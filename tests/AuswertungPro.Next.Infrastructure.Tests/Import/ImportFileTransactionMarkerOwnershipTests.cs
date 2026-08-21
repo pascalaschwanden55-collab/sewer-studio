@@ -121,6 +121,25 @@ public sealed class ImportFileTransactionMarkerOwnershipTests : IDisposable
         Assert.Null(journal.TryRead(_wurzel));
     }
 
+    [Fact]
+    public void Beschaedigter_marker_sperrt_publish_und_bleibt_bytegleich()
+    {
+        var journal = new FileImportTransactionJournal();
+        var markerPath = Path.Combine(_wurzel, FileImportTransactionJournal.MarkerFileName);
+        byte[] kaputterMarker = [0xFF, 0x00, 0x7B, 0x13, 0x0A];
+        File.WriteAllBytes(markerPath, kaputterMarker);
+
+        using var staging = new ImportFileStagingService().Begin(_projektDatei)!;
+        var transaktion = new ImportFileTransaction("Import", staging, journal);
+        var zielOrdner = Path.Combine(_wurzel, "Ziel");
+        staging.StageCopy(QuelleAnlegen("kaputt.txt", "inhalt"), zielOrdner);
+
+        Assert.Throws<InvalidOperationException>(() => transaktion.Publish());
+
+        Assert.Equal(kaputterMarker, File.ReadAllBytes(markerPath));
+        Assert.False(File.Exists(Path.Combine(zielOrdner, "kaputt.txt")));
+    }
+
     public void Dispose()
     {
         try { Directory.Delete(_wurzel, recursive: true); } catch { }

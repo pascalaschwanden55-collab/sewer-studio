@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
+using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
@@ -110,29 +111,13 @@ public static partial class HoldingFolderDistributor
     private static bool IsValidHaltungId(string? value) => HoldingIdNormalizer.IsValidHaltungId(value);
 
     /// <summary>
-    /// Prueft ob im Haltungsordner bereits ein Video mit gleicher Dateigroesse existiert.
-    /// Gibt den Pfad zurueck wenn ja, sonst null.
-    /// Verhindert Duplikate beim erneuten Verteilen.
+    /// Behaelt hier den nachgewiesenen Zielpfad. Diese Verteilfunktion kennt den echten
+    /// Projektordner nicht; ein Ordnername wie "Haltungen_Verteilt" allein ist kein
+    /// Eigentumsnachweis. Beim Projektspeichern relativiert der zentrale
+    /// ProjectVideoReferenceNormalizer nur Pfade, die wirklich im Projekt liegen.
     /// </summary>
-
     internal static string MakeProjectRelativeLink(string mediaPath, string municipalityFolder)
-    {
-        var current = new DirectoryInfo(Path.GetFullPath(municipalityFolder));
-        while (current is not null)
-        {
-            if (string.Equals(current.Name, "Haltungen", StringComparison.OrdinalIgnoreCase)
-                && current.Parent is not null)
-            {
-                return ProjectPathResolver.MakeRelative(mediaPath, current.Parent.FullName);
-            }
-
-            current = current.Parent;
-        }
-
-        // Unbekannte Altstruktur: absoluten Pfad behalten, statt einen falsch aufgeloesten
-        // relativen Link zu erzeugen.
-        return mediaPath;
-    }
+        => mediaPath;
 
 
 }

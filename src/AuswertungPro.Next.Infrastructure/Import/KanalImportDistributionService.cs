@@ -147,18 +147,18 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
             if (string.IsNullOrWhiteSpace(link) || ProjectPathResolver.IsRelative(link))
                 continue;
 
-            // UNC vor File.Exists ablehnen (S2-3: SMB-Authentifizierung an fremde Hosts).
-            if (MediaFileAllowlist.IsUnc(link))
+            if (!TryInspectExistingSourceFile(
+                    link,
+                    out var safeLink,
+                    out var sourceError))
             {
-                messages.Add($"Video {haltung}: UNC-Pfad wird nicht uebernommen: {link}");
+                if (!string.IsNullOrWhiteSpace(sourceError))
+                    messages.Add($"Video {haltung}: {sourceError}");
                 continue;
             }
 
-            if (!File.Exists(link))
-                continue;
-
             // S2-1: Nur bekannte Medientypen/Protokoll-PDFs ins Projekt kopieren.
-            if (!MediaFileAllowlist.IsImportableMediaOrPdf(link))
+            if (!MediaFileAllowlist.IsImportableMediaOrPdf(safeLink))
             {
                 messages.Add($"Video {haltung}: Dateityp nicht erlaubt, wird nicht kopiert: {link}");
                 continue;
@@ -166,21 +166,33 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
 
             try
             {
+                if (!TryInspectExistingSourceFile(
+                        safeLink,
+                        out safeLink,
+                        out sourceError))
+                {
+                    throw new IOException(sourceError ?? "Quelldatei fehlt.");
+                }
+
                 var san = ProjectPathResolver.SanitizePathSegment(haltung);
                 var dir = ProjectStructure.HaltungVerteiltDir(projectFolder, san);
                 var stamp = ResolveDateStamp(record);
-                var ext = Path.GetExtension(link);
+                var ext = Path.GetExtension(safeLink);
                 string dest;
                 if (fileStaging is null)
                 {
+                    var writePathGuard = new ProjectWritePathGuard(projectFolder);
+                    dir = writePathGuard.EnsureSafeDirectoryTarget(dir);
                     Directory.CreateDirectory(dir);
-                    dest = UniquePath(Path.Combine(dir, $"{stamp}_{san}{ext}"));
-                    File.Copy(link, dest, overwrite: false);
+                    dest = writePathGuard.EnsureSafeFileTarget(
+                        UniquePath(Path.Combine(dir, $"{stamp}_{san}{ext}")));
+                    writePathGuard.EnsureSafeFileTarget(dest);
+                    File.Copy(safeLink, dest, overwrite: false);
                 }
                 else
                 {
                     dest = fileStaging.StageCopyAs(
-                        link,
+                        safeLink,
                         dir,
                         $"{stamp}_{san}{ext}");
                 }
@@ -210,11 +222,13 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
             primaryProtocolPdf,
             archivedPdfDir,
             fileStaging);
-        if (primary is null)
+        if (primary is null || !TryInspectReadableFile(primary, out primary))
             return Array.Empty<HoldingFolderDistributor.DistributionResult>();
 
         if (fileStaging is null)
         {
+            new ProjectWritePathGuard(projectFolder)
+                .EnsureSafeDirectoryTarget(logicalDestinationRoot);
             return HoldingFolderDistributor.DistributeFiles(
                 pdfFiles: [primary.ReadPath],
                 videoSourceFolder: sourceVideoDir,
@@ -252,16 +266,18 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
     {
         if (!string.IsNullOrWhiteSpace(primaryProtocolPdf))
         {
-            if (File.Exists(primaryProtocolPdf))
-                return new ImportReadableFile(primaryProtocolPdf, primaryProtocolPdf);
+            var direct = new ImportReadableFile(primaryProtocolPdf, primaryProtocolPdf);
+            if (TryInspectReadableFile(direct, out direct))
+                return direct;
 
             if (fileStaging is not null)
             {
                 try
                 {
                     var readable = fileStaging.ResolveReadPath(primaryProtocolPdf);
-                    if (File.Exists(readable))
-                        return new ImportReadableFile(primaryProtocolPdf, readable);
+                    var staged = new ImportReadableFile(primaryProtocolPdf, readable);
+                    if (TryInspectReadableFile(staged, out staged))
+                        return staged;
                 }
                 catch (ArgumentException)
                 {
@@ -313,16 +329,39 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
         string archivedPdfDir,
         IImportFileStagingSession? fileStaging)
     {
-        var pdfs = (fileStaging is null
-                ? Directory.Exists(archivedPdfDir)
-                    ? Directory.EnumerateFiles(archivedPdfDir, "*.pdf", SearchOption.TopDirectoryOnly)
-                        .Select(path => new ImportReadableFile(path, path))
-                        .ToList()
-                    : []
-                : fileStaging.EnumerateReadableFiles(
-                    archivedPdfDir,
-                    "*.pdf",
-                    SearchOption.TopDirectoryOnly))
+        if (!ImportSourcePathGuard.TryInspectDirectory(
+                archivedPdfDir,
+                out var safeArchivedPdfDir,
+                out var archiveExists,
+                out _))
+        {
+            return null;
+        }
+
+        IReadOnlyList<ImportReadableFile> candidates;
+        if (fileStaging is null)
+        {
+            candidates = archiveExists
+                ? Directory.EnumerateFiles(
+                        safeArchivedPdfDir,
+                        "*.pdf",
+                        SearchOption.TopDirectoryOnly)
+                    .Select(path => new ImportReadableFile(path, path))
+                    .ToList()
+                : [];
+        }
+        else
+        {
+            candidates = fileStaging.EnumerateReadableFiles(
+                safeArchivedPdfDir,
+                "*.pdf",
+                SearchOption.TopDirectoryOnly);
+        }
+
+        var pdfs = candidates
+            .Select(file => TryInspectReadableFile(file, out var safeFile) ? safeFile : null)
+            .Where(file => file is not null)
+            .Select(file => file!)
             .Where(p => !Path.GetFileName(p.TargetPath).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
             .ToList();
         if (pdfs.Count == 0)
@@ -385,6 +424,49 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
         catch { return 0L; }
     }
 
+    private static bool TryInspectReadableFile(
+        ImportReadableFile file,
+        out ImportReadableFile safeFile)
+    {
+        safeFile = file;
+        if (!string.Equals(
+                Path.GetExtension(file.TargetPath),
+                ".pdf",
+                StringComparison.OrdinalIgnoreCase)
+            || !TryInspectExistingSourceFile(
+                file.ReadPath,
+                out var safeReadPath,
+                out _))
+        {
+            return false;
+        }
+
+        safeFile = file with { ReadPath = safeReadPath };
+        return true;
+    }
+
+    private static bool TryInspectExistingSourceFile(
+        string path,
+        out string safePath,
+        out string? error)
+    {
+        if (!ImportSourcePathGuard.TryInspectFile(
+                path,
+                out safePath,
+                out var exists,
+                out error))
+        {
+            return false;
+        }
+
+        if (exists)
+            return true;
+
+        safePath = string.Empty;
+        error = null;
+        return false;
+    }
+
     // Record über den sanitisierten Haltungsnamen (== Ordnername) finden.
     private static HaltungRecord? FindRecordBySanitizedHaltung(Project project, string sanitizedFolderName)
     {
@@ -432,10 +514,23 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
             return;
         }
 
-        if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+        if (!IsUnderDirectory(full, root))
             return;
 
         record.SetFieldValue(field, ProjectPathResolver.MakeRelative(full, projectFolder), FieldSource.Legacy, userEdited: false);
+    }
+
+    private static bool IsUnderDirectory(string path, string directory)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var fullDirectory = Path.GetFullPath(directory)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (string.Equals(fullPath, fullDirectory, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return fullPath.StartsWith(
+            fullDirectory + Path.DirectorySeparatorChar,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     // JJJJMMTT aus Datum_Jahr (verschiedene Formate), sonst aus verteilten Medienpfaden.

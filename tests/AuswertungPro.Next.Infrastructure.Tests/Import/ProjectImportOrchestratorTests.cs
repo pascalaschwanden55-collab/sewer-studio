@@ -1,9 +1,11 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Ibak;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Import.WinCan;
 using UglyToad.PdfPig.Content;
@@ -18,6 +20,37 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 /// </summary>
 public sealed class ProjectImportOrchestratorTests
 {
+    [JunctionFact]
+    public void DatenquellenSignal_BetrittKeineUntergeordneteVerknuepfung()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"orch-signal-{Guid.NewGuid():N}");
+        var source = Path.Combine(root, "Quelle");
+        var external = Path.Combine(root, "Fremd");
+        var link = Path.Combine(source, "Verknuepft");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(external);
+        File.WriteAllText(Path.Combine(external, "Daten.txt"), "fremd");
+        JunctionTestSupport.CreateDirectoryLink(link, external);
+
+        try
+        {
+            var method = typeof(ProjectImportOrchestrator).GetMethod(
+                "AnyFile",
+                BindingFlags.Static | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("AnyFile fehlt.");
+
+            var found = Assert.IsType<bool>(method.Invoke(null, [source, "Daten.txt"]));
+
+            Assert.False(found);
+        }
+        finally
+        {
+            if (Directory.Exists(link))
+                Directory.Delete(link);
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Hilfsmethode: Mini-IKAS-Fixture anlegen
     // -----------------------------------------------------------------------

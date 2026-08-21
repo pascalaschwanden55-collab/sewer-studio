@@ -17,16 +17,27 @@ public sealed class ImportSummaryExporter : IImportSummaryExporter
         if (string.IsNullOrWhiteSpace(projectDirectory))
             throw new InvalidOperationException("Der Projektordner konnte nicht ermittelt werden.");
 
-        return ExportToDirectory(
+        var guard = new ProjectWritePathGuard(projectDirectory);
+        return ExportToDirectoryCore(
             project,
-            Path.Combine(projectDirectory, "__IMPORT_REPORTS"));
+            Path.Combine(projectDirectory, ProjectStructure.ImportReports),
+            guard);
     }
 
     internal string ExportToDirectory(Project project, string reportDirectory)
+        => ExportToDirectoryCore(project, reportDirectory, projectGuard: null);
+
+    private static string ExportToDirectoryCore(
+        Project project,
+        string reportDirectory,
+        ProjectWritePathGuard? projectGuard)
     {
+        projectGuard?.EnsureSafeDirectoryTarget(reportDirectory);
         Directory.CreateDirectory(reportDirectory);
+        projectGuard?.EnsureSafeDirectoryTarget(reportDirectory);
         var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
         var path = Path.Combine(reportDirectory, $"import_summary_{stamp}.csv");
+        projectGuard?.EnsureSafeFileTarget(path);
 
         var content = new StringBuilder();
         content.AppendLine("Type;RecordId;Field;Value;Source;UserEdited;LastUpdatedUtc");

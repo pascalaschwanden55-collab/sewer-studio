@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
+using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 using UglyToad.PdfPig;
@@ -33,10 +34,17 @@ public static partial class HoldingFolderDistributor
 
     private static IReadOnlyList<string> EnumerateVideoFiles(string root, bool recursive)
     {
-        if (!Directory.Exists(root))
+        if (!ImportSourcePathGuard.TryInspectDirectory(
+                root,
+                out var safeRoot,
+                out var rootExists,
+                out _)
+            || !rootExists)
+        {
             return Array.Empty<string>();
+        }
 
-        return Common.SafeFileEnumeration.EnumerateFilesSafe(root, "*.*", recursive: recursive)
+        return Common.SafeFileEnumeration.EnumerateFilesSafe(safeRoot, "*.*", recursive: recursive)
             .Where(MediaFileTypes.HasVideoExtension)
             .ToList();
     }
@@ -70,7 +78,17 @@ public static partial class HoldingFolderDistributor
 
     private static System.DateTime? GetFileTimestampSafe(string path)
     {
-        try { return File.Exists(path) ? File.GetLastWriteTime(path) : (System.DateTime?)null; }
+        try
+        {
+            return ImportSourcePathGuard.TryInspectFile(
+                       path,
+                       out var safePath,
+                       out var exists,
+                       out _)
+                   && exists
+                ? File.GetLastWriteTime(safePath)
+                : null;
+        }
         catch { return null; }
     }
 
@@ -322,8 +340,23 @@ public static partial class HoldingFolderDistributor
         if (string.IsNullOrWhiteSpace(link) || !HasVideoExtension(link))
             return new VideoFindResult(VideoMatchStatus.NotFound, null, Array.Empty<string>(), "No usable video link");
 
-        if (File.Exists(link))
-            return new VideoFindResult(VideoMatchStatus.Matched, link, Array.Empty<string>(), "Matched by existing Link path");
+        // Vor dem ersten Dateizugriff auch lokal aussehende Links sperren. Ein
+        // Verzeichnis-Symlink kann sonst die syntaktische UNC-Pruefung umgehen.
+        if (!ImportSourcePathGuard.TryInspectFile(
+                link,
+                out var safeLink,
+                out var linkExists,
+                out var linkError))
+        {
+            return new VideoFindResult(
+                VideoMatchStatus.NotFound,
+                null,
+                Array.Empty<string>(),
+                linkError ?? "Unsafe video link rejected");
+        }
+
+        if (linkExists)
+            return new VideoFindResult(VideoMatchStatus.Matched, safeLink, Array.Empty<string>(), "Matched by existing Link path");
 
         var linkFile = Path.GetFileName(link);
         if (string.IsNullOrWhiteSpace(linkFile))
@@ -334,33 +367,57 @@ public static partial class HoldingFolderDistributor
 
 
     /// <summary>
-    /// Prueft ob im Haltungsordner bereits ein Video mit gleicher Dateigroesse existiert.
-    /// Gibt den Pfad zurueck wenn ja, sonst null.
-    /// Verhindert Duplikate beim erneuten Verteilen.
+    /// Prueft, ob im Haltungsordner bereits ein bytegleiches Video existiert.
+    /// Gleicher Name oder gleiche Groesse allein reichen nicht. Bei abweichendem
+    /// Inhalt liefert die Methode null; der Aufrufer erzeugt dann einen eindeutigen Zielnamen.
     /// </summary>
     internal static string? FindExistingVideo(string holdingFolder, string sourceVideoPath)
     {
-        if (!Directory.Exists(holdingFolder) || !File.Exists(sourceVideoPath))
+        if (!ImportSourcePathGuard.TryInspectDirectory(
+                holdingFolder,
+                out var safeHoldingFolder,
+                out var holdingFolderExists,
+                out _)
+            || !holdingFolderExists
+            || !ImportSourcePathGuard.TryInspectFile(
+                sourceVideoPath,
+                out var safeSourceVideoPath,
+                out var sourceExists,
+                out _)
+            || !sourceExists)
+        {
             return null;
-
-        var srcInfo = new FileInfo(sourceVideoPath);
-        var srcName = Path.GetFileName(sourceVideoPath);
+        }
 
         try
         {
-            foreach (var existing in Directory.EnumerateFiles(holdingFolder))
+            foreach (var candidate in Directory.EnumerateFiles(safeHoldingFolder))
             {
+                if (!ImportSourcePathGuard.TryInspectFile(
+                        candidate,
+                        out var existing,
+                        out var existingFileExists,
+                        out _)
+                    || !existingFileExists)
+                {
+                    continue;
+                }
+
                 if (!MediaFileTypes.HasVideoExtension(existing))
                     continue;
 
-                // Exakter Dateiname-Match
-                if (string.Equals(Path.GetFileName(existing), srcName, StringComparison.OrdinalIgnoreCase))
-                    return existing;
-
-                // Gleiche Dateigroesse = selbes Video (anderer Name)
-                var existInfo = new FileInfo(existing);
-                if (existInfo.Length == srcInfo.Length && existInfo.Length > 0)
-                    return existing;
+                try
+                {
+                    if (FileContentComparer.FilesEqual(safeSourceVideoPath, existing))
+                        return existing;
+                }
+                catch (Exception ex)
+                {
+                    // Eine unlesbare Zieldatei ist kein Identitaetsbeweis. Andere
+                    // vorhandene Videos koennen trotzdem noch bytegleich sein.
+                    BestEffort.ReportWarning(
+                        $"[HoldingDistribution] Vorhandenes Video nicht vergleichbar: {existing}: {ex.Message}");
+                }
             }
         }
         catch

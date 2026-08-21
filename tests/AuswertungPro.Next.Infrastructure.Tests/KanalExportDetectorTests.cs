@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -105,6 +106,39 @@ public sealed class KanalExportDetectorTests
         Assert.Equal(KanalExportFormat.WinCan, result.Format);
         Assert.NotNull(result.Db3Path);
         Assert.EndsWith("large.db3", result.Db3Path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [JunctionFact]
+    public void Detect_BetrittKeineUntergeordneteVerzeichnisverknuepfung_AberAkzeptiertSieAlsExpliziteWurzel()
+    {
+        using var temp = new TempDir();
+        var sourceRoot = Path.Combine(temp.Path, "quelle");
+        var externalRoot = Path.Combine(temp.Path, "extern");
+        var externalDb = Path.Combine(externalRoot, "DB", "projekt.db3");
+        var link = Path.Combine(sourceRoot, "verknuepft");
+        Directory.CreateDirectory(sourceRoot);
+        Directory.CreateDirectory(Path.GetDirectoryName(externalDb)!);
+        File.WriteAllText(externalDb, "fremde-datenbank");
+        JunctionTestSupport.CreateDirectoryLink(link, externalRoot);
+
+        try
+        {
+            var nested = KanalExportDetector.Detect(sourceRoot);
+            var explicitlySelected = KanalExportDetector.Detect(link);
+
+            Assert.Equal(KanalExportFormat.Unknown, nested.Format);
+            Assert.Null(nested.Db3Path);
+            Assert.Equal(KanalExportFormat.WinCan, explicitlySelected.Format);
+            Assert.Equal(
+                Path.Combine(link, "DB", "projekt.db3"),
+                explicitlySelected.Db3Path,
+                ignoreCase: true);
+        }
+        finally
+        {
+            if (Directory.Exists(link))
+                Directory.Delete(link);
+        }
     }
 
     // -------------------------------------------------------------------------

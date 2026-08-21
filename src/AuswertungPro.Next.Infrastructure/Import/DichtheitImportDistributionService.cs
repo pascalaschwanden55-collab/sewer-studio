@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Common;
+using FileContentComparer = AuswertungPro.Next.Application.Common.FileContentComparer;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
 
@@ -73,28 +74,29 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
 
         var zielRoot = Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt);
 
-        // Idempotenz-Guard: bereits verteilte DP-Protokolle (gleiche Dateigroesse)
+        // Idempotenz-Guard: bereits verteilte, bytegleiche DP-Protokolle
         // nicht erneut kopieren — DistributeDichtheitFiles wuerde sonst bei jedem
         // Lauf _01-Duplikate anlegen.
-        var vorhandeneGroessen = LeseVorhandeneDpGroessen(zielRoot, fileStaging);
+        // Gleiche Dateigroesse allein ist kein Inhaltsbeweis.
+        var vorhandeneHashes = LeseVorhandeneDpHashes(zielRoot, fileStaging);
         var neue = new List<string>();
         var uebersprungen = 0;
         foreach (var kandidat in kandidaten)
         {
-            long groesse;
+            string hash;
             try
             {
-                groesse = new FileInfo(kandidat).Length;
+                hash = VerifiedImportFileCopy.ComputeSha256(kandidat);
             }
             catch (Exception ex)
             {
                 // Best effort: eine unlesbare Datei darf die restlichen DP-Kandidaten nicht blockieren.
                 AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
-                    $"[DichtheitImport] Kandidat uebersprungen, Groesse nicht lesbar: {kandidat}: {ex.Message}");
+                    $"[DichtheitImport] Kandidat uebersprungen, SHA-256 nicht lesbar: {kandidat}: {ex.Message}");
                 continue;
             }
 
-            if (vorhandeneGroessen.Contains(groesse))
+            if (vorhandeneHashes.Contains(hash))
                 uebersprungen++;
             else
                 neue.Add(kandidat);
@@ -116,7 +118,13 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
             // R4: Wenn der Inhalt-Parser das Schachtpaar nicht fand, darf die KI
             // einen Vorschlag machen — Zuordnung wird im Report als "per KI" gekennzeichnet.
             if (ki is not null && !string.IsNullOrWhiteSpace(r.SourcePdfPath)
-                && VerteilePerKi(ki, r.SourcePdfPath!, zielRoot, messages, fileStaging))
+                && VerteilePerKi(
+                    ki,
+                    r.SourcePdfPath!,
+                    projectFolder,
+                    zielRoot,
+                    messages,
+                    fileStaging))
             {
                 verteilt++;
                 continue;
@@ -192,6 +200,7 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
     private static bool VerteilePerKi(
         PdfKiSchiedsrichter ki,
         string pdfPath,
+        string projectFolder,
         string zielRoot,
         List<string> messages,
         IImportFileStagingSession? fileStaging)
@@ -221,11 +230,24 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
                     dir,
                     Path.GetFileName(ziel));
             }
-            else if (!(File.Exists(ziel) && new FileInfo(ziel).Length == new FileInfo(pdfPath).Length))
+            else
             {
-                Directory.CreateDirectory(dir);
-                ziel = KanalImportDistributor.UniquePath(ziel);
-                File.Copy(pdfPath, ziel, overwrite: false);
+                var writePaths = new ProjectWritePathGuard(projectFolder);
+                writePaths.EnsureSafeDirectoryTarget(projectFolder);
+                zielRoot = writePaths.EnsureSafeDirectoryTarget(zielRoot);
+                dir = writePaths.EnsureSafeDirectoryTarget(dir);
+                ziel = writePaths.EnsureSafeFileTarget(ziel);
+
+                if (!(File.Exists(ziel) && FileContentComparer.FilesEqual(ziel, pdfPath)))
+                {
+                    ziel = writePaths.EnsureSafeFileTarget(
+                        KanalImportDistributor.UniquePath(ziel));
+                    Directory.CreateDirectory(dir);
+                    dir = writePaths.EnsureSafeDirectoryTarget(dir);
+                    writePaths.EnsureSafeDirectoryTarget(dir);
+                    writePaths.EnsureSafeFileTarget(ziel);
+                    File.Copy(pdfPath, ziel, overwrite: false);
+                }
             }
 
             messages.Add($"DP per KI zugeordnet: {Path.GetFileName(pdfPath)} → {haltung}");
@@ -307,11 +329,11 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         return false;
     }
 
-    private static HashSet<long> LeseVorhandeneDpGroessen(
+    private static HashSet<string> LeseVorhandeneDpHashes(
         string zielRoot,
         IImportFileStagingSession? fileStaging)
     {
-        var groessen = new HashSet<long>();
+        var hashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         try
         {
@@ -332,13 +354,13 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
             {
                 try
                 {
-                    groessen.Add(new FileInfo(file.ReadPath).Length);
+                    hashes.Add(VerifiedImportFileCopy.ComputeSha256(file.ReadPath));
                 }
                 catch (Exception ex)
                 {
                     // Best effort: defekte Ziel-Dateien verhindern nur die Duplikat-Erkennung fuer diese Datei.
                     AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
-                        $"[DichtheitImport] Vorhandenes DP-Protokoll ohne Groesse ignoriert: {file.TargetPath}: {ex.Message}");
+                        $"[DichtheitImport] Vorhandenes DP-Protokoll ohne lesbare SHA-256 ignoriert: {file.TargetPath}: {ex.Message}");
                 }
             }
         }
@@ -346,9 +368,9 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         {
             // Best effort: wenn der Zielbaum nicht lesbar ist, laeuft der Import ohne Idempotenz-Guard weiter.
             AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
-                $"[DichtheitImport] Vorhandene DP-Groessen konnten nicht gelesen werden: {zielRoot}: {ex.Message}");
+                $"[DichtheitImport] Vorhandene DP-Pruefsummen konnten nicht gelesen werden: {zielRoot}: {ex.Message}");
         }
 
-        return groessen;
+        return hashes;
     }
 }

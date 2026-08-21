@@ -469,7 +469,8 @@ public partial class SchaechtePage : UserControl
             return;
 
         var record = ResolveRecordFromComboBox(combo);
-        if (record is null)
+        if (record is null
+            || !vm.CanMutateRecord(record, "Schachtfeld aendern"))
             return;
 
         var value = DataGridEditedTextValueResolver.ResolveComboBoxValue(combo);
@@ -494,6 +495,19 @@ public partial class SchaechtePage : UserControl
         return Grid.CurrentItem as SchachtRecord;
     }
 
+    private void Grid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
+    {
+        _ = sender;
+        if (e.Row?.Item is not SchachtRecord record
+            || DataContext is not SchaechtePageViewModel vm
+            || vm.CanMutateRecord(record, "Schachtfeld aendern"))
+        {
+            return;
+        }
+
+        e.Cancel = true;
+    }
+
     private void Grid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
     {
         _ = sender;
@@ -502,6 +516,12 @@ public partial class SchaechtePage : UserControl
             return;
         if (e.Row?.Item is not SchachtRecord record)
             return;
+        if (DataContext is not SchaechtePageViewModel vm
+            || !vm.CanMutateRecord(record, "Schachtfeld aendern"))
+        {
+            e.Cancel = true;
+            return;
+        }
         if (e.Column.GetValue(FrameworkElement.TagProperty) is not string recordField)
             return;
 
@@ -702,6 +722,12 @@ public partial class SchaechtePage : UserControl
 
     private void CommitSchachtDetailField(SchachtRecord record, string recordField, string? value)
     {
+        if (_vm is null
+            || !_vm.CanMutateRecord(record, "Schachtdetail aendern"))
+        {
+            return;
+        }
+
         var next = value ?? string.Empty;
         if (!SchaechteFieldEditController.Apply(
                 recordField,
@@ -723,6 +749,12 @@ public partial class SchaechtePage : UserControl
     // Schachtnummer-Umbenennung laeuft wie gehabt; Optionen/Filter werden einmal aktualisiert.
     private void CommitSchachtDetailKonsolidiert(SchachtRecord record, KonsolidiertesSchachtFeld feld, string? value)
     {
+        if (_vm is null
+            || !_vm.CanMutateRecord(record, "Schachtdetail aendern"))
+        {
+            return;
+        }
+
         var next = value ?? string.Empty;
 
         if (string.Equals(feld.PrimaerKey, "Schachtnummer", StringComparison.Ordinal))
@@ -784,7 +816,7 @@ public partial class SchaechtePage : UserControl
 
     private void ClearColumn(string fieldName, string displayName)
     {
-        if (_vm is null)
+        if (_vm is null || !_vm.CanMutateShaftData)
             return;
 
         if (!DialogHost.Current.ConfirmWarn(
@@ -797,7 +829,12 @@ public partial class SchaechtePage : UserControl
         // Bewusstes Leeren ist ebenfalls eine Entscheidung des Menschen und darf
         // nicht spaeter von einem automatischen Schreiber wieder gefuellt werden.
         foreach (var record in _vm.Records)
+        {
+            if (!_vm.CanMutateRecord(record, "Schachtspalte leeren"))
+                return;
+
             record.SetFieldValue(fieldName, string.Empty, FieldSource.Manual, userEdited: true);
+        }
 
         MarkProjectDirty();
     }
@@ -864,7 +901,15 @@ public partial class SchaechtePage : UserControl
     }
 
     private void OpenSchachtMassnahmen(SchachtRecord record)
-        => _massnahmenController?.Open(record);
+    {
+        if (_vm is null
+            || !_vm.CanMutateRecord(record, "Sanierungsmassnahmen bearbeiten"))
+        {
+            return;
+        }
+
+        _massnahmenController?.Open(record);
+    }
 
     private static SchaechteFileActionController CreateFileActionController(
         SchaechtePageViewModel viewModel)

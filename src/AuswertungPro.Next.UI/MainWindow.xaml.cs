@@ -96,7 +96,7 @@ public partial class MainWindow : Window
 
     private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
-        if (DataContext is ShellViewModel closeVm && !ShellLeaveGuard.CanLeave(closeVm.CurrentPage))
+        if (DataContext is ShellViewModel closeVm && !closeVm.ConfirmLeaveCurrentContext())
         {
             e.Cancel = true;
             return;

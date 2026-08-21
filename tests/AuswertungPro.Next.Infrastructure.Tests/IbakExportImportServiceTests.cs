@@ -80,6 +80,53 @@ public sealed class IbakExportImportServiceTests
     }
 
     [Fact]
+    public void ImportIbakExport_MehrdeutigerSegmentPraefix_LegtExakteHaltungAn()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ibak-prefix-{Guid.NewGuid():N}");
+        var film = Path.Combine(root, "Film");
+        Directory.CreateDirectory(film);
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        File.WriteAllText(
+            Path.Combine(film, "Daten.txt"),
+            "100-200\n" +
+            "\t00:00:05    1.00 m  BCD     Schaden@!$ibak$!100-200$H\n",
+            Encoding.GetEncoding(1252));
+
+        try
+        {
+            var project = new Project();
+            foreach (var suffix in new[] { "-1", "-2" })
+            {
+                var existing = project.CreateNewRecord();
+                existing.SetFieldValue(
+                    "Haltungsname",
+                    $"100-200{suffix}",
+                    FieldSource.Xtf,
+                    userEdited: false);
+                project.AddRecord(existing);
+            }
+
+            var result = new IbakExportImportService().ImportIbakExport(root, project);
+
+            Assert.True(result.Ok, result.ErrorMessage);
+            Assert.Equal(3, project.Data.Count);
+            var imported = Assert.Single(
+                project.Data,
+                record => record.GetFieldValue("Haltungsname") == "100-200");
+            Assert.NotNull(imported.Protocol);
+            Assert.NotEmpty(imported.Protocol.Current.Entries);
+            Assert.All(
+                project.Data.Where(record => record.GetFieldValue("Haltungsname") != "100-200"),
+                record => Assert.True(
+                    record.Protocol is null || record.Protocol.Current.Entries.Count == 0));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void ImportIbakExport_LaesstHoeherwertigenXtfWert_stehen_und_protokolliertKonflikt()
     {
         // Daten.txt liefert BCE @ 8.20m -> Haltungslaenge_m "8.2" (FieldSource.Legacy).
@@ -184,6 +231,37 @@ public sealed class IbakExportImportServiceTests
             var entry = Assert.Single(record.Protocol!.Current.Entries);
             Assert.Equal(foto, Assert.Single(entry.FotoPaths));
             Assert.Equal(foto, Assert.Single(record.VsaFindings!).FotoPath);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void ImportIbakExport_KuerzereHaltungUebernimmtNichtVideoDerLaengerenHaltung()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ibak-video-boundary-{Guid.NewGuid():N}");
+        var film = Path.Combine(root, "Film");
+        Directory.CreateDirectory(film);
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        File.WriteAllText(
+            Path.Combine(film, "Daten.txt"),
+            "100-200\n" +
+            "\t00:00:05    1.00 m  BCD     Schaden@!$ibak$!100-200$H\n",
+            Encoding.GetEncoding(1252));
+        var fremdesVideo = Path.Combine(film, "L__100-2000.mp4");
+        File.WriteAllText(fremdesVideo, "video-der-anderen-haltung");
+
+        try
+        {
+            var project = new Project();
+
+            var result = new IbakExportImportService().ImportIbakExport(root, project);
+
+            Assert.True(result.Ok, result.ErrorMessage);
+            var record = Assert.Single(project.Data);
+            Assert.True(string.IsNullOrWhiteSpace(record.GetFieldValue("Link")));
         }
         finally
         {

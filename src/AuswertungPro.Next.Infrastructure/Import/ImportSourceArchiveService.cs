@@ -37,6 +37,9 @@ public sealed class ImportSourceArchiveService : IImportSourceArchiver
             var copied = 0;
             var reused = 0;
             var messages = new List<string>();
+            var writePaths = fileStaging is null
+                ? new ProjectWritePathGuard(projectFolder)
+                : null;
 
             foreach (var sourcePath in SafeFileEnumeration.EnumerateFilesSafe(
                          sourceFolder,
@@ -49,6 +52,7 @@ public sealed class ImportSourceArchiveService : IImportSourceArchiver
                         sourcePath,
                         projectFolder,
                         fileStaging,
+                        writePaths,
                         ref copied,
                         ref reused,
                         messages);
@@ -68,6 +72,7 @@ public sealed class ImportSourceArchiveService : IImportSourceArchiver
         string sourcePath,
         string projectFolder,
         IImportFileStagingSession? fileStaging,
+        ProjectWritePathGuard? writePaths,
         ref int copied,
         ref int reused,
         List<string> messages)
@@ -78,7 +83,11 @@ public sealed class ImportSourceArchiveService : IImportSourceArchiver
 
         var targetDirectory = ProjectStructure.ImportdateienDir(projectFolder, subKind);
         if (fileStaging is null)
+        {
+            targetDirectory = writePaths!.EnsureSafeDirectoryTarget(targetDirectory);
+            writePaths.EnsureSafeDirectoryTarget(targetDirectory);
             Directory.CreateDirectory(targetDirectory);
+        }
 
         if (fileStaging is not null)
         {
@@ -103,46 +112,59 @@ public sealed class ImportSourceArchiveService : IImportSourceArchiver
             return;
         }
 
+        var directWritePaths = writePaths
+            ?? throw new InvalidOperationException("Direkte Archivziele brauchen eine Projektpfadpruefung.");
         var fileName = Path.GetFileName(sourcePath);
-        var targetPath = Path.Combine(targetDirectory, fileName);
+        var targetPath = directWritePaths.EnsureSafeFileTarget(
+            Path.Combine(targetDirectory, fileName));
         if (!File.Exists(targetPath))
         {
-            CopyAtomically(sourcePath, targetPath);
+            CopyAtomically(sourcePath, targetPath, directWritePaths);
             copied++;
             return;
         }
 
-        var sourceSize = new FileInfo(sourcePath).Length;
-        var targetSize = new FileInfo(targetPath).Length;
-        if (sourceSize == targetSize)
+        if (VerifiedImportFileCopy.ContentsEqual(sourcePath, targetPath))
         {
             reused++;
             return;
         }
 
-        var safeName = BuildCollisionSafeName(targetDirectory, fileName);
-        CopyAtomically(sourcePath, Path.Combine(targetDirectory, safeName));
+        var safePath = BuildCollisionSafePath(targetDirectory, fileName, directWritePaths);
+        CopyAtomically(sourcePath, safePath, directWritePaths);
         copied++;
         messages.Add(
-            $"Namenskollision: '{fileName}' im Ziel hat abweichende Groesse " +
-            $"({targetSize} vs. {sourceSize} Bytes). Kopiert als '{safeName}'.");
+            $"Namenskollision: '{fileName}' im Ziel hat abweichenden Inhalt. " +
+            $"Kopiert als '{Path.GetFileName(safePath)}'.");
     }
 
-    private static void CopyAtomically(string sourcePath, string targetPath)
+    private static void CopyAtomically(
+        string sourcePath,
+        string targetPath,
+        ProjectWritePathGuard writePaths)
     {
-        var directory = Path.GetDirectoryName(targetPath)!;
-        var tempPath = Path.Combine(
+        var directory = writePaths.EnsureSafeDirectoryTarget(Path.GetDirectoryName(targetPath)!);
+        targetPath = writePaths.EnsureSafeFileTarget(targetPath);
+        var tempPath = writePaths.EnsureSafeFileTarget(Path.Combine(
             directory,
-            $".{Path.GetFileName(targetPath)}.{Guid.NewGuid():N}.tmp");
+            $".{Path.GetFileName(targetPath)}.{Guid.NewGuid():N}.tmp"));
         try
         {
+            writePaths.EnsureSafeDirectoryTarget(directory);
+            writePaths.EnsureSafeFileTarget(tempPath);
+            writePaths.EnsureSafeFileTarget(targetPath);
             File.Copy(sourcePath, tempPath, overwrite: false);
+
+            writePaths.EnsureSafeDirectoryTarget(directory);
+            writePaths.EnsureSafeFileTarget(tempPath);
+            writePaths.EnsureSafeFileTarget(targetPath);
             File.Move(tempPath, targetPath, overwrite: false);
         }
         finally
         {
             try
             {
+                writePaths.EnsureSafeFileTarget(tempPath);
                 if (File.Exists(tempPath))
                     File.Delete(tempPath);
             }
@@ -153,20 +175,25 @@ public sealed class ImportSourceArchiveService : IImportSourceArchiver
         }
     }
 
-    private static string BuildCollisionSafeName(string targetDirectory, string originalName)
+    private static string BuildCollisionSafePath(
+        string targetDirectory,
+        string originalName,
+        ProjectWritePathGuard writePaths)
     {
         var baseName = Path.GetFileNameWithoutExtension(originalName);
         var extension = Path.GetExtension(originalName);
         var counter = 1;
 
-        string candidate;
+        string candidatePath;
         do
         {
-            candidate = $"{baseName}_{counter}{extension}";
+            candidatePath = writePaths.EnsureSafeFileTarget(Path.Combine(
+                targetDirectory,
+                $"{baseName}_{counter}{extension}"));
             counter++;
         }
-        while (File.Exists(Path.Combine(targetDirectory, candidate)));
+        while (File.Exists(candidatePath));
 
-        return candidate;
+        return candidatePath;
     }
 }

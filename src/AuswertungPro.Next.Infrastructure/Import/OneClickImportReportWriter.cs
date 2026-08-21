@@ -21,9 +21,13 @@ public sealed class OneClickImportReportWriter : IOneClickImportReportWriter
 
         try
         {
-            var directory = Path.Combine(projectFolder, "__IMPORT_REPORTS");
+            var guard = new ProjectWritePathGuard(projectFolder);
+            var directory = guard.EnsureSafeDirectoryTarget(
+                Path.Combine(projectFolder, ProjectStructure.ImportReports));
             Directory.CreateDirectory(directory);
-            var path = Path.Combine(directory, $"kanalimport_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+            guard.EnsureSafeDirectoryTarget(directory);
+            var path = guard.EnsureSafeFileTarget(
+                Path.Combine(directory, $"kanalimport_{DateTime.Now:yyyyMMdd_HHmmss}.txt"));
             var text = new StringBuilder()
                 .AppendLine($"Kanalfernseh-Import {DateTime.Now:yyyy-MM-dd HH:mm:ss}")
                 .AppendLine($"Format: {result.Format}")

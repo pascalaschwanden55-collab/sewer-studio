@@ -133,6 +133,43 @@ public sealed class SchachtProtocolApplierTests
         Assert.DoesNotContain("Status offen/abgeschlossen", record.Fields.Keys);
     }
 
+    [Fact]
+    public void Apply_NormalerReimport_BehaeltOriginalUndArchiviertArbeitsstand()
+    {
+        var record = BestehenderSchacht();
+        var geaendert = new LegacyPdfImportService.ParsedSchachtFields(
+            "74467", null, "Kontrollschacht", null, null, null, null, null, null, null);
+
+        SchachtProtocolApplier.Apply(
+            record,
+            "74467",
+            geaendert,
+            new[] { ("Konus", "Riss") },
+            "C:/x/neu.pdf");
+
+        Assert.Equal("Schachtdeckel", Assert.Single(record.Protocol!.Original.Entries).Code);
+        Assert.Equal("Schachtdeckel", Assert.Single(record.Protocol.History).Entries[0].Code);
+        Assert.Equal("Konus", Assert.Single(record.Protocol.Current.Entries).Code);
+    }
+
+    [Fact]
+    public void Apply_UeberschreibtKeinAusdruecklichHandgesetztesSchachtfeld()
+    {
+        var record = BestehenderSchacht();
+        record.SetFieldValue("Funktion", "Von Hand geprueft", FieldSource.Manual, userEdited: true);
+        var geaendert = new LegacyPdfImportService.ParsedSchachtFields(
+            "74467", null, "Absturzschacht", null, null, null, null, null, null, null);
+
+        SchachtProtocolApplier.Apply(
+            record,
+            "74467",
+            geaendert,
+            Array.Empty<(string, string)>(),
+            "C:/x/neu.pdf");
+
+        Assert.Equal("Von Hand geprueft", record.GetFieldValue("Funktion"));
+    }
+
     /// <summary>Ein Schacht, der bereits aus einem frueheren Protokoll aufgebaut wurde.</summary>
     private static SchachtRecord BestehenderSchacht()
     {

@@ -91,8 +91,11 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
         if (fileStaging is not null && !SamePath(fileStaging.ProjectRoot, projectFolder))
             throw new InvalidOperationException("Datei-Staging und Medienziel gehoeren nicht zum selben Projekt.");
 
+        var writePaths = fileStaging is null
+            ? new ProjectWritePathGuard(projectFolder)
+            : null;
         Func<string, string, string> copyFile = fileStaging is null
-            ? CopyFileUnique
+            ? (source, targetDirectory) => CopyFileUnique(source, targetDirectory, writePaths!)
             : (source, targetDirectory) => fileStaging.StageCopy(
                 source,
                 targetDirectory,
@@ -187,9 +190,15 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                 return;
             }
 
-            var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(rawPath, projectFolder);
+            var resolved = ResolveSafeExistingSource(rawPath, projectFolder, out var sourceError);
             if (resolved is not null)
                 return; // Alles OK, Datei existiert
+
+            if (!string.IsNullOrWhiteSpace(sourceError)
+                && sourceError.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase))
+            {
+                messages.Add($"{fieldName}: {sourceError}");
+            }
 
             // Datei nicht gefunden - nach Dateiname in Haltungen-Ordner suchen
             var fileName = Path.GetFileName(rawPath);
@@ -209,19 +218,6 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
             return;
         }
 
-        // UNC vor File.Exists ablehnen: der Zugriff wuerde SMB-Authentifizierung ausloesen (S2-3).
-        if (MediaFileAllowlist.IsUnc(rawPath))
-        {
-            messages.Add($"{fieldName}: UNC-Pfad wird nicht uebernommen: {rawPath}");
-            return;
-        }
-
-        if (!File.Exists(rawPath))
-        {
-            messages.Add($"{fieldName}: Datei nicht gefunden: {rawPath}");
-            return;
-        }
-
         // Nur bekannte Medientypen/Protokoll-PDFs ins Projekt kopieren (S2-1: Exfiltration beliebiger Dateien).
         if (!MediaFileAllowlist.IsImportableMediaOrPdf(rawPath))
         {
@@ -229,11 +225,20 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
             return;
         }
 
+        var safeSource = ResolveSafeExistingSource(rawPath, projectFolder: null, out var absoluteSourceError);
+        if (safeSource is null)
+        {
+            messages.Add($"{fieldName}: {absoluteSourceError ?? "Datei nicht gefunden."}: {rawPath}");
+            return;
+        }
+
         try
         {
-            var subfolder = GetSubfolder(Path.GetExtension(rawPath));
+            var subfolder = GetSubfolder(Path.GetExtension(safeSource));
             var destDir = Path.Combine(holdingRoot, subfolder);
-            var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(rawPath)) : copyFile(rawPath, destDir);
+            var destPath = dryRun
+                ? Path.Combine(destDir, Path.GetFileName(safeSource))
+                : copyFile(safeSource, destDir);
             if (!dryRun)
                 record.SetFieldValue(fieldName,
                     ProjectPathResolver.MakeRelative(destPath, projectFolder),
@@ -278,11 +283,20 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                     continue;
                 }
 
-                var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(trimmed, projectFolder);
+                var resolved = ResolveSafeExistingSource(
+                    trimmed,
+                    projectFolder,
+                    out var relativeSourceError);
                 if (resolved is not null)
                 {
                     newPaths.Add(trimmed);
                     continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(relativeSourceError)
+                    && relativeSourceError.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase))
+                {
+                    messages.Add($"{fieldName}: {relativeSourceError}");
                 }
 
                 // Datei nicht gefunden - suchen
@@ -304,21 +318,6 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                 continue;
             }
 
-            // UNC vor File.Exists ablehnen (S2-3: SMB-Authentifizierung an fremde Hosts).
-            if (MediaFileAllowlist.IsUnc(trimmed))
-            {
-                newPaths.Add(trimmed);
-                messages.Add($"{fieldName}: UNC-Pfad wird nicht uebernommen: {trimmed}");
-                continue;
-            }
-
-            if (!File.Exists(trimmed))
-            {
-                newPaths.Add(trimmed);
-                messages.Add($"{fieldName}: Datei nicht gefunden: {trimmed}");
-                continue;
-            }
-
             // S2-1: Nur bekannte Medientypen/Protokoll-PDFs ins Projekt kopieren.
             if (!MediaFileAllowlist.IsImportableMediaOrPdf(trimmed))
             {
@@ -327,11 +326,21 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                 continue;
             }
 
+            var safeSource = ResolveSafeExistingSource(trimmed, projectFolder: null, out var sourceError);
+            if (safeSource is null)
+            {
+                newPaths.Add(trimmed);
+                messages.Add($"{fieldName}: {sourceError ?? "Datei nicht gefunden."}: {trimmed}");
+                continue;
+            }
+
             try
             {
-                var subfolder = GetSubfolder(Path.GetExtension(trimmed));
+                var subfolder = GetSubfolder(Path.GetExtension(safeSource));
                 var destDir = Path.Combine(holdingRoot, subfolder);
-                var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(trimmed)) : copyFile(trimmed, destDir);
+                var destPath = dryRun
+                    ? Path.Combine(destDir, Path.GetFileName(safeSource))
+                    : copyFile(safeSource, destDir);
                 newPaths.Add(ProjectPathResolver.MakeRelative(destPath, projectFolder));
                 anyChanged = true;
                 copied++;
@@ -392,9 +401,18 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                         continue;
                     }
 
-                    var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(rawPath, projectFolder);
+                    var resolved = ResolveSafeExistingSource(
+                        rawPath,
+                        projectFolder,
+                        out var relativeSourceError);
                     if (resolved is not null)
                         continue; // OK
+
+                    if (!string.IsNullOrWhiteSpace(relativeSourceError)
+                        && relativeSourceError.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase))
+                    {
+                        messages.Add($"Foto: {relativeSourceError}");
+                    }
 
                     var fn = Path.GetFileName(rawPath);
                     var found = SearchFileInHaltungen(projectFolder, holdingRoot, fn, messages, "Foto");
@@ -413,19 +431,6 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                     continue;
                 }
 
-                // UNC vor File.Exists ablehnen (S2-3).
-                if (MediaFileAllowlist.IsUnc(rawPath))
-                {
-                    messages.Add($"Foto UNC-Pfad wird nicht uebernommen: {rawPath}");
-                    continue;
-                }
-
-                if (!File.Exists(rawPath))
-                {
-                    messages.Add($"Foto nicht gefunden: {rawPath}");
-                    continue;
-                }
-
                 // S2-1: Nur bekannte Medientypen ins Projekt kopieren.
                 if (!MediaFileAllowlist.IsMediaFile(rawPath))
                 {
@@ -433,11 +438,20 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                     continue;
                 }
 
+                var safeSource = ResolveSafeExistingSource(rawPath, projectFolder: null, out var sourceError);
+                if (safeSource is null)
+                {
+                    messages.Add($"Foto {sourceError ?? "nicht gefunden"}: {rawPath}");
+                    continue;
+                }
+
                 try
                 {
                     // Fotos liegen GRUPPIERT je Haltung: <Projekt>\Fotos\Haltungen\<Haltung>\
                     var destDir = ProjectStructure.FotosHaltungDir(projectFolder, haltungSan);
-                    var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(rawPath)) : copyFile(rawPath, destDir);
+                    var destPath = dryRun
+                        ? Path.Combine(destDir, Path.GetFileName(safeSource))
+                        : copyFile(safeSource, destDir);
                     if (!dryRun)
                         entry.FotoPaths[i] = ProjectPathResolver.MakeRelative(destPath, projectFolder);
                     copied++;
@@ -484,9 +498,18 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                     continue;
                 }
 
-                var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(finding.FotoPath, projectFolder);
+                var resolved = ResolveSafeExistingSource(
+                    finding.FotoPath,
+                    projectFolder,
+                    out var relativeSourceError);
                 if (resolved is not null)
                     continue; // OK
+
+                if (!string.IsNullOrWhiteSpace(relativeSourceError)
+                    && relativeSourceError.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase))
+                {
+                    messages.Add($"VsaFinding Foto: {relativeSourceError}");
+                }
 
                 var fn = Path.GetFileName(finding.FotoPath);
                 var found = SearchFileInHaltungen(projectFolder, holdingRoot, fn, messages, "VsaFinding Foto");
@@ -505,19 +528,6 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                 continue;
             }
 
-            // UNC vor File.Exists ablehnen (S2-3).
-            if (MediaFileAllowlist.IsUnc(finding.FotoPath))
-            {
-                messages.Add($"VsaFinding Foto UNC-Pfad wird nicht uebernommen: {finding.FotoPath}");
-                continue;
-            }
-
-            if (!File.Exists(finding.FotoPath))
-            {
-                messages.Add($"VsaFinding Foto nicht gefunden: {finding.FotoPath}");
-                continue;
-            }
-
             // S2-1: Nur bekannte Medientypen ins Projekt kopieren.
             if (!MediaFileAllowlist.IsMediaFile(finding.FotoPath))
             {
@@ -525,11 +535,23 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                 continue;
             }
 
+            var safeSource = ResolveSafeExistingSource(
+                finding.FotoPath,
+                projectFolder: null,
+                out var sourceError);
+            if (safeSource is null)
+            {
+                messages.Add($"VsaFinding Foto {sourceError ?? "nicht gefunden"}: {finding.FotoPath}");
+                continue;
+            }
+
             try
             {
                 // Fotos liegen GRUPPIERT je Haltung: <Projekt>\Fotos\Haltungen\<Haltung>\
                 var destDir = ProjectStructure.FotosHaltungDir(projectFolder, haltungSan);
-                var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(finding.FotoPath)) : copyFile(finding.FotoPath, destDir);
+                var destPath = dryRun
+                    ? Path.Combine(destDir, Path.GetFileName(safeSource))
+                    : copyFile(safeSource, destDir);
                 if (!dryRun)
                     finding.FotoPath = ProjectPathResolver.MakeRelative(destPath, projectFolder);
                 copied++;
@@ -575,9 +597,25 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
 
         var destDir = ProjectStructure.FotosHaltungDir(projectFolder, haltungSan);
         var preferred = Path.Combine(destDir, fileName);
-        var source = ResolveExistingPhotoSource(rawPath, projectFolder);
+        if (!ImportSourcePathGuard.TryInspectFile(
+                preferred,
+                out preferred,
+                out var preferredExists,
+                out var preferredError))
+        {
+            messages.Add($"Foto-Ziel nicht sicher: {preferredError}");
+            return false;
+        }
 
-        if (File.Exists(preferred))
+        var source = ResolveSafeExistingSource(rawPath, projectFolder, out var sourceError);
+        if (source is null
+            && !string.IsNullOrWhiteSpace(sourceError)
+            && sourceError.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase))
+        {
+            messages.Add($"Foto: {sourceError}");
+        }
+
+        if (preferredExists)
         {
             if (source is not null
                 && !SamePath(source, preferred)
@@ -628,17 +666,41 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
         }
     }
 
-    private static string? ResolveExistingPhotoSource(string rawPath, string projectFolder)
+    private static string? ResolveSafeExistingSource(
+        string rawPath,
+        string? projectFolder,
+        out string? error)
     {
+        error = null;
         var normalized = rawPath.Replace('/', Path.DirectorySeparatorChar);
-        if (Path.IsPathRooted(normalized))
-            return File.Exists(normalized) ? normalized : null;
+        if (!Path.IsPathRooted(normalized))
+        {
+            if (string.IsNullOrWhiteSpace(projectFolder)
+                || !ProjectPathResolver.IsSafeRelativeProjectPath(rawPath))
+            {
+                error = "Unsicherer relativer Quellenpfad.";
+                return null;
+            }
 
-        if (!ProjectPathResolver.IsSafeRelativeProjectPath(rawPath))
+            normalized = Path.Combine(projectFolder, normalized);
+        }
+
+        if (!ImportSourcePathGuard.TryInspectFile(
+                normalized,
+                out var safePath,
+                out var exists,
+                out error))
+        {
             return null;
+        }
 
-        var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(rawPath, projectFolder);
-        return resolved is not null && File.Exists(resolved) ? resolved : null;
+        if (!exists)
+        {
+            error = "Datei nicht gefunden.";
+            return null;
+        }
+
+        return safePath;
     }
 
     private static void DeduplicatePhotoPaths(IList<string> paths)
@@ -700,23 +762,14 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
         if (ProjectPathResolver.IsRelative(rawPath))
         {
             // Bereits relativ: ok, wenn aufloesbar; sonst nur protokollieren (keine globale Schacht-Reparatur).
-            if (ProjectPathResolver.IsSafeRelativeProjectPath(rawPath)
-                && ProjectPathResolver.ResolveFilePathFromProjectFolder(rawPath, projectFolder) is not null)
+            string? sourceError = null;
+            var resolved = ProjectPathResolver.IsSafeRelativeProjectPath(rawPath)
+                ? ResolveSafeExistingSource(rawPath, projectFolder, out sourceError)
+                : null;
+            if (resolved is not null)
                 return;
-            messages.Add($"Schacht {fieldName}: relative Datei nicht gefunden: {rawPath}");
-            return;
-        }
-
-        // UNC vor File.Exists ablehnen (S2-3: SMB-Authentifizierung an fremde Hosts).
-        if (MediaFileAllowlist.IsUnc(rawPath))
-        {
-            messages.Add($"Schacht {fieldName}: UNC-Pfad wird nicht uebernommen: {rawPath}");
-            return;
-        }
-
-        if (!File.Exists(rawPath))
-        {
-            messages.Add($"Schacht {fieldName}: Datei nicht gefunden: {rawPath}");
+            messages.Add(
+                $"Schacht {fieldName}: {sourceError ?? "relative Datei nicht gefunden"}: {rawPath}");
             return;
         }
 
@@ -727,11 +780,21 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
             return;
         }
 
+        var safeSource = ResolveSafeExistingSource(rawPath, projectFolder: null, out var absoluteSourceError);
+        if (safeSource is null)
+        {
+            messages.Add(
+                $"Schacht {fieldName}: {absoluteSourceError ?? "Datei nicht gefunden"}: {rawPath}");
+            return;
+        }
+
         try
         {
-            var subfolder = GetSubfolder(Path.GetExtension(rawPath));
+            var subfolder = GetSubfolder(Path.GetExtension(safeSource));
             var destDir = Path.Combine(schachtRoot, subfolder);
-            var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(rawPath)) : copyFile(rawPath, destDir);
+            var destPath = dryRun
+                ? Path.Combine(destDir, Path.GetFileName(safeSource))
+                : copyFile(safeSource, destDir);
             if (!dryRun)
                 record.SetFieldValue(fieldName, ProjectPathResolver.MakeRelative(destPath, projectFolder));
             copied++;
@@ -761,9 +824,14 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
         if (string.IsNullOrWhiteSpace(fileName))
             return null;
 
-        if (Directory.Exists(holdingRoot))
+        if (ImportSourcePathGuard.TryInspectDirectory(
+                holdingRoot,
+                out var safeHoldingRoot,
+                out var holdingRootExists,
+                out var holdingRootError)
+            && holdingRootExists)
         {
-            var ownMatches = FindMatchingFiles(holdingRoot, fileName, max: 2);
+            var ownMatches = FindMatchingFiles(safeHoldingRoot, fileName, max: 2);
             if (ownMatches.Count == 1)
                 return ownMatches[0];
             if (ownMatches.Count > 1)
@@ -772,12 +840,25 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                 return null;
             }
         }
+        else if (!string.IsNullOrWhiteSpace(holdingRootError))
+        {
+            messages.Add($"{context}: Eigener Haltungsordner nicht sicher: {holdingRootError}");
+        }
 
         var haltungenRoot = Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt);
-        if (!Directory.Exists(haltungenRoot))
+        if (!ImportSourcePathGuard.TryInspectDirectory(
+                haltungenRoot,
+                out var safeHaltungenRoot,
+                out var haltungenRootExists,
+                out var haltungenRootError)
+            || !haltungenRootExists)
+        {
+            if (!string.IsNullOrWhiteSpace(haltungenRootError))
+                messages.Add($"{context}: Haltungsbaum nicht sicher: {haltungenRootError}");
             return null;
+        }
 
-        var globalMatches = FindMatchingFiles(haltungenRoot, fileName, max: 2);
+        var globalMatches = FindMatchingFiles(safeHaltungenRoot, fileName, max: 2);
         if (globalMatches.Count == 1)
             return globalMatches[0];
         if (globalMatches.Count > 1)
@@ -819,11 +900,16 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
     /// Kopiert eine Datei in den Zielordner. Nur wirklich gleicher Inhalt wird
     /// wiederverwendet; eine Namenskollision erhaelt einen eindeutigen Suffix.
     /// </summary>
-    private static string CopyFileUnique(string source, string destDir)
+    private static string CopyFileUnique(
+        string source,
+        string destDir,
+        ProjectWritePathGuard writePaths)
     {
+        destDir = writePaths.EnsureSafeDirectoryTarget(destDir);
+        writePaths.EnsureSafeDirectoryTarget(destDir);
         Directory.CreateDirectory(destDir);
         var fileName = Path.GetFileName(source);
-        var dest = Path.Combine(destDir, fileName);
+        var dest = writePaths.EnsureSafeFileTarget(Path.Combine(destDir, fileName));
 
         if (File.Exists(dest))
         {
@@ -833,17 +919,20 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
             var name = Path.GetFileNameWithoutExtension(fileName);
             var ext = Path.GetExtension(fileName);
             var stem = $"{name}_{DateTime.Now:yyyyMMdd_HHmmss}";
-            dest = Path.Combine(destDir, stem + ext);
+            dest = writePaths.EnsureSafeFileTarget(Path.Combine(destDir, stem + ext));
             var suffix = 2;
             while (File.Exists(dest))
             {
                 if (FileContentComparer.FilesEqual(source, dest))
                     return dest;
-                dest = Path.Combine(destDir, $"{stem}_{suffix}{ext}");
+                dest = writePaths.EnsureSafeFileTarget(
+                    Path.Combine(destDir, $"{stem}_{suffix}{ext}"));
                 suffix++;
             }
         }
 
+        writePaths.EnsureSafeDirectoryTarget(destDir);
+        writePaths.EnsureSafeFileTarget(dest);
         File.Copy(source, dest, overwrite: false);
         return dest;
     }

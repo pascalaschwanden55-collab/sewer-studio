@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.IO;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Diagnostics;
@@ -17,6 +18,562 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class ImportPageViewModelProjectToolsTests : IDisposable
 {
     private readonly ILoggerFactory _loggerFactory = LoggerFactory.Create(_ => { });
+
+    [Fact]
+    public void Projektwerkzeuge_werden_durch_die_gemeinsame_Importsperre_deaktiviert()
+    {
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory);
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        var viewModel = new ImportPageViewModel(shell, services);
+
+        Assert.True(viewModel.MakeProjectPortableCommand.CanExecute(null));
+        Assert.True(viewModel.AssignPhotosFromFolderCommand.CanExecute(null));
+        Assert.True(viewModel.ProtokollNeuGenerierenCommand.CanExecute(null));
+        Assert.True(viewModel.ImportSchachtPdfsFolderCommand.CanExecute(null));
+        Assert.True(viewModel.ImportKanalProjektCommand.CanExecute(null));
+
+        viewModel.IsImportInProgress = true;
+
+        Assert.False(viewModel.MakeProjectPortableCommand.CanExecute(null));
+        Assert.False(viewModel.AssignPhotosFromFolderCommand.CanExecute(null));
+        Assert.False(viewModel.ProtokollNeuGenerierenCommand.CanExecute(null));
+        Assert.False(viewModel.ImportSchachtPdfsFolderCommand.CanExecute(null));
+        Assert.False(viewModel.ImportKanalProjektCommand.CanExecute(null));
+
+        viewModel.IsImportInProgress = false;
+
+        Assert.True(viewModel.MakeProjectPortableCommand.CanExecute(null));
+        Assert.True(viewModel.AssignPhotosFromFolderCommand.CanExecute(null));
+        Assert.True(viewModel.ProtokollNeuGenerierenCommand.CanExecute(null));
+        Assert.True(viewModel.ImportSchachtPdfsFolderCommand.CanExecute(null));
+        Assert.True(viewModel.ImportKanalProjektCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Direkt_gestartete_Projektwerkzeuge_laufen_nicht_parallel()
+    {
+        using var infoEntered = new ManualResetEventSlim();
+        using var releaseInfo = new ManualResetEventSlim();
+        var dialogs = new DialogFake
+        {
+            InfoEntered = infoEntered,
+            ReleaseInfo = releaseInfo
+        };
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory)
+        {
+            Dialogs = dialogs
+        };
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        var viewModel = new ImportPageViewModel(shell, services);
+
+        var first = Task.Run(() => viewModel.MakeProjectPortableCommand.ExecuteAsync(null));
+        Assert.True(infoEntered.Wait(TimeSpan.FromSeconds(5)), "Erster Projektbefehl wurde nicht gestartet.");
+
+        Assert.True(viewModel.IsImportInProgress);
+        Assert.False(viewModel.AssignPhotosFromFolderCommand.CanExecute(null));
+        await viewModel.AssignPhotosFromFolderCommand.ExecuteAsync(null);
+        Assert.Equal(1, dialogs.InfoCalls);
+        await viewModel.ImportPdfCommand.ExecuteAsync(null);
+        Assert.Equal(0, dialogs.OpenFilesCalls);
+
+        releaseInfo.Set();
+        await first;
+
+        Assert.False(viewModel.IsImportInProgress);
+        Assert.True(viewModel.AssignPhotosFromFolderCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Neu_erzeugte_Importseite_uebernimmt_die_laufende_Importsperre()
+    {
+        using var infoEntered = new ManualResetEventSlim();
+        using var releaseInfo = new ManualResetEventSlim();
+        var dialogs = new DialogFake
+        {
+            InfoEntered = infoEntered,
+            ReleaseInfo = releaseInfo
+        };
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory)
+        {
+            Dialogs = dialogs
+        };
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        var firstViewModel = new ImportPageViewModel(shell, services);
+
+        var first = Task.Run(() => firstViewModel.MakeProjectPortableCommand.ExecuteAsync(null));
+        Assert.True(infoEntered.Wait(TimeSpan.FromSeconds(5)), "Erste Importseite wurde nicht gestartet.");
+
+        var secondViewModel = new ImportPageViewModel(shell, services);
+        var secondLeaveGuard = Assert.IsAssignableFrom<IConfirmLeave>(secondViewModel);
+        try
+        {
+            Assert.True(secondViewModel.IsImportInProgress);
+            Assert.False(secondViewModel.AssignPhotosFromFolderCommand.CanExecute(null));
+            Assert.False(secondLeaveGuard.ConfirmLeave());
+
+            await secondViewModel.AssignPhotosFromFolderCommand.ExecuteAsync(null);
+
+            Assert.Equal(1, dialogs.InfoCalls);
+        }
+        finally
+        {
+            releaseInfo.Set();
+            await first;
+        }
+
+        Assert.False(firstViewModel.IsImportInProgress);
+        Assert.False(secondViewModel.IsImportInProgress);
+        Assert.True(secondViewModel.AssignPhotosFromFolderCommand.CanExecute(null));
+        Assert.True(secondLeaveGuard.ConfirmLeave());
+    }
+
+    [Fact]
+    public async Task Laufender_Import_verhindert_Seiten_und_Projektwechsel()
+    {
+        using var infoEntered = new ManualResetEventSlim();
+        using var releaseInfo = new ManualResetEventSlim();
+        var dialogs = new DialogFake
+        {
+            InfoEntered = infoEntered,
+            ReleaseInfo = releaseInfo
+        };
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory)
+        {
+            Dialogs = dialogs
+        };
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        var viewModel = new ImportPageViewModel(shell, services);
+        var guard = Assert.IsAssignableFrom<IConfirmLeave>(viewModel);
+
+        var running = Task.Run(() => viewModel.MakeProjectPortableCommand.ExecuteAsync(null));
+        Assert.True(infoEntered.Wait(TimeSpan.FromSeconds(5)), "Importseite wurde nicht gestartet.");
+
+        try
+        {
+            Assert.False(ShellLeaveGuard.CanLeave(viewModel));
+            Assert.Contains("Import", shell.Subtitle, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            releaseInfo.Set();
+            await running;
+        }
+
+        Assert.True(ShellLeaveGuard.CanLeave(viewModel));
+    }
+
+    [Fact]
+    public async Task Laufender_Import_sperrt_manuelles_Speichern_aber_nicht_den_internen_Save()
+    {
+        using var infoEntered = new ManualResetEventSlim();
+        using var releaseInfo = new ManualResetEventSlim();
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "SewerStudio_ImportSaveGuard_" + Guid.NewGuid().ToString("N"));
+        var projectPath = Path.Combine(root, "projekt.json");
+        var dialogs = new DialogFake
+        {
+            InfoEntered = infoEntered,
+            ReleaseInfo = releaseInfo
+        };
+        var settings = new AppSettings
+        {
+            EnableRestorePoints = false,
+            LastProjectPath = projectPath
+        };
+        var services = new ServiceProvider(
+            settings,
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory)
+        {
+            Dialogs = dialogs
+        };
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        shell.EnterWorkspaceOn("Uebersicht");
+        shell.HasPersistedProject = true;
+        shell.Project.Name = "Vom Import gespeichert";
+        shell.Project.Data.Add(new HaltungRecord());
+
+        // Absichtlich nicht die aktuelle Seite: Auch ein direkter Aufruf einer neu
+        // erzeugten Importseite muss die Shell desselben Projekts sperren.
+        var viewModel = new ImportPageViewModel(shell, services);
+        var saveCanExecuteChanged = 0;
+        var saveAsCanExecuteChanged = 0;
+        shell.SaveCommand.CanExecuteChanged += (_, _) =>
+            Interlocked.Increment(ref saveCanExecuteChanged);
+        shell.SaveAsProjectCommand.CanExecuteChanged += (_, _) =>
+            Interlocked.Increment(ref saveAsCanExecuteChanged);
+        var running = Task.Run(() => viewModel.MakeProjectPortableCommand.ExecuteAsync(null));
+        Assert.True(infoEntered.Wait(TimeSpan.FromSeconds(5)), "Importseite wurde nicht gestartet.");
+
+        try
+        {
+            Assert.True(Volatile.Read(ref saveCanExecuteChanged) > 0);
+            Assert.True(Volatile.Read(ref saveAsCanExecuteChanged) > 0);
+            Assert.False(shell.SaveCommand.CanExecute(null));
+            Assert.False(shell.SaveAsProjectCommand.CanExecute(null));
+
+            // RelayCommand.Execute kann auch direkt aufgerufen werden. Die Methode
+            // selbst muss deshalb ebenfalls vor dem Dialog abbrechen.
+            shell.SaveCommand.Execute(null);
+            shell.SaveAsProjectCommand.Execute(null);
+            Assert.False(shell.TrySaveProjectAs());
+            Assert.Equal(0, dialogs.SaveFileCalls);
+            Assert.Contains("Import", shell.Subtitle, StringComparison.OrdinalIgnoreCase);
+
+            // Bis der Abschlussdialog erreicht ist, hat der Import bereits ueber
+            // seinen internen Delegate gespeichert.
+            Assert.True(File.Exists(projectPath));
+            var importedState = services.Projects.Load(projectPath);
+            Assert.True(importedState.Ok, importedState.ErrorMessage);
+            Assert.Equal("Vom Import gespeichert", importedState.Value!.Name);
+
+            // Derselbe oeffentliche Weg wird vom modeless Player benutzt. Er darf
+            // waehrend des Imports keinen spaeteren Teilstand persistieren.
+            shell.Project.Name = "Player-Zwischenstand";
+            Assert.False(shell.TrySaveProject());
+            var afterPublicSave = services.Projects.Load(projectPath);
+            Assert.True(afterPublicSave.Ok, afterPublicSave.ErrorMessage);
+            Assert.Equal("Vom Import gespeichert", afterPublicSave.Value!.Name);
+        }
+        finally
+        {
+            releaseInfo.Set();
+            await running;
+            try
+            {
+                if (Directory.Exists(root))
+                    Directory.Delete(root, recursive: true);
+            }
+            catch
+            {
+                // Best-effort-Cleanup fuer den Testordner.
+            }
+        }
+
+        Assert.True(Volatile.Read(ref saveCanExecuteChanged) > 1);
+        Assert.True(Volatile.Read(ref saveAsCanExecuteChanged) > 1);
+        Assert.True(shell.SaveCommand.CanExecute(null));
+        Assert.True(shell.SaveAsProjectCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Verdeckter_Import_sperrt_die_gesamte_Shell_bis_zur_Freigabe()
+    {
+        using var infoEntered = new ManualResetEventSlim();
+        using var releaseInfo = new ManualResetEventSlim();
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "SewerStudio_ImportShellGuard_" + Guid.NewGuid().ToString("N"));
+        var otherProjectPath = Path.Combine(root, "anderes-projekt.json");
+        Directory.CreateDirectory(root);
+        var dialogs = new DialogFake
+        {
+            InfoEntered = infoEntered,
+            ReleaseInfo = releaseInfo
+        };
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory)
+        {
+            Dialogs = dialogs
+        };
+        Assert.True(
+            services.Projects.Save(new Project { Name = "Anderes Projekt" }, otherProjectPath).Ok);
+
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        shell.EnterWorkspaceOn("Uebersicht");
+        shell.Project.Name = "Aktuelles Projekt";
+        var currentPage = shell.CurrentPage;
+        var currentProject = shell.Project;
+
+        // Die laufende VM ist nicht CurrentPage. Der Schutz muss daher wirklich an
+        // der Shell haengen und darf nicht nur den sichtbaren Seitentyp pruefen.
+        var hiddenImportPage = new ImportPageViewModel(shell, services);
+        var running = Task.Run(() => hiddenImportPage.MakeProjectPortableCommand.ExecuteAsync(null));
+        Assert.True(infoEntered.Wait(TimeSpan.FromSeconds(5)), "Importseite wurde nicht gestartet.");
+
+        try
+        {
+            Assert.False(shell.ConfirmLeaveCurrentContext());
+            Assert.False(shell.ConfirmDiscardUnsavedChanges());
+            Assert.False(shell.NewProjectCommand.CanExecute(null));
+            Assert.False(shell.SwitchProjectCommand.CanExecute(null));
+            Assert.False(shell.OpenProjectCommand.CanExecute(null));
+
+            shell.NavigateTo("Import");
+            shell.NewProjectCommand.Execute(null);
+            shell.SwitchProjectCommand.Execute(null);
+            shell.EnterLauncher();
+            await Assert.IsAssignableFrom<CommunityToolkit.Mvvm.Input.IAsyncRelayCommand>(
+                shell.OpenProjectCommand).ExecuteAsync(null);
+            Assert.False(await shell.TryOpenProjectWithDialogAsync());
+            Assert.False(shell.TryOpenProject(otherProjectPath));
+
+            Assert.Same(currentPage, shell.CurrentPage);
+            Assert.Same(currentProject, shell.Project);
+            Assert.Equal(ShellMode.Workspace, shell.CurrentMode);
+            Assert.Equal("Aktuelles Projekt", shell.Project.Name);
+            Assert.Equal(0, dialogs.OpenFileCalls);
+            Assert.Contains("Import", shell.Subtitle, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            releaseInfo.Set();
+            await running;
+        }
+
+        try
+        {
+            Assert.True(shell.ConfirmLeaveCurrentContext());
+            Assert.True(shell.ConfirmDiscardUnsavedChanges());
+            Assert.True(shell.NewProjectCommand.CanExecute(null));
+            Assert.True(shell.SwitchProjectCommand.CanExecute(null));
+            Assert.True(shell.OpenProjectCommand.CanExecute(null));
+            Assert.True(shell.TryOpenProject(otherProjectPath));
+            Assert.Equal("Anderes Projekt", shell.Project.Name);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(root))
+                    Directory.Delete(root, recursive: true);
+            }
+            catch
+            {
+                // Best-effort-Cleanup fuer den Testordner.
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Spaete_Freigabemeldung_haelt_die_zentrale_reservierung_bis_zum_kompletten_release()
+    {
+        using var infoEntered = new ManualResetEventSlim();
+        using var releaseInfo = new ManualResetEventSlim();
+        using var releaseNotificationEntered = new ManualResetEventSlim();
+        using var continueOldRelease = new ManualResetEventSlim();
+        var dialogs = new DialogFake
+        {
+            InfoEntered = infoEntered,
+            ReleaseInfo = releaseInfo
+        };
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory)
+        {
+            Dialogs = dialogs
+        };
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        var firstViewModel = new ImportPageViewModel(shell, services);
+        var secondViewModel = new ImportPageViewModel(shell, services);
+
+        var firstRun = Task.Run(() => firstViewModel.MakeProjectPortableCommand.ExecuteAsync(null));
+        Assert.True(infoEntered.Wait(TimeSpan.FromSeconds(5)), "Erster Import wurde nicht gestartet.");
+
+        void HoldOldRelease(object? sender, PropertyChangedEventArgs args)
+        {
+            _ = sender;
+            if (args.PropertyName != nameof(ImportPageViewModel.IsImportInProgress)
+                || secondViewModel.IsImportInProgress)
+            {
+                return;
+            }
+
+            releaseNotificationEntered.Set();
+            continueOldRelease.Wait(TimeSpan.FromSeconds(5));
+        }
+
+        secondViewModel.PropertyChanged += HoldOldRelease;
+        Task? secondRun = null;
+        try
+        {
+            releaseInfo.Set();
+            Assert.True(
+                releaseNotificationEntered.Wait(TimeSpan.FromSeconds(5)),
+                "Alte Freigabemeldung wurde nicht angehalten.");
+            releaseInfo.Reset();
+
+            var thirdViewModel = new ImportPageViewModel(shell, services);
+            var rejectedRun = Task.Run(
+                () => thirdViewModel.MakeProjectPortableCommand.ExecuteAsync(null));
+            await rejectedRun;
+            Assert.False(thirdViewModel.IsImportInProgress);
+            Assert.Equal(1, dialogs.InfoCalls);
+
+            continueOldRelease.Set();
+            await firstRun;
+
+            secondRun = Task.Run(
+                () => thirdViewModel.MakeProjectPortableCommand.ExecuteAsync(null));
+            Assert.True(
+                SpinWait.SpinUntil(() => thirdViewModel.IsImportInProgress, TimeSpan.FromSeconds(5)),
+                "Zweite Sperre wurde nach der vollstaendigen Freigabe nicht gesetzt.");
+            Assert.True(
+                SpinWait.SpinUntil(() => dialogs.InfoCalls >= 2, TimeSpan.FromSeconds(5)),
+                "Zweiter Import wurde nach der vollstaendigen Freigabe nicht ausgefuehrt.");
+
+            Assert.True(firstViewModel.IsImportInProgress);
+            Assert.True(secondViewModel.IsImportInProgress);
+            Assert.True(thirdViewModel.IsImportInProgress);
+        }
+        finally
+        {
+            secondViewModel.PropertyChanged -= HoldOldRelease;
+            continueOldRelease.Set();
+            releaseInfo.Set();
+            await firstRun;
+            if (secondRun is not null)
+                await secondRun;
+        }
+
+        Assert.False(firstViewModel.IsImportInProgress);
+        Assert.False(secondViewModel.IsImportInProgress);
+    }
+
+    [Fact]
+    public async Task Fehler_in_Zustandsmeldung_laesst_die_Importsperre_nicht_haengen()
+    {
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory);
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        shell.EnterWorkspaceOn("Uebersicht");
+        var viewModel = new ImportPageViewModel(shell, services);
+
+        void ThrowWhenStarted(object? sender, PropertyChangedEventArgs args)
+        {
+            _ = sender;
+            if (args.PropertyName == nameof(ImportPageViewModel.IsImportInProgress)
+                && viewModel.IsImportInProgress)
+            {
+                throw new InvalidOperationException("Fehlerhafter UI-Empfaenger");
+            }
+        }
+
+        viewModel.PropertyChanged += ThrowWhenStarted;
+        try
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => viewModel.MakeProjectPortableCommand.ExecuteAsync(null));
+        }
+        finally
+        {
+            viewModel.PropertyChanged -= ThrowWhenStarted;
+        }
+
+        Assert.False(viewModel.IsImportInProgress);
+        Assert.True(viewModel.MakeProjectPortableCommand.CanExecute(null));
+        Assert.True(((IConfirmLeave)viewModel).ConfirmLeave());
+        Assert.True(shell.SaveCommand.CanExecute(null));
+        Assert.True(shell.SaveAsProjectCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Fehler_in_Shell_Commandmeldung_laesst_die_Importsperre_nicht_haengen()
+    {
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory);
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        shell.EnterWorkspaceOn("Uebersicht");
+        var viewModel = new ImportPageViewModel(shell, services);
+
+        void ThrowWhenSaveGetsBlocked(object? sender, EventArgs args)
+        {
+            _ = sender;
+            _ = args;
+            if (!shell.SaveAsProjectCommand.CanExecute(null))
+                throw new InvalidOperationException("Fehlerhafter Shell-Empfaenger");
+        }
+
+        shell.SaveAsProjectCommand.CanExecuteChanged += ThrowWhenSaveGetsBlocked;
+        try
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => viewModel.MakeProjectPortableCommand.ExecuteAsync(null));
+        }
+        finally
+        {
+            shell.SaveAsProjectCommand.CanExecuteChanged -= ThrowWhenSaveGetsBlocked;
+        }
+
+        Assert.False(viewModel.IsImportInProgress);
+        Assert.True(viewModel.MakeProjectPortableCommand.CanExecute(null));
+        Assert.True(shell.SaveCommand.CanExecute(null));
+        Assert.True(shell.SaveAsProjectCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Projektwerkzeug_gibt_die_Importsperre_nach_einem_Fehler_frei()
+    {
+        var dialogs = new DialogFake
+        {
+            InfoException = new InvalidOperationException("Testfehler")
+        };
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            _loggerFactory.CreateLogger("test"),
+            _loggerFactory)
+        {
+            Dialogs = dialogs
+        };
+        using var shell = new ShellViewModel(
+            services,
+            new SystemMonitorService(enableHardwareSensorInit: false));
+        var viewModel = new ImportPageViewModel(shell, services);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => viewModel.ProtokollNeuGenerierenCommand.ExecuteAsync(null));
+
+        Assert.False(viewModel.IsImportInProgress);
+        Assert.True(viewModel.MakeProjectPortableCommand.CanExecute(null));
+    }
 
     [Fact]
     public async Task Projekt_portabel_ohne_gespeichertes_Projekt_zeigt_Hinweis()
@@ -1270,7 +1827,18 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
 
     private sealed class DialogFake : IDialogService
     {
+        private int _infoCalls;
+        private int _openFileCalls;
+        private int _saveFileCalls;
+
         public string? SelectedFolder { get; init; }
+        public ManualResetEventSlim? InfoEntered { get; init; }
+        public ManualResetEventSlim? ReleaseInfo { get; init; }
+        public Exception? InfoException { get; init; }
+        public int InfoCalls => Volatile.Read(ref _infoCalls);
+        public int OpenFileCalls => Volatile.Read(ref _openFileCalls);
+        public int SaveFileCalls => Volatile.Read(ref _saveFileCalls);
+        public int OpenFilesCalls { get; private set; }
         public string LastInfoMessage { get; private set; } = string.Empty;
         public string LastInfoTitle { get; private set; } = string.Empty;
         public string LastWarnMessage { get; private set; } = string.Empty;
@@ -1278,12 +1846,29 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         public string LastErrorMessage { get; private set; } = string.Empty;
         public string LastErrorTitle { get; private set; } = string.Empty;
 
-        public string? OpenFile(string title, string filter, string? initialDirectory = null) => null;
-        public string? SaveFile(string title, string filter, string? defaultExt = null, string? defaultFileName = null) => null;
-        public string[] OpenFiles(string title, string filter) => Array.Empty<string>();
+        public string? OpenFile(string title, string filter, string? initialDirectory = null)
+        {
+            Interlocked.Increment(ref _openFileCalls);
+            return null;
+        }
+        public string? SaveFile(string title, string filter, string? defaultExt = null, string? defaultFileName = null)
+        {
+            Interlocked.Increment(ref _saveFileCalls);
+            return null;
+        }
+        public string[] OpenFiles(string title, string filter)
+        {
+            OpenFilesCalls++;
+            return Array.Empty<string>();
+        }
         public string? SelectFolder(string title, string? initialPath = null) => SelectedFolder;
         public void Info(string message, string title = "Hinweis")
         {
+            Interlocked.Increment(ref _infoCalls);
+            InfoEntered?.Set();
+            ReleaseInfo?.Wait(TimeSpan.FromSeconds(5));
+            if (InfoException is not null)
+                throw InfoException;
             LastInfoMessage = message;
             LastInfoTitle = title;
         }

@@ -89,7 +89,7 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
             preparedPdfCount: 9,
             created: 2,
             updated: 7,
-            archivedOlderProtocols: 0,
+            skippedOlderPdfCandidates: 0,
             skippedDirectoryCount: 0,
             failures: []);
 
@@ -115,7 +115,7 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
             preparedPdfCount: 11,
             created: 3,
             updated: 8,
-            archivedOlderProtocols: 4,
+            skippedOlderPdfCandidates: 4,
             skippedDirectoryCount: 2,
             failures: failures);
 
@@ -126,7 +126,7 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
                 "Eingelesene Schachtprotokolle: 11",
                 "Schaechte neu angelegt: 3",
                 "Schaechte aktualisiert: 8",
-                "Aeltere Protokolle archiviert: 4 (Stammdaten stammen aus dem neuesten Protokoll)",
+                "Aeltere PDF-Kandidaten uebersprungen: 4 (sie bleiben erhalten; Stammdaten stammen aus dem neuesten Protokoll)",
                 "Nicht lesbare Unterordner uebersprungen: 2",
                 "Fehler: 10",
                 "- Fehler 1",
@@ -153,7 +153,7 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
             preparedPdfCount: 0,
             created: 0,
             updated: 0,
-            archivedOlderProtocols: 0,
+            skippedOlderPdfCandidates: 0,
             skippedDirectoryCount: 0,
             failures: failures);
 
@@ -164,10 +164,10 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
     [Theory]
     [InlineData(3, 0, true, false)]
     [InlineData(0, 2, false, true)]
-    public void BuildFolderImportSummary_includes_archive_and_skipped_folder_lines_independently(
-        int archivedOlderProtocols,
+    public void BuildFolderImportSummary_includes_older_pdf_and_skipped_folder_lines_independently(
+        int skippedOlderPdfCandidates,
         int skippedDirectoryCount,
-        bool expectsArchiveLine,
+        bool expectsOlderPdfLine,
         bool expectsSkippedLine)
     {
         var summary = SchachtProtocolFolderImportPolicy.BuildFolderImportSummary(
@@ -175,13 +175,13 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
             preparedPdfCount: 1,
             created: 0,
             updated: 1,
-            archivedOlderProtocols: archivedOlderProtocols,
+            skippedOlderPdfCandidates: skippedOlderPdfCandidates,
             skippedDirectoryCount: skippedDirectoryCount,
             failures: []);
 
         Assert.Equal(
-            expectsArchiveLine,
-            summary.Contains("Aeltere Protokolle archiviert:", StringComparison.Ordinal));
+            expectsOlderPdfLine,
+            summary.Contains("Aeltere PDF-Kandidaten uebersprungen:", StringComparison.Ordinal));
         Assert.Equal(
             expectsSkippedLine,
             summary.Contains("Nicht lesbare Unterordner uebersprungen:", StringComparison.Ordinal));
@@ -245,6 +245,59 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
 
         Assert.Null(directlyInLegacyRoot);
         Assert.Equal("99887", inLegacyShaftFolder);
+    }
+
+    [Fact]
+    public void ResolveCanonicalShaftFolder_SanierungsordnerUndTiefereEbenen_LiefernBestehendenSchacht()
+    {
+        var distributionRoot = Path.Combine(_root, "Projekt", ProjectStructure.SchaechteVerteilt);
+        var pdfPath = Path.Combine(
+            distributionRoot,
+            "Gemeinde",
+            "2026",
+            "80454",
+            "20260609_80454_Saniert 2026",
+            "Unterlagen",
+            "20260609_80454.pdf");
+
+        var resolved = SchachtProtocolFolderImportPolicy.ResolveCanonicalShaftFolder(
+            pdfPath,
+            parsedShaftNumber: "falsch-erkannt",
+            existingShaftNumbers: new[] { "80454", "99887" },
+            distributionRoots: new[] { distributionRoot });
+        var resolvedFromParsedNumber = SchachtProtocolFolderImportPolicy.ResolveCanonicalShaftFolder(
+            pdfPath,
+            parsedShaftNumber: "80454",
+            existingShaftNumbers: Array.Empty<string>(),
+            distributionRoots: new[] { distributionRoot });
+        var ambiguousFolder = SchachtProtocolFolderImportPolicy.ResolveCanonicalShaftFolder(
+            Path.Combine(distributionRoot, "Gemeinde", "2026", "Unterlagen", "protokoll.pdf"),
+            parsedShaftNumber: "99999",
+            existingShaftNumbers: Array.Empty<string>(),
+            distributionRoots: new[] { distributionRoot });
+
+        Assert.Equal("80454", resolved);
+        Assert.Equal("80454", resolvedFromParsedNumber);
+        Assert.Null(ambiguousFolder);
+        Assert.NotEqual("20260609_80454_Saniert 2026", resolved);
+        Assert.NotEqual("Unterlagen", resolved);
+    }
+
+    [Fact]
+    public void BuildFolderImportSummary_AelterePdfKandidatenWerdenNichtAlsArchivierteRevisionenGemeldet()
+    {
+        var summary = SchachtProtocolFolderImportPolicy.BuildFolderImportSummary(
+            sourcePdfCount: 2,
+            preparedPdfCount: 2,
+            created: 0,
+            updated: 1,
+            skippedOlderPdfCandidates: 1,
+            skippedDirectoryCount: 0,
+            failures: []);
+
+        Assert.Contains("Aeltere PDF-Kandidaten uebersprungen: 1", summary, StringComparison.Ordinal);
+        Assert.Contains("bleiben erhalten", summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("Protokolle archiviert", summary, StringComparison.Ordinal);
     }
 
     private SchachtProtocolFolderCandidate Candidate(string shaft, string date, string fileName)

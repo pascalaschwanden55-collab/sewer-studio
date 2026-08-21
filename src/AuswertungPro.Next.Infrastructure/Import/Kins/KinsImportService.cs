@@ -212,7 +212,17 @@ public sealed class KinsImportService : IKinsImportService
                         messages.Add($"KINS-TXT: Keine Beobachtungen fuer {holdingName} in {Path.GetFileName(dataFile)}");
                     }
 
-                    ApplyProtocol(record, currentEntries, protocolService, $"Import (KINS kiDVDaten.txt: {Path.GetFileName(dataFile)})");
+                    // Ein Header ohne Beobachtungszeilen liefert Stammdaten, aber kein
+                    // neues Protokoll. Eine leere Revision wuerde ein vorhandenes,
+                    // fachlich geprueftes Protokoll unsichtbar machen.
+                    if (currentEntries.Count > 0)
+                    {
+                        ApplyProtocol(
+                            record,
+                            currentEntries,
+                            protocolService,
+                            $"Import (KINS kiDVDaten.txt: {Path.GetFileName(dataFile)})");
+                    }
                     updated++;
 
                     currentHeader = null;
@@ -461,18 +471,21 @@ public sealed class KinsImportService : IKinsImportService
         if (exact is not null)
             return exact;
 
-        foreach (var record in project.Data)
-        {
-            var candidate = NormalizeHoldingKey(record.GetFieldValue("Haltungsname"));
-            if (string.IsNullOrWhiteSpace(candidate))
-                continue;
-            // Kein unscharfes Contains mehr (100-200 wuerde sonst 100-2000 treffen).
-            // Nur Praefix-Match an einer Segmentgrenze zulassen.
-            if (Common.HoldingKeyMatch.IsBoundaryPrefixMatch(candidate, key))
-                return record;
-        }
+        // Kein unscharfes Contains mehr (100-200 wuerde sonst 100-2000 treffen).
+        // Ein Segment-Praefix ist nur dann fachlich eindeutig, wenn genau ein
+        // Bestandsdatensatz passt. Bei zwei Segmenten darf nicht die Listenreihenfolge
+        // entscheiden; dann wird unten ein neuer exakter Datensatz angelegt.
+        var prefixMatches = project.Data
+            .Where(record =>
+            {
+                var candidate = NormalizeHoldingKey(record.GetFieldValue("Haltungsname"));
+                return !string.IsNullOrWhiteSpace(candidate)
+                       && Common.HoldingKeyMatch.IsBoundaryPrefixMatch(candidate, key);
+            })
+            .Take(2)
+            .ToList();
 
-        return null;
+        return prefixMatches.Count == 1 ? prefixMatches[0] : null;
     }
 
     private static string NormalizeHoldingKey(string? value)

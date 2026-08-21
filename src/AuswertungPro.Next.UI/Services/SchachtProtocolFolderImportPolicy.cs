@@ -71,7 +71,7 @@ internal static class SchachtProtocolFolderImportPolicy
         int preparedPdfCount,
         int created,
         int updated,
-        int archivedOlderProtocols,
+        int skippedOlderPdfCandidates,
         int skippedDirectoryCount,
         IReadOnlyList<string> failures)
     {
@@ -83,8 +83,12 @@ internal static class SchachtProtocolFolderImportPolicy
             $"Schaechte aktualisiert: {updated}"
         };
 
-        if (archivedOlderProtocols > 0)
-            lines.Add($"Aeltere Protokolle archiviert: {archivedOlderProtocols} (Stammdaten stammen aus dem neuesten Protokoll)");
+        if (skippedOlderPdfCandidates > 0)
+        {
+            lines.Add(
+                $"Aeltere PDF-Kandidaten uebersprungen: {skippedOlderPdfCandidates} " +
+                "(sie bleiben erhalten; Stammdaten stammen aus dem neuesten Protokoll)");
+        }
         if (skippedDirectoryCount > 0)
             lines.Add($"Nicht lesbare Unterordner uebersprungen: {skippedDirectoryCount}");
         if (failures.Count > 0)
@@ -101,16 +105,114 @@ internal static class SchachtProtocolFolderImportPolicy
     internal static string? ResolveCanonicalShaftFolder(
         string pdfPath,
         params string[] distributionRoots)
+        => ResolveCanonicalShaftFolder(
+            pdfPath,
+            parsedShaftNumber: null,
+            existingShaftNumbers: Array.Empty<string>(),
+            distributionRoots);
+
+    internal static string? ResolveCanonicalShaftFolder(
+        string pdfPath,
+        string? parsedShaftNumber,
+        IEnumerable<string>? existingShaftNumbers,
+        params string[] distributionRoots)
     {
         var parentFolder = Path.GetDirectoryName(pdfPath);
         if (string.IsNullOrWhiteSpace(parentFolder))
             return null;
 
-        if (distributionRoots.Any(root => PathsEqual(parentFolder, root)))
+        var knownFolderNames = BuildFolderNameSet(existingShaftNumbers);
+        var parsedFolderNames = BuildFolderNameSet(
+            string.IsNullOrWhiteSpace(parsedShaftNumber)
+                ? Array.Empty<string>()
+                : new[] { parsedShaftNumber });
+
+        foreach (var root in distributionRoots)
+        {
+            var ancestors = GetAncestorsBelowRoot(parentFolder, root);
+            if (ancestors is null)
+                continue;
+            if (ancestors.Count == 0)
+                return null;
+
+            var knownMatch = ancestors.FirstOrDefault(knownFolderNames.Contains);
+            if (!string.IsNullOrWhiteSpace(knownMatch))
+                return knownMatch;
+
+            var parsedMatch = ancestors.FirstOrDefault(parsedFolderNames.Contains);
+            if (!string.IsNullOrWhiteSpace(parsedMatch))
+                return parsedMatch;
+
+            var renovationIndex = ancestors.FindIndex(LooksLikeRenovationFolder);
+            if (renovationIndex >= 0 && renovationIndex + 1 < ancestors.Count)
+                return ancestors[renovationIndex + 1];
+
+            // Ohne Projekt- oder PDF-Abgleich ist nur ein Objektordner eindeutig,
+            // der direkt unter der bekannten Verteilwurzel liegt.
+            if (ancestors.Count == 1 && !LooksLikeRenovationFolder(ancestors[0]))
+                return ancestors[0];
+
             return null;
+        }
 
         return Path.GetFileName(Path.TrimEndingDirectorySeparator(parentFolder));
     }
+
+    private static HashSet<string> BuildFolderNameSet(IEnumerable<string>? values)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (values is null)
+            return result;
+
+        foreach (var value in values)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                continue;
+
+            var trimmed = value.Trim();
+            result.Add(trimmed);
+            result.Add(ProjectPathResolver.SanitizePathSegment(trimmed));
+        }
+
+        return result;
+    }
+
+    private static List<string>? GetAncestorsBelowRoot(string parentFolder, string root)
+    {
+        try
+        {
+            var fullRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+            var current = Path.TrimEndingDirectorySeparator(Path.GetFullPath(parentFolder));
+            if (!IsSameOrBelow(current, fullRoot))
+                return null;
+
+            var ancestors = new List<string>();
+            while (!PathsEqual(current, fullRoot))
+            {
+                var folderName = Path.GetFileName(current);
+                if (string.IsNullOrWhiteSpace(folderName))
+                    return null;
+
+                ancestors.Add(folderName);
+                var next = Path.GetDirectoryName(current);
+                if (string.IsNullOrWhiteSpace(next) || PathsEqual(next, current))
+                    return null;
+                current = next;
+            }
+
+            return ancestors;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool LooksLikeRenovationFolder(string folderName)
+        => folderName.Contains("_Saniert ", StringComparison.OrdinalIgnoreCase)
+           || folderName.EndsWith("_Saniert", StringComparison.OrdinalIgnoreCase)
+           || folderName.StartsWith("Saniert ", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(folderName, "Saniert", StringComparison.OrdinalIgnoreCase);
 
     private static DateTime ParseProtocolDate(string? rawDate, string pdfPath)
     {

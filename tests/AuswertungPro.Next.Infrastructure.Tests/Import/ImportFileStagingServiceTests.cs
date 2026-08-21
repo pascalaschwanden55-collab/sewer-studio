@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
@@ -110,6 +111,50 @@ public sealed class ImportFileStagingServiceTests
                                       && file.ReadPath.Equals(existing, StringComparison.OrdinalIgnoreCase));
         Assert.Contains(files, file => file.TargetPath.Equals(target, StringComparison.OrdinalIgnoreCase)
                                       && !file.ReadPath.Equals(target, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [JunctionFact]
+    public void Lesesicht_AllDirectories_BetrittKeineUntergeordneteVerzeichnisverknuepfung()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = temp.CreateProjectFile();
+        var targetDirectory = Path.Combine(temp.ProjectRoot, "Importdateien", "PDF");
+        var existing = temp.CreateFile("Importdateien/PDF/sicher/alt.pdf", "alt");
+        var source = temp.CreateFile("quelle/neu.pdf", "neu");
+        var externalDirectory = Path.Combine(temp.Path, "extern");
+        var external = Path.Combine(externalDirectory, "fremd.pdf");
+        var link = Path.Combine(targetDirectory, "verknuepft");
+        Directory.CreateDirectory(externalDirectory);
+        File.WriteAllText(external, "fremd");
+        JunctionTestSupport.CreateDirectoryLink(link, externalDirectory);
+
+        try
+        {
+            using var session = Begin(projectPath);
+            var stagedTarget = session.StageCopy(source, targetDirectory);
+
+            var files = session.EnumerateReadableFiles(
+                targetDirectory,
+                "*.pdf",
+                SearchOption.AllDirectories);
+
+            Assert.Equal(
+                new[] { existing, stagedTarget }.OrderBy(path => path, StringComparer.OrdinalIgnoreCase),
+                files.Select(file => file.TargetPath));
+            Assert.DoesNotContain(files, file =>
+                file.ReadPath.Equals(external, StringComparison.OrdinalIgnoreCase)
+                || file.TargetPath.EndsWith(
+                    Path.Combine("verknuepft", "fremd.pdf"),
+                    StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(files, file =>
+                file.TargetPath.Equals(stagedTarget, StringComparison.OrdinalIgnoreCase)
+                && !file.ReadPath.Equals(stagedTarget, StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            if (Directory.Exists(link))
+                Directory.Delete(link);
+        }
     }
 
     [Fact]
@@ -264,6 +309,158 @@ public sealed class ImportFileStagingServiceTests
         var error = Assert.Throws<ArgumentException>(
             () => session.StageCopy(source, outside));
         Assert.Contains("Projektstamm", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [JunctionFact]
+    public void Begin_blockiert_Projektroot_als_Verknuepfung_vor_dem_Staging()
+    {
+        using var temp = new TempDirectory();
+        var externalProject = Path.Combine(temp.Path, "externes-projekt");
+        var linkedProject = Path.Combine(temp.Path, "projekt-link");
+        var externalProjectFile = Path.Combine(
+            externalProject,
+            "Projektdateien",
+            "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(externalProjectFile)!);
+        File.WriteAllText(externalProjectFile, "{}");
+        JunctionTestSupport.CreateDirectoryLink(linkedProject, externalProject);
+
+        try
+        {
+            var linkedProjectFile = Path.Combine(
+                linkedProject,
+                "Projektdateien",
+                "projekt.json");
+
+            var error = Assert.Throws<IOException>(
+                () => new ImportFileStagingService().Begin(linkedProjectFile));
+
+            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.False(Directory.Exists(Path.Combine(
+                externalProject,
+                "Projektdateien",
+                ".import-staging")));
+        }
+        finally
+        {
+            if (Directory.Exists(linkedProject))
+                Directory.Delete(linkedProject);
+        }
+    }
+
+    [JunctionFact]
+    public void StageCopy_blockiert_nachtraeglich_verknuepften_Projektroot_vor_der_Kopie()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = temp.CreateProjectFile();
+        var source = temp.CreateFile("quelle/neu.pdf", "neu");
+        var originalProject = temp.ProjectRoot + "-original";
+        var externalProject = Path.Combine(temp.Path, "externes-ziel");
+        var session = Begin(projectPath);
+
+        Directory.Move(temp.ProjectRoot, originalProject);
+        Directory.CreateDirectory(externalProject);
+        JunctionTestSupport.CreateDirectoryLink(temp.ProjectRoot, externalProject);
+        try
+        {
+            var error = Assert.Throws<IOException>(() => session.StageCopy(
+                source,
+                Path.Combine(temp.ProjectRoot, "Imports", "PDF")));
+
+            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Empty(Directory.EnumerateFileSystemEntries(externalProject));
+        }
+        finally
+        {
+            if (Directory.Exists(temp.ProjectRoot))
+                Directory.Delete(temp.ProjectRoot);
+            Directory.Move(originalProject, temp.ProjectRoot);
+            session.Dispose();
+        }
+    }
+
+    [JunctionFact]
+    public void Publish_blockiert_nachtraeglich_verknuepften_Projektroot_vor_dem_Veroeffentlichen()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = temp.CreateProjectFile();
+        var source = temp.CreateFile("quelle/neu.pdf", "neu");
+        var target = Path.Combine(temp.ProjectRoot, "Imports", "PDF", "neu.pdf");
+        var originalProject = temp.ProjectRoot + "-original";
+        var externalProject = Path.Combine(temp.Path, "externes-ziel");
+        var session = Begin(projectPath);
+        session.StageCopy(source, Path.GetDirectoryName(target)!);
+        var stagedFileName = Directory
+            .EnumerateFiles(session.StagingRoot)
+            .Select(Path.GetFileName)
+            .Single();
+
+        Directory.Move(temp.ProjectRoot, originalProject);
+        Directory.CreateDirectory(externalProject);
+        JunctionTestSupport.CreateDirectoryLink(temp.ProjectRoot, externalProject);
+        var externalStage = Path.Combine(
+            externalProject,
+            Path.GetRelativePath(temp.ProjectRoot, session.StagingRoot),
+            stagedFileName!);
+        Directory.CreateDirectory(Path.GetDirectoryName(externalStage)!);
+        File.WriteAllText(externalStage, "fremder-inhalt");
+        try
+        {
+            var error = Assert.Throws<IOException>(session.Publish);
+
+            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("fremder-inhalt", File.ReadAllText(externalStage));
+            Assert.False(File.Exists(Path.Combine(
+                externalProject,
+                "Imports",
+                "PDF",
+                "neu.pdf")));
+        }
+        finally
+        {
+            if (Directory.Exists(temp.ProjectRoot))
+                Directory.Delete(temp.ProjectRoot);
+            Directory.Move(originalProject, temp.ProjectRoot);
+            session.Dispose();
+        }
+    }
+
+    [JunctionFact]
+    public void Dispose_loescht_nichts_hinter_nachtraeglich_verknuepftem_Projektroot()
+    {
+        using var temp = new TempDirectory();
+        var projectPath = temp.CreateProjectFile();
+        var source = temp.CreateFile("quelle/neu.pdf", "neu");
+        var originalProject = temp.ProjectRoot + "-original";
+        var externalProject = Path.Combine(temp.Path, "externes-ziel");
+        var session = Begin(projectPath);
+        session.StageCopy(source, Path.Combine(temp.ProjectRoot, "Imports", "PDF"));
+
+        Directory.Move(temp.ProjectRoot, originalProject);
+        Directory.CreateDirectory(externalProject);
+        JunctionTestSupport.CreateDirectoryLink(temp.ProjectRoot, externalProject);
+        var externalStage = Path.Combine(
+            externalProject,
+            Path.GetRelativePath(temp.ProjectRoot, session.StagingRoot),
+            "fremd.stage");
+        Directory.CreateDirectory(Path.GetDirectoryName(externalStage)!);
+        File.WriteAllText(externalStage, "fremd");
+        try
+        {
+            var error = Assert.Throws<AggregateException>(session.Dispose);
+
+            Assert.Contains(
+                error.InnerExceptions,
+                inner => inner.Message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal("fremd", File.ReadAllText(externalStage));
+        }
+        finally
+        {
+            if (Directory.Exists(temp.ProjectRoot))
+                Directory.Delete(temp.ProjectRoot);
+            Directory.Move(originalProject, temp.ProjectRoot);
+            session.Dispose();
+        }
     }
 
     private static IImportFileStagingSession Begin(string projectPath)

@@ -485,7 +485,9 @@ Stammdatennachlauf und Neueinlesen verwenden denselben Dienst; die kleine
 `StoredImportFileService` plant neue Importkopien fuer beide Projektdatei-Strukturen
 unter `<Projekt>\Imports\<Art>`. Im manuellen Import schreibt er zunaechst ueber die
 laufbezogene `IImportFileStagingSession`; ausserhalb dieses Ablaufs bleibt sein bisheriger
-direkter Kompatibilitaetsweg erhalten. `StoredImportFilePathResolver` liest die Metadaten
+direkter Kompatibilitaetsweg erhalten. Dieser Direktweg prueft Projektroot,
+`Imports\<Art>`, Wunschziel und Kollisionsziel ueber `ProjectWritePathGuard`, bevor er
+Ordner anlegt oder kopiert. `StoredImportFilePathResolver` liest die Metadaten
 ueber `StoredImportFileRegistry`, prueft zuerst den echten Projekt-Root und faellt fuer
 bestehende Ablagen auf den Ordner der `projekt.json` zurueck. Dadurch bleiben alte
 `Projektdateien\Imports`-Dateien lesbar. Fehlende oder unsichere Einzelpfade werden
@@ -496,11 +498,30 @@ Die oeffentliche `ImportFileStoreService`-API bleibt nur als duenne
 Kompatibilitaetsfassade und delegiert ohne eigene Dateioperationen an dieselbe
 Schreib-Implementierung.
 
-Die fuenf manuellen Importwege PDF, XTF, WinCan, IBAK und KINS liegen im internen
-`ImportManualWorkflowController`. Er kennt weder `ServiceProvider` noch Shell oder
+Die sechs manuellen Importwege PDF, XTF, WinCan, IBAK, KINS und SchachtPro liegen im
+internen `ImportManualWorkflowController`. Er kennt weder `ServiceProvider` noch Shell oder
 ViewModel und verwendet fuer Vorschau, Commit, Bericht, Speichern und Projekttausch
 weiter den `ImportRunWorkflowController`. `ImportPageViewModel` verbindet nur Befehle
-und aktuellen UI-Zustand. Der gemeinsame Importlauf bindet beim Start Projektinstanz,
+und aktuellen UI-Zustand. Seine gemeinsame Importsperre umfasst diese sechs Wege,
+den Schacht-PDF-Ordnerimport, den Ein-Knopf-Import sowie Portabilitaet,
+Fotozuordnung und Protokoll-Neugenerierung. Auch direkte parallele Befehlsaufrufe
+werden abgewiesen; ein Fehler gibt die Sperre im `finally` frei. Der Zustand liegt
+je `ShellViewModel` gemeinsam und gilt deshalb auch fuer neu erzeugte oder gerade
+nicht sichtbare Importseiten. Solange er aktiv ist, sperrt die Shell Navigation,
+Fensterschliessen, Neu/Oeffnen/Projektwechsel sowie manuelles Speichern und
+„Speichern unter". Nur der an den registrierten, aktiven Import-Guard gebundene
+interne Delegate darf die abschliessende Speicherung des Importablaufs ausfuehren.
+Import-, Export-/Verteil- und Schacht-PDF-Guards reservieren zusaetzlich denselben
+atomaren Projektvorgang der `ShellViewModel`. Dadurch koennen sich auch verdeckte oder
+neu erzeugte Seiteninstanzen nicht gegenseitig ueberholen; ein interner Save ist nur
+fuer den registrierten zentralen Besitzer erlaubt. Auf der Schachtseite umfasst der
+Schutz Einzel- und Ordnerimport, Neueinlesen eines verknuepften Protokolls sowie den
+PDF-Stammdatennachlauf. Er gilt bereits waehrend der Quellenauswahl, sperrt Navigation,
+Projektwechsel, Schliessen und die oeffentlichen Speicherwege und bindet Projekt,
+Projektpfad und Datensaetze vor der Hintergrundarbeit. Fehler und auch fehlgeschlagene
+UI-Benachrichtigungen geben den Besitz wieder frei; `Dispose` meldet einen inaktiven
+Guard sofort und einen noch laufenden Guard erst nach dessen sicherer Freigabe ab.
+Der gemeinsame Importlauf bindet beim Start Projektinstanz,
 normalisierten Projektpfad und Berichtsordner. Nach jedem asynchronen Abschnitt prueft
 er Projektidentitaet und Abbruch erneut; bei einem Wechsel wird die Arbeitskopie nicht
 uebernommen. PDF-/XTF-Quellkopien und die Medienverteilung verwenden dabei dieselbe
@@ -509,7 +530,13 @@ unter `.import-staging/<Lauf-GUID>`, veroeffentlicht sie erst nach den Nacharbei
 nimmt nur die vom Lauf neu angelegten Dateien zurueck, solange das Live-Projekt noch
 nicht getauscht ist. Vor dem ersten Datei-Move schreibt der Lauf alle vorbereiteten
 Rollback-Ziele samt SHA-256 atomar in `.import-transaction.json`; nach `Publish` wird
-der Marker mit dem tatsaechlichen Ist-Stand erneuert.
+der Marker mit dem tatsaechlichen Ist-Stand erneuert. `FileImportTransactionJournal`
+fuehrt Markerlesen, eigentumsgebundenes Schreiben und Loeschen je Projekt unter
+derselben prozessuebergreifenden Sperre aus. Nur ein fehlender oder derselben TxId
+gehoerender Marker darf geschrieben werden. Ein fremder oder unlesbarer Marker bleibt
+unveraendert und sperrt den Import. Cleanup und Recovery loeschen nur mit der erwarteten
+TxId; ein inzwischen ersetzter Marker bleibt erhalten. Staging, Publish und Journal
+weisen auch einen Projektroot oder Markerpfad ab, der selbst eine Verknuepfung ist.
 Bereits vorhandene oder wiederverwendete Dateien werden nie geloescht. Unvollstaendige
 Nacharbeiten und fehlgeschlagenes Speichern bleiben als
 eigene Zustaende sichtbar; nach Vorschau plus Echtlauf zeigt der letzte Bericht auf den
@@ -520,9 +547,25 @@ Beim Projektladen vergleicht `ImportTransactionRecoveryService` die Marker-TxId 
 `Project.LastCommittedImportTxId` aus dem atomar gespeicherten `projekt.json`.
 Gleiche TxId bedeutet: Dateien behalten und nur den eigenen Arbeitsordner aufraeumen.
 Ohne Commit-Beweis werden ausschliesslich die im Marker genannten, unveraenderten
-Dateien SHA-geprueft zurueckgenommen. Unlesbare Marker, Hashabweichungen, unklare
-Dateiarten, Verknuepfungen oder Aufraeumfehler sperren das Projektoeffnen; der Marker
-bleibt zur Pruefung erhalten. Auch bei einem normalen Speicherfehler bleibt er stehen.
+Dateien SHA-geprueft zurueckgenommen. Der Preflight prueft vor jeder Loeschung auch
+Schreibschutz, exklusiven Lesezugriff, Datei-Verknuepfungen und den gesamten
+Staging-Baum, ohne Verknuepfungen zu betreten. Unlesbare Marker, Hashabweichungen,
+unklare Dateiarten, Verknuepfungen oder Aufraeumfehler sperren das Projektoeffnen;
+der Marker bleibt zur Pruefung erhalten. Der vollstaendige Preflight veraendert bei
+einem Hindernis nichts. Scheitert ein erst danach gestartetes rekursives
+Staging-Aufraeumen teilweise, meldet `ProjectFolderModified` dagegen konservativ
+eine moegliche Aenderung. Beim asynchronen Projektoeffnen laeuft diese dateiintensive
+Recovery im Hintergrund; nur Dialoge und Projektuebernahme bleiben auf dem UI-Thread.
+Hat die vorgelagerte Projektrecovery eine kaputte `projekt.json` bereits in
+Quarantaene verschoben und blockiert danach der Importmarker, stellt
+`ProjectRecoveryService` die gepruefte Sicherung ueber einen dauerhaften Zwischenstand
+atomar und ohne Ueberschreiben wieder am Originalpfad bereit. Die Shell fuehrt nur die
+strukturierten Recovery-Ergebnisse zusammen und leitet „veraendert" oder
+„nicht veraendert" ausschliesslich aus deren gemeinsamem Flag ab.
+Restore-Point-Erstellung, Ausduennen, Sicherungssuche, Quarantaene und Materialisierung
+pruefen Projektroot und Ziele ueber dieselbe Verknuepfungsgrenze; rekursive Suchen
+betreten keine Junctions oder Symlinks.
+Auch bei einem normalen Speicherfehler bleibt der Marker stehen.
 Ein spaeterer erfolgreicher Save persistiert die Commit-TxId; entfernt wird der Marker
 erst durch den anschliessenden eindeutigen Recovery-Lauf.
 
@@ -542,6 +585,77 @@ Die manuelle Schachtverteilung liegt hinter `IShaftDistributionService`. Ziele i
 Projekt laufen ueber dieselbe Transaktion; die UI-Logik ist in
 `ExportPageViewModel.ShaftDistribution.cs` getrennt. Bewusst externe Zielordner bleiben
 direkte Exporte: Der Projektmarker besitzt dort keine sichere Loeschberechtigung.
+Alle drei manuellen Verteilungen halten waehrend des Laufs einen Shell-weiten
+Operations-Guard. Dadurch sind Navigation, Projektwechsel, Fensterschliessen sowie
+manuelles Speichern und „Speichern unter" gesperrt. Haltung und Dichtheit arbeiten
+mit der beim Start gebundenen Projektinstanz und pruefen diese nach dem Hintergrundlauf;
+der Schachtweg verwendet dieselbe Regel auch ohne Staging. Nur ein an genau diesen
+aktiven Guard gebundener interner Save darf den Abschluss speichern. Die Exportseite
+meldet den Guard beim `Dispose` wieder ab.
+
+Rekursive Import- und Quellsuchen verwenden `Application.Common.SafeFileEnumeration`.
+Der ausdruecklich vom Benutzer gewaehlte Leseroot darf selbst eine Verknuepfung sein;
+untergeordnete Verzeichnis- und Datei-Verknuepfungen werden dagegen nie betreten oder
+geliefert. Eine normalisierte Visited-Menge verhindert doppelte Pfade und Zyklen.
+Kanal-/WinCan-Suche, KIAS-Standardordner `Data`, `Film`, `Report`, die Import-Staging-
+Lesesicht, Protokollsuche, Portabilitaet und Verteilquellen verwenden diese Grenze.
+KIAS prueft die direkten Standardordner zusaetzlich als untrusted Kinder des
+gewaehlten Roots; Datei-Symlinks zaehlen nicht als Exportbestand.
+Einzelne fremde Medienquellen laufen vor dem ersten `File.Exists`, Zeitstempel- oder
+Kopierzugriff ueber `ImportSourcePathGuard`. Er prueft jede vorhandene Pfadkomponente,
+weist UNC-/Netzlaufwerke sowie Datei- und Verzeichnis-Verknuepfungen ab und wird vom
+XTF-Medienresolver, der Medienverteilung, der Haltungs-Videozuordnung, dem Kanal-
+Verteilfallback und der Projektportabilitaet gemeinsam verwendet. Ein lokal
+aussehender Alias darf die UNC-Sperre nicht umgehen.
+
+Direkte Schreibwege sind getrennt abgesichert. `ProjectWritePathGuard` verwendet die
+Projektgrenze und die bestehende Reparse-Pruefung des Import-Stagings. Er prueft auch
+den Projektroot selbst und wird fuer Projektstruktur, gespeicherte Importkopien,
+Rohdatenarchiv, Plan-PDF, Medien, namensbasierte Protokolle, Protokoll-Neuerzeugung,
+Dichtheits-KI-Fallback, Portabilitaet, Fotozuordnung, Kanal-Fallback und direkten
+Schachtprotokollimport verwendet. Dazu gehoeren auch Restore-Points, Projektrecovery
+und die produktiven Importberichte unter `__IMPORT_REPORTS`. Wunschziel, freier
+Kollisionspfad und atomare Temp-Datei werden jeweils vor der Mutation erneut geprueft;
+die Staging-Zweige bleiben unter ihrer eigenen gleichwertigen Grenze.
+`DistributionWritePathGuard` bindet Haltung, Dichtheit und Schacht an den bewusst
+gewaehlten Verteilroot und sperrt auch diesen Root selbst, falls er eine Junction oder
+ein Symlink ist. Vor PDF-/TXT-/Video-/Info-/Unmatched- und Schacht-Mutationen werden
+alle bekannten Ziele vorgeprueft. Der kleine unvermeidbare Austauschzeitraum zwischen
+letzter Pfadpruefung und einer pfadbasierten Dateioperation bleibt als dokumentiertes
+Restrisiko: Die verwalteten .NET-Datei-APIs halten kein durchgehendes Handle auf den
+geprueften Pfad.
+
+Dateigleichheit wird nicht aus Name, Groesse oder Teilproben abgeleitet. Fotozuordnung,
+Portabilitaet, Importarchiv, Plan-PDF, Haltungsvideo, Medienkonfliktcenter,
+Dichtheitsprotokoll und Schachtprotokoll vergleichen den vollstaendigen Inhalt; ein
+abweichender Bestand erhaelt einen freien Zielnamen oder einen sichtbaren Konflikt.
+Das Medienkonfliktcenter prueft ausserdem Haltungsroot, Zielordner und Info-Datei gegen
+Verknuepfungen, bevor es kopiert oder loescht. Ohne passenden Haltungsdatensatz bleibt
+der Konfliktmarker offen und es wird keine Datei kopiert. `ProjectPortabilityService` bearbeitet auch
+`OriginalFotoPaths`, bewahrt Kundenbytes und relativiert nur innerhalb der echten,
+separatorbewusst geprueften Projektgrenze. Haltungsmedien bleiben waehrend einer
+direkten Verteilung absolut verlinkt, solange der echte Projektroot nicht bekannt ist;
+`ProjectVideoReferenceNormalizer` macht nur nachgewiesen projektinterne Links beim
+zentralen Projektspeichern relativ.
+
+Haltungszuordnungen verwenden echte Zeichen-/Segmentgrenzen. `100-200` darf weder
+Medien noch PDFs von `100-2000` uebernehmen. Ein fachlicher Segment-Praefix wird bei
+IBAK, KINS und WinCan nur bei genau einem Kandidaten verwendet; bei mehreren
+Segmenten wird ein neuer exakter Datensatz angelegt. XTF-Medienpfade weisen
+Elternsegmente sowohl im Ordner als auch im Dateinamen ab. Ein Befundfoto wird nur bei
+Code- oder Meterbezug einem Protokolleintrag zugeordnet; ohne Bezug gibt es keinen
+beliebigen Fallback.
+
+Ein KINS-Header ohne Beobachtungen ersetzt kein bestehendes Protokoll. Beim
+Schacht-PDF-Import respektieren Stammdaten und Protokoll `fillMissingOnly`, bewahren
+benutzerbearbeitete Felder und legen bei einer echten Protokollaenderung eine Revision
+an. Der direkte Schachtprotokollimport verwendet eine gleichnamige Zieldatei nur bei
+gleichem Inhalt. `SchachtProtocolFolderImportPolicy` sucht die Schachtnummer ueber
+gueltige Vorfahren unter modernen und alten Verteilroots, ueberspringt Sanierungs-
+ebenen und laesst mehrdeutige tiefe Strukturen offen. Nicht uebernommene aeltere PDFs
+werden ehrlich als uebersprungen und erhalten gemeldet, nicht als archivierte
+Protokollrevisionen.
+
 Der manuelle PDF-Stapellauf bleibt bewusst getrennt vom fehlertoleranten PDF-Scan des
 `ImportPostProcessingController`, weil beide verschiedene Fehlerregeln haben.
 

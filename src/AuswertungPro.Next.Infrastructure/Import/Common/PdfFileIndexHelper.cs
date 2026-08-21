@@ -28,7 +28,9 @@ internal static class PdfFileIndexHelper
     {
         return index.Keys
             .Where(k => k.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            .Where(k => k.Contains(key, StringComparison.OrdinalIgnoreCase))
+            .Where(k => HoldingTextNormalizer.ContainsKeyAtBoundary(
+                Path.GetFileNameWithoutExtension(k),
+                key))
             .Select(k => ResolveFile(index, k))
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .ToList()!;

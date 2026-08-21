@@ -140,6 +140,17 @@ public sealed partial class SchaechtePageViewModel
             return;
 
         var candidates = new List<SchachtProtocolFolderCandidate>();
+        var existingShaftNumbers = expectedProject.SchaechteData
+            .SelectMany(record => new[]
+            {
+                record.GetFieldValue("Schachtnummer"),
+                record.GetFieldValue("Nr."),
+                record.GetFieldValue("NR.")
+            })
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         for (var index = 0; index < preparedPdfs.Length; index++)
         {
             var pdfPath = preparedPdfs[index];
@@ -157,6 +168,8 @@ public sealed partial class SchaechtePageViewModel
 
                 var canonicalShaft = SchachtProtocolFolderImportPolicy.ResolveCanonicalShaftFolder(
                     pdfPath,
+                    parsed.Schachtnummer,
+                    existingShaftNumbers,
                     destinationFolder,
                     legacyDestinationFolder);
                 if (!string.IsNullOrWhiteSpace(canonicalShaft))
@@ -178,7 +191,7 @@ public sealed partial class SchaechtePageViewModel
             return;
 
         var currentProtocols = SchachtProtocolFolderImportPolicy.SelectCurrentPerShaft(candidates);
-        var archivedOlderProtocols = candidates.Count - currentProtocols.Count;
+        var skippedOlderPdfCandidates = candidates.Count - currentProtocols.Count;
         var created = 0;
         var updated = 0;
         SchachtRecord? lastTarget = null;
@@ -188,22 +201,78 @@ public sealed partial class SchaechtePageViewModel
             var target = _schachtProtocolImport.FindSchacht(
                 expectedProject,
                 candidate.ParseResult.Schachtnummer);
-            if (target is null)
+            var requiresProjectMembership = target is not null;
+            target ??= new SchachtRecord();
+            var relativePdfPath = ProjectPathResolver.MakeRelative(candidate.PdfPath, projectFolder);
+            var projectChangedBeforeApply = false;
+            var targetRemovedBeforeApply = false;
+            lock (_shell.CollectionLock)
             {
-                target = new SchachtRecord();
-                lock (_shell.CollectionLock)
+                // Die Shell-Sperre verhindert den normalen Projektwechsel. Diese
+                // unmittelbare Nachpruefung schuetzt zusaetzlich vor direkten/testweisen
+                // Austauschen und vor einem inzwischen geloeschten Bestandsziel.
+                if (!ActiveProjectGuard.IsCurrent(
+                        projectContext,
+                        _shell.Project,
+                        _settings.LastProjectPath))
                 {
-                    expectedProject.SchaechteData.Add(target);
+                    projectChangedBeforeApply = true;
                 }
-                created++;
-            }
-            else
-            {
-                updated++;
+                else if (requiresProjectMembership
+                         && !expectedProject.SchaechteData.Contains(target))
+                {
+                    targetRemovedBeforeApply = true;
+                }
+                else
+                {
+                    _schachtProtocolImport.Apply(
+                        target,
+                        candidate.ParseResult,
+                        relativePdfPath);
+                }
             }
 
-            var relativePdfPath = ProjectPathResolver.MakeRelative(candidate.PdfPath, projectFolder);
-            _schachtProtocolImport.Apply(target, candidate.ParseResult, relativePdfPath);
+            if (!requiresProjectMembership
+                && !projectChangedBeforeApply
+                && !targetRemovedBeforeApply)
+            {
+                lock (_shell.CollectionLock)
+                {
+                    if (ActiveProjectGuard.IsCurrent(
+                            projectContext, _shell.Project, _settings.LastProjectPath))
+                    {
+                        expectedProject.SchaechteData.Add(target);
+                    }
+                    else
+                    {
+                        projectChangedBeforeApply = true;
+                    }
+                }
+            }
+
+            var impactBeforeCandidate = created + updated > 0
+                ? distributionImpact | ProjectOperationImpact.ProjectDataChanged
+                : distributionImpact;
+            if (projectChangedBeforeApply)
+            {
+                _ = ProjectIsStillOpen(
+                    projectContext,
+                    "Protokoll importieren",
+                    impactBeforeCandidate);
+                return;
+            }
+
+            if (targetRemovedBeforeApply)
+            {
+                failures.Add(
+                    $"{Path.GetFileName(candidate.PdfPath)}: Zielschacht wurde waehrend des Imports entfernt");
+                continue;
+            }
+
+            if (requiresProjectMembership)
+                updated++;
+            else
+                created++;
             lastTarget = target;
         }
 
@@ -237,7 +306,7 @@ public sealed partial class SchaechtePageViewModel
                 return;
             }
 
-            saveSucceeded = _shell.TrySaveProject();
+            saveSucceeded = _saveProjectForProtocolImport();
         }
 
         var summary = SchachtProtocolFolderImportPolicy.BuildFolderImportSummary(
@@ -245,7 +314,7 @@ public sealed partial class SchaechtePageViewModel
             preparedPdfs.Length,
             created,
             updated,
-            archivedOlderProtocols,
+            skippedOlderPdfCandidates,
             skippedDirectories.Count,
             failures);
         if (!saveSucceeded)

@@ -318,11 +318,12 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains(
             "SchachtProtocolFolderImportPolicy.BuildFolderImportSummary(" +
             "sourcePdfs.Count,preparedPdfs.Length,created,updated," +
-            "archivedOlderProtocols,skippedDirectories.Count,failures)",
+            "skippedOlderPdfCandidates,skippedDirectories.Count,failures)",
             compactViewModelPartial);
         Assert.Contains(
             "SchachtProtocolFolderImportPolicy.ResolveCanonicalShaftFolder(" +
-            "pdfPath,destinationFolder,legacyDestinationFolder)",
+            "pdfPath,parsed.Schachtnummer,existingShaftNumbers," +
+            "destinationFolder,legacyDestinationFolder)",
             compactViewModelPartial);
         Assert.DoesNotContain("private static string BuildFolderImportSummary(", viewModelPartial);
         Assert.DoesNotContain("private static string? ResolveCanonicalShaftFolder(", viewModelPartial);
@@ -363,7 +364,9 @@ public sealed class SchaechtePageArchitectureGuardTests
             guardSearchStart = guard + 1;
         }
 
-        Assert.Equal(6, projectGuards.Count);
+        Assert.Equal(7, projectGuards.Count);
+        Assert.Contains("ActiveProjectGuard.IsCurrent(", viewModelPartial);
+        Assert.Contains("targetRemovedBeforeApply", viewModelPartial);
         var confirmation = compactViewModelPartial.IndexOf(
             "ConfirmWarn(",
             projectGuards[0],
@@ -380,6 +383,9 @@ public sealed class SchaechtePageArchitectureGuardTests
         var apply = compactViewModelPartial.IndexOf(
             "_schachtProtocolImport.Apply(target",
             StringComparison.Ordinal);
+        var immediateApplyGuard = compactViewModelPartial.IndexOf(
+            "ActiveProjectGuard.IsCurrent(projectContext",
+            StringComparison.Ordinal);
         var markDirty = compactViewModelPartial.IndexOf(
             "expectedProject.Dirty=true",
             StringComparison.Ordinal);
@@ -387,7 +393,7 @@ public sealed class SchaechtePageArchitectureGuardTests
             "Selected=lastTarget",
             StringComparison.Ordinal);
         var save = compactViewModelPartial.IndexOf(
-            "_shell.TrySaveProject()",
+            "_saveProjectForProtocolImport()",
             StringComparison.Ordinal);
         Assert.True(
             projectGuards[0] < confirmation
@@ -398,12 +404,14 @@ public sealed class SchaechtePageArchitectureGuardTests
             && distribute < projectGuards[2]
             && projectGuards[2] < parse
             && parse < projectGuards[3]
-            && projectGuards[3] < apply
-            && apply < markDirty
-            && markDirty < projectGuards[4]
-            && projectGuards[4] < select
-            && select < projectGuards[5]
-            && projectGuards[5] < save);
+            && projectGuards[3] < immediateApplyGuard
+            && immediateApplyGuard < apply
+            && apply < projectGuards[4]
+            && projectGuards[4] < markDirty
+            && markDirty < projectGuards[5]
+            && projectGuards[5] < select
+            && select < projectGuards[6]
+            && projectGuards[6] < save);
     }
 
     [Fact]
@@ -429,11 +437,11 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("SchachtStammdatenResultApplier.Apply(", viewModelPartial);
         Assert.Contains("beforeApply:", viewModelPartial);
         Assert.Contains(
-            "SchachtStammdatenResultApplier.Apply(Records,result,beforeApply:()=>",
+            "SchachtStammdatenResultApplier.Apply(projectRecords,result,beforeApply:()=>",
             compactViewModelPartial);
         Assert.Contains(
             "varapplyResult=SchachtStammdatenResultApplier.Apply(" +
-            "Records,result,beforeApply:()=>{" +
+            "projectRecords,result,beforeApply:()=>{" +
             "if(result.Ergaenzungen.Count>0)" +
             "_shell.TryCreateImportRestorePoint(\"Schacht-PDF-Stammdaten\");});",
             compactViewModelPartial);
@@ -443,17 +451,25 @@ public sealed class SchaechtePageArchitectureGuardTests
             compactViewModelPartial);
         Assert.Contains("_shell.TryCreateImportRestorePoint(\"Schacht-PDF-Stammdaten\")", viewModelPartial);
         Assert.Contains("if (applyResult.ChangedShaftCount > 0)", viewModelPartial);
-        Assert.Contains(
-            "if(applyResult.ChangedShaftCount>0){_shell.MarkProjectDirty();" +
-            "if(!_shell.TrySaveProject())",
-            compactViewModelPartial);
+        Assert.Contains("varproject=projectContext.Project;", compactViewModelPartial);
+        Assert.Contains("project.ModifiedAtUtc=DateTime.UtcNow;", compactViewModelPartial);
+        Assert.Contains("project.Dirty=true;", compactViewModelPartial);
+        Assert.Contains("ProjectOperationImpact.ProjectDataChanged", viewModelPartial);
         Assert.Contains("_shell.MarkProjectDirty()", viewModelPartial);
-        Assert.Contains("_shell.TrySaveProject()", viewModelPartial);
+        Assert.Contains("_saveProjectForProtocolImport()", viewModelPartial);
+        Assert.DoesNotContain("_shell.TrySaveProject()", viewModelPartial);
+        Assert.Contains("TryBeginProtocolPdfOperation", viewModelPartial);
+        Assert.Contains("EndProtocolPdfOperation", viewModelPartial);
+        Assert.Contains("ProjectFileLocator.ProjectRootFromFile(projectContext.ProjectPath)", viewModelPartial);
+        Assert.Contains("projectContext.Project.SchaechteData", viewModelPartial);
         Assert.Contains("_dialogs.Info(applyResult.DialogText", viewModelPartial);
         Assert.Contains("LastResult=applyResult.Summary;", compactViewModelPartial);
         Assert.Contains("StammdatenErgaenzungText=applyResult.Summary;", compactViewModelPartial);
         Assert.Contains(
-            "_dialogs.Info(applyResult.DialogText,\"PDF-Stammdatenergaenzen\")",
+            "conststringdialogTitle=\"PDF-Stammdatenergaenzen\";",
+            compactViewModelPartial);
+        Assert.Contains(
+            "_dialogs.Info(applyResult.DialogText,dialogTitle)",
             compactViewModelPartial);
         Assert.DoesNotContain("Records.ToDictionary", viewModelPartial);
         Assert.DoesNotContain("private static bool SetIfMissing(", viewModelPartial);
@@ -513,7 +529,7 @@ public sealed class SchaechtePageArchitectureGuardTests
             "ReadProtocolAsync:ReadProtocolAsync," +
             "ProjectIsStillOpen:ProjectIsStillOpen," +
             "Apply:RebuildFromProtocol," +
-            "SaveProject:_shell.TrySaveProject," +
+            "SaveProject:_saveProjectForProtocolImport," +
             "SetLastResult:value=>LastResult=value));",
             compactViewModel);
         // Aktualisieren baut genau diesen einen Schacht komplett aus dem frisch
@@ -522,10 +538,13 @@ public sealed class SchaechtePageArchitectureGuardTests
             "if(_schachtProtocolImportisISchachtProtocolRebuildServicerebuild)" +
             "rebuild.Rebuild(schacht,protokoll,pdfPfadFuerFeld);",
             compactPartial);
+        Assert.Contains("CanStartProtocolPdfOperation()", partial);
         Assert.Contains("SchachtProtocolRefreshController.CanExecute(Selected)", partial);
         Assert.Contains(
             "privateasyncTaskRefreshProtocolAsync(){" +
-            "_=await_schachtProtocolRefreshController.ExecuteAsync(Selected);}",
+            "if(!TryBeginProtocolPdfOperation(\"Protokollaktualisierung\"))return;" +
+            "try{_=await_schachtProtocolRefreshController.ExecuteAsync(Selected);}" +
+            "finally{EndProtocolPdfOperation();}}",
             compactPartial);
         Assert.Contains("_actions.Apply(selected, result, pathForRecord)", controller);
         // Die Dateisuche selbst bleibt im injizierten Locator; der Controller entscheidet nur.
@@ -575,10 +594,10 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains(
             "_schachtProtocolSingleImportController=newSchachtProtocolSingleImportController(" +
              "_dialogs,_schachtProtocolImport,newSchachtProtocolSingleImportActions(" +
-             "ReadProtocolAsync:ReadProtocolAsync," +
-             "ProjectIsStillOpen:ProjectIsStillOpen," +
+            "ReadProtocolAsync:ReadProtocolAsync," +
+            "ProjectIsStillOpen:ProjectIsStillOpen," +
             "CollectionLock:_shell.CollectionLock," +
-            "SaveProject:_shell.TrySaveProject," +
+            "SaveProject:_saveProjectForProtocolImport," +
             "SetSelected:record=>Selected=record," +
             "ClearSelectedIfSame:ClearSelectedIfSame," +
             "SetLastResult:value=>LastResult=value));",
@@ -593,15 +612,14 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("_protocolImport.DistributePdf(", controller);
         Assert.Contains("_protocolImport.Apply(target, result, distribution.RelativePath)", controller);
         Assert.Contains("lock (_actions.CollectionLock)", controller);
+        Assert.Contains("RequiresProjectMembership", controller);
+        Assert.Contains("targetRemoved", controller);
+        Assert.Contains("Der geloeschte Datensatz wurde nicht wieder eingefuegt", controller);
         Assert.Contains(
             "distribution=awaitTask.Run(()=>DistributePdf(" +
             "projectFolder,result.Schachtnummer,pdfPath));",
             compactController);
         Assert.Contains(
-            "_protocolImport.Apply(target,result,distribution.RelativePath);" +
-            "if(!project.SchaechteData.Contains(target)){" +
-            "lock(_actions.CollectionLock){" +
-            "project.SchaechteData.Add(target);}}" +
             "project.ModifiedAtUtc=DateTime.UtcNow;" +
             "project.Dirty=true;" +
             "varcommittedImpact=fileImpact|ProjectOperationImpact.ProjectDataChanged;" +

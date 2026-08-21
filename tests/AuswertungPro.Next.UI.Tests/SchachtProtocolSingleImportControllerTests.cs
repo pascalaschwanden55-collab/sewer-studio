@@ -189,7 +189,7 @@ public sealed class SchachtProtocolSingleImportControllerTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_found_target_outside_current_records_is_added_after_apply()
+    public async Task ExecuteAsync_found_target_outside_current_records_is_not_applied_or_reinserted()
     {
         var harness = new Harness();
         var found = new SchachtRecord();
@@ -198,11 +198,14 @@ public sealed class SchachtProtocolSingleImportControllerTests
 
         await harness.Controller.ExecuteAsync(harness.ProjectContext, "C:\\Projekt", "quelle.pdf");
 
-        Assert.Same(found, harness.Service.AppliedTarget);
-        Assert.Same(found, Assert.Single(harness.Project.SchaechteData));
-        Assert.True(
-            harness.Calls.IndexOf("apply|Schaechte_Verteilt/S-1/protokoll.pdf")
-            < harness.Calls.IndexOf("collection-add|lock=True"));
+        Assert.Null(harness.Service.AppliedTarget);
+        Assert.Empty(harness.Project.SchaechteData);
+        Assert.Contains("entfernt", harness.LastResult, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            harness.Warnings,
+            warning => warning.Message.Contains(
+                "nicht wieder eingefuegt",
+                StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

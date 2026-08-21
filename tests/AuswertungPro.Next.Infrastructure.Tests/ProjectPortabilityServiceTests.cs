@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 using Xunit;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -182,6 +184,188 @@ public sealed class ProjectPortabilityServiceTests
         finally { TryDelete(root); }
     }
 
+    [Fact]
+    public void MakePortable_ProjektnameAlsPraefixEinesNachbarordners_WirdNichtAlsProjektinhaltBehandelt()
+    {
+        var parent = NewDir();
+        var root = Path.Combine(parent, "Projekt");
+        var sibling = Path.Combine(parent, "Projekt-Quelle");
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(sibling);
+        var holding = "100-200";
+        Directory.CreateDirectory(Path.Combine(root, "Verteilung", holding));
+        var source = Path.Combine(sibling, "H_100-200_001.jpg");
+        File.WriteAllText(source, "kunde");
+        try
+        {
+            var project = new Project();
+            var rec = new HaltungRecord();
+            rec.SetFieldValue("Haltungsname", holding, FieldSource.Xtf, userEdited: false);
+            rec.VsaFindings.Add(new VsaFinding { FotoPath = source });
+            project.AddRecord(rec);
+
+            var result = new ProjectPortabilityService().MakePortable(root, project);
+
+            Assert.Equal(1, result.FotosCopied);
+            Assert.Equal("kunde", File.ReadAllText(source));
+            var relative = rec.VsaFindings[0].FotoPath ?? "";
+            Assert.False(Path.IsPathRooted(relative));
+            Assert.DoesNotContain("..", relative, StringComparison.Ordinal);
+            Assert.Equal("kunde", File.ReadAllText(Path.Combine(root, relative)));
+        }
+        finally { TryDelete(parent); }
+    }
+
+    [Fact]
+    public void MakePortable_ExternesOriginalfoto_WirdKopiertUndDieKundenquelleBleibtUnveraendert()
+    {
+        var root = NewDir();
+        var ext = NewDir();
+        var holding = "100-200";
+        Directory.CreateDirectory(Path.Combine(root, "Verteilung", holding));
+        var source = Path.Combine(ext, "H_100-200_original.jpg");
+        File.WriteAllText(source, "original");
+        try
+        {
+            var entry = new ProtocolEntry();
+            entry.OriginalFotoPaths.Add(source);
+            var revision = new ProtocolRevision();
+            revision.Entries.Add(entry);
+            var record = new HaltungRecord
+            {
+                Protocol = new ProtocolDocument { Current = revision }
+            };
+            record.SetFieldValue("Haltungsname", holding, FieldSource.Xtf, userEdited: false);
+            var project = new Project();
+            project.AddRecord(record);
+
+            var result = new ProjectPortabilityService().MakePortable(root, project);
+
+            Assert.Equal(1, result.FotosCopied);
+            Assert.Equal("original", File.ReadAllText(source));
+            var relative = Assert.Single(entry.OriginalFotoPaths);
+            Assert.False(Path.IsPathRooted(relative));
+            Assert.Equal("original", File.ReadAllText(Path.Combine(root, relative)));
+        }
+        finally { TryDelete(root); TryDelete(ext); }
+    }
+
+    [JunctionFact]
+    public void MakePortable_ZielhaltungIstVerknuepft_SchreibtNichtInFremdenOrdner()
+    {
+        var root = NewDir();
+        var sourceFolder = NewDir();
+        var foreignFolder = NewDir();
+        var holding = "100-200";
+        var holdingLink = Path.Combine(root, "Verteilung", holding);
+        Directory.CreateDirectory(Path.GetDirectoryName(holdingLink)!);
+        var source = Path.Combine(sourceFolder, "H_100-200_001.jpg");
+        File.WriteAllText(source, "kundenfoto");
+        File.WriteAllText(Path.Combine(foreignFolder, Path.GetFileName(source)), "kundenfoto");
+        JunctionTestSupport.CreateDirectoryLink(holdingLink, foreignFolder);
+        try
+        {
+            var record = new HaltungRecord();
+            record.SetFieldValue("Haltungsname", holding, FieldSource.Xtf, userEdited: false);
+            record.VsaFindings.Add(new VsaFinding { FotoPath = source });
+            var project = new Project();
+            project.AddRecord(record);
+
+            var result = new ProjectPortabilityService().MakePortable(root, project);
+
+            Assert.Equal(0, result.FotosCopied);
+            Assert.Equal(1, result.Unresolved);
+            Assert.Contains(result.Messages, message =>
+                message.Contains("nicht aufgeloest", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(source, record.VsaFindings[0].FotoPath);
+            Assert.Equal("kundenfoto", File.ReadAllText(source));
+            Assert.False(Directory.Exists(Path.Combine(foreignFolder, "Fotos")));
+        }
+        finally
+        {
+            TryDeleteLink(holdingLink);
+            TryDelete(root);
+            TryDelete(sourceFolder);
+            TryDelete(foreignFolder);
+        }
+    }
+
+    [JunctionFact]
+    public void MakePortable_DateisymlinkMitBildendung_AufFremdtypWirdNichtKopiert()
+    {
+        var root = NewDir();
+        var sourceFolder = NewDir();
+        var holding = "100-200";
+        var holdingFolder = Path.Combine(root, "Verteilung", holding);
+        Directory.CreateDirectory(holdingFolder);
+        var protectedSource = Path.Combine(sourceFolder, "kundendaten.xlsx");
+        var disguisedLink = Path.Combine(sourceFolder, "foto.jpg");
+        File.WriteAllText(protectedSource, "kundendaten");
+        File.CreateSymbolicLink(disguisedLink, protectedSource);
+        try
+        {
+            var record = new HaltungRecord();
+            record.SetFieldValue("Haltungsname", holding, FieldSource.Xtf, userEdited: false);
+            record.VsaFindings.Add(new VsaFinding { FotoPath = disguisedLink });
+            var project = new Project();
+            project.AddRecord(record);
+
+            var result = new ProjectPortabilityService().MakePortable(root, project);
+
+            Assert.Equal(0, result.FotosCopied);
+            Assert.Equal(1, result.Unresolved);
+            Assert.Equal(disguisedLink, record.VsaFindings[0].FotoPath);
+            Assert.Contains(result.Messages, message =>
+                message.Contains("nicht aufgeloest", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal("kundendaten", File.ReadAllText(protectedSource));
+            Assert.False(Directory.Exists(Path.Combine(holdingFolder, "Fotos")));
+        }
+        finally
+        {
+            TryDelete(root);
+            TryDelete(sourceFolder);
+        }
+    }
+
+    [JunctionFact]
+    public void MakePortable_VerknuepfterQuellordner_WirdNichtGelesenOderKopiert()
+    {
+        var root = NewDir();
+        var foreignFolder = NewDir();
+        var sourceParent = NewDir();
+        var sourceLink = Path.Combine(sourceParent, "Quelle-Link");
+        var holding = "100-200";
+        var holdingFolder = Path.Combine(root, "Verteilung", holding);
+        Directory.CreateDirectory(holdingFolder);
+        var protectedSource = Path.Combine(foreignFolder, "foto.jpg");
+        File.WriteAllText(protectedSource, "kundenfoto");
+        JunctionTestSupport.CreateDirectoryLink(sourceLink, foreignFolder);
+        var linkedSource = Path.Combine(sourceLink, "foto.jpg");
+        try
+        {
+            var record = new HaltungRecord();
+            record.SetFieldValue("Haltungsname", holding, FieldSource.Xtf, userEdited: false);
+            record.VsaFindings.Add(new VsaFinding { FotoPath = linkedSource });
+            var project = new Project();
+            project.AddRecord(record);
+
+            var result = new ProjectPortabilityService().MakePortable(root, project);
+
+            Assert.Equal(0, result.FotosCopied);
+            Assert.Equal(1, result.Unresolved);
+            Assert.Equal(linkedSource, record.VsaFindings[0].FotoPath);
+            Assert.Equal("kundenfoto", File.ReadAllText(protectedSource));
+            Assert.False(Directory.Exists(Path.Combine(holdingFolder, "Fotos")));
+        }
+        finally
+        {
+            TryDeleteLink(sourceLink);
+            TryDelete(root);
+            TryDelete(foreignFolder);
+            TryDelete(sourceParent);
+        }
+    }
+
     private static string NewDir()
     {
         var d = Path.Combine(Path.GetTempPath(), $"port-{Guid.NewGuid():N}");
@@ -192,5 +376,10 @@ public sealed class ProjectPortabilityServiceTests
     private static void TryDelete(string d)
     {
         try { if (Directory.Exists(d)) Directory.Delete(d, recursive: true); } catch { }
+    }
+
+    private static void TryDeleteLink(string path)
+    {
+        try { if (Directory.Exists(path)) Directory.Delete(path); } catch { }
     }
 }

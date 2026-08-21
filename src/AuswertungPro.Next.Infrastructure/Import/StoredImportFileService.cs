@@ -151,6 +151,9 @@ public sealed class StoredImportFileService : IStoredImportFileService
 
         var storedPaths = new List<string>();
         var errors = new List<StoredImportFileError>();
+        var writePathGuard = fileStaging is null
+            ? new ProjectWritePathGuard(projectDirectory)
+            : null;
         foreach (var sourcePath in paths)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -177,9 +180,11 @@ public sealed class StoredImportFileService : IStoredImportFileService
                 }
                 else
                 {
-                    Directory.CreateDirectory(targetDirectory);
+                    var safeTargetDirectory = writePathGuard!.EnsureSafeDirectoryTarget(targetDirectory);
+                    Directory.CreateDirectory(safeTargetDirectory);
                     var fileName = Path.GetFileName(sourcePath);
-                    targetPath = Path.Combine(targetDirectory, fileName);
+                    targetPath = writePathGuard.EnsureSafeFileTarget(
+                        Path.Combine(safeTargetDirectory, fileName));
                     if (File.Exists(targetPath))
                     {
                         if (FileContentComparer.FilesEqual(sourcePath, targetPath))
@@ -188,9 +193,10 @@ public sealed class StoredImportFileService : IStoredImportFileService
                             continue;
                         }
 
-                        targetPath = ResolveCollisionPath(targetDirectory, fileName, now());
+                        targetPath = ResolveCollisionPath(safeTargetDirectory, fileName, now());
                     }
 
+                    targetPath = writePathGuard.EnsureSafeFileTarget(targetPath);
                     File.Copy(sourcePath, targetPath, overwrite: false);
                 }
 

@@ -66,7 +66,11 @@ public sealed class ProjectRestorePointStore : IProjectRestorePointService
 
         try
         {
-            var validation = new JsonProjectRepository().Load(projectFilePath);
+            var pathGuard = new ProjectWritePathGuard(projectRoot);
+            projectRoot = pathGuard.EnsureSafeDirectoryTarget(projectRoot);
+            var safeProjectFile = pathGuard.EnsureSafeFileTarget(projectFilePath);
+
+            var validation = new JsonProjectRepository().Load(safeProjectFile);
             if (!validation.Ok || validation.Value is null)
             {
                 return ProjectRestorePointResult.Skipped(
@@ -77,12 +81,21 @@ public sealed class ProjectRestorePointStore : IProjectRestorePointService
                 projectRoot,
                 ProjectStructure.RestorePoints,
                 "projekt");
+            restoreDir = pathGuard.EnsureSafeDirectoryTarget(restoreDir);
             Directory.CreateDirectory(restoreDir);
+            restoreDir = pathGuard.EnsureSafeDirectoryTarget(restoreDir);
 
             var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff", CultureInfo.InvariantCulture);
-            var snapshotPath = EnsureUniqueSnapshotPath(restoreDir, stamp);
-            File.Copy(projectFilePath, snapshotPath, overwrite: false);
-            PruneOldSnapshots(restoreDir);
+            var snapshotPath = EnsureUniqueSnapshotPath(restoreDir, stamp, pathGuard);
+
+            // Direkt vor dem ersten Schreibzugriff nochmals alle beteiligten Pfade
+            // pruefen. Damit wird auch ein zwischenzeitlich ersetzter Ordner erkannt.
+            pathGuard.EnsureSafeDirectoryTarget(projectRoot);
+            pathGuard.EnsureSafeDirectoryTarget(restoreDir);
+            safeProjectFile = pathGuard.EnsureSafeFileTarget(safeProjectFile);
+            snapshotPath = pathGuard.EnsureSafeFileTarget(snapshotPath);
+            File.Copy(safeProjectFile, snapshotPath, overwrite: false);
+            PruneOldSnapshots(restoreDir, pathGuard);
 
             return ProjectRestorePointResult.Success(
                 snapshotPath,
@@ -95,51 +108,85 @@ public sealed class ProjectRestorePointStore : IProjectRestorePointService
         }
     }
 
-    private static string EnsureUniqueSnapshotPath(string restoreDir, string stamp)
+    private static string EnsureUniqueSnapshotPath(
+        string restoreDir,
+        string stamp,
+        ProjectWritePathGuard pathGuard)
     {
-        var desiredPath = Path.Combine(
+        var desiredPath = pathGuard.EnsureSafeFileTarget(Path.Combine(
             restoreDir,
-            $"{stamp}_{ProjectFileLocator.ProjectFileName}");
+            $"{stamp}_{ProjectFileLocator.ProjectFileName}"));
         if (!File.Exists(desiredPath))
             return desiredPath;
 
         for (var suffix = 2; ; suffix++)
         {
-            var candidate = Path.Combine(
+            var candidate = pathGuard.EnsureSafeFileTarget(Path.Combine(
                 restoreDir,
-                $"{stamp}_{suffix}_{ProjectFileLocator.ProjectFileName}");
+                $"{stamp}_{suffix}_{ProjectFileLocator.ProjectFileName}"));
             if (!File.Exists(candidate))
                 return candidate;
         }
     }
 
-    private static void PruneOldSnapshots(string restoreDir)
+    private static void PruneOldSnapshots(
+        string restoreDir,
+        ProjectWritePathGuard pathGuard)
     {
-        var snapshots = Directory
-            .EnumerateFiles(
-                restoreDir,
-                $"*_{ProjectFileLocator.ProjectFileName}",
-                SearchOption.TopDirectoryOnly)
-            .Concat(Directory.EnumerateFiles(
-                restoreDir,
-                ProjectFileLocator.ProjectFileName,
-                SearchOption.AllDirectories))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(path => new FileInfo(path))
-            .OrderByDescending(info => info.CreationTimeUtc)
-            .ThenByDescending(info => info.Name, StringComparer.Ordinal)
-            .ToList();
+        List<FileInfo> snapshots;
+        try
+        {
+            restoreDir = pathGuard.EnsureSafeDirectoryTarget(restoreDir);
+            snapshots = SafeFileEnumeration
+                .EnumerateFilesSafe(
+                    restoreDir,
+                    $"*_{ProjectFileLocator.ProjectFileName}",
+                    recursive: false)
+                .Concat(SafeFileEnumeration.EnumerateFilesSafe(
+                    restoreDir,
+                    ProjectFileLocator.ProjectFileName,
+                    recursive: true))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(path => TryGetSafeSnapshot(path, pathGuard))
+                .OfType<FileInfo>()
+                .OrderByDescending(info => info.CreationTimeUtc)
+                .ThenByDescending(info => info.Name, StringComparer.Ordinal)
+                .ToList();
+        }
+        catch
+        {
+            // Aufraeumfehler duerfen einen erfolgreichen Restore-Point nicht entwerten.
+            return;
+        }
 
         foreach (var snapshot in snapshots.Skip(MaxRestorePoints))
         {
             try
             {
-                snapshot.Delete();
+                pathGuard.EnsureSafeDirectoryTarget(restoreDir);
+                var safeSnapshot = pathGuard.EnsureSafeFileTarget(snapshot.FullName);
+                File.Delete(safeSnapshot);
             }
             catch
             {
                 // Aufraeumfehler duerfen einen erfolgreichen Restore-Point nicht entwerten.
             }
+        }
+    }
+
+    private static FileInfo? TryGetSafeSnapshot(
+        string path,
+        ProjectWritePathGuard pathGuard)
+    {
+        try
+        {
+            return new FileInfo(pathGuard.EnsureSafeFileTarget(path));
+        }
+        catch
+        {
+            // Einzelne unsichere oder zwischenzeitlich verschwundene Eintraege
+            // werden beim optionalen Aufraeumen ausgelassen.
+            return null;
         }
     }
 }

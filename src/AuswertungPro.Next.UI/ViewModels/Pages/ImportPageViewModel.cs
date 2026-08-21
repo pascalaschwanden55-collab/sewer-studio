@@ -8,7 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-public sealed partial class ImportPageViewModel : ObservableObject
+public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeave
 {
     private readonly ShellViewModel _shell;
     private readonly AppSettings _settings;
@@ -26,6 +26,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private readonly Services.ImportSummaryExportController _summaryExportController;
     private readonly Services.ImportCatalogController _catalogController;
     private readonly Services.ImportVsaEvaluationController _vsaEvaluationController;
+    private readonly Func<bool> _saveProjectForActiveImport;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _summaryText = "";
@@ -63,6 +64,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         ArgumentNullException.ThrowIfNull(sp);
+        _sharedImportState = SharedImportStates.GetValue(
+            _shell,
+            static _ => new SharedImportOperationState());
+        _shell.RegisterShellOperationGuard(_sharedImportState);
+        _saveProjectForActiveImport = _shell.CreateActiveImportProjectSaveDelegate(
+            _sharedImportState);
         var dialogs = sp.Dialogs;
         _settings = sp.Settings;
         _projects = sp.Projects;
@@ -134,16 +141,17 @@ public sealed partial class ImportPageViewModel : ObservableObject
         CancelImportCommand = new RelayCommand(CancelImport, () => CanCancel);
         OpenLastReportCommand = new RelayCommand(_reportNavigationController.OpenLastReport);
         OpenReportFolderCommand = new RelayCommand(_reportNavigationController.OpenReportFolder);
-        MakeProjectPortableCommand = new AsyncRelayCommand(MakeProjectPortableAsync);
-        AssignPhotosFromFolderCommand = new AsyncRelayCommand(AssignPhotosFromFolderAsync);
+        MakeProjectPortableCommand = new AsyncRelayCommand(MakeProjectPortableAsync, CanStartImport);
+        AssignPhotosFromFolderCommand = new AsyncRelayCommand(AssignPhotosFromFolderAsync, CanStartImport);
         ImportKanalProjektCommand = new AsyncRelayCommand(ImportKanalProjektAsync, CanStartImport);
-        ProtokollNeuGenerierenCommand = new AsyncRelayCommand(ProtokollNeuGenerierenAsync);
+        ProtokollNeuGenerierenCommand = new AsyncRelayCommand(ProtokollNeuGenerierenAsync, CanStartImport);
 
+        _sharedImportState.Register(this);
         ApplyCatalogStatus(_catalogController.GetStatus());
     }
 
     private bool CanStartImport()
-        => !IsImportInProgress;
+        => !IsImportInProgress && !_sharedImportState.IsActive;
 
     partial void OnIsImportInProgressChanged(bool value)
     {
@@ -155,17 +163,27 @@ public sealed partial class ImportPageViewModel : ObservableObject
         ImportIbakCommand.NotifyCanExecuteChanged();
         ImportKinsCommand.NotifyCanExecuteChanged();
         ImportSchachtProCommand.NotifyCanExecuteChanged();
-        // Fehlte: Der Ein-Knopf-Befehl hat CanStartImport zwar als Bedingung, wurde
-        // ueber den Wechsel aber nie informiert - WPF fragt CanExecute erst nach dieser
-        // Meldung erneut, die Schaltflaeche blieb also waehrend eines manuellen Imports
-        // anklickbar.
+        MakeProjectPortableCommand.NotifyCanExecuteChanged();
+        AssignPhotosFromFolderCommand.NotifyCanExecuteChanged();
         ImportKanalProjektCommand.NotifyCanExecuteChanged();
+        ProtokollNeuGenerierenCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCanCancelChanged(bool value)
     {
         _ = value;
         (CancelImportCommand as RelayCommand)?.NotifyCanExecuteChanged();
+    }
+
+    public bool ConfirmLeave()
+    {
+        if (!_sharedImportState.IsActive)
+            return true;
+
+        _shell.SetStatus(
+            "Seiten- oder Projektwechsel ist waehrend eines Imports gesperrt. " +
+            "Bitte den Import zuerst abschliessen oder abbrechen.");
+        return false;
     }
 
     // ──── Cancel ────
@@ -181,11 +199,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private Task RunManualImportAsync(
         Func<Services.ImportManualWorkflowContext, Task> runAsync)
-    {
-        _importCts?.Dispose();
-        _importCts = new CancellationTokenSource();
-        return runAsync(CreateManualWorkflowContext(_importCts.Token));
-    }
+        => RunWithSharedImportLockAsync(() =>
+        {
+            _importCts?.Dispose();
+            _importCts = new CancellationTokenSource();
+            return runAsync(CreateManualWorkflowContext(_importCts.Token));
+        });
 
     private Services.ImportManualWorkflowContext CreateManualWorkflowContext(
         CancellationToken cancellationToken)
@@ -214,10 +233,13 @@ public sealed partial class ImportPageViewModel : ObservableObject
             ValidatePlausibility: Application.Import.ImportPlausibilityValidator.Validate,
             DeduplicateAllPrimaryDamages: DeduplicateAllPrimaryDamages,
             RunAfterImportAsync: RunVsaAfterImport,
-            SaveProject: _shell.TrySaveProject,
+            SaveProject: _saveProjectForActiveImport,
             SetStatus: _shell.SetStatus,
             SetCanCancel: value => CanCancel = value,
-            SetIsImportInProgress: value => IsImportInProgress = value,
+            // Der gemeinsame ViewModel-Ablauf besitzt die Sperre vom Auswahldialog
+            // bis zum vollstaendigen Abschluss. Der innere Importlauf darf sie daher
+            // nicht vorzeitig freigeben.
+            SetIsImportInProgress: _ => { },
             SetProgressPercent: value => ImportProgressPercent = value,
             SetPhase: value => ImportPhase = value,
             SetProgressText: value => ImportProgress = value,
@@ -245,12 +267,13 @@ public sealed partial class ImportPageViewModel : ObservableObject
         => RunManualImportAsync(_manualWorkflowController.ImportPdfAsync);
 
     private Task ImportSchachtPdfsFolderAsync()
-        => _protocolDistributionController.ExecuteAsync(
-            new Services.ImportProtocolDistributionActions(
-                GetProjectFolder: _shell.GetProjectFolder,
-                GetProject: () => _shell.Project,
-                CollectionLock: _shell.CollectionLock,
-                SaveProject: _shell.TrySaveProject));
+        => RunWithSharedImportLockAsync(
+            () => _protocolDistributionController.ExecuteAsync(
+                new Services.ImportProtocolDistributionActions(
+                    GetProjectFolder: _shell.GetProjectFolder,
+                    GetProject: () => _shell.Project,
+                    CollectionLock: _shell.CollectionLock,
+                    SaveProject: _saveProjectForActiveImport)));
 
     private Task ImportXtfAsync()
         => RunManualImportAsync(_manualWorkflowController.ImportXtfAsync);
@@ -274,14 +297,15 @@ public sealed partial class ImportPageViewModel : ObservableObject
     /// Fotos aus der Quelle ins Projekt holen. Danach 1:1 auf einen anderen PC kopierbar.
     /// </summary>
     private Task MakeProjectPortableAsync()
-        => _projectPortabilityController.ExecuteAsync(
-            new Services.ImportProjectPortabilityActions(
-                GetProjectFolder: _shell.GetProjectFolder,
-                GetProject: () => _shell.Project,
-                SaveProject: _shell.TrySaveProject,
-                SetProgress: value => ImportProgress = value,
-                AppendSummary: value => SummaryText += value,
-                AppendDetails: value => DetailsText += value));
+        => RunWithSharedImportLockAsync(
+            () => _projectPortabilityController.ExecuteAsync(
+                new Services.ImportProjectPortabilityActions(
+                    GetProjectFolder: _shell.GetProjectFolder,
+                    GetProject: () => _shell.Project,
+                    SaveProject: _saveProjectForActiveImport,
+                    SetProgress: value => ImportProgress = value,
+                    AppendSummary: value => SummaryText += value,
+                    AppendDetails: value => DetailsText += value)));
 
     /// <summary>
     /// Erzeugt am Ende der Bearbeitung je Haltung das programm-EIGENE Protokoll (mit Fotos, Suffix _E)
@@ -289,15 +313,16 @@ public sealed partial class ImportPageViewModel : ObservableObject
     /// Das ORIGINAL-Protokoll (PDF_Path) bleibt unberuehrt. Immer aktuell (Haltungsnummer, DN, Befunde).
     /// </summary>
     private Task ProtokollNeuGenerierenAsync()
-        => _protocolRegenerationController.ExecuteAsync(
-            new Services.ImportProtocolRegenerationActions(
-                GetProjectFolder: _shell.GetProjectFolder,
-                GetProject: () => _shell.Project,
-                SaveProject: _shell.TrySaveProject,
-                SetProgress: value => ImportProgress = value,
-                AppendSummary: value => SummaryText += value,
-                AppendDetails: value => DetailsText += value,
-                SetStatus: _shell.SetStatus));
+        => RunWithSharedImportLockAsync(
+            () => _protocolRegenerationController.ExecuteAsync(
+                new Services.ImportProtocolRegenerationActions(
+                    GetProjectFolder: _shell.GetProjectFolder,
+                    GetProject: () => _shell.Project,
+                    SaveProject: _saveProjectForActiveImport,
+                    SetProgress: value => ImportProgress = value,
+                    AppendSummary: value => SummaryText += value,
+                    AppendDetails: value => DetailsText += value,
+                    SetStatus: _shell.SetStatus)));
 
     /// <summary>
     /// Ordnet Fotos aus einem gewaehlten Quellordner den Haltungen/Beobachtungen zu (per Dateiname,
@@ -305,55 +330,38 @@ public sealed partial class ImportPageViewModel : ObservableObject
     /// GUID-benannte (nur ueber die DB zuordenbar) bleiben offen.
     /// </summary>
     private Task AssignPhotosFromFolderAsync()
-        => _projectPhotoAssignmentController.ExecuteAsync(
-            new Services.ImportProjectPhotoAssignmentActions(
-                GetProjectFolder: _shell.GetProjectFolder,
-                GetProject: () => _shell.Project,
-                SaveProject: _shell.TrySaveProject,
-                SetProgress: value => ImportProgress = value,
-                AppendSummary: value => SummaryText += value,
-                AppendDetails: value => DetailsText += value));
+        => RunWithSharedImportLockAsync(
+            () => _projectPhotoAssignmentController.ExecuteAsync(
+                new Services.ImportProjectPhotoAssignmentActions(
+                    GetProjectFolder: _shell.GetProjectFolder,
+                    GetProject: () => _shell.Project,
+                    SaveProject: _saveProjectForActiveImport,
+                    SetProgress: value => ImportProgress = value,
+                    AppendSummary: value => SummaryText += value,
+                    AppendDetails: value => DetailsText += value)));
 
     /// <summary>
     /// Ein-Knopf-Import: Quellordner der Kanalfernsehdaten waehlen → Format erkennen (WinCan/IKAS/KINS) →
     /// massgebliche Quelle importieren (inkl. Pro-Beobachtung-Fotos) → Rohdaten archivieren →
     /// Filme/PDFs verteilen → Fotos zentral gruppieren → relativ verlinken. Nutzt den getesteten
-    /// ProjectImportOrchestrator. Die 5 manuellen Format-Knoepfe bleiben als Spezialfall.
+    /// ProjectImportOrchestrator. Die 6 manuellen Format-Knoepfe bleiben als Spezialfall.
     /// </summary>
     private async Task ImportKanalProjektAsync()
     {
-        // Ein-Knopf und die fuenf manuellen Importe teilen sich Projekt, Staging und den
-        // einen Wiederherstellungs-Marker. Frueher setzte dieser Weg die Sperre gar nicht,
-        // beide Laeufe konnten also gleichzeitig starten und um dieselben Dateien streiten.
-        if (IsImportInProgress)
-        {
-            _shell.SetStatus("Es laeuft bereits ein Import.");
-            return;
-        }
-
-        IsImportInProgress = true;
-        try
-        {
-            await _oneClickProjectController.ExecuteAsync(
+        await RunWithSharedImportLockAsync(
+            () => _oneClickProjectController.ExecuteAsync(
                 new Services.ImportOneClickProjectActions(
                     GetProjectFolder: _shell.GetProjectFolder,
                     GetProject: () => _shell.Project,
                     DeepCopyProject: _projects.DeepCopy,
                     ReplaceProject: _shell.ReplaceProject,
                     CollectionLock: _shell.CollectionLock,
-                    SaveProject: _shell.TrySaveProject,
+                    SaveProject: _saveProjectForActiveImport,
                     SetProgress: value => ImportProgress = value,
                     AppendSummary: value => SummaryText += value,
                     AppendDetails: value => DetailsText += value,
                     ComputeSignature: _contentSignature.Compute,
-                    GetProjectPath: () => _settings.LastProjectPath));
-        }
-        finally
-        {
-            // Ohne finally bliebe die Sperre nach einem Fehler haengen und niemand
-            // koennte mehr importieren.
-            IsImportInProgress = false;
-        }
+                    GetProjectPath: () => _settings.LastProjectPath)));
     }
 
     private Task RunVsaAfterImport(Project project, string sourceLabel)

@@ -56,8 +56,12 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
         if (fileStaging is null && !Directory.Exists(sourceFolder))
             return new ProtocolDistributionReport(0, 0, 0, nichtZugeordnet, new[] { $"Quellordner fehlt: {sourceFolder}" });
 
+        var writePathGuard = fileStaging is null
+            ? new ProjectWritePathGuard(projectFolder)
+            : null;
+
         var pdfs = fileStaging is null
-            ? Directory.EnumerateFiles(sourceFolder, "*.pdf", SearchOption.AllDirectories)
+            ? SafeFileEnumeration.EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true)
                 .Select(path => new ImportReadableFile(path, path))
                 .ToList()
             : fileStaging.EnumerateReadableFiles(
@@ -96,7 +100,8 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
                         ProjectStructure.HaltungVerteiltDir(projectFolder, sichererName),
                         pdf,
                         $"{stempel}_{sichererName}.pdf",
-                        fileStaging);
+                        fileStaging,
+                        writePathGuard);
                     rec.SetFieldValue(FieldKeys.PdfPath, ProjectPathResolver.MakeRelative(dest, projectFolder), FieldSource.Legacy, userEdited: false);
                     haltung++;
                 }
@@ -123,7 +128,8 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
                         ProjectStructure.SchachtVerteiltDir(projectFolder, sichereNr),
                         pdf,
                         $"{stempel}_{sichereNr}.pdf",
-                        fileStaging);
+                        fileStaging,
+                        writePathGuard);
                     if (rec is null)
                     {
                         rec = new SchachtRecord();
@@ -238,7 +244,8 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
         string destDir,
         ImportReadableFile sourcePdf,
         string zielDateiname,
-        IImportFileStagingSession? fileStaging)
+        IImportFileStagingSession? fileStaging,
+        ProjectWritePathGuard? writePathGuard)
     {
         if (fileStaging is not null)
         {
@@ -247,8 +254,12 @@ public sealed class NameBasedProtocolDistributor : INameBasedProtocolDistributor
             return fileStaging.StageCopyAs(sourcePdf.ReadPath, destDir, zielDateiname);
         }
 
-        Directory.CreateDirectory(destDir);
-        var dest = EindeutigesZiel(Path.Combine(destDir, zielDateiname), sourcePdf.ReadPath);
+        var safeDestDir = writePathGuard!.EnsureSafeDirectoryTarget(destDir);
+        Directory.CreateDirectory(safeDestDir);
+        var requestedTarget = writePathGuard.EnsureSafeFileTarget(
+            Path.Combine(safeDestDir, zielDateiname));
+        var dest = EindeutigesZiel(requestedTarget, sourcePdf.ReadPath);
+        dest = writePathGuard.EnsureSafeFileTarget(dest);
         if (!File.Exists(dest))
             File.Copy(sourcePdf.ReadPath, dest, overwrite: false);
         return dest;

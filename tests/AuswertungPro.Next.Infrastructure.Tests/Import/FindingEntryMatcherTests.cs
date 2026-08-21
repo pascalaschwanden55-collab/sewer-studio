@@ -129,14 +129,14 @@ public sealed class FindingEntryMatcherTests
     }
 
     [Fact]
-    public void FindBestFindingForEntry_ReturnsSomething_WhenNoCodeAndNoMeter()
+    public void FindBestFindingForEntry_ReturnsNull_WhenNeitherCodeNorMeterMatches()
     {
-        // Kein Meter, kein Code-Match → Fallback gibt irgendwas zurueck (nicht null)
+        // Ohne fachlichen Match darf kein fremdes Foto/Video an den Eintrag geraten.
         var finding = new VsaFinding { KanalSchadencode = "BBA", MeterStart = 3.0 };
         var entry = new ProtocolEntry { Code = "XYZ" };
 
         var result = FindingEntryMatcher.FindBestFindingForEntry(
             entry, new List<VsaFinding> { finding });
-        Assert.NotNull(result);
+        Assert.Null(result);
     }
 }

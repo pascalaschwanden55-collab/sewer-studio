@@ -157,27 +157,34 @@ public sealed class IbakExportImportService : IIbakImportService
 
         // Fallback: Praefix-Match an Segmentgrenze (kein unscharfes Contains mehr,
         // das 100-200 mit 100-2000 verwechselt hat).
-        foreach (var r in project.Data)
-        {
-            var v = NormalizeHoldingKey(r.GetFieldValue("Haltungsname"));
-            if (string.IsNullOrWhiteSpace(v))
-                continue;
-            if (Common.HoldingKeyMatch.IsBoundaryPrefixMatch(v, key))
-                return r;
-        }
+        var prefixMatches = project.Data
+            .Where(r =>
+            {
+                var value = NormalizeHoldingKey(r.GetFieldValue("Haltungsname"));
+                return !string.IsNullOrWhiteSpace(value)
+                       && Common.HoldingKeyMatch.IsBoundaryPrefixMatch(value, key);
+            })
+            .Take(2)
+            .ToList();
+        if (prefixMatches.Count == 1)
+            return prefixMatches[0];
 
         // Fallback 2: Knoten-Prefix-tolerant (z.B. 10.1064892 == 1064892, 07.1028055 == 1028055)
         var keyStripped = StripNodePrefixes(key);
-        foreach (var r in project.Data)
-        {
-            var v = NormalizeHoldingKey(r.GetFieldValue("Haltungsname"));
-            if (string.IsNullOrWhiteSpace(v))
-                continue;
-            if (string.Equals(StripNodePrefixes(v), keyStripped, StringComparison.OrdinalIgnoreCase))
-                return r;
-        }
+        var strippedMatches = project.Data
+            .Where(r =>
+            {
+                var value = NormalizeHoldingKey(r.GetFieldValue("Haltungsname"));
+                return !string.IsNullOrWhiteSpace(value)
+                       && string.Equals(
+                           StripNodePrefixes(value),
+                           keyStripped,
+                           StringComparison.OrdinalIgnoreCase);
+            })
+            .Take(2)
+            .ToList();
 
-        return null;
+        return strippedMatches.Count == 1 ? strippedMatches[0] : null;
     }
 
     private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, IProtocolService protocolService)
@@ -197,7 +204,7 @@ public sealed class IbakExportImportService : IIbakImportService
         var videoExtensions = new[] { ".mpg", ".mpeg", ".mp4", ".avi", ".mov" };
 
         var matches = index.Keys
-            .Where(k => prefixes.Any(p => k.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+            .Where(k => prefixes.Any(p => HasPrefixAtBoundary(k, p)))
             .Where(k => videoExtensions.Any(ext => k.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
             .Select(k => ResolveFile(index, k))
             .Where(p => !string.IsNullOrWhiteSpace(p))
@@ -209,6 +216,11 @@ public sealed class IbakExportImportService : IIbakImportService
 
         record.SetFieldValue("Link", matches[0]!, FieldSource.Legacy, userEdited: false);
     }
+
+    private static bool HasPrefixAtBoundary(string value, string prefix)
+        => value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+           && (value.Length == prefix.Length
+               || !char.IsLetterOrDigit(value[prefix.Length]));
 
     private static void LinkHoldingPdf(HaltungRecord record, string holdingKey, Dictionary<string, List<string>> index)
     {

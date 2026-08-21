@@ -67,9 +67,10 @@ internal sealed class SchachtProtocolSingleImportController
             return;
         }
 
-        var target = ResolveTarget(project, result);
-        if (target is null)
+        var targetResolution = ResolveTarget(project, result);
+        if (targetResolution is null)
             return;
+        var target = targetResolution.Target;
 
         SchachtProtocolDistributionResult distribution;
         try
@@ -101,13 +102,34 @@ internal sealed class SchachtProtocolSingleImportController
                 fileImpact))
             return;
 
-        _protocolImport.Apply(target, result, distribution.RelativePath);
-        if (!project.SchaechteData.Contains(target))
+        var targetRemoved = false;
+        lock (_actions.CollectionLock)
         {
-            lock (_actions.CollectionLock)
+            if (targetResolution.RequiresProjectMembership
+                && !project.SchaechteData.Contains(target))
             {
-                project.SchaechteData.Add(target);
+                targetRemoved = true;
             }
+            else
+            {
+                _protocolImport.Apply(target, result, distribution.RelativePath);
+                if (!targetResolution.RequiresProjectMembership
+                    && !project.SchaechteData.Contains(target))
+                {
+                    project.SchaechteData.Add(target);
+                }
+            }
+        }
+
+        if (targetRemoved)
+        {
+            var removed =
+                $"Protokoll nicht uebernommen: Schacht {result.Schachtnummer} wurde inzwischen entfernt.";
+            _actions.SetLastResult(removed);
+            _dialogs.Warn(
+                removed + " Der geloeschte Datensatz wurde nicht wieder eingefuegt.",
+                DialogTitle);
+            return;
         }
 
         project.ModifiedAtUtc = DateTime.UtcNow;
@@ -173,7 +195,7 @@ internal sealed class SchachtProtocolSingleImportController
             FileCreated: true);
     }
 
-    private SchachtRecord? ResolveTarget(
+    private TargetResolution? ResolveTarget(
         Project project,
         SchachtProtocolParseResult result)
     {
@@ -181,7 +203,9 @@ internal sealed class SchachtProtocolSingleImportController
             project,
             result.Schachtnummer);
         if (existing is null)
-            return new SchachtRecord();
+            return new TargetResolution(
+                new SchachtRecord(),
+                RequiresProjectMembership: false);
 
         var choice = _dialogs.ConfirmCancel(
             $"Schacht {result.Schachtnummer} ist bereits vorhanden.\n\n" +
@@ -190,11 +214,19 @@ internal sealed class SchachtProtocolSingleImportController
 
         return choice switch
         {
-            DialogConfirm.Yes => existing,
-            DialogConfirm.No => new SchachtRecord(),
+            DialogConfirm.Yes => new TargetResolution(
+                existing,
+                RequiresProjectMembership: true),
+            DialogConfirm.No => new TargetResolution(
+                new SchachtRecord(),
+                RequiresProjectMembership: false),
             _ => null
         };
     }
+
+    private sealed record TargetResolution(
+        SchachtRecord Target,
+        bool RequiresProjectMembership);
 
     private static void Validate(SchachtProtocolSingleImportActions actions)
     {

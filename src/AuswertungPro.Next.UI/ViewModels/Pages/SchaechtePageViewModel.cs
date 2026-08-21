@@ -18,7 +18,7 @@ using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-public sealed partial class SchaechtePageViewModel : ObservableObject
+public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmLeave, IDisposable
 {
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
@@ -193,6 +193,31 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _schachtFileTargets = schachtFileTargets ?? SchachtFileTargetResolver.CompatibilityService;
         _protocolFileLocator = protocolFileLocator ?? SchachtProtocolFileCompatibility.Default;
         _schachtCostCatalog = schachtCostCatalog;
+        _sharedProtocolImportState = SharedProtocolImportStates.GetValue(
+            _shell,
+            static _ => new SharedProtocolImportOperationState());
+        _protocolImportShellGuard = new ProtocolImportShellOperationGuard(
+            _sharedProtocolImportState);
+        _shell.RegisterShellOperationGuard(_protocolImportShellGuard);
+        try
+        {
+            _saveProjectForProtocolImport =
+                _shell.CreateActiveProjectOperationSaveDelegate(_protocolImportShellGuard);
+        }
+        catch
+        {
+            try
+            {
+                _shell.UnregisterShellOperationGuard(_protocolImportShellGuard);
+            }
+            finally
+            {
+                _protocolImportShellGuard.Dispose();
+            }
+
+            throw;
+        }
+
         _schachtProtocolRefreshController = new SchachtProtocolRefreshController(
             _dialogs,
             new SchachtProtocolRefreshActions(
@@ -204,7 +229,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
                 ReadProtocolAsync: ReadProtocolAsync,
                 ProjectIsStillOpen: ProjectIsStillOpen,
                 Apply: RebuildFromProtocol,
-                SaveProject: _shell.TrySaveProject,
+                SaveProject: _saveProjectForProtocolImport,
                 SetLastResult: value => LastResult = value));
         _schachtProtocolSingleImportController = new SchachtProtocolSingleImportController(
             _dialogs,
@@ -213,7 +238,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
                 ReadProtocolAsync: ReadProtocolAsync,
                 ProjectIsStillOpen: ProjectIsStillOpen,
                 CollectionLock: _shell.CollectionLock,
-                SaveProject: _shell.TrySaveProject,
+                SaveProject: _saveProjectForProtocolImport,
                 SetSelected: record => Selected = record,
                 ClearSelectedIfSame: ClearSelectedIfSame,
                 SetLastResult: value => LastResult = value));
@@ -236,13 +261,17 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             new[] { "Rund", "Oval", "Quadratisch", "Rechteckig" });
         EnforceEigentuemerOptionsExact();
 
-        AddCommand = new RelayCommand(Add);
-        RemoveCommand = new RelayCommand(Remove, () => Selected is not null);
+        AddCommand = new RelayCommand(Add, CanMutateShaftDataForCommand);
+        RemoveCommand = new RelayCommand(
+            Remove,
+            () => CanMutateShaftData && Selected is not null);
         MoveUpCommand = new RelayCommand(MoveUp, CanMoveUp);
         MoveDownCommand = new RelayCommand(MoveDown, CanMoveDown);
-        SaveCommand = new RelayCommand(Save);
+        SaveCommand = new RelayCommand(Save, CanMutateShaftDataForCommand);
         RefreshProtocolCommand = new AsyncRelayCommand(RefreshProtocolAsync, CanRefreshProtocol);
-        ImportProtocolCommand = new AsyncRelayCommand(ImportProtocolAsync);
+        ImportProtocolCommand = new AsyncRelayCommand(
+            ImportProtocolAsync,
+            CanStartProtocolPdfOperation);
         ErgaenzeStammdatenAusPdfsCommand = new AsyncRelayCommand(
             ErgaenzeStammdatenAusPdfsAsync,
             CanErgaenzeStammdatenAusPdfs);
@@ -266,6 +295,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         EnsureRecordColumns();
         UpdateNr();
         UpdateSearchResultInfo(Records.Count);
+        _protocolImportShellGuard.OperationAvailabilityChanged +=
+            OnProtocolPdfOperationAvailabilityChanged;
     }
 
     partial void OnSelectedChanged(SchachtRecord? value)
@@ -384,6 +415,9 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     private void Save()
     {
+        if (!EnsureShaftDataMutationAllowed("Speichern"))
+            return;
+
         var ok = _shell.TrySaveProject();
         LastResult = ok ? "Schaechte gespeichert." : "Speichern fehlgeschlagen.";
     }

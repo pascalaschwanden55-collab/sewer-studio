@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
 
@@ -17,51 +18,50 @@ public sealed class KiasExportPatternDetectionService : IKiasExportPatternDetect
         }
 
         var dataDirectory = Path.Combine(exportRoot, "Data");
+        var hasData = IsSafeStandardDirectory(dataDirectory);
         var hasFdb = HasFile(exportRoot, "Arizona.fdb")
-                     || (Directory.Exists(dataDirectory) && HasFile(dataDirectory, "*.fdb"));
+                     || (hasData && HasFile(dataDirectory, "*.fdb", requireSafeDirectory: true));
 
         var filmDirectory = Path.Combine(exportRoot, "Film");
-        var hasFilm = Directory.Exists(filmDirectory);
+        var hasFilm = IsSafeStandardDirectory(filmDirectory);
         var reportDirectory = Path.Combine(exportRoot, "Report");
-        var hasReport = Directory.Exists(reportDirectory);
-        var hasDatenTxt = hasFilm && File.Exists(Path.Combine(filmDirectory, "Daten.txt"));
+        var hasReport = IsSafeStandardDirectory(reportDirectory);
+        var hasDatenTxt = hasFilm
+                          && HasFile(filmDirectory, "Daten.txt", requireSafeDirectory: true);
 
         var holdingPdfs = 0;
         var lateralPdfs = 0;
         if (hasReport)
         {
-            try
-            {
-                holdingPdfs = Directory.EnumerateFiles(reportDirectory, "H_*.pdf").Count();
-                lateralPdfs = Directory.EnumerateFiles(reportDirectory, "L_*.pdf").Count();
-            }
-            catch
-            {
-                // Einzelne nicht lesbare Report-Ordner verhindern die Formaterkennung nicht.
-            }
+            holdingPdfs = EnumerateDirectFiles(
+                    reportDirectory,
+                    "H_*.pdf",
+                    requireSafeDirectory: true)
+                .Count;
+            lateralPdfs = EnumerateDirectFiles(
+                    reportDirectory,
+                    "L_*.pdf",
+                    requireSafeDirectory: true)
+                .Count;
         }
 
         var gegenrichtung = 0;
         var wiederholung = 0;
         if (hasFilm)
         {
-            try
+            foreach (var filePath in EnumerateDirectFiles(
+                         filmDirectory,
+                         "*.*",
+                         requireSafeDirectory: true))
             {
-                foreach (var filePath in Directory.EnumerateFiles(filmDirectory, "*.*"))
-                {
-                    var name = Path.GetFileNameWithoutExtension(filePath);
-                    if (string.IsNullOrWhiteSpace(name))
-                        continue;
+                var name = Path.GetFileNameWithoutExtension(filePath);
+                if (string.IsNullOrWhiteSpace(name))
+                    continue;
 
-                    if (KiasExportPattern.IsGegenrichtungName(name))
-                        gegenrichtung++;
-                    else if (KiasExportPattern.HasTildeSuffix(name))
-                        wiederholung++;
-                }
-            }
-            catch
-            {
-                // Einzelne nicht lesbare Film-Ordner verhindern die Formaterkennung nicht.
+                if (KiasExportPattern.IsGegenrichtungName(name))
+                    gegenrichtung++;
+                else if (KiasExportPattern.HasTildeSuffix(name))
+                    wiederholung++;
             }
         }
 
@@ -84,17 +84,48 @@ public sealed class KiasExportPatternDetectionService : IKiasExportPatternDetect
             Reason: reason);
     }
 
-    private static bool HasFile(string directory, string pattern)
+    private static bool HasFile(
+        string directory,
+        string pattern,
+        bool requireSafeDirectory = false)
+        => EnumerateDirectFiles(directory, pattern, requireSafeDirectory).Count > 0;
+
+    private static IReadOnlyList<string> EnumerateDirectFiles(
+        string directory,
+        string pattern,
+        bool requireSafeDirectory)
     {
+        // Der ausdruecklich gewaehlte Export-Root darf selbst eine Verknuepfung sein.
+        // Seine bekannten Unterordner muessen dagegen echte Ordner sein.
+        if (requireSafeDirectory && !IsSafeStandardDirectory(directory))
+            return Array.Empty<string>();
+
+        var files = SafeFileEnumeration
+            .EnumerateFilesSafe(directory, pattern, recursive: false)
+            .ToArray();
+
+        // Zweite Pruefung nach dem Aufzaehlen: Ein waehrenddessen ausgetauschter
+        // Standardordner darf keine bereits gefundenen Fremddateien liefern.
+        return !requireSafeDirectory || IsSafeStandardDirectory(directory)
+            ? files
+            : Array.Empty<string>();
+    }
+
+    private static bool IsSafeStandardDirectory(string directory)
+    {
+        if (!Directory.Exists(directory))
+            return false;
+
         try
         {
-            return Directory.EnumerateFiles(
-                    directory,
-                    pattern,
-                    SearchOption.TopDirectoryOnly)
-                .Any();
+            ImportFileStagingPathGuard.EnsureNotReparsePoint(directory);
+            return true;
         }
-        catch
+        catch (Exception ex) when (ex is IOException
+                                   or UnauthorizedAccessException
+                                   or ArgumentException
+                                   or NotSupportedException
+                                   or System.Security.SecurityException)
         {
             return false;
         }

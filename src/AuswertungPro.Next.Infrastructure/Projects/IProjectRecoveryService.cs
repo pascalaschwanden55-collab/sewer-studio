@@ -8,4 +8,9 @@ namespace AuswertungPro.Next.Infrastructure.Projects;
 public interface IProjectRecoveryService
 {
     ProjectRecoveryResult TryRecover(string projectFilePath, IProjectRepository repository);
+
+    ProjectRecoveryMaterializationResult MaterializeRecoveredProjectForRetry(
+        string projectFilePath,
+        ProjectRecoveryResult recovery,
+        IProjectRepository repository);
 }

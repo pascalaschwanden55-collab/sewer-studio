@@ -79,6 +79,8 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
                     var (val, act) = ResolvePortable(finding.FotoPath, holdingFolder, projectFolder, IsImage, copyExternalInto: "Fotos", dryRun);
                     if (!dryRun && act is Act.Relinked or Act.Copied)
                         finding.FotoPath = val;
+                    if (act == Act.Unresolved)
+                        messages.Add($"Foto: nicht aufgeloest ({finding.FotoPath})");
                     Tally(act);
                 }
             }
@@ -107,9 +109,16 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
     {
         foreach (var root in HoldingRootFolders)
         {
-            var p = Path.Combine(projectFolder, root, san);
-            if (Directory.Exists(p))
-                return p;
+            var candidate = Path.Combine(projectFolder, root, san);
+            if (ImportSourcePathGuard.TryInspectDirectory(
+                    candidate,
+                    out var safeFolder,
+                    out var exists,
+                    out _)
+                && exists)
+            {
+                return safeFolder;
+            }
         }
         return null;
     }
@@ -163,18 +172,41 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
     {
         foreach (var entry in revision.Entries)
         {
-            for (var i = 0; i < entry.FotoPaths.Count; i++)
-            {
-                var raw = entry.FotoPaths[i];
-                if (string.IsNullOrWhiteSpace(raw))
-                    continue;
+            RelinkPhotoPaths(entry.FotoPaths, "Foto", holdingFolder, projectFolder, dryRun, tally, messages);
+            RelinkPhotoPaths(entry.OriginalFotoPaths, "Originalfoto", holdingFolder, projectFolder, dryRun, tally, messages);
+        }
+    }
 
-                var (val, act) = ResolvePortable(raw, holdingFolder, projectFolder, IsImage, copyExternalInto: "Fotos", dryRun);
-                if (!dryRun && act is Act.Relinked or Act.Copied)
-                    entry.FotoPaths[i] = val;
-                if (act == Act.Unresolved) messages.Add($"Foto: nicht aufgeloest ({raw})");
-                tally(act);
-            }
+    private void RelinkPhotoPaths(
+        IList<string>? paths,
+        string label,
+        string? holdingFolder,
+        string projectFolder,
+        bool dryRun,
+        Action<Act> tally,
+        List<string> messages)
+    {
+        if (paths is null)
+            return;
+
+        for (var i = 0; i < paths.Count; i++)
+        {
+            var raw = paths[i];
+            if (string.IsNullOrWhiteSpace(raw))
+                continue;
+
+            var (val, act) = ResolvePortable(
+                raw,
+                holdingFolder,
+                projectFolder,
+                IsImage,
+                copyExternalInto: "Fotos",
+                dryRun);
+            if (!dryRun && act is Act.Relinked or Act.Copied)
+                paths[i] = val;
+            if (act == Act.Unresolved)
+                messages.Add($"{label}: nicht aufgeloest ({raw})");
+            tally(act);
         }
     }
 
@@ -186,42 +218,79 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
         Func<string, bool> typeMatch, string? copyExternalInto, bool dryRun)
     {
         raw = raw.Trim();
-        // S2-3: UNC-Pfade koennen nicht portabel gemacht werden; jeder Zugriff wuerde
-        // SMB-Authentifizierung an fremde Hosts ausloesen -> als unaufloesbar melden.
-        if (MediaFileAllowlist.IsUnc(raw))
-            return (raw, Act.Unresolved);
         if (raw.Length == 0)
             return (raw, Act.Kept);
+
+        ProjectWritePathGuard writePathGuard;
+        try
+        {
+            writePathGuard = new ProjectWritePathGuard(projectFolder);
+        }
+        catch
+        {
+            return (raw, Act.Unresolved);
+        }
+
+        if (!TryInspectPortableSource(
+                raw,
+                projectFolder,
+                out var safeSourcePath,
+                out var sourceExists))
+        {
+            return (raw, Act.Unresolved);
+        }
 
         // 1) Schon relativ + loest auf -> behalten.
         if (ProjectPathResolver.IsRelative(raw))
         {
-            if (ProjectPathResolver.ResolveFilePathFromProjectFolder(raw, projectFolder) != null)
-                return (raw, Act.Kept);
+            if (sourceExists)
+            {
+                try
+                {
+                    writePathGuard.EnsureSafeFileTarget(safeSourcePath);
+                    return (raw, Act.Kept);
+                }
+                catch
+                {
+                    return (raw, Act.Unresolved);
+                }
+            }
         }
         else
         {
             // 2) Absolut INNERHALB des Projekts -> nur relativ machen.
-            string full;
-            try { full = Path.GetFullPath(raw); } catch { full = raw; }
             var rootFull = Path.GetFullPath(projectFolder);
-            if (full.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase) && File.Exists(full))
-                return (ProjectPathResolver.MakeRelative(full, projectFolder), Act.Relinked);
+            if (sourceExists && IsUnderDirectory(safeSourcePath, rootFull))
+            {
+                try
+                {
+                    safeSourcePath = writePathGuard.EnsureSafeFileTarget(safeSourcePath);
+                    return (ProjectPathResolver.MakeRelative(safeSourcePath, projectFolder), Act.Relinked);
+                }
+                catch
+                {
+                    return (raw, Act.Unresolved);
+                }
+            }
         }
 
         var fileName = Path.GetFileName(raw);
 
         // 3) Kopie im Haltungsordner finden (gleicher Typ) -> relinken (kein Neu-Kopieren).
-        if (!string.IsNullOrWhiteSpace(holdingFolder) && Directory.Exists(holdingFolder))
+        if (!string.IsNullOrWhiteSpace(holdingFolder))
         {
-            var match = PickHoldingMatch(holdingFolder!, fileName, typeMatch);
+            var match = PickHoldingMatch(
+                holdingFolder!,
+                fileName,
+                typeMatch,
+                writePathGuard);
             if (match != null)
             {
                 var externalPhotoDiffersFromProjectMatch =
                     copyExternalInto != null
                     && Path.IsPathRooted(raw)
-                    && File.Exists(raw)
-                    && !SameFileContent(raw, match);
+                    && sourceExists
+                    && !SameFileContent(safeSourcePath, match);
 
                 // Gleichnamiges Projektfoto ist nicht dieselbe Datei: nicht falsch relinken,
                 // sondern unten kollisionssicher ins Projekt kopieren.
@@ -231,20 +300,25 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
         }
 
         // S2-1: Externe Fremd-Dateien nur als bekannte Medientypen ins Projekt kopieren.
-        if (copyExternalInto != null && Path.IsPathRooted(raw) && !MediaFileAllowlist.IsMediaFile(raw))
+        if (copyExternalInto != null
+            && Path.IsPathRooted(raw)
+            && !MediaFileAllowlist.IsMediaFile(safeSourcePath))
             return (raw, Act.Unresolved);
 
         // 4) Foto-Sonderfall: absolut + extern existiert -> in den Haltungsordner kopieren.
-        if (copyExternalInto != null && Path.IsPathRooted(raw) && File.Exists(raw)
+        if (copyExternalInto != null && Path.IsPathRooted(raw) && sourceExists
             && !string.IsNullOrWhiteSpace(holdingFolder))
         {
             var destDir = Path.Combine(holdingFolder!, copyExternalInto);
-            if (dryRun)
-                return (raw, Act.Copied);
             try
             {
+                destDir = writePathGuard.EnsureSafeDirectoryTarget(destDir);
+                if (dryRun)
+                    return (raw, Act.Copied);
+
+                writePathGuard.EnsureSafeDirectoryTarget(destDir);
                 Directory.CreateDirectory(destDir);
-                var dest = CopyUnique(raw, destDir);
+                var dest = CopyUnique(safeSourcePath, destDir, writePathGuard);
                 return (ProjectPathResolver.MakeRelative(dest, projectFolder), Act.Copied);
             }
             catch
@@ -256,10 +330,30 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
         return (raw, Act.Unresolved);
     }
 
-    private static string? PickHoldingMatch(string holdingFolder, string originalFileName, Func<string, bool> typeMatch)
+    private static string? PickHoldingMatch(
+        string holdingFolder,
+        string originalFileName,
+        Func<string, bool> typeMatch,
+        ProjectWritePathGuard writePathGuard)
     {
         string[] files;
-        try { files = Directory.GetFiles(holdingFolder, "*", SearchOption.AllDirectories); }
+        try
+        {
+            if (!ImportSourcePathGuard.TryInspectDirectory(
+                    holdingFolder,
+                    out holdingFolder,
+                    out var exists,
+                    out _)
+                || !exists)
+            {
+                return null;
+            }
+
+            holdingFolder = writePathGuard.EnsureSafeDirectoryTarget(holdingFolder);
+            files = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
+                .EnumerateFilesSafe(holdingFolder)
+                .ToArray();
+        }
         catch { return null; }
 
         var typed = files.Where(typeMatch).ToList();
@@ -302,6 +396,19 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
         return string.Equals(parent, dir, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsUnderDirectory(string path, string directory)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var fullDirectory = Path.GetFullPath(directory)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (string.Equals(fullPath, fullDirectory, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return fullPath.StartsWith(
+            fullDirectory + Path.DirectorySeparatorChar,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsMainMediaCopy(string path)
     {
         var name = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
@@ -310,18 +417,33 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
                && !name.EndsWith("_g");
     }
 
-    private static string CopyUnique(string source, string destDir)
+    private static string CopyUnique(
+        string source,
+        string destDir,
+        ProjectWritePathGuard writePathGuard)
     {
+        source = EnsureSafeExistingSourceFile(source);
         var fileName = Path.GetFileName(source);
-        var dest = ResolveCopyTarget(source, Path.Combine(destDir, fileName));
+        var dest = ResolveCopyTarget(
+            source,
+            Path.Combine(destDir, fileName),
+            writePathGuard);
 
         if (!File.Exists(dest))
+        {
+            source = EnsureSafeExistingSourceFile(source);
+            writePathGuard.EnsureSafeFileTarget(dest);
             File.Copy(source, dest, overwrite: false);
+        }
         return dest;
     }
 
-    private static string ResolveCopyTarget(string source, string target)
+    private static string ResolveCopyTarget(
+        string source,
+        string target,
+        ProjectWritePathGuard writePathGuard)
     {
+        target = writePathGuard.EnsureSafeFileTarget(target);
         if (!File.Exists(target) || SameFileContent(source, target))
             return target;
 
@@ -331,7 +453,8 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
         var i = 1;
         while (true)
         {
-            var candidate = Path.Combine(dir, $"{stem}_{i}{ext}");
+            var candidate = writePathGuard.EnsureSafeFileTarget(
+                Path.Combine(dir, $"{stem}_{i}{ext}"));
             if (!File.Exists(candidate) || SameFileContent(source, candidate))
                 return candidate;
             i++;
@@ -342,36 +465,67 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
     {
         try
         {
-            var leftInfo = new FileInfo(left);
-            var rightInfo = new FileInfo(right);
-            if (!leftInfo.Exists || !rightInfo.Exists || leftInfo.Length != rightInfo.Length)
-                return false;
+            left = EnsureSafeExistingSourceFile(left);
+            right = EnsureSafeExistingSourceFile(right);
+            return FileContentComparer.FilesEqual(left, right);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
-            using var leftStream = File.OpenRead(left);
-            using var rightStream = File.OpenRead(right);
-            var leftBuffer = new byte[81920];
-            var rightBuffer = new byte[81920];
+    private static bool TryInspectPortableSource(
+        string raw,
+        string projectFolder,
+        out string safePath,
+        out bool exists)
+    {
+        safePath = string.Empty;
+        exists = false;
+        string candidate;
 
-            while (true)
+        try
+        {
+            if (ProjectPathResolver.IsRelative(raw))
             {
-                var leftRead = leftStream.Read(leftBuffer, 0, leftBuffer.Length);
-                var rightRead = rightStream.Read(rightBuffer, 0, rightBuffer.Length);
-                if (leftRead != rightRead)
+                if (!ProjectPathResolver.IsSafeRelativeProjectPath(raw))
                     return false;
-                if (leftRead == 0)
-                    return true;
 
-                for (var i = 0; i < leftRead; i++)
-                {
-                    if (leftBuffer[i] != rightBuffer[i])
-                        return false;
-                }
+                candidate = Path.GetFullPath(Path.Combine(projectFolder, raw));
+                if (!IsUnderDirectory(candidate, projectFolder))
+                    return false;
+            }
+            else
+            {
+                candidate = raw;
             }
         }
         catch
         {
             return false;
         }
+
+        return ImportSourcePathGuard.TryInspectFile(
+            candidate,
+            out safePath,
+            out exists,
+            out _);
+    }
+
+    private static string EnsureSafeExistingSourceFile(string path)
+    {
+        if (!ImportSourcePathGuard.TryInspectFile(
+                path,
+                out var safePath,
+                out var exists,
+                out var error)
+            || !exists)
+        {
+            throw new IOException(error ?? "Quelldatei fehlt.");
+        }
+
+        return safePath;
     }
 
     private static bool IsVideo(string path) => MediaFileTypes.HasVideoExtension(path);

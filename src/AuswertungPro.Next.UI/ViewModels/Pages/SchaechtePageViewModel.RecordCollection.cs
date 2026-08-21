@@ -16,6 +16,9 @@ public sealed partial class SchaechtePageViewModel
 
     private void Add()
     {
+        if (!EnsureShaftDataMutationAllowed("Schacht anlegen"))
+            return;
+
         var record = RecordCollectionController.Add();
         SetSelectedWithoutRequiredFieldWarning(record);
         UpdateSearchResultInfo(Records.Count);
@@ -24,6 +27,9 @@ public sealed partial class SchaechtePageViewModel
 
     private void Remove()
     {
+        if (!CanMutateRecord(Selected, "Schacht loeschen"))
+            return;
+
         if (!RecordCollectionController.TryRemove(Selected, out var nextSelection))
             return;
 
@@ -34,13 +40,18 @@ public sealed partial class SchaechtePageViewModel
     }
 
     private bool CanMoveUp()
-        => RecordCollectionController.CanMoveUp(Selected);
+        => CanMutateShaftData
+           && RecordCollectionController.CanMoveUp(Selected);
 
     private bool CanMoveDown()
-        => RecordCollectionController.CanMoveDown(Selected);
+        => CanMutateShaftData
+           && RecordCollectionController.CanMoveDown(Selected);
 
     private void MoveUp()
     {
+        if (!CanMutateRecord(Selected, "Schacht verschieben"))
+            return;
+
         if (!RecordCollectionController.TryMoveUp(Selected))
             return;
 
@@ -49,6 +60,9 @@ public sealed partial class SchaechtePageViewModel
 
     private void MoveDown()
     {
+        if (!CanMutateRecord(Selected, "Schacht verschieben"))
+            return;
+
         if (!RecordCollectionController.TryMoveDown(Selected))
             return;
 
@@ -60,6 +74,9 @@ public sealed partial class SchaechtePageViewModel
     /// </summary>
     public bool MoveToPosition(int targetPosition)
     {
+        if (!CanMutateRecord(Selected, "Schacht verschieben"))
+            return false;
+
         if (!RecordCollectionController.TryMoveToPosition(Selected, targetPosition))
             return false;
 

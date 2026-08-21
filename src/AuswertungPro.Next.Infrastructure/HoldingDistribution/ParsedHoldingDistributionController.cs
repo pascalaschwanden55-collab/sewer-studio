@@ -195,6 +195,7 @@ internal static class ParsedHoldingDistributionController
 
         try
         {
+            var writePaths = new DistributionWritePathGuard(destinationMunicipalityFolder);
             var treeContext = new DistributionPatternContext(
                 Datum: date,
                 Gemeinde: DistributionDirectoryTreeController.GetMunicipality(project),
@@ -206,12 +207,106 @@ internal static class ParsedHoldingDistributionController
                 "{Haltung}",
                 variant,
                 "{Datum}_{Haltung}");
-            Directory.CreateDirectory(holdingFolder);
-
+            holdingFolder = writePaths.EnsureDirectoryTarget(holdingFolder);
             var destinationPdfName = $"{dateStamp}_{holding}.pdf";
-            var destinationPdfPath = DistributionFileTransfer.EnsureUniquePath(
+            var destinationPdfPath = writePaths.ResolveUniqueFileTarget(
                 Path.Combine(holdingFolder, destinationPdfName),
                 overwrite);
+            var counterInspection = Distributor.FindVideoByHaltungDate(
+                videoSourceFolder,
+                holding + "g",
+                dateStamp,
+                recursiveVideoSearch,
+                videoFilesCache);
+            string? destinationVideoPath = null;
+            string? destinationCounterVideoPath = null;
+            string? infoPath = null;
+            string? unmatchedFolder = null;
+            IReadOnlyList<string> ambiguousCandidates = Array.Empty<string>();
+            var copyStandardVideo = false;
+            var copyCounterVideo = false;
+            var videoPaths = new List<string>();
+
+            if (videoFind.Status == Distributor.VideoMatchStatus.Matched && videoFind.VideoPath is not null)
+            {
+                var videoExtension = Path.GetExtension(videoFind.VideoPath);
+                var destinationVideoName = $"{dateStamp}_{holding}{videoExtension}";
+                destinationVideoPath = Path.Combine(holdingFolder, destinationVideoName);
+                var existingVideo = Distributor.FindExistingVideo(holdingFolder, videoFind.VideoPath);
+                if (existingVideo is not null)
+                {
+                    destinationVideoPath = writePaths.EnsureFileTarget(existingVideo);
+                }
+                else
+                {
+                    destinationVideoPath = writePaths.ResolveUniqueFileTarget(
+                        destinationVideoPath,
+                        overwrite);
+                    copyStandardVideo = true;
+                }
+                videoPaths.Add(destinationVideoPath);
+            }
+
+            if (counterInspection.Status == Distributor.VideoMatchStatus.Matched
+                && counterInspection.VideoPath is not null
+                && !string.Equals(
+                    counterInspection.VideoPath,
+                    videoFind.VideoPath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var existingCounterVideo = Distributor.FindExistingVideo(
+                    holdingFolder,
+                    counterInspection.VideoPath);
+                if (existingCounterVideo is not null)
+                {
+                    destinationCounterVideoPath = writePaths.EnsureFileTarget(existingCounterVideo);
+                }
+                else
+                {
+                    var extension = Path.GetExtension(counterInspection.VideoPath);
+                    var destinationName = $"{dateStamp}_{holding}-g{extension}";
+                    destinationCounterVideoPath = writePaths.ResolveUniqueFileTarget(
+                        Path.Combine(holdingFolder, destinationName),
+                        overwrite);
+                    copyCounterVideo = true;
+                }
+                videoPaths.Add(destinationCounterVideoPath);
+            }
+
+            if (videoPaths.Count == 0)
+            {
+                if (videoFind.Status == Distributor.VideoMatchStatus.NotFound
+                    && counterInspection.Status == Distributor.VideoMatchStatus.NotFound)
+                {
+                    var infoName = $"{dateStamp}_{holding}_VIDEO_MISSING.txt";
+                    infoPath = writePaths.ResolveUniqueFileTarget(
+                        Path.Combine(holdingFolder, infoName),
+                        overwrite);
+                }
+                else if (videoFind.Status == Distributor.VideoMatchStatus.Ambiguous
+                         || counterInspection.Status == Distributor.VideoMatchStatus.Ambiguous)
+                {
+                    var infoName = $"{dateStamp}_{holding}_VIDEO_AMBIGUOUS.txt";
+                    infoPath = writePaths.ResolveUniqueFileTarget(
+                        Path.Combine(holdingFolder, infoName),
+                        overwrite);
+                    ambiguousCandidates = videoFind.Status == Distributor.VideoMatchStatus.Ambiguous
+                        ? videoFind.Candidates
+                        : counterInspection.Candidates;
+                    var holdingParent = Directory.GetParent(holdingFolder)?.FullName
+                                        ?? destinationMunicipalityFolder;
+                    var safeUnmatchedFolderName = ProjectPathResolver.SanitizePathSegment(unmatchedFolderName);
+                    unmatchedFolder = Path.Combine(
+                        holdingParent,
+                        safeUnmatchedFolderName,
+                        holding);
+                    unmatchedFolder = writePaths.EnsureDirectoryTarget(unmatchedFolder);
+                }
+            }
+
+            // Alle Ziele sind geprueft. Erst jetzt duerfen Quellen verschoben oder
+            // bereits vorhandene Projektdateien veraendert werden.
+            Directory.CreateDirectory(holdingFolder);
             DistributionFileTransfer.MoveOrCopy(
                 pdfSourceToStorePath,
                 destinationPdfPath,
@@ -232,39 +327,19 @@ internal static class ParsedHoldingDistributionController
                 }
             }
 
-            var counterInspection = Distributor.FindVideoByHaltungDate(
-                videoSourceFolder,
-                holding + "g",
-                dateStamp,
-                recursiveVideoSearch,
-                videoFilesCache);
-            string? destinationVideoPath = null;
-            string? destinationCounterVideoPath = null;
-            string? infoPath = null;
-            var videoPaths = new List<string>();
-
-            if (videoFind.Status == Distributor.VideoMatchStatus.Matched && videoFind.VideoPath is not null)
+            if (videoFind.Status == Distributor.VideoMatchStatus.Matched
+                && videoFind.VideoPath is not null
+                && destinationVideoPath is not null)
             {
-                var videoExtension = Path.GetExtension(videoFind.VideoPath);
-                var destinationVideoName = $"{dateStamp}_{holding}{videoExtension}";
-                destinationVideoPath = Path.Combine(holdingFolder, destinationVideoName);
-                var existingVideo = Distributor.FindExistingVideo(holdingFolder, videoFind.VideoPath);
-                if (existingVideo is not null)
+                if (copyStandardVideo)
                 {
-                    destinationVideoPath = existingVideo;
-                }
-                else
-                {
-                    destinationVideoPath = DistributionFileTransfer.EnsureUniquePath(
-                        destinationVideoPath,
-                        overwrite);
                     DistributionFileTransfer.MoveOrCopy(
                         videoFind.VideoPath,
                         destinationVideoPath,
                         moveInsteadOfCopy,
                         overwrite);
                 }
-                videoPaths.Add(destinationVideoPath);
+
                 UpdateRecordLink(
                     project,
                     holding,
@@ -275,32 +350,17 @@ internal static class ParsedHoldingDistributionController
 
             if (counterInspection.Status == Distributor.VideoMatchStatus.Matched
                 && counterInspection.VideoPath is not null
-                && !string.Equals(
-                    counterInspection.VideoPath,
-                    videoFind.VideoPath,
-                    StringComparison.OrdinalIgnoreCase))
+                && destinationCounterVideoPath is not null)
             {
-                var existingCounterVideo = Distributor.FindExistingVideo(
-                    holdingFolder,
-                    counterInspection.VideoPath);
-                if (existingCounterVideo is not null)
+                if (copyCounterVideo)
                 {
-                    destinationCounterVideoPath = existingCounterVideo;
-                }
-                else
-                {
-                    var extension = Path.GetExtension(counterInspection.VideoPath);
-                    var destinationName = $"{dateStamp}_{holding}-g{extension}";
-                    destinationCounterVideoPath = DistributionFileTransfer.EnsureUniquePath(
-                        Path.Combine(holdingFolder, destinationName),
-                        overwrite);
                     DistributionFileTransfer.MoveOrCopy(
                         counterInspection.VideoPath,
                         destinationCounterVideoPath,
                         moveInsteadOfCopy,
                         overwrite);
                 }
-                videoPaths.Add(destinationCounterVideoPath);
+
                 UpdateRecordLink(
                     project,
                     holding,
@@ -309,15 +369,11 @@ internal static class ParsedHoldingDistributionController
                     destinationMunicipalityFolder);
             }
 
-            if (videoPaths.Count == 0)
+            if (videoPaths.Count == 0 && infoPath is not null)
             {
                 if (videoFind.Status == Distributor.VideoMatchStatus.NotFound
                     && counterInspection.Status == Distributor.VideoMatchStatus.NotFound)
                 {
-                    var infoName = $"{dateStamp}_{holding}_VIDEO_MISSING.txt";
-                    infoPath = DistributionFileTransfer.EnsureUniquePath(
-                        Path.Combine(holdingFolder, infoName),
-                        overwrite);
                     var filmName = string.IsNullOrWhiteSpace(parsed.VideoFile)
                         ? "<nicht gefunden>"
                         : parsed.VideoFile;
@@ -329,16 +385,8 @@ internal static class ParsedHoldingDistributionController
                             date,
                             holdingRaw));
                 }
-                else if (videoFind.Status == Distributor.VideoMatchStatus.Ambiguous
-                         || counterInspection.Status == Distributor.VideoMatchStatus.Ambiguous)
+                else if (unmatchedFolder is not null)
                 {
-                    var infoName = $"{dateStamp}_{holding}_VIDEO_AMBIGUOUS.txt";
-                    infoPath = DistributionFileTransfer.EnsureUniquePath(
-                        Path.Combine(holdingFolder, infoName),
-                        overwrite);
-                    var candidates = videoFind.Status == Distributor.VideoMatchStatus.Ambiguous
-                        ? videoFind.Candidates
-                        : counterInspection.Candidates;
                     AtomicTextFileWriter.WriteAllText(
                         infoPath,
                         VideoConflictArtifacts.BuildAmbiguousInfo(
@@ -346,20 +394,13 @@ internal static class ParsedHoldingDistributionController
                             parsed.VideoFile!,
                             date,
                             holdingRaw,
-                            candidates));
-                    var holdingParent = Directory.GetParent(holdingFolder)?.FullName
-                                        ?? destinationMunicipalityFolder;
-                    var safeUnmatchedFolderName = ProjectPathResolver.SanitizePathSegment(unmatchedFolderName);
-                    var unmatchedFolder = Path.Combine(
-                        holdingParent,
-                        safeUnmatchedFolderName,
-                        holding);
+                            ambiguousCandidates));
                     Directory.CreateDirectory(unmatchedFolder);
                     VideoConflictArtifacts.CopyCandidates(
                         unmatchedFolder,
                         dateStamp,
                         holding,
-                        candidates);
+                        ambiguousCandidates);
                 }
             }
 

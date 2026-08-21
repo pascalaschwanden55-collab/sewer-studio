@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Import;
 
 namespace AuswertungPro.Next.Infrastructure.Media;
 
@@ -84,7 +85,18 @@ public sealed class MediaConflictCenterService
         if (string.IsNullOrWhiteSpace(projectFolder))
             return Array.Empty<MediaConflictCase>();
 
-        var holdingsRoot = Path.Combine(projectFolder, "Haltungen");
+        string holdingsRoot;
+        try
+        {
+            var guard = new ProjectWritePathGuard(projectFolder);
+            holdingsRoot = guard.EnsureSafeDirectoryTarget(
+                Path.Combine(projectFolder, "Haltungen"));
+        }
+        catch
+        {
+            return Array.Empty<MediaConflictCase>();
+        }
+
         if (!Directory.Exists(holdingsRoot))
             return Array.Empty<MediaConflictCase>();
 
@@ -141,38 +153,54 @@ public sealed class MediaConflictCenterService
         string? preferredVideoRoot = null,
         IReadOnlyDictionary<string, List<string>>? fileIndexByName = null)
     {
+        if (project is null || conflict is null)
+            return null;
+
         var store = LoadMappings(project);
         if (!TryGetLearnedMapping(store, conflict, out var learned))
             return null;
+        if (!TryNormalizeLearnedVideoFileName(learned.SelectedFileName, out var selectedFileName))
+            return null;
 
         // 1) Last known path.
-        if (!string.IsNullOrWhiteSpace(learned.LastKnownSourcePath) && File.Exists(learned.LastKnownSourcePath))
-            return learned.LastKnownSourcePath;
+        if (TryInspectNamedVideoSource(
+                learned.LastKnownSourcePath,
+                selectedFileName,
+                out var lastKnownSourcePath))
+        {
+            return lastKnownSourcePath;
+        }
 
         // 2) Current candidates from info/unmatched.
-        var candidateMatch = conflict.Candidates.FirstOrDefault(path =>
-            string.Equals(Path.GetFileName(path), learned.SelectedFileName, StringComparison.OrdinalIgnoreCase)
-            && File.Exists(path));
-        if (!string.IsNullOrWhiteSpace(candidateMatch))
-            return candidateMatch;
+        foreach (var candidate in conflict.Candidates ?? Array.Empty<string>())
+        {
+            if (TryInspectNamedVideoSource(candidate, selectedFileName, out var candidateMatch))
+                return candidateMatch;
+        }
 
         // 3) Search indexed source roots.
-        if (fileIndexByName is not null && fileIndexByName.TryGetValue(learned.SelectedFileName, out var hits))
+        if (fileIndexByName is not null && fileIndexByName.TryGetValue(selectedFileName, out var hits))
         {
-            var existing = hits.FirstOrDefault(File.Exists);
-            if (!string.IsNullOrWhiteSpace(existing))
-                return existing;
+            foreach (var hit in hits ?? [])
+            {
+                if (TryInspectNamedVideoSource(hit, selectedFileName, out var indexedSourcePath))
+                    return indexedSourcePath;
+            }
         }
 
         // 4) Last fallback: targeted search in preferred root.
-        if (!string.IsNullOrWhiteSpace(preferredVideoRoot) && Directory.Exists(preferredVideoRoot))
+        if (TryInspectExistingSourceDirectory(
+                preferredVideoRoot,
+                out var safePreferredVideoRoot,
+                out _))
         {
-            var found = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
-                .EnumerateFilesSafe(preferredVideoRoot, learned.SelectedFileName, recursive: true)
-                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
-                .FirstOrDefault(File.Exists);
-            if (!string.IsNullOrWhiteSpace(found))
-                return found;
+            foreach (var found in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
+                         .EnumerateFilesSafe(safePreferredVideoRoot, selectedFileName, recursive: true)
+                         .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+            {
+                if (TryInspectNamedVideoSource(found, selectedFileName, out var foundSourcePath))
+                    return foundSourcePath;
+            }
         }
 
         return null;
@@ -189,8 +217,8 @@ public sealed class MediaConflictCenterService
             return new AutoResolveResult(0, 0, 0, 0, Array.Empty<string>());
 
         IReadOnlyDictionary<string, List<string>>? index = null;
-        if (!string.IsNullOrWhiteSpace(preferredVideoRoot) && Directory.Exists(preferredVideoRoot))
-            index = BuildVideoFileIndex(preferredVideoRoot);
+        if (TryInspectExistingSourceDirectory(preferredVideoRoot, out var safePreferredVideoRoot, out _))
+            index = BuildVideoFileIndex(safePreferredVideoRoot);
 
         var messages = new List<string>();
         var resolved = 0;
@@ -202,7 +230,12 @@ public sealed class MediaConflictCenterService
             if (string.IsNullOrWhiteSpace(source))
                 continue;
 
-            var result = ResolveConflict(project, conflict, source, setUserEdited);
+            var result = ResolveConflict(
+                project,
+                projectFolder,
+                conflict,
+                source,
+                setUserEdited);
             if (result.Success)
             {
                 resolved++;
@@ -225,47 +258,129 @@ public sealed class MediaConflictCenterService
         string selectedVideoPath,
         bool setUserEdited = true)
     {
+        if (conflict is null)
+        {
+            return new ResolveResult(
+                false,
+                "Konflikt ist null.",
+                selectedVideoPath,
+                null,
+                null,
+                null);
+        }
+
+        var projectRoot = FindProjectRoot(conflict.HoldingFolder);
+        if (string.IsNullOrWhiteSpace(projectRoot))
+        {
+            return new ResolveResult(
+                false,
+                "Der Projektordner des Medienkonflikts konnte nicht sicher bestimmt werden.",
+                selectedVideoPath,
+                null,
+                null,
+                conflict?.InfoPath);
+        }
+
+        return ResolveConflict(
+            project,
+            projectRoot,
+            conflict,
+            selectedVideoPath,
+            setUserEdited);
+    }
+
+    public ResolveResult ResolveConflict(
+        Project project,
+        string? projectFolder,
+        MediaConflictCase conflict,
+        string selectedVideoPath,
+        bool setUserEdited = true)
+    {
         if (project is null)
-            return new ResolveResult(false, "Projekt ist null.", selectedVideoPath, null, null, conflict.InfoPath);
+            return new ResolveResult(false, "Projekt ist null.", selectedVideoPath, null, null, conflict?.InfoPath);
         if (conflict is null)
             return new ResolveResult(false, "Konflikt ist null.", selectedVideoPath, null, null, null);
-        if (string.IsNullOrWhiteSpace(selectedVideoPath) || !File.Exists(selectedVideoPath))
-            return new ResolveResult(false, $"Video nicht gefunden: {selectedVideoPath}", selectedVideoPath, null, null, conflict.InfoPath);
-        if (!Directory.Exists(conflict.HoldingFolder))
-            return new ResolveResult(false, $"Haltungsordner nicht gefunden: {conflict.HoldingFolder}", selectedVideoPath, null, null, conflict.InfoPath);
+        if (string.IsNullOrWhiteSpace(projectFolder))
+            return new ResolveResult(false, "Projektordner fehlt.", selectedVideoPath, null, null, conflict.InfoPath);
+        if (!TryInspectExistingVideoSource(selectedVideoPath, out var safeSelectedVideoPath, out var sourceError))
+        {
+            return new ResolveResult(
+                false,
+                sourceError ?? "Videoquelle konnte nicht sicher geprueft werden.",
+                selectedVideoPath,
+                null,
+                null,
+                conflict.InfoPath);
+        }
+
+        selectedVideoPath = safeSelectedVideoPath;
 
         try
         {
+            var guard = new ProjectWritePathGuard(projectFolder);
+            var holdingFolder = guard.EnsureSafeDirectoryTarget(conflict.HoldingFolder);
+            var infoPath = guard.EnsureSafeFileTarget(conflict.InfoPath);
+            if (!Directory.Exists(holdingFolder))
+            {
+                return new ResolveResult(
+                    false,
+                    $"Haltungsordner nicht gefunden: {conflict.HoldingFolder}",
+                    selectedVideoPath,
+                    null,
+                    null,
+                    conflict.InfoPath);
+            }
+
+            var targetRecord = FindRecord(project, conflict);
+            if (targetRecord is null)
+            {
+                return new ResolveResult(
+                    false,
+                    "Kein passender Haltungsdatensatz gefunden; der Konflikt bleibt offen.",
+                    selectedVideoPath,
+                    null,
+                    null,
+                    conflict.InfoPath);
+            }
+
             var ext = Path.GetExtension(selectedVideoPath);
-            if (string.IsNullOrWhiteSpace(ext))
-                ext = ".mp4";
 
             var stem = BuildDestStem(conflict);
-            var existing = FindExistingVideo(conflict.HoldingFolder, selectedVideoPath);
+            var existing = FindExistingVideo(holdingFolder, selectedVideoPath, guard);
             string destVideoPath;
             if (!string.IsNullOrWhiteSpace(existing))
             {
-                destVideoPath = existing;
+                destVideoPath = guard.EnsureSafeFileTarget(existing);
             }
             else
             {
-                var desired = Path.Combine(conflict.HoldingFolder, $"{stem}{ext}");
-                destVideoPath = EnsureUniquePath(desired, overwrite: false);
+                var desired = guard.EnsureSafeFileTarget(
+                    Path.Combine(holdingFolder, $"{stem}{ext}"));
+                destVideoPath = guard.EnsureSafeFileTarget(
+                    EnsureUniquePath(desired, overwrite: false));
                 if (!string.Equals(
                         Path.GetFullPath(selectedVideoPath),
                         Path.GetFullPath(destVideoPath),
                         StringComparison.OrdinalIgnoreCase))
                 {
-                    File.Copy(selectedVideoPath, destVideoPath, overwrite: false);
+                    guard.EnsureSafeFileTarget(destVideoPath);
+                    if (!TryInspectExistingVideoSource(selectedVideoPath, out var recheckedSourcePath, out sourceError))
+                        throw new IOException(sourceError ?? "Videoquelle konnte vor dem Kopieren nicht sicher geprueft werden.");
+                    File.Copy(recheckedSourcePath, destVideoPath, overwrite: false);
                 }
             }
 
-            var updatedHolding = UpdateRecordLink(project, conflict, destVideoPath, setUserEdited);
+            var updatedHolding = UpdateRecordLink(
+                targetRecord,
+                destVideoPath,
+                projectFolder,
+                setUserEdited);
 
             try
             {
-                if (File.Exists(conflict.InfoPath))
-                    File.Delete(conflict.InfoPath);
+                guard.EnsureSafeFileTarget(infoPath);
+                if (File.Exists(infoPath))
+                    File.Delete(infoPath);
             }
             catch
             {
@@ -454,16 +569,11 @@ public sealed class MediaConflictCenterService
     }
 
     private static string? UpdateRecordLink(
-        Project project,
-        MediaConflictCase conflict,
+        HaltungRecord record,
         string destVideoPath,
+        string projectRoot,
         bool setUserEdited)
     {
-        var record = FindRecord(project, conflict);
-        if (record is null)
-            return null;
-
-        var projectRoot = FindProjectRoot(conflict.HoldingFolder);
         var storedPath = ProjectPathResolver.MakeRelativeIfInsideProject(destVideoPath, projectRoot);
         record.SetFieldValue("Link", storedPath, FieldSource.Unknown, userEdited: setUserEdited);
         return record.GetFieldValue("Haltungsname");
@@ -668,31 +778,148 @@ public sealed class MediaConflictCenterService
 
     private static readonly HashSet<string> VideoExtensions = new(MediaFileTypes.VideoExtensions, StringComparer.OrdinalIgnoreCase);
 
-    private static string? FindExistingVideo(string holdingFolder, string sourceVideoPath)
+    private static bool TryInspectNamedVideoSource(
+        string? path,
+        string expectedFileName,
+        out string safePath)
     {
-        if (!Directory.Exists(holdingFolder) || !File.Exists(sourceVideoPath))
-            return null;
+        safePath = string.Empty;
+        if (!TryInspectExistingVideoSource(path, out var inspectedPath, out _))
+            return false;
+        if (!string.Equals(
+                Path.GetFileName(inspectedPath),
+                expectedFileName,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
 
-        var srcInfo = new FileInfo(sourceVideoPath);
-        var srcName = Path.GetFileName(sourceVideoPath);
+        safePath = inspectedPath;
+        return true;
+    }
+
+    private static bool TryInspectExistingVideoSource(
+        string? path,
+        out string safePath,
+        out string? error)
+    {
+        safePath = string.Empty;
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            error = "Video nicht gefunden: Der Quellenpfad fehlt.";
+            return false;
+        }
+
+        if (!HasAllowedVideoExtension(path))
+        {
+            error = "Nicht erlaubte Video-Endung.";
+            return false;
+        }
+
+        if (!ImportSourcePathGuard.TryInspectFile(
+                path,
+                out var inspectedPath,
+                out var exists,
+                out error))
+        {
+            return false;
+        }
+
+        if (!exists)
+        {
+            error = $"Video nicht gefunden: {path}";
+            return false;
+        }
+
+        safePath = inspectedPath;
+        return true;
+    }
+
+    private static bool TryInspectExistingSourceDirectory(
+        string? path,
+        out string safePath,
+        out string? error)
+    {
+        safePath = string.Empty;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            error = "Video-Quellordner fehlt.";
+            return false;
+        }
+
+        if (!ImportSourcePathGuard.TryInspectDirectory(
+                path,
+                out var inspectedPath,
+                out var exists,
+                out error))
+        {
+            return false;
+        }
+
+        if (!exists)
+        {
+            error = $"Video-Quellordner nicht gefunden: {path}";
+            return false;
+        }
+
+        safePath = inspectedPath;
+        return true;
+    }
+
+    private static bool TryNormalizeLearnedVideoFileName(string? value, out string fileName)
+    {
+        fileName = (value ?? string.Empty).Trim();
+        if (fileName.Length == 0
+            || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
+            || !string.Equals(Path.GetFileName(fileName), fileName, StringComparison.Ordinal)
+            || !HasAllowedVideoExtension(fileName))
+        {
+            fileName = string.Empty;
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool HasAllowedVideoExtension(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
 
         try
         {
-            foreach (var existing in Directory.EnumerateFiles(holdingFolder))
+            return VideoExtensions.Contains(Path.GetExtension(path.Trim()));
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    private static string? FindExistingVideo(
+        string holdingFolder,
+        string sourceVideoPath,
+        ProjectWritePathGuard guard)
+    {
+        if (!Directory.Exists(holdingFolder))
+            return null;
+        if (!TryInspectExistingVideoSource(sourceVideoPath, out var safeSourceVideoPath, out _))
+            return null;
+
+        try
+        {
+            var safeHoldingFolder = guard.EnsureSafeDirectoryTarget(holdingFolder);
+            foreach (var candidate in Directory.EnumerateFiles(safeHoldingFolder))
             {
+                var existing = guard.EnsureSafeFileTarget(candidate);
                 var ext = Path.GetExtension(existing);
                 if (!VideoExtensions.Contains(ext))
                     continue;
 
-                if (string.Equals(Path.GetFileName(existing), srcName, StringComparison.OrdinalIgnoreCase))
-                    return existing;
-
-                // Gleiche Groesse ist KEIN Identitaetsbeweis — zwei verschiedene Videos koennen
-                // zufaellig gleich gross sein. Nur verlinken, wenn auch der Inhalt (Kopf+Schwanz)
-                // passt; sonst kein Auto-Link (lieber als neu importieren statt falsch zuordnen). (Audit R5)
-                var existInfo = new FileInfo(existing);
-                if (existInfo.Length > 0 && existInfo.Length == srcInfo.Length
-                    && SameHeadAndTail(sourceVideoPath, existing, srcInfo.Length))
+                // Nur vollständig gleicher Inhalt darf als bereits vorhandenes Kundenmedium gelten.
+                if (FileContentComparer.FilesEqual(safeSourceVideoPath, existing))
                     return existing;
             }
         }
@@ -702,46 +929,6 @@ public sealed class MediaConflictCenterService
         }
 
         return null;
-    }
-
-    private const long HeadTailSampleBytes = 1_048_576;   // je 1 MB Kopf + Schwanz
-
-    /// <summary>
-    /// Vergleicht zwei gleich grosse Dateien anhand der ersten und letzten <see cref="HeadTailSampleBytes"/>
-    /// Bytes. Genuegt, um zwei zufaellig gleich grosse, aber verschiedene Videos zu unterscheiden,
-    /// ohne die ganze Datei zu hashen. IO-Fehler -> false (lieber kein Auto-Link). (Audit R5)
-    /// </summary>
-    internal static bool SameHeadAndTail(string pathA, string pathB, long length)
-    {
-        try
-        {
-            var sample = (int)Math.Min(HeadTailSampleBytes, length);
-            using var a = File.OpenRead(pathA);
-            using var b = File.OpenRead(pathB);
-
-            if (!RegionsEqual(a, b, 0, sample))
-                return false;
-
-            if (length > sample && !RegionsEqual(a, b, length - sample, sample))
-                return false;
-
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static bool RegionsEqual(FileStream a, FileStream b, long offset, int count)
-    {
-        a.Seek(offset, SeekOrigin.Begin);
-        b.Seek(offset, SeekOrigin.Begin);
-        var ba = new byte[count];
-        var bb = new byte[count];
-        a.ReadExactly(ba, 0, count);
-        b.ReadExactly(bb, 0, count);
-        return ba.AsSpan().SequenceEqual(bb);
     }
 
     private static string EnsureUniquePath(string path, bool overwrite)
@@ -765,23 +952,22 @@ public sealed class MediaConflictCenterService
     private static IReadOnlyDictionary<string, List<string>> BuildVideoFileIndex(string root)
     {
         var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
+        if (!TryInspectExistingSourceDirectory(root, out var safeRoot, out _))
             return map;
 
-        foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(root, "*.*", recursive: true))
+        foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(safeRoot, "*.*", recursive: true))
         {
-            var ext = Path.GetExtension(file);
-            if (!VideoExtensions.Contains(ext))
+            if (!TryInspectExistingVideoSource(file, out var safeFile, out _))
                 continue;
 
-            var name = Path.GetFileName(file);
+            var name = Path.GetFileName(safeFile);
             if (!map.TryGetValue(name, out var list))
             {
                 list = new List<string>();
                 map[name] = list;
             }
 
-            list.Add(file);
+            list.Add(safeFile);
         }
 
         return map;

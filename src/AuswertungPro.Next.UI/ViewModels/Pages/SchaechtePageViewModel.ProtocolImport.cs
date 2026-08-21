@@ -9,11 +9,22 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 public sealed partial class SchaechtePageViewModel
 {
     private bool CanRefreshProtocol()
-        => SchachtProtocolRefreshController.CanExecute(Selected);
+        => CanStartProtocolPdfOperation()
+           && SchachtProtocolRefreshController.CanExecute(Selected);
 
     private async Task RefreshProtocolAsync()
     {
-        _ = await _schachtProtocolRefreshController.ExecuteAsync(Selected);
+        if (!TryBeginProtocolPdfOperation("Protokollaktualisierung"))
+            return;
+
+        try
+        {
+            _ = await _schachtProtocolRefreshController.ExecuteAsync(Selected);
+        }
+        finally
+        {
+            EndProtocolPdfOperation();
+        }
     }
 
     /// <summary>
@@ -45,6 +56,21 @@ public sealed partial class SchaechtePageViewModel
     }
 
     private async Task ImportProtocolAsync()
+    {
+        if (!TryBeginProtocolPdfOperation("Protokollimport"))
+            return;
+
+        try
+        {
+            await ImportProtocolCoreAsync();
+        }
+        finally
+        {
+            EndProtocolPdfOperation();
+        }
+    }
+
+    private async Task ImportProtocolCoreAsync()
     {
         var projectContext = new ProjectOperationContext(
             _shell.Project,

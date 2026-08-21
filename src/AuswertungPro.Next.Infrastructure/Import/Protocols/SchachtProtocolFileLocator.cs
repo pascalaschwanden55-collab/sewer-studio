@@ -114,8 +114,8 @@ public sealed class SchachtProtocolFileLocator : ISchachtProtocolFileLocator
 
         try
         {
-            return Directory
-                .EnumerateFiles(numberFolder, "*.pdf", SearchOption.AllDirectories)
+            return SafeFileEnumeration
+                .EnumerateFilesSafe(numberFolder, "*.pdf", recursive: true)
                 .OrderByDescending(path => Path.GetFileNameWithoutExtension(path)
                     .Contains(schachtnummer, StringComparison.OrdinalIgnoreCase))
                 .ThenByDescending(File.GetLastWriteTimeUtc)

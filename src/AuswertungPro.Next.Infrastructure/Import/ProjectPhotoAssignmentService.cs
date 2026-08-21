@@ -43,6 +43,8 @@ public sealed class ProjectPhotoAssignmentService : IProjectPhotoAssignmentServi
         if (images.Count == 0)
             return new Result(0, 0, 0, 0, new[] { "Keine Bilddateien im Quellordner gefunden." });
 
+        var writePathGuard = new ProjectWritePathGuard(projectFolder);
+
         // Haltungs-Schlüssel je Record, längster zuerst (spezifischster Match gewinnt).
         var keyed = project.Data
             .Select(r => new { Record = r, Key = NormalizeKey(r.GetFieldValue("Haltungsname") ?? "") })
@@ -54,8 +56,9 @@ public sealed class ProjectPhotoAssignmentService : IProjectPhotoAssignmentServi
         var unmatched = 0;
         foreach (var img in images)
         {
-            var nameKey = NormalizeKey(Path.GetFileNameWithoutExtension(img));
-            var match = keyed.FirstOrDefault(x => nameKey.Contains(x.Key, StringComparison.OrdinalIgnoreCase));
+            var fileName = Path.GetFileNameWithoutExtension(img);
+            var match = keyed.FirstOrDefault(x =>
+                HoldingTextNormalizer.ContainsNormalizedKeyAtBoundary(fileName, x.Key));
             if (match is null) { unmatched++; continue; }
             if (!byRecord.TryGetValue(match.Record, out var list))
             {
@@ -85,7 +88,12 @@ public sealed class ProjectPhotoAssignmentService : IProjectPhotoAssignmentServi
             {
                 try
                 {
-                    var rel = EnsureInProjectRelative(src, fotoDir, projectFolder, ref copied);
+                    var rel = EnsureInProjectRelative(
+                        src,
+                        fotoDir,
+                        projectFolder,
+                        writePathGuard,
+                        ref copied);
                     if (!string.IsNullOrWhiteSpace(rel) && !relPaths.Contains(rel, StringComparer.OrdinalIgnoreCase))
                         relPaths.Add(rel);
                 }
@@ -145,36 +153,58 @@ public sealed class ProjectPhotoAssignmentService : IProjectPhotoAssignmentServi
     /// Liefert den RELATIVEN Projektpfad: liegt das Foto schon im Projekt → nur relativ machen;
     /// sonst nach &lt;Haltung&gt;/Fotos kopieren (kollisionssicher) und relativ verlinken.
     /// </summary>
-    private static string? EnsureInProjectRelative(string src, string fotoDir, string projectFolder, ref int copied)
+    private static string? EnsureInProjectRelative(
+        string src,
+        string fotoDir,
+        string projectFolder,
+        ProjectWritePathGuard writePathGuard,
+        ref int copied)
     {
         var srcFull = Path.GetFullPath(src);
         if (!File.Exists(srcFull))
             return null;
 
-        var targetFull = Path.GetFullPath(fotoDir);
+        var targetFull = writePathGuard.EnsureSafeDirectoryTarget(fotoDir);
         if (IsUnderDirectory(srcFull, targetFull))
             return ProjectPathResolver.MakeRelative(srcFull, projectFolder); // schon im gekoppelten Zielordner
 
-        Directory.CreateDirectory(fotoDir);
-        var dest = Path.Combine(fotoDir, Path.GetFileName(srcFull));
+        writePathGuard.EnsureSafeDirectoryTarget(targetFull);
+        Directory.CreateDirectory(targetFull);
+        var dest = writePathGuard.EnsureSafeFileTarget(
+            Path.Combine(targetFull, Path.GetFileName(srcFull)));
         if (File.Exists(dest))
         {
-            if (new FileInfo(dest).Length != new FileInfo(srcFull).Length)
+            if (!SameFileContent(dest, srcFull))
             {
                 var stem = Path.GetFileNameWithoutExtension(srcFull);
                 var ext = Path.GetExtension(srcFull);
-                dest = Path.Combine(fotoDir, $"{stem}_{Guid.NewGuid():N}".Substring(0, stem.Length + 7) + ext);
+                dest = writePathGuard.EnsureSafeFileTarget(
+                    Path.Combine(targetFull, $"{stem}_{Guid.NewGuid():N}".Substring(0, stem.Length + 7) + ext));
+                writePathGuard.EnsureSafeFileTarget(dest);
                 File.Copy(srcFull, dest, overwrite: false);
                 copied++;
             }
-            // gleiche Groesse → vorhandene Kopie wiederverwenden
+            // Nur eine wirklich inhaltsgleiche Projektkopie wiederverwenden.
         }
         else
         {
+            writePathGuard.EnsureSafeFileTarget(dest);
             File.Copy(srcFull, dest, overwrite: false);
             copied++;
         }
         return ProjectPathResolver.MakeRelative(dest, projectFolder);
+    }
+
+    private static bool SameFileContent(string left, string right)
+    {
+        try
+        {
+            return FileContentComparer.FilesEqual(left, right);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static bool IsUnderDirectory(string path, string directory)

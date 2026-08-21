@@ -67,7 +67,10 @@ public sealed class ProtocolRegenerationAdapter : IProtocolRegenerationService, 
             return null;
 
         var sanitizedHolding = ProjectPathResolver.SanitizePathSegment(haltung);
-        var directory = ProjectStructure.HaltungVerteiltDir(projectFolder, sanitizedHolding);
+        var writePaths = new ProjectWritePathGuard(projectFolder);
+        var directory = writePaths.EnsureSafeDirectoryTarget(
+            ProjectStructure.HaltungVerteiltDir(projectFolder, sanitizedHolding));
+        writePaths.EnsureSafeDirectoryTarget(directory);
         Directory.CreateDirectory(directory);
 
         var stamp = KanalImportDistributor.ResolveDateStamp(record);
@@ -85,19 +88,37 @@ public sealed class ProtocolRegenerationAdapter : IProtocolRegenerationService, 
             document,
             projectFolder,
             options);
-        var destination = Path.Combine(directory, $"{stamp}_{sanitizedHolding}_E.pdf");
+        var destination = writePaths.EnsureSafeFileTarget(
+            Path.Combine(directory, $"{stamp}_{sanitizedHolding}_E.pdf"));
         // Atomar schreiben: erst Temp im Zielordner (gleiches Volume -> File.Move ist atomar),
         // dann verschieben. Ein Absturz mitten im direkten Schreiben hinterliess sonst ein halbes
         // _E.pdf unter dem finalen Namen (und der naechste Lauf koennte es als "vorhanden" werten).
-        var tempPath = destination + $".{Guid.NewGuid():N}.tmp";
+        var tempPath = writePaths.EnsureSafeFileTarget(
+            destination + $".{Guid.NewGuid():N}.tmp");
         try
         {
+            writePaths.EnsureSafeDirectoryTarget(directory);
+            writePaths.EnsureSafeFileTarget(tempPath);
+            writePaths.EnsureSafeFileTarget(destination);
             File.WriteAllBytes(tempPath, pdf);
+
+            writePaths.EnsureSafeDirectoryTarget(directory);
+            writePaths.EnsureSafeFileTarget(tempPath);
+            writePaths.EnsureSafeFileTarget(destination);
             File.Move(tempPath, destination, overwrite: true);
         }
         catch
         {
-            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { /* Temp-Rest ist unkritisch */ }
+            try
+            {
+                writePaths.EnsureSafeFileTarget(tempPath);
+                if (File.Exists(tempPath))
+                    File.Delete(tempPath);
+            }
+            catch
+            {
+                // Ein unsicherer oder nicht entfernbarer Temp-Rest wird nie verfolgt.
+            }
             throw;
         }
 

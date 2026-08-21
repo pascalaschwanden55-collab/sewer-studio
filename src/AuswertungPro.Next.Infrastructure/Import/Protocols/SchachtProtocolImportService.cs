@@ -174,16 +174,45 @@ public sealed class SchachtProtocolImportService :
         string schachtnummer,
         string pdfQuelle)
     {
-        var destDir = ProjectStructure.SchachtVerteiltDir(projektOrdner, schachtnummer);
+        var writePathGuard = new ProjectWritePathGuard(projektOrdner);
+        var destDir = writePathGuard.EnsureSafeDirectoryTarget(
+            ProjectStructure.SchachtVerteiltDir(projektOrdner, schachtnummer));
         Directory.CreateDirectory(destDir);
+        writePathGuard.EnsureSafeDirectoryTarget(destDir);
 
-        var dest = Path.Combine(destDir, Path.GetFileName(pdfQuelle));
-        var fileCreated = !File.Exists(dest);
-        if (fileCreated)
-            File.Copy(pdfQuelle, dest, overwrite: false);
+        var preferredDestination = writePathGuard.EnsureSafeFileTarget(
+            Path.Combine(destDir, Path.GetFileName(pdfQuelle)));
+        if (File.Exists(preferredDestination)
+            && VerifiedImportFileCopy.ContentsEqual(pdfQuelle, preferredDestination))
+        {
+            return new SchachtProtocolDistributionResult(
+                ProjectPathResolver.MakeRelative(preferredDestination, projektOrdner),
+                FileCreated: false);
+        }
+
+        var destination = File.Exists(preferredDestination)
+            ? ResolveUniquePath(preferredDestination)
+            : preferredDestination;
+        destination = writePathGuard.EnsureSafeFileTarget(destination);
+        File.Copy(pdfQuelle, destination, overwrite: false);
 
         return new SchachtProtocolDistributionResult(
-            ProjectPathResolver.MakeRelative(dest, projektOrdner),
-            fileCreated);
+            ProjectPathResolver.MakeRelative(destination, projektOrdner),
+            FileCreated: true);
+    }
+
+    private static string ResolveUniquePath(string preferredPath)
+    {
+        var directory = Path.GetDirectoryName(preferredPath) ?? string.Empty;
+        var stem = Path.GetFileNameWithoutExtension(preferredPath);
+        var extension = Path.GetExtension(preferredPath);
+        for (var suffix = 1; suffix < 1000; suffix++)
+        {
+            var candidate = Path.Combine(directory, $"{stem}_{suffix:00}{extension}");
+            if (!File.Exists(candidate) && !Directory.Exists(candidate))
+                return candidate;
+        }
+
+        throw new IOException($"Kein freier Dateiname fuer das Schachtprotokoll gefunden: {preferredPath}");
     }
 }

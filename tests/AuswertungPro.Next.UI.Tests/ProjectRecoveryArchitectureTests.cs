@@ -20,10 +20,17 @@ public sealed class ProjectRecoveryArchitectureTests
         Assert.Contains("public IProjectRecoveryService ProjectRecovery", provider);
         Assert.Contains("ProjectRecovery = new ProjectRecoveryService()", provider);
         Assert.Contains("_sp.ProjectRecovery.TryRecover(path, _sp.Projects)", shell);
+        Assert.Contains("_sp.ProjectRecovery.MaterializeRecoveredProjectForRetry(", shell);
+        Assert.DoesNotContain(
+            "private ImportRecoveryResult MaterializeRecoveredProjectForRetry",
+            shell);
         Assert.DoesNotContain("return (res, ProjectRecovery.TryRecover(", shell);
         Assert.Contains("private static readonly IProjectRecoveryService DefaultService", facade);
         Assert.DoesNotContain("File.Move", facade);
         Assert.Contains("public sealed class ProjectRecoveryService : IProjectRecoveryService", service);
+        Assert.Contains(
+            "public ProjectRecoveryMaterializationResult MaterializeRecoveredProjectForRetry(",
+            service);
         Assert.Contains("lock (_sync)", service);
         Assert.Contains("File.Move", service);
     }

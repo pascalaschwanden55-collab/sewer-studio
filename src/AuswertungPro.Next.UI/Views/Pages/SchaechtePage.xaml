@@ -97,6 +97,7 @@
                     <ToggleButton x:Name="ClearColumnModeButton" Content="Spalte leeren"
                                   Margin="0,0,2,0"
                                   Style="{StaticResource CompactToggleButton}"
+                                  IsEnabled="{Binding CanMutateShaftData}"
                                   ToolTip="Aktivieren, dann auf Spaltentitel klicken um Spalte zu leeren"/>
                 </StackPanel>
             </Border>
@@ -120,11 +121,13 @@
 
                         <TextBlock Text="Verschieben auf Pos.:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="20,0,6,0"/>
                         <TextBox x:Name="MoveToPositionBox" Width="60" VerticalAlignment="Center"
-                                 VerticalContentAlignment="Center" Padding="4,2"
+                                  VerticalContentAlignment="Center" Padding="4,2"
+                                  IsEnabled="{Binding CanMutateShaftData}"
                                  ToolTip="Zielposition eingeben (1-basiert) und Enter drücken"
                                  KeyDown="MoveToPositionBox_KeyDown"/>
                         <Button Content="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="12"
-                                Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                                 Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                                 IsEnabled="{Binding CanMutateShaftData}"
                                 ToolTip="Selektierten Schacht an Position verschieben"
                                 Click="MoveToPosition_Click"/>
 
@@ -258,10 +261,12 @@
                   VirtualizingPanel.ScrollUnit="Pixel"
                   ScrollViewer.CanContentScroll="True"
                   CanUserSortColumns="False"
+                  IsReadOnly="{Binding IsShaftDataReadOnly}"
                   UseLayoutRounding="True"
                   SnapsToDevicePixels="True"
                   TextOptions.TextFormattingMode="Display"
                   TextOptions.TextRenderingMode="Grayscale"
+                  BeginningEdit="Grid_BeginningEdit"
                   CellEditEnding="Grid_CellEditEnding"
                   SelectedCellsChanged="Grid_SelectedCellsChanged"
                   CurrentCellChanged="Grid_CurrentCellChanged"
@@ -293,6 +298,7 @@
 
         <schachtansicht:SchachtansichtView x:Name="SchachtansichtView"
                                            Grid.Row="1"
+                                           IsEnabled="{Binding CanMutateShaftData}"
                                            Visibility="Collapsed"/>
 
         <uc:EmptyStateControl Grid.Row="1"

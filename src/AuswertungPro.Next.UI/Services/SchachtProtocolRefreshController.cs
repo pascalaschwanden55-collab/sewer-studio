@@ -16,6 +16,7 @@ internal enum SchachtProtocolRefreshOutcome
     ProjectChanged,
     InvalidProtocol,
     ForeignShaftNumber,
+    TargetRemoved,
     UpdatedButNotSaved,
     Updated
 }
@@ -129,6 +130,28 @@ internal sealed class SchachtProtocolRefreshController
         var pathForRecord = match.Herkunft == SchachtProtocolFileOrigin.Verknuepfung
             ? relativePath
             : ProjectPathResolver.MakeRelativeIfInsideProject(match.PdfPfad, projectFolder);
+
+        // Zwischen Dateilesen, Rueckfragen und Uebernahme kann ein externer Aufrufer
+        // das Projekt oder den Zielschacht austauschen. Direkt vor Apply deshalb
+        // beides erneut pruefen; ein geloeschter Record darf nicht "offline" mutieren.
+        if (!_actions.ProjectIsStillOpen(
+                projectContext,
+                DialogTitle,
+                ProjectOperationImpact.None))
+        {
+            return SchachtProtocolRefreshOutcome.ProjectChanged;
+        }
+
+        if (!projectContext.Project.SchaechteData.Contains(selected))
+        {
+            const string removed =
+                "Aktualisierung abgebrochen: Der ausgewaehlte Schacht wurde inzwischen entfernt.";
+            _actions.SetLastResult(removed);
+            _dialogs.Warn(
+                removed + " Es wurden keine Protokolldaten uebernommen.",
+                DialogTitle);
+            return SchachtProtocolRefreshOutcome.TargetRemoved;
+        }
 
         _actions.Apply(selected, result, pathForRecord);
         var project = projectContext.Project;

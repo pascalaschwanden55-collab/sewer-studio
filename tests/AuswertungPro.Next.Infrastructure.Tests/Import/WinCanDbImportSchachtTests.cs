@@ -211,6 +211,45 @@ public sealed class WinCanDbImportSchachtTests
     }
 
     [Fact]
+    public void WinCanImport_MehrereBoundaryPrefixKandidaten_ErzeugenEinenNeuenExaktenRecord()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"wincan-prefix-ambiguous-{Guid.NewGuid():N}");
+        var dbDir = Path.Combine(root, "DB");
+        Directory.CreateDirectory(dbDir);
+        var db3 = Path.Combine(dbDir, "projekt.db3");
+        try
+        {
+            ErzeugeMiniDb3(db3);
+
+            var project = new Project();
+            var first = project.CreateNewRecord();
+            first.SetFieldValue("Haltungsname", "06-001-1", FieldSource.Xtf, userEdited: false);
+            project.AddRecord(first);
+            var second = project.CreateNewRecord();
+            second.SetFieldValue("Haltungsname", "06-001-2", FieldSource.Xtf, userEdited: false);
+            project.AddRecord(second);
+
+            var result = new WinCanDbImportService().ImportWinCanExport(root, project);
+
+            Assert.True(result.Ok, result.ErrorMessage);
+            Assert.Equal(3, project.Data.Count);
+            var exact = Assert.Single(project.Data.Where(record =>
+                string.Equals(
+                    record.GetFieldValue("Haltungsname"),
+                    "06-001",
+                    StringComparison.OrdinalIgnoreCase)));
+            Assert.Equal("S-865", exact.GetFieldValue("Schacht_oben"));
+            Assert.True(string.IsNullOrWhiteSpace(first.GetFieldValue("Schacht_oben")));
+            Assert.True(string.IsNullOrWhiteSpace(second.GetFieldValue("Schacht_oben")));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void WinCanImport_ImportiertBeobachtungUndFoto_AusDb3()
     {
         // Charakterisierung des Kernpfads SECTION -> SECINSP -> SECOBS -> SECOBSMM:

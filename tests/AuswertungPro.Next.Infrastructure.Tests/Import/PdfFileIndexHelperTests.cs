@@ -54,6 +54,18 @@ public class PdfFileIndexHelperTests
     }
 
     [Fact]
+    public void KuerzererKey_TrifftNichtAufPdfDerLaengerenHaltung()
+    {
+        var index = BuildIndex((
+            "100-2000_Inspektion.pdf",
+            new[] { @"C:\Export\100-2000_Inspektion.pdf" }));
+
+        var result = PdfFileIndexHelper.ResolvePdfMatches(index, "100-200");
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
     public void NichtPdfDatei_WirdIgnoriert()
     {
         var index = BuildIndex(

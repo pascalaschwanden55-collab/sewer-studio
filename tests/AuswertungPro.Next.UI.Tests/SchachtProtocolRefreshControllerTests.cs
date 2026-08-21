@@ -176,6 +176,7 @@ public sealed class SchachtProtocolRefreshControllerTests
                 "locate|Schaechte_Verteilt/S-1/protokoll.pdf|C:\\Projekt",
                 "read|C:\\Projekt\\protokoll.pdf|Aktualisieren",
                 "project-still-open|C:\\Projekt\\projekt.json|Aktualisieren|impact=None",
+                "project-still-open|C:\\Projekt\\projekt.json|Aktualisieren|impact=None",
                 "apply|Schaechte_Verteilt/S-1/protokoll.pdf",
                 "project-still-open|C:\\Projekt\\projekt.json|Aktualisieren|impact=ProjectDataChanged",
                 "save|dirty=True|modified=True",
@@ -312,7 +313,7 @@ public sealed class SchachtProtocolRefreshControllerTests
     [Fact]
     public async Task ExecuteAsync_project_change_after_apply_keeps_dirty_commit_but_stops_save()
     {
-        var harness = new Harness { ProjectChecks = new[] { true, false } };
+        var harness = new Harness { ProjectChecks = new[] { true, true, false } };
 
         var outcome = await harness.Controller.ExecuteAsync(CreateRecord());
 
@@ -380,6 +381,8 @@ public sealed class SchachtProtocolRefreshControllerTests
                 },
                 LocateProtocolFile: (record, projectFolder) =>
                 {
+                    if (!Project.SchaechteData.Contains(record))
+                        Project.SchaechteData.Add(record);
                     Calls.Add($"locate|{record.GetFieldValue("PDF_Path")}|{projectFolder}");
                     return Match;
                 },

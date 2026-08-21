@@ -1,5 +1,6 @@
 ﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
@@ -86,6 +87,31 @@ public class ProjectFieldCsvExporterTests : IDisposable
             Path.Combine(_tmpDir, "__IMPORT_REPORTS"),
             Path.GetDirectoryName(path));
         Assert.True(File.Exists(path));
+    }
+
+    [JunctionFact]
+    public void ImportSummaryExporter_SchreibtNichtDurchVerknuepftenBerichtsordner()
+    {
+        var projectRoot = Path.Combine(_tmpDir, "Projekt");
+        var external = Path.Combine(_tmpDir, "Fremdziel");
+        var reportLink = Path.Combine(projectRoot, ProjectStructure.ImportReports);
+        Directory.CreateDirectory(projectRoot);
+        Directory.CreateDirectory(external);
+        JunctionTestSupport.CreateDirectoryLink(reportLink, external);
+
+        try
+        {
+            var exporter = new ImportSummaryExporter();
+
+            Assert.Throws<IOException>(() =>
+                exporter.Export(Path.Combine(projectRoot, "projekt.json"), new Project()));
+            Assert.Empty(Directory.EnumerateFiles(external));
+        }
+        finally
+        {
+            if (Directory.Exists(reportLink))
+                Directory.Delete(reportLink);
+        }
     }
 
     [Fact]

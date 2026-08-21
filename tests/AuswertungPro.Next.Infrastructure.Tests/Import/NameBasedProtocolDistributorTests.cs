@@ -4,6 +4,7 @@ using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.Protocols;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 using Xunit;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
@@ -153,6 +154,113 @@ public sealed class NameBasedProtocolDistributorTests
         {
             Directory.Delete(projectFolder, true);
             Directory.Delete(source, true);
+        }
+    }
+
+    [JunctionFact]
+    public void Distribute_BetrittKeineVerzeichnisverknuepfungImQuellbaum()
+    {
+        var root = NewTempDir();
+        var projectFolder = Path.Combine(root, "Projekt");
+        var source = Path.Combine(root, "Quelle");
+        var external = Path.Combine(root, "Fremd");
+        var link = Path.Combine(source, "verknuepft");
+        Directory.CreateDirectory(projectFolder);
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(external);
+        var externalPdf = Path.Combine(external, "H_33390-36268.pdf");
+        File.WriteAllText(externalPdf, "fremdes protokoll");
+        JunctionTestSupport.CreateDirectoryLink(link, external);
+
+        try
+        {
+            var project = new Project();
+            project.Data.Add(Haltung("33390-36268"));
+
+            var report = new NameBasedProtocolDistributor().Distribute(
+                project,
+                projectFolder,
+                source);
+
+            Assert.Equal(0, report.HaltungProtokolle);
+            Assert.True(string.IsNullOrWhiteSpace(project.Data[0].GetFieldValue("PDF_Path")));
+            Assert.Equal("fremdes protokoll", File.ReadAllText(externalPdf));
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(link))
+                    Directory.Delete(link);
+            }
+            catch
+            {
+                // Nur Test-Aufraeumen.
+            }
+
+            try
+            {
+                if (Directory.Exists(root))
+                    Directory.Delete(root, recursive: true);
+            }
+            catch
+            {
+                // Nur Test-Aufraeumen.
+            }
+        }
+    }
+
+    [JunctionFact]
+    public void Distribute_SchreibtNichtDurchVerknuepftenHaltungsZielordner()
+    {
+        var root = NewTempDir();
+        var projectFolder = Path.Combine(root, "Projekt");
+        var source = Path.Combine(root, "Quelle");
+        var external = Path.Combine(root, "Fremdziel");
+        var holdingRoot = Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt);
+        var holdingLink = Path.Combine(holdingRoot, "33390-36268");
+        Directory.CreateDirectory(holdingRoot);
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(external);
+        File.WriteAllText(Path.Combine(source, "H_33390-36268.pdf"), "kundenprotokoll");
+        JunctionTestSupport.CreateDirectoryLink(holdingLink, external);
+
+        try
+        {
+            var project = new Project();
+            project.Data.Add(Haltung("33390-36268"));
+
+            var report = new NameBasedProtocolDistributor().Distribute(
+                project,
+                projectFolder,
+                source);
+
+            Assert.Equal(0, report.HaltungProtokolle);
+            Assert.NotEmpty(report.Meldungen);
+            Assert.Empty(Directory.EnumerateFiles(external));
+            Assert.True(string.IsNullOrWhiteSpace(project.Data[0].GetFieldValue("PDF_Path")));
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(holdingLink))
+                    Directory.Delete(holdingLink);
+            }
+            catch
+            {
+                // Nur Test-Aufraeumen.
+            }
+
+            try
+            {
+                if (Directory.Exists(root))
+                    Directory.Delete(root, recursive: true);
+            }
+            catch
+            {
+                // Nur Test-Aufraeumen.
+            }
         }
     }
 }

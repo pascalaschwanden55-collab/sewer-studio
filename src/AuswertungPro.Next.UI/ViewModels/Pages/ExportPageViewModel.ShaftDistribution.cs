@@ -7,6 +7,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.UseCases.Import;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Import;
@@ -47,12 +48,12 @@ public sealed partial class ExportPageViewModel
         var directoryConfig = SnapshotDistributionTree(_settings.SchachtDistribution);
         var projectContext = new ProjectOperationContext(
             _shell.Project,
-            _shell.GetProjectFolder());
+            _settings.LastProjectPath);
+        var projectRoot = ProjectFileLocator.ProjectRootFromFile(projectContext.ProjectPath);
         ImportFileTransaction? fileTransaction = null;
 
         try
         {
-            IsPageBusy = true;
             IsDistributionInProgress = true;
             IsDistributionIndeterminate = true;
             DistributionPercent = 0;
@@ -70,12 +71,10 @@ public sealed partial class ExportPageViewModel
                 _shell.SetStatus(DistributionProgress);
             });
 
-            var projectPath = _settings.LastProjectPath;
-            var projectRoot = ProjectFileLocator.ProjectRootFromFile(projectPath);
             var useProjectTransaction = _importFileStaging is not null
                                         && IsSameOrBelow(destFolder, projectRoot);
             var staging = useProjectTransaction
-                ? _importFileStaging!.Begin(projectPath)
+                ? _importFileStaging!.Begin(projectContext.ProjectPath)
                 : null;
             if (staging is not null)
             {
@@ -96,27 +95,45 @@ public sealed partial class ExportPageViewModel
                     Progress: progress,
                     FileStaging: staging)));
 
-            if (staging is not null
-                && !ActiveProjectGuard.IsCurrent(
+            if (!ProjectIsStillCurrent(
                     projectContext,
-                    _shell.Project,
-                    _shell.GetProjectFolder()))
+                    "Schacht-Verteilung",
+                    filesMayRemain: staging is null && batch.Items.Any(static item => item.Success)))
             {
-                LastResult = "Schacht-Verteilung verworfen: Das aktive Projekt wurde gewechselt.";
-                _shell.SetStatus(LastResult);
                 return;
             }
 
             fileTransaction?.Publish();
+            if (fileTransaction is not null
+                && !ProjectIsStillCurrent(
+                    projectContext,
+                    "Schacht-Verteilung",
+                    filesMayRemain: false))
+            {
+                return;
+            }
+
             fileTransaction?.StampProject(projectContext.Project);
             var results = batch.Items.Select(ToLegacyDistributionResult).ToList();
             var summary = DistributionSummaryBuilder.BuildShaftDistributionSummary(results);
-            var pdfUpdated = ApplyPdfPathsToSchachtRecords(results);
+            var pdfUpdated = ApplyPdfPathsToSchachtRecords(
+                results,
+                projectContext.Project,
+                projectRoot);
             var saved = true;
             if (fileTransaction is not null)
             {
                 fileTransaction.MarkProjectCommitted();
-                saved = _shell.TrySaveProject();
+                if (!ProjectIsStillCurrent(
+                        projectContext,
+                        "Schacht-Verteilung",
+                        filesMayRemain: true,
+                        projectDataChanged: true))
+                {
+                    return;
+                }
+
+                saved = _saveProjectForActiveDistribution();
                 if (saved)
                     fileTransaction.MarkProjectSaved();
                 else
@@ -132,7 +149,7 @@ public sealed partial class ExportPageViewModel
                 : "Schachtprotokolle verteilt, aber nicht gespeichert");
 
             if (selectedPdfFiles.Length > 0)
-                StorePdfFiles(selectedPdfFiles);
+                StorePdfFiles(selectedPdfFiles, projectContext);
         }
         catch (Exception ex)
         {
@@ -142,19 +159,23 @@ public sealed partial class ExportPageViewModel
         }
         finally
         {
-            var cleanup = fileTransaction?.Cleanup();
-            if (cleanup is { StagingCleanupSucceeded: false, StagingCleanupError: { } error })
+            try
             {
-                LastResult += Environment.NewLine
-                              + "Datei-Arbeitsordner konnte nicht vollstaendig aufgeraeumt werden: "
-                              + error.Message;
+                var cleanup = fileTransaction?.Cleanup();
+                if (cleanup is { StagingCleanupSucceeded: false, StagingCleanupError: { } error })
+                {
+                    LastResult += Environment.NewLine
+                                  + "Datei-Arbeitsordner konnte nicht vollstaendig aufgeraeumt werden: "
+                                  + error.Message;
+                }
             }
-
-            IsDistributionInProgress = false;
-            IsDistributionIndeterminate = false;
-            DistributionProgress = "";
-            DistributionPercent = 0;
-            IsPageBusy = false;
+            finally
+            {
+                IsDistributionInProgress = false;
+                IsDistributionIndeterminate = false;
+                DistributionProgress = "";
+                DistributionPercent = 0;
+            }
         }
     }
 
@@ -193,8 +214,10 @@ public sealed partial class ExportPageViewModel
         }
     }
 
-    private int ApplyPdfPathsToSchachtRecords(
-        IReadOnlyList<HoldingFolderDistributor.DistributionResult> results)
+    private static int ApplyPdfPathsToSchachtRecords(
+        IReadOnlyList<HoldingFolderDistributor.DistributionResult> results,
+        Project project,
+        string? projectRoot)
     {
         var updated = 0;
         foreach (var result in results)
@@ -206,31 +229,47 @@ public sealed partial class ExportPageViewModel
                 continue;
             }
 
-            var folderName = Path.GetFileName(result.HoldingFolder.TrimEnd(
-                Path.DirectorySeparatorChar,
-                Path.AltDirectorySeparatorChar));
-            if (string.IsNullOrWhiteSpace(folderName))
-                continue;
-
-            var record = _shell.Project.SchaechteData.FirstOrDefault(x =>
-                string.Equals(
-                    ProjectPathResolver.SanitizePathSegment(
-                        (x.GetFieldValue("Schachtnummer") ?? "").Trim()),
-                    folderName,
-                    StringComparison.OrdinalIgnoreCase));
+            var record = FindShaftRecord(project, result.HoldingFolder);
             if (record is null)
                 continue;
 
-            record.SetFieldValue("PDF_Path", result.DestPdfPath);
+            record.SetFieldValue(
+                "PDF_Path",
+                ProjectPathResolver.MakeRelativeIfInsideProject(
+                    result.DestPdfPath,
+                    projectRoot));
             updated++;
         }
 
         if (updated > 0)
         {
-            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-            _shell.Project.Dirty = true;
+            project.ModifiedAtUtc = DateTime.UtcNow;
+            project.Dirty = true;
         }
 
         return updated;
+    }
+
+    private static SchachtRecord? FindShaftRecord(
+        Project project,
+        string shaftFolder)
+    {
+        var segments = shaftFolder.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        for (var index = segments.Length - 1; index >= 0; index--)
+        {
+            var folderName = ProjectPathResolver.SanitizePathSegment(segments[index]);
+            var record = project.SchaechteData.FirstOrDefault(x =>
+                string.Equals(
+                    ProjectPathResolver.SanitizePathSegment(
+                        (x.GetFieldValue("Schachtnummer") ?? "").Trim()),
+                    folderName,
+                    StringComparison.OrdinalIgnoreCase));
+            if (record is not null)
+                return record;
+        }
+
+        return null;
     }
 }

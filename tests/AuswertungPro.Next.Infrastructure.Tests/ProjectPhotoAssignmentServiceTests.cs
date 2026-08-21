@@ -3,6 +3,7 @@ using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 using Xunit;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -170,6 +171,100 @@ public sealed class ProjectPhotoAssignmentServiceTests
         finally { TryDelete(root); TryDelete(ext); }
     }
 
+    [Fact]
+    public void AssignFromFolder_GleichGrossesAnderesFoto_UeberschreibtOderVerlinktNichtDieVorhandeneDatei()
+    {
+        var root = NewDir();
+        var ext = NewDir();
+        var targetFolder = Path.Combine(root, "Fotos", "Haltungen", "100-200");
+        Directory.CreateDirectory(targetFolder);
+        var existing = Path.Combine(targetFolder, "H_100-200_001.jpg");
+        var source = Path.Combine(ext, "H_100-200_001.jpg");
+        File.WriteAllText(existing, "ALT");
+        File.WriteAllText(source, "NEU");
+        try
+        {
+            var project = new Project();
+            var rec = NewRecordWithEntry("100-200", "Foto1");
+            project.AddRecord(rec);
+
+            var result = new ProjectPhotoAssignmentService().AssignFromFolder(root, ext, project);
+
+            Assert.Equal(1, result.PhotosCopied);
+            Assert.Equal("ALT", File.ReadAllText(existing));
+            Assert.Equal("NEU", File.ReadAllText(source));
+            var relative = Assert.Single(rec.Protocol!.Current.Entries[0].FotoPaths);
+            var assigned = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
+            Assert.False(string.Equals(
+                Path.GetFullPath(existing),
+                Path.GetFullPath(assigned),
+                StringComparison.OrdinalIgnoreCase));
+            Assert.Equal("NEU", File.ReadAllText(assigned));
+        }
+        finally { TryDelete(root); TryDelete(ext); }
+    }
+
+    [Fact]
+    public void AssignFromFolder_LaengererHaltungsname_TrifftNichtAufKuerzereHaltung()
+    {
+        var root = NewDir();
+        var ext = NewDir();
+        File.WriteAllText(Path.Combine(ext, "H_100-2000_001.jpg"), "foto");
+        try
+        {
+            var project = new Project();
+            var rec = NewRecordWithEntry("100-200", "Foto1");
+            project.AddRecord(rec);
+
+            var result = new ProjectPhotoAssignmentService().AssignFromFolder(root, ext, project);
+
+            Assert.Equal(0, result.HoldingsMatched);
+            Assert.Equal(1, result.UnmatchedFiles);
+            Assert.Empty(rec.Protocol!.Current.Entries[0].FotoPaths);
+        }
+        finally { TryDelete(root); TryDelete(ext); }
+    }
+
+    [JunctionFact]
+    public void AssignFromFolder_ZielhaltungIstVerknuepft_SchreibtNichtInFremdenOrdner()
+    {
+        var root = NewDir();
+        var sourceFolder = NewDir();
+        var foreignFolder = NewDir();
+        var holdingLink = Path.Combine(root, "Fotos", "Haltungen", "100-200");
+        Directory.CreateDirectory(Path.GetDirectoryName(holdingLink)!);
+        JunctionTestSupport.CreateDirectoryLink(holdingLink, foreignFolder);
+        var source = Path.Combine(sourceFolder, "H_100-200_001.jpg");
+        File.WriteAllText(source, "kundenfoto");
+        try
+        {
+            var project = new Project();
+            var record = NewRecordWithEntry("100-200", "Foto1");
+            project.AddRecord(record);
+
+            var result = new ProjectPhotoAssignmentService().AssignFromFolder(
+                root,
+                sourceFolder,
+                project);
+
+            Assert.Equal(0, result.PhotosCopied);
+            Assert.Equal(0, result.PhotosAssigned);
+            Assert.Contains(result.Messages, message =>
+                message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("Junction", StringComparison.OrdinalIgnoreCase));
+            Assert.Empty(record.Protocol!.Current.Entries[0].FotoPaths);
+            Assert.Equal("kundenfoto", File.ReadAllText(source));
+            Assert.False(File.Exists(Path.Combine(foreignFolder, Path.GetFileName(source))));
+        }
+        finally
+        {
+            TryDeleteLink(holdingLink);
+            TryDelete(root);
+            TryDelete(sourceFolder);
+            TryDelete(foreignFolder);
+        }
+    }
+
     private static HaltungRecord NewRecordWithEntry(string holding, string beschreibung)
     {
         var rec = new HaltungRecord();
@@ -189,5 +284,10 @@ public sealed class ProjectPhotoAssignmentServiceTests
     private static void TryDelete(string d)
     {
         try { if (Directory.Exists(d)) Directory.Delete(d, recursive: true); } catch { }
+    }
+
+    private static void TryDeleteLink(string path)
+    {
+        try { if (Directory.Exists(path)) Directory.Delete(path); } catch { }
     }
 }

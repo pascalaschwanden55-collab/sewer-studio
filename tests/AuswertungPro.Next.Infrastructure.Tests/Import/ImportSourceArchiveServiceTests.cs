@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -57,6 +58,65 @@ public sealed class ImportSourceArchiveServiceTests : IDisposable
             "*.pdf",
             SearchOption.TopDirectoryOnly));
         Assert.Equal("PDF-Inhalt", File.ReadAllText(readable.ReadPath));
+    }
+
+    [Fact]
+    public void InstanceService_GleicheGroesseMitAnderemInhalt_WirdNichtAlsWiederverwendetGemeldet()
+    {
+        Directory.CreateDirectory(_sourceFolder);
+        Directory.CreateDirectory(_projectFolder);
+        var sourcePath = Path.Combine(_sourceFolder, "quelle.pdf");
+        File.WriteAllText(sourcePath, "NEU!");
+        var targetDirectory = ProjectStructure.ImportdateienDir(
+            _projectFolder,
+            ProjectStructure.PdfDir);
+        Directory.CreateDirectory(targetDirectory);
+        var existing = Path.Combine(targetDirectory, "quelle.pdf");
+        File.WriteAllText(existing, "ALT!");
+
+        var result = new ImportSourceArchiveService().Archive(
+            _sourceFolder,
+            _projectFolder);
+
+        Assert.Equal(1, result.Copied);
+        Assert.Equal(0, result.Reused);
+        Assert.Equal("ALT!", File.ReadAllText(existing));
+        Assert.Contains(
+            Directory.EnumerateFiles(targetDirectory, "*.pdf"),
+            path => !string.Equals(path, existing, StringComparison.OrdinalIgnoreCase)
+                    && File.ReadAllText(path) == "NEU!");
+    }
+
+    [JunctionFact]
+    public void DirektesArchiv_VerknuepfterZielordner_SchreibtKeineDateiNachAussen()
+    {
+        Directory.CreateDirectory(_sourceFolder);
+        Directory.CreateDirectory(_projectFolder);
+        var sourcePath = Path.Combine(_sourceFolder, "quelle.pdf");
+        File.WriteAllText(sourcePath, "PDF-Inhalt");
+        var archiveRoot = Path.Combine(_projectFolder, ProjectStructure.Importdateien);
+        var targetLink = Path.Combine(archiveRoot, ProjectStructure.PdfDir);
+        var external = Path.Combine(_projectFolder, "Fremdziel");
+        Directory.CreateDirectory(archiveRoot);
+        Directory.CreateDirectory(external);
+        JunctionTestSupport.CreateDirectoryLink(targetLink, external);
+
+        try
+        {
+            var result = new ImportSourceArchiveService().Archive(
+                _sourceFolder,
+                _projectFolder);
+
+            Assert.Equal(0, result.Copied);
+            Assert.Contains(result.Messages, message =>
+                message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+            Assert.Empty(Directory.EnumerateFileSystemEntries(external));
+            Assert.Equal("PDF-Inhalt", File.ReadAllText(sourcePath));
+        }
+        finally
+        {
+            try { Directory.Delete(targetLink); } catch { }
+        }
     }
 
     public void Dispose()

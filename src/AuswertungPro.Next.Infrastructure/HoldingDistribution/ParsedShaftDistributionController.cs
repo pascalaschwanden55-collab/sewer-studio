@@ -74,6 +74,7 @@ internal static class ParsedShaftDistributionController
 
         try
         {
+            var writePaths = new DistributionWritePathGuard(destinationMunicipalityFolder);
             var treeContext = new DistributionPatternContext(
                 Datum: parsed.Date.Value,
                 Gemeinde: DistributionDirectoryTreeController.GetMunicipality(project),
@@ -85,6 +86,7 @@ internal static class ParsedShaftDistributionController
                 "{Schachtnummer}",
                 variant,
                 "{Datum}_{Schachtnummer}");
+            shaftFolder = writePaths.EnsureDirectoryTarget(shaftFolder);
             Directory.CreateDirectory(shaftFolder);
 
             var destinationPdfName = $"{dateStamp}_{shaft}.pdf";
@@ -98,6 +100,7 @@ internal static class ParsedShaftDistributionController
             {
                 try
                 {
+                    existingPath = writePaths.EnsureFileTarget(existingPath);
                     Distributor.AppendPdfFile(existingPath, pdfSourceToStorePath, moveInsteadOfCopy);
                     destinationPdfPath = existingPath;
                     appendedToExisting = true;
@@ -118,7 +121,7 @@ internal static class ParsedShaftDistributionController
             }
             else
             {
-                destinationPdfPath = DistributionFileTransfer.EnsureUniquePath(
+                destinationPdfPath = writePaths.ResolveUniqueFileTarget(
                     Path.Combine(shaftFolder, destinationPdfName),
                     overwrite);
                 DistributionFileTransfer.MoveOrCopy(

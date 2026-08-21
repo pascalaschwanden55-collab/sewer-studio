@@ -9,6 +9,24 @@ internal sealed class ImportFileStagingPathGuard
 
     public string ProjectRoot { get; }
 
+    /// <summary>
+    /// Gemeinsame Pfadgrenze fuer Staging, direkte Projektschreibwege und Journal.
+    /// Sie prueft neben der lexikalischen Projektgrenze auch den Projektroot selbst,
+    /// alle vorhandenen Elternordner und ein bereits vorhandenes Endziel.
+    /// </summary>
+    public string EnsureSafeProjectPath(string path, string parameterName)
+    {
+        var fullPath = Path.GetFullPath(path);
+        EnsureWithinProject(fullPath, parameterName);
+        EnsureProjectRootIsSafe();
+        EnsureNoNestedReparsePoint(fullPath);
+        EnsureExistingTargetIsNotReparsePoint(fullPath);
+        return fullPath;
+    }
+
+    public void EnsureProjectRootIsSafe()
+        => EnsureExistingTargetIsNotReparsePoint(ProjectRoot);
+
     public void EnsureWithinProject(string path, string parameterName)
     {
         if (!IsWithinProject(path))
@@ -56,5 +74,21 @@ internal sealed class ImportFileStagingPathGuard
             .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         if (!string.Equals(childParent, fullParent, StringComparison.OrdinalIgnoreCase))
             throw new IOException("Unsicherer Import-Arbeitsordner wird nicht geloescht.");
+    }
+
+    private static void EnsureExistingTargetIsNotReparsePoint(string path)
+    {
+        try
+        {
+            EnsureNotReparsePoint(path);
+        }
+        catch (FileNotFoundException)
+        {
+            // Das Ziel darf vor dem Schreiben noch fehlen.
+        }
+        catch (DirectoryNotFoundException)
+        {
+            // Fehlende Unterordner werden erst nach der Elternpruefung angelegt.
+        }
     }
 }

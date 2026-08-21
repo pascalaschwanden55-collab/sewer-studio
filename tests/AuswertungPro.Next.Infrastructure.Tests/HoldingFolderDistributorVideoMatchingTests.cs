@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
@@ -334,6 +335,188 @@ public sealed class HoldingFolderDistributorVideoMatchingTests
         {
             try { Directory.Delete(tempDir, recursive: true); } catch { }
         }
+    }
+
+    [Fact]
+    public void FindVideoByHaltungDate_KuerzereHaltungUebernimmtNichtVideoDerLaengerenHaltung()
+    {
+        var fremdesVideo = Path.Combine(Path.GetTempPath(), "20260820_100-2000.mp4");
+
+        var result = HoldingFolderDistributor.FindVideoByHaltungDate(
+            Path.GetTempPath(),
+            "100-200",
+            "20260820",
+            recursiveVideoSearch: false,
+            videoFilesCache: [fremdesVideo]);
+
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotFound, result.Status);
+        Assert.Null(result.VideoPath);
+    }
+
+    [Fact]
+    public void FindExistingVideo_GleicherDateinameAberAndererInhalt_WirdNichtWiederverwendet()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"video-content-conflict-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "Quelle");
+        var holdingDir = Path.Combine(root, "Haltung");
+        Directory.CreateDirectory(sourceDir);
+        Directory.CreateDirectory(holdingDir);
+
+        var source = Path.Combine(sourceDir, "inspektion.mp4");
+        var existing = Path.Combine(holdingDir, "inspektion.mp4");
+        File.WriteAllBytes(source, [1, 2, 3, 4]);
+        File.WriteAllBytes(existing, [4, 3, 2, 1]);
+
+        try
+        {
+            var result = HoldingFolderDistributor.FindExistingVideo(holdingDir, source);
+
+            Assert.Null(result);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void FindExistingVideo_GleicheGroesseMitAnderemNamen_WirdNichtWiederverwendet()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"video-size-conflict-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "Quelle");
+        var holdingDir = Path.Combine(root, "Haltung");
+        Directory.CreateDirectory(sourceDir);
+        Directory.CreateDirectory(holdingDir);
+
+        var source = Path.Combine(sourceDir, "quelle.mp4");
+        var existing = Path.Combine(holdingDir, "vorhanden.mp4");
+        File.WriteAllBytes(source, [1, 2, 3, 4]);
+        File.WriteAllBytes(existing, [4, 3, 2, 1]);
+
+        try
+        {
+            var result = HoldingFolderDistributor.FindExistingVideo(holdingDir, source);
+
+            Assert.Null(result);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void FindExistingVideo_IdentischerInhaltMitAnderemNamen_WirdWiederverwendet()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"video-content-match-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "Quelle");
+        var holdingDir = Path.Combine(root, "Haltung");
+        Directory.CreateDirectory(sourceDir);
+        Directory.CreateDirectory(holdingDir);
+
+        var source = Path.Combine(sourceDir, "quelle.mp4");
+        var existing = Path.Combine(holdingDir, "vorhanden.mp4");
+        File.WriteAllBytes(source, [1, 2, 3, 4]);
+        File.WriteAllBytes(existing, [1, 2, 3, 4]);
+
+        try
+        {
+            var result = HoldingFolderDistributor.FindExistingVideo(holdingDir, source);
+
+            Assert.Equal(existing, result);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void RecordLinkLookup_UncLinkWirdVorJederDateisucheAbgewiesen()
+    {
+        var localVideo = Path.Combine(Path.GetTempPath(), "unc-link-darf-nicht-fallbacken.mp4");
+        var project = new Project();
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "100-200", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(
+            "Link",
+            @"\\localhost\nicht-vorhanden\unc-link-darf-nicht-fallbacken.mp4",
+            FieldSource.Xtf,
+            userEdited: false);
+        project.AddRecord(record);
+
+        var result = HoldingFolderDistributor.TryFindVideoFromRecordLink(
+            project,
+            "100-200",
+            Path.GetTempPath(),
+            "20260820",
+            recursiveVideoSearch: false,
+            videoFilesCache: [localVideo]);
+
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotFound, result.Status);
+        Assert.Contains("UNC", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [JunctionFact]
+    public void RecordLinkLookup_DateiverknuepfungWirdVorDemLesenAbgewiesen()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"record-link-source-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        var externalVideo = Path.Combine(root, "fremd.mp4");
+        var linkedVideo = Path.Combine(root, "alias.mp4");
+        File.WriteAllText(externalVideo, "kundenvideo");
+        File.CreateSymbolicLink(linkedVideo, externalVideo);
+        var project = new Project();
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "100-200", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue("Link", linkedVideo, FieldSource.Xtf, userEdited: false);
+        project.AddRecord(record);
+
+        try
+        {
+            var result = HoldingFolderDistributor.TryFindVideoFromRecordLink(
+                project,
+                "100-200",
+                root,
+                "20260820",
+                recursiveVideoSearch: false,
+                videoFilesCache: []);
+
+            Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotFound, result.Status);
+            Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("kundenvideo", File.ReadAllText(externalVideo));
+        }
+        finally
+        {
+            try { File.Delete(linkedVideo); } catch { }
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void MakeProjectRelativeLink_ProjektordnerOhneProjektkontext_BleibtBisZumSpeichernAbsolut()
+    {
+        var projectRoot = Path.Combine(Path.GetTempPath(), $"relative-video-link-{Guid.NewGuid():N}");
+        var distributionRoot = Path.Combine(projectRoot, "Haltungen_Verteilt");
+        var mediaPath = Path.Combine(distributionRoot, "100-200", "20260820_100-200.mp4");
+
+        var result = HoldingFolderDistributor.MakeProjectRelativeLink(mediaPath, distributionRoot);
+
+        Assert.Equal(mediaPath, result);
+    }
+
+    [Fact]
+    public void MakeProjectRelativeLink_ExternerNurGleichBenannterOrdner_BleibtAbsolut()
+    {
+        var externalRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"external-distribution-{Guid.NewGuid():N}",
+            "Haltungen_Verteilt");
+        var mediaPath = Path.Combine(externalRoot, "100-200", "20260820_100-200.mp4");
+
+        var result = HoldingFolderDistributor.MakeProjectRelativeLink(mediaPath, externalRoot);
+
+        Assert.Equal(mediaPath, result);
     }
 
     private static void WritePdf(string path, params string[] lines)

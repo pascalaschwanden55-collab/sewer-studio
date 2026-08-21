@@ -303,7 +303,13 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             return;
 
         var project = _getProject();
-        var result = _service.ResolveConflict(project, SelectedConflict.Conflict, sourcePath, setUserEdited);
+        var projectFolder = _getProjectFolder();
+        var result = _service.ResolveConflict(
+            project,
+            projectFolder,
+            SelectedConflict.Conflict,
+            sourcePath,
+            setUserEdited);
         if (!result.Success)
         {
             LastResult = $"Fehler: {result.Message}";

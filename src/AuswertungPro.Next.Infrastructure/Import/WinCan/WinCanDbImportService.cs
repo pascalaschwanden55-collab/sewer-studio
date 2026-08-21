@@ -456,33 +456,11 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
 
     private static Dictionary<string, List<string>> BuildFileIndex(string root)
     {
-        // IO und GetMediaRoots bleiben callerseitig; Kern-Logik liegt in MediaFileIndex.Build.
-        // WinCan scannt mehrere Sub-Roots (Video/, Picture/, …) statt root rekursiv.
-        var files = GetMediaRoots(root)
-            .SelectMany(dir => AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(dir, "*.*", recursive: true));
+        // Genau die vom Benutzer gewaehlte Wurzel ist vertrauenswuerdig. Bekannte
+        // Medien-Unterordner duerfen nicht als neue Wurzeln behandelt werden, weil
+        // eine dort liegende Junction sonst den Schutz der rekursiven Suche umgeht.
+        var files = SafeFileEnumeration.EnumerateFilesSafe(root, "*", recursive: true);
         return Common.MediaFileIndex.Build(files, MediaExtensions);
-    }
-
-    private static IEnumerable<string> GetMediaRoots(string root)
-    {
-        var candidates = new[]
-        {
-            root,
-            Path.Combine(root, "Video"),
-            Path.Combine(root, "Picture"),
-            Path.Combine(root, "Pictures"),
-            Path.Combine(root, "Foto"),
-            Path.Combine(root, "Fotos"),
-            Path.Combine(root, "Film"),
-            Path.Combine(root, "Report"),
-            Path.Combine(root, "Reports"),
-            Path.Combine(root, "PDF"),
-            Path.Combine(root, "Dokumente")
-        };
-
-        foreach (var dir in candidates)
-            if (Directory.Exists(dir))
-                yield return dir;
     }
 
     private static string? ResolveFile(Dictionary<string, List<string>> index, string fileName)
@@ -555,45 +533,51 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
         if (exact is not null)
             return exact;
 
-        foreach (var record in project.Data)
-        {
-            var candidate = NormalizeHoldingKey(record.GetFieldValue("Haltungsname"));
-            if (string.IsNullOrWhiteSpace(candidate))
-                continue;
-            if (Common.HoldingKeyMatch.IsBoundaryPrefixMatch(candidate, key))
-                return record;
-        }
+        var boundaryMatches = project.Data
+            .Where(record =>
+            {
+                var candidate = NormalizeHoldingKey(record.GetFieldValue("Haltungsname"));
+                return !string.IsNullOrWhiteSpace(candidate)
+                       && Common.HoldingKeyMatch.IsBoundaryPrefixMatch(candidate, key);
+            })
+            .Take(2)
+            .ToList();
 
-        return null;
+        return boundaryMatches.Count == 1
+            ? boundaryMatches[0]
+            : null;
     }
 
     private static string? FindDb3(string exportRoot)
     {
-        var enumOpts = new EnumerationOptions
+        var candidates = new List<(string Path, long Length)>();
+        foreach (var path in SafeFileEnumeration.EnumerateFilesSafe(exportRoot, "*", recursive: true))
         {
-            RecurseSubdirectories = true,
-            IgnoreInaccessible = true,
-            // Ohne diese Zeile gilt der .NET-Standard "Hidden, System": Ein versteckter
-            // Ordner oder eine versteckte Datei verschwindet lautlos aus dem Import, und
-            // der Bericht meldet nur eine kleinere Fundzahl (Audit 2026-08-17, auf
-            // .NET 10 nachgemessen: 1 von 3 Dateien). Kundendaten von optischen Medien,
-            // aus Sicherungen oder von Netzlaufwerken tragen diese Merker regelmaessig.
-            // Bewusst None und nicht ReparsePoint: Ein Verweisordner darf hier weiter
-            // verfolgt werden - beim SUCHEN waere sein Ueberspringen ein Datenverlust.
-            AttributesToSkip = FileAttributes.None,
-            MatchCasing = MatchCasing.CaseInsensitive
-        };
-        var candidates = Directory.EnumerateFiles(exportRoot, "*.db3", enumOpts)
-            .Where(p => p.IndexOf(Path.DirectorySeparatorChar + "DB" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) >= 0)
-            .ToList();
+            if (!Path.GetExtension(path).Equals(".db3", StringComparison.OrdinalIgnoreCase)
+                || path.IndexOf(
+                    Path.DirectorySeparatorChar + "DB" + Path.DirectorySeparatorChar,
+                    StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                continue;
+            }
+
+            try
+            {
+                candidates.Add((path, new FileInfo(path).Length));
+            }
+            catch
+            {
+                // Eine unlesbare Datei verhindert den Import der restlichen Quellen nicht.
+            }
+        }
 
         if (candidates.Count == 0)
             return null;
 
         return candidates
-            .Select(p => new FileInfo(p))
-            .OrderByDescending(fi => fi.Length)
-            .FirstOrDefault()?.FullName;
+            .OrderByDescending(candidate => candidate.Length)
+            .ThenBy(candidate => candidate.Path, StringComparer.OrdinalIgnoreCase)
+            .First().Path;
     }
 
     /// <summary>
@@ -602,42 +586,34 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     /// </summary>
     private static string? FindSdf(string exportRoot)
     {
-        try
+        var candidates = new List<(string Path, long Length)>();
+        foreach (var path in SafeFileEnumeration.EnumerateFilesSafe(exportRoot, "*", recursive: true))
         {
-            var enumOpts = new EnumerationOptions
+            if (!Path.GetExtension(path).Equals(".sdf", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var directory = Path.GetDirectoryName(path) ?? "";
+            if (!Path.GetFileName(directory).Equals("DB", StringComparison.OrdinalIgnoreCase)
+                || Path.GetFileName(path).Contains("_Meta", StringComparison.OrdinalIgnoreCase))
             {
-                RecurseSubdirectories = true,
-                IgnoreInaccessible = true,
-                // Ohne diese Zeile gilt der .NET-Standard "Hidden, System": Ein versteckter
-                // Ordner oder eine versteckte Datei verschwindet lautlos aus dem Import, und
-                // der Bericht meldet nur eine kleinere Fundzahl (Audit 2026-08-17, auf
-                // .NET 10 nachgemessen: 1 von 3 Dateien). Kundendaten von optischen Medien,
-                // aus Sicherungen oder von Netzlaufwerken tragen diese Merker regelmaessig.
-                // Bewusst None und nicht ReparsePoint: Ein Verweisordner darf hier weiter
-                // verfolgt werden - beim SUCHEN waere sein Ueberspringen ein Datenverlust.
-                AttributesToSkip = FileAttributes.None,
-                MatchCasing = MatchCasing.CaseInsensitive
-            };
+                continue;
+            }
 
-            var candidates = Directory.EnumerateFiles(exportRoot, "*.sdf", enumOpts)
-                .Where(p =>
-                {
-                    var dir = Path.GetDirectoryName(p) ?? "";
-                    var dirName = Path.GetFileName(dir);
-                    return string.Equals(dirName, "DB", StringComparison.OrdinalIgnoreCase);
-                })
-                .Where(p => !Path.GetFileName(p).Contains("_Meta", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            try
+            {
+                candidates.Add((path, new FileInfo(path).Length));
+            }
+            catch
+            {
+                // Eine unlesbare Datei verhindert den Import der restlichen Quellen nicht.
+            }
+        }
 
-            return candidates
-                .Select(p => new FileInfo(p))
-                .OrderByDescending(fi => fi.Length)
-                .FirstOrDefault()?.FullName;
-        }
-        catch
-        {
-            return null;
-        }
+        return candidates
+            .OrderByDescending(candidate => candidate.Length)
+            .ThenBy(candidate => candidate.Path, StringComparer.OrdinalIgnoreCase)
+            .Select(candidate => candidate.Path)
+            .FirstOrDefault();
     }
 
     /// <summary>
@@ -647,33 +623,12 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     private Result<ImportStats>? TryImportViaXtfFallback(
         string exportRoot, Project project, string sdfPath, ImportRunContext? ctx)
     {
-        // Suche XTF-Dateien im gesamten Projektordner (robust, ignoriert gesperrte Ordner)
-        var xtfFiles = new List<string>();
-        var enumOpts = new EnumerationOptions
-        {
-            RecurseSubdirectories = true,
-            IgnoreInaccessible = true,
-            // Ohne diese Zeile gilt der .NET-Standard "Hidden, System": Ein versteckter
-            // Ordner oder eine versteckte Datei verschwindet lautlos aus dem Import, und
-            // der Bericht meldet nur eine kleinere Fundzahl (Audit 2026-08-17, auf
-            // .NET 10 nachgemessen: 1 von 3 Dateien). Kundendaten von optischen Medien,
-            // aus Sicherungen oder von Netzlaufwerken tragen diese Merker regelmaessig.
-            // Bewusst None und nicht ReparsePoint: Ein Verweisordner darf hier weiter
-            // verfolgt werden - beim SUCHEN waere sein Ueberspringen ein Datenverlust.
-            AttributesToSkip = FileAttributes.None,
-            MatchCasing = MatchCasing.CaseInsensitive
-        };
-
-        try
-        {
-            xtfFiles.AddRange(Directory.EnumerateFiles(exportRoot, "*.xtf", enumOpts));
-        }
-        catch (Exception ex)
-        {
-            ctx?.Log.AddEntry("WinCan", "XTF_Search_Error", ImportLogStatus.Info,
-                sourceFile: exportRoot,
-                detail: $"Fehler bei XTF-Suche: {ex.Message}");
-        }
+        // Unterordner werden einzeln gelesen. Verknuepfungen innerhalb der gewaehlten
+        // Wurzel werden nicht betreten; die explizit gewaehlte Wurzel selbst bleibt lesbar.
+        var xtfFiles = SafeFileEnumeration
+            .EnumerateFilesSafe(exportRoot, "*", recursive: true)
+            .Where(path => Path.GetExtension(path).Equals(".xtf", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
         if (xtfFiles.Count == 0)
         {
@@ -742,7 +697,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
             if (!string.IsNullOrWhiteSpace(existingLink)) continue;
 
             var candidates = fileIndex
-                .Where(kv => kv.Key.Contains(haltungsname, StringComparison.OrdinalIgnoreCase))
+                .Where(kv => HoldingTextNormalizer.ContainsKeyAtBoundary(kv.Key, haltungsname))
                 .SelectMany(kv => kv.Value)
                 .Where(filePath =>
                 {

@@ -1,73 +1,461 @@
-using System;
-using System.IO;
+using System.Text.Json;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
-using Xunit;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
 public sealed class MediaConflictCenterServiceTests
 {
-    // Audit R5: gleiche Dateigroesse ist KEIN Identitaetsbeweis. SameHeadAndTail muss zwei
-    // gleich grosse, aber verschiedene Videos unterscheiden, damit nicht falsch verlinkt wird.
-
-    [Fact]
-    public void SameHeadAndTail_EqualSizeDifferentContent_IsFalse_IdenticalIsTrue()
+    [JunctionFact]
+    public void Scan_BetrittKeinenVerknuepftenHaltungsroot()
     {
-        var dir = Path.Combine(Path.GetTempPath(), "media-r5", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(dir);
+        var root = TempRoot();
+        var projectRoot = Path.Combine(root, "Projekt");
+        var external = Path.Combine(root, "Fremd");
+        var holdingsLink = Path.Combine(projectRoot, "Haltungen");
+        var externalHolding = Path.Combine(external, "H-1");
+        Directory.CreateDirectory(projectRoot);
+        Directory.CreateDirectory(externalHolding);
+        File.WriteAllText(
+            Path.Combine(externalHolding, "20260821_H-1_VIDEO_MISSING.txt"),
+            "Haltung: H-1");
+        JunctionTestSupport.CreateDirectoryLink(holdingsLink, external);
+
         try
         {
-            var a = Path.Combine(dir, "a.mp4");
-            var b = Path.Combine(dir, "b.mp4");
-            var bytesA = new byte[5000];
-            var bytesB = new byte[5000];
-            for (var i = 0; i < bytesA.Length; i++)
-            {
-                bytesA[i] = (byte)(i % 251);
-                bytesB[i] = (byte)((i + 7) % 251);   // gleiche Groesse, anderer Inhalt
-            }
-            File.WriteAllBytes(a, bytesA);
-            File.WriteAllBytes(b, bytesB);
+            var conflicts = new MediaConflictCenterService().Scan(projectRoot);
 
-            Assert.False(MediaConflictCenterService.SameHeadAndTail(a, b, bytesA.Length));
-
-            var c = Path.Combine(dir, "c.mp4");
-            File.WriteAllBytes(c, bytesA);   // identische Kopie
-            Assert.True(MediaConflictCenterService.SameHeadAndTail(a, c, bytesA.Length));
+            Assert.Empty(conflicts);
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, recursive: true);
+            DeleteLinkAndRoot(holdingsLink, root);
+        }
+    }
+
+    [JunctionFact]
+    public void ResolveConflict_SchreibtUndLoeschtNichtDurchVerknuepftenHaltungsordner()
+    {
+        var root = TempRoot();
+        var projectRoot = Path.Combine(root, "Projekt");
+        var holdingsRoot = Path.Combine(projectRoot, "Haltungen");
+        var holdingLink = Path.Combine(holdingsRoot, "H-1");
+        var external = Path.Combine(root, "Fremd");
+        var source = Path.Combine(root, "quelle.mp4");
+        Directory.CreateDirectory(holdingsRoot);
+        Directory.CreateDirectory(external);
+        File.WriteAllText(source, "kunden-video");
+        JunctionTestSupport.CreateDirectoryLink(holdingLink, external);
+        var infoPath = Path.Combine(holdingLink, "20260821_H-1_VIDEO_MISSING.txt");
+        File.WriteAllText(infoPath, "Konflikt");
+
+        try
+        {
+            var conflict = Conflict(infoPath, holdingLink, "H-1", "20260821");
+
+            var result = new MediaConflictCenterService().ResolveConflict(
+                new Project(),
+                conflict,
+                source);
+
+            Assert.False(result.Success);
+            Assert.True(File.Exists(infoPath));
+            Assert.Equal(
+                new[] { Path.GetFileName(infoPath) },
+                Directory.GetFiles(external).Select(Path.GetFileName).ToArray());
+            Assert.Equal("kunden-video", File.ReadAllText(source));
+        }
+        finally
+        {
+            DeleteLinkAndRoot(holdingLink, root);
         }
     }
 
     [Fact]
-    public void SameHeadAndTail_LargeFilesDifferingOnlyInTail_IsFalse()
+    public void ResolveConflict_GleichnamigerAndererInhaltErhaeltEigenesZiel()
     {
-        // Exerziert den Schwanz-Vergleich (> 1 MB): Kopf identisch, nur die letzten Bytes anders.
-        var dir = Path.Combine(Path.GetTempPath(), "media-r5", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(dir);
+        var root = TempRoot();
+        var holding = Path.Combine(root, "Projekt", "Haltungen", "H-1");
+        var sourceDirectory = Path.Combine(root, "Quelle");
+        Directory.CreateDirectory(holding);
+        Directory.CreateDirectory(sourceDirectory);
+        var fileName = "20260821_H-1.mp4";
+        var existing = Path.Combine(holding, fileName);
+        var source = Path.Combine(sourceDirectory, fileName);
+        File.WriteAllText(existing, "AAAA");
+        File.WriteAllText(source, "BBBB");
+        var infoPath = Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt");
+        File.WriteAllText(infoPath, "Konflikt");
+
         try
         {
-            const int size = 1_200_000;
-            var a = new byte[size];
-            var b = new byte[size];
-            Array.Fill(a, (byte)0xAA);
-            Array.Fill(b, (byte)0xAA);
-            for (var i = size - 100; i < size; i++) b[i] = 0xBB;   // nur Schwanz unterscheidet sich
+            var result = new MediaConflictCenterService().ResolveConflict(
+                ProjectWithHolding("H-1"),
+                Conflict(infoPath, holding, "H-1", "20260821"),
+                source);
 
-            var pa = Path.Combine(dir, "a.mp4");
-            var pb = Path.Combine(dir, "b.mp4");
-            File.WriteAllBytes(pa, a);
-            File.WriteAllBytes(pb, b);
-
-            Assert.False(MediaConflictCenterService.SameHeadAndTail(pa, pb, size));
+            Assert.True(result.Success, result.Message);
+            Assert.NotEqual(existing, result.DestVideoPath);
+            Assert.Equal("AAAA", File.ReadAllText(existing));
+            Assert.Equal("BBBB", File.ReadAllText(result.DestVideoPath!));
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, recursive: true);
+            TryDeleteRoot(root);
+        }
+    }
+
+    [Fact]
+    public void ResolveConflict_GleicheGroesseUndKopfSchwanzSindKeinInhaltsbeweis()
+    {
+        var root = TempRoot();
+        var holding = Path.Combine(root, "Projekt", "Haltungen", "H-1");
+        var sourceDirectory = Path.Combine(root, "Quelle");
+        Directory.CreateDirectory(holding);
+        Directory.CreateDirectory(sourceDirectory);
+        const int size = 3 * 1024 * 1024;
+        var sourceBytes = new byte[size];
+        var existingBytes = new byte[size];
+        sourceBytes[size / 2] = 1;
+        existingBytes[size / 2] = 2;
+        var source = Path.Combine(sourceDirectory, "quelle.mp4");
+        var existing = Path.Combine(holding, "anderes.mp4");
+        File.WriteAllBytes(source, sourceBytes);
+        File.WriteAllBytes(existing, existingBytes);
+        var infoPath = Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt");
+        File.WriteAllText(infoPath, "Konflikt");
+
+        try
+        {
+            var result = new MediaConflictCenterService().ResolveConflict(
+                ProjectWithHolding("H-1"),
+                Conflict(infoPath, holding, "H-1", "20260821"),
+                source);
+
+            Assert.True(result.Success, result.Message);
+            Assert.NotEqual(existing, result.DestVideoPath);
+            Assert.Equal(sourceBytes, File.ReadAllBytes(result.DestVideoPath!));
+            Assert.Equal(existingBytes, File.ReadAllBytes(existing));
+        }
+        finally
+        {
+            TryDeleteRoot(root);
+        }
+    }
+
+    [Fact]
+    public void ResolveConflict_OhnePassendenDatensatz_BelaesstMarkerUndProjektUnveraendert()
+    {
+        var root = TempRoot();
+        var projectRoot = Path.Combine(root, "Projekt");
+        var holding = Path.Combine(projectRoot, "Haltungen", "H-1");
+        Directory.CreateDirectory(holding);
+        var source = Path.Combine(root, "quelle.mp4");
+        File.WriteAllText(source, "kundenvideo");
+        var infoPath = Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt");
+        File.WriteAllText(infoPath, "Konflikt");
+        var project = new Project();
+
+        try
+        {
+            var result = new MediaConflictCenterService().ResolveConflict(
+                project,
+                projectRoot,
+                Conflict(infoPath, holding, "H-1", "20260821"),
+                source);
+
+            Assert.False(result.Success);
+            Assert.Contains("Datensatz", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.True(File.Exists(infoPath));
+            Assert.False(project.Dirty);
+            Assert.Equal(
+                new[] { Path.GetFileName(infoPath) },
+                Directory.GetFiles(holding).Select(Path.GetFileName).ToArray());
+        }
+        finally
+        {
+            TryDeleteRoot(root);
+        }
+    }
+
+    [JunctionFact]
+    public void TryResolveLearnedSourcePath_GelernteDateiverknuepfungWirdAbgewiesen()
+    {
+        var root = TempRoot();
+        var externalDirectory = Path.Combine(root, "Fremd");
+        var sourceDirectory = Path.Combine(root, "Quelle");
+        Directory.CreateDirectory(externalDirectory);
+        Directory.CreateDirectory(sourceDirectory);
+        var externalVideo = Path.Combine(externalDirectory, "video.mp4");
+        var sourceLink = Path.Combine(sourceDirectory, "video.mp4");
+        File.WriteAllText(externalVideo, "kunden-video");
+        File.CreateSymbolicLink(sourceLink, externalVideo);
+        var conflict = Conflict(
+            Path.Combine(root, "20260821_H-1_VIDEO_MISSING.txt"),
+            Path.Combine(root, "H-1"),
+            "H-1",
+            "20260821");
+        var project = ProjectWithLearnedMapping(conflict, "video.mp4", sourceLink);
+
+        try
+        {
+            var result = new MediaConflictCenterService().TryResolveLearnedSourcePath(
+                project,
+                conflict);
+
+            Assert.Null(result);
+            Assert.Equal("kunden-video", File.ReadAllText(externalVideo));
+        }
+        finally
+        {
+            TryDeleteFileLink(sourceLink);
+            TryDeleteRoot(root);
+        }
+    }
+
+    [Fact]
+    public void TryResolveLearnedSourcePath_RegulaereVideodateiBleibtVerwendbar()
+    {
+        var root = TempRoot();
+        var source = Path.Combine(root, "Quelle", "video.mp4");
+        Directory.CreateDirectory(Path.GetDirectoryName(source)!);
+        File.WriteAllText(source, "kunden-video");
+        var conflict = Conflict(
+            Path.Combine(root, "20260821_H-1_VIDEO_MISSING.txt"),
+            Path.Combine(root, "H-1"),
+            "H-1",
+            "20260821");
+        var project = ProjectWithLearnedMapping(conflict, "video.mp4", source);
+
+        try
+        {
+            var result = new MediaConflictCenterService().TryResolveLearnedSourcePath(
+                project,
+                conflict);
+
+            Assert.Equal(Path.GetFullPath(source), result);
+        }
+        finally
+        {
+            TryDeleteRoot(root);
+        }
+    }
+
+    [JunctionFact]
+    public void Verzeichnisverknuepfung_WirdWederAlsSuchrootVerwendetNochAlsAuswahlKopiert()
+    {
+        var root = TempRoot();
+        var projectRoot = Path.Combine(root, "Projekt");
+        var holding = Path.Combine(projectRoot, "Haltungen", "H-1");
+        var externalDirectory = Path.Combine(root, "Fremd");
+        var sourceLink = Path.Combine(root, "Quelle-Link");
+        Directory.CreateDirectory(holding);
+        Directory.CreateDirectory(externalDirectory);
+        var externalVideo = Path.Combine(externalDirectory, "video.mp4");
+        File.WriteAllText(externalVideo, "kunden-video");
+        JunctionTestSupport.CreateDirectoryLink(sourceLink, externalDirectory);
+        var selectedVideo = Path.Combine(sourceLink, "video.mp4");
+        var infoPath = Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt");
+        File.WriteAllText(infoPath, "Konflikt");
+        var conflict = Conflict(infoPath, holding, "H-1", "20260821");
+        var learnedProject = ProjectWithLearnedMapping(
+            conflict,
+            "video.mp4",
+            Path.Combine(root, "Fehlend", "video.mp4"));
+        var project = ProjectWithHolding("H-1");
+
+        try
+        {
+            var service = new MediaConflictCenterService();
+
+            var learnedSource = service.TryResolveLearnedSourcePath(
+                learnedProject,
+                conflict,
+                preferredVideoRoot: sourceLink);
+            var result = service.ResolveConflict(
+                project,
+                projectRoot,
+                conflict,
+                selectedVideo);
+
+            Assert.Null(learnedSource);
+            Assert.False(result.Success);
+            Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.True(File.Exists(infoPath));
+            Assert.False(project.Dirty);
+            Assert.Equal("kunden-video", File.ReadAllText(externalVideo));
+            Assert.Equal(
+                new[] { Path.GetFileName(infoPath) },
+                Directory.GetFiles(holding).Select(Path.GetFileName).ToArray());
+        }
+        finally
+        {
+            DeleteLinkAndRoot(sourceLink, root);
+        }
+    }
+
+    [Fact]
+    public void ResolveConflict_NichtErlaubteVideoendungWirdNichtKopiert()
+    {
+        var root = TempRoot();
+        var projectRoot = Path.Combine(root, "Projekt");
+        var holding = Path.Combine(projectRoot, "Haltungen", "H-1");
+        var sourceDirectory = Path.Combine(root, "Quelle");
+        Directory.CreateDirectory(holding);
+        Directory.CreateDirectory(sourceDirectory);
+        var source = Path.Combine(sourceDirectory, "video.txt");
+        File.WriteAllText(source, "kein-video");
+        var infoPath = Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt");
+        File.WriteAllText(infoPath, "Konflikt");
+        var project = ProjectWithHolding("H-1");
+
+        try
+        {
+            var result = new MediaConflictCenterService().ResolveConflict(
+                project,
+                projectRoot,
+                Conflict(infoPath, holding, "H-1", "20260821"),
+                source);
+
+            Assert.False(result.Success);
+            Assert.Contains("Video-Endung", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.True(File.Exists(infoPath));
+            Assert.False(project.Dirty);
+            Assert.Equal(
+                new[] { Path.GetFileName(infoPath) },
+                Directory.GetFiles(holding).Select(Path.GetFileName).ToArray());
+        }
+        finally
+        {
+            TryDeleteRoot(root);
+        }
+    }
+
+    [Fact]
+    public void ResolveConflict_UncQuelleWirdVorDemKopierenAbgewiesen()
+    {
+        var root = TempRoot();
+        var projectRoot = Path.Combine(root, "Projekt");
+        var holding = Path.Combine(projectRoot, "Haltungen", "H-1");
+        Directory.CreateDirectory(holding);
+        var infoPath = Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt");
+        File.WriteAllText(infoPath, "Konflikt");
+        var project = ProjectWithHolding("H-1");
+
+        try
+        {
+            var result = new MediaConflictCenterService().ResolveConflict(
+                project,
+                projectRoot,
+                Conflict(infoPath, holding, "H-1", "20260821"),
+                @"\\localhost\SewerStudio_DarfNichtLesen\video.mp4");
+
+            Assert.False(result.Success);
+            Assert.Contains("UNC", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.True(File.Exists(infoPath));
+            Assert.False(project.Dirty);
+            Assert.Equal(
+                new[] { Path.GetFileName(infoPath) },
+                Directory.GetFiles(holding).Select(Path.GetFileName).ToArray());
+        }
+        finally
+        {
+            TryDeleteRoot(root);
+        }
+    }
+
+    private static MediaConflictCenterService.MediaConflictCase Conflict(
+        string infoPath,
+        string holdingFolder,
+        string holdingName,
+        string dateStamp)
+        => new(
+            infoPath,
+            holdingFolder,
+            holdingName,
+            holdingName,
+            SourcePdfPath: null,
+            DateStamp: dateStamp,
+            Date: null,
+            ExpectedVideoName: null,
+            Type: MediaConflictCenterService.ConflictType.Missing,
+            Candidates: Array.Empty<string>(),
+            Fingerprint: $"{dateStamp}|{holdingName}");
+
+    private static Project ProjectWithHolding(string holdingName)
+    {
+        var project = new Project();
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", holdingName, FieldSource.Manual, userEdited: false);
+        project.AddRecord(record);
+        project.Dirty = false;
+        return project;
+    }
+
+    private static Project ProjectWithLearnedMapping(
+        MediaConflictCenterService.MediaConflictCase conflict,
+        string selectedFileName,
+        string lastKnownSourcePath)
+    {
+        var project = new Project();
+        var mapping = new MediaConflictCenterService.LearnedVideoMapping(
+            conflict.Fingerprint,
+            selectedFileName,
+            lastKnownSourcePath,
+            DateTime.UtcNow);
+        project.Metadata[MediaConflictCenterService.MappingMetadataKey] = JsonSerializer.Serialize(new
+        {
+            ByFingerprint = new Dictionary<string, MediaConflictCenterService.LearnedVideoMapping>
+            {
+                [conflict.Fingerprint] = mapping
+            },
+            ByFilmName = new Dictionary<string, MediaConflictCenterService.LearnedVideoMapping>()
+        });
+        return project;
+    }
+
+    private static string TempRoot()
+        => Path.Combine(Path.GetTempPath(), $"MediaConflictCenter_{Guid.NewGuid():N}");
+
+    private static void DeleteLinkAndRoot(string link, string root)
+    {
+        try
+        {
+            if (Directory.Exists(link))
+                Directory.Delete(link);
+        }
+        catch
+        {
+            // Test-Aufraeumen darf das Ergebnis nicht verdecken.
+        }
+
+        TryDeleteRoot(root);
+    }
+
+    private static void TryDeleteFileLink(string link)
+    {
+        try
+        {
+            if (File.Exists(link))
+                File.Delete(link);
+        }
+        catch
+        {
+            // Test-Aufraeumen darf das Ergebnis nicht verdecken.
+        }
+    }
+
+    private static void TryDeleteRoot(string root)
+    {
+        try
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+        catch
+        {
+            // Test-Aufraeumen darf das Ergebnis nicht verdecken.
         }
     }
 }

@@ -5,6 +5,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -506,6 +507,71 @@ public sealed class MediaDistributionServiceTests
         Assert.False(Path.IsPathRooted(relPath), "FotoPath muss relativ sein.");
         Assert.Equal("Fotos/Haltungen/06-001/bild.jpg", relPath);
         Assert.True(project.Dirty);
+    }
+
+    [JunctionFact]
+    public void DistributeImportedMedia_VerknuepfterVideoZielordner_SchreibtKeineDateiNachAussen()
+    {
+        using var temp = new TempDir();
+        var projectFolder = temp.CreateSubdir("projekt");
+        var sourceFolder = temp.CreateSubdir("quelle");
+        var source = Path.Combine(sourceFolder, "inspektion.mpg");
+        File.WriteAllText(source, "kundenvideo");
+        var holdingFolder = Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt, "06.123-456");
+        var external = temp.CreateSubdir("fremdziel");
+        var videoLink = Path.Combine(holdingFolder, "Video");
+        Directory.CreateDirectory(holdingFolder);
+        JunctionTestSupport.CreateDirectoryLink(videoLink, external);
+        var project = NewProject("06.123-456", FieldKeys.Link, source);
+
+        try
+        {
+            var result = new MediaDistributionService()
+                .DistributeImportedMedia(projectFolder, project);
+
+            Assert.Equal(0, result.FilesCopied);
+            Assert.Equal(1, result.Errors);
+            Assert.Contains(result.Messages, message =>
+                message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+            Assert.Empty(Directory.EnumerateFileSystemEntries(external));
+            Assert.Equal("kundenvideo", File.ReadAllText(source));
+            Assert.Equal(source, project.Data[0].GetFieldValue(FieldKeys.Link));
+        }
+        finally
+        {
+            try { Directory.Delete(videoLink); } catch { }
+        }
+    }
+
+    [JunctionFact]
+    public void DistributeImportedMedia_VerknuepfterQuellordner_WirdNichtGelesenOderKopiert()
+    {
+        using var temp = new TempDir();
+        var projectFolder = temp.CreateSubdir("projekt");
+        var aliasRoot = temp.CreateSubdir("alias");
+        var external = temp.CreateSubdir("fremdquelle");
+        var externalVideo = Path.Combine(external, "inspektion.mpg");
+        File.WriteAllText(externalVideo, "kundenvideo");
+        var sourceLink = Path.Combine(aliasRoot, "Video");
+        JunctionTestSupport.CreateDirectoryLink(sourceLink, external);
+        var aliasedSource = Path.Combine(sourceLink, "inspektion.mpg");
+        var project = NewProject("06.123-456", FieldKeys.Link, aliasedSource);
+
+        try
+        {
+            var result = new MediaDistributionService()
+                .DistributeImportedMedia(projectFolder, project);
+
+            Assert.Equal(0, result.FilesCopied);
+            Assert.Contains(result.Messages, message =>
+                message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(aliasedSource, project.Data[0].GetFieldValue(FieldKeys.Link));
+            Assert.Equal("kundenvideo", File.ReadAllText(externalVideo));
+        }
+        finally
+        {
+            try { Directory.Delete(sourceLink); } catch { }
+        }
     }
 
     [Fact]

@@ -552,21 +552,9 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
                 return false;
 
-            var opts = new EnumerationOptions
-            {
-                RecurseSubdirectories = true,
-                IgnoreInaccessible = true,
-                // Ohne diese Zeile gilt der .NET-Standard "Hidden, System": Ein versteckter
-                // Ordner oder eine versteckte Datei verschwindet lautlos aus dem Import, und
-                // der Bericht meldet nur eine kleinere Fundzahl (Audit 2026-08-17, auf
-                // .NET 10 nachgemessen: 1 von 3 Dateien). Kundendaten von optischen Medien,
-                // aus Sicherungen oder von Netzlaufwerken tragen diese Merker regelmaessig.
-                // Bewusst None und nicht ReparsePoint: Ein Verweisordner darf hier weiter
-                // verfolgt werden - beim SUCHEN waere sein Ueberspringen ein Datenverlust.
-                AttributesToSkip = FileAttributes.None,
-                MatchCasing = MatchCasing.CaseInsensitive
-            };
-            return Directory.EnumerateFiles(root, pattern, opts).Any();
+            return SafeFileEnumeration
+                .EnumerateFilesSafe(root, pattern, recursive: true)
+                .Any();
         }
         catch
         {

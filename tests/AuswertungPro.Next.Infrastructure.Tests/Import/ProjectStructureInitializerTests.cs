@@ -3,6 +3,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Import.WinCan;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
@@ -54,6 +55,52 @@ public sealed class ProjectStructureInitializerTests : IDisposable
 
         Assert.Equal(1, initializer.Calls);
         Assert.Equal(projectDirectory, initializer.LastProjectFolder);
+    }
+
+    [JunctionFact]
+    public void EnsureCreated_VerknuepfterProjektroot_ErzeugtKeineOrdnerImFremdziel()
+    {
+        var external = Path.Combine(_tempDirectory, "Fremdziel");
+        var projectLink = Path.Combine(_tempDirectory, "Projekt");
+        Directory.CreateDirectory(external);
+        JunctionTestSupport.CreateDirectoryLink(projectLink, external);
+
+        try
+        {
+            var error = Assert.Throws<IOException>(() =>
+                new ProjectStructureInitializer().EnsureCreated(projectLink));
+
+            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Empty(Directory.EnumerateFileSystemEntries(external));
+        }
+        finally
+        {
+            try { Directory.Delete(projectLink); } catch { }
+        }
+    }
+
+    [JunctionFact]
+    public void EnsureCreated_VerknuepfterKindordner_ErzeugtKeineUnterordnerImFremdziel()
+    {
+        var projectFolder = Path.Combine(_tempDirectory, "Projekt");
+        var external = Path.Combine(_tempDirectory, "Fremdziel");
+        var importLink = Path.Combine(projectFolder, ProjectStructure.Importdateien);
+        Directory.CreateDirectory(projectFolder);
+        Directory.CreateDirectory(external);
+        JunctionTestSupport.CreateDirectoryLink(importLink, external);
+
+        try
+        {
+            var error = Assert.Throws<IOException>(() =>
+                new ProjectStructureInitializer().EnsureCreated(projectFolder));
+
+            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Empty(Directory.EnumerateFileSystemEntries(external));
+        }
+        finally
+        {
+            try { Directory.Delete(importLink); } catch { }
+        }
     }
 
     public void Dispose()

@@ -60,8 +60,9 @@ public sealed class PlanPdfImportService : IPlanPdfImporter
             return new PlanPdfImportResult(copied, reused, skipped, errors, messages);
 
         var plaeneDir = ProjectStructure.PlaeneDir(projectFolder);
-        if (fileStaging is null)
-            Directory.CreateDirectory(plaeneDir);
+        var writePathGuard = fileStaging is null
+            ? new ProjectWritePathGuard(projectFolder)
+            : null;
 
         foreach (var source in archivedPdfs)
         {
@@ -96,20 +97,24 @@ public sealed class PlanPdfImportService : IPlanPdfImporter
                     continue;
                 }
 
+                var safePlansDirectory = writePathGuard!.EnsureSafeDirectoryTarget(plaeneDir);
+                Directory.CreateDirectory(safePlansDirectory);
+                targetPath = writePathGuard.EnsureSafeFileTarget(
+                    Path.Combine(safePlansDirectory, fileName));
+
                 if (File.Exists(targetPath))
                 {
-                    var sourceSize = new FileInfo(sourcePath).Length;
-                    var targetSize = new FileInfo(targetPath).Length;
-                    if (sourceSize == targetSize)
+                    if (VerifiedImportFileCopy.ContentsEqual(sourcePath, targetPath))
                     {
                         reused++;
                         continue;
                     }
 
-                    targetPath = BuildCollisionSafePath(plaeneDir, fileName);
+                    targetPath = BuildCollisionSafePath(safePlansDirectory, fileName);
                     messages.Add($"Plan-Namenskollision: '{fileName}' als '{Path.GetFileName(targetPath)}' kopiert.");
                 }
 
+                targetPath = writePathGuard.EnsureSafeFileTarget(targetPath);
                 File.Copy(sourcePath, targetPath, overwrite: false);
                 copied++;
             }

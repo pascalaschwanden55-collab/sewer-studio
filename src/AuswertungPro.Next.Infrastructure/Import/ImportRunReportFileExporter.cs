@@ -21,7 +21,10 @@ public sealed class ImportRunReportFileExporter : IImportRunReportExporter
         ArgumentNullException.ThrowIfNull(log);
         ArgumentException.ThrowIfNullOrWhiteSpace(reportDirectory);
 
+        var projectGuard = CreateProjectReportGuard(reportDirectory);
+        projectGuard?.EnsureSafeDirectoryTarget(reportDirectory);
         Directory.CreateDirectory(reportDirectory);
+        projectGuard?.EnsureSafeDirectoryTarget(reportDirectory);
         var stamp = log.StartedAtUtc.ToString("yyyyMMdd_HHmmss");
         var id = log.RunId;
         var baseName = $"run_{id}_{stamp}";
@@ -29,10 +32,33 @@ public sealed class ImportRunReportFileExporter : IImportRunReportExporter
         var jsonPath = Path.Combine(reportDirectory, $"{baseName}.json");
         var errorPath = Path.Combine(reportDirectory, $"fehlerliste_{id}.txt");
 
+        projectGuard?.EnsureSafeFileTarget(textPath);
+        projectGuard?.EnsureSafeFileTarget(jsonPath);
+        projectGuard?.EnsureSafeFileTarget(errorPath);
+
         WriteTextReport(log, textPath);
         WriteJsonReport(log, jsonPath);
         WriteErrorReport(log, errorPath);
         return textPath;
+    }
+
+    private static ProjectWritePathGuard? CreateProjectReportGuard(string reportDirectory)
+    {
+        var fullDirectory = Path.GetFullPath(reportDirectory);
+        if (!string.Equals(
+                Path.GetFileName(fullDirectory),
+                ProjectStructure.ImportReports,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            // Die Kompatibilitaetsfassade darf weiterhin einen ausdruecklich gewaehlten
+            // beliebigen Zielordner erhalten. Projektberichte tragen den festen Namen.
+            return null;
+        }
+
+        var projectRoot = Path.GetDirectoryName(fullDirectory)
+                          ?? throw new IOException(
+                              "Der Projektordner des Importberichts konnte nicht bestimmt werden.");
+        return new ProjectWritePathGuard(projectRoot);
     }
 
     private static void WriteTextReport(ImportRunLog log, string path)

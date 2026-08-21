@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
@@ -176,6 +177,60 @@ public sealed class SchachtPdfImportMappingTests
             Assert.Contains("Schacht: Ueberdeckt", record.GetFieldValue("Primäre Schäden"));
             Assert.Contains("Bemerkungen: ueberdeckt, 2 Einlaeufe", record.GetFieldValue("Primäre Schäden"));
             Assert.Equal("", record.GetFieldValue("Bemerkungen"));
+        }
+        finally
+        {
+            TryDeleteDirectory(tempRoot);
+        }
+    }
+
+    [Fact]
+    public void ImportPdf_FillMissingOnly_ErgaenztAberErsetztKeineSchachtwerteOderProtokolle()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"schacht-pdf-fill-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        var pdfPath = Path.Combine(tempRoot, "20260618_1085605.pdf");
+
+        try
+        {
+            WritePdf(
+                pdfPath,
+                "Schachtprotokoll Schacht Nr. 1085605",
+                "Schachtfunktion            Kontrollschacht",
+                "Dimension                  1000 mm",
+                "ZUSTAND DER SCHACHTBAUTEILE",
+                "Schacht                    Ueberdeckt");
+
+            var project = new Project();
+            var record = new SchachtRecord();
+            record.SetFieldValue("Schachtnummer", "1085605");
+            record.SetFieldValue("Funktion", "Von Hand geprueft");
+            record.SetFieldValue("PDF_Path", "C:/bestand/alt.pdf");
+            record.Protocol = new ProtocolDocument
+            {
+                HaltungId = "1085605",
+                Original = new ProtocolRevision
+                {
+                    Entries = [new ProtocolEntry { Code = "Bestand", Beschreibung = "Original" }]
+                },
+                Current = new ProtocolRevision
+                {
+                    Entries = [new ProtocolEntry { Code = "Bestand", Beschreibung = "Arbeitsstand" }]
+                }
+            };
+            project.SchaechteData.Add(record);
+
+            var stats = new LegacyPdfImportService().ImportPdf(
+                pdfPath,
+                project,
+                fillMissingOnly: true);
+
+            Assert.Equal(0, stats.Errors);
+            Assert.Equal("Von Hand geprueft", record.GetFieldValue("Funktion"));
+            Assert.Equal("1000 mm", record.GetFieldValue("Dimension"));
+            Assert.Equal("C:/bestand/alt.pdf", record.GetFieldValue("PDF_Path"));
+            Assert.Equal("Bestand", Assert.Single(record.Protocol.Current.Entries).Code);
+            Assert.Empty(record.Protocol.History);
         }
         finally
         {

@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
@@ -24,10 +25,16 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
     public ImportFileStagingSession(string projectRoot, string projectFileDirectory)
     {
         _paths = new ImportFileStagingPathGuard(projectRoot);
-        _projectFileDirectory = Path.GetFullPath(projectFileDirectory);
-        _paths.EnsureWithinProject(_projectFileDirectory, nameof(projectFileDirectory));
-        _stagingParent = Path.Combine(_projectFileDirectory, StagingDirectoryName);
-        _stagingDirectory = Path.Combine(_stagingParent, Guid.NewGuid().ToString("N"));
+        _paths.EnsureProjectRootIsSafe();
+        _projectFileDirectory = _paths.EnsureSafeProjectPath(
+            projectFileDirectory,
+            nameof(projectFileDirectory));
+        _stagingParent = _paths.EnsureSafeProjectPath(
+            Path.Combine(_projectFileDirectory, StagingDirectoryName),
+            nameof(projectFileDirectory));
+        _stagingDirectory = _paths.EnsureSafeProjectPath(
+            Path.Combine(_stagingParent, Guid.NewGuid().ToString("N")),
+            nameof(projectFileDirectory));
     }
 
     public string ProjectRoot => _paths.ProjectRoot;
@@ -97,9 +104,10 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
             if (!File.Exists(fullSource))
                 throw new FileNotFoundException("Quelldatei wurde nicht gefunden.", fullSource);
 
-            var fullTargetDirectory = Path.GetFullPath(targetDirectory);
-            _paths.EnsureWithinProject(fullTargetDirectory, nameof(targetDirectory));
-            _paths.EnsureNoNestedReparsePoint(fullTargetDirectory);
+            _paths.EnsureProjectRootIsSafe();
+            var fullTargetDirectory = _paths.EnsureSafeProjectPath(
+                targetDirectory,
+                nameof(targetDirectory));
 
             var fileName = Path.GetFileName(targetFileName);
             if (string.IsNullOrWhiteSpace(fileName)
@@ -113,15 +121,17 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
                 fullTargetDirectory,
                 fileName,
                 now ?? (() => DateTime.Now));
+            targetPath = _paths.EnsureSafeProjectPath(targetPath, nameof(targetDirectory));
             if (File.Exists(targetPath))
                 return targetPath;
             if (_filesByTarget.TryGetValue(targetPath, out var existingStage))
                 return existingStage.TargetPath;
 
             EnsureStagingDirectory();
-            var stagePath = Path.Combine(
+            var stagePath = _paths.EnsureSafeProjectPath(Path.Combine(
                 _stagingDirectory,
-                $"{Guid.NewGuid():N}{Path.GetExtension(fileName)}.stage");
+                $"{Guid.NewGuid():N}{Path.GetExtension(fileName)}.stage"),
+                nameof(targetDirectory));
             var sha256 = VerifiedImportFileCopy.CopyToStage(
                 fullSource,
                 stagePath,
@@ -139,12 +149,13 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
 
         lock (_sync)
         {
-            var fullTarget = Path.GetFullPath(targetPath);
-            _paths.EnsureWithinProject(fullTarget, nameof(targetPath));
+            var fullTarget = _paths.EnsureSafeProjectPath(targetPath, nameof(targetPath));
             if (_filesByTarget.TryGetValue(fullTarget, out var staged)
-                && File.Exists(staged.StagePath))
+                && File.Exists(_paths.EnsureSafeProjectPath(
+                    staged.StagePath,
+                    nameof(targetPath))))
             {
-                return staged.StagePath;
+                return _paths.EnsureSafeProjectPath(staged.StagePath, nameof(targetPath));
             }
 
             return fullTarget;
@@ -163,16 +174,21 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
 
         lock (_sync)
         {
-            var fullDirectory = Path.GetFullPath(targetDirectory);
-            _paths.EnsureWithinProject(fullDirectory, nameof(targetDirectory));
-            _paths.EnsureNoNestedReparsePoint(fullDirectory);
+            var fullDirectory = _paths.EnsureSafeProjectPath(
+                targetDirectory,
+                nameof(targetDirectory));
 
             var result = new Dictionary<string, ImportReadableFile>(StringComparer.OrdinalIgnoreCase);
             if (Directory.Exists(fullDirectory))
             {
-                foreach (var path in Directory.EnumerateFiles(fullDirectory, searchPattern, searchOption))
+                var existingPaths = SafeFileEnumeration.EnumerateFilesSafe(
+                    fullDirectory,
+                    searchPattern,
+                    recursive: searchOption == SearchOption.AllDirectories);
+
+                foreach (var path in existingPaths)
                 {
-                    var fullPath = Path.GetFullPath(path);
+                    var fullPath = _paths.EnsureSafeProjectPath(path, nameof(targetDirectory));
                     result[fullPath] = new ImportReadableFile(fullPath, fullPath);
                 }
             }
@@ -188,10 +204,16 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
                     continue;
                 }
 
-                var readPath = File.Exists(file.StagePath)
-                    ? file.StagePath
-                    : file.TargetPath;
-                result[file.TargetPath] = new ImportReadableFile(file.TargetPath, readPath);
+                var safeTargetPath = _paths.EnsureSafeProjectPath(
+                    file.TargetPath,
+                    nameof(targetDirectory));
+                var safeStagePath = _paths.EnsureSafeProjectPath(
+                    file.StagePath,
+                    nameof(targetDirectory));
+                var readPath = File.Exists(safeStagePath)
+                    ? safeStagePath
+                    : safeTargetPath;
+                result[safeTargetPath] = new ImportReadableFile(safeTargetPath, readPath);
             }
 
             return result.Values
@@ -213,32 +235,44 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
             EnsureState(SessionState.Open, "Weitere Dateien koennen nicht mehr vorbereitet werden.");
             cancellationToken.ThrowIfCancellationRequested();
 
-            var fullPreferredTarget = Path.GetFullPath(preferredTargetPath);
-            _paths.EnsureWithinProject(fullPreferredTarget, nameof(preferredTargetPath));
+            _paths.EnsureProjectRootIsSafe();
+            var fullPreferredTarget = _paths.EnsureSafeProjectPath(
+                preferredTargetPath,
+                nameof(preferredTargetPath));
             var targetDirectory = Path.GetDirectoryName(fullPreferredTarget)
                                   ?? throw new ArgumentException(
                                       "Zieldatei hat keinen gueltigen Ordner.",
                                       nameof(preferredTargetPath));
-            _paths.EnsureNoNestedReparsePoint(targetDirectory);
+            targetDirectory = _paths.EnsureSafeProjectPath(
+                targetDirectory,
+                nameof(preferredTargetPath));
 
             EnsureStagingDirectory();
-            var stagePath = Path.Combine(
+            var stagePath = _paths.EnsureSafeProjectPath(Path.Combine(
                 _stagingDirectory,
-                $"{Guid.NewGuid():N}{Path.GetExtension(fullPreferredTarget)}");
+                $"{Guid.NewGuid():N}{Path.GetExtension(fullPreferredTarget)}"),
+                nameof(preferredTargetPath));
             try
             {
+                stagePath = _paths.EnsureSafeProjectPath(stagePath, nameof(preferredTargetPath));
                 writeStageFile(stagePath);
                 cancellationToken.ThrowIfCancellationRequested();
                 ImportFileStagingPathGuard.EnsureDirectChild(stagePath, _stagingDirectory);
+                stagePath = _paths.EnsureSafeProjectPath(stagePath, nameof(preferredTargetPath));
                 if (!File.Exists(stagePath))
                     throw new IOException("Der Dateierzeuger hat keine vorbereitete Datei geschrieben.");
-                ImportFileStagingPathGuard.EnsureNotReparsePoint(stagePath);
 
                 var sha256 = VerifiedImportFileCopy.ComputeSha256(stagePath);
                 var targetPath = ResolveGeneratedTargetPath(fullPreferredTarget, stagePath, sha256);
+                targetPath = _paths.EnsureSafeProjectPath(
+                    targetPath,
+                    nameof(preferredTargetPath));
                 if (File.Exists(targetPath)
                     || _filesByTarget.TryGetValue(targetPath, out _))
                 {
+                    stagePath = _paths.EnsureSafeProjectPath(
+                        stagePath,
+                        nameof(preferredTargetPath));
                     File.Delete(stagePath);
                     return targetPath;
                 }
@@ -252,6 +286,9 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
             {
                 try
                 {
+                    stagePath = _paths.EnsureSafeProjectPath(
+                        stagePath,
+                        nameof(preferredTargetPath));
                     if (File.Exists(stagePath))
                         File.Delete(stagePath);
                 }
@@ -270,6 +307,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
         lock (_sync)
         {
             EnsureState(SessionState.Open, "Dateien wurden bereits veroeffentlicht.");
+            _paths.EnsureProjectRootIsSafe();
             try
             {
                 foreach (var file in _stagedFiles)
@@ -297,6 +335,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
         lock (_sync)
         {
             EnsureState(SessionState.Published, "Dateien muessen vor der Bestaetigung veroeffentlicht sein.");
+            _paths.EnsureProjectRootIsSafe();
 
             // Der Status wird vor dem Aufraeumen gesetzt. Ein reiner
             // Aufraeumfehler darf bestaetigte Projektdateien nie zuruecknehmen.
@@ -389,18 +428,25 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
         string stagePath,
         string sha256)
     {
+        candidate = _paths.EnsureSafeProjectPath(candidate, nameof(candidate));
+        stagePath = _paths.EnsureSafeProjectPath(stagePath, nameof(stagePath));
         if (File.Exists(candidate))
         {
-            ImportFileStagingPathGuard.EnsureNotReparsePoint(candidate);
             return VerifiedImportFileCopy.ComputeSha256(candidate)
                 .Equals(sha256, StringComparison.OrdinalIgnoreCase);
         }
 
         if (_filesByTarget.TryGetValue(candidate, out var staged))
         {
-            var readable = File.Exists(staged.StagePath)
-                ? staged.StagePath
-                : staged.TargetPath;
+            var safeStagedPath = _paths.EnsureSafeProjectPath(
+                staged.StagePath,
+                nameof(candidate));
+            var safeTargetPath = _paths.EnsureSafeProjectPath(
+                staged.TargetPath,
+                nameof(candidate));
+            var readable = File.Exists(safeStagedPath)
+                ? safeStagedPath
+                : safeTargetPath;
             return File.Exists(readable)
                    && VerifiedImportFileCopy.ContentsEqual(stagePath, readable);
         }
@@ -432,9 +478,9 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
         out string? usablePath)
     {
         usablePath = null;
+        candidate = _paths.EnsureSafeProjectPath(candidate, nameof(candidate));
         if (File.Exists(candidate))
         {
-            ImportFileStagingPathGuard.EnsureNotReparsePoint(candidate);
             if (VerifiedImportFileCopy.ContentsEqual(sourcePath, candidate))
             {
                 usablePath = candidate;
@@ -446,7 +492,10 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
 
         if (_filesByTarget.TryGetValue(candidate, out var staged))
         {
-            if (VerifiedImportFileCopy.ContentsEqual(sourcePath, staged.StagePath))
+            var safeStagePath = _paths.EnsureSafeProjectPath(
+                staged.StagePath,
+                nameof(candidate));
+            if (VerifiedImportFileCopy.ContentsEqual(sourcePath, safeStagePath))
             {
                 usablePath = staged.TargetPath;
                 return true;
@@ -461,20 +510,23 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
 
     private void PublishOne(StagedFile file)
     {
-        var targetDirectory = Path.GetDirectoryName(file.TargetPath)
+        var stagePath = _paths.EnsureSafeProjectPath(file.StagePath, nameof(file.StagePath));
+        var targetPath = _paths.EnsureSafeProjectPath(file.TargetPath, nameof(file.TargetPath));
+        var targetDirectory = Path.GetDirectoryName(targetPath)
                               ?? throw new IOException($"Zielordner fehlt: {file.TargetPath}");
-        _paths.EnsureWithinProject(targetDirectory, nameof(file.TargetPath));
-        _paths.EnsureNoNestedReparsePoint(targetDirectory);
+        targetDirectory = _paths.EnsureSafeProjectPath(targetDirectory, nameof(file.TargetPath));
         RememberMissingDirectories(targetDirectory);
         Directory.CreateDirectory(targetDirectory);
-        _paths.EnsureNoNestedReparsePoint(targetDirectory);
+        targetDirectory = _paths.EnsureSafeProjectPath(targetDirectory, nameof(file.TargetPath));
+        stagePath = _paths.EnsureSafeProjectPath(stagePath, nameof(file.StagePath));
+        targetPath = _paths.EnsureSafeProjectPath(targetPath, nameof(file.TargetPath));
 
-        if (File.Exists(file.TargetPath))
+        if (File.Exists(targetPath))
         {
-            ImportFileStagingPathGuard.EnsureNotReparsePoint(file.TargetPath);
-            if (VerifiedImportFileCopy.ContentsEqual(file.StagePath, file.TargetPath))
+            if (VerifiedImportFileCopy.ContentsEqual(stagePath, targetPath))
             {
-                File.Delete(file.StagePath);
+                stagePath = _paths.EnsureSafeProjectPath(stagePath, nameof(file.StagePath));
+                File.Delete(stagePath);
                 return;
             }
 
@@ -482,7 +534,9 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
                 $"Importziel wurde waehrend des Laufs durch eine andere Datei belegt: {file.TargetPath}");
         }
 
-        File.Move(file.StagePath, file.TargetPath, overwrite: false);
+        stagePath = _paths.EnsureSafeProjectPath(stagePath, nameof(file.StagePath));
+        targetPath = _paths.EnsureSafeProjectPath(targetPath, nameof(file.TargetPath));
+        File.Move(stagePath, targetPath, overwrite: false);
         file.PublishedBySession = true;
     }
 
@@ -509,28 +563,31 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
         return errors;
     }
 
-    private static void DeletePublishedFileIfUnchanged(StagedFile file)
+    private void DeletePublishedFileIfUnchanged(StagedFile file)
     {
-        if (!File.Exists(file.TargetPath))
+        var targetPath = _paths.EnsureSafeProjectPath(file.TargetPath, nameof(file.TargetPath));
+        if (!File.Exists(targetPath))
             return;
 
-        ImportFileStagingPathGuard.EnsureNotReparsePoint(file.TargetPath);
-        var currentHash = VerifiedImportFileCopy.ComputeSha256(file.TargetPath);
+        targetPath = _paths.EnsureSafeProjectPath(targetPath, nameof(file.TargetPath));
+        var currentHash = VerifiedImportFileCopy.ComputeSha256(targetPath);
         if (!currentHash.Equals(file.Sha256, StringComparison.OrdinalIgnoreCase))
         {
             throw new IOException(
                 $"Neue Importdatei wurde nach der Veroeffentlichung veraendert und wird nicht geloescht: {file.TargetPath}");
         }
 
-        File.Delete(file.TargetPath);
+        targetPath = _paths.EnsureSafeProjectPath(targetPath, nameof(file.TargetPath));
+        File.Delete(targetPath);
     }
 
     private void RememberMissingDirectories(string targetDirectory)
     {
-        var current = targetDirectory;
+        var current = _paths.EnsureSafeProjectPath(targetDirectory, nameof(targetDirectory));
         while (!string.Equals(current, ProjectRoot, StringComparison.OrdinalIgnoreCase)
                && _paths.IsWithinProject(current))
         {
+            current = _paths.EnsureSafeProjectPath(current, nameof(targetDirectory));
             if (Directory.Exists(current))
                 break;
             _createdDirectories.Add(current);
@@ -544,10 +601,16 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
         {
             try
             {
-                if (Directory.Exists(directory)
-                    && !Directory.EnumerateFileSystemEntries(directory).Any())
+                var safeDirectory = _paths.EnsureSafeProjectPath(
+                    directory,
+                    nameof(directory));
+                if (Directory.Exists(safeDirectory)
+                    && !Directory.EnumerateFileSystemEntries(safeDirectory).Any())
                 {
-                    Directory.Delete(directory, recursive: false);
+                    safeDirectory = _paths.EnsureSafeProjectPath(
+                        safeDirectory,
+                        nameof(directory));
+                    Directory.Delete(safeDirectory, recursive: false);
                 }
             }
             catch (Exception ex)
@@ -559,40 +622,57 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
 
     private void EnsureStagingDirectory()
     {
-        if (Directory.Exists(_stagingDirectory))
+        _paths.EnsureProjectRootIsSafe();
+        _paths.EnsureSafeProjectPath(_projectFileDirectory, nameof(_projectFileDirectory));
+        _paths.EnsureSafeProjectPath(_stagingParent, nameof(_stagingParent));
+        var safeStagingDirectory = _paths.EnsureSafeProjectPath(
+            _stagingDirectory,
+            nameof(_stagingDirectory));
+        if (Directory.Exists(safeStagingDirectory))
             return;
 
-        _paths.EnsureWithinProject(_stagingDirectory, nameof(_stagingDirectory));
-        _paths.EnsureNoNestedReparsePoint(_stagingDirectory);
-        Directory.CreateDirectory(_stagingDirectory);
-        _paths.EnsureNoNestedReparsePoint(_stagingDirectory);
+        Directory.CreateDirectory(safeStagingDirectory);
+        _paths.EnsureSafeProjectPath(safeStagingDirectory, nameof(_stagingDirectory));
     }
 
     private void CleanupStagingDirectory()
     {
-        if (Directory.Exists(_stagingDirectory))
+        _paths.EnsureProjectRootIsSafe();
+        var safeStagingDirectory = _paths.EnsureSafeProjectPath(
+            _stagingDirectory,
+            nameof(_stagingDirectory));
+        if (Directory.Exists(safeStagingDirectory))
         {
-            _paths.EnsureNoNestedReparsePoint(_stagingDirectory);
-            ImportFileStagingPathGuard.EnsureDirectChild(_stagingDirectory, _stagingParent);
-            ImportFileStagingPathGuard.EnsureNotReparsePoint(_stagingDirectory);
-            foreach (var entry in Directory.EnumerateFileSystemEntries(_stagingDirectory))
+            ImportFileStagingPathGuard.EnsureDirectChild(safeStagingDirectory, _stagingParent);
+            foreach (var entry in Directory.EnumerateFileSystemEntries(safeStagingDirectory))
             {
-                ImportFileStagingPathGuard.EnsureDirectChild(entry, _stagingDirectory);
-                ImportFileStagingPathGuard.EnsureNotReparsePoint(entry);
-                if ((File.GetAttributes(entry) & FileAttributes.Directory) != 0)
-                    throw new IOException($"Unerwarteter Unterordner im Import-Arbeitsordner: {entry}");
-                File.Delete(entry);
+                var safeEntry = _paths.EnsureSafeProjectPath(entry, nameof(_stagingDirectory));
+                ImportFileStagingPathGuard.EnsureDirectChild(safeEntry, safeStagingDirectory);
+                if ((File.GetAttributes(safeEntry) & FileAttributes.Directory) != 0)
+                    throw new IOException($"Unerwarteter Unterordner im Import-Arbeitsordner: {safeEntry}");
+                safeEntry = _paths.EnsureSafeProjectPath(safeEntry, nameof(_stagingDirectory));
+                File.Delete(safeEntry);
             }
 
-            Directory.Delete(_stagingDirectory, recursive: false);
+            safeStagingDirectory = _paths.EnsureSafeProjectPath(
+                safeStagingDirectory,
+                nameof(_stagingDirectory));
+            Directory.Delete(safeStagingDirectory, recursive: false);
         }
 
-        if (Directory.Exists(_stagingParent)
-            && !Directory.EnumerateFileSystemEntries(_stagingParent).Any())
+        var safeStagingParent = _paths.EnsureSafeProjectPath(
+            _stagingParent,
+            nameof(_stagingParent));
+        if (Directory.Exists(safeStagingParent)
+            && !Directory.EnumerateFileSystemEntries(safeStagingParent).Any())
         {
-            ImportFileStagingPathGuard.EnsureDirectChild(_stagingParent, _projectFileDirectory);
-            ImportFileStagingPathGuard.EnsureNotReparsePoint(_stagingParent);
-            Directory.Delete(_stagingParent, recursive: false);
+            ImportFileStagingPathGuard.EnsureDirectChild(
+                safeStagingParent,
+                _projectFileDirectory);
+            safeStagingParent = _paths.EnsureSafeProjectPath(
+                safeStagingParent,
+                nameof(_stagingParent));
+            Directory.Delete(safeStagingParent, recursive: false);
         }
     }
 

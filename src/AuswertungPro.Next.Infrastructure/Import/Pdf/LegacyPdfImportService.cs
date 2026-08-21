@@ -85,7 +85,14 @@ public sealed class LegacyPdfImportService
 
             if (LooksLikeSchachtProtokoll(fullText))
             {
-                ImportSchachtPdfPages(pdfPath, effectivePages, fullText, project, stats, ctx);
+                ImportSchachtPdfPages(
+                    pdfPath,
+                    effectivePages,
+                    fullText,
+                    project,
+                    stats,
+                    fillMissingOnly,
+                    ctx);
                 return stats;
             }
 
@@ -466,7 +473,13 @@ public sealed class LegacyPdfImportService
         return text.Contains("Schachtprotokoll", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void ImportSchachtPdf(string pdfPath, string fullText, Project project, ImportStats stats, ImportRunContext? ctx = null)
+    private static void ImportSchachtPdf(
+        string pdfPath,
+        string fullText,
+        Project project,
+        ImportStats stats,
+        bool fillMissingOnly,
+        ImportRunContext? ctx = null)
     {
         var parsed = ParseSchachtFields(fullText);
         stats.Found++;
@@ -499,7 +512,13 @@ public sealed class LegacyPdfImportService
         }
 
         var damageEntries = ParseSchachtDamageEntries(fullText);
-        var imported = SchachtProtocolApplier.Apply(target, key, parsed, damageEntries, pdfPath);
+        var imported = SchachtProtocolApplier.Apply(
+            target,
+            key,
+            parsed,
+            damageEntries,
+            pdfPath,
+            fillMissingOnly: fillMissingOnly);
 
         project.ModifiedAtUtc = DateTime.UtcNow;
         project.Dirty = true;
@@ -521,17 +540,18 @@ public sealed class LegacyPdfImportService
         string fullText,
         Project project,
         ImportStats stats,
+        bool fillMissingOnly,
         ImportRunContext? ctx)
     {
         var chunks = SplitSchachtPdfPages(pages);
         if (chunks.Count == 0)
         {
-            ImportSchachtPdf(pdfPath, fullText, project, stats, ctx);
+            ImportSchachtPdf(pdfPath, fullText, project, stats, fillMissingOnly, ctx);
             return;
         }
 
         foreach (var chunk in chunks)
-            ImportSchachtPdf(pdfPath, chunk.Text, project, stats, ctx);
+            ImportSchachtPdf(pdfPath, chunk.Text, project, stats, fillMissingOnly, ctx);
     }
 
     private sealed record SchachtPdfTextChunk(string Text);

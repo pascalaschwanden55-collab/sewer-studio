@@ -26,7 +26,7 @@ public sealed class ImportBestEffortLoggingArchitectureTests
 
         Assert.DoesNotContain("catch {", source);
         Assert.Contains("Kandidat uebersprungen", source);
-        Assert.Contains("Vorhandene DP-Groessen konnten nicht gelesen werden", source);
+        Assert.Contains("Vorhandene DP-Pruefsummen konnten nicht gelesen werden", source);
         Assert.Contains("BestEffort.ReportWarning", source);
     }
 }
