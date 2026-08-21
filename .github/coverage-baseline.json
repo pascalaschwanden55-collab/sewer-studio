@@ -1,5 +1,5 @@
 {
-  "beschreibung": "Mindest-Zeilenabdeckung der vier .NET-Testprojekte. Geprueft von .github/scripts/check-coverage.ps1. Die Zahl darf nur STEIGEN — der Messwert muss aber aus einem echten CI-Lauf stammen, siehe wieMessen.",
+  "beschreibung": "Mindest-Zeilenabdeckung der vier .NET-Testprojekte. Geprueft von .github/scripts/check-coverage.ps1. Die Zahl darf gegenueber dem Zielbranch oder Vorgaenger nur STEIGEN — der Messwert muss aber aus einem echten CI-Lauf stammen, siehe wieMessen.",
   "gemessen": {
     "datum": "2026-08-14",
     "linienAbgedeckt": 291460,
@@ -9,6 +9,7 @@
     "hinweis": "Der Sammler zaehlt auch Testcode und generierten Code mit. Die Prozentzahl ist ein CI-Verlaufswert, kein absolutes Qualitaetsurteil."
   },
   "minimumLinePercent": 45.35,
+  "ratchet": "Die CI verhindert ein Absenken der Grenze und verlangt ab 0,5 Prozentpunkten Vorsprung eine Anhebung. Der Wert umfasst derzeit auch Test- und generierten Code; eine getrennte Produktcode-Grenze wird erst nach einer belastbaren CI-Messung eingefuehrt.",
   "wieMessen": "Den Wert IMMER aus einem echten CI-Lauf uebernehmen, nie vom Entwicklerrechner und auch nicht aus einer Nachstellung. Umgebungsabhaengig uebersprungene Tests verschieben die Zahl, und zwar mehr als erwartet: derselbe Stand ergab lokal 45,61 %, lokal ohne FFmpeg und ohne Modell-Klassenkarte 45,57 % und auf dem GitHub-Runner 45,42 %. Der Rest sind vor allem die 13 Junction-Schutztests, die lokal nur mit eingeschaltetem Windows-Entwicklermodus laufen.",
   "warumPuffer": "0,07 Punkte Abstand zur CI-Messung. Ohne Puffer macht ein einzelner umgebungsabhaengig uebersprungener Test die CI rot, ohne dass sich am Code etwas geaendert hat."
 }

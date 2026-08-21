@@ -1,7 +1,7 @@
 # Entwicklungs-Gate (Test-Absicherung)
 
 Damit rote Tests keinen Push erreichen, prüft ein **pre-push-Hook** vor jedem
-`git push` die Infrastructure-, Pipeline- und UI-Tests.
+`git push` die vier normalen .NET-Testprojekte.
 
 ## Reproduzierbar auf jedem Klon
 
@@ -9,20 +9,22 @@ Der Hook liegt **versioniert** unter [`.githooks/pre-push`](../.githooks/pre-pus
 (nicht nur lokal in `.git/hooks/`, das nicht getrackt wird). Nach einem frischen
 Klon einmalig aktivieren:
 
-```bash
-git config core.hooksPath .githooks
+```powershell
+./tools/git-hooks/Install-PrePushHook.ps1
 ```
 
-Ab dann läuft das Gate bei jedem `git push`. Ohne diese Zeile greift der Hook
-nicht — deshalb steht sie hier dokumentiert.
+Das Skript setzt `core.hooksPath` auf `.githooks`. Es kopiert den Hook nicht;
+dadurch gibt es nur eine versionierte, aktuelle Fassung. Ab dann läuft das Gate
+bei jedem `git push`.
 
 ## Was das Gate prüft
 
 - `AuswertungPro.Next.Infrastructure.Tests`
 - `AuswertungPro.Next.Pipeline.Tests`
 - `AuswertungPro.Next.UI.Tests`
+- `ProjectModernizer.Tests`
 
-Ist eine der drei Test-Sammlungen rot, bricht der Push ab.
+Ist eine der vier Test-Sammlungen rot, bricht der Push ab.
 
 ## Dateisperre ist kein Codefehler
 
@@ -42,3 +44,6 @@ Sperrmeldung im Log steht, gilt: Tests sind rot.
 - Die **KI-Pipeline gegen ein echtes Video** (GPU + Sidecar) ist hier bewusst
   **nicht** enthalten — dieser Golden-Lauf ist ein eigenes Release-Gate, siehe
   [`docs/KI-RELEASE-GATE.md`](KI-RELEASE-GATE.md).
+- Die Python-Tests des **Sidecars** und die **QGIS**-Tests laufen in der CI sowie
+  bei passenden Änderungen. Sie sind bewusst nicht Teil des schnellen
+  Pre-Push-Hooks.

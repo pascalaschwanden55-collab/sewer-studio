@@ -6,13 +6,17 @@ if ([string]::IsNullOrWhiteSpace($repoRoot)) {
     throw 'Git-Projektordner konnte nicht ermittelt werden.'
 }
 
-$source = Join-Path $repoRoot 'tools\git-hooks\pre-push'
-$target = Join-Path $repoRoot '.git\hooks\pre-push'
+$hookRoot = Join-Path $repoRoot '.githooks'
+$hook = Join-Path $hookRoot 'pre-push'
 
-if (-not (Test-Path -LiteralPath $source)) {
-    throw "Hook-Vorlage fehlt: $source"
+if (-not (Test-Path -LiteralPath $hook -PathType Leaf)) {
+    throw "Versionierter Pre-Push-Hook fehlt: $hook"
 }
 
-Copy-Item -LiteralPath $source -Destination $target -Force
-Write-Host "Pre-Push-Testschutz installiert: $target"
+& git -C $repoRoot config core.hooksPath .githooks
+if ($LASTEXITCODE -ne 0) {
+    throw 'Git konnte core.hooksPath nicht auf .githooks setzen.'
+}
+
+Write-Host "Pre-Push-Testschutz aktiviert: $hook"
 Write-Host 'Im Notfall kann ein einzelner Push mit git push --no-verify umgangen werden.'

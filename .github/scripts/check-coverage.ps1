@@ -14,8 +14,9 @@
 param(
     [Parameter(Mandatory = $true)][string]$ResultsDirectory,
     [string]$BaselineFile = ".github/coverage-baseline.json",
+    [string]$ReferenceRef = "",
     # Ab dieser Ueberschreitung gilt die Grenze als veraltet.
-    [double]$RatchetToleranz = 3.0
+    [double]$RatchetToleranz = 0.5
 )
 
 $ErrorActionPreference = "Stop"
@@ -75,10 +76,43 @@ try {
     exit 2
 }
 
+# Eine Aenderung darf die bereits erreichte Grenze nicht einfach mit absenken.
+# Im Pull Request vergleichen wir mit dem Zielbranch, sonst mit dem direkten
+# Vorgaenger. Die CI holt dafuer die vollstaendige Historie.
+if ([string]::IsNullOrWhiteSpace($ReferenceRef)) {
+    $ReferenceRef = if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_BASE_REF)) {
+        "origin/$($env:GITHUB_BASE_REF)"
+    } else {
+        "HEAD^"
+    }
+}
+
+$baselinePathForGit = $BaselineFile.Replace('\', '/')
+$referenceLines = @(& git show "${ReferenceRef}:${baselinePathForGit}" 2>$null)
+$gitShowExitCode = $LASTEXITCODE
+$referenceText = $referenceLines -join [Environment]::NewLine
+if ($gitShowExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($referenceText)) {
+    Write-Host "FEHLER: Vergleichsgrenze aus $ReferenceRef konnte nicht gelesen werden."
+    exit 2
+}
+try {
+    $referenceBaseline = $referenceText | ConvertFrom-Json
+    $referenceGrenze = [double]$referenceBaseline.minimumLinePercent
+} catch {
+    Write-Host "FEHLER: Vergleichsgrenze aus $ReferenceRef ist nicht lesbar: $($_.Exception.Message)"
+    exit 2
+}
+
+if ($grenze -lt $referenceGrenze) {
+    Write-Host "ABDECKUNGSGRENZE DARF NICHT SINKEN: $grenze % statt bisher $referenceGrenze %."
+    exit 1
+}
+
 Write-Host "Berichte:   $($berichte.Count)"
 Write-Host "Zeilen:     $abgedeckt von $gesamt abgedeckt"
 Write-Host "Abdeckung:  $prozent %"
 Write-Host "Mindestens: $grenze %"
+Write-Host "Vorher:     $referenceGrenze % ($ReferenceRef)"
 
 if ($prozent -lt $grenze) {
     Write-Host ""

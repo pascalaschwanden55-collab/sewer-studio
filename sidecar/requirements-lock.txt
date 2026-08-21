@@ -13,6 +13,9 @@
 # vom PyTorch-Index nach einiger Zeit entfernt. Findet ein spaeterer Re-Sync das exakte
 # torch==2.12.0.dev20260408+cu128 nicht mehr, auf ein aktuelles cu128-Nightly (oder ein
 # stabiles cu128-Release) aktualisieren - aber bei cu128 bleiben.
+# Die aktuell verwendeten Windows-/Python-3.12-Wheels sind zusätzlich lokal archiviert;
+# Dateinamen und SHA-256 stehen in torch-nightly-windows-py312.sha256. Anleitung:
+# docs/TORCH-OFFLINE-ARCHIV.md.
 #
 # ----------------------------------------------------------------------------
 # SICHERHEITSSTAND 2026-08-14 (Gesamtaudit P1-1)
