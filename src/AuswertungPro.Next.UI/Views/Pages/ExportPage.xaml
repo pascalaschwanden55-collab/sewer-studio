@@ -1,4 +1,4 @@
-<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.ExportPage"
+﻿<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.ExportPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
@@ -98,6 +98,14 @@
                             <MenuItem Header="Dichtheitsprüfung verteilen" Command="{Binding DistributeDichtheitCommand}">
                                 <MenuItem.Icon>
                                     <ui:FluentIcon Glyph="&#xE9CE;" Foreground="{DynamicResource MutedBrush}"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator/>
+                            <MenuItem Header="Abgleichen"
+                                      ToolTip="Verschiebt aus den Verteilordnern alles in den Papierkorb, wozu es im Projekt keine Haltung und keinen Schacht gibt. Zeigt vorher, was betroffen ist."
+                                      Command="{Binding AbgleichenCommand}">
+                                <MenuItem.Icon>
+                                    <ui:FluentIcon Glyph="&#xE895;" Foreground="{DynamicResource MutedBrush}"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                         </ContextMenu>

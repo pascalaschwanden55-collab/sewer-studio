@@ -82,9 +82,12 @@ public sealed class ServiceProviderRegistrationTests
         // 144 -> 145: IProtocolPdfDateReader liest das Protokolldatum mit derselben
         // Textquelle wie die Verteilung. Vorher hiess dieselbe Datei je nach Weg anders
         // ("20231010_80783.pdf" nach dem Verteilen, "00000000_80783.pdf" nach dem Import).
+        // 145 -> 146: IDistributionReconciliationService ("Abgleichen") verschiebt aus
+        // Haltungen_Verteilt und Schaechte_Verteilt alles ohne Gegenstueck im Projekt in
+        // den Papierkorb.
         Assert.True(
-            registrations.Count == 145,
-            $"Erwartet 145 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 146,
+            $"Erwartet 146 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(

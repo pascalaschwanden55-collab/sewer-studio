@@ -142,6 +142,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IShaftPdfSelectionExpander)] = services.ShaftPdfSelectionExpansion,
             [typeof(IImportPdfReferenceResolver)] = services.ImportPdfReferences,
             [typeof(IProtocolPdfDateReader)] = services.ProtocolPdfDates,
+            [typeof(IDistributionReconciliationService)] = services.DistributionReconciliation,
             [typeof(INameBasedProtocolDistributor)] = services.NameBasedProtocolDistributor,
             [typeof(IVsaMediaPathResolver)] = services.VsaMediaPaths,
             [typeof(IXtfHoldingFileReader)] = services.XtfHoldingFiles,

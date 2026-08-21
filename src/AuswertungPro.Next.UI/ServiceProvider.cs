@@ -197,6 +197,8 @@ namespace AuswertungPro.Next.UI
         public IImportPdfReferenceResolver ImportPdfReferences { get; }
         // Liest das Protokolldatum mit derselben Textquelle und Regel wie die Verteilung.
         public IProtocolPdfDateReader ProtocolPdfDates { get; }
+        // "Abgleichen": raeumt aus den Verteilordnern, was im Projekt kein Gegenstueck hat.
+        public IDistributionReconciliationService DistributionReconciliation { get; }
         // Name-basierte Protokoll-Verteilung (Haltungen + Schaechte) aus einem Quellordner.
         public INameBasedProtocolDistributor NameBasedProtocolDistributor { get; }
         public IVsaMediaPathResolver VsaMediaPaths { get; }
@@ -503,6 +505,8 @@ namespace AuswertungPro.Next.UI
             ShaftPdfSelectionExpansion = new ShaftPdfSelectionExpansionService();
             ImportPdfReferences = new AuswertungPro.Next.Infrastructure.Import.Protocols.ImportPdfReferenceResolver();
             ProtocolPdfDates = new AuswertungPro.Next.Infrastructure.Import.Protocols.ProtocolPdfDateReader();
+            DistributionReconciliation =
+                new AuswertungPro.Next.Infrastructure.Export.DistributionReconciliationService();
             NameBasedProtocolDistributor = new AuswertungPro.Next.Infrastructure.Import.Protocols.NameBasedProtocolDistributor(
                 ImportPdfReferences,
                 ProtocolPdfDates);

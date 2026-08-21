@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -23,7 +23,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-public sealed partial class ExportPageViewModel : ObservableObject
+public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeave, IDisposable
 {
     private readonly ShellViewModel _shell;
     private readonly AppSettings _settings;
@@ -39,8 +39,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
     private readonly IKatasterXtfPathResolver _katasterXtfPaths;
     private readonly IHaltungCadastreIndexProvider _haltungCadastreIndexes;
     private readonly IShaftDistributionService _shaftDistribution;
+    private readonly Application.Export.IDistributionReconciliationService _distributionReconciliation;
     private readonly IImportFileStagingService? _importFileStaging;
     private readonly IImportTransactionJournal? _importTransactionJournal;
+    private readonly ExportPageShellOperationGuard _shellOperationGuard = new();
+    private readonly Func<bool> _saveProjectForActiveDistribution;
+    private bool _isShaftDistributionActive;
+    private bool _disposed;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _distributionProgress = "";
@@ -60,6 +65,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
     public IAsyncRelayCommand DistributeShaftsNormalCommand { get; }
     public IAsyncRelayCommand DistributeShaftsSanierungCommand { get; }
     public IAsyncRelayCommand DistributeDichtheitCommand { get; }
+    /// <summary>Raeumt aus den Verteilordnern, was im Projekt kein Gegenstueck hat.</summary>
+    public IAsyncRelayCommand AbgleichenCommand { get; }
     public IRelayCommand BrowseExcelExportRootCommand { get; }
 
     /// <summary>Erzeugt aus dem aktuellen Projektstand revidierte XTF-Dateien.</summary>
@@ -158,6 +165,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         IHaltungCadastreIndexProvider? haltungCadastreIndexes,
         AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService? xtfRevisionExport = null,
         IShaftDistributionService? shaftDistribution = null,
+        Application.Export.IDistributionReconciliationService? distributionReconciliation = null,
         IImportFileStagingService? importFileStaging = null,
         IImportTransactionJournal? importTransactionJournal = null)
     {
@@ -169,27 +177,41 @@ public sealed partial class ExportPageViewModel : ObservableObject
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         _projectCosts = projectCosts ?? throw new ArgumentNullException(nameof(projectCosts));
         _storedImportFiles = storedImportFiles ?? throw new ArgumentNullException(nameof(storedImportFiles));
-        ExportCommand = new AsyncRelayCommand(ExportAsync, CanRunProjectExportCommands);
-        ExportSchaechteCommand = new AsyncRelayCommand(ExportSchaechteAsync, CanRunProjectExportCommands);
-        DistributeHoldingsNormalCommand = new AsyncRelayCommand(() => DistributeHoldingsAsync(DistributionVariant.Normal), CanRunDistributeCommands);
-        DistributeHoldingsSanierungCommand = new AsyncRelayCommand(() => DistributeHoldingsAsync(DistributionVariant.Sanierung), CanRunDistributeCommands);
-        DistributeShaftsNormalCommand = new AsyncRelayCommand(() => DistributeShaftsAsync(DistributionVariant.Normal), CanRunDistributeCommands);
-        DistributeShaftsSanierungCommand = new AsyncRelayCommand(() => DistributeShaftsAsync(DistributionVariant.Sanierung), CanRunDistributeCommands);
-        DistributeDichtheitCommand = new AsyncRelayCommand(DistributeDichtheitAsync, CanRunDistributeCommands);
+        ExportCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(ExportAsync), CanRunProjectExportCommands);
+        ExportSchaechteCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(ExportSchaechteAsync), CanRunProjectExportCommands);
+        DistributeHoldingsNormalCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => DistributeHoldingsAsync(DistributionVariant.Normal)), CanRunDistributeCommands);
+        DistributeHoldingsSanierungCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => DistributeHoldingsAsync(DistributionVariant.Sanierung)), CanRunDistributeCommands);
+        DistributeShaftsNormalCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => DistributeShaftsAsync(DistributionVariant.Normal), allowsInternalProjectSave: true), CanRunDistributeCommands);
+        DistributeShaftsSanierungCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => DistributeShaftsAsync(DistributionVariant.Sanierung), allowsInternalProjectSave: true), CanRunDistributeCommands);
+        DistributeDichtheitCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(DistributeDichtheitAsync), CanRunDistributeCommands);
+        AbgleichenCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(AbgleichenAsync), CanRunDistributeCommands);
         BrowseExcelExportRootCommand = new RelayCommand(BrowseExcelExportRoot);
         _xtfRevisionExport = xtfRevisionExport
             ?? new AuswertungPro.Next.Infrastructure.Import.Xtf.XtfRevisionExportService();
-        ErzeugeXtfRevisionCommand = new RelayCommand(ErzeugeXtfRevision, CanRunProjectExportCommands);
+        ErzeugeXtfRevisionCommand = new RelayCommand(RunXtfRevisionWithProjectOperation, CanRunProjectExportCommands);
         _patternResolver = patternResolver ?? new DistributionPatternResolver();
         _directoryTreeResolver = directoryTreeResolver ?? new DistributionDirectoryTreeResolver(_patternResolver);
         _katasterXtfPaths = katasterXtfPaths ?? KatasterXtfPathResolver.CompatibilityService;
         _haltungCadastreIndexes = haltungCadastreIndexes ?? HaltungCadastreIndex.CurrentProvider;
         _shaftDistribution = shaftDistribution ?? new ShaftDistributionService();
+        _distributionReconciliation = distributionReconciliation
+            ?? new Infrastructure.Export.DistributionReconciliationService();
         _importFileStaging = importFileStaging;
         _importTransactionJournal = importTransactionJournal;
         _settings.MigrateLegacyExcelExportRoot();
         _excelExportRoot = _settings.ExcelExportRoot;
         DistributionTargets = BuildDistributionTargets(_patternResolver);
+        _shell.RegisterShellOperationGuard(_shellOperationGuard);
+        try
+        {
+            _saveProjectForActiveDistribution =
+                _shell.CreateActiveProjectOperationSaveDelegate(_shellOperationGuard);
+        }
+        catch
+        {
+            _shell.UnregisterShellOperationGuard(_shellOperationGuard);
+            throw;
+        }
     }
 
     /// <summary>
@@ -375,15 +397,15 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     /// <summary>Excel-Export braucht geladenes Projekt.</summary>
     private bool CanRunProjectExportCommands()
-        => !IsPageBusy && _shell.Project is not null;
+        => !_disposed && !IsPageBusy && _shell.Project is not null;
 
     /// <summary>Verteilung funktioniert auch ohne Projekt (Ordner-/PDF-basiert).</summary>
     private bool CanRunDistributeCommands()
-        => !IsPageBusy;
+        => !_disposed && !IsPageBusy;
 
     partial void OnIsPageBusyChanged(bool value)
     {
-        _ = value;
+        _shellOperationGuard.Update(value, _isShaftDistributionActive);
         NotifyAllCommandsCanExecuteChanged();
     }
 
@@ -400,6 +422,37 @@ public sealed partial class ExportPageViewModel : ObservableObject
         DistributeShaftsNormalCommand.NotifyCanExecuteChanged();
         DistributeShaftsSanierungCommand.NotifyCanExecuteChanged();
         DistributeDichtheitCommand.NotifyCanExecuteChanged();
+        ErzeugeXtfRevisionCommand.NotifyCanExecuteChanged();
+    }
+
+    public bool ConfirmLeave()
+    {
+        if (!IsPageBusy)
+            return true;
+
+        _shell.SetStatus(
+            "Seiten- oder Projektwechsel ist waehrend eines Exports oder einer Verteilung gesperrt. " +
+            "Bitte den laufenden Vorgang zuerst abschliessen.");
+        return false;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        _shell.UnregisterShellOperationGuard(_shellOperationGuard);
+        GC.SuppressFinalize(this);
+    }
+
+    private void SetShaftDistributionActive(bool value)
+    {
+        if (_isShaftDistributionActive == value)
+            return;
+
+        _isShaftDistributionActive = value;
+        _shellOperationGuard.Update(IsPageBusy, value);
     }
 
     private async Task ExportAsync()
@@ -416,7 +469,6 @@ public sealed partial class ExportPageViewModel : ObservableObject
             if (outPath is null)
                 return;
 
-            IsPageBusy = true;
             using var busy = Busy.Enter("Haltungen werden exportiert …");
 
             // Vor dem Export die abgeleiteten Kostenfelder auf den aktuellen Stand ziehen
@@ -441,10 +493,6 @@ public sealed partial class ExportPageViewModel : ObservableObject
             LastResult = $"Fehler: {userMessage}";
             _shell.SetStatus("Export fehlgeschlagen");
             _toasts.Error($"Haltungs-Export fehlgeschlagen: {userMessage}");
-        }
-        finally
-        {
-            IsPageBusy = false;
         }
     }
 
@@ -486,7 +534,6 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 return;
             }
 
-            IsPageBusy = true;
             using var busy = Busy.Enter("Schächte werden exportiert …");
             var res = await Task.Run(() =>
                 _excelExport.ExportSchaechteToTemplate(_shell.Project, templatePath, outPath, headerRow: 12, startRow: 13));
@@ -503,10 +550,6 @@ public sealed partial class ExportPageViewModel : ObservableObject
             LastResult = $"Fehler: {userMessage}";
             _shell.SetStatus("Export fehlgeschlagen");
             _toasts.Error($"Schacht-Export fehlgeschlagen: {userMessage}");
-        }
-        finally
-        {
-            IsPageBusy = false;
         }
     }
 
@@ -577,10 +620,12 @@ public sealed partial class ExportPageViewModel : ObservableObject
             ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
         var directoryConfig = SnapshotDistributionTree(_settings.HaltungDistribution);
+        var projectContext = new ProjectOperationContext(
+            _shell.Project,
+            _settings.LastProjectPath);
 
         try
         {
-            IsPageBusy = true;
             IsDistributionInProgress = true;
             IsDistributionIndeterminate = true;
             DistributionPercent = 0;
@@ -607,7 +652,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     overwrite: false,
                     recursiveVideoSearch: true,
                     unmatchedFolderName: "__UNMATCHED",
-                    project: _shell.Project,
+                    project: projectContext.Project,
                     progress: progress,
                     directoryConfig: directoryConfig,
                     variant: variant));
@@ -622,7 +667,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     overwrite: false,
                     recursiveVideoSearch: true,
                     unmatchedFolderName: "__UNMATCHED",
-                    project: _shell.Project,
+                    project: projectContext.Project,
                     progress: progress,
                     directoryConfig: directoryConfig,
                     variant: variant));
@@ -637,7 +682,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     overwrite: false,
                     recursiveVideoSearch: true,
                     unmatchedFolderName: "__UNMATCHED",
-                    project: _shell.Project,
+                    project: projectContext.Project,
                     progress: progress,
                     directoryConfig: directoryConfig));
             }
@@ -651,9 +696,17 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     overwrite: false,
                     recursiveVideoSearch: true,
                     unmatchedFolderName: "__UNMATCHED",
-                    project: _shell.Project,
+                    project: projectContext.Project,
                     progress: progress,
                     directoryConfig: directoryConfig));
+            }
+
+            if (!ProjectIsStillCurrent(
+                    projectContext,
+                    "Haltungs-Verteilung",
+                    filesMayRemain: results.Any(static result => result.Success)))
+            {
+                return;
             }
 
             // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
@@ -661,9 +714,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
             _shell.SetStatus(useTxtImport ? "Haltungsdaten (TXT) verteilt" : "Haltungsdaten verteilt");
 
             if (!useTxtImport && selectedPdfFiles.Length > 0)
-                StorePdfFiles(selectedPdfFiles);
+                StorePdfFiles(selectedPdfFiles, projectContext);
             if (useTxtImport && selectedTxtFiles.Length > 0)
-                StoreTxtFiles(selectedTxtFiles);
+                StoreTxtFiles(selectedTxtFiles, projectContext);
 
             _settings.LastVideoSourceFolder = videoFolder;
             _settings.LastDistributionTargetFolder = destFolder;
@@ -676,7 +729,6 @@ public sealed partial class ExportPageViewModel : ObservableObject
             IsDistributionIndeterminate = false;
             DistributionProgress = "";
             DistributionPercent = 0;
-            IsPageBusy = false;
         }
     }
 
@@ -709,10 +761,12 @@ public sealed partial class ExportPageViewModel : ObservableObject
             ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
         var directoryConfig = SnapshotDistributionTree(_settings.DichtheitDistribution);
+        var projectContext = new ProjectOperationContext(
+            _shell.Project,
+            _settings.LastProjectPath);
 
         try
         {
-            IsPageBusy = true;
             IsDistributionInProgress = true;
             IsDistributionIndeterminate = true;
             DistributionPercent = 0;
@@ -744,6 +798,14 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 // Kataster optional: ohne ihn laeuft die Verteilung wie bisher.
             }
 
+            if (!ProjectIsStillCurrent(
+                    projectContext,
+                    "Dichtheitspruefungs-Verteilung",
+                    filesMayRemain: false))
+            {
+                return;
+            }
+
             IReadOnlyList<HoldingFolderDistributor.DistributionResult> results;
             if (selectedPdfFiles.Length > 0)
             {
@@ -752,7 +814,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     destGemeindeFolder: destFolder,
                     moveInsteadOfCopy: false,
                     overwrite: false,
-                    project: _shell.Project,
+                    project: projectContext.Project,
                     progress: progress,
                     cadastre: cadastre,
                     directoryConfig: directoryConfig));
@@ -764,10 +826,18 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     destGemeindeFolder: destFolder,
                     moveInsteadOfCopy: false,
                     overwrite: false,
-                    project: _shell.Project,
+                    project: projectContext.Project,
                     progress: progress,
                     cadastre: cadastre,
                     directoryConfig: directoryConfig));
+            }
+
+            if (!ProjectIsStillCurrent(
+                    projectContext,
+                    "Dichtheitspruefungs-Verteilung",
+                    filesMayRemain: results.Any(static result => result.Success)))
+            {
+                return;
             }
 
             // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
@@ -775,7 +845,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
             _shell.SetStatus("Dichtheitsprüfungsprotokolle verteilt");
 
             if (selectedPdfFiles.Length > 0)
-                StorePdfFiles(selectedPdfFiles);
+                StorePdfFiles(selectedPdfFiles, projectContext);
         }
         finally
         {
@@ -783,7 +853,6 @@ public sealed partial class ExportPageViewModel : ObservableObject
             IsDistributionIndeterminate = false;
             DistributionProgress = "";
             DistributionPercent = 0;
-            IsPageBusy = false;
         }
     }
 
@@ -849,20 +918,21 @@ public sealed partial class ExportPageViewModel : ObservableObject
         return ziel;
     }
 
-    private void StorePdfFiles(string[] paths)
-        => StoreImportFiles(paths, "PDF", "PDF-Dateien");
+    private void StorePdfFiles(string[] paths, ProjectOperationContext projectContext)
+        => StoreImportFiles(paths, "PDF", "PDF-Dateien", projectContext);
 
-    private void StoreTxtFiles(string[] paths)
-        => StoreImportFiles(paths, "TXT", "TXT-Dateien");
+    private void StoreTxtFiles(string[] paths, ProjectOperationContext projectContext)
+        => StoreImportFiles(paths, "TXT", "TXT-Dateien", projectContext);
 
     private void StoreImportFiles(
         IReadOnlyCollection<string> paths,
         string importKind,
-        string displayName)
+        string displayName,
+        ProjectOperationContext projectContext)
     {
         var result = _storedImportFiles.Store(
-            _settings.LastProjectPath,
-            _shell.Project.Metadata,
+            projectContext.ProjectPath,
+            projectContext.Project.Metadata,
             importKind,
             paths);
 
@@ -876,4 +946,31 @@ public sealed partial class ExportPageViewModel : ObservableObject
             LastResult += $"{Environment.NewLine}Hinweis: {result.Errors.Count} {displayName} konnten nicht im Projekt abgelegt werden.";
         }
     }
+
+    private bool ProjectIsStillCurrent(
+        ProjectOperationContext projectContext,
+        string operation,
+        bool filesMayRemain,
+        bool projectDataChanged = false)
+    {
+        if (ActiveProjectGuard.IsCurrent(
+                projectContext,
+                _shell.Project,
+                _settings.LastProjectPath))
+        {
+            return true;
+        }
+
+        LastResult = projectDataChanged
+            ? $"{operation}: Das aktive Projekt wurde gewechselt. " +
+              "Dateien und PDF-Pfade wurden im gestarteten Projekt uebernommen, " +
+              "aber nicht gespeichert."
+            : filesMayRemain
+            ? $"{operation} beendet, aber nicht in Projektdaten uebernommen: " +
+              "Das aktive Projekt wurde gewechselt. Bereits kopierte Dateien bleiben im Zielordner."
+            : $"{operation} abgebrochen: Das aktive Projekt wurde gewechselt.";
+        _shell.SetStatus(LastResult);
+        return false;
+    }
+
 }

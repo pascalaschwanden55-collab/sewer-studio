@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Projects;
 
@@ -39,6 +39,13 @@ public static class ProjectStructure
 
     /// <summary>Ordner fuer importierte Plan-PDFs.</summary>
     public const string Plaene = "Pläne";
+
+    /// <summary>
+    /// Ordner fuer Eintraege, die der Abgleich aus den Verteilordnern genommen hat.
+    /// Wird nur bei Bedarf angelegt, nicht von EnsureCreated - ein leerer Papierkorb
+    /// in jedem Projekt waere nur Rauschen.
+    /// </summary>
+    public const string Papierkorb = "Papierkorb";
 
     /// <summary>Wurzel-Ordner fuer Foto-Sammlungen.</summary>
     public const string Fotos = "Fotos";
