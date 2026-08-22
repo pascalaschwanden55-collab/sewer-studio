@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Projects;
@@ -20,7 +21,17 @@ public sealed record OneClickImportResult(
     int Updated,
     int Errors,
     int Conflicts,
-    IReadOnlyList<string> Messages);
+    IReadOnlyList<string> Messages)
+{
+    /// <summary>Haltungen, die die geprueften Quellen versprechen.</summary>
+    public int ErwarteteHaltungen { get; init; }
+
+    /// <summary>Tatsaechlich verarbeitete Haltungen, ohne Schaechte.</summary>
+    public int BearbeiteteHaltungen { get; init; }
+
+    /// <summary>Protokoll der geprueften Importquellen. Null = kein Urteil moeglich.</summary>
+    public QuellenwahlErgebnis? Quellenprotokoll { get; init; }
+}
 
 /// <summary>
 /// Orchestriert den vollstaendigen Ein-Knopf-Import:
@@ -127,7 +138,12 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             result.Updated,
             result.Errors,
             result.Conflicts,
-            result.Messages);
+            result.Messages)
+        {
+            ErwarteteHaltungen = result.ErwarteteHaltungen,
+            BearbeiteteHaltungen = result.BearbeiteteHaltungen,
+            Quellenprotokoll = result.Quellenprotokoll
+        };
     }
 
     public OneClickImportResult Import(
@@ -142,6 +158,11 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         var updated       = 0;
         var errors        = 0;
         var conflictCount = 0;
+        // Getrennt von found/created: nur Haltungen, ohne Schaechte. Grundlage fuer das
+        // Plausibilitaetstor vor der Veroeffentlichung.
+        var erwarteteHaltungen   = 0;
+        var bearbeiteteHaltungen = 0;
+        QuellenwahlErgebnis? quellenprotokoll = null;
 
         var ct = ctx?.CancellationToken ?? System.Threading.CancellationToken.None;
 
@@ -279,6 +300,11 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 created += parseResult.Value.Created;
                 updated += parseResult.Value.Updated;
                 errors  += parseResult.Value.Errors;
+                // Fuer das Plausibilitaetstor: getrennte Haltungszahlen und das
+                // Quellenprotokoll bis zum Ein-Knopf-Controller durchreichen.
+                erwarteteHaltungen += parseResult.Value.ErwarteteHaltungen;
+                bearbeiteteHaltungen += parseResult.Value.BearbeiteteHaltungen;
+                quellenprotokoll ??= parseResult.Value.Quellenprotokoll;
                 messages.AddRange(parseResult.Value.Messages);
             }
             else
@@ -326,6 +352,46 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 errors++;
                 messages.Add($"KINS-Anreicherung fehlgeschlagen: {ex.Message}");
             }
+        }
+
+        // ------------------------------------------------------------------
+        // ------------------------------------------------------------------
+        // Schritt 5c: Haltungsnummern gegen den amtlichen Kataster abgleichen
+        // ------------------------------------------------------------------
+        // Eine Haltungsnummer ist "Schacht oben - Schacht unten". Diese Nummer entsteht
+        // bereits beim Einlesen aus Protokoll bzw. Datenbank. Liegt zusaetzlich eine
+        // amtliche SIA405-Datei vor, kann die dortige Bezeichnung abweichen, wenn ein
+        // Schacht spaeter umnummeriert wurde. Dann gilt der Kataster.
+        //
+        // Haltungen, die der Kataster nicht kennt, behalten ausdruecklich ihre Nummer aus
+        // dem Protokoll. Ohne Katasterdatei aendert sich gar nichts.
+        //
+        // Muss VOR der Verteilung laufen (Schritt 7): die Zielordner werden nach dem
+        // Haltungsnamen benannt.
+        try
+        {
+            var katasterDateien = FindeKatasterDateien(projectFolder, det.Sia405XtfPath);
+            foreach (var katasterPfad in katasterDateien)
+            {
+                ct.ThrowIfCancellationRequested();
+                var verzeichnis = Kataster.SiaKatasterXtfReader.Lies(katasterPfad);
+                if (verzeichnis.Anzahl == 0)
+                    continue;
+
+                var abgleich = Application.UseCases.Import.Kataster
+                    .HaltungsnummerKatasterAbgleich.Gleiche(project, verzeichnis);
+                if (abgleich.Meldungen.Count > 0)
+                {
+                    messages.Add($"Kataster: {Path.GetFileName(katasterPfad)} ({verzeichnis.Anzahl} Haltungen)");
+                    messages.AddRange(abgleich.Meldungen);
+                }
+            }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            // Der Abgleich ist eine Zusatzpruefung und darf den Import nie stoppen.
+            messages.Add($"Katasterabgleich uebersprungen: {ex.Message}");
         }
 
         // ------------------------------------------------------------------
@@ -495,7 +561,43 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         }
 
         return new OneClickImportResult(
-            det.Format, found, created, updated, errors, conflictCount, messages);
+            det.Format, found, created, updated, errors, conflictCount, messages)
+        {
+            ErwarteteHaltungen = erwarteteHaltungen,
+            BearbeiteteHaltungen = bearbeiteteHaltungen,
+            Quellenprotokoll = quellenprotokoll
+        };
+    }
+
+    /// <summary>
+    /// Sammelt moegliche amtliche Katasterdateien: die vom Erkenner gefundene SIA405-Datei
+    /// und alle XTF im Importordner des Projekts. Dateien ohne Haltungsobjekte (etwa die
+    /// VSA-KEK-Exporte von WinCan) liefern ein leeres Verzeichnis und bleiben wirkungslos.
+    /// </summary>
+    private static IReadOnlyList<string> FindeKatasterDateien(string projectFolder, string? sia405AusQuelle)
+    {
+        var pfade = new List<string>();
+        if (!string.IsNullOrWhiteSpace(sia405AusQuelle) && File.Exists(sia405AusQuelle))
+            pfade.Add(sia405AusQuelle!);
+
+        try
+        {
+            var xtfOrdner = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.XtfDir);
+            if (Directory.Exists(xtfOrdner))
+            {
+                foreach (var datei in SafeFileEnumeration.EnumerateFilesSafe(xtfOrdner, "*.xtf", recursive: false))
+                {
+                    if (!pfade.Contains(datei, StringComparer.OrdinalIgnoreCase))
+                        pfade.Add(datei);
+                }
+            }
+        }
+        catch
+        {
+            // Ein unlesbarer Importordner darf den Import nicht stoppen.
+        }
+
+        return pfade;
     }
 
     private static IReadOnlyList<string> BuildSourceDecisionMessages(KanalExportDetection det)

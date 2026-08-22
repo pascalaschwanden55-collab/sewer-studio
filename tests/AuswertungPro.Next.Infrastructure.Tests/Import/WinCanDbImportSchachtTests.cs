@@ -57,10 +57,13 @@ public sealed class WinCanDbImportSchachtTests
         // Eine Haltung 06-001 mit FromNode=N1, ToNode=N2 und einem BAUJAHR (darf Datum_Jahr NICHT belegen).
         Exec(@"INSERT INTO SECTION(OBJ_PK, OBJ_Key, OBJ_FromNode_REF, OBJ_ToNode_REF, OBJ_ConstructionDate)
                VALUES('SEC1', '06-001', 'N1', 'N2', '1998-05-05');");
-        // Zwei Schaechte; N1 mit zusaetzlichen Stammdaten (Form/Groesse/Tiefe/Material)
+        // Zwei Schaechte; N1 mit zusaetzlichen Stammdaten (Form/Groesse/Tiefe/Material).
+        // Die Schachtnummern bilden die Haltungsnummer: 06 (oben) -> 001 (unten) = "06-001".
+        // Die fruehere Vorlage nannte die Haltung "06-001", gab ihr aber die Schaechte
+        // "06"/"001" — so kann echte Kundendaten nie aussehen.
         Exec(@"INSERT INTO NODE(OBJ_PK, OBJ_Key, OBJ_Shape, OBJ_Size1, OBJ_RimToInvert, OBJ_Material)
-               VALUES('N1', 'S-865', 'rund', '1000', '2500', 'Beton');");
-        Exec(@"INSERT INTO NODE(OBJ_PK, OBJ_Key) VALUES('N2', 'S-864');");
+               VALUES('N1', '06', 'rund', '1000', '2500', 'Beton');");
+        Exec(@"INSERT INTO NODE(OBJ_PK, OBJ_Key) VALUES('N2', '001');");
 
         // Optionale Inspektion mit Befahrungsrichtung (fuer Gegenbefahrungs-Fall)
         if (!string.IsNullOrWhiteSpace(inspectionDir))
@@ -129,8 +132,8 @@ public sealed class WinCanDbImportSchachtTests
             var rec = project.Data.FirstOrDefault(r =>
                 string.Equals(r.GetFieldValue("Haltungsname"), "06-001", StringComparison.OrdinalIgnoreCase));
             Assert.NotNull(rec);
-            Assert.Equal("S-865", rec!.GetFieldValue("Schacht_oben"));
-            Assert.Equal("S-864", rec.GetFieldValue("Schacht_unten"));
+            Assert.Equal("06", rec!.GetFieldValue("Schacht_oben"));
+            Assert.Equal("001", rec.GetFieldValue("Schacht_unten"));
         }
         finally
         {
@@ -142,7 +145,7 @@ public sealed class WinCanDbImportSchachtTests
     [Fact]
     public void WinCanImport_LaesstHoeherwertigenXtfWert_stehen_und_protokolliertKonflikt()
     {
-        // Die Mini-DB3 liefert Schacht_oben "S-865" (FieldSource.Legacy). Der bestehende Record
+        // Die Mini-DB3 liefert Schacht_oben "06" (FieldSource.Legacy). Der bestehende Record
         // traegt dort aber bereits einen hoeherwertigen XTF-Wert. U16-Fix: WinCan-Legacy (Prio 50)
         // ueberschreibt den XTF-Wert (Prio 80) NICHT mehr still, sondern protokolliert den Konflikt.
         var root = Path.Combine(Path.GetTempPath(), $"wincan-xtf-{Guid.NewGuid():N}");
@@ -201,7 +204,7 @@ public sealed class WinCanDbImportSchachtTests
             var rec = Assert.Single(project.Data);
             Assert.Equal("06-001-1", rec.GetFieldValue("Haltungsname"));   // Key nie umgeschrieben
             // WinCan-Schacht wurde in den bestehenden Record gemergt (Zusammenfuehrung).
-            Assert.Equal("S-865", rec.GetFieldValue("Schacht_oben"));
+            Assert.Equal("06", rec.GetFieldValue("Schacht_oben"));
         }
         finally
         {
@@ -238,7 +241,7 @@ public sealed class WinCanDbImportSchachtTests
                     record.GetFieldValue("Haltungsname"),
                     "06-001",
                     StringComparison.OrdinalIgnoreCase)));
-            Assert.Equal("S-865", exact.GetFieldValue("Schacht_oben"));
+            Assert.Equal("06", exact.GetFieldValue("Schacht_oben"));
             Assert.True(string.IsNullOrWhiteSpace(first.GetFieldValue("Schacht_oben")));
             Assert.True(string.IsNullOrWhiteSpace(second.GetFieldValue("Schacht_oben")));
         }
@@ -395,7 +398,7 @@ public sealed class WinCanDbImportSchachtTests
             Assert.True(result.Ok, result.ErrorMessage);
 
             var schacht = project.SchaechteData.FirstOrDefault(s =>
-                string.Equals(s.GetFieldValue("Schachtnummer"), "S-865", StringComparison.OrdinalIgnoreCase));
+                string.Equals(s.GetFieldValue("Schachtnummer"), "06", StringComparison.OrdinalIgnoreCase));
             Assert.NotNull(schacht);
             Assert.Equal("rund", schacht!.GetFieldValue("Schachtform"));
             Assert.Equal("1000", schacht.GetFieldValue("Durchmesser"));
@@ -410,29 +413,37 @@ public sealed class WinCanDbImportSchachtTests
     }
 
     [Fact]
-    public void WinCanImport_GegenBefahrung_VertauschtSchachtObenUnten()
+    public void WinCanImport_GegenBefahrung_VertauschtSchachtObenUnten_NICHT()
     {
-        // Bei Gegenbefahrung (INS_InspectionDir='U') faehrt die Kamera von ToNode nach FromNode:
-        // Schacht_oben = Anfangsschacht der Befahrung = ToNode, Schacht_unten = FromNode.
+        // Schacht oben/unten sind HYDRAULISCH und haengen nicht an der Fahrtrichtung.
+        //
+        // Frueher drehte der Import bei Gegenbefahrung (INS_InspectionDir='U') oben und
+        // unten um. Am Kundenbestand Andermatt (2026-08-21) ist das widerlegt:
+        // OBJ_FromNode_REF/ToNode_REF stimmen in 16 von 16 Faellen mit "Schacht oben"/
+        // "Schacht unten" im Protokoll ueberein, auch bei allen drei Gegenbefahrungen.
+        // Die WinCan-XTF fuehrt die Fahrtrichtung getrennt als von-/bisPunktBezeichnung.
+        // Die Umkehrung vertauschte genau diese drei Haltungen — und damit auch ihre
+        // Haltungsnummer, die aus dem Schachtpaar gebildet wird.
         var root = Path.Combine(Path.GetTempPath(), $"wincan-rev-{Guid.NewGuid():N}");
         var dbDir = Path.Combine(root, "DB");
         Directory.CreateDirectory(dbDir);
         var db3 = Path.Combine(dbDir, "projekt.db3");
         try
         {
-            ErzeugeMiniDb3(db3, inspectionDir: "U");
+            // "2" ist der Wert, den der echte Kundenbestand fuer Gegenbefahrung fuehrt.
+            ErzeugeMiniDb3(db3, inspectionDir: "2");
 
             var project = new Project();
-            var svc = new WinCanDbImportService();
-            var result = svc.ImportWinCanExport(root, project);
+            var result = new WinCanDbImportService().ImportWinCanExport(root, project);
             Assert.True(result.Ok, result.ErrorMessage);
 
             var rec = project.Data.FirstOrDefault(r =>
                 string.Equals(r.GetFieldValue("Haltungsname"), "06-001", StringComparison.OrdinalIgnoreCase));
             Assert.NotNull(rec);
-            // getauscht gegenueber Standardbefahrung: oben=ToNode(S-864), unten=FromNode(S-865)
-            Assert.Equal("S-864", rec!.GetFieldValue("Schacht_oben"));
-            Assert.Equal("S-865", rec.GetFieldValue("Schacht_unten"));
+            Assert.Equal("06", rec!.GetFieldValue("Schacht_oben"));
+            Assert.Equal("001", rec.GetFieldValue("Schacht_unten"));
+            // Die Fahrtrichtung bleibt getrennt erhalten.
+            Assert.Equal("Gegen Fliessrichtung", rec.GetFieldValue("Inspektionsrichtung"));
         }
         finally
         {

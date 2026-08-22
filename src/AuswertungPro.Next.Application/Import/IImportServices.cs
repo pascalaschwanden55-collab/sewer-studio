@@ -10,7 +10,27 @@ public sealed record ImportStats(
     int Errors,
     int Uncertain,
     IReadOnlyList<string> Messages
-);
+)
+{
+    // Additive Felder fuer das Plausibilitaetstor. Bewusst als init-Eigenschaften mit
+    // Standardwert, damit alle bestehenden Aufrufer unveraendert bleiben.
+    //
+    // Warum nicht Found? Found zaehlt bei WinCan auch Schaechte mit
+    // (WinCanDbImportService.Records.cs, found++ in der Knotenschleife). Gemessen:
+    // Found = 44 bei 15 Haltungen und 26 Schaechten. Als Pruefgroesse unbrauchbar.
+
+    /// <summary>Haltungen, die die geprueften Quellen versprechen. 0 = keine Angabe.</summary>
+    public int ErwarteteHaltungen { get; init; }
+
+    /// <summary>Tatsaechlich verarbeitete Haltungen, ohne Schaechte. 0 = keine Angabe.</summary>
+    public int BearbeiteteHaltungen { get; init; }
+
+    /// <summary>
+    /// Protokoll der geprueften Importquellen. Leer = dieser Weg liefert kein Protokoll;
+    /// das Plausibilitaetstor urteilt dann nicht.
+    /// </summary>
+    public AuswertungPro.Next.Application.UseCases.Import.Quellen.QuellenwahlErgebnis? Quellenprotokoll { get; init; }
+}
 
 public interface IPdfImportService
 {

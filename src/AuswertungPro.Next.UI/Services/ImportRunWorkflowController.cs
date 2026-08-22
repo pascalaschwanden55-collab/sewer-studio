@@ -2,6 +2,7 @@ using System.IO;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.UseCases.Import;
+using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Services;
@@ -13,7 +14,10 @@ public sealed record ImportRunWorkflowRequest<TSource>(
     bool DryRun = false,
     Func<TSource, Project, ImportRunContext, Task>? PostImportAsync = null,
     bool SaveProjectAfterCommit = false,
-    Func<string?, IImportFileStagingSession?>? BeginFileStaging = null);
+    Func<string?, IImportFileStagingSession?>? BeginFileStaging = null,
+    // Zustimmung aus der Vorschau. Gilt im Echtlauf nur, wenn das neu berechnete
+    // Pruefergebnis denselben Fingerabdruck hat — sonst wird erneut gefragt.
+    string? ZugestimmterFingerabdruck = null);
 
 public sealed record ImportRunWorkflowActions(
     Func<Project> GetProject,
@@ -45,7 +49,10 @@ public sealed record ImportRunWorkflowActions(
     Func<Project, string>? ComputeSignature = null,
     // Transaktions-Journal fuer die Absturz-Atomaritaet. Null = kein Marker (z.B. Tests ohne
     // Datei-Staging). Wird nur zusammen mit einer File-Staging-Session genutzt.
-    IImportTransactionJournal? Journal = null);
+    IImportTransactionJournal? Journal = null,
+    // Rueckfrage bei unstimmigem Ergebnis. Null = keine Rueckfrage moeglich; dann wird
+    // fail-closed abgebrochen, statt stillschweigend zu uebernehmen.
+    Func<PlausibilitaetsUrteil, string, bool>? ConfirmImplausible = null);
 
 public static class ImportRunWorkflowController
 {
@@ -163,15 +170,33 @@ public static class ImportRunWorkflowController
                                    $"  Fehler: {stats.Errors}, Unklar: {stats.Uncertain}");
             actions.SetDetailsText(string.Join("\n", stats.Messages.Take(80)));
 
+            var urteil = ImportPlausibilitaetsTor.Beurteile(stats.Quellenprotokoll, stats.BearbeiteteHaltungen);
+            if (urteil.Stufe != PlausibilitaetsStufe.Gruen)
+            {
+                actions.SetSummaryText(actions.GetSummaryText() + "\n  " + urteil.Begruendung);
+                actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), urteil.VollerText()));
+                runLog.AddEntry(request.Label, "Plausibilitaet", ImportLogStatus.Error,
+                    detail: urteil.VollerText());
+            }
+
             if (request.DryRun)
             {
+                // Ein harter Abbruch wird gar nicht erst zur Uebernahme angeboten.
+                if (urteil.Stufe == PlausibilitaetsStufe.HartAbbruch)
+                {
+                    actions.SetStatus($"{request.Label}: {PlausibilitaetsUrteil.AbbruchHinweis}");
+                    return;
+                }
+
                 var preview = ImportPreviewResult.FromLog(runLog);
                 var doImport = actions.ShowPreview(preview, request.Label);
                 if (doImport)
                 {
                     followUpRunStarted = true;
                     await RunCoreAsync(
-                        request with { DryRun = false },
+                        // Die Zustimmung aus der Vorschau wird an den Echtlauf gebunden,
+                        // damit nicht zweimal gefragt wird — aber nur fuer genau diese Lage.
+                        request with { DryRun = false, ZugestimmterFingerabdruck = urteil.Fingerabdruck },
                         actions,
                         cancellationToken,
                         projectSnapshot,
@@ -209,6 +234,11 @@ public static class ImportRunWorkflowController
             cancellationToken.ThrowIfCancellationRequested();
 
             if (!EnsureProjectIsStillCurrent(request.Label, actions, runLog, projectSnapshot))
+                return;
+
+            // Stopptor VOR der Veroeffentlichung. Die bestehende ValidatePlausibility
+            // laeuft erst nach Publish und taugt deshalb nicht zum Anhalten.
+            if (!DarfUebernehmen(request, actions, runLog, urteil))
                 return;
 
             // Erst jetzt werden vorbereitete Kopien an ihren endgueltigen Orten sichtbar.
@@ -425,6 +455,65 @@ public static class ImportRunWorkflowController
         actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), detail));
         actions.SetStatus($"{label} Import gestoppt - Projekt wurde gewechselt");
         return false;
+    }
+
+    /// <summary>
+    /// Entscheidet unmittelbar vor der Veroeffentlichung, ob uebernommen werden darf.
+    ///
+    /// Drei Faelle:
+    /// - Gruen: weiter ohne Rueckfrage.
+    /// - HartAbbruch: keine einzige lesbare Quelle. Kein Uebersteuern.
+    /// - Rueckfrage: Mengenabweichung. Gilt die Zustimmung aus der Vorschau noch
+    ///   (gleicher Fingerabdruck), wird nicht erneut gefragt. Sonst entscheidet der
+    ///   Benutzer; ohne Rueckfragemoeglichkeit wird fail-closed abgebrochen.
+    /// </summary>
+    private static bool DarfUebernehmen<TSource>(
+        ImportRunWorkflowRequest<TSource> request,
+        ImportRunWorkflowActions actions,
+        ImportRunLog runLog,
+        PlausibilitaetsUrteil urteil)
+    {
+        if (urteil.Stufe == PlausibilitaetsStufe.Gruen)
+            return true;
+
+        if (urteil.Stufe == PlausibilitaetsStufe.HartAbbruch)
+        {
+            Abbrechen(request.Label, actions, runLog, "harter Abbruch: keine lesbare Quelle");
+            return false;
+        }
+
+        if (ImportPlausibilitaetsTor.ZustimmungGiltNoch(request.ZugestimmterFingerabdruck, urteil))
+        {
+            runLog.AddEntry(request.Label, "Plausibilitaet", ImportLogStatus.Conflict,
+                detail: "Mengenabweichung in der Vorschau bestaetigt — unveraendert uebernommen.");
+            return true;
+        }
+
+        var bestaetigt = actions.ConfirmImplausible?.Invoke(urteil, request.Label) ?? false;
+        if (!bestaetigt)
+        {
+            Abbrechen(request.Label, actions, runLog, "Mengenabweichung nicht bestaetigt");
+            return false;
+        }
+
+        runLog.AddEntry(request.Label, "Plausibilitaet", ImportLogStatus.Conflict,
+            detail: "Mengenabweichung ausdruecklich bestaetigt — trotzdem uebernommen.");
+        return true;
+    }
+
+    private static void Abbrechen(
+        string label,
+        ImportRunWorkflowActions actions,
+        ImportRunLog runLog,
+        string grund)
+    {
+        // Bewusst NICHT "nichts veraendert": Wiederherstellungspunkt, Arbeitsdateien und
+        // Bericht koennen bereits entstanden sein. Zurueckgenommen wird das Staging durch
+        // Dispose, weil Publish nie lief.
+        var text = $"{label} abgebrochen ({grund}). {PlausibilitaetsUrteil.AbbruchHinweis}";
+        runLog.AddEntry(label, "Plausibilitaet", ImportLogStatus.Error, detail: text);
+        actions.SetSummaryText(actions.GetSummaryText() + "\n  " + text);
+        actions.SetStatus(text);
     }
 
     private static string AppendParagraph(string currentText, string text)

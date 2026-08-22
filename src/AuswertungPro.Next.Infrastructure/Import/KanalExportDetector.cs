@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Infrastructure.Import.Ibak;
 
@@ -171,40 +172,19 @@ public sealed class KanalExportDetectionService : IKanalExportDetectionService
     // WinCan: *.db3 in einem Unterordner namens "DB" suchen
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Waehlt dieselbe Datei wie der Import.
+    ///
+    /// Frueher stand die Regel hier ein zweites Mal und lief mit der Kopie im
+    /// WinCanDbImportService auseinander: Diese Stelle schloss "*_Meta.db3" aus, die
+    /// andere nicht. Die Erkennung meldete die richtige Datei, der Importer oeffnete
+    /// eine andere und las null Haltungen. Beide gehen jetzt ueber
+    /// <see cref="WinCanDb3Pruefer"/> — es gibt keine zweite Regel mehr.
+    /// </summary>
     private static string? FindWinCanDb3(string root)
-    {
-        string? best = null;
-        long bestSize = -1;
-
-        foreach (var path in SafeFileEnumeration.EnumerateFilesSafe(root, "*", recursive: true))
-        {
-            if (!Path.GetExtension(path).Equals(".db3", StringComparison.OrdinalIgnoreCase)
-                || !IsUnderDbFolder(path))
-            {
-                continue;
-            }
-
-            var name = Path.GetFileNameWithoutExtension(path);
-            if (name.EndsWith("_Meta", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            try
-            {
-                var size = new FileInfo(path).Length;
-                if (size > bestSize)
-                {
-                    bestSize = size;
-                    best = path;
-                }
-            }
-            catch
-            {
-                // Eine unlesbare Datei verhindert die Erkennung der restlichen Dateien nicht.
-            }
-        }
-
-        return best;
-    }
+        => Quellenwahl.Waehle(
+            WinCan.WinCanDb3Pruefer.FindeKandidaten(root),
+            WinCan.WinCanDb3Pruefer.Pruefe).BesterErkannter?.Pfad;
 
     /// <summary>
     /// Sucht die groesste Access-Datei unter einem Ordner "DB". Die Einschraenkung auf

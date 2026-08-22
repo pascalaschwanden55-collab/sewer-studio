@@ -209,4 +209,24 @@ internal static class WinCanValueNormalizer
         var t = type.Trim().ToUpperInvariant();
         return t is "MPG" or "MPEG" or "MP4" or "AVI" or "MOV";
     }
+
+    /// <summary>
+    /// Liefert den auswertbaren Medientyp einer WinCan-Medienzeile.
+    ///
+    /// Im echten Bestand kommen Zeilen mit leerem OMM_FileType vor (gemessen in zwei von
+    /// fuenf Projekten, jeweils genau die Videozeile). Ohne Rueckfall auf die Dateiendung
+    /// wurde ein vorhandenes Video weder als Video noch als Bild erkannt und still
+    /// verworfen. Der Dateiname ist in diesem Fall die verlaessliche Quelle.
+    /// </summary>
+    public static string? MedientypOderEndung(string? type, string? fileName)
+    {
+        if (!string.IsNullOrWhiteSpace(type))
+            return type;
+
+        if (string.IsNullOrWhiteSpace(fileName))
+            return type;
+
+        var endung = System.IO.Path.GetExtension(fileName);
+        return string.IsNullOrWhiteSpace(endung) ? type : endung.TrimStart('.');
+    }
 }

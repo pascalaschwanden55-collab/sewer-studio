@@ -27,6 +27,7 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
     private readonly Services.ImportCatalogController _catalogController;
     private readonly Services.ImportVsaEvaluationController _vsaEvaluationController;
     private readonly Func<bool> _saveProjectForActiveImport;
+    private readonly IDialogService _dialogs;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _summaryText = "";
@@ -71,6 +72,7 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
         _saveProjectForActiveImport = _shell.CreateActiveImportProjectSaveDelegate(
             _sharedImportState);
         var dialogs = sp.Dialogs;
+        _dialogs = dialogs;
         _settings = sp.Settings;
         _projects = sp.Projects;
         _contentSignature = sp.ProjectContentSignature;
@@ -250,7 +252,24 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
             SetLastReportPath: _reportNavigationController.SetLastReportPath,
             CollectionLock: _shell.CollectionLock,
             ComputeSignature: _contentSignature.Compute,
-            Journal: _transactionJournal);
+            Journal: _transactionJournal,
+            ConfirmImplausible: BestaetigeUnstimmigesErgebnis);
+
+    /// <summary>
+    /// Rueckfrage vor der Uebernahme, wenn weniger Haltungen ankamen als die Quellen
+    /// versprechen. Vorbelegung ist bewusst "Nein": Im Zweifel lieber abbrechen und die
+    /// Quellen anschauen, als ein halbes Ergebnis ins Projekt zu uebernehmen.
+    /// Ein harter Abbruch erreicht diese Stelle nie — er ist nicht uebersteuerbar.
+    /// </summary>
+    private bool BestaetigeUnstimmigesErgebnis(
+        Application.UseCases.Import.Quellen.PlausibilitaetsUrteil urteil,
+        string label)
+        => _dialogs.ConfirmWarn(
+            urteil.VollerText()
+            + "\n\nTrotzdem uebernehmen?"
+            + "\n(Empfohlen: abbrechen und die Quellen pruefen.)",
+            $"{label} importieren",
+            defaultNo: true);
 
     private bool ShowPreviewWindow(ImportPreviewResult preview, string label)
     {

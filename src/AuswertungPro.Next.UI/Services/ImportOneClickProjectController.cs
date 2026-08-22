@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using AuswertungPro.Next.Application.UseCases.Import;
 using AuswertungPro.Next.Domain.Models;
 
@@ -161,6 +162,14 @@ internal sealed class ImportOneClickProjectController
                 return;
             }
 
+            // Stopptor VOR der Veroeffentlichung. Derselbe Massstab wie im manuellen
+            // Import: Der Ein-Knopf-Weg hat einen eigenen Publish und braucht deshalb
+            // sein eigenes Tor, sonst wandert ein unstimmiges Ergebnis ungeprueft durch.
+            var urteil = ImportPlausibilitaetsTor.Beurteile(
+                result.Quellenprotokoll, result.BearbeiteteHaltungen);
+            if (!DarfUebernehmen(urteil, folderBeforeRun, ref legacyRollbackEnabled))
+                return;
+
             // Ab hier besitzt ausschliesslich der persistente Marker die Ruecknahme.
             // Das Ordner-Ledger darf veroeffentlichte Dateien nie wieder loeschen.
             legacyRollbackEnabled = false;
@@ -250,6 +259,52 @@ internal sealed class ImportOneClickProjectController
     /// Meldung. Der Benutzer soll immer erfahren, was mit den Dateien geschehen ist —
     /// auch dann, wenn die Ruecknahme aus Sicherheitsgruenden verweigert wurde.
     /// </summary>
+    /// <summary>
+    /// Entscheidet vor der Veroeffentlichung, ob das Ergebnis uebernommen werden darf.
+    ///
+    /// Ein harter Abbruch (keine einzige lesbare Quelle) laesst sich nicht uebersteuern.
+    /// Eine Mengenabweichung darf uebersteuert werden, ist aber mit "Nein" vorbelegt.
+    /// Der Ein-Knopf-Weg kennt keine Vorschau, deshalb wird hier immer gefragt — ein
+    /// doppeltes Fragen kann es nicht geben.
+    /// </summary>
+    private bool DarfUebernehmen(
+        PlausibilitaetsUrteil urteil,
+        ImportFolderSnapshot? folderBeforeRun,
+        ref bool legacyRollbackEnabled)
+    {
+        if (urteil.Stufe == PlausibilitaetsStufe.Gruen)
+            return true;
+
+        var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
+        legacyRollbackEnabled = false;
+
+        if (urteil.Stufe == PlausibilitaetsStufe.HartAbbruch)
+        {
+            _dialogs.Error(
+                urteil.VollerText() + NeueZeile + NeueZeile
+                + PlausibilitaetsUrteil.AbbruchHinweis + rollback,
+                "Import Kanalfernseh-Projekt");
+            return false;
+        }
+
+        var trotzdem = _dialogs.ConfirmWarn(
+            urteil.VollerText() + NeueZeile + NeueZeile
+            + "Trotzdem uebernehmen?" + NeueZeile
+            + "(Empfohlen: abbrechen und die Quellen pruefen.)",
+            "Import Kanalfernseh-Projekt",
+            defaultNo: true);
+
+        if (!trotzdem)
+        {
+            _dialogs.Info(PlausibilitaetsUrteil.AbbruchHinweis + rollback, "Import Kanalfernseh-Projekt");
+            return false;
+        }
+
+        return true;
+    }
+
+    private const string NeueZeile = "\n";
+
     private string TryRollback(ImportFolderSnapshot? before)
     {
         if (_fileLedger is null || before is null)

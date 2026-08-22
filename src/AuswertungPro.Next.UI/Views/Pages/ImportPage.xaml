@@ -14,10 +14,10 @@
             <!-- Import Toolbar Card -->
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="6,4" CornerRadius="8">
-                <StackPanel Orientation="Horizontal">
+                <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
                     <Button Command="{Binding ImportKanalProjektCommand}"
                             Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,8,0"
-                            ToolTip="Quellordner der Kanalfernsehdaten waehlen — erkennt WinCan/IKAS automatisch, importiert maszgebliche Quelle + Pro-Beobachtung-Fotos, archiviert Rohdaten, verteilt Filme/PDFs, alles relativ verlinkt">
+                            ToolTip="Quellordner der Kanalfernsehdaten waehlen — erkennt WinCan/IKAS automatisch, importiert massgebliche Quelle + Pro-Beobachtung-Fotos, archiviert Rohdaten, verteilt Filme/PDFs, alles relativ verlinkt">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8B7;" FontFamily="{DynamicResource FontIcon}" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Import Kanalfernseh-Projekt" VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -142,7 +142,7 @@
                             <TextBlock Text="Fotos zuordnen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                </StackPanel>
+                </WrapPanel>
             </Border>
 
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">

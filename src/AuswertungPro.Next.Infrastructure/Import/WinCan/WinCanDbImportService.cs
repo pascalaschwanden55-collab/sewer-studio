@@ -28,9 +28,30 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
 
         ctx?.Log.AddEntry("WinCan", "Start", ImportLogStatus.Info, sourceFile: exportRoot);
 
+        // Ein gewaehlter Sammelordner kann mehrere vollstaendige WinCan-Projekte enthalten
+        // (je Projekt ein eigener Ordner "DB"). Dann wird jedes Projekt einzeln eingelesen,
+        // damit keines still liegen bleibt und die Medien-/PDF-Suche je Projekt getrennt
+        // bleibt. Nur ein einzelnes Projekt behaelt den bisherigen Ablauf unveraendert.
+        var projektWurzeln = FindWinCanProjektWurzeln(exportRoot);
+        if (projektWurzeln.Count > 1)
+            return ImportMehrereProjekte(projektWurzeln, project, ctx);
+
+        return ImportEinzelnesProjekt(exportRoot, project, ctx, zonenName: null);
+    }
+
+    private Result<ImportStats> ImportEinzelnesProjekt(
+        string exportRoot,
+        Project project,
+        ImportRunContext? ctx,
+        string? zonenName)
+    {
         // WinCan VX speichert in .sdf (SQL Server Compact) — dafuer gibt es keinen .NET 8 Treiber.
         // Wenn .sdf vorhanden aber kein .db3, versuche XTF aus Misc/Exchange als Fallback.
-        var dbPath = FindDb3(exportRoot);
+        //
+        // Die Quellenwahl schaut in JEDE Kandidatendatei hinein und protokolliert das
+        // Ergebnis. Das Protokoll wandert bis ins Plausibilitaetstor und in den Bericht.
+        var quellen = WaehleDatenbank(exportRoot);
+        var dbPath = quellen.Gewinner?.Pfad;
         if (string.IsNullOrWhiteSpace(dbPath))
         {
             var sdfPath = FindSdf(exportRoot);
@@ -69,11 +90,59 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                     }));
             }
 
+            // Kandidaten vorhanden, aber keiner brauchbar: ehrlich melden statt
+            // "nicht gefunden". Eine defekte oder gesperrte Datenbank IST gefunden
+            // worden — sie liess sich nur nicht lesen. Das Protokoll geht mit,
+            // damit das Plausibilitaetstor hart abbrechen kann.
+            var unbrauchbare = quellen.AlleVersuche
+                .Where(v => v.Befund.ErkanntAlsQuelle)
+                .ToList();
+
+            if (unbrauchbare.Count > 0)
+            {
+                var meldungen = new List<string>();
+                foreach (var versuch in unbrauchbare)
+                {
+                    var text = $"Fehler beim WinCan-DB Import: "
+                               + versuch.Berichtszeile(Path.GetFileName);
+                    meldungen.Add(text);
+                    ctx?.Log.AddEntry("WinCan", "DB3", ImportLogStatus.Error,
+                        sourceFile: versuch.Pfad, detail: versuch.Befund.Grund);
+                }
+
+                var rueckfall = ImportWithoutDb3(
+                    exportRoot, project,
+                    "Keine lesbare WinCan-Datenbank. Versuche MDB-Fallback.",
+                    failWhenNoMdb: false, ctx: ctx);
+
+                var rueckfallWerte = rueckfall.Ok ? rueckfall.Value : null;
+                if (rueckfallWerte is not null)
+                    meldungen.AddRange(rueckfallWerte.Messages);
+                else if (!string.IsNullOrWhiteSpace(rueckfall.ErrorMessage))
+                    meldungen.Add($"MDB-Fallback fehlgeschlagen: {rueckfall.ErrorMessage}");
+
+                return Result<ImportStats>.Success(new ImportStats(
+                    rueckfallWerte?.Found ?? 0,
+                    rueckfallWerte?.Created ?? 0,
+                    rueckfallWerte?.Updated ?? 0,
+                    unbrauchbare.Count + (rueckfallWerte?.Errors ?? 0),
+                    rueckfallWerte?.Uncertain ?? 0,
+                    meldungen)
+                {
+                    ErwarteteHaltungen = quellen.ErwarteteMenge,
+                    BearbeiteteHaltungen = rueckfallWerte?.BearbeiteteHaltungen ?? 0,
+                    Quellenprotokoll = quellen
+                });
+            }
+
             return ImportWithoutDb3(exportRoot, project, "WinCan DB3 nicht gefunden. Fallback auf MDB.", ctx: ctx);
         }
 
         var messages = new List<string>();
         messages.Add($"Importquelle: WinCan DB3 ({Path.GetFileName(dbPath)})");
+        // Getrennte Zaehlung: found/updated enthalten auch Schaechte und taugen nicht
+        // als Pruefgroesse fuer das Plausibilitaetstor.
+        var bearbeiteteHaltungen = 0;
         var found = 0;
         var updated = 0;
         var errors = 0;
@@ -126,14 +195,20 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                 // weder die restlichen blockieren noch den MDB-Fallback ausloesen.
                 try
                 {
-                    var record = FindRecord(project, section.Key);
+                    // Haltungsnamen sind nur INNERHALB eines WinCan-Projekts eindeutig. Werden
+                    // mehrere Projekte in dasselbe Programmprojekt eingelesen, muss eine
+                    // gleichnamige, aber andere Haltung einen eigenen Datensatz bekommen.
+                    var datensatzName = BestimmeHaltungsname(
+                        project, section, nodeKeyByPk, zonenName, messages);
+
+                    var record = FindRecord(project, datensatzName);
                     if (record is null)
                     {
                         record = project.CreateNewRecord();
-                        record.SetFieldValue("Haltungsname", section.Key, FieldSource.Legacy, userEdited: false);
+                        record.SetFieldValue("Haltungsname", datensatzName, FieldSource.Legacy, userEdited: false);
                         AddRecord(project, record, ctx);
                         created++;
-                        messages.Add($"Haltung neu angelegt: {section.Key}");
+                        messages.Add($"Haltung neu angelegt: {datensatzName}");
                     }
 
                     found++;
@@ -154,9 +229,21 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                     // ist das FromNode, ToNode = unten. Bei GEGENBEFAHRUNG (INS_InspectionDir U/UP/
                     // UPSTREAM/2) faehrt die Kamera von ToNode nach FromNode -> oben/unten tauschen
                     // (konsistent mit M150ValueExtractor.ShouldReverseWinCanDirection und VSA_KEK von=oben).
-                    var reverseDir = Xtf.M150ValueExtractor.ShouldReverseWinCanDirection(inspection?.InspectionDir);
-                    var obenRef  = reverseDir ? section.ToNodeFk   : section.FromNodeFk;
-                    var untenRef = reverseDir ? section.FromNodeFk : section.ToNodeFk;
+                    // Schacht oben/unten sind HYDRAULISCH und werden NICHT nach der
+                    // Fahrtrichtung gedreht.
+                    //
+                    // Gemessen am Bestand Andermatt (2026-08-21): OBJ_FromNode_REF /
+                    // OBJ_ToNode_REF stimmen in 16 von 16 Faellen mit "Schacht oben" /
+                    // "Schacht unten" im Kundenprotokoll ueberein — einschliesslich aller
+                    // drei Gegenbefahrungen. Die frueher hier eingebaute Umkehrung
+                    // vertauschte genau diese drei Haltungen und erzeugte damit auch
+                    // falsche Haltungsnummern.
+                    //
+                    // Die Fahrtrichtung geht nicht verloren: sie steht getrennt im Feld
+                    // "Inspektionsrichtung"; die WinCan-XTF fuehrt sie zusaetzlich als
+                    // vonPunktBezeichnung / bisPunktBezeichnung.
+                    var obenRef  = section.FromNodeFk;
+                    var untenRef = section.ToNodeFk;
                     if (!string.IsNullOrWhiteSpace(obenRef)
                         && nodeKeyByPk.TryGetValue(obenRef!, out var schachtOben))
                         ApplyField(source, "Schacht_oben", schachtOben);
@@ -165,6 +252,12 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                         ApplyField(source, "Schacht_unten", schachtUnten);
 
                     Common.LegacyStammdatenMerger.MergeLegacy(project, record, source, ctx);
+
+                    // Ab hier ist die Haltung mit ihren Stammdaten im Projekt angekommen.
+                    // Bewusst SCHON HIER zaehlen, nicht erst nach dem Protokoll: Eine
+                    // Haltung ohne Befunde (sauberes Rohr) ist vollstaendig importiert
+                    // und darf keinen Fehlalarm im Plausibilitaetstor ausloesen.
+                    bearbeiteteHaltungen++;
 
                     if (inspection is null)
                     {
@@ -223,13 +316,18 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                                 if (string.IsNullOrWhiteSpace(media.FileName))
                                     continue;
 
-                                if (IsVideo(media.FileType))
+                                // Ein leerer Medientyp in der Datenbank darf eine vorhandene
+                                // Datei nicht verwerfen — dann entscheidet die Dateiendung.
+                                var medientyp = WinCanValueNormalizer.MedientypOderEndung(
+                                    media.FileType, media.FileName);
+
+                                if (IsVideo(medientyp))
                                 {
                                     var videoPath = ResolveFile(fileIndex, media.FileName);
                                     if (!string.IsNullOrWhiteSpace(videoPath))
                                         record.SetFieldValue("Link", videoPath, FieldSource.Legacy, userEdited: false);
                                 }
-                                else if (IsImage(media.FileType))
+                                else if (IsImage(medientyp))
                                 {
                                     var photoPath = ResolveFile(fileIndex, media.FileName);
                                     if (!string.IsNullOrWhiteSpace(photoPath))
@@ -311,7 +409,12 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
         project.ModifiedAtUtc = DateTime.UtcNow;
         project.Dirty = true;
 
-        var stats = new ImportStats(found, created, updated, errors, uncertain, messages);
+        var stats = new ImportStats(found, created, updated, errors, uncertain, messages)
+        {
+            ErwarteteHaltungen = quellen.ErwarteteMenge,
+            BearbeiteteHaltungen = bearbeiteteHaltungen,
+            Quellenprotokoll = quellen
+        };
         return Result<ImportStats>.Success(stats);
     }
 
@@ -548,37 +651,13 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
             : null;
     }
 
+    /// <summary>
+    /// Waehlt die fachliche Datenbank ueber die gemeinsame Quellenwahl.
+    /// Frueher entschied hier die Dateigroesse — und traf damit immer die groessere,
+    /// aber leere "*_Meta.db3".
+    /// </summary>
     private static string? FindDb3(string exportRoot)
-    {
-        var candidates = new List<(string Path, long Length)>();
-        foreach (var path in SafeFileEnumeration.EnumerateFilesSafe(exportRoot, "*", recursive: true))
-        {
-            if (!Path.GetExtension(path).Equals(".db3", StringComparison.OrdinalIgnoreCase)
-                || path.IndexOf(
-                    Path.DirectorySeparatorChar + "DB" + Path.DirectorySeparatorChar,
-                    StringComparison.OrdinalIgnoreCase) < 0)
-            {
-                continue;
-            }
-
-            try
-            {
-                candidates.Add((path, new FileInfo(path).Length));
-            }
-            catch
-            {
-                // Eine unlesbare Datei verhindert den Import der restlichen Quellen nicht.
-            }
-        }
-
-        if (candidates.Count == 0)
-            return null;
-
-        return candidates
-            .OrderByDescending(candidate => candidate.Length)
-            .ThenBy(candidate => candidate.Path, StringComparer.OrdinalIgnoreCase)
-            .First().Path;
-    }
+        => WaehleDatenbank(exportRoot).Gewinner?.Pfad;
 
     /// <summary>
     /// Sucht nach WinCan VX .sdf (SQL Server Compact) Datenbanken.
