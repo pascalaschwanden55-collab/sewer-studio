@@ -286,6 +286,8 @@ public static class OfferPdfModelFactory
         var overallNet = 0m;
         var overallVat = 0m;
         var overallGross = 0m;
+        // Summe aller Positionszeilen - zum Abgleich gegen die gespeicherten Totale.
+        var detailNetSum = 0m;
 
         var measureBuckets = new Dictionary<string, MeasureSummaryBucket>(StringComparer.OrdinalIgnoreCase);
         var ownerBuckets = new Dictionary<string, OwnerSummaryBucket>(StringComparer.OrdinalIgnoreCase);
@@ -335,6 +337,7 @@ public static class OfferPdfModelFactory
                     measureName = "Unbekannte Massnahme";
 
                 var measureNet = selectedLines.Sum(l => l.Qty * l.UnitPrice);
+                detailNetSum += measureNet;
                 if (!measureBuckets.TryGetValue(measureName, out var measureBucket))
                 {
                     measureBucket = new MeasureSummaryBucket();
@@ -411,6 +414,18 @@ public static class OfferPdfModelFactory
         model.Totals.VatText = $"MwSt. {vatRate:0.0}%: {Money(overallVat)}";
         model.Totals.GrossText = Money(overallGross);
         model.Totals.EntryCount = list.Count;
+
+        // Konsistenz-Waechter: Der Kopf nutzt die gespeicherten Totale, die
+        // Detailliste rechnet die Positionszeilen neu. Laufen beide auseinander
+        // (handeditierte costs.json, uebersprungenes 'Aktualisieren'), stand der
+        // Widerspruch bisher stumm auf demselben Blatt. Jetzt sagt es das PDF.
+        if (Math.Abs(overallNet - detailNetSum) > 0.05m)
+        {
+            model.TextBlocks.Insert(
+                0,
+                $"Achtung: Positionsdetails ({Money(detailNetSum)}) und gespeicherte Totale ({Money(overallNet)}) "
+                + "stimmen nicht überein. Im Druckcenter 'Aktualisieren' ausführen und neu exportieren.");
+        }
 
         if (sections.DetailList)
             model.DetailGroups.AddRange(BuildDetailGroups(list, Money, Qty));

@@ -256,4 +256,64 @@ public sealed class OfferPdfModelFactoryTests
         Assert.Equal("Preis fehlt", position.UnitPriceText);
         Assert.Equal("Preis fehlt", position.TotalText);
     }
+
+    // ── Konsistenz-Waechter: Kopf gegen Detailliste ─────────────────────────
+    //
+    // Der Kopf des Druckcenter-PDFs nutzt das GESPEICHERTE Total, die
+    // Detailliste rechnet die Positionszeilen neu. Laufen beide auseinander
+    // (von Hand editierte costs.json, uebersprungenes 'Aktualisieren'), stand
+    // der Widerspruch bisher stumm auf demselben Blatt - wie der Excel-Fund
+    // vom 21.08., bei dem CHF 3'975.55 aus beiden Summen herausfielen.
+
+    private static CostSummaryEntry EintragMit(decimal gespeichertesTotal, decimal zeilenTotal)
+        => new()
+        {
+            Holding = "H-1",
+            Owner = "AWU",
+            Cost = new HoldingCost
+            {
+                Holding = "H-1",
+                Total = gespeichertesTotal,
+                Measures = new List<MeasureCost>
+                {
+                    new()
+                    {
+                        MeasureId = "M1",
+                        MeasureName = "Schlauchliner (GFK)",
+                        Lines = new List<CostLine>
+                        {
+                            new()
+                            {
+                                Text = "Schlauchliner (GFK)", Unit = "m",
+                                Qty = 1m, UnitPrice = zeilenTotal, Selected = true
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+    [Fact]
+    public void Widerspruch_zwischen_Total_und_Positionen_wird_im_PDF_sichtbar()
+    {
+        var model = OfferPdfModelFactory.CreateCostSummary(
+            new List<CostSummaryEntry> { EintragMit(gespeichertesTotal: 1000m, zeilenTotal: 800m) },
+            new OfferPdfContext { TextBlocks = { "Hinweis" } },
+            DateTimeOffset.UnixEpoch);
+
+        Assert.Contains(model.TextBlocks, t =>
+            t.Contains("stimmen nicht überein", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Uebereinstimmende_Totale_erzeugen_keinen_Warnhinweis()
+    {
+        var model = OfferPdfModelFactory.CreateCostSummary(
+            new List<CostSummaryEntry> { EintragMit(gespeichertesTotal: 800m, zeilenTotal: 800m) },
+            new OfferPdfContext { TextBlocks = { "Hinweis" } },
+            DateTimeOffset.UnixEpoch);
+
+        Assert.DoesNotContain(model.TextBlocks, t =>
+            t.Contains("stimmen nicht überein", StringComparison.Ordinal));
+    }
 }

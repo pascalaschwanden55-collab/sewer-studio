@@ -385,7 +385,22 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
         return utf8.GetBytes(sb.ToString());
     }
 
-    private static IReadOnlyList<(string Label, string? Value)> BuildHaltungsprotokollHeaderTable(
+    /// <summary>
+    /// Betreiber der Haltung. Die Haltung selbst weiss es am besten (Spalte
+    /// "Eigentuemer"); das Projekt-Metadatum ist nur der Rueckfall. Vorher wurde
+    /// NUR das Projekt gelesen - und dessen Standardwert ist "Privat", sodass auf
+    /// AWU-Protokollen "Betreiber Privat" stand.
+    /// </summary>
+    internal static string? ResolveBetreiber(Project project, HaltungRecord record)
+    {
+        var ausHaltung = record.GetFieldValue("Eigentuemer");
+        if (!string.IsNullOrWhiteSpace(ausHaltung))
+            return ausHaltung.Trim();
+
+        return GetMeta(project, "Eigentuemer");
+    }
+
+    internal static IReadOnlyList<(string Label, string? Value)> BuildHaltungsprotokollHeaderTable(
         Project project,
         HaltungRecord record,
         string inspectionDate,
@@ -398,18 +413,23 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
             strasse = GetMeta(project, "Strasse");
 
         var projektname = !string.IsNullOrWhiteSpace(project.Description) ? project.Description : project.Name;
+        // Ohne eigene Beschreibung sind GEP und Projektname derselbe Text -
+        // zweimal dieselbe Zeile traegt nichts.
+        var gep = string.Equals(projektname?.Trim(), project.Name?.Trim(), StringComparison.Ordinal)
+            ? null
+            : project.Name;
         var lengthText = length.HasValue ? length.Value.ToString("0.00", CultureInfo.InvariantCulture) : record.GetFieldValue("Haltungslaenge_m");
 
         var all = new List<(string, string?)>
         {
-            ("GEP", project.Name),
+            ("GEP", gep),
             ("Projektname", projektname),
             ("Nr.", record.GetFieldValue("NR")),
             ("Ort", ort),
             ("Strasse", strasse),
             ("Datum", inspectionDate),
             ("Haltung", holdingLabel),
-            ("Betreiber", GetMeta(project, "Eigentuemer")),
+            ("Betreiber", ResolveBetreiber(project, record)),
             ("Auftraggeber", GetMeta(project, "Auftraggeber")),
             ("DN [mm]", record.GetFieldValue("DN_mm")),
             ("Material", record.GetFieldValue("Rohrmaterial")),
@@ -562,10 +582,52 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                     foreach (var item in items)
                     {
                         table.Cell().PaddingVertical(0.8f).Text(item.Label).FontSize(8).FontColor("#6B7280");
+
+                        // Zustandsklasse als Ampel-Chip - dieselben Farben wie in
+                        // Tabelle und Excel-Export (ExcelReportStyle ist die Quelle).
+                        var ampel = item.Label.StartsWith("Zustandsklasse", StringComparison.Ordinal)
+                            ? ResolveZustandsklassenFarbe(item.Value)
+                            : null;
+                        if (ampel is not null)
+                        {
+                            table.Cell().PaddingVertical(0.8f).AlignLeft().Element(z => z
+                                .Background(ampel.Value.Hintergrund)
+                                .PaddingVertical(0.5f).PaddingHorizontal(6)
+                                .Text(NormalizeValue(item.Value))
+                                .FontSize(8.5f).SemiBold()
+                                .FontColor(ampel.Value.Schrift));
+                            continue;
+                        }
+
                         table.Cell().PaddingVertical(0.8f).Text(NormalizeValue(item.Value)).FontSize(8.5f).SemiBold().FontColor("#1F2937");
                     }
                 });
         });
+    }
+
+    /// <summary>
+    /// Ampelfarbe der Zustandsklasse 0..4 - exakt die Werte aus
+    /// <see cref="AuswertungPro.Next.Infrastructure.Export.Excel.ExcelReportStyle"/>,
+    /// damit App-Tabelle, Excel-Bericht und PDF dieselbe Sprache sprechen.
+    /// </summary>
+    internal static (string Hintergrund, string Schrift)? ResolveZustandsklassenFarbe(string? wert)
+    {
+        var klasse = (wert ?? "").Trim();
+        if (klasse.Length == 0)
+            return null;
+
+        foreach (var regel in AuswertungPro.Next.Infrastructure.Export.Excel.ExcelReportStyle.Zustandsklassen)
+        {
+            if (!string.Equals(regel.Wert, klasse, StringComparison.Ordinal))
+                continue;
+
+            var hex = "#" + regel.Farbe[^6..];
+            // Rot und Orange brauchen weisse Schrift, die hellen Stufen dunkle.
+            var weiss = klasse is "0" or "1";
+            return (hex, weiss ? "#FFFFFF" : "#1F2937");
+        }
+
+        return null;
     }
 
     private static void ComposeObservationTable(IContainer container, IReadOnlyList<ProtocolEntry> entries)
@@ -682,9 +744,9 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                 columns.ConstantColumn(38); // m-
                 columns.ConstantColumn(55); // OP
                 columns.RelativeColumn(6);  // Zustand
-                columns.ConstantColumn(45); // Foto
-                columns.ConstantColumn(55); // MPEG
-                columns.ConstantColumn(45); // Zeit
+                columns.ConstantColumn(40); // Foto
+                columns.ConstantColumn(78); // MPEG (Videodateinamen brechen sonst mitten im Wort)
+                columns.ConstantColumn(34); // Zeit
                 columns.RelativeColumn(2);  // Bemerkung
             });
 
@@ -737,7 +799,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                     table.Cell().Element(BodyCell)
                         .Text(ProtocolPdfPhotoSection.ResolveNumberText(entry, photoNumbers))
                         .FontSize(9);
-                    table.Cell().Element(BodyCell).Text(entry.Mpeg?.Trim() ?? "-").FontSize(9);
+                    table.Cell().Element(BodyCell).Text(entry.Mpeg?.Trim() ?? "-").FontSize(7.5f);
                     table.Cell().Element(BodyCell).Text(entry.Zeit.HasValue ? FormatTime(entry.Zeit.Value) : "-").FontSize(9);
                     table.Cell().Element(BodyCell).Text(BuildObservationNotesText(entry)).FontSize(9);
                 }

@@ -282,8 +282,9 @@ public static class HaltungsgrafikSvgBuilder
                           $"fill='url(#flowGrad)' stroke='white' stroke-width='1.5' filter='url(#flowGlow)'/>");
             }
 
-            // Wellenlinien (3 Wellen) links neben dem Rohr
-            var waveX = lineX - pipeHalf - 10; // Links neben dem Rohr
+            // Wellenlinien (3 Wellen) am linken Rand - weiter aussen als frueher,
+            // weil links jetzt die 1-5-Uhr-Anschluesse liegen (WinCan-Draufsicht).
+            var waveX = 16d;
             var waveCenterY = (top + bottom) / 2.0;
             var waveLen = 40d; // Laenge der Wellenlinien
             var waveAmp = 2.5; // Amplitude der Wellen
@@ -319,8 +320,8 @@ public static class HaltungsgrafikSvgBuilder
             var midY = (top + bottom) / 2.0;
             var flowLabel = flowDown.Value ? "↓ Fliessrichtung" : "↑ Fliessrichtung";
             var rotation = flowDown.Value ? 90 : -90;
-            sb.Append($"<text x='{Svg(waveX - 10)}' y='{Svg(midY)}' font-size='9' fill='{flowColorDark}' font-weight='600' text-anchor='middle' font-family='sans-serif' " +
-                      $"transform='rotate({rotation} {Svg(waveX - 10)} {Svg(midY)})'>{EscapeSvgText(flowLabel)}</text>");
+            sb.Append($"<text x='{Svg(waveX - 9)}' y='{Svg(midY)}' font-size='9' fill='{flowColorDark}' font-weight='600' text-anchor='middle' font-family='sans-serif' " +
+                      $"transform='rotate({rotation} {Svg(waveX - 9)} {Svg(midY)})'>{EscapeSvgText(flowLabel)}</text>");
         }
 
         // --- Streckenschaeden (schraffierte Rohr-Abschnitte) ---
@@ -396,35 +397,53 @@ public static class HaltungsgrafikSvgBuilder
 
             var connY = MapToLine(pos.Value, length, top, bottom);
             var clockHour = ExtractClockHour(entry);
+
+            // Seitenwahl wie in echten WinCan-Protokollen (Referenz: Fretz-
+            // Protokoll 06.71273-77775 mit neun Anschluessen): Die Grafik ist die
+            // ehrliche Draufsicht. Die Kamera blickt in Inspektionsrichtung, auf
+            // dem Blatt nach unten - ihr Rechts (1-5 Uhr) erscheint deshalb auf
+            // dem Blatt LINKS, ihr Links (7-11 Uhr) RECHTS. 12 und 6 Uhr liegen
+            // ueber/unter dem Rohr: Kreis AUF dem Rohr, keine erfundene Seite.
             if (clockHour is null)
             {
-                // Kein Uhrzeitwert: Standardmaessig nach rechts (3 Uhr)
-                clockHour = 3;
+                // Ohne erfasste Uhrlage: gestrichelter Orientierungs-Stutzen ohne
+                // Stundenlabel. Ein "3h" waere eine erfundene Messangabe.
+                var oX1 = lineX + pipeHalf;
+                var oX2 = lineX + pipeHalf + 20;
+                sb.Append($"<line x1='{Svg(oX1)}' y1='{Svg(connY)}' x2='{Svg(oX2)}' y2='{Svg(connY)}' " +
+                          $"stroke='#6B7280' stroke-width='3' stroke-linecap='round' stroke-dasharray='3 3'/>");
+                sb.Append($"<circle cx='{Svg(oX2)}' cy='{Svg(connY)}' r='3.5' fill='#6B7280' stroke='white' stroke-width='1'/>");
+                continue;
             }
 
-            // Winkel berechnen: 12 Uhr = 0 Grad (nach oben), Uhrzeigersinn
-            // In der Grafik: 9 Uhr = links, 3 Uhr = rechts
-            // Mapping: 3h=rechts(0°), 6h=unten(90°), 9h=links(180°), 12h=oben(270°)
-            var angleDeg = (clockHour.Value - 3) * 30.0; // 30° pro Stunde, 3 Uhr = 0°
-            var angleRad = angleDeg * Math.PI / 180.0;
-            var stubLen = 22d; // Laenge des Rohrstutzens
-            var stubEndX = lineX + Math.Cos(angleRad) * (pipeHalf + stubLen);
-            var stubEndY = connY + Math.Sin(angleRad) * (pipeHalf + stubLen);
-            var stubStartX = lineX + Math.Cos(angleRad) * pipeHalf;
-            var stubStartY = connY + Math.Sin(angleRad) * pipeHalf;
+            if (clockHour.Value is 12 or 6)
+            {
+                sb.Append($"<circle cx='{Svg(lineX)}' cy='{Svg(connY)}' r='4.5' fill='white' stroke='#6B7280' stroke-width='2'/>");
+                sb.Append($"<text x='{Svg(lineX + pipeHalf + 4)}' y='{Svg(connY + 3)}' " +
+                          $"font-size='8' fill='#4B5563' text-anchor='start' font-family='sans-serif'>" +
+                          $"{clockHour.Value}h</text>");
+                continue;
+            }
 
-            // Rohrstutzen-Linie
-            sb.Append($"<line x1='{Svg(stubStartX)}' y1='{Svg(stubStartY)}' x2='{Svg(stubEndX)}' y2='{Svg(stubEndY)}' " +
+            var seite = clockHour.Value <= 5 ? -1d : 1d;
+            // Leicht nach oben angestellt, wie die Stutzen im WinCan-Vorbild.
+            var steigung = Math.Sin(35.0 * Math.PI / 180.0);
+            var lauf = Math.Cos(35.0 * Math.PI / 180.0);
+            var stubLen = 16d;
+            var startX = lineX + seite * pipeHalf;
+            var endX = startX + seite * lauf * stubLen;
+            var endY = connY - steigung * stubLen;
+
+            sb.Append($"<line x1='{Svg(startX)}' y1='{Svg(connY)}' x2='{Svg(endX)}' y2='{Svg(endY)}' " +
                       $"stroke='#6B7280' stroke-width='3' stroke-linecap='round'/>");
-            // Anschluss-Kreis am Ende
-            sb.Append($"<circle cx='{Svg(stubEndX)}' cy='{Svg(stubEndY)}' r='3.5' fill='#6B7280' stroke='white' stroke-width='1'/>");
-            // Uhrzeitlabel
-            var labelOffsetX = Math.Cos(angleRad) * 8;
-            var labelOffsetY = Math.Sin(angleRad) * 8;
-            var anchor = clockHour.Value >= 7 && clockHour.Value <= 11 ? "end" : "start";
-            if (clockHour.Value == 12 || clockHour.Value == 6) anchor = "middle";
-            sb.Append($"<text x='{Svg(stubEndX + labelOffsetX)}' y='{Svg(stubEndY + labelOffsetY + 3)}' " +
-                      $"font-size='8' fill='#4B5563' text-anchor='{anchor}' font-family='sans-serif'>" +
+            sb.Append($"<circle cx='{Svg(endX)}' cy='{Svg(endY)}' r='3.5' fill='#6B7280' stroke='white' stroke-width='1'/>");
+
+            // Label oberhalb der Stutzenspitze. Links laeuft es nach rechts in die
+            // Luecke zwischen Spitze und Rohr, damit es der Fliessrichtungs-
+            // Beschriftung am linken Rand nicht in die Quere kommt.
+            var labelX = seite < 0 ? endX + 2 : endX + 6;
+            sb.Append($"<text x='{Svg(labelX)}' y='{Svg(endY - 3)}' " +
+                      $"font-size='8' fill='#4B5563' text-anchor='start' font-family='sans-serif'>" +
                       $"{clockHour.Value}h</text>");
         }
 
@@ -458,8 +477,11 @@ public static class HaltungsgrafikSvgBuilder
                       $"{EscapeSvgText(label.CodeText)}</text>");
             sb.Append($"<text clip-path='url(#clipZustand)' x='{Svg(colZustandX)}' y='{Svg(labelY + 3)}' font-size='{fontSize}' text-anchor='start' fill='{textColor}' font-family='sans-serif'>" +
                       $"{EscapeSvgText(label.ZustandText)}</text>");
+            // Sichtbar gekuerzt statt hart abgeschnitten: der clipPath schnitt
+            // "80638-80631.mpg" mitten in der Zahl ab und der Rest sah wie ein
+            // vollstaendiger, falscher Name aus.
             sb.Append($"<text clip-path='url(#clipMpeg)' x='{Svg(colMpegX)}' y='{Svg(labelY + 3)}' font-size='{fontSize}' text-anchor='start' fill='#4B5563' font-family='sans-serif'>" +
-                      $"{EscapeSvgText(label.MpegText)}</text>");
+                      $"{EscapeSvgText(KuerzeMitEllipse(label.MpegText, 12))}</text>");
             sb.Append($"<text clip-path='url(#clipFoto)' x='{Svg(colFotoX)}' y='{Svg(labelY + 3)}' font-size='{fontSize}' text-anchor='start' fill='#4B5563' font-family='sans-serif'>" +
                       $"{EscapeSvgText(label.FotoText)}</text>");
             sb.Append($"<text clip-path='url(#clipStufe)' x='{Svg(colStufeX)}' y='{Svg(labelY + 3)}' font-size='{fontSize}' text-anchor='start' fill='{textColor}' font-family='sans-serif'>" +

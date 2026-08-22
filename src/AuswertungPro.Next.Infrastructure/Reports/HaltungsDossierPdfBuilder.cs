@@ -711,12 +711,14 @@ public static class HaltungsDossierPdfBuilder
                                 columns.ConstantColumn(70); // Total
                             });
 
-                            // Header
-                            table.Cell().Background("#F3F4F6").Padding(3).Text("Position").FontSize(8).Bold();
-                            table.Cell().Background("#F3F4F6").Padding(3).Text("Einh.").FontSize(8).Bold();
-                            table.Cell().Background("#F3F4F6").Padding(3).AlignRight().Text("Menge").FontSize(8).Bold();
-                            table.Cell().Background("#F3F4F6").Padding(3).AlignRight().Text("EP").FontSize(8).Bold();
-                            table.Cell().Background("#F3F4F6").Padding(3).AlignRight().Text("Total").FontSize(8).Bold();
+                            // Kopfzeile im hellen Markenton der Nutzungsart -
+                            // wie die uebrigen Tabellen des Dossiers, statt neutralgrau.
+                            var kopf = ProtocolPdfExporter.ResolveNutzungsartBrandLight(brand);
+                            table.Cell().Background(kopf).Padding(3).Text("Position").FontSize(8).Bold();
+                            table.Cell().Background(kopf).Padding(3).Text("Einh.").FontSize(8).Bold();
+                            table.Cell().Background(kopf).Padding(3).AlignRight().Text("Menge").FontSize(8).Bold();
+                            table.Cell().Background(kopf).Padding(3).AlignRight().Text("EP").FontSize(8).Bold();
+                            table.Cell().Background(kopf).Padding(3).AlignRight().Text("Total").FontSize(8).Bold();
 
                             foreach (var line in measure.Lines.Where(l => l.Selected))
                             {
@@ -761,7 +763,22 @@ public static class HaltungsDossierPdfBuilder
         });
     }
 
-    private static string FmtDec(decimal v) =>
-        v.ToString("N2", CultureInfo.InvariantCulture);
+    private static readonly CultureInfo ChZahl = BaueChZahlenformat();
+
+    private static CultureInfo BaueChZahlenformat()
+    {
+        var kultur = (CultureInfo)CultureInfo.InvariantCulture.Clone();
+        kultur.NumberFormat.NumberGroupSeparator = "'";
+        kultur.NumberFormat.NumberDecimalSeparator = ".";
+        return kultur;
+    }
+
+    /// <summary>
+    /// Mengenformat der Kostentabelle. Bewusst dasselbe Tausenderzeichen wie
+    /// <see cref="ChfFormat"/> - vorher stand "1,234.56" (Invariant) neben
+    /// "1'234.56 CHF" in derselben Tabelle.
+    /// </summary>
+    internal static string FmtDec(decimal v) =>
+        v.ToString("N2", ChZahl);
 
 }

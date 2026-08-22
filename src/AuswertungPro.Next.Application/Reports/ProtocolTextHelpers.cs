@@ -42,21 +42,51 @@ public static class ProtocolTextHelpers
     public static int? ExtractClockHour(ProtocolEntry entry)
     {
         var parameters = entry.CodeMeta?.Parameters;
-        if (parameters is null || parameters.Count == 0)
+        if (parameters is { Count: > 0 })
+        {
+            // Prioritaet: vsa.uhr.von > ClockPos1 > Quantifizierung1
+            var raw = ProtocolPdfObservationText.GetParam(parameters, "vsa.uhr.von")
+                   ?? ProtocolPdfObservationText.GetParam(parameters, "ClockPos1")
+                   ?? ProtocolPdfObservationText.GetParam(parameters, "Quantifizierung1");
+
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                // Versuche die Uhrzeit zu parsen (z.B. "3", "3 Uhr", "03:00", "9")
+                var cleaned = Regex.Match(raw.Trim(), @"(\d{1,2})");
+                if (cleaned.Success && int.TryParse(cleaned.Groups[1].Value, out var hour) && hour >= 1 && hour <= 12)
+                    return hour;
+            }
+        }
+
+        // Rueckfall: Uhrlage aus dem Befundtext. Der alte WinCan-Viewer-MDB-
+        // Import schreibt keine strukturierten Parameter - die vom Operateur
+        // erfasste Lage steht dort nur als Text ("... offen bei 2 Uhr",
+        // "von 4 Uhr bis 8 Uhr"). Das ist erfasste Information, keine Erfindung.
+        // Bei einem Bereich gilt der VON-Wert (Start der Ausdehnung).
+        return ExtractClockHourFromText(entry.Beschreibung);
+    }
+
+    /// <summary>Liest "bei X Uhr" / "von X Uhr" / "X Uhr" aus einem Befundtext.</summary>
+    public static int? ExtractClockHourFromText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
             return null;
 
-        // Prioritaet: vsa.uhr.von > ClockPos1 > Quantifizierung1
-        var raw = ProtocolPdfObservationText.GetParam(parameters, "vsa.uhr.von")
-               ?? ProtocolPdfObservationText.GetParam(parameters, "ClockPos1")
-               ?? ProtocolPdfObservationText.GetParam(parameters, "Quantifizierung1");
-
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        // Versuche die Uhrzeit zu parsen (z.B. "3", "3 Uhr", "03:00", "9")
-        var cleaned = Regex.Match(raw.Trim(), @"(\d{1,2})");
-        if (cleaned.Success && int.TryParse(cleaned.Groups[1].Value, out var hour) && hour >= 1 && hour <= 12)
-            return hour;
+        foreach (var muster in new[]
+                 {
+                     @"\bbei\s+(\d{1,2})\s*Uhr\b",
+                     @"\bvon\s+(\d{1,2})\s*Uhr\b",
+                     @"\b(\d{1,2})\s*Uhr\b",
+                 })
+        {
+            var treffer = Regex.Match(text, muster, RegexOptions.IgnoreCase);
+            if (treffer.Success
+                && int.TryParse(treffer.Groups[1].Value, out var stunde)
+                && stunde is >= 1 and <= 12)
+            {
+                return stunde;
+            }
+        }
 
         return null;
     }
@@ -88,6 +118,19 @@ public static class ProtocolTextHelpers
             return true;
 
         return false;
+    }
+
+    /// <summary>
+    /// Kuerzt einen Zelltext sichtbar mit "…" statt ihn hart abschneiden zu
+    /// lassen. Ein Clip mitten im Dateinamen ("80638-8063") sieht wie ein
+    /// vollstaendiger, falscher Name aus - die Ellipse sagt ehrlich "da fehlt was".
+    /// </summary>
+    public static string KuerzeMitEllipse(string? text, int maxZeichen)
+    {
+        var t = (text ?? "").Trim();
+        if (maxZeichen < 2 || t.Length <= maxZeichen)
+            return t;
+        return t[..(maxZeichen - 1)] + "…";
     }
 
     /// <summary>
