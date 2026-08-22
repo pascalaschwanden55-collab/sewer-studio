@@ -537,8 +537,8 @@ def main():
         try:
             with pdfplumber.open(str(pdf_path)) as p:
                 page1 = p.pages[0].extract_text() or ""
-        except:
-            pass
+        except Exception:
+            log.warning("Erste PDF-Seite konnte nicht gelesen werden: %s", pdf_path, exc_info=True)
         fmt = detect_format(page1)
         format_counts[fmt] = format_counts.get(fmt, 0) + 1
 

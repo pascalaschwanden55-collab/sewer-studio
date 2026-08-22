@@ -236,9 +236,12 @@ internal sealed class QgisBridgeServer : IDisposable
     public void Dispose()
     {
         _cts.Cancel();
-        try { _listener?.Stop(); } catch { }
-        try { _loopTask?.Wait(TimeSpan.FromSeconds(1)); } catch { }
-        try { _clientTasks.WaitForIdleAsync().Wait(TimeSpan.FromSeconds(1)); } catch { }
+        try { _listener?.Stop(); }
+        catch (Exception ex) { TryLogWarning(ex, "QGIS-Bridge-Listener konnte beim Beenden nicht gestoppt werden."); }
+        try { _loopTask?.Wait(TimeSpan.FromSeconds(1)); }
+        catch (Exception ex) { TryLogWarning(ex, "QGIS-Bridge-Serverloop konnte beim Beenden nicht abgewartet werden."); }
+        try { _clientTasks.WaitForIdleAsync().Wait(TimeSpan.FromSeconds(1)); }
+        catch (Exception ex) { TryLogWarning(ex, "QGIS-Bridge-Clients konnten beim Beenden nicht abgewartet werden."); }
         _cts.Dispose();
     }
 

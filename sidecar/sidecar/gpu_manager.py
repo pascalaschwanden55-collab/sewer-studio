@@ -560,7 +560,7 @@ class GpuModelManager:
             if torch.cuda.is_available():
                 return torch.cuda.memory_allocated(0) / (1024**3)
         except Exception:
-            pass
+            logger.debug("CUDA-Speicherbelegung konnte nicht gelesen werden", exc_info=True)
         return 0.0
 
     def _warn_if_over_budget(self) -> None:
@@ -673,7 +673,7 @@ class GpuModelManager:
                 free, _total = torch.cuda.mem_get_info(0)
                 return free / (1024**3)
         except Exception:
-            pass
+            logger.debug("Freier CUDA-Speicher konnte nicht gelesen werden", exc_info=True)
         return None
 
     @staticmethod
@@ -683,7 +683,7 @@ class GpuModelManager:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
         except Exception:
-            pass
+            logger.debug("CUDA-Zwischenspeicher konnte nicht geleert werden", exc_info=True)
 
 
 # Singleton
