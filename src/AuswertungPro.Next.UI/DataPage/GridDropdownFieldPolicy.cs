@@ -79,6 +79,13 @@ public static class GridDropdownFieldPolicy
                 "SchachtformOptions",
                 AllowFreeText: false,
                 Managed: false),
+            // Belastungsklasse nach EN 124: feste Liste, kein Freitext. Eine getippte
+            // Klasse waere eine unbelegte Aussage ueber die Tragfaehigkeit.
+            "Belastungsklasse" => new GridDropdownFieldSpec(
+                optionField,
+                "BelastungsklasseOptions",
+                AllowFreeText: false,
+                Managed: false),
             _ => null!
         };
 

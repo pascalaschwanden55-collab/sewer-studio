@@ -88,6 +88,12 @@ public static class FieldCatalog
             {
                 "", "Kanalsanierer", "Baumeister", "Gartenbauer"
             }),
+            // Belastungsklassen der Schachtabdeckung nach EN 124. Feste Liste ohne
+            // Freitext: eine erfundene Klasse waere eine Aussage ueber die Tragfaehigkeit.
+            [FieldKeys.LoadClass] = new ReadOnlyCollection<string>(new List<string>
+            {
+                "", "A15", "B125", "C250", "D400", "E600", "F900"
+            }),
             [FieldKeys.WorkflowStatus] = new ReadOnlyCollection<string>(new List<string>
             {
                 "", "offen", "abgeschlossen"

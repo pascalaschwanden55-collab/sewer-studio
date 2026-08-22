@@ -419,6 +419,7 @@
         <!-- Lade-Overlay fuer den xlsx-Export (deckt alle Zeilen ab) -->
         <ctrl:BusyOverlay Grid.RowSpan="4"
                           IsActive="{Binding Busy.IsActive}"
-                          Message="{Binding Busy.Message}"/>
+                          Message="{Binding Busy.Message}"
+                          CancelCommand="{Binding CancelExcelExportCommand}"/>
     </Grid>
 </UserControl>

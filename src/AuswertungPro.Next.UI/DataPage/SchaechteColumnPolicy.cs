@@ -27,6 +27,17 @@ internal static class SchaechteColumnPolicy
             || string.Equals(normalized, "form", StringComparison.Ordinal))
             return "Schachtform";
 
+        // Vor der Zustandsklasse pruefen: beide Namen enden auf "klasse".
+        // Excel-Kopfzeilen tragen oft einen Umbruch oder Trennstrich
+        // ("Belastungs-\nklasse"); fuer den Vergleich faellt beides weg.
+        var ohneTrenner = normalized
+            .Replace("-", "", StringComparison.Ordinal)
+            .Replace("\r", "", StringComparison.Ordinal)
+            .Replace("\n", "", StringComparison.Ordinal)
+            .Replace(" ", "", StringComparison.Ordinal);
+        if (ohneTrenner.Contains("belastungsklasse", StringComparison.Ordinal))
+            return FieldKeys.LoadClass;
+
         if ((normalized.Contains("ausgefuehrt", StringComparison.Ordinal)
              || normalized.Contains("ausgefuhrt", StringComparison.Ordinal))
             && normalized.Contains("durch", StringComparison.Ordinal))

@@ -708,6 +708,7 @@ public partial class SchaechtePage : UserControl
             "ReferenzpruefungOptions" => _vm.ReferenzpruefungOptions,
             "AusgefuehrtDurchOptions" => _vm.AusgefuehrtDurchOptions,
             "SchachtformOptions" => _vm.SchachtformOptions,
+            "BelastungsklasseOptions" => _vm.BelastungsklasseOptions,
             _ => Array.Empty<string>()
         };
     }

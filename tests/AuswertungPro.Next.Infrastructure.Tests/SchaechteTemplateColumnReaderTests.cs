@@ -40,20 +40,22 @@ public sealed class SchaechteTemplateColumnReaderTests
     {
         var root = CreateTempRoot();
         var exportDir = Directory.CreateDirectory(Path.Combine(root, "Export_Vorlage")).FullName;
-        var exactPath = Path.Combine(exportDir, "Schaechte.xlsx");
+        var exactPath = Path.Combine(exportDir, "Schächte.xlsx");
 
         WriteWorkbook(
             exactPath,
             "Schaechte",
             [" Funktion ", "Schachtnummer", "", "Daten", "0", "Daten"]);
         WriteWorkbook(
-            Path.Combine(exportDir, "Fallback-Schaechte.xlsx"),
+            Path.Combine(exportDir, "Schaechte.xlsx"),
             "Schaechte",
             ["Ignored"]);
 
         var result = SchaechteTemplateColumnReader.LoadFromExportDirectory(root);
 
         Assert.True(result.TemplateFound);
+        Assert.True(result.TemplateReadable);
+        Assert.Null(result.ErrorMessage);
         Assert.Equal(exactPath, result.TemplatePath);
         Assert.Equal(["Schachtnummer", "Funktion", "Daten"], result.Columns);
     }
@@ -63,7 +65,7 @@ public sealed class SchaechteTemplateColumnReaderTests
     {
         var root = CreateTempRoot();
         var exportDir = Directory.CreateDirectory(Path.Combine(root, "Export_Vorlage")).FullName;
-        var exactPath = Path.Combine(exportDir, "Schaechte.xlsx");
+        var exactPath = Path.Combine(exportDir, "Schächte.xlsx");
         WriteWorkbook(
             exactPath,
             "Schaechte",
@@ -105,6 +107,21 @@ public sealed class SchaechteTemplateColumnReaderTests
         Assert.Empty(result.Columns);
     }
 
+    [Fact]
+    public void LoadFromExportDirectory_meldet_beschaedigte_Vorlage_ohne_Ausnahme()
+    {
+        var root = CreateTempRoot();
+        var exportDir = Directory.CreateDirectory(Path.Combine(root, "Export_Vorlage")).FullName;
+        File.WriteAllText(Path.Combine(exportDir, "Schächte.xlsx"), "keine Arbeitsmappe");
+
+        var result = SchaechteTemplateColumnReader.LoadFromExportDirectory(root);
+
+        Assert.False(result.TemplateFound);
+        Assert.False(result.TemplateReadable);
+        Assert.Empty(result.Columns);
+        Assert.Contains("nicht lesbar", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string CreateTempRoot()
         => Path.Combine(Path.GetTempPath(), $"schaechte-columns-{Guid.NewGuid():N}");
 
@@ -112,7 +129,10 @@ public sealed class SchaechteTemplateColumnReaderTests
     {
         using var workbook = new XLWorkbook();
         var worksheet = workbook.Worksheets.Add(worksheetName);
-        const int headerRow = 12;
+        // Nicht fest verdrahten: die Kopfzeile der Vorlage steht in
+        // ExcelVorlagenLayout. Vorher stand hier eine 12, und als die Vorlage
+        // ihre Kopfzeile verschob, las der Test an der falschen Stelle.
+        var headerRow = AuswertungPro.Next.Application.Export.ExcelVorlagenLayout.KopfZeile;
 
         for (var i = 0; i < headers.Length; i++)
             worksheet.Cell(headerRow, i + 1).Value = headers[i];

@@ -19,6 +19,12 @@ public static class FieldKeys
     public const string Cost = "Kosten";
     public const string Owner = "Eigentuemer";
     public const string RehabilitationExecutor = "Ausgefuehrt_durch";
+
+    /// <summary>
+    /// Belastungsklasse der Schachtabdeckung nach EN 124 (A15 bis F900). Steht neben
+    /// "Abdeckung Stk." und sagt, welche Last die Abdeckung tragen darf.
+    /// </summary>
+    public const string LoadClass = "Belastungsklasse";
     public const string WorkflowStatus = "Offen_abgeschlossen";
     public const string InspectionYear = "Datum_Jahr";
     public const string Remarks = "Bemerkungen";

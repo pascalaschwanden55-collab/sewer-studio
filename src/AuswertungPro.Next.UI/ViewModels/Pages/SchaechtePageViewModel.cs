@@ -65,6 +65,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
     public ObservableCollection<string> ReferenzpruefungOptions { get; }
     public ObservableCollection<string> AusgefuehrtDurchOptions { get; }
     public ObservableCollection<string> SchachtformOptions { get; }
+    public ObservableCollection<string> BelastungsklasseOptions { get; }
 
     [ObservableProperty] private SchachtRecord? _selected;
     [ObservableProperty] private string _lastResult = "";
@@ -259,6 +260,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
         SchachtformOptions = new ObservableCollection<string>(
             new[] { "Rund", "Oval", "Quadratisch", "Rechteckig" });
+        BelastungsklasseOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.LoadClass));
         EnforceEigentuemerOptionsExact();
 
         AddCommand = new RelayCommand(Add, CanMutateShaftDataForCommand);
@@ -380,6 +383,12 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         Columns.Clear();
 
         var result = _templateColumnReader.LoadFromExportDirectory(AppContext.BaseDirectory);
+        if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+        {
+            LastResult = result.ErrorMessage;
+            return;
+        }
+
         if (!result.TemplateFound)
         {
             LastResult = "Schaechte-Vorlage nicht gefunden.";
@@ -389,12 +398,17 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         foreach (var column in result.Columns)
             Columns.Add(column);
 
-        // Schaechte kennen in der Vorlage kein "Ausgefuehrt durch" — fuer die kategorisierte
-        // QGIS-Einfaerbung + Auswertung ergaenzen wir es als editierbare Dropdown-Spalte. Die
-        // Optionen (Baumeister/Sanierer/Gaertner) stehen ueber AusgefuehrtDurchOptions bereit.
+        // Aeltere Schacht-Vorlagen kannten kein "Ausgefuehrt durch". Fuer diese
+        // Bestandsdateien bleibt der Rueckfall als editierbare Dropdown-Spalte erhalten.
         if (!Columns.Any(c => c.IndexOf("usgef", StringComparison.OrdinalIgnoreCase) >= 0
                            && c.IndexOf("durch", StringComparison.OrdinalIgnoreCase) >= 0))
             Columns.Add("Ausgefuehrt durch");
+
+        // Belastungsklasse der Abdeckung (EN 124). Aeltere Vorlagen fuehren an dieser
+        // Stelle nur eine Spalte mit der Ueberschrift "0", die als reine Ziffer
+        // weggefiltert wird - der Wert liesse sich dann nirgends erfassen.
+        if (!Columns.Any(c => SchaechteColumnPolicy.ResolveOptionField(c) == FieldKeys.LoadClass))
+            Columns.Add(FieldKeys.LoadClass);
 
         EnsureRecordColumns();
         UpdateNr();

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Common;
@@ -45,6 +46,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
     private readonly ExportPageShellOperationGuard _shellOperationGuard = new();
     private readonly Func<bool> _saveProjectForActiveDistribution;
     private bool _isShaftDistributionActive;
+    private CancellationTokenSource? _excelExportCancellation;
     private bool _disposed;
 
     [ObservableProperty] private string _lastResult = "";
@@ -60,6 +62,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
 
     public IAsyncRelayCommand ExportCommand { get; }
     public IAsyncRelayCommand ExportSchaechteCommand { get; }
+    public IRelayCommand CancelExcelExportCommand { get; }
     public IAsyncRelayCommand DistributeHoldingsNormalCommand { get; }
     public IAsyncRelayCommand DistributeHoldingsSanierungCommand { get; }
     public IAsyncRelayCommand DistributeShaftsNormalCommand { get; }
@@ -179,6 +182,9 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         _storedImportFiles = storedImportFiles ?? throw new ArgumentNullException(nameof(storedImportFiles));
         ExportCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(ExportAsync), CanRunProjectExportCommands);
         ExportSchaechteCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(ExportSchaechteAsync), CanRunProjectExportCommands);
+        CancelExcelExportCommand = new RelayCommand(
+            CancelExcelExport,
+            () => _excelExportCancellation is { IsCancellationRequested: false });
         DistributeHoldingsNormalCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => DistributeHoldingsAsync(DistributionVariant.Normal)), CanRunDistributeCommands);
         DistributeHoldingsSanierungCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => DistributeHoldingsAsync(DistributionVariant.Sanierung)), CanRunDistributeCommands);
         DistributeShaftsNormalCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => DistributeShaftsAsync(DistributionVariant.Normal), allowsInternalProjectSave: true), CanRunDistributeCommands);
@@ -442,6 +448,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             return;
 
         _disposed = true;
+        _excelExportCancellation?.Cancel();
         _shell.UnregisterShellOperationGuard(_shellOperationGuard);
         GC.SuppressFinalize(this);
     }
@@ -453,104 +460,6 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
 
         _isShaftDistributionActive = value;
         _shellOperationGuard.Update(IsPageBusy, value);
-    }
-
-    private async Task ExportAsync()
-    {
-        var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Haltungen.xlsx");
-        try
-        {
-            if (!TryLoadCostsForHoldingExport(out var costStore))
-                return;
-
-            // Ein gemeinsamer Zielordner, fester Dateiname; ohne Zielordner den Dialog wie bisher.
-            var outPath = ResolveConfiguredExcelPath("Haltungen")
-                ?? _dialogs.SaveFile("Export (Haltungen.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
-            if (outPath is null)
-                return;
-
-            using var busy = Busy.Enter("Haltungen werden exportiert …");
-
-            // Vor dem Export die abgeleiteten Kostenfelder auf den aktuellen Stand ziehen
-            // (Sanieren=Nein/leer -> geleert, damit nur echte Sanierungen exportiert werden).
-            // Gesperrte costs.json (loadError) -> NICHT syncen, um keinen leeren Stand zu schreiben.
-            var projectPath = _settings.LastProjectPath ?? "";
-            if (!string.IsNullOrWhiteSpace(projectPath))
-                _costFieldSync.Sync(_shell.Project, costStore);
-
-            var res = await Task.Run(() =>
-                _excelExport.ExportToTemplate(_shell.Project, templatePath, outPath, headerRow: 11, startRow: 12));
-            LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
-            _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
-            if (res.Ok)
-                _toasts.Success($"Haltungen exportiert: {Path.GetFileName(outPath)}");
-            else
-                _toasts.Error(res.ErrorMessage ?? "Haltungs-Export fehlgeschlagen.");
-        }
-        catch (Exception ex)
-        {
-            var userMessage = UserError.DescribeAndReport(ex, "Haltungs-Excel-Export");
-            LastResult = $"Fehler: {userMessage}";
-            _shell.SetStatus("Export fehlgeschlagen");
-            _toasts.Error($"Haltungs-Export fehlgeschlagen: {userMessage}");
-        }
-    }
-
-    private bool TryLoadCostsForHoldingExport(out ProjectCostStore store)
-    {
-        store = new ProjectCostStore();
-        var projectPath = _settings.LastProjectPath ?? "";
-        if (string.IsNullOrWhiteSpace(projectPath))
-            return true;
-
-        store = _projectCosts.Load(projectPath, out var loadError);
-        if (string.IsNullOrWhiteSpace(loadError))
-            return true;
-
-        LastResult = $"Kostendaten konnten nicht geladen werden: {loadError}";
-        _shell.SetStatus("Haltungs-Export gesperrt: Kostendaten nicht lesbar");
-        _toasts.Error("Kostendaten sind nicht lesbar. Der Haltungs-Export wurde abgebrochen.");
-        _dialogs.Error(
-            $"Der Haltungs-Export wurde abgebrochen, weil die Kostendaten nicht lesbar sind:\n{loadError}\n\n" +
-            "Bitte costs.json pruefen und den Export danach erneut starten.",
-            "Haltungs-Export");
-        return false;
-    }
-
-    private async Task ExportSchaechteAsync()
-    {
-        var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Schächte.xlsx");
-        try
-        {
-            var outPath = ResolveConfiguredExcelPath("Schaechte")
-                ?? _dialogs.SaveFile("Export (Schaechte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
-            if (outPath is null)
-                return;
-
-            if (!File.Exists(templatePath))
-            {
-                LastResult = $"Fehler: Vorlage nicht gefunden ({templatePath})";
-                _shell.SetStatus("Export fehlgeschlagen");
-                return;
-            }
-
-            using var busy = Busy.Enter("Schächte werden exportiert …");
-            var res = await Task.Run(() =>
-                _excelExport.ExportSchaechteToTemplate(_shell.Project, templatePath, outPath, headerRow: 12, startRow: 13));
-            LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
-            _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
-            if (res.Ok)
-                _toasts.Success($"Schächte exportiert: {Path.GetFileName(outPath)}");
-            else
-                _toasts.Error(res.ErrorMessage ?? "Schacht-Export fehlgeschlagen.");
-        }
-        catch (Exception ex)
-        {
-            var userMessage = UserError.DescribeAndReport(ex, "Schacht-Excel-Export");
-            LastResult = $"Fehler: {userMessage}";
-            _shell.SetStatus("Export fehlgeschlagen");
-            _toasts.Error($"Schacht-Export fehlgeschlagen: {userMessage}");
-        }
     }
 
     // ─── Distribution: Haltungen ───────────────────────────────────────────
