@@ -88,6 +88,18 @@
                             <ui:FluentIcon Glyph="&#xE8F1;" Foreground="{DynamicResource MutedBrush}"/>
                         </MenuItem.Icon>
                     </MenuItem>
+                    <MenuItem Header="Preis_katalog..." Command="{Binding OpenPriceCatalogCommand}"
+                              ToolTip="Preise und Einheiten fuer Sanierungsmassnahmen bearbeiten.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE8C7;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Mess_vorlagen..." Command="{Binding OpenTemplateEditorCommand}"
+                              ToolTip="Vorlagen fuer Sanierungsmassnahmen bearbeiten.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE8EF;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
                     <MenuItem Header="KI starten" Click="StartAi_Click"
                               ToolTip="Lokale KI-Dienste fuer Analyse und Codierung starten.">
                         <MenuItem.Icon>

@@ -1446,6 +1446,12 @@
                 <TextBlock Text="Allgemein" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
                            FontFamily="Consolas" Text="F11          Fokusmodus ein/aus"/>
+                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
+                           FontFamily="Consolas" Text="Strg+N       Neues Projekt"/>
+                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
+                           FontFamily="Consolas" Text="Strg+O       Projekt öffnen"/>
+                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
+                           FontFamily="Consolas" Text="Strg+S       Projekt speichern"/>
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,8"
                            FontFamily="Consolas" Text="Doppelklick  Protokoll/KI öffnen (auf Haltung)"/>
 

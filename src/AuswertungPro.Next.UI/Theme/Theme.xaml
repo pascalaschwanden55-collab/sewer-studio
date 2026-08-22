@@ -7,8 +7,8 @@
          ═══════════════════════════════════════════════════════════ -->
 
     <!-- ── ACCENT — Confident professional blue ── -->
-    <Color x:Key="ColorAccent">#FF539BF5</Color>
-    <Color x:Key="ColorAccentHover">#FF6CB6FF</Color>
+    <Color x:Key="ColorAccent">#FF2563EB</Color>
+    <Color x:Key="ColorAccentHover">#FF1D4ED8</Color>
     <Color x:Key="ColorAccentLight">#FF6CB6FF</Color>
     <Color x:Key="ColorAccentSubtle">#FF1C3050</Color>
 
@@ -24,10 +24,10 @@
     <!-- ── TEXT — WCAG AAA on #2A3038 card surface ── -->
     <Color x:Key="ColorTextPrimary">#FFE6EDF3</Color>
     <Color x:Key="ColorTextSecondary">#FFB0BAC5</Color>
-    <Color x:Key="ColorTextMuted">#FF8891A0</Color>
+    <Color x:Key="ColorTextMuted">#FF9AA5B1</Color>
 
     <!-- ── SEMANTIC — Brighter tones for dark backgrounds ── -->
-    <Color x:Key="ColorSuccess">#FF3FB950</Color>
+    <Color x:Key="ColorSuccess">#FF15803D</Color>
     <Color x:Key="ColorDanger">#FFF85149</Color>
     <Color x:Key="ColorWarning">#FFD29922</Color>
     <Color x:Key="ColorInfo">#FF539BF5</Color>
@@ -56,9 +56,16 @@
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
     <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource ColorInfo}"/>
 
+    <!-- Textfarben sind von den kraeftigeren Flaechenfarben getrennt. -->
+    <SolidColorBrush x:Key="SuccessTextBrush" Color="#FF56D364"/>
+    <SolidColorBrush x:Key="DangerTextBrush" Color="#FFFF7B72"/>
+    <SolidColorBrush x:Key="WarningTextBrush" Color="#FFD29922"/>
+    <SolidColorBrush x:Key="InfoTextBrush" Color="#FF79C0FF"/>
+
     <!-- Subtle-Hintergruende fuer Erfolg-/Fehler-Abzeichen (Badges) — dunkel abgestimmt -->
     <SolidColorBrush x:Key="SuccessSubtleBrush" Color="#FF14432A"/>
     <SolidColorBrush x:Key="DangerSubtleBrush" Color="#FF4A1A1A"/>
+    <SolidColorBrush x:Key="WarningSubtleBrush" Color="#FF493719"/>
 
     <!-- ── DESIGNSTUDIE: Zweit-Akzent (Teal), Severity-Skala, Akzent-Verlauf — dunkel abgestimmt ── -->
     <Color x:Key="ColorSecondaryAccent">#FF22D3EE</Color>
@@ -200,10 +207,24 @@
         </Setter>
     </Style>
 
+    <Style x:Key="KeyboardFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-3"
+                            BorderBrush="{DynamicResource InfoTextBrush}"
+                            BorderThickness="2"
+                            CornerRadius="7"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ═══════════════════════════════════════════════════════════
          BUTTON — Clean, no glow
          ═══════════════════════════════════════════════════════════ -->
     <Style TargetType="{x:Type Button}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="MinHeight" Value="36"/>
         <Setter Property="MinWidth" Value="100"/>
         <Setter Property="Padding" Value="16,8"/>
@@ -317,6 +338,7 @@
          TOOLBAR BUTTON — Compact, transparent background
          ═══════════════════════════════════════════════════════════ -->
     <Style x:Key="ToolbarButton" TargetType="Button">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="MinHeight" Value="30"/>
         <Setter Property="MinWidth" Value="0"/>
         <Setter Property="Padding" Value="10,5"/>
@@ -372,6 +394,7 @@
 
     <!-- Toolbar Accent Button — Blue accent for primary actions -->
     <Style x:Key="ToolbarButtonAccent" TargetType="Button">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="MinHeight" Value="30"/>
         <Setter Property="MinWidth" Value="0"/>
         <Setter Property="Padding" Value="12,5"/>

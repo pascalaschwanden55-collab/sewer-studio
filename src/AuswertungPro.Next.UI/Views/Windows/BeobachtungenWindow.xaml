@@ -18,10 +18,6 @@
         <pages:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyVisible"/>
         <pages:AnyValueToVisibilityConverter x:Key="AnyValueVisible"/>
 
-        <SolidColorBrush x:Key="PanelBgBrush" Color="#F8FAFC"/>
-        <SolidColorBrush x:Key="PanelBorderBrush" Color="#D7DEE8"/>
-        <SolidColorBrush x:Key="HeaderBgBrush" Color="#EEF5FB"/>
-
         <Style x:Key="ActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
             <Setter Property="MinHeight" Value="30"/>
             <Setter Property="Padding" Value="12,5"/>
@@ -38,9 +34,9 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                BorderBrush="{StaticResource PanelBorderBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
-                Background="{StaticResource PanelBgBrush}"
+                Background="{DynamicResource CardBrush}"
                 CornerRadius="8"
                 Padding="10"
                 Margin="0,0,0,8">
@@ -63,10 +59,10 @@
         </Border>
 
         <Border Grid.Row="1"
-                BorderBrush="{StaticResource PanelBorderBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="8"
-                Background="White">
+                Background="{DynamicResource CardBrush}">
             <DataGrid x:Name="EntriesGrid"
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
@@ -75,26 +71,26 @@
                       behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
                       HeadersVisibility="All"
                       GridLinesVisibility="Horizontal"
-                      VerticalGridLinesBrush="#E5EAF1"
-                      HorizontalGridLinesBrush="#E5EAF1"
+                      VerticalGridLinesBrush="{DynamicResource BorderBrush}"
+                      HorizontalGridLinesBrush="{DynamicResource BorderBrush}"
                       AlternationCount="2"
                       MinRowHeight="28">
                 <DataGrid.ColumnHeaderStyle>
                     <Style TargetType="{x:Type DataGridColumnHeader}">
-                        <Setter Property="Background" Value="{StaticResource HeaderBgBrush}"/>
-                        <Setter Property="Foreground" Value="#1E293B"/>
+                        <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="BorderBrush" Value="#D7DEE8"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
                         <Setter Property="Padding" Value="6,4"/>
                     </Style>
                 </DataGrid.ColumnHeaderStyle>
                 <DataGrid.RowStyle>
                     <Style TargetType="{x:Type DataGridRow}">
-                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
                         <Style.Triggers>
                             <Trigger Property="ItemsControl.AlternationIndex" Value="1">
-                                <Setter Property="Background" Value="#FBFDFF"/>
+                                <Setter Property="Background" Value="{DynamicResource RowHoverBrush}"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>

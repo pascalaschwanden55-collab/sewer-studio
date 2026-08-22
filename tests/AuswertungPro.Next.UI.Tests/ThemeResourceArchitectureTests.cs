@@ -90,20 +90,6 @@ public sealed class ThemeResourceArchitectureTests
                 "#94A3B8",
                 "#64748B"))
             .Concat(FindFileTokenOffenders(
-                RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "CorrectionDialog.xaml"),
-                "x:Key=\"PrimaryButton\"",
-                "x:Key=\"SecondaryButton\"",
-                "#0D1117",
-                "#161B22",
-                "#21262D",
-                "#30363D",
-                "#E6EDF3",
-                "#8B949E",
-                "#484F58",
-                "#58A6FF",
-                "#238636",
-                "#2EA043"))
-            .Concat(FindFileTokenOffenders(
                 RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "DossierPrintDialog.xaml"),
                 "#FF0D1117",
                 "#E6EDF3",

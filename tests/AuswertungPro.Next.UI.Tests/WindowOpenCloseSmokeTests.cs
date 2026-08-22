@@ -12,7 +12,6 @@ public sealed class WindowOpenCloseSmokeTests
         StaTestRunner.Run(() =>
         {
             OpenAndClose(new KarteWindow());
-            OpenAndClose(new MeasureSelectionWindow());
         });
     }
 

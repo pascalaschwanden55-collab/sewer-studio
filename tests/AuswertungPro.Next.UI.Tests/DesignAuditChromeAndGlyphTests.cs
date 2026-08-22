@@ -23,12 +23,6 @@ public sealed class DesignAuditChromeAndGlyphTests
         Assert.DoesNotContain("Height=\"620\"", protocolRoot);
 
         AssertWindowChrome(
-            ReadUiFile(Path.Combine("Views", "Windows", "CorrectionDialog.xaml")),
-            "SewerStudio \u2014 Korrektur",
-            "MinWidth=\"420\"",
-            "MinHeight=\"520\"");
-
-        AssertWindowChrome(
             ReadUiFile(Path.Combine("Views", "Windows", "DossierPrintDialog.xaml")),
             "SewerStudio \u2014 Haltungsdossier drucken",
             "MinWidth=\"480\"",

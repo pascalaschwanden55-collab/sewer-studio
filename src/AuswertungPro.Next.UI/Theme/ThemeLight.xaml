@@ -27,9 +27,9 @@
     <Color x:Key="ColorTextMuted">#FF3D4D63</Color>
 
     <!-- ── SEMANTIC ── -->
-    <Color x:Key="ColorSuccess">#FF16A34A</Color>
+    <Color x:Key="ColorSuccess">#FF15803D</Color>
     <Color x:Key="ColorDanger">#FFDC2626</Color>
-    <Color x:Key="ColorWarning">#FFF59E0B</Color>
+    <Color x:Key="ColorWarning">#FFB45309</Color>
     <Color x:Key="ColorInfo">#FF0EA5E9</Color>
 
     <!-- ── SOLID BRUSHES ── -->
@@ -56,9 +56,16 @@
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
     <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource ColorInfo}"/>
 
+    <!-- Textfarben sind von den kraeftigeren Flaechenfarben getrennt. -->
+    <SolidColorBrush x:Key="SuccessTextBrush" Color="#FF15803D"/>
+    <SolidColorBrush x:Key="DangerTextBrush" Color="#FFDC2626"/>
+    <SolidColorBrush x:Key="WarningTextBrush" Color="#FFB45309"/>
+    <SolidColorBrush x:Key="InfoTextBrush" Color="#FF0369A1"/>
+
     <!-- Subtle-Hintergruende fuer Erfolg-/Fehler-Abzeichen (Badges) — hell abgestimmt -->
     <SolidColorBrush x:Key="SuccessSubtleBrush" Color="#FFDCFCE7"/>
     <SolidColorBrush x:Key="DangerSubtleBrush" Color="#FFFEE2E2"/>
+    <SolidColorBrush x:Key="WarningSubtleBrush" Color="#FFFFF3CD"/>
 
     <!-- ── DESIGNSTUDIE: Zweit-Akzent (Teal), Severity-Skala, Akzent-Verlauf ── -->
     <Color x:Key="ColorSecondaryAccent">#FF0891B2</Color>
@@ -200,10 +207,24 @@
         </Setter>
     </Style>
 
+    <Style x:Key="KeyboardFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-3"
+                            BorderBrush="{DynamicResource InfoTextBrush}"
+                            BorderThickness="2"
+                            CornerRadius="7"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ═══════════════════════════════════════════════════════════
          BUTTON — Clean, no glow
          ═══════════════════════════════════════════════════════════ -->
     <Style TargetType="{x:Type Button}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="MinHeight" Value="36"/>
         <Setter Property="MinWidth" Value="100"/>
         <Setter Property="Padding" Value="16,8"/>
@@ -317,6 +338,7 @@
          TOOLBAR BUTTON — Compact, transparent background
          ═══════════════════════════════════════════════════════════ -->
     <Style x:Key="ToolbarButton" TargetType="Button">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="MinHeight" Value="30"/>
         <Setter Property="MinWidth" Value="0"/>
         <Setter Property="Padding" Value="10,5"/>
@@ -372,6 +394,7 @@
 
     <!-- Toolbar Accent Button — Blue accent for primary actions -->
     <Style x:Key="ToolbarButtonAccent" TargetType="Button">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="MinHeight" Value="30"/>
         <Setter Property="MinWidth" Value="0"/>
         <Setter Property="Padding" Value="12,5"/>

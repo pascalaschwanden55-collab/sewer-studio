@@ -321,6 +321,7 @@
     </Style>
 
     <Style TargetType="{x:Type ToggleButton}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="MinHeight" Value="30"/>
         <Setter Property="Padding" Value="10,5"/>
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>

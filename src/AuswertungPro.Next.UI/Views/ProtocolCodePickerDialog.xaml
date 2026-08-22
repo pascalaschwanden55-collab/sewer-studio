@@ -51,13 +51,13 @@
                             <Border Margin="6,0,0,0"
                                     Padding="4,1"
                                     CornerRadius="2"
-                                    Background="#FFF0F2F5"
-                                    BorderBrush="#FFD0D7E2"
+                                    Background="{DynamicResource CardBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
                                     Visibility="{Binding HasSourceBadge, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="{Binding SourceBadgeText}"
                                            FontSize="10"
-                                           Foreground="#FF4B5563" />
+                                           Foreground="{DynamicResource TextSecondaryBrush}" />
                             </Border>
                         </StackPanel>
                     </HierarchicalDataTemplate>
@@ -68,7 +68,7 @@
                        Text="Nicht normal auswählbar"
                        Margin="0,8,0,6"
                        FontWeight="SemiBold"
-                       Foreground="#FF6B7280" />
+                       Foreground="{DynamicResource MutedBrush}" />
             <TreeView Grid.Row="3"
                       ItemsSource="{Binding LockedCodeTree}"
                       SelectedItemChanged="TreeView_SelectedItemChanged">
@@ -85,13 +85,13 @@
                             <Border Margin="6,0,0,0"
                                     Padding="4,1"
                                     CornerRadius="2"
-                                    Background="#FFFFF3E0"
-                                    BorderBrush="#FFFFCC80"
+                                    Background="{DynamicResource WarningSubtleBrush}"
+                                    BorderBrush="{DynamicResource WarningBrush}"
                                     BorderThickness="1"
                                     Visibility="{Binding HasSourceBadge, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="{Binding SourceBadgeText}"
                                            FontSize="10"
-                                           Foreground="#FF9A3412" />
+                                           Foreground="{DynamicResource WarningTextBrush}" />
                             </Border>
                         </StackPanel>
                     </HierarchicalDataTemplate>
