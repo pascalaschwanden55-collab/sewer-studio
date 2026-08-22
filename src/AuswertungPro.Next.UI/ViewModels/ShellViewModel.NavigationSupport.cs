@@ -56,9 +56,11 @@ public sealed partial class ShellViewModel
             "Karte" => "Haltungen raeumlich ansehen und von der Karte aus oeffnen.",
             "Medienkonflikte" => "Fehlende, doppelte oder mehrdeutige Medienzuordnungen klaeren.",
             "Druckcenter" => "Dossiers und Berichte fuer Haltungen oder Projektumfang erstellen.",
+            "Dossiers" => "Eigentuemerdossiers zusammenstellen, bearbeiten und als PDF ausgeben.",
             "Sanierungs-Matrix" => "Massnahmen, Kosten und Varianten fuer Sanierung bearbeiten.",
             "Schacht-Matrix" => "Sanierungsmassnahmen und Kosten je Schacht (NPK Kap. 700) erfassen.",
             "VSA" => "VSA-Zustandsklassen und Bewertungsdaten kontrollieren.",
+            "Schattenauswertung" => "KI-Vorschlaege im Hintergrund pruefen und mit den Projektdaten vergleichen.",
             "Diagnose" => "Logs, Diagnoseinformationen und technische Details pruefen.",
             "Einstellungen" => "Pfade, Theme, KI-Start und Programmverhalten konfigurieren.",
             _ => "Ansicht oeffnen."

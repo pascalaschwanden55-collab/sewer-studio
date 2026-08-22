@@ -1,0 +1,358 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.DossiersPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
+             xmlns:dossiers="clr-namespace:AuswertungPro.Next.Domain.Models.Dossiers;assembly=AuswertungPro.Next.Domain">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
+
+        <Style x:Key="MetricCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+
+        <Style x:Key="MetricValue" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <Style x:Key="MetricLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Kopf -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource CardGlassBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1" CornerRadius="14" Padding="18" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Eigentümerdossiers" Style="{StaticResource PageTitle}"/>
+                    <TextBlock Text="{Binding AreaTitle}"
+                               Style="{StaticResource Caption}"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Gebietsangaben" Padding="12,7" Margin="0,0,8,0"
+                            Command="{Binding EditAreaCommand}"/>
+                    <Button Content="Word-Vorlage" Padding="12,7" Margin="0,0,8,0"
+                            ToolTip="Standardvorlage neu erstellen und in Word öffnen"
+                            Command="{Binding ResetTemplateCommand}"/>
+                    <Button Content="Aktualisieren" Padding="12,7"
+                            Command="{Binding RefreshCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Inhalt -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Liste der Liegenschaften -->
+            <Border Grid.Column="0"
+                    Background="{DynamicResource CardGlassBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="14" Padding="12">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Button Grid.Row="0" Content="+  Neue Liegenschaft"
+                            HorizontalAlignment="Stretch" Padding="10,8" Margin="0,0,0,10"
+                            Command="{Binding NewDossierCommand}"/>
+
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding Dossiers}"
+                             SelectedItem="{Binding Selected, Mode=TwoWay}"
+                             Background="Transparent" BorderThickness="0">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="8,6"/>
+                                <Setter Property="Margin" Value="0,0,0,4"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Owner}"
+                                               Foreground="{DynamicResource MutedBrush}"
+                                               FontSize="11"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Summary}"
+                                               Foreground="{DynamicResource MutedBrush}"
+                                               FontSize="11" Margin="0,2,0,0"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                        <TextBlock Text="{Binding StatusText}"
+                                                   Foreground="{DynamicResource AccentBrush}"
+                                                   FontSize="10"/>
+                                        <TextBlock Text="  ⚠ Leitung fehlt"
+                                                   Foreground="{DynamicResource DangerBrush}"
+                                                   FontSize="10"
+                                                   Visibility="{Binding HasMissingHoldings,
+                                                       Converter={StaticResource BoolToVis}}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <!-- Cockpit der gewählten Liegenschaft -->
+            <Border Grid.Column="2"
+                    Background="{DynamicResource CardGlassBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="14" Padding="18">
+
+                <Grid>
+                    <!-- Leerzustand -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                Visibility="{Binding HasSelection,
+                                    Converter={StaticResource InverseBoolToVis}}"
+                                x:Name="EmptyState">
+                        <TextBlock Text="&#xE8A5;" FontFamily="{DynamicResource FontIcon}"
+                                   FontSize="34" HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource MutedBrush}"/>
+                        <TextBlock Text="Keine Liegenschaft gewählt"
+                                   Foreground="{DynamicResource TextBrush}"
+                                   FontSize="15" Margin="0,10,0,0"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Links eine Liegenschaft wählen — oder eine neue anlegen."
+                                   Foreground="{DynamicResource MutedBrush}"
+                                   Margin="0,4,0,0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Grid Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Titel -->
+                        <StackPanel Grid.Row="0" Margin="0,0,0,14">
+                            <TextBlock Text="{Binding DetailTitle}"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       FontSize="20" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding DetailSubtitle}"
+                                       Foreground="{DynamicResource MutedBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+
+                        <!-- Warnung fehlende Leitungen -->
+                        <Border Grid.Row="1"
+                                Background="{DynamicResource DangerSubtleBrush}"
+                                CornerRadius="8" Padding="12,8" Margin="0,0,0,12"
+                                Visibility="{Binding HasMissingWarning,
+                                    Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding MissingWarning}"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       TextWrapping="Wrap"/>
+                        </Border>
+
+                        <!-- Kennzahlen -->
+                        <UniformGrid Grid.Row="2" Rows="1" Columns="4" Margin="0,0,0,14">
+                            <Border Style="{StaticResource MetricCard}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding HoldingCountText}"
+                                               Style="{StaticResource MetricValue}"/>
+                                    <TextBlock Text="Leitungen"
+                                               Style="{StaticResource MetricLabel}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource MetricCard}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding LengthText}"
+                                               Style="{StaticResource MetricValue}"/>
+                                    <TextBlock Text="Gesamtlänge"
+                                               Style="{StaticResource MetricLabel}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource MetricCard}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding CostText}"
+                                               Style="{StaticResource MetricValue}"/>
+                                    <TextBlock Text="Sanierungskosten CHF (ohne MWST)"
+                                               Style="{StaticResource MetricLabel}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource MetricCard}" Margin="0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding UrgentText}"
+                                               Style="{StaticResource MetricValue}"/>
+                                    <TextBlock Text="Dringend (Z0/Z1)"
+                                               Style="{StaticResource MetricLabel}"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+
+                        <!-- Zustand und Schäden -->
+                        <Grid Grid.Row="3" Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Zustand"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           FontSize="11" Margin="0,0,0,4"/>
+                                <ItemsControl ItemsSource="{Binding ConditionRows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,0,0,3">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="40"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Label}"
+                                                           Foreground="{DynamicResource TextBrush}"
+                                                           FontSize="12"/>
+                                                <ProgressBar Grid.Column="1"
+                                                             Value="{Binding Percent, Mode=OneWay}"
+                                                             Maximum="100" Height="8"
+                                                             VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding Count}"
+                                                           Foreground="{DynamicResource MutedBrush}"
+                                                           FontSize="12"
+                                                           HorizontalAlignment="Right"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Häufigste Schäden"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           FontSize="11" Margin="0,0,0,4"/>
+                                <ItemsControl ItemsSource="{Binding TopDamages}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}"
+                                                       Foreground="{DynamicResource TextBrush}"
+                                                       FontSize="12" Margin="0,0,0,3"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Leitungen -->
+                        <Border Grid.Row="4"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="10">
+                            <DataGrid ItemsSource="{Binding HoldingRows}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      HeadersVisibility="Column"
+                                      GridLinesVisibility="Horizontal"
+                                      Background="Transparent"
+                                      BorderThickness="0">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Leitung" Width="200"
+                                                        Binding="{Binding Holding}"/>
+                                    <DataGridTextColumn Header="Länge" Width="90"
+                                                        Binding="{Binding Length}"/>
+                                    <DataGridTextColumn Header="Zustand" Width="140"
+                                                        Binding="{Binding Condition}"/>
+                                    <DataGridTextColumn Header="Empfohlene Massnahme" Width="*"
+                                                        Binding="{Binding Measures}"/>
+                                    <DataGridTextColumn Header="Kosten CHF" Width="110"
+                                                        Binding="{Binding Cost}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Border>
+
+                        <!-- Aktionen -->
+                        <WrapPanel Grid.Row="5" Margin="0,14,0,0">
+                            <Button Content="Leitungen wählen…" Padding="12,7" Margin="0,0,8,8"
+                                    Command="{Binding EditHoldingsCommand}"/>
+                            <Button Content="Stammdaten…" Padding="12,7" Margin="0,0,8,8"
+                                    Command="{Binding EditDossierCommand}"/>
+                            <Button Content="Word erzeugen" Padding="12,7" Margin="0,0,8,8"
+                                    Command="{Binding CreateWordCommand}"/>
+                            <Button Content="Beilagen sammeln" Padding="12,7" Margin="0,0,8,8"
+                                    Command="{Binding CollectAttachmentsCommand}"/>
+                            <Button Content="Alles zu einem PDF" Padding="12,7" Margin="0,0,8,8"
+                                    Command="{Binding AssemblePdfCommand}"/>
+                            <Button Content="Ordner öffnen" Padding="12,7" Margin="0,0,8,8"
+                                    Command="{Binding OpenFolderCommand}"/>
+                            <Button Content="Entfernen" Padding="12,7" Margin="0,0,8,8"
+                                    Command="{Binding DeleteDossierCommand}"/>
+
+                            <ComboBox Width="190" Margin="16,0,0,8" Padding="8,6"
+                                      x:Name="StatusCombo"
+                                      SelectionChanged="OnStatusChanged">
+                                <ComboBoxItem Content="Stand: offen"
+                                              Tag="{x:Static dossiers:DossierStatus.Offen}"/>
+                                <ComboBoxItem Content="Stand: Word erzeugt"
+                                              Tag="{x:Static dossiers:DossierStatus.WordErzeugt}"/>
+                                <ComboBoxItem Content="Stand: versendet"
+                                              Tag="{x:Static dossiers:DossierStatus.Versendet}"/>
+                                <ComboBoxItem Content="Stand: zurück / unterschrieben"
+                                              Tag="{x:Static dossiers:DossierStatus.Zurueck}"/>
+                            </ComboBox>
+                        </WrapPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Fusszeile -->
+        <Border Grid.Row="2" Margin="0,8,0,0" Padding="12,8"
+                Background="{DynamicResource HeaderBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1" CornerRadius="10">
+            <Grid>
+                <TextBlock Text="{Binding StatusMessage}"
+                           Foreground="{DynamicResource MutedBrush}"
+                           TextWrapping="Wrap"/>
+                <TextBlock Text="Arbeitet…"
+                           Foreground="{DynamicResource AccentBrush}"
+                           HorizontalAlignment="Right"
+                           Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

@@ -111,6 +111,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
+    <None Include="..\..\Export_Vorlage\Eigentuemerdossier.docx" Link="Export_Vorlage\Eigentuemerdossier.docx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
 
     <None Include="tools\PLACE_PDFTOTEXT_HERE.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

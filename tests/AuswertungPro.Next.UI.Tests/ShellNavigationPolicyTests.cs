@@ -135,6 +135,17 @@ public sealed class ShellNavigationPolicyTests
         Assert.Equal(1.0, item.AvailabilityOpacity);
     }
 
+    [Theory]
+    [InlineData("Dossiers")]
+    [InlineData("Schattenauswertung")]
+    public void New_navigation_pages_have_a_specific_tooltip(string title)
+    {
+        var item = new ShellViewModel.NavItem("", title, () => new object());
+
+        Assert.NotEqual("Ansicht oeffnen.", item.ToolTipDescription);
+        Assert.Contains(".", item.ToolTipDescription, StringComparison.Ordinal);
+    }
+
     private sealed class FakeConfirmLeave(bool allowLeave) : IConfirmLeave
     {
         public int Calls { get; private set; }

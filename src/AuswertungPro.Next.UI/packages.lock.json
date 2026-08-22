@@ -737,6 +737,7 @@
           "AuswertungPro.Next.Application": "[1.0.0, )",
           "AuswertungPro.Next.Domain": "[1.0.0, )",
           "ClosedXML": "[0.105.0, )",
+          "DocumentFormat.OpenXml": "[3.1.1, )",
           "FirebirdSql.Data.FirebirdClient": "[10.0.0, )",
           "Microsoft.Data.Sqlite": "[10.0.3, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.2, )",

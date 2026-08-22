@@ -85,9 +85,12 @@ public sealed class ServiceProviderRegistrationTests
         // 145 -> 146: IDistributionReconciliationService ("Abgleichen") verschiebt aus
         // Haltungen_Verteilt und Schaechte_Verteilt alles ohne Gegenstueck im Projekt in
         // den Papierkorb.
+        // 146 -> 150: Eigentuemerdossier (IDossierStore, IDossierWordExportService,
+        // IDossierAttachmentService, IDossierPdfAssemblyService). Buendelt mehrere
+        // Haltungen einer Liegenschaft zu einem Dossier fuer den Eigentuemer.
         Assert.True(
-            registrations.Count == 146,
-            $"Erwartet 146 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 150,
+            $"Erwartet 150 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(

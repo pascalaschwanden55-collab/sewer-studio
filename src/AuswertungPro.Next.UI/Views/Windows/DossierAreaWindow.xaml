@@ -1,0 +1,83 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.DossierAreaWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        ui:WindowFx.Entrance="True"
+        Title="Gebietsangaben"
+        Width="640" Height="700"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgBrush}">
+
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,10,0,2"/>
+        </Style>
+        <!-- Erbt den globalen Feldstil, damit der Dunkelmodus greift. -->
+        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="Diese Angaben gelten für ALLE Dossiers dieses Projekts. Einzelne Liegenschaften können sie überschreiben."
+                   TextWrapping="Wrap" FontStyle="Italic" Margin="0,0,0,8"/>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,12,0">
+
+                <TextBlock Text="Gebietstitel (erscheint gross auf dem Deckblatt)"/>
+                <TextBox x:Name="TitleBox" AcceptsReturn="True" MinHeight="46"
+                         TextWrapping="Wrap"/>
+
+                <TextBlock Text="Ausführungstermin"/>
+                <TextBox x:Name="ExecutionBox"/>
+
+                <TextBlock Text="Ansprechpartner (Name, Adresse, Telefon, E-Mail)"/>
+                <TextBox x:Name="ContactBox" AcceptsReturn="True" MinHeight="70"
+                         TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+
+                <TextBlock Text="Unternehmer"/>
+                <TextBox x:Name="ContractorBox"/>
+
+                <TextBlock Text="Örtliche Bauleitung"/>
+                <TextBox x:Name="SiteBox"/>
+
+                <TextBlock Text="Behinderungen, Zugänge, Verkehrs- und Fussgängerführung"/>
+                <TextBox x:Name="ObstructionsBox" AcceptsReturn="True" MinHeight="60"
+                         TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+
+                <TextBlock Text="Hausanschluss Abwasser (Standardtext)"/>
+                <TextBox x:Name="HouseConnectionBox" AcceptsReturn="True" MinHeight="120"
+                         TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+
+                <TextBlock Text="Meteorwasser"/>
+                <TextBox x:Name="StormWaterBox" AcceptsReturn="True" MinHeight="46"
+                         TextWrapping="Wrap"/>
+
+                <TextBlock Text="Rückmeldefrist"/>
+                <TextBox x:Name="DeadlineBox"/>
+
+                <TextBlock Text="Fusszeile des Dokuments"/>
+                <TextBox x:Name="FooterBox"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
+                    Margin="0,16,0,0">
+            <Button Content="Abbrechen" Width="110" Height="32" Margin="0,0,8,0"
+                    IsCancel="True" Click="OnCancel"/>
+            <Button Content="Speichern" Width="110" Height="32"
+                    IsDefault="True" Click="OnSave"/>
+        </StackPanel>
+    </Grid>
+</Window>

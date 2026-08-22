@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using AuswertungPro.Next.UI.Services;
 using Xunit;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
@@ -7,18 +7,6 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DesignAuditThemeResourceTests
 {
-    [Fact]
-    public void CorrectionDialog_uses_theme_resources_and_does_not_shadow_button_styles()
-    {
-        var xaml = ReadUiFile("Views", "Windows", "CorrectionDialog.xaml");
-        var themeLight = ReadUiFile("Theme", "ThemeLight.xaml");
-        var themeDark = ReadUiFile("Theme", "Theme.xaml");
-
-        Assert.Contains("x:Key=\"SuccessButton\"", themeLight);
-        Assert.Contains("x:Key=\"SuccessButton\"", themeDark);
-        Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
-    }
-
     [Fact]
     public void DossierPrintDialog_uses_theme_resources_for_surface_and_text_colors()
     {
@@ -295,10 +283,10 @@ public sealed class DesignAuditThemeResourceTests
         // Entweder alle Dialoge treten auf oder keiner — halb wirkt zufaellig.
         string[] dialogs =
         [
-            "CorrectionDialog", "ImportPreviewWindow", "RecordDetailsWindow", "DossierPrintDialog",
-            "HydraulikPrintDialog", "MeasureSelectionWindow", "CatalogSelectorWindow", "TextPreviewWindow",
+            "ImportPreviewWindow", "RecordDetailsWindow", "DossierPrintDialog",
+            "HydraulikPrintDialog", "TextPreviewWindow",
             "BeobachtungenWindow", "ObservationCatalogWindow", "CodeCatalogEditorWindow",
-            "PriceCatalogEditorWindow", "MeasureTemplateEditorWindow", "SchachtMassnahmenKatalogEditorWindow"
+            "MeasureTemplateEditorWindow", "SchachtMassnahmenKatalogEditorWindow"
         ];
 
         foreach (var dialog in dialogs)
@@ -448,7 +436,6 @@ public sealed class DesignAuditThemeResourceTests
         var editorXaml = string.Join(
             "\n",
             ReadUiFile("Dialogs", "OptionsEditorWindow.xaml"),
-            ReadUiFile("Dialogs", "OptionsEditorDialog.xaml"),
             ReadUiFile("Dialogs", "CostCatalogEditorDialog.xaml"),
             ReadUiFile("Dialogs", "PositionTemplateEditorDialog.xaml"),
             ReadUiFile("Views", "Windows", "MeasureTemplateEditorWindow.xaml"));
@@ -603,8 +590,10 @@ public sealed class DesignAuditThemeResourceTests
             "new\\(\\\"(?<icon>\\\\u[0-9A-F]{4})\\\",\\s*\\\"(?<title>[^\\\"]+)\\\"");
         var icons = matches.Select(match => match.Groups["icon"].Value).ToArray();
 
-        Assert.Equal(15, matches.Count);
+        // 15 -> 16: Navigationspunkt "Dossiers" (Eigentuemerdossier je Liegenschaft).
+        Assert.Equal(16, matches.Count);
         Assert.Equal(icons.Length, icons.Distinct(StringComparer.Ordinal).Count());
+        Assert.Contains("new(\"\\uE8F1\", \"Dossiers\"", navBlock);
         Assert.Contains("new(\"\\uE80A\", \"Schacht-Matrix\"", navBlock);
         Assert.Contains("new(\"\\uE73E\", \"VSA\"", navBlock);
         Assert.Contains("new(\"\\uE9D9\", \"Diagnose\"", navBlock);

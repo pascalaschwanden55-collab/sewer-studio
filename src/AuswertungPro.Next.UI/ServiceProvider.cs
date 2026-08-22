@@ -552,6 +552,8 @@ namespace AuswertungPro.Next.UI
             ImportedFiles = new ImportedFileLedgerService();
             ImportMediaDistribution = new MediaDistributionService();
             InspectionProtocolFiles = new InspectionProtocolFileLocator(StoredImportFilePaths);
+            _dossierComposition = new AuswertungPro.Next.Infrastructure.Dossiers.DossierComposition(
+                InspectionProtocolFiles, ProtocolPdfExporter, PdfMerge);
             DichtheitProtocolFiles = new DichtheitProtocolFileLocator();
             SchachtFileTargets = new SchachtFileTargetPathResolver();
             var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);
