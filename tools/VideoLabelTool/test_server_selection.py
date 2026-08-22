@@ -57,11 +57,11 @@ class ServerSelectionTests(unittest.TestCase):
 
 class ServerSecurityTests(unittest.TestCase):
     @staticmethod
-    def _call(method, host):
+    def _call(method, host, path="/session.json", headers=None):
         handler = object.__new__(server.Handler)
         handler.command = method
-        handler.path = "/session.json"
-        handler.headers = {"Host": host}
+        handler.path = path
+        handler.headers = {"Host": host, **(headers or {})}
         responses = []
         handler._send = lambda code, body, ctype="application/json", extra=None: responses.append(
             (code, body)
@@ -79,10 +79,67 @@ class ServerSecurityTests(unittest.TestCase):
                 self.assertNotIn("video_label_token", responses[0][1])
 
     def test_session_json_bleibt_ueber_localhost_erreichbar(self):
-        responses = self._call("GET", "localhost:8200")
+        responses = self._call(
+            "GET",
+            "localhost:8200",
+            headers={"Sec-Fetch-Site": "same-origin"},
+        )
 
         self.assertEqual(200, responses[0][0])
         self.assertEqual(server.VIDEO_LABEL_TOKEN, responses[0][1]["video_label_token"])
+
+    def test_sensible_get_route_verweigert_fremde_webseite(self):
+        for path in ("/session.json", "/findings.json", "/clip?key=x", "/trainframe?key=x"):
+            with self.subTest(path=path):
+                responses = self._call(
+                    "GET",
+                    "localhost:8200",
+                    path=path,
+                    headers={
+                        "Origin": "https://angreifer.example",
+                        "Referer": "https://angreifer.example/seite",
+                        "Sec-Fetch-Site": "cross-site",
+                    },
+                )
+
+                self.assertEqual(403, responses[0][0])
+
+    def test_sensible_get_route_verweigert_headerlosen_zugriff(self):
+        responses = self._call("GET", "localhost:8200", path="/findings.json")
+
+        self.assertEqual(403, responses[0][0])
+
+    def test_startseite_bleibt_ohne_browser_metadaten_erreichbar(self):
+        responses = self._call("GET", "localhost:8200", path="/")
+
+        self.assertEqual(200, responses[0][0])
+
+    def test_post_auth_verlangt_exakten_lokalen_origin(self):
+        handler = object.__new__(server.Handler)
+        handler.headers = {
+            "Host": "localhost:8200",
+            "X-Video-Label-Token": server.VIDEO_LABEL_TOKEN,
+            "Origin": "http://localhost:8200",
+            "Referer": "http://localhost:8200/",
+            "Sec-Fetch-Site": "same-origin",
+        }
+
+        self.assertEqual((True, ""), server.require_post_auth(handler))
+
+        handler.headers["Origin"] = "http://localhost:9999"
+        self.assertEqual((False, "ungueltiger Origin"), server.require_post_auth(handler))
+
+        handler.headers["Origin"] = "https://localhost:8200"
+        self.assertEqual((False, "ungueltiger Origin"), server.require_post_auth(handler))
+
+    def test_post_auth_verweigert_fehlenden_origin(self):
+        handler = object.__new__(server.Handler)
+        handler.headers = {
+            "Host": "localhost:8200",
+            "X-Video-Label-Token": server.VIDEO_LABEL_TOKEN,
+        }
+
+        self.assertEqual((False, "ungueltiger Origin"), server.require_post_auth(handler))
 
 
 if __name__ == "__main__":

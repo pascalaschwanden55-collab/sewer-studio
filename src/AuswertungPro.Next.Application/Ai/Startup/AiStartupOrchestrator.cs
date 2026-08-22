@@ -106,7 +106,7 @@ public static class AiStartupOrchestrator
         {
             Report("Warte auf Ollama (Kaltstart kann ~40s dauern)...");
             ollamaReachable = await WaitForReachableAsync(
-                launcher, input.OllamaBaseUri, "/api/tags", headers: null, OllamaMaxAttempts, ct)
+                launcher, input.OllamaBaseUri, "/api/tags", static () => null, OllamaMaxAttempts, ct)
                 .ConfigureAwait(false);
             if (!ollamaReachable)
                 warnings.Add("Ollama wurde gestartet, ist aber noch nicht erreichbar. Modelle konnten nicht geladen werden.");
@@ -152,7 +152,7 @@ public static class AiStartupOrchestrator
         // ------------------------------------------------------------------ Sidecar
         Report("Pruefe Vision-Sidecar...");
         var sidecarReachable = await launcher
-            .IsReachableAsync(input.SidecarUrl, "/health", input.SidecarHeaders, ct)
+            .IsReachableAsync(input.SidecarUrl, "/health", ResolveSidecarHeaders(input), ct)
             .ConfigureAwait(false);
 
         var sidecarAttempted = false;
@@ -198,7 +198,7 @@ public static class AiStartupOrchestrator
         {
             Report("Warte auf Vision-Sidecar (Kaltstart inkl. TensorRT kann 1-2 Min dauern)...");
             sidecarReachable = await WaitForReachableAsync(
-                launcher, input.SidecarUrl, "/health", input.SidecarHeaders, SidecarMaxAttempts, ct)
+                launcher, input.SidecarUrl, "/health", () => ResolveSidecarHeaders(input), SidecarMaxAttempts, ct)
                 .ConfigureAwait(false);
             if (!sidecarReachable)
                 warnings.Add("Vision-Sidecar wurde gestartet, ist aber noch nicht erreichbar. Modelle konnten nicht geladen werden.");
@@ -220,7 +220,10 @@ public static class AiStartupOrchestrator
             {
                 if (attempt > 1)
                     Report($"Lade Vision-Modelle, Versuch {attempt}/3...");
-                var warm = await launcher.WarmupSidecarModelsAsync(input.SidecarUrl, input.SidecarHeaders, ct).ConfigureAwait(false);
+                var warm = await launcher.WarmupSidecarModelsAsync(
+                    input.SidecarUrl,
+                    ResolveSidecarHeaders(input),
+                    ct).ConfigureAwait(false);
                 foreach (var m in warm.LoadedModels)
                     loadedAll.Add(m);
                 lastError = warm.Succeeded ? null : warm.Error;
@@ -264,13 +267,17 @@ public static class AiStartupOrchestrator
         IAiStartupLauncher launcher,
         Uri baseUri,
         string relativePath,
-        IReadOnlyDictionary<string, string>? headers,
+        Func<IReadOnlyDictionary<string, string>?> headersProvider,
         int maxAttempts,
         CancellationToken ct)
     {
         for (var attempt = 0; attempt < maxAttempts; attempt++)
         {
-            if (await launcher.IsReachableAsync(baseUri, relativePath, headers, ct).ConfigureAwait(false))
+            if (await launcher.IsReachableAsync(
+                    baseUri,
+                    relativePath,
+                    headersProvider(),
+                    ct).ConfigureAwait(false))
                 return true;
 
             await Task.Delay(TimeSpan.FromMilliseconds(PollIntervalMs), ct).ConfigureAwait(false);
@@ -278,6 +285,12 @@ public static class AiStartupOrchestrator
 
         return false;
     }
+
+    private static IReadOnlyDictionary<string, string>? ResolveSidecarHeaders(
+        AiStartupOrchestratorInput input)
+        => input.SidecarHeadersProvider is null
+            ? input.SidecarHeaders
+            : input.SidecarHeadersProvider();
 
     private static string Quote(string value)
         => "\"" + value.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
@@ -303,4 +316,5 @@ public sealed record AiStartupOrchestratorInput(
     string? SidecarScriptPath,
     string PowerShellExe,
     bool SettingsChanged,
-    IReadOnlyDictionary<string, string>? SidecarEnvironmentVariables = null);
+    IReadOnlyDictionary<string, string>? SidecarEnvironmentVariables = null,
+    Func<IReadOnlyDictionary<string, string>?>? SidecarHeadersProvider = null);

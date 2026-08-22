@@ -5,7 +5,6 @@ Lauf:  python -m pytest test_guardrails.py   (oder)   python test_guardrails.py
 from __future__ import annotations
 
 import urllib.error
-from pathlib import Path
 
 import guardrails as g
 
@@ -48,21 +47,6 @@ def test_sidecar_running_behandelt_http_fehler_als_erreichbaren_dienst():
         assert g.sidecar_running()
     finally:
         g.urllib.request.urlopen = original
-
-
-def test_path_is_within():
-    root = Path("/a/b")
-    assert g.path_is_within(Path("/a/b/c/report.md"), root)
-    assert not g.path_is_within(Path("/a/x/report.md"), root)
-
-
-def test_assert_write_allowed_blockt_ausserhalb():
-    raised = False
-    try:
-        g.assert_write_allowed(Path("/tmp/evil.md"), Path("/a/b/reports"))
-    except g.GuardrailViolation:
-        raised = True
-    assert raised
 
 
 def _run_all():

@@ -149,6 +149,7 @@ def bild_extrahieren(ffmpeg: Path, video: Path, sekunde: float, ziel: Path) -> b
          "-frames:v", "1", "-q:v", "2", str(ziel)],
         capture_output=True,
         text=True,
+        timeout=2 * 60,
     )
     return lauf.returncode == 0 and ziel.is_file() and ziel.stat().st_size > 0
 

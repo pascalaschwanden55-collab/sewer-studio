@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import Sequence
 from urllib.parse import parse_qs, urlparse
 
+try:
+    from .review_server_security import read_json_body, require_loopback_host
+except ImportError:  # Direkter Skriptstart aus diesem Ordner
+    from review_server_security import read_json_body, require_loopback_host
+
 POLARITAETEN = ("hell_auf_dunkel", "dunkel_auf_hell", "andere")
 FARBEN = ("weiss_grau", "gelb", "andere")
 FORMATE = ("zahl_mit_einheit", "zahl_ohne_einheit", "praefix_oder_nullen", "andere")
@@ -146,7 +151,7 @@ a.innerHTML='<h1>Wo steht der Meterstand?</h1><div class="sub">Bild '+nr+' von '
 '<div class="stand">'+(s.gesamt-s.offen)+' erledigt · '+s.offen+' offen</div>';
 document.getElementById('rahmen').onclick=e=>{const r=document.getElementById('bild').getBoundingClientRect();x=(e.clientX-r.left)/r.width;y=(e.clientY-r.top)/r.height;const m=document.getElementById('marker');m.style.left=(x*100)+'%';m.style.top=(y*100)+'%';m.hidden=false;};}
 async function speichern(sichtbar){const body={fall_id:aktuell.fall_id,meter_sichtbar:sichtbar,x:x,y:y,polaritaet:document.getElementById('pol').value,farbe:document.getElementById('farbe').value,format:document.getElementById('format').value};const r=await fetch('/entscheiden',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok){alert((await r.json()).fehler);return;}laden();}
-async function zurueck(){await fetch('/zurueck',{method:'POST'});laden();}laden();</script>"""
+async function zurueck(){await fetch('/zurueck',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});laden();}laden();</script>"""
 
 
 def create_server(store: OsdLayoutReviewStore, port: int) -> ThreadingHTTPServer:
@@ -164,6 +169,8 @@ def create_server(store: OsdLayoutReviewStore, port: int) -> ThreadingHTTPServer
             self.wfile.write(roh)
 
         def do_GET(self) -> None:  # noqa: N802
+            if not require_loopback_host(self):
+                return
             weg = urlparse(self.path)
             if weg.path == "/":
                 roh = SEITE.encode("utf-8")
@@ -194,6 +201,11 @@ def create_server(store: OsdLayoutReviewStore, port: int) -> ThreadingHTTPServer
             self._json({"fehler": "unbekannt"}, 404)
 
         def do_POST(self) -> None:  # noqa: N802
+            if not require_loopback_host(self):
+                return
+            body = read_json_body(self)
+            if body is None:
+                return
             weg = urlparse(self.path).path
             if weg == "/zurueck":
                 self._json(store.zuruecknehmen())
@@ -201,8 +213,7 @@ def create_server(store: OsdLayoutReviewStore, port: int) -> ThreadingHTTPServer
             if weg != "/entscheiden":
                 self._json({"fehler": "unbekannt"}, 404)
                 return
-            laenge = int(self.headers.get("Content-Length") or 0)
-            anfrage = json.loads(self.rfile.read(laenge) or b"{}")
+            anfrage = json.loads(body or b"{}")
             try:
                 self._json(store.entscheiden(
                     str(anfrage.get("fall_id") or ""), bool(anfrage.get("meter_sichtbar")),

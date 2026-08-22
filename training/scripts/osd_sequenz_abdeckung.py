@@ -49,7 +49,7 @@ def bildfolge_lesen(ffmpeg: str, video: Path, ziel: Path) -> list[tuple[float, f
     lauf = subprocess.run(
         [ffmpeg, "-hide_banner", "-loglevel", "error", "-i", str(video),
          "-vf", f"fps={BILDER_JE_SEKUNDE}", "-q:v", "2", str(ziel / "f%06d.jpg")],
-        capture_output=True, text=True)
+        capture_output=True, text=True, timeout=2 * 60 * 60)
     if lauf.returncode != 0:
         raise RuntimeError(lauf.stderr.strip()[:300] or "ffmpeg fehlgeschlagen")
 

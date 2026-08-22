@@ -36,7 +36,8 @@ from bcc_lernstufe_aus_protokoll import FFMPEG
 def videodauer(video: Path) -> float | None:
     lauf = subprocess.run(
         [str(FFMPEG.with_name("ffprobe.exe")), "-v", "error", "-show_entries",
-         "format=duration", "-of", "csv=p=0", str(video)], capture_output=True, text=True)
+         "format=duration", "-of", "csv=p=0", str(video)],
+        capture_output=True, text=True, timeout=30)
     try:
         return float(lauf.stdout.strip())
     except ValueError:
@@ -81,7 +82,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             [str(FFMPEG), "-v", "error", "-y", "-ss", f"{von:.2f}", "-i", str(video),
              "-t", f"{args.sekunden:.2f}", "-an", "-c:v", "libx264", "-preset", "veryfast",
              "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(clip)],
-            capture_output=True, text=True)
+            capture_output=True, text=True, timeout=5 * 60)
         if lauf.returncode != 0 or not clip.is_file():
             print(f"  {v['haltung']}: Clip fehlgeschlagen, uebersprungen", flush=True)
             continue
@@ -90,10 +91,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         bild = arbeit / "bilder" / f"{nr:03d}.jpg"
         subprocess.run(
             [str(FFMPEG), "-v", "error", "-y", "-ss", f"{args.sekunden / 2:.2f}",
-             "-i", str(clip), "-frames:v", "1", "-q:v", "3", str(bild)], capture_output=True)
+             "-i", str(clip), "-frames:v", "1", "-q:v", "3", str(bild)],
+            capture_output=True, timeout=2 * 60)
         if not bild.is_file():
             subprocess.run([str(FFMPEG), "-v", "error", "-y", "-i", str(clip),
-                            "-frames:v", "1", "-q:v", "3", str(bild)], capture_output=True)
+                            "-frames:v", "1", "-q:v", "3", str(bild)],
+                           capture_output=True, timeout=2 * 60)
 
         daten = bild.read_bytes()
         faelle.append({"nummer": nr, "bild": f"bilder/{nr:03d}.jpg",

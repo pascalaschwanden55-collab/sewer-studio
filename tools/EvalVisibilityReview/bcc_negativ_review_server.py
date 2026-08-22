@@ -33,6 +33,11 @@ import webbrowser
 from pathlib import Path
 from typing import Sequence
 
+try:
+    from .review_server_security import read_json_body, require_loopback_host
+except ImportError:  # Direkter Skriptstart aus diesem Ordner
+    from review_server_security import read_json_body, require_loopback_host
+
 # Rueckfall fuer Bestaende ohne eigene Urteilsliste (die BCC-Negativpruefung
 # vom 2026-08-10 ist damit gespeichert und muss weiter lesbar bleiben).
 URTEILE = ("bogen_sichtbar", "kein_bogen", "unsicher")
@@ -300,6 +305,8 @@ def create_handler(store: NegativReviewStore):
             self.wfile.write(koerper)
 
         def do_GET(self) -> None:
+            if not require_loopback_host(self):
+                return
             pfad = urllib.parse.urlparse(self.path).path
             try:
                 if pfad == "/":
@@ -319,12 +326,16 @@ def create_handler(store: NegativReviewStore):
                 self._senden(500, "text/plain; charset=utf-8", str(fehler).encode("utf-8"))
 
         def do_POST(self) -> None:
+            if not require_loopback_host(self):
+                return
+            body = read_json_body(self)
+            if body is None:
+                return
             if urllib.parse.urlparse(self.path).path != "/urteil":
                 self._senden(404, "text/plain; charset=utf-8", b"unbekannt")
                 return
             try:
-                laenge = int(self.headers.get("Content-Length") or 0)
-                daten = json.loads(self.rfile.read(laenge).decode("utf-8"))
+                daten = json.loads(body.decode("utf-8"))
                 store.urteilen(int(daten["nummer"]), str(daten["urteil"]))
                 self._senden(200, "application/json; charset=utf-8", b'{"ok":true}')
             except Exception as fehler:

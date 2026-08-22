@@ -102,7 +102,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         frames.mkdir()
         lauf = subprocess.run(
             [str(FFMPEG), "-v", "error", "-y", "-i", str(video), "-vf", f"fps={args.fps:g}",
-             "-q:v", "3", str(frames / "f%06d.jpg")], capture_output=True, text=True)
+             "-q:v", "3", str(frames / "f%06d.jpg")],
+            capture_output=True, text=True, timeout=2 * 60 * 60)
         if lauf.returncode != 0:
             # Ein technischer Fehler ist kein "nichts gefunden".
             raise SystemExit(f"ffmpeg fehlgeschlagen bei {video}: {lauf.stderr.strip()[:300]}")
@@ -200,7 +201,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             [str(FFMPEG), "-v", "error", "-y", "-ss", f"{von:.2f}", "-i", s["video"],
              "-t", f"{dauer:.2f}", "-an", "-c:v", "libx264", "-preset", "veryfast",
              "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
-             str(arbeit / clip)], capture_output=True)
+             str(arbeit / clip)], capture_output=True, timeout=5 * 60)
         # Blind: weder Konfidenz noch Haltung noch Sekunde im Fall.
         faelle.append({"nummer": nr, "bild": f"bilder/{nr:03d}.jpg",
                        "bild_sha256": hashlib.sha256(s["bild_bytes"]).hexdigest(),

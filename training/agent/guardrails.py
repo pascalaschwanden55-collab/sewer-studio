@@ -12,7 +12,6 @@ import socket
 import subprocess
 import urllib.error
 import urllib.request
-from pathlib import Path
 from typing import Optional
 
 from config import (
@@ -92,22 +91,4 @@ def assert_eval_split_allowed(split: str) -> None:
         raise GuardrailViolation(
             f"Split '{split}' ist versiegelt (Abnahme/Gold). Der Agent darf ausschliesslich "
             "auf Dev-Val messen. Die Abnahme laeuft manuell je Release-Kandidat."
-        )
-
-
-# ── Pfad-Sandbox (Schreibzugriffe eingrenzen) ────────────────────────────────
-def path_is_within(child: Path, parent: Path) -> bool:
-    """True, wenn 'child' innerhalb von 'parent' liegt (verhindert Streu-Schreibzugriffe)."""
-    try:
-        Path(child).resolve().relative_to(Path(parent).resolve())
-        return True
-    except (ValueError, OSError):
-        return False
-
-
-def assert_write_allowed(target: Path, allowed_root: Path) -> None:
-    """Schreibziele muessen innerhalb des erlaubten Wurzelordners (z.B. reports/) liegen."""
-    if not path_is_within(target, allowed_root):
-        raise GuardrailViolation(
-            f"Schreibziel '{target}' liegt ausserhalb des erlaubten Ordners '{allowed_root}'."
         )

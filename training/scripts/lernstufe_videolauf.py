@@ -108,7 +108,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     lauf = subprocess.run(
         [str(FFMPEG), "-v", "error", "-i", str(args.video), "-vf", f"fps={args.fps:g}",
          "-q:v", "3", str(arbeit / "frames" / "f%06d.jpg")],
-        capture_output=True, text=True)
+        capture_output=True, text=True, timeout=2 * 60 * 60)
     if lauf.returncode != 0:
         raise SystemExit(f"ffmpeg fehlgeschlagen: {lauf.stderr.strip()[:300]}")
 
@@ -137,7 +137,7 @@ def main(argv: Sequence[str] | None = None) -> int:
              "-t", f"{dauer:.2f}", "-an", "-c:v", "libx264", "-preset", "veryfast",
              "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
              str(arbeit / "clips" / name)],
-            capture_output=True)
+            capture_output=True, timeout=5 * 60)
         s["nummer"] = nr
         s["clip"] = name
 

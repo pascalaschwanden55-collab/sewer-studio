@@ -164,7 +164,11 @@ public static class AiStartupService
                     "training",
                     "models",
                     "candidates")
-            });
+            },
+            SidecarHeadersProvider: () => BuildSidecarHeaders(
+                platform.SidecarUrl,
+                platform.SidecarToken,
+                sidecarTokens));
 
         var result = await AiStartupOrchestrator.StartAsync(input, launcher, progress, ct)
             .ConfigureAwait(false);

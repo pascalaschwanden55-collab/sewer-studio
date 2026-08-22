@@ -78,25 +78,52 @@ def is_allowed_local_host(value):
     return host in ("localhost", "127.0.0.1", "::1")
 
 
-def is_allowed_same_origin(value):
+def is_allowed_same_origin(value, request_host):
     if not value:
-        return True
+        return False
     try:
         parsed = urllib.parse.urlparse(value)
     except Exception:
         return False
-    return parsed.scheme in ("http", "https") and is_allowed_local_host(parsed.netloc)
+    return (
+        parsed.scheme == "http"
+        and is_allowed_local_host(parsed.netloc)
+        and parsed.netloc.lower() == (request_host or "").strip().lower()
+    )
+
+
+def has_allowed_browser_context(headers):
+    """Akzeptiert sensible GETs nur aus der lokal geladenen Werkzeugseite."""
+    request_host = headers.get("Host", "")
+    fetch_site = (headers.get("Sec-Fetch-Site") or "").strip().lower()
+    origin = headers.get("Origin")
+    referer = headers.get("Referer")
+
+    if fetch_site and fetch_site not in ("same-origin", "none"):
+        return False
+    if origin and not is_allowed_same_origin(origin, request_host):
+        return False
+    if referer and not is_allowed_same_origin(referer, request_host):
+        return False
+
+    return fetch_site in ("same-origin", "none") or bool(origin or referer)
 
 
 def require_post_auth(handler):
-    if not is_allowed_local_host(handler.headers.get("Host", "")):
+    request_host = handler.headers.get("Host", "")
+    if not is_allowed_local_host(request_host):
         return False, "ungueltiger Host"
-    if handler.headers.get("X-Video-Label-Token", "") != VIDEO_LABEL_TOKEN:
+    provided = handler.headers.get("X-Video-Label-Token", "")
+    if not secrets.compare_digest(provided.encode("utf-8"), VIDEO_LABEL_TOKEN.encode("utf-8")):
         return False, "ungueltiges Token"
-    if not is_allowed_same_origin(handler.headers.get("Origin")):
+    if not is_allowed_same_origin(handler.headers.get("Origin"), request_host):
         return False, "ungueltiger Origin"
-    if not is_allowed_same_origin(handler.headers.get("Referer")):
+    referer = handler.headers.get("Referer")
+    if referer and not is_allowed_same_origin(referer, request_host):
         return False, "ungueltiger Referer"
+    fetch_site = (handler.headers.get("Sec-Fetch-Site") or "").strip().lower()
+    if fetch_site and fetch_site != "same-origin":
+        return False, "ungueltiger Browser-Kontext"
     return True, ""
 
 
@@ -412,6 +439,10 @@ class Handler(BaseHTTPRequestHandler):
 
         u = urllib.parse.urlparse(self.path)
         q = urllib.parse.parse_qs(u.query)
+        sensitive_routes = ("/session.json", "/findings.json", "/clip", "/trainframe")
+        if u.path in sensitive_routes and not has_allowed_browser_context(self.headers):
+            return self._send(403, {"error": "ungueltiger Browser-Kontext"})
+
         if u.path in ("/", "/index.html"):
             with open(os.path.join(HERE, "app.html"), "rb") as fh:
                 self._send(200, fh.read(), "text/html; charset=utf-8")

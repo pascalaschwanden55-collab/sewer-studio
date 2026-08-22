@@ -96,7 +96,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         lauf = subprocess.run(
             [str(FFMPEG), "-v", "error", "-y", "-i", str(args.video), "-vf", f"fps={args.fps:g}",
-             "-q:v", "3", str(arbeit / "f%06d.jpg")], capture_output=True, text=True)
+             "-q:v", "3", str(arbeit / "f%06d.jpg")],
+            capture_output=True, text=True, timeout=2 * 60 * 60)
         if lauf.returncode != 0:
             raise SystemExit(f"Video nicht lesbar: {lauf.stderr.strip()[:200]}")
         bilder = sorted(arbeit.glob("f*.jpg"))

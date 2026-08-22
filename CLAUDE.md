@@ -333,8 +333,25 @@ zurueckgedreht werden:
 - **`async void`:** `VsaCodeExplorerWindow.ApplyAndCloseAsync` ist ein `Task`; die
   Aufrufer gehen ueber `StartApplyAndClose`, das Ausnahmen anzeigt statt die Oberflaeche
   zu beenden.
-- **Uebersprungene Tests:** `UebersprungeneTestsWaechterTests` haelt die sechs zulaessigen
+- **Uebersprungene Tests:** `UebersprungeneTestsWaechterTests` haelt die sieben zulaessigen
   Skip-Stellen namentlich fest. Ein neuer oder entfernter Skip macht den Waechter rot.
+
+### Nachaudit 2026-08-22 — verifizierte Randhaertungen
+
+- Der IBAK-FDB-Import laedt `fbclient.dll` nur noch aus dem Programmordner. Eine DLL
+  aus einem Kunden- oder Importordner wird nie als nativer Treiber verwendet.
+- Die acht zuvor ungeschuetzten Review-Server unter `tools/EvalVisibilityReview`
+  pruefen nun den Loopback-Host. POST akzeptiert nur JSON mit deklarierter Laenge
+  und hoechstens 64 KiB; ihre gemeinsame Regel liegt in
+  `review_server_security.py`.
+- Der KI-Erststart liest den Sidecar-Token nach dem Prozessstart fuer jeden
+  Health-Versuch neu. Dadurch funktioniert auch ein Token, den der Sidecar beim
+  ersten Start erst auf die Platte schreibt.
+- Blockierende Trainingsskripte besitzen endliche Subprocess-Zeitlimits.
+  `osd_hd_validierung_vorbereiten.py` ersetzt vorhandene Ziele nur mit `--force`
+  und eigenem Arbeitsmarker; fremde Ordner und Verknuepfungen bleiben unangetastet.
+- `TrainingCenterViewModel` gibt seinen eigenen Knowledge-Base-HTTP-Client beim
+  Schliessen des Fensters frei. Dispose ist mehrfach sicher aufrufbar.
 
 Nachgelagerte Grossumbauten vom 2026-08-14:
 
@@ -359,7 +376,7 @@ dotnet test AuswertungPro.sln
 ```
 
 `AuswertungPro.sln` enthaelt die vier produktiven Projekte, die vier Testprojekte
-und alle 43 `tools/**/*.csproj`. Neue Werkzeugprojekte sofort aufnehmen, damit
+und alle 44 `tools/**/*.csproj`. Neue Werkzeugprojekte sofort aufnehmen, damit
 verschobene Klassen oder Projektverweise im normalen Release-Build sichtbar brechen.
 
 ## Wichtige Klassen
@@ -675,6 +692,42 @@ Ausgewaehlte Kostenrechner-Zeilen mit negativer Menge oder negativem Preis werde
 weder summiert noch gespeichert, uebernommen oder exportiert. NPK-Codes werden in
 CSV und Excel als Text ausgegeben, damit etwa `612.110` nicht zu `612.11` gekuerzt
 wird.
+
+Die Haltungs- und Schachtberichte verwenden die datenfreien Vorlagen
+`Export_Vorlage/Haltungen.xlsx` und `Export_Vorlage/Schächte.xlsx`. Ihre lesbare,
+reproduzierbare Quelle liegt unter `tools/ExcelVorlagenBauer/`; die dort gepinnten
+Werkzeuge erzeugen Logo, sechs Diagramme, Kennzahlenformeln, Bedeutungsfarben,
+Druckeinrichtung und genau eine gestaltete Musterzeile. Titel, Kopfzeile und Daten
+beginnen verbindlich in den Zeilen 25, 26 und 27. Formeln und bedingte Formatierung
+reichen bis Zeile 5000, deshalb lehnt der Export mehr als 4'974 Datensaetze klar ab.
+Beide im Bestand belegten Pruefresultat-Familien werden gezaehlt und gefaerbt, ohne
+gespeicherte Werte umzudeuten.
+
+`ExcelTemplateExportService` fuellt ausschliesslich eine geladene Arbeitsmappe:
+fehlende Werte bleiben echte Leerzellen, Kennungen und Datumsangaben bleiben Text,
+definierte Mengen und Kosten werden als Zahlen geschrieben. Ein nichtleerer,
+ungueltiger Zahlenwert blockiert den Export mit Zeile und Spalte; ein bestehendes
+Ausgabeziel bleibt dabei unveraendert. Schachtspalten verwenden einen expliziten
+Aliasvertrag. Die Linkspalte liest der Reihe nach `Link`, `PDF_Path`, `PDF_Eigen` und
+`PDF_All`. Relative Projektverweise werden mit dem beim Start gebundenen Projektpfad
+zu absoluten Dateilinks aufgeloest; Pfadausbrueche bleiben unanklickbarer Text. Der
+Dienst schreibt zuerst eine Temp-Datei im Zielordner, prueft XLSX-Pflichtteile und
+Blatt erneut und veroeffentlicht erst danach. Die additiven
+`IExcelExportService`-Overloads mit `CancellationToken` pruefen den Abbruch beim
+Laden, je Datensatz und an jeder Veroeffentlichungsgrenze. Ein Abbruch waehrend des
+synchronen ClosedXML-Schreibens wird am naechsten sicheren Punkt wirksam: Die
+Temp-Datei wird entfernt und ein bestehendes Ausgabeziel bleibt unveraendert. Die
+Vorlage darf nie selbst Ziel sein und bleibt bytegleich.
+
+Der Haltungs-Export zieht abgeleitete Kosten nur auf einer unabhaengigen
+`HoldingExcelExportSnapshotFactory`-Kopie nach. Das geoeffnete Projekt, seine
+Feldmetadaten, Zeitstempel und sein Dirty-Status bleiben durch den reinen Export
+unveraendert. Beide Exporte pruefen die ausgelieferte Vorlage vor Ziel- und
+Kostenarbeit. Eine fehlende Vorlage oder unlesbare Kostendaten erscheinen bewusst
+nur einmal als blockierender Dialog; Status und Ergebnistext werden weiterhin gesetzt.
+`ExcelExportVorlagentreueTests` schuetzen Datenfreiheit, Formeln, Diagramme, Farben,
+Logo, Fixierung, Druck und Neuberechnung fuer beide Blaetter.
+
 Die drei Stammdaten-Stores lehnen `null`-Strukturen, doppelte normalisierte
 Kosten-/Vorlagen-Identitaeten und negative Mengen ab. Vor jedem Save wird auch eine
 vorhandene Override-Datei neu gelesen; ein frisch erzeugter Store darf deshalb keine

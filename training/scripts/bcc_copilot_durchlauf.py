@@ -106,7 +106,7 @@ def bilder_holen(ffmpeg: Path, video: Path, ziel: Path, fps: float) -> list[tupl
     ergebnis = subprocess.run(
         [str(ffmpeg), "-v", "error", "-i", str(video),
          "-vf", f"fps={fps:g}", "-q:v", "3", str(ziel / "f%06d.jpg")],
-        capture_output=True, text=True)
+        capture_output=True, text=True, timeout=2 * 60 * 60)
     if ergebnis.returncode != 0:
         raise SystemExit(f"ffmpeg ist fehlgeschlagen: {ergebnis.stderr.strip()}")
 
@@ -228,7 +228,7 @@ def clip_schneiden(ffmpeg: Path, video: Path, von: float, bis: float, ziel: Path
          "-i", str(video), "-t", f"{dauer:.2f}", "-an",
          "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
          "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(ziel)],
-        capture_output=True, text=True)
+        capture_output=True, text=True, timeout=5 * 60)
     return ergebnis.returncode == 0 and ziel.is_file() and ziel.stat().st_size > 0
 
 

@@ -112,6 +112,7 @@ def clip_schneiden(ffmpeg: Path, fall: dict, ziel: Path) -> bool:
         ],
         capture_output=True,
         text=True,
+        timeout=5 * 60,
     )
     return ergebnis.returncode == 0 and ziel.is_file() and ziel.stat().st_size > 0
 

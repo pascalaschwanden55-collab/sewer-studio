@@ -77,10 +77,10 @@ public sealed class UebersprungeneTestsWaechterTests
     }
 
     [Fact]
-    public void Die_Zahl_der_uebersprungenen_Stellen_bleibt_bei_sechs()
+    public void Die_Zahl_der_uebersprungenen_Stellen_bleibt_bei_sieben()
     {
-        // Harte Zahl statt Gefuehl: 4 im .NET-Lauf sichtbare Skips plus zwei
-        // Attribut-Faelle, die je nach Umgebung greifen.
+        // Harte Zahl statt Gefuehl: vier im .NET-Lauf sichtbare Skips plus drei
+        // Attribut-/Mess-Faelle, die je nach Umgebung greifen.
         Assert.Equal(Bekannt.Length, FindeAlleSkips().Count);
     }
 

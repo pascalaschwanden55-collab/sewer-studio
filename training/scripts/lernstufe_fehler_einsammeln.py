@@ -134,7 +134,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         frames.mkdir()
         lauf = subprocess.run(
             [str(FFMPEG), "-v", "error", "-y", "-i", q["video"], "-vf", f"fps={args.fps:g}",
-             "-q:v", "3", str(frames / "f%06d.jpg")], capture_output=True, text=True)
+             "-q:v", "3", str(frames / "f%06d.jpg")],
+            capture_output=True, text=True, timeout=2 * 60 * 60)
         if lauf.returncode != 0:
             # Kein stiller Ausfall: ein unlesbares Video ist kein "nichts gefunden".
             print(f"  [{i}/{len(quellen)}] {q['haltung']}: Video unlesbar, uebersprungen", flush=True)

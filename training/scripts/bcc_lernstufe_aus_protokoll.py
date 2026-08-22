@@ -190,7 +190,7 @@ def bild_holen(ffmpeg: Path, video: Path, sekunde: float, ziel: Path) -> bool:
     lauf = subprocess.run(
         [str(ffmpeg), "-v", "error", "-y", "-ss", f"{sekunde:.3f}", "-i", str(video),
          "-frames:v", "1", "-q:v", "2", str(ziel)],
-        capture_output=True, text=True)
+        capture_output=True, text=True, timeout=2 * 60)
     return lauf.returncode == 0 and ziel.is_file() and ziel.stat().st_size > 0
 
 
@@ -199,7 +199,7 @@ def videodauer(ffmpeg: Path, video: Path) -> float | None:
     lauf = subprocess.run(
         [str(ffprobe), "-v", "error", "-show_entries", "format=duration",
          "-of", "default=nw=1:nk=1", str(video)],
-        capture_output=True, text=True)
+        capture_output=True, text=True, timeout=30)
     zeilen = [z.strip() for z in lauf.stdout.splitlines() if z.strip()]
     try:
         return float(zeilen[-1])

@@ -16,6 +16,11 @@ from pathlib import Path
 from typing import Callable
 from urllib.parse import parse_qs, quote, urlparse
 
+try:
+    from .review_server_security import read_json_body, require_loopback_host
+except ImportError:  # Direkter Skriptstart aus diesem Ordner
+    from review_server_security import read_json_body, require_loopback_host
+
 
 REVIEW_FIELDS = (
     "code_decision",
@@ -564,6 +569,8 @@ def make_handler(store: EvalMetadataReviewStore, reviewer: str):
         server_version = "SewerStudioEvalMetadataReview/1.0"
 
         def do_GET(self) -> None:  # noqa: N802
+            if not require_loopback_host(self):
+                return
             parsed = urlparse(self.path)
             if parsed.path == "/":
                 self._send_html(html)
@@ -577,12 +584,16 @@ def make_handler(store: EvalMetadataReviewStore, reviewer: str):
             self.send_error(404, "Nicht gefunden")
 
         def do_POST(self) -> None:  # noqa: N802
+            if not require_loopback_host(self):
+                return
+            body = read_json_body(self)
+            if body is None:
+                return
             if urlparse(self.path).path != "/api/review":
                 self.send_error(404, "Nicht gefunden")
                 return
             try:
-                length = int(self.headers.get("Content-Length", "0"))
-                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                payload = json.loads(body.decode("utf-8"))
                 state = store.set_review(
                     str(payload.get("id", "")),
                     payload.get("expected_severity"),

@@ -42,7 +42,7 @@ KEY_CLASSES = ["BAI", "BAB", "BBA", "BDD", "BAJ"]
 
 def run(cmd):
     print(">>", " ".join(str(c) for c in cmd), flush=True)
-    if subprocess.run(cmd).returncode != 0:
+    if subprocess.run(cmd, timeout=12 * 60 * 60).returncode != 0:
         raise SystemExit(f"Schritt fehlgeschlagen: {cmd}")
 
 

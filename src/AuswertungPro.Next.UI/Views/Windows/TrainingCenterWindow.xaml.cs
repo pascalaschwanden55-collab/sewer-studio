@@ -174,6 +174,7 @@ public partial class TrainingCenterWindow : Window
         Closed += (_, _) =>
         {
             Vm.PropertyChanged -= OnVmPropertyChanged;
+            Vm.Dispose();
             // Gibt den bedarfsgesteuert erzeugten SAM-Dienst (eigener HttpClient) frei.
             _trainingServices.Dispose();
         };

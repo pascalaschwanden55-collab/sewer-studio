@@ -13,6 +13,11 @@ from pathlib import Path
 from html import escape
 from urllib.parse import parse_qs, quote, urlparse
 
+try:
+    from .review_server_security import read_json_body, require_loopback_host
+except ImportError:  # Direkter Skriptstart aus diesem Ordner
+    from review_server_security import read_json_body, require_loopback_host
+
 
 VALID_LABELS = {"ja", "nein", "unsicher"}
 LABEL_ALIASES = {
@@ -189,6 +194,8 @@ def make_handler(
         server_version = "SewerStudioVisibilityReview/1.0"
 
         def do_GET(self) -> None:  # noqa: N802
+            if not require_loopback_host(self):
+                return
             parsed = urlparse(self.path)
             if parsed.path == "/":
                 self._send_html(index_html)
@@ -203,13 +210,17 @@ def make_handler(
             self.send_error(404, "Nicht gefunden")
 
         def do_POST(self) -> None:  # noqa: N802
+            if not require_loopback_host(self):
+                return
+            body = read_json_body(self)
+            if body is None:
+                return
             parsed = urlparse(self.path)
             if parsed.path != "/api/label":
                 self.send_error(404, "Nicht gefunden")
                 return
             try:
-                length = int(self.headers.get("Content-Length", "0"))
-                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                payload = json.loads(body.decode("utf-8"))
                 state = store.set_label(
                     str(payload.get("image_name", "")),
                     str(payload.get("visibility_label", "")),

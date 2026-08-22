@@ -17,6 +17,11 @@ from pathlib import Path
 from typing import Sequence
 from urllib.parse import parse_qs, urlparse
 
+try:
+    from .review_server_security import read_json_body, require_loopback_host
+except ImportError:  # Direkter Skriptstart aus diesem Ordner
+    from review_server_security import read_json_body, require_loopback_host
+
 URTEILE = ("bogen", "kein_bogen", "unsicher")
 
 
@@ -175,7 +180,7 @@ async function urteil(u){
     body:JSON.stringify({fall_id:aktuell.fall_id,urteil:u})});
   laden();
 }
-async function zurueck(){ await fetch('/zurueck',{method:'POST'}); laden(); }
+async function zurueck(){ await fetch('/zurueck',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); laden(); }
 document.addEventListener('keydown',e=>{
   if(e.key==='1')urteil('bogen'); if(e.key==='2')urteil('kein_bogen'); if(e.key==='3')urteil('unsicher');
 });
@@ -197,6 +202,8 @@ def create_server(store: FehlalarmReviewStore, port: int = 8776) -> ThreadingHTT
             self.wfile.write(roh)
 
         def do_GET(self) -> None:  # noqa: N802
+            if not require_loopback_host(self):
+                return
             weg = urlparse(self.path)
             if weg.path == "/":
                 roh = SEITE.encode("utf-8")
@@ -225,6 +232,11 @@ def create_server(store: FehlalarmReviewStore, port: int = 8776) -> ThreadingHTT
             self._json({"fehler": "unbekannt"}, 404)
 
         def do_POST(self) -> None:  # noqa: N802
+            if not require_loopback_host(self):
+                return
+            body = read_json_body(self)
+            if body is None:
+                return
             weg = urlparse(self.path)
             if weg.path == "/zurueck":
                 self._json(store.zuruecknehmen())
@@ -232,8 +244,7 @@ def create_server(store: FehlalarmReviewStore, port: int = 8776) -> ThreadingHTT
             if weg.path != "/urteil":
                 self._json({"fehler": "unbekannt"}, 404)
                 return
-            laenge = int(self.headers.get("Content-Length") or 0)
-            anfrage = json.loads(self.rfile.read(laenge) or b"{}")
+            anfrage = json.loads(body or b"{}")
             try:
                 self._json(store.entscheiden(anfrage.get("fall_id", ""), anfrage.get("urteil", "")))
             except ValueError as fehler:

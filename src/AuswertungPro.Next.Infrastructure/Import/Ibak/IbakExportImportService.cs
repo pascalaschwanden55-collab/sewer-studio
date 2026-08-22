@@ -494,7 +494,7 @@ public sealed class IbakExportImportService : IIbakImportService
             using var workingCopy = IbakFdbWorkingCopy.Create(fdbPath);
             var cs = _connectionOptions.CreatePhotoMap(
                 workingCopy.DatabasePath,
-                TryFindFbClient(exportRoot));
+                FindBundledFbClient());
 
             using var conn = new FbConnection(cs.ToString());
             conn.Open();
@@ -566,7 +566,7 @@ public sealed class IbakExportImportService : IIbakImportService
         }
         catch (Exception ex)
         {
-            messages.Add($"IBAK FDB: Zugriff fehlgeschlagen ({ex.Message}). Fallback auf Dateinamen. Falls no client library: Firebird Client installieren oder fbclient.dll bereitstellen.");
+            messages.Add($"IBAK FDB: Zugriff fehlgeschlagen ({ex.Message}). Fallback auf Dateinamen. Falls no client library: Firebird Client installieren oder fbclient.dll im Programmordner bereitstellen.");
         }
 
         return result;
@@ -639,20 +639,13 @@ public sealed class IbakExportImportService : IIbakImportService
         return preferred ?? candidates[0];
     }
 
-    private static string? TryFindFbClient(string exportRoot)
+    internal static string? FindBundledFbClient(
+        string? applicationDirectory = null,
+        Func<string, bool>? fileExists = null)
     {
-        var candidates = new[]
-        {
-            Path.Combine(exportRoot, "fbclient.dll"),
-            Path.Combine(exportRoot, "Data", "fbclient.dll"),
-            Path.Combine(AppContext.BaseDirectory, "fbclient.dll")
-        };
-
-        foreach (var c in candidates)
-            if (File.Exists(c))
-                return c;
-
-        return null;
+        var trustedDirectory = applicationDirectory ?? AppContext.BaseDirectory;
+        var candidate = Path.Combine(trustedDirectory, "fbclient.dll");
+        return (fileExists ?? File.Exists)(candidate) ? candidate : null;
     }
 
     // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser

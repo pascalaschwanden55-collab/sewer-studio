@@ -30,6 +30,7 @@ FFMPEG_STANDARD = Path(
     r"\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe"
     r"\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe"
 )
+WORKSPACE_MARKER = ".sewerstudio-osd-hd-validierung"
 
 
 def werkzeug(pfad: Path, name: str) -> Path:
@@ -39,12 +40,32 @@ def werkzeug(pfad: Path, name: str) -> Path:
     return kandidat
 
 
+def ziel_vorbereiten(ziel: Path, force: bool) -> None:
+    """Loescht nur einen von diesem Werkzeug markierten alten Arbeitsordner."""
+    ziel = Path(ziel)
+    if ziel.exists():
+        is_junction = getattr(ziel, "is_junction", lambda: False)()
+        if ziel.is_symlink() or is_junction:
+            raise SystemExit(f"Ziel ist eine Verknuepfung und wird nicht veraendert: {ziel}")
+        if not force:
+            raise SystemExit(
+                f"Ziel existiert bereits: {ziel}. Zum Ersetzen ausdruecklich --force verwenden.")
+        marker = ziel / WORKSPACE_MARKER
+        if not marker.is_file():
+            raise SystemExit(
+                f"Ziel besitzt keinen SewerStudio-Arbeitsmarker und wird nicht geloescht: {ziel}")
+        shutil.rmtree(ziel)
+
+    (ziel / "frames").mkdir(parents=True)
+    (ziel / WORKSPACE_MARKER).write_text("osd-hd-validierung-v1\n", encoding="utf-8")
+
+
 def videodaten(ffprobe: Path, video: Path) -> tuple[float, int, int] | None:
     ergebnis = subprocess.run(
         [str(ffprobe), "-v", "error", "-select_streams", "v:0",
          "-show_entries", "stream=width,height", "-show_entries", "format=duration",
          "-of", "default=nw=1:nk=1", str(video)],
-        capture_output=True, text=True)
+        capture_output=True, text=True, timeout=30)
     zeilen = [z.strip() for z in ergebnis.stdout.splitlines() if z.strip()]
     if len(zeilen) < 3:
         return None
@@ -67,6 +88,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--min-breite", type=int, default=1280)
     parser.add_argument("--saat", type=int, default=20260808)
     parser.add_argument("--ffmpeg", type=Path, default=FFMPEG_STANDARD)
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Vorhandenen, von diesem Werkzeug markierten Zielordner ersetzen.")
     parser.add_argument(
         "--ausschliessen", type=Path, default=None,
         help="Manifest eines bestehenden Bestands; dessen Haltungen werden uebergangen.")
@@ -110,9 +135,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not gewaehlt:
         raise SystemExit("Kein passendes HD-Video gefunden.")
 
-    if args.ziel.exists():
-        shutil.rmtree(args.ziel)
-    (args.ziel / "frames").mkdir(parents=True)
+    ziel_vorbereiten(args.ziel, args.force)
 
     from osd_meter_leser import lese_meter, plausibilisiere_sequenz, rendere_templates
 
@@ -131,7 +154,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             ergebnis = subprocess.run(
                 [str(ffmpeg), "-v", "error", "-ss", f"{sekunde:.2f}", "-i", str(video),
                  "-frames:v", "1", "-q:v", "2", str(ziel)],
-                capture_output=True, text=True)
+                capture_output=True, text=True, timeout=2 * 60)
             if ergebnis.returncode != 0 or not ziel.is_file():
                 nummer -= 1
                 continue
