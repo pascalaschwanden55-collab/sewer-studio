@@ -35,6 +35,7 @@ public partial class DossierAreaWindow : Window
     private void Load()
     {
         TitleBox.Text = _target.AreaTitle;
+        AuthorsBox.Text = _target.Authors;
         ExecutionBox.Text = _target.ExecutionDate;
         ContactBox.Text = _target.ContactPerson;
         ContractorBox.Text = _target.Contractor;
@@ -49,6 +50,7 @@ public partial class DossierAreaWindow : Window
     private void OnSave(object sender, RoutedEventArgs e)
     {
         _target.AreaTitle = Trim(TitleBox.Text);
+        _target.Authors = Trim(AuthorsBox.Text);
         _target.ExecutionDate = Trim(ExecutionBox.Text);
         _target.ContactPerson = Trim(ContactBox.Text);
         _target.Contractor = Trim(ContractorBox.Text);

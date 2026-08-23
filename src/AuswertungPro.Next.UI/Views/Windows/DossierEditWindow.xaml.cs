@@ -1,4 +1,8 @@
 using System;
+using System.Collections.ObjectModel;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Windows;
 
 using AuswertungPro.Next.Domain.Models.Dossiers;
@@ -13,6 +17,8 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class DossierEditWindow : Window
 {
     private readonly DossierDefinition _target;
+    private readonly ObservableCollection<DossierOwnerRow> _owners = new();
+    private string _planPath = "";
 
     private DossierEditWindow(DossierDefinition target, bool isNew)
     {
@@ -67,6 +73,26 @@ public partial class DossierEditWindow : Window
         HouseConnectionOverrideBox.Text = _target.HouseConnectionTextOverride ?? "";
         StormWaterOverrideBox.Text = _target.StormWaterTextOverride ?? "";
         DeadlineOverrideBox.Text = _target.ResponseDeadlineOverride ?? "";
+
+        _owners.Clear();
+        foreach (var owner in _target.Owners)
+        {
+            // Arbeitskopie: ein Abbrechen darf die gespeicherten Zeilen nicht veraendern.
+            _owners.Add(new DossierOwnerRow
+            {
+                HouseNumber = owner.HouseNumber,
+                ParcelNumber = owner.ParcelNumber,
+                Name = owner.Name,
+                Phone = owner.Phone,
+                Mail = owner.Mail,
+                Occupancy = owner.Occupancy
+            });
+        }
+
+        OwnersGrid.ItemsSource = _owners;
+
+        _planPath = _target.OverviewPlanPath;
+        ShowPlanPath();
     }
 
     private const string DefaultAttachmentList =
@@ -116,6 +142,15 @@ public partial class DossierEditWindow : Window
         _target.StormWaterTextOverride = NullIfEmpty(StormWaterOverrideBox.Text);
         _target.ResponseDeadlineOverride = NullIfEmpty(DeadlineOverrideBox.Text);
 
+        // Das Raster gibt die letzte Zelle erst beim Fokuswechsel frei.
+        OwnersGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Row, true);
+
+        _target.Owners = _owners
+            .Where(owner => owner.HasContent)
+            .ToList();
+
+        _target.OverviewPlanPath = _planPath;
+
         DialogResult = true;
     }
 
@@ -127,5 +162,58 @@ public partial class DossierEditWindow : Window
     {
         var trimmed = value?.Trim() ?? "";
         return trimmed.Length == 0 ? null : trimmed;
+    }
+
+    private void OnAddOwner(object sender, RoutedEventArgs e)
+    {
+        var row = new DossierOwnerRow
+        {
+            // Die erste Zeile uebernimmt die Angaben der Liegenschaft als Vorschlag.
+            HouseNumber = _owners.Count == 0 ? Trim(HouseBox.Text) : "",
+            ParcelNumber = _owners.Count == 0 ? Trim(ParcelBox.Text) : ""
+        };
+
+        _owners.Add(row);
+        OwnersGrid.SelectedItem = row;
+    }
+
+    private void OnRemoveOwner(object sender, RoutedEventArgs e)
+    {
+        if (OwnersGrid.SelectedItem is DossierOwnerRow row)
+            _owners.Remove(row);
+    }
+
+    private void OnChoosePlan(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Übersichtsplan wählen",
+            Filter = "Bilder (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg"
+        };
+
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        _planPath = dialog.FileName;
+        ShowPlanPath();
+    }
+
+    private void OnClearPlan(object sender, RoutedEventArgs e)
+    {
+        _planPath = "";
+        ShowPlanPath();
+    }
+
+    private void ShowPlanPath()
+    {
+        if (_planPath.Length == 0)
+        {
+            PlanPathText.Text = "Kein Bild gewählt — Kapitel 1 bleibt leer.";
+            return;
+        }
+
+        PlanPathText.Text = File.Exists(_planPath)
+            ? Path.GetFileName(_planPath)
+            : Path.GetFileName(_planPath) + "  (Datei nicht gefunden)";
     }
 }

@@ -107,6 +107,47 @@
                 <TextBlock Text="Objektbewohner (z.B. Mehrfamilienhaus)"/>
                 <TextBox x:Name="OccupancyBox"/>
 
+                <TextBlock Text="Eigentumsverhältnisse (Tabelle im Dossier)"
+                           Style="{StaticResource SectionStyle}"/>
+                <TextBlock Text="Eine Zeile je Eigentümer bzw. Hausnummer. Diese Zeilen erscheinen in Kapitel 2."/>
+
+                <DataGrid x:Name="OwnersGrid"
+                          Height="150"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Haus Nr." Width="70"
+                                            Binding="{Binding HouseNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Pz. Nr." Width="70"
+                                            Binding="{Binding ParcelNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Name" Width="*"
+                                            Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Telefon" Width="110"
+                                            Binding="{Binding Phone, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Mail" Width="140"
+                                            Binding="{Binding Mail, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Objektbewohner" Width="130"
+                                            Binding="{Binding Occupancy, UpdateSourceTrigger=PropertyChanged}"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <Button Content="+ Zeile" Padding="10,4" Click="OnAddOwner"/>
+                    <Button Content="Zeile entfernen" Padding="10,4" Margin="8,0,0,0"
+                            Click="OnRemoveOwner"/>
+                </StackPanel>
+
+                <TextBlock Text="Übersichtsplan (Bild für Kapitel 1)"
+                           Style="{StaticResource SectionStyle}"/>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Bild wählen…" Padding="10,4" Click="OnChoosePlan"/>
+                    <Button Content="Entfernen" Padding="10,4" Margin="8,0,0,0"
+                            Click="OnClearPlan"/>
+                </StackPanel>
+                <TextBlock x:Name="PlanPathText" TextWrapping="Wrap"/>
+
                 <TextBlock Text="Sanierung" Style="{StaticResource SectionStyle}"/>
 
                 <TextBlock Text="Bauvorgang für diese Liegenschaft"/>

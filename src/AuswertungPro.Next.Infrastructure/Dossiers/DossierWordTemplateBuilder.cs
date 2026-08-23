@@ -92,7 +92,19 @@ public static class DossierWordTemplateBuilder
         cell.AppendChild(new TableCellProperties(
             new TableCellWidth { Width = "5000", Type = TableWidthUnitValues.Pct }));
 
-        cell.AppendChild(Paragraph("{{Logo_Hinweis}}", size: 18, color: HintColor, italic: true));
+        // Logo links, Wappen rechts — die Anordnung des Vorbilds. Beide Bilder
+        // sind fest mitgeliefert und stecken in jedem Dossier.
+        var brandRow = new Table();
+        brandRow.AppendChild(new TableProperties(
+            new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct },
+            NoBorders()));
+        brandRow.AppendChild(new TableGrid(
+            new GridColumn { Width = "6000" }, new GridColumn { Width = "3000" }));
+        brandRow.AppendChild(new TableRow(
+            BorderlessCell(Paragraph("{{@Logo}}", size: 18)),
+            BorderlessCell(Paragraph(
+                "{{@Wappen}}", size: 18, alignment: JustificationValues.Right))));
+        cell.AppendChild(brandRow);
         cell.AppendChild(EmptyParagraph());
         cell.AppendChild(EmptyParagraph());
 
@@ -166,7 +178,7 @@ public static class DossierWordTemplateBuilder
 
         var meta = NewTable(3000, 6000, borders: false);
         meta.AppendChild(BorderlessRow("Erstellungsdatum:", "{{Datum_Lang}}"));
-        meta.AppendChild(BorderlessRow("Autoren:", "{{Autor}}"));
+        meta.AppendChild(BorderlessRow("Autoren:", "{{Autoren}}"));
         body.AppendChild(meta);
 
         body.AppendChild(EmptyParagraph());
@@ -179,7 +191,6 @@ public static class DossierWordTemplateBuilder
         toc.AppendChild(BorderlessRow("2.", "Eigentumsverhältnisse"));
         toc.AppendChild(BorderlessRow("3.", "Betroffene Abwasserleitungen"));
         toc.AppendChild(BorderlessRow("4.", "Informationen Sanierung"));
-        toc.AppendChild(BorderlessRow("5.", "Rückmeldung / Einverständnis"));
         body.AppendChild(toc);
 
         body.AppendChild(PageBreak());
@@ -191,10 +202,10 @@ public static class DossierWordTemplateBuilder
     {
         body.AppendChild(Paragraph("1.  Übersichtsplan Werkleitungen", size: 24, bold: true));
         body.AppendChild(EmptyParagraph());
+        // Das Planbild waehlt Pascal je Liegenschaft im Programm; hier steht
+        // nur die Stelle, an die es kommt.
         body.AppendChild(Paragraph(
-            "[Hier den Übersichtsplan einfügen: Register „Einfügen\" → „Bilder\". "
-            + "Diesen Hinweis danach löschen.]",
-            size: 20, color: HintColor, italic: true));
+            "{{@Uebersichtsplan}}", size: 20, alignment: JustificationValues.Center));
         body.AppendChild(PageBreak());
     }
 
@@ -209,9 +220,9 @@ public static class DossierWordTemplateBuilder
         var owner = NewTable(1400, 1400, 6200);
         owner.AppendChild(HeaderRow("Haus Nr.", "Pz. Nr.", "Eigentümer"));
         owner.AppendChild(BodyRow(
-            "{{Hausnummern}}",
-            "{{Parzellen}}",
-            "{{Eigentuemer_Detail}}"));
+            "{{#Eigentuemer}}{{Haus_Nr}}",
+            "{{Pz_Nr}}",
+            "{{Eigentuemer_Zelle}}"));
         body.AppendChild(owner);
 
         body.AppendChild(EmptyParagraph());
@@ -254,32 +265,8 @@ public static class DossierWordTemplateBuilder
         info.AppendChild(BodyRow("Meteorwasser", "{{Meteorwasser}}"));
         info.AppendChild(BodyRow("Bemerkungen", "{{Bemerkungen}}"));
         info.AppendChild(BodyRow("Beilagen", "{{Beilagen}}"));
+        info.AppendChild(ResponseRow());
         body.AppendChild(info);
-
-        body.AppendChild(EmptyParagraph());
-        body.AppendChild(EmptyParagraph());
-
-        // 5. Rueckmeldung
-        body.AppendChild(Paragraph("5.  Rückmeldung / Einverständnis Eigentümer", size: 24, bold: true));
-        body.AppendChild(EmptyParagraph());
-
-        var response = NewTable(9200);
-        response.AppendChild(BodyRow("{{Rueckmeldung}}"));
-        var signature = new TableCell();
-        signature.AppendChild(new TableCellProperties(
-            new TableCellWidth { Width = "5000", Type = TableWidthUnitValues.Pct }));
-        signature.AppendChild(EmptyParagraph());
-        signature.AppendChild(EmptyParagraph());
-
-        var signatureLines = NewTable(4400, 4400, borders: false);
-        signatureLines.AppendChild(BorderlessRow(
-            "..............................................",
-            ".............................................."));
-        signatureLines.AppendChild(BorderlessRow("Ort/Datum", "Unterschrift(en)"));
-        signature.AppendChild(signatureLines);
-        signature.AppendChild(EmptyParagraph());
-        response.AppendChild(new TableRow(signature));
-        body.AppendChild(response);
     }
 
     // ── Bausteine ─────────────────────────────────────────────────────────
@@ -386,6 +373,38 @@ public static class DossierWordTemplateBuilder
             row.AppendChild(cell);
         }
 
+        return row;
+    }
+
+    /// <summary>
+    /// Die letzte Zeile der Info-Tabelle: Rueckmeldung samt Unterschriftslinien.
+    /// Im Vorbild ist das keine eigene Seite, sondern eine Tabellenzeile.
+    /// </summary>
+    private static TableRow ResponseRow()
+    {
+        var row = new TableRow();
+
+        var label = new TableCell();
+        label.AppendChild(new TableCellProperties(
+            new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center }));
+        label.AppendChild(Paragraph("Rückmeldung / Einverständnis Eigentümer", size: 18));
+        row.AppendChild(label);
+
+        var content = new TableCell();
+        content.AppendChild(new TableCellProperties(
+            new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center }));
+        content.AppendChild(Paragraph("{{Rueckmeldung}}", size: 18));
+        content.AppendChild(EmptyParagraph());
+
+        var signatureLines = NewTable(4400, 4400, borders: false);
+        signatureLines.AppendChild(BorderlessRow(
+            "..............................................",
+            ".............................................."));
+        signatureLines.AppendChild(BorderlessRow("Ort/Datum", "Unterschrift(en)"));
+        content.AppendChild(signatureLines);
+        content.AppendChild(EmptyParagraph());
+
+        row.AppendChild(content);
         return row;
     }
 

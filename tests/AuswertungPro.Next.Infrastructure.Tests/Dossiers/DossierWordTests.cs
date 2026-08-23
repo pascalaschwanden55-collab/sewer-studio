@@ -222,6 +222,204 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         Assert.Contains("Keine Leitungen zugeordnet", text, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Schreibt_jede_Eigentuemerzeile_als_eigene_Tabellenzeile()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.Owners.Clear();
+        request.Dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "3",
+            ParcelNumber = "170",
+            Name = "Martin Muster",
+            Phone = "079 858 53 74",
+            Occupancy = "Einfamilienhaus"
+        });
+        request.Dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "4",
+            ParcelNumber = "171",
+            Name = "Anna Gisler",
+            Mail = "anna.gisler@example.ch"
+        });
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Martin Muster", text, StringComparison.Ordinal);
+        Assert.Contains("Anna Gisler", text, StringComparison.Ordinal);
+        Assert.Contains("Tel.: 079 858 53 74", text, StringComparison.Ordinal);
+        Assert.Contains("Objektbewohner: Einfamilienhaus", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+
+        // Beide Zeilen muessen wirklich EIGENE Tabellenzeilen sein — faellt
+        // beides in eine Zeile zusammen, bliebe der Test oben trotzdem gruen.
+        Assert.Equal(3, CountOwnerTableRows(result.FilePath!)); // Kopfzeile + 2 Datenzeilen
+    }
+
+    /// <summary>Zaehlt die Zeilen der Eigentuemertabelle, gefunden ueber ihre Kopfzeile "Haus Nr.".</summary>
+    private static int CountOwnerTableRows(string path)
+    {
+        using var document = WordprocessingDocument.Open(path, false);
+        var body = document.MainDocumentPart!.Document.Body!;
+
+        var table = body.Descendants<Table>().Single(t => t.Descendants<Text>()
+            .Any(text => text.Text.Contains("Haus Nr.", StringComparison.Ordinal)));
+
+        return table.Elements<TableRow>().Count();
+    }
+
+    [Fact]
+    public async Task Ohne_Eigentuemerzeile_bleibt_ein_klarer_Hinweis_statt_eines_Platzhalters()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.Owners.Clear();
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Keine Eigentümerangaben erfasst", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Gefuellte_Eigentuemerfelder_speisen_das_Deckblatt_auch_wenn_es_Tabellenzeilen_gibt()
+    {
+        // Pascal kuerzt den Namen in der Tabelle sinnvoll ("Lubag AG"), die
+        // klassischen Felder tragen weiterhin Name und Adresse. Beides muss
+        // auf dem Deckblatt stehen, nicht nur der gekuerzte Tabellenname.
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.OwnerName = "Lubag AG";
+        request.Dossier.OwnerAddress = "Landenbergstrasse 34, 6005 Luzern";
+        request.Dossier.Owners.Clear();
+        request.Dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "3+4+7+8",
+            ParcelNumber = "762+756",
+            Name = "Lubag AG"
+        });
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Lubag AG", text, StringComparison.Ordinal);
+        Assert.Contains("Landenbergstrasse 34, 6005 Luzern", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Nur_Tabellenzeilen_ohne_klassische_Felder_speisen_ebenfalls_das_Deckblatt()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.OwnerName = "";
+        request.Dossier.OwnerAddress = "";
+        request.Dossier.Owners.Clear();
+        request.Dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "3",
+            ParcelNumber = "170",
+            Name = "Martin Muster"
+        });
+        request.Dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "4",
+            ParcelNumber = "171",
+            Name = "Anna Gisler"
+        });
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Martin Muster", text, StringComparison.Ordinal);
+        Assert.Contains("Anna Gisler", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Nimmt_die_Autoren_des_Gebiets_statt_des_Windows_Benutzers()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Area.Authors = "Pascal Aschwanden/";
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Pascal Aschwanden/", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Leere_Autoren_bleiben_leer_statt_den_Windows_Benutzernamen_zu_zeigen()
+    {
+        // "Lieber leer als falsch": auf diesem Rechner heisst der Benutzer
+        // "Besitzer" — das gehoert nicht in ein Dokument fuer den Eigentuemer.
+        var (request, templatePath) = BuildScenario();
+        request.Area.Authors = "";
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.DoesNotContain(Environment.UserName, text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Setzt_Logo_Wappen_und_Uebersichtsplan_als_Bilder_ein()
+    {
+        var (request, templatePath) = BuildScenario();
+
+        // Logo und Wappen liegen neben der Vorlage.
+        var vorlagenOrdner = Path.GetDirectoryName(templatePath)!;
+        File.WriteAllBytes(
+            Path.Combine(vorlagenOrdner, DossierWordTemplateExportService.LogoFileName),
+            TestImages.Png(716, 297));
+        File.WriteAllBytes(
+            Path.Combine(vorlagenOrdner, DossierWordTemplateExportService.CoatOfArmsFileName),
+            TestImages.Png(407, 491));
+
+        var planPfad = Path.Combine(_root, "plan.png");
+        File.WriteAllBytes(planPfad, TestImages.Png(1200, 1600));
+        request.Dossier.OverviewPlanPath = planPfad;
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        Assert.Equal(3, document.MainDocumentPart!.ImageParts.Count());
+
+        var text = ReadDocumentText(result.FilePath!);
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Fehlende_Bilder_erzeugen_trotzdem_ein_vollstaendiges_Dossier()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.OverviewPlanPath = Path.Combine(_root, "gibtesnicht.png");
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        // Die Datei entsteht trotzdem — aber Pascal darf nicht erst beim
+        // Eigentuemer merken, dass Kapitel 1 leer geblieben ist.
+        Assert.True(result.Success, result.Message);
+        Assert.Contains("Übersichtsplan", result.Message, StringComparison.Ordinal);
+
+        var text = ReadDocumentText(result.FilePath!);
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+        Assert.Contains("Erstfeld West", text, StringComparison.Ordinal);
+    }
+
     private (DossierExportRequest Request, string TemplatePath) BuildScenario(
         bool withHoldings = true)
     {
@@ -245,6 +443,16 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
             Occupancy = "Mehrfamilienhaus",
             ConstructionProcess = "Leitung 1 und 7 mittels Inliner sanieren."
         };
+
+        dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "3+4+7+8",
+            ParcelNumber = "762+756",
+            Name = "Lubag AG Landenbergstrasse 34, 6005 Luzern",
+            Phone = "041 360 00 50",
+            Mail = "sandro.sigrist@lubag.ch",
+            Occupancy = "Mehrfamilienhaus"
+        });
 
         var costs = new ProjectCostStore();
 
@@ -325,20 +533,15 @@ public sealed class DossierWordTemplateBuilderTests
     [Fact]
     public void Die_Vorlage_ist_eine_gueltige_Word_Datei_mit_allen_Platzhaltern()
     {
-        var bytes = DossierWordTemplateBuilder.Build();
-
-        using var stream = new MemoryStream(bytes);
-        using var document = WordprocessingDocument.Open(stream, false);
-
-        var text = string.Concat(
-            document.MainDocumentPart!.Document.Body!
-                .Descendants<Text>()
-                .Select(t => t.Text));
+        var text = ReadTemplateText();
 
         foreach (var expected in new[]
                  {
                      "{{Gebietstitel}}", "{{Parzellen_Zeile}}", "{{Eigentuemer_Block}}",
-                     "{{Revision}}", "{{Datum}}", "{{#Haltungen}}",
+                     "{{Revision}}", "{{Datum}}", "{{Autoren}}",
+                     "{{@Logo}}", "{{@Wappen}}", "{{@Uebersichtsplan}}",
+                     "{{#Eigentuemer}}", "{{Haus_Nr}}", "{{Pz_Nr}}", "{{Eigentuemer_Zelle}}",
+                     "{{#Haltungen}}",
                      "{{Ausfuehrungstermin}}", "{{Hausanschluss}}", "{{Meteorwasser}}",
                      "{{Rueckmeldung}}"
                  })
@@ -348,21 +551,101 @@ public sealed class DossierWordTemplateBuilderTests
     }
 
     [Fact]
-    public void Die_Vorlage_traegt_die_Ueberschriften_des_Vorbilds()
+    public void Die_Vorlage_traegt_die_vier_Kapitel_des_Vorbilds()
+    {
+        var text = ReadTemplateText();
+
+        Assert.Contains("Eigentümerdossier", text, StringComparison.Ordinal);
+        Assert.Contains("1.  Übersichtsplan Werkleitungen", text, StringComparison.Ordinal);
+        Assert.Contains("2.  Eigentumsverhältnisse", text, StringComparison.Ordinal);
+        Assert.Contains("3.  Betroffene Abwasserleitungen", text, StringComparison.Ordinal);
+        Assert.Contains("4.  Informationen Sanierung", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Die_Rueckmeldung_steht_in_der_Info_Tabelle_und_nicht_als_eigenes_Kapitel()
+    {
+        var text = ReadTemplateText();
+
+        Assert.Contains("Rückmeldung / Einverständnis Eigentümer", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("5.  Rückmeldung", text, StringComparison.Ordinal);
+        Assert.Contains("Unterschrift(en)", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Das_Deckblatt_traegt_keinen_Logo_Hinweistext_mehr()
+    {
+        var text = ReadTemplateText();
+
+        Assert.DoesNotContain("Logo hier einfügen", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{Logo_Hinweis}}", text, StringComparison.Ordinal);
+    }
+
+    private static string ReadTemplateText()
     {
         var bytes = DossierWordTemplateBuilder.Build();
 
         using var stream = new MemoryStream(bytes);
         using var document = WordprocessingDocument.Open(stream, false);
 
-        var text = string.Concat(
+        return string.Concat(
             document.MainDocumentPart!.Document.Body!
                 .Descendants<Text>()
                 .Select(t => t.Text));
+    }
+}
 
-        Assert.Contains("Eigentümerdossier", text, StringComparison.Ordinal);
-        Assert.Contains("Übersichtsplan Werkleitungen", text, StringComparison.Ordinal);
-        Assert.Contains("Eigentumsverhältnisse", text, StringComparison.Ordinal);
-        Assert.Contains("Informationen Sanierung", text, StringComparison.Ordinal);
+/// <summary>
+/// Waechter gegen eine still veraltende ausgelieferte Vorlage: Der Bauer
+/// (<see cref="DossierWordTemplateBuilder"/>) kann sich weiterentwickeln,
+/// ohne dass jemand die Datei unter "Export_Vorlage" nachzieht — der Export
+/// liest aber genau diese Datei, nicht den Bauer zur Laufzeit. Dieser Test
+/// vergleicht deshalb den TEXT der ausgelieferten Datei mit dem Text, den der
+/// Bauer aktuell erzeugt. Ein Bytevergleich waere falsch: die ZIP-Huelle
+/// einer .docx traegt Zeitstempel und waere bei jedem Neuschreiben zufaellig
+/// anders, ohne dass sich am Inhalt etwas aendert.
+/// </summary>
+public sealed class AusgelieferteDossierWordVorlageTests
+{
+    [Fact]
+    public void Die_ausgelieferte_Vorlage_entspricht_dem_aktuellen_Bauer()
+    {
+        var wurzel = new AuswertungPro.Next.Infrastructure.Backup.RepositoryRootFileLocator()
+            .Locate(AppContext.BaseDirectory);
+
+        Assert.NotNull(wurzel);
+
+        var pfad = Path.Combine(wurzel!, "Export_Vorlage", DossierWordTemplateBuilder.TemplateFileName);
+        Assert.True(File.Exists(pfad), $"'{pfad}' fehlt.");
+
+        var ausgeliefertText = ReadDocumentText(File.ReadAllBytes(pfad));
+        var aktuellerText = ReadDocumentText(DossierWordTemplateBuilder.Build());
+
+        Assert.True(
+            string.Equals(ausgeliefertText, aktuellerText, StringComparison.Ordinal),
+            "Die ausgelieferte Datei 'Export_Vorlage/Eigentuemerdossier.docx' ist nicht mehr " +
+            "identisch mit dem, was DossierWordTemplateBuilder.Build() heute erzeugt. " +
+            "Die Vorlage muss neu erzeugt und committet werden " +
+            "(DossierWordTemplateBuilder.WriteTo(\"Export_Vorlage/Eigentuemerdossier.docx\")).");
+    }
+
+    private static string ReadDocumentText(byte[] bytes)
+    {
+        using var stream = new MemoryStream(bytes);
+        using var document = WordprocessingDocument.Open(stream, false);
+        var mainPart = document.MainDocumentPart!;
+
+        var parts = new List<string>
+        {
+            string.Concat(mainPart.Document.Body!.Descendants<Text>().Select(t => t.Text))
+        };
+
+        foreach (var footer in mainPart.FooterParts)
+        {
+            parts.Add(string.Concat(
+                footer.Footer!.Descendants<Text>().Select(t => t.Text)));
+        }
+
+        return string.Join("\n", parts);
     }
 }

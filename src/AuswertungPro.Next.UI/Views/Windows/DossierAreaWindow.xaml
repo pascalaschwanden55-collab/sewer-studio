@@ -39,6 +39,9 @@
                 <TextBox x:Name="TitleBox" AcceptsReturn="True" MinHeight="46"
                          TextWrapping="Wrap"/>
 
+                <TextBlock Text="Autoren (erscheint auf Seite 2 unter „Autoren:“)"/>
+                <TextBox x:Name="AuthorsBox"/>
+
                 <TextBlock Text="Ausführungstermin"/>
                 <TextBox x:Name="ExecutionBox"/>
 
