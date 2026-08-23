@@ -70,4 +70,67 @@ public sealed class LandRegistryHtmlParserTests
         // Lieber nichts als ein geratener Name.
         Assert.Null(LandRegistryHtmlParser.Parse(html));
     }
+
+    [Fact]
+    public void Keine_bleibt_auch_mit_zusaetzlicher_Zeile_kein_Name()
+    {
+        var html = """
+            <html><body><table>
+            <tr><td>Grundbuch Musterdorf</td></tr>
+            <tr><td>Liegenschaft Nr. 13</td></tr>
+            <tr><td>Eigent&#252;mer</td></tr>
+            <tr><td>Keine</td></tr>
+            <tr><td>siehe Hinweis unten</td></tr>
+            <tr><td>Anmerkungen(nur &#246;ffentlich einsehbare)</td></tr>
+            </table></body></html>
+            """;
+
+        var eintrag = LandRegistryHtmlParser.Parse(html);
+
+        Assert.NotNull(eintrag);
+        Assert.True(eintrag!.NoOwnerRegistered);
+        Assert.DoesNotContain(eintrag.Owners, o => o.Name.Contains("Keine", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Ohne_Abschluss_Anmerkungen_wird_nichts_gelesen()
+    {
+        // Der Seitenrest darf nicht zum Eigentuemerblock werden.
+        var html = """
+            <html><body><table>
+            <tr><td>Grundbuch Musterdorf</td></tr>
+            <tr><td>Eigent&#252;mer</td></tr>
+            <tr><td>Martin Muster</td></tr>
+            <tr><td>Musterweg 3, 6472 Musterdorf</td></tr>
+            <tr><td>Dieser Auszug kann nicht als g&#252;ltiger Grundbuchauszug verwendet werden.</td></tr>
+            </table></body></html>
+            """;
+
+        Assert.Null(LandRegistryHtmlParser.Parse(html));
+    }
+
+    [Fact]
+    public void Eine_dritte_Zeile_erbt_nicht_die_Kennzeichnung_des_Vorgaengers()
+    {
+        var html = """
+            <html><body><table>
+            <tr><td>Grundbuch Musterdorf</td></tr>
+            <tr><td>Eigent&#252;mer</td></tr>
+            <tr><td>Lit.A:</td></tr>
+            <tr><td>Kurt Beispiel</td></tr>
+            <tr><td>Musterstrasse 30, 6472 Musterdorf</td></tr>
+            <tr><td>1/2 Miteigentum</td></tr>
+            <tr><td>Martin Muster</td></tr>
+            <tr><td>Musterweg 3, 6472 Musterdorf</td></tr>
+            <tr><td>Anmerkungen(nur &#246;ffentlich einsehbare)</td></tr>
+            </table></body></html>
+            """;
+
+        var eintrag = LandRegistryHtmlParser.Parse(html);
+
+        Assert.NotNull(eintrag);
+        Assert.Equal(2, eintrag!.Owners.Count);
+        Assert.Equal("Lit.A", eintrag.Owners[0].Designation);
+        Assert.Equal("", eintrag.Owners[1].Designation);
+    }
 }

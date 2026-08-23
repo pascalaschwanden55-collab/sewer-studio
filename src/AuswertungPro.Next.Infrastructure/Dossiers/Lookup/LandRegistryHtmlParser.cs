@@ -55,12 +55,19 @@ public static class LandRegistryHtmlParser
         var ende = zeilen.FindIndex(
             eigentuemerIndex + 1,
             z => z.StartsWith("Anmerkungen", StringComparison.OrdinalIgnoreCase));
+
+        // Ohne diesen Abschluss ist der Aufbau der Seite nicht wiedererkannt.
+        // Dann lieber gar nichts liefern, als den restlichen Seitentext als
+        // Eigentuemer zu lesen.
         if (ende < 0)
-            ende = zeilen.Count;
+            return null;
 
         var block = zeilen.GetRange(eigentuemerIndex + 1, ende - eigentuemerIndex - 1);
 
-        var ohneEigentuemer = block.Count == 1
+        // "Keine" steht als erste Angabe des Blocks. An der Blocklaenge darf das
+        // nicht haengen: eine zusaetzliche Hinweiszeile wuerde den Schutz sonst
+        // aushebeln und "Keine" zu einem Eigentuemernamen machen.
+        var ohneEigentuemer = block.Count > 0
             && string.Equals(block[0], "Keine", StringComparison.OrdinalIgnoreCase);
 
         var eigentuemer = ohneEigentuemer
@@ -110,10 +117,19 @@ public static class LandRegistryHtmlParser
             name = null;
             adresse = string.Empty;
             anteil = string.Empty;
+            kennzeichnung = string.Empty;
         }
 
         foreach (var zeile in block)
         {
+            // Zweite Lage: "Keine" ist eine Angabe, kein Name — auch dann nicht,
+            // wenn die Zeile mitten im Block auftaucht.
+            if (string.Equals(zeile, "Keine", StringComparison.OrdinalIgnoreCase))
+            {
+                Abschliessen();
+                continue;
+            }
+
             var lit = LitZeile.Match(zeile);
             if (lit.Success)
             {
