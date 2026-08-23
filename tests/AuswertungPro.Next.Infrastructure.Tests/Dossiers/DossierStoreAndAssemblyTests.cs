@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -123,6 +123,33 @@ public sealed class DossierFileStoreTests : IDisposable
 
         // Nichts wurde ueberschrieben — die Originaldatei liegt unveraendert da.
         Assert.Equal("{ kaputt", await File.ReadAllTextAsync(path));
+    }
+
+    [Fact]
+    public async Task Die_abgeleitete_Regel_HasContent_wird_nicht_mitgespeichert()
+    {
+        // HasContent ist eine reine Rechenregel ("ist diese Zeile leer?"),
+        // keine Angabe. Landet sie in dossiers.json, steht dort ein Wert, den
+        // niemand gepflegt hat und der beim Lesen ignoriert wird — Ballast,
+        // der bei einer spaeteren Aenderung der Regel auch noch falsch waere.
+        var store = new DossierFileStore();
+        var document = new DossierDocument();
+        var dossier = new DossierDefinition { Name = "Liegenschaft 439" };
+        dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "30",
+            ParcelNumber = "439",
+            Name = "Kurt Beispiel"
+        });
+        document.Dossiers.Add(dossier);
+
+        await store.SaveAsync(_projectRoot, document);
+
+        var json = await File.ReadAllTextAsync(
+            DossierFolderPlanner.ResolveDocumentPath(_projectRoot));
+
+        Assert.DoesNotContain("HasContent", json, StringComparison.Ordinal);
+        Assert.Contains("Kurt Beispiel", json, StringComparison.Ordinal);
     }
 
     [Fact]

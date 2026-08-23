@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace AuswertungPro.Next.Domain.Models.Dossiers;
 
@@ -90,6 +91,12 @@ public sealed class DossierOwnerRow
     /// Editor-Fenster und Migration verwenden dieselbe Eigenschaft, statt die
     /// Regel je einzeln nachzubauen.
     /// </summary>
+    /// <remarks>
+    /// Abgeleitet, nicht gespeichert: In der Datei haette der Wert nichts
+    /// verloren — niemand pflegt ihn, und aendert sich die Regel, stuende dort
+    /// ein falscher Altwert.
+    /// </remarks>
+    [JsonIgnore]
     public bool HasContent =>
         !string.IsNullOrWhiteSpace(HouseNumber)
         || !string.IsNullOrWhiteSpace(ParcelNumber)
