@@ -325,20 +325,15 @@ public sealed class DossierWordTemplateBuilderTests
     [Fact]
     public void Die_Vorlage_ist_eine_gueltige_Word_Datei_mit_allen_Platzhaltern()
     {
-        var bytes = DossierWordTemplateBuilder.Build();
-
-        using var stream = new MemoryStream(bytes);
-        using var document = WordprocessingDocument.Open(stream, false);
-
-        var text = string.Concat(
-            document.MainDocumentPart!.Document.Body!
-                .Descendants<Text>()
-                .Select(t => t.Text));
+        var text = ReadTemplateText();
 
         foreach (var expected in new[]
                  {
                      "{{Gebietstitel}}", "{{Parzellen_Zeile}}", "{{Eigentuemer_Block}}",
-                     "{{Revision}}", "{{Datum}}", "{{#Haltungen}}",
+                     "{{Revision}}", "{{Datum}}", "{{Autoren}}",
+                     "{{@Logo}}", "{{@Wappen}}", "{{@Uebersichtsplan}}",
+                     "{{#Eigentuemer}}", "{{Haus_Nr}}", "{{Pz_Nr}}", "{{Eigentuemer_Zelle}}",
+                     "{{#Haltungen}}",
                      "{{Ausfuehrungstermin}}", "{{Hausanschluss}}", "{{Meteorwasser}}",
                      "{{Rueckmeldung}}"
                  })
@@ -348,21 +343,46 @@ public sealed class DossierWordTemplateBuilderTests
     }
 
     [Fact]
-    public void Die_Vorlage_traegt_die_Ueberschriften_des_Vorbilds()
+    public void Die_Vorlage_traegt_die_vier_Kapitel_des_Vorbilds()
+    {
+        var text = ReadTemplateText();
+
+        Assert.Contains("Eigentümerdossier", text, StringComparison.Ordinal);
+        Assert.Contains("1.  Übersichtsplan Werkleitungen", text, StringComparison.Ordinal);
+        Assert.Contains("2.  Eigentumsverhältnisse", text, StringComparison.Ordinal);
+        Assert.Contains("3.  Betroffene Abwasserleitungen", text, StringComparison.Ordinal);
+        Assert.Contains("4.  Informationen Sanierung", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Die_Rueckmeldung_steht_in_der_Info_Tabelle_und_nicht_als_eigenes_Kapitel()
+    {
+        var text = ReadTemplateText();
+
+        Assert.Contains("Rückmeldung / Einverständnis Eigentümer", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("5.  Rückmeldung", text, StringComparison.Ordinal);
+        Assert.Contains("Unterschrift(en)", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Das_Deckblatt_traegt_keinen_Logo_Hinweistext_mehr()
+    {
+        var text = ReadTemplateText();
+
+        Assert.DoesNotContain("Logo hier einfügen", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{Logo_Hinweis}}", text, StringComparison.Ordinal);
+    }
+
+    private static string ReadTemplateText()
     {
         var bytes = DossierWordTemplateBuilder.Build();
 
         using var stream = new MemoryStream(bytes);
         using var document = WordprocessingDocument.Open(stream, false);
 
-        var text = string.Concat(
+        return string.Concat(
             document.MainDocumentPart!.Document.Body!
                 .Descendants<Text>()
                 .Select(t => t.Text));
-
-        Assert.Contains("Eigentümerdossier", text, StringComparison.Ordinal);
-        Assert.Contains("Übersichtsplan Werkleitungen", text, StringComparison.Ordinal);
-        Assert.Contains("Eigentumsverhältnisse", text, StringComparison.Ordinal);
-        Assert.Contains("Informationen Sanierung", text, StringComparison.Ordinal);
     }
 }
