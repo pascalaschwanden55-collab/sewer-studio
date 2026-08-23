@@ -174,6 +174,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 wordExport: _sp.DossierWordExport,
                 attachments: _sp.DossierAttachments,
                 pdfAssembly: _sp.DossierPdfAssembly,
+                parcels: _sp.DossierParcels,
+                batchProposal: _sp.DossierBatchProposal,
                 costStores: _sp.CostStores,
                 dialogs: _sp.Dialogs,
                 toasts: _sp.Toasts,

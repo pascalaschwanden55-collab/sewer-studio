@@ -64,6 +64,8 @@
                             Command="{Binding ResetTemplateCommand}"/>
                     <Button Content="Aktualisieren" Padding="12,7"
                             Command="{Binding RefreshCommand}"/>
+                    <Button Content="Aus Projekt erzeugen" Padding="12,7" Margin="8,0,0,0"
+                            Command="{Binding CreateFromProjectCommand}"/>
                 </StackPanel>
             </Grid>
         </Border>

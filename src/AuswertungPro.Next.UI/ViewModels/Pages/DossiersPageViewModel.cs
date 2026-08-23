@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.Application.Dossiers.Lookup;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.UI.Services;
@@ -90,6 +91,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     private readonly IDossierWordExportService _wordExport;
     private readonly IDossierAttachmentService _attachments;
     private readonly IDossierPdfAssemblyService _pdfAssembly;
+    private readonly IParcelLookup _parcels;
+    private readonly DossierBatchProposalUseCase _batchProposal;
     private readonly ICostStoreFactory _costStores;
     private readonly IDialogService _dialogs;
     private readonly ToastService _toasts;
@@ -107,6 +110,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         IDossierWordExportService wordExport,
         IDossierAttachmentService attachments,
         IDossierPdfAssemblyService pdfAssembly,
+        IParcelLookup parcels,
+        DossierBatchProposalUseCase batchProposal,
         ICostStoreFactory costStores,
         IDialogService dialogs,
         ToastService toasts,
@@ -120,6 +125,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         _wordExport = wordExport ?? throw new ArgumentNullException(nameof(wordExport));
         _attachments = attachments ?? throw new ArgumentNullException(nameof(attachments));
         _pdfAssembly = pdfAssembly ?? throw new ArgumentNullException(nameof(pdfAssembly));
+        _parcels = parcels ?? throw new ArgumentNullException(nameof(parcels));
+        _batchProposal = batchProposal ?? throw new ArgumentNullException(nameof(batchProposal));
         _costStores = costStores ?? throw new ArgumentNullException(nameof(costStores));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _toasts = toasts ?? throw new ArgumentNullException(nameof(toasts));
@@ -139,6 +146,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         SetStatusCommand = new AsyncRelayCommand<DossierStatus?>(SetDossierStatusAsync);
         ResetTemplateCommand = new AsyncRelayCommand(ResetTemplateAsync);
         RefreshCommand = new AsyncRelayCommand(ReloadAsync);
+        CreateFromProjectCommand = new AsyncRelayCommand(CreateFromProjectAsync);
 
         _ = ReloadAsync();
     }
@@ -163,6 +171,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     public IAsyncRelayCommand<DossierStatus?> SetStatusCommand { get; }
     public IAsyncRelayCommand ResetTemplateCommand { get; }
     public IAsyncRelayCommand RefreshCommand { get; }
+    public IAsyncRelayCommand CreateFromProjectCommand { get; }
 
     [ObservableProperty]
     private DossierListItem? _selected;
