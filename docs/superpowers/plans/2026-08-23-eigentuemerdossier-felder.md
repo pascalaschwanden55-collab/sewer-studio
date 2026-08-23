@@ -27,9 +27,8 @@
 
 | Datei | Verantwortung |
 |---|---|
-| `tools/PdfImageAnalyzer/Program.cs` (ändern) | zusätzlicher Modus `--extract`, um die Bilder einer PDF-Seite als Datei zu speichern |
 | `Export_Vorlage/Dossier_Logo.png` (neu) | festes Firmenlogo für jedes Dossier |
-| `Export_Vorlage/Dossier_Wappen.jpg` (neu) | festes Wappen für jedes Dossier |
+| `Export_Vorlage/Dossier_Wappen.png` (neu) | festes Wappen für jedes Dossier |
 | `src/AuswertungPro.Next.Infrastructure/Dossiers/ImageSizeReader.cs` (neu) | liest Breite und Höhe aus PNG- und JPEG-Bytes |
 | `src/AuswertungPro.Next.Infrastructure/Dossiers/DocxImagePlaceholderFiller.cs` (neu) | ersetzt `{{@Name}}` durch ein eingebettetes Bild |
 | `src/AuswertungPro.Next.Domain/Models/Dossiers/DossierModels.cs` (ändern) | `DossierOwnerRow`, `Owners`, `OverviewPlanPath`, `Authors`, Formatversion 2 |
@@ -1294,7 +1293,7 @@ git commit -m "feat(dossier): Vorlage nach dem Aufbau des Originals"
 - Produces:
   - `public static List<IReadOnlyDictionary<string, string>> BuildOwnerRows(DossierDefinition dossier)`
   - `public const string LogoFileName = "Dossier_Logo.png"`
-  - `public const string CoatOfArmsFileName = "Dossier_Wappen.jpg"`
+  - `public const string CoatOfArmsFileName = "Dossier_Wappen.png"`
 
 - [ ] **Step 1: Die fehlschlagenden Tests schreiben**
 
@@ -1375,7 +1374,7 @@ In `DossierWordTemplateExportServiceTests` diese Tests anhängen:
             TestImages.Png(716, 297));
         File.WriteAllBytes(
             Path.Combine(vorlagenOrdner, DossierWordTemplateExportService.CoatOfArmsFileName),
-            TestImages.Jpeg(177, 213));
+            TestImages.Png(407, 491));
 
         var planPfad = Path.Combine(_root, "plan.png");
         File.WriteAllBytes(planPfad, TestImages.Png(1200, 1600));
@@ -1451,7 +1450,7 @@ Konstanten direkt nach `private static readonly CultureInfo Ch = ...` einfügen:
     public const string LogoFileName = "Dossier_Logo.png";
 
     /// <summary>Das feste Wappen, ausgeliefert neben der Word-Vorlage.</summary>
-    public const string CoatOfArmsFileName = "Dossier_Wappen.jpg";
+    public const string CoatOfArmsFileName = "Dossier_Wappen.png";
 ```
 
 In `ExportAsync` den Füllblock
@@ -1677,94 +1676,37 @@ git commit -m "feat(dossier): Eigentuemerzeilen, Autoren und Bilder in der Word-
 
 ---
 
-### Task 6: Logo und Wappen aus dem Original-PDF gewinnen und ausliefern
+### Task 6: Logo und Wappen fest ausliefern
+
+Pascal hat die beiden Bilder direkt geliefert — sauberer als die Auszüge aus dem PDF (dort klebte am Logo noch ein grauer Kasten). Es wird nichts aus dem PDF gezogen; `tools/PdfImageAnalyzer` bleibt unverändert.
+
+**Quellen:**
+
+- `C:\Users\Besitzer\Downloads\Abwasser Uri.png` — 697 × 286, Querformat, das Firmenlogo
+- `C:\Users\Besitzer\Downloads\Uri Wappen.png` — 407 × 491, Hochformat, das Urner Wappen
 
 **Files:**
-- Modify: `tools/PdfImageAnalyzer/Program.cs`
-- Create: `Export_Vorlage/Dossier_Logo.png`, `Export_Vorlage/Dossier_Wappen.jpg`
+
+- Create: `Export_Vorlage/Dossier_Logo.png`, `Export_Vorlage/Dossier_Wappen.png`
 - Modify: `src/AuswertungPro.Next.UI/AuswertungPro.Next.UI.csproj:114-117`
+- Modify: `tests/AuswertungPro.Next.Infrastructure.Tests/Dossiers/DossierImageTests.cs`
 
 **Interfaces:**
-- Consumes: `DossierWordTemplateExportService.LogoFileName` / `.CoatOfArmsFileName` aus Task 5 (die Dateinamen müssen wörtlich stimmen)
+
+- Consumes: `DossierWordTemplateExportService.LogoFileName` = `"Dossier_Logo.png"` und `.CoatOfArmsFileName` = `"Dossier_Wappen.png"` aus Task 5 — die Dateinamen müssen wörtlich stimmen
 - Produces: die zwei Bilddateien im Ausgabeverzeichnis neben `Eigentuemerdossier.docx`
 
-- [ ] **Step 1: Auszugsmodus im Werkzeug ergänzen**
-
-In `tools/PdfImageAnalyzer/Program.cs` direkt nach dem JSON-Modus-Block (vor der normalen Auswertung) einfügen:
-
-```csharp
-// Auszugsmodus: speichert die Bilder einer Seite als Dateien.
-// Verwendung: PdfImageAnalyzer --extract <pdf> <seite> <zielordner>
-if (args[0] == "--extract")
-{
-    if (args.Length < 4)
-    {
-        Console.WriteLine("Verwendung: PdfImageAnalyzer --extract <pdf> <seite> <zielordner>");
-        return 1;
-    }
-
-    var quelle = args[1];
-    if (!int.TryParse(args[2], out var seitenNummer) || seitenNummer < 1)
-    {
-        Console.WriteLine("Die Seitennummer muss eine Zahl ab 1 sein.");
-        return 1;
-    }
-
-    var zielOrdner = args[3];
-    Directory.CreateDirectory(zielOrdner);
-
-    using var quellDokument = PdfDocument.Open(quelle);
-    var seite = quellDokument.GetPage(seitenNummer);
-    var nummer = 0;
-
-    foreach (var bild in seite.GetImages())
-    {
-        nummer++;
-        var roh = bild.RawBytes.ToArray();
-
-        // Ein PNG-faehiges Bild wird als PNG geschrieben; sonst der rohe
-        // JPEG-Strom, denn der ist bereits eine gueltige Bilddatei.
-        if (bild.TryGetPng(out var png) && png.Length > 0)
-        {
-            var ziel = Path.Combine(zielOrdner, $"seite{seitenNummer}_bild{nummer}.png");
-            File.WriteAllBytes(ziel, png);
-            Console.WriteLine($"{ziel}  {bild.WidthInSamples}x{bild.HeightInSamples}");
-        }
-        else if (roh.Length > 2 && roh[0] == 0xFF && roh[1] == 0xD8)
-        {
-            var ziel = Path.Combine(zielOrdner, $"seite{seitenNummer}_bild{nummer}.jpg");
-            File.WriteAllBytes(ziel, roh);
-            Console.WriteLine($"{ziel}  {bild.WidthInSamples}x{bild.HeightInSamples}");
-        }
-        else
-        {
-            Console.WriteLine($"Bild {nummer}: kein bekanntes Format, uebersprungen.");
-        }
-    }
-
-    return 0;
-}
-```
-
-- [ ] **Step 2: Bilder aus dem Original ziehen**
+- [ ] **Step 1: Die Dateien an ihren Platz kopieren**
 
 ```bash
-dotnet run --project tools/PdfImageAnalyzer/PdfImageAnalyzer.csproj -- --extract "C:/Users/Besitzer/Documents/Eigentümerdossier_Pz.170.pdf" 1 "artifacts/dossier-bilder"
-```
-
-Erwartet: zwei Zeilen — ein Bild `177x213` (das Wappen, `.jpg`) und ein Bild `716x297` (das Logo, `.png`).
-
-- [ ] **Step 3: Die Dateien an ihren endgültigen Platz legen**
-
-```bash
-cp artifacts/dossier-bilder/seite1_bild2.png Export_Vorlage/Dossier_Logo.png
-cp artifacts/dossier-bilder/seite1_bild1.jpg Export_Vorlage/Dossier_Wappen.jpg
+cp "C:/Users/Besitzer/Downloads/Abwasser Uri.png" Export_Vorlage/Dossier_Logo.png
+cp "C:/Users/Besitzer/Downloads/Uri Wappen.png" Export_Vorlage/Dossier_Wappen.png
 ls -la Export_Vorlage/Dossier_*
 ```
 
-**Prüfen:** Beide Dateien öffnen und mit blossem Auge ansehen. Passt die Zuordnung nicht (die Nummerierung kann abweichen), die Dateien entsprechend tauschen — massgebend ist: `Dossier_Logo.png` ist das breite Logo (716×297), `Dossier_Wappen.jpg` das hochformatige Wappen (177×213).
+Erwartet: zwei Dateien, rund 8 KB (Logo) und rund 16 KB (Wappen).
 
-- [ ] **Step 4: Ausliefern**
+- [ ] **Step 2: Ausliefern**
 
 In `src/AuswertungPro.Next.UI/AuswertungPro.Next.UI.csproj` nach dem Block für `Eigentuemerdossier.docx` einfügen:
 
@@ -1773,13 +1715,13 @@ In `src/AuswertungPro.Next.UI/AuswertungPro.Next.UI.csproj` nach dem Block für 
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
-    <None Include="..\..\Export_Vorlage\Dossier_Wappen.jpg" Link="Export_Vorlage\Dossier_Wappen.jpg">
+    <None Include="..\..\Export_Vorlage\Dossier_Wappen.png" Link="Export_Vorlage\Dossier_Wappen.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
 ```
 
-- [ ] **Step 5: Test schreiben, dass die Dateien im Quellbestand liegen**
+- [ ] **Step 3: Test schreiben, dass die Dateien im Quellbestand liegen**
 
 An `tests/AuswertungPro.Next.Infrastructure.Tests/Dossiers/DossierImageTests.cs` anhängen:
 
@@ -1795,22 +1737,26 @@ public sealed class AusgelieferteDossierBilderTests
         Assert.NotNull(wurzel);
 
         var logo = Path.Combine(wurzel!, "Export_Vorlage", "Dossier_Logo.png");
-        var wappen = Path.Combine(wurzel!, "Export_Vorlage", "Dossier_Wappen.jpg");
+        var wappen = Path.Combine(wurzel!, "Export_Vorlage", "Dossier_Wappen.png");
 
         Assert.True(File.Exists(logo), $"'{logo}' fehlt.");
         Assert.True(File.Exists(wappen), $"'{wappen}' fehlt.");
 
+        // Die Masse belegen zugleich, dass die beiden Dateien nicht vertauscht
+        // sind: das Logo ist breiter als hoch, das Wappen hoeher als breit.
         Assert.True(ImageSizeReader.TryRead(File.ReadAllBytes(logo), out var logoW, out var logoH));
-        Assert.True(logoW > logoH, "Das Logo ist im Vorbild breiter als hoch.");
+        Assert.Equal(697, logoW);
+        Assert.Equal(286, logoH);
 
         Assert.True(ImageSizeReader.TryRead(
             File.ReadAllBytes(wappen), out var wappenW, out var wappenH));
-        Assert.True(wappenH > wappenW, "Das Wappen ist im Vorbild höher als breit.");
+        Assert.Equal(407, wappenW);
+        Assert.Equal(491, wappenH);
     }
 }
 ```
 
-- [ ] **Step 6: Test laufen lassen und Erfolg prüfen**
+- [ ] **Step 4: Test laufen lassen und Erfolg prüfen**
 
 ```bash
 dotnet test tests/AuswertungPro.Next.Infrastructure.Tests/AuswertungPro.Next.Infrastructure.Tests.csproj --filter "FullyQualifiedName~AusgelieferteDossierBilderTests"
@@ -1818,10 +1764,10 @@ dotnet test tests/AuswertungPro.Next.Infrastructure.Tests/AuswertungPro.Next.Inf
 
 Erwartet: 1 Test grün.
 
-- [ ] **Step 7: Committen**
+- [ ] **Step 5: Committen**
 
 ```bash
-git add tools/PdfImageAnalyzer/Program.cs Export_Vorlage/Dossier_Logo.png Export_Vorlage/Dossier_Wappen.jpg src/AuswertungPro.Next.UI/AuswertungPro.Next.UI.csproj tests/AuswertungPro.Next.Infrastructure.Tests/Dossiers/DossierImageTests.cs
+git add Export_Vorlage/Dossier_Logo.png Export_Vorlage/Dossier_Wappen.png src/AuswertungPro.Next.UI/AuswertungPro.Next.UI.csproj tests/AuswertungPro.Next.Infrastructure.Tests/Dossiers/DossierImageTests.cs
 git commit -m "feat(dossier): Logo und Wappen fest ausliefern"
 ```
 
