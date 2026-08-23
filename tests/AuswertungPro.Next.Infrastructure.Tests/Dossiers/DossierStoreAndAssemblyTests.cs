@@ -135,8 +135,69 @@ public sealed class DossierFileStoreTests : IDisposable
             DossierFolderPlanner.ResolveDocumentPath(_projectRoot),
             """{ "SchemaVersion": 99, "Dossiers": [] }""");
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        // DossierSchemaVersionException ist eine InvalidOperationException,
+        // aber ein eigener Typ (siehe W5) — hier ausdruecklich der genaue Typ.
+        await Assert.ThrowsAsync<DossierSchemaVersionException>(
             () => store.LoadAsync(_projectRoot));
+    }
+
+    [Fact]
+    public async Task Neuere_Formatversion_wird_nicht_durch_ein_Backup_umgangen()
+    {
+        // Genau das Fehlerszenario aus dem Fix-Brief: eine spaetere
+        // Programmversion hat Version 3 geschrieben, es liegt aber noch ein
+        // gueltiges .bak mit dem alten Stand daneben. Die aeltere
+        // Programmversion darf das Backup NICHT still laden — sonst
+        // ueberschreibt die naechste Aenderung die Version-3-Datei mit
+        // Version-2-Inhalt.
+        var store = new DossierFileStore();
+        var root = DossierFolderPlanner.ResolveRoot(_projectRoot);
+        Directory.CreateDirectory(root);
+        var path = DossierFolderPlanner.ResolveDocumentPath(_projectRoot);
+
+        await File.WriteAllTextAsync(
+            path + ".bak",
+            """{ "SchemaVersion": 2, "Dossiers": [] }""");
+        await File.WriteAllTextAsync(
+            path,
+            """{ "SchemaVersion": 99, "Dossiers": [] }""");
+
+        await Assert.ThrowsAsync<DossierSchemaVersionException>(
+            () => store.LoadAsync(_projectRoot));
+    }
+
+    [Fact]
+    public async Task Eine_echte_Version_1_Datei_wird_beim_Laden_umgestellt()
+    {
+        // Prueft die Verdrahtung Store -> Umstellung: bisher gab es nur
+        // Tests fuer die reine Umstellungslogik und fuer den Store getrennt.
+        var store = new DossierFileStore();
+        var root = DossierFolderPlanner.ResolveRoot(_projectRoot);
+        Directory.CreateDirectory(root);
+        await File.WriteAllTextAsync(
+            DossierFolderPlanner.ResolveDocumentPath(_projectRoot),
+            """
+            {
+              "SchemaVersion": 1,
+              "Dossiers": [
+                {
+                  "Name": "Brämenhofstatt 3",
+                  "HouseNumbers": "3",
+                  "OwnerName": "Martin Muster",
+                  "ContactPhone": "079 858 53 74"
+                }
+              ]
+            }
+            """);
+
+        var geladen = await store.LoadAsync(_projectRoot);
+
+        var dossier = Assert.Single(geladen.Dossiers);
+        var row = Assert.Single(dossier.Owners);
+        Assert.Equal("3", row.HouseNumber);
+        Assert.Equal("Martin Muster", row.Name);
+        Assert.Equal("079 858 53 74", row.Phone);
+        Assert.Equal(DossierDocument.CurrentSchemaVersion, geladen.SchemaVersion);
     }
 }
 

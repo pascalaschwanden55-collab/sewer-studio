@@ -83,6 +83,20 @@ public sealed class DossierOwnerRow
 
     /// <summary>Objektbewohner, z.B. "Mehrfamilienhaus".</summary>
     public string Occupancy { get; set; } = "";
+
+    /// <summary>
+    /// Wahr, sobald mindestens eines der sechs Felder etwas anderes als
+    /// Leerraum enthaelt. Zentrale Regel fuer "ist diese Zeile leer" —
+    /// Editor-Fenster und Migration verwenden dieselbe Eigenschaft, statt die
+    /// Regel je einzeln nachzubauen.
+    /// </summary>
+    public bool HasContent =>
+        !string.IsNullOrWhiteSpace(HouseNumber)
+        || !string.IsNullOrWhiteSpace(ParcelNumber)
+        || !string.IsNullOrWhiteSpace(Name)
+        || !string.IsNullOrWhiteSpace(Phone)
+        || !string.IsNullOrWhiteSpace(Mail)
+        || !string.IsNullOrWhiteSpace(Occupancy);
 }
 
 /// <summary>

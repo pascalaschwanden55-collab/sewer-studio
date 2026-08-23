@@ -175,9 +175,10 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
         var fehlt = Path.Combine(_root, "gibtesnicht.png");
 
         using var stream = new MemoryStream();
+        IReadOnlyList<string> nichtGefuellt;
         using (var document = CreateDocument(stream, "Vorne {{@Logo}} hinten"))
         {
-            DocxImagePlaceholderFiller.Fill(document, new[]
+            nichtGefuellt = DocxImagePlaceholderFiller.Fill(document, new[]
             {
                 new DocxImagePlacement("Logo", fehlt, MaxWidthCm: 4.5)
             });
@@ -195,6 +196,9 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
         Assert.Contains("Vorne", text, StringComparison.Ordinal);
         Assert.Contains("hinten", text, StringComparison.Ordinal);
         Assert.Empty(mainPart.ImageParts);
+
+        // Der Aufrufer muss erfahren koennen, dass "Logo" nicht gesetzt wurde.
+        Assert.Contains("Logo", nichtGefuellt);
     }
 
     [Fact]
@@ -268,13 +272,13 @@ public sealed class AusgelieferteDossierBilderTests
 
         // Die Masse belegen zugleich, dass die beiden Dateien nicht vertauscht
         // sind: das Logo ist breiter als hoch, das Wappen hoeher als breit.
+        // Bewusst keine exakten Pixelmasse: das Wappen wird fuer eine andere
+        // Gemeinde ausgetauscht, ohne dass dabei etwas kaputt geht.
         Assert.True(ImageSizeReader.TryRead(File.ReadAllBytes(logo), out var logoW, out var logoH));
-        Assert.Equal(697, logoW);
-        Assert.Equal(286, logoH);
+        Assert.True(logoW > logoH, $"Logo sollte breiter als hoch sein ({logoW}x{logoH}).");
 
         Assert.True(ImageSizeReader.TryRead(
             File.ReadAllBytes(wappen), out var wappenW, out var wappenH));
-        Assert.Equal(407, wappenW);
-        Assert.Equal(491, wappenH);
+        Assert.True(wappenH > wappenW, $"Wappen sollte hoeher als breit sein ({wappenW}x{wappenH}).");
     }
 }

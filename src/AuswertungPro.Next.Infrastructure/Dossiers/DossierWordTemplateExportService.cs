@@ -78,6 +78,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             var tempPath = targetPath + ".tmp";
             File.Copy(templatePath, tempPath, overwrite: true);
 
+            IReadOnlyList<string> missingImages;
             try
             {
                 using (var document = WordprocessingDocument.Open(tempPath, isEditable: true))
@@ -97,7 +98,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     // Bilder VOR dem Textfueller: sonst wuerde der Textfueller
                     // "{{@Logo}}" als unbekannten Textplatzhalter leeren und das
                     // Bild fehlte im fertigen Dossier ohne jede Meldung.
-                    DocxImagePlaceholderFiller.Fill(
+                    missingImages = DocxImagePlaceholderFiller.Fill(
                         document, BuildImagePlacements(request, templatePath));
 
                     DocxPlaceholderFiller.Fill(document, BuildValues(request));
@@ -112,10 +113,12 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                 throw;
             }
 
-            return Task.FromResult(new DossierWordExportResult(
-                true,
-                targetPath,
-                $"Word-Datei erstellt: {Path.GetFileName(targetPath)}"));
+            var message = $"Word-Datei erstellt: {Path.GetFileName(targetPath)}";
+            var hint = BuildMissingImagesHint(missingImages);
+            if (hint.Length > 0)
+                message += "  (Hinweis: " + hint + ")";
+
+            return Task.FromResult(new DossierWordExportResult(true, targetPath, message));
         }
         catch (OperationCanceledException)
         {
@@ -160,8 +163,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             ["Datum"] = today.ToString("dd.MM.yyyy", Ch),
             ["Datum_Lang"] = today.ToString("dd. MMMM yyyy", Ch),
             ["Revision"] = d.Revision,
+            // Kein Rueckfall auf Environment.UserName: "lieber leer als
+            // falsch" — der Windows-Benutzername gehoert nicht in ein
+            // Dokument fuer den Eigentuemer.
             ["Autoren"] = string.IsNullOrWhiteSpace(request.Area.Authors)
-                ? Environment.UserName
+                ? string.Empty
                 : request.Area.Authors.Trim(),
             ["Dossier_Name"] = d.Name,
 
@@ -256,20 +262,25 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     }
 
     /// <summary>
-    /// Auf dem Deckblatt stehen die Namen aller Eigentuemerzeilen untereinander.
-    /// Gibt es keine Zeile, gilt weiterhin die alte Einzelangabe.
+    /// Auf dem Deckblatt stehen die klassischen Felder "Eigentuemer"/"Adresse
+    /// des Eigentuemers", sofern eines von beiden gefuellt ist — sonst gehen
+    /// sie verloren, sobald die Tabellenzeilen einen gekuerzten Namen tragen.
+    /// Erst wenn beide leer sind, gelten stattdessen die Namen aller
+    /// Eigentuemerzeilen untereinander.
     /// </summary>
     private static string BuildCoverOwnerBlock(DossierDefinition dossier)
     {
+        var legacy = JoinLines(dossier.OwnerName, dossier.OwnerAddress);
+        if (legacy.Length > 0)
+            return legacy;
+
         var names = dossier.Owners
             .Select(owner => owner.Name)
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .Select(name => name!.Split('\n')[0].Trim())
             .ToList();
 
-        return names.Count > 0
-            ? string.Join("\n", names)
-            : JoinLines(dossier.OwnerName, dossier.OwnerAddress);
+        return string.Join("\n", names);
     }
 
     /// <summary>
@@ -298,6 +309,22 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
 
         return placements;
     }
+
+    /// <summary>
+    /// Baut den Hinweistext fuer nicht eingesetzte Bilder — in Klartext, nicht
+    /// mit den technischen Platzhalternamen. Pascal soll das VOR dem Versand
+    /// merken, nicht erst beim Eigentuemer.
+    /// </summary>
+    private static string BuildMissingImagesHint(IReadOnlyList<string> missingPlaceholders)
+        => string.Join(" ", missingPlaceholders.Select(DescribeMissingImage));
+
+    private static string DescribeMissingImage(string placeholderName) => placeholderName switch
+    {
+        "Logo" => "Firmenlogo nicht gefunden.",
+        "Wappen" => "Wappen nicht gefunden.",
+        "Uebersichtsplan" => "Übersichtsplan nicht gefunden – Kapitel 1 bleibt leer.",
+        _ => placeholderName + " nicht gefunden."
+    };
 
     private static string? ResolvePlanPath(DossierExportRequest request)
     {

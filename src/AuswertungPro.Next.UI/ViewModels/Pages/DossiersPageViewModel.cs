@@ -344,15 +344,25 @@ public sealed partial class DossiersPageViewModel : ObservableObject
             : "";
     }
 
-    private static string BuildSubtitle(DossierDefinition d)
+    /// <summary>Internal statt private, damit der reine Textaufbau direkt testbar ist.</summary>
+    internal static string BuildSubtitle(DossierDefinition d)
     {
         var parts = new List<string>();
 
         if (!string.IsNullOrWhiteSpace(d.ParcelNumbers))
             parts.Add("Parz. " + d.ParcelNumbers.Trim());
 
-        if (!string.IsNullOrWhiteSpace(d.OwnerName))
-            parts.Add(d.OwnerName.Trim());
+        var ownerName = d.OwnerName;
+        if (string.IsNullOrWhiteSpace(ownerName))
+        {
+            // Wer nur die neue Tabelle fuellt, soll in der Uebersicht nicht
+            // "Noch keine Stammdaten erfasst" lesen, waehrend im Word bereits
+            // alle Namen stehen.
+            ownerName = d.Owners.FirstOrDefault(o => !string.IsNullOrWhiteSpace(o.Name))?.Name;
+        }
+
+        if (!string.IsNullOrWhiteSpace(ownerName))
+            parts.Add(ownerName.Trim());
 
         if (!string.IsNullOrWhiteSpace(d.Town))
             parts.Add(d.Town.Trim());

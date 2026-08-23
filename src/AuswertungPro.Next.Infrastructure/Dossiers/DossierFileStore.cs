@@ -52,6 +52,14 @@ public sealed class DossierFileStore : IDossierStore
         {
             throw;
         }
+        catch (DossierSchemaVersionException)
+        {
+            // Der Versionsschutz darf nicht durch das Backup umgangen werden:
+            // eine .bak gibt es in echten Projekten fast immer, und ein
+            // stiller Rueckfall wuerde die neuere Datei beim naechsten
+            // Speichern mit dem alten Stand ueberschreiben.
+            throw;
+        }
         catch (Exception ex)
         {
             BestEffort.ReportWarning($"[Dossiers] Ladefehler: {ex.Message}");
@@ -136,7 +144,7 @@ public sealed class DossierFileStore : IDossierStore
         // stiller Weiterlauf wuerde beim naechsten Speichern Felder verlieren.
         if (document.SchemaVersion > DossierDocument.CurrentSchemaVersion)
         {
-            throw new InvalidOperationException(
+            throw new DossierSchemaVersionException(
                 $"'{path}' hat Formatversion {document.SchemaVersion}. "
                 + $"Diese Programmversion kennt nur Version {DossierDocument.CurrentSchemaVersion}.");
         }

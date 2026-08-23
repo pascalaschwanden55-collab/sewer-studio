@@ -253,6 +253,22 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         Assert.Contains("Tel.: 079 858 53 74", text, StringComparison.Ordinal);
         Assert.Contains("Objektbewohner: Einfamilienhaus", text, StringComparison.Ordinal);
         Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+
+        // Beide Zeilen muessen wirklich EIGENE Tabellenzeilen sein — faellt
+        // beides in eine Zeile zusammen, bliebe der Test oben trotzdem gruen.
+        Assert.Equal(3, CountOwnerTableRows(result.FilePath!)); // Kopfzeile + 2 Datenzeilen
+    }
+
+    /// <summary>Zaehlt die Zeilen der Eigentuemertabelle, gefunden ueber ihre Kopfzeile "Haus Nr.".</summary>
+    private static int CountOwnerTableRows(string path)
+    {
+        using var document = WordprocessingDocument.Open(path, false);
+        var body = document.MainDocumentPart!.Document.Body!;
+
+        var table = body.Descendants<Table>().Single(t => t.Descendants<Text>()
+            .Any(text => text.Text.Contains("Haus Nr.", StringComparison.Ordinal)));
+
+        return table.Elements<TableRow>().Count();
     }
 
     [Fact]
@@ -271,6 +287,61 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Gefuellte_Eigentuemerfelder_speisen_das_Deckblatt_auch_wenn_es_Tabellenzeilen_gibt()
+    {
+        // Pascal kuerzt den Namen in der Tabelle sinnvoll ("Lubag AG"), die
+        // klassischen Felder tragen weiterhin Name und Adresse. Beides muss
+        // auf dem Deckblatt stehen, nicht nur der gekuerzte Tabellenname.
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.OwnerName = "Lubag AG";
+        request.Dossier.OwnerAddress = "Landenbergstrasse 34, 6005 Luzern";
+        request.Dossier.Owners.Clear();
+        request.Dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "3+4+7+8",
+            ParcelNumber = "762+756",
+            Name = "Lubag AG"
+        });
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Lubag AG", text, StringComparison.Ordinal);
+        Assert.Contains("Landenbergstrasse 34, 6005 Luzern", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Nur_Tabellenzeilen_ohne_klassische_Felder_speisen_ebenfalls_das_Deckblatt()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.OwnerName = "";
+        request.Dossier.OwnerAddress = "";
+        request.Dossier.Owners.Clear();
+        request.Dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "3",
+            ParcelNumber = "170",
+            Name = "Martin Muster"
+        });
+        request.Dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "4",
+            ParcelNumber = "171",
+            Name = "Anna Gisler"
+        });
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Martin Muster", text, StringComparison.Ordinal);
+        Assert.Contains("Anna Gisler", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Nimmt_die_Autoren_des_Gebiets_statt_des_Windows_Benutzers()
     {
         var (request, templatePath) = BuildScenario();
@@ -282,6 +353,22 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         var text = ReadDocumentText(result.FilePath!);
 
         Assert.Contains("Pascal Aschwanden/", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Leere_Autoren_bleiben_leer_statt_den_Windows_Benutzernamen_zu_zeigen()
+    {
+        // "Lieber leer als falsch": auf diesem Rechner heisst der Benutzer
+        // "Besitzer" — das gehoert nicht in ein Dokument fuer den Eigentuemer.
+        var (request, templatePath) = BuildScenario();
+        request.Area.Authors = "";
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.DoesNotContain(Environment.UserName, text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -323,7 +410,10 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         var service = new DossierWordTemplateExportService(() => templatePath);
         var result = await service.ExportAsync(request);
 
+        // Die Datei entsteht trotzdem — aber Pascal darf nicht erst beim
+        // Eigentuemer merken, dass Kapitel 1 leer geblieben ist.
         Assert.True(result.Success, result.Message);
+        Assert.Contains("Übersichtsplan", result.Message, StringComparison.Ordinal);
 
         var text = ReadDocumentText(result.FilePath!);
         Assert.DoesNotContain("{{", text, StringComparison.Ordinal);

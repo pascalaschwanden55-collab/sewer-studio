@@ -146,13 +146,7 @@ public partial class DossierEditWindow : Window
         OwnersGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Row, true);
 
         _target.Owners = _owners
-            .Where(owner =>
-                !string.IsNullOrWhiteSpace(owner.HouseNumber)
-                || !string.IsNullOrWhiteSpace(owner.ParcelNumber)
-                || !string.IsNullOrWhiteSpace(owner.Name)
-                || !string.IsNullOrWhiteSpace(owner.Phone)
-                || !string.IsNullOrWhiteSpace(owner.Mail)
-                || !string.IsNullOrWhiteSpace(owner.Occupancy))
+            .Where(owner => owner.HasContent)
             .ToList();
 
         _target.OverviewPlanPath = _planPath;

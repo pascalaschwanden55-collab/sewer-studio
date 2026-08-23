@@ -78,4 +78,29 @@ public sealed class DossierDocumentMigrationTests
         var row = Assert.Single(result.Dossiers[0].Owners);
         Assert.Equal("Neu", row.Name);
     }
+
+    [Fact]
+    public void Eine_geloeschte_Zeile_wird_bei_bereits_aktueller_Version_nicht_neu_erzeugt()
+    {
+        // Genau das Fehlerszenario aus dem Fix-Brief: Pascal loescht die
+        // automatisch erzeugte Zeile wieder. Beim naechsten Laden (hier: beim
+        // zweiten Migrationslauf) darf sie nicht zurueckkommen, nur weil
+        // OwnerName weiterhin im Datensatz steht.
+        var document = new DossierDocument { SchemaVersion = 1 };
+        document.Dossiers.Add(new DossierDefinition
+        {
+            OwnerName = "Martin Muster",
+            ContactPhone = "079 858 53 74"
+        });
+
+        var afterFirstLoad = DossierDocumentMigration.MigrateToCurrent(document);
+        Assert.Single(afterFirstLoad.Dossiers[0].Owners);
+
+        // Pascal loescht die Zeile wieder, OwnerName bleibt (speist das Deckblatt).
+        afterFirstLoad.Dossiers[0].Owners.Clear();
+
+        var afterSecondLoad = DossierDocumentMigration.MigrateToCurrent(afterFirstLoad);
+
+        Assert.Empty(afterSecondLoad.Dossiers[0].Owners);
+    }
 }

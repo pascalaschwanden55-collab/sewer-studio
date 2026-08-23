@@ -23,9 +23,19 @@ public static class DossierDocumentMigration
         document.Area ??= new DossierAreaSettings();
         document.Dossiers ??= new List<DossierDefinition>();
 
+        // Die Ableitung aus den Altfeldern ist eine EINMALIGE Umstellung von
+        // Version 1 auf Version 2. Bei einem bereits aktuellen Dokument darf
+        // sie nie erneut laufen: sonst kommt eine von Pascal geloeschte Zeile
+        // beim naechsten Laden zurueck, oder ein neu angelegtes Dossier
+        // bekommt eine Zeile, die er nie eingegeben hat.
+        var isLegacyDocument = document.SchemaVersion < DossierDocument.CurrentSchemaVersion;
+
         foreach (var dossier in document.Dossiers)
         {
             dossier.Owners ??= new List<DossierOwnerRow>();
+
+            if (!isLegacyDocument)
+                continue;
 
             // Wer schon Zeilen hat, wird nicht angefasst.
             if (dossier.Owners.Count > 0)
@@ -64,11 +74,7 @@ public static class DossierDocumentMigration
             Occupancy = Trim(dossier.Occupancy)
         };
 
-        var hasContent =
-            row.HouseNumber.Length > 0 || row.ParcelNumber.Length > 0 || row.Name.Length > 0
-            || row.Phone.Length > 0 || row.Mail.Length > 0 || row.Occupancy.Length > 0;
-
-        return hasContent ? row : null;
+        return row.HasContent ? row : null;
     }
 
     private static string Trim(string? value)

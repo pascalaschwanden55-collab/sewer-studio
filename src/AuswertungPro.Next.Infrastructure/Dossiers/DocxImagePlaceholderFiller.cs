@@ -46,19 +46,27 @@ public static class DocxImagePlaceholderFiller
 
     private const long EmuPerCm = 360_000L;
 
-    public static void Fill(
+    /// <summary>
+    /// Fuellt alle Bildplatzhalter. Liefert die Namen der Platzhalter, deren
+    /// Bild NICHT eingesetzt werden konnte — der Platzhaltertext selbst wird
+    /// trotzdem immer entfernt. Der Aufrufer kann damit Pascal auf ein leer
+    /// gebliebenes Kapitel hinweisen, statt es stillschweigend zu verschweigen.
+    /// </summary>
+    public static IReadOnlyList<string> Fill(
         WordprocessingDocument document,
         IReadOnlyList<DocxImagePlacement> placements)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(placements);
 
+        var missing = new List<string>();
+
         var mainPart = document.MainDocumentPart
             ?? throw new InvalidOperationException("Die Word-Vorlage hat keinen Hauptteil.");
 
         var body = mainPart.Document?.Body;
         if (body is null)
-            return;
+            return missing;
 
         var drawingId = 1U;
 
@@ -68,6 +76,7 @@ public static class DocxImagePlaceholderFiller
                 continue;
 
             var marker = MarkerPrefix + placement.PlaceholderName.Trim() + "}}";
+            var inserted = false;
 
             foreach (var paragraph in body.Descendants<Paragraph>().ToList())
             {
@@ -96,8 +105,14 @@ public static class DocxImagePlaceholderFiller
 
                 run.AppendChild(drawing);
                 drawingId++;
+                inserted = true;
             }
+
+            if (!inserted)
+                missing.Add(placement.PlaceholderName.Trim());
         }
+
+        return missing;
     }
 
     /// <summary>
@@ -134,7 +149,12 @@ public static class DocxImagePlaceholderFiller
 
         var partType = ResolvePartType(placement.ImagePath);
         if (partType is null)
+        {
+            // Derselbe Fehler wie oben: stiller Verzicht statt Hinweis.
+            BestEffort.ReportWarning(
+                $"[Dossiers] Dateiendung von '{placement.ImagePath}' wird nicht unterstuetzt.");
             return null;
+        }
 
         // ABWEICHUNG vom Brief: ImagePartType ist in OpenXml 3.1.1 keine Enum
         // mehr, sondern eine statische Klasse mit PartTypeInfo-Feldern
