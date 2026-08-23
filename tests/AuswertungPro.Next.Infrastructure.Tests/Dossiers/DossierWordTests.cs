@@ -504,3 +504,49 @@ public sealed class DossierWordTemplateBuilderTests
                 .Select(t => t.Text));
     }
 }
+
+/// <summary>
+/// Waechter gegen eine still veraltende ausgelieferte Vorlage: Der Bauer
+/// (<see cref="DossierWordTemplateBuilder"/>) kann sich weiterentwickeln,
+/// ohne dass jemand die Datei unter "Export_Vorlage" nachzieht — der Export
+/// liest aber genau diese Datei, nicht den Bauer zur Laufzeit. Dieser Test
+/// vergleicht deshalb den TEXT der ausgelieferten Datei mit dem Text, den der
+/// Bauer aktuell erzeugt. Ein Bytevergleich waere falsch: die ZIP-Huelle
+/// einer .docx traegt Zeitstempel und waere bei jedem Neuschreiben zufaellig
+/// anders, ohne dass sich am Inhalt etwas aendert.
+/// </summary>
+public sealed class AusgelieferteDossierWordVorlageTests
+{
+    [Fact]
+    public void Die_ausgelieferte_Vorlage_entspricht_dem_aktuellen_Bauer()
+    {
+        var wurzel = new AuswertungPro.Next.Infrastructure.Backup.RepositoryRootFileLocator()
+            .Locate(AppContext.BaseDirectory);
+
+        Assert.NotNull(wurzel);
+
+        var pfad = Path.Combine(wurzel!, "Export_Vorlage", DossierWordTemplateBuilder.TemplateFileName);
+        Assert.True(File.Exists(pfad), $"'{pfad}' fehlt.");
+
+        var ausgeliefertText = ReadDocumentText(File.ReadAllBytes(pfad));
+        var aktuellerText = ReadDocumentText(DossierWordTemplateBuilder.Build());
+
+        Assert.True(
+            string.Equals(ausgeliefertText, aktuellerText, StringComparison.Ordinal),
+            "Die ausgelieferte Datei 'Export_Vorlage/Eigentuemerdossier.docx' ist nicht mehr " +
+            "identisch mit dem, was DossierWordTemplateBuilder.Build() heute erzeugt. " +
+            "Die Vorlage muss neu erzeugt und committet werden " +
+            "(DossierWordTemplateBuilder.WriteTo(\"Export_Vorlage/Eigentuemerdossier.docx\")).");
+    }
+
+    private static string ReadDocumentText(byte[] bytes)
+    {
+        using var stream = new MemoryStream(bytes);
+        using var document = WordprocessingDocument.Open(stream, false);
+
+        return string.Concat(
+            document.MainDocumentPart!.Document.Body!
+                .Descendants<Text>()
+                .Select(t => t.Text));
+    }
+}
