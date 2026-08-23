@@ -109,10 +109,9 @@ public sealed class DossierBatchProposalUseCase
             .Where(w => !string.IsNullOrWhiteSpace(w))
             .ToList();
 
-        // Immer aufrufen, auch ohne bekannte Leitungsgeometrie: der Parzellendienst
-        // entscheidet selbst, was er mit einer leeren Linienliste anfaengt. Ein
-        // Ueberspringen wuerde Parzellen verlieren, die nur der Name-Weg noch
-        // liefern koennte, aber deren Grundbuchauskunft der Dienst trotzdem kennt.
+        // Der Aufruf laeuft auch ohne Linien: der Leser kehrt bei leerer Liste
+        // sofort und ohne Abfrage zurueck. Ein Waechter hier waere doppelt
+        // gemoppelt und wuerde die Absicht nur verschleiern.
         progress?.Report("Parzellen unter den Leitungen suchen");
         var beruehrt = await SicherLesen<IReadOnlyList<ParcelInfo>>(
             () => _parcels.FindTouchedAsync(linien, ct),

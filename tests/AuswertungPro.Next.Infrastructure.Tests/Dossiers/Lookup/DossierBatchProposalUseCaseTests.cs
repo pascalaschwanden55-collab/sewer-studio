@@ -157,6 +157,107 @@ public sealed class DossierBatchProposalUseCaseTests
         Assert.False(vorschlag.Selectable);
     }
 
+    [Fact]
+    public async Task Eine_dem_Kanton_unbekannte_Leitung_kommt_ueber_ihren_Namen_dazu()
+    {
+        // Der Kanton kennt auf der Parzelle nur die eine Leitung. Der private
+        // Hausanschluss 439.01-36051 steht nur im Projekt — sein Knotenname
+        // nennt die Parzelle und bringt ihn hinein.
+        var aufParzelle = new[]
+        {
+            new NetworkHolding("36051-36329", "Privat", 11.46, "LINESTRING(1 1,2 2)")
+        };
+
+        var use = Baue(new[] { Parzelle("439") }, aufParzelle, Miteigentum());
+
+        var ergebnis = await use.RunAsync(
+            new DossierBatchProposalRequest(
+                1206, new[] { "36051-36329", "439.01-36051" }, Array.Empty<string>()),
+            null, CancellationToken.None);
+
+        var vorschlag = Assert.Single(ergebnis.Proposals);
+        Assert.Equal(2, vorschlag.Holdings.Count);
+
+        var ueberDenNamen = Assert.Single(vorschlag.Holdings, h => h.Origin == "Name");
+        Assert.Equal("439.01-36051", ueberDenNamen.Designation);
+        Assert.True(ueberDenNamen.IsPrivate);
+        Assert.True(ueberDenNamen.InProject);
+        Assert.True(ueberDenNamen.Preselected);
+
+        Assert.Equal("36051-36329", Assert.Single(vorschlag.Holdings, h => h.Origin == "Lage").Designation);
+    }
+
+    [Fact]
+    public async Task Eine_Leitung_die_beide_Wege_finden_erscheint_nur_einmal()
+    {
+        var aufParzelle = new[]
+        {
+            new NetworkHolding("439.01-36051", "Privat", 5.0, "LINESTRING(1 1,2 2)")
+        };
+
+        var use = Baue(new[] { Parzelle("439") }, aufParzelle, Miteigentum());
+
+        var ergebnis = await use.RunAsync(
+            new DossierBatchProposalRequest(1206, new[] { "439.01-36051" }, Array.Empty<string>()),
+            null, CancellationToken.None);
+
+        var vorschlag = Assert.Single(ergebnis.Proposals);
+        var leitung = Assert.Single(vorschlag.Holdings);
+
+        // Die Lage gewinnt: sie kennt den echten Eigentuemer.
+        Assert.Equal("Lage", leitung.Origin);
+    }
+
+    [Fact]
+    public async Task Zwei_Parzellen_bekommen_jede_ihre_eigenen_Leitungen()
+    {
+        var jeParzelle = new Dictionary<string, NetworkHolding[]>(StringComparer.Ordinal)
+        {
+            ["439"] = new[] { new NetworkHolding("36051-36329", "Privat", 11.46, "LINESTRING(1 1,2 2)") },
+            ["441"] = new[] { new NetworkHolding("36052-36329", "Privat", 12.9, "LINESTRING(3 3,4 4)") }
+        };
+
+        var use = new DossierBatchProposalUseCase(
+            new FakeParcels(new[] { Parzelle("439"), Parzelle("441") }),
+            new FakeRegistry(Miteigentum()),
+            new ParzellenweisesNetz(jeParzelle));
+
+        var ergebnis = await use.RunAsync(
+            new DossierBatchProposalRequest(
+                1206, new[] { "36051-36329", "36052-36329" }, Array.Empty<string>()),
+            null, CancellationToken.None);
+
+        Assert.Equal(2, ergebnis.Proposals.Count);
+
+        var vier39 = Assert.Single(ergebnis.Proposals, p => p.Parcel.Number == "439");
+        var vier41 = Assert.Single(ergebnis.Proposals, p => p.Parcel.Number == "441");
+
+        Assert.Equal("36051-36329", Assert.Single(vier39.Holdings).Designation);
+        Assert.Equal("36052-36329", Assert.Single(vier41.Holdings).Designation);
+    }
+
+    /// <summary>Liefert je Parzelle andere Leitungen — anders als der einfache Fake.</summary>
+    private sealed class ParzellenweisesNetz : ISewerNetworkLookup
+    {
+        private readonly IReadOnlyDictionary<string, NetworkHolding[]> _jeParzelle;
+
+        public ParzellenweisesNetz(IReadOnlyDictionary<string, NetworkHolding[]> jeParzelle)
+            => _jeParzelle = jeParzelle;
+
+        public Task<IReadOnlyList<NetworkHolding>> FindByNamesAsync(
+            IReadOnlyList<string> names, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<NetworkHolding>>(
+                _jeParzelle.Values.SelectMany(h => h)
+                    .Where(h => names.Contains(h.Designation)).ToList());
+
+        public Task<IReadOnlyList<NetworkHolding>> FindOnParcelAsync(
+            ParcelInfo parcel, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<NetworkHolding>>(
+                _jeParzelle.TryGetValue(parcel.Number, out var treffer)
+                    ? treffer
+                    : Array.Empty<NetworkHolding>());
+    }
+
     private static DossierBatchProposalUseCase Baue(
         IReadOnlyList<ParcelInfo> parzellen,
         IReadOnlyList<NetworkHolding> aufParzelle,
