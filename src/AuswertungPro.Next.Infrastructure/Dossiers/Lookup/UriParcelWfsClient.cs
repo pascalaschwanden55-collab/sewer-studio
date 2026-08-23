@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -47,7 +48,14 @@ public sealed class UriParcelWfsClient : IParcelLookup
         if (wktLines.Count == 0)
             return Array.Empty<ParcelInfo>();
 
-        var linien = string.Join(",", ExtrahiereLinienkoerper(wktLines));
+        var teile = ExtrahiereLinienkoerper(wktLines).ToList();
+
+        // Nur unbrauchbare Eintraege: dann gar nicht erst fragen, statt eine
+        // leere Geometrie an den Dienst zu schicken.
+        if (teile.Count == 0)
+            return Array.Empty<ParcelInfo>();
+
+        var linien = string.Join(",", teile);
         var filter = $"INTERSECTS(wkb_geometry,MULTILINESTRING({linien}))";
 
         // Per POST, weil der Filter fuer ein ganzes Projekt mehrere tausend
