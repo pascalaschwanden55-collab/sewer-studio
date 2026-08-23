@@ -128,6 +128,12 @@ public sealed class DossierDefinition
     public string PostalCode { get; set; } = "";
     public string Town { get; set; } = "";
 
+    /// <summary>Politische Gemeinde. Nicht dasselbe wie der Ort der Adresse.</summary>
+    public string Municipality { get; set; } = "";
+
+    /// <summary>BFS-Nummer der Gemeinde. Ueber sie laeuft die Parzellensuche.</summary>
+    public int? MunicipalityBfsNr { get; set; }
+
     // ── Eigentuemer ───────────────────────────────────────────────────────
     public string OwnerName { get; set; } = "";
     public string OwnerAddress { get; set; } = "";
@@ -183,7 +189,7 @@ public sealed class DossierDefinition
 public sealed class DossierDocument
 {
     /// <summary>Formatversion, die diese Programmversion schreibt.</summary>
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     /// <summary>Formatversion. Unbekannt hoehere Versionen werden nicht ueberschrieben.</summary>
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;

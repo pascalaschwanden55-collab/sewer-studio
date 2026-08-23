@@ -32,7 +32,10 @@ public sealed class DossierDocumentMigrationTests
         Assert.Equal("079 858 53 74", row.Phone);
         Assert.Equal("markus@example.ch", row.Mail);
         Assert.Equal("Einfamilienhaus", row.Occupancy);
-        Assert.Equal(2, result.SchemaVersion);
+        // War fest auf 2 verdrahtet; mit der Anhebung auf Version 3 (Task 6)
+        // stimmt das nicht mehr. Der Test prueft "aktuelle Version nach der
+        // Umstellung", nicht die Ableitungsgrenze — deshalb dynamisch pruefen.
+        Assert.Equal(DossierDocument.CurrentSchemaVersion, result.SchemaVersion);
     }
 
     [Fact]
@@ -137,5 +140,20 @@ public sealed class DossierDocumentMigrationTests
         var afterSecondLoad = DossierDocumentMigration.MigrateToCurrent(afterFirstLoad);
 
         Assert.Empty(afterSecondLoad.Dossiers[0].Owners);
+    }
+
+    [Fact]
+    public void Version_2_bleibt_bei_der_Erhoehung_auf_3_ohne_neue_Eigentuemerzeile()
+    {
+        // Die Falle aus der Pruefung: mit "kleiner als die aktuelle Version"
+        // waere eine Version-2-Datei wieder Altbestand und die geloeschte Zeile
+        // kaeme zurueck.
+        var document = new DossierDocument { SchemaVersion = 2 };
+        document.Dossiers.Add(new DossierDefinition { OwnerName = "Martin Muster" });
+
+        var result = DossierDocumentMigration.MigrateToCurrent(document);
+
+        Assert.Empty(result.Dossiers[0].Owners);
+        Assert.Equal(3, result.SchemaVersion);
     }
 }
