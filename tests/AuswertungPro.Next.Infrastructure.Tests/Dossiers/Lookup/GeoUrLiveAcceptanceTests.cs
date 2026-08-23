@@ -51,9 +51,11 @@ public sealed class GeoUrLiveAcceptanceTests
         Assert.Equal("6472", eintrag.PostalCode);
         Assert.Equal("Erstfeld", eintrag.Town);
 
-        // Namensfreie Kodierungspruefung: die Auskunft ist ISO-8859-1. Wird sie
-        // falsch gelesen, entstehen Ersatzzeichen oder Mojibake-Folgen wie "Ã¼".
-        // Beides waere ein verstuemmelter Name im Brief an den Eigentuemer.
+        // Namensfreie NEGATIV-Pruefung: findet Zeichensalat, falls doch
+        // einmal ein Umlaut auftaucht. Sie ist bei umlautfreien Namen (wie
+        // hier bei Parzelle 439) leer wahr und belegt die Kodierung deshalb
+        // NICHT — den positiven Nachweis liefert der eigene Test
+        // Die_Auskunft_wird_wirklich_als_ISO_8859_1_gelesen weiter unten.
         Assert.All(eintrag.Owners, o =>
         {
             Assert.DoesNotContain('�', o.Name);
@@ -84,5 +86,27 @@ public sealed class GeoUrLiveAcceptanceTests
 
         Assert.Equal(19, gemeinden.Count);
         Assert.Contains(gemeinden, g => g.BfsNr == 1206 && g.Name == "Erstfeld");
+    }
+
+    [Fact]
+    public async Task Die_Auskunft_wird_wirklich_als_ISO_8859_1_gelesen()
+    {
+        // Positiver Nachweis statt blosser Abwesenheit von Zeichensalat: die
+        // Seite traegt das Wort "Eigentümer" als rohes Latin-1-Byte. Wird sie
+        // als UTF-8 gelesen, steht dort ein Ersatzzeichen — und ein Umlaut in
+        // einem echten Namen waere genauso verstuemmelt.
+        //
+        // Das Wort ist eine feste Beschriftung der Seite, kein Personenname.
+        using var gateway = new GeoUrHttpGateway();
+
+        var parzelle = await new UriParcelWfsClient(gateway).FindAsync(1206, "439");
+        Assert.NotNull(parzelle);
+        Assert.False(string.IsNullOrWhiteSpace(parzelle!.LandRegistryUrl));
+
+        var seite = await gateway.GetStringAsync(new Uri(parzelle.LandRegistryUrl));
+
+        Assert.NotNull(seite);
+        Assert.Contains("Eigentümer", seite!, StringComparison.Ordinal);
+        Assert.DoesNotContain('�', seite);
     }
 }
