@@ -222,6 +222,114 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         Assert.Contains("Keine Leitungen zugeordnet", text, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Schreibt_jede_Eigentuemerzeile_als_eigene_Tabellenzeile()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.Owners.Clear();
+        request.Dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "3",
+            ParcelNumber = "170",
+            Name = "Martin Muster",
+            Phone = "079 858 53 74",
+            Occupancy = "Einfamilienhaus"
+        });
+        request.Dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "4",
+            ParcelNumber = "171",
+            Name = "Anna Gisler",
+            Mail = "anna.gisler@example.ch"
+        });
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Martin Muster", text, StringComparison.Ordinal);
+        Assert.Contains("Anna Gisler", text, StringComparison.Ordinal);
+        Assert.Contains("Tel.: 079 858 53 74", text, StringComparison.Ordinal);
+        Assert.Contains("Objektbewohner: Einfamilienhaus", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Ohne_Eigentuemerzeile_bleibt_ein_klarer_Hinweis_statt_eines_Platzhalters()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.Owners.Clear();
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Keine Eigentümerangaben erfasst", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Nimmt_die_Autoren_des_Gebiets_statt_des_Windows_Benutzers()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Area.Authors = "Pascal Aschwanden/";
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Pascal Aschwanden/", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Setzt_Logo_Wappen_und_Uebersichtsplan_als_Bilder_ein()
+    {
+        var (request, templatePath) = BuildScenario();
+
+        // Logo und Wappen liegen neben der Vorlage.
+        var vorlagenOrdner = Path.GetDirectoryName(templatePath)!;
+        File.WriteAllBytes(
+            Path.Combine(vorlagenOrdner, DossierWordTemplateExportService.LogoFileName),
+            TestImages.Png(716, 297));
+        File.WriteAllBytes(
+            Path.Combine(vorlagenOrdner, DossierWordTemplateExportService.CoatOfArmsFileName),
+            TestImages.Png(407, 491));
+
+        var planPfad = Path.Combine(_root, "plan.png");
+        File.WriteAllBytes(planPfad, TestImages.Png(1200, 1600));
+        request.Dossier.OverviewPlanPath = planPfad;
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        Assert.Equal(3, document.MainDocumentPart!.ImageParts.Count());
+
+        var text = ReadDocumentText(result.FilePath!);
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Fehlende_Bilder_erzeugen_trotzdem_ein_vollstaendiges_Dossier()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.OverviewPlanPath = Path.Combine(_root, "gibtesnicht.png");
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+
+        var text = ReadDocumentText(result.FilePath!);
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+        Assert.Contains("Erstfeld West", text, StringComparison.Ordinal);
+    }
+
     private (DossierExportRequest Request, string TemplatePath) BuildScenario(
         bool withHoldings = true)
     {
@@ -245,6 +353,16 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
             Occupancy = "Mehrfamilienhaus",
             ConstructionProcess = "Leitung 1 und 7 mittels Inliner sanieren."
         };
+
+        dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "3+4+7+8",
+            ParcelNumber = "762+756",
+            Name = "Lubag AG Landenbergstrasse 34, 6005 Luzern",
+            Phone = "041 360 00 50",
+            Mail = "sandro.sigrist@lubag.ch",
+            Occupancy = "Mehrfamilienhaus"
+        });
 
         var costs = new ProjectCostStore();
 
