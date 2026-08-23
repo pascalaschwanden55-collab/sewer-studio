@@ -249,3 +249,32 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
     private static Run NewRun(string text)
         => new(new Text(text) { Space = DocumentFormat.OpenXml.SpaceProcessingModeValues.Preserve });
 }
+
+public sealed class AusgelieferteDossierBilderTests
+{
+    [Fact]
+    public void Logo_und_Wappen_liegen_im_Vorlagenordner_und_sind_lesbare_Bilder()
+    {
+        var wurzel = new AuswertungPro.Next.Infrastructure.Backup.RepositoryRootFileLocator()
+            .Locate(AppContext.BaseDirectory);
+
+        Assert.NotNull(wurzel);
+
+        var logo = Path.Combine(wurzel!, "Export_Vorlage", "Dossier_Logo.png");
+        var wappen = Path.Combine(wurzel!, "Export_Vorlage", "Dossier_Wappen.png");
+
+        Assert.True(File.Exists(logo), $"'{logo}' fehlt.");
+        Assert.True(File.Exists(wappen), $"'{wappen}' fehlt.");
+
+        // Die Masse belegen zugleich, dass die beiden Dateien nicht vertauscht
+        // sind: das Logo ist breiter als hoch, das Wappen hoeher als breit.
+        Assert.True(ImageSizeReader.TryRead(File.ReadAllBytes(logo), out var logoW, out var logoH));
+        Assert.Equal(697, logoW);
+        Assert.Equal(286, logoH);
+
+        Assert.True(ImageSizeReader.TryRead(
+            File.ReadAllBytes(wappen), out var wappenW, out var wappenH));
+        Assert.Equal(407, wappenW);
+        Assert.Equal(491, wappenH);
+    }
+}

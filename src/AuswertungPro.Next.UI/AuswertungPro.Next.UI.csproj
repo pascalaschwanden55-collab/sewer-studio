@@ -115,6 +115,14 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
+    <None Include="..\..\Export_Vorlage\Dossier_Logo.png" Link="Export_Vorlage\Dossier_Logo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+    <None Include="..\..\Export_Vorlage\Dossier_Wappen.png" Link="Export_Vorlage\Dossier_Wappen.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
 
     <None Include="tools\PLACE_PDFTOTEXT_HERE.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
