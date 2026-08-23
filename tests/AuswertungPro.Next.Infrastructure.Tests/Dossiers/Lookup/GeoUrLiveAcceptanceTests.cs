@@ -45,7 +45,18 @@ public sealed class GeoUrLiveAcceptanceTests
         Assert.NotNull(eintrag);
         Assert.False(eintrag!.NoOwnerRegistered);
         Assert.Equal(2, eintrag.Owners.Count);
-        Assert.All(eintrag.Owners, o => Assert.False(string.IsNullOrWhiteSpace(o.Name)));
+
+        // Bewusst KEIN Assert.All und KEIN Assert.Contains/DoesNotContain auf
+        // dem Namen selbst: xUnit haengt einem Fehlschlag sowohl den ToString()
+        // des Elements (ein Record — das waere der ganze Eintrag samt echtem
+        // Namen) als auch den geprueften Text an die Meldung an. Beides wuerde
+        // einen echten Eigentuemernamen ins Testprotokoll schreiben.
+        foreach (var eigentuemer in eintrag.Owners)
+        {
+            Assert.True(!string.IsNullOrWhiteSpace(eigentuemer.Name),
+                "Ein Eigentuemername ist leer.");
+        }
+
         Assert.Equal("Lit.A", eintrag.Owners[0].Designation);
         Assert.Equal("Lit.B", eintrag.Owners[1].Designation);
         Assert.Equal("6472", eintrag.PostalCode);
@@ -56,13 +67,20 @@ public sealed class GeoUrLiveAcceptanceTests
         // hier bei Parzelle 439) leer wahr und belegt die Kodierung deshalb
         // NICHT — den positiven Nachweis liefert der eigene Test
         // Die_Auskunft_wird_wirklich_als_ISO_8859_1_gelesen weiter unten.
-        Assert.All(eintrag.Owners, o =>
+        foreach (var eigentuemer in eintrag.Owners)
         {
-            Assert.DoesNotContain('�', o.Name);
-            Assert.DoesNotContain("Ã", o.Name, StringComparison.Ordinal);
-            Assert.DoesNotContain('�', o.AddressLine);
-            Assert.DoesNotContain("Ã", o.AddressLine, StringComparison.Ordinal);
-        });
+            var nameOhneZeichensalat =
+                !eigentuemer.Name.Contains('�')
+                && !eigentuemer.Name.Contains("Ã", StringComparison.Ordinal);
+            var adresseOhneZeichensalat =
+                !eigentuemer.AddressLine.Contains('�')
+                && !eigentuemer.AddressLine.Contains("Ã", StringComparison.Ordinal);
+
+            Assert.True(nameOhneZeichensalat,
+                "Ein Eigentuemername enthält Zeichensalat — die Kodierung stimmt nicht.");
+            Assert.True(adresseOhneZeichensalat,
+                "Eine Adresse enthält Zeichensalat — die Kodierung stimmt nicht.");
+        }
 
         // Sechs Haltungen auf der Parzelle, davon fuenf privat.
         var netz = new UriSewerNetworkWfsClient(gateway);
@@ -106,7 +124,15 @@ public sealed class GeoUrLiveAcceptanceTests
         var seite = await gateway.GetStringAsync(new Uri(parzelle.LandRegistryUrl));
 
         Assert.NotNull(seite);
-        Assert.Contains("Eigentümer", seite!, StringComparison.Ordinal);
-        Assert.DoesNotContain('�', seite);
+
+        var traegtUmlaut = seite!.Contains("Eigentümer", StringComparison.Ordinal);
+        var traegtErsatzzeichen = seite.Contains('�');
+
+        // Bewusst Assert.True mit eigener Meldung: Assert.Contains wuerde im
+        // Fehlerfall die ganze Seite ausgeben — samt echter Eigentuemernamen.
+        Assert.True(traegtUmlaut,
+            "Die Beschriftung 'Eigentümer' wurde nicht mit Umlaut gelesen — die Kodierung stimmt nicht.");
+        Assert.False(traegtErsatzzeichen,
+            "Die gelesene Seite enthält Ersatzzeichen — die Kodierung stimmt nicht.");
     }
 }

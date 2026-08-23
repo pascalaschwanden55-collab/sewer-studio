@@ -106,8 +106,12 @@ public sealed partial class DossiersPageViewModel
         }
 
         // Parzellen, fuer die es schon ein Dossier gibt, werden nicht erneut angeboten.
+        // "439, 440" oder "762+756": das Feld ist Freitext. Jede einzelne Nummer
+        // muss den Doppelten-Schutz ausloesen, nicht nur die ganze Zeichenkette.
         var mitDossier = _document.Dossiers
-            .Select(d => (d.ParcelNumbers ?? string.Empty).Trim())
+            .SelectMany(d => (d.ParcelNumbers ?? string.Empty)
+                .Split(new[] { ',', ';', '+', '/', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+            .Select(p => p.Trim())
             .Where(p => p.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();

@@ -60,12 +60,14 @@ public sealed class UriLookupClientTests
     }
 
     [Fact]
-    public async Task Ein_Serverfehler_ergibt_null_statt_einer_Ausnahme()
+    public async Task Ein_Serverfehler_wird_als_Ausnahme_gemeldet()
     {
+        // Ein Fehlschlag darf nicht wie "nichts gefunden" aussehen — sonst
+        // entstuende ein Dossier mit zu wenigen Leitungen, ohne Hinweis.
         var handler = new FesteAntwort("", HttpStatusCode.InternalServerError);
         var client = new UriParcelWfsClient(new GeoUrHttpGateway(handler));
 
-        Assert.Null(await client.FindAsync(1206, "439"));
+        await Assert.ThrowsAsync<GeoUrRequestFailedException>(() => client.FindAsync(1206, "439"));
     }
 
     [Fact]

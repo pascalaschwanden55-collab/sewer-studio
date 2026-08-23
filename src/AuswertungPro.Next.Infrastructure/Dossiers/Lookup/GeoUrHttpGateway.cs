@@ -5,8 +5,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using AuswertungPro.Next.Application.Common;
-
 namespace AuswertungPro.Next.Infrastructure.Dossiers.Lookup;
 
 /// <summary>
@@ -17,8 +15,11 @@ namespace AuswertungPro.Next.Infrastructure.Dossiers.Lookup;
 /// deshalb bewusst NACHEINANDER — ein Schwall gleichzeitiger Anfragen waere
 /// unhoeflich und kann gesperrt werden.
 ///
-/// Ein Fehler ergibt null. Der Aufrufer meldet das als Warnung; nichts wird
-/// geraten.
+/// Ein Fehler wirft <see cref="GeoUrRequestFailedException"/>. Das ist bewusst
+/// KEIN null: Ein leeres Ergebnis heisst "nichts gefunden", ein Fehlschlag
+/// heisst "wir wissen es nicht" — beides gleich zu behandeln wuerde ein
+/// Dossier mit zu wenigen Leitungen erzeugen, ohne dass es auffaellt. Der
+/// Anwendungsfall faengt die Ausnahme und meldet sie als Warnung.
 /// </summary>
 public sealed class GeoUrHttpGateway : IDisposable
 {
@@ -69,7 +70,10 @@ public sealed class GeoUrHttpGateway : IDisposable
             using var antwort = await _http.SendAsync(anfrage, ct).ConfigureAwait(false);
 
             if (!antwort.IsSuccessStatusCode)
-                return null;
+            {
+                throw new GeoUrRequestFailedException(
+                    $"Der Kartendienst antwortete mit {(int)antwort.StatusCode}.");
+            }
 
             var bytes = await antwort.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
             return LiesText(bytes, antwort.Content.Headers.ContentType?.CharSet);
@@ -78,10 +82,14 @@ public sealed class GeoUrHttpGateway : IDisposable
         {
             throw;
         }
+        catch (GeoUrRequestFailedException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            BestEffort.ReportWarning($"[Dossier-Auskunft] Abfrage fehlgeschlagen: {ex.Message}");
-            return null;
+            throw new GeoUrRequestFailedException(
+                "Die Abfrage an den Kartendienst ist fehlgeschlagen: " + ex.Message, ex);
         }
         finally
         {

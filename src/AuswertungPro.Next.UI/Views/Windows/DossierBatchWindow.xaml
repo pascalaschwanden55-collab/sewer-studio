@@ -31,7 +31,8 @@
 
         <DataGrid Grid.Row="2" x:Name="ProposalGrid" AutoGenerateColumns="False"
                   CanUserAddRows="False" HeadersVisibility="Column"
-                  GridLinesVisibility="Horizontal" IsReadOnly="False">
+                  GridLinesVisibility="Horizontal" IsReadOnly="False"
+                  RowDetailsVisibilityMode="VisibleWhenSelected">
             <DataGrid.Columns>
                 <DataGridCheckBoxColumn Header="" Width="40"
                                         Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"/>
@@ -46,6 +47,21 @@
                 <DataGridTextColumn Header="Hinweis" Width="180" IsReadOnly="True"
                                     Binding="{Binding SkipReason}"/>
             </DataGrid.Columns>
+            <DataGrid.RowDetailsTemplate>
+                <DataTemplate>
+                    <ItemsControl ItemsSource="{Binding Holdings}" Margin="34,4,0,8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                    <CheckBox IsChecked="{Binding IsSelected}" Width="26"/>
+                                    <TextBlock Text="{Binding Designation}" Width="180"/>
+                                    <TextBlock Text="{Binding Note}" Opacity="0.75"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </DataTemplate>
+            </DataGrid.RowDetailsTemplate>
         </DataGrid>
 
         <TextBlock Grid.Row="3" x:Name="StatusText" TextWrapping="Wrap" Margin="0,10,0,0"/>

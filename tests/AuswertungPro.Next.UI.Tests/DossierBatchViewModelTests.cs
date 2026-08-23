@@ -104,6 +104,27 @@ public sealed class DossierBatchViewModelTests
     }
 
     [Fact]
+    public void Das_Abhaken_einer_Leitung_aktualisiert_die_Zusammenfassung()
+    {
+        var vm = new DossierBatchViewModel();
+        vm.Uebernehmen(new DossierBatchProposalResult(
+            new[] { Vorschlag("439", true) }, Array.Empty<string>()));
+
+        var zeile = vm.Rows[0];
+        var gemeldet = false;
+        zeile.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(DossierBatchRow.HoldingSummary))
+                gemeldet = true;
+        };
+
+        zeile.Holdings[0].IsSelected = false;
+
+        Assert.True(gemeldet);
+        Assert.Contains("0 von 2", zeile.HoldingSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Eine_waehlbare_Zeile_meldet_nicht_unnoetig()
     {
         var vm = new DossierBatchViewModel();

@@ -81,14 +81,42 @@ internal static class WfsGml
 
     public static string PolygonWkt(XElement element)
     {
-        // Ein Ring braucht mindestens vier Punkte.
-        var teile = Geometrieteile(element, mindestPunkte: 4);
-        if (teile.Count == 0)
+        var flaechen = new List<string>();
+
+        foreach (var polygon in element.Descendants()
+                     .Where(e => e.Name.LocalName == "Polygon"))
+        {
+            var ringe = new List<string>();
+
+            foreach (var rand in polygon.Elements()
+                         .Where(e => e.Name.LocalName is "exterior" or "interior"))
+            {
+                var punkte = Punkte(
+                    rand.Descendants().FirstOrDefault(e => e.Name.LocalName == "posList")?.Value,
+                    mindestPunkte: 4);
+
+                if (punkte.Count == 0)
+                    return string.Empty;
+
+                ringe.Add(string.Join(",", punkte));
+            }
+
+            if (ringe.Count == 0)
+                return string.Empty;
+
+            // Der erste Ring ist die Aussenkante, jeder weitere ein Loch — meist
+            // eine umschlossene Nachbarparzelle. Wuerde man sie gleichrangig
+            // behandeln, faende die raeumliche Suche auch die Leitungen des
+            // Nachbarn und legte sie ins falsche Dossier.
+            flaechen.Add("((" + string.Join("),(", ringe) + "))");
+        }
+
+        if (flaechen.Count == 0)
             return string.Empty;
 
-        return teile.Count == 1
-            ? "POLYGON((" + teile[0] + "))"
-            : "MULTIPOLYGON(((" + string.Join(")),((", teile) + ")))";
+        return flaechen.Count == 1
+            ? "POLYGON" + flaechen[0]
+            : "MULTIPOLYGON(" + string.Join(",", flaechen) + ")";
     }
 
     public static string LineStringWkt(XElement element)

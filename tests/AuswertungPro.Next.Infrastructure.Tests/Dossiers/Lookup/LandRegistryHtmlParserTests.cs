@@ -93,6 +93,30 @@ public sealed class LandRegistryHtmlParserTests
     }
 
     [Fact]
+    public void Keine_wird_auch_mitten_im_Block_nicht_zum_Namen()
+    {
+        var html = """
+            <html><body><table>
+            <tr><td>Grundbuch Musterdorf</td></tr>
+            <tr><td>Eigent&#252;mer</td></tr>
+            <tr><td>Lit.A:</td></tr>
+            <tr><td>Martin Muster</td></tr>
+            <tr><td>Musterweg 3, 6472 Musterdorf</td></tr>
+            <tr><td>1/2 Miteigentum</td></tr>
+            <tr><td>Lit.B:</td></tr>
+            <tr><td>Keine</td></tr>
+            <tr><td>Anmerkungen(nur &#246;ffentlich einsehbare)</td></tr>
+            </table></body></html>
+            """;
+
+        var eintrag = LandRegistryHtmlParser.Parse(html);
+
+        Assert.NotNull(eintrag);
+        Assert.DoesNotContain(eintrag!.Owners,
+            o => o.Name.Equals("Keine", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Ohne_Abschluss_Anmerkungen_wird_nichts_gelesen()
     {
         // Der Seitenrest darf nicht zum Eigentuemerblock werden.

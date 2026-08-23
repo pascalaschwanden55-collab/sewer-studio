@@ -148,6 +148,36 @@ public sealed class WfsXmlParserTests
     }
 
     [Fact]
+    public void Ein_Loch_in_der_Parzelle_wird_zur_Aussparung_nicht_zur_zweiten_Flaeche()
+    {
+        var xml = """
+            <wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"
+                                   xmlns:gml="http://www.opengis.net/gml/3.2"
+                                   xmlns:av="http://geo.ur.ch/av">
+              <wfs:member>
+                <av:ch059_liegenschaften_flaechen>
+                  <av:nummer>905</av:nummer>
+                  <av:wkb_geometry><gml:MultiSurface><gml:surfaceMember><gml:Polygon>
+                    <gml:exterior><gml:LinearRing>
+                      <gml:posList>0 0 100 0 100 100 0 100 0 0</gml:posList>
+                    </gml:LinearRing></gml:exterior>
+                    <gml:interior><gml:LinearRing>
+                      <gml:posList>40 40 60 40 60 60 40 60 40 40</gml:posList>
+                    </gml:LinearRing></gml:interior>
+                  </gml:Polygon></gml:surfaceMember></gml:MultiSurface></av:wkb_geometry>
+                </av:ch059_liegenschaften_flaechen>
+              </wfs:member>
+            </wfs:FeatureCollection>
+            """;
+
+        var parzelle = Assert.Single(ParcelWfsXmlParser.Parse(xml));
+
+        Assert.Equal(
+            "POLYGON((0 0,100 0,100 100,0 100,0 0),(40 40,60 40,60 60,40 60,40 40))",
+            parzelle.OutlineWkt);
+    }
+
+    [Fact]
     public void Eine_Flaeche_aus_zwei_Punkten_ist_kein_Ring()
     {
         var xml = """

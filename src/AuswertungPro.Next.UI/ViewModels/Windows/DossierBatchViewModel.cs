@@ -19,6 +19,11 @@ public sealed class DossierBatchRow : INotifyPropertyChanged
         Proposal = proposal ?? throw new ArgumentNullException(nameof(proposal));
         Holdings = proposal.Holdings.Select(h => new DossierBatchHoldingRow(h)).ToList();
         _isSelected = proposal.Selectable;
+
+        // Das Abhaken einer einzelnen Leitung in der aufklappbaren Zeilenansicht
+        // muss die Zusammenfassung ("4 von 6 Leitungen") sofort nachziehen.
+        foreach (var leitung in Holdings)
+            leitung.PropertyChanged += (_, _) => Melde(nameof(HoldingSummary));
     }
 
     public DossierProposal Proposal { get; }
@@ -72,27 +77,47 @@ public sealed class DossierBatchRow : INotifyPropertyChanged
 }
 
 /// <summary>Eine Leitung innerhalb einer Zeile.</summary>
-public sealed class DossierBatchHoldingRow
+public sealed class DossierBatchHoldingRow : INotifyPropertyChanged
 {
+    private bool _isSelected;
+
     public DossierBatchHoldingRow(ProposedHolding holding)
     {
         Holding = holding ?? throw new ArgumentNullException(nameof(holding));
-        IsSelected = holding.Preselected;
+        _isSelected = holding.Preselected;
     }
 
     public ProposedHolding Holding { get; }
 
-    public bool IsSelected { get; set; }
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (value == _isSelected)
+                return;
+
+            _isSelected = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+        }
+    }
 
     public string Designation => Holding.Designation;
 
+    /// <summary>
+    /// Warum die Leitung so eingestuft ist. "aus dem Leitungsnamen" ist wichtig:
+    /// dort ist "privat" eine Annahme aus der Knotenform, keine Auskunft des
+    /// Kantons — das muss der Mensch sehen koennen.
+    /// </summary>
     public string Note => Holding switch
     {
         { IsPrivate: false } => "gehört dem Werk",
         { InProject: false } => "nicht im Projekt",
-        { Origin: "Name" } => "aus dem Leitungsnamen",
+        { Origin: "Name" } => "aus dem Leitungsnamen — privat angenommen",
         _ => ""
     };
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }
 
 /// <summary>

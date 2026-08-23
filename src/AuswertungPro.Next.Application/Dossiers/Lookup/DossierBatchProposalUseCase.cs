@@ -118,7 +118,10 @@ public sealed class DossierBatchProposalUseCase
             "Parzellensuche", warnungen).ConfigureAwait(false)
             ?? Array.Empty<ParcelInfo>();
 
-        gefunden.AddRange(beruehrt);
+        // Parzellennummern sind je Gemeinde vergeben. Eine Leitung an der
+        // Gemeindegrenze liefert sonst eine fremde Parzelle mit derselben
+        // Nummer — und damit den falschen Eigentuemer.
+        gefunden.AddRange(beruehrt.Where(p => p.BfsNr == request.BfsNr));
 
         foreach (var nummer in ParcelNumberFromHoldingName.ExtractAll(request.ProjectHoldingNames))
         {
@@ -137,7 +140,7 @@ public sealed class DossierBatchProposalUseCase
         }
 
         return gefunden
-            .GroupBy(p => p.Number, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(p => (p.BfsNr, p.Number))
             .Select(g => g.First())
             .OrderBy(p => p.Number.Length)
             .ThenBy(p => p.Number, StringComparer.Ordinal)

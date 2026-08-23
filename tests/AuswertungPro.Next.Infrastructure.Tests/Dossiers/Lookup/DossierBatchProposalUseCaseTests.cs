@@ -127,6 +127,24 @@ public sealed class DossierBatchProposalUseCaseTests
     }
 
     [Fact]
+    public async Task Eine_Parzelle_aus_einer_anderen_Gemeinde_wird_verworfen()
+    {
+        // Nummern wiederholen sich je Gemeinde. Eine Leitung an der Grenze darf
+        // nicht den Eigentuemer der Nachbargemeinde ins Dossier bringen.
+        var fremd = new ParcelInfo("12", 1216, "Anderdorf", 300, "CH2",
+            "POLYGON((0 0,1 0,1 1,0 0))", "https://example.invalid/gb");
+
+        var use = Baue(new[] { Parzelle("439"), fremd }, AufParzelle439, Miteigentum());
+
+        var ergebnis = await use.RunAsync(
+            new DossierBatchProposalRequest(1206, ImProjekt, Array.Empty<string>()),
+            null, CancellationToken.None);
+
+        Assert.All(ergebnis.Proposals, p => Assert.Equal(1206, p.Parcel.BfsNr));
+        Assert.DoesNotContain(ergebnis.Proposals, p => p.Parcel.Number == "12");
+    }
+
+    [Fact]
     public async Task Ein_Abbruch_bricht_wirklich_ab()
     {
         using var quelle = new CancellationTokenSource();
@@ -155,6 +173,32 @@ public sealed class DossierBatchProposalUseCaseTests
         Assert.NotEmpty(ergebnis.Warnings);
         var vorschlag = Assert.Single(ergebnis.Proposals);
         Assert.False(vorschlag.Selectable);
+    }
+
+    [Fact]
+    public async Task Ein_fehlgeschlagener_Leitungsabruf_wird_als_Warnung_sichtbar()
+    {
+        var use = new DossierBatchProposalUseCase(
+            new FakeParcels(new[] { Parzelle("439") }),
+            new FakeRegistry(Miteigentum()),
+            new FehlerhaftesNetz());
+
+        var ergebnis = await use.RunAsync(
+            new DossierBatchProposalRequest(1206, ImProjekt, Array.Empty<string>()),
+            null, CancellationToken.None);
+
+        Assert.NotEmpty(ergebnis.Warnings);
+    }
+
+    private sealed class FehlerhaftesNetz : ISewerNetworkLookup
+    {
+        public Task<IReadOnlyList<NetworkHolding>> FindByNamesAsync(
+            IReadOnlyList<string> names, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<NetworkHolding>>(Array.Empty<NetworkHolding>());
+
+        public Task<IReadOnlyList<NetworkHolding>> FindOnParcelAsync(
+            ParcelInfo parcel, CancellationToken ct = default)
+            => throw new InvalidOperationException("Dienst nicht erreichbar");
     }
 
     [Fact]

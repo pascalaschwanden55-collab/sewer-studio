@@ -126,9 +126,13 @@ public partial class DossierBatchWindow : Window
             _viewModel.Uebernehmen(ergebnis);
             CreateButton.IsEnabled = _viewModel.SelectedCount > 0;
 
-            StatusText.Text = _viewModel.Rows.Count == 0
+            var kopf = _viewModel.Rows.Count == 0
                 ? "Keine Parzellen gefunden."
-                : $"{_viewModel.Rows.Count} Parzellen gefunden. {_viewModel.WarningText}".Trim();
+                : $"{_viewModel.Rows.Count} Parzellen gefunden.";
+
+            StatusText.Text = _viewModel.WarningText.Length == 0
+                ? kopf
+                : kopf + " Nicht alles konnte abgefragt werden: " + _viewModel.WarningText;
         }
         catch (OperationCanceledException)
         {
