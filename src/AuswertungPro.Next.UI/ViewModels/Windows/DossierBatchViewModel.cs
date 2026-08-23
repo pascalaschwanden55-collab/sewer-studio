@@ -48,8 +48,17 @@ public sealed class DossierBatchRow : INotifyPropertyChanged
         {
             // Ein gesperrter Vorschlag bleibt gesperrt, auch wenn jemand klickt.
             var neu = value && CanSelect;
+
             if (neu == _isSelected)
+            {
+                // Der geklemmte Wert stimmt mit dem alten ueberein — die Bindung
+                // hat das Kaestchen aber schon selbst umgestellt. Ohne Meldung
+                // bliebe es sichtbar angehakt, obwohl es nichts bewirkt.
+                if (value != neu)
+                    Melde();
+
                 return;
+            }
 
             _isSelected = neu;
             Melde();

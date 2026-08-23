@@ -79,4 +79,48 @@ public sealed class DossierBatchViewModelTests
 
         Assert.Contains("Dienst nicht erreichbar", vm.WarningText, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Ein_Klick_auf_eine_gesperrte_Zeile_holt_das_Kaestchen_zurueck()
+    {
+        // Ohne diese Meldung liest die Bindung den Zielwert nicht zurueck und
+        // das Kaestchen bliebe sichtbar angehakt.
+        var vm = new DossierBatchViewModel();
+        vm.Uebernehmen(new DossierBatchProposalResult(
+            new[] { Vorschlag("13", false, "kein Eigentümer") }, Array.Empty<string>()));
+
+        var zeile = vm.Rows[0];
+        var meldungen = 0;
+        zeile.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(DossierBatchRow.IsSelected))
+                meldungen++;
+        };
+
+        zeile.IsSelected = true;
+
+        Assert.False(zeile.IsSelected);
+        Assert.Equal(1, meldungen);
+    }
+
+    [Fact]
+    public void Eine_waehlbare_Zeile_meldet_nicht_unnoetig()
+    {
+        var vm = new DossierBatchViewModel();
+        vm.Uebernehmen(new DossierBatchProposalResult(
+            new[] { Vorschlag("439", true) }, Array.Empty<string>()));
+
+        var zeile = vm.Rows[0];   // ist bereits angehakt
+        var meldungen = 0;
+        zeile.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(DossierBatchRow.IsSelected))
+                meldungen++;
+        };
+
+        zeile.IsSelected = true;   // derselbe Wert
+
+        Assert.True(zeile.IsSelected);
+        Assert.Equal(0, meldungen);
+    }
 }

@@ -43,6 +43,10 @@ public partial class DossierBatchWindow : Window
 
         ProposalGrid.ItemsSource = _viewModel.Rows;
         Loaded += async (_, _) => await LadeGemeinden().ConfigureAwait(true);
+
+        // Eine laufende Abfrage soll nicht sinnlos weiterlaufen, und ihre spaete
+        // Antwort darf nicht in ein geschlossenes Fenster schreiben.
+        Closing += (_, _) => _laufendeSuche?.Cancel();
     }
 
     /// <summary>Die erzeugten Dossiers. Leer, wenn abgebrochen wurde.</summary>
@@ -73,6 +77,10 @@ public partial class DossierBatchWindow : Window
         {
             StatusText.Text = "Gemeindeliste wird geladen…";
             var gemeinden = await _parcels.ListMunicipalitiesAsync().ConfigureAwait(true);
+
+            if (!IsLoaded)
+                return;
+
             MunicipalityBox.ItemsSource = gemeinden;
             StatusText.Text = gemeinden.Count == 0
                 ? "Die Gemeindeliste konnte nicht geladen werden. Ohne Netzverbindung geht diese Funktion nicht."
@@ -80,6 +88,9 @@ public partial class DossierBatchWindow : Window
         }
         catch (Exception ex)
         {
+            if (!IsLoaded)
+                return;
+
             StatusText.Text = "Die Gemeindeliste konnte nicht geladen werden: " + ex.Message;
         }
     }
@@ -109,6 +120,9 @@ public partial class DossierBatchWindow : Window
                 fortschritt,
                 _laufendeSuche.Token).ConfigureAwait(true);
 
+            if (!IsLoaded)
+                return;
+
             _viewModel.Uebernehmen(ergebnis);
             CreateButton.IsEnabled = _viewModel.SelectedCount > 0;
 
@@ -118,16 +132,25 @@ public partial class DossierBatchWindow : Window
         }
         catch (OperationCanceledException)
         {
+            if (!IsLoaded)
+                return;
+
             StatusText.Text = "Abgebrochen. Es wurde nichts erzeugt.";
         }
         catch (Exception ex)
         {
+            if (!IsLoaded)
+                return;
+
             StatusText.Text = "Die Suche ist fehlgeschlagen: " + ex.Message;
         }
         finally
         {
-            StartButton.IsEnabled = true;
-            CancelSearchButton.IsEnabled = false;
+            if (IsLoaded)
+            {
+                StartButton.IsEnabled = true;
+                CancelSearchButton.IsEnabled = false;
+            }
         }
     }
 
