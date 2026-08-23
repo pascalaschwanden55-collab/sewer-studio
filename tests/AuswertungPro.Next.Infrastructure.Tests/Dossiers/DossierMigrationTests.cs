@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 
 using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Domain.Models.Dossiers;
@@ -63,6 +63,41 @@ public sealed class DossierDocumentMigrationTests
         var result = DossierDocumentMigration.MigrateToCurrent(document);
 
         Assert.Empty(result.Dossiers[0].Owners);
+    }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(2, false)]
+    [InlineData(3, false)]
+    [InlineData(4, false)]
+    public void Die_Ableitung_gilt_nur_fuer_Dateien_aus_Version_1(int version, bool erwartet)
+    {
+        // Diese Zusicherung ist eine Falle fuer spaeter, nicht fuer heute:
+        // Solange die aktuelle Formatversion 2 ist, verhaelt sich
+        // "kleiner als 2" gleich wie "kleiner als die aktuelle Version".
+        // Steigt die Version auf 3, wuerde die zweite Fassung jede
+        // Version-2-Datei erneut ableiten und geloeschte Eigentuemerzeilen
+        // zurueckholen. Dann faellt dieser Test um — genau dort, wo es
+        // gefunden werden muss.
+        Assert.Equal(erwartet, DossierDocumentMigration.NeedsOwnerDerivation(version));
+    }
+
+    [Fact]
+    public void Eine_Datei_der_aktuellen_Version_bekommt_keine_Zeile_nachgetragen()
+    {
+        var document = new DossierDocument { SchemaVersion = 2 };
+        document.Dossiers.Add(new DossierDefinition
+        {
+            // Der Eigentuemer speist weiterhin das Deckblatt; die Zeile hat
+            // Pascal bewusst geloescht und sie darf nicht wiederkommen.
+            OwnerName = "Martin Muster",
+            OwnerAddress = "Musterstrasse 1, 6472 Erstfeld"
+        });
+
+        var result = DossierDocumentMigration.MigrateToCurrent(document);
+
+        Assert.Empty(result.Dossiers[0].Owners);
+        Assert.Equal("Martin Muster", result.Dossiers[0].OwnerName);
     }
 
     [Fact]

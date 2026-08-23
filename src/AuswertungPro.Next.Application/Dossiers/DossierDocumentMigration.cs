@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,6 +16,26 @@ namespace AuswertungPro.Next.Application.Dossiers;
 /// </summary>
 public static class DossierDocumentMigration
 {
+    /// <summary>
+    /// Version, ab der die Eigentuemerzeilen im Dokument selbst stehen. Nur
+    /// Dateien darunter brauchen die Ableitung aus den Altfeldern.
+    /// </summary>
+    private const int OwnersStoredFromVersion = 2;
+
+    /// <summary>
+    /// Die Ableitung aus den Altfeldern ist eine EINMALIGE Umstellung von
+    /// Version 1 auf Version 2. Sie darf bei einem neueren Dokument nie erneut
+    /// laufen: sonst kommt eine bewusst geloeschte Eigentuemerzeile beim
+    /// naechsten Laden zurueck, oder ein neu angelegtes Dossier bekommt eine
+    /// Zeile, die niemand eingegeben hat.
+    ///
+    /// Die Grenze ist bewusst fest auf Version 1 gebunden und NICHT auf
+    /// "kleiner als die aktuelle Version": bei der naechsten Versionserhoehung
+    /// wuerde die Ableitung sonst fuer jede Version-2-Datei erneut laufen.
+    /// </summary>
+    public static bool NeedsOwnerDerivation(int schemaVersion)
+        => schemaVersion < OwnersStoredFromVersion;
+
     public static DossierDocument MigrateToCurrent(DossierDocument document)
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -23,12 +43,7 @@ public static class DossierDocumentMigration
         document.Area ??= new DossierAreaSettings();
         document.Dossiers ??= new List<DossierDefinition>();
 
-        // Die Ableitung aus den Altfeldern ist eine EINMALIGE Umstellung von
-        // Version 1 auf Version 2. Bei einem bereits aktuellen Dokument darf
-        // sie nie erneut laufen: sonst kommt eine von Pascal geloeschte Zeile
-        // beim naechsten Laden zurueck, oder ein neu angelegtes Dossier
-        // bekommt eine Zeile, die er nie eingegeben hat.
-        var isLegacyDocument = document.SchemaVersion < DossierDocument.CurrentSchemaVersion;
+        var isLegacyDocument = NeedsOwnerDerivation(document.SchemaVersion);
 
         foreach (var dossier in document.Dossiers)
         {
