@@ -54,5 +54,5 @@ public sealed record NetworkHolding(
 {
     /// <summary>Nur private Leitungen gehoeren in ein Eigentuemerdossier.</summary>
     public bool IsPrivate
-        => Owner.Contains("Privat", System.StringComparison.OrdinalIgnoreCase);
+        => Owner?.Contains("Privat", System.StringComparison.OrdinalIgnoreCase) ?? false;
 }
