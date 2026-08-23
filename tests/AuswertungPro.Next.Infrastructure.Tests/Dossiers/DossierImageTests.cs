@@ -93,3 +93,159 @@ internal static class TestImages
         (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value
     };
 }
+
+public sealed class DocxImagePlaceholderFillerTests : IDisposable
+{
+    private readonly string _root = Path.Combine(
+        Path.GetTempPath(), "dossier_bilder_" + Guid.NewGuid().ToString("N"));
+
+    public DocxImagePlaceholderFillerTests() => Directory.CreateDirectory(_root);
+
+    public void Dispose()
+    {
+        try
+        {
+            if (Directory.Exists(_root))
+                Directory.Delete(_root, recursive: true);
+        }
+        catch
+        {
+            // Ein Aufraeumfehler darf den Testlauf nicht rot machen.
+        }
+    }
+
+    [Fact]
+    public void Setzt_ein_Bild_ein_und_entfernt_den_Platzhalter()
+    {
+        var bildPfad = Path.Combine(_root, "logo.png");
+        File.WriteAllBytes(bildPfad, TestImages.Png(width: 716, height: 297));
+
+        using var stream = new MemoryStream();
+        using (var document = CreateDocument(stream, "{{@Logo}}"))
+        {
+            DocxImagePlaceholderFiller.Fill(document, new[]
+            {
+                new DocxImagePlacement("Logo", bildPfad, MaxWidthCm: 4.5)
+            });
+            document.MainDocumentPart!.Document.Save();
+        }
+
+        stream.Position = 0;
+        using var reopened = WordprocessingDocument.Open(stream, false);
+        var mainPart = reopened.MainDocumentPart!;
+
+        var text = string.Concat(
+            mainPart.Document.Body!.Descendants<Text>().Select(t => t.Text));
+
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+        Assert.Single(mainPart.ImageParts);
+        Assert.NotEmpty(mainPart.Document.Body!.Descendants<Drawing>());
+    }
+
+    [Fact]
+    public void Behaelt_das_Seitenverhaeltnis_des_Bildes()
+    {
+        var bildPfad = Path.Combine(_root, "logo.png");
+        File.WriteAllBytes(bildPfad, TestImages.Png(width: 200, height: 100));
+
+        using var stream = new MemoryStream();
+        using (var document = CreateDocument(stream, "{{@Logo}}"))
+        {
+            // 2 cm breit, halb so hoch wie breit -> 1 cm hoch.
+            DocxImagePlaceholderFiller.Fill(document, new[]
+            {
+                new DocxImagePlacement("Logo", bildPfad, MaxWidthCm: 2.0)
+            });
+            document.MainDocumentPart!.Document.Save();
+        }
+
+        stream.Position = 0;
+        using var reopened = WordprocessingDocument.Open(stream, false);
+        var extent = reopened.MainDocumentPart!.Document.Body!
+            .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>()
+            .Single();
+
+        Assert.Equal(720_000L, extent.Cx!.Value);
+        Assert.Equal(360_000L, extent.Cy!.Value);
+    }
+
+    [Fact]
+    public void Fehlende_Bilddatei_laesst_die_Stelle_leer_statt_den_Platzhalter_stehen()
+    {
+        var fehlt = Path.Combine(_root, "gibtesnicht.png");
+
+        using var stream = new MemoryStream();
+        using (var document = CreateDocument(stream, "Vorne {{@Logo}} hinten"))
+        {
+            DocxImagePlaceholderFiller.Fill(document, new[]
+            {
+                new DocxImagePlacement("Logo", fehlt, MaxWidthCm: 4.5)
+            });
+            document.MainDocumentPart!.Document.Save();
+        }
+
+        stream.Position = 0;
+        using var reopened = WordprocessingDocument.Open(stream, false);
+        var mainPart = reopened.MainDocumentPart!;
+
+        var text = string.Concat(
+            mainPart.Document.Body!.Descendants<Text>().Select(t => t.Text));
+
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+        Assert.Contains("Vorne", text, StringComparison.Ordinal);
+        Assert.Contains("hinten", text, StringComparison.Ordinal);
+        Assert.Empty(mainPart.ImageParts);
+    }
+
+    [Fact]
+    public void Findet_den_Platzhalter_auch_wenn_Word_ihn_zerlegt_hat()
+    {
+        var bildPfad = Path.Combine(_root, "wappen.jpg");
+        File.WriteAllBytes(bildPfad, TestImages.Jpeg(width: 177, height: 213));
+
+        using var stream = new MemoryStream();
+        using (var document = new Func<WordprocessingDocument>(() =>
+               {
+                   var doc = WordprocessingDocument.Create(
+                       stream, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
+                   var part = doc.AddMainDocumentPart();
+                   part.Document = new Document();
+                   var body = part.Document.AppendChild(new Body());
+                   var paragraph = body.AppendChild(new Paragraph());
+                   paragraph.Append(
+                       NewRun("{{@"), NewRun("Wap"), NewRun("pen"), NewRun("}}"));
+                   return doc;
+               })())
+        {
+            DocxImagePlaceholderFiller.Fill(document, new[]
+            {
+                new DocxImagePlacement("Wappen", bildPfad, MaxWidthCm: 2.0)
+            });
+            document.MainDocumentPart!.Document.Save();
+        }
+
+        stream.Position = 0;
+        using var reopened = WordprocessingDocument.Open(stream, false);
+        var mainPart = reopened.MainDocumentPart!;
+
+        var text = string.Concat(
+            mainPart.Document.Body!.Descendants<Text>().Select(t => t.Text));
+
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+        Assert.Single(mainPart.ImageParts);
+    }
+
+    private static WordprocessingDocument CreateDocument(MemoryStream stream, string text)
+    {
+        var document = WordprocessingDocument.Create(
+            stream, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
+        var mainPart = document.AddMainDocumentPart();
+        mainPart.Document = new Document();
+        var body = mainPart.Document.AppendChild(new Body());
+        body.AppendChild(new Paragraph()).Append(NewRun(text));
+        return document;
+    }
+
+    private static Run NewRun(string text)
+        => new(new Text(text) { Space = DocumentFormat.OpenXml.SpaceProcessingModeValues.Preserve });
+}
