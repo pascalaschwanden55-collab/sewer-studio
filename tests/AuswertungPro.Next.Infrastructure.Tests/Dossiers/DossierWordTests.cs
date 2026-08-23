@@ -543,10 +543,19 @@ public sealed class AusgelieferteDossierWordVorlageTests
     {
         using var stream = new MemoryStream(bytes);
         using var document = WordprocessingDocument.Open(stream, false);
+        var mainPart = document.MainDocumentPart!;
 
-        return string.Concat(
-            document.MainDocumentPart!.Document.Body!
-                .Descendants<Text>()
-                .Select(t => t.Text));
+        var parts = new List<string>
+        {
+            string.Concat(mainPart.Document.Body!.Descendants<Text>().Select(t => t.Text))
+        };
+
+        foreach (var footer in mainPart.FooterParts)
+        {
+            parts.Add(string.Concat(
+                footer.Footer!.Descendants<Text>().Select(t => t.Text)));
+        }
+
+        return string.Join("\n", parts);
     }
 }
