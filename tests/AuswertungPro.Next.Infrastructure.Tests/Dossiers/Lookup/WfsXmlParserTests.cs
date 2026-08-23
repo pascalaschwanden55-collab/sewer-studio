@@ -58,4 +58,115 @@ public sealed class WfsXmlParserTests
         Assert.Empty(ParcelWfsXmlParser.Parse(xml));
         Assert.Empty(SewerNetworkWfsXmlParser.Parse(xml));
     }
+[Fact]
+    public void Eine_zweiteilige_Parzelle_verliert_ihren_zweiten_Teil_nicht()
+    {
+        var xml = """
+            <wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"
+                                   xmlns:gml="http://www.opengis.net/gml/3.2"
+                                   xmlns:av="http://geo.ur.ch/av">
+              <wfs:member>
+                <av:ch059_liegenschaften_flaechen>
+                  <av:nummer>500</av:nummer>
+                  <av:bfsnr>1206</av:bfsnr>
+                  <av:wkb_geometry>
+                    <gml:MultiSurface>
+                      <gml:surfaceMember><gml:Polygon><gml:exterior><gml:LinearRing>
+                        <gml:posList>0 0 10 0 10 10 0 0</gml:posList>
+                      </gml:LinearRing></gml:exterior></gml:Polygon></gml:surfaceMember>
+                      <gml:surfaceMember><gml:Polygon><gml:exterior><gml:LinearRing>
+                        <gml:posList>20 20 30 20 30 30 20 20</gml:posList>
+                      </gml:LinearRing></gml:exterior></gml:Polygon></gml:surfaceMember>
+                    </gml:MultiSurface>
+                  </av:wkb_geometry>
+                </av:ch059_liegenschaften_flaechen>
+              </wfs:member>
+            </wfs:FeatureCollection>
+            """;
+
+        var parzelle = Assert.Single(ParcelWfsXmlParser.Parse(xml));
+
+        Assert.Equal(
+            "MULTIPOLYGON(((0 0,10 0,10 10,0 0)),((20 20,30 20,30 30,20 20)))",
+            parzelle.OutlineWkt);
+    }
+
+    [Fact]
+    public void Eine_zweiteilige_Leitung_wird_zur_Mehrfachlinie()
+    {
+        var xml = """
+            <wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"
+                                   xmlns:gml="http://www.opengis.net/gml/3.2"
+                                   xmlns:leitungen="http://geo.ur.ch/leitungen">
+              <wfs:member>
+                <leitungen:abw_haltungen>
+                  <leitungen:ne_bezeichnung>A-B</leitungen:ne_bezeichnung>
+                  <leitungen:org_eigentuemer>Privat</leitungen:org_eigentuemer>
+                  <leitungen:wkb_geometry>
+                    <gml:MultiCurve>
+                      <gml:curveMember><gml:LineString>
+                        <gml:posList>0 0 1 1</gml:posList>
+                      </gml:LineString></gml:curveMember>
+                      <gml:curveMember><gml:LineString>
+                        <gml:posList>5 5 6 6</gml:posList>
+                      </gml:LineString></gml:curveMember>
+                    </gml:MultiCurve>
+                  </leitungen:wkb_geometry>
+                </leitungen:abw_haltungen>
+              </wfs:member>
+            </wfs:FeatureCollection>
+            """;
+
+        var haltung = Assert.Single(SewerNetworkWfsXmlParser.Parse(xml));
+
+        Assert.Equal("MULTILINESTRING((0 0,1 1),(5 5,6 6))", haltung.GeometryWkt);
+    }
+
+    [Fact]
+    public void Datenmuell_in_den_Koordinaten_ergibt_keine_Geometrie()
+    {
+        var xml = """
+            <wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"
+                                   xmlns:gml="http://www.opengis.net/gml/3.2"
+                                   xmlns:leitungen="http://geo.ur.ch/leitungen">
+              <wfs:member>
+                <leitungen:abw_haltungen>
+                  <leitungen:ne_bezeichnung>A-B</leitungen:ne_bezeichnung>
+                  <leitungen:wkb_geometry><gml:MultiCurve><gml:curveMember><gml:LineString>
+                    <gml:posList>0 0 spam eggs</gml:posList>
+                  </gml:LineString></gml:curveMember></gml:MultiCurve></leitungen:wkb_geometry>
+                </leitungen:abw_haltungen>
+              </wfs:member>
+            </wfs:FeatureCollection>
+            """;
+
+        var haltung = Assert.Single(SewerNetworkWfsXmlParser.Parse(xml));
+
+        // Die Angaben bleiben nutzbar, die Geometrie gilt als nicht lesbar.
+        Assert.Equal("A-B", haltung.Designation);
+        Assert.Equal("", haltung.GeometryWkt);
+    }
+
+    [Fact]
+    public void Eine_Flaeche_aus_zwei_Punkten_ist_kein_Ring()
+    {
+        var xml = """
+            <wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"
+                                   xmlns:gml="http://www.opengis.net/gml/3.2"
+                                   xmlns:av="http://geo.ur.ch/av">
+              <wfs:member>
+                <av:ch059_liegenschaften_flaechen>
+                  <av:nummer>501</av:nummer>
+                  <av:wkb_geometry><gml:MultiSurface><gml:surfaceMember><gml:Polygon>
+                    <gml:exterior><gml:LinearRing>
+                      <gml:posList>0 0 10 10</gml:posList>
+                    </gml:LinearRing></gml:exterior>
+                  </gml:Polygon></gml:surfaceMember></gml:MultiSurface></av:wkb_geometry>
+                </av:ch059_liegenschaften_flaechen>
+              </wfs:member>
+            </wfs:FeatureCollection>
+            """;
+
+        Assert.Equal("", Assert.Single(ParcelWfsXmlParser.Parse(xml)).OutlineWkt);
+    }
 }

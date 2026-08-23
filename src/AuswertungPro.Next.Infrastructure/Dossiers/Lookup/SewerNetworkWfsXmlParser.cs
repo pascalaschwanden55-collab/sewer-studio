@@ -81,33 +81,75 @@ internal static class WfsGml
 
     public static string PolygonWkt(XElement element)
     {
-        var punkte = Punkte(element);
-        return punkte.Count == 0 ? string.Empty : "POLYGON((" + string.Join(",", punkte) + "))";
+        // Ein Ring braucht mindestens vier Punkte.
+        var teile = Geometrieteile(element, mindestPunkte: 4);
+        if (teile.Count == 0)
+            return string.Empty;
+
+        return teile.Count == 1
+            ? "POLYGON((" + teile[0] + "))"
+            : "MULTIPOLYGON(((" + string.Join(")),((", teile) + ")))";
     }
 
     public static string LineStringWkt(XElement element)
     {
-        var punkte = Punkte(element);
-        return punkte.Count == 0 ? string.Empty : "LINESTRING(" + string.Join(",", punkte) + ")";
+        var teile = Geometrieteile(element, mindestPunkte: 2);
+        if (teile.Count == 0)
+            return string.Empty;
+
+        return teile.Count == 1
+            ? "LINESTRING(" + teile[0] + ")"
+            : "MULTILINESTRING((" + string.Join("),(", teile) + "))";
+    }
+
+    /// <summary>
+    /// Alle Teile einer Geometrie. Eine Parzelle kann aus mehreren getrennten
+    /// Flaechen bestehen, eine Haltung aus mehreren Linienstuecken — nur den
+    /// ersten Teil zu lesen ergaebe einen halben Umriss, und die raeumliche
+    /// Suche wuerde still zu wenige Leitungen finden.
+    ///
+    /// Ist auch nur ein Teil unlesbar, gilt die ganze Geometrie als unlesbar:
+    /// eine halbe Flaeche ist schlimmer als gar keine.
+    /// </summary>
+    private static List<string> Geometrieteile(XElement element, int mindestPunkte)
+    {
+        var ergebnis = new List<string>();
+
+        foreach (var posList in element.Descendants()
+                     .Where(e => e.Name.LocalName == "posList"))
+        {
+            var punkte = Punkte(posList.Value, mindestPunkte);
+            if (punkte.Count == 0)
+                return new List<string>();
+
+            ergebnis.Add(string.Join(",", punkte));
+        }
+
+        return ergebnis;
     }
 
     /// <summary>
     /// GML gibt die Koordinaten als flache Zahlenfolge "x y x y ...". Eine
-    /// ungerade Anzahl waere unvollstaendig und ergibt gar nichts.
+    /// ungerade Anzahl waere unvollstaendig, und jedes Token muss wirklich eine
+    /// Zahl sein — sonst entstuende aus Datenmuell eine gueltig aussehende
+    /// Geometrie.
     /// </summary>
-    private static List<string> Punkte(XElement element)
+    private static List<string> Punkte(string? posList, int mindestPunkte)
     {
-        var posList = element.Descendants()
-            .FirstOrDefault(e => e.Name.LocalName == "posList")?.Value;
-
         if (string.IsNullOrWhiteSpace(posList))
             return new List<string>();
 
         var zahlen = posList.Split(
             new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
-        if (zahlen.Length < 4 || zahlen.Length % 2 != 0)
+        if (zahlen.Length % 2 != 0 || zahlen.Length / 2 < mindestPunkte)
             return new List<string>();
+
+        foreach (var zahl in zahlen)
+        {
+            if (!double.TryParse(zahl, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+                return new List<string>();
+        }
 
         var punkte = new List<string>(zahlen.Length / 2);
         for (var i = 0; i < zahlen.Length; i += 2)
