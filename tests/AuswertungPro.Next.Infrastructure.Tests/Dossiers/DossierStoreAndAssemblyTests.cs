@@ -40,7 +40,7 @@ public sealed class DossierFileStoreTests : IDisposable
         var document = await store.LoadAsync(_projectRoot);
 
         Assert.Empty(document.Dossiers);
-        Assert.Equal(1, document.SchemaVersion);
+        Assert.Equal(DossierDocument.CurrentSchemaVersion, document.SchemaVersion);
     }
 
     [Fact]

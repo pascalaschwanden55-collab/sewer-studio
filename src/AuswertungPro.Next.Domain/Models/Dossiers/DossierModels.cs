@@ -60,6 +60,29 @@ public sealed class DossierAreaSettings
 
     /// <summary>Pfad zum Logo (relativ zum Projekt oder absolut).</summary>
     public string LogoPath { get; set; } = "";
+
+    /// <summary>
+    /// Autoren fuer die Zeile "Autoren:" auf Seite 2. Bleibt das Feld leer,
+    /// nimmt die Ausgabe den Windows-Benutzernamen — der heisst aber je nach
+    /// Rechner "Besitzer" und gehoert nicht in ein Dokument fuer den Eigentuemer.
+    /// </summary>
+    public string Authors { get; set; } = "";
+}
+
+/// <summary>
+/// Eine Zeile der Tabelle "Eigentumsverhaeltnisse". Eine Liegenschaft kann
+/// mehrere haben — Stockwerkeigentum, Doppelhaus, mehrere Hausnummern.
+/// </summary>
+public sealed class DossierOwnerRow
+{
+    public string HouseNumber { get; set; } = "";
+    public string ParcelNumber { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Phone { get; set; } = "";
+    public string Mail { get; set; } = "";
+
+    /// <summary>Objektbewohner, z.B. "Mehrfamilienhaus".</summary>
+    public string Occupancy { get; set; } = "";
 }
 
 /// <summary>
@@ -93,6 +116,15 @@ public sealed class DossierDefinition
 
     /// <summary>Objektbewohner, z.B. "Mehrfamilienhaus".</summary>
     public string Occupancy { get; set; } = "";
+
+    /// <summary>
+    /// Die Zeilen der Tabelle "Eigentumsverhaeltnisse". Die Einzelfelder oben
+    /// bleiben bestehen: sie speisen weiterhin das Deckblatt.
+    /// </summary>
+    public List<DossierOwnerRow> Owners { get; set; } = new();
+
+    /// <summary>Bilddatei des Uebersichtsplans fuer Kapitel 1.</summary>
+    public string OverviewPlanPath { get; set; } = "";
 
     // ── Sanierung ─────────────────────────────────────────────────────────
     /// <summary>Beschreibung des Bauvorgangs fuer genau diese Liegenschaft.</summary>
@@ -129,8 +161,11 @@ public sealed class DossierDefinition
 /// </summary>
 public sealed class DossierDocument
 {
+    /// <summary>Formatversion, die diese Programmversion schreibt.</summary>
+    public const int CurrentSchemaVersion = 2;
+
     /// <summary>Formatversion. Unbekannt hoehere Versionen werden nicht ueberschrieben.</summary>
-    public int SchemaVersion { get; set; } = 1;
+    public int SchemaVersion { get; set; } = CurrentSchemaVersion;
 
     public DossierAreaSettings Area { get; set; } = new();
 

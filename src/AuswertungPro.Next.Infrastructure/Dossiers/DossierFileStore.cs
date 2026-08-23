@@ -134,16 +134,16 @@ public sealed class DossierFileStore : IDossierStore
 
         // Ein neueres Format als bekannt: nicht raten, sondern melden. Ein
         // stiller Weiterlauf wuerde beim naechsten Speichern Felder verlieren.
-        if (document.SchemaVersion > 1)
+        if (document.SchemaVersion > DossierDocument.CurrentSchemaVersion)
         {
             throw new InvalidOperationException(
                 $"'{path}' hat Formatversion {document.SchemaVersion}. "
-                + "Diese Programmversion kennt nur Version 1.");
+                + $"Diese Programmversion kennt nur Version {DossierDocument.CurrentSchemaVersion}.");
         }
 
-        document.Area ??= new DossierAreaSettings();
-        document.Dossiers ??= new();
-        return document;
+        // Aeltere Staende werden beim Laden umgestellt; gespeichert wird erst,
+        // wenn Pascal wirklich etwas aendert.
+        return DossierDocumentMigration.MigrateToCurrent(document);
     }
 }
 
