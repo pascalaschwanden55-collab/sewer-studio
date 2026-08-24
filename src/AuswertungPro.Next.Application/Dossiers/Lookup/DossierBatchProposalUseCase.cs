@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -71,7 +71,8 @@ public sealed class DossierBatchProposalUseCase
                 $"Grundbuchauskunft zu Parzelle {parzelle.Number}", warnungen)
                 .ConfigureAwait(false);
 
-            var leitungen = BaueLeitungen(parzelle, aufParzelle, imProjekt, request);
+            var leitungen = ProposedHoldingComposer.Compose(
+                aufParzelle, request.ProjectHoldingNames, parzelle.Number);
             var (waehlbar, grund) = Beurteile(parzelle, eintrag, mitDossier);
 
             vorschlaege.Add(new DossierProposal(
@@ -145,48 +146,6 @@ public sealed class DossierBatchProposalUseCase
             .OrderBy(p => p.Number.Length)
             .ThenBy(p => p.Number, StringComparer.Ordinal)
             .ToList();
-    }
-
-    private static IReadOnlyList<ProposedHolding> BaueLeitungen(
-        ParcelInfo parzelle,
-        IReadOnlyList<NetworkHolding> aufParzelle,
-        HashSet<string> imProjekt,
-        DossierBatchProposalRequest request)
-    {
-        var ergebnis = new List<ProposedHolding>();
-
-        foreach (var haltung in aufParzelle)
-        {
-            var inProjekt = imProjekt.Contains(haltung.Designation);
-            ergebnis.Add(new ProposedHolding(
-                haltung.Designation,
-                haltung.IsPrivate,
-                inProjekt,
-                Preselected: haltung.IsPrivate && inProjekt,
-                Origin: "Lage"));
-        }
-
-        // Was der Kanton nicht fuehrt, verraet der Knotenname: diese Haltungen
-        // sind Hausanschluesse der Parzelle und liegen im Projekt.
-        foreach (var name in request.ProjectHoldingNames)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                continue;
-
-            if (!ParcelNumberFromHoldingName.Extract(name)
-                    .Any(n => n.Equals(parzelle.Number, StringComparison.OrdinalIgnoreCase)))
-            {
-                continue;
-            }
-
-            if (ergebnis.Any(h => h.Designation.Equals(name, StringComparison.OrdinalIgnoreCase)))
-                continue;
-
-            ergebnis.Add(new ProposedHolding(
-                name, IsPrivate: true, InProject: true, Preselected: true, Origin: "Name"));
-        }
-
-        return ergebnis;
     }
 
     private static (bool Waehlbar, string Grund) Beurteile(

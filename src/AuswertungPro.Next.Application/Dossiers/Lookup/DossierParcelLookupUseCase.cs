@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -120,7 +120,8 @@ public sealed class DossierParcelLookupUseCase
             return new DossierParcelLookupResult(
                 nurParzelle,
                 parzelle,
-                BaueLeitungen(Array.Empty<NetworkHolding>(), projectHoldingNames, parzelle.Number),
+                ProposedHoldingComposer.Compose(
+                    Array.Empty<NetworkHolding>(), projectHoldingNames, parzelle.Number),
                 warnungen);
         }
 
@@ -150,62 +151,8 @@ public sealed class DossierParcelLookupUseCase
         return new DossierParcelLookupResult(
             dossier,
             parzelle,
-            BaueLeitungen(nachLage, projectHoldingNames, parzelle.Number),
+            ProposedHoldingComposer.Compose(nachLage, projectHoldingNames, parzelle.Number),
             warnungen);
-    }
-
-    /// <summary>
-    /// Die Leitungen aus beiden Wegen in einer Liste: zuerst die vom Kanton
-    /// bekannten, danach die, die nur ihr Name der Parzelle zuordnet.
-    /// Angehakt wird nur, was das Projekt wirklich fuehrt.
-    /// </summary>
-    private static IReadOnlyList<ProposedHolding> BaueLeitungen(
-        IReadOnlyList<NetworkHolding> nachLage,
-        IReadOnlyList<string>? projectHoldingNames,
-        string parzellenNummer)
-    {
-        var imProjekt = new HashSet<string>(
-            (projectHoldingNames ?? Array.Empty<string>())
-                .Where(n => !string.IsNullOrWhiteSpace(n))
-                .Select(n => n.Trim()),
-            StringComparer.OrdinalIgnoreCase);
-
-        var ergebnis = new List<ProposedHolding>();
-        var gesehen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var leitung in nachLage)
-        {
-            if (!gesehen.Add(leitung.Designation))
-                continue;
-
-            var bekannt = imProjekt.Contains(leitung.Designation);
-
-            ergebnis.Add(new ProposedHolding(
-                leitung.Designation,
-                leitung.IsPrivate,
-                bekannt,
-                Preselected: bekannt && leitung.IsPrivate,
-                Origin: "Lage"));
-        }
-
-        foreach (var name in ParcelHoldingAndShaftMatcher.HoldingsByName(
-                     projectHoldingNames, parzellenNummer))
-        {
-            if (!gesehen.Add(name))
-                continue;
-
-            // Ueber den Namen gefunden heisst: privater Hausanschluss. Der
-            // Kanton fuehrt diese Leitungen nicht, deshalb steht hier keine
-            // Eigentumsangabe zur Verfuegung — angenommen wird privat.
-            ergebnis.Add(new ProposedHolding(
-                name,
-                IsPrivate: true,
-                InProject: true,
-                Preselected: true,
-                Origin: "Name"));
-        }
-
-        return ergebnis;
     }
 
     private static DossierParcelLookupResult Leer(IReadOnlyList<string> warnungen)
