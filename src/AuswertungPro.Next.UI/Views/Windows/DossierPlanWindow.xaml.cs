@@ -79,6 +79,10 @@ public partial class DossierPlanWindow : Window
             var bild = new BitmapImage();
             bild.BeginInit();
             bild.CacheOption = BitmapCacheOption.OnLoad;
+
+            // Nach Drehen oder Zuschneiden hat die Datei denselben Pfad. Ohne
+            // dies zeigte das Fenster weiter das Bild von vorher.
+            bild.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
             bild.UriSource = new Uri(System.IO.Path.GetFullPath(_pfad), UriKind.Absolute);
             bild.EndInit();
             bild.Freeze();

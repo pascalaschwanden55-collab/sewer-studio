@@ -57,6 +57,7 @@ public sealed class PlanImageAdjusterTests : IDisposable
         var bild = new BitmapImage();
         bild.BeginInit();
         bild.CacheOption = BitmapCacheOption.OnLoad;
+        bild.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
         bild.UriSource = new Uri(pfad, UriKind.Absolute);
         bild.EndInit();
         return (bild.PixelWidth, bild.PixelHeight);

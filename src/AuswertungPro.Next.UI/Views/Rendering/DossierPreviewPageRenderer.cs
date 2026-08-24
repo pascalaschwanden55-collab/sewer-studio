@@ -388,6 +388,11 @@ public static class DossierPreviewPageRenderer
             var quelle = new BitmapImage();
             quelle.BeginInit();
             quelle.CacheOption = BitmapCacheOption.OnLoad;
+
+            // Ohne dies zeigt die Vorschau nach dem Drehen oder Zuschneiden
+            // weiter das alte Bild: WPF merkt sich geladene Bilder nach ihrem
+            // Pfad, und der bleibt derselbe.
+            quelle.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
             quelle.UriSource = new Uri(pfad, UriKind.Absolute);
             quelle.EndInit();
             quelle.Freeze();

@@ -81,11 +81,20 @@ public sealed class PlanImageAdjuster : IPlanImageAdjuster
         }
     }
 
+    /// <summary>
+    /// Laedt das Bild frisch von der Platte.
+    ///
+    /// WPF merkt sich geladene Bilder nach ihrem Pfad. Ohne
+    /// <see cref="BitmapCreateOptions.IgnoreImageCache"/> kaeme nach dem ersten
+    /// Drehen wieder das ALTE Bild zurueck — die Datei waere richtig, die
+    /// Anzeige und jede weitere Drehung falsch.
+    /// </summary>
     private static BitmapImage Lade(string pfad)
     {
         var quelle = new BitmapImage();
         quelle.BeginInit();
         quelle.CacheOption = BitmapCacheOption.OnLoad;
+        quelle.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
         quelle.UriSource = new Uri(Path.GetFullPath(pfad), UriKind.Absolute);
         quelle.EndInit();
         quelle.Freeze();
