@@ -144,6 +144,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     }
 
     /// <summary>Baut die Platzhalterwerte. Oeffentlich, damit sie testbar sind.</summary>
+    /// <summary>
+    /// Die Werte aller Textplatzhalter. Oeffentlich, weil die Seitenvorschau
+    /// dieselbe Quelle verwenden MUSS — eine Vorschau, die andere Werte zeigt
+    /// als der Export, waere schlimmer als gar keine.
+    /// </summary>
     public static Dictionary<string, string> BuildValues(DossierExportRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -286,7 +291,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// ueberschrieben. Die Regel selbst liegt im
     /// <see cref="DossierTopicResolver"/> — hier wird nur abgebildet.
     /// </summary>
-    private static List<IReadOnlyDictionary<string, string>> BuildTopicRows(
+    public static List<IReadOnlyDictionary<string, string>> BuildTopicRows(
         DossierAreaSettings area, DossierDefinition dossier)
         => DossierTopicResolver.Resolve(area, dossier)
             .Select(thema => (IReadOnlyDictionary<string, string>)
@@ -297,7 +302,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                 })
             .ToList();
 
-    private static List<IReadOnlyDictionary<string, string>> BuildChangeRows(
+    public static List<IReadOnlyDictionary<string, string>> BuildChangeRows(
         DossierDefinition dossier)
         => (dossier.Changes ?? new List<DossierChangeRow>())
             .Where(z => z is not null)
@@ -311,7 +316,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                 })
             .ToList();
 
-    private static List<IReadOnlyDictionary<string, string>> BuildHoldingRows(
+    public static List<IReadOnlyDictionary<string, string>> BuildHoldingRows(
         DossierSnapshot snapshot)
     {
         var rows = new List<IReadOnlyDictionary<string, string>>();
