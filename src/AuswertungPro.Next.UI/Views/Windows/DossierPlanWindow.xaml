@@ -36,6 +36,7 @@
                     ToolTip="Auf den Kopf stellen" Click="OnRotateHalf"/>
 
             <Button x:Name="CropButton" Content="Zuschneiden" Height="30" Padding="12,0"
+                    ToolTip="Schneidet den Plan auf den gezogenen Rahmen zu. Das Bild im Dossier-Ordner wird ersetzt; die ursprüngliche Quelldatei bleibt unberührt."
                     Margin="0,0,14,0" IsEnabled="False" Click="OnCrop"/>
 
             <TextBlock Text="Zoom" Margin="0,0,6,0"/>
@@ -68,9 +69,11 @@
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right"
                     Margin="0,14,0,0">
             <TextBlock x:Name="StatusText" Margin="0,0,14,0"/>
-            <Button Content="Abbrechen" Width="110" Height="32" Margin="0,0,8,0"
+            <Button Content="Abbrechen"
+                    ToolTip="Schliesst das Fenster. Bereits ausgeführtes Drehen oder Zuschneiden bleibt erhalten — es wirkt direkt auf die Bilddatei." Width="110" Height="32" Margin="0,0,8,0"
                     IsCancel="True" Click="OnCancel"/>
-            <Button Content="Übernehmen" Width="130" Height="32"
+            <Button Content="Übernehmen"
+                    ToolTip="Übernimmt den bearbeiteten Plan als Übersichtsplan des Dossiers." Width="130" Height="32"
                     IsDefault="True" Click="OnAccept"/>
         </StackPanel>
     </Grid>

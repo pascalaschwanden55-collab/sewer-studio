@@ -40,10 +40,12 @@
                     Margin="0,14,0,0">
             <Button x:Name="AcceptButton"
                     Content="Übernehmen"
+                        ToolTip="Ergänzt das Dossier um die angehakten Einträge. Nicht Angehaktes wird als abgelehnt gemerkt und beim nächsten Nachführen nicht erneut angeboten."
                     Padding="16,7"
                     Margin="0,0,8,0"
                     Click="OnAccept"/>
             <Button Content="Abbrechen"
+                        ToolTip="Schliesst das Fenster. Das Dossier bleibt unverändert, und nichts gilt als abgelehnt."
                     Padding="16,7"
                     Click="OnCancel"/>
         </StackPanel>

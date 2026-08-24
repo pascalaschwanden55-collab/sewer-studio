@@ -134,16 +134,22 @@
                 </DataGrid>
 
                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                    <Button Content="+ Zeile" Padding="10,4" Click="OnAddOwner"/>
+                    <Button Content="+ Zeile" Padding="10,4"
+                            ToolTip="Fügt der Tabelle Eigentumsverhältnisse eine Zeile an — eine je Eigentümer bzw. Hausnummer. Bei Stockwerkeigentum steht jede Partei in einer eigenen Zeile."
+                            Click="OnAddOwner"/>
                     <Button Content="Zeile entfernen" Padding="10,4" Margin="8,0,0,0"
+                            ToolTip="Entfernt die gewählte Eigentümerzeile. Das Deckblatt zieht seine Angaben weiterhin aus den Einzelfeldern oben."
                             Click="OnRemoveOwner"/>
                 </StackPanel>
 
                 <TextBlock Text="Übersichtsplan (Bild für Kapitel 1)"
                            Style="{StaticResource SectionStyle}"/>
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="Bild wählen…" Padding="10,4" Click="OnChoosePlan"/>
+                    <Button Content="Bild wählen…" Padding="10,4"
+                            ToolTip="Wählt das Bild des Übersichtsplans für Kapitel 1. Es wird in den Dossier-Ordner kopiert; Ihre Quelldatei bleibt unberührt."
+                            Click="OnChoosePlan"/>
                     <Button Content="Entfernen" Padding="10,4" Margin="8,0,0,0"
+                            ToolTip="Nimmt den Übersichtsplan aus dem Dossier. Die bereits kopierte Bilddatei im Ordner bleibt liegen."
                             Click="OnClearPlan"/>
                 </StackPanel>
                 <TextBlock x:Name="PlanPathText" TextWrapping="Wrap"/>
@@ -185,8 +191,11 @@
                 </DataGrid>
 
                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                    <Button Content="+ Zeile" Padding="10,4" Click="OnAddTopic"/>
+                    <Button Content="+ Zeile" Padding="10,4"
+                            ToolTip="Fügt diesem Dossier ein eigenes Thema an. Gleicher Titel wie ein Gebietsthema heisst: dessen Text wird hier ersetzt."
+                            Click="OnAddTopic"/>
                     <Button Content="Zeile entfernen" Padding="10,4" Margin="8,0,0,0"
+                            ToolTip="Entfernt das gewählte eigene Thema. Ein gleichnamiges Gebietsthema gilt danach wieder."
                             Click="OnRemoveTopic"/>
                 </StackPanel>
 
@@ -211,8 +220,11 @@
                 </DataGrid>
 
                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                    <Button Content="+ Zeile" Padding="10,4" Click="OnAddChange"/>
+                    <Button Content="+ Zeile" Padding="10,4"
+                            ToolTip="Fügt der Tabelle Änderungswesen eine Zeile an — Version, Datum, Visum und was geändert wurde."
+                            Click="OnAddChange"/>
                     <Button Content="Zeile entfernen" Padding="10,4" Margin="8,0,0,0"
+                            ToolTip="Entfernt die gewählte Zeile aus dem Änderungswesen."
                             Click="OnRemoveChange"/>
                 </StackPanel>
 
@@ -242,8 +254,10 @@
             <TextBlock x:Name="HintText" Text="" Foreground="{DynamicResource DangerBrush}"
                        VerticalAlignment="Center" Margin="0,0,12,0"/>
             <Button Content="Abbrechen" Width="110" Height="32" Margin="0,0,8,0"
+                    ToolTip="Schliesst das Fenster. Die Stammdaten bleiben so, wie sie beim Öffnen waren."
                     IsCancel="True" Click="OnCancel"/>
             <Button Content="Speichern" Width="110" Height="32"
+                    ToolTip="Übernimmt die Stammdaten und schreibt sie auf die Platte."
                     IsDefault="True" Click="OnSave"/>
         </StackPanel>
     </Grid>

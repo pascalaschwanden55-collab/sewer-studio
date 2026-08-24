@@ -51,6 +51,7 @@
 
             <StackPanel Grid.Column="2" VerticalAlignment="Bottom" Orientation="Horizontal">
                 <Button x:Name="LookupButton" Content="Daten holen" Width="130" Height="32"
+                        ToolTip="Fragt Grundbuch und Abwassernetz zur gewählten Gemeinde und Parzelle ab und füllt daraus vor: Eigentümer, Adresse und die Leitungen auf der Parzelle."
                         IsDefault="True" Click="OnLookup"/>
                 <CheckBox x:Name="DirectoryBox" Content="Telefon und Mail suchen"
                           VerticalAlignment="Center" Margin="12,0,0,0"
@@ -71,10 +72,13 @@
                     Margin="0,14,0,0">
             <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="0,0,14,0"/>
             <Button Content="Ohne Abfrage anlegen" Width="170" Height="32" Margin="0,0,8,0"
+                    ToolTip="Legt eine leere Liegenschaft an, ohne den Kanton zu fragen. Alle Angaben tragen Sie danach von Hand ein."
                     Click="OnSkip"/>
             <Button Content="Abbrechen" Width="110" Height="32" Margin="0,0,8,0"
+                    ToolTip="Schliesst das Fenster. Es wird keine Liegenschaft angelegt."
                     IsCancel="True" Click="OnCancel"/>
             <Button x:Name="AcceptButton" Content="Übernehmen" Width="130" Height="32"
+                    ToolTip="Legt die Liegenschaft mit den abgefragten Angaben und den angehakten Leitungen an. Danach öffnen sich die Stammdaten zum Prüfen."
                     IsEnabled="False" Click="OnAccept"/>
         </StackPanel>
     </Grid>

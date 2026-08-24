@@ -59,6 +59,7 @@
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="Gebietsangaben" Padding="12,7" Margin="0,0,8,0"
+                            ToolTip="Angaben, die für ALLE Dossiers dieses Projekts gelten: Gebietstitel, Ansprechpartner, Unternehmer, örtliche Bauleitung, Ausführungstermin, Fusszeile und die Standardthemen. Ein einzelnes Dossier darf jedes Feld überschreiben."
                             Command="{Binding EditAreaCommand}"/>
                     <Button Content="Word-Vorlage" Padding="12,7" Margin="0,0,8,0"
                             ToolTip="Die ausgelieferte Vorlage in Word öffnen und anpassen"
@@ -67,8 +68,10 @@
                             ToolTip="Schreibt den aktuellen Stand der Dossiers auf die Platte"
                             Command="{Binding SaveCommand}"/>
                     <Button Content="Aktualisieren" Padding="12,7"
+                            ToolTip="Liest die Dossierdatei und die Kostendateien neu von der Platte. Nötig, wenn Sie inzwischen woanders Kosten geändert haben."
                             Command="{Binding RefreshCommand}"/>
                     <Button Content="Aus Projekt erzeugen" Padding="12,7" Margin="8,0,0,0"
+                            ToolTip="Legt für alle Parzellen des Projekts auf einmal Dossiers an. Die Parzellen kommen aus den Leitungsnamen, die Eigentümer aus dem Grundbuch. Sie sehen die Vorschläge vorher und wählen aus."
                             Command="{Binding CreateFromProjectCommand}"/>
                 </StackPanel>
             </Grid>
@@ -94,6 +97,7 @@
                     </Grid.RowDefinitions>
 
                     <Button Grid.Row="0" Content="+  Neue Liegenschaft"
+                            ToolTip="Legt EINE Liegenschaft an. Fragt zuerst Gemeinde und Parzelle ab und füllt daraus vor, was die öffentlichen Dienste hergeben: Eigentümer, Adresse und die Leitungen auf der Parzelle."
                             HorizontalAlignment="Stretch" Padding="10,8" Margin="0,0,0,10"
                             Command="{Binding NewDossierCommand}"/>
 
@@ -321,6 +325,7 @@
                                 <DataGrid.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Header="Video abspielen"
+                                                  ToolTip="Öffnet den Player mit dem Video dieser Leitung."
                                                   Command="{Binding PlacementTarget.DataContext.PlayHoldingVideoCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
                                                   CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}">
                                             <MenuItem.Icon>
@@ -328,6 +333,7 @@
                                             </MenuItem.Icon>
                                         </MenuItem>
                                         <MenuItem Header="Haltungsprotokoll (PDF) öffnen…"
+                                                  ToolTip="Öffnet das TV-Protokoll dieser Leitung — bevorzugt das unveränderte Original des Kanalunternehmers."
                                                   Command="{Binding PlacementTarget.DataContext.OpenHoldingProtocolCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
                                                   CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}">
                                             <MenuItem.Icon>
@@ -336,7 +342,7 @@
                                         </MenuItem>
                                         <Separator/>
                                         <MenuItem Header="Zur Haltung"
-                                                  ToolTip="Im Menü Haltungen öffnen"
+                                                  ToolTip="Wechselt ins Menü Haltungen und wählt dort genau diese Leitung aus — zum Nachsehen oder Bearbeiten der Daten."
                                                   Command="{Binding PlacementTarget.DataContext.NavigateToHoldingCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
                                                   CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}">
                                             <MenuItem.Icon>
@@ -418,26 +424,34 @@
                         <!-- Aktionen -->
                         <WrapPanel Grid.Row="7" Margin="0,14,0,0">
                             <Button Content="Leitungen wählen…" Padding="12,7" Margin="0,0,8,8"
+                                    ToolTip="Ankreuzliste aller Leitungen des Projekts. Eine Leitung darf auch in mehreren Dossiers stehen."
                                     Command="{Binding EditHoldingsCommand}"/>
                             <Button Content="Schächte wählen…" Padding="12,7" Margin="0,0,8,8"
+                                    ToolTip="Ankreuzliste aller Schächte des Projekts. Ein Schacht darf auch in mehreren Dossiers stehen."
                                     Command="{Binding EditShaftsCommand}"/>
                             <Button Content="Nachführen" Padding="12,7" Margin="0,0,8,8"
                                     ToolTip="Ergänzt Leitungen und Schächte, die das Projekt inzwischen kennt. Entfernt nie etwas."
                                     Command="{Binding RefreshDossierCommand}"/>
                             <Button Content="Stammdaten…" Padding="12,7" Margin="0,0,8,8"
+                                    ToolTip="Adresse, Eigentümerzeilen, Übersichtsplan und die Themen dieses Dossiers bearbeiten."
                                     Command="{Binding EditDossierCommand}"/>
                             <Button Content="Vorschau" Padding="12,7" Margin="0,0,8,8"
                                     ToolTip="Seite für Seite ansehen und ausfüllen"
                                     Command="{Binding PreviewCommand}"/>
                             <Button Content="Word erzeugen" Padding="12,7" Margin="0,0,8,8"
+                                    ToolTip="Erzeugt die Word-Datei im Dossier-Ordner. Eine vorhandene wird NIE überschrieben — es entsteht ein freier Name, damit Ihre Ergänzungen von Hand erhalten bleiben."
                                     Command="{Binding CreateWordCommand}"/>
                             <Button Content="Beilagen sammeln" Padding="12,7" Margin="0,0,8,8"
+                                    ToolTip="Legt die TV-Protokolle der Leitungen und die Schachtprotokolle in den Beilagen-Ordner. Zuerst das Original des Kanalunternehmers, sonst ein selbst erzeugtes. Von Hand hinzugelegte Beilagen bleiben unangetastet."
                                     Command="{Binding CollectAttachmentsCommand}"/>
                             <Button Content="Alles zu einem PDF" Padding="12,7" Margin="0,0,8,8"
+                                    ToolTip="Wandelt die Word-Datei in ein PDF und hängt die Beilagen an. Braucht ein installiertes Microsoft Word — ohne Word schlägt dieser Weg fehl."
                                     Command="{Binding AssemblePdfCommand}"/>
                             <Button Content="Ordner öffnen" Padding="12,7" Margin="0,0,8,8"
+                                    ToolTip="Zeigt den Ordner dieser Liegenschaft im Explorer — mit Word-Datei, Beilagen und Gesamt-PDF."
                                     Command="{Binding OpenFolderCommand}"/>
                             <Button Content="Entfernen" Padding="12,7" Margin="0,0,8,8"
+                                    ToolTip="Nimmt die Liegenschaft aus der Liste. Der Ordner mit Word-Datei und Beilagen bleibt erhalten und wird nicht gelöscht."
                                     Command="{Binding DeleteDossierCommand}"/>
 
                             <ComboBox Width="190" Margin="16,0,0,8" Padding="8,6"

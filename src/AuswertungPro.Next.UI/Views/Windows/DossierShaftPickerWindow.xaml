@@ -50,6 +50,7 @@
             </ComboBox>
 
             <Button Grid.Column="2" Content="Sichtbare wählen" Margin="8,0,0,0"
+                    ToolTip="Hakt alle Schächte an, die gerade in der Liste zu sehen sind. Bei gesetztem Suchbegriff also nur die Treffer."
                     Padding="10,6" Click="OnSelectVisible"/>
         </Grid>
 
@@ -108,10 +109,13 @@
                        HorizontalAlignment="Left"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Auswahl leeren" Width="130" Height="32" Margin="0,0,8,0"
+                        ToolTip="Entfernt alle Haken. Das Dossier ändert sich erst mit Übernehmen."
                         Click="OnClear"/>
                 <Button Content="Abbrechen" Width="110" Height="32" Margin="0,0,8,0"
+                        ToolTip="Schliesst das Fenster. Die Zuordnung des Dossiers bleibt unverändert."
                         IsCancel="True" Click="OnCancel"/>
                 <Button Content="Übernehmen" Width="120" Height="32"
+                        ToolTip="Speichert die angehakten Schächte als Zuordnung dieser Liegenschaft."
                         IsDefault="True" Click="OnApply"/>
             </StackPanel>
         </Grid>

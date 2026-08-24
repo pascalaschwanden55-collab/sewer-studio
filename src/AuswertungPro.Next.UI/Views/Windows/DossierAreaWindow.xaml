@@ -81,9 +81,11 @@
                     <DockPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,0">
                         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
                                     Margin="0,8,0,0">
-                            <Button Content="Neu" Width="62" Height="28" Margin="0,0,6,0"
+                            <Button Content="Neu"
+                        ToolTip="Fügt ein neues Thema an. Es erscheint bei allen Dossiers des Gebiets." Width="62" Height="28" Margin="0,0,6,0"
                                     Click="OnAddTopic"/>
-                            <Button Content="Entfernen" Width="82" Height="28" Margin="0,0,6,0"
+                            <Button Content="Entfernen"
+                        ToolTip="Entfernt das gewählte Thema aus dem Gebiet. Dossiers, die dafür einen eigenen Text führen, behalten ihn." Width="82" Height="28" Margin="0,0,6,0"
                                     Click="OnRemoveTopic"/>
                             <Button Content="▲" Width="34" Height="28" Margin="0,0,6,0"
                                     ToolTip="Nach oben" Click="OnTopicUp"/>
@@ -120,9 +122,11 @@
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
                     Margin="0,16,0,0">
-            <Button Content="Abbrechen" Width="110" Height="32" Margin="0,0,8,0"
+            <Button Content="Abbrechen"
+                    ToolTip="Schliesst das Fenster. Die Gebietsangaben bleiben unverändert." Width="110" Height="32" Margin="0,0,8,0"
                     IsCancel="True" Click="OnCancel"/>
-            <Button Content="Speichern" Width="110" Height="32"
+            <Button Content="Speichern"
+                    ToolTip="Speichert die Gebietsangaben. Sie gelten ab sofort für alle Dossiers dieses Projekts." Width="110" Height="32"
                     IsDefault="True" Click="OnSave"/>
         </StackPanel>
     </Grid>

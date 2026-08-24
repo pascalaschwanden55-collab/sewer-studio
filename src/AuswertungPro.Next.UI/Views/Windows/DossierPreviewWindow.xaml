@@ -80,9 +80,11 @@
         <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal"
                     HorizontalAlignment="Right" Margin="0,14,0,0">
             <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="0,0,14,0"/>
-            <Button Content="Verwerfen" Width="120" Height="32" Margin="0,0,8,0"
+            <Button Content="Verwerfen"
+                        ToolTip="Schliesst die Vorschau und wirft alle Eingaben dieser Sitzung weg. Das Dossier bleibt so, wie es beim Öffnen war." Width="120" Height="32" Margin="0,0,8,0"
                     IsCancel="True" Click="OnCancel"/>
-            <Button Content="Übernehmen" Width="120" Height="32"
+            <Button Content="Übernehmen"
+                        ToolTip="Speichert alle Eingaben der Vorschau in das Dossier und die Gebietsangaben." Width="120" Height="32"
                     IsDefault="True" Click="OnAccept"/>
         </StackPanel>
     </Grid>
