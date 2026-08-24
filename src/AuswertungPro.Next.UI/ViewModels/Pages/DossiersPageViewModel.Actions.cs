@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.Application.Dossiers.Lookup;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.Infrastructure.Dossiers;
 using AuswertungPro.Next.UI.Views.Windows;
@@ -74,6 +76,79 @@ public sealed partial class DossiersPageViewModel
         AreaTitle = _document.Area.AreaTitle;
         RefreshDetail();
         StatusMessage = "Gebietsangaben gespeichert. Sie gelten für alle Dossiers.";
+    }
+
+    /// <summary>
+    /// Legt fuer die Parzellen des Projekts auf einmal Dossiers an. Die Regeln
+    /// liegen in den Anwendungsfaellen; hier wird nur eingesammelt, das Fenster
+    /// gezeigt und einmal gespeichert.
+    /// </summary>
+    private async Task CreateFromProjectAsync()
+    {
+        if (!EnsureProject(out var root))
+            return;
+
+        var project = _getProject();
+
+        // Haltungsname -> Kennung. Ohne Namen laesst sich nichts zuordnen.
+        var idsByName = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        foreach (var record in project.Data)
+        {
+            var name = (record.GetFieldValue(FieldKeys.HoldingName) ?? string.Empty).Trim();
+            if (name.Length > 0)
+                idsByName[name] = record.Id;
+        }
+
+        if (idsByName.Count == 0)
+        {
+            StatusMessage = "Das Projekt enthält keine Leitungen — es gibt nichts zu suchen.";
+            return;
+        }
+
+        // Parzellen, fuer die es schon ein Dossier gibt, werden nicht erneut angeboten.
+        // "439, 440" oder "762+756": das Feld ist Freitext. Jede einzelne Nummer
+        // muss den Doppelten-Schutz ausloesen, nicht nur die ganze Zeichenkette.
+        var mitDossier = _document.Dossiers
+            .SelectMany(d => (d.ParcelNumbers ?? string.Empty)
+                .Split(new[] { ',', ';', '+', '/', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+            .Select(p => p.Trim())
+            .Where(p => p.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var erzeugte = DossierBatchWindow.ShowFor(
+            _parcels,
+            _batchProposal,
+            idsByName.Keys.ToList(),
+            idsByName,
+            mitDossier);
+
+        if (erzeugte.Count == 0)
+        {
+            StatusMessage = "Es wurden keine Dossiers erzeugt.";
+            return;
+        }
+
+        foreach (var dossier in erzeugte)
+        {
+            dossier.FolderName = DossierFolderPlanner.PlanFolderName(
+                dossier.Name,
+                candidate => _document.Dossiers.Any(d =>
+                    string.Equals(d.FolderName, candidate, StringComparison.OrdinalIgnoreCase))
+                    || Directory.Exists(Path.Combine(
+                        DossierFolderPlanner.ResolveRoot(root), candidate)));
+
+            _document.Dossiers.Add(dossier);
+        }
+
+        // Alle auf einmal: ein Speichervorgang, nicht einer je Dossier.
+        if (!await SaveDocumentAsync(root))
+            return;
+
+        await ReloadAsync();
+        StatusMessage = erzeugte.Count == 1
+            ? "1 Dossier erzeugt."
+            : $"{erzeugte.Count} Dossiers erzeugt.";
     }
 
     private async Task DeleteDossierAsync()

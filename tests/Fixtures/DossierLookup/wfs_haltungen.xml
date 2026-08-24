@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"
+                       xmlns:gml="http://www.opengis.net/gml/3.2"
+                       xmlns:leitungen="http://geo.ur.ch/leitungen"
+                       numberMatched="2" numberReturned="2">
+  <wfs:member>
+    <leitungen:abw_haltungen gml:id="h.1">
+      <leitungen:ne_bezeichnung>36051-36329</leitungen:ne_bezeichnung>
+      <leitungen:ha_laengeeffektiv>11.46</leitungen:ha_laengeeffektiv>
+      <leitungen:org_eigentuemer>Privat</leitungen:org_eigentuemer>
+      <leitungen:wkb_geometry>
+        <gml:MultiCurve srsName="urn:ogc:def:crs:EPSG::2056">
+          <gml:curveMember>
+            <gml:LineString>
+              <gml:posList>2692462.471 1185860.503 2692458.291 1185862.403</gml:posList>
+            </gml:LineString>
+          </gml:curveMember>
+        </gml:MultiCurve>
+      </leitungen:wkb_geometry>
+    </leitungen:abw_haltungen>
+  </wfs:member>
+  <wfs:member>
+    <leitungen:abw_haltungen gml:id="h.2">
+      <leitungen:ne_bezeichnung>36329-35558</leitungen:ne_bezeichnung>
+      <leitungen:ha_laengeeffektiv>18.24</leitungen:ha_laengeeffektiv>
+      <leitungen:org_eigentuemer>Abwasser Uri</leitungen:org_eigentuemer>
+      <leitungen:wkb_geometry>
+        <gml:MultiCurve srsName="urn:ogc:def:crs:EPSG::2056">
+          <gml:curveMember>
+            <gml:LineString>
+              <gml:posList>2692470.0 1185870.0 2692480.0 1185875.0</gml:posList>
+            </gml:LineString>
+          </gml:curveMember>
+        </gml:MultiCurve>
+      </leitungen:wkb_geometry>
+    </leitungen:abw_haltungen>
+  </wfs:member>
+</wfs:FeatureCollection>
