@@ -19,10 +19,16 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup;
 ///
 /// Es werden bewusst KEINE Personennamen geprueft: die Zusicherungen kommen
 /// ohne sie aus.
+///
+/// Diese drei Tests laufen nur, wenn die Umgebungsvariable
+/// <c>SEWER_GEOUR_LIVE_ACCEPTANCE=1</c> gesetzt ist — siehe
+/// <see cref="GeoUrLiveFactAttribute"/>. Ohne sie werden sie uebersprungen, damit
+/// der oeffentliche Dienst des Kantons nicht bei jedem Testlauf angefragt wird und
+/// nicht drosselt.
 /// </summary>
 public sealed class GeoUrLiveAcceptanceTests
 {
-    [Fact]
+    [GeoUrLiveFact]
     public async Task Die_echten_Dienste_liefern_die_gemessenen_Werte_fuer_Parzelle_439()
     {
         using var gateway = new GeoUrHttpGateway();
@@ -95,7 +101,7 @@ public sealed class GeoUrLiveAcceptanceTests
         Assert.Single(nachName);
     }
 
-    [Fact]
+    [GeoUrLiveFact]
     public async Task Die_Gemeindeliste_enthaelt_die_19_Urner_Gemeinden()
     {
         using var gateway = new GeoUrHttpGateway();
@@ -106,7 +112,7 @@ public sealed class GeoUrLiveAcceptanceTests
         Assert.Contains(gemeinden, g => g.BfsNr == 1206 && g.Name == "Erstfeld");
     }
 
-    [Fact]
+    [GeoUrLiveFact]
     public async Task Die_Auskunft_wird_wirklich_als_ISO_8859_1_gelesen()
     {
         // Positiver Nachweis statt blosser Abwesenheit von Zeichensalat: die

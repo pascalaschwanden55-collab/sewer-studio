@@ -16,9 +16,9 @@ public sealed class UebersprungeneTestsWaechterTests
 {
     /// <summary>
     /// Bekannte, bewusst uebersprungene Faelle: Datei -> Grund.
-    /// Alle sieben haengen an einer Umgebung, die es in der CI nicht gibt
+    /// Alle acht haengen an einer Umgebung, die es in der CI nicht gibt
     /// (Entwicklermodus, Kundenbestand, ffmpeg, GPU, WPF-Kindprozess, erzeugte
-    /// Messdaten aus Kundenvideos).
+    /// Messdaten aus Kundenvideos, oeffentlicher Kartendienst des Kantons Uri).
     /// </summary>
     private static readonly (string Datei, string Grundfragment)[] Bekannt =
     {
@@ -38,7 +38,12 @@ public sealed class UebersprungeneTestsWaechterTests
         // Meterfolgen (training/scripts/osd_sequenz_abdeckung.py). Die Daten liegen
         // unter KnowledgeRoot und koennen nicht ins Repo.
         (Path.Combine("AuswertungPro.Next.Pipeline.Tests", "OsdSequenzAbdeckungAcceptanceTests.cs"),
-            "Meterfolgen nicht vorhanden")
+            "Meterfolgen nicht vorhanden"),
+        // Abnahme gegen den echten Kartendienst des Kantons Uri. Sie laeuft nur
+        // auf Zuruf: bei wiederholten Laeufen drosselt der Dienst mit HTTP 429,
+        // und die ganze Suite waere rot, ohne dass am Code etwas fehlt.
+        (Path.Combine("AuswertungPro.Next.Infrastructure.Tests", "Dossiers", "Lookup", "GeoUrLiveFactAttribute.cs"),
+            "GeoUr-Abnahme nur auf Zuruf")
     };
 
     [Fact]
@@ -77,10 +82,10 @@ public sealed class UebersprungeneTestsWaechterTests
     }
 
     [Fact]
-    public void Die_Zahl_der_uebersprungenen_Stellen_bleibt_bei_sieben()
+    public void Die_Zahl_der_uebersprungenen_Stellen_bleibt_bei_acht()
     {
-        // Harte Zahl statt Gefuehl: vier im .NET-Lauf sichtbare Skips plus drei
-        // Attribut-/Mess-Faelle, die je nach Umgebung greifen.
+        // Harte Zahl statt Gefuehl: vier im .NET-Lauf sichtbare Skips plus vier
+        // Attribut-/Mess-Faelle, die je nach Umgebung beziehungsweise Zuruf greifen.
         Assert.Equal(Bekannt.Length, FindeAlleSkips().Count);
     }
 
