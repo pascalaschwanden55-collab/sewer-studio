@@ -358,7 +358,10 @@ public partial class DossierPreviewWindow
             };
 
             inhalt.Children.Add(box);
-            inhalt.Children.Add(BaueEinfuegeleiste(box, feld));
+            inhalt.Children.Add(BaueFarbleiste(titel, box, feld));
+
+            if (DossierTopicEditing.SupportsHoldingInsert(titel))
+                inhalt.Children.Add(BaueEinfuegeleiste(box, feld));
 
             if (vomGebiet)
                 inhalt.Children.Add(BaueGebietsHinweis(titel, box, wirt, feld));
@@ -400,6 +403,87 @@ public partial class DossierPreviewWindow
         wirt.Children.Add(neuesThema);
         wirt.Children.Add(hinzufuegen);
     }
+
+    /// <summary>
+    /// Die waehlbaren Schriftfarben. Bewusst eine kleine feste Auswahl statt
+    /// eines Farbmischers: ein Dossier ist ein Brief an den Eigentuemer, kein
+    /// Plakat, und jede Farbe muss auf Papier lesbar bleiben.
+    /// </summary>
+    private static readonly (string Name, string Hex)[] Schriftfarben =
+    {
+        ("Standard", ""),
+        ("Rot", "C00000"),
+        ("Blau", "1F4E79"),
+        ("Grün", "2E7D32"),
+        ("Orange", "C55A11"),
+        ("Grau", "7F7F7F")
+    };
+
+    /// <summary>
+    /// Die Farbwahl eines Themas. Gesetzt wird sie als Abweichung dieses
+    /// Dossiers — wie der Text auch.
+    /// </summary>
+    private UIElement BaueFarbleiste(string titel, TextBox box, DossierPreviewField feld)
+    {
+        var leiste = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 4, 0, 0)
+        };
+
+        leiste.Children.Add(new TextBlock
+        {
+            Text = "Farbe",
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 6, 0)
+        });
+
+        foreach (var (name, hex) in Schriftfarben)
+        {
+            var knopf = new Button
+            {
+                Width = 22,
+                Height = 20,
+                Margin = new Thickness(0, 0, 4, 0),
+                ToolTip = name,
+                Content = hex.Length == 0 ? "A" : string.Empty,
+                FontSize = 10,
+                Background = hex.Length == 0
+                    ? Brushes.Transparent
+                    : new SolidColorBrush(AusHex(hex))
+            };
+
+            var eigene = hex;
+
+            knopf.Click += (_, _) =>
+            {
+                DossierTopicEditing.SetForDossier(_dossier, titel, box.Text);
+                SetzeThemenFarbe(titel, eigene);
+                ZeichneBlatt();
+                _aktivesFeld = feld.Key;
+                Hervorheben(feld.Key, blinken: true);
+            };
+
+            leiste.Children.Add(knopf);
+        }
+
+        return leiste;
+    }
+
+    private void SetzeThemenFarbe(string titel, string hex)
+    {
+        var zeile = _dossier.Topics.FirstOrDefault(t =>
+            string.Equals(t.Title, titel, StringComparison.OrdinalIgnoreCase));
+
+        if (zeile is not null)
+            zeile.ColorHex = hex;
+    }
+
+    private static Color AusHex(string hex)
+        => Color.FromRgb(
+            Convert.ToByte(hex.Substring(0, 2), 16),
+            Convert.ToByte(hex.Substring(2, 2), 16),
+            Convert.ToByte(hex.Substring(4, 2), 16));
 
     /// <summary>
     /// Zwei Knoepfe, die die betroffenen Leitungen und Schaechte in den Text

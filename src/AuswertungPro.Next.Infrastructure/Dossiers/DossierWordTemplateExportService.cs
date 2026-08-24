@@ -367,7 +367,10 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     // hineinkopiert zu veralten.
                     ["Text"] = values is null
                         ? thema.Text
-                        : DocxPlaceholderFiller.ReplacePlaceholders(thema.Text, values)
+                        : DocxPlaceholderFiller.ReplacePlaceholders(thema.Text, values),
+
+                    // Die Schriftfarbe reist unter demselben Namen mit.
+                    ["Text" + DocxPlaceholderFiller.FarbSuffix] = thema.ColorHex ?? string.Empty
                 })
             .ToList();
 

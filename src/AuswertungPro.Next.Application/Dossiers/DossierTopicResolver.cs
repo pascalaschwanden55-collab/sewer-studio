@@ -43,18 +43,31 @@ public static class DossierTopicResolver
                 ergebnis.Add(new DossierTopicRow
                 {
                     Title = thema.Title,
-                    Text = eigene[treffer].Text
+                    Text = eigene[treffer].Text,
+                    ColorHex = eigene[treffer].ColorHex
                 });
                 continue;
             }
 
-            ergebnis.Add(new DossierTopicRow { Title = thema.Title, Text = thema.Text });
+            ergebnis.Add(new DossierTopicRow
+            {
+                Title = thema.Title,
+                Text = thema.Text,
+                ColorHex = thema.ColorHex
+            });
         }
 
         for (var i = 0; i < eigene.Count; i++)
         {
             if (!verbraucht.Contains(i))
-                ergebnis.Add(new DossierTopicRow { Title = eigene[i].Title, Text = eigene[i].Text });
+            {
+                ergebnis.Add(new DossierTopicRow
+                {
+                    Title = eigene[i].Title,
+                    Text = eigene[i].Text,
+                    ColorHex = eigene[i].ColorHex
+                });
+            }
         }
 
         return ergebnis;
@@ -83,6 +96,11 @@ public static class DossierTopicResolver
     private static List<DossierTopicRow> Bereinigt(IEnumerable<DossierTopicRow>? zeilen)
         => (zeilen ?? Enumerable.Empty<DossierTopicRow>())
             .Where(z => z is not null && !string.IsNullOrWhiteSpace(z.Title))
-            .Select(z => new DossierTopicRow { Title = z.Title.Trim(), Text = z.Text ?? string.Empty })
+            .Select(z => new DossierTopicRow
+            {
+                Title = z.Title.Trim(),
+                Text = z.Text ?? string.Empty,
+                ColorHex = z.ColorHex ?? string.Empty
+            })
             .ToList();
 }

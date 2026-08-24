@@ -240,13 +240,21 @@ public static class DossierPreviewPageRenderer
             // Eine leere Stelle bleibt LEER — genau wie im Dokument. Sichtbar
             // wird sie ueber den blassen Grund des Absatzes, nicht ueber
             // erfundene Zeichen; die stuenden so nie im fertigen Dossier.
+            // Eine im Dossier gesetzte Schriftfarbe sticht die der Vorlage —
+            // genau wie im fertigen Word.
+            var eigeneFarbe = run.IsField
+                ? Pinsel(value(run.FieldKey + "__Farbe"))
+                : null;
+
             var stueck = new Run(inhalt)
             {
                 FontFamily = new FontFamily(run.Format.FontFamily),
                 FontSize = run.Format.FontSizePx,
                 FontWeight = run.Format.Bold ? FontWeights.Bold : FontWeights.Normal,
                 FontStyle = run.Format.Italic ? FontStyles.Italic : FontStyles.Normal,
-                Foreground = leer ? Blass : (Pinsel(run.Format.ColorHex) ?? Tinte)
+                Foreground = leer
+                    ? Blass
+                    : (eigeneFarbe ?? Pinsel(run.Format.ColorHex) ?? Tinte)
             };
 
             if (run.Format.Underline)
@@ -425,7 +433,11 @@ public static class DossierPreviewPageRenderer
 
         var zeile = 0;
 
-        void Setze(DossierPreviewTableRow satz, Func<int, string?> ueberschreiben, string? feldKey)
+        void Setze(
+            DossierPreviewTableRow satz,
+            Func<int, string?> ueberschreiben,
+            string? feldKey,
+            Func<int, string?>? farben = null)
         {
             raster.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
@@ -433,7 +445,8 @@ public static class DossierPreviewPageRenderer
             for (var i = 0; i < satz.Cells.Count && spalte < raster.ColumnDefinitions.Count; i++)
             {
                 var zelle = satz.Cells[i];
-                var element = ZeichneZelle(zelle, value, ueberschreiben(i), feldKey, merke);
+                var element = ZeichneZelle(
+                    zelle, value, ueberschreiben(i), feldKey, merke, farben?.Invoke(i));
 
                 Grid.SetRow(element, zeile);
                 Grid.SetColumn(element, spalte);
@@ -476,7 +489,19 @@ public static class DossierPreviewPageRenderer
                             ? wert
                             : string.Empty;
                     },
-                    tabelle.RepeatKey);
+                    tabelle.RepeatKey,
+                    i =>
+                    {
+                        var key = i < tabelle.RepeatCellKeys.Count
+                            ? tabelle.RepeatCellKeys[i]
+                            : string.Empty;
+
+                        return key.Length > 0
+                            && satz.TryGetValue(key + "__Farbe", out var farbe)
+                            && farbe.Length == 6
+                                ? farbe
+                                : null;
+                    });
             }
         }
 
@@ -503,7 +528,8 @@ public static class DossierPreviewPageRenderer
         Func<string, string> value,
         string? ersatztext,
         string? feldKey,
-        Action<string, Border> merke)
+        Action<string, Border> merke,
+        string? farbe = null)
     {
         var inhalt = new StackPanel();
 
@@ -518,6 +544,9 @@ public static class DossierPreviewPageRenderer
             // Bauplans, traegt aber den Text der Daten.
             var vorbild = zelle.Paragraphs.FirstOrDefault();
             var format = vorbild?.Runs.FirstOrDefault()?.Format ?? DossierPreviewRunFormat.Default;
+
+            if (farbe is not null)
+                format = format with { ColorHex = farbe };
 
             inhalt.Children.Add(ZeichneAbsatz(
                 new DossierPreviewParagraph(

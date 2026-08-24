@@ -86,6 +86,30 @@ public static class DossierTopicEditing
             t is not null && string.Equals(t.Title, titel, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>
+    /// Die Themen, in denen die betroffenen Leitungen und Schaechte stehen.
+    /// Nur dort werden die Einfuegeknoepfe angeboten — ein Ansprechpartner oder
+    /// ein Ausfuehrungstermin braucht keine Leitungsliste.
+    ///
+    /// Verglichen wird der Anfang des Titels, damit "Schaeden Pz. 30" ebenso
+    /// zaehlt wie "Schaeden".
+    /// </summary>
+    private static readonly string[] TitelMitLeitungen =
+    {
+        "Schäden",
+        "Sanierungskonzept",
+        "Kostenschätzung"
+    };
+
+    public static bool SupportsHoldingInsert(string? title)
+    {
+        var titel = (title ?? string.Empty).Trim();
+
+        return titel.Length > 0
+            && TitelMitLeitungen.Any(t =>
+                titel.StartsWith(t, StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>Wahr, wenn dieses Dossier fuer den Titel etwas Eigenes fuehrt.</summary>
     public static bool HasDossierOverride(DossierDefinition dossier, string title)
     {

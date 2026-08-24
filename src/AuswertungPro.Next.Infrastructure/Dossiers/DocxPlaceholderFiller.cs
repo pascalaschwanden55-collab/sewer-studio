@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -28,6 +29,9 @@ public static class DocxPlaceholderFiller
 {
     /// <summary>Markiert die Vorlagenzeile einer Wiederholtabelle.</summary>
     public const string RepeatMarkerPrefix = "{{#";
+
+    /// <summary>Zusatz, unter dem die Schriftfarbe eines Platzhalters steht.</summary>
+    public const string FarbSuffix = "__Farbe";
 
     /// <summary>
     /// Ersetzt alle Platzhalter in Haupttext, Kopf- und Fusszeilen.
@@ -148,7 +152,51 @@ public static class DocxPlaceholderFiller
         if (string.Equals(replaced, combined, StringComparison.Ordinal))
             return;
 
+        // Die Schriftfarbe wird VOR dem Zurueckschreiben gesucht: danach steht
+        // der Platzhaltername nicht mehr im Text.
+        var farbe = FarbeFuer(combined, values);
+
         WriteBack(paragraph, texts, replaced);
+
+        if (farbe is not null)
+            SetzeFarbe(paragraph, farbe);
+    }
+
+    /// <summary>
+    /// Die Schriftfarbe zu einem Platzhalter. Sie steht unter demselben Namen
+    /// mit dem Zusatz "__Farbe" — so bleibt der Wertevorrat eine einfache
+    /// Zeichenketten-Karte und der Fueller kennt keine Dossierbegriffe.
+    /// </summary>
+    private static string? FarbeFuer(
+        string text, IReadOnlyDictionary<string, string> values)
+    {
+        foreach (Match treffer in Regex.Matches(text, @"\{\{([A-Za-z0-9_]+)\}\}"))
+        {
+            var name = treffer.Groups[1].Value + FarbSuffix;
+
+            if (values.TryGetValue(name, out var wert) && IstFarbe(wert))
+                return wert.Trim();
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Sechs Hexziffern, sonst nichts. Ein unbrauchbarer Wert laesst die Farbe
+    /// der Vorlage stehen, statt Word eine ungueltige Angabe unterzuschieben.
+    /// </summary>
+    private static bool IstFarbe(string? wert)
+        => wert is not null
+            && wert.Trim().Length == 6
+            && wert.Trim().All(Uri.IsHexDigit);
+
+    private static void SetzeFarbe(Paragraph paragraph, string hex)
+    {
+        foreach (var run in paragraph.Descendants<Run>())
+        {
+            run.RunProperties ??= new RunProperties();
+            run.RunProperties.Color = new Color { Val = hex };
+        }
     }
 
     /// <summary>

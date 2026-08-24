@@ -36,6 +36,12 @@ public sealed class DossierTopicRow
 
     /// <summary>Text in der Spalte "Bemerkungen".</summary>
     public string Text { get; set; } = "";
+
+    /// <summary>
+    /// Schriftfarbe des Textes als sechsstelliger Hexwert ohne Raute, zum
+    /// Beispiel "C00000". Leer heisst: die Farbe der Vorlage.
+    /// </summary>
+    public string ColorHex { get; set; } = "";
 }
 
 /// <summary>Eine Zeile der Tabelle "Aenderungswesen".</summary>
