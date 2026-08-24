@@ -188,7 +188,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 shellOpen: _sp.ShellOpen,
                 explorerReveal: _sp.ExplorerReveal,
                 holdingActions: DossierHoldingActionFactory.Create(this, _sp),
-                shaftActions: DossierShaftActionFactory.Create(this, _sp))),
+                shaftActions: DossierShaftActionFactory.Create(this, _sp),
+                settings: _sp.Settings)),
             new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(this, _sp)),
             new("\uE80A", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(this, _sp)),
             // Segoe MDL2 E8AA = "ViewAll": zwei Auswertungen nebeneinander (Mensch vs. Schatten-KI)

@@ -1,5 +1,9 @@
+﻿using System;
+using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 
 using AuswertungPro.Next.Domain.Models.Dossiers;
@@ -39,6 +43,44 @@ public partial class DossiersPage : UserControl
         viewModel.PropertyChanged += OnViewModelChanged;
 
         ApplySelectedStatus(viewModel);
+        PasseSpaltenAn(viewModel);
+    }
+
+    /// <summary>
+    /// Gibt der Spalte „Empfohlene Massnahme" nur so viel Platz, wie sie
+    /// braucht. Ist sie in jeder Zeile leer, gehoert die Breite dem
+    /// Bauteilnamen — bei DN-losen Schachtlisten ist das der Regelfall.
+    ///
+    /// Von Hand statt per Bindung: Tabellenspalten liegen nicht im sichtbaren
+    /// Baum und bekommen deshalb keinen Datenkontext.
+    /// </summary>
+    private void PasseSpaltenAn(DossiersPageViewModel viewModel)
+    {
+        Verteile(
+            DossierMeasureColumn.HasContent(viewModel.HoldingRows.Select(r => r.Measures)),
+            HoldingNameColumn,
+            HoldingMeasureColumn);
+
+        Verteile(
+            DossierMeasureColumn.HasContent(viewModel.ShaftRows.Select(r => r.Measures)),
+            ShaftNameColumn,
+            ShaftMeasureColumn);
+    }
+
+    private static void Verteile(
+        bool massnahmenVorhanden,
+        DataGridTextColumn name,
+        DataGridTextColumn massnahme)
+    {
+        if (massnahmenVorhanden)
+        {
+            name.Width = new DataGridLength(200);
+            massnahme.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
+            return;
+        }
+
+        name.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
+        massnahme.Width = new DataGridLength(DossierMeasureColumn.NarrowWidth);
     }
 
     private void Abmelden()
@@ -56,6 +98,7 @@ public partial class DossiersPage : UserControl
             && sender is DossiersPageViewModel viewModel)
         {
             ApplySelectedStatus(viewModel);
+            PasseSpaltenAn(viewModel);
         }
     }
 
@@ -98,4 +141,18 @@ public partial class DossiersPage : UserControl
         if (row is not null)
             grid.SelectedItem = row.Item;
     }
+}
+
+/// <summary>
+/// Das Zeichen des Umschalters am Kopfblock: zugeklappt zeigt es nach unten
+/// („aufklappen"), aufgeklappt nach oben („zuklappen"). Es zeigt also immer,
+/// was der Klick bewirkt — nicht, wie der Zustand gerade ist.
+/// </summary>
+public sealed class CollapseGlyphConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is bool zugeklappt && zugeklappt ? "▾  Kennzahlen" : "▴  Kennzahlen";
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
 }

@@ -70,6 +70,13 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public bool OverviewProjectListCollapsed { get; set; }
 
     /// <summary>
+    /// Der Kopfblock des Dossier-Cockpits (Kacheln, Zustand, Schaeden) ist
+    /// zugeklappt. Zugeklappt bleibt eine Zusammenzugszeile stehen; der
+    /// gewonnene Platz geht an die Tabellen der Leitungen und Schaechte.
+    /// </summary>
+    public bool DossierSummaryCollapsed { get; set; }
+
+    /// <summary>
     /// Schluessel fuer die Telefonsuche von search.ch. Ohne ihn bleibt die
     /// Suche aus: die Nutzungsbedingungen erlauben nur die Schnittstelle mit
     /// eigenem Schluessel, nicht das Auslesen der Webseite.

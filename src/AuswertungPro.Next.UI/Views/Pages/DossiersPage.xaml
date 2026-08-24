@@ -8,6 +8,7 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
+        <local:CollapseGlyphConverter x:Key="CollapseGlyph"/>
 
         <Style x:Key="MetricCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
@@ -182,14 +183,38 @@
                         </Grid.RowDefinitions>
 
                         <!-- Titel -->
-                        <StackPanel Grid.Row="0" Margin="0,0,0,14">
-                            <TextBlock Text="{Binding DetailTitle}"
-                                       Foreground="{DynamicResource TextBrush}"
-                                       FontSize="20" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding DetailSubtitle}"
-                                       Foreground="{DynamicResource MutedBrush}"
-                                       Margin="0,2,0,0"/>
-                        </StackPanel>
+                        <Grid Grid.Row="0" Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding DetailTitle}"
+                                           Foreground="{DynamicResource TextBrush}"
+                                           FontSize="20" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding DetailSubtitle}"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           Margin="0,2,0,0"/>
+
+                                <!-- Zugeklappt bleibt der Zusammenzug stehen: die
+                                     Zahlen sollen nicht verschwinden, nur ihr Platz. -->
+                                <TextBlock Text="{Binding SummaryLine}"
+                                           Foreground="{DynamicResource TextBrush}"
+                                           FontSize="13" Margin="0,6,0,0"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding IsSummaryCollapsed,
+                                               Converter={StaticResource BoolToVis}}"/>
+                            </StackPanel>
+
+                            <ToggleButton Grid.Column="1"
+                                          VerticalAlignment="Top"
+                                          Padding="10,5"
+                                          IsChecked="{Binding IsSummaryCollapsed, Mode=TwoWay}"
+                                          ToolTip="Klappt Kennzahlen, Zustand und Schadensliste zu. Der gewonnene Platz geht an die Tabellen der Leitungen und Schächte; der Zusammenzug bleibt als Zeile stehen."
+                                          Content="{Binding IsSummaryCollapsed,
+                                              Converter={StaticResource CollapseGlyph}}"/>
+                        </Grid>
 
                         <!-- Warnung fehlende Leitungen -->
                         <Border Grid.Row="1"
@@ -203,7 +228,9 @@
                         </Border>
 
                         <!-- Kennzahlen -->
-                        <UniformGrid Grid.Row="2" Rows="1" Columns="4" Margin="0,0,0,14">
+                        <UniformGrid Grid.Row="2" Rows="1" Columns="4" Margin="0,0,0,14"
+                                     Visibility="{Binding IsSummaryCollapsed,
+                                         Converter={StaticResource InverseBoolToVis}}">
                             <Border Style="{StaticResource MetricCard}">
                                 <StackPanel>
                                     <TextBlock Text="{Binding HoldingCountText}"
@@ -239,7 +266,9 @@
                         </UniformGrid>
 
                         <!-- Zustand und Schäden -->
-                        <Grid Grid.Row="3" Margin="0,0,0,12">
+                        <Grid Grid.Row="3" Margin="0,0,0,12"
+                              Visibility="{Binding IsSummaryCollapsed,
+                                  Converter={StaticResource InverseBoolToVis}}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="12"/>
@@ -352,13 +381,15 @@
                                     </ContextMenu>
                                 </DataGrid.ContextMenu>
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Leitung" Width="200"
+                                    <DataGridTextColumn x:Name="HoldingNameColumn"
+                                                        Header="Leitung" Width="200"
                                                         Binding="{Binding Holding}"/>
                                     <DataGridTextColumn Header="Länge" Width="90"
                                                         Binding="{Binding Length}"/>
                                     <DataGridTextColumn Header="Zustand" Width="140"
                                                         Binding="{Binding Condition}"/>
-                                    <DataGridTextColumn Header="Empfohlene Massnahme" Width="*"
+                                    <DataGridTextColumn x:Name="HoldingMeasureColumn"
+                                                        Header="Empfohlene Massnahme" Width="*"
                                                         Binding="{Binding Measures}"/>
                                     <DataGridTextColumn Header="Kosten CHF" Width="110"
                                                         Binding="{Binding Cost}"/>
@@ -430,11 +461,13 @@
                                         </ContextMenu>
                                     </DataGrid.ContextMenu>
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Schacht" Width="200"
+                                        <DataGridTextColumn x:Name="ShaftNameColumn"
+                                                            Header="Schacht" Width="200"
                                                             Binding="{Binding Shaft}"/>
                                         <DataGridTextColumn Header="Funktion" Width="160"
                                                             Binding="{Binding Funktion}"/>
-                                        <DataGridTextColumn Header="Empfohlene Massnahme" Width="*"
+                                        <DataGridTextColumn x:Name="ShaftMeasureColumn"
+                                                            Header="Empfohlene Massnahme" Width="*"
                                                             Binding="{Binding Measures}"/>
                                         <DataGridTextColumn Header="Kosten CHF" Width="110"
                                                             Binding="{Binding Cost}"/>

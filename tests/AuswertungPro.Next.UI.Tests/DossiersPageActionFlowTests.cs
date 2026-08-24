@@ -33,6 +33,10 @@ public sealed class DossiersPageActionFlowTests : IDisposable
     private readonly FakeDialogs _fenster = new();
     private readonly Project _project = new();
 
+    // Eigene Einstellungsdatei je Test: der Merker des Kopfblocks wird
+    // beim Umschalten gespeichert, und das darf die echte nicht anfassen.
+    private readonly AuswertungPro.Next.UI.AppSettings _einstellungen = new();
+
     public DossiersPageActionFlowTests() => Directory.CreateDirectory(_root);
 
     public void Dispose()
@@ -59,7 +63,8 @@ public sealed class DossiersPageActionFlowTests : IDisposable
             holdingActions: new DossierHoldingActionController(
                 () => _project, new StilleDialoge(), _ => { }, _ => { }, _ => { }),
             shaftActions: new DossierShaftActionController(
-                () => _project, new StilleDialoge(), _ => { }, _ => { }));
+                () => _project, new StilleDialoge(), _ => { }, _ => { }),
+            settings: _einstellungen);
 
         // Der Konstruktor laedt im Hintergrund; abwarten.
         SpinWait.SpinUntil(() => _store.Geladen, TimeSpan.FromSeconds(5));

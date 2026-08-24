@@ -104,6 +104,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     private readonly IExplorerRevealService _explorerReveal;
     private readonly DossierHoldingActionController _holdingActions;
     private readonly DossierShaftActionController _shaftActions;
+    private readonly AppSettings _settings;
 
     private readonly DossierCostCache _costs;
 
@@ -125,7 +126,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         ISafeShellOpenService shellOpen,
         IExplorerRevealService explorerReveal,
         DossierHoldingActionController holdingActions,
-        DossierShaftActionController shaftActions)
+        DossierShaftActionController shaftActions,
+        AppSettings settings)
     {
         _getProject = getProject ?? throw new ArgumentNullException(nameof(getProject));
         _getProjectFolder = getProjectFolder ?? throw new ArgumentNullException(nameof(getProjectFolder));
@@ -142,6 +144,10 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         _explorerReveal = explorerReveal ?? throw new ArgumentNullException(nameof(explorerReveal));
         _holdingActions = holdingActions ?? throw new ArgumentNullException(nameof(holdingActions));
         _shaftActions = shaftActions ?? throw new ArgumentNullException(nameof(shaftActions));
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+
+        // Einmal zuklappen soll reichen — nicht bei jedem Seitenwechsel erneut.
+        _isSummaryCollapsed = _settings.DossierSummaryCollapsed;
 
         _costs = new DossierCostCache(() => new DossierCostSnapshot(
             LoadCosts(), LoadSchachtCosts()));
@@ -254,6 +260,14 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     [ObservableProperty]
     private string _shaftCountText = "0";
 
+    /// <summary>Der Kopfblock mit Kacheln, Zustand und Schaeden ist zugeklappt.</summary>
+    [ObservableProperty]
+    private bool _isSummaryCollapsed;
+
+    /// <summary>Die eine Zeile, die im zugeklappten Zustand stehen bleibt.</summary>
+    [ObservableProperty]
+    private string _summaryLine = "";
+
     [ObservableProperty]
     private string _lengthText = "—";
 
@@ -277,6 +291,12 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         RefreshDetail();
         OnPropertyChanged(nameof(HasSelection));
         NotifyCommands();
+    }
+
+    partial void OnIsSummaryCollapsedChanged(bool value)
+    {
+        _settings.DossierSummaryCollapsed = value;
+        _settings.Save();
     }
 
     partial void OnMissingWarningChanged(string value)
@@ -403,6 +423,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
             DetailSubtitle = "";
             HoldingCountText = "0";
             ShaftCountText = "0";
+            SummaryLine = "";
             LengthText = "—";
             CostText = "—";
             UrgentText = "0";
@@ -451,6 +472,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         foreach (var shaft in snapshot.Shafts)
             ShaftRows.Add(BuildShaftRow(shaft));
 
+        SummaryLine = BuildSummaryLine(snapshot);
+
         MissingWarning = BuildMissingWarning(snapshot);
     }
 
@@ -486,6 +509,48 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         return teile.Count == 0
             ? ""
             : string.Join(". ", teile) + ". Bitte die Auswahl prüfen.";
+    }
+
+    /// <summary>
+    /// Der Zusammenzug, der sichtbar bleibt, wenn der Kopfblock zugeklappt ist.
+    ///
+    /// Kennzahlen und Zustandsblock brauchen rund ein Drittel der Hoehe, obwohl
+    /// man sie beim Arbeiten selten liest — von fuenf Leitungen blieben drei
+    /// sichtbar. Zugeklappt verschwinden nicht die Zahlen, nur ihr Platz.
+    /// </summary>
+    public static string BuildSummaryLine(DossierSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        var teile = new List<string>();
+
+        if (snapshot.HoldingCount > 0)
+        {
+            teile.Add(snapshot.HoldingCount == 1
+                ? "1 Leitung"
+                : $"{snapshot.HoldingCount} Leitungen");
+        }
+
+        // Ohne Schaechte steht dort nichts: „0 Schaechte" waere Rauschen, und
+        // die meisten Liegenschaften haben keine.
+        if (snapshot.ShaftCount > 0)
+        {
+            teile.Add(snapshot.ShaftCount == 1
+                ? "1 Schacht"
+                : $"{snapshot.ShaftCount} Schächte");
+        }
+
+        if (snapshot.LengthTotal > 0)
+            teile.Add(snapshot.LengthTotal.ToString("0.00", Ch) + " m");
+
+        if (snapshot.NetCostTotal > 0m)
+            teile.Add("CHF " + snapshot.NetCostTotal.ToString("#,##0.00", Ch));
+
+        var dringend = snapshot.Statistics.DringendCount;
+        if (dringend > 0)
+            teile.Add($"{dringend} dringend (Z0/Z1)");
+
+        return teile.Count == 0 ? "Noch nichts zugeordnet" : string.Join(" · ", teile);
     }
 
     /// <summary>Internal statt private, damit der reine Textaufbau direkt testbar ist.</summary>
