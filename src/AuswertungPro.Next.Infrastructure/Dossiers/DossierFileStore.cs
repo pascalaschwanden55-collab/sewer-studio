@@ -111,10 +111,24 @@ public sealed class DossierFileStore : IDossierStore
             var path = guard.EnsureSafeFileTarget(
                 Path.Combine(root, DossierFolderPlanner.DocumentFileName));
 
-            // Vor dem Ersetzen den letzten guten Stand als .bak sichern.
-            if (File.Exists(path))
+            var backupPath = guard.EnsureSafeFileTarget(path + ".bak");
+
+            // Ist die vorhandene Datei kaputt, muss das bisherige .bak den
+            // Schreibvorgang ueberleben.
+            //
+            // Das Speichern selbst legt naemlich immer eines an: der gemeinsame
+            // atomare Schreiber ersetzt die Zieldatei ueber File.Replace und
+            // schiebt die alte — hier also die kaputte — als .bak beiseite.
+            // Ohne diese Rettung waere ausgerechnet die letzte gute Fassung weg,
+            // und zwar genau in dem Moment, in dem man sie braucht.
+            var zuRettendesBackup = File.Exists(path) && !IstLesbar(path) && File.Exists(backupPath)
+                ? await File.ReadAllBytesAsync(backupPath, ct).ConfigureAwait(false)
+                : null;
+
+            // Der letzte gute Stand als .bak. Der atomare Schreiber tut das
+            // unten ohnehin; dieser Weg deckt seinen Rueckfall ohne Replace ab.
+            if (File.Exists(path) && IstLesbar(path))
             {
-                var backupPath = guard.EnsureSafeFileTarget(path + ".bak");
                 BestEffort.Try(
                     () => File.Copy(path, backupPath, overwrite: true),
                     "Dossiers: Backup schreiben");
@@ -123,10 +137,35 @@ public sealed class DossierFileStore : IDossierStore
             document.ModifiedNow();
             var json = JsonSerializer.Serialize(document, JsonOptions);
             await AtomicTextFileWriter.WriteAllTextAsync(path, json, ct).ConfigureAwait(false);
+
+            if (zuRettendesBackup is not null)
+            {
+                await File.WriteAllBytesAsync(backupPath, zuRettendesBackup, ct)
+                    .ConfigureAwait(false);
+            }
         }
         finally
         {
             _saveLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Wahr, wenn die Datei sich als Dossier-Dokument lesen laesst.
+    ///
+    /// Bewusst nur eine Formpruefung ohne Umstellung: gefragt ist „taugt das
+    /// als Sicherungsexemplar", nicht „ist der Inhalt aktuell".
+    /// </summary>
+    private static bool IstLesbar(string path)
+    {
+        try
+        {
+            using var stream = File.OpenRead(path);
+            return JsonSerializer.Deserialize<DossierDocument>(stream, JsonOptions) is not null;
+        }
+        catch
+        {
+            return false;
         }
     }
 

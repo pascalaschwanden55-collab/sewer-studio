@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -98,15 +98,12 @@ public partial class DossierPreviewWindow : Window
     }
 
     /// <summary>
-    /// Tiefe Kopie ueber JSON. Die Angaben sind reine Datenklassen; ein
-    /// halbtiefer Klon wuerde die Zeilenlisten teilen und "Verwerfen"
-    /// wirkungslos machen.
+    /// Tiefe Kopie. Ein halbtiefer Klon wuerde die Zeilenlisten teilen und
+    /// „Verwerfen" wirkungslos machen — dieselbe Regel wie beim Ruecksetzen
+    /// nach einem misslungenen Speichern, deshalb derselbe Weg.
     /// </summary>
     private static T Kopiere<T>(T quelle) where T : new()
-    {
-        var json = JsonSerializer.Serialize(quelle);
-        return JsonSerializer.Deserialize<T>(json) ?? new T();
-    }
+        => DossierDeepCopy.Of(quelle);
 
     private void OnPageSelected(object sender, SelectionChangedEventArgs e)
     {

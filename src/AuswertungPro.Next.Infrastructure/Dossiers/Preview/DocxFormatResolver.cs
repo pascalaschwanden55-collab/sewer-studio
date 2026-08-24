@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -8,6 +8,8 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
 using AuswertungPro.Next.Application.Dossiers.Preview;
+
+using AuswertungPro.Next.Application.Dossiers;
 
 namespace AuswertungPro.Next.Infrastructure.Dossiers.Preview;
 
@@ -200,9 +202,7 @@ internal sealed class DocxFormatResolver
     }
 
     internal static bool IstUeberschriftenStil(string styleId)
-        => styleId.StartsWith("berschrift", StringComparison.OrdinalIgnoreCase)
-            || styleId.StartsWith("Überschrift", StringComparison.OrdinalIgnoreCase)
-            || styleId.StartsWith("Heading", StringComparison.OrdinalIgnoreCase);
+        => DossierHeadingStyle.IsHeading(styleId);
 
     public DossierPreviewRunFormat RunFormat(Paragraph absatz, Run? run)
     {

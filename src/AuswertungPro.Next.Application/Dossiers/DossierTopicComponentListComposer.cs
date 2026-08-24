@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 using AuswertungPro.Next.Domain.Models.Dossiers;
@@ -15,11 +15,6 @@ public static class DossierTopicComponentListComposer
     public const string ValueKey = "Bauteile_Text";
     public const string Placeholder = "{{Bauteile_Text}}";
 
-    private static readonly string[] AutomaticTitles =
-    {
-        "Schäden",
-        "Sanierungskonzept"
-    };
 
     private static readonly string[] ComponentValueKeys =
     {
@@ -29,13 +24,7 @@ public static class DossierTopicComponentListComposer
     };
 
     public static bool IsAutomaticTitle(string? title)
-    {
-        var value = (title ?? string.Empty).Trim();
-
-        return value.Length > 0
-            && Array.Exists(AutomaticTitles,
-                candidate => value.StartsWith(candidate, StringComparison.OrdinalIgnoreCase));
-    }
+        => DossierTopicTitles.Matches(DossierTopicTitles.WithAutomaticComponents, title);
 
     public static DossierTopicTextFormatting.FormattedText Compose(
         DossierTopicRow topic,

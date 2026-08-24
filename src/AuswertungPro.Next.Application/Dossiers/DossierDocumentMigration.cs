@@ -44,9 +44,9 @@ public static class DossierDocumentMigration
         "Örtliche Bauleitung",
         "Behinderungen, Zugänge, Verkehrsführung, Fussgängerführung",
         "Ausgangslage",
-        "Schäden",
-        "Sanierungskonzept",
-        "Kostenschätzung Abwasser Uri",
+        DossierTopicTitles.Schaeden,
+        DossierTopicTitles.Sanierungskonzept,
+        DossierTopicTitles.Kostenschaetzung + " Abwasser Uri",
         "Bemerkungen",
         "Beilagen"
     };

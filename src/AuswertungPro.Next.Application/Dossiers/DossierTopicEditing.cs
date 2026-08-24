@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -179,21 +179,8 @@ public static class DossierTopicEditing
     /// Verglichen wird der Anfang des Titels, damit "Schaeden Pz. 30" ebenso
     /// zaehlt wie "Schaeden".
     /// </summary>
-    private static readonly string[] TitelMitLeitungen =
-    {
-        "Schäden",
-        "Sanierungskonzept",
-        "Kostenschätzung"
-    };
-
     public static bool SupportsHoldingInsert(string? title)
-    {
-        var titel = (title ?? string.Empty).Trim();
-
-        return titel.Length > 0
-            && TitelMitLeitungen.Any(t =>
-                titel.StartsWith(t, StringComparison.OrdinalIgnoreCase));
-    }
+        => DossierTopicTitles.Matches(DossierTopicTitles.WithComponentButton, title);
 
     /// <summary>
     /// In diesen Themen werden alle Haltungen und danach alle Schaechte ohne

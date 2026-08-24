@@ -83,12 +83,25 @@ public sealed partial class DossiersPageViewModel
         if (Selected is null || !EnsureProject(out var root))
             return;
 
+        // Das Fenster aendert die Angaben unmittelbar. Ohne Vorherstand
+        // stuenden nach einem misslungenen Speichern Angaben am Bildschirm,
+        // die nicht auf der Platte sind.
+        var vorher = DossierDeepCopy.Of(Selected.Definition);
+
         if (!DossierEditWindow.ShowFor(Selected.Definition, isNew: false))
+        {
+            ErsetzeDossier(Selected.Definition, vorher);
+            RebuildList();
             return;
+        }
 
         Selected.Definition.ModifiedAtUtc = DateTime.UtcNow;
         if (!await SaveDocumentAsync(root))
+        {
+            ErsetzeDossier(Selected.Definition, vorher);
+            RebuildList();
             return;
+        }
 
         RebuildList();
         StatusMessage = "Stammdaten gespeichert.";
@@ -99,15 +112,36 @@ public sealed partial class DossiersPageViewModel
         if (!EnsureProject(out var root))
             return;
 
+        var vorher = DossierDeepCopy.Of(_document.Area);
+
         if (!DossierAreaWindow.ShowFor(_document.Area))
+        {
+            _document.Area = vorher;
             return;
+        }
 
         if (!await SaveDocumentAsync(root))
+        {
+            _document.Area = vorher;
+            AreaTitle = _document.Area.AreaTitle;
+            RefreshDetail();
             return;
+        }
 
         AreaTitle = _document.Area.AreaTitle;
         RefreshDetail();
         StatusMessage = "Gebietsangaben gespeichert. Sie gelten für alle Dossiers.";
+    }
+
+    /// <summary>
+    /// Setzt ein Dossier auf seinen Vorherstand zurueck — an derselben Stelle
+    /// der Liste, damit die Reihenfolge in der Datei erhalten bleibt.
+    /// </summary>
+    private void ErsetzeDossier(DossierDefinition ziel, DossierDefinition vorher)
+    {
+        var stelle = _document.Dossiers.IndexOf(ziel);
+        if (stelle >= 0)
+            _document.Dossiers[stelle] = vorher;
     }
 
     /// <summary>
@@ -170,7 +204,16 @@ public sealed partial class DossiersPageViewModel
 
         // Alle auf einmal: ein Speichervorgang, nicht einer je Dossier.
         if (!await SaveDocumentAsync(root))
+        {
+            // Sonst stuenden die neuen Dossiers am Bildschirm, ohne je auf der
+            // Platte gewesen zu sein — und der naechste Speichervorgang
+            // schriebe sie ungefragt mit.
+            foreach (var dossier in erzeugte)
+                _document.Dossiers.Remove(dossier);
+
+            RebuildList();
             return;
+        }
 
         await ReloadAsync();
         StatusMessage = erzeugte.Count == 1
@@ -194,11 +237,14 @@ public sealed partial class DossiersPageViewModel
         }
 
         var definition = Selected.Definition;
+        var stelle = _document.Dossiers.IndexOf(definition);
         _document.Dossiers.Remove(definition);
 
         if (!await SaveDocumentAsync(root))
         {
-            _document.Dossiers.Add(definition);
+            // An dieselbe Stelle zurueck: hinten angehaengt aenderte sich die
+            // Reihenfolge in der Datei ohne jeden Anlass.
+            _document.Dossiers.Insert(Math.Clamp(stelle, 0, _document.Dossiers.Count), definition);
             return;
         }
 

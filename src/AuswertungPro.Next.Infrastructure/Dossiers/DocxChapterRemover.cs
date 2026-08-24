@@ -1,10 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+
+using AuswertungPro.Next.Application.Dossiers;
 
 namespace AuswertungPro.Next.Infrastructure.Dossiers;
 
@@ -83,12 +85,7 @@ public static class DocxChapterRemover
     {
         var stil = absatz.ParagraphProperties?.ParagraphStyleId?.Val?.Value ?? string.Empty;
 
-        var ueberschrift =
-            stil.StartsWith("berschrift", StringComparison.OrdinalIgnoreCase)
-            || stil.StartsWith("Überschrift", StringComparison.OrdinalIgnoreCase)
-            || stil.StartsWith("Heading", StringComparison.OrdinalIgnoreCase);
-
-        if (!ueberschrift)
+        if (!DossierHeadingStyle.IsHeading(stil))
             return false;
 
         return titel is null

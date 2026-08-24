@@ -10,10 +10,18 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 
 public partial class DossiersPage : UserControl
 {
+    /// <summary>
+    /// Das aktuell beobachtete Cockpit. Ohne diesen Merker haengte jeder
+    /// Wechsel des Datenkontexts einen WEITEREN Empfaenger an dasselbe
+    /// ViewModel — sie sammelten sich, und keiner wurde je geloest.
+    /// </summary>
+    private DossiersPageViewModel? _beobachtet;
+
     public DossiersPage()
     {
         InitializeComponent();
         DataContextChanged += (_, _) => SyncStatusCombo();
+        Unloaded += (_, _) => Abmelden();
     }
 
     /// <summary>
@@ -22,16 +30,33 @@ public partial class DossiersPage : UserControl
     /// </summary>
     private void SyncStatusCombo()
     {
+        Abmelden();
+
         if (DataContext is not DossiersPageViewModel viewModel)
             return;
 
-        viewModel.PropertyChanged += (_, args) =>
-        {
-            if (args.PropertyName == nameof(DossiersPageViewModel.Selected))
-                ApplySelectedStatus(viewModel);
-        };
+        _beobachtet = viewModel;
+        viewModel.PropertyChanged += OnViewModelChanged;
 
         ApplySelectedStatus(viewModel);
+    }
+
+    private void Abmelden()
+    {
+        if (_beobachtet is null)
+            return;
+
+        _beobachtet.PropertyChanged -= OnViewModelChanged;
+        _beobachtet = null;
+    }
+
+    private void OnViewModelChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(DossiersPageViewModel.Selected)
+            && sender is DossiersPageViewModel viewModel)
+        {
+            ApplySelectedStatus(viewModel);
+        }
     }
 
     private void ApplySelectedStatus(DossiersPageViewModel viewModel)
