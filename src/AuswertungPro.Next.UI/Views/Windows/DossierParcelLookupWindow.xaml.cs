@@ -6,16 +6,11 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
+using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Dossiers.Lookup;
 using AuswertungPro.Next.Domain.Models.Dossiers;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
-
-/// <summary>Was der Benutzer aus der Abfrage uebernommen hat.</summary>
-public sealed record DossierParcelLookupChoice(
-    DossierDefinition Dossier,
-    IReadOnlyList<string> SelectedHoldingDesignations,
-    IReadOnlyList<string> ShaftNumbers);
 
 /// <summary>
 /// Fragt Gemeinde und Parzelle ab und fuellt daraus alles vor, was die

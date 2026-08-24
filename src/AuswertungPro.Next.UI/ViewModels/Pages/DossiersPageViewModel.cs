@@ -96,12 +96,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     private readonly IDossierWordExportService _wordExport;
     private readonly IDossierAttachmentService _attachments;
     private readonly IDossierPdfAssemblyService _pdfAssembly;
-    private readonly IParcelLookup _parcels;
-    private readonly DossierBatchProposalUseCase _batchProposal;
-    private readonly DossierParcelLookupUseCase _parcelLookup;
-    private readonly IDirectoryLookup _directory;
-    private readonly IPlanImageConverter _planImages;
-    private readonly IPlanImageAdjuster _planAdjuster;
+    private readonly IDossierDialogs _dialogWindows;
     private readonly ICostStoreFactory _costStores;
     private readonly IDialogService _dialogs;
     private readonly ToastService _toasts;
@@ -122,12 +117,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         IDossierWordExportService wordExport,
         IDossierAttachmentService attachments,
         IDossierPdfAssemblyService pdfAssembly,
-        IParcelLookup parcels,
-        DossierBatchProposalUseCase batchProposal,
-        DossierParcelLookupUseCase parcelLookup,
-        IDirectoryLookup directory,
-        IPlanImageConverter planImages,
-        IPlanImageAdjuster planAdjuster,
+        IDossierDialogs dialogWindows,
         ICostStoreFactory costStores,
         IDialogService dialogs,
         ToastService toasts,
@@ -142,12 +132,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         _wordExport = wordExport ?? throw new ArgumentNullException(nameof(wordExport));
         _attachments = attachments ?? throw new ArgumentNullException(nameof(attachments));
         _pdfAssembly = pdfAssembly ?? throw new ArgumentNullException(nameof(pdfAssembly));
-        _parcels = parcels ?? throw new ArgumentNullException(nameof(parcels));
-        _batchProposal = batchProposal ?? throw new ArgumentNullException(nameof(batchProposal));
-        _parcelLookup = parcelLookup ?? throw new ArgumentNullException(nameof(parcelLookup));
-        _directory = directory ?? throw new ArgumentNullException(nameof(directory));
-        _planImages = planImages ?? throw new ArgumentNullException(nameof(planImages));
-        _planAdjuster = planAdjuster ?? throw new ArgumentNullException(nameof(planAdjuster));
+        _dialogWindows = dialogWindows ?? throw new ArgumentNullException(nameof(dialogWindows));
         _costStores = costStores ?? throw new ArgumentNullException(nameof(costStores));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _toasts = toasts ?? throw new ArgumentNullException(nameof(toasts));

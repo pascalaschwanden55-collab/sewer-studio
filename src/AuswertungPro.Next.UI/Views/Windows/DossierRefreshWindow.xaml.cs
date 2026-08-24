@@ -1,17 +1,13 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
+using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Dossiers.Lookup;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
-
-/// <summary>Was der Mensch beim Nachfuehren angehakt hat.</summary>
-public sealed record DossierRefreshChoice(
-    IReadOnlyList<RefreshableHolding> Holdings,
-    IReadOnlyList<string> Shafts);
 
 /// <summary>
 /// Zeigt, was ein Dossier ergaenzen wuerde, und laesst den Menschen

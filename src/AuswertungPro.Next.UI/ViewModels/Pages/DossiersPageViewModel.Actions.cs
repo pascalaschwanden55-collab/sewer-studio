@@ -29,8 +29,7 @@ public sealed partial class DossiersPageViewModel
         DossierParcelLookupChoice? abfrage;
         try
         {
-            abfrage = DossierParcelLookupWindow.ShowFor(
-                _parcels, _parcelLookup, _directory, idsByName, ProjektSchachtnummern());
+            abfrage = _dialogWindows.NewProperty(idsByName, ProjektSchachtnummern());
         }
         catch (Exception ex)
         {
@@ -55,7 +54,7 @@ public sealed partial class DossiersPageViewModel
 
         definition.ShaftNumbers = abfrage.ShaftNumbers.ToList();
 
-        if (!DossierEditWindow.ShowFor(definition, isNew: true))
+        if (!_dialogWindows.EditDossier(definition, isNew: true))
             return;
 
         definition.FolderName = DossierFolderPlanner.PlanFolderName(
@@ -88,7 +87,7 @@ public sealed partial class DossiersPageViewModel
         // die nicht auf der Platte sind.
         var vorher = DossierDeepCopy.Of(Selected.Definition);
 
-        if (!DossierEditWindow.ShowFor(Selected.Definition, isNew: false))
+        if (!_dialogWindows.EditDossier(Selected.Definition, isNew: false))
         {
             ErsetzeDossier(Selected.Definition, vorher);
             RebuildList();
@@ -114,7 +113,7 @@ public sealed partial class DossiersPageViewModel
 
         var vorher = DossierDeepCopy.Of(_document.Area);
 
-        if (!DossierAreaWindow.ShowFor(_document.Area))
+        if (!_dialogWindows.EditArea(_document.Area))
         {
             _document.Area = vorher;
             return;
@@ -176,9 +175,7 @@ public sealed partial class DossiersPageViewModel
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var erzeugte = DossierBatchWindow.ShowFor(
-            _parcels,
-            _batchProposal,
+        var erzeugte = _dialogWindows.CreateFromProject(
             idsByName.Keys.ToList(),
             idsByName,
             ProjektSchachtnummern(),
@@ -258,7 +255,7 @@ public sealed partial class DossiersPageViewModel
         if (Selected is null || !EnsureProject(out var root))
             return;
 
-        var chosen = DossierHoldingPickerWindow.ShowFor(
+        var chosen = _dialogWindows.PickHoldings(
             _getProject(), Selected.Definition.HoldingIds);
 
         if (chosen is null)
@@ -292,7 +289,7 @@ public sealed partial class DossiersPageViewModel
         if (Selected is null || !EnsureProject(out var root))
             return;
 
-        var chosen = DossierShaftPickerWindow.ShowFor(
+        var chosen = _dialogWindows.PickShafts(
             _getProject(), Selected.Definition.ShaftNumbers);
 
         if (chosen is null)
@@ -510,8 +507,7 @@ public sealed partial class DossiersPageViewModel
         (DossierAreaSettings Area, DossierDefinition Dossier)? ergebnis;
         try
         {
-            ergebnis = DossierPreviewWindow.ShowFor(
-                BuildRequest(root, definition), vorlage, _planImages, _planAdjuster);
+            ergebnis = _dialogWindows.Preview(BuildRequest(root, definition), vorlage);
         }
         catch (Exception ex)
         {
@@ -668,7 +664,7 @@ public sealed partial class DossiersPageViewModel
             return;
         }
 
-        var auswahl = DossierRefreshWindow.ShowFor(definition.Name, vorschlag);
+        var auswahl = _dialogWindows.Refresh(definition.Name, vorschlag);
         if (auswahl is null)
             return;
 

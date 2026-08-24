@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -73,7 +73,97 @@ public sealed class DossierAttachmentCollector : IDossierAttachmentService
             attachments.Add(attachment);
         }
 
+        // Danach die Schaechte. Wird der Kontrollschacht eines Eigentuemers
+        // saniert, fehlte ihm bisher genau sein Protokoll — gesammelt wurden
+        // nur die Haltungen.
+        var schaechteNachNummer = new Dictionary<string, SchachtRecord>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var schacht in request.Project.SchaechteData)
+        {
+            var nummer = DossierShaftNumberPolicy.NumberOf(schacht);
+            if (nummer.Length > 0 && !schaechteNachNummer.ContainsKey(nummer))
+                schaechteNachNummer[nummer] = schacht;
+        }
+
+        foreach (var line in request.Snapshot.Shafts)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (!schaechteNachNummer.TryGetValue(line.Number, out var schacht))
+            {
+                warnings.Add($"Schacht '{line.Number}' ist nicht mehr im Projekt.");
+                continue;
+            }
+
+            var prefix = index.ToString("00", CultureInfo.InvariantCulture);
+            index++;
+
+            attachments.Add(CollectForShaft(
+                request, schacht, line.Number, folder, guard, prefix, warnings));
+        }
+
         return Task.FromResult(new DossierAttachmentResult(attachments, warnings));
+    }
+
+    /// <summary>
+    /// Das Protokoll eines Schachts. Anders als bei den Leitungen gibt es
+    /// keinen Rueckfall auf ein selbst erzeugtes Protokoll — SewerStudio baut
+    /// keines. Fehlt die PDF, wird das ehrlich gemeldet statt still gelassen.
+    /// </summary>
+    private DossierAttachment CollectForShaft(
+        DossierExportRequest request,
+        SchachtRecord schacht,
+        string nummer,
+        string attachmentFolder,
+        ProjectWritePathGuard guard,
+        string prefix,
+        List<string> warnings)
+    {
+        var safeName = ProjectPathResolver.SanitizePathSegment(
+            nummer.Length > 0 ? nummer : schacht.Id.ToString("N"));
+
+        var pfade = new List<string>();
+        try
+        {
+            _protocolFiles.ResolveSchachtPdfPaths(schacht, request.ProjectRoot, pfade);
+        }
+        catch (Exception ex)
+        {
+            warnings.Add($"Schacht '{nummer}': Protokollsuche fehlgeschlagen ({ex.Message}).");
+        }
+
+        var quelle = pfade.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p) && File.Exists(p));
+
+        if (quelle is null)
+        {
+            warnings.Add(
+                $"Schacht '{nummer}': kein Protokoll-PDF gefunden. Die Beilage fehlt.");
+
+            return new DossierAttachment(
+                string.Empty, string.Empty, DossierAttachmentKind.Missing, nummer);
+        }
+
+        if (pfade.Count(p => !string.IsNullOrWhiteSpace(p) && File.Exists(p)) > 1)
+        {
+            warnings.Add(
+                $"Schacht '{nummer}': mehrere Protokoll-PDFs gefunden, verwendet wird "
+                + $"'{Path.GetFileName(quelle)}'.");
+        }
+
+        var targetName = $"{prefix}_Schacht_{safeName}{Path.GetExtension(quelle)}";
+        var targetPath = guard.EnsureSafeFileTarget(Path.Combine(attachmentFolder, targetName));
+
+        if (!TryCopy(quelle, targetPath, warnings, nummer))
+        {
+            return new DossierAttachment(
+                string.Empty, string.Empty, DossierAttachmentKind.Missing, nummer);
+        }
+
+        return new DossierAttachment(
+            Path.GetFileName(targetPath),
+            targetPath,
+            DossierAttachmentKind.OriginalProtocol,
+            nummer);
     }
 
     private DossierAttachment CollectForHolding(
