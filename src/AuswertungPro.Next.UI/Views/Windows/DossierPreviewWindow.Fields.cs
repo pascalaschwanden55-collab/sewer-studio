@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
+using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Dossiers.Preview;
 using AuswertungPro.Next.Domain.Models.Dossiers;
 
@@ -68,6 +69,10 @@ public partial class DossierPreviewWindow
 
                 case DossierPreviewFieldKind.File:
                     FieldPanel.Children.Add(BaueDateifeld(feld));
+                    break;
+
+                case DossierPreviewFieldKind.Rows when feld.Key == "Themen":
+                    FieldPanel.Children.Add(BaueThemenEditor(feld));
                     break;
 
                 case DossierPreviewFieldKind.Rows:
@@ -152,6 +157,200 @@ public partial class DossierPreviewWindow
         panel.Children.Add(knopf);
         panel.Children.Add(anzeige);
         return panel;
+    }
+
+    /// <summary>
+    /// Die Themen der Informationstabelle — ein eigenes Eingabefeld je Zeile,
+    /// die im Dossier wirklich gedruckt wird.
+    ///
+    /// Gezeigt wird die AUFGELOESTE Liste (Gebietsvorgabe plus Abweichungen
+    /// dieses Dossiers), nicht nur die Abweichungen: sonst stuenden im Blatt
+    /// elf Zeilen und daneben ein einziges leeres Kaestchen.
+    ///
+    /// Was hier getippt wird, gehoert diesem Dossier. Der Titel einer
+    /// Gebietszeile bleibt fest — er wird in den Gebietsangaben geaendert;
+    /// ihn hier umzubenennen wuerde die Zeile vom Gebiet loesen und beide
+    /// nebeneinander drucken.
+    /// </summary>
+    private UIElement BaueThemenEditor(DossierPreviewField feld)
+    {
+        var wirt = new StackPanel();
+        FuelleThemenEditor(wirt, feld);
+        return wirt;
+    }
+
+    private void FuelleThemenEditor(Panel wirt, DossierPreviewField feld)
+    {
+        wirt.Children.Clear();
+
+        var themen = DossierTopicResolver.Resolve(_area, _dossier);
+        var ausGebiet = new HashSet<string>(
+            (_area.Topics ?? new List<DossierTopicRow>())
+                .Where(t => t is not null && !string.IsNullOrWhiteSpace(t.Title))
+                .Select(t => t.Title.Trim()),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var thema in themen)
+        {
+            var titel = thema.Title;
+            var vomGebiet = ausGebiet.Contains(titel);
+
+            var karte = new Border
+            {
+                BorderBrush = Randfarbe,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(3),
+                Padding = new Thickness(8),
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+
+            var inhalt = new StackPanel();
+            karte.Child = inhalt;
+
+            var kopf = new DockPanel();
+
+            if (!vomGebiet)
+            {
+                var entfernen = Werkzeug("✕", "Diese Zeile entfernen", () =>
+                {
+                    DossierTopicEditing.RemoveDossierOverride(_dossier, titel);
+                    FuelleThemenEditor(wirt, feld);
+                    ZeichneBlatt();
+                    Hervorheben(feld.Key, blinken: true);
+                });
+
+                DockPanel.SetDock(entfernen, Dock.Right);
+                kopf.Children.Add(entfernen);
+            }
+
+            kopf.Children.Add(new TextBlock
+            {
+                Text = titel + (vomGebiet ? string.Empty : "   (nur dieses Dossier)"),
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 12,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            inhalt.Children.Add(kopf);
+
+            var box = new TextBox
+            {
+                Text = thema.Text,
+                AcceptsReturn = true,
+                TextWrapping = TextWrapping.Wrap,
+                MinHeight = 52,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalContentAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+
+            box.GotKeyboardFocus += (_, _) =>
+            {
+                _aktivesFeld = feld.Key;
+                Hervorheben(feld.Key, blinken: true);
+            };
+
+            box.TextChanged += (_, _) =>
+            {
+                DossierTopicEditing.SetForDossier(_dossier, titel, box.Text);
+                ZeichneBlatt();
+                Hervorheben(feld.Key, blinken: false);
+            };
+
+            inhalt.Children.Add(box);
+
+            if (vomGebiet)
+                inhalt.Children.Add(BaueGebietsHinweis(titel, box, wirt, feld));
+
+            wirt.Children.Add(karte);
+        }
+
+        var neuesThema = new TextBox
+        {
+            Margin = new Thickness(0, 4, 0, 4),
+            ToolTip = "Titel einer zusätzlichen Zeile nur für dieses Dossier"
+        };
+
+        var hinzufuegen = new Button
+        {
+            Content = "+ Eigene Zeile",
+            Padding = new Thickness(10, 4, 10, 4),
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+
+        hinzufuegen.Click += (_, _) =>
+        {
+            var titel = neuesThema.Text?.Trim() ?? string.Empty;
+            if (titel.Length == 0)
+                return;
+
+            DossierTopicEditing.SetForDossier(_dossier, titel, string.Empty);
+            FuelleThemenEditor(wirt, feld);
+            ZeichneBlatt();
+            Hervorheben(feld.Key, blinken: true);
+        };
+
+        wirt.Children.Add(new TextBlock
+        {
+            Text = "Zusätzliche Zeile",
+            Margin = new Thickness(0, 10, 0, 2)
+        });
+
+        wirt.Children.Add(neuesThema);
+        wirt.Children.Add(hinzufuegen);
+    }
+
+    /// <summary>
+    /// Der Hinweis unter einem Gebietsthema. Er erscheint nur, wenn dieses
+    /// Dossier vom Gebiet abweicht, und bietet an, den Text fuer alle
+    /// Liegenschaften zu uebernehmen.
+    ///
+    /// Ohne ihn waere nicht zu sehen, dass ein hier getippter Ansprechpartner
+    /// oder Unternehmer nur fuer DIESE Liegenschaft gilt — beim naechsten
+    /// Dossier staende das Feld wieder leer.
+    /// </summary>
+    private UIElement BaueGebietsHinweis(
+        string titel, TextBox box, Panel wirt, DossierPreviewField feld)
+    {
+        var zeile = new DockPanel { Margin = new Thickness(0, 4, 0, 0) };
+
+        var uebernehmen = new Button
+        {
+            Content = "Für alle übernehmen",
+            Padding = new Thickness(8, 2, 8, 2),
+            FontSize = 11
+        };
+
+        DockPanel.SetDock(uebernehmen, Dock.Right);
+
+        var text = new TextBlock
+        {
+            Text = "Weicht vom Gebiet ab — gilt nur für diese Liegenschaft.",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 11,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        uebernehmen.Click += (_, _) =>
+        {
+            DossierTopicEditing.PromoteToArea(_area, _dossier, titel, box.Text);
+            FuelleThemenEditor(wirt, feld);
+            ZeichneBlatt();
+            Hervorheben(feld.Key, blinken: true);
+        };
+
+        zeile.Children.Add(uebernehmen);
+        zeile.Children.Add(text);
+
+        void Aktualisiere()
+            => zeile.Visibility = DossierTopicEditing.HasDossierOverride(_dossier, titel)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        box.TextChanged += (_, _) => Aktualisiere();
+        Aktualisiere();
+
+        return zeile;
     }
 
     /// <summary>
@@ -300,19 +499,6 @@ public partial class DossierPreviewWindow
 
     private ZeilenTyp? ZeilenTypFuer(string key) => key switch
     {
-        "Themen" => new ZeilenTyp(
-            _dossier.Topics,
-            () => new DossierTopicRow(),
-            new[]
-            {
-                new ZeilenSpalte("Thema",
-                    z => ((DossierTopicRow)z).Title,
-                    (z, w) => ((DossierTopicRow)z).Title = w),
-                new ZeilenSpalte("Text",
-                    z => ((DossierTopicRow)z).Text,
-                    (z, w) => ((DossierTopicRow)z).Text = w)
-            }),
-
         "Eigentuemer" => new ZeilenTyp(
             _dossier.Owners,
             () => new DossierOwnerRow(),
