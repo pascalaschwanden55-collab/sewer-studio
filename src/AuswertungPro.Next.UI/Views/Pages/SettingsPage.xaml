@@ -626,7 +626,7 @@
                                 <TextBlock TextWrapping="Wrap"
                                            Foreground="{DynamicResource MutedBrush}"
                                            FontSize="11" Margin="0,0,0,8"
-                                           Text="Mit einem Schlüssel von search.ch füllt „Neue Liegenschaft“ Telefon und Mail der Eigentümer vor. Ohne Schlüssel bleibt die Suche aus — die Nutzungsbedingungen erlauben nur die offizielle Schnittstelle und keine Massenabfragen. Quelle: Swisscom Directories AG."/>
+                                           Text="Mit einem Schlüssel von search.ch füllt „Neue Liegenschaft“ Telefon und Mail der Eigentümer vor. Den Schlüssel gibt localsearch auf Antrag heraus; er gilt für search.ch und local.ch gleichermassen — es sind dieselbe Stelle und dieselben Daten. Das Kontingent beträgt 1000 Abfragen im Monat. Ohne Schlüssel bleibt die Suche aus: die Bedingungen erlauben nur die offizielle Schnittstelle und untersagen Massenabfragen ausdrücklich. Quellenangabe im Dossier: Swisscom Directories AG."/>
                                 <Grid Style="{StaticResource SettingsFormGrid}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="180"/>

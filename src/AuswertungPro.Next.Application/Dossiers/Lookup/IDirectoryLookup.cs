@@ -30,11 +30,20 @@ public sealed record DirectoryLookupResult(
 /// <summary>
 /// Sucht Telefonnummer und Mailadresse zu einem Namen an einem Ort.
 ///
-/// WICHTIG — die Nutzungsbedingungen von search.ch verbieten maschinelle
-/// MASSENabfragen ausdruecklich, insbesondere zum Aufbau oder zur
-/// Aktualisierung von Adressdatenbanken. Erlaubt ist die einzelne, von einem
-/// Menschen ausgeloeste Abfrage ueber die offizielle Schnittstelle mit
-/// eigenem Schluessel und mit der Quellenangabe "Swisscom Directories AG".
+/// WICHTIG — geprueft am 2026-08-24 an den Bedingungen von search.ch:
+///   - "Maschinelle Massenabfragen, beispielsweise zur Erstellung oder
+///     Aktualisierung von Adressdatenbanken" sind ausdruecklich untersagt.
+///   - Ebenso "jede Form der Weitergabe der uebermittelten und/oder
+///     abgespeicherten Eintraege an Dritte".
+///   - "Das monatliche Nutzungskontingent pro Kunde und API-Key umfasst 1000
+///     Abfragen. Pro Abfrage werden maximal 20 Resultate ausgeliefert."
+///   - "Bei allen Formen der API-Nutzung muss folgende Quellenangabe gemacht
+///     werden: «Swisscom Directories AG»".
+///
+/// local.ch ist kein zweiter Weg: beide Dienste gehoeren derselben Stelle
+/// (Swisscom Directories AG / localsearch) und teilen Daten, Schluessel und
+/// Bedingungen. Ein eigenes Entwicklerportal unter api.local.ch gibt es nicht
+/// mehr.
 ///
 /// Deshalb: Dieser Vertrag wird nur beim Anlegen EINER Liegenschaft verwendet,
 /// nie in der Stapelanlage. Die Webseite wird nie ausgelesen.

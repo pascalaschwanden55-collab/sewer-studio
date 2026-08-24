@@ -58,8 +58,9 @@ public partial class DossierParcelLookupWindow : Window
 
         DirectoryBox.IsEnabled = _directory.IsConfigured;
         DirectoryBox.ToolTip = _directory.IsConfigured
-            ? _directory.Attribution
-            : "Dafür fehlt der Schlüssel von search.ch. Er wird in den Einstellungen hinterlegt.";
+            ? _directory.Attribution + " — Kontingent 1000 Abfragen im Monat"
+            : "Dafür fehlt der Schlüssel von search.ch beziehungsweise local.ch. "
+                + "Er wird in den Einstellungen hinterlegt.";
 
         Loaded += async (_, _) => await LadeGemeindenAsync();
     }
