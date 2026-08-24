@@ -249,6 +249,36 @@ public sealed class DossierPreviewBuilderTests
     }
 
     [Fact]
+    public void Die_Hoehe_eines_Kastens_zaehlt_ab_seinem_Absatz()
+    {
+        // Word fuehrt die senkrechte Lage eines schwebenden Objekts relativ zum
+        // Absatz, an dem es haengt. Der obere Seitenrand steckt schon in der
+        // Lage dieses Absatzes; wird er hier noch addiert, rutscht jeder Kasten
+        // um einen ganzen Rand nach unten — und der Fussstreifen des Deckblatts
+        // faellt aus dem Rahmen.
+        var seite = Vorschau().Pages.First();
+
+        var rahmen = seite.Blocks
+            .OfType<DossierPreviewParagraph>()
+            .SelectMany(p => p.Floating)
+            .First(f => f.WidthPx > 700);
+
+        Assert.True(
+            rahmen.TopPx < 1,
+            $"Der Rahmen sitzt {rahmen.TopPx:0.0} Punkte unter seinem Absatz — "
+            + "der Seitenrand wird doppelt gezählt.");
+
+        // Und die Kaesten des Fussstreifens haengen alle am selben Absatz.
+        var fuss = seite.Blocks
+            .OfType<DossierPreviewParagraph>()
+            .First(p => p.Floating.Count >= 6)
+            .Floating;
+
+        Assert.All(fuss, f => Assert.True(f.TopPx < 30, "Der Fussstreifen hängt zu tief."));
+        Assert.Equal(6, fuss.Count);
+    }
+
+    [Fact]
     public void Der_Deckblattrahmen_wird_als_Umriss_gelesen()
     {
         var rahmen = Vorschau().Pages.First().Blocks

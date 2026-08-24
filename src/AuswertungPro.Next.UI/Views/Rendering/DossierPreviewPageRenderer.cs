@@ -188,12 +188,13 @@ public static class DossierPreviewPageRenderer
         Action<string, Border> merke)
     {
         var erster = absatz.Runs.FirstOrDefault()?.Format ?? DossierPreviewRunFormat.Default;
+        var schrift = new FontFamily(erster.FontFamily);
 
         var text = new TextBlock
         {
             TextWrapping = TextWrapping.Wrap,
             Foreground = Tinte,
-            FontFamily = new FontFamily(erster.FontFamily),
+            FontFamily = schrift,
             FontSize = erster.FontSizePx,
             TextAlignment = absatz.Format.Alignment switch
             {
@@ -236,7 +237,15 @@ public static class DossierPreviewPageRenderer
         // Mindesthoehe faellt er in der Vorschau auf null zusammen und alles
         // darunter rutscht nach oben.
         if (absatz.Runs.All(r => string.IsNullOrEmpty(r.IsField ? value(r.FieldKey!) : r.Text)))
-            text.MinHeight = erster.FontSizePx * 1.2;
+        {
+            // Die Hoehe einer leeren Zeile kommt aus der Schrift selbst — Word
+            // rechnet mit denselben Metriken. Ein fester Faktor 1,2 klingt
+            // harmlos, weicht bei Arial aber je Zeile um ein knappes Prozent ab;
+            // ueber ein Deckblatt mit drei Dutzend Leerzeilen sind das mehr als
+            // zwei Zentimeter, und der Fussstreifen faellt aus dem Rahmen.
+            var zeilenmass = schrift.LineSpacing > 0 ? schrift.LineSpacing : 1.2;
+            text.MinHeight = erster.FontSizePx * zeilenmass;
+        }
 
         var rahmen = new Border
         {

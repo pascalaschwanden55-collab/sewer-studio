@@ -375,9 +375,13 @@ public static class DossierPreviewBuilder
                 links = basis;
             }
 
-            var oben = _geometrie.Margin.Top;
+            // Senkrecht zaehlt Word ab dem Absatz, an dem das Objekt haengt.
+            // Der obere Seitenrand steckt bereits in der Lage dieses Absatzes —
+            // ihn hier nochmals zu addieren schoebe jeden Kasten um einen
+            // ganzen Rand nach unten.
+            var oben = 0.0;
             if (v?.PositionOffset?.Text is { } hoch && long.TryParse(hoch, out var emuV))
-                oben += DocxFormatResolver.EmuZuPixel(emuV);
+                oben = DocxFormatResolver.EmuZuPixel(emuV);
 
             return (links, oben);
         }
