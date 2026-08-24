@@ -42,16 +42,32 @@
 
         <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource SurfaceBrush}"
                 CornerRadius="4" Padding="0">
-            <ScrollViewer x:Name="SheetScroll" VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Auto" Padding="20">
-                <Border x:Name="Sheet" Background="White" Width="760"
-                        Padding="60,50,60,50" Margin="10"
-                        HorizontalAlignment="Center" VerticalAlignment="Top">
-                    <Border.Effect>
-                        <DropShadowEffect BlurRadius="18" ShadowDepth="3" Opacity="0.35"/>
-                    </Border.Effect>
-                </Border>
-            </ScrollViewer>
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                            HorizontalAlignment="Center" Margin="0,6,0,8">
+                    <TextBlock Text="Zoom" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Slider x:Name="ZoomSlider" Width="180" Minimum="0.4" Maximum="1.6"
+                            Value="0.85" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                            VerticalAlignment="Center"
+                            ValueChanged="OnZoomChanged"/>
+                    <TextBlock x:Name="ZoomText" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                </StackPanel>
+
+                <ScrollViewer x:Name="SheetScroll" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto" Padding="20">
+                    <!-- Das Blatt bringt seine eigenen Masse mit: A4 in
+                         Bildpunkten, so wie Word bei 100 % zeigt. -->
+                    <Border x:Name="Sheet" Background="White" Margin="10"
+                            HorizontalAlignment="Center" VerticalAlignment="Top">
+                        <Border.LayoutTransform>
+                            <ScaleTransform x:Name="SheetZoom" ScaleX="0.85" ScaleY="0.85"/>
+                        </Border.LayoutTransform>
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="18" ShadowDepth="3" Opacity="0.35"/>
+                        </Border.Effect>
+                    </Border>
+                </ScrollViewer>
+            </DockPanel>
         </Border>
 
         <DockPanel Grid.Row="1" Grid.Column="2" Margin="12,0,0,0">

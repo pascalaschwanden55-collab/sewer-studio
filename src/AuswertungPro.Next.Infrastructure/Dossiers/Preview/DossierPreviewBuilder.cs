@@ -4,20 +4,25 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
 using AuswertungPro.Next.Application.Dossiers.Preview;
 
+using A = DocumentFormat.OpenXml.Drawing;
+using WText = DocumentFormat.OpenXml.Wordprocessing.Text;
+
 namespace AuswertungPro.Next.Infrastructure.Dossiers.Preview;
 
 /// <summary>
-/// Liest die ausgelieferte Word-Vorlage und baut daraus das Vorschaumodell.
+/// Liest die ausgelieferte Word-Vorlage und baut daraus das Vorschaumodell —
+/// mit den echten Massen: Seitenformat, Raender, Spaltenbreiten, Abstaende,
+/// Schriften und die Lage der schwebenden Kaesten des Deckblatts.
 ///
 /// Bewusst aus der ECHTEN Vorlage und nicht aus einer nachgebauten Beschreibung:
-/// eine Vorschau, die eine andere Reihenfolge oder andere Felder zeigt als die
-/// Vorlage, waere schlimmer als gar keine. Aendert jemand die Vorlage in Word,
-/// aendert sich die Vorschau mit.
+/// eine Vorschau, die anders aussieht als das Dokument, waere schlimmer als gar
+/// keine. Aendert jemand die Vorlage in Word, aendert sich die Vorschau mit.
 ///
 /// Die Platzhalter bleiben als Platzhalter stehen. Erst das Fenster setzt Werte
 /// ein — nur so weiss es, welche Stelle zu welchem Feld gehoert.
@@ -28,354 +33,644 @@ public static class DossierPreviewBuilder
         @"\{\{(?<art>[@#]?)(?<name>[A-Za-z0-9_]+)\}\}",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    /// <summary>A4, falls die Vorlage kein Format nennt.</summary>
+    private static readonly DossierPreviewGeometry StandardSeite = new(
+        DocxFormatResolver.TwipsZuPixel(11906),
+        DocxFormatResolver.TwipsZuPixel(16838),
+        DossierPreviewEdges.All(DocxFormatResolver.TwipsZuPixel(1134)));
+
     public static DossierPreviewDocument Build(string templatePath)
     {
         if (string.IsNullOrWhiteSpace(templatePath))
             throw new ArgumentException("Kein Pfad zur Vorlage.", nameof(templatePath));
 
         using var document = WordprocessingDocument.Open(templatePath, false);
-        var body = document.MainDocumentPart?.Document?.Body;
+        var mainPart = document.MainDocumentPart;
+        var body = mainPart?.Document?.Body;
 
-        if (body is null)
+        if (mainPart is null || body is null)
             return new DossierPreviewDocument(Array.Empty<DossierPreviewPage>());
 
-        return Build(body);
+        return new Leser(mainPart).Baue(body);
     }
 
-    internal static DossierPreviewDocument Build(Body body)
+    /// <summary>
+    /// Der eigentliche Lauf. Als eigene Instanz, damit Formatleser und
+    /// Bildteile nicht durch jede Methode gereicht werden muessen.
+    /// </summary>
+    private sealed class Leser
     {
-        var seiten = new List<DossierPreviewPage>();
-        var aktuell = new List<DossierPreviewBlock>();
+        private readonly MainDocumentPart _mainPart;
+        private readonly DocxFormatResolver _format;
 
-        // Die Liste wird geleert, nicht ersetzt: an anderer Stelle liegt eine
-        // Referenz darauf, und eine neue Liste haette die Bloecke weiter in die
-        // bereits abgeschlossene Seite geschrieben.
-        void SeiteAbschliessen()
+        private readonly List<DossierPreviewPage> _seiten = new();
+        private readonly List<DossierPreviewBlock> _bloecke = new();
+
+        private DossierPreviewGeometry _geometrie = StandardSeite;
+
+        public Leser(MainDocumentPart mainPart)
         {
-            if (aktuell.Count == 0)
+            _mainPart = mainPart;
+            _format = new DocxFormatResolver(mainPart);
+        }
+
+        public DossierPreviewDocument Baue(Body body)
+        {
+            _geometrie = LiesGeometrie(body);
+
+            foreach (var element in body.ChildElements)
+            {
+                switch (element)
+                {
+                    case Paragraph absatz:
+                        VerarbeiteAbsatz(absatz);
+                        break;
+
+                    case Table tabelle:
+                        _bloecke.Add(BaueTabelle(tabelle));
+                        break;
+                }
+            }
+
+            SeiteAbschliessen();
+            return new DossierPreviewDocument(_seiten);
+        }
+
+        private static DossierPreviewGeometry LiesGeometrie(Body body)
+        {
+            var sect = body.Elements<SectionProperties>().FirstOrDefault()
+                ?? body.Descendants<SectionProperties>().FirstOrDefault();
+
+            var groesse = sect?.Elements<PageSize>().FirstOrDefault();
+            var rand = sect?.Elements<PageMargin>().FirstOrDefault();
+
+            if (groesse is null)
+                return StandardSeite;
+
+            return new DossierPreviewGeometry(
+                DocxFormatResolver.TwipsZuPixel(groesse.Width?.Value ?? 11906),
+                DocxFormatResolver.TwipsZuPixel(groesse.Height?.Value ?? 16838),
+                new DossierPreviewEdges(
+                    DocxFormatResolver.TwipsZuPixel(rand?.Left?.Value ?? 1134),
+                    DocxFormatResolver.TwipsZuPixel(rand?.Top?.Value ?? 1134),
+                    DocxFormatResolver.TwipsZuPixel(rand?.Right?.Value ?? 1134),
+                    DocxFormatResolver.TwipsZuPixel(rand?.Bottom?.Value ?? 1134)));
+        }
+
+        // ── Seiten ────────────────────────────────────────────────────────
+
+        private void SeiteAbschliessen()
+        {
+            if (_bloecke.Count == 0)
                 return;
 
-            seiten.Add(BaueSeite(seiten.Count + 1, aktuell.ToList()));
-            aktuell.Clear();
+            var bloecke = _bloecke.ToList();
+
+            _seiten.Add(new DossierPreviewPage(
+                _seiten.Count + 1,
+                Seitentitel(_seiten.Count + 1, bloecke),
+                _geometrie,
+                bloecke,
+                SammleFelder(bloecke)));
+
+            _bloecke.Clear();
         }
 
-        foreach (var element in body.ChildElements)
+        private static string Seitentitel(int nummer, IReadOnlyList<DossierPreviewBlock> bloecke)
         {
-            switch (element)
-            {
-                case Paragraph absatz:
-                    VerarbeiteAbsatz(absatz, aktuell, SeiteAbschliessen);
-                    break;
+            if (nummer == 1)
+                return "Deckblatt";
 
-                case Table tabelle:
-                    var block = BaueTabelle(tabelle);
-                    if (block is not null)
-                        aktuell.Add(block);
-                    break;
-            }
+            var absaetze = bloecke.OfType<DossierPreviewParagraph>().ToList();
+
+            // Zuerst das Kapitel, sonst der groesste Titel der Seite. Ein
+            // Kapitel beginnt eine Seite, ein Titel nicht — deshalb zaehlt er
+            // nur fuer die Beschriftung.
+            var titel = absaetze
+                .Where(p => p.Format.IsHeading)
+                .Select(Klartext)
+                .FirstOrDefault(t => t.Length > 0)
+                ?? absaetze
+                    .Where(p => p.Format.IsTitle)
+                    .Select(Klartext)
+                    .FirstOrDefault(t => t.Length > 0);
+
+            return string.IsNullOrWhiteSpace(titel) ? "Seite " + nummer : titel;
         }
 
-        SeiteAbschliessen();
-        return new DossierPreviewDocument(seiten);
-    }
+        private static string Klartext(DossierPreviewParagraph absatz)
+            => string.Concat(absatz.Runs.Where(r => !r.IsField).Select(r => r.Text)).Trim();
 
-    private static void VerarbeiteAbsatz(
-        Paragraph absatz, List<DossierPreviewBlock> ziel, Action seiteAbschliessen)
-    {
-        // Ein Absatz mit Kind-Absaetzen ist die Huelle um Textfelder. Seine
-        // Kinder sind der eigentliche Inhalt — die Rueckfallfassung, die Word
-        // zu jedem Feld ablegt, wird dabei uebersprungen.
-        var innere = absatz.Descendants<Paragraph>().ToList();
-        if (innere.Count > 0)
+        // ── Absaetze ──────────────────────────────────────────────────────
+
+        private void VerarbeiteAbsatz(Paragraph absatz)
         {
-            // Die Huelle traegt oft selbst Text und den Seitenumbruch — auf dem
-            // Deckblatt haengen die Textfelder an genau dem Absatz, der auch
-            // "Aenderungswesen:" enthaelt. Wird nur nach innen geschaut, geht
-            // dieser Text verloren und der Umbruch bleibt unbemerkt.
-            if (UmbruchVorText(absatz))
-                seiteAbschliessen();
+            var format = _format.AbsatzFormat(absatz);
 
-            foreach (var inneres in innere.Where(p => !LiegtInRueckfall(p)))
-                FuegeAbsatzHinzu(inneres, ziel);
-
+            // Steht der Umbruch VOR dem Text, eroeffnet dieser Absatz die neue
+            // Seite. Ohne diese Unterscheidung landete die Kapitelueberschrift
+            // allein auf einer Seite und ihr Inhalt auf der naechsten.
+            var umbruchVorText = UmbruchVorText(absatz);
             var eigenerText = EigenerText(absatz);
-            if (eigenerText.Trim().Length > 0)
-                ziel.Add(new DossierPreviewParagraph(LiesStil(absatz), Zerlege(eigenerText)));
 
-            return;
-        }
-
-        var stil = LiesStil(absatz);
-
-        // Steht der Umbruch VOR dem Text, eroeffnet dieser Absatz die neue
-        // Seite. Steht er dahinter, schliesst er die laufende ab. In dieser
-        // Vorlage ist es der erste Fall — ohne die Unterscheidung landete die
-        // Kapitelueberschrift allein auf einer Seite und ihr Inhalt auf der
-        // naechsten.
-        var umbruchVorText = UmbruchVorText(absatz);
-
-        // Ein Kapitel beginnt ebenfalls eine neue Seite; die echte Seitenzahl
-        // kaeme erst aus dem Umbruch in Word.
-        if (umbruchVorText || (stil == DossierPreviewStyle.Heading && ziel.Count > 0))
-            seiteAbschliessen();
-
-        FuegeAbsatzHinzu(absatz, ziel);
-
-        if (!umbruchVorText && HatSeitenumbruch(absatz))
-            seiteAbschliessen();
-    }
-
-    /// <summary>
-    /// Der Text, der dem Absatz selbst gehoert — ohne die Textfelder, die an
-    /// ihm haengen.
-    /// </summary>
-    private static string EigenerText(Paragraph absatz)
-        => string.Concat(absatz.Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>()
-            .Where(t => !LiegtInRueckfall(t))
-            .Where(t => t.Ancestors<Paragraph>().FirstOrDefault() == absatz)
-            .Select(t => t.Text));
-
-    private static bool HatSeitenumbruch(Paragraph absatz)
-        => absatz.Descendants<Break>()
-            .Any(b => b.Type is not null && b.Type.Value == BreakValues.Page);
-
-    /// <summary>
-    /// Wahr, wenn der Seitenumbruch vor dem ersten sichtbaren Text steht.
-    /// </summary>
-    private static bool UmbruchVorText(Paragraph absatz)
-    {
-        foreach (var element in absatz.Descendants())
-        {
-            if (element is Break bruch
-                && bruch.Type is not null
-                && bruch.Type.Value == BreakValues.Page)
+            if (umbruchVorText
+                || (format.IsHeading && eigenerText.Trim().Length > 0 && _bloecke.Count > 0))
             {
-                return true;
+                SeiteAbschliessen();
             }
 
-            if (element is DocumentFormat.OpenXml.Wordprocessing.Text text
-                && text.Text.Trim().Length > 0)
+            var schwebend = LiesSchwebende(absatz);
+
+            foreach (var bild in LiesEingebetteteBilder(absatz))
+                _bloecke.Add(bild);
+
+            // Auch ein LEERER Absatz wird uebernommen: er traegt im Dokument den
+            // senkrechten Abstand, und die an ihm haengenden Kaesten zaehlen ihre
+            // Hoehe ab genau dieser Stelle.
+            FuegeTextHinzu(absatz, eigenerText, format, schwebend);
+
+            if (!umbruchVorText && HatSeitenumbruch(absatz))
+                SeiteAbschliessen();
+        }
+
+        private void FuegeTextHinzu(
+            Paragraph absatz,
+            string text,
+            DossierPreviewParagraphFormat format,
+            IReadOnlyList<DossierPreviewFloating> schwebend)
+        {
+            // Ein Absatz, der NUR aus einer Bildmarke besteht, ist die Bildstelle.
+            var nurBild = Platzhalter.Match(text.Trim());
+            if (nurBild.Success
+                && nurBild.Length == text.Trim().Length
+                && nurBild.Groups["art"].Value == "@")
             {
-                return false;
+                var breite = _geometrie.WidthPx
+                    - _geometrie.Margin.Left - _geometrie.Margin.Right;
+
+                _bloecke.Add(new DossierPreviewImage(
+                    nurBild.Groups["name"].Value, breite, breite * 1.4));
+                return;
             }
+
+            var runs = text.Length > 0
+                ? Zerlege(absatz, text)
+                : new[] { DossierPreviewRun.Literal(string.Empty, _format.RunFormat(absatz, null)) };
+
+            _bloecke.Add(new DossierPreviewParagraph(runs, format, schwebend));
         }
 
-        return false;
-    }
-
-    private static void FuegeAbsatzHinzu(Paragraph absatz, List<DossierPreviewBlock> ziel)
-    {
-        var text = Text(absatz);
-        if (text.Trim().Length == 0)
-            return;
-
-        // Ein Absatz, der NUR aus einer Bildmarke besteht, ist die Bildstelle.
-        var nurBild = Platzhalter.Match(text.Trim());
-        if (nurBild.Success
-            && nurBild.Length == text.Trim().Length
-            && nurBild.Groups["art"].Value == "@")
+        /// <summary>
+        /// Zerlegt den Absatz in Textstuecke und Platzhalter. Das Zeichenformat
+        /// stammt von dem Run, in dem die Stelle beginnt — so behaelt ein
+        /// eingesetzter Wert die Schrift, die die Vorlage dort vorsieht.
+        /// </summary>
+        private IReadOnlyList<DossierPreviewRun> Zerlege(Paragraph absatz, string text)
         {
-            ziel.Add(new DossierPreviewImage(nurBild.Groups["name"].Value));
-            return;
-        }
+            var stuecke = EigeneStuecke(absatz).ToList();
+            var runs = new List<DossierPreviewRun>();
+            var stelle = 0;
 
-        ziel.Add(new DossierPreviewParagraph(LiesStil(absatz), Zerlege(text)));
-    }
-
-    /// <summary>
-    /// Zerlegt einen Text in feste Stuecke und Platzhalter. Wiederholmarken
-    /// ("{{#Themen}}") gehoeren zur Tabelle und erscheinen nicht als Feld.
-    /// </summary>
-    internal static IReadOnlyList<DossierPreviewRun> Zerlege(string text)
-    {
-        var runs = new List<DossierPreviewRun>();
-        var stelle = 0;
-
-        foreach (Match treffer in Platzhalter.Matches(text))
-        {
-            if (treffer.Index > stelle)
-                runs.Add(DossierPreviewRun.Literal(text[stelle..treffer.Index]));
-
-            var art = treffer.Groups["art"].Value;
-            if (art != "#")
-                runs.Add(DossierPreviewRun.Field(treffer.Groups["name"].Value));
-
-            stelle = treffer.Index + treffer.Length;
-        }
-
-        if (stelle < text.Length)
-            runs.Add(DossierPreviewRun.Literal(text[stelle..]));
-
-        return runs;
-    }
-
-    private static DossierPreviewBlock? BaueTabelle(Table tabelle)
-    {
-        var zeilen = tabelle.Elements<TableRow>().ToList();
-        if (zeilen.Count == 0)
-            return null;
-
-        var kopf = Zellen(zeilen[0]).Select(z => Text(z).Trim()).ToList();
-        var feste = new List<IReadOnlyList<DossierPreviewRun>>();
-        string? wiederholung = null;
-        var wiederholZellen = new List<string>();
-
-        foreach (var zeile in zeilen.Skip(1))
-        {
-            var zellen = Zellen(zeile).Select(Text).ToList();
-            var marke = zellen.Count == 0
-                ? Match.Empty
-                : Regex.Match(zellen[0], @"\{\{#(?<name>[A-Za-z0-9_]+)\}\}");
-
-            if (marke.Success)
+            DossierPreviewRunFormat FormatAn(int position)
             {
-                wiederholung = marke.Groups["name"].Value;
-                wiederholZellen = zellen
-                    .Select(z => Platzhalter.Match(z))
-                    .Select(t => t.Success && t.Groups["art"].Value != "#"
-                        ? t.Groups["name"].Value
-                        : NaechstesFeld(t))
+                var lauf = 0;
+                foreach (var (run, laenge) in stuecke)
+                {
+                    lauf += laenge;
+                    if (position < lauf)
+                        return _format.RunFormat(absatz, run);
+                }
+
+                return _format.RunFormat(
+                    absatz, stuecke.Count > 0 ? stuecke[^1].Run : null);
+            }
+
+            foreach (Match treffer in Platzhalter.Matches(text))
+            {
+                if (treffer.Index > stelle)
+                {
+                    runs.Add(DossierPreviewRun.Literal(
+                        text[stelle..treffer.Index], FormatAn(stelle)));
+                }
+
+                if (treffer.Groups["art"].Value != "#")
+                {
+                    runs.Add(DossierPreviewRun.Field(
+                        treffer.Groups["name"].Value, FormatAn(treffer.Index)));
+                }
+
+                stelle = treffer.Index + treffer.Length;
+            }
+
+            if (stelle < text.Length)
+                runs.Add(DossierPreviewRun.Literal(text[stelle..], FormatAn(stelle)));
+
+            return runs;
+        }
+
+        private static List<(Run? Run, int Laenge)> EigeneStuecke(Paragraph absatz)
+            => EigeneTexte(absatz)
+                .Select(t => (t.Ancestors<Run>().FirstOrDefault(), t.Text.Length))
+                .ToList();
+
+        /// <summary>
+        /// Der Text, der dem Absatz selbst gehoert — ohne die Kaesten, die an
+        /// ihm haengen.
+        /// </summary>
+        private static string EigenerText(Paragraph absatz)
+            => string.Concat(EigeneTexte(absatz).Select(t => t.Text));
+
+        private static IEnumerable<WText> EigeneTexte(Paragraph absatz)
+            => absatz.Descendants<WText>()
+                .Where(t => !t.Ancestors<Drawing>().Any())
+                .Where(t => t.Ancestors<Paragraph>().FirstOrDefault() == absatz);
+
+        private static bool HatSeitenumbruch(Paragraph absatz)
+            => absatz.Descendants<Break>()
+                .Any(b => b.Type is not null && b.Type.Value == BreakValues.Page);
+
+        private static bool UmbruchVorText(Paragraph absatz)
+        {
+            foreach (var element in absatz.Descendants())
+            {
+                if (element is Break bruch
+                    && bruch.Type is not null
+                    && bruch.Type.Value == BreakValues.Page)
+                {
+                    return true;
+                }
+
+                if (element is WText text && text.Text.Trim().Length > 0)
+                    return false;
+            }
+
+            return false;
+        }
+
+        // ── Schwebende Objekte ────────────────────────────────────────────
+
+        /// <summary>
+        /// Die Kaesten, Bilder und Rahmen, die an diesem Absatz haengen. Gelesen
+        /// wird nur der moderne Zweig; die Rueckfallfassung, die Word zu jedem
+        /// Kasten zusaetzlich ablegt, kommt so gar nicht erst in die Naehe.
+        /// </summary>
+        private List<DossierPreviewFloating> LiesSchwebende(Paragraph absatz)
+        {
+            var ergebnis = new List<DossierPreviewFloating>();
+
+            foreach (var anker in absatz.Descendants<Anchor>())
+            {
+                var ausdehnung = anker.Descendants<Extent>().FirstOrDefault();
+                if (ausdehnung is null)
+                    continue;
+
+                var breite = DocxFormatResolver.EmuZuPixel(ausdehnung.Cx ?? 0);
+                var hoehe = DocxFormatResolver.EmuZuPixel(ausdehnung.Cy ?? 0);
+
+                var (links, oben) = Lage(anker, breite);
+                var (randbreite, randfarbe, fuellung) = Umriss(anker);
+
+                ergebnis.Add(new DossierPreviewFloating(
+                    links, oben, breite, hoehe,
+                    InhaltDesKastens(anker, breite, hoehe),
+                    randbreite, randfarbe, fuellung));
+            }
+
+            return ergebnis;
+        }
+
+        /// <summary>
+        /// Lage auf dem Blatt. Waagrecht zaehlt der Bezug: "page" ab dem
+        /// Blattrand, alles andere ab dem Satzspiegel. Senkrecht bezieht sich
+        /// Word auf den Absatz — auf dem Deckblatt ist das der obere Rand.
+        /// </summary>
+        private (double Links, double Oben) Lage(Anchor anker, double breite)
+        {
+            var h = anker.HorizontalPosition;
+            var v = anker.VerticalPosition;
+
+            var abPage = h?.RelativeFrom?.Value == HorizontalRelativePositionValues.Page;
+            var basis = abPage ? 0 : _geometrie.Margin.Left;
+
+            double links;
+            if (h?.PositionOffset?.Text is { } versatz
+                && long.TryParse(versatz, out var emu))
+            {
+                links = basis + DocxFormatResolver.EmuZuPixel(emu);
+            }
+            else if (h?.HorizontalAlignment?.Text is { } ausrichtung)
+            {
+                var satzbreite = _geometrie.WidthPx
+                    - _geometrie.Margin.Left - _geometrie.Margin.Right;
+
+                links = ausrichtung.Trim().ToLowerInvariant() switch
+                {
+                    "right" => basis + satzbreite - breite,
+                    "center" => basis + (satzbreite - breite) / 2,
+                    _ => basis
+                };
+            }
+            else
+            {
+                links = basis;
+            }
+
+            var oben = _geometrie.Margin.Top;
+            if (v?.PositionOffset?.Text is { } hoch && long.TryParse(hoch, out var emuV))
+                oben += DocxFormatResolver.EmuZuPixel(emuV);
+
+            return (links, oben);
+        }
+
+        private static (double Breite, string? Farbe, string? Fuellung) Umriss(Anchor anker)
+        {
+            // Die Formangaben liegen je nach Objektart in verschiedenen
+            // Namensraeumen (Zeichnung, Textkasten, Bild). Gesucht wird deshalb
+            // ueber den lokalen Namen.
+            var form = anker.Descendants()
+                .FirstOrDefault(e => string.Equals(e.LocalName, "spPr", StringComparison.Ordinal));
+
+            if (form is null)
+                return (0, null, null);
+
+            var fuellung = form.Elements<A.SolidFill>().FirstOrDefault()
+                ?.Elements<A.RgbColorModelHex>().FirstOrDefault()?.Val?.Value;
+
+            var linie = form.Elements<A.Outline>().FirstOrDefault();
+            if (linie is null)
+                return (0, null, fuellung);
+
+            var farbe = linie.Elements<A.SolidFill>().FirstOrDefault()
+                ?.Elements<A.RgbColorModelHex>().FirstOrDefault()?.Val?.Value;
+
+            if (farbe is null)
+                return (0, null, fuellung);
+
+            var breite = linie.Width is { } w ? DocxFormatResolver.EmuZuPixel(w) : 1;
+            return (Math.Max(0.5, breite), farbe, fuellung);
+        }
+
+        private List<DossierPreviewBlock> InhaltDesKastens(
+            Anchor anker, double breite, double hoehe)
+        {
+            var inhalt = new List<DossierPreviewBlock>();
+
+            foreach (var absatz in anker.Descendants<TextBoxContent>()
+                         .SelectMany(t => t.Elements<Paragraph>()))
+            {
+                var text = string.Concat(absatz.Descendants<WText>().Select(t => t.Text));
+                if (text.Trim().Length == 0)
+                    continue;
+
+                inhalt.Add(new DossierPreviewParagraph(
+                    Zerlege(absatz, text), _format.AbsatzFormat(absatz)));
+            }
+
+            inhalt.AddRange(LiesBilder(anker, breite, hoehe));
+            return inhalt;
+        }
+
+        private List<DossierPreviewBlock> LiesEingebetteteBilder(Paragraph absatz)
+        {
+            var ergebnis = new List<DossierPreviewBlock>();
+
+            foreach (var inline in absatz.Descendants<Inline>())
+            {
+                var ausdehnung = inline.Descendants<Extent>().FirstOrDefault();
+                ergebnis.AddRange(LiesBilder(
+                    inline,
+                    DocxFormatResolver.EmuZuPixel(ausdehnung?.Cx ?? 0),
+                    DocxFormatResolver.EmuZuPixel(ausdehnung?.Cy ?? 0)));
+            }
+
+            return ergebnis;
+        }
+
+        private List<DossierPreviewBlock> LiesBilder(
+            OpenXmlElement wurzel, double breite, double hoehe)
+        {
+            var ergebnis = new List<DossierPreviewBlock>();
+
+            foreach (var blip in wurzel.Descendants<A.Blip>())
+            {
+                var id = blip.Embed?.Value;
+                if (id is null)
+                    continue;
+
+                try
+                {
+                    if (_mainPart.GetPartById(id) is not ImagePart teil)
+                        continue;
+
+                    using var strom = teil.GetStream();
+                    using var speicher = new System.IO.MemoryStream();
+                    strom.CopyTo(speicher);
+                    ergebnis.Add(new DossierPreviewPicture(speicher.ToArray(), breite, hoehe));
+                }
+                catch (Exception)
+                {
+                    // Ein unlesbares Bild darf die Vorschau nicht verhindern.
+                }
+            }
+
+            return ergebnis;
+        }
+
+        // ── Tabellen ──────────────────────────────────────────────────────
+
+        private DossierPreviewTable BaueTabelle(Table tabelle)
+        {
+            var breiten = tabelle.Elements<TableGrid>().FirstOrDefault()
+                ?.Elements<GridColumn>()
+                .Select(c => DocxFormatResolver.TwipsZuPixel(Zahl(c.Width?.Value) ?? 0))
+                .ToList()
+                ?? new List<double>();
+
+            var eigenschaften = tabelle.Elements<TableProperties>().FirstOrDefault();
+            var einzug = DocxFormatResolver.TwipsZuPixel(
+                Zahl(eigenschaften?.TableIndentation?.Width?.Value.ToString()) ?? 0);
+
+            var standardRand = ZellRand(eigenschaften?.TableCellMarginDefault);
+            var tabellenrahmen = eigenschaften?.TableBorders;
+
+            var zeilen = new List<DossierPreviewTableRow>();
+            string? wiederholung = null;
+            var wiederholZellen = new List<string>();
+            DossierPreviewTableRow? bauplan = null;
+
+            foreach (var zeile in tabelle.Elements<TableRow>())
+            {
+                var zellen = zeile.Elements<TableCell>().ToList();
+                var texte = zellen
+                    .Select(z => string.Concat(z.Descendants<WText>().Select(t => t.Text)))
                     .ToList();
 
-                // Die erste Zelle traegt Marke UND Feld.
-                var erstes = Platzhalter.Matches(zellen[0])
-                    .Select(t => t)
-                    .FirstOrDefault(t => t.Groups["art"].Value != "#");
-                wiederholZellen[0] = erstes?.Groups["name"].Value ?? string.Empty;
-                continue;
+                var marke = texte.Count == 0
+                    ? Match.Empty
+                    : Regex.Match(texte[0], @"\{\{#(?<name>[A-Za-z0-9_]+)\}\}");
+
+                var gebaut = new DossierPreviewTableRow(
+                    zellen.Select(z => BaueZelle(z, standardRand, tabellenrahmen)).ToList());
+
+                if (marke.Success)
+                {
+                    wiederholung = marke.Groups["name"].Value;
+                    wiederholZellen = texte
+                        .Select(t => Platzhalter.Matches(t)
+                            .FirstOrDefault(m => m.Groups["art"].Value != "#")
+                            ?.Groups["name"].Value ?? string.Empty)
+                        .ToList();
+                    bauplan = gebaut;
+                    continue;
+                }
+
+                zeilen.Add(gebaut);
             }
 
-            foreach (var zelle in zellen)
-                feste.Add(Zerlege(zelle));
+            return new DossierPreviewTable(
+                breiten, einzug, zeilen, wiederholung, wiederholZellen, bauplan);
         }
 
-        return new DossierPreviewTable(kopf, feste, wiederholung, wiederholZellen);
-    }
-
-    private static string NaechstesFeld(Match treffer)
-        => treffer.Success && treffer.Groups["art"].Value != "#"
-            ? treffer.Groups["name"].Value
-            : string.Empty;
-
-    private static IEnumerable<TableCell> Zellen(TableRow zeile)
-        => zeile.Elements<TableCell>();
-
-    private static string Text(OpenXmlElement element)
-        => string.Concat(element.Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>()
-            .Where(t => !LiegtInRueckfall(t))
-            .Select(t => t.Text));
-
-    /// <summary>
-    /// Word legt zu jedem Textfeld eine Rueckfallfassung ab. Ohne diese Grenze
-    /// erschiene jede Deckblattzeile doppelt.
-    /// </summary>
-    private static bool LiegtInRueckfall(OpenXmlElement element)
-    {
-        for (var eltern = element.Parent; eltern is not null; eltern = eltern.Parent)
+        private DossierPreviewTableCell BaueZelle(
+            TableCell zelle,
+            DossierPreviewEdges standardRand,
+            TableBorders? tabellenrahmen)
         {
-            if (eltern is AlternateContentFallback)
-                return true;
+            var eigenschaften = zelle.Elements<TableCellProperties>().FirstOrDefault();
+
+            var absaetze = zelle.Elements<Paragraph>()
+                .Select(p => new DossierPreviewParagraph(
+                    Zerlege(p, string.Concat(p.Descendants<WText>().Select(t => t.Text))),
+                    _format.AbsatzFormat(p)))
+                .ToList();
+
+            var rand = eigenschaften?.TableCellMargin is { } eigen
+                ? ZellRand(eigen)
+                : standardRand;
+
+            var fuellung = eigenschaften?.Shading?.Fill?.Value;
+
+            return new DossierPreviewTableCell(
+                absaetze,
+                rand,
+                Rahmen(eigenschaften?.TableCellBorders, tabellenrahmen),
+                fuellung is not null
+                    && !string.Equals(fuellung, "auto", StringComparison.OrdinalIgnoreCase)
+                        ? fuellung
+                        : null,
+                eigenschaften?.GridSpan?.Val?.Value ?? 1);
         }
 
-        return false;
-    }
-
-    private static DossierPreviewStyle LiesStil(Paragraph absatz)
-    {
-        var name = absatz.ParagraphProperties?.ParagraphStyleId?.Val?.Value ?? string.Empty;
-
-        if (name.StartsWith("berschrift", StringComparison.OrdinalIgnoreCase)
-            || name.StartsWith("Überschrift", StringComparison.OrdinalIgnoreCase)
-            || name.StartsWith("Heading", StringComparison.OrdinalIgnoreCase))
+        private static DossierPreviewEdges ZellRand(OpenXmlElement? rand)
         {
-            return DossierPreviewStyle.Heading;
-        }
+            var standard = DocxFormatResolver.TwipsZuPixel(108);
 
-        if (name.Equals("Titel", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("Title", StringComparison.OrdinalIgnoreCase))
-        {
-            return DossierPreviewStyle.Title;
-        }
+            if (rand is null)
+                return DossierPreviewEdges.All(standard);
 
-        if (name.StartsWith("Verzeichnis", StringComparison.OrdinalIgnoreCase)
-            || name.StartsWith("TOC", StringComparison.OrdinalIgnoreCase))
-        {
-            return DossierPreviewStyle.Small;
-        }
-
-        // Das Deckblatt arbeitet ohne Formatvorlage, nur mit direkter
-        // Schriftgroesse. Sie ist der einzige Hinweis auf die Bedeutung.
-        var groesse = absatz.Descendants<FontSize>()
-            .Select(f => int.TryParse(f.Val?.Value, out var wert) ? wert : 0)
-            .DefaultIfEmpty(0)
-            .Max();
-
-        return groesse switch
-        {
-            >= 40 => DossierPreviewStyle.Title,
-            >= 28 => DossierPreviewStyle.Heading,
-            _ => DossierPreviewStyle.Normal
-        };
-    }
-
-    private static DossierPreviewPage BaueSeite(int nummer, List<DossierPreviewBlock> blocks)
-    {
-        var titel = blocks
-            .OfType<DossierPreviewParagraph>()
-            .Where(p => p.Style is DossierPreviewStyle.Heading or DossierPreviewStyle.Title)
-            .Select(p => Klartext(p.Runs))
-            .FirstOrDefault(t => t.Length > 0);
-
-        // Die erste Seite heisst immer Deckblatt. Ihr groesster Text ist der
-        // Dokumenttitel; ihn als Seitennamen zu fuehren waere nur verwirrend.
-        if (nummer == 1 || string.IsNullOrWhiteSpace(titel))
-            titel = nummer == 1 ? "Deckblatt" : "Seite " + nummer;
-
-        return new DossierPreviewPage(nummer, titel, blocks, SammleFelder(blocks));
-    }
-
-    private static string Klartext(IEnumerable<DossierPreviewRun> runs)
-        => string.Concat(runs.Where(r => !r.IsField).Select(r => r.Text)).Trim();
-
-    private static IReadOnlyList<string> SammleFelder(IEnumerable<DossierPreviewBlock> blocks)
-    {
-        var felder = new List<string>();
-
-        void Sammle(IEnumerable<DossierPreviewRun> runs)
-        {
-            foreach (var run in runs.Where(r => r.IsField))
+            double Wert(string name)
             {
-                if (!felder.Contains(run.FieldKey!, StringComparer.Ordinal))
-                    felder.Add(run.FieldKey!);
+                var element = rand.ChildElements
+                    .FirstOrDefault(e => string.Equals(e.LocalName, name, StringComparison.Ordinal));
+
+                var attribut = element?.GetAttributes()
+                    .FirstOrDefault(a => a.LocalName == "w");
+
+                return Zahl(attribut?.Value) is { } zahl
+                    ? DocxFormatResolver.TwipsZuPixel(zahl)
+                    : standard;
             }
+
+            return new DossierPreviewEdges(
+                Wert("left"), Wert("top"), Wert("right"), Wert("bottom"));
         }
 
-        foreach (var block in blocks)
+        /// <summary>
+        /// Rahmenbreiten der Zelle. Word zaehlt sie in Achtelpunkten; die
+        /// Angabe der Zelle sticht die der Tabelle.
+        /// </summary>
+        private static DossierPreviewEdges Rahmen(
+            TableCellBorders? zelle, TableBorders? tabelle)
         {
-            switch (block)
-            {
-                case DossierPreviewParagraph absatz:
-                    Sammle(absatz.Runs);
-                    break;
+            double Breite(BorderType? kante)
+                => kante?.Val?.Value is { } art
+                    && art != BorderValues.None
+                    && art != BorderValues.Nil
+                        ? Math.Max(0.5, (kante.Size?.Value ?? 4) / 6.0)
+                        : 0;
 
-                case DossierPreviewImage bild when !felder.Contains(bild.FieldKey, StringComparer.Ordinal):
-                    felder.Add(bild.FieldKey);
-                    break;
+            BorderType? Waehle(BorderType? eigen, BorderType? tabellenkante, BorderType? innen)
+                => eigen ?? tabellenkante ?? innen;
 
-                case DossierPreviewTable tabelle:
-                    foreach (var zeile in tabelle.FixedRowCells)
-                        Sammle(zeile);
-
-                    if (tabelle.RepeatKey is not null
-                        && !felder.Contains(tabelle.RepeatKey, StringComparer.Ordinal))
-                    {
-                        felder.Add(tabelle.RepeatKey);
-                    }
-
-                    break;
-            }
+            return new DossierPreviewEdges(
+                Breite(Waehle(zelle?.LeftBorder, tabelle?.LeftBorder, tabelle?.InsideVerticalBorder)),
+                Breite(Waehle(zelle?.TopBorder, tabelle?.TopBorder, tabelle?.InsideHorizontalBorder)),
+                Breite(Waehle(zelle?.RightBorder, tabelle?.RightBorder, tabelle?.InsideVerticalBorder)),
+                Breite(Waehle(zelle?.BottomBorder, tabelle?.BottomBorder, tabelle?.InsideHorizontalBorder)));
         }
 
-        return felder;
+        private static double? Zahl(string? wert)
+            => double.TryParse(
+                wert,
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var zahl)
+                    ? zahl
+                    : null;
+
+        // ── Felder ────────────────────────────────────────────────────────
+
+        private static IReadOnlyList<string> SammleFelder(IEnumerable<DossierPreviewBlock> bloecke)
+        {
+            var felder = new List<string>();
+
+            void Nimm(string? key)
+            {
+                if (key is null || felder.Contains(key, StringComparer.Ordinal))
+                    return;
+
+                felder.Add(key);
+            }
+
+            void AusAbsatz(DossierPreviewParagraph absatz)
+            {
+                foreach (var run in absatz.Runs.Where(r => r.IsField))
+                    Nimm(run.FieldKey);
+            }
+
+            foreach (var block in bloecke)
+            {
+                switch (block)
+                {
+                    case DossierPreviewParagraph absatz:
+                        AusAbsatz(absatz);
+
+                        foreach (var kasten in absatz.Floating)
+                        {
+                            foreach (var inneres in kasten.Blocks.OfType<DossierPreviewParagraph>())
+                                AusAbsatz(inneres);
+                        }
+
+                        break;
+
+                    case DossierPreviewImage bild:
+                        Nimm(bild.FieldKey);
+                        break;
+
+                    case DossierPreviewTable tabelle:
+                        foreach (var absatz in tabelle.Rows
+                                     .SelectMany(z => z.Cells)
+                                     .SelectMany(z => z.Paragraphs))
+                        {
+                            AusAbsatz(absatz);
+                        }
+
+                        Nimm(tabelle.RepeatKey);
+                        break;
+                }
+            }
+
+            return felder;
+        }
     }
 }

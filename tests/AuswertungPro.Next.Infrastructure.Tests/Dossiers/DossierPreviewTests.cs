@@ -57,6 +57,9 @@ public sealed class DossierPreviewBuilderTests
 
         var titelFelder = deckblatt.Blocks
             .OfType<DossierPreviewParagraph>()
+            .SelectMany(p => p.Floating)
+            .SelectMany(f => f.Blocks)
+            .OfType<DossierPreviewParagraph>()
             .SelectMany(p => p.Runs)
             .Count(r => r.FieldKey == "Gebietstitel");
 
@@ -82,6 +85,7 @@ public sealed class DossierPreviewBuilderTests
 
         var bild = Assert.Single(seite.Blocks.OfType<DossierPreviewImage>());
         Assert.Equal("Uebersichtsplan", bild.FieldKey);
+        Assert.True(bild.WidthPx > 400, "Die Bildstelle nimmt die Satzbreite ein.");
     }
 
     [Fact]
@@ -100,8 +104,18 @@ public sealed class DossierPreviewBuilderTests
         Assert.Contains(tabellen, t => t.RepeatKey == "Themen");
 
         var themen = tabellen.Single(t => t.RepeatKey == "Themen");
-        Assert.Equal(new[] { "Thema", "Bemerkungen" }, themen.HeaderCells);
         Assert.Equal(new[] { "Thema", "Text" }, themen.RepeatCellKeys);
+        Assert.NotNull(themen.RepeatTemplate);
+
+        // Die Kopfzeile bleibt eine feste Zeile der Tabelle.
+        var kopf = themen.Rows[0].Cells
+            .Select(z => string.Concat(z.Paragraphs
+                .SelectMany(a => a.Runs)
+                .Where(r => !r.IsField)
+                .Select(r => r.Text)).Trim())
+            .ToList();
+
+        Assert.Equal(new[] { "Thema", "Bemerkungen" }, kopf);
     }
 
     [Fact]
@@ -110,6 +124,9 @@ public sealed class DossierPreviewBuilderTests
         var deckblatt = Vorschau().Pages.First();
 
         var feste = deckblatt.Blocks
+            .OfType<DossierPreviewParagraph>()
+            .SelectMany(p => p.Floating)
+            .SelectMany(f => f.Blocks)
             .OfType<DossierPreviewParagraph>()
             .SelectMany(p => p.Runs)
             .Where(r => !r.IsField)
@@ -120,15 +137,112 @@ public sealed class DossierPreviewBuilderTests
         Assert.Contains(feste, t => t.StartsWith("Datum:", StringComparison.Ordinal));
     }
 
-    [Theory]
-    [InlineData("Datum: {{Datum}}", 2)]
-    [InlineData("{{Gebietstitel}}", 1)]
-    [InlineData("Ganz ohne Platzhalter", 1)]
-    [InlineData("{{#Themen}}{{Thema}}", 1)]
-    public void Zerlegt_Text_in_feste_Stuecke_und_Felder(string text, int erwartet)
+    [Fact]
+    public void Ein_Absatz_mit_Beschriftung_und_Platzhalter_bleibt_zweiteilig()
     {
-        // Die Wiederholmarke gehoert zur Tabelle und ist kein Feld.
-        Assert.Equal(erwartet, DossierPreviewBuilder.Zerlege(text).Count);
+        // "Datum: {{Datum}}" ist fester Text PLUS Feld — sonst waere die
+        // Beschriftung nicht mehr von ihrem Wert zu unterscheiden.
+        var absatz = Vorschau().Pages
+            .SelectMany(s => s.Blocks)
+            .OfType<DossierPreviewParagraph>()
+            .SelectMany(p => p.Floating.SelectMany(f => f.Blocks).Append(p))
+            .OfType<DossierPreviewParagraph>()
+            .First(p => p.Runs.Any(r => r.FieldKey == "Datum")
+                && p.Runs.Any(r => !r.IsField && r.Text!.Contains("Datum:", StringComparison.Ordinal)));
+
+        Assert.Equal(2, absatz.Runs.Count);
+        Assert.False(absatz.Runs[0].IsField);
+        Assert.Equal("Datum", absatz.Runs[1].FieldKey);
+    }
+
+    [Fact]
+    public void Das_Blatt_hat_die_Masse_der_Vorlage()
+    {
+        // A4 bei 96 dpi und die Raender aus dem Abschnitt der Vorlage. Ohne
+        // diese Masse waere die Vorschau eine Nachbildung statt ein Abbild.
+        var seite = Vorschau().Pages.First();
+
+        Assert.Equal(794, seite.Geometry.WidthPx, 0);
+        Assert.Equal(1123, seite.Geometry.HeightPx, 0);
+        Assert.Equal(95, seite.Geometry.Margin.Left, 0);
+        Assert.Equal(38, seite.Geometry.Margin.Top, 0);
+        Assert.Equal(76, seite.Geometry.Margin.Right, 0);
+    }
+
+    [Fact]
+    public void Die_Spaltenbreiten_stammen_aus_der_Tabelle()
+    {
+        var themen = Vorschau().Pages
+            .SelectMany(s => s.Blocks)
+            .OfType<DossierPreviewTable>()
+            .Single(t => t.RepeatKey == "Themen");
+
+        // 2333 und 6456 Twips aus dem Raster der Vorlage.
+        Assert.Equal(new[] { 156, 430 }, themen.ColumnWidthsPx.Select(w => (int)Math.Round(w)));
+        Assert.True(themen.IndentPx > 0, "Der Einzug der Tabelle fehlt.");
+    }
+
+    [Fact]
+    public void Schrift_und_Groesse_stammen_aus_Vorlage_und_Formatvorlage()
+    {
+        // Die Deckblattzeilen tragen keine eigene Schriftangabe — sie erben sie
+        // von der Standardvorlage. Wer die nicht liest, zeichnet Times statt
+        // Arial.
+        var titel = Vorschau().Pages.First().Blocks
+            .OfType<DossierPreviewParagraph>()
+            .SelectMany(p => p.Floating)
+            .SelectMany(f => f.Blocks)
+            .OfType<DossierPreviewParagraph>()
+            .SelectMany(p => p.Runs)
+            .First(r => r.FieldKey == "Gebietstitel");
+
+        Assert.Equal("Arial", titel.Format.FontFamily);
+        Assert.True(titel.Format.Bold);
+
+        // 40 halbe Punkte = 20 pt = 26,67 Bildpunkte.
+        Assert.Equal(26.67, titel.Format.FontSizePx, 1);
+    }
+
+    [Fact]
+    public void Logo_und_Wappen_liegen_an_ihrer_Stelle_und_tragen_ihre_Bytes()
+    {
+        var kaesten = Vorschau().Pages.First().Blocks
+            .OfType<DossierPreviewParagraph>()
+            .SelectMany(p => p.Floating)
+            .Where(f => f.Blocks.OfType<DossierPreviewPicture>().Any())
+            .ToList();
+
+        Assert.Equal(2, kaesten.Count);
+
+        var logo = kaesten[0];
+        Assert.Equal(229, logo.WidthPx, 0);
+        Assert.Equal(94, logo.HeightPx, 0);
+        Assert.True(logo.LeftPx > 0, "Das Logo sitzt nicht am linken Blattrand.");
+        Assert.NotEmpty(logo.Blocks.OfType<DossierPreviewPicture>().Single().Bytes);
+    }
+
+    [Fact]
+    public void Der_Deckblattrahmen_wird_als_Umriss_gelesen()
+    {
+        var rahmen = Vorschau().Pages.First().Blocks
+            .OfType<DossierPreviewParagraph>()
+            .SelectMany(p => p.Floating)
+            .First(f => f.WidthPx > 700);
+
+        Assert.True(rahmen.BorderWidthPx >= 1, "Der Rahmen des Deckblatts hat keine Linie.");
+        Assert.Equal("000000", rahmen.BorderColorHex);
+    }
+
+    [Fact]
+    public void Leere_Absaetze_bleiben_erhalten()
+    {
+        // Sie tragen im Dokument den senkrechten Abstand. Wer sie wegwirft,
+        // schiebt das halbe Deckblatt nach oben.
+        var leere = Vorschau().Pages.First().Blocks
+            .OfType<DossierPreviewParagraph>()
+            .Count(p => p.Runs.All(r => string.IsNullOrEmpty(r.Text) && !r.IsField));
+
+        Assert.True(leere > 5, $"Nur {leere} leere Absätze — der Abstand des Deckblatts fehlt.");
     }
 
     [Fact]

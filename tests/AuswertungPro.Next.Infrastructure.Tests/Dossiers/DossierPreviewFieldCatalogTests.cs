@@ -9,6 +9,13 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Dossiers;
 
 public sealed class DossierPreviewFieldCatalogTests
 {
+    private static DossierPreviewPage Seite(params string[] felder)
+        => new(
+            1, "Deckblatt",
+            new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.All(76)),
+            System.Array.Empty<DossierPreviewBlock>(),
+            felder);
+
     private static (DossierAreaSettings Area, DossierDefinition Dossier) Stand()
         => (new DossierAreaSettings { AreaTitle = "Sanierung Musterweg" },
             new DossierDefinition { ParcelNumbers = "30", Town = "Musterdorf" });
@@ -58,10 +65,7 @@ public sealed class DossierPreviewFieldCatalogTests
         var (area, dossier) = Stand();
         var alle = DossierPreviewFieldCatalog.Build(area, dossier);
 
-        var seite = new DossierPreviewPage(
-            1, "Deckblatt",
-            System.Array.Empty<DossierPreviewBlock>(),
-            new[] { "Gebietstitel", "Revision" });
+        var seite = Seite("Gebietstitel", "Revision");
 
         var felder = DossierPreviewFieldCatalog.ForPage(alle, seite);
 
@@ -76,10 +80,7 @@ public sealed class DossierPreviewFieldCatalogTests
         var (area, dossier) = Stand();
         var alle = DossierPreviewFieldCatalog.Build(area, dossier);
 
-        var seite = new DossierPreviewPage(
-            1, "Deckblatt",
-            System.Array.Empty<DossierPreviewBlock>(),
-            new[] { "Voellig_Neues_Feld" });
+        var seite = Seite("Voellig_Neues_Feld");
 
         var feld = Assert.Single(DossierPreviewFieldCatalog.ForPage(alle, seite));
 

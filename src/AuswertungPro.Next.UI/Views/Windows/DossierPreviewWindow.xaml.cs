@@ -186,6 +186,16 @@ public partial class DossierPreviewWindow : Window
         }
     }
 
+    private void OnZoomChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (SheetZoom is null)
+            return;
+
+        SheetZoom.ScaleX = e.NewValue;
+        SheetZoom.ScaleY = e.NewValue;
+        ZoomText.Text = (e.NewValue * 100).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " %";
+    }
+
     private void OnAccept(object sender, RoutedEventArgs e)
     {
         DialogResult = true;

@@ -6,11 +6,31 @@ namespace AuswertungPro.Next.Application.Dossiers.Preview;
 /// Die Vorschau eines Dossiers, Seite fuer Seite. Reine Struktur: kein Word,
 /// keine Oberflaeche, keine Dateien.
 ///
-/// Das Modell entsteht aus der ECHTEN Vorlage und behaelt die Platzhalter als
-/// solche. Erst beim Zeichnen wird ein Wert eingesetzt. Nur so weiss das
-/// Fenster, welche Stelle zu welchem Feld gehoert — und kann sie hervorheben.
+/// Alle Masse sind Bildpunkte bei 96 dpi. Sie stammen aus der Vorlage selbst —
+/// Seitenformat, Raender, Spaltenbreiten, Abstaende, Schriftgroessen und die
+/// Lage der schwebenden Kaesten des Deckblatts. Dadurch zeigt die Vorschau die
+/// Seite so, wie sie im Dokument steht, und nicht eine Nachbildung.
+///
+/// Die Platzhalter bleiben als Platzhalter stehen. Erst beim Zeichnen wird ein
+/// Wert eingesetzt — nur so weiss das Fenster, welche Stelle zu welchem Feld
+/// gehoert.
 /// </summary>
 public sealed record DossierPreviewDocument(IReadOnlyList<DossierPreviewPage> Pages);
+
+/// <summary>Vier Kantenmasse in Bildpunkten.</summary>
+public readonly record struct DossierPreviewEdges(
+    double Left, double Top, double Right, double Bottom)
+{
+    public static DossierPreviewEdges Zero => new(0, 0, 0, 0);
+
+    public static DossierPreviewEdges All(double wert) => new(wert, wert, wert, wert);
+}
+
+/// <summary>Blattformat und Satzspiegel.</summary>
+public sealed record DossierPreviewGeometry(
+    double WidthPx,
+    double HeightPx,
+    DossierPreviewEdges Margin);
 
 /// <summary>
 /// Eine Seite. Die Grenzen sind die Seitenumbrueche der Vorlage und der Beginn
@@ -19,49 +39,130 @@ public sealed record DossierPreviewDocument(IReadOnlyList<DossierPreviewPage> Pa
 public sealed record DossierPreviewPage(
     int Number,
     string Title,
+    DossierPreviewGeometry Geometry,
     IReadOnlyList<DossierPreviewBlock> Blocks,
     IReadOnlyList<string> FieldKeys);
 
-/// <summary>Wie ein Absatz dargestellt wird.</summary>
-public enum DossierPreviewStyle
+public enum DossierPreviewAlignment
 {
-    Normal,
-    Title,
-    Heading,
-    Small
+    Left,
+    Center,
+    Right,
+    Justify
 }
 
-/// <summary>Ein Baustein einer Seite.</summary>
+/// <summary>Ein Baustein im Textfluss.</summary>
 public abstract record DossierPreviewBlock;
 
-/// <summary>Ein Absatz aus einem oder mehreren Stuecken.</summary>
-public sealed record DossierPreviewParagraph(
-    DossierPreviewStyle Style,
-    IReadOnlyList<DossierPreviewRun> Runs) : DossierPreviewBlock;
+/// <summary>Absatzformat, wie es in der Vorlage steht.</summary>
+public sealed record DossierPreviewParagraphFormat(
+    double SpaceBeforePx,
+    double SpaceAfterPx,
+    double? LineHeightPx,
+    DossierPreviewEdges Indent,
+    DossierPreviewAlignment Alignment,
+    bool IsHeading,
+    bool IsTitle = false)
+{
+    public static DossierPreviewParagraphFormat Default { get; } = new(
+        0, 0, null, DossierPreviewEdges.Zero, DossierPreviewAlignment.Left, false);
+}
+
+/// <summary>Zeichenformat eines Textstuecks.</summary>
+public sealed record DossierPreviewRunFormat(
+    string FontFamily,
+    double FontSizePx,
+    bool Bold,
+    bool Italic,
+    bool Underline,
+    string? ColorHex)
+{
+    public static DossierPreviewRunFormat Default { get; } = new(
+        "Arial", 14.67, false, false, false, null);
+}
 
 /// <summary>
-/// Eine Tabelle. <paramref name="RepeatKey"/> ist gesetzt, wenn die Vorlage
-/// eine Wiederholzeile fuehrt ("Themen", "Eigentuemer", "Aenderungen") — dann
-/// entstehen die Datenzeilen erst beim Zeichnen aus den aktuellen Daten.
+/// Ein Absatz aus einem oder mehreren Stuecken.
+///
+/// <paramref name="Anchored"/> sind die schwebenden Kaesten, die Word an genau
+/// diesen Absatz haengt. Ihre Hoehe zaehlt Word ab dem Absatz — deshalb gehoeren
+/// sie hierher und nicht an die Seite. Ein LEERER Absatz bleibt erhalten: er
+/// traegt im Dokument den senkrechten Abstand.
 /// </summary>
-public sealed record DossierPreviewTable(
-    IReadOnlyList<string> HeaderCells,
-    IReadOnlyList<IReadOnlyList<DossierPreviewRun>> FixedRowCells,
-    string? RepeatKey,
-    IReadOnlyList<string> RepeatCellKeys) : DossierPreviewBlock;
-
-/// <summary>Eine Bildstelle, zum Beispiel der Uebersichtsplan.</summary>
-public sealed record DossierPreviewImage(string FieldKey) : DossierPreviewBlock;
+public sealed record DossierPreviewParagraph(
+    IReadOnlyList<DossierPreviewRun> Runs,
+    DossierPreviewParagraphFormat Format,
+    IReadOnlyList<DossierPreviewFloating>? Anchored = null) : DossierPreviewBlock
+{
+    public IReadOnlyList<DossierPreviewFloating> Floating
+        => Anchored ?? System.Array.Empty<DossierPreviewFloating>();
+}
 
 /// <summary>
 /// Ein Textstueck. Entweder fester Text der Vorlage oder ein Platzhalter.
 /// Genau eines von beiden ist gesetzt.
 /// </summary>
-public sealed record DossierPreviewRun(string? Text, string? FieldKey)
+public sealed record DossierPreviewRun(
+    string? Text,
+    string? FieldKey,
+    DossierPreviewRunFormat Format)
 {
-    public static DossierPreviewRun Literal(string text) => new(text, null);
+    public static DossierPreviewRun Literal(string text, DossierPreviewRunFormat format)
+        => new(text, null, format);
 
-    public static DossierPreviewRun Field(string key) => new(null, key);
+    public static DossierPreviewRun Field(string key, DossierPreviewRunFormat format)
+        => new(null, key, format);
 
     public bool IsField => FieldKey is not null;
 }
+
+/// <summary>Eine Tabellenzelle mit ihren Absaetzen und ihrem Rahmen.</summary>
+public sealed record DossierPreviewTableCell(
+    IReadOnlyList<DossierPreviewParagraph> Paragraphs,
+    DossierPreviewEdges Padding,
+    DossierPreviewEdges Borders,
+    string? ShadingHex,
+    int GridSpan);
+
+public sealed record DossierPreviewTableRow(IReadOnlyList<DossierPreviewTableCell> Cells);
+
+/// <summary>
+/// Eine Tabelle mit den Spaltenbreiten der Vorlage.
+/// <paramref name="RepeatKey"/> ist gesetzt, wenn die Vorlage eine
+/// Wiederholzeile fuehrt; <paramref name="RepeatTemplate"/> ist deren Bauplan,
+/// damit jede erzeugte Zeile dasselbe Aussehen bekommt.
+/// </summary>
+public sealed record DossierPreviewTable(
+    IReadOnlyList<double> ColumnWidthsPx,
+    double IndentPx,
+    IReadOnlyList<DossierPreviewTableRow> Rows,
+    string? RepeatKey,
+    IReadOnlyList<string> RepeatCellKeys,
+    DossierPreviewTableRow? RepeatTemplate) : DossierPreviewBlock;
+
+/// <summary>Ein fest eingebettetes Bild, zum Beispiel Logo oder Wappen.</summary>
+public sealed record DossierPreviewPicture(
+    byte[] Bytes,
+    double WidthPx,
+    double HeightPx) : DossierPreviewBlock;
+
+/// <summary>Eine Bildstelle, die erst beim Erzeugen gefuellt wird.</summary>
+public sealed record DossierPreviewImage(
+    string FieldKey,
+    double WidthPx,
+    double HeightPx) : DossierPreviewBlock;
+
+/// <summary>
+/// Ein schwebendes Objekt: Textkasten, Bild oder Rahmen des Deckblatts.
+/// <paramref name="LeftPx"/> zaehlt ab dem Blattrand, <paramref name="TopPx"/>
+/// ab dem Absatz, an dem das Objekt haengt — so wie Word es fuehrt.
+/// </summary>
+public sealed record DossierPreviewFloating(
+    double LeftPx,
+    double TopPx,
+    double WidthPx,
+    double HeightPx,
+    IReadOnlyList<DossierPreviewBlock> Blocks,
+    double BorderWidthPx,
+    string? BorderColorHex,
+    string? FillHex);
