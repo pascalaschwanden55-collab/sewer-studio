@@ -22,6 +22,7 @@ public partial class DossierBatchWindow : Window
     private readonly DossierBatchProposalUseCase _proposal;
     private readonly IReadOnlyList<string> _projectHoldingNames;
     private readonly IReadOnlyDictionary<string, Guid> _holdingIdsByName;
+    private readonly IReadOnlyList<string> _projectShaftNumbers;
     private readonly IReadOnlyList<string> _parcelsWithDossier;
 
     private CancellationTokenSource? _laufendeSuche;
@@ -31,6 +32,7 @@ public partial class DossierBatchWindow : Window
         DossierBatchProposalUseCase proposal,
         IReadOnlyList<string> projectHoldingNames,
         IReadOnlyDictionary<string, Guid> holdingIdsByName,
+        IReadOnlyList<string> projectShaftNumbers,
         IReadOnlyList<string> parcelsWithDossier)
     {
         InitializeComponent();
@@ -39,6 +41,7 @@ public partial class DossierBatchWindow : Window
         _proposal = proposal;
         _projectHoldingNames = projectHoldingNames;
         _holdingIdsByName = holdingIdsByName;
+        _projectShaftNumbers = projectShaftNumbers;
         _parcelsWithDossier = parcelsWithDossier;
 
         ProposalGrid.ItemsSource = _viewModel.Rows;
@@ -57,13 +60,16 @@ public partial class DossierBatchWindow : Window
         DossierBatchProposalUseCase proposal,
         IReadOnlyList<string> projectHoldingNames,
         IReadOnlyDictionary<string, Guid> holdingIdsByName,
+        IReadOnlyList<string> projectShaftNumbers,
         IReadOnlyList<string> parcelsWithDossier)
     {
         ArgumentNullException.ThrowIfNull(parcels);
         ArgumentNullException.ThrowIfNull(proposal);
+        ArgumentNullException.ThrowIfNull(projectShaftNumbers);
 
         var fenster = new DossierBatchWindow(
-            parcels, proposal, projectHoldingNames, holdingIdsByName, parcelsWithDossier)
+            parcels, proposal, projectHoldingNames, holdingIdsByName,
+            projectShaftNumbers, parcelsWithDossier)
         {
             Owner = System.Windows.Application.Current?.MainWindow
         };
@@ -162,7 +168,8 @@ public partial class DossierBatchWindow : Window
 
     private void OnCreate(object sender, RoutedEventArgs e)
     {
-        Created = DossierBatchCreationUseCase.Build(_viewModel.BaueAuswahl(), _holdingIdsByName);
+        Created = DossierBatchCreationUseCase.Build(
+            _viewModel.BaueAuswahl(), _holdingIdsByName, _projectShaftNumbers);
         DialogResult = true;
     }
 

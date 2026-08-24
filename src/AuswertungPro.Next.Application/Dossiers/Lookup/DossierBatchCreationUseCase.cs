@@ -17,12 +17,20 @@ public sealed record DossierCreationSelection(
 /// </summary>
 public static class DossierBatchCreationUseCase
 {
+    /// <param name="projectShaftNumbers">
+    /// Die Schaechte des Hauptprojekts. Pflicht und nicht optional: ein
+    /// vergessener Wert wuerde hier still zu Dossiers ohne Schaechte fuehren,
+    /// und niemand sieht einer leeren Liste an, ob es keine gibt oder ob nur
+    /// niemand gesucht hat.
+    /// </param>
     public static IReadOnlyList<DossierDefinition> Build(
         IReadOnlyList<DossierCreationSelection> selections,
-        IReadOnlyDictionary<string, Guid> holdingIdsByName)
+        IReadOnlyDictionary<string, Guid> holdingIdsByName,
+        IReadOnlyList<string> projectShaftNumbers)
     {
         ArgumentNullException.ThrowIfNull(selections);
         ArgumentNullException.ThrowIfNull(holdingIdsByName);
+        ArgumentNullException.ThrowIfNull(projectShaftNumbers);
 
         var ergebnis = new List<DossierDefinition>();
 
@@ -49,6 +57,15 @@ public static class DossierBatchCreationUseCase
                     dossier.HoldingIds.Add(id);
                 }
             }
+
+            // Die Schaechte kommen aus denselben zwei Wegen wie bei einer
+            // einzeln angelegten Liegenschaft. Ohne diesen Schritt blieben
+            // Stapel-Dossiers ganz ohne Schacht.
+            dossier.ShaftNumbers = ParcelHoldingAndShaftMatcher.ShaftsForParcel(
+                    auswahl.SelectedHoldingDesignations,
+                    projectShaftNumbers,
+                    vorschlag.Parcel.Number)
+                .ToList();
 
             ergebnis.Add(dossier);
         }

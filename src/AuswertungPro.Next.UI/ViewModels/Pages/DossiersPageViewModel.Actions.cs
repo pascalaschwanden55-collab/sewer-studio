@@ -24,25 +24,13 @@ public sealed partial class DossiersPageViewModel
 
         // Zuerst Gemeinde und Parzelle: daraus fuellt der Kanton alles vor, was
         // er hergibt. Wer das nicht will, legt ohne Abfrage an.
-        var idsByName = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
-        foreach (var record in _getProject().Data)
-        {
-            var name = (record.GetFieldValue(FieldKeys.HoldingName) ?? string.Empty).Trim();
-            if (name.Length > 0)
-                idsByName[name] = record.Id;
-        }
+        var idsByName = HaltungsIdsNachName();
 
         DossierParcelLookupChoice? abfrage;
         try
         {
-            // Nur Schaechte, die das Hauptprojekt wirklich fuehrt.
-            var schachtNummern = _getProject().SchaechteData
-                .Select(s => (s.GetFieldValue("Schachtnummer") ?? string.Empty).Trim())
-                .Where(n => n.Length > 0)
-                .ToList();
-
             abfrage = DossierParcelLookupWindow.ShowFor(
-                _parcels, _parcelLookup, _directory, idsByName, schachtNummern);
+                _parcels, _parcelLookup, _directory, idsByName, ProjektSchachtnummern());
         }
         catch (Exception ex)
         {
@@ -135,13 +123,7 @@ public sealed partial class DossiersPageViewModel
         var project = _getProject();
 
         // Haltungsname -> Kennung. Ohne Namen laesst sich nichts zuordnen.
-        var idsByName = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
-        foreach (var record in project.Data)
-        {
-            var name = (record.GetFieldValue(FieldKeys.HoldingName) ?? string.Empty).Trim();
-            if (name.Length > 0)
-                idsByName[name] = record.Id;
-        }
+        var idsByName = HaltungsIdsNachName();
 
         if (idsByName.Count == 0)
         {
@@ -165,6 +147,7 @@ public sealed partial class DossiersPageViewModel
             _batchProposal,
             idsByName.Keys.ToList(),
             idsByName,
+            ProjektSchachtnummern(),
             mitDossier);
 
         if (erzeugte.Count == 0)
@@ -538,6 +521,143 @@ public sealed partial class DossiersPageViewModel
 
         return true;
     }
+
+    /// <summary>
+    /// Speichert den ganzen Dossierbestand auf Zuruf.
+    ///
+    /// Jede Aktion speichert bereits selbst. Dieser Weg ist trotzdem nicht
+    /// ueberfluessig: Er sagt mit Zeitstempel, DASS der Stand auf der Platte
+    /// liegt. Wer eine Stunde an einem Dossier gearbeitet hat, soll sich das
+    /// nicht aus dem Ausbleiben einer Fehlermeldung erschliessen muessen.
+    ///
+    /// Bei unlesbarer Dossierdatei sperrt EnsureProject den Weg, damit ein
+    /// unvollstaendig geladener Stand die gute Datei nicht ueberschreibt.
+    /// </summary>
+    private async Task SaveNowAsync()
+    {
+        if (!EnsureProject(out var root))
+            return;
+
+        if (!await SaveDocumentAsync(root))
+            return;
+
+        StatusMessage = BuildSaveConfirmation(_document.Dossiers.Count, DateTime.Now);
+    }
+
+    /// <summary>
+    /// Die Rueckmeldung des Speicherns. Sie nennt Anzahl und Uhrzeit, weil
+    /// genau das die Frage beantwortet, die zum Knopf gefuehrt hat: Ist mein
+    /// Stand jetzt auf der Platte?
+    /// </summary>
+    public static string BuildSaveConfirmation(int count, DateTime when)
+    {
+        var uhrzeit = when.ToString("HH:mm", System.Globalization.CultureInfo.CurrentCulture);
+
+        return count == 1
+            ? $"1 Dossier gespeichert um {uhrzeit} Uhr."
+            : $"{count} Dossiers gespeichert um {uhrzeit} Uhr.";
+    }
+
+    /// <summary>
+    /// Fuehrt das gewaehlte Dossier nach.
+    ///
+    /// Gefragt wird das PROJEKT, nicht der Kanton: gesucht wird, was seit dem
+    /// Anlegen aufgenommen wurde. Deshalb kostet das keine Abfrage und geht
+    /// auch ohne Netz.
+    /// </summary>
+    private async Task RefreshDossierAsync()
+    {
+        if (Selected is null || !EnsureProject(out var root))
+            return;
+
+        var definition = Selected.Definition;
+
+        var vorschlag = DossierRefreshUseCase.Propose(
+            definition, HaltungsIdsNachName(), ProjektSchachtnummern());
+
+        if (!vorschlag.HasAnything)
+        {
+            StatusMessage = "Nichts Neues — das Projekt kennt zu dieser "
+                + "Liegenschaft nichts, was nicht schon im Dossier steht.";
+            return;
+        }
+
+        var auswahl = DossierRefreshWindow.ShowFor(definition.Name, vorschlag);
+        if (auswahl is null)
+            return;
+
+        // Der Stand VOR der Aenderung, damit ein misslungenes Speichern nichts
+        // Halbes stehen laesst.
+        var vorherLeitungen = new List<Guid>(definition.HoldingIds);
+        var vorherSchaechte = new List<string>(definition.ShaftNumbers);
+        var vorherAbgelehnteLeitungen = new List<Guid>(definition.DismissedHoldingIds);
+        var vorherAbgelehnteSchaechte = new List<string>(definition.DismissedShaftNumbers);
+
+        DossierRefreshUseCase.Apply(
+            definition, auswahl.Holdings, auswahl.Shafts, vorschlag);
+
+        definition.ModifiedAtUtc = DateTime.UtcNow;
+
+        if (!await SaveDocumentAsync(root))
+        {
+            definition.HoldingIds = vorherLeitungen;
+            definition.ShaftNumbers = vorherSchaechte;
+            definition.DismissedHoldingIds = vorherAbgelehnteLeitungen;
+            definition.DismissedShaftNumbers = vorherAbgelehnteSchaechte;
+            return;
+        }
+
+        RefreshDetail();
+
+        StatusMessage = Nachgefuehrt(auswahl.Holdings.Count, auswahl.Shafts.Count);
+    }
+
+    /// <summary>Die Rueckmeldung des Nachfuehrens.</summary>
+    public static string Nachgefuehrt(int leitungen, int schaechte)
+    {
+        if (leitungen == 0 && schaechte == 0)
+            return "Nichts übernommen.";
+
+        var teile = new List<string>();
+
+        if (leitungen > 0)
+            teile.Add(leitungen == 1 ? "1 Leitung" : leitungen + " Leitungen");
+
+        if (schaechte > 0)
+            teile.Add(schaechte == 1 ? "1 Schacht" : schaechte + " Schächte");
+
+        return string.Join(" und ", teile) + " ergänzt.";
+    }
+
+    /// <summary>
+    /// Die Leitungen des Hauptprojekts nach Namen. Dieselbe Regel fuer jeden
+    /// Weg, damit nicht einer etwas findet und der andere nicht.
+    /// </summary>
+    private IReadOnlyDictionary<string, Guid> HaltungsIdsNachName()
+    {
+        var idsByName = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var record in _getProject().Data)
+        {
+            var name = (record.GetFieldValue(FieldKeys.HoldingName) ?? string.Empty).Trim();
+            if (name.Length > 0)
+                idsByName[name] = record.Id;
+        }
+
+        return idsByName;
+    }
+
+    /// <summary>
+    /// Die Schaechte, die das Hauptprojekt wirklich fuehrt. Einzelanlage und
+    /// Stapel lesen dieselbe Liste — zwei Kopien derselben Abfrage waren in
+    /// diesem Programm schon einmal der Grund, dass ein Weg etwas fand und
+    /// der andere nicht.
+    /// </summary>
+    private IReadOnlyList<string> ProjektSchachtnummern()
+        => _getProject().SchaechteData
+            .Select(s => (s.GetFieldValue("Schachtnummer") ?? string.Empty).Trim())
+            .Where(n => n.Length > 0)
+            .ToList();
 
     private async Task<bool> SaveDocumentAsync(string root)
     {

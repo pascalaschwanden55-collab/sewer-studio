@@ -309,6 +309,19 @@ public sealed class DossierDefinition
     /// </summary>
     public List<string> ShaftNumbers { get; set; } = new();
 
+    /// <summary>
+    /// Leitungen, die das Nachfuehren schon einmal vorgeschlagen hat und die
+    /// abgelehnt wurden.
+    ///
+    /// Ohne dieses Gedaechtnis wuerde jede Nachfuehrung dieselbe entfernte
+    /// Leitung erneut anbieten. Eine bewusste Entscheidung soll nicht bei
+    /// jedem Lauf wieder zur Frage werden.
+    /// </summary>
+    public List<Guid> DismissedHoldingIds { get; set; } = new();
+
+    /// <summary>Schaechte, die beim Nachfuehren abgelehnt wurden.</summary>
+    public List<string> DismissedShaftNumbers { get; set; } = new();
+
     // ── Ueberschreibbare Gebietsfelder (null/leer = vom Gebiet erben) ─────
     public string? ExecutionDateOverride { get; set; }
     public string? ContactPersonOverride { get; set; }

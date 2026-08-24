@@ -41,7 +41,9 @@ public sealed class DossierBatchCreationUseCaseTests
         };
 
         var dossiers = DossierBatchCreationUseCase.Build(
-            new[] { new DossierCreationSelection(Vorschlag(), new[] { "36051-36329" }) }, ids);
+            new[] { new DossierCreationSelection(Vorschlag(), new[] { "36051-36329" }) },
+            ids,
+            Array.Empty<string>());
 
         var dossier = Assert.Single(dossiers);
         Assert.Equal("Liegenschaft Nr. 439 Beispiel", dossier.Name);
@@ -71,7 +73,9 @@ public sealed class DossierBatchCreationUseCaseTests
         };
 
         var dossiers = DossierBatchCreationUseCase.Build(
-            new[] { new DossierCreationSelection(Vorschlag(), Array.Empty<string>()) }, ids);
+            new[] { new DossierCreationSelection(Vorschlag(), Array.Empty<string>()) },
+            ids,
+            Array.Empty<string>());
 
         Assert.Empty(Assert.Single(dossiers).HoldingIds);
     }
@@ -81,7 +85,8 @@ public sealed class DossierBatchCreationUseCaseTests
     {
         var dossiers = DossierBatchCreationUseCase.Build(
             new[] { new DossierCreationSelection(Vorschlag(), new[] { "36051-36329" }) },
-            new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase));
+            new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase),
+            Array.Empty<string>());
 
         Assert.Empty(Assert.Single(dossiers).HoldingIds);
     }
@@ -93,8 +98,32 @@ public sealed class DossierBatchCreationUseCaseTests
 
         var dossiers = DossierBatchCreationUseCase.Build(
             new[] { new DossierCreationSelection(gesperrt, new[] { "36051-36329" }) },
-            new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase));
+            new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase),
+            Array.Empty<string>());
 
         Assert.Empty(dossiers);
+    }
+
+    [Fact]
+    public void Ein_Stapel_Dossier_bekommt_die_Schaechte_seiner_Parzelle()
+    {
+        // Vorher vergab der Stapel ueberhaupt keine Schaechte: die Dossiers
+        // kamen leer heraus, und niemand sah einer leeren Liste an, ob es
+        // keine gibt oder ob nur niemand gesucht hat.
+        var ids = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["439.01-36051"] = Guid.NewGuid()
+        };
+
+        var dossiers = DossierBatchCreationUseCase.Build(
+            new[] { new DossierCreationSelection(Vorschlag(), new[] { "439.01-36051" }) },
+            ids,
+            new[] { "439.01", "36051", "439.02", "512.01" });
+
+        var dossier = Assert.Single(dossiers);
+
+        // Knoten der Leitung zuerst, danach der nur ueber seinen Namen
+        // gefundene Schacht derselben Parzelle. "512.01" gehoert nicht dazu.
+        Assert.Equal(new[] { "439.01", "36051", "439.02" }, dossier.ShaftNumbers);
     }
 }

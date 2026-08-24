@@ -38,6 +38,13 @@ public partial class DossierParcelLookupWindow : Window
     private readonly IReadOnlyList<string> _projectShaftNumbers;
 
     private DossierDefinition? _ergebnis;
+
+    /// <summary>
+    /// Die bestaetigte Parzellennummer des Parzellendienstes. Bewusst NICHT
+    /// aus dem Eingabefeld: dort kann inzwischen etwas anderes stehen, und die
+    /// Schaechte sollen zu der Parzelle gehoeren, die wirklich gefunden wurde.
+    /// </summary>
+    private string? _parzellenNummer;
     private readonly List<CheckBox> _leitungen = new();
     private TextBlock? _schachtZeile;
 
@@ -96,7 +103,8 @@ public partial class DossierParcelLookupWindow : Window
         return new DossierParcelLookupChoice(
             window._ergebnis,
             gewaehlt,
-            ParcelHoldingAndShaftMatcher.ShaftsOfHoldings(gewaehlt, projectShaftNumbers));
+            ParcelHoldingAndShaftMatcher.ShaftsForParcel(
+                gewaehlt, projectShaftNumbers, window._parzellenNummer));
     }
 
     private IReadOnlyList<string> GewaehlteLeitungen()
@@ -139,6 +147,7 @@ public partial class DossierParcelLookupWindow : Window
         LookupButton.IsEnabled = false;
         AcceptButton.IsEnabled = false;
         _ergebnis = null;
+        _parzellenNummer = null;
 
         try
         {
@@ -226,6 +235,7 @@ public partial class DossierParcelLookupWindow : Window
         }
 
         _ergebnis = ergebnis.Dossier;
+        _parzellenNummer = ergebnis.Parcel?.Number;
         AcceptButton.IsEnabled = true;
         StatusText.Text = "Gefunden.";
 
@@ -352,21 +362,24 @@ public partial class DossierParcelLookupWindow : Window
     }
 
     /// <summary>
-    /// Die Schaechte ergeben sich aus den Knotennamen der angehakten Leitungen
-    /// und aendern sich deshalb mit jedem Haken. Aufgenommen wird nur, was das
-    /// Hauptprojekt als Schacht fuehrt.
+    /// Die Schaechte kommen aus den Knoten der angehakten Leitungen UND aus
+    /// den Schachtnamen, die selbst auf die Parzelle zeigen. Die erste Haelfte
+    /// aendert sich mit jedem Haken, die zweite steht fest. Aufgenommen wird
+    /// nur, was das Hauptprojekt als Schacht fuehrt.
     /// </summary>
     private void ZeigeSchaechte()
     {
         if (_schachtZeile is null)
             return;
 
-        var schaechte = ParcelHoldingAndShaftMatcher.ShaftsOfHoldings(
-            GewaehlteLeitungen(), _projectShaftNumbers);
+        var schaechte = ParcelHoldingAndShaftMatcher.ShaftsForParcel(
+            GewaehlteLeitungen(), _projectShaftNumbers, _parzellenNummer);
 
         _schachtZeile.Text = schaechte.Count == 0
-            ? "Keine Schächte — zu den gewählten Leitungen führt das Projekt keinen Schacht."
-            : schaechte.Count + " Schächte kommen mit: " + string.Join(", ", schaechte);
+            ? "Keine Schächte — das Projekt führt auf dieser Parzelle keinen Schacht."
+            : schaechte.Count == 1
+                ? "1 Schacht kommt mit: " + schaechte[0]
+                : schaechte.Count + " Schächte kommen mit: " + string.Join(", ", schaechte);
     }
 
     private void Zeile(string beschriftung, string wert)

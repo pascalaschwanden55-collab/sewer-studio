@@ -15,6 +15,7 @@ using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Dossiers.Lookup;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Models.Dossiers;
+using AuswertungPro.Next.UI.Dossiers;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -102,6 +103,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     private readonly ToastService _toasts;
     private readonly ISafeShellOpenService _shellOpen;
     private readonly IExplorerRevealService _explorerReveal;
+    private readonly DossierHoldingActionController _holdingActions;
 
     private DossierDocument _document = new();
     private bool _loaded;
@@ -124,7 +126,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         IDialogService dialogs,
         ToastService toasts,
         ISafeShellOpenService shellOpen,
-        IExplorerRevealService explorerReveal)
+        IExplorerRevealService explorerReveal,
+        DossierHoldingActionController holdingActions)
     {
         _getProject = getProject ?? throw new ArgumentNullException(nameof(getProject));
         _getProjectFolder = getProjectFolder ?? throw new ArgumentNullException(nameof(getProjectFolder));
@@ -144,6 +147,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         _toasts = toasts ?? throw new ArgumentNullException(nameof(toasts));
         _shellOpen = shellOpen ?? throw new ArgumentNullException(nameof(shellOpen));
         _explorerReveal = explorerReveal ?? throw new ArgumentNullException(nameof(explorerReveal));
+        _holdingActions = holdingActions ?? throw new ArgumentNullException(nameof(holdingActions));
 
         NewDossierCommand = new AsyncRelayCommand(CreateDossierAsync);
         DeleteDossierCommand = new AsyncRelayCommand(DeleteDossierAsync, () => Selected is not null);
@@ -159,7 +163,19 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         SetStatusCommand = new AsyncRelayCommand<DossierStatus?>(SetDossierStatusAsync);
         OpenTemplateCommand = new AsyncRelayCommand(OpenTemplateAsync);
         RefreshCommand = new AsyncRelayCommand(ReloadAsync);
+        SaveCommand = new AsyncRelayCommand(SaveNowAsync);
+        RefreshDossierCommand = new AsyncRelayCommand(
+            RefreshDossierAsync, () => Selected is not null);
         CreateFromProjectCommand = new AsyncRelayCommand(CreateFromProjectAsync);
+        PlayHoldingVideoCommand = new RelayCommand<DossierHoldingRow?>(
+            PlayHoldingVideo,
+            row => row is not null);
+        OpenHoldingProtocolCommand = new RelayCommand<DossierHoldingRow?>(
+            OpenHoldingProtocol,
+            row => row is not null);
+        NavigateToHoldingCommand = new RelayCommand<DossierHoldingRow?>(
+            NavigateToHolding,
+            row => row is not null);
 
         _ = ReloadAsync();
     }
@@ -186,7 +202,19 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     public IAsyncRelayCommand<DossierStatus?> SetStatusCommand { get; }
     public IAsyncRelayCommand OpenTemplateCommand { get; }
     public IAsyncRelayCommand RefreshCommand { get; }
+
+    /// <summary>Speichert den aktuellen Stand der Dossiers von Hand.</summary>
+    public IAsyncRelayCommand SaveCommand { get; }
+
+    /// <summary>
+    /// Ergaenzt das gewaehlte Dossier um Leitungen und Schaechte, die das
+    /// Projekt inzwischen kennt.
+    /// </summary>
+    public IAsyncRelayCommand RefreshDossierCommand { get; }
     public IAsyncRelayCommand CreateFromProjectCommand { get; }
+    public IRelayCommand<DossierHoldingRow?> PlayHoldingVideoCommand { get; }
+    public IRelayCommand<DossierHoldingRow?> OpenHoldingProtocolCommand { get; }
+    public IRelayCommand<DossierHoldingRow?> NavigateToHoldingCommand { get; }
 
     [ObservableProperty]
     private DossierListItem? _selected;
@@ -353,6 +381,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         foreach (var holding in snapshot.Holdings)
         {
             HoldingRows.Add(new DossierHoldingRow(
+                holding.HoldingId,
                 holding.HoldingName,
                 holding.LengthMeters is > 0
                     ? holding.LengthMeters.Value.ToString("0.00", Ch) + " m"
@@ -423,10 +452,29 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         AssemblePdfCommand.NotifyCanExecuteChanged();
         OpenFolderCommand.NotifyCanExecuteChanged();
     }
+
+    private void PlayHoldingVideo(DossierHoldingRow? row)
+    {
+        if (row is not null)
+            _holdingActions.PlayVideo(row.HoldingId);
+    }
+
+    private void OpenHoldingProtocol(DossierHoldingRow? row)
+    {
+        if (row is not null)
+            _holdingActions.OpenProtocol(row.HoldingId);
+    }
+
+    private void NavigateToHolding(DossierHoldingRow? row)
+    {
+        if (row is not null)
+            _holdingActions.NavigateToHolding(row.HoldingId);
+    }
 }
 
 /// <summary>Eine Leitungszeile im Dossier-Cockpit.</summary>
 public sealed record DossierHoldingRow(
+    Guid HoldingId,
     string Holding,
     string Length,
     string Condition,

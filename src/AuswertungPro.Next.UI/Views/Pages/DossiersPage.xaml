@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:dossiers="clr-namespace:AuswertungPro.Next.Domain.Models.Dossiers;assembly=AuswertungPro.Next.Domain">
 
     <UserControl.Resources>
@@ -62,6 +63,9 @@
                     <Button Content="Word-Vorlage" Padding="12,7" Margin="0,0,8,0"
                             ToolTip="Die ausgelieferte Vorlage in Word öffnen und anpassen"
                             Command="{Binding OpenTemplateCommand}"/>
+                    <Button Content="Speichern" Padding="12,7" Margin="0,0,8,0"
+                            ToolTip="Schreibt den aktuellen Stand der Dossiers auf die Platte"
+                            Command="{Binding SaveCommand}"/>
                     <Button Content="Aktualisieren" Padding="12,7"
                             Command="{Binding RefreshCommand}"/>
                     <Button Content="Aus Projekt erzeugen" Padding="12,7" Margin="8,0,0,0"
@@ -284,13 +288,42 @@
                         <Border Grid.Row="4"
                                 BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1" CornerRadius="10">
-                            <DataGrid ItemsSource="{Binding HoldingRows}"
+                            <DataGrid x:Name="HoldingGrid"
+                                      ItemsSource="{Binding HoldingRows}"
                                       AutoGenerateColumns="False"
                                       IsReadOnly="True"
                                       HeadersVisibility="Column"
                                       GridLinesVisibility="Horizontal"
                                       Background="Transparent"
-                                      BorderThickness="0">
+                                      BorderThickness="0"
+                                      PreviewMouseRightButtonDown="HoldingGrid_PreviewMouseRightButtonDown">
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Video abspielen"
+                                                  Command="{Binding PlacementTarget.DataContext.PlayHoldingVideoCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                                  CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}">
+                                            <MenuItem.Icon>
+                                                <ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource MutedBrush}"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Haltungsprotokoll (PDF) öffnen…"
+                                                  Command="{Binding PlacementTarget.DataContext.OpenHoldingProtocolCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                                  CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}">
+                                            <MenuItem.Icon>
+                                                <ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator/>
+                                        <MenuItem Header="Zur Haltung"
+                                                  ToolTip="Im Menü Haltungen öffnen"
+                                                  Command="{Binding PlacementTarget.DataContext.NavigateToHoldingCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                                  CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}">
+                                            <MenuItem.Icon>
+                                                <ui:FluentIcon Glyph="&#xE72A;" Foreground="{DynamicResource AccentBrush}"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Leitung" Width="200"
                                                         Binding="{Binding Holding}"/>
@@ -310,6 +343,9 @@
                         <WrapPanel Grid.Row="5" Margin="0,14,0,0">
                             <Button Content="Leitungen wählen…" Padding="12,7" Margin="0,0,8,8"
                                     Command="{Binding EditHoldingsCommand}"/>
+                            <Button Content="Nachführen" Padding="12,7" Margin="0,0,8,8"
+                                    ToolTip="Ergänzt Leitungen und Schächte, die das Projekt inzwischen kennt. Entfernt nie etwas."
+                                    Command="{Binding RefreshDossierCommand}"/>
                             <Button Content="Stammdaten…" Padding="12,7" Margin="0,0,8,8"
                                     Command="{Binding EditDossierCommand}"/>
                             <Button Content="Vorschau" Padding="12,7" Margin="0,0,8,8"
