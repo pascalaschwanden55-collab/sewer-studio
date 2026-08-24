@@ -109,6 +109,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     private readonly IExplorerRevealService _explorerReveal;
     private readonly DossierHoldingActionController _holdingActions;
 
+    private readonly DossierCostCache _costs;
+
     private DossierDocument _document = new();
     private bool _loaded;
 
@@ -152,6 +154,9 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         _shellOpen = shellOpen ?? throw new ArgumentNullException(nameof(shellOpen));
         _explorerReveal = explorerReveal ?? throw new ArgumentNullException(nameof(explorerReveal));
         _holdingActions = holdingActions ?? throw new ArgumentNullException(nameof(holdingActions));
+
+        _costs = new DossierCostCache(() => new DossierCostSnapshot(
+            LoadCosts(), LoadSchachtCosts()));
 
         NewDossierCommand = new AsyncRelayCommand(CreateDossierAsync);
         DeleteDossierCommand = new AsyncRelayCommand(DeleteDossierAsync, () => Selected is not null);
@@ -285,6 +290,9 @@ public sealed partial class DossiersPageViewModel : ObservableObject
 
     private async Task ReloadAsync()
     {
+        // „Aktualisieren" heisst auch: die Kostendateien erneut lesen.
+        _costs.Invalidate();
+
         var root = _getProjectFolder();
         if (string.IsNullOrWhiteSpace(root))
         {
@@ -321,13 +329,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         var previous = Selected?.Id;
         Dossiers.Clear();
 
-        // Die Kostendateien einmal fuer den ganzen Aufbau lesen, nicht je
-        // Liegenschaft erneut: bei einem Gebiet mit vielen Dossiers waeren das
-        // sonst Dutzende Dateizugriffe fuer immer dieselben Zahlen.
-        var kosten = LoadCostSnapshot();
-
         foreach (var definition in _document.Dossiers.OrderBy(d => d.Name, StringComparer.CurrentCultureIgnoreCase))
-            Dossiers.Add(new DossierListItem(definition, BuildSnapshot(definition, kosten)));
+            Dossiers.Add(new DossierListItem(definition, BuildSnapshot(definition)));
 
         Selected = previous is null
             ? Dossiers.FirstOrDefault()
@@ -337,26 +340,12 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         RefreshDetail();
     }
 
-    /// <summary>
-    /// Die Kostendateien eines Durchgangs. Sie werden bewusst gemeinsam
-    /// gelesen und weitergereicht, damit ein Aufbau mit vielen Liegenschaften
-    /// nicht dieselben Dateien dutzendfach oeffnet.
-    /// </summary>
-    private sealed record DossierCostSnapshot(
-        ProjectCostStore Haltungen,
-        ProjectCostStore Schaechte);
-
-    private DossierCostSnapshot LoadCostSnapshot()
-        => new(LoadCosts(), LoadSchachtCosts());
-
-    private DossierSnapshot BuildSnapshot(
-        DossierDefinition definition,
-        DossierCostSnapshot? kosten = null)
+    private DossierSnapshot BuildSnapshot(DossierDefinition definition)
     {
-        var geladen = kosten ?? LoadCostSnapshot();
+        var kosten = _costs.Get();
 
         return DossierSnapshotBuilder.Build(
-            definition, _getProject(), geladen.Haltungen, geladen.Schaechte);
+            definition, _getProject(), kosten.Haltungen, kosten.Schaechte);
     }
 
     private ProjectCostStore LoadCosts()

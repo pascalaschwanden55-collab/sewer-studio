@@ -129,7 +129,7 @@ public static class DossierSnapshotBuilder
         var statistics = DashboardStatisticsBuilder.Build(
             scopedProject,
             scopedCosts,
-            schachtCosts is null ? new ProjectCostStore() : FilterEmpty(schachtCosts));
+            schachtCosts is null ? new ProjectCostStore() : OhneKennzahlKosten(schachtCosts));
 
         var (shaftLines, missingShafts) = BuildShaftLines(definition, project, schachtCosts);
 
@@ -273,10 +273,17 @@ public static class DossierSnapshotBuilder
     }
 
     /// <summary>
-    /// Schachtkosten gehoeren derzeit nicht zum Eigentuemerdossier. Sie werden
-    /// bewusst leer weitergereicht statt die Kosten des ganzen Gebiets zu zeigen.
+    /// Ein leerer Kostenstand fuer die Kennzahl-Kacheln.
+    ///
+    /// Die Schachtkosten stehen in der Schacht-Tabelle und im Dossier, aber
+    /// NICHT in den Kacheln „Sanierungskosten" und „Dringend": dort wuerden
+    /// sonst die Kosten des ganzen Gebiets erscheinen, weil die Statistik den
+    /// Kostenstand nicht auf die Schaechte dieser Liegenschaft eingrenzt.
+    ///
+    /// Der frueher hier stehende Name „FilterEmpty" taeuschte — gefiltert wird
+    /// nichts, es wird alles verworfen.
     /// </summary>
-    private static ProjectCostStore FilterEmpty(ProjectCostStore _) => new();
+    private static ProjectCostStore OhneKennzahlKosten(ProjectCostStore _) => new();
 
     private static HoldingCost? TryGetCost(
         IReadOnlyDictionary<string, HoldingCost> costMap,

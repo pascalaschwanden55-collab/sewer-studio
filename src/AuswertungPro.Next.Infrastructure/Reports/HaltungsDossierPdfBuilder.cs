@@ -76,10 +76,12 @@ public static class HaltungsDossierPdfBuilder
             if (options.IncludeHaltungsprotokoll)
             {
                 var doc = record.Protocol ?? new ProtocolDocument();
-                var exporter = new ProtocolPdfExporter();
-                var protocolBytes = exporter.BuildHaltungsprotokollPdf(project, record, doc, projectRootAbs, haltungsprotokollOpts);
 
-                // Embed as pre-built pages
+                // Frueher wurde hier zusaetzlich ein vollstaendiges
+                // Haltungsprotokoll-PDF erzeugt und danach weggeworfen: die
+                // Seiten entstehen unten ohnehin frisch ueber
+                // ComposeHaltungsprotokollContent. Das kostete je Haltung
+                // einen kompletten PDF-Aufbau ohne jede Wirkung.
                 container.Page(page =>
                 {
                     page.Margin(25);
