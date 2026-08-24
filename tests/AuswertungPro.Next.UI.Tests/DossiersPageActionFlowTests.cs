@@ -57,7 +57,9 @@ public sealed class DossiersPageActionFlowTests : IDisposable
             shellOpen: new NichtsOeffnen(),
             explorerReveal: new NichtsZeigen(),
             holdingActions: new DossierHoldingActionController(
-                () => _project, new StilleDialoge(), _ => { }, _ => { }, _ => { }));
+                () => _project, new StilleDialoge(), _ => { }, _ => { }, _ => { }),
+            shaftActions: new DossierShaftActionController(
+                () => _project, new StilleDialoge(), _ => { }, _ => { }));
 
         // Der Konstruktor laedt im Hintergrund; abwarten.
         SpinWait.SpinUntil(() => _store.Geladen, TimeSpan.FromSeconds(5));

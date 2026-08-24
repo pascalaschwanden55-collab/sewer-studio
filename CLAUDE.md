@@ -65,6 +65,12 @@
   `DataPageVideoPlaybackController`-, `DataPageOriginalPdfController`- und sicheren
   Pfadaufloesungswege. `ShellViewModel.NavigateToHolding` ist der gemeinsame direkte
   Sprung fuer Dossier und Karte und selektiert den Projektdatensatz im Menue `Haltungen`.
+- Auch `DossierShaftRow` behaelt seine eindeutige `ShaftId`. Das Schacht-Rechtsklick-Menue
+  delegiert Protokolloeffnung und Navigation an `DossierShaftActionController`.
+  `DossierShaftActionFactory` verwendet fuer die PDF denselben
+  `SchaechteFileActionController` wie die Seite `Schaechte`; die Seite selbst waehlt nur
+  die rechts angeklickte Zeile aus. `ShellViewModel.NavigateToShaft` oeffnet `Schaechte`
+  und selektiert dort den Originaldatensatz.
 
 ## Aktueller Pipeline-Ablauf
 1. UI/Service startet Analyse ueber `VideoAnalysisPipelineService`, `SingleFrameMultiModelService` oder `VideoFullAnalysisService`.

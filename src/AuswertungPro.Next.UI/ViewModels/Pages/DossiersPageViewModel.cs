@@ -103,6 +103,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     private readonly ISafeShellOpenService _shellOpen;
     private readonly IExplorerRevealService _explorerReveal;
     private readonly DossierHoldingActionController _holdingActions;
+    private readonly DossierShaftActionController _shaftActions;
 
     private readonly DossierCostCache _costs;
 
@@ -123,7 +124,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         ToastService toasts,
         ISafeShellOpenService shellOpen,
         IExplorerRevealService explorerReveal,
-        DossierHoldingActionController holdingActions)
+        DossierHoldingActionController holdingActions,
+        DossierShaftActionController shaftActions)
     {
         _getProject = getProject ?? throw new ArgumentNullException(nameof(getProject));
         _getProjectFolder = getProjectFolder ?? throw new ArgumentNullException(nameof(getProjectFolder));
@@ -139,6 +141,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         _shellOpen = shellOpen ?? throw new ArgumentNullException(nameof(shellOpen));
         _explorerReveal = explorerReveal ?? throw new ArgumentNullException(nameof(explorerReveal));
         _holdingActions = holdingActions ?? throw new ArgumentNullException(nameof(holdingActions));
+        _shaftActions = shaftActions ?? throw new ArgumentNullException(nameof(shaftActions));
 
         _costs = new DossierCostCache(() => new DossierCostSnapshot(
             LoadCosts(), LoadSchachtCosts()));
@@ -170,6 +173,12 @@ public sealed partial class DossiersPageViewModel : ObservableObject
             row => row is not null);
         NavigateToHoldingCommand = new RelayCommand<DossierHoldingRow?>(
             NavigateToHolding,
+            row => row is not null);
+        OpenShaftProtocolCommand = new RelayCommand<DossierShaftRow?>(
+            OpenShaftProtocol,
+            row => row is not null);
+        NavigateToShaftCommand = new RelayCommand<DossierShaftRow?>(
+            NavigateToShaft,
             row => row is not null);
 
         _ = ReloadAsync();
@@ -216,6 +225,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     public IRelayCommand<DossierHoldingRow?> PlayHoldingVideoCommand { get; }
     public IRelayCommand<DossierHoldingRow?> OpenHoldingProtocolCommand { get; }
     public IRelayCommand<DossierHoldingRow?> NavigateToHoldingCommand { get; }
+    public IRelayCommand<DossierShaftRow?> OpenShaftProtocolCommand { get; }
+    public IRelayCommand<DossierShaftRow?> NavigateToShaftCommand { get; }
 
     [ObservableProperty]
     private DossierListItem? _selected;
@@ -579,6 +590,18 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     {
         if (row is not null)
             _holdingActions.NavigateToHolding(row.HoldingId);
+    }
+
+    private void OpenShaftProtocol(DossierShaftRow? row)
+    {
+        if (row is not null)
+            _shaftActions.OpenProtocol(row.ShaftId);
+    }
+
+    private void NavigateToShaft(DossierShaftRow? row)
+    {
+        if (row is not null)
+            _shaftActions.NavigateToShaft(row.ShaftId);
     }
 }
 

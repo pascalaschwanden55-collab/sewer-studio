@@ -83,13 +83,19 @@ public partial class DossiersPage : UserControl
 
     /// <summary>Ein Rechtsklick arbeitet immer auf der Zeile direkt unter dem Mauszeiger.</summary>
     private void HoldingGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        => SelectRowUnderPointer(HoldingGrid, e);
+
+    /// <summary>Auch beim Schacht gilt immer die direkt angeklickte Zeile.</summary>
+    private void ShaftGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        => SelectRowUnderPointer(ShaftGrid, e);
+
+    private static void SelectRowUnderPointer(DataGrid grid, MouseButtonEventArgs e)
     {
-        _ = sender;
         if (e.OriginalSource is not DependencyObject source)
             return;
 
         var row = VisualTreeSafe.FindAncestor<DataGridRow>(source);
         if (row is not null)
-            HoldingGrid.SelectedItem = row.Item;
+            grid.SelectedItem = row.Item;
     }
 }

@@ -187,7 +187,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 toasts: _sp.Toasts,
                 shellOpen: _sp.ShellOpen,
                 explorerReveal: _sp.ExplorerReveal,
-                holdingActions: DossierHoldingActionFactory.Create(this, _sp))),
+                holdingActions: DossierHoldingActionFactory.Create(this, _sp),
+                shaftActions: DossierShaftActionFactory.Create(this, _sp))),
             new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(this, _sp)),
             new("\uE80A", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(this, _sp)),
             // Segoe MDL2 E8AA = "ViewAll": zwei Auswertungen nebeneinander (Mensch vs. Schatten-KI)
@@ -439,6 +440,21 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         dataPage.Selected = record;
         var name = record.GetFieldValue(FieldKeys.HoldingName) ?? "(ohne Name)";
         SetStatus($"Haltung geoeffnet: {name}");
+    }
+
+    /// <summary>Oeffnet die Schachtseite und waehlt dort genau diesen Schacht aus.</summary>
+    public void NavigateToShaft(SchachtRecord? record)
+    {
+        if (record is null)
+            return;
+
+        NavigateTo("Schaechte");
+        if (CurrentPage is not Pages.SchaechtePageViewModel shaftPage)
+            return;
+
+        shaftPage.Selected = record;
+        var number = SchaechteColumnPolicy.GetSchachtNumber(record);
+        SetStatus($"Schacht geoeffnet: {number}");
     }
 
     public void NavigateToSanierungsMatrix(string? holding, bool singleHoldingMode = false, HaltungRecord? targetRecord = null)

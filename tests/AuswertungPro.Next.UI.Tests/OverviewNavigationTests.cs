@@ -60,6 +60,21 @@ public sealed class OverviewNavigationTests
         Assert.Same(record, dataPage.Selected);
     }
 
+    [Fact]
+    public void NavigateToShaft_oeffnet_Schaechte_und_waehlt_den_Datensatz()
+    {
+        using var scope = CreateOverview();
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", "36051");
+        scope.Shell.Project.SchaechteData.Add(record);
+
+        scope.Shell.NavigateToShaft(record);
+
+        Assert.Equal("Schaechte", scope.Shell.SelectedNavItem?.Title);
+        var shaftPage = Assert.IsType<SchaechtePageViewModel>(scope.Shell.CurrentPage);
+        Assert.Same(record, shaftPage.Selected);
+    }
+
     private static OverviewScope CreateOverview()
     {
         var loggerFactory = LoggerFactory.Create(_ => { });
