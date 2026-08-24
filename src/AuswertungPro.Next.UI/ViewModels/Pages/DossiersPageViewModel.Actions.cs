@@ -355,38 +355,31 @@ public sealed partial class DossiersPageViewModel
         _explorerReveal.TryReveal(folder, out _);
     }
 
-    private async Task ResetTemplateAsync()
+    /// <summary>
+    /// Oeffnet die ausgelieferte Word-Vorlage. Sie ist eine von Hand gestaltete
+    /// Datei und wird nicht aus Code erzeugt — ein "Zuruecksetzen" gibt es
+    /// deshalb nicht mehr; es haette die Vorlage nur zerstoert.
+    /// </summary>
+    private Task OpenTemplateAsync()
     {
         var path = DossierWordTemplateExportService.DefaultTemplatePath();
 
-        if (File.Exists(path)
-            && !_dialogs.ConfirmWarn(
-                "Die vorhandene Word-Vorlage wird durch die Standardvorlage ersetzt.\n\n"
-                + $"Datei: {path}\n\n"
-                + "Eigene Änderungen an der Vorlage gehen dabei verloren. Fortfahren?",
-                "Vorlage zurücksetzen"))
+        if (!File.Exists(path))
         {
-            return;
-        }
-
-        try
-        {
-            await Task.Run(() => DossierWordTemplateBuilder.WriteTo(path));
-            StatusMessage = "Standardvorlage wurde neu erstellt.";
-            _toasts.Success(StatusMessage);
-
-            if (_dialogs.Confirm(
-                    "Vorlage neu erstellt.\n\nJetzt in Word öffnen, um sie anzupassen?",
-                    "Word-Vorlage"))
-            {
-                _shellOpen.TryOpen(path, out _);
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "Die Vorlage konnte nicht erstellt werden: " + ex.Message;
+            StatusMessage = "Die Word-Vorlage fehlt: " + path;
             _dialogs.Error(StatusMessage, "Word-Vorlage");
+            return Task.CompletedTask;
         }
+
+        if (!_shellOpen.TryOpen(path, out var fehler))
+        {
+            StatusMessage = "Die Vorlage konnte nicht geöffnet werden: " + fehler;
+            _dialogs.Error(StatusMessage, "Word-Vorlage");
+            return Task.CompletedTask;
+        }
+
+        StatusMessage = "Word-Vorlage geöffnet.";
+        return Task.CompletedTask;
     }
 
     // ── Hilfen ────────────────────────────────────────────────────────────

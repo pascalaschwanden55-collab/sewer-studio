@@ -144,7 +144,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         AssemblePdfCommand = new AsyncRelayCommand(AssemblePdfAsync, () => Selected is not null);
         OpenFolderCommand = new RelayCommand(OpenFolder, () => Selected is not null);
         SetStatusCommand = new AsyncRelayCommand<DossierStatus?>(SetDossierStatusAsync);
-        ResetTemplateCommand = new AsyncRelayCommand(ResetTemplateAsync);
+        OpenTemplateCommand = new AsyncRelayCommand(OpenTemplateAsync);
         RefreshCommand = new AsyncRelayCommand(ReloadAsync);
         CreateFromProjectCommand = new AsyncRelayCommand(CreateFromProjectAsync);
 
@@ -169,7 +169,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     public IAsyncRelayCommand AssemblePdfCommand { get; }
     public IRelayCommand OpenFolderCommand { get; }
     public IAsyncRelayCommand<DossierStatus?> SetStatusCommand { get; }
-    public IAsyncRelayCommand ResetTemplateCommand { get; }
+    public IAsyncRelayCommand OpenTemplateCommand { get; }
     public IAsyncRelayCommand RefreshCommand { get; }
     public IAsyncRelayCommand CreateFromProjectCommand { get; }
 

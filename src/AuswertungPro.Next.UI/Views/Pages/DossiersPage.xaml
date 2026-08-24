@@ -60,8 +60,8 @@
                     <Button Content="Gebietsangaben" Padding="12,7" Margin="0,0,8,0"
                             Command="{Binding EditAreaCommand}"/>
                     <Button Content="Word-Vorlage" Padding="12,7" Margin="0,0,8,0"
-                            ToolTip="Standardvorlage neu erstellen und in Word öffnen"
-                            Command="{Binding ResetTemplateCommand}"/>
+                            ToolTip="Die ausgelieferte Vorlage in Word öffnen und anpassen"
+                            Command="{Binding OpenTemplateCommand}"/>
                     <Button Content="Aktualisieren" Padding="12,7"
                             Command="{Binding RefreshCommand}"/>
                     <Button Content="Aus Projekt erzeugen" Padding="12,7" Margin="8,0,0,0"

@@ -42,7 +42,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         => Path.Combine(
             AppContext.BaseDirectory,
             "Export_Vorlage",
-            DossierWordTemplateBuilder.TemplateFileName);
+            DossierWordTemplate.TemplateFileName);
 
     public Task<DossierWordExportResult> ExportAsync(
         DossierExportRequest request,
@@ -189,8 +189,73 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             ["Kosten_Total"] = FormatChf(snapshot.NetCostTotal),
             ["Kosten_Hinweis"] = snapshot.NetCostTotal > 0m
                 ? "Kostenangaben ohne MWST, Stand " + today.ToString("dd.MM.yyyy", Ch) + "."
-                : string.Empty
+                : string.Empty,
+            ["Haltungen_Text"] = BuildHoldingsText(snapshot),
+            ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
         };
+    }
+
+    /// <summary>
+    /// Die ausgewaehlten Leitungen als Textblock — eine Zeile je Leitung.
+    ///
+    /// Die Vorlage kann sie stattdessen auch als Tabelle fuehren; dafuer gibt es
+    /// die Wiederholzeile <c>{{#Haltungen}}</c>. Der Textblock ist der Weg, der
+    /// ohne Tabellenbau in Word auskommt.
+    /// </summary>
+    private static string BuildHoldingsText(DossierSnapshot snapshot)
+    {
+        if (snapshot.Holdings.Count == 0)
+            return "Keine Leitungen zugeordnet.";
+
+        var zeilen = new List<string>();
+        foreach (var holding in snapshot.Holdings)
+        {
+            var teile = new List<string> { holding.HoldingName };
+
+            if (!string.IsNullOrWhiteSpace(holding.Street))
+                teile.Add(holding.Street);
+
+            var laenge = FormatLength(holding.LengthMeters);
+            if (!string.IsNullOrWhiteSpace(laenge))
+                teile.Add(laenge);
+
+            var zustand = FormatCondition(holding.ConditionClass);
+            if (!string.IsNullOrWhiteSpace(zustand))
+                teile.Add(zustand);
+
+            if (!string.IsNullOrWhiteSpace(holding.Measures))
+                teile.Add(holding.Measures);
+
+            if (holding.NetCost > 0m)
+                teile.Add(FormatChf(holding.NetCost));
+
+            zeilen.Add(string.Join(" · ", teile));
+        }
+
+        return string.Join(Environment.NewLine, zeilen);
+    }
+
+    private static string BuildHoldingsSummary(DossierSnapshot snapshot, DateTime today)
+    {
+        if (snapshot.Holdings.Count == 0)
+            return string.Empty;
+
+        var teile = new List<string>
+        {
+            snapshot.HoldingCount == 1 ? "1 Leitung" : snapshot.HoldingCount + " Leitungen"
+        };
+
+        var laenge = FormatLength(snapshot.LengthTotal);
+        if (!string.IsNullOrWhiteSpace(laenge))
+            teile.Add("Gesamtlänge " + laenge);
+
+        if (snapshot.NetCostTotal > 0m)
+        {
+            teile.Add("Kostenschätzung " + FormatChf(snapshot.NetCostTotal)
+                + " (ohne MWST, Stand " + today.ToString("dd.MM.yyyy", Ch) + ")");
+        }
+
+        return string.Join(" · ", teile);
     }
 
     private static List<IReadOnlyDictionary<string, string>> BuildHoldingRows(

@@ -476,11 +476,25 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         Assert.Contains("Erstfeld West", text, StringComparison.Ordinal);
     }
 
+    private static string AusgelieferteVorlage()
+    {
+        var wurzel = new AuswertungPro.Next.Infrastructure.Backup.RepositoryRootFileLocator()
+            .Locate(AppContext.BaseDirectory);
+        Assert.NotNull(wurzel);
+
+        var pfad = Path.Combine(wurzel!, "Export_Vorlage", DossierWordTemplate.TemplateFileName);
+        Assert.True(File.Exists(pfad), $"'{pfad}' fehlt.");
+        return pfad;
+    }
+
     private (DossierExportRequest Request, string TemplatePath) BuildScenario(
         bool withHoldings = true)
     {
-        var templatePath = Path.Combine(_root, "Vorlage", "Eigentuemerdossier.docx");
-        DossierWordTemplateBuilder.WriteTo(templatePath);
+        // Geprueft wird gegen die WIRKLICH ausgelieferte Vorlage. Eine im Test
+        // nachgebaute Datei wuerde einen Weg beweisen, den das Programm nie geht.
+        var templatePath = Path.Combine(_root, "Vorlage", DossierWordTemplate.TemplateFileName);
+        Directory.CreateDirectory(Path.GetDirectoryName(templatePath)!);
+        File.Copy(AusgelieferteVorlage(), templatePath);
 
         var project = new Project();
         var dossier = new DossierDefinition
@@ -584,124 +598,170 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 }
 
-public sealed class DossierWordTemplateBuilderTests
-{
-    [Fact]
-    public void Die_Vorlage_ist_eine_gueltige_Word_Datei_mit_allen_Platzhaltern()
-    {
-        var text = ReadTemplateText();
-
-        foreach (var expected in new[]
-                 {
-                     "{{Gebietstitel}}", "{{Parzellen_Zeile}}", "{{Eigentuemer_Block}}",
-                     "{{Revision}}", "{{Datum}}", "{{Autoren}}",
-                     "{{@Logo}}", "{{@Wappen}}", "{{@Uebersichtsplan}}",
-                     "{{#Eigentuemer}}", "{{Haus_Nr}}", "{{Pz_Nr}}", "{{Eigentuemer_Zelle}}",
-                     "{{#Haltungen}}",
-                     "{{Ausfuehrungstermin}}", "{{Hausanschluss}}", "{{Meteorwasser}}",
-                     "{{Rueckmeldung}}"
-                 })
-        {
-            Assert.Contains(expected, text, StringComparison.Ordinal);
-        }
-    }
-
-    [Fact]
-    public void Die_Vorlage_traegt_die_vier_Kapitel_des_Vorbilds()
-    {
-        var text = ReadTemplateText();
-
-        Assert.Contains("Eigentümerdossier", text, StringComparison.Ordinal);
-        Assert.Contains("1.  Übersichtsplan Werkleitungen", text, StringComparison.Ordinal);
-        Assert.Contains("2.  Eigentumsverhältnisse", text, StringComparison.Ordinal);
-        Assert.Contains("3.  Betroffene Abwasserleitungen", text, StringComparison.Ordinal);
-        Assert.Contains("4.  Informationen Sanierung", text, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Die_Rueckmeldung_steht_in_der_Info_Tabelle_und_nicht_als_eigenes_Kapitel()
-    {
-        var text = ReadTemplateText();
-
-        Assert.Contains("Rückmeldung / Einverständnis Eigentümer", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("5.  Rückmeldung", text, StringComparison.Ordinal);
-        Assert.Contains("Unterschrift(en)", text, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Das_Deckblatt_traegt_keinen_Logo_Hinweistext_mehr()
-    {
-        var text = ReadTemplateText();
-
-        Assert.DoesNotContain("Logo hier einfügen", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("{{Logo_Hinweis}}", text, StringComparison.Ordinal);
-    }
-
-    private static string ReadTemplateText()
-    {
-        var bytes = DossierWordTemplateBuilder.Build();
-
-        using var stream = new MemoryStream(bytes);
-        using var document = WordprocessingDocument.Open(stream, false);
-
-        return string.Concat(
-            document.MainDocumentPart!.Document.Body!
-                .Descendants<Text>()
-                .Select(t => t.Text));
-    }
-}
-
 /// <summary>
-/// Waechter gegen eine still veraltende ausgelieferte Vorlage: Der Bauer
-/// (<see cref="DossierWordTemplateBuilder"/>) kann sich weiterentwickeln,
-/// ohne dass jemand die Datei unter "Export_Vorlage" nachzieht — der Export
-/// liest aber genau diese Datei, nicht den Bauer zur Laufzeit. Dieser Test
-/// vergleicht deshalb den TEXT der ausgelieferten Datei mit dem Text, den der
-/// Bauer aktuell erzeugt. Ein Bytevergleich waere falsch: die ZIP-Huelle
-/// einer .docx traegt Zeitstempel und waere bei jedem Neuschreiben zufaellig
-/// anders, ohne dass sich am Inhalt etwas aendert.
+/// Waechter ueber die ausgelieferte Datei "Export_Vorlage/Eigentuemerdossier.docx".
+///
+/// Sie ist von Hand in Word gestaltet und wird nicht aus Code erzeugt. Der Test
+/// nagelt deshalb JEDE sichtbare Zeile fest. Das hat zwei Gruende: eine
+/// verrutschte oder geloeschte Platzhalterzeile faellt sofort auf, und es kann
+/// kein Personendatum unbemerkt in die Vorlage geraten — sie stammt aus einem
+/// echten Kundendossier.
+///
+/// Wird die Vorlage bewusst geaendert, ist diese Liste mit anzupassen.
+/// </summary>
+/// <summary>
+/// Waechter ueber die ausgelieferte Datei "Export_Vorlage/Eigentuemerdossier.docx".
+///
+/// Sie ist von Hand in Word gestaltet und wird nicht aus Code erzeugt. Der Test
+/// nagelt deshalb JEDE sichtbare Zeile fest. Das hat zwei Gruende: eine
+/// verrutschte oder geloeschte Platzhalterzeile faellt sofort auf, und es kann
+/// kein Personendatum unbemerkt in die Vorlage geraten — sie stammt aus einem
+/// echten Kundendossier.
+///
+/// Wird die Vorlage bewusst geaendert, ist diese Liste mit anzupassen.
 /// </summary>
 public sealed class AusgelieferteDossierWordVorlageTests
 {
-    [Fact]
-    public void Die_ausgelieferte_Vorlage_entspricht_dem_aktuellen_Bauer()
+    /// <summary>
+    /// Jede nicht leere Zeile der Vorlage, in Dokumentreihenfolge. Die
+    /// Deckblatt-Textfelder liegen doppelt in der Datei (Word legt zu jedem
+    /// Feld eine Rueckfallfassung ab); unmittelbare Wiederholungen sind
+    /// deshalb zusammengefasst.
+    /// </summary>
+    private static readonly string[] ErwarteteZeilen =
+        {
+            "{{Gebietstitel}}",
+            "{{Gebiet_Ort}}",
+            "{{Gebietstitel}}",
+            "{{Gebiet_Ort}}",
+            "Eigentümerdossier",
+            "{{Parzellen_Zeile}}",
+            "{{Eigentuemer_Block}}",
+            "{{Adresse_Zeile}}",
+            "{{Ort_Zeile}}",
+            "{{Parzellen_Zeile}}",
+            "{{Eigentuemer_Block}}",
+            "{{Adresse_Zeile}}",
+            "{{Ort_Zeile}}",
+            "Datum: {{Datum}}",
+            "Revision: {{Revision}}",
+            "Proj. Nr. AWU  : {{Projekt_Nr}}",
+            "Gez          :",
+            "{{Gezeichnet}}",
+            "Version",
+            "Datum",
+            "Visum",
+            "Art der Änderung",
+            "{{#Aenderungen}}{{Version}}",
+            "{{Datum}}",
+            "{{Visum}}",
+            "{{Aenderung}}",
+            "Erstellungsdatum: {{Datum_Lang}}",
+            "Autoren: {{Autoren}}",
+            "Inhaltsverzeichnis",
+            "1.Übersichtsplan Werkleitungen3",
+            "2.Eigentumsverhältnisse4",
+            "3.Betroffene Leitungen4",
+            "4.Informationen Baustelle5",
+            "Übersichtsplan Werkleitungen",
+            "{{@Uebersichtsplan}}",
+            "Eigentumsverhältnisse",
+            "Haus Nr.",
+            "Pz. Nr.",
+            "Eigentümer",
+            "{{#Eigentuemer}}{{Haus_Nr}}",
+            "{{Pz_Nr}}",
+            "{{Eigentuemer_Zelle}}",
+            "Betroffene Leitungen",
+            "{{Haltungen_Text}}",
+            "{{Haltungen_Summe}}",
+            "Informationen Sanierung",
+            "Thema",
+            "Bemerkungen",
+            "{{#Themen}}{{Thema}}",
+            "{{Text}}",
+            "Für die Aktennotiz",
+            "{{Aktennotiz}}",
+            "Rückmeldung / Einverständnis Eigentümer",
+            "{{Rueckmeldung}}",
+            "……………………………………………………………………                       ………………………………………………….……………………………………………",
+            "Ort/Datum                               Unterschrift(en)",
+        };
+
+    private static string VorlagenPfad()
     {
         var wurzel = new AuswertungPro.Next.Infrastructure.Backup.RepositoryRootFileLocator()
             .Locate(AppContext.BaseDirectory);
-
         Assert.NotNull(wurzel);
 
-        var pfad = Path.Combine(wurzel!, "Export_Vorlage", DossierWordTemplateBuilder.TemplateFileName);
+        var pfad = Path.Combine(wurzel!, "Export_Vorlage", DossierWordTemplate.TemplateFileName);
         Assert.True(File.Exists(pfad), $"'{pfad}' fehlt.");
-
-        var ausgeliefertText = ReadDocumentText(File.ReadAllBytes(pfad));
-        var aktuellerText = ReadDocumentText(DossierWordTemplateBuilder.Build());
-
-        Assert.True(
-            string.Equals(ausgeliefertText, aktuellerText, StringComparison.Ordinal),
-            "Die ausgelieferte Datei 'Export_Vorlage/Eigentuemerdossier.docx' ist nicht mehr " +
-            "identisch mit dem, was DossierWordTemplateBuilder.Build() heute erzeugt. " +
-            "Die Vorlage muss neu erzeugt und committet werden " +
-            "(DossierWordTemplateBuilder.WriteTo(\"Export_Vorlage/Eigentuemerdossier.docx\")).");
+        return pfad;
     }
 
-    private static string ReadDocumentText(byte[] bytes)
+    private static List<string> Zeilen(OpenXmlElement wurzel)
+        => wurzel.Descendants<Paragraph>()
+            .Where(p => !p.Descendants<Paragraph>().Any())
+            .Select(p => string.Concat(p.Descendants<Text>().Select(t => t.Text)).Trim())
+            .Where(t => t.Length > 0)
+            .ToList();
+
+    [Fact]
+    public void Die_Vorlage_traegt_genau_die_erwarteten_Zeilen()
     {
-        using var stream = new MemoryStream(bytes);
-        using var document = WordprocessingDocument.Open(stream, false);
-        var mainPart = document.MainDocumentPart!;
+        using var document = WordprocessingDocument.Open(VorlagenPfad(), false);
 
-        var parts = new List<string>
-        {
-            string.Concat(mainPart.Document.Body!.Descendants<Text>().Select(t => t.Text))
-        };
+        var zeilen = Zeilen(document.MainDocumentPart!.Document.Body!);
 
-        foreach (var footer in mainPart.FooterParts)
+        var entdoppelt = new List<string>();
+        foreach (var zeile in zeilen)
         {
-            parts.Add(string.Concat(
-                footer.Footer!.Descendants<Text>().Select(t => t.Text)));
+            if (entdoppelt.Count == 0 || entdoppelt[^1] != zeile)
+                entdoppelt.Add(zeile);
         }
 
-        return string.Join("\n", parts);
+        Assert.Equal(ErwarteteZeilen, entdoppelt);
+    }
+
+    [Fact]
+    public void Die_Fusszeile_traegt_nur_den_Platzhalter()
+    {
+        using var document = WordprocessingDocument.Open(VorlagenPfad(), false);
+
+        var fuss = document.MainDocumentPart!.FooterParts
+            .SelectMany(f => Zeilen(f.Footer))
+            .ToList();
+
+        Assert.Contains("{{Fusszeile}}", fuss);
+        Assert.DoesNotContain(fuss, z => z.Contains("Parzelle", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Die_Vorlage_nennt_keinen_Verfasser_aus_dem_Kundendokument()
+    {
+        using var document = WordprocessingDocument.Open(VorlagenPfad(), false);
+
+        Assert.Equal("SewerStudio", document.PackageProperties.Creator);
+        Assert.Equal("SewerStudio", document.PackageProperties.LastModifiedBy);
+    }
+
+    [Fact]
+    public void Logo_und_Wappen_bleiben_fest_eingebettet()
+    {
+        using var document = WordprocessingDocument.Open(VorlagenPfad(), false);
+        var mainPart = document.MainDocumentPart!;
+
+        // Logo und Wappen schweben frei auf dem Deckblatt. Als Bildmarke
+        // eingesetzt wuerden sie ihre Position verlieren, weil ein nachtraeglich
+        // eingefuegtes Bild im Textfluss sitzt. Nur der Uebersichtsplan ist eine
+        // Bildmarke — deshalb bleiben genau zwei Bilder in der Datei.
+        var namen = mainPart.Document.Body!
+            .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.DocProperties>()
+            .Select(d => d.Name?.Value ?? string.Empty)
+            .ToList();
+
+        Assert.Contains("Logo", namen);
+        Assert.Contains("Wappen", namen);
+        Assert.Equal(2, mainPart.ImageParts.Count());
     }
 }
