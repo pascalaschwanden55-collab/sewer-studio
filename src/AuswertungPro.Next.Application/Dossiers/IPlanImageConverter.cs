@@ -47,4 +47,11 @@ public interface IPlanImageAdjuster
     /// veraendert.
     /// </summary>
     PlanImageResult Rotate(string? imagePath, string targetFolder, int degrees);
+
+    /// <summary>
+    /// Schneidet den Bereich heraus. Die Angaben sind Bildpunkte des Bildes
+    /// selbst, nicht der Anzeige — die Anzeige kann gezoomt sein.
+    /// </summary>
+    PlanImageResult Crop(
+        string? imagePath, string targetFolder, int x, int y, int width, int height);
 }

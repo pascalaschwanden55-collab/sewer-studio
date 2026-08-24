@@ -229,6 +229,33 @@ public partial class DossierPreviewWindow
         leiste.Children.Add(Werkzeug("⟳", "90° nach rechts drehen", () => Drehe(90)));
         leiste.Children.Add(Werkzeug("180°", "Auf den Kopf stellen", () => Drehe(180)));
 
+        var bearbeiten = new Button
+        {
+            Content = "Zuschneiden…",
+            Padding = new Thickness(8, 2, 8, 2),
+            FontSize = 11,
+            Margin = new Thickness(10, 0, 0, 0),
+            ToolTip = "Ausschnitt wählen, drehen und die Breite im Dossier festlegen"
+        };
+
+        bearbeiten.Click += (_, _) =>
+        {
+            var ergebnis = DossierPlanWindow.ShowFor(
+                _planAdjuster, feld.Read(), _request.TargetFolder, _dossier.OverviewPlanWidthCm);
+
+            if (ergebnis is null)
+                return;
+
+            feld.Write?.Invoke(ergebnis.ImagePath);
+            _dossier.OverviewPlanWidthCm = ergebnis.WidthCm;
+            anzeige.Text = ergebnis.ImagePath;
+            _aktivesFeld = feld.Key;
+            StatusText.Text = "Plan übernommen.";
+            ZeichneBlatt();
+            Hervorheben(feld.Key, blinken: true);
+        };
+
+        leiste.Children.Add(bearbeiten);
         return leiste;
     }
 
@@ -331,6 +358,7 @@ public partial class DossierPreviewWindow
             };
 
             inhalt.Children.Add(box);
+            inhalt.Children.Add(BaueEinfuegeleiste(box, feld));
 
             if (vomGebiet)
                 inhalt.Children.Add(BaueGebietsHinweis(titel, box, wirt, feld));
@@ -371,6 +399,59 @@ public partial class DossierPreviewWindow
 
         wirt.Children.Add(neuesThema);
         wirt.Children.Add(hinzufuegen);
+    }
+
+    /// <summary>
+    /// Zwei Knoepfe, die die betroffenen Leitungen und Schaechte in den Text
+    /// setzen.
+    ///
+    /// Eingefuegt wird eine MARKE, nicht die fertige Liste: sonst veraltet der
+    /// Text, sobald eine Leitung dazukommt. Im Blatt daneben steht sofort die
+    /// aufgeloeste Liste, damit sichtbar ist, was die Marke bedeutet.
+    /// </summary>
+    private UIElement BaueEinfuegeleiste(TextBox box, DossierPreviewField feld)
+    {
+        var leiste = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 4, 0, 0)
+        };
+
+        void Einfuegen(string marke)
+        {
+            var stelle = box.SelectionStart;
+            box.Text = box.Text.Insert(stelle, marke);
+            box.SelectionStart = stelle + marke.Length;
+            box.Focus();
+
+            _aktivesFeld = feld.Key;
+            ZeichneBlatt();
+            Hervorheben(feld.Key, blinken: true);
+        }
+
+        var leitungen = new Button
+        {
+            Content = "Leitungen einfügen",
+            Padding = new Thickness(8, 2, 8, 2),
+            FontSize = 11,
+            Margin = new Thickness(0, 0, 6, 0),
+            ToolTip = "Setzt die betroffenen Leitungen an dieser Stelle ein"
+        };
+
+        var schaechte = new Button
+        {
+            Content = "Schächte einfügen",
+            Padding = new Thickness(8, 2, 8, 2),
+            FontSize = 11,
+            ToolTip = "Setzt die zugehörigen Schächte an dieser Stelle ein"
+        };
+
+        leitungen.Click += (_, _) => Einfuegen("{{Haltungen_Text}}");
+        schaechte.Click += (_, _) => Einfuegen("{{Schaechte_Text}}");
+
+        leiste.Children.Add(leitungen);
+        leiste.Children.Add(schaechte);
+        return leiste;
     }
 
     /// <summary>

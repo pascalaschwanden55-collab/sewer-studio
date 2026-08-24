@@ -330,9 +330,18 @@ public static class DossierPreviewPageRenderer
     {
         var pfad = value(stelle.FieldKey);
 
+        // Die Breite kann das Dossier bestimmen; sonst gilt die der Vorlage.
+        var breite = double.TryParse(
+            value(stelle.FieldKey + "_BreiteCm"),
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out var cm) && cm > 0
+                ? cm / 2.54 * 96.0
+                : stelle.WidthPx;
+
         var rahmen = new Border
         {
-            Width = stelle.WidthPx,
+            Width = breite,
             HorizontalAlignment = HorizontalAlignment.Left,
             BorderBrush = Blass,
             BorderThickness = new Thickness(1),
@@ -361,8 +370,8 @@ public static class DossierPreviewPageRenderer
         {
             // Genau die Rechnung des Exports: Breite fest, Hoehe aus dem Bild.
             rahmen.Height = bild.PixelWidth > 0
-                ? stelle.WidthPx * bild.PixelHeight / bild.PixelWidth
-                : stelle.WidthPx;
+                ? breite * bild.PixelHeight / bild.PixelWidth
+                : breite;
 
             rahmen.BorderThickness = new Thickness(0);
             rahmen.Child = new Image { Source = bild, Stretch = Stretch.Fill };

@@ -149,7 +149,7 @@ public partial class DossierPreviewWindow : Window
 
     private IReadOnlyList<IReadOnlyDictionary<string, string>> ZeilenFuer(string key) => key switch
     {
-        "Themen" => DossierWordTemplateExportService.BuildTopicRows(_area, _dossier),
+        "Themen" => DossierWordTemplateExportService.BuildTopicRows(_area, _dossier, _values),
         "Eigentuemer" => DossierWordTemplateExportService.BuildOwnerRows(_dossier),
         "Aenderungen" => DossierWordTemplateExportService.BuildChangeRows(_dossier),
         "Haltungen" => DossierWordTemplateExportService.BuildHoldingRows(_snapshot),

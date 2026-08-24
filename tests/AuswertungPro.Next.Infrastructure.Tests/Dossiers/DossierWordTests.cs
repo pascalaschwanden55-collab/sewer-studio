@@ -296,6 +296,14 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         var (request, templatePath) = BuildScenario();
         request.Dossier.ShaftNumbers = new List<string> { "36051" };
 
+        // Die Schaechte gehoeren in das Thema, nicht in ein eigenes Kapitel —
+        // die Seitendarstellung entspricht dem Originaldossier.
+        request.Dossier.Topics.Add(new DossierTopicRow
+        {
+            Title = "Schäden",
+            Text = "Betroffen sind: {{Schaechte_Text}}"
+        });
+
         // Der Schacht muss im Projekt vorhanden sein — sonst gehoert er nicht
         // ins Dossier.
         var schacht = new SchachtRecord();
@@ -321,6 +329,11 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         // Lieber eine kurze Liste als ein erfundener Schacht im Brief.
         var (request, templatePath) = BuildScenario();
         request.Dossier.ShaftNumbers = new List<string> { "99999" };
+        request.Dossier.Topics.Add(new DossierTopicRow
+        {
+            Title = "Schäden",
+            Text = "{{Schaechte_Text}}"
+        });
 
         var snapshot = DossierSnapshotBuilder.Build(request.Dossier, request.Project, null);
         var mitSchacht = request with { Snapshot = snapshot };
@@ -333,11 +346,17 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Die_ausgewaehlten_Leitungen_stehen_als_eigenes_Kapitel_im_Dossier()
+    public async Task Die_betroffenen_Leitungen_stehen_im_Thema_Schaeden()
     {
-        // Das Originaldossier kennt dieses Kapitel nicht — ohne es faenden
-        // Leitung, Laenge und Kosten nirgends Platz.
+        // Das Originaldossier hat kein Kapitel fuer die Leitungen. Sie gehoeren
+        // in die Themen — und bleiben dort aktuell, statt einmal hineinkopiert
+        // zu veralten.
         var (request, templatePath) = BuildScenario();
+        request.Dossier.Topics.Add(new DossierTopicRow
+        {
+            Title = "Schäden",
+            Text = "Betroffen sind:\n{{Haltungen_Text}}"
+        });
 
         var service = new DossierWordTemplateExportService(() => templatePath);
         var result = await service.ExportAsync(request);
@@ -345,8 +364,28 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         Assert.True(result.Success, result.Message);
         var text = ReadDocumentText(result.FilePath!);
 
-        Assert.Contains("Betroffene Leitungen", text, StringComparison.Ordinal);
         Assert.Contains("36080-36086", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Ein_Thementext_ohne_Platzhalter_bleibt_woertlich()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.Topics.Add(new DossierTopicRow
+        {
+            Title = "Sanierungskonzept",
+            Text = "Die Leitung wird mit einem Inliner saniert."
+        });
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Contains(
+            "Die Leitung wird mit einem Inliner saniert.",
+            ReadDocumentText(result.FilePath!),
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -375,6 +414,11 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     public async Task Schreibt_jede_ausgewaehlte_Haltung_als_eigene_Zeile()
     {
         var (request, templatePath) = BuildScenario();
+        request.Dossier.Topics.Add(new DossierTopicRow
+        {
+            Title = "Schäden",
+            Text = "{{Haltungen_Text}}"
+        });
 
         var service = new DossierWordTemplateExportService(() => templatePath);
         var result = await service.ExportAsync(request);
@@ -420,6 +464,11 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     public async Task Leeres_Dossier_erzeugt_trotzdem_ein_lesbares_Word()
     {
         var (request, templatePath) = BuildScenario(withHoldings: false);
+        request.Dossier.Topics.Add(new DossierTopicRow
+        {
+            Title = "Schäden",
+            Text = "{{Haltungen_Text}}"
+        });
 
         var service = new DossierWordTemplateExportService(() => templatePath);
         var result = await service.ExportAsync(request);
@@ -784,6 +833,17 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 ///
 /// Wird die Vorlage bewusst geaendert, ist diese Liste mit anzupassen.
 /// </summary>
+/// <summary>
+/// Waechter ueber die ausgelieferte Datei "Export_Vorlage/Eigentuemerdossier.docx".
+///
+/// Sie ist von Hand in Word gestaltet und wird nicht aus Code erzeugt. Der Test
+/// nagelt deshalb JEDE sichtbare Zeile fest. Das hat zwei Gruende: eine
+/// verrutschte oder geloeschte Platzhalterzeile faellt sofort auf, und es kann
+/// kein Personendatum unbemerkt in die Vorlage geraten — sie stammt aus einem
+/// echten Kundendossier.
+///
+/// Wird die Vorlage bewusst geaendert, ist diese Liste mit anzupassen.
+/// </summary>
 public sealed class AusgelieferteDossierWordVorlageTests
 {
     /// <summary>
@@ -825,8 +885,7 @@ public sealed class AusgelieferteDossierWordVorlageTests
             "Inhaltsverzeichnis",
             "1.Übersichtsplan Werkleitungen3",
             "2.Eigentumsverhältnisse4",
-            "3.Betroffene Leitungen4",
-            "4.Informationen Baustelle5",
+            "3.Informationen Baustelle4",
             "Übersichtsplan Werkleitungen",
             "{{@Uebersichtsplan}}",
             "Eigentumsverhältnisse",
@@ -836,10 +895,6 @@ public sealed class AusgelieferteDossierWordVorlageTests
             "{{#Eigentuemer}}{{Haus_Nr}}",
             "{{Pz_Nr}}",
             "{{Eigentuemer_Zelle}}",
-            "Betroffene Leitungen",
-            "{{Haltungen_Text}}",
-            "{{Haltungen_Summe}}",
-            "{{Schaechte_Text}}",
             "Informationen Sanierung",
             "Thema",
             "Bemerkungen",

@@ -148,6 +148,69 @@ public sealed class PlanImageAdjusterTests : IDisposable
         });
     }
 
+    [Fact]
+    public void Zuschneiden_liefert_genau_den_gewaehlten_Bereich()
+    {
+        RunOnSta(() =>
+        {
+            var ziel = Path.Combine(_root, "dossier");
+            var quelle = SchreibeBild(Path.Combine("dossier", "plan.png"), 100, 60);
+
+            var ergebnis = new PlanImageAdjuster().Crop(quelle, ziel, 10, 20, 40, 25);
+
+            Assert.True(ergebnis.Success, ergebnis.Error);
+            Assert.Equal((40, 25), Masse(ergebnis.ImagePath!));
+        });
+    }
+
+    [Fact]
+    public void Ein_Rahmen_ueber_den_Bildrand_hinaus_wird_begrenzt()
+    {
+        // Ueber den Rand zu ziehen ist eine normale Handbewegung und keine
+        // Fehleingabe — der Ausschnitt wird gekuerzt, nicht abgelehnt.
+        RunOnSta(() =>
+        {
+            var ziel = Path.Combine(_root, "dossier");
+            var quelle = SchreibeBild(Path.Combine("dossier", "plan.png"), 100, 60);
+
+            var ergebnis = new PlanImageAdjuster().Crop(quelle, ziel, 80, 40, 500, 500);
+
+            Assert.True(ergebnis.Success, ergebnis.Error);
+            Assert.Equal((20, 20), Masse(ergebnis.ImagePath!));
+        });
+    }
+
+    [Fact]
+    public void Ein_leerer_Ausschnitt_wird_abgelehnt()
+    {
+        RunOnSta(() =>
+        {
+            var ziel = Path.Combine(_root, "dossier");
+            var quelle = SchreibeBild(Path.Combine("dossier", "plan.png"), 100, 60);
+
+            var ergebnis = new PlanImageAdjuster().Crop(quelle, ziel, 10, 10, 0, 20);
+
+            Assert.False(ergebnis.Success);
+            Assert.NotNull(ergebnis.Error);
+        });
+    }
+
+    [Fact]
+    public void Zuschneiden_laesst_ein_fremdes_Bild_unveraendert()
+    {
+        RunOnSta(() =>
+        {
+            var fremd = SchreibeBild("fremd.png", 100, 60);
+            var ziel = Path.Combine(_root, "dossier");
+
+            var ergebnis = new PlanImageAdjuster().Crop(fremd, ziel, 10, 10, 30, 30);
+
+            Assert.True(ergebnis.Success, ergebnis.Error);
+            Assert.Equal((100, 60), Masse(fremd));
+            Assert.Equal((30, 30), Masse(ergebnis.ImagePath!));
+        });
+    }
+
     private static void RunOnSta(Action action)
     {
         Exception? fehler = null;

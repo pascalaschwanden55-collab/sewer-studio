@@ -97,6 +97,10 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             IReadOnlyList<string> missingImages;
             try
             {
+                // Einmal gebaut und zweimal gebraucht: fuer die Thementexte, die
+                // dieselben Platzhalter tragen duerfen, und fuer die Vorlage.
+                var values = BuildValues(request);
+
                 using (var document = WordprocessingDocument.Open(tempPath, isEditable: true))
                 {
                     DocxPlaceholderFiller.FillRepeatingRows(
@@ -114,7 +118,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     DocxPlaceholderFiller.FillRepeatingRows(
                         document,
                         "Themen",
-                        BuildTopicRows(request.Area, request.Dossier),
+                        BuildTopicRows(request.Area, request.Dossier, values),
                         EmptyRowText("Themen"));
 
                     DocxPlaceholderFiller.FillRepeatingRows(
@@ -129,7 +133,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     missingImages = DocxImagePlaceholderFiller.Fill(
                         document, BuildImagePlacements(request, templatePath));
 
-                    DocxPlaceholderFiller.Fill(document, BuildValues(request));
+                    DocxPlaceholderFiller.Fill(document, values);
                     document.MainDocumentPart?.Document?.Save();
                 }
 
@@ -228,6 +232,8 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             ["Aktennotiz"] = d.FileNote,
             ["Haltungen_Text"] = BuildHoldingsText(snapshot),
             ["Schaechte_Text"] = BuildShaftsText(snapshot),
+            ["Uebersichtsplan_BreiteCm"] = PlanWidthCm(d)
+                .ToString("0.###", CultureInfo.InvariantCulture),
             ["Anzahl_Schaechte"] = snapshot.ShaftCount.ToString(CultureInfo.InvariantCulture),
             ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
         };
@@ -345,13 +351,23 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// <see cref="DossierTopicResolver"/> — hier wird nur abgebildet.
     /// </summary>
     public static List<IReadOnlyDictionary<string, string>> BuildTopicRows(
-        DossierAreaSettings area, DossierDefinition dossier)
+        DossierAreaSettings area,
+        DossierDefinition dossier,
+        IReadOnlyDictionary<string, string>? values = null)
         => DossierTopicResolver.Resolve(area, dossier)
             .Select(thema => (IReadOnlyDictionary<string, string>)
                 new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["Thema"] = thema.Title,
-                    ["Text"] = thema.Text
+
+                    // Ein Thementext darf dieselben Platzhalter tragen wie die
+                    // Vorlage. So stehen die betroffenen Leitungen und Schaechte
+                    // dort, wo sie fachlich hingehoeren — in "Schaeden" und
+                    // "Sanierungskonzept" — und bleiben aktuell, statt einmal
+                    // hineinkopiert zu veralten.
+                    ["Text"] = values is null
+                        ? thema.Text
+                        : DocxPlaceholderFiller.ReplacePlaceholders(thema.Text, values)
                 })
             .ToList();
 
@@ -481,7 +497,10 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
 
         var plan = ResolvePlanPath(request);
         if (plan is not null)
-            placements.Add(new DocxImagePlacement("Uebersichtsplan", plan, MaxWidthCm: 15.0));
+        {
+            placements.Add(new DocxImagePlacement(
+                "Uebersichtsplan", plan, MaxWidthCm: PlanWidthCm(request.Dossier)));
+        }
 
         return placements;
     }
@@ -507,6 +526,15 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// aufgeloest. Oeffentlich, weil die Vorschau denselben Pfad braucht — sonst
     /// zeigt sie eine leere Stelle, wo das Dossier ein Bild traegt.
     /// </summary>
+    /// <summary>
+    /// Die Breite des Uebersichtsplans im Dokument. Ohne eigene Angabe gilt die
+    /// Breite der Vorlage; unsinnige Werte werden auf das Blatt begrenzt.
+    /// </summary>
+    public static double PlanWidthCm(DossierDefinition dossier)
+        => dossier?.OverviewPlanWidthCm is { } cm && cm > 0
+            ? Math.Min(cm, 30.0)
+            : PlanMaxWidthCm;
+
     public static string? ResolvePlanPath(DossierExportRequest request)
     {
         var configured = request.Dossier.OverviewPlanPath;

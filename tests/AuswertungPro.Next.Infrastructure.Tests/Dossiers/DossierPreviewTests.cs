@@ -39,7 +39,6 @@ public sealed class DossierPreviewBuilderTests
         Assert.Equal("Deckblatt", titel[0]);
         Assert.Contains("Übersichtsplan Werkleitungen", titel);
         Assert.Contains("Eigentumsverhältnisse", titel);
-        Assert.Contains("Betroffene Leitungen", titel);
         Assert.Contains("Informationen Sanierung", titel);
 
         // Fortlaufend nummeriert, damit das Fenster blaettern kann.

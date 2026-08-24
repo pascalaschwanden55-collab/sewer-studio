@@ -195,6 +195,12 @@ public sealed class DossierDefinition
     /// <summary>Bilddatei des Uebersichtsplans fuer Kapitel 1.</summary>
     public string OverviewPlanPath { get; set; } = "";
 
+    /// <summary>
+    /// Breite des Uebersichtsplans im Dokument in Zentimetern. Leer heisst:
+    /// die Breite der Vorlage (15 cm wie im Originaldossier).
+    /// </summary>
+    public double? OverviewPlanWidthCm { get; set; }
+
     // ── Sanierung ─────────────────────────────────────────────────────────
     /// <summary>Beschreibung des Bauvorgangs fuer genau diese Liegenschaft.</summary>
     public string ConstructionProcess { get; set; } = "";

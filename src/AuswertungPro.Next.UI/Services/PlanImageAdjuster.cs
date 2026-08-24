@@ -34,36 +34,83 @@ public sealed class PlanImageAdjuster : IPlanImageAdjuster
 
         try
         {
-            var quelle = new BitmapImage();
-            quelle.BeginInit();
-            quelle.CacheOption = BitmapCacheOption.OnLoad;
-            quelle.UriSource = new Uri(Path.GetFullPath(imagePath), UriKind.Absolute);
-            quelle.EndInit();
-            quelle.Freeze();
-
-            var gedreht = new TransformedBitmap(quelle, new RotateTransform(winkel));
+            var gedreht = new TransformedBitmap(Lade(imagePath), new RotateTransform(winkel));
             gedreht.Freeze();
 
-            Directory.CreateDirectory(targetFolder);
-            var ziel = Zielpfad(imagePath, targetFolder);
-
-            // Erst in eine Nebendatei schreiben: bricht das Speichern ab, bleibt
-            // das bisherige Bild unversehrt.
-            var zwischen = ziel + ".neu";
-
-            var kodierer = new PngBitmapEncoder();
-            kodierer.Frames.Add(BitmapFrame.Create(gedreht));
-
-            using (var strom = new FileStream(zwischen, FileMode.Create, FileAccess.Write))
-                kodierer.Save(strom);
-
-            File.Move(zwischen, ziel, overwrite: true);
-            return PlanImageResult.Ok(ziel);
+            return Speichere(gedreht, imagePath, targetFolder);
         }
         catch (Exception ex)
         {
             return PlanImageResult.Failed("Der Plan konnte nicht gedreht werden: " + ex.Message);
         }
+    }
+
+    public PlanImageResult Crop(
+        string? imagePath, string targetFolder, int x, int y, int width, int height)
+    {
+        if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath))
+            return PlanImageResult.Failed("Es ist kein Planbild gewählt.");
+
+        if (string.IsNullOrWhiteSpace(targetFolder))
+            return PlanImageResult.Failed("Es ist kein Zielordner bekannt.");
+
+        if (width <= 0 || height <= 0)
+            return PlanImageResult.Failed("Der gewählte Ausschnitt ist leer.");
+
+        try
+        {
+            var quelle = Lade(imagePath);
+
+            // Der Ausschnitt wird auf das Bild begrenzt, statt zu werfen: ein
+            // Rahmen, der ueber den Rand gezogen wurde, ist eine normale
+            // Handbewegung und keine Fehleingabe.
+            var links = Math.Clamp(x, 0, quelle.PixelWidth - 1);
+            var oben = Math.Clamp(y, 0, quelle.PixelHeight - 1);
+            var breite = Math.Clamp(width, 1, quelle.PixelWidth - links);
+            var hoehe = Math.Clamp(height, 1, quelle.PixelHeight - oben);
+
+            var ausschnitt = new CroppedBitmap(
+                quelle, new System.Windows.Int32Rect(links, oben, breite, hoehe));
+            ausschnitt.Freeze();
+
+            return Speichere(ausschnitt, imagePath, targetFolder);
+        }
+        catch (Exception ex)
+        {
+            return PlanImageResult.Failed("Der Plan konnte nicht zugeschnitten werden: " + ex.Message);
+        }
+    }
+
+    private static BitmapImage Lade(string pfad)
+    {
+        var quelle = new BitmapImage();
+        quelle.BeginInit();
+        quelle.CacheOption = BitmapCacheOption.OnLoad;
+        quelle.UriSource = new Uri(Path.GetFullPath(pfad), UriKind.Absolute);
+        quelle.EndInit();
+        quelle.Freeze();
+        return quelle;
+    }
+
+    /// <summary>
+    /// Schreibt das Ergebnis. Erst in eine Nebendatei: bricht das Speichern ab,
+    /// bleibt das bisherige Bild unversehrt.
+    /// </summary>
+    private static PlanImageResult Speichere(
+        BitmapSource bild, string quellpfad, string zielordner)
+    {
+        Directory.CreateDirectory(zielordner);
+        var ziel = Zielpfad(quellpfad, zielordner);
+        var zwischen = ziel + ".neu";
+
+        var kodierer = new PngBitmapEncoder();
+        kodierer.Frames.Add(BitmapFrame.Create(bild));
+
+        using (var strom = new FileStream(zwischen, FileMode.Create, FileAccess.Write))
+            kodierer.Save(strom);
+
+        File.Move(zwischen, ziel, overwrite: true);
+        return PlanImageResult.Ok(ziel);
     }
 
     /// <summary>
