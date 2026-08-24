@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -29,8 +29,6 @@ public sealed record DossierParcelLookupChoice(
 /// </summary>
 public partial class DossierParcelLookupWindow : Window
 {
-    private const int MaxVerzeichnisAbfragen = 5;
-
     private readonly IParcelLookup _parcels;
     private readonly DossierParcelLookupUseCase _lookup;
     private readonly IDirectoryLookup _directory;
@@ -175,41 +173,21 @@ public partial class DossierParcelLookupWindow : Window
     }
 
     /// <summary>
-    /// Telefon und Mail je Eigentuemer — eine Abfrage je Person und hoechstens
-    /// eine Handvoll. Nur ein EINDEUTIGER Treffer wird uebernommen: eine
-    /// geratene Nummer im Brief waere schlimmer als eine leere Zelle.
+    /// Telefon und Mail je Eigentuemer. Kontingent und die Regel „nur ein
+    /// eindeutiger Treffer" liegen im geprueften
+    /// <see cref="OwnerDirectoryLookupUseCase"/> — im Fenstercode waren sie
+    /// von keiner Pruefung gedeckt, obwohl sie eine Nutzungsgrenze sind.
     /// </summary>
     private async Task SucheVerzeichnisAsync(DossierDefinition dossier)
     {
-        var gesucht = 0;
+        StatusText.Text = "Verzeichnis: Telefon und Mail werden gesucht…";
 
-        foreach (var eigentuemer in dossier.Owners)
-        {
-            if (gesucht >= MaxVerzeichnisAbfragen)
-                break;
+        var uebernommen = await new OwnerDirectoryLookupUseCase(_directory)
+            .FillAsync(dossier);
 
-            if (string.IsNullOrWhiteSpace(eigentuemer.Name))
-                continue;
-
-            gesucht++;
-            StatusText.Text = "Verzeichnis: " + eigentuemer.Name;
-
-            DirectoryLookupResult treffer;
-            try
-            {
-                treffer = await _directory.FindAsync(eigentuemer.Name, dossier.Town);
-            }
-            catch (Exception)
-            {
-                continue;
-            }
-
-            if (treffer.Unique is not { } eintrag)
-                continue;
-
-            eigentuemer.Phone = eintrag.Phone;
-            eigentuemer.Mail = eintrag.Mail;
-        }
+        StatusText.Text = uebernommen == 1
+            ? "Verzeichnis: 1 Eintrag übernommen."
+            : $"Verzeichnis: {uebernommen} Einträge übernommen.";
     }
 
     private void Zeige(DossierParcelLookupResult ergebnis)
