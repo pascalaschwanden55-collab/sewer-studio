@@ -621,6 +621,26 @@
                             </Grid>
                         </GroupBox>
 
+                        <GroupBox Header="Telefonsuche (search.ch)" Style="{StaticResource SettingsSectionGroupBox}">
+                            <StackPanel>
+                                <TextBlock TextWrapping="Wrap"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           FontSize="11" Margin="0,0,0,8"
+                                           Text="Mit einem Schlüssel von search.ch füllt „Neue Liegenschaft“ Telefon und Mail der Eigentümer vor. Ohne Schlüssel bleibt die Suche aus — die Nutzungsbedingungen erlauben nur die offizielle Schnittstelle und keine Massenabfragen. Quelle: Swisscom Directories AG."/>
+                                <Grid Style="{StaticResource SettingsFormGrid}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="API-Schlüssel"
+                                               Style="{StaticResource SettingsFieldLabel}"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding SearchChApiKey}"
+                                             Style="{StaticResource SettingsTextInput}"/>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
                         <GroupBox Header="Referenzdaten" Style="{StaticResource SettingsSectionGroupBox}">
                             <Grid Style="{StaticResource SettingsFormGrid}">
                                 <Grid.ColumnDefinitions>

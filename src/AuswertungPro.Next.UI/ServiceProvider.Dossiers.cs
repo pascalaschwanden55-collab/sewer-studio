@@ -25,4 +25,10 @@ public sealed partial class ServiceProvider
 
     /// <summary>Stellt die Dossier-Vorschlaege eines Projekts zusammen.</summary>
     public DossierBatchProposalUseCase DossierBatchProposal => _dossierComposition.BatchProposal;
+
+    /// <summary>Holt alles zu einer einzelnen Gemeinde-und-Parzelle-Angabe.</summary>
+    public DossierParcelLookupUseCase DossierParcelLookup => _dossierComposition.ParcelLookup;
+
+    /// <summary>Telefon und Mail zu einem Namen — nur fuer Einzelabfragen.</summary>
+    public IDirectoryLookup DossierDirectory => _dossierComposition.Directory;
 }

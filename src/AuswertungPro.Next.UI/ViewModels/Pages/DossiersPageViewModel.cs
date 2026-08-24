@@ -93,6 +93,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     private readonly IDossierPdfAssemblyService _pdfAssembly;
     private readonly IParcelLookup _parcels;
     private readonly DossierBatchProposalUseCase _batchProposal;
+    private readonly DossierParcelLookupUseCase _parcelLookup;
+    private readonly IDirectoryLookup _directory;
     private readonly ICostStoreFactory _costStores;
     private readonly IDialogService _dialogs;
     private readonly ToastService _toasts;
@@ -112,6 +114,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         IDossierPdfAssemblyService pdfAssembly,
         IParcelLookup parcels,
         DossierBatchProposalUseCase batchProposal,
+        DossierParcelLookupUseCase parcelLookup,
+        IDirectoryLookup directory,
         ICostStoreFactory costStores,
         IDialogService dialogs,
         ToastService toasts,
@@ -127,6 +131,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         _pdfAssembly = pdfAssembly ?? throw new ArgumentNullException(nameof(pdfAssembly));
         _parcels = parcels ?? throw new ArgumentNullException(nameof(parcels));
         _batchProposal = batchProposal ?? throw new ArgumentNullException(nameof(batchProposal));
+        _parcelLookup = parcelLookup ?? throw new ArgumentNullException(nameof(parcelLookup));
+        _directory = directory ?? throw new ArgumentNullException(nameof(directory));
         _costStores = costStores ?? throw new ArgumentNullException(nameof(costStores));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _toasts = toasts ?? throw new ArgumentNullException(nameof(toasts));

@@ -553,7 +553,12 @@ namespace AuswertungPro.Next.UI
             ImportMediaDistribution = new MediaDistributionService();
             InspectionProtocolFiles = new InspectionProtocolFileLocator(StoredImportFilePaths);
             _dossierComposition = new AuswertungPro.Next.Infrastructure.Dossiers.DossierComposition(
-                InspectionProtocolFiles, ProtocolPdfExporter, PdfMerge);
+                InspectionProtocolFiles,
+                ProtocolPdfExporter,
+                PdfMerge,
+                // Erst beim Aufruf gelesen, damit ein nachtraeglich eingetragener
+                // Schluessel ohne Programmneustart wirkt.
+                () => Settings.SearchChApiKey);
             DichtheitProtocolFiles = new DichtheitProtocolFileLocator();
             SchachtFileTargets = new SchachtFileTargetPathResolver();
             var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);

@@ -17,7 +17,8 @@ public sealed class DossierComposition
     public DossierComposition(
         IInspectionProtocolFileLocator protocolFiles,
         IProtocolPdfExporter protocolPdf,
-        IPdfMergeService pdfMerge)
+        IPdfMergeService pdfMerge,
+        Func<string?>? readDirectoryApiKey = null)
     {
         ArgumentNullException.ThrowIfNull(protocolFiles);
         ArgumentNullException.ThrowIfNull(protocolPdf);
@@ -32,10 +33,16 @@ public sealed class DossierComposition
         // ein Abbruch, Aufrufe der Reihe nach.
         var gateway = new Lookup.GeoUrHttpGateway();
         Parcels = new Lookup.UriParcelWfsClient(gateway);
-        BatchProposal = new DossierBatchProposalUseCase(
-            Parcels,
-            new Lookup.UriLandRegistryClient(gateway),
-            new Lookup.UriSewerNetworkWfsClient(gateway));
+        var grundbuch = new Lookup.UriLandRegistryClient(gateway);
+        var netz = new Lookup.UriSewerNetworkWfsClient(gateway);
+
+        BatchProposal = new DossierBatchProposalUseCase(Parcels, grundbuch, netz);
+        ParcelLookup = new DossierParcelLookupUseCase(Parcels, grundbuch, netz);
+
+        // Das Telefonverzeichnis ist bewusst NICHT an die Stapelanlage
+        // angeschlossen: maschinelle Massenabfragen sind dort untersagt.
+        Directory = new Lookup.SearchChDirectoryClient(
+            readDirectoryApiKey ?? (() => null));
     }
 
     public IDossierStore Store { get; }
@@ -51,4 +58,13 @@ public sealed class DossierComposition
 
     /// <summary>Stellt die Dossier-Vorschlaege eines Projekts zusammen.</summary>
     public DossierBatchProposalUseCase BatchProposal { get; }
+
+    /// <summary>Holt alles zu einer einzelnen Gemeinde-und-Parzelle-Angabe.</summary>
+    public DossierParcelLookupUseCase ParcelLookup { get; }
+
+    /// <summary>
+    /// Telefon und Mail zu einem Namen. Nur fuer die einzelne, von Hand
+    /// ausgeloeste Abfrage — siehe <see cref="IDirectoryLookup"/>.
+    /// </summary>
+    public IDirectoryLookup Directory { get; }
 }

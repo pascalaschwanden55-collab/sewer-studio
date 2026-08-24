@@ -27,7 +27,8 @@ public sealed record SettingsSaveValues(
     bool StartAiOnProgramStart,
     double PipelineYoloConfidence,
     double PipelineDinoBoxThreshold,
-    double PipelineDinoTextThreshold);
+    double PipelineDinoTextThreshold,
+    string? SearchChApiKey = null);
 
 public sealed record SettingsSaveWorkflowRequest(
     AppSettings Settings,
@@ -73,6 +74,12 @@ public static class SettingsSaveWorkflow
         settings.PipelineYoloConfidence = ClampThreshold(values.PipelineYoloConfidence);
         settings.PipelineDinoBoxThreshold = ClampThreshold(values.PipelineDinoBoxThreshold);
         settings.PipelineDinoTextThreshold = ClampThreshold(values.PipelineDinoTextThreshold);
+
+        // Leer heisst: keine Telefonsuche. Ein Schluessel mit Leerzeichen
+        // ringsum wuerde die Abfrage lautlos scheitern lassen.
+        settings.SearchChApiKey = string.IsNullOrWhiteSpace(values.SearchChApiKey)
+            ? null
+            : values.SearchChApiKey.Trim();
         request.SaveSettings();
 
         request.Diagnostics.EnableDiagnostics = values.EnableDiagnostics;

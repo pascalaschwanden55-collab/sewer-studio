@@ -47,6 +47,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
 
     [ObservableProperty] private bool _enableDiagnostics;
     [ObservableProperty] private string? _pdfToTextPath;
+
+    /// <summary>
+    /// Schluessel fuer die Telefonsuche von search.ch. Leer heisst: keine
+    /// Suche — die Nutzungsbedingungen erlauben nur die Schnittstelle mit
+    /// eigenem Schluessel, nicht das Auslesen der Webseite.
+    /// </summary>
+    [ObservableProperty] private string? _searchChApiKey;
     [ObservableProperty] private string? _projectPath;
     [ObservableProperty] private string? _projectsRootDirectory;
     [ObservableProperty] private string? _abwasserkatasterXtfPath;
@@ -277,6 +284,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
 
         EnableDiagnostics = _settings.EnableDiagnostics;
         PdfToTextPath = _settings.PdfToTextPath;
+        SearchChApiKey = _settings.SearchChApiKey;
         ProjectPath = _settings.LastProjectPath;
         ProjectsRootDirectory = _settings.ProjectsRootDirectory;
         AbwasserkatasterXtfPath = _settings.AbwasserkatasterXtfPath;
@@ -461,7 +469,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
                 StartAiOnProgramStart,
                 PipelineYoloConfidence,
                 PipelineDinoBoxThreshold,
-                PipelineDinoTextThreshold),
+                PipelineDinoTextThreshold,
+                SearchChApiKey),
             _settings.Save,
             _katasterXtfPaths));
     }

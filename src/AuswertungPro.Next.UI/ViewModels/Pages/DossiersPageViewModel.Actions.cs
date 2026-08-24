@@ -22,7 +22,43 @@ public sealed partial class DossiersPageViewModel
         if (!EnsureProject(out var root))
             return;
 
-        var definition = new DossierDefinition();
+        // Zuerst Gemeinde und Parzelle: daraus fuellt der Kanton alles vor, was
+        // er hergibt. Wer das nicht will, legt ohne Abfrage an.
+        var idsByName = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        foreach (var record in _getProject().Data)
+        {
+            var name = (record.GetFieldValue(FieldKeys.HoldingName) ?? string.Empty).Trim();
+            if (name.Length > 0)
+                idsByName[name] = record.Id;
+        }
+
+        DossierParcelLookupChoice? abfrage;
+        try
+        {
+            abfrage = DossierParcelLookupWindow.ShowFor(
+                _parcels, _parcelLookup, _directory, idsByName);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Die Abfrage konnte nicht geöffnet werden: " + ex.Message;
+            _dialogs.Error(StatusMessage, "Neue Liegenschaft");
+            return;
+        }
+
+        if (abfrage is null)
+            return;
+
+        var definition = abfrage.Dossier;
+
+        foreach (var bezeichnung in abfrage.SelectedHoldingDesignations)
+        {
+            if (idsByName.TryGetValue(bezeichnung, out var id)
+                && !definition.HoldingIds.Contains(id))
+            {
+                definition.HoldingIds.Add(id);
+            }
+        }
+
         if (!DossierEditWindow.ShowFor(definition, isNew: true))
             return;
 

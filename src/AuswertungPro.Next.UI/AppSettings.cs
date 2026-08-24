@@ -69,6 +69,13 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public List<string> HiddenProjectPaths { get; set; } = new();
     public bool OverviewProjectListCollapsed { get; set; }
 
+    /// <summary>
+    /// Schluessel fuer die Telefonsuche von search.ch. Ohne ihn bleibt die
+    /// Suche aus: die Nutzungsbedingungen erlauben nur die Schnittstelle mit
+    /// eigenem Schluessel, nicht das Auslesen der Webseite.
+    /// </summary>
+    public string? SearchChApiKey { get; set; }
+
     /// <summary>Projekt-Pfad in RecentProjectPaths einfuegen (Duplikate vermeiden, max 20).</summary>
     public void AddRecentProject(string path)
     {

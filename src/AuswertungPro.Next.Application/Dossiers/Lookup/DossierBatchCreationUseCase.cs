@@ -34,39 +34,12 @@ public static class DossierBatchCreationUseCase
             if (!vorschlag.Selectable || vorschlag.Registry is null)
                 continue;
 
-            var dossier = new DossierDefinition
-            {
-                Name = vorschlag.SuggestedName,
-                ParcelNumbers = vorschlag.Parcel.Number,
-                Municipality = vorschlag.Parcel.Municipality,
-                MunicipalityBfsNr = vorschlag.Parcel.BfsNr,
-                Address = vorschlag.Registry.BuildingStreet,
-                HouseNumbers = vorschlag.Registry.BuildingHouseNumber,
-                PostalCode = vorschlag.Registry.PostalCode,
-                Town = vorschlag.Registry.Town
-            };
+            // Die Vorbelegung steht nur einmal — dieselbe Regel gilt beim
+            // Anlegen einer einzelnen Liegenschaft.
+            var dossier = DossierFromLandRegistryMapper.Build(
+                vorschlag.Parcel, vorschlag.Registry);
 
-            // Das Deckblatt speist sich weiterhin aus diesen Feldern.
-            var erster = vorschlag.Registry.Owners.FirstOrDefault();
-            if (erster is not null)
-            {
-                dossier.OwnerName = erster.Name;
-                dossier.OwnerAddress = erster.AddressLine;
-            }
-
-            foreach (var eigentuemer in vorschlag.Registry.Owners)
-            {
-                dossier.Owners.Add(new DossierOwnerRow
-                {
-                    HouseNumber = vorschlag.Registry.BuildingHouseNumber,
-                    ParcelNumber = vorschlag.Parcel.Number,
-                    Name = eigentuemer.Name,
-                    // Telefonnummern werden bewusst nicht ermittelt.
-                    Phone = "",
-                    Mail = "",
-                    Occupancy = ""
-                });
-            }
+            dossier.Name = vorschlag.SuggestedName;
 
             foreach (var bezeichnung in auswahl.SelectedHoldingDesignations)
             {
