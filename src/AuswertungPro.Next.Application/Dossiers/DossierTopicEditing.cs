@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 using AuswertungPro.Next.Domain.Models.Dossiers;
@@ -71,6 +72,31 @@ public static class DossierTopicEditing
         }
 
         zeile.ColorHex = (colorHex ?? string.Empty).Trim();
+        zeile.StyleRanges = new();
+    }
+
+    /// <summary>
+    /// Speichert Klartext und gemischte Farben gemeinsam. Die alte Ganzzeilen-
+    /// Farbe wird geleert, weil die Farbbereiche die genauere Angabe sind.
+    /// </summary>
+    public static void SetFormattedForDossier(
+        DossierDefinition dossier,
+        string title,
+        string? text,
+        IEnumerable<DossierTextStyleRange>? styleRanges)
+    {
+        ArgumentNullException.ThrowIfNull(dossier);
+
+        var titel = (title ?? string.Empty).Trim();
+        if (titel.Length == 0)
+            return;
+
+        SetForDossier(dossier, titel, text);
+        var zeile = dossier.Topics.First(t =>
+            t is not null && string.Equals(t.Title, titel, StringComparison.OrdinalIgnoreCase));
+
+        zeile.ColorHex = string.Empty;
+        zeile.StyleRanges = DossierTopicTextFormatting.Normalize(text, styleRanges);
     }
 
     /// <summary>Die gesetzte Schriftfarbe, oder leer fuer Schwarz.</summary>
@@ -93,6 +119,16 @@ public static class DossierTopicEditing
     /// </summary>
     public static void PromoteToArea(
         DossierAreaSettings area, DossierDefinition dossier, string title, string? text)
+        => PromoteToArea(area, dossier, title, text, null, null);
+
+    /// <summary>Uebernimmt Text und Teilfarben in die Gebietsvorgabe.</summary>
+    public static void PromoteToArea(
+        DossierAreaSettings area,
+        DossierDefinition dossier,
+        string title,
+        string? text,
+        IEnumerable<DossierTextStyleRange>? styleRanges,
+        string? legacyColorHex)
     {
         ArgumentNullException.ThrowIfNull(area);
         ArgumentNullException.ThrowIfNull(dossier);
@@ -107,9 +143,17 @@ public static class DossierTopicEditing
             t is not null && string.Equals(t.Title, titel, StringComparison.OrdinalIgnoreCase));
 
         if (gebietsThema is null)
-            area.Topics.Add(new DossierTopicRow { Title = titel, Text = text ?? "" });
-        else
-            gebietsThema.Text = text ?? "";
+        {
+            gebietsThema = new DossierTopicRow { Title = titel };
+            area.Topics.Add(gebietsThema);
+        }
+
+        gebietsThema.Text = text ?? "";
+        if (styleRanges is not null || legacyColorHex is not null)
+        {
+            gebietsThema.ColorHex = legacyColorHex?.Trim() ?? string.Empty;
+            gebietsThema.StyleRanges = DossierTopicTextFormatting.Normalize(text, styleRanges);
+        }
 
         RemoveDossierOverride(dossier, titel);
     }

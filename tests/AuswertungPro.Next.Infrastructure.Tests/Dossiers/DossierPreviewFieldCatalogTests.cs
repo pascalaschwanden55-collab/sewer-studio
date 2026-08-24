@@ -1,7 +1,10 @@
+using System;
 using System.Linq;
 
 using AuswertungPro.Next.Application.Dossiers.Preview;
 using AuswertungPro.Next.Domain.Models.Dossiers;
+using AuswertungPro.Next.Infrastructure.Dossiers;
+using AuswertungPro.Next.Infrastructure.Dossiers.Preview;
 
 using Xunit;
 
@@ -34,16 +37,17 @@ public sealed class DossierPreviewFieldCatalogTests
     }
 
     [Fact]
-    public void Zwei_Eingaben_duerfen_sich_dieselbe_Stelle_teilen()
+    public void Eine_sichtbare_Stelle_hat_genau_ein_Eingabefeld()
     {
-        // "Musterweg 51" ist EINE Zeile im Dokument, aber zwei Angaben.
+        // "Musterweg 51" ist EINE Zeile im Dokument und wird in der
+        // 1:1-Vorschau deshalb auch gemeinsam bearbeitet.
         var (area, dossier) = Stand();
         var felder = DossierPreviewFieldCatalog.Build(area, dossier);
 
-        var adresse = felder.Where(f => f.Key == "Adresse_Zeile").ToList();
+        var adresse = Assert.Single(felder.Where(f => f.Key == "Adresse_Zeile"));
 
-        Assert.Equal(2, adresse.Count);
-        Assert.Equal(new[] { "Strasse", "Haus-Nr." }, adresse.Select(f => f.Label));
+        Assert.Equal("Strasse und Haus-Nr.", adresse.Label);
+        Assert.True(adresse.CanReset);
     }
 
     [Fact]
@@ -169,6 +173,37 @@ public sealed class DossierPreviewFieldCatalogTests
         {
             var feld = felder.Single(f => f.Key == key);
             Assert.Equal(DossierPreviewFieldKind.Rows, feld.Kind);
+        }
+    }
+
+    [Fact]
+    public void Jeder_Platzhalter_der_echten_Vorlage_hat_einen_bearbeitbaren_Weg()
+    {
+        var root = new AuswertungPro.Next.Infrastructure.Backup.RepositoryRootFileLocator()
+            .Locate(AppContext.BaseDirectory);
+        Assert.NotNull(root);
+        var path = System.IO.Path.Combine(
+            root!, "Export_Vorlage", DossierWordTemplate.TemplateFileName);
+        Assert.True(System.IO.File.Exists(path), $"Dossiervorlage fehlt: {path}");
+
+        var document = DossierPreviewBuilder.Build(path);
+        var (area, dossier) = Stand();
+        var alle = DossierPreviewFieldCatalog.Build(area, dossier, _ => "berechnet");
+
+        foreach (var page in document.Pages)
+        {
+            var pageFields = DossierPreviewFieldCatalog.ForPage(
+                alle, page, dossier, _ => "berechnet");
+
+            foreach (var key in page.FieldKeys)
+            {
+                var passend = pageFields.Where(f => f.Key == key).ToList();
+                Assert.NotEmpty(passend);
+                Assert.All(passend, field =>
+                    Assert.True(field.Write is not null
+                        || field.Kind is DossierPreviewFieldKind.Rows,
+                        $"Feld {key} auf Seite {page.Number} ist nicht bearbeitbar."));
+            }
         }
     }
 }

@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.Domain.Models.Dossiers;
+
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
@@ -156,9 +159,13 @@ public static class DocxPlaceholderFiller
         // der Platzhaltername nicht mehr im Text.
         var farbe = FarbeFuer(combined, values);
 
-        WriteBack(paragraph, texts, replaced);
+        var formatbereiche = FormatFuer(combined, replaced, values);
+        if (formatbereiche.Count > 0)
+            WriteBackFormatted(paragraph, texts, replaced, formatbereiche);
+        else
+            WriteBack(paragraph, texts, replaced);
 
-        if (farbe is not null)
+        if (formatbereiche.Count == 0 && farbe is not null)
             SetzeFarbe(paragraph, farbe);
     }
 
@@ -196,6 +203,146 @@ public static class DocxPlaceholderFiller
         {
             run.RunProperties ??= new RunProperties();
             run.RunProperties.Color = new Color { Val = hex };
+        }
+    }
+
+    private static List<DossierTextStyleRange> FormatFuer(
+        string source,
+        string replaced,
+        IReadOnlyDictionary<string, string> values)
+    {
+        var match = Regex.Match(source, @"^\{\{([A-Za-z0-9_]+)\}\}$");
+        if (!match.Success)
+            return new List<DossierTextStyleRange>();
+
+        var key = match.Groups[1].Value + DossierTopicTextFormatting.StyleRangesSuffix;
+        return values.TryGetValue(key, out var encoded)
+            ? DossierTopicTextFormatting.Normalize(
+                replaced,
+                DossierTopicTextFormatting.Decode(encoded))
+            : new List<DossierTextStyleRange>();
+    }
+
+    /// <summary>
+    /// Schreibt einen Wert in mehrere Word-Runs. Eigenschaften der Vorlage wie
+    /// Schriftgroesse und Absatzabstand bleiben dabei erhalten; nur Arial,
+    /// Farbe, Fett, Kursiv und Unterstreichen stammen aus der Eingabe.
+    /// </summary>
+    private static void WriteBackFormatted(
+        Paragraph paragraph,
+        List<Text> texts,
+        string replaced,
+        IReadOnlyList<DossierTextStyleRange> ranges)
+    {
+        var firstRun = texts[0].Ancestors<Run>().FirstOrDefault();
+        if (firstRun?.Parent is null)
+        {
+            WriteBack(paragraph, texts, replaced);
+            return;
+        }
+
+        foreach (var text in texts)
+            text.Text = string.Empty;
+
+        var baseProperties = firstRun.RunProperties is null
+            ? new RunProperties()
+            : (RunProperties)firstRun.RunProperties.CloneNode(deep: true);
+
+        firstRun.RemoveAllChildren();
+        OpenXmlElement anchor = firstRun;
+        var first = true;
+
+        foreach (var segment in DossierTopicTextFormatting.Split(replaced, ranges))
+        {
+            var run = first ? firstRun : new Run();
+            run.RunProperties = FormatProperties(baseProperties, segment);
+            AppendRunText(run, segment.Text);
+
+            if (!first)
+            {
+                anchor.Parent!.InsertAfter(run, anchor);
+                anchor = run;
+            }
+
+            first = false;
+        }
+    }
+
+    private static RunProperties FormatProperties(
+        RunProperties source,
+        DossierTopicTextFormatting.Segment segment)
+    {
+        var properties = (RunProperties)source.CloneNode(deep: true);
+        properties.RunFonts = new RunFonts
+        {
+            Ascii = "Arial",
+            HighAnsi = "Arial",
+            EastAsia = "Arial",
+            ComplexScript = "Arial"
+        };
+        properties.Bold = segment.Bold ? new Bold() : null;
+        properties.Italic = segment.Italic ? new Italic() : null;
+        properties.Underline = segment.Underline
+            ? new Underline { Val = UnderlineValues.Single }
+            : null;
+        properties.Color = new Color
+        {
+            Val = DossierTopicTextFormatting.IsColor(segment.ColorHex)
+                ? segment.ColorHex
+                : "000000"
+        };
+        return properties;
+    }
+
+    private static void AppendRunText(Run run, string value)
+    {
+        var lines = value.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (i > 0)
+                run.AppendChild(new Break());
+
+            run.AppendChild(new Text(lines[i]) { Space = SpaceProcessingModeValues.Preserve });
+        }
+    }
+
+    /// <summary>
+    /// Vereinheitlicht nur die Schriftfamilie. Groessen, Zeilenabstaende,
+    /// Tabellenhoehen und Fusszeilenaufbau bleiben unveraendert.
+    /// </summary>
+    public static void SetArial(WordprocessingDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var main = document.MainDocumentPart;
+        if (main?.Document is not null)
+            SetArial(main.Document);
+
+        foreach (var header in main?.HeaderParts ?? Enumerable.Empty<HeaderPart>())
+        {
+            if (header.Header is not null)
+                SetArial(header.Header);
+        }
+
+        foreach (var footer in main?.FooterParts ?? Enumerable.Empty<FooterPart>())
+        {
+            if (footer.Footer is not null)
+                SetArial(footer.Footer);
+        }
+    }
+
+    private static void SetArial(OpenXmlElement scope)
+    {
+        foreach (var run in scope.Descendants<Run>())
+        {
+            run.RunProperties ??= new RunProperties();
+            run.RunProperties.RunFonts = new RunFonts
+            {
+                Ascii = "Arial",
+                HighAnsi = "Arial",
+                EastAsia = "Arial",
+                ComplexScript = "Arial"
+            };
         }
     }
 

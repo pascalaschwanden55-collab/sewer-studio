@@ -25,8 +25,11 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 /// </summary>
 public partial class DossierPreviewWindow
 {
+    private readonly HashSet<RichTextBox> _geladeneFormatfelder = new();
+
     private sealed record ZeilenSpalte(
         string Label,
+        string StyleKey,
         Func<object, string> Read,
         Action<object, string> Write);
 
@@ -35,17 +38,8 @@ public partial class DossierPreviewWindow
         Func<object> Neu,
         IReadOnlyList<ZeilenSpalte> Spalten);
 
-    /// <summary>
-    /// Schwarz und Rot — mehr braucht ein Brief an den Eigentuemer nicht, und
-    /// jede weitere Farbe muesste auf Papier lesbar bleiben.
-    /// </summary>
-    private const string FarbeRot = "C00000";
-
     private static readonly SolidColorBrush Randfarbe =
         new(Color.FromRgb(0xC8, 0xC8, 0xC8));
-
-    private static readonly SolidColorBrush Rotstift =
-        new(Color.FromRgb(0xC0, 0x00, 0x00));
 
     // ── Aufbau ────────────────────────────────────────────────────────────
 
@@ -138,6 +132,12 @@ public partial class DossierPreviewWindow
             default:
                 var box = BaueTextfeld(feld);
                 block.Children.Add(box);
+                block.Children.Add(DossierTextFormattingToolbar.Create(box, () =>
+                {
+                    SpeichereFormatiertesFeld(feld, box);
+                    ZeichneBlatt();
+                    Betone(feld.Key);
+                }));
 
                 if (feld.CanReset)
                     block.Children.Add(BaueRueckweg(feld, box));
@@ -150,29 +150,31 @@ public partial class DossierPreviewWindow
 
     // ── Einzelne Angabe ───────────────────────────────────────────────────
 
-    private TextBox BaueTextfeld(DossierPreviewField feld)
+    private RichTextBox BaueTextfeld(DossierPreviewField feld)
     {
         var mehrzeilig = feld.Kind == DossierPreviewFieldKind.MultiLine;
-
-        var box = new TextBox
+        var text = feld.Read();
+        var row = new DossierTopicRow
         {
-            Text = feld.Read(),
-            AcceptsReturn = mehrzeilig,
-            TextWrapping = mehrzeilig ? TextWrapping.Wrap : TextWrapping.NoWrap,
-            MinHeight = mehrzeilig ? 64 : 0,
-            VerticalContentAlignment = mehrzeilig
-                ? VerticalAlignment.Top
-                : VerticalAlignment.Center,
-            VerticalScrollBarVisibility = mehrzeilig
-                ? ScrollBarVisibility.Auto
-                : ScrollBarVisibility.Disabled
+            Text = text,
+            StyleRanges = Feldformat(feld.FormattingKey, text)
         };
+        var box = DossierTopicRichTextEditor.Create(row);
+        box.AcceptsReturn = mehrzeilig;
+        box.MinHeight = mehrzeilig ? 68 : 34;
+        box.MaxHeight = mehrzeilig ? double.PositiveInfinity : 34;
+        box.VerticalScrollBarVisibility = mehrzeilig
+            ? ScrollBarVisibility.Auto
+            : ScrollBarVisibility.Disabled;
 
         box.GotKeyboardFocus += (_, _) => Betone(feld.Key);
 
         box.TextChanged += (_, _) =>
         {
-            feld.Write?.Invoke(box.Text);
+            if (_geladeneFormatfelder.Contains(box))
+                return;
+
+            SpeichereFormatiertesFeld(feld, box);
             ZeichneBlatt();
         };
 
@@ -184,14 +186,25 @@ public partial class DossierPreviewWindow
     /// gesetzte Stelle eine Einbahnstrasse: das Erstellungsdatum bliebe fuer
     /// immer stehen, auch wenn es laengst das falsche ist.
     /// </summary>
-    private UIElement BaueRueckweg(DossierPreviewField feld, TextBox box)
+    private UIElement BaueRueckweg(DossierPreviewField feld, RichTextBox box)
     {
         var zeile = new DockPanel { Margin = new Thickness(0, 4, 0, 0) };
 
         var knopf = Kleiner("Zurücksetzen", "Wieder den berechneten Wert nehmen", () =>
         {
             feld.Reset?.Invoke();
-            box.Text = feld.Read();
+            _dossier.FieldStyles?.Remove(feld.FormattingKey);
+
+            _geladeneFormatfelder.Add(box);
+            try
+            {
+                DossierTopicRichTextEditor.SetValue(box, new DossierTopicRow { Text = feld.Read() });
+            }
+            finally
+            {
+                _geladeneFormatfelder.Remove(box);
+            }
+
             ZeichneBlatt();
             Betone(feld.Key);
         });
@@ -214,6 +227,26 @@ public partial class DossierPreviewWindow
         Aktualisiere();
 
         return zeile;
+    }
+
+    private List<DossierTextStyleRange> Feldformat(string key, string text)
+    {
+        _dossier.FieldStyles ??= new();
+        return _dossier.FieldStyles.TryGetValue(key, out var ranges)
+            ? DossierTopicTextFormatting.Normalize(text, ranges)
+            : new List<DossierTextStyleRange>();
+    }
+
+    private void SpeichereFormatiertesFeld(DossierPreviewField feld, RichTextBox box)
+    {
+        var value = DossierTopicRichTextEditor.Read(box);
+        feld.Write?.Invoke(value.Text);
+
+        _dossier.FieldStyles ??= new();
+        if (value.StyleRanges.Count == 0)
+            _dossier.FieldStyles.Remove(feld.FormattingKey);
+        else
+            _dossier.FieldStyles[feld.FormattingKey] = value.StyleRanges.ToList();
     }
 
     private UIElement BaueDateifeld(DossierPreviewField feld)
@@ -413,21 +446,13 @@ public partial class DossierPreviewWindow
 
         inhalt.Children.Add(kopf);
 
-        var box = new TextBox
-        {
-            Text = thema.Text,
-            AcceptsReturn = true,
-            TextWrapping = TextWrapping.Wrap,
-            MinHeight = 54,
-            VerticalContentAlignment = VerticalAlignment.Top,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
-        };
+        var box = DossierTopicRichTextEditor.Create(thema);
 
         box.GotKeyboardFocus += (_, _) => Betone(marke);
 
         box.TextChanged += (_, _) =>
         {
-            DossierTopicEditing.SetForDossier(_dossier, titel, box.Text);
+            SpeichereFormatiertenText(titel, box);
             ZeichneBlatt();
         };
 
@@ -444,65 +469,42 @@ public partial class DossierPreviewWindow
     private UIElement BaueThemenLeiste(
         string titel,
         string marke,
-        TextBox box,
+        RichTextBox box,
         bool vomGebiet,
         Panel wirt,
         DossierPreviewField feld)
     {
-        var leiste = new WrapPanel { Margin = new Thickness(0, 7, 0, 0) };
-
-        var schwarz = Kleiner("A", "Schwarz", () => { });
-        var rot = Kleiner("A", "Rot", () => { });
-
-        rot.Foreground = Rotstift;
-        schwarz.FontSize = 13;
-        rot.FontSize = 13;
-
-        void ZeigeFarbe()
+        var wurzel = new StackPanel();
+        wurzel.Children.Add(DossierTextFormattingToolbar.Create(box, () =>
         {
-            var istRot = string.Equals(
-                DossierTopicEditing.ColorOf(_area, _dossier, titel),
-                FarbeRot,
-                StringComparison.OrdinalIgnoreCase);
-
-            // Die gewaehlte Farbe steht fett — sonst sieht niemand, was gilt.
-            schwarz.FontWeight = istRot ? FontWeights.Normal : FontWeights.Bold;
-            rot.FontWeight = istRot ? FontWeights.Bold : FontWeights.Normal;
-        }
-
-        void SetzeFarbe(string hex)
-        {
-            DossierTopicEditing.SetColorForDossier(_dossier, titel, hex, box.Text);
-            ZeigeFarbe();
+            SpeichereFormatiertenText(titel, box);
             ZeichneBlatt();
             Betone(marke);
-        }
+        }));
 
-        schwarz.Click += (_, _) => SetzeFarbe(string.Empty);
-        rot.Click += (_, _) => SetzeFarbe(FarbeRot);
-
-        leiste.Children.Add(schwarz);
-        leiste.Children.Add(rot);
-        ZeigeFarbe();
+        var aktionen = new WrapPanel();
+        wurzel.Children.Add(aktionen);
 
         if (DossierTopicEditing.SupportsHoldingInsert(titel))
         {
-            leiste.Children.Add(Kleiner("+ Leitungen",
+            aktionen.Children.Add(Kleiner("+ Leitungen",
                 "Setzt die betroffenen Leitungen an der Schreibmarke ein",
                 () => Einfuegen(box, marke, "{{Haltungen_Text}}")));
 
-            leiste.Children.Add(Kleiner("+ Schächte",
+            aktionen.Children.Add(Kleiner("+ Schächte",
                 "Setzt die zugehörigen Schächte an der Schreibmarke ein",
                 () => Einfuegen(box, marke, "{{Schaechte_Text}}")));
         }
 
         if (!vomGebiet)
-            return leiste;
+            return wurzel;
 
         var uebernehmen = Kleiner("Für alle übernehmen",
             "Gilt danach für jede Liegenschaft dieses Gebiets", () =>
             {
-                DossierTopicEditing.PromoteToArea(_area, _dossier, titel, box.Text);
+                var wert = DossierTopicRichTextEditor.Read(box);
+                DossierTopicEditing.PromoteToArea(
+                    _area, _dossier, titel, wert.Text, wert.StyleRanges, string.Empty);
                 FuelleThemenEditor(wirt, feld);
                 ZeichneBlatt();
                 Betone(feld.Key);
@@ -516,8 +518,8 @@ public partial class DossierPreviewWindow
         box.TextChanged += (_, _) => ZeigeUebernehmen();
         ZeigeUebernehmen();
 
-        leiste.Children.Add(uebernehmen);
-        return leiste;
+        aktionen.Children.Add(uebernehmen);
+        return wurzel;
     }
 
     /// <summary>
@@ -525,15 +527,19 @@ public partial class DossierPreviewWindow
     /// Text, sobald eine Leitung dazukommt. Im Blatt daneben steht sofort die
     /// aufgeloeste Liste.
     /// </summary>
-    private void Einfuegen(TextBox box, string marke, string text)
+    private void Einfuegen(RichTextBox box, string marke, string text)
     {
-        var stelle = box.SelectionStart;
-        box.Text = box.Text.Insert(stelle, text);
-        box.SelectionStart = stelle + text.Length;
-        box.Focus();
+        DossierTopicRichTextEditor.InsertAtSelection(box, text);
 
         ZeichneBlatt();
         Betone(marke);
+    }
+
+    private void SpeichereFormatiertenText(string titel, RichTextBox box)
+    {
+        var wert = DossierTopicRichTextEditor.Read(box);
+        DossierTopicEditing.SetFormattedForDossier(
+            _dossier, titel, wert.Text, wert.StyleRanges);
     }
 
     private UIElement BaueNeuesThema(Panel wirt, DossierPreviewField feld)
@@ -763,26 +769,34 @@ public partial class DossierPreviewWindow
 
                 var mehrzeilig = spalte.Label is "Name" or "Art der Änderung";
 
-                var box = new TextBox
+                var text = spalte.Read(zeile);
+                var box = DossierTopicRichTextEditor.Create(new DossierTopicRow
                 {
-                    Text = spalte.Read(zeile),
-                    AcceptsReturn = mehrzeilig,
-                    TextWrapping = mehrzeilig ? TextWrapping.Wrap : TextWrapping.NoWrap,
-                    MinHeight = mehrzeilig ? 48 : 0,
-                    VerticalContentAlignment = mehrzeilig
-                        ? VerticalAlignment.Top
-                        : VerticalAlignment.Center
-                };
+                    Text = text,
+                    StyleRanges = Zeilenformat(zeile, spalte.StyleKey, text)
+                });
+                box.AcceptsReturn = mehrzeilig;
+                box.MinHeight = mehrzeilig ? 54 : 34;
+                box.MaxHeight = mehrzeilig ? double.PositiveInfinity : 34;
+                box.VerticalScrollBarVisibility = mehrzeilig
+                    ? ScrollBarVisibility.Auto
+                    : ScrollBarVisibility.Hidden;
 
                 box.GotKeyboardFocus += (_, _) => Betone(marke);
 
                 box.TextChanged += (_, _) =>
                 {
-                    spalte.Write(zeile, box.Text);
+                    SpeichereZeilenfeld(zeile, spalte, box);
                     ZeichneBlatt();
                 };
 
                 inhalt.Children.Add(box);
+                inhalt.Children.Add(DossierTextFormattingToolbar.Create(box, () =>
+                {
+                    SpeichereZeilenfeld(zeile, spalte, box);
+                    ZeichneBlatt();
+                    Betone(marke);
+                }));
             }
 
             wirt.Children.Add(karte);
@@ -799,6 +813,36 @@ public partial class DossierPreviewWindow
         neu.HorizontalAlignment = HorizontalAlignment.Left;
         wirt.Children.Add(neu);
     }
+
+    private static List<DossierTextStyleRange> Zeilenformat(
+        object zeile, string key, string text)
+    {
+        var formate = Zeilenformate(zeile);
+        return formate.TryGetValue(key, out var ranges)
+            ? DossierTopicTextFormatting.Normalize(text, ranges)
+            : new List<DossierTextStyleRange>();
+    }
+
+    private static void SpeichereZeilenfeld(
+        object zeile, ZeilenSpalte spalte, RichTextBox box)
+    {
+        var value = DossierTopicRichTextEditor.Read(box);
+        spalte.Write(zeile, value.Text);
+
+        var formate = Zeilenformate(zeile);
+        if (value.StyleRanges.Count == 0)
+            formate.Remove(spalte.StyleKey);
+        else
+            formate[spalte.StyleKey] = value.StyleRanges.ToList();
+    }
+
+    private static Dictionary<string, List<DossierTextStyleRange>> Zeilenformate(object zeile)
+        => zeile switch
+        {
+            DossierOwnerRow owner => owner.FieldStyles ??= new(),
+            DossierChangeRow change => change.FieldStyles ??= new(),
+            _ => throw new ArgumentException("Unbekannte Dossierzeile.", nameof(zeile))
+        };
 
     private void Verschiebe(
         ZeilenTyp typ, int stelle, int richtung, Panel wirt, DossierPreviewField feld)
@@ -850,22 +894,22 @@ public partial class DossierPreviewWindow
             () => new DossierOwnerRow(),
             new[]
             {
-                new ZeilenSpalte("Haus-Nr.",
+                new ZeilenSpalte("Haus-Nr.", "HouseNumber",
                     z => ((DossierOwnerRow)z).HouseNumber,
                     (z, w) => ((DossierOwnerRow)z).HouseNumber = w),
-                new ZeilenSpalte("Parzelle",
+                new ZeilenSpalte("Parzelle", "ParcelNumber",
                     z => ((DossierOwnerRow)z).ParcelNumber,
                     (z, w) => ((DossierOwnerRow)z).ParcelNumber = w),
-                new ZeilenSpalte("Name",
+                new ZeilenSpalte("Name", "Name",
                     z => ((DossierOwnerRow)z).Name,
                     (z, w) => ((DossierOwnerRow)z).Name = w),
-                new ZeilenSpalte("Telefon",
+                new ZeilenSpalte("Telefon", "Phone",
                     z => ((DossierOwnerRow)z).Phone,
                     (z, w) => ((DossierOwnerRow)z).Phone = w),
-                new ZeilenSpalte("Mail",
+                new ZeilenSpalte("Mail", "Mail",
                     z => ((DossierOwnerRow)z).Mail,
                     (z, w) => ((DossierOwnerRow)z).Mail = w),
-                new ZeilenSpalte("Objektbewohner",
+                new ZeilenSpalte("Objektbewohner", "Occupancy",
                     z => ((DossierOwnerRow)z).Occupancy,
                     (z, w) => ((DossierOwnerRow)z).Occupancy = w)
             }),
@@ -875,16 +919,16 @@ public partial class DossierPreviewWindow
             () => new DossierChangeRow(),
             new[]
             {
-                new ZeilenSpalte("Version",
+                new ZeilenSpalte("Version", "Version",
                     z => ((DossierChangeRow)z).Version,
                     (z, w) => ((DossierChangeRow)z).Version = w),
-                new ZeilenSpalte("Datum",
+                new ZeilenSpalte("Datum", "Date",
                     z => ((DossierChangeRow)z).Date,
                     (z, w) => ((DossierChangeRow)z).Date = w),
-                new ZeilenSpalte("Visum",
+                new ZeilenSpalte("Visum", "Visum",
                     z => ((DossierChangeRow)z).Visum,
                     (z, w) => ((DossierChangeRow)z).Visum = w),
-                new ZeilenSpalte("Art der Änderung",
+                new ZeilenSpalte("Art der Änderung", "Change",
                     z => ((DossierChangeRow)z).Change,
                     (z, w) => ((DossierChangeRow)z).Change = w)
             }),

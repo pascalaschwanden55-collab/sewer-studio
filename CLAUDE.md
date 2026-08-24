@@ -40,6 +40,21 @@
 5. **Budget & Gate:** VRAM-Budget (max 29GB) nicht gebrochen, QualityGate laeuft weiter durch.
 6. **Klein bleiben:** Kein grosses Refactoring am Bestand ohne Rueckfrage — neues Feature additiv bauen.
 
+## Eigentuemer-Dossiers
+- `Export_Vorlage/Eigentuemerdossier.docx` ist die verbindliche Word-Geometrie. Seitenraender,
+  Abstaende, Zeilenhoehen, Tabellen, Deckblatt, Logo, Wappen und Fusszeile werden beim
+  Ersetzen der Platzhalter nicht neu berechnet oder umgebaut.
+- `DossierTextStyleRange` speichert Schriftfarbe, Fett, Kursiv und Unterstrichen als
+  Zeichenbereiche. Themen verwenden `DossierTopicRow.StyleRanges`, andere Textfelder
+  `DossierDefinition.FieldStyles`; das alte `ColorHex` bleibt fuer bestehende Projekte lesbar.
+- `DossierTopicTextFormatting` ist die WPF-freie Bereichs-, Platzhalter- und
+  Serialisierungsregel. Vorschau und Word-Export muessen dieselben Bereiche verwenden.
+- Dossiertext wird in Vorschau und Word direkt als Arial ausgegeben. Schriftgroessen,
+  Absatzabstaende und Tabellenmasse stammen weiterhin unveraendert aus der Vorlage.
+- Der Uebersichtsplan wird in das feste Seitenverhaeltnis der Referenzflaeche
+  (ca. 15 x 21,5 cm) eingepasst. Ein reines Datei-Seitenverhaeltnis kann den Plan
+  auf eine Zusatzseite schieben und darf deshalb nicht wieder verwendet werden.
+
 ## Aktueller Pipeline-Ablauf
 1. UI/Service startet Analyse ueber `VideoAnalysisPipelineService`, `SingleFrameMultiModelService` oder `VideoFullAnalysisService`.
 2. C# ruft den Sidecar ueber `VisionPipelineClient` auf.

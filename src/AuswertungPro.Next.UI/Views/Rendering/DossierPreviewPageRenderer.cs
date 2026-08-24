@@ -8,7 +8,9 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
+using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Dossiers.Preview;
+using AuswertungPro.Next.Infrastructure.Dossiers;
 
 namespace AuswertungPro.Next.UI.Views.Rendering;
 
@@ -216,7 +218,7 @@ public static class DossierPreviewPageRenderer
         Action<string, Border> merke)
     {
         var erster = absatz.Runs.FirstOrDefault()?.Format ?? DossierPreviewRunFormat.Default;
-        var schrift = new FontFamily(erster.FontFamily);
+        var schrift = new FontFamily("Arial");
 
         var text = new TextBlock
         {
@@ -252,7 +254,7 @@ public static class DossierPreviewPageRenderer
             {
                 var eigenes = new Run(ersatz)
                 {
-                    FontFamily = new FontFamily(erster.FontFamily),
+                    FontFamily = new FontFamily("Arial"),
                     FontSize = erster.FontSizePx,
                     FontWeight = erster.Bold ? FontWeights.Bold : FontWeights.Normal,
                     FontStyle = erster.Italic ? FontStyles.Italic : FontStyles.Normal,
@@ -288,24 +290,49 @@ public static class DossierPreviewPageRenderer
                 ? Pinsel(value(run.FieldKey + "__Farbe"))
                 : null;
 
-            var stueck = new Run(inhalt)
-            {
-                FontFamily = new FontFamily(run.Format.FontFamily),
-                FontSize = run.Format.FontSizePx,
-                FontWeight = run.Format.Bold ? FontWeights.Bold : FontWeights.Normal,
-                FontStyle = run.Format.Italic ? FontStyles.Italic : FontStyles.Normal,
-                Foreground = leer
-                    ? Blass
-                    : (eigeneFarbe ?? Pinsel(run.Format.ColorHex) ?? Tinte)
-            };
+            var bereiche = run.IsField
+                ? DossierTopicTextFormatting.Normalize(
+                    inhalt,
+                    DossierTopicTextFormatting.Decode(value(
+                        run.FieldKey + DossierTopicTextFormatting.StyleRangesSuffix)))
+                : new List<AuswertungPro.Next.Domain.Models.Dossiers.DossierTextStyleRange>();
 
-            if (run.Format.Underline)
-                stueck.TextDecorations = TextDecorations.Underline;
+            var segmente = bereiche.Count > 0
+                ? DossierTopicTextFormatting.Split(inhalt, bereiche)
+                : new[]
+                {
+                    new DossierTopicTextFormatting.Segment(
+                        inhalt,
+                        eigeneFarbe is SolidColorBrush farbe
+                            ? $"{farbe.Color.R:X2}{farbe.Color.G:X2}{farbe.Color.B:X2}"
+                            : run.Format.ColorHex,
+                        run.Format.Bold,
+                        run.Format.Italic,
+                        run.Format.Underline)
+                };
+
+            foreach (var segment in segmente)
+            {
+                var stueck = new Run(segment.Text)
+                {
+                    FontFamily = new FontFamily("Arial"),
+                    FontSize = run.Format.FontSizePx,
+                    FontWeight = segment.Bold ? FontWeights.Bold : FontWeights.Normal,
+                    FontStyle = segment.Italic ? FontStyles.Italic : FontStyles.Normal,
+                    Foreground = leer
+                        ? Blass
+                        : (Pinsel(segment.ColorHex) ?? Tinte)
+                };
+
+                if (segment.Underline)
+                    stueck.TextDecorations = TextDecorations.Underline;
+
+                text.Inlines.Add(stueck);
+            }
 
             if (leer)
                 offeneStelle = true;
 
-            text.Inlines.Add(stueck);
         }
 
         // Ein leerer Absatz traegt im Dokument den senkrechten Abstand; ohne
@@ -367,9 +394,8 @@ public static class DossierPreviewPageRenderer
     }
 
     /// <summary>
-    /// Die Stelle des Uebersichtsplans. Breite und Seitenverhaeltnis folgen
-    /// derselben Regel wie der Export: feste Breite, Hoehe aus dem echten
-    /// Bild. Ohne Datei entsteht KEIN erfundener Kasten, sondern ein
+    /// Die Stelle des Uebersichtsplans. Breite und feste Vorlagenhoehe folgen
+    /// derselben Regel wie der Export. Ohne Datei entsteht KEIN erfundener Kasten, sondern ein
     /// schmaler Hinweis — sonst zeigte die Vorschau Platz, den das Dossier
     /// nicht hat.
     /// </summary>
@@ -418,10 +444,9 @@ public static class DossierPreviewPageRenderer
         }
         else
         {
-            // Genau die Rechnung des Exports: Breite fest, Hoehe aus dem Bild.
-            rahmen.Height = bild.PixelWidth > 0
-                ? breite * bild.PixelHeight / bild.PixelWidth
-                : breite;
+            // Genau die feste Planflaeche des Exports. Das Dateiverhaeltnis
+            // darf den Plan nicht in Vorschau und Word verschieden umbrechen.
+            rahmen.Height = DossierWordTemplateExportService.PlanHeightForWidth(breite);
 
             rahmen.BorderThickness = new Thickness(0);
             rahmen.Child = new Image { Source = bild, Stretch = Stretch.Fill };
@@ -480,6 +505,7 @@ public static class DossierPreviewPageRenderer
             Func<int, string?> ueberschreiben,
             string? feldKey,
             Func<int, string?>? farben = null,
+            Func<int, string?>? formatbereiche = null,
             string? zeilenKey = null)
         {
             raster.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -490,7 +516,7 @@ public static class DossierPreviewPageRenderer
                 var zelle = satz.Cells[i];
                 var element = ZeichneZelle(
                     zelle, value, ueberschreiben(i), feldKey, merke,
-                    farben?.Invoke(i), zeilenKey);
+                    farben?.Invoke(i), formatbereiche?.Invoke(i), zeilenKey);
 
                 Grid.SetRow(element, zeile);
                 Grid.SetColumn(element, spalte);
@@ -548,6 +574,19 @@ public static class DossierPreviewPageRenderer
                                 ? farbe
                                 : null;
                     },
+                    i =>
+                    {
+                        var key = i < tabelle.RepeatCellKeys.Count
+                            ? tabelle.RepeatCellKeys[i]
+                            : string.Empty;
+
+                        return key.Length > 0
+                            && satz.TryGetValue(
+                                key + DossierTopicTextFormatting.StyleRangesSuffix,
+                                out var format)
+                                ? format
+                                : null;
+                    },
                     tabelle.RepeatKey + "#" + zeilennummer);
             }
         }
@@ -577,6 +616,7 @@ public static class DossierPreviewPageRenderer
         string? feldKey,
         Action<string, Border> merke,
         string? farbe = null,
+        string? formatbereiche = null,
         string? zeilenKey = null)
     {
         var inhalt = new StackPanel();
@@ -593,12 +633,38 @@ public static class DossierPreviewPageRenderer
             var vorbild = zelle.Paragraphs.FirstOrDefault();
             var format = vorbild?.Runs.FirstOrDefault()?.Format ?? DossierPreviewRunFormat.Default;
 
-            if (farbe is not null)
-                format = format with { ColorHex = farbe };
+            format = format with { FontFamily = "Arial" };
+
+            var bereiche = DossierTopicTextFormatting.Normalize(
+                ersatztext,
+                DossierTopicTextFormatting.Decode(formatbereiche));
+
+            IReadOnlyList<DossierPreviewRun> runs;
+            if (bereiche.Count > 0)
+            {
+                runs = DossierTopicTextFormatting.Split(ersatztext, bereiche)
+                    .Select(segment => DossierPreviewRun.Literal(
+                        segment.Text,
+                        format with
+                        {
+                            ColorHex = segment.ColorHex ?? "000000",
+                            Bold = segment.Bold,
+                            Italic = segment.Italic,
+                            Underline = segment.Underline
+                        }))
+                    .ToList();
+            }
+            else
+            {
+                if (farbe is not null)
+                    format = format with { ColorHex = farbe };
+
+                runs = new[] { DossierPreviewRun.Literal(ersatztext, format) };
+            }
 
             inhalt.Children.Add(ZeichneAbsatz(
                 new DossierPreviewParagraph(
-                    new[] { DossierPreviewRun.Literal(ersatztext, format) },
+                    runs,
                     vorbild?.Format ?? DossierPreviewParagraphFormat.Default),
                 value,
                 merke));

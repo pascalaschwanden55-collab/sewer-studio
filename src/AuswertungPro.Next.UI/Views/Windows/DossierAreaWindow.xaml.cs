@@ -57,7 +57,13 @@ public partial class DossierAreaWindow : Window
             if (thema is null)
                 continue;
 
-            _topics.Add(new DossierTopicItem { Title = thema.Title, Text = thema.Text });
+            _topics.Add(new DossierTopicItem
+            {
+                Title = thema.Title,
+                Text = thema.Text,
+                ColorHex = thema.ColorHex,
+                StyleRanges = KopiereFormat(thema.StyleRanges)
+            });
         }
 
         // Ein Gebiet ohne Themen bekommt die Standardliste — sonst staende der
@@ -89,7 +95,13 @@ public partial class DossierAreaWindow : Window
         // nicht auffindbar und stuende als leere Tabellenzeile im Dokument.
         _target.Topics = _topics
             .Where(t => !string.IsNullOrWhiteSpace(t.Title))
-            .Select(t => new DossierTopicRow { Title = t.Title.Trim(), Text = t.Text ?? "" })
+            .Select(t => new DossierTopicRow
+            {
+                Title = t.Title.Trim(),
+                Text = t.Text ?? "",
+                ColorHex = t.ColorHex,
+                StyleRanges = KopiereFormat(t.StyleRanges)
+            })
             .ToList();
 
         DialogResult = true;
@@ -137,4 +149,18 @@ public partial class DossierAreaWindow : Window
     }
 
     private static string Trim(string? value) => value?.Trim() ?? "";
+
+    private static System.Collections.Generic.List<DossierTextStyleRange> KopiereFormat(
+        System.Collections.Generic.IEnumerable<DossierTextStyleRange>? ranges)
+        => (ranges ?? System.Linq.Enumerable.Empty<DossierTextStyleRange>())
+            .Select(r => new DossierTextStyleRange
+            {
+                Start = r.Start,
+                Length = r.Length,
+                ColorHex = r.ColorHex,
+                Bold = r.Bold,
+                Italic = r.Italic,
+                Underline = r.Underline
+            })
+            .ToList();
 }

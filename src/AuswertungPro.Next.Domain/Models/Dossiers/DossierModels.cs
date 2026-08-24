@@ -42,6 +42,31 @@ public sealed class DossierTopicRow
     /// Beispiel "C00000". Leer heisst: die Farbe der Vorlage.
     /// </summary>
     public string ColorHex { get; set; } = "";
+
+    /// <summary>
+    /// Abweichende Formatierungen innerhalb des Textes. Start und Laenge beziehen sich
+    /// auf <see cref="Text"/>. Bereiche ausserhalb des Textes werden beim Lesen
+    /// sicher begrenzt. Eine leere Liste behaelt alte Dossiers mit einer Farbe
+    /// fuer die ganze Zeile vollstaendig kompatibel.
+    /// </summary>
+    public List<DossierTextStyleRange> StyleRanges { get; set; } = new();
+}
+
+/// <summary>Ein formatierter Teil innerhalb eines Dossier-Thementextes.</summary>
+public sealed class DossierTextStyleRange
+{
+    public int Start { get; set; }
+
+    public int Length { get; set; }
+
+    /// <summary>Sechsstelliger RGB-Hexwert ohne Raute.</summary>
+    public string ColorHex { get; set; } = "";
+
+    public bool Bold { get; set; }
+
+    public bool Italic { get; set; }
+
+    public bool Underline { get; set; }
 }
 
 /// <summary>Eine Zeile der Tabelle "Aenderungswesen".</summary>
@@ -51,6 +76,9 @@ public sealed class DossierChangeRow
     public string Date { get; set; } = "";
     public string Visum { get; set; } = "";
     public string Change { get; set; } = "";
+
+    /// <summary>Zeichenformatierung je Eingabefeld dieser Tabellenzeile.</summary>
+    public Dictionary<string, List<DossierTextStyleRange>> FieldStyles { get; set; } = new();
 }
 
 /// <summary>
@@ -132,6 +160,9 @@ public sealed class DossierOwnerRow
 
     /// <summary>Objektbewohner, z.B. "Mehrfamilienhaus".</summary>
     public string Occupancy { get; set; } = "";
+
+    /// <summary>Zeichenformatierung je Eingabefeld dieser Tabellenzeile.</summary>
+    public Dictionary<string, List<DossierTextStyleRange>> FieldStyles { get; set; } = new();
 
     /// <summary>
     /// Wahr, sobald mindestens eines der sechs Felder etwas anderes als
@@ -242,6 +273,13 @@ public sealed class DossierDefinition
     public Dictionary<string, string> FieldOverrides { get; set; } = new();
 
     /// <summary>
+    /// Formatierte Teile einzelner Vorlagenfelder. Der Schluessel entspricht
+    /// dem Platzhalter beziehungsweise dem eindeutigen Eingabefeld. Alte
+    /// Dossiers ohne diese additive Angabe bleiben unveraendert lesbar.
+    /// </summary>
+    public Dictionary<string, List<DossierTextStyleRange>> FieldStyles { get; set; } = new();
+
+    /// <summary>
     /// Kapitel, die dieses Dossier nicht fuehrt — benannt nach ihrer
     /// Ueberschrift. Wer keinen Uebersichtsplan hat, laesst das Kapitel weg,
     /// statt eine leere Seite zu verschicken.
@@ -291,7 +329,7 @@ public sealed class DossierDefinition
 public sealed class DossierDocument
 {
     /// <summary>Formatversion, die diese Programmversion schreibt.</summary>
-    public const int CurrentSchemaVersion = 4;
+    public const int CurrentSchemaVersion = 5;
 
     /// <summary>Formatversion. Unbekannt hoehere Versionen werden nicht ueberschrieben.</summary>
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;

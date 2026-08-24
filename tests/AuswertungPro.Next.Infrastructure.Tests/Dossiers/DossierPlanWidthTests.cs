@@ -37,4 +37,13 @@ public sealed class DossierPlanWidthTests
             DossierWordTemplateExportService.PlanMaxWidthCm,
             DossierWordTemplateExportService.PlanWidthCm(dossier));
     }
+
+    [Fact]
+    public void Planhoehe_verwendet_das_feste_Verhaeltnis_der_Referenz()
+    {
+        Assert.Equal(
+            7_741_920d / 360_000d,
+            DossierWordTemplateExportService.PlanHeightForWidth(5_402_580d / 360_000d),
+            precision: 8);
+    }
 }

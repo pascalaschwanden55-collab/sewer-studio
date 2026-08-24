@@ -68,7 +68,13 @@ public partial class DossierEditWindow : Window
         foreach (var thema in _target.Topics ?? new())
         {
             if (thema is not null)
-                _topics.Add(new DossierTopicRow { Title = thema.Title, Text = thema.Text });
+                _topics.Add(new DossierTopicRow
+                {
+                    Title = thema.Title,
+                    Text = thema.Text,
+                    ColorHex = thema.ColorHex,
+                    StyleRanges = KopiereFormat(thema.StyleRanges)
+                });
         }
 
         _changes.Clear();
@@ -158,7 +164,9 @@ public partial class DossierEditWindow : Window
             .Select(thema => new DossierTopicRow
             {
                 Title = thema.Title.Trim(),
-                Text = thema.Text ?? ""
+                Text = thema.Text ?? "",
+                ColorHex = thema.ColorHex,
+                StyleRanges = KopiereFormat(thema.StyleRanges)
             })
             .ToList();
 
@@ -177,6 +185,20 @@ public partial class DossierEditWindow : Window
     private void OnCancel(object sender, RoutedEventArgs e) => DialogResult = false;
 
     private static string Trim(string? value) => value?.Trim() ?? "";
+
+    private static System.Collections.Generic.List<DossierTextStyleRange> KopiereFormat(
+        System.Collections.Generic.IEnumerable<DossierTextStyleRange>? ranges)
+        => (ranges ?? System.Linq.Enumerable.Empty<DossierTextStyleRange>())
+            .Select(r => new DossierTextStyleRange
+            {
+                Start = r.Start,
+                Length = r.Length,
+                ColorHex = r.ColorHex,
+                Bold = r.Bold,
+                Italic = r.Italic,
+                Underline = r.Underline
+            })
+            .ToList();
 
     private static string? NullIfEmpty(string? value)
     {

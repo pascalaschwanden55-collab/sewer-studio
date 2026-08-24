@@ -6,7 +6,9 @@ using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Media;
 
+using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Dossiers.Preview;
+using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.UI.Views.Rendering;
 
 using Xunit;
@@ -151,6 +153,38 @@ public sealed class DossierPreviewColorRenderTests
 
         Assert.Equal(Color.FromRgb(0xC0, 0x00, 0x00), FarbeVon(zeilen, "rot"));
         Assert.Equal(Color.FromRgb(0x00, 0x00, 0x00), FarbeVon(zeilen, "schwarz"));
+    }
+
+    [Fact]
+    public void Gemischte_Formatierung_erscheint_in_Arial_im_Blatt()
+    {
+        var format = DossierTopicTextFormatting.Encode(new[]
+        {
+            new DossierTextStyleRange
+            {
+                Start = 0,
+                Length = 3,
+                ColorHex = "C00000",
+                Bold = true,
+                Italic = true,
+                Underline = true
+            }
+        });
+        var zeile = Zeile("Schäden", "rot normal", "");
+        zeile["Text" + DossierTopicTextFormatting.StyleRangesSuffix] = format;
+
+        RunOnSta(() =>
+        {
+            var run = Zeichne(new[] { zeile }).First(r => r.Text == "rot");
+
+            Assert.Equal("Arial", run.FontFamily.Source);
+            Assert.Equal(FontWeights.Bold, run.FontWeight);
+            Assert.Equal(FontStyles.Italic, run.FontStyle);
+            Assert.Contains(run.TextDecorations,
+                d => d.Location == TextDecorationLocation.Underline);
+            Assert.Equal(Color.FromRgb(0xC0, 0x00, 0x00),
+                Assert.IsType<SolidColorBrush>(run.Foreground).Color);
+        });
     }
 
     private static void RunOnSta(Action action)

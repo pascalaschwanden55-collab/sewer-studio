@@ -1,5 +1,8 @@
 using System.ComponentModel;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+
+using AuswertungPro.Next.Domain.Models.Dossiers;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -24,6 +27,10 @@ public sealed class DossierTopicItem : INotifyPropertyChanged
         get => _text;
         set => Set(ref _text, value);
     }
+
+    public string ColorHex { get; set; } = "";
+
+    public List<DossierTextStyleRange> StyleRanges { get; set; } = new();
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

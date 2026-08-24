@@ -171,6 +171,33 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
     }
 
     [Fact]
+    public void Eine_feste_Vorlagenflaeche_bestimmt_Breite_und_Hoehe()
+    {
+        var bildPfad = Path.Combine(_root, "plan.png");
+        File.WriteAllBytes(bildPfad, TestImages.Png(width: 200, height: 100));
+
+        using var stream = new MemoryStream();
+        using (var document = CreateDocument(stream, "{{@Uebersichtsplan}}"))
+        {
+            DocxImagePlaceholderFiller.Fill(document, new[]
+            {
+                new DocxImagePlacement(
+                    "Uebersichtsplan", bildPfad, MaxWidthCm: 2.0, HeightCm: 3.0)
+            });
+            document.MainDocumentPart!.Document.Save();
+        }
+
+        stream.Position = 0;
+        using var reopened = WordprocessingDocument.Open(stream, false);
+        var extent = reopened.MainDocumentPart!.Document.Body!
+            .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>()
+            .Single();
+
+        Assert.Equal(720_000L, extent.Cx!.Value);
+        Assert.Equal(1_080_000L, extent.Cy!.Value);
+    }
+
+    [Fact]
     public void Fehlende_Bilddatei_laesst_die_Stelle_leer_statt_den_Platzhalter_stehen()
     {
         var fehlt = Path.Combine(_root, "gibtesnicht.png");

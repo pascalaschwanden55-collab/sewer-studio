@@ -44,7 +44,8 @@ public static class DossierTopicResolver
                 {
                     Title = thema.Title,
                     Text = eigene[treffer].Text,
-                    ColorHex = eigene[treffer].ColorHex
+                    ColorHex = eigene[treffer].ColorHex,
+                    StyleRanges = KopiereFormat(eigene[treffer].StyleRanges)
                 });
                 continue;
             }
@@ -53,7 +54,8 @@ public static class DossierTopicResolver
             {
                 Title = thema.Title,
                 Text = thema.Text,
-                ColorHex = thema.ColorHex
+                ColorHex = thema.ColorHex,
+                StyleRanges = KopiereFormat(thema.StyleRanges)
             });
         }
 
@@ -65,7 +67,8 @@ public static class DossierTopicResolver
                 {
                     Title = eigene[i].Title,
                     Text = eigene[i].Text,
-                    ColorHex = eigene[i].ColorHex
+                    ColorHex = eigene[i].ColorHex,
+                    StyleRanges = KopiereFormat(eigene[i].StyleRanges)
                 });
             }
         }
@@ -100,7 +103,23 @@ public static class DossierTopicResolver
             {
                 Title = z.Title.Trim(),
                 Text = z.Text ?? string.Empty,
-                ColorHex = z.ColorHex ?? string.Empty
+                ColorHex = z.ColorHex ?? string.Empty,
+                StyleRanges = KopiereFormat(z.StyleRanges)
+            })
+            .ToList();
+
+    private static List<DossierTextStyleRange> KopiereFormat(
+        IEnumerable<DossierTextStyleRange>? ranges)
+        => (ranges ?? Enumerable.Empty<DossierTextStyleRange>())
+            .Where(r => r is not null)
+            .Select(r => new DossierTextStyleRange
+            {
+                Start = r.Start,
+                Length = r.Length,
+                ColorHex = r.ColorHex ?? string.Empty,
+                Bold = r.Bold,
+                Italic = r.Italic,
+                Underline = r.Underline
             })
             .ToList();
 }

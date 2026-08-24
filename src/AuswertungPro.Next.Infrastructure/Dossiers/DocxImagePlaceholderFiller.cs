@@ -19,10 +19,15 @@ namespace AuswertungPro.Next.Infrastructure.Dossiers;
 /// <param name="PlaceholderName">Name ohne Klammern, z.B. "Logo".</param>
 /// <param name="ImagePath">Pfad zur Bilddatei.</param>
 /// <param name="MaxWidthCm">Breite im Dokument in Zentimetern.</param>
+/// <param name="HeightCm">
+/// Optionale feste Hoehe der Vorlagenflaeche. Leer behaelt das Bild sein
+/// Seitenverhaeltnis.
+/// </param>
 public sealed record DocxImagePlacement(
     string PlaceholderName,
     string ImagePath,
-    double MaxWidthCm);
+    double MaxWidthCm,
+    double? HeightCm = null);
 
 /// <summary>
 /// Ersetzt Platzhalter der Form <c>{{@Name}}</c> durch ein eingebettetes Bild.
@@ -175,7 +180,9 @@ public static class DocxImagePlaceholderFiller
         var relationshipId = mainPart.GetIdOfPart(imagePart);
 
         var widthEmu = (long)Math.Round(placement.MaxWidthCm * EmuPerCm);
-        var heightEmu = (long)Math.Round(widthEmu * (double)pixelHeight / pixelWidth);
+        var heightEmu = placement.HeightCm is > 0
+            ? (long)Math.Round(placement.HeightCm.Value * EmuPerCm)
+            : (long)Math.Round(widthEmu * (double)pixelHeight / pixelWidth);
 
         return BuildDrawing(relationshipId, widthEmu, heightEmu, drawingId, placement.PlaceholderName);
     }

@@ -60,6 +60,7 @@ public partial class DossierPreviewWindow : Window
         _request = request with { Area = area, Dossier = dossier };
 
         _document = DossierPreviewBuilder.Build(templatePath);
+        _values = DossierWordTemplateExportService.BuildValues(_request);
         // Die berechneten Werte sind die Vorgabe jeder Stelle; eine eigene
         // Angabe des Dossiers sticht sie.
         _fields = DossierPreviewFieldCatalog.Build(

@@ -42,7 +42,8 @@ public sealed record DossierPreviewField(
     Action<string>? Write,
     string Hint = "",
     Func<bool>? IsOverridden = null,
-    Action? Reset = null)
+    Action? Reset = null,
+    string StyleKey = "")
 {
     /// <summary>
     /// Wahr, wenn dieses Dossier hier etwas Eigenes fuehrt statt des
@@ -51,6 +52,8 @@ public sealed record DossierPreviewField(
     public bool Overridden => IsOverridden?.Invoke() ?? false;
 
     public bool CanReset => Reset is not null;
+
+    public string FormattingKey => StyleKey.Length > 0 ? StyleKey : Key;
 }
 
 /// <summary>
@@ -102,14 +105,10 @@ public static class DossierPreviewFieldCatalog
             Eigen("Eigentuemer_Block", "Eigentümer auf dem Deckblatt",
                 DossierPreviewFieldKind.MultiLine,
                 "Entsteht sonst aus der Tabelle „Eigentumsverhältnisse“."),
-            Text("Adresse_Zeile", "Strasse",
-                () => dossier.Address, w => dossier.Address = w),
-            Text("Adresse_Zeile", "Haus-Nr.",
-                () => dossier.HouseNumbers, w => dossier.HouseNumbers = w),
-            Text("Ort_Zeile", "PLZ",
-                () => dossier.PostalCode, w => dossier.PostalCode = w),
-            Text("Ort_Zeile", "Ort",
-                () => dossier.Town, w => dossier.Town = w),
+            Eigen("Adresse_Zeile", "Strasse und Haus-Nr.", DossierPreviewFieldKind.Text,
+                "Entsteht sonst aus Strasse und Hausnummer."),
+            Eigen("Ort_Zeile", "PLZ und Ort", DossierPreviewFieldKind.Text,
+                "Entsteht sonst aus PLZ und Ort."),
             Eigen("Datum", "Datum", DossierPreviewFieldKind.Text,
                 "Sonst das heutige Datum."),
             Text("Revision", "Revision",

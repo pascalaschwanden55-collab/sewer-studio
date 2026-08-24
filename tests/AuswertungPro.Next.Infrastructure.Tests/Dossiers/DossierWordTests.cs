@@ -660,6 +660,20 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Fest_eingebettete_Deckblattbilder_erzeugen_keine_Fehlwarnung()
+    {
+        var (request, _) = BuildScenario();
+        request.Dossier.OverviewPlanPath = string.Empty;
+
+        var service = new DossierWordTemplateExportService(AusgelieferteVorlage);
+        var result = await service.ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        Assert.DoesNotContain("Firmenlogo nicht gefunden", result.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Wappen nicht gefunden", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Fehlende_Bilder_erzeugen_trotzdem_ein_vollstaendiges_Dossier()
     {
         var (request, templatePath) = BuildScenario();

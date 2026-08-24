@@ -13,6 +13,8 @@ namespace AuswertungPro.Next.Application.Dossiers;
 /// Version 1 kannte je Liegenschaft genau einen Eigentuemer in Einzelfeldern.
 /// Version 2 hat eine Zeilenliste. Die Einzelfelder bleiben erhalten — sie
 /// speisen weiterhin das Deckblatt, und ein Wegwerfen waere Datenverlust.
+/// Version 5 speichert additive Zeichenformatierungen. Alte Dokumente brauchen
+/// dafuer keine Ableitung; leere Formatlisten bedeuten weiterhin Vorlagenformat.
 /// </summary>
 public static class DossierDocumentMigration
 {
@@ -91,6 +93,9 @@ public static class DossierDocumentMigration
         var brauchtThemen = NeedsTopicDerivation(document.SchemaVersion);
 
         document.Area.Topics ??= new List<DossierTopicRow>();
+        foreach (var topic in document.Area.Topics.Where(topic => topic is not null))
+            topic.StyleRanges ??= new List<DossierTextStyleRange>();
+
         if (brauchtThemen && document.Area.Topics.Count == 0)
             document.Area.Topics.AddRange(BuildAreaTopics(document.Area));
 
@@ -98,7 +103,15 @@ public static class DossierDocumentMigration
         {
             dossier.Owners ??= new List<DossierOwnerRow>();
             dossier.Topics ??= new List<DossierTopicRow>();
+            dossier.FieldStyles ??= new Dictionary<string, List<DossierTextStyleRange>>();
             dossier.Changes ??= new List<DossierChangeRow>();
+
+            foreach (var topic in dossier.Topics.Where(topic => topic is not null))
+                topic.StyleRanges ??= new List<DossierTextStyleRange>();
+            foreach (var owner in dossier.Owners.Where(owner => owner is not null))
+                owner.FieldStyles ??= new Dictionary<string, List<DossierTextStyleRange>>();
+            foreach (var change in dossier.Changes.Where(change => change is not null))
+                change.FieldStyles ??= new Dictionary<string, List<DossierTextStyleRange>>();
 
             if (brauchtThemen && dossier.Topics.Count == 0)
                 dossier.Topics.AddRange(BuildDossierTopics(dossier));

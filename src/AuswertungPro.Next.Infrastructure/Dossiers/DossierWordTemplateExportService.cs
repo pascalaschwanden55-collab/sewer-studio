@@ -36,6 +36,19 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     public const double PlanMaxWidthCm = 15.0;
 
     /// <summary>
+    /// Hoehe/Breite der Planflaeche aus dem Referenzdossier. Word passt das
+    /// Planbild genau in diese Flaeche ein; das verhindert eine Zusatzseite.
+    /// </summary>
+    private const double PlanTemplateHeightToWidth = 7_741_920d / 5_402_580d;
+
+    /// <summary>
+    /// Rechnet eine Breite in die feste Hoehe der Word-Vorlagenflaeche um.
+    /// Die Einheit bleibt gleich (cm zu cm, Pixel zu Pixel).
+    /// </summary>
+    public static double PlanHeightForWidth(double width)
+        => Math.Max(0, width) * PlanTemplateHeightToWidth;
+
+    /// <summary>
     /// Der Text, den eine Wiederholzeile ohne Daten traegt. Er steht hier, weil
     /// Export UND Vorschau denselben verwenden muessen — sonst zeigt die
     /// Vorschau etwas anderes als das fertige Dossier.
@@ -136,7 +149,9 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     // "{{@Logo}}" als unbekannten Textplatzhalter leeren und das
                     // Bild fehlte im fertigen Dossier ohne jede Meldung.
                     missingImages = DocxImagePlaceholderFiller.Fill(
-                        document, BuildImagePlacements(request, templatePath));
+                            document, BuildImagePlacements(request, templatePath))
+                        .Where(name => !HatFestEingebettetesBild(document, name))
+                        .ToList();
 
                     DocxPlaceholderFiller.Fill(document, values);
 
@@ -144,6 +159,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     // auf Zeilen OHNE Platzhalter, die es nach dem Fuellen noch
                     // unveraendert gibt.
                     DocxLiteralTextReplacer.Apply(document, request.Dossier.TextOverrides);
+
+                    // Die Vorlage bestimmt weiterhin Groessen, Abstaende,
+                    // Tabellen und Fusszeile. Nur die Schriftfamilie ist fuer
+                    // alle sichtbaren Texte verbindlich Arial.
+                    DocxPlaceholderFiller.SetArial(document);
 
                     document.MainDocumentPart?.Document?.Save();
                 }
@@ -196,6 +216,23 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         return werte;
     }
 
+    private static Dictionary<string, string> MitFormaten(
+        Dictionary<string, string> values,
+        DossierDefinition dossier)
+    {
+        foreach (var (key, ranges) in dossier.FieldStyles ?? new())
+        {
+            if (string.IsNullOrWhiteSpace(key) || !values.TryGetValue(key, out var text))
+                continue;
+
+            values[key + DossierTopicTextFormatting.StyleRangesSuffix] =
+                DossierTopicTextFormatting.Encode(
+                    DossierTopicTextFormatting.Normalize(text, ranges));
+        }
+
+        return values;
+    }
+
     public static Dictionary<string, string> BuildValues(DossierExportRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -205,7 +242,8 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         var snapshot = request.Snapshot;
         var today = DateTime.Now;
 
-        return MitEigenenWerten(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        return MitFormaten(MitEigenenWerten(
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["Gebietstitel"] = resolved.AreaTitle,
             ["Parzellen"] = d.ParcelNumbers,
@@ -263,7 +301,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                 .ToString("0.###", CultureInfo.InvariantCulture),
             ["Anzahl_Schaechte"] = snapshot.ShaftCount.ToString(CultureInfo.InvariantCulture),
             ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
-        }, d);
+        }, d), d);
     }
 
     /// <summary>
@@ -382,38 +420,52 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         DossierDefinition dossier,
         IReadOnlyDictionary<string, string>? values = null)
         => DossierTopicResolver.Resolve(area, dossier)
-            .Select(thema => (IReadOnlyDictionary<string, string>)
-                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["Thema"] = thema.Title,
+            .Select(thema =>
+            {
+                var formatiert = values is null
+                    ? new DossierTopicTextFormatting.FormattedText(
+                        thema.Text,
+                        DossierTopicTextFormatting.EffectiveRanges(thema))
+                    : DossierTopicTextFormatting.ReplacePlaceholders(
+                        thema.Text,
+                        values,
+                        DossierTopicTextFormatting.EffectiveRanges(thema));
 
-                    // Ein Thementext darf dieselben Platzhalter tragen wie die
-                    // Vorlage. So stehen die betroffenen Leitungen und Schaechte
-                    // dort, wo sie fachlich hingehoeren — in "Schaeden" und
-                    // "Sanierungskonzept" — und bleiben aktuell, statt einmal
-                    // hineinkopiert zu veralten.
-                    ["Text"] = values is null
-                        ? thema.Text
-                        : DocxPlaceholderFiller.ReplacePlaceholders(thema.Text, values),
+                return (IReadOnlyDictionary<string, string>)
+                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["Thema"] = thema.Title,
+                        ["Text"] = formatiert.Text,
 
-                    // Die Schriftfarbe reist unter demselben Namen mit.
-                    ["Text" + DocxPlaceholderFiller.FarbSuffix] = thema.ColorHex ?? string.Empty
-                })
+                        // Alte Dossiers mit einer Farbe fuer die ganze Zeile
+                        // bleiben lesbar. Neue Eintraege tragen genaue Bereiche.
+                        ["Text" + DocxPlaceholderFiller.FarbSuffix] =
+                            thema.StyleRanges is { Count: > 0 }
+                                ? string.Empty
+                                : thema.ColorHex ?? string.Empty,
+                        ["Text" + DossierTopicTextFormatting.StyleRangesSuffix] =
+                            DossierTopicTextFormatting.Encode(formatiert.StyleRanges)
+                    };
+            })
             .ToList();
 
     public static List<IReadOnlyDictionary<string, string>> BuildChangeRows(
         DossierDefinition dossier)
-        => (dossier.Changes ?? new List<DossierChangeRow>())
-            .Where(z => z is not null)
-            .Select(z => (IReadOnlyDictionary<string, string>)
-                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["Version"] = Clean(z.Version),
-                    ["Datum"] = Clean(z.Date),
-                    ["Visum"] = Clean(z.Visum),
-                    ["Aenderung"] = Clean(z.Change)
-                })
-            .ToList();
+    {
+        var rows = new List<IReadOnlyDictionary<string, string>>();
+        foreach (var change in (dossier.Changes ?? new List<DossierChangeRow>())
+            .Where(change => change is not null))
+        {
+            var row = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            AddFormattedValue(row, "Version", change.Version, RowStyles(change.FieldStyles, "Version"));
+            AddFormattedValue(row, "Datum", change.Date, RowStyles(change.FieldStyles, "Date"));
+            AddFormattedValue(row, "Visum", change.Visum, RowStyles(change.FieldStyles, "Visum"));
+            AddFormattedValue(row, "Aenderung", change.Change, RowStyles(change.FieldStyles, "Change"));
+            rows.Add(row);
+        }
+
+        return rows;
+    }
 
     public static List<IReadOnlyDictionary<string, string>> BuildHoldingRows(
         DossierSnapshot snapshot)
@@ -449,12 +501,17 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
 
         foreach (var owner in dossier.Owners)
         {
-            rows.Add(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Haus_Nr"] = Clean(owner.HouseNumber),
-                ["Pz_Nr"] = Clean(owner.ParcelNumber),
-                ["Eigentuemer_Zelle"] = BuildOwnerCell(owner)
-            });
+            var row = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            AddFormattedValue(row, "Haus_Nr", owner.HouseNumber,
+                RowStyles(owner.FieldStyles, "HouseNumber"));
+            AddFormattedValue(row, "Pz_Nr", owner.ParcelNumber,
+                RowStyles(owner.FieldStyles, "ParcelNumber"));
+
+            var ownerCell = BuildOwnerCell(owner);
+            row["Eigentuemer_Zelle"] = ownerCell.Text;
+            row["Eigentuemer_Zelle" + DossierTopicTextFormatting.StyleRangesSuffix] =
+                DossierTopicTextFormatting.Encode(ownerCell.StyleRanges);
+            rows.Add(row);
         }
 
         return rows;
@@ -464,23 +521,97 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// Der mehrzeilige Inhalt der Eigentuemerzelle — dieselbe Aufteilung wie im
     /// Vorbild. Leere Angaben erzeugen keine leere Beschriftungszeile.
     /// </summary>
-    private static string BuildOwnerCell(DossierOwnerRow owner)
+    private static DossierTopicTextFormatting.FormattedText BuildOwnerCell(DossierOwnerRow owner)
     {
-        var parts = new List<string>();
+        var text = new System.Text.StringBuilder();
+        var ranges = new List<DossierTextStyleRange>();
 
-        if (!string.IsNullOrWhiteSpace(owner.Name))
-            parts.Add(owner.Name.Trim());
+        void AddLine(string prefix, string value, string styleKey)
+        {
+            var formatted = CleanFormatted(value, RowStyles(owner.FieldStyles, styleKey));
+            if (formatted.Text.Length == 0)
+                return;
 
-        if (!string.IsNullOrWhiteSpace(owner.Phone))
-            parts.Add("Tel.: " + owner.Phone.Trim());
+            if (text.Length > 0)
+                text.Append('\n');
 
-        if (!string.IsNullOrWhiteSpace(owner.Mail))
-            parts.Add("Mail: " + owner.Mail.Trim());
+            var offset = text.Length + prefix.Length;
+            text.Append(prefix).Append(formatted.Text);
+            ranges.AddRange(formatted.StyleRanges.Select(range => new DossierTextStyleRange
+            {
+                Start = offset + range.Start,
+                Length = range.Length,
+                ColorHex = range.ColorHex,
+                Bold = range.Bold,
+                Italic = range.Italic,
+                Underline = range.Underline
+            }));
+        }
 
-        if (!string.IsNullOrWhiteSpace(owner.Occupancy))
-            parts.Add("Objektbewohner: " + owner.Occupancy.Trim());
+        AddLine(string.Empty, owner.Name, "Name");
+        AddLine("Tel.: ", owner.Phone, "Phone");
+        AddLine("Mail: ", owner.Mail, "Mail");
+        AddLine("Objektbewohner: ", owner.Occupancy, "Occupancy");
 
-        return string.Join("\n", parts);
+        return new DossierTopicTextFormatting.FormattedText(text.ToString(), ranges);
+    }
+
+    private static IReadOnlyList<DossierTextStyleRange> RowStyles(
+        Dictionary<string, List<DossierTextStyleRange>>? styles,
+        string key)
+        => styles is not null && styles.TryGetValue(key, out var ranges)
+            ? ranges
+            : Array.Empty<DossierTextStyleRange>();
+
+    private static void AddFormattedValue(
+        IDictionary<string, string> row,
+        string key,
+        string? value,
+        IReadOnlyList<DossierTextStyleRange> styles)
+    {
+        var formatted = CleanFormatted(value, styles);
+        row[key] = formatted.Text;
+        row[key + DossierTopicTextFormatting.StyleRangesSuffix] =
+            DossierTopicTextFormatting.Encode(formatted.StyleRanges);
+    }
+
+    private static DossierTopicTextFormatting.FormattedText CleanFormatted(
+        string? value,
+        IReadOnlyList<DossierTextStyleRange> styles)
+    {
+        var original = value ?? string.Empty;
+        var start = 0;
+        while (start < original.Length && char.IsWhiteSpace(original[start]))
+            start++;
+
+        var end = original.Length;
+        while (end > start && char.IsWhiteSpace(original[end - 1]))
+            end--;
+
+        var text = original[start..end];
+        if (text.Length == 0)
+            return new DossierTopicTextFormatting.FormattedText(string.Empty, Array.Empty<DossierTextStyleRange>());
+
+        var ranges = new List<DossierTextStyleRange>();
+        foreach (var range in DossierTopicTextFormatting.Normalize(original, styles))
+        {
+            var overlapStart = Math.Max(start, range.Start);
+            var overlapEnd = Math.Min(end, range.Start + range.Length);
+            if (overlapEnd <= overlapStart)
+                continue;
+
+            ranges.Add(new DossierTextStyleRange
+            {
+                Start = overlapStart - start,
+                Length = overlapEnd - overlapStart,
+                ColorHex = range.ColorHex,
+                Bold = range.Bold,
+                Italic = range.Italic,
+                Underline = range.Underline
+            });
+        }
+
+        return new DossierTopicTextFormatting.FormattedText(text, ranges);
     }
 
     /// <summary>
@@ -528,8 +659,12 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         var plan = ResolvePlanPath(request);
         if (plan is not null)
         {
+            var width = PlanWidthCm(request.Dossier);
             placements.Add(new DocxImagePlacement(
-                "Uebersichtsplan", plan, MaxWidthCm: PlanWidthCm(request.Dossier)));
+                "Uebersichtsplan",
+                plan,
+                MaxWidthCm: width,
+                HeightCm: PlanHeightForWidth(width)));
         }
 
         return placements;
@@ -542,6 +677,16 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// </summary>
     private static string BuildMissingImagesHint(IReadOnlyList<string> missingPlaceholders)
         => string.Join(" ", missingPlaceholders.Select(DescribeMissingImage));
+
+    private static bool HatFestEingebettetesBild(
+        WordprocessingDocument document,
+        string name)
+        => document.MainDocumentPart?.Document?.Body?
+            .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.DocProperties>()
+            .Any(properties => string.Equals(
+                properties.Name?.Value,
+                name,
+                StringComparison.OrdinalIgnoreCase)) == true;
 
     private static string DescribeMissingImage(string placeholderName) => placeholderName switch
     {
