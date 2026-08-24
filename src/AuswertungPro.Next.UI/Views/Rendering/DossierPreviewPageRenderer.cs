@@ -40,6 +40,13 @@ public sealed record DossierPreviewFrameOrigin(Brush? BorderBrush, Thickness Bor
 /// </summary>
 public static class DossierPreviewPageRenderer
 {
+    /// <summary>
+    /// Die eigene Fassung eines festen Textes. Als Feld statt als Parameter
+    /// durch jede Zeichenmethode gereicht: der Zeichner ist einfaedrig, und die
+    /// Alternative waeren acht zusaetzliche Parameter.
+    /// </summary>
+    private static Func<string, string?>? LiteralErsatz;
+
     private static readonly SolidColorBrush Papier = Fest(Color.FromRgb(0xFF, 0xFF, 0xFF));
     private static readonly SolidColorBrush Tinte = Fest(Color.FromRgb(0x00, 0x00, 0x00));
     private static readonly SolidColorBrush Blass = Fest(Color.FromRgb(0x90, 0x90, 0x90));
@@ -58,8 +65,10 @@ public static class DossierPreviewPageRenderer
         DossierPreviewPage page,
         Func<string, string> value,
         Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rows,
-        Func<string, string> emptyRowText)
+        Func<string, string> emptyRowText,
+        Func<string, string?>? literal = null)
     {
+        LiteralErsatz = literal;
         ArgumentNullException.ThrowIfNull(page);
         ArgumentNullException.ThrowIfNull(value);
         ArgumentNullException.ThrowIfNull(rows);
@@ -231,6 +240,39 @@ public static class DossierPreviewPageRenderer
         }
 
         var offeneStelle = false;
+
+        // Ein Absatz ohne Platzhalter ist fester Text — fuer ihn kann das
+        // Dossier eine eigene Fassung fuehren.
+        if (LiteralErsatz is not null && absatz.Runs.All(r => !r.IsField))
+        {
+            var urtext = string.Concat(absatz.Runs.Select(r => r.Text)).Trim();
+            var ersatz = urtext.Length > 0 ? LiteralErsatz(urtext) : null;
+
+            if (ersatz is not null)
+            {
+                var eigenes = new Run(ersatz)
+                {
+                    FontFamily = new FontFamily(erster.FontFamily),
+                    FontSize = erster.FontSizePx,
+                    FontWeight = erster.Bold ? FontWeights.Bold : FontWeights.Normal,
+                    FontStyle = erster.Italic ? FontStyles.Italic : FontStyles.Normal,
+                    Foreground = Pinsel(erster.ColorHex) ?? Tinte
+                };
+
+                text.Inlines.Add(eigenes);
+
+                return new Border
+                {
+                    Child = text,
+                    Background = ersatz.Trim().Length == 0 ? Luecke : Brushes.Transparent,
+                    Margin = new Thickness(
+                        absatz.Format.Indent.Left,
+                        absatz.Format.SpaceBeforePx,
+                        absatz.Format.Indent.Right,
+                        absatz.Format.SpaceAfterPx)
+                };
+            }
+        }
 
         foreach (var run in absatz.Runs)
         {

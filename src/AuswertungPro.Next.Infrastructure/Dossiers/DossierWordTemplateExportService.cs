@@ -103,6 +103,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
 
                 using (var document = WordprocessingDocument.Open(tempPath, isEditable: true))
                 {
+                    // Zuerst die weggelassenen Kapitel: was nicht mehr da ist,
+                    // muss auch nicht gefuellt werden.
+                    foreach (var kapitel in request.Dossier.HiddenChapters ?? new())
+                        DocxChapterRemover.Remove(document, kapitel);
+
                     DocxPlaceholderFiller.FillRepeatingRows(
                         document,
                         "Haltungen",
@@ -134,6 +139,12 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                         document, BuildImagePlacements(request, templatePath));
 
                     DocxPlaceholderFiller.Fill(document, values);
+
+                    // Zuletzt die eigenen Fassungen fester Texte: sie greifen
+                    // auf Zeilen OHNE Platzhalter, die es nach dem Fuellen noch
+                    // unveraendert gibt.
+                    DocxLiteralTextReplacer.Apply(document, request.Dossier.TextOverrides);
+
                     document.MainDocumentPart?.Document?.Save();
                 }
 
@@ -169,6 +180,22 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// dieselbe Quelle verwenden MUSS — eine Vorschau, die andere Werte zeigt
     /// als der Export, waere schlimmer als gar keine.
     /// </summary>
+    /// <summary>
+    /// Legt die eigenen Angaben des Dossiers ueber die berechneten. Ein leerer
+    /// Eintrag zaehlt: die Stelle bleibt dann bewusst leer.
+    /// </summary>
+    private static Dictionary<string, string> MitEigenenWerten(
+        Dictionary<string, string> werte, DossierDefinition dossier)
+    {
+        foreach (var (name, wert) in dossier.FieldOverrides ?? new())
+        {
+            if (!string.IsNullOrWhiteSpace(name))
+                werte[name.Trim()] = wert ?? string.Empty;
+        }
+
+        return werte;
+    }
+
     public static Dictionary<string, string> BuildValues(DossierExportRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -178,7 +205,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         var snapshot = request.Snapshot;
         var today = DateTime.Now;
 
-        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        return MitEigenenWerten(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["Gebietstitel"] = resolved.AreaTitle,
             ["Parzellen"] = d.ParcelNumbers,
@@ -236,7 +263,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                 .ToString("0.###", CultureInfo.InvariantCulture),
             ["Anzahl_Schaechte"] = snapshot.ShaftCount.ToString(CultureInfo.InvariantCulture),
             ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
-        };
+        }, d);
     }
 
     /// <summary>

@@ -40,7 +40,18 @@ public sealed record DossierPreviewField(
     DossierPreviewFieldKind Kind,
     Func<string> Read,
     Action<string>? Write,
-    string Hint = "");
+    string Hint = "",
+    Func<bool>? IsOverridden = null,
+    Action? Reset = null)
+{
+    /// <summary>
+    /// Wahr, wenn dieses Dossier hier etwas Eigenes fuehrt statt des
+    /// berechneten Werts.
+    /// </summary>
+    public bool Overridden => IsOverridden?.Invoke() ?? false;
+
+    public bool CanReset => Reset is not null;
+}
 
 /// <summary>
 /// Verbindet die Platzhalter der Vorlage mit den Angaben, aus denen sie
@@ -52,11 +63,33 @@ public sealed record DossierPreviewField(
 /// </summary>
 public static class DossierPreviewFieldCatalog
 {
+    /// <summary>
+    /// <paramref name="computed"/> liefert den berechneten Wert einer Stelle.
+    /// Er ist die Vorgabe; sobald das Dossier etwas Eigenes fuehrt, gilt das.
+    /// </summary>
     public static IReadOnlyList<DossierPreviewField> Build(
-        DossierAreaSettings area, DossierDefinition dossier)
+        DossierAreaSettings area,
+        DossierDefinition dossier,
+        Func<string, string>? computed = null)
     {
         ArgumentNullException.ThrowIfNull(area);
         ArgumentNullException.ThrowIfNull(dossier);
+
+        var berechnet = computed ?? (_ => string.Empty);
+
+        DossierPreviewField Eigen(
+            string key, string label, DossierPreviewFieldKind kind, string hint)
+            => new(
+                key,
+                label,
+                kind,
+                () => dossier.FieldOverrides.TryGetValue(key, out var wert)
+                    ? wert
+                    : berechnet(key),
+                wert => dossier.FieldOverrides[key] = wert ?? string.Empty,
+                hint,
+                () => dossier.FieldOverrides.ContainsKey(key),
+                () => dossier.FieldOverrides.Remove(key));
 
         return new List<DossierPreviewField>
         {
@@ -66,8 +99,9 @@ public static class DossierPreviewFieldCatalog
                 () => area.AreaLocation, w => area.AreaLocation = w),
             Text("Parzellen_Zeile", "Parzellen-Nr.",
                 () => dossier.ParcelNumbers, w => dossier.ParcelNumbers = w),
-            Derived("Eigentuemer_Block", "Eigentümer auf dem Deckblatt",
-                "Entsteht aus der Tabelle „Eigentumsverhältnisse“."),
+            Eigen("Eigentuemer_Block", "Eigentümer auf dem Deckblatt",
+                DossierPreviewFieldKind.MultiLine,
+                "Entsteht sonst aus der Tabelle „Eigentumsverhältnisse“."),
             Text("Adresse_Zeile", "Strasse",
                 () => dossier.Address, w => dossier.Address = w),
             Text("Adresse_Zeile", "Haus-Nr.",
@@ -76,7 +110,8 @@ public static class DossierPreviewFieldCatalog
                 () => dossier.PostalCode, w => dossier.PostalCode = w),
             Text("Ort_Zeile", "Ort",
                 () => dossier.Town, w => dossier.Town = w),
-            Derived("Datum", "Datum", "Immer das heutige Datum."),
+            Eigen("Datum", "Datum", DossierPreviewFieldKind.Text,
+                "Sonst das heutige Datum."),
             Text("Revision", "Revision",
                 () => dossier.Revision, w => dossier.Revision = w),
             Text("Projekt_Nr", "Proj. Nr. AWU",
@@ -85,7 +120,8 @@ public static class DossierPreviewFieldCatalog
                 () => area.DrawnBy, w => area.DrawnBy = w),
 
             Rows("Aenderungen", "Änderungswesen"),
-            Derived("Datum_Lang", "Erstellungsdatum", "Immer das heutige Datum."),
+            Eigen("Datum_Lang", "Erstellungsdatum", DossierPreviewFieldKind.Text,
+                "Sonst das heutige Datum."),
             Text("Autoren", "Autoren",
                 () => area.Authors, w => area.Authors = w),
 
@@ -94,9 +130,14 @@ public static class DossierPreviewFieldCatalog
 
             Rows("Eigentuemer", "Eigentumsverhältnisse"),
 
-            Derived("Haltungen_Text", "Betroffene Leitungen",
-                "Entsteht aus den gewählten Leitungen des Projekts."),
-            Derived("Haltungen_Summe", "Zusammenzug", "Anzahl, Länge und Kosten der Leitungen."),
+            Eigen("Haltungen_Text", "Betroffene Leitungen",
+                DossierPreviewFieldKind.MultiLine,
+                "Entsteht sonst aus den gewählten Leitungen des Projekts."),
+            Eigen("Haltungen_Summe", "Zusammenzug", DossierPreviewFieldKind.Text,
+                "Sonst Anzahl, Länge und Kosten der Leitungen."),
+            Eigen("Schaechte_Text", "Betroffene Schächte",
+                DossierPreviewFieldKind.MultiLine,
+                "Entsteht sonst aus den Schächten der gewählten Leitungen."),
 
             Rows("Themen", "Themen der Informationstabelle"),
             MultiLine("Aktennotiz", "Für die Aktennotiz",
@@ -115,7 +156,10 @@ public static class DossierPreviewFieldCatalog
     /// gemeldet, statt lautlos zu fehlen.
     /// </summary>
     public static IReadOnlyList<DossierPreviewField> ForPage(
-        IReadOnlyList<DossierPreviewField> alle, DossierPreviewPage page)
+        IReadOnlyList<DossierPreviewField> alle,
+        DossierPreviewPage page,
+        DossierDefinition? dossier = null,
+        Func<string, string>? computed = null)
     {
         ArgumentNullException.ThrowIfNull(alle);
         ArgumentNullException.ThrowIfNull(page);
@@ -126,8 +170,31 @@ public static class DossierPreviewFieldCatalog
 
         foreach (var key in page.FieldKeys)
         {
-            if (!alle.Any(f => string.Equals(f.Key, key, StringComparison.Ordinal)))
+            if (alle.Any(f => string.Equals(f.Key, key, StringComparison.Ordinal)))
+                continue;
+
+            // Auch eine Stelle, die der Katalog nicht kennt, muss von Hand zu
+            // fuellen sein — sonst gaebe es im Blatt einen Platz ohne Eingabe.
+            if (dossier is null)
+            {
                 ergebnis.Add(Derived(key, key, "Wird aus anderen Angaben berechnet."));
+                continue;
+            }
+
+            var berechnet = computed ?? (_ => string.Empty);
+            var eigener = key;
+
+            ergebnis.Add(new DossierPreviewField(
+                eigener,
+                eigener,
+                DossierPreviewFieldKind.MultiLine,
+                () => dossier.FieldOverrides.TryGetValue(eigener, out var wert)
+                    ? wert
+                    : berechnet(eigener),
+                wert => dossier.FieldOverrides[eigener] = wert ?? string.Empty,
+                "Wird sonst aus anderen Angaben berechnet.",
+                () => dossier.FieldOverrides.ContainsKey(eigener),
+                () => dossier.FieldOverrides.Remove(eigener)));
         }
 
         return ergebnis;

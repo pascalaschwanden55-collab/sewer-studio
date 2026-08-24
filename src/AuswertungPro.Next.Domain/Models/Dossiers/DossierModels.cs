@@ -231,6 +231,34 @@ public sealed class DossierDefinition
     /// <summary>Text der Zeile "Fuer die Aktennotiz".</summary>
     public string FileNote { get; set; } = "";
 
+    /// <summary>
+    /// Eigene Werte fuer einzelne Stellen des Dossiers, je Platzhaltername.
+    ///
+    /// Damit ist auch eine sonst berechnete Angabe von Hand zu setzen — das
+    /// Erstellungsdatum, der Eigentuemerblock, die Leitungsliste. Ein LEERER
+    /// Eintrag ist eine Angabe: die Stelle bleibt dann bewusst leer. Fehlt der
+    /// Eintrag ganz, rechnet das Programm den Wert wie bisher aus.
+    /// </summary>
+    public Dictionary<string, string> FieldOverrides { get; set; } = new();
+
+    /// <summary>
+    /// Kapitel, die dieses Dossier nicht fuehrt — benannt nach ihrer
+    /// Ueberschrift. Wer keinen Uebersichtsplan hat, laesst das Kapitel weg,
+    /// statt eine leere Seite zu verschicken.
+    /// </summary>
+    public List<string> HiddenChapters { get; set; } = new();
+
+    /// <summary>
+    /// Eigene Fassungen fester Texte der Vorlage, je urspruenglichem Text.
+    /// Ein LEERER Ersatz laesst die Zeile weg.
+    ///
+    /// Der Text selbst ist der Schluessel: das braucht keine kuenstliche
+    /// Nummer, die beim Umbau der Vorlage verrutscht. Wird der Text in Word
+    /// geaendert, greift die eigene Fassung nicht mehr — dann steht wieder der
+    /// Text der Vorlage da und nicht ein Rest von gestern.
+    /// </summary>
+    public Dictionary<string, string> TextOverrides { get; set; } = new();
+
     public DossierStatus Status { get; set; } = DossierStatus.Offen;
 
     /// <summary>Verweise auf die Haltungen. Bewusst die Guid, nicht der Name.</summary>

@@ -60,7 +60,10 @@ public partial class DossierPreviewWindow : Window
         _request = request with { Area = area, Dossier = dossier };
 
         _document = DossierPreviewBuilder.Build(templatePath);
-        _fields = DossierPreviewFieldCatalog.Build(_area, _dossier);
+        // Die berechneten Werte sind die Vorgabe jeder Stelle; eine eigene
+        // Angabe des Dossiers sticht sie.
+        _fields = DossierPreviewFieldCatalog.Build(
+            _area, _dossier, key => _values.TryGetValue(key, out var wert) ? wert : string.Empty);
 
         PageList.ItemsSource = _document.Pages;
         if (_document.Pages.Count > 0)
@@ -111,7 +114,13 @@ public partial class DossierPreviewWindow : Window
 
         _aktivesFeld = null;
         FieldsHeader.Text = $"Felder auf Seite {seite.Number} — {seite.Title}";
-        BaueFelder(DossierPreviewFieldCatalog.ForPage(_fields, seite));
+        BaueFelder(DossierPreviewFieldCatalog.ForPage(
+            _fields,
+            seite,
+            _dossier,
+            key => _values.TryGetValue(key, out var wert) ? wert : string.Empty));
+
+        BaueFesteTexte(seite);
         ZeichneBlatt();
     }
 
@@ -139,7 +148,8 @@ public partial class DossierPreviewWindow : Window
             seite,
             key => _values.TryGetValue(key, out var wert) ? wert : string.Empty,
             ZeilenFuer,
-            DossierWordTemplateExportService.EmptyRowText);
+            DossierWordTemplateExportService.EmptyRowText,
+            urtext => _dossier.TextOverrides.TryGetValue(urtext, out var eigen) ? eigen : null);
 
         Sheet.Child = _render.Root;
 

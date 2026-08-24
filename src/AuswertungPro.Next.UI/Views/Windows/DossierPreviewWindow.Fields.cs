@@ -65,6 +65,10 @@ public partial class DossierPreviewWindow
                 case DossierPreviewFieldKind.Text:
                 case DossierPreviewFieldKind.MultiLine:
                     FieldPanel.Children.Add(BaueTextfeld(feld));
+
+                    if (feld.CanReset)
+                        FieldPanel.Children.Add(BaueRueckweg(feld));
+
                     break;
 
                 case DossierPreviewFieldKind.File:
@@ -89,6 +93,136 @@ public partial class DossierPreviewWindow
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// Die festen Texte der Seite — Kapitelueberschriften, Spaltentitel, jede
+    /// Zeile ohne Platzhalter.
+    ///
+    /// Damit ist wirklich jedes Element der Seite aenderbar und nicht nur die
+    /// gefuellten Stellen. Wer eine Zeile leert, laesst sie weg; ein
+    /// Zuruecksetzen bringt den Text der Vorlage zurueck.
+    /// </summary>
+    private void BaueFesteTexte(DossierPreviewPage seite)
+    {
+        var texte = FesteTexte(seite);
+        if (texte.Count == 0)
+            return;
+
+        var ausklapper = new Expander
+        {
+            Header = "Feste Texte dieser Seite",
+            Foreground = (System.Windows.Media.Brush)FindResource("TextBrush"),
+            Margin = new Thickness(0, 18, 0, 0)
+        };
+
+        var inhalt = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+        ausklapper.Content = inhalt;
+
+        inhalt.Children.Add(new TextBlock
+        {
+            Text = "Leeren heisst: die Zeile wird weggelassen.",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 6)
+        });
+
+        foreach (var urtext in texte)
+        {
+            var schluessel = urtext;
+
+            inhalt.Children.Add(new TextBlock
+            {
+                Text = schluessel,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 10, 0, 2)
+            });
+
+            var box = new TextBox
+            {
+                Text = _dossier.TextOverrides.TryGetValue(schluessel, out var eigen)
+                    ? eigen
+                    : schluessel,
+                TextWrapping = TextWrapping.Wrap,
+                AcceptsReturn = false
+            };
+
+            box.GotKeyboardFocus += (_, _) => Hervorheben(schluessel, blinken: false);
+
+            box.TextChanged += (_, _) =>
+            {
+                if (string.Equals(box.Text, schluessel, StringComparison.Ordinal))
+                    _dossier.TextOverrides.Remove(schluessel);
+                else
+                    _dossier.TextOverrides[schluessel] = box.Text;
+
+                ZeichneBlatt();
+            };
+
+            var zurueck = new Button
+            {
+                Content = "Text der Vorlage",
+                Padding = new Thickness(8, 2, 8, 2),
+                FontSize = 11,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+
+            zurueck.Click += (_, _) =>
+            {
+                _dossier.TextOverrides.Remove(schluessel);
+                box.Text = schluessel;
+                ZeichneBlatt();
+            };
+
+            inhalt.Children.Add(box);
+            inhalt.Children.Add(zurueck);
+        }
+
+        FieldPanel.Children.Add(ausklapper);
+    }
+
+    /// <summary>
+    /// Die festen Texte einer Seite, ohne Wiederholungen. Zeilen MIT
+    /// Platzhalter gehoeren ihrem Feld und stehen deshalb nicht hier.
+    /// </summary>
+    private static IReadOnlyList<string> FesteTexte(DossierPreviewPage seite)
+    {
+        var ergebnis = new List<string>();
+
+        void Sammle(IEnumerable<DossierPreviewParagraph> absaetze)
+        {
+            foreach (var absatz in absaetze)
+            {
+                if (absatz.Runs.Any(r => r.IsField))
+                    continue;
+
+                var text = string.Concat(absatz.Runs.Select(r => r.Text)).Trim();
+
+                if (text.Length > 0 && !ergebnis.Contains(text, StringComparer.Ordinal))
+                    ergebnis.Add(text);
+            }
+        }
+
+        foreach (var block in seite.Blocks)
+        {
+            switch (block)
+            {
+                case DossierPreviewParagraph absatz:
+                    Sammle(new[] { absatz });
+                    Sammle(absatz.Floating
+                        .SelectMany(f => f.Blocks)
+                        .OfType<DossierPreviewParagraph>());
+                    break;
+
+                case DossierPreviewTable tabelle:
+                    Sammle(tabelle.Rows
+                        .SelectMany(z => z.Cells)
+                        .SelectMany(z => z.Paragraphs));
+                    break;
+            }
+        }
+
+        return ergebnis;
     }
 
     private TextBox BaueTextfeld(DossierPreviewField feld)
@@ -117,9 +251,75 @@ public partial class DossierPreviewWindow
             feld.Write?.Invoke(box.Text);
             ZeichneBlatt();
             Hervorheben(feld.Key, blinken: false);
+
+            // Der Rueckweg steht unmittelbar unter dem Feld.
+            if (feld.CanReset
+                && FieldPanel.Children.IndexOf(box) is var stelle and >= 0
+                && stelle + 1 < FieldPanel.Children.Count
+                && FieldPanel.Children[stelle + 1] is DockPanel rueckweg)
+            {
+                rueckweg.Visibility = feld.Overridden
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            }
         };
 
         return box;
+    }
+
+    /// <summary>
+    /// Der Rueckweg zur berechneten Angabe.
+    ///
+    /// Ohne ihn waere jede von Hand gesetzte Stelle eine Einbahnstrasse: das
+    /// Erstellungsdatum bliebe fuer immer stehen, auch wenn es laengst das
+    /// falsche ist.
+    /// </summary>
+    private UIElement BaueRueckweg(DossierPreviewField feld)
+    {
+        var zeile = new DockPanel { Margin = new Thickness(0, 4, 0, 0) };
+
+        var knopf = new Button
+        {
+            Content = "Zurücksetzen",
+            Padding = new Thickness(8, 2, 8, 2),
+            FontSize = 11
+        };
+
+        DockPanel.SetDock(knopf, Dock.Right);
+
+        var hinweis = new TextBlock
+        {
+            Text = "Von Hand gesetzt.",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 11,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        knopf.Click += (_, _) =>
+        {
+            feld.Reset?.Invoke();
+            _aktivesFeld = feld.Key;
+            ZeichneBlatt();
+
+            // Die Felder danach neu aufbauen: das Textfeld traegt jetzt wieder
+            // den berechneten Wert, und der Rueckweg wird ueberfluessig.
+            if (PageList.SelectedItem is DossierPreviewPage seite)
+            {
+                BaueFelder(DossierPreviewFieldCatalog.ForPage(
+                    _fields,
+                    seite,
+                    _dossier,
+                    key => _values.TryGetValue(key, out var wert) ? wert : string.Empty));
+            }
+
+            Hervorheben(feld.Key, blinken: true);
+        };
+
+        zeile.Children.Add(knopf);
+        zeile.Children.Add(hinweis);
+
+        zeile.Visibility = feld.Overridden ? Visibility.Visible : Visibility.Collapsed;
+        return zeile;
     }
 
     private UIElement BaueDateifeld(DossierPreviewField feld)
@@ -411,12 +611,8 @@ public partial class DossierPreviewWindow
     /// </summary>
     private static readonly (string Name, string Hex)[] Schriftfarben =
     {
-        ("Standard", ""),
-        ("Rot", "C00000"),
-        ("Blau", "1F4E79"),
-        ("Grün", "2E7D32"),
-        ("Orange", "C55A11"),
-        ("Grau", "7F7F7F")
+        ("Schwarz", ""),
+        ("Rot", "C00000")
     };
 
     /// <summary>

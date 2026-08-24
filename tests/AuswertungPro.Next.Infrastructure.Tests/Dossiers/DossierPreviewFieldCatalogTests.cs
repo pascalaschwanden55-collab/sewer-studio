@@ -47,16 +47,68 @@ public sealed class DossierPreviewFieldCatalogTests
     }
 
     [Fact]
-    public void Berechnete_Stellen_sind_nicht_beschreibbar_und_sagen_warum()
+    public void Eine_berechnete_Stelle_zeigt_den_berechneten_Wert_und_sagt_woher()
     {
         var (area, dossier) = Stand();
-        var felder = DossierPreviewFieldCatalog.Build(area, dossier);
+        var felder = DossierPreviewFieldCatalog.Build(
+            area, dossier, key => key == "Eigentuemer_Block" ? "Kurt Beispiel" : "");
 
         var block = felder.Single(f => f.Key == "Eigentuemer_Block");
 
-        Assert.Equal(DossierPreviewFieldKind.Derived, block.Kind);
-        Assert.Null(block.Write);
+        Assert.Equal("Kurt Beispiel", block.Read());
+        Assert.False(block.Overridden);
         Assert.NotEqual("", block.Hint);
+    }
+
+    [Fact]
+    public void Auch_eine_berechnete_Stelle_laesst_sich_von_Hand_setzen()
+    {
+        // Jedes Element muss aenderbar sein — auch das Erstellungsdatum oder
+        // der Eigentuemerblock.
+        var (area, dossier) = Stand();
+        var felder = DossierPreviewFieldCatalog.Build(
+            area, dossier, _ => "berechnet");
+
+        var block = felder.Single(f => f.Key == "Eigentuemer_Block");
+
+        Assert.NotNull(block.Write);
+        block.Write!("Von Hand");
+
+        Assert.Equal("Von Hand", block.Read());
+        Assert.True(block.Overridden);
+        Assert.Equal("Von Hand", dossier.FieldOverrides["Eigentuemer_Block"]);
+    }
+
+    [Fact]
+    public void Eine_von_Hand_gesetzte_Stelle_laesst_sich_zuruecksetzen()
+    {
+        // Ohne Rueckweg waere jede Handeingabe eine Einbahnstrasse.
+        var (area, dossier) = Stand();
+        var felder = DossierPreviewFieldCatalog.Build(area, dossier, _ => "berechnet");
+
+        var datum = felder.Single(f => f.Key == "Datum_Lang");
+        datum.Write!("im Frühjahr");
+
+        Assert.True(datum.Overridden);
+        Assert.True(datum.CanReset);
+
+        datum.Reset!();
+
+        Assert.False(datum.Overridden);
+        Assert.Equal("berechnet", datum.Read());
+    }
+
+    [Fact]
+    public void Eine_leer_gesetzte_Stelle_bleibt_leer_statt_zu_rechnen()
+    {
+        var (area, dossier) = Stand();
+        var felder = DossierPreviewFieldCatalog.Build(area, dossier, _ => "berechnet");
+
+        var datum = felder.Single(f => f.Key == "Datum");
+        datum.Write!("");
+
+        Assert.Equal("", datum.Read());
+        Assert.True(datum.Overridden);
     }
 
     [Fact]
