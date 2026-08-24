@@ -31,6 +31,8 @@ public partial class DossierPreviewWindow : Window
     private readonly DossierDefinition _dossier;
     private readonly DossierSnapshot _snapshot;
     private readonly DossierExportRequest _request;
+    private readonly IPlanImageConverter _planImages;
+    private readonly IPlanImageAdjuster _planAdjuster;
 
     private readonly DossierPreviewDocument _document;
     private IReadOnlyList<DossierPreviewField> _fields = Array.Empty<DossierPreviewField>();
@@ -43,9 +45,14 @@ public partial class DossierPreviewWindow : Window
         DossierExportRequest request,
         DossierAreaSettings area,
         DossierDefinition dossier,
-        string templatePath)
+        string templatePath,
+        IPlanImageConverter planImages,
+        IPlanImageAdjuster planAdjuster)
     {
         InitializeComponent();
+
+        _planImages = planImages;
+        _planAdjuster = planAdjuster;
 
         _area = area;
         _dossier = dossier;
@@ -65,14 +72,20 @@ public partial class DossierPreviewWindow : Window
     /// wenn der Benutzer verworfen hat.
     /// </summary>
     public static (DossierAreaSettings Area, DossierDefinition Dossier)? ShowFor(
-        DossierExportRequest request, string templatePath)
+        DossierExportRequest request,
+        string templatePath,
+        IPlanImageConverter planImages,
+        IPlanImageAdjuster planAdjuster)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(planImages);
+        ArgumentNullException.ThrowIfNull(planAdjuster);
 
         var area = Kopiere(request.Area);
         var dossier = Kopiere(request.Dossier);
 
-        var window = new DossierPreviewWindow(request, area, dossier, templatePath)
+        var window = new DossierPreviewWindow(
+            request, area, dossier, templatePath, planImages, planAdjuster)
         {
             Owner = System.Windows.Application.Current?.MainWindow
         };

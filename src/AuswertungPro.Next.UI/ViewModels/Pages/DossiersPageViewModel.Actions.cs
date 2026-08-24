@@ -449,7 +449,8 @@ public sealed partial class DossiersPageViewModel
         (DossierAreaSettings Area, DossierDefinition Dossier)? ergebnis;
         try
         {
-            ergebnis = DossierPreviewWindow.ShowFor(BuildRequest(root, definition), vorlage);
+            ergebnis = DossierPreviewWindow.ShowFor(
+                BuildRequest(root, definition), vorlage, _planImages, _planAdjuster);
         }
         catch (Exception ex)
         {

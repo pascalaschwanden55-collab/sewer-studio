@@ -31,4 +31,14 @@ public sealed partial class ServiceProvider
 
     /// <summary>Telefon und Mail zu einem Namen — nur fuer Einzelabfragen.</summary>
     public IDirectoryLookup DossierDirectory => _dossierComposition.Directory;
+
+    /// <summary>
+    /// Macht aus einer Plan-PDF ein Bild. Liegt in der Oberflaechenschicht,
+    /// weil der PDF-Renderer von Windows nur dort erreichbar ist.
+    /// </summary>
+    public IPlanImageConverter DossierPlanImages { get; } =
+        new Services.WindowsPdfPlanImageConverter();
+
+    /// <summary>Dreht das Planbild eines Dossiers.</summary>
+    public IPlanImageAdjuster DossierPlanAdjuster { get; } = new Services.PlanImageAdjuster();
 }

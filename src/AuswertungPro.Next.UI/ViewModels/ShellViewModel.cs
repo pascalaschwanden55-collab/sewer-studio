@@ -178,6 +178,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 batchProposal: _sp.DossierBatchProposal,
                 parcelLookup: _sp.DossierParcelLookup,
                 directory: _sp.DossierDirectory,
+                planImages: _sp.DossierPlanImages,
+                planAdjuster: _sp.DossierPlanAdjuster,
                 costStores: _sp.CostStores,
                 dialogs: _sp.Dialogs,
                 toasts: _sp.Toasts,

@@ -136,19 +136,49 @@ public partial class DossierPreviewWindow
         var knopf = new Button { Content = "Wählen…", Padding = new Thickness(10, 4, 10, 4) };
         DockPanel.SetDock(knopf, Dock.Right);
 
-        knopf.Click += (_, _) =>
+        knopf.Click += async (_, _) =>
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
                 Title = "Übersichtsplan wählen",
-                Filter = "Bilder|*.png;*.jpg;*.jpeg;*.bmp|Alle Dateien|*.*"
+                Filter = "Plan (PDF und Bilder)|*.pdf;*.png;*.jpg;*.jpeg;*.bmp"
+                    + "|PDF|*.pdf|Bilder|*.png;*.jpg;*.jpeg;*.bmp|Alle Dateien|*.*"
             };
 
             if (dialog.ShowDialog(this) != true)
                 return;
 
-            feld.Write?.Invoke(dialog.FileName);
-            anzeige.Text = dialog.FileName;
+            var pfad = dialog.FileName;
+
+            // Word nimmt nur PNG und JPEG. Ein Plan kommt aber meist als PDF —
+            // er wird deshalb sofort umgewandelt, damit die Vorschau schon
+            // zeigt, was im Dossier stehen wird.
+            if (_planImages.NeedsConversion(pfad))
+            {
+                knopf.IsEnabled = false;
+                StatusText.Text = "Plan wird in ein Bild umgewandelt…";
+
+                try
+                {
+                    var ergebnis = await _planImages.ConvertAsync(pfad, _request.TargetFolder);
+
+                    if (!ergebnis.Success)
+                    {
+                        StatusText.Text = ergebnis.Error ?? "Die Umwandlung ist fehlgeschlagen.";
+                        return;
+                    }
+
+                    pfad = ergebnis.ImagePath!;
+                    StatusText.Text = ergebnis.Error ?? "Plan übernommen.";
+                }
+                finally
+                {
+                    knopf.IsEnabled = true;
+                }
+            }
+
+            feld.Write?.Invoke(pfad);
+            anzeige.Text = pfad;
             _aktivesFeld = feld.Key;
             ZeichneBlatt();
             Hervorheben(feld.Key, blinken: true);
@@ -156,7 +186,50 @@ public partial class DossierPreviewWindow
 
         panel.Children.Add(knopf);
         panel.Children.Add(anzeige);
-        return panel;
+
+        var ganzes = new StackPanel();
+        ganzes.Children.Add(panel);
+        ganzes.Children.Add(BaueDrehleiste(feld, anzeige));
+        return ganzes;
+    }
+
+    /// <summary>
+    /// Die Drehknoepfe. Gedreht wird die Datei selbst — dann stimmt der Plan
+    /// in der Vorschau, im Word und in jedem PDF daraus. Eine nur gespeicherte
+    /// Gradzahl muesste jede dieser Stellen erneut auswerten, und eine davon
+    /// vergisst es.
+    /// </summary>
+    private UIElement BaueDrehleiste(DossierPreviewField feld, TextBlock anzeige)
+    {
+        var leiste = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 6, 0, 0)
+        };
+
+        void Drehe(int grad)
+        {
+            var ergebnis = _planAdjuster.Rotate(feld.Read(), _request.TargetFolder, grad);
+
+            if (!ergebnis.Success)
+            {
+                StatusText.Text = ergebnis.Error ?? "Der Plan konnte nicht gedreht werden.";
+                return;
+            }
+
+            feld.Write?.Invoke(ergebnis.ImagePath!);
+            anzeige.Text = ergebnis.ImagePath!;
+            _aktivesFeld = feld.Key;
+            StatusText.Text = "Plan gedreht.";
+            ZeichneBlatt();
+            Hervorheben(feld.Key, blinken: false);
+        }
+
+        leiste.Children.Add(Werkzeug("⟲", "90° nach links drehen", () => Drehe(270)));
+        leiste.Children.Add(Werkzeug("⟳", "90° nach rechts drehen", () => Drehe(90)));
+        leiste.Children.Add(Werkzeug("180°", "Auf den Kopf stellen", () => Drehe(180)));
+
+        return leiste;
     }
 
     /// <summary>
@@ -487,7 +560,8 @@ public partial class DossierPreviewWindow
         var knopf = new Button
         {
             Content = zeichen,
-            Width = 28,
+            MinWidth = 28,
+            Padding = new Thickness(6, 0, 6, 0),
             Height = 24,
             Margin = new Thickness(4, 0, 0, 0),
             ToolTip = hinweis

@@ -95,6 +95,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     private readonly DossierBatchProposalUseCase _batchProposal;
     private readonly DossierParcelLookupUseCase _parcelLookup;
     private readonly IDirectoryLookup _directory;
+    private readonly IPlanImageConverter _planImages;
+    private readonly IPlanImageAdjuster _planAdjuster;
     private readonly ICostStoreFactory _costStores;
     private readonly IDialogService _dialogs;
     private readonly ToastService _toasts;
@@ -116,6 +118,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         DossierBatchProposalUseCase batchProposal,
         DossierParcelLookupUseCase parcelLookup,
         IDirectoryLookup directory,
+        IPlanImageConverter planImages,
+        IPlanImageAdjuster planAdjuster,
         ICostStoreFactory costStores,
         IDialogService dialogs,
         ToastService toasts,
@@ -133,6 +137,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         _batchProposal = batchProposal ?? throw new ArgumentNullException(nameof(batchProposal));
         _parcelLookup = parcelLookup ?? throw new ArgumentNullException(nameof(parcelLookup));
         _directory = directory ?? throw new ArgumentNullException(nameof(directory));
+        _planImages = planImages ?? throw new ArgumentNullException(nameof(planImages));
+        _planAdjuster = planAdjuster ?? throw new ArgumentNullException(nameof(planAdjuster));
         _costStores = costStores ?? throw new ArgumentNullException(nameof(costStores));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _toasts = toasts ?? throw new ArgumentNullException(nameof(toasts));
