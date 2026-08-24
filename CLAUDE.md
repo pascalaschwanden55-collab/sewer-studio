@@ -49,11 +49,22 @@
   `DossierDefinition.FieldStyles`; das alte `ColorHex` bleibt fuer bestehende Projekte lesbar.
 - `DossierTopicTextFormatting` ist die WPF-freie Bereichs-, Platzhalter- und
   Serialisierungsregel. Vorschau und Word-Export muessen dieselben Bereiche verwenden.
+- `DossierTopicComponentListComposer` fuegt in `Schäden` und `Sanierungskonzept`
+  automatisch dieselbe fortlaufend nummerierte Bauteilliste ein: zuerst alle
+  Dossier-Haltungen, danach alle Dossier-Schächte. Alte getrennte Listenmarken bleiben
+  als Position und Formatierung lesbar, erzeugen aber keine Doppelungen.
 - Dossiertext wird in Vorschau und Word direkt als Arial ausgegeben. Schriftgroessen,
   Absatzabstaende und Tabellenmasse stammen weiterhin unveraendert aus der Vorlage.
 - Der Uebersichtsplan wird in das feste Seitenverhaeltnis der Referenzflaeche
   (ca. 15 x 21,5 cm) eingepasst. Ein reines Datei-Seitenverhaeltnis kann den Plan
   auf eine Zusatzseite schieben und darf deshalb nicht wieder verwendet werden.
+- Jede Zeile im Dossier-Cockpit behaelt die eindeutige `HoldingId`. Das Rechtsklick-Menue
+  routet Video, Originalprotokoll und den Sprung zur Datenseite ueber
+  `DossierHoldingActionController`; die Seite selbst enthaelt nur die Zeilenauswahl.
+  `DossierHoldingActionFactory` verwendet dafuer die bestehenden
+  `DataPageVideoPlaybackController`-, `DataPageOriginalPdfController`- und sicheren
+  Pfadaufloesungswege. `ShellViewModel.NavigateToHolding` ist der gemeinsame direkte
+  Sprung fuer Dossier und Karte und selektiert den Projektdatensatz im Menue `Haltungen`.
 
 ## Aktueller Pipeline-Ablauf
 1. UI/Service startet Analyse ueber `VideoAnalysisPipelineService`, `SingleFrameMultiModelService` oder `VideoFullAnalysisService`.

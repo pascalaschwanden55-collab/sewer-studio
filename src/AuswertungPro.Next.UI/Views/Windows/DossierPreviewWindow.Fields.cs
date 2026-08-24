@@ -485,7 +485,23 @@ public partial class DossierPreviewWindow
         var aktionen = new WrapPanel();
         wurzel.Children.Add(aktionen);
 
-        if (DossierTopicEditing.SupportsHoldingInsert(titel))
+        if (DossierTopicEditing.IncludesComponentsAutomatically(titel))
+        {
+            var hinweis = new TextBlock
+            {
+                Text = "Die Liste wird automatisch nummeriert: zuerst alle Haltungen, danach alle Schächte.",
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 11,
+                Margin = new Thickness(0, 3, 0, 5)
+            };
+            hinweis.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+            wurzel.Children.Add(hinweis);
+
+            aktionen.Children.Add(Kleiner("Liste hier",
+                "Setzt nur die Position der automatischen Liste; ohne Marke steht sie nach dem eigenen Text",
+                () => Einfuegen(box, marke, DossierTopicComponentListComposer.Placeholder)));
+        }
+        else if (DossierTopicEditing.SupportsHoldingInsert(titel))
         {
             aktionen.Children.Add(Kleiner("+ Leitungen",
                 "Setzt die betroffenen Leitungen an der Schreibmarke ein",

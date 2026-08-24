@@ -195,6 +195,13 @@ public static class DossierTopicEditing
                 titel.StartsWith(t, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>
+    /// In diesen Themen werden alle Haltungen und danach alle Schaechte ohne
+    /// einen manuellen Einfuegeschritt ausgegeben.
+    /// </summary>
+    public static bool IncludesComponentsAutomatically(string? title)
+        => DossierTopicComponentListComposer.IsAutomaticTitle(title);
+
     /// <summary>Wahr, wenn dieses Dossier fuer den Titel etwas Eigenes fuehrt.</summary>
     public static bool HasDossierOverride(DossierDefinition dossier, string title)
     {

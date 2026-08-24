@@ -297,6 +297,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             ["Aktennotiz"] = d.FileNote,
             ["Haltungen_Text"] = BuildHoldingsText(snapshot),
             ["Schaechte_Text"] = BuildShaftsText(snapshot),
+            [DossierTopicComponentListComposer.ValueKey] = BuildNumberedComponentsText(snapshot),
             ["Uebersichtsplan_BreiteCm"] = PlanWidthCm(d)
                 .ToString("0.###", CultureInfo.InvariantCulture),
             ["Anzahl_Schaechte"] = snapshot.ShaftCount.ToString(CultureInfo.InvariantCulture),
@@ -322,32 +323,8 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         if (snapshot.Holdings.Count == 0)
             return "Keine Leitungen zugeordnet.";
 
-        var zeilen = new List<string>();
-        foreach (var holding in snapshot.Holdings)
-        {
-            var teile = new List<string> { holding.HoldingName };
-
-            if (!string.IsNullOrWhiteSpace(holding.Street))
-                teile.Add(holding.Street);
-
-            var laenge = FormatLength(holding.LengthMeters);
-            if (!string.IsNullOrWhiteSpace(laenge))
-                teile.Add(laenge);
-
-            var zustand = FormatCondition(holding.ConditionClass);
-            if (!string.IsNullOrWhiteSpace(zustand))
-                teile.Add(zustand);
-
-            if (!string.IsNullOrWhiteSpace(holding.Measures))
-                teile.Add(holding.Measures);
-
-            if (holding.NetCost > 0m)
-                teile.Add(FormatChf(holding.NetCost));
-
-            zeilen.Add(string.Join(" · ", teile));
-        }
-
-        return string.Join(Environment.NewLine, zeilen);
+        return string.Join(Environment.NewLine,
+            snapshot.Holdings.Select(BuildHoldingDescription));
     }
 
     /// <summary>
@@ -368,23 +345,66 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         };
 
         foreach (var schacht in snapshot.Shafts)
-        {
-            var teile = new List<string> { schacht.Number };
-
-            if (!string.IsNullOrWhiteSpace(schacht.Street))
-                teile.Add(schacht.Street);
-
-            var zustand = FormatCondition(schacht.ConditionClass);
-            if (!string.IsNullOrWhiteSpace(zustand))
-                teile.Add(zustand);
-
-            if (schacht.NetCost > 0m)
-                teile.Add(FormatChf(schacht.NetCost));
-
-            zeilen.Add(string.Join(" · ", teile));
-        }
+            zeilen.Add(BuildShaftDescription(schacht));
 
         return string.Join(Environment.NewLine, zeilen);
+    }
+
+    private static string BuildNumberedComponentsText(DossierSnapshot snapshot)
+    {
+        var lines = new List<string>();
+        var number = 1;
+
+        foreach (var holding in snapshot.Holdings)
+            lines.Add($"{number++}. Haltung {BuildHoldingDescription(holding)}".TrimEnd());
+
+        foreach (var shaft in snapshot.Shafts)
+            lines.Add($"{number++}. Schacht {BuildShaftDescription(shaft)}".TrimEnd());
+
+        return lines.Count == 0
+            ? "Keine Leitungen zugeordnet."
+            : string.Join("\n", lines);
+    }
+
+    private static string BuildHoldingDescription(DossierHoldingLine holding)
+    {
+        var parts = new List<string> { holding.HoldingName };
+
+        if (!string.IsNullOrWhiteSpace(holding.Street))
+            parts.Add(holding.Street);
+
+        var length = FormatLength(holding.LengthMeters);
+        if (!string.IsNullOrWhiteSpace(length))
+            parts.Add(length);
+
+        var condition = FormatCondition(holding.ConditionClass);
+        if (!string.IsNullOrWhiteSpace(condition))
+            parts.Add(condition);
+
+        if (!string.IsNullOrWhiteSpace(holding.Measures))
+            parts.Add(holding.Measures);
+
+        if (holding.NetCost > 0m)
+            parts.Add(FormatChf(holding.NetCost));
+
+        return string.Join(" · ", parts);
+    }
+
+    private static string BuildShaftDescription(DossierShaftLine shaft)
+    {
+        var parts = new List<string> { shaft.Number };
+
+        if (!string.IsNullOrWhiteSpace(shaft.Street))
+            parts.Add(shaft.Street);
+
+        var condition = FormatCondition(shaft.ConditionClass);
+        if (!string.IsNullOrWhiteSpace(condition))
+            parts.Add(condition);
+
+        if (shaft.NetCost > 0m)
+            parts.Add(FormatChf(shaft.NetCost));
+
+        return string.Join(" · ", parts);
     }
 
     private static string BuildHoldingsSummary(DossierSnapshot snapshot, DateTime today)
@@ -426,10 +446,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     ? new DossierTopicTextFormatting.FormattedText(
                         thema.Text,
                         DossierTopicTextFormatting.EffectiveRanges(thema))
-                    : DossierTopicTextFormatting.ReplacePlaceholders(
-                        thema.Text,
-                        values,
-                        DossierTopicTextFormatting.EffectiveRanges(thema));
+                    : DossierTopicComponentListComposer.Compose(thema, values);
 
                 return (IReadOnlyDictionary<string, string>)
                     new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
