@@ -197,6 +197,33 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
+    public void Der_Ort_steht_auf_dem_Deckblatt_nur_einmal()
+    {
+        // Die Vorlage hat fuer Strasse und Ort ZWEI Zeilen. Liefert die
+        // Adresszeile beides, steht der Ort zweimal untereinander.
+        var werte = DossierWordTemplateExportService.BuildValues(BuildScenario().Request);
+
+        Assert.Equal("Brämenhofstatt 3+4+7+8", werte["Adresse_Zeile"]);
+        Assert.Equal("6472 Erstfeld", werte["Ort_Zeile"]);
+        Assert.DoesNotContain("Erstfeld", werte["Adresse_Zeile"], StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("439", "Parzelle 439")]
+    [InlineData("  439 ", "Parzelle 439")]
+    [InlineData("439, 440", "Parzellen 439, 440")]
+    [InlineData("762+756", "Parzellen 762+756")]
+    [InlineData("439a", "Parzelle 439a")]
+    [InlineData("", "")]
+    public void Die_Parzellenzeile_zaehlt_richtig(string eingabe, string erwartet)
+    {
+        var (request, _) = BuildScenario();
+        request.Dossier.ParcelNumbers = eingabe;
+
+        Assert.Equal(erwartet, DossierWordTemplateExportService.BuildValues(request)["Parzellen_Zeile"]);
+    }
+
+    [Fact]
     public async Task Die_neuen_Deckblattfelder_erscheinen_im_fertigen_Dossier()
     {
         var (request, templatePath) = BuildScenario();

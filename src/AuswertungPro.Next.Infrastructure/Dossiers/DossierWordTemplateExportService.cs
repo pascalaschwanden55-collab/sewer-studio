@@ -162,9 +162,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         {
             ["Gebietstitel"] = resolved.AreaTitle,
             ["Parzellen"] = d.ParcelNumbers,
-            ["Parzellen_Zeile"] = string.IsNullOrWhiteSpace(d.ParcelNumbers)
-                ? string.Empty
-                : "Parzellen " + d.ParcelNumbers,
+            ["Parzellen_Zeile"] = BuildParcelLine(d.ParcelNumbers),
             ["Hausnummern"] = d.HouseNumbers,
             ["Adresse_Zeile"] = BuildAddressLine(d),
             ["Adresse"] = d.Address,
@@ -472,16 +470,31 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     private static string Clean(string? value)
         => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
 
+    /// <summary>
+    /// Nur Strasse und Hausnummer. Ort und Postleitzahl stehen in der Vorlage
+    /// als eigene Zeile <c>{{Ort_Zeile}}</c> darunter — beides hier zu
+    /// wiederholen hiesse, den Ort auf dem Deckblatt zweimal zu drucken.
+    /// </summary>
     private static string BuildAddressLine(DossierDefinition d)
-    {
-        var street = string.Join(
+        => string.Join(
             " ",
             new[] { d.Address, d.HouseNumbers }.Where(p => !string.IsNullOrWhiteSpace(p)));
-        var town = string.Join(
-            " ",
-            new[] { d.PostalCode, d.Town }.Where(p => !string.IsNullOrWhiteSpace(p)));
 
-        return JoinLines(street, town);
+    /// <summary>
+    /// "Parzelle 439" oder "Parzellen 439, 440". Das Feld ist Freitext; als
+    /// mehrere gilt es erst, wenn wirklich ein Trenner oder eine zweite
+    /// Nummerngruppe darin steht.
+    /// </summary>
+    private static string BuildParcelLine(string? parzellen)
+    {
+        if (string.IsNullOrWhiteSpace(parzellen))
+            return string.Empty;
+
+        var text = parzellen.Trim();
+        var mehrere = text.IndexOfAny(new[] { ',', ';', '+', '/', '&' }) >= 0
+            || System.Text.RegularExpressions.Regex.Matches(text, @"\d+").Count > 1;
+
+        return (mehrere ? "Parzellen " : "Parzelle ") + text;
     }
 
     private static string BuildOwnerDetail(DossierDefinition d)

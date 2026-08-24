@@ -497,6 +497,7 @@ public static class DossierPreviewBuilder
             string? wiederholung = null;
             var wiederholZellen = new List<string>();
             DossierPreviewTableRow? bauplan = null;
+            var wiederholStelle = -1;
 
             foreach (var zeile in tabelle.Elements<TableRow>())
             {
@@ -521,6 +522,7 @@ public static class DossierPreviewBuilder
                             ?.Groups["name"].Value ?? string.Empty)
                         .ToList();
                     bauplan = gebaut;
+                    wiederholStelle = zeilen.Count;
                     continue;
                 }
 
@@ -528,7 +530,8 @@ public static class DossierPreviewBuilder
             }
 
             return new DossierPreviewTable(
-                breiten, einzug, zeilen, wiederholung, wiederholZellen, bauplan);
+                breiten, einzug, zeilen, wiederholung, wiederholZellen, bauplan,
+                wiederholStelle);
         }
 
         private DossierPreviewTableCell BaueZelle(

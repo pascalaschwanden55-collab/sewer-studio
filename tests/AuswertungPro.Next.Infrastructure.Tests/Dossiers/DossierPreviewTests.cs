@@ -156,6 +156,33 @@ public sealed class DossierPreviewBuilderTests
     }
 
     [Fact]
+    public void Die_erzeugten_Zeilen_stehen_vor_Aktennotiz_und_Rueckmeldung()
+    {
+        // In der Informationstabelle folgen unter der Wiederholzeile noch zwei
+        // feste Zeilen. Werden die erzeugten Zeilen angehaengt statt eingesetzt,
+        // rutschen Aktennotiz und Rueckmeldung darueber — die Reihenfolge im
+        // Dossier waere falsch.
+        var themen = Vorschau().Pages
+            .SelectMany(s => s.Blocks)
+            .OfType<DossierPreviewTable>()
+            .Single(t => t.RepeatKey == "Themen");
+
+        // Kopfzeile, danach die Wiederholzeile, danach die zwei festen.
+        Assert.Equal(1, themen.RepeatIndex);
+        Assert.Equal(3, themen.Rows.Count);
+
+        string Zeilentext(int i) => string.Concat(themen.Rows[i].Cells
+            .SelectMany(z => z.Paragraphs)
+            .SelectMany(a => a.Runs)
+            .Where(r => !r.IsField)
+            .Select(r => r.Text));
+
+        Assert.Contains("Thema", Zeilentext(0), StringComparison.Ordinal);
+        Assert.Contains("Aktennotiz", Zeilentext(1), StringComparison.Ordinal);
+        Assert.Contains("Rückmeldung", Zeilentext(2), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Das_Blatt_hat_die_Masse_der_Vorlage()
     {
         // A4 bei 96 dpi und die Raender aus dem Abschnitt der Vorlage. Ohne

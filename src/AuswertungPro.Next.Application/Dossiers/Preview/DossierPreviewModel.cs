@@ -131,6 +131,11 @@ public sealed record DossierPreviewTableRow(IReadOnlyList<DossierPreviewTableCel
 /// <paramref name="RepeatKey"/> ist gesetzt, wenn die Vorlage eine
 /// Wiederholzeile fuehrt; <paramref name="RepeatTemplate"/> ist deren Bauplan,
 /// damit jede erzeugte Zeile dasselbe Aussehen bekommt.
+///
+/// <paramref name="RepeatIndex"/> ist die STELLE, an der die erzeugten Zeilen
+/// stehen — sie muessen dort erscheinen, wo die Vorlage sie fuehrt. In der
+/// Informationstabelle folgen darunter noch die Aktennotiz und die
+/// Rueckmeldung; angehaengt statt eingesetzt stuenden sie in falscher Ordnung.
 /// </summary>
 public sealed record DossierPreviewTable(
     IReadOnlyList<double> ColumnWidthsPx,
@@ -138,7 +143,8 @@ public sealed record DossierPreviewTable(
     IReadOnlyList<DossierPreviewTableRow> Rows,
     string? RepeatKey,
     IReadOnlyList<string> RepeatCellKeys,
-    DossierPreviewTableRow? RepeatTemplate) : DossierPreviewBlock;
+    DossierPreviewTableRow? RepeatTemplate,
+    int RepeatIndex = -1) : DossierPreviewBlock;
 
 /// <summary>Ein fest eingebettetes Bild, zum Beispiel Logo oder Wappen.</summary>
 public sealed record DossierPreviewPicture(

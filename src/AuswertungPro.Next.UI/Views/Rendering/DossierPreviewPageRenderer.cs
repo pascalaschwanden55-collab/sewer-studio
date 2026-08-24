@@ -388,11 +388,11 @@ public static class DossierPreviewPageRenderer
             zeile++;
         }
 
-        foreach (var satz in tabelle.Rows)
-            Setze(satz, _ => null, null);
-
-        if (tabelle.RepeatKey is not null && tabelle.RepeatTemplate is not null)
+        void SetzeWiederholung()
         {
+            if (tabelle.RepeatKey is null || tabelle.RepeatTemplate is null)
+                return;
+
             var daten = rows(tabelle.RepeatKey);
 
             if (daten.Count == 0)
@@ -400,6 +400,7 @@ public static class DossierPreviewPageRenderer
                 Setze(tabelle.RepeatTemplate,
                     i => i == 0 ? "— noch keine Zeile —" : string.Empty,
                     tabelle.RepeatKey);
+                return;
             }
 
             foreach (var satz in daten)
@@ -419,6 +420,21 @@ public static class DossierPreviewPageRenderer
                     tabelle.RepeatKey);
             }
         }
+
+        // Die erzeugten Zeilen stehen dort, wo die Vorlage sie fuehrt — nicht
+        // am Ende. Sonst rutschten Aktennotiz und Rueckmeldung darueber.
+        var stelle = tabelle.RepeatIndex < 0 ? tabelle.Rows.Count : tabelle.RepeatIndex;
+
+        for (var i = 0; i < tabelle.Rows.Count; i++)
+        {
+            if (i == stelle)
+                SetzeWiederholung();
+
+            Setze(tabelle.Rows[i], _ => null, null);
+        }
+
+        if (stelle >= tabelle.Rows.Count)
+            SetzeWiederholung();
 
         return raster;
     }
