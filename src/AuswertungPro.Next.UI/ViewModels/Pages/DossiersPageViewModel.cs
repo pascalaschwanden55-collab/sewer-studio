@@ -139,6 +139,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         EditDossierCommand = new AsyncRelayCommand(EditDossierAsync, () => Selected is not null);
         EditAreaCommand = new AsyncRelayCommand(EditAreaAsync);
         CreateWordCommand = new AsyncRelayCommand(CreateWordAsync, () => Selected is not null);
+        PreviewCommand = new AsyncRelayCommand(PreviewAsync, () => Selected is not null);
         CollectAttachmentsCommand = new AsyncRelayCommand(
             CollectAttachmentsAsync, () => Selected is not null);
         AssemblePdfCommand = new AsyncRelayCommand(AssemblePdfAsync, () => Selected is not null);
@@ -165,6 +166,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     public IAsyncRelayCommand EditDossierCommand { get; }
     public IAsyncRelayCommand EditAreaCommand { get; }
     public IAsyncRelayCommand CreateWordCommand { get; }
+
+    public IAsyncRelayCommand PreviewCommand { get; }
     public IAsyncRelayCommand CollectAttachmentsCommand { get; }
     public IAsyncRelayCommand AssemblePdfCommand { get; }
     public IRelayCommand OpenFolderCommand { get; }
@@ -403,6 +406,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         EditHoldingsCommand.NotifyCanExecuteChanged();
         EditDossierCommand.NotifyCanExecuteChanged();
         CreateWordCommand.NotifyCanExecuteChanged();
+        PreviewCommand.NotifyCanExecuteChanged();
         CollectAttachmentsCommand.NotifyCanExecuteChanged();
         AssemblePdfCommand.NotifyCanExecuteChanged();
         OpenFolderCommand.NotifyCanExecuteChanged();

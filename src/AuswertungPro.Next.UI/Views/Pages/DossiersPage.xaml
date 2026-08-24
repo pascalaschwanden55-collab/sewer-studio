@@ -312,6 +312,9 @@
                                     Command="{Binding EditHoldingsCommand}"/>
                             <Button Content="Stammdaten…" Padding="12,7" Margin="0,0,8,8"
                                     Command="{Binding EditDossierCommand}"/>
+                            <Button Content="Vorschau" Padding="12,7" Margin="0,0,8,8"
+                                    ToolTip="Seite für Seite ansehen und ausfüllen"
+                                    Command="{Binding PreviewCommand}"/>
                             <Button Content="Word erzeugen" Padding="12,7" Margin="0,0,8,8"
                                     Command="{Binding CreateWordCommand}"/>
                             <Button Content="Beilagen sammeln" Padding="12,7" Margin="0,0,8,8"

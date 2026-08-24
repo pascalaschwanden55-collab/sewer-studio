@@ -382,6 +382,64 @@ public sealed partial class DossiersPageViewModel
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Zeigt das Dossier Seite fuer Seite und laesst die Felder dieser Seite
+    /// direkt daneben ausfuellen. Uebernommen wird nur auf ausdruecklichen
+    /// Wunsch — das Fenster arbeitet auf einer Kopie.
+    /// </summary>
+    private async Task PreviewAsync()
+    {
+        if (Selected is null || !EnsureProject(out var root))
+            return;
+
+        var vorlage = DossierWordTemplateExportService.DefaultTemplatePath();
+        if (!File.Exists(vorlage))
+        {
+            StatusMessage = "Die Word-Vorlage fehlt: " + vorlage;
+            _dialogs.Error(StatusMessage, "Vorschau");
+            return;
+        }
+
+        var definition = Selected.Definition;
+
+        (DossierAreaSettings Area, DossierDefinition Dossier)? ergebnis;
+        try
+        {
+            ergebnis = DossierPreviewWindow.ShowFor(BuildRequest(root, definition), vorlage);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Die Vorschau konnte nicht geöffnet werden: " + ex.Message;
+            _dialogs.Error(StatusMessage, "Vorschau");
+            return;
+        }
+
+        if (ergebnis is null)
+        {
+            StatusMessage = "Vorschau geschlossen, nichts übernommen.";
+            return;
+        }
+
+        // Die Vorschau hat auf Kopien gearbeitet. Zurueckgeschrieben wird an
+        // genau die Stelle, von der die Kopie stammt.
+        _document.Area = ergebnis.Value.Area;
+
+        var stelle = _document.Dossiers.FindIndex(d => d.Id == definition.Id);
+        if (stelle < 0)
+        {
+            StatusMessage = "Das Dossier ist zwischenzeitlich verschwunden — nichts übernommen.";
+            return;
+        }
+
+        _document.Dossiers[stelle] = ergebnis.Value.Dossier;
+
+        if (!await SaveDocumentAsync(root))
+            return;
+
+        await ReloadAsync();
+        StatusMessage = "Angaben aus der Vorschau übernommen.";
+    }
+
     // ── Hilfen ────────────────────────────────────────────────────────────
 
     private DossierExportRequest BuildRequest(string root, DossierDefinition definition)
