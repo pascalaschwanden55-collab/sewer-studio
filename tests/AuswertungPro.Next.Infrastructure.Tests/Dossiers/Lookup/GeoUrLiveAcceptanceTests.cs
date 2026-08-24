@@ -141,4 +141,52 @@ public sealed class GeoUrLiveAcceptanceTests
         Assert.False(traegtErsatzzeichen,
             "Die gelesene Seite enthält Ersatzzeichen — die Kodierung stimmt nicht.");
     }
+
+    [GeoUrLiveFact]
+    public async Task Stockwerkeigentum_wird_an_der_echten_Seite_richtig_zerlegt()
+    {
+        // Goeschenen (BFS 1208), Parzelle 30: drei Stockwerkeigentums-Parteien,
+        // deren Eintrag jeweils in EINER Zeile steht. Am 2026-08-24 gemessen.
+        //
+        // Diese Form kam in Erstfeld nicht vor. Vor der Reparatur las der Parser
+        // hier zwei Eigentuemer mit dem Registertext als Name — der waere so in
+        // den Brief gedruckt worden.
+        using var gateway = new GeoUrHttpGateway();
+
+        var parzelle = await new UriParcelWfsClient(gateway).FindAsync(1208, "30");
+        Assert.NotNull(parzelle);
+        Assert.Equal(1208, parzelle!.BfsNr);
+
+        var eintrag = await new UriLandRegistryClient(gateway).ReadAsync(parzelle);
+
+        Assert.NotNull(eintrag);
+        Assert.False(eintrag!.NoOwnerRegistered);
+        Assert.Equal(3, eintrag.Owners.Count);
+
+        Assert.Equal("StWE S1021", eintrag.Owners[0].Designation);
+        Assert.Equal("StWE S1022", eintrag.Owners[1].Designation);
+        Assert.Equal("StWE S1023", eintrag.Owners[2].Designation);
+
+        Assert.Equal("31/100 Miteigentum", eintrag.Owners[0].Share);
+        Assert.Equal("32/100 Miteigentum", eintrag.Owners[1].Share);
+        Assert.Equal("37/100 Miteigentum", eintrag.Owners[2].Share);
+
+        // Die Liegenschaftsadresse steht in der Gebaeudezeile.
+        Assert.Equal("Unterdorf", eintrag.BuildingStreet);
+        Assert.Equal("51", eintrag.BuildingHouseNumber);
+
+        // Kein Name traegt noch Verwaltungstext. Bewusst Assert.False mit eigener
+        // Meldung: der gepruefte Text darf nicht ins Protokoll geraten.
+        foreach (var eigentuemer in eintrag.Owners)
+        {
+            Assert.True(!string.IsNullOrWhiteSpace(eigentuemer.Name),
+                "Ein Eigentuemername ist leer.");
+            Assert.False(eigentuemer.Name.Contains("StWE", StringComparison.OrdinalIgnoreCase),
+                "Ein Eigentuemername enthält noch den Stockwerkeigentums-Verweis.");
+            Assert.False(eigentuemer.Name.Contains("Lit.", StringComparison.OrdinalIgnoreCase),
+                "Ein Eigentuemername enthält noch die Kennzeichnung.");
+            Assert.False(eigentuemer.Name.Contains('/'),
+                "Ein Eigentuemername enthält noch den Anteil.");
+        }
+    }
 }

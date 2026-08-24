@@ -157,4 +157,49 @@ public sealed class LandRegistryHtmlParserTests
         Assert.Equal("Lit.A", eintrag.Owners[0].Designation);
         Assert.Equal("", eintrag.Owners[1].Designation);
     }
+
+    [Fact]
+    public void Liest_alle_Stockwerkeigentuemer_aus_der_einzeiligen_Form()
+    {
+        // Beim Stockwerkeigentum steht der ganze Eintrag in EINER Zeile:
+        //   "Lit.: Jeweiliger Eigentuemer von StWE S1021 (Name), 31/100 Miteigentum"
+        // Der Name steht in der Klammer, nicht am Zeilenanfang.
+        var eintrag = LandRegistryHtmlParser.Parse(Lade("grundbuch_stockwerkeigentum.html"));
+
+        Assert.NotNull(eintrag);
+        Assert.Equal(3, eintrag!.Owners.Count);
+
+        Assert.Equal("Kurt Beispiel, Rita Beispiel", eintrag.Owners[0].Name);
+        Assert.Equal("StWE S1021", eintrag.Owners[0].Designation);
+        Assert.Equal("31/100 Miteigentum", eintrag.Owners[0].Share);
+
+        Assert.Equal("Martin Muster und Anna Muster Eheleute", eintrag.Owners[1].Name);
+        Assert.Equal("StWE S1022", eintrag.Owners[1].Designation);
+
+        Assert.Equal("Peter Beispiel-Muster und Sara Claire Eheleute", eintrag.Owners[2].Name);
+        Assert.Equal("37/100 Miteigentum", eintrag.Owners[2].Share);
+
+        // Die Liegenschaftsadresse steht in der Gebaeudezeile, nicht beim Eigentuemer.
+        Assert.Equal("Musterweg", eintrag.BuildingStreet);
+        Assert.Equal("51", eintrag.BuildingHouseNumber);
+    }
+
+    [Fact]
+    public void Kein_Eigentuemername_traegt_noch_Verwaltungstext()
+    {
+        // Ein Name, der "Lit." oder "StWE" enthaelt, ist nie ein Personenname —
+        // er wuerde so in den Brief an den Eigentuemer gedruckt.
+        var eintrag = LandRegistryHtmlParser.Parse(Lade("grundbuch_stockwerkeigentum.html"));
+
+        Assert.NotNull(eintrag);
+        Assert.All(eintrag!.Owners, o =>
+        {
+            Assert.False(o.Name.Contains("Lit.", StringComparison.OrdinalIgnoreCase),
+                "Der Eigentuemername enthaelt noch die Kennzeichnung.");
+            Assert.False(o.Name.Contains("StWE", StringComparison.OrdinalIgnoreCase),
+                "Der Eigentuemername enthaelt noch den Stockwerkeigentums-Verweis.");
+            Assert.False(o.Name.Contains("/", StringComparison.Ordinal),
+                "Der Eigentuemername enthaelt noch den Anteil.");
+        });
+    }
 }

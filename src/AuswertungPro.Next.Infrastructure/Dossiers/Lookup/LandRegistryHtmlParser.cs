@@ -34,8 +34,25 @@ public static class LandRegistryHtmlParser
         @"\b(?<plz>\d{4})\s+(?<ort>[^,]+)$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    /// <summary>
+    /// Kennzeichnungszeile. Der Buchstabe fehlt beim Stockwerkeigentum ("Lit.:"),
+    /// und dort steht der ganze Eintrag hinter dem Doppelpunkt auf derselben Zeile.
+    /// </summary>
     private static readonly Regex LitZeile = new(
-        @"^Lit\.\s*([A-Z])\s*:$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        @"^Lit\.\s*(?<buchstabe>[A-Z])?\s*:\s*(?<inhalt>.*)$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>Personenname in der Klammer: "... von StWE S1021 (Kurt Beispiel), 31/100 ...".</summary>
+    private static readonly Regex NameInKlammern = new(
+        @"\((?<name>[^()]+)\)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex StockwerkNummer = new(
+        @"StWE\s*(?<nr>S?\d+[A-Za-z]?)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>Anteil am Zeilenende: ", 31/100 Miteigentum".</summary>
+    private static readonly Regex AnteilAmEnde = new(
+        @",\s*(?<anteil>\d+/\d+\s+\S.*)$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex AnteilZeile = new(
         @"^\d+/\d+\s", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -134,7 +151,24 @@ public static class LandRegistryHtmlParser
             if (lit.Success)
             {
                 Abschliessen();
-                kennzeichnung = "Lit." + lit.Groups[1].Value;
+                kennzeichnung = lit.Groups["buchstabe"].Success
+                    ? "Lit." + lit.Groups["buchstabe"].Value
+                    : string.Empty;
+
+                var inhalt = lit.Groups["inhalt"].Value.Trim();
+
+                // Klassische Form: hinter dem Doppelpunkt steht nichts, der Name
+                // folgt in der naechsten Zeile.
+                if (inhalt.Length == 0)
+                    continue;
+
+                // Stockwerkeigentum: der ganze Eintrag steht in dieser einen Zeile.
+                var (stwe, stweName, stweAnteil) = ZerlegeEinzeiler(inhalt);
+                if (stwe.Length > 0)
+                    kennzeichnung = stwe;
+                name = stweName;
+                anteil = stweAnteil;
+                Abschliessen();
                 continue;
             }
 
@@ -164,6 +198,39 @@ public static class LandRegistryHtmlParser
 
         Abschliessen();
         return ergebnis;
+    }
+
+    /// <summary>
+    /// Zerlegt die einzeilige Stockwerkeigentums-Form:
+    ///   "Jeweiliger Eigentuemer von StWE S1021 (Kurt Beispiel), 31/100 Miteigentum"
+    ///
+    /// Fehlt die Klammer, bleibt der Registertext als Name stehen. Er ist
+    /// erkennbar kein Personenname, und ein stilles Weglassen waere schlimmer:
+    /// dann verschwaende ein Eigentuemer spurlos aus dem Dossier.
+    /// </summary>
+    private static (string Kennzeichnung, string Name, string Anteil) ZerlegeEinzeiler(string inhalt)
+    {
+        var anteil = string.Empty;
+        var rest = inhalt;
+
+        var anteilTreffer = AnteilAmEnde.Match(rest);
+        if (anteilTreffer.Success)
+        {
+            anteil = anteilTreffer.Groups["anteil"].Value.Trim();
+            rest = rest[..anteilTreffer.Index];
+        }
+
+        var kennzeichnung = string.Empty;
+        var stwe = StockwerkNummer.Match(rest);
+        if (stwe.Success)
+            kennzeichnung = "StWE " + stwe.Groups["nr"].Value;
+
+        var klammern = NameInKlammern.Matches(rest);
+        var name = klammern.Count > 0
+            ? klammern[^1].Groups["name"].Value.Trim()
+            : rest.Trim();
+
+        return (kennzeichnung, name, anteil);
     }
 
     private static (string Strasse, string HausNr) LiesGebaeudeadresse(List<string> zeilen)
