@@ -24,6 +24,30 @@ public enum DossierStatus
 }
 
 /// <summary>
+/// Eine Zeile der Tabelle "Informationen". Welche Themen ein Dossier fuehrt,
+/// entscheidet das Projekt: das eine Gebiet braucht "Hausanschluss Abwasser",
+/// das andere "Ausgangslage" und "Sanierungskonzept". Deshalb eine Liste und
+/// keine feste Feldreihe.
+/// </summary>
+public sealed class DossierTopicRow
+{
+    /// <summary>Beschriftung in der Spalte "Thema".</summary>
+    public string Title { get; set; } = "";
+
+    /// <summary>Text in der Spalte "Bemerkungen".</summary>
+    public string Text { get; set; } = "";
+}
+
+/// <summary>Eine Zeile der Tabelle "Aenderungswesen".</summary>
+public sealed class DossierChangeRow
+{
+    public string Version { get; set; } = "";
+    public string Date { get; set; } = "";
+    public string Visum { get; set; } = "";
+    public string Change { get; set; } = "";
+}
+
+/// <summary>
 /// Gebietsweite Angaben. Sie gelten fuer alle Dossiers eines Projekts und
 /// werden nur einmal erfasst. Ein Dossier darf jedes Feld einzeln ueberschreiben.
 /// </summary>
@@ -68,6 +92,24 @@ public sealed class DossierAreaSettings
     /// Rechner "Besitzer" und gehoert nicht in ein Dokument fuer den Eigentuemer.
     /// </summary>
     public string Authors { get; set; } = "";
+
+    /// <summary>
+    /// Zweite Deckblattzeile unter dem Gebietstitel, z.B. "6472 Erstfeld".
+    /// </summary>
+    public string AreaLocation { get; set; } = "";
+
+    /// <summary>Projektnummer fuer die Deckblattzeile "Proj. Nr. AWU".</summary>
+    public string ProjectNumber { get; set; } = "";
+
+    /// <summary>Kuerzel fuer die Deckblattzeile "Gez.".</summary>
+    public string DrawnBy { get; set; } = "";
+
+    /// <summary>
+    /// Die Standardthemen der Tabelle "Informationen" fuer alle Dossiers des
+    /// Gebiets. Ein Dossier darf einzelne Themen ueberschreiben und eigene
+    /// ergaenzen — siehe <see cref="DossierDefinition.Topics"/>.
+    /// </summary>
+    public List<DossierTopicRow> Topics { get; set; } = new();
 }
 
 /// <summary>
@@ -164,6 +206,19 @@ public sealed class DossierDefinition
 
     public string Revision { get; set; } = "A";
 
+    /// <summary>
+    /// Abweichende Themen dieses Dossiers. Ein Eintrag mit demselben Titel wie
+    /// ein Gebietsthema ersetzt dessen Text; alle uebrigen werden angehaengt.
+    /// Bleibt die Liste leer, gelten die Gebietsthemen unveraendert.
+    /// </summary>
+    public List<DossierTopicRow> Topics { get; set; } = new();
+
+    /// <summary>Zeilen der Tabelle "Aenderungswesen".</summary>
+    public List<DossierChangeRow> Changes { get; set; } = new();
+
+    /// <summary>Text der Zeile "Fuer die Aktennotiz".</summary>
+    public string FileNote { get; set; } = "";
+
     public DossierStatus Status { get; set; } = DossierStatus.Offen;
 
     /// <summary>Verweise auf die Haltungen. Bewusst die Guid, nicht der Name.</summary>
@@ -189,7 +244,7 @@ public sealed class DossierDefinition
 public sealed class DossierDocument
 {
     /// <summary>Formatversion, die diese Programmversion schreibt.</summary>
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
 
     /// <summary>Formatversion. Unbekannt hoehere Versionen werden nicht ueberschrieben.</summary>
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;

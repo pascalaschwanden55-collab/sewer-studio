@@ -143,7 +143,7 @@ public sealed class DossierDocumentMigrationTests
     }
 
     [Fact]
-    public void Version_2_bleibt_bei_der_Erhoehung_auf_3_ohne_neue_Eigentuemerzeile()
+    public void Version_2_bleibt_bei_jeder_Erhoehung_ohne_neue_Eigentuemerzeile()
     {
         // Die Falle aus der Pruefung: mit "kleiner als die aktuelle Version"
         // waere eine Version-2-Datei wieder Altbestand und die geloeschte Zeile
@@ -154,6 +154,8 @@ public sealed class DossierDocumentMigrationTests
         var result = DossierDocumentMigration.MigrateToCurrent(document);
 
         Assert.Empty(result.Dossiers[0].Owners);
-        Assert.Equal(3, result.SchemaVersion);
+        // Bewusst gegen die Konstante: der Test soll bei der naechsten
+        // Versionserhoehung die ABLEITUNG pruefen, nicht die Zahl.
+        Assert.Equal(DossierDocument.CurrentSchemaVersion, result.SchemaVersion);
     }
 }

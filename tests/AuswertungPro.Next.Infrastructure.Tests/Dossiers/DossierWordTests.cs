@@ -197,6 +197,90 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Die_neuen_Deckblattfelder_erscheinen_im_fertigen_Dossier()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Area.AreaLocation = "6472 Musterdorf";
+        request.Area.ProjectNumber = "AWU 2026-042";
+        request.Area.DrawnBy = "Pa";
+        request.Dossier.FileNote = "Altdorf, 24. August 2026";
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("6472 Musterdorf", text, StringComparison.Ordinal);
+        Assert.Contains("AWU 2026-042", text, StringComparison.Ordinal);
+        Assert.Contains("Altdorf, 24. August 2026", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Die_Themen_stammen_aus_Gebiet_und_Dossier()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Area.Topics.Clear();
+        request.Area.Topics.Add(new DossierTopicRow { Title = "Unternehmer", Text = "Musterbau AG" });
+        request.Area.Topics.Add(new DossierTopicRow { Title = "Bemerkungen", Text = "Standardtext" });
+        request.Dossier.Topics.Clear();
+        request.Dossier.Topics.Add(new DossierTopicRow { Title = "Bemerkungen", Text = "Hier anders" });
+        request.Dossier.Topics.Add(new DossierTopicRow { Title = "Schäden Pz. 30", Text = "Leitung undicht" });
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Musterbau AG", text, StringComparison.Ordinal);
+        Assert.Contains("Hier anders", text, StringComparison.Ordinal);
+        Assert.Contains("Schäden Pz. 30", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Standardtext", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Das_Aenderungswesen_zeigt_jede_erfasste_Zeile()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.Changes.Clear();
+        request.Dossier.Changes.Add(new DossierChangeRow
+        {
+            Version = "1", Date = "09.04.2026", Visum = "Pa", Change = "Erstausgabe"
+        });
+        request.Dossier.Changes.Add(new DossierChangeRow
+        {
+            Version = "2", Date = "24.08.2026", Visum = "Pa", Change = "Kosten ergänzt"
+        });
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Erstausgabe", text, StringComparison.Ordinal);
+        Assert.Contains("Kosten ergänzt", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Die_ausgewaehlten_Leitungen_stehen_als_eigenes_Kapitel_im_Dossier()
+    {
+        // Das Originaldossier kennt dieses Kapitel nicht — ohne es faenden
+        // Leitung, Laenge und Kosten nirgends Platz.
+        var (request, templatePath) = BuildScenario();
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("Betroffene Leitungen", text, StringComparison.Ordinal);
+        Assert.Contains("36080-36086", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Erzeugt_ein_Word_ohne_uebrig_gebliebene_Platzhalter()
     {
         var (request, templatePath) = BuildScenario();

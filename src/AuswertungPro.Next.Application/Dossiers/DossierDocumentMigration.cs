@@ -23,6 +23,36 @@ public static class DossierDocumentMigration
     private const int OwnersStoredFromVersion = 2;
 
     /// <summary>
+    /// Version, ab der die Themen der Tabelle "Informationen" als Liste im
+    /// Dokument stehen. Darunter werden sie einmalig aus den Einzelfeldern
+    /// abgeleitet — mit derselben festen Grenze wie oben und aus demselben
+    /// Grund: ein bewusst geloeschtes Thema darf nie zurueckkehren.
+    /// </summary>
+    private const int TopicsStoredFromVersion = 4;
+
+    /// <summary>
+    /// Die Standardthemen eines Gebiets in der Reihenfolge des Originaldossiers.
+    /// Zweiter Wert ist das Altfeld, aus dem der Text stammt (leer = neu).
+    /// </summary>
+    public static readonly IReadOnlyList<string> DefaultTopicTitles = new[]
+    {
+        "Ausführungstermin",
+        "Ansprechpartner",
+        "Unternehmer",
+        "Örtliche Bauleitung",
+        "Behinderungen, Zugänge, Verkehrsführung, Fussgängerführung",
+        "Ausgangslage",
+        "Schäden",
+        "Sanierungskonzept",
+        "Kostenschätzung Abwasser Uri",
+        "Bemerkungen",
+        "Beilagen"
+    };
+
+    public static bool NeedsTopicDerivation(int schemaVersion)
+        => schemaVersion < TopicsStoredFromVersion;
+
+    /// <summary>
     /// Die Ableitung aus den Altfeldern ist eine EINMALIGE Umstellung von
     /// Version 1 auf Version 2. Sie darf bei einem neueren Dokument nie erneut
     /// laufen: sonst kommt eine bewusst geloeschte Eigentuemerzeile beim
@@ -44,10 +74,20 @@ public static class DossierDocumentMigration
         document.Dossiers ??= new List<DossierDefinition>();
 
         var isLegacyDocument = NeedsOwnerDerivation(document.SchemaVersion);
+        var brauchtThemen = NeedsTopicDerivation(document.SchemaVersion);
+
+        document.Area.Topics ??= new List<DossierTopicRow>();
+        if (brauchtThemen && document.Area.Topics.Count == 0)
+            document.Area.Topics.AddRange(BuildAreaTopics(document.Area));
 
         foreach (var dossier in document.Dossiers)
         {
             dossier.Owners ??= new List<DossierOwnerRow>();
+            dossier.Topics ??= new List<DossierTopicRow>();
+            dossier.Changes ??= new List<DossierChangeRow>();
+
+            if (brauchtThemen && dossier.Topics.Count == 0)
+                dossier.Topics.AddRange(BuildDossierTopics(dossier));
 
             if (!isLegacyDocument)
                 continue;
@@ -63,6 +103,58 @@ public static class DossierDocumentMigration
 
         document.SchemaVersion = DossierDocument.CurrentSchemaVersion;
         return document;
+    }
+
+    /// <summary>
+    /// Die Gebietsthemen aus den bisherigen Einzelfeldern. Themen ohne Altfeld
+    /// entstehen leer — sie sind neu und werden von Hand gefuellt.
+    /// </summary>
+    private static List<DossierTopicRow> BuildAreaTopics(DossierAreaSettings area)
+    {
+        var texte = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Ausführungstermin"] = Trim(area.ExecutionDate),
+            ["Ansprechpartner"] = Trim(area.ContactPerson),
+            ["Unternehmer"] = Trim(area.Contractor),
+            ["Örtliche Bauleitung"] = Trim(area.SiteManagement),
+            ["Behinderungen, Zugänge, Verkehrsführung, Fussgängerführung"] =
+                Trim(area.Obstructions)
+        };
+
+        var themen = DefaultTopicTitles
+            .Select(titel => new DossierTopicRow
+            {
+                Title = titel,
+                Text = texte.TryGetValue(titel, out var text) ? text : string.Empty
+            })
+            .ToList();
+
+        // Die zwei Erklaertexte des bisherigen Aufbaus gehen sonst verloren.
+        AppendIfSet(themen, "Hausanschluss Abwasser", area.HouseConnectionText);
+        AppendIfSet(themen, "Meteorwasser", area.StormWaterText);
+
+        return themen;
+    }
+
+    /// <summary>
+    /// Die abweichenden Themen eines Dossiers aus seinen bisherigen Feldern.
+    /// Nur was wirklich gefuellt war, wird zur Zeile.
+    /// </summary>
+    private static List<DossierTopicRow> BuildDossierTopics(DossierDefinition dossier)
+    {
+        var themen = new List<DossierTopicRow>();
+        AppendIfSet(themen, "Bauvorgang", dossier.ConstructionProcess);
+        AppendIfSet(themen, "Bemerkungen", dossier.Remarks);
+        AppendIfSet(themen, "Beilagen", dossier.Attachments);
+        return themen;
+    }
+
+    private static void AppendIfSet(List<DossierTopicRow> themen, string titel, string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        themen.Add(new DossierTopicRow { Title = titel, Text = text.Trim() });
     }
 
     /// <summary>

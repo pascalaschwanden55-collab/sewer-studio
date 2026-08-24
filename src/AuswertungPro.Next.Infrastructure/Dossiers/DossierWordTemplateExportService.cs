@@ -95,6 +95,18 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                         BuildOwnerRows(request.Dossier),
                         "Keine Eigentümerangaben erfasst");
 
+                    DocxPlaceholderFiller.FillRepeatingRows(
+                        document,
+                        "Themen",
+                        BuildTopicRows(request.Area, request.Dossier),
+                        "Keine Angaben erfasst");
+
+                    DocxPlaceholderFiller.FillRepeatingRows(
+                        document,
+                        "Aenderungen",
+                        BuildChangeRows(request.Dossier),
+                        string.Empty);
+
                     // Bilder VOR dem Textfueller: sonst wuerde der Textfueller
                     // "{{@Logo}}" als unbekannten Textplatzhalter leeren und das
                     // Bild fehlte im fertigen Dossier ohne jede Meldung.
@@ -190,6 +202,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             ["Kosten_Hinweis"] = snapshot.NetCostTotal > 0m
                 ? "Kostenangaben ohne MWST, Stand " + today.ToString("dd.MM.yyyy", Ch) + "."
                 : string.Empty,
+            ["Gebiet_Ort"] = request.Area.AreaLocation,
+            ["Ort_Zeile"] = BuildTownLine(d),
+            ["Projekt_Nr"] = request.Area.ProjectNumber,
+            ["Gezeichnet"] = request.Area.DrawnBy,
+            ["Aktennotiz"] = d.FileNote,
             ["Haltungen_Text"] = BuildHoldingsText(snapshot),
             ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
         };
@@ -202,6 +219,12 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// die Wiederholzeile <c>{{#Haltungen}}</c>. Der Textblock ist der Weg, der
     /// ohne Tabellenbau in Word auskommt.
     /// </summary>
+    /// <summary>PLZ und Ort als eine Zeile, z.B. "6487 Göschenen".</summary>
+    private static string BuildTownLine(DossierDefinition dossier)
+        => string.Join(" ", new[] { dossier.PostalCode, dossier.Town }
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Select(t => t.Trim()));
+
     private static string BuildHoldingsText(DossierSnapshot snapshot)
     {
         if (snapshot.Holdings.Count == 0)
@@ -257,6 +280,36 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
 
         return string.Join(" · ", teile);
     }
+
+    /// <summary>
+    /// Die Themen der Tabelle "Informationen": Gebietsstandard, vom Dossier
+    /// ueberschrieben. Die Regel selbst liegt im
+    /// <see cref="DossierTopicResolver"/> — hier wird nur abgebildet.
+    /// </summary>
+    private static List<IReadOnlyDictionary<string, string>> BuildTopicRows(
+        DossierAreaSettings area, DossierDefinition dossier)
+        => DossierTopicResolver.Resolve(area, dossier)
+            .Select(thema => (IReadOnlyDictionary<string, string>)
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Thema"] = thema.Title,
+                    ["Text"] = thema.Text
+                })
+            .ToList();
+
+    private static List<IReadOnlyDictionary<string, string>> BuildChangeRows(
+        DossierDefinition dossier)
+        => (dossier.Changes ?? new List<DossierChangeRow>())
+            .Where(z => z is not null)
+            .Select(z => (IReadOnlyDictionary<string, string>)
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Version"] = Clean(z.Version),
+                    ["Datum"] = Clean(z.Date),
+                    ["Visum"] = Clean(z.Visum),
+                    ["Aenderung"] = Clean(z.Change)
+                })
+            .ToList();
 
     private static List<IReadOnlyDictionary<string, string>> BuildHoldingRows(
         DossierSnapshot snapshot)
