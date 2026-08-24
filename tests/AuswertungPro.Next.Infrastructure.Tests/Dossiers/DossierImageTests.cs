@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
@@ -238,6 +239,68 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
         Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
         Assert.Single(mainPart.ImageParts);
     }
+
+    [Fact]
+    public void Bild_im_Textfeld_laesst_die_uebrigen_Felder_unberuehrt()
+    {
+        // Logo und Wappen der Dossiervorlage liegen in Textfeldern des
+        // Deckblatts. Word legt diese als Absaetze innerhalb eines Absatzes ab.
+        // Wird die aeussere Huelle mitverarbeitet, verliert das Nachbarfeld
+        // seinen Text und das Bild landet an der falschen Stelle.
+        var bildPfad = Path.Combine(_root, "logo.png");
+        File.WriteAllBytes(bildPfad, TestImages.Png(width: 716, height: 297));
+
+        using var stream = new MemoryStream();
+        using (var document = WordprocessingDocument.Create(
+                   stream, WordprocessingDocumentType.Document))
+        {
+            var mainPart = document.AddMainDocumentPart();
+            mainPart.Document = new Document();
+            var body = mainPart.Document.AppendChild(new Body());
+            body.InnerXml = TextfeldAbsatzMitBild;
+
+            DocxImagePlaceholderFiller.Fill(document, new[]
+            {
+                new DocxImagePlacement("Logo", bildPfad, MaxWidthCm: 4.5)
+            });
+            mainPart.Document.Save();
+        }
+
+        stream.Position = 0;
+        using var wieder = WordprocessingDocument.Open(stream, false);
+        var felder = wieder.MainDocumentPart!.Document.Body!
+            .Descendants<TextBoxContent>()
+            .ToList();
+
+        Assert.Equal(2, felder.Count);
+
+        // Das Nachbarfeld behaelt seinen Text.
+        var zweites = string.Concat(felder[1].Descendants<Text>().Select(t => t.Text));
+        Assert.Equal("Eigentümerdossier", zweites);
+
+        // Und das Bild sitzt im ersten Feld, nicht daneben.
+        Assert.NotEmpty(felder[0].Descendants<Drawing>());
+        Assert.Empty(felder[1].Descendants<Drawing>());
+    }
+
+    private const string TextfeldAbsatzMitBild = """
+        <w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+          <w:r>
+            <w:pict xmlns:v="urn:schemas-microsoft-com:vml">
+              <v:shape><v:textbox><w:txbxContent>
+                <w:p><w:r><w:t>{{@Logo}}</w:t></w:r></w:p>
+              </w:txbxContent></v:textbox></v:shape>
+            </w:pict>
+          </w:r>
+          <w:r>
+            <w:pict xmlns:v="urn:schemas-microsoft-com:vml">
+              <v:shape><v:textbox><w:txbxContent>
+                <w:p><w:r><w:t>Eigentümerdossier</w:t></w:r></w:p>
+              </w:txbxContent></v:textbox></v:shape>
+            </w:pict>
+          </w:r>
+        </w:p>
+        """;
 
     private static WordprocessingDocument CreateDocument(MemoryStream stream, string text)
     {

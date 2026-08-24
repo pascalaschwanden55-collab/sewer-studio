@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -232,7 +233,10 @@ internal static class WordInterop
             System.Reflection.BindingFlags.GetProperty,
             binder: null,
             target,
-            args: null);
+            args: null,
+            modifiers: null,
+            culture: CultureInfo.InvariantCulture,
+            namedParameters: null);
 
     private static void Set(object target, string name, object value)
         => target.GetType().InvokeMember(
@@ -240,7 +244,10 @@ internal static class WordInterop
             System.Reflection.BindingFlags.SetProperty,
             binder: null,
             target,
-            new[] { value });
+            new[] { value },
+            modifiers: null,
+            culture: CultureInfo.InvariantCulture,
+            namedParameters: null);
 
     private static object? Invoke(object? target, string name, params object[] args)
         => target?.GetType().InvokeMember(
@@ -248,10 +255,16 @@ internal static class WordInterop
             System.Reflection.BindingFlags.InvokeMethod,
             binder: null,
             target,
-            args);
+            args,
+            modifiers: null,
+            culture: CultureInfo.InvariantCulture,
+            namedParameters: null);
 
     private static void Release(object? comObject)
     {
+        if (!OperatingSystem.IsWindows())
+            return;
+
         try
         {
             if (comObject is not null && Marshal.IsComObject(comObject))

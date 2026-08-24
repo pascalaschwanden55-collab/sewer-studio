@@ -90,6 +90,62 @@ public sealed class DocxPlaceholderFillerTests
         Assert.Equal("Preis 100 und {{offen", result);
     }
 
+    [Fact]
+    public void Zwei_Textfelder_im_selben_Absatz_bleiben_getrennt()
+    {
+        // Das Deckblatt der Dossiervorlage besteht aus Textfeldern. Word legt
+        // sie als Absaetze INNERHALB eines Absatzes ab. Wird der aeussere Absatz
+        // mitgefuellt, laufen die Texte aller Felder in einem einzigen Run
+        // zusammen und die uebrigen Felder werden geleert — das Deckblatt waere
+        // zerstoert.
+        using var stream = new MemoryStream();
+        using (var document = WordprocessingDocument.Create(
+                   stream, WordprocessingDocumentType.Document))
+        {
+            var mainPart = document.AddMainDocumentPart();
+            mainPart.Document = new Document();
+            var body = mainPart.Document.AppendChild(new Body());
+            body.InnerXml = TextfeldAbsatz;
+
+            DocxPlaceholderFiller.Fill(document, new Dictionary<string, string>
+            {
+                ["Links"] = "Gebietstitel",
+                ["Rechts"] = "Parzelle 30"
+            });
+            mainPart.Document.Save();
+        }
+
+        stream.Position = 0;
+        using var wieder = WordprocessingDocument.Open(stream, false);
+        var felder = wieder.MainDocumentPart!.Document.Body!
+            .Descendants<TextBoxContent>()
+            .Select(f => string.Concat(f.Descendants<Text>().Select(t => t.Text)))
+            .ToList();
+
+        Assert.Equal(2, felder.Count);
+        Assert.Equal("Gebietstitel", felder[0]);
+        Assert.Equal("Parzelle 30", felder[1]);
+    }
+
+    private const string TextfeldAbsatz = """
+        <w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+          <w:r>
+            <w:pict xmlns:v="urn:schemas-microsoft-com:vml">
+              <v:shape><v:textbox><w:txbxContent>
+                <w:p><w:r><w:t>{{Links}}</w:t></w:r></w:p>
+              </w:txbxContent></v:textbox></v:shape>
+            </w:pict>
+          </w:r>
+          <w:r>
+            <w:pict xmlns:v="urn:schemas-microsoft-com:vml">
+              <v:shape><v:textbox><w:txbxContent>
+                <w:p><w:r><w:t>{{Rechts}}</w:t></w:r></w:p>
+              </w:txbxContent></v:textbox></v:shape>
+            </w:pict>
+          </w:r>
+        </w:p>
+        """;
+
     private static WordprocessingDocument CreateDocument(
         MemoryStream stream,
         Action<Paragraph> fill)

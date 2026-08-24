@@ -119,7 +119,17 @@ public static class DocxPlaceholderFiller
         IReadOnlyDictionary<string, string> values)
     {
         foreach (var paragraph in scope.Descendants<Paragraph>().ToList())
+        {
+            // Ein Absatz, der selbst Absaetze enthaelt, ist nur die Huelle um
+            // Textfelder — auf dem Deckblatt liegt jede Zeile in einem eigenen
+            // Feld. Wuerde die Huelle mitgefuellt, liefe der Text ALLER Felder
+            // in ihrem ersten Run zusammen und die uebrigen Felder blieben leer.
+            // Gefuellt wird deshalb nur der innerste Absatz.
+            if (paragraph.Descendants<Paragraph>().Any())
+                continue;
+
             FillParagraph(paragraph, values);
+        }
     }
 
     private static void FillParagraph(

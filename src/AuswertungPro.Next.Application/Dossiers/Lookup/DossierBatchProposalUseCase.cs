@@ -62,7 +62,7 @@ public sealed class DossierBatchProposalUseCase
             progress?.Report($"Parzelle {parzelle.Number}: Eigentümer und Leitungen");
 
             var aufParzelle = await SicherLesen<IReadOnlyList<NetworkHolding>>(
-                () => _network.FindOnParcelAsync(parzelle, ct),
+                async () => await _network.FindOnParcelAsync(parzelle, ct).ConfigureAwait(false),
                 $"Leitungen auf Parzelle {parzelle.Number}", warnungen).ConfigureAwait(false)
                 ?? Array.Empty<NetworkHolding>();
 
@@ -100,7 +100,7 @@ public sealed class DossierBatchProposalUseCase
 
         progress?.Report("Lage der Haltungen beim Kanton abfragen");
         var haltungen = await SicherLesen<IReadOnlyList<NetworkHolding>>(
-            () => _network.FindByNamesAsync(request.ProjectHoldingNames, ct),
+            async () => await _network.FindByNamesAsync(request.ProjectHoldingNames, ct).ConfigureAwait(false),
             "Lage der Haltungen", warnungen).ConfigureAwait(false)
             ?? Array.Empty<NetworkHolding>();
 
@@ -114,7 +114,7 @@ public sealed class DossierBatchProposalUseCase
         // gemoppelt und wuerde die Absicht nur verschleiern.
         progress?.Report("Parzellen unter den Leitungen suchen");
         var beruehrt = await SicherLesen<IReadOnlyList<ParcelInfo>>(
-            () => _parcels.FindTouchedAsync(linien, ct),
+            async () => await _parcels.FindTouchedAsync(linien, ct).ConfigureAwait(false),
             "Parzellensuche", warnungen).ConfigureAwait(false)
             ?? Array.Empty<ParcelInfo>();
 

@@ -80,6 +80,14 @@ public static class DocxImagePlaceholderFiller
 
             foreach (var paragraph in body.Descendants<Paragraph>().ToList())
             {
+                // Nur der innerste Absatz. Ein Absatz, der selbst Absaetze
+                // enthaelt, ist die Huelle um Textfelder — Logo und Wappen des
+                // Deckblatts liegen in solchen Feldern. Wuerde die Huelle
+                // mitverarbeitet, verloeren die Nachbarfelder ihren Text und das
+                // Bild landete an der falschen Stelle.
+                if (paragraph.Descendants<Paragraph>().Any())
+                    continue;
+
                 var texts = paragraph.Descendants<Text>().ToList();
                 if (texts.Count == 0)
                     continue;
