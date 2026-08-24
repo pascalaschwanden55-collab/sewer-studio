@@ -205,11 +205,11 @@ public static class DossierPreviewBuilder
                 && nurBild.Length == text.Trim().Length
                 && nurBild.Groups["art"].Value == "@")
             {
-                var breite = _geometrie.WidthPx
-                    - _geometrie.Margin.Left - _geometrie.Margin.Right;
+                // Dieselbe Breite, die der Export ins Dokument setzt. Die Hoehe
+                // folgt erst beim Zeichnen aus dem echten Seitenverhaeltnis.
+                var breite = DossierWordTemplateExportService.PlanMaxWidthCm / 2.54 * 96.0;
 
-                _bloecke.Add(new DossierPreviewImage(
-                    nurBild.Groups["name"].Value, breite, breite * 1.4));
+                _bloecke.Add(new DossierPreviewImage(nurBild.Groups["name"].Value, breite));
                 return;
             }
 

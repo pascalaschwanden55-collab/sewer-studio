@@ -44,6 +44,9 @@ public static class DossierPreviewPageRenderer
     private static readonly SolidColorBrush Tinte = Fest(Color.FromRgb(0x00, 0x00, 0x00));
     private static readonly SolidColorBrush Blass = Fest(Color.FromRgb(0x90, 0x90, 0x90));
 
+    /// <summary>Blasser Grund fuer eine noch leere Stelle.</summary>
+    private static readonly SolidColorBrush Luecke = Fest(Color.FromRgb(0xF0, 0xF0, 0xF0));
+
     private static SolidColorBrush Fest(Color farbe)
     {
         var brush = new SolidColorBrush(farbe);
@@ -54,11 +57,13 @@ public static class DossierPreviewPageRenderer
     public static DossierPreviewRenderResult Render(
         DossierPreviewPage page,
         Func<string, string> value,
-        Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rows)
+        Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rows,
+        Func<string, string> emptyRowText)
     {
         ArgumentNullException.ThrowIfNull(page);
         ArgumentNullException.ThrowIfNull(value);
         ArgumentNullException.ThrowIfNull(rows);
+        ArgumentNullException.ThrowIfNull(emptyRowText);
 
         var rahmen = new Dictionary<string, List<Border>>(StringComparer.Ordinal);
 
@@ -91,9 +96,18 @@ public static class DossierPreviewPageRenderer
         };
 
         foreach (var block in page.Blocks)
-            fluss.Children.Add(ZeichneBlock(block, value, rows, Merke, page.Geometry.Margin.Left));
+        {
+            fluss.Children.Add(ZeichneBlock(
+                block, value, rows, emptyRowText, Merke, page.Geometry.Margin.Left));
+        }
 
         blatt.Children.Add(fluss);
+
+        // Der Umbruch auf eine Folgeseite bleibt Word ueberlassen. Laeuft der
+        // Inhalt ueber den Satzspiegel, wird das SICHTBAR gemacht, statt das
+        // Blatt stillschweigend wachsen zu lassen — sonst zeigte die Vorschau
+        // eine Seite, die es so nie gibt.
+        blatt.Children.Add(UeberlaufMarke(page));
 
         return new DossierPreviewRenderResult
         {
@@ -107,12 +121,15 @@ public static class DossierPreviewPageRenderer
         DossierPreviewBlock block,
         Func<string, string> value,
         Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rows,
+        Func<string, string> emptyRowText,
         Action<string, Border> merke,
         double randLinks = 0)
         => block switch
         {
-            DossierPreviewParagraph absatz => MitKaesten(absatz, value, rows, merke, randLinks),
-            DossierPreviewTable tabelle => ZeichneTabelle(tabelle, value, rows, merke),
+            DossierPreviewParagraph absatz
+                => MitKaesten(absatz, value, rows, emptyRowText, merke, randLinks),
+            DossierPreviewTable tabelle
+                => ZeichneTabelle(tabelle, value, rows, emptyRowText, merke),
             DossierPreviewPicture bild => ZeichneBild(bild),
             DossierPreviewImage stelle => ZeichneBildstelle(stelle, value, merke),
             _ => new Border()
@@ -128,6 +145,7 @@ public static class DossierPreviewPageRenderer
         DossierPreviewParagraph absatz,
         Func<string, string> value,
         Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rows,
+        Func<string, string> emptyRowText,
         Action<string, Border> merke,
         double randLinks)
     {
@@ -149,7 +167,7 @@ public static class DossierPreviewPageRenderer
 
         foreach (var kasten in absatz.Floating)
         {
-            var element = ZeichneKasten(kasten, value, rows, merke);
+            var element = ZeichneKasten(kasten, value, rows, emptyRowText, merke);
             Canvas.SetLeft(element, kasten.LeftPx - randLinks);
             Canvas.SetTop(element, kasten.TopPx);
             leinwand.Children.Add(element);
@@ -163,11 +181,12 @@ public static class DossierPreviewPageRenderer
         DossierPreviewFloating kasten,
         Func<string, string> value,
         Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rows,
+        Func<string, string> emptyRowText,
         Action<string, Border> merke)
     {
         var inhalt = new StackPanel();
         foreach (var block in kasten.Blocks)
-            inhalt.Children.Add(ZeichneBlock(block, value, rows, merke));
+            inhalt.Children.Add(ZeichneBlock(block, value, rows, emptyRowText, merke));
 
         inhalt.Margin = new Thickness(2, 1, 2, 1);
 
@@ -211,14 +230,17 @@ public static class DossierPreviewPageRenderer
             text.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
         }
 
+        var offeneStelle = false;
+
         foreach (var run in absatz.Runs)
         {
             var inhalt = run.IsField ? value(run.FieldKey!) : run.Text ?? string.Empty;
             var leer = run.IsField && string.IsNullOrWhiteSpace(inhalt);
 
-            // Eine leere Stelle wird sichtbar gemacht: sonst sieht die Vorschau
-            // fertig aus, obwohl das Feld im Dokument leer bleibt.
-            var stueck = new Run(leer ? "———" : inhalt)
+            // Eine leere Stelle bleibt LEER — genau wie im Dokument. Sichtbar
+            // wird sie ueber den blassen Grund des Absatzes, nicht ueber
+            // erfundene Zeichen; die stuenden so nie im fertigen Dossier.
+            var stueck = new Run(inhalt)
             {
                 FontFamily = new FontFamily(run.Format.FontFamily),
                 FontSize = run.Format.FontSizePx,
@@ -229,6 +251,9 @@ public static class DossierPreviewPageRenderer
 
             if (run.Format.Underline)
                 stueck.TextDecorations = TextDecorations.Underline;
+
+            if (leer)
+                offeneStelle = true;
 
             text.Inlines.Add(stueck);
         }
@@ -250,7 +275,7 @@ public static class DossierPreviewPageRenderer
         var rahmen = new Border
         {
             Child = text,
-            Background = Brushes.Transparent,
+            Background = offeneStelle ? Luecke : Brushes.Transparent,
             Margin = new Thickness(
                 absatz.Format.Indent.Left,
                 absatz.Format.SpaceBeforePx,
@@ -291,7 +316,14 @@ public static class DossierPreviewPageRenderer
         }
     }
 
-    private static Border ZeichneBildstelle(
+    /// <summary>
+    /// Die Stelle des Uebersichtsplans. Breite und Seitenverhaeltnis folgen
+    /// derselben Regel wie der Export: feste Breite, Hoehe aus dem echten
+    /// Bild. Ohne Datei entsteht KEIN erfundener Kasten, sondern ein
+    /// schmaler Hinweis — sonst zeigte die Vorschau Platz, den das Dossier
+    /// nicht hat.
+    /// </summary>
+    private static FrameworkElement ZeichneBildstelle(
         DossierPreviewImage stelle,
         Func<string, string> value,
         Action<string, Border> merke)
@@ -301,18 +333,23 @@ public static class DossierPreviewPageRenderer
         var rahmen = new Border
         {
             Width = stelle.WidthPx,
-            Height = stelle.HeightPx,
+            HorizontalAlignment = HorizontalAlignment.Left,
             BorderBrush = Blass,
             BorderThickness = new Thickness(1),
             Background = Brushes.Transparent,
             Margin = new Thickness(0, 8, 0, 8)
         };
 
-        if (string.IsNullOrWhiteSpace(pfad))
+        var bild = string.IsNullOrWhiteSpace(pfad) ? null : Lade(pfad);
+
+        if (bild is null)
         {
+            rahmen.Height = 26;
             rahmen.Child = new TextBlock
             {
-                Text = "Kein Übersichtsplan gewählt",
+                Text = string.IsNullOrWhiteSpace(pfad)
+                    ? "Kein Übersichtsplan gewählt"
+                    : "Übersichtsplan nicht lesbar: " + System.IO.Path.GetFileName(pfad),
                 Foreground = Blass,
                 FontFamily = new FontFamily("Arial"),
                 FontSize = 12,
@@ -322,37 +359,34 @@ public static class DossierPreviewPageRenderer
         }
         else
         {
-            rahmen.Child = LadeFuerVorschau(pfad, stelle);
+            // Genau die Rechnung des Exports: Breite fest, Hoehe aus dem Bild.
+            rahmen.Height = bild.PixelWidth > 0
+                ? stelle.WidthPx * bild.PixelHeight / bild.PixelWidth
+                : stelle.WidthPx;
+
+            rahmen.BorderThickness = new Thickness(0);
+            rahmen.Child = new Image { Source = bild, Stretch = Stretch.Fill };
         }
 
         merke(stelle.FieldKey, rahmen);
         return rahmen;
     }
 
-    private static FrameworkElement LadeFuerVorschau(string pfad, DossierPreviewImage stelle)
+    private static BitmapImage? Lade(string pfad)
     {
         try
         {
             var quelle = new BitmapImage();
             quelle.BeginInit();
             quelle.CacheOption = BitmapCacheOption.OnLoad;
-            quelle.UriSource = new Uri(pfad);
+            quelle.UriSource = new Uri(pfad, UriKind.Absolute);
             quelle.EndInit();
             quelle.Freeze();
-
-            return new Image { Source = quelle, Stretch = Stretch.Uniform };
+            return quelle;
         }
         catch (Exception)
         {
-            return new TextBlock
-            {
-                Text = System.IO.Path.GetFileName(pfad),
-                Foreground = Blass,
-                FontFamily = new FontFamily("Arial"),
-                FontSize = 12,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
+            return null;
         }
     }
 
@@ -360,6 +394,7 @@ public static class DossierPreviewPageRenderer
         DossierPreviewTable tabelle,
         Func<string, string> value,
         Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rows,
+        Func<string, string> emptyRowText,
         Action<string, Border> merke)
     {
         var raster = new Grid
@@ -406,8 +441,9 @@ public static class DossierPreviewPageRenderer
 
             if (daten.Count == 0)
             {
+                // Derselbe Text, den auch der Export in die leere Zeile setzt.
                 Setze(tabelle.RepeatTemplate,
-                    i => i == 0 ? "— noch keine Zeile —" : string.Empty,
+                    i => i == 0 ? emptyRowText(tabelle.RepeatKey) : string.Empty,
                     tabelle.RepeatKey);
                 return;
             }
@@ -493,6 +529,31 @@ public static class DossierPreviewPageRenderer
 
         return rahmen;
     }
+
+    /// <summary>
+    /// Eine Linie am Ende des Satzspiegels samt Hinweis. Sie sagt ehrlich, dass
+    /// Word ab dort umbricht — die Vorschau kann den Umbruch nicht nachrechnen.
+    /// </summary>
+    private static FrameworkElement UeberlaufMarke(DossierPreviewPage page)
+        => new Border
+        {
+            BorderBrush = Fest(Color.FromRgb(0xC0, 0x50, 0x50)),
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            VerticalAlignment = VerticalAlignment.Top,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Margin = new Thickness(
+                0, page.Geometry.HeightPx - page.Geometry.Margin.Bottom, 0, 0),
+            IsHitTestVisible = false,
+            Child = new TextBlock
+            {
+                Text = "Ab hier bricht Word auf die Folgeseite um",
+                FontFamily = new FontFamily("Arial"),
+                FontSize = 10,
+                Foreground = Fest(Color.FromRgb(0xC0, 0x50, 0x50)),
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 2, 4, 0)
+            }
+        };
 
     private static SolidColorBrush? Pinsel(string? hex)
     {

@@ -152,11 +152,16 @@ public sealed record DossierPreviewPicture(
     double WidthPx,
     double HeightPx) : DossierPreviewBlock;
 
-/// <summary>Eine Bildstelle, die erst beim Erzeugen gefuellt wird.</summary>
+/// <summary>
+/// Eine Bildstelle, die erst beim Erzeugen gefuellt wird.
+///
+/// Nur die BREITE steht fest — sie ist dieselbe, die der Export setzt. Die
+/// Hoehe ergibt sich aus dem Seitenverhaeltnis des tatsaechlichen Bildes; eine
+/// hier erfundene Hoehe waere eine andere als im fertigen Dossier.
+/// </summary>
 public sealed record DossierPreviewImage(
     string FieldKey,
-    double WidthPx,
-    double HeightPx) : DossierPreviewBlock;
+    double WidthPx) : DossierPreviewBlock;
 
 /// <summary>
 /// Ein schwebendes Objekt: Textkasten, Bild oder Rahmen des Deckblatts.

@@ -32,6 +32,22 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// <summary>Das feste Wappen, ausgeliefert neben der Word-Vorlage.</summary>
     public const string CoatOfArmsFileName = "Dossier_Wappen.png";
 
+    /// <summary>Breite des Uebersichtsplans im Dokument.</summary>
+    public const double PlanMaxWidthCm = 15.0;
+
+    /// <summary>
+    /// Der Text, den eine Wiederholzeile ohne Daten traegt. Er steht hier, weil
+    /// Export UND Vorschau denselben verwenden muessen — sonst zeigt die
+    /// Vorschau etwas anderes als das fertige Dossier.
+    /// </summary>
+    public static string EmptyRowText(string repeatKey) => repeatKey switch
+    {
+        "Haltungen" => "Keine Leitungen zugeordnet",
+        "Eigentuemer" => "Keine Eigentümerangaben erfasst",
+        "Themen" => "Keine Angaben erfasst",
+        _ => string.Empty
+    };
+
     private readonly Func<string> _resolveTemplatePath;
 
     public DossierWordTemplateExportService(Func<string>? resolveTemplatePath = null)
@@ -87,25 +103,25 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                         document,
                         "Haltungen",
                         BuildHoldingRows(request.Snapshot),
-                        "Keine Leitungen zugeordnet");
+                        EmptyRowText("Haltungen"));
 
                     DocxPlaceholderFiller.FillRepeatingRows(
                         document,
                         "Eigentuemer",
                         BuildOwnerRows(request.Dossier),
-                        "Keine Eigentümerangaben erfasst");
+                        EmptyRowText("Eigentuemer"));
 
                     DocxPlaceholderFiller.FillRepeatingRows(
                         document,
                         "Themen",
                         BuildTopicRows(request.Area, request.Dossier),
-                        "Keine Angaben erfasst");
+                        EmptyRowText("Themen"));
 
                     DocxPlaceholderFiller.FillRepeatingRows(
                         document,
                         "Aenderungen",
                         BuildChangeRows(request.Dossier),
-                        string.Empty);
+                        EmptyRowText("Aenderungen"));
 
                     // Bilder VOR dem Textfueller: sonst wuerde der Textfueller
                     // "{{@Logo}}" als unbekannten Textplatzhalter leeren und das
@@ -447,7 +463,12 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         _ => placeholderName + " nicht gefunden."
     };
 
-    private static string? ResolvePlanPath(DossierExportRequest request)
+    /// <summary>
+    /// Der Pfad des Uebersichtsplans, relative Angaben am Projektordner
+    /// aufgeloest. Oeffentlich, weil die Vorschau denselben Pfad braucht — sonst
+    /// zeigt sie eine leere Stelle, wo das Dossier ein Bild traegt.
+    /// </summary>
+    public static string? ResolvePlanPath(DossierExportRequest request)
     {
         var configured = request.Dossier.OverviewPlanPath;
         if (string.IsNullOrWhiteSpace(configured))

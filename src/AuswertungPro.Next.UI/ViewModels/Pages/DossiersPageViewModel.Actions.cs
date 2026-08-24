@@ -420,10 +420,6 @@ public sealed partial class DossiersPageViewModel
             return;
         }
 
-        // Die Vorschau hat auf Kopien gearbeitet. Zurueckgeschrieben wird an
-        // genau die Stelle, von der die Kopie stammt.
-        _document.Area = ergebnis.Value.Area;
-
         var stelle = _document.Dossiers.FindIndex(d => d.Id == definition.Id);
         if (stelle < 0)
         {
@@ -431,10 +427,23 @@ public sealed partial class DossiersPageViewModel
             return;
         }
 
+        // Die Vorschau hat auf Kopien gearbeitet. Zurueckgeschrieben wird an
+        // genau die Stelle, von der die Kopie stammt — und der bisherige Stand
+        // wird gemerkt: scheitert das Speichern, stuende sonst im Arbeitsspeicher
+        // etwas anderes als in der Datei.
+        var vorherigesGebiet = _document.Area;
+        var vorherigesDossier = _document.Dossiers[stelle];
+
+        _document.Area = ergebnis.Value.Area;
         _document.Dossiers[stelle] = ergebnis.Value.Dossier;
 
         if (!await SaveDocumentAsync(root))
+        {
+            _document.Area = vorherigesGebiet;
+            _document.Dossiers[stelle] = vorherigesDossier;
+            StatusMessage = "Nicht gespeichert — die Angaben bleiben wie vorher.";
             return;
+        }
 
         await ReloadAsync();
         StatusMessage = "Angaben aus der Vorschau übernommen.";

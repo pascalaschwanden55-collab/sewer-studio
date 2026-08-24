@@ -116,10 +116,17 @@ public partial class DossierPreviewWindow : Window
 
         _values = DossierWordTemplateExportService.BuildValues(_request);
 
+        // Der Uebersichtsplan ist eine Bildmarke, kein Textwert. Sein Pfad wird
+        // genau so aufgeloest wie beim Erzeugen des Dossiers — sonst zeigte die
+        // Vorschau eine leere Stelle, wo ein relativ hinterlegter Plan liegt.
+        _values["Uebersichtsplan"] =
+            DossierWordTemplateExportService.ResolvePlanPath(_request) ?? string.Empty;
+
         _render = DossierPreviewPageRenderer.Render(
             seite,
             key => _values.TryGetValue(key, out var wert) ? wert : string.Empty,
-            ZeilenFuer);
+            ZeilenFuer,
+            DossierWordTemplateExportService.EmptyRowText);
 
         Sheet.Child = _render.Root;
 
