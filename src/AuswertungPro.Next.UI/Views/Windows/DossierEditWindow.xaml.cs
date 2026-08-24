@@ -18,6 +18,8 @@ public partial class DossierEditWindow : Window
 {
     private readonly DossierDefinition _target;
     private readonly ObservableCollection<DossierOwnerRow> _owners = new();
+    private readonly ObservableCollection<DossierTopicRow> _topics = new();
+    private readonly ObservableCollection<DossierChangeRow> _changes = new();
     private string _planPath = "";
 
     private DossierEditWindow(DossierDefinition target, bool isNew)
@@ -58,21 +60,34 @@ public partial class DossierEditWindow : Window
         MailBox.Text = _target.ContactMail;
         OccupancyBox.Text = _target.Occupancy;
 
-        ProcessBox.Text = _target.ConstructionProcess;
-        RemarksBox.Text = _target.Remarks;
-        AttachmentsBox.Text = string.IsNullOrWhiteSpace(_target.Attachments)
-            ? DefaultAttachmentList
-            : _target.Attachments;
+        FileNoteBox.Text = _target.FileNote;
         RevisionBox.Text = _target.Revision;
-
-        ExecutionOverrideBox.Text = _target.ExecutionDateOverride ?? "";
-        ContactPersonOverrideBox.Text = _target.ContactPersonOverride ?? "";
-        ContractorOverrideBox.Text = _target.ContractorOverride ?? "";
-        SiteManagementOverrideBox.Text = _target.SiteManagementOverride ?? "";
-        ObstructionsOverrideBox.Text = _target.ObstructionsOverride ?? "";
-        HouseConnectionOverrideBox.Text = _target.HouseConnectionTextOverride ?? "";
-        StormWaterOverrideBox.Text = _target.StormWaterTextOverride ?? "";
         DeadlineOverrideBox.Text = _target.ResponseDeadlineOverride ?? "";
+
+        _topics.Clear();
+        foreach (var thema in _target.Topics ?? new())
+        {
+            if (thema is not null)
+                _topics.Add(new DossierTopicRow { Title = thema.Title, Text = thema.Text });
+        }
+
+        _changes.Clear();
+        foreach (var zeile in _target.Changes ?? new())
+        {
+            if (zeile is null)
+                continue;
+
+            _changes.Add(new DossierChangeRow
+            {
+                Version = zeile.Version,
+                Date = zeile.Date,
+                Visum = zeile.Visum,
+                Change = zeile.Change
+            });
+        }
+
+        TopicsGrid.ItemsSource = _topics;
+        ChangesGrid.ItemsSource = _changes;
 
         _owners.Clear();
         foreach (var owner in _target.Owners)
@@ -94,12 +109,6 @@ public partial class DossierEditWindow : Window
         _planPath = _target.OverviewPlanPath;
         ShowPlanPath();
     }
-
-    private const string DefaultAttachmentList =
-        "Situation Liegenschaft GIS\n"
-        + "Situation Abwasserleitungen der TV-Aufnahmen\n"
-        + "TV-Haltungsprotokolle\n"
-        + "Offerte";
 
     private void OnSave(object sender, RoutedEventArgs e)
     {
@@ -126,27 +135,38 @@ public partial class DossierEditWindow : Window
         _target.ContactMail = Trim(MailBox.Text);
         _target.Occupancy = Trim(OccupancyBox.Text);
 
-        _target.ConstructionProcess = Trim(ProcessBox.Text);
-        _target.Remarks = Trim(RemarksBox.Text);
-        _target.Attachments = Trim(AttachmentsBox.Text);
+        _target.FileNote = Trim(FileNoteBox.Text);
 
         var revision = Trim(RevisionBox.Text);
         _target.Revision = revision.Length == 0 ? "A" : revision;
 
-        _target.ExecutionDateOverride = NullIfEmpty(ExecutionOverrideBox.Text);
-        _target.ContactPersonOverride = NullIfEmpty(ContactPersonOverrideBox.Text);
-        _target.ContractorOverride = NullIfEmpty(ContractorOverrideBox.Text);
-        _target.SiteManagementOverride = NullIfEmpty(SiteManagementOverrideBox.Text);
-        _target.ObstructionsOverride = NullIfEmpty(ObstructionsOverrideBox.Text);
-        _target.HouseConnectionTextOverride = NullIfEmpty(HouseConnectionOverrideBox.Text);
-        _target.StormWaterTextOverride = NullIfEmpty(StormWaterOverrideBox.Text);
         _target.ResponseDeadlineOverride = NullIfEmpty(DeadlineOverrideBox.Text);
 
-        // Das Raster gibt die letzte Zelle erst beim Fokuswechsel frei.
+        // Die Raster geben die letzte Zelle erst beim Fokuswechsel frei.
         OwnersGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Row, true);
+        TopicsGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Row, true);
+        ChangesGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Row, true);
 
         _target.Owners = _owners
             .Where(owner => owner.HasContent)
+            .ToList();
+
+        // Ein Thema ohne Titel findet im Dossier keinen Platz und stuende als
+        // leere Tabellenzeile im Dokument.
+        _target.Topics = _topics
+            .Where(thema => !string.IsNullOrWhiteSpace(thema.Title))
+            .Select(thema => new DossierTopicRow
+            {
+                Title = thema.Title.Trim(),
+                Text = thema.Text ?? ""
+            })
+            .ToList();
+
+        _target.Changes = _changes
+            .Where(zeile => !string.IsNullOrWhiteSpace(zeile.Version)
+                || !string.IsNullOrWhiteSpace(zeile.Date)
+                || !string.IsNullOrWhiteSpace(zeile.Visum)
+                || !string.IsNullOrWhiteSpace(zeile.Change))
             .ToList();
 
         _target.OverviewPlanPath = _planPath;
@@ -175,6 +195,38 @@ public partial class DossierEditWindow : Window
 
         _owners.Add(row);
         OwnersGrid.SelectedItem = row;
+    }
+
+    private void OnAddTopic(object sender, RoutedEventArgs e)
+    {
+        var zeile = new DossierTopicRow();
+        _topics.Add(zeile);
+        TopicsGrid.SelectedItem = zeile;
+    }
+
+    private void OnRemoveTopic(object sender, RoutedEventArgs e)
+    {
+        if (TopicsGrid.SelectedItem is DossierTopicRow zeile)
+            _topics.Remove(zeile);
+    }
+
+    private void OnAddChange(object sender, RoutedEventArgs e)
+    {
+        var zeile = new DossierChangeRow
+        {
+            // Fortlaufende Nummer und heutiges Datum als Vorschlag.
+            Version = (_changes.Count + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Date = DateTime.Today.ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture)
+        };
+
+        _changes.Add(zeile);
+        ChangesGrid.SelectedItem = zeile;
+    }
+
+    private void OnRemoveChange(object sender, RoutedEventArgs e)
+    {
+        if (ChangesGrid.SelectedItem is DossierChangeRow zeile)
+            _changes.Remove(zeile);
     }
 
     private void OnRemoveOwner(object sender, RoutedEventArgs e)

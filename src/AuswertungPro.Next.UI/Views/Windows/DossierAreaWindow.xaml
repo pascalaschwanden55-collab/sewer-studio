@@ -4,7 +4,7 @@
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
         Title="Gebietsangaben"
-        Width="640" Height="700"
+        Width="900" Height="720"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}">
 
@@ -32,48 +32,91 @@
                    Text="Diese Angaben gelten für ALLE Dossiers dieses Projekts. Einzelne Liegenschaften können sie überschreiben."
                    TextWrapping="Wrap" FontStyle="Italic" Margin="0,0,0,8"/>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="0,0,12,0">
+        <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
 
-                <TextBlock Text="Gebietstitel (erscheint gross auf dem Deckblatt)"/>
-                <TextBox x:Name="TitleBox" AcceptsReturn="True" MinHeight="46"
-                         TextWrapping="Wrap"/>
+            <TabItem Header="Deckblatt">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="4,0,12,0">
 
-                <TextBlock Text="Autoren (erscheint auf Seite 2 unter „Autoren:“)"/>
-                <TextBox x:Name="AuthorsBox"/>
+                        <TextBlock Text="Gebietstitel (erscheint gross auf dem Deckblatt)"/>
+                        <TextBox x:Name="TitleBox" AcceptsReturn="True" MinHeight="46"
+                                 TextWrapping="Wrap"/>
 
-                <TextBlock Text="Ausführungstermin"/>
-                <TextBox x:Name="ExecutionBox"/>
+                        <TextBlock Text="Zweite Deckblattzeile, z. B. „6472 Erstfeld“"/>
+                        <TextBox x:Name="LocationBox"/>
 
-                <TextBlock Text="Ansprechpartner (Name, Adresse, Telefon, E-Mail)"/>
-                <TextBox x:Name="ContactBox" AcceptsReturn="True" MinHeight="70"
-                         TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                        <TextBlock Text="Projektnummer („Proj. Nr. AWU“)"/>
+                        <TextBox x:Name="ProjectNumberBox"/>
 
-                <TextBlock Text="Unternehmer"/>
-                <TextBox x:Name="ContractorBox"/>
+                        <TextBlock Text="Gezeichnet („Gez.“) — Kürzel"/>
+                        <TextBox x:Name="DrawnByBox"/>
 
-                <TextBlock Text="Örtliche Bauleitung"/>
-                <TextBox x:Name="SiteBox"/>
+                        <TextBlock Text="Autoren (erscheint auf Seite 2 unter „Autoren:“)"/>
+                        <TextBox x:Name="AuthorsBox"/>
 
-                <TextBlock Text="Behinderungen, Zugänge, Verkehrs- und Fussgängerführung"/>
-                <TextBox x:Name="ObstructionsBox" AcceptsReturn="True" MinHeight="60"
-                         TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                        <TextBlock Text="Rückmeldefrist"/>
+                        <TextBox x:Name="DeadlineBox"/>
 
-                <TextBlock Text="Hausanschluss Abwasser (Standardtext)"/>
-                <TextBox x:Name="HouseConnectionBox" AcceptsReturn="True" MinHeight="120"
-                         TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                        <TextBlock Text="Fusszeile des Dokuments"/>
+                        <TextBox x:Name="FooterBox"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
 
-                <TextBlock Text="Meteorwasser"/>
-                <TextBox x:Name="StormWaterBox" AcceptsReturn="True" MinHeight="46"
-                         TextWrapping="Wrap"/>
+            <TabItem Header="Themen">
+                <Grid Margin="4,10,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                <TextBlock Text="Rückmeldefrist"/>
-                <TextBox x:Name="DeadlineBox"/>
+                    <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,6"
+                               TextWrapping="Wrap"
+                               Text="Die Zeilen der Tabelle „Informationen“ — in dieser Reihenfolge. Ein Dossier kann einzelne Texte überschreiben und eigene Zeilen ergänzen."/>
 
-                <TextBlock Text="Fusszeile des Dokuments"/>
-                <TextBox x:Name="FooterBox"/>
-            </StackPanel>
-        </ScrollViewer>
+                    <DockPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,0">
+                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                                    Margin="0,8,0,0">
+                            <Button Content="Neu" Width="62" Height="28" Margin="0,0,6,0"
+                                    Click="OnAddTopic"/>
+                            <Button Content="Entfernen" Width="82" Height="28" Margin="0,0,6,0"
+                                    Click="OnRemoveTopic"/>
+                            <Button Content="▲" Width="34" Height="28" Margin="0,0,6,0"
+                                    ToolTip="Nach oben" Click="OnTopicUp"/>
+                            <Button Content="▼" Width="34" Height="28"
+                                    ToolTip="Nach unten" Click="OnTopicDown"/>
+                        </StackPanel>
+
+                        <ListBox x:Name="TopicList" DisplayMemberPath="Title"/>
+                    </DockPanel>
+
+                    <Grid Grid.Row="1" Grid.Column="1"
+                          DataContext="{Binding SelectedItem, ElementName=TopicList}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="Thema (Spalte links)" Margin="0,0,0,2"/>
+                        <TextBox Grid.Row="1" x:Name="TopicTitleBox"
+                                 Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Grid.Row="2" Text="Text (Spalte „Bemerkungen“)"/>
+                        <TextBox Grid.Row="3" x:Name="TopicTextBox"
+                                 Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                                 AcceptsReturn="True" TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto"
+                                 VerticalContentAlignment="Top"/>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
                     Margin="0,16,0,0">

@@ -148,18 +148,76 @@
                 </StackPanel>
                 <TextBlock x:Name="PlanPathText" TextWrapping="Wrap"/>
 
-                <TextBlock Text="Sanierung" Style="{StaticResource SectionStyle}"/>
+                <TextBlock Text="Themen dieses Dossiers" Style="{StaticResource SectionStyle}"/>
 
-                <TextBlock Text="Bauvorgang für diese Liegenschaft"/>
-                <TextBox x:Name="ProcessBox" AcceptsReturn="True" MinHeight="70"
-                         TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                <TextBlock Text="Nur Abweichungen zum Gebiet: derselbe Titel ersetzt den Gebietstext, ein neuer Titel kommt hinten dran."
+                           TextWrapping="Wrap"/>
 
-                <TextBlock Text="Bemerkungen"/>
-                <TextBox x:Name="RemarksBox" AcceptsReturn="True" MinHeight="46"
-                         TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                <DataGrid x:Name="TopicsGrid"
+                          Height="170"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal"
+                          RowHeight="26">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Thema" Width="230"
+                                            Binding="{Binding Title, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTemplateColumn Header="Text" Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center" Margin="4,0"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <!-- Mehrzeilig bearbeitbar: Ausgangslage und
+                                 Sanierungskonzept sind ganze Absaetze. -->
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                                             AcceptsReturn="True" TextWrapping="Wrap"
+                                             Height="120" VerticalScrollBarVisibility="Auto"
+                                             VerticalContentAlignment="Top"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
 
-                <TextBlock Text="Beilagen (Aufzählung für das Dokument)"/>
-                <TextBox x:Name="AttachmentsBox" AcceptsReturn="True" MinHeight="60"
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <Button Content="+ Zeile" Padding="10,4" Click="OnAddTopic"/>
+                    <Button Content="Zeile entfernen" Padding="10,4" Margin="8,0,0,0"
+                            Click="OnRemoveTopic"/>
+                </StackPanel>
+
+                <TextBlock Text="Änderungswesen" Style="{StaticResource SectionStyle}"/>
+
+                <DataGrid x:Name="ChangesGrid"
+                          Height="110"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Version" Width="70"
+                                            Binding="{Binding Version, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Datum" Width="100"
+                                            Binding="{Binding Date, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Visum" Width="70"
+                                            Binding="{Binding Visum, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Art der Änderung" Width="*"
+                                            Binding="{Binding Change, UpdateSourceTrigger=PropertyChanged}"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <Button Content="+ Zeile" Padding="10,4" Click="OnAddChange"/>
+                    <Button Content="Zeile entfernen" Padding="10,4" Margin="8,0,0,0"
+                            Click="OnRemoveChange"/>
+                </StackPanel>
+
+                <TextBlock Text="Für die Aktennotiz (letzte Zeile der Informationstabelle)"/>
+                <TextBox x:Name="FileNoteBox" AcceptsReturn="True" MinHeight="46"
                          TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
 
                 <TextBlock Text="Revision"/>
@@ -171,31 +229,6 @@
                     <StackPanel Margin="0,8,0,0">
                         <TextBlock Text="Leer lassen heisst: es gilt die Angabe des Gebiets."
                                    FontStyle="Italic" Margin="0,0,0,6"/>
-
-                        <TextBlock Text="Ausführungstermin"/>
-                        <TextBox x:Name="ExecutionOverrideBox"/>
-
-                        <TextBlock Text="Ansprechpartner"/>
-                        <TextBox x:Name="ContactPersonOverrideBox" AcceptsReturn="True"
-                                 MinHeight="46" TextWrapping="Wrap"/>
-
-                        <TextBlock Text="Unternehmer"/>
-                        <TextBox x:Name="ContractorOverrideBox"/>
-
-                        <TextBlock Text="Örtliche Bauleitung"/>
-                        <TextBox x:Name="SiteManagementOverrideBox"/>
-
-                        <TextBlock Text="Behinderungen / Zugänge"/>
-                        <TextBox x:Name="ObstructionsOverrideBox" AcceptsReturn="True"
-                                 MinHeight="46" TextWrapping="Wrap"/>
-
-                        <TextBlock Text="Hausanschluss Abwasser"/>
-                        <TextBox x:Name="HouseConnectionOverrideBox" AcceptsReturn="True"
-                                 MinHeight="60" TextWrapping="Wrap"/>
-
-                        <TextBlock Text="Meteorwasser"/>
-                        <TextBox x:Name="StormWaterOverrideBox" AcceptsReturn="True"
-                                 MinHeight="46" TextWrapping="Wrap"/>
 
                         <TextBlock Text="Rückmeldefrist"/>
                         <TextBox x:Name="DeadlineOverrideBox"/>

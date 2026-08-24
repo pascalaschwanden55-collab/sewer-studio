@@ -49,6 +49,20 @@ public static class DossierDocumentMigration
         "Beilagen"
     };
 
+    /// <summary>
+    /// Vorbelegte Texte fuer neue Gebietsthemen. Nur dort, wo eine Vorgabe
+    /// wirklich hilft — der Rest bleibt leer statt erfunden.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> DefaultTopicTexts =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Beilagen"] =
+                "Situation Liegenschaft GIS\n"
+                + "Situation Abwasserleitungen der TV-Aufnahmen\n"
+                + "TV-Haltungsprotokolle\n"
+                + "Offerte"
+        };
+
     public static bool NeedsTopicDerivation(int schemaVersion)
         => schemaVersion < TopicsStoredFromVersion;
 
