@@ -182,6 +182,83 @@ public sealed class DossierParcelLookupUseCaseTests
     }
 
     [Fact]
+    public async Task Die_privaten_Leitungen_des_Projekts_kommen_ueber_ihren_Namen_dazu()
+    {
+        // Der Kanton fuehrt sie nicht — ihr Knotenname zeigt aber auf die
+        // Parzelle. Ohne diesen Weg fehlten genau die Hausanschluesse.
+        var fall = new DossierParcelLookupUseCase(
+            new Parzellen { Treffer = Parzelle("439") },
+            new Grundbuch { Treffer = Auszug("Kurt Beispiel") },
+            new Netz());
+
+        var ergebnis = await fall.RunAsync(
+            1208, "439", new[] { "439.01-36051", "12345-12346" });
+
+        var leitung = Assert.Single(ergebnis.Holdings);
+        Assert.Equal("439.01-36051", leitung.Designation);
+        Assert.Equal("Name", leitung.Origin);
+        Assert.True(leitung.InProject);
+        Assert.True(leitung.Preselected);
+    }
+
+    [Fact]
+    public async Task Eine_Leitung_die_das_Projekt_nicht_fuehrt_ist_nicht_vorgewaehlt()
+    {
+        var fall = new DossierParcelLookupUseCase(
+            new Parzellen { Treffer = Parzelle("439") },
+            new Grundbuch { Treffer = Auszug("Kurt Beispiel") },
+            new Netz
+            {
+                Treffer = new[]
+                {
+                    new NetworkHolding("77000-77001", "Privat", 12.5, "LINESTRING(0 0,1 1)")
+                }
+            });
+
+        var ergebnis = await fall.RunAsync(1208, "439", Array.Empty<string>());
+
+        var leitung = Assert.Single(ergebnis.Holdings);
+        Assert.Equal("Lage", leitung.Origin);
+        Assert.False(leitung.InProject);
+        Assert.False(leitung.Preselected);
+    }
+
+    [Fact]
+    public async Task Dieselbe_Leitung_aus_beiden_Wegen_erscheint_nur_einmal()
+    {
+        var fall = new DossierParcelLookupUseCase(
+            new Parzellen { Treffer = Parzelle("439") },
+            new Grundbuch { Treffer = Auszug("Kurt Beispiel") },
+            new Netz
+            {
+                Treffer = new[]
+                {
+                    new NetworkHolding("439.01-36051", "Privat", 12.5, "LINESTRING(0 0,1 1)")
+                }
+            });
+
+        var ergebnis = await fall.RunAsync(1208, "439", new[] { "439.01-36051" });
+
+        var leitung = Assert.Single(ergebnis.Holdings);
+        Assert.Equal("Lage", leitung.Origin);
+        Assert.True(leitung.InProject);
+    }
+
+    [Fact]
+    public async Task Auch_ohne_Grundbuchauszug_werden_die_Leitungen_zugeordnet()
+    {
+        var fall = new DossierParcelLookupUseCase(
+            new Parzellen { Treffer = Parzelle("439") },
+            new Grundbuch { Fehler = new InvalidOperationException("Seite kaputt") },
+            new Netz());
+
+        var ergebnis = await fall.RunAsync(1208, "439", new[] { "439.01-36051" });
+
+        Assert.True(ergebnis.Found);
+        Assert.Single(ergebnis.Holdings);
+    }
+
+    [Fact]
     public async Task Eine_leere_Parzellennummer_fragt_gar_nichts_ab()
     {
         var fall = new DossierParcelLookupUseCase(

@@ -291,6 +291,48 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Die_Schaechte_der_Liegenschaft_stehen_im_Dossier()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.ShaftNumbers = new List<string> { "36051" };
+
+        // Der Schacht muss im Projekt vorhanden sein — sonst gehoert er nicht
+        // ins Dossier.
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "36051");
+        request.Project.SchaechteData.Add(schacht);
+
+        var snapshot = DossierSnapshotBuilder.Build(request.Dossier, request.Project, null);
+        var mitSchacht = request with { Snapshot = snapshot };
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(mitSchacht);
+
+        Assert.True(result.Success, result.Message);
+        var text = ReadDocumentText(result.FilePath!);
+
+        Assert.Contains("36051", text, StringComparison.Ordinal);
+        Assert.Contains("Schacht", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Ein_Schacht_den_das_Projekt_nicht_kennt_erscheint_nicht()
+    {
+        // Lieber eine kurze Liste als ein erfundener Schacht im Brief.
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.ShaftNumbers = new List<string> { "99999" };
+
+        var snapshot = DossierSnapshotBuilder.Build(request.Dossier, request.Project, null);
+        var mitSchacht = request with { Snapshot = snapshot };
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(mitSchacht);
+
+        Assert.True(result.Success, result.Message);
+        Assert.DoesNotContain("99999", ReadDocumentText(result.FilePath!), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Die_ausgewaehlten_Leitungen_stehen_als_eigenes_Kapitel_im_Dossier()
     {
         // Das Originaldossier kennt dieses Kapitel nicht — ohne es faenden
@@ -731,6 +773,17 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 ///
 /// Wird die Vorlage bewusst geaendert, ist diese Liste mit anzupassen.
 /// </summary>
+/// <summary>
+/// Waechter ueber die ausgelieferte Datei "Export_Vorlage/Eigentuemerdossier.docx".
+///
+/// Sie ist von Hand in Word gestaltet und wird nicht aus Code erzeugt. Der Test
+/// nagelt deshalb JEDE sichtbare Zeile fest. Das hat zwei Gruende: eine
+/// verrutschte oder geloeschte Platzhalterzeile faellt sofort auf, und es kann
+/// kein Personendatum unbemerkt in die Vorlage geraten — sie stammt aus einem
+/// echten Kundendossier.
+///
+/// Wird die Vorlage bewusst geaendert, ist diese Liste mit anzupassen.
+/// </summary>
 public sealed class AusgelieferteDossierWordVorlageTests
 {
     /// <summary>
@@ -786,6 +839,7 @@ public sealed class AusgelieferteDossierWordVorlageTests
             "Betroffene Leitungen",
             "{{Haltungen_Text}}",
             "{{Haltungen_Summe}}",
+            "{{Schaechte_Text}}",
             "Informationen Sanierung",
             "Thema",
             "Bemerkungen",

@@ -20,6 +20,14 @@ public sealed record DossierHoldingLine(
     decimal NetCost,
     string Measures);
 
+/// <summary>Ein Schacht der Liegenschaft.</summary>
+public sealed record DossierShaftLine(
+    Guid ShaftId,
+    string Number,
+    string Street,
+    string ConditionClass,
+    decimal NetCost);
+
 /// <summary>
 /// Der berechnete Stand eines Dossiers: seine Haltungen, die Kennzahlen und
 /// die Verweise, zu denen keine Haltung mehr existiert.
@@ -29,8 +37,14 @@ public sealed record DossierSnapshot(
     string Name,
     IReadOnlyList<DossierHoldingLine> Holdings,
     IReadOnlyList<Guid> MissingHoldingIds,
-    DashboardStatistics Statistics)
+    DashboardStatistics Statistics,
+    IReadOnlyList<DossierShaftLine>? ShaftLines = null)
 {
+    /// <summary>Die Schaechte der Liegenschaft.</summary>
+    public IReadOnlyList<DossierShaftLine> Shafts
+        => ShaftLines ?? Array.Empty<DossierShaftLine>();
+
+    public int ShaftCount => Shafts.Count;
     public int HoldingCount => Holdings.Count;
 
     public bool HasMissingHoldings => MissingHoldingIds.Count > 0;
@@ -101,7 +115,52 @@ public static class DossierSnapshotBuilder
             definition.Name,
             lines,
             missing,
-            statistics);
+            statistics,
+            BuildShaftLines(definition, project, schachtCosts));
+    }
+
+    /// <summary>
+    /// Die Schaechte in der Reihenfolge, in der sie im Dossier stehen. Eine
+    /// Nummer ohne Datensatz im Projekt wird uebersprungen — ein erfundener
+    /// Schacht im Brief waere schlimmer als eine kurze Liste.
+    /// </summary>
+    private static IReadOnlyList<DossierShaftLine> BuildShaftLines(
+        DossierDefinition definition,
+        Project? project,
+        ProjectCostStore? schachtCosts)
+    {
+        if (definition.ShaftNumbers is null || definition.ShaftNumbers.Count == 0)
+            return Array.Empty<DossierShaftLine>();
+
+        var nachNummer = new Dictionary<string, SchachtRecord>(StringComparer.OrdinalIgnoreCase);
+        foreach (var record in project?.SchaechteData ?? Enumerable.Empty<SchachtRecord>())
+        {
+            var nummer = (record.GetFieldValue("Schachtnummer") ?? string.Empty).Trim();
+            if (nummer.Length > 0 && !nachNummer.ContainsKey(nummer))
+                nachNummer[nummer] = record;
+        }
+
+        var kosten = schachtCosts?.ByHolding
+            ?? new Dictionary<string, HoldingCost>(StringComparer.OrdinalIgnoreCase);
+
+        var zeilen = new List<DossierShaftLine>();
+
+        foreach (var nummer in definition.ShaftNumbers)
+        {
+            var sauber = (nummer ?? string.Empty).Trim();
+            if (sauber.Length == 0 || !nachNummer.TryGetValue(sauber, out var record))
+                continue;
+
+            zeilen.Add(new DossierShaftLine(
+                record.Id,
+                (record.GetFieldValue("Schachtnummer") ?? sauber).Trim(),
+                (record.GetFieldValue(FieldKeys.Street) ?? string.Empty).Trim(),
+                DashboardStatisticsBuilder.NormalizeZustandsklasse(
+                    record.GetFieldValue(FieldKeys.ConditionClass)),
+                ResolveNetTotal(TryGetCost(kosten, sauber))));
+        }
+
+        return zeilen;
     }
 
     private static DossierHoldingLine BuildLine(

@@ -14,7 +14,8 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 /// <summary>Was der Benutzer aus der Abfrage uebernommen hat.</summary>
 public sealed record DossierParcelLookupChoice(
     DossierDefinition Dossier,
-    IReadOnlyList<string> SelectedHoldingDesignations);
+    IReadOnlyList<string> SelectedHoldingDesignations,
+    IReadOnlyList<string> ShaftNumbers);
 
 /// <summary>
 /// Fragt Gemeinde und Parzelle ab und fuellt daraus alles vor, was die
@@ -34,15 +35,18 @@ public partial class DossierParcelLookupWindow : Window
     private readonly DossierParcelLookupUseCase _lookup;
     private readonly IDirectoryLookup _directory;
     private readonly IReadOnlyDictionary<string, Guid> _holdingIdsByName;
+    private readonly IReadOnlyList<string> _projectShaftNumbers;
 
     private DossierDefinition? _ergebnis;
     private readonly List<CheckBox> _leitungen = new();
+    private TextBlock? _schachtZeile;
 
     private DossierParcelLookupWindow(
         IParcelLookup parcels,
         DossierParcelLookupUseCase lookup,
         IDirectoryLookup directory,
-        IReadOnlyDictionary<string, Guid> holdingIdsByName)
+        IReadOnlyDictionary<string, Guid> holdingIdsByName,
+        IReadOnlyList<string> projectShaftNumbers)
     {
         InitializeComponent();
 
@@ -50,6 +54,7 @@ public partial class DossierParcelLookupWindow : Window
         _lookup = lookup;
         _directory = directory;
         _holdingIdsByName = holdingIdsByName;
+        _projectShaftNumbers = projectShaftNumbers;
 
         DirectoryBox.IsEnabled = _directory.IsConfigured;
         DirectoryBox.ToolTip = _directory.IsConfigured
@@ -67,14 +72,17 @@ public partial class DossierParcelLookupWindow : Window
         IParcelLookup parcels,
         DossierParcelLookupUseCase lookup,
         IDirectoryLookup directory,
-        IReadOnlyDictionary<string, Guid> holdingIdsByName)
+        IReadOnlyDictionary<string, Guid> holdingIdsByName,
+        IReadOnlyList<string> projectShaftNumbers)
     {
         ArgumentNullException.ThrowIfNull(parcels);
         ArgumentNullException.ThrowIfNull(lookup);
         ArgumentNullException.ThrowIfNull(directory);
         ArgumentNullException.ThrowIfNull(holdingIdsByName);
+        ArgumentNullException.ThrowIfNull(projectShaftNumbers);
 
-        var window = new DossierParcelLookupWindow(parcels, lookup, directory, holdingIdsByName)
+        var window = new DossierParcelLookupWindow(
+            parcels, lookup, directory, holdingIdsByName, projectShaftNumbers)
         {
             Owner = System.Windows.Application.Current?.MainWindow
         };
@@ -82,13 +90,19 @@ public partial class DossierParcelLookupWindow : Window
         if (window.ShowDialog() != true || window._ergebnis is null)
             return null;
 
+        var gewaehlt = window.GewaehlteLeitungen();
+
         return new DossierParcelLookupChoice(
             window._ergebnis,
-            window._leitungen
-                .Where(c => c.IsChecked == true)
-                .Select(c => (string)c.Tag)
-                .ToList());
+            gewaehlt,
+            ParcelHoldingAndShaftMatcher.ShaftsOfHoldings(gewaehlt, projectShaftNumbers));
     }
+
+    private IReadOnlyList<string> GewaehlteLeitungen()
+        => _leitungen
+            .Where(c => c.IsChecked == true)
+            .Select(c => (string)c.Tag)
+            .ToList();
 
     private async Task LadeGemeindenAsync()
     {
@@ -128,7 +142,8 @@ public partial class DossierParcelLookupWindow : Window
         try
         {
             var fortschritt = new Progress<string>(text => StatusText.Text = text);
-            var ergebnis = await _lookup.RunAsync(gemeinde.BfsNr, nummer, fortschritt);
+            var ergebnis = await _lookup.RunAsync(
+                gemeinde.BfsNr, nummer, _holdingIdsByName.Keys.ToList(), fortschritt);
 
             if (ergebnis.Dossier is not null
                 && DirectoryBox.IsChecked == true
@@ -268,35 +283,89 @@ public partial class DossierParcelLookupWindow : Window
     /// Projekt wirklich gibt — eine Leitung, die das Projekt nicht kennt, kann
     /// nicht ins Dossier.
     /// </summary>
-    private void ZeigeLeitungen(IReadOnlyList<NetworkHolding> haltungen)
+    /// <summary>
+    /// Nur Leitungen, die das Hauptprojekt wirklich fuehrt. Was der Kanton
+    /// kennt, das Projekt aber nicht aufgenommen hat, gehoert nicht ins
+    /// Dossier — es wird nur als Zahl gemeldet, damit die Luecke sichtbar ist.
+    /// </summary>
+    private void ZeigeLeitungen(IReadOnlyList<ProposedHolding> haltungen)
     {
+        var imProjekt = haltungen.Where(h => h.InProject).ToList();
+        var fremde = haltungen.Count - imProjekt.Count;
+
         ResultPanel.Children.Add(new TextBlock
         {
-            Text = haltungen.Count == 0
-                ? "Der Kanton kennt auf dieser Parzelle keine Leitungen."
-                : haltungen.Count + " Leitungen auf der Parzelle",
+            Text = imProjekt.Count == 0
+                ? "Im Projekt gibt es zu dieser Parzelle keine aufgenommenen Leitungen."
+                : imProjekt.Count + " aufgenommene Leitungen im Projekt",
             Margin = new Thickness(0, 14, 0, 2)
         });
 
-        foreach (var haltung in haltungen)
+        foreach (var haltung in imProjekt)
         {
-            var bekannt = _holdingIdsByName.ContainsKey(haltung.Designation);
+            // "Lage" heisst: der Kanton fuehrt sie. "Name" heisst: nur ihr
+            // Knotenname zeigt auf die Parzelle — so heissen die privaten
+            // Hausanschluesse, die der Kanton nicht kennt.
+            var herkunft = haltung.Origin == "Name"
+                ? "aus dem Leitungsnamen — privat angenommen"
+                : haltung.IsPrivate ? "beim Kanton, privat" : "beim Kanton, öffentlich";
 
             var kasten = new CheckBox
             {
-                Content = haltung.Designation
-                    + (bekannt ? string.Empty : "   (nicht im Projekt)")
-                    + (haltung.IsPrivate ? "   privat" : string.Empty),
+                Content = haltung.Designation + "   (" + herkunft + ")",
                 Tag = haltung.Designation,
-                IsChecked = bekannt,
-                IsEnabled = bekannt,
+                IsChecked = haltung.Preselected,
                 Foreground = (System.Windows.Media.Brush)FindResource("TextBrush"),
                 Margin = new Thickness(0, 2, 0, 0)
             };
 
+            kasten.Checked += (_, _) => ZeigeSchaechte();
+            kasten.Unchecked += (_, _) => ZeigeSchaechte();
+
             _leitungen.Add(kasten);
             ResultPanel.Children.Add(kasten);
         }
+
+        if (fremde > 0)
+        {
+            ResultPanel.Children.Add(new TextBlock
+            {
+                Text = fremde == 1
+                    ? "Der Kanton kennt hier eine weitere Leitung, die das Projekt nicht führt."
+                    : $"Der Kanton kennt hier {fremde} weitere Leitungen, die das Projekt nicht führt.",
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 6, 0, 0)
+            });
+        }
+
+        _schachtZeile = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = (System.Windows.Media.Brush)FindResource("TextBrush"),
+            FontSize = 13,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+
+        ResultPanel.Children.Add(_schachtZeile);
+        ZeigeSchaechte();
+    }
+
+    /// <summary>
+    /// Die Schaechte ergeben sich aus den Knotennamen der angehakten Leitungen
+    /// und aendern sich deshalb mit jedem Haken. Aufgenommen wird nur, was das
+    /// Hauptprojekt als Schacht fuehrt.
+    /// </summary>
+    private void ZeigeSchaechte()
+    {
+        if (_schachtZeile is null)
+            return;
+
+        var schaechte = ParcelHoldingAndShaftMatcher.ShaftsOfHoldings(
+            GewaehlteLeitungen(), _projectShaftNumbers);
+
+        _schachtZeile.Text = schaechte.Count == 0
+            ? "Keine Schächte — zu den gewählten Leitungen führt das Projekt keinen Schacht."
+            : schaechte.Count + " Schächte kommen mit: " + string.Join(", ", schaechte);
     }
 
     private void Zeile(string beschriftung, string wert)

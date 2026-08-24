@@ -224,6 +224,13 @@ public sealed class DossierDefinition
     /// <summary>Verweise auf die Haltungen. Bewusst die Guid, nicht der Name.</summary>
     public List<Guid> HoldingIds { get; set; } = new();
 
+    /// <summary>
+    /// Die Schaechte der Liegenschaft, als Schachtnummern wie im Projekt.
+    /// Nummern statt Kennungen, weil ein Schacht auch dann noch gemeint ist,
+    /// wenn sein Datensatz spaeter neu eingelesen wurde.
+    /// </summary>
+    public List<string> ShaftNumbers { get; set; } = new();
+
     // ── Ueberschreibbare Gebietsfelder (null/leer = vom Gebiet erben) ─────
     public string? ExecutionDateOverride { get; set; }
     public string? ContactPersonOverride { get; set; }

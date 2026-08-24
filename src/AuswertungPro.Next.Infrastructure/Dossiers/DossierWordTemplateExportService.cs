@@ -227,6 +227,8 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             ["Gezeichnet"] = request.Area.DrawnBy,
             ["Aktennotiz"] = d.FileNote,
             ["Haltungen_Text"] = BuildHoldingsText(snapshot),
+            ["Schaechte_Text"] = BuildShaftsText(snapshot),
+            ["Anzahl_Schaechte"] = snapshot.ShaftCount.ToString(CultureInfo.InvariantCulture),
             ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
         };
     }
@@ -270,6 +272,43 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
 
             if (holding.NetCost > 0m)
                 teile.Add(FormatChf(holding.NetCost));
+
+            zeilen.Add(string.Join(" · ", teile));
+        }
+
+        return string.Join(Environment.NewLine, zeilen);
+    }
+
+    /// <summary>
+    /// Die Schaechte der Liegenschaft als Textblock. Ohne Schaechte bleibt die
+    /// Zeile leer statt einen Hinweis zu drucken — im Dossier steht dann
+    /// einfach nichts, so wie bei jeder anderen leeren Angabe.
+    /// </summary>
+    private static string BuildShaftsText(DossierSnapshot snapshot)
+    {
+        if (snapshot.Shafts.Count == 0)
+            return string.Empty;
+
+        var zeilen = new List<string>
+        {
+            snapshot.Shafts.Count == 1
+                ? "1 Schacht:"
+                : snapshot.Shafts.Count + " Schächte:"
+        };
+
+        foreach (var schacht in snapshot.Shafts)
+        {
+            var teile = new List<string> { schacht.Number };
+
+            if (!string.IsNullOrWhiteSpace(schacht.Street))
+                teile.Add(schacht.Street);
+
+            var zustand = FormatCondition(schacht.ConditionClass);
+            if (!string.IsNullOrWhiteSpace(zustand))
+                teile.Add(zustand);
+
+            if (schacht.NetCost > 0m)
+                teile.Add(FormatChf(schacht.NetCost));
 
             zeilen.Add(string.Join(" · ", teile));
         }

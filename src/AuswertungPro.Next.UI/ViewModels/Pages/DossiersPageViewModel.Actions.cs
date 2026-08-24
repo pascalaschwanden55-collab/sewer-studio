@@ -35,8 +35,14 @@ public sealed partial class DossiersPageViewModel
         DossierParcelLookupChoice? abfrage;
         try
         {
+            // Nur Schaechte, die das Hauptprojekt wirklich fuehrt.
+            var schachtNummern = _getProject().SchaechteData
+                .Select(s => (s.GetFieldValue("Schachtnummer") ?? string.Empty).Trim())
+                .Where(n => n.Length > 0)
+                .ToList();
+
             abfrage = DossierParcelLookupWindow.ShowFor(
-                _parcels, _parcelLookup, _directory, idsByName);
+                _parcels, _parcelLookup, _directory, idsByName, schachtNummern);
         }
         catch (Exception ex)
         {
@@ -58,6 +64,8 @@ public sealed partial class DossiersPageViewModel
                 definition.HoldingIds.Add(id);
             }
         }
+
+        definition.ShaftNumbers = abfrage.ShaftNumbers.ToList();
 
         if (!DossierEditWindow.ShowFor(definition, isNew: true))
             return;
