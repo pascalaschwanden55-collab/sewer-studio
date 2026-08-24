@@ -479,7 +479,8 @@ public static class DossierPreviewPageRenderer
             DossierPreviewTableRow satz,
             Func<int, string?> ueberschreiben,
             string? feldKey,
-            Func<int, string?>? farben = null)
+            Func<int, string?>? farben = null,
+            string? zeilenKey = null)
         {
             raster.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
@@ -488,7 +489,8 @@ public static class DossierPreviewPageRenderer
             {
                 var zelle = satz.Cells[i];
                 var element = ZeichneZelle(
-                    zelle, value, ueberschreiben(i), feldKey, merke, farben?.Invoke(i));
+                    zelle, value, ueberschreiben(i), feldKey, merke,
+                    farben?.Invoke(i), zeilenKey);
 
                 Grid.SetRow(element, zeile);
                 Grid.SetColumn(element, spalte);
@@ -517,8 +519,10 @@ public static class DossierPreviewPageRenderer
                 return;
             }
 
-            foreach (var satz in daten)
+            for (var zeilennummer = 0; zeilennummer < daten.Count; zeilennummer++)
             {
+                var satz = daten[zeilennummer];
+
                 Setze(
                     tabelle.RepeatTemplate,
                     i =>
@@ -543,7 +547,8 @@ public static class DossierPreviewPageRenderer
                             && farbe.Length == 6
                                 ? farbe
                                 : null;
-                    });
+                    },
+                    tabelle.RepeatKey + "#" + zeilennummer);
             }
         }
 
@@ -571,7 +576,8 @@ public static class DossierPreviewPageRenderer
         string? ersatztext,
         string? feldKey,
         Action<string, Border> merke,
-        string? farbe = null)
+        string? farbe = null,
+        string? zeilenKey = null)
     {
         var inhalt = new StackPanel();
 
@@ -611,6 +617,11 @@ public static class DossierPreviewPageRenderer
 
         if (feldKey is not null)
             merke(feldKey, rahmen);
+
+        // Zusaetzlich unter der Marke DIESER Zeile. Sonst blinkte beim Tippen
+        // in einem Thema die ganze Tabelle auf statt der bearbeiteten Zeile.
+        if (zeilenKey is not null)
+            merke(zeilenKey, rahmen);
 
         return rahmen;
     }

@@ -102,3 +102,64 @@ public sealed class DossierTopicEditingTests
         Assert.Empty(dossier.Topics);
     }
 }
+
+public sealed class DossierTopicColorEditingTests
+{
+    private static DossierAreaSettings Gebiet()
+        => new()
+        {
+            Topics = { new DossierTopicRow { Title = "Ansprechpartner", Text = "Abwasser Uri" } }
+        };
+
+    [Fact]
+    public void Rot_setzen_und_wieder_schwarz_stellen()
+    {
+        // Genau der Fall, der in der Oberflaeche nicht funktionierte: Rot ging,
+        // Schwarz kam nicht zurueck.
+        var gebiet = Gebiet();
+        var dossier = new DossierDefinition();
+
+        DossierTopicEditing.SetColorForDossier(dossier, "Ansprechpartner", "C00000", "unbekannt");
+        Assert.Equal("C00000", DossierTopicEditing.ColorOf(gebiet, dossier, "Ansprechpartner"));
+
+        DossierTopicEditing.SetColorForDossier(dossier, "Ansprechpartner", "");
+        Assert.Equal("", DossierTopicEditing.ColorOf(gebiet, dossier, "Ansprechpartner"));
+    }
+
+    [Fact]
+    public void Die_Farbe_eines_reinen_Gebietsthemas_laesst_sich_setzen()
+    {
+        // Ohne eigene Zeile gaebe es nichts, woran die Farbe haengen koennte.
+        var gebiet = Gebiet();
+        var dossier = new DossierDefinition();
+
+        DossierTopicEditing.SetColorForDossier(dossier, "Ansprechpartner", "C00000", "Abwasser Uri");
+
+        var zeile = Assert.Single(dossier.Topics);
+        Assert.Equal("Abwasser Uri", zeile.Text);
+        Assert.Equal("C00000", zeile.ColorHex);
+    }
+
+    [Fact]
+    public void Der_Text_bleibt_beim_Farbwechsel_erhalten()
+    {
+        var dossier = new DossierDefinition();
+
+        DossierTopicEditing.SetForDossier(dossier, "Schäden", "Leitung undicht");
+        DossierTopicEditing.SetColorForDossier(dossier, "Schäden", "C00000");
+
+        var zeile = Assert.Single(dossier.Topics);
+        Assert.Equal("Leitung undicht", zeile.Text);
+        Assert.Equal("C00000", zeile.ColorHex);
+    }
+
+    [Fact]
+    public void Ein_leerer_Titel_erzeugt_keine_Farbzeile()
+    {
+        var dossier = new DossierDefinition();
+
+        DossierTopicEditing.SetColorForDossier(dossier, "  ", "C00000");
+
+        Assert.Empty(dossier.Topics);
+    }
+}

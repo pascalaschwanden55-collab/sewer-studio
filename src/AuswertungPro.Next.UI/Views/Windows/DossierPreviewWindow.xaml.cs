@@ -114,13 +114,12 @@ public partial class DossierPreviewWindow : Window
 
         _aktivesFeld = null;
         FieldsHeader.Text = $"Felder auf Seite {seite.Number} — {seite.Title}";
-        BaueFelder(DossierPreviewFieldCatalog.ForPage(
+        BaueFelder(seite, DossierPreviewFieldCatalog.ForPage(
             _fields,
             seite,
             _dossier,
             key => _values.TryGetValue(key, out var wert) ? wert : string.Empty));
 
-        BaueFesteTexte(seite);
         ZeichneBlatt();
     }
 

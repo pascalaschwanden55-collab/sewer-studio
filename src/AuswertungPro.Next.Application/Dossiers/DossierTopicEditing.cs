@@ -44,6 +44,47 @@ public static class DossierTopicEditing
     }
 
     /// <summary>
+    /// Setzt die Schriftfarbe als Abweichung dieses Dossiers.
+    ///
+    /// Ein leerer Wert heisst Schwarz — die Farbe der Vorlage. Die Zeile
+    /// entsteht dabei notfalls: sonst liesse sich die Farbe eines reinen
+    /// Gebietsthemas gar nicht setzen.
+    /// </summary>
+    public static void SetColorForDossier(
+        DossierDefinition dossier, string title, string? colorHex, string? currentText = null)
+    {
+        ArgumentNullException.ThrowIfNull(dossier);
+
+        var titel = (title ?? string.Empty).Trim();
+        if (titel.Length == 0)
+            return;
+
+        dossier.Topics ??= new();
+
+        var zeile = dossier.Topics.FirstOrDefault(t =>
+            t is not null && string.Equals(t.Title, titel, StringComparison.OrdinalIgnoreCase));
+
+        if (zeile is null)
+        {
+            zeile = new DossierTopicRow { Title = titel, Text = currentText ?? string.Empty };
+            dossier.Topics.Add(zeile);
+        }
+
+        zeile.ColorHex = (colorHex ?? string.Empty).Trim();
+    }
+
+    /// <summary>Die gesetzte Schriftfarbe, oder leer fuer Schwarz.</summary>
+    public static string ColorOf(
+        DossierAreaSettings? area, DossierDefinition dossier, string title)
+    {
+        ArgumentNullException.ThrowIfNull(dossier);
+
+        return DossierTopicResolver.Resolve(area, dossier)
+            .FirstOrDefault(t => string.Equals(t.Title, title, StringComparison.OrdinalIgnoreCase))
+            ?.ColorHex ?? string.Empty;
+    }
+
+    /// <summary>
     /// Uebernimmt den Text ins Gebiet und entfernt die Abweichung. Danach gilt
     /// er hier wie ueberall — genau das ist der Sinn des Knopfes.
     ///
