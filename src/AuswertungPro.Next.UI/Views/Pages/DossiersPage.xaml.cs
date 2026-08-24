@@ -1,6 +1,9 @@
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 using AuswertungPro.Next.Domain.Models.Dossiers;
+using AuswertungPro.Next.UI.Behaviors;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
@@ -51,5 +54,17 @@ public partial class DossiersPage : UserControl
             return;
 
         viewModel.SetStatusCommand.Execute(status);
+    }
+
+    /// <summary>Ein Rechtsklick arbeitet immer auf der Zeile direkt unter dem Mauszeiger.</summary>
+    private void HoldingGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _ = sender;
+        if (e.OriginalSource is not DependencyObject source)
+            return;
+
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>(source);
+        if (row is not null)
+            HoldingGrid.SelectedItem = row.Item;
     }
 }

@@ -14,6 +14,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Settings;
+using AuswertungPro.Next.UI.Dossiers;
 
 namespace AuswertungPro.Next.UI.ViewModels;
 
@@ -184,7 +185,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 dialogs: _sp.Dialogs,
                 toasts: _sp.Toasts,
                 shellOpen: _sp.ShellOpen,
-                explorerReveal: _sp.ExplorerReveal)),
+                explorerReveal: _sp.ExplorerReveal,
+                holdingActions: DossierHoldingActionFactory.Create(this, _sp))),
             new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(this, _sp)),
             new("\uE80A", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(this, _sp)),
             // Segoe MDL2 E8AA = "ViewAll": zwei Auswertungen nebeneinander (Mensch vs. Schatten-KI)
@@ -421,6 +423,21 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         _suppressLeaveGuard = false;
         _navItemBeforeChange = target;
         SetCurrentPage(new Pages.DataPageViewModel(this, _sp, startFilter));
+    }
+
+    /// <summary>Oeffnet die Datenseite und waehlt dort genau diese Haltung aus.</summary>
+    public void NavigateToHolding(HaltungRecord? record)
+    {
+        if (record is null)
+            return;
+
+        NavigateTo("Haltungen");
+        if (CurrentPage is not Pages.DataPageViewModel dataPage)
+            return;
+
+        dataPage.Selected = record;
+        var name = record.GetFieldValue(FieldKeys.HoldingName) ?? "(ohne Name)";
+        SetStatus($"Haltung geoeffnet: {name}");
     }
 
     public void NavigateToSanierungsMatrix(string? holding, bool singleHoldingMode = false, HaltungRecord? targetRecord = null)

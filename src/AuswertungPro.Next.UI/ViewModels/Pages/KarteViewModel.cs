@@ -687,9 +687,7 @@ public sealed partial class KarteViewModel : ObservableObject
             return;
         }
 
-        _shell.NavigateTo("Haltungen");
-        if (_shell.CurrentPage is DataPageViewModel dataPage)
-            dataPage.Selected = record;
+        _shell.NavigateToHolding(record);
     }
 
     private void OpenInspektionForRecord(HaltungRecord record)

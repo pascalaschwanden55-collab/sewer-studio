@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Services;
@@ -42,6 +43,21 @@ public sealed class OverviewNavigationTests
         Assert.Equal(ShellMode.Workspace, scope.Shell.CurrentMode);
         Assert.Equal("Schaechte", scope.Shell.SelectedNavItem?.Title);
         Assert.IsType<SchaechtePageViewModel>(scope.Shell.CurrentPage);
+    }
+
+    [Fact]
+    public void NavigateToHolding_oeffnet_Haltungen_und_waehlt_den_Datensatz()
+    {
+        using var scope = CreateOverview();
+        var record = new HaltungRecord();
+        record.SetFieldValue(FieldKeys.HoldingName, "36051-36329", FieldSource.Manual, userEdited: true);
+        scope.Shell.Project.Data.Add(record);
+
+        scope.Shell.NavigateToHolding(record);
+
+        Assert.Equal("Haltungen", scope.Shell.SelectedNavItem?.Title);
+        var dataPage = Assert.IsType<DataPageViewModel>(scope.Shell.CurrentPage);
+        Assert.Same(record, dataPage.Selected);
     }
 
     private static OverviewScope CreateOverview()
