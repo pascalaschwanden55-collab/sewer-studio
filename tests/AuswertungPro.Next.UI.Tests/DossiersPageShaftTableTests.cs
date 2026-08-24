@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 
 using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.UI.ViewModels.Pages;
@@ -123,6 +124,41 @@ public sealed class DossiersPageShaftTableTests
         var rumpf = quelle[start..ende];
         Assert.Contains("EnsureProject(out var root)", rumpf, StringComparison.Ordinal);
         Assert.Contains("ShaftNumbers = vorher", rumpf, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Das_Warnzeichen_der_Liste_ist_an_eine_vorhandene_Eigenschaft_gebunden()
+    {
+        // Eine falsch geschriebene Bindung faellt in WPF NICHT auf: sie zeigt
+        // einfach nie etwas an. Deshalb hier festgehalten.
+        var xaml = Seite();
+
+        Assert.Contains("Binding HasMissingParts", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Binding HasMissingHoldings", xaml, StringComparison.Ordinal);
+
+        var eigenschaft = typeof(DossierListItem).GetProperty("HasMissingParts");
+        Assert.NotNull(eigenschaft);
+        Assert.Equal(typeof(bool), eigenschaft!.PropertyType);
+    }
+
+    [Theory]
+    [InlineData(0, 1, "Schacht 80551 ist nicht mehr im Projekt. Bitte die Auswahl prüfen.")]
+    [InlineData(1, 0, "1 zugeordnete Leitung ist nicht mehr im Projekt. Bitte die Auswahl prüfen.")]
+    [InlineData(0, 0, "")]
+    public void Die_Warnung_nennt_auch_fehlende_Schaechte(
+        int leitungen, int schaechte, string erwartet)
+    {
+        var stand = new DossierSnapshot(
+            Guid.NewGuid(),
+            "Musterweg 1",
+            Array.Empty<DossierHoldingLine>(),
+            Enumerable.Range(0, leitungen).Select(_ => Guid.NewGuid()).ToList(),
+            AuswertungPro.Next.Application.Dashboard.DashboardStatisticsBuilder.Build(
+                Array.Empty<AuswertungPro.Next.Domain.Models.HaltungRecord>()),
+            Array.Empty<DossierShaftLine>(),
+            Enumerable.Range(0, schaechte).Select(_ => "80551").ToList());
+
+        Assert.Equal(erwartet, DossiersPageViewModel.BuildMissingWarning(stand));
     }
 
     [Fact]

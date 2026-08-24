@@ -48,8 +48,12 @@ public sealed partial class DossierListItem : ObservableObject
     [ObservableProperty]
     private string _statusText = "";
 
+    /// <summary>
+    /// Wahr, wenn dem Dossier eine Leitung ODER ein Schacht fehlt. Beides ist
+    /// derselbe Fall: ein Bauteil, das die Ausgabe nicht mehr findet.
+    /// </summary>
     [ObservableProperty]
-    private bool _hasMissingHoldings;
+    private bool _hasMissingParts;
 
     public void Apply(DossierSnapshot snapshot)
     {
@@ -69,7 +73,7 @@ public sealed partial class DossierListItem : ObservableObject
 
         Summary = string.Join(" · ", parts);
         StatusText = DossiersPageViewModel.DescribeStatus(Definition.Status);
-        HasMissingHoldings = snapshot.HasMissingHoldings;
+        HasMissingParts = snapshot.HasMissingHoldings || snapshot.HasMissingShafts;
     }
 }
 
@@ -462,10 +466,41 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         foreach (var shaft in snapshot.Shafts)
             ShaftRows.Add(BuildShaftRow(shaft));
 
-        MissingWarning = snapshot.HasMissingHoldings
-            ? $"{snapshot.MissingHoldingIds.Count} zugeordnete Leitung(en) sind nicht mehr im Projekt. "
-              + "Bitte die Auswahl prüfen."
-            : "";
+        MissingWarning = BuildMissingWarning(snapshot);
+    }
+
+    /// <summary>
+    /// Der Warnhinweis ueber fehlende Bauteile.
+    ///
+    /// Auch Schaechte werden genannt: eine Nummer ohne Datensatz verschwand
+    /// bisher spurlos aus Tabelle und Word-Datei, und niemand erfuhr davon.
+    /// Die Nummern stehen mit dabei, sonst muesste man sie suchen.
+    /// </summary>
+    public static string BuildMissingWarning(DossierSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        var teile = new List<string>();
+
+        if (snapshot.HasMissingHoldings)
+        {
+            var anzahl = snapshot.MissingHoldingIds.Count;
+            teile.Add(anzahl == 1
+                ? "1 zugeordnete Leitung ist nicht mehr im Projekt"
+                : $"{anzahl} zugeordnete Leitungen sind nicht mehr im Projekt");
+        }
+
+        if (snapshot.HasMissingShafts)
+        {
+            var nummern = string.Join(", ", snapshot.MissingShaftNumbers);
+            teile.Add(snapshot.MissingShaftNumbers.Count == 1
+                ? $"Schacht {nummern} ist nicht mehr im Projekt"
+                : $"Die Schächte {nummern} sind nicht mehr im Projekt");
+        }
+
+        return teile.Count == 0
+            ? ""
+            : string.Join(". ", teile) + ". Bitte die Auswahl prüfen.";
     }
 
     /// <summary>Internal statt private, damit der reine Textaufbau direkt testbar ist.</summary>

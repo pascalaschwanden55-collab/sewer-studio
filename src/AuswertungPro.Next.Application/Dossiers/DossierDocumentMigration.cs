@@ -106,6 +106,18 @@ public static class DossierDocumentMigration
             dossier.FieldStyles ??= new Dictionary<string, List<DossierTextStyleRange>>();
             dossier.Changes ??= new List<DossierChangeRow>();
 
+            // Auch die Verweislisten. Eine von Hand bearbeitete Datei mit
+            // "HoldingIds": null liess die Berechnung des Dossierstands
+            // abstuerzen — die Umstellung ist die Stelle, an der so etwas
+            // aufgefangen gehoert, nicht jede spaetere Schleife einzeln.
+            dossier.HoldingIds ??= new List<Guid>();
+            dossier.ShaftNumbers ??= new List<string>();
+            dossier.DismissedHoldingIds ??= new List<Guid>();
+            dossier.DismissedShaftNumbers ??= new List<string>();
+            dossier.HiddenChapters ??= new List<string>();
+            dossier.FieldOverrides ??= new Dictionary<string, string>();
+            dossier.TextOverrides ??= new Dictionary<string, string>();
+
             foreach (var topic in dossier.Topics.Where(topic => topic is not null))
                 topic.StyleRanges ??= new List<DossierTextStyleRange>();
             foreach (var owner in dossier.Owners.Where(owner => owner is not null))

@@ -168,3 +168,111 @@ public sealed class DossierShaftLineTests
         Assert.Equal(0, stand.Statistics.DringendCount);
     }
 }
+
+/// <summary>
+/// Ein Schacht, den das Projekt nicht mehr kennt, darf nicht spurlos aus dem
+/// Dossier verschwinden. Bei den Leitungen warnt das Cockpit seit jeher.
+/// </summary>
+public sealed class DossierMissingShaftTests
+{
+    [Fact]
+    public void Eine_Nummer_ohne_Schacht_im_Projekt_wird_gemeldet()
+    {
+        var dossier = new DossierDefinition { ShaftNumbers = { "80551", "gibt-es-nicht" } };
+
+        var project = new Project();
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", "80551");
+        project.SchaechteData.Add(record);
+
+        var stand = DossierSnapshotBuilder.Build(dossier, project, new ProjectCostStore());
+
+        Assert.Single(stand.Shafts);
+        Assert.True(stand.HasMissingShafts);
+        Assert.Equal(new[] { "gibt-es-nicht" }, stand.MissingShaftNumbers);
+    }
+
+    [Fact]
+    public void Ohne_Fehlstelle_bleibt_die_Meldung_aus()
+    {
+        var dossier = new DossierDefinition { ShaftNumbers = { "80551" } };
+
+        var project = new Project();
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", "80551");
+        project.SchaechteData.Add(record);
+
+        var stand = DossierSnapshotBuilder.Build(dossier, project, new ProjectCostStore());
+
+        Assert.False(stand.HasMissingShafts);
+        Assert.Empty(stand.MissingShaftNumbers);
+    }
+
+    [Fact]
+    public void Eine_leere_Nummer_gilt_nicht_als_Fehlstelle()
+    {
+        // Leerraum in der Liste ist kein verlorener Schacht, sondern nichts.
+        var dossier = new DossierDefinition { ShaftNumbers = { "  " } };
+
+        var stand = DossierSnapshotBuilder.Build(dossier, new Project(), new ProjectCostStore());
+
+        Assert.False(stand.HasMissingShafts);
+    }
+}
+
+/// <summary>
+/// Eine von Hand bearbeitete Dossierdatei darf das Programm nicht zum Absturz
+/// bringen. Die Umstellung fuellt leere Listen auf — bisher aber nur vier von
+/// zehn, und die uebrigen sechs sind genau die, ueber die spaeter gelaufen wird.
+/// </summary>
+public sealed class DossierMigrationNullListTests
+{
+    [Fact]
+    public void Leere_Listen_werden_bei_der_Umstellung_aufgefuellt()
+    {
+        var dokument = new DossierDocument
+        {
+            SchemaVersion = DossierDocument.CurrentSchemaVersion,
+            Dossiers =
+            {
+                new DossierDefinition
+                {
+                    HoldingIds = null!,
+                    ShaftNumbers = null!,
+                    DismissedHoldingIds = null!,
+                    DismissedShaftNumbers = null!,
+                    HiddenChapters = null!,
+                    FieldOverrides = null!,
+                    TextOverrides = null!
+                }
+            }
+        };
+
+        var umgestellt = DossierDocumentMigration.MigrateToCurrent(dokument);
+        var dossier = umgestellt.Dossiers[0];
+
+        Assert.NotNull(dossier.HoldingIds);
+        Assert.NotNull(dossier.ShaftNumbers);
+        Assert.NotNull(dossier.DismissedHoldingIds);
+        Assert.NotNull(dossier.DismissedShaftNumbers);
+        Assert.NotNull(dossier.HiddenChapters);
+        Assert.NotNull(dossier.FieldOverrides);
+        Assert.NotNull(dossier.TextOverrides);
+    }
+
+    [Fact]
+    public void Der_Stand_eines_so_bereinigten_Dossiers_laesst_sich_rechnen()
+    {
+        var dokument = new DossierDocument
+        {
+            SchemaVersion = DossierDocument.CurrentSchemaVersion,
+            Dossiers = { new DossierDefinition { HoldingIds = null! } }
+        };
+
+        var dossier = DossierDocumentMigration.MigrateToCurrent(dokument).Dossiers[0];
+
+        var stand = DossierSnapshotBuilder.Build(dossier, new Project(), new ProjectCostStore());
+
+        Assert.Empty(stand.Holdings);
+    }
+}

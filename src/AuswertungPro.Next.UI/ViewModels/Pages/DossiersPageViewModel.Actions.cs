@@ -511,13 +511,21 @@ public sealed partial class DossiersPageViewModel
 
     // ── Hilfen ────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Der Auftrag fuer Word, Vorschau, Beilagen und PDF.
+    ///
+    /// Der Stand kommt bewusst aus demselben <see cref="BuildSnapshot"/> wie
+    /// das Cockpit. Frueher rechnete diese Stelle ihren eigenen Stand — und
+    /// gab dabei die Schacht-Kostendatei nicht mit. Das Cockpit zeigte dann
+    /// Kosten, die im Brief an den Eigentuemer fehlten.
+    /// </summary>
     private DossierExportRequest BuildRequest(string root, DossierDefinition definition)
         => new(
             _getProject(),
             root,
             _document.Area,
             definition,
-            DossierSnapshotBuilder.Build(definition, _getProject(), LoadCosts()),
+            BuildSnapshot(definition),
             ResolveDossierFolder(root, definition));
 
     private static string ResolveDossierFolder(string root, DossierDefinition definition)

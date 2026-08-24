@@ -126,10 +126,10 @@
                                         <TextBlock Text="{Binding StatusText}"
                                                    Foreground="{DynamicResource AccentBrush}"
                                                    FontSize="10"/>
-                                        <TextBlock Text="  ⚠ Leitung fehlt"
+                                        <TextBlock Text="  ⚠ Bauteil fehlt"
                                                    Foreground="{DynamicResource DangerBrush}"
                                                    FontSize="10"
-                                                   Visibility="{Binding HasMissingHoldings,
+                                                   Visibility="{Binding HasMissingParts,
                                                        Converter={StaticResource BoolToVis}}"/>
                                     </StackPanel>
                                 </StackPanel>

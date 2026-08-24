@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -48,16 +48,27 @@ public sealed record DossierSnapshot(
     IReadOnlyList<DossierHoldingLine> Holdings,
     IReadOnlyList<Guid> MissingHoldingIds,
     DashboardStatistics Statistics,
-    IReadOnlyList<DossierShaftLine>? ShaftLines = null)
+    IReadOnlyList<DossierShaftLine>? ShaftLines = null,
+    IReadOnlyList<string>? MissingShafts = null)
 {
     /// <summary>Die Schaechte der Liegenschaft.</summary>
     public IReadOnlyList<DossierShaftLine> Shafts
         => ShaftLines ?? Array.Empty<DossierShaftLine>();
 
+    /// <summary>
+    /// Schachtnummern des Dossiers, zu denen das Projekt keinen Datensatz mehr
+    /// hat. Ein erfundener Schacht im Brief waere schlimm — ein spurlos
+    /// verschwundener aber auch: dann fehlt er unbemerkt in der Ausgabe.
+    /// </summary>
+    public IReadOnlyList<string> MissingShaftNumbers
+        => MissingShafts ?? Array.Empty<string>();
+
     public int ShaftCount => Shafts.Count;
     public int HoldingCount => Holdings.Count;
 
     public bool HasMissingHoldings => MissingHoldingIds.Count > 0;
+
+    public bool HasMissingShafts => MissingShaftNumbers.Count > 0;
 
     /// <summary>Summe der Nettokosten der enthaltenen Haltungen.</summary>
     public decimal NetCostTotal => Holdings.Sum(h => h.NetCost);
@@ -120,13 +131,16 @@ public static class DossierSnapshotBuilder
             scopedCosts,
             schachtCosts is null ? new ProjectCostStore() : FilterEmpty(schachtCosts));
 
+        var (shaftLines, missingShafts) = BuildShaftLines(definition, project, schachtCosts);
+
         return new DossierSnapshot(
             definition.Id,
             definition.Name,
             lines,
             missing,
             statistics,
-            BuildShaftLines(definition, project, schachtCosts));
+            shaftLines,
+            missingShafts);
     }
 
     /// <summary>
@@ -134,13 +148,14 @@ public static class DossierSnapshotBuilder
     /// Nummer ohne Datensatz im Projekt wird uebersprungen — ein erfundener
     /// Schacht im Brief waere schlimmer als eine kurze Liste.
     /// </summary>
-    private static IReadOnlyList<DossierShaftLine> BuildShaftLines(
-        DossierDefinition definition,
-        Project? project,
-        ProjectCostStore? schachtCosts)
+    private static (IReadOnlyList<DossierShaftLine> Lines, IReadOnlyList<string> Missing)
+        BuildShaftLines(
+            DossierDefinition definition,
+            Project? project,
+            ProjectCostStore? schachtCosts)
     {
         if (definition.ShaftNumbers is null || definition.ShaftNumbers.Count == 0)
-            return Array.Empty<DossierShaftLine>();
+            return (Array.Empty<DossierShaftLine>(), Array.Empty<string>());
 
         var nachNummer = new Dictionary<string, SchachtRecord>(StringComparer.OrdinalIgnoreCase);
         foreach (var record in project?.SchaechteData ?? Enumerable.Empty<SchachtRecord>())
@@ -155,12 +170,21 @@ public static class DossierSnapshotBuilder
             ?? new Dictionary<string, HoldingCost>(StringComparer.OrdinalIgnoreCase);
 
         var zeilen = new List<DossierShaftLine>();
+        var fehlend = new List<string>();
 
         foreach (var nummer in definition.ShaftNumbers)
         {
             var sauber = (nummer ?? string.Empty).Trim();
-            if (sauber.Length == 0 || !nachNummer.TryGetValue(sauber, out var record))
+
+            // Leerraum ist kein verlorener Schacht, sondern nichts.
+            if (sauber.Length == 0)
                 continue;
+
+            if (!nachNummer.TryGetValue(sauber, out var record))
+            {
+                fehlend.Add(sauber);
+                continue;
+            }
 
             var cost = TryGetCost(kosten, sauber);
 
@@ -175,7 +199,7 @@ public static class DossierSnapshotBuilder
                 DescribeMeasures(cost)));
         }
 
-        return zeilen;
+        return (zeilen, fehlend);
     }
 
     /// <summary>

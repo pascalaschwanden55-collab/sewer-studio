@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -377,7 +377,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         if (!string.IsNullOrWhiteSpace(length))
             parts.Add(length);
 
-        var condition = FormatCondition(holding.ConditionClass);
+        var condition = FormatConditionInline(holding.ConditionClass);
         if (!string.IsNullOrWhiteSpace(condition))
             parts.Add(condition);
 
@@ -390,6 +390,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         return string.Join(" · ", parts);
     }
 
+    /// <summary>
+    /// Ein Schacht als Aufzaehlungszeile. Dieselben Angaben wie die Tabelle im
+    /// Cockpit — Funktion statt Laenge, denn eine Laenge hat ein Schacht nicht.
+    /// Was fehlt, bleibt weg statt als Strich zu erscheinen.
+    /// </summary>
     private static string BuildShaftDescription(DossierShaftLine shaft)
     {
         var parts = new List<string> { shaft.Number };
@@ -397,9 +402,15 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         if (!string.IsNullOrWhiteSpace(shaft.Street))
             parts.Add(shaft.Street);
 
-        var condition = FormatCondition(shaft.ConditionClass);
+        if (!string.IsNullOrWhiteSpace(shaft.Funktion))
+            parts.Add(shaft.Funktion);
+
+        var condition = FormatConditionInline(shaft.ConditionClass);
         if (!string.IsNullOrWhiteSpace(condition))
             parts.Add(condition);
+
+        if (!string.IsNullOrWhiteSpace(shaft.Measures))
+            parts.Add(shaft.Measures);
 
         if (shaft.NetCost > 0m)
             parts.Add(FormatChf(shaft.NetCost));
@@ -822,6 +833,10 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// keine Klasse hinterlegt ist — das wird als Strich gezeigt und nicht als
     /// Klasse 0 ausgegeben, die "dringend" bedeuten wuerde.
     /// </summary>
+    /// <summary>
+    /// Die Zustandsklasse fuer eine TABELLENZELLE. Ohne Wert ein Strich: eine
+    /// leere Zelle liesse offen, ob nichts erfasst oder nichts noetig ist.
+    /// </summary>
     private static string FormatCondition(string conditionClass) => conditionClass switch
     {
         "0" => "Z0 – sofort",
@@ -831,6 +846,18 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         "4" => "Z4 – kein Mangel",
         _ => "—"
     };
+
+    /// <summary>
+    /// Die Zustandsklasse fuer eine AUFZAEHLUNGSZEILE. Ohne Wert bleibt sie
+    /// weg. In einer Zeile aus mit Punkten verbundenen Angaben haengt ein
+    /// Strich sonst nackt hinten dran — "Schacht 33458 · —" stand so in den
+    /// Briefen, weil Schaechte im Bestand keine Zustandsklasse tragen.
+    /// </summary>
+    private static string FormatConditionInline(string conditionClass)
+    {
+        var text = FormatCondition(conditionClass);
+        return text == "—" ? string.Empty : text;
+    }
 
     private static void TryDelete(string path)
     {
