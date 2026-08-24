@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -232,6 +232,38 @@ public sealed partial class DossiersPageViewModel
         StatusMessage = chosen.Count == 1
             ? "1 Leitung zugeordnet."
             : $"{chosen.Count} Leitungen zugeordnet.";
+    }
+
+    /// <summary>
+    /// Waehlt die Schaechte der Liegenschaft. Zwilling zur Leitungsauswahl.
+    ///
+    /// Gespeichert werden Schachtnummern, nicht Kennungen: so ist derselbe
+    /// Schacht auch dann noch gemeint, wenn sein Datensatz spaeter neu
+    /// eingelesen wurde.
+    /// </summary>
+    private async Task EditShaftsAsync()
+    {
+        if (Selected is null || !EnsureProject(out var root))
+            return;
+
+        var chosen = DossierShaftPickerWindow.ShowFor(
+            _getProject(), Selected.Definition.ShaftNumbers);
+
+        if (chosen is null)
+            return;
+
+        var vorher = new List<string>(Selected.Definition.ShaftNumbers);
+        Selected.Definition.ShaftNumbers = chosen;
+        Selected.Definition.ModifiedAtUtc = DateTime.UtcNow;
+
+        if (!await SaveDocumentAsync(root))
+        {
+            Selected.Definition.ShaftNumbers = vorher;
+            return;
+        }
+
+        RefreshDetail();
+        StatusMessage = SchaechteZugeordnet(chosen.Count);
     }
 
     private async Task SetDossierStatusAsync(DossierStatus? status)
@@ -654,10 +686,7 @@ public sealed partial class DossiersPageViewModel
     /// der andere nicht.
     /// </summary>
     private IReadOnlyList<string> ProjektSchachtnummern()
-        => _getProject().SchaechteData
-            .Select(s => (s.GetFieldValue("Schachtnummer") ?? string.Empty).Trim())
-            .Where(n => n.Length > 0)
-            .ToList();
+        => DossierShaftNumberPolicy.NumbersOf(_getProject());
 
     private async Task<bool> SaveDocumentAsync(string root)
     {

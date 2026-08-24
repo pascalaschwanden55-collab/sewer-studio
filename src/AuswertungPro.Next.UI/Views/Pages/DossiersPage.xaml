@@ -169,7 +169,11 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
+                            <!-- Leitungen und Schaechte teilen sich die Hoehe;
+                                 der Trenner dazwischen ist verschiebbar. -->
+                            <RowDefinition Height="3*" MinHeight="90"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="2*" MinHeight="90"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
@@ -288,7 +292,24 @@
                         <Border Grid.Row="4"
                                 BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1" CornerRadius="10">
-                            <DataGrid x:Name="HoldingGrid"
+                          <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Orientation="Horizontal"
+                                        Margin="12,8,12,4">
+                                <TextBlock Text="Leitungen"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           FontSize="11"/>
+                                <TextBlock Text="{Binding HoldingCountText}"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           FontSize="11" Margin="6,0,0,0"/>
+                            </StackPanel>
+
+                            <DataGrid Grid.Row="1"
+                                      x:Name="HoldingGrid"
                                       ItemsSource="{Binding HoldingRows}"
                                       AutoGenerateColumns="False"
                                       IsReadOnly="True"
@@ -337,12 +358,69 @@
                                                         Binding="{Binding Cost}"/>
                                 </DataGrid.Columns>
                             </DataGrid>
+                          </Grid>
+                        </Border>
+
+                        <!-- Trenner: die Aufteilung zwischen Leitungen und
+                             Schaechten haengt von der Liegenschaft ab. -->
+                        <GridSplitter Grid.Row="5"
+                                      Height="8"
+                                      HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Center"
+                                      Background="Transparent"
+                                      ResizeBehavior="PreviousAndNext"
+                                      ResizeDirection="Rows"
+                                      Cursor="SizeNS"/>
+
+                        <!-- Schächte -->
+                        <Border Grid.Row="6"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="10">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Orientation="Horizontal"
+                                            Margin="12,8,12,4">
+                                    <TextBlock Text="Schächte"
+                                               Foreground="{DynamicResource MutedBrush}"
+                                               FontSize="11"/>
+                                    <TextBlock Text="{Binding ShaftCountText}"
+                                               Foreground="{DynamicResource MutedBrush}"
+                                               FontSize="11" Margin="6,0,0,0"/>
+                                </StackPanel>
+
+                                <DataGrid Grid.Row="1"
+                                          x:Name="ShaftGrid"
+                                          ItemsSource="{Binding ShaftRows}"
+                                          AutoGenerateColumns="False"
+                                          IsReadOnly="True"
+                                          HeadersVisibility="Column"
+                                          GridLinesVisibility="Horizontal"
+                                          Background="Transparent"
+                                          BorderThickness="0">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Schacht" Width="200"
+                                                            Binding="{Binding Shaft}"/>
+                                        <DataGridTextColumn Header="Funktion" Width="160"
+                                                            Binding="{Binding Funktion}"/>
+                                        <DataGridTextColumn Header="Empfohlene Massnahme" Width="*"
+                                                            Binding="{Binding Measures}"/>
+                                        <DataGridTextColumn Header="Kosten CHF" Width="110"
+                                                            Binding="{Binding Cost}"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
                         </Border>
 
                         <!-- Aktionen -->
-                        <WrapPanel Grid.Row="5" Margin="0,14,0,0">
+                        <WrapPanel Grid.Row="7" Margin="0,14,0,0">
                             <Button Content="Leitungen wählen…" Padding="12,7" Margin="0,0,8,8"
                                     Command="{Binding EditHoldingsCommand}"/>
+                            <Button Content="Schächte wählen…" Padding="12,7" Margin="0,0,8,8"
+                                    Command="{Binding EditShaftsCommand}"/>
                             <Button Content="Nachführen" Padding="12,7" Margin="0,0,8,8"
                                     ToolTip="Ergänzt Leitungen und Schächte, die das Projekt inzwischen kennt. Entfernt nie etwas."
                                     Command="{Binding RefreshDossierCommand}"/>

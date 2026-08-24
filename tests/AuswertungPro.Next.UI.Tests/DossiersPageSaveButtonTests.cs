@@ -121,6 +121,25 @@ public sealed class DossiersPageRefreshButtonTests
     }
 
     [Fact]
+    public void Der_Knopf_wird_nach_der_Auswahl_freigeschaltet()
+    {
+        var quelle = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "ViewModels", "Pages",
+            "DossiersPageViewModel.cs"));
+
+        var start = quelle.IndexOf("private void NotifyCommands()", StringComparison.Ordinal);
+        Assert.True(start >= 0, "NotifyCommands fehlt.");
+
+        var ende = quelle.IndexOf("private void PlayHoldingVideo", start, StringComparison.Ordinal);
+        Assert.True(ende > start, "Das Ende von NotifyCommands wurde nicht gefunden.");
+
+        Assert.Contains(
+            "RefreshDossierCommand.NotifyCanExecuteChanged();",
+            quelle[start..ende],
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Ein_misslungenes_Speichern_laesst_nichts_Halbes_stehen()
     {
         // Ohne diese Ruecknahme haette das Dossier die Ergaenzung im Speicher

@@ -21,12 +21,22 @@ public sealed record DossierHoldingLine(
     string Measures);
 
 /// <summary>Ein Schacht der Liegenschaft.</summary>
+/// <param name="Funktion">
+/// Funktion des Schachts, z.B. "Kontrollschacht". Bei Schaechten das Gegenstueck
+/// zur Laenge einer Leitung — eine Laenge gibt es hier nicht.
+/// </param>
+/// <param name="Measures">
+/// Die empfohlenen Arbeiten als lesbarer Text. Sie stehen nicht im
+/// Projektdatensatz, sondern in den Schacht-Kostendateien.
+/// </param>
 public sealed record DossierShaftLine(
     Guid ShaftId,
     string Number,
     string Street,
     string ConditionClass,
-    decimal NetCost);
+    decimal NetCost,
+    string Funktion = "",
+    string Measures = "");
 
 /// <summary>
 /// Der berechnete Stand eines Dossiers: seine Haltungen, die Kennzahlen und
@@ -135,7 +145,8 @@ public static class DossierSnapshotBuilder
         var nachNummer = new Dictionary<string, SchachtRecord>(StringComparer.OrdinalIgnoreCase);
         foreach (var record in project?.SchaechteData ?? Enumerable.Empty<SchachtRecord>())
         {
-            var nummer = (record.GetFieldValue("Schachtnummer") ?? string.Empty).Trim();
+            // Dieselbe Nummernregel wie das Auswahlfenster und das Nachfuehren.
+            var nummer = DossierShaftNumberPolicy.NumberOf(record);
             if (nummer.Length > 0 && !nachNummer.ContainsKey(nummer))
                 nachNummer[nummer] = record;
         }
@@ -151,16 +162,53 @@ public static class DossierSnapshotBuilder
             if (sauber.Length == 0 || !nachNummer.TryGetValue(sauber, out var record))
                 continue;
 
+            var cost = TryGetCost(kosten, sauber);
+
             zeilen.Add(new DossierShaftLine(
                 record.Id,
-                (record.GetFieldValue("Schachtnummer") ?? sauber).Trim(),
+                DossierShaftNumberPolicy.NumberOf(record),
                 (record.GetFieldValue(FieldKeys.Street) ?? string.Empty).Trim(),
                 DashboardStatisticsBuilder.NormalizeZustandsklasse(
                     record.GetFieldValue(FieldKeys.ConditionClass)),
-                ResolveNetTotal(TryGetCost(kosten, sauber))));
+                ResolveNetTotal(cost),
+                (record.GetFieldValue("Funktion") ?? string.Empty).Trim(),
+                DescribeMeasures(cost)));
         }
 
         return zeilen;
+    }
+
+    /// <summary>
+    /// Die empfohlenen Arbeiten eines Schachts als lesbarer Text.
+    ///
+    /// Bevorzugt die einzelnen gewaehlten Kostenzeilen ("Schachthals sanieren"),
+    /// denn der Eigentuemer soll lesen, WAS gemacht wird. Der Massnahmenname
+    /// des Dialogs lautet bei allen Schaechten gleich ("Empfohlene Massnahmen")
+    /// und sagt fuer sich genommen nichts; er bleibt nur der Rueckfall, wenn
+    /// keine Zeile einen Text traegt.
+    /// </summary>
+    private static string DescribeMeasures(HoldingCost? cost)
+    {
+        if (cost is null)
+            return string.Empty;
+
+        var texte = cost.Measures
+            .SelectMany(measure => measure.Lines)
+            .Where(line => line.Selected)
+            .Select(line => (line.Text ?? string.Empty).Trim())
+            .Where(text => text.Length > 0)
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
+        if (texte.Count > 0)
+            return string.Join("; ", texte);
+
+        var namen = cost.Measures
+            .Select(measure => (measure.MeasureName ?? string.Empty).Trim())
+            .Where(name => name.Length > 0)
+            .Distinct(StringComparer.CurrentCultureIgnoreCase);
+
+        return string.Join("; ", namen);
     }
 
     private static DossierHoldingLine BuildLine(

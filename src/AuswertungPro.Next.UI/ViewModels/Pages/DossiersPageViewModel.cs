@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -152,6 +152,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         NewDossierCommand = new AsyncRelayCommand(CreateDossierAsync);
         DeleteDossierCommand = new AsyncRelayCommand(DeleteDossierAsync, () => Selected is not null);
         EditHoldingsCommand = new AsyncRelayCommand(EditHoldingsAsync, () => Selected is not null);
+        EditShaftsCommand = new AsyncRelayCommand(EditShaftsAsync, () => Selected is not null);
         EditDossierCommand = new AsyncRelayCommand(EditDossierAsync, () => Selected is not null);
         EditAreaCommand = new AsyncRelayCommand(EditAreaAsync);
         CreateWordCommand = new AsyncRelayCommand(CreateWordAsync, () => Selected is not null);
@@ -184,6 +185,9 @@ public sealed partial class DossiersPageViewModel : ObservableObject
 
     public ObservableCollection<DossierHoldingRow> HoldingRows { get; } = new();
 
+    /// <summary>Die Schaechte der gewaehlten Liegenschaft.</summary>
+    public ObservableCollection<DossierShaftRow> ShaftRows { get; } = new();
+
     public ObservableCollection<DossierConditionRow> ConditionRows { get; } = new();
 
     public ObservableCollection<string> TopDamages { get; } = new();
@@ -191,6 +195,9 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     public IAsyncRelayCommand NewDossierCommand { get; }
     public IAsyncRelayCommand DeleteDossierCommand { get; }
     public IAsyncRelayCommand EditHoldingsCommand { get; }
+
+    /// <summary>Oeffnet die Auswahl der Schaechte dieser Liegenschaft.</summary>
+    public IAsyncRelayCommand EditShaftsCommand { get; }
     public IAsyncRelayCommand EditDossierCommand { get; }
     public IAsyncRelayCommand EditAreaCommand { get; }
     public IAsyncRelayCommand CreateWordCommand { get; }
@@ -238,6 +245,9 @@ public sealed partial class DossiersPageViewModel : ObservableObject
 
     [ObservableProperty]
     private string _holdingCountText = "0";
+
+    [ObservableProperty]
+    private string _shaftCountText = "0";
 
     [ObservableProperty]
     private string _lengthText = "—";
@@ -307,8 +317,13 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         var previous = Selected?.Id;
         Dossiers.Clear();
 
+        // Die Kostendateien einmal fuer den ganzen Aufbau lesen, nicht je
+        // Liegenschaft erneut: bei einem Gebiet mit vielen Dossiers waeren das
+        // sonst Dutzende Dateizugriffe fuer immer dieselben Zahlen.
+        var kosten = LoadCostSnapshot();
+
         foreach (var definition in _document.Dossiers.OrderBy(d => d.Name, StringComparer.CurrentCultureIgnoreCase))
-            Dossiers.Add(new DossierListItem(definition, BuildSnapshot(definition)));
+            Dossiers.Add(new DossierListItem(definition, BuildSnapshot(definition, kosten)));
 
         Selected = previous is null
             ? Dossiers.FirstOrDefault()
@@ -318,8 +333,27 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         RefreshDetail();
     }
 
-    private DossierSnapshot BuildSnapshot(DossierDefinition definition)
-        => DossierSnapshotBuilder.Build(definition, _getProject(), LoadCosts());
+    /// <summary>
+    /// Die Kostendateien eines Durchgangs. Sie werden bewusst gemeinsam
+    /// gelesen und weitergereicht, damit ein Aufbau mit vielen Liegenschaften
+    /// nicht dieselben Dateien dutzendfach oeffnet.
+    /// </summary>
+    private sealed record DossierCostSnapshot(
+        ProjectCostStore Haltungen,
+        ProjectCostStore Schaechte);
+
+    private DossierCostSnapshot LoadCostSnapshot()
+        => new(LoadCosts(), LoadSchachtCosts());
+
+    private DossierSnapshot BuildSnapshot(
+        DossierDefinition definition,
+        DossierCostSnapshot? kosten = null)
+    {
+        var geladen = kosten ?? LoadCostSnapshot();
+
+        return DossierSnapshotBuilder.Build(
+            definition, _getProject(), geladen.Haltungen, geladen.Schaechte);
+    }
 
     private ProjectCostStore LoadCosts()
     {
@@ -336,9 +370,41 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Die Schachtkosten aus BEIDEN gepflegten Quellen: der Schacht-Matrix
+    /// (<c>schacht_costs.json</c>) und dem Massnahmen-Dialog
+    /// (<c>schacht_empfehlungen.json</c>).
+    ///
+    /// Die Matrix hat Vorrang, die Empfehlung ist der Rueckfall; addiert wird
+    /// NIE, sonst stuende derselbe Schacht doppelt und zu teuer im Dossier.
+    /// Dieselbe Regel wie in Projektuebersicht und Druckcenter — eine eigene
+    /// zweite Regel wuerde dem Eigentuemer einen anderen Betrag nennen als der
+    /// Ausdruck.
+    /// </summary>
+    private ProjectCostStore LoadSchachtCosts()
+    {
+        var matrix = LoadCostFile("schacht_costs.json");
+        var empfehlungen = LoadCostFile("schacht_empfehlungen.json");
+
+        return SchachtCostStoreMerger.Merge(matrix, empfehlungen);
+    }
+
+    private ProjectCostStore LoadCostFile(string fileName)
+    {
+        try
+        {
+            return _costStores.CreateProjectCostStore(fileName).Load(_getProjectFilePath());
+        }
+        catch
+        {
+            return new ProjectCostStore();
+        }
+    }
+
     private void RefreshDetail()
     {
         HoldingRows.Clear();
+        ShaftRows.Clear();
         ConditionRows.Clear();
         TopDamages.Clear();
 
@@ -347,6 +413,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
             DetailTitle = "";
             DetailSubtitle = "";
             HoldingCountText = "0";
+            ShaftCountText = "0";
             LengthText = "—";
             CostText = "—";
             UrgentText = "0";
@@ -362,6 +429,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         DetailSubtitle = BuildSubtitle(definition);
 
         HoldingCountText = snapshot.HoldingCount.ToString(CultureInfo.InvariantCulture);
+        ShaftCountText = snapshot.ShaftCount.ToString(CultureInfo.InvariantCulture);
         LengthText = snapshot.LengthTotal > 0
             ? snapshot.LengthTotal.ToString("0.00", Ch) + " m"
             : "—";
@@ -390,6 +458,9 @@ public sealed partial class DossiersPageViewModel : ObservableObject
                 holding.Measures,
                 holding.NetCost > 0m ? holding.NetCost.ToString("#,##0.00", Ch) : "—"));
         }
+
+        foreach (var shaft in snapshot.Shafts)
+            ShaftRows.Add(BuildShaftRow(shaft));
 
         MissingWarning = snapshot.HasMissingHoldings
             ? $"{snapshot.MissingHoldingIds.Count} zugeordnete Leitung(en) sind nicht mehr im Projekt. "
@@ -423,6 +494,34 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         return parts.Count == 0 ? "Noch keine Stammdaten erfasst" : string.Join(" · ", parts);
     }
 
+    /// <summary>
+    /// Eine Schachtzeile fuer die Anzeige. Fehlende Angaben werden zum Strich:
+    /// eine leere Zelle liesse offen, ob nichts erfasst oder nichts noetig ist,
+    /// und "0.00" waere eine Zahl, die niemand geprueft hat.
+    /// </summary>
+    public static DossierShaftRow BuildShaftRow(DossierShaftLine line)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+
+        return new DossierShaftRow(
+            line.ShaftId,
+            OderStrich(line.Number),
+            OderStrich(line.Funktion),
+            OderStrich(line.Measures),
+            line.NetCost > 0m ? line.NetCost.ToString("#,##0.00", Ch) : "—");
+    }
+
+    /// <summary>Die Rueckmeldung nach der Schachtauswahl.</summary>
+    public static string SchaechteZugeordnet(int anzahl) => anzahl switch
+    {
+        <= 0 => "Kein Schacht zugeordnet.",
+        1 => "1 Schacht zugeordnet.",
+        _ => $"{anzahl} Schächte zugeordnet."
+    };
+
+    private static string OderStrich(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "—" : value.Trim();
+
     internal static string DescribeStatus(DossierStatus status) => status switch
     {
         DossierStatus.WordErzeugt => "Word erzeugt",
@@ -445,12 +544,14 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     {
         DeleteDossierCommand.NotifyCanExecuteChanged();
         EditHoldingsCommand.NotifyCanExecuteChanged();
+        EditShaftsCommand.NotifyCanExecuteChanged();
         EditDossierCommand.NotifyCanExecuteChanged();
         CreateWordCommand.NotifyCanExecuteChanged();
         PreviewCommand.NotifyCanExecuteChanged();
         CollectAttachmentsCommand.NotifyCanExecuteChanged();
         AssemblePdfCommand.NotifyCanExecuteChanged();
         OpenFolderCommand.NotifyCanExecuteChanged();
+        RefreshDossierCommand.NotifyCanExecuteChanged();
     }
 
     private void PlayHoldingVideo(DossierHoldingRow? row)
@@ -478,6 +579,20 @@ public sealed record DossierHoldingRow(
     string Holding,
     string Length,
     string Condition,
+    string Measures,
+    string Cost);
+
+/// <summary>
+/// Eine Schachtzeile im Dossier-Cockpit.
+///
+/// Bewusst nicht dieselbe Zeile wie bei den Leitungen: ein Schacht hat keine
+/// Laenge, dafuer eine Funktion, und seine Massnahme steht nicht im
+/// Projektdatensatz, sondern in den Kostendateien.
+/// </summary>
+public sealed record DossierShaftRow(
+    Guid ShaftId,
+    string Shaft,
+    string Funktion,
     string Measures,
     string Cost);
 
