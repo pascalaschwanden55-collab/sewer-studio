@@ -15,8 +15,8 @@ namespace AuswertungPro.Next.UI.Services;
 /// entsteht. Eine Gradzahl muesste jede dieser Stellen erneut auswerten, und
 /// eine davon vergisst es.
 ///
-/// Ein Bild, das nicht im Dossierordner liegt, gehoert dem Benutzer. Es wird
-/// deshalb zuerst kopiert; das Original bleibt unangetastet.
+/// Jede Bearbeitung erzeugt im angegebenen Arbeitsordner eine neue Kopie. So
+/// bleiben sowohl das Kundenoriginal als auch der bisherige Plan unangetastet.
 /// </summary>
 public sealed class PlanImageAdjuster : IPlanImageAdjuster
 {
@@ -123,21 +123,12 @@ public sealed class PlanImageAdjuster : IPlanImageAdjuster
     }
 
     /// <summary>
-    /// Liegt das Bild schon im Dossierordner, wird es ersetzt. Sonst entsteht
-    /// dort eine Kopie — ein fremdes Bild wird nie veraendert.
+    /// Jede Bearbeitung entsteht als neue Datei im Zielordner. Das gilt
+    /// auch fuer ein bereits dort liegendes Bild: Wird das Vorschaufenster
+    /// verworfen, muss der bisher verwendete Plan unveraendert bleiben.
     /// </summary>
     private static string Zielpfad(string imagePath, string targetFolder)
     {
-        var ordner = Path.GetDirectoryName(Path.GetFullPath(imagePath));
-
-        if (string.Equals(
-                Path.GetFullPath(targetFolder).TrimEnd(Path.DirectorySeparatorChar),
-                ordner?.TrimEnd(Path.DirectorySeparatorChar),
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return Path.GetFullPath(imagePath);
-        }
-
         var name = Path.GetFileNameWithoutExtension(imagePath);
         foreach (var zeichen in Path.GetInvalidFileNameChars())
             name = name.Replace(zeichen, '_');

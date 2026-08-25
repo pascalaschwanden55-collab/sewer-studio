@@ -487,8 +487,8 @@ public static class DossierPreviewPageRenderer
             rahmen.Child = new TextBlock
             {
                 Text = string.IsNullOrWhiteSpace(pfad)
-                    ? "Kein Übersichtsplan gewählt"
-                    : "Übersichtsplan nicht lesbar: " + System.IO.Path.GetFileName(pfad),
+                    ? "Kein Werkleitungsplan gewählt"
+                    : "Werkleitungsplan nicht lesbar: " + System.IO.Path.GetFileName(pfad),
                 Foreground = Blass,
                 FontFamily = new FontFamily("Arial"),
                 FontSize = 12,

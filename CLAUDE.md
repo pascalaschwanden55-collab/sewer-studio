@@ -58,8 +58,11 @@
   denselben Word-Export und denselben Word-/LibreOffice-PDF-Wandler wie die Ausgabe. Word-
   und PDF-Arbeitsdateien liegen in einem eindeutigen System-Temp-Ordner; Dossier und Gebiet
   werden tief kopiert, relative Planpfade nur in dieser Kopie aufgeloest und der Kundenordner
-  bleibt unveraendert. Bereits vorhandene PDFs im Beilagen-Ordner werden wie beim Gesamt-PDF
-  in Dateinamenreihenfolge angehaengt, aber nur gelesen.
+  bleibt unveraendert. Vorhandene PDFs im echten Beilagen-Ordner werden nur in den Temp-Stand
+  kopiert. Dort sammelt `DossierAttachmentCollector` die Protokolle aller aktuell gewaehlten
+  Haltungen und danach aller Schaechte neu; die Vorschau fuegt ausschliesslich diese
+  kurzlebige Kopie in Dateinamenreihenfolge an. So bleiben auch manuelle Beilagen sichtbar,
+  ohne dass eine Vorschau Dateien im Projekt anlegt, ersetzt oder loescht.
 - `WindowsDossierPreviewPageRasterizer` zeichnet jede echte PDF-Seite. Damit stammen
   Seitenzahl, Blattformat, Abstaende, Umbrueche, Tabellen, Farben, Bilder, Logo und Fusszeile
   nicht mehr aus einer WPF-Nachbildung. Nach 700 ms Schreibpause wird die Ausgabe neu
@@ -78,6 +81,10 @@
 - `DossierPreviewTarget` adressiert anklickbare Vorschautexte fachlich ueber Feld,
   Zeile und Spalte statt ueber feste Pixelpositionen. Die genaueste vorhandene Adresse
   fuehrt direkt zum passenden Editor; auch geaenderte Vorlagentexte bleiben anklickbar.
+  Fusszeilen-Platzhalter werden beim Lesen der Word-Vorlage jeder Dossierseite als
+  gemeinsame Felder zugeordnet. Zusatzpunkt-Titel und deren Seitenzahl sowie Thementitel
+  und Bemerkung besitzen getrennte Klickziele. Zusatzpunkt-Titel speichern ihre
+  Zeichenformatierung in `DossierTocAttachment.TitleStyles` und geben sie an Word weiter.
 - `DossierPreviewNavigation` ordnet die Vorlagenseiten den Editoren zu; die sichtbare
   Navigation verwendet dagegen die tatsaechlichen Seiten des erzeugten PDF. Fortsetzungs-
   seiten bleiben beim erkannten Kapitel; rechts erscheinen weiterhin nur die Felder der
@@ -112,15 +119,34 @@
   `Bauteile_Text`-/`Haltungen_Text`-/`Schaechte_Text`-Marken kompatibel auf.
 - Bearbeitete Beschriftungen und Ueberschriften speichern ihre Zeichenformatierung unter
   `DossierTopicTextFormatting.LiteralStyleKey(...)` ebenfalls in `FieldStyles`; Vorschau
-  und Word wenden Farbe, Fett, Kursiv und Unterstrichen gleich an.
+  und Word wenden Farbe, Fett, Kursiv und Unterstrichen gleich an. Der Export merkt sich
+  diese Benutzereingaben als Literalbereiche, damit darin geschriebener Text wie
+  `{{Datum}}` nicht nachtraeglich als Vorlagen-Platzhalter ausgewertet wird.
+- `DossierTopicTitleEditing` speichert eine eigene Fassung eines Thementitels unter einem
+  stabilen Feldschluessel im einzelnen Dossier. `DossierTopicResolver` behaelt den
+  urspruenglichen Gebietstitel als Quelle, waehrend Vorschau und Export den eigenen Titel
+  samt Zeichenformatierung verwenden; die Gebietsvorgabe wird nicht umbenannt.
 - Dossiertext wird in Vorschau und Word direkt als Arial ausgegeben. Schriftgroessen,
   Absatzabstaende und Tabellenmasse stammen weiterhin unveraendert aus der Vorlage.
 - Der bekannte manuelle Seitenumbruch unmittelbar vor `Aenderungswesen:` wird beim
   Export gezielt entfernt, weil das volle Deckblatt bereits selbst auf Seite 2 umbricht.
   Andere Seitenumbrueche der Vorlage bleiben unveraendert.
-- Der Uebersichtsplan wird in das feste Seitenverhaeltnis der Referenzflaeche
-  (ca. 15 x 21,5 cm) eingepasst. Ein reines Datei-Seitenverhaeltnis kann den Plan
-  auf eine Zusatzseite schieben und darf deshalb nicht wieder verwendet werden.
+- Der Werkleitungsplan verwendet weiter den kompatiblen Vorlagenschluessel
+  `Uebersichtsplan`. `WindowsPdfPlanImageConverter` uebernimmt JPG, JPEG, PNG, BMP oder
+  die erste PDF-Seite immer als neue, gepruefte PNG-Kopie. In der Vorschau liegen Import,
+  Drehen und Zuschneiden in der eigenen `DossierPlanWorkSession`; erst `Uebernehmen`
+  reicht die letzte Datei an `DossierPlanPublicationService` weiter. Der Dienst prueft
+  Projektgrenze und Junctions ueber `ProjectWritePathGuard` und veroeffentlicht unter
+  einem freien Namen. Der Hash-Beleg bleibt in `DossierPreviewChoice`, bis das
+  Dossier-Dokument erfolgreich gespeichert ist. Verschwindet das Dossier oder scheitert
+  das Speichern, wird nur die gerade erzeugte, unveraenderte PNG zurueckgenommen.
+  `Verwerfen` entfernt nur den eigenen Temporaerordner. Quelle und vorhandene
+  Dossierdateien werden nie ueberschrieben oder geloescht.
+- Das Planbild wird proportional innerhalb der Referenzflaeche (maximal ca. 15 x 21,5 cm)
+  eingepasst; der aeussere Word-Rahmen behaelt dabei immer die volle Vorlagenhoehe.
+  Damit bleibt ein JPG unverzerrt, Folgekapitel ruecken bei Querformat nicht hoch und
+  es entsteht trotzdem keine Zusatzseite. Eine gespeicherte Breite wird auf die 15 cm
+  der Vorlage begrenzt.
   Ist kein lesbarer Plan gewaehlt, entfernt der Bildfueller den ganzen
   Platzhalterabsatz samt grossem schwebendem Vorlagenrahmen; sonst liegt dieser
   Rahmen in Word ueber den folgenden Kapiteln. Ein bewusst leerer Plan erzeugt

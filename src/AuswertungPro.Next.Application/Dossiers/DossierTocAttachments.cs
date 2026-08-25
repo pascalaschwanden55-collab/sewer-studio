@@ -12,7 +12,8 @@ namespace AuswertungPro.Next.Application.Dossiers;
 public sealed record DossierTocAttachmentEntry(
     int Number,
     string Title,
-    string PageNumber);
+    string PageNumber,
+    IReadOnlyList<DossierTextStyleRange> TitleStyles);
 
 public sealed record DossierTocAttachmentStart(
     int FirstNumber,
@@ -74,17 +75,36 @@ public static class DossierTocAttachments
             if (attachment is null)
                 continue;
 
-            var text = FuehrendeNummer.Replace(
-                (attachment.Title ?? string.Empty).Trim(),
-                string.Empty).Trim();
+            var rawTitle = attachment.Title ?? string.Empty;
+            var outerTrimmed = rawTitle.Trim();
+            var prefix = FuehrendeNummer.Match(outerTrimmed);
+            var afterPrefix = outerTrimmed[prefix.Length..];
+            var text = afterPrefix.Trim();
             if (text.Length == 0)
                 continue;
+
+            // Die Formatbereiche beziehen sich auf den Text im Editor. Beim
+            // Export fallen Randabstand und eine versehentlich mitgetippte
+            // Nummer weg; die Bereiche muessen um genau denselben Anteil
+            // verschoben werden.
+            var outerStart = rawTitle.Length - rawTitle.TrimStart().Length;
+            var innerStart = afterPrefix.Length - afterPrefix.TrimStart().Length;
+            var sourceStart = outerStart + prefix.Length + innerStart;
+            var titleStyles = ShiftTitleStyles(
+                rawTitle,
+                attachment.TitleStyles,
+                sourceStart,
+                text.Length);
 
             var seite = attachment.PageNumber is null
                 ? vorgeschlageneSeite?.ToString(CultureInfo.InvariantCulture) ?? string.Empty
                 : attachment.PageNumber.Trim();
 
-            entries.Add(new DossierTocAttachmentEntry(nummer, text, seite));
+            entries.Add(new DossierTocAttachmentEntry(
+                nummer,
+                text,
+                seite,
+                titleStyles));
             nummer++;
 
             if (int.TryParse(
@@ -97,6 +117,36 @@ public static class DossierTocAttachments
         }
 
         return entries;
+    }
+
+    private static IReadOnlyList<DossierTextStyleRange> ShiftTitleStyles(
+        string source,
+        IReadOnlyList<DossierTextStyleRange>? styles,
+        int sourceStart,
+        int targetLength)
+    {
+        var sourceEnd = sourceStart + targetLength;
+        var result = new List<DossierTextStyleRange>();
+
+        foreach (var range in DossierTopicTextFormatting.Normalize(source, styles))
+        {
+            var overlapStart = Math.Max(sourceStart, range.Start);
+            var overlapEnd = Math.Min(sourceEnd, range.Start + range.Length);
+            if (overlapEnd <= overlapStart)
+                continue;
+
+            result.Add(new DossierTextStyleRange
+            {
+                Start = overlapStart - sourceStart,
+                Length = overlapEnd - overlapStart,
+                ColorHex = range.ColorHex,
+                Bold = range.Bold,
+                Italic = range.Italic,
+                Underline = range.Underline
+            });
+        }
+
+        return result;
     }
 
     /// <summary>

@@ -31,6 +31,13 @@ public enum DossierStatus
 /// </summary>
 public sealed class DossierTopicRow
 {
+    /// <summary>
+    /// Urspruenglicher Titel, wenn <see cref="Title"/> nur die dossierbezogene
+    /// Anzeigefassung ist. Wird beim Aufloesen gesetzt und nicht gespeichert.
+    /// </summary>
+    [JsonIgnore]
+    public string SourceTitle { get; set; } = "";
+
     /// <summary>Beschriftung in der Spalte "Thema".</summary>
     public string Title { get; set; } = "";
 
@@ -90,6 +97,9 @@ public sealed class DossierChangeRow
 public sealed class DossierTocAttachment
 {
     public string Title { get; set; } = "";
+
+    /// <summary>Zeichenformatierung des Titels; die Seitenzahl bleibt separat.</summary>
+    public List<DossierTextStyleRange> TitleStyles { get; set; } = new();
 
     public string? PageNumber { get; set; }
 }

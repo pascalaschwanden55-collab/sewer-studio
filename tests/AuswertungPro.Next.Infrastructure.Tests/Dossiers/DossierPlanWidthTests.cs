@@ -17,9 +17,11 @@ public sealed class DossierPlanWidthTests
 
     [Theory]
     [InlineData(8.0, 8.0)]
-    [InlineData(30.0, 30.0)]
-    [InlineData(80.0, 30.0)]
-    public void Eine_eigene_Breite_gilt_bis_zur_Blattgrenze(double eingabe, double erwartet)
+    [InlineData(30.0, 15.0)]
+    [InlineData(80.0, 15.0)]
+    public void Eine_eigene_Breite_bleibt_in_der_originalen_Planflaeche(
+        double eingabe,
+        double erwartet)
     {
         var dossier = new DossierDefinition { OverviewPlanWidthCm = eingabe };
 

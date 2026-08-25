@@ -129,6 +129,31 @@ public sealed class DossierPreviewFieldCatalogTests
     }
 
     [Fact]
+    public void Mehrere_Kapitel_eines_Ausgabeblatts_zeigen_die_Fusszeile_nur_einmal()
+    {
+        // Ein Word-Blatt kann mehrere Kapitel enthalten. Die Fusszeile gehoert
+        // zum Blatt und darf rechts deshalb nicht in jedem Kapitel erneut als
+        // dasselbe Eingabefeld erscheinen.
+        var (area, dossier) = Stand();
+        var alle = DossierPreviewFieldCatalog.Build(area, dossier);
+        var seiten = new[]
+        {
+            Seite("Gebietstitel", "Fusszeile"),
+            Seite("Revision", "Fusszeile")
+        };
+
+        var gruppen = DossierPreviewFieldCatalog.ForPages(alle, seiten, dossier);
+
+        Assert.Equal(2, gruppen.Count);
+        Assert.Contains(gruppen[0].Felder, feld => feld.Key == "Gebietstitel");
+        Assert.Contains(gruppen[0].Felder, feld => feld.Key == "Fusszeile");
+        Assert.Contains(gruppen[1].Felder, feld => feld.Key == "Revision");
+        Assert.DoesNotContain(gruppen[1].Felder, feld => feld.Key == "Fusszeile");
+        Assert.Single(gruppen.SelectMany(gruppe => gruppe.Felder)
+            .Where(feld => feld.Key == "Fusszeile"));
+    }
+
+    [Fact]
     public void Ein_unbekannter_Platzhalter_wird_sichtbar_als_berechnet_gemeldet()
     {
         // Sonst faende der Benutzer eine Stelle im Blatt, zu der es keine
@@ -207,6 +232,28 @@ public sealed class DossierPreviewFieldCatalogTests
                         || field.Kind is DossierPreviewFieldKind.Rows,
                         $"Feld {key} auf Seite {page.Number} ist nicht bearbeitbar."));
             }
+        }
+    }
+
+    [Fact]
+    public void Die_Fusszeile_ist_auf_jeder_Vorlagenseite_bearbeitbar()
+    {
+        var root = new AuswertungPro.Next.Infrastructure.Backup.RepositoryRootFileLocator()
+            .Locate(AppContext.BaseDirectory);
+        Assert.NotNull(root);
+        var path = System.IO.Path.Combine(
+            root!, "Export_Vorlage", DossierWordTemplate.TemplateFileName);
+        var document = DossierPreviewBuilder.Build(path);
+        var (area, dossier) = Stand();
+        var alle = DossierPreviewFieldCatalog.Build(area, dossier);
+
+        Assert.NotEmpty(document.Pages);
+        foreach (var page in document.Pages)
+        {
+            Assert.Contains("Fusszeile", page.FieldKeys);
+            var feld = Assert.Single(DossierPreviewFieldCatalog.ForPage(
+                alle, page, dossier).Where(f => f.Key == "Fusszeile"));
+            Assert.NotNull(feld.Write);
         }
     }
 }

@@ -44,7 +44,8 @@ internal sealed partial class DossierPreviewFieldPanel
         ErgaenzeFehlendeVerzeichnisSeitenzahlen();
 
         foreach (var target in _feldStellen.Keys
-                     .Where(target => target.Kind == DossierPreviewTargetKind.Row
+                     .Where(target => (target.Kind is DossierPreviewTargetKind.Row
+                             or DossierPreviewTargetKind.RowCell)
                          && string.Equals(
                              target.Key,
                              feld.Key,
@@ -115,22 +116,37 @@ internal sealed partial class DossierPreviewFieldPanel
             eingaben.Children.Add(titelLabel);
             eingaben.Children.Add(seitenLabel);
 
-            var box = new TextBox
+            var box = DossierTopicRichTextEditor.Create(new DossierTopicRow
             {
                 Text = punkt.Title ?? string.Empty,
-                MinHeight = 34,
-                Padding = new Thickness(6, 4, 6, 4),
-                FontFamily = new FontFamily("Arial"),
-                VerticalContentAlignment = VerticalAlignment.Center
-            };
-            box.GotKeyboardFocus += (_, _) => Betone(feld.Key);
+                StyleRanges = punkt.TitleStyles ?? new()
+            });
+            box.AcceptsReturn = false;
+            box.MinHeight = 34;
+            var titelTarget = DossierPreviewTarget.RowCell(
+                feld.Key, stelle, "Titel");
+            box.GotKeyboardFocus += (_, _) => Betone(titelTarget);
             box.TextChanged += (_, _) =>
             {
-                punkt.Title = box.Text;
+                var value = DossierTopicRichTextEditor.Read(box);
+                punkt.Title = value.Text;
+                punkt.TitleStyles = value.StyleRanges.ToList();
                 _zeichneBlatt();
             };
-            Grid.SetRow(box, 1);
-            eingaben.Children.Add(box);
+            var titelBereich = new StackPanel();
+            titelBereich.Children.Add(box);
+            var formatWerkzeuge = DossierTextFormattingToolbar.Create(box, () =>
+            {
+                var value = DossierTopicRichTextEditor.Read(box);
+                punkt.Title = value.Text;
+                punkt.TitleStyles = value.StyleRanges.ToList();
+                _zeichneBlatt();
+                Betone(titelTarget);
+            });
+            ZeigeWerkzeugeNurAmAktivenFeld(titelBereich, formatWerkzeuge);
+            titelBereich.Children.Add(formatWerkzeuge);
+            Grid.SetRow(titelBereich, 1);
+            eingaben.Children.Add(titelBereich);
 
             var seite = new TextBox
             {
@@ -145,7 +161,9 @@ internal sealed partial class DossierPreviewFieldPanel
                 VerticalContentAlignment = VerticalAlignment.Center,
                 ToolTip = "Seitenzahl am rechten Rand des Inhaltsverzeichnisses"
             };
-            seite.GotKeyboardFocus += (_, _) => Betone(feld.Key);
+            var seitenTarget = DossierPreviewTarget.RowCell(
+                feld.Key, stelle, "Seite");
+            seite.GotKeyboardFocus += (_, _) => Betone(seitenTarget);
             seite.TextChanged += (_, _) =>
             {
                 punkt.PageNumber = seite.Text;
@@ -158,6 +176,8 @@ internal sealed partial class DossierPreviewFieldPanel
             inhalt.Children.Add(eingaben);
             wirt.Children.Add(karte);
             MerkeStelle(DossierPreviewTarget.Row(feld.Key, stelle), karte);
+            MerkeStelle(titelTarget, box);
+            MerkeStelle(seitenTarget, seite);
         }
 
         var neu = Kleiner("+ Punkt ergänzen", "Einen zusätzlichen Verzeichnispunkt anhängen", () =>

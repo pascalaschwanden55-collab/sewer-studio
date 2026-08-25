@@ -266,6 +266,9 @@ public static class DossierOutputPreviewInteractionMapper
                     break;
 
                 case DossierPreviewTargetKind.RowCell:
+                    if (TryAddTocAttachmentCell(result, target, dossier))
+                        break;
+
                     var row = Row(rowsFor, target.Key, target.RowIndex);
                     if (row is not null && row.TryGetValue(target.CellKey, out var cell))
                         Add(result, target, cell);
@@ -274,6 +277,30 @@ public static class DossierOutputPreviewInteractionMapper
         }
 
         return result;
+    }
+
+    private static bool TryAddTocAttachmentCell(
+        ICollection<DossierPreviewTextCandidate> result,
+        DossierPreviewTarget target,
+        DossierDefinition dossier)
+    {
+        if (!string.Equals(
+                target.Key,
+                "Verzeichnis_Beilagen",
+                StringComparison.OrdinalIgnoreCase)
+            || target.RowIndex < 0
+            || target.RowIndex >= dossier.TocAttachments.Count)
+        {
+            return false;
+        }
+
+        var attachment = dossier.TocAttachments[target.RowIndex];
+        if (string.Equals(target.CellKey, "Titel", StringComparison.OrdinalIgnoreCase))
+            Add(result, target, attachment.Title);
+        else if (string.Equals(target.CellKey, "Seite", StringComparison.OrdinalIgnoreCase))
+            Add(result, target, attachment.PageNumber);
+
+        return true;
     }
 
     private static int EvidenceScore(

@@ -198,6 +198,86 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
     }
 
     [Fact]
+    public void Ein_Hochformat_bleibt_proportional_und_die_Vorlagenflaeche_bleibt_fest()
+    {
+        var bildPfad = Path.Combine(_root, "hochformat.png");
+        File.WriteAllBytes(bildPfad, TestImages.Png(width: 100, height: 200));
+
+        using var stream = new MemoryStream();
+        using (var document = CreateDocument(stream, "{{@Uebersichtsplan}}"))
+        {
+            DocxImagePlaceholderFiller.Fill(document,
+            [
+                new DocxImagePlacement(
+                    "Uebersichtsplan",
+                    bildPfad,
+                    MaxWidthCm: 2.0,
+                    HeightCm: 3.0,
+                    FitWithinBounds: true)
+            ]);
+            document.MainDocumentPart!.Document.Save();
+        }
+
+        stream.Position = 0;
+        using var reopened = WordprocessingDocument.Open(stream, false);
+        var body = reopened.MainDocumentPart!.Document.Body!;
+        var frame = body
+            .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>()
+            .Single();
+        var picture = body.Descendants<DocumentFormat.OpenXml.Drawing.Extents>().Single();
+        var offset = body.Descendants<DocumentFormat.OpenXml.Drawing.Offset>().Single();
+
+        // Der Word-Rahmen bleibt 2 x 3 cm. Darin steht das 1:2-Foto
+        // unverzerrt mit 1,5 x 3 cm und je 0,25 cm Rand links und rechts.
+        Assert.Equal(720_000L, frame.Cx!.Value);
+        Assert.Equal(1_080_000L, frame.Cy!.Value);
+        Assert.Equal(540_000L, picture.Cx!.Value);
+        Assert.Equal(1_080_000L, picture.Cy!.Value);
+        Assert.Equal(90_000L, offset.X!.Value);
+        Assert.Equal(0L, offset.Y!.Value);
+    }
+
+    [Fact]
+    public void Ein_Querformat_bleibt_proportional_und_die_Vorlagenflaeche_bleibt_fest()
+    {
+        var bildPfad = Path.Combine(_root, "querformat.png");
+        File.WriteAllBytes(bildPfad, TestImages.Png(width: 200, height: 100));
+
+        using var stream = new MemoryStream();
+        using (var document = CreateDocument(stream, "{{@Uebersichtsplan}}"))
+        {
+            DocxImagePlaceholderFiller.Fill(document,
+            [
+                new DocxImagePlacement(
+                    "Uebersichtsplan",
+                    bildPfad,
+                    MaxWidthCm: 2.0,
+                    HeightCm: 3.0,
+                    FitWithinBounds: true)
+            ]);
+            document.MainDocumentPart!.Document.Save();
+        }
+
+        stream.Position = 0;
+        using var reopened = WordprocessingDocument.Open(stream, false);
+        var body = reopened.MainDocumentPart!.Document.Body!;
+        var frame = body
+            .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>()
+            .Single();
+        var picture = body.Descendants<DocumentFormat.OpenXml.Drawing.Extents>().Single();
+        var offset = body.Descendants<DocumentFormat.OpenXml.Drawing.Offset>().Single();
+
+        // Der Word-Rahmen bleibt 2 x 3 cm. Darin steht das 2:1-Foto
+        // unverzerrt mit 2 x 1 cm und je 1 cm Rand oben und unten.
+        Assert.Equal(720_000L, frame.Cx!.Value);
+        Assert.Equal(1_080_000L, frame.Cy!.Value);
+        Assert.Equal(720_000L, picture.Cx!.Value);
+        Assert.Equal(360_000L, picture.Cy!.Value);
+        Assert.Equal(0L, offset.X!.Value);
+        Assert.Equal(360_000L, offset.Y!.Value);
+    }
+
+    [Fact]
     public void Fehlende_Bilddatei_laesst_die_Stelle_leer_statt_den_Platzhalter_stehen()
     {
         var fehlt = Path.Combine(_root, "gibtesnicht.png");

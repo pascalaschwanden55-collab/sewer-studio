@@ -139,6 +139,33 @@ public sealed class DocxLiteralTextReplacerTests
     }
 
     [Fact]
+    public void Platzhaltertext_in_einer_frei_bearbeiteten_Ueberschrift_bleibt_woertlich()
+    {
+        using var strom = new MemoryStream();
+        using var document = Erzeuge(strom, "Informationen Sanierung", "{{Datum}}");
+
+        var formatting = DocxLiteralTextReplacer.ApplyBeforePlaceholderFill(
+            document,
+            new Dictionary<string, string>
+            {
+                ["Informationen Sanierung"] = "Hinweis {{Datum}}"
+            });
+
+        DocxPlaceholderFiller.Fill(
+            document,
+            new Dictionary<string, string> { ["Datum"] = "24.08.2026" },
+            formatting);
+
+        var paragraphs = document.MainDocumentPart!.Document.Body!
+            .Elements<Paragraph>()
+            .Select(paragraph => paragraph.InnerText)
+            .ToList();
+
+        Assert.Equal("Hinweis {{Datum}}", paragraphs[0]);
+        Assert.Equal("24.08.2026", paragraphs[1]);
+    }
+
+    [Fact]
     public void Ein_Text_den_es_nicht_gibt_aendert_nichts()
     {
         using var strom = new MemoryStream();

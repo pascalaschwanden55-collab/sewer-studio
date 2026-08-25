@@ -42,15 +42,26 @@ public static class DocxPlaceholderFiller
     public static void Fill(
         WordprocessingDocument document,
         IReadOnlyDictionary<string, string> values)
+        => Fill(document, values, DocxLiteralFormatting.Empty);
+
+    /// <summary>
+    /// Fuellt die Platzhalter und uebernimmt dabei die zuvor erfassten
+    /// Zeichenformate fester Beschriftungen im selben Absatz.
+    /// </summary>
+    internal static void Fill(
+        WordprocessingDocument document,
+        IReadOnlyDictionary<string, string> values,
+        DocxLiteralFormatting literalFormatting)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(values);
+        ArgumentNullException.ThrowIfNull(literalFormatting);
 
         var mainPart = document.MainDocumentPart
             ?? throw new InvalidOperationException("Die Word-Vorlage hat keinen Hauptteil.");
 
         if (mainPart.Document?.Body is not null)
-            FillPart(mainPart.Document.Body, values);
+            FillPart(mainPart.Document.Body, values, literalFormatting);
 
         foreach (var header in mainPart.HeaderParts)
         {
@@ -123,7 +134,8 @@ public static class DocxPlaceholderFiller
 
     private static void FillPart(
         OpenXmlElement scope,
-        IReadOnlyDictionary<string, string> values)
+        IReadOnlyDictionary<string, string> values,
+        DocxLiteralFormatting? literalFormatting = null)
     {
         foreach (var paragraph in scope.Descendants<Paragraph>().ToList())
         {
@@ -135,13 +147,14 @@ public static class DocxPlaceholderFiller
             if (paragraph.Descendants<Paragraph>().Any())
                 continue;
 
-            FillParagraph(paragraph, values);
+            FillParagraph(paragraph, values, literalFormatting);
         }
     }
 
     private static void FillParagraph(
         Paragraph paragraph,
-        IReadOnlyDictionary<string, string> values)
+        IReadOnlyDictionary<string, string> values,
+        DocxLiteralFormatting? literalFormatting)
     {
         var texts = paragraph.Descendants<Text>().ToList();
         if (texts.Count == 0)
@@ -151,15 +164,24 @@ public static class DocxPlaceholderFiller
         if (!combined.Contains("{{", StringComparison.Ordinal))
             return;
 
-        var replaced = ReplacePlaceholders(combined, values);
+        IReadOnlyList<DocxLiteralRange>? literalRanges = null;
+        literalFormatting?.LiteralRanges.TryGetValue(paragraph, out literalRanges);
+        var replaced = ReplacePlaceholders(combined, values, literalRanges);
         if (string.Equals(replaced, combined, StringComparison.Ordinal))
             return;
 
         // Die Schriftfarbe wird VOR dem Zurueckschreiben gesucht: danach steht
         // der Platzhaltername nicht mehr im Text.
-        var farbe = FarbeFuer(combined, values);
+        var farbe = FarbeFuer(combined, values, literalRanges);
 
-        var formatbereiche = FormatFuer(combined, replaced, values);
+        IReadOnlyList<DossierTextStyleRange>? festeFormate = null;
+        literalFormatting?.Paragraphs.TryGetValue(paragraph, out festeFormate);
+        var formatbereiche = FormatFuer(
+            combined,
+            replaced,
+            values,
+            festeFormate,
+            literalRanges);
         if (formatbereiche.Count > 0)
             WriteBackFormatted(paragraph, texts, replaced, formatbereiche);
         else
@@ -175,9 +197,11 @@ public static class DocxPlaceholderFiller
     /// Zeichenketten-Karte und der Fueller kennt keine Dossierbegriffe.
     /// </summary>
     private static string? FarbeFuer(
-        string text, IReadOnlyDictionary<string, string> values)
+        string text,
+        IReadOnlyDictionary<string, string> values,
+        IReadOnlyList<DocxLiteralRange>? literalRanges = null)
     {
-        foreach (Match treffer in Regex.Matches(text, @"\{\{([A-Za-z0-9_]+)\}\}"))
+        foreach (var treffer in PlaceholderMatches(text, literalRanges))
         {
             var name = treffer.Groups[1].Value + FarbSuffix;
 
@@ -209,13 +233,15 @@ public static class DocxPlaceholderFiller
     private static List<DossierTextStyleRange> FormatFuer(
         string source,
         string replaced,
-        IReadOnlyDictionary<string, string> values)
+        IReadOnlyDictionary<string, string> values,
+        IReadOnlyList<DossierTextStyleRange>? festeFormate = null,
+        IReadOnlyList<DocxLiteralRange>? literalRanges = null)
     {
         var ranges = new List<DossierTextStyleRange>();
         var sourcePosition = 0;
         var outputPosition = 0;
 
-        foreach (Match match in Regex.Matches(source, @"\{\{([A-Za-z0-9_]+)\}\}"))
+        foreach (var match in PlaceholderMatches(source, literalRanges))
         {
             // Der feste Text zwischen zwei Platzhaltern bleibt unformatiert.
             outputPosition += match.Index - sourcePosition;
@@ -245,7 +271,73 @@ public static class DocxPlaceholderFiller
             sourcePosition = match.Index + match.Length;
         }
 
+        if (festeFormate is { Count: > 0 })
+        {
+            ranges.AddRange(VerschiebeFesteFormate(
+                source,
+                values,
+                festeFormate,
+                literalRanges));
+        }
+
         return DossierTopicTextFormatting.Normalize(replaced, ranges);
+    }
+
+    /// <summary>
+    /// Verschiebt Zeichenbereiche des festen Textes um die Laengen der
+    /// eingesetzten Platzhalterwerte. Bereiche innerhalb eines Platzhalters
+    /// werden bewusst nicht uebernommen; dafuer gelten dessen eigene Formate.
+    /// </summary>
+    private static IReadOnlyList<DossierTextStyleRange> VerschiebeFesteFormate(
+        string source,
+        IReadOnlyDictionary<string, string> values,
+        IReadOnlyList<DossierTextStyleRange> sourceRanges,
+        IReadOnlyList<DocxLiteralRange>? literalRanges)
+    {
+        var result = new List<DossierTextStyleRange>();
+        var sourcePosition = 0;
+        var outputPosition = 0;
+
+        foreach (var match in PlaceholderMatches(source, literalRanges))
+        {
+            Uebertrage(sourcePosition, match.Index, outputPosition);
+            outputPosition += match.Index - sourcePosition;
+
+            var name = match.Groups[1].Value;
+            if (values.TryGetValue(name, out var value))
+                outputPosition += (value ?? string.Empty).Length;
+
+            sourcePosition = match.Index + match.Length;
+        }
+
+        Uebertrage(sourcePosition, source.Length, outputPosition);
+        return result;
+
+        void Uebertrage(int segmentStart, int segmentEnd, int targetStart)
+        {
+            if (segmentEnd <= segmentStart)
+                return;
+
+            foreach (var range in sourceRanges)
+            {
+                var start = Math.Max(segmentStart, range.Start);
+                var end = (int)Math.Min(
+                    segmentEnd,
+                    (long)range.Start + range.Length);
+                if (end <= start)
+                    continue;
+
+                result.Add(new DossierTextStyleRange
+                {
+                    Start = targetStart + start - segmentStart,
+                    Length = end - start,
+                    ColorHex = range.ColorHex,
+                    Bold = range.Bold,
+                    Italic = range.Italic,
+                    Underline = range.Underline
+                });
+            }
+        }
     }
 
     /// <summary>
@@ -417,6 +509,12 @@ public static class DocxPlaceholderFiller
     public static string ReplacePlaceholders(
         string input,
         IReadOnlyDictionary<string, string> values)
+        => ReplacePlaceholders(input, values, literalRanges: null);
+
+    private static string ReplacePlaceholders(
+        string input,
+        IReadOnlyDictionary<string, string> values,
+        IReadOnlyList<DocxLiteralRange>? literalRanges)
     {
         if (string.IsNullOrEmpty(input))
             return input ?? string.Empty;
@@ -431,6 +529,16 @@ public static class DocxPlaceholderFiller
             {
                 result.Append(input, index, input.Length - index);
                 break;
+            }
+
+            if (IsProtectedLiteral(start, literalRanges))
+            {
+                // Dieser Text stammt aus einer Benutzereingabe. Auch wenn er
+                // wie {{Datum}} aussieht, ist er kein Steuerzeichen der
+                // Word-Vorlage und bleibt deshalb genau so stehen.
+                result.Append(input, index, start + 2 - index);
+                index = start + 2;
+                continue;
             }
 
             var end = input.IndexOf("}}", start + 2, StringComparison.Ordinal);
@@ -450,6 +558,32 @@ public static class DocxPlaceholderFiller
         }
 
         return result.ToString();
+    }
+
+    private static IEnumerable<Match> PlaceholderMatches(
+        string input,
+        IReadOnlyList<DocxLiteralRange>? literalRanges)
+        => Regex.Matches(input, @"\{\{([A-Za-z0-9_]+)\}\}")
+            .Cast<Match>()
+            .Where(match => !IsProtectedLiteral(match.Index, literalRanges));
+
+    private static bool IsProtectedLiteral(
+        int position,
+        IReadOnlyList<DocxLiteralRange>? literalRanges)
+    {
+        if (literalRanges is null)
+            return false;
+
+        foreach (var range in literalRanges)
+        {
+            if (position >= range.Start
+                && position < (long)range.Start + range.Length)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string GetRowText(TableRow row)

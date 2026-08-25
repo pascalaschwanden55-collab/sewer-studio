@@ -125,13 +125,20 @@ internal sealed partial class DossierPreviewFieldPanel
 
             ZeigeRueckweg();
 
-            karte.Children.Add(box);
-            karte.Children.Add(DossierTextFormattingToolbar.Create(box, () =>
+            // Die Seitenzahl einer Inhaltsverzeichniszeile liegt ebenfalls in
+            // der Karte, formatiert aber nicht den Titel. Darum umfasst der
+            // Fokusbereich der Titel-Werkzeuge nur Editor und Werkzeuge.
+            var titelBereich = new StackPanel();
+            titelBereich.Children.Add(box);
+            var werkzeuge = DossierTextFormattingToolbar.Create(box, () =>
             {
                 Speichere();
                 _zeichneBlatt();
                 Betone(target);
-            }));
+            });
+            ZeigeWerkzeugeNurAmAktivenFeld(titelBereich, werkzeuge);
+            titelBereich.Children.Add(werkzeuge);
+            karte.Children.Add(titelBereich);
             karte.Children.Add(zurueck);
 
             karte.Children.Add(DossierTocChapterPageField.CreateFor(

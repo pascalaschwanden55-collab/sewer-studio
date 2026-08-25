@@ -23,8 +23,8 @@ public sealed record PlanImageResult(string? ImagePath, string? Error)
 /// deshalb beim Auswaehlen umgewandelt, nicht erst beim Erzeugen: so sieht man
 /// in der Vorschau sofort, was im Dossier stehen wird.
 ///
-/// Die Quelldatei wird nur gelesen. Das Bild entsteht im Projekt, nie neben dem
-/// Kundenoriginal.
+/// Die Quelldatei wird nur gelesen. Das Bild entsteht im angegebenen
+/// Arbeitsordner, nie neben dem Kundenoriginal.
 /// </summary>
 public interface IPlanImageConverter
 {
@@ -36,15 +36,14 @@ public interface IPlanImageConverter
 }
 
 /// <summary>
-/// Passt ein bereits gewaehltes Planbild an. Gedreht wird die Datei selbst,
-/// damit der Plan in Vorschau, Word und PDF gleich aussieht.
+/// Passt ein bereits gewaehltes Planbild an. Jede Bearbeitung erzeugt im
+/// angegebenen Arbeitsordner eine neue Datei, damit ein Verwerfen sicher ist.
 /// </summary>
 public interface IPlanImageAdjuster
 {
     /// <summary>
-    /// Dreht um 90, 180 oder 270 Grad. Liegt das Bild nicht im Zielordner,
-    /// entsteht dort eine gedrehte Kopie — ein fremdes Bild wird nie
-    /// veraendert.
+    /// Dreht um 90, 180 oder 270 Grad und erzeugt im Zielordner eine neue
+    /// Kopie. Ein vorhandenes Bild wird nie veraendert.
     /// </summary>
     PlanImageResult Rotate(string? imagePath, string targetFolder, int degrees);
 

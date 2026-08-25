@@ -25,9 +25,14 @@ public sealed class DossierComposition
         ArgumentNullException.ThrowIfNull(pdfMerge);
 
         Store = new DossierFileStore();
+        PlanPublications = new DossierPlanPublicationService();
         WordExport = new DossierWordTemplateExportService();
-        OutputPreview = new DossierOutputPreviewService(WordExport, pdfMerge);
-        Attachments = new DossierAttachmentCollector(protocolFiles, protocolPdf);
+        var attachmentCollector = new DossierAttachmentCollector(protocolFiles, protocolPdf);
+        Attachments = attachmentCollector;
+        OutputPreview = new DossierOutputPreviewService(
+            WordExport,
+            pdfMerge,
+            attachmentCollector);
         PdfAssembly = new DossierPdfAssemblyService(pdfMerge);
 
         // Die Auskunftsleser teilen sich ein Tor nach draussen: ein Zeitlimit,
@@ -47,6 +52,9 @@ public sealed class DossierComposition
     }
 
     public IDossierStore Store { get; }
+
+    /// <summary>Veroeffentlicht bearbeitete Planbilder sicher im Projekt.</summary>
+    public IDossierPlanPublicationService PlanPublications { get; }
 
     public IDossierWordExportService WordExport { get; }
 

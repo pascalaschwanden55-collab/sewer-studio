@@ -42,7 +42,8 @@ public static class DossierTopicResolver
                 verbraucht.Add(treffer);
                 ergebnis.Add(new DossierTopicRow
                 {
-                    Title = thema.Title,
+                    SourceTitle = thema.Title,
+                    Title = DossierTopicTitleEditing.DisplayTitle(dossier, thema.Title),
                     Text = eigene[treffer].Text,
                     ColorHex = eigene[treffer].ColorHex,
                     StyleRanges = KopiereFormat(eigene[treffer].StyleRanges)
@@ -52,7 +53,8 @@ public static class DossierTopicResolver
 
             ergebnis.Add(new DossierTopicRow
             {
-                Title = thema.Title,
+                SourceTitle = thema.Title,
+                Title = DossierTopicTitleEditing.DisplayTitle(dossier, thema.Title),
                 Text = thema.Text,
                 ColorHex = thema.ColorHex,
                 StyleRanges = KopiereFormat(thema.StyleRanges)
@@ -65,7 +67,8 @@ public static class DossierTopicResolver
             {
                 ergebnis.Add(new DossierTopicRow
                 {
-                    Title = eigene[i].Title,
+                    SourceTitle = eigene[i].Title,
+                    Title = DossierTopicTitleEditing.DisplayTitle(dossier, eigene[i].Title),
                     Text = eigene[i].Text,
                     ColorHex = eigene[i].ColorHex,
                     StyleRanges = KopiereFormat(eigene[i].StyleRanges)

@@ -3,6 +3,7 @@ using System.Linq;
 
 using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Domain.Models.Dossiers;
+using AuswertungPro.Next.Infrastructure.Dossiers;
 
 using Xunit;
 
@@ -87,6 +88,49 @@ public sealed class DossierTopicResolverTests
     public void Ohne_jede_Angabe_bleibt_die_Liste_leer_statt_zu_werfen()
     {
         Assert.Empty(DossierTopicResolver.Resolve(null, null));
+    }
+
+    [Fact]
+    public void Ein_Thementitel_kann_nur_fuer_dieses_Dossier_geaendert_und_formatiert_werden()
+    {
+        var area = Gebiet(("Unternehmer", "Implenia"));
+        var dossier = Dossier();
+
+        DossierTopicTitleEditing.Set(
+            dossier,
+            "Unternehmer",
+            "Ausführende Firma",
+            [new DossierTextStyleRange
+            {
+                Start = 0,
+                Length = 11,
+                ColorHex = "C00000",
+                Bold = true
+            }]);
+
+        var resolved = Assert.Single(DossierTopicResolver.Resolve(area, dossier));
+        Assert.Equal("Unternehmer", resolved.SourceTitle);
+        Assert.Equal("Ausführende Firma", resolved.Title);
+        Assert.Equal("Unternehmer", area.Topics[0].Title);
+
+        var row = Assert.Single(DossierWordTemplateExportService.BuildTopicRows(area, dossier));
+        Assert.Equal("Ausführende Firma", row["Thema"]);
+        var style = Assert.Single(DossierTopicTextFormatting.Decode(
+            row["Thema" + DossierTopicTextFormatting.StyleRangesSuffix]));
+        Assert.Equal("C00000", style.ColorHex);
+        Assert.True(style.Bold);
+    }
+
+    [Fact]
+    public void Zuruecksetzen_stellt_den_urspruenglichen_Thementitel_wieder_her()
+    {
+        var dossier = Dossier();
+        DossierTopicTitleEditing.Set(dossier, "Schäden", "Festgestellte Schäden", []);
+
+        DossierTopicTitleEditing.Reset(dossier, "Schäden");
+
+        Assert.Equal("Schäden", DossierTopicTitleEditing.DisplayTitle(dossier, "Schäden"));
+        Assert.False(DossierTopicTitleEditing.IsOverridden(dossier, "Schäden"));
     }
 }
 

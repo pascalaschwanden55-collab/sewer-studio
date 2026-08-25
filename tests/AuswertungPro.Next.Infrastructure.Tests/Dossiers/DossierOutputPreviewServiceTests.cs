@@ -129,6 +129,75 @@ public sealed class DossierOutputPreviewServiceTests
         Assert.False(Directory.Exists(previewRoot));
     }
 
+    [Fact]
+    public async Task CreateAsync_verwendet_frisch_gesammelte_Beilagen_aus_dem_Temp_Ordner()
+    {
+        using var temp = new TempDirectory();
+        var projectRoot = Path.Combine(temp.Path, "Projekt");
+        var targetFolder = Path.Combine(projectRoot, "Dossiers", "Fall");
+        var realAttachmentFolder = Path.Combine(
+            targetFolder,
+            DossierFolderPlanner.AttachmentFolderName);
+        Directory.CreateDirectory(realAttachmentFolder);
+        var staleAttachment = Path.Combine(realAttachmentFolder, "01_TV_Alt.pdf");
+        await File.WriteAllTextAsync(staleAttachment, "Alter Stand");
+        var previewRoot = Path.Combine(temp.Path, "Vorschauarbeit");
+
+        var service = new DossierOutputPreviewService(
+            new RecordingWordExporter(),
+            (_, pdfPath) =>
+            {
+                File.WriteAllBytes(pdfPath!, [5, 6]);
+                return true;
+            },
+            (generated, attachments) =>
+            {
+                Assert.Equal([5, 6], generated);
+                var attachment = Assert.Single(attachments);
+                Assert.StartsWith(previewRoot, attachment, StringComparison.OrdinalIgnoreCase);
+                Assert.Equal("Aktuelles Original", File.ReadAllText(attachment));
+                Assert.NotEqual(staleAttachment, attachment);
+                return [7, 8, 9];
+            },
+            pdfPath => pdfPath.EndsWith("-komplett.pdf", StringComparison.Ordinal)
+                ?
+                [
+                    new DossierOutputPreviewPage(1, 595, 842, "Dossier", []),
+                    new DossierOutputPreviewPage(2, 595, 842, "Aktuelles Original", [])
+                ]
+                :
+                [
+                    new DossierOutputPreviewPage(1, 595, 842, "Dossier", [])
+                ],
+            () => previewRoot,
+            async (_, temporaryDossierFolder, ct) =>
+            {
+                var folder = Path.Combine(
+                    temporaryDossierFolder,
+                    DossierFolderPlanner.AttachmentFolderName);
+                Directory.CreateDirectory(folder);
+                var fresh = Path.Combine(folder, "01_TV_Aktuell.pdf");
+                await File.WriteAllTextAsync(fresh, "Aktuelles Original", ct);
+                return new DossierAttachmentResult(
+                    [
+                        new DossierAttachment(
+                            Path.GetFileName(fresh),
+                            fresh,
+                            DossierAttachmentKind.OriginalProtocol,
+                            "100-200")
+                    ],
+                    []);
+            });
+
+        var result = await service.CreateAsync(Request(projectRoot, targetFolder, ""));
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal([7, 8, 9], result.PdfBytes);
+        Assert.True(result.Pages[1].IsAttachment);
+        Assert.Equal("Alter Stand", await File.ReadAllTextAsync(staleAttachment));
+        Assert.False(Directory.Exists(previewRoot));
+    }
+
     private static DossierExportRequest Request(
         string projectRoot,
         string targetFolder,

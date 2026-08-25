@@ -38,3 +38,15 @@ public interface IDossierOutputPreviewService
         DossierExportRequest request,
         CancellationToken ct = default);
 }
+
+/// <summary>
+/// Sammelt die zur aktuellen Auswahl gehoerenden Protokolle ausschliesslich
+/// in einen kurzlebigen Vorschauordner. Der echte Dossierordner wird nur gelesen.
+/// </summary>
+public interface IDossierPreviewAttachmentService
+{
+    Task<DossierAttachmentResult> CollectIntoTemporaryAsync(
+        DossierExportRequest request,
+        string temporaryDossierFolder,
+        CancellationToken ct = default);
+}

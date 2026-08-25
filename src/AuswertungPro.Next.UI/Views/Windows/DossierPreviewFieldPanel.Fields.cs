@@ -451,7 +451,15 @@ internal sealed partial class DossierPreviewFieldPanel
 
         var leiste = new WrapPanel();
 
-        leiste.Children.Add(Kleiner("Wählen…", "Plan als PDF oder Bild wählen",
+        block.Children.Add(new TextBlock
+        {
+            Text = "JPG, PNG oder PDF wählen. Das Bild wird in die originale Planfläche eingesetzt; die Quelldatei bleibt unverändert.",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 11,
+            Margin = new Thickness(0, 0, 0, 5)
+        });
+
+        leiste.Children.Add(Kleiner("JPG / Plan wählen…", "Werkleitungsplan als JPG, PNG oder PDF wählen",
             async () => await WaehlePlanAsync(feld, anzeige)));
 
         leiste.Children.Add(Kleiner("⟲", "90° nach links", () => Drehe(feld, anzeige, 270)));
@@ -479,9 +487,9 @@ internal sealed partial class DossierPreviewFieldPanel
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Übersichtsplan wählen",
-            Filter = "Plan (PDF und Bilder)|*.pdf;*.png;*.jpg;*.jpeg;*.bmp"
-                + "|PDF|*.pdf|Bilder|*.png;*.jpg;*.jpeg;*.bmp|Alle Dateien|*.*"
+            Title = "Werkleitungsplan wählen",
+            Filter = "Werkleitungsplan (JPG, PNG oder PDF)|*.jpg;*.jpeg;*.png;*.pdf"
+                + "|JPG-Foto|*.jpg;*.jpeg|PNG-Bild|*.png|PDF|*.pdf"
         };
 
         if (dialog.ShowDialog(_fenster()) != true)
@@ -489,13 +497,14 @@ internal sealed partial class DossierPreviewFieldPanel
 
         var pfad = dialog.FileName;
 
-        // Word nimmt nur PNG und JPEG. Ein Plan kommt aber meist als PDF — er
-        // wird deshalb sofort umgewandelt, damit die Vorschau schon zeigt, was
-        // im Dossier stehen wird.
+        // Jede Auswahl wird als eigene, gepruefte Bildkopie in den temporaeren
+        // Arbeitsordner uebernommen. Vorschau, Word und PDF verwenden sofort
+        // diese Datei; erst "Uebernehmen" veroeffentlicht sie im Dossierordner.
+        // Das Foto selbst bleibt unveraendert.
         if (_planImages.NeedsConversion(pfad))
         {
-            _status("Plan wird in ein Bild umgewandelt…");
-            var ergebnis = await _planImages.ConvertAsync(pfad, _request.TargetFolder);
+            _status("Werkleitungsplan wird übernommen…");
+            var ergebnis = await _planImages.ConvertAsync(pfad, _planWorkFolder);
 
             if (!ergebnis.Success)
             {
@@ -512,7 +521,7 @@ internal sealed partial class DossierPreviewFieldPanel
 
     private void Drehe(DossierPreviewField feld, TextBlock anzeige, int grad)
     {
-        var ergebnis = _planAdjuster.Rotate(feld.Read(), _request.TargetFolder, grad);
+        var ergebnis = _planAdjuster.Rotate(feld.Read(), _planWorkFolder, grad);
 
         if (!ergebnis.Success)
         {
@@ -526,13 +535,13 @@ internal sealed partial class DossierPreviewFieldPanel
 
     /// <summary>
     /// Ausschnitt, Drehung und Breite im Dossier — alles am selben Bild, das
-    /// die Vorschau daneben zeigt. Geschrieben wird nur in eine Kopie im
-    /// Dossierordner; das Kundenoriginal bleibt unangetastet.
+    /// die Vorschau daneben zeigt. Geschrieben wird nur in eine temporaere
+    /// Kopie; das Kundenoriginal bleibt unangetastet.
     /// </summary>
     private void BearbeitePlan(DossierPreviewField feld, TextBlock anzeige)
     {
         var ergebnis = DossierPlanWindow.ShowFor(
-            _planAdjuster, feld.Read(), _request.TargetFolder, _dossier.OverviewPlanWidthCm);
+            _planAdjuster, feld.Read(), _planWorkFolder, _dossier.OverviewPlanWidthCm);
 
         if (ergebnis is null)
             return;

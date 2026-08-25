@@ -38,6 +38,8 @@ public partial class DossierPreviewWindow : Window
     private readonly DossierExportRequest _request;
     private readonly IPlanImageConverter _planImages;
     private readonly IPlanImageAdjuster _planAdjuster;
+    private readonly IDossierPlanPublicationService _planPublications;
+    private readonly DossierPlanWorkSession _planWorkSession = new();
     private readonly IDossierOutputPreviewService _outputPreview;
     private readonly IDossierPreviewPageRasterizer _previewPages;
 
@@ -47,6 +49,7 @@ public partial class DossierPreviewWindow : Window
 
     private Dictionary<string, string> _values = new(StringComparer.OrdinalIgnoreCase);
     private DossierPreviewRenderResult? _render;
+    private IDossierPlanPublication? _publishedPlan;
     private DossierPreviewTarget? _aktivesFeld;
     private DossierPreviewFieldPanel _felder = null!;
     private bool _fitPage = true;
@@ -59,6 +62,7 @@ public partial class DossierPreviewWindow : Window
         string templatePath,
         IPlanImageConverter planImages,
         IPlanImageAdjuster planAdjuster,
+        IDossierPlanPublicationService planPublications,
         IDossierOutputPreviewService outputPreview,
         IDossierPreviewPageRasterizer previewPages)
     {
@@ -66,6 +70,7 @@ public partial class DossierPreviewWindow : Window
 
         _planImages = planImages;
         _planAdjuster = planAdjuster;
+        _planPublications = planPublications;
         _outputPreview = outputPreview;
         _previewPages = previewPages;
 
@@ -83,7 +88,7 @@ public partial class DossierPreviewWindow : Window
             FieldPanel,
             _area,
             _dossier,
-            _request,
+            _planWorkSession.WorkFolder,
             _document,
             _planImages,
             _planAdjuster,
@@ -109,17 +114,19 @@ public partial class DossierPreviewWindow : Window
     /// Zeigt die Vorschau. Liefert die uebernommenen Angaben zurueck oder null,
     /// wenn der Benutzer verworfen hat.
     /// </summary>
-    public static (DossierAreaSettings Area, DossierDefinition Dossier)? ShowFor(
+    public static DossierPreviewChoice? ShowFor(
         DossierExportRequest request,
         string templatePath,
         IPlanImageConverter planImages,
         IPlanImageAdjuster planAdjuster,
+        IDossierPlanPublicationService planPublications,
         IDossierOutputPreviewService outputPreview,
         IDossierPreviewPageRasterizer previewPages)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(planImages);
         ArgumentNullException.ThrowIfNull(planAdjuster);
+        ArgumentNullException.ThrowIfNull(planPublications);
         ArgumentNullException.ThrowIfNull(outputPreview);
         ArgumentNullException.ThrowIfNull(previewPages);
 
@@ -133,13 +140,29 @@ public partial class DossierPreviewWindow : Window
             templatePath,
             planImages,
             planAdjuster,
+            planPublications,
             outputPreview,
             previewPages)
         {
             Owner = System.Windows.Application.Current?.MainWindow
         };
 
-        return window.ShowDialog() == true ? (area, dossier) : null;
+        try
+        {
+            if (window.ShowDialog() != true)
+                return null;
+
+            var publication = window._publishedPlan;
+            window._publishedPlan = null;
+            return new DossierPreviewChoice(area, dossier, publication);
+        }
+        finally
+        {
+            // Falls das Fenster nach dem Kopieren unerwartet nicht als
+            // uebernommen endet, bleibt keine verwaiste Plandatei zurueck.
+            window._publishedPlan?.Dispose();
+            window._publishedPlan = null;
+        }
     }
 
     /// <summary>
@@ -168,13 +191,11 @@ public partial class DossierPreviewWindow : Window
             return;
         }
 
-        _felder.Baue(item.EditorPages
-            .Select(seite => (seite, DossierPreviewFieldCatalog.ForPage(
-                _fields,
-                seite,
-                _dossier,
-                key => _values.TryGetValue(key, out var wert) ? wert : string.Empty)))
-            .ToList());
+        _felder.Baue(DossierPreviewFieldCatalog.ForPages(
+            _fields,
+            item.EditorPages,
+            _dossier,
+            key => _values.TryGetValue(key, out var wert) ? wert : string.Empty));
 
         await ZeichneEchteSeiteAsync(item);
 
@@ -385,8 +406,40 @@ public partial class DossierPreviewWindow : Window
 
     private void OnAccept(object sender, RoutedEventArgs e)
     {
+        _ = sender;
+        _ = e;
+
+        var plan = _planWorkSession.Publish(
+            _planPublications,
+            _request.ProjectRoot,
+            _dossier.OverviewPlanPath,
+            _request.TargetFolder);
+
+        if (!plan.Success)
+        {
+            StatusText.Text = plan.Error ?? "Der bearbeitete Plan konnte nicht übernommen werden.";
+            return;
+        }
+
+        _dossier.OverviewPlanPath = plan.ImagePath ?? string.Empty;
+        _publishedPlan = plan.Publication;
         DialogResult = true;
     }
 
     private void OnCancel(object sender, RoutedEventArgs e) => DialogResult = false;
+
+    protected override void OnClosed(EventArgs e)
+    {
+        try
+        {
+            // base.OnClosed loest zuerst die vorhandenen Closed-Empfaenger
+            // aus. Dadurch wird eine laufende Ausgabevorschau abgebrochen,
+            // bevor deren Plan-Arbeitsdateien entfernt werden.
+            base.OnClosed(e);
+        }
+        finally
+        {
+            _planWorkSession.Dispose();
+        }
+    }
 }

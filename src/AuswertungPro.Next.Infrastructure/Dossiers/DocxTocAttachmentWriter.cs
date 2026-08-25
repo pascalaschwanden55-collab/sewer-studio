@@ -119,14 +119,24 @@ internal static class DocxTocAttachmentWriter
             .LastOrDefault(run => run.Descendants<Text>().Any())
             ?.RunProperties;
 
+        var titleText = new Text(entry.Title) { Space = SpaceProcessingModeValues.Preserve };
+        var titleRun = CreateRun(titleProperties, titleText);
+
         paragraph.Append(
             CreateRun(
                 numberProperties,
                 new Text($"{entry.Number}.") { Space = SpaceProcessingModeValues.Preserve }),
             CreateRun(tabProperties, new TabChar()),
-            CreateRun(
-                titleProperties,
-                new Text(entry.Title) { Space = SpaceProcessingModeValues.Preserve }));
+            titleRun);
+
+        if (entry.TitleStyles.Count > 0)
+        {
+            DocxPlaceholderFiller.WriteBackFormatted(
+                paragraph,
+                [titleText],
+                entry.Title,
+                entry.TitleStyles);
+        }
 
         if (!string.IsNullOrWhiteSpace(entry.PageNumber))
         {

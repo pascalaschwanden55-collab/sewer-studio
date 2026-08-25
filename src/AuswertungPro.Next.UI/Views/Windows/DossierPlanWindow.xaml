@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
-        Title="Übersichtsplan anpassen"
+        Title="Werkleitungsplan anpassen"
         Width="1100" Height="820"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}">
@@ -25,7 +25,7 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Margin="0,0,0,10" TextWrapping="Wrap"
-                   Text="Mit gedrückter Maustaste einen Rahmen aufziehen und „Zuschneiden“ drücken. Das Original bleibt unverändert — bearbeitet wird eine Kopie im Dossierordner."/>
+                   Text="Mit gedrückter Maustaste einen Rahmen aufziehen und „Zuschneiden“ drücken. Das Bild wird proportional in die originale Planfläche eingepasst. Das Original bleibt unverändert — bearbeitet wird eine temporäre Kopie."/>
 
         <WrapPanel Grid.Row="1" Margin="0,0,0,10">
             <Button x:Name="LeftButton" Content="⟲" Width="40" Height="30" Margin="0,0,6,0"
@@ -36,7 +36,7 @@
                     ToolTip="Auf den Kopf stellen" Click="OnRotateHalf"/>
 
             <Button x:Name="CropButton" Content="Zuschneiden" Height="30" Padding="12,0"
-                    ToolTip="Schneidet den Plan auf den gezogenen Rahmen zu. Das Bild im Dossier-Ordner wird ersetzt; die ursprüngliche Quelldatei bleibt unberührt."
+                    ToolTip="Schneidet die temporäre Kopie auf den gezogenen Rahmen zu. Die ursprüngliche Quelldatei bleibt unberührt."
                     Margin="0,0,14,0" IsEnabled="False" Click="OnCrop"/>
 
             <TextBlock Text="Zoom" Margin="0,0,6,0"/>
@@ -70,10 +70,10 @@
                     Margin="0,14,0,0">
             <TextBlock x:Name="StatusText" Margin="0,0,14,0"/>
             <Button Content="Abbrechen"
-                    ToolTip="Schliesst das Fenster. Bereits ausgeführtes Drehen oder Zuschneiden bleibt erhalten — es wirkt direkt auf die Bilddatei." Width="110" Height="32" Margin="0,0,8,0"
+                    ToolTip="Schliesst das Fenster, ohne diese Anpassung in die Dossiervorschau zu übernehmen." Width="110" Height="32" Margin="0,0,8,0"
                     IsCancel="True" Click="OnCancel"/>
             <Button Content="Übernehmen"
-                    ToolTip="Übernimmt den bearbeiteten Plan als Übersichtsplan des Dossiers." Width="130" Height="32"
+                    ToolTip="Übernimmt die Anpassung in die Dossiervorschau. Im Dossierordner wird sie erst beim Übernehmen des Dossiers gespeichert." Width="130" Height="32"
                     IsDefault="True" Click="OnAccept"/>
         </StackPanel>
     </Grid>

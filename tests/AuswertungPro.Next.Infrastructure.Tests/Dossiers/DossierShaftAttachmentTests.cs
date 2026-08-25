@@ -92,6 +92,28 @@ public sealed class DossierShaftAttachmentTests : IDisposable
     }
 
     [Fact]
+    public async Task Die_Vorschau_sammelt_das_aktuelle_Schachtprotokoll_nur_in_Temp()
+    {
+        var pdf = Path.Combine(_root, "80551.pdf");
+        await File.WriteAllTextAsync(pdf, "Aktuelles Schachtprotokoll");
+        var request = Szenario("80551");
+        var temporaeresDossier = Path.Combine(_root, "Vorschau", "Dossier");
+
+        var ergebnis = await Sammler(new() { ["80551"] = pdf })
+            .CollectIntoTemporaryAsync(request, temporaeresDossier);
+
+        var beilage = ergebnis.Attachments.Single(a => a.HoldingName == "80551");
+        Assert.StartsWith(
+            Path.GetFullPath(temporaeresDossier),
+            beilage.SourcePath,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            "Aktuelles Schachtprotokoll",
+            await File.ReadAllTextAsync(beilage.SourcePath));
+        Assert.Equal("Aktuelles Schachtprotokoll", await File.ReadAllTextAsync(pdf));
+    }
+
+    [Fact]
     public async Task Die_Schaechte_stehen_hinter_den_Leitungen()
     {
         var pdf = Path.Combine(_root, "80551.pdf");

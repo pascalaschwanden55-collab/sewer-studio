@@ -51,7 +51,36 @@ public static class DossierPreviewBuilder
         if (mainPart is null || body is null)
             return new DossierPreviewDocument(Array.Empty<DossierPreviewPage>());
 
-        return new Leser(mainPart).Baue(body);
+        return new Leser(mainPart, SammleFusszeilenFelder(mainPart)).Baue(body);
+    }
+
+    /// <summary>
+    /// Fusszeilen gelten auf jedem Blatt. Ihre Platzhalter muessen deshalb auf
+    /// jeder Vorlagenseite als Eingabefeld erreichbar sein, obwohl die
+    /// Seitenbloecke selbst nur aus dem Haupttext entstehen.
+    /// </summary>
+    private static IReadOnlyList<string> SammleFusszeilenFelder(MainDocumentPart mainPart)
+    {
+        var felder = new List<string>();
+
+        foreach (var paragraph in mainPart.FooterParts
+                     .Where(part => part.Footer is not null)
+                     .SelectMany(part => part.Footer!.Descendants<Paragraph>())
+                     .Where(paragraph => !paragraph.Descendants<Paragraph>().Any()))
+        {
+            var text = string.Concat(paragraph.Descendants<WText>().Select(part => part.Text));
+            foreach (Match match in Platzhalter.Matches(text))
+            {
+                if (match.Groups["art"].Value.Length > 0)
+                    continue;
+
+                var key = match.Groups["name"].Value;
+                if (!felder.Contains(key, StringComparer.Ordinal))
+                    felder.Add(key);
+            }
+        }
+
+        return felder;
     }
 
     /// <summary>
@@ -62,16 +91,18 @@ public static class DossierPreviewBuilder
     {
         private readonly MainDocumentPart _mainPart;
         private readonly DocxFormatResolver _format;
+        private readonly IReadOnlyList<string> _fusszeilenFelder;
 
         private readonly List<DossierPreviewPage> _seiten = new();
         private readonly List<DossierPreviewBlock> _bloecke = new();
 
         private DossierPreviewGeometry _geometrie = StandardSeite;
 
-        public Leser(MainDocumentPart mainPart)
+        public Leser(MainDocumentPart mainPart, IReadOnlyList<string> fusszeilenFelder)
         {
             _mainPart = mainPart;
             _format = new DocxFormatResolver(mainPart);
+            _fusszeilenFelder = fusszeilenFelder;
         }
 
         public DossierPreviewDocument Baue(Body body)
@@ -128,12 +159,17 @@ public static class DossierPreviewBuilder
             RueckeVerzeichnisBeilagenDirektAnDieKapitel(bloecke);
             DossierPreviewTocLayout.Apply(bloecke);
 
+            var felder = SammleFelder(bloecke)
+                .Concat(_fusszeilenFelder)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
             _seiten.Add(new DossierPreviewPage(
                 _seiten.Count + 1,
                 Seitentitel(_seiten.Count + 1, bloecke),
                 _geometrie,
                 bloecke,
-                SammleFelder(bloecke)));
+                felder));
 
             _bloecke.Clear();
         }

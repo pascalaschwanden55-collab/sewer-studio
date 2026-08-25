@@ -126,21 +126,31 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     // vollständig leere Seite 2.
                     DocxKnownBlankPageRemover.Apply(document);
 
-                    // Erst JETZT steht fest, wie viele Kapitel das Verzeichnis
-                    // fuehrt: ein weggelassenes hat seine Zeile mitgenommen.
-                    // Jeder zusätzliche Punkt wird direkt dahinter als eigener,
-                    // gleich formatierter Absatz eingesetzt.
-                    DocxTocAttachmentWriter.Apply(
-                        document,
-                        request.Dossier.TocAttachments,
-                        ZaehleVerzeichniszeilen(document) + 1);
-
                     // Die Vorlage setzt zwischen allen Buchstaben zusätzlichen
                     // Abstand und vor jede Verzeichniszeile 18 Punkt Luft.
                     // Kompakte Arial-Zeilen lesen sich deutlich ruhiger; die
                     // Word-Felder und ihre echten Seitenzahlen bleiben dabei
                     // vollständig erhalten.
                     DocxTocLayoutFormatter.Apply(document);
+
+                    // Erst JETZT steht fest, wie viele Kapitel das Verzeichnis
+                    // fuehrt: ein weggelassenes hat seine Zeile mitgenommen.
+                    // Die Zusatzpunkte klonen die bereits vereinheitlichte
+                    // Verzeichniszeile. Ihre eigene Zeichenformatierung wird
+                    // danach aufgetragen und nicht wieder auf Schwarz gesetzt.
+                    DocxTocAttachmentWriter.Apply(
+                        document,
+                        request.Dossier.TocAttachments,
+                        ZaehleVerzeichniszeilen(document) + 1);
+
+                    // Beschriftungen wie "Datum: {{Datum}}" muessen geaendert
+                    // werden, solange der Platzhalter noch erkennbar ist. Die
+                    // dabei gemerkten Zeichenformate werden vom Textfueller auf
+                    // den fertigen Absatz uebertragen.
+                    var literalFormatting = DocxLiteralTextReplacer.ApplyBeforePlaceholderFill(
+                        document,
+                        request.Dossier.TextOverrides,
+                        request.Dossier.FieldStyles);
 
                     DocxPlaceholderFiller.FillRepeatingRows(
                         document,
@@ -179,7 +189,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                             || !string.IsNullOrWhiteSpace(request.Dossier.OverviewPlanPath))
                         .ToList();
 
-                    DocxPlaceholderFiller.Fill(document, values);
+                    DocxPlaceholderFiller.Fill(document, values, literalFormatting);
 
                     // Im echten Word-Verzeichnis wird nur der Titel ersetzt.
                     // Nummer und Seitenzahl bleiben Felder; die gleichnamige
@@ -193,14 +203,6 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     // das Word-Feld. Alle uebrigen Kapitel behalten ihre
                     // Automatik.
                     DocxTocPageEditor.Apply(document, request.Dossier.TocChapterPages);
-
-                    // Zuletzt die eigenen Fassungen fester Texte: sie greifen
-                    // auf Zeilen OHNE Platzhalter, die es nach dem Fuellen noch
-                    // unveraendert gibt.
-                    DocxLiteralTextReplacer.Apply(
-                        document,
-                        request.Dossier.TextOverrides,
-                        request.Dossier.FieldStyles);
 
                     // Die Vorlage bestimmt weiterhin Groessen, Abstaende,
                     // Tabellen und Fusszeile. Nur die Schriftfamilie ist fuer
@@ -532,6 +534,12 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                     {
                         ["Thema"] = thema.Title,
+                        ["Thema" + DossierTopicTextFormatting.StyleRangesSuffix] =
+                            DossierTopicTextFormatting.Encode(
+                                DossierTopicTitleEditing.Styles(
+                                    dossier,
+                                    DossierTopicTitleEditing.SourceTitle(thema),
+                                    thema.Title)),
                         ["Text"] = formatiert.Text,
 
                         // Alte Dossiers mit einer Farbe fuer die ganze Zeile
@@ -608,6 +616,14 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             row["Eigentuemer_Zelle"] = ownerCell.Text;
             row["Eigentuemer_Zelle" + DossierTopicTextFormatting.StyleRangesSuffix] =
                 DossierTopicTextFormatting.Encode(ownerCell.StyleRanges);
+
+            // Nur fuer den direkten Klick in der echten PDF-Vorschau. Die
+            // Word-Vorlage verwendet weiterhin ausschliesslich die gemeinsame
+            // Eigentuemerzelle; diese Einzelwerte geben dem Trefferabgleich
+            // aber eindeutige Textstuecke fuer Telefon, Mail und Bewohner.
+            row["Telefon"] = owner.Phone ?? string.Empty;
+            row["Mail"] = owner.Mail ?? string.Empty;
+            row["Objektbewohner"] = owner.Occupancy ?? string.Empty;
             rows.Add(row);
         }
 
@@ -763,7 +779,8 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             plan,
             MaxWidthCm: width,
             HeightCm: PlanHeightForWidth(width),
-            RemoveParagraphWhenMissing: true));
+            RemoveParagraphWhenMissing: true,
+            FitWithinBounds: true));
 
         return placements;
     }
@@ -790,7 +807,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     {
         "Logo" => "Firmenlogo nicht gefunden.",
         "Wappen" => "Wappen nicht gefunden.",
-        "Uebersichtsplan" => "Übersichtsplan nicht gefunden – Kapitel 1 bleibt leer.",
+        "Uebersichtsplan" => "Werkleitungsplan nicht gefunden – Kapitel 1 bleibt leer.",
         _ => placeholderName + " nicht gefunden."
     };
 
@@ -805,7 +822,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// </summary>
     public static double PlanWidthCm(DossierDefinition dossier)
         => dossier?.OverviewPlanWidthCm is { } cm && cm > 0
-            ? Math.Min(cm, 30.0)
+            ? Math.Min(cm, PlanMaxWidthCm)
             : PlanMaxWidthCm;
 
     public static string? ResolvePlanPath(DossierExportRequest request)

@@ -8,6 +8,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
 using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.Infrastructure.Dossiers;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -249,10 +250,9 @@ public partial class DossierPlanWindow : Window
             return;
         }
 
-        if (cm is <= 0 or > 30)
+        if (cm is <= 0 or > DossierWordTemplateExportService.PlanMaxWidthCm)
         {
-            // Mehr als 30 cm passt auf kein A4-Blatt.
-            StatusText.Text = "Die Breite muss zwischen 1 und 30 cm liegen.";
+            StatusText.Text = "Die Breite muss zwischen 1 und 15 cm liegen.";
             return;
         }
 

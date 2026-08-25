@@ -182,6 +182,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                     _sp.DossierDirectory,
                     _sp.DossierPlanImages,
                     _sp.DossierPlanAdjuster,
+                    _sp.DossierPlanPublications,
                     _sp.DossierOutputPreview,
                     _sp.DossierPreviewPages),
                 costStores: _sp.CostStores,

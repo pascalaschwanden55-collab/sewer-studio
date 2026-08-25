@@ -301,6 +301,78 @@ public sealed class DossiersPageActionFlowTests : IDisposable
         Assert.Contains("nicht erstellt", vm.StatusMessage, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Verschwundenes_Dossier_nimmt_neu_veroeffentlichten_Plan_zurueck()
+    {
+        var dossier = new DossierDefinition { Name = "Musterweg 1" };
+        _store.Dokument.Dossiers.Add(dossier);
+        var publication = new FakePlanPublication();
+
+        var vm = BaueCockpit();
+        _fenster.VorschauUebernahme = new DossierPreviewChoice(
+            new DossierAreaSettings(),
+            DossierDeepCopy.Of(dossier),
+            publication);
+        _fenster.VorVorschauRueckgabe = () => _store.Dokument.Dossiers.Clear();
+
+        await vm.PreviewCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, publication.RollbackCalls);
+        Assert.Equal(0, publication.AcceptCalls);
+        Assert.Equal(0, _store.Speicherlaeufe);
+        Assert.Contains("verschwunden", vm.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Speicherfehler_nimmt_nur_die_neue_Planveroeffentlichung_zurueck()
+    {
+        var dossier = new DossierDefinition
+        {
+            Name = "Musterweg 1",
+            OverviewPlanPath = "alter-plan.png"
+        };
+        _store.Dokument.Dossiers.Add(dossier);
+        var publication = new FakePlanPublication();
+        var bearbeitet = DossierDeepCopy.Of(dossier);
+        bearbeitet.OverviewPlanPath = "neuer-plan.png";
+
+        var vm = BaueCockpit();
+        _fenster.VorschauUebernahme = new DossierPreviewChoice(
+            new DossierAreaSettings(),
+            bearbeitet,
+            publication);
+        _store.SpeichernScheitert = true;
+
+        await vm.PreviewCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, publication.RollbackCalls);
+        Assert.Equal(0, publication.AcceptCalls);
+        Assert.Equal("alter-plan.png", _store.Dokument.Dossiers[0].OverviewPlanPath);
+        Assert.Contains("bleiben wie vorher", vm.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Erfolgreiches_Speichern_bestaetigt_die_neue_Planveroeffentlichung()
+    {
+        var dossier = new DossierDefinition { Name = "Musterweg 1" };
+        _store.Dokument.Dossiers.Add(dossier);
+        var publication = new FakePlanPublication();
+        var bearbeitet = DossierDeepCopy.Of(dossier);
+        bearbeitet.OverviewPlanPath = "neuer-plan.png";
+
+        var vm = BaueCockpit();
+        _fenster.VorschauUebernahme = new DossierPreviewChoice(
+            new DossierAreaSettings(),
+            bearbeitet,
+            publication);
+
+        await vm.PreviewCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, publication.AcceptCalls);
+        Assert.Equal(0, publication.RollbackCalls);
+        Assert.Equal("neuer-plan.png", _store.Dokument.Dossiers[0].OverviewPlanPath);
+    }
+
     // ── Attrappen ─────────────────────────────────────────────────────────
 
     private sealed class FakeDialogs : IDossierDialogs
@@ -309,6 +381,8 @@ public sealed class DossiersPageActionFlowTests : IDisposable
         public List<Guid>? LeitungsAuswahl { get; set; }
         public Action<DossierDefinition>? StammdatenAenderung { get; set; }
         public Action<DossierAreaSettings>? GebietsAenderung { get; set; }
+        public DossierPreviewChoice? VorschauUebernahme { get; set; }
+        public Action? VorVorschauRueckgabe { get; set; }
 
         public DossierParcelLookupChoice? NewProperty(
             IReadOnlyDictionary<string, Guid> holdingIdsByName,
@@ -344,11 +418,48 @@ public sealed class DossiersPageActionFlowTests : IDisposable
         public List<string>? PickShafts(Project project, IReadOnlyCollection<string> chosen)
             => SchachtAuswahl;
 
-        public (DossierAreaSettings Area, DossierDefinition Dossier)? Preview(
-            DossierExportRequest request, string templatePath) => null;
+        public DossierPreviewChoice? Preview(
+            DossierExportRequest request, string templatePath)
+        {
+            VorVorschauRueckgabe?.Invoke();
+            return VorschauUebernahme;
+        }
 
         public DossierRefreshChoice? Refresh(string dossierName, DossierRefreshProposal proposal)
             => null;
+    }
+
+    private sealed class FakePlanPublication : IDossierPlanPublication
+    {
+        private bool _finished;
+
+        public string PublishedPath => "neuer-plan.png";
+
+        public int AcceptCalls { get; private set; }
+
+        public int RollbackCalls { get; private set; }
+
+        public void Accept()
+        {
+            if (_finished)
+                return;
+
+            _finished = true;
+            AcceptCalls++;
+        }
+
+        public DossierPlanRollbackResult Rollback()
+        {
+            if (_finished)
+                return DossierPlanRollbackResult.Ok();
+
+            _finished = true;
+            RollbackCalls++;
+            return DossierPlanRollbackResult.Ok();
+        }
+
+        public void Dispose()
+            => _ = Rollback();
     }
 
     private sealed class FakeStore : IDossierStore

@@ -106,7 +106,11 @@ public static class DossierTopicEditing
         ArgumentNullException.ThrowIfNull(dossier);
 
         return DossierTopicResolver.Resolve(area, dossier)
-            .FirstOrDefault(t => string.Equals(t.Title, title, StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault(t => string.Equals(
+                    DossierTopicTitleEditing.SourceTitle(t),
+                    title,
+                    StringComparison.OrdinalIgnoreCase)
+                || string.Equals(t.Title, title, StringComparison.OrdinalIgnoreCase))
             ?.ColorHex ?? string.Empty;
     }
 

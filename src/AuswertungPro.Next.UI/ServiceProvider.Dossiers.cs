@@ -11,6 +11,10 @@ public sealed partial class ServiceProvider
     /// <summary>Ablage der Eigentuemerdossiers eines Projekts.</summary>
     public IDossierStore DossierStore => _dossierComposition.Store;
 
+    /// <summary>Veroeffentlicht bearbeitete Planbilder sicher im Projekt.</summary>
+    public IDossierPlanPublicationService DossierPlanPublications
+        => _dossierComposition.PlanPublications;
+
     /// <summary>Erzeugt die Word-Datei aus der Vorlage.</summary>
     public IDossierWordExportService DossierWordExport => _dossierComposition.WordExport;
 

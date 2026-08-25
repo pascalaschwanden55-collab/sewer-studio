@@ -25,6 +25,7 @@ public sealed class WpfDossierDialogs : IDossierDialogs
     private readonly IDirectoryLookup _directory;
     private readonly IPlanImageConverter _planImages;
     private readonly IPlanImageAdjuster _planAdjuster;
+    private readonly IDossierPlanPublicationService _planPublications;
     private readonly IDossierOutputPreviewService _outputPreview;
     private readonly IDossierPreviewPageRasterizer _previewPages;
 
@@ -35,6 +36,7 @@ public sealed class WpfDossierDialogs : IDossierDialogs
         IDirectoryLookup directory,
         IPlanImageConverter planImages,
         IPlanImageAdjuster planAdjuster,
+        IDossierPlanPublicationService planPublications,
         IDossierOutputPreviewService outputPreview,
         IDossierPreviewPageRasterizer previewPages)
     {
@@ -44,6 +46,7 @@ public sealed class WpfDossierDialogs : IDossierDialogs
         _directory = directory ?? throw new ArgumentNullException(nameof(directory));
         _planImages = planImages ?? throw new ArgumentNullException(nameof(planImages));
         _planAdjuster = planAdjuster ?? throw new ArgumentNullException(nameof(planAdjuster));
+        _planPublications = planPublications ?? throw new ArgumentNullException(nameof(planPublications));
         _outputPreview = outputPreview ?? throw new ArgumentNullException(nameof(outputPreview));
         _previewPages = previewPages ?? throw new ArgumentNullException(nameof(previewPages));
     }
@@ -79,13 +82,14 @@ public sealed class WpfDossierDialogs : IDossierDialogs
     public List<string>? PickShafts(Project project, IReadOnlyCollection<string> chosen)
         => DossierShaftPickerWindow.ShowFor(project, chosen);
 
-    public (DossierAreaSettings Area, DossierDefinition Dossier)? Preview(
+    public DossierPreviewChoice? Preview(
         DossierExportRequest request, string templatePath)
         => DossierPreviewWindow.ShowFor(
             request,
             templatePath,
             _planImages,
             _planAdjuster,
+            _planPublications,
             _outputPreview,
             _previewPages);
 

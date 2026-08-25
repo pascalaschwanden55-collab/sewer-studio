@@ -81,7 +81,9 @@ internal sealed partial class DossierPreviewFieldPanel
 
             foreach (var spalte in typ.Spalten)
             {
-                inhalt.Children.Add(new TextBlock
+                var feldKarte = new StackPanel();
+
+                feldKarte.Children.Add(new TextBlock
                 {
                     Text = spalte.Label,
                     Margin = new Thickness(0, 5, 0, 2),
@@ -114,13 +116,16 @@ internal sealed partial class DossierPreviewFieldPanel
                     _zeichneBlatt();
                 };
 
-                inhalt.Children.Add(box);
-                inhalt.Children.Add(DossierTextFormattingToolbar.Create(box, () =>
+                feldKarte.Children.Add(box);
+                var formatWerkzeuge = DossierTextFormattingToolbar.Create(box, () =>
                 {
                     SpeichereZeilenfeld(zeile, spalte, box);
                     _zeichneBlatt();
                     Betone(cellTarget);
-                }));
+                });
+                ZeigeWerkzeugeNurAmAktivenFeld(feldKarte, formatWerkzeuge);
+                feldKarte.Children.Add(formatWerkzeuge);
+                inhalt.Children.Add(feldKarte);
 
                 MerkeStelle(cellTarget, box);
             }

@@ -587,7 +587,7 @@ public sealed partial class DossiersPageViewModel
 
         var definition = Selected.Definition;
 
-        (DossierAreaSettings Area, DossierDefinition Dossier)? ergebnis;
+        DossierPreviewChoice? ergebnis;
         try
         {
             ergebnis = _dialogWindows.Preview(BuildRequest(root, definition), vorlage);
@@ -605,10 +605,15 @@ public sealed partial class DossiersPageViewModel
             return;
         }
 
+        using var uebernahme = ergebnis;
+
         var stelle = _document.Dossiers.FindIndex(d => d.Id == definition.Id);
         if (stelle < 0)
         {
+            var rollback = uebernahme.RollbackPlanPublication();
             StatusMessage = "Das Dossier ist zwischenzeitlich verschwunden — nichts übernommen.";
+            if (!rollback.Success)
+                StatusMessage += " " + rollback.Error;
             return;
         }
 
@@ -619,17 +624,21 @@ public sealed partial class DossiersPageViewModel
         var vorherigesGebiet = _document.Area;
         var vorherigesDossier = _document.Dossiers[stelle];
 
-        _document.Area = ergebnis.Value.Area;
-        _document.Dossiers[stelle] = ergebnis.Value.Dossier;
+        _document.Area = uebernahme.Area;
+        _document.Dossiers[stelle] = uebernahme.Dossier;
 
         if (!await SaveDocumentAsync(root))
         {
             _document.Area = vorherigesGebiet;
             _document.Dossiers[stelle] = vorherigesDossier;
+            var rollback = uebernahme.RollbackPlanPublication();
             StatusMessage = "Nicht gespeichert — die Angaben bleiben wie vorher.";
+            if (!rollback.Success)
+                StatusMessage += " " + rollback.Error;
             return;
         }
 
+        uebernahme.AcceptPlanPublication();
         await ReloadAsync();
         StatusMessage = "Angaben aus der Vorschau übernommen.";
     }

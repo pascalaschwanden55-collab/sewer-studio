@@ -23,6 +23,10 @@ namespace AuswertungPro.Next.Infrastructure.Dossiers;
 /// Optionale feste Hoehe der Vorlagenflaeche. Leer behaelt das Bild sein
 /// Seitenverhaeltnis.
 /// </param>
+/// <param name="FitWithinBounds">
+/// Wahr passt das Bild proportional in Breite und Hoehe ein. Damit bleibt ein
+/// JPG unverzerrt und zugleich innerhalb der originalen Planflaeche.
+/// </param>
 /// <param name="RemoveParagraphWhenMissing">
 /// Entfernt bei einem fehlenden Bild den ganzen Platzhalterabsatz samt
 /// Vorlagenformen. Das ist fuer den Uebersichtsplan noetig: sein grosser
@@ -33,7 +37,8 @@ public sealed record DocxImagePlacement(
     string ImagePath,
     double MaxWidthCm,
     double? HeightCm = null,
-    bool RemoveParagraphWhenMissing = false);
+    bool RemoveParagraphWhenMissing = false,
+    bool FitWithinBounds = false);
 
 /// <summary>
 /// Ersetzt Platzhalter der Form <c>{{@Name}}</c> durch ein eingebettetes Bild.
@@ -52,6 +57,14 @@ public sealed record DocxImagePlacement(
 /// </summary>
 public static class DocxImagePlaceholderFiller
 {
+    private readonly record struct DrawingGeometry(
+        long FrameWidthEmu,
+        long FrameHeightEmu,
+        long PictureXEmu,
+        long PictureYEmu,
+        long PictureWidthEmu,
+        long PictureHeightEmu);
+
     /// <summary>Kennzeichnet einen Bildplatzhalter.</summary>
     public const string MarkerPrefix = "{{@";
 
@@ -195,12 +208,40 @@ public static class DocxImagePlaceholderFiller
 
         var relationshipId = mainPart.GetIdOfPart(imagePart);
 
-        var widthEmu = (long)Math.Round(placement.MaxWidthCm * EmuPerCm);
-        var heightEmu = placement.HeightCm is > 0
+        var frameWidthEmu = (long)Math.Round(placement.MaxWidthCm * EmuPerCm);
+        var naturalHeightEmu = (long)Math.Round(
+            frameWidthEmu * (double)pixelHeight / pixelWidth);
+        var frameHeightEmu = placement.HeightCm is > 0
             ? (long)Math.Round(placement.HeightCm.Value * EmuPerCm)
-            : (long)Math.Round(widthEmu * (double)pixelHeight / pixelWidth);
+            : naturalHeightEmu;
+        var pictureWidthEmu = frameWidthEmu;
+        var pictureHeightEmu = frameHeightEmu;
 
-        return BuildDrawing(relationshipId, widthEmu, heightEmu, drawingId, placement.PlaceholderName);
+        if (placement.FitWithinBounds && placement.HeightCm is > 0)
+        {
+            pictureHeightEmu = naturalHeightEmu;
+            if (pictureHeightEmu > frameHeightEmu)
+            {
+                pictureHeightEmu = frameHeightEmu;
+                pictureWidthEmu = (long)Math.Round(
+                    pictureHeightEmu * (double)pixelWidth / pixelHeight);
+            }
+        }
+
+        // Der aeussere Inline-Rahmen behaelt immer die Vorlagenmasse. Nur das
+        // Bild darin wird proportional verkleinert und mittig platziert. So
+        // bleibt ein Querformat unverzerrt, ohne dass das Folgekapitel auf die
+        // Planseite hochrutscht.
+        var geometry = new DrawingGeometry(
+            frameWidthEmu,
+            frameHeightEmu,
+            Math.Max(0, (frameWidthEmu - pictureWidthEmu) / 2),
+            Math.Max(0, (frameHeightEmu - pictureHeightEmu) / 2),
+            pictureWidthEmu,
+            pictureHeightEmu);
+
+        return BuildDrawing(
+            relationshipId, geometry, drawingId, placement.PlaceholderName);
     }
 
     private static PartTypeInfo? ResolvePartType(string path)
@@ -213,12 +254,15 @@ public static class DocxImagePlaceholderFiller
 
     private static Drawing BuildDrawing(
         string relationshipId,
-        long widthEmu,
-        long heightEmu,
+        DrawingGeometry geometry,
         uint drawingId,
         string name) => new(
         new DW.Inline(
-            new DW.Extent { Cx = widthEmu, Cy = heightEmu },
+            new DW.Extent
+            {
+                Cx = geometry.FrameWidthEmu,
+                Cy = geometry.FrameHeightEmu
+            },
             new DW.EffectExtent { LeftEdge = 0L, TopEdge = 0L, RightEdge = 0L, BottomEdge = 0L },
             new DW.DocProperties { Id = drawingId, Name = name },
             new DW.NonVisualGraphicFrameDrawingProperties(
@@ -234,8 +278,16 @@ public static class DocxImagePlaceholderFiller
                             new A.Stretch(new A.FillRectangle())),
                         new PIC.ShapeProperties(
                             new A.Transform2D(
-                                new A.Offset { X = 0L, Y = 0L },
-                                new A.Extents { Cx = widthEmu, Cy = heightEmu }),
+                                new A.Offset
+                                {
+                                    X = geometry.PictureXEmu,
+                                    Y = geometry.PictureYEmu
+                                },
+                                new A.Extents
+                                {
+                                    Cx = geometry.PictureWidthEmu,
+                                    Cy = geometry.PictureHeightEmu
+                                }),
                             new A.PresetGeometry(new A.AdjustValueList())
                             {
                                 Preset = A.ShapeTypeValues.Rectangle

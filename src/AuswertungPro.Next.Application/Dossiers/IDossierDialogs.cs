@@ -19,6 +19,71 @@ public sealed record DossierRefreshChoice(
     IReadOnlyList<string> Shafts);
 
 /// <summary>
+/// Uebernommene Vorschauangaben samt einer allenfalls neu veroeffentlichten
+/// Plandatei. Der Plan wird erst nach erfolgreichem Speichern bestaetigt.
+/// </summary>
+public sealed class DossierPreviewChoice : IDisposable
+{
+    private IDossierPlanPublication? _planPublication;
+
+    public DossierPreviewChoice(
+        DossierAreaSettings area,
+        DossierDefinition dossier,
+        IDossierPlanPublication? planPublication = null)
+    {
+        Area = area ?? throw new ArgumentNullException(nameof(area));
+        Dossier = dossier ?? throw new ArgumentNullException(nameof(dossier));
+        _planPublication = planPublication;
+    }
+
+    public DossierAreaSettings Area { get; }
+
+    public DossierDefinition Dossier { get; }
+
+    public void AcceptPlanPublication()
+    {
+        var publication = TakePublication();
+        if (publication is null)
+            return;
+
+        try
+        {
+            publication.Accept();
+        }
+        finally
+        {
+            publication.Dispose();
+        }
+    }
+
+    public DossierPlanRollbackResult RollbackPlanPublication()
+    {
+        var publication = TakePublication();
+        if (publication is null)
+            return DossierPlanRollbackResult.Ok();
+
+        try
+        {
+            return publication.Rollback();
+        }
+        catch (Exception ex)
+        {
+            return DossierPlanRollbackResult.Failed(ex.Message);
+        }
+        finally
+        {
+            publication.Dispose();
+        }
+    }
+
+    public void Dispose()
+        => _ = RollbackPlanPublication();
+
+    private IDossierPlanPublication? TakePublication()
+        => System.Threading.Interlocked.Exchange(ref _planPublication, null);
+}
+
+/// <summary>
 /// Die Fenster des Dossier-Bereichs — als Vertrag statt als acht feste
 /// Aufrufe.
 ///
@@ -56,7 +121,7 @@ public interface IDossierDialogs
     List<string>? PickShafts(Project project, IReadOnlyCollection<string> chosen);
 
     /// <summary>Seite fuer Seite ansehen und ausfuellen.</summary>
-    (DossierAreaSettings Area, DossierDefinition Dossier)? Preview(
+    DossierPreviewChoice? Preview(
         DossierExportRequest request, string templatePath);
 
     /// <summary>Zeigen, was das Dossier ergaenzen wuerde.</summary>

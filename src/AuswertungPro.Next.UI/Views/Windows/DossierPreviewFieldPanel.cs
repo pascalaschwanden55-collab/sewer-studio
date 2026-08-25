@@ -28,7 +28,7 @@ internal sealed partial class DossierPreviewFieldPanel
     private readonly Panel _wirt;
     private readonly DossierAreaSettings _area;
     private readonly DossierDefinition _dossier;
-    private readonly DossierExportRequest _request;
+    private readonly string _planWorkFolder;
     private readonly DossierPreviewDocument _document;
     private readonly IPlanImageConverter _planImages;
     private readonly IPlanImageAdjuster _planAdjuster;
@@ -51,7 +51,7 @@ internal sealed partial class DossierPreviewFieldPanel
         Panel wirt,
         DossierAreaSettings area,
         DossierDefinition dossier,
-        DossierExportRequest request,
+        string planWorkFolder,
         DossierPreviewDocument document,
         IPlanImageConverter planImages,
         IPlanImageAdjuster planAdjuster,
@@ -66,7 +66,9 @@ internal sealed partial class DossierPreviewFieldPanel
         _wirt = wirt ?? throw new ArgumentNullException(nameof(wirt));
         _area = area ?? throw new ArgumentNullException(nameof(area));
         _dossier = dossier ?? throw new ArgumentNullException(nameof(dossier));
-        _request = request ?? throw new ArgumentNullException(nameof(request));
+        _planWorkFolder = !string.IsNullOrWhiteSpace(planWorkFolder)
+            ? planWorkFolder
+            : throw new ArgumentException("Der Plan-Arbeitsordner fehlt.", nameof(planWorkFolder));
         _document = document ?? throw new ArgumentNullException(nameof(document));
         _planImages = planImages ?? throw new ArgumentNullException(nameof(planImages));
         _planAdjuster = planAdjuster ?? throw new ArgumentNullException(nameof(planAdjuster));

@@ -100,7 +100,7 @@ public sealed class PlanImageAdjusterTests : IDisposable
     }
 
     [Fact]
-    public void Ein_Bild_im_Dossierordner_wird_ersetzt_statt_vervielfacht()
+    public void Ein_Bild_im_Dossierordner_bleibt_beim_Bearbeiten_unveraendert()
     {
         RunOnSta(() =>
         {
@@ -111,8 +111,10 @@ public sealed class PlanImageAdjusterTests : IDisposable
             var zweimal = new PlanImageAdjuster().Rotate(einmal.ImagePath, ziel, 90);
 
             Assert.True(zweimal.Success, zweimal.Error);
-            Assert.Equal(Path.GetFullPath(quelle), Path.GetFullPath(zweimal.ImagePath!));
-            Assert.Single(Directory.GetFiles(ziel, "*.png"));
+            Assert.NotEqual(Path.GetFullPath(quelle), Path.GetFullPath(einmal.ImagePath!));
+            Assert.NotEqual(Path.GetFullPath(einmal.ImagePath!), Path.GetFullPath(zweimal.ImagePath!));
+            Assert.Equal((40, 20), Masse(quelle));
+            Assert.Equal(3, Directory.GetFiles(ziel, "*.png").Length);
 
             // Zweimal ein Viertel ergibt die halbe Drehung.
             Assert.Equal((40, 20), Masse(zweimal.ImagePath!));

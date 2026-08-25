@@ -505,7 +505,7 @@
                                     ToolTip="Ergänzt Leitungen und Schächte, die das Projekt inzwischen kennt. Entfernt nie etwas."
                                     Command="{Binding RefreshDossierCommand}"/>
                             <Button Content="Stammdaten…" Padding="12,7" Margin="0,0,8,8"
-                                    ToolTip="Adresse, Eigentümerzeilen, Übersichtsplan und die Themen dieses Dossiers bearbeiten."
+                                    ToolTip="Adresse, Eigentümerzeilen, Werkleitungsplan und die Themen dieses Dossiers bearbeiten."
                                     Command="{Binding EditDossierCommand}"/>
                             <Button Content="Vorschau" Padding="12,7" Margin="0,0,8,8"
                                     ToolTip="Seite für Seite ansehen und ausfüllen"

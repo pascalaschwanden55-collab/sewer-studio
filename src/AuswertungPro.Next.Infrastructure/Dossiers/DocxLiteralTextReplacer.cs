@@ -12,6 +12,27 @@ using DocumentFormat.OpenXml.Wordprocessing;
 namespace AuswertungPro.Next.Infrastructure.Dossiers;
 
 /// <summary>
+/// Zeichenformate und geschuetzte Textbereiche fester Beschriftungen in
+/// Absaetzen, deren echte Vorlagen-Platzhalter erst danach gefuellt werden.
+/// Die Absatzreferenzen leben nur waehrend eines Exportlaufs und werden nie
+/// gespeichert.
+/// </summary>
+internal sealed record DocxLiteralFormatting(
+    IReadOnlyDictionary<Paragraph, IReadOnlyList<DossierTextStyleRange>> Paragraphs,
+    IReadOnlyDictionary<Paragraph, IReadOnlyList<DocxLiteralRange>> LiteralRanges)
+{
+    public static DocxLiteralFormatting Empty { get; } = new(
+        new Dictionary<Paragraph, IReadOnlyList<DossierTextStyleRange>>(),
+        new Dictionary<Paragraph, IReadOnlyList<DocxLiteralRange>>());
+}
+
+/// <summary>
+/// Ein vom Benutzer geschriebener Bereich. Platzhalter-aehnlicher Text darin
+/// ist Inhalt und kein Steuerzeichen der Word-Vorlage.
+/// </summary>
+internal readonly record struct DocxLiteralRange(int Start, int Length);
+
+/// <summary>
 /// Ersetzt feste Texte der Vorlage durch eigene Angaben des Dossiers —
 /// Kapitelueberschriften, Spaltentitel, jede Zeile ohne Platzhalter.
 ///
@@ -30,15 +51,31 @@ public static class DocxLiteralTextReplacer
         WordprocessingDocument document,
         IReadOnlyDictionary<string, string>? overrides,
         IReadOnlyDictionary<string, List<DossierTextStyleRange>>? fieldStyles = null)
+        => ApplyCore(document, overrides, fieldStyles).Changed;
+
+    /// <summary>
+    /// Ersetzt feste Texte, bevor die normalen Platzhalter gefuellt werden, und
+    /// liefert die Formate gemischter Beschriftungen fuer diesen Fuellvorgang.
+    /// </summary>
+    internal static DocxLiteralFormatting ApplyBeforePlaceholderFill(
+        WordprocessingDocument document,
+        IReadOnlyDictionary<string, string>? overrides,
+        IReadOnlyDictionary<string, List<DossierTextStyleRange>>? fieldStyles = null)
+        => ApplyCore(document, overrides, fieldStyles).Formatting;
+
+    private static (int Changed, DocxLiteralFormatting Formatting) ApplyCore(
+        WordprocessingDocument document,
+        IReadOnlyDictionary<string, string>? overrides,
+        IReadOnlyDictionary<string, List<DossierTextStyleRange>>? fieldStyles)
     {
         ArgumentNullException.ThrowIfNull(document);
 
         if (overrides is null || overrides.Count == 0)
-            return 0;
+            return (0, DocxLiteralFormatting.Empty);
 
         var body = document.MainDocumentPart?.Document?.Body;
         if (body is null)
-            return 0;
+            return (0, DocxLiteralFormatting.Empty);
 
         var karte = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (schluessel, wert) in overrides)
@@ -49,6 +86,8 @@ public static class DocxLiteralTextReplacer
         }
 
         var geaendert = 0;
+        var gemischteFormate = new Dictionary<Paragraph, IReadOnlyList<DossierTextStyleRange>>();
+        var literalTextbereiche = new Dictionary<Paragraph, IReadOnlyList<DocxLiteralRange>>();
 
         foreach (var absatz in body.Descendants<Paragraph>().ToList())
         {
@@ -84,8 +123,48 @@ public static class DocxLiteralTextReplacer
             // einziger Lauf; frueher war damit auch das Wort „Datum:" gesperrt.
             if (text.Contains("{{", StringComparison.Ordinal))
             {
-                if (ErsetzeBeschriftung(stuecke, text, karte))
+                if (ErsetzeBeschriftung(
+                        stuecke,
+                        text,
+                        karte,
+                        out var schluessel,
+                        out var beschriftungsErsatz,
+                        out var start))
+                {
                     geaendert++;
+
+                    if (beschriftungsErsatz.Length > 0)
+                    {
+                        literalTextbereiche[absatz] =
+                        [
+                            new DocxLiteralRange(start, beschriftungsErsatz.Length)
+                        ];
+                    }
+
+                    var beschriftungsStyleKey =
+                        DossierTopicTextFormatting.LiteralStyleKey(schluessel);
+                    if (fieldStyles is not null
+                        && fieldStyles.TryGetValue(
+                            beschriftungsStyleKey,
+                            out var gespeichert))
+                    {
+                        var beschriftungsRanges = DossierTopicTextFormatting
+                            .Normalize(beschriftungsErsatz, gespeichert)
+                            .Select(range => new DossierTextStyleRange
+                            {
+                                Start = start + range.Start,
+                                Length = range.Length,
+                                ColorHex = range.ColorHex,
+                                Bold = range.Bold,
+                                Italic = range.Italic,
+                                Underline = range.Underline
+                            })
+                            .ToList();
+
+                        if (beschriftungsRanges.Count > 0)
+                            gemischteFormate[absatz] = beschriftungsRanges;
+                    }
+                }
 
                 continue;
             }
@@ -119,10 +198,22 @@ public static class DocxLiteralTextReplacer
                     stuecke[i].Text = string.Empty;
             }
 
+            // Auch eine frei bearbeitete reine Ueberschrift darf Zeichen wie
+            // {{Datum}} enthalten. Sie sind Benutzereingabe und kein nach dem
+            // Ersetzen neu entstandener Vorlagen-Platzhalter.
+            literalTextbereiche[absatz] =
+            [
+                new DocxLiteralRange(0, ersatz.Length)
+            ];
+
             geaendert++;
         }
 
-        return geaendert;
+        return (
+            geaendert,
+            gemischteFormate.Count == 0 && literalTextbereiche.Count == 0
+                ? DocxLiteralFormatting.Empty
+                : new DocxLiteralFormatting(gemischteFormate, literalTextbereiche));
     }
 
     /// <summary>
@@ -138,14 +229,23 @@ public static class DocxLiteralTextReplacer
     private static bool ErsetzeBeschriftung(
         List<Text> stuecke,
         string text,
-        IReadOnlyDictionary<string, string> karte)
+        IReadOnlyDictionary<string, string> karte,
+        out string schluessel,
+        out string ersatz,
+        out int start)
     {
+        schluessel = string.Empty;
+        ersatz = string.Empty;
+        start = 0;
+
         if (DossierMixedParagraphLiteral.Bereich(text) is not { } bereich)
             return false;
 
-        var schluessel = text.Substring(bereich.Start, bereich.Length);
-        if (!karte.TryGetValue(schluessel, out var ersatz))
+        schluessel = text.Substring(bereich.Start, bereich.Length);
+        if (!karte.TryGetValue(schluessel, out var eigenerText))
             return false;
+
+        ersatz = eigenerText;
 
         // `text` ist getrimmt, die Stuecke sind es nicht. Ohne diesen Versatz
         // laege der Bereich um die fuehrenden Leerzeichen daneben.
@@ -156,6 +256,7 @@ public static class DocxLiteralTextReplacer
 
         var von = versatz + bereich.Start;
         var bis = von + bereich.Length;
+        start = von;
         var gesetzt = false;
         var gelesen = 0;
 

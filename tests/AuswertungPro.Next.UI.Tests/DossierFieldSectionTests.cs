@@ -1,10 +1,19 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
+using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.Application.Dossiers.Preview;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.UI.Views.Windows;
 
 using Xunit;
@@ -164,6 +173,162 @@ public sealed class DossierFieldSectionTests
         // — sonst verschwaende die Leiste in dem Moment, in dem man einen ihrer
         // Knoepfe anklickt.
         Assert.Equal(erwartet, DossierFieldHighlight.SichtbarkeitFuer(fokusInDerKarte));
+    }
+
+    [Fact]
+    public void Formatleiste_bleibt_beim_Klick_auf_ihr_Werkzeug_sichtbar()
+    {
+        RunOnSta(() =>
+        {
+            var editor = new TextBox();
+            var knopf = new Button { Content = "Fett" };
+            var werkzeuge = new StackPanel { Children = { knopf } };
+            var karte = new StackPanel { Children = { editor, werkzeuge } };
+            var ausserhalb = new TextBox();
+            var fenster = new Window
+            {
+                Content = new StackPanel { Children = { karte, ausserhalb } },
+                Width = 300,
+                Height = 180,
+                ShowInTaskbar = false,
+                WindowStyle = WindowStyle.None
+            };
+
+            DossierFieldHighlight.ZeigeWerkzeugeNurAmAktivenFeld(karte, werkzeuge);
+
+            try
+            {
+                fenster.Show();
+                Keyboard.Focus(editor);
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(80));
+                Assert.Equal(Visibility.Visible, werkzeuge.Visibility);
+
+                Keyboard.Focus(knopf);
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(80));
+                Assert.Equal(Visibility.Visible, werkzeuge.Visibility);
+
+                Keyboard.Focus(ausserhalb);
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(80));
+                Assert.Equal(Visibility.Collapsed, werkzeuge.Visibility);
+            }
+            finally
+            {
+                fenster.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void Seitenzahl_der_Verzeichniszeile_zeigt_nicht_die_Formatleiste_des_Titels()
+    {
+        // Titel und Seitenzahl stehen in derselben Karte, sind aber zwei
+        // verschiedene Eingaben. Beim Schreiben der Zahl darf die Leiste des
+        // Titels nicht sichtbar bleiben und versehentlich dessen Text aendern.
+        RunOnSta(() =>
+        {
+            var area = new DossierAreaSettings();
+            var dossier = new DossierDefinition();
+            var project = new Project();
+            var request = new DossierExportRequest(
+                project,
+                string.Empty,
+                area,
+                dossier,
+                DossierSnapshotBuilder.Build(dossier, project, null),
+                string.Empty);
+            var panel = new DossierPreviewFieldPanel(
+                new StackPanel(),
+                area,
+                dossier,
+                System.IO.Path.GetTempPath(),
+                new DossierPreviewDocument([]),
+                new PlanImageConverterStub(),
+                new PlanImageAdjusterStub(),
+                () => new Dictionary<string, string>(),
+                () => { },
+                _ => { },
+                (_, _) => { },
+                _ => new object(),
+                _ => { },
+                () => new Window());
+
+            var methode = typeof(DossierPreviewFieldPanel).GetMethod(
+                "BaueFesteTexte",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(methode);
+            var wurzel = Assert.IsAssignableFrom<UIElement>(methode.Invoke(
+                panel,
+                new object[] { new[] { "Kapitel" }, new[] { "Kapitel" } }));
+
+            var titel = Assert.Single(Nachfahren(wurzel).OfType<RichTextBox>());
+            var seitenzahl = Assert.Single(Nachfahren(wurzel).OfType<TextBox>());
+            var fett = Assert.Single(Nachfahren(wurzel).OfType<Button>()
+                .Where(knopf => string.Equals(
+                    knopf.Content as string, "Fett", StringComparison.Ordinal)));
+            var zeile = Assert.IsType<WrapPanel>(LogicalTreeHelper.GetParent(fett));
+            var werkzeuge = Assert.IsType<StackPanel>(LogicalTreeHelper.GetParent(zeile));
+            var fenster = new Window
+            {
+                Content = wurzel,
+                Width = 420,
+                Height = 600,
+                ShowInTaskbar = false,
+                WindowStyle = WindowStyle.None
+            };
+
+            try
+            {
+                fenster.Show();
+                Keyboard.Focus(titel);
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(80));
+                Assert.Equal(Visibility.Visible, werkzeuge.Visibility);
+
+                Keyboard.Focus(seitenzahl);
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(80));
+                Assert.Equal(Visibility.Collapsed, werkzeuge.Visibility);
+            }
+            finally
+            {
+                fenster.Close();
+            }
+        });
+    }
+
+    private static IEnumerable<DependencyObject> Nachfahren(DependencyObject wurzel)
+    {
+        foreach (var kind in LogicalTreeHelper.GetChildren(wurzel)
+                     .OfType<DependencyObject>())
+        {
+            yield return kind;
+            foreach (var nachfahr in Nachfahren(kind))
+                yield return nachfahr;
+        }
+    }
+
+    private sealed class PlanImageConverterStub : IPlanImageConverter
+    {
+        public bool NeedsConversion(string? path) => false;
+
+        public Task<PlanImageResult> ConvertAsync(
+            string sourcePath,
+            string targetFolder,
+            CancellationToken ct = default)
+            => Task.FromResult(PlanImageResult.Failed("Im Test nicht verwendet."));
+    }
+
+    private sealed class PlanImageAdjusterStub : IPlanImageAdjuster
+    {
+        public PlanImageResult Rotate(string? imagePath, string targetFolder, int degrees)
+            => PlanImageResult.Failed("Im Test nicht verwendet.");
+
+        public PlanImageResult Crop(
+            string? imagePath,
+            string targetFolder,
+            int x,
+            int y,
+            int width,
+            int height)
+            => PlanImageResult.Failed("Im Test nicht verwendet.");
     }
 
     private static void PumpDispatcherFor(TimeSpan duration)

@@ -123,6 +123,68 @@ public sealed class DossierAttachmentCollectorTests : IDisposable
     }
 
     [Fact]
+    public async Task Vorschau_sammelt_aktuell_in_Temp_und_laesst_den_Dossierordner_unveraendert()
+    {
+        var original = Path.Combine(_root, "aktuelles_protokoll.pdf");
+        await File.WriteAllTextAsync(original, "Aktuelles Original");
+
+        var echteBeilagen = Path.Combine(
+            _dossierFolder,
+            DossierFolderPlanner.AttachmentFolderName);
+        Directory.CreateDirectory(echteBeilagen);
+        var alterStand = Path.Combine(echteBeilagen, "01_TV_36080-36086.pdf");
+        var manuelleBeilage = Path.Combine(echteBeilagen, "00_QGIS_Plan.pdf");
+        await File.WriteAllTextAsync(alterStand, "Alter Stand");
+        await File.WriteAllTextAsync(manuelleBeilage, "Manuelle Beilage");
+
+        var (request, _) = BuildScenario(
+            originals: new Dictionary<string, List<string>>
+            {
+                ["36080-36086"] = new() { original }
+            });
+        var collector = new DossierAttachmentCollector(
+            new FakeLocator(_originals), new FakeProtocolPdf());
+        var temporaeresDossier = Path.Combine(_root, "Vorschau", "Dossier");
+
+        var result = await collector.CollectIntoTemporaryAsync(
+            request,
+            temporaeresDossier);
+
+        var attachment = Assert.Single(result.Attachments);
+        Assert.StartsWith(
+            Path.GetFullPath(temporaeresDossier),
+            attachment.SourcePath,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Aktuelles Original", await File.ReadAllTextAsync(attachment.SourcePath));
+        Assert.Equal("Alter Stand", await File.ReadAllTextAsync(alterStand));
+        Assert.Equal("Manuelle Beilage", await File.ReadAllTextAsync(manuelleBeilage));
+        Assert.Equal("Aktuelles Original", await File.ReadAllTextAsync(original));
+
+        var temporaererPlan = Path.Combine(
+            temporaeresDossier,
+            DossierFolderPlanner.AttachmentFolderName,
+            Path.GetFileName(manuelleBeilage));
+        Assert.Equal("Manuelle Beilage", await File.ReadAllTextAsync(temporaererPlan));
+    }
+
+    [Fact]
+    public async Task Vorschau_weist_ein_Schreibziel_ausserhalb_des_System_Temp_Ordners_ab()
+    {
+        var (request, _) = BuildScenario(originals: new());
+        var collector = new DossierAttachmentCollector(
+            new FakeLocator(_originals), new FakeProtocolPdf());
+        var laufwerkswurzel = Path.GetPathRoot(Path.GetFullPath(Path.GetTempPath()))!;
+        var unsicheresZiel = Path.Combine(
+            laufwerkswurzel,
+            "SewerStudio_DossierPreview_Unsicher_" + Guid.NewGuid().ToString("N"));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            collector.CollectIntoTemporaryAsync(request, unsicheresZiel));
+
+        Assert.False(Directory.Exists(unsicheresZiel));
+    }
+
+    [Fact]
     public async Task Mehrere_Treffer_melden_welches_PDF_verwendet_wurde()
     {
         var a = Path.Combine(_root, "a.pdf");

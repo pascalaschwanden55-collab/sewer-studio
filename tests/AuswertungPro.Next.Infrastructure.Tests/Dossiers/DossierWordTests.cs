@@ -274,6 +274,142 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Zusatzpunkt_im_Verzeichnis_behaelt_seine_Zeichenformatierung()
+    {
+        var (request, templatePath) = BuildScenario();
+        const string title = "TV-Protokolle";
+        request.Dossier.TocAttachments.Add(new DossierTocAttachment
+        {
+            Title = title,
+            PageNumber = "5",
+            TitleStyles =
+            [
+                new DossierTextStyleRange
+                {
+                    Start = 0,
+                    Length = title.Length,
+                    ColorHex = "C00000",
+                    Bold = true,
+                    Italic = true,
+                    Underline = true
+                }
+            ]
+        });
+
+        var result = await new DossierWordTemplateExportService(() => templatePath)
+            .ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        var run = document.MainDocumentPart!.Document.Body!
+            .Descendants<Run>()
+            .First(candidate => candidate.InnerText == title);
+
+        Assert.Equal("C00000", run.RunProperties!.Color!.Val!.Value);
+        Assert.NotNull(run.RunProperties.Bold);
+        Assert.NotNull(run.RunProperties.Italic);
+        Assert.Equal(UnderlineValues.Single, run.RunProperties.Underline!.Val!.Value);
+        Assert.Equal("Arial", run.RunProperties.RunFonts!.Ascii!.Value);
+    }
+
+    [Fact]
+    public async Task Bearbeitete_Beschriftung_neben_Platzhalter_erscheint_formatiert_im_fertigen_Dossier()
+    {
+        var (request, templatePath) = BuildScenario();
+        const string original = "Datum:";
+        const string replacement = "Erfasst am:";
+        request.Dossier.TextOverrides[original] = replacement;
+        request.Dossier.FieldStyles[DossierTopicTextFormatting.LiteralStyleKey(original)] =
+        [
+            new DossierTextStyleRange
+            {
+                Start = 0,
+                Length = replacement.Length,
+                ColorHex = "C00000",
+                Bold = true,
+                Italic = true,
+                Underline = true
+            }
+        ];
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        var paragraph = document.MainDocumentPart!.Document.Body!
+            .Descendants<Paragraph>()
+            .First(p => !p.Descendants<Paragraph>().Any()
+                && p.InnerText.Contains(replacement, StringComparison.Ordinal));
+        var labelRun = paragraph.Descendants<Run>()
+            .First(run => run.InnerText.Contains(replacement, StringComparison.Ordinal));
+
+        Assert.Contains(replacement, paragraph.InnerText, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{Datum}}", paragraph.InnerText, StringComparison.Ordinal);
+        Assert.Equal("C00000", labelRun.RunProperties!.Color!.Val!.Value);
+        Assert.NotNull(labelRun.RunProperties.Bold);
+        Assert.NotNull(labelRun.RunProperties.Italic);
+        Assert.Equal(
+            UnderlineValues.Single,
+            labelRun.RunProperties.Underline!.Val!.Value);
+    }
+
+    [Fact]
+    public async Task Platzhaltertext_in_bearbeiteter_Beschriftung_bleibt_woertlich_und_das_echte_Feld_wird_formatiert_gefuellt()
+    {
+        var (request, templatePath) = BuildScenario();
+        const string original = "Datum:";
+        const string replacement = "Hinweis {{Datum}}:";
+        const string fieldValue = "24.08.2026";
+        request.Dossier.TextOverrides[original] = replacement;
+        request.Dossier.FieldOverrides["Datum"] = fieldValue;
+        request.Dossier.FieldStyles[DossierTopicTextFormatting.LiteralStyleKey(original)] =
+        [
+            new DossierTextStyleRange
+            {
+                Start = 0,
+                Length = replacement.Length,
+                ColorHex = "C00000",
+                Bold = true
+            }
+        ];
+        request.Dossier.FieldStyles["Datum"] =
+        [
+            new DossierTextStyleRange
+            {
+                Start = 0,
+                Length = fieldValue.Length,
+                ColorHex = "0070C0",
+                Italic = true,
+                Underline = true
+            }
+        ];
+
+        var result = await new DossierWordTemplateExportService(() => templatePath)
+            .ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        var paragraph = document.MainDocumentPart!.Document.Body!
+            .Descendants<Paragraph>()
+            .First(p => !p.Descendants<Paragraph>().Any()
+                && p.InnerText.Contains("Hinweis", StringComparison.Ordinal));
+        var literalRun = paragraph.Descendants<Run>()
+            .First(run => run.InnerText == replacement);
+        var fieldRun = paragraph.Descendants<Run>()
+            .First(run => run.InnerText == fieldValue);
+
+        Assert.Equal($"{replacement} {fieldValue}", paragraph.InnerText);
+        Assert.Equal("C00000", literalRun.RunProperties!.Color!.Val!.Value);
+        Assert.NotNull(literalRun.RunProperties.Bold);
+        Assert.Equal("0070C0", fieldRun.RunProperties!.Color!.Val!.Value);
+        Assert.NotNull(fieldRun.RunProperties.Italic);
+        Assert.Equal(
+            UnderlineValues.Single,
+            fieldRun.RunProperties.Underline!.Val!.Value);
+    }
+
+    [Fact]
     public async Task Zusaetzliche_Verzeichnispunkte_stehen_direkt_darunter_im_gleichen_Absatzformat()
     {
         var (request, templatePath) = BuildScenario();
@@ -404,6 +540,42 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         Assert.Contains("Hier anders", text, StringComparison.Ordinal);
         Assert.Contains("Schäden Pz. 30", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Standardtext", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Ein_eigener_Thementitel_erscheint_formatiert_im_fertigen_Dossier()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Area.Topics.Clear();
+        request.Area.Topics.Add(new DossierTopicRow
+        {
+            Title = "Unternehmer",
+            Text = "Musterbau AG"
+        });
+        DossierTopicTitleEditing.Set(
+            request.Dossier,
+            "Unternehmer",
+            "Ausführende Firma",
+            [new DossierTextStyleRange
+            {
+                Start = 0,
+                Length = "Ausführende Firma".Length,
+                ColorHex = "C00000",
+                Bold = true
+            }]);
+
+        var result = await new DossierWordTemplateExportService(() => templatePath)
+            .ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        var run = document.MainDocumentPart!.Document.Body!
+            .Descendants<Run>()
+            .First(run => run.InnerText.Contains("Ausführende Firma", StringComparison.Ordinal));
+
+        Assert.Equal("C00000", run.RunProperties!.Color!.Val!.Value);
+        Assert.NotNull(run.RunProperties.Bold);
+        Assert.Equal("Unternehmer", request.Area.Topics[0].Title);
     }
 
     [Fact]
@@ -925,7 +1097,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         // Die Datei entsteht trotzdem — aber Pascal darf nicht erst beim
         // Eigentuemer merken, dass Kapitel 1 leer geblieben ist.
         Assert.True(result.Success, result.Message);
-        Assert.Contains("Übersichtsplan", result.Message, StringComparison.Ordinal);
+        Assert.Contains("Werkleitungsplan", result.Message, StringComparison.Ordinal);
 
         var text = ReadDocumentText(result.FilePath!);
         Assert.DoesNotContain("{{", text, StringComparison.Ordinal);

@@ -23,6 +23,11 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
     private readonly Func<byte[], IReadOnlyList<string>, byte[]> _mergePdfs;
     private readonly Func<string, IReadOnlyList<DossierOutputPreviewPage>> _readPages;
     private readonly Func<string> _createWorkRoot;
+    private readonly Func<
+        DossierExportRequest,
+        string,
+        CancellationToken,
+        Task<DossierAttachmentResult>>? _collectPreviewAttachments;
 
     public DossierOutputPreviewService(
         IDossierWordExportService wordExport,
@@ -32,7 +37,23 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
             DossierWordPdfConverter.TryConvertToPdf,
             (generated, attachments) => pdfMerge.MergeWithOriginals(generated, attachments),
             ReadPages,
-            CreateWorkRoot)
+            CreateWorkRoot,
+            collectPreviewAttachments: null)
+    {
+        ArgumentNullException.ThrowIfNull(pdfMerge);
+    }
+
+    public DossierOutputPreviewService(
+        IDossierWordExportService wordExport,
+        IPdfMergeService pdfMerge,
+        IDossierPreviewAttachmentService previewAttachments)
+        : this(
+            wordExport,
+            DossierWordPdfConverter.TryConvertToPdf,
+            (generated, attachments) => pdfMerge.MergeWithOriginals(generated, attachments),
+            ReadPages,
+            CreateWorkRoot,
+            CreatePreviewAttachmentCollector(previewAttachments))
     {
         ArgumentNullException.ThrowIfNull(pdfMerge);
     }
@@ -47,7 +68,8 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
             convertWordToPdf,
             (generated, _) => generated,
             readPages,
-            createWorkRoot)
+            createWorkRoot,
+            collectPreviewAttachments: null)
     {
     }
 
@@ -56,7 +78,12 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
         Func<string, string?, bool> convertWordToPdf,
         Func<byte[], IReadOnlyList<string>, byte[]> mergePdfs,
         Func<string, IReadOnlyList<DossierOutputPreviewPage>> readPages,
-        Func<string> createWorkRoot)
+        Func<string> createWorkRoot,
+        Func<
+            DossierExportRequest,
+            string,
+            CancellationToken,
+            Task<DossierAttachmentResult>>? collectPreviewAttachments = null)
     {
         _wordExport = wordExport ?? throw new ArgumentNullException(nameof(wordExport));
         _convertWordToPdf = convertWordToPdf
@@ -64,6 +91,7 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
         _mergePdfs = mergePdfs ?? throw new ArgumentNullException(nameof(mergePdfs));
         _readPages = readPages ?? throw new ArgumentNullException(nameof(readPages));
         _createWorkRoot = createWorkRoot ?? throw new ArgumentNullException(nameof(createWorkRoot));
+        _collectPreviewAttachments = collectPreviewAttachments;
     }
 
     public Task<DossierOutputPreviewResult> CreateAsync(
@@ -121,11 +149,29 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
 
             ct.ThrowIfCancellationRequested();
 
-            // Bereits vorhandene Beilagen gehören zur Ausgabe „Alles zu
-            // einem PDF“. Sie werden nur gelesen und in der kurzlebigen
-            // Vorschau angehängt; der Kundenordner bleibt unverändert.
-            var attachmentPaths = DossierPdfAssemblyService
-                .CollectAttachmentPdfs(request.TargetFolder);
+            // Im produktiven Weg wird der echte Beilagenstand zuerst in den
+            // Temp-Ordner kopiert. Dort sammelt derselbe Fachdienst die aktuell
+            // gewählten Haltungen und Schächte neu. So bleibt der Kundenordner
+            // unverändert und die Vorschau zeigt trotzdem den aktuellen Stand.
+            DossierAttachmentResult? collectedAttachments = null;
+            IReadOnlyList<string> attachmentPaths;
+            if (_collectPreviewAttachments is null)
+            {
+                // Kompatibilitätsweg für bestehende direkte Konstruktoraufrufe.
+                attachmentPaths = DossierPdfAssemblyService
+                    .CollectAttachmentPdfs(request.TargetFolder);
+            }
+            else
+            {
+                var temporaryDossierFolder = Path.Combine(workRoot, "Gesamt-PDF");
+                collectedAttachments = await _collectPreviewAttachments(
+                        request,
+                        temporaryDossierFolder,
+                        ct)
+                    .ConfigureAwait(false);
+                attachmentPaths = DossierPdfAssemblyService
+                    .CollectAttachmentPdfs(temporaryDossierFolder);
+            }
             var previewPdfPath = pdfPath;
             var wordPages = _readPages(pdfPath);
             IReadOnlyList<DossierOutputPreviewPage> pages = wordPages;
@@ -151,13 +197,23 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
                 : attachmentPaths.Count == 1
                     ? " Einschliesslich 1 Beilage."
                     : $" Einschliesslich {attachmentPaths.Count} Beilagen.";
+            var missingCount = (collectedAttachments?.MissingCount ?? 0)
+                + request.Snapshot.MissingHoldingIds.Count
+                + request.Snapshot.MissingShaftNumbers.Count;
+            var missingNote = missingCount == 0
+                ? string.Empty
+                : missingCount == 1
+                    ? " Ein ausgewähltes Protokoll fehlt."
+                    : $" {missingCount} ausgewählte Protokolle fehlen.";
             return new DossierOutputPreviewResult(
                 true,
                 bytes,
                 pages,
                 pages.Count == 1
-                    ? "Ausgabevorschau aktualisiert: 1 Seite." + attachmentNote
-                    : $"Ausgabevorschau aktualisiert: {pages.Count} Seiten." + attachmentNote);
+                    ? "Ausgabevorschau aktualisiert: 1 Seite." + attachmentNote + missingNote
+                    : $"Ausgabevorschau aktualisiert: {pages.Count} Seiten."
+                      + attachmentNote
+                      + missingNote);
         }
         catch (OperationCanceledException)
         {
@@ -202,6 +258,17 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
 
     private static DossierOutputPreviewResult Failed(string message)
         => new(false, null, Array.Empty<DossierOutputPreviewPage>(), message);
+
+    private static Func<
+        DossierExportRequest,
+        string,
+        CancellationToken,
+        Task<DossierAttachmentResult>> CreatePreviewAttachmentCollector(
+            IDossierPreviewAttachmentService previewAttachments)
+    {
+        ArgumentNullException.ThrowIfNull(previewAttachments);
+        return previewAttachments.CollectIntoTemporaryAsync;
+    }
 
     private static string CreateWorkRoot()
         => Path.Combine(

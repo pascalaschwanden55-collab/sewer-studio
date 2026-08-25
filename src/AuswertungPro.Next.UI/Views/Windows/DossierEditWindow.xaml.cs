@@ -261,7 +261,7 @@ public partial class DossierEditWindow : Window
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Übersichtsplan wählen",
+            Title = "Werkleitungsplan wählen",
             Filter = "Bilder (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg"
         };
 

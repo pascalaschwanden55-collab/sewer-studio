@@ -50,10 +50,12 @@ internal sealed partial class DossierPreviewFieldPanel
 
         for (var i = 0; i < themen.Count; i++)
         {
+            var sourceTitle = DossierTopicTitleEditing.SourceTitle(themen[i]);
+
             // Jede Zeile hat ihre eigene Marke, damit im Blatt genau sie
             // aufblinkt und nicht die ganze Tabelle.
             wirt.Children.Add(BaueThemenKarte(
-                themen[i], i, ausGebiet.Contains(themen[i].Title), wirt, feld));
+                themen[i], i, ausGebiet.Contains(sourceTitle), wirt, feld));
         }
 
         wirt.Children.Add(BaueNeuesThema(wirt, feld));
@@ -62,7 +64,7 @@ internal sealed partial class DossierPreviewFieldPanel
     private UIElement BaueThemenKarte(
         DossierTopicRow thema, int rowIndex, bool vomGebiet, Panel wirt, DossierPreviewField feld)
     {
-        var titel = thema.Title;
+        var sourceTitle = DossierTopicTitleEditing.SourceTitle(thema);
         var rowTarget = DossierPreviewTarget.Row(feld.Key, rowIndex);
         var titleTarget = DossierPreviewTarget.RowCell(feld.Key, rowIndex, "Thema");
         var textTarget = DossierPreviewTarget.RowCell(feld.Key, rowIndex, "Text");
@@ -84,7 +86,8 @@ internal sealed partial class DossierPreviewFieldPanel
         {
             var entfernen = Kleiner("✕", "Diese Zeile entfernen", () =>
             {
-                DossierTopicEditing.RemoveDossierOverride(_dossier, titel);
+                DossierTopicEditing.RemoveDossierOverride(_dossier, sourceTitle);
+                DossierTopicTitleEditing.Reset(_dossier, sourceTitle);
                 FuelleThemenEditor(wirt, feld);
                 _zeichneBlatt();
                 Betone(feld.Key);
@@ -96,7 +99,9 @@ internal sealed partial class DossierPreviewFieldPanel
 
         kopf.Children.Add(new TextBlock
         {
-            Text = vomGebiet ? titel : titel + "   (nur dieses Dossier)",
+            Text = vomGebiet
+                ? $"Zeile {rowIndex + 1} · Gebietsvorgabe"
+                : $"Zeile {rowIndex + 1} · nur dieses Dossier",
             TextWrapping = TextWrapping.Wrap,
             FontSize = 12,
             FontWeight = FontWeights.SemiBold,
@@ -105,6 +110,91 @@ internal sealed partial class DossierPreviewFieldPanel
         });
 
         inhalt.Children.Add(kopf);
+
+        inhalt.Children.Add(new TextBlock
+        {
+            Text = "Thema",
+            Margin = new Thickness(0, 2, 0, 2)
+        });
+
+        var titleBox = DossierTopicRichTextEditor.Create(new DossierTopicRow
+        {
+            Text = thema.Title,
+            StyleRanges = DossierTopicTitleEditing.Styles(
+                _dossier, sourceTitle, thema.Title).ToList()
+        });
+        titleBox.AcceptsReturn = true;
+        titleBox.MinHeight = 34;
+        titleBox.GotKeyboardFocus += (_, _) => Betone(titleTarget);
+
+        void SpeichereTitel()
+        {
+            var value = DossierTopicRichTextEditor.Read(titleBox);
+            DossierTopicTitleEditing.Set(
+                _dossier, sourceTitle, value.Text, value.StyleRanges);
+        }
+
+        Button titelZurueck = null!;
+        void ZeigeTitelRueckweg()
+            => titelZurueck.Visibility = DossierTopicTitleEditing.IsOverridden(
+                    _dossier, sourceTitle)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        titleBox.TextChanged += (_, _) =>
+        {
+            if (_geladeneFormatfelder.Contains(titleBox))
+                return;
+
+            SpeichereTitel();
+            ZeigeTitelRueckweg();
+            _zeichneBlatt();
+        };
+
+        var titleHost = new StackPanel();
+        titleHost.Children.Add(titleBox);
+        var titleTools = DossierTextFormattingToolbar.Create(titleBox, () =>
+        {
+            SpeichereTitel();
+            ZeigeTitelRueckweg();
+            _zeichneBlatt();
+            Betone(titleTarget);
+        });
+        ZeigeWerkzeugeNurAmAktivenFeld(titleHost, titleTools);
+        titleHost.Children.Add(titleTools);
+
+        titelZurueck = Kleiner("Ursprünglichen Titel verwenden",
+            "Eigene Fassung und Formatierung dieses Thementitels verwerfen", () =>
+            {
+                DossierTopicTitleEditing.Reset(_dossier, sourceTitle);
+
+                _geladeneFormatfelder.Add(titleBox);
+                try
+                {
+                    DossierTopicRichTextEditor.SetValue(
+                        titleBox, new DossierTopicRow { Text = sourceTitle });
+                }
+                finally
+                {
+                    _geladeneFormatfelder.Remove(titleBox);
+                }
+
+                ZeigeTitelRueckweg();
+                _zeichneBlatt();
+                Betone(titleTarget);
+            });
+        titelZurueck.HorizontalAlignment = HorizontalAlignment.Left;
+        titelZurueck.Margin = new Thickness(0, 3, 0, 5);
+        ZeigeTitelRueckweg();
+
+        titleHost.Children.Add(titelZurueck);
+        inhalt.Children.Add(titleHost);
+
+        inhalt.Children.Add(new TextBlock
+        {
+            Text = "Bemerkungen",
+            Margin = new Thickness(0, 5, 0, 2)
+        });
 
         var box = DossierTopicRichTextEditor.Create(thema);
 
@@ -115,24 +205,36 @@ internal sealed partial class DossierPreviewFieldPanel
             if (_geladeneFormatfelder.Contains(box))
                 return;
 
-            SpeichereFormatiertenText(titel, box);
+            SpeichereFormatiertenText(sourceTitle, box);
             _zeichneBlatt();
         };
 
-        inhalt.Children.Add(box);
+        var textHost = new StackPanel();
+        textHost.Children.Add(box);
+        var textTools = DossierTextFormattingToolbar.Create(box, () =>
+        {
+            SpeichereFormatiertenText(sourceTitle, box);
+            _zeichneBlatt();
+            Betone(textTarget);
+        });
+        ZeigeWerkzeugeNurAmAktivenFeld(textHost, textTools);
+        textHost.Children.Add(textTools);
+        inhalt.Children.Add(textHost);
+
         inhalt.Children.Add(BaueThemenLeiste(
-            titel, textTarget, box, vomGebiet, wirt, feld));
+            sourceTitle, textTarget, box, vomGebiet, wirt, feld));
 
         MerkeStelle(rowTarget, karte);
-        MerkeStelle(titleTarget, box);
+        MerkeStelle(titleTarget, titleBox);
         MerkeStelle(textTarget, box);
 
         return karte;
     }
 
     /// <summary>
-    /// Die Werkzeuge einer Themenzeile in einer Reihe: Farbe, Einfuegen,
-    /// Uebernehmen — statt drei uebereinandergestapelter Bloecke.
+    /// Die fachlichen Aktionen einer Themenzeile. Die Formatleiste sitzt direkt
+    /// beim jeweiligen Textfeld und erscheint nur, solange dort gearbeitet
+    /// wird; Import und gebietsweite Uebernahme bleiben dagegen sichtbar.
     /// </summary>
     private UIElement BaueThemenLeiste(
         string titel,
@@ -143,13 +245,6 @@ internal sealed partial class DossierPreviewFieldPanel
         DossierPreviewField feld)
     {
         var wurzel = new StackPanel();
-        wurzel.Children.Add(DossierTextFormattingToolbar.Create(box, () =>
-        {
-            SpeichereFormatiertenText(titel, box);
-            _zeichneBlatt();
-            Betone(textTarget);
-        }));
-
         var aktionen = new WrapPanel();
         wurzel.Children.Add(aktionen);
 

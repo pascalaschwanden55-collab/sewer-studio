@@ -188,6 +188,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(AuswertungPro.Next.Application.Output.IPdfPrintService)] = services.PdfPrint,
             [typeof(IDossierPhotoAvailabilityService)] = services.DossierPhotoAvailability,
             [typeof(AuswertungPro.Next.Application.Dossiers.IDossierStore)] = services.DossierStore,
+            [typeof(AuswertungPro.Next.Application.Dossiers.IDossierPlanPublicationService)] = services.DossierPlanPublications,
             [typeof(AuswertungPro.Next.Application.Dossiers.IDossierWordExportService)] = services.DossierWordExport,
             [typeof(AuswertungPro.Next.Application.Dossiers.IDossierOutputPreviewService)] = services.DossierOutputPreview,
             [typeof(AuswertungPro.Next.Application.Dossiers.IDossierAttachmentService)] = services.DossierAttachments,

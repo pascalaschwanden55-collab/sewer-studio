@@ -26,7 +26,9 @@ namespace AuswertungPro.Next.Infrastructure.Dossiers;
 /// Von Hand hinzugelegte Beilagen (QGIS-Plan, Offerte) bleiben unangetastet:
 /// es wird nur geschrieben, nie aufgeraeumt.
 /// </summary>
-public sealed class DossierAttachmentCollector : IDossierAttachmentService
+public sealed class DossierAttachmentCollector :
+    IDossierAttachmentService,
+    IDossierPreviewAttachmentService
 {
     private readonly IInspectionProtocolFileLocator _protocolFiles;
     private readonly IProtocolPdfExporter _protocolPdf;
@@ -44,13 +46,51 @@ public sealed class DossierAttachmentCollector : IDossierAttachmentService
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        return CollectCoreAsync(
+            request,
+            request.ProjectRoot,
+            request.TargetFolder,
+            new List<string>(),
+            ct);
+    }
 
-        var attachments = new List<DossierAttachment>();
+    public Task<DossierAttachmentResult> CollectIntoTemporaryAsync(
+        DossierExportRequest request,
+        string temporaryDossierFolder,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(temporaryDossierFolder);
+
+        var tempRoot = Path.GetFullPath(Path.GetTempPath());
+        var guard = new ProjectWritePathGuard(tempRoot);
+        var dossierFolder = guard.EnsureSafeDirectoryTarget(temporaryDossierFolder);
         var warnings = new List<string>();
 
-        var guard = new ProjectWritePathGuard(request.ProjectRoot);
+        CopyExistingAttachmentsToTemporaryFolder(
+            request.TargetFolder,
+            dossierFolder,
+            guard,
+            warnings,
+            ct);
+
+        return CollectCoreAsync(request, tempRoot, dossierFolder, warnings, ct);
+    }
+
+    private Task<DossierAttachmentResult> CollectCoreAsync(
+        DossierExportRequest request,
+        string writeRoot,
+        string targetFolder,
+        List<string> warnings,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var attachments = new List<DossierAttachment>();
+
+        var guard = new ProjectWritePathGuard(writeRoot);
         var folder = guard.EnsureSafeDirectoryTarget(
-            Path.Combine(request.TargetFolder, DossierFolderPlanner.AttachmentFolderName));
+            Path.Combine(targetFolder, DossierFolderPlanner.AttachmentFolderName));
         Directory.CreateDirectory(folder);
 
         var byId = request.Project.Data.ToDictionary(r => r.Id);
@@ -103,6 +143,40 @@ public sealed class DossierAttachmentCollector : IDossierAttachmentService
         }
 
         return Task.FromResult(new DossierAttachmentResult(attachments, warnings));
+    }
+
+    private static void CopyExistingAttachmentsToTemporaryFolder(
+        string sourceDossierFolder,
+        string temporaryDossierFolder,
+        ProjectWritePathGuard guard,
+        List<string> warnings,
+        CancellationToken ct)
+    {
+        var sourcePaths = DossierPdfAssemblyService.CollectAttachmentPdfs(sourceDossierFolder);
+        if (sourcePaths.Count == 0)
+            return;
+
+        var targetFolder = guard.EnsureSafeDirectoryTarget(
+            Path.Combine(temporaryDossierFolder, DossierFolderPlanner.AttachmentFolderName));
+        Directory.CreateDirectory(targetFolder);
+
+        foreach (var sourcePath in sourcePaths)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var targetPath = guard.EnsureSafeFileTarget(
+                Path.Combine(targetFolder, Path.GetFileName(sourcePath)));
+            try
+            {
+                File.Copy(sourcePath, targetPath, overwrite: true);
+            }
+            catch (Exception ex)
+            {
+                warnings.Add(
+                    $"Beilage '{Path.GetFileName(sourcePath)}': "
+                    + $"Kopie fuer die Vorschau fehlgeschlagen ({ex.Message}).");
+            }
+        }
     }
 
     /// <summary>

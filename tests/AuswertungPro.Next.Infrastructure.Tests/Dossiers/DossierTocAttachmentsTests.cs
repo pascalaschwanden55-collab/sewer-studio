@@ -108,6 +108,34 @@ public sealed class DossierTocAttachmentsTests
     }
 
     [Fact]
+    public void Formatierung_folgt_dem_Titel_auch_wenn_eine_Nummer_entfernt_wird()
+    {
+        var attachment = new DossierTocAttachment
+        {
+            Title = "  4. TV-Protokolle  ",
+            TitleStyles =
+            [
+                new DossierTextStyleRange
+                {
+                    Start = 5,
+                    Length = 13,
+                    ColorHex = "C00000",
+                    Bold = true
+                }
+            ]
+        };
+
+        var entry = Assert.Single(DossierTocAttachments.BuildEntries([attachment], 4, 5));
+        var style = Assert.Single(entry.TitleStyles);
+
+        Assert.Equal("TV-Protokolle", entry.Title);
+        Assert.Equal(0, style.Start);
+        Assert.Equal(entry.Title.Length, style.Length);
+        Assert.Equal("C00000", style.ColorHex);
+        Assert.True(style.Bold);
+    }
+
+    [Fact]
     public void Fehlende_Liste_ist_kein_Absturz()
         => Assert.Equal("", DossierTocAttachments.Build(attachments: null, firstNumber: 4));
 

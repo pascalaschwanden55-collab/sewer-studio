@@ -128,7 +128,7 @@ public static class DossierPreviewFieldCatalog
             Text("Autoren", "Autoren",
                 () => area.Authors, w => area.Authors = w),
 
-            File("Uebersichtsplan", "Übersichtsplan",
+            File("Uebersichtsplan", "Werkleitungsplan (JPG, PNG oder PDF)",
                 () => dossier.OverviewPlanPath, w => dossier.OverviewPlanPath = w),
 
             Rows("Eigentuemer", "Eigentumsverhältnisse"),
@@ -198,6 +198,46 @@ public static class DossierPreviewFieldCatalog
                 "Wird sonst aus anderen Angaben berechnet.",
                 () => dossier.FieldOverrides.ContainsKey(eigener),
                 () => dossier.FieldOverrides.Remove(eigener)));
+        }
+
+        return ergebnis;
+    }
+
+    /// <summary>
+    /// Ordnet die Felder mehreren Kapiteln desselben Ausgabeblatts zu. Ein
+    /// gemeinsamer Platzhalter erscheint nur beim ersten Kapitel: Die
+    /// Fusszeile gehoert beispielsweise zum Blatt und nicht zu jedem Kapitel,
+    /// das durch den Word-Umbruch auf diesem Blatt liegt.
+    /// </summary>
+    public static IReadOnlyList<(
+        DossierPreviewPage Seite,
+        IReadOnlyList<DossierPreviewField> Felder)> ForPages(
+        IReadOnlyList<DossierPreviewField> alle,
+        IReadOnlyList<DossierPreviewPage> seiten,
+        DossierDefinition? dossier = null,
+        Func<string, string>? computed = null)
+    {
+        ArgumentNullException.ThrowIfNull(alle);
+        ArgumentNullException.ThrowIfNull(seiten);
+
+        var vergebeneSchluessel = new HashSet<string>(StringComparer.Ordinal);
+        var ergebnis = new List<(
+            DossierPreviewPage Seite,
+            IReadOnlyList<DossierPreviewField> Felder)>(seiten.Count);
+
+        foreach (var seite in seiten)
+        {
+            var seitenFelder = ForPage(alle, seite, dossier, computed);
+
+            // Erst nach dem Filtern merken: Mehrere Katalogeintraege duerfen
+            // sich auf derselben Seite bewusst einen Platzhalter teilen.
+            var neueFelder = seitenFelder
+                .Where(feld => !vergebeneSchluessel.Contains(feld.Key))
+                .ToList();
+            ergebnis.Add((seite, neueFelder));
+
+            foreach (var schluessel in seitenFelder.Select(feld => feld.Key))
+                vergebeneSchluessel.Add(schluessel);
         }
 
         return ergebnis;
