@@ -51,11 +51,38 @@ internal sealed partial class DossierPreviewFieldPanel
 
     // ── Aufbau ────────────────────────────────────────────────────────────
 
-    private void BaueFelder(DossierPreviewPage seite, IReadOnlyList<DossierPreviewField> felder)
+    /// <summary>
+    /// Baut die Eingaben zu allen Kapiteln, die auf dem gewaehlten Blatt
+    /// stehen. Es sind mehrere, sobald Word ein kurzes Kapitel mit dem
+    /// naechsten auf ein Blatt packt.
+    /// </summary>
+    private void BaueFelder(
+        IReadOnlyList<(DossierPreviewPage Seite, IReadOnlyList<DossierPreviewField> Felder)> seiten)
     {
         _wirt.Children.Clear();
         _feldStellen.Clear();
         LeereAbschnitte();
+
+        // Nur bei mehreren Kapiteln der Kapitelname vor dem Abschnitt; sonst
+        // stuende „Angaben" zweimal untereinander.
+        var mitKapitel = seiten.Count > 1;
+
+        foreach (var (seite, felder) in seiten)
+            HaengeSeiteAn(seite, felder, mitKapitel ? seite.Title : string.Empty);
+
+        OeffneNurDenErsten();
+
+        if (_wirt.Children.Count == 0)
+            ZeigeLeerhinweis();
+    }
+
+    private void HaengeSeiteAn(
+        DossierPreviewPage seite,
+        IReadOnlyList<DossierPreviewField> felder,
+        string kapitel)
+    {
+        string Titel(string name)
+            => kapitel.Length == 0 ? name : $"{kapitel} · {name}";
 
         var angaben = felder.Where(f => f.Kind is not DossierPreviewFieldKind.Rows).ToList();
 
@@ -70,7 +97,7 @@ internal sealed partial class DossierPreviewFieldPanel
                 MerkeStelle(DossierPreviewTarget.Field(feld.Key), karte);
             }
 
-            _wirt.Children.Add(Abschnitt("Angaben", inhalt, offen: true));
+            _wirt.Children.Add(Abschnitt(Titel("Angaben"), inhalt, offen: true));
         }
 
         var feste = DossierPreviewTextInventory.Literals(seite);
@@ -83,7 +110,7 @@ internal sealed partial class DossierPreviewFieldPanel
         if (istVerzeichnis && feste.Count > 0)
         {
             _wirt.Children.Add(Abschnitt(
-                "Inhaltsverzeichnis bearbeiten",
+                Titel("Inhaltsverzeichnis bearbeiten"),
                 BaueFesteTexte(feste, DossierTocChapterPageField.ChapterTitles(seite)),
                 offen: true));
         }
@@ -98,18 +125,21 @@ internal sealed partial class DossierPreviewFieldPanel
                 _ => BaueZeilenEditor(feld)
             };
 
-            var abschnitt = Abschnitt(feld.Label, inhalt, offen: true);
+            var abschnitt = Abschnitt(Titel(feld.Label), inhalt, offen: true);
             _wirt.Children.Add(abschnitt);
             MerkeStelle(DossierPreviewTarget.Field(feld.Key), abschnitt);
         }
 
         if (!istVerzeichnis && feste.Count > 0)
             _wirt.Children.Add(Abschnitt(
-                "Beschriftungen und Überschriften", BaueFesteTexte(feste, []), offen: false));
+                Titel("Beschriftungen und Überschriften"),
+                BaueFesteTexte(feste, []),
+                offen: false));
 
-        OeffneNurDenErsten();
+    }
 
-        if (_wirt.Children.Count == 0)
+    private void ZeigeLeerhinweis()
+    {
         {
             _wirt.Children.Add(new TextBlock
             {

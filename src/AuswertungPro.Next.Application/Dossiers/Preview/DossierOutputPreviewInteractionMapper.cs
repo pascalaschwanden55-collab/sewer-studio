@@ -6,11 +6,30 @@ using AuswertungPro.Next.Domain.Models.Dossiers;
 
 namespace AuswertungPro.Next.Application.Dossiers.Preview;
 
-/// <summary>Eine echte Ausgabeseite samt zugeordneter Editor-Seite.</summary>
+/// <summary>
+/// Eine echte Ausgabeseite samt der Vorlagenseiten, die darauf stehen.
+///
+/// Es ist bewusst eine LISTE: Ist ein Kapitel kurz — etwa ohne gewählten
+/// Übersichtsplan —, packt Word das nächste auf dasselbe Blatt. Mit nur einer
+/// Editorseite waren die Felder des anderen Kapitels unerreichbar, und
+/// ausgerechnet dort sitzt die Auswahl des Plans: Wer keinen hatte, kam nicht
+/// an den Knopf, der ihn einfügen würde.
+///
+/// <see cref="EditorPage"/> bleibt als erste dieser Seiten erhalten.
+/// </summary>
 public sealed record DossierOutputPreviewNavigationItem(
     string ChapterTitle,
     string PageLabel,
     DossierOutputPreviewPage OutputPage,
+
+    /// <summary>Alle Vorlagenseiten dieses Blattes, in Dokumentreihenfolge.</summary>
+    IReadOnlyList<DossierPreviewPage> EditorPages,
+
+    /// <summary>
+    /// Die am staerksten belegte davon — sie benennt das Blatt. Getrennt von
+    /// der Reihenfolge, weil die Felder in Leserichtung erscheinen sollen und
+    /// nicht nach Belegstaerke.
+    /// </summary>
     DossierPreviewPage? EditorPage);
 
 /// <summary>
@@ -38,6 +57,9 @@ public static class DossierOutputPreviewInteractionMapper
         var result = new List<DossierOutputPreviewNavigationItem>(pages.Count);
         var minimumTemplateIndex = 0;
 
+        // Bis hierher sind die Vorlagenseiten bereits vergeben.
+        var vergebenBis = -1;
+
         foreach (var page in pages)
         {
             if (page.IsAttachment)
@@ -46,6 +68,7 @@ public static class DossierOutputPreviewInteractionMapper
                     "Beilagen",
                     $"Beilage — Seite {page.Number}",
                     page,
+                    Array.Empty<DossierPreviewPage>(),
                     null));
                 continue;
             }
@@ -69,6 +92,31 @@ public static class DossierOutputPreviewInteractionMapper
                 }
             }
 
+            // Ein Blatt traegt oft mehr als ein Kapitel: Ist eines kurz — etwa
+            // ohne gewaehlten Uebersichtsplan —, packt Word das naechste
+            // dazu. Frueher gewann davon nur das am staerksten belegte, und die
+            // Felder der uebrigen waren unerreichbar.
+            //
+            // Nach vorn: alles, was seit dem letzten Blatt noch nicht bedient
+            // wurde — auch ein Kapitel ohne eigenen Textbeleg.
+            // Nach hinten: jedes weitere Kapitel, das auf diesem Blatt
+            // tatsaechlich zu lesen ist.
+            var von = bestIndex == vergebenBis ? bestIndex : vergebenBis + 1;
+            var bis = bestIndex;
+
+            while (bis + 1 < templates.Count
+                && EvidenceScore(pageText, templates[bis + 1], dossier, values, rowsFor) > 0)
+            {
+                bis++;
+            }
+
+            var seiten = templates
+                .Skip(von)
+                .Take(bis - von + 1)
+                .Select(eintrag => eintrag.Page)
+                .ToList();
+
+            vergebenBis = bis;
             minimumTemplateIndex = bestIndex;
             var template = templates[bestIndex];
             var chapter = dossier.TextOverrides.TryGetValue(template.ChapterTitle, out var own)
@@ -76,13 +124,47 @@ public static class DossierOutputPreviewInteractionMapper
                     ? own.Trim()
                     : template.ChapterTitle;
 
+            if (!seiten.Contains(template.Page))
+                seiten.Insert(0, template.Page);
+
             result.Add(new DossierOutputPreviewNavigationItem(
                 chapter,
                 $"Seite {page.Number}",
                 page,
+                seiten,
                 template.Page));
         }
 
+        return MitNachzueglern(result, templates, vergebenBis);
+    }
+
+    /// <summary>
+    /// Haengt Kapitel, die kein Blatt mehr abbekommen haben, an das letzte
+    /// Dossierblatt.
+    ///
+    /// Das ist der Regelfall und keine Randerscheinung: Im echten Dossier
+    /// folgen hinten die Protokolle als Beilagen. Beilagenblaetter bekommen
+    /// keine Vorlagenseite — die Zuordnung endete damit, bevor die letzten
+    /// Kapitel an der Reihe waren, und ihre Felder waren unerreichbar.
+    /// Gemessen fehlten so drei von fuenf Kapiteln.
+    /// </summary>
+    private static IReadOnlyList<DossierOutputPreviewNavigationItem> MitNachzueglern(
+        List<DossierOutputPreviewNavigationItem> result,
+        IReadOnlyList<DossierPreviewNavigationItem> templates,
+        int vergebenBis)
+    {
+        if (vergebenBis + 1 >= templates.Count)
+            return result;
+
+        var letztes = result.FindLastIndex(eintrag => eintrag.EditorPage is not null);
+        if (letztes < 0)
+            return result;
+
+        var seiten = result[letztes].EditorPages
+            .Concat(templates.Skip(vergebenBis + 1).Select(eintrag => eintrag.Page))
+            .ToList();
+
+        result[letztes] = result[letztes] with { EditorPages = seiten };
         return result;
     }
 

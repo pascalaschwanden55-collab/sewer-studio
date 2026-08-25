@@ -102,7 +102,19 @@ internal sealed partial class DossierPreviewFieldPanel
 
     /// <summary>Baut die Felder zur gewählten Seite neu auf.</summary>
     public void Baue(DossierPreviewPage seite, IReadOnlyList<DossierPreviewField> felder)
-        => BaueFelder(seite, felder);
+        => BaueFelder([(seite, felder)]);
+
+    /// <summary>
+    /// Baut die Felder zu allen Kapiteln des gewählten Blattes neu auf.
+    ///
+    /// Ein Ausgabeblatt trägt oft mehr als ein Kapitel — ohne gewählten
+    /// Übersichtsplan rutscht „Eigentumsverhältnisse" auf dasselbe Blatt.
+    /// Zeigte die Eingabeseite dann nur eines davon, wären die Felder des
+    /// anderen unerreichbar, darunter die Auswahl des Plans selbst.
+    /// </summary>
+    public void Baue(
+        IReadOnlyList<(DossierPreviewPage Seite, IReadOnlyList<DossierPreviewField> Felder)> seiten)
+        => BaueFelder(seiten);
 
     /// <summary>
     /// Springt zu der Stelle, die im Blatt angeklickt wurde. Falsch, wenn es

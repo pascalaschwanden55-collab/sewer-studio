@@ -168,12 +168,13 @@ public partial class DossierPreviewWindow : Window
             return;
         }
 
-        var seite = item.EditorPage;
-        _felder.Baue(seite, DossierPreviewFieldCatalog.ForPage(
-            _fields,
-            seite,
-            _dossier,
-            key => _values.TryGetValue(key, out var wert) ? wert : string.Empty));
+        _felder.Baue(item.EditorPages
+            .Select(seite => (seite, DossierPreviewFieldCatalog.ForPage(
+                _fields,
+                seite,
+                _dossier,
+                key => _values.TryGetValue(key, out var wert) ? wert : string.Empty)))
+            .ToList());
 
         await ZeichneEchteSeiteAsync(item);
 
