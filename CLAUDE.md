@@ -52,6 +52,9 @@
 - `DossierPreviewTarget` adressiert anklickbare Vorschautexte fachlich ueber Feld,
   Zeile und Spalte statt ueber feste Pixelpositionen. Die genaueste vorhandene Adresse
   fuehrt direkt zum passenden Editor; auch geaenderte Vorlagentexte bleiben anklickbar.
+- `DossierPreviewNavigation` gruppiert die Vorschau zuerst nach Kapitel und darin nach
+  Seiten. Fortsetzungsseiten ohne neue Ueberschrift bleiben beim zuletzt begonnenen
+  Kapitel; rechts erscheinen weiterhin nur die Felder der gewaehlten Seite.
 - Inhaltsverzeichniszeilen werden strukturell aus dem echten Word-Feld gelesen:
   `DossierPreviewTocEntry` trennt Nummer, bearbeitbaren Kapiteltitel und PAGEREF-Seitenzahl.
   `DocxTocEntryEditor` ersetzt nur den Titel; Nummer, Tabulatoren und Seitenzahl bleiben
@@ -60,6 +63,9 @@
 - Zusaetzliche Verzeichnispunkte bleiben in `DossierDefinition.TocAttachmentLines` und
   werden als eigene sortierbare Liste bearbeitet. `DossierTocAttachments` nummeriert sie
   erst hinter den vorhandenen Kapiteln; fuer externe Beilagen wird keine Seitenzahl erfunden.
+  `DocxTocAttachmentWriter` schreibt jeden Punkt direkt hinter den letzten echten
+  Word-Eintrag als eigenen Absatz in dessen Format. Die Vorschau verwendet dasselbe
+  Zeilenraster und adressiert jeden Zusatzpunkt einzeln fuer den direkten Klick zum Editor.
 - In `Schäden` und `Sanierungskonzept` kopiert `Import aus Liste` die aktuelle,
   fortlaufend nummerierte Bauteilliste als normalen Dossiertext: zuerst alle Haltungen,
   danach alle Schächte. Diese Kopie ist frei bearbeitbar und aendert weder die Auswahl

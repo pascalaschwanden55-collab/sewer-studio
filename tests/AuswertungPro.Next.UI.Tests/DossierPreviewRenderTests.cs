@@ -36,6 +36,20 @@ public sealed class DossierPreviewRenderTests
         return DossierPreviewBuilder.Build(pfad).Pages.First();
     }
 
+    private static DossierPreviewPage Inhaltsverzeichnis()
+    {
+        var wurzel = new AuswertungPro.Next.Infrastructure.Backup.RepositoryRootFileLocator()
+            .Locate(AppContext.BaseDirectory);
+        Assert.NotNull(wurzel);
+
+        var pfad = Path.Combine(wurzel!, "Export_Vorlage", DossierWordTemplate.TemplateFileName);
+        Assert.True(File.Exists(pfad), $"'{pfad}' fehlt.");
+
+        return DossierPreviewBuilder.Build(pfad).Pages.Single(page => page.Blocks
+            .OfType<DossierPreviewParagraph>()
+            .Any(paragraph => paragraph.TocEntry is not null));
+    }
+
     private static FrameworkElement Zeichne(DossierPreviewPage seite)
     {
         var ergebnis = DossierPreviewPageRenderer.Render(
@@ -158,6 +172,63 @@ public sealed class DossierPreviewRenderTests
                 lagen[1].Left - lagen[0].Right > 200,
                 "Logo und Wappen stehen nicht auf gegenüberliegenden Seiten.");
         });
+    }
+
+    [Fact]
+    public void Zusaetzliche_Verzeichnispunkte_sind_einzelne_gleich_ausgerichtete_Zeilen()
+    {
+        RunOnSta(() =>
+        {
+            var seite = Inhaltsverzeichnis();
+            var ergebnis = DossierPreviewPageRenderer.Render(
+                seite,
+                key => key == "Verzeichnis_Beilagen"
+                    ? "4.\tProtokolle\n5.\tPläne"
+                    : string.Empty,
+                _ => Array.Empty<IReadOnlyDictionary<string, string>>(),
+                _ => string.Empty);
+            var blatt = ergebnis.Root;
+            blatt.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            blatt.Arrange(new Rect(blatt.DesiredSize));
+            blatt.UpdateLayout();
+
+            var drittesKapitel = Assert.Single(ergebnis.Frames[
+                DossierPreviewTarget.Literal("Informationen Sanierung")]);
+            var zweitesKapitel = Assert.Single(ergebnis.Frames[
+                DossierPreviewTarget.Literal("Eigentumsverhältnisse")]);
+            var beilageZeilen = ergebnis.Frames[
+                DossierPreviewTarget.Field("Verzeichnis_Beilagen")];
+
+            Assert.Equal(2, beilageZeilen.Count);
+            Assert.Single(ergebnis.Frames[
+                DossierPreviewTarget.Row("Verzeichnis_Beilagen", 0)]);
+            Assert.Single(ergebnis.Frames[
+                DossierPreviewTarget.Row("Verzeichnis_Beilagen", 1)]);
+            var kapitelAbstand = LageIm(blatt, drittesKapitel).Top
+                - LageIm(blatt, zweitesKapitel).Bottom;
+            var beilageAbstand = LageIm(blatt, beilageZeilen[0]).Top
+                - LageIm(blatt, drittesKapitel).Bottom;
+            Assert.Equal(kapitelAbstand, beilageAbstand, precision: 1);
+
+            var kapitelTitel = Titelspalte(drittesKapitel);
+            var beilageTitel = Titelspalte(beilageZeilen[0]);
+            Assert.InRange(
+                Math.Abs(
+                    LageIm(blatt, kapitelTitel).Left
+                    - LageIm(blatt, beilageTitel).Left),
+                0,
+                1.5);
+            Assert.Equal(kapitelTitel.FontFamily.Source, beilageTitel.FontFamily.Source);
+            Assert.Equal(kapitelTitel.FontSize, beilageTitel.FontSize, precision: 1);
+        });
+    }
+
+    private static TextBlock Titelspalte(Border row)
+    {
+        var grid = Assert.IsType<Grid>(row.Child);
+        return grid.Children
+            .OfType<TextBlock>()
+            .Single(block => Grid.GetColumn(block) == 1);
     }
 
     private static void RunOnSta(Action action)

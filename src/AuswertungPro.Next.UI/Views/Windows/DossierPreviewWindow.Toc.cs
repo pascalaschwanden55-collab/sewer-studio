@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -36,6 +37,17 @@ public partial class DossierPreviewWindow
     {
         wirt.Children.Clear();
         _dossier.TocAttachmentLines ??= new();
+
+        foreach (var target in _feldStellen.Keys
+                     .Where(target => target.Kind == DossierPreviewTargetKind.Row
+                         && string.Equals(
+                             target.Key,
+                             feld.Key,
+                             StringComparison.OrdinalIgnoreCase))
+                     .ToList())
+        {
+            _feldStellen.Remove(target);
+        }
 
         for (var i = 0; i < _dossier.TocAttachmentLines.Count; i++)
         {
@@ -93,6 +105,7 @@ public partial class DossierPreviewWindow
             };
             inhalt.Children.Add(box);
             wirt.Children.Add(karte);
+            MerkeStelle(DossierPreviewTarget.Row(feld.Key, stelle), karte);
         }
 
         var neu = Kleiner("+ Punkt ergänzen", "Einen zusätzlichen Verzeichnispunkt anhängen", () =>

@@ -125,6 +125,7 @@ public static class DossierPreviewBuilder
                 return;
 
             var bloecke = _bloecke.ToList();
+            RueckeVerzeichnisBeilagenDirektAnDieKapitel(bloecke);
 
             _seiten.Add(new DossierPreviewPage(
                 _seiten.Count + 1,
@@ -134,6 +135,62 @@ public static class DossierPreviewBuilder
                 SammleFelder(bloecke)));
 
             _bloecke.Clear();
+        }
+
+        /// <summary>
+        /// Die Vorlagenmarke für zusätzliche Verzeichnispunkte steht hinter
+        /// einem leeren Absatz. Für die bearbeitbare Vorschau gehört sie
+        /// unmittelbar unter den letzten echten Word-Eintrag. Es werden nur
+        /// vollständig leere Absätze dazwischen entfernt; sichtbarer Inhalt
+        /// bleibt unangetastet.
+        /// </summary>
+        private static void RueckeVerzeichnisBeilagenDirektAnDieKapitel(
+            List<DossierPreviewBlock> blocks)
+        {
+            var attachmentIndex = blocks.FindIndex(block =>
+                block is DossierPreviewParagraph paragraph
+                && paragraph.Runs.Any(run =>
+                    string.Equals(
+                        run.FieldKey,
+                        "Verzeichnis_Beilagen",
+                        StringComparison.OrdinalIgnoreCase)));
+
+            if (attachmentIndex <= 0)
+                return;
+
+            var lastEntryIndex = blocks.FindLastIndex(
+                attachmentIndex - 1,
+                block => block is DossierPreviewParagraph paragraph
+                    && paragraph.TocEntry is not null);
+
+            if (lastEntryIndex < 0)
+                return;
+
+            var entryParagraph = (DossierPreviewParagraph)blocks[lastEntryIndex];
+            var attachmentParagraph = (DossierPreviewParagraph)blocks[attachmentIndex];
+            var entryRunFormat = entryParagraph.Runs.FirstOrDefault()?.Format;
+            if (entryRunFormat is not null)
+            {
+                blocks[attachmentIndex] = attachmentParagraph with
+                {
+                    Format = entryParagraph.Format,
+                    Runs = attachmentParagraph.Runs
+                        .Select(run => run with { Format = entryRunFormat })
+                        .ToList()
+                };
+            }
+
+            for (var index = attachmentIndex - 1; index > lastEntryIndex; index--)
+            {
+                if (blocks[index] is DossierPreviewParagraph paragraph
+                    && paragraph.TocEntry is null
+                    && paragraph.Floating.Count == 0
+                    && paragraph.Runs.All(run =>
+                        !run.IsField && string.IsNullOrWhiteSpace(run.Text)))
+                {
+                    blocks.RemoveAt(index);
+                }
+            }
         }
 
         private static string Seitentitel(int nummer, IReadOnlyList<DossierPreviewBlock> bloecke)

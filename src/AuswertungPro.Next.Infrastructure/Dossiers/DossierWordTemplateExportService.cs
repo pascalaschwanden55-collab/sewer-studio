@@ -123,8 +123,10 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
 
                     // Erst JETZT steht fest, wie viele Kapitel das Verzeichnis
                     // fuehrt: ein weggelassenes hat seine Zeile mitgenommen.
-                    // Die Beilagen zaehlen dahinter weiter.
-                    values["Verzeichnis_Beilagen"] = DossierTocAttachments.Build(
+                    // Jeder zusätzliche Punkt wird direkt dahinter als eigener,
+                    // gleich formatierter Absatz eingesetzt.
+                    DocxTocAttachmentWriter.Apply(
+                        document,
                         request.Dossier.TocAttachmentLines,
                         ZaehleVerzeichniszeilen(document) + 1);
 
@@ -337,9 +339,9 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// </summary>
     /// <summary>PLZ und Ort als eine Zeile, z.B. "6487 Göschenen".</summary>
     /// <summary>
-    /// Die Zeilen, die das Word-Verzeichnis bereits fuehrt. Der eigene
-    /// Platzhalterabsatz traegt denselben Stil und wird deshalb ausgenommen —
-    /// sonst zaehlte er sich selbst mit.
+    /// Die echten Zeilen, die das Word-Verzeichnis bereits führt. Nur ein
+    /// strukturell lesbarer PAGEREF-Eintrag zählt; ein leerer Absatz oder der
+    /// gleich formatierte Platzhalter darf die Nummer nicht verschieben.
     /// </summary>
     private static int ZaehleVerzeichniszeilen(WordprocessingDocument document)
     {
@@ -349,13 +351,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
 
         return body
             .Descendants<DocumentFormat.OpenXml.Wordprocessing.Paragraph>()
-            .Count(absatz =>
-                DossierTocStyle.IsEntry(
-                    absatz.ParagraphProperties?.ParagraphStyleId?.Val?.Value)
-                && !string.Concat(absatz
-                        .Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>()
-                        .Select(t => t.Text))
-                    .Contains("{{", StringComparison.Ordinal));
+            .Count(absatz => DocxTocEntryReader.Read(absatz) is not null);
     }
 
     private static string BuildTownLine(DossierDefinition dossier)

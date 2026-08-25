@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -70,8 +71,12 @@ public partial class DossierPreviewWindow : Window
         _fields = DossierPreviewFieldCatalog.Build(
             _area, _dossier, key => _values.TryGetValue(key, out var wert) ? wert : string.Empty);
 
-        PageList.ItemsSource = _document.Pages;
-        if (_document.Pages.Count > 0)
+        var navigation = DossierPreviewNavigation.Build(_document.Pages);
+        var navigationView = new ListCollectionView(navigation.ToList());
+        navigationView.GroupDescriptions.Add(new PropertyGroupDescription(
+            nameof(DossierPreviewNavigationItem.ChapterTitle)));
+        PageList.ItemsSource = navigationView;
+        if (navigation.Count > 0)
             PageList.SelectedIndex = 0;
     }
 
@@ -111,11 +116,12 @@ public partial class DossierPreviewWindow : Window
 
     private void OnPageSelected(object sender, SelectionChangedEventArgs e)
     {
-        if (PageList.SelectedItem is not DossierPreviewPage seite)
+        if (PageList.SelectedItem is not DossierPreviewNavigationItem item)
             return;
 
+        var seite = item.Page;
         _aktivesFeld = null;
-        FieldsHeader.Text = $"Felder auf Seite {seite.Number} — {seite.Title}";
+        FieldsHeader.Text = $"{item.ChapterTitle} — Seite {seite.Number}";
         BaueFelder(seite, DossierPreviewFieldCatalog.ForPage(
             _fields,
             seite,
@@ -134,8 +140,10 @@ public partial class DossierPreviewWindow : Window
     /// </summary>
     private void ZeichneBlatt()
     {
-        if (PageList.SelectedItem is not DossierPreviewPage seite)
+        if (PageList.SelectedItem is not DossierPreviewNavigationItem item)
             return;
+
+        var seite = item.Page;
 
         _values = DossierWordTemplateExportService.BuildValues(_request);
 

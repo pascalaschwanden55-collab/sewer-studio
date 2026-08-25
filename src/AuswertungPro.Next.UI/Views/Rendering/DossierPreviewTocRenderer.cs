@@ -34,6 +34,78 @@ internal static class DossierPreviewTocRenderer
         Func<string, IReadOnlyList<DossierTextStyleRange>>? literalStyles,
         Action<DossierPreviewTarget, Border> remember)
     {
+        var ownTitle = literal?.Invoke(entry.Title) ?? entry.Title;
+        var ranges = DossierTopicTextFormatting.Normalize(
+            ownTitle, literalStyles?.Invoke(entry.Title));
+
+        return RenderRow(
+            paragraph,
+            entry,
+            format,
+            ownTitle,
+            ranges,
+            DossierPreviewTarget.Literal(entry.Title),
+            remember);
+    }
+
+    /// <summary>
+    /// Zeichnet zusätzliche Verzeichnispunkte als einzelne Zeilen mit genau
+    /// demselben Raster wie die Word-Einträge darüber. Jede Zeile verweist
+    /// direkt auf ihre eigene Karte im Listen-Editor rechts.
+    /// </summary>
+    public static Border RenderAttachments(
+        DossierPreviewParagraph paragraph,
+        string value,
+        DossierPreviewRunFormat format,
+        Action<DossierPreviewTarget, Border> remember)
+    {
+        var stack = new StackPanel();
+        var entries = ParseAttachments(value);
+
+        if (entries.Count == 0)
+        {
+            stack.Children.Add(RenderRow(
+                paragraph,
+                new DossierPreviewTocEntry(string.Empty, string.Empty, string.Empty),
+                format,
+                string.Empty,
+                Array.Empty<DossierTextStyleRange>(),
+                DossierPreviewTarget.Field("Verzeichnis_Beilagen"),
+                remember));
+
+            return new Border { Child = stack };
+        }
+
+        for (var index = 0; index < entries.Count; index++)
+        {
+            var row = RenderRow(
+                paragraph,
+                entries[index],
+                format,
+                entries[index].Title,
+                Array.Empty<DossierTextStyleRange>(),
+                DossierPreviewTarget.Row("Verzeichnis_Beilagen", index),
+                remember);
+
+            // Der allgemeine Feldschlüssel bleibt für die Hervorhebung des
+            // ganzen Listenabschnitts erhalten; beim Klick gewinnt die
+            // genauere Zeilenadresse.
+            remember(DossierPreviewTarget.Field("Verzeichnis_Beilagen"), row);
+            stack.Children.Add(row);
+        }
+
+        return new Border { Child = stack };
+    }
+
+    private static Border RenderRow(
+        DossierPreviewParagraph paragraph,
+        DossierPreviewTocEntry entry,
+        DossierPreviewRunFormat format,
+        string titleText,
+        IReadOnlyList<DossierTextStyleRange> ranges,
+        DossierPreviewTarget target,
+        Action<DossierPreviewTarget, Border> remember)
+    {
         TextBlock Base(string text)
         {
             var block = new TextBlock
@@ -63,18 +135,15 @@ internal static class DossierPreviewTocRenderer
         page.Margin = new Thickness(7, 0, 0, 0);
         page.HorizontalAlignment = HorizontalAlignment.Right;
 
-        var ownTitle = literal?.Invoke(entry.Title) ?? entry.Title;
         var title = Base(string.Empty);
         title.TextWrapping = TextWrapping.Wrap;
-        var ranges = DossierTopicTextFormatting.Normalize(
-            ownTitle, literalStyles?.Invoke(entry.Title));
 
         var segments = ranges.Count > 0
-            ? DossierTopicTextFormatting.Split(ownTitle, ranges)
+            ? DossierTopicTextFormatting.Split(titleText, ranges)
             : new[]
             {
                 new DossierTopicTextFormatting.Segment(
-                    ownTitle,
+                    titleText,
                     format.ColorHex,
                     format.Bold,
                     format.Italic,
@@ -115,7 +184,7 @@ internal static class DossierPreviewTocRenderer
         var frame = new Border
         {
             Child = grid,
-            Background = ownTitle.Trim().Length == 0 ? Empty : Brushes.Transparent,
+            Background = titleText.Trim().Length == 0 ? Empty : Brushes.Transparent,
             Margin = new Thickness(
                 paragraph.Format.Indent.Left,
                 paragraph.Format.SpaceBeforePx,
@@ -123,8 +192,35 @@ internal static class DossierPreviewTocRenderer
                 paragraph.Format.SpaceAfterPx)
         };
 
-        remember(DossierPreviewTarget.Literal(entry.Title), frame);
+        remember(target, frame);
         return frame;
+    }
+
+    private static List<DossierPreviewTocEntry> ParseAttachments(string value)
+    {
+        var result = new List<DossierPreviewTocEntry>();
+        foreach (var rawLine in (value ?? string.Empty).Split(
+                     new[] { '\r', '\n' },
+                     StringSplitOptions.RemoveEmptyEntries))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0)
+                continue;
+
+            var separator = line.IndexOf('\t');
+            if (separator < 0)
+            {
+                result.Add(new DossierPreviewTocEntry(string.Empty, line, string.Empty));
+                continue;
+            }
+
+            result.Add(new DossierPreviewTocEntry(
+                line[..separator].Trim(),
+                line[(separator + 1)..].Trim(),
+                string.Empty));
+        }
+
+        return result;
     }
 
     private static SolidColorBrush Frozen(Color color)

@@ -95,6 +95,27 @@ public sealed class DossierPreviewBuilderTests
     }
 
     [Fact]
+    public void Zusaetzliche_Verzeichnispunkte_folgen_ohne_Leerzeile_auf_das_letzte_Kapitel()
+    {
+        var seite = Vorschau().Pages.Single(page => page.Blocks
+            .OfType<DossierPreviewParagraph>()
+            .Any(paragraph => paragraph.TocEntry is not null));
+        var bloecke = seite.Blocks.ToList();
+        var letztesKapitel = bloecke.FindLastIndex(block =>
+            block is DossierPreviewParagraph paragraph && paragraph.TocEntry is not null);
+        var beilage = bloecke.FindIndex(block =>
+            block is DossierPreviewParagraph paragraph
+            && paragraph.Runs.Any(run => run.FieldKey == "Verzeichnis_Beilagen"));
+
+        Assert.True(letztesKapitel >= 0);
+        Assert.Equal(letztesKapitel + 1, beilage);
+
+        var kapitelFormat = Assert.IsType<DossierPreviewParagraph>(bloecke[letztesKapitel]).Format;
+        var beilageFormat = Assert.IsType<DossierPreviewParagraph>(bloecke[beilage]).Format;
+        Assert.Equal(kapitelFormat, beilageFormat);
+    }
+
+    [Fact]
     public void Der_Uebersichtsplan_ist_eine_Bildstelle_und_kein_Text()
     {
         var seite = Vorschau().Pages
@@ -323,5 +344,57 @@ public sealed class DossierPreviewBuilderTests
     public void Ein_leerer_Pfad_wird_klar_abgewiesen()
     {
         Assert.Throws<ArgumentException>(() => DossierPreviewBuilder.Build("  "));
+    }
+}
+
+public sealed class DossierPreviewNavigationTests
+{
+    [Fact]
+    public void Seiten_werden_unter_ihrem_Kapitel_gruppiert_und_Fortsetzungen_bleiben_dort()
+    {
+        var pages = new[]
+        {
+            Seite(1, "Deckblatt", "", heading: false),
+            Seite(2, "Inhaltsverzeichnis", "Inhaltsverzeichnis", heading: false, title: true),
+            Seite(3, "Kapitel A", "Kapitel A", heading: true),
+            Seite(4, "Seite 4", "Fortsetzung", heading: false),
+            Seite(5, "Kapitel B", "Kapitel B", heading: true)
+        };
+
+        var navigation = DossierPreviewNavigation.Build(pages);
+
+        Assert.Equal(
+            new[] { "Deckblatt", "Inhaltsverzeichnis", "Kapitel A", "Kapitel A", "Kapitel B" },
+            navigation.Select(item => item.ChapterTitle));
+        Assert.Equal(
+            new[] { "Seite 1", "Seite 2", "Seite 3", "Seite 4", "Seite 5" },
+            navigation.Select(item => item.PageLabel));
+        Assert.Same(pages[3], navigation[3].Page);
+    }
+
+    private static DossierPreviewPage Seite(
+        int number,
+        string pageTitle,
+        string text,
+        bool heading,
+        bool title = false)
+    {
+        var format = DossierPreviewParagraphFormat.Default with
+        {
+            IsHeading = heading,
+            IsTitle = title
+        };
+
+        return new DossierPreviewPage(
+            number,
+            pageTitle,
+            new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.Zero),
+            new DossierPreviewBlock[]
+            {
+                new DossierPreviewParagraph(
+                    new[] { DossierPreviewRun.Literal(text, DossierPreviewRunFormat.Default) },
+                    format)
+            },
+            Array.Empty<string>());
     }
 }

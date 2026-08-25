@@ -32,12 +32,40 @@
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,10" TextWrapping="Wrap"
-                   Text="Links die Seiten, in der Mitte das Blatt, rechts die Felder dieser Seite. Ein Klick auf Text im Blatt springt direkt zum passenden Feld; Änderungen erscheinen sofort in der Vorschau."/>
+                   Text="Links Kapitel und Seiten, in der Mitte das Blatt, rechts die Felder dieser Seite. Ein Klick auf Text im Blatt springt direkt zum passenden Feld; Änderungen erscheinen sofort in der Vorschau."/>
 
         <DockPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,0">
-            <TextBlock DockPanel.Dock="Top" Text="Seiten" Margin="0,0,0,6"/>
-            <ListBox x:Name="PageList" DisplayMemberPath="Title"
-                     SelectionChanged="OnPageSelected"/>
+            <TextBlock DockPanel.Dock="Top" Text="Kapitel und Seiten" Margin="0,0,0,6"/>
+            <ListBox x:Name="PageList"
+                     SelectionChanged="OnPageSelected"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource SurfaceBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="0,0,0,1"
+                                        Padding="7,8,5,5"
+                                        Margin="0,5,0,2">
+                                    <TextBlock Text="{Binding Name}"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"/>
+                                </Border>
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding PageLabel}"
+                                   Margin="12,4,4,4"
+                                   TextWrapping="Wrap"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </DockPanel>
 
         <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource SurfaceBrush}"

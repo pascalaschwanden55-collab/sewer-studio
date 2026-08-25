@@ -5,6 +5,8 @@ using System.Text.RegularExpressions;
 
 namespace AuswertungPro.Next.Application.Dossiers;
 
+public sealed record DossierTocAttachmentEntry(int Number, string Title);
+
 /// <summary>
 /// Die zusaetzlichen Zeilen des Inhaltsverzeichnisses.
 ///
@@ -36,12 +38,23 @@ public static class DossierTocAttachments
     /// Luecken in der Nummerierung.
     /// </summary>
     public static string Build(IEnumerable<string?>? lines, int firstNumber)
+        => string.Join("\n", BuildEntries(lines, firstNumber)
+            .Select(entry => $"{entry.Number}.\t{entry.Title}"));
+
+    /// <summary>
+    /// Die normalisierten Einträge. Vorschau und Word-Ausgabe verwenden damit
+    /// dieselben Nummern und denselben Text, auch wenn eine Nummer mitgetippt
+    /// oder eine leere Zeile erfasst wurde.
+    /// </summary>
+    public static IReadOnlyList<DossierTocAttachmentEntry> BuildEntries(
+        IEnumerable<string?>? lines,
+        int firstNumber)
     {
         if (lines is null)
-            return string.Empty;
+            return Array.Empty<DossierTocAttachmentEntry>();
 
         var nummer = firstNumber;
-        var zeilen = new List<string>();
+        var entries = new List<DossierTocAttachmentEntry>();
 
         foreach (var eintrag in lines)
         {
@@ -49,10 +62,10 @@ public static class DossierTocAttachments
             if (text.Length == 0)
                 continue;
 
-            zeilen.Add($"{nummer}.\t{text}");
+            entries.Add(new DossierTocAttachmentEntry(nummer, text));
             nummer++;
         }
 
-        return string.Join("\n", zeilen);
+        return entries;
     }
 }

@@ -254,6 +254,19 @@ public static class DossierPreviewPageRenderer
                 absatz, toc, erster, LiteralErsatz, LiteralFormate, merke);
         }
 
+        if (absatz.Runs.Count == 1
+            && string.Equals(
+                absatz.Runs[0].FieldKey,
+                "Verzeichnis_Beilagen",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return DossierPreviewTocRenderer.RenderAttachments(
+                absatz,
+                value("Verzeichnis_Beilagen"),
+                erster,
+                merke);
+        }
+
         var offeneStelle = false;
 
         // Ein Absatz ohne Platzhalter ist fester Text — fuer ihn kann das

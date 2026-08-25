@@ -274,6 +274,40 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Zusaetzliche_Verzeichnispunkte_stehen_direkt_darunter_im_gleichen_Absatzformat()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.TocAttachmentLines.Add("Protokolle");
+        request.Dossier.TocAttachmentLines.Add("Pläne");
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        var body = document.MainDocumentPart!.Document.Body!;
+        var drittesKapitel = body.Elements<Paragraph>().Single(paragraph =>
+            paragraph.InnerText.Contains("3.Informationen Sanierung", StringComparison.Ordinal));
+        var vierterPunkt = drittesKapitel.NextSibling<Paragraph>();
+        var fuenfterPunkt = vierterPunkt?.NextSibling<Paragraph>();
+
+        Assert.NotNull(vierterPunkt);
+        Assert.NotNull(fuenfterPunkt);
+        Assert.Equal("4.Protokolle", vierterPunkt.InnerText);
+        Assert.Equal("5.Pläne", fuenfterPunkt!.InnerText);
+        Assert.Single(vierterPunkt.Descendants<TabChar>());
+        Assert.Single(fuenfterPunkt.Descendants<TabChar>());
+        Assert.Equal(
+            drittesKapitel.ParagraphProperties?.OuterXml,
+            vierterPunkt.ParagraphProperties?.OuterXml);
+        Assert.Equal(
+            drittesKapitel.ParagraphProperties?.OuterXml,
+            fuenfterPunkt.ParagraphProperties?.OuterXml);
+        Assert.Empty(vierterPunkt.Descendants<FieldCode>());
+        Assert.DoesNotContain("{{Verzeichnis_Beilagen}}", body.InnerText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Die_Themen_stammen_aus_Gebiet_und_Dossier()
     {
         var (request, templatePath) = BuildScenario();
