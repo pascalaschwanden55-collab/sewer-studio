@@ -127,8 +127,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     // gleich formatierter Absatz eingesetzt.
                     DocxTocAttachmentWriter.Apply(
                         document,
-                        request.Dossier.TocAttachmentLines,
-                        request.Dossier.TocAttachmentPageNumbers,
+                        request.Dossier.TocAttachments,
                         ZaehleVerzeichniszeilen(document) + 1);
 
                     DocxPlaceholderFiller.FillRepeatingRows(
@@ -254,7 +253,9 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         return values;
     }
 
-    public static Dictionary<string, string> BuildValues(DossierExportRequest request)
+    public static Dictionary<string, string> BuildValues(
+        DossierExportRequest request,
+        DossierTocAttachmentStart? tocStart = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -262,6 +263,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         var resolved = DossierFieldResolver.Resolve(request.Area, d);
         var snapshot = request.Snapshot;
         var today = DateTime.Now;
+        var verzeichnisStart = tocStart ?? new DossierTocAttachmentStart(4, 5);
 
         return MitFormaten(MitEigenenWerten(
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -322,14 +324,14 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             ["Uebersichtsplan_BreiteCm"] = PlanWidthCm(d)
                 .ToString("0.###", CultureInfo.InvariantCulture),
             ["Anzahl_Schaechte"] = snapshot.ShaftCount.ToString(CultureInfo.InvariantCulture),
-            // In der Vorschau stehen alle drei Word-Kapitel noch da. Beim
-            // Export wird die Anfangsnummer nach dem Entfernen ausgeblendeter
-            // Kapitel nochmals aus dem echten Dokument berechnet.
+            // Die Vorschau übergibt den aus ihren sichtbaren Word-Zeilen
+            // berechneten Start. Ohne Vorschau gilt die unveränderte Vorlage;
+            // der Export zählt nach dem Entfernen ausgeblendeter Kapitel
+            // nochmals direkt im echten Word-Dokument.
             ["Verzeichnis_Beilagen"] = DossierTocAttachments.Build(
-                d.TocAttachmentLines,
-                d.TocAttachmentPageNumbers,
-                firstNumber: 4,
-                firstPageNumber: 5),
+                d.TocAttachments,
+                verzeichnisStart.FirstNumber,
+                verzeichnisStart.FirstPageNumber),
             ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
         }, d), d);
     }

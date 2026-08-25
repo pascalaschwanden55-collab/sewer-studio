@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 
 using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.Domain.Models.Dossiers;
 
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -23,13 +24,12 @@ internal static class DocxTocAttachmentWriter
 
     public static int Apply(
         WordprocessingDocument document,
-        IEnumerable<string?>? lines,
-        IEnumerable<string?>? pageNumbers,
+        IEnumerable<DossierTocAttachment?>? attachments,
         int firstNumber)
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        var lineList = lines?.ToList() ?? new List<string?>();
+        var attachmentList = attachments?.ToList() ?? new List<DossierTocAttachment?>();
         var body = document.MainDocumentPart?.Document?.Body;
         if (body is null)
             return 0;
@@ -41,7 +41,8 @@ internal static class DocxTocAttachmentWriter
 
         if (marker is null)
         {
-            if (lineList.Any(line => !string.IsNullOrWhiteSpace(line)))
+            if (attachmentList.Any(punkt =>
+                    punkt is not null && !string.IsNullOrWhiteSpace(punkt.Title)))
             {
                 throw new InvalidDataException(
                     $"Die Word-Vorlage enthält die Stelle '{Placeholder}' nicht.");
@@ -65,8 +66,7 @@ internal static class DocxTocAttachmentWriter
             ? lastPageNumber + 1
             : 1;
         var entries = DossierTocAttachments.BuildEntries(
-            lineList,
-            pageNumbers,
+            attachmentList,
             firstNumber,
             firstPageNumber);
 

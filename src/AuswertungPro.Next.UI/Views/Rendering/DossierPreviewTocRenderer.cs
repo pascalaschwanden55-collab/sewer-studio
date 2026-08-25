@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Shapes;
 
 using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Dossiers.Preview;
@@ -138,6 +139,31 @@ internal static class DossierPreviewTocRenderer
         var title = Base(string.Empty);
         title.TextWrapping = TextWrapping.Wrap;
 
+        Line? leader = null;
+        if (!string.IsNullOrWhiteSpace(entry.PageNumber))
+        {
+            leader = new Line
+            {
+                X1 = 0,
+                Y1 = 0.5,
+                X2 = 1,
+                Y2 = 0.5,
+                Stretch = Stretch.Fill,
+                Height = 1,
+                Stroke = Brush(format.ColorHex) ?? Ink,
+                StrokeThickness = 1,
+                StrokeDashArray = new DoubleCollection { 0, 2.5 },
+                StrokeDashCap = PenLineCap.Round,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Margin = new Thickness(4, 0, 2, Math.Max(2, format.FontSizePx * 0.18))
+            };
+
+            // Die Linie liegt hinter dem Titel. Dessen eigene weisse Fläche
+            // lässt die Punkte erst nach dem letzten Buchstaben beginnen.
+            title.HorizontalAlignment = HorizontalAlignment.Left;
+            title.Background = Brushes.White;
+        }
+
         var segments = ranges.Count > 0
             ? DossierTopicTextFormatting.Split(titleText, ranges)
             : new[]
@@ -178,6 +204,11 @@ internal static class DossierPreviewTocRenderer
         Grid.SetColumn(title, 1);
         Grid.SetColumn(page, 2);
         grid.Children.Add(number);
+        if (leader is not null)
+        {
+            Grid.SetColumn(leader, 1);
+            grid.Children.Add(leader);
+        }
         grid.Children.Add(title);
         grid.Children.Add(page);
 

@@ -66,15 +66,17 @@
   `DocxTocEntryEditor` ersetzt nur den Titel; Nummer, Tabulatoren und Seitenzahl bleiben
   Word-Felder. Der gleichnamige Kapitelkopf wird weiterhin ueber `TextOverrides` geaendert,
   damit eine spaetere Word-Aktualisierung den eigenen Titel nicht zuruecksetzt.
-- Zusaetzliche Verzeichnispunkte bleiben in `DossierDefinition.TocAttachmentLines` und
-  werden als eigene sortierbare Liste bearbeitet. Ihre rechten Seitenzahlen stehen additiv
-  in `TocAttachmentPageNumbers`. `DossierTocAttachments` nummeriert sie erst hinter den
-  vorhandenen Kapiteln und schlägt bei Altdaten die nächste freie Seite vor; Titel und
+- Zusaetzliche Verzeichnispunkte stehen gemeinsam in
+  `DossierDefinition.TocAttachments`; jedes `DossierTocAttachment` verbindet Titel und
+  Seitenzahl untrennbar. Schema 8 uebernimmt die zwei alten parallelen Listen einmalig und
+  entfernt sie danach. `DossierTocAttachments` nummeriert erst hinter den in der Vorschau
+  sichtbaren Kapiteln und schlaegt bei Altdaten die naechste freie Seite vor; Titel und
   Seitenzahl bleiben je Punkt frei bearbeitbar.
   `DocxTocAttachmentWriter` schreibt jeden Punkt direkt hinter den letzten echten
   Word-Eintrag als eigenen Absatz in dessen Format samt rechtem Seitenzahl-Tabulator.
-  Die Vorschau verwendet dasselbe Zeilenraster und adressiert jeden Zusatzpunkt einzeln
-  fuer den direkten Klick zum Editor.
+  Die Vorschau verwendet dasselbe Zeilenraster samt Punktlinie, zaehlt ausgeblendete
+  Kapitel nicht mit und adressiert jeden Zusatzpunkt einzeln fuer den direkten Klick zum
+  Editor.
 - In `Schäden` und `Sanierungskonzept` kopiert `Import aus Liste` die aktuelle,
   fortlaufend nummerierte Bauteilliste als normalen Dossiertext: zuerst alle Haltungen,
   danach alle Schächte. Diese Kopie ist frei bearbeitbar und aendert weder die Auswahl

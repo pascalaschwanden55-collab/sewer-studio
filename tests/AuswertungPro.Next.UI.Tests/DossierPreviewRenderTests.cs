@@ -6,6 +6,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Line = System.Windows.Shapes.Line;
 
 using AuswertungPro.Next.Application.Dossiers.Preview;
 using AuswertungPro.Next.Infrastructure.Dossiers;
@@ -226,6 +227,10 @@ public sealed class DossierPreviewRenderTests
             Assert.Equal("8", ersteSeite.Text);
             Assert.Equal("12", zweiteSeite.Text);
             Assert.Equal(HorizontalAlignment.Right, ersteSeite.HorizontalAlignment);
+
+            var punktlinie = Punktlinie(beilageZeilen[0]);
+            Assert.Equal(PenLineCap.Round, punktlinie.StrokeDashCap);
+            Assert.NotEmpty(punktlinie.StrokeDashArray);
         });
     }
 
@@ -243,6 +248,14 @@ public sealed class DossierPreviewRenderTests
         return grid.Children
             .OfType<TextBlock>()
             .Single(block => Grid.GetColumn(block) == 2);
+    }
+
+    private static Line Punktlinie(Border row)
+    {
+        var grid = Assert.IsType<Grid>(row.Child);
+        return grid.Children
+            .OfType<Line>()
+            .Single(line => Grid.GetColumn(line) == 1);
     }
 
     private static void RunOnSta(Action action)

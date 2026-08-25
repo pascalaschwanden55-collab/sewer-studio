@@ -5,7 +5,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
+using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Dossiers.Preview;
+using AuswertungPro.Next.Domain.Models.Dossiers;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -38,9 +40,8 @@ public partial class DossierPreviewWindow
     private void FuelleVerzeichnisEditor(Panel wirt, DossierPreviewField feld)
     {
         wirt.Children.Clear();
-        _dossier.TocAttachmentLines ??= new();
-        _dossier.TocAttachmentPageNumbers ??= new();
-        SynchronisiereVerzeichnisSeitenzahlen();
+        _dossier.TocAttachments ??= new();
+        ErgaenzeFehlendeVerzeichnisSeitenzahlen();
 
         foreach (var target in _feldStellen.Keys
                      .Where(target => target.Kind == DossierPreviewTargetKind.Row
@@ -53,9 +54,10 @@ public partial class DossierPreviewWindow
             _feldStellen.Remove(target);
         }
 
-        for (var i = 0; i < _dossier.TocAttachmentLines.Count; i++)
+        for (var i = 0; i < _dossier.TocAttachments.Count; i++)
         {
             var stelle = i;
+            var punkt = _dossier.TocAttachments[stelle];
             var inhalt = new StackPanel();
             var karte = new Border
             {
@@ -76,8 +78,7 @@ public partial class DossierPreviewWindow
                 VerschiebeVerzeichnispunkt(stelle, +1, wirt, feld)));
             werkzeuge.Children.Add(Kleiner("✕", "Punkt entfernen", () =>
             {
-                _dossier.TocAttachmentLines.RemoveAt(stelle);
-                _dossier.TocAttachmentPageNumbers.RemoveAt(stelle);
+                _dossier.TocAttachments.RemoveAt(stelle);
                 FuelleVerzeichnisEditor(wirt, feld);
                 ZeichneBlatt();
                 Betone(feld.Key);
@@ -116,7 +117,7 @@ public partial class DossierPreviewWindow
 
             var box = new TextBox
             {
-                Text = _dossier.TocAttachmentLines[stelle] ?? string.Empty,
+                Text = punkt.Title ?? string.Empty,
                 MinHeight = 34,
                 Padding = new Thickness(6, 4, 6, 4),
                 FontFamily = new FontFamily("Arial"),
@@ -125,7 +126,7 @@ public partial class DossierPreviewWindow
             box.GotKeyboardFocus += (_, _) => Betone(feld.Key);
             box.TextChanged += (_, _) =>
             {
-                _dossier.TocAttachmentLines[stelle] = box.Text;
+                punkt.Title = box.Text;
                 ZeichneBlatt();
             };
             Grid.SetRow(box, 1);
@@ -133,7 +134,7 @@ public partial class DossierPreviewWindow
 
             var seite = new TextBox
             {
-                Text = _dossier.TocAttachmentPageNumbers[stelle] ?? string.Empty,
+                Text = punkt.PageNumber ?? string.Empty,
                 Width = 64,
                 MinHeight = 34,
                 MaxLength = 4,
@@ -147,7 +148,7 @@ public partial class DossierPreviewWindow
             seite.GotKeyboardFocus += (_, _) => Betone(feld.Key);
             seite.TextChanged += (_, _) =>
             {
-                _dossier.TocAttachmentPageNumbers[stelle] = seite.Text;
+                punkt.PageNumber = seite.Text;
                 ZeichneBlatt();
             };
             Grid.SetRow(seite, 1);
@@ -161,8 +162,10 @@ public partial class DossierPreviewWindow
 
         var neu = Kleiner("+ Punkt ergänzen", "Einen zusätzlichen Verzeichnispunkt anhängen", () =>
         {
-            _dossier.TocAttachmentLines.Add(string.Empty);
-            _dossier.TocAttachmentPageNumbers.Add(NaechsteVerzeichnisSeite());
+            _dossier.TocAttachments.Add(new DossierTocAttachment
+            {
+                PageNumber = NaechsteVerzeichnisSeite()
+            });
             FuelleVerzeichnisEditor(wirt, feld);
             ZeichneBlatt();
             Betone(feld.Key);
@@ -184,36 +187,28 @@ public partial class DossierPreviewWindow
         DossierPreviewField feld)
     {
         var ziel = stelle + richtung;
-        if (ziel < 0 || ziel >= _dossier.TocAttachmentLines.Count)
+        if (ziel < 0 || ziel >= _dossier.TocAttachments.Count)
             return;
 
-        var text = _dossier.TocAttachmentLines[stelle];
-        var seite = _dossier.TocAttachmentPageNumbers[stelle];
-        _dossier.TocAttachmentLines.RemoveAt(stelle);
-        _dossier.TocAttachmentPageNumbers.RemoveAt(stelle);
-        _dossier.TocAttachmentLines.Insert(ziel, text);
-        _dossier.TocAttachmentPageNumbers.Insert(ziel, seite);
+        var punkt = _dossier.TocAttachments[stelle];
+        _dossier.TocAttachments.RemoveAt(stelle);
+        _dossier.TocAttachments.Insert(ziel, punkt);
         FuelleVerzeichnisEditor(wirt, feld);
         ZeichneBlatt();
         Betone(feld.Key);
     }
 
-    private void SynchronisiereVerzeichnisSeitenzahlen()
+    private void ErgaenzeFehlendeVerzeichnisSeitenzahlen()
     {
-        while (_dossier.TocAttachmentPageNumbers.Count > _dossier.TocAttachmentLines.Count)
-            _dossier.TocAttachmentPageNumbers.RemoveAt(_dossier.TocAttachmentPageNumbers.Count - 1);
-
-        while (_dossier.TocAttachmentPageNumbers.Count < _dossier.TocAttachmentLines.Count)
-            _dossier.TocAttachmentPageNumbers.Add(NaechsteVerzeichnisSeite());
+        foreach (var punkt in _dossier.TocAttachments.Where(punkt => punkt.PageNumber is null))
+            punkt.PageNumber = NaechsteVerzeichnisSeite();
     }
 
     private string NaechsteVerzeichnisSeite()
     {
-        var hoechsteSeite = _document.Pages
-            .SelectMany(page => page.Blocks)
-            .OfType<DossierPreviewParagraph>()
-            .Select(paragraph => paragraph.TocEntry?.PageNumber)
-            .Concat(_dossier.TocAttachmentPageNumbers)
+        var start = AktuellerVerzeichnisStart();
+        var hoechsteSeite = _dossier.TocAttachments
+            .Select(punkt => punkt.PageNumber)
             .Select(text => int.TryParse(
                 text,
                 NumberStyles.Integer,
@@ -222,8 +217,18 @@ public partial class DossierPreviewWindow
                     ? nummer
                     : 0)
             .DefaultIfEmpty(0)
+            .Append(start.FirstPageNumber - 1)
             .Max();
 
         return (hoechsteSeite + 1).ToString(CultureInfo.InvariantCulture);
     }
+
+    private DossierTocAttachmentStart AktuellerVerzeichnisStart()
+        => DossierTocAttachments.StartAfter(
+            _document.Pages
+                .SelectMany(page => page.Blocks)
+                .OfType<DossierPreviewParagraph>()
+                .Select(paragraph => paragraph.TocEntry),
+            _dossier.HiddenChapters);
+
 }

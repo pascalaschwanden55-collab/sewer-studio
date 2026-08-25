@@ -65,7 +65,9 @@ public partial class DossierPreviewWindow : Window
         _request = request with { Area = area, Dossier = dossier };
 
         _document = DossierPreviewBuilder.Build(templatePath);
-        _values = DossierWordTemplateExportService.BuildValues(_request);
+        _values = DossierWordTemplateExportService.BuildValues(
+            _request,
+            AktuellerVerzeichnisStart());
         // Die berechneten Werte sind die Vorgabe jeder Stelle; eine eigene
         // Angabe des Dossiers sticht sie.
         _fields = DossierPreviewFieldCatalog.Build(
@@ -145,7 +147,9 @@ public partial class DossierPreviewWindow : Window
 
         var seite = item.Page;
 
-        _values = DossierWordTemplateExportService.BuildValues(_request);
+        _values = DossierWordTemplateExportService.BuildValues(
+            _request,
+            AktuellerVerzeichnisStart());
 
         // Der Uebersichtsplan ist eine Bildmarke, kein Textwert. Sein Pfad wird
         // genau so aufgeloest wie beim Erzeugen des Dossiers — sonst zeigte die

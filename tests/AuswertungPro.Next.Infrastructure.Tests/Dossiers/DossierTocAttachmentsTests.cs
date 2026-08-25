@@ -1,6 +1,8 @@
 using System;
 
 using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.Application.Dossiers.Preview;
+using AuswertungPro.Next.Domain.Models.Dossiers;
 
 using Xunit;
 
@@ -20,7 +22,8 @@ public sealed class DossierTocAttachmentsTests
     public void Die_Nummerierung_laeuft_nach_den_Kapiteln_weiter()
     {
         var text = DossierTocAttachments.Build(
-            new[] { "TV-Protokolle", "Schachtprotokolle" }, firstNumber: 4);
+            new[] { Punkt("TV-Protokolle"), Punkt("Schachtprotokolle") },
+            firstNumber: 4);
 
         Assert.Equal("4.\tTV-Protokolle\n5.\tSchachtprotokolle", text);
     }
@@ -29,8 +32,7 @@ public sealed class DossierTocAttachmentsTests
     public void Eigene_Seitenzahlen_stehen_rechts_in_einer_dritten_Spalte()
     {
         var text = DossierTocAttachments.Build(
-            new[] { "TV-Protokolle", "Schachtprotokolle" },
-            new[] { "8", "12" },
+            new[] { Punkt("TV-Protokolle", "8"), Punkt("Schachtprotokolle", "12") },
             firstNumber: 4,
             firstPageNumber: 5);
 
@@ -41,8 +43,7 @@ public sealed class DossierTocAttachmentsTests
     public void Alte_Zeilen_ohne_Seitenangabe_erhalten_einen_Fortlaufenden_Vorschlag()
     {
         var text = DossierTocAttachments.Build(
-            new[] { "TV-Protokolle", "Schachtprotokolle" },
-            Array.Empty<string>(),
+            new[] { Punkt("TV-Protokolle"), Punkt("Schachtprotokolle") },
             firstNumber: 4,
             firstPageNumber: 5);
 
@@ -53,8 +54,7 @@ public sealed class DossierTocAttachmentsTests
     public void Eine_bewusst_geloeschte_Seitenzahl_bleibt_leer()
     {
         var text = DossierTocAttachments.Build(
-            new[] { "TV-Protokolle" },
-            new[] { "" },
+            new[] { Punkt("TV-Protokolle", "") },
             firstNumber: 4,
             firstPageNumber: 5);
 
@@ -63,14 +63,17 @@ public sealed class DossierTocAttachmentsTests
 
     [Fact]
     public void Ohne_Zeilen_entsteht_nichts()
-        => Assert.Equal("", DossierTocAttachments.Build(Array.Empty<string>(), 4));
+        => Assert.Equal(
+            "",
+            DossierTocAttachments.Build(Array.Empty<DossierTocAttachment>(), 4));
 
     [Fact]
     public void Leere_Zeilen_werden_uebersprungen_und_zaehlen_nicht_mit()
     {
         // Sonst entstuenden Luecken in der Nummerierung.
         var text = DossierTocAttachments.Build(
-            new[] { "TV-Protokolle", "   ", "", "Pläne" }, firstNumber: 4);
+            new[] { Punkt("TV-Protokolle"), Punkt("   "), Punkt(""), Punkt("Pläne") },
+            firstNumber: 4);
 
         Assert.Equal("4.\tTV-Protokolle\n5.\tPläne", text);
     }
@@ -78,7 +81,7 @@ public sealed class DossierTocAttachmentsTests
     [Fact]
     public void Leerraum_am_Rand_faellt_weg()
     {
-        var text = DossierTocAttachments.Build(new[] { "  TV-Protokolle  " }, 4);
+        var text = DossierTocAttachments.Build(new[] { Punkt("  TV-Protokolle  ") }, 4);
 
         Assert.Equal("4.\tTV-Protokolle", text);
     }
@@ -88,7 +91,9 @@ public sealed class DossierTocAttachmentsTests
     {
         // Wer aus Gewohnheit „4. TV-Protokolle" tippt, soll nicht
         // „4.\t4. TV-Protokolle" im Dossier stehen haben.
-        var text = DossierTocAttachments.Build(new[] { "4. TV-Protokolle", "5.Pläne" }, 4);
+        var text = DossierTocAttachments.Build(
+            new[] { Punkt("4. TV-Protokolle"), Punkt("5.Pläne") },
+            4);
 
         Assert.Equal("4.\tTV-Protokolle\n5.\tPläne", text);
     }
@@ -97,24 +102,43 @@ public sealed class DossierTocAttachmentsTests
     public void Eine_Zahl_im_Text_bleibt_erhalten()
     {
         // „3 Pläne" ist keine Nummerierung, sondern eine Menge.
-        var text = DossierTocAttachments.Build(new[] { "3 Pläne Werkleitungen" }, 4);
+        var text = DossierTocAttachments.Build(new[] { Punkt("3 Pläne Werkleitungen") }, 4);
 
         Assert.Equal("4.\t3 Pläne Werkleitungen", text);
     }
 
     [Fact]
     public void Fehlende_Liste_ist_kein_Absturz()
-        => Assert.Equal("", DossierTocAttachments.Build(null, 4));
+        => Assert.Equal("", DossierTocAttachments.Build(attachments: null, firstNumber: 4));
 
     [Theory]
     [InlineData(1)]
     [InlineData(7)]
     public void Die_Anfangsnummer_wird_uebernommen(int start)
     {
-        var text = DossierTocAttachments.Build(new[] { "Beilage" }, start);
+        var text = DossierTocAttachments.Build(new[] { Punkt("Beilage") }, start);
 
         Assert.StartsWith($"{start}.\t", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Ausgeblendete_Kapitel_werden_fuer_die_Vorschau_nicht_mitgezaehlt()
+    {
+        var start = DossierTocAttachments.StartAfter(
+            new[]
+            {
+                new DossierPreviewTocEntry("1.", "Übersichtsplan Werkleitungen", "3"),
+                new DossierPreviewTocEntry("2.", "Eigentumsverhältnisse", "4"),
+                new DossierPreviewTocEntry("3.", "Informationen Sanierung", "4")
+            },
+            new[] { "Eigentumsverhältnisse" });
+
+        Assert.Equal(3, start.FirstNumber);
+        Assert.Equal(5, start.FirstPageNumber);
+    }
+
+    private static DossierTocAttachment Punkt(string title, string? pageNumber = null)
+        => new() { Title = title, PageNumber = pageNumber };
 }
 
 /// <summary>
@@ -175,7 +199,7 @@ public sealed class DossierTocTemplateTests
 /// <summary>
 /// Der Wechsel auf die aktuelle Formatversion.
 /// </summary>
-public sealed class DossierSchema7Tests
+public sealed class DossierSchema8Tests
 {
     [Fact]
     public void Eine_Datei_der_Version_5_wird_uebernommen_und_verliert_nichts()
@@ -198,11 +222,12 @@ public sealed class DossierSchema7Tests
         var umgestellt = DossierDocumentMigration.MigrateToCurrent(dokument);
         var dossier = umgestellt.Dossiers[0];
 
-        Assert.Equal(7, umgestellt.SchemaVersion);
+        Assert.Equal(8, umgestellt.SchemaVersion);
         Assert.Equal("Liegenschaft Nr. 439 Dittli", dossier.Name);
         Assert.Equal(new[] { "33458", "36051" }, dossier.ShaftNumbers);
-        Assert.Empty(dossier.TocAttachmentLines);
-        Assert.Empty(dossier.TocAttachmentPageNumbers);
+        Assert.Empty(dossier.TocAttachments);
+        Assert.Null(dossier.TocAttachmentLines);
+        Assert.Null(dossier.TocAttachmentPageNumbers);
     }
 
     [Fact]
@@ -215,15 +240,31 @@ public sealed class DossierSchema7Tests
             {
                 new AuswertungPro.Next.Domain.Models.Dossiers.DossierDefinition
                 {
-                    TocAttachmentLines = { "TV-Protokolle", "Schachtprotokolle" }
+                    TocAttachmentLines = new List<string>
+                    {
+                        "TV-Protokolle",
+                        "Schachtprotokolle"
+                    }
                 }
             }
         };
 
         var dossier = DossierDocumentMigration.MigrateToCurrent(dokument).Dossiers[0];
 
-        Assert.Equal(new[] { "TV-Protokolle", "Schachtprotokolle" }, dossier.TocAttachmentLines);
-        Assert.Empty(dossier.TocAttachmentPageNumbers);
+        Assert.Collection(
+            dossier.TocAttachments,
+            punkt =>
+            {
+                Assert.Equal("TV-Protokolle", punkt.Title);
+                Assert.Null(punkt.PageNumber);
+            },
+            punkt =>
+            {
+                Assert.Equal("Schachtprotokolle", punkt.Title);
+                Assert.Null(punkt.PageNumber);
+            });
+        Assert.Null(dossier.TocAttachmentLines);
+        Assert.Null(dossier.TocAttachmentPageNumbers);
     }
 
 
@@ -237,15 +278,40 @@ public sealed class DossierSchema7Tests
             {
                 new AuswertungPro.Next.Domain.Models.Dossiers.DossierDefinition
                 {
-                    TocAttachmentLines = { "TV-Protokolle" },
-                    TocAttachmentPageNumbers = { "8" }
+                    TocAttachmentLines = new List<string> { "TV-Protokolle" },
+                    TocAttachmentPageNumbers = new List<string> { "8" }
                 }
             }
         };
 
         var dossier = DossierDocumentMigration.MigrateToCurrent(dokument).Dossiers[0];
 
-        Assert.Equal(new[] { "TV-Protokolle" }, dossier.TocAttachmentLines);
-        Assert.Equal(new[] { "8" }, dossier.TocAttachmentPageNumbers);
+        var punkt = Assert.Single(dossier.TocAttachments);
+        Assert.Equal("TV-Protokolle", punkt.Title);
+        Assert.Equal("8", punkt.PageNumber);
+        Assert.Null(dossier.TocAttachmentLines);
+        Assert.Null(dossier.TocAttachmentPageNumbers);
+    }
+
+    [Fact]
+    public void Eine_bewusst_leere_Seitenzahl_wird_von_Version_7_unveraendert_uebernommen()
+    {
+        var dokument = new DossierDocument
+        {
+            SchemaVersion = 7,
+            Dossiers =
+            {
+                new DossierDefinition
+                {
+                    TocAttachmentLines = new List<string> { "TV-Protokolle" },
+                    TocAttachmentPageNumbers = new List<string> { "" }
+                }
+            }
+        };
+
+        var punkt = Assert.Single(
+            DossierDocumentMigration.MigrateToCurrent(dokument).Dossiers[0].TocAttachments);
+
+        Assert.Equal(string.Empty, punkt.PageNumber);
     }
 }

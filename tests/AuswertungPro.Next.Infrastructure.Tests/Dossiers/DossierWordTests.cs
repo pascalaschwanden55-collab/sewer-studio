@@ -277,10 +277,16 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     public async Task Zusaetzliche_Verzeichnispunkte_stehen_direkt_darunter_im_gleichen_Absatzformat()
     {
         var (request, templatePath) = BuildScenario();
-        request.Dossier.TocAttachmentLines.Add("Protokolle");
-        request.Dossier.TocAttachmentLines.Add("Pläne");
-        request.Dossier.TocAttachmentPageNumbers.Add("8");
-        request.Dossier.TocAttachmentPageNumbers.Add("12");
+        request.Dossier.TocAttachments.Add(new DossierTocAttachment
+        {
+            Title = "Protokolle",
+            PageNumber = "8"
+        });
+        request.Dossier.TocAttachments.Add(new DossierTocAttachment
+        {
+            Title = "Pläne",
+            PageNumber = "12"
+        });
 
         var service = new DossierWordTemplateExportService(() => templatePath);
         var result = await service.ExportAsync(request);
@@ -307,6 +313,30 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
             fuenfterPunkt.ParagraphProperties?.OuterXml);
         Assert.Empty(vierterPunkt.Descendants<FieldCode>());
         Assert.DoesNotContain("{{Verzeichnis_Beilagen}}", body.InnerText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Nach_ausgeblendetem_Kapitel_beginnt_der_Zusatzpunkt_bei_der_richtigen_Nummer()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.HiddenChapters.Add("Übersichtsplan Werkleitungen");
+        request.Dossier.TocAttachments.Add(new DossierTocAttachment
+        {
+            Title = "Protokolle",
+            PageNumber = "8"
+        });
+
+        var result = await new DossierWordTemplateExportService(() => templatePath)
+            .ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        Assert.Contains(
+            document.MainDocumentPart!.Document.Body!.Elements<Paragraph>(),
+            paragraph => string.Equals(
+                paragraph.InnerText,
+                "3.Protokolle8",
+                StringComparison.Ordinal));
     }
 
     [Fact]

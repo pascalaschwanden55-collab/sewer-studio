@@ -82,6 +82,19 @@ public sealed class DossierChangeRow
 }
 
 /// <summary>
+/// Ein zusätzlicher Punkt des Inhaltsverzeichnisses. Titel und Seitenzahl
+/// gehören bewusst in dasselbe Objekt, damit sie beim Verschieben oder Löschen
+/// nie auseinanderlaufen können. <c>null</c> bedeutet: Seite noch vorschlagen;
+/// ein leerer Text bedeutet: bewusst ohne Seitenzahl anzeigen.
+/// </summary>
+public sealed class DossierTocAttachment
+{
+    public string Title { get; set; } = "";
+
+    public string? PageNumber { get; set; }
+}
+
+/// <summary>
 /// Gebietsweite Angaben. Sie gelten fuer alle Dossiers eines Projekts und
 /// werden nur einmal erfasst. Ein Dossier darf jedes Feld einzeln ueberschreiben.
 /// </summary>
@@ -260,20 +273,19 @@ public sealed class DossierDefinition
     public List<DossierChangeRow> Changes { get; set; } = new();
 
     /// <summary>
-    /// Zusaetzliche Zeilen des Inhaltsverzeichnisses — die Beilagen, die am
-    /// Schluss dazukommen: TV-Protokolle, Schachtprotokolle, Plaene.
-    ///
-    /// Die drei Kapitel bleiben Word ueberlassen. Für diese zusätzlichen
-    /// Punkte speichert SewerStudio Titel und Seitenzahl getrennt.
+    /// Zusätzliche Punkte des Inhaltsverzeichnisses — die Beilagen, die am
+    /// Schluss dazukommen: TV-Protokolle, Schachtprotokolle, Pläne.
     /// </summary>
-    public List<string> TocAttachmentLines { get; set; } = new();
+    public List<DossierTocAttachment> TocAttachments { get; set; } = new();
 
     /// <summary>
-    /// Seitenzahl rechts neben jedem zusätzlichen Verzeichnispunkt. Die Liste
-    /// läuft parallel zu <see cref="TocAttachmentLines"/>. Sie ist additiv,
-    /// damit bestehende Dossiers ihre bisherigen Titel unverändert behalten.
+    /// Alte Ablage bis Schema 7. Nur die Migration liest diese Liste und leert
+    /// sie danach. Neue Logik darf sie nicht wieder verwenden.
     /// </summary>
-    public List<string> TocAttachmentPageNumbers { get; set; } = new();
+    public List<string>? TocAttachmentLines { get; set; }
+
+    /// <summary>Alte parallele Seitenzahlliste bis Schema 7.</summary>
+    public List<string>? TocAttachmentPageNumbers { get; set; }
 
     /// <summary>Text der Zeile "Fuer die Aktennotiz".</summary>
     public string FileNote { get; set; } = "";
@@ -358,7 +370,7 @@ public sealed class DossierDefinition
 public sealed class DossierDocument
 {
     /// <summary>Formatversion, die diese Programmversion schreibt.</summary>
-    public const int CurrentSchemaVersion = 7;
+    public const int CurrentSchemaVersion = 8;
 
     /// <summary>Formatversion. Unbekannt hoehere Versionen werden nicht ueberschrieben.</summary>
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;

@@ -154,6 +154,38 @@ public sealed class DossierFileStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Neue_Datei_speichert_nur_die_gemeinsamen_Verzeichniseintraege()
+    {
+        var store = new DossierFileStore();
+        var document = new DossierDocument
+        {
+            Dossiers =
+            {
+                new DossierDefinition
+                {
+                    TocAttachments =
+                    {
+                        new DossierTocAttachment
+                        {
+                            Title = "TV-Protokolle",
+                            PageNumber = "8"
+                        }
+                    }
+                }
+            }
+        };
+
+        await store.SaveAsync(_projectRoot, document);
+
+        var json = await File.ReadAllTextAsync(
+            DossierFolderPlanner.ResolveDocumentPath(_projectRoot));
+
+        Assert.Contains("TocAttachments", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("TocAttachmentLines", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("TocAttachmentPageNumbers", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Neuere_Formatversion_wird_nicht_erraten()
     {
         var store = new DossierFileStore();

@@ -17,6 +17,7 @@ namespace AuswertungPro.Next.Application.Dossiers;
 /// dafuer keine Ableitung; leere Formatlisten bedeuten weiterhin Vorlagenformat.
 /// Version 6 fuehrt die zusaetzlichen Verzeichniszeilen der Beilagen.
 /// Version 7 ergänzt deren frei bearbeitbare Seitenzahlen.
+/// Version 8 verbindet Titel und Seitenzahl zu einem untrennbaren Eintrag.
 /// </summary>
 public static class DossierDocumentMigration
 {
@@ -93,6 +94,7 @@ public static class DossierDocumentMigration
 
         var isLegacyDocument = NeedsOwnerDerivation(document.SchemaVersion);
         var brauchtThemen = NeedsTopicDerivation(document.SchemaVersion);
+        var brauchtVerzeichnisEintraege = document.SchemaVersion < 8;
 
         document.Area.Topics ??= new List<DossierTopicRow>();
         foreach (var topic in document.Area.Topics.Where(topic => topic is not null))
@@ -121,6 +123,32 @@ public static class DossierDocumentMigration
             dossier.TextOverrides ??= new Dictionary<string, string>();
             dossier.TocAttachmentLines ??= new List<string>();
             dossier.TocAttachmentPageNumbers ??= new List<string>();
+            dossier.TocAttachments = (dossier.TocAttachments ?? new List<DossierTocAttachment>())
+                .Where(punkt => punkt is not null)
+                .ToList();
+
+            if (brauchtVerzeichnisEintraege && dossier.TocAttachments.Count == 0)
+            {
+                for (var index = 0; index < dossier.TocAttachmentLines.Count; index++)
+                {
+                    dossier.TocAttachments.Add(new DossierTocAttachment
+                    {
+                        Title = dossier.TocAttachmentLines[index] ?? string.Empty,
+                        PageNumber = index < dossier.TocAttachmentPageNumbers.Count
+                            ? dossier.TocAttachmentPageNumbers[index] ?? string.Empty
+                            : null
+                    });
+                }
+            }
+
+            // Ab Schema 8 existiert nur noch die gemeinsame Objektliste. Die
+            // alten parallelen Listen werden nach der einmaligen Übernahme
+            // geleert, damit sie nie wieder auseinanderlaufen können.
+            dossier.TocAttachmentLines = null;
+            dossier.TocAttachmentPageNumbers = null;
+
+            foreach (var punkt in dossier.TocAttachments)
+                punkt.Title ??= string.Empty;
 
             foreach (var topic in dossier.Topics.Where(topic => topic is not null))
                 topic.StyleRanges ??= new List<DossierTextStyleRange>();

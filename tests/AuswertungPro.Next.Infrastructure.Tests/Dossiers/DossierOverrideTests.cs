@@ -213,13 +213,35 @@ public sealed class DossierFieldOverrideTests
     {
         var dossier = new DossierDefinition
         {
-            TocAttachmentLines = { "TV-Protokolle", "Schachtprotokolle" }
+            TocAttachments =
+            {
+                new DossierTocAttachment { Title = "TV-Protokolle" },
+                new DossierTocAttachment { Title = "Schachtprotokolle" }
+            }
         };
 
         var value = DossierWordTemplateExportService.BuildValues(Anfrage(dossier))[
             "Verzeichnis_Beilagen"];
 
         Assert.Equal("4.\tTV-Protokolle\t5\n5.\tSchachtprotokolle\t6", value);
+    }
+
+    [Fact]
+    public void Vorschau_uebernimmt_die_aus_sichtbaren_Kapiteln_berechnete_Anfangsnummer()
+    {
+        var dossier = new DossierDefinition
+        {
+            TocAttachments =
+            {
+                new DossierTocAttachment { Title = "TV-Protokolle" }
+            }
+        };
+
+        var value = DossierWordTemplateExportService.BuildValues(
+            Anfrage(dossier),
+            new DossierTocAttachmentStart(3, 5))["Verzeichnis_Beilagen"];
+
+        Assert.Equal("3.\tTV-Protokolle\t5", value);
     }
 
     private static AuswertungPro.Next.Application.Dossiers.DossierExportRequest Anfrage(

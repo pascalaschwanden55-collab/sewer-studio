@@ -4,12 +4,19 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+using AuswertungPro.Next.Application.Dossiers.Preview;
+using AuswertungPro.Next.Domain.Models.Dossiers;
+
 namespace AuswertungPro.Next.Application.Dossiers;
 
 public sealed record DossierTocAttachmentEntry(
     int Number,
     string Title,
     string PageNumber);
+
+public sealed record DossierTocAttachmentStart(
+    int FirstNumber,
+    int FirstPageNumber);
 
 /// <summary>
 /// Die zusaetzlichen Zeilen des Inhaltsverzeichnisses.
@@ -39,21 +46,11 @@ public static class DossierTocAttachments
     /// Leere Zeilen fallen weg und zaehlen nicht mit, sonst entstuenden
     /// Luecken in der Nummerierung.
     /// </summary>
-    public static string Build(IEnumerable<string?>? lines, int firstNumber)
-        => Format(BuildEntries(lines, firstNumber));
-
-    /// <summary>
-    /// Baut Nummer, Titel und die rechts ausgerichtete Seitenzahl. Fehlt bei
-    /// einem alten Dossier der passende Listeneintrag, wird ab
-    /// <paramref name="firstPageNumber"/> fortlaufend vorgeschlagen. Eine
-    /// vorhandene, aber leere Angabe bleibt dagegen bewusst leer.
-    /// </summary>
     public static string Build(
-        IEnumerable<string?>? lines,
-        IEnumerable<string?>? pageNumbers,
+        IEnumerable<DossierTocAttachment?>? attachments,
         int firstNumber,
-        int firstPageNumber)
-        => Format(BuildEntries(lines, pageNumbers, firstNumber, firstPageNumber));
+        int? firstPageNumber = null)
+        => Format(BuildEntries(attachments, firstNumber, firstPageNumber));
 
     /// <summary>
     /// Die normalisierten Einträge. Vorschau und Word-Ausgabe verwenden damit
@@ -61,41 +58,34 @@ public static class DossierTocAttachments
     /// oder eine leere Zeile erfasst wurde.
     /// </summary>
     public static IReadOnlyList<DossierTocAttachmentEntry> BuildEntries(
-        IEnumerable<string?>? lines,
-        int firstNumber)
-        => BuildEntries(lines, pageNumbers: null, firstNumber, firstPageNumber: null);
-
-    public static IReadOnlyList<DossierTocAttachmentEntry> BuildEntries(
-        IEnumerable<string?>? lines,
-        IEnumerable<string?>? pageNumbers,
+        IEnumerable<DossierTocAttachment?>? attachments,
         int firstNumber,
         int? firstPageNumber)
     {
-        if (lines is null)
+        if (attachments is null)
             return Array.Empty<DossierTocAttachmentEntry>();
 
-        var pages = pageNumbers?.ToList() ?? new List<string?>();
         var nummer = firstNumber;
         var vorgeschlageneSeite = firstPageNumber;
         var entries = new List<DossierTocAttachmentEntry>();
-        var inputIndex = 0;
 
-        foreach (var eintrag in lines)
+        foreach (var attachment in attachments)
         {
-            var text = FuehrendeNummer.Replace((eintrag ?? string.Empty).Trim(), string.Empty).Trim();
-            if (text.Length == 0)
-            {
-                inputIndex++;
+            if (attachment is null)
                 continue;
-            }
 
-            var seite = inputIndex < pages.Count
-                ? (pages[inputIndex] ?? string.Empty).Trim()
-                : vorgeschlageneSeite?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+            var text = FuehrendeNummer.Replace(
+                (attachment.Title ?? string.Empty).Trim(),
+                string.Empty).Trim();
+            if (text.Length == 0)
+                continue;
+
+            var seite = attachment.PageNumber is null
+                ? vorgeschlageneSeite?.ToString(CultureInfo.InvariantCulture) ?? string.Empty
+                : attachment.PageNumber.Trim();
 
             entries.Add(new DossierTocAttachmentEntry(nummer, text, seite));
             nummer++;
-            inputIndex++;
 
             if (int.TryParse(
                     seite,
@@ -104,11 +94,42 @@ public static class DossierTocAttachments
                     out var verwendeteSeite) &&
                 verwendeteSeite >= 0)
                 vorgeschlageneSeite = verwendeteSeite + 1;
-            else if (inputIndex > pages.Count && vorgeschlageneSeite is not null)
-                vorgeschlageneSeite++;
         }
 
         return entries;
+    }
+
+    /// <summary>
+    /// Ermittelt für die Vorschau dieselbe Anfangsnummer, die Word nach dem
+    /// Entfernen ausgeblendeter Kapitel verwendet. Die nächste Seite folgt
+    /// der höchsten sichtbaren Word-Seitenzahl.
+    /// </summary>
+    public static DossierTocAttachmentStart StartAfter(
+        IEnumerable<DossierPreviewTocEntry?>? entries,
+        IEnumerable<string?>? hiddenChapters)
+    {
+        var hidden = new HashSet<string>(
+            (hiddenChapters ?? Array.Empty<string?>())
+                .Where(title => !string.IsNullOrWhiteSpace(title))
+                .Select(title => title!.Trim()),
+            StringComparer.OrdinalIgnoreCase);
+        var visible = (entries ?? Array.Empty<DossierPreviewTocEntry?>())
+            .Where(entry => entry is not null
+                && !hidden.Contains((entry.Title ?? string.Empty).Trim()))
+            .Select(entry => entry!)
+            .ToList();
+        var lastPage = visible
+            .Select(entry => int.TryParse(
+                entry.PageNumber,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var page)
+                    ? page
+                    : 0)
+            .DefaultIfEmpty(0)
+            .Max();
+
+        return new DossierTocAttachmentStart(visible.Count + 1, lastPage + 1);
     }
 
     private static string Format(IEnumerable<DossierTocAttachmentEntry> entries)
