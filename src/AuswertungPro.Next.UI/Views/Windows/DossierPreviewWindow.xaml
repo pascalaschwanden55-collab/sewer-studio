@@ -33,7 +33,7 @@
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,10" TextWrapping="Wrap"
-                   Text="Links Kapitel und Seiten, in der Mitte das Blatt, rechts die Felder dieser Seite. Ein Klick auf Text im Blatt springt direkt zum passenden Feld; Änderungen erscheinen sofort in der Vorschau."/>
+                   Text="Links Kapitel und echte Ausgabeseiten, in der Mitte das fertige Word/PDF-Blatt, rechts die Felder. Ein Klick auf Text springt zum passenden Feld. Nach einer Eingabe wird die Ausgabe nach kurzer Schreibpause aktualisiert."/>
 
         <DockPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,0">
             <TextBlock DockPanel.Dock="Top" Text="Kapitel und Seiten" Margin="0,0,0,6"/>
@@ -89,8 +89,7 @@
                 <ScrollViewer x:Name="SheetScroll" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Auto" Padding="20"
                               SizeChanged="OnSheetViewportChanged">
-                    <!-- Das Blatt bringt seine eigenen Masse mit: A4 in
-                         Bildpunkten, so wie Word bei 100 % zeigt. -->
+                    <!-- Das Blatt bringt seine Masse aus der erzeugten PDF-Seite mit. -->
                     <Border x:Name="Sheet" Background="White" Margin="10"
                             PreviewMouseLeftButtonDown="OnBlattGeklickt"
                             ToolTip="Klick auf einen bearbeitbaren Text springt rechts direkt zu seinem Eingabefeld."

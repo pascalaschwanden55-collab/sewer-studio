@@ -4,8 +4,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 
@@ -14,6 +12,7 @@ using AuswertungPro.Next.Application.Dossiers.Preview;
 using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.Infrastructure.Dossiers;
 using AuswertungPro.Next.Infrastructure.Dossiers.Preview;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Rendering;
 
 using System.Windows.Input;
@@ -23,9 +22,10 @@ using AuswertungPro.Next.UI.Behaviors;
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 /// <summary>
-/// Zeigt das Dossier Seite fuer Seite so, wie es die Vorlage anordnet, und
-/// laesst die Felder dieser Seite direkt daneben ausfuellen. Jede Eingabe
-/// erscheint sofort im Blatt; die bearbeitete Stelle blinkt rot auf.
+/// Zeigt das Dossier Seite fuer Seite aus der echten Word/PDF-Ausgabe und
+/// laesst die Felder der zugeordneten Seite direkt daneben ausfuellen. Nach
+/// einer kurzen Schreibpause wird die Ausgabe neu erzeugt; die bearbeitete
+/// Stelle bleibt über den PDF-Text direkt anklickbar.
 ///
 /// Gearbeitet wird auf einer KOPIE der Angaben. Erst "Übernehmen" schreibt
 /// zurueck — sonst waere "Verwerfen" eine Luege.
@@ -38,8 +38,11 @@ public partial class DossierPreviewWindow : Window
     private readonly DossierExportRequest _request;
     private readonly IPlanImageConverter _planImages;
     private readonly IPlanImageAdjuster _planAdjuster;
+    private readonly IDossierOutputPreviewService _outputPreview;
+    private readonly IDossierPreviewPageRasterizer _previewPages;
 
     private readonly DossierPreviewDocument _document;
+    private readonly IReadOnlyList<DossierPreviewNavigationItem> _templateNavigation;
     private IReadOnlyList<DossierPreviewField> _fields = Array.Empty<DossierPreviewField>();
 
     private Dictionary<string, string> _values = new(StringComparer.OrdinalIgnoreCase);
@@ -54,12 +57,16 @@ public partial class DossierPreviewWindow : Window
         DossierDefinition dossier,
         string templatePath,
         IPlanImageConverter planImages,
-        IPlanImageAdjuster planAdjuster)
+        IPlanImageAdjuster planAdjuster,
+        IDossierOutputPreviewService outputPreview,
+        IDossierPreviewPageRasterizer previewPages)
     {
         InitializeComponent();
 
         _planImages = planImages;
         _planAdjuster = planAdjuster;
+        _outputPreview = outputPreview;
+        _previewPages = previewPages;
 
         _area = area;
         _dossier = dossier;
@@ -75,13 +82,10 @@ public partial class DossierPreviewWindow : Window
         _fields = DossierPreviewFieldCatalog.Build(
             _area, _dossier, key => _values.TryGetValue(key, out var wert) ? wert : string.Empty);
 
-        var navigation = DossierPreviewNavigation.Build(_document.Pages);
-        var navigationView = new ListCollectionView(navigation.ToList());
-        navigationView.GroupDescriptions.Add(new PropertyGroupDescription(
-            nameof(DossierPreviewNavigationItem.ChapterTitle)));
-        PageList.ItemsSource = navigationView;
-        if (navigation.Count > 0)
-            PageList.SelectedIndex = 0;
+        _templateNavigation = DossierPreviewNavigation.Build(_document.Pages);
+        Sheet.Child = DossierExactPreviewPageRenderer.CreateNotice(
+            "Die genaue Word/PDF-Vorschau wird erstellt …",
+            pageSized: true);
     }
 
     /// <summary>
@@ -92,17 +96,28 @@ public partial class DossierPreviewWindow : Window
         DossierExportRequest request,
         string templatePath,
         IPlanImageConverter planImages,
-        IPlanImageAdjuster planAdjuster)
+        IPlanImageAdjuster planAdjuster,
+        IDossierOutputPreviewService outputPreview,
+        IDossierPreviewPageRasterizer previewPages)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(planImages);
         ArgumentNullException.ThrowIfNull(planAdjuster);
+        ArgumentNullException.ThrowIfNull(outputPreview);
+        ArgumentNullException.ThrowIfNull(previewPages);
 
         var area = Kopiere(request.Area);
         var dossier = Kopiere(request.Dossier);
 
         var window = new DossierPreviewWindow(
-            request, area, dossier, templatePath, planImages, planAdjuster)
+            request,
+            area,
+            dossier,
+            templatePath,
+            planImages,
+            planAdjuster,
+            outputPreview,
+            previewPages)
         {
             Owner = System.Windows.Application.Current?.MainWindow
         };
@@ -118,40 +133,43 @@ public partial class DossierPreviewWindow : Window
     private static T Kopiere<T>(T quelle) where T : new()
         => DossierDeepCopy.Of(quelle);
 
-    private void OnPageSelected(object sender, SelectionChangedEventArgs e)
+    private async void OnPageSelected(object sender, SelectionChangedEventArgs e)
     {
-        if (PageList.SelectedItem is not DossierPreviewNavigationItem item)
+        _ = sender;
+        _ = e;
+
+        if (PageList.SelectedItem is not DossierOutputPreviewNavigationItem item)
             return;
 
-        var seite = item.Page;
         _aktivesFeld = null;
-        FieldsHeader.Text = $"{item.ChapterTitle} — Seite {seite.Number}";
+        FieldsHeader.Text = $"{item.ChapterTitle} — Seite {item.OutputPage.Number}";
+
+        if (item.EditorPage is null)
+        {
+            BaueBeilagenHinweis();
+            await ZeichneEchteSeiteAsync(item);
+            return;
+        }
+
+        var seite = item.EditorPage;
         BaueFelder(seite, DossierPreviewFieldCatalog.ForPage(
             _fields,
             seite,
             _dossier,
             key => _values.TryGetValue(key, out var wert) ? wert : string.Empty));
 
-        ZeichneBlatt();
+        await ZeichneEchteSeiteAsync(item);
 
         if (_fitPage)
             PasseGanzeSeiteEin();
     }
 
     /// <summary>
-    /// Zeichnet das Blatt neu — bei JEDER Eingabe. Eine Seite traegt wenige
-    /// Bloecke, und nur so wachsen die Tabellen sofort mit ihrem Inhalt.
-    ///
-    /// Die Felder daneben bleiben dabei stehen: wuerden auch sie neu entstehen,
-    /// verloere das Textfeld bei jedem Tastendruck den Fokus.
+    /// Fordert nach einer kurzen Schreibpause eine neue echte Ausgabe an. Das
+    /// vermeidet einen Word-Start für jeden einzelnen Buchstaben.
     /// </summary>
     private void ZeichneBlatt()
     {
-        if (PageList.SelectedItem is not DossierPreviewNavigationItem item)
-            return;
-
-        var seite = item.Page;
-
         _values = DossierWordTemplateExportService.BuildValues(
             _request,
             AktuellerVerzeichnisStart());
@@ -162,20 +180,7 @@ public partial class DossierPreviewWindow : Window
         _values["Uebersichtsplan"] =
             DossierWordTemplateExportService.ResolvePlanPath(_request) ?? string.Empty;
 
-        _render = DossierPreviewPageRenderer.Render(
-            seite,
-            key => _values.TryGetValue(key, out var wert) ? wert : string.Empty,
-            ZeilenFuer,
-            DossierWordTemplateExportService.EmptyRowText,
-            urtext => _dossier.TextOverrides.TryGetValue(urtext, out var eigen) ? eigen : null,
-            urtext => Feldformat(
-                DossierTopicTextFormatting.LiteralStyleKey(urtext),
-                _dossier.TextOverrides.TryGetValue(urtext, out var eigen) ? eigen : urtext));
-
-        Sheet.Child = _render.Root;
-
-        if (_aktivesFeld is not null)
-            Hervorheben(_aktivesFeld.Value, blinken: false);
+        FordereEchteVorschauAn();
     }
 
     private IReadOnlyList<IReadOnlyDictionary<string, string>> ZeilenFuer(string key) => key switch
@@ -299,7 +304,7 @@ public partial class DossierPreviewWindow : Window
         _ = sender;
         _ = e;
         _fitPage = true;
-        PasseGanzeSeiteEin();
+        StarteEchteVorschau();
     }
 
     private void OnSheetViewportChanged(object sender, SizeChangedEventArgs e)
@@ -325,7 +330,7 @@ public partial class DossierPreviewWindow : Window
     /// </summary>
     private void PasseGanzeSeiteEin()
     {
-        if (PageList.SelectedItem is not DossierPreviewNavigationItem item)
+        if (PageList.SelectedItem is not DossierOutputPreviewNavigationItem item)
             return;
 
         var viewportWidth = SheetScroll.ViewportWidth > 0
@@ -337,8 +342,8 @@ public partial class DossierPreviewWindow : Window
         var scale = DossierPreviewFitCalculator.Calculate(
             viewportWidth,
             viewportHeight,
-            item.Page.Geometry.WidthPx,
-            item.Page.Geometry.HeightPx,
+            item.OutputPage.Width * 96d / 72d,
+            item.OutputPage.Height * 96d / 72d,
             surroundingSpace: 60);
         scale = Math.Clamp(scale, ZoomSlider.Minimum, ZoomSlider.Maximum);
 

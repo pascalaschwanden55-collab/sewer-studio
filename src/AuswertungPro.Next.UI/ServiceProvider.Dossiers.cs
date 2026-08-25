@@ -14,6 +14,9 @@ public sealed partial class ServiceProvider
     /// <summary>Erzeugt die Word-Datei aus der Vorlage.</summary>
     public IDossierWordExportService DossierWordExport => _dossierComposition.WordExport;
 
+    /// <summary>Erzeugt die echte Word/PDF-Ausgabe für die Vorschau.</summary>
+    public IDossierOutputPreviewService DossierOutputPreview => _dossierComposition.OutputPreview;
+
     /// <summary>Sammelt die TV-Protokolle der zugeordneten Haltungen.</summary>
     public IDossierAttachmentService DossierAttachments => _dossierComposition.Attachments;
 
@@ -41,4 +44,8 @@ public sealed partial class ServiceProvider
 
     /// <summary>Dreht das Planbild eines Dossiers.</summary>
     public IPlanImageAdjuster DossierPlanAdjuster { get; } = new Services.PlanImageAdjuster();
+
+    /// <summary>Zeichnet einzelne Seiten der erzeugten Vorschau-PDF.</summary>
+    public Services.IDossierPreviewPageRasterizer DossierPreviewPages { get; } =
+        new Services.WindowsDossierPreviewPageRasterizer();
 }

@@ -177,6 +177,59 @@ public sealed class DossiersPageActionFlowTests : IDisposable
     }
 
     [Fact]
+    public void Die_Liste_zeigt_die_gespeicherte_Reihenfolge_statt_alphabetisch_zu_sortieren()
+    {
+        _store.Dokument.Dossiers.Add(new DossierDefinition { Name = "Zweite Anzeige" });
+        _store.Dokument.Dossiers.Add(new DossierDefinition { Name = "Erste Anzeige" });
+
+        var vm = BaueCockpit();
+        SpinWait.SpinUntil(() => vm.Dossiers.Count == 2, TimeSpan.FromSeconds(5));
+
+        Assert.Equal(
+            new[] { "Zweite Anzeige", "Erste Anzeige" },
+            vm.Dossiers.Select(dossier => dossier.Name));
+    }
+
+    [Fact]
+    public async Task Eine_Liegenschaft_kann_nach_unten_verschoben_und_gespeichert_werden()
+    {
+        var erste = new DossierDefinition { Name = "Liegenschaft A" };
+        var zweite = new DossierDefinition { Name = "Liegenschaft B" };
+        _store.Dokument.Dossiers.Add(erste);
+        _store.Dokument.Dossiers.Add(zweite);
+
+        var vm = BaueCockpit();
+        SpinWait.SpinUntil(() => vm.Dossiers.Count == 2, TimeSpan.FromSeconds(5));
+        vm.Selected = vm.Dossiers[0];
+
+        await vm.MoveDossierDownCommand.ExecuteAsync(null);
+
+        Assert.Equal(new[] { zweite, erste }, _store.Dokument.Dossiers);
+        Assert.Equal(erste.Id, vm.Selected?.Id);
+        Assert.Equal(1, _store.Speicherlaeufe);
+    }
+
+    [Fact]
+    public async Task Misslungenes_Speichern_setzt_die_Reihenfolge_zurueck()
+    {
+        var erste = new DossierDefinition { Name = "Liegenschaft A" };
+        var zweite = new DossierDefinition { Name = "Liegenschaft B" };
+        _store.Dokument.Dossiers.Add(erste);
+        _store.Dokument.Dossiers.Add(zweite);
+
+        var vm = BaueCockpit();
+        SpinWait.SpinUntil(() => vm.Dossiers.Count == 2, TimeSpan.FromSeconds(5));
+        vm.Selected = vm.Dossiers[0];
+        _store.SpeichernScheitert = true;
+
+        await vm.MoveDossierDownCommand.ExecuteAsync(null);
+
+        Assert.Equal(new[] { erste, zweite }, _store.Dokument.Dossiers);
+        Assert.Equal(erste.Id, vm.Selected?.Id);
+        Assert.Contains("Speichern fehlgeschlagen", vm.StatusMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Fehlt_ein_Schacht_im_Projekt_wird_gewarnt_statt_still_weggelassen()
     {
         Schacht("80551");

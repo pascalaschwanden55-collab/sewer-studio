@@ -26,6 +26,7 @@ public sealed class DossierComposition
 
         Store = new DossierFileStore();
         WordExport = new DossierWordTemplateExportService();
+        OutputPreview = new DossierOutputPreviewService(WordExport, pdfMerge);
         Attachments = new DossierAttachmentCollector(protocolFiles, protocolPdf);
         PdfAssembly = new DossierPdfAssemblyService(pdfMerge);
 
@@ -48,6 +49,9 @@ public sealed class DossierComposition
     public IDossierStore Store { get; }
 
     public IDossierWordExportService WordExport { get; }
+
+    /// <summary>Erzeugt die echte Word/PDF-Seitenansicht in einem Temp-Ordner.</summary>
+    public IDossierOutputPreviewService OutputPreview { get; }
 
     public IDossierAttachmentService Attachments { get; }
 

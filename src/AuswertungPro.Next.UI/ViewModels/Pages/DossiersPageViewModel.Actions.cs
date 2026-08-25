@@ -250,6 +250,52 @@ public sealed partial class DossiersPageViewModel
         StatusMessage = $"Dossier „{name}\" entfernt. Der Ordner blieb erhalten.";
     }
 
+    private bool CanMoveSelectedDossierUp()
+        => Selected is not null
+           && _document.Dossiers.IndexOf(Selected.Definition) > 0;
+
+    private bool CanMoveSelectedDossierDown()
+    {
+        if (Selected is null)
+            return false;
+
+        var index = _document.Dossiers.IndexOf(Selected.Definition);
+        return index >= 0 && index < _document.Dossiers.Count - 1;
+    }
+
+    /// <summary>
+    /// Verschiebt die gewaehlte Liegenschaft genau eine Stelle. Die Liste in
+    /// <c>dossiers.json</c> ist dabei die einzige Reihenfolge; ein zusaetzliches
+    /// Sortierfeld waere nur eine zweite Quelle, die auseinanderlaufen kann.
+    /// </summary>
+    private async Task MoveSelectedDossierAsync(int offset)
+    {
+        if (Selected is null || !EnsureProject(out var root) || offset is not (-1 or 1))
+            return;
+
+        var definition = Selected.Definition;
+        var oldIndex = _document.Dossiers.IndexOf(definition);
+        var newIndex = oldIndex + offset;
+        if (oldIndex < 0 || newIndex < 0 || newIndex >= _document.Dossiers.Count)
+            return;
+
+        _document.Dossiers.RemoveAt(oldIndex);
+        _document.Dossiers.Insert(newIndex, definition);
+
+        if (!await SaveDocumentAsync(root))
+        {
+            _document.Dossiers.RemoveAt(newIndex);
+            _document.Dossiers.Insert(oldIndex, definition);
+            RebuildList();
+            return;
+        }
+
+        RebuildList();
+        StatusMessage = offset < 0
+            ? $"„{definition.Name}“ wurde nach oben verschoben."
+            : $"„{definition.Name}“ wurde nach unten verschoben.";
+    }
+
     private async Task EditHoldingsAsync()
     {
         if (Selected is null || !EnsureProject(out var root))

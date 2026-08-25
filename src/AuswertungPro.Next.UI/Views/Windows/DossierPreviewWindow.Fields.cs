@@ -71,7 +71,7 @@ public partial class DossierPreviewWindow
             FieldPanel.Children.Add(Abschnitt("Angaben", inhalt, offen: true));
         }
 
-        var feste = FesteTexte(seite);
+        var feste = DossierPreviewTextInventory.Literals(seite);
         var istVerzeichnis = seite.Blocks
             .OfType<DossierPreviewParagraph>()
             .Any(absatz => absatz.TocEntry is not null);

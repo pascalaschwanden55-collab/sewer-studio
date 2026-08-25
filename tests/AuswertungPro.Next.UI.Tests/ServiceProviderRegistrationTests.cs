@@ -88,9 +88,11 @@ public sealed class ServiceProviderRegistrationTests
         // 146 -> 150: Eigentuemerdossier (IDossierStore, IDossierWordExportService,
         // IDossierAttachmentService, IDossierPdfAssemblyService). Buendelt mehrere
         // Haltungen einer Liegenschaft zu einem Dossier fuer den Eigentuemer.
+        // 150 -> 151: IDossierOutputPreviewService erzeugt die Vorschau aus dem
+        // echten Word-/PDF-Weg statt aus einer nachgezeichneten WPF-Seite.
         Assert.True(
-            registrations.Count == 150,
-            $"Erwartet 150 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 151,
+            $"Erwartet 151 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(

@@ -54,6 +54,20 @@
   gewaehlten Haltungen und danach aller Schaechte. Bei Haltungen wird das Original und nur
   ersatzweise das SewerStudio-Protokoll verwendet; Schaechte verlangen ihr Original. Fehlt
   ein ausgewaehltes Protokoll, wird kein unvollstaendiges Gesamt-PDF erzeugt.
+- `IDossierOutputPreviewService`/`DossierOutputPreviewService` erzeugt die Vorschau ueber
+  denselben Word-Export und denselben Word-/LibreOffice-PDF-Wandler wie die Ausgabe. Word-
+  und PDF-Arbeitsdateien liegen in einem eindeutigen System-Temp-Ordner; Dossier und Gebiet
+  werden tief kopiert, relative Planpfade nur in dieser Kopie aufgeloest und der Kundenordner
+  bleibt unveraendert. Bereits vorhandene PDFs im Beilagen-Ordner werden wie beim Gesamt-PDF
+  in Dateinamenreihenfolge angehaengt, aber nur gelesen.
+- `WindowsDossierPreviewPageRasterizer` zeichnet jede echte PDF-Seite. Damit stammen
+  Seitenzahl, Blattformat, Abstaende, Umbrueche, Tabellen, Farben, Bilder, Logo und Fusszeile
+  nicht mehr aus einer WPF-Nachbildung. Nach 700 ms Schreibpause wird die Ausgabe neu
+  erzeugt; ein veraltetes Zwischenergebnis wird nie eingeblendet. `PdfPig` liefert die
+  Wortlagen fuer transparente Klickflaechen, sodass ein Klick auf sichtbaren Text weiterhin
+  direkt zum passenden Editor springt. `DossierOutputPreviewInteractionMapper` haelt die
+  Seiten-/Editor-Zuordnung und Textziele WPF-frei; das Vorschaufenster orchestriert nur.
+  Original-Beilagen erscheinen als eigene Gruppe und sind bewusst nur lesbar.
 - `DossierTextStyleRange` speichert Schriftfarbe, Fett, Kursiv und Unterstrichen als
   Zeichenbereiche. Themen verwenden `DossierTopicRow.StyleRanges`, andere Textfelder
   `DossierDefinition.FieldStyles`; das alte `ColorHex` bleibt fuer bestehende Projekte lesbar.
@@ -64,9 +78,10 @@
 - `DossierPreviewTarget` adressiert anklickbare Vorschautexte fachlich ueber Feld,
   Zeile und Spalte statt ueber feste Pixelpositionen. Die genaueste vorhandene Adresse
   fuehrt direkt zum passenden Editor; auch geaenderte Vorlagentexte bleiben anklickbar.
-- `DossierPreviewNavigation` gruppiert die Vorschau zuerst nach Kapitel und darin nach
-  Seiten. Fortsetzungsseiten ohne neue Ueberschrift bleiben beim zuletzt begonnenen
-  Kapitel; rechts erscheinen weiterhin nur die Felder der gewaehlten Seite.
+- `DossierPreviewNavigation` ordnet die Vorlagenseiten den Editoren zu; die sichtbare
+  Navigation verwendet dagegen die tatsaechlichen Seiten des erzeugten PDF. Fortsetzungs-
+  seiten bleiben beim erkannten Kapitel; rechts erscheinen weiterhin nur die Felder der
+  zugeordneten Seite.
 - Inhaltsverzeichniszeilen werden strukturell aus dem echten Word-Feld gelesen:
   `DossierPreviewTocEntry` trennt Nummer, bearbeitbaren Kapiteltitel und PAGEREF-Seitenzahl.
   `DocxTocEntryEditor` ersetzt nur den Titel; Nummer, Tabulatoren und Seitenzahl bleiben
@@ -87,7 +102,8 @@
   Kapitel nicht mit und adressiert jeden Zusatzpunkt einzeln fuer den direkten Klick zum
   Editor.
 - Die Dossier-Vorschau startet mit einer vollstaendig eingepassten Seite.
-  `DossierPreviewFitCalculator` berechnet den Zoom aus Blatt- und Vorschauflaeche;
+  `DossierPreviewFitCalculator` berechnet den Zoom aus der echten PDF-Blattgroesse und der
+  Vorschauflaeche;
   der Benutzer kann danach manuell vergroessern und mit `Ganze Seite` zurueckkehren.
 - In `Schäden` und `Sanierungskonzept` kopiert `Import aus Liste` die aktuelle,
   fortlaufend nummerierte Bauteilliste als normalen Dossiertext: zuerst alle Haltungen,
@@ -122,6 +138,10 @@
   `SchaechteFileActionController` wie die Seite `Schaechte`; die Seite selbst waehlt nur
   die rechts angeklickte Zeile aus. `ShellViewModel.NavigateToShaft` oeffnet `Schaechte`
   und selektiert dort den Originaldatensatz.
+- Die Reihenfolge der Liegenschaften ist die Reihenfolge von `DossierDocument.Dossiers` in
+  `dossiers.json`. Das Cockpit sortiert nicht mehr still alphabetisch. `Nach oben` und
+  `Nach unten` verschieben die Auswahl um genau eine Stelle und speichern sofort; bei einem
+  Speicherfehler wird die vorige Reihenfolge wiederhergestellt.
 
 ## Aktueller Pipeline-Ablauf
 1. UI/Service startet Analyse ueber `VideoAnalysisPipelineService`, `SingleFrameMultiModelService` oder `VideoFullAnalysisService`.

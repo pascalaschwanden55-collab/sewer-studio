@@ -123,7 +123,7 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
     /// Nummerierung "01_", "02_" bestimmt damit die Reihenfolge — auch fuer
     /// von Hand hinzugelegte Beilagen wie den Übersichtsplan.
     /// </summary>
-    private static List<string> CollectAttachmentPdfs(string dossierFolder)
+    internal static List<string> CollectAttachmentPdfs(string dossierFolder)
     {
         var folder = Path.Combine(dossierFolder, DossierFolderPlanner.AttachmentFolderName);
         if (!Directory.Exists(folder))

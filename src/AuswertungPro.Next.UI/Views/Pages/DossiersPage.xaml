@@ -94,6 +94,7 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
@@ -102,7 +103,23 @@
                             HorizontalAlignment="Stretch" Padding="10,8" Margin="0,0,0,10"
                             Command="{Binding NewDossierCommand}"/>
 
-                    <ListBox Grid.Row="1"
+                    <Grid Grid.Row="1" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="↑  Nach oben"
+                                Padding="8,5"
+                                ToolTip="Verschiebt die gewählte Liegenschaft eine Stelle nach oben und speichert die Reihenfolge."
+                                Command="{Binding MoveDossierUpCommand}"/>
+                        <Button Grid.Column="2" Content="↓  Nach unten"
+                                Padding="8,5"
+                                ToolTip="Verschiebt die gewählte Liegenschaft eine Stelle nach unten und speichert die Reihenfolge."
+                                Command="{Binding MoveDossierDownCommand}"/>
+                    </Grid>
+
+                    <ListBox Grid.Row="2"
                              ItemsSource="{Binding Dossiers}"
                              SelectedItem="{Binding Selected, Mode=TwoWay}"
                              Background="Transparent" BorderThickness="0">

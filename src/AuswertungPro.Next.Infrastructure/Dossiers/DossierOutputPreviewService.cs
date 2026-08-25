@@ -1,0 +1,265 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.Application.Reports;
+
+using UglyToad.PdfPig;
+
+namespace AuswertungPro.Next.Infrastructure.Dossiers;
+
+/// <summary>
+/// Baut die Vorschau über genau denselben Word-Export und PDF-Wandler wie die
+/// wirkliche Ausgabe. Alle Arbeitsdateien liegen in einem eigenen Temp-Ordner.
+/// </summary>
+public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
+{
+    private readonly IDossierWordExportService _wordExport;
+    private readonly Func<string, string?, bool> _convertWordToPdf;
+    private readonly Func<byte[], IReadOnlyList<string>, byte[]> _mergePdfs;
+    private readonly Func<string, IReadOnlyList<DossierOutputPreviewPage>> _readPages;
+    private readonly Func<string> _createWorkRoot;
+
+    public DossierOutputPreviewService(
+        IDossierWordExportService wordExport,
+        IPdfMergeService pdfMerge)
+        : this(
+            wordExport,
+            DossierWordPdfConverter.TryConvertToPdf,
+            (generated, attachments) => pdfMerge.MergeWithOriginals(generated, attachments),
+            ReadPages,
+            CreateWorkRoot)
+    {
+        ArgumentNullException.ThrowIfNull(pdfMerge);
+    }
+
+    internal DossierOutputPreviewService(
+        IDossierWordExportService wordExport,
+        Func<string, string?, bool> convertWordToPdf,
+        Func<string, IReadOnlyList<DossierOutputPreviewPage>> readPages,
+        Func<string> createWorkRoot)
+        : this(
+            wordExport,
+            convertWordToPdf,
+            (generated, _) => generated,
+            readPages,
+            createWorkRoot)
+    {
+    }
+
+    internal DossierOutputPreviewService(
+        IDossierWordExportService wordExport,
+        Func<string, string?, bool> convertWordToPdf,
+        Func<byte[], IReadOnlyList<string>, byte[]> mergePdfs,
+        Func<string, IReadOnlyList<DossierOutputPreviewPage>> readPages,
+        Func<string> createWorkRoot)
+    {
+        _wordExport = wordExport ?? throw new ArgumentNullException(nameof(wordExport));
+        _convertWordToPdf = convertWordToPdf
+            ?? throw new ArgumentNullException(nameof(convertWordToPdf));
+        _mergePdfs = mergePdfs ?? throw new ArgumentNullException(nameof(mergePdfs));
+        _readPages = readPages ?? throw new ArgumentNullException(nameof(readPages));
+        _createWorkRoot = createWorkRoot ?? throw new ArgumentNullException(nameof(createWorkRoot));
+    }
+
+    public Task<DossierOutputPreviewResult> CreateAsync(
+        DossierExportRequest request,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ct.ThrowIfCancellationRequested();
+
+        // Word-Automation braucht einen STA-Thread. Gleichzeitig bleibt das
+        // Vorschaufenster während der Umwandlung bedienbar.
+        return RunStaAsync(() => CreateCoreAsync(request, ct), ct);
+    }
+
+    private async Task<DossierOutputPreviewResult> CreateCoreAsync(
+        DossierExportRequest request,
+        CancellationToken ct)
+    {
+        var workRoot = Path.GetFullPath(_createWorkRoot());
+
+        try
+        {
+            Directory.CreateDirectory(workRoot);
+            var outputFolder = Path.Combine(workRoot, "Ausgabe");
+
+            // Ein relativer Planpfad gehört zum echten Projekt. Würde nur der
+            // Projektroot auf den Temp-Ordner zeigen, verschwände der Plan aus
+            // der Vorschau. Darum wird nur die Arbeitskopie absolut gemacht.
+            var dossier = DossierDeepCopy.Of(request.Dossier);
+            dossier.OverviewPlanPath = DossierWordTemplateExportService.ResolvePlanPath(request)
+                ?? string.Empty;
+
+            var previewRequest = request with
+            {
+                ProjectRoot = workRoot,
+                TargetFolder = outputFolder,
+                Area = DossierDeepCopy.Of(request.Area),
+                Dossier = dossier
+            };
+
+            var word = await _wordExport.ExportAsync(previewRequest, ct).ConfigureAwait(false);
+            if (!word.Success || string.IsNullOrWhiteSpace(word.FilePath) || !File.Exists(word.FilePath))
+            {
+                return Failed("Die Ausgabevorschau konnte keine Word-Datei erzeugen. " + word.Message);
+            }
+
+            ct.ThrowIfCancellationRequested();
+            var pdfPath = Path.Combine(workRoot, "Dossier-Vorschau.pdf");
+            if (!_convertWordToPdf(word.FilePath, pdfPath) || !File.Exists(pdfPath))
+            {
+                return Failed(
+                    "Die Ausgabevorschau konnte die Word-Datei nicht in ein PDF umwandeln. "
+                    + "Dafür wird Microsoft Word oder LibreOffice benötigt.");
+            }
+
+            ct.ThrowIfCancellationRequested();
+
+            // Bereits vorhandene Beilagen gehören zur Ausgabe „Alles zu
+            // einem PDF“. Sie werden nur gelesen und in der kurzlebigen
+            // Vorschau angehängt; der Kundenordner bleibt unverändert.
+            var attachmentPaths = DossierPdfAssemblyService
+                .CollectAttachmentPdfs(request.TargetFolder);
+            var previewPdfPath = pdfPath;
+            var wordPages = _readPages(pdfPath);
+            IReadOnlyList<DossierOutputPreviewPage> pages = wordPages;
+            if (attachmentPaths.Count > 0)
+            {
+                var mergedBytes = _mergePdfs(File.ReadAllBytes(pdfPath), attachmentPaths);
+                previewPdfPath = Path.Combine(workRoot, "Dossier-Vorschau-komplett.pdf");
+                File.WriteAllBytes(previewPdfPath, mergedBytes);
+                pages = _readPages(previewPdfPath)
+                    .Select(page => page with
+                    {
+                        IsAttachment = page.Number > wordPages.Count
+                    })
+                    .ToList();
+            }
+
+            if (pages.Count == 0)
+                return Failed("Die erzeugte Ausgabevorschau enthält keine Seite.");
+
+            var bytes = await File.ReadAllBytesAsync(previewPdfPath, ct).ConfigureAwait(false);
+            var attachmentNote = attachmentPaths.Count == 0
+                ? string.Empty
+                : attachmentPaths.Count == 1
+                    ? " Einschliesslich 1 Beilage."
+                    : $" Einschliesslich {attachmentPaths.Count} Beilagen.";
+            return new DossierOutputPreviewResult(
+                true,
+                bytes,
+                pages,
+                pages.Count == 1
+                    ? "Ausgabevorschau aktualisiert: 1 Seite." + attachmentNote
+                    : $"Ausgabevorschau aktualisiert: {pages.Count} Seiten." + attachmentNote);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return Failed("Die Ausgabevorschau konnte nicht erstellt werden: " + ex.Message);
+        }
+        finally
+        {
+            TryDeleteWorkRoot(workRoot);
+        }
+    }
+
+    private static IReadOnlyList<DossierOutputPreviewPage> ReadPages(string pdfPath)
+    {
+        using var document = PdfDocument.Open(pdfPath);
+        var pages = new List<DossierOutputPreviewPage>(document.NumberOfPages);
+
+        foreach (var page in document.GetPages())
+        {
+            var words = page.GetWords()
+                .Select(word => new DossierOutputPreviewWord(
+                    word.Text,
+                    word.BoundingBox.Left,
+                    word.BoundingBox.Bottom,
+                    word.BoundingBox.Right,
+                    word.BoundingBox.Top))
+                .ToList();
+
+            pages.Add(new DossierOutputPreviewPage(
+                page.Number,
+                page.Width,
+                page.Height,
+                page.Text,
+                words));
+        }
+
+        return pages;
+    }
+
+    private static DossierOutputPreviewResult Failed(string message)
+        => new(false, null, Array.Empty<DossierOutputPreviewPage>(), message);
+
+    private static string CreateWorkRoot()
+        => Path.Combine(
+            Path.GetTempPath(),
+            "SewerStudio_DossierPreview_" + Guid.NewGuid().ToString("N"));
+
+    private static void TryDeleteWorkRoot(string path)
+    {
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            var tempRoot = Path.GetFullPath(Path.GetTempPath());
+            var tempPrefix = Path.EndsInDirectorySeparator(tempRoot)
+                ? tempRoot
+                : tempRoot + Path.DirectorySeparatorChar;
+
+            if (!fullPath.StartsWith(tempPrefix, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (Directory.Exists(fullPath))
+                Directory.Delete(fullPath, recursive: true);
+        }
+        catch
+        {
+            // Ein eigener liegen gebliebener Temp-Ordner verändert kein Projekt.
+        }
+    }
+
+    private static Task<T> RunStaAsync<T>(Func<Task<T>> action, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (!OperatingSystem.IsWindows())
+            return Task.Run(action, ct);
+
+        var completion = new TaskCompletionSource<T>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                completion.TrySetResult(action().GetAwaiter().GetResult());
+            }
+            catch (OperationCanceledException ex)
+            {
+                completion.TrySetCanceled(ex.CancellationToken);
+            }
+            catch (Exception ex)
+            {
+                completion.TrySetException(ex);
+            }
+        })
+        {
+            IsBackground = true,
+            Name = "Dossier-Ausgabevorschau"
+        };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        return completion.Task;
+    }
+}

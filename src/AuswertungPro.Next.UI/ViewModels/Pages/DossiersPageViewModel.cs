@@ -154,6 +154,12 @@ public sealed partial class DossiersPageViewModel : ObservableObject
 
         NewDossierCommand = new AsyncRelayCommand(CreateDossierAsync);
         DeleteDossierCommand = new AsyncRelayCommand(DeleteDossierAsync, () => Selected is not null);
+        MoveDossierUpCommand = new AsyncRelayCommand(
+            () => MoveSelectedDossierAsync(-1),
+            CanMoveSelectedDossierUp);
+        MoveDossierDownCommand = new AsyncRelayCommand(
+            () => MoveSelectedDossierAsync(1),
+            CanMoveSelectedDossierDown);
         EditHoldingsCommand = new AsyncRelayCommand(EditHoldingsAsync, () => Selected is not null);
         EditShaftsCommand = new AsyncRelayCommand(EditShaftsAsync, () => Selected is not null);
         EditDossierCommand = new AsyncRelayCommand(EditDossierAsync, () => Selected is not null);
@@ -203,6 +209,11 @@ public sealed partial class DossiersPageViewModel : ObservableObject
 
     public IAsyncRelayCommand NewDossierCommand { get; }
     public IAsyncRelayCommand DeleteDossierCommand { get; }
+
+    /// <summary>Verschiebt die gewaehlte Liegenschaft in der gespeicherten Reihenfolge.</summary>
+    public IAsyncRelayCommand MoveDossierUpCommand { get; }
+    public IAsyncRelayCommand MoveDossierDownCommand { get; }
+
     public IAsyncRelayCommand EditHoldingsCommand { get; }
 
     /// <summary>Oeffnet die Auswahl der Schaechte dieser Liegenschaft.</summary>
@@ -345,7 +356,10 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         var previous = Selected?.Id;
         Dossiers.Clear();
 
-        foreach (var definition in _document.Dossiers.OrderBy(d => d.Name, StringComparer.CurrentCultureIgnoreCase))
+        // Die Reihenfolge in dossiers.json ist die vom Benutzer festgelegte
+        // Reihenfolge. Eine alphabetische Anzeige wuerde das Verschieben nach
+        // jedem erneuten Laden scheinbar rueckgaengig machen.
+        foreach (var definition in _document.Dossiers)
             Dossiers.Add(new DossierListItem(definition, BuildSnapshot(definition)));
 
         Selected = previous is null
@@ -628,6 +642,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     private void NotifyCommands()
     {
         DeleteDossierCommand.NotifyCanExecuteChanged();
+        MoveDossierUpCommand.NotifyCanExecuteChanged();
+        MoveDossierDownCommand.NotifyCanExecuteChanged();
         EditHoldingsCommand.NotifyCanExecuteChanged();
         EditShaftsCommand.NotifyCanExecuteChanged();
         EditDossierCommand.NotifyCanExecuteChanged();

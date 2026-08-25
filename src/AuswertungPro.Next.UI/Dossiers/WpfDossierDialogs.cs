@@ -6,6 +6,7 @@ using AuswertungPro.Next.Application.Dossiers.Lookup;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.UI.Views.Windows;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Dossiers;
 
@@ -24,6 +25,8 @@ public sealed class WpfDossierDialogs : IDossierDialogs
     private readonly IDirectoryLookup _directory;
     private readonly IPlanImageConverter _planImages;
     private readonly IPlanImageAdjuster _planAdjuster;
+    private readonly IDossierOutputPreviewService _outputPreview;
+    private readonly IDossierPreviewPageRasterizer _previewPages;
 
     public WpfDossierDialogs(
         IParcelLookup parcels,
@@ -31,7 +34,9 @@ public sealed class WpfDossierDialogs : IDossierDialogs
         DossierBatchProposalUseCase batchProposal,
         IDirectoryLookup directory,
         IPlanImageConverter planImages,
-        IPlanImageAdjuster planAdjuster)
+        IPlanImageAdjuster planAdjuster,
+        IDossierOutputPreviewService outputPreview,
+        IDossierPreviewPageRasterizer previewPages)
     {
         _parcels = parcels ?? throw new ArgumentNullException(nameof(parcels));
         _parcelLookup = parcelLookup ?? throw new ArgumentNullException(nameof(parcelLookup));
@@ -39,6 +44,8 @@ public sealed class WpfDossierDialogs : IDossierDialogs
         _directory = directory ?? throw new ArgumentNullException(nameof(directory));
         _planImages = planImages ?? throw new ArgumentNullException(nameof(planImages));
         _planAdjuster = planAdjuster ?? throw new ArgumentNullException(nameof(planAdjuster));
+        _outputPreview = outputPreview ?? throw new ArgumentNullException(nameof(outputPreview));
+        _previewPages = previewPages ?? throw new ArgumentNullException(nameof(previewPages));
     }
 
     public DossierParcelLookupChoice? NewProperty(
@@ -74,7 +81,13 @@ public sealed class WpfDossierDialogs : IDossierDialogs
 
     public (DossierAreaSettings Area, DossierDefinition Dossier)? Preview(
         DossierExportRequest request, string templatePath)
-        => DossierPreviewWindow.ShowFor(request, templatePath, _planImages, _planAdjuster);
+        => DossierPreviewWindow.ShowFor(
+            request,
+            templatePath,
+            _planImages,
+            _planAdjuster,
+            _outputPreview,
+            _previewPages);
 
     public DossierRefreshChoice? Refresh(string dossierName, DossierRefreshProposal proposal)
         => DossierRefreshWindow.ShowFor(dossierName, proposal);
