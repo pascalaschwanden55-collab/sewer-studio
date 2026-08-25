@@ -81,7 +81,9 @@ public partial class DossierPreviewWindow
         if (istVerzeichnis && feste.Count > 0)
         {
             FieldPanel.Children.Add(Abschnitt(
-                "Inhaltsverzeichnis bearbeiten", BaueFesteTexte(feste), offen: true));
+                "Inhaltsverzeichnis bearbeiten",
+                BaueFesteTexte(feste, DossierTocChapterPageField.ChapterTitles(seite)),
+                offen: true));
         }
 
         // Jede Zeilenliste bekommt ihren eigenen Abschnitt mit ihrem Namen.
@@ -101,7 +103,7 @@ public partial class DossierPreviewWindow
 
         if (!istVerzeichnis && feste.Count > 0)
             FieldPanel.Children.Add(Abschnitt(
-                "Beschriftungen und Überschriften", BaueFesteTexte(feste), offen: false));
+                "Beschriftungen und Überschriften", BaueFesteTexte(feste, []), offen: false));
 
         if (FieldPanel.Children.Count == 0)
         {

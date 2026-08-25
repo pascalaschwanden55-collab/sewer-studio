@@ -189,6 +189,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                         request.Dossier.TextOverrides,
                         request.Dossier.FieldStyles);
 
+                    // Danach die eigene Seitenzahl: Wo eine steht, ersetzt sie
+                    // das Word-Feld. Alle uebrigen Kapitel behalten ihre
+                    // Automatik.
+                    DocxTocPageEditor.Apply(document, request.Dossier.TocChapterPages);
+
                     // Zuletzt die eigenen Fassungen fester Texte: sie greifen
                     // auf Zeilen OHNE Platzhalter, die es nach dem Fuellen noch
                     // unveraendert gibt.

@@ -121,6 +121,7 @@ public static class DossierDocumentMigration
             dossier.HiddenChapters ??= new List<string>();
             dossier.FieldOverrides ??= new Dictionary<string, string>();
             dossier.TextOverrides ??= new Dictionary<string, string>();
+            dossier.TocChapterPages ??= new Dictionary<string, string>();
             dossier.TocAttachmentLines ??= new List<string>();
             dossier.TocAttachmentPageNumbers ??= new List<string>();
             dossier.TocAttachments = (dossier.TocAttachments ?? new List<DossierTocAttachment>())

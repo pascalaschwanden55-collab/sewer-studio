@@ -199,7 +199,7 @@ public sealed class DossierTocTemplateTests
 /// <summary>
 /// Der Wechsel auf die aktuelle Formatversion.
 /// </summary>
-public sealed class DossierSchema8Tests
+public sealed class DossierSchemaMigrationTests
 {
     [Fact]
     public void Eine_Datei_der_Version_5_wird_uebernommen_und_verliert_nichts()
@@ -222,7 +222,7 @@ public sealed class DossierSchema8Tests
         var umgestellt = DossierDocumentMigration.MigrateToCurrent(dokument);
         var dossier = umgestellt.Dossiers[0];
 
-        Assert.Equal(8, umgestellt.SchemaVersion);
+        Assert.Equal(9, umgestellt.SchemaVersion);
         Assert.Equal("Liegenschaft Nr. 439 Dittli", dossier.Name);
         Assert.Equal(new[] { "33458", "36051" }, dossier.ShaftNumbers);
         Assert.Empty(dossier.TocAttachments);

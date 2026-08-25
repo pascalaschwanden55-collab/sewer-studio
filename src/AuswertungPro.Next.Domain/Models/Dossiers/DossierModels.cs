@@ -279,6 +279,17 @@ public sealed class DossierDefinition
     public List<DossierTocAttachment> TocAttachments { get; set; } = new();
 
     /// <summary>
+    /// Eigene Seitenzahlen fuer die Kapitelzeilen des Inhaltsverzeichnisses,
+    /// je Kapiteltitel.
+    ///
+    /// Ohne Eintrag rechnet Word die Zahl weiter selbst. Mit Eintrag ersetzt
+    /// Text das Word-Feld — nur so ist auch diese Zeile aenderbar, ohne dass
+    /// die uebrigen ihre Automatik verlieren. Ein LEERER Eintrag ist eine
+    /// Angabe: die Zeile bekommt dann gar keine Seitenzahl.
+    /// </summary>
+    public Dictionary<string, string> TocChapterPages { get; set; } = new();
+
+    /// <summary>
     /// Alte Ablage bis Schema 7. Nur die Migration liest diese Liste und leert
     /// sie danach. Neue Logik darf sie nicht wieder verwenden.
     /// </summary>
@@ -370,7 +381,7 @@ public sealed class DossierDefinition
 public sealed class DossierDocument
 {
     /// <summary>Formatversion, die diese Programmversion schreibt.</summary>
-    public const int CurrentSchemaVersion = 8;
+    public const int CurrentSchemaVersion = 9;
 
     /// <summary>Formatversion. Unbekannt hoehere Versionen werden nicht ueberschrieben.</summary>
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;

@@ -25,7 +25,9 @@ public partial class DossierPreviewWindow
     /// Platzhalter. Damit ist wirklich jedes Element aenderbar und nicht nur
     /// die gefuellten Stellen.
     /// </summary>
-    private UIElement BaueFesteTexte(IReadOnlyList<string> texte)
+    private UIElement BaueFesteTexte(
+        IReadOnlyList<string> texte,
+        IReadOnlyCollection<string> verzeichnisTitel)
     {
         var block = new StackPanel();
 
@@ -131,6 +133,11 @@ public partial class DossierPreviewWindow
                 Betone(target);
             }));
             karte.Children.Add(zurueck);
+
+            karte.Children.Add(DossierTocChapterPageField.CreateFor(
+                _dossier, schluessel, verzeichnisTitel, Kleiner, ZeichneBlatt,
+                () => Betone(target)));
+
             block.Children.Add(karte);
 
             // Unter dem Wortlaut: genau so merkt sich das Blatt seine Absaetze.
@@ -139,5 +146,7 @@ public partial class DossierPreviewWindow
 
         return block;
     }
+
+
 
 }
