@@ -24,7 +24,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 /// die Felder nur beim Seitenwechsel. Entstuenden auch sie neu, verloere das
 /// Textfeld bei jedem Tastendruck den Fokus.
 /// </summary>
-public partial class DossierPreviewWindow
+internal sealed partial class DossierPreviewFieldPanel
 {
     private readonly HashSet<RichTextBox> _geladeneFormatfelder = new();
 
@@ -52,7 +52,7 @@ public partial class DossierPreviewWindow
 
     private void BaueFelder(DossierPreviewPage seite, IReadOnlyList<DossierPreviewField> felder)
     {
-        FieldPanel.Children.Clear();
+        _wirt.Children.Clear();
         _feldStellen.Clear();
 
         var angaben = felder.Where(f => f.Kind is not DossierPreviewFieldKind.Rows).ToList();
@@ -68,7 +68,7 @@ public partial class DossierPreviewWindow
                 MerkeStelle(DossierPreviewTarget.Field(feld.Key), karte);
             }
 
-            FieldPanel.Children.Add(Abschnitt("Angaben", inhalt, offen: true));
+            _wirt.Children.Add(Abschnitt("Angaben", inhalt, offen: true));
         }
 
         var feste = DossierPreviewTextInventory.Literals(seite);
@@ -80,7 +80,7 @@ public partial class DossierPreviewWindow
         // Sie stehen deshalb offen und vor den zusätzlichen Punkten.
         if (istVerzeichnis && feste.Count > 0)
         {
-            FieldPanel.Children.Add(Abschnitt(
+            _wirt.Children.Add(Abschnitt(
                 "Inhaltsverzeichnis bearbeiten",
                 BaueFesteTexte(feste, DossierTocChapterPageField.ChapterTitles(seite)),
                 offen: true));
@@ -97,17 +97,17 @@ public partial class DossierPreviewWindow
             };
 
             var abschnitt = Abschnitt(feld.Label, inhalt, offen: true);
-            FieldPanel.Children.Add(abschnitt);
+            _wirt.Children.Add(abschnitt);
             MerkeStelle(DossierPreviewTarget.Field(feld.Key), abschnitt);
         }
 
         if (!istVerzeichnis && feste.Count > 0)
-            FieldPanel.Children.Add(Abschnitt(
+            _wirt.Children.Add(Abschnitt(
                 "Beschriftungen und Überschriften", BaueFesteTexte(feste, []), offen: false));
 
-        if (FieldPanel.Children.Count == 0)
+        if (_wirt.Children.Count == 0)
         {
-            FieldPanel.Children.Add(new TextBlock
+            _wirt.Children.Add(new TextBlock
             {
                 Text = "Auf dieser Seite gibt es nichts auszufüllen.",
                 TextWrapping = TextWrapping.Wrap
@@ -186,7 +186,7 @@ public partial class DossierPreviewWindow
         {
             Header = titel,
             IsExpanded = offen,
-            Foreground = (Brush)FindResource("TextBrush"),
+            Foreground = (Brush)_ressource("TextBrush"),
             FontSize = 13,
             FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 0, 0, 14),
@@ -232,7 +232,7 @@ public partial class DossierPreviewWindow
                 block.Children.Add(DossierTextFormattingToolbar.Create(box, () =>
                 {
                     SpeichereFormatiertesFeld(feld, box);
-                    ZeichneBlatt();
+                    _zeichneBlatt();
                     Betone(feld.Key);
                 }));
 
@@ -272,7 +272,7 @@ public partial class DossierPreviewWindow
                 return;
 
             SpeichereFormatiertesFeld(feld, box);
-            ZeichneBlatt();
+            _zeichneBlatt();
         };
 
         return box;
@@ -302,7 +302,7 @@ public partial class DossierPreviewWindow
                 _geladeneFormatfelder.Remove(box);
             }
 
-            ZeichneBlatt();
+            _zeichneBlatt();
             Betone(feld.Key);
         });
 
@@ -376,7 +376,7 @@ public partial class DossierPreviewWindow
         {
             feld.Write?.Invoke(string.Empty);
             anzeige.Text = "— keine Datei —";
-            ZeichneBlatt();
+            _zeichneBlatt();
             Betone(feld.Key);
         }));
 
@@ -394,7 +394,7 @@ public partial class DossierPreviewWindow
                 + "|PDF|*.pdf|Bilder|*.png;*.jpg;*.jpeg;*.bmp|Alle Dateien|*.*"
         };
 
-        if (dialog.ShowDialog(this) != true)
+        if (dialog.ShowDialog(_fenster()) != true)
             return;
 
         var pfad = dialog.FileName;
@@ -404,17 +404,17 @@ public partial class DossierPreviewWindow
         // im Dossier stehen wird.
         if (_planImages.NeedsConversion(pfad))
         {
-            StatusText.Text = "Plan wird in ein Bild umgewandelt…";
+            _status("Plan wird in ein Bild umgewandelt…");
             var ergebnis = await _planImages.ConvertAsync(pfad, _request.TargetFolder);
 
             if (!ergebnis.Success)
             {
-                StatusText.Text = ergebnis.Error ?? "Die Umwandlung ist fehlgeschlagen.";
+                _status(ergebnis.Error ?? "Die Umwandlung ist fehlgeschlagen.");
                 return;
             }
 
             pfad = ergebnis.ImagePath!;
-            StatusText.Text = ergebnis.Error ?? "Plan übernommen.";
+            _status(ergebnis.Error ?? "Plan übernommen.");
         }
 
         UebernimmPlan(feld, anzeige, pfad);
@@ -426,11 +426,11 @@ public partial class DossierPreviewWindow
 
         if (!ergebnis.Success)
         {
-            StatusText.Text = ergebnis.Error ?? "Der Plan konnte nicht gedreht werden.";
+            _status(ergebnis.Error ?? "Der Plan konnte nicht gedreht werden.");
             return;
         }
 
-        StatusText.Text = "Plan gedreht.";
+        _status("Plan gedreht.");
         UebernimmPlan(feld, anzeige, ergebnis.ImagePath!);
     }
 
@@ -448,7 +448,7 @@ public partial class DossierPreviewWindow
             return;
 
         _dossier.OverviewPlanWidthCm = ergebnis.WidthCm;
-        StatusText.Text = "Plan übernommen.";
+        _status("Plan übernommen.");
         UebernimmPlan(feld, anzeige, ergebnis.ImagePath);
     }
 
@@ -456,7 +456,7 @@ public partial class DossierPreviewWindow
     {
         feld.Write?.Invoke(pfad);
         anzeige.Text = pfad.Length == 0 ? "— keine Datei —" : pfad;
-        ZeichneBlatt();
+        _zeichneBlatt();
         Betone(feld.Key);
     }
 
@@ -478,16 +478,6 @@ public partial class DossierPreviewWindow
 
         knopf.Click += (_, _) => tue();
         return knopf;
-    }
-
-    /// <summary>Merkt sich die bearbeitete Stelle und laesst sie aufblinken.</summary>
-    private void Betone(string fieldKey)
-        => Betone(DossierPreviewTarget.Field(fieldKey));
-
-    private void Betone(DossierPreviewTarget target)
-    {
-        _aktivesFeld = target;
-        Hervorheben(target, blinken: true);
     }
 
     private ZeilenTyp? ZeilenTypFuer(string key) => key switch

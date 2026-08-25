@@ -17,7 +17,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 /// und Weglassen. In der Oberflaeche heissen sie bewusst nicht "fest", denn
 /// der Benutzer kann jeden dieser Texte aendern.
 /// </summary>
-public partial class DossierPreviewWindow
+internal sealed partial class DossierPreviewFieldPanel
 {
 
     /// <summary>
@@ -99,7 +99,7 @@ public partial class DossierPreviewWindow
                     _geladeneFormatfelder.Remove(box);
                 }
 
-                ZeichneBlatt();
+                _zeichneBlatt();
                 Betone(target);
                 ZeigeRueckweg();
             });
@@ -120,7 +120,7 @@ public partial class DossierPreviewWindow
 
                 Speichere();
                 ZeigeRueckweg();
-                ZeichneBlatt();
+                _zeichneBlatt();
             };
 
             ZeigeRueckweg();
@@ -129,13 +129,13 @@ public partial class DossierPreviewWindow
             karte.Children.Add(DossierTextFormattingToolbar.Create(box, () =>
             {
                 Speichere();
-                ZeichneBlatt();
+                _zeichneBlatt();
                 Betone(target);
             }));
             karte.Children.Add(zurueck);
 
             karte.Children.Add(DossierTocChapterPageField.CreateFor(
-                _dossier, schluessel, verzeichnisTitel, Kleiner, ZeichneBlatt,
+                _dossier, schluessel, verzeichnisTitel, Kleiner, _zeichneBlatt,
                 () => Betone(target)));
 
             block.Children.Add(karte);

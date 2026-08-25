@@ -48,6 +48,7 @@ public partial class DossierPreviewWindow : Window
     private Dictionary<string, string> _values = new(StringComparer.OrdinalIgnoreCase);
     private DossierPreviewRenderResult? _render;
     private DossierPreviewTarget? _aktivesFeld;
+    private DossierPreviewFieldPanel _felder = null!;
     private bool _fitPage = true;
     private bool _setztAutomatischenZoom;
 
@@ -76,7 +77,23 @@ public partial class DossierPreviewWindow : Window
         _document = DossierPreviewBuilder.Build(templatePath);
         _values = DossierWordTemplateExportService.BuildValues(
             _request,
-            AktuellerVerzeichnisStart());
+            DossierPreviewFieldPanel.VerzeichnisStart(_document, _dossier));
+
+        _felder = new DossierPreviewFieldPanel(
+            FieldPanel,
+            _area,
+            _dossier,
+            _request,
+            _document,
+            _planImages,
+            _planAdjuster,
+            () => _values,
+            ZeichneBlatt,
+            Betone,
+            (ziel, blinken) => Hervorheben(ziel, blinken),
+            FindResource,
+            text => StatusText.Text = text,
+            () => this);
         // Die berechneten Werte sind die Vorgabe jeder Stelle; eine eigene
         // Angabe des Dossiers sticht sie.
         _fields = DossierPreviewFieldCatalog.Build(
@@ -152,7 +169,7 @@ public partial class DossierPreviewWindow : Window
         }
 
         var seite = item.EditorPage;
-        BaueFelder(seite, DossierPreviewFieldCatalog.ForPage(
+        _felder.Baue(seite, DossierPreviewFieldCatalog.ForPage(
             _fields,
             seite,
             _dossier,
@@ -172,7 +189,7 @@ public partial class DossierPreviewWindow : Window
     {
         _values = DossierWordTemplateExportService.BuildValues(
             _request,
-            AktuellerVerzeichnisStart());
+            DossierPreviewFieldPanel.VerzeichnisStart(_document, _dossier));
 
         // Der Uebersichtsplan ist eine Bildmarke, kein Textwert. Sein Pfad wird
         // genau so aufgeloest wie beim Erzeugen des Dossiers — sonst zeigte die
@@ -181,6 +198,13 @@ public partial class DossierPreviewWindow : Window
             DossierWordTemplateExportService.ResolvePlanPath(_request) ?? string.Empty;
 
         FordereEchteVorschauAn();
+    }
+
+    /// <summary>Merkt die bearbeitete Stelle und laesst sie aufblinken.</summary>
+    private void Betone(DossierPreviewTarget target)
+    {
+        _aktivesFeld = target;
+        Hervorheben(target, blinken: true);
     }
 
     private IReadOnlyList<IReadOnlyDictionary<string, string>> ZeilenFuer(string key) => key switch
@@ -225,8 +249,8 @@ public partial class DossierPreviewWindow : Window
             if (aktuell is Border rahmen
                 && rahmenZuZielen.TryGetValue(rahmen, out var ziele)
                 && DossierPreviewTarget.SelectMostSpecific(
-                    ziele, _feldStellen.ContainsKey) is { } target
-                && SpringeZuFeld(target))
+                    ziele, _felder.Kennt) is { } target
+                && _felder.SpringeZu(target))
             {
                 e.Handled = true;
                 return;

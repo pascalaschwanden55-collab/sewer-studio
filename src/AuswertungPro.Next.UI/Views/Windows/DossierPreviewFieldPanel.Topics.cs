@@ -19,7 +19,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 /// Herausgeloest aus der Feld-Datei, ohne eine Zeile zu aendern — sie war mit
 /// ueber 950 Zeilen zu gross, um sie beim Suchen noch zu ueberblicken.
 /// </summary>
-public partial class DossierPreviewWindow
+internal sealed partial class DossierPreviewFieldPanel
 {
 
     /// <summary>
@@ -86,7 +86,7 @@ public partial class DossierPreviewWindow
             {
                 DossierTopicEditing.RemoveDossierOverride(_dossier, titel);
                 FuelleThemenEditor(wirt, feld);
-                ZeichneBlatt();
+                _zeichneBlatt();
                 Betone(feld.Key);
             });
 
@@ -100,7 +100,7 @@ public partial class DossierPreviewWindow
             TextWrapping = TextWrapping.Wrap,
             FontSize = 12,
             FontWeight = FontWeights.SemiBold,
-            Foreground = (Brush)FindResource("TextBrush"),
+            Foreground = (Brush)_ressource("TextBrush"),
             VerticalAlignment = VerticalAlignment.Center
         });
 
@@ -116,7 +116,7 @@ public partial class DossierPreviewWindow
                 return;
 
             SpeichereFormatiertenText(titel, box);
-            ZeichneBlatt();
+            _zeichneBlatt();
         };
 
         inhalt.Children.Add(box);
@@ -146,7 +146,7 @@ public partial class DossierPreviewWindow
         wurzel.Children.Add(DossierTextFormattingToolbar.Create(box, () =>
         {
             SpeichereFormatiertenText(titel, box);
-            ZeichneBlatt();
+            _zeichneBlatt();
             Betone(textTarget);
         }));
 
@@ -170,7 +170,7 @@ public partial class DossierPreviewWindow
                 () => ImportiereBauteilliste(titel, box, textTarget));
 
             import.IsEnabled = !string.IsNullOrWhiteSpace(
-                DossierTopicComponentListComposer.ComponentText(_values));
+                DossierTopicComponentListComposer.ComponentText(_werte()));
             aktionen.Children.Add(import);
         }
         else if (DossierTopicEditing.SupportsHoldingInsert(titel))
@@ -194,8 +194,8 @@ public partial class DossierPreviewWindow
                 DossierTopicEditing.PromoteToArea(
                     _area, _dossier, titel, wert.Text, wert.StyleRanges, string.Empty);
                 FuelleThemenEditor(wirt, feld);
-                ZeichneBlatt();
-                Betone(DossierPreviewTarget.Field(feld.Key));
+                _zeichneBlatt();
+                Betone(feld.Key);
             });
 
         void ZeigeUebernehmen()
@@ -221,7 +221,7 @@ public partial class DossierPreviewWindow
         DossierPreviewTarget textTarget)
     {
         var text = DossierTopicEditing.ImportComponentListForDossier(
-            _dossier, titel, _values);
+            _dossier, titel, _werte());
 
         _geladeneFormatfelder.Add(box);
         try
@@ -233,7 +233,7 @@ public partial class DossierPreviewWindow
             _geladeneFormatfelder.Remove(box);
         }
 
-        ZeichneBlatt();
+        _zeichneBlatt();
         Betone(textTarget);
         box.Focus();
     }
@@ -243,7 +243,7 @@ public partial class DossierPreviewWindow
     {
         DossierTopicRichTextEditor.InsertAtSelection(box, text);
 
-        ZeichneBlatt();
+        _zeichneBlatt();
         Betone(textTarget);
     }
 
@@ -276,7 +276,7 @@ public partial class DossierPreviewWindow
 
             DossierTopicEditing.SetForDossier(_dossier, titel, string.Empty);
             FuelleThemenEditor(wirt, feld);
-            ZeichneBlatt();
+            _zeichneBlatt();
             Betone(feld.Key);
         });
 

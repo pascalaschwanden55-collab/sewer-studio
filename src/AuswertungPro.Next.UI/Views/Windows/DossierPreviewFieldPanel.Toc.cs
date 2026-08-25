@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -17,7 +17,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 /// selbst nicht als Kapitel und damit auch nicht mit einer Seite kennt. Darum
 /// besitzt jeder Zusatzpunkt eine eigene, bearbeitbare Seitenzahl.
 /// </summary>
-public partial class DossierPreviewWindow
+internal sealed partial class DossierPreviewFieldPanel
 {
     private UIElement BaueVerzeichnisEditor(DossierPreviewField feld)
     {
@@ -80,7 +80,7 @@ public partial class DossierPreviewWindow
             {
                 _dossier.TocAttachments.RemoveAt(stelle);
                 FuelleVerzeichnisEditor(wirt, feld);
-                ZeichneBlatt();
+                _zeichneBlatt();
                 Betone(feld.Key);
             }));
 
@@ -90,7 +90,7 @@ public partial class DossierPreviewWindow
                 Text = "Zusätzlicher Punkt " + (stelle + 1),
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = (Brush)FindResource("TextBrush"),
+                Foreground = (Brush)_ressource("TextBrush"),
                 VerticalAlignment = VerticalAlignment.Center
             });
             inhalt.Children.Add(kopf);
@@ -127,7 +127,7 @@ public partial class DossierPreviewWindow
             box.TextChanged += (_, _) =>
             {
                 punkt.Title = box.Text;
-                ZeichneBlatt();
+                _zeichneBlatt();
             };
             Grid.SetRow(box, 1);
             eingaben.Children.Add(box);
@@ -149,7 +149,7 @@ public partial class DossierPreviewWindow
             seite.TextChanged += (_, _) =>
             {
                 punkt.PageNumber = seite.Text;
-                ZeichneBlatt();
+                _zeichneBlatt();
             };
             Grid.SetRow(seite, 1);
             Grid.SetColumn(seite, 1);
@@ -167,7 +167,7 @@ public partial class DossierPreviewWindow
                 PageNumber = NaechsteVerzeichnisSeite()
             });
             FuelleVerzeichnisEditor(wirt, feld);
-            ZeichneBlatt();
+            _zeichneBlatt();
             Betone(feld.Key);
 
             if (wirt.Children.Count >= 2
@@ -194,7 +194,7 @@ public partial class DossierPreviewWindow
         _dossier.TocAttachments.RemoveAt(stelle);
         _dossier.TocAttachments.Insert(ziel, punkt);
         FuelleVerzeichnisEditor(wirt, feld);
-        ZeichneBlatt();
+        _zeichneBlatt();
         Betone(feld.Key);
     }
 
@@ -224,11 +224,21 @@ public partial class DossierPreviewWindow
     }
 
     private DossierTocAttachmentStart AktuellerVerzeichnisStart()
+        => VerzeichnisStart(_document, _dossier);
+
+    /// <summary>
+    /// Wo die zusaetzlichen Verzeichnispunkte anfangen. Gemeinsam nutzbar, weil
+    /// auch das Fenster sie beim Aufbau der Werte braucht — und zwar bevor es
+    /// diese Eingabeseite ueberhaupt gibt.
+    /// </summary>
+    public static DossierTocAttachmentStart VerzeichnisStart(
+        DossierPreviewDocument document,
+        DossierDefinition dossier)
         => DossierTocAttachments.StartAfter(
-            _document.Pages
+            document.Pages
                 .SelectMany(page => page.Blocks)
                 .OfType<DossierPreviewParagraph>()
                 .Select(paragraph => paragraph.TocEntry),
-            _dossier.HiddenChapters);
+            dossier.HiddenChapters);
 
 }

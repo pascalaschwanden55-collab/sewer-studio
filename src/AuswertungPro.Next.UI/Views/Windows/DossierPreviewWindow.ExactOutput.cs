@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -27,8 +27,7 @@ public partial class DossierPreviewWindow
 
     private void BaueBeilagenHinweis()
     {
-        FieldPanel.Children.Clear();
-        _feldStellen.Clear();
+        _felder.Leere();
         FieldPanel.Children.Add(DossierExactPreviewPageRenderer.CreateNotice(
             "Diese Seite ist eine Original-Beilage. Sie wird vollständig angezeigt, "
             + "aber nicht im Dossier-Editor verändert.",
@@ -178,7 +177,7 @@ public partial class DossierPreviewWindow
             }
 
             var candidates = DossierOutputPreviewInteractionMapper.BuildCandidates(
-                _feldStellen.Keys,
+                _felder.Ziele,
                 _fields,
                 _values,
                 _dossier,

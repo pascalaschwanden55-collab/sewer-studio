@@ -15,7 +15,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 /// <summary>
 /// Die Zeilenlisten der Vorschau — Eigentuemer und Aenderungswesen.
 /// </summary>
-public partial class DossierPreviewWindow
+internal sealed partial class DossierPreviewFieldPanel
 {
 
     private UIElement BaueZeilenEditor(DossierPreviewField feld)
@@ -63,7 +63,7 @@ public partial class DossierPreviewWindow
             {
                 typ.Liste.RemoveAt(stelle);
                 FuelleZeilenEditor(wirt, feld);
-                ZeichneBlatt();
+                _zeichneBlatt();
                 Betone(feld.Key);
             }));
 
@@ -73,7 +73,7 @@ public partial class DossierPreviewWindow
                 Text = "Zeile " + (stelle + 1),
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = (Brush)FindResource("TextBrush"),
+                Foreground = (Brush)_ressource("TextBrush"),
                 VerticalAlignment = VerticalAlignment.Center
             });
 
@@ -111,14 +111,14 @@ public partial class DossierPreviewWindow
                 box.TextChanged += (_, _) =>
                 {
                     SpeichereZeilenfeld(zeile, spalte, box);
-                    ZeichneBlatt();
+                    _zeichneBlatt();
                 };
 
                 inhalt.Children.Add(box);
                 inhalt.Children.Add(DossierTextFormattingToolbar.Create(box, () =>
                 {
                     SpeichereZeilenfeld(zeile, spalte, box);
-                    ZeichneBlatt();
+                    _zeichneBlatt();
                     Betone(cellTarget);
                 }));
 
@@ -133,7 +133,7 @@ public partial class DossierPreviewWindow
         {
             typ.Liste.Add(typ.Neu());
             FuelleZeilenEditor(wirt, feld);
-            ZeichneBlatt();
+            _zeichneBlatt();
             Betone(feld.Key);
         });
 
@@ -201,7 +201,7 @@ public partial class DossierPreviewWindow
         typ.Liste.Insert(ziel, zeile);
 
         FuelleZeilenEditor(wirt, feld);
-        ZeichneBlatt();
+        _zeichneBlatt();
         Betone(feld.Key);
     }
 }
