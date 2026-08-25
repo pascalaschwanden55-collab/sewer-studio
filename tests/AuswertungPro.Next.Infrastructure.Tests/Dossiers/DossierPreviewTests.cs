@@ -95,6 +95,37 @@ public sealed class DossierPreviewBuilderTests
     }
 
     [Fact]
+    public void Inhaltsverzeichnis_zeigt_dieselbe_kompakte_Form_wie_Word()
+    {
+        var seite = Vorschau().Pages.Single(page => page.Blocks
+            .OfType<DossierPreviewParagraph>()
+            .Any(paragraph => paragraph.TocEntry is not null));
+        var entries = seite.Blocks
+            .OfType<DossierPreviewParagraph>()
+            .Where(paragraph => paragraph.TocEntry is not null)
+            .ToList();
+        var firstIndex = seite.Blocks.ToList().IndexOf(entries[0]);
+        var heading = seite.Blocks
+            .Take(firstIndex)
+            .OfType<DossierPreviewParagraph>()
+            .Last(paragraph => paragraph.Runs.Any(run =>
+                !run.IsField && !string.IsNullOrWhiteSpace(run.Text)));
+
+        Assert.All(entries, paragraph =>
+        {
+            Assert.Equal(8, paragraph.Format.SpaceBeforePx);
+            Assert.All(paragraph.Runs, run =>
+            {
+                Assert.Equal("Arial", run.Format.FontFamily);
+                Assert.Equal(14.67, run.Format.FontSizePx, precision: 2);
+                Assert.False(run.Format.Bold);
+            });
+        });
+        Assert.Equal(18.67, heading.Runs[0].Format.FontSizePx, precision: 2);
+        Assert.True(heading.Runs[0].Format.Bold);
+    }
+
+    [Fact]
     public void Zusaetzliche_Verzeichnispunkte_folgen_ohne_Leerzeile_auf_das_letzte_Kapitel()
     {
         var seite = Vorschau().Pages.Single(page => page.Blocks

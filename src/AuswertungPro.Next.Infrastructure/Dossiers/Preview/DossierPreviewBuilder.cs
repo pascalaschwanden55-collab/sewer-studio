@@ -126,6 +126,7 @@ public static class DossierPreviewBuilder
 
             var bloecke = _bloecke.ToList();
             RueckeVerzeichnisBeilagenDirektAnDieKapitel(bloecke);
+            DossierPreviewTocLayout.Apply(bloecke);
 
             _seiten.Add(new DossierPreviewPage(
                 _seiten.Count + 1,

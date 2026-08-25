@@ -80,9 +80,15 @@
   Seitenzahl bleiben je Punkt frei bearbeitbar.
   `DocxTocAttachmentWriter` schreibt jeden Punkt direkt hinter den letzten echten
   Word-Eintrag als eigenen Absatz in dessen Format samt rechtem Seitenzahl-Tabulator.
+  `DocxTocLayoutFormatter` entfernt nur im Inhaltsverzeichnis die alte gesperrte
+  Zeichenweite und verdichtet die Zeilen; Arial, Punktlinie und rechte Seitenzahl
+  bleiben erhalten. `DossierPreviewTocLayout` verwendet in der Vorschau dieselben Masse.
   Die Vorschau verwendet dasselbe Zeilenraster samt Punktlinie, zaehlt ausgeblendete
   Kapitel nicht mit und adressiert jeden Zusatzpunkt einzeln fuer den direkten Klick zum
   Editor.
+- Die Dossier-Vorschau startet mit einer vollstaendig eingepassten Seite.
+  `DossierPreviewFitCalculator` berechnet den Zoom aus Blatt- und Vorschauflaeche;
+  der Benutzer kann danach manuell vergroessern und mit `Ganze Seite` zurueckkehren.
 - In `Schäden` und `Sanierungskonzept` kopiert `Import aus Liste` die aktuelle,
   fortlaufend nummerierte Bauteilliste als normalen Dossiertext: zuerst alle Haltungen,
   danach alle Schächte. Diese Kopie ist frei bearbeitbar und aendert weder die Auswahl

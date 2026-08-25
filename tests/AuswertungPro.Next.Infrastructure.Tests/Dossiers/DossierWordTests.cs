@@ -316,6 +316,50 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Das_Inhaltsverzeichnis_ist_kompakt_und_ohne_gesperrte_Buchstaben()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.TocAttachments.Add(new DossierTocAttachment
+        {
+            Title = "Protokolle",
+            PageNumber = "5"
+        });
+
+        var result = await new DossierWordTemplateExportService(() => templatePath)
+            .ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        var paragraphs = document.MainDocumentPart!.Document.Body!
+            .Elements<Paragraph>()
+            .ToList();
+        var entries = paragraphs
+            .Where(paragraph => DossierTocStyle.IsEntry(
+                paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value)
+                && !string.IsNullOrWhiteSpace(paragraph.InnerText))
+            .ToList();
+
+        Assert.NotEmpty(entries);
+        var heading = paragraphs.Take(paragraphs.IndexOf(entries[0]))
+            .Last(paragraph => !string.IsNullOrWhiteSpace(paragraph.InnerText));
+
+        Assert.Equal("Inhaltsverzeichnis", heading.InnerText);
+        Assert.All(
+            heading.Descendants<Run>(),
+            run => Assert.Equal(0, run.RunProperties?.Spacing?.Val?.Value));
+        Assert.All(entries, paragraph =>
+        {
+            Assert.Equal("120", paragraph.ParagraphProperties?
+                .SpacingBetweenLines?.Before?.Value);
+            Assert.All(paragraph.Descendants<Run>(), run =>
+            {
+                Assert.Equal("Arial", run.RunProperties?.RunFonts?.Ascii?.Value);
+                Assert.Equal(0, run.RunProperties?.Spacing?.Val?.Value);
+            });
+        });
+    }
+
+    [Fact]
     public async Task Nach_ausgeblendetem_Kapitel_beginnt_der_Zusatzpunkt_bei_der_richtigen_Nummer()
     {
         var (request, templatePath) = BuildScenario();

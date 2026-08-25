@@ -45,6 +45,8 @@ public partial class DossierPreviewWindow : Window
     private Dictionary<string, string> _values = new(StringComparer.OrdinalIgnoreCase);
     private DossierPreviewRenderResult? _render;
     private DossierPreviewTarget? _aktivesFeld;
+    private bool _fitPage = true;
+    private bool _setztAutomatischenZoom;
 
     private DossierPreviewWindow(
         DossierExportRequest request,
@@ -131,6 +133,9 @@ public partial class DossierPreviewWindow : Window
             key => _values.TryGetValue(key, out var wert) ? wert : string.Empty));
 
         ZeichneBlatt();
+
+        if (_fitPage)
+            PasseGanzeSeiteEin();
     }
 
     /// <summary>
@@ -281,9 +286,71 @@ public partial class DossierPreviewWindow : Window
         if (SheetZoom is null)
             return;
 
+        if (IsLoaded && !_setztAutomatischenZoom)
+            _fitPage = false;
+
         SheetZoom.ScaleX = e.NewValue;
         SheetZoom.ScaleY = e.NewValue;
         ZoomText.Text = (e.NewValue * 100).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " %";
+    }
+
+    private void OnPreviewLoaded(object sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _fitPage = true;
+        PasseGanzeSeiteEin();
+    }
+
+    private void OnSheetViewportChanged(object sender, SizeChangedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        if (_fitPage)
+            PasseGanzeSeiteEin();
+    }
+
+    private void OnFitPage(object sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _fitPage = true;
+        PasseGanzeSeiteEin();
+    }
+
+    /// <summary>
+    /// Verkleinert das Blatt so weit, dass oben, unten, links und rechts
+    /// gleichzeitig sichtbar bleiben. Der Schieberegler darf danach weiterhin
+    /// bewusst auf einen Ausschnitt vergrössern.
+    /// </summary>
+    private void PasseGanzeSeiteEin()
+    {
+        if (PageList.SelectedItem is not DossierPreviewNavigationItem item)
+            return;
+
+        var viewportWidth = SheetScroll.ViewportWidth > 0
+            ? SheetScroll.ViewportWidth
+            : SheetScroll.ActualWidth;
+        var viewportHeight = SheetScroll.ViewportHeight > 0
+            ? SheetScroll.ViewportHeight
+            : SheetScroll.ActualHeight;
+        var scale = DossierPreviewFitCalculator.Calculate(
+            viewportWidth,
+            viewportHeight,
+            item.Page.Geometry.WidthPx,
+            item.Page.Geometry.HeightPx,
+            surroundingSpace: 60);
+        scale = Math.Clamp(scale, ZoomSlider.Minimum, ZoomSlider.Maximum);
+
+        _setztAutomatischenZoom = true;
+        try
+        {
+            ZoomSlider.Value = scale;
+        }
+        finally
+        {
+            _setztAutomatischenZoom = false;
+        }
     }
 
     private void OnAccept(object sender, RoutedEventArgs e)

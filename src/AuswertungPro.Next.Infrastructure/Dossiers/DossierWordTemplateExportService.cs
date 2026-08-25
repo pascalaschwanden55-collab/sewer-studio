@@ -135,6 +135,13 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                         request.Dossier.TocAttachments,
                         ZaehleVerzeichniszeilen(document) + 1);
 
+                    // Die Vorlage setzt zwischen allen Buchstaben zusätzlichen
+                    // Abstand und vor jede Verzeichniszeile 18 Punkt Luft.
+                    // Kompakte Arial-Zeilen lesen sich deutlich ruhiger; die
+                    // Word-Felder und ihre echten Seitenzahlen bleiben dabei
+                    // vollständig erhalten.
+                    DocxTocLayoutFormatter.Apply(document);
+
                     DocxPlaceholderFiller.FillRepeatingRows(
                         document,
                         "Haltungen",

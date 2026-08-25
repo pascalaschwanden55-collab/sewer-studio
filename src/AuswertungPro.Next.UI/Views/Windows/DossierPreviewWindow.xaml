@@ -5,6 +5,7 @@
         ui:WindowFx.Entrance="True"
         Title="Dossier-Vorschau"
         Width="1400" Height="900"
+        Loaded="OnPreviewLoaded"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}">
 
@@ -73,16 +74,21 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
                             HorizontalAlignment="Center" Margin="0,6,0,8">
+                    <Button Content="Ganze Seite"
+                            ToolTip="Passt das vollständige Blatt in die verfügbare Vorschaufläche ein."
+                            Height="28" Padding="10,2" Margin="0,0,14,0"
+                            Click="OnFitPage"/>
                     <TextBlock Text="Zoom" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <Slider x:Name="ZoomSlider" Width="180" Minimum="0.4" Maximum="1.6"
-                            Value="0.85" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                    <Slider x:Name="ZoomSlider" Width="180" Minimum="0.25" Maximum="1.6"
+                            Value="0.85" TickFrequency="0.05"
                             VerticalAlignment="Center"
                             ValueChanged="OnZoomChanged"/>
                     <TextBlock x:Name="ZoomText" VerticalAlignment="Center" Margin="8,0,0,0"/>
                 </StackPanel>
 
                 <ScrollViewer x:Name="SheetScroll" VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Auto" Padding="20">
+                              HorizontalScrollBarVisibility="Auto" Padding="20"
+                              SizeChanged="OnSheetViewportChanged">
                     <!-- Das Blatt bringt seine eigenen Masse mit: A4 in
                          Bildpunkten, so wie Word bei 100 % zeigt. -->
                     <Border x:Name="Sheet" Background="White" Margin="10"
