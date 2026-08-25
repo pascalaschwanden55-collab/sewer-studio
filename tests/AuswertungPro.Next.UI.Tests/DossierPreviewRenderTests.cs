@@ -183,7 +183,7 @@ public sealed class DossierPreviewRenderTests
             var ergebnis = DossierPreviewPageRenderer.Render(
                 seite,
                 key => key == "Verzeichnis_Beilagen"
-                    ? "4.\tProtokolle\n5.\tPläne"
+                    ? "4.\tProtokolle\t8\n5.\tPläne\t12"
                     : string.Empty,
                 _ => Array.Empty<IReadOnlyDictionary<string, string>>(),
                 _ => string.Empty);
@@ -220,6 +220,12 @@ public sealed class DossierPreviewRenderTests
                 1.5);
             Assert.Equal(kapitelTitel.FontFamily.Source, beilageTitel.FontFamily.Source);
             Assert.Equal(kapitelTitel.FontSize, beilageTitel.FontSize, precision: 1);
+
+            var ersteSeite = Seitenspalte(beilageZeilen[0]);
+            var zweiteSeite = Seitenspalte(beilageZeilen[1]);
+            Assert.Equal("8", ersteSeite.Text);
+            Assert.Equal("12", zweiteSeite.Text);
+            Assert.Equal(HorizontalAlignment.Right, ersteSeite.HorizontalAlignment);
         });
     }
 
@@ -229,6 +235,14 @@ public sealed class DossierPreviewRenderTests
         return grid.Children
             .OfType<TextBlock>()
             .Single(block => Grid.GetColumn(block) == 1);
+    }
+
+    private static TextBlock Seitenspalte(Border row)
+    {
+        var grid = Assert.IsType<Grid>(row.Child);
+        return grid.Children
+            .OfType<TextBlock>()
+            .Single(block => Grid.GetColumn(block) == 2);
     }
 
     private static void RunOnSta(Action action)

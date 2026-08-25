@@ -128,6 +128,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     DocxTocAttachmentWriter.Apply(
                         document,
                         request.Dossier.TocAttachmentLines,
+                        request.Dossier.TocAttachmentPageNumbers,
                         ZaehleVerzeichniszeilen(document) + 1);
 
                     DocxPlaceholderFiller.FillRepeatingRows(
@@ -325,7 +326,10 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             // Export wird die Anfangsnummer nach dem Entfernen ausgeblendeter
             // Kapitel nochmals aus dem echten Dokument berechnet.
             ["Verzeichnis_Beilagen"] = DossierTocAttachments.Build(
-                d.TocAttachmentLines, firstNumber: 4),
+                d.TocAttachmentLines,
+                d.TocAttachmentPageNumbers,
+                firstNumber: 4,
+                firstPageNumber: 5),
             ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
         }, d), d);
     }

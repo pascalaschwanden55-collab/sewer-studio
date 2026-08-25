@@ -263,11 +263,17 @@ public sealed class DossierDefinition
     /// Zusaetzliche Zeilen des Inhaltsverzeichnisses — die Beilagen, die am
     /// Schluss dazukommen: TV-Protokolle, Schachtprotokolle, Plaene.
     ///
-    /// Die drei Kapitel bleiben Word ueberlassen; diese Zeilen stehen gar nicht
-    /// im Word-Dokument und koennen deshalb weder von Word gezaehlt noch mit
-    /// einer Seitenzahl versehen werden.
+    /// Die drei Kapitel bleiben Word ueberlassen. Für diese zusätzlichen
+    /// Punkte speichert SewerStudio Titel und Seitenzahl getrennt.
     /// </summary>
     public List<string> TocAttachmentLines { get; set; } = new();
+
+    /// <summary>
+    /// Seitenzahl rechts neben jedem zusätzlichen Verzeichnispunkt. Die Liste
+    /// läuft parallel zu <see cref="TocAttachmentLines"/>. Sie ist additiv,
+    /// damit bestehende Dossiers ihre bisherigen Titel unverändert behalten.
+    /// </summary>
+    public List<string> TocAttachmentPageNumbers { get; set; } = new();
 
     /// <summary>Text der Zeile "Fuer die Aktennotiz".</summary>
     public string FileNote { get; set; } = "";
@@ -352,7 +358,7 @@ public sealed class DossierDefinition
 public sealed class DossierDocument
 {
     /// <summary>Formatversion, die diese Programmversion schreibt.</summary>
-    public const int CurrentSchemaVersion = 6;
+    public const int CurrentSchemaVersion = 7;
 
     /// <summary>Formatversion. Unbekannt hoehere Versionen werden nicht ueberschrieben.</summary>
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;

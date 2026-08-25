@@ -26,6 +26,42 @@ public sealed class DossierTocAttachmentsTests
     }
 
     [Fact]
+    public void Eigene_Seitenzahlen_stehen_rechts_in_einer_dritten_Spalte()
+    {
+        var text = DossierTocAttachments.Build(
+            new[] { "TV-Protokolle", "Schachtprotokolle" },
+            new[] { "8", "12" },
+            firstNumber: 4,
+            firstPageNumber: 5);
+
+        Assert.Equal("4.\tTV-Protokolle\t8\n5.\tSchachtprotokolle\t12", text);
+    }
+
+    [Fact]
+    public void Alte_Zeilen_ohne_Seitenangabe_erhalten_einen_Fortlaufenden_Vorschlag()
+    {
+        var text = DossierTocAttachments.Build(
+            new[] { "TV-Protokolle", "Schachtprotokolle" },
+            Array.Empty<string>(),
+            firstNumber: 4,
+            firstPageNumber: 5);
+
+        Assert.Equal("4.\tTV-Protokolle\t5\n5.\tSchachtprotokolle\t6", text);
+    }
+
+    [Fact]
+    public void Eine_bewusst_geloeschte_Seitenzahl_bleibt_leer()
+    {
+        var text = DossierTocAttachments.Build(
+            new[] { "TV-Protokolle" },
+            new[] { "" },
+            firstNumber: 4,
+            firstPageNumber: 5);
+
+        Assert.Equal("4.\tTV-Protokolle", text);
+    }
+
+    [Fact]
     public void Ohne_Zeilen_entsteht_nichts()
         => Assert.Equal("", DossierTocAttachments.Build(Array.Empty<string>(), 4));
 
@@ -137,9 +173,9 @@ public sealed class DossierTocTemplateTests
 }
 
 /// <summary>
-/// Der Wechsel von Formatversion 5 auf 6.
+/// Der Wechsel auf die aktuelle Formatversion.
 /// </summary>
-public sealed class DossierSchema6Tests
+public sealed class DossierSchema7Tests
 {
     [Fact]
     public void Eine_Datei_der_Version_5_wird_uebernommen_und_verliert_nichts()
@@ -162,10 +198,11 @@ public sealed class DossierSchema6Tests
         var umgestellt = DossierDocumentMigration.MigrateToCurrent(dokument);
         var dossier = umgestellt.Dossiers[0];
 
-        Assert.Equal(6, umgestellt.SchemaVersion);
+        Assert.Equal(7, umgestellt.SchemaVersion);
         Assert.Equal("Liegenschaft Nr. 439 Dittli", dossier.Name);
         Assert.Equal(new[] { "33458", "36051" }, dossier.ShaftNumbers);
         Assert.Empty(dossier.TocAttachmentLines);
+        Assert.Empty(dossier.TocAttachmentPageNumbers);
     }
 
     [Fact]
@@ -186,5 +223,29 @@ public sealed class DossierSchema6Tests
         var dossier = DossierDocumentMigration.MigrateToCurrent(dokument).Dossiers[0];
 
         Assert.Equal(new[] { "TV-Protokolle", "Schachtprotokolle" }, dossier.TocAttachmentLines);
+        Assert.Empty(dossier.TocAttachmentPageNumbers);
+    }
+
+
+    [Fact]
+    public void Bestehende_eigene_Seitenzahlen_bleiben_erhalten()
+    {
+        var dokument = new AuswertungPro.Next.Domain.Models.Dossiers.DossierDocument
+        {
+            SchemaVersion = 7,
+            Dossiers =
+            {
+                new AuswertungPro.Next.Domain.Models.Dossiers.DossierDefinition
+                {
+                    TocAttachmentLines = { "TV-Protokolle" },
+                    TocAttachmentPageNumbers = { "8" }
+                }
+            }
+        };
+
+        var dossier = DossierDocumentMigration.MigrateToCurrent(dokument).Dossiers[0];
+
+        Assert.Equal(new[] { "TV-Protokolle" }, dossier.TocAttachmentLines);
+        Assert.Equal(new[] { "8" }, dossier.TocAttachmentPageNumbers);
     }
 }

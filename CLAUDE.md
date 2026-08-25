@@ -61,11 +61,14 @@
   Word-Felder. Der gleichnamige Kapitelkopf wird weiterhin ueber `TextOverrides` geaendert,
   damit eine spaetere Word-Aktualisierung den eigenen Titel nicht zuruecksetzt.
 - Zusaetzliche Verzeichnispunkte bleiben in `DossierDefinition.TocAttachmentLines` und
-  werden als eigene sortierbare Liste bearbeitet. `DossierTocAttachments` nummeriert sie
-  erst hinter den vorhandenen Kapiteln; fuer externe Beilagen wird keine Seitenzahl erfunden.
+  werden als eigene sortierbare Liste bearbeitet. Ihre rechten Seitenzahlen stehen additiv
+  in `TocAttachmentPageNumbers`. `DossierTocAttachments` nummeriert sie erst hinter den
+  vorhandenen Kapiteln und schlägt bei Altdaten die nächste freie Seite vor; Titel und
+  Seitenzahl bleiben je Punkt frei bearbeitbar.
   `DocxTocAttachmentWriter` schreibt jeden Punkt direkt hinter den letzten echten
-  Word-Eintrag als eigenen Absatz in dessen Format. Die Vorschau verwendet dasselbe
-  Zeilenraster und adressiert jeden Zusatzpunkt einzeln fuer den direkten Klick zum Editor.
+  Word-Eintrag als eigenen Absatz in dessen Format samt rechtem Seitenzahl-Tabulator.
+  Die Vorschau verwendet dasselbe Zeilenraster und adressiert jeden Zusatzpunkt einzeln
+  fuer den direkten Klick zum Editor.
 - In `Schäden` und `Sanierungskonzept` kopiert `Import aus Liste` die aktuelle,
   fortlaufend nummerierte Bauteilliste als normalen Dossiertext: zuerst alle Haltungen,
   danach alle Schächte. Diese Kopie ist frei bearbeitbar und aendert weder die Auswahl

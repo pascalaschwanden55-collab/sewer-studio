@@ -219,7 +219,7 @@ public sealed class DossierFieldOverrideTests
         var value = DossierWordTemplateExportService.BuildValues(Anfrage(dossier))[
             "Verzeichnis_Beilagen"];
 
-        Assert.Equal("4.\tTV-Protokolle\n5.\tSchachtprotokolle", value);
+        Assert.Equal("4.\tTV-Protokolle\t5\n5.\tSchachtprotokolle\t6", value);
     }
 
     private static AuswertungPro.Next.Application.Dossiers.DossierExportRequest Anfrage(

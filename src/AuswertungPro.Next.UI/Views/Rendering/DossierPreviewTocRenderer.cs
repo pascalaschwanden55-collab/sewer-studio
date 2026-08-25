@@ -214,10 +214,18 @@ internal static class DossierPreviewTocRenderer
                 continue;
             }
 
+            var pageSeparator = line.IndexOf('\t', separator + 1);
+            var title = pageSeparator < 0
+                ? line[(separator + 1)..].Trim()
+                : line[(separator + 1)..pageSeparator].Trim();
+            var pageNumber = pageSeparator < 0
+                ? string.Empty
+                : line[(pageSeparator + 1)..].Trim();
+
             result.Add(new DossierPreviewTocEntry(
                 line[..separator].Trim(),
-                line[(separator + 1)..].Trim(),
-                string.Empty));
+                title,
+                pageNumber));
         }
 
         return result;

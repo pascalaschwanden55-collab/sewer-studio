@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -23,11 +24,12 @@ internal static class DocxTocAttachmentWriter
     public static int Apply(
         WordprocessingDocument document,
         IEnumerable<string?>? lines,
+        IEnumerable<string?>? pageNumbers,
         int firstNumber)
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        var entries = DossierTocAttachments.BuildEntries(lines, firstNumber);
+        var lineList = lines?.ToList() ?? new List<string?>();
         var body = document.MainDocumentPart?.Document?.Body;
         if (body is null)
             return 0;
@@ -39,7 +41,7 @@ internal static class DocxTocAttachmentWriter
 
         if (marker is null)
         {
-            if (entries.Count > 0)
+            if (lineList.Any(line => !string.IsNullOrWhiteSpace(line)))
             {
                 throw new InvalidDataException(
                     $"Die Word-Vorlage enthält die Stelle '{Placeholder}' nicht.");
@@ -54,6 +56,19 @@ internal static class DocxTocAttachmentWriter
             .Where(entry => entry is not null)
             .Cast<DocxTocEntry>()
             .LastOrDefault();
+
+        var firstPageNumber = int.TryParse(
+            lastEntry?.PageNumber,
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out var lastPageNumber)
+            ? lastPageNumber + 1
+            : 1;
+        var entries = DossierTocAttachments.BuildEntries(
+            lineList,
+            pageNumbers,
+            firstNumber,
+            firstPageNumber);
 
         OpenXmlElement? anchor = lastEntry?.Paragraph;
         var formatTemplate = lastEntry?.Paragraph ?? marker;
@@ -92,13 +107,17 @@ internal static class DocxTocAttachmentWriter
             ?.RunProperties;
         var tabProperties = lastEntry?.Paragraph
             .Descendants<Run>()
-            .FirstOrDefault(run => run.Descendants<TabChar>().Any())
+            .LastOrDefault(run => run.Descendants<TabChar>().Any())
             ?.RunProperties;
         var titleProperties = lastEntry?.TitleTexts
             .FirstOrDefault()?
             .Ancestors<Run>()
             .FirstOrDefault()?
             .RunProperties;
+        var pageProperties = lastEntry?.Paragraph
+            .Descendants<Run>()
+            .LastOrDefault(run => run.Descendants<Text>().Any())
+            ?.RunProperties;
 
         paragraph.Append(
             CreateRun(
@@ -108,6 +127,15 @@ internal static class DocxTocAttachmentWriter
             CreateRun(
                 titleProperties,
                 new Text(entry.Title) { Space = SpaceProcessingModeValues.Preserve }));
+
+        if (!string.IsNullOrWhiteSpace(entry.PageNumber))
+        {
+            paragraph.Append(
+                CreateRun(tabProperties, new TabChar()),
+                CreateRun(
+                    pageProperties,
+                    new Text(entry.PageNumber) { Space = SpaceProcessingModeValues.Preserve }));
+        }
 
         return paragraph;
     }

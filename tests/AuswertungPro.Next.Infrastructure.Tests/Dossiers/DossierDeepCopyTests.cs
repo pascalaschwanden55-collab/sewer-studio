@@ -23,6 +23,8 @@ public sealed class DossierDeepCopyTests
         original.Topics.Add(new DossierTopicRow { Title = "Schäden", Text = "alt" });
         original.HoldingIds.Add(Guid.NewGuid());
         original.ShaftNumbers.Add("80551");
+        original.TocAttachmentLines.Add("Protokolle");
+        original.TocAttachmentPageNumbers.Add("8");
 
         var kopie = DossierDeepCopy.Of(original);
 
@@ -30,6 +32,7 @@ public sealed class DossierDeepCopyTests
         original.Topics[0].Text = "geändert";
         original.HoldingIds.Clear();
         original.ShaftNumbers.Clear();
+        original.TocAttachmentPageNumbers[0] = "12";
         original.Name = "geändert";
 
         Assert.Equal("Musterweg 1", kopie.Name);
@@ -37,6 +40,7 @@ public sealed class DossierDeepCopyTests
         Assert.Equal("alt", kopie.Topics[0].Text);
         Assert.Single(kopie.HoldingIds);
         Assert.Equal(new[] { "80551" }, kopie.ShaftNumbers);
+        Assert.Equal(new[] { "8" }, kopie.TocAttachmentPageNumbers);
     }
 
     [Fact]

@@ -279,6 +279,8 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         var (request, templatePath) = BuildScenario();
         request.Dossier.TocAttachmentLines.Add("Protokolle");
         request.Dossier.TocAttachmentLines.Add("Pläne");
+        request.Dossier.TocAttachmentPageNumbers.Add("8");
+        request.Dossier.TocAttachmentPageNumbers.Add("12");
 
         var service = new DossierWordTemplateExportService(() => templatePath);
         var result = await service.ExportAsync(request);
@@ -293,10 +295,10 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         Assert.NotNull(vierterPunkt);
         Assert.NotNull(fuenfterPunkt);
-        Assert.Equal("4.Protokolle", vierterPunkt.InnerText);
-        Assert.Equal("5.Pläne", fuenfterPunkt!.InnerText);
-        Assert.Single(vierterPunkt.Descendants<TabChar>());
-        Assert.Single(fuenfterPunkt.Descendants<TabChar>());
+        Assert.Equal("4.Protokolle8", vierterPunkt.InnerText);
+        Assert.Equal("5.Pläne12", fuenfterPunkt!.InnerText);
+        Assert.Equal(2, vierterPunkt.Descendants<TabChar>().Count());
+        Assert.Equal(2, fuenfterPunkt.Descendants<TabChar>().Count());
         Assert.Equal(
             drittesKapitel.ParagraphProperties?.OuterXml,
             vierterPunkt.ParagraphProperties?.OuterXml);
