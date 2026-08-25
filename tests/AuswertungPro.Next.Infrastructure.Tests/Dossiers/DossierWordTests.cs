@@ -387,6 +387,48 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Vor_Aenderungswesen_entsteht_keine_leere_zweite_Seite_mehr()
+    {
+        var (request, templatePath) = BuildScenario();
+
+        var result = await new DossierWordTemplateExportService(() => templatePath)
+            .ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        var paragraph = document.MainDocumentPart!.Document.Body!
+            .Descendants<Paragraph>()
+            .First(item => item.InnerText.Contains("Änderungswesen:", StringComparison.Ordinal));
+
+        Assert.DoesNotContain(
+            paragraph.Descendants<Break>(),
+            item => item.Type?.Value == BreakValues.Page);
+    }
+
+    [Fact]
+    public async Task Rotes_Feld_mit_Beschriftung_bleibt_im_echten_Word_Export_rot()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.FieldOverrides["Datum"] = "ROT-DATUM";
+        request.Dossier.FieldStyles["Datum"] = new List<DossierTextStyleRange>
+        {
+            new() { Start = 0, Length = 9, ColorHex = "C00000" }
+        };
+
+        var result = await new DossierWordTemplateExportService(() => templatePath)
+            .ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        var run = document.MainDocumentPart!.Document.Body!
+            .Descendants<Run>()
+            .First(item => item.InnerText == "ROT-DATUM");
+
+        Assert.Equal("C00000", run.RunProperties?.Color?.Val?.Value);
+        Assert.Equal("Arial", run.RunProperties?.RunFonts?.Ascii?.Value);
+    }
+
+    [Fact]
     public async Task Die_Schaechte_der_Liegenschaft_stehen_im_Dossier()
     {
         var (request, templatePath) = BuildScenario();

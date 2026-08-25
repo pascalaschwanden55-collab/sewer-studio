@@ -44,7 +44,9 @@ public sealed class DossiersPageActionFlowTests : IDisposable
         try { Directory.Delete(_root, recursive: true); } catch { }
     }
 
-    private DossiersPageViewModel BaueCockpit()
+    private DossiersPageViewModel BaueCockpit(
+        IDossierAttachmentService? attachments = null,
+        IDossierPdfAssemblyService? pdfAssembly = null)
     {
         var vm = new DossiersPageViewModel(
             getProject: () => _project,
@@ -52,8 +54,8 @@ public sealed class DossiersPageActionFlowTests : IDisposable
             getProjectFilePath: () => Path.Combine(_root, "projekt.json"),
             store: _store,
             wordExport: new NichtGebraucht(),
-            attachments: new NichtGebraucht(),
-            pdfAssembly: new NichtGebraucht(),
+            attachments: attachments ?? new NichtGebraucht(),
+            pdfAssembly: pdfAssembly ?? new NichtGebraucht(),
             dialogWindows: _fenster,
             costStores: new LeereKosten(),
             dialogs: new StilleDialoge(),
@@ -76,6 +78,18 @@ public sealed class DossiersPageActionFlowTests : IDisposable
         var s = new SchachtRecord();
         s.SetFieldValue("Schachtnummer", nummer);
         _project.SchaechteData.Add(s);
+    }
+
+    private HaltungRecord Haltung(string nummer)
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue(
+            FieldKeys.HoldingName,
+            nummer,
+            FieldSource.Manual,
+            userEdited: false);
+        _project.Data.Add(record);
+        return record;
     }
 
     [Fact]
@@ -181,6 +195,59 @@ public sealed class DossiersPageActionFlowTests : IDisposable
         Assert.Contains("gibt-es-nicht", vm.MissingWarning, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Alles_zu_einem_Pdf_sammelt_zuerst_alle_ausgewaehlten_Protokolle()
+    {
+        var haltungA = Haltung("100-200");
+        var haltungB = Haltung("200-300");
+        Schacht("100");
+        Schacht("200");
+        _store.Dokument.Dossiers.Add(new DossierDefinition
+        {
+            Name = "Musterweg 1",
+            HoldingIds = { haltungA.Id, haltungB.Id },
+            ShaftNumbers = { "100", "200" }
+        });
+        var flow = new RecordingPdfFlow();
+        var vm = BaueCockpit(flow, flow);
+
+        await vm.AssemblePdfCommand.ExecuteAsync(null);
+
+        Assert.Equal(new[] { "Sammeln", "Zusammenführen" }, flow.Calls);
+        Assert.Equal(2, flow.LastSnapshot!.HoldingCount);
+        Assert.Equal(2, flow.LastSnapshot.ShaftCount);
+    }
+
+    [Fact]
+    public async Task Fehlendes_Protokoll_stoppt_ein_unvollstaendiges_Gesamt_Pdf()
+    {
+        var haltung = Haltung("100-200");
+        _store.Dokument.Dossiers.Add(new DossierDefinition
+        {
+            Name = "Musterweg 1",
+            HoldingIds = { haltung.Id }
+        });
+        var flow = new RecordingPdfFlow
+        {
+            AttachmentResult = new DossierAttachmentResult(
+                new[]
+                {
+                    new DossierAttachment(
+                        string.Empty,
+                        string.Empty,
+                        DossierAttachmentKind.Missing,
+                        "100-200")
+                },
+                new[] { "Haltung '100-200': kein Protokoll-PDF gefunden." })
+        };
+        var vm = BaueCockpit(flow, flow);
+
+        await vm.AssemblePdfCommand.ExecuteAsync(null);
+
+        Assert.Equal(new[] { "Sammeln" }, flow.Calls);
+        Assert.Contains("nicht erstellt", vm.StatusMessage, StringComparison.Ordinal);
+    }
+
     // ── Attrappen ─────────────────────────────────────────────────────────
 
     private sealed class FakeDialogs : IDossierDialogs
@@ -272,6 +339,35 @@ public sealed class DossiersPageActionFlowTests : IDisposable
         public Task<DossierPdfAssemblyResult> AssembleAsync(
             string dossierFolder, CancellationToken ct = default)
             => throw new NotSupportedException();
+    }
+
+    private sealed class RecordingPdfFlow
+        : IDossierAttachmentService, IDossierPdfAssemblyService
+    {
+        public List<string> Calls { get; } = new();
+        public DossierSnapshot? LastSnapshot { get; private set; }
+        public DossierAttachmentResult AttachmentResult { get; set; }
+            = new(Array.Empty<DossierAttachment>(), Array.Empty<string>());
+
+        public Task<DossierAttachmentResult> CollectAsync(
+            DossierExportRequest request,
+            CancellationToken ct = default)
+        {
+            Calls.Add("Sammeln");
+            LastSnapshot = request.Snapshot;
+            return Task.FromResult(AttachmentResult);
+        }
+
+        public Task<DossierPdfAssemblyResult> AssembleAsync(
+            string dossierFolder,
+            CancellationToken ct = default)
+        {
+            Calls.Add("Zusammenführen");
+            return Task.FromResult(new DossierPdfAssemblyResult(
+                true,
+                Path.Combine(dossierFolder, "Eigentuemerdossier_komplett.pdf"),
+                "Gesamt-PDF erstellt."));
+        }
     }
 
     private sealed class LeereKosten : ICostStoreFactory

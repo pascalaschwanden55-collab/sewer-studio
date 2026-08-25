@@ -168,6 +168,43 @@ public sealed class DocxPlaceholderColorTests
         Assert.Equal(UnderlineValues.Single, run.RunProperties.Underline!.Val!.Value);
         Assert.Equal("Arial", run.RunProperties.RunFonts!.Ascii!.Value);
     }
+
+    [Fact]
+    public void Markiertes_Feld_in_einer_beschrifteten_Zeile_bleibt_im_Word_rot()
+    {
+        using var strom = new MemoryStream();
+        using (var document = Erzeuge(strom, "Datum: {{Datum}}"))
+        {
+            var format = DossierTopicTextFormatting.Encode(new[]
+            {
+                new DossierTextStyleRange
+                {
+                    Start = 0,
+                    Length = 10,
+                    ColorHex = "C00000"
+                }
+            });
+
+            DocxPlaceholderFiller.Fill(document, new Dictionary<string, string>
+            {
+                ["Datum"] = "25.08.2026",
+                ["Datum" + DossierTopicTextFormatting.StyleRangesSuffix] = format
+            });
+            document.MainDocumentPart!.Document.Save();
+        }
+
+        strom.Position = 0;
+        using var gelesen = WordprocessingDocument.Open(strom, false);
+        var runs = gelesen.MainDocumentPart!.Document.Body!
+            .Descendants<Run>()
+            .Where(run => run.InnerText.Length > 0)
+            .ToList();
+
+        Assert.Contains(runs, run => run.InnerText == "Datum: "
+            && run.RunProperties?.Color?.Val?.Value == "000000");
+        Assert.Contains(runs, run => run.InnerText == "25.08.2026"
+            && run.RunProperties?.Color?.Val?.Value == "C00000");
+    }
 }
 
 public sealed class DossierTopicTextFormattingTests

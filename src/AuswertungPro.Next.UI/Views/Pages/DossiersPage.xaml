@@ -500,7 +500,7 @@
                                     ToolTip="Legt die TV-Protokolle der Leitungen und die Schachtprotokolle in den Beilagen-Ordner. Zuerst das Original des Kanalunternehmers, sonst ein selbst erzeugtes. Von Hand hinzugelegte Beilagen bleiben unangetastet."
                                     Command="{Binding CollectAttachmentsCommand}"/>
                             <Button Content="Alles zu einem PDF" Padding="12,7" Margin="0,0,8,8"
-                                    ToolTip="Wandelt die Word-Datei in ein PDF und hängt die Beilagen an. Braucht ein installiertes Microsoft Word — ohne Word schlägt dieser Weg fehl."
+                                    ToolTip="Sammelt automatisch die Originalprotokolle aller ausgewählten Haltungen und Schächte; bei einer Haltung ohne Original ersatzweise das SewerStudio-Protokoll. Danach wird die Word-Datei mit Microsoft Word oder LibreOffice umgewandelt und mit allen Beilagen zu einem Gesamt-PDF verbunden. Fehlt ein ausgewähltes Protokoll, wird kein unvollständiges Gesamt-PDF erstellt."
                                     Command="{Binding AssemblePdfCommand}"/>
                             <Button Content="Ordner öffnen" Padding="12,7" Margin="0,0,8,8"
                                     ToolTip="Zeigt den Ordner dieser Liegenschaft im Explorer — mit Word-Datei, Beilagen und Gesamt-PDF."

@@ -423,8 +423,38 @@ public sealed partial class DossiersPageViewModel
         IsBusy = true;
         try
         {
-            var folder = ResolveDossierFolder(root, Selected.Definition);
-            var result = await _pdfAssembly.AssembleAsync(folder);
+            var request = BuildRequest(root, Selected.Definition);
+
+            // "Alles" bedeutet wirklich alles: Vor jeder Zusammenführung
+            // werden die Originalprotokolle aller aktuell ausgewählten
+            // Haltungen und Schächte neu gesammelt.
+            var collected = await _attachments.CollectAsync(request);
+            var missingSelections = request.Snapshot.MissingHoldingIds.Count
+                + request.Snapshot.MissingShaftNumbers.Count;
+            var missing = collected.MissingCount + missingSelections;
+
+            if (missing > 0)
+            {
+                StatusMessage = missing == 1
+                    ? "Gesamt-PDF nicht erstellt: Ein ausgewähltes Protokoll fehlt."
+                    : $"Gesamt-PDF nicht erstellt: {missing} ausgewählte Protokolle fehlen.";
+
+                var details = collected.Warnings
+                    .Concat(request.Snapshot.MissingHoldingIds.Select(id =>
+                        $"Haltung mit Kennung '{id}' ist nicht mehr im Projekt."))
+                    .Concat(request.Snapshot.MissingShaftNumbers.Select(number =>
+                        $"Schacht '{number}' ist nicht mehr im Projekt."))
+                    .Take(15)
+                    .ToList();
+                _dialogs.Warn(
+                    details.Count == 0
+                        ? StatusMessage
+                        : StatusMessage + "\n\n" + string.Join("\n", details),
+                    "Gesamt-PDF");
+                return;
+            }
+
+            var result = await _pdfAssembly.AssembleAsync(request.TargetFolder);
 
             StatusMessage = result.Message;
 
@@ -432,6 +462,13 @@ public sealed partial class DossiersPageViewModel
             {
                 _dialogs.Warn(result.Message, "Gesamt-PDF");
                 return;
+            }
+
+            if (collected.Warnings.Count > 0)
+            {
+                _dialogs.Warn(
+                    result.Message + "\n\n" + string.Join("\n", collected.Warnings.Take(15)),
+                    "Gesamt-PDF");
             }
 
             _toasts.Success(result.Message);

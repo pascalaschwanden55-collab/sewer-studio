@@ -50,11 +50,17 @@
   den normalen Windows-Installationsordnern und im `PATH`. LibreOffice laeuft kopflos mit
   einem eigenen Temp-Profil; die Kundendatei bleibt unveraendert. Scheitern beide Wege,
   darf weiterhin kein scheinbar vollstaendiges Teil-PDF nur aus Beilagen entstehen.
+- `Alles zu einem PDF` sammelt vor der Umwandlung die Protokolle aller aktuell im Dossier
+  gewaehlten Haltungen und danach aller Schaechte. Bei Haltungen wird das Original und nur
+  ersatzweise das SewerStudio-Protokoll verwendet; Schaechte verlangen ihr Original. Fehlt
+  ein ausgewaehltes Protokoll, wird kein unvollstaendiges Gesamt-PDF erzeugt.
 - `DossierTextStyleRange` speichert Schriftfarbe, Fett, Kursiv und Unterstrichen als
   Zeichenbereiche. Themen verwenden `DossierTopicRow.StyleRanges`, andere Textfelder
   `DossierDefinition.FieldStyles`; das alte `ColorHex` bleibt fuer bestehende Projekte lesbar.
 - `DossierTopicTextFormatting` ist die WPF-freie Bereichs-, Platzhalter- und
-  Serialisierungsregel. Vorschau und Word-Export muessen dieselben Bereiche verwenden.
+  Serialisierungsregel. Vorschau und Word-Export muessen dieselben Bereiche verwenden,
+  auch wenn ein bearbeitbares Feld in einer beschrifteten Zeile wie `Datum: {{Datum}}`
+  steht.
 - `DossierPreviewTarget` adressiert anklickbare Vorschautexte fachlich ueber Feld,
   Zeile und Spalte statt ueber feste Pixelpositionen. Die genaueste vorhandene Adresse
   fuehrt direkt zum passenden Editor; auch geaenderte Vorlagentexte bleiben anklickbar.
@@ -87,6 +93,9 @@
   und Word wenden Farbe, Fett, Kursiv und Unterstrichen gleich an.
 - Dossiertext wird in Vorschau und Word direkt als Arial ausgegeben. Schriftgroessen,
   Absatzabstaende und Tabellenmasse stammen weiterhin unveraendert aus der Vorlage.
+- Der bekannte manuelle Seitenumbruch unmittelbar vor `Aenderungswesen:` wird beim
+  Export gezielt entfernt, weil das volle Deckblatt bereits selbst auf Seite 2 umbricht.
+  Andere Seitenumbrueche der Vorlage bleiben unveraendert.
 - Der Uebersichtsplan wird in das feste Seitenverhaeltnis der Referenzflaeche
   (ca. 15 x 21,5 cm) eingepasst. Ein reines Datei-Seitenverhaeltnis kann den Plan
   auf eine Zusatzseite schieben und darf deshalb nicht wieder verwendet werden.

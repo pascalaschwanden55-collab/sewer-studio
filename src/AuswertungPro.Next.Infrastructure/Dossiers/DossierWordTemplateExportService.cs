@@ -121,6 +121,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     foreach (var kapitel in request.Dossier.HiddenChapters ?? new())
                         DocxChapterRemover.Remove(document, kapitel);
 
+                    // Das Deckblatt füllt Seite 1 bereits. Der zusätzliche
+                    // Umbruch vor "Änderungswesen" erzeugte deshalb eine
+                    // vollständig leere Seite 2.
+                    DocxKnownBlankPageRemover.Apply(document);
+
                     // Erst JETZT steht fest, wie viele Kapitel das Verzeichnis
                     // fuehrt: ein weggelassenes hat seine Zeile mitgenommen.
                     // Jeder zusätzliche Punkt wird direkt dahinter als eigener,

@@ -211,16 +211,41 @@ public static class DocxPlaceholderFiller
         string replaced,
         IReadOnlyDictionary<string, string> values)
     {
-        var match = Regex.Match(source, @"^\{\{([A-Za-z0-9_]+)\}\}$");
-        if (!match.Success)
-            return new List<DossierTextStyleRange>();
+        var ranges = new List<DossierTextStyleRange>();
+        var sourcePosition = 0;
+        var outputPosition = 0;
 
-        var key = match.Groups[1].Value + DossierTopicTextFormatting.StyleRangesSuffix;
-        return values.TryGetValue(key, out var encoded)
-            ? DossierTopicTextFormatting.Normalize(
-                replaced,
-                DossierTopicTextFormatting.Decode(encoded))
-            : new List<DossierTextStyleRange>();
+        foreach (Match match in Regex.Matches(source, @"\{\{([A-Za-z0-9_]+)\}\}"))
+        {
+            // Der feste Text zwischen zwei Platzhaltern bleibt unformatiert.
+            outputPosition += match.Index - sourcePosition;
+
+            var name = match.Groups[1].Value;
+            var value = values.TryGetValue(name, out var storedValue)
+                ? storedValue ?? string.Empty
+                : string.Empty;
+            var formatKey = name + DossierTopicTextFormatting.StyleRangesSuffix;
+
+            if (values.TryGetValue(formatKey, out var encoded))
+            {
+                ranges.AddRange(DossierTopicTextFormatting
+                    .Normalize(value, DossierTopicTextFormatting.Decode(encoded))
+                    .Select(range => new DossierTextStyleRange
+                    {
+                        Start = outputPosition + range.Start,
+                        Length = range.Length,
+                        ColorHex = range.ColorHex,
+                        Bold = range.Bold,
+                        Italic = range.Italic,
+                        Underline = range.Underline
+                    }));
+            }
+
+            outputPosition += value.Length;
+            sourcePosition = match.Index + match.Length;
+        }
+
+        return DossierTopicTextFormatting.Normalize(replaced, ranges);
     }
 
     /// <summary>
