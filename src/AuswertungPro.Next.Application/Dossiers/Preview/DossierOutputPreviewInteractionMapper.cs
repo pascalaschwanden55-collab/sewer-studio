@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -283,11 +283,22 @@ public static class DossierPreviewTextInventory
         {
             foreach (var paragraph in paragraphs)
             {
-                if (paragraph.Runs.Any(run => run.IsField))
-                    continue;
-
                 var text = paragraph.TocEntry?.Title
                     ?? string.Concat(paragraph.Runs.Select(run => run.Text)).Trim();
+
+                // Ein Absatz mit Feldlauf gehoert dem Feld — seine BESCHRIFTUNG
+                // aber nicht. In der Vorlage steht „Datum: {{Datum}}" als ein
+                // einziger Lauf; frueher fiel damit auch „Datum:" heraus und
+                // war als einziger sichtbarer Text nicht aenderbar.
+                //
+                // Gefragt wird auf der Wortform des Absatzes, nicht auf dem
+                // gelesenen Text: Ein Feldlauf traegt hier keinen Text, sondern
+                // seinen Schluessel. Nur so ergibt sich derselbe Schluessel wie
+                // beim Schreiben ins Word-Dokument.
+                if (paragraph.Runs.Any(run => run.IsField))
+                    text = DossierMixedParagraphLiteral.Schluessel(Wortform(paragraph))
+                        ?? string.Empty;
+
                 if (text.Length > 0 && !result.Contains(text, StringComparer.Ordinal))
                     result.Add(text);
             }
@@ -314,4 +325,9 @@ public static class DossierPreviewTextInventory
 
         return result;
     }
+
+    /// <summary>Der Absatz so, wie er in der Word-Vorlage steht.</summary>
+    private static string Wortform(DossierPreviewParagraph paragraph)
+        => string.Concat(paragraph.Runs.Select(run
+            => run.IsField ? "{{" + run.FieldKey + "}}" : run.Text)).Trim();
 }

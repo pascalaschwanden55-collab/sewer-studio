@@ -76,13 +76,22 @@ public static class DocxLiteralTextReplacer
 
             var text = string.Concat(stuecke.Select(t => t.Text)).Trim();
 
-            // Eine Zeile mit Platzhalter gehoert dem Feld, nicht dem festen Text.
-            if (text.Length == 0
-                || text.Contains("{{", StringComparison.Ordinal)
-                || !karte.TryGetValue(text, out var ersatz))
+            if (text.Length == 0)
+                continue;
+
+            // Eine Zeile mit Platzhalter gehoert dem Feld — ihre BESCHRIFTUNG
+            // aber nicht. In der Vorlage steht „Datum: {{Datum}}" als ein
+            // einziger Lauf; frueher war damit auch das Wort „Datum:" gesperrt.
+            if (text.Contains("{{", StringComparison.Ordinal))
             {
+                if (ErsetzeBeschriftung(stuecke, text, karte))
+                    geaendert++;
+
                 continue;
             }
+
+            if (!karte.TryGetValue(text, out var ersatz))
+                continue;
 
             if (ersatz.Trim().Length == 0)
             {
@@ -114,5 +123,61 @@ public static class DocxLiteralTextReplacer
         }
 
         return geaendert;
+    }
+
+    /// <summary>
+    /// Ersetzt nur die Beschriftung eines Absatzes, in dem auch ein Platzhalter
+    /// steht — Zeichen fuer Zeichen genau an ihrer Stelle.
+    ///
+    /// Der Platzhalter und alles um ihn herum bleiben unangetastet: Ein leerer
+    /// Ersatz entfernt hier deshalb nur die Beschriftung und NICHT den Absatz.
+    /// Bei einem reinen Textabsatz heisst leer „Zeile weg"; hier haenge am
+    /// selben Absatz aber das Feld, und es mitzunehmen waere ein Datenverlust,
+    /// den niemand bestellt hat.
+    /// </summary>
+    private static bool ErsetzeBeschriftung(
+        List<Text> stuecke,
+        string text,
+        IReadOnlyDictionary<string, string> karte)
+    {
+        if (DossierMixedParagraphLiteral.Bereich(text) is not { } bereich)
+            return false;
+
+        var schluessel = text.Substring(bereich.Start, bereich.Length);
+        if (!karte.TryGetValue(schluessel, out var ersatz))
+            return false;
+
+        // `text` ist getrimmt, die Stuecke sind es nicht. Ohne diesen Versatz
+        // laege der Bereich um die fuehrenden Leerzeichen daneben.
+        var ganz = string.Concat(stuecke.Select(t => t.Text));
+        var versatz = ganz.IndexOf(text, StringComparison.Ordinal);
+        if (versatz < 0)
+            return false;
+
+        var von = versatz + bereich.Start;
+        var bis = von + bereich.Length;
+        var gesetzt = false;
+        var gelesen = 0;
+
+        foreach (var stueck in stuecke)
+        {
+            var laenge = stueck.Text.Length;
+            var stueckVon = gelesen;
+            var stueckBis = gelesen + laenge;
+            gelesen = stueckBis;
+
+            if (stueckBis <= von || stueckVon >= bis)
+                continue;
+
+            var vorne = stueck.Text[..Math.Max(0, von - stueckVon)];
+            var hinten = stueckBis > bis ? stueck.Text[(bis - stueckVon)..] : string.Empty;
+            var mitte = gesetzt ? string.Empty : ersatz;
+            gesetzt = true;
+
+            stueck.Text = vorne + mitte + hinten;
+            stueck.Space = SpaceProcessingModeValues.Preserve;
+        }
+
+        return gesetzt;
     }
 }
