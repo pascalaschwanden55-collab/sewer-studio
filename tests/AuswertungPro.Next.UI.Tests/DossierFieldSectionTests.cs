@@ -201,4 +201,50 @@ public sealed class DossierFieldSectionTests
 
         fehler?.Throw();
     }
+
+    [Fact]
+    public void Der_Sprung_setzt_den_Schreibfokus_auch_in_einen_zugeklappten_Abschnitt()
+    {
+        // Pascals Anforderung: Ein Klick ins Blatt soll die Stelle rechts
+        // AKTIVIEREN, nicht nur hinscrollen. Der Abschnitt ist dabei meist
+        // zugeklappt — ein Fokus auf ein noch nicht dargestelltes Feld
+        // verpufft, wenn man ihn zu frueh setzt.
+        RunOnSta(() =>
+        {
+            var feld = new TextBox();
+            var karte = new Border { Child = feld };
+            var abschnitt = new Expander { Content = karte, IsExpanded = false };
+
+            var fenster = new Window
+            {
+                Content = new StackPanel { Children = { abschnitt } },
+                Width = 300,
+                Height = 200,
+                ShowInTaskbar = false,
+                WindowStyle = WindowStyle.None
+            };
+
+            try
+            {
+                fenster.Show();
+
+                abschnitt.IsExpanded = true;
+                DossierFieldHighlight.AktiviereEingabe(karte);
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(300));
+
+                Assert.True(feld.IsKeyboardFocused, "Das Feld hat den Schreibfokus nicht.");
+            }
+            finally
+            {
+                fenster.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void Ohne_Eingabe_in_der_Karte_passiert_nichts()
+    {
+        RunOnSta(() => DossierFieldHighlight.AktiviereEingabe(
+            new Border { Child = new TextBlock { Text = "Nur Text" } }));
+    }
 }

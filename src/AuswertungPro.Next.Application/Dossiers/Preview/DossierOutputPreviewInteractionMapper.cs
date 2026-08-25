@@ -54,26 +54,24 @@ public static class DossierOutputPreviewInteractionMapper
         if (pages.Count == 0 || templates.Count == 0)
             return Array.Empty<DossierOutputPreviewNavigationItem>();
 
-        var result = new List<DossierOutputPreviewNavigationItem>(pages.Count);
+        // Erster Durchgang: Jedes Blatt beansprucht GENAU EIN Kapitel — das,
+        // fuer das es den staerksten Textbeleg hat. Mehr darf ein Blatt hier
+        // nicht an sich ziehen: Auf dem Verzeichnisblatt stehen alle
+        // Kapitelnamen, es wuerde sonst den ganzen Rest verschlucken.
+        var beansprucht = new int?[pages.Count];
         var minimumTemplateIndex = 0;
 
-        // Bis hierher sind die Vorlagenseiten bereits vergeben.
-        var vergebenBis = -1;
+        var blatttexte = pages
+            .Select(seite => Normalize(
+                string.Join(" ", seite.Words.Select(word => word.Text))))
+            .ToArray();
 
-        foreach (var page in pages)
+        for (var seite = 0; seite < pages.Count; seite++)
         {
-            if (page.IsAttachment)
-            {
-                result.Add(new DossierOutputPreviewNavigationItem(
-                    "Beilagen",
-                    $"Beilage — Seite {page.Number}",
-                    page,
-                    Array.Empty<DossierPreviewPage>(),
-                    null));
+            if (pages[seite].IsAttachment)
                 continue;
-            }
 
-            var pageText = Normalize(string.Join(" ", page.Words.Select(word => word.Text)));
+            var pageText = blatttexte[seite];
             var bestIndex = minimumTemplateIndex;
             var bestScore = -1;
 
@@ -85,6 +83,7 @@ public static class DossierOutputPreviewInteractionMapper
                     dossier,
                     values,
                     rowsFor);
+
                 if (score > bestScore)
                 {
                     bestScore = score;
@@ -92,80 +91,133 @@ public static class DossierOutputPreviewInteractionMapper
                 }
             }
 
-            // Ein Blatt traegt oft mehr als ein Kapitel: Ist eines kurz — etwa
-            // ohne gewaehlten Uebersichtsplan —, packt Word das naechste
-            // dazu. Frueher gewann davon nur das am staerksten belegte, und die
-            // Felder der uebrigen waren unerreichbar.
-            //
-            // Nach vorn: alles, was seit dem letzten Blatt noch nicht bedient
-            // wurde — auch ein Kapitel ohne eigenen Textbeleg.
-            // Nach hinten: jedes weitere Kapitel, das auf diesem Blatt
-            // tatsaechlich zu lesen ist.
-            var von = bestIndex == vergebenBis ? bestIndex : vergebenBis + 1;
-            var bis = bestIndex;
+            beansprucht[seite] = bestIndex;
+            minimumTemplateIndex = bestIndex;
+        }
 
-            while (bis + 1 < templates.Count
-                && EvidenceScore(pageText, templates[bis + 1], dossier, values, rowsFor) > 0)
+        var seitenJeBlatt = VerteileUnbeanspruchte(
+            beansprucht,
+            templates,
+            (blatt, kapitel) => EvidenceScore(
+                blatttexte[blatt], templates[kapitel], dossier, values, rowsFor));
+        var result = new List<DossierOutputPreviewNavigationItem>(pages.Count);
+
+        for (var seite = 0; seite < pages.Count; seite++)
+        {
+            if (beansprucht[seite] is not { } eigenes)
             {
-                bis++;
+                result.Add(new DossierOutputPreviewNavigationItem(
+                    "Beilagen",
+                    $"Beilage — Seite {pages[seite].Number}",
+                    pages[seite],
+                    Array.Empty<DossierPreviewPage>(),
+                    null));
+                continue;
             }
 
-            var seiten = templates
-                .Skip(von)
-                .Take(bis - von + 1)
-                .Select(eintrag => eintrag.Page)
-                .ToList();
-
-            vergebenBis = bis;
-            minimumTemplateIndex = bestIndex;
-            var template = templates[bestIndex];
+            var template = templates[eigenes];
             var chapter = dossier.TextOverrides.TryGetValue(template.ChapterTitle, out var own)
                 && !string.IsNullOrWhiteSpace(own)
                     ? own.Trim()
                     : template.ChapterTitle;
 
-            if (!seiten.Contains(template.Page))
-                seiten.Insert(0, template.Page);
-
             result.Add(new DossierOutputPreviewNavigationItem(
                 chapter,
-                $"Seite {page.Number}",
-                page,
-                seiten,
+                $"Seite {pages[seite].Number}",
+                pages[seite],
+                seitenJeBlatt[seite].Select(index => templates[index].Page).ToList(),
                 template.Page));
         }
 
-        return MitNachzueglern(result, templates, vergebenBis);
+        return result;
     }
 
     /// <summary>
-    /// Haengt Kapitel, die kein Blatt mehr abbekommen haben, an das letzte
-    /// Dossierblatt.
+    /// Verteilt die Kapitel, die kein Blatt beansprucht hat.
     ///
-    /// Das ist der Regelfall und keine Randerscheinung: Im echten Dossier
-    /// folgen hinten die Protokolle als Beilagen. Beilagenblaetter bekommen
-    /// keine Vorlagenseite — die Zuordnung endete damit, bevor die letzten
-    /// Kapitel an der Reihe waren, und ihre Felder waren unerreichbar.
-    /// Gemessen fehlten so drei von fuenf Kapiteln.
+    /// Ein Kapitel ohne eigenes Blatt steht trotzdem irgendwo: entweder mit
+    /// seinem Text auf einem Blatt, das schon ein anderes Kapitel beansprucht
+    /// hat, oder — wenn es leer ist wie der Uebersichtsplan ohne Plan — als
+    /// blosse Ueberschrift ueber dem naechsten Kapitel.
+    ///
+    /// Gesucht wird deshalb zuerst das Blatt mit dem staerksten Beleg, und nur
+    /// zwischen den Blaettern der beiden Nachbarkapitel. Diese Schranke ist
+    /// nicht Kosmetik: Auf dem Verzeichnisblatt stehen ALLE Kapitelnamen, es
+    /// wuerde sonst jedes belegarme Kapitel an sich ziehen. Ohne jeden Beleg
+    /// gilt das Blatt des naechsten Kapitels, und ganz am Ende — hinten haengen
+    /// die Protokolle als Beilagen — das letzte Dossierblatt.
+    ///
+    /// Ohne diese Verteilung waren die Felder solcher Kapitel unerreichbar,
+    /// darunter ausgerechnet die Auswahl des Uebersichtsplans: Wer keinen Plan
+    /// hat, hat ein leeres Kapitel 1 und kaeme nicht an den Knopf, der ihn
+    /// einfuegen wuerde.
     /// </summary>
-    private static IReadOnlyList<DossierOutputPreviewNavigationItem> MitNachzueglern(
-        List<DossierOutputPreviewNavigationItem> result,
+    private static List<int>[] VerteileUnbeanspruchte(
+        int?[] beansprucht,
         IReadOnlyList<DossierPreviewNavigationItem> templates,
-        int vergebenBis)
+        Func<int, int, int> beleg)
     {
-        if (vergebenBis + 1 >= templates.Count)
-            return result;
+        var ergebnis = new List<int>[beansprucht.Length];
+        for (var seite = 0; seite < ergebnis.Length; seite++)
+            ergebnis[seite] = beansprucht[seite] is { } eigenes ? [eigenes] : [];
 
-        var letztes = result.FindLastIndex(eintrag => eintrag.EditorPage is not null);
-        if (letztes < 0)
-            return result;
+        var letztesDossierblatt = Array.FindLastIndex(
+            beansprucht, eintrag => eintrag is not null);
 
-        var seiten = result[letztes].EditorPages
-            .Concat(templates.Skip(vergebenBis + 1).Select(eintrag => eintrag.Page))
-            .ToList();
+        if (letztesDossierblatt < 0)
+            return ergebnis;
 
-        result[letztes] = result[letztes] with { EditorPages = seiten };
-        return result;
+        for (var kapitel = 0; kapitel < templates.Count; kapitel++)
+        {
+            if (Array.IndexOf(beansprucht, (int?)kapitel) >= 0)
+                continue;
+
+            ergebnis[Zielblatt(beansprucht, letztesDossierblatt, kapitel, beleg)].Add(kapitel);
+        }
+
+        foreach (var blatt in ergebnis)
+            blatt.Sort();
+
+        return ergebnis;
+    }
+
+    private static int Zielblatt(
+        int?[] beansprucht,
+        int letztesDossierblatt,
+        int kapitel,
+        Func<int, int, int> beleg)
+    {
+        // Zwischen den Blaettern der beiden Nachbarkapitel — weiter weg kann
+        // ein Kapitel in einem fortlaufenden Dokument nicht stehen.
+        var davor = Array.FindLastIndex(
+            beansprucht, eintrag => eintrag is { } eigenes && eigenes < kapitel);
+
+        var danach = Array.FindIndex(
+            beansprucht, eintrag => eintrag is { } eigenes && eigenes > kapitel);
+
+        var von = Math.Max(0, davor);
+        var bis = danach >= 0 ? danach : letztesDossierblatt;
+
+        var bestesBlatt = -1;
+        var besterBeleg = 0;
+
+        for (var blatt = von; blatt <= bis; blatt++)
+        {
+            if (beansprucht[blatt] is null)
+                continue;
+
+            var wert = beleg(blatt, kapitel);
+            if (wert > besterBeleg)
+            {
+                besterBeleg = wert;
+                bestesBlatt = blatt;
+            }
+        }
+
+        if (bestesBlatt >= 0)
+            return bestesBlatt;
+
+        return danach >= 0 ? danach : letztesDossierblatt;
     }
 
     public static IReadOnlyList<DossierPreviewTextCandidate> BuildCandidates(
@@ -381,7 +433,7 @@ public static class DossierPreviewTextInventory
                     text = DossierMixedParagraphLiteral.Schluessel(Wortform(paragraph))
                         ?? string.Empty;
 
-                if (text.Length > 0 && !result.Contains(text, StringComparer.Ordinal))
+                if (IstEchterText(text) && !result.Contains(text, StringComparer.Ordinal))
                     result.Add(text);
             }
         }
@@ -412,4 +464,17 @@ public static class DossierPreviewTextInventory
     private static string Wortform(DossierPreviewParagraph paragraph)
         => string.Concat(paragraph.Runs.Select(run
             => run.IsField ? "{{" + run.FieldKey + "}}" : run.Text)).Trim();
+
+    /// <summary>
+    /// Ein Text, den man bearbeiten kann — mindestens ein Buchstabe oder eine
+    /// Ziffer.
+    ///
+    /// Die Vorlage enthaelt Punktlinien zum Ausfuellen von Hand. Sie standen
+    /// bisher als bearbeitbare Beschriftung in der Liste, waren im Blatt aber
+    /// nie anklickbar: Die Zuordnung sucht ueber WOERTER, und eine Reihe
+    /// Punkte traegt keines. Ein Angebot, das der Klick nicht halten kann, ist
+    /// schlechter als gar keines.
+    /// </summary>
+    public static bool IstEchterText(string? text)
+        => text is not null && text.Any(char.IsLetterOrDigit);
 }

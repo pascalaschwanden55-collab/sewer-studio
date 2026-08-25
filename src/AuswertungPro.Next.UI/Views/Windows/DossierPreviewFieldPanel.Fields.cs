@@ -177,16 +177,13 @@ internal sealed partial class DossierPreviewFieldPanel
         foreach (var expander in Vorfahren(stelle).OfType<Expander>())
             NurDiesenAbschnitt(expander);
 
-        stelle.BringIntoView();
-        stelle.Dispatcher.BeginInvoke(new Action(() =>
-        {
-            stelle.BringIntoView();
-            ErsteEingabe(stelle)?.Focus();
+        // Sichtbar machen und den Schreibfokus setzen — erst nachdem WPF den
+        // gerade aufgeklappten Abschnitt wirklich dargestellt hat.
+        AktiviereEingabe(stelle);
 
-            // Auch rechts sichtbar machen, wo man gelandet ist: das Blatt
-            // blinkt schon, das Feld tat es bisher nicht.
-            LasseAufblinken(stelle);
-        }), System.Windows.Threading.DispatcherPriority.Loaded);
+        // Auch rechts sichtbar machen, wo man gelandet ist: das Blatt blinkt
+        // schon, das Feld tat es bisher nicht.
+        LasseAufblinken(stelle);
 
         Betone(target);
         return true;

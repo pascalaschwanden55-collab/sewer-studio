@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -49,6 +50,52 @@ internal static class DossierFieldHighlight
 
         karte.IsKeyboardFocusWithinChanged += (_, args)
             => werkzeuge.Visibility = SichtbarkeitFuer(args.NewValue is true);
+    }
+
+    /// <summary>
+    /// Aktiviert die Eingabe in dieser Karte: sichtbar machen und den
+    /// Schreibfokus setzen.
+    ///
+    /// Beides erst, nachdem WPF den gerade aufgeklappten Abschnitt wirklich
+    /// dargestellt hat. Ein Fokus auf ein noch nicht dargestelltes Feld
+    /// verpufft, und <c>BringIntoView</c> rechnet dann mit Nullmassen.
+    /// </summary>
+    public static void AktiviereEingabe(FrameworkElement karte)
+    {
+        ArgumentNullException.ThrowIfNull(karte);
+
+        karte.BringIntoView();
+
+        karte.Dispatcher.BeginInvoke(
+            new Action(() =>
+            {
+                karte.UpdateLayout();
+                karte.BringIntoView();
+
+                if (ErsteEingabe(karte) is { } eingabe)
+                {
+                    // Keyboard.Focus setzt den echten Tastaturfokus; das
+                    // blosse Focus() der Logik reicht dafuer nicht immer.
+                    eingabe.Focus();
+                    Keyboard.Focus(eingabe);
+                }
+            }),
+            DispatcherPriority.Input);
+    }
+
+    /// <summary>Das erste beschreibbare Feld innerhalb einer Karte.</summary>
+    private static Control? ErsteEingabe(DependencyObject wurzel)
+    {
+        if (wurzel is TextBox or RichTextBox)
+            return (Control)wurzel;
+
+        foreach (var kind in LogicalTreeHelper.GetChildren(wurzel).OfType<DependencyObject>())
+        {
+            if (ErsteEingabe(kind) is { } treffer)
+                return treffer;
+        }
+
+        return null;
     }
 
     /// <summary>

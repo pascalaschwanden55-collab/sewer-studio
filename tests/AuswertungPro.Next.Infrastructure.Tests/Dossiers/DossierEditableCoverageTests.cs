@@ -81,7 +81,10 @@ public sealed class DossierEditableCoverageTests
             {
                 case DossierPreviewParagraph absatz:
                     var text = string.Concat(absatz.Runs.Select(run => run.Text)).Trim();
-                    if (text.Length > 0)
+
+                    // Punktlinien zum Ausfuellen von Hand sind kein Text; sie
+                    // waeren im Blatt auch nie anklickbar.
+                    if (DossierPreviewTextInventory.IstEchterText(text))
                         ziel.Add(absatz.TocEntry?.Title ?? text);
 
                     foreach (var schwebend in absatz.Floating)

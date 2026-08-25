@@ -123,10 +123,16 @@ public sealed class DossierOutputPreviewMultiChapterTests
 
     // ── Kein Kapitel darf verlorengehen ───────────────────────────────────
 
+    /// <summary>
+    /// Die Vorlagenseiten mit dem Text, der auf ihnen steht. Die
+    /// Verzeichnisseite traegt die Kapiteltitel selbst — genau das macht sie
+    /// zum Inhaltsverzeichnis, und genau das macht sie zur Falle.
+    /// </summary>
     private static readonly (string Titel, string Text)[] AlleKapitel =
     [
         ("Deckblatt", "Deckblatt Liegenschaft"),
-        ("Inhaltsverzeichnis", "Inhaltsverzeichnis"),
+        ("Inhaltsverzeichnis", "Inhaltsverzeichnis Übersichtsplan Werkleitungen "
+            + "Eigentumsverhältnisse Informationen Sanierung Protokolle"),
         ("Übersichtsplan Werkleitungen", "Übersichtsplan Werkleitungen"),
         ("Eigentumsverhältnisse", "Eigentumsverhältnisse Haus Nr."),
         ("Informationen Sanierung", "Informationen Sanierung Aktennotiz")
@@ -217,5 +223,39 @@ public sealed class DossierOutputPreviewMultiChapterTests
             ("Original", true),
             ("Original", true)
         ]));
+    }
+
+    [Fact]
+    public void Das_Inhaltsverzeichnis_verschluckt_die_Kapitel_nicht()
+    {
+        // Die Falle: Auf dem Verzeichnisblatt STEHEN alle Kapitelnamen. Ein
+        // Blatt, das seine Kapitel nach Textbeleg nach vorn einsammelt, nimmt
+        // dort alles mit — und die spaeteren Blaetter gehen leer aus. Genau so
+        // landeten die Felder von „Informationen Sanierung" neben einem Blatt,
+        // das Kapitel 1 und 2 zeigt.
+        var navigation = NavigationFuer(
+        [
+            ("Deckblatt Liegenschaft", false),
+            (AlleKapitel[1].Text, false),
+            ("Übersichtsplan Werkleitungen Eigentumsverhältnisse Haus Nr.", false),
+            ("Informationen Sanierung Aktennotiz", false)
+        ]);
+
+        KeinKapitelFehlt(navigation);
+
+        var verzeichnisblatt = navigation[1];
+        Assert.Equal(
+            ["Inhaltsverzeichnis"],
+            verzeichnisblatt.EditorPages.Select(seite => seite.Title));
+
+        // Das Blatt mit Kapitel 1 und 2 muss auch deren Felder tragen —
+        // darunter die Auswahl des Uebersichtsplans.
+        Assert.Equal(
+            ["Übersichtsplan Werkleitungen", "Eigentumsverhältnisse"],
+            navigation[2].EditorPages.Select(seite => seite.Title));
+
+        Assert.Equal(
+            ["Informationen Sanierung"],
+            navigation[3].EditorPages.Select(seite => seite.Title));
     }
 }
