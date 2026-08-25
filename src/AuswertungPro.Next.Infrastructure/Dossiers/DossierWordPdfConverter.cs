@@ -1,0 +1,226 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+
+namespace AuswertungPro.Next.Infrastructure.Dossiers;
+
+/// <summary>
+/// Wandelt die Dossier-Word-Datei in ein PDF. Microsoft Word bleibt der erste
+/// Weg, weil es die Vorlage am genauesten wiedergibt. Fehlt Word oder scheitert
+/// die Umwandlung, übernimmt automatisch LibreOffice.
+/// </summary>
+internal static class DossierWordPdfConverter
+{
+    public static bool TryConvertToPdf(string wordPath, string? pdfPath)
+        => TryConvertToPdf(
+            wordPath,
+            pdfPath,
+            WordInterop.TryConvertToPdf,
+            LibreOfficeWriterPdfConverter.TryConvertToPdf);
+
+    internal static bool TryConvertToPdf(
+        string wordPath,
+        string? pdfPath,
+        Func<string, string?, bool> tryMicrosoftWord,
+        Func<string, string?, bool> tryLibreOffice)
+    {
+        ArgumentNullException.ThrowIfNull(tryMicrosoftWord);
+        ArgumentNullException.ThrowIfNull(tryLibreOffice);
+
+        if (tryMicrosoftWord(wordPath, pdfPath))
+            return true;
+
+        TryDeleteFile(pdfPath);
+        return tryLibreOffice(wordPath, pdfPath);
+    }
+
+    private static void TryDeleteFile(string? path)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
+            // Der zweite Wandler entscheidet anschliessend selbst, ob er schreiben kann.
+        }
+    }
+}
+
+/// <summary>
+/// Word-zu-PDF über LibreOffice Writer. Ein eigener, kurzlebiger Benutzerordner
+/// verhindert Konflikte mit einem bereits geöffneten LibreOffice.
+/// </summary>
+internal static class LibreOfficeWriterPdfConverter
+{
+    private static readonly TimeSpan ConversionTimeout = TimeSpan.FromMinutes(2);
+
+    public static bool TryConvertToPdf(string wordPath, string? pdfPath)
+    {
+        if (!OperatingSystem.IsWindows() ||
+            string.IsNullOrWhiteSpace(wordPath) ||
+            string.IsNullOrWhiteSpace(pdfPath) ||
+            !File.Exists(wordPath))
+        {
+            return false;
+        }
+
+        var executable = FindExecutable();
+        if (executable is null)
+            return false;
+
+        var workFolder = Path.Combine(
+            Path.GetTempPath(),
+            "SewerStudio_LibreOffice_" + Guid.NewGuid().ToString("N"));
+        var outputFolder = Path.Combine(workFolder, "output");
+        var profileFolder = Path.Combine(workFolder, "profile");
+
+        try
+        {
+            Directory.CreateDirectory(outputFolder);
+            Directory.CreateDirectory(profileFolder);
+
+            var startInfo = CreateStartInfo(
+                executable,
+                wordPath,
+                outputFolder,
+                profileFolder);
+
+            using var process = Process.Start(startInfo);
+            if (process is null)
+                return false;
+
+            if (!process.WaitForExit((int)ConversionTimeout.TotalMilliseconds))
+            {
+                TryStop(process);
+                return false;
+            }
+
+            if (process.ExitCode != 0)
+                return false;
+
+            var generatedPdf = Path.Combine(
+                outputFolder,
+                Path.GetFileNameWithoutExtension(wordPath) + ".pdf");
+            if (!File.Exists(generatedPdf))
+                return false;
+
+            var targetFolder = Path.GetDirectoryName(Path.GetFullPath(pdfPath));
+            if (!string.IsNullOrWhiteSpace(targetFolder))
+                Directory.CreateDirectory(targetFolder);
+
+            File.Move(generatedPdf, pdfPath, overwrite: true);
+            return File.Exists(pdfPath);
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            TryDeleteWorkFolder(workFolder);
+        }
+    }
+
+    internal static ProcessStartInfo CreateStartInfo(
+        string executable,
+        string wordPath,
+        string outputFolder,
+        string profileFolder)
+    {
+        var profileUri = new Uri(
+            Path.GetFullPath(profileFolder) + Path.DirectorySeparatorChar).AbsoluteUri;
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = executable,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden
+        };
+
+        startInfo.ArgumentList.Add("-env:UserInstallation=" + profileUri);
+        startInfo.ArgumentList.Add("--headless");
+        startInfo.ArgumentList.Add("--nologo");
+        startInfo.ArgumentList.Add("--nodefault");
+        startInfo.ArgumentList.Add("--nofirststartwizard");
+        startInfo.ArgumentList.Add("--convert-to");
+        startInfo.ArgumentList.Add("pdf:writer_pdf_Export");
+        startInfo.ArgumentList.Add("--outdir");
+        startInfo.ArgumentList.Add(outputFolder);
+        startInfo.ArgumentList.Add(wordPath);
+        return startInfo;
+    }
+
+    private static string? FindExecutable()
+    {
+        var candidates = new List<string>
+        {
+            Path.Combine(AppContext.BaseDirectory, "LibreOffice", "program", "soffice.exe")
+        };
+
+        AddInstalledCandidate(candidates, Environment.SpecialFolder.ProgramFiles);
+        AddInstalledCandidate(candidates, Environment.SpecialFolder.ProgramFilesX86);
+
+        var pathVariable = Environment.GetEnvironmentVariable("PATH");
+        if (!string.IsNullOrWhiteSpace(pathVariable))
+        {
+            candidates.AddRange(pathVariable
+                .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+                .Select(folder => Path.Combine(folder.Trim(), "soffice.exe")));
+        }
+
+        return candidates
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(File.Exists);
+    }
+
+    private static void AddInstalledCandidate(
+        ICollection<string> candidates,
+        Environment.SpecialFolder folder)
+    {
+        var root = Environment.GetFolderPath(folder);
+        if (!string.IsNullOrWhiteSpace(root))
+            candidates.Add(Path.Combine(root, "LibreOffice", "program", "soffice.exe"));
+    }
+
+    private static void TryStop(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit(milliseconds: 5_000);
+            }
+        }
+        catch
+        {
+            // Nur der von SewerStudio gestartete LibreOffice-Prozess wird beendet.
+        }
+    }
+
+    private static void TryDeleteWorkFolder(string folder)
+    {
+        try
+        {
+            var fullFolder = Path.GetFullPath(folder);
+            var tempRoot = Path.GetFullPath(Path.GetTempPath());
+            var tempPrefix = Path.EndsInDirectorySeparator(tempRoot)
+                ? tempRoot
+                : tempRoot + Path.DirectorySeparatorChar;
+
+            if (!fullFolder.StartsWith(tempPrefix, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (Directory.Exists(fullFolder))
+                Directory.Delete(fullFolder, recursive: true);
+        }
+        catch
+        {
+            // Ein liegen gebliebener, eigener Temp-Ordner ist harmlos.
+        }
+    }
+}

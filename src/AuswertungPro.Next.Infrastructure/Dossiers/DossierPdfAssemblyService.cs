@@ -16,10 +16,10 @@ namespace AuswertungPro.Next.Infrastructure.Dossiers;
 /// Fuehrt die fertig ergaenzte Word-Datei und die Beilagen zu einem Gesamt-PDF
 /// zusammen.
 ///
-/// Die Word-Datei wird ueber das installierte Microsoft Word nach PDF
-/// gewandelt. Fehlt Word, wird das ehrlich gemeldet — es entsteht dann
-/// bewusst KEIN Teil-PDF nur aus den Beilagen, denn ein Dossier ohne
-/// Deckblatt und Eigentuemerangaben saehe vollstaendig aus und waere es nicht.
+/// Die Word-Datei wird zuerst ueber Microsoft Word und ersatzweise ueber
+/// LibreOffice nach PDF gewandelt. Sind beide Wege nicht verfuegbar, entsteht
+/// bewusst KEIN Teil-PDF nur aus den Beilagen: Ein Dossier ohne Deckblatt und
+/// Eigentuemerangaben saehe vollstaendig aus und waere es nicht.
 /// </summary>
 public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
 {
@@ -31,7 +31,7 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
         Func<string, string?, bool>? convertWordToPdf = null)
     {
         _pdfMerge = pdfMerge ?? throw new ArgumentNullException(nameof(pdfMerge));
-        _convertWordToPdf = convertWordToPdf ?? WordInterop.TryConvertToPdf;
+        _convertWordToPdf = convertWordToPdf ?? DossierWordPdfConverter.TryConvertToPdf;
     }
 
     public Task<DossierPdfAssemblyResult> AssembleAsync(
@@ -63,9 +63,9 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
             if (!_convertWordToPdf(wordFile, wordPdf) || !File.Exists(wordPdf))
             {
                 return Fail(
-                    "Die Word-Datei konnte nicht in ein PDF gewandelt werden. "
-                    + "Dafür wird ein installiertes Microsoft Word benötigt. "
-                    + "Alternative: in Word „Speichern unter → PDF\" und die Beilagen "
+                    "Die Word-Datei konnte weder mit Microsoft Word noch mit LibreOffice "
+                    + "in ein PDF gewandelt werden. Alternative: die Datei in einem der "
+                    + "beiden Programme als PDF speichern und die Beilagen "
                     + "von Hand anfügen.");
             }
 

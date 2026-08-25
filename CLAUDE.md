@@ -44,6 +44,12 @@
 - `Export_Vorlage/Eigentuemerdossier.docx` ist die verbindliche Word-Geometrie. Seitenraender,
   Abstaende, Zeilenhoehen, Tabellen, Deckblatt, Logo, Wappen und Fusszeile werden beim
   Ersetzen der Platzhalter nicht neu berechnet oder umgebaut.
+- `DossierPdfAssemblyService` wandelt die fertige Word-Datei zuerst mit Microsoft Word
+  und ersatzweise mit LibreOffice in PDF um. `DossierWordPdfConverter` sucht LibreOffice
+  zuerst gebuendelt unter `LibreOffice/program/soffice.exe` neben SewerStudio, danach in
+  den normalen Windows-Installationsordnern und im `PATH`. LibreOffice laeuft kopflos mit
+  einem eigenen Temp-Profil; die Kundendatei bleibt unveraendert. Scheitern beide Wege,
+  darf weiterhin kein scheinbar vollstaendiges Teil-PDF nur aus Beilagen entstehen.
 - `DossierTextStyleRange` speichert Schriftfarbe, Fett, Kursiv und Unterstrichen als
   Zeichenbereiche. Themen verwenden `DossierTopicRow.StyleRanges`, andere Textfelder
   `DossierDefinition.FieldStyles`; das alte `ColorHex` bleibt fuer bestehende Projekte lesbar.

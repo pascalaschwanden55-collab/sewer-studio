@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 using AuswertungPro.Next.Application.Dossiers;
@@ -261,7 +262,7 @@ public sealed class DossierPdfAssemblyServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Ohne_installiertes_Word_entsteht_kein_unvollstaendiges_PDF()
+    public async Task Ohne_verfuegbares_Office_entsteht_kein_unvollstaendiges_PDF()
     {
         await File.WriteAllTextAsync(
             Path.Combine(_folder, "Eigentuemerdossier.docx"), "Platzhalter");
@@ -273,8 +274,72 @@ public sealed class DossierPdfAssemblyServiceTests : IDisposable
 
         Assert.False(result.Success);
         Assert.Contains("Microsoft Word", result.Message, StringComparison.Ordinal);
+        Assert.Contains("LibreOffice", result.Message, StringComparison.Ordinal);
         Assert.False(File.Exists(
             Path.Combine(_folder, DossierFolderPlanner.CombinedPdfFileName)));
+    }
+
+    [Fact]
+    public void LibreOffice_uebernimmt_wenn_Microsoft_Word_nicht_umwandeln_kann()
+    {
+        var versuche = new List<string>();
+
+        var result = DossierWordPdfConverter.TryConvertToPdf(
+            "Dossier.docx",
+            "Dossier.pdf",
+            (_, _) =>
+            {
+                versuche.Add("Word");
+                return false;
+            },
+            (_, _) =>
+            {
+                versuche.Add("LibreOffice");
+                return true;
+            });
+
+        Assert.True(result);
+        Assert.Equal(new[] { "Word", "LibreOffice" }, versuche);
+    }
+
+    [Fact]
+    public void Nach_erfolgreichem_Microsoft_Word_wird_LibreOffice_nicht_gestartet()
+    {
+        var libreOfficeGestartet = false;
+
+        var result = DossierWordPdfConverter.TryConvertToPdf(
+            "Dossier.docx",
+            "Dossier.pdf",
+            (_, _) => true,
+            (_, _) =>
+            {
+                libreOfficeGestartet = true;
+                return true;
+            });
+
+        Assert.True(result);
+        Assert.False(libreOfficeGestartet);
+    }
+
+    [Fact]
+    public void LibreOffice_erhaelt_sichere_einzelne_Argumente_und_ein_eigenes_Profil()
+    {
+        var wordPath = @"C:\Dossier Ordner\Eigentümerdossier.docx";
+        var outputFolder = @"C:\Ausgabe Ordner";
+        var startInfo = LibreOfficeWriterPdfConverter.CreateStartInfo(
+            @"C:\Program Files\LibreOffice\program\soffice.exe",
+            wordPath,
+            outputFolder,
+            @"C:\Temporärer Ordner\Profil");
+        var arguments = startInfo.ArgumentList.ToArray();
+
+        Assert.False(startInfo.UseShellExecute);
+        Assert.True(startInfo.CreateNoWindow);
+        Assert.Contains("--headless", arguments);
+        Assert.Contains(wordPath, arguments);
+        Assert.Contains(outputFolder, arguments);
+        Assert.Contains(arguments, argument =>
+            argument.StartsWith("-env:UserInstallation=file:///", StringComparison.Ordinal));
     }
 
     [Fact]
