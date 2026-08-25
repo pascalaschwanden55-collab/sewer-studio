@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 
 using AuswertungPro.Next.Application.Dossiers;
@@ -54,6 +55,7 @@ internal sealed partial class DossierPreviewFieldPanel
     {
         _wirt.Children.Clear();
         _feldStellen.Clear();
+        LeereAbschnitte();
 
         var angaben = felder.Where(f => f.Kind is not DossierPreviewFieldKind.Rows).ToList();
 
@@ -105,6 +107,8 @@ internal sealed partial class DossierPreviewFieldPanel
             _wirt.Children.Add(Abschnitt(
                 "Beschriftungen und Überschriften", BaueFesteTexte(feste, []), offen: false));
 
+        OeffneNurDenErsten();
+
         if (_wirt.Children.Count == 0)
         {
             _wirt.Children.Add(new TextBlock
@@ -138,14 +142,20 @@ internal sealed partial class DossierPreviewFieldPanel
         if (!_feldStellen.TryGetValue(target, out var stelle))
             return false;
 
+        // Genau der eine Abschnitt auf — die uebrigen zu, damit man nicht an
+        // der gesuchten Stelle vorbeiscrollt.
         foreach (var expander in Vorfahren(stelle).OfType<Expander>())
-            expander.IsExpanded = true;
+            NurDiesenAbschnitt(expander);
 
         stelle.BringIntoView();
         stelle.Dispatcher.BeginInvoke(new Action(() =>
         {
             stelle.BringIntoView();
             ErsteEingabe(stelle)?.Focus();
+
+            // Auch rechts sichtbar machen, wo man gelandet ist: das Blatt
+            // blinkt schon, das Feld tat es bisher nicht.
+            LasseAufblinken(stelle);
         }), System.Windows.Threading.DispatcherPriority.Loaded);
 
         Betone(target);
@@ -182,32 +192,81 @@ internal sealed partial class DossierPreviewFieldPanel
     }
 
     private Expander Abschnitt(string titel, UIElement inhalt, bool offen)
-        => new()
+    {
+        var abschnitt = BaueAbschnitt(titel, inhalt, offen);
+        MerkeAbschnitt(abschnitt);
+        return abschnitt;
+    }
+
+    private Expander BaueAbschnitt(string titel, UIElement inhalt, bool offen)
+    {
+        var rahmen = new Border
         {
-            Header = titel,
+            BorderBrush = Randfarbe,
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Padding = new Thickness(0, 8, 0, 2),
+            Margin = new Thickness(0, 4, 0, 0),
+            Child = inhalt
+        };
+
+        // Der Abschnittskopf ist halbfett — ohne dieses Zuruecksetzen erbt
+        // jede Beschriftung und jedes Eingabefeld darin dieselbe Schrift.
+        // Dann sieht alles gleich wichtig aus, und genau das machte das
+        // Suchen muehsam.
+        TextElement.SetFontWeight(rahmen, FontWeights.Normal);
+        TextElement.SetFontSize(rahmen, 12);
+
+        return new Expander
+        {
+            Header = titel + Anzahl(inhalt),
             IsExpanded = offen,
             Foreground = (Brush)_ressource("TextBrush"),
             FontSize = 13,
             FontWeight = FontWeights.SemiBold,
-            Margin = new Thickness(0, 0, 0, 14),
-            Content = new Border
-            {
-                BorderBrush = Randfarbe,
-                BorderThickness = new Thickness(0, 1, 0, 0),
-                Padding = new Thickness(0, 10, 0, 2),
-                Margin = new Thickness(0, 5, 0, 0),
-                Child = inhalt
-            }
+            Margin = new Thickness(0, 0, 0, 8),
+            Content = rahmen
         };
+    }
+
+    /// <summary>
+    /// Wie viele Eingaben in diesem Abschnitt stecken. Damit sieht man am
+    /// zugeklappten Kopf, ob sich das Aufklappen lohnt.
+    /// </summary>
+    private static string Anzahl(UIElement inhalt)
+    {
+        if (inhalt is not DependencyObject wurzel)
+            return string.Empty;
+
+        var eingaben = Eingaben(wurzel);
+        return eingaben == 0 ? string.Empty : $"  ({eingaben})";
+    }
+
+    private static int Eingaben(DependencyObject wurzel)
+    {
+        if (wurzel is TextBox or RichTextBox)
+            return 1;
+
+        var summe = 0;
+        foreach (var kind in LogicalTreeHelper.GetChildren(wurzel).OfType<DependencyObject>())
+            summe += Eingaben(kind);
+
+        return summe;
+    }
 
     private UIElement BaueAngabe(DossierPreviewField feld)
     {
-        var block = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
+        var block = new StackPanel
+        {
+            Margin = new Thickness(0, 0, 0, 9),
+            Focusable = true
+        };
 
         block.Children.Add(new TextBlock
         {
             Text = feld.Label,
-            Margin = new Thickness(0, 0, 0, 3),
+            Margin = new Thickness(0, 0, 0, 2),
+            FontSize = 11,
+            Foreground = (Brush)_ressource("TextSecondaryBrush"),
             TextWrapping = TextWrapping.Wrap
         });
 
@@ -229,12 +288,16 @@ internal sealed partial class DossierPreviewFieldPanel
             default:
                 var box = BaueTextfeld(feld);
                 block.Children.Add(box);
-                block.Children.Add(DossierTextFormattingToolbar.Create(box, () =>
+
+                var werkzeuge = DossierTextFormattingToolbar.Create(box, () =>
                 {
                     SpeichereFormatiertesFeld(feld, box);
                     _zeichneBlatt();
                     Betone(feld.Key);
-                }));
+                });
+
+                ZeigeWerkzeugeNurAmAktivenFeld(block, werkzeuge);
+                block.Children.Add(werkzeuge);
 
                 if (feld.CanReset)
                     block.Children.Add(BaueRueckweg(feld, box));
