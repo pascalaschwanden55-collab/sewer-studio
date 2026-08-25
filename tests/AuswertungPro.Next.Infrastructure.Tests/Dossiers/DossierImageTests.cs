@@ -230,6 +230,37 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
     }
 
     [Fact]
+    public void Fehlender_Plan_kann_seinen_ganzen_Vorlagenabsatz_entfernen()
+    {
+        var fehlt = Path.Combine(_root, "gibtesnicht.png");
+
+        using var stream = new MemoryStream();
+        using (var document = CreateDocument(stream, "{{@Uebersichtsplan}}"))
+        {
+            var body = document.MainDocumentPart!.Document.Body!;
+            body.Elements<Paragraph>().Single().AppendChild(new Run(new Drawing()));
+            body.AppendChild(new Paragraph(new Run(new Text("Kapitel 2"))));
+
+            DocxImagePlaceholderFiller.Fill(document, new[]
+            {
+                new DocxImagePlacement(
+                    "Uebersichtsplan",
+                    fehlt,
+                    MaxWidthCm: 15.0,
+                    RemoveParagraphWhenMissing: true)
+            });
+            document.MainDocumentPart.Document.Save();
+        }
+
+        stream.Position = 0;
+        using var reopened = WordprocessingDocument.Open(stream, false);
+        var bodyText = reopened.MainDocumentPart!.Document.Body!.InnerText;
+
+        Assert.Equal("Kapitel 2", bodyText);
+        Assert.Empty(reopened.MainDocumentPart.Document.Body!.Descendants<Drawing>());
+    }
+
+    [Fact]
     public void Findet_den_Platzhalter_auch_wenn_Word_ihn_zerlegt_hat()
     {
         var bildPfad = Path.Combine(_root, "wappen.jpg");

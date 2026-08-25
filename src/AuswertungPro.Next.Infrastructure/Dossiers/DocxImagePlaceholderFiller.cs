@@ -23,11 +23,17 @@ namespace AuswertungPro.Next.Infrastructure.Dossiers;
 /// Optionale feste Hoehe der Vorlagenflaeche. Leer behaelt das Bild sein
 /// Seitenverhaeltnis.
 /// </param>
+/// <param name="RemoveParagraphWhenMissing">
+/// Entfernt bei einem fehlenden Bild den ganzen Platzhalterabsatz samt
+/// Vorlagenformen. Das ist fuer den Uebersichtsplan noetig: sein grosser
+/// schwebender Rahmen darf ohne Plan nicht ueber die folgenden Kapitel liegen.
+/// </param>
 public sealed record DocxImagePlacement(
     string PlaceholderName,
     string ImagePath,
     double MaxWidthCm,
-    double? HeightCm = null);
+    double? HeightCm = null,
+    bool RemoveParagraphWhenMissing = false);
 
 /// <summary>
 /// Ersetzt Platzhalter der Form <c>{{@Name}}</c> durch ein eingebettetes Bild.
@@ -110,11 +116,21 @@ public static class DocxImagePlaceholderFiller
 
                 var run = texts[0].Ancestors<Run>().FirstOrDefault();
                 if (run is null)
+                {
+                    if (placement.RemoveParagraphWhenMissing)
+                        paragraph.Remove();
+
                     continue;
+                }
 
                 var drawing = TryCreateDrawing(mainPart, placement, drawingId);
                 if (drawing is null)
+                {
+                    if (placement.RemoveParagraphWhenMissing)
+                        paragraph.Remove();
+
                     continue;
+                }
 
                 run.AppendChild(drawing);
                 drawingId++;

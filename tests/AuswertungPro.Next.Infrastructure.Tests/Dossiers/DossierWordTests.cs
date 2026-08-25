@@ -856,6 +856,64 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Ohne_Uebersichtsplan_bleibt_kein_grosser_schwebender_Planrahmen_zurueck()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.OverviewPlanPath = string.Empty;
+
+        var result = await new DossierWordTemplateExportService(() => templatePath)
+            .ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        var body = document.MainDocumentPart!.Document.Body!;
+
+        Assert.DoesNotContain(
+            body.Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.DocProperties>(),
+            properties => string.Equals(
+                properties.Name?.Value,
+                "Rechteck 3",
+                StringComparison.Ordinal));
+        Assert.Contains("Übersichtsplan Werkleitungen", body.InnerText, StringComparison.Ordinal);
+        Assert.Contains("Eigentumsverhältnisse", body.InnerText, StringComparison.Ordinal);
+        Assert.Contains("Informationen Sanierung", body.InnerText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Roter_mehrzeiliger_Thementext_bleibt_im_echten_Word_Export_rot()
+    {
+        var (request, templatePath) = BuildScenario();
+        const string text = "1. Haltung 439.01-36051 - rot\n2. Schacht 36051 - ebenfalls rot";
+        request.Dossier.Topics.Add(new DossierTopicRow
+        {
+            Title = "Schäden",
+            Text = text,
+            StyleRanges =
+            {
+                new DossierTextStyleRange
+                {
+                    Start = 0,
+                    Length = text.Length,
+                    ColorHex = "C00000"
+                }
+            }
+        });
+
+        var result = await new DossierWordTemplateExportService(() => templatePath)
+            .ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        var run = document.MainDocumentPart!.Document.Body!
+            .Descendants<Run>()
+            .Single(item => item.InnerText.Contains("Haltung 439.01-36051", StringComparison.Ordinal));
+
+        Assert.Contains("Schacht 36051", run.InnerText, StringComparison.Ordinal);
+        Assert.Equal("C00000", run.RunProperties?.Color?.Val?.Value);
+        Assert.Equal("Arial", run.RunProperties?.RunFonts?.Ascii?.Value);
+    }
+
+    [Fact]
     public async Task Fehlende_Bilder_erzeugen_trotzdem_ein_vollstaendiges_Dossier()
     {
         var (request, templatePath) = BuildScenario();

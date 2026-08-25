@@ -105,6 +105,10 @@
 - Der Uebersichtsplan wird in das feste Seitenverhaeltnis der Referenzflaeche
   (ca. 15 x 21,5 cm) eingepasst. Ein reines Datei-Seitenverhaeltnis kann den Plan
   auf eine Zusatzseite schieben und darf deshalb nicht wieder verwendet werden.
+  Ist kein lesbarer Plan gewaehlt, entfernt der Bildfueller den ganzen
+  Platzhalterabsatz samt grossem schwebendem Vorlagenrahmen; sonst liegt dieser
+  Rahmen in Word ueber den folgenden Kapiteln. Ein bewusst leerer Plan erzeugt
+  dabei keinen Fehlhinweis.
 - Jede Zeile im Dossier-Cockpit behaelt die eindeutige `HoldingId`. Das Rechtsklick-Menue
   routet Video, Originalprotokoll und den Sprung zur Datenseite ueber
   `DossierHoldingActionController`; die Seite selbst enthaelt nur die Zeilenauswahl.

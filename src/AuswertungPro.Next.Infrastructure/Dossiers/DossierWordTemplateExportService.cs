@@ -172,6 +172,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     missingImages = DocxImagePlaceholderFiller.Fill(
                             document, BuildImagePlacements(request, templatePath))
                         .Where(name => !HatFestEingebettetesBild(document, name))
+                        .Where(name => !string.Equals(
+                                name,
+                                "Uebersichtsplan",
+                                StringComparison.OrdinalIgnoreCase)
+                            || !string.IsNullOrWhiteSpace(request.Dossier.OverviewPlanPath))
                         .ToList();
 
                     DocxPlaceholderFiller.Fill(document, values);
@@ -743,16 +748,17 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                 "Wappen", Path.Combine(templateFolder, CoatOfArmsFileName), MaxWidthCm: 2.0));
         }
 
-        var plan = ResolvePlanPath(request);
-        if (plan is not null)
-        {
-            var width = PlanWidthCm(request.Dossier);
-            placements.Add(new DocxImagePlacement(
-                "Uebersichtsplan",
-                plan,
-                MaxWidthCm: width,
-                HeightCm: PlanHeightForWidth(width)));
-        }
+        // Auch ohne gewaehlte Datei wird die Bildmarke verarbeitet. So kann
+        // der Fueller den grossen schwebenden Planrahmen der Vorlage entfernen;
+        // sonst liegt er in Word ueber Kapitel 2 und 3.
+        var plan = ResolvePlanPath(request) ?? string.Empty;
+        var width = PlanWidthCm(request.Dossier);
+        placements.Add(new DocxImagePlacement(
+            "Uebersichtsplan",
+            plan,
+            MaxWidthCm: width,
+            HeightCm: PlanHeightForWidth(width),
+            RemoveParagraphWhenMissing: true));
 
         return placements;
     }
