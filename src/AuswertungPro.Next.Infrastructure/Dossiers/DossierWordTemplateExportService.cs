@@ -121,6 +121,13 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     foreach (var kapitel in request.Dossier.HiddenChapters ?? new())
                         DocxChapterRemover.Remove(document, kapitel);
 
+                    // Erst JETZT steht fest, wie viele Kapitel das Verzeichnis
+                    // fuehrt: ein weggelassenes hat seine Zeile mitgenommen.
+                    // Die Beilagen zaehlen dahinter weiter.
+                    values["Verzeichnis_Beilagen"] = DossierTocAttachments.Build(
+                        request.Dossier.TocAttachmentLines,
+                        ZaehleVerzeichniszeilen(document) + 1);
+
                     DocxPlaceholderFiller.FillRepeatingRows(
                         document,
                         "Haltungen",
@@ -301,6 +308,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             ["Uebersichtsplan_BreiteCm"] = PlanWidthCm(d)
                 .ToString("0.###", CultureInfo.InvariantCulture),
             ["Anzahl_Schaechte"] = snapshot.ShaftCount.ToString(CultureInfo.InvariantCulture),
+            ["Verzeichnis_Beilagen"] = string.Empty,
             ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
         }, d), d);
     }
@@ -313,6 +321,28 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// ohne Tabellenbau in Word auskommt.
     /// </summary>
     /// <summary>PLZ und Ort als eine Zeile, z.B. "6487 Göschenen".</summary>
+    /// <summary>
+    /// Die Zeilen, die das Word-Verzeichnis bereits fuehrt. Der eigene
+    /// Platzhalterabsatz traegt denselben Stil und wird deshalb ausgenommen —
+    /// sonst zaehlte er sich selbst mit.
+    /// </summary>
+    private static int ZaehleVerzeichniszeilen(WordprocessingDocument document)
+    {
+        var body = document.MainDocumentPart?.Document?.Body;
+        if (body is null)
+            return 0;
+
+        return body
+            .Descendants<DocumentFormat.OpenXml.Wordprocessing.Paragraph>()
+            .Count(absatz =>
+                DossierTocStyle.IsEntry(
+                    absatz.ParagraphProperties?.ParagraphStyleId?.Val?.Value)
+                && !string.Concat(absatz
+                        .Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>()
+                        .Select(t => t.Text))
+                    .Contains("{{", StringComparison.Ordinal));
+    }
+
     private static string BuildTownLine(DossierDefinition dossier)
         => string.Join(" ", new[] { dossier.PostalCode, dossier.Town }
             .Where(t => !string.IsNullOrWhiteSpace(t))

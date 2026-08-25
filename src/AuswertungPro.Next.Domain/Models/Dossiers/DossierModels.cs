@@ -259,6 +259,16 @@ public sealed class DossierDefinition
     /// <summary>Zeilen der Tabelle "Aenderungswesen".</summary>
     public List<DossierChangeRow> Changes { get; set; } = new();
 
+    /// <summary>
+    /// Zusaetzliche Zeilen des Inhaltsverzeichnisses — die Beilagen, die am
+    /// Schluss dazukommen: TV-Protokolle, Schachtprotokolle, Plaene.
+    ///
+    /// Die drei Kapitel bleiben Word ueberlassen; diese Zeilen stehen gar nicht
+    /// im Word-Dokument und koennen deshalb weder von Word gezaehlt noch mit
+    /// einer Seitenzahl versehen werden.
+    /// </summary>
+    public List<string> TocAttachmentLines { get; set; } = new();
+
     /// <summary>Text der Zeile "Fuer die Aktennotiz".</summary>
     public string FileNote { get; set; } = "";
 
@@ -342,7 +352,7 @@ public sealed class DossierDefinition
 public sealed class DossierDocument
 {
     /// <summary>Formatversion, die diese Programmversion schreibt.</summary>
-    public const int CurrentSchemaVersion = 5;
+    public const int CurrentSchemaVersion = 6;
 
     /// <summary>Formatversion. Unbekannt hoehere Versionen werden nicht ueberschrieben.</summary>
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;

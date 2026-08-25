@@ -13,6 +13,7 @@ namespace AuswertungPro.Next.Application.Dossiers;
 /// Version 1 kannte je Liegenschaft genau einen Eigentuemer in Einzelfeldern.
 /// Version 2 hat eine Zeilenliste. Die Einzelfelder bleiben erhalten — sie
 /// speisen weiterhin das Deckblatt, und ein Wegwerfen waere Datenverlust.
+/// Version 6 fuehrt die zusaetzlichen Verzeichniszeilen der Beilagen.
 /// Version 5 speichert additive Zeichenformatierungen. Alte Dokumente brauchen
 /// dafuer keine Ableitung; leere Formatlisten bedeuten weiterhin Vorlagenformat.
 /// </summary>
@@ -117,6 +118,7 @@ public static class DossierDocumentMigration
             dossier.HiddenChapters ??= new List<string>();
             dossier.FieldOverrides ??= new Dictionary<string, string>();
             dossier.TextOverrides ??= new Dictionary<string, string>();
+            dossier.TocAttachmentLines ??= new List<string>();
 
             foreach (var topic in dossier.Topics.Where(topic => topic is not null))
                 topic.StyleRanges ??= new List<DossierTextStyleRange>();
