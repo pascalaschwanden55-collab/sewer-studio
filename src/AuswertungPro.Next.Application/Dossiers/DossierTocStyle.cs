@@ -7,13 +7,12 @@ namespace AuswertungPro.Next.Application.Dossiers;
 ///
 /// Sie sieht wie fester Text aus, ist aber ein Word-Feld: hinter
 /// „1.Übersichtsplan Werkleitungen" steht ein PAGEREF mit der Seitenzahl.
-/// Wurde sie als bearbeitbarer Text angeboten, wanderte diese Zahl in den
-/// Schluessel — und die eigene Fassung wurde ungueltig, sobald sich die Seiten
-/// verschoben.
+/// Deshalb wird sie strukturell getrennt: Nur der Titel ist bearbeitbar; Nummer
+/// und Seitenzahl bleiben ausserhalb seines Schluessels.
 ///
-/// Die Zeilen gehoeren Word: es rechnet sie aus den Kapitelueberschriften und
-/// den Seitenzahlen. Die Ueberschrift „Inhaltsverzeichnis" selbst ist dagegen
-/// wirklich fester Text und bleibt bearbeitbar — sie traegt den Stil „Titel".
+/// Word rechnet die Zeilen aus den Kapitelueberschriften und Seitenzahlen. Die
+/// Ueberschrift „Inhaltsverzeichnis" selbst ist ebenfalls bearbeitbar — sie
+/// traegt den Stil „Titel".
 /// </summary>
 public static class DossierTocStyle
 {

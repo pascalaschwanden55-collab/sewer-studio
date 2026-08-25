@@ -155,14 +155,11 @@ public partial class DossierPreviewWindow
                 if (absatz.Runs.Any(r => r.IsField))
                     continue;
 
-                // Die Zeilen des Inhaltsverzeichnisses gehoeren Word: es rechnet
-                // sie aus Kapitelueberschrift und Seitenzahl. Als bearbeitbarer
-                // Text angeboten, stand die Seitenzahl im Schluessel — und die
-                // eigene Fassung war weg, sobald sich die Seiten verschoben.
-                if (absatz.Format.IsTableOfContentsEntry)
-                    continue;
-
-                var text = string.Concat(absatz.Runs.Select(r => r.Text)).Trim();
+                // Bei einer Verzeichniszeile gehört nur der Titel dem Menschen.
+                // Nummer und Seitenzahl bleiben echte Word-Felder und dürfen
+                // deshalb nie Teil des gespeicherten Textschlüssels werden.
+                var text = absatz.TocEntry?.Title
+                    ?? string.Concat(absatz.Runs.Select(r => r.Text)).Trim();
 
                 if (text.Length > 0 && !ergebnis.Contains(text, StringComparer.Ordinal))
                     ergebnis.Add(text);

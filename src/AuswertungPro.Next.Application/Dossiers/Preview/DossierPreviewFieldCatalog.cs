@@ -102,18 +102,10 @@ public static class DossierPreviewFieldCatalog
                 () => area.AreaLocation, w => area.AreaLocation = w),
             Text("Parzellen_Zeile", "Parzellen-Nr.",
                 () => dossier.ParcelNumbers, w => dossier.ParcelNumbers = w),
-            // Eine Zeile je Beilage. Die drei Kapitel darueber gehoeren Word;
-            // diese Zeilen stehen gar nicht im Dokument und werden deshalb
-            // beim Erzeugen geschrieben — fortlaufend nummeriert, ohne
-            // Seitenzahl.
-            MultiLine("Verzeichnis_Beilagen", "Weitere Verzeichniszeilen (Beilagen)",
-                () => string.Join("\n", dossier.TocAttachmentLines ?? new List<string>()),
-                w => dossier.TocAttachmentLines = (w ?? string.Empty)
-                    .Replace("\r\n", "\n")
-                    .Split('\n')
-                    .Select(z => z.Trim())
-                    .Where(z => z.Length > 0)
-                    .ToList()),
+            // Eine eigene Karte je zusätzlichem Punkt. Word kennt diese
+            // externen Beilagen nicht und kann ihnen keine Seitenzahl geben;
+            // nummeriert werden sie beim Export fortlaufend nach den Kapiteln.
+            Rows("Verzeichnis_Beilagen", "Inhaltsverzeichnis ergänzen"),
             Eigen("Eigentuemer_Block", "Eigentümer auf dem Deckblatt",
                 DossierPreviewFieldKind.MultiLine,
                 "Entsteht sonst aus der Tabelle „Eigentumsverhältnisse“."),

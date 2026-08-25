@@ -169,7 +169,10 @@ public sealed class DossierPreviewFieldCatalogTests
         var (area, dossier) = Stand();
         var felder = DossierPreviewFieldCatalog.Build(area, dossier);
 
-        foreach (var key in new[] { "Themen", "Eigentuemer", "Aenderungen" })
+        foreach (var key in new[]
+                 {
+                     "Themen", "Eigentuemer", "Aenderungen", "Verzeichnis_Beilagen"
+                 })
         {
             var feld = felder.Single(f => f.Key == key);
             Assert.Equal(DossierPreviewFieldKind.Rows, feld.Kind);

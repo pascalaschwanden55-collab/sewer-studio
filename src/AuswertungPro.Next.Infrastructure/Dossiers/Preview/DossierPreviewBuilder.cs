@@ -217,7 +217,17 @@ public static class DossierPreviewBuilder
                 ? Zerlege(absatz, text)
                 : new[] { DossierPreviewRun.Literal(string.Empty, _format.RunFormat(absatz, null)) };
 
-            _bloecke.Add(new DossierPreviewParagraph(runs, format, schwebend));
+            var toc = format.IsTableOfContentsEntry
+                ? DocxTocEntryReader.Read(absatz)
+                : null;
+
+            _bloecke.Add(new DossierPreviewParagraph(
+                runs,
+                format,
+                schwebend,
+                toc is null
+                    ? null
+                    : new DossierPreviewTocEntry(toc.Number, toc.Title, toc.PageNumber)));
         }
 
         /// <summary>

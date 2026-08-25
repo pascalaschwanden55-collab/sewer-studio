@@ -244,6 +244,36 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Bearbeiteter_Verzeichnistitel_aendert_Toc_und_Kapitel_ohne_Seitenfeld_zu_verlieren()
+    {
+        var (request, templatePath) = BuildScenario();
+        request.Dossier.TextOverrides["Übersichtsplan Werkleitungen"] =
+            "Situationsplan Werkleitungen";
+
+        var service = new DossierWordTemplateExportService(() => templatePath);
+        var result = await service.ExportAsync(request);
+
+        Assert.True(result.Success, result.Message);
+        using var document = WordprocessingDocument.Open(result.FilePath!, false);
+        var body = document.MainDocumentPart!.Document.Body!;
+        var toc = body.Descendants<Paragraph>()
+            .First(paragraph => DossierTocStyle.IsEntry(
+                paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value)
+                && paragraph.InnerText.Contains(
+                    "Situationsplan Werkleitungen", StringComparison.Ordinal));
+        var heading = body.Descendants<Paragraph>()
+            .First(paragraph => DossierHeadingStyle.IsHeading(
+                paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value)
+                && paragraph.InnerText.Contains(
+                    "Situationsplan Werkleitungen", StringComparison.Ordinal));
+
+        Assert.NotNull(heading);
+        Assert.Contains(
+            toc.Descendants<FieldCode>(),
+            code => code.Text.Contains("PAGEREF", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Die_Themen_stammen_aus_Gebiet_und_Dossier()
     {
         var (request, templatePath) = BuildScenario();

@@ -183,6 +183,45 @@ public sealed class DossierPreviewRowMarkTests
         Assert.Single(marken[DossierPreviewTarget.Literal("Informationen Sanierung")]);
     }
 
+    [Fact]
+    public void Ein_Titel_im_Inhaltsverzeichnis_springt_zu_seinem_Textfeld()
+    {
+        var format = DossierPreviewParagraphFormat.Default with
+        {
+            IsTableOfContentsEntry = true
+        };
+        var paragraph = new DossierPreviewParagraph(
+            new[]
+            {
+                DossierPreviewRun.Literal(
+                    "1.Übersichtsplan Werkleitungen3", DossierPreviewRunFormat.Default)
+            },
+            format,
+            TocEntry: new DossierPreviewTocEntry(
+                "1.", "Übersichtsplan Werkleitungen", "3"));
+        var page = new DossierPreviewPage(
+            1,
+            "Inhaltsverzeichnis",
+            new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.All(76)),
+            new DossierPreviewBlock[] { paragraph },
+            Array.Empty<string>());
+
+        IReadOnlyDictionary<DossierPreviewTarget, IReadOnlyList<Border>> marken =
+            new Dictionary<DossierPreviewTarget, IReadOnlyList<Border>>();
+
+        RunOnSta(() => marken = DossierPreviewPageRenderer.Render(
+            page,
+            _ => string.Empty,
+            _ => Array.Empty<IReadOnlyDictionary<string, string>>(),
+            _ => string.Empty,
+            original => original == "Übersichtsplan Werkleitungen"
+                ? "Situationsplan Werkleitungen"
+                : null)
+            .Frames);
+
+        Assert.Single(marken[DossierPreviewTarget.Literal("Übersichtsplan Werkleitungen")]);
+    }
+
     private static void RunOnSta(Action action)
     {
         Exception? fehler = null;

@@ -162,6 +162,14 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
 
                     DocxPlaceholderFiller.Fill(document, values);
 
+                    // Im echten Word-Verzeichnis wird nur der Titel ersetzt.
+                    // Nummer und Seitenzahl bleiben Felder; die gleichnamige
+                    // Kapitelüberschrift wird direkt danach ebenfalls geändert.
+                    DocxTocEntryEditor.Apply(
+                        document,
+                        request.Dossier.TextOverrides,
+                        request.Dossier.FieldStyles);
+
                     // Zuletzt die eigenen Fassungen fester Texte: sie greifen
                     // auf Zeilen OHNE Platzhalter, die es nach dem Fuellen noch
                     // unveraendert gibt.
@@ -311,7 +319,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             ["Uebersichtsplan_BreiteCm"] = PlanWidthCm(d)
                 .ToString("0.###", CultureInfo.InvariantCulture),
             ["Anzahl_Schaechte"] = snapshot.ShaftCount.ToString(CultureInfo.InvariantCulture),
-            ["Verzeichnis_Beilagen"] = string.Empty,
+            // In der Vorschau stehen alle drei Word-Kapitel noch da. Beim
+            // Export wird die Anfangsnummer nach dem Entfernen ausgeblendeter
+            // Kapitel nochmals aus dem echten Dokument berechnet.
+            ["Verzeichnis_Beilagen"] = DossierTocAttachments.Build(
+                d.TocAttachmentLines, firstNumber: 4),
             ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
         }, d), d);
     }

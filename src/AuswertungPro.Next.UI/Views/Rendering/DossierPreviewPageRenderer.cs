@@ -248,6 +248,12 @@ public static class DossierPreviewPageRenderer
             text.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
         }
 
+        if (absatz.TocEntry is { } toc)
+        {
+            return DossierPreviewTocRenderer.Render(
+                absatz, toc, erster, LiteralErsatz, LiteralFormate, merke);
+        }
+
         var offeneStelle = false;
 
         // Ein Absatz ohne Platzhalter ist fester Text — fuer ihn kann das
@@ -388,8 +394,9 @@ public static class DossierPreviewPageRenderer
 
         // Auch reiner Text wird gemerkt — unter seinem eigenen Wortlaut. Nur so
         // findet ein Klick ins Blatt auch das Eingabefeld eines festen Textes.
-        // Verzeichniszeilen bleiben aussen vor: sie gehoeren Word und haben
-        // rechts kein Feld.
+        // Eine strukturell gelesene Verzeichniszeile wurde weiter oben bereits
+        // unter ihrem getrennten Titel gemerkt; unbekannte Fassungen bleiben
+        // vorsichtshalber unangetastet.
         if (!absatz.Runs.Any(r => r.IsField) && !absatz.Format.IsTableOfContentsEntry)
         {
             var wortlaut = string.Concat(absatz.Runs.Select(r => r.Text)).Trim();

@@ -71,20 +71,35 @@ public partial class DossierPreviewWindow
             FieldPanel.Children.Add(Abschnitt("Angaben", inhalt, offen: true));
         }
 
+        var feste = FesteTexte(seite);
+        var istVerzeichnis = seite.Blocks
+            .OfType<DossierPreviewParagraph>()
+            .Any(absatz => absatz.TocEntry is not null);
+
+        // Auf der Verzeichnisseite sind die drei Kapiteltitel die Hauptarbeit.
+        // Sie stehen deshalb offen und vor den zusätzlichen Punkten.
+        if (istVerzeichnis && feste.Count > 0)
+        {
+            FieldPanel.Children.Add(Abschnitt(
+                "Inhaltsverzeichnis bearbeiten", BaueFesteTexte(feste), offen: true));
+        }
+
         // Jede Zeilenliste bekommt ihren eigenen Abschnitt mit ihrem Namen.
         foreach (var feld in felder.Where(f => f.Kind is DossierPreviewFieldKind.Rows))
         {
-            var inhalt = feld.Key == "Themen"
-                ? BaueThemenEditor(feld)
-                : BaueZeilenEditor(feld);
+            var inhalt = feld.Key switch
+            {
+                "Themen" => BaueThemenEditor(feld),
+                "Verzeichnis_Beilagen" => BaueVerzeichnisEditor(feld),
+                _ => BaueZeilenEditor(feld)
+            };
 
             var abschnitt = Abschnitt(feld.Label, inhalt, offen: true);
             FieldPanel.Children.Add(abschnitt);
             MerkeStelle(DossierPreviewTarget.Field(feld.Key), abschnitt);
         }
 
-        var feste = FesteTexte(seite);
-        if (feste.Count > 0)
+        if (!istVerzeichnis && feste.Count > 0)
             FieldPanel.Children.Add(Abschnitt(
                 "Beschriftungen und Überschriften", BaueFesteTexte(feste), offen: false));
 

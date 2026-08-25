@@ -65,8 +65,8 @@ public sealed record DossierPreviewParagraphFormat(
     bool IsTitle = false,
 
     /// <summary>
-    /// Eine Zeile des Inhaltsverzeichnisses. Sie sieht wie fester Text aus,
-    /// wird aber von Word gerechnet — deshalb nicht zum Bearbeiten anbieten.
+    /// Eine Zeile des Inhaltsverzeichnisses. Word rechnet Nummer und Seitenzahl;
+    /// der Titel dazwischen kann im Dossier eine eigene Fassung erhalten.
     /// </summary>
     bool IsTableOfContentsEntry = false)
 {
@@ -98,11 +98,22 @@ public sealed record DossierPreviewRunFormat(
 public sealed record DossierPreviewParagraph(
     IReadOnlyList<DossierPreviewRun> Runs,
     DossierPreviewParagraphFormat Format,
-    IReadOnlyList<DossierPreviewFloating>? Anchored = null) : DossierPreviewBlock
+    IReadOnlyList<DossierPreviewFloating>? Anchored = null,
+    DossierPreviewTocEntry? TocEntry = null) : DossierPreviewBlock
 {
     public IReadOnlyList<DossierPreviewFloating> Floating
         => Anchored ?? System.Array.Empty<DossierPreviewFloating>();
 }
+
+/// <summary>
+/// Die drei getrennten Teile einer echten Word-Verzeichniszeile. Diese
+/// Trennung verhindert, dass eine Seitenzahl versehentlich Teil des
+/// bearbeitbaren Titels wird.
+/// </summary>
+public sealed record DossierPreviewTocEntry(
+    string Number,
+    string Title,
+    string PageNumber);
 
 /// <summary>
 /// Ein Textstueck. Entweder fester Text der Vorlage oder ein Platzhalter.

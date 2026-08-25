@@ -77,6 +77,24 @@ public sealed class DossierPreviewBuilderTests
     }
 
     [Fact]
+    public void Inhaltsverzeichnis_trennt_Titel_und_Seitenzahl_fuer_die_Bearbeitung()
+    {
+        var eintraege = Vorschau().Pages
+            .SelectMany(seite => seite.Blocks)
+            .OfType<DossierPreviewParagraph>()
+            .Where(absatz => absatz.TocEntry is not null)
+            .Select(absatz => absatz.TocEntry!)
+            .ToList();
+
+        Assert.Equal(3, eintraege.Count);
+        Assert.Equal("1.", eintraege[0].Number);
+        Assert.Equal("Übersichtsplan Werkleitungen", eintraege[0].Title);
+        Assert.Equal("3", eintraege[0].PageNumber);
+        Assert.Equal("Eigentumsverhältnisse", eintraege[1].Title);
+        Assert.Equal("Informationen Sanierung", eintraege[2].Title);
+    }
+
+    [Fact]
     public void Der_Uebersichtsplan_ist_eine_Bildstelle_und_kein_Text()
     {
         var seite = Vorschau().Pages

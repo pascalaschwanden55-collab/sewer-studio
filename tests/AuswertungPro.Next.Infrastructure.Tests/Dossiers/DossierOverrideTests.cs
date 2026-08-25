@@ -208,6 +208,20 @@ public sealed class DossierFieldOverrideTests
             System.Globalization.CultureInfo.GetCultureInfo("de-CH")), werte["Datum"]);
     }
 
+    [Fact]
+    public void Zusaetzliche_Verzeichnispunkte_erscheinen_auch_in_der_Vorschau()
+    {
+        var dossier = new DossierDefinition
+        {
+            TocAttachmentLines = { "TV-Protokolle", "Schachtprotokolle" }
+        };
+
+        var value = DossierWordTemplateExportService.BuildValues(Anfrage(dossier))[
+            "Verzeichnis_Beilagen"];
+
+        Assert.Equal("4.\tTV-Protokolle\n5.\tSchachtprotokolle", value);
+    }
+
     private static AuswertungPro.Next.Application.Dossiers.DossierExportRequest Anfrage(
         DossierDefinition dossier)
     {
