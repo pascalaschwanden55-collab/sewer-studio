@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -56,6 +56,19 @@ public static class DocxLiteralTextReplacer
             // Text aller Felder zusammen und gehoert keinem davon.
             if (absatz.Descendants<Paragraph>().Any())
                 continue;
+
+            // Verzeichniszeilen gehoeren dem Verzeichnis-Editor. Ginge dieser
+            // Weg darueber, schriebe er den ganzen Text in den ersten Lauf und
+            // leerte die uebrigen — mitsamt Seitenzahl und Tabulatoren. Genau
+            // das ist passiert, als der Schluessel noch die ganze Zeile war
+            // ("1.Uebersichtsplan Werkleitungen3"): Die Zeile stand danach ohne
+            // Seitenzahl und ohne Einzug da. Solche Eintraege liegen in alten
+            // Dossiers weiterhin gespeichert und muessen wirkungslos bleiben.
+            if (DossierTocStyle.IsEntry(
+                    absatz.ParagraphProperties?.ParagraphStyleId?.Val?.Value))
+            {
+                continue;
+            }
 
             var stuecke = absatz.Descendants<Text>().ToList();
             if (stuecke.Count == 0)
