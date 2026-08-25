@@ -53,16 +53,19 @@ public partial class DossierPreviewWindow
             // Jede Zeile hat ihre eigene Marke, damit im Blatt genau sie
             // aufblinkt und nicht die ganze Tabelle.
             wirt.Children.Add(BaueThemenKarte(
-                themen[i], feld.Key + "#" + i, ausGebiet.Contains(themen[i].Title), wirt, feld));
+                themen[i], i, ausGebiet.Contains(themen[i].Title), wirt, feld));
         }
 
         wirt.Children.Add(BaueNeuesThema(wirt, feld));
     }
 
     private UIElement BaueThemenKarte(
-        DossierTopicRow thema, string marke, bool vomGebiet, Panel wirt, DossierPreviewField feld)
+        DossierTopicRow thema, int rowIndex, bool vomGebiet, Panel wirt, DossierPreviewField feld)
     {
         var titel = thema.Title;
+        var rowTarget = DossierPreviewTarget.Row(feld.Key, rowIndex);
+        var titleTarget = DossierPreviewTarget.RowCell(feld.Key, rowIndex, "Thema");
+        var textTarget = DossierPreviewTarget.RowCell(feld.Key, rowIndex, "Text");
         var inhalt = new StackPanel();
 
         var karte = new Border
@@ -105,16 +108,24 @@ public partial class DossierPreviewWindow
 
         var box = DossierTopicRichTextEditor.Create(thema);
 
-        box.GotKeyboardFocus += (_, _) => Betone(marke);
+        box.GotKeyboardFocus += (_, _) => Betone(textTarget);
 
         box.TextChanged += (_, _) =>
         {
+            if (_geladeneFormatfelder.Contains(box))
+                return;
+
             SpeichereFormatiertenText(titel, box);
             ZeichneBlatt();
         };
 
         inhalt.Children.Add(box);
-        inhalt.Children.Add(BaueThemenLeiste(titel, marke, box, vomGebiet, wirt, feld));
+        inhalt.Children.Add(BaueThemenLeiste(
+            titel, textTarget, box, vomGebiet, wirt, feld));
+
+        MerkeStelle(rowTarget, karte);
+        MerkeStelle(titleTarget, box);
+        MerkeStelle(textTarget, box);
 
         return karte;
     }
@@ -125,7 +136,7 @@ public partial class DossierPreviewWindow
     /// </summary>
     private UIElement BaueThemenLeiste(
         string titel,
-        string marke,
+        DossierPreviewTarget textTarget,
         RichTextBox box,
         bool vomGebiet,
         Panel wirt,
@@ -136,17 +147,17 @@ public partial class DossierPreviewWindow
         {
             SpeichereFormatiertenText(titel, box);
             ZeichneBlatt();
-            Betone(marke);
+            Betone(textTarget);
         }));
 
         var aktionen = new WrapPanel();
         wurzel.Children.Add(aktionen);
 
-        if (DossierTopicEditing.IncludesComponentsAutomatically(titel))
+        if (DossierTopicEditing.SupportsComponentListImport(titel))
         {
             var hinweis = new TextBlock
             {
-                Text = "Die Liste wird automatisch nummeriert: zuerst alle Haltungen, danach alle Schächte.",
+                Text = "Kopiert die aktuelle Liste hierher: zuerst alle Haltungen, danach alle Schächte. Die Kopie kann anschliessend frei bearbeitet werden.",
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 11,
                 Margin = new Thickness(0, 3, 0, 5)
@@ -154,19 +165,23 @@ public partial class DossierPreviewWindow
             hinweis.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
             wurzel.Children.Add(hinweis);
 
-            aktionen.Children.Add(Kleiner("Liste hier",
-                "Setzt nur die Position der automatischen Liste; ohne Marke steht sie nach dem eigenen Text",
-                () => Einfuegen(box, marke, DossierTopicComponentListComposer.Placeholder)));
+            var import = Kleiner("Import aus Liste",
+                "Ersetzt dieses Feld durch eine bearbeitbare Kopie der aktuellen Haltungen und Schächte. Die Projektdaten bleiben unverändert.",
+                () => ImportiereBauteilliste(titel, box, textTarget));
+
+            import.IsEnabled = !string.IsNullOrWhiteSpace(
+                DossierTopicComponentListComposer.ComponentText(_values));
+            aktionen.Children.Add(import);
         }
         else if (DossierTopicEditing.SupportsHoldingInsert(titel))
         {
             aktionen.Children.Add(Kleiner("+ Leitungen",
                 "Setzt die betroffenen Leitungen an der Schreibmarke ein",
-                () => Einfuegen(box, marke, "{{Haltungen_Text}}")));
+                () => Einfuegen(box, textTarget, "{{Haltungen_Text}}")));
 
             aktionen.Children.Add(Kleiner("+ Schächte",
                 "Setzt die zugehörigen Schächte an der Schreibmarke ein",
-                () => Einfuegen(box, marke, "{{Schaechte_Text}}")));
+                () => Einfuegen(box, textTarget, "{{Schaechte_Text}}")));
         }
 
         if (!vomGebiet)
@@ -180,7 +195,7 @@ public partial class DossierPreviewWindow
                     _area, _dossier, titel, wert.Text, wert.StyleRanges, string.Empty);
                 FuelleThemenEditor(wirt, feld);
                 ZeichneBlatt();
-                Betone(feld.Key);
+                Betone(DossierPreviewTarget.Field(feld.Key));
             });
 
         void ZeigeUebernehmen()
@@ -196,16 +211,40 @@ public partial class DossierPreviewWindow
     }
 
     /// <summary>
-    /// Eingefuegt wird eine MARKE, nicht die fertige Liste: sonst veraltet der
-    /// Text, sobald eine Leitung dazukommt. Im Blatt daneben steht sofort die
-    /// aufgeloeste Liste.
+    /// Der ausdrueckliche Gesamtimport ersetzt den Feldinhalt durch eine
+    /// bearbeitbare Momentaufnahme. Die getrennten Altknopfe fuer die
+    /// Kostenschaetzung duerfen weiterhin dynamische Marken einsetzen.
     /// </summary>
-    private void Einfuegen(RichTextBox box, string marke, string text)
+    private void ImportiereBauteilliste(
+        string titel,
+        RichTextBox box,
+        DossierPreviewTarget textTarget)
+    {
+        var text = DossierTopicEditing.ImportComponentListForDossier(
+            _dossier, titel, _values);
+
+        _geladeneFormatfelder.Add(box);
+        try
+        {
+            DossierTopicRichTextEditor.SetValue(box, new DossierTopicRow { Text = text });
+        }
+        finally
+        {
+            _geladeneFormatfelder.Remove(box);
+        }
+
+        ZeichneBlatt();
+        Betone(textTarget);
+        box.Focus();
+    }
+
+    private void Einfuegen(
+        RichTextBox box, DossierPreviewTarget textTarget, string text)
     {
         DossierTopicRichTextEditor.InsertAtSelection(box, text);
 
         ZeichneBlatt();
-        Betone(marke);
+        Betone(textTarget);
     }
 
     private void SpeichereFormatiertenText(string titel, RichTextBox box)

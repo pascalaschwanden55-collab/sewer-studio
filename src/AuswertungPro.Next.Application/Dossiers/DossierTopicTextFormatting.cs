@@ -16,6 +16,18 @@ namespace AuswertungPro.Next.Application.Dossiers;
 public static class DossierTopicTextFormatting
 {
     public const string StyleRangesSuffix = "__Formatbereiche";
+    private const string LiteralStylePrefix = "__Vorlagentext__:";
+
+    /// <summary>
+    /// Eindeutiger Formatschluessel fuer eine bearbeitete Beschriftung oder
+    /// Ueberschrift der Vorlage. Der Wortlaut bleibt die stabile Identitaet;
+    /// eine Seitenposition oder laufende Nummer wird nicht gespeichert.
+    /// </summary>
+    public static string LiteralStyleKey(string originalText)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(originalText);
+        return LiteralStylePrefix + originalText.Trim();
+    }
 
     public sealed record Segment(
         string Text,

@@ -32,7 +32,7 @@
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,10" TextWrapping="Wrap"
-                   Text="Links die Seiten, in der Mitte das Blatt, rechts die Felder dieser Seite. Was rechts eingegeben wird, erscheint sofort im Blatt — die bearbeitete Stelle blinkt rot auf."/>
+                   Text="Links die Seiten, in der Mitte das Blatt, rechts die Felder dieser Seite. Ein Klick auf Text im Blatt springt direkt zum passenden Feld; Änderungen erscheinen sofort in der Vorschau."/>
 
         <DockPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,0">
             <TextBlock DockPanel.Dock="Top" Text="Seiten" Margin="0,0,0,6"/>
@@ -59,7 +59,7 @@
                          Bildpunkten, so wie Word bei 100 % zeigt. -->
                     <Border x:Name="Sheet" Background="White" Margin="10"
                             PreviewMouseLeftButtonDown="OnBlattGeklickt"
-                            ToolTip="Klick auf eine ausgefüllte Stelle springt rechts zu ihrem Eingabefeld."
+                            ToolTip="Klick auf einen bearbeitbaren Text springt rechts direkt zu seinem Eingabefeld."
                             HorizontalAlignment="Center" VerticalAlignment="Top">
                         <Border.LayoutTransform>
                             <ScaleTransform x:Name="SheetZoom" ScaleX="0.85" ScaleY="0.85"/>

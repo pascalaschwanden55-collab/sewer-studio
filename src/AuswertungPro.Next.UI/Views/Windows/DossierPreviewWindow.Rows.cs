@@ -37,7 +37,7 @@ public partial class DossierPreviewWindow
         {
             var stelle = i;
             var zeile = typ.Liste[stelle]!;
-            var marke = feld.Key + "#" + stelle;
+            var rowTarget = DossierPreviewTarget.Row(feld.Key, stelle);
 
             var inhalt = new StackPanel();
 
@@ -103,7 +103,10 @@ public partial class DossierPreviewWindow
                     ? ScrollBarVisibility.Auto
                     : ScrollBarVisibility.Hidden;
 
-                box.GotKeyboardFocus += (_, _) => Betone(marke);
+                var cellTarget = DossierPreviewTarget.RowCell(
+                    feld.Key, stelle, VorschauSpaltenKey(feld.Key, spalte.StyleKey));
+
+                box.GotKeyboardFocus += (_, _) => Betone(cellTarget);
 
                 box.TextChanged += (_, _) =>
                 {
@@ -116,11 +119,14 @@ public partial class DossierPreviewWindow
                 {
                     SpeichereZeilenfeld(zeile, spalte, box);
                     ZeichneBlatt();
-                    Betone(marke);
+                    Betone(cellTarget);
                 }));
+
+                MerkeStelle(cellTarget, box);
             }
 
             wirt.Children.Add(karte);
+            MerkeStelle(rowTarget, karte);
         }
 
         var neu = Kleiner("+ Zeile", "Eine Zeile anhängen", () =>
@@ -163,6 +169,24 @@ public partial class DossierPreviewWindow
             DossierOwnerRow owner => owner.FieldStyles ??= new(),
             DossierChangeRow change => change.FieldStyles ??= new(),
             _ => throw new ArgumentException("Unbekannte Dossierzeile.", nameof(zeile))
+        };
+
+    /// <summary>
+    /// Die Spaltennamen des Editors und der Word-Wiederholzeile sind historisch
+    /// nicht ueberall gleich. Die Klickadresse verwendet die Namen der Vorlage.
+    /// </summary>
+    private static string VorschauSpaltenKey(string listKey, string styleKey)
+        => (listKey, styleKey) switch
+        {
+            ("Eigentuemer", "HouseNumber") => "Haus_Nr",
+            ("Eigentuemer", "ParcelNumber") => "Pz_Nr",
+            ("Eigentuemer", "Name") => "Eigentuemer_Zelle",
+            ("Eigentuemer", "Phone") => "Telefon",
+            ("Eigentuemer", "Mail") => "Mail",
+            ("Eigentuemer", "Occupancy") => "Objektbewohner",
+            ("Aenderungen", "Date") => "Datum",
+            ("Aenderungen", "Change") => "Aenderung",
+            _ => styleKey
         };
 
     private void Verschiebe(

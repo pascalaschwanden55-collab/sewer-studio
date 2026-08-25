@@ -43,7 +43,7 @@ public partial class DossierPreviewWindow : Window
 
     private Dictionary<string, string> _values = new(StringComparer.OrdinalIgnoreCase);
     private DossierPreviewRenderResult? _render;
-    private string? _aktivesFeld;
+    private DossierPreviewTarget? _aktivesFeld;
 
     private DossierPreviewWindow(
         DossierExportRequest request,
@@ -150,12 +150,15 @@ public partial class DossierPreviewWindow : Window
             key => _values.TryGetValue(key, out var wert) ? wert : string.Empty,
             ZeilenFuer,
             DossierWordTemplateExportService.EmptyRowText,
-            urtext => _dossier.TextOverrides.TryGetValue(urtext, out var eigen) ? eigen : null);
+            urtext => _dossier.TextOverrides.TryGetValue(urtext, out var eigen) ? eigen : null,
+            urtext => Feldformat(
+                DossierTopicTextFormatting.LiteralStyleKey(urtext),
+                _dossier.TextOverrides.TryGetValue(urtext, out var eigen) ? eigen : urtext));
 
         Sheet.Child = _render.Root;
 
         if (_aktivesFeld is not null)
-            Hervorheben(_aktivesFeld, blinken: false);
+            Hervorheben(_aktivesFeld.Value, blinken: false);
     }
 
     private IReadOnlyList<IReadOnlyDictionary<string, string>> ZeilenFuer(string key) => key switch
@@ -182,19 +185,26 @@ public partial class DossierPreviewWindow : Window
         if (_render is null || e.OriginalSource is not DependencyObject quelle)
             return;
 
-        var rahmenZuSchluessel = new Dictionary<Border, string>();
-        foreach (var (key, rahmen) in _render.Frames)
+        var rahmenZuZielen = new Dictionary<Border, List<DossierPreviewTarget>>();
+        foreach (var (target, rahmen) in _render.Frames)
         {
             foreach (var einzeln in rahmen)
-                rahmenZuSchluessel.TryAdd(einzeln, key);
+            {
+                if (!rahmenZuZielen.TryGetValue(einzeln, out var ziele))
+                    rahmenZuZielen[einzeln] = ziele = new List<DossierPreviewTarget>();
+
+                ziele.Add(target);
+            }
         }
 
         var aktuell = quelle;
         while (aktuell is not null)
         {
             if (aktuell is Border rahmen
-                && rahmenZuSchluessel.TryGetValue(rahmen, out var key)
-                && SpringeZuFeld(key))
+                && rahmenZuZielen.TryGetValue(rahmen, out var ziele)
+                && DossierPreviewTarget.SelectMostSpecific(
+                    ziele, _feldStellen.ContainsKey) is { } target
+                && SpringeZuFeld(target))
             {
                 e.Handled = true;
                 return;
@@ -208,7 +218,7 @@ public partial class DossierPreviewWindow : Window
     /// Laesst die Stelle im Blatt aufblinken und haelt sie danach dezent
     /// umrandet, solange das Feld bearbeitet wird.
     /// </summary>
-    private void Hervorheben(string key, bool blinken)
+    private void Hervorheben(DossierPreviewTarget target, bool blinken)
     {
         if (_render is null)
             return;
@@ -224,7 +234,7 @@ public partial class DossierPreviewWindow : Window
             rahmen.Background = Brushes.Transparent;
         }
 
-        if (!_render.Frames.TryGetValue(key, out var stellen))
+        if (!_render.Frames.TryGetValue(target, out var stellen))
             return;
 
         foreach (var rahmen in stellen)

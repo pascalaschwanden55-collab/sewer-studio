@@ -183,11 +183,32 @@ public static class DossierTopicEditing
         => DossierTopicTitles.Matches(DossierTopicTitles.WithComponentButton, title);
 
     /// <summary>
-    /// In diesen Themen werden alle Haltungen und danach alle Schaechte ohne
-    /// einen manuellen Einfuegeschritt ausgegeben.
+    /// In diesen Themen kann die aktuelle Liste aus Haltungen und Schaechten
+    /// als frei bearbeitbare Kopie importiert werden.
     /// </summary>
-    public static bool IncludesComponentsAutomatically(string? title)
-        => DossierTopicComponentListComposer.IsAutomaticTitle(title);
+    public static bool SupportsComponentListImport(string? title)
+        => DossierTopicComponentListComposer.IsComponentImportTitle(title);
+
+    /// <summary>
+    /// Kopiert die aktuelle Liste in genau dieses Dossier. Die Haltungs- und
+    /// Schachtauswahl selbst wird weder gelesen noch veraendert; der Aufrufer
+    /// liefert bereits den aus seinem unveraenderlichen Snapshot gebauten Text.
+    /// </summary>
+    public static string ImportComponentListForDossier(
+        DossierDefinition dossier,
+        string title,
+        IReadOnlyDictionary<string, string> values)
+    {
+        ArgumentNullException.ThrowIfNull(dossier);
+        ArgumentNullException.ThrowIfNull(values);
+
+        if (!SupportsComponentListImport(title))
+            return string.Empty;
+
+        var text = DossierTopicComponentListComposer.ComponentText(values);
+        SetFormattedForDossier(dossier, title, text, Array.Empty<DossierTextStyleRange>());
+        return text;
+    }
 
     /// <summary>Wahr, wenn dieses Dossier fuer den Titel etwas Eigenes fuehrt.</summary>
     public static bool HasDossierOverride(DossierDefinition dossier, string title)

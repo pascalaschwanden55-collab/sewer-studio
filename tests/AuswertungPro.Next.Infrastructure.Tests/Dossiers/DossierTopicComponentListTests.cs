@@ -19,29 +19,59 @@ public sealed class DossierTopicComponentListTests
     [InlineData("Sanierungskonzept Parzelle 30", true)]
     [InlineData("Kostenschätzung", false)]
     [InlineData("Ausgangslage", false)]
-    public void Nur_Schaeden_und_Sanierungskonzept_erhalten_die_Liste_automatisch(
+    public void Nur_Schaeden_und_Sanierungskonzept_erhalten_den_Listenimport(
         string titel,
         bool erwartet)
-        => Assert.Equal(erwartet, DossierTopicEditing.IncludesComponentsAutomatically(titel));
+        => Assert.Equal(erwartet, DossierTopicEditing.SupportsComponentListImport(titel));
 
     [Fact]
-    public void Haltungen_stehen_vor_Schaechten_und_werden_durchgehend_nummeriert()
+    public void Ohne_Import_bleibt_der_Thementext_frei_von_der_Bauteilliste()
     {
         var (area, dossier, values) = BuildScenario();
 
         var rows = DossierWordTemplateExportService.BuildTopicRows(area, dossier, values);
 
         Assert.Equal(2, rows.Count);
-        foreach (var row in rows)
-        {
-            var text = row["Text"];
-            Assert.Contains("1. Haltung H-1", text, StringComparison.Ordinal);
-            Assert.Contains("2. Haltung H-2", text, StringComparison.Ordinal);
-            Assert.Contains("3. Schacht S-1", text, StringComparison.Ordinal);
-            Assert.Contains("4. Schacht S-2", text, StringComparison.Ordinal);
-            Assert.True(text.IndexOf("1. Haltung H-1", StringComparison.Ordinal)
-                < text.IndexOf("3. Schacht S-1", StringComparison.Ordinal));
-        }
+        Assert.DoesNotContain("H-1", rows[0]["Text"], StringComparison.Ordinal);
+        Assert.DoesNotContain("S-1", rows[0]["Text"], StringComparison.Ordinal);
+        Assert.DoesNotContain("H-1", rows[1]["Text"], StringComparison.Ordinal);
+        Assert.DoesNotContain("S-1", rows[1]["Text"], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Import_kopiert_Haltungen_vor_Schaechten_als_frei_bearbeitbaren_Text()
+    {
+        var (area, dossier, values) = BuildScenario();
+
+        var imported = DossierTopicEditing.ImportComponentListForDossier(
+            dossier, DossierTopicTitles.Schaeden, values);
+
+        Assert.Contains("1. Haltung H-1", imported, StringComparison.Ordinal);
+        Assert.Contains("2. Haltung H-2", imported, StringComparison.Ordinal);
+        Assert.Contains("3. Schacht S-1", imported, StringComparison.Ordinal);
+        Assert.Contains("4. Schacht S-2", imported, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{", imported, StringComparison.Ordinal);
+
+        var row = DossierWordTemplateExportService.BuildTopicRows(area, dossier, values)[0];
+        Assert.Equal(imported, row["Text"]);
+        Assert.Equal(2, dossier.HoldingIds.Count);
+        Assert.Equal(2, dossier.ShaftNumbers.Count);
+    }
+
+    [Fact]
+    public void Loeschen_im_importierten_Text_loescht_keine_Haltung_und_keinen_Schacht()
+    {
+        var (area, dossier, values) = BuildScenario();
+        DossierTopicEditing.ImportComponentListForDossier(
+            dossier, DossierTopicTitles.Schaeden, values);
+
+        DossierTopicEditing.SetForDossier(
+            dossier, DossierTopicTitles.Schaeden, "Nur noch meine eigene Bemerkung");
+
+        var row = DossierWordTemplateExportService.BuildTopicRows(area, dossier, values)[0];
+        Assert.Equal("Nur noch meine eigene Bemerkung", row["Text"]);
+        Assert.Equal(2, dossier.HoldingIds.Count);
+        Assert.Equal(2, dossier.ShaftNumbers.Count);
     }
 
     [Fact]
@@ -64,7 +94,7 @@ public sealed class DossierTopicComponentListTests
     }
 
     [Fact]
-    public void Eigener_Text_behaelt_seine_Formatierung_vor_der_automatischen_Liste()
+    public void Eigener_Text_bleibt_ohne_Import_unveraendert_formatiert()
     {
         var (area, dossier, values) = BuildScenario();
         dossier.Topics.Add(new DossierTopicRow
@@ -87,12 +117,14 @@ public sealed class DossierTopicComponentListTests
         var ranges = DossierTopicTextFormatting.Decode(
             row["Text" + DossierTopicTextFormatting.StyleRangesSuffix]);
 
-        Assert.StartsWith("Dringend\n1. Haltung H-1", row["Text"], StringComparison.Ordinal);
+        Assert.Equal("Dringend", row["Text"]);
         var range = Assert.Single(ranges);
         Assert.Equal(0, range.Start);
         Assert.Equal(8, range.Length);
         Assert.Equal("C00000", range.ColorHex);
         Assert.True(range.Bold);
+        Assert.Equal(2, dossier.HoldingIds.Count);
+        Assert.Equal(2, dossier.ShaftNumbers.Count);
     }
 
     [Fact]

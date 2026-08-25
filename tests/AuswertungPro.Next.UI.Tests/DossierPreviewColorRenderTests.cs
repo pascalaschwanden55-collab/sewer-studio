@@ -187,6 +187,48 @@ public sealed class DossierPreviewColorRenderTests
         });
     }
 
+    [Fact]
+    public void Bearbeitete_Ueberschrift_zeigt_ihre_Formatierung_auch_in_der_Vorschau()
+    {
+        var paragraph = new DossierPreviewParagraph(
+            new[] { DossierPreviewRun.Literal("Informationen", Format()) },
+            DossierPreviewParagraphFormat.Default);
+        var page = new DossierPreviewPage(
+            1,
+            "Informationen",
+            new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.All(76)),
+            new DossierPreviewBlock[] { paragraph },
+            Array.Empty<string>());
+        var styles = new[]
+        {
+            new DossierTextStyleRange
+            {
+                Start = 0,
+                Length = 3,
+                ColorHex = "C00000",
+                Bold = true
+            }
+        };
+
+        RunOnSta(() =>
+        {
+            var render = DossierPreviewPageRenderer.Render(
+                page,
+                _ => string.Empty,
+                _ => Array.Empty<IReadOnlyDictionary<string, string>>(),
+                _ => string.Empty,
+                _ => "Neu beschriftet",
+                _ => styles);
+
+            var run = AlleRuns(render.Root).First(r => r.Text == "Neu");
+            Assert.Equal("Arial", run.FontFamily.Source);
+            Assert.Equal(FontWeights.Bold, run.FontWeight);
+            Assert.Equal(
+                Color.FromRgb(0xC0, 0x00, 0x00),
+                Assert.IsType<SolidColorBrush>(run.Foreground).Color);
+        });
+    }
+
     private static void RunOnSta(Action action)
     {
         Exception? fehler = null;

@@ -13,7 +13,9 @@ using AuswertungPro.Next.Domain.Models.Dossiers;
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 /// <summary>
-/// Die festen Texte der Word-Vorlage: eigene Fassungen und Weglassen.
+/// Die Beschriftungen und Ueberschriften der Word-Vorlage: eigene Fassungen
+/// und Weglassen. In der Oberflaeche heissen sie bewusst nicht "fest", denn
+/// der Benutzer kann jeden dieser Texte aendern.
 /// </summary>
 public partial class DossierPreviewWindow
 {
@@ -47,19 +49,57 @@ public partial class DossierPreviewWindow
                 Margin = new Thickness(0, 0, 0, 3)
             });
 
-            var box = new TextBox
+            var text = _dossier.TextOverrides.TryGetValue(schluessel, out var eigen)
+                ? eigen
+                : schluessel;
+            var styleKey = DossierTopicTextFormatting.LiteralStyleKey(schluessel);
+            var target = DossierPreviewTarget.Literal(schluessel);
+            var box = DossierTopicRichTextEditor.Create(new DossierTopicRow
             {
-                Text = _dossier.TextOverrides.TryGetValue(schluessel, out var eigen)
-                    ? eigen
-                    : schluessel,
-                TextWrapping = TextWrapping.Wrap
-            };
+                Text = text,
+                StyleRanges = Feldformat(styleKey, text)
+            });
+            box.AcceptsReturn = true;
+            box.MinHeight = 40;
 
-            var zurueck = Kleiner("Text der Vorlage", "Die eigene Fassung verwerfen", () =>
+            box.GotKeyboardFocus += (_, _) => Betone(target);
+
+            void Speichere()
+            {
+                var value = DossierTopicRichTextEditor.Read(box);
+                if (string.Equals(value.Text, schluessel, StringComparison.Ordinal)
+                    && value.StyleRanges.Count == 0)
+                    _dossier.TextOverrides.Remove(schluessel);
+                else
+                    _dossier.TextOverrides[schluessel] = value.Text;
+
+                _dossier.FieldStyles ??= new();
+                if (value.StyleRanges.Count == 0)
+                    _dossier.FieldStyles.Remove(styleKey);
+                else
+                    _dossier.FieldStyles[styleKey] = value.StyleRanges.ToList();
+            }
+
+            Button zurueck = null!;
+            zurueck = Kleiner("Text der Vorlage", "Die eigene Fassung verwerfen", () =>
             {
                 _dossier.TextOverrides.Remove(schluessel);
-                box.Text = schluessel;
+                _dossier.FieldStyles?.Remove(styleKey);
+
+                _geladeneFormatfelder.Add(box);
+                try
+                {
+                    DossierTopicRichTextEditor.SetValue(
+                        box, new DossierTopicRow { Text = schluessel });
+                }
+                finally
+                {
+                    _geladeneFormatfelder.Remove(box);
+                }
+
                 ZeichneBlatt();
+                Betone(target);
+                ZeigeRueckweg();
             });
 
             zurueck.Margin = new Thickness(0, 4, 0, 0);
@@ -67,16 +107,16 @@ public partial class DossierPreviewWindow
 
             void ZeigeRueckweg()
                 => zurueck.Visibility = _dossier.TextOverrides.ContainsKey(schluessel)
+                    || _dossier.FieldStyles?.ContainsKey(styleKey) == true
                     ? Visibility.Visible
                     : Visibility.Collapsed;
 
             box.TextChanged += (_, _) =>
             {
-                if (string.Equals(box.Text, schluessel, StringComparison.Ordinal))
-                    _dossier.TextOverrides.Remove(schluessel);
-                else
-                    _dossier.TextOverrides[schluessel] = box.Text;
+                if (_geladeneFormatfelder.Contains(box))
+                    return;
 
+                Speichere();
                 ZeigeRueckweg();
                 ZeichneBlatt();
             };
@@ -84,11 +124,17 @@ public partial class DossierPreviewWindow
             ZeigeRueckweg();
 
             karte.Children.Add(box);
+            karte.Children.Add(DossierTextFormattingToolbar.Create(box, () =>
+            {
+                Speichere();
+                ZeichneBlatt();
+                Betone(target);
+            }));
             karte.Children.Add(zurueck);
             block.Children.Add(karte);
 
             // Unter dem Wortlaut: genau so merkt sich das Blatt seine Absaetze.
-            MerkeStelle(schluessel, karte);
+            MerkeStelle(target, box);
         }
 
         return block;

@@ -6,9 +6,9 @@ using AuswertungPro.Next.Domain.Models.Dossiers;
 namespace AuswertungPro.Next.Application.Dossiers;
 
 /// <summary>
-/// Fuegt die zum Dossier gehoerenden Bauteile in die beiden fachlich passenden
-/// Themen ein. Die Reihenfolge und Nummerierung kommen aus einem gemeinsamen
-/// Wert, damit Vorschau und Word nie auseinanderlaufen.
+/// Loest alte Bauteilmarken in Themen auf. Neue Dossiers erhalten die Liste
+/// nur noch durch den ausdruecklichen Import im Editor. Danach liegt sie als
+/// normaler, frei bearbeitbarer Text im Dossier.
 /// </summary>
 public static class DossierTopicComponentListComposer
 {
@@ -23,8 +23,14 @@ public static class DossierTopicComponentListComposer
         "Schaechte_Text"
     };
 
-    public static bool IsAutomaticTitle(string? title)
-        => DossierTopicTitles.Matches(DossierTopicTitles.WithAutomaticComponents, title);
+    public static bool IsComponentImportTitle(string? title)
+        => DossierTopicTitles.Matches(DossierTopicTitles.WithComponentImport, title);
+
+    public static string ComponentText(IReadOnlyDictionary<string, string> values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        return values.TryGetValue(ValueKey, out var text) ? text ?? string.Empty : string.Empty;
+    }
 
     public static DossierTopicTextFormatting.FormattedText Compose(
         DossierTopicRow topic,
@@ -34,7 +40,7 @@ public static class DossierTopicComponentListComposer
         ArgumentNullException.ThrowIfNull(values);
 
         var ranges = DossierTopicTextFormatting.EffectiveRanges(topic);
-        if (!IsAutomaticTitle(topic.Title))
+        if (!IsComponentImportTitle(topic.Title))
             return DossierTopicTextFormatting.ReplacePlaceholders(topic.Text, values, ranges);
 
         values.TryGetValue(ValueKey, out var componentList);
@@ -60,13 +66,7 @@ public static class DossierTopicComponentListComposer
         var text = formatted.Text.TrimEnd();
         var styles = DossierTopicTextFormatting.Normalize(text, formatted.StyleRanges);
 
-        if (firstMarkerKey is not null || componentList.Length == 0)
-            return new DossierTopicTextFormatting.FormattedText(text, styles);
-
-        var separator = text.Length == 0 ? string.Empty : "\n";
-        return new DossierTopicTextFormatting.FormattedText(
-            text + separator + componentList,
-            styles);
+        return new DossierTopicTextFormatting.FormattedText(text, styles);
     }
 
     private static string? FindFirstComponentMarkerKey(string? text)

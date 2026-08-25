@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -22,8 +23,8 @@ public sealed class DossierPreviewRenderResult
 {
     public required FrameworkElement Root { get; init; }
 
-    /// <summary>Rahmen je Platzhalter — ein Feld kann mehrfach vorkommen.</summary>
-    public required IReadOnlyDictionary<string, IReadOnlyList<Border>> Frames { get; init; }
+    /// <summary>Rahmen je fachlicher Zieladresse — ein Feld kann mehrfach vorkommen.</summary>
+    public required IReadOnlyDictionary<DossierPreviewTarget, IReadOnlyList<Border>> Frames { get; init; }
 }
 
 /// <summary>Der Rand eines Rahmens vor jeder Hervorhebung.</summary>
@@ -48,6 +49,8 @@ public static class DossierPreviewPageRenderer
     /// Alternative waeren acht zusaetzliche Parameter.
     /// </summary>
     private static Func<string, string?>? LiteralErsatz;
+    private static Func<string, IReadOnlyList<AuswertungPro.Next.Domain.Models.Dossiers.DossierTextStyleRange>>?
+        LiteralFormate;
 
     private static readonly SolidColorBrush Papier = Fest(Color.FromRgb(0xFF, 0xFF, 0xFF));
     private static readonly SolidColorBrush Tinte = Fest(Color.FromRgb(0x00, 0x00, 0x00));
@@ -68,24 +71,28 @@ public static class DossierPreviewPageRenderer
         Func<string, string> value,
         Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rows,
         Func<string, string> emptyRowText,
-        Func<string, string?>? literal = null)
+        Func<string, string?>? literal = null,
+        Func<string, IReadOnlyList<AuswertungPro.Next.Domain.Models.Dossiers.DossierTextStyleRange>>?
+            literalStyles = null)
     {
         LiteralErsatz = literal;
+        LiteralFormate = literalStyles;
         ArgumentNullException.ThrowIfNull(page);
         ArgumentNullException.ThrowIfNull(value);
         ArgumentNullException.ThrowIfNull(rows);
         ArgumentNullException.ThrowIfNull(emptyRowText);
 
-        var rahmen = new Dictionary<string, List<Border>>(StringComparer.Ordinal);
+        var rahmen = new Dictionary<DossierPreviewTarget, List<Border>>();
 
-        void Merke(string key, Border border)
+        void Merke(DossierPreviewTarget target, Border border)
         {
-            if (!rahmen.TryGetValue(key, out var liste))
-                rahmen[key] = liste = new List<Border>();
+            if (!rahmen.TryGetValue(target, out var liste))
+                rahmen[target] = liste = new List<Border>();
 
             // Der urspruengliche Rand wird mitgegeben. Ohne ihn wuerde das
             // Zuruecksetzen der Hervorhebung die Linien der Tabelle mitloeschen.
             border.Tag = new DossierPreviewFrameOrigin(border.BorderBrush, border.BorderThickness);
+            border.Cursor = Cursors.Hand;
             liste.Add(border);
         }
 
@@ -124,7 +131,7 @@ public static class DossierPreviewPageRenderer
         {
             Root = blatt,
             Frames = rahmen.ToDictionary(
-                p => p.Key, p => (IReadOnlyList<Border>)p.Value, StringComparer.Ordinal)
+                p => p.Key, p => (IReadOnlyList<Border>)p.Value)
         };
     }
 
@@ -133,7 +140,7 @@ public static class DossierPreviewPageRenderer
         Func<string, string> value,
         Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rows,
         Func<string, string> emptyRowText,
-        Action<string, Border> merke,
+        Action<DossierPreviewTarget, Border> merke,
         double randLinks = 0)
         => block switch
         {
@@ -157,7 +164,7 @@ public static class DossierPreviewPageRenderer
         Func<string, string> value,
         Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rows,
         Func<string, string> emptyRowText,
-        Action<string, Border> merke,
+        Action<DossierPreviewTarget, Border> merke,
         double randLinks)
     {
         var text = ZeichneAbsatz(absatz, value, merke);
@@ -193,7 +200,7 @@ public static class DossierPreviewPageRenderer
         Func<string, string> value,
         Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rows,
         Func<string, string> emptyRowText,
-        Action<string, Border> merke)
+        Action<DossierPreviewTarget, Border> merke)
     {
         var inhalt = new StackPanel();
         foreach (var block in kasten.Blocks)
@@ -215,7 +222,7 @@ public static class DossierPreviewPageRenderer
     private static Border ZeichneAbsatz(
         DossierPreviewParagraph absatz,
         Func<string, string> value,
-        Action<string, Border> merke)
+        Action<DossierPreviewTarget, Border> merke)
     {
         var erster = absatz.Runs.FirstOrDefault()?.Format ?? DossierPreviewRunFormat.Default;
         var schrift = new FontFamily("Arial");
@@ -252,18 +259,31 @@ public static class DossierPreviewPageRenderer
 
             if (ersatz is not null)
             {
-                var eigenes = new Run(ersatz)
+                var bereiche = DossierTopicTextFormatting.Normalize(
+                    ersatz, LiteralFormate?.Invoke(urtext));
+
+                foreach (var segment in DossierTopicTextFormatting.Split(ersatz, bereiche))
                 {
-                    FontFamily = new FontFamily("Arial"),
-                    FontSize = erster.FontSizePx,
-                    FontWeight = erster.Bold ? FontWeights.Bold : FontWeights.Normal,
-                    FontStyle = erster.Italic ? FontStyles.Italic : FontStyles.Normal,
-                    Foreground = Pinsel(erster.ColorHex) ?? Tinte
-                };
+                    var eigenes = new Run(segment.Text)
+                    {
+                        FontFamily = new FontFamily("Arial"),
+                        FontSize = erster.FontSizePx,
+                        FontWeight = segment.Bold || bereiche.Count == 0 && erster.Bold
+                            ? FontWeights.Bold
+                            : FontWeights.Normal,
+                        FontStyle = segment.Italic || bereiche.Count == 0 && erster.Italic
+                            ? FontStyles.Italic
+                            : FontStyles.Normal,
+                        Foreground = Pinsel(segment.ColorHex ?? erster.ColorHex) ?? Tinte
+                    };
 
-                text.Inlines.Add(eigenes);
+                    if (segment.Underline || bereiche.Count == 0 && erster.Underline)
+                        eigenes.TextDecorations = TextDecorations.Underline;
 
-                return new Border
+                    text.Inlines.Add(eigenes);
+                }
+
+                var eigenerRahmen = new Border
                 {
                     Child = text,
                     Background = ersatz.Trim().Length == 0 ? Luecke : Brushes.Transparent,
@@ -273,6 +293,9 @@ public static class DossierPreviewPageRenderer
                         absatz.Format.Indent.Right,
                         absatz.Format.SpaceAfterPx)
                 };
+
+                merke(DossierPreviewTarget.Literal(urtext), eigenerRahmen);
+                return eigenerRahmen;
             }
         }
 
@@ -361,7 +384,7 @@ public static class DossierPreviewPageRenderer
         };
 
         foreach (var run in absatz.Runs.Where(r => r.IsField))
-            merke(run.FieldKey!, rahmen);
+            merke(DossierPreviewTarget.Field(run.FieldKey!), rahmen);
 
         // Auch reiner Text wird gemerkt — unter seinem eigenen Wortlaut. Nur so
         // findet ein Klick ins Blatt auch das Eingabefeld eines festen Textes.
@@ -371,7 +394,7 @@ public static class DossierPreviewPageRenderer
         {
             var wortlaut = string.Concat(absatz.Runs.Select(r => r.Text)).Trim();
             if (wortlaut.Length > 0)
-                merke(wortlaut, rahmen);
+                merke(DossierPreviewTarget.Literal(wortlaut), rahmen);
         }
 
         return rahmen;
@@ -413,7 +436,7 @@ public static class DossierPreviewPageRenderer
     private static FrameworkElement ZeichneBildstelle(
         DossierPreviewImage stelle,
         Func<string, string> value,
-        Action<string, Border> merke)
+        Action<DossierPreviewTarget, Border> merke)
     {
         var pfad = value(stelle.FieldKey);
 
@@ -463,7 +486,7 @@ public static class DossierPreviewPageRenderer
             rahmen.Child = new Image { Source = bild, Stretch = Stretch.Fill };
         }
 
-        merke(stelle.FieldKey, rahmen);
+        merke(DossierPreviewTarget.Field(stelle.FieldKey), rahmen);
         return rahmen;
     }
 
@@ -495,7 +518,7 @@ public static class DossierPreviewPageRenderer
         Func<string, string> value,
         Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rows,
         Func<string, string> emptyRowText,
-        Action<string, Border> merke)
+        Action<DossierPreviewTarget, Border> merke)
     {
         var raster = new Grid
         {
@@ -517,7 +540,7 @@ public static class DossierPreviewPageRenderer
             string? feldKey,
             Func<int, string?>? farben = null,
             Func<int, string?>? formatbereiche = null,
-            string? zeilenKey = null)
+            int? rowIndex = null)
         {
             raster.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
@@ -525,9 +548,25 @@ public static class DossierPreviewPageRenderer
             for (var i = 0; i < satz.Cells.Count && spalte < raster.ColumnDefinitions.Count; i++)
             {
                 var zelle = satz.Cells[i];
+                var repeatCellKey = i < tabelle.RepeatCellKeys.Count
+                    ? tabelle.RepeatCellKeys[i]
+                    : string.Empty;
+
                 var element = ZeichneZelle(
-                    zelle, value, ueberschreiben(i), feldKey, merke,
-                    farben?.Invoke(i), formatbereiche?.Invoke(i), zeilenKey);
+                    zelle,
+                    value,
+                    ueberschreiben(i),
+                    feldKey is null ? null : DossierPreviewTarget.Field(feldKey),
+                    merke,
+                    farben?.Invoke(i),
+                    formatbereiche?.Invoke(i),
+                    feldKey is not null && rowIndex is not null
+                        ? DossierPreviewTarget.Row(feldKey, rowIndex.Value)
+                        : null,
+                    feldKey is not null && rowIndex is not null && repeatCellKey.Length > 0
+                        ? DossierPreviewTarget.RowCell(
+                            feldKey, rowIndex.Value, repeatCellKey)
+                        : null);
 
                 Grid.SetRow(element, zeile);
                 Grid.SetColumn(element, spalte);
@@ -598,7 +637,7 @@ public static class DossierPreviewPageRenderer
                                 ? format
                                 : null;
                     },
-                    tabelle.RepeatKey + "#" + zeilennummer);
+                    zeilennummer);
             }
         }
 
@@ -624,11 +663,12 @@ public static class DossierPreviewPageRenderer
         DossierPreviewTableCell zelle,
         Func<string, string> value,
         string? ersatztext,
-        string? feldKey,
-        Action<string, Border> merke,
+        DossierPreviewTarget? fieldTarget,
+        Action<DossierPreviewTarget, Border> merke,
         string? farbe = null,
         string? formatbereiche = null,
-        string? zeilenKey = null)
+        DossierPreviewTarget? rowTarget = null,
+        DossierPreviewTarget? cellTarget = null)
     {
         var inhalt = new StackPanel();
 
@@ -692,13 +732,19 @@ public static class DossierPreviewPageRenderer
             Background = Pinsel(zelle.ShadingHex) ?? Brushes.Transparent
         };
 
-        if (feldKey is not null)
-            merke(feldKey, rahmen);
+        if (fieldTarget is not null)
+            merke(fieldTarget.Value, rahmen);
 
         // Zusaetzlich unter der Marke DIESER Zeile. Sonst blinkte beim Tippen
         // in einem Thema die ganze Tabelle auf statt der bearbeiteten Zeile.
-        if (zeilenKey is not null)
-            merke(zeilenKey, rahmen);
+        if (rowTarget is not null)
+            merke(rowTarget.Value, rahmen);
+
+        // Die Zelle ist das genaueste Ziel. Ein Klick auf den Text einer
+        // Themen-, Eigentuemer- oder Aenderungszeile landet dadurch direkt im
+        // passenden Eingabefeld statt nur im Abschnitt der ganzen Tabelle.
+        if (cellTarget is not null)
+            merke(cellTarget.Value, rahmen);
 
         return rahmen;
     }

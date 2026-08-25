@@ -49,10 +49,17 @@
   `DossierDefinition.FieldStyles`; das alte `ColorHex` bleibt fuer bestehende Projekte lesbar.
 - `DossierTopicTextFormatting` ist die WPF-freie Bereichs-, Platzhalter- und
   Serialisierungsregel. Vorschau und Word-Export muessen dieselben Bereiche verwenden.
-- `DossierTopicComponentListComposer` fuegt in `Schäden` und `Sanierungskonzept`
-  automatisch dieselbe fortlaufend nummerierte Bauteilliste ein: zuerst alle
-  Dossier-Haltungen, danach alle Dossier-Schächte. Alte getrennte Listenmarken bleiben
-  als Position und Formatierung lesbar, erzeugen aber keine Doppelungen.
+- `DossierPreviewTarget` adressiert anklickbare Vorschautexte fachlich ueber Feld,
+  Zeile und Spalte statt ueber feste Pixelpositionen. Die genaueste vorhandene Adresse
+  fuehrt direkt zum passenden Editor; auch geaenderte Vorlagentexte bleiben anklickbar.
+- In `Schäden` und `Sanierungskonzept` kopiert `Import aus Liste` die aktuelle,
+  fortlaufend nummerierte Bauteilliste als normalen Dossiertext: zuerst alle Haltungen,
+  danach alle Schächte. Diese Kopie ist frei bearbeitbar und aendert weder die Auswahl
+  noch Projektdatensaetze. `DossierTopicComponentListComposer` loest nur noch alte
+  `Bauteile_Text`-/`Haltungen_Text`-/`Schaechte_Text`-Marken kompatibel auf.
+- Bearbeitete Beschriftungen und Ueberschriften speichern ihre Zeichenformatierung unter
+  `DossierTopicTextFormatting.LiteralStyleKey(...)` ebenfalls in `FieldStyles`; Vorschau
+  und Word wenden Farbe, Fett, Kursiv und Unterstrichen gleich an.
 - Dossiertext wird in Vorschau und Word direkt als Arial ausgegeben. Schriftgroessen,
   Absatzabstaende und Tabellenmasse stammen weiterhin unveraendert aus der Vorlage.
 - Der Uebersichtsplan wird in das feste Seitenverhaeltnis der Referenzflaeche

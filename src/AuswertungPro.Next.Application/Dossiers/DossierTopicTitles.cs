@@ -15,9 +15,9 @@ namespace AuswertungPro.Next.Application.Dossiers;
 /// <item><see cref="WithComponentButton"/> — hier bietet der Editor den Knopf
 /// zum Einfuegen an. Auch bei der Kostenschaetzung, wo man die Liste von Hand
 /// setzen darf.</item>
-/// <item><see cref="WithAutomaticComponents"/> — hier kommt die Liste ohne
-/// Zutun hinein. Die Kostenschaetzung gehoert NICHT dazu: dort wuerde eine
-/// ungefragte Bauteilliste zwischen den Betraegen stehen.</item>
+/// <item><see cref="WithComponentImport"/> — hier kopiert ein ausdruecklicher
+/// Importknopf die ganze Liste als frei bearbeitbaren Text. Die
+/// Kostenschaetzung gehoert nicht dazu.</item>
 /// </list>
 /// </summary>
 public static class DossierTopicTitles
@@ -30,8 +30,8 @@ public static class DossierTopicTitles
     public static readonly string[] WithComponentButton =
         [Schaeden, Sanierungskonzept, Kostenschaetzung];
 
-    /// <summary>Themen, in die die Bauteilliste automatisch kommt.</summary>
-    public static readonly string[] WithAutomaticComponents =
+    /// <summary>Themen mit ausdruecklichem Import der ganzen Bauteilliste.</summary>
+    public static readonly string[] WithComponentImport =
         [Schaeden, Sanierungskonzept];
 
     /// <summary>

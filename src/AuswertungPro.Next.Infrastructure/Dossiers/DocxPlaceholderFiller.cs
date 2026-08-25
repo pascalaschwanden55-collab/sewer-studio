@@ -228,7 +228,7 @@ public static class DocxPlaceholderFiller
     /// Schriftgroesse und Absatzabstand bleiben dabei erhalten; nur Arial,
     /// Farbe, Fett, Kursiv und Unterstreichen stammen aus der Eingabe.
     /// </summary>
-    private static void WriteBackFormatted(
+    internal static void WriteBackFormatted(
         Paragraph paragraph,
         List<Text> texts,
         string replaced,

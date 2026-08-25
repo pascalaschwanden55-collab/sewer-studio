@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.Domain.Models.Dossiers;
+
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
@@ -24,7 +27,9 @@ namespace AuswertungPro.Next.Infrastructure.Dossiers;
 public static class DocxLiteralTextReplacer
 {
     public static int Apply(
-        WordprocessingDocument document, IReadOnlyDictionary<string, string>? overrides)
+        WordprocessingDocument document,
+        IReadOnlyDictionary<string, string>? overrides,
+        IReadOnlyDictionary<string, List<DossierTextStyleRange>>? fieldStyles = null)
     {
         ArgumentNullException.ThrowIfNull(document);
 
@@ -73,11 +78,24 @@ public static class DocxLiteralTextReplacer
                 continue;
             }
 
-            stuecke[0].Text = ersatz;
-            stuecke[0].Space = SpaceProcessingModeValues.Preserve;
+            var styleKey = DossierTopicTextFormatting.LiteralStyleKey(text);
+            var ranges = fieldStyles is not null
+                && fieldStyles.TryGetValue(styleKey, out var stored)
+                    ? DossierTopicTextFormatting.Normalize(ersatz, stored)
+                    : new List<DossierTextStyleRange>();
 
-            for (var i = 1; i < stuecke.Count; i++)
-                stuecke[i].Text = string.Empty;
+            if (ranges.Count > 0)
+            {
+                DocxPlaceholderFiller.WriteBackFormatted(absatz, stuecke, ersatz, ranges);
+            }
+            else
+            {
+                stuecke[0].Text = ersatz;
+                stuecke[0].Space = SpaceProcessingModeValues.Preserve;
+
+                for (var i = 1; i < stuecke.Count; i++)
+                    stuecke[i].Text = string.Empty;
+            }
 
             geaendert++;
         }

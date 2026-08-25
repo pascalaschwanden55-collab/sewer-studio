@@ -7,6 +7,7 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
+using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.Infrastructure.Dossiers;
 
@@ -96,6 +97,45 @@ public sealed class DocxLiteralTextReplacerTests
         }
 
         Assert.Equal(new[] { "Datum: {{Datum}}" }, Lies(strom));
+    }
+
+    [Fact]
+    public void Eine_eigene_Beschriftung_uebernimmt_Farbe_und_Schriftschnitt()
+    {
+        using var strom = new MemoryStream();
+        using var document = Erzeuge(strom, "Informationen Sanierung");
+
+        DocxLiteralTextReplacer.Apply(
+            document,
+            new Dictionary<string, string>
+            {
+                ["Informationen Sanierung"] = "Informationen Baustelle"
+            },
+            new Dictionary<string, List<DossierTextStyleRange>>
+            {
+                [DossierTopicTextFormatting.LiteralStyleKey("Informationen Sanierung")] =
+                [
+                    new DossierTextStyleRange
+                    {
+                        Start = 0,
+                        Length = 13,
+                        ColorHex = "C00000",
+                        Bold = true,
+                        Italic = true,
+                        Underline = true
+                    }
+                ]
+            });
+
+        var run = document.MainDocumentPart!.Document.Body!
+            .Descendants<Run>()
+            .First(r => r.InnerText == "Informationen");
+
+        Assert.Equal("Arial", run.RunProperties!.RunFonts!.Ascii!.Value);
+        Assert.NotNull(run.RunProperties.Bold);
+        Assert.NotNull(run.RunProperties.Italic);
+        Assert.Equal(UnderlineValues.Single, run.RunProperties.Underline!.Val!.Value);
+        Assert.Equal("C00000", run.RunProperties.Color!.Val!.Value);
     }
 
     [Fact]

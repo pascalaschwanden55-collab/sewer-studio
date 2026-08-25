@@ -165,7 +165,10 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                     // Zuletzt die eigenen Fassungen fester Texte: sie greifen
                     // auf Zeilen OHNE Platzhalter, die es nach dem Fuellen noch
                     // unveraendert gibt.
-                    DocxLiteralTextReplacer.Apply(document, request.Dossier.TextOverrides);
+                    DocxLiteralTextReplacer.Apply(
+                        document,
+                        request.Dossier.TextOverrides,
+                        request.Dossier.FieldStyles);
 
                     // Die Vorlage bestimmt weiterhin Groessen, Abstaende,
                     // Tabellen und Fusszeile. Nur die Schriftfamilie ist fuer

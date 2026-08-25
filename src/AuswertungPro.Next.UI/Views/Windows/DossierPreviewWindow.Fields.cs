@@ -32,8 +32,7 @@ public partial class DossierPreviewWindow
     /// Die Eingabestelle je Schluessel. Ohne sie wuesste ein Klick ins Blatt
     /// zwar, WELCHES Feld gemeint ist, aber nicht, wohin er springen soll.
     /// </summary>
-    private readonly Dictionary<string, FrameworkElement> _feldStellen =
-        new(StringComparer.Ordinal);
+    private readonly Dictionary<DossierPreviewTarget, FrameworkElement> _feldStellen = new();
 
     private sealed record ZeilenSpalte(
         string Label,
@@ -66,7 +65,7 @@ public partial class DossierPreviewWindow
             {
                 var karte = BaueAngabe(feld);
                 inhalt.Children.Add(karte);
-                MerkeStelle(feld.Key, karte);
+                MerkeStelle(DossierPreviewTarget.Field(feld.Key), karte);
             }
 
             FieldPanel.Children.Add(Abschnitt("Angaben", inhalt, offen: true));
@@ -81,12 +80,13 @@ public partial class DossierPreviewWindow
 
             var abschnitt = Abschnitt(feld.Label, inhalt, offen: true);
             FieldPanel.Children.Add(abschnitt);
-            MerkeStelle(feld.Key, abschnitt);
+            MerkeStelle(DossierPreviewTarget.Field(feld.Key), abschnitt);
         }
 
         var feste = FesteTexte(seite);
         if (feste.Count > 0)
-            FieldPanel.Children.Add(Abschnitt("Feste Texte", BaueFesteTexte(feste), offen: false));
+            FieldPanel.Children.Add(Abschnitt(
+                "Beschriftungen und Überschriften", BaueFesteTexte(feste), offen: false));
 
         if (FieldPanel.Children.Count == 0)
         {
@@ -98,16 +98,15 @@ public partial class DossierPreviewWindow
         }
     }
 
-    /// <summary>Ein aufklappbarer Abschnitt mit Trennlinie.</summary>
     /// <summary>
-    /// Merkt sich, wo ein Schluessel rechts zu finden ist. Der erste Eintrag
-    /// gewinnt: ein Feld kann im Blatt mehrfach vorkommen, rechts steht es aber
-    /// nur einmal.
+    /// Merkt sich, wo eine fachliche Zieladresse rechts zu finden ist. Wird
+    /// eine dynamische Tabelle neu aufgebaut, ersetzt das neue sichtbare Feld
+    /// die veraltete Control-Instanz derselben Adresse.
     /// </summary>
-    private void MerkeStelle(string? key, UIElement stelle)
+    private void MerkeStelle(DossierPreviewTarget target, UIElement stelle)
     {
-        if (!string.IsNullOrEmpty(key) && stelle is FrameworkElement element)
-            _feldStellen.TryAdd(key, element);
+        if (stelle is FrameworkElement element)
+            _feldStellen[target] = element;
     }
 
     /// <summary>
@@ -117,9 +116,9 @@ public partial class DossierPreviewWindow
     /// Ohne Feld passiert nichts — ein Klick, der scheinbar reagiert und dann
     /// doch nirgends hinfuehrt, waere schlimmer als gar keiner.
     /// </summary>
-    private bool SpringeZuFeld(string key)
+    private bool SpringeZuFeld(DossierPreviewTarget target)
     {
-        if (!_feldStellen.TryGetValue(key, out var stelle))
+        if (!_feldStellen.TryGetValue(target, out var stelle))
             return false;
 
         foreach (var expander in Vorfahren(stelle).OfType<Expander>())
@@ -132,7 +131,7 @@ public partial class DossierPreviewWindow
             ErsteEingabe(stelle)?.Focus();
         }), System.Windows.Threading.DispatcherPriority.Loaded);
 
-        Betone(key);
+        Betone(target);
         return true;
     }
 
@@ -465,10 +464,13 @@ public partial class DossierPreviewWindow
     }
 
     /// <summary>Merkt sich die bearbeitete Stelle und laesst sie aufblinken.</summary>
-    private void Betone(string key)
+    private void Betone(string fieldKey)
+        => Betone(DossierPreviewTarget.Field(fieldKey));
+
+    private void Betone(DossierPreviewTarget target)
     {
-        _aktivesFeld = key;
-        Hervorheben(key, blinken: true);
+        _aktivesFeld = target;
+        Hervorheben(target, blinken: true);
     }
 
     private ZeilenTyp? ZeilenTypFuer(string key) => key switch
