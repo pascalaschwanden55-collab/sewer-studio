@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AuswertungPro.Next.Application.Dossiers.Preview;
 
@@ -62,7 +62,13 @@ public sealed record DossierPreviewParagraphFormat(
     DossierPreviewEdges Indent,
     DossierPreviewAlignment Alignment,
     bool IsHeading,
-    bool IsTitle = false)
+    bool IsTitle = false,
+
+    /// <summary>
+    /// Eine Zeile des Inhaltsverzeichnisses. Sie sieht wie fester Text aus,
+    /// wird aber von Word gerechnet — deshalb nicht zum Bearbeiten anbieten.
+    /// </summary>
+    bool IsTableOfContentsEntry = false)
 {
     public static DossierPreviewParagraphFormat Default { get; } = new(
         0, 0, null, DossierPreviewEdges.Zero, DossierPreviewAlignment.Left, false);

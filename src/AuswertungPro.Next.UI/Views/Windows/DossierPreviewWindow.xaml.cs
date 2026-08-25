@@ -15,6 +15,10 @@ using AuswertungPro.Next.Infrastructure.Dossiers;
 using AuswertungPro.Next.Infrastructure.Dossiers.Preview;
 using AuswertungPro.Next.UI.Views.Rendering;
 
+using System.Windows.Input;
+
+using AuswertungPro.Next.UI.Behaviors;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 /// <summary>
@@ -162,6 +166,43 @@ public partial class DossierPreviewWindow : Window
         "Haltungen" => DossierWordTemplateExportService.BuildHoldingRows(_snapshot),
         _ => Array.Empty<IReadOnlyDictionary<string, string>>()
     };
+
+    /// <summary>
+    /// Ein Klick ins Blatt springt zu der Stelle, an der dieser Text
+    /// ausgefuellt wird.
+    ///
+    /// Gesucht wird von der angeklickten Stelle nach aussen: der innerste
+    /// Rahmen gewinnt. Sonst faenge man in einer Tabelle immer die ganze
+    /// Zeile statt der Zelle, die unter dem Zeiger liegt.
+    /// </summary>
+    private void OnBlattGeklickt(object sender, MouseButtonEventArgs e)
+    {
+        _ = sender;
+
+        if (_render is null || e.OriginalSource is not DependencyObject quelle)
+            return;
+
+        var rahmenZuSchluessel = new Dictionary<Border, string>();
+        foreach (var (key, rahmen) in _render.Frames)
+        {
+            foreach (var einzeln in rahmen)
+                rahmenZuSchluessel.TryAdd(einzeln, key);
+        }
+
+        var aktuell = quelle;
+        while (aktuell is not null)
+        {
+            if (aktuell is Border rahmen
+                && rahmenZuSchluessel.TryGetValue(rahmen, out var key)
+                && SpringeZuFeld(key))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            aktuell = VisualTreeSafe.GetParentSafe(aktuell);
+        }
+    }
 
     /// <summary>
     /// Laesst die Stelle im Blatt aufblinken und haelt sie danach dezent

@@ -193,12 +193,15 @@ internal sealed class DocxFormatResolver
         var titel = styleId.Equals("Titel", StringComparison.OrdinalIgnoreCase)
             || styleId.Equals("Title", StringComparison.OrdinalIgnoreCase);
 
+        var verzeichnis = DossierTocStyle.IsEntry(styleId);
+
         return new DossierPreviewParagraphFormat(
             vor, nach, zeilenhoehe,
             new DossierPreviewEdges(links, 0, rechts, 0) with { Top = erste },
             ausrichtung,
             ueberschrift,
-            titel);
+            titel,
+            verzeichnis);
     }
 
     internal static bool IstUeberschriftenStil(string styleId)

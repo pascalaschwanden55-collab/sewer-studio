@@ -58,6 +58,8 @@
                     <!-- Das Blatt bringt seine eigenen Masse mit: A4 in
                          Bildpunkten, so wie Word bei 100 % zeigt. -->
                     <Border x:Name="Sheet" Background="White" Margin="10"
+                            PreviewMouseLeftButtonDown="OnBlattGeklickt"
+                            ToolTip="Klick auf eine ausgefüllte Stelle springt rechts zu ihrem Eingabefeld."
                             HorizontalAlignment="Center" VerticalAlignment="Top">
                         <Border.LayoutTransform>
                             <ScaleTransform x:Name="SheetZoom" ScaleX="0.85" ScaleY="0.85"/>

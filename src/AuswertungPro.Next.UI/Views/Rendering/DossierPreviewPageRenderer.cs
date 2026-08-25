@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -362,6 +362,17 @@ public static class DossierPreviewPageRenderer
 
         foreach (var run in absatz.Runs.Where(r => r.IsField))
             merke(run.FieldKey!, rahmen);
+
+        // Auch reiner Text wird gemerkt — unter seinem eigenen Wortlaut. Nur so
+        // findet ein Klick ins Blatt auch das Eingabefeld eines festen Textes.
+        // Verzeichniszeilen bleiben aussen vor: sie gehoeren Word und haben
+        // rechts kein Feld.
+        if (!absatz.Runs.Any(r => r.IsField) && !absatz.Format.IsTableOfContentsEntry)
+        {
+            var wortlaut = string.Concat(absatz.Runs.Select(r => r.Text)).Trim();
+            if (wortlaut.Length > 0)
+                merke(wortlaut, rahmen);
+        }
 
         return rahmen;
     }

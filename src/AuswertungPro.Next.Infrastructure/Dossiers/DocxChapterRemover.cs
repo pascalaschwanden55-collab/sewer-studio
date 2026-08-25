@@ -68,12 +68,12 @@ public static class DocxChapterRemover
     {
         foreach (var absatz in body.Elements<Paragraph>().ToList())
         {
-            var stil = absatz.ParagraphProperties?.ParagraphStyleId?.Val?.Value ?? string.Empty;
+            var stil = absatz.ParagraphProperties?.ParagraphStyleId?.Val?.Value;
 
-            var imVerzeichnis = stil.StartsWith("Verzeichnis", StringComparison.OrdinalIgnoreCase)
-                || stil.StartsWith("TOC", StringComparison.OrdinalIgnoreCase);
-
-            if (!imVerzeichnis)
+            // Dieselbe Regel wie die Vorschau: sie entscheidet dort, was NICHT
+            // zum Bearbeiten angeboten wird. Zwei Fassungen liefen in diesem
+            // Programm schon einmal auseinander.
+            if (!DossierTocStyle.IsEntry(stil))
                 continue;
 
             if (Text(absatz).Contains(titel, StringComparison.OrdinalIgnoreCase))

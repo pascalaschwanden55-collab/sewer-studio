@@ -86,6 +86,9 @@ public partial class DossierPreviewWindow
             karte.Children.Add(box);
             karte.Children.Add(zurueck);
             block.Children.Add(karte);
+
+            // Unter dem Wortlaut: genau so merkt sich das Blatt seine Absaetze.
+            MerkeStelle(schluessel, karte);
         }
 
         return block;
@@ -104,6 +107,13 @@ public partial class DossierPreviewWindow
             foreach (var absatz in absaetze)
             {
                 if (absatz.Runs.Any(r => r.IsField))
+                    continue;
+
+                // Die Zeilen des Inhaltsverzeichnisses gehoeren Word: es rechnet
+                // sie aus Kapitelueberschrift und Seitenzahl. Als bearbeitbarer
+                // Text angeboten, stand die Seitenzahl im Schluessel — und die
+                // eigene Fassung war weg, sobald sich die Seiten verschoben.
+                if (absatz.Format.IsTableOfContentsEntry)
                     continue;
 
                 var text = string.Concat(absatz.Runs.Select(r => r.Text)).Trim();

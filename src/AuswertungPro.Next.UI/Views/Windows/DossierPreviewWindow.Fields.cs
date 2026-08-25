@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 
 using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.UI.Behaviors;
 using AuswertungPro.Next.Application.Dossiers.Preview;
 using AuswertungPro.Next.Domain.Models.Dossiers;
 
@@ -27,6 +28,13 @@ public partial class DossierPreviewWindow
 {
     private readonly HashSet<RichTextBox> _geladeneFormatfelder = new();
 
+    /// <summary>
+    /// Die Eingabestelle je Schluessel. Ohne sie wuesste ein Klick ins Blatt
+    /// zwar, WELCHES Feld gemeint ist, aber nicht, wohin er springen soll.
+    /// </summary>
+    private readonly Dictionary<string, FrameworkElement> _feldStellen =
+        new(StringComparer.Ordinal);
+
     private sealed record ZeilenSpalte(
         string Label,
         string StyleKey,
@@ -46,6 +54,7 @@ public partial class DossierPreviewWindow
     private void BaueFelder(DossierPreviewPage seite, IReadOnlyList<DossierPreviewField> felder)
     {
         FieldPanel.Children.Clear();
+        _feldStellen.Clear();
 
         var angaben = felder.Where(f => f.Kind is not DossierPreviewFieldKind.Rows).ToList();
 
@@ -54,7 +63,11 @@ public partial class DossierPreviewWindow
             var inhalt = new StackPanel();
 
             foreach (var feld in angaben)
-                inhalt.Children.Add(BaueAngabe(feld));
+            {
+                var karte = BaueAngabe(feld);
+                inhalt.Children.Add(karte);
+                MerkeStelle(feld.Key, karte);
+            }
 
             FieldPanel.Children.Add(Abschnitt("Angaben", inhalt, offen: true));
         }
@@ -66,7 +79,9 @@ public partial class DossierPreviewWindow
                 ? BaueThemenEditor(feld)
                 : BaueZeilenEditor(feld);
 
-            FieldPanel.Children.Add(Abschnitt(feld.Label, inhalt, offen: true));
+            var abschnitt = Abschnitt(feld.Label, inhalt, offen: true);
+            FieldPanel.Children.Add(abschnitt);
+            MerkeStelle(feld.Key, abschnitt);
         }
 
         var feste = FesteTexte(seite);
@@ -84,6 +99,72 @@ public partial class DossierPreviewWindow
     }
 
     /// <summary>Ein aufklappbarer Abschnitt mit Trennlinie.</summary>
+    /// <summary>
+    /// Merkt sich, wo ein Schluessel rechts zu finden ist. Der erste Eintrag
+    /// gewinnt: ein Feld kann im Blatt mehrfach vorkommen, rechts steht es aber
+    /// nur einmal.
+    /// </summary>
+    private void MerkeStelle(string? key, UIElement stelle)
+    {
+        if (!string.IsNullOrEmpty(key) && stelle is FrameworkElement element)
+            _feldStellen.TryAdd(key, element);
+    }
+
+    /// <summary>
+    /// Springt zu der Stelle, die im Blatt angeklickt wurde: der Abschnitt wird
+    /// aufgeklappt, das Feld sichtbar gescrollt und bekommt den Schreibfokus.
+    ///
+    /// Ohne Feld passiert nichts — ein Klick, der scheinbar reagiert und dann
+    /// doch nirgends hinfuehrt, waere schlimmer als gar keiner.
+    /// </summary>
+    private bool SpringeZuFeld(string key)
+    {
+        if (!_feldStellen.TryGetValue(key, out var stelle))
+            return false;
+
+        foreach (var expander in Vorfahren(stelle).OfType<Expander>())
+            expander.IsExpanded = true;
+
+        stelle.BringIntoView();
+        stelle.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            stelle.BringIntoView();
+            ErsteEingabe(stelle)?.Focus();
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
+
+        Betone(key);
+        return true;
+    }
+
+    private static IEnumerable<DependencyObject> Vorfahren(DependencyObject start)
+    {
+        var aktuell = VisualTreeSafe.GetParentSafe(start);
+        while (aktuell is not null)
+        {
+            yield return aktuell;
+            aktuell = VisualTreeSafe.GetParentSafe(aktuell);
+        }
+    }
+
+    /// <summary>Das erste beschreibbare Feld innerhalb einer Karte.</summary>
+    private static Control? ErsteEingabe(DependencyObject wurzel)
+    {
+        if (wurzel is TextBox or RichTextBox)
+            return (Control)wurzel;
+
+        var anzahl = System.Windows.Media.VisualTreeHelper.GetChildrenCount(wurzel);
+        for (var i = 0; i < anzahl; i++)
+        {
+            var treffer = ErsteEingabe(
+                System.Windows.Media.VisualTreeHelper.GetChild(wurzel, i));
+
+            if (treffer is not null)
+                return treffer;
+        }
+
+        return null;
+    }
+
     private Expander Abschnitt(string titel, UIElement inhalt, bool offen)
         => new()
         {
