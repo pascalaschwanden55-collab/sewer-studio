@@ -18,6 +18,7 @@ public static class DossierOutputPreviewEmptyRowCellMapper
         StringComparer.OrdinalIgnoreCase)
     {
         "Aenderungen",
+        "Eigentuemer",
         "Themen"
     };
 

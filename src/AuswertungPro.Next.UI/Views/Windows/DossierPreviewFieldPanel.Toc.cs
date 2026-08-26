@@ -52,6 +52,7 @@ internal sealed partial class DossierPreviewFieldPanel
 
     private void FuelleVerzeichnisEditor(Panel wirt, DossierPreviewField feld)
     {
+        _textUndo.Reset();
         wirt.Children.Clear();
         _dossier.TocAttachments ??= new();
         ErgaenzeFehlendeVerzeichnisSeitenzahlen();

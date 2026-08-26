@@ -65,6 +65,7 @@ internal sealed partial class DossierPreviewFieldPanel
     private void BaueFelder(
         IReadOnlyList<(DossierPreviewPage Seite, IReadOnlyList<DossierPreviewField> Felder)> seiten)
     {
+        _textUndo.Reset();
         _wirt.Children.Clear();
         _feldStellen.Clear();
         LeereAbschnitte();

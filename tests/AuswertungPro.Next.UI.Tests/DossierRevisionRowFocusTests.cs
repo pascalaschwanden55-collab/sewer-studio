@@ -103,6 +103,150 @@ public sealed class DossierRevisionRowFocusTests
                 Assert.All(editors.Skip(4), editor =>
                     Assert.Equal(Visibility.Collapsed, editor.Visibility));
                 Assert.True(editors[1].IsKeyboardFocused);
+
+                var alleFelder = Assert.Single(Nachfahren(host)
+                    .OfType<Button>()
+                    .Where(button => string.Equals(
+                        button.Content as string,
+                        "Alle Felder anzeigen",
+                        StringComparison.Ordinal)));
+                var rueckgaengig = Assert.Single(Nachfahren(host)
+                    .OfType<Button>()
+                    .Where(button => string.Equals(
+                        button.Content as string,
+                        "↶",
+                        StringComparison.Ordinal)));
+                Assert.Equal(Visibility.Visible, alleFelder.Visibility);
+                Assert.Equal(Visibility.Visible, rueckgaengig.Visibility);
+
+                alleFelder.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+                Assert.Equal(Visibility.Collapsed, alleFelder.Visibility);
+                Assert.Equal(Visibility.Visible, rueckgaengig.Visibility);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void Rueckgaengig_und_wiederholen_stellen_geloeschten_Text_im_Dossier_wieder_her()
+    {
+        RunOnSta(() =>
+        {
+            var host = new StackPanel();
+            var dossier = new DossierDefinition
+            {
+                Changes = [new DossierChangeRow { Version = "1" }]
+            };
+            var panel = CreatePanel(host, dossier);
+            panel.Baue(ChangePage(), [ChangeField()]);
+
+            var window = new Window
+            {
+                Content = host,
+                Width = 420,
+                Height = 700,
+                ShowInTaskbar = false,
+                WindowStyle = WindowStyle.None
+            };
+
+            try
+            {
+                window.Show();
+                var editor = Nachfahren(host).OfType<RichTextBox>().First();
+                editor.Focus();
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(50));
+
+                editor.SelectAll();
+                editor.Selection.Text = string.Empty;
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(50));
+                Assert.Equal(string.Empty, dossier.Changes[0].Version);
+
+                var undo = Assert.Single(Nachfahren(host)
+                    .OfType<Button>()
+                    .Where(button => string.Equals(
+                        button.Content as string,
+                        "↶",
+                        StringComparison.Ordinal)));
+                var undoCommand = Assert.IsType<RoutedUICommand>(undo.Command);
+                Assert.Same(editor, undo.CommandTarget);
+                Assert.True(undoCommand.CanExecute(null, undo.CommandTarget));
+
+                undoCommand.Execute(null, undo.CommandTarget);
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(50));
+                Assert.Equal("1", dossier.Changes[0].Version);
+
+                var redo = Assert.Single(Nachfahren(host)
+                    .OfType<Button>()
+                    .Where(button => string.Equals(
+                        button.Content as string,
+                        "↷",
+                        StringComparison.Ordinal)));
+                var redoCommand = Assert.IsType<RoutedUICommand>(redo.Command);
+                Assert.Same(editor, redo.CommandTarget);
+                Assert.True(redoCommand.CanExecute(null, redo.CommandTarget));
+
+                redoCommand.Execute(null, redo.CommandTarget);
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(50));
+                Assert.Equal(string.Empty, dossier.Changes[0].Version);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void Neuaufbau_verwendet_die_Textleiste_erneut_und_verwirft_das_alte_Ziel()
+    {
+        RunOnSta(() =>
+        {
+            var host = new StackPanel();
+            var dossier = new DossierDefinition
+            {
+                Changes = [new DossierChangeRow { Version = "1" }]
+            };
+            var panel = CreatePanel(host, dossier);
+            panel.Baue(ChangePage(), [ChangeField()]);
+
+            var window = new Window
+            {
+                Content = host,
+                Width = 420,
+                Height = 700,
+                ShowInTaskbar = false,
+                WindowStyle = WindowStyle.None
+            };
+
+            try
+            {
+                window.Show();
+                var altesFeld = Nachfahren(host).OfType<RichTextBox>().First();
+                altesFeld.Focus();
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(50));
+
+                var alterKnopf = Assert.Single(Nachfahren(host)
+                    .OfType<Button>()
+                    .Where(button => string.Equals(
+                        button.Content as string,
+                        "↶",
+                        StringComparison.Ordinal)));
+                Assert.Same(altesFeld, alterKnopf.CommandTarget);
+
+                panel.Baue(ChangePage(), [ChangeField()]);
+
+                var neuerKnopf = Assert.Single(Nachfahren(host)
+                    .OfType<Button>()
+                    .Where(button => string.Equals(
+                        button.Content as string,
+                        "↶",
+                        StringComparison.Ordinal)));
+                Assert.Same(alterKnopf, neuerKnopf);
+                Assert.Null(neuerKnopf.CommandTarget);
             }
             finally
             {

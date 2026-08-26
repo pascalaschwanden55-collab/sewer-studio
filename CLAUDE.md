@@ -73,16 +73,25 @@
   PDF-Seite begrenzt. `DossierOutputPreviewHitMatcher` erkennt auch abweichende PDF-Wortgrenzen
   und lange Tabellenzellen; `DossierOutputPreviewHitAreaBuilder` fasst deren Worttreffer zu
   einer gut anklickbaren Zellflaeche zusammen. Weil leere Zellen kein PDF-Wort besitzen,
-  leitet `DossierOutputPreviewEmptyRowCellMapper` ihre Klickflaechen im Aenderungswesen
-  und in der Informationstabelle nur bei eindeutig erkannter Tabellenkopfzeile aus der
-  echten Vorlagengeometrie ab. `DossierPreviewTableRow.MinimumHeightPx` bewahrt dabei die
+  leitet `DossierOutputPreviewEmptyRowCellMapper` ihre Klickflaechen im Aenderungswesen,
+  in den drei echten Eigentuemerzellen und in der Informationstabelle nur bei eindeutig
+  erkannter Tabellenkopfzeile aus der echten Vorlagengeometrie ab. Telefon, Mail und
+  Objektbewohner bleiben Zeilen innerhalb der gemeinsamen Eigentuemerzelle und werden
+  nicht als erfundene Spalten behandelt. `DossierOutputPreviewEmptyFixedCellMapper`
+  ergaenzt die leere Aktennotiz-Zelle und nur den oberen Eingabeabsatz der Rueckmeldung;
+  Punktlinien, Ort/Datum und Unterschriften bleiben eigene Vorlageninhalte. Mehrdeutige
+  Tabellen werden nicht geraten. `DossierPreviewTableRow.MinimumHeightPx` bewahrt dabei die
   Mindesthoehe der Word-Zeile; mehrzeilige, vollstaendig erkannte Nachbartexte erweitern
   die Hoehe. So ist die ganze leere Zelle anklickbar und nicht nur ein Streifen neben dem
   Text. Die im Word sichtbare erste Aenderungszeile besitzt rechts sofort vier Eingaben;
   ein Zellklick zeigt die ganze Zeile, setzt den Schreibfokus aber nur in die gewaehlte
   Zelle. Bleibt die reine Eingabe-Grundzeile leer, entfernt `DossierChangeRows` sie vor
   dem Uebernehmen; sie wird nicht als fachlicher Eintrag in `dossiers.json` gespeichert.
-  Das Vorschaufenster orchestriert nur.
+  `DossierTextUndoController` stellt im Feldbereich die zentralen Pfeile fuer
+  Rueckgaengig und Wiederholen bereit. Sie verwenden die native Texthistorie des zuletzt
+  aktiven Textfelds und funktionieren dadurch auch fuer dynamisch erzeugte Zeilen; beim
+  Neuaufbau wird ein entferntes Textfeld als Ziel verworfen. Das Vorschaufenster
+  orchestriert nur.
   Original-Beilagen erscheinen als eigene Gruppe und sind bewusst nur lesbar.
 - `DossierTextStyleRange` speichert Schriftfarbe, Fett, Kursiv und Unterstrichen als
   Zeichenbereiche. Themen verwenden `DossierTopicRow.StyleRanges`, andere Textfelder

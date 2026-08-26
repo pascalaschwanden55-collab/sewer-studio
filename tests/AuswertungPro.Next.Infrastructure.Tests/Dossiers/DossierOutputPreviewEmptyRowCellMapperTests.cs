@@ -125,6 +125,45 @@ public sealed class DossierOutputPreviewEmptyRowCellMapperTests
     }
 
     [Fact]
+    public void Leere_Eigentuemerzeile_erhaelt_nur_die_drei_echten_Zellflaechen()
+    {
+        var page = OwnerOutputPage();
+        var physicalTargets = new[]
+        {
+            DossierPreviewTarget.RowCell("Eigentuemer", 0, "Haus_Nr"),
+            DossierPreviewTarget.RowCell("Eigentuemer", 0, "Pz_Nr"),
+            DossierPreviewTarget.RowCell("Eigentuemer", 0, "Eigentuemer_Zelle")
+        };
+        var conceptualTargets = new[]
+        {
+            DossierPreviewTarget.RowCell("Eigentuemer", 0, "Telefon"),
+            DossierPreviewTarget.RowCell("Eigentuemer", 0, "Mail"),
+            DossierPreviewTarget.RowCell("Eigentuemer", 0, "Objektbewohner")
+        };
+        var row = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Haus_Nr"] = "",
+            ["Pz_Nr"] = "",
+            ["Eigentuemer_Zelle"] = "",
+            ["Telefon"] = "",
+            ["Mail"] = "",
+            ["Objektbewohner"] = ""
+        };
+
+        var areas = DossierOutputPreviewEmptyRowCellMapper.Build(
+            page,
+            [OwnerTemplatePage()],
+            [.. physicalTargets, .. conceptualTargets],
+            _ => [row],
+            new Dictionary<int, IReadOnlyList<DossierPreviewTarget>>());
+
+        Assert.Equal(physicalTargets, areas.Select(area => area.Target));
+        Assert.DoesNotContain(
+            areas,
+            area => conceptualTargets.Contains(area.Target));
+    }
+
+    [Fact]
     public void Leere_Bemerkungszellen_der_Informationstabelle_sind_direkt_anklickbar()
     {
         var page = TopicOutputPage();
@@ -589,6 +628,49 @@ public sealed class DossierOutputPreviewEmptyRowCellMapperTests
                 Word("Unternehmer", 24, 560),
                 Word("unbekannt", 175, 560)
             ]);
+
+    private static DossierOutputPreviewPage OwnerOutputPage()
+        => new(
+            3,
+            612,
+            792,
+            "",
+            [
+                Word("Haus", 20, 700),
+                Word("Nr.", 48, 700),
+                Word("Pz.", 150, 700),
+                Word("Nr.", 170, 700),
+                Word("Eigentümer", 250, 700)
+            ]);
+
+    private static DossierPreviewPage OwnerTemplatePage()
+    {
+        var table = new DossierPreviewTable(
+            [170, 110, 470],
+            0,
+            [new DossierPreviewTableRow(
+            [
+                Cell("Haus Nr."),
+                Cell("Pz. Nr."),
+                Cell("Eigentümer")
+            ])],
+            "Eigentuemer",
+            ["Haus_Nr", "Pz_Nr", "Eigentuemer_Zelle"],
+            new DossierPreviewTableRow(
+            [
+                Cell("{{#Eigentuemer}}{{Haus_Nr}}"),
+                Cell("{{Pz_Nr}}"),
+                Cell("{{Eigentuemer_Zelle}}")
+            ]),
+            1);
+
+        return new DossierPreviewPage(
+            3,
+            "Eigentumsverhältnisse",
+            new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.Zero),
+            [table],
+            ["Eigentuemer"]);
+    }
 
     private static DossierPreviewPage TopicTemplatePage()
     {

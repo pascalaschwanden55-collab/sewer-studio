@@ -194,7 +194,17 @@ public partial class DossierPreviewWindow
                 item.EditorPages,
                 sichtbareZiele,
                 ZeilenFuer,
-                hits);
+                hits)
+                .Concat(DossierOutputPreviewEmptyFixedCellMapper.Build(
+                    item.OutputPage,
+                    item.EditorPages,
+                    sichtbareZiele,
+                    _fields,
+                    hits,
+                    key => _dossier.TextOverrides.TryGetValue(key, out var own)
+                        ? own
+                        : key))
+                .ToList();
             var planTarget = DossierOutputPreviewInteractionMapper.ContainsPlanLocation(
                     item.OutputPage,
                     item.EditorPages)

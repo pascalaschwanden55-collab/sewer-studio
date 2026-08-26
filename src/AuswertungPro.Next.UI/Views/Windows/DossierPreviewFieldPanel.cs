@@ -32,6 +32,7 @@ internal sealed partial class DossierPreviewFieldPanel
     private readonly DossierPreviewDocument _document;
     private readonly IPlanImageConverter _planImages;
     private readonly IPlanImageAdjuster _planAdjuster;
+    private readonly DossierTextUndoController _textUndo;
 
     /// <summary>Die Werte der Vorlage — bei jedem Neuzeichnen ein neuer Stand.</summary>
     private readonly Func<IReadOnlyDictionary<string, string>> _werte;
@@ -64,6 +65,7 @@ internal sealed partial class DossierPreviewFieldPanel
         Func<Window> fenster)
     {
         _wirt = wirt ?? throw new ArgumentNullException(nameof(wirt));
+        _textUndo = new DossierTextUndoController(_wirt);
         _area = area ?? throw new ArgumentNullException(nameof(area));
         _dossier = dossier ?? throw new ArgumentNullException(nameof(dossier));
         _planWorkFolder = !string.IsNullOrWhiteSpace(planWorkFolder)

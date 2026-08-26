@@ -37,31 +37,45 @@ internal sealed partial class DossierPreviewFieldPanel
 
     // ── Nur das angeklickte Feld zeigen ───────────────────────────────────
 
-    /// <summary>Die Kopfzeile mit dem Rueckweg aus dem Fokus.</summary>
+    /// <summary>Die stets sichtbare Kopfzeile fuer Textaktionen und Rueckweg.</summary>
     private Border? _fokuszeile;
 
+    /// <summary>Nur dieser Knopf erscheint waehrend des Blatt-Fokus.</summary>
+    private Button? _alleFelderKnopf;
+
     /// <summary>
-    /// Legt die Kopfzeile an, die aus dem Fokus zurueckfuehrt. Sie liegt
-    /// ausserhalb der Abschnitte und wird deshalb vom Fokus nie ausgeblendet.
+    /// Legt die Kopfzeile mit Textverlauf und Rueckweg an. Sie liegt ausserhalb
+    /// der Abschnitte und wird deshalb vom Fokus nie ausgeblendet.
     /// </summary>
     private void BaueFokuszeile()
     {
-        var zurueck = new Button
+        if (_fokuszeile is not null)
+        {
+            _wirt.Children.Add(_fokuszeile);
+            return;
+        }
+
+        _alleFelderKnopf = new Button
         {
             Content = "Alle Felder anzeigen",
             Padding = new Thickness(9, 3, 9, 3),
             HorizontalAlignment = HorizontalAlignment.Left,
-            ToolTip = "Ein leeres Feld hat im Blatt keinen Text zum Anklicken — "
-                + "hierueber kommt man trotzdem hin."
+            Visibility = Visibility.Collapsed,
+            ToolTip = "Zeigt wieder alle Eingabefelder der aktuellen Seite."
         };
 
-        zurueck.Click += (_, _) => ZeigeAlleFelder();
+        _alleFelderKnopf.Click += (_, _) => ZeigeAlleFelder();
+
+        var leiste = new DockPanel { LastChildFill = false };
+        DockPanel.SetDock(_alleFelderKnopf, Dock.Left);
+        DockPanel.SetDock(_textUndo.View, Dock.Right);
+        leiste.Children.Add(_alleFelderKnopf);
+        leiste.Children.Add(_textUndo.View);
 
         _fokuszeile = new Border
         {
             Margin = new Thickness(0, 0, 0, 8),
-            Child = zurueck,
-            Visibility = Visibility.Collapsed
+            Child = leiste
         };
 
         _wirt.Children.Add(_fokuszeile);
@@ -72,8 +86,8 @@ internal sealed partial class DossierPreviewFieldPanel
     {
         DossierFieldFocus.ZeigeNur(Fokusfaehige(), stelle);
 
-        if (_fokuszeile is not null)
-            _fokuszeile.Visibility = Visibility.Visible;
+        if (_alleFelderKnopf is not null)
+            _alleFelderKnopf.Visibility = Visibility.Visible;
     }
 
     /// <summary>Zurueck zur ganzen Seite.</summary>
@@ -81,8 +95,8 @@ internal sealed partial class DossierPreviewFieldPanel
     {
         DossierFieldFocus.ZeigeAlles(Fokusfaehige());
 
-        if (_fokuszeile is not null)
-            _fokuszeile.Visibility = Visibility.Collapsed;
+        if (_alleFelderKnopf is not null)
+            _alleFelderKnopf.Visibility = Visibility.Collapsed;
     }
 
     /// <summary>
