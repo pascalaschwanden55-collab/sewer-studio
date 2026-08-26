@@ -42,18 +42,7 @@ internal sealed partial class DossierPreviewFieldPanel
         wirt.Children.Clear();
         _dossier.TocAttachments ??= new();
         ErgaenzeFehlendeVerzeichnisSeitenzahlen();
-
-        foreach (var target in _feldStellen.Keys
-                     .Where(target => (target.Kind is DossierPreviewTargetKind.Row
-                             or DossierPreviewTargetKind.RowCell)
-                         && string.Equals(
-                             target.Key,
-                             feld.Key,
-                             StringComparison.OrdinalIgnoreCase))
-                     .ToList())
-        {
-            _feldStellen.Remove(target);
-        }
+        EntferneAlteZeilenStellen(feld.Key);
 
         for (var i = 0; i < _dossier.TocAttachments.Count; i++)
         {

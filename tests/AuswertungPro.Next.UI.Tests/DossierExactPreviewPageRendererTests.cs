@@ -1,3 +1,5 @@
+using System.Windows.Input;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Threading;
@@ -35,6 +37,50 @@ public sealed class DossierExactPreviewPageRendererTests
             Assert.Same(fieldFrame, Assert.Single(result.Frames[literal]));
             Assert.True(fieldFrame.Width > 90);
             Assert.True(fieldFrame.Height > 20);
+        });
+    }
+
+    [Fact]
+    public void Render_zeigt_auf_der_Planseite_einen_sichtbaren_Fotoknopf()
+    {
+        RunOnSta(() =>
+        {
+            var bitmap = new WriteableBitmap(100, 150, 96, 96, PixelFormats.Bgra32, null);
+            var heading = new DossierOutputPreviewWord(
+                "Übersichtsplan", 72, 700, 160, 718);
+            var page = new DossierOutputPreviewPage(
+                3, 612, 792, "Übersichtsplan Werkleitungen", [heading]);
+            var plan = DossierPreviewTarget.Field("Uebersichtsplan");
+
+            var result = DossierExactPreviewPageRenderer.Render(
+                bitmap,
+                page,
+                new Dictionary<int, IReadOnlyList<DossierPreviewTarget>>(),
+                plan);
+
+            var button = Assert.Single(result.Frames[plan]);
+            Assert.Equal(190, button.Width);
+            Assert.Equal(Cursors.Hand, button.Cursor);
+            Assert.Contains("Werkleitungsplan", button.ToolTip?.ToString());
+            Assert.Single(Assert.IsType<Canvas>(result.Overlay).Children);
+        });
+    }
+
+    [Fact]
+    public void Render_zeigt_auf_einer_anderen_Seite_keinen_Fotoknopf()
+    {
+        RunOnSta(() =>
+        {
+            var bitmap = new WriteableBitmap(100, 150, 96, 96, PixelFormats.Bgra32, null);
+            var page = new DossierOutputPreviewPage(4, 612, 792, "Eigentümer", []);
+
+            var result = DossierExactPreviewPageRenderer.Render(
+                bitmap,
+                page,
+                new Dictionary<int, IReadOnlyList<DossierPreviewTarget>>());
+
+            Assert.Empty(result.Frames);
+            Assert.Empty(Assert.IsType<Canvas>(result.Overlay).Children);
         });
     }
 

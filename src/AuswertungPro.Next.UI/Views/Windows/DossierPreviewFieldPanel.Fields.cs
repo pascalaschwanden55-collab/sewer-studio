@@ -162,6 +162,26 @@ internal sealed partial class DossierPreviewFieldPanel
     }
 
     /// <summary>
+    /// Entfernt vor dem Neuaufbau einer dynamischen Liste deren alte Zeilen-
+    /// und Zellenadressen. Sonst bliebe nach dem Loeschen einer Zeile ein
+    /// Klickziel auf ein bereits entferntes WPF-Element erhalten.
+    /// </summary>
+    private void EntferneAlteZeilenStellen(string fieldKey)
+    {
+        foreach (var target in _feldStellen.Keys
+                     .Where(target => target.Kind is DossierPreviewTargetKind.Row
+                         or DossierPreviewTargetKind.RowCell)
+                     .Where(target => string.Equals(
+                         target.Key,
+                         fieldKey,
+                         StringComparison.OrdinalIgnoreCase))
+                     .ToList())
+        {
+            _feldStellen.Remove(target);
+        }
+    }
+
+    /// <summary>
     /// Springt zu der Stelle, die im Blatt angeklickt wurde: der Abschnitt wird
     /// aufgeklappt, das Feld sichtbar gescrollt und bekommt den Schreibfokus.
     ///

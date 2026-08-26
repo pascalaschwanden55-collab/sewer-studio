@@ -38,6 +38,88 @@ public sealed record DossierOutputPreviewNavigationItem(
 /// </summary>
 public static class DossierOutputPreviewInteractionMapper
 {
+    /// <summary>
+    /// Erkennt die Planstelle auch dann, wenn Word bei leerem Plan mehrere
+    /// kurze Kapitel auf dasselbe Ausgabeblatt zieht und die Navigation das
+    /// Blatt nach einem anderen Kapitel benennt.
+    /// </summary>
+    public static bool ContainsPlanLocation(
+        DossierOutputPreviewPage outputPage,
+        IReadOnlyList<DossierPreviewPage> editorPages)
+    {
+        ArgumentNullException.ThrowIfNull(outputPage);
+        ArgumentNullException.ThrowIfNull(editorPages);
+
+        if (editorPages.Any(page => page.FieldKeys.Contains(
+                "Uebersichtsplan",
+                StringComparer.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // Auch im Inhaltsverzeichnis steht "Uebersichtsplan". Dort darf das
+        // Fotosymbol nicht erscheinen. Der Fallback gilt nur fuer ein Blatt,
+        // dessen Kapitelzuordnung zwar verrutscht ist, das aber nicht die
+        // Verzeichnisseite selbst enthaelt.
+        var isTocPage = editorPages
+            .SelectMany(DossierPreviewTextInventory.Literals)
+            .Any(text => text.Contains(
+                "Inhaltsverzeichnis",
+                StringComparison.OrdinalIgnoreCase));
+
+        return !isTocPage
+            && outputPage.Words.Any(word => word.Text.Contains(
+                "bersichtsplan",
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Begrenzt die Klickziele auf die Vorlagenkapitel, die auf dem gerade
+    /// sichtbaren PDF-Blatt liegen.
+    ///
+    /// Die Eingabeseite darf weiterhin alle Felder des Dossiers bereithalten.
+    /// Fuer die Treffer im Blatt waere diese Gesamtmenge aber falsch: Ein Wert
+    /// wie "439" steht auf Deckblatt und Eigentuemerseite. Wuerden beide Ziele
+    /// gleichzeitig gesucht, koennte ein Klick auf dem Deckblatt in die
+    /// Eigentuemertabelle springen.
+    /// </summary>
+    public static IReadOnlyList<DossierPreviewTarget> TargetsForPages(
+        IEnumerable<DossierPreviewTarget> targets,
+        IReadOnlyList<DossierPreviewPage> pages)
+    {
+        ArgumentNullException.ThrowIfNull(targets);
+        ArgumentNullException.ThrowIfNull(pages);
+
+        if (pages.Count == 0)
+            return Array.Empty<DossierPreviewTarget>();
+
+        var fieldKeys = new HashSet<string>(
+            pages.SelectMany(page => page.FieldKeys),
+            StringComparer.OrdinalIgnoreCase);
+        var literalKeys = new HashSet<string>(
+            pages.SelectMany(DossierPreviewTextInventory.Literals),
+            StringComparer.Ordinal);
+        var tocChapterTitles = new HashSet<string>(
+            DossierTocChapterPageClickMapper.ChapterTitles(pages),
+            StringComparer.Ordinal);
+
+        return targets
+            .Where(target => target.Kind switch
+            {
+                DossierPreviewTargetKind.Literal => literalKeys.Contains(target.Key),
+                DossierPreviewTargetKind.RowCell
+                    when DossierTocChapterPageClickMapper.IsPageTarget(target)
+                    => DossierTocChapterPageClickMapper.OriginalTitle(target) is { } title
+                        && tocChapterTitles.Contains(title),
+                DossierPreviewTargetKind.Field
+                    or DossierPreviewTargetKind.Row
+                    or DossierPreviewTargetKind.RowCell => fieldKeys.Contains(target.Key),
+                _ => false
+            })
+            .Distinct()
+            .ToList();
+    }
+
     public static IReadOnlyList<DossierOutputPreviewNavigationItem> BuildNavigation(
         IReadOnlyList<DossierOutputPreviewPage> pages,
         IReadOnlyList<DossierPreviewNavigationItem> templates,

@@ -27,7 +27,7 @@ internal sealed partial class DossierPreviewFieldPanel
     /// </summary>
     private UIElement BaueFesteTexte(
         IReadOnlyList<string> texte,
-        IReadOnlyCollection<string> verzeichnisTitel)
+        IReadOnlyList<string> verzeichnisTitel)
     {
         var block = new StackPanel();
 
@@ -143,7 +143,7 @@ internal sealed partial class DossierPreviewFieldPanel
 
             karte.Children.Add(DossierTocChapterPageField.CreateFor(
                 _dossier, schluessel, verzeichnisTitel, Kleiner, _zeichneBlatt,
-                () => Betone(target)));
+                MerkeStelle, Betone));
 
             block.Children.Add(karte);
 

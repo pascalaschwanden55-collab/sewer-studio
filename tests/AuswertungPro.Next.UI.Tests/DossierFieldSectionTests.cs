@@ -143,6 +143,7 @@ public sealed class DossierFieldSectionTests
             var area = new DossierAreaSettings();
             var dossier = new DossierDefinition();
             var project = new Project();
+            DossierPreviewTarget? betont = null;
             var request = new DossierExportRequest(
                 project,
                 string.Empty,
@@ -160,9 +161,9 @@ public sealed class DossierFieldSectionTests
                 new PlanImageAdjusterStub(),
                 () => new Dictionary<string, string>(),
                 () => { },
-                _ => { },
+                target => betont = target,
                 (_, _) => { },
-                _ => new object(),
+                _ => Brushes.Black,
                 _ => { },
                 () => new Window());
 
@@ -176,6 +177,8 @@ public sealed class DossierFieldSectionTests
 
             var titel = Assert.Single(Nachfahren(wurzel).OfType<RichTextBox>());
             var seitenzahl = Assert.Single(Nachfahren(wurzel).OfType<TextBox>());
+            var seitenZiel = DossierTocChapterPageClickMapper.PageTarget("Kapitel");
+            Assert.True(panel.Kennt(seitenZiel));
             var fett = Assert.Single(Nachfahren(wurzel).OfType<Button>()
                 .Where(knopf => string.Equals(
                     knopf.Content as string, "Fett", StringComparison.Ordinal)));
@@ -200,11 +203,123 @@ public sealed class DossierFieldSectionTests
                 Keyboard.Focus(seitenzahl);
                 PumpDispatcherFor(TimeSpan.FromMilliseconds(80));
                 Assert.Equal(Visibility.Collapsed, werkzeuge.Visibility);
+                Assert.Equal(seitenZiel, betont);
             }
             finally
             {
                 fenster.Close();
             }
+        });
+    }
+
+    [Fact]
+    public void Neuaufbau_einer_Zeilenliste_entfernt_Adressen_geloeschter_Zeilen()
+    {
+        RunOnSta(() =>
+        {
+            var area = new DossierAreaSettings();
+            var dossier = new DossierDefinition
+            {
+                Owners =
+                [
+                    new DossierOwnerRow { Name = "Erste Person" },
+                    new DossierOwnerRow { Name = "Zweite Person" }
+                ]
+            };
+            var panel = new DossierPreviewFieldPanel(
+                new StackPanel(),
+                area,
+                dossier,
+                System.IO.Path.GetTempPath(),
+                new DossierPreviewDocument([]),
+                new PlanImageConverterStub(),
+                new PlanImageAdjusterStub(),
+                () => new Dictionary<string, string>(),
+                () => { },
+                _ => { },
+                (_, _) => { },
+                _ => Brushes.Black,
+                _ => { },
+                () => new Window());
+            var feld = new DossierPreviewField(
+                "Eigentuemer",
+                "Eigentümer",
+                DossierPreviewFieldKind.Rows,
+                () => string.Empty,
+                null);
+
+            var bauen = typeof(DossierPreviewFieldPanel).GetMethod(
+                "BaueZeilenEditor",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            var fuellen = typeof(DossierPreviewFieldPanel).GetMethod(
+                "FuelleZeilenEditor",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(bauen);
+            Assert.NotNull(fuellen);
+
+            var wirt = Assert.IsType<StackPanel>(bauen.Invoke(panel, [feld]));
+            var zweiteZeile = DossierPreviewTarget.Row("Eigentuemer", 1);
+            var zweiteNamenszelle = DossierPreviewTarget.RowCell(
+                "Eigentuemer", 1, "Eigentuemer_Zelle");
+            Assert.True(panel.Kennt(zweiteZeile));
+            Assert.True(panel.Kennt(zweiteNamenszelle));
+
+            dossier.Owners.RemoveAt(1);
+            fuellen.Invoke(panel, [wirt, feld]);
+
+            Assert.False(panel.Kennt(zweiteZeile));
+            Assert.False(panel.Kennt(zweiteNamenszelle));
+            Assert.True(panel.Kennt(DossierPreviewTarget.Row("Eigentuemer", 0)));
+        });
+    }
+
+    [Fact]
+    public void Plansprung_zeigt_die_vorhandenen_Foto_Dreh_und_Zuschneidewerkzeuge()
+    {
+        RunOnSta(() =>
+        {
+            var host = new StackPanel();
+            var dossier = new DossierDefinition();
+            var panel = new DossierPreviewFieldPanel(
+                host,
+                new DossierAreaSettings(),
+                dossier,
+                System.IO.Path.GetTempPath(),
+                new DossierPreviewDocument([]),
+                new PlanImageConverterStub(),
+                new PlanImageAdjusterStub(),
+                () => new Dictionary<string, string>(),
+                () => { },
+                _ => { },
+                (_, _) => { },
+                _ => Brushes.Black,
+                _ => { },
+                () => new Window());
+            var field = new DossierPreviewField(
+                "Uebersichtsplan",
+                "Werkleitungsplan (JPG, PNG oder PDF)",
+                DossierPreviewFieldKind.File,
+                () => dossier.OverviewPlanPath,
+                value => dossier.OverviewPlanPath = value);
+            var page = new DossierPreviewPage(
+                3,
+                "Übersichtsplan Werkleitungen",
+                new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.Zero),
+                [],
+                ["Uebersichtsplan"]);
+            var target = DossierPreviewTarget.Field("Uebersichtsplan");
+
+            panel.Baue(page, [field]);
+
+            Assert.True(panel.SpringeZu(target));
+            var buttons = Nachfahren(host)
+                .OfType<Button>()
+                .Select(button => button.Content?.ToString())
+                .ToList();
+            Assert.Contains("JPG / Plan wählen…", buttons);
+            Assert.Contains("⟲", buttons);
+            Assert.Contains("⟳", buttons);
+            Assert.Contains("Zuschneiden…", buttons);
         });
     }
 

@@ -185,7 +185,20 @@ public partial class DossierPreviewWindow
             var hits = DossierOutputPreviewHitMatcher.Match(
                 item.OutputPage.Words,
                 candidates);
-            _render = DossierExactPreviewPageRenderer.Render(bitmap, item.OutputPage, hits);
+            hits = DossierTocChapterPageClickMapper.AddPageTargets(
+                item.OutputPage,
+                hits,
+                DossierTocChapterPageClickMapper.ChapterTitles(item.EditorPages));
+            var planTarget = DossierOutputPreviewInteractionMapper.ContainsPlanLocation(
+                    item.OutputPage,
+                    item.EditorPages)
+                    ? DossierPreviewTarget.Field("Uebersichtsplan")
+                    : (DossierPreviewTarget?)null;
+            _render = DossierExactPreviewPageRenderer.Render(
+                bitmap,
+                item.OutputPage,
+                hits,
+                planTarget);
             Sheet.Child = _render.Root;
 
             if (_aktivesFeld is not null)

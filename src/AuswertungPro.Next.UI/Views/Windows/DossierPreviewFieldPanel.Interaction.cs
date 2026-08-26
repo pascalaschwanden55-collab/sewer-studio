@@ -48,7 +48,7 @@ internal sealed partial class DossierPreviewFieldPanel
     {
         var zurueck = new Button
         {
-            Content = "Alle Felder dieser Seite zeigen",
+            Content = "Alle Felder anzeigen",
             Padding = new Thickness(9, 3, 9, 3),
             HorizontalAlignment = HorizontalAlignment.Left,
             ToolTip = "Ein leeres Feld hat im Blatt keinen Text zum Anklicken — "

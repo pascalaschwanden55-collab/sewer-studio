@@ -69,7 +69,10 @@
   erzeugt; ein veraltetes Zwischenergebnis wird nie eingeblendet. `PdfPig` liefert die
   Wortlagen fuer transparente Klickflaechen, sodass ein Klick auf sichtbaren Text weiterhin
   direkt zum passenden Editor springt. `DossierOutputPreviewInteractionMapper` haelt die
-  Seiten-/Editor-Zuordnung und Textziele WPF-frei; das Vorschaufenster orchestriert nur.
+  Seiten-/Editor-Zuordnung und Textziele WPF-frei; Treffer werden auf die wirklich sichtbare
+  PDF-Seite begrenzt. `DossierOutputPreviewHitMatcher` erkennt auch abweichende PDF-Wortgrenzen
+  und lange Tabellenzellen; `DossierOutputPreviewHitAreaBuilder` fasst deren Worttreffer zu
+  einer gut anklickbaren Zellflaeche zusammen. Das Vorschaufenster orchestriert nur.
   Original-Beilagen erscheinen als eigene Gruppe und sind bewusst nur lesbar.
 - `DossierTextStyleRange` speichert Schriftfarbe, Fett, Kursiv und Unterstrichen als
   Zeichenbereiche. Themen verwenden `DossierTopicRow.StyleRanges`, andere Textfelder
@@ -107,7 +110,8 @@
   bleiben erhalten. `DossierPreviewTocLayout` verwendet in der Vorschau dieselben Masse.
   Die Vorschau verwendet dasselbe Zeilenraster samt Punktlinie, zaehlt ausgeblendete
   Kapitel nicht mit und adressiert jeden Zusatzpunkt einzeln fuer den direkten Klick zum
-  Editor.
+  Editor. `DossierTocChapterPageClickMapper` ordnet auch die rechts stehenden Seitenzahlen
+  anhand derselben Inhaltsverzeichniszeile eindeutig ihrem Seitenzahlfeld zu.
 - Die Dossier-Vorschau startet mit einer vollstaendig eingepassten Seite.
   `DossierPreviewFitCalculator` berechnet den Zoom aus der echten PDF-Blattgroesse und der
   Vorschauflaeche;
@@ -141,7 +145,9 @@
   Dossier-Dokument erfolgreich gespeichert ist. Verschwindet das Dossier oder scheitert
   das Speichern, wird nur die gerade erzeugte, unveraenderte PNG zurueckgenommen.
   `Verwerfen` entfernt nur den eigenen Temporaerordner. Quelle und vorhandene
-  Dossierdateien werden nie ueberschrieben oder geloescht.
+  Dossierdateien werden nie ueberschrieben oder geloescht. Auf der echten Planseite zeigt
+  die Vorschau eine sichtbare Foto-Schaltflaeche. Sie springt direkt zum vorhandenen
+  Planeditor mit Dateiwahl, Drehen und Zuschneiden; es gibt keinen zweiten Importweg.
 - Das Planbild wird proportional innerhalb der Referenzflaeche (maximal ca. 15 x 21,5 cm)
   eingepasst; der aeussere Word-Rahmen behaelt dabei immer die volle Vorlagenhoehe.
   Damit bleibt ein JPG unverzerrt, Folgekapitel ruecken bei Querformat nicht hoch und

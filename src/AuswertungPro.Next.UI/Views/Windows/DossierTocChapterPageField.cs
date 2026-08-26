@@ -32,14 +32,10 @@ internal static class DossierTocChapterPageField
     /// Die Titel der Kapitelzeilen dieser Seite. Nur sie holen ihre Seitenzahl
     /// aus einem Word-Feld und brauchen deshalb ein eigenes Feld dafuer.
     /// </summary>
-    public static IReadOnlyCollection<string> ChapterTitles(DossierPreviewPage page)
-        => page?.Blocks
-            .OfType<DossierPreviewParagraph>()
-            .Select(absatz => absatz.TocEntry?.Title)
-            .Where(titel => !string.IsNullOrWhiteSpace(titel))
-            .Select(titel => titel!)
-            .ToList()
-            ?? (IReadOnlyCollection<string>)Array.Empty<string>();
+    public static IReadOnlyList<string> ChapterTitles(DossierPreviewPage page)
+        => page is null
+            ? Array.Empty<string>()
+            : DossierTocChapterPageClickMapper.ChapterTitles([page]);
 
     /// <param name="kleiner">
     /// Baut einen kleinen Knopf im Stil der übrigen Vorschau-Werkzeuge:
@@ -53,20 +49,39 @@ internal static class DossierTocChapterPageField
     public static UIElement CreateFor(
         DossierDefinition dossier,
         string titel,
-        IReadOnlyCollection<string> chapterTitles,
+        IReadOnlyList<string> chapterTitles,
         Func<string, string, Action, Button> kleiner,
         Action zeichneBlatt,
-        Action betone)
-        => chapterTitles is not null && chapterTitles.Contains(titel)
-            ? Create(dossier, titel, kleiner, zeichneBlatt, betone)
-            : new StackPanel();
+        Action<DossierPreviewTarget, UIElement> merke,
+        Action<DossierPreviewTarget> betone)
+    {
+        var match = chapterTitles
+            .Select((title, rowIndex) => (title, rowIndex))
+            .FirstOrDefault(item => string.Equals(
+                item.title,
+                titel,
+                StringComparison.Ordinal));
+
+        if (match.title is null)
+            return new StackPanel();
+
+        var target = DossierTocChapterPageClickMapper.PageTarget(titel);
+        return Create(
+            dossier,
+            titel,
+            kleiner,
+            zeichneBlatt,
+            () => betone(target),
+            input => merke(target, input));
+    }
 
     public static UIElement Create(
         DossierDefinition dossier,
         string titel,
         Func<string, string, Action, Button> kleiner,
         Action zeichneBlatt,
-        Action betone)
+        Action betone,
+        Action<UIElement>? merke = null)
     {
         ArgumentNullException.ThrowIfNull(dossier);
         ArgumentNullException.ThrowIfNull(kleiner);
@@ -95,6 +110,7 @@ internal static class DossierTocChapterPageField
                 + "Eine eigene Angabe ersetzt die Rechnung — auch eine leere, "
                 + "dann steht dort gar keine Zahl."
         };
+        merke?.Invoke(feld);
 
         var hinweis = new TextBlock
         {

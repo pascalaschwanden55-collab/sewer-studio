@@ -39,6 +39,7 @@ internal sealed partial class DossierPreviewFieldPanel
     private void FuelleThemenEditor(Panel wirt, DossierPreviewField feld)
     {
         wirt.Children.Clear();
+        EntferneAlteZeilenStellen(feld.Key);
 
         var themen = DossierTopicResolver.Resolve(_area, _dossier);
 
