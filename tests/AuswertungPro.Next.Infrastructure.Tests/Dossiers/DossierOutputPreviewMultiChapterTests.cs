@@ -258,4 +258,31 @@ public sealed class DossierOutputPreviewMultiChapterTests
             ["Informationen Sanierung"],
             navigation[3].EditorPages.Select(seite => seite.Title));
     }
+
+    [Fact]
+    public void Eine_Beilage_bekommt_niemals_eine_bearbeitbare_Seite()
+    {
+        // Pascals Grenze: Es geht nur um das Word-Dokument. Protokolle,
+        // Schachtprotokolle und angehaengte PDF-Seiten sind Originale und
+        // duerfen nie bearbeitbar werden — auch nicht als Auffangblatt fuer
+        // Kapitel, die sonst nirgends unterkommen.
+        var navigation = NavigationFuer(
+        [
+            ("Deckblatt Liegenschaft", false),
+            (AlleKapitel[1].Text, false),
+            ("Haltung 33458-36051 Protokoll", true),
+            ("Schacht 36051 Protokoll", true)
+        ]);
+
+        foreach (var beilage in navigation.Where(blatt => blatt.OutputPage.IsAttachment))
+        {
+            Assert.Empty(beilage.EditorPages);
+            Assert.Null(beilage.EditorPage);
+            Assert.Equal("Beilagen", beilage.ChapterTitle);
+        }
+
+        // Die uebrigen Kapitel landen trotzdem irgendwo — auf dem letzten
+        // echten Dossierblatt.
+        KeinKapitelFehlt(navigation);
+    }
 }

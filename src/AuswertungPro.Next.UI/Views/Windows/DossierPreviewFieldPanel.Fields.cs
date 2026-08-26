@@ -62,6 +62,7 @@ internal sealed partial class DossierPreviewFieldPanel
         _wirt.Children.Clear();
         _feldStellen.Clear();
         LeereAbschnitte();
+        BaueFokuszeile();
 
         // Nur bei mehreren Kapiteln der Kapitelname vor dem Abschnitt; sonst
         // stuende „Angaben" zweimal untereinander.
@@ -71,6 +72,7 @@ internal sealed partial class DossierPreviewFieldPanel
             HaengeSeiteAn(seite, felder, mitKapitel ? seite.Title : string.Empty);
 
         OeffneNurDenErsten();
+        ZeigeAlleFelder();
 
         if (_wirt.Children.Count == 0)
             ZeigeLeerhinweis();
@@ -176,6 +178,10 @@ internal sealed partial class DossierPreviewFieldPanel
         // der gesuchten Stelle vorbeiscrollt.
         foreach (var expander in Vorfahren(stelle).OfType<Expander>())
             NurDiesenAbschnitt(expander);
+
+        // Rechts nur noch diese eine Stelle — der Klick im Blatt sagt ja
+        // bereits, welche gemeint ist.
+        ZeigeNurDieseStelle(stelle);
 
         // Sichtbar machen und den Schreibfokus setzen — erst nachdem WPF den
         // gerade aufgeklappten Abschnitt wirklich dargestellt hat.

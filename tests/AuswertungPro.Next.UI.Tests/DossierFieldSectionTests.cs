@@ -412,4 +412,71 @@ public sealed class DossierFieldSectionTests
         RunOnSta(() => DossierFieldHighlight.AktiviereEingabe(
             new Border { Child = new TextBlock { Text = "Nur Text" } }));
     }
+
+    // ── Nur das angeklickte Feld zeigen ───────────────────────────────────
+
+    [Fact]
+    public void Im_Fokus_bleibt_nur_die_angeklickte_Stelle_sichtbar()
+    {
+        // Pascals Modell: Klick in der Vorschau -> rechts geht genau dieses
+        // Feld auf, alle anderen werden ausgeblendet.
+        RunOnSta(() =>
+        {
+            var gesucht = new Border();
+            var daneben = new Border();
+            var andererAbschnitt = new Border();
+
+            var abschnittA = new StackPanel { Children = { gesucht, daneben } };
+            var abschnittB = new StackPanel { Children = { andererAbschnitt } };
+            var wurzel = new StackPanel { Children = { abschnittA, abschnittB } };
+
+            DossierFieldFocus.ZeigeNur([abschnittA, abschnittB, gesucht, daneben, andererAbschnitt], gesucht);
+
+            Assert.Equal(Visibility.Visible, gesucht.Visibility);
+            Assert.Equal(Visibility.Visible, abschnittA.Visibility);
+            Assert.Equal(Visibility.Collapsed, daneben.Visibility);
+            Assert.Equal(Visibility.Collapsed, abschnittB.Visibility);
+            Assert.Equal(Visibility.Collapsed, andererAbschnitt.Visibility);
+            Assert.NotNull(wurzel);
+        });
+    }
+
+    [Fact]
+    public void Was_in_der_gesuchten_Stelle_steckt_bleibt_sichtbar()
+    {
+        // Eine Karte enthaelt Beschriftung, Eingabe und Werkzeuge. Sie duerfen
+        // nicht mit ausgeblendet werden, nur weil sie eigene Stellen sind.
+        RunOnSta(() =>
+        {
+            var innen = new Border();
+            var karte = new Border { Child = new StackPanel { Children = { innen } } };
+            var wurzel = new StackPanel { Children = { karte } };
+
+            DossierFieldFocus.ZeigeNur([karte, innen], karte);
+
+            Assert.Equal(Visibility.Visible, karte.Visibility);
+            Assert.Equal(Visibility.Visible, innen.Visibility);
+            Assert.NotNull(wurzel);
+        });
+    }
+
+    [Fact]
+    public void Alles_zeigen_stellt_jede_Stelle_wieder_her()
+    {
+        // Der Rueckweg ist Pflicht: Ein leeres Feld hat in der Vorschau keinen
+        // Text zum Anklicken — ohne ihn waere es unerreichbar.
+        RunOnSta(() =>
+        {
+            var eine = new Border();
+            var zwei = new Border();
+            var wurzel = new StackPanel { Children = { eine, zwei } };
+
+            DossierFieldFocus.ZeigeNur([eine, zwei], eine);
+            DossierFieldFocus.ZeigeAlles([eine, zwei]);
+
+            Assert.Equal(Visibility.Visible, eine.Visibility);
+            Assert.Equal(Visibility.Visible, zwei.Visibility);
+            Assert.NotNull(wurzel);
+        });
+    }
 }
