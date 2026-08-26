@@ -47,10 +47,19 @@ public sealed class DossierFileStore : IDossierStore
 
         try
         {
-            return await ReadAsync(path, ct).ConfigureAwait(false);
+            var document = await ReadAsync(path, ct).ConfigureAwait(false);
+            await EnsureDossierFoldersOnLoadAsync(projectRoot, document, ct)
+                .ConfigureAwait(false);
+            return document;
         }
         catch (OperationCanceledException)
         {
+            throw;
+        }
+        catch (DossierFolderProvisionException)
+        {
+            // Eine lesbare JSON-Datei mit einem nicht anlegbaren Zielordner ist
+            // kein JSON-Schaden und darf deshalb nicht quarantänisiert werden.
             throw;
         }
         catch (DossierSchemaVersionException)
@@ -76,8 +85,18 @@ public sealed class DossierFileStore : IDossierStore
                 try
                 {
                     var backup = await ReadAsync(backupPath, ct).ConfigureAwait(false);
+                    await EnsureDossierFoldersOnLoadAsync(projectRoot, backup, ct)
+                        .ConfigureAwait(false);
                     Trace.WriteLine("[Dossiers] Backup .bak geladen");
                     return backup;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (DossierFolderProvisionException)
+                {
+                    throw;
                 }
                 catch (Exception backupError)
                 {
@@ -158,6 +177,40 @@ public sealed class DossierFileStore : IDossierStore
                     RollbackEmptyFolders(projectRoot, newFolders);
                 throw;
             }
+        }
+        finally
+        {
+            _saveLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Zieht die Ordner eines bereits gespeicherten Dokuments beim Laden nach,
+    /// ohne die JSON-Datei oder ihre Zeitstempel zu verändern.
+    /// </summary>
+    private async Task EnsureDossierFoldersOnLoadAsync(
+        string projectRoot,
+        DossierDocument document,
+        CancellationToken ct)
+    {
+        await _saveLock.WaitAsync(ct).ConfigureAwait(false);
+        var newFolders = new List<string>();
+
+        try
+        {
+            var guard = new ProjectWritePathGuard(projectRoot);
+            var root = guard.EnsureSafeDirectoryTarget(
+                DossierFolderPlanner.ResolveRoot(projectRoot));
+
+            EnsureDossierFolders(projectRoot, root, document, guard, newFolders);
+        }
+        catch (Exception ex)
+        {
+            RollbackEmptyFolders(projectRoot, newFolders);
+            throw new DossierFolderProvisionException(
+                "Die Dossier-Datei ist lesbar, aber mindestens ein "
+                + "Liegenschaftsordner konnte nicht angelegt werden.",
+                ex);
         }
         finally
         {
@@ -275,6 +328,14 @@ public sealed class DossierFileStore : IDossierStore
         // Aeltere Staende werden beim Laden umgestellt; gespeichert wird erst,
         // wenn Pascal wirklich etwas aendert.
         return DossierDocumentMigration.MigrateToCurrent(document);
+    }
+
+    private sealed class DossierFolderProvisionException : InvalidOperationException
+    {
+        public DossierFolderProvisionException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
     }
 }
 

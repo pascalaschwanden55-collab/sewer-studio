@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 using AuswertungPro.Next.Application.Dossiers;
@@ -97,6 +98,67 @@ public sealed class DossierFileStoreTests : IDisposable
         Assert.True(Directory.Exists(Path.Combine(
             DossierFolderPlanner.ResolveRoot(_projectRoot),
             "Liegenschaft Nr. 439 Dittli")));
+    }
+
+    [Fact]
+    public async Task Laden_zieht_fehlende_Ordner_vorhandener_Liegenschaften_nach()
+    {
+        var store = new DossierFileStore();
+        var document = new DossierDocument
+        {
+            Dossiers =
+            {
+                new DossierDefinition
+                {
+                    Name = "Liegenschaft Nr. 439 Dittli",
+                    FolderName = "Liegenschaft Nr. 439 Dittli"
+                }
+            }
+        };
+
+        await store.SaveAsync(_projectRoot, document);
+
+        var dossierFolder = DossierFolderPlanner.ResolveDossierFolder(
+            _projectRoot,
+            "Liegenschaft Nr. 439 Dittli");
+        Directory.Delete(dossierFolder);
+
+        var jsonPath = DossierFolderPlanner.ResolveDocumentPath(_projectRoot);
+        var jsonVorher = await File.ReadAllBytesAsync(jsonPath);
+
+        var geladen = await store.LoadAsync(_projectRoot);
+
+        Assert.Single(geladen.Dossiers);
+        Assert.True(Directory.Exists(dossierFolder));
+        Assert.Equal(jsonVorher, await File.ReadAllBytesAsync(jsonPath));
+    }
+
+    [Fact]
+    public async Task Ungueltiger_Ordnername_macht_eine_lesbare_Json_nicht_zu_einer_bad_Datei()
+    {
+        var dossierRoot = DossierFolderPlanner.ResolveRoot(_projectRoot);
+        Directory.CreateDirectory(dossierRoot);
+
+        var document = new DossierDocument
+        {
+            Dossiers =
+            {
+                new DossierDefinition
+                {
+                    Name = "Unsicher",
+                    FolderName = Path.Combine("..", "Ausbruch")
+                }
+            }
+        };
+        var jsonPath = DossierFolderPlanner.ResolveDocumentPath(_projectRoot);
+        await File.WriteAllTextAsync(jsonPath, JsonSerializer.Serialize(document));
+
+        var error = await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            () => new DossierFileStore().LoadAsync(_projectRoot));
+
+        Assert.Contains("Liegenschaftsordner", error.Message, StringComparison.Ordinal);
+        Assert.Empty(Directory.GetFiles(dossierRoot, "dossiers.json.bad_*"));
+        Assert.False(Directory.Exists(Path.Combine(_projectRoot, "Ausbruch")));
     }
 
     [Fact]

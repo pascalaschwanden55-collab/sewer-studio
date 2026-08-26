@@ -17,7 +17,8 @@ public interface IDossierStore
     /// Laedt die Dossiers eines Projekts. Eine fehlende Datei ergibt ein leeres
     /// Dokument. Eine vorhandene, aber unlesbare Datei wird NICHT als leer
     /// behandelt, sondern ueber das Backup wiederhergestellt; scheitert auch
-    /// das, wirft die Methode.
+    /// das, wirft die Methode. Bei einer lesbaren Datei werden fehlende, bereits
+    /// gespeicherte Liegenschaftsordner nachgezogen, ohne die JSON zu veraendern.
     /// </summary>
     Task<DossierDocument> LoadAsync(string projectRoot, CancellationToken ct = default);
 

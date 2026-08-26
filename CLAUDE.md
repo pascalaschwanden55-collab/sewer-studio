@@ -170,6 +170,8 @@
   Speicherfehler wird die vorige Reihenfolge wiederhergestellt.
 - `DossierFileStore` legt den eigenen Ordner jeder neu gespeicherten Liegenschaft sofort
   direkt unter `<Projekt>\Dossiers` an. Die gleiche Regel gilt fuer Einzel- und Stapelanlage.
+  Beim Laden einer vorhandenen, lesbaren `dossiers.json` zieht der Store fehlende,
+  bereits benannte Liegenschaftsordner nach, ohne die JSON-Datei zu veraendern.
   Ordnernamen duerfen diese Ebene nicht verlassen. Scheitert das anschliessende Speichern,
   werden nur in diesem Lauf neu erzeugte und weiterhin leere Ordner zurueckgenommen;
   bestehende Ordner und Benutzerdateien bleiben unangetastet.
