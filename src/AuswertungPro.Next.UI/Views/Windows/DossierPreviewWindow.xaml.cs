@@ -51,6 +51,9 @@ public partial class DossierPreviewWindow : Window
     private DossierPreviewRenderResult? _render;
     private IDossierPlanPublication? _publishedPlan;
     private DossierPreviewTarget? _aktivesFeld;
+
+    /// <summary>Die Vorlagenseiten, fuer die die Eingaben gerade gebaut sind.</summary>
+    private IReadOnlyList<DossierPreviewPage>? _gebauteSeiten;
     private DossierPreviewFieldPanel _felder = null!;
     private bool _fitPage = true;
     private bool _setztAutomatischenZoom;
@@ -181,8 +184,20 @@ public partial class DossierPreviewWindow : Window
         if (PageList.SelectedItem is not DossierOutputPreviewNavigationItem item)
             return;
 
-        _aktivesFeld = null;
         FieldsHeader.Text = $"{item.ChapterTitle} — Seite {item.OutputPage.Number}";
+
+        // Nur bei wirklich anderen Kapiteln neu bauen. Jede fertige
+        // Ausgabevorschau setzt die Seitenliste neu und loest damit die Auswahl
+        // erneut aus; ein Neuaufbau naehme dann mitten im Wort den Cursor und
+        // klappte den offenen Abschnitt wieder zu.
+        if (!DossierPreviewFieldRebuild.IstNoetig(_gebauteSeiten, item.EditorPages))
+        {
+            await ZeichneEchteSeiteAsync(item);
+            return;
+        }
+
+        _aktivesFeld = null;
+        _gebauteSeiten = item.EditorPages;
 
         if (item.EditorPage is null)
         {
