@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 using AuswertungPro.Next.Application.Dossiers.Lookup;
@@ -126,4 +126,11 @@ public interface IDossierDialogs
 
     /// <summary>Zeigen, was das Dossier ergaenzen wuerde.</summary>
     DossierRefreshChoice? Refresh(string dossierName, DossierRefreshProposal proposal);
+
+    /// <summary>
+    /// Vor dem Gesamt-PDF alle Blaetter auf einmal zeigen und einzeln abwaehlen
+    /// lassen. Zurueck kommen die Seitennummern (1-basiert), die NICHT in die
+    /// Datei sollen — oder <c>null</c> fuer Abbruch.
+    /// </summary>
+    IReadOnlySet<int>? ChoosePages(byte[] pdf);
 }

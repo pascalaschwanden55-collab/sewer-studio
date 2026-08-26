@@ -500,7 +500,11 @@ public sealed partial class DossiersPageViewModel
                 return;
             }
 
-            var result = await _pdfAssembly.AssembleAsync(request.TargetFolder);
+            // Vor dem Schreiben alle Blaetter zeigen: Erst nach dem
+            // Zusammenfuehren steht fest, was am Ende in der Datei stuende.
+            var result = await _pdfAssembly.AssembleAsync(
+                request.TargetFolder,
+                (pdf, _) => Task.FromResult(_dialogWindows.ChoosePages(pdf)));
 
             StatusMessage = result.Message;
 

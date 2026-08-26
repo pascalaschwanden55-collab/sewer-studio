@@ -291,6 +291,27 @@ public sealed class DossiersPageActionFlowTests : IDisposable
     }
 
     [Fact]
+    public async Task Vor_dem_Gesamt_Pdf_werden_die_Blaetter_gezeigt()
+    {
+        // Pascal will jedes Blatt sehen und einzeln abwaehlen koennen, bevor
+        // die Datei entsteht.
+        var haltung = Haltung("100-200");
+        _store.Dokument.Dossiers.Add(new DossierDefinition
+        {
+            Name = "Musterweg 1",
+            HoldingIds = { haltung.Id }
+        });
+
+        var flow = new RecordingPdfFlow();
+        var vm = BaueCockpit(flow, flow);
+
+        await vm.AssemblePdfCommand.ExecuteAsync(null);
+
+        Assert.True(flow.WurdeNachBlaetternGefragt, "Es wurde nicht nach den Blaettern gefragt.");
+        Assert.Equal(1, _fenster.BlattFragen);
+    }
+
+    [Fact]
     public async Task Fehlendes_Protokoll_stoppt_ein_unvollstaendiges_Gesamt_Pdf()
     {
         var haltung = Haltung("100-200");
@@ -447,6 +468,17 @@ public sealed class DossiersPageActionFlowTests : IDisposable
 
         public DossierRefreshChoice? Refresh(string dossierName, DossierRefreshProposal proposal)
             => null;
+
+        /// <summary>Was die Blattauswahl antworten soll — Standard: alles behalten.</summary>
+        public IReadOnlySet<int>? BlattAntwort { get; set; } = new HashSet<int>();
+
+        public int BlattFragen { get; private set; }
+
+        public IReadOnlySet<int>? ChoosePages(byte[] pdf)
+        {
+            BlattFragen++;
+            return BlattAntwort;
+        }
     }
 
     private sealed class FakePlanPublication : IDossierPlanPublication
@@ -521,7 +553,9 @@ public sealed class DossiersPageActionFlowTests : IDisposable
             => throw new NotSupportedException();
 
         public Task<DossierPdfAssemblyResult> AssembleAsync(
-            string dossierFolder, CancellationToken ct = default)
+            string dossierFolder,
+            Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
+            CancellationToken ct = default)
             => throw new NotSupportedException();
     }
 
@@ -542,15 +576,26 @@ public sealed class DossiersPageActionFlowTests : IDisposable
             return Task.FromResult(AttachmentResult);
         }
 
-        public Task<DossierPdfAssemblyResult> AssembleAsync(
+        /// <summary>Wurde vor dem Schreiben nach den Blaettern gefragt?</summary>
+        public bool WurdeNachBlaetternGefragt { get; private set; }
+
+        public async Task<DossierPdfAssemblyResult> AssembleAsync(
             string dossierFolder,
+            Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
             CancellationToken ct = default)
         {
             Calls.Add("Zusammenführen");
-            return Task.FromResult(new DossierPdfAssemblyResult(
+
+            if (waehleSeiten is not null)
+            {
+                WurdeNachBlaetternGefragt = true;
+                await waehleSeiten(Array.Empty<byte>(), ct).ConfigureAwait(false);
+            }
+
+            return new DossierPdfAssemblyResult(
                 true,
                 Path.Combine(dossierFolder, "Eigentuemerdossier_komplett.pdf"),
-                "Gesamt-PDF erstellt."));
+                "Gesamt-PDF erstellt.");
         }
     }
 

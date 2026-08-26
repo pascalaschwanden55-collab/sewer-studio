@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 using AuswertungPro.Next.Application.Dossiers;
@@ -95,4 +95,10 @@ public sealed class WpfDossierDialogs : IDossierDialogs
 
     public DossierRefreshChoice? Refresh(string dossierName, DossierRefreshProposal proposal)
         => DossierRefreshWindow.ShowFor(dossierName, proposal);
+
+    public IReadOnlySet<int>? ChoosePages(byte[] pdf)
+        => DossierPageSelectionWindow.Frage(
+            pdf,
+            _previewPages,
+            System.Windows.Application.Current?.MainWindow);
 }

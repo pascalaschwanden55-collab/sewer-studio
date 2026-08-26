@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -34,17 +34,16 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
         _convertWordToPdf = convertWordToPdf ?? DossierWordPdfConverter.TryConvertToPdf;
     }
 
-    public Task<DossierPdfAssemblyResult> AssembleAsync(
+    public async Task<DossierPdfAssemblyResult> AssembleAsync(
         string dossierFolder,
+        Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
         CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dossierFolder);
         ct.ThrowIfCancellationRequested();
 
         if (!Directory.Exists(dossierFolder))
-        {
             return Fail($"Der Dossier-Ordner fehlt: '{dossierFolder}'.");
-        }
 
         var wordFile = FindNewestWordFile(dossierFolder);
         if (wordFile is null)
@@ -75,6 +74,29 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
                 ? generated
                 : _pdfMerge.MergeWithOriginals(generated, attachments);
 
+            // Zwischen „zusammengefuehrt" und „geschrieben": Erst hier stehen
+            // alle Blaetter fest — die aus Word UND die Beilagen. Vorher liesse
+            // sich gar nicht zeigen, was am Ende in der Datei stuende.
+            if (waehleSeiten is not null)
+            {
+                var ausgeschlossen = await waehleSeiten(merged, ct).ConfigureAwait(false);
+
+                if (ausgeschlossen is null)
+                {
+                    return new DossierPdfAssemblyResult(
+                        false, null, "Das Gesamt-PDF wurde nicht erstellt.");
+                }
+
+                try
+                {
+                    merged = DossierPdfPageFilter.Ohne(merged, ausgeschlossen);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return new DossierPdfAssemblyResult(false, null, ex.Message);
+                }
+            }
+
             var targetPath = Path.Combine(
                 dossierFolder, DossierFolderPlanner.CombinedPdfFileName);
 
@@ -89,8 +111,8 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
                 ? " (ohne Beilagen — der Ordner „Beilagen\" ist leer)"
                 : $" (mit {attachments.Count} Beilagen)";
 
-            return Task.FromResult(new DossierPdfAssemblyResult(
-                true, targetPath, "Gesamt-PDF erstellt" + note + "."));
+            return new DossierPdfAssemblyResult(
+                true, targetPath, "Gesamt-PDF erstellt" + note + ".");
         }
         catch (OperationCanceledException)
         {
@@ -135,8 +157,8 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
             .ToList();
     }
 
-    private static Task<DossierPdfAssemblyResult> Fail(string message)
-        => Task.FromResult(new DossierPdfAssemblyResult(false, null, message));
+    private static DossierPdfAssemblyResult Fail(string message)
+        => new(false, null, message);
 
     private static void TryDelete(string path)
     {

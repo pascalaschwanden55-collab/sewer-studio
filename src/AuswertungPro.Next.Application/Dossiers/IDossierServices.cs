@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -115,7 +115,14 @@ public sealed record DossierPdfAssemblyResult(
 /// </summary>
 public interface IDossierPdfAssemblyService
 {
+    /// <param name="waehleSeiten">
+    /// Wird zwischen „zusammengefuehrt" und „geschrieben" gefragt und bekommt
+    /// das fertige PDF. Zurueck kommen die Seitennummern (1-basiert), die NICHT
+    /// in die Datei sollen — oder <c>null</c> fuer Abbruch. Ohne Rueckfrage
+    /// wird alles geschrieben.
+    /// </param>
     Task<DossierPdfAssemblyResult> AssembleAsync(
         string dossierFolder,
+        Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
         CancellationToken ct = default);
 }
