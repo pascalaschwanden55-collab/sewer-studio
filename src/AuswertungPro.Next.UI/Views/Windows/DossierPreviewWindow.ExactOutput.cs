@@ -25,15 +25,6 @@ public partial class DossierPreviewWindow
     private int _pageRenderVersion;
     private bool _previewRefreshRunning;
 
-    private void BaueBeilagenHinweis()
-    {
-        _felder.Leere();
-        FieldPanel.Children.Add(DossierExactPreviewPageRenderer.CreateNotice(
-            "Diese Seite ist eine Original-Beilage. Sie wird vollständig angezeigt, "
-            + "aber nicht im Dossier-Editor verändert.",
-            pageSized: false));
-    }
-
     private void StarteEchteVorschau()
     {
         _previewDelay = new DispatcherTimer(DispatcherPriority.Background)

@@ -176,6 +176,16 @@ public partial class DossierPreviewWindow : Window
     private static T Kopiere<T>(T quelle) where T : new()
         => DossierDeepCopy.Of(quelle);
 
+    /// <summary>
+    /// Alle Vorlagenseiten des Dossiers, in Dokumentreihenfolge und ohne
+    /// Wiederholung. Die Eingabeseite baut daraus einmal ihre Felder.
+    /// </summary>
+    private IReadOnlyList<DossierPreviewPage> AlleVorlagenseiten()
+        => _templateNavigation
+            .Select(eintrag => eintrag.Page)
+            .Distinct()
+            .ToList();
+
     private async void OnPageSelected(object sender, SelectionChangedEventArgs e)
     {
         _ = sender;
@@ -184,33 +194,27 @@ public partial class DossierPreviewWindow : Window
         if (PageList.SelectedItem is not DossierOutputPreviewNavigationItem item)
             return;
 
-        FieldsHeader.Text = $"{item.ChapterTitle} — Seite {item.OutputPage.Number}";
+        FieldsHeader.Text = item.EditorPage is null
+            ? $"Beilage — Seite {item.OutputPage.Number} · Original, wird nicht verändert"
+            : $"{item.ChapterTitle} — Seite {item.OutputPage.Number}";
 
-        // Nur bei wirklich anderen Kapiteln neu bauen. Jede fertige
-        // Ausgabevorschau setzt die Seitenliste neu und loest damit die Auswahl
-        // erneut aus; ein Neuaufbau naehme dann mitten im Wort den Cursor und
-        // klappte den offenen Abschnitt wieder zu.
-        if (!DossierPreviewFieldRebuild.IstNoetig(_gebauteSeiten, item.EditorPages))
+        // Die Eingaben gelten fuer das GANZE Word-Dokument, nicht fuer die
+        // gewaehlte Seite. Damit findet ein Klick sein Feld auch dann, wenn der
+        // Text auf einem anderen Blatt steht — und beim Blaettern bleibt der
+        // Cursor stehen, weil nichts neu gebaut wird.
+        var alleSeiten = AlleVorlagenseiten();
+
+        if (DossierPreviewFieldRebuild.IstNoetig(_gebauteSeiten, alleSeiten))
         {
-            await ZeichneEchteSeiteAsync(item);
-            return;
+            _aktivesFeld = null;
+            _gebauteSeiten = alleSeiten;
+
+            _felder.Baue(DossierPreviewFieldCatalog.ForPages(
+                _fields,
+                alleSeiten,
+                _dossier,
+                key => _values.TryGetValue(key, out var wert) ? wert : string.Empty));
         }
-
-        _aktivesFeld = null;
-        _gebauteSeiten = item.EditorPages;
-
-        if (item.EditorPage is null)
-        {
-            BaueBeilagenHinweis();
-            await ZeichneEchteSeiteAsync(item);
-            return;
-        }
-
-        _felder.Baue(DossierPreviewFieldCatalog.ForPages(
-            _fields,
-            item.EditorPages,
-            _dossier,
-            key => _values.TryGetValue(key, out var wert) ? wert : string.Empty));
 
         await ZeichneEchteSeiteAsync(item);
 

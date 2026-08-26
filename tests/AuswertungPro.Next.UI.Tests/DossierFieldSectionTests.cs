@@ -24,99 +24,13 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Wie sich die Eingabeseite der Dossier-Vorschau verhält.
 ///
 /// Pascals Befund war: „es ist eher verwirrend bis ich die Felder gefunden
-/// habe". Die Ursache war nicht die Menge der Felder, sondern dass alle
-/// Abschnitte gleichzeitig offen standen und ein Sprung aus dem Blatt nur den
-/// Schreibfokus setzte — sichtbar geblinkt hat allein das Blatt. Man landete
-/// irgendwo und musste erst suchen, wo.
+/// habe". Die erste Antwort waren Klapp-Abschnitte; die hat er nach dem
+/// Ansehen wieder verworfen. Geblieben ist der bessere Weg: Ein Klick im Blatt
+/// zeigt rechts genau dieses eine Feld, hebt es beidseitig hervor und setzt
+/// den Schreibfokus hinein.
 /// </summary>
 public sealed class DossierFieldSectionTests
 {
-    [Fact]
-    public void Wer_einen_Abschnitt_aufklappt_klappt_die_uebrigen_zu()
-    {
-        RunOnSta(() =>
-        {
-            var ordnung = new DossierFieldSectionAccordion();
-            var erster = new Expander { IsExpanded = true };
-            var zweiter = new Expander();
-            var dritter = new Expander();
-
-            ordnung.Merke(erster);
-            ordnung.Merke(zweiter);
-            ordnung.Merke(dritter);
-
-            zweiter.IsExpanded = true;
-
-            Assert.False(erster.IsExpanded);
-            Assert.True(zweiter.IsExpanded);
-            Assert.False(dritter.IsExpanded);
-        });
-    }
-
-    [Fact]
-    public void Nach_dem_Aufbau_steht_genau_ein_Abschnitt_offen()
-    {
-        // Die Verzeichnisseite baute drei Abschnitte als „wichtig" auf. Alle
-        // drei standen offen, und die gesuchte Eingabe lag irgendwo dazwischen.
-        RunOnSta(() =>
-        {
-            var ordnung = new DossierFieldSectionAccordion();
-            var angaben = new Expander { IsExpanded = true };
-            var verzeichnis = new Expander { IsExpanded = true };
-            var beilagen = new Expander { IsExpanded = true };
-
-            ordnung.Merke(angaben);
-            ordnung.Merke(verzeichnis);
-            ordnung.Merke(beilagen);
-
-            ordnung.OeffneNurDenErsten();
-
-            Assert.True(angaben.IsExpanded);
-            Assert.False(verzeichnis.IsExpanded);
-            Assert.False(beilagen.IsExpanded);
-        });
-    }
-
-    [Fact]
-    public void Sind_alle_zu_oeffnet_der_erste()
-    {
-        RunOnSta(() =>
-        {
-            var ordnung = new DossierFieldSectionAccordion();
-            var erster = new Expander();
-            var zweiter = new Expander();
-
-            ordnung.Merke(erster);
-            ordnung.Merke(zweiter);
-            ordnung.OeffneNurDenErsten();
-
-            Assert.True(erster.IsExpanded);
-            Assert.False(zweiter.IsExpanded);
-        });
-    }
-
-    [Fact]
-    public void Eine_neue_Seite_vergisst_die_Abschnitte_der_alten()
-    {
-        // Ohne das Leeren wuerde ein Abschnitt der vorigen Seite weiter
-        // mitgeordnet — und ein Klick auf der neuen Seite ihn zuklappen wollen.
-        RunOnSta(() =>
-        {
-            var ordnung = new DossierFieldSectionAccordion();
-            var alt = new Expander { IsExpanded = true };
-            ordnung.Merke(alt);
-
-            ordnung.Leere();
-
-            var neu = new Expander();
-            ordnung.Merke(neu);
-            neu.IsExpanded = true;
-
-            Assert.True(alt.IsExpanded);
-            Assert.True(neu.IsExpanded);
-        });
-    }
-
     [Fact]
     public void Der_Sprung_laesst_die_Stelle_aufblinken_und_gibt_die_Farbe_zurueck()
     {

@@ -71,7 +71,6 @@ internal sealed partial class DossierPreviewFieldPanel
         foreach (var (seite, felder) in seiten)
             HaengeSeiteAn(seite, felder, mitKapitel ? seite.Title : string.Empty);
 
-        OeffneNurDenErsten();
         ZeigeAlleFelder();
 
         if (_wirt.Children.Count == 0)
@@ -174,11 +173,6 @@ internal sealed partial class DossierPreviewFieldPanel
         if (!_feldStellen.TryGetValue(target, out var stelle))
             return false;
 
-        // Genau der eine Abschnitt auf — die uebrigen zu, damit man nicht an
-        // der gesuchten Stelle vorbeiscrollt.
-        foreach (var expander in Vorfahren(stelle).OfType<Expander>())
-            NurDiesenAbschnitt(expander);
-
         // Rechts nur noch diese eine Stelle — der Klick im Blatt sagt ja
         // bereits, welche gemeint ist.
         ZeigeNurDieseStelle(stelle);
@@ -224,41 +218,51 @@ internal sealed partial class DossierPreviewFieldPanel
         return null;
     }
 
-    private Expander Abschnitt(string titel, UIElement inhalt, bool offen)
+    /// <summary>
+    /// Ein Abschnitt der Eingabeseite: Ueberschrift und Inhalt, immer offen.
+    ///
+    /// Vorher war das ein Aufklapper. Pascal wollte das Klappen weg — und mit
+    /// dem Klick im Blatt braucht es das auch nicht: Rechts steht ohnehin nur
+    /// noch das angeklickte Feld, und der Weg dorthin fuehrt nicht mehr ueber
+    /// das Suchen in einer langen Liste.
+    ///
+    /// Der <paramref name="offen"/>-Wert bleibt in der Signatur, damit die
+    /// Aufrufer unveraendert lesbar bleiben; er sagt jetzt nur noch, was der
+    /// Aufbau fuer wichtig haelt.
+    /// </summary>
+    private FrameworkElement Abschnitt(string titel, UIElement inhalt, bool offen)
     {
-        var abschnitt = BaueAbschnitt(titel, inhalt, offen);
-        MerkeAbschnitt(abschnitt);
-        return abschnitt;
-    }
+        _ = offen;
 
-    private Expander BaueAbschnitt(string titel, UIElement inhalt, bool offen)
-    {
+        var kopf = new TextBlock
+        {
+            Text = titel + Anzahl(inhalt),
+            Foreground = (Brush)_ressource("TextBrush"),
+            FontSize = 13,
+            FontWeight = FontWeights.SemiBold,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+
         var rahmen = new Border
         {
             BorderBrush = Randfarbe,
             BorderThickness = new Thickness(0, 1, 0, 0),
             Padding = new Thickness(0, 8, 0, 2),
-            Margin = new Thickness(0, 4, 0, 0),
             Child = inhalt
         };
 
-        // Der Abschnittskopf ist halbfett — ohne dieses Zuruecksetzen erbt
-        // jede Beschriftung und jedes Eingabefeld darin dieselbe Schrift.
-        // Dann sieht alles gleich wichtig aus, und genau das machte das
-        // Suchen muehsam.
+        // Ohne dieses Zuruecksetzen erbt jede Beschriftung darin die halbfette
+        // Schrift der Ueberschrift; dann sieht alles gleich wichtig aus.
         TextElement.SetFontWeight(rahmen, FontWeights.Normal);
         TextElement.SetFontSize(rahmen, 12);
 
-        return new Expander
-        {
-            Header = titel + Anzahl(inhalt),
-            IsExpanded = offen,
-            Foreground = (Brush)_ressource("TextBrush"),
-            FontSize = 13,
-            FontWeight = FontWeights.SemiBold,
-            Margin = new Thickness(0, 0, 0, 8),
-            Content = rahmen
-        };
+        var abschnitt = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
+        abschnitt.Children.Add(kopf);
+        abschnitt.Children.Add(rahmen);
+
+        MerkeAbschnitt(abschnitt);
+        return abschnitt;
     }
 
     /// <summary>

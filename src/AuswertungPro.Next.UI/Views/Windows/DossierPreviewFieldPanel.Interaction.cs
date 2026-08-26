@@ -6,23 +6,23 @@ using System.Windows.Controls;
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 /// <summary>
-/// Verdrahtung der Eingabeseite mit ihren zwei Verhaltensregeln.
+/// Verdrahtung der Eingabeseite mit ihrem Verhalten.
 ///
-/// Die Regeln selbst stehen in <see cref="DossierFieldSectionAccordion"/> und
-/// <see cref="DossierFieldHighlight"/> — dort sind sie ohne Fenster, Vorlage
-/// und Dossier prüfbar.
+/// Die Regeln selbst stehen in <see cref="DossierFieldHighlight"/> und
+/// <see cref="DossierFieldFocus"/> — dort sind sie ohne Fenster, Vorlage und
+/// Dossier prüfbar.
 /// </summary>
 internal sealed partial class DossierPreviewFieldPanel
 {
-    private readonly DossierFieldSectionAccordion _ordnung = new();
+    /// <summary>
+    /// Die Abschnitte der Eingabeseite, in ihrer Reihenfolge. Sie stehen alle
+    /// offen; ein- und ausgeblendet wird nur noch ueber den Klick im Blatt.
+    /// </summary>
+    private readonly List<FrameworkElement> _abschnitte = new();
 
-    private void MerkeAbschnitt(Expander abschnitt) => _ordnung.Merke(abschnitt);
+    private void MerkeAbschnitt(FrameworkElement abschnitt) => _abschnitte.Add(abschnitt);
 
-    private void NurDiesenAbschnitt(Expander offen) => _ordnung.OeffneNur(offen);
-
-    private void OeffneNurDenErsten() => _ordnung.OeffneNurDenErsten();
-
-    private void LeereAbschnitte() => _ordnung.Leere();
+    private void LeereAbschnitte() => _abschnitte.Clear();
 
     private static void LasseAufblinken(FrameworkElement stelle)
         => DossierFieldHighlight.LasseAufblinken(stelle);
@@ -90,7 +90,5 @@ internal sealed partial class DossierPreviewFieldPanel
     /// gemerkten Eingabestellen. Die Kopfzeile gehoert bewusst nicht dazu.
     /// </summary>
     private IEnumerable<FrameworkElement> Fokusfaehige()
-        => _ordnung.Abschnitte
-            .Cast<FrameworkElement>()
-            .Concat(_feldStellen.Values);
+        => _abschnitte.Concat(_feldStellen.Values);
 }

@@ -203,4 +203,128 @@ public sealed class DossierClickToFieldTests
 
     private static string Kurz(string text)
         => text.Length <= 60 ? text : text[..60] + " …";
+
+    [Fact]
+    public void Jede_Zeile_und_jede_Spalte_der_Tabellen_ist_anklickbar()
+    {
+        // Pascals Anforderung: Jede Spalte, jede Zeile bekommt ihr eigenes
+        // Feld. Im Blatt hatte die Spalte „Thema" keinen Rahmen, die Spalte
+        // „Bemerkungen" schon — gemessen wird, woran das liegt.
+        // Der echte Bestand aus Pascals Blatt.
+        var dossier = Dossier();
+        dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "30",
+            ParcelNumber = "439",
+            Name = "Karl Theodor Dittli"
+        });
+        dossier.Owners.Add(new DossierOwnerRow
+        {
+            HouseNumber = "30",
+            ParcelNumber = "439",
+            Name = "Johanna Meyer"
+        });
+
+        var gebiet = new DossierAreaSettings();
+        foreach (var titel in new[]
+                 {
+                     "Ausführungstermin", "Ansprechpartner", "Unternehmer",
+                     "Örtliche Bauleitung", "Behinderungen"
+                 })
+        {
+            gebiet.Topics.Add(new DossierTopicRow { Title = titel, Text = "unbekannt" });
+        }
+
+        var zeilen = new Dictionary<string, IReadOnlyList<IReadOnlyDictionary<string, string>>>(
+            StringComparer.Ordinal)
+        {
+            ["Themen"] = DossierWordTemplateExportService.BuildTopicRows(
+                gebiet, dossier, new Dictionary<string, string>()),
+            ["Eigentuemer"] = DossierWordTemplateExportService.BuildOwnerRows(dossier)
+        };
+
+        var fehlend = new List<string>();
+
+        foreach (var (schluessel, liste) in zeilen)
+        {
+            _bericht.WriteLine($"── {schluessel}: {liste.Count} Zeilen");
+
+            for (var zeile = 0; zeile < liste.Count; zeile++)
+            {
+                foreach (var (spalte, inhalt) in liste[zeile])
+                {
+                    if (spalte.Contains("Style", StringComparison.Ordinal)
+                        || spalte.Contains("Farbe", StringComparison.Ordinal)
+                        || inhalt.Trim().Length == 0)
+                    {
+                        continue;
+                    }
+
+                    var ziel = DossierPreviewTarget.RowCell(schluessel, zeile, spalte);
+                    var kandidaten = DossierOutputPreviewInteractionMapper.BuildCandidates(
+                        [ziel],
+                        Array.Empty<DossierPreviewField>(),
+                        new Dictionary<string, string>(),
+                        dossier,
+                        key => zeilen.TryGetValue(key, out var treffer)
+                            ? treffer
+                            : Array.Empty<IReadOnlyDictionary<string, string>>());
+
+                    var text = kandidaten.FirstOrDefault()?.Text ?? string.Empty;
+                    var trifft = text.Trim().Length > 0
+                        && DossierOutputPreviewHitMatcher
+                            .Match(Woerter(inhalt), kandidaten)
+                            .Values.Any(liste2 => liste2.Contains(ziel));
+
+                    _bericht.WriteLine(
+                        $"   Zeile {zeile} · {spalte}: {(trifft ? "anklickbar" : "OFFEN")}"
+                        + $" — „{Kurz(inhalt)}\"");
+
+                    if (!trifft)
+                        fehlend.Add($"{schluessel}[{zeile}].{spalte} = „{Kurz(inhalt)}\"");
+                }
+            }
+        }
+
+        Assert.True(fehlend.Count == 0, "Nicht anklickbar: " + string.Join(" · ", fehlend));
+    }
+
+    [Fact]
+    public void Gleiche_Texte_in_verschiedenen_Zeilen_bleiben_unterscheidbar()
+    {
+        // Im echten Blatt steht in vier Themenzeilen dasselbe Wort
+        // „unbekannt". Trifft der Sucher jeden Kandidaten an JEDER Fundstelle,
+        // fuehrt ein Klick auf die vierte Zeile in das Feld der ersten — und
+        // vier Zellen leuchten gemeinsam auf.
+        var worte = Woerter(
+            "Ausführungstermin unbekannt Ansprechpartner unbekannt "
+            + "Unternehmer unbekannt Örtliche Bauleitung unbekannt");
+
+        var kandidaten = Enumerable.Range(0, 4)
+            .Select(zeile => new DossierPreviewTextCandidate(
+                DossierPreviewTarget.RowCell("Themen", zeile, "Text"),
+                "unbekannt"))
+            .ToList();
+
+        var treffer = DossierOutputPreviewHitMatcher.Match(worte, kandidaten);
+
+        foreach (var (wort, ziele) in treffer.OrderBy(paar => paar.Key))
+            _bericht.WriteLine($"Wort {wort}: {ziele.Count} Ziel(e)");
+
+        // Jede Fundstelle gehoert genau einer Zeile.
+        foreach (var (wort, ziele) in treffer)
+        {
+            Assert.True(
+                ziele.Count == 1,
+                $"Wort {wort} traegt {ziele.Count} Ziele statt einem.");
+        }
+
+        // Und zwar in Leserichtung: erste Fundstelle -> erste Zeile.
+        var reihenfolge = treffer
+            .OrderBy(paar => paar.Key)
+            .Select(paar => paar.Value[0].RowIndex)
+            .ToList();
+
+        Assert.Equal([0, 1, 2, 3], reihenfolge);
+    }
 }

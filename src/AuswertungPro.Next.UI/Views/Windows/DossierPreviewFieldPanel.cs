@@ -92,13 +92,6 @@ internal sealed partial class DossierPreviewFieldPanel
     /// <summary>Alle Ziele, zu denen es eine Eingabestelle gibt.</summary>
     public IReadOnlyCollection<DossierPreviewTarget> Ziele => _feldStellen.Keys;
 
-    /// <summary>Raeumt die Eingabeseite — fuer Seiten ohne eigene Felder.</summary>
-    public void Leere()
-    {
-        _wirt.Children.Clear();
-        _feldStellen.Clear();
-    }
-
     /// <summary>Kennt die Eingabeseite eine Stelle zu diesem Ziel?</summary>
     public bool Kennt(DossierPreviewTarget target) => _feldStellen.ContainsKey(target);
 
