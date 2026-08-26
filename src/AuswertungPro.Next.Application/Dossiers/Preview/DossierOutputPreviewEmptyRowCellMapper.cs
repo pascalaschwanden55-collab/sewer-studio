@@ -14,6 +14,12 @@ namespace AuswertungPro.Next.Application.Dossiers.Preview;
 public static class DossierOutputPreviewEmptyRowCellMapper
 {
     private const double PixelsToPoints = 72d / 96d;
+    private static readonly HashSet<string> SupportedRepeatKeys = new(
+        StringComparer.OrdinalIgnoreCase)
+    {
+        "Aenderungen",
+        "Themen"
+    };
 
     public static IReadOnlyList<DossierOutputPreviewHitArea> Build(
         DossierOutputPreviewPage page,
@@ -28,21 +34,47 @@ public static class DossierOutputPreviewEmptyRowCellMapper
         ArgumentNullException.ThrowIfNull(rowsFor);
         ArgumentNullException.ThrowIfNull(hits);
 
-        var tables = editorPages
+        var tableGroups = editorPages
             .SelectMany(editorPage => editorPage.Blocks)
             .OfType<DossierPreviewTable>()
-            .Where(table => string.Equals(
-                table.RepeatKey,
-                "Aenderungen",
-                StringComparison.OrdinalIgnoreCase))
+            .Where(table => table.RepeatKey is not null
+                && SupportedRepeatKeys.Contains(table.RepeatKey))
+            .GroupBy(table => table.RepeatKey!, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        // Mehrere moegliche Tabellen oder ein unvollstaendiger Bauplan sind
-        // nicht sicher zuordenbar. Dann bleibt die Vorschau unveraendert.
-        if (tables.Count != 1)
-            return [];
+        var available = visibleTargets.ToHashSet();
+        var alreadyMatched = hits.Values.SelectMany(targets => targets).ToHashSet();
+        var result = new List<DossierOutputPreviewHitArea>();
 
-        var table = tables[0];
+        foreach (var group in tableGroups)
+        {
+            // Eine mehrdeutige Tabelle bleibt unangetastet. Eine andere,
+            // eindeutige Tabelle auf demselben PDF-Blatt darf dadurch aber
+            // nicht ebenfalls ihre sicheren Klickflaechen verlieren.
+            if (group.Count() != 1)
+                continue;
+
+            var table = group.Single();
+            result.AddRange(BuildTable(
+                page,
+                table,
+                available,
+                rowsFor(table.RepeatKey!),
+                hits,
+                alreadyMatched));
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<DossierOutputPreviewHitArea> BuildTable(
+        DossierOutputPreviewPage page,
+        DossierPreviewTable table,
+        IReadOnlySet<DossierPreviewTarget> available,
+        IReadOnlyList<IReadOnlyDictionary<string, string>> rows,
+        IReadOnlyDictionary<int, IReadOnlyList<DossierPreviewTarget>> hits,
+        IReadOnlySet<DossierPreviewTarget> alreadyMatched)
+    {
         if (table.RepeatTemplate is null
             || table.RepeatIndex <= 0
             || table.RepeatIndex > table.Rows.Count
@@ -76,12 +108,9 @@ public static class DossierOutputPreviewEmptyRowCellMapper
             return [];
         }
 
-        var rows = rowsFor(table.RepeatKey!);
         if (rows.Count == 0)
             return [];
 
-        var available = visibleTargets.ToHashSet();
-        var alreadyMatched = hits.Values.SelectMany(targets => targets).ToHashSet();
         var repeatPadding = table.RepeatTemplate.Cells[0].Padding;
         var defaultHeight = RepeatRowHeightPoints(table.RepeatTemplate);
         if (defaultHeight <= 0)
@@ -109,21 +138,42 @@ public static class DossierOutputPreviewEmptyRowCellMapper
         if (currentLeft > page.Width + 2)
             return [];
 
+        var rowAnchors = new RowAnchor[rows.Count];
+        for (var rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+        {
+            rowAnchors[rowIndex] = TrustedRowBounds(
+                page,
+                hits,
+                table.RepeatKey!,
+                rowIndex,
+                table.RepeatCellKeys,
+                rows[rowIndex],
+                columnLefts,
+                table.ColumnWidthsPx,
+                headerBottom);
+        }
+
         var result = new List<DossierOutputPreviewHitArea>();
         var previousBottom = headerBottom;
 
         for (var rowIndex = 0; rowIndex < rows.Count; rowIndex++)
         {
-            var actual = RowBounds(page, hits, table.RepeatKey!, rowIndex);
-            var rowTop = actual is null
-                ? previousBottom
-                : Math.Min(previousBottom, actual.Value.Top
-                    + repeatPadding.Top * PixelsToPoints);
-            var rowBottom = actual is null
-                ? rowTop - defaultHeight
-                : actual.Value.Bottom - repeatPadding.Bottom * PixelsToPoints;
+            var anchor = rowAnchors[rowIndex];
+            if (anchor.Kind == RowAnchorKind.Uncertain)
+                break;
 
-            if (rowBottom < 0 || rowBottom >= rowTop)
+            var actual = anchor.Bounds;
+            var rowTop = previousBottom;
+            var rowBottom = RowBottom(
+                rowTop,
+                actual,
+                repeatPadding,
+                defaultHeight);
+
+            if (rowBottom is not { } safeBottom)
+                break;
+
+            if (safeBottom < 0 || safeBottom >= rowTop)
                 return [];
 
             for (var columnIndex = 0;
@@ -145,7 +195,7 @@ public static class DossierOutputPreviewEmptyRowCellMapper
                 result.Add(new DossierOutputPreviewHitArea(
                     target,
                     Math.Clamp(columnLefts[columnIndex], 0, page.Width),
-                    Math.Clamp(rowBottom, 0, page.Height),
+                    Math.Clamp(safeBottom, 0, page.Height),
                     Math.Clamp(
                         columnLefts[columnIndex]
                         + table.ColumnWidthsPx[columnIndex] * PixelsToPoints,
@@ -154,10 +204,119 @@ public static class DossierOutputPreviewEmptyRowCellMapper
                     Math.Clamp(rowTop, 0, page.Height)));
             }
 
-            previousBottom = rowBottom;
+            previousBottom = safeBottom;
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Nutzt nur vollstaendig erkannte Zellentexte als Hoehenanker. Der normale
+    /// Wortmatcher darf bei langen Texten bewusst nur einen eindeutigen
+    /// Ausschnitt liefern; dieser Ausschnitt waere fuer die Zeilenhoehe zu
+    /// ungenau. Bei einer leeren Bemerkung reicht dagegen der vollstaendig
+    /// erkannte Thementitel, um sie sicher derselben Zeile zuzuordnen.
+    /// </summary>
+    private static RowAnchor TrustedRowBounds(
+        DossierOutputPreviewPage page,
+        IReadOnlyDictionary<int, IReadOnlyList<DossierPreviewTarget>> hits,
+        string key,
+        int rowIndex,
+        IReadOnlyList<string> cellKeys,
+        IReadOnlyDictionary<string, string> row,
+        IReadOnlyList<double> columnLefts,
+        IReadOnlyList<double> columnWidthsPx,
+        double headerBottom)
+    {
+        var indices = new List<int>();
+        var hasValue = false;
+        var incomplete = false;
+
+        for (var columnIndex = 0; columnIndex < cellKeys.Count; columnIndex++)
+        {
+            var cellKey = cellKeys[columnIndex];
+            if (!row.TryGetValue(cellKey, out var value)
+                || string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            hasValue = true;
+            var target = DossierPreviewTarget.RowCell(key, rowIndex, cellKey);
+            var cellIndices = hits
+                .Where(pair => pair.Key >= 0
+                    && pair.Key < page.Words.Count
+                    && pair.Value.Contains(target))
+                .Select(pair => pair.Key)
+                .Distinct()
+                .OrderBy(index => index)
+                .ToList();
+
+            if (cellIndices.Count == 0
+                || !string.Equals(
+                    Normalize(string.Concat(cellIndices.Select(
+                        index => page.Words[index].Text))),
+                    Normalize(value),
+                    StringComparison.Ordinal))
+            {
+                incomplete = true;
+                continue;
+            }
+
+            var bounds = BoundsOf(page.Words, cellIndices);
+            var expectedLeft = columnLefts[columnIndex] - 2;
+            var expectedRight = columnLefts[columnIndex]
+                + columnWidthsPx[columnIndex] * PixelsToPoints
+                + 2;
+            if (bounds.Left < expectedLeft
+                || bounds.Right > expectedRight
+                || bounds.Top >= headerBottom
+                || bounds.Bottom <= 0)
+            {
+                incomplete = true;
+                continue;
+            }
+
+            indices.AddRange(cellIndices);
+        }
+
+        var distinct = indices.Distinct().ToList();
+        if (!hasValue)
+            return new RowAnchor(RowAnchorKind.Empty, null);
+
+        if (incomplete || distinct.Count == 0)
+            return new RowAnchor(RowAnchorKind.Uncertain, null);
+
+        return new RowAnchor(RowAnchorKind.Exact, BoundsOf(page.Words, distinct));
+    }
+
+    private static double? RowBottom(
+        double rowTop,
+        Bounds? actual,
+        DossierPreviewEdges padding,
+        double defaultHeight)
+    {
+        if (actual is null)
+            return rowTop - defaultHeight;
+
+        var contentHeight = actual.Value.Top - actual.Value.Bottom;
+        var measuredHeight = contentHeight
+            + (padding.Top + padding.Bottom) * PixelsToPoints;
+        var maximumHeight = Math.Max(defaultHeight, measuredHeight + defaultHeight);
+
+        // Der Treffer muss in DER Zeile liegen, deren Oberkante aus Kopf und
+        // allen vorherigen Zeilen bereits feststeht. Ein gleichlautender Text
+        // irgendwo weiter unten wird nicht passend gekuerzt, sondern verworfen.
+        if (actual.Value.Top >= rowTop
+            || actual.Value.Bottom <= rowTop - maximumHeight)
+        {
+            return null;
+        }
+
+        var result = Math.Min(
+            actual.Value.Bottom - padding.Bottom * PixelsToPoints,
+            rowTop - Math.Max(defaultHeight, measuredHeight));
+        return result >= rowTop - maximumHeight ? result : null;
     }
 
     /// <summary>
@@ -209,24 +368,6 @@ public static class DossierOutputPreviewEmptyRowCellMapper
             .ToList();
     }
 
-    private static Bounds? RowBounds(
-        DossierOutputPreviewPage page,
-        IReadOnlyDictionary<int, IReadOnlyList<DossierPreviewTarget>> hits,
-        string key,
-        int rowIndex)
-    {
-        var indices = hits
-            .Where(pair => pair.Value.Any(target =>
-                target.RowIndex == rowIndex
-                && string.Equals(target.Key, key, StringComparison.OrdinalIgnoreCase)))
-            .Select(pair => pair.Key)
-            .Where(index => index >= 0 && index < page.Words.Count)
-            .Distinct()
-            .ToList();
-
-        return indices.Count == 0 ? null : BoundsOf(page.Words, indices);
-    }
-
     private static double RepeatRowHeightPoints(DossierPreviewTableRow row)
     {
         var heightPx = row.Cells.Max(cell =>
@@ -236,7 +377,7 @@ public static class DossierOutputPreviewEmptyRowCellMapper
             + cell.Borders.Bottom
             + cell.Paragraphs.Sum(ParagraphHeightPx));
 
-        return heightPx * PixelsToPoints;
+        return Math.Max(heightPx, row.MinimumHeightPx ?? 0) * PixelsToPoints;
     }
 
     private static double ParagraphHeightPx(DossierPreviewParagraph paragraph)
@@ -337,4 +478,13 @@ public static class DossierOutputPreviewEmptyRowCellMapper
         double Bottom,
         double Right,
         double Top);
+
+    private readonly record struct RowAnchor(RowAnchorKind Kind, Bounds? Bounds);
+
+    private enum RowAnchorKind
+    {
+        Empty,
+        Exact,
+        Uncertain
+    }
 }

@@ -141,7 +141,9 @@ public sealed record DossierPreviewTableCell(
     string? ShadingHex,
     int GridSpan);
 
-public sealed record DossierPreviewTableRow(IReadOnlyList<DossierPreviewTableCell> Cells);
+public sealed record DossierPreviewTableRow(
+    IReadOnlyList<DossierPreviewTableCell> Cells,
+    double? MinimumHeightPx = null);
 
 /// <summary>
 /// Eine Tabelle mit den Spaltenbreiten der Vorlage.

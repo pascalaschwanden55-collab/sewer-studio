@@ -618,8 +618,17 @@ public static class DossierPreviewBuilder
                     ? Match.Empty
                     : Regex.Match(texte[0], @"\{\{#(?<name>[A-Za-z0-9_]+)\}\}");
 
+                var mindesthoehe = zeile
+                    .Elements<TableRowProperties>()
+                    .FirstOrDefault()
+                    ?.Elements<TableRowHeight>()
+                    .FirstOrDefault()
+                    ?.Val?.Value.ToString();
                 var gebaut = new DossierPreviewTableRow(
-                    zellen.Select(z => BaueZelle(z, standardRand, tabellenrahmen)).ToList());
+                    zellen.Select(z => BaueZelle(z, standardRand, tabellenrahmen)).ToList(),
+                    Zahl(mindesthoehe) is { } twips && twips > 0
+                        ? DocxFormatResolver.TwipsZuPixel(twips)
+                        : null);
 
                 if (marke.Success)
                 {

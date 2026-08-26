@@ -111,12 +111,64 @@ public sealed class DossierRevisionRowFocusTests
         });
     }
 
+    [Fact]
+    public void Sprung_in_leere_Themenbemerkung_fokussiert_das_Bemerkungsfeld()
+    {
+        RunOnSta(() =>
+        {
+            var host = new StackPanel();
+            var area = new DossierAreaSettings
+            {
+                Topics =
+                [
+                    new DossierTopicRow
+                    {
+                        Title = "Ausfuehrungstermin",
+                        Text = string.Empty
+                    }
+                ]
+            };
+            var panel = CreatePanel(host, new DossierDefinition(), area);
+
+            panel.Baue(TopicPage(), [TopicField()]);
+            var editors = Nachfahren(host).OfType<RichTextBox>().ToList();
+            Assert.Equal(2, editors.Count);
+
+            var window = new Window
+            {
+                Content = host,
+                Width = 420,
+                Height = 700,
+                ShowInTaskbar = false,
+                WindowStyle = WindowStyle.None
+            };
+
+            try
+            {
+                window.Show();
+
+                Assert.True(panel.SpringeZu(DossierPreviewTarget.RowCell(
+                    "Themen", 0, "Text")));
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(300));
+
+                Assert.All(editors, editor =>
+                    Assert.Equal(Visibility.Visible, editor.Visibility));
+                Assert.True(editors[1].IsKeyboardFocused);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
     private static DossierPreviewFieldPanel CreatePanel(
         Panel host,
-        DossierDefinition dossier)
+        DossierDefinition dossier,
+        DossierAreaSettings? area = null)
         => new(
             host,
-            new DossierAreaSettings(),
+            area ?? new DossierAreaSettings(),
             dossier,
             System.IO.Path.GetTempPath(),
             new DossierPreviewDocument([]),
@@ -145,6 +197,22 @@ public sealed class DossierRevisionRowFocusTests
             new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.Zero),
             [],
             ["Aenderungen"]);
+
+    private static DossierPreviewField TopicField()
+        => new(
+            "Themen",
+            "Themen der Informationstabelle",
+            DossierPreviewFieldKind.Rows,
+            () => string.Empty,
+            null);
+
+    private static DossierPreviewPage TopicPage()
+        => new(
+            3,
+            "Informationen Sanierung",
+            new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.Zero),
+            [],
+            ["Themen"]);
 
     private static IEnumerable<DependencyObject> Nachfahren(DependencyObject wurzel)
     {

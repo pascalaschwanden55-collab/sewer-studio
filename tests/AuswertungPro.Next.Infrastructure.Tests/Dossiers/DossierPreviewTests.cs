@@ -190,6 +190,7 @@ public sealed class DossierPreviewBuilderTests
         var themen = tabellen.Single(t => t.RepeatKey == "Themen");
         Assert.Equal(new[] { "Thema", "Text" }, themen.RepeatCellKeys);
         Assert.NotNull(themen.RepeatTemplate);
+        Assert.InRange(themen.RepeatTemplate.MinimumHeightPx ?? 0, 61.6, 61.8);
 
         // Die Kopfzeile bleibt eine feste Zeile der Tabelle.
         var kopf = themen.Rows[0].Cells

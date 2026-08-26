@@ -73,13 +73,16 @@
   PDF-Seite begrenzt. `DossierOutputPreviewHitMatcher` erkennt auch abweichende PDF-Wortgrenzen
   und lange Tabellenzellen; `DossierOutputPreviewHitAreaBuilder` fasst deren Worttreffer zu
   einer gut anklickbaren Zellflaeche zusammen. Weil leere Zellen kein PDF-Wort besitzen,
-  leitet `DossierOutputPreviewEmptyRowCellMapper` die vier Zellen des Aenderungswesens nur
-  bei eindeutig erkannter Tabellenkopfzeile aus der echten Vorlagengeometrie ab. Die im
-  Word sichtbare erste Leerzeile besitzt rechts sofort vier Eingaben; ein Zellklick zeigt
-  die ganze Zeile, setzt den Schreibfokus aber nur in die gewaehlte Zelle. Bleibt die
-  reine Eingabe-Grundzeile leer, entfernt `DossierChangeRows` sie vor dem Uebernehmen;
-  sie wird nicht als fachlicher Eintrag in `dossiers.json` gespeichert. Das
-  Vorschaufenster orchestriert nur.
+  leitet `DossierOutputPreviewEmptyRowCellMapper` ihre Klickflaechen im Aenderungswesen
+  und in der Informationstabelle nur bei eindeutig erkannter Tabellenkopfzeile aus der
+  echten Vorlagengeometrie ab. `DossierPreviewTableRow.MinimumHeightPx` bewahrt dabei die
+  Mindesthoehe der Word-Zeile; mehrzeilige, vollstaendig erkannte Nachbartexte erweitern
+  die Hoehe. So ist die ganze leere Zelle anklickbar und nicht nur ein Streifen neben dem
+  Text. Die im Word sichtbare erste Aenderungszeile besitzt rechts sofort vier Eingaben;
+  ein Zellklick zeigt die ganze Zeile, setzt den Schreibfokus aber nur in die gewaehlte
+  Zelle. Bleibt die reine Eingabe-Grundzeile leer, entfernt `DossierChangeRows` sie vor
+  dem Uebernehmen; sie wird nicht als fachlicher Eintrag in `dossiers.json` gespeichert.
+  Das Vorschaufenster orchestriert nur.
   Original-Beilagen erscheinen als eigene Gruppe und sind bewusst nur lesbar.
 - `DossierTextStyleRange` speichert Schriftfarbe, Fett, Kursiv und Unterstrichen als
   Zeichenbereiche. Themen verwenden `DossierTopicRow.StyleRanges`, andere Textfelder

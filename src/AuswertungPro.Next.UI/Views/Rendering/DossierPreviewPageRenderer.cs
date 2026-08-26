@@ -568,7 +568,11 @@ public static class DossierPreviewPageRenderer
             Func<int, string?>? formatbereiche = null,
             int? rowIndex = null)
         {
-            raster.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            raster.RowDefinitions.Add(new RowDefinition
+            {
+                Height = GridLength.Auto,
+                MinHeight = Math.Max(0, satz.MinimumHeightPx ?? 0)
+            });
 
             var spalte = 0;
             for (var i = 0; i < satz.Cells.Count && spalte < raster.ColumnDefinitions.Count; i++)
