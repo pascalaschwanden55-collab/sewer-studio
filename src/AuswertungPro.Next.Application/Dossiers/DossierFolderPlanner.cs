@@ -40,6 +40,29 @@ public static class DossierFolderPlanner
         => Path.Combine(ResolveRoot(projectRoot), DocumentFileName);
 
     /// <summary>
+    /// Vollstaendiger Ordner einer einzelnen Liegenschaft. Der gespeicherte
+    /// Ordnername muss ein direktes Kind des Dossier-Sammelordners bleiben.
+    /// </summary>
+    public static string ResolveDossierFolder(string projectRoot, string folderName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(folderName);
+
+        var root = Path.GetFullPath(ResolveRoot(projectRoot));
+        var folder = Path.GetFullPath(Path.Combine(root, folderName));
+        var parent = Path.GetDirectoryName(folder);
+
+        if (!string.Equals(parent, root, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException(
+                "Der Dossierordner muss direkt unter dem Ordner 'Dossiers' liegen.",
+                nameof(folderName));
+        }
+
+        return folder;
+    }
+
+    /// <summary>
     /// Bildet aus dem Anzeigenamen einen freien Ordnernamen. Ungueltige Zeichen
     /// werden ersetzt, Kollisionen mit "-2", "-3" ... aufgeloest.
     /// </summary>

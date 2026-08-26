@@ -93,6 +93,25 @@ public sealed class DossiersPageActionFlowTests : IDisposable
     }
 
     [Fact]
+    public async Task Neue_Liegenschaft_erhaelt_vor_dem_Speichern_ihren_Ordnernamen()
+    {
+        var definition = new DossierDefinition { Name = "Musterweg 1" };
+        _fenster.NeueLiegenschaft = new DossierParcelLookupChoice(
+            definition,
+            Array.Empty<string>(),
+            Array.Empty<string>());
+        _fenster.StammdatenAenderung = _ => { };
+
+        var vm = BaueCockpit();
+
+        await vm.NewDossierCommand.ExecuteAsync(null);
+
+        var gespeichert = Assert.Single(_store.Dokument.Dossiers);
+        Assert.Equal("Musterweg 1", gespeichert.FolderName);
+        Assert.Equal(1, _store.Speicherlaeufe);
+    }
+
+    [Fact]
     public async Task Eine_gewaehlte_Schachtauswahl_wird_gespeichert()
     {
         Schacht("80551");
@@ -381,12 +400,13 @@ public sealed class DossiersPageActionFlowTests : IDisposable
         public List<Guid>? LeitungsAuswahl { get; set; }
         public Action<DossierDefinition>? StammdatenAenderung { get; set; }
         public Action<DossierAreaSettings>? GebietsAenderung { get; set; }
+        public DossierParcelLookupChoice? NeueLiegenschaft { get; set; }
         public DossierPreviewChoice? VorschauUebernahme { get; set; }
         public Action? VorVorschauRueckgabe { get; set; }
 
         public DossierParcelLookupChoice? NewProperty(
             IReadOnlyDictionary<string, Guid> holdingIdsByName,
-            IReadOnlyList<string> projectShaftNumbers) => null;
+            IReadOnlyList<string> projectShaftNumbers) => NeueLiegenschaft;
 
         public bool EditDossier(DossierDefinition definition, bool isNew)
         {

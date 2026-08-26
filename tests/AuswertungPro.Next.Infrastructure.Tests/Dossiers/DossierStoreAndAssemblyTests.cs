@@ -77,6 +77,80 @@ public sealed class DossierFileStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Speichern_einer_neuen_Liegenschaft_legt_ihren_Ordner_sofort_an()
+    {
+        var store = new DossierFileStore();
+        var document = new DossierDocument
+        {
+            Dossiers =
+            {
+                new DossierDefinition
+                {
+                    Name = "Liegenschaft Nr. 439 Dittli",
+                    FolderName = "Liegenschaft Nr. 439 Dittli"
+                }
+            }
+        };
+
+        await store.SaveAsync(_projectRoot, document);
+
+        Assert.True(Directory.Exists(Path.Combine(
+            DossierFolderPlanner.ResolveRoot(_projectRoot),
+            "Liegenschaft Nr. 439 Dittli")));
+    }
+
+    [Fact]
+    public async Task Dossierordner_darf_den_Sammelordner_nicht_verlassen()
+    {
+        var store = new DossierFileStore();
+        var document = new DossierDocument
+        {
+            Dossiers =
+            {
+                new DossierDefinition
+                {
+                    Name = "Unsicher",
+                    FolderName = Path.Combine("..", "Ausbruch")
+                }
+            }
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => store.SaveAsync(_projectRoot, document));
+
+        Assert.False(Directory.Exists(Path.Combine(_projectRoot, "Ausbruch")));
+        Assert.False(File.Exists(DossierFolderPlanner.ResolveDocumentPath(_projectRoot)));
+    }
+
+    [Fact]
+    public async Task Speicherfehler_entfernt_nur_den_neuen_leeren_Dossierordner()
+    {
+        var dossierRoot = DossierFolderPlanner.ResolveRoot(_projectRoot);
+        var bestehenderOrdner = Path.Combine(dossierRoot, "Bestehend");
+        Directory.CreateDirectory(bestehenderOrdner);
+        await File.WriteAllTextAsync(Path.Combine(bestehenderOrdner, "behalten.txt"), "wichtig");
+
+        // Ein Ordner am Ort der JSON-Datei erzwingt einen Schreibfehler erst,
+        // nachdem die Liegenschaftsordner angelegt worden sind.
+        Directory.CreateDirectory(DossierFolderPlanner.ResolveDocumentPath(_projectRoot));
+
+        var document = new DossierDocument
+        {
+            Dossiers =
+            {
+                new DossierDefinition { Name = "Bestehend", FolderName = "Bestehend" },
+                new DossierDefinition { Name = "Neu", FolderName = "Neu" }
+            }
+        };
+
+        await Assert.ThrowsAnyAsync<Exception>(
+            () => new DossierFileStore().SaveAsync(_projectRoot, document));
+
+        Assert.True(File.Exists(Path.Combine(bestehenderOrdner, "behalten.txt")));
+        Assert.False(Directory.Exists(Path.Combine(dossierRoot, "Neu")));
+    }
+
+    [Fact]
     public async Task Zweites_Speichern_legt_ein_Backup_an()
     {
         var store = new DossierFileStore();

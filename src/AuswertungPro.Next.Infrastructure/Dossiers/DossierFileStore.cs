@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
@@ -113,40 +114,123 @@ public sealed class DossierFileStore : IDossierStore
 
             var backupPath = guard.EnsureSafeFileTarget(path + ".bak");
 
-            // Ist die vorhandene Datei kaputt, muss das bisherige .bak den
-            // Schreibvorgang ueberleben.
-            //
-            // Das Speichern selbst legt naemlich immer eines an: der gemeinsame
-            // atomare Schreiber ersetzt die Zieldatei ueber File.Replace und
-            // schiebt die alte — hier also die kaputte — als .bak beiseite.
-            // Ohne diese Rettung waere ausgerechnet die letzte gute Fassung weg,
-            // und zwar genau in dem Moment, in dem man sie braucht.
-            var zuRettendesBackup = File.Exists(path) && !IstLesbar(path) && File.Exists(backupPath)
-                ? await File.ReadAllBytesAsync(backupPath, ct).ConfigureAwait(false)
-                : null;
-
-            // Der letzte gute Stand als .bak. Der atomare Schreiber tut das
-            // unten ohnehin; dieser Weg deckt seinen Rueckfall ohne Replace ab.
-            if (File.Exists(path) && IstLesbar(path))
+            var newFolders = new List<string>();
+            var documentWritten = false;
+            try
             {
-                BestEffort.Try(
-                    () => File.Copy(path, backupPath, overwrite: true),
-                    "Dossiers: Backup schreiben");
+                EnsureDossierFolders(projectRoot, root, document, guard, newFolders);
+
+                // Ist die vorhandene Datei kaputt, muss das bisherige .bak den
+                // Schreibvorgang ueberleben.
+                //
+                // Das Speichern selbst legt naemlich immer eines an: der gemeinsame
+                // atomare Schreiber ersetzt die Zieldatei ueber File.Replace und
+                // schiebt die alte — hier also die kaputte — als .bak beiseite.
+                // Ohne diese Rettung waere ausgerechnet die letzte gute Fassung weg,
+                // und zwar genau in dem Moment, in dem man sie braucht.
+                var zuRettendesBackup = File.Exists(path) && !IstLesbar(path) && File.Exists(backupPath)
+                    ? await File.ReadAllBytesAsync(backupPath, ct).ConfigureAwait(false)
+                    : null;
+
+                // Der letzte gute Stand als .bak. Der atomare Schreiber tut das
+                // unten ohnehin; dieser Weg deckt seinen Rueckfall ohne Replace ab.
+                if (File.Exists(path) && IstLesbar(path))
+                {
+                    BestEffort.Try(
+                        () => File.Copy(path, backupPath, overwrite: true),
+                        "Dossiers: Backup schreiben");
+                }
+
+                document.ModifiedNow();
+                var json = JsonSerializer.Serialize(document, JsonOptions);
+                await AtomicTextFileWriter.WriteAllTextAsync(path, json, ct).ConfigureAwait(false);
+                documentWritten = true;
+
+                if (zuRettendesBackup is not null)
+                {
+                    await File.WriteAllBytesAsync(backupPath, zuRettendesBackup, ct)
+                        .ConfigureAwait(false);
+                }
             }
-
-            document.ModifiedNow();
-            var json = JsonSerializer.Serialize(document, JsonOptions);
-            await AtomicTextFileWriter.WriteAllTextAsync(path, json, ct).ConfigureAwait(false);
-
-            if (zuRettendesBackup is not null)
+            catch
             {
-                await File.WriteAllBytesAsync(backupPath, zuRettendesBackup, ct)
-                    .ConfigureAwait(false);
+                if (!documentWritten)
+                    RollbackEmptyFolders(projectRoot, newFolders);
+                throw;
             }
         }
         finally
         {
             _saveLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Legt die Ordner aller gespeicherten Liegenschaften an. So gilt dieselbe
+    /// Regel fuer Einzel- und Stapelanlage, ohne Dateilogik im ViewModel.
+    /// </summary>
+    private static void EnsureDossierFolders(
+        string projectRoot,
+        string dossierRoot,
+        DossierDocument document,
+        ProjectWritePathGuard guard,
+        List<string> newFolders)
+    {
+        foreach (var dossier in document.Dossiers)
+        {
+            if (string.IsNullOrWhiteSpace(dossier.FolderName))
+                continue;
+
+            var plannedFolder = DossierFolderPlanner.ResolveDossierFolder(
+                projectRoot,
+                dossier.FolderName);
+            var folder = guard.EnsureSafeDirectoryTarget(plannedFolder);
+
+            if (!string.Equals(
+                    Path.GetDirectoryName(folder),
+                    dossierRoot,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException(
+                    "Der Dossierordner liegt nicht direkt unter dem Dossier-Sammelordner.",
+                    nameof(document));
+            }
+
+            if (Directory.Exists(folder))
+                continue;
+
+            newFolders.Add(folder);
+            Directory.CreateDirectory(folder);
+            guard.EnsureSafeDirectoryTarget(folder);
+        }
+    }
+
+    /// <summary>
+    /// Bei einem Speicherfehler werden nur gerade neu erzeugte und weiterhin
+    /// leere Ordner entfernt. Vorhandene Ordner und Benutzerdateien bleiben.
+    /// </summary>
+    private static void RollbackEmptyFolders(
+        string projectRoot,
+        IReadOnlyList<string> newFolders)
+    {
+        for (var index = newFolders.Count - 1; index >= 0; index--)
+        {
+            var folder = newFolders[index];
+            BestEffort.Try(
+                () =>
+                {
+                    var guard = new ProjectWritePathGuard(projectRoot);
+                    var safeFolder = guard.EnsureSafeDirectoryTarget(folder);
+                    if (!Directory.Exists(safeFolder))
+                        return;
+
+                    using var entries = Directory
+                        .EnumerateFileSystemEntries(safeFolder)
+                        .GetEnumerator();
+                    if (!entries.MoveNext())
+                        Directory.Delete(safeFolder, recursive: false);
+                },
+                $"Dossiers: leeren neuen Ordner '{folder}' zuruecknehmen");
         }
     }
 

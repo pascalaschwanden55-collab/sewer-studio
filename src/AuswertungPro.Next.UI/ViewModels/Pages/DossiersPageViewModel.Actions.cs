@@ -668,7 +668,7 @@ public sealed partial class DossiersPageViewModel
             ? DossierFolderPlanner.PlanFolderName(definition.Name, _ => false)
             : definition.FolderName;
 
-        return Path.Combine(DossierFolderPlanner.ResolveRoot(root), folderName);
+        return DossierFolderPlanner.ResolveDossierFolder(root, folderName);
     }
 
     private bool EnsureProject(out string root)

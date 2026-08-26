@@ -168,6 +168,11 @@
   `dossiers.json`. Das Cockpit sortiert nicht mehr still alphabetisch. `Nach oben` und
   `Nach unten` verschieben die Auswahl um genau eine Stelle und speichern sofort; bei einem
   Speicherfehler wird die vorige Reihenfolge wiederhergestellt.
+- `DossierFileStore` legt den eigenen Ordner jeder neu gespeicherten Liegenschaft sofort
+  direkt unter `<Projekt>\Dossiers` an. Die gleiche Regel gilt fuer Einzel- und Stapelanlage.
+  Ordnernamen duerfen diese Ebene nicht verlassen. Scheitert das anschliessende Speichern,
+  werden nur in diesem Lauf neu erzeugte und weiterhin leere Ordner zurueckgenommen;
+  bestehende Ordner und Benutzerdateien bleiben unangetastet.
 
 ## Aktueller Pipeline-Ablauf
 1. UI/Service startet Analyse ueber `VideoAnalysisPipelineService`, `SingleFrameMultiModelService` oder `VideoFullAnalysisService`.
