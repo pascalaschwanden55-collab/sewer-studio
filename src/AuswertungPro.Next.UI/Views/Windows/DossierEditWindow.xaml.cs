@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 
+using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Domain.Models.Dossiers;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -171,10 +172,7 @@ public partial class DossierEditWindow : Window
             .ToList();
 
         _target.Changes = _changes
-            .Where(zeile => !string.IsNullOrWhiteSpace(zeile.Version)
-                || !string.IsNullOrWhiteSpace(zeile.Date)
-                || !string.IsNullOrWhiteSpace(zeile.Visum)
-                || !string.IsNullOrWhiteSpace(zeile.Change))
+            .Where(DossierChangeRows.HasContent)
             .ToList();
 
         _target.OverviewPlanPath = _planPath;

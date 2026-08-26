@@ -52,7 +52,8 @@ public static class DossierExactPreviewPageRenderer
         BitmapSource bitmap,
         DossierOutputPreviewPage page,
         IReadOnlyDictionary<int, IReadOnlyList<DossierPreviewTarget>> hits,
-        DossierPreviewTarget? planTarget = null)
+        DossierPreviewTarget? planTarget = null,
+        IReadOnlyList<DossierOutputPreviewHitArea>? additionalAreas = null)
     {
         ArgumentNullException.ThrowIfNull(bitmap);
         ArgumentNullException.ThrowIfNull(page);
@@ -78,7 +79,9 @@ public static class DossierExactPreviewPageRenderer
         var overlay = new Canvas { Width = width, Height = height };
         var frames = new Dictionary<DossierPreviewTarget, List<Border>>();
 
-        var areas = DossierOutputPreviewHitAreaBuilder.Build(page, hits);
+        var areas = DossierOutputPreviewHitAreaBuilder.Build(page, hits)
+            .Concat(additionalAreas ?? [])
+            .ToList();
         foreach (var group in areas
                      .GroupBy(area => new AreaKey(
                          area.Left,

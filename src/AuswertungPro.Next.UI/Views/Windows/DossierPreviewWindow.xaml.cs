@@ -155,6 +155,11 @@ public partial class DossierPreviewWindow : Window
             if (window.ShowDialog() != true)
                 return null;
 
+            // Die Vorschau stellt die im Word sichtbare Grundzeile als echte
+            // Eingabe bereit. Bleibt sie leer, ist sie kein fachlicher
+            // Aenderungseintrag und wird nicht in dossiers.json uebernommen.
+            DossierChangeRows.RemoveEmpty(dossier);
+
             var publication = window._publishedPlan;
             window._publishedPlan = null;
             return new DossierPreviewChoice(area, dossier, publication);

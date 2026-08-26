@@ -274,6 +274,105 @@ public sealed class DossierFieldSectionTests
     }
 
     [Fact]
+    public void Inhaltsverzeichnis_Titel_und_Ergaenzen_bleiben_gemeinsam_erreichbar()
+    {
+        RunOnSta(() =>
+        {
+            static DossierPreviewParagraph Absatz(string text)
+                => new(
+                    [DossierPreviewRun.Literal(text, DossierPreviewRunFormat.Default)],
+                    DossierPreviewParagraphFormat.Default);
+
+            static DossierPreviewParagraph Verzeichniszeile(
+                string nummer,
+                string titel,
+                string seite)
+                => new(
+                    [DossierPreviewRun.Literal(titel, DossierPreviewRunFormat.Default)],
+                    DossierPreviewParagraphFormat.Default with
+                    {
+                        IsTableOfContentsEntry = true
+                    },
+                    TocEntry: new DossierPreviewTocEntry(nummer, titel, seite));
+
+            var host = new StackPanel();
+            var dossier = new DossierDefinition();
+            var page = new DossierPreviewPage(
+                2,
+                "Inhaltsverzeichnis",
+                new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.Zero),
+                [
+                    Absatz("Inhaltsverzeichnis"),
+                    Verzeichniszeile("1.", "Übersichtsplan Werkleitungen", "3"),
+                    Verzeichniszeile("2.", "Eigentumsverhältnisse", "4"),
+                    Verzeichniszeile("3.", "Informationen Sanierung", "4")
+                ],
+                ["Verzeichnis_Beilagen"]);
+            var document = new DossierPreviewDocument([page]);
+            var panel = new DossierPreviewFieldPanel(
+                host,
+                new DossierAreaSettings(),
+                dossier,
+                System.IO.Path.GetTempPath(),
+                document,
+                new PlanImageConverterStub(),
+                new PlanImageAdjusterStub(),
+                () => new Dictionary<string, string>(),
+                () => { },
+                _ => { },
+                (_, _) => { },
+                _ => Brushes.Black,
+                _ => { },
+                () => new Window());
+            var field = new DossierPreviewField(
+                "Verzeichnis_Beilagen",
+                "Inhaltsverzeichnis ergänzen",
+                DossierPreviewFieldKind.Rows,
+                () => string.Empty,
+                null);
+
+            panel.Baue(page, [field]);
+            var ergaenzen = Assert.Single(Nachfahren(host)
+                .OfType<Button>()
+                .Where(button => string.Equals(
+                    button.Content as string,
+                    "+ Punkt ergänzen",
+                    StringComparison.Ordinal)));
+            var targets = new[]
+            {
+                DossierPreviewTarget.Literal("Übersichtsplan Werkleitungen"),
+                DossierPreviewTarget.Literal("Eigentumsverhältnisse"),
+                DossierPreviewTarget.Literal("Informationen Sanierung")
+            };
+            Assert.All(targets, target => Assert.True(panel.Kennt(target)));
+
+            var window = new Window
+            {
+                Content = host,
+                Width = 420,
+                Height = 760,
+                ShowInTaskbar = false,
+                WindowStyle = WindowStyle.None
+            };
+
+            try
+            {
+                window.Show();
+                Assert.All(targets, target => Assert.True(panel.SpringeZu(target)));
+                PumpDispatcherFor(TimeSpan.FromMilliseconds(80));
+
+                Assert.True(ergaenzen.IsVisible);
+                ergaenzen.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Assert.Single(dossier.TocAttachments);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
     public void Plansprung_zeigt_die_vorhandenen_Foto_Dreh_und_Zuschneidewerkzeuge()
     {
         RunOnSta(() =>

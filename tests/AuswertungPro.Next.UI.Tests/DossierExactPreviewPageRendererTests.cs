@@ -84,6 +84,31 @@ public sealed class DossierExactPreviewPageRendererTests
         });
     }
 
+    [Fact]
+    public void Render_macht_eine_abgeleitete_leere_Zelle_anklickbar()
+    {
+        RunOnSta(() =>
+        {
+            var bitmap = new WriteableBitmap(100, 150, 96, 96, PixelFormats.Bgra32, null);
+            var page = new DossierOutputPreviewPage(2, 612, 792, string.Empty, []);
+            var target = DossierPreviewTarget.RowCell(
+                "Aenderungen", 0, "Datum");
+            var area = new DossierOutputPreviewHitArea(
+                target, 40, 620, 120, 650);
+
+            var result = DossierExactPreviewPageRenderer.Render(
+                bitmap,
+                page,
+                new Dictionary<int, IReadOnlyList<DossierPreviewTarget>>(),
+                additionalAreas: [area]);
+
+            var frame = Assert.Single(result.Frames[target]);
+            Assert.Equal(Cursors.Hand, frame.Cursor);
+            Assert.True(frame.Width > 100);
+            Assert.True(frame.Height > 35);
+        });
+    }
+
     private static void RunOnSta(Action action)
     {
         Exception? error = null;

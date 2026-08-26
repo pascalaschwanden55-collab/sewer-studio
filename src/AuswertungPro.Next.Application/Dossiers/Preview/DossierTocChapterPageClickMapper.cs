@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 using AuswertungPro.Next.Application.Dossiers;
@@ -65,6 +66,8 @@ public static class DossierTocChapterPageClickMapper
             pair => pair.Key,
             pair => pair.Value.Distinct().ToList());
 
+        AddGluedLeaderTitleTargets(page, result, chapterTitles);
+
         for (var rowIndex = 0; rowIndex < chapterTitles.Count; rowIndex++)
         {
             var titleTarget = DossierPreviewTarget.Literal(chapterTitles[rowIndex]);
@@ -108,6 +111,107 @@ public static class DossierTocChapterPageClickMapper
             pair => pair.Key,
             pair => (IReadOnlyList<DossierPreviewTarget>)pair.Value);
     }
+
+    /// <summary>
+    /// Word und PDFPig liefern die Punktlinie nicht immer als eigenes Wort.
+    /// Aus dem letzten Titelwort kann zum Beispiel
+    /// <c>Werkleitungen........3</c> werden. Der allgemeine Texttreffer darf
+    /// dieses Wort nicht unscharf kuerzen; hier ist die Zuordnung trotzdem
+    /// sicher, weil Punktlinie, Seitenzahl, Zeilennummer und ganzer Titel
+    /// gemeinsam exakt stimmen muessen.
+    /// </summary>
+    private static void AddGluedLeaderTitleTargets(
+        DossierOutputPreviewPage page,
+        IDictionary<int, List<DossierPreviewTarget>> hits,
+        IReadOnlyList<string> chapterTitles)
+    {
+        for (var rowIndex = 0; rowIndex < chapterTitles.Count; rowIndex++)
+        {
+            var title = chapterTitles[rowIndex];
+            var expectedLine = Normalize(
+                (rowIndex + 1).ToString(CultureInfo.InvariantCulture) + title);
+            var expectedWithoutNumber = Normalize(title);
+            var matches = new List<IReadOnlyList<int>>();
+
+            for (var leaderIndex = 0; leaderIndex < page.Words.Count; leaderIndex++)
+            {
+                if (!TrySplitLeaderAndPage(
+                        page.Words[leaderIndex].Text,
+                        out var beforeLeader))
+                {
+                    continue;
+                }
+
+                var anchor = page.Words[leaderIndex];
+                var line = page.Words
+                    .Select((word, index) => (word, index))
+                    .Where(item => IsSameLine(anchor, item.word)
+                        && item.word.Left <= anchor.Right)
+                    .OrderBy(item => item.word.Left)
+                    .ThenBy(item => item.index)
+                    .ToList();
+
+                var normalizedLine = string.Concat(line.Select(item => Normalize(
+                    item.index == leaderIndex ? beforeLeader : item.word.Text)));
+                if (!string.Equals(normalizedLine, expectedLine, StringComparison.Ordinal)
+                    && !string.Equals(
+                        normalizedLine,
+                        expectedWithoutNumber,
+                        StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                matches.Add(line.Select(item => item.index).ToList());
+            }
+
+            // Mehrere gleich passende Zeilen waeren nicht eindeutig. In
+            // diesem Fall lieber keinen Klick anbieten als die falsche Zeile
+            // zu oeffnen.
+            if (matches.Count != 1)
+                continue;
+
+            var target = DossierPreviewTarget.Literal(title);
+            foreach (var wordIndex in matches[0])
+            {
+                if (!hits.TryGetValue(wordIndex, out var targets))
+                    hits[wordIndex] = targets = [];
+
+                if (!targets.Contains(target))
+                    targets.Add(target);
+            }
+        }
+    }
+
+    private static bool TrySplitLeaderAndPage(string? text, out string beforeLeader)
+    {
+        var value = text ?? string.Empty;
+        beforeLeader = string.Empty;
+
+        for (var start = 0; start < value.Length - 1; start++)
+        {
+            if (value[start] != '.' || value[start + 1] != '.')
+                continue;
+
+            var end = start + 2;
+            while (end < value.Length && value[end] == '.')
+                end++;
+
+            if (!IsPageNumber(value[end..]))
+                return false;
+
+            beforeLeader = value[..start];
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string Normalize(string? text)
+        => new((text ?? string.Empty)
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToLowerInvariant)
+            .ToArray());
 
     private static bool IsSameLine(
         DossierOutputPreviewWord left,

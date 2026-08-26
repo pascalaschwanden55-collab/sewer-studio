@@ -189,6 +189,12 @@ public partial class DossierPreviewWindow
                 item.OutputPage,
                 hits,
                 DossierTocChapterPageClickMapper.ChapterTitles(item.EditorPages));
+            var emptyCellAreas = DossierOutputPreviewEmptyRowCellMapper.Build(
+                item.OutputPage,
+                item.EditorPages,
+                sichtbareZiele,
+                ZeilenFuer,
+                hits);
             var planTarget = DossierOutputPreviewInteractionMapper.ContainsPlanLocation(
                     item.OutputPage,
                     item.EditorPages)
@@ -198,7 +204,8 @@ public partial class DossierPreviewWindow
                 bitmap,
                 item.OutputPage,
                 hits,
-                planTarget);
+                planTarget,
+                emptyCellAreas);
             Sheet.Child = _render.Root;
 
             if (_aktivesFeld is not null)

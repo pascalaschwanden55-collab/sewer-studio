@@ -72,7 +72,14 @@
   Seiten-/Editor-Zuordnung und Textziele WPF-frei; Treffer werden auf die wirklich sichtbare
   PDF-Seite begrenzt. `DossierOutputPreviewHitMatcher` erkennt auch abweichende PDF-Wortgrenzen
   und lange Tabellenzellen; `DossierOutputPreviewHitAreaBuilder` fasst deren Worttreffer zu
-  einer gut anklickbaren Zellflaeche zusammen. Das Vorschaufenster orchestriert nur.
+  einer gut anklickbaren Zellflaeche zusammen. Weil leere Zellen kein PDF-Wort besitzen,
+  leitet `DossierOutputPreviewEmptyRowCellMapper` die vier Zellen des Aenderungswesens nur
+  bei eindeutig erkannter Tabellenkopfzeile aus der echten Vorlagengeometrie ab. Die im
+  Word sichtbare erste Leerzeile besitzt rechts sofort vier Eingaben; ein Zellklick zeigt
+  die ganze Zeile, setzt den Schreibfokus aber nur in die gewaehlte Zelle. Bleibt die
+  reine Eingabe-Grundzeile leer, entfernt `DossierChangeRows` sie vor dem Uebernehmen;
+  sie wird nicht als fachlicher Eintrag in `dossiers.json` gespeichert. Das
+  Vorschaufenster orchestriert nur.
   Original-Beilagen erscheinen als eigene Gruppe und sind bewusst nur lesbar.
 - `DossierTextStyleRange` speichert Schriftfarbe, Fett, Kursiv und Unterstrichen als
   Zeichenbereiche. Themen verwenden `DossierTopicRow.StyleRanges`, andere Textfelder
@@ -110,8 +117,11 @@
   bleiben erhalten. `DossierPreviewTocLayout` verwendet in der Vorschau dieselben Masse.
   Die Vorschau verwendet dasselbe Zeilenraster samt Punktlinie, zaehlt ausgeblendete
   Kapitel nicht mit und adressiert jeden Zusatzpunkt einzeln fuer den direkten Klick zum
-  Editor. `DossierTocChapterPageClickMapper` ordnet auch die rechts stehenden Seitenzahlen
-  anhand derselben Inhaltsverzeichniszeile eindeutig ihrem Seitenzahlfeld zu.
+  Editor. `DossierTocChapterPageClickMapper` erkennt auch von PDFPig mit Punktlinie und
+  Seitenzahl verklebte Titel fail-closed und ordnet getrennt gelieferte Seitenzahlen anhand
+  derselben Inhaltsverzeichniszeile eindeutig ihrem Seitenzahlfeld zu. Vorhandene Titel und
+  `+ Punkt ergaenzen` stehen rechts im selben Abschnitt, damit der Knopf auch nach einem
+  direkten Titelklick sichtbar bleibt.
 - Die Dossier-Vorschau startet mit einer vollstaendig eingepassten Seite.
   `DossierPreviewFitCalculator` berechnet den Zoom aus der echten PDF-Blattgroesse und der
   Vorschauflaeche;

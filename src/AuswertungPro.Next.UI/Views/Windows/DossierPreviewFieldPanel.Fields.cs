@@ -46,8 +46,14 @@ internal sealed partial class DossierPreviewFieldPanel
         Func<object> Neu,
         IReadOnlyList<ZeilenSpalte> Spalten);
 
-    private static readonly SolidColorBrush Randfarbe =
-        new(Color.FromRgb(0xC8, 0xC8, 0xC8));
+    private static readonly SolidColorBrush Randfarbe = ErzeugeRandfarbe();
+
+    private static SolidColorBrush ErzeugeRandfarbe()
+    {
+        var farbe = new SolidColorBrush(Color.FromRgb(0xC8, 0xC8, 0xC8));
+        farbe.Freeze();
+        return farbe;
+    }
 
     // ── Aufbau ────────────────────────────────────────────────────────────
 
@@ -106,18 +112,43 @@ internal sealed partial class DossierPreviewFieldPanel
             .OfType<DossierPreviewParagraph>()
             .Any(absatz => absatz.TocEntry is not null);
 
-        // Auf der Verzeichnisseite sind die drei Kapiteltitel die Hauptarbeit.
-        // Sie stehen deshalb offen und vor den zusätzlichen Punkten.
-        if (istVerzeichnis && feste.Count > 0)
+        var verzeichnisFeld = istVerzeichnis
+            ? felder.FirstOrDefault(feld =>
+                feld.Kind is DossierPreviewFieldKind.Rows
+                && string.Equals(
+                    feld.Key,
+                    "Verzeichnis_Beilagen",
+                    StringComparison.OrdinalIgnoreCase))
+            : null;
+
+        // Die vorhandenen Kapitel und die zusaetzlichen Punkte sind eine
+        // einzige Aufgabe. In getrennten Abschnitten verschwand ausgerechnet
+        // "+ Punkt ergänzen", sobald man links einen vorhandenen Titel
+        // anklickte. Gemeinsam bleibt der Knopf immer am sichtbaren Ort.
+        if (istVerzeichnis && (feste.Count > 0 || verzeichnisFeld is not null))
         {
-            _wirt.Children.Add(Abschnitt(
-                Titel("Inhaltsverzeichnis bearbeiten"),
-                BaueFesteTexte(feste, DossierTocChapterPageField.ChapterTitles(seite)),
-                offen: true));
+            var festeTitel = feste.Count > 0
+                ? BaueFesteTexte(
+                    feste,
+                    DossierTocChapterPageField.ChapterTitles(seite))
+                : null;
+            var inhalt = verzeichnisFeld is not null
+                ? BaueVerzeichnisEditor(verzeichnisFeld, festeTitel)
+                : festeTitel!;
+            var abschnitt = Abschnitt(
+                Titel("Inhaltsverzeichnis bearbeiten und ergänzen"),
+                inhalt,
+                offen: true);
+            _wirt.Children.Add(abschnitt);
+
+            if (verzeichnisFeld is not null)
+                MerkeStelle(DossierPreviewTarget.Field(verzeichnisFeld.Key), abschnitt);
         }
 
         // Jede Zeilenliste bekommt ihren eigenen Abschnitt mit ihrem Namen.
-        foreach (var feld in felder.Where(f => f.Kind is DossierPreviewFieldKind.Rows))
+        foreach (var feld in felder
+                     .Where(f => f.Kind is DossierPreviewFieldKind.Rows)
+                     .Where(f => !ReferenceEquals(f, verzeichnisFeld)))
         {
             var inhalt = feld.Key switch
             {
@@ -193,9 +224,18 @@ internal sealed partial class DossierPreviewFieldPanel
         if (!_feldStellen.TryGetValue(target, out var stelle))
             return false;
 
-        // Rechts nur noch diese eine Stelle — der Klick im Blatt sagt ja
-        // bereits, welche gemeint ist.
-        ZeigeNurDieseStelle(stelle);
+        // Eine Tabellenzelle gehoert zu einer gemeinsamen Zeile. Beim Sprung
+        // bleibt deshalb die ganze Zeile sichtbar; sonst waeren leere
+        // Nachbarzellen nicht mehr erreichbar. Schreibfokus und Blinken gelten
+        // weiterhin nur fuer die genau angeklickte Zelle.
+        var sichtbareStelle = target.Kind == DossierPreviewTargetKind.RowCell
+            && _feldStellen.TryGetValue(
+                DossierPreviewTarget.Row(target.Key, target.RowIndex),
+                out var zeile)
+            ? zeile
+            : stelle;
+
+        ZeigeNurDieseStelle(sichtbareStelle);
 
         // Sichtbar machen und den Schreibfokus setzen — erst nachdem WPF den
         // gerade aufgeklappten Abschnitt wirklich dargestellt hat.

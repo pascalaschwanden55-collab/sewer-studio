@@ -34,6 +34,19 @@ internal sealed partial class DossierPreviewFieldPanel
         if (typ is null)
             return;
 
+        // Word zeigt im Aenderungswesen auch ohne vorhandenen Eintrag eine
+        // leere Datenzeile. Rechts muss genau diese sichtbare Zeile bereits
+        // beschreibbar sein; sonst gaebe es nur den versteckten Umweg ueber
+        // "+ Zeile". Ein erneuter Aufbau legt keine weitere Zeile an.
+        if (string.Equals(
+                feld.Key,
+                "Aenderungen",
+                StringComparison.OrdinalIgnoreCase)
+            && typ.Liste.Count == 0)
+        {
+            typ.Liste.Add(typ.Neu());
+        }
+
         for (var i = 0; i < typ.Liste.Count; i++)
         {
             var stelle = i;
@@ -60,13 +73,32 @@ internal sealed partial class DossierPreviewFieldPanel
                 () => Verschiebe(typ, stelle, -1, wirt, feld)));
             werkzeuge.Children.Add(Kleiner("▼", "Nach unten",
                 () => Verschiebe(typ, stelle, +1, wirt, feld)));
-            werkzeuge.Children.Add(Kleiner("✕", "Zeile entfernen", () =>
+            var entfernen = Kleiner("✕", "Zeile entfernen", () =>
             {
                 typ.Liste.RemoveAt(stelle);
                 FuelleZeilenEditor(wirt, feld);
                 _zeichneBlatt();
                 Betone(feld.Key);
-            }));
+            });
+            werkzeuge.Children.Add(entfernen);
+
+            void AktualisiereEntfernen()
+            {
+                var istLeereGrundzeile = string.Equals(
+                        feld.Key,
+                        "Aenderungen",
+                        StringComparison.OrdinalIgnoreCase)
+                    && typ.Liste.Count == 1
+                    && zeile is DossierChangeRow change
+                    && !DossierChangeRows.HasContent(change);
+
+                entfernen.IsEnabled = !istLeereGrundzeile;
+                entfernen.ToolTip = istLeereGrundzeile
+                    ? "Die im Word sichtbare leere Grundzeile bleibt bestehen."
+                    : "Zeile entfernen";
+            }
+
+            AktualisiereEntfernen();
 
             kopf.Children.Add(werkzeuge);
             kopf.Children.Add(new TextBlock
@@ -114,6 +146,7 @@ internal sealed partial class DossierPreviewFieldPanel
                 box.TextChanged += (_, _) =>
                 {
                     SpeichereZeilenfeld(zeile, spalte, box);
+                    AktualisiereEntfernen();
                     _zeichneBlatt();
                 };
 

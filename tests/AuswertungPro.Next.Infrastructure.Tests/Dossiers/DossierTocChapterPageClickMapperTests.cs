@@ -104,6 +104,51 @@ public sealed class DossierTocChapterPageClickMapperTests
                 && pair.Value.Any(DossierTocChapterPageClickMapper.IsPageTarget));
     }
 
+    [Fact]
+    public void Verklebte_Punktlinie_und_Seite_lassen_den_Kapiteltitel_anklicken()
+    {
+        var title = DossierPreviewTarget.Literal("Übersichtsplan Werkleitungen");
+        var words = new[]
+        {
+            Word("1.", 30, 700),
+            Word("Übersichtsplan", 60, 700),
+            Word("Werkleitungen........................3", 170, 700)
+        };
+        var page = new DossierOutputPreviewPage(2, 612, 792, "", words);
+
+        var result = DossierTocChapterPageClickMapper.AddPageTargets(
+            page,
+            new Dictionary<int, IReadOnlyList<DossierPreviewTarget>>(),
+            ["Übersichtsplan Werkleitungen"]);
+
+        Assert.All(new[] { 0, 1, 2 }, index => Assert.Contains(title, result[index]));
+        Assert.DoesNotContain(
+            result[2],
+            DossierTocChapterPageClickMapper.IsPageTarget);
+    }
+
+    [Fact]
+    public void Zwei_gleich_passende_verklebte_Zeilen_bleiben_fail_closed()
+    {
+        var words = new[]
+        {
+            Word("1.", 30, 700),
+            Word("Übersichtsplan", 60, 700),
+            Word("Werkleitungen........3", 170, 700),
+            Word("1.", 30, 600),
+            Word("Übersichtsplan", 60, 600),
+            Word("Werkleitungen........3", 170, 600)
+        };
+        var page = new DossierOutputPreviewPage(2, 612, 792, "", words);
+
+        var result = DossierTocChapterPageClickMapper.AddPageTargets(
+            page,
+            new Dictionary<int, IReadOnlyList<DossierPreviewTarget>>(),
+            ["Übersichtsplan Werkleitungen"]);
+
+        Assert.Empty(result);
+    }
+
     private static DossierOutputPreviewWord Word(string text, double left, double bottom)
         => new(text, left, bottom, left + Math.Max(12, text.Length * 6), bottom + 12);
 }

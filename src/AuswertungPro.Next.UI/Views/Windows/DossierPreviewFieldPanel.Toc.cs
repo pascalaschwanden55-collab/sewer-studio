@@ -19,7 +19,9 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 /// </summary>
 internal sealed partial class DossierPreviewFieldPanel
 {
-    private UIElement BaueVerzeichnisEditor(DossierPreviewField feld)
+    private UIElement BaueVerzeichnisEditor(
+        DossierPreviewField feld,
+        UIElement? festeTitel = null)
     {
         var block = new StackPanel();
         block.Children.Add(new TextBlock
@@ -32,6 +34,17 @@ internal sealed partial class DossierPreviewFieldPanel
         });
 
         var liste = new StackPanel();
+        var neu = Kleiner(
+            "+ Punkt ergänzen",
+            "Einen zusätzlichen Verzeichnispunkt anhängen",
+            () => FuegeVerzeichnispunktHinzu(liste, feld));
+        neu.HorizontalAlignment = HorizontalAlignment.Left;
+        neu.Margin = new Thickness(0, 0, 0, 8);
+        block.Children.Add(neu);
+
+        if (festeTitel is not null)
+            block.Children.Add(festeTitel);
+
         block.Children.Add(liste);
         FuelleVerzeichnisEditor(liste, feld);
         return block;
@@ -169,24 +182,20 @@ internal sealed partial class DossierPreviewFieldPanel
             MerkeStelle(seitenTarget, seite);
         }
 
-        var neu = Kleiner("+ Punkt ergänzen", "Einen zusätzlichen Verzeichnispunkt anhängen", () =>
-        {
-            _dossier.TocAttachments.Add(new DossierTocAttachment
-            {
-                PageNumber = NaechsteVerzeichnisSeite()
-            });
-            FuelleVerzeichnisEditor(wirt, feld);
-            _zeichneBlatt();
-            Betone(feld.Key);
+    }
 
-            if (wirt.Children.Count >= 2
-                && wirt.Children[^2] is Border letzteKarte)
-            {
-                ErsteEingabe(letzteKarte)?.Focus();
-            }
+    private void FuegeVerzeichnispunktHinzu(Panel wirt, DossierPreviewField feld)
+    {
+        _dossier.TocAttachments.Add(new DossierTocAttachment
+        {
+            PageNumber = NaechsteVerzeichnisSeite()
         });
-        neu.HorizontalAlignment = HorizontalAlignment.Left;
-        wirt.Children.Add(neu);
+        FuelleVerzeichnisEditor(wirt, feld);
+        _zeichneBlatt();
+        Betone(feld.Key);
+
+        if (wirt.Children.OfType<Border>().LastOrDefault() is { } letzteKarte)
+            ErsteEingabe(letzteKarte)?.Focus();
     }
 
     private void VerschiebeVerzeichnispunkt(

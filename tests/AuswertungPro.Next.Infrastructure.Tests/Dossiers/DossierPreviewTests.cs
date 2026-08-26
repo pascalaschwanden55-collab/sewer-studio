@@ -172,6 +172,21 @@ public sealed class DossierPreviewBuilderTests
         Assert.Contains(tabellen, t => t.RepeatKey == "Eigentuemer");
         Assert.Contains(tabellen, t => t.RepeatKey == "Themen");
 
+        var aenderungen = tabellen.Single(t => t.RepeatKey == "Aenderungen");
+        Assert.Equal(new[] { "Version", "Datum", "Visum", "Aenderung" },
+            aenderungen.RepeatCellKeys);
+        Assert.NotNull(aenderungen.RepeatTemplate);
+        Assert.True(aenderungen.RepeatIndex > 0);
+        var aenderungsKopf = aenderungen.Rows[aenderungen.RepeatIndex - 1].Cells
+            .Select(z => string.Concat(z.Paragraphs
+                .SelectMany(a => a.Runs)
+                .Where(r => !r.IsField)
+                .Select(r => r.Text)).Trim())
+            .ToList();
+        Assert.Equal(
+            new[] { "Version", "Datum", "Visum", "Art der Änderung" },
+            aenderungsKopf);
+
         var themen = tabellen.Single(t => t.RepeatKey == "Themen");
         Assert.Equal(new[] { "Thema", "Text" }, themen.RepeatCellKeys);
         Assert.NotNull(themen.RepeatTemplate);
