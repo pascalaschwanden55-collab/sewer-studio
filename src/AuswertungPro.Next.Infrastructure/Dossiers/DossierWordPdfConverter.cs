@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -58,6 +58,8 @@ internal static class LibreOfficeWriterPdfConverter
 {
     private static readonly TimeSpan ConversionTimeout = TimeSpan.FromMinutes(2);
 
+    private static readonly object Schloss = new();
+
     public static bool TryConvertToPdf(string wordPath, string? pdfPath)
     {
         if (!OperatingSystem.IsWindows() ||
@@ -72,11 +74,54 @@ internal static class LibreOfficeWriterPdfConverter
         if (executable is null)
             return false;
 
+        return TryConvertToPdf(
+            wordPath,
+            pdfPath,
+            profil => Wandle(executable, wordPath, pdfPath, profil));
+    }
+
+    /// <summary>
+    /// Der Ablauf um die eigentliche Umwandlung: ein wiederverwendetes
+    /// Benutzerprofil, und bei einem Fehlschlag genau ein zweiter Versuch mit
+    /// frischem Profil.
+    ///
+    /// Das wiederverwendete Profil ist die ganze Beschleunigung — gemessen
+    /// 2,35 s je Lauf mit eigenem Profil gegen rund 1,0 s ab dem zweiten Lauf
+    /// mit geteiltem. Der zweite Versuch ist der Preis dafuer: Ein beschaedigtes
+    /// Profil wuerde sonst jede weitere Umwandlung dauerhaft kosten.
+    ///
+    /// Serialisiert, weil LibreOffice ein Profil nicht zweimal gleichzeitig
+    /// verwenden kann.
+    /// </summary>
+    internal static bool TryConvertToPdf(
+        string wordPath,
+        string? pdfPath,
+        Func<string, bool> wandleMitProfil)
+    {
+        ArgumentNullException.ThrowIfNull(wandleMitProfil);
+        _ = wordPath;
+        _ = pdfPath;
+
+        lock (Schloss)
+        {
+            if (wandleMitProfil(LibreOfficeProfileStore.Ordner()))
+                return true;
+
+            LibreOfficeProfileStore.Erneuere();
+            return wandleMitProfil(LibreOfficeProfileStore.Ordner());
+        }
+    }
+
+    private static bool Wandle(
+        string executable,
+        string wordPath,
+        string pdfPath,
+        string profileFolder)
+    {
         var workFolder = Path.Combine(
             Path.GetTempPath(),
             "SewerStudio_LibreOffice_" + Guid.NewGuid().ToString("N"));
         var outputFolder = Path.Combine(workFolder, "output");
-        var profileFolder = Path.Combine(workFolder, "profile");
 
         try
         {
@@ -121,6 +166,8 @@ internal static class LibreOfficeWriterPdfConverter
         }
         finally
         {
+            // Nur der Arbeitsordner dieses Laufs — das Profil bleibt stehen,
+            // sonst waere die Beschleunigung wieder weg.
             TryDeleteWorkFolder(workFolder);
         }
     }

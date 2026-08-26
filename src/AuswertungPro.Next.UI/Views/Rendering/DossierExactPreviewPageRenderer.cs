@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -109,6 +109,7 @@ public static class DossierExactPreviewPageRenderer
         return new DossierPreviewRenderResult
         {
             Root = root,
+            Overlay = overlay,
             Frames = frames.ToDictionary(
                 pair => pair.Key,
                 pair => (IReadOnlyList<Border>)pair.Value)

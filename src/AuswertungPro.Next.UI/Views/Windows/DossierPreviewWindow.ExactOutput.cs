@@ -27,9 +27,15 @@ public partial class DossierPreviewWindow
 
     private void StarteEchteVorschau()
     {
+        // Der getippte Text steht sofort im Blatt; diese Pause bestimmt nur,
+        // wann das ECHTE Bild nachgezogen wird. Mit dem wiederverwendeten
+        // LibreOffice-Profil dauert eine Umwandlung rund eine Sekunde statt
+        // 2,4 — deshalb darf die Pause kuerzer sein. Weiteres Tippen waehrend
+        // einer laufenden Umwandlung stapelt sich nicht: Der Lauf merkt sich
+        // die neueste Fassung und rechnet nur diese.
         _previewDelay = new DispatcherTimer(DispatcherPriority.Background)
         {
-            Interval = TimeSpan.FromMilliseconds(700)
+            Interval = TimeSpan.FromMilliseconds(300)
         };
         _previewDelay.Tick += OnPreviewDelayElapsed;
         Closed += (_, _) =>
@@ -46,7 +52,7 @@ public partial class DossierPreviewWindow
     private void FordereEchteVorschauAn()
     {
         _previewRequestedVersion++;
-        StatusText.Text = "Änderung erfasst — Ausgabevorschau wird aktualisiert …";
+        StatusText.Text = "Änderung übernommen — genaues Blatt folgt …";
 
         if (_previewDelay is null)
             return;
@@ -167,8 +173,11 @@ public partial class DossierPreviewWindow
                 return;
             }
 
-            var candidates = DossierOutputPreviewInteractionMapper.BuildCandidates(
+            var sichtbareZiele = DossierOutputPreviewInteractionMapper.TargetsForPages(
                 _felder.Ziele,
+                item.EditorPages);
+            var candidates = DossierOutputPreviewInteractionMapper.BuildCandidates(
+                sichtbareZiele,
                 _fields,
                 _values,
                 _dossier,

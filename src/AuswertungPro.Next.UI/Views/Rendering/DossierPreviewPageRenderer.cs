@@ -25,6 +25,12 @@ public sealed class DossierPreviewRenderResult
 
     /// <summary>Rahmen je fachlicher Zieladresse — ein Feld kann mehrfach vorkommen.</summary>
     public required IReadOnlyDictionary<DossierPreviewTarget, IReadOnlyList<Border>> Frames { get; init; }
+
+    /// <summary>
+    /// Die Ebene ueber dem Blatt, auf der die Rahmen liegen. Dorthin kommt auch
+    /// die Sofortanzeige des gerade getippten Textes.
+    /// </summary>
+    public Canvas? Overlay { get; init; }
 }
 
 /// <summary>Der Rand eines Rahmens vor jeder Hervorhebung.</summary>

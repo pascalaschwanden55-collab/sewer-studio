@@ -238,6 +238,7 @@ public partial class DossierPreviewWindow : Window
         _values["Uebersichtsplan"] =
             DossierWordTemplateExportService.ResolvePlanPath(_request) ?? string.Empty;
 
+        ZeigeSofort();
         FordereEchteVorschauAn();
     }
 
@@ -246,6 +247,34 @@ public partial class DossierPreviewWindow : Window
     {
         _aktivesFeld = target;
         Hervorheben(target, blinken: true);
+    }
+
+    /// <summary>
+    /// Zeigt den gerade getippten Text sofort im Blatt.
+    ///
+    /// Die echte Word/PDF-Ausgabe braucht auf diesem Rechner ueber zwei
+    /// Sekunden; so lange darf man seinen eigenen Text nicht suchen muessen.
+    /// Diese Anzeige ist eine Naeherung des Wortlauts und wird vom echten Bild
+    /// abgeloest, sobald es da ist.
+    /// </summary>
+    private void ZeigeSofort()
+    {
+        if (_render?.Overlay is not { } blatt)
+            return;
+
+        if (_aktivesFeld is not { } ziel
+            || !_render.Frames.TryGetValue(ziel, out var stellen))
+        {
+            DossierPreviewLiveText.Entferne(blatt);
+            return;
+        }
+
+        var text = DossierOutputPreviewInteractionMapper
+            .BuildCandidates([ziel], _fields, _values, _dossier, ZeilenFuer)
+            .Select(kandidat => kandidat.Text)
+            .FirstOrDefault() ?? string.Empty;
+
+        DossierPreviewLiveText.Zeige(blatt, stellen, text);
     }
 
     private IReadOnlyList<IReadOnlyDictionary<string, string>> ZeilenFuer(string key) => key switch
