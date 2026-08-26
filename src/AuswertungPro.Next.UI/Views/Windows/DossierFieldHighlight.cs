@@ -60,7 +60,9 @@ internal static class DossierFieldHighlight
     /// dargestellt hat. Ein Fokus auf ein noch nicht dargestelltes Feld
     /// verpufft, und <c>BringIntoView</c> rechnet dann mit Nullmassen.
     /// </summary>
-    public static void AktiviereEingabe(FrameworkElement karte)
+    public static void AktiviereEingabe(
+        FrameworkElement karte,
+        Action? afterFocus = null)
     {
         ArgumentNullException.ThrowIfNull(karte);
 
@@ -79,6 +81,8 @@ internal static class DossierFieldHighlight
                     eingabe.Focus();
                     Keyboard.Focus(eingabe);
                 }
+
+                afterFocus?.Invoke();
             }),
             DispatcherPriority.Input);
     }

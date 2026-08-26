@@ -11,6 +11,16 @@ namespace AuswertungPro.Next.Application.Dossiers;
 /// </summary>
 public static class DossierChangeRows
 {
+    public static void EnsureStarter(DossierDefinition dossier)
+    {
+        ArgumentNullException.ThrowIfNull(dossier);
+        dossier.Changes ??= [];
+        dossier.Changes.RemoveAll(row => row is null);
+
+        if (dossier.Changes.Count == 0)
+            dossier.Changes.Add(new DossierChangeRow());
+    }
+
     /// <summary>Entfernt nur vollstaendig leere Zeilen und liefert ihre Anzahl.</summary>
     public static int RemoveEmpty(DossierDefinition dossier)
     {

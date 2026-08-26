@@ -186,6 +186,70 @@ public sealed class DossierOutputPreviewHitMatcherTests
         Assert.False(result.ContainsKey(5));
     }
 
+    [Fact]
+    public void Match_laesst_gleichen_Text_in_zwei_verschiedenen_Feldern_fail_closed()
+    {
+        var hausnummer = DossierPreviewTarget.Field("Haus_Nr");
+        var parzellennummer = DossierPreviewTarget.Field("Pz_Nr");
+
+        var result = DossierOutputPreviewHitMatcher.Match(
+            Words("30", "30"),
+            [
+                new DossierPreviewTextCandidate(hausnummer, "30"),
+                new DossierPreviewTextCandidate(parzellennummer, "30")
+            ]);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void Match_laesst_gleichen_Text_bei_abweichender_Anzahl_fail_closed()
+    {
+        var erster = DossierPreviewTarget.Field("Erstes_Feld");
+        var zweiter = DossierPreviewTarget.Field("Zweites_Feld");
+
+        var result = DossierOutputPreviewHitMatcher.Match(
+            Words("gleich", "gleich", "gleich"),
+            [
+                new DossierPreviewTextCandidate(erster, "gleich"),
+                new DossierPreviewTextCandidate(zweiter, "gleich")
+            ]);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void Teilanker_verteilen_identische_Listenzeilen_nicht_nach_Ankeranzahl()
+    {
+        var first = DossierPreviewTarget.RowCell("Themen", 0, "Text");
+        var second = DossierPreviewTarget.RowCell("Themen", 1, "Text");
+        const string value = "Die Zugänge sollten normal möglich sein wenn nötig werden "
+            + "Provisorien für die Zugänge erstellt";
+
+        var result = DossierOutputPreviewHitMatcher.Match(
+            Words(
+                "Abweichend",
+                "Zugänge",
+                "sollten",
+                "normal",
+                "möglich",
+                "sein",
+                "wenn",
+                "nötig",
+                "werden",
+                "Provisorien",
+                "für",
+                "die",
+                "Zugänge",
+                "erstellt"),
+            [
+                new DossierPreviewTextCandidate(first, value),
+                new DossierPreviewTextCandidate(second, value)
+            ]);
+
+        Assert.Empty(result);
+    }
+
     private static IReadOnlyList<DossierOutputPreviewWord> Words(params string[] texts)
         => texts
             .Select((text, index) => Word(text, 10 + (index * 40)))

@@ -91,6 +91,7 @@
                               SizeChanged="OnSheetViewportChanged">
                     <!-- Das Blatt bringt seine Masse aus der erzeugten PDF-Seite mit. -->
                     <Border x:Name="Sheet" Background="White" Margin="10"
+                            IsHitTestVisible="False"
                             PreviewMouseLeftButtonDown="OnBlattGeklickt"
                             ToolTip="Klick auf einen bearbeitbaren Text springt rechts direkt zu seinem Eingabefeld."
                             HorizontalAlignment="Center" VerticalAlignment="Top">
@@ -118,9 +119,9 @@
             <Button Content="Verwerfen"
                         ToolTip="Schliesst die Vorschau und wirft alle Eingaben dieser Sitzung weg. Das Dossier bleibt so, wie es beim Öffnen war." Width="120" Height="32" Margin="0,0,8,0"
                     IsCancel="True" Click="OnCancel"/>
-            <Button Content="Übernehmen"
+            <Button x:Name="AcceptButton" Content="Übernehmen"
                         ToolTip="Speichert alle Eingaben der Vorschau in das Dossier und die Gebietsangaben." Width="120" Height="32"
-                    IsDefault="True" Click="OnAccept"/>
+                    IsDefault="True" IsEnabled="False" Click="OnAccept"/>
         </StackPanel>
     </Grid>
 </Window>

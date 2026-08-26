@@ -82,6 +82,14 @@ public partial class DossierPreviewWindow : Window
         _snapshot = request.Snapshot;
         _request = request with { Area = area, Dossier = dossier };
 
+        // Die drei Word-Tabellen besitzen auch ohne Fachdaten eine sichtbare
+        // Grundzeile. Sie wird vor der ERSTEN exakten Ausgabe angelegt, damit
+        // Blatt, Klickziele und rechte Eingaben bereits beim Oeffnen denselben
+        // Stand zeigen. Unbenutzte Eingabehilfen werden bei Uebernahme entfernt.
+        DossierChangeRows.EnsureStarter(_dossier);
+        DossierOwnerRows.EnsureStarter(_dossier);
+        DossierTopicRows.EnsureStarter(_area, _dossier);
+
         _document = DossierPreviewBuilder.Build(templatePath);
         _values = DossierWordTemplateExportService.BuildValues(
             _request,
@@ -159,6 +167,8 @@ public partial class DossierPreviewWindow : Window
             // Eingabe bereit. Bleibt sie leer, ist sie kein fachlicher
             // Aenderungseintrag und wird nicht in dossiers.json uebernommen.
             DossierChangeRows.RemoveEmpty(dossier);
+            DossierOwnerRows.RemoveEmpty(dossier);
+            DossierTopicRows.RemoveEmpty(dossier);
 
             var publication = window._publishedPlan;
             window._publishedPlan = null;
@@ -303,7 +313,9 @@ public partial class DossierPreviewWindow : Window
     {
         _ = sender;
 
-        if (_render is null || e.OriginalSource is not DependencyObject quelle)
+        if (!_exactPreviewState.CanInteractWithPage
+            || _render is null
+            || e.OriginalSource is not DependencyObject quelle)
             return;
 
         var rahmenZuZielen = new Dictionary<Border, List<DossierPreviewTarget>>();
@@ -461,6 +473,12 @@ public partial class DossierPreviewWindow : Window
     {
         _ = sender;
         _ = e;
+
+        if (!_exactPreviewState.CanAccept)
+        {
+            StatusText.Text = "Übernehmen ist erst nach einer erfolgreichen aktuellen Vorschau möglich.";
+            return;
+        }
 
         var plan = _planWorkSession.Publish(
             _planPublications,

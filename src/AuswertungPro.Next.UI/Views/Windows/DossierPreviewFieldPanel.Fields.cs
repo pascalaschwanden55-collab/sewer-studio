@@ -229,24 +229,24 @@ internal sealed partial class DossierPreviewFieldPanel
         // bleibt deshalb die ganze Zeile sichtbar; sonst waeren leere
         // Nachbarzellen nicht mehr erreichbar. Schreibfokus und Blinken gelten
         // weiterhin nur fuer die genau angeklickte Zelle.
-        var sichtbareStelle = target.Kind == DossierPreviewTargetKind.RowCell
-            && _feldStellen.TryGetValue(
-                DossierPreviewTarget.Row(target.Key, target.RowIndex),
-                out var zeile)
-            ? zeile
-            : stelle;
+        FrameworkElement? zeile = null;
+        if (target.Kind == DossierPreviewTargetKind.RowCell)
+        {
+            _feldStellen.TryGetValue(
+                DossierPreviewTarget.Row(target.Key, target.RowIndex), out zeile);
+        }
+        var sichtbareStelle = DossierFieldFocus.VisibleRoot(stelle, zeile);
 
         ZeigeNurDieseStelle(sichtbareStelle);
 
         // Sichtbar machen und den Schreibfokus setzen — erst nachdem WPF den
         // gerade aufgeklappten Abschnitt wirklich dargestellt hat.
-        AktiviereEingabe(stelle);
+        AktiviereEingabe(stelle, () => Betone(target));
 
         // Auch rechts sichtbar machen, wo man gelandet ist: das Blatt blinkt
         // schon, das Feld tat es bisher nicht.
         LasseAufblinken(stelle);
 
-        Betone(target);
         return true;
     }
 

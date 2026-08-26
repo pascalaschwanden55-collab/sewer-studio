@@ -27,8 +27,10 @@ internal sealed partial class DossierPreviewFieldPanel
     private static void LasseAufblinken(FrameworkElement stelle)
         => DossierFieldHighlight.LasseAufblinken(stelle);
 
-    private static void AktiviereEingabe(FrameworkElement stelle)
-        => DossierFieldHighlight.AktiviereEingabe(stelle);
+    private static void AktiviereEingabe(
+        FrameworkElement stelle,
+        System.Action? danach = null)
+        => DossierFieldHighlight.AktiviereEingabe(stelle, danach);
 
     private static void ZeigeWerkzeugeNurAmAktivenFeld(
         FrameworkElement karte,

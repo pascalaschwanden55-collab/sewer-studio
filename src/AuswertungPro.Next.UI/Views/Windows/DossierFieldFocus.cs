@@ -24,6 +24,16 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 /// </summary>
 internal static class DossierFieldFocus
 {
+    /// <summary>
+    /// Normale Tabellenfelder zeigen ihre ganze Zeilenkarte. Ein gemeinsam
+    /// genutztes Feld ausserhalb der Karte — etwa "Tel.:" — muss dagegen
+    /// selbst sichtbar bleiben.
+    /// </summary>
+    public static FrameworkElement VisibleRoot(
+        FrameworkElement field,
+        FrameworkElement? row)
+        => row is not null && IstDarin(field, row) ? row : field;
+
     public static void ZeigeNur(
         IEnumerable<FrameworkElement> alle,
         FrameworkElement fokus)

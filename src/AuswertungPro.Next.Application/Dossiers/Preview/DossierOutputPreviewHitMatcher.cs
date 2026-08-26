@@ -49,20 +49,18 @@ public static class DossierOutputPreviewHitMatcher
             .Select(candidate => candidate.Tokens)
             .ToList();
 
-        // Gleicher Text, gleiche Herkunft, nur andere Zeile: In der Themen-
-        // tabelle steht viermal „unbekannt". Ohne diese Gruppierung traegt jede
-        // Fundstelle ALLE vier Ziele — ein Klick auf die vierte Zeile fuehrt
-        // dann ins Feld der ersten, und beim Hervorheben leuchten alle vier
-        // gemeinsam auf. Solche Geschwister werden der Reihe nach verteilt:
-        // erste Fundstelle, erste Zeile.
-        foreach (var gruppe in kandidaten.GroupBy(kandidat => (
-                     Text: TokenKey(kandidat.Tokens),
-                     kandidat.Target.Kind,
-                     kandidat.Target.Key,
-                     kandidat.Target.CellKey)))
+        // Ein gleicher Wert kann in verschiedenen Feldern stehen — zum
+        // Beispiel Haus-Nr. und Parzellen-Nr. „30". Die Reihenfolge des
+        // Feldkatalogs ist kein geometrischer Beweis; solche verschiedenen
+        // Stellen bleiben hier deshalb bewusst ohne Treffer. Nur echte
+        // Geschwister derselben Wiederholspalte duerfen in Zeilenreihenfolge
+        // verteilt werden. Verschiedene physische Tabellenzellen loest der
+        // getrennte Tabellenmapper ueber ihre Spaltengeometrie auf.
+        foreach (var gruppe in kandidaten.GroupBy(kandidat => TokenKey(kandidat.Tokens)))
         {
             var tokens = gruppe.First().Tokens;
             var fundstellen = ExakteFundstellen(normalizedWords, tokens);
+            var partialFallback = false;
 
             // PDF-Bibliotheken trennen Wörter nicht immer gleich wie Word.
             // Beispiel: Aus „Kanalisationsleitungen" können die zwei PDF-
@@ -91,6 +89,7 @@ public static class DossierOutputPreviewHitMatcher
                     unterschiedlicheTexte);
 
                 fundstellen.AddRange(anker);
+                partialFallback = anker.Count > 0;
             }
 
             // Tabellenzellen koennen im PDF-Inhaltsstrom mit den Woertern der
@@ -101,29 +100,45 @@ public static class DossierOutputPreviewHitMatcher
             // Der Flaechenbauer spannt daraus anschliessend wieder die ganze
             // Tabellenzelle auf.
             if (fundstellen.Count == 0
-                && gruppe.First().Target.Kind is DossierPreviewTargetKind.Row
-                    or DossierPreviewTargetKind.RowCell)
+                && gruppe.Any(kandidat => kandidat.Target.Kind is
+                    DossierPreviewTargetKind.Row or DossierPreviewTargetKind.RowCell))
             {
-                fundstellen.AddRange(EindeutigeZellenWoerterFinden(
+                var cellWords = EindeutigeZellenWoerterFinden(
                     normalizedWords,
                     tokens,
-                    unterschiedlicheTexte));
+                    unterschiedlicheTexte);
+                fundstellen.AddRange(cellWords);
+                partialFallback = cellWords.Count > 0;
             }
 
-            var geschwister = gruppe.OrderBy(kandidat => kandidat.Target.RowIndex).ToList();
+            var stellen = FachlicheStellen(gruppe.ToList());
 
-            // Nur ein Kandidat: Er gehoert zu jeder Fundstelle. Eine
+            // Nur eine fachliche Stelle: Sie gehoert zu jeder Fundstelle. Eine
             // Ueberschrift darf durchaus mehrfach im Blatt stehen.
-            if (geschwister.Count == 1)
+            if (stellen.Count == 1)
             {
                 foreach (var fundstelle in fundstellen)
-                    Merke(matches, normalizedWords, geschwister[0], fundstelle);
+                {
+                    foreach (var kandidat in stellen[0].Candidates)
+                        Merke(matches, normalizedWords, kandidat, fundstelle);
+                }
 
                 continue;
             }
 
-            for (var i = 0; i < geschwister.Count && i < fundstellen.Count; i++)
-                Merke(matches, normalizedWords, geschwister[i], fundstellen[i]);
+            // Teilanker beweisen nur die Zelle, nicht welche von mehreren
+            // identischen Listenzeilen gemeint ist. Ihre Anzahl darf deshalb
+            // niemals als vermeintliche Zeilenanzahl benutzt werden.
+            if (partialFallback
+                || !SindListengeschwister(stellen)
+                || stellen.Count != fundstellen.Count)
+                continue;
+
+            for (var i = 0; i < stellen.Count; i++)
+            {
+                foreach (var kandidat in stellen[i].Candidates)
+                    Merke(matches, normalizedWords, kandidat, fundstellen[i]);
+            }
         }
 
         return matches.ToDictionary(
@@ -286,6 +301,75 @@ public static class DossierOutputPreviewHitMatcher
         return result.Count >= 2 ? result : [];
     }
 
+    /// <summary>
+    /// Eine Tabellenzeile und ihre genauere Zelle duerfen dieselbe Fundstelle
+    /// gemeinsam tragen. Zwei verschiedene Felder oder zwei verschiedene
+    /// Tabellenzellen sind dagegen zwei Stellen und werden nicht vermischt.
+    /// </summary>
+    private static IReadOnlyList<FachlicheStelle> FachlicheStellen(
+        IReadOnlyList<NormalizedCandidate> kandidaten)
+    {
+        var result = new List<FachlicheStelle>();
+
+        foreach (var kandidat in kandidaten)
+        {
+            var target = kandidat.Target;
+            var companions = target.Kind == DossierPreviewTargetKind.Row
+                ? kandidaten
+                    .Where(other => other.Target.Kind == DossierPreviewTargetKind.RowCell
+                        && string.Equals(
+                            other.Target.Key,
+                            target.Key,
+                            StringComparison.OrdinalIgnoreCase)
+                        && other.Target.RowIndex == target.RowIndex)
+                    .Select(other => other.Target)
+                    .Distinct()
+                    .ToList()
+                : [];
+            var slotTarget = companions.Count == 1 ? companions[0] : target;
+
+            var slot = result.FirstOrDefault(existing => existing.Address == slotTarget);
+
+            if (slot is null)
+            {
+                slot = new FachlicheStelle(slotTarget, []);
+                result.Add(slot);
+            }
+
+            if (!slot.Candidates.Contains(kandidat))
+                slot.Candidates.Add(kandidat);
+        }
+
+        return result;
+    }
+
+    private static bool SindListengeschwister(
+        IReadOnlyList<FachlicheStelle> stellen)
+    {
+        if (stellen.Count < 2)
+            return true;
+
+        var first = stellen[0].Address;
+        if (first.Kind is not (DossierPreviewTargetKind.Row
+            or DossierPreviewTargetKind.RowCell))
+        {
+            return false;
+        }
+
+        return stellen.All(stelle =>
+            stelle.Address.Kind == first.Kind
+            && string.Equals(
+                stelle.Address.Key,
+                first.Key,
+                StringComparison.OrdinalIgnoreCase)
+            && string.Equals(
+                stelle.Address.CellKey,
+                first.CellKey,
+                StringComparison.OrdinalIgnoreCase))
+            && stellen.Select(stelle => stelle.Address.RowIndex).Distinct().Count()
+                == stellen.Count;
+    }
+
     private static void Merke(
         Dictionary<int, List<DossierPreviewTarget>> matches,
         IReadOnlyList<IndexedWord> words,
@@ -343,6 +427,10 @@ public static class DossierOutputPreviewHitMatcher
     private sealed record NormalizedCandidate(
         DossierPreviewTarget Target,
         IReadOnlyList<string> Tokens);
+
+    private sealed record FachlicheStelle(
+        DossierPreviewTarget Address,
+        List<NormalizedCandidate> Candidates);
 
     private sealed record Fundstelle(int Start, int WordCount);
 }

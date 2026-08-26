@@ -23,8 +23,9 @@ namespace AuswertungPro.Next.Infrastructure.Dossiers;
 /// 2. sonst ein von SewerStudio erzeugtes Protokoll als Rueckfall,
 /// 3. sonst eine ehrliche Meldung — nie eine stillschweigende Luecke.
 ///
-/// Von Hand hinzugelegte Beilagen (QGIS-Plan, Offerte) bleiben unangetastet:
-/// es wird nur geschrieben, nie aufgeraeumt.
+/// Von Hand hinzugelegte Beilagen (QGIS-Plan, Offerte) bleiben unangetastet.
+/// Nur eigene, ueber ein hashgebundenes Manifest eindeutig erkannte Kopien
+/// werden bei einer spaeteren Abwahl wieder aus der Ausgabe entfernt.
 /// </summary>
 public sealed class DossierAttachmentCollector :
     IDossierAttachmentService,
@@ -68,6 +69,7 @@ public sealed class DossierAttachmentCollector :
         var warnings = new List<string>();
 
         CopyExistingAttachmentsToTemporaryFolder(
+            request.ProjectRoot,
             request.TargetFolder,
             dossierFolder,
             guard,
@@ -92,66 +94,132 @@ public sealed class DossierAttachmentCollector :
         var folder = guard.EnsureSafeDirectoryTarget(
             Path.Combine(targetFolder, DossierFolderPlanner.AttachmentFolderName));
         Directory.CreateDirectory(folder);
+        using var folderLock = DossierAttachmentFolderLock.Acquire(folder, ct);
+        var ownership = DossierAttachmentOwnershipManifest.Load(folder, guard, warnings);
+        var reservedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var publications = new DossierAttachmentPublishSession(warnings);
 
-        var byId = request.Project.Data.ToDictionary(r => r.Id);
-        var index = 1;
-
-        foreach (var line in request.Snapshot.Holdings)
+        try
         {
-            ct.ThrowIfCancellationRequested();
+            var byId = request.Project.Data.ToDictionary(r => r.Id);
+            var index = 1;
 
-            if (!byId.TryGetValue(line.HoldingId, out var record))
+            foreach (var line in request.Snapshot.Holdings)
             {
-                warnings.Add($"Haltung '{line.HoldingName}' ist nicht mehr im Projekt.");
-                continue;
+                ct.ThrowIfCancellationRequested();
+
+                if (!byId.TryGetValue(line.HoldingId, out var record))
+                {
+                    warnings.Add($"Haltung '{line.HoldingName}' ist nicht mehr im Projekt.");
+                    attachments.Add(new DossierAttachment(
+                        string.Empty,
+                        string.Empty,
+                        DossierAttachmentKind.Missing,
+                        line.HoldingName));
+                    continue;
+                }
+
+                var prefix = index.ToString("00", CultureInfo.InvariantCulture);
+                index++;
+
+                var attachment = CollectForHolding(
+                    request,
+                    record,
+                    line,
+                    folder,
+                    guard,
+                    publications,
+                    ownership,
+                    reservedNames,
+                    prefix,
+                    warnings);
+                attachments.Add(attachment);
             }
 
-            var prefix = index.ToString("00", CultureInfo.InvariantCulture);
-            index++;
-
-            var attachment = CollectForHolding(request, record, line, folder, guard, prefix, warnings);
-            attachments.Add(attachment);
-        }
-
-        // Danach die Schaechte. Wird der Kontrollschacht eines Eigentuemers
-        // saniert, fehlte ihm bisher genau sein Protokoll — gesammelt wurden
-        // nur die Haltungen.
-        var schaechteNachNummer = new Dictionary<string, SchachtRecord>(
-            StringComparer.OrdinalIgnoreCase);
-        foreach (var schacht in request.Project.SchaechteData)
-        {
-            var nummer = DossierShaftNumberPolicy.NumberOf(schacht);
-            if (nummer.Length > 0 && !schaechteNachNummer.ContainsKey(nummer))
-                schaechteNachNummer[nummer] = schacht;
-        }
-
-        foreach (var line in request.Snapshot.Shafts)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            if (!schaechteNachNummer.TryGetValue(line.Number, out var schacht))
+            // Danach die Schaechte. Wird der Kontrollschacht eines Eigentuemers
+            // saniert, fehlte ihm bisher genau sein Protokoll — gesammelt wurden
+            // nur die Haltungen.
+            var schaechteNachNummer = new Dictionary<string, SchachtRecord>(
+                StringComparer.OrdinalIgnoreCase);
+            foreach (var schacht in request.Project.SchaechteData)
             {
-                warnings.Add($"Schacht '{line.Number}' ist nicht mehr im Projekt.");
-                continue;
+                var nummer = DossierShaftNumberPolicy.NumberOf(schacht);
+                if (nummer.Length > 0 && !schaechteNachNummer.ContainsKey(nummer))
+                    schaechteNachNummer[nummer] = schacht;
             }
 
-            var prefix = index.ToString("00", CultureInfo.InvariantCulture);
-            index++;
+            foreach (var line in request.Snapshot.Shafts)
+            {
+                ct.ThrowIfCancellationRequested();
 
-            attachments.Add(CollectForShaft(
-                request, schacht, line.Number, folder, guard, prefix, warnings));
+                if (!schaechteNachNummer.TryGetValue(line.Number, out var schacht))
+                {
+                    warnings.Add($"Schacht '{line.Number}' ist nicht mehr im Projekt.");
+                    attachments.Add(new DossierAttachment(
+                        string.Empty,
+                        string.Empty,
+                        DossierAttachmentKind.Missing,
+                        line.Number));
+                    continue;
+                }
+
+                var prefix = index.ToString("00", CultureInfo.InvariantCulture);
+                index++;
+
+                attachments.Add(CollectForShaft(
+                    request,
+                    schacht,
+                    line.Number,
+                    folder,
+                    guard,
+                    publications,
+                    ownership,
+                    reservedNames,
+                    prefix,
+                    warnings));
+            }
+
+            DossierAttachmentOwnershipManifest.Commit(
+                folder,
+                guard,
+                ownership,
+                attachments,
+                request.Snapshot.MissingHoldingIds.Count > 0
+                    || request.Snapshot.MissingShaftNumbers.Count > 0,
+                publications,
+                warnings,
+                ct);
+            publications.Complete();
+        }
+        catch
+        {
+            publications.Rollback();
+            throw;
         }
 
         return Task.FromResult(new DossierAttachmentResult(attachments, warnings));
     }
 
     private static void CopyExistingAttachmentsToTemporaryFolder(
+        string sourceProjectRoot,
         string sourceDossierFolder,
         string temporaryDossierFolder,
         ProjectWritePathGuard guard,
         List<string> warnings,
         CancellationToken ct)
     {
+        var sourceGuard = new ProjectWritePathGuard(sourceProjectRoot);
+        var sourceFolder = sourceGuard.EnsureSafeDirectoryTarget(
+            Path.Combine(sourceDossierFolder, DossierFolderPlanner.AttachmentFolderName));
+        if (!Directory.Exists(sourceFolder))
+            return;
+
+        using var folderLock = DossierAttachmentFolderLock.Acquire(sourceFolder, ct);
+
+        var ownership = DossierAttachmentOwnershipManifest.Load(
+            sourceFolder,
+            sourceGuard,
+            warnings);
         var sourcePaths = DossierPdfAssemblyService.CollectAttachmentPdfs(sourceDossierFolder);
         if (sourcePaths.Count == 0)
             return;
@@ -164,16 +232,31 @@ public sealed class DossierAttachmentCollector :
         {
             ct.ThrowIfCancellationRequested();
 
+            var safeSource = sourceGuard.EnsureSafeFileTarget(sourcePath);
+            if (DossierAttachmentOwnershipManifest.IsStillVerified(
+                    sourceFolder,
+                    safeSource,
+                    sourceGuard,
+                    ownership,
+                    warnings))
+                continue;
+
             var targetPath = guard.EnsureSafeFileTarget(
-                Path.Combine(targetFolder, Path.GetFileName(sourcePath)));
+                Path.Combine(targetFolder, Path.GetFileName(safeSource)));
             try
             {
-                File.Copy(sourcePath, targetPath, overwrite: true);
+                // Der Temp-Ordner ist frisch. Ein gleichnamiges Ziel waere
+                // deshalb kein legitimer Grund, eine manuelle Beilage zu
+                // ueberschreiben.
+                DossierAttachmentFilePublisher.CopyAtomically(
+                    safeSource,
+                    targetPath,
+                    guard);
             }
             catch (Exception ex)
             {
                 warnings.Add(
-                    $"Beilage '{Path.GetFileName(sourcePath)}': "
+                    $"Beilage '{Path.GetFileName(safeSource)}': "
                     + $"Kopie fuer die Vorschau fehlgeschlagen ({ex.Message}).");
             }
         }
@@ -190,6 +273,9 @@ public sealed class DossierAttachmentCollector :
         string nummer,
         string attachmentFolder,
         ProjectWritePathGuard guard,
+        DossierAttachmentPublishSession publications,
+        DossierAttachmentOwnershipSnapshot ownership,
+        ISet<string> reservedNames,
         string prefix,
         List<string> warnings)
     {
@@ -225,9 +311,23 @@ public sealed class DossierAttachmentCollector :
         }
 
         var targetName = $"{prefix}_Schacht_{safeName}{Path.GetExtension(quelle)}";
-        var targetPath = guard.EnsureSafeFileTarget(Path.Combine(attachmentFolder, targetName));
+        var targetPath = DossierAttachmentOwnershipManifest.ResolveAvailableTarget(
+            attachmentFolder,
+            targetName,
+            nummer,
+            guard,
+            ownership,
+            reservedNames);
 
-        if (!TryCopy(quelle, targetPath, warnings, nummer))
+        if (!TryCopy(
+                quelle,
+                targetPath,
+                guard,
+                publications,
+                ownership,
+                warnings,
+                "Schacht",
+                nummer))
         {
             return new DossierAttachment(
                 string.Empty, string.Empty, DossierAttachmentKind.Missing, nummer);
@@ -246,6 +346,9 @@ public sealed class DossierAttachmentCollector :
         DossierHoldingLine line,
         string attachmentFolder,
         ProjectWritePathGuard guard,
+        DossierAttachmentPublishSession publications,
+        DossierAttachmentOwnershipSnapshot ownership,
+        ISet<string> reservedNames,
         string prefix,
         List<string> warnings)
     {
@@ -265,9 +368,23 @@ public sealed class DossierAttachmentCollector :
             }
 
             var targetName = $"{prefix}_TV_{safeName}{Path.GetExtension(source)}";
-            var targetPath = guard.EnsureSafeFileTarget(Path.Combine(attachmentFolder, targetName));
+            var targetPath = DossierAttachmentOwnershipManifest.ResolveAvailableTarget(
+                attachmentFolder,
+                targetName,
+                line.HoldingName,
+                guard,
+                ownership,
+                reservedNames);
 
-            if (TryCopy(source, targetPath, warnings, line.HoldingName))
+            if (TryCopy(
+                    source,
+                    targetPath,
+                    guard,
+                    publications,
+                    ownership,
+                    warnings,
+                    "Haltung",
+                    line.HoldingName))
             {
                 return new DossierAttachment(
                     Path.GetFileName(targetPath),
@@ -279,7 +396,17 @@ public sealed class DossierAttachmentCollector :
 
         // 2. Rueckfall: eigenes Protokoll
         var generated = TryBuildOwnProtocol(
-            request, record, line, attachmentFolder, guard, prefix, safeName, warnings);
+            request,
+            record,
+            line,
+            attachmentFolder,
+            guard,
+            publications,
+            ownership,
+            reservedNames,
+            prefix,
+            safeName,
+            warnings);
         if (generated is not null)
             return generated;
 
@@ -316,6 +443,9 @@ public sealed class DossierAttachmentCollector :
         DossierHoldingLine line,
         string attachmentFolder,
         ProjectWritePathGuard guard,
+        DossierAttachmentPublishSession publications,
+        DossierAttachmentOwnershipSnapshot ownership,
+        ISet<string> reservedNames,
         string prefix,
         string safeName,
         List<string> warnings)
@@ -336,15 +466,20 @@ public sealed class DossierAttachmentCollector :
                 return null;
 
             var targetName = $"{prefix}_Protokoll_{safeName}.pdf";
-            var targetPath = guard.EnsureSafeFileTarget(
-                Path.Combine(attachmentFolder, targetName));
+            var targetPath = DossierAttachmentOwnershipManifest.ResolveAvailableTarget(
+                attachmentFolder,
+                targetName,
+                line.HoldingName,
+                guard,
+                ownership,
+                reservedNames);
 
-            var temp = targetPath + ".tmp";
-            File.WriteAllBytes(temp, bytes);
-            if (File.Exists(targetPath))
-                File.Replace(temp, targetPath, destinationBackupFileName: null);
-            else
-                File.Move(temp, targetPath);
+            DossierAttachmentFilePublisher.WriteAllBytesAtomically(
+                bytes,
+                targetPath,
+                guard,
+                ExpectedExistingHash(ownership, targetPath),
+                publications);
 
             return new DossierAttachment(
                 Path.GetFileName(targetPath),
@@ -363,18 +498,35 @@ public sealed class DossierAttachmentCollector :
     private static bool TryCopy(
         string source,
         string target,
+        ProjectWritePathGuard guard,
+        DossierAttachmentPublishSession publications,
+        DossierAttachmentOwnershipSnapshot ownership,
         List<string> warnings,
-        string holdingName)
+        string objectType,
+        string objectName)
     {
         try
         {
-            File.Copy(source, target, overwrite: true);
+            DossierAttachmentFilePublisher.CopyAtomically(
+                source,
+                target,
+                guard,
+                ExpectedExistingHash(ownership, target),
+                publications);
             return true;
         }
         catch (Exception ex)
         {
-            warnings.Add($"Haltung '{holdingName}': Kopieren fehlgeschlagen ({ex.Message}).");
+            warnings.Add(
+                $"{objectType} '{objectName}': Kopieren fehlgeschlagen ({ex.Message}).");
             return false;
         }
     }
+
+    private static string? ExpectedExistingHash(
+        DossierAttachmentOwnershipSnapshot ownership,
+        string targetPath)
+        => ownership.Verified.TryGetValue(Path.GetFileName(targetPath), out var entry)
+            ? entry.Sha256
+            : null;
 }

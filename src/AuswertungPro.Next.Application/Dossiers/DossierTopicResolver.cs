@@ -20,16 +20,22 @@ namespace AuswertungPro.Next.Application.Dossiers;
 public static class DossierTopicResolver
 {
     /// <summary>
-    /// Die fertige Themenliste. Themen ohne Titel entfallen; ein leerer Text
-    /// bleibt erhalten, weil die Zeile im Dossier auch leer zum Ausfuellen
-    /// stehen darf.
+    /// Die fertige Themenliste. Gebietsvorgaben ohne Titel entfallen. Eine
+    /// dossierbezogene Grundzeile darf dagegen voruebergehend auch ohne Titel
+    /// bestehen, damit beide sichtbaren Tabellenzellen direkt ausfuellbar sind.
+    /// Ein leerer Text bleibt ebenfalls erhalten.
     /// </summary>
     public static IReadOnlyList<DossierTopicRow> Resolve(
         DossierAreaSettings? area,
         DossierDefinition? dossier)
     {
-        var gebiet = Bereinigt(area?.Topics);
-        var eigene = Bereinigt(dossier?.Topics);
+        var gebiet = Bereinigt(area?.Topics, leereTitelBehalten: false);
+
+        // Eine leere dossierbezogene Zeile kann eine reine Eingabehilfe sein.
+        // Sie muss bis zur Uebernahme sichtbar bleiben, damit beide Zellen im
+        // echten Word-Blatt direkt anklickbar sind. Gebietsvorgaben ohne Titel
+        // bleiben dagegen weiterhin ungueltig und werden verworfen.
+        var eigene = Bereinigt(dossier?.Topics, leereTitelBehalten: true);
 
         var ergebnis = new List<DossierTopicRow>();
         var verbraucht = new HashSet<int>();
@@ -99,12 +105,15 @@ public static class DossierTopicResolver
         return -1;
     }
 
-    private static List<DossierTopicRow> Bereinigt(IEnumerable<DossierTopicRow>? zeilen)
+    private static List<DossierTopicRow> Bereinigt(
+        IEnumerable<DossierTopicRow>? zeilen,
+        bool leereTitelBehalten)
         => (zeilen ?? Enumerable.Empty<DossierTopicRow>())
-            .Where(z => z is not null && !string.IsNullOrWhiteSpace(z.Title))
+            .Where(z => z is not null
+                && (leereTitelBehalten || !string.IsNullOrWhiteSpace(z.Title)))
             .Select(z => new DossierTopicRow
             {
-                Title = z.Title.Trim(),
+                Title = (z.Title ?? string.Empty).Trim(),
                 Text = z.Text ?? string.Empty,
                 ColorHex = z.ColorHex ?? string.Empty,
                 StyleRanges = KopiereFormat(z.StyleRanges)

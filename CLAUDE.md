@@ -54,39 +54,75 @@
   gewaehlten Haltungen und danach aller Schaechte. Bei Haltungen wird das Original und nur
   ersatzweise das SewerStudio-Protokoll verwendet; Schaechte verlangen ihr Original. Fehlt
   ein ausgewaehltes Protokoll, wird kein unvollstaendiges Gesamt-PDF erzeugt.
+- `DossierAttachmentCollector` kennzeichnet nur seine eigenen Protokollkopien im
+  Beilagenordner ueber `.sewerstudio-dossier-beilagen.v1.json`: direkter PDF-Dateiname,
+  SHA-256, Typ und Objekt. Eine abgewaehlte, unmittelbar vor dem Entfernen nochmals
+  hash-gepruefte automatische Kopie wird aus der Ausgabe genommen. Unbekannte, manuelle,
+  nachtraeglich veraenderte oder aus der Zeit vor dem Manifest stammende PDFs gelten
+  fail-closed als manuell und werden weder ersetzt noch geloescht. Kopien, generierte PDFs
+  und Manifest werden ueber eindeutige Temp-Dateien veroeffentlicht. Ein benannter
+  `DossierAttachmentFolderLock` serialisiert den gesamten Lauf je kanonischem
+  Beilagenordner auch zwischen Prozessen. Eine alte eigene Kopie wird zuerst atomar unter
+  einem eindeutigen Sicherungsnamen weggestellt und erst dort erneut hash-geprueft; die neue
+  Kopie darf danach nur ohne Overwrite an den freien Zielpfad. Das Manifest uebernimmt nur
+  den beim Publizieren bekannten Hash und prueft den Zielinhalt unmittelbar vor seinem
+  Schreiben nochmals. Abgewaehlte eigene Kopien gehen mit derselben Move-first-Regel in
+  einen versteckten Quarantaeneordner. Ist eine bisher eigene PDF voruebergehend gesperrt, bleibt ihre
+  Eigentumskennzeichnung fuer einen spaeteren sicheren Versuch erhalten. Scheitert das
+  abschliessende Manifest-Schreiben, werden die in diesem Lauf veroeffentlichten PDFs nur
+  bei weiterhin passender SHA-256 auf den vorherigen Stand zurueckgesetzt. Kundenoriginale
+  werden immer nur gelesen.
 - `IDossierOutputPreviewService`/`DossierOutputPreviewService` erzeugt die Vorschau ueber
   denselben Word-Export und denselben Word-/LibreOffice-PDF-Wandler wie die Ausgabe. Word-
   und PDF-Arbeitsdateien liegen in einem eindeutigen System-Temp-Ordner; Dossier und Gebiet
   werden tief kopiert, relative Planpfade nur in dieser Kopie aufgeloest und der Kundenordner
-  bleibt unveraendert. Vorhandene PDFs im echten Beilagen-Ordner werden nur in den Temp-Stand
-  kopiert. Dort sammelt `DossierAttachmentCollector` die Protokolle aller aktuell gewaehlten
-  Haltungen und danach aller Schaechte neu; die Vorschau fuegt ausschliesslich diese
-  kurzlebige Kopie in Dateinamenreihenfolge an. So bleiben auch manuelle Beilagen sichtbar,
-  ohne dass eine Vorschau Dateien im Projekt anlegt, ersetzt oder loescht.
+  bleibt unveraendert. Aus dem echten Beilagenordner werden nur manuelle beziehungsweise
+  nicht sicher als automatisch erkannte PDFs in den Temp-Stand kopiert. Dort sammelt
+  `DossierAttachmentCollector` die Protokolle aller aktuell gewaehlten Haltungen und danach
+  aller Schaechte neu; die Vorschau fuegt ausschliesslich diesen kurzlebigen Stand in
+  Dateinamenreihenfolge an. So verschwinden abgewaehlte automatische Protokolle sofort aus
+  Vorschau und Gesamt-PDF, manuelle Beilagen bleiben sichtbar, und eine Vorschau legt im
+  echten Projekt keine Datei an, ersetzt nichts und loescht nichts.
 - `WindowsDossierPreviewPageRasterizer` zeichnet jede echte PDF-Seite. Damit stammen
   Seitenzahl, Blattformat, Abstaende, Umbrueche, Tabellen, Farben, Bilder, Logo und Fusszeile
-  nicht mehr aus einer WPF-Nachbildung. Nach 700 ms Schreibpause wird die Ausgabe neu
-  erzeugt; ein veraltetes Zwischenergebnis wird nie eingeblendet. `PdfPig` liefert die
+  nicht mehr aus einer WPF-Nachbildung. Nach 300 ms Schreibpause wird die Ausgabe neu
+  erzeugt; das alte Blatt wird sofort gesperrt und durch einen Aktualisierungshinweis
+  ersetzt. Erst eine erfolgreich gerasterte Seite des neuesten Ausgabestands gibt Klicks
+  und `Uebernehmen` wieder frei. Ein veraltetes oder fehlgeschlagenes Zwischenergebnis wird
+  nie eingeblendet. `PdfPig` liefert die
   Wortlagen fuer transparente Klickflaechen, sodass ein Klick auf sichtbaren Text weiterhin
   direkt zum passenden Editor springt. `DossierOutputPreviewInteractionMapper` haelt die
   Seiten-/Editor-Zuordnung und Textziele WPF-frei; Treffer werden auf die wirklich sichtbare
   PDF-Seite begrenzt. `DossierOutputPreviewHitMatcher` erkennt auch abweichende PDF-Wortgrenzen
-  und lange Tabellenzellen; `DossierOutputPreviewHitAreaBuilder` fasst deren Worttreffer zu
-  einer gut anklickbaren Zellflaeche zusammen. Weil leere Zellen kein PDF-Wort besitzen,
-  leitet `DossierOutputPreviewEmptyRowCellMapper` ihre Klickflaechen im Aenderungswesen,
-  in den drei echten Eigentuemerzellen und in der Informationstabelle nur bei eindeutig
-  erkannter Tabellenkopfzeile aus der echten Vorlagengeometrie ab. Telefon, Mail und
-  Objektbewohner bleiben Zeilen innerhalb der gemeinsamen Eigentuemerzelle und werden
-  nicht als erfundene Spalten behandelt. `DossierOutputPreviewEmptyFixedCellMapper`
+  und lange Tabellenzellen; gleiche Texte verschiedener normaler Felder werden ohne
+  geometrischen Beleg nicht nach Katalogreihenfolge geraten. Nur echte Geschwister derselben
+  Wiederholspalte werden in Zeilenreihenfolge verteilt. `DossierOutputPreviewHitAreaBuilder`
+  fasst sichere Worttreffer zusammen. `DossierOutputPreviewTableCellMapper` verarbeitet die
+  PDF-Blaetter dagegen gemeinsam in Dokumentreihenfolge: Er liest Spalten und erste
+  Zeilenoberkante einmal am eindeutigen Tabellenkopf, traegt den naechsten globalen
+  `RowIndex` auf Folgeseiten weiter und beginnt dort am echten Vorlagenrand. Die Word-Vorlage
+  braucht dafuer keinen neu erzwungenen Wiederholungskopf. Jede sicher erkannte physische
+  Tabellenzeile erhaelt fuer gefuellte UND leere Werte die ganze Zellflaeche. Bei einer
+  unsicheren Zeile ersetzt der Mapper keine bisherigen Wortziele. Der bestehende
+  `DossierOutputPreviewEmptyRowCellMapper` bleibt der konservative Rueckfall fuer ein
+  einzelnes Blatt. Telefon, Mail, Objektbewohner und ihre bearbeitbaren Beschriftungen bleiben
+  kleine Textziele innerhalb der gemeinsamen Eigentuemerzelle und werden nicht als erfundene
+  Spalten behandelt. `DossierOutputPreviewEmptyFixedCellMapper`
   ergaenzt die leere Aktennotiz-Zelle und nur den oberen Eingabeabsatz der Rueckmeldung;
   Punktlinien, Ort/Datum und Unterschriften bleiben eigene Vorlageninhalte. Mehrdeutige
   Tabellen werden nicht geraten. `DossierPreviewTableRow.MinimumHeightPx` bewahrt dabei die
   Mindesthoehe der Word-Zeile; mehrzeilige, vollstaendig erkannte Nachbartexte erweitern
   die Hoehe. So ist die ganze leere Zelle anklickbar und nicht nur ein Streifen neben dem
-  Text. Die im Word sichtbare erste Aenderungszeile besitzt rechts sofort vier Eingaben;
-  ein Zellklick zeigt die ganze Zeile, setzt den Schreibfokus aber nur in die gewaehlte
-  Zelle. Bleibt die reine Eingabe-Grundzeile leer, entfernt `DossierChangeRows` sie vor
-  dem Uebernehmen; sie wird nicht als fachlicher Eintrag in `dossiers.json` gespeichert.
+  Text. Die im Word sichtbaren Grundzeilen fuer Aenderungswesen, Eigentuemer und Themen
+  besitzen rechts sofort alle zugehoerigen Eingaben; ein normaler Zellklick zeigt die ganze
+  Zeile und setzt den Schreibfokus nur in die gewaehlte Zelle. Die gemeinsamen bearbeitbaren
+  Eigentuemer-Beschriftungen bleiben dabei selbst sichtbar, statt von einer einzelnen
+  Zeilenkarte verdeckt zu werden. Mehrere titellose Themen-Altdaten werden in Listenreihenfolge
+  an ihre jeweils eigene Editorzeile gebunden. Erhaelt eine Grundzeile einen Titel wie
+  `Schaeden`, erscheint ihre passende Fachaktion (`Import aus Liste`) sofort. Unbenutzte
+  Eingabe-Grundzeilen entfernen `DossierChangeRows`, `DossierOwnerRows` und
+  `DossierTopicRows` vor dem Uebernehmen; sie werden nicht als fachliche Eintraege in
+  `dossiers.json` gespeichert.
   `DossierTextUndoController` stellt im Feldbereich die zentralen Pfeile fuer
   Rueckgaengig und Wiederholen bereit. Sie verwenden die native Texthistorie des zuletzt
   aktiven Textfelds und funktionieren dadurch auch fuer dynamisch erzeugte Zeilen; beim
@@ -148,6 +184,10 @@
   und Word wenden Farbe, Fett, Kursiv und Unterstrichen gleich an. Der Export merkt sich
   diese Benutzereingaben als Literalbereiche, damit darin geschriebener Text wie
   `{{Datum}}` nicht nachtraeglich als Vorlagen-Platzhalter ausgewertet wird.
+- Die frueher erzeugten Eigentuemer-Praefixe `Tel.:`, `Mail:` und `Objektbewohner:` sind
+  ueber `DossierOwnerCellLabels` ebenfalls bearbeitbare, formatierbare Dossierfelder. Der
+  Word-Export setzt Beschriftung und Wert mit getrennten Zeichenbereichen in dieselbe
+  physische Eigentuemerzelle; das gespeicherte Schema bleibt kompatibel.
 - `DossierTopicTitleEditing` speichert eine eigene Fassung eines Thementitels unter einem
   stabilen Feldschluessel im einzelnen Dossier. `DossierTopicResolver` behaelt den
   urspruenglichen Gebietstitel als Quelle, waehrend Vorschau und Export den eigenen Titel

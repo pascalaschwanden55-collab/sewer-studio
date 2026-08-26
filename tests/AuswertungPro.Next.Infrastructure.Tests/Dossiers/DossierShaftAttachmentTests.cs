@@ -114,6 +114,42 @@ public sealed class DossierShaftAttachmentTests : IDisposable
     }
 
     [Fact]
+    public async Task Ein_abgewaehltes_automatisches_Schachtprotokoll_wird_entfernt()
+    {
+        var pdf = Path.Combine(_root, "80551.pdf");
+        await File.WriteAllTextAsync(pdf, "Schachtprotokoll");
+        var request = Szenario("80551");
+        var sammler = Sammler(new() { ["80551"] = pdf });
+
+        var ersterLauf = await sammler.CollectAsync(request);
+        var automatisch = ersterLauf.Attachments
+            .Single(a => a.HoldingName == "80551")
+            .SourcePath;
+        var beilageOrdner = Path.GetDirectoryName(automatisch)!;
+        var manuell = Path.Combine(beilageOrdner, "00_Offerte.pdf");
+        await File.WriteAllTextAsync(manuell, "Manuell");
+
+        var dossierOhneSchacht = new DossierDefinition
+        {
+            Name = request.Dossier.Name,
+            HoldingIds = { request.Dossier.HoldingIds.Single() }
+        };
+        var requestOhneSchacht = request with
+        {
+            Dossier = dossierOhneSchacht,
+            Snapshot = DossierSnapshotBuilder.Build(
+                dossierOhneSchacht,
+                request.Project,
+                new ProjectCostStore())
+        };
+
+        await sammler.CollectAsync(requestOhneSchacht);
+
+        Assert.False(File.Exists(automatisch));
+        Assert.Equal("Manuell", await File.ReadAllTextAsync(manuell));
+    }
+
+    [Fact]
     public async Task Die_Schaechte_stehen_hinter_den_Leitungen()
     {
         var pdf = Path.Combine(_root, "80551.pdf");

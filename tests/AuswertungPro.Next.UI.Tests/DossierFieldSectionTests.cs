@@ -589,6 +589,26 @@ public sealed class DossierFieldSectionTests
     }
 
     [Fact]
+    public void Gemeinsames_Feld_ausserhalb_der_Zeile_bleibt_selbst_sichtbar()
+    {
+        RunOnSta(() =>
+        {
+            var zeilenFeld = new TextBox();
+            var zeile = new Border { Child = zeilenFeld };
+            var gemeinsamesFeld = new TextBox();
+            var wurzel = new StackPanel { Children = { gemeinsamesFeld, zeile } };
+
+            Assert.Same(
+                zeile,
+                DossierFieldFocus.VisibleRoot(zeilenFeld, zeile));
+            Assert.Same(
+                gemeinsamesFeld,
+                DossierFieldFocus.VisibleRoot(gemeinsamesFeld, zeile));
+            Assert.NotNull(wurzel);
+        });
+    }
+
+    [Fact]
     public void Alles_zeigen_stellt_jede_Stelle_wieder_her()
     {
         // Der Rueckweg ist Pflicht: Ein leeres Feld hat in der Vorschau keinen

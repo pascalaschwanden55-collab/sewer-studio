@@ -585,11 +585,17 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         request.Dossier.Changes.Clear();
         request.Dossier.Changes.Add(new DossierChangeRow
         {
-            Version = "1", Date = "09.04.2026", Visum = "Pa", Change = "Erstausgabe"
+            Version = "1",
+            Date = "09.04.2026",
+            Visum = "Pa",
+            Change = "Erstausgabe"
         });
         request.Dossier.Changes.Add(new DossierChangeRow
         {
-            Version = "2", Date = "24.08.2026", Visum = "Pa", Change = "Kosten ergänzt"
+            Version = "2",
+            Date = "24.08.2026",
+            Visum = "Pa",
+            Change = "Kosten ergänzt"
         });
 
         var service = new DossierWordTemplateExportService(() => templatePath);
@@ -884,7 +890,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Ohne_Eigentuemerzeile_bleibt_ein_klarer_Hinweis_statt_eines_Platzhalters()
+    public async Task Ohne_Eigentuemerzeile_bleibt_eine_leere_beschreibbare_Datenzeile()
     {
         var (request, templatePath) = BuildScenario();
         request.Dossier.Owners.Clear();
@@ -894,8 +900,9 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         var text = ReadDocumentText(result.FilePath!);
 
-        Assert.Contains("Keine Eigentümerangaben erfasst", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Keine Eigentümerangaben erfasst", text, StringComparison.Ordinal);
         Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+        Assert.Equal(2, CountOwnerTableRows(result.FilePath!)); // Kopf + leere Eingabezeile
     }
 
     [Fact]

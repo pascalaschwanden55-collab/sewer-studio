@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -31,21 +28,28 @@ internal sealed partial class DossierPreviewFieldPanel
         wirt.Children.Clear();
         EntferneAlteZeilenStellen(feld.Key);
 
+        // Word zeigt fuer beide Tabellen auch ohne Fachdaten eine sichtbare
+        // Grundzeile. Genau diese Zeile muss rechts bereits ihre Eingaben
+        // besitzen; eine leere Eingabehilfe wird vor dem Speichern entfernt.
+        if (string.Equals(feld.Key, "Eigentuemer", StringComparison.OrdinalIgnoreCase))
+            DossierOwnerRows.EnsureStarter(_dossier);
+        else if (string.Equals(feld.Key, "Aenderungen", StringComparison.OrdinalIgnoreCase))
+            DossierChangeRows.EnsureStarter(_dossier);
+
         var typ = ZeilenTypFuer(feld.Key);
         if (typ is null)
             return;
 
-        // Word zeigt im Aenderungswesen auch ohne vorhandenen Eintrag eine
-        // leere Datenzeile. Rechts muss genau diese sichtbare Zeile bereits
-        // beschreibbar sein; sonst gaebe es nur den versteckten Umweg ueber
-        // "+ Zeile". Ein erneuter Aufbau legt keine weitere Zeile an.
-        if (string.Equals(
-                feld.Key,
-                "Aenderungen",
-                StringComparison.OrdinalIgnoreCase)
-            && typ.Liste.Count == 0)
+        if (string.Equals(feld.Key, "Eigentuemer", StringComparison.OrdinalIgnoreCase))
         {
-            typ.Liste.Add(typ.Neu());
+            wirt.Children.Add(DossierOwnerLabelFieldBuilder.Build(
+                _dossier,
+                typ.Liste.Count,
+                Randfarbe,
+                (Brush)_ressource("TextBrush"),
+                _zeichneBlatt,
+                Betone,
+                MerkeStelle));
         }
 
         for (var i = 0; i < typ.Liste.Count; i++)
@@ -85,13 +89,11 @@ internal sealed partial class DossierPreviewFieldPanel
 
             void AktualisiereEntfernen()
             {
-                var istLeereGrundzeile = string.Equals(
-                        feld.Key,
-                        "Aenderungen",
-                        StringComparison.OrdinalIgnoreCase)
-                    && typ.Liste.Count == 1
-                    && zeile is DossierChangeRow change
-                    && !DossierChangeRows.HasContent(change);
+                var istLeereGrundzeile = typ.Liste.Count == 1
+                    && (zeile is DossierChangeRow change
+                            && !DossierChangeRows.HasContent(change)
+                        || zeile is DossierOwnerRow owner
+                            && !owner.HasContent);
 
                 entfernen.IsEnabled = !istLeereGrundzeile;
                 entfernen.ToolTip = istLeereGrundzeile
@@ -130,7 +132,8 @@ internal sealed partial class DossierPreviewFieldPanel
                 var box = DossierTopicRichTextEditor.Create(new DossierTopicRow
                 {
                     Text = text,
-                    StyleRanges = Zeilenformat(zeile, spalte.StyleKey, text)
+                    StyleRanges = DossierEditableRowFormatting.ReadStyles(
+                        zeile, spalte.StyleKey, text)
                 });
                 box.AcceptsReturn = mehrzeilig;
                 box.MinHeight = mehrzeilig ? 54 : 34;
@@ -140,13 +143,17 @@ internal sealed partial class DossierPreviewFieldPanel
                     : ScrollBarVisibility.Hidden;
 
                 var cellTarget = DossierPreviewTarget.RowCell(
-                    feld.Key, stelle, VorschauSpaltenKey(feld.Key, spalte.StyleKey));
+                    feld.Key,
+                    stelle,
+                    DossierEditableRowFormatting.PreviewColumnKey(
+                        feld.Key, spalte.StyleKey));
 
                 box.GotKeyboardFocus += (_, _) => Betone(cellTarget);
 
                 box.TextChanged += (_, _) =>
                 {
-                    SpeichereZeilenfeld(zeile, spalte, box);
+                    DossierEditableRowFormatting.Save(
+                        zeile, spalte.StyleKey, spalte.Write, box);
                     AktualisiereEntfernen();
                     _zeichneBlatt();
                 };
@@ -154,7 +161,8 @@ internal sealed partial class DossierPreviewFieldPanel
                 feldKarte.Children.Add(box);
                 var formatWerkzeuge = DossierTextFormattingToolbar.Create(box, () =>
                 {
-                    SpeichereZeilenfeld(zeile, spalte, box);
+                    DossierEditableRowFormatting.Save(
+                        zeile, spalte.StyleKey, spalte.Write, box);
                     _zeichneBlatt();
                     Betone(cellTarget);
                 });
@@ -180,54 +188,6 @@ internal sealed partial class DossierPreviewFieldPanel
         neu.HorizontalAlignment = HorizontalAlignment.Left;
         wirt.Children.Add(neu);
     }
-
-    private static List<DossierTextStyleRange> Zeilenformat(
-        object zeile, string key, string text)
-    {
-        var formate = Zeilenformate(zeile);
-        return formate.TryGetValue(key, out var ranges)
-            ? DossierTopicTextFormatting.Normalize(text, ranges)
-            : new List<DossierTextStyleRange>();
-    }
-
-    private static void SpeichereZeilenfeld(
-        object zeile, ZeilenSpalte spalte, RichTextBox box)
-    {
-        var value = DossierTopicRichTextEditor.Read(box);
-        spalte.Write(zeile, value.Text);
-
-        var formate = Zeilenformate(zeile);
-        if (value.StyleRanges.Count == 0)
-            formate.Remove(spalte.StyleKey);
-        else
-            formate[spalte.StyleKey] = value.StyleRanges.ToList();
-    }
-
-    private static Dictionary<string, List<DossierTextStyleRange>> Zeilenformate(object zeile)
-        => zeile switch
-        {
-            DossierOwnerRow owner => owner.FieldStyles ??= new(),
-            DossierChangeRow change => change.FieldStyles ??= new(),
-            _ => throw new ArgumentException("Unbekannte Dossierzeile.", nameof(zeile))
-        };
-
-    /// <summary>
-    /// Die Spaltennamen des Editors und der Word-Wiederholzeile sind historisch
-    /// nicht ueberall gleich. Die Klickadresse verwendet die Namen der Vorlage.
-    /// </summary>
-    private static string VorschauSpaltenKey(string listKey, string styleKey)
-        => (listKey, styleKey) switch
-        {
-            ("Eigentuemer", "HouseNumber") => "Haus_Nr",
-            ("Eigentuemer", "ParcelNumber") => "Pz_Nr",
-            ("Eigentuemer", "Name") => "Eigentuemer_Zelle",
-            ("Eigentuemer", "Phone") => "Telefon",
-            ("Eigentuemer", "Mail") => "Mail",
-            ("Eigentuemer", "Occupancy") => "Objektbewohner",
-            ("Aenderungen", "Date") => "Datum",
-            ("Aenderungen", "Change") => "Aenderung",
-            _ => styleKey
-        };
 
     private void Verschiebe(
         ZeilenTyp typ, int stelle, int richtung, Panel wirt, DossierPreviewField feld)

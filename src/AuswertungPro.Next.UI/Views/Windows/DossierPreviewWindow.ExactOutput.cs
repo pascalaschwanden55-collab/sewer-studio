@@ -18,11 +18,12 @@ public partial class DossierPreviewWindow
     private const uint PreviewRenderWidth = 1800;
 
     private readonly CancellationTokenSource _previewLifetime = new();
+    private readonly DossierExactPreviewState _exactPreviewState = new();
+    private IReadOnlyDictionary<int, DossierOutputPreviewTablePageMapping>
+        _tableCellMappings =
+            new Dictionary<int, DossierOutputPreviewTablePageMapping>();
     private DispatcherTimer? _previewDelay;
     private byte[]? _previewPdfBytes;
-    private int _previewRequestedVersion;
-    private int _previewAppliedVersion;
-    private int _pageRenderVersion;
     private bool _previewRefreshRunning;
 
     private void StarteEchteVorschau()
@@ -45,13 +46,17 @@ public partial class DossierPreviewWindow
             _previewLifetime.Dispose();
         };
 
-        _previewRequestedVersion++;
+        _exactPreviewState.RequestOutputRefresh();
+        ZeigeAktualisierungshinweis("Die genaue Ausgabevorschau wird erstellt …");
+        AktualisiereVorschauFreigabe();
         _ = AktualisiereEchteVorschauAsync();
     }
 
     private void FordereEchteVorschauAn()
     {
-        _previewRequestedVersion++;
+        _exactPreviewState.RequestOutputRefresh();
+        ZeigeAktualisierungshinweis("Die genaue Ausgabe wird aktualisiert …");
+        AktualisiereVorschauFreigabe();
         StatusText.Text = "Änderung übernommen — genaues Blatt folgt …";
 
         if (_previewDelay is null)
@@ -78,9 +83,9 @@ public partial class DossierPreviewWindow
         try
         {
             while (!_previewLifetime.IsCancellationRequested
-                   && _previewAppliedVersion != _previewRequestedVersion)
+                   && _exactPreviewState.NeedsOutputRefresh)
             {
-                var version = _previewRequestedVersion;
+                var version = _exactPreviewState.RequestedOutputVersion;
                 StatusText.Text = "Genaue Word/PDF-Ausgabe wird erstellt …";
 
                 var request = _request with
@@ -89,30 +94,51 @@ public partial class DossierPreviewWindow
                     Dossier = DossierDeepCopy.Of(_dossier)
                 };
 
-                var result = await _outputPreview
-                    .CreateAsync(request, _previewLifetime.Token)
-                    .ConfigureAwait(true);
+                DossierOutputPreviewResult result;
+                try
+                {
+                    result = await _outputPreview
+                        .CreateAsync(request, _previewLifetime.Token)
+                        .ConfigureAwait(true);
+                }
+                catch (OperationCanceledException) when (_previewLifetime.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    // Falls waehrend des fehlgeschlagenen Laufs weitergeschrieben
+                    // wurde, gehoert der Fehler nicht zum neuesten Stand. Dann wird
+                    // direkt die aktuelle Fassung erzeugt.
+                    if (version != _exactPreviewState.RequestedOutputVersion)
+                        continue;
+
+                    _exactPreviewState.TryCompleteOutput(version, success: false);
+                    ZeigeAusgabefehler(
+                        "Die Ausgabevorschau konnte nicht aktualisiert werden: " + ex.Message);
+                    return;
+                }
 
                 if (_previewLifetime.IsCancellationRequested)
                     return;
 
                 // Während Word arbeitete, wurde weitergeschrieben. Das alte
                 // Ergebnis wird nie kurz eingeblendet; direkt folgt der letzte Stand.
-                if (version != _previewRequestedVersion)
+                if (version != _exactPreviewState.RequestedOutputVersion)
                     continue;
 
-                _previewAppliedVersion = version;
                 if (!result.Success || result.PdfBytes is null)
                 {
-                    StatusText.Text = result.Message;
-                    if (_previewPdfBytes is null)
-                        Sheet.Child = DossierExactPreviewPageRenderer.CreateNotice(
-                            result.Message,
-                            pageSized: true);
+                    _exactPreviewState.TryCompleteOutput(version, success: false);
+                    ZeigeAusgabefehler(result.Message);
                     return;
                 }
 
+                if (!_exactPreviewState.TryCompleteOutput(version, success: true))
+                    continue;
+
                 _previewPdfBytes = result.PdfBytes;
+                AktualisiereVorschauFreigabe();
                 UebernehmeAusgabeseiten(result.Pages);
                 StatusText.Text = result.Message;
             }
@@ -123,7 +149,10 @@ public partial class DossierPreviewWindow
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Die Ausgabevorschau konnte nicht aktualisiert werden: " + ex.Message;
+            var version = _exactPreviewState.RequestedOutputVersion;
+            _exactPreviewState.TryCompleteOutput(version, success: false);
+            ZeigeAusgabefehler(
+                "Die Ausgabevorschau konnte nicht aktualisiert werden: " + ex.Message);
         }
         finally
         {
@@ -141,6 +170,13 @@ public partial class DossierPreviewWindow
             _dossier,
             _values,
             ZeilenFuer);
+        _tableCellMappings = DossierOutputPreviewTableCellMapper.Build(
+            navigation,
+            _felder.Ziele,
+            _fields,
+            _values,
+            _dossier,
+            ZeilenFuer);
         var view = new ListCollectionView(navigation.ToList());
         view.GroupDescriptions.Add(new PropertyGroupDescription(
             nameof(DossierOutputPreviewNavigationItem.ChapterTitle)));
@@ -154,10 +190,16 @@ public partial class DossierPreviewWindow
 
     private async Task ZeichneEchteSeiteAsync(DossierOutputPreviewNavigationItem item)
     {
+        var renderVersion = _exactPreviewState.BeginPageRender();
+        _render = null;
+        Sheet.Child = DossierExactPreviewPageRenderer.CreateNotice(
+            $"Seite {item.OutputPage.Number} wird angezeigt …",
+            pageSized: true);
+        AktualisiereVorschauFreigabe();
+
         if (_previewPdfBytes is null)
             return;
 
-        var renderVersion = ++_pageRenderVersion;
         try
         {
             var bitmap = await _previewPages.RenderAsync(
@@ -166,7 +208,7 @@ public partial class DossierPreviewWindow
                 PreviewRenderWidth,
                 _previewLifetime.Token).ConfigureAwait(true);
 
-            if (renderVersion != _pageRenderVersion
+            if (!_exactPreviewState.IsCurrentPageRender(renderVersion)
                 || !ReferenceEquals(PageList.SelectedItem, item)
                 || _previewLifetime.IsCancellationRequested)
             {
@@ -185,16 +227,27 @@ public partial class DossierPreviewWindow
             var hits = DossierOutputPreviewHitMatcher.Match(
                 item.OutputPage.Words,
                 candidates);
+            _tableCellMappings.TryGetValue(
+                item.OutputPage.Number,
+                out var tableMapping);
+            if (tableMapping is not null)
+            {
+                hits = DossierOutputPreviewTableCellMapper.RemoveMappedTableTargets(
+                    hits,
+                    tableMapping.ReplacedPhysicalTargets);
+            }
             hits = DossierTocChapterPageClickMapper.AddPageTargets(
                 item.OutputPage,
                 hits,
                 DossierTocChapterPageClickMapper.ChapterTitles(item.EditorPages));
-            var emptyCellAreas = DossierOutputPreviewEmptyRowCellMapper.Build(
-                item.OutputPage,
-                item.EditorPages,
-                sichtbareZiele,
-                ZeilenFuer,
-                hits)
+            var emptyCellAreas = (tableMapping?.Areas ?? [])
+                .Concat(DossierOutputPreviewEmptyRowCellMapper.Build(
+                    item.OutputPage,
+                    item.EditorPages,
+                    sichtbareZiele,
+                    ZeilenFuer,
+                    hits).Where(area => tableMapping is null
+                    || !tableMapping.ReplacedPhysicalTargets.Contains(area.Target)))
                 .Concat(DossierOutputPreviewEmptyFixedCellMapper.Build(
                     item.OutputPage,
                     item.EditorPages,
@@ -210,13 +263,19 @@ public partial class DossierPreviewWindow
                     item.EditorPages)
                     ? DossierPreviewTarget.Field("Uebersichtsplan")
                     : (DossierPreviewTarget?)null;
-            _render = DossierExactPreviewPageRenderer.Render(
+            var render = DossierExactPreviewPageRenderer.Render(
                 bitmap,
                 item.OutputPage,
                 hits,
                 planTarget,
                 emptyCellAreas);
-            Sheet.Child = _render.Root;
+
+            if (!_exactPreviewState.TryCompletePage(renderVersion, success: true))
+                return;
+
+            _render = render;
+            Sheet.Child = render.Root;
+            AktualisiereVorschauFreigabe();
 
             if (_aktivesFeld is not null)
                 Hervorheben(_aktivesFeld.Value, blinken: false);
@@ -230,8 +289,45 @@ public partial class DossierPreviewWindow
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Seite konnte nicht angezeigt werden: " + ex.Message;
+            if (_exactPreviewState.TryCompletePage(renderVersion, success: false))
+            {
+                var message = "Seite konnte nicht angezeigt werden: " + ex.Message;
+                _render = null;
+                Sheet.Child = DossierExactPreviewPageRenderer.CreateNotice(
+                    message,
+                    pageSized: true);
+                StatusText.Text = message;
+                AktualisiereVorschauFreigabe();
+            }
         }
+    }
+
+    private void ZeigeAusgabefehler(string message)
+    {
+        _previewPdfBytes = null;
+        _render = null;
+        PageList.SelectedItem = null;
+        PageList.ItemsSource = null;
+        FieldsHeader.Text = "Felder — aktueller Arbeitsstand";
+        Sheet.Child = DossierExactPreviewPageRenderer.CreateNotice(
+            message,
+            pageSized: true);
+        StatusText.Text = message;
+        AktualisiereVorschauFreigabe();
+    }
+
+    private void ZeigeAktualisierungshinweis(string message)
+    {
+        _render = null;
+        Sheet.Child = DossierExactPreviewPageRenderer.CreateNotice(
+            message,
+            pageSized: true);
+    }
+
+    private void AktualisiereVorschauFreigabe()
+    {
+        Sheet.IsHitTestVisible = _exactPreviewState.CanInteractWithPage;
+        AcceptButton.IsEnabled = _exactPreviewState.CanAccept;
     }
 
 }

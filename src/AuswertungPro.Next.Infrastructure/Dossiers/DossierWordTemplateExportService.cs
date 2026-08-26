@@ -56,8 +56,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     public static string EmptyRowText(string repeatKey) => repeatKey switch
     {
         "Haltungen" => "Keine Leitungen zugeordnet",
-        "Eigentuemer" => "Keine Eigentümerangaben erfasst",
-        "Themen" => "Keine Angaben erfasst",
+        // Diese beiden Tabellen sind Ausfuellbereiche. Eine leere Datenzeile
+        // bleibt professioneller und vor allem direkt beschreibbar; ein
+        // erzeugter Hinweis waere sichtbarer Text ohne eigenes Fachfeld.
+        "Eigentuemer" => string.Empty,
+        "Themen" => string.Empty,
         _ => string.Empty
     };
 
@@ -291,73 +294,73 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
 
         return MitFormaten(MitEigenenWerten(
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Gebietstitel"] = resolved.AreaTitle,
-            ["Parzellen"] = d.ParcelNumbers,
-            ["Parzellen_Zeile"] = BuildParcelLine(d.ParcelNumbers),
-            ["Hausnummern"] = d.HouseNumbers,
-            ["Adresse_Zeile"] = BuildAddressLine(d),
-            ["Adresse"] = d.Address,
-            ["PLZ"] = d.PostalCode,
-            ["Ort"] = d.Town,
-            ["Eigentuemer"] = d.OwnerName,
-            ["Eigentuemer_Block"] = BuildCoverOwnerBlock(d),
-            ["Eigentuemer_Detail"] = BuildOwnerDetail(d),
-            ["Kontakt"] = d.ContactName,
-            ["Telefon"] = d.ContactPhone,
-            ["EMail"] = d.ContactMail,
-            ["Objektbewohner"] = d.Occupancy,
-            ["Datum"] = today.ToString("dd.MM.yyyy", Ch),
-            ["Datum_Lang"] = today.ToString("dd. MMMM yyyy", Ch),
-            ["Revision"] = d.Revision,
-            // Kein Rueckfall auf Environment.UserName: "lieber leer als
-            // falsch" — der Windows-Benutzername gehoert nicht in ein
-            // Dokument fuer den Eigentuemer.
-            ["Autoren"] = string.IsNullOrWhiteSpace(request.Area.Authors)
+            {
+                ["Gebietstitel"] = resolved.AreaTitle,
+                ["Parzellen"] = d.ParcelNumbers,
+                ["Parzellen_Zeile"] = BuildParcelLine(d.ParcelNumbers),
+                ["Hausnummern"] = d.HouseNumbers,
+                ["Adresse_Zeile"] = BuildAddressLine(d),
+                ["Adresse"] = d.Address,
+                ["PLZ"] = d.PostalCode,
+                ["Ort"] = d.Town,
+                ["Eigentuemer"] = d.OwnerName,
+                ["Eigentuemer_Block"] = BuildCoverOwnerBlock(d),
+                ["Eigentuemer_Detail"] = BuildOwnerDetail(d),
+                ["Kontakt"] = d.ContactName,
+                ["Telefon"] = d.ContactPhone,
+                ["EMail"] = d.ContactMail,
+                ["Objektbewohner"] = d.Occupancy,
+                ["Datum"] = today.ToString("dd.MM.yyyy", Ch),
+                ["Datum_Lang"] = today.ToString("dd. MMMM yyyy", Ch),
+                ["Revision"] = d.Revision,
+                // Kein Rueckfall auf Environment.UserName: "lieber leer als
+                // falsch" — der Windows-Benutzername gehoert nicht in ein
+                // Dokument fuer den Eigentuemer.
+                ["Autoren"] = string.IsNullOrWhiteSpace(request.Area.Authors)
                 ? string.Empty
                 : request.Area.Authors.Trim(),
-            ["Dossier_Name"] = d.Name,
+                ["Dossier_Name"] = d.Name,
 
-            ["Ausfuehrungstermin"] = resolved.ExecutionDate,
-            ["Ansprechpartner"] = resolved.ContactPerson,
-            ["Unternehmer"] = resolved.Contractor,
-            ["Bauleitung"] = resolved.SiteManagement,
-            ["Behinderungen"] = resolved.Obstructions,
-            ["Bauvorgang"] = d.ConstructionProcess,
-            ["Hausanschluss"] = resolved.HouseConnectionText,
-            ["Meteorwasser"] = resolved.StormWaterText,
-            ["Bemerkungen"] = d.Remarks,
-            ["Beilagen"] = d.Attachments,
-            ["Rueckmeldung"] = BuildResponseText(resolved.ResponseDeadline),
-            ["Fusszeile"] = resolved.FooterLine,
+                ["Ausfuehrungstermin"] = resolved.ExecutionDate,
+                ["Ansprechpartner"] = resolved.ContactPerson,
+                ["Unternehmer"] = resolved.Contractor,
+                ["Bauleitung"] = resolved.SiteManagement,
+                ["Behinderungen"] = resolved.Obstructions,
+                ["Bauvorgang"] = d.ConstructionProcess,
+                ["Hausanschluss"] = resolved.HouseConnectionText,
+                ["Meteorwasser"] = resolved.StormWaterText,
+                ["Bemerkungen"] = d.Remarks,
+                ["Beilagen"] = d.Attachments,
+                ["Rueckmeldung"] = BuildResponseText(resolved.ResponseDeadline),
+                ["Fusszeile"] = resolved.FooterLine,
 
-            ["Anzahl_Haltungen"] = snapshot.HoldingCount.ToString(CultureInfo.InvariantCulture),
-            ["Laenge_Total"] = FormatLength(snapshot.LengthTotal),
-            ["Kosten_Total"] = FormatChf(snapshot.NetCostTotal),
-            ["Kosten_Hinweis"] = snapshot.NetCostTotal > 0m
+                ["Anzahl_Haltungen"] = snapshot.HoldingCount.ToString(CultureInfo.InvariantCulture),
+                ["Laenge_Total"] = FormatLength(snapshot.LengthTotal),
+                ["Kosten_Total"] = FormatChf(snapshot.NetCostTotal),
+                ["Kosten_Hinweis"] = snapshot.NetCostTotal > 0m
                 ? "Kostenangaben ohne MWST, Stand " + today.ToString("dd.MM.yyyy", Ch) + "."
                 : string.Empty,
-            ["Gebiet_Ort"] = request.Area.AreaLocation,
-            ["Ort_Zeile"] = BuildTownLine(d),
-            ["Projekt_Nr"] = request.Area.ProjectNumber,
-            ["Gezeichnet"] = request.Area.DrawnBy,
-            ["Aktennotiz"] = d.FileNote,
-            ["Haltungen_Text"] = BuildHoldingsText(snapshot),
-            ["Schaechte_Text"] = BuildShaftsText(snapshot),
-            [DossierTopicComponentListComposer.ValueKey] = BuildNumberedComponentsText(snapshot),
-            ["Uebersichtsplan_BreiteCm"] = PlanWidthCm(d)
+                ["Gebiet_Ort"] = request.Area.AreaLocation,
+                ["Ort_Zeile"] = BuildTownLine(d),
+                ["Projekt_Nr"] = request.Area.ProjectNumber,
+                ["Gezeichnet"] = request.Area.DrawnBy,
+                ["Aktennotiz"] = d.FileNote,
+                ["Haltungen_Text"] = BuildHoldingsText(snapshot),
+                ["Schaechte_Text"] = BuildShaftsText(snapshot),
+                [DossierTopicComponentListComposer.ValueKey] = BuildNumberedComponentsText(snapshot),
+                ["Uebersichtsplan_BreiteCm"] = PlanWidthCm(d)
                 .ToString("0.###", CultureInfo.InvariantCulture),
-            ["Anzahl_Schaechte"] = snapshot.ShaftCount.ToString(CultureInfo.InvariantCulture),
-            // Die Vorschau übergibt den aus ihren sichtbaren Word-Zeilen
-            // berechneten Start. Ohne Vorschau gilt die unveränderte Vorlage;
-            // der Export zählt nach dem Entfernen ausgeblendeter Kapitel
-            // nochmals direkt im echten Word-Dokument.
-            ["Verzeichnis_Beilagen"] = DossierTocAttachments.Build(
+                ["Anzahl_Schaechte"] = snapshot.ShaftCount.ToString(CultureInfo.InvariantCulture),
+                // Die Vorschau übergibt den aus ihren sichtbaren Word-Zeilen
+                // berechneten Start. Ohne Vorschau gilt die unveränderte Vorlage;
+                // der Export zählt nach dem Entfernen ausgeblendeter Kapitel
+                // nochmals direkt im echten Word-Dokument.
+                ["Verzeichnis_Beilagen"] = DossierTocAttachments.Build(
                 d.TocAttachments,
                 verzeichnisStart.FirstNumber,
                 verzeichnisStart.FirstPageNumber),
-            ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
-        }, d), d);
+                ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
+            }, d), d);
     }
 
     /// <summary>
@@ -562,10 +565,18 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             .Where(change => change is not null))
         {
             var row = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            AddFormattedValue(row, "Version", change.Version, RowStyles(change.FieldStyles, "Version"));
-            AddFormattedValue(row, "Datum", change.Date, RowStyles(change.FieldStyles, "Date"));
-            AddFormattedValue(row, "Visum", change.Visum, RowStyles(change.FieldStyles, "Visum"));
-            AddFormattedValue(row, "Aenderung", change.Change, RowStyles(change.FieldStyles, "Change"));
+            DossierRowTextFormatting.AddValue(
+                row, "Version", change.Version,
+                DossierRowTextFormatting.Styles(change.FieldStyles, "Version"));
+            DossierRowTextFormatting.AddValue(
+                row, "Datum", change.Date,
+                DossierRowTextFormatting.Styles(change.FieldStyles, "Date"));
+            DossierRowTextFormatting.AddValue(
+                row, "Visum", change.Visum,
+                DossierRowTextFormatting.Styles(change.FieldStyles, "Visum"));
+            DossierRowTextFormatting.AddValue(
+                row, "Aenderung", change.Change,
+                DossierRowTextFormatting.Styles(change.FieldStyles, "Change"));
             rows.Add(row);
         }
 
@@ -599,133 +610,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// </summary>
     public static List<IReadOnlyDictionary<string, string>> BuildOwnerRows(
         DossierDefinition dossier)
-    {
-        ArgumentNullException.ThrowIfNull(dossier);
-
-        var rows = new List<IReadOnlyDictionary<string, string>>();
-
-        foreach (var owner in dossier.Owners)
-        {
-            var row = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            AddFormattedValue(row, "Haus_Nr", owner.HouseNumber,
-                RowStyles(owner.FieldStyles, "HouseNumber"));
-            AddFormattedValue(row, "Pz_Nr", owner.ParcelNumber,
-                RowStyles(owner.FieldStyles, "ParcelNumber"));
-
-            var ownerCell = BuildOwnerCell(owner);
-            row["Eigentuemer_Zelle"] = ownerCell.Text;
-            row["Eigentuemer_Zelle" + DossierTopicTextFormatting.StyleRangesSuffix] =
-                DossierTopicTextFormatting.Encode(ownerCell.StyleRanges);
-
-            // Nur fuer den direkten Klick in der echten PDF-Vorschau. Die
-            // Word-Vorlage verwendet weiterhin ausschliesslich die gemeinsame
-            // Eigentuemerzelle; diese Einzelwerte geben dem Trefferabgleich
-            // aber eindeutige Textstuecke fuer Telefon, Mail und Bewohner.
-            row["Telefon"] = owner.Phone ?? string.Empty;
-            row["Mail"] = owner.Mail ?? string.Empty;
-            row["Objektbewohner"] = owner.Occupancy ?? string.Empty;
-            rows.Add(row);
-        }
-
-        return rows;
-    }
-
-    /// <summary>
-    /// Der mehrzeilige Inhalt der Eigentuemerzelle — dieselbe Aufteilung wie im
-    /// Vorbild. Leere Angaben erzeugen keine leere Beschriftungszeile.
-    /// </summary>
-    private static DossierTopicTextFormatting.FormattedText BuildOwnerCell(DossierOwnerRow owner)
-    {
-        var text = new System.Text.StringBuilder();
-        var ranges = new List<DossierTextStyleRange>();
-
-        void AddLine(string prefix, string value, string styleKey)
-        {
-            var formatted = CleanFormatted(value, RowStyles(owner.FieldStyles, styleKey));
-            if (formatted.Text.Length == 0)
-                return;
-
-            if (text.Length > 0)
-                text.Append('\n');
-
-            var offset = text.Length + prefix.Length;
-            text.Append(prefix).Append(formatted.Text);
-            ranges.AddRange(formatted.StyleRanges.Select(range => new DossierTextStyleRange
-            {
-                Start = offset + range.Start,
-                Length = range.Length,
-                ColorHex = range.ColorHex,
-                Bold = range.Bold,
-                Italic = range.Italic,
-                Underline = range.Underline
-            }));
-        }
-
-        AddLine(string.Empty, owner.Name, "Name");
-        AddLine("Tel.: ", owner.Phone, "Phone");
-        AddLine("Mail: ", owner.Mail, "Mail");
-        AddLine("Objektbewohner: ", owner.Occupancy, "Occupancy");
-
-        return new DossierTopicTextFormatting.FormattedText(text.ToString(), ranges);
-    }
-
-    private static IReadOnlyList<DossierTextStyleRange> RowStyles(
-        Dictionary<string, List<DossierTextStyleRange>>? styles,
-        string key)
-        => styles is not null && styles.TryGetValue(key, out var ranges)
-            ? ranges
-            : Array.Empty<DossierTextStyleRange>();
-
-    private static void AddFormattedValue(
-        IDictionary<string, string> row,
-        string key,
-        string? value,
-        IReadOnlyList<DossierTextStyleRange> styles)
-    {
-        var formatted = CleanFormatted(value, styles);
-        row[key] = formatted.Text;
-        row[key + DossierTopicTextFormatting.StyleRangesSuffix] =
-            DossierTopicTextFormatting.Encode(formatted.StyleRanges);
-    }
-
-    private static DossierTopicTextFormatting.FormattedText CleanFormatted(
-        string? value,
-        IReadOnlyList<DossierTextStyleRange> styles)
-    {
-        var original = value ?? string.Empty;
-        var start = 0;
-        while (start < original.Length && char.IsWhiteSpace(original[start]))
-            start++;
-
-        var end = original.Length;
-        while (end > start && char.IsWhiteSpace(original[end - 1]))
-            end--;
-
-        var text = original[start..end];
-        if (text.Length == 0)
-            return new DossierTopicTextFormatting.FormattedText(string.Empty, Array.Empty<DossierTextStyleRange>());
-
-        var ranges = new List<DossierTextStyleRange>();
-        foreach (var range in DossierTopicTextFormatting.Normalize(original, styles))
-        {
-            var overlapStart = Math.Max(start, range.Start);
-            var overlapEnd = Math.Min(end, range.Start + range.Length);
-            if (overlapEnd <= overlapStart)
-                continue;
-
-            ranges.Add(new DossierTextStyleRange
-            {
-                Start = overlapStart - start,
-                Length = overlapEnd - overlapStart,
-                ColorHex = range.ColorHex,
-                Bold = range.Bold,
-                Italic = range.Italic,
-                Underline = range.Underline
-            });
-        }
-
-        return new DossierTopicTextFormatting.FormattedText(text, ranges);
-    }
+        => DossierOwnerRowBuilder.Build(dossier);
 
     /// <summary>
     /// Auf dem Deckblatt stehen die klassischen Felder "Eigentuemer"/"Adresse
