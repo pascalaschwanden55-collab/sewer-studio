@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
@@ -93,6 +94,39 @@ public sealed class CodingProtocolRevisionUpdaterTests
         Assert.Equal(1, count);
         Assert.Single(revision.Entries);
         Assert.Equal("BAA", revision.Entries[0].Code);
+    }
+
+    /// <summary>
+    /// WAECHTER gegen einen bereits einmal gebauten und wieder verworfenen Fix.
+    ///
+    /// Die selbst ergaenzten Rohrgrenzen tragen das Kennzeichen "auto_boundary".
+    /// Es liegt nahe, sie damit vor dem Loeschen zu schuetzen - dann ueberlebten
+    /// sie ein zweites "Uebernehmen". Das ist FALSCH: Beim erneuten Oeffnen des
+    /// Codiermodus laedt CodingSessionService.LoadExistingObservations jeden
+    /// Protokolleintrag als Ereignis, auch BCD und BCE. Loescht der Mensch dort ein
+    /// falsches Rohrende, ist diese Loeschung von "war nie ein Ereignis" nicht mehr
+    /// zu unterscheiden - ein solcher Schutz macht ein falsches Rohrende ueber den
+    /// Codiermodus unloeschbar.
+    ///
+    /// Wird dieser Test rot, wurde der Schutz erneut eingebaut. Die richtige
+    /// Loesung waere, die Grenzen als echte Codier-Ereignisse anzulegen.
+    /// </summary>
+    [Fact]
+    public void Ein_geloeschtes_Rohrende_bleibt_geloescht_auch_mit_Auto_Kennzeichen()
+    {
+        var rohrende = Entry(Guid.NewGuid(), "BCE", "Rohrende");
+        rohrende.Ai = new ProtocolEntryAiMeta
+        {
+            Flags = new List<string> { "foto_required", ProtocolBoundaryService.AutoBoundaryFlag }
+        };
+        var riss = Entry(Guid.NewGuid(), "BAB", "Riss");
+        var revision = new ProtocolRevision { Entries = { riss, rohrende } };
+
+        // Der Mensch hat das Rohrende in der Codierliste geloescht: Es fehlt.
+        CodingProtocolRevisionUpdater.ApplyCodingEvents(revision, [Event(riss)]);
+
+        Assert.True(revision.Entries.Single(e => e.Code == "BCE").IsDeleted);
+        Assert.False(revision.Entries.Single(e => e.Code == "BAB").IsDeleted);
     }
 
     private static CodingEvent Event(ProtocolEntry entry)

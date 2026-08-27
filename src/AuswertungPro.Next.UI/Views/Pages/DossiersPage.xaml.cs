@@ -8,6 +8,7 @@ using System.Windows.Input;
 
 using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.UI.Behaviors;
+using AuswertungPro.Next.UI.Dossiers;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
@@ -122,6 +123,31 @@ public partial class DossiersPage : UserControl
             return;
 
         viewModel.SetStatusCommand.Execute(status);
+    }
+
+    /// <summary>
+    /// Meldet jeden linken Klick auf eine Leitungszeile erneut an QGIS.
+    /// Dadurch zoomt auch ein zweiter Klick auf dieselbe Haltung nochmals.
+    /// </summary>
+    private void HoldingGrid_QgisReselectOnClick(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject source
+            && VisualTreeSafe.FindAncestor<DataGridRow>(source)?.Item is DossierHoldingRow row)
+        {
+            DossierQgisSelectionReporter.Report(row);
+        }
+    }
+
+    /// <summary>
+    /// Der Schachtweg entspricht dem bestehenden Verhalten im Menue Schaechte.
+    /// </summary>
+    private void ShaftGrid_QgisReselectOnClick(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject source
+            && VisualTreeSafe.FindAncestor<DataGridRow>(source)?.Item is DossierShaftRow row)
+        {
+            DossierQgisSelectionReporter.Report(row);
+        }
     }
 
     /// <summary>Ein Rechtsklick arbeitet immer auf der Zeile direkt unter dem Mauszeiger.</summary>

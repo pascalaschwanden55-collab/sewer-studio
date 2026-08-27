@@ -16,6 +16,7 @@ public sealed record CodingApplyControllerBindings(
     Func<bool> HasCodingViewModel,
     Func<HaltungRecord?> GetHaltungRecord,
     Func<IReadOnlyList<CodingEvent>?> GetEventCollection,
+    Action<ProtocolEntry> AddAutomaticBoundaryEvent,
     Func<IEnumerable<CodingEvent>> GetEvents,
     Func<bool> IsCodingMode,
     Func<string> GetBaselineSignature,
@@ -27,7 +28,9 @@ public sealed record CodingApplyControllerBindings(
     Action<string> SetBaselineSignature,
     Action SaveProjectAfterCoding,
     Action<string, TimeSpan> ShowOverlay,
-    Func<Func<bool>, bool> ConfirmUnappliedChanges);
+    Func<Func<bool>, bool> ConfirmUnappliedChanges,
+    Func<HaltungRecord?, double?> GetHaltungslaenge,
+    Func<CodingApplyPipeEndPrompt, CodingApplyPipeEndDecision> ConfirmMissingPipeEnd);
 
 public sealed class CodingApplyController : ICodingApplyController
 {
@@ -41,21 +44,25 @@ public sealed class CodingApplyController : ICodingApplyController
 
     public bool Apply(bool showOverlay)
     {
+        var haltungRecord = _bindings.GetHaltungRecord();
         var result = CodingApplyChangesWorkflow.Execute(
             new CodingApplyChangesWorkflowRequest(
                 _bindings.HasCodingViewModel(),
-                _bindings.GetHaltungRecord(),
+                haltungRecord,
                 _bindings.GetEventCollection(),
-                showOverlay),
+                showOverlay,
+                _bindings.GetHaltungslaenge(haltungRecord)),
             new CodingApplyChangesWorkflowActions(
                 ConfirmEmptyProtocol: _bindings.ConfirmEmptyProtocol,
+                AddAutomaticBoundaryEvent: _bindings.AddAutomaticBoundaryEvent,
                 AssignProtocol: _bindings.AssignProtocol,
                 MarkProjectDirty: MarkProjectDirty,
                 SyncCodingToPrimaryDamages: _bindings.SyncCodingToPrimaryDamages,
                 PersistCodingEventsAsTrainingSamples: _bindings.PersistCodingEventsAsTrainingSamples,
                 SetBaselineSignature: _bindings.SetBaselineSignature,
                 SaveProjectAfterCoding: _bindings.SaveProjectAfterCoding,
-                ShowOverlay: _bindings.ShowOverlay));
+                ShowOverlay: _bindings.ShowOverlay,
+                ConfirmMissingPipeEnd: _bindings.ConfirmMissingPipeEnd));
 
         return result.Applied;
     }

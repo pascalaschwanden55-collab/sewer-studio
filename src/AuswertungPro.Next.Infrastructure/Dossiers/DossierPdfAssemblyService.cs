@@ -181,6 +181,7 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
 internal static class WordInterop
 {
     private const int WdExportFormatPdf = 17;
+    private const int WdExportCreateWordBookmarks = 2;
     private const int WdDoNotSaveChanges = 0;
 
     public static bool TryConvertToPdf(string wordPath, string? pdfPath)
@@ -210,7 +211,10 @@ internal static class WordInterop
             if (document is null)
                 return false;
 
-            Invoke(document, "ExportAsFixedFormat", pdfPath, WdExportFormatPdf);
+            Invoke(
+                document,
+                "ExportAsFixedFormat",
+                CreateExportAsFixedFormatArguments(pdfPath));
             return File.Exists(pdfPath);
         }
         catch
@@ -224,6 +228,32 @@ internal static class WordInterop
             Release(documents);
             Release(application);
         }
+    }
+
+    /// <summary>
+    /// Argumente fuer Words PDF-Export. Die ausgelassenen Standardwerte bleiben
+    /// unveraendert; nur die Word-Textmarken werden ausdruecklich als
+    /// PDF-Lesezeichen verlangt. Ohne den elften Wert verwendet Word
+    /// <c>wdExportCreateNoBookmarks</c>.
+    /// </summary>
+    internal static object[] CreateExportAsFixedFormatArguments(string pdfPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(pdfPath);
+
+        return
+        [
+            pdfPath,
+            WdExportFormatPdf,
+            Type.Missing, // OpenAfterExport
+            Type.Missing, // OptimizeFor
+            Type.Missing, // Range
+            Type.Missing, // From
+            Type.Missing, // To
+            Type.Missing, // Item
+            Type.Missing, // IncludeDocProps
+            Type.Missing, // KeepIRM
+            WdExportCreateWordBookmarks
+        ];
     }
 
     private static void TryQuit(object? document, object? application)

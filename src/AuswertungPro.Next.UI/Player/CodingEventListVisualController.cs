@@ -28,10 +28,11 @@ public sealed class CodingEventListVisualController
 
     public void ColorizeCodingEvents()
     {
+        var codingEvents = _codingEvents.Items.OfType<CodingEvent>().ToList();
         CodingEventListItemColorizeWorkflow.Execute(
             new CodingEventListItemColorizeWorkflowRequest(_codingEvents.Items.Count),
             new CodingEventListItemColorizeWorkflowActions(
-                TryApplyItem: index => TryColorizeCodingEvent(index),
+                TryApplyItem: index => TryColorizeCodingEvent(index, codingEvents),
                 RefreshHighlights: ApplyProtocolMatchHighlights));
     }
 
@@ -41,7 +42,7 @@ public sealed class CodingEventListVisualController
         ApplyProtocolMatchHighlights(_importEvents);
     }
 
-    private bool TryColorizeCodingEvent(int index)
+    private bool TryColorizeCodingEvent(int index, IReadOnlyList<CodingEvent> codingEvents)
     {
         if (_codingEvents.ItemContainerGenerator.ContainerFromIndex(index) is not ListBoxItem container)
             return false;
@@ -57,12 +58,21 @@ public sealed class CodingEventListVisualController
         var statusIcon = VisualTreeSafe.FindNamedDescendant<TextBlock>(
             container,
             "TxtStatusIcon");
+        var meterText = VisualTreeSafe.FindNamedDescendant<TextBlock>(
+            container,
+            "TxtEventMeter");
+        var stretchBadge = VisualTreeSafe.FindNamedDescendant<Border>(
+            container,
+            "StretchOpenBadge");
 
         CodingEventListItemControls.Apply(
             zoneDot,
             confidenceText,
             statusIcon,
-            codingEvent);
+            meterText,
+            stretchBadge,
+            codingEvent,
+            codingEvents);
         return true;
     }
 

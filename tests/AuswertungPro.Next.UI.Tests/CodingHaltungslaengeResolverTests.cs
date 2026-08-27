@@ -34,27 +34,28 @@ public sealed class CodingHaltungslaengeResolverTests
     public void TryEnsureFromKnownSources_copies_laenge_m_before_other_fallbacks()
     {
         var record = new HaltungRecord();
-        record.SetFieldValue("Laenge_m", "17,25", FieldSource.Legacy, userEdited: false);
+        record.SetFieldValue("Laenge_m", "17,25", FieldSource.Xtf, userEdited: false);
 
         var resolved = CodingHaltungslaengeResolver.TryEnsureFromKnownSources(record, overlayPipeLengthMeters: 22);
 
         Assert.True(resolved);
         Assert.Equal("17,25", record.GetFieldValue("Haltungslaenge_m"));
+        Assert.Equal(FieldSource.Xtf, record.FieldMeta["Haltungslaenge_m"].Source);
     }
 
     [Fact]
-    public void TryEnsureFromKnownSources_uses_overlay_length_when_fields_are_missing()
+    public void TryEnsureFromKnownSources_does_not_treat_overlay_as_independent_length_source()
     {
         var record = new HaltungRecord();
 
         var resolved = CodingHaltungslaengeResolver.TryEnsureFromKnownSources(record, overlayPipeLengthMeters: 22.345);
 
-        Assert.True(resolved);
-        Assert.Equal("22.34", record.GetFieldValue("Haltungslaenge_m"));
+        Assert.False(resolved);
+        Assert.Equal("", record.GetFieldValue("Haltungslaenge_m"));
     }
 
     [Fact]
-    public void TryEnsureFromKnownSources_uses_max_protocol_meter_as_last_known_source()
+    public void TryEnsureFromKnownSources_does_not_treat_damage_meter_as_holding_length()
     {
         var record = new HaltungRecord
         {
@@ -74,8 +75,61 @@ public sealed class CodingHaltungslaengeResolverTests
 
         var resolved = CodingHaltungslaengeResolver.TryEnsureFromKnownSources(record, overlayPipeLengthMeters: null);
 
+        Assert.False(resolved);
+        Assert.Equal("", record.GetFieldValue("Haltungslaenge_m"));
+    }
+
+    [Fact]
+    public void TryEnsureFromKnownSources_uses_unique_active_pipe_end_and_marks_source()
+    {
+        var record = RecordWithEntries(
+            new ProtocolEntry { Code = "BABBB", MeterStart = 9.876 },
+            new ProtocolEntry { Code = "BCE", MeterStart = 22.345 });
+
+        var resolved = CodingHaltungslaengeResolver.TryEnsureFromKnownSources(record, overlayPipeLengthMeters: null);
+
         Assert.True(resolved);
-        Assert.Equal("9.88", record.GetFieldValue("Haltungslaenge_m"));
+        Assert.Equal("22.34", record.GetFieldValue("Haltungslaenge_m"));
+        Assert.Equal(FieldSource.Protocol, record.FieldMeta["Haltungslaenge_m"].Source);
+        Assert.False(record.FieldMeta["Haltungslaenge_m"].UserEdited);
+    }
+
+    [Fact]
+    public void TryEnsureFromKnownSources_ignores_deleted_pipe_end()
+    {
+        var record = RecordWithEntries(
+            new ProtocolEntry { Code = "BCE", MeterStart = 22.345, IsDeleted = true });
+
+        var resolved = CodingHaltungslaengeResolver.TryEnsureFromKnownSources(record, overlayPipeLengthMeters: null);
+
+        Assert.False(resolved);
+        Assert.Equal("", record.GetFieldValue("Haltungslaenge_m"));
+    }
+
+    [Fact]
+    public void TryEnsureFromKnownSources_rejects_conflicting_active_pipe_ends()
+    {
+        var record = RecordWithEntries(
+            new ProtocolEntry { Code = "BCE", MeterStart = 22.34 },
+            new ProtocolEntry { Code = "BCE", MeterStart = 25.67 });
+
+        var resolved = CodingHaltungslaengeResolver.TryEnsureFromKnownSources(record, overlayPipeLengthMeters: null);
+
+        Assert.False(resolved);
+        Assert.Equal("", record.GetFieldValue("Haltungslaenge_m"));
+    }
+
+    [Fact]
+    public void TryEnsureFromKnownSources_rejects_pipe_end_when_abort_is_also_active()
+    {
+        var record = RecordWithEntries(
+            new ProtocolEntry { Code = "BDCZ", MeterStart = 14.20 },
+            new ProtocolEntry { Code = "BCE", MeterStart = 22.34 });
+
+        var resolved = CodingHaltungslaengeResolver.TryEnsureFromKnownSources(record, overlayPipeLengthMeters: null);
+
+        Assert.False(resolved);
+        Assert.Equal("", record.GetFieldValue("Haltungslaenge_m"));
     }
 
     [Fact]
@@ -85,4 +139,16 @@ public sealed class CodingHaltungslaengeResolverTests
 
         Assert.False(CodingHaltungslaengeResolver.TryEnsureFromKnownSources(record, overlayPipeLengthMeters: null));
     }
+
+    private static HaltungRecord RecordWithEntries(params ProtocolEntry[] entries)
+        => new()
+        {
+            Protocol = new ProtocolDocument
+            {
+                Current = new ProtocolRevision
+                {
+                    Entries = entries.ToList()
+                }
+            }
+        };
 }

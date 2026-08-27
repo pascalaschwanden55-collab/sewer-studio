@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Reports;
 
@@ -12,6 +12,12 @@ public sealed record DossierPrintOptions
     public bool IncludeHydraulik { get; init; } = true;
     public bool IncludeKostenschaetzung { get; init; } = true;
     public bool IncludeOriginalProtokolle { get; init; } = true;
+    /// <summary>
+    /// Anzahl Fotos je Fotoseite (1, 2, 4 oder 6). <c>null</c> bedeutet: die Einstellung
+    /// des Benutzers verwenden.
+    /// </summary>
+    public int? PhotosPerPage { get; init; }
+
     public string? LogoPathAbs { get; init; }
     public string FooterLine { get; init; } = "";
 

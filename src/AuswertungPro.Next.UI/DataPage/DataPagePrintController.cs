@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -53,6 +53,7 @@ public sealed class DataPagePrintController
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly IProjectCostStoreRepository _projectCosts;
+    private readonly IProtocolPdfLayoutSettings? _protocolPdfLayoutSettings;
 
     [Obsolete("Kompatibilitaetskonstruktor. Neue Aufrufer muessen einen sicheren PDF-Oeffner injizieren.")]
     public DataPagePrintController(
@@ -124,7 +125,8 @@ public sealed class DataPagePrintController
         Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
         IProtocolSingleRegenerationService? protocolRegeneration = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
-        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
+        IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null)
         : this(
             dialogs,
             getProjectFolder,
@@ -135,13 +137,13 @@ public sealed class DataPagePrintController
             getLastProjectPath: getLastProjectPath,
             findSchachtByNummer: findSchachtByNummer,
             buildDossierHydraulikCalculation: buildDossierHydraulikCalculation,
-            regenerateOne: protocolRegeneration is null
-                ? null
-                : (project, folder, record, document) =>
-                    protocolRegeneration.RegenerateOne(project, folder, record, document),
+            // Immer ueber den eingebauten Erzeuger: nur so gilt die Einstellung
+            // "Fotos pro Seite" auch fuer das neu erzeugte _E-Protokoll.
+            regenerateOne: CreateRegenerateOne(protocolRegeneration, protocolPdfExporter),
             openPdf: openPdf,
             dossierPhotoAvailability: dossierPhotoAvailability,
-            inspectionProtocolFiles: inspectionProtocolFiles)
+            inspectionProtocolFiles: inspectionProtocolFiles,
+            protocolPdfLayoutSettings: protocolPdfLayoutSettings)
     {
     }
 
@@ -158,7 +160,8 @@ public sealed class DataPagePrintController
         Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
         IProtocolSingleRegenerationService? protocolRegeneration = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
-        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
+        IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null)
         : this(
             dialogs,
             protocolPdfExporter,
@@ -171,7 +174,8 @@ public sealed class DataPagePrintController
             buildDossierHydraulikCalculation,
             protocolRegeneration,
             dossierPhotoAvailability,
-            inspectionProtocolFiles)
+            inspectionProtocolFiles,
+            protocolPdfLayoutSettings)
     {
         _pdfMerge = pdfMerge ?? throw new ArgumentNullException(nameof(pdfMerge));
     }
@@ -262,7 +266,8 @@ public sealed class DataPagePrintController
         Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null,
         Func<Project, string, HaltungRecord, ProtocolDocument, string?>? regenerateOne = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
-        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
+        IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _getProjectFolder = getProjectFolder ?? throw new ArgumentNullException(nameof(getProjectFolder));
@@ -293,15 +298,19 @@ public sealed class DataPagePrintController
             : new DelegatePdfMergeService(
                 mergeOriginals ?? mergeFallback.MergeOriginals,
                 mergeWithOriginals ?? mergeFallback.MergeWithOriginals);
+        // Kein stiller statischer Rueckfall: der wuerde sich einen zweiten PDF-Erzeuger
+        // ohne die Benutzereinstellung bauen. Die produktiven Aufrufwege reichen den
+        // eingebauten Dienst immer durch.
         _regenerateOne = regenerateOne
-            ?? ((project, folder, record, doc) =>
-                AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationService.RegenerateOne(project, folder, record, doc));
+            ?? ((_, _, _, _) => throw new InvalidOperationException(
+                "Protokoll-Neuerzeugung ist nicht verdrahtet."));
         _openPdf = openPdf ?? throw new ArgumentNullException(nameof(openPdf));
         _dossierPhotoAvailability = dossierPhotoAvailability
             ?? DataPageDossierAvailability.CompatibilityService;
         _inspectionProtocolFiles = inspectionProtocolFiles
             ?? DataPageProtocolPathResolver.CompatibilityService;
         _projectCosts = projectCosts ?? throw new ArgumentNullException(nameof(projectCosts));
+        _protocolPdfLayoutSettings = protocolPdfLayoutSettings;
     }
 
     public async Task PrintDossierPdfAsync(Project project, HaltungRecord? record)
@@ -534,6 +543,19 @@ public sealed class DataPagePrintController
         }
     }
 
+    private static Func<Project, string, HaltungRecord, ProtocolDocument, string?> CreateRegenerateOne(
+        IProtocolSingleRegenerationService? protocolRegeneration,
+        IProtocolPdfExporter protocolPdfExporter)
+    {
+        ArgumentNullException.ThrowIfNull(protocolPdfExporter);
+
+        var service = protocolRegeneration
+            ?? new AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationAdapter(protocolPdfExporter);
+
+        return (project, folder, record, document) =>
+            service.RegenerateOne(project, folder, record, document);
+    }
+
     private static Func<Project, HaltungRecord, ProtocolDocument, string, HaltungsprotokollPdfOptions, byte[]> CreateBuildAwuPdf(
         IProtocolPdfExporter protocolPdfExporter)
     {
@@ -591,12 +613,12 @@ public sealed class DataPagePrintController
         return paths;
     }
 
-    private static DossierPrintOptions? SelectDossierPrintOptionsWithDialog(DataPageDossierPrintAvailability availability)
+    private DossierPrintOptions? SelectDossierPrintOptionsWithDialog(DataPageDossierPrintAvailability availability)
     {
-        var dialog = new DossierPrintDialog
-        {
-            Owner = System.Windows.Application.Current?.MainWindow
-        };
+        var dialog = _protocolPdfLayoutSettings is null
+            ? new DossierPrintDialog()
+            : new DossierPrintDialog(_protocolPdfLayoutSettings);
+        dialog.Owner = System.Windows.Application.Current?.MainWindow;
         dialog.SetAvailability(
             availability.HasSchachtVon,
             availability.SchachtVonNr,

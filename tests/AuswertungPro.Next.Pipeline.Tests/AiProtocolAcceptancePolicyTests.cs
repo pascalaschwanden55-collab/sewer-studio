@@ -65,18 +65,51 @@ public sealed class AiProtocolAcceptancePolicyTests
     }
 
     [Fact]
-    public void CodingEvents_verlangen_Annahme_bei_Ai_und_manuellem_Review()
+    public void KI_Vorschlaege_verlangen_weiterhin_eine_ausdrueckliche_Annahme()
     {
         var imported = Event(ProtocolEntrySource.Imported);
         var aiAccepted = Event(ProtocolEntrySource.Ai, aiDecision: CodingUserDecision.Accepted);
         var aiRejected = Event(ProtocolEntrySource.Ai, aiDecision: CodingUserDecision.Rejected);
+        var aiOpen = Event(ProtocolEntrySource.Ai, aiDecision: CodingUserDecision.Ignored);
         var manualAccepted = Event(ProtocolEntrySource.Manual, reviewDecision: CodingUserDecision.Accepted);
-        var manualOpen = Event(ProtocolEntrySource.Manual, reviewDecision: CodingUserDecision.Ignored);
 
         var result = AiProtocolAcceptancePolicy.FilterCodingEvents(
-            [imported, aiAccepted, aiRejected, manualAccepted, manualOpen]);
+            [imported, aiAccepted, aiRejected, aiOpen, manualAccepted]);
 
         Assert.Equal([imported, aiAccepted, manualAccepted], result);
+    }
+
+    [Fact]
+    public void Selbst_codierter_Eintrag_geht_auch_ohne_Bestaetigung_ins_Protokoll()
+    {
+        // Regression: Eine im VSA-Codierfenster erzeugte Handcodierung startet als
+        // "Manuell codiert - bitte bestaetigen" (Ignored). Sie verschwand beim
+        // "Uebernehmen" kommentarlos - unter anderem Rohranfang und Rohrende.
+        var manualOpen = Event(ProtocolEntrySource.Manual, reviewDecision: CodingUserDecision.Ignored);
+
+        Assert.True(AiProtocolAcceptancePolicy.CanApply(manualOpen));
+    }
+
+    [Fact]
+    public void Selbst_codierter_Eintrag_bleibt_nach_Ablehnen_draussen()
+    {
+        var manualRejected = Event(ProtocolEntrySource.Manual, reviewDecision: CodingUserDecision.Rejected);
+
+        Assert.False(AiProtocolAcceptancePolicy.CanApply(manualRejected));
+    }
+
+    [Fact]
+    public void Ein_KI_Vorschlag_mit_Pruefkontext_bleibt_bestaetigungspflichtig()
+    {
+        // Beide Kontexte vorhanden: der KI-Kontext entscheidet, nicht der Pruefkontext.
+        var event_ = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BCE", Source = ProtocolEntrySource.Ai },
+            AiContext = new CodingEventAiContext { Decision = CodingUserDecision.Ignored },
+            ReviewContext = new CodingEventReviewContext { Decision = CodingUserDecision.Ignored }
+        };
+
+        Assert.False(AiProtocolAcceptancePolicy.CanApply(event_));
     }
 
     private static CodingEvent Event(

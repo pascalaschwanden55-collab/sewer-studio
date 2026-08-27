@@ -83,6 +83,16 @@
   Dateinamenreihenfolge an. So verschwinden abgewaehlte automatische Protokolle sofort aus
   Vorschau und Gesamt-PDF, manuelle Beilagen bleiben sichtbar, und eine Vorschau legt im
   echten Projekt keine Datei an, ersetzt nichts und loescht nichts.
+- `DocxFieldMarkerWriter` setzt fuer jedes bearbeitbare Dossierfeld eine deterministische,
+  hoechstens 40 Zeichen lange Word-Textmarke. Word und LibreOffice exportieren diese Marken
+  als benannte PDF-Ziele. Da `PdfMergeService` beim Anfuegen von Beilagen nur Seiten kopiert,
+  liest `DossierOutputPreviewService` die Ziele vorher aus der reinen Word-PDF und reicht sie
+  getrennt mit der zusammengefuehrten Vorschau weiter. So bleibt die Feldzuordnung auch mit
+  Beilagen exakt.
+- Leere Texte der elf bekannten Standardthemen bleiben im Kundendokument leer; nur ein leerer
+  frei angelegter Zusatzpunkt wird als `unbekannt` kenntlich gemacht. Der Standardtext der
+  Ausgangslage setzt `Gebiet_Perimeter` nur bei vorhandenem Gebietsort ein und bleibt sonst
+  als vollstaendiger deutscher Satz erhalten.
 - `WindowsDossierPreviewPageRasterizer` zeichnet jede echte PDF-Seite. Damit stammen
   Seitenzahl, Blattformat, Abstaende, Umbrueche, Tabellen, Farben, Bilder, Logo und Fusszeile
   nicht mehr aus einer WPF-Nachbildung. Nach 300 ms Schreibpause wird die Ausgabe neu
@@ -232,6 +242,10 @@
   `SchaechteFileActionController` wie die Seite `Schaechte`; die Seite selbst waehlt nur
   die rechts angeklickte Zeile aus. `ShellViewModel.NavigateToShaft` oeffnet `Schaechte`
   und selektiert dort den Originaldatensatz.
+- Ein linker Klick auf eine Haltungs- oder Schachtzeile im Dossier meldet den sichtbaren
+  Namen an dieselbe `QgisBridgeSelection` wie die Seiten `Haltungen` und `Schaechte`.
+  Auch ein erneuter Klick auf dieselbe Zeile erhoeht den Auswahlstempel und loest den
+  QGIS-Zoom nochmals aus; die eigentliche Zoomlogik bleibt in der QGIS-Bruecke.
 - Die Reihenfolge der Liegenschaften ist die Reihenfolge von `DossierDocument.Dossiers` in
   `dossiers.json`. Das Cockpit sortiert nicht mehr still alphabetisch. `Nach oben` und
   `Nach unten` verschieben die Auswahl um genau eine Stelle und speichern sofort; bei einem
@@ -892,6 +906,22 @@ Neuberechnung, Speichern und Geld-Exporte, statt mit leerem Katalog plausible
 Nullwerte zu erzeugen. Fehlende, nichtpositive oder ungueltige Haltungslaengen
 blockieren laengenbasierte Positionen im Kostenrechner und in der Matrix;
 nichtpositive Schachtmengen blockieren Berechnung und Speichern ebenfalls.
+Der Codiermodus darf `Haltungslaenge_m` nur aus einem bereits gueltigen Feld,
+aus `Laenge_m` unter Erhalt seiner `FieldSource` oder aus genau einem aktiven
+`BCE` ableiten. Ein BCE-Wert wird als `FieldSource.Protocol` markiert und bleibt
+unterhalb echter Importquellen priorisiert. Schadensmeter und das daraus gebaute
+Video-Overlay sind keine Laengenquelle; fehlt eine sichere Quelle, fragt der
+Codiermodus nach einer manuellen Eingabe.
+Nach einer bestaetigten Uebernahme fuegt `CodingApplyController` automatisch erzeugte
+`BCD`-/`BCE`-Grenzereignisse derselben `ICodingSessionService`-Sitzung hinzu. Damit gehoeren
+sie beim naechsten Uebernehmen zum echten Ausgangsstand und werden weder erneut vorgeschlagen
+noch als geloeschte Ereignisse behandelt. Automatische Grenzen werden nicht als Trainingsfall
+gespeichert; Abbrechen veraendert die Sitzung nicht.
+`ServiceProvider` erzeugt genau eine live lesende `IProtocolPdfLayoutSettings`-Instanz aus
+`AppSettings`. `ProtocolPdfExporter` sowie die produktiven Dossier-Dialogwege verwenden
+dieselbe Instanz; beim Klick wird `settings.json` nicht erneut geladen. Erlaubt sind 1, 2, 4
+oder 6 Fotos je Seite, unbekannte Werte fallen auf 2 zurueck; explizite Exportoptionen haben
+Vorrang vor der Programmeinstellung.
 Ausgewaehlte Kostenrechner-Zeilen mit negativer Menge oder negativem Preis werden
 weder summiert noch gespeichert, uebernommen oder exportiert. NPK-Codes werden in
 CSV und Excel als Text ausgegeben, damit etwa `612.110` nicht zu `612.11` gekuerzt

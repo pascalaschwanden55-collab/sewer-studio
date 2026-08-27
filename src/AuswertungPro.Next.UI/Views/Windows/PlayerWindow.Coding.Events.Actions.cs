@@ -47,12 +47,14 @@ public partial class PlayerWindow
             new CodingEventCloseStretchCommandActions(
                 CloseStretch: startEvent => CodingEventListActionWorkflow.CloseStretch(
                     startEvent,
+                    _codingSessionHost.Events,
                     _codingSessionRuntimeOwner.Service,
                     ResolveCodingMeterForFrame(_playerTimelineHost.CurrentSeconds),
                     _playerTimelineHost.CurrentTimeOrZero),
                 ShowRequiresLaterMeterPrompt: CodingEventActionDialogWorkflow.ShowStretchCloseRequiresLaterMeter,
                 RefreshEvents: RefreshCodingEventsList,
-                ShowSuccessStatus: status => _liveDetectionStatusController.SetCodingAiState(status, PlayerStatusColors.Success, "")));
+                ShowSuccessStatus: status => _liveDetectionStatusController.SetCodingAiState(status, PlayerStatusColors.Success, ""),
+                ShowNotAnOpenStretchDamagePrompt: CodingEventActionDialogWorkflow.ShowNotAnOpenStretchDamage));
     }
 
     private void CodingEventDelete_Click(object sender, RoutedEventArgs e)

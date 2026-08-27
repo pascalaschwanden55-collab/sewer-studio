@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,7 +26,15 @@ public sealed record DossierOutputPreviewResult(
     bool Success,
     byte[]? PdfBytes,
     IReadOnlyList<DossierOutputPreviewPage> Pages,
-    string Message);
+    string Message,
+
+    /// <summary>
+    /// Die benannten Ziele der erzeugten PDF: je fuellbare Stelle Seite und
+    /// Position, aus den unsichtbaren Word-Textmarken. Damit erkennt die
+    /// Vorschau ein Feld exakt statt an seinem Text. Leer bedeutet: der
+    /// bisherige Weg ueber den Text gilt unveraendert weiter.
+    /// </summary>
+    IReadOnlyList<Preview.DossierPdfFieldAnchor>? Anchors = null);
 
 /// <summary>
 /// Erzeugt eine echte Ausgabeansicht aus demselben Word-Weg wie der Export.

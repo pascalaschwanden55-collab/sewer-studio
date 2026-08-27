@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -14,8 +15,38 @@ public static class CodingEventListItemControls
         TextBlock? confidenceText,
         TextBlock? statusIcon,
         CodingEvent codingEvent)
+        => Apply(zoneDot, confidenceText, statusIcon, null, null, codingEvent, null);
+
+    /// <summary>
+    /// Zusaetzlich zur Statusfarbe wird die Meterangabe gesetzt: Punktschaden als
+    /// einzelner Wert, Streckenschaden als Von-Bis, ein offener Anfang klar als offen.
+    /// Dafuer sind die uebrigen Ereignisse noetig, weil die Endmarke eines
+    /// Streckenschadens nur ueber ihren Anfang erkennbar ist.
+    /// </summary>
+    public static void Apply(
+        Ellipse? zoneDot,
+        TextBlock? confidenceText,
+        TextBlock? statusIcon,
+        TextBlock? meterText,
+        Border? stretchBadge,
+        CodingEvent codingEvent,
+        IReadOnlyList<CodingEvent>? allEvents)
     {
         var status = DefectStatusPolicy.GetStatus(codingEvent);
+
+        if (meterText is not null)
+            meterText.Text = CodingStretchDamageDisplayPolicy.BuildMeterText(codingEvent, allEvents);
+
+        if (stretchBadge is not null)
+        {
+            var badge = CodingStretchDamageDisplayPolicy.BuildBadgeText(codingEvent, allEvents);
+            stretchBadge.Visibility = string.IsNullOrEmpty(badge)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+            if (stretchBadge.Child is TextBlock badgeText)
+                badgeText.Text = badge;
+        }
 
         if (zoneDot is not null)
             zoneDot.Fill = new SolidColorBrush(CodingDefectStatusDisplayPolicy.ZoneDotColor(status));

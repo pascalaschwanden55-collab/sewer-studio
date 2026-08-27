@@ -216,6 +216,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             protocolRegeneration: services.ProtocolSingleRegeneration,
             dossierPhotoAvailability: services.DossierPhotoAvailability,
             inspectionProtocolFiles: services.InspectionProtocolFiles,
+            protocolPdfLayoutSettings: services.ProtocolPdfLayoutSettings,
             openPdf: path => TryOpenFile(path).Success,
             buildDossierHydraulikCalculation: (record, dn) => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,

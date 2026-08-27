@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -175,9 +175,19 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
             var previewPdfPath = pdfPath;
             var wordPages = _readPages(pdfPath);
             IReadOnlyList<DossierOutputPreviewPage> pages = wordPages;
+
+            // Die benannten Feldziele stehen im KATALOG der Word-PDF, nicht in ihren
+            // Seiten. Das Zusammenfuehren der Beilagen kopiert nur Seiten - danach
+            // sind sie weg. Deshalb werden sie hier gelesen, VOR den Beilagen.
+            // Die Seitenzahlen bleiben gueltig, weil die Word-Seiten im
+            // Gesamtdokument vorne stehen; genau darauf stuetzt sich auch das
+            // IsAttachment-Kennzeichen weiter unten.
+            var wordPdfBytes = await File.ReadAllBytesAsync(pdfPath, ct).ConfigureAwait(false);
+            var anchors = DossierPdfFieldAnchorReader.Read(wordPdfBytes);
+
             if (attachmentPaths.Count > 0)
             {
-                var mergedBytes = _mergePdfs(File.ReadAllBytes(pdfPath), attachmentPaths);
+                var mergedBytes = _mergePdfs(wordPdfBytes, attachmentPaths);
                 previewPdfPath = Path.Combine(workRoot, "Dossier-Vorschau-komplett.pdf");
                 File.WriteAllBytes(previewPdfPath, mergedBytes);
                 pages = _readPages(previewPdfPath)
@@ -213,7 +223,8 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
                     ? "Ausgabevorschau aktualisiert: 1 Seite." + attachmentNote + missingNote
                     : $"Ausgabevorschau aktualisiert: {pages.Count} Seiten."
                       + attachmentNote
-                      + missingNote);
+                      + missingNote,
+                anchors);
         }
         catch (OperationCanceledException)
         {

@@ -15,6 +15,7 @@
             <conv:VsaCodeToTextConverter x:Key="VsaCodeToText"/>
             <conv:VsaCodeToLabelConverter x:Key="VsaCodeToLabel"/>
 
+
             <!-- MVVM: ViewModel -> View -->
             <DataTemplate DataType="{x:Type vm:ProjectPageViewModel}">
                 <views:ProjectPage/>

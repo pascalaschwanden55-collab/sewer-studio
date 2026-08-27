@@ -155,6 +155,28 @@ public class MergeEngineDryRunTests
         Assert.True(result.Updated >= 2);
     }
 
+    [Fact]
+    public void Imported_length_overwrites_length_derived_from_protocol()
+    {
+        var target = CreateRecord("H1", new Dictionary<string, string>
+        {
+            ["Haltungsname"] = "H1"
+        });
+        target.SetFieldValue("Haltungslaenge_m", "22.34", FieldSource.Protocol, userEdited: false);
+
+        var source = CreateRecord("H1", new Dictionary<string, string>
+        {
+            ["Haltungsname"] = "H1",
+            ["Haltungslaenge_m"] = "24.80"
+        });
+
+        var result = MergeEngine.MergeRecord(target, source, FieldSource.Xtf);
+
+        Assert.True(result.Updated > 0);
+        Assert.Equal("24.80", target.GetFieldValue("Haltungslaenge_m"));
+        Assert.Equal(FieldSource.Xtf, target.FieldMeta["Haltungslaenge_m"].Source);
+    }
+
     private static HaltungRecord CreateRecord(string key, Dictionary<string, string> fields)
     {
         var record = new HaltungRecord();

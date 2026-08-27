@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -120,13 +120,24 @@ public static class DocxPlaceholderFiller
             return;
         }
 
+        // Die Spaltenschluessel stammen aus der Vorlagenzeile - VOR dem Fuellen,
+        // danach stehen dort die Werte. Jede erzeugte Zelle bekommt daraus ihre
+        // unsichtbare Marke; sie wird beim Umwandeln zum benannten PDF-Ziel und
+        // macht die Vorschau-Zuordnung exakt statt vom Text abhaengig.
+        var cellKeys = DocxFieldMarkerWriter.CellKeys(templateRow);
+        var markerId = DocxFieldMarkerWriter.NextId(document);
+
         OpenXmlElement anchor = templateRow;
+        var rowIndex = 0;
         foreach (var row in rows)
         {
             var clone = (TableRow)templateRow.CloneNode(deep: true);
             FillPart(clone, row);
+            markerId = DocxFieldMarkerWriter.MarkRow(
+                clone, markerName, rowIndex, cellKeys, markerId);
             anchor.Parent!.InsertAfter(clone, anchor);
             anchor = clone;
+            rowIndex++;
         }
 
         templateRow.Remove();

@@ -211,9 +211,57 @@ public sealed class DossierTopicMigrationTests
         Assert.Equal("Unternehmer", document.Area.Topics[0].Title);
     }
 
+    /// <summary>
+    /// Der Benutzer darf im Gebietsfenster alle Themen loeschen. Diese Entscheidung
+    /// muss halten: Wuerde die Migration die Standardliste beim naechsten Laden
+    /// erneut einsetzen, waere sie ueberhaupt nicht speicherbar. Unterschieden wird
+    /// ueber <see cref="DossierAreaSettings.TopicsInitialized"/> - "noch nie
+    /// eingerichtet" gegen "bewusst geleert".
+    /// </summary>
     [Fact]
-    public void Eine_leere_Themenliste_einer_aktuellen_Datei_bleibt_leer()
+    public void Eine_bewusst_geleerte_Themenliste_bleibt_leer()
     {
+        var document = new DossierDocument
+        {
+            SchemaVersion = DossierDocument.CurrentSchemaVersion,
+            Area = new DossierAreaSettings { TopicsInitialized = true }
+        };
+
+        DossierDocumentMigration.MigrateToCurrent(document);
+
+        Assert.Empty(document.Area.Topics);
+    }
+
+    /// <summary>
+    /// Beim ersten Einrichten wird die Liste befuellt UND als eingerichtet
+    /// vermerkt - sonst greift die Regel bei jedem Laden erneut.
+    /// </summary>
+    [Fact]
+    public void Die_erste_Befuellung_merkt_sich_dass_eingerichtet_wurde()
+    {
+        var document = new DossierDocument
+        {
+            SchemaVersion = DossierDocument.CurrentSchemaVersion,
+            Area = new DossierAreaSettings()
+        };
+
+        DossierDocumentMigration.MigrateToCurrent(document);
+
+        Assert.NotEmpty(document.Area.Topics);
+        Assert.True(document.Area.TopicsInitialized);
+    }
+
+    [Fact]
+    public void Eine_leere_Themenliste_bekommt_die_Standardliste_ohne_Altfelder()
+    {
+        // Geaenderte Regel: Ein Gebiet ganz OHNE Themen erzeugte im fertigen Dossier
+        // eine leere Tabelle „Informationen Sanierung" (real: Projekt Feldliweg).
+        // Es bekommt jetzt dieselbe Standardliste, die das Gebietsfenster schon
+        // immer anbietet.
+        //
+        // Die urspruengliche Absicht dieses Tests bleibt geschuetzt: die ABLEITUNG
+        // aus den Altfeldern laeuft dabei NICHT erneut. „Ab Mai 2026" darf nicht
+        // wieder auftauchen - sonst kaeme ein bewusst geleertes Feld zurueck.
         var document = new DossierDocument
         {
             SchemaVersion = DossierDocument.CurrentSchemaVersion,
@@ -222,6 +270,13 @@ public sealed class DossierTopicMigrationTests
 
         DossierDocumentMigration.MigrateToCurrent(document);
 
-        Assert.Empty(document.Area.Topics);
+        Assert.Equal(
+            DossierDocumentMigration.DefaultTopicTitles,
+            document.Area.Topics.Select(t => t.Title).ToList());
+
+        var ausfuehrung = document.Area.Topics.Single(t => t.Title == "Ausführungstermin");
+        Assert.True(
+            string.IsNullOrEmpty(ausfuehrung.Text),
+            $"Altfeld wurde erneut abgeleitet: \"{ausfuehrung.Text}\"");
     }
 }

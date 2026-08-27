@@ -172,6 +172,21 @@ internal static class LibreOfficeWriterPdfConverter
         }
     }
 
+    /// <summary>
+    /// Der PDF-Filter samt Schalter fuer die benannten Ziele.
+    ///
+    /// Ohne <c>ExportBookmarksToPDFDestination</c> schreibt LibreOffice KEINE
+    /// einzige Word-Textmarke in die PDF - gemessen an einem echten Lauf mit der
+    /// ausgelieferten Vorlage. Genau diese Ziele braucht die Vorschau, um ein
+    /// Feld exakt statt ueber seinen Text zuzuordnen.
+    ///
+    /// Die Angabe muss EIN Argument bleiben; als mehrere uebergeben deutet
+    /// LibreOffice sie als Dateinamen.
+    /// </summary>
+    internal const string PdfFilter =
+        "pdf:writer_pdf_Export:"
+        + "{\"ExportBookmarksToPDFDestination\":{\"type\":\"boolean\",\"value\":\"true\"}}";
+
     internal static ProcessStartInfo CreateStartInfo(
         string executable,
         string wordPath,
@@ -194,7 +209,7 @@ internal static class LibreOfficeWriterPdfConverter
         startInfo.ArgumentList.Add("--nodefault");
         startInfo.ArgumentList.Add("--nofirststartwizard");
         startInfo.ArgumentList.Add("--convert-to");
-        startInfo.ArgumentList.Add("pdf:writer_pdf_Export");
+        startInfo.ArgumentList.Add(PdfFilter);
         startInfo.ArgumentList.Add("--outdir");
         startInfo.ArgumentList.Add(outputFolder);
         startInfo.ArgumentList.Add(wordPath);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -55,6 +55,13 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
     public bool EnableDiagnostics { get; set; } = true;
     public string? PdfToTextPath { get; set; }
+
+    /// <summary>
+    /// Anzahl Fotos je Seite in den selbst erzeugten Haltungsprotokollen und im
+    /// Haltungsdossier. Erlaubt sind 1, 2, 4 und 6; ungueltige Werte gelten als 2.
+    /// </summary>
+    public int ProtocolPhotosPerPage { get; set; } =
+        AuswertungPro.Next.Application.Reports.ProtocolPdfPhotoLayout.DefaultPhotosPerPage;
     public string? LastProjectPath { get; set; }
 
     // Basisverzeichnis fuer neu angelegte Projekte. Leer = beim ersten Anlegen

@@ -225,6 +225,7 @@ public sealed partial class BuilderPageViewModel
             findSchachtByNummer: FindSchachtByNummer,
             dossierPhotoAvailability: _dossierPhotoAvailability,
             inspectionProtocolFiles: _inspectionProtocolFiles,
+            protocolPdfLayoutSettings: _protocolPdfLayoutSettings,
             buildDossierHydraulikCalculation: (record, dn) => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
                 _settings.HydraulikPanel,

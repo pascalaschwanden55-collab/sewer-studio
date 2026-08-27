@@ -1,4 +1,4 @@
-<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SettingsPage"
+﻿<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SettingsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:settings="clr-namespace:AuswertungPro.Next.UI.Settings"
@@ -378,6 +378,30 @@
                                           SelectedValue="{Binding DataAutoSaveMode, Mode=TwoWay}"
                                           Style="{StaticResource SettingsComboInput}"/>
                             </Grid>
+                        </GroupBox>
+
+                        <GroupBox Header="Haltungsprotokoll (PDF)" Style="{StaticResource SettingsSectionGroupBox}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingsFormGrid}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Fotos pro Seite" Style="{StaticResource SettingsFieldLabel}"/>
+                                    <ComboBox Grid.Column="1"
+                                              ItemsSource="{Binding ProtocolPhotosPerPageOptions}"
+                                              SelectedValuePath="Value"
+                                              DisplayMemberPath="Label"
+                                              SelectedValue="{Binding ProtocolPhotosPerPage, Mode=TwoWay}"
+                                              Style="{StaticResource SettingsComboInput}"/>
+                                </Grid>
+                                <TextBlock Margin="0,6,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontSize="12"
+                                           Text="Gilt fuer selbst erzeugte Haltungsprotokolle und die Fotoseiten im Haltungsdossier. Bereits gespeicherte PDF-Dateien aendern sich nicht - dafuer die Protokolle neu erzeugen."/>
+                            </StackPanel>
                         </GroupBox>
                     </StackPanel>
                     </ScrollViewer>

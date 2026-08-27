@@ -39,6 +39,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
+    private readonly IProtocolPdfLayoutSettings? _protocolPdfLayoutSettings;
     private readonly IPdfMergeService _pdfMerge;
     // Nur auf dem produktiven ServiceProvider-Weg gesetzt; die Alt-/Test-Konstruktoren
     // ohne ServiceProvider lassen ihn null (der PDF-Export wacht dann mit klarer Meldung).
@@ -201,6 +202,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             schachtCostRepo: services.CostStores.CreateProjectCostStore(SchachtCostFileName),
             schachtEmpfehlungRepo: services.CostStores.CreateProjectCostStore(SchachtEmpfehlungFileName))
     {
+        _protocolPdfLayoutSettings = services.ProtocolPdfLayoutSettings;
         _pdfMerge = services.PdfMerge;
         _pdfExport = services.OfferPdfExport;
         _npkPdfExport = services.NpkOfferPdfExport;

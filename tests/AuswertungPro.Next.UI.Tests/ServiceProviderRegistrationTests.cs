@@ -4,6 +4,7 @@ using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Projects;
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
 using AuswertungPro.Next.Application.Ai.Training.Inventory;
@@ -23,6 +24,9 @@ public sealed class ServiceProviderRegistrationTests
         var services = CreateServices(loggerFactory);
 
         Assert.Same(services.Projects, services.GetService(typeof(IProjectRepository)));
+        Assert.Same(
+            services.ProtocolPdfLayoutSettings,
+            services.GetService(typeof(IProtocolPdfLayoutSettings)));
     }
 
     [Fact]
@@ -92,14 +96,26 @@ public sealed class ServiceProviderRegistrationTests
         // echten Word-/PDF-Weg statt aus einer nachgezeichneten WPF-Seite.
         // 151 -> 152: IDossierPlanPublicationService veroeffentlicht einen bearbeiteten
         // Plan nur innerhalb des Projekts und liefert den sicheren Rueckbau-Beleg.
+        // 152 -> 153: IProtocolPdfLayoutSettings liefert Exporter und Dossierdialog
+        // dieselbe Live-Einstellung, ohne settings.json beim Klick erneut zu laden.
         Assert.True(
-            registrations.Count == 152,
-            $"Erwartet 152 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 153,
+            $"Erwartet 153 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(
             services.DossierPlanPublications,
             registrations[typeof(AuswertungPro.Next.Application.Dossiers.IDossierPlanPublicationService)]);
+        Assert.Same(
+            services.ProtocolPdfLayoutSettings,
+            registrations[typeof(IProtocolPdfLayoutSettings)]);
+        var exporterSettingsField = typeof(ProtocolPdfExporter).GetField(
+            "_layoutSettings",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(exporterSettingsField);
+        Assert.Same(
+            services.ProtocolPdfLayoutSettings,
+            exporterSettingsField!.GetValue(services.ProtocolPdfExporter));
         Assert.Same(
             services.ProjectOverviewCatalog,
             registrations[typeof(IProjectOverviewCatalog)]);

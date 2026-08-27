@@ -1,9 +1,10 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Backup;
@@ -18,6 +19,8 @@ using AuswertungPro.Next.Infrastructure.Maintenance;
 using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Settings;
 using AuswertungPro.Next.UI.Services;
+
+using AuswertungPro.Next.Application.Reports;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
@@ -71,6 +74,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private string _uiTheme = ThemeManager.Light;
     [ObservableProperty] private bool _isDarkTheme;
     [ObservableProperty] private bool _reduceMotion;
+
+    /// <summary>Anzahl Fotos je Seite in den selbst erzeugten Haltungsprotokollen.</summary>
+    [ObservableProperty] private int _protocolPhotosPerPage;
     [ObservableProperty] private bool _startAiOnProgramStart;
     [ObservableProperty] private double _pipelineYoloConfidence = DefaultYoloConfidence;
     [ObservableProperty] private double _pipelineDinoBoxThreshold = DefaultDinoBoxThreshold;
@@ -88,6 +94,11 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     // true, solange "KI starten" laeuft -> Fortschrittsbalken sichtbar, Knopf gesperrt.
     [ObservableProperty] private bool _isAiStarting;
     private bool _syncingThemeState;
+
+    public IReadOnlyList<IntOption> ProtocolPhotosPerPageOptions { get; } =
+        ProtocolPdfPhotoLayout.AllowedValues
+            .Select(CreateProtocolPhotosPerPageOption)
+            .ToArray();
 
     public IReadOnlyList<AutoSaveModeOption> AutoSaveModeOptions { get; } =
     [
@@ -302,6 +313,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         UiTheme = ThemeManager.NormalizeTheme(_settings.UiTheme);
         IsDarkTheme = string.Equals(UiTheme, ThemeManager.Dark, StringComparison.Ordinal);
         ReduceMotion = _settings.ReduceMotion;
+        // Direkt ins Feld: ueber die Eigenschaft wuerde das blosse Oeffnen der Seite
+        // die Einstellungen ohne Aenderung neu schreiben.
+        _protocolPhotosPerPage = ProtocolPdfPhotoLayout.Normalize(_settings.ProtocolPhotosPerPage);
         StartAiOnProgramStart = _settings.AiStartOnProgramStart;
         var pipelineConfig = AiSettingsFactory
             .Load(AppSettingsAiSettingsProvider.ToSource(_settings))
@@ -374,6 +388,24 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         _settings.SaveImmediate();
         MotionSettings.Configure(value);
     }
+
+    partial void OnProtocolPhotosPerPageChanged(int value)
+    {
+        // Sofort speichern (Muster wie der Backup-Schalter). Bereits erzeugte PDFs bleiben
+        // unveraendert; die Einstellung greift beim naechsten erzeugten Protokoll.
+        _settings.ProtocolPhotosPerPage = ProtocolPdfPhotoLayout.Normalize(value);
+        _settings.SaveImmediate();
+    }
+
+    private static IntOption CreateProtocolPhotosPerPageOption(int value)
+        => new(value, value switch
+        {
+            1 => "1 - ganzseitig",
+            ProtocolPdfPhotoLayout.DefaultPhotosPerPage => "2 (Standard)",
+            4 => "4 - zwei mal zwei",
+            6 => "6 - klein",
+            _ => value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        });
 
     partial void OnIsProgramCleanupRunningChanged(bool value)
     {

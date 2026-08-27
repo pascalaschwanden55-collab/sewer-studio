@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -20,14 +20,28 @@ namespace AuswertungPro.Next.Application.Reports;
 public sealed class ProtocolPdfExporter : IProtocolPdfExporter
 {
     private readonly IProtocolPdfAssetResolver _assets;
+    private readonly IProtocolPdfLayoutSettings? _layoutSettings;
 
     public ProtocolPdfExporter()
-        : this(new ProtocolPdfAssetFileResolver())
+        : this(new ProtocolPdfAssetFileResolver(), layoutSettings: null)
+    {
+    }
+
+    public ProtocolPdfExporter(IProtocolPdfLayoutSettings? layoutSettings)
+        : this(new ProtocolPdfAssetFileResolver(), layoutSettings)
     {
     }
 
     public ProtocolPdfExporter(IProtocolPdfAssetResolver assets)
-        => _assets = assets ?? throw new ArgumentNullException(nameof(assets));
+        : this(assets, layoutSettings: null)
+    {
+    }
+
+    public ProtocolPdfExporter(IProtocolPdfAssetResolver assets, IProtocolPdfLayoutSettings? layoutSettings)
+    {
+        _assets = assets ?? throw new ArgumentNullException(nameof(assets));
+        _layoutSettings = layoutSettings;
+    }
 
     public byte[] BuildPdf(string projectTitle, ProtocolDocument doc, string projectRootAbs)
         => BuildPdf(projectTitle, doc, projectRootAbs, new ProtocolPdfExportOptions());
@@ -137,6 +151,14 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
         HaltungsprotokollPdfOptions? options = null)
     {
         options ??= new HaltungsprotokollPdfOptions();
+        // Ohne ausdrueckliche Angabe gilt die Einstellung des Benutzers; fehlt auch die,
+        // bleibt es beim bisherigen Stand mit zwei Fotos je Seite. Die oeffentliche
+        // Eigenschaft bleibt fuer alte Aufrufer trotzdem ein nicht-nullbares int.
+        options = options with
+        {
+            PhotosPerPage = ProtocolPdfPhotoLayout.Normalize(
+                options.RequestedPhotosPerPage ?? _layoutSettings?.PhotosPerPage)
+        };
         QuestPDF.Settings.License = LicenseType.Community;
 
         var resolvedEntries = ProtocolPdfEntryResolver.ResolveEntriesForExport(record, doc);
@@ -877,7 +899,8 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
     internal static string ResolveDamageSymbolCategory(string? rawCode)
         => DamageSymbolClassifier.ResolveDamageSymbolCategory(rawCode);
 
-    private static string ResolveInspectionDate(Project project, HaltungRecord record, ProtocolDocument doc)
+    /// <summary>Inspektionsdatum - auch das Haltungsdossier beschriftet damit seine Fotoseiten.</summary>
+    internal static string ResolveInspectionDate(Project project, HaltungRecord record, ProtocolDocument doc)
     {
         // Prioritaet: Haltungs-spezifisches Aufnahmedatum vor Projekt-Metadaten
         var recordDate = record.GetFieldValue("Datum_Jahr");
@@ -960,4 +983,3 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
     }
 
 }
-

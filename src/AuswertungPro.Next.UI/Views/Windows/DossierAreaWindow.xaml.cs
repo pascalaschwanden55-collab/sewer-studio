@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
@@ -66,15 +66,15 @@ public partial class DossierAreaWindow : Window
             });
         }
 
-        // Ein Gebiet ohne Themen bekommt die Standardliste — sonst staende der
-        // Benutzer vor einer leeren Seite und muesste elf Zeilen abtippen.
-        if (_topics.Count == 0)
+        // Ein noch nicht eingerichtetes Gebiet bekommt die Standardliste — sonst
+        // staende der Benutzer vor einer leeren Seite und muesste elf Zeilen
+        // abtippen. Dieselbe Liste verwendet auch der Ladeweg, damit Fenster,
+        // Vorschau und Word nie verschiedene Themen zeigen. Ein bewusst geleertes
+        // Gebiet bleibt dagegen leer.
+        if (_topics.Count == 0 && !_target.TopicsInitialized)
         {
-            foreach (var titel in DossierDocumentMigration.DefaultTopicTitles)
-            {
-                DossierDocumentMigration.DefaultTopicTexts.TryGetValue(titel, out var text);
-                _topics.Add(new DossierTopicItem { Title = titel, Text = text ?? "" });
-            }
+            foreach (var thema in DossierDocumentMigration.BuildDefaultTopics())
+                _topics.Add(new DossierTopicItem { Title = thema.Title, Text = thema.Text ?? "" });
         }
 
         if (_topics.Count > 0)
@@ -103,6 +103,11 @@ public partial class DossierAreaWindow : Window
                 StyleRanges = KopiereFormat(t.StyleRanges)
             })
             .ToList();
+
+        // Ab hier ist das Gebiet eingerichtet - auch dann, wenn der Benutzer alle
+        // Themen geloescht hat. Sonst setzte der Ladeweg die Standardliste beim
+        // naechsten Oeffnen erneut ein und die Entscheidung waere nicht speicherbar.
+        _target.TopicsInitialized = true;
 
         DialogResult = true;
     }

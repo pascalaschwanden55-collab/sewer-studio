@@ -367,6 +367,7 @@
                                       GridLinesVisibility="Horizontal"
                                       Background="Transparent"
                                       BorderThickness="0"
+                                      PreviewMouseLeftButtonDown="HoldingGrid_QgisReselectOnClick"
                                       PreviewMouseRightButtonDown="HoldingGrid_PreviewMouseRightButtonDown">
                                 <DataGrid.ContextMenu>
                                     <ContextMenu>
@@ -455,6 +456,7 @@
                                           GridLinesVisibility="Horizontal"
                                           Background="Transparent"
                                           BorderThickness="0"
+                                          PreviewMouseLeftButtonDown="ShaftGrid_QgisReselectOnClick"
                                           PreviewMouseRightButtonDown="ShaftGrid_PreviewMouseRightButtonDown">
                                     <DataGrid.ContextMenu>
                                         <ContextMenu>

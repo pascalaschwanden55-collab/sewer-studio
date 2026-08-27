@@ -61,12 +61,39 @@ public static class DossierDocumentMigration
     public static readonly IReadOnlyDictionary<string, string> DefaultTopicTexts =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
+            // Stehende Texte aus der Wordvorlage. Sie werden von Gebiet zu Gebiet
+            // weitergetragen und nur wenig geaendert. Der Ort steht als Platzhalter
+            // darin, damit ein Dossier eines anderen Gebiets nicht die falsche
+            // Strasse nennt; aufgeloest wird er beim Fuellen wie jeder Platzhalter.
+            ["Ausgangslage"] = "Abwasser Uri (AWU) hat gemäss kantonalem Umweltgesetz (KUG) als Betreiberin der öffentlichen Abwasseranlagen im Kanton Uri die einwandfreie Funktion der Kanalisationsleitungen zu gewährleisten. Ebenfalls hat AWU die Abwasseranlagen der Gemeinden und Privaten, die nicht der Groberschliessung dienen zu beaufsichtigen. Die Abwasseranlagen im öffentlichen Bereich{{Gebiet_Perimeter}} sowie die angrenzenden privaten Liegenschaften wurden kontrolliert, einschliesslich der Abwasserschächte. Diverse Schäden wurden an den Leitungen und Schächten festgestellt. Diese Schäden erfordern eine Sanierung, um die ordnungsgemässe Funktionalität, Dichtheit und Sicherheit des Systems wiederherzustellen.",
+
+            ["Behinderungen, Zugänge, Verkehrsführung, Fussgängerführung"] =
+                "Die Zugänge sollten normal möglich sein, wenn nötig werden Provisorien für die Zugänge erstellt.",
+
+            ["Bemerkungen"] = "Allfällige Leistungen von Versicherungen sind vor der Sanierung durch die Eigentümer abzuklären.",
+
             ["Beilagen"] =
                 "Situation Liegenschaft GIS\n"
                 + "Situation Abwasserleitungen der TV-Aufnahmen\n"
                 + "TV-Haltungsprotokolle\n"
                 + "Offerte"
         };
+
+
+    /// <summary>
+    /// Die Standardthemen mit ihren stehenden Texten. Ein Gebiet ohne Themen erhaelt
+    /// diese Liste - sonst bleibt die Tabelle "Informationen Sanierung" im fertigen
+    /// Dossier leer. Die Regel stand bisher nur im Gebietsfenster und wirkte deshalb
+    /// nur, wenn jemand den Dialog oeffnete und speicherte.
+    /// </summary>
+    public static List<DossierTopicRow> BuildDefaultTopics()
+        => DefaultTopicTitles
+            .Select(titel => new DossierTopicRow
+            {
+                Title = titel,
+                Text = DefaultTopicTexts.TryGetValue(titel, out var text) ? text : string.Empty
+            })
+            .ToList();
 
     public static bool NeedsTopicDerivation(int schemaVersion)
         => schemaVersion < TopicsStoredFromVersion;
@@ -102,6 +129,22 @@ public static class DossierDocumentMigration
 
         if (brauchtThemen && document.Area.Topics.Count == 0)
             document.Area.Topics.AddRange(BuildAreaTopics(document.Area));
+
+        // Auch ein aktuelles Gebiet kann ohne Themen dastehen (real: Projekt
+        // Feldliweg, 0 Themen bei 15 Dossiers). Dann gilt dieselbe Regel wie im
+        // Gebietsfenster. Ein Gebiet MIT Themen wird nie ergaenzt oder ueberschrieben.
+        //
+        // Das geschieht GENAU EINMAL. Danach ist das Gebiet eingerichtet, und eine
+        // leere Liste ist eine Entscheidung des Benutzers - kein fehlender Stand.
+        // Ohne diese Unterscheidung waere "alle Themen loeschen" nicht speicherbar:
+        // beim naechsten Laden staenden alle elf wieder da.
+        if (!document.Area.TopicsInitialized)
+        {
+            if (document.Area.Topics.Count == 0)
+                document.Area.Topics.AddRange(BuildDefaultTopics());
+
+            document.Area.TopicsInitialized = true;
+        }
 
         foreach (var dossier in document.Dossiers)
         {
@@ -197,7 +240,9 @@ public static class DossierDocumentMigration
             .Select(titel => new DossierTopicRow
             {
                 Title = titel,
-                Text = texte.TryGetValue(titel, out var text) ? text : string.Empty
+                Text = texte.TryGetValue(titel, out var text) && text.Length > 0
+                    ? text
+                    : DefaultTopicTexts.TryGetValue(titel, out var vorgabe) ? vorgabe : string.Empty
             })
             .ToList();
 

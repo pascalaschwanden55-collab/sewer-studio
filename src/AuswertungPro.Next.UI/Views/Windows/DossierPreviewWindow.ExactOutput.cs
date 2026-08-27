@@ -139,7 +139,7 @@ public partial class DossierPreviewWindow
 
                 _previewPdfBytes = result.PdfBytes;
                 AktualisiereVorschauFreigabe();
-                UebernehmeAusgabeseiten(result.Pages);
+                UebernehmeAusgabeseiten(result.Pages, result.Anchors);
                 StatusText.Text = result.Message;
             }
         }
@@ -160,7 +160,9 @@ public partial class DossierPreviewWindow
         }
     }
 
-    private void UebernehmeAusgabeseiten(IReadOnlyList<DossierOutputPreviewPage> pages)
+    private void UebernehmeAusgabeseiten(
+        IReadOnlyList<DossierOutputPreviewPage> pages,
+        IReadOnlyList<DossierPdfFieldAnchor>? anchors = null)
     {
         var vorherigeSeite = (PageList.SelectedItem as DossierOutputPreviewNavigationItem)
             ?.OutputPage.Number;
@@ -170,13 +172,18 @@ public partial class DossierPreviewWindow
             _dossier,
             _values,
             ZeilenFuer);
+        // Die benannten Ziele aus den Word-Textmarken gehen mit: Wo eine Marke
+        // vorliegt, ist die Zelle exakt bestimmt - auch wenn sie leer ist oder
+        // ihr Text in vielen Zellen gleich lautet. Fehlen sie, gilt unveraendert
+        // der bisherige Weg ueber den Text.
         _tableCellMappings = DossierOutputPreviewTableCellMapper.Build(
             navigation,
             _felder.Ziele,
             _fields,
             _values,
             _dossier,
-            ZeilenFuer);
+            ZeilenFuer,
+            anchors);
         var view = new ListCollectionView(navigation.ToList());
         view.GroupDescriptions.Add(new PropertyGroupDescription(
             nameof(DossierOutputPreviewNavigationItem.ChapterTitle)));

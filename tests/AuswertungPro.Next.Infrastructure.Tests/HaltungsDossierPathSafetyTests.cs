@@ -53,7 +53,7 @@ public sealed class HaltungsDossierPathSafetyTests
     }
 
     [Fact]
-    public void ResolvePhotoEntries_DeduplicatesCentralAndArchiveCopy()
+    public void Fotoaufloesung_bevorzugt_die_zentrale_Kopie_und_entdoppelt()
     {
         var root = Path.Combine(Path.GetTempPath(), $"dossier_root_{Guid.NewGuid():N}");
         try
@@ -81,10 +81,10 @@ public sealed class HaltungsDossierPathSafetyTests
                 }
             });
 
-            var photos = InvokeResolvePhotoEntries(record, doc, root);
+            var photos = ResolveDossierPhotos(record, doc, root);
 
             var photo = Assert.Single(photos);
-            Assert.Equal(Path.GetFullPath(central), photo.AbsPath);
+            Assert.Equal(Path.GetFullPath(central), photo.Path);
         }
         finally
         {
@@ -102,16 +102,28 @@ public sealed class HaltungsDossierPathSafetyTests
         return (string?)method!.Invoke(null, [raw, projectRoot]);
     }
 
-    private static List<(string Label, string AbsPath)> InvokeResolvePhotoEntries(
+    /// <summary>
+    /// Genau der Weg, den das Dossier heute geht: eigener Verteil-Fotoordner der Haltung
+    /// plus die gemeinsame Fotoseiten-Logik des Haltungsprotokolls.
+    /// </summary>
+    private static List<ProtocolPdfPhotoSection.PhotoItem> ResolveDossierPhotos(
         HaltungRecord record,
         ProtocolDocument doc,
         string projectRoot)
     {
-        var method = typeof(HaltungsDossierPdfBuilder).GetMethod(
-            "ResolvePhotoEntries",
+        var holdingLabel = record.GetFieldValue("Haltungsname") ?? string.Empty;
+        var folderMethod = typeof(HaltungsDossierPdfBuilder).GetMethod(
+            "ResolveHoldingPhotoFolder",
             BindingFlags.NonPublic | BindingFlags.Static);
-        Assert.NotNull(method);
+        Assert.NotNull(folderMethod);
+        var preferredFolder = (string?)folderMethod!.Invoke(null, [holdingLabel, projectRoot]);
 
-        return (List<(string Label, string AbsPath)>)method!.Invoke(null, [record, doc, projectRoot])!;
+        var entries = doc.Current.Entries.Where(e => !e.IsDeleted).ToList();
+        return ProtocolPdfPhotoSection.BuildItems(
+            ProtocolPdfAssetResolver.CompatibilityService,
+            entries,
+            projectRoot,
+            int.MaxValue,
+            preferredFolder);
     }
 }

@@ -1,14 +1,23 @@
-using System.Windows;
+﻿using System.Windows;
 using AuswertungPro.Next.Application.Reports;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class DossierPrintDialog : Window
 {
+    private readonly IProtocolPdfLayoutSettings _protocolPdfLayoutSettings;
+
     public DossierPrintOptions? SelectedOptions { get; private set; }
 
     public DossierPrintDialog()
+        : this(DefaultProtocolPdfLayoutSettings.Instance)
     {
+    }
+
+    public DossierPrintDialog(IProtocolPdfLayoutSettings protocolPdfLayoutSettings)
+    {
+        _protocolPdfLayoutSettings = protocolPdfLayoutSettings
+            ?? throw new ArgumentNullException(nameof(protocolPdfLayoutSettings));
         InitializeComponent();
     }
 
@@ -94,6 +103,8 @@ public partial class DossierPrintDialog : Window
             IncludeHydraulik = ChkHydraulik.IsChecked == true,
             IncludeKostenschaetzung = ChkKostenschaetzung.IsChecked == true,
             IncludeOriginalProtokolle = ChkOriginalProtokolle.IsChecked == true,
+            // Fotoseiten wie im Haltungsprotokoll: dieselbe zentrale Einstellung entscheidet.
+            PhotosPerPage = _protocolPdfLayoutSettings.PhotosPerPage,
         };
         DialogResult = true;
     }
@@ -117,4 +128,15 @@ public partial class DossierPrintDialog : Window
         || ChkHydraulik.IsChecked == true
         || ChkKostenschaetzung.IsChecked == true
         || ChkOriginalProtokolle.IsChecked == true;
+
+    /// <summary>
+    /// Kompatibilitaet fuer Designer und alte direkte Fensteraufrufe. Der produktive Weg
+    /// uebergibt die zentral registrierte Einstellung ausdruecklich.
+    /// </summary>
+    private sealed class DefaultProtocolPdfLayoutSettings : IProtocolPdfLayoutSettings
+    {
+        public static DefaultProtocolPdfLayoutSettings Instance { get; } = new();
+
+        public int PhotosPerPage => ProtocolPdfPhotoLayout.DefaultPhotosPerPage;
+    }
 }

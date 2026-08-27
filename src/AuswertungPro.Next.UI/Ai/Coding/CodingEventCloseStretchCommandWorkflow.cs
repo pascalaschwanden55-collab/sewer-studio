@@ -8,6 +8,7 @@ public enum CodingEventCloseStretchCommandWorkflowOutcome
     NoCodingViewModel,
     NotApplied,
     RequiresLaterMeterPrompt,
+    NotAnOpenStretchDamage,
     Closed
 }
 
@@ -19,7 +20,8 @@ public sealed record CodingEventCloseStretchCommandActions(
     Func<CodingEvent, CodingEventCloseStretchActionResult> CloseStretch,
     Action ShowRequiresLaterMeterPrompt,
     Action RefreshEvents,
-    Action<string> ShowSuccessStatus);
+    Action<string> ShowSuccessStatus,
+    Action? ShowNotAnOpenStretchDamagePrompt = null);
 
 public sealed record CodingEventCloseStretchCommandWorkflowResult(
     CodingEventCloseStretchCommandWorkflowOutcome Outcome)
@@ -45,6 +47,12 @@ public static class CodingEventCloseStretchCommandWorkflow
         var closeAction = actions.CloseStretch(selectedEvent);
         if (!closeAction.Applied)
             return Result(CodingEventCloseStretchCommandWorkflowOutcome.NotApplied);
+
+        if (closeAction.NotAnOpenStretchDamage)
+        {
+            actions.ShowNotAnOpenStretchDamagePrompt?.Invoke();
+            return Result(CodingEventCloseStretchCommandWorkflowOutcome.NotAnOpenStretchDamage);
+        }
 
         if (closeAction.RequiresLaterMeterPrompt)
         {

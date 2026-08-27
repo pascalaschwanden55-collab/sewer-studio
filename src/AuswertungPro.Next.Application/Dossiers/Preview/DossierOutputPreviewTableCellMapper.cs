@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -14,7 +14,15 @@ namespace AuswertungPro.Next.Application.Dossiers.Preview;
 public sealed record DossierOutputPreviewTablePageInput(
     DossierOutputPreviewPage Page,
     IReadOnlyList<DossierPreviewPage> EditorPages,
-    IReadOnlyDictionary<int, IReadOnlyList<DossierPreviewTarget>> Hits);
+    IReadOnlyDictionary<int, IReadOnlyList<DossierPreviewTarget>> Hits,
+
+    /// <summary>
+    /// Die benannten Ziele dieses Blatts aus den unsichtbaren Word-Textmarken.
+    /// Wo eine Marke vorliegt, ist die Zeile exakt bestimmt - unabhaengig davon,
+    /// ob ihr Text im Blatt wiederfindbar ist. Leer bedeutet: es gilt
+    /// unveraendert der bisherige Weg ueber den Text.
+    /// </summary>
+    IReadOnlyList<DossierPdfFieldAnchor>? Anchors = null);
 
 /// <summary>Die sicheren Tabellenflaechen eines einzelnen PDF-Blatts.</summary>
 public sealed record DossierOutputPreviewTablePageMapping(
@@ -51,7 +59,8 @@ public static class DossierOutputPreviewTableCellMapper
         IReadOnlyList<DossierPreviewField> fields,
         IReadOnlyDictionary<string, string> values,
         DossierDefinition dossier,
-        Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rowsFor)
+        Func<string, IReadOnlyList<IReadOnlyDictionary<string, string>>> rowsFor,
+        IReadOnlyList<DossierPdfFieldAnchor>? anchors = null)
     {
         ArgumentNullException.ThrowIfNull(pages);
         ArgumentNullException.ThrowIfNull(targets);
@@ -78,7 +87,8 @@ public static class DossierOutputPreviewTableCellMapper
             return new DossierOutputPreviewTablePageInput(
                 item.OutputPage,
                 item.EditorPages,
-                hits);
+                hits,
+                anchors);
         }).ToList();
 
         return Build(inputs, allTargets, rowsFor);
@@ -129,7 +139,8 @@ public static class DossierOutputPreviewTableCellMapper
                         state,
                         firstRowTop,
                         rows,
-                        available);
+                        available,
+                        Ankerkarte(input));
                     if (firstAreas.Count > 0)
                     {
                         areas.AddRange(firstAreas);
@@ -169,7 +180,8 @@ public static class DossierOutputPreviewTableCellMapper
                     state,
                     rowTop,
                     rows,
-                    available);
+                    available,
+                    Ankerkarte(input));
                 if (pageAreas.Count > 0)
                 {
                     areas.AddRange(pageAreas);
@@ -299,13 +311,28 @@ public static class DossierOutputPreviewTableCellMapper
             && table.Rows[table.RepeatIndex - 1].Cells.Count
                 == table.RepeatCellKeys.Count;
 
+    /// <summary>Markenname auf Position, fuer die Ziele genau dieses Blatts.</summary>
+    private static IReadOnlyDictionary<string, double> Ankerkarte(
+        DossierOutputPreviewTablePageInput input)
+    {
+        var karte = new Dictionary<string, double>(StringComparer.Ordinal);
+        foreach (var anker in input.Anchors ?? [])
+        {
+            if (anker.PageNumber == input.Page.Number)
+                karte[anker.MarkerName] = anker.Y;
+        }
+
+        return karte;
+    }
+
     private static IReadOnlyList<DossierOutputPreviewHitArea> BuildPageRows(
         DossierOutputPreviewPage page,
         DossierPreviewPage editorPage,
         TableState state,
         double firstRowTop,
         IReadOnlyList<IReadOnlyDictionary<string, string>> rows,
-        IReadOnlySet<DossierPreviewTarget> available)
+        IReadOnlySet<DossierPreviewTarget> available,
+        IReadOnlyDictionary<string, double> anchors)
     {
         var result = new List<DossierOutputPreviewHitArea>();
         var rowTop = firstRowTop;
@@ -325,24 +352,55 @@ public static class DossierOutputPreviewTableCellMapper
 
             var rowIndex = state.NextRowIndex;
             var row = rows[rowIndex];
-            var anchor = FindRowAnchor(
-                page,
-                state,
-                row,
-                rowTop,
-                bottomLimit,
-                consumedWords);
-            if (anchor.Kind == RowAnchorKind.Uncertain)
-            {
-                state.HasUncertainPageBoundary = true;
-                break;
-            }
 
-            var rowBottom = RowBottom(
-                rowTop,
-                anchor.Bounds,
-                state.MaximumPadding,
-                state.DefaultHeight);
+            // Die Marke ist der sichere Beleg. Sie steht auch dann im Blatt,
+            // wenn der Text fehlt, verschachtelt ist oder in dreizehn Zellen
+            // gleich lautet - genau die Faelle, an denen die Textsuche
+            // zurecht aufgibt.
+            RowAnchor anchor;
+            double? rowBottom;
+
+            if (MarkenY(state, rowIndex, anchors) is { } markenY)
+            {
+                if (markenY > rowTop + GeometryTolerancePoints || markenY <= bottomLimit)
+                {
+                    // Die Marke gehoert nicht in dieses Zeilenband.
+                    state.HasUncertainPageBoundary = true;
+                    break;
+                }
+
+                anchor = new RowAnchor(RowAnchorKind.Empty, null, []);
+
+                // Die naechste Marke ist die Unterkante dieser Zeile. Nur so
+                // behaelt eine hohe Zeile ihre echte Hoehe: in der Ausgabe ist
+                // „Ausgangslage" rund 170 Punkte hoch, die uebrigen rund 47.
+                // Wer die Vorlagenhoehe fortschreibt, verliert ab dort jede Zeile.
+                rowBottom = MarkenY(state, rowIndex + 1, anchors) is { } naechste
+                    && naechste < markenY
+                        ? naechste
+                        : markenY - state.DefaultHeight;
+            }
+            else
+            {
+                anchor = FindRowAnchor(
+                    page,
+                    state,
+                    row,
+                    rowTop,
+                    bottomLimit,
+                    consumedWords);
+                if (anchor.Kind == RowAnchorKind.Uncertain)
+                {
+                    state.HasUncertainPageBoundary = true;
+                    break;
+                }
+
+                rowBottom = RowBottom(
+                    rowTop,
+                    anchor.Bounds,
+                    state.MaximumPadding,
+                    state.DefaultHeight);
+            }
             if (rowBottom is not { } safeBottom
                 || safeBottom <= bottomLimit
                 || safeBottom >= rowTop)
@@ -403,6 +461,34 @@ public static class DossierOutputPreviewTableCellMapper
             Normalize(rows[current].TryGetValue(key, out var first) ? first : string.Empty),
             Normalize(rows[current + 1].TryGetValue(key, out var second) ? second : string.Empty),
             StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Die Position der Marke dieser Zeile auf diesem Blatt, oder <c>null</c>,
+    /// wenn keine vorliegt. Dann entscheidet weiterhin die Textsuche.
+    /// Von mehreren Spaltenmarken zaehlt die oberste - sie beginnt die Zeile.
+    /// </summary>
+    private static double? MarkenY(
+        TableState state,
+        int rowIndex,
+        IReadOnlyDictionary<string, double> anchors)
+    {
+        if (anchors.Count == 0 || rowIndex < 0)
+            return null;
+
+        double? gefunden = null;
+        foreach (var cellKey in state.CellKeys)
+        {
+            if (string.IsNullOrEmpty(cellKey))
+                continue;
+
+            var name = DossierPdfFieldMarker.Name(
+                DossierPreviewTarget.RowCell(state.Key, rowIndex, cellKey));
+            if (anchors.TryGetValue(name, out var y))
+                gefunden = gefunden is { } bisher ? Math.Max(bisher, y) : y;
+        }
+
+        return gefunden;
     }
 
     private static RowAnchor FindRowAnchor(

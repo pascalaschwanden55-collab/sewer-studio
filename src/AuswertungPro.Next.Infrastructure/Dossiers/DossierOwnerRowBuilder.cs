@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -35,7 +35,8 @@ internal static class DossierOwnerRowBuilder
                 DossierRowTextFormatting.Styles(owner.FieldStyles, "ParcelNumber"));
 
             var ownerCell = BuildCell(dossier, owner);
-            row["Eigentuemer_Zelle"] = ownerCell.Text;
+            row["Eigentuemer_Zelle"] =
+                DossierUnbekanntText.OderUnbekannt("Eigentuemer_Zelle", ownerCell.Text);
             row["Eigentuemer_Zelle" + DossierTopicTextFormatting.StyleRangesSuffix] =
                 DossierTopicTextFormatting.Encode(ownerCell.StyleRanges);
 

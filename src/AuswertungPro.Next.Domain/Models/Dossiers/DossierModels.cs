@@ -167,6 +167,18 @@ public sealed class DossierAreaSettings
     /// ergaenzen — siehe <see cref="DossierDefinition.Topics"/>.
     /// </summary>
     public List<DossierTopicRow> Topics { get; set; } = new();
+
+    /// <summary>
+    /// Wurde die Themenliste schon einmal befuellt? Ohne diese Angabe sind
+    /// "noch nie eingerichtet" und "vom Benutzer bewusst geleert" nicht zu
+    /// unterscheiden - eine leere Liste ist in beiden Faellen eine leere Liste.
+    /// Ein Gebiet ohne Themen erzeugt im fertigen Dossier eine leere Tabelle
+    /// "Informationen Sanierung"; deshalb wird beim ERSTEN Mal die Standardliste
+    /// eingesetzt. Danach bleibt jede Entscheidung des Benutzers stehen, auch
+    /// die, gar keine Themen zu wollen.
+    /// Alte Dateien kennen das Feld nicht und gelten damit als nicht eingerichtet.
+    /// </summary>
+    public bool TopicsInitialized { get; set; }
 }
 
 /// <summary>

@@ -261,6 +261,7 @@ namespace AuswertungPro.Next.UI
         public IDistributionPatternResolver DistributionPatterns { get; }
         public IDistributionDirectoryTreeResolver DistributionDirectoryTree { get; }
         public IProtocolService Protocols { get; }
+        public IProtocolPdfLayoutSettings ProtocolPdfLayoutSettings { get; }
         public ProtocolPdfExporter ProtocolPdfExporter { get; }
         public IProtocolPdfExporter ProtocolPdfExports => ProtocolPdfExporter;
         public IPdfMergeService PdfMerge { get; }
@@ -539,7 +540,8 @@ namespace AuswertungPro.Next.UI
             HoldingRename = new HoldingRenameFileService();
             ShaftRename = new ShaftRenameFileService();
             PlanPdfImport = new PlanPdfImportService();
-            ProtocolPdfExporter = new ProtocolPdfExporter();
+            ProtocolPdfLayoutSettings = new AppSettingsProtocolPdfLayoutSettings(Settings);
+            ProtocolPdfExporter = new ProtocolPdfExporter(ProtocolPdfLayoutSettings);
             PdfMerge = new PdfMergeService();
             OfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.OfferPdfExportService();
             NpkOfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.NpkOfferPdfExportService();

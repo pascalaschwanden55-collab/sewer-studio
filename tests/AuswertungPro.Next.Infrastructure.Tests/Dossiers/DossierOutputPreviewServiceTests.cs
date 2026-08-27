@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Dossiers.Preview;
 using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Models.Dossiers;
@@ -197,6 +198,76 @@ public sealed class DossierOutputPreviewServiceTests
         Assert.Equal("Alter Stand", await File.ReadAllTextAsync(staleAttachment));
         Assert.False(Directory.Exists(previewRoot));
     }
+
+    /// <summary>
+    /// Die benannten Ziele stehen im Katalog der Word-PDF, nicht in ihren Seiten.
+    /// Das Zusammenfuehren der Beilagen kopiert nur Seiten - danach sind sie weg.
+    /// Wer die Anker aus dem Gesamtdokument liest, bekommt bei jedem Dossier mit
+    /// Beilage nichts, und die Vorschau faellt still auf die ratende Textzuordnung
+    /// zurueck. Genau der Normalfall: Beilagen sind der halbe Zweck der Sache.
+    /// </summary>
+    [Fact]
+    public async Task CreateAsync_liefert_die_Feldziele_auch_mit_angehaengten_Beilagen()
+    {
+        using var temp = new TempDirectory();
+        var projectRoot = Path.Combine(temp.Path, "Projekt");
+        var targetFolder = Path.Combine(projectRoot, "Dossiers", "Fall");
+        var attachmentFolder = Path.Combine(targetFolder, DossierFolderPlanner.AttachmentFolderName);
+        Directory.CreateDirectory(attachmentFolder);
+        await File.WriteAllBytesAsync(
+            Path.Combine(attachmentFolder, "01_Original.pdf"),
+            [1, 2, 3, 4]);
+        var previewRoot = Path.Combine(temp.Path, "Vorschauarbeit");
+
+        var marke = DossierPdfFieldMarker.Name(
+            DossierPreviewTarget.RowCell("Themen", 0, "Text"));
+        var wordPdf = PdfMitZiel(marke);
+
+        var service = new DossierOutputPreviewService(
+            new RecordingWordExporter(),
+            (_, pdfPath) =>
+            {
+                File.WriteAllBytes(pdfPath!, wordPdf);
+                return true;
+            },
+            // So verhaelt sich der echte Wandler: PdfPigs PdfDocumentBuilder
+            // kopiert Seiten und schreibt keine benannten Ziele in den Katalog.
+            (_, _) => PdfOhneZiele(),
+            _ =>
+            [
+                new DossierOutputPreviewPage(1, 595, 842, "Dossier", []),
+                new DossierOutputPreviewPage(2, 595, 842, "Original", [])
+            ],
+            () => previewRoot);
+
+        var result = await service.CreateAsync(Request(projectRoot, targetFolder, ""));
+
+        Assert.True(result.Success, result.Message);
+        Assert.NotNull(result.Anchors);
+        var anker = Assert.Single(result.Anchors!);
+        Assert.Equal(marke, anker.MarkerName);
+        Assert.Equal(1, anker.PageNumber);
+    }
+
+    /// <summary>Kleine, aber echte PDF-Struktur mit einem benannten Ziel auf Seite 1.</summary>
+    private static byte[] PdfMitZiel(string marke)
+        => System.Text.Encoding.Latin1.GetBytes(
+            "%PDF-1.6\n"
+            + "15 0 obj\n<</Type/Page/MediaBox[0 0 612 792]>>\nendobj\n"
+            + "7 0 obj\n<</Type/Pages/Kids[15 0 R]/Count 1>>\nendobj\n"
+            + $"5 0 obj\n<</{marke}[15 0 R/XYZ 226.9 402.139 0]>>\nendobj\n"
+            + "6 0 obj\n<</Type/Catalog/Pages 7 0 R\n/Dests 5 0 R>>\nendobj\n"
+            + "trailer\n<</Size 8/Root 6 0 R>>\n%%EOF");
+
+    /// <summary>Dieselbe Struktur ohne /Dests - so sieht das Zusammengefuehrte aus.</summary>
+    private static byte[] PdfOhneZiele()
+        => System.Text.Encoding.Latin1.GetBytes(
+            "%PDF-1.6\n"
+            + "15 0 obj\n<</Type/Page/MediaBox[0 0 612 792]>>\nendobj\n"
+            + "16 0 obj\n<</Type/Page/MediaBox[0 0 612 792]>>\nendobj\n"
+            + "7 0 obj\n<</Type/Pages/Kids[15 0 R 16 0 R]/Count 2>>\nendobj\n"
+            + "6 0 obj\n<</Type/Catalog/Pages 7 0 R>>\nendobj\n"
+            + "trailer\n<</Size 8/Root 6 0 R>>\n%%EOF");
 
     private static DossierExportRequest Request(
         string projectRoot,

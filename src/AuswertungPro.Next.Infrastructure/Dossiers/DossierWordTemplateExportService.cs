@@ -192,7 +192,10 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                             || !string.IsNullOrWhiteSpace(request.Dossier.OverviewPlanPath))
                         .ToList();
 
-                    DocxPlaceholderFiller.Fill(document, values, literalFormatting);
+                    DocxPlaceholderFiller.Fill(
+                        document,
+                        DossierUnbekanntText.Anwenden(values),
+                        literalFormatting);
 
                     // Im echten Word-Verzeichnis wird nur der Titel ersetzt.
                     // Nummer und Seitenzahl bleiben Felder; die gleichnamige
@@ -341,6 +344,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                 ? "Kostenangaben ohne MWST, Stand " + today.ToString("dd.MM.yyyy", Ch) + "."
                 : string.Empty,
                 ["Gebiet_Ort"] = request.Area.AreaLocation,
+                ["Gebiet_Perimeter"] = BuildAreaPerimeter(request.Area.AreaLocation),
                 ["Ort_Zeile"] = BuildTownLine(d),
                 ["Projekt_Nr"] = request.Area.ProjectNumber,
                 ["Gezeichnet"] = request.Area.DrawnBy,
@@ -391,6 +395,14 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         => string.Join(" ", new[] { dossier.PostalCode, dossier.Town }
             .Where(t => !string.IsNullOrWhiteSpace(t))
             .Select(t => t.Trim()));
+
+    private static string BuildAreaPerimeter(string? areaLocation)
+    {
+        var location = areaLocation?.Trim();
+        return string.IsNullOrEmpty(location)
+            ? string.Empty
+            : " im Perimeter " + location;
+    }
 
     private static string BuildHoldingsText(DossierSnapshot snapshot)
     {
@@ -532,6 +544,13 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                         thema.Text,
                         DossierTopicTextFormatting.EffectiveRanges(thema))
                     : DossierTopicComponentListComposer.Compose(thema, values);
+                var quelltitel = DossierTopicTitleEditing.SourceTitle(thema);
+                var istStandardthema = DossierDocumentMigration.DefaultTopicTitles.Contains(
+                    quelltitel,
+                    StringComparer.OrdinalIgnoreCase);
+                var text = istStandardthema && string.IsNullOrWhiteSpace(formatiert.Text)
+                    ? string.Empty
+                    : DossierUnbekanntText.OderUnbekannt("Text", formatiert.Text);
 
                 return (IReadOnlyDictionary<string, string>)
                     new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -541,9 +560,9 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                             DossierTopicTextFormatting.Encode(
                                 DossierTopicTitleEditing.Styles(
                                     dossier,
-                                    DossierTopicTitleEditing.SourceTitle(thema),
+                                    quelltitel,
                                     thema.Title)),
-                        ["Text"] = formatiert.Text,
+                        ["Text"] = text,
 
                         // Alte Dossiers mit einer Farbe fuer die ganze Zeile
                         // bleiben lesbar. Neue Eintraege tragen genaue Bereiche.
@@ -654,9 +673,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                 "Wappen", Path.Combine(templateFolder, CoatOfArmsFileName), MaxWidthCm: 2.0));
         }
 
-        // Auch ohne gewaehlte Datei wird die Bildmarke verarbeitet. So kann
-        // der Fueller den grossen schwebenden Planrahmen der Vorlage entfernen;
-        // sonst liegt er in Word ueber Kapitel 2 und 3.
+        // Auch ohne gewaehlte Datei wird die Bildmarke verarbeitet. Der Fueller
+        // entfernt dann den grossen schwebenden Planrahmen der Vorlage - sonst
+        // liegt er in Word ueber Kapitel 2 und 3 - behaelt aber den PLATZ.
+        // Frueher verschwand der ganze Absatz; damit rutschten Eigentumsverhaelt-
+        // nisse und Sanierung auf das Planblatt (gemessen: 4 statt 5 Blaetter).
         var plan = ResolvePlanPath(request) ?? string.Empty;
         var width = PlanWidthCm(request.Dossier);
         placements.Add(new DocxImagePlacement(
@@ -664,8 +685,8 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
             plan,
             MaxWidthCm: width,
             HeightCm: PlanHeightForWidth(width),
-            RemoveParagraphWhenMissing: true,
-            FitWithinBounds: true));
+            FitWithinBounds: true,
+            ReserveSpaceWhenMissing: true));
 
         return placements;
     }

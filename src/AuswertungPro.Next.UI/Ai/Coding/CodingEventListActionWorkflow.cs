@@ -13,7 +13,8 @@ public sealed record CodingEventCloseStretchActionResult(
     bool Applied,
     bool RequiresLaterMeterPrompt,
     bool ShouldRefreshEvents,
-    string StatusText);
+    string StatusText,
+    bool NotAnOpenStretchDamage = false);
 
 public static class CodingEventListActionWorkflow
 {
@@ -52,8 +53,15 @@ public static class CodingEventListActionWorkflow
             deleteResult.ShouldClearSelectedDefect);
     }
 
+    /// <summary>
+    /// Schliesst genau einen offenen Streckenschaden-Anfang. Ein Punktschaden, ein
+    /// bereits geschlossener Anfang und eine Endmarke werden abgewiesen: Schliessen
+    /// setzt IsStreckenschaden und MeterEnd und wuerde einen Punktschaden sonst
+    /// stillschweigend in einen Streckenschaden verwandeln.
+    /// </summary>
     public static CodingEventCloseStretchActionResult CloseStretch(
         CodingEvent? startEvent,
+        IEnumerable<CodingEvent>? allEvents,
         ICodingSessionService? codingSessionService,
         double currentMeter,
         TimeSpan currentVideoTime)
@@ -64,6 +72,14 @@ public static class CodingEventListActionWorkflow
                 RequiresLaterMeterPrompt: false,
                 ShouldRefreshEvents: false,
                 StatusText: "");
+
+        if (!CodingStretchDamageDisplayPolicy.CanClose(startEvent, allEvents))
+            return new CodingEventCloseStretchActionResult(
+                Applied: true,
+                RequiresLaterMeterPrompt: false,
+                ShouldRefreshEvents: false,
+                StatusText: "",
+                NotAnOpenStretchDamage: true);
 
         var closeResult = CodingStretchDamageManualCloseApplier.Apply(
             startEvent,

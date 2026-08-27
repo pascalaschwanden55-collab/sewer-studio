@@ -88,6 +88,100 @@ public sealed class CodingApplyDialogServiceTests
         Assert.False(result);
     }
 
+    /// <summary>
+    /// Eine bekannte, aber unbrauchbare Haltungslaenge darf nicht als "nicht
+    /// bekannt" ausgegeben werden. Der Codiermodus startet ohne Laenge gar nicht -
+    /// dieser Satz waere im Programm also immer falsch. Der Benutzer muss lesen,
+    /// welche Zahl verworfen wurde und warum, sonst kann er nichts damit anfangen.
+    /// </summary>
+    [Fact]
+    public void ConfirmMissingPipeEnd_nennt_die_verworfene_Laenge_statt_sie_zu_leugnen()
+    {
+        string? nachricht = null;
+        var service = new CodingApplyDialogService(
+            (message, _) =>
+            {
+                nachricht = message;
+                return true;
+            },
+            (_, _) => throw new InvalidOperationException("ConfirmCancel darf nicht laufen."));
+
+        var entscheidung = service.ConfirmMissingPipeEnd(
+            new CodingApplyPipeEndPrompt(
+                ProposalMeter: null,
+                RejectedLengthM: 12.00,
+                LastObservationM: 18.50));
+
+        Assert.Equal(CodingApplyPipeEndDecision.Skip, entscheidung);
+        Assert.NotNull(nachricht);
+        var text = nachricht!.Replace(',', '.');
+
+        Assert.DoesNotContain("nicht bekannt", text, StringComparison.Ordinal);
+        // BEIDE Zahlen, sonst wuerde ein Text durchgehen, der zweimal dieselbe nennt.
+        Assert.Contains("12.00", text, StringComparison.Ordinal);
+        Assert.Contains("18.50", text, StringComparison.Ordinal);
+
+        // "gespeichert" waere gelogen: im haeufigsten Fall hat der Codiermodus die
+        // Laenge beim Einstieg selbst aus dem hoechsten Protokollmeter abgeleitet.
+        Assert.DoesNotContain("gespeichert", text, StringComparison.OrdinalIgnoreCase);
+
+        // Und kein Rat, der ausserhalb des Protokolls wirkt: Haltungslaenge_m
+        // steuert auch laengenbasierte Kostenpositionen und den PDF-Export.
+        Assert.DoesNotContain("korrigiere die Haltungsl", text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Der haeufigste Fall: Die Laenge sitzt GENAU auf dem letzten Befund, weil der
+    /// Codiermodus sie von dort abgeleitet hat. Dann darf der Satz nicht zweimal
+    /// dieselbe Zahl nennen - das liest sich wie ein Fehler im Programm.
+    /// </summary>
+    [Fact]
+    public void ConfirmMissingPipeEnd_nennt_bei_gleichem_Meter_nur_eine_Zahl()
+    {
+        string? nachricht = null;
+        var service = new CodingApplyDialogService(
+            (message, _) =>
+            {
+                nachricht = message;
+                return true;
+            },
+            (_, _) => throw new InvalidOperationException("ConfirmCancel darf nicht laufen."));
+
+        service.ConfirmMissingPipeEnd(
+            new CodingApplyPipeEndPrompt(
+                ProposalMeter: null,
+                RejectedLengthM: 20.31,
+                LastObservationM: 20.31));
+
+        var text = nachricht!.Replace(',', '.');
+        var treffer = text.Split("20.31").Length - 1;
+
+        Assert.Equal(1, treffer);
+        Assert.DoesNotContain("nicht bekannt", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Der Fall ohne jede Laenge bleibt erhalten - er ist im Codiermodus zwar
+    /// nicht erreichbar, der Dienst ist aber auch von aussen aufrufbar.
+    /// </summary>
+    [Fact]
+    public void ConfirmMissingPipeEnd_meldet_eine_wirklich_fehlende_Laenge_weiterhin_als_unbekannt()
+    {
+        string? nachricht = null;
+        var service = new CodingApplyDialogService(
+            (message, _) =>
+            {
+                nachricht = message;
+                return false;
+            },
+            (_, _) => throw new InvalidOperationException("ConfirmCancel darf nicht laufen."));
+
+        var entscheidung = service.ConfirmMissingPipeEnd(new CodingApplyPipeEndPrompt(null));
+
+        Assert.Equal(CodingApplyPipeEndDecision.Cancel, entscheidung);
+        Assert.Contains("nicht bekannt", nachricht!, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Factory_creates_dialog_service()
     {

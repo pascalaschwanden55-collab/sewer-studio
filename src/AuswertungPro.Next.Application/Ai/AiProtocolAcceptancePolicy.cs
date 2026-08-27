@@ -14,9 +14,15 @@ namespace AuswertungPro.Next.Application.Ai;
 public static class AiProtocolAcceptancePolicy
 {
     /// <summary>
-    /// Gemeinsame Uebernahme-Regel fuer den Codiermodus. Neue KI- sowie manuell
-    /// gepruefte Events brauchen eine ausdrueckliche Annahme. Bereits vorhandene
-    /// Import-/Protokolleintraege ohne Pruefkontext bleiben erhalten.
+    /// Gemeinsame Uebernahme-Regel fuer den Codiermodus. Ein KI-Vorschlag braucht
+    /// weiterhin eine ausdrueckliche Annahme. Was der Mensch selbst codiert hat
+    /// (nur Pruefkontext, kein KI-Vorschlag), gehoert dagegen ins Fachprotokoll,
+    /// sobald es existiert — nur ein ausdrueckliches Ablehnen haelt es zurueck.
+    /// Vorher verschwand eine noch nicht bestaetigte Handcodierung beim
+    /// "Uebernehmen" kommentarlos. Die Goldfreigabe bleibt davon unberuehrt:
+    /// dafuer zaehlt in <c>CodingEventToSampleMapper</c> weiterhin nur eine
+    /// ausdrueckliche Annahme mit Benutzer und Zeitpunkt.
+    /// Bereits vorhandene Import-/Protokolleintraege ohne Pruefkontext bleiben erhalten.
     /// </summary>
     public static bool CanApply(CodingEvent? codingEvent)
     {
@@ -27,7 +33,7 @@ public static class AiProtocolAcceptancePolicy
             return IsAccepted(codingEvent.AiContext.Decision);
 
         if (codingEvent.ReviewContext is not null)
-            return IsAccepted(codingEvent.ReviewContext.Decision);
+            return codingEvent.ReviewContext.Decision != CodingUserDecision.Rejected;
 
         return true;
     }

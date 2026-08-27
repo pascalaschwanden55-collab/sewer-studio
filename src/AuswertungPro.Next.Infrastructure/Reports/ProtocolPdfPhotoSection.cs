@@ -1,4 +1,4 @@
-using QuestPDF.Fluent;
+﻿using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using AuswertungPro.Next.Domain.Models;
@@ -87,7 +87,8 @@ internal static class ProtocolPdfPhotoSection
         HaltungsprotokollPdfOptions options,
         IProtocolPdfAssetResolver assets,
         string brand = "#7A8A94",
-        string? pageTitle = null)
+        string? pageTitle = null,
+        bool startOnCurrentPage = false)
     {
         if (photoItems.Count == 0)
             return;
@@ -99,14 +100,20 @@ internal static class ProtocolPdfPhotoSection
             : pageTitle;
         var headerItems = BuildHeaderTable(project, record, inspectionDate, holdingLabel);
 
-        const int perPage = 2;
-        const int perRow = 1;
+        var layout = ProtocolPdfPhotoLayout.Resolve(options.PhotosPerPage);
+        var perPage = layout.PhotosPerPage;
+        var perRow = layout.Columns;
+        var photoHeight = ResolvePhotoHeight(layout, options);
         var photoIndex = 1;
-        const float captionHeight = 36f;
 
         for (var offset = 0; offset < photoItems.Count; offset += perPage)
         {
-            column.Item().PageBreak();
+            // Im Haltungsprotokoll folgen die Fotoseiten auf die Befundtabelle und brauchen
+            // deshalb auch vor der ersten Gruppe einen Umbruch. Das Haltungsdossier oeffnet
+            // dafuer bereits eine eigene, noch leere Seite - dort wuerde der Umbruch eine
+            // leere Seite erzeugen.
+            if (offset > 0 || !startOnCurrentPage)
+                column.Item().PageBreak();
             column.Item().Element(container =>
                 ProtocolPdfExporter.ComposeTitleBar(container, title, options.Subtitle, brand));
             column.Item().PaddingTop(2).Element(container => ComposeHeaderTable(container, headerItems, brand));
@@ -131,12 +138,12 @@ internal static class ProtocolPdfPhotoSection
                         {
                             var item = pageItems[cellIndex];
                             var currentIndex = photoIndex++;
-                            table.Cell().Element(cell => ComposePhotoCell(cell, item, currentIndex, options, assets));
+                            table.Cell().Element(cell => ComposePhotoCell(cell, item, currentIndex, layout, options, assets));
                             cellIndex++;
                         }
                         else
                         {
-                            table.Cell().Height(options.PhotoHeight + captionHeight);
+                            table.Cell().Height(photoHeight + ProtocolPdfPhotoLayout.CaptionHeight);
                         }
                     }
                 }
@@ -199,10 +206,16 @@ internal static class ProtocolPdfPhotoSection
         IContainer container,
         PhotoItem item,
         int index,
+        ProtocolPdfPhotoLayout layout,
         HaltungsprotokollPdfOptions options,
         IProtocolPdfAssetResolver assets)
     {
-        var photoWidth = Math.Max(220f, Math.Min(options.PhotoWidth, 500f));
+        // Fuer den bisherigen Zwei-Foto-Weg bleiben die oeffentlichen Groessenoptionen
+        // wirksam. Die neuen Mehrspalten-Anordnungen verwenden ihre geprueften Festmasse.
+        var photoWidth = layout.PhotosPerPage == ProtocolPdfPhotoLayout.DefaultPhotosPerPage
+            ? Math.Max(220f, Math.Min(options.PhotoWidth, 500f))
+            : layout.PhotoWidth;
+        var photoHeight = ResolvePhotoHeight(layout, options);
         container.AlignCenter().Width(photoWidth).Padding(4).Column(column =>
         {
             var bytes = assets.ReadAllBytes(item.Path);
@@ -211,7 +224,7 @@ internal static class ProtocolPdfPhotoSection
             {
                 try
                 {
-                    column.Item().Height(options.PhotoHeight)
+                    column.Item().Height(photoHeight)
                         .AlignCenter()
                         .AlignMiddle()
                         .Image(bytes)
@@ -226,7 +239,7 @@ internal static class ProtocolPdfPhotoSection
 
             if (!imageAdded)
             {
-                column.Item().Height(options.PhotoHeight)
+                column.Item().Height(photoHeight)
                     .Background("#F5F5F5")
                     .AlignMiddle()
                     .AlignCenter()
@@ -244,6 +257,13 @@ internal static class ProtocolPdfPhotoSection
                 column.Item().AlignCenter().Text(line2).FontSize(9);
         });
     }
+
+    private static float ResolvePhotoHeight(
+        ProtocolPdfPhotoLayout layout,
+        HaltungsprotokollPdfOptions options)
+        => layout.PhotosPerPage == ProtocolPdfPhotoLayout.DefaultPhotosPerPage
+            ? options.PhotoHeight
+            : layout.PhotoHeight;
 
     private static string NormalizeExportPhotoPathKey(string path)
         => Path.GetFullPath(path)

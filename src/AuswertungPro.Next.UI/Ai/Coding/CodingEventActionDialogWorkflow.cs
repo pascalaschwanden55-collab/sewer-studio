@@ -20,6 +20,20 @@ public static class CodingEventActionDialogWorkflow
         service.ShowStretchCloseRequiresLaterMeter();
     }
 
+    public static void ShowNotAnOpenStretchDamage()
+        => ShowNotAnOpenStretchDamage(
+            new CodingEventActionDialogWorkflowActions(
+                CreateDialogService: CodingEventActionDialogServiceFactory.Create,
+                RunWithSuspendedOverlay: callback => callback()));
+
+    public static void ShowNotAnOpenStretchDamage(
+        CodingEventActionDialogWorkflowActions actions)
+    {
+        var service = Create(actions);
+
+        service.ShowNotAnOpenStretchDamage();
+    }
+
     public static bool ConfirmDelete(
         string? code,
         Func<Func<bool>, bool> runWithSuspendedOverlay)

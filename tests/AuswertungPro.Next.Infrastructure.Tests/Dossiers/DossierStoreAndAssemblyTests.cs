@@ -490,6 +490,20 @@ public sealed class DossierPdfAssemblyServiceTests : IDisposable
     }
 
     [Fact]
+    public void Microsoft_Word_exportiert_die_Word_Textmarken_als_PDF_Lesezeichen()
+    {
+        var pdfPath = @"C:\Dossier Ordner\Eigentuemerdossier.pdf";
+
+        var arguments = WordInterop.CreateExportAsFixedFormatArguments(pdfPath);
+
+        Assert.Equal(11, arguments.Length);
+        Assert.Equal(pdfPath, arguments[0]);
+        Assert.Equal(17, arguments[1]);
+        Assert.All(arguments.Skip(2).Take(8), argument => Assert.Same(Type.Missing, argument));
+        Assert.Equal(2, arguments[10]);
+    }
+
+    [Fact]
     public void LibreOffice_erhaelt_sichere_einzelne_Argumente_und_ein_eigenes_Profil()
     {
         var wordPath = @"C:\Dossier Ordner\Eigentümerdossier.docx";

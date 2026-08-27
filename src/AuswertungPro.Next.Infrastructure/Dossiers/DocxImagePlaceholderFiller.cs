@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Globalization;
 
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -38,7 +39,15 @@ public sealed record DocxImagePlacement(
     double MaxWidthCm,
     double? HeightCm = null,
     bool RemoveParagraphWhenMissing = false,
-    bool FitWithinBounds = false);
+    bool FitWithinBounds = false,
+
+    /// <summary>
+    /// Statt den Absatz zu entfernen: seine schwebenden Formen loeschen und die
+    /// Hoehe aus <see cref="HeightCm"/> als fester Platz stehen lassen. Nur so
+    /// behaelt ein Kapitel ohne Bild sein eigenes Blatt; ein entfernter Absatz
+    /// zieht die Folgekapitel nach oben.
+    /// </summary>
+    bool ReserveSpaceWhenMissing = false);
 
 /// <summary>
 /// Ersetzt Platzhalter der Form <c>{{@Name}}</c> durch ein eingebettetes Bild.
@@ -130,18 +139,14 @@ public static class DocxImagePlaceholderFiller
                 var run = texts[0].Ancestors<Run>().FirstOrDefault();
                 if (run is null)
                 {
-                    if (placement.RemoveParagraphWhenMissing)
-                        paragraph.Remove();
-
+                    BehandleFehlendesBild(paragraph, placement);
                     continue;
                 }
 
                 var drawing = TryCreateDrawing(mainPart, placement, drawingId);
                 if (drawing is null)
                 {
-                    if (placement.RemoveParagraphWhenMissing)
-                        paragraph.Remove();
-
+                    BehandleFehlendesBild(paragraph, placement);
                     continue;
                 }
 
@@ -161,6 +166,62 @@ public static class DocxImagePlaceholderFiller
     /// Legt den Bildteil an und baut das Zeichnungselement. Liefert null, wenn
     /// die Datei fehlt, unlesbar ist oder ihre Masse nicht erkannt werden.
     /// </summary>
+
+    /// <summary>
+    /// Was mit dem Absatz geschieht, wenn kein Bild eingesetzt werden konnte.
+    /// Entweder ganz weg (Altverhalten) oder: schwebende Formen loeschen und den
+    /// Platz behalten, damit das Kapitel sein Blatt behaelt.
+    /// </summary>
+    private static void BehandleFehlendesBild(Paragraph paragraph, DocxImagePlacement placement)
+    {
+        if (placement.ReserveSpaceWhenMissing)
+        {
+            EntferneSchwebendeFormen(paragraph);
+            SetzeFesteHoehe(paragraph, placement.HeightCm);
+            return;
+        }
+
+        if (placement.RemoveParagraphWhenMissing)
+            paragraph.Remove();
+    }
+
+    /// <summary>
+    /// Loescht alles, was in Word ueber den folgenden Kapiteln liegen wuerde:
+    /// verankerte Zeichnungen, alte VML-Formen und deren Auswahlhuellen.
+    /// </summary>
+    private static void EntferneSchwebendeFormen(Paragraph paragraph)
+    {
+        foreach (var huelle in paragraph.Descendants<AlternateContent>().ToList())
+            huelle.Remove();
+
+        foreach (var zeichnung in paragraph.Descendants<Drawing>().ToList())
+        {
+            if (zeichnung.Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Anchor>().Any())
+                zeichnung.Remove();
+        }
+
+        foreach (var form in paragraph.Descendants<Picture>().ToList())
+            form.Remove();
+    }
+
+    /// <summary>
+    /// Reserviert die Hoehe der Bildflaeche als feste Zeilenhoehe. 1 cm sind
+    /// 566,93 Twips; ohne Hoehenangabe bleibt der Absatz unveraendert.
+    /// </summary>
+    private static void SetzeFesteHoehe(Paragraph paragraph, double? heightCm)
+    {
+        if (heightCm is not { } cm || cm <= 0)
+            return;
+
+        var twips = (int)Math.Round(cm * 566.929133858);
+        var properties = paragraph.ParagraphProperties ??= new ParagraphProperties();
+        properties.SpacingBetweenLines = new SpacingBetweenLines
+        {
+            Line = twips.ToString(CultureInfo.InvariantCulture),
+            LineRule = LineSpacingRuleValues.Exact
+        };
+    }
+
     private static Drawing? TryCreateDrawing(
         MainDocumentPart mainPart,
         DocxImagePlacement placement,

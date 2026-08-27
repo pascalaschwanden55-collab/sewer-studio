@@ -8,7 +8,7 @@ public partial class PlayerWindow
 {
     /// <summary>
     /// Stellt sicher, dass Haltungslaenge_m gesetzt ist.
-    /// Fallback-Kette: Haltungslaenge_m -> Laenge_m -> DamageOverlay -> Protokoll BCE -> manuelle Eingabe.
+    /// Fallback-Kette: Haltungslaenge_m -> Laenge_m -> eindeutiges aktives BCE -> manuelle Eingabe.
     /// </summary>
     private void EnsureHaltungslaenge(HaltungRecord record)
     {

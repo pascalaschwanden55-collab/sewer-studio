@@ -16,6 +16,35 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Projects;
 public sealed class JsonProjectRepositorySaveSerializationTests
 {
     [Fact]
+    public void Save_und_Load_erhalten_die_Protokollherkunft_einer_Haltungslaenge()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"repo-length-source-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, "projekt.json");
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungslaenge_m", "22.34", FieldSource.Protocol, userEdited: false);
+        var project = new Project();
+        project.Data.Add(record);
+        var repository = new JsonProjectRepository();
+
+        try
+        {
+            var save = repository.Save(project, path);
+            var load = repository.Load(path);
+
+            Assert.True(save.Ok, save.ErrorMessage);
+            Assert.True(load.Ok, load.ErrorMessage);
+            Assert.Equal(
+                FieldSource.Protocol,
+                Assert.Single(load.Value!.Data).FieldMeta["Haltungslaenge_m"].Source);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Save_VieleParalleleAufrufe_AlleErfolgreich_UndDateiBleibtLadbar()
     {
         var dir = Path.Combine(Path.GetTempPath(), $"repo-savepar-{Guid.NewGuid():N}");
