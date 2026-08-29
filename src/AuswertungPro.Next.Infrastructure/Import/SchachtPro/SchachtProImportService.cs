@@ -329,9 +329,9 @@ public sealed class SchachtProImportService : ISchachtProImportService
         found++;
 
         // Schluessel-Felder immer (Konvention des PDF-Imports).
-        record.SetFieldValue(SchachtProFieldNames.Schachtnummer, schachtNr);
-        record.SetFieldValue(SchachtProFieldNames.NrGross, schachtNr);
-        record.SetFieldValue(SchachtProFieldNames.NrKlein, schachtNr);
+        record.SetFieldValue(SchachtProFieldNames.Schachtnummer, schachtNr, FieldSource.Spro, userEdited: false);
+        record.SetFieldValue(SchachtProFieldNames.NrGross, schachtNr, FieldSource.Spro, userEdited: false);
+        record.SetFieldValue(SchachtProFieldNames.NrKlein, schachtNr, FieldSource.Spro, userEdited: false);
 
         // Das Archiv fuellt und aktualisiert seine Felder, aber eine Handkorrektur in
         // SewerStudio bleibt stehen - auch bei einem versehentlich wiederholten Import.
@@ -339,14 +339,12 @@ public sealed class SchachtProImportService : ISchachtProImportService
         var geschuetzt = new List<string>();
         foreach (var (field, value) in mapped.Fields)
         {
-            if (record.IsUserEdited(field)
+            if (record.SetFieldValue(field, value, FieldSource.Spro, userEdited: false)
+                == FeldSchreibErgebnis.HandwertGeschuetzt
                 && !string.Equals(record.GetFieldValue(field), value ?? "", StringComparison.Ordinal))
             {
                 geschuetzt.Add(field);
-                continue;
             }
-
-            record.SetFieldValue(field, value);
         }
 
         if (geschuetzt.Count > 0)
@@ -606,8 +604,16 @@ public sealed class SchachtProImportService : ISchachtProImportService
             }
         }
 
-        if (relativePaths.Count > 0)
-            record.SetFieldValue(SchachtProFieldNames.Fotos, string.Join(";", relativePaths));
+        if (relativePaths.Count > 0
+            && record.SetFieldValue(SchachtProFieldNames.Fotos, string.Join(";", relativePaths),
+                   FieldSource.Spro, userEdited: false)
+               == FeldSchreibErgebnis.HandwertGeschuetzt)
+        {
+            // Sonst lägen die Fotos auf der Platte und der Schacht zeigte nicht darauf.
+            messages.Add(
+                $"Schacht {schachtNr}: {relativePaths.Count} Foto(s) kopiert, aber das Feld "
+                + "'Fotos' wurde von Hand geaendert und bleibt unveraendert.");
+        }
     }
 
     private static SchachtRecord? FindSchachtRecord(IEnumerable<SchachtRecord> records, string key)

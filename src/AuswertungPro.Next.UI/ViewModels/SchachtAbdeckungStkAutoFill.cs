@@ -35,8 +35,7 @@ internal static class SchachtAbdeckungStkAutoFill
         if (!ShouldReplace(current))
             return false;
 
-        record.SetFieldValue(FieldName, "1");
-        return true;
+        return record.SetFieldValue(FieldName, "1") == FeldSchreibErgebnis.Geschrieben;
     }
 
     private static bool ShouldReplace(string? value)

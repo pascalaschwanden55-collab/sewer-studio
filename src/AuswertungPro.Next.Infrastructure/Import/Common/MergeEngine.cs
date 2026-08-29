@@ -163,6 +163,7 @@ public static class MergeEngine
         FieldSource.Xtf405 => 80,
         FieldSource.Ili => 70,
         FieldSource.Pdf => 60,
+        FieldSource.Spro => 60,
         FieldSource.Legacy => 50,
         FieldSource.Protocol => 40,
         FieldSource.Unknown => 0,

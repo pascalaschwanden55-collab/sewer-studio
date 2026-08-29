@@ -70,7 +70,7 @@ public sealed class SchachtProtocolRefreshControllerTests
             {
                 "project-folder",
                 "project-context",
-                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand erfasste Werte gehen dabei verloren. Fortfahren?"
+                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand geaenderte Felder bleiben erhalten; alle uebrigen werden ersetzt. Fortfahren?"
             },
             harness.Calls);
     }
@@ -88,7 +88,7 @@ public sealed class SchachtProtocolRefreshControllerTests
             {
                 "project-folder",
                 "project-context",
-                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand erfasste Werte gehen dabei verloren. Fortfahren?",
+                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand geaenderte Felder bleiben erhalten; alle uebrigen werden ersetzt. Fortfahren?",
                 "locate|Schaechte_Verteilt/S-1/protokoll.pdf|C:\\Projekt",
                 "warn|Aktualisieren|Die verknuepfte Protokoll-Datei wurde nicht gefunden."
             },
@@ -172,7 +172,7 @@ public sealed class SchachtProtocolRefreshControllerTests
             {
                 "project-folder",
                 "project-context",
-                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand erfasste Werte gehen dabei verloren. Fortfahren?",
+                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand geaenderte Felder bleiben erhalten; alle uebrigen werden ersetzt. Fortfahren?",
                 "locate|Schaechte_Verteilt/S-1/protokoll.pdf|C:\\Projekt",
                 "read|C:\\Projekt\\protokoll.pdf|Aktualisieren",
                 "project-still-open|C:\\Projekt\\projekt.json|Aktualisieren|impact=None",

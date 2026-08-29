@@ -1050,7 +1050,8 @@ Der Export `IXtfRevisionExportService`/`XtfRevisionExportService` erzeugt aus de
 unveraenderten Projektkopien unter `Imports\XTF` beziehungsweise
 `Importdateien\XTF` und dem aktuellen Projektstand neue revidierte XTF-Dateien.
 `VsaFinding` traegt dafuer additiv Kanalschaden- und Untersuchungs-TID;
-`HaltungRecord` und `SchachtRecord` bewahren die importierte `XtfHerkunft`.
+`HaltungRecord` bewahrt die importierte `XtfHerkunft`; `SchachtRecord` hat keine
+(Schaechte entstehen heute nicht aus XTF).
 Altprojekte werden nicht neu importiert: `XtfKanalschadenElementReader` und
 `XtfFindingMatcher` bilden nur beidseitig eindeutige Zuordnungen im Arbeitsspeicher.
 `XtfRevisionPlanBuilder` plant geaenderte, neue und entfernte Befunde;

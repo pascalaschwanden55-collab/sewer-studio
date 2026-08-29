@@ -73,7 +73,11 @@ internal static class SchachtStammdatenResultApplier
             return false;
         }
 
-        record.SetFieldValue(fieldName, value.Trim());
+        // Der Schutz kann ablehnen (von Hand geleertes Feld). Dann darf hier
+        // nichts gezaehlt und kein Erfolg gemeldet werden.
+        if (record.SetFieldValue(fieldName, value.Trim()) != FeldSchreibErgebnis.Geschrieben)
+            return false;
+
         addedFields++;
         return true;
     }

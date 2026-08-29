@@ -77,7 +77,7 @@ internal sealed class SchachtProtocolRefreshController
 
         if (!_dialogs.ConfirmWarn(
                 "Der Schacht wird komplett aus dem Protokoll neu aufgebaut. " +
-                "Von Hand erfasste Werte gehen dabei verloren. Fortfahren?",
+                "Von Hand geaenderte Felder bleiben erhalten; alle uebrigen werden ersetzt. Fortfahren?",
                 DialogTitle))
         {
             return SchachtProtocolRefreshOutcome.Cancelled;

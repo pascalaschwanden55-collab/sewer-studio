@@ -34,34 +34,47 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     /// unveraendert und senkt keine vorhandene Handmarkierung ab. Damit ueberlebt
     /// eine Korrektur auch einen versehentlich wiederholten Import.
     /// </summary>
-    public void SetFieldValue(string fieldName, string? value)
+    public FeldSchreibErgebnis SetFieldValue(string fieldName, string? value)
     {
         // Schutz wie bei HaltungRecord: ein von Hand gesetzter Wert wird nie
         // ueberschrieben - auch nicht durch einen versehentlich wiederholten Import.
         // Wer bewusst eine Handeingabe setzt oder ersetzt (Umbenennen, Massnahme
         // leeren), ruft die Ueberladung mit userEdited: true.
         if (IsUserEdited(fieldName))
-            return;
+            return FeldSchreibErgebnis.HandwertGeschuetzt;
 
-        WriteField(fieldName, value, FieldSource.Manual, userEdited: null);
+        return WriteField(fieldName, value, FieldSource.Manual, userEdited: null);
     }
+
+    /// <summary>
+    /// Zieht einen Wert technisch nach, ohne Herkunft oder Handmarkierung zu
+    /// veraendern. Gedacht fuer Dateipfade nach einem Umbenennen: der alte Pfad
+    /// zeigt ins Leere, also muss auch ein handgesetzter Wert mit - er darf dadurch
+    /// aber weder zur Handeingabe erklaert noch von einer werden.
+    /// </summary>
+    public FeldSchreibErgebnis SetFieldValueTechnical(string fieldName, string? value)
+        => WriteField(fieldName, value, FieldMeta.TryGetValue(fieldName, out var meta)
+            ? meta.Source
+            : FieldSource.Manual, userEdited: null);
 
     /// <summary>
     /// Schreibt mit ausdruecklicher Herkunft. Ein automatischer Schreibvorgang
     /// (<paramref name="userEdited"/> = false) laesst ein bereits handgesetztes Feld
     /// unveraendert — dieselbe Regel wie bei <see cref="HaltungRecord"/>.
     /// </summary>
-    public void SetFieldValue(string fieldName, string? value, FieldSource source, bool userEdited)
+    public FeldSchreibErgebnis SetFieldValue(string fieldName, string? value, FieldSource source, bool userEdited)
     {
         if (!userEdited && IsUserEdited(fieldName))
-            return;
+            return FeldSchreibErgebnis.HandwertGeschuetzt;
 
-        WriteField(fieldName, value, source, userEdited);
+        return WriteField(fieldName, value, source, userEdited);
     }
 
-    private void WriteField(string fieldName, string? value, FieldSource source, bool? userEdited)
+    private FeldSchreibErgebnis WriteField(string fieldName, string? value, FieldSource source, bool? userEdited)
     {
         value ??= "";
+        var unveraendert = Fields.TryGetValue(fieldName, out var bisher)
+                           && string.Equals(bisher ?? "", value, StringComparison.Ordinal);
         Fields[fieldName] = value;
 
         if (!FieldMeta.TryGetValue(fieldName, out var meta))
@@ -80,5 +93,7 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Fields)));
         PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs($"Fields[{fieldName}]"));
         PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ModifiedAtUtc)));
+
+        return unveraendert ? FeldSchreibErgebnis.Unveraendert : FeldSchreibErgebnis.Geschrieben;
     }
 }

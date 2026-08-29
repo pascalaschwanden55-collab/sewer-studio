@@ -253,4 +253,29 @@ public sealed class SchachtStammdatenResultApplierTests
             NichtLesbar: unreadable,
             Ergaenzungen: additions ?? [],
             Meldungen: messages ?? []);
+
+    [Fact]
+    public void Ein_von_Hand_geleertes_Feld_wird_nicht_als_ergaenzt_gezaehlt()
+    {
+        // Der Schutz lehnt den Schreibvorgang ab. Ohne Auswertung des Ergebnisses
+        // meldete der Nachlauf trotzdem "ergaenzt" - der Wert stand aber nirgends.
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtform", "", FieldSource.Manual, userEdited: true);
+
+        var result = SchachtStammdatenResultApplier.Apply(
+            [record],
+            Result(
+                additions:
+                [
+                    new SchachtStammdatenErgaenzung(record.Id, "protokoll.pdf", "rund", "1200", "2.40")
+                ],
+                pdfFound: 1,
+                pdfMissing: 0,
+                unreadable: 0,
+                alreadyComplete: 0));
+
+        Assert.Equal("", record.GetFieldValue("Schachtform"));
+        Assert.Equal("1200", record.GetFieldValue("Dimension"));
+        Assert.Equal(2, result.AddedFieldCount);
+    }
 }

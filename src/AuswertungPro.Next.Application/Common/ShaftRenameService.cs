@@ -284,7 +284,7 @@ public sealed class ShaftRenameFileService : IShaftRenameService
             var newValue = string.Join(";", newParts);
             if (!string.Equals(pdfAll, newValue, StringComparison.OrdinalIgnoreCase))
             {
-                record.SetFieldValue(FieldKeys.PdfAll, newValue, FieldSource.Manual, userEdited: true);
+                record.SetFieldValueTechnical(FieldKeys.PdfAll, newValue);
                 count++;
             }
         }
@@ -306,7 +306,7 @@ public sealed class ShaftRenameFileService : IShaftRenameService
         if (string.Equals(raw, updated, StringComparison.OrdinalIgnoreCase))
             return 0;
 
-        record.SetFieldValue(fieldName, updated, FieldSource.Manual, userEdited: true);
+        record.SetFieldValueTechnical(fieldName, updated);
         return 1;
     }
 

@@ -611,4 +611,25 @@ public sealed partial class SchachtProImportServiceTests
         Assert.False(string.IsNullOrEmpty(meldung), "Keine Meldung zu den nicht uebernommenen Feldern gefunden.");
         Assert.Contains("von Hand", meldung!, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void Importierte_Werte_tragen_die_Herkunft_SchachtPro_und_keine_Handmarkierung()
+    {
+        // Frueher wurde jeder Archivwert als "Manual" gekennzeichnet, obwohl nichts
+        // von Hand kam. Damit war spaeter nicht mehr unterscheidbar, was der Mensch
+        // gesetzt hat und was das Archiv.
+        using var temp = new TempDir();
+        var archiv = ErzeugeArchivMitZweiProtokollen(temp);
+        var project = new Project();
+
+        using var session = BeginStaging(temp);
+        new SchachtProImportService().ImportSchachtProArchive(archiv, project, Ctx(session));
+        session.Publish();
+        session.Accept();
+
+        var schacht = project.SchaechteData.Single(r => r.GetFieldValue("Schachtnummer") == "S-100");
+        Assert.Equal(FieldSource.Spro, schacht.FieldMeta["Funktion"].Source);
+        Assert.Equal(FieldSource.Spro, schacht.FieldMeta["Schachtnummer"].Source);
+        Assert.False(schacht.IsUserEdited("Funktion"));
+    }
 }
