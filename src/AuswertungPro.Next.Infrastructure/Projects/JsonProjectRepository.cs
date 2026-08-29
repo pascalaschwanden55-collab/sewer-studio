@@ -63,6 +63,13 @@ public sealed class JsonProjectRepository : IProjectRepository
             project.EnsureMetadataDefaults();
             _photoReferenceNormalizer.Normalize(project, path);
             ProjectVideoReferenceNormalizer.Normalize(project, path);
+
+            // Auch beim Laden, nicht nur beim Speichern: Die Auswahlmenues fuehren nur
+            // die Begriffe der Norm. Ohne Anhebung zeigte ein Bestandsprojekt dort leer
+            // an, bis es einmal gespeichert wurde. Nur die Schreibweise aendert sich,
+            // die Herkunft bleibt unangetastet - deshalb wird das Projekt dadurch auch
+            // nicht als geaendert markiert.
+            ProjectVocabularyNormalizer.Normalize(project);
             return Result<Project>.Success(project);
         }
         catch (Exception ex)

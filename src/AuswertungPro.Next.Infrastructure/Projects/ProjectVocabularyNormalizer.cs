@@ -6,8 +6,13 @@ namespace AuswertungPro.Next.Infrastructure.Projects;
 /// Bringt Werte aus Bestandsprojekten auf die Begriffe der Norm.
 ///
 /// Frueher fuehrte das Programm eigene Kurzformen der Nutzungsart ("Schmutzwasser"), die
-/// beim Export Werte erzeugten, die kein INTERLIS-Pruefer akzeptiert. Beim Speichern wird
-/// die Schreibweise deshalb einmalig nachgezogen.
+/// beim Export Werte erzeugten, die kein INTERLIS-Pruefer akzeptiert. Die Schreibweise
+/// wird deshalb beim Laden und beim Speichern nachgezogen.
+///
+/// Seit 2026-08-29 gilt dasselbe fuer Rohrmaterial, Schachtfunktion und Schachtmaterial.
+/// Die Auswahlmenues fuehren nur noch die Begriffe der Norm; ohne Anhebung zeigte ein
+/// Bestandsprojekt dort leer an, obwohl ein Wert gespeichert ist. Gemessen an Zone 1.15
+/// betraf das 19 Haltungen und 10 Schaechte mit "Beton Normalbeton".
 ///
 /// Zwei Grenzen gelten dabei fest:
 /// <list type="bullet">
@@ -23,28 +28,46 @@ internal static class ProjectVocabularyNormalizer
     /// <summary>Anzahl tatsaechlich angepasster Felder.</summary>
     public static int Normalize(Project? project)
     {
-        if (project?.Data is null)
+        if (project is null)
             return 0;
 
         var geaendert = 0;
-        foreach (var record in project.Data)
+
+        foreach (var record in project.Data ?? [])
         {
-            if (record?.Fields is null)
-                continue;
+            geaendert += Hebe(record?.Fields, FieldKeys.UsageType, NutzungsartVokabular.Normalisieren);
+            geaendert += Hebe(record?.Fields, FieldKeys.PipeMaterial, MaterialVokabular.Normalisieren);
+        }
 
-            if (!record.Fields.TryGetValue(FieldKeys.UsageType, out var alt))
-                continue;
-
-            var neu = NutzungsartVokabular.Normalisieren(alt);
-            if (string.Equals(alt, neu, StringComparison.Ordinal))
-                continue;
-
-            // Bewusst direkt auf Fields: SetFieldValue wuerde Quelle und Zeitstempel
-            // ueberschreiben und damit die Herkunft des Werts verfaelschen.
-            record.Fields[FieldKeys.UsageType] = neu;
-            geaendert++;
+        foreach (var record in project.SchaechteData ?? [])
+        {
+            geaendert += Hebe(record?.Fields, "Funktion", SchachtFunktionVokabular.Normalisieren);
+            geaendert += Hebe(record?.Fields, "Material", SchachtMaterialVokabular.Normalisieren);
         }
 
         return geaendert;
+    }
+
+    /// <summary>
+    /// Hebt ein einzelnes Feld auf die Schreibweise des Vokabulars.
+    ///
+    /// Bewusst direkt auf <c>Fields</c>: <c>SetFieldValue</c> wuerde Quelle und
+    /// Zeitstempel ueberschreiben und damit die Herkunft des Werts verfaelschen.
+    /// Eine vorhandene Handmarkierung bleibt dadurch ebenfalls unangetastet.
+    /// </summary>
+    private static int Hebe(
+        IDictionary<string, string>? fields,
+        string feld,
+        Func<string?, string> normalisieren)
+    {
+        if (fields is null || !fields.TryGetValue(feld, out var alt))
+            return 0;
+
+        var neu = normalisieren(alt);
+        if (string.Equals(alt, neu, StringComparison.Ordinal))
+            return 0;
+
+        fields[feld] = neu;
+        return 1;
     }
 }

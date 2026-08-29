@@ -658,13 +658,6 @@ public partial class SchaechtePage : UserControl
             return;
 
         _vm.Selected = record;
-        if (actionKey.StartsWith("zustandsklasse:", StringComparison.Ordinal))
-        {
-            var value = actionKey["zustandsklasse:".Length..];
-            CommitSchachtDetailField(record, "Zustandsklasse", value);
-            return;
-        }
-
         var e = new RoutedEventArgs();
         switch (actionKey)
         {
@@ -709,6 +702,8 @@ public partial class SchaechtePage : UserControl
             "AusgefuehrtDurchOptions" => _vm.AusgefuehrtDurchOptions,
             "SchachtformOptions" => _vm.SchachtformOptions,
             "BelastungsklasseOptions" => _vm.BelastungsklasseOptions,
+            "SchachtFunktionOptions" => _vm.SchachtFunktionOptions,
+            "SchachtMaterialOptions" => _vm.SchachtMaterialOptions,
             _ => Array.Empty<string>()
         };
     }
@@ -719,27 +714,6 @@ public partial class SchaechtePage : UserControl
             return null;
 
         return _vm.GetType().GetProperty(propertyName)?.GetValue(_vm) as ICommand;
-    }
-
-    private void CommitSchachtDetailField(SchachtRecord record, string recordField, string? value)
-    {
-        if (_vm is null
-            || !_vm.CanMutateRecord(record, "Schachtdetail aendern"))
-        {
-            return;
-        }
-
-        var next = value ?? string.Empty;
-        if (!SchaechteFieldEditController.Apply(
-                recordField,
-                record,
-                next,
-                ApplySchachtNumberChange,
-                EnsureSchachtOption))
-            return;
-
-        MarkProjectDirty();
-        ApplySearchFilter();
     }
 
     private void EnsureSchachtOption(string optionField, string? value)

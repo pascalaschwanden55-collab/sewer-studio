@@ -66,6 +66,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
     public ObservableCollection<string> AusgefuehrtDurchOptions { get; }
     public ObservableCollection<string> SchachtformOptions { get; }
     public ObservableCollection<string> BelastungsklasseOptions { get; }
+    public ObservableCollection<string> SchachtFunktionOptions { get; }
+    public ObservableCollection<string> SchachtMaterialOptions { get; }
 
     [ObservableProperty] private SchachtRecord? _selected;
     [ObservableProperty] private string _lastResult = "";
@@ -262,6 +264,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
             new[] { "Rund", "Oval", "Quadratisch", "Rechteckig" });
         BelastungsklasseOptions = new ObservableCollection<string>(
             FieldCatalog.GetComboItems(FieldKeys.LoadClass));
+        // Keine zweite Liste: die Begriffe fuehren die Vokabulare, damit Anzeige und
+        // XTF-Wert nicht auseinanderlaufen koennen.
+        SchachtFunktionOptions = new ObservableCollection<string>(SchachtFunktionVokabular.Auswahl);
+        SchachtMaterialOptions = new ObservableCollection<string>(SchachtMaterialVokabular.Auswahl);
         EnforceEigentuemerOptionsExact();
 
         AddCommand = new RelayCommand(Add, CanMutateShaftDataForCommand);

@@ -71,6 +71,19 @@ public static class SchachtFunktionVokabular
     ];
 
     /// <summary>
+    /// Die Auswahl im Programm: leer plus genau ein Begriff je Funktion. Jeder Eintrag
+    /// liefert einen Wert der Modelldatei — es kann also kein ungueltiger Wert in eine
+    /// XTF geraten.
+    /// </summary>
+    public static readonly IReadOnlyList<string> Auswahl =
+        new System.Collections.ObjectModel.ReadOnlyCollection<string>(
+            new[] { "" }
+                .Concat(Konzepte.Select(k => k.App))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+                .ToList());
+
+    /// <summary>
     /// Bringt eine beliebige gelesene Schreibweise auf den Begriff des Programms.
     /// Ein unbekannter Wert bleibt unveraendert stehen.
     /// </summary>

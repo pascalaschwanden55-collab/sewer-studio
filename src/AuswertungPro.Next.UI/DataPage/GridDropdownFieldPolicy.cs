@@ -86,6 +86,19 @@ public static class GridDropdownFieldPolicy
                 "BelastungsklasseOptions",
                 AllowFreeText: false,
                 Managed: false),
+            // Schachtfunktion und -material nach SIA405: feste Listen, kein Freitext
+            // und nicht vom Benutzer erweiterbar. Ein getippter Wert haette keinen
+            // Normwert und koennte deshalb nie in eine XTF geschrieben werden.
+            "Funktion" => new GridDropdownFieldSpec(
+                optionField,
+                "SchachtFunktionOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Material" => new GridDropdownFieldSpec(
+                optionField,
+                "SchachtMaterialOptions",
+                AllowFreeText: false,
+                Managed: false),
             _ => null!
         };
 
