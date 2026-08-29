@@ -329,6 +329,19 @@ public partial class TrainingStudioWindow : Window
         _vm.StatusText = "PDF-Import wird abgebrochen …";
     }
 
+    private void PreviewModelBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!TrainingStudioModelSelectionFocusPolicy.ShouldReleaseFocus(
+                hasSelection: PreviewModelBox.SelectedItem is not null,
+                listHasFocus: PreviewModelBox.IsKeyboardFocusWithin))
+            return;
+
+        // Fokus ans Fenster zurueck, damit A/K/V und die Pfeiltasten sofort wieder
+        // greifen. Nicht auf das Bild: ein Image ist in WPF nicht fokussierbar,
+        // der Fokus bliebe still auf der Auswahlliste stehen.
+        Keyboard.Focus(this);
+    }
+
     private void TrainingStudioWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         var decision = TrainingStudioKeyboardShortcutPolicy.Resolve(
