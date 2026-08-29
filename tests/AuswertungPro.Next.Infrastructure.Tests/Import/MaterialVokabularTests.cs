@@ -83,7 +83,6 @@ public sealed class MaterialVokabularTests
     [Theory]
     [InlineData("Guss")]
     [InlineData("GFK")]
-    [InlineData("Glasfaser")]
     public void Ein_Altwert_ohne_sicheres_Gegenstueck_wird_nicht_geraten(string altwert)
     {
         // "Guss" allein sagt nicht, ob duktil oder Grauguss. "GFK" ist nicht dasselbe
@@ -168,5 +167,68 @@ public sealed class MaterialVokabularTests
         // aus dem alten Normalisierer, der Unterstriche ersetzte, wenn er einen Wert
         // nicht kannte. Ohne diese Zeile faellt es aus der Auswahlliste.
         Assert.Equal(norm, MaterialVokabular.NachNorm(MaterialVokabular.Normalisieren(gespeichert)));
+    }
+
+    [Fact]
+    public void Die_Auswahlliste_enthaelt_genau_einen_Eintrag_je_Begriff()
+    {
+        // Entscheid Pascal: exakt die AWU-Begriffe, keine zweite Schreibweise
+        // daneben. "PVC" wird weiterhin GELESEN, steht aber nicht mehr zur Auswahl.
+        Assert.DoesNotContain("PVC", MaterialVokabular.Auswahl);
+        Assert.DoesNotContain("PE", MaterialVokabular.Auswahl);
+        Assert.DoesNotContain("PP", MaterialVokabular.Auswahl);
+        Assert.DoesNotContain("Beton Normalbeton", MaterialVokabular.Auswahl);
+
+        Assert.Equal("Polyvinylchlorid", MaterialVokabular.Normalisieren("PVC"));
+        Assert.Equal("Normalbeton", MaterialVokabular.Normalisieren("Beton Normalbeton"));
+
+        // Keine Dublette: jeder Eintrag genau einmal.
+        Assert.Equal(
+            MaterialVokabular.Auswahl.Count,
+            MaterialVokabular.Auswahl.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    [Theory]
+    [InlineData("Guss")]
+    [InlineData("GFK")]
+    public void Altwerte_ohne_Normziel_bleiben_waehlbar_liefern_aber_nichts(string altwert)
+    {
+        // Sie stehen in Bestandsprojekten. Faellt der Eintrag aus der Liste, zeigt
+        // das Feld leer an, obwohl ein Wert gespeichert ist. In die XTF koennen sie
+        // nie geraten - NachNorm liefert null, also wird nichts geschrieben.
+        Assert.Contains(altwert, MaterialVokabular.Auswahl);
+        Assert.Null(MaterialVokabular.NachNorm(altwert));
+    }
+
+    [Fact]
+    public void Jeder_waehlbare_Eintrag_liefert_entweder_einen_Normwert_oder_gar_nichts()
+    {
+        // Damit kann kein Listeneintrag jemals einen ungueltigen Wert in die XTF
+        // schreiben - der Kern von "kompatibel werden und bleiben".
+        var gueltig = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "andere","Asbestzement","Beton_Normalbeton","Beton_Ortsbeton","Beton_Pressrohrbeton",
+            "Beton_Spezialbeton","Beton_unbekannt","Faserzement","Gebrannte_Steine","Guss_duktil",
+            "Guss_Grauguss","Kunststoff_Epoxydharz","Kunststoff_Hartpolyethylen",
+            "Kunststoff_Polyester_GUP","Kunststoff_Polyethylen","Kunststoff_Polypropylen",
+            "Kunststoff_Polyvinilchlorid","Kunststoff_unbekannt","Stahl","Stahl_rostfrei",
+            "Steinzeug","Ton","unbekannt","Zement"
+        };
+
+        foreach (var eintrag in MaterialVokabular.Auswahl.Where(a => a.Length > 0))
+        {
+            var norm = MaterialVokabular.NachNorm(eintrag);
+            Assert.True(norm is null || gueltig.Contains(norm),
+                $"'{eintrag}' liefert '{norm}' - das ist kein Wert der Modelldatei.");
+        }
+    }
+
+    [Fact]
+    public void Glasfaser_und_GFK_sind_derselbe_Eintrag()
+    {
+        // Zwei Namen fuer dieselbe Sache duerfen nicht zwei Listeneintraege sein -
+        // Entscheid Pascal: genau ein Begriff je Werkstoff.
+        Assert.Equal("GFK", MaterialVokabular.Normalisieren("Glasfaser"));
+        Assert.DoesNotContain("Glasfaser", MaterialVokabular.Auswahl);
     }
 }

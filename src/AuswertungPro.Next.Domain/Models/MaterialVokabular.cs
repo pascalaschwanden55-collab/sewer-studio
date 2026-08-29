@@ -30,7 +30,12 @@ public static class MaterialVokabular
     /// Ein Werkstoff mit allen Schreibweisen, die dafuer gelesen werden, dem Begriff
     /// im Programm und der Schreibweise in der SIA405-Datei.
     /// </summary>
-    private sealed record Konzept(string[] Gelesen, string App, string Norm);
+    /// <summary>
+    /// Ein Werkstoff. <paramref name="Norm"/> ist <c>null</c>, wenn die Norm dafuer
+    /// keinen Wert kennt — der Begriff bleibt dann waehlbar und lesbar, kann aber
+    /// nie in eine XTF geraten.
+    /// </summary>
+    private sealed record Konzept(string[] Gelesen, string App, string? Norm);
 
     private static readonly Konzept[] Konzepte =
     [
@@ -80,7 +85,19 @@ public static class MaterialVokabular
 
         // --- Sammelwerte der Norm ---
         new(["andere"], "andere", "andere"),
-        new(["unbekannt"], "unbekannt", "unbekannt")
+        new(["unbekannt"], "unbekannt", "unbekannt"),
+
+        // --- Altwerte ohne Normziel ---
+        // Sie stehen in Bestandsprojekten und bleiben deshalb waehlbar; faellt der
+        // Eintrag aus der Liste, zeigt das Feld leer an, obwohl ein Wert gespeichert
+        // ist. In eine XTF koennen sie nie geraten: NachNorm liefert null, also
+        // wird nichts geschrieben.
+        //
+        // "Guss" allein sagt nicht, ob duktil oder Grauguss - beide stehen einzeln
+        // in der Liste. "GFK" ist nicht dasselbe wie Kunststoff_Polyester_GUP.
+        new(["guss"], "Guss", null),
+        new(["gfk", "glasfaser", "glasfaserverstaerkter kunststoff",
+             "glasfaserverstärkter kunststoff (gfk)"], "GFK", null)
     ];
 
     /// <summary>
@@ -89,27 +106,17 @@ public static class MaterialVokabular
     /// sagt nicht, ob duktil oder Grauguss, und "GFK" ist nicht dasselbe wie
     /// "Kunststoff_Polyester_GUP". Raten waere hier schlimmer als schweigen.
     /// </summary>
-    private static readonly string[] AltwerteOhneNorm =
-        ["Guss", "GFK", "Glasfaser"];
+
 
     /// <summary>
-    /// Kurzformen, die bis heute in der Auswahlliste standen und in bestehenden
-    /// Projekten gespeichert sind. Sie bleiben waehlbar, sonst zeigte ein altes
-    /// Projekt an dieser Stelle nichts mehr an. Ueber die Leselisten finden sie
-    /// trotzdem ihren Normwert.
-    /// </summary>
-    private static readonly string[] AltweisenMitNorm = ["PVC", "PE", "PP"];
-
-    /// <summary>
-    /// Die Auswahl im Programm: leer, die Begriffe aller Konzepte und die Altwerte
-    /// ohne Normentsprechung. Letztere muessen drinbleiben, sonst zeigt ein
-    /// bestehendes Projekt an dieser Stelle nichts mehr an.
+    /// Die Auswahl im Programm: leer plus genau ein Begriff je Werkstoff.
+    /// Keine zweite Schreibweise daneben — "PVC" wird weiterhin gelesen, steht aber
+    /// nicht zur Auswahl. Damit kann kein Listeneintrag einen ungueltigen Wert in
+    /// eine XTF schreiben.
     /// </summary>
     public static readonly IReadOnlyList<string> Auswahl = new ReadOnlyCollection<string>(
         new[] { "" }
             .Concat(Konzepte.Select(k => k.App))
-            .Concat(AltwerteOhneNorm)
-            .Concat(AltweisenMitNorm)
             .Distinct(StringComparer.Ordinal)
             .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
             .ToList());
