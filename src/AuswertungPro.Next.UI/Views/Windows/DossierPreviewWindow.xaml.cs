@@ -39,6 +39,7 @@ public partial class DossierPreviewWindow : Window
     private readonly IPlanImageConverter _planImages;
     private readonly IPlanImageAdjuster _planAdjuster;
     private readonly IDossierPlanPublicationService _planPublications;
+    private bool _hatAenderungen;
     private readonly DossierPlanWorkSession _planWorkSession = new();
     private readonly IDossierOutputPreviewService _outputPreview;
     private readonly IDossierPreviewPageRasterizer _previewPages;
@@ -245,6 +246,10 @@ public partial class DossierPreviewWindow : Window
     /// </summary>
     private void ZeichneBlatt()
     {
+        // Einziger Weg, auf dem eine Eingabe ins Dossier laeuft - deshalb hier
+        // der Merker fuer die Rueckfrage beim Verwerfen.
+        _hatAenderungen = true;
+
         _values = DossierWordTemplateExportService.BuildValues(
             _request,
             DossierPreviewFieldPanel.VerzeichnisStart(_document, _dossier));
@@ -500,6 +505,29 @@ public partial class DossierPreviewWindow : Window
     }
 
     private void OnCancel(object sender, RoutedEventArgs e) => DialogResult = false;
+
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        if (DossierPreviewCancelPolicy.NeedsDiscardConfirmation(_hatAenderungen, DialogResult == true)
+            && !DarfVerworfenWerden())
+        {
+            e.Cancel = true;
+            return;
+        }
+
+        base.OnClosing(e);
+    }
+
+    private bool DarfVerworfenWerden()
+        => MessageBox.Show(
+            this,
+            "Die in dieser Vorschau gemachten Eingaben gehen verloren."
+            + Environment.NewLine + Environment.NewLine
+            + "Wirklich verwerfen?",
+            "Dossier-Vorschau",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No) == MessageBoxResult.Yes;
 
     protected override void OnClosed(EventArgs e)
     {
