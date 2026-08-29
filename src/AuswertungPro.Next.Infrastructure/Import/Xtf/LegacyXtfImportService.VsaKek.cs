@@ -181,14 +181,13 @@ public sealed partial class LegacyXtfImportService
                 }
             }
 
-            // LL berechnen wie PS
+            // SchadenlageAnfang/-Ende sind Uhrlagen im Rohrquerschnitt und keine
+            // Laengenpositionen. Eine Streckenlaenge darf daraus nie entstehen.
             double ll = 0.0;
-            if (string.Equals(s.Streckenschaden, "true", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(s.Streckenschaden, "true", StringComparison.OrdinalIgnoreCase)
+                && TryParseDouble(s.Quantifizierung1, out var q1))
             {
-                if (TryParseDouble(s.SchadenlageAnfang, out var anf) && TryParseDouble(s.SchadenlageEnde, out var end) && end > anf)
-                    ll = end - anf;
-                else if (TryParseDouble(s.Quantifizierung1, out var q1))
-                    ll = q1;
+                ll = q1;
             }
             s.LL = ll;
             finding.LL = ll;
@@ -300,7 +299,7 @@ public sealed partial class LegacyXtfImportService
                 {
                     var code = (f.KanalSchadencode ?? "").Trim().ToUpperInvariant();
                     if (code.Length == 0) continue;
-                    var meter = f.MeterStart ?? f.SchadenlageAnfang;
+                    var meter = f.MeterStart;
                     var key = $"{code}|{(meter.HasValue ? meter.Value.ToString("F2") : "")}";
                     if (!seen.Add(key)) continue;
 

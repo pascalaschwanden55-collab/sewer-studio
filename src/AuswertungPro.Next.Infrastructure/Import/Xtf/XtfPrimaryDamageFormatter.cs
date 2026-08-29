@@ -39,7 +39,7 @@ public static class XtfPrimaryDamageFormatter
             return string.Empty;
 
         var parts = new List<string>();
-        var meter = finding.MeterStart ?? finding.SchadenlageAnfang;
+        var meter = finding.MeterStart;
         if (meter.HasValue)
             parts.Add($"{meter.Value:0.00}m");
 
@@ -76,7 +76,7 @@ public static class XtfPrimaryDamageFormatter
             if (code.Length == 0)
                 continue;
 
-            var meter = finding.MeterStart ?? finding.SchadenlageAnfang;
+            var meter = finding.MeterStart;
             var key = $"{code}|{(meter.HasValue ? meter.Value.ToString("F2") : "")}";
             if (!seen.Add(key))
                 continue;

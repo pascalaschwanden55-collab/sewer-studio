@@ -35,14 +35,14 @@ public sealed class ProtokollPdfEhrlichkeitTests
         return e;
     }
 
-    private static string Svg(ProtocolEntry eintrag)
+    private static string Svg(ProtocolEntry eintrag, bool? flowDown = true)
         => HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(
             length: 40.0,
             entries: new[] { eintrag },
             photoNumbers: null,
             startNode: "80638",
             endNode: "80631",
-            flowDown: true);
+            flowDown: flowDown);
 
     [Fact]
     public void Grafik_ohne_erfasste_Uhrlage_behauptet_keine()
@@ -72,15 +72,23 @@ public sealed class ProtokollPdfEhrlichkeitTests
     // erscheint auf dem Blatt LINKS, ihr Links (7-11 Uhr) RECHTS. 12 und 6 Uhr
     // liegen ueber/unter dem Rohr und werden als Kreis AUF dem Rohr gezeichnet.
 
-    private static double? StutzenEndeX(string svg)
+    private static (double X1, double Y1, double X2, double Y2)? StutzenKoordinaten(string svg)
     {
         // Der Anschluss-Stutzen ist die einzige 3px-Linie in Grau #6B7280.
         var treffer = System.Text.RegularExpressions.Regex.Match(
-            svg, @"<line [^>]*x2='([0-9.]+)'[^>]*stroke='#6B7280' stroke-width='3'");
+            svg,
+            @"<line [^>]*x1='([0-9.]+)' y1='([0-9.]+)' x2='([0-9.]+)' y2='([0-9.]+)'[^>]*stroke='#6B7280' stroke-width='3'");
         return treffer.Success
-            ? double.Parse(treffer.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture)
+            ? (
+                double.Parse(treffer.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture),
+                double.Parse(treffer.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture),
+                double.Parse(treffer.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture),
+                double.Parse(treffer.Groups[4].Value, System.Globalization.CultureInfo.InvariantCulture))
             : null;
     }
+
+    private static double? StutzenEndeX(string svg)
+        => StutzenKoordinaten(svg)?.X2;
 
     [Theory]
     [InlineData(1)]
@@ -106,6 +114,58 @@ public sealed class ProtokollPdfEhrlichkeitTests
         Assert.NotNull(x2);
         Assert.True(x2 > HaltungsgrafikSvgBuilder.LineX,
             $"{uhr} Uhr muss rechts der Rohrachse liegen (x2={x2}).");
+    }
+
+    [Theory]
+    [InlineData(3)]
+    [InlineData(9)]
+    public void Drei_und_neun_Uhr_werden_waagrecht_gezeichnet(int uhr)
+    {
+        var stutzen = StutzenKoordinaten(Svg(Anschluss(uhr)));
+
+        Assert.NotNull(stutzen);
+        Assert.Equal(stutzen.Value.Y1, stutzen.Value.Y2, precision: 6);
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(10)]
+    public void Zwei_und_zehn_Uhr_werden_nach_oben_gezeichnet(int uhr)
+    {
+        var stutzen = StutzenKoordinaten(Svg(Anschluss(uhr)));
+
+        Assert.NotNull(stutzen);
+        Assert.True(stutzen.Value.Y2 < stutzen.Value.Y1,
+            $"{uhr} Uhr muss vom Rohr aus nach oben zeigen.");
+    }
+
+    [Theory]
+    [InlineData(4)]
+    [InlineData(8)]
+    public void Vier_und_acht_Uhr_werden_nach_unten_gezeichnet(int uhr)
+    {
+        var stutzen = StutzenKoordinaten(Svg(Anschluss(uhr)));
+
+        Assert.NotNull(stutzen);
+        Assert.True(stutzen.Value.Y2 > stutzen.Value.Y1,
+            $"{uhr} Uhr muss vom Rohr aus nach unten zeigen.");
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(8)]
+    [InlineData(9)]
+    [InlineData(10)]
+    public void Fliessrichtung_spiegelt_den_Anschluss_nicht(int uhr)
+    {
+        var mitFluss = StutzenKoordinaten(Svg(Anschluss(uhr), flowDown: true));
+        var gegenFluss = StutzenKoordinaten(Svg(Anschluss(uhr), flowDown: false));
+
+        Assert.NotNull(mitFluss);
+        Assert.NotNull(gegenFluss);
+        Assert.Equal(mitFluss.Value, gegenFluss.Value);
     }
 
     // ── Uhrlage aus dem Befundtext ──────────────────────────────────────────

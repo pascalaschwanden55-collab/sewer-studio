@@ -84,6 +84,27 @@ public sealed class VsaFindingProtocolSynchronizerTests
     }
 
     [Fact]
+    public void Sync_alte_gespiegelte_Meterwerte_werden_nicht_als_Uhrlage_geschrieben()
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "100-200", FieldSource.Xtf, userEdited: false);
+        var finding = new VsaFinding
+        {
+            KanalSchadencode = "BCAAA",
+            Raw = "Anschluss bei 9 Uhr",
+            MeterStart = 3,
+            MeterEnd = 3,
+            SchadenlageAnfang = 3,
+            SchadenlageEnde = 3
+        };
+
+        VsaFindingProtocolSynchronizer.Sync(record, [finding]);
+
+        var entry = Assert.Single(record.Protocol!.Current.Entries);
+        Assert.Null(entry.CodeMeta);
+    }
+
+    [Fact]
     public void Sync_HistoryNutztTimestampFallback_BewahrtWerteUndDedupliziertFotos()
     {
         var timestampEntry = new ProtocolEntry

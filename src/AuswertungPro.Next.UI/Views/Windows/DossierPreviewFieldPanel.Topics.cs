@@ -334,7 +334,7 @@ internal sealed partial class DossierPreviewFieldPanel
         {
             var hinweis = new TextBlock
             {
-                Text = "Kopiert die aktuelle Liste hierher: zuerst alle Haltungen, danach alle Schächte. Die Kopie kann anschliessend frei bearbeitet werden.",
+                Text = "Kopiert die aktuelle Liste hierher: zuerst alle Haltungen, danach alle Schächte. Zustandsklassen werden in ihrer Farbe markiert. Die Kopie kann anschliessend frei bearbeitet werden.",
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 11,
                 Margin = new Thickness(0, 3, 0, 5)
@@ -343,7 +343,7 @@ internal sealed partial class DossierPreviewFieldPanel
             wurzel.Children.Add(hinweis);
 
             var import = Kleiner("Import aus Liste",
-                "Ersetzt dieses Feld durch eine bearbeitbare Kopie der aktuellen Haltungen und Schächte. Die Projektdaten bleiben unverändert.",
+                "Ersetzt dieses Feld durch eine bearbeitbare Kopie der aktuellen Haltungen und Schächte. Z0 bis Z4 erhalten ihre Zustandsfarbe. Die Projektdaten bleiben unverändert.",
                 () => ImportiereBauteilliste(titel, box, textTarget));
 
             import.IsEnabled = !string.IsNullOrWhiteSpace(
@@ -397,13 +397,17 @@ internal sealed partial class DossierPreviewFieldPanel
         RichTextBox box,
         DossierPreviewTarget textTarget)
     {
-        var text = DossierTopicEditing.ImportComponentListForDossier(
+        var imported = DossierTopicEditing.ImportFormattedComponentListForDossier(
             _dossier, titel, _werte());
 
         _geladeneFormatfelder.Add(box);
         try
         {
-            DossierTopicRichTextEditor.SetValue(box, new DossierTopicRow { Text = text });
+            DossierTopicRichTextEditor.SetValue(box, new DossierTopicRow
+            {
+                Text = imported.Text,
+                StyleRanges = imported.StyleRanges.ToList()
+            });
         }
         finally
         {

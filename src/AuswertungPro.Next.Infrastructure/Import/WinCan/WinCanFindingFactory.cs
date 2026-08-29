@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Common;
@@ -51,8 +52,16 @@ internal static class WinCanFindingFactory
                 Raw = entry.Beschreibung,
                 MeterStart = meterStart,
                 MeterEnd = meterEnd,
-                SchadenlageAnfang = meterStart,
-                SchadenlageEnde = meterEnd,
+                // Schadenlage ist die Uhrlage im Rohrquerschnitt und darf nie
+                // mit dem Meterstand entlang der Haltung befuellt werden.
+                SchadenlageAnfang = ReadClock(entry, "vsa.uhr.von", "ClockPos1", "Uhr_von")
+                                      ?? (ProtocolTextHelpers.IsLateralConnection(entry)
+                                          ? ProtocolTextHelpers.ExtractClockHourFromText(entry.Beschreibung)
+                                          : null),
+                SchadenlageEnde = ReadClock(entry, "vsa.uhr.bis", "ClockPos2", "Uhr_bis")
+                                    ?? (ProtocolTextHelpers.IsLateralConnection(entry)
+                                        ? ProtocolTextHelpers.ExtractClockHourEndFromText(entry.Beschreibung)
+                                        : null),
                 MPEG = entry.Mpeg,
                 FotoPath = entry.FotoPaths.Count > 0 ? entry.FotoPaths[0] : null
             };
@@ -81,4 +90,22 @@ internal static class WinCanFindingFactory
     /// </summary>
     private static string? ExtractQuantValue(string beschreibung)
         => WinCanValueNormalizer.ExtractQuantValue(beschreibung);
+
+    private static double? ReadClock(ProtocolEntry entry, params string[] keys)
+    {
+        var parameters = entry.CodeMeta?.Parameters;
+        if (parameters is null || parameters.Count == 0)
+            return null;
+
+        foreach (var key in keys)
+        {
+            if (!parameters.TryGetValue(key, out var raw))
+                continue;
+
+            if (ProtocolTextHelpers.TryParseClockHourValue(raw, out var hour))
+                return hour;
+        }
+
+        return null;
+    }
 }

@@ -49,19 +49,22 @@ public sealed class ConnectionCountEstimatorTests
                 new()
                 {
                     KanalSchadencode = "BCAEA",
-                    SchadenlageAnfang = 7.52,
+                    MeterStart = 7.52,
+                    SchadenlageAnfang = 12,
                     Raw = "Anschluss eingespitzt, bei 12 Uhr"
                 },
                 new()
                 {
                     KanalSchadencode = "BAHC",
-                    SchadenlageAnfang = 7.53,
+                    MeterStart = 7.53,
+                    SchadenlageAnfang = 12,
                     Raw = "Anschluss unvollstaendig eingebunden, bei 12 Uhr"
                 },
                 new()
                 {
                     KanalSchadencode = "BCAAA",
-                    SchadenlageAnfang = 21.40,
+                    MeterStart = 21.40,
+                    SchadenlageAnfang = 3,
                     Raw = "Anschluss mit Formstueck, offen bei 3 Uhr"
                 }
             }
@@ -70,6 +73,64 @@ public sealed class ConnectionCountEstimatorTests
         var result = ConnectionCountEstimator.EstimateFromRecord(record);
 
         Assert.Equal(2, result);
+    }
+
+    [Fact]
+    public void EstimateFromRecord_SameClockAtDifferentMeters_CountsSeparately()
+    {
+        var record = new HaltungRecord
+        {
+            VsaFindings =
+            [
+                new VsaFinding
+                {
+                    KanalSchadencode = "BCAAA",
+                    MeterStart = 2.62,
+                    SchadenlageAnfang = 9,
+                    Raw = "Anschluss mit Formstueck, offen bei 9 Uhr"
+                },
+                new VsaFinding
+                {
+                    KanalSchadencode = "BCAAA",
+                    MeterStart = 5.20,
+                    SchadenlageAnfang = 9,
+                    Raw = "Anschluss mit Formstueck, offen bei 9 Uhr"
+                }
+            ]
+        };
+
+        var result = ConnectionCountEstimator.EstimateFromRecord(record);
+
+        Assert.Equal(2, result);
+    }
+
+    [Fact]
+    public void EstimateFromRecord_SupplementalCodeAtSameMeterAndClock_IsDeduplicated()
+    {
+        var record = new HaltungRecord
+        {
+            VsaFindings =
+            [
+                new VsaFinding
+                {
+                    KanalSchadencode = "BCAAA",
+                    MeterStart = 2.62,
+                    SchadenlageAnfang = 9,
+                    Raw = "Anschluss mit Formstueck, offen bei 9 Uhr"
+                },
+                new VsaFinding
+                {
+                    KanalSchadencode = "BAHC",
+                    MeterStart = 2.62,
+                    SchadenlageAnfang = 9,
+                    Raw = "Anschluss unvollstaendig eingebunden, bei 9 Uhr"
+                }
+            ]
+        };
+
+        var result = ConnectionCountEstimator.EstimateFromRecord(record);
+
+        Assert.Equal(1, result);
     }
 
     [Fact]

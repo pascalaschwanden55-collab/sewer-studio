@@ -209,9 +209,11 @@ public partial class DossierPreviewWindow : Window
         if (PageList.SelectedItem is not DossierOutputPreviewNavigationItem item)
             return;
 
-        FieldsHeader.Text = item.EditorPage is null
-            ? $"Beilage — Seite {item.OutputPage.Number} · Original, wird nicht verändert"
-            : $"{item.ChapterTitle} — Seite {item.OutputPage.Number}";
+        FieldsHeader.Text = item.OutputPage.IsConditionClassExplanation
+            ? $"Erklärblatt Zustandsklassen — Seite {item.OutputPage.Number} · automatisch erzeugt"
+            : item.EditorPage is null
+                ? $"Beilage — Seite {item.OutputPage.Number} · Original, wird nicht verändert"
+                : $"{item.ChapterTitle} — Seite {item.OutputPage.Number}";
 
         // Die Eingaben gelten fuer das GANZE Word-Dokument, nicht fuer die
         // gewaehlte Seite. Damit findet ein Klick sein Feld auch dann, wenn der

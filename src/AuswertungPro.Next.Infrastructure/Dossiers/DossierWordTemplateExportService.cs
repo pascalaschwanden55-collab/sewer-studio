@@ -26,6 +26,11 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
 {
     private static readonly CultureInfo Ch = CultureInfo.GetCultureInfo("de-CH");
 
+    private sealed record ComponentDescription(
+        string Text,
+        string ConditionClass,
+        int? ConditionTokenStart);
+
     /// <summary>Das feste Firmenlogo, ausgeliefert neben der Word-Vorlage.</summary>
     public const string LogoFileName = "Dossier_Logo.png";
 
@@ -283,6 +288,31 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         return values;
     }
 
+    private static Dictionary<string, string> MitBauteillistenFormat(
+        Dictionary<string, string> values,
+        DossierTopicTextFormatting.FormattedText generatedList)
+    {
+        var text = DossierTopicComponentListComposer.ComponentText(values);
+        values.TryGetValue(
+            DossierTopicComponentListComposer.StyleValueKey,
+            out var encodedStyles);
+        var existingStyles = DossierTopicTextFormatting.Decode(encodedStyles);
+        var conditionStyles = string.Equals(
+                text,
+                generatedList.Text,
+                StringComparison.Ordinal)
+            ? generatedList.StyleRanges
+            : Array.Empty<DossierTextStyleRange>();
+
+        values[DossierTopicComponentListComposer.StyleValueKey] =
+            DossierTopicTextFormatting.Encode(
+                DossierTopicTextFormatting.OverlayStyles(
+                    text,
+                    existingStyles,
+                    conditionStyles));
+        return values;
+    }
+
     public static Dictionary<string, string> BuildValues(
         DossierExportRequest request,
         DossierTocAttachmentStart? tocStart = null)
@@ -294,8 +324,9 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         var snapshot = request.Snapshot;
         var today = DateTime.Now;
         var verzeichnisStart = tocStart ?? new DossierTocAttachmentStart(4, 5);
+        var componentList = BuildNumberedComponents(snapshot);
 
-        return MitFormaten(MitEigenenWerten(
+        return MitBauteillistenFormat(MitFormaten(MitEigenenWerten(
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["Gebietstitel"] = resolved.AreaTitle,
@@ -351,7 +382,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                 ["Aktennotiz"] = d.FileNote,
                 ["Haltungen_Text"] = BuildHoldingsText(snapshot),
                 ["Schaechte_Text"] = BuildShaftsText(snapshot),
-                [DossierTopicComponentListComposer.ValueKey] = BuildNumberedComponentsText(snapshot),
+                [DossierTopicComponentListComposer.ValueKey] = componentList.Text,
                 ["Uebersichtsplan_BreiteCm"] = PlanWidthCm(d)
                 .ToString("0.###", CultureInfo.InvariantCulture),
                 ["Anzahl_Schaechte"] = snapshot.ShaftCount.ToString(CultureInfo.InvariantCulture),
@@ -364,7 +395,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
                 verzeichnisStart.FirstNumber,
                 verzeichnisStart.FirstPageNumber),
                 ["Haltungen_Summe"] = BuildHoldingsSummary(snapshot, today)
-            }, d), d);
+            }, d), d), componentList);
     }
 
     /// <summary>
@@ -436,23 +467,53 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         return string.Join(Environment.NewLine, zeilen);
     }
 
-    private static string BuildNumberedComponentsText(DossierSnapshot snapshot)
+    private static DossierTopicTextFormatting.FormattedText BuildNumberedComponents(
+        DossierSnapshot snapshot)
     {
         var lines = new List<string>();
+        var ranges = new List<DossierTextStyleRange>();
         var number = 1;
+        var textLength = 0;
 
         foreach (var holding in snapshot.Holdings)
-            lines.Add($"{number++}. Haltung {BuildHoldingDescription(holding)}".TrimEnd());
+            AddLine("Haltung", BuildHoldingComponentDescription(holding));
 
         foreach (var shaft in snapshot.Shafts)
-            lines.Add($"{number++}. Schacht {BuildShaftDescription(shaft)}".TrimEnd());
+            AddLine("Schacht", BuildShaftComponentDescription(shaft));
 
         return lines.Count == 0
-            ? "Keine Leitungen zugeordnet."
-            : string.Join("\n", lines);
+            ? new DossierTopicTextFormatting.FormattedText(
+                "Keine Leitungen zugeordnet.",
+                Array.Empty<DossierTextStyleRange>())
+            : new DossierTopicTextFormatting.FormattedText(
+                string.Join("\n", lines),
+                ranges);
+
+        void AddLine(string componentType, ComponentDescription description)
+        {
+            var prefix = $"{number++}. {componentType} ";
+            var line = (prefix + description.Text).TrimEnd();
+            var lineStart = textLength + (lines.Count > 0 ? 1 : 0);
+
+            if (description.ConditionTokenStart is int conditionStart)
+            {
+                var range = DossierComponentConditionClassFormatting.CreateRange(
+                    description.ConditionClass,
+                    lineStart + prefix.Length + conditionStart);
+                if (range is not null)
+                    ranges.Add(range);
+            }
+
+            lines.Add(line);
+            textLength = lineStart + line.Length;
+        }
     }
 
     private static string BuildHoldingDescription(DossierHoldingLine holding)
+        => BuildHoldingComponentDescription(holding).Text;
+
+    private static ComponentDescription BuildHoldingComponentDescription(
+        DossierHoldingLine holding)
     {
         var parts = new List<string> { holding.HoldingName };
 
@@ -463,9 +524,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         if (!string.IsNullOrWhiteSpace(length))
             parts.Add(length);
 
-        var condition = FormatConditionInline(holding.ConditionClass);
-        if (!string.IsNullOrWhiteSpace(condition))
-            parts.Add(condition);
+        var conditionStart = AddConditionPart(parts, holding.ConditionClass);
 
         if (!string.IsNullOrWhiteSpace(holding.Measures))
             parts.Add(holding.Measures);
@@ -473,7 +532,10 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         if (holding.NetCost > 0m)
             parts.Add(FormatChf(holding.NetCost));
 
-        return string.Join(" · ", parts);
+        return new ComponentDescription(
+            string.Join(" · ", parts),
+            holding.ConditionClass,
+            conditionStart);
     }
 
     /// <summary>
@@ -482,6 +544,10 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
     /// Was fehlt, bleibt weg statt als Strich zu erscheinen.
     /// </summary>
     private static string BuildShaftDescription(DossierShaftLine shaft)
+        => BuildShaftComponentDescription(shaft).Text;
+
+    private static ComponentDescription BuildShaftComponentDescription(
+        DossierShaftLine shaft)
     {
         var parts = new List<string> { shaft.Number };
 
@@ -491,9 +557,7 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         if (!string.IsNullOrWhiteSpace(shaft.Funktion))
             parts.Add(shaft.Funktion);
 
-        var condition = FormatConditionInline(shaft.ConditionClass);
-        if (!string.IsNullOrWhiteSpace(condition))
-            parts.Add(condition);
+        var conditionStart = AddConditionPart(parts, shaft.ConditionClass);
 
         if (!string.IsNullOrWhiteSpace(shaft.Measures))
             parts.Add(shaft.Measures);
@@ -501,7 +565,23 @@ public sealed class DossierWordTemplateExportService : IDossierWordExportService
         if (shaft.NetCost > 0m)
             parts.Add(FormatChf(shaft.NetCost));
 
-        return string.Join(" · ", parts);
+        return new ComponentDescription(
+            string.Join(" · ", parts),
+            shaft.ConditionClass,
+            conditionStart);
+    }
+
+    private static int? AddConditionPart(
+        ICollection<string> parts,
+        string conditionClass)
+    {
+        var condition = FormatConditionInline(conditionClass);
+        if (string.IsNullOrWhiteSpace(condition))
+            return null;
+
+        var tokenStart = parts.Sum(part => part.Length) + (parts.Count * " · ".Length);
+        parts.Add(condition);
+        return tokenStart;
     }
 
     private static string BuildHoldingsSummary(DossierSnapshot snapshot, DateTime today)

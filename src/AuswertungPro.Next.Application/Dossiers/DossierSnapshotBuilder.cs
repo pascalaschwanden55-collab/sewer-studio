@@ -18,7 +18,17 @@ public sealed record DossierHoldingLine(
     double? LengthMeters,
     string ConditionClass,
     decimal NetCost,
-    string Measures);
+    string Measures)
+{
+    /// <summary>Rohrmaterial aus den Stammdaten, noch ohne Anzeige-Umschreibung.</summary>
+    public string PipeMaterial { get; init; } = "";
+
+    /// <summary>Nennweite aus den Stammdaten, als verlustfreier Anzeigetext.</summary>
+    public string NominalDiameterMm { get; init; } = "";
+
+    /// <summary>Nutzungsart in der aktuellen Schreibweise der Anwendung.</summary>
+    public string UsageType { get; init; } = "";
+}
 
 /// <summary>Ein Schacht der Liegenschaft.</summary>
 /// <param name="Funktion">
@@ -250,7 +260,13 @@ public static class DossierSnapshotBuilder
             DashboardStatisticsBuilder.NormalizeZustandsklasse(
                 record.GetFieldValue(FieldKeys.ConditionClass)),
             ResolveNetTotal(cost),
-            (record.GetFieldValue(FieldKeys.RecommendedRehabilitationMeasures) ?? string.Empty).Trim());
+            (record.GetFieldValue(FieldKeys.RecommendedRehabilitationMeasures) ?? string.Empty).Trim())
+        {
+            PipeMaterial = (record.GetFieldValue(FieldKeys.PipeMaterial) ?? string.Empty).Trim(),
+            NominalDiameterMm = (record.GetFieldValue(FieldKeys.NominalDiameterMm) ?? string.Empty).Trim(),
+            UsageType = NutzungsartVokabular.Normalisieren(
+                record.GetFieldValue(FieldKeys.UsageType))
+        };
     }
 
     private static ProjectCostStore BuildScopedCostStore(

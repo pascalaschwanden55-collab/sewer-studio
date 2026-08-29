@@ -44,16 +44,14 @@ public static class ProtocolTextHelpers
         var parameters = entry.CodeMeta?.Parameters;
         if (parameters is { Count: > 0 })
         {
-            // Prioritaet: vsa.uhr.von > ClockPos1 > Quantifizierung1
-            var raw = ProtocolPdfObservationText.GetParam(parameters, "vsa.uhr.von")
-                   ?? ProtocolPdfObservationText.GetParam(parameters, "ClockPos1")
-                   ?? ProtocolPdfObservationText.GetParam(parameters, "Quantifizierung1");
-
-            if (!string.IsNullOrWhiteSpace(raw))
+            // Nicht den ersten vorhandenen, sondern den ersten gueltigen Wert
+            // verwenden. In aelteren WinCan-Importen wurde der Meterstand
+            // versehentlich auch als vsa.uhr.von gespeichert. Dadurch wurde
+            // z.B. 2.62136 m als "2 Uhr" gezeichnet, obwohl ClockPos1 = 9 war.
+            foreach (var key in new[] { "vsa.uhr.von", "ClockPos1", "Uhr_von" })
             {
-                // Versuche die Uhrzeit zu parsen (z.B. "3", "3 Uhr", "03:00", "9")
-                var cleaned = Regex.Match(raw.Trim(), @"(\d{1,2})");
-                if (cleaned.Success && int.TryParse(cleaned.Groups[1].Value, out var hour) && hour >= 1 && hour <= 12)
+                var raw = ProtocolPdfObservationText.GetParam(parameters, key);
+                if (TryParseClockHourValue(raw, out var hour))
                     return hour;
             }
         }
@@ -63,7 +61,32 @@ public static class ProtocolTextHelpers
         // erfasste Lage steht dort nur als Text ("... offen bei 2 Uhr",
         // "von 4 Uhr bis 8 Uhr"). Das ist erfasste Information, keine Erfindung.
         // Bei einem Bereich gilt der VON-Wert (Start der Ausdehnung).
-        return ExtractClockHourFromText(entry.Beschreibung);
+        return IsLateralConnection(entry)
+            ? ExtractClockHourFromText(entry.Beschreibung)
+            : null;
+    }
+
+    /// <summary>
+    /// Liest einen einzelnen Uhrlagenwert. Erlaubt sind die in Importen
+    /// vorkommenden Formen wie "3", "03", "3 Uhr", "03:00" und "3.00".
+    /// Nicht-nullige Dezimalzahlen sind Meter- oder Messwerte und keine
+    /// gueltigen Uhrlagen.
+    /// </summary>
+    public static bool TryParseClockHourValue(string? raw, out int hour)
+    {
+        hour = 0;
+        if (string.IsNullOrWhiteSpace(raw))
+            return false;
+
+        var value = raw.Trim();
+        var match = Regex.Match(
+            value,
+            @"^(?<hour>\d{1,2})(?:(?:[\.,]0+)|(?::00)|(?:\s*(?:Uhr|h)))?$",
+            RegexOptions.IgnoreCase);
+
+        return match.Success
+               && int.TryParse(match.Groups["hour"].Value, out hour)
+               && hour is >= 1 and <= 12;
     }
 
     /// <summary>Liest "bei X Uhr" / "von X Uhr" / "X Uhr" aus einem Befundtext.</summary>
@@ -91,6 +114,23 @@ public static class ProtocolTextHelpers
         return null;
     }
 
+    /// <summary>Liest den BIS-Wert aus "von X (Uhr) bis Y Uhr".</summary>
+    public static int? ExtractClockHourEndFromText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var match = Regex.Match(
+            text,
+            @"\bvon\s+\d{1,2}\s*(?:Uhr\s*)?bis\s+(\d{1,2})\s*Uhr\b",
+            RegexOptions.IgnoreCase);
+        return match.Success
+               && int.TryParse(match.Groups[1].Value, out var hour)
+               && hour is >= 1 and <= 12
+            ? hour
+            : null;
+    }
+
     /// <summary>Prueft ob ein Protokolleintrag einen Inspektions-Abbruch darstellt (BDC-Codes).</summary>
     public static bool IsAbortCode(ProtocolEntry entry)
     {
@@ -107,11 +147,15 @@ public static class ProtocolTextHelpers
         // BCA* = Bestandsaufnahme Anschluss (Formstueck, Sattelanschluss)
         if (code.StartsWith("BAG", StringComparison.Ordinal) ||
             code.StartsWith("BAH", StringComparison.Ordinal) ||
-            code.StartsWith("BCAA", StringComparison.Ordinal) ||
-            code.StartsWith("BCAB", StringComparison.Ordinal))
+            code.StartsWith("BCA", StringComparison.Ordinal))
             return true;
 
         // Fallback: Beschreibung enthält "Anschluss" oder "Seiteneinlauf"
+        // Ein eindeutiger Fachcode hat Vorrang. Sonst wuerde z.B. BCE
+        // (Rohrende mit Anschluss-Bemerkung) als Seitenanschluss gezeichnet.
+        if (!string.IsNullOrWhiteSpace(code))
+            return false;
+
         var desc = entry.Beschreibung ?? entry.CodeMeta?.Notes ?? "";
         if (desc.Contains("Anschluss", StringComparison.OrdinalIgnoreCase) ||
             desc.Contains("Seiteneinlauf", StringComparison.OrdinalIgnoreCase))

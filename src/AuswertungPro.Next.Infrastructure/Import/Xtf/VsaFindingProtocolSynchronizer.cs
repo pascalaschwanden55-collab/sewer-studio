@@ -1,5 +1,5 @@
-using System.Globalization;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -83,8 +83,9 @@ internal static class VsaFindingProtocolSynchronizer
 
     private static void SetCodeMetadata(ProtocolEntry entry, VsaFinding finding)
     {
-        var clockStart = TryFormatClock(finding.SchadenlageAnfang);
-        var clockEnd = TryFormatClock(finding.SchadenlageEnde);
+        var clock = VsaFindingClockResolver.Resolve(finding);
+        var clockStart = clock.Start?.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var clockEnd = clock.End?.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (string.IsNullOrWhiteSpace(finding.Quantifizierung1)
             && string.IsNullOrWhiteSpace(finding.Quantifizierung2)
             && clockStart is null
@@ -140,9 +141,4 @@ internal static class VsaFindingProtocolSynchronizer
                 entry.FotoPaths.Add(finding.FotoPath);
         }
     }
-
-    private static string? TryFormatClock(double? value)
-        => value is > 0 and <= 12
-            ? value.Value.ToString("0.##", CultureInfo.InvariantCulture)
-            : null;
 }

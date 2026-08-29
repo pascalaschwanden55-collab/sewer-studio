@@ -20,7 +20,7 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
 {
     private readonly IDossierWordExportService _wordExport;
     private readonly Func<string, string?, bool> _convertWordToPdf;
-    private readonly Func<byte[], IReadOnlyList<string>, byte[]> _mergePdfs;
+    private readonly Func<byte[], IReadOnlyList<string>, string, byte[]> _composePdfPackage;
     private readonly Func<string, IReadOnlyList<DossierOutputPreviewPage>> _readPages;
     private readonly Func<string> _createWorkRoot;
     private readonly Func<
@@ -35,12 +35,26 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
         : this(
             wordExport,
             DossierWordPdfConverter.TryConvertToPdf,
-            (generated, attachments) => pdfMerge.MergeWithOriginals(generated, attachments),
+            CreateDefaultPackageComposer(pdfMerge),
             ReadPages,
             CreateWorkRoot,
             collectPreviewAttachments: null)
     {
         ArgumentNullException.ThrowIfNull(pdfMerge);
+    }
+
+    internal DossierOutputPreviewService(
+        IDossierWordExportService wordExport,
+        DossierPdfPackageComposer packageComposer,
+        IDossierPreviewAttachmentService previewAttachments)
+        : this(
+            wordExport,
+            DossierWordPdfConverter.TryConvertToPdf,
+            UsePackageComposer(packageComposer),
+            ReadPages,
+            CreateWorkRoot,
+            CreatePreviewAttachmentCollector(previewAttachments))
+    {
     }
 
     public DossierOutputPreviewService(
@@ -50,7 +64,7 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
         : this(
             wordExport,
             DossierWordPdfConverter.TryConvertToPdf,
-            (generated, attachments) => pdfMerge.MergeWithOriginals(generated, attachments),
+            CreateDefaultPackageComposer(pdfMerge),
             ReadPages,
             CreateWorkRoot,
             CreatePreviewAttachmentCollector(previewAttachments))
@@ -66,7 +80,7 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
         : this(
             wordExport,
             convertWordToPdf,
-            (generated, _) => generated,
+            (generated, _, _) => generated,
             readPages,
             createWorkRoot,
             collectPreviewAttachments: null)
@@ -84,11 +98,34 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
             string,
             CancellationToken,
             Task<DossierAttachmentResult>>? collectPreviewAttachments = null)
+        : this(
+            wordExport,
+            convertWordToPdf,
+            (generated, attachments, _) => mergePdfs(generated, attachments),
+            readPages,
+            createWorkRoot,
+            collectPreviewAttachments)
+    {
+        ArgumentNullException.ThrowIfNull(mergePdfs);
+    }
+
+    internal DossierOutputPreviewService(
+        IDossierWordExportService wordExport,
+        Func<string, string?, bool> convertWordToPdf,
+        Func<byte[], IReadOnlyList<string>, string, byte[]> composePdfPackage,
+        Func<string, IReadOnlyList<DossierOutputPreviewPage>> readPages,
+        Func<string> createWorkRoot,
+        Func<
+            DossierExportRequest,
+            string,
+            CancellationToken,
+            Task<DossierAttachmentResult>>? collectPreviewAttachments)
     {
         _wordExport = wordExport ?? throw new ArgumentNullException(nameof(wordExport));
         _convertWordToPdf = convertWordToPdf
             ?? throw new ArgumentNullException(nameof(convertWordToPdf));
-        _mergePdfs = mergePdfs ?? throw new ArgumentNullException(nameof(mergePdfs));
+        _composePdfPackage = composePdfPackage
+            ?? throw new ArgumentNullException(nameof(composePdfPackage));
         _readPages = readPages ?? throw new ArgumentNullException(nameof(readPages));
         _createWorkRoot = createWorkRoot ?? throw new ArgumentNullException(nameof(createWorkRoot));
         _collectPreviewAttachments = collectPreviewAttachments;
@@ -172,9 +209,7 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
                 attachmentPaths = DossierPdfAssemblyService
                     .CollectAttachmentPdfs(temporaryDossierFolder);
             }
-            var previewPdfPath = pdfPath;
             var wordPages = _readPages(pdfPath);
-            IReadOnlyList<DossierOutputPreviewPage> pages = wordPages;
 
             // Die benannten Feldziele stehen im KATALOG der Word-PDF, nicht in ihren
             // Seiten. Das Zusammenfuehren der Beilagen kopiert nur Seiten - danach
@@ -185,28 +220,35 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
             var wordPdfBytes = await File.ReadAllBytesAsync(pdfPath, ct).ConfigureAwait(false);
             var anchors = DossierPdfFieldAnchorReader.Read(wordPdfBytes);
 
-            if (attachmentPaths.Count > 0)
-            {
-                var mergedBytes = _mergePdfs(wordPdfBytes, attachmentPaths);
-                previewPdfPath = Path.Combine(workRoot, "Dossier-Vorschau-komplett.pdf");
-                File.WriteAllBytes(previewPdfPath, mergedBytes);
-                pages = _readPages(previewPdfPath)
-                    .Select(page => page with
-                    {
-                        IsAttachment = page.Number > wordPages.Count
-                    })
-                    .ToList();
-            }
+            // Der feste Erklaeranhang steht immer vor den normalen Beilagen. Darum wird
+            // auch ohne ein einziges Protokoll zusammengefuehrt.
+            var mergedBytes = _composePdfPackage(wordPdfBytes, attachmentPaths, workRoot);
+            var previewPdfPath = Path.Combine(workRoot, "Dossier-Vorschau-komplett.pdf");
+            File.WriteAllBytes(previewPdfPath, mergedBytes);
+            var firstExplanationPageNumber = wordPages.Count + 1;
+            var lastExplanationPageNumber = wordPages.Count
+                + DossierConditionClassDefinitions.PdfRequiredPageCount;
+            IReadOnlyList<DossierOutputPreviewPage> pages = _readPages(previewPdfPath)
+                .Select(page => page with
+                {
+                    IsAttachment = page.Number > wordPages.Count,
+                    IsConditionClassExplanation = page.Number >= firstExplanationPageNumber
+                        && page.Number <= lastExplanationPageNumber
+                        && page.Text.Contains(
+                            DossierConditionClassDefinitions.PdfRequiredPageMarker,
+                            StringComparison.Ordinal)
+                })
+                .ToList();
 
             if (pages.Count == 0)
                 return Failed("Die erzeugte Ausgabevorschau enthält keine Seite.");
 
             var bytes = await File.ReadAllBytesAsync(previewPdfPath, ct).ConfigureAwait(false);
             var attachmentNote = attachmentPaths.Count == 0
-                ? string.Empty
+                ? " Einschliesslich Erkläranhang."
                 : attachmentPaths.Count == 1
-                    ? " Einschliesslich 1 Beilage."
-                    : $" Einschliesslich {attachmentPaths.Count} Beilagen.";
+                    ? " Einschliesslich Erkläranhang und 1 Beilage."
+                    : $" Einschliesslich Erkläranhang und {attachmentPaths.Count} Beilagen.";
             var missingCount = (collectedAttachments?.MissingCount ?? 0)
                 + request.Snapshot.MissingHoldingIds.Count
                 + request.Snapshot.MissingShaftNumbers.Count;
@@ -279,6 +321,23 @@ public sealed class DossierOutputPreviewService : IDossierOutputPreviewService
     {
         ArgumentNullException.ThrowIfNull(previewAttachments);
         return previewAttachments.CollectIntoTemporaryAsync;
+    }
+
+    private static Func<byte[], IReadOnlyList<string>, string, byte[]> CreateDefaultPackageComposer(
+        IPdfMergeService pdfMerge)
+    {
+        ArgumentNullException.ThrowIfNull(pdfMerge);
+        var composer = new DossierPdfPackageComposer(
+            pdfMerge,
+            DossierConditionClassPdfService.Shared);
+        return composer.Compose;
+    }
+
+    private static Func<byte[], IReadOnlyList<string>, string, byte[]> UsePackageComposer(
+        DossierPdfPackageComposer packageComposer)
+    {
+        ArgumentNullException.ThrowIfNull(packageComposer);
+        return packageComposer.Compose;
     }
 
     private static string CreateWorkRoot()

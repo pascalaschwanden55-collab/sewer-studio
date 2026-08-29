@@ -80,7 +80,7 @@ internal static class PrimaryDamageParser
             var effectiveCode = code;
             if (code.Length == 3)
             {
-                var meter = finding.MeterStart ?? finding.SchadenlageAnfang;
+                var meter = finding.MeterStart;
                 var candidate = FindMatchingFullCodeCandidate(candidates, code, meter);
                 if (candidate is not null)
                     effectiveCode = candidate.Code;

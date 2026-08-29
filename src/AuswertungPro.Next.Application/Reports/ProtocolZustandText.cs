@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Reports;
@@ -58,17 +59,18 @@ public static class ProtocolZustandText
     /// Baut den Zustandstext fuer einen Eintrag in der Haltungsgrafik (max. 120 Zeichen).
     /// </summary>
     public static string BuildHaltungsgrafikZustandText(ProtocolEntry entry)
+        => BuildHaltungsgrafikZustandText(entry, catalog: null);
+
+    /// <summary>
+    /// Baut den Zustandstext fuer einen Eintrag in der Haltungsgrafik und ergaenzt
+    /// bei bekanntem Code den Katalogtitel (max. 120 Zeichen).
+    /// </summary>
+    public static string BuildHaltungsgrafikZustandText(
+        ProtocolEntry entry,
+        ICodeCatalogProvider? catalog)
     {
-        var desc = NormalizeZustandDescription(entry.Beschreibung, entry.Code);
-        if (string.IsNullOrWhiteSpace(desc))
-            desc = ProtocolPdfObservationText.BuildParameterShortText(entry);
-        if (string.IsNullOrWhiteSpace(desc))
-            desc = entry.CodeMeta?.Notes?.Trim();
-
-        if (string.IsNullOrWhiteSpace(desc))
-            return "-";
-
-        return Shorten(desc, 120);
+        var text = ObservationZustandBuilder.Build(entry, catalog);
+        return text == "-" ? text : Shorten(text, 120);
     }
 
     /// <summary>

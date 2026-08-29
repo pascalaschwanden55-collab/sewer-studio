@@ -173,6 +173,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 getProjectFilePath: () => _sp.Settings.LastProjectPath,
                 store: _sp.DossierStore,
                 wordExport: _sp.DossierWordExport,
+                componentLists: _sp.DossierComponentLists,
                 attachments: _sp.DossierAttachments,
                 pdfAssembly: _sp.DossierPdfAssembly,
                 dialogWindows: new Dossiers.WpfDossierDialogs(

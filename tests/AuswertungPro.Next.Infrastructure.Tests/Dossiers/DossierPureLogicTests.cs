@@ -219,6 +219,51 @@ public sealed class DossierSnapshotBuilderTests
     }
 
     [Fact]
+    public void Haltungsliste_erhaelt_Material_DN_und_normalisierte_Nutzungsart()
+    {
+        var record = Holding("77467-77463", length: "3.60", condition: "2");
+        record.Fields[FieldKeys.PipeMaterial] = " PP ";
+        record.Fields[FieldKeys.NominalDiameterMm] = " 250 ";
+        record.Fields[FieldKeys.UsageType] = "Regenwasser";
+
+        var project = new Project();
+        project.Data.Add(record);
+        var dossier = new DossierDefinition { HoldingIds = { record.Id } };
+
+        var line = Assert.Single(
+            DossierSnapshotBuilder.Build(dossier, project, new ProjectCostStore()).Holdings);
+
+        Assert.Equal("PP", line.PipeMaterial);
+        Assert.Equal("250", line.NominalDiameterMm);
+        Assert.Equal("Niederschlagsabwasser", line.UsageType);
+        Assert.Equal(3.60, line.LengthMeters);
+        Assert.Equal("2", line.ConditionClass);
+    }
+
+    [Fact]
+    public void Haltungsliste_Kopf_verwendet_Dossierdaten_und_Eigentuemerzeile_als_Rueckfall()
+    {
+        var dossier = new DossierDefinition
+        {
+            Name = "Liegenschaft Feldliweg 26",
+            Address = "Feldliweg",
+            HouseNumbers = "26",
+            PostalCode = "6460",
+            Town = "Altdorf",
+            Owners = { new DossierOwnerRow { Name = "Heinz Müller" } }
+        };
+        var snapshot = DossierSnapshotBuilder.Build(dossier, new Project(), null);
+        var stand = new DateTime(2026, 8, 28);
+
+        var model = DossierHoldingListPdfModelBuilder.Build(dossier, snapshot, stand);
+
+        Assert.Equal("Heinz Müller", model.OwnerName);
+        Assert.Equal("Feldliweg 26, 6460 Altdorf", model.PropertyAddress);
+        Assert.Equal(stand, model.Stand);
+        Assert.Same(snapshot.Holdings, model.Holdings);
+    }
+
+    [Fact]
     public void Leeres_Dossier_ergibt_leere_Kennzahlen_statt_Absturz()
     {
         var snapshot = DossierSnapshotBuilder.Build(

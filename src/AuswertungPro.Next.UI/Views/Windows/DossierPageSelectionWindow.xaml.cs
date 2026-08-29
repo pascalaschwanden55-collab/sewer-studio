@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -24,6 +25,8 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 /// Ein abgewähltes Blatt fehlt nur in dieser Ausgabe. Word-Datei und
 /// Original-Protokolle bleiben unverändert — deshalb wird auch nur die
 /// PDF-Kopie gefiltert und nie eine Quelle angefasst.
+/// Die automatisch erkannten Erklärseiten werden sichtbar als Pflichtblätter
+/// markiert und können nicht abgewählt werden.
 /// </summary>
 public partial class DossierPageSelectionWindow : Window
 {
@@ -37,13 +40,14 @@ public partial class DossierPageSelectionWindow : Window
     private DossierPageSelectionWindow(
         byte[] pdf,
         int blaetter,
+        IReadOnlySet<int> pflichtblaetter,
         IDossierPreviewPageRasterizer seiten)
     {
         InitializeComponent();
 
         _pdf = pdf;
         _seiten = seiten;
-        _auswahl = new DossierPageSelection(blaetter);
+        _auswahl = new DossierPageSelection(blaetter, pflichtblaetter);
 
         Closed += (_, _) =>
         {
@@ -69,10 +73,12 @@ public partial class DossierPageSelectionWindow : Window
         ArgumentNullException.ThrowIfNull(seiten);
 
         int blaetter;
+        IReadOnlySet<int> pflichtblaetter;
         try
         {
             using var dokument = PdfDocument.Open(pdf);
             blaetter = dokument.NumberOfPages;
+            pflichtblaetter = FindePflichtblaetter(dokument);
         }
         catch (Exception)
         {
@@ -84,12 +90,36 @@ public partial class DossierPageSelectionWindow : Window
         if (blaetter <= 1)
             return new HashSet<int>();
 
-        var fenster = new DossierPageSelectionWindow(pdf, blaetter, seiten)
+        var fenster = new DossierPageSelectionWindow(pdf, blaetter, pflichtblaetter, seiten)
         {
             Owner = besitzer
         };
 
         return fenster.ShowDialog() == true ? fenster._auswahl.Ausgeschlossen : null;
+    }
+
+    internal static IReadOnlySet<int> FindePflichtblaetter(byte[] pdf)
+    {
+        ArgumentNullException.ThrowIfNull(pdf);
+        using var dokument = PdfDocument.Open(pdf);
+        return FindePflichtblaetter(dokument);
+    }
+
+    private static IReadOnlySet<int> FindePflichtblaetter(PdfDocument dokument)
+    {
+        var gefunden = new HashSet<int>();
+        foreach (var seite in dokument.GetPages())
+        {
+            var text = string.Join(" ", seite.GetWords().Select(wort => wort.Text));
+            if (text.Contains(
+                    DossierConditionClassDefinitions.PdfRequiredPageMarker,
+                    StringComparison.Ordinal))
+            {
+                gefunden.Add(seite.Number);
+            }
+        }
+
+        return gefunden;
     }
 
     /// <summary>Für jedes Blatt eine Karte — zuerst ohne Bild, damit das Fenster sofort steht.</summary>
@@ -101,6 +131,7 @@ public partial class DossierPageSelectionWindow : Window
 
     private Border BaueKarte(int nummer)
     {
+        var istPflichtblatt = _auswahl.IstPflichtblatt(nummer);
         var bild = new Image
         {
             Width = Vorschaubreite,
@@ -111,8 +142,14 @@ public partial class DossierPageSelectionWindow : Window
 
         var haken = new CheckBox
         {
-            Content = $"Blatt {nummer}",
+            Content = istPflichtblatt
+                ? $"Blatt {nummer} · Dossier-Erklärung (Pflichtblatt)"
+                : $"Blatt {nummer}",
             IsChecked = true,
+            IsEnabled = !istPflichtblatt,
+            ToolTip = istPflichtblatt
+                ? "Diese Erklärseite gehört zu jedem Eigentümerdossier."
+                : null,
             Foreground = (Brush)FindResource("TextBrush")
         };
 
@@ -144,8 +181,14 @@ public partial class DossierPageSelectionWindow : Window
         haken.Unchecked += (_, _) => Uebernimm(false);
 
         // Ein Klick aufs Bild schaltet mit — bequemer als der kleine Haken.
-        bild.MouseLeftButtonUp += (_, _) => haken.IsChecked = haken.IsChecked != true;
-        bild.Cursor = System.Windows.Input.Cursors.Hand;
+        bild.MouseLeftButtonUp += (_, _) =>
+        {
+            if (!istPflichtblatt)
+                haken.IsChecked = haken.IsChecked != true;
+        };
+        bild.Cursor = istPflichtblatt
+            ? System.Windows.Input.Cursors.Arrow
+            : System.Windows.Input.Cursors.Hand;
 
         return rahmen;
     }
@@ -213,7 +256,7 @@ public partial class DossierPageSelectionWindow : Window
             {
                 foreach (var kind in stapel.Children)
                 {
-                    if (kind is CheckBox haken)
+                    if (kind is CheckBox { IsEnabled: true } haken)
                         haken.IsChecked = gewaehlt;
                 }
             }

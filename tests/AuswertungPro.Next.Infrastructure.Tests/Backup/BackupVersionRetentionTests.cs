@@ -5,6 +5,10 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Backup;
 public sealed class BackupVersionRetentionTests
 {
     [Fact]
+    public void Standardlimit_BewahrtDreiStaende()
+        => Assert.Equal(3, BackupVersionRetention.MaxStaende);
+
+    [Fact]
     public void BuildStandName_IstSortierbarUndWirdErkannt()
     {
         var frueh = BackupVersionRetention.BuildStandName(new DateTime(2026, 7, 8, 9, 5, 3));

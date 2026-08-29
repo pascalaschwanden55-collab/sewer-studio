@@ -13,17 +13,27 @@ namespace AuswertungPro.Next.Application.Dossiers;
 ///
 /// Reine Zustandsführung ohne Oberfläche: Das Fenster zeigt nur, was hier
 /// entschieden wird, und die Ausgabe fragt nur <see cref="Ausgeschlossen"/>.
+/// Als Pflichtblatt markierte Seiten bleiben auch bei „Keine" gewählt.
 /// </summary>
 public sealed class DossierPageSelection
 {
     private readonly HashSet<int> _ausgeschlossen = new();
+    private readonly HashSet<int> _pflichtblaetter;
 
     public DossierPageSelection(int blaetter)
+        : this(blaetter, pflichtblaetter: null)
+    {
+    }
+
+    public DossierPageSelection(int blaetter, IEnumerable<int>? pflichtblaetter)
     {
         if (blaetter < 0)
             throw new ArgumentOutOfRangeException(nameof(blaetter));
 
         Blaetter = blaetter;
+        _pflichtblaetter = new HashSet<int>(
+            (pflichtblaetter ?? Enumerable.Empty<int>())
+                .Where(seite => seite >= 1 && seite <= blaetter));
     }
 
     /// <summary>Wie viele Blätter das Dossier insgesamt hat.</summary>
@@ -39,12 +49,16 @@ public sealed class DossierPageSelection
 
     public bool IstGewaehlt(int seite) => !_ausgeschlossen.Contains(seite);
 
+    public bool IstPflichtblatt(int seite) => _pflichtblaetter.Contains(seite);
+
     public void Setze(int seite, bool gewaehlt)
     {
         if (seite < 1 || seite > Blaetter)
             return;
 
         if (gewaehlt)
+            _ausgeschlossen.Remove(seite);
+        else if (IstPflichtblatt(seite))
             _ausgeschlossen.Remove(seite);
         else
             _ausgeschlossen.Add(seite);
@@ -55,7 +69,10 @@ public sealed class DossierPageSelection
     public void Keine()
     {
         foreach (var seite in Enumerable.Range(1, Blaetter))
-            _ausgeschlossen.Add(seite);
+        {
+            if (!IstPflichtblatt(seite))
+                _ausgeschlossen.Add(seite);
+        }
     }
 
     /// <summary>Was gerade erzeugt würde — in einem Satz.</summary>

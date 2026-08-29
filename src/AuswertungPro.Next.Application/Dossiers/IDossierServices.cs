@@ -22,8 +22,33 @@ public interface IDossierStore
     /// </summary>
     Task<DossierDocument> LoadAsync(string projectRoot, CancellationToken ct = default);
 
-    /// <summary>Speichert atomar mit Backup.</summary>
+    /// <summary>
+    /// Kompatibler projektbezogener Ladeweg. Fehlende Dossierordner werden
+    /// nachgezogen; Haltungs- und Schachtlisten entstehen nur noch ueber die
+    /// ausdruecklichen Erstellen-Aktionen im Dossier-Cockpit.
+    /// </summary>
+    Task<DossierDocument> LoadAsync(
+        string projectRoot,
+        Project project,
+        CancellationToken ct = default)
+        => LoadAsync(projectRoot, ct);
+
+    /// <summary>
+    /// Speichert atomar mit Backup. Bei einer neuen Liegenschaft legt der
+    /// produktive Speicher auch das feste Zustandsklassenblatt in ihren Ordner.
+    /// </summary>
     Task SaveAsync(string projectRoot, DossierDocument document, CancellationToken ct = default);
+
+    /// <summary>
+    /// Kompatibler projektbezogener Speicherweg. Dynamische Bauteillisten werden
+    /// beim Speichern bewusst nicht automatisch erzeugt.
+    /// </summary>
+    Task SaveAsync(
+        string projectRoot,
+        DossierDocument document,
+        Project project,
+        CancellationToken ct = default)
+        => SaveAsync(projectRoot, document, ct);
 }
 
 /// <summary>Ergebnis einer Word-Erzeugung.</summary>
@@ -119,10 +144,27 @@ public interface IDossierPdfAssemblyService
     /// Wird zwischen „zusammengefuehrt" und „geschrieben" gefragt und bekommt
     /// das fertige PDF. Zurueck kommen die Seitennummern (1-basiert), die NICHT
     /// in die Datei sollen — oder <c>null</c> fuer Abbruch. Ohne Rueckfrage
-    /// wird alles geschrieben.
+    /// wird alles geschrieben. Die automatisch erzeugte Seite des
+    /// Erklaeranhangs ist ein Pflichtblatt und wird nie entfernt.
     /// </param>
     Task<DossierPdfAssemblyResult> AssembleAsync(
         string dossierFolder,
         Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
         CancellationToken ct = default);
+}
+
+/// <summary>
+/// Erzeugt das feste Erklaerblatt zu Zustandsklassen und zeitlicher Orientierung.
+/// Dasselbe PDF wird fuer Vorschau, Gesamt-PDF, Muster und die Kopie im
+/// Liegenschaftsordner verwendet.
+/// </summary>
+public interface IDossierConditionClassPdfService
+{
+    byte[] CreatePdf();
+}
+
+/// <summary>Erzeugt die datenbasierte Haltungsliste eines Eigentuemerdossiers.</summary>
+public interface IDossierHoldingListPdfService
+{
+    byte[] CreatePdf(DossierHoldingListPdfModel model);
 }

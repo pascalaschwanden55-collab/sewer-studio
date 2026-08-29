@@ -162,6 +162,63 @@ public sealed class DossierEmptyListFieldTests
     }
 
     [Fact]
+    public void Listenimport_zeigt_die_Zustandsfarbe_sofort_im_Textfeld()
+    {
+        RunOnSta(() =>
+        {
+            const string importedText = "1. Haltung Z3-Weg · Z3 – langfristig";
+            var conditionStart = importedText.IndexOf(
+                " · Z3", StringComparison.Ordinal) + 3;
+            var values = new Dictionary<string, string>
+            {
+                [DossierTopicComponentListComposer.ValueKey] = importedText,
+                [DossierTopicComponentListComposer.StyleValueKey] =
+                    DossierTopicTextFormatting.Encode(
+                    [
+                        new DossierTextStyleRange
+                        {
+                            Start = conditionStart,
+                            Length = 2,
+                            ColorHex = "AEB135"
+                        }
+                    ])
+            };
+            var area = new DossierAreaSettings
+            {
+                Topics =
+                [
+                    new DossierTopicRow
+                    {
+                        Title = DossierTopicTitles.Schaeden
+                    }
+                ]
+            };
+            var dossier = new DossierDefinition();
+            var panel = CreatePanel(area, dossier, values);
+            var editor = BuildPrivate(panel, "BaueThemenEditor", RowsField("Themen"));
+            var import = Descendants(editor).OfType<Button>().Single(
+                button => Equals(button.Content, "Import aus Liste"));
+
+            Assert.True(import.IsEnabled);
+            import.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+            var textBox = Descendants(editor).OfType<RichTextBox>().Last();
+            var shown = DossierTopicRichTextEditor.Read(textBox);
+            Assert.Equal(importedText, shown.Text);
+            var conditionSegment = DossierTopicTextFormatting
+                .Split(shown.Text, shown.StyleRanges)
+                .Single(segment => segment.Text == "Z3");
+            Assert.Equal("AEB135", conditionSegment.ColorHex);
+
+            var stored = Assert.Single(dossier.Topics);
+            var storedRange = Assert.Single(stored.StyleRanges);
+            Assert.Equal("Z3", stored.Text.Substring(
+                storedRange.Start, storedRange.Length));
+            Assert.Equal("AEB135", storedRange.ColorHex);
+        });
+    }
+
+    [Fact]
     public void Erzeugte_Eigentuemerbeschriftungen_haben_eigene_Klickziele()
     {
         RunOnSta(() =>
@@ -207,7 +264,8 @@ public sealed class DossierEmptyListFieldTests
 
     private static DossierPreviewFieldPanel CreatePanel(
         DossierAreaSettings area,
-        DossierDefinition dossier)
+        DossierDefinition dossier,
+        IReadOnlyDictionary<string, string>? values = null)
         => new(
             new StackPanel(),
             area,
@@ -216,7 +274,7 @@ public sealed class DossierEmptyListFieldTests
             new DossierPreviewDocument([]),
             new PlanImageConverterStub(),
             new PlanImageAdjusterStub(),
-            () => new Dictionary<string, string>(),
+            () => values ?? new Dictionary<string, string>(),
             () => { },
             _ => { },
             (_, _) => { },

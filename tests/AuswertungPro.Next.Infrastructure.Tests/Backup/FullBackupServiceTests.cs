@@ -358,10 +358,14 @@ public sealed class FullBackupServiceTests : IDisposable
             .Where(n => BackupVersionRetention.IsStandName(n!))
             .OrderBy(n => n, StringComparer.Ordinal)
             .ToArray();
-        Assert.Equal(BackupVersionRetention.MaxStaende, staende.Length);
+        Assert.Equal(3, staende.Length);
         // Die aeltesten Staende sind entfernt, die neuesten geblieben.
         Assert.DoesNotContain("2026-01-01_000000", staende);
-        Assert.Contains("2026-01-01_001200", staende);
+        Assert.Collection(
+            staende,
+            stand => Assert.Equal("2026-01-01_000300", stand),
+            stand => Assert.Equal("2026-01-01_000400", stand),
+            stand => Assert.Equal("2026-01-01_000500", stand));
         // Fremde Ordner ohne Stand-Muster werden nie geloescht (sichere Richtung).
         Assert.True(File.Exists(Path.Combine(fremd, "fremd.txt")));
     }

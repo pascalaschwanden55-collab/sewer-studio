@@ -64,9 +64,107 @@ public sealed class ObservationZustandBuilderTests
     }
 
     [Fact]
+    public void Build_with_catalog_adds_missing_primary_title_before_operator_note()
+    {
+        var catalog = new FakeCatalog(new CodeDefinition
+        {
+            Code = "BCE",
+            Title = "Rohrende"
+        });
+        var entry = new ProtocolEntry
+        {
+            Code = "BCE",
+            MeterStart = 2.9,
+            Beschreibung = "Anschluss von 12 Uhr in Schmutzleitung"
+        };
+
+        var text = ObservationZustandBuilder.Build(entry, catalog);
+
+        Assert.Equal("Rohrende, Anschluss von 12 Uhr in Schmutzleitung", text);
+    }
+
+    [Fact]
+    public void Build_with_catalog_does_not_add_clock_to_non_clock_rohrende_code()
+    {
+        var catalog = new FakeCatalog(new CodeDefinition
+        {
+            Code = "BCE",
+            Title = "Rohrende"
+        });
+        var entry = new ProtocolEntry
+        {
+            Code = "BCE",
+            Beschreibung = "Anschluss von 12 Uhr in Schmutzleitung",
+            CodeMeta = new ProtocolEntryCodeMeta
+            {
+                Parameters = { ["vsa.uhr.von"] = "12" }
+            }
+        };
+
+        var text = ObservationZustandBuilder.Build(entry, catalog);
+
+        Assert.Equal("Rohrende, Anschluss von 12 Uhr in Schmutzleitung", text);
+    }
+
+    [Fact]
+    public void Build_with_catalog_does_not_repeat_title_already_in_description()
+    {
+        var catalog = new FakeCatalog(new CodeDefinition
+        {
+            Code = "BCD",
+            Title = "Rohranfang"
+        });
+        var entry = new ProtocolEntry
+        {
+            Code = "BCD",
+            MeterStart = 0,
+            Beschreibung = "Rohranfang"
+        };
+
+        var text = ObservationZustandBuilder.Build(entry, catalog);
+
+        Assert.Equal("Rohranfang", text);
+    }
+
+    [Fact]
+    public void Build_with_catalog_preserves_note_when_description_is_empty()
+    {
+        var catalog = new FakeCatalog(new CodeDefinition
+        {
+            Code = "BCE",
+            Title = "Rohrende"
+        });
+        var entry = new ProtocolEntry
+        {
+            Code = "BCE",
+            CodeMeta = new ProtocolEntryCodeMeta
+            {
+                Notes = "Anschluss in Schmutzleitung"
+            }
+        };
+
+        var text = ObservationZustandBuilder.Build(entry, catalog);
+
+        Assert.Equal("Rohrende, Anschluss in Schmutzleitung", text);
+    }
+
+    [Fact]
     public void Build_with_catalog_adds_clock_position()
     {
-        var catalog = new FakeCatalog(new CodeDefinition { Code = "BAB", Title = "Riss" });
+        var catalog = new FakeCatalog(new CodeDefinition
+        {
+            Code = "BAB",
+            Title = "Riss",
+            Parameters =
+            {
+                new CodeParameter
+                {
+                    Name = "Uhrlage Anfang",
+                    DataKey = "SchadenlageAnfang",
+                    Type = "clock"
+                }
+            }
+        });
 
         var entry = new ProtocolEntry
         {
@@ -79,6 +177,48 @@ public sealed class ObservationZustandBuilderTests
         var text = ObservationZustandBuilder.Build(entry, catalog);
 
         Assert.Equal("Riss, Lage 3 Uhr", text);
+    }
+
+    [Fact]
+    public void Build_with_catalog_does_not_repeat_clock_already_in_description()
+    {
+        var catalog = new FakeCatalog(new CodeDefinition { Code = "BCAAA", Title = "Anschluss" });
+        var entry = new ProtocolEntry
+        {
+            Code = "BCAAA",
+            Beschreibung = "Anschluss mit Formstueck, offen, bei 9 Uhr",
+            CodeMeta = new ProtocolEntryCodeMeta
+            {
+                Parameters = { ["ClockPos1"] = "9" }
+            }
+        };
+
+        var text = ObservationZustandBuilder.Build(entry, catalog);
+
+        Assert.Equal("Anschluss mit Formstueck, offen, bei 9 Uhr", text);
+    }
+
+    [Fact]
+    public void Build_with_catalog_does_not_repeat_clock_range_already_in_description()
+    {
+        var catalog = new FakeCatalog(new CodeDefinition { Code = "BAAA", Title = "Rohr deformiert" });
+        var entry = new ProtocolEntry
+        {
+            Code = "BAAA",
+            Beschreibung = "Rohr vertikal deformiert, von 4 Uhr bis 8 Uhr, Start",
+            CodeMeta = new ProtocolEntryCodeMeta
+            {
+                Parameters =
+                {
+                    ["ClockPos1"] = "4",
+                    ["ClockPos2"] = "8"
+                }
+            }
+        };
+
+        var text = ObservationZustandBuilder.Build(entry, catalog);
+
+        Assert.Equal("Rohr deformiert, Rohr vertikal deformiert, von 4 Uhr bis 8 Uhr, Start", text);
     }
 
     [Fact]
@@ -134,6 +274,44 @@ public sealed class ObservationZustandBuilderTests
         var text = ObservationZustandBuilder.Build(entry, catalog);
 
         Assert.Equal("Bogen nach rechts, Winkel = 45°", text);
+    }
+
+    [Fact]
+    public void Build_with_catalog_uses_valid_clock_alias_and_does_not_repeat_clock_parameter()
+    {
+        var catalog = new FakeCatalog(new CodeDefinition
+        {
+            Code = "BCAAA",
+            Title = "Seitlicher Anschluss",
+            Parameters =
+            {
+                new CodeParameter
+                {
+                    Name = "Uhrlage Anfang",
+                    DataKey = "SchadenlageAnfang",
+                    Type = "clock"
+                }
+            }
+        });
+        var entry = new ProtocolEntry
+        {
+            Code = "BCAAA",
+            Beschreibung = "offen",
+            CodeMeta = new ProtocolEntryCodeMeta
+            {
+                Code = "BCAAA",
+                Parameters =
+                {
+                    ["vsa.uhr.von"] = "2.62136",
+                    ["ClockPos1"] = "9",
+                    ["SchadenlageAnfang"] = "9"
+                }
+            }
+        };
+
+        var text = ObservationZustandBuilder.Build(entry, catalog);
+
+        Assert.Equal("Seitlicher Anschluss, offen, Lage 9 Uhr", text);
     }
 
     [Fact]

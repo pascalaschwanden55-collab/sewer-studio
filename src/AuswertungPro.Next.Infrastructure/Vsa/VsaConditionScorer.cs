@@ -166,9 +166,7 @@ internal static class VsaConditionScorer
     internal static double ComputeLengthFactor(VsaFinding finding, double minLength)
     {
         double? actualLength = null;
-        if (finding.SchadenlageAnfang.HasValue && finding.SchadenlageEnde.HasValue)
-            actualLength = Math.Abs(finding.SchadenlageEnde.Value - finding.SchadenlageAnfang.Value);
-        else if (finding.MeterStart.HasValue && finding.MeterEnd.HasValue)
+        if (finding.MeterStart.HasValue && finding.MeterEnd.HasValue)
             actualLength = Math.Abs(finding.MeterEnd.Value - finding.MeterStart.Value);
 
         return actualLength.HasValue && actualLength.Value > minLength

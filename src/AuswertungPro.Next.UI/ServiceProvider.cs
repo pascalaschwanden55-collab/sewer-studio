@@ -540,8 +540,19 @@ namespace AuswertungPro.Next.UI
             HoldingRename = new HoldingRenameFileService();
             ShaftRename = new ShaftRenameFileService();
             PlanPdfImport = new PlanPdfImportService();
+            var catalogPaths = VsaCatalogPaths.Resolve(
+                Services.VsaCatalogPathResolver.ToRequest(settings));
+            VsaCatalogResolvedPath = catalogPaths.DisplayPath;
+            var vsaManifestPath = !string.IsNullOrWhiteSpace(catalogPaths.KekManifestPath)
+                ? catalogPaths.KekManifestPath
+                : Path.Combine(AppContext.BaseDirectory, "Data", "vsa_kek_2020_catalog_manifest.json");
+            CodeCatalog = CreateCodeCatalog(
+                settings,
+                VsaCatalogPaths,
+                catalogPaths.KekManifestPath,
+                catalogPaths.XmlCatalogPaths);
             ProtocolPdfLayoutSettings = new AppSettingsProtocolPdfLayoutSettings(Settings);
-            ProtocolPdfExporter = new ProtocolPdfExporter(ProtocolPdfLayoutSettings);
+            ProtocolPdfExporter = new ProtocolPdfExporter(new ProtocolPdfAssetFileResolver(), ProtocolPdfLayoutSettings, CodeCatalog);
             PdfMerge = new PdfMergeService();
             OfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.OfferPdfExportService();
             NpkOfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.NpkOfferPdfExportService();
@@ -616,21 +627,10 @@ namespace AuswertungPro.Next.UI
 
             // AI/CodeCatalog Init (AiLocalPack)
             var cfg = aiPlatform.ToRuntimeSettings();
-            var catalogPaths = VsaCatalogPaths.Resolve(
-                Services.VsaCatalogPathResolver.ToRequest(settings));
-            VsaCatalogResolvedPath = catalogPaths.DisplayPath;
-            var vsaManifestPath = !string.IsNullOrWhiteSpace(catalogPaths.KekManifestPath)
-                ? catalogPaths.KekManifestPath
-                : Path.Combine(AppContext.BaseDirectory, "Data", "vsa_kek_2020_catalog_manifest.json");
             TrainingYoloClasses = new TrainingYoloClassMapFileStore(
                 Path.Combine(AppContext.BaseDirectory, "Data", "Training", "detect_class_map_v3.json"),
                 Path.Combine(AppContext.BaseDirectory, "Data", "Training", "detect_class_migration_v3.candidate.json"),
                 vsaManifestPath);
-            CodeCatalog = CreateCodeCatalog(
-                settings,
-                VsaCatalogPaths,
-                catalogPaths.KekManifestPath,
-                catalogPaths.XmlCatalogPaths);
             _trainingYoloExportComposition = TrainingYoloExportComposition.Create(
                 KnowledgeRoot,
                 settings.EvalSetRoot,

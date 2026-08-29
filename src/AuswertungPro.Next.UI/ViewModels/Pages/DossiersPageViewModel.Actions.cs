@@ -416,6 +416,58 @@ public sealed partial class DossiersPageViewModel
         }
     }
 
+    private Task CreateHoldingListAsync()
+        => CreateComponentListAsync(
+            "Haltungsliste",
+            request => _componentLists.CreateHoldingListAsync(request));
+
+    private Task CreateShaftListAsync()
+        => CreateComponentListAsync(
+            "Schachtliste",
+            request => _componentLists.CreateShaftListAsync(request));
+
+    /// <summary>
+    /// Gemeinsamer, bewusst ausgeloester PDF-Weg fuer Haltungs- und
+    /// Schachtliste. Die Fach- und Dateilogik bleibt vollstaendig im Dienst.
+    /// </summary>
+    private async Task CreateComponentListAsync(
+        string title,
+        Func<DossierExportRequest, Task<DossierComponentListExportResult>> create)
+    {
+        if (Selected is null || !EnsureProject(out var root))
+            return;
+
+        IsBusy = true;
+        try
+        {
+            var result = await create(BuildRequest(root, Selected.Definition));
+            StatusMessage = result.Message;
+
+            if (!result.Success)
+            {
+                _dialogs.Warn(result.Message, title);
+                return;
+            }
+
+            _toasts.Success(result.Message);
+
+            if (!string.IsNullOrWhiteSpace(result.FilePath)
+                && _dialogs.Confirm(result.Message + "\n\nPDF jetzt öffnen?", title))
+            {
+                _shellOpen.TryOpen(result.FilePath, out _);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = title + " konnte nicht erstellt werden: " + ex.Message;
+            _dialogs.Error(StatusMessage, title);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     private async Task CollectAttachmentsAsync()
     {
         if (Selected is null || !EnsureProject(out var root))
@@ -838,7 +890,7 @@ public sealed partial class DossiersPageViewModel
     {
         try
         {
-            await _store.SaveAsync(root, _document);
+            await _store.SaveAsync(root, _document, _getProject());
             return true;
         }
         catch (Exception ex)

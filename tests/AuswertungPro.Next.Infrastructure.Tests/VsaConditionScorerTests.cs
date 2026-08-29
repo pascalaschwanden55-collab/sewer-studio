@@ -29,11 +29,26 @@ public sealed class VsaConditionScorerTests
         var finding = new VsaFinding
         {
             KanalSchadencode = "BAF",
-            SchadenlageAnfang = 2.0,
-            SchadenlageEnde = 10.0
+            MeterStart = 2.0,
+            MeterEnd = 10.0
         };
         var lf = VsaConditionScorer.ComputeLengthFactor(finding, minLength: 3.0);
         Assert.Equal(8.0, lf);
+    }
+
+    [Fact]
+    public void ComputeLengthFactor_UhrbereichDreiBisNeun_IstKeinSechsMeterStreckenschaden()
+    {
+        var finding = new VsaFinding
+        {
+            KanalSchadencode = "BAB",
+            SchadenlageAnfang = 3,
+            SchadenlageEnde = 9
+        };
+
+        var lf = VsaConditionScorer.ComputeLengthFactor(finding, minLength: 3.0);
+
+        Assert.Equal(3.0, lf);
     }
 
     [Fact]

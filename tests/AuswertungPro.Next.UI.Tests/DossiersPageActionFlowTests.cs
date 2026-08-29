@@ -46,7 +46,10 @@ public sealed class DossiersPageActionFlowTests : IDisposable
 
     private DossiersPageViewModel BaueCockpit(
         IDossierAttachmentService? attachments = null,
-        IDossierPdfAssemblyService? pdfAssembly = null)
+        IDossierPdfAssemblyService? pdfAssembly = null,
+        IDossierComponentListExportService? componentLists = null,
+        IDialogService? dialogs = null,
+        ISafeShellOpenService? shellOpen = null)
     {
         var vm = new DossiersPageViewModel(
             getProject: () => _project,
@@ -54,13 +57,14 @@ public sealed class DossiersPageActionFlowTests : IDisposable
             getProjectFilePath: () => Path.Combine(_root, "projekt.json"),
             store: _store,
             wordExport: new NichtGebraucht(),
+            componentLists: componentLists ?? new NichtGebraucht(),
             attachments: attachments ?? new NichtGebraucht(),
             pdfAssembly: pdfAssembly ?? new NichtGebraucht(),
             dialogWindows: _fenster,
             costStores: new LeereKosten(),
-            dialogs: new StilleDialoge(),
+            dialogs: dialogs ?? new StilleDialoge(),
             toasts: new ToastService(),
-            shellOpen: new NichtsOeffnen(),
+            shellOpen: shellOpen ?? new NichtsOeffnen(),
             explorerReveal: new NichtsZeigen(),
             holdingActions: new DossierHoldingActionController(
                 () => _project, new StilleDialoge(), _ => { }, _ => { }, _ => { }),
@@ -413,6 +417,80 @@ public sealed class DossiersPageActionFlowTests : IDisposable
         Assert.Equal("neuer-plan.png", _store.Dokument.Dossiers[0].OverviewPlanPath);
     }
 
+    [Fact]
+    public async Task Haltungsliste_wird_bewusst_aus_dem_aktuellen_Dossier_erzeugt_und_geoeffnet()
+    {
+        var haltung = Haltung("100-200");
+        _store.Dokument.Dossiers.Add(new DossierDefinition
+        {
+            Name = "Musterweg 1",
+            FolderName = "Musterweg 1",
+            HoldingIds = { haltung.Id }
+        });
+        var flow = new RecordingComponentLists();
+        var completion = new TaskCompletionSource<DossierComponentListExportResult>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        flow.HoldingCompletion = completion;
+        var dialogs = new StilleDialoge();
+        var shellOpen = new NichtsOeffnen();
+        var vm = BaueCockpit(
+            componentLists: flow,
+            dialogs: dialogs,
+            shellOpen: shellOpen);
+
+        var execution = vm.CreateHoldingListCommand.ExecuteAsync(null);
+        Assert.True(SpinWait.SpinUntil(
+            () => flow.Calls.Count == 1,
+            TimeSpan.FromSeconds(5)));
+        Assert.True(vm.IsBusy);
+
+        var path = Path.Combine(_root, "Haltungsliste_Eigentuemer_Dossier.pdf");
+        completion.SetResult(new DossierComponentListExportResult(
+            true,
+            "Haltungsliste erstellt.",
+            path));
+        await execution;
+
+        Assert.Equal(new[] { "Haltung" }, flow.Calls);
+        Assert.Equal("100-200", Assert.Single(flow.LastRequest!.Snapshot.Holdings).HoldingName);
+        Assert.Equal("Haltungsliste erstellt.", vm.StatusMessage);
+        Assert.False(vm.IsBusy);
+        Assert.Equal(1, dialogs.ConfirmCalls);
+        Assert.Equal(path, shellOpen.LastPath);
+    }
+
+    [Fact]
+    public async Task Fehlgeschlagene_Schachtliste_wird_gemeldet_und_nicht_geoeffnet()
+    {
+        _store.Dokument.Dossiers.Add(new DossierDefinition
+        {
+            Name = "Musterweg 1",
+            FolderName = "Musterweg 1"
+        });
+        var flow = new RecordingComponentLists
+        {
+            ShaftResult = new DossierComponentListExportResult(
+                false,
+                "Schachtliste konnte nicht erstellt werden.",
+                null)
+        };
+        var dialogs = new StilleDialoge();
+        var shellOpen = new NichtsOeffnen();
+        var vm = BaueCockpit(
+            componentLists: flow,
+            dialogs: dialogs,
+            shellOpen: shellOpen);
+
+        await vm.CreateShaftListCommand.ExecuteAsync(null);
+
+        Assert.Equal(new[] { "Schacht" }, flow.Calls);
+        Assert.Equal("Schachtliste konnte nicht erstellt werden.", vm.StatusMessage);
+        Assert.False(vm.IsBusy);
+        Assert.Equal(1, dialogs.WarnCalls);
+        Assert.Equal(0, dialogs.ConfirmCalls);
+        Assert.Null(shellOpen.LastPath);
+    }
+
     // ── Attrappen ─────────────────────────────────────────────────────────
 
     private sealed class FakeDialogs : IDossierDialogs
@@ -538,13 +616,24 @@ public sealed class DossiersPageActionFlowTests : IDisposable
     }
 
     private sealed class NichtGebraucht
-        : IDossierWordExportService, IDossierAttachmentService, IDossierPdfAssemblyService
+        : IDossierWordExportService,
+          IDossierComponentListExportService,
+          IDossierAttachmentService,
+          IDossierPdfAssemblyService
     {
         public Task<DossierWordExportResult> ExportAsync(
             DossierExportRequest request, CancellationToken ct = default)
             => throw new NotSupportedException();
 
         public Task<DossierAttachmentResult> CollectAsync(
+            DossierExportRequest request, CancellationToken ct = default)
+            => throw new NotSupportedException();
+
+        public Task<DossierComponentListExportResult> CreateHoldingListAsync(
+            DossierExportRequest request, CancellationToken ct = default)
+            => throw new NotSupportedException();
+
+        public Task<DossierComponentListExportResult> CreateShaftListAsync(
             DossierExportRequest request, CancellationToken ct = default)
             => throw new NotSupportedException();
 
@@ -557,6 +646,39 @@ public sealed class DossiersPageActionFlowTests : IDisposable
             Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
             CancellationToken ct = default)
             => throw new NotSupportedException();
+    }
+
+    private sealed class RecordingComponentLists : IDossierComponentListExportService
+    {
+        public List<string> Calls { get; } = new();
+        public DossierExportRequest? LastRequest { get; private set; }
+        public TaskCompletionSource<DossierComponentListExportResult>? HoldingCompletion { get; set; }
+        public DossierComponentListExportResult HoldingResult { get; set; } = new(
+            true,
+            "Haltungsliste erstellt.",
+            "Haltungsliste.pdf");
+        public DossierComponentListExportResult ShaftResult { get; set; } = new(
+            true,
+            "Schachtliste erstellt.",
+            "Schachtliste.pdf");
+
+        public Task<DossierComponentListExportResult> CreateHoldingListAsync(
+            DossierExportRequest request,
+            CancellationToken ct = default)
+        {
+            Calls.Add("Haltung");
+            LastRequest = request;
+            return HoldingCompletion?.Task ?? Task.FromResult(HoldingResult);
+        }
+
+        public Task<DossierComponentListExportResult> CreateShaftListAsync(
+            DossierExportRequest request,
+            CancellationToken ct = default)
+        {
+            Calls.Add("Schacht");
+            LastRequest = request;
+            return Task.FromResult(ShaftResult);
+        }
     }
 
     private sealed class RecordingPdfFlow
@@ -641,6 +763,9 @@ public sealed class DossiersPageActionFlowTests : IDisposable
 
     private sealed class StilleDialoge : IDialogService
     {
+        public int WarnCalls { get; private set; }
+        public int ConfirmCalls { get; private set; }
+
         public string? OpenFile(string title, string filter, string? initialDirectory = null) => null;
 
         public string? SaveFile(
@@ -653,11 +778,15 @@ public sealed class DossiersPageActionFlowTests : IDisposable
 
         public void Info(string message, string title = "Hinweis") { }
 
-        public void Warn(string message, string title = "Warnung") { }
+        public void Warn(string message, string title = "Warnung") => WarnCalls++;
 
         public void Error(string message, string title = "Fehler") { }
 
-        public bool Confirm(string message, string title = "Bestaetigung") => true;
+        public bool Confirm(string message, string title = "Bestaetigung")
+        {
+            ConfirmCalls++;
+            return true;
+        }
 
         public bool ConfirmWarn(
             string message, string title = "Bestaetigung", bool defaultNo = true) => true;
@@ -668,8 +797,11 @@ public sealed class DossiersPageActionFlowTests : IDisposable
 
     private sealed class NichtsOeffnen : ISafeShellOpenService
     {
+        public string? LastPath { get; private set; }
+
         public bool TryOpen(string? path, out string? error)
         {
+            LastPath = path;
             error = null;
             return true;
         }

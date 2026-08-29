@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 using AuswertungPro.Next.Application.Dossiers;
-using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Infrastructure.Dossiers;
+using AuswertungPro.Next.Infrastructure.Media;
 
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
@@ -73,7 +71,7 @@ public sealed class DossierPageChoiceTests : IDisposable
         };
 
     private DossierPdfAssemblyService Dienst(int seiten)
-        => new(new DurchreichendeZusammenfuehrung(), Wandler(seiten));
+        => new(new PdfMergeService(), Wandler(seiten));
 
     private string Ergebnisdatei
         => Path.Combine(_ordner, DossierFolderPlanner.CombinedPdfFileName);
@@ -90,7 +88,7 @@ public sealed class DossierPageChoiceTests : IDisposable
         var ergebnis = await Dienst(4).AssembleAsync(_ordner);
 
         Assert.True(ergebnis.Success, ergebnis.Message);
-        Assert.Equal(4, SeitenImErgebnis());
+        Assert.Equal(5, SeitenImErgebnis());
     }
 
     [Fact]
@@ -107,7 +105,7 @@ public sealed class DossierPageChoiceTests : IDisposable
                 return Task.FromResult<IReadOnlySet<int>?>(new HashSet<int>());
             });
 
-        Assert.Equal(3, gesehen);
+        Assert.Equal(4, gesehen);
     }
 
     [Fact]
@@ -118,7 +116,7 @@ public sealed class DossierPageChoiceTests : IDisposable
             (_, _) => Task.FromResult<IReadOnlySet<int>?>(new HashSet<int> { 2, 3 }));
 
         Assert.True(ergebnis.Success, ergebnis.Message);
-        Assert.Equal(2, SeitenImErgebnis());
+        Assert.Equal(3, SeitenImErgebnis());
     }
 
     [Fact]
@@ -146,24 +144,16 @@ public sealed class DossierPageChoiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Alle_Blaetter_abzuwaehlen_wird_ehrlich_gemeldet()
+    public async Task Das_Erklaerblatt_kann_nicht_abgewaehlt_werden()
     {
         var ergebnis = await Dienst(2).AssembleAsync(
             _ordner,
-            (_, _) => Task.FromResult<IReadOnlySet<int>?>(new HashSet<int> { 1, 2 }));
+            (_, _) => Task.FromResult<IReadOnlySet<int>?>(new HashSet<int> { 1, 2, 3 }));
 
-        Assert.False(ergebnis.Success);
-        Assert.Contains("Blatt", ergebnis.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.False(File.Exists(Ergebnisdatei));
-    }
-
-    /// <summary>Ohne Beilagen ist die Zusammenfuehrung eine Durchreiche.</summary>
-    private sealed class DurchreichendeZusammenfuehrung : IPdfMergeService
-    {
-        public byte[] MergeWithOriginals(byte[] generatedPdf, IReadOnlyList<string> originalPdfPaths)
-            => generatedPdf;
-
-        public byte[] MergeOriginals(IReadOnlyList<string> originalPdfPaths)
-            => Array.Empty<byte>();
+        Assert.True(ergebnis.Success, ergebnis.Message);
+        Assert.Equal(1, SeitenImErgebnis());
+        using var dokument = PdfDocument.Open(File.ReadAllBytes(Ergebnisdatei));
+        Assert.Contains("Zustandsklassen", dokument.GetPage(1).Text, StringComparison.Ordinal);
+        Assert.Contains("Sofort", dokument.GetPage(1).Text, StringComparison.Ordinal);
     }
 }

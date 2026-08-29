@@ -94,6 +94,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     private readonly Func<string?> _getProjectFilePath;
     private readonly IDossierStore _store;
     private readonly IDossierWordExportService _wordExport;
+    private readonly IDossierComponentListExportService _componentLists;
     private readonly IDossierAttachmentService _attachments;
     private readonly IDossierPdfAssemblyService _pdfAssembly;
     private readonly IDossierDialogs _dialogWindows;
@@ -117,6 +118,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         Func<string?> getProjectFilePath,
         IDossierStore store,
         IDossierWordExportService wordExport,
+        IDossierComponentListExportService componentLists,
         IDossierAttachmentService attachments,
         IDossierPdfAssemblyService pdfAssembly,
         IDossierDialogs dialogWindows,
@@ -134,6 +136,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         _getProjectFilePath = getProjectFilePath ?? throw new ArgumentNullException(nameof(getProjectFilePath));
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _wordExport = wordExport ?? throw new ArgumentNullException(nameof(wordExport));
+        _componentLists = componentLists ?? throw new ArgumentNullException(nameof(componentLists));
         _attachments = attachments ?? throw new ArgumentNullException(nameof(attachments));
         _pdfAssembly = pdfAssembly ?? throw new ArgumentNullException(nameof(pdfAssembly));
         _dialogWindows = dialogWindows ?? throw new ArgumentNullException(nameof(dialogWindows));
@@ -165,6 +168,10 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         EditDossierCommand = new AsyncRelayCommand(EditDossierAsync, () => Selected is not null);
         EditAreaCommand = new AsyncRelayCommand(EditAreaAsync);
         CreateWordCommand = new AsyncRelayCommand(CreateWordAsync, () => Selected is not null);
+        CreateHoldingListCommand = new AsyncRelayCommand(
+            CreateHoldingListAsync, () => Selected is not null);
+        CreateShaftListCommand = new AsyncRelayCommand(
+            CreateShaftListAsync, () => Selected is not null);
         PreviewCommand = new AsyncRelayCommand(PreviewAsync, () => Selected is not null);
         CollectAttachmentsCommand = new AsyncRelayCommand(
             CollectAttachmentsAsync, () => Selected is not null);
@@ -221,6 +228,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     public IAsyncRelayCommand EditDossierCommand { get; }
     public IAsyncRelayCommand EditAreaCommand { get; }
     public IAsyncRelayCommand CreateWordCommand { get; }
+    public IAsyncRelayCommand CreateHoldingListCommand { get; }
+    public IAsyncRelayCommand CreateShaftListCommand { get; }
 
     public IAsyncRelayCommand PreviewCommand { get; }
     public IAsyncRelayCommand CollectAttachmentsCommand { get; }
@@ -334,7 +343,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
 
         try
         {
-            _document = await _store.LoadAsync(root);
+            _document = await _store.LoadAsync(root, _getProject());
             _loaded = true;
             StatusMessage = "";
         }
@@ -648,6 +657,8 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         EditShaftsCommand.NotifyCanExecuteChanged();
         EditDossierCommand.NotifyCanExecuteChanged();
         CreateWordCommand.NotifyCanExecuteChanged();
+        CreateHoldingListCommand.NotifyCanExecuteChanged();
+        CreateShaftListCommand.NotifyCanExecuteChanged();
         PreviewCommand.NotifyCanExecuteChanged();
         CollectAttachmentsCommand.NotifyCanExecuteChanged();
         AssemblePdfCommand.NotifyCanExecuteChanged();

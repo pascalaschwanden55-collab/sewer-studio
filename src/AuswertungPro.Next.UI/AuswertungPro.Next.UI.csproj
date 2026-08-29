@@ -123,6 +123,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
+    <None Include="..\..\Export_Vorlage\Zustandsklassen_Eigentuemer_Dossier.pdf" Link="Export_Vorlage\Zustandsklassen_Eigentuemer_Dossier.pdf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
 
     <None Include="tools\PLACE_PDFTOTEXT_HERE.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

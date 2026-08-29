@@ -3,11 +3,97 @@ using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.Infrastructure.Dossiers;
+using AuswertungPro.Next.Infrastructure.Media;
+
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+
+using UglyToad.PdfPig;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Dossiers;
 
 public sealed class DossierOutputPreviewServiceTests
 {
+    [Fact]
+    public async Task Produktiver_Zusammenbau_zeigt_das_Erklaerblatt_auch_ohne_Protokolle()
+    {
+        using var temp = new TempDirectory();
+        var projectRoot = Path.Combine(temp.Path, "Projekt");
+        var targetFolder = Path.Combine(projectRoot, "Dossiers", "Fall");
+        var previewRoot = Path.Combine(temp.Path, "Vorschauarbeit");
+        var composer = new DossierPdfPackageComposer(
+            new PdfMergeService(),
+            new DossierConditionClassPdfService(templateAssetFolder: temp.Path));
+
+        var service = new DossierOutputPreviewService(
+            new RecordingWordExporter(),
+            (_, pdfPath) =>
+            {
+                File.WriteAllBytes(pdfPath!, CreateQuestPdf("WORD-DOSSIER"));
+                return true;
+            },
+            composer.Compose,
+            ReadPreviewPages,
+            () => previewRoot,
+            collectPreviewAttachments: null);
+
+        var result = await service.CreateAsync(Request(projectRoot, targetFolder, ""));
+
+        Assert.True(result.Success, result.Message);
+        Assert.Contains("Erkläranhang", result.Message, StringComparison.Ordinal);
+        Assert.Equal(2, result.Pages.Count);
+        Assert.False(result.Pages[0].IsAttachment);
+        Assert.True(result.Pages[1].IsAttachment);
+        Assert.True(result.Pages[1].IsConditionClassExplanation);
+        Assert.Contains("WORD-DOSSIER", result.Pages[0].Text, StringComparison.Ordinal);
+        Assert.Contains("Zustandsklassen", result.Pages[1].Text, StringComparison.Ordinal);
+        Assert.Contains("Sofort", result.Pages[1].Text, StringComparison.Ordinal);
+        Assert.NotNull(result.PdfBytes);
+        using var document = PdfDocument.Open(result.PdfBytes!);
+        Assert.Equal(2, document.NumberOfPages);
+        Assert.False(Directory.Exists(previewRoot));
+        Assert.False(Directory.Exists(targetFolder));
+    }
+
+    [Fact]
+    public async Task CreateAsync_markiert_nur_die_erwartete_Erklaerseite()
+    {
+        using var temp = new TempDirectory();
+        var projectRoot = Path.Combine(temp.Path, "Projekt");
+        var targetFolder = Path.Combine(projectRoot, "Dossiers", "Fall");
+        var previewRoot = Path.Combine(temp.Path, "Vorschauarbeit");
+        var marker = DossierConditionClassDefinitions.PdfRequiredPageMarker;
+
+        var service = new DossierOutputPreviewService(
+            new RecordingWordExporter(),
+            (_, pdfPath) =>
+            {
+                File.WriteAllBytes(pdfPath!, [5, 6]);
+                return true;
+            },
+            (_, _) => [7, 8, 9],
+            pdfPath => pdfPath.EndsWith("-komplett.pdf", StringComparison.Ordinal)
+                ?
+                [
+                    new DossierOutputPreviewPage(1, 595, 842, "Dossier", []),
+                    new DossierOutputPreviewPage(2, 595, 842, marker + " Zustandsklassen", []),
+                    new DossierOutputPreviewPage(3, 595, 842, marker + " Altes Dossier", [])
+                ]
+                :
+                [
+                    new DossierOutputPreviewPage(1, 595, 842, "Dossier", [])
+                ],
+            () => previewRoot);
+
+        var result = await service.CreateAsync(Request(projectRoot, targetFolder, ""));
+
+        Assert.True(result.Success, result.Message);
+        Assert.False(result.Pages[0].IsConditionClassExplanation);
+        Assert.True(result.Pages[1].IsConditionClassExplanation);
+        Assert.False(result.Pages[2].IsConditionClassExplanation);
+    }
+
     [Fact]
     public async Task CreateAsync_erzeugt_ausserhalb_des_Projekts_und_bereinigt_den_Arbeitsordner()
     {
@@ -111,7 +197,12 @@ public sealed class DossierOutputPreviewServiceTests
                 ?
                 [
                     new DossierOutputPreviewPage(1, 595, 842, "Dossier", []),
-                    new DossierOutputPreviewPage(2, 595, 842, "Original", [])
+                    new DossierOutputPreviewPage(
+                        2,
+                        595,
+                        842,
+                        DossierConditionClassDefinitions.PdfHeading,
+                        [])
                 ]
                 :
                 [
@@ -126,6 +217,7 @@ public sealed class DossierOutputPreviewServiceTests
         Assert.Contains("1 Beilage", result.Message, StringComparison.Ordinal);
         Assert.False(result.Pages[0].IsAttachment);
         Assert.True(result.Pages[1].IsAttachment);
+        Assert.False(result.Pages[1].IsConditionClassExplanation);
         Assert.Equal([1, 2, 3, 4], await File.ReadAllBytesAsync(attachment));
         Assert.False(Directory.Exists(previewRoot));
     }
@@ -268,6 +360,33 @@ public sealed class DossierOutputPreviewServiceTests
             + "7 0 obj\n<</Type/Pages/Kids[15 0 R 16 0 R]/Count 2>>\nendobj\n"
             + "6 0 obj\n<</Type/Catalog/Pages 7 0 R>>\nendobj\n"
             + "trailer\n<</Size 8/Root 6 0 R>>\n%%EOF");
+
+    private static byte[] CreateQuestPdf(string text)
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
+        return Document.Create(document =>
+        {
+            document.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(20);
+                page.Content().Text(text);
+            });
+        }).GeneratePdf();
+    }
+
+    private static IReadOnlyList<DossierOutputPreviewPage> ReadPreviewPages(string pdfPath)
+    {
+        using var document = PdfDocument.Open(pdfPath);
+        return document.GetPages()
+            .Select(page => new DossierOutputPreviewPage(
+                page.Number,
+                page.Width,
+                page.Height,
+                page.Text,
+                []))
+            .ToList();
+    }
 
     private static DossierExportRequest Request(
         string projectRoot,

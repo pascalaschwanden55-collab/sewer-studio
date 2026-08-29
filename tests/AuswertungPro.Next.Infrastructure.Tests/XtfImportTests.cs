@@ -10,6 +10,66 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class XtfImportTests
 {
     [Fact]
+    public void VsaKekImport_VerwendetUhrlagenWederAlsLaengeNochAlsMeterOderDedupePosition()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"vsakek-clock-{Guid.NewGuid():N}.xtf");
+        File.WriteAllText(tempPath, """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="VSA_KEK_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <VSA_KEK_2020_LV95.KEK BID="B1">
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="U1">
+        <Bezeichnung>UHRLAGE-TEST</Bezeichnung>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="S1">
+        <UntersuchungRef REF="U1" />
+        <KanalSchadencode>BAB</KanalSchadencode>
+        <Streckenschaden>true</Streckenschaden>
+        <SchadenlageAnfang>4</SchadenlageAnfang>
+        <SchadenlageEnde>8</SchadenlageEnde>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="S2">
+        <UntersuchungRef REF="U1" />
+        <KanalSchadencode>BCA</KanalSchadencode>
+        <SchadenlageAnfang>9</SchadenlageAnfang>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="S3">
+        <UntersuchungRef REF="U1" />
+        <KanalSchadencode>BCA</KanalSchadencode>
+        <SchadenlageAnfang>3</SchadenlageAnfang>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+    </VSA_KEK_2020_LV95.KEK>
+  </DATASECTION>
+</TRANSFER>
+""");
+
+        try
+        {
+            var project = new Project();
+            var stats = new LegacyXtfImportService().ImportXtfFiles([tempPath], project);
+            var debug = string.Join("\n", stats.Messages.Select(m => $"{m.Level}: {m.Message} ({m.Context})"));
+
+            Assert.True(stats.Errors == 0, debug);
+            var record = Assert.Single(project.Data);
+            var stretchFinding = Assert.Single(record.VsaFindings.Where(f => f.KanalSchadencode == "BAB"));
+            Assert.Equal(0, stretchFinding.LL);
+
+            var primaryDamage = record.GetFieldValue("Primaere_Schaeden");
+            Assert.DoesNotContain("4.00m", primaryDamage, StringComparison.Ordinal);
+            Assert.DoesNotContain("9.00m", primaryDamage, StringComparison.Ordinal);
+            Assert.DoesNotContain("3.00m", primaryDamage, StringComparison.Ordinal);
+            Assert.Equal(2, primaryDamage.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
+        }
+        finally
+        {
+            try { File.Delete(tempPath); } catch { }
+        }
+    }
+
+    [Fact]
     public void Import_ArchiviertAusserhalbDesProgrammordners_UndMigriertAltbestand()
     {
         var root = Path.Combine(Path.GetTempPath(), $"xtf-archive-{Guid.NewGuid():N}");

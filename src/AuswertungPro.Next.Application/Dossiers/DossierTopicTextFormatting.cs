@@ -120,6 +120,40 @@ public static class DossierTopicTextFormatting
         return result;
     }
 
+    /// <summary>
+    /// Legt eine zusätzliche Formatierung über bestehende Bereiche. Eine
+    /// gesetzte Farbe ersetzt die bisherige; Fett, Kursiv und Unterstrichen
+    /// werden ergänzt und nie unbeabsichtigt entfernt.
+    /// </summary>
+    public static List<DossierTextStyleRange> OverlayStyles(
+        string? text,
+        IEnumerable<DossierTextStyleRange>? baseRanges,
+        IEnumerable<DossierTextStyleRange>? overlayRanges)
+    {
+        var value = text ?? string.Empty;
+        if (value.Length == 0)
+            return new List<DossierTextStyleRange>();
+
+        var styles = Styles(value, Normalize(value, baseRanges));
+        foreach (var range in Normalize(value, overlayRanges))
+        {
+            var end = Math.Min(value.Length, range.Start + range.Length);
+            for (var i = Math.Max(0, range.Start); i < end; i++)
+            {
+                var current = styles[i];
+                styles[i] = new Style(
+                    IsColor(range.ColorHex)
+                        ? range.ColorHex.Trim().ToUpperInvariant()
+                        : current?.ColorHex,
+                    (current?.Bold ?? false) || range.Bold,
+                    (current?.Italic ?? false) || range.Italic,
+                    (current?.Underline ?? false) || range.Underline);
+            }
+        }
+
+        return BuildRanges(styles);
+    }
+
     public static FormattedText ReplacePlaceholders(
         string? input,
         IReadOnlyDictionary<string, string> values,

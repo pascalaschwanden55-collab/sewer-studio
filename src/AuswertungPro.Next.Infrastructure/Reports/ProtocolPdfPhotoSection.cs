@@ -252,7 +252,7 @@ internal static class ProtocolPdfPhotoSection
             if (!string.IsNullOrWhiteSpace(line1))
                 column.Item().PaddingTop(2).AlignCenter().Text(line1).FontSize(9);
 
-            var line2 = BuildPhotoCaptionLine2(item.Entry);
+            var line2 = BuildPhotoCaptionLine2(item.Entry, options.CodeCatalog);
             if (!string.IsNullOrWhiteSpace(line2))
                 column.Item().AlignCenter().Text(line2).FontSize(9);
         });

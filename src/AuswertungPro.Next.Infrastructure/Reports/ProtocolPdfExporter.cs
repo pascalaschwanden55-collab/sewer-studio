@@ -21,26 +21,36 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
 {
     private readonly IProtocolPdfAssetResolver _assets;
     private readonly IProtocolPdfLayoutSettings? _layoutSettings;
+    private readonly ICodeCatalogProvider? _defaultCodeCatalog;
 
     public ProtocolPdfExporter()
-        : this(new ProtocolPdfAssetFileResolver(), layoutSettings: null)
+        : this(new ProtocolPdfAssetFileResolver(), layoutSettings: null, defaultCodeCatalog: null)
     {
     }
 
     public ProtocolPdfExporter(IProtocolPdfLayoutSettings? layoutSettings)
-        : this(new ProtocolPdfAssetFileResolver(), layoutSettings)
+        : this(new ProtocolPdfAssetFileResolver(), layoutSettings, defaultCodeCatalog: null)
     {
     }
 
     public ProtocolPdfExporter(IProtocolPdfAssetResolver assets)
-        : this(assets, layoutSettings: null)
+        : this(assets, layoutSettings: null, defaultCodeCatalog: null)
     {
     }
 
     public ProtocolPdfExporter(IProtocolPdfAssetResolver assets, IProtocolPdfLayoutSettings? layoutSettings)
+        : this(assets, layoutSettings, defaultCodeCatalog: null)
+    {
+    }
+
+    public ProtocolPdfExporter(
+        IProtocolPdfAssetResolver assets,
+        IProtocolPdfLayoutSettings? layoutSettings,
+        ICodeCatalogProvider? defaultCodeCatalog = null)
     {
         _assets = assets ?? throw new ArgumentNullException(nameof(assets));
         _layoutSettings = layoutSettings;
+        _defaultCodeCatalog = defaultCodeCatalog;
     }
 
     public byte[] BuildPdf(string projectTitle, ProtocolDocument doc, string projectRootAbs)
@@ -157,7 +167,8 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
         options = options with
         {
             PhotosPerPage = ProtocolPdfPhotoLayout.Normalize(
-                options.RequestedPhotosPerPage ?? _layoutSettings?.PhotosPerPage)
+                options.RequestedPhotosPerPage ?? _layoutSettings?.PhotosPerPage),
+            CodeCatalog = options.CodeCatalog ?? _defaultCodeCatalog
         };
         QuestPDF.Settings.License = LicenseType.Community;
 
@@ -200,7 +211,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
 
         var grafikHeight = HaltungsgrafikExportSizing.ChooseSvgHeight(entries.Count);
         var svg = options.IncludeHaltungsgrafik && length.HasValue && length.Value > 0
-            ? BuildHaltungsgrafikSvg(length.Value, entries, photoNumberMap, startNode, endNode, flowDown, brand, overrideHeight: grafikHeight, unknownGaps: unknownGaps)
+            ? BuildHaltungsgrafikSvg(length.Value, entries, photoNumberMap, startNode, endNode, flowDown, brand, overrideHeight: grafikHeight, unknownGaps: unknownGaps, catalog: options.CodeCatalog)
             : null;
 
         var headerItems = BuildHaltungsprotokollHeaderTable(project, record, inspectionDate, length, holdingLabel);
@@ -833,25 +844,11 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
 
     /// <summary>Akzentfarbe abhaengig von Nutzungsart (dezent, nicht knallig).</summary>
     internal static string ResolveNutzungsartBrand(string nutzungsart)
-    {
-        var n = nutzungsart.ToUpperInvariant();
-        if (n.Contains("SCHMUTZ"))
-            return "#7A6242"; // braun (dezent)
-        if (n.Contains("REGEN") || n.Contains("RAIN") || n.Contains("METEOR") || n.Contains("REIN"))
-            return "#4A7FA5"; // blau (gedaempft)
-        if (n.Contains("MISCH"))
-            return "#8E4A6E"; // magenta (gedaempft)
-        return "#7A8A94"; // neutral grau fuer unbekannte Nutzungsart
-    }
+        => NutzungsartReportColors.Resolve(nutzungsart).Accent;
 
     /// <summary>Helle Akzentfarbe fuer Hintergruende (aus brand abgeleitet).</summary>
-    internal static string ResolveNutzungsartBrandLight(string brand) => brand switch
-    {
-        "#7A6242" => "#F5F0E8", // braun-hell (warm)
-        "#4A7FA5" => "#EBF2F7", // blau-hell (kuehl)
-        "#8E4A6E" => "#F5ECF1", // magenta-hell (sanft)
-        _ => "#F2F4F5"          // neutral-hell (grau)
-    };
+    internal static string ResolveNutzungsartBrandLight(string brand)
+        => NutzungsartReportColors.ResolveLight(brand);
 
     // Dünne Delegation zu HaltungsgrafikSvgBuilder (verhaltensneutral extrahiert).
     private static string BuildHaltungsgrafikSvg(
@@ -863,8 +860,9 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
         bool? flowDown,
         string brand = "#006E9C",
         int? overrideHeight = null,
-        IReadOnlyList<InspectionGap>? unknownGaps = null)
-        => HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(length, entries, photoNumbers, startNode, endNode, flowDown, brand, overrideHeight, unknownGaps);
+        IReadOnlyList<InspectionGap>? unknownGaps = null,
+        ICodeCatalogProvider? catalog = null)
+        => HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(length, entries, photoNumbers, startNode, endNode, flowDown, brand, overrideHeight, unknownGaps, catalog);
 
     private sealed record HaltungsgrafikScale(string? LengthText, string? ScaleText);
 

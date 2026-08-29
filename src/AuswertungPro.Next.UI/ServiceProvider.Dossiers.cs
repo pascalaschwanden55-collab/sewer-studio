@@ -18,6 +18,10 @@ public sealed partial class ServiceProvider
     /// <summary>Erzeugt die Word-Datei aus der Vorlage.</summary>
     public IDossierWordExportService DossierWordExport => _dossierComposition.WordExport;
 
+    /// <summary>Erzeugt Haltungs- und Schachtliste eines Eigentuemerdossiers.</summary>
+    public IDossierComponentListExportService DossierComponentLists
+        => _dossierComposition.ComponentLists;
+
     /// <summary>Erzeugt die echte Word/PDF-Ausgabe für die Vorschau.</summary>
     public IDossierOutputPreviewService DossierOutputPreview => _dossierComposition.OutputPreview;
 

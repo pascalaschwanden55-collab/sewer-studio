@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.Infrastructure.Import;
 
@@ -35,9 +37,55 @@ public sealed class DossierFileStore : IDossierStore
         Converters = { new JsonStringEnumConverter() }
     };
 
-    private readonly SemaphoreSlim _saveLock = new(1, 1);
+    // Alle Store-Instanzen eines laufenden SewerStudio teilen dieselbe Sperre.
+    // Dadurch kann kein zweiter Speicher- oder Ladevorgang einen gerade neu
+    // angelegten Ordner uebernehmen, waehrend der erste ihn noch zurueckrollen
+    // koennte.
+    private static readonly SemaphoreSlim MutationLock = new(1, 1);
+    private readonly IDossierConditionClassPdfService? _conditionClassPdf;
+    public DossierFileStore()
+        : this(conditionClassPdf: null)
+    {
+    }
 
-    public async Task<DossierDocument> LoadAsync(string projectRoot, CancellationToken ct = default)
+    public DossierFileStore(IDossierConditionClassPdfService? conditionClassPdf)
+    {
+        _conditionClassPdf = conditionClassPdf;
+    }
+
+    /// <summary>
+    /// Kompatibler Konstruktor fuer Aufrufer des frueheren automatischen
+    /// Haltungslistenwegs. Listen werden heute bewusst erst ueber die
+    /// Schaltflaechen im Dossier-Cockpit erzeugt.
+    /// </summary>
+    public DossierFileStore(
+        IDossierConditionClassPdfService? conditionClassPdf,
+        IDossierHoldingListPdfService? holdingListPdf,
+        Func<DateTime>? currentTime = null)
+        : this(conditionClassPdf)
+    {
+        _ = holdingListPdf;
+        _ = currentTime;
+    }
+
+    public Task<DossierDocument> LoadAsync(
+        string projectRoot,
+        CancellationToken ct = default)
+        => LoadCoreAsync(projectRoot, project: null, ct);
+
+    public Task<DossierDocument> LoadAsync(
+        string projectRoot,
+        Project project,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        return LoadCoreAsync(projectRoot, project, ct);
+    }
+
+    private async Task<DossierDocument> LoadCoreAsync(
+        string projectRoot,
+        Project? project,
+        CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectRoot);
 
@@ -48,7 +96,7 @@ public sealed class DossierFileStore : IDossierStore
         try
         {
             var document = await ReadAsync(path, ct).ConfigureAwait(false);
-            await EnsureDossierFoldersOnLoadAsync(projectRoot, document, ct)
+            await EnsureDossierFoldersOnLoadAsync(projectRoot, document, project, ct)
                 .ConfigureAwait(false);
             return document;
         }
@@ -85,7 +133,7 @@ public sealed class DossierFileStore : IDossierStore
                 try
                 {
                     var backup = await ReadAsync(backupPath, ct).ConfigureAwait(false);
-                    await EnsureDossierFoldersOnLoadAsync(projectRoot, backup, ct)
+                    await EnsureDossierFoldersOnLoadAsync(projectRoot, backup, project, ct)
                         .ConfigureAwait(false);
                     Trace.WriteLine("[Dossiers] Backup .bak geladen");
                     return backup;
@@ -112,15 +160,32 @@ public sealed class DossierFileStore : IDossierStore
         }
     }
 
-    public async Task SaveAsync(
+    public Task SaveAsync(
         string projectRoot,
         DossierDocument document,
         CancellationToken ct = default)
+        => SaveCoreAsync(projectRoot, document, project: null, ct);
+
+    public Task SaveAsync(
+        string projectRoot,
+        DossierDocument document,
+        Project project,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        return SaveCoreAsync(projectRoot, document, project, ct);
+    }
+
+    private async Task SaveCoreAsync(
+        string projectRoot,
+        DossierDocument document,
+        Project? project,
+        CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectRoot);
         ArgumentNullException.ThrowIfNull(document);
 
-        await _saveLock.WaitAsync(ct).ConfigureAwait(false);
+        await MutationLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             var guard = new ProjectWritePathGuard(projectRoot);
@@ -133,11 +198,19 @@ public sealed class DossierFileStore : IDossierStore
 
             var backupPath = guard.EnsureSafeFileTarget(path + ".bak");
 
-            var newFolders = new List<string>();
+            var newFolders = new List<DossierFolderProvision>();
             var documentWritten = false;
             try
             {
-                EnsureDossierFolders(projectRoot, root, document, guard, newFolders);
+                await EnsureDossierFoldersAsync(
+                        projectRoot,
+                        root,
+                        document,
+                        project,
+                        guard,
+                        newFolders,
+                        ct)
+                    .ConfigureAwait(false);
 
                 // Ist die vorhandene Datei kaputt, muss das bisherige .bak den
                 // Schreibvorgang ueberleben.
@@ -174,13 +247,13 @@ public sealed class DossierFileStore : IDossierStore
             catch
             {
                 if (!documentWritten)
-                    RollbackEmptyFolders(projectRoot, newFolders);
+                    RollbackNewFolders(projectRoot, newFolders);
                 throw;
             }
         }
         finally
         {
-            _saveLock.Release();
+            MutationLock.Release();
         }
     }
 
@@ -191,10 +264,11 @@ public sealed class DossierFileStore : IDossierStore
     private async Task EnsureDossierFoldersOnLoadAsync(
         string projectRoot,
         DossierDocument document,
+        Project? project,
         CancellationToken ct)
     {
-        await _saveLock.WaitAsync(ct).ConfigureAwait(false);
-        var newFolders = new List<string>();
+        await MutationLock.WaitAsync(ct).ConfigureAwait(false);
+        var newFolders = new List<DossierFolderProvision>();
 
         try
         {
@@ -202,11 +276,24 @@ public sealed class DossierFileStore : IDossierStore
             var root = guard.EnsureSafeDirectoryTarget(
                 DossierFolderPlanner.ResolveRoot(projectRoot));
 
-            EnsureDossierFolders(projectRoot, root, document, guard, newFolders);
+            await EnsureDossierFoldersAsync(
+                    projectRoot,
+                    root,
+                    document,
+                    project,
+                    guard,
+                    newFolders,
+                    ct)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            RollbackNewFolders(projectRoot, newFolders);
+            throw;
         }
         catch (Exception ex)
         {
-            RollbackEmptyFolders(projectRoot, newFolders);
+            RollbackNewFolders(projectRoot, newFolders);
             throw new DossierFolderProvisionException(
                 "Die Dossier-Datei ist lesbar, aber mindestens ein "
                 + "Liegenschaftsordner konnte nicht angelegt werden.",
@@ -214,7 +301,7 @@ public sealed class DossierFileStore : IDossierStore
         }
         finally
         {
-            _saveLock.Release();
+            MutationLock.Release();
         }
     }
 
@@ -222,15 +309,19 @@ public sealed class DossierFileStore : IDossierStore
     /// Legt die Ordner aller gespeicherten Liegenschaften an. So gilt dieselbe
     /// Regel fuer Einzel- und Stapelanlage, ohne Dateilogik im ViewModel.
     /// </summary>
-    private static void EnsureDossierFolders(
+    private async Task EnsureDossierFoldersAsync(
         string projectRoot,
         string dossierRoot,
         DossierDocument document,
+        Project? project,
         ProjectWritePathGuard guard,
-        List<string> newFolders)
+        List<DossierFolderProvision> newFolders,
+        CancellationToken ct)
     {
         foreach (var dossier in document.Dossiers)
         {
+            ct.ThrowIfCancellationRequested();
+
             if (string.IsNullOrWhiteSpace(dossier.FolderName))
                 continue;
 
@@ -252,23 +343,70 @@ public sealed class DossierFileStore : IDossierStore
             if (Directory.Exists(folder))
                 continue;
 
-            newFolders.Add(folder);
+            var provision = new DossierFolderProvision(folder);
+            newFolders.Add(provision);
             Directory.CreateDirectory(folder);
             guard.EnsureSafeDirectoryTarget(folder);
+
+            var standardFiles = BuildStandardFiles();
+            foreach (var standardFile in standardFiles)
+            {
+                var target = guard.EnsureSafeFileTarget(Path.Combine(
+                    folder,
+                    standardFile.FileName));
+
+                await WriteNewFileAtomicallyAsync(target, standardFile.Content, guard, ct)
+                    .ConfigureAwait(false);
+                provision.OwnedFiles.Add(new DossierOwnedFileProvision(
+                    target,
+                    SHA256.HashData(standardFile.Content)));
+            }
         }
     }
 
+    private IReadOnlyList<DossierStandardFile> BuildStandardFiles()
+    {
+        var files = new List<DossierStandardFile>(1);
+
+        if (_conditionClassPdf is not null)
+        {
+            var conditionPdf = _conditionClassPdf.CreatePdf();
+            if (conditionPdf.Length == 0)
+                throw new InvalidDataException("Das feste Zustandsklassenblatt ist leer.");
+
+            files.Add(new DossierStandardFile(
+                DossierFolderPlanner.ConditionClassPdfFileName,
+                conditionPdf));
+        }
+
+        return files;
+    }
+
     /// <summary>
-    /// Bei einem Speicherfehler werden nur gerade neu erzeugte und weiterhin
-    /// leere Ordner entfernt. Vorhandene Ordner und Benutzerdateien bleiben.
+    /// Bei einem Speicherfehler wird nur die eigene, unveraenderte PDF entfernt.
+    /// Danach werden weiterhin nur leere, gerade neu erzeugte Ordner entfernt.
+    /// Vorhandene Ordner und Benutzerdateien bleiben unangetastet.
     /// </summary>
-    private static void RollbackEmptyFolders(
+    private static void RollbackNewFolders(
         string projectRoot,
-        IReadOnlyList<string> newFolders)
+        IReadOnlyList<DossierFolderProvision> newFolders)
     {
         for (var index = newFolders.Count - 1; index >= 0; index--)
         {
-            var folder = newFolders[index];
+            var provision = newFolders[index];
+            var folder = provision.FolderPath;
+
+            for (var fileIndex = provision.OwnedFiles.Count - 1; fileIndex >= 0; fileIndex--)
+            {
+                var ownedFile = provision.OwnedFiles[fileIndex];
+                BestEffort.Try(
+                    () => DeleteOwnUnchangedFile(
+                        projectRoot,
+                        ownedFile.Path,
+                        ownedFile.Sha256),
+                    $"Dossiers: eigene Standarddatei in '{folder}' zuruecknehmen");
+            }
+
             BestEffort.Try(
                 () =>
                 {
@@ -285,6 +423,49 @@ public sealed class DossierFileStore : IDossierStore
                 },
                 $"Dossiers: leeren neuen Ordner '{folder}' zuruecknehmen");
         }
+    }
+
+    private static async Task WriteNewFileAtomicallyAsync(
+        string target,
+        byte[] content,
+        ProjectWritePathGuard guard,
+        CancellationToken ct)
+    {
+        var temporary = guard.EnsureSafeFileTarget(
+            target + ".tmp_" + Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            await File.WriteAllBytesAsync(temporary, content, ct).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            guard.EnsureSafeFileTarget(temporary);
+            guard.EnsureSafeFileTarget(target);
+            File.Move(temporary, target, overwrite: false);
+        }
+        finally
+        {
+            BestEffort.Try(
+                () =>
+                {
+                    var safeTemporary = guard.EnsureSafeFileTarget(temporary);
+                    if (File.Exists(safeTemporary))
+                        File.Delete(safeTemporary);
+                },
+                "Dossiers: temporaere Standarddatei entfernen");
+        }
+    }
+
+    private static void DeleteOwnUnchangedFile(
+        string projectRoot,
+        string path,
+        byte[] expectedSha256)
+    {
+        var guard = new ProjectWritePathGuard(projectRoot);
+        var safePath = guard.EnsureSafeFileTarget(path);
+        if (!File.Exists(safePath))
+            return;
+
+        DossierOwnedFileRollback.DeleteIfSha256Matches(safePath, expectedSha256);
     }
 
     /// <summary>
@@ -337,6 +518,17 @@ public sealed class DossierFileStore : IDossierStore
         {
         }
     }
+
+    private sealed class DossierFolderProvision(string folderPath)
+    {
+        public string FolderPath { get; } = folderPath;
+
+        public List<DossierOwnedFileProvision> OwnedFiles { get; } = new();
+    }
+
+    private sealed record DossierOwnedFileProvision(string Path, byte[] Sha256);
+
+    private sealed record DossierStandardFile(string FileName, byte[] Content);
 }
 
 internal static class DossierDocumentExtensions

@@ -209,9 +209,43 @@ public static class DossierTopicEditing
         if (!SupportsComponentListImport(title))
             return string.Empty;
 
+        // Diese bestehende String-Fassade behaelt ihren Klartextvertrag. Die UI
+        // verwendet den additiven formatierten Weg darunter.
         var text = DossierTopicComponentListComposer.ComponentText(values);
-        SetFormattedForDossier(dossier, title, text, Array.Empty<DossierTextStyleRange>());
+        SetFormattedForDossier(
+            dossier,
+            title,
+            text,
+            Array.Empty<DossierTextStyleRange>());
         return text;
+    }
+
+    /// <summary>
+    /// Kopiert die Liste samt Zustandsfarben. Der formatierte Rueckgabewert
+    /// sorgt dafuer, dass der Editor dieselbe gespeicherte Fassung sofort zeigt.
+    /// </summary>
+    public static DossierTopicTextFormatting.FormattedText ImportFormattedComponentListForDossier(
+        DossierDefinition dossier,
+        string title,
+        IReadOnlyDictionary<string, string> values)
+    {
+        ArgumentNullException.ThrowIfNull(dossier);
+        ArgumentNullException.ThrowIfNull(values);
+
+        if (!SupportsComponentListImport(title))
+        {
+            return new DossierTopicTextFormatting.FormattedText(
+                string.Empty,
+                Array.Empty<DossierTextStyleRange>());
+        }
+
+        var formatted = DossierTopicComponentListComposer.ComponentFormattedText(values);
+        SetFormattedForDossier(
+            dossier,
+            title,
+            formatted.Text,
+            formatted.StyleRanges);
+        return formatted;
     }
 
     /// <summary>Wahr, wenn dieses Dossier fuer den Titel etwas Eigenes fuehrt.</summary>

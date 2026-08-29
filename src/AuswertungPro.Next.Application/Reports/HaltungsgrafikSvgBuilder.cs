@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using static AuswertungPro.Next.Application.Reports.ProtocolPdfValueFormatting;
 using static AuswertungPro.Next.Application.Reports.ProtocolTextHelpers;
@@ -43,6 +44,33 @@ public static class HaltungsgrafikSvgBuilder
         string brand = "#006E9C",
         int? overrideHeight = null,
         IReadOnlyList<InspectionGap>? unknownGaps = null)
+        => BuildHaltungsgrafikSvg(
+            length,
+            entries,
+            photoNumbers,
+            startNode,
+            endNode,
+            flowDown,
+            brand,
+            overrideHeight,
+            unknownGaps,
+            catalog: null);
+
+    /// <summary>
+    /// Erstellt die Haltungsgrafik und verwendet den optionalen Katalog fuer
+    /// die Klartexte der Beobachtungs-Labels.
+    /// </summary>
+    public static string BuildHaltungsgrafikSvg(
+        double length,
+        IReadOnlyList<ProtocolEntry> entries,
+        IReadOnlyDictionary<ProtocolEntry, string>? photoNumbers,
+        string? startNode,
+        string? endNode,
+        bool? flowDown,
+        string brand,
+        int? overrideHeight,
+        IReadOnlyList<InspectionGap>? unknownGaps,
+        ICodeCatalogProvider? catalog)
     {
         var width = Width;
         var height = overrideHeight ?? Height;
@@ -426,9 +454,15 @@ public static class HaltungsgrafikSvgBuilder
             }
 
             var seite = clockHour.Value <= 5 ? -1d : 1d;
-            // Leicht nach oben angestellt, wie die Stutzen im WinCan-Vorbild.
-            var steigung = Math.Sin(35.0 * Math.PI / 180.0);
-            var lauf = Math.Cos(35.0 * Math.PI / 180.0);
+            // Die Uhrlage bestimmt auch den Winkel des Stutzens: 3/9 Uhr ist
+            // waagrecht, jede Stunde davon entfernt entspricht 30 Grad.
+            // flowDown darf diese Kameraperspektive nicht spiegeln.
+            var winkelGrad = clockHour.Value <= 5
+                ? (3 - clockHour.Value) * 30d
+                : (clockHour.Value - 9) * 30d;
+            var winkel = winkelGrad * Math.PI / 180.0;
+            var steigung = Math.Sin(winkel);
+            var lauf = Math.Cos(winkel);
             var stubLen = 16d;
             var startX = lineX + seite * pipeHalf;
             var endX = startX + seite * lauf * stubLen;
@@ -448,7 +482,14 @@ public static class HaltungsgrafikSvgBuilder
         }
 
         // --- Beobachtungs-Labels ---
-        var labels = HaltungsgrafikLabelLayout.BuildHaltungsgrafikLabels(entries, length, top, bottom, photoNumbers, brand);
+        var labels = HaltungsgrafikLabelLayout.BuildHaltungsgrafikLabels(
+            entries,
+            length,
+            top,
+            bottom,
+            photoNumbers,
+            brand,
+            catalog);
         HaltungsgrafikLabelLayout.LayoutHaltungsgrafikLabels(labels, top, bottom);
 
         // --- Bezugslinien (Verbindung Beobachtung auf Leitung -> Label-Zeile) ---

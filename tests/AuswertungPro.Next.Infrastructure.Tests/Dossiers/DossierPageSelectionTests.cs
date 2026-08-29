@@ -97,4 +97,18 @@ public sealed class DossierPageSelectionTests
         auswahl.Keine();
         Assert.Equal("Kein Blatt gewählt", auswahl.Beschreibung);
     }
+
+    [Fact]
+    public void Ein_Pflichtblatt_bleibt_auch_bei_Keine_gewaehlt()
+    {
+        var auswahl = new DossierPageSelection(3, new HashSet<int> { 2 });
+
+        auswahl.Setze(2, gewaehlt: false);
+        auswahl.Keine();
+
+        Assert.True(auswahl.IstPflichtblatt(2));
+        Assert.True(auswahl.IstGewaehlt(2));
+        Assert.Equal([1, 3], auswahl.Ausgeschlossen.OrderBy(nummer => nummer));
+        Assert.True(auswahl.DarfErzeugen);
+    }
 }

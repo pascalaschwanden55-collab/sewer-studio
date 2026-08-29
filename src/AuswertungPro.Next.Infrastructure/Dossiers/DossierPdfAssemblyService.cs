@@ -23,14 +23,26 @@ namespace AuswertungPro.Next.Infrastructure.Dossiers;
 /// </summary>
 public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
 {
-    private readonly IPdfMergeService _pdfMerge;
+    private readonly DossierPdfPackageComposer _packageComposer;
     private readonly Func<string, string?, bool> _convertWordToPdf;
 
     public DossierPdfAssemblyService(
         IPdfMergeService pdfMerge,
         Func<string, string?, bool>? convertWordToPdf = null)
+        : this(
+            new DossierPdfPackageComposer(
+                pdfMerge ?? throw new ArgumentNullException(nameof(pdfMerge)),
+                DossierConditionClassPdfService.Shared),
+            convertWordToPdf)
     {
-        _pdfMerge = pdfMerge ?? throw new ArgumentNullException(nameof(pdfMerge));
+    }
+
+    internal DossierPdfAssemblyService(
+        DossierPdfPackageComposer packageComposer,
+        Func<string, string?, bool>? convertWordToPdf = null)
+    {
+        _packageComposer = packageComposer
+            ?? throw new ArgumentNullException(nameof(packageComposer));
         _convertWordToPdf = convertWordToPdf ?? DossierWordPdfConverter.TryConvertToPdf;
     }
 
@@ -70,9 +82,11 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
 
             var attachments = CollectAttachmentPdfs(dossierFolder);
             var generated = File.ReadAllBytes(wordPdf);
-            var merged = attachments.Count == 0
-                ? generated
-                : _pdfMerge.MergeWithOriginals(generated, attachments);
+            var merged = _packageComposer.Compose(
+                generated,
+                attachments,
+                Path.GetDirectoryName(wordPdf) ?? Path.GetTempPath(),
+                out var conditionClassPageNumbers);
 
             // Zwischen „zusammengefuehrt" und „geschrieben": Erst hier stehen
             // alle Blaetter fest — die aus Word UND die Beilagen. Vorher liesse
@@ -89,7 +103,10 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
 
                 try
                 {
-                    merged = DossierPdfPageFilter.Ohne(merged, ausgeschlossen);
+                    var sichereAuswahl = new HashSet<int>(ausgeschlossen);
+                    foreach (var conditionClassPageNumber in conditionClassPageNumbers)
+                        sichereAuswahl.Remove(conditionClassPageNumber);
+                    merged = DossierPdfPageFilter.Ohne(merged, sichereAuswahl);
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -107,9 +124,12 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
             else
                 File.Move(temp, targetPath);
 
-            var note = attachments.Count == 0
-                ? " (ohne Beilagen — der Ordner „Beilagen\" ist leer)"
-                : $" (mit {attachments.Count} Beilagen)";
+            var note = attachments.Count switch
+            {
+                0 => " (mit Erkläranhang; keine weiteren Beilagen)",
+                1 => " (mit Erkläranhang und 1 Beilage)",
+                _ => $" (mit Erkläranhang und {attachments.Count} Beilagen)"
+            };
 
             return new DossierPdfAssemblyResult(
                 true, targetPath, "Gesamt-PDF erstellt" + note + ".");

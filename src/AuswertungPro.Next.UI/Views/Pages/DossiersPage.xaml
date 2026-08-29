@@ -515,6 +515,12 @@
                             <Button Content="Word erzeugen" Padding="12,7" Margin="0,0,8,8"
                                     ToolTip="Erzeugt die Word-Datei im Dossier-Ordner. Eine vorhandene wird NIE überschrieben — es entsteht ein freier Name, damit Ihre Ergänzungen von Hand erhalten bleiben."
                                     Command="{Binding CreateWordCommand}"/>
+                            <Button Content="Haltungsliste erstellen" Padding="12,7" Margin="0,0,8,8"
+                                    ToolTip="Erst nach den Korrekturen erzeugen. Erstellt die Haltungsliste aus dem aktuellen Dossierstand. Eine vorhandene Liste wird nicht überschrieben — es entsteht ein freier Dateiname."
+                                    Command="{Binding CreateHoldingListCommand}"/>
+                            <Button Content="Schachtliste erstellen" Padding="12,7" Margin="0,0,8,8"
+                                    ToolTip="Erst nach den Korrekturen erzeugen. Erstellt die Schachtliste aus dem aktuellen Dossierstand. Eine vorhandene Liste wird nicht überschrieben — es entsteht ein freier Dateiname."
+                                    Command="{Binding CreateShaftListCommand}"/>
                             <Button Content="Beilagen sammeln" Padding="12,7" Margin="0,0,8,8"
                                     ToolTip="Legt die TV-Protokolle der Leitungen und die Schachtprotokolle in den Beilagen-Ordner. Zuerst das Original des Kanalunternehmers, sonst ein selbst erzeugtes. Von Hand hinzugelegte Beilagen bleiben unangetastet."
                                     Command="{Binding CollectAttachmentsCommand}"/>

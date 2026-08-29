@@ -24,16 +24,29 @@ public sealed class DossierComposition
         ArgumentNullException.ThrowIfNull(protocolPdf);
         ArgumentNullException.ThrowIfNull(pdfMerge);
 
-        Store = new DossierFileStore();
+        var conditionClassPdf = new DossierConditionClassPdfTemplateService(
+            Path.Combine(
+                AppContext.BaseDirectory,
+                "Export_Vorlage",
+                DossierFolderPlanner.ConditionClassPdfFileName));
+        var dossierAssets = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage");
+        var holdingListPdf = new DossierHoldingListPdfService(dossierAssets);
+        var shaftListPdf = new DossierShaftListPdfService(dossierAssets);
+
+        Store = new DossierFileStore(conditionClassPdf);
+        ComponentLists = new DossierComponentListExportService(
+            holdingListPdf,
+            shaftListPdf);
         PlanPublications = new DossierPlanPublicationService();
         WordExport = new DossierWordTemplateExportService();
         var attachmentCollector = new DossierAttachmentCollector(protocolFiles, protocolPdf);
+        var pdfPackageComposer = new DossierPdfPackageComposer(pdfMerge, conditionClassPdf);
         Attachments = attachmentCollector;
         OutputPreview = new DossierOutputPreviewService(
             WordExport,
-            pdfMerge,
+            pdfPackageComposer,
             attachmentCollector);
-        PdfAssembly = new DossierPdfAssemblyService(pdfMerge);
+        PdfAssembly = new DossierPdfAssemblyService(pdfPackageComposer);
 
         // Die Auskunftsleser teilen sich ein Tor nach draussen: ein Zeitlimit,
         // ein Abbruch, Aufrufe der Reihe nach.
@@ -52,6 +65,11 @@ public sealed class DossierComposition
     }
 
     public IDossierStore Store { get; }
+
+    /// <summary>
+    /// Erzeugt Haltungs- und Schachtlisten erst nach ausdruecklichem Klick.
+    /// </summary>
+    public IDossierComponentListExportService ComponentLists { get; }
 
     /// <summary>Veroeffentlicht bearbeitete Planbilder sicher im Projekt.</summary>
     public IDossierPlanPublicationService PlanPublications { get; }

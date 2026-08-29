@@ -19,7 +19,14 @@ public sealed record DossierOutputPreviewPage(
     double Height,
     string Text,
     IReadOnlyList<DossierOutputPreviewWord> Words,
-    bool IsAttachment = false);
+    bool IsAttachment = false)
+{
+    /// <summary>
+    /// Diese Beilage ist eine automatisch erzeugte Seite des festen
+    /// Erklaeranhangs und kein Kundenoriginal.
+    /// </summary>
+    public bool IsConditionClassExplanation { get; init; }
+}
 
 /// <summary>Die fertige PDF-Ansicht der kurzlebigen Vorschau.</summary>
 public sealed record DossierOutputPreviewResult(

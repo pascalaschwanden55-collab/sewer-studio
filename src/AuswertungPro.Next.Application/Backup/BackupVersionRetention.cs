@@ -19,7 +19,7 @@ public static class BackupVersionRetention
     public const string VersionsFolderName = "_Versionen";
 
     /// <summary>Wie viele Staende aufbewahrt werden — aelteste werden beim Lauf entfernt.</summary>
-    public const int MaxStaende = 10;
+    public const int MaxStaende = 3;
 
     private const string StandNameFormat = "yyyy-MM-dd_HHmmss";
 

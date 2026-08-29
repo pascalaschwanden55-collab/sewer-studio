@@ -98,14 +98,19 @@ public sealed class ServiceProviderRegistrationTests
         // Plan nur innerhalb des Projekts und liefert den sicheren Rueckbau-Beleg.
         // 152 -> 153: IProtocolPdfLayoutSettings liefert Exporter und Dossierdialog
         // dieselbe Live-Einstellung, ohne settings.json beim Klick erneut zu laden.
+        // 153 -> 154: IDossierComponentListExportService erzeugt Haltungs- und
+        // Schachtlisten bewusst aus dem aktuellen Stand des Eigentuemerdossiers.
         Assert.True(
-            registrations.Count == 153,
-            $"Erwartet 153 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 154,
+            $"Erwartet 154 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(
             services.DossierPlanPublications,
             registrations[typeof(AuswertungPro.Next.Application.Dossiers.IDossierPlanPublicationService)]);
+        Assert.Same(
+            services.DossierComponentLists,
+            registrations[typeof(AuswertungPro.Next.Application.Dossiers.IDossierComponentListExportService)]);
         Assert.Same(
             services.ProtocolPdfLayoutSettings,
             registrations[typeof(IProtocolPdfLayoutSettings)]);

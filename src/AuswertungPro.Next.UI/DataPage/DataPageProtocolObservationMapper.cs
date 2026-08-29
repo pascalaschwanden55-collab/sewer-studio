@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 namespace AuswertungPro.Next.UI.DataPage;
@@ -17,6 +19,12 @@ public static class DataPageProtocolObservationMapper
 {
     private static readonly Regex ContinuousDefectMarkerRegex = new(@"^[AB]\d{2}$", RegexOptions.Compiled);
     private static readonly Regex EmbeddedVsaCodeRegex = new(@"^([A-Z]{3,5})\b", RegexOptions.Compiled);
+    private static readonly string[] ClockFromKeys =
+        ["vsa.uhr.von", "ClockPos1", "Uhr_von", "SchadenlageAnfang"];
+    private static readonly string[] ClockToKeys =
+        ["vsa.uhr.bis", "ClockPos2", "Uhr_bis", "SchadenlageEnde"];
+    private static readonly string[] ClockFromFallbackKeys = ["ClockPos1", "Uhr_von"];
+    private static readonly string[] ClockToFallbackKeys = ["ClockPos2", "Uhr_bis"];
 
     public static DataPageProtocolObservationSync Build(
         IReadOnlyList<ProtocolEntry> entries,
@@ -93,7 +101,20 @@ public static class DataPageProtocolObservationMapper
 
             var template = existing.FirstOrDefault(f =>
                 AreCodesCompatible(code, f.KanalSchadencode)
-                && AreMetersClose(meterStart, f.MeterStart ?? f.SchadenlageAnfang, 0.15));
+                && AreMetersClose(meterStart ?? meterEnd, f.MeterStart ?? f.MeterEnd, 0.15));
+
+            var entryClock = ResolveClock(entry);
+            var clockFrom = entryClock.Start;
+            var clockTo = entryClock.End;
+            if (template is not null && (!clockFrom.HasValue || !clockTo.HasValue))
+            {
+                var templateClock = ApplyClockTextFallback(
+                    VsaFindingClockResolver.Resolve(template),
+                    entry,
+                    template.Raw);
+                clockFrom ??= templateClock.Start;
+                clockTo ??= templateClock.End;
+            }
 
             var finding = new VsaFinding
             {
@@ -101,8 +122,8 @@ public static class DataPageProtocolObservationMapper
                 Raw = (entry.Beschreibung ?? string.Empty).Trim(),
                 MeterStart = meterStart,
                 MeterEnd = meterEnd,
-                SchadenlageAnfang = meterStart,
-                SchadenlageEnde = meterEnd,
+                SchadenlageAnfang = clockFrom,
+                SchadenlageEnde = clockTo,
                 Quantifizierung1 = q1,
                 Quantifizierung2 = q2,
                 MPEG = string.IsNullOrWhiteSpace(entry.Mpeg) ? template?.MPEG : entry.Mpeg,
@@ -234,6 +255,74 @@ public static class DataPageProtocolObservationMapper
         }
 
         return null;
+    }
+
+    internal static VsaFindingClockPositions ApplyClockTextFallback(
+        VsaFindingClockPositions clock,
+        ProtocolEntry entry,
+        string? text)
+    {
+        if (!SupportsClockText(entry))
+            return clock;
+
+        return new VsaFindingClockPositions(
+            clock.Start ?? ProtocolTextHelpers.ExtractClockHourFromText(text),
+            clock.End ?? ProtocolTextHelpers.ExtractClockHourEndFromText(text));
+    }
+
+    private static VsaFindingClockPositions ResolveClock(ProtocolEntry entry)
+    {
+        var clock = ResolveStructuredClock(entry, ClockFromKeys, ClockToKeys);
+        if (clock == default)
+            clock = ResolveStructuredClock(entry, ClockFromFallbackKeys, ClockToFallbackKeys);
+
+        return ApplyClockTextFallback(clock, entry, entry.Beschreibung);
+    }
+
+    private static VsaFindingClockPositions ResolveStructuredClock(
+        ProtocolEntry entry,
+        IEnumerable<string> fromKeys,
+        IEnumerable<string> toKeys)
+        => VsaFindingClockResolver.Resolve(new VsaFinding
+        {
+            MeterStart = entry.MeterStart,
+            MeterEnd = entry.MeterEnd,
+            SchadenlageAnfang = ReadStrictClockParameter(entry, fromKeys),
+            SchadenlageEnde = ReadStrictClockParameter(entry, toKeys)
+        });
+
+    private static int? ReadStrictClockParameter(ProtocolEntry entry, IEnumerable<string> keys)
+    {
+        var parameters = entry.CodeMeta?.Parameters;
+        if (parameters is null)
+            return null;
+
+        foreach (var key in keys)
+        {
+            if (!parameters.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw))
+                continue;
+
+            if (ProtocolTextHelpers.TryParseClockHourValue(raw, out var hour))
+                return hour;
+        }
+
+        return null;
+    }
+
+    private static bool SupportsClockText(ProtocolEntry entry)
+    {
+        if (ProtocolTextHelpers.IsLateralConnection(entry))
+            return true;
+
+        var code = NormalizeCodeToken(entry.Code);
+        if (code.Length == 0)
+            return false;
+
+        var baseCode = code.Length > 3 ? code[..3] : code;
+        return !string.Equals(
+            VsaCodeRuleResolver.GetClockRule(baseCode).Mode,
+            "none",
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FormatNullableDouble(double? value)

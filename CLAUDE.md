@@ -50,6 +50,48 @@
   den normalen Windows-Installationsordnern und im `PATH`. LibreOffice laeuft kopflos mit
   einem eigenen Temp-Profil; die Kundendatei bleibt unveraendert. Scheitern beide Wege,
   darf weiterhin kein scheinbar vollstaendiges Teil-PDF nur aus Beilagen entstehen.
+- `IDossierConditionClassPdfService` liefert das feste einseitige A4-Erklaerblatt.
+  Produktiv liest `DossierConditionClassPdfTemplateService` die persoenlich freigegebene
+  Datei `Export_Vorlage/Zustandsklassen_Eigentuemer_Dossier.pdf` genau einmal, prueft
+  Lesbarkeit, eine Seite und die Pflichtblatt-Marke und gibt ihre Bytes unveraendert weiter.
+  Dieselben Bytes werden fuer Vorschau, Gesamt-PDF und die eigene Datei im neu angelegten
+  Liegenschaftsordner verwendet. `DossierConditionClassPdfService` bleibt der reproduzierbare
+  Erzeuger fuer Tests und kompatible direkte Aufrufer. Es beschreibt Z0 bis Z4 und zeigt je
+  Klasse rechts eine kompakte zeitliche Orientierung von sofort bis zur naechsten
+  Zustandsbeurteilung. Die WPF-freien Texte liegen in `DossierConditionClassDefinitions`;
+  die Farben stammen aus `ExcelReportStyle`. Logo und Wappen sind optionale Vorlagen-Assets.
+  Der Grundlagenkasten fasst VSA
+  "Zustandsbeurteilung von Entwaesserungsanlagen", Kapitel 2.2-2.3, zusammen: Grundlage
+  sind vollstaendige Bauwerksdaten und korrekt erfasste Befundcodes; Fachpersonen pruefen
+  Daten und Ergebnis. Schutzbereich, Nutzung, Grundwasserlage und Netzbedeutung veraendern
+  nur die Sanierungsdringlichkeit, nicht die Zustandsnote. Die Zeitspanne rechts ist deshalb
+  ausdruecklich nur als Orientierung bezeichnet. Die Klassenzeilen enthalten die
+  fachlichen VSA-Beschreibungen samt typischen Defizitbeispielen. Ein Strich ist der
+  getrennte Status `nicht berechnet` und darf niemals als Z4 ausgegeben werden. Zustandsklasse
+  und Dringlichkeitszahl bleiben getrennte Skalen ohne feste 1:1-Zuordnung. Das Erklaerblatt
+  zeigt deshalb keine numerischen Dringlichkeitsbereiche und ordnet Z4 keinem `NULL`-Wert zu.
+- `IDossierHoldingListPdfService` und `IDossierShaftListPdfService` rendern die
+  freigegebenen A4-Layouts der Haltungs- und Schachtliste. Die zugehoerigen ModelBuilder
+  verbinden Dossierkopf und `DossierSnapshot`; die Renderer stellen nur dar und schreiben
+  nie selbst Dateien. Tabellenkoepfe werden auf Folgeseiten wiederholt. Haltungszustand und
+  Nutzungsart sind farblich gekennzeichnet; die Schachtliste zeigt Nummer, Strasse, Funktion
+  und Zustandsklasse. Fehlende Angaben heissen `nicht erfasst`.
+- `IDossierComponentListExportService` veroeffentlicht eine Liste erst nach dem bewussten
+  Klick auf `Haltungsliste erstellen` oder `Schachtliste erstellen`. Er bindet das Ziel an
+  den ausgewaehlten Liegenschaftsordner, schreibt ueber eine Temp-Datei und waehlt bei einer
+  vorhandenen Liste einen freien Namen. Keine bestehende Datei wird ersetzt. Die Listen
+  bleiben eigene Dateien und werden nicht still in `Eigentuemerdossier_komplett.pdf`
+  eingefuegt.
+- `DossierPdfPackageComposer` wird von Ausgabe und Vorschau gemeinsam verwendet. Die feste
+  Reihenfolge ist Word-Dossier, einseitiges Erklaerblatt und danach die normalen
+  Beilagen. Der Composer prueft, dass der Anhang genau eine Seite hat und diese wirklich
+  eingefuegt wurde. Seine Arbeitsdatei liegt nur im Temp-Ordner; Kundenoriginale,
+  Beilagenordner und Manifest bleiben davon unberuehrt. Das Blatt wird auch ohne weitere
+  Beilagen erzeugt und erscheint in der Vorschau als automatisch erzeugte, nicht
+  bearbeitbare Beilage. Eine unsichtbare eindeutige Seitenmarke verhindert
+  die Verwechslung mit Kundenseiten, die denselben sichtbaren Titel tragen. Die
+  Seitenauswahl kennzeichnet die echte Erklaerseite als Pflichtblatt und kann sie
+  nicht abwaehlen; die Ausgabe erzwingt das zusaetzlich unabhaengig von der Oberflaeche.
 - `Alles zu einem PDF` sammelt vor der Umwandlung die Protokolle aller aktuell im Dossier
   gewaehlten Haltungen und danach aller Schaechte. Bei Haltungen wird das Original und nur
   ersatzweise das SewerStudio-Protokoll verwendet; Schaechte verlangen ihr Original. Fehlt
@@ -186,8 +228,10 @@
   der Benutzer kann danach manuell vergroessern und mit `Ganze Seite` zurueckkehren.
 - In `Schäden` und `Sanierungskonzept` kopiert `Import aus Liste` die aktuelle,
   fortlaufend nummerierte Bauteilliste als normalen Dossiertext: zuerst alle Haltungen,
-  danach alle Schächte. Diese Kopie ist frei bearbeitbar und aendert weder die Auswahl
-  noch Projektdatensaetze. `DossierTopicComponentListComposer` loest nur noch alte
+  danach alle Schächte. Die Kürzel `Z0` bis `Z4` tragen dabei dieselbe Zustandsklassenfarbe
+  wie Haltungen und Schächte; nur das Zustandskürzel, nicht die ganze Zeile, wird gefärbt.
+  Diese Kopie ist frei bearbeitbar und aendert weder die Auswahl noch Projektdatensaetze.
+  `DossierTopicComponentListComposer` loest nur noch alte
   `Bauteile_Text`-/`Haltungen_Text`-/`Schaechte_Text`-Marken kompatibel auf.
 - Bearbeitete Beschriftungen und Ueberschriften speichern ihre Zeichenformatierung unter
   `DossierTopicTextFormatting.LiteralStyleKey(...)` ebenfalls in `FieldStyles`; Vorschau
@@ -252,6 +296,17 @@
   Speicherfehler wird die vorige Reihenfolge wiederhergestellt.
 - `DossierFileStore` legt den eigenen Ordner jeder neu gespeicherten Liegenschaft sofort
   direkt unter `<Projekt>\Dossiers` an. Die gleiche Regel gilt fuer Einzel- und Stapelanlage.
+  In jeden dabei neu erzeugten Ordner kommt nur die freigegebene, bytegleiche
+  `Zustandsklassen_Eigentuemer_Dossier.pdf`. Dynamische Haltungs- und Schachtlisten werden
+  bewusst nicht beim Anlegen oder Laden erzeugt, damit zuerst die Projektdaten korrigiert
+  werden koennen. Sie entstehen spaeter ueber die beiden Erstellen-Schaltflaechen.
+  Ein bestehender Ordner oder eine vorhandene Datei wird nie ersetzt. Scheitert der
+  anschliessende Save, entfernt der Store nur sein weiterhin hashgleiches Erklaerblatt
+  und danach den leeren neuen Ordner; eine inzwischen veraenderte Datei bleibt unangetastet.
+  Alle Store-Instanzen
+  teilen dafuer pro laufendem Programm eine Sperre. Die Hashpruefung und Loeschmarkierung
+  erfolgen unter Windows am selben exklusiven Dateihandle, sodass kein fremder Ersatz
+  zwischen Pruefung und Ruecknahme geloescht werden kann.
   Beim Laden einer vorhandenen, lesbaren `dossiers.json` zieht der Store fehlende,
   bereits benannte Liegenschaftsordner nach, ohne die JSON-Datei zu veraendern.
   Ordnernamen duerfen diese Ebene nicht verlassen. Scheitert das anschliessende Speichern,
@@ -685,7 +740,9 @@ automatisch vollstaendig nachgeholt.
 `BackupSourcePathGuard` und `BackupTargetPathGuard` pruefen Quelle und Ziel vor
 jedem kritischen Dateizugriff erneut. Ein unlesbarer oder verknuepfter Pflichtpfad
 bricht Spiegelung/Vollsicherung ab, bevor veraltete Zieldateien entfernt oder
-Versionen rotiert werden. Einstellungs-, Log- und Desktop-Skriptquellen duerfen
+Versionen rotiert werden. Unter `_Versionen` bleiben hoechstens die drei neuesten
+Sicherungsstaende; aeltere werden erst nach einem bis dahin fehlerfreien Lauf
+entfernt. Einstellungs-, Log- und Desktop-Skriptquellen duerfen
 fehlen; Programm- und Projektkomponenten sind nur dann leer, wenn fuer sie keine
 Wurzel konfiguriert wurde. Bestehende Spiegeldateien bleiben bei optionalen
 Fehlstellen erhalten. `KnowledgeRoot` und jede tatsaechlich konfigurierte
@@ -922,6 +979,15 @@ gespeichert; Abbrechen veraendert die Sitzung nicht.
 dieselbe Instanz; beim Klick wird `settings.json` nicht erneut geladen. Erlaubt sind 1, 2, 4
 oder 6 Fotos je Seite, unbekannte Werte fallen auf 2 zurueck; explizite Exportoptionen haben
 Vorrang vor der Programmeinstellung.
+Der aktive `CodeCatalog` wird dem gemeinsam genutzten `ProtocolPdfExporter` als Standard
+mitgegeben; ein expliziter Katalog in `HaltungsprotokollPdfOptions` hat Vorrang.
+`ObservationZustandBuilder` liefert fuer Befundetabelle, Haltungsgrafik und Fototitel
+denselben deduplizierten Klartext aus Katalogtitel, Operateurtext und vorhandenen Parametern.
+Uhrlagen werden nur aus gueltigen Uhrwerten gelesen; ein alter WinCan-Meterwert wie
+`2.62136` darf weder als `2 Uhr` noch als `Schadenlage` weitergereicht werden.
+Die Haltungsgrafik laeuft oben nach unten in Aufnahmerichtung. Deshalb spiegelt
+`flowDown` nur den Fliesspfeil, nie die Kamera-Uhrlage: 1-5 Uhr liegen auf dem Blatt links,
+7-11 Uhr rechts; der Stutzenwinkel folgt der erfassten Stunde in 30-Grad-Schritten.
 Ausgewaehlte Kostenrechner-Zeilen mit negativer Menge oder negativem Preis werden
 weder summiert noch gespeichert, uebernommen oder exportiert. NPK-Codes werden in
 CSV und Excel als Text ausgegeben, damit etwa `612.110` nicht zu `612.11` gekuerzt

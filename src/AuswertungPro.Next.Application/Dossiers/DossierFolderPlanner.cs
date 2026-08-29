@@ -28,6 +28,18 @@ public static class DossierFolderPlanner
     /// <summary>Dateiname des zusammengefuehrten Gesamt-PDF.</summary>
     public const string CombinedPdfFileName = "Eigentuemerdossier_komplett.pdf";
 
+    /// <summary>Dateiname des festen Erklaerblatts im Liegenschaftsordner.</summary>
+    public const string ConditionClassPdfFileName =
+        "Zustandsklassen_Eigentuemer_Dossier.pdf";
+
+    /// <summary>Dateiname der datenbasierten Haltungsliste im Liegenschaftsordner.</summary>
+    public const string HoldingListPdfFileName =
+        "Haltungsliste_Eigentuemer_Dossier.pdf";
+
+    /// <summary>Dateiname der datenbasierten Schachtliste im Liegenschaftsordner.</summary>
+    public const string ShaftListPdfFileName =
+        "Schachtliste_Eigentuemer_Dossier.pdf";
+
     /// <summary>Sammelordner "&lt;Projekt&gt;\Dossiers".</summary>
     public static string ResolveRoot(string projectRoot)
     {
