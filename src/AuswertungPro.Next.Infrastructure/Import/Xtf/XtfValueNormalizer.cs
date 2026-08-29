@@ -52,6 +52,25 @@ internal static class XtfValueNormalizer
     /// </summary>
     public static string NormalizeSiaMaterial(string material)
     {
+        // Zuerst das Vokabular: es kennt die Normwerte zeichengenau und haelt die
+        // Betonarten und Gussarten auseinander.
+        var ausVokabular = MaterialVokabular.Normalisieren(material);
+        if (MaterialVokabular.NachNorm(ausVokabular) is not null)
+            return ausVokabular;
+
+        // Danach die alte, tolerante Regel. Sie deckt Schreibweisen ab, die im
+        // Kanton Uri nicht vorkommen, in anderen Katastern und IKAS-Exporten aber
+        // schon ("Beton_Stahlbeton", "Gusseisen", Kurzcodes). Ohne sie waere das
+        // Vokabular enger als der bisherige Stand.
+        return NormalizeSiaMaterialLegacy(material);
+    }
+
+    /// <summary>
+    /// Die tolerante Wortteil-Regel von frueher. Sie greift nur noch fuer Werte, die
+    /// das <see cref="MaterialVokabular"/> nicht kennt.
+    /// </summary>
+    internal static string NormalizeSiaMaterialLegacy(string material)
+    {
         material ??= "";
         if (string.IsNullOrWhiteSpace(material)) return "";
 

@@ -59,12 +59,8 @@ public static class FieldCatalog
             // der Wert in den Daten steht. Die Liste muss darum zu dem passen, was
             // XtfValueNormalizer.NormalizeSiaMaterial aus SIA405-Katastern liefert.
             // Ergaenzt 2026-07-17: Epoxydharz, Faserzement, Ton — kommen in echten IKAS-Exporten vor.
-            [FieldKeys.PipeMaterial] = new ReadOnlyCollection<string>(new List<string>
-            {
-                "", "PVC", "PE", "PP", "GFK", "Beton", "Steinzeug", "Guss", "Hartpolyethylen",
-                "Zement", "Polyvinylchlorid", "Polyethylen", "Polypropylen", "Normalbeton", "Glasfaser",
-                "Epoxydharz", "Faserzement", "Asbestzement", "Ton"
-            }),
+            [FieldKeys.PipeMaterial] = new ReadOnlyCollection<string>(
+                MaterialVokabular.Auswahl.ToList()),
             // Die Begriffe der Norm, gefuehrt in NutzungsartVokabular — keine zweite Liste.
             [FieldKeys.UsageType] = new ReadOnlyCollection<string>(
                 NutzungsartVokabular.Auswahl.ToList()),

@@ -24,7 +24,7 @@ public sealed class XtfValueNormalizerTests
     [InlineData("kunststoff_hartpolyethylen", "Hartpolyethylen")]
     [InlineData("Kunststoff_Polyethylen", "Polyethylen")]
     [InlineData("Kunststoff_Polyvinylchlorid", "Polyvinylchlorid")]
-    [InlineData("Beton_Normalbeton", "Beton")]
+    [InlineData("Beton_Normalbeton", "Normalbeton")] // ab 2026-08-29 eigener Werkstoff, nicht mehr mit Beton zusammengelegt
     [InlineData("Beton_Stahlbeton", "Beton")]
     [InlineData("Steinzeug", "Steinzeug")]
     [InlineData("steinzeug", "Steinzeug")]

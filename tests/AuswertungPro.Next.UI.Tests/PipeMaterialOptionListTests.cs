@@ -75,20 +75,23 @@ public sealed class PipeMaterialOptionListTests
     [Fact]
     public void ExtractCustom_liefert_niemals_feste_Katalogwerte()
     {
-        var alle = PipeMaterialOptionList.Compose(new[] { "Spezialbetonrohr", "Stahl" });
+        // "Stahl" war hier frueher das Beispiel eines eigenen Werts. Seit dem
+        // MaterialVokabular ist es ein Normwert (im AWU-Kantonsexport 134 Haltungen)
+        // und damit ein fester Katalogwert - deshalb jetzt "Blaustein".
+        var alle = PipeMaterialOptionList.Compose(new[] { "Spezialbetonrohr", "Blaustein" });
 
         var eigene = PipeMaterialOptionList.ExtractCustom(alle);
 
-        Assert.Equal(new[] { "Spezialbetonrohr", "Stahl" }, eigene);
+        Assert.Equal(new[] { "Spezialbetonrohr", "Blaustein" }, eigene);
     }
 
     [Fact]
     public void ExtractCustom_behaelt_die_Reihenfolge_und_entdoppelt()
     {
         var eigene = PipeMaterialOptionList.ExtractCustom(
-            new[] { "Stahl", "Beton", "Spezialbetonrohr", "stahl", "" });
+            new[] { "Blaustein", "Beton", "Spezialbetonrohr", "blaustein", "" });
 
-        Assert.Equal(new[] { "Stahl", "Spezialbetonrohr" }, eigene);
+        Assert.Equal(new[] { "Blaustein", "Spezialbetonrohr" }, eigene);
     }
 
     [Fact]
