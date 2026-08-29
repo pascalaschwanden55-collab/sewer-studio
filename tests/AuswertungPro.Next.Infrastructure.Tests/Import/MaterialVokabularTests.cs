@@ -155,4 +155,18 @@ public sealed class MaterialVokabularTests
         var app = MaterialVokabular.Normalisieren(norm);
         Assert.Equal(norm, MaterialVokabular.NachNorm(app));
     }
+
+    [Theory]
+    [InlineData("Beton Normalbeton", "Beton_Normalbeton")]   // 19x im Projekt Zone 1.15
+    [InlineData("Zement", "Zement")]                          // 47x - haeufigster Wert dort
+    [InlineData("Polyethylen", "Kunststoff_Polyethylen")]     // 29x
+    [InlineData("Polyvinylchlorid", "Kunststoff_Polyvinilchlorid")]
+    [InlineData("Beton", "Beton_unbekannt")]
+    public void Werte_aus_einem_echten_Projekt_finden_ihren_Normwert(string gespeichert, string norm)
+    {
+        // Gemessen am Projekt Zone 1.15. "Beton Normalbeton" mit Leerzeichen stammt
+        // aus dem alten Normalisierer, der Unterstriche ersetzte, wenn er einen Wert
+        // nicht kannte. Ohne diese Zeile faellt es aus der Auswahlliste.
+        Assert.Equal(norm, MaterialVokabular.NachNorm(MaterialVokabular.Normalisieren(gespeichert)));
+    }
 }

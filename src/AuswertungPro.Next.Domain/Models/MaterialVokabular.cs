@@ -141,11 +141,18 @@ public static class MaterialVokabular
 
         var klein = text.ToLowerInvariant();
 
+        // Leerzeichen wie Unterstrich behandeln. In echten Projekten steht
+        // "Beton Normalbeton" - der alte Normalisierer ersetzte Unterstriche durch
+        // Leerzeichen, wenn er einen Wert nicht kannte. Diese Werte muessen lesbar
+        // bleiben, sonst faellt ein Bestandsprojekt aus der Auswahlliste.
+        var mitUnterstrich = klein.Replace(' ', '_');
+
         // Der Begriff des Programms zaehlt immer als gelesene Schreibweise. Sonst
         // muesste er in jeder Leseliste doppelt stehen, und ein vergessener Eintrag
         // machte den eigenen App-Wert unlesbar.
         return Konzepte.FirstOrDefault(k =>
             k.Gelesen.Contains(klein)
+            || k.Gelesen.Contains(mitUnterstrich)
             || string.Equals(k.App, text, StringComparison.OrdinalIgnoreCase));
     }
 }
