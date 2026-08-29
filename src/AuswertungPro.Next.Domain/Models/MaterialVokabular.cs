@@ -61,7 +61,17 @@ public static class MaterialVokabular
             "Kunststoff unbekannt", "Kunststoff_unbekannt"),
 
         // --- Beton: vier eigenstaendige Arten, frueher alle "Beton" ---
-        new(["beton_normalbeton", "normalbeton"], "Normalbeton", "Beton_Normalbeton"),
+        // "Zement" gehoert hierher, nicht zum eigenen Normwert: Abwasser Uri fuehrt in
+        // der Datenbank "Zement" und schreibt fuer dasselbe Objekt Beton_Normalbeton in
+        // die XTF - belegt an der Haltung 78623-77600 und an Goeschenen. Pascal:
+        // "Grundsaetzlich ist es das gleiche." Ohne diese Zeile kaemen in Zone 1.15
+        // 47 von 96 Haltungen mit einem Wert zurueck, den AWU dafuer nicht verwendet.
+        //
+        // Preis, ausdruecklich: "Zement" IST ein gueltiger Modellwert. Aus einer fremden
+        // XTF gelesen, in der er wirklich Zement bedeutet, kaeme er nach einer
+        // Handaenderung als Beton_Normalbeton zurueck. Der Export schreibt nur
+        // handgeaenderte Felder - unberuehrte Werte bleiben in der Datei stehen.
+        new(["beton_normalbeton", "normalbeton", "zement"], "Normalbeton", "Beton_Normalbeton"),
         new(["beton_spezialbeton", "spezialbeton"], "Spezialbeton", "Beton_Spezialbeton"),
         new(["beton_ortsbeton", "ortsbeton"], "Ortsbeton", "Beton_Ortsbeton"),
         new(["beton_pressrohrbeton", "pressrohrbeton"], "Pressrohrbeton", "Beton_Pressrohrbeton"),
@@ -75,7 +85,6 @@ public static class MaterialVokabular
         new(["asbestzement", "az"], "Asbestzement", "Asbestzement"),
         new(["gebrannte_steine", "gebrannte steine"], "Gebrannte Steine", "Gebrannte_Steine"),
         new(["ton"], "Ton", "Ton"),
-        new(["zement"], "Zement", "Zement"),
 
         // --- Metalle: "Guss" allein bleibt bewusst unaufgeloest ---
         new(["stahl"], "Stahl", "Stahl"),

@@ -137,3 +137,35 @@ aus 2,02 m würde 2020, ein Faktor-1000-Fehler in der Gegenrichtung.
 Ein pauschales ×1000 auf alle Massfelder wäre also selbst der Fehler. `SiaAbmessung`
 benutzt stattdessen dieselbe Regel wie die SchachtPro-Zeichnung: ein Wert über 10
 gilt bereits als Millimeter.
+
+## Eine Abweichung, die AWU selbst macht: Zement
+
+Abwasser Uri führt in der Datenbank **`Zement`** und schreibt für dasselbe Objekt
+**`Beton_Normalbeton`** in die XTF. Belegt an zwei unabhängigen Stellen:
+
+| | QGIS `Leitungen Lokal` | AWU-XTF |
+|---|---|---|
+| Haltung `78623-77600` | `ha_material = Zement` | `Material = Beton_Normalbeton` |
+| Göschenen, eine von 117 | Shapefile `Zement` | XTF `Beton_Normalbeton` |
+
+Alles andere an diesen Objekten ist identisch — Länge, Lichte Höhe, Baujahr.
+Ihr Exporter übersetzt also systematisch.
+
+**Entscheid (Pascal, 2026-08-29):** „Grundsätzlich ist es das gleiche." SewerStudio
+folgt der AWU-Schreibweise. `MaterialVokabular` bildet `Zement` deshalb auf
+`Beton_Normalbeton` ab; im Programm heisst der Begriff `Normalbeton`.
+
+Das betrifft **47 von 96 Haltungen in Zone 1.15** — dort ist `Zement` der häufigste
+Materialwert überhaupt.
+
+**Der Preis, ausdrücklich:** `Zement` *ist* ein gültiger Modellwert. Wird er aus einer
+fremden XTF gelesen, in der er wirklich Zement bedeutet, käme er nach einer
+Handänderung als `Beton_Normalbeton` zurück. Da der Revisionsexport nur handgeänderte
+Felder schreibt, bleiben unberührte Werte in der Datei unverändert stehen.
+
+## BaulicherZustand: SewerStudio füllt eine Lücke
+
+`bw_baulicherzustand` steht in AWUs Datenbank (`Z2`), kommt in beiden gelieferten
+XTF-Dateien aber **null Mal** vor. SewerStudio schreibt dort `Z0` bis `Z4` — die
+Schreibweise stimmt also mit ihrer Datenbank überein, und der Wert ergänzt etwas,
+das ihr eigener Export nicht liefert.
