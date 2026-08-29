@@ -82,13 +82,17 @@ public sealed class MaterialVokabularTests
 
     [Theory]
     [InlineData("Guss")]
-    [InlineData("Zement")]
     [InlineData("GFK")]
-    [InlineData("Ton")]
+    [InlineData("Glasfaser")]
     public void Ein_Altwert_ohne_sicheres_Gegenstueck_wird_nicht_geraten(string altwert)
     {
-        // "Guss" allein sagt nicht, ob duktil oder Grauguss. Lieber nichts schreiben
-        // als raten - der Wert bleibt im Programm sichtbar.
+        // "Guss" allein sagt nicht, ob duktil oder Grauguss. "GFK" ist nicht dasselbe
+        // wie Kunststoff_Polyester_GUP. Lieber nichts schreiben als raten - der Wert
+        // bleibt im Programm sichtbar.
+        //
+        // Korrigiert 2026-08-29: "Ton" und "Zement" standen hier ebenfalls. Die
+        // Modelldatei fuehrt beide als gueltige Werte - sie fehlten nur in der
+        // Kantonsauszaehlung. Meine Annahme war falsch, nicht die Norm.
         Assert.Equal(altwert, MaterialVokabular.Normalisieren(altwert));
         Assert.Null(MaterialVokabular.NachNorm(altwert));
     }
@@ -117,5 +121,38 @@ public sealed class MaterialVokabularTests
         // ihren Langbegriff zeigen - sie muessen nur in der Liste bleiben.
         foreach (var app in MaterialVokabular.Auswahl.Where(a => a.Length > 0))
             Assert.Contains(MaterialVokabular.Normalisieren(app), MaterialVokabular.Auswahl);
+    }
+
+    // Alle 24 Werte der Modelldatei SIA405_Abwasser_2020_2_d_LV95 fuer Haltung.Material.
+    // Die Kantonsauszaehlung zeigte nur 21 - sie sagt, was vorkommt, nicht was erlaubt ist.
+    [Theory]
+    [InlineData("andere")]
+    [InlineData("Asbestzement")]
+    [InlineData("Beton_Normalbeton")]
+    [InlineData("Beton_Ortsbeton")]
+    [InlineData("Beton_Pressrohrbeton")]
+    [InlineData("Beton_Spezialbeton")]
+    [InlineData("Beton_unbekannt")]
+    [InlineData("Faserzement")]
+    [InlineData("Gebrannte_Steine")]
+    [InlineData("Guss_duktil")]
+    [InlineData("Guss_Grauguss")]
+    [InlineData("Kunststoff_Epoxydharz")]
+    [InlineData("Kunststoff_Hartpolyethylen")]
+    [InlineData("Kunststoff_Polyester_GUP")]
+    [InlineData("Kunststoff_Polyethylen")]
+    [InlineData("Kunststoff_Polypropylen")]
+    [InlineData("Kunststoff_Polyvinilchlorid")]
+    [InlineData("Kunststoff_unbekannt")]
+    [InlineData("Stahl")]
+    [InlineData("Stahl_rostfrei")]
+    [InlineData("Steinzeug")]
+    [InlineData("Ton")]
+    [InlineData("unbekannt")]
+    [InlineData("Zement")]
+    public void Jeder_Modellwert_kommt_unveraendert_zurueck(string norm)
+    {
+        var app = MaterialVokabular.Normalisieren(norm);
+        Assert.Equal(norm, MaterialVokabular.NachNorm(app));
     }
 }

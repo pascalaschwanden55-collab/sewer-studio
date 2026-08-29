@@ -5,8 +5,11 @@ namespace AuswertungPro.Next.Domain.Models;
 /// <summary>
 /// Das Rohr- und Bauwerksmaterial — mit den Begriffen der Norm, an einer Stelle.
 ///
-/// Massgebend ist SIA405 2020, ausgezaehlt am Kantonsexport von Abwasser Uri
-/// (109871 Haltungen, 21 vorkommende Werte).
+/// Massgebend ist die Modelldatei SIA405_Abwasser_2020_2_d_LV95 (VSA-Modellablage):
+/// 24 zulaessige Werte fuer Haltung.Material. Der Kantonsexport von Abwasser Uri
+/// (109871 Haltungen) belegt davon 21 - eine Auszaehlung sagt, was vorkommt, nicht
+/// was erlaubt ist. Beton_Pressrohrbeton, Ton und Zement kommen in Uri nicht vor,
+/// sind aber gueltig.
 ///
 /// Warum es das braucht: Die frueheren Regeln bildeten mehrere Normwerte auf einen
 /// ab — vier Betonarten wurden zu "Beton", zwei Gussarten zu "Guss". Das betraf
@@ -56,6 +59,7 @@ public static class MaterialVokabular
         new(["beton_normalbeton", "normalbeton"], "Normalbeton", "Beton_Normalbeton"),
         new(["beton_spezialbeton", "spezialbeton"], "Spezialbeton", "Beton_Spezialbeton"),
         new(["beton_ortsbeton", "ortsbeton"], "Ortsbeton", "Beton_Ortsbeton"),
+        new(["beton_pressrohrbeton", "pressrohrbeton"], "Pressrohrbeton", "Beton_Pressrohrbeton"),
         // Ein blosses "Beton" sagt nicht, welche Art. Der Normwert dafuer heisst
         // ausdruecklich "unbekannt" — das ist keine Erfindung, sondern die Aussage.
         new(["beton_unbekannt", "beton"], "Beton", "Beton_unbekannt"),
@@ -65,6 +69,8 @@ public static class MaterialVokabular
         new(["faserzement"], "Faserzement", "Faserzement"),
         new(["asbestzement", "az"], "Asbestzement", "Asbestzement"),
         new(["gebrannte_steine", "gebrannte steine"], "Gebrannte Steine", "Gebrannte_Steine"),
+        new(["ton"], "Ton", "Ton"),
+        new(["zement"], "Zement", "Zement"),
 
         // --- Metalle: "Guss" allein bleibt bewusst unaufgeloest ---
         new(["stahl"], "Stahl", "Stahl"),
@@ -84,7 +90,7 @@ public static class MaterialVokabular
     /// "Kunststoff_Polyester_GUP". Raten waere hier schlimmer als schweigen.
     /// </summary>
     private static readonly string[] AltwerteOhneNorm =
-        ["Guss", "Zement", "Ton", "GFK", "Glasfaser"];
+        ["Guss", "GFK", "Glasfaser"];
 
     /// <summary>
     /// Kurzformen, die bis heute in der Auswahlliste standen und in bestehenden
