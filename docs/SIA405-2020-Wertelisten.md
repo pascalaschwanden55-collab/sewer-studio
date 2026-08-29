@@ -138,34 +138,77 @@ Ein pauschales ×1000 auf alle Massfelder wäre also selbst der Fehler. `SiaAbme
 benutzt stattdessen dieselbe Regel wie die SchachtPro-Zeichnung: ein Wert über 10
 gilt bereits als Millimeter.
 
-## Eine Abweichung, die AWU selbst macht: Zement
+## Zement: geprueft und ausdruecklich NICHT umgebogen
 
-Abwasser Uri führt in der Datenbank **`Zement`** und schreibt für dasselbe Objekt
-**`Beton_Normalbeton`** in die XTF. Belegt an zwei unabhängigen Stellen:
+Am 2026-08-29 sah es kurz so aus, als wuerde Abwasser Uri ihr `Zement` beim Export
+systematisch zu `Beton_Normalbeton` uebersetzen: Fuer die Haltung `78623-77600` zeigt
+der QGIS-Layer `ha_material = Zement`, die XTF `Material = Beton_Normalbeton`. Die
+Messung an einer zweiten Datei hat das widerlegt.
 
-| | QGIS `Leitungen Lokal` | AWU-XTF |
-|---|---|---|
-| Haltung `78623-77600` | `ha_material = Zement` | `Material = Beton_Normalbeton` |
-| Göschenen, eine von 117 | Shapefile `Zement` | XTF `Beton_Normalbeton` |
+**`Zement` ist ein gueltiger SIA405-2020-Wert.** Er steht in der offiziellen
+`SIA405_Abwasser_2020_2_d_LV95-20251129.ili` in der Liste der 24 Materialwerte an der
+Klasse `Haltung`.
 
-Alles andere an diesen Objekten ist identisch — Länge, Lichte Höhe, Baujahr.
-Ihr Exporter übersetzt also systematisch.
+Es gibt keine Uebersetzung, sondern zwei verschiedene Datenstaende. Belegt an den 77
+Haltungen, die sowohl im GEP-Export Zone 1.15 (SIA405 **2015**) als auch im
+Kantonsexport (SIA405 **2020**) vorkommen:
 
-**Entscheid (Pascal, 2026-08-29):** „Grundsätzlich ist es das gleiche." SewerStudio
-folgt der AWU-Schreibweise. `MaterialVokabular` bildet `Zement` deshalb auf
-`Beton_Normalbeton` ab; im Programm heisst der Begriff `Normalbeton`.
+| `Zement` (2015) wird 2020 zu | Anzahl |
+|---|---|
+| `Beton_unbekannt` | 21 |
+| `Beton_Normalbeton` | 18 |
+| `unbekannt` | 6 |
+| `Beton_Spezialbeton` | 2 |
+| `Beton_Ortsbeton` | 1 |
 
-Das betrifft **47 von 96 Haltungen in Zone 1.15** — dort ist `Zement` der häufigste
-Materialwert überhaupt.
+Eine Fassungsuebersetzung waere eindeutig. Fuenf Ziele sind eine **Datenverfeinerung**:
+Zwischen den beiden Staenden hat jemand die Betonart nachgetragen. Der QGIS-Layer
+`Leitungen Lokal` ist damit ein aelterer Stand als die XTF, keine parallele Sicht
+derselben Daten.
 
-**Der Preis, ausdrücklich:** `Zement` *ist* ein gültiger Modellwert. Wird er aus einer
-fremden XTF gelesen, in der er wirklich Zement bedeutet, käme er nach einer
-Handänderung als `Beton_Normalbeton` zurück. Da der Revisionsexport nur handgeänderte
-Felder schreibt, bleiben unberührte Werte in der Datei unverändert stehen.
+Wuerde SewerStudio `Zement` auf `Beton_Normalbeton` abbilden, wuerde eine Handaenderung
+an einer Zement-Haltung eine echte Angabe durch eine feinere ersetzen, die nie erhoben
+wurde. `Zement` bleibt deshalb `Zement`.
 
-## BaulicherZustand: SewerStudio füllt eine Lücke
+## Die 2015-Fassung fuehrt eine andere Werteliste
+
+Dieselben Materialien heissen in SIA405 2015 kuerzer. Gemessen an den echten
+Kundendateien:
+
+| 2015 | 2020 |
+|---|---|
+| `Zement` (106x) | `Zement` |
+| `Polyethylen` (58x) | `Kunststoff_Polyethylen` |
+| `Polyvinylchlorid` (10x) | `Kunststoff_Polyvinilchlorid` |
+| `Polypropylen` (6x) | `Kunststoff_Polypropylen` |
+| `Beton` (4x) | `Beton_unbekannt` |
+
+Das ist dieselbe Falle wie bei `Regenabwasser` / `Niederschlagsabwasser`: Die
+Modellfassung im Dateikopf entscheidet ueber die gueltige Schreibweise. Ein Export
+in eine 2015-Datei darf keine 2020-Praefixe schreiben.
+
+VSA veroeffentlicht unter `https://vsa.ch/models/` nur noch die 2020-Fassungen; die
+2015-Liste ist deshalb aus den echten Kundendateien belegt, nicht aus dem Modell.
+
+## Material und Lichte_Hoehe haengen an `Haltung`, nicht an `Kanal`
+
+Im Kantonsexport tragen alle 109'871 `Kanal`-Objekte **kein** `Material` und **kein**
+`Lichte_Hoehe`. Beide Felder gehoeren zur physischen Klasse `Haltung`:
+
+- `Kanal` (logisch): `Nutzungsart_Ist`, `Standortname`, `BaulicherZustand`
+- `Haltung` (physisch): `Material`, `Lichte_Hoehe`, `LaengeEffektiv`, `Lagebestimmung`
+
+Beide tragen dieselbe `Bezeichnung` — in allen 109'871 Faellen identisch. Die Zuordnung
+ueber den Haltungsnamen funktioniert deshalb fuer beide Klassen gleich; ein Umweg ueber
+`AbwasserbauwerkRef` ist nicht noetig.
+
+**`Lichte_Hoehe` ist amtlich Millimeter:** `DOMAIN Lichte_Hoehe = 0 .. 99999 [Units.mm]`.
+Der Wert `0` bedeutet unbekannt — im Kantonsexport bei 39'486 von 109'871 Haltungen, in
+Goeschenen bei allen 17.
+
+## BaulicherZustand: SewerStudio fuellt eine Luecke
 
 `bw_baulicherzustand` steht in AWUs Datenbank (`Z2`), kommt in beiden gelieferten
 XTF-Dateien aber **null Mal** vor. SewerStudio schreibt dort `Z0` bis `Z4` — die
-Schreibweise stimmt also mit ihrer Datenbank überein, und der Wert ergänzt etwas,
+Schreibweise stimmt also mit ihrer Datenbank ueberein, und der Wert ergaenzt etwas,
 das ihr eigener Export nicht liefert.

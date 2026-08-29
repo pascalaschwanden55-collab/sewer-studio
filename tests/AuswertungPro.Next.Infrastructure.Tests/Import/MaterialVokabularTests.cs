@@ -148,7 +148,7 @@ public sealed class MaterialVokabularTests
     [InlineData("Steinzeug")]
     [InlineData("Ton")]
     [InlineData("unbekannt")]
-    // "Zement" fehlt hier bewusst - eigener Test weiter unten.
+    [InlineData("Zement")]
     public void Jeder_Modellwert_kommt_unveraendert_zurueck(string norm)
     {
         var app = MaterialVokabular.Normalisieren(norm);
@@ -157,7 +157,7 @@ public sealed class MaterialVokabularTests
 
     [Theory]
     [InlineData("Beton Normalbeton", "Beton_Normalbeton")]   // 19x im Projekt Zone 1.15
-    [InlineData("Zement", "Beton_Normalbeton")]               // 47x - haeufigster Wert dort
+    [InlineData("Zement", "Zement")]                          // 47x - haeufigster Wert dort
     [InlineData("Polyethylen", "Kunststoff_Polyethylen")]     // 29x
     [InlineData("Polyvinylchlorid", "Kunststoff_Polyvinilchlorid")]
     [InlineData("Beton", "Beton_unbekannt")]
@@ -230,27 +230,5 @@ public sealed class MaterialVokabularTests
         // Entscheid Pascal: genau ein Begriff je Werkstoff.
         Assert.Equal("GFK", MaterialVokabular.Normalisieren("Glasfaser"));
         Assert.DoesNotContain("Glasfaser", MaterialVokabular.Auswahl);
-    }
-
-    [Fact]
-    public void Zement_geht_auf_Beton_Normalbeton_wie_bei_Abwasser_Uri()
-    {
-        // Belegt an derselben Haltung 78623-77600: die QGIS-Ebene "Leitungen Lokal"
-        // fuehrt ha_material = "Zement", die AWU-XTF schreibt fuer dasselbe Objekt
-        // Beton_Normalbeton. Dasselbe Muster in Goeschenen (Shapefile "Zement",
-        // XTF "Beton_Normalbeton"). AWUs Exporter uebersetzt das also systematisch.
-        //
-        // Pascal: "Grundsaetzlich ist es das gleiche." Damit gilt die AWU-Schreibweise -
-        // sonst kaemen in Zone 1.15 47 von 96 Haltungen mit einem Wert zurueck, den
-        // Abwasser Uri fuer diese Sache nicht verwendet.
-        //
-        // Preis dieser Entscheidung, ausdruecklich: "Zement" ist ein gueltiger
-        // Modellwert. Wird er aus einer fremden XTF gelesen, in der er wirklich
-        // Zement bedeutet, kaeme er nach einer Handaenderung als Beton_Normalbeton
-        // zurueck. Der Export schreibt aber nur handgeaenderte Felder - unberuehrte
-        // Werte bleiben in der Datei unveraendert stehen.
-        Assert.Equal("Beton_Normalbeton", MaterialVokabular.NachNorm("Zement"));
-        Assert.Equal("Normalbeton", MaterialVokabular.Normalisieren("Zement"));
-        Assert.DoesNotContain("Zement", MaterialVokabular.Auswahl);
     }
 }

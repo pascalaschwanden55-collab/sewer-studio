@@ -30,7 +30,7 @@ public sealed class XtfMaterialNormalizerTests
     [InlineData("Beton", "Beton")]
     [InlineData("Guss_Grauguss", "Grauguss")]        // ab 2026-08-29 nicht mehr mit Guss_duktil zusammengelegt
     [InlineData("Steinzeug", "Steinzeug")]
-    [InlineData("Zement", "Normalbeton")] // AWU schreibt fuer ihr "Zement" Beton_Normalbeton - siehe MaterialVokabular
+    [InlineData("Zement", "Zement")]
     [InlineData("Faserzement", "Faserzement")]
     [InlineData("Ton", "Ton")]
     public void Every_real_catalog_value_becomes_a_selectable_entry(string rohwert, string erwartet)
@@ -76,16 +76,10 @@ public sealed class XtfMaterialNormalizerTests
     }
 
     [Fact]
-    public void Faserzement_und_Asbestzement_ueberleben_die_Zement_Regel()
+    public void Faserzement_und_Zement_bleiben_unveraendert()
     {
-        // Seit 2026-08-29 geht "Zement" auf Normalbeton (Abwasser Uri schreibt fuer
-        // ihr Zement Beton_Normalbeton). Genau das macht diese Gegenprobe wichtiger,
-        // nicht ueberfluessig: Faserzement und Asbestzement enthalten das Wort
-        // "zement" und wuerden von einer Teilstring-Regel mitgerissen. Es sind eigene
-        // Werkstoffe - andere Sanierung, anderer Arbeitsschutz. 247 Haltungen im
-        // AWU-Kantonsexport tragen Asbestzement.
+        // Gegenprobe: die neue Regel darf die zwei bestehenden nicht verdraengen.
         Assert.Equal("Faserzement", XtfValueNormalizer.NormalizeSiaMaterial("Faserzement"));
-        Assert.Equal("Asbestzement", XtfValueNormalizer.NormalizeSiaMaterial("Asbestzement"));
-        Assert.Equal("Normalbeton", XtfValueNormalizer.NormalizeSiaMaterial("Zement"));
+        Assert.Equal("Zement", XtfValueNormalizer.NormalizeSiaMaterial("Zement"));
     }
 }
