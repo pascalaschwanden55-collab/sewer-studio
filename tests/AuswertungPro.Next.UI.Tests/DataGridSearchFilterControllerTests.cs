@@ -136,6 +136,67 @@ public sealed class DataGridSearchFilterControllerTests
         });
     }
 
+    [Fact]
+    public void ApplyFilter_applies_one_combined_predicate_and_reports_visible_count()
+    {
+        RunOnSta(() =>
+        {
+            var rows = new ObservableCollection<Row>
+            {
+                new("Alpha"),
+                new("Alpine"),
+                new("Beta")
+            };
+            var view = CollectionViewSource.GetDefaultView(rows);
+            var reportedCount = -1;
+
+            DataGridSearchFilterController.ApplyFilter(
+                view,
+                rows,
+                getFilter: () => row => row.Name.StartsWith("Al", StringComparison.OrdinalIgnoreCase)
+                                       && row.Name.EndsWith("a", StringComparison.OrdinalIgnoreCase),
+                updateSearchResultInfo: count => reportedCount = count,
+                deferRefresh: _ => throw new InvalidOperationException("No deferral expected."));
+
+            Assert.Equal(1, reportedCount);
+            Assert.Equal(new[] { "Alpha" }, view.Cast<Row>().Select(x => x.Name).ToArray());
+        });
+    }
+
+    [Fact]
+    public void ApplyFilter_deferred_callback_uses_latest_combined_filter()
+    {
+        RunOnSta(() =>
+        {
+            var rows = new ObservableCollection<Row>
+            {
+                new("Alpha"),
+                new("Beta")
+            };
+            var view = CollectionViewSource.GetDefaultView(rows);
+            var editableView = Assert.IsAssignableFrom<IEditableCollectionView>(view);
+            Predicate<Row>? currentFilter = row => row.Name == "Alpha";
+            Action? deferred = null;
+            var reportedCount = -1;
+            editableView.AddNew();
+
+            DataGridSearchFilterController.ApplyFilter(
+                view,
+                rows,
+                getFilter: () => currentFilter,
+                updateSearchResultInfo: count => reportedCount = count,
+                deferRefresh: action => deferred = action);
+
+            currentFilter = row => row.Name == "Beta";
+            editableView.CancelNew();
+            Assert.NotNull(deferred);
+            deferred();
+
+            Assert.Equal(1, reportedCount);
+            Assert.Equal(new[] { "Beta" }, view.Cast<Row>().Select(x => x.Name).ToArray());
+        });
+    }
+
     private sealed class Row
     {
         public Row()

@@ -39,6 +39,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
     private bool _isUndocking;
     private bool _startFilterApplied;
+    private DataPageCombinedFilter _combinedFilter = DataPageCombinedFilter.Aus;
 
     public DataPage()
     {
@@ -50,6 +51,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 ? ProjectFileLocator.ProjectRootFromFile(vm.Settings.LastProjectPath)
                 : null);
         FilterChips.FilterGeaendert += WendeChipFilterAn;
+        FilterChips.StartFilterZurueckgesetzt += EntferneStartFilter;
         _haltungDetailItemFactory = new DataPageDetailItemFactory(
             ResolveManagedComboSpec,
             CommitHaltungDetailField);
@@ -135,6 +137,15 @@ public partial class DataPage : System.Windows.Controls.UserControl
             newVm.RecordsOrderChanged += ResetSort;
             newVm.PropertyChanged += ViewModel_PropertyChanged;
             ApplyHaltungsansichtSettings(newVm);
+            _combinedFilter = new DataPageCombinedFilter(
+                newVm.SearchText,
+                FilterChips.CurrentFilter,
+                newVm.StartFilter);
+            _startFilterApplied = false;
+            FilterChips.SetStartFilter(_combinedFilter.StartFilter);
+
+            if (IsLoaded)
+                ApplyStartFilter();
         }
     }
 
@@ -784,13 +795,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        DataGridSearchFilterController.Apply(
-            CollectionViewSource.GetDefaultView(Grid.ItemsSource),
-            vm.Records,
-            getSearchText: () => vm.SearchText,
-            matches: vm.MatchesSearch,
-            updateSearchResultInfo: vm.UpdateSearchResultInfo,
-            deferRefresh: action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
+        _combinedFilter = _combinedFilter.WithSearchText(vm.SearchText);
+        ApplyCombinedFilter(vm);
     }
 
     private void ShowTextPreview(string title, string content)

@@ -17,6 +17,9 @@ public partial class FilterChipBar : UserControl
     /// <summary>Wird bei jeder Chip-Aenderung mit dem neuen Filterzustand ausgeloest.</summary>
     public event Action<DataPageFilter>? FilterGeaendert;
 
+    /// <summary>Wird ausgeloest, wenn nur der sichtbare Dashboard-Filter entfernt werden soll.</summary>
+    public event Action? StartFilterZurueckgesetzt;
+
     private bool _sync;
 
     public FilterChipBar()
@@ -87,13 +90,32 @@ public partial class FilterChipBar : UserControl
             : $"{sichtbar} von {gesamt} Haltungen";
     }
 
+    /// <summary>Zeigt den aktiven Dashboard-Startfilter als einzeln entfernbaren Filter an.</summary>
+    public void SetStartFilter(DataPageStartFilter? filter)
+    {
+        StartFilterResetButton.Content = filter is null
+            ? string.Empty
+            : $"Dashboard: {filter.DisplayText}  ×";
+        StartFilterResetButton.Visibility = filter is null
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+    }
+
+    /// <summary>Zeigt die Verschiebesperre fuer jede aktive Filterart.</summary>
+    public void SetFilterActive(bool isActive)
+        => SperrHinweis.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
+
+    public DataPageFilter CurrentFilter => AktuellerFilter();
+
     private void MeldeFilter()
     {
         var filter = AktuellerFilter();
         ResetButton.Visibility = filter.IstAktiv ? Visibility.Visible : Visibility.Collapsed;
-        SperrHinweis.Visibility = filter.IstAktiv ? Visibility.Visible : Visibility.Collapsed;
         FilterGeaendert?.Invoke(filter);
     }
+
+    private void StartFilterReset_Click(object sender, RoutedEventArgs e)
+        => StartFilterZurueckgesetzt?.Invoke();
 
     private DataPageFilter AktuellerFilter()
     {

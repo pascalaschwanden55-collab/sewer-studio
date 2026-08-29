@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -311,40 +310,75 @@ public partial class DataPage : UserControl
     }
 
     /// <summary>
-    /// Chip-Filter auf die Grid-Sicht anwenden. Reiner View-Filter: die
-    /// Records-Reihenfolge (= NR-Laufnummer) bleibt unangetastet; Zeilen-
-    /// Verschieben per Drag&amp;Drop wird bei aktivem Filter gesperrt.
+    /// Chip-Filter aktualisieren. Die eigentliche Grid-Sicht erhaelt danach
+    /// genau einen gemeinsamen Filter aus Suche, Chips und Dashboard-Startfilter.
     /// </summary>
     private void WendeChipFilterAn(DataPageFilter filter)
     {
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var view = System.Windows.Data.CollectionViewSource.GetDefaultView(vm.Records);
-        view.Filter = filter.IstAktiv
-            ? o => filter.Passt(o as HaltungRecord)
-            : null;
-
-        Grid.AllowDrop = !filter.IstAktiv;
-        FilterChips.SetTrefferInfo(view.Cast<object>().Count(), vm.Records.Count);
+        _combinedFilter = _combinedFilter
+            .WithSearchText(vm.SearchText)
+            .WithChipFilter(filter);
+        ApplyCombinedFilter(vm);
     }
 
     private void ApplyStartFilter()
     {
-        if (_startFilterApplied || DataContext is not DataPageViewModel vm || vm.StartFilter is null)
+        if (_startFilterApplied || DataContext is not DataPageViewModel vm)
             return;
 
         _startFilterApplied = true;
-        HaltungsansichtToggle.IsChecked = false;
-        HaltungsansichtView.Visibility = Visibility.Collapsed;
-        Grid.Visibility = Visibility.Visible;
+        _combinedFilter = _combinedFilter
+            .WithSearchText(vm.SearchText)
+            .WithStartFilter(_combinedFilter.StartFilter ?? vm.StartFilter);
+        FilterChips.SetStartFilter(_combinedFilter.StartFilter);
 
-        var view = CollectionViewSource.GetDefaultView(vm.Records);
-        view.Filter = obj => vm.StartFilter.Matches(obj as HaltungRecord);
-        view.Refresh();
+        if (_combinedFilter.StartFilter is not null)
+        {
+            HaltungsansichtToggle.IsChecked = false;
+            HaltungsansichtView.Visibility = Visibility.Collapsed;
+            Grid.Visibility = Visibility.Visible;
+        }
 
-        Grid.AllowDrop = false;
-        FilterChips.SetTrefferInfo(view.Cast<object>().Count(), vm.Records.Count);
+        ApplyCombinedFilter(vm);
+    }
+
+    private void EntferneStartFilter()
+    {
+        if (_combinedFilter.StartFilter is null || DataContext is not DataPageViewModel vm)
+            return;
+
+        _combinedFilter = _combinedFilter
+            .WithSearchText(vm.SearchText)
+            .WithoutStartFilter();
+        FilterChips.SetStartFilter(null);
+        ApplyCombinedFilter(vm);
+    }
+
+    private void ApplyCombinedFilter(DataPageViewModel vm)
+    {
+        DataGridSearchFilterController.ApplyFilter(
+            CollectionViewSource.GetDefaultView(vm.Records),
+            vm.Records,
+            getFilter: () =>
+            {
+                var filter = _combinedFilter.WithSearchText(vm.SearchText);
+                return filter.IstAktiv ? filter.Passt : null;
+            },
+            updateSearchResultInfo: visibleCount => UpdateCombinedFilterUi(vm, visibleCount),
+            deferRefresh: action => Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, action));
+    }
+
+    private void UpdateCombinedFilterUi(DataPageViewModel vm, int visibleCount)
+    {
+        _combinedFilter = _combinedFilter.WithSearchText(vm.SearchText);
+
+        vm.UpdateSearchResultInfo(visibleCount);
+        Grid.AllowDrop = !_combinedFilter.IstAktiv;
+        FilterChips.SetFilterActive(_combinedFilter.IstAktiv);
+        FilterChips.SetTrefferInfo(visibleCount, vm.Records.Count);
     }
 
     private void OpenContainingFolderMenu_Click(object sender, RoutedEventArgs e)

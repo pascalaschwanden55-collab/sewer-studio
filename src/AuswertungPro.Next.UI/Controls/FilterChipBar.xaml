@@ -146,13 +146,19 @@
         <ToggleButton x:Name="ChipSchaeden" Content="mit Schäden" Margin="0,0,10,0" Style="{StaticResource FilterChipToggleButton}"
                       Checked="Chip_Changed" Unchecked="Chip_Changed"/>
 
-        <Button x:Name="ResetButton" Content="Filter aus"
+        <Button x:Name="StartFilterResetButton"
+                Visibility="Collapsed" Click="StartFilterReset_Click"
+                Margin="0,0,4,0"
+                Style="{StaticResource FilterChipResetButton}"
+                ToolTip="Nur den Dashboard-Filter entfernen"/>
+
+        <Button x:Name="ResetButton" Content="Chip-Filter aus"
                 Visibility="Collapsed" Click="Reset_Click"
                 Style="{StaticResource FilterChipResetButton}"/>
 
         <TextBlock x:Name="TrefferText" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"
                    Foreground="{DynamicResource TextSecondaryBrush}"/>
-        <TextBlock x:Name="SperrHinweis" Text="(Verschieben bei aktivem Filter gesperrt)"
+        <TextBlock x:Name="SperrHinweis" Text="(Drag &amp; Drop bei aktivem Filter gesperrt)"
                    FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="Collapsed"
                    Foreground="{DynamicResource MutedBrush}"/>
     </WrapPanel>

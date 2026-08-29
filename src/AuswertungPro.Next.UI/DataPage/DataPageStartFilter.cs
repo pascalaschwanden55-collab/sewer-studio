@@ -10,6 +10,17 @@ namespace AuswertungPro.Next.UI.DataPage;
 
 public sealed record DataPageStartFilter(string FieldName, string Value)
 {
+    public string DisplayText => FieldName switch
+    {
+        "Zustandsklasse" when string.Equals(Value, "ohne", StringComparison.OrdinalIgnoreCase)
+            => "ohne Zustandsklasse",
+        "Zustandsklasse" => $"Zustandsklasse {Value}",
+        "DN_mm" when Value == "?" => "DN unbekannt",
+        "DN_mm" => $"DN {Value}",
+        "Primaere_Schaeden" => $"Schaden {Value}",
+        _ => $"{FieldName}: {Value}"
+    };
+
     public static DataPageStartFilter FromDashboardZustand(string key)
         => new("Zustandsklasse", NormalizeZustandKey(key));
 
