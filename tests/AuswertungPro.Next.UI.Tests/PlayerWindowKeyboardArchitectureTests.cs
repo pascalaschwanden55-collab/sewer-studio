@@ -65,6 +65,21 @@ public sealed class PlayerWindowKeyboardArchitectureTests
         Assert.Contains("PlayerDetectionShortcutControls.CreateActions", keyboard);
         Assert.Contains("PlayerCancelCodingOverlayShortcutWorkflow.Execute", keyboard);
         Assert.Contains("_shortcutOverlayController.HandleKey", keyboard);
+        var textInputGuard = keyboard.IndexOf(
+            "KeyboardTextInputFocusGuard.IsTextInputFocused()",
+            StringComparison.Ordinal);
+        var overlayKeyHandling = keyboard.IndexOf(
+            "_shortcutOverlayController.HandleKey",
+            StringComparison.Ordinal);
+        Assert.True(
+            textInputGuard >= 0 && textInputGuard < overlayKeyHandling,
+            "Texteingaben muessen vor allen Player-Fensterkuerzeln einschliesslich Overlay geschuetzt sein.");
+        Assert.Contains("PlayerKeyboardShortcutPolicy.IsAllowedDuringTextInput", keyboard, StringComparison.Ordinal);
+        var textInputExit = keyboard.IndexOf("if (textInputFocused)", StringComparison.Ordinal);
+        var shortcutResolve = keyboard.IndexOf("PlayerKeyboardShortcutPolicy.Resolve", StringComparison.Ordinal);
+        Assert.True(
+            textInputExit >= 0 && shortcutResolve >= 0 && textInputExit < shortcutResolve,
+            "Ausser der F1-Ausnahme darf waehrend einer Texteingabe kein Player-Kuerzel aufgeloest werden.");
         Assert.Contains("_shortcutOverlayController.Show", keyboard);
         Assert.Contains("_shortcutOverlayController.Hide", keyboard);
         Assert.DoesNotContain("ShortcutOverlay.Visibility", keyboard, StringComparison.Ordinal);

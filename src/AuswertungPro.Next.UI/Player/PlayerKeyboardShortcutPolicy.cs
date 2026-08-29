@@ -19,6 +19,13 @@ public enum PlayerKeyboardAction
 
 public static class PlayerKeyboardShortcutPolicy
 {
+    /// <summary>
+    /// Welche Fenstertasten duerfen auch dann wirken, wenn ein Text- oder
+    /// Auswahlfeld den Fokus hat? Nur F1: die Tastenuebersicht ist Hilfe und
+    /// kein Schriftzeichen. Das Fragezeichen bleibt gesperrt, es gehoert in den Text.
+    /// </summary>
+    public static bool IsAllowedDuringTextInput(Key key) => key is Key.F1;
+
     public static PlayerKeyboardAction? Resolve(Key key, bool canCancelCodingOverlay)
         => key switch
         {

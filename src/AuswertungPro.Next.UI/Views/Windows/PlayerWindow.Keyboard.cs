@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Coding;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -9,11 +10,20 @@ public partial class PlayerWindow
 {
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // Waehrend einer Texteingabe bleibt die Tastatur dem Feld vorbehalten.
+        // Einzige Ausnahme ist F1: die Tastenuebersicht schreibt kein Zeichen.
+        var textInputFocused = KeyboardTextInputFocusGuard.IsTextInputFocused();
+        if (textInputFocused && !PlayerKeyboardShortcutPolicy.IsAllowedDuringTextInput(e.Key))
+            return;
+
         var overlayOutcome = _shortcutOverlayController.HandleKey(e.Key);
         if (overlayOutcome == PlayerShortcutOverlayKeyOutcome.Handled)
             e.Handled = true;
 
         if (overlayOutcome != PlayerShortcutOverlayKeyOutcome.Continue)
+            return;
+
+        if (textInputFocused)
             return;
 
         var keyboardActions = _keyboardActionControllerOwner.Ensure(

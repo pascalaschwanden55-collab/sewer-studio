@@ -39,4 +39,18 @@ public sealed class PlayerKeyboardShortcutPolicyTests
     {
         Assert.Null(PlayerKeyboardShortcutPolicy.Resolve(Key.F1, canCancelCodingOverlay: true));
     }
+
+    [Theory]
+    [InlineData(Key.F1, true)]
+    [InlineData(Key.OemQuestion, false)]
+    [InlineData(Key.Space, false)]
+    [InlineData(Key.S, false)]
+    [InlineData(Key.Escape, false)]
+    public void Nur_F1_darf_waehrend_einer_Texteingabe_wirken(Key key, bool erwartet)
+    {
+        // F1 ist kein Schriftzeichen und darf die Tastenuebersicht auch dann zeigen,
+        // wenn gerade in ein Feld geschrieben wird. Das Fragezeichen dagegen gehoert
+        // in den Text und darf die Uebersicht nicht oeffnen.
+        Assert.Equal(erwartet, PlayerKeyboardShortcutPolicy.IsAllowedDuringTextInput(key));
+    }
 }

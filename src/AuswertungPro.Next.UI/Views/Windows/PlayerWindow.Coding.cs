@@ -38,9 +38,16 @@ public partial class PlayerWindow
             isEnter: e.Key == Key.Enter);
 
     private void CmbEingabemarker_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        => _codingEingabemarkerInputController.HandleSelection(
-            CodingEingabemarkerPopupControls.IsVisible(EingabemarkerPopup),
-            CodingEingabemarkerPopupControls.ResolveSelectedText(CmbEingabemarker.SelectedItem));
+    {
+        var popupVisible = CodingEingabemarkerPopupControls.IsVisible(EingabemarkerPopup);
+        var selectedText = CodingEingabemarkerPopupControls.ResolveSelectedText(CmbEingabemarker.SelectedItem);
+
+        _codingEingabemarkerInputController.HandleSelection(popupVisible, selectedText);
+
+        // Schreibfokus zurueck ins Textfeld, damit Enter direkt bestaetigt.
+        if (CodingEingabemarkerFocusPolicy.ShouldFocusInput(popupVisible, selectedText))
+            CodingEingabemarkerPopupControls.FocusInput(TxtEingabemarker);
+    }
 
     /// <summary>
     /// HÃ¤lt die Overlay-ZeichenflÃ¤che exakt auf VideoView-GrÃ¶ÃŸe.

@@ -14,6 +14,7 @@ using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
 using AuswertungPro.Next.Application.UseCases.TrainingStudioSegmentation;
 using AuswertungPro.Next.Domain.Protocol;            // ProtocolEntry (Codierfenster-Ergebnis)
 using AuswertungPro.Next.UI.Ai.Pipeline;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.BendSuggestions;  // BendSuggestionListViewModel
@@ -330,11 +331,29 @@ public partial class TrainingStudioWindow : Window
 
     private void TrainingStudioWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (!_pdfImportInProgress)
+        var decision = TrainingStudioKeyboardShortcutPolicy.Resolve(
+            e.Key,
+            Keyboard.Modifiers,
+            KeyboardTextInputFocusGuard.IsTextInputFocused(),
+            _pdfImportInProgress);
+
+        if (!decision.ShouldHandle)
             return;
 
-        if (e.Key is Key.A or Key.K or Key.V or Key.Left or Key.Right)
-            e.Handled = true;
+        e.Handled = true;
+
+        ICommand? command = decision.Action switch
+        {
+            TrainingStudioKeyboardShortcutAction.Accept => _vm.AcceptCommand,
+            TrainingStudioKeyboardShortcutAction.Correct => _vm.CorrectCommand,
+            TrainingStudioKeyboardShortcutAction.Discard => _vm.DiscardCommand,
+            TrainingStudioKeyboardShortcutAction.NextItem => _vm.NextItemCommand,
+            TrainingStudioKeyboardShortcutAction.PreviousItem => _vm.PreviousItemCommand,
+            _ => null
+        };
+
+        if (command?.CanExecute(null) == true)
+            command.Execute(null);
     }
 
     private void OpenGoldInbox_Click(object sender, RoutedEventArgs e)

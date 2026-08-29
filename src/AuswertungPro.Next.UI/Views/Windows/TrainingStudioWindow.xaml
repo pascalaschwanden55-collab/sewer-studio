@@ -14,14 +14,6 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </Window.Resources>
 
-    <Window.InputBindings>
-        <KeyBinding Key="A" Command="{Binding AcceptCommand}"/>
-        <KeyBinding Key="K" Command="{Binding CorrectCommand}"/>
-        <KeyBinding Key="V" Command="{Binding DiscardCommand}"/>
-        <KeyBinding Key="Right" Command="{Binding NextItemCommand}"/>
-        <KeyBinding Key="Left" Command="{Binding PreviousItemCommand}"/>
-    </Window.InputBindings>
-
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

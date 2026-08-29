@@ -35,6 +35,15 @@ public static class CodingEingabemarkerPopupControls
         inputText.Text = text;
     }
 
+    /// <summary>Setzt Schreibfokus und Schreibmarke ans Textende.</summary>
+    public static void FocusInput(TextBox inputText)
+    {
+        ArgumentNullException.ThrowIfNull(inputText);
+
+        inputText.Focus();
+        inputText.CaretIndex = inputText.Text?.Length ?? 0;
+    }
+
     public static bool IsVisible(FrameworkElement popup)
     {
         ArgumentNullException.ThrowIfNull(popup);
