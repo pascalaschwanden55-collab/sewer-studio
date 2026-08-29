@@ -100,4 +100,17 @@ public sealed class SiaAbmessungTests
     {
         Assert.Equal(mm, SiaAbmessung.NachMillimeter(wert));
     }
+
+    [Fact]
+    public void Eine_Tiefe_gehoert_ausdruecklich_NICHT_hierher()
+    {
+        // Festgehalten, weil es beim Messen schon einmal passiert ist: Die Regel
+        // macht aus der Schachttiefe 2.02 m die Zahl 2020 - richtig gerechnet fuer
+        // eine Abmessung, falsch fuer eine Hoehe.
+        //
+        // SIA405 trennt zwei Typen: Abmessung (Bauteilquerschnitt, Millimeter) und
+        // Hoehe/Laenge (Sohlenkote, Deckelkote, LaengeEffektiv - Meter). Die
+        // Schachttiefe ist eine Hoehe und hat in der Norm gar kein Zielfeld.
+        Assert.Equal(2020, SiaAbmessung.NachMillimeter("2.02"));
+    }
 }

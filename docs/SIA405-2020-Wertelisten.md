@@ -118,3 +118,22 @@ ablehnt — und der Fehler sieht wie ein Erfolg aus.
 **Das Shapefile ist nicht massgebend.** Bei einer von 117 Göschenen-Haltungen
 widersprechen sich die beiden Ausgaben: Shapefile `Zement`, XTF
 `Beton_Normalbeton`. Massgebend ist die XTF.
+
+## Einheiten — zwei Typen, kein Widerspruch
+
+Die Norm mischt Meter und Millimeter, aber nach einer klaren Regel:
+**Bauteilquerschnitte in Millimetern, Lagen und Höhen im Gelände in Metern.**
+
+| Typ im Modell | Einheit | Felder | Werte im Kantonsexport |
+|---|---|---|---|
+| `SIA405_Base_Abwasser.Abmessung` | **mm** | `Dimension1/2`, `Lichte_Hoehe`, `Deckel.Durchmesser` | 1 – 5000 |
+| `Base_LV95.Hoehe` | **m** | `Sohlenkote`, `Deckel.Kote` | 0,95 – 2429 m ü. M. |
+| Länge | **m** | `Haltung.LaengeEffektiv` | 0,06 – 5237 |
+
+Die **Schachttiefe** ist danach eine Höhe und gehört in Meter — sie hat in SIA405
+ohnehin kein Zielfeld. `SiaAbmessung` darf deshalb nie auf sie angewandt werden:
+aus 2,02 m würde 2020, ein Faktor-1000-Fehler in der Gegenrichtung.
+
+Ein pauschales ×1000 auf alle Massfelder wäre also selbst der Fehler. `SiaAbmessung`
+benutzt stattdessen dieselbe Regel wie die SchachtPro-Zeichnung: ein Wert über 10
+gilt bereits als Millimeter.

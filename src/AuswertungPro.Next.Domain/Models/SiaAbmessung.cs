@@ -4,7 +4,18 @@ using System.Text.RegularExpressions;
 namespace AuswertungPro.Next.Domain.Models;
 
 /// <summary>
-/// Bringt eine Massangabe auf Millimeter als ganze Zahl, wie SIA405 sie verlangt.
+/// Bringt eine ABMESSUNG auf Millimeter als ganze Zahl, wie SIA405 sie verlangt.
+///
+/// Nur fuer Abmessungen — also Bauteilquerschnitte. Die Norm fuehrt dafuer den Typ
+/// <c>SIA405_Base_Abwasser.Abmessung</c> in Millimetern: Dimension1/2, Lichte_Hoehe,
+/// Deckel.Durchmesser.
+///
+/// NICHT fuer Hoehen und Laengen. Die tragen den Typ <c>Base_LV95.Hoehe</c>
+/// beziehungsweise eine Laenge und stehen in METERN: Sohlenkote, Deckel.Kote,
+/// LaengeEffektiv. Die Schachttiefe gehoert ebenfalls dorthin — sie ist eine Hoehe,
+/// kein Querschnitt, und hat in SIA405 ohnehin kein Zielfeld. Wer diese Klasse
+/// darauf anwendet, macht aus 2.02 m die Zahl 2020 und damit einen Faktor-1000-Fehler
+/// in der anderen Richtung.
 ///
 /// Warum das nicht einfach mal 1000 ist: Im Programm stehen zwei Einheiten
 /// nebeneinander. Schachtmasse sind Meter ("1.00"), Rohrnennweiten Millimeter
