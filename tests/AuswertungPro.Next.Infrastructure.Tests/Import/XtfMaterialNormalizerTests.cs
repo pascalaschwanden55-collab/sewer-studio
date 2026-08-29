@@ -63,4 +63,22 @@ public sealed class XtfMaterialNormalizerTests
         // waehlbar, aber die Information geht nicht verloren.
         Assert.Equal("Irgendwas Neues", XtfValueNormalizer.NormalizeSiaMaterial("Irgendwas_Neues"));
     }
+
+    [Fact]
+    public void Asbestzement_wird_nicht_zu_Zement()
+    {
+        // Gemessen am AWU-Kantonsexport: 247 Haltungen tragen Asbestzement.
+        // Die Zement-Regel schluckte sie, weil "Asbestzement" das Wort enthaelt.
+        // Asbestzement ist ein eigener Werkstoff - andere Sanierung, anderer
+        // Arbeitsschutz. Ein falsches Material ist schlimmer als ein grobes.
+        Assert.Equal("Asbestzement", XtfValueNormalizer.NormalizeSiaMaterial("Asbestzement"));
+    }
+
+    [Fact]
+    public void Faserzement_und_Zement_bleiben_unveraendert()
+    {
+        // Gegenprobe: die neue Regel darf die zwei bestehenden nicht verdraengen.
+        Assert.Equal("Faserzement", XtfValueNormalizer.NormalizeSiaMaterial("Faserzement"));
+        Assert.Equal("Zement", XtfValueNormalizer.NormalizeSiaMaterial("Zement"));
+    }
 }

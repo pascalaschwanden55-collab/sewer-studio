@@ -63,7 +63,7 @@ public static class FieldCatalog
             {
                 "", "PVC", "PE", "PP", "GFK", "Beton", "Steinzeug", "Guss", "Hartpolyethylen",
                 "Zement", "Polyvinylchlorid", "Polyethylen", "Polypropylen", "Normalbeton", "Glasfaser",
-                "Epoxydharz", "Faserzement", "Ton"
+                "Epoxydharz", "Faserzement", "Asbestzement", "Ton"
             }),
             // Die Begriffe der Norm, gefuehrt in NutzungsartVokabular — keine zweite Liste.
             [FieldKeys.UsageType] = new ReadOnlyCollection<string>(

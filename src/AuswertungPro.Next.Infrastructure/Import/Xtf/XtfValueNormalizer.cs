@@ -61,7 +61,11 @@ internal static class XtfValueNormalizer
         if (Regex.IsMatch(material, "(?i)polypropylen")) return "Polypropylen";
         if (Regex.IsMatch(material, "(?i)epoxydharz")) return "Epoxydharz";
         if (Regex.IsMatch(material, "(?i)glasfaser|(?:^|[_ ])GFK(?:[_ ]|$)")) return "GFK";
-        // Faserzement vor Zement: sonst schluckt die Zement-Regel den Sonderfall.
+        // Asbestzement und Faserzement vor Zement: sonst schluckt die Zement-Regel
+        // beide Sonderfaelle. Asbestzement ist ein eigener Werkstoff - im
+        // AWU-Kantonsexport 247 Haltungen -, mit anderer Sanierung und anderem
+        // Arbeitsschutz. "Zement" waere dort schlicht falsch.
+        if (Regex.IsMatch(material, "(?i)asbestzement|(?:^|[_ ])AZ(?:[_ ]|$)")) return "Asbestzement";
         if (Regex.IsMatch(material, "(?i)faserzement")) return "Faserzement";
         if (Regex.IsMatch(material, "(?i)zement")) return "Zement";
         if (Regex.IsMatch(material, "(?i)beton")) return "Beton";
