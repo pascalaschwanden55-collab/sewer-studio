@@ -6,6 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using AuswertungPro.Next.UI.Behaviors;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Reports;
@@ -188,13 +191,39 @@ public partial class ProtocolObservationsWindow : Window
         RefreshRevisionHeader();
     }
 
-    private void EntriesGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void EntriesGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (_isOpeningDialog || _isRefreshingEntries)
+        // Nur echte Datenzeilen: ein Doppelklick auf die Spaltenueberschrift oder
+        // in den Leerraum darf nichts oeffnen. VisualTreeSafe statt VisualTreeHelper,
+        // weil GetParent auf einem Text-Run abstuerzt.
+        if (VisualTreeSafe.FindAncestor<DataGridRow>(e.OriginalSource as DependencyObject) is null)
             return;
 
+        OpenSelectedEntryForEdit();
+    }
+
+    private void EntriesGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (!ProtocolObservationsEditTriggerPolicy.OpensEditor(e.Key))
+            return;
+
+        e.Handled = true;
+        OpenSelectedEntryForEdit();
+    }
+
+    /// <summary>
+    /// Oeffnet die gewaehlte Beobachtung und schreibt die Bearbeitung in die
+    /// Revisionsspur. Ausgeloest nur durch Doppelklick oder Enter, nie durch die
+    /// blosse Zeilenauswahl.
+    /// </summary>
+    private void OpenSelectedEntryForEdit()
+    {
         var entry = SelectedEntry;
-        if (entry is null)
+        if (!ProtocolObservationsEditTriggerPolicy.CanOpenEditor(
+                hasSelectedEntry: entry is not null,
+                isOpeningDialog: _isOpeningDialog,
+                isRefreshingEntries: _isRefreshingEntries)
+            || entry is null)
             return;
 
         var before = SerializeEntry(entry);
