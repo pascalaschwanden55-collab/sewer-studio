@@ -300,6 +300,146 @@ public sealed class XtfStammdatenPlanBuilderTests
             XtfStammdatenElementReader.ParseModelName(XDocument.Parse(Sec)));
     }
 
+    // ---------------------------------------------------------------------------
+    // Klasse "Haltung": Material und Lichte_Hoehe haengen nicht am Kanal.
+    //
+    // Gemessen am Kantonsexport von Abwasser Uri: Alle 109871 Kanal-Objekte tragen
+    // weder Material noch Lichte_Hoehe. Beide gehoeren zur physischen Klasse Haltung,
+    // die dieselbe Bezeichnung fuehrt — in allen 109871 Faellen identisch.
+    // ---------------------------------------------------------------------------
+
+    private const string MitHaltung = """
+<?xml version="1.0" encoding="utf-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION VERSION="2.3" SENDER="VSA">
+    <MODELS><MODEL NAME="SIA405_ABWASSER_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_Abwasser.SIA405_Abwasser>
+      <SIA405_Abwasser.SIA405_Abwasser.Kanal TID="ch010wcsKA000001">
+        <Bezeichnung>80638-80631</Bezeichnung>
+        <Nutzungsart_Ist>Schmutzabwasser</Nutzungsart_Ist>
+      </SIA405_Abwasser.SIA405_Abwasser.Kanal>
+      <SIA405_Abwasser.SIA405_Abwasser.Haltung TID="ch010wcsHA000001">
+        <Bezeichnung>80638-80631</Bezeichnung>
+        <Lichte_Hoehe>0</Lichte_Hoehe>
+        <Material>unbekannt</Material>
+      </SIA405_Abwasser.SIA405_Abwasser.Haltung>
+    </SIA405_Abwasser.SIA405_Abwasser>
+  </DATASECTION>
+</TRANSFER>
+""";
+
+    [Fact]
+    public void Der_Leser_findet_auch_die_Haltung_und_kennzeichnet_die_Klasse()
+    {
+        var elemente = XtfStammdatenElementReader.Parse(XDocument.Parse(MitHaltung));
+
+        Assert.Equal(2, elemente.Count);
+        var kanal = Assert.Single(elemente, e => e.Klasse == "Kanal");
+        var haltung = Assert.Single(elemente, e => e.Klasse == "Haltung");
+
+        Assert.Equal("ch010wcsKA000001", kanal.Tid);
+        Assert.Equal("ch010wcsHA000001", haltung.Tid);
+        Assert.Equal("80638-80631", haltung.Bezeichnung);
+        Assert.Equal("unbekannt", haltung.Werte["Material"]);
+        Assert.Equal("0", haltung.Werte["Lichte_Hoehe"]);
+    }
+
+    [Fact]
+    public void Ein_handgesetztes_Material_geht_an_die_Haltung_nicht_an_den_Kanal()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.PipeMaterial, "Steinzeug", FieldSource.Manual, userEdited: true);
+
+        var position = Assert.Single(PlanMitHaltung(record).Positionen);
+
+        // Die TID der Haltung, nicht die des Kanals — sonst landet Material an einem
+        // Objekt, dessen Klasse das Feld gar nicht kennt.
+        Assert.Equal("ch010wcsHA000001", position.KanalschadenTid);
+        var feld = Assert.Single(position.Felder);
+        Assert.Equal("Material", feld.Name);
+        Assert.Equal("unbekannt", feld.Alt);
+        Assert.Equal("Steinzeug", feld.Neu);
+    }
+
+    [Fact]
+    public void Ein_handgesetzter_Durchmesser_geht_als_Lichte_Hoehe_in_Millimeter()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "300", FieldSource.Manual, userEdited: true);
+
+        var position = Assert.Single(PlanMitHaltung(record).Positionen);
+        var feld = Assert.Single(position.Felder);
+
+        // DOMAIN Lichte_Hoehe = 0 .. 99999 [Units.mm] laut SIA405_Abwasser_2020_2_d_LV95.
+        Assert.Equal("Lichte_Hoehe", feld.Name);
+        Assert.Equal("300", feld.Neu);
+    }
+
+    [Fact]
+    public void Kanal_und_Haltung_ergeben_zwei_getrennte_Positionen()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.UsageType, "Mischabwasser", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.PipeMaterial, "Steinzeug", FieldSource.Manual, userEdited: true);
+
+        var positionen = PlanMitHaltung(record).Positionen;
+
+        Assert.Equal(2, positionen.Count);
+        Assert.Equal(
+            new[] { "ch010wcsHA000001", "ch010wcsKA000001" },
+            positionen.Select(p => p.KanalschadenTid).OrderBy(t => t, StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Ein_nur_importiertes_Material_kommt_nicht_in_den_Plan()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.PipeMaterial, "Steinzeug", FieldSource.Xtf, userEdited: false);
+
+        Assert.Empty(PlanMitHaltung(record).Positionen);
+    }
+
+    [Fact]
+    public void Ein_Material_ohne_belegte_2015_Schreibweise_wird_gemeldet_statt_geschrieben()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.PipeMaterial, "Normalbeton", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(MitHaltung)),
+            "SIA405_ABWASSER_2015_LV95");
+
+        Assert.Empty(plan.Positionen);
+        Assert.Contains("Normalbeton", Assert.Single(plan.Hinweise));
+    }
+
+    [Theory]
+    // 0 heisst in dieser Datei "unbekannt" und ist keine Angabe. Negatives und alles
+    // ueber der Modellgrenze 99999 mm ist keine Rohrweite.
+    [InlineData("0")]
+    [InlineData("-100")]
+    [InlineData("100000")]
+    [InlineData("keine Ahnung")]
+    public void Eine_unbrauchbare_Rohrweite_wird_nicht_geschrieben(string wert)
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, wert, FieldSource.Manual, userEdited: true);
+
+        var plan = PlanMitHaltung(record);
+
+        Assert.Empty(plan.Positionen);
+        Assert.Single(plan.Hinweise);
+    }
+
+    private static XtfStammdatenPlan PlanMitHaltung(HaltungRecord record)
+        => XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(MitHaltung)),
+            "SIA405_ABWASSER_2020_LV95");
+
     private static XtfStammdatenPlan Plan(HaltungRecord record)
         => XtfStammdatenPlanBuilder.Build(
             new[] { record },

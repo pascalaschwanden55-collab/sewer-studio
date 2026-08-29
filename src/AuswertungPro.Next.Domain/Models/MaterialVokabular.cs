@@ -35,7 +35,13 @@ public static class MaterialVokabular
     /// keinen Wert kennt — der Begriff bleibt dann waehlbar und lesbar, kann aber
     /// nie in eine XTF geraten.
     /// </summary>
-    private sealed record Konzept(string[] Gelesen, string App, string? Norm);
+    /// <param name="Bis2015">
+    /// Die Schreibweise in SIA405 2015, sofern an echten Dateien belegt. <c>null</c>
+    /// heisst nicht "gibt es nicht", sondern "nicht belegt" — und dann wird in eine
+    /// 2015-Datei nichts geschrieben. VSA veroeffentlicht das 2015-Modell nicht mehr,
+    /// deshalb ist die Liste nur so lang wie die Belege reichen.
+    /// </param>
+    private sealed record Konzept(string[] Gelesen, string App, string? Norm, string? Bis2015 = null);
 
     private static readonly Konzept[] Konzepte =
     [
@@ -45,14 +51,14 @@ public static class MaterialVokabular
         new(["kunststoff_polyvinilchlorid", "kunststoff_polyvinylchlorid",
              "polyvinylchlorid", "polyvinilchlorid",
              "polyvinylchlorid (pvc)", "pvc", "kunststoff pvc"],
-            "Polyvinylchlorid", "Kunststoff_Polyvinilchlorid"),
+            "Polyvinylchlorid", "Kunststoff_Polyvinilchlorid", "Polyvinylchlorid"),
         new(["kunststoff_hartpolyethylen", "hartpolyethylen", "hart-polyethylen (hdpe)",
              "hartpolyethylen (hdpe)", "hdpe", "pe-hd", "pehd", "pe_hd"],
             "Hartpolyethylen", "Kunststoff_Hartpolyethylen"),
         new(["kunststoff_polyethylen", "polyethylen", "polyethylen (pe)", "pe", "kunststoff pe"],
-            "Polyethylen", "Kunststoff_Polyethylen"),
+            "Polyethylen", "Kunststoff_Polyethylen", "Polyethylen"),
         new(["kunststoff_polypropylen", "polypropylen", "polypropylen (pp)", "pp"],
-            "Polypropylen", "Kunststoff_Polypropylen"),
+            "Polypropylen", "Kunststoff_Polypropylen", "Polypropylen"),
         new(["kunststoff_epoxydharz", "epoxydharz", "epoxidharz"],
             "Epoxydharz", "Kunststoff_Epoxydharz"),
         new(["kunststoff_polyester_gup", "polyester gup", "gup"],
@@ -67,7 +73,7 @@ public static class MaterialVokabular
         new(["beton_pressrohrbeton", "pressrohrbeton"], "Pressrohrbeton", "Beton_Pressrohrbeton"),
         // Ein blosses "Beton" sagt nicht, welche Art. Der Normwert dafuer heisst
         // ausdruecklich "unbekannt" — das ist keine Erfindung, sondern die Aussage.
-        new(["beton_unbekannt", "beton"], "Beton", "Beton_unbekannt"),
+        new(["beton_unbekannt", "beton"], "Beton", "Beton_unbekannt", "Beton"),
 
         // --- Mineralisch ---
         new(["steinzeug"], "Steinzeug", "Steinzeug"),
@@ -75,7 +81,7 @@ public static class MaterialVokabular
         new(["asbestzement", "az"], "Asbestzement", "Asbestzement"),
         new(["gebrannte_steine", "gebrannte steine"], "Gebrannte Steine", "Gebrannte_Steine"),
         new(["ton"], "Ton", "Ton"),
-        new(["zement"], "Zement", "Zement"),
+        new(["zement"], "Zement", "Zement", "Zement"),
 
         // --- Metalle: "Guss" allein bleibt bewusst unaufgeloest ---
         new(["stahl"], "Stahl", "Stahl"),
@@ -140,6 +146,44 @@ public static class MaterialVokabular
     /// keinem Begriff gehoert. Dann wird nichts geschrieben statt geraten.
     /// </summary>
     public static string? NachNorm(string? wert) => Finde((wert ?? "").Trim())?.Norm;
+
+    /// <summary>
+    /// Die in der Zielfassung gueltige Schreibweise, oder <c>null</c>, wenn sie dort
+    /// nicht belegt ist. Dann wird nichts geschrieben statt geraten.
+    ///
+    /// Die 2015-Fassung fuehrt die Werkstoffe ohne Kategorie-Praefix: <c>Polyethylen</c>
+    /// statt <c>Kunststoff_Polyethylen</c>, <c>Beton</c> statt <c>Beton_unbekannt</c>.
+    /// Sie ist ausserdem groeber — aus dem 2015-Wert <c>Polyethylen</c> wurde 2020 sowohl
+    /// <c>Kunststoff_Polyethylen</c> (18x) als auch <c>Kunststoff_Hartpolyethylen</c> (9x),
+    /// gemessen an den 77 Haltungen, die in beiden Fassungen vorliegen. Der Rueckweg
+    /// waere deshalb ein Informationsverlust und wird nicht gegangen.
+    ///
+    /// Belegt sind nur die fuenf Werkstoffe, die in echten 2015-Kundendateien vorkommen.
+    /// Fuer alle uebrigen bleibt <c>Bis2015</c> leer: VSA veroeffentlicht das 2015-Modell
+    /// nicht mehr, und "sieht eindeutig aus" hat mich beim Zement schon einmal in die
+    /// Irre gefuehrt.
+    /// </summary>
+    /// <param name="ab2020">
+    /// <c>true</c> fuer SIA405 2020 und neuer, <c>false</c> fuer aeltere Fassungen,
+    /// <c>null</c>, wenn die Fassung der Datei nicht erkennbar ist.
+    /// </param>
+    public static string? NachModell(string? wert, bool? ab2020)
+    {
+        var konzept = Finde((wert ?? "").Trim());
+        if (konzept is null)
+            return null;
+
+        if (konzept.Norm is not null && string.Equals(konzept.Norm, konzept.Bis2015, StringComparison.Ordinal))
+            return konzept.Norm;
+
+        // Nur hier entscheidet die Fassung — ohne sie waere jede Wahl geraten.
+        return ab2020 switch
+        {
+            true => konzept.Norm,
+            false => konzept.Bis2015,
+            _ => null
+        };
+    }
 
     private static Konzept? Finde(string text)
     {

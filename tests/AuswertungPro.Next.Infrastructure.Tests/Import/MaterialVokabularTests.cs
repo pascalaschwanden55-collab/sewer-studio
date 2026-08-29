@@ -231,4 +231,60 @@ public sealed class MaterialVokabularTests
         Assert.Equal("GFK", MaterialVokabular.Normalisieren("Glasfaser"));
         Assert.DoesNotContain("Glasfaser", MaterialVokabular.Auswahl);
     }
+    [Theory]
+    // Belegt an den echten 2015-Kundendateien (GEP Altdorf Zone 1.15, 92 Haltungen):
+    // Dort stehen Zement 53x, Polyethylen 29x, Polyvinylchlorid 5x, Polypropylen 3x
+    // und Beton 2x. Die 2015-Fassung fuehrt die Werkstoffe ohne Kategorie-Praefix.
+    [InlineData("Zement", "Zement", "Zement")]
+    [InlineData("Polyethylen", "Polyethylen", "Kunststoff_Polyethylen")]
+    [InlineData("Polyvinylchlorid", "Polyvinylchlorid", "Kunststoff_Polyvinilchlorid")]
+    [InlineData("Polypropylen", "Polypropylen", "Kunststoff_Polypropylen")]
+    [InlineData("Beton", "Beton", "Beton_unbekannt")]
+    public void Belegte_Werkstoffe_kennen_beide_Modellfassungen(string app, string bis2015, string ab2020)
+    {
+        Assert.Equal(bis2015, MaterialVokabular.NachModell(app, ab2020: false));
+        Assert.Equal(ab2020, MaterialVokabular.NachModell(app, ab2020: true));
+    }
+
+    [Theory]
+    // Fuer diese Werkstoffe ist keine 2015-Schreibweise belegt. VSA veroeffentlicht das
+    // 2015-Modell nicht mehr, und in den vorhandenen Kundendateien kommen sie nicht vor.
+    // Sie werden deshalb nicht in eine 2015-Datei geschrieben, sondern als Hinweis
+    // gemeldet. Genau hier ist mir der Zement-Fehler passiert: "sieht eindeutig aus"
+    // ist kein Beleg. Ein Wert, der 2015 gar nicht existiert, macht die Datei ungueltig;
+    // ein groeberer Ersatzwert zerstoert eine echte Angabe.
+    [InlineData("Normalbeton")]
+    [InlineData("Hartpolyethylen")]
+    [InlineData("Steinzeug")]
+    [InlineData("Asbestzement")]
+    [InlineData("Guss duktil")]
+    public void Ohne_belegte_2015_Schreibweise_wird_nichts_geschrieben(string app)
+    {
+        Assert.Null(MaterialVokabular.NachModell(app, ab2020: false));
+        // In eine 2020-Datei geht derselbe Wert weiterhin.
+        Assert.NotNull(MaterialVokabular.NachModell(app, ab2020: true));
+    }
+
+    [Fact]
+    public void Bei_unbekannter_Modellfassung_entscheidet_die_Gleichheit()
+    {
+        // Ist die Fassung aus dem Dateikopf nicht lesbar, darf nur geschrieben werden,
+        // was in beiden Fassungen gleich heisst. Dieselbe Regel wie beim
+        // NutzungsartVokabular fuer Regenabwasser/Niederschlagsabwasser.
+        Assert.Equal("Zement", MaterialVokabular.NachModell("Zement", ab2020: null));
+        Assert.Null(MaterialVokabular.NachModell("Polyethylen", ab2020: null));
+        Assert.Null(MaterialVokabular.NachModell("Normalbeton", ab2020: null));
+    }
+
+    [Fact]
+    public void Hartpolyethylen_wird_nicht_zu_Polyethylen_verallgemeinert()
+    {
+        // Gemessen an den 77 Haltungen, die in beiden Fassungen vorkommen: Aus dem
+        // 2015-Wert "Polyethylen" wurde 2020 18x Kunststoff_Polyethylen und 9x
+        // Kunststoff_Hartpolyethylen. Der 2015-Begriff ist also groeber. Der Rueckweg
+        // waere deshalb ein Informationsverlust - PE und PE-HD sind verschiedene
+        // Werkstoffe mit verschiedener Lebensdauer.
+        Assert.Null(MaterialVokabular.NachModell("Hartpolyethylen", ab2020: false));
+        Assert.Equal("Kunststoff_Hartpolyethylen", MaterialVokabular.NachModell("Hartpolyethylen", ab2020: true));
+    }
 }

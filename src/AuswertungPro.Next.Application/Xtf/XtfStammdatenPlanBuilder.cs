@@ -3,12 +3,20 @@ using AuswertungPro.Next.Domain.Models;
 namespace AuswertungPro.Next.Application.Xtf;
 
 /// <summary>
-/// Ein Stammdaten-Objekt aus der SIA405-XTF (Klasse "Kanal") mit seinen gelesenen Werten.
+/// Ein Stammdaten-Objekt aus der SIA405-XTF mit seinen gelesenen Werten.
+///
+/// Zwei Klassen beschreiben dieselbe Leitung: <c>Kanal</c> fuehrt die logischen Angaben
+/// (Nutzungsart, Standortname, Zustand), <c>Haltung</c> die physischen (Material, lichte
+/// Hoehe, Laenge). Beide tragen dieselbe <c>Bezeichnung</c> — im Kantonsexport von
+/// Abwasser Uri in allen 109871 Faellen identisch. <see cref="Klasse"/> haelt fest,
+/// welche der beiden gelesen wurde, damit ein Feld nie an einem Objekt landet, dessen
+/// Klasse es gar nicht kennt.
 /// </summary>
 public sealed record XtfStammdatenElement(
     string Tid,
     string Bezeichnung,
-    IReadOnlyDictionary<string, string> Werte);
+    IReadOnlyDictionary<string, string> Werte,
+    string Klasse = "Kanal");
 
 /// <summary>
 /// Das Ergebnis der Stammdaten-Planung.
@@ -48,6 +56,26 @@ public static class XtfStammdatenPlanBuilder
         };
 
     /// <summary>
+    /// Abbildung XTF-Element -> Projektfeld fuer die physische Klasse "Haltung".
+    ///
+    /// Getrennt von <see cref="Felder"/>, weil die Felder an einem anderen Objekt
+    /// haengen: Im Kantonsexport von Abwasser Uri tragen alle 109871 Kanal-Objekte
+    /// weder Material noch Lichte_Hoehe. Beide Klassen fuehren dieselbe Bezeichnung,
+    /// die Zuordnung ueber den Haltungsnamen ist deshalb fuer beide dieselbe.
+    ///
+    /// Es sind genau die zwei Felder, die Pascal am haeufigsten von Hand korrigiert.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> HaltungFelder =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Material"] = FieldKeys.PipeMaterial,
+            ["Lichte_Hoehe"] = FieldKeys.NominalDiameterMm
+        };
+
+    /// <summary>Obergrenze aus <c>DOMAIN Lichte_Hoehe = 0 .. 99999 [Units.mm]</c>.</summary>
+    private const int LichteHoeheMaxMm = 99999;
+
+    /// <summary>
     /// Bringt einen Projektwert in die Schreibweise des XTF-Modells.
     ///
     /// <c>BaulicherZustand</c>: Das Projekt fuehrt die Zustandsklasse als blosse Ziffer,
@@ -58,6 +86,15 @@ public static class XtfStammdatenPlanBuilder
     /// <c>Nutzungsart_Ist</c>: Die Begriffe fuehrt <see cref="NutzungsartVokabular"/>.
     /// Fuer das Regenwasser entscheidet die Modellfassung der Datei — SIA405 2015 kennt
     /// nur <c>Regenabwasser</c>, SIA405 2020 nur <c>Niederschlagsabwasser</c>.
+    ///
+    /// <c>Material</c>: Die Begriffe fuehrt <see cref="MaterialVokabular"/>, ebenfalls
+    /// modellabhaengig. Die 2015-Fassung kennt die Kategorie-Praefixe nicht
+    /// (<c>Polyethylen</c> statt <c>Kunststoff_Polyethylen</c>) und ist zudem groeber.
+    /// Wo keine 2015-Schreibweise belegt ist, wird nichts geschrieben.
+    ///
+    /// <c>Lichte_Hoehe</c>: Millimeter als ganze Zahl, Wertebereich 0 bis 99999 laut
+    /// <c>SIA405_Abwasser_2020_2_d_LV95</c>. Die Null bedeutet in dieser Datei
+    /// "unbekannt" und ist keine Angabe; sie wird deshalb nicht geschrieben.
     ///
     /// Alles, was nicht eindeutig in den Wertebereich passt — "n/a", eine berechnete Note
     /// mit Nachkommastellen, ein unbekannter Begriff — liefert <c>null</c> und wird nicht
@@ -76,6 +113,17 @@ public static class XtfStammdatenPlanBuilder
                 return "Z" + wert[1];
 
             return wert.Length == 1 && wert[0] is >= '0' and <= '4' ? "Z" + wert : null;
+        }
+
+        if (string.Equals(xtfName, "Material", StringComparison.Ordinal))
+            return MaterialVokabular.NachModell(wert, IstModell2020OderNeuer(modell));
+
+        if (string.Equals(xtfName, "Lichte_Hoehe", StringComparison.Ordinal))
+        {
+            var mm = SiaAbmessung.NachMillimeter(wert);
+            return mm is > 0 and <= LichteHoeheMaxMm
+                ? mm.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : null;
         }
 
         if (!string.Equals(xtfName, "Nutzungsart_Ist", StringComparison.Ordinal))
@@ -113,23 +161,10 @@ public static class XtfStammdatenPlanBuilder
         if (elemente.Count == 0)
             return new XtfStammdatenPlan(positionen, hinweise);
 
-        var jeBezeichnung = new Dictionary<string, XtfStammdatenElement>(StringComparer.OrdinalIgnoreCase);
-        // Zweiter Index ueber die Gegenrichtung: Dieselbe Haltung heisst im Projekt
-        // schon mal "A-B" und in der XTF "B-A". Der Kanal ist derselbe.
-        var jeGegenrichtung = new Dictionary<string, XtfStammdatenElement>(StringComparer.OrdinalIgnoreCase);
-        foreach (var element in elemente)
-        {
-            var name = (element.Bezeichnung ?? "").Trim();
-            // Doppelte Bezeichnungen sind nicht eindeutig zuordenbar und bleiben aussen vor.
-            if (name.Length == 0)
-                continue;
-            if (!jeBezeichnung.TryAdd(name, element))
-                jeBezeichnung[name] = null!;
-
-            var gedreht = Gegenrichtung(name);
-            if (gedreht is not null && !jeGegenrichtung.TryAdd(gedreht, element))
-                jeGegenrichtung[gedreht] = null!;
-        }
+        // Je Klasse ein eigener Index: Kanal und Haltung tragen dieselbe Bezeichnung,
+        // sind aber verschiedene Objekte mit verschiedenen Feldern.
+        var kanaele = BaueIndex(elemente, "Kanal");
+        var haltungenXtf = BaueIndex(elemente, "Haltung");
 
         foreach (var record in haltungen)
         {
@@ -137,61 +172,131 @@ public static class XtfStammdatenPlanBuilder
             if (name.Length == 0)
                 continue;
 
-            // Die Gegenrichtung greift nur, wenn es keinen direkten Treffer gibt.
-            if (!jeBezeichnung.TryGetValue(name, out var element) || element is null)
-                jeGegenrichtung.TryGetValue(name, out element);
+            var kanal = kanaele.Finde(name);
+            var haltungElement = haltungenXtf.Finde(name);
 
-            if (element is null)
+            if (kanal is null && haltungElement is null)
             {
-                if (HatHandaenderung(record))
+                if (HatHandaenderung(record, Felder) || HatHandaenderung(record, HaltungFelder))
                     hinweise.Add($"{name}: in der XTF nicht gefunden — die Handaenderung bleibt aussen vor.");
                 continue;
             }
 
-            var felder = new List<XtfRevisionFeld>();
-            foreach (var (xtfName, projektFeld) in Felder)
-            {
-                if (!record.FieldMeta.TryGetValue(projektFeld, out var meta) || !meta.UserEdited)
-                    continue;
-
-                var roh = (record.GetFieldValue(projektFeld) ?? "").Trim();
-                var neu = NachXtfWert(xtfName, roh, modell);
-                if (string.IsNullOrEmpty(neu))
-                {
-                    // Ein gesetzter, aber nicht abbildbarer Wert darf nicht still
-                    // verschwinden — und erst recht nicht geraten werden.
-                    if (roh.Length > 0)
-                    {
-                        hinweise.Add(
-                            $"{name}: {xtfName} = \"{roh}\" passt in dieser XTF zu keinem " +
-                            "gueltigen Wert — nicht geschrieben.");
-                    }
-
-                    continue;
-                }
-
-                element.Werte.TryGetValue(xtfName, out var alt);
-                alt = (alt ?? "").Trim();
-                if (string.Equals(alt, neu, StringComparison.Ordinal))
-                    continue;
-
-                felder.Add(new XtfRevisionFeld(xtfName, alt.Length == 0 ? null : alt, neu));
-            }
-
-            if (felder.Count == 0)
-                continue;
-
-            positionen.Add(new XtfRevisionPosition(
-                XtfRevisionAenderung.Geaendert,
-                element.Tid,
-                UntersuchungTid: "",
-                name,
-                Code: "",
-                Meter: null,
-                felder));
+            SammlePosition(record, kanal, Felder, name, modell, positionen, hinweise);
+            SammlePosition(record, haltungElement, HaltungFelder, name, modell, positionen, hinweise);
         }
 
         return new XtfStammdatenPlan(positionen, hinweise);
+    }
+
+    /// <summary>
+    /// Traegt die Handaenderungen eines Datensatzes fuer genau ein XTF-Objekt zusammen.
+    /// Fehlt das Objekt, wird eine gesetzte Handaenderung gemeldet statt still verworfen.
+    /// </summary>
+    private static void SammlePosition(
+        HaltungRecord record,
+        XtfStammdatenElement? element,
+        IReadOnlyDictionary<string, string> felderKarte,
+        string name,
+        string? modell,
+        List<XtfRevisionPosition> positionen,
+        List<string> hinweise)
+    {
+        if (element is null)
+        {
+            if (HatHandaenderung(record, felderKarte))
+                hinweise.Add($"{name}: in der XTF nicht gefunden — die Handaenderung bleibt aussen vor.");
+            return;
+        }
+
+        var felder = new List<XtfRevisionFeld>();
+        foreach (var (xtfName, projektFeld) in felderKarte)
+        {
+            if (!record.FieldMeta.TryGetValue(projektFeld, out var meta) || !meta.UserEdited)
+                continue;
+
+            var roh = (record.GetFieldValue(projektFeld) ?? "").Trim();
+            var neu = NachXtfWert(xtfName, roh, modell);
+            if (string.IsNullOrEmpty(neu))
+            {
+                // Ein gesetzter, aber nicht abbildbarer Wert darf nicht still
+                // verschwinden — und erst recht nicht geraten werden.
+                if (roh.Length > 0)
+                {
+                    hinweise.Add(
+                        $"{name}: {xtfName} = \"{roh}\" passt in dieser XTF zu keinem " +
+                        "gueltigen Wert — nicht geschrieben.");
+                }
+
+                continue;
+            }
+
+            element.Werte.TryGetValue(xtfName, out var alt);
+            alt = (alt ?? "").Trim();
+            if (string.Equals(alt, neu, StringComparison.Ordinal))
+                continue;
+
+            felder.Add(new XtfRevisionFeld(xtfName, alt.Length == 0 ? null : alt, neu));
+        }
+
+        if (felder.Count == 0)
+            return;
+
+        positionen.Add(new XtfRevisionPosition(
+            XtfRevisionAenderung.Geaendert,
+            element.Tid,
+            UntersuchungTid: "",
+            name,
+            Code: "",
+            Meter: null,
+            felder));
+    }
+
+    /// <summary>
+    /// Nachschlagewerk ueber die Bezeichnung einer Klasse, mit der Gegenrichtung als
+    /// zweitem Weg. Doppelte Bezeichnungen sind nicht eindeutig und bleiben aussen vor.
+    /// </summary>
+    private sealed class Klassenindex
+    {
+        private readonly Dictionary<string, XtfStammdatenElement?> _direkt = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, XtfStammdatenElement?> _gedreht = new(StringComparer.OrdinalIgnoreCase);
+
+        public void Fuege(string name, XtfStammdatenElement element)
+        {
+            if (!_direkt.TryAdd(name, element))
+                _direkt[name] = null;
+
+            var gedreht = Gegenrichtung(name);
+            if (gedreht is not null && !_gedreht.TryAdd(gedreht, element))
+                _gedreht[gedreht] = null;
+        }
+
+        /// <summary>Die Gegenrichtung greift nur, wenn es keinen direkten Treffer gibt.</summary>
+        public XtfStammdatenElement? Finde(string name)
+        {
+            if (_direkt.TryGetValue(name, out var treffer) && treffer is not null)
+                return treffer;
+
+            return _gedreht.TryGetValue(name, out var gedreht) ? gedreht : null;
+        }
+    }
+
+    private static Klassenindex BaueIndex(IReadOnlyList<XtfStammdatenElement> elemente, string klasse)
+    {
+        var index = new Klassenindex();
+        foreach (var element in elemente)
+        {
+            if (!string.Equals(element.Klasse, klasse, StringComparison.Ordinal))
+                continue;
+
+            var name = (element.Bezeichnung ?? "").Trim();
+            if (name.Length == 0)
+                continue;
+
+            index.Fuege(name, element);
+        }
+
+        return index;
     }
 
     /// <summary>
@@ -208,9 +313,9 @@ public static class XtfStammdatenPlanBuilder
     }
 
     /// <summary>True, wenn der Mensch mindestens eines der uebertragbaren Felder gesetzt hat.</summary>
-    private static bool HatHandaenderung(HaltungRecord record)
+    private static bool HatHandaenderung(HaltungRecord record, IReadOnlyDictionary<string, string> felderKarte)
     {
-        foreach (var projektFeld in Felder.Values)
+        foreach (var projektFeld in felderKarte.Values)
         {
             if (record.FieldMeta.TryGetValue(projektFeld, out var meta)
                 && meta.UserEdited

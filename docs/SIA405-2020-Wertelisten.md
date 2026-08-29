@@ -212,3 +212,54 @@ Goeschenen bei allen 17.
 XTF-Dateien aber **null Mal** vor. SewerStudio schreibt dort `Z0` bis `Z4` — die
 Schreibweise stimmt also mit ihrer Datenbank ueberein, und der Wert ergaenzt etwas,
 das ihr eigener Export nicht liefert.
+
+## Was der Export jetzt schreibt (Stand 2026-08-29)
+
+| Feld | Klasse | Projektfeld | Umsetzung |
+|---|---|---|---|
+| `Nutzungsart_Ist` | Kanal | `Nutzungsart_Ist` | `NutzungsartVokabular`, modellabhaengig |
+| `Standortname` | Kanal | `Standortname` | unveraendert |
+| `BaulicherZustand` | Kanal | Zustandsklasse | Ziffer wird zu `Z0`..`Z4` |
+| `Material` | **Haltung** | `Rohrmaterial` | `MaterialVokabular`, modellabhaengig |
+| `Lichte_Hoehe` | **Haltung** | `DN_mm` | ganze Millimeter, 1..99999 |
+
+Geschrieben wird weiterhin ausschliesslich, was der Mensch von Hand gesetzt hat
+(`FieldMeta.UserEdited`). Ein importierter Wert geht nie in die Datei zurueck, aus der
+er stammt.
+
+Belegt an zwei echten Lieferungen (Planer und Schreiber gegen das unveraenderte
+Original, Ziel im Temp-Ordner):
+
+- **Goeschenen** (SIA405 2020, 17 Haltungen): `Material unbekannt -> Steinzeug`,
+  `Lichte_Hoehe 0 -> 250`. Feldreihenfolge erhalten, `Letzte_Aenderung` nachgefuehrt.
+- **GEP Altdorf Zone 1.15** (SIA405 **2015**, 92 Haltungen): `Material Zement ->
+  Polyethylen` — also die 2015-Kurzform, nicht `Kunststoff_Polyethylen`. Auch die
+  abweichende Feldreihenfolge dieser Datei (`AbwasserbauwerkRef` direkt hinter der
+  Bezeichnung) bleibt erhalten.
+
+In beiden Faellen blieb das Original bytegleich.
+
+## Die Feldreihenfolge kommt aus der Datei, nicht aus einer Liste
+
+INTERLIS gibt die Reihenfolge der Elemente vor; ein neu eingefuegtes Feld darf nicht
+hinten angehaengt werden. Eine feste Liste je Klasse reicht dafuer nicht — gemessen an
+drei echten Lieferungen ordnen sie die Haltung verschieden:
+
+| Datei | Reihenfolge (Anfang) |
+|---|---|
+| Kantonsexport 2020 | `Letzte_Aenderung, Bezeichnung, LaengeEffektiv, Lichte_Hoehe, Material, Lagebestimmung, …` |
+| Zone 1.17 | `Letzte_Aenderung, Bezeichnung, LaengeEffektiv, Lichte_Hoehe, Material, Verbindungsart, …` |
+| Zone 1.15 | `Bezeichnung, AbwasserbauwerkRef, LaengeEffektiv, Lichte_Hoehe, Material, …` |
+
+**Innerhalb** einer Datei ist sie dagegen konsistent (Kantonsexport: 2 Muster auf 3000
+Objekte, Zone 1.15: 1 Muster auf 92). `XtfRevisionWriter` fragt deshalb zuerst ein
+Geschwister-Objekt derselben Klasse, das das Feld bereits fuehrt, und faellt erst dann
+auf die Modellreihenfolge zurueck. Das funktioniert unabhaengig davon, welchem
+Modellableger die Datei folgt.
+
+Der Umweg ist noetig, weil die gelieferten Dateien **nicht** dem reinen VSA-Modell
+folgen: Zone 1.17 traegt an der Haltung `Verbindungsart`, `Bettung_Umhuellung`,
+`Spuelintervall` und `Letzte_Aenderung` — vier Felder, die
+`SIA405_Abwasser_2020_2_d_LV95` an dieser Klasse gar nicht kennt. Der Modellname im
+Dateikopf lautet dementsprechend `SIA405_ABWASSER_2020_LV95`, nicht
+`SIA405_Abwasser_2020_2_d_LV95`.

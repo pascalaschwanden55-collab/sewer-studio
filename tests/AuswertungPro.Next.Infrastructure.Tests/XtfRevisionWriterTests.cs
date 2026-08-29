@@ -304,6 +304,95 @@ public sealed class XtfRevisionWriterTests : IDisposable
         Assert.Equal("Neue Gasse", Kindwert(kanal, "Standortname"));
     }
 
+    // ---------------------------------------------------------------------------
+    // Ein fehlendes Feld muss an die richtige Stelle. INTERLIS gibt die Reihenfolge
+    // vor; hinten anhaengen macht die Datei ungueltig.
+    //
+    // Eine feste Liste je Klasse reicht dafuer nicht: Gemessen an drei echten Dateien
+    // ordnen sie die Haltung verschieden - Zone 1.15 setzt AbwasserbauwerkRef direkt
+    // hinter die Bezeichnung, der Kantonsexport ganz ans Ende. Innerhalb einer Datei
+    // ist die Reihenfolge dagegen konsistent. Die Datei weiss es also selbst.
+    // ---------------------------------------------------------------------------
+
+    private const string MitHaltungen = """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="SIA405_ABWASSER_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_Abwasser.SIA405_Abwasser BID="B1">
+      <SIA405_Abwasser.SIA405_Abwasser.Haltung TID="HA1">
+        <Bezeichnung>80638-80631</Bezeichnung>
+        <LaengeEffektiv>21.40</LaengeEffektiv>
+        <Lichte_Hoehe>300</Lichte_Hoehe>
+        <Material>Steinzeug</Material>
+        <Lagebestimmung>genau</Lagebestimmung>
+      </SIA405_Abwasser.SIA405_Abwasser.Haltung>
+      <SIA405_Abwasser.SIA405_Abwasser.Haltung TID="HA2">
+        <Bezeichnung>80631-80551</Bezeichnung>
+        <LaengeEffektiv>18.00</LaengeEffektiv>
+        <Lagebestimmung>genau</Lagebestimmung>
+      </SIA405_Abwasser.SIA405_Abwasser.Haltung>
+    </SIA405_Abwasser.SIA405_Abwasser>
+  </DATASECTION>
+</TRANSFER>
+""";
+
+    [Fact]
+    public void Ein_fehlendes_Feld_lernt_seinen_Platz_vom_Geschwister_Objekt()
+    {
+        var quelle = Path.Combine(_dir, "haltungen.xtf");
+        File.WriteAllText(quelle, MitHaltungen);
+        var ziel = Path.Combine(_dir, "haltungen-revision.xtf");
+
+        var plan = new XtfRevisionPlan(
+            "haltungen.xtf",
+            [new XtfRevisionPosition(
+                XtfRevisionAenderung.Geaendert, "HA2", "", "80631-80551", "", null,
+                [new XtfRevisionFeld("Material", null, "Beton_Normalbeton")])],
+            Array.Empty<string>());
+
+        var ergebnis = XtfRevisionWriter.Schreibe(quelle, plan, ziel);
+        Assert.True(ergebnis.Ok, ergebnis.Fehler);
+
+        var ha2 = XDocument.Load(ziel).Descendants()
+            .Single(e => (string?)e.Attribute("TID") == "HA2");
+
+        // HA1 fuehrt Material zwischen Lichte_Hoehe und Lagebestimmung. HA2 hat kein
+        // Lichte_Hoehe, also muss Material dort vor Lagebestimmung landen - nicht
+        // hinter ihr und nicht am Ende.
+        Assert.Equal(
+            new[] { "Bezeichnung", "LaengeEffektiv", "Material", "Lagebestimmung" },
+            ha2.Elements().Select(e => e.Name.LocalName));
+        Assert.Equal("Beton_Normalbeton", Kindwert(ha2, "Material"));
+    }
+
+    [Fact]
+    public void Ein_vorhandenes_Feld_bleibt_an_seinem_Platz()
+    {
+        var quelle = Path.Combine(_dir, "haltungen.xtf");
+        File.WriteAllText(quelle, MitHaltungen);
+        var ziel = Path.Combine(_dir, "haltungen-revision.xtf");
+
+        var plan = new XtfRevisionPlan(
+            "haltungen.xtf",
+            [new XtfRevisionPosition(
+                XtfRevisionAenderung.Geaendert, "HA1", "", "80638-80631", "", null,
+                [new XtfRevisionFeld("Material", "Steinzeug", "Faserzement")])],
+            Array.Empty<string>());
+
+        Assert.True(XtfRevisionWriter.Schreibe(quelle, plan, ziel).Ok);
+
+        var ha1 = XDocument.Load(ziel).Descendants()
+            .Single(e => (string?)e.Attribute("TID") == "HA1");
+
+        Assert.Equal(
+            new[] { "Bezeichnung", "LaengeEffektiv", "Lichte_Hoehe", "Material", "Lagebestimmung" },
+            ha1.Elements().Select(e => e.Name.LocalName));
+        Assert.Equal("Faserzement", Kindwert(ha1, "Material"));
+    }
+
     private (string Quelle, string Ziel) Dateien()
     {
         var quelle = Path.Combine(_dir, "original.xtf");

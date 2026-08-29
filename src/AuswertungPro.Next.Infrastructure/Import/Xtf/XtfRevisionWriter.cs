@@ -227,11 +227,25 @@ public static class XtfRevisionWriter
     }
 
     /// <summary>
-    /// Das erste vorhandene Feld, das laut Modell hinter <paramref name="name"/> steht.
-    /// Kennt das Modell den Namen nicht, wird nichts geraten und hinten angehaengt.
+    /// Das erste vorhandene Feld, hinter dem <paramref name="name"/> nicht mehr stehen darf.
+    /// <c>null</c> heisst: ans Ende haengen.
+    ///
+    /// Zuerst wird die Datei selbst befragt. Ein Geschwister-Objekt derselben Klasse, das
+    /// das Feld bereits fuehrt, zeigt genau, wohin es gehoert — und zwar unabhaengig davon,
+    /// welchem Modellableger die Datei folgt. Das ist noetig, weil die Reihenfolge zwischen
+    /// Dateien wirklich verschieden ist: Gemessen an drei echten Lieferungen setzt der
+    /// GEP-Export Zone 1.15 <c>AbwasserbauwerkRef</c> direkt hinter die Bezeichnung, der
+    /// Kantonsexport ganz ans Ende. Innerhalb einer Datei ist sie dagegen konsistent.
+    ///
+    /// Erst wenn kein Geschwister das Feld fuehrt, gilt die Modellreihenfolge der Klasse
+    /// "Kanal". Kennt auch die den Namen nicht, wird nichts geraten und hinten angehaengt.
     /// </summary>
     private static XElement? ErstesFeldDanach(XElement parent, string name)
     {
+        var ausDerDatei = NachfolgerAusGeschwister(parent, name);
+        if (ausDerDatei is not null)
+            return ausDerDatei;
+
         var platz = Array.IndexOf(KanalFeldreihenfolge, name);
         if (platz < 0)
             return null;
@@ -241,6 +255,37 @@ public static class XtfRevisionWriter
             var stelle = Array.IndexOf(KanalFeldreihenfolge, kind.Name.LocalName);
             if (stelle > platz)
                 return kind;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Sucht ein Objekt derselben Klasse, das <paramref name="name"/> bereits fuehrt, und
+    /// liefert daraus das erste nachfolgende Feld, das es auch in <paramref name="parent"/>
+    /// gibt. Ohne Vorbild <c>null</c>.
+    /// </summary>
+    private static XElement? NachfolgerAusGeschwister(XElement parent, string name)
+    {
+        var vorbild = parent.Parent?
+            .Elements(parent.Name)
+            .FirstOrDefault(e => !ReferenceEquals(e, parent)
+                                 && e.Elements().Any(k => string.Equals(k.Name.LocalName, name, StringComparison.Ordinal)));
+
+        if (vorbild is null)
+            return null;
+
+        var namen = vorbild.Elements().Select(e => e.Name.LocalName).ToList();
+        var platz = namen.IndexOf(name);
+        if (platz < 0)
+            return null;
+
+        for (var i = platz + 1; i < namen.Count; i++)
+        {
+            var treffer = parent.Elements()
+                .FirstOrDefault(e => string.Equals(e.Name.LocalName, namen[i], StringComparison.Ordinal));
+            if (treffer is not null)
+                return treffer;
         }
 
         return null;
