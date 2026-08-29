@@ -185,4 +185,28 @@ public sealed class SchachtProtocolApplierTests
             "C:/x/alt.pdf");
         return record;
     }
+
+    [Fact]
+    public void Apply_MitNeuaufbau_LaesstEinHandgeaendertesFeldStehen()
+    {
+        // "Protokoll neu aufbauen" leert Felder, zu denen das PDF nichts liefert.
+        // Ein von Hand gesetzter Wert darf davon nicht betroffen sein.
+        var record = new SchachtRecord();
+        record.SetFieldValue("Bemerkungen", "Deckel sitzt schief", FieldSource.Manual, userEdited: true);
+
+        var parsed = new LegacyPdfImportService.ParsedSchachtFields(
+            "74467", "02.10.2025", "Kontrollschacht",
+            "Rund", "1000 mm", "2.35", "BAC", null, "offen", null);
+
+        SchachtProtocolApplier.Apply(
+            record,
+            "74467",
+            parsed,
+            Array.Empty<(string, string)>(),
+            "C:/x/quelle.pdf",
+            rebuildFromProtocol: true);
+
+        Assert.Equal("Deckel sitzt schief", record.GetFieldValue("Bemerkungen"));
+        Assert.True(record.IsUserEdited("Bemerkungen"));
+    }
 }

@@ -21,10 +21,12 @@ public static class SchachtEmpfehlungRecordMapper
         if (record is null)
             return;
 
-        record.SetFieldValue(MassnahmenField, SchachtEmpfehlungTextFormatter.BuildMassnahmenText(cost));
+        record.SetFieldValue(MassnahmenField, SchachtEmpfehlungTextFormatter.BuildMassnahmenText(cost), FieldSource.Manual, userEdited: true);
         record.SetFieldValue(
             KostenField,
-            SchachtEmpfehlungTextFormatter.FormatTotal(SchachtEmpfehlungTextFormatter.ResolveTotal(cost)));
+            SchachtEmpfehlungTextFormatter.FormatTotal(SchachtEmpfehlungTextFormatter.ResolveTotal(cost)),
+            FieldSource.Manual,
+            userEdited: true);
     }
 
     /// <summary>Leert beide Felder (Massnahme auf "keine" gesetzt / Auswahl geleert).</summary>
@@ -33,7 +35,7 @@ public static class SchachtEmpfehlungRecordMapper
         if (record is null)
             return;
 
-        record.SetFieldValue(MassnahmenField, "");
-        record.SetFieldValue(KostenField, "");
+        record.SetFieldValue(MassnahmenField, "", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(KostenField, "", FieldSource.Manual, userEdited: true);
     }
 }

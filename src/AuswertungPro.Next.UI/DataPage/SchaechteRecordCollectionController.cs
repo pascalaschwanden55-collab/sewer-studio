@@ -147,7 +147,7 @@ internal sealed class SchaechteRecordCollectionController
                 return;
 
             for (var index = 0; index < records.Count; index++)
-                records[index].SetFieldValue(nrField, (index + 1).ToString());
+                records[index].SetFieldValue(nrField, (index + 1).ToString(), FieldSource.Manual, userEdited: true);
         }
     }
 

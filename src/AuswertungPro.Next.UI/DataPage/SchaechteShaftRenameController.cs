@@ -36,7 +36,7 @@ internal static class SchaechteShaftRenameController
             return false;
         }
 
-        record.SetFieldValue("Schachtnummer", newNumber);
+        record.SetFieldValue("Schachtnummer", newNumber, FieldSource.Manual, userEdited: true);
         PdfCorrectionMetadata.RegisterShaftRename(project, oldNumber, newNumber);
 
         var pdfPaths = CollectPdfPaths(record, projectPath);

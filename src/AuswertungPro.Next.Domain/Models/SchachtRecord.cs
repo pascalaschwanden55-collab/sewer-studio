@@ -29,13 +29,22 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
         => FieldMeta.TryGetValue(fieldName, out var meta) && meta.UserEdited;
 
     /// <summary>
-    /// Kompatibilitaetsweg fuer alle bestehenden Aufrufer (Umbenennen, Durchnummerieren,
-    /// Massnahmen, Import). Schreibt immer und wird nie gesperrt, senkt aber auch keine
-    /// vorhandene Handmarkierung ab — sonst wuerde ein technischer Schreibvorgang den
-    /// Schutz stillschweigend aufheben.
+    /// Kompatibilitaetsweg fuer bestehende Aufrufer (Durchnummerieren, Import).
+    /// Schreibt mit Herkunft "Manual", laesst aber ein von Hand gesetztes Feld
+    /// unveraendert und senkt keine vorhandene Handmarkierung ab. Damit ueberlebt
+    /// eine Korrektur auch einen versehentlich wiederholten Import.
     /// </summary>
     public void SetFieldValue(string fieldName, string? value)
-        => WriteField(fieldName, value, FieldSource.Manual, userEdited: null);
+    {
+        // Schutz wie bei HaltungRecord: ein von Hand gesetzter Wert wird nie
+        // ueberschrieben - auch nicht durch einen versehentlich wiederholten Import.
+        // Wer bewusst eine Handeingabe setzt oder ersetzt (Umbenennen, Massnahme
+        // leeren), ruft die Ueberladung mit userEdited: true.
+        if (IsUserEdited(fieldName))
+            return;
+
+        WriteField(fieldName, value, FieldSource.Manual, userEdited: null);
+    }
 
     /// <summary>
     /// Schreibt mit ausdruecklicher Herkunft. Ein automatischer Schreibvorgang

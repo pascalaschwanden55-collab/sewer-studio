@@ -56,18 +56,34 @@ public sealed class SchachtRecordFieldProtectionTests
         Assert.Equal("4", record.GetFieldValue("Zustandsklasse"));
     }
 
-    // Umbenennen, Durchnummerieren und Massnahmen laufen weiter ueber den alten Aufruf.
-    // Er muss schreiben duerfen, darf aber den Schutz nicht stillschweigend aufheben.
+    // Geaendert 2026-08-29: Frueher durfte der alte Aufruf eine Handeingabe
+    // ueberschreiben, weil Umbenennen, Durchnummerieren und Massnahmen ueber ihn
+    // liefen. Das kostete bei einem versehentlich wiederholten .spro-Import jede
+    // Korrektur. Diese vier Benutzeraktionen rufen jetzt ausdruecklich mit
+    // userEdited: true; der alte Aufruf schuetzt seitdem wie bei HaltungRecord.
     [Fact]
-    public void Der_alte_Aufruf_schreibt_weiter_und_senkt_die_Handmarkierung_nicht_ab()
+    public void Der_alte_Aufruf_ueberschreibt_eine_Handeingabe_nicht_mehr()
     {
         var record = new SchachtRecord();
         record.SetFieldValue("Bemerkungen", "von Hand", FieldSource.Manual, userEdited: true);
 
         record.SetFieldValue("Bemerkungen", "technisch nachgezogen");
 
-        Assert.Equal("technisch nachgezogen", record.GetFieldValue("Bemerkungen"));
+        Assert.Equal("von Hand", record.GetFieldValue("Bemerkungen"));
         Assert.True(record.IsUserEdited("Bemerkungen"));
+    }
+
+    [Fact]
+    public void Eine_bewusste_Benutzeraktion_darf_die_Handeingabe_weiterhin_ersetzen()
+    {
+        // Umbenennen, Durchnummerieren und Massnahmen gehen diesen Weg.
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", "100", FieldSource.Manual, userEdited: true);
+
+        record.SetFieldValue("Schachtnummer", "101", FieldSource.Manual, userEdited: true);
+
+        Assert.Equal("101", record.GetFieldValue("Schachtnummer"));
+        Assert.True(record.IsUserEdited("Schachtnummer"));
     }
 
     [Fact]

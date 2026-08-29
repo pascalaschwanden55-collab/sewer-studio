@@ -333,10 +333,28 @@ public sealed class SchachtProImportService : ISchachtProImportService
         record.SetFieldValue(SchachtProFieldNames.NrGross, schachtNr);
         record.SetFieldValue(SchachtProFieldNames.NrKlein, schachtNr);
 
-        // Archiv ist fuer seine Felder autoritativ (wie der Schacht-PDF-Import):
-        // nicht-leere Werte ueberschreiben, leere Archivwerte loeschen nichts.
+        // Das Archiv fuellt und aktualisiert seine Felder, aber eine Handkorrektur in
+        // SewerStudio bleibt stehen - auch bei einem versehentlich wiederholten Import.
+        // Uebersprungene Felder werden gemeldet, sonst wundert man sich still.
+        var geschuetzt = new List<string>();
         foreach (var (field, value) in mapped.Fields)
+        {
+            if (record.IsUserEdited(field)
+                && !string.Equals(record.GetFieldValue(field), value ?? "", StringComparison.Ordinal))
+            {
+                geschuetzt.Add(field);
+                continue;
+            }
+
             record.SetFieldValue(field, value);
+        }
+
+        if (geschuetzt.Count > 0)
+        {
+            messages.Add(
+                $"Schacht {schachtNr}: {geschuetzt.Count} Feld(er) nicht uebernommen, weil von Hand geaendert - "
+                + string.Join(", ", geschuetzt) + ".");
+        }
 
         if (mapped.Entries.Count > 0)
             ApplyProtocol(record, schachtNr, mapped.Entries, sproPath);

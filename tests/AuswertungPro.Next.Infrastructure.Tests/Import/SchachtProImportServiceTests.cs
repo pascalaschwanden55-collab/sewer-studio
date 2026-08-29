@@ -543,4 +543,72 @@ public sealed partial class SchachtProImportServiceTests
             e => e.Beschreibung == "gerissen, gross — DAB-B, K2 (vor Ort korrigiert)");
         Assert.Single(s100.Protocol.History);
     }
+
+    [Fact]
+    public void Erneuter_Import_ueberschreibt_eine_Handkorrektur_nicht()
+    {
+        // Pascals Regel: was von Hand geaendert wurde, bleibt - auch wenn dieselbe
+        // Datei versehentlich ein zweites Mal importiert wird.
+        using var temp = new TempDir();
+        var archiv = ErzeugeArchivMitZweiProtokollen(temp);
+        var project = new Project();
+        var service = new SchachtProImportService();
+
+        using (var erste = BeginStaging(temp))
+        {
+            service.ImportSchachtProArchive(archiv, project, Ctx(erste));
+            erste.Publish();
+            erste.Accept();
+        }
+
+        var schacht = project.SchaechteData.Single(r => r.GetFieldValue("Schachtnummer") == "S-100");
+        Assert.Equal("Kontrollschacht", schacht.GetFieldValue("Funktion"));
+
+        // So schreibt die Schachtseite eine Handeingabe.
+        schacht.SetFieldValue("Funktion", "Schlammsammler", FieldSource.Manual, userEdited: true);
+
+        using (var zweite = BeginStaging(temp))
+        {
+            service.ImportSchachtProArchive(archiv, project, Ctx(zweite));
+            zweite.Publish();
+            zweite.Accept();
+        }
+
+        var danach = project.SchaechteData.Single(r => r.GetFieldValue("Schachtnummer") == "S-100");
+        Assert.Equal("Schlammsammler", danach.GetFieldValue("Funktion"));
+        Assert.True(danach.IsUserEdited("Funktion"));
+    }
+
+    [Fact]
+    public void Der_Bericht_nennt_die_wegen_Handkorrektur_uebersprungenen_Felder()
+    {
+        // Ohne diese Zeile wundert man sich, warum eine Korrektur aus SchachtPro
+        // nicht ankommt - der Wert wird still nicht uebernommen.
+        using var temp = new TempDir();
+        var archiv = ErzeugeArchivMitZweiProtokollen(temp);
+        var project = new Project();
+        var service = new SchachtProImportService();
+
+        using (var erste = BeginStaging(temp))
+        {
+            service.ImportSchachtProArchive(archiv, project, Ctx(erste));
+            erste.Publish();
+            erste.Accept();
+        }
+
+        project.SchaechteData
+            .Single(r => r.GetFieldValue("Schachtnummer") == "S-100")
+            .SetFieldValue("Funktion", "Schlammsammler", FieldSource.Manual, userEdited: true);
+
+        using var zweite = BeginStaging(temp);
+        var result = service.ImportSchachtProArchive(archiv, project, Ctx(zweite));
+        zweite.Publish();
+        zweite.Accept();
+
+        Assert.True(result.Ok, result.ErrorMessage);
+        var meldung = result.Value!.Messages.FirstOrDefault(m => m.Contains("S-100", StringComparison.Ordinal)
+                                                                && m.Contains("Funktion", StringComparison.Ordinal));
+        Assert.False(string.IsNullOrEmpty(meldung), "Keine Meldung zu den nicht uebernommenen Feldern gefunden.");
+        Assert.Contains("von Hand", meldung!, StringComparison.OrdinalIgnoreCase);
+    }
 }
