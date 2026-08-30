@@ -110,4 +110,24 @@ public sealed class FeldNachschlagUseCaseTests
         Assert.Null(FeldQuellenTabelle.QuelleFuer("Massnahmen"));
         Assert.Null(FeldQuellenTabelle.QuelleFuer(null));
     }
+
+    [Fact]
+    public void Der_Eigentuemer_einer_Haltung_kommt_nicht_aus_dem_Kataster()
+    {
+        // Der QGIS-Export nach XTF plattet die Eigentuemer-Zuordnung ein: Der
+        // Kopf der Datei nennt 27 verschiedene Eigentuemer (Abwasser Uri,
+        // Privat, Kanton Uri, Gemeinden, ASTRA), aber alle EigentuemerRef
+        // zeigen danach auf dieselbe Organisation. Ein Nachschlag wuerde
+        // "Abwasser Uri" auch fuer eine private Leitung vorschlagen - und das
+        // waere im Protokoll eine falsche Aussage.
+        Assert.Null(FeldQuellenTabelle.QuelleFuer("Eigentuemer", BauteilArt.Haltung));
+        Assert.Null(FeldQuellenTabelle.QuelleFuer("Eigentümer", BauteilArt.Haltung));
+
+        // Beim Schacht bleibt es beim Grundbuch - dort ist der
+        // Grundstueckseigentuemer gemeint, und der kommt aus einer Quelle,
+        // die ihn wirklich kennt.
+        Assert.Equal(
+            FeldQuelle.Grundbuch,
+            FeldQuellenTabelle.QuelleFuer("Eigentuemer", BauteilArt.Schacht));
+    }
 }

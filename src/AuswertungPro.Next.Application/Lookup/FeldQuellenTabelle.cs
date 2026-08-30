@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -48,9 +48,14 @@ public static class FeldQuellenTabelle
             ["Rohrmaterial"] = FeldQuelle.Kataster,
             ["Haltungslaenge_m"] = FeldQuelle.Kataster,
 
-            // Beim Netz ist der Betreiber gemeint, nicht der Grundeigentuemer.
-            ["Eigentuemer"] = FeldQuelle.Kataster,
-            ["Eigentümer"] = FeldQuelle.Kataster,
+            // "Eigentuemer" fehlt hier bewusst. Der QGIS-Export nach XTF
+            // plattet die Eigentuemer-Zuordnung ein: Der Kopf der Datei nennt
+            // 27 verschiedene Eigentuemer (Abwasser Uri, Privat, Kanton Uri,
+            // die Gemeinden, ASTRA), aber alle EigentuemerRef zeigen danach
+            // auf dieselbe Organisation. Ein Nachschlag wuerde deshalb
+            // "Abwasser Uri" auch fuer eine private Leitung vorschlagen.
+            // Erst wenn der Export das Feld org_eigentuemer mitfuehrt, darf
+            // dieses Feld wieder hier stehen.
         };
 
     public static IReadOnlyList<string> UnterstuetzteFelder(BauteilArt art)
