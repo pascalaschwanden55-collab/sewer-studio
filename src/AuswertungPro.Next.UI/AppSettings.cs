@@ -324,15 +324,6 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     // Vollstaendiger XTF-Datenbestand Kanton Uri (Leitungen und Schaechte).
     public string KantonUriXtfDirectory { get; set; } = DefaultKantonUriXtfDirectory;
 
-    // Lokale QGIS-XYZ-Kacheln fuer die Kartenansicht. Fehlt der Ordner, bleibt es beim WMS.
-    public string QgisTilesPath { get; set; } = DefaultQgisExportDirectory + @"\tiles_test";
-
-    // Offline-Hintergrundkarten: Basisordner im Programmordner mit den Unterordnern
-    // "satellit" (SWISSIMAGE, JPEG) und "av" (AV-Karte farbig/Grundbuch, PNG), Kanton Uri z18.
-    // Standard-Hintergrund der App-Karte; fehlt ein Ordner, wird stattdessen OSM online genutzt.
-    // In den Einstellungen aenderbar.
-    public string OfflineBasemapPath { get; set; } = @"c:\Sewer-Studio_KI_4.5\basemap_tiles";
-
     // VSA Zustandklassifizierung v2: Shadow-Vergleich gegen Legacy-Engine.
     // Null bedeutet Default an.
     public bool? VsaClassificationShadowEnabled { get; set; }
