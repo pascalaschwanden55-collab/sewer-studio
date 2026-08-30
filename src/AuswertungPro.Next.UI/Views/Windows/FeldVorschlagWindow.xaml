@@ -6,7 +6,7 @@
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="{DynamicResource SurfaceBrush}"
+        Background="{DynamicResource BgLightBrush}"
         Foreground="{DynamicResource TextBrush}">
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -28,7 +28,7 @@
         <!-- Ein einzelner Treffer -->
         <Border x:Name="TrefferBereich"
                 Grid.Row="1"
-                Background="{DynamicResource SurfaceAltBrush}"
+                Background="{DynamicResource CardBrush}"
                 CornerRadius="4"
                 Padding="12"
                 Margin="0,0,0,12">
