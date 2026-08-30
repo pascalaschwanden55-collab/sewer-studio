@@ -49,13 +49,13 @@ public sealed class FeldNachschlagUseCaseTests
     }
 
     [Fact]
-    public async Task Eigentuemer_geht_ans_Grundbuch_nicht_an_den_Kataster()
+    public async Task Die_Strasse_geht_ans_Grundbuch_nicht_an_den_Kataster()
     {
         var kataster = FindetNichts();
-        var grundbuch = Findet("Muster, Hans");
+        var grundbuch = Findet("Gotthardstrasse 12");
         var useCase = new FeldNachschlagUseCase(kataster, grundbuch);
 
-        var ergebnis = await useCase.SucheAsync(new FeldNachschlagAnfrage("33429", "Eigentuemer"));
+        var ergebnis = await useCase.SucheAsync(new FeldNachschlagAnfrage("33429", "Strasse"));
 
         Assert.IsType<FeldNachschlagErgebnis.Gefunden>(ergebnis);
         Assert.Equal(0, kataster.Aufrufe);
@@ -63,16 +63,77 @@ public sealed class FeldNachschlagUseCaseTests
     }
 
     [Fact]
-    public async Task Auch_die_Schreibweise_mit_Umlaut_geht_ans_Grundbuch()
+    public async Task Der_Schacht_Eigentuemer_geht_ans_Schachtnetz_nicht_ans_Grundbuch()
     {
+        // Gemeint ist der Eigentuemer des BAUWERKS (Privat, Abwasser Uri,
+        // Kanton Uri, eine Gemeinde) - nicht der Grundstuecksbesitzer.
         var kataster = FindetNichts();
         var grundbuch = Findet("Muster, Hans");
-        var useCase = new FeldNachschlagUseCase(kataster, grundbuch);
+        var haltungsnetz = Findet("Abwasser Uri");
+        var schachtnetz = Findet("Privat");
+        var useCase = new FeldNachschlagUseCase(
+            kataster, grundbuch, null, haltungsnetz, schachtnetz);
 
-        var ergebnis = await useCase.SucheAsync(new FeldNachschlagAnfrage("33429", "Eigentümer"));
+        var ergebnis = await useCase.SucheAsync(
+            new FeldNachschlagAnfrage("33434", "Eigentuemer", BauteilArt.Schacht));
+
+        Assert.Equal(
+            "Privat",
+            Assert.IsType<FeldNachschlagErgebnis.Gefunden>(ergebnis).Vorschlag.Wert);
+        Assert.Equal(1, schachtnetz.Aufrufe);
+        Assert.Equal(0, grundbuch.Aufrufe);
+        Assert.Equal(0, haltungsnetz.Aufrufe);
+        Assert.Equal(0, kataster.Aufrufe);
+    }
+
+    [Fact]
+    public async Task Auch_die_Schreibweise_mit_Umlaut_geht_ans_Schachtnetz()
+    {
+        var schachtnetz = Findet("Privat");
+        var useCase = new FeldNachschlagUseCase(
+            FindetNichts(), FindetNichts(), null, FindetNichts(), schachtnetz);
+
+        var ergebnis = await useCase.SucheAsync(
+            new FeldNachschlagAnfrage("33434", "Eigentümer", BauteilArt.Schacht));
 
         Assert.IsType<FeldNachschlagErgebnis.Gefunden>(ergebnis);
-        Assert.Equal(1, grundbuch.Aufrufe);
+        Assert.Equal(1, schachtnetz.Aufrufe);
+    }
+
+    [Fact]
+    public async Task Der_Haltungs_Eigentuemer_geht_weiterhin_ans_Haltungsnetz()
+    {
+        // Beide Bauteilarten fragen dieselbe Quelle, aber verschiedene Ebenen.
+        // Wuerden sie sich denselben Anbieter teilen, kaeme fuer den Schacht
+        // die Antwort der Leitung.
+        var haltungsnetz = Findet("Abwasser Uri");
+        var schachtnetz = Findet("Privat");
+        var useCase = new FeldNachschlagUseCase(
+            FindetNichts(), FindetNichts(), null, haltungsnetz, schachtnetz);
+
+        var ergebnis = await useCase.SucheAsync(
+            new FeldNachschlagAnfrage("36262-36275", "Eigentuemer", BauteilArt.Haltung));
+
+        Assert.Equal(
+            "Abwasser Uri",
+            Assert.IsType<FeldNachschlagErgebnis.Gefunden>(ergebnis).Vorschlag.Wert);
+        Assert.Equal(1, haltungsnetz.Aufrufe);
+        Assert.Equal(0, schachtnetz.Aufrufe);
+    }
+
+    [Fact]
+    public async Task Ohne_angeschlossenes_Schachtnetz_wird_nichts_geraten()
+    {
+        // Ohne Netzzugriff darf der Grundstuecksbesitzer nicht ersatzweise
+        // als Bauwerkseigentuemer erscheinen.
+        var grundbuch = Findet("Muster, Hans");
+        var useCase = new FeldNachschlagUseCase(FindetNichts(), grundbuch);
+
+        var ergebnis = await useCase.SucheAsync(
+            new FeldNachschlagAnfrage("33434", "Eigentuemer", BauteilArt.Schacht));
+
+        Assert.IsType<FeldNachschlagErgebnis.NichtGefunden>(ergebnis);
+        Assert.Equal(0, grundbuch.Aufrufe);
     }
 
     [Fact]
@@ -129,10 +190,10 @@ public sealed class FeldNachschlagUseCaseTests
             FeldQuelle.Abwassernetz,
             FeldQuellenTabelle.QuelleFuer("Eigentümer", BauteilArt.Haltung));
 
-        // Beim Schacht bleibt es beim Grundbuch - dort ist der
-        // Grundstueckseigentuemer gemeint, nicht der Leitungsbetreiber.
+        // Beim Schacht gilt dasselbe: Gefragt ist der Eigentuemer des
+        // Bauwerks, nicht der Besitzer des Grundstuecks darunter.
         Assert.Equal(
-            FeldQuelle.Grundbuch,
+            FeldQuelle.Abwassernetz,
             FeldQuellenTabelle.QuelleFuer("Eigentuemer", BauteilArt.Schacht));
     }
 }

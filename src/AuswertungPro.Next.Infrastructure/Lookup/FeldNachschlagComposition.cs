@@ -41,6 +41,7 @@ public static class FeldNachschlagComposition
         IParcelLookup parzellen,
         ILandRegistryLookup grundbuch,
         ISewerNetworkLookup? abwassernetz = null,
+        ISchachtNetzLookup? schachtNetz = null,
         Action<string>? log = null)
     {
         ArgumentNullException.ThrowIfNull(parzellen);
@@ -52,7 +53,8 @@ public static class FeldNachschlagComposition
             kataster,
             new GrundbuchFeldNachschlag(kataster.LiesLage, parzellen, grundbuch, log),
             ErzeugeHaltungsAnbieter(katasterXtfPfad),
-            abwassernetz is null ? null : new NetzFeldNachschlag(abwassernetz, log));
+            abwassernetz is null ? null : new NetzFeldNachschlag(abwassernetz, log),
+            schachtNetz is null ? null : new SchachtNetzFeldNachschlag(schachtNetz, log));
     }
 
     /// <summary>

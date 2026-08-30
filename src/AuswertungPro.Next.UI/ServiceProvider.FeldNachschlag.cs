@@ -27,6 +27,7 @@ namespace AuswertungPro.Next.UI
                 DossierParcels,
                 DossierLandRegistry,
                 DossierSewerNetwork,
+                DossierSchachtNetz,
                 meldung => Logger.LogInformation("Feldnachschlag: {Meldung}", meldung));
     }
 }

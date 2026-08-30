@@ -43,6 +43,9 @@ public sealed partial class ServiceProvider
     /// <summary>Abwassernetz des Kantons — auch fuer den Feld-Nachschlag.</summary>
     public ISewerNetworkLookup DossierSewerNetwork => _dossierComposition.SewerNetwork;
 
+    /// <summary>Schaechte aus dem Abwassernetz — fuer den Feld-Nachschlag.</summary>
+    public ISchachtNetzLookup DossierSchachtNetz => _dossierComposition.SchachtNetwork;
+
     /// <summary>Stellt die Dossier-Vorschlaege eines Projekts zusammen.</summary>
     public DossierBatchProposalUseCase DossierBatchProposal => _dossierComposition.BatchProposal;
 

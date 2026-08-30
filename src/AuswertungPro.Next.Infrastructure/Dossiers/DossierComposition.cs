@@ -55,6 +55,7 @@ public sealed class DossierComposition
         LandRegistry = new Lookup.UriLandRegistryClient(gateway);
         var grundbuch = LandRegistry;
         SewerNetwork = new Lookup.UriSewerNetworkWfsClient(gateway);
+        SchachtNetwork = new Lookup.UriSchachtWfsClient(gateway);
         var netz = SewerNetwork;
 
         BatchProposal = new DossierBatchProposalUseCase(Parcels, grundbuch, netz);
@@ -101,6 +102,12 @@ public sealed class DossierComposition
     /// kennt sie noch.
     /// </summary>
     public ISewerNetworkLookup SewerNetwork { get; }
+
+    /// <summary>
+    /// Liest Schaechte aus dem Abwassernetz. Nur der Feld-Nachschlag nutzt
+    /// ihn: Der Eigentuemer des Bauwerks steht nicht in der XTF.
+    /// </summary>
+    public ISchachtNetzLookup SchachtNetwork { get; }
 
     /// <summary>Stellt die Dossier-Vorschlaege eines Projekts zusammen.</summary>
     public DossierBatchProposalUseCase BatchProposal { get; }

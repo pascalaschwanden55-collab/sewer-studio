@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Lookup;
@@ -20,17 +20,20 @@ public sealed class FeldNachschlagUseCase
     private readonly IFeldWertNachschlag _grundbuch;
     private readonly IFeldWertNachschlag _haltungKataster;
     private readonly IFeldWertNachschlag? _abwassernetz;
+    private readonly IFeldWertNachschlag? _schachtNetz;
 
     public FeldNachschlagUseCase(
         IFeldWertNachschlag schachtKataster,
         IFeldWertNachschlag grundbuch,
         IFeldWertNachschlag? haltungKataster = null,
-        IFeldWertNachschlag? abwassernetz = null)
+        IFeldWertNachschlag? abwassernetz = null,
+        IFeldWertNachschlag? schachtNetz = null)
     {
         _schachtKataster = schachtKataster ?? throw new ArgumentNullException(nameof(schachtKataster));
         _grundbuch = grundbuch ?? throw new ArgumentNullException(nameof(grundbuch));
         _haltungKataster = haltungKataster ?? schachtKataster;
         _abwassernetz = abwassernetz;
+        _schachtNetz = schachtNetz;
     }
 
     public Task<FeldNachschlagErgebnis> SucheAsync(
@@ -51,7 +54,12 @@ public sealed class FeldNachschlagUseCase
             case FeldQuelle.Grundbuch:
                 return _grundbuch.SucheAsync(anfrage, ct);
 
-            case FeldQuelle.Abwassernetz when _abwassernetz is not null:
+            case FeldQuelle.Abwassernetz when anfrage.Art == BauteilArt.Schacht
+                                              && _schachtNetz is not null:
+                return _schachtNetz.SucheAsync(anfrage, ct);
+
+            case FeldQuelle.Abwassernetz when anfrage.Art == BauteilArt.Haltung
+                                              && _abwassernetz is not null:
                 return _abwassernetz.SucheAsync(anfrage, ct);
 
             case FeldQuelle.Abwassernetz:

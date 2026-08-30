@@ -43,9 +43,18 @@ public static class FeldQuellenTabelle
             ["Funktion"] = FeldQuelle.Kataster,
             ["Material"] = FeldQuelle.Kataster,
 
-            // Beide Schreibweisen kommen in echten Projekten vor.
-            ["Eigentuemer"] = FeldQuelle.Grundbuch,
-            ["Eigentümer"] = FeldQuelle.Grundbuch,
+            // Gemeint ist der Eigentuemer des BAUWERKS (Privat, Abwasser Uri,
+            // Kanton Uri, eine Gemeinde) — nicht der Grundstuecksbesitzer aus
+            // dem Grundbuch. Bei manchen Anlagen gehoert das Bauwerk nicht
+            // dem, dem das Land gehoert; im Eigentuemerdossier geht es dagegen
+            // um den Besitzer der Liegenschaft.
+            //
+            // Die XTF taugt dafuer nicht: Dort tragen alle Bauwerke denselben
+            // Verweis. Beide Schreibweisen kommen in echten Projekten vor.
+            ["Eigentuemer"] = FeldQuelle.Abwassernetz,
+            ["Eigentümer"] = FeldQuelle.Abwassernetz,
+
+            // Die Gebaeudeadresse kennt nur das Grundbuch.
             ["Strasse"] = FeldQuelle.Grundbuch,
         };
 
