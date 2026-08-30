@@ -9,7 +9,9 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Lookup;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Behaviors;
@@ -87,7 +89,8 @@ public partial class SchaechtePage : UserControl
             ResolveOptions,
             ResolveViewModelCommand,
             CommitSchachtDetailKonsolidiert,
-            () => _vm is not null);
+            () => _vm is not null,
+            BaueNachschlagBefehl);
 
         SchachtansichtView.DetailBuilder = BuildRecordDetailsForAnsicht;
         SchachtansichtView.DamageLineBuilder = SchachtDamageLineBuilder.Build;
@@ -722,6 +725,89 @@ public partial class SchaechtePage : UserControl
     // Schreibt den Wert auf ALLE Encoding-Varianten des Feldes, damit keine "Geister-Duplikate"
     // mit altem Wert zurueckbleiben (die der Konsolidierer sonst wieder anzeigen wuerde).
     // Schachtnummer-Umbenennung laeuft wie gehabt; Optionen/Filter werden einmal aktualisiert.
+    /// <summary>
+    /// Baut den Befehl "Beim Kanton nachschlagen" fuer genau ein Feld. Der
+    /// Befehl fragt die Quelle, zeigt das Ergebnis und schreibt erst nach
+    /// ausdruecklicher Bestaetigung.
+    /// </summary>
+    private ICommand? BaueNachschlagBefehl(SchachtRecord record, string feldname)
+    {
+        if (_vm?.FeldNachschlag is null)
+            return null;
+        if (FeldQuellenTabelle.QuelleFuer(feldname) is null)
+            return null;
+
+        return new EinfacherBefehl(async () =>
+            await NachschlagenAsync(record, feldname).ConfigureAwait(true));
+    }
+
+    private async Task NachschlagenAsync(SchachtRecord record, string feldname)
+    {
+        var useCase = _vm?.FeldNachschlag;
+        if (useCase is null)
+            return;
+
+        var schachtnummer = record.GetFieldValue("Schachtnummer");
+        if (string.IsNullOrWhiteSpace(schachtnummer))
+        {
+            _vm?.Dialogs?.Info(
+                "Ohne Schachtnummer laesst sich beim Kanton nichts nachschlagen.",
+                "Beim Kanton nachschlagen");
+            return;
+        }
+
+        FeldNachschlagErgebnis ergebnis;
+        try
+        {
+            ergebnis = await useCase
+                .SucheAsync(new FeldNachschlagAnfrage(schachtnummer, feldname))
+                .ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            ergebnis = new FeldNachschlagErgebnis.Fehler(ex.Message);
+        }
+
+        var fenster = new FeldVorschlagWindow(schachtnummer, feldname, ergebnis)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (fenster.ShowDialog() != true || fenster.Uebernommen is null)
+            return;
+
+        UebernimmNachschlag(record, feldname, fenster.Uebernommen);
+    }
+
+    /// <summary>
+    /// Schreibt den bestaetigten Wert. userEdited: true ist Pflicht — es ist
+    /// der einzige Schutz davor, dass der naechste Import ihn ueberschreibt
+    /// (die Merge-Prioritaet schuetzt nicht, sie waere sogar niedriger).
+    /// </summary>
+    private void UebernimmNachschlag(SchachtRecord record, string feldname, FeldVorschlag vorschlag)
+    {
+        if (_vm is null || !_vm.CanMutateRecord(record, "Feld beim Kanton nachschlagen"))
+            return;
+
+        var herkunft = vorschlag.Herkunftshinweis switch
+        {
+            "Kataster" => FieldSource.Kataster,
+            "Grundbuch" => FieldSource.Grundbuch,
+            _ => FieldSource.Manual
+        };
+
+        record.SetFieldValue(feldname, vorschlag.Wert, herkunft, userEdited: true);
+
+        // Ein neuer Eigentuemer soll auch in der Auswahlliste erscheinen —
+        // derselbe Weg wie beim normalen Bearbeiten des Feldes.
+        var optionField = ResolveOptionField(feldname);
+        if (!string.IsNullOrWhiteSpace(optionField))
+            _vm.EnsureOptionForField(optionField, vorschlag.Wert);
+
+        MarkProjectDirty();
+        ApplySearchFilter();
+    }
+
     private void CommitSchachtDetailKonsolidiert(SchachtRecord record, KonsolidiertesSchachtFeld feld, string? value)
     {
         if (_vm is null

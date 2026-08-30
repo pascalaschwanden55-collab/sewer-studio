@@ -129,7 +129,17 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
             schachtFileTargets: services.SchachtFileTargets,
             protocolFileLocator: services.SchachtProtocolFiles)
     {
+        // Nachschlagen leerer Felder beim Kanton. Optional: Die aelteren
+        // Uebergangskonstruktoren kennen den Dienst nicht, dort bleibt der
+        // Menuepunkt einfach aus.
+        FeldNachschlag = services.FeldNachschlag;
     }
+
+    /// <summary>
+    /// Schlaegt leere Schachtfelder beim Kanton nach. Null, wenn das
+    /// ViewModel ueber einen Uebergangskonstruktor ohne Dienste entstand.
+    /// </summary>
+    internal AuswertungPro.Next.Application.UseCases.FeldNachschlagUseCase? FeldNachschlag { get; }
 
     [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
     public SchaechtePageViewModel(

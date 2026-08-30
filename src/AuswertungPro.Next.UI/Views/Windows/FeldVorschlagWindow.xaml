@@ -1,0 +1,74 @@
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.FeldVorschlagWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Beim Kanton nachschlagen"
+        Width="520"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{DynamicResource SurfaceBrush}"
+        Foreground="{DynamicResource TextBrush}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Kopf: worum es geht -->
+        <TextBlock x:Name="KopfText"
+                   Grid.Row="0"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,14"/>
+
+        <!-- Ein einzelner Treffer -->
+        <Border x:Name="TrefferBereich"
+                Grid.Row="1"
+                Background="{DynamicResource SurfaceAltBrush}"
+                CornerRadius="4"
+                Padding="12"
+                Margin="0,0,0,12">
+            <TextBlock x:Name="TrefferText"
+                       FontSize="14"
+                       TextWrapping="Wrap"/>
+        </Border>
+
+        <!-- Mehrere Kandidaten: der Mensch entscheidet -->
+        <StackPanel x:Name="AuswahlBereich"
+                    Grid.Row="2"
+                    Visibility="Collapsed"
+                    Margin="0,0,0,12">
+            <TextBlock Text="Mehrere Treffer — bitte auswaehlen:"
+                       Margin="0,0,0,6"
+                       Foreground="{DynamicResource MutedBrush}"/>
+            <ListBox x:Name="KandidatenListe"
+                     MaxHeight="180"
+                     DisplayMemberPath="Wert"
+                     SelectionChanged="KandidatenListe_SelectionChanged"/>
+        </StackPanel>
+
+        <!-- Herkunft, immer sichtbar wenn es einen Treffer gibt -->
+        <TextBlock x:Name="QuelleText"
+                   Grid.Row="3"
+                   Foreground="{DynamicResource MutedBrush}"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,18"/>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="UebernehmenKnopf"
+                    Content="Uebernehmen"
+                    MinWidth="120"
+                    Margin="0,0,10,0"
+                    IsDefault="True"
+                    Click="Uebernehmen_Click"/>
+            <Button x:Name="AbbrechenKnopf"
+                    Content="Abbrechen"
+                    MinWidth="100"
+                    IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

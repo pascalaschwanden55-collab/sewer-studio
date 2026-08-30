@@ -94,6 +94,53 @@
                     </Style>
                 </MenuItem.Style>
             </MenuItem>
+            <Separator>
+                <Separator.Style>
+                    <Style TargetType="Separator" BasedOn="{StaticResource {x:Type Separator}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding KannNachschlagen}" Value="False">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Separator.Style>
+            </Separator>
+            <!-- Auch an Auswahlfeldern noetig: "Eigentuemer" ist bei Schaechten
+                 ein verwaltetes Dropdown und traegt deshalb dieses Menue, nicht
+                 das der Textfelder. -->
+            <MenuItem Header="Beim Kanton nachschlagen" Command="{Binding NachschlagenCommand}">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE721;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                <MenuItem.Style>
+                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding KannNachschlagen}" Value="False">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </MenuItem.Style>
+            </MenuItem>
+        </ContextMenu>
+
+        <!-- Nachschlagen beim Kanton: erscheint nur an einem leeren Feld, fuer
+             das es eine Quelle gibt (siehe RecordDetailItem.KannNachschlagen).
+             Bewusst kein Sammellauf - die Grundbuchauskunft erlaubt nur
+             Einzelabfragen mit Bestaetigung. -->
+        <ContextMenu x:Key="NachschlagContextMenu"
+                     x:Shared="False"
+                     DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+            <MenuItem Header="Beim Kanton nachschlagen" Command="{Binding NachschlagenCommand}">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE721;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                <MenuItem.Style>
+                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding KannNachschlagen}" Value="False">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </MenuItem.Style>
+            </MenuItem>
         </ContextMenu>
 
         <Style x:Key="DetailComboStyle"
@@ -110,6 +157,7 @@
         <DataTemplate x:Key="TextEditorTemplate" DataType="{x:Type windows:RecordDetailItem}">
             <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                      IsReadOnly="{Binding IsReadOnly}"
+                     ContextMenu="{StaticResource NachschlagContextMenu}"
                      PreviewTextInput="NumericTextBox_PreviewTextInput"
                      DataObject.Pasting="NumericTextBox_Pasting"/>
         </DataTemplate>

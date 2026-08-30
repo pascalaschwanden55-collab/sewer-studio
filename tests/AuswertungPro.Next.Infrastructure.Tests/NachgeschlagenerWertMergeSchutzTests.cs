@@ -22,8 +22,8 @@ public sealed class NachgeschlagenerWertMergeSchutzTests
     [Fact]
     public void Die_neuen_Herkuenfte_existieren()
     {
-        Assert.True(Enum.IsDefined(typeof(FieldSource), FieldSource.Kataster));
-        Assert.True(Enum.IsDefined(typeof(FieldSource), FieldSource.Grundbuch));
+        Assert.True(Enum.IsDefined(FieldSource.Kataster));
+        Assert.True(Enum.IsDefined(FieldSource.Grundbuch));
     }
 
     [Fact]

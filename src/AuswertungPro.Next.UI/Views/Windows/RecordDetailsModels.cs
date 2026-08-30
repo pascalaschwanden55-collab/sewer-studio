@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using AuswertungPro.Next.Application.Lookup;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -43,7 +44,8 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
         ICommand? resetOptionsCommand = null,
         ICommand? addOptionCommand = null,
         ICommand? removeOptionCommand = null,
-        RecordDetailHighlightKind highlightKind = RecordDetailHighlightKind.None)
+        RecordDetailHighlightKind highlightKind = RecordDetailHighlightKind.None,
+        ICommand? nachschlagenCommand = null)
     {
         Label = label;
         _value = value ?? string.Empty;
@@ -60,6 +62,7 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
         AddOptionCommand = addOptionCommand;
         RemoveOptionCommand = removeOptionCommand;
         HighlightKind = highlightKind;
+        NachschlagenCommand = nachschlagenCommand;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -85,6 +88,19 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
     public ICommand? AddOptionCommand { get; }
     public ICommand? RemoveOptionCommand { get; }
     public RecordDetailHighlightKind HighlightKind { get; }
+
+    /// <summary>Schlaegt den Feldwert beim Kanton nach (Kataster oder Grundbuch).</summary>
+    public ICommand? NachschlagenCommand { get; }
+
+    /// <summary>
+    /// Nur wenn das Feld leer ist UND eine Quelle kennt. An einem gefuellten
+    /// Feld waere der Menuepunkt eine Einladung zum versehentlichen
+    /// Ueberschreiben, an einem Kostenfeld eine leere Zusage.
+    /// </summary>
+    public bool KannNachschlagen
+        => NachschlagenCommand is not null
+           && string.IsNullOrWhiteSpace(Value)
+           && FeldQuellenTabelle.QuelleFuer(FieldName) is not null;
     public bool CanEdit => !IsReadOnly;
     public bool HasManagedOptions =>
         EditOptionsCommand is not null ||
@@ -106,6 +122,9 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsEmpty));
             OnPropertyChanged(nameof(SelectedOption));
+            // Sonst bliebe der Nachschlag-Menuepunkt sichtbar, obwohl das
+            // Feld gerade gefuellt wurde.
+            OnPropertyChanged(nameof(KannNachschlagen));
             _commitValue(_value);
         }
     }

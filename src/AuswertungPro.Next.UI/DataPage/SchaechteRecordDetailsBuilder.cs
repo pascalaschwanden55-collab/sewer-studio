@@ -1,4 +1,4 @@
-using System.Windows.Input;
+﻿using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 using AuswertungPro.Next.UI.Views.Windows;
@@ -16,17 +16,20 @@ internal sealed class SchaechteRecordDetailsBuilder
     private readonly Func<string, ICommand?> _resolveCommand;
     private readonly Action<SchachtRecord, KonsolidiertesSchachtFeld, string?> _commit;
     private readonly Func<bool> _canResolveDropdowns;
+    private readonly Func<SchachtRecord, string, ICommand?>? _resolveNachschlag;
 
     internal SchaechteRecordDetailsBuilder(
         Func<string, IEnumerable<string>> resolveOptions,
         Func<string, ICommand?> resolveCommand,
         Action<SchachtRecord, KonsolidiertesSchachtFeld, string?> commit,
-        Func<bool>? canResolveDropdowns = null)
+        Func<bool>? canResolveDropdowns = null,
+        Func<SchachtRecord, string, ICommand?>? resolveNachschlag = null)
     {
         _resolveOptions = resolveOptions ?? throw new ArgumentNullException(nameof(resolveOptions));
         _resolveCommand = resolveCommand ?? throw new ArgumentNullException(nameof(resolveCommand));
         _commit = commit ?? throw new ArgumentNullException(nameof(commit));
         _canResolveDropdowns = canResolveDropdowns ?? (() => true);
+        _resolveNachschlag = resolveNachschlag;
     }
 
     internal List<RecordDetailGroup> Build(
@@ -102,6 +105,9 @@ internal sealed class SchaechteRecordDetailsBuilder
         SchachtRecord record)
     {
         var label = GetDisplayHeader(field.AnzeigeName);
+        // Nachschlagen beim Kanton: Das Item entscheidet selbst, ob der
+        // Menuepunkt sichtbar wird (leeres Feld mit bekannter Quelle).
+        var nachschlagen = _resolveNachschlag?.Invoke(record, field.AnzeigeName);
         var highlightKind = RecordDetailHighlightPolicy.Resolve(field.AnzeigeName);
         void Commit(string? value) => _commit(record, field, value);
 
@@ -119,7 +125,8 @@ internal sealed class SchaechteRecordDetailsBuilder
                 resetOptionsCommand: spec.Managed ? _resolveCommand(spec.ResetCommand) : null,
                 addOptionCommand: spec.Managed ? _resolveCommand(spec.AddCommand) : null,
                 removeOptionCommand: spec.Managed ? _resolveCommand(spec.RemoveCommand) : null,
-                highlightKind: highlightKind)
+                highlightKind: highlightKind,
+                nachschlagenCommand: nachschlagen)
             { FieldName = field.AnzeigeName };
         }
 
@@ -135,7 +142,8 @@ internal sealed class SchaechteRecordDetailsBuilder
                 isCombo: true,
                 allowFreeText: false,
                 options: ZustandsklasseColorPalette.SelectionOptions,
-                highlightKind: highlightKind)
+                highlightKind: highlightKind,
+                nachschlagenCommand: nachschlagen)
             { FieldName = field.AnzeigeName };
         }
 
@@ -144,7 +152,8 @@ internal sealed class SchaechteRecordDetailsBuilder
             field.Wert,
             commitValue: Commit,
             isMultiline: isMultiline,
-            highlightKind: highlightKind)
+            highlightKind: highlightKind,
+            nachschlagenCommand: nachschlagen)
         { FieldName = field.AnzeigeName };
     }
 
