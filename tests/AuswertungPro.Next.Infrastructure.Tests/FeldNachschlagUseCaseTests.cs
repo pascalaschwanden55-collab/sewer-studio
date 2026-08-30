@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Lookup;
 using AuswertungPro.Next.Application.UseCases;
@@ -92,10 +92,12 @@ public sealed class FeldNachschlagUseCaseTests
     [Fact]
     public void Jedes_unterstuetzte_Feld_hat_genau_eine_Quelle()
     {
-        Assert.NotEmpty(FeldQuellenTabelle.UnterstuetzteFelder);
-
-        foreach (var feld in FeldQuellenTabelle.UnterstuetzteFelder)
-            Assert.NotNull(FeldQuellenTabelle.QuelleFuer(feld));
+        foreach (var art in new[] { BauteilArt.Schacht, BauteilArt.Haltung })
+        {
+            Assert.NotEmpty(FeldQuellenTabelle.UnterstuetzteFelder(art));
+            foreach (var feld in FeldQuellenTabelle.UnterstuetzteFelder(art))
+                Assert.NotNull(FeldQuellenTabelle.QuelleFuer(feld, art));
+        }
     }
 
     [Fact]

@@ -6,22 +6,27 @@ using AuswertungPro.Next.Application.Lookup;
 namespace AuswertungPro.Next.Application.UseCases;
 
 /// <summary>
-/// Waehlt anhand des Feldnamens die zustaendige Quelle und reicht deren
-/// Ergebnis unveraendert weiter. Schreibt selbst nichts — die Uebernahme
-/// bleibt eine bewusste Entscheidung des Bearbeiters.
+/// Waehlt anhand von Feldname und Bauteilart die zustaendige Quelle und
+/// reicht deren Ergebnis unveraendert weiter. Schreibt selbst nichts — die
+/// Uebernahme bleibt eine bewusste Entscheidung des Bearbeiters.
 ///
 /// Ein Feld ohne Quelle wird gar nicht erst abgefragt. Beim Grundbuch ist das
 /// keine Feinheit: Jede unnoetige Abfrage zaehlt gegen die Drosselung.
 /// </summary>
 public sealed class FeldNachschlagUseCase
 {
-    private readonly IFeldWertNachschlag _kataster;
+    private readonly IFeldWertNachschlag _schachtKataster;
     private readonly IFeldWertNachschlag _grundbuch;
+    private readonly IFeldWertNachschlag _haltungKataster;
 
-    public FeldNachschlagUseCase(IFeldWertNachschlag kataster, IFeldWertNachschlag grundbuch)
+    public FeldNachschlagUseCase(
+        IFeldWertNachschlag schachtKataster,
+        IFeldWertNachschlag grundbuch,
+        IFeldWertNachschlag? haltungKataster = null)
     {
-        _kataster = kataster ?? throw new ArgumentNullException(nameof(kataster));
+        _schachtKataster = schachtKataster ?? throw new ArgumentNullException(nameof(schachtKataster));
         _grundbuch = grundbuch ?? throw new ArgumentNullException(nameof(grundbuch));
+        _haltungKataster = haltungKataster ?? schachtKataster;
     }
 
     public Task<FeldNachschlagErgebnis> SucheAsync(
@@ -29,7 +34,7 @@ public sealed class FeldNachschlagUseCase
     {
         ArgumentNullException.ThrowIfNull(anfrage);
 
-        var quelle = FeldQuellenTabelle.QuelleFuer(anfrage.Feldname);
+        var quelle = FeldQuellenTabelle.QuelleFuer(anfrage.Feldname, anfrage.Art);
         if (quelle is null)
         {
             return Task.FromResult<FeldNachschlagErgebnis>(
@@ -37,8 +42,11 @@ public sealed class FeldNachschlagUseCase
                     $"Fuer das Feld {anfrage.Feldname} gibt es keine Quelle."));
         }
 
-        return quelle == FeldQuelle.Kataster
-            ? _kataster.SucheAsync(anfrage, ct)
-            : _grundbuch.SucheAsync(anfrage, ct);
+        if (quelle == FeldQuelle.Grundbuch)
+            return _grundbuch.SucheAsync(anfrage, ct);
+
+        return anfrage.Art == BauteilArt.Haltung
+            ? _haltungKataster.SucheAsync(anfrage, ct)
+            : _schachtKataster.SucheAsync(anfrage, ct);
     }
 }

@@ -1,11 +1,24 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace AuswertungPro.Next.Application.Lookup;
 
-/// <summary>Was nachgeschlagen werden soll.</summary>
-public sealed record FeldNachschlagAnfrage(string Schachtnummer, string Feldname);
+/// <summary>Welche Art von Bauteil nachgeschlagen wird.</summary>
+public enum BauteilArt
+{
+    Schacht,
+    Haltung
+}
+
+/// <summary>
+/// Was nachgeschlagen werden soll. <paramref name="Bauteilnummer"/> ist die
+/// Schachtnummer beziehungsweise der Haltungsname.
+/// </summary>
+public sealed record FeldNachschlagAnfrage(
+    string Bauteilnummer,
+    string Feldname,
+    BauteilArt Art = BauteilArt.Schacht);
 
 /// <summary>
 /// Ein gefundener Wert samt seiner Herkunft. <paramref name="QuelleKlartext"/>

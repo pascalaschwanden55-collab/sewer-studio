@@ -50,7 +50,7 @@ public sealed class GrundbuchFeldNachschlag : IFeldWertNachschlag
             // Die Lage kommt aus der Kataster-Tabelle, die beim ersten Aufruf
             // aus einer mehrere hundert Megabyte grossen Datei entsteht. Das
             // darf die Oberflaeche nicht einfrieren.
-            var lage = await Task.Run(() => _lageQuelle(anfrage.Schachtnummer), ct)
+            var lage = await Task.Run(() => _lageQuelle(anfrage.Bauteilnummer), ct)
                 .ConfigureAwait(false);
             if (lage is null)
             {

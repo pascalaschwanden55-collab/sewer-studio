@@ -93,6 +93,13 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
     public ICommand? NachschlagenCommand { get; }
 
     /// <summary>
+    /// Ob die Karte zu einem Schacht oder einer Haltung gehoert. Beim Feld
+    /// "Eigentuemer" entscheidet das ueber die Quelle: Grundstueckseigentuemer
+    /// beim Schacht, Netzbetreiber bei der Haltung.
+    /// </summary>
+    public BauteilArt BauteilArt { get; init; } = BauteilArt.Schacht;
+
+    /// <summary>
     /// Nur wenn das Feld leer ist UND eine Quelle kennt. An einem gefuellten
     /// Feld waere der Menuepunkt eine Einladung zum versehentlichen
     /// Ueberschreiben, an einem Kostenfeld eine leere Zusage.
@@ -100,7 +107,7 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
     public bool KannNachschlagen
         => NachschlagenCommand is not null
            && string.IsNullOrWhiteSpace(Value)
-           && FeldQuellenTabelle.QuelleFuer(FieldName) is not null;
+           && FeldQuellenTabelle.QuelleFuer(FieldName, BauteilArt) is not null;
     public bool CanEdit => !IsReadOnly;
     public bool HasManagedOptions =>
         EditOptionsCommand is not null ||

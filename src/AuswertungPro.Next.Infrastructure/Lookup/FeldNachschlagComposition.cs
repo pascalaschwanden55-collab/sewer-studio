@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using AuswertungPro.Next.Application.Dossiers.Lookup;
 using AuswertungPro.Next.Application.Lookup;
@@ -49,7 +49,8 @@ public static class FeldNachschlagComposition
 
         return new FeldNachschlagUseCase(
             kataster,
-            new GrundbuchFeldNachschlag(kataster.LiesLage, parzellen, grundbuch, log));
+            new GrundbuchFeldNachschlag(kataster.LiesLage, parzellen, grundbuch, log),
+            ErzeugeHaltungsAnbieter(katasterXtfPfad));
     }
 
     /// <summary>
@@ -61,7 +62,18 @@ public static class FeldNachschlagComposition
         => new(
             ErzeugeKatasterAnbieter(katasterXtfPfad),
             new NochNichtAngeschlossenerNachschlag(
-                "Die Grundbuchauskunft ist hier nicht angeschlossen."));
+                "Die Grundbuchauskunft ist hier nicht angeschlossen."),
+            ErzeugeHaltungsAnbieter(katasterXtfPfad));
+
+    /// <summary>
+    /// Der Anbieter fuer Haltungen. Er nutzt dieselbe Katastertabelle wie der
+    /// Verteil-Abgleich und veraendert sie nicht.
+    /// </summary>
+    public static KatasterHaltungFeldNachschlag ErzeugeHaltungsAnbieter(string katasterXtfPfad)
+        => new(
+            new HaltungCadastreTableFileStore(),
+            HaltungCadastreIndex.DefaultTablePath,
+            katasterXtfPfad ?? string.Empty);
 
     /// <summary>
     /// Der Kataster-Anbieter allein. Er liefert ausserdem die Lage eines
