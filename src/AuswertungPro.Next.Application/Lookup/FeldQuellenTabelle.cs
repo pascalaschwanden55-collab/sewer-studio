@@ -52,8 +52,20 @@ public static class FeldQuellenTabelle
     private static readonly Dictionary<string, FeldQuelle> Haltung =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            ["Rohrmaterial"] = FeldQuelle.Kataster,
-            ["Haltungslaenge_m"] = FeldQuelle.Kataster,
+            // Material und Laenge stehen auch im lokalen Kataster. Sie kommen
+            // trotzdem aus dem Netzdienst: Er liefert in derselben Abfrage die
+            // uebrigen Felder mit, und seine Angaben sind aktueller (SDE-Stand
+            // statt Exportdatum).
+            ["Rohrmaterial"] = FeldQuelle.Abwassernetz,
+            ["Haltungslaenge_m"] = FeldQuelle.Abwassernetz,
+
+            // In 473 von 475 Haltungen leer - und in der XTF gar nicht
+            // vorhanden. Nur der Netzdienst kennt dieses Feld.
+            ["FunktionHierarchisch"] = FeldQuelle.Abwassernetz,
+
+            // In 113 von 475 Haltungen leer.
+            ["Nutzungsart"] = FeldQuelle.Abwassernetz,
+            ["Nutzungsart_Ist"] = FeldQuelle.Abwassernetz,
 
             // Der Eigentuemer kommt NICHT aus dem Kataster: Der QGIS-Export
             // nach XTF plattet die Zuordnung ein — dort tragen alle Leitungen

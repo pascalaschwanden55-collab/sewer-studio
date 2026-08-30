@@ -55,4 +55,14 @@ public sealed record NetworkHolding(
     /// <summary>Nur private Leitungen gehoeren in ein Eigentuemerdossier.</summary>
     public bool IsPrivate
         => Owner?.Contains("Privat", System.StringComparison.OrdinalIgnoreCase) ?? false;
+
+    // Additive Angaben aus demselben Layer. Der Dossier-Weg braucht sie nicht;
+    // der Feld-Nachschlag fuellt damit Projektfelder, die sonst leer bleiben —
+    // FunktionHierarchisch etwa ist in 473 von 475 Haltungen ohne Wert und in
+    // der XTF gar nicht vorhanden.
+    public string? FunktionHierarchisch { get; init; }
+    public string? NutzungsartIst { get; init; }
+    public string? Material { get; init; }
+    public string? LichteHoehe { get; init; }
+    public string? Status { get; init; }
 }

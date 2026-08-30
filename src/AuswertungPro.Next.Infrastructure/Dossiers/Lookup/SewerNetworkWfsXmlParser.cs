@@ -32,11 +32,24 @@ public static class SewerNetworkWfsXmlParser
                 bezeichnung,
                 WfsGml.Text(element, "org_eigentuemer"),
                 WfsGml.Double(element, "ha_laengeeffektiv"),
-                WfsGml.LineStringWkt(element)));
+                WfsGml.LineStringWkt(element))
+            {
+                // Additiv: Der Dossier-Weg nutzt diese Angaben nicht, der
+                // Feld-Nachschlag fuellt damit sonst leere Projektfelder.
+                // FunktionHierarchisch etwa ist in 473 von 475 Haltungen leer.
+                FunktionHierarchisch = LeerAlsNull(WfsGml.Text(element, "ka_funktionhierarchisch")),
+                NutzungsartIst = LeerAlsNull(WfsGml.Text(element, "ka_nutzungsart_ist")),
+                Material = LeerAlsNull(WfsGml.Text(element, "ha_material")),
+                LichteHoehe = LeerAlsNull(WfsGml.Text(element, "ha_lichte_hoehe")),
+                Status = LeerAlsNull(WfsGml.Text(element, "bw_status")),
+            });
         }
 
         return ergebnis;
     }
+
+    private static string? LeerAlsNull(string? wert)
+        => string.IsNullOrWhiteSpace(wert) ? null : wert.Trim();
 }
 
 /// <summary>

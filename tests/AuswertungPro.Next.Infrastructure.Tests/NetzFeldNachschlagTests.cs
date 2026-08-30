@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,7 +51,12 @@ public sealed class NetzFeldNachschlagTests
     }
 
     private static NetworkHolding Haltung(string name, string eigentuemer, double? laenge = 3.61)
-        => new(name, eigentuemer, laenge, "LINESTRING(0 0, 1 1)");
+        => new(name, eigentuemer, laenge, "LINESTRING(0 0, 1 1)")
+        {
+            FunktionHierarchisch = "SAA.Liegenschaftsentwaesserung",
+            NutzungsartIst = "Mischabwasser",
+            Material = "Kunststoff_Polyvinilchlorid",
+        };
 
     [Fact]
     public async Task Der_Eigentuemer_kommt_aus_dem_Netzdienst()
@@ -128,5 +133,23 @@ public sealed class NetzFeldNachschlagTests
             new FeldNachschlagAnfrage("36262-36275", "Eigentuemer", BauteilArt.Haltung));
 
         Assert.IsType<FeldNachschlagErgebnis.Gedrosselt>(ergebnis);
+    }
+
+    [Theory]
+    [InlineData("FunktionHierarchisch", "SAA.Liegenschaftsentwaesserung")]
+    [InlineData("Nutzungsart", "Mischabwasser")]
+    [InlineData("Rohrmaterial", "Kunststoff_Polyvinilchlorid")]
+    [InlineData("Haltungslaenge_m", "3.61")]
+    public async Task Auch_die_uebrigen_Netzfelder_kommen_an(string feld, string erwartet)
+    {
+        // Gemessen an 475 Haltungen aller Projekte: FunktionHierarchisch ist
+        // in 473 Faellen leer, Nutzungsart in 113. Der Netzdienst kennt beides.
+        var dienst = new NetzFeldNachschlag(new FestesNetz(Haltung("36262-36275", "Privat")));
+
+        var ergebnis = await dienst.SucheAsync(
+            new FeldNachschlagAnfrage("36262-36275", feld, BauteilArt.Haltung));
+
+        var vorschlag = Assert.IsType<FeldNachschlagErgebnis.Gefunden>(ergebnis).Vorschlag;
+        Assert.Equal(erwartet, vorschlag.Wert);
     }
 }

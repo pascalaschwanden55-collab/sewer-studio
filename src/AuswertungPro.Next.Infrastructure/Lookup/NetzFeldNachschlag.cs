@@ -93,6 +93,9 @@ public sealed class NetzFeldNachschlag : IFeldWertNachschlag
         var f when f.StartsWith("Eigent", StringComparison.OrdinalIgnoreCase) => haltung.Owner,
         "Haltungslaenge_m" => haltung.LengthMeters?.ToString(
             "0.##", System.Globalization.CultureInfo.InvariantCulture),
+        "FunktionHierarchisch" => haltung.FunktionHierarchisch,
+        "Nutzungsart" or "Nutzungsart_Ist" => haltung.NutzungsartIst,
+        "Rohrmaterial" => haltung.Material,
         _ => null
     };
 
