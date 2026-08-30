@@ -100,9 +100,11 @@ public sealed class ServiceProviderRegistrationTests
         // dieselbe Live-Einstellung, ohne settings.json beim Klick erneut zu laden.
         // 153 -> 154: IDossierComponentListExportService erzeugt Haltungs- und
         // Schachtlisten bewusst aus dem aktuellen Stand des Eigentuemerdossiers.
+        // 154 -> 152: Kartenansicht entfernt (IOfflineBasemapPathResolver,
+        // IKarteBasemapLayerFactory). Die raeumliche Arbeit laeuft ueber QGIS.
         Assert.True(
-            registrations.Count == 154,
-            $"Erwartet 154 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 152,
+            $"Erwartet 152 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(

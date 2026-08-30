@@ -7,15 +7,6 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class WindowOpenCloseSmokeTests
 {
     [Fact]
-    public void Einfache_fenster_lassen_sich_oeffnen_und_wieder_schliessen()
-    {
-        StaTestRunner.Run(() =>
-        {
-            OpenAndClose(new KarteWindow());
-        });
-    }
-
-    [Fact]
     public void Fachfenster_lassen_sich_oeffnen_und_wieder_schliessen()
     {
         StaTestRunner.Run(() =>

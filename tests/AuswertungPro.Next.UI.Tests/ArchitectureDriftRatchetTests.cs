@@ -31,7 +31,6 @@ public sealed class ArchitectureDriftRatchetTests
         "ViewModels/Pages/DataPageViewModel.cs",
         "ViewModels/Pages/ExportPageViewModel.cs",
         "ViewModels/Pages/ImportPageViewModel.cs",
-        "ViewModels/Pages/KarteViewModel.cs",
         "ViewModels/Pages/MediaConflictsPageViewModel.cs",
         "ViewModels/Pages/OverviewPageViewModel.cs",
         "ViewModels/Pages/ProjectPageViewModel.cs",

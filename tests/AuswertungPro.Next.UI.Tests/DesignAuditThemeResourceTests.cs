@@ -493,13 +493,10 @@ public sealed class DesignAuditThemeResourceTests
     }
 
     [Fact]
-    public void Map_and_counter_inspection_markers_use_fluent_icons()
+    public void Counter_inspection_markers_use_fluent_icons()
     {
-        var map = ReadUiFile("Views", "Pages", "KartePage.xaml");
         var holdings = ReadUiFile("Views", "Pages", "Haltungsansicht", "HaltungsansichtView.xaml");
 
-        Assert.Contains("Glyph=\"&#xE91F;\"", map);
-        Assert.DoesNotContain("Text=\"&#x25CF;\"", map);
         Assert.Contains("Glyph=\"&#xE8AB;\"", holdings);
         Assert.DoesNotContain("Text=\"⇄\"", holdings);
     }

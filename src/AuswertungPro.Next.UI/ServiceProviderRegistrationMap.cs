@@ -107,8 +107,6 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IKatasterXtfPathResolver)] = services.KatasterXtfPaths,
             [typeof(IHaltungCadastreTableStore)] = services.HaltungCadastreTables,
             [typeof(IHaltungCadastreIndexProvider)] = services.HaltungCadastreIndexes,
-            [typeof(IOfflineBasemapPathResolver)] = services.OfflineBasemapPaths,
-            [typeof(Mapping.IKarteBasemapLayerFactory)] = services.BasemapLayers,
             [typeof(IVsaCatalogPathResolver)] = services.VsaCatalogPaths,
             [typeof(IGitCommitResolver)] = services.GitCommit,
             [typeof(IProgramSnapshotService)] = services.ProgramSnapshot,

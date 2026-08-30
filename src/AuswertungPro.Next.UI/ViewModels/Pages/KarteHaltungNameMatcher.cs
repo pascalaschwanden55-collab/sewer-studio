@@ -8,8 +8,13 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 /// Matcht einen angeklickten Kataster-Haltungsnamen gegen einen Projekt-Haltungsnamen.
 /// Toleriert umgekehrte Schacht-Reihenfolge ("A-B" &lt;-&gt; "B-A") und Teilstrecken-Suffixe
 /// (".1" .. ".99"); lange Kataster-Nummern mit Punkt (z.B. "7.32154", viele Stellen)
-/// bleiben unberuehrt. Gleiche Regel wie im QGIS-Bridge, damit ein Kartenklick dieselbe
-/// Haltung findet wie die Bridge.
+/// bleiben unberuehrt. Gleiche Regel wie in der QGIS-Bruecke, damit eine Auswahl
+/// dieselbe Haltung findet.
+///
+/// Namensvermerk: Der Name stammt aus der am 2026-08-30 entfernten Kartenansicht.
+/// Heute dient die Klasse ausschliesslich der QGIS-Auswahl
+/// (DataPage/DataPageProjectBindingController). Sie darf spaeter umbenannt oder
+/// ganz entfernt werden, wenn der QGIS-Weg sie nicht mehr braucht.
 /// </summary>
 public static class KarteHaltungNameMatcher
 {

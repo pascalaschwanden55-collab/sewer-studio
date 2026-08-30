@@ -144,12 +144,7 @@ namespace AuswertungPro.Next.UI
         public IKatasterXtfPathResolver KatasterXtfPaths { get; }
         public IHaltungCadastreTableStore HaltungCadastreTables { get; }
         public IHaltungCadastreIndexProvider HaltungCadastreIndexes { get; }
-        public IOfflineBasemapPathResolver OfflineBasemapPaths { get; }
         public IVsaCatalogPathResolver VsaCatalogPaths { get; }
-        public Mapping.IKarteBasemapLayerFactory BasemapLayers { get; }
-        // Kartennetz-Cache (Netzlinien + raeumlicher Index): einmal gebaut, ueber alle
-        // Kartenoeffnungen wiederverwendet, beim Start vorladbar. Singleton.
-        public AuswertungPro.Next.UI.Mapping.NetworkFeatureCache NetworkFeatures { get; } = new();
         public IPlaywrightInstallService PlaywrightInstaller { get; }
         public ILogTailReader LogTailReader { get; }
         public IDiagnosticsPackageService DiagnosticsPackages { get; }
@@ -370,8 +365,6 @@ namespace AuswertungPro.Next.UI
             KatasterXtfPaths = katasterXtfPaths ?? new KatasterXtfFilePathResolver();
             HaltungCadastreTables = new HaltungCadastreTableFileStore();
             HaltungCadastreIndexes = new HaltungCadastreIndexProvider(HaltungCadastreTables);
-            OfflineBasemapPaths = new OfflineBasemapDirectoryResolver();
-            BasemapLayers = new Mapping.KarteBasemapLayerService();
             VsaCatalogPaths = new VsaCatalogFilePathResolver();
             SettingsRestorePoints = new SettingsRestorePointStore();
             SettingsFiles = SettingsStore.CreateDefault(SettingsRestorePoints);
