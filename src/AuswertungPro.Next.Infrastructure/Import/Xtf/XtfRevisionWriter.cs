@@ -209,16 +209,16 @@ public static class XtfRevisionWriter
         if (string.IsNullOrWhiteSpace(wert))
             return;
 
-        var kind = parent.Elements()
-            .FirstOrDefault(e => string.Equals(e.Name.LocalName, name, StringComparison.Ordinal));
-
+        var kind = FindeKind(parent, name);
         if (kind is not null)
         {
             kind.Value = wert;
             return;
         }
 
-        var neu = new XElement(parent.Name.Namespace + name, wert);
+        // Ein neues Feld bekommt die Schreibweise, die die Datei fuer dieses Feld
+        // verwendet — nicht die des Modells. Ohne Vorbild bleibt es beim Modellnamen.
+        var neu = new XElement(parent.Name.Namespace + SchreibweiseAusDatei(parent, name), wert);
         var nachfolger = ErstesFeldDanach(parent, name);
         if (nachfolger is null)
             parent.Add(neu);
@@ -270,20 +270,20 @@ public static class XtfRevisionWriter
         var vorbild = parent.Parent?
             .Elements(parent.Name)
             .FirstOrDefault(e => !ReferenceEquals(e, parent)
-                                 && e.Elements().Any(k => string.Equals(k.Name.LocalName, name, StringComparison.Ordinal)));
+                                 && e.Elements().Any(k => string.Equals(k.Name.LocalName, name, StringComparison.OrdinalIgnoreCase)));
 
         if (vorbild is null)
             return null;
 
         var namen = vorbild.Elements().Select(e => e.Name.LocalName).ToList();
-        var platz = namen.IndexOf(name);
+        var platz = namen.FindIndex(x => string.Equals(x, name, StringComparison.OrdinalIgnoreCase));
         if (platz < 0)
             return null;
 
         for (var i = platz + 1; i < namen.Count; i++)
         {
             var treffer = parent.Elements()
-                .FirstOrDefault(e => string.Equals(e.Name.LocalName, namen[i], StringComparison.Ordinal));
+                .FirstOrDefault(e => string.Equals(e.Name.LocalName, namen[i], StringComparison.OrdinalIgnoreCase));
             if (treffer is not null)
                 return treffer;
         }
@@ -293,10 +293,41 @@ public static class XtfRevisionWriter
 
     private static void AktualisiereVorhandenesKind(XElement parent, string name, string wert)
     {
-        var kind = parent.Elements()
-            .FirstOrDefault(e => string.Equals(e.Name.LocalName, name, StringComparison.Ordinal));
+        var kind = FindeKind(parent, name);
         if (kind is not null)
             kind.Value = wert;
+    }
+
+    /// <summary>
+    /// Das vorhandene Feld <paramref name="name"/>, zuerst zeichengenau und danach ohne
+    /// Ruecksicht auf Gross- und Kleinschreibung.
+    ///
+    /// Die zweite Runde ist noetig, weil echte Lieferungen sich darin unterscheiden: Der
+    /// GEP-Export Zone 1.15 schreibt "BaulicherZustand" wie das Modell, Zone 1.17 dagegen
+    /// "Baulicherzustand" mit kleinem z — an 446 Kanal- und 295 Normschacht-Objekten.
+    /// Ohne diese Runde entstuende dort ein zweites Feld neben dem vorhandenen, und das
+    /// Objekt traege denselben Wert zweimal in verschiedener Schreibweise.
+    ///
+    /// Zwei Felder, die sich nur in der Gross-/Kleinschreibung unterscheiden, kennt
+    /// INTERLIS nicht; die Runde kann deshalb nichts Falsches treffen.
+    /// </summary>
+    private static XElement? FindeKind(XElement parent, string name)
+        => parent.Elements().FirstOrDefault(e => string.Equals(e.Name.LocalName, name, StringComparison.Ordinal))
+           ?? parent.Elements().FirstOrDefault(e => string.Equals(e.Name.LocalName, name, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Die Schreibweise, die diese Datei fuer <paramref name="name"/> verwendet — abgelesen
+    /// an einem Objekt derselben Klasse, das das Feld bereits fuehrt. Ohne Vorbild bleibt
+    /// es beim uebergebenen Namen.
+    /// </summary>
+    private static string SchreibweiseAusDatei(XElement parent, string name)
+    {
+        var vorbild = parent.Parent?
+            .Elements(parent.Name)
+            .SelectMany(e => e.Elements())
+            .FirstOrDefault(k => string.Equals(k.Name.LocalName, name, StringComparison.OrdinalIgnoreCase));
+
+        return vorbild?.Name.LocalName ?? name;
     }
 
     /// <summary>

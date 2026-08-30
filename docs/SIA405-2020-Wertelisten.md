@@ -263,3 +263,58 @@ folgen: Zone 1.17 traegt an der Haltung `Verbindungsart`, `Bettung_Umhuellung`,
 `SIA405_Abwasser_2020_2_d_LV95` an dieser Klasse gar nicht kennt. Der Modellname im
 Dateikopf lautet dementsprechend `SIA405_ABWASSER_2020_LV95`, nicht
 `SIA405_Abwasser_2020_2_d_LV95`.
+
+## Auch die Schreibweise kommt aus der Datei
+
+Dieselbe Falle wie bei der Reihenfolge, eine Ebene tiefer. Zwei echte Lieferungen
+schreiben dasselbe Feld verschieden:
+
+| Datei | Zustandsfeld |
+|---|---|
+| GEP Altdorf Zone 1.15 | `BaulicherZustand` (wie das Modell) |
+| Zone 1.17 | `Baulicherzustand` — kleines z, an 446 Kanal- und 295 Normschacht-Objekten |
+| Kantonsexport, Goeschenen | fuehren das Feld gar nicht |
+
+Ein zeichengenauer Vergleich findet das vorhandene Feld in Zone 1.17 nicht und legt ein
+zweites daneben. Das Objekt traegt danach denselben Wert zweimal in verschiedener
+Schreibweise. `XtfRevisionWriter` sucht deshalb zuerst zeichengenau und danach ohne
+Ruecksicht auf Gross-/Kleinschreibung; ein wirklich neues Feld uebernimmt die
+Schreibweise eines Geschwister-Objekts. Zwei Felder, die sich nur darin unterscheiden,
+kennt INTERLIS nicht — die zweite Runde kann nichts Falsches treffen.
+
+Zone 1.17 weicht auch sonst ab: `Funktion_hierarchisch` statt `FunktionHierarchisch`,
+`Datenherr`/`Eigentuemer` als Textfelder statt `DatenherrRef`/`EigentuemerRef`.
+
+## Schaechte in der XTF: ja, aber nur eine der vier Klassen traegt Daten
+
+SIA405 beschreibt einen Schacht mit vier Klassen. Gemessen am Kantonsexport
+(64'420 Schaechte) und an Zone 1.17 (295):
+
+| Klasse | Objekte | Was tatsaechlich gefuellt ist |
+|---|---|---|
+| `Normschacht` | 64'420 | `Funktion` 100 %, `Material` 100 %, `Dimension1/2` 89 %, `Status` 100 %, `Sanierungsbedarf` 56 %, `Baujahr` 33 % |
+| `Deckel` | 64'420 | **nichts** — nur Bezeichnung, Lage, Verweise |
+| `Einstiegshilfe` | 64'420 | **nichts** — nur Bezeichnung und Verweise |
+| `Abwasserknoten` | 113'559 | `Sohlenkote` 31 % |
+
+Das Modell haette fuer Deckelmaterial (`Deckel.Material`), Deckelform
+(`Deckel.Deckelform`), Deckeldurchmesser (`Deckel.Durchmesser`) und Steighilfe
+(`Einstiegshilfe.Art`) durchaus ein Ziel. Abwasser Uri liefert diese Felder nur nicht —
+in **keiner** der vier gepruefte Dateien steht dort ein Wert.
+
+**Die Schachttiefe hat weiterhin kein Ziel.** Sie waere aus `Deckel.Kote` minus
+`Abwasserknoten.Sohlenkote` ableitbar, aber `Deckel.Kote` ist ueberall leer.
+
+Zwei Fallen fuer einen spaeteren Schacht-Export:
+
+- **`Normschacht.Material` hat 2020 nur vier Werte** (`andere`, `Beton`, `Kunststoff`,
+  `unbekannt`) — eine viel kuerzere Liste als beim Rohr. In der 2015-Datei Zone 1.15
+  stehen dort aber `Zement` (53x), `Polyethylen` (36x), `Polyvinylchlorid` (5x),
+  `Polypropylen` (2x), `Beton` (2x), also die **Rohrmaterialliste**. Die Fassung
+  entscheidet hier ueber die ganze Werteliste, nicht nur ueber die Schreibweise.
+- **Goeschenen enthaelt ueberhaupt keine Schaechte** (0 Normschacht, 0 Deckel,
+  0 Einstiegshilfe, 19 Abwasserknoten). Ein Schacht-Export laesst sich an dieser Datei
+  nicht pruefen; dafuer braucht es Zone 1.17.
+
+`Normschacht.Bezeichnung` ist die Schachtnummer und in Zone 1.17 eindeutig (295 von
+295). Die Zuordnung ueber den Namen funktioniert also wie bei den Haltungen.

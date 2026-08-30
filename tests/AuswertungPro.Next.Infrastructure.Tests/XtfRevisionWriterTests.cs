@@ -393,6 +393,60 @@ public sealed class XtfRevisionWriterTests : IDisposable
         Assert.Equal("Faserzement", Kindwert(ha1, "Material"));
     }
 
+    // ---------------------------------------------------------------------------
+    // Die Datei bestimmt auch die SCHREIBWEISE, nicht nur die Reihenfolge.
+    //
+    // Gemessen an zwei echten Lieferungen: Der GEP-Export Zone 1.15 schreibt
+    // "BaulicherZustand" wie das Modell, Zone 1.17 dagegen "Baulicherzustand" mit
+    // kleinem z - an Kanal (446 Objekte) und an Normschacht (295). Ein zeichengenauer
+    // Vergleich findet das vorhandene Feld dann nicht und legt ein zweites daneben.
+    // Die Haltung traegt danach beide, und die Datei ist kaputt.
+    // ---------------------------------------------------------------------------
+
+    private const string KleinGeschrieben = """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="SIA405_ABWASSER_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_Abwasser.SIA405_Abwasser BID="B1">
+      <SIA405_Abwasser.SIA405_Abwasser.Kanal TID="KA1">
+        <Bezeichnung>80638-80631</Bezeichnung>
+        <Nutzungsart_Ist>Schmutzabwasser</Nutzungsart_Ist>
+        <Baulicherzustand>unbekannt</Baulicherzustand>
+      </SIA405_Abwasser.SIA405_Abwasser.Kanal>
+    </SIA405_Abwasser.SIA405_Abwasser>
+  </DATASECTION>
+</TRANSFER>
+""";
+
+    [Fact]
+    public void Ein_Feld_wird_in_der_Schreibweise_der_Datei_geaendert()
+    {
+        var quelle = Path.Combine(_dir, "klein.xtf");
+        File.WriteAllText(quelle, KleinGeschrieben);
+        var ziel = Path.Combine(_dir, "klein-revision.xtf");
+
+        var plan = new XtfRevisionPlan(
+            "klein.xtf",
+            [new XtfRevisionPosition(
+                XtfRevisionAenderung.Geaendert, "KA1", "", "80638-80631", "", null,
+                [new XtfRevisionFeld("BaulicherZustand", "unbekannt", "Z2")])],
+            Array.Empty<string>());
+
+        Assert.True(XtfRevisionWriter.Schreibe(quelle, plan, ziel).Ok);
+
+        var kanal = XDocument.Load(ziel).Descendants().Single(e => (string?)e.Attribute("TID") == "KA1");
+
+        // Genau ein Zustandsfeld, und zwar das der Datei - kein zweites daneben.
+        var zustaende = kanal.Elements()
+            .Where(e => e.Name.LocalName.Equals("BaulicherZustand", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        Assert.Equal(new[] { "Baulicherzustand" }, zustaende.Select(e => e.Name.LocalName));
+        Assert.Equal("Z2", Assert.Single(zustaende).Value);
+    }
+
     private (string Quelle, string Ziel) Dateien()
     {
         var quelle = Path.Combine(_dir, "original.xtf");
