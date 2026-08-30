@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -125,19 +125,6 @@ public sealed class GrundbuchFeldNachschlagTests
     }
 
     [Fact]
-    public async Task Mehrere_Parzellen_werden_nicht_geraten()
-    {
-        var dienst = new GrundbuchFeldNachschlag(
-            _ => (1.0, 2.0), new FesteParzellen(Parzelle("439"), Parzelle("440")),
-            new FestesGrundbuch(Eintrag("Muster, Hans")));
-
-        var ergebnis = await dienst.SucheAsync(new FeldNachschlagAnfrage("33429", "Eigentuemer"));
-
-        var mehrdeutig = Assert.IsType<FeldNachschlagErgebnis.Mehrdeutig>(ergebnis);
-        Assert.Equal(2, mehrdeutig.Kandidaten.Count);
-    }
-
-    [Fact]
     public async Task Die_Strasse_kommt_mit_Hausnummer()
     {
         var dienst = new GrundbuchFeldNachschlag(
@@ -188,5 +175,42 @@ public sealed class GrundbuchFeldNachschlagTests
         // Nicht "nicht gefunden": Der Bearbeiter soll wissen, dass es an der
         // Drosselung liegt und ein spaeterer Versuch hilft.
         Assert.IsType<FeldNachschlagErgebnis.Gedrosselt>(ergebnis);
+    }
+
+    [Fact]
+    public async Task Mehrere_Parzellen_liefern_niemals_eine_Parzellennummer_als_Feldwert()
+    {
+        // Frueher wurden hier die Parzellennummern als Vorschlaege geliefert.
+        // Der Bearbeiter haette eine davon gewaehlt - und dann stuende "439"
+        // im Feld Eigentuemer statt eines Namens.
+        var dienst = new GrundbuchFeldNachschlag(
+            _ => (1.0, 2.0), new FesteParzellen(Parzelle("439"), Parzelle("440")),
+            new FestesGrundbuch(Eintrag("Muster, Hans")));
+
+        var ergebnis = await dienst.SucheAsync(new FeldNachschlagAnfrage("33429", "Eigentuemer"));
+
+        var nicht = Assert.IsType<FeldNachschlagErgebnis.NichtGefunden>(ergebnis);
+        Assert.Contains("439", nicht.Grund, StringComparison.Ordinal);
+        Assert.Contains("440", nicht.Grund, StringComparison.Ordinal);
+        Assert.Contains("Grenze", nicht.Grund, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Die_Lage_wird_nicht_auf_dem_aufrufenden_Thread_geholt()
+    {
+        // LiesLage baut beim ersten Aufruf die Tabelle aus einer 467-MB-Datei.
+        // Liefe das auf dem Oberflaechen-Thread, wuerde das Programm einfrieren.
+        var aufrufer = Environment.CurrentManagedThreadId;
+        int? lageThread = null;
+
+        var dienst = new GrundbuchFeldNachschlag(
+            _ => { lageThread = Environment.CurrentManagedThreadId; return (1.0, 2.0); },
+            new FesteParzellen(Parzelle("439")),
+            new FestesGrundbuch(Eintrag("Muster, Hans")));
+
+        await dienst.SucheAsync(new FeldNachschlagAnfrage("33429", "Eigentuemer"));
+
+        Assert.NotNull(lageThread);
+        Assert.NotEqual(aufrufer, lageThread!.Value);
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -47,7 +47,11 @@ public sealed class GrundbuchFeldNachschlag : IFeldWertNachschlag
 
         try
         {
-            var lage = _lageQuelle(anfrage.Schachtnummer);
+            // Die Lage kommt aus der Kataster-Tabelle, die beim ersten Aufruf
+            // aus einer mehrere hundert Megabyte grossen Datei entsteht. Das
+            // darf die Oberflaeche nicht einfrieren.
+            var lage = await Task.Run(() => _lageQuelle(anfrage.Schachtnummer), ct)
+                .ConfigureAwait(false);
             if (lage is null)
             {
                 // Ohne Lage keine Abfrage. Jeder unnoetige Aufruf zaehlt gegen
@@ -70,10 +74,16 @@ public sealed class GrundbuchFeldNachschlag : IFeldWertNachschlag
 
             if (parzellen.Count > 1)
             {
-                // Der Schacht liegt auf einer Parzellengrenze. Nicht raten.
-                return new FeldNachschlagErgebnis.Mehrdeutig(parzellen
-                    .Select(p => new FeldVorschlag(p.Number, Quelle(p), HerkunftGrundbuch))
-                    .ToList());
+                // Der Schacht liegt auf einer Parzellengrenze. Frueher wurden
+                // hier die Parzellennummern als Vorschlaege geliefert - eine
+                // gewaehlte Nummer waere dann als "Eigentuemer" im Protokoll
+                // gelandet. Stattdessen ehrlich abbrechen und sagen, wo der
+                // Bearbeiter selbst nachsehen kann.
+                var nummern = string.Join(", ", parzellen.Select(p => p.Number));
+                return new FeldNachschlagErgebnis.NichtGefunden(
+                    $"Der Schacht liegt auf einer Parzellengrenze ({nummern}). "
+                    + "Welche Parzelle gemeint ist, laesst sich von hier aus nicht "
+                    + "entscheiden.");
             }
 
             var parzelle = parzellen[0];

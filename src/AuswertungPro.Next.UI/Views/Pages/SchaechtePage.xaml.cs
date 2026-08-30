@@ -51,6 +51,9 @@ public partial class SchaechtePage : UserControl
     private readonly SchaechtePageSubscriptionController _subscriptionController;
     private readonly SchaechteRecordDetailsBuilder _recordDetailsBuilder;
     private SchachtMassnahmenDialogController? _massnahmenController;
+    // Alle Nachschlag-Befehle der Seite teilen sich diese Sperre: immer
+    // nur eine Abfrage zur Zeit.
+    private readonly NachschlagTor _nachschlagTor = new();
     private bool _isRestoringLayout;
 
     public SchaechtePage()
@@ -737,8 +740,12 @@ public partial class SchaechtePage : UserControl
         if (FeldQuellenTabelle.QuelleFuer(feldname) is null)
             return null;
 
-        return new EinfacherBefehl(async () =>
-            await NachschlagenAsync(record, feldname).ConfigureAwait(true));
+        return new EinfacherBefehl(
+            async () => await NachschlagenAsync(record, feldname).ConfigureAwait(true),
+            fehler => Dialogs.Error(
+                $"Das Nachschlagen ist fehlgeschlagen: {fehler.Message}",
+                "Beim Kanton nachschlagen"),
+            _nachschlagTor);
     }
 
     private async Task NachschlagenAsync(SchachtRecord record, string feldname)
