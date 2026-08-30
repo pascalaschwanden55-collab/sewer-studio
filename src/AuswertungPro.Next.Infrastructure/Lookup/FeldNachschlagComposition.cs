@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using AuswertungPro.Next.Application.Dossiers.Lookup;
 using AuswertungPro.Next.Application.Lookup;
 using AuswertungPro.Next.Application.UseCases;
 using AuswertungPro.Next.Infrastructure.Map;
@@ -21,23 +22,46 @@ public static class FeldNachschlagComposition
         "SewerStudio", "map", "abwasserkataster_schaechte.tsv");
 
     /// <summary>
-    /// Erzeugt den UseCase mit dem lokalen Kataster als Quelle. Der
-    /// Grundbuch-Anbieter ist noch nicht angeschlossen und meldet das ehrlich,
-    /// statt stillschweigend nichts zu finden.
+    /// Erzeugt den UseCase mit beiden Quellen. Der Grundbuchweg setzt auf der
+    /// Lage auf, die der Kataster liefert — Projektdatensaetze fuehren keine
+    /// Koordinaten.
     /// </summary>
     /// <param name="katasterXtfPfad">
     /// Pfad zur Abwasserkataster-XTF. Leer oder nicht vorhanden ist erlaubt —
     /// der Nachschlag nennt dann den Grund.
     /// </param>
-    public static FeldNachschlagUseCase Erzeuge(string katasterXtfPfad)
+    /// <param name="parzellen">Raeumliche Parzellensuche des Kantons.</param>
+    /// <param name="grundbuch">Grundbuchauskunft des Kantons.</param>
+    /// <param name="log">
+    /// Optionales Protokoll. Es erhaelt nur Status und Fehlerklasse — nie
+    /// einen Namen, nie eine Adresse.
+    /// </param>
+    public static FeldNachschlagUseCase Erzeuge(
+        string katasterXtfPfad,
+        IParcelLookup parzellen,
+        ILandRegistryLookup grundbuch,
+        Action<string>? log = null)
     {
+        ArgumentNullException.ThrowIfNull(parzellen);
+        ArgumentNullException.ThrowIfNull(grundbuch);
+
         var kataster = ErzeugeKatasterAnbieter(katasterXtfPfad);
 
         return new FeldNachschlagUseCase(
             kataster,
-            new NochNichtAngeschlossenerNachschlag(
-                "Die Grundbuchauskunft ist noch nicht angeschlossen."));
+            new GrundbuchFeldNachschlag(kataster.LiesLage, parzellen, grundbuch, log));
     }
+
+    /// <summary>
+    /// Nur der lokale Kataster, ohne Netzzugriff. Fuer Aufrufer ohne
+    /// Auskunftsdienste — der Grundbuchweg meldet dann ehrlich, dass er nicht
+    /// angeschlossen ist, statt stillschweigend nichts zu finden.
+    /// </summary>
+    public static FeldNachschlagUseCase ErzeugeNurKataster(string katasterXtfPfad)
+        => new(
+            ErzeugeKatasterAnbieter(katasterXtfPfad),
+            new NochNichtAngeschlossenerNachschlag(
+                "Die Grundbuchauskunft ist hier nicht angeschlossen."));
 
     /// <summary>
     /// Der Kataster-Anbieter allein. Er liefert ausserdem die Lage eines

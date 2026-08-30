@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Application.Dossiers;
+﻿using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Dossiers.Lookup;
 using AuswertungPro.Next.Infrastructure.Dossiers;
 
@@ -33,6 +33,12 @@ public sealed partial class ServiceProvider
 
     /// <summary>Liest Liegenschaften aus dem Parzellendienst des Kantons.</summary>
     public IParcelLookup DossierParcels => _dossierComposition.Parcels;
+
+    /// <summary>
+    /// Grundbuchauskunft des Kantons. Auch das Nachschlagen einzelner
+    /// Schachtfelder verwendet diesen Leser.
+    /// </summary>
+    public ILandRegistryLookup DossierLandRegistry => _dossierComposition.LandRegistry;
 
     /// <summary>Stellt die Dossier-Vorschlaege eines Projekts zusammen.</summary>
     public DossierBatchProposalUseCase DossierBatchProposal => _dossierComposition.BatchProposal;

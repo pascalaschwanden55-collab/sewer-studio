@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Dossiers;
@@ -52,7 +52,8 @@ public sealed class DossierComposition
         // ein Abbruch, Aufrufe der Reihe nach.
         var gateway = new Lookup.GeoUrHttpGateway();
         Parcels = new Lookup.UriParcelWfsClient(gateway);
-        var grundbuch = new Lookup.UriLandRegistryClient(gateway);
+        LandRegistry = new Lookup.UriLandRegistryClient(gateway);
+        var grundbuch = LandRegistry;
         var netz = new Lookup.UriSewerNetworkWfsClient(gateway);
 
         BatchProposal = new DossierBatchProposalUseCase(Parcels, grundbuch, netz);
@@ -85,6 +86,13 @@ public sealed class DossierComposition
 
     /// <summary>Liest Liegenschaften aus dem Parzellendienst des Kantons.</summary>
     public IParcelLookup Parcels { get; }
+
+    /// <summary>
+    /// Liest Eigentuemer und Gebaeudeadresse aus der Grundbuchauskunft.
+    /// Auch das Nachschlagen einzelner Schachtfelder verwendet diesen Leser —
+    /// dadurch teilen sich beide Wege dasselbe Tor nach draussen.
+    /// </summary>
+    public ILandRegistryLookup LandRegistry { get; }
 
     /// <summary>Stellt die Dossier-Vorschlaege eines Projekts zusammen.</summary>
     public DossierBatchProposalUseCase BatchProposal { get; }
