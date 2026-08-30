@@ -318,3 +318,54 @@ Zwei Fallen fuer einen spaeteren Schacht-Export:
 
 `Normschacht.Bezeichnung` ist die Schachtnummer und in Zone 1.17 eindeutig (295 von
 295). Die Zuordnung ueber den Namen funktioniert also wie bei den Haltungen.
+
+## Schaechte aus der XTF importieren (Stand 2026-08-30)
+
+Bis dahin legte kein XTF-Weg Schaechte an. Gemessen an allen 17 echten Projekten waren
+**alle 122 vorhandenen Eigentumsangaben von Hand gesetzt** (`FieldSource.Manual`), keine
+einzige aus einem Import — obwohl der QGIS-Export Zone 1.17 sie mitliefert.
+
+Uebernommen wird nur, was in der Schachttabelle gebraucht wird:
+
+| XTF (`Normschacht`) | Projektfeld | Umsetzung |
+|---|---|---|
+| `Bezeichnung` | `Schachtnummer` | unveraendert |
+| `Funktion` | `Funktion` | `SchachtFunktionVokabular` |
+| `Material` | `Material` | `SchachtMaterialVokabular`, `unbekannt` faellt weg |
+| `Dimension1`/`Dimension2` | `Dimension` | `600 mm` bzw. `1100 x 900 mm` |
+| `Eigentuemer` | `Eigentuemer` | `EigentumVokabular` |
+
+`Status`, `Sanierungsbedarf`, `Baujahr`, `Sohlenkote`, `Lagebestimmung` und die
+Deckelangaben bleiben ausdruecklich draussen — sie sind informativ und stehen im
+Protokoll.
+
+Beleglauf gegen die drei echten Lieferungen:
+
+| Datei | Schaechte | Eigentuemer | Funktion | Material | Dimension |
+|---|---|---|---|---|---|
+| Zone 1.17 | 295 | 289 (`Privat` 204, `AWU` 68, `Kanton` 17) | 295 | 84 | 280 |
+| Zone 1.15 | 99 | 0 (Datei fuehrt das Feld nicht) | 86 | 99 | 0 |
+| Goeschenen | 0 | – | – | – | – |
+
+Im echten Projekt `Zone 1.15` treffen **99 von 99** XTF-Schaechten auf einen bereits
+vorhandenen Datensatz; es entsteht keine Dublette.
+
+### Zwei Fallen, die erst die Messung gezeigt hat
+
+**`Abwasser Uri` faerbt die Excel-Zelle nicht.** Beide Berichtsvorlagen vergleichen die
+Eigentuemerspalte exakt: `Haltungen.xlsx` Spalte O und `Schaechte.xlsx` Spalte J pruefen
+je `="AWU"`, `="Kanton"`, `="Bund"`, `="Gemeinde"`, `="Privat"`. Die XTF schreibt
+`Abwasser Uri` und `Kanton Uri`. Ohne `EigentumVokabular` waere die Spalte gefuellt und
+zwei Drittel der Zeilen ohne Farbe — genau das, wofuer die Angabe gebraucht wird, kaputt.
+Der Haltungs-Import schrieb den Rohwert schon vorher; auch das ist behoben.
+
+**`NR.` ist nicht die Schachtnummer.** Der SchachtPro-Import fuellt `NR.` und `Nr.` mit
+der Schachtnummer, und es lag nahe, das nachzuahmen. In den 17 echten Projekten tragen
+diese Felder aber bei **257 von 257** Schaechten eine laufende Nummer (1, 2, 3 …) und in
+keinem einzigen Fall die Schachtnummer. Der XTF-Import schreibt deshalb nur
+`Schachtnummer` und sucht auch nicht ueber `NR.` — sonst traefe ein Schacht mit der
+Nummer `1` auf den ersten Schacht der Liste.
+
+Die Schluesselfelder fuer das Wiederfinden sind dieselben wie bei WinCan und SchachtPro;
+`XtfSchachtSchluesselfelderTests` haelt das per Reflection fest, damit die drei Listen
+nicht auseinanderlaufen.

@@ -162,6 +162,24 @@ public sealed partial class LegacyXtfImportService
         var sia405Imported = false;
         if (isSia405)
         {
+            // Schaechte sind unabhaengig von den Haltungen: Eine Datei kann Normschaechte
+            // ohne Kanaele enthalten, und umgekehrt (Goeschenen hat 17 Haltungen und
+            // null Schaechte).
+            var schaechte = ParseSia405Schaechte(doc);
+            if (schaechte.Count > 0)
+            {
+                var beruehrt = MergeSchaechteIntoProject(project, schaechte, stats, ctx);
+                if (beruehrt > 0)
+                {
+                    stats.Messages.Add(new ImportMessage
+                    {
+                        Level = "Info",
+                        Context = "XTF405",
+                        Message = $"Importiert {beruehrt} Schaechte aus {Path.GetFileName(path)}"
+                    });
+                }
+            }
+
             var records = ParseSia405(doc);
             if (records.Count > 0)
             {
@@ -549,7 +567,10 @@ public sealed partial class LegacyXtfImportService
                 if (!string.IsNullOrWhiteSpace(kanal.Standortname)) rec.SetFieldValue("Strasse", kanal.Standortname, FieldSource.Xtf405, userEdited: false);
                 if (!string.IsNullOrWhiteSpace(nutzungsart)) rec.SetFieldValue("Nutzungsart", nutzungsart, FieldSource.Xtf405, userEdited: false);
                 if (!string.IsNullOrWhiteSpace(kanal.Bemerkung)) rec.SetFieldValue("Bemerkungen", kanal.Bemerkung, FieldSource.Xtf405, userEdited: false);
-                if (!string.IsNullOrWhiteSpace(kanal.Eigentuemer)) rec.SetFieldValue("Eigentuemer", kanal.Eigentuemer, FieldSource.Xtf405, userEdited: false);
+                // Der Rohwert der XTF ("Abwasser Uri") faerbt die Eigentuemerspalte der
+                // Excel-Vorlage nicht - sie vergleicht exakt gegen "AWU".
+                var eigentuemer = EigentumVokabular.Normalisieren(kanal.Eigentuemer);
+                if (!string.IsNullOrWhiteSpace(eigentuemer)) rec.SetFieldValue("Eigentuemer", eigentuemer, FieldSource.Xtf405, userEdited: false);
 
                 // Funktionhierarchisch -> Katalog-Combo "PAA.<Suffix>" (speist u.a. VSA-Zustandsnote B4)
                 var funktion = NormalizeFunktionHierarchisch(kanal.Funktion);
