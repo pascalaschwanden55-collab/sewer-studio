@@ -54,7 +54,8 @@ public sealed class DossierComposition
         Parcels = new Lookup.UriParcelWfsClient(gateway);
         LandRegistry = new Lookup.UriLandRegistryClient(gateway);
         var grundbuch = LandRegistry;
-        var netz = new Lookup.UriSewerNetworkWfsClient(gateway);
+        SewerNetwork = new Lookup.UriSewerNetworkWfsClient(gateway);
+        var netz = SewerNetwork;
 
         BatchProposal = new DossierBatchProposalUseCase(Parcels, grundbuch, netz);
         ParcelLookup = new DossierParcelLookupUseCase(Parcels, grundbuch, netz);
@@ -93,6 +94,13 @@ public sealed class DossierComposition
     /// dadurch teilen sich beide Wege dasselbe Tor nach draussen.
     /// </summary>
     public ILandRegistryLookup LandRegistry { get; }
+
+    /// <summary>
+    /// Liest das Abwassernetz des Kantons. Auch der Feld-Nachschlag nutzt
+    /// diesen Leser: Der XTF-Export plattet die Eigentuemer ein, der Dienst
+    /// kennt sie noch.
+    /// </summary>
+    public ISewerNetworkLookup SewerNetwork { get; }
 
     /// <summary>Stellt die Dossier-Vorschlaege eines Projekts zusammen.</summary>
     public DossierBatchProposalUseCase BatchProposal { get; }

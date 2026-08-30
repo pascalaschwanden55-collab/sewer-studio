@@ -114,18 +114,23 @@ public sealed class FeldNachschlagUseCaseTests
     [Fact]
     public void Der_Eigentuemer_einer_Haltung_kommt_nicht_aus_dem_Kataster()
     {
-        // Der QGIS-Export nach XTF plattet die Eigentuemer-Zuordnung ein: Der
-        // Kopf der Datei nennt 27 verschiedene Eigentuemer (Abwasser Uri,
-        // Privat, Kanton Uri, Gemeinden, ASTRA), aber alle EigentuemerRef
-        // zeigen danach auf dieselbe Organisation. Ein Nachschlag wuerde
-        // "Abwasser Uri" auch fuer eine private Leitung vorschlagen - und das
-        // waere im Protokoll eine falsche Aussage.
-        Assert.Null(FeldQuellenTabelle.QuelleFuer("Eigentuemer", BauteilArt.Haltung));
-        Assert.Null(FeldQuellenTabelle.QuelleFuer("Eigentümer", BauteilArt.Haltung));
+        // Der QGIS-Export nach XTF plattet die Eigentuemer-Zuordnung ein: Dort
+        // tragen alle Leitungen denselben Verweis, obwohl der Kopf der Datei
+        // 27 verschiedene Eigentuemer nennt. Der Kataster wuerde deshalb
+        // "Abwasser Uri" auch fuer eine private Leitung behaupten.
+        //
+        // Der Abwassernetz-Dienst kennt sie noch: Am 2026-08-30 lieferte er
+        // fuer 36262-36275, 33458-36051 und 36275-35558 jeweils "Privat".
+        var quelle = FeldQuellenTabelle.QuelleFuer("Eigentuemer", BauteilArt.Haltung);
+
+        Assert.NotEqual(FeldQuelle.Kataster, quelle);
+        Assert.Equal(FeldQuelle.Abwassernetz, quelle);
+        Assert.Equal(
+            FeldQuelle.Abwassernetz,
+            FeldQuellenTabelle.QuelleFuer("Eigentümer", BauteilArt.Haltung));
 
         // Beim Schacht bleibt es beim Grundbuch - dort ist der
-        // Grundstueckseigentuemer gemeint, und der kommt aus einer Quelle,
-        // die ihn wirklich kennt.
+        // Grundstueckseigentuemer gemeint, nicht der Leitungsbetreiber.
         Assert.Equal(
             FeldQuelle.Grundbuch,
             FeldQuellenTabelle.QuelleFuer("Eigentuemer", BauteilArt.Schacht));

@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.UseCases;
 using AuswertungPro.Next.Infrastructure.Lookup;
 
@@ -26,6 +26,7 @@ namespace AuswertungPro.Next.UI
                 Mapping.KatasterXtfPathResolver.Resolve(Settings),
                 DossierParcels,
                 DossierLandRegistry,
+                DossierSewerNetwork,
                 meldung => Logger.LogInformation("Feldnachschlag: {Meldung}", meldung));
     }
 }

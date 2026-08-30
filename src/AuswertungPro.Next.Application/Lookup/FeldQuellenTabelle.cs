@@ -11,7 +11,14 @@ public enum FeldQuelle
     Kataster,
 
     /// <summary>Grundbuchauskunft des Kantons Uri (Netzabfrage).</summary>
-    Grundbuch
+    Grundbuch,
+
+    /// <summary>
+    /// Abwassernetz des Kantons Uri (Netzabfrage). Eigene Quelle neben dem
+    /// Kataster, weil der XTF-Export die Eigentuemer einplattet — der Dienst
+    /// kennt sie noch.
+    /// </summary>
+    Abwassernetz
 }
 
 /// <summary>
@@ -48,14 +55,13 @@ public static class FeldQuellenTabelle
             ["Rohrmaterial"] = FeldQuelle.Kataster,
             ["Haltungslaenge_m"] = FeldQuelle.Kataster,
 
-            // "Eigentuemer" fehlt hier bewusst. Der QGIS-Export nach XTF
-            // plattet die Eigentuemer-Zuordnung ein: Der Kopf der Datei nennt
-            // 27 verschiedene Eigentuemer (Abwasser Uri, Privat, Kanton Uri,
-            // die Gemeinden, ASTRA), aber alle EigentuemerRef zeigen danach
-            // auf dieselbe Organisation. Ein Nachschlag wuerde deshalb
-            // "Abwasser Uri" auch fuer eine private Leitung vorschlagen.
-            // Erst wenn der Export das Feld org_eigentuemer mitfuehrt, darf
-            // dieses Feld wieder hier stehen.
+            // Der Eigentuemer kommt NICHT aus dem Kataster: Der QGIS-Export
+            // nach XTF plattet die Zuordnung ein — dort tragen alle Leitungen
+            // denselben Verweis, obwohl der Kopf der Datei 27 verschiedene
+            // Eigentuemer nennt. Der Abwassernetz-Dienst des Kantons kennt sie
+            // noch und liefert etwa "Privat" fuer private Hausanschluesse.
+            ["Eigentuemer"] = FeldQuelle.Abwassernetz,
+            ["Eigentümer"] = FeldQuelle.Abwassernetz,
         };
 
     public static IReadOnlyList<string> UnterstuetzteFelder(BauteilArt art)

@@ -40,6 +40,9 @@ public sealed partial class ServiceProvider
     /// </summary>
     public ILandRegistryLookup DossierLandRegistry => _dossierComposition.LandRegistry;
 
+    /// <summary>Abwassernetz des Kantons — auch fuer den Feld-Nachschlag.</summary>
+    public ISewerNetworkLookup DossierSewerNetwork => _dossierComposition.SewerNetwork;
+
     /// <summary>Stellt die Dossier-Vorschlaege eines Projekts zusammen.</summary>
     public DossierBatchProposalUseCase DossierBatchProposal => _dossierComposition.BatchProposal;
 
