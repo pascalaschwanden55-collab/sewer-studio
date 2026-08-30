@@ -40,16 +40,18 @@ public static class DataPageRecordDetailsBuilder
             if (IsExcluded(extraField)) continue;
             var item = createItem(extraField);
             itemsByField[extraField] = item;
-            buckets["Weitere Angaben"].Add(item);
+            // Auch freie Projektfelder laufen durch die Gruppenregel; alles
+            // Unbekannte liefert sie weiterhin als "Weitere Angaben" zurueck.
+            buckets[ResolveGroup(extraField)].Add(item);
         }
 
         WireSanierungSichtbarkeit(itemsByField);
 
-        AddGroup(groups, buckets, "Stammdaten", "Identifikation und Lage der Haltung.");
-        AddGroup(groups, buckets, "Zustand & Inspektion", "Bewertung, Schaeden und Pruefresultate.");
-        AddGroup(groups, buckets, "Sanierung & Kosten", "Massnahmen, Kosten und Mengenangaben.");
-        AddGroup(groups, buckets, "Dokumente & Medien", "Verknuepfte Dateien, PDFs und Links.");
-        AddGroup(groups, buckets, "Weitere Angaben", "Felder ohne klare Zuordnung.");
+        AddGroup(groups, buckets, "Stammdaten", "Identifikation und Lage der Haltung.", RecordDetailGroupKind.MasterData);
+        AddGroup(groups, buckets, "Zustand & Inspektion", "Bewertung, Schaeden und Pruefresultate.", RecordDetailGroupKind.Condition);
+        AddGroup(groups, buckets, "Sanierung & Kosten", "Massnahmen, Kosten und Mengenangaben.", RecordDetailGroupKind.RenovationCosts);
+        AddGroup(groups, buckets, "Dokumente & Medien", "Verknuepfte Dateien, PDFs und Links.", RecordDetailGroupKind.Documents);
+        AddGroup(groups, buckets, "Weitere Angaben", "Felder ohne klare Zuordnung.", RecordDetailGroupKind.Additional);
 
         return groups;
     }
@@ -61,6 +63,9 @@ public static class DataPageRecordDetailsBuilder
             "NR" or "Haltungsname" or "Strasse" or "DN_mm" or "Rohrmaterial"
                 or "Nutzungsart" or "Haltungslaenge_m" or "Inspektionsrichtung"
                 or "Eigentuemer" or "FunktionHierarchisch"
+                // Anfangs- und Endschacht stehen nicht im Feldkatalog, gehoeren
+                // fachlich aber zu den Stammdaten der Haltung.
+                or "Schacht_oben" or "Schacht_unten"
                 => "Stammdaten",
 
             "Zustandsklasse" or "VSA_Zustandsnote_D" or "VSA_Zustandsnote_S"
@@ -87,12 +92,13 @@ public static class DataPageRecordDetailsBuilder
         ICollection<RecordDetailGroup> groups,
         IReadOnlyDictionary<string, List<RecordDetailItem>> buckets,
         string title,
-        string description)
+        string description,
+        RecordDetailGroupKind kind)
     {
         if (!buckets.TryGetValue(title, out var items) || items.Count == 0)
             return;
 
-        groups.Add(new RecordDetailGroup(title, description, items));
+        groups.Add(new RecordDetailGroup(title, description, items, kind));
     }
 
     // Folgefelder der Sanierungs-Gruppe: nur sinnvoll, wenn ueberhaupt saniert wird.

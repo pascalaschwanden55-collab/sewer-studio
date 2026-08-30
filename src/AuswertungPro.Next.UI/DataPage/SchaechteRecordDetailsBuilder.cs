@@ -64,11 +64,11 @@ internal sealed class SchaechteRecordDetailsBuilder
         }
 
         WireRenovationVisibility(renovationSwitch, renovationDependents);
-        AddGroup(groups, buckets, "Stammdaten", "Identifikation und Lage des Schachts.");
-        AddGroup(groups, buckets, "Zustand und Inspektion", "Bewertung, Schaeden und Pruefresultate.");
-        AddGroup(groups, buckets, "Sanierung und Kosten", "Massnahmen, Kosten und Mengenangaben.");
-        AddGroup(groups, buckets, "Dokumente und Medien", "Verknuepfte Dateien, PDFs und Links.");
-        AddGroup(groups, buckets, "Weitere Angaben", "Felder ohne klare Zuordnung.");
+        AddGroup(groups, buckets, "Stammdaten", "Identifikation und Lage des Schachts.", RecordDetailGroupKind.MasterData);
+        AddGroup(groups, buckets, "Zustand und Inspektion", "Bewertung, Schaeden und Pruefresultate.", RecordDetailGroupKind.Condition);
+        AddGroup(groups, buckets, "Sanierung und Kosten", "Massnahmen, Kosten und Mengenangaben.", RecordDetailGroupKind.RenovationCosts);
+        AddGroup(groups, buckets, "Dokumente und Medien", "Verknuepfte Dateien, PDFs und Links.", RecordDetailGroupKind.Documents);
+        AddGroup(groups, buckets, "Weitere Angaben", "Felder ohne klare Zuordnung.", RecordDetailGroupKind.Additional);
         return groups;
     }
 
@@ -119,7 +119,8 @@ internal sealed class SchaechteRecordDetailsBuilder
                 resetOptionsCommand: spec.Managed ? _resolveCommand(spec.ResetCommand) : null,
                 addOptionCommand: spec.Managed ? _resolveCommand(spec.AddCommand) : null,
                 removeOptionCommand: spec.Managed ? _resolveCommand(spec.RemoveCommand) : null,
-                highlightKind: highlightKind);
+                highlightKind: highlightKind)
+            { FieldName = field.AnzeigeName };
         }
 
         var normalized = Normalize(field.AnzeigeName);
@@ -134,7 +135,8 @@ internal sealed class SchaechteRecordDetailsBuilder
                 isCombo: true,
                 allowFreeText: false,
                 options: ZustandsklasseColorPalette.SelectionOptions,
-                highlightKind: highlightKind);
+                highlightKind: highlightKind)
+            { FieldName = field.AnzeigeName };
         }
 
         return new RecordDetailItem(
@@ -142,16 +144,18 @@ internal sealed class SchaechteRecordDetailsBuilder
             field.Wert,
             commitValue: Commit,
             isMultiline: isMultiline,
-            highlightKind: highlightKind);
+            highlightKind: highlightKind)
+        { FieldName = field.AnzeigeName };
     }
 
     private static void AddGroup(
         ICollection<RecordDetailGroup> groups,
         IReadOnlyDictionary<string, List<RecordDetailItem>> buckets,
         string title,
-        string description)
+        string description,
+        RecordDetailGroupKind kind)
     {
         if (buckets.TryGetValue(title, out var items) && items.Count > 0)
-            groups.Add(new RecordDetailGroup(title, description, items));
+            groups.Add(new RecordDetailGroup(title, description, items, kind));
     }
 }

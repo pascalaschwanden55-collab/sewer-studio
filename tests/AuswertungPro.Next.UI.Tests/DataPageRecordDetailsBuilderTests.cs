@@ -7,8 +7,36 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageRecordDetailsBuilderTests
 {
+    // Anfangs- und Endschacht gehoeren fachlich zu den Stammdaten der Haltung.
+    // Sie stehen nicht im Feldkatalog, sondern kommen als freie Projektfelder herein -
+    // frueher landeten sie deshalb ungefragt in "Weitere Angaben".
+    [Fact]
+    public void Build_stellt_Anfangs_und_Endschacht_zu_den_Stammdaten()
+    {
+        var record = new HaltungRecord();
+        record.Fields["Schacht_oben"] = "36262";
+        record.Fields["Schacht_unten"] = "36275";
+
+        var groups = DataPageRecordDetailsBuilder.Build(
+            record,
+            fieldName => new RecordDetailItem(fieldName, fieldName, _ => { }));
+
+        var stammdaten = groups.Single(g => g.Title == "Stammdaten");
+        Assert.Contains(stammdaten.Items, item => item.Label == "Schacht_oben");
+        Assert.Contains(stammdaten.Items, item => item.Label == "Schacht_unten");
+
+        var weitere = groups.SingleOrDefault(g => g.Title == "Weitere Angaben");
+        if (weitere is not null)
+        {
+            Assert.DoesNotContain(weitere.Items, item => item.Label == "Schacht_oben");
+            Assert.DoesNotContain(weitere.Items, item => item.Label == "Schacht_unten");
+        }
+    }
+
     [Theory]
     [InlineData("Haltungsname", "Stammdaten")]
+    [InlineData("Schacht_oben", "Stammdaten")]
+    [InlineData("Schacht_unten", "Stammdaten")]
     [InlineData("Primaere_Schaeden", "Zustand & Inspektion")]
     [InlineData("Kosten", "Sanierung & Kosten")]
     [InlineData("Link", "Dokumente & Medien")]
@@ -50,6 +78,14 @@ public sealed class DataPageRecordDetailsBuilderTests
             "Dokumente & Medien",
             "Weitere Angaben"
         }, groups.Select(g => g.Title));
+        Assert.Equal(new[]
+        {
+            RecordDetailGroupKind.MasterData,
+            RecordDetailGroupKind.Condition,
+            RecordDetailGroupKind.RenovationCosts,
+            RecordDetailGroupKind.Documents,
+            RecordDetailGroupKind.Additional
+        }, groups.Select(g => g.Kind));
     }
 
     [Fact]

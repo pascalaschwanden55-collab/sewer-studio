@@ -8,6 +8,29 @@
     <UserControl.Resources>
         <local:NullToCollapsedConverter x:Key="NullToCollapsed"/>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <ItemsPanelTemplate x:Key="DefaultDetailGroupPanel"><StackPanel/></ItemsPanelTemplate>
+        <!-- Eine Zeile, gleich breite Spalten: die Spaltenzahl folgt der Zahl der
+             Gruppen, und die Position in der Liste ist unmittelbar die Spalte. -->
+        <ItemsPanelTemplate x:Key="CompactDetailGroupPanel">
+            <UniformGrid Rows="1"/>
+        </ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="DefaultDetailFieldPanel"><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="CompactDetailFieldPanel"><StackPanel Orientation="Vertical"/></ItemsPanelTemplate>
+
+        <!-- Die Spalte einer Gruppe ist ihre Position in der Liste (UniformGrid).
+             Nur "Dokumente & Medien" bleibt in der kompakten Ansicht aussen vor. -->
+        <Style x:Key="CompactDetailGroupContainerStyle" TargetType="ContentPresenter">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Kind}" Value="{x:Static windows:RecordDetailGroupKind.Documents}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="CompactDetailFieldContainerStyle" TargetType="ContentPresenter">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        </Style>
 
         <ContextMenu x:Key="ManagedOptionsContextMenu"
                      x:Shared="False"
@@ -93,9 +116,21 @@
 
         <DataTemplate x:Key="MultilineEditorTemplate" DataType="{x:Type windows:RecordDetailItem}">
             <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                     IsReadOnly="{Binding IsReadOnly}"
-                     AcceptsReturn="True" TextWrapping="Wrap"
-                     VerticalScrollBarVisibility="Auto" MinHeight="108"/>
+                      IsReadOnly="{Binding IsReadOnly}"
+                      AcceptsReturn="True" TextWrapping="Wrap"
+                      VerticalScrollBarVisibility="Auto">
+                <TextBox.Style>
+                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                        <Setter Property="MinHeight" Value="108"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
+                                         Value="True">
+                                <Setter Property="MinHeight" Value="72"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
         </DataTemplate>
 
         <DataTemplate x:Key="EditableComboEditorTemplate" DataType="{x:Type windows:RecordDetailItem}">
@@ -129,49 +164,211 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Margin="0,0,0,14" Padding="18,16"
-                Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="1" CornerRadius="12">
-            <StackPanel>
+        <Border Grid.Row="0">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Margin" Value="0,0,0,14"/>
+                    <Setter Property="Padding" Value="18,16"/>
+                    <Setter Property="Background" Value="{StaticResource HeaderBrush}"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                    <Setter Property="BorderThickness" Value="1"/>
+                    <Setter Property="CornerRadius" Value="12"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsCompactLayout, ElementName=Root}" Value="True">
+                            <Setter Property="Margin" Value="0,0,0,8"/>
+                            <Setter Property="Padding" Value="14,10"/>
+                            <Setter Property="CornerRadius" Value="9"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <DockPanel>
+                <!-- Anpassen-Modus: nur wo die Ansicht ihn auch speichert. -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                    <Button x:Name="CustomizeStartButton" Content="Ansicht anpassen"
+                            Padding="10,4" Margin="8,0,0,0" Click="CustomizeStart_Click"
+                            ToolTip="Karten und Spalten ziehen, Felder aus- und einblenden">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding CanCustomize, ElementName=Root}" Value="True"/>
+                                            <Condition Binding="{Binding IsCustomizing, ElementName=Root}" Value="False"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button x:Name="CustomizeResetButton" Content="Standard wiederherstellen"
+                            Padding="10,4" Margin="8,0,0,0" Click="CustomizeReset_Click"
+                            Visibility="{Binding IsCustomizing, ElementName=Root, Converter={StaticResource BoolToVis}}"
+                            ToolTip="Spalten, Reihenfolge und ausgeblendete Felder auf die Werkseinstellung zuruecksetzen"/>
+                    <Button x:Name="CustomizeDoneButton" Content="Fertig"
+                            Padding="14,4" Margin="8,0,0,0" Click="CustomizeDone_Click"
+                            Style="{StaticResource PrimaryButton}"
+                            Visibility="{Binding IsCustomizing, ElementName=Root, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
+                <StackPanel>
                 <TextBlock Text="{Binding Header, ElementName=Root}"
-                           FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
+                           FontWeight="SemiBold" Foreground="{StaticResource TextBrush}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontSize" Value="26"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCompactLayout, ElementName=Root}" Value="True">
+                                    <Setter Property="FontSize" Value="22"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
                 <TextBlock Text="{Binding SubHeader, ElementName=Root}"
-                           Margin="0,6,0,0" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
-            </StackPanel>
+                           Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Margin" Value="0,6,0,0"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCompactLayout, ElementName=Root}" Value="True">
+                                    <Setter Property="Margin" Value="0,3,0,0"/>
+                                    <Setter Property="FontSize" Value="12"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                </StackPanel>
+            </DockPanel>
         </Border>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled" CanContentScroll="False">
-            <ItemsControl ItemsSource="{Binding Groups, ElementName=Root}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
+                      HorizontalScrollBarVisibility="Disabled" CanContentScroll="False"
+                      PanningMode="VerticalOnly">
+            <ItemsControl ItemsSource="{Binding VisibleGroups, ElementName=Root}">
+                <ItemsControl.Style>
+                    <Style TargetType="ItemsControl">
+                        <Setter Property="ItemsPanel" Value="{StaticResource DefaultDetailGroupPanel}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsCompactLayout, ElementName=Root}" Value="True">
+                                <Setter Property="ItemsPanel" Value="{StaticResource CompactDetailGroupPanel}"/>
+                                <Setter Property="ItemContainerStyle" Value="{StaticResource CompactDetailGroupContainerStyle}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ItemsControl.Style>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Margin="0,0,0,16" Padding="16"
-                                Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}"
-                                BorderThickness="1" CornerRadius="12" VerticalAlignment="Top">
+                        <Border VerticalAlignment="Top"
+                                AllowDrop="True"
+                                PreviewDragOver="ColumnCard_PreviewDragOver"
+                                PreviewDrop="ColumnCard_PreviewDrop">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Margin" Value="0,0,0,16"/>
+                                    <Setter Property="Padding" Value="16"/>
+                                    <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Setter Property="CornerRadius" Value="12"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
+                                                     Value="True">
+                                            <Setter Property="Margin" Value="0,0,6,6"/>
+                                            <Setter Property="Padding" Value="8"/>
+                                            <Setter Property="CornerRadius" Value="8"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
                             <StackPanel>
-                                <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold"
-                                           Foreground="{StaticResource TextBrush}"/>
-                                <TextBlock Text="{Binding Description}" Margin="0,4,0,12"
-                                           Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextBrush}"
+                                           PreviewMouseLeftButtonDown="ColumnHandle_PreviewMouseLeftButtonDown"
+                                           PreviewMouseMove="ColumnHandle_PreviewMouseMove">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontSize" Value="18"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
+                                                             Value="True">
+                                                    <Setter Property="FontSize" Value="15"/>
+                                                </DataTrigger>
+                                                <!-- Im Anpassen-Modus laedt der Spaltentitel zum Ziehen ein. -->
+                                                <DataTrigger Binding="{Binding IsCustomizing, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
+                                                             Value="True">
+                                                    <Setter Property="Cursor" Value="SizeWE"/>
+                                                    <Setter Property="ToolTip" Value="Spalte an dieser Ueberschrift nach links oder rechts ziehen"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text="{Binding Description}"
+                                           Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Margin" Value="0,4,0,12"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
+                                                             Value="True">
+                                                    <Setter Property="Margin" Value="0,2,0,8"/>
+                                                    <Setter Property="FontSize" Value="11"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                                 <ItemsControl ItemsSource="{Binding Items}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.Style>
+                                        <Style TargetType="ItemsControl">
+                                            <Setter Property="ItemsPanel" Value="{StaticResource DefaultDetailFieldPanel}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
+                                                             Value="True">
+                                                    <Setter Property="ItemsPanel" Value="{StaticResource CompactDetailFieldPanel}"/>
+                                                    <Setter Property="ItemContainerStyle" Value="{StaticResource CompactDetailFieldContainerStyle}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ItemsControl.Style>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Width="390" Margin="0,0,14,14" Padding="14"
-                                                    BorderThickness="1" CornerRadius="10" VerticalAlignment="Top"
-                                                    Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
+                                            <Border VerticalAlignment="Top"
+                                                    AllowDrop="True"
+                                                    PreviewDragOver="FieldCard_PreviewDragOver"
+                                                    PreviewDrop="FieldCard_PreviewDrop">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
+                                                        <Setter Property="Width" Value="390"/>
+                                                        <Setter Property="Margin" Value="0,0,14,14"/>
+                                                        <Setter Property="Padding" Value="14"/>
+                                                        <Setter Property="BorderThickness" Value="1"/>
+                                                        <Setter Property="CornerRadius" Value="10"/>
                                                         <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
                                                         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                                                         <Style.Triggers>
+                                                            <!-- Zwei getrennte Gruende, unsichtbar zu sein: die fachliche Regel
+                                                                 (Sanierungs-Folgefelder) und das persoenliche Ausblenden. -->
+                                                            <DataTrigger Binding="{Binding IsVisible}" Value="False">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsHiddenByUser}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
+                                                                Value="True">
+                                                                <Setter Property="Width" Value="Auto"/>
+                                                                <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                                                                <Setter Property="Margin" Value="0,0,0,6"/>
+                                                                <Setter Property="Padding" Value="8"/>
+                                                                <Setter Property="CornerRadius" Value="8"/>
+                                                            </DataTrigger>
                                                             <DataTrigger Binding="{Binding HighlightKind}" Value="{x:Static windows:RecordDetailHighlightKind.Sanieren}">
                                                                 <Setter Property="Background" Value="#EAF6E3"/>
                                                                 <Setter Property="BorderBrush" Value="#6AA84F"/>
@@ -184,10 +381,51 @@
                                                     </Style>
                                                 </Border.Style>
                                                 <StackPanel>
+                                                    <DockPanel>
+                                                    <Button DockPanel.Dock="Right" Content="&#xE711;"
+                                                            FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                                            Padding="4,0" Margin="4,0,0,0" VerticalAlignment="Top"
+                                                            Background="Transparent" BorderThickness="0"
+                                                            Click="HideField_Click"
+                                                            ToolTip="Dieses Feld ausblenden (Wert und Exporte bleiben unveraendert)"
+                                                            Visibility="{Binding IsCustomizing, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}, Converter={StaticResource BoolToVis}}"/>
                                                     <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextSecondaryBrush}"
-                                                               FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                                    <ContentControl Content="{Binding}" Margin="0,8,0,0"
-                                                                    ContentTemplateSelector="{StaticResource EditorTemplateSelector}"/>
+                                                               FontWeight="SemiBold" TextWrapping="Wrap"
+                                                               PreviewMouseLeftButtonDown="FieldHandle_PreviewMouseLeftButtonDown"
+                                                               PreviewMouseMove="FieldHandle_PreviewMouseMove">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="FontSize" Value="12"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
+                                                                                 Value="True">
+                                                                        <Setter Property="FontSize" Value="11"/>
+                                                                    </DataTrigger>
+                                                                    <!-- Nur im Anpassen-Modus laedt die Beschriftung zum Ziehen ein. -->
+                                                                    <DataTrigger Binding="{Binding IsCustomizing, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
+                                                                                 Value="True">
+                                                                        <Setter Property="Cursor" Value="SizeAll"/>
+                                                                        <Setter Property="ToolTip" Value="An dieser Beschriftung ziehen - auch in eine andere Spalte"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    </DockPanel>
+                                                    <ContentControl Content="{Binding}"
+                                                                    ContentTemplateSelector="{StaticResource EditorTemplateSelector}">
+                                                        <ContentControl.Style>
+                                                            <Style TargetType="ContentControl">
+                                                                <Setter Property="Margin" Value="0,8,0,0"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
+                                                                                 Value="True">
+                                                                        <Setter Property="Margin" Value="0,5,0,0"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </ContentControl.Style>
+                                                    </ContentControl>
                                                 </StackPanel>
                                             </Border>
                                         </DataTemplate>
@@ -200,7 +438,43 @@
             </ItemsControl>
         </ScrollViewer>
 
-        <DockPanel Grid.Row="2" Margin="0,14,0,0" LastChildFill="False"
+        <!-- Ausgeblendete Felder: nur im Anpassen-Modus, zum Zurueckholen. -->
+        <Border Grid.Row="2" Margin="0,10,0,0" Padding="10,8" CornerRadius="8"
+                Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                Visibility="{Binding IsCustomizing, ElementName=Root, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <TextBlock Text="Ausgeblendete Felder" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                <TextBlock Text="Nichts ausgeblendet." FontSize="11" Margin="0,4,0,0"
+                           Foreground="{StaticResource TextSecondaryBrush}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HiddenFields.Count, ElementName=Root}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <ItemsControl ItemsSource="{Binding HiddenFields, ElementName=Root}" Margin="0,4,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding Label}" Margin="0,0,6,4" Padding="8,3" FontSize="11"
+                                    Click="ShowField_Click"
+                                    ToolTip="Wieder einblenden"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <DockPanel Grid.Row="3" Margin="0,14,0,0" LastChildFill="False"
                    Visibility="{Binding SuggestMeasuresCommand, ElementName=Root, Converter={StaticResource NullToCollapsed}}">
             <Button DockPanel.Dock="Right" Margin="0,0,10,0" Padding="14,6"
                     Command="{Binding SuggestMeasuresCommand, ElementName=Root}"

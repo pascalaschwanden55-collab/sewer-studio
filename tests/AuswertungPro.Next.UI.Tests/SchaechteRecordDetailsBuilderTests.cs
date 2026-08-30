@@ -4,6 +4,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
+using AuswertungPro.Next.UI.Views.Windows;
 using System.IO;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -32,6 +33,10 @@ public sealed class SchaechteRecordDetailsBuilderTests
         Assert.Equal(
             ["Stammdaten", "Zustand und Inspektion", "Sanierung und Kosten", "Dokumente und Medien"],
             groups.Select(group => group.Title));
+        Assert.Equal(
+            [RecordDetailGroupKind.MasterData, RecordDetailGroupKind.Condition,
+                RecordDetailGroupKind.RenovationCosts, RecordDetailGroupKind.Documents],
+            groups.Select(group => group.Kind));
         var renovation = groups.Single(group => group.Title == "Sanierung und Kosten");
         var switchItem = renovation.Items.Single(item => item.Label == "Sanieren Ja/Nein");
         var costItem = renovation.Items.Single(item => item.Label == "Kosten");

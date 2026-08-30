@@ -49,7 +49,8 @@ public sealed class DataPageDetailItemFactory
                 resetOptionsCommand: managedCombo.ResetOptionsCommand,
                 addOptionCommand: managedCombo.AddOptionCommand,
                 removeOptionCommand: managedCombo.RemoveOptionCommand,
-                highlightKind: highlightKind);
+                highlightKind: highlightKind)
+            { FieldName = fieldName };
         }
 
         var catalogItems = FieldCatalog.GetComboItems(fieldName);
@@ -62,7 +63,8 @@ public sealed class DataPageDetailItemFactory
                 isCombo: true,
                 allowFreeText: false,
                 options: catalogItems,
-                highlightKind: highlightKind);
+                highlightKind: highlightKind)
+            { FieldName = fieldName };
         }
 
         var isMultiline = fieldName is "Primaere_Schaeden" or "Bemerkungen" or "Empfohlene_Sanierungsmassnahmen";
@@ -74,6 +76,7 @@ public sealed class DataPageDetailItemFactory
             commitValue: next => _commitValue(record, fieldName, next),
             isMultiline: isMultiline,
             digitsOnly: digitsOnly,
-            highlightKind: highlightKind);
+            highlightKind: highlightKind)
+        { FieldName = fieldName };
     }
 }

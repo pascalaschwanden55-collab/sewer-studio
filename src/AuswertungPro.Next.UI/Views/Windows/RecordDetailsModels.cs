@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
@@ -12,6 +12,15 @@ public enum RecordDetailHighlightKind
     None,
     Sanieren,
     AusgefuehrtDurch
+}
+
+public enum RecordDetailGroupKind
+{
+    Additional,
+    MasterData,
+    Condition,
+    RenovationCosts,
+    Documents
 }
 
 public sealed class RecordDetailItem : INotifyPropertyChanged
@@ -56,6 +65,14 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public string Label { get; }
+
+    /// <summary>
+    /// Stabiler Feldschluessel (Katalogfeld bei Haltungen, Spaltenname bei Schaechten).
+    /// Nur damit laesst sich eine persoenliche Kartenreihenfolge speichern; die
+    /// Beschriftung taugt dafuer nicht, weil sie sich aendern und doppeln kann.
+    /// Leer = Karte nimmt an der Umsortierung nicht teil.
+    /// </summary>
+    public string FieldName { get; init; } = string.Empty;
     public bool IsReadOnly { get; }
     public bool IsMultiline { get; }
     public bool IsCombo { get; }
@@ -101,6 +118,26 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
 
     public bool IsEmpty => string.IsNullOrWhiteSpace(_value);
 
+    private bool _isHiddenByUser;
+
+    /// <summary>
+    /// Vom Benutzer in der Detailansicht ausgeblendet. Getrennt von <see cref="IsVisible"/>:
+    /// das ist die fachliche Regel (Sanierungs-Folgefelder), dies die persoenliche
+    /// Einstellung. Eine Karte erscheint nur, wenn beides zutrifft.
+    /// Ausblenden veraendert weder den Wert noch einen Export.
+    /// </summary>
+    public bool IsHiddenByUser
+    {
+        get => _isHiddenByUser;
+        set
+        {
+            if (_isHiddenByUser == value)
+                return;
+            _isHiddenByUser = value;
+            OnPropertyChanged();
+        }
+    }
+
     private bool _isVisible = true;
 
     /// <summary>
@@ -123,7 +160,11 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
 
-public sealed record RecordDetailGroup(string Title, string Description, IReadOnlyList<RecordDetailItem> Items);
+public sealed record RecordDetailGroup(
+    string Title,
+    string Description,
+    IReadOnlyList<RecordDetailItem> Items,
+    RecordDetailGroupKind Kind = RecordDetailGroupKind.Additional);
 
 public sealed class RecordDetailEditorTemplateSelector : DataTemplateSelector
 {

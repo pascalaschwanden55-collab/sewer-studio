@@ -8,6 +8,25 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageDetailItemFactoryTests
 {
+    // Ohne Feldschluessel laesst sich keine persoenliche Kartenreihenfolge speichern:
+    // die Beschriftung ist dafuer nicht eindeutig genug.
+    [Theory]
+    [InlineData("Sanieren_JaNein")]  // gepflegte Auswahlliste
+    [InlineData("Zustandsklasse")]   // Auswahlliste aus dem Katalog
+    [InlineData("Bemerkungen")]      // freies Textfeld
+    public void Create_traegt_den_Feldnamen_als_Schluessel(string fieldName)
+    {
+        var factory = new DataPageDetailItemFactory(
+            name => name == "Sanieren_JaNein"
+                ? new DataPageManagedComboSpec(new[] { "Ja", "Nein" }, AllowFreeText: true)
+                : null,
+            (_, _, _) => { });
+
+        var item = factory.Create(fieldName, new HaltungRecord());
+
+        Assert.Equal(fieldName, item.FieldName);
+    }
+
     [Fact]
     public void Create_nutzt_managed_combo_spec_vor_katalog_combo()
     {

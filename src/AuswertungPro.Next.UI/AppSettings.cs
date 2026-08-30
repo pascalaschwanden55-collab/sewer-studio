@@ -567,8 +567,10 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         settings.HydraulikPanel ??= new HydraulikPanelSettings();
         settings.DataPageLayout ??= new DataPageLayoutSettings();
         settings.DataPageLayout.Columns ??= new List<DataPageColumnLayout>();
+        settings.DataPageLayout.DetailLayout ??= new DetailLayoutSettings();
         settings.SchaechtePageLayout ??= new DataPageLayoutSettings();
         settings.SchaechtePageLayout.Columns ??= new List<DataPageColumnLayout>();
+        settings.SchaechtePageLayout.DetailLayout ??= new DetailLayoutSettings();
         if (string.IsNullOrWhiteSpace(settings.LastVideoSourceFolder))
             settings.LastVideoSourceFolder = settings.LastVideoFolder;
         if (string.IsNullOrWhiteSpace(settings.LastVideoFolder))
@@ -647,6 +649,31 @@ public sealed class DataPageLayoutSettings
     public double GridZoom { get; set; } = 1.0d;
     public bool IsColumnReorderEnabled { get; set; }
     public List<DataPageColumnLayout> Columns { get; set; } = new();
+
+    /// <summary>
+    /// Persoenliche Gestaltung der Detailansicht: Spalten, Feldreihenfolge und
+    /// ausgeblendete Felder. Leer = Werkseinstellung wie bisher.
+    /// Betrifft nur die Anzeige; ein ausgeblendetes Feld behaelt seinen Wert und geht in
+    /// jeden Export weiterhin mit.
+    /// </summary>
+    public DetailLayoutSettings DetailLayout { get; set; } = new();
+}
+
+/// <summary>
+/// Gespeicherte Gestaltung der Detailansicht. Bewusst eigene, einfache Klassen statt
+/// der UI-Typen: die Einstellungsdatei soll lesbar bleiben und beim Laden nichts
+/// erzwingen, was die Oberflaeche gerade nicht hergibt.
+/// </summary>
+public sealed class DetailLayoutSettings
+{
+    public List<DetailLayoutColumnSettings> Columns { get; set; } = new();
+    public List<string> HiddenFields { get; set; } = new();
+}
+
+public sealed class DetailLayoutColumnSettings
+{
+    public string Title { get; set; } = "";
+    public List<string> Fields { get; set; } = new();
 }
 
 public sealed class DataPageColumnLayout
