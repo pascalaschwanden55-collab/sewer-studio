@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -34,7 +34,7 @@ public sealed class KatasterFeldNachschlag : IFeldWertNachschlag
         _xtfVorhanden = xtfVorhanden ?? File.Exists;
     }
 
-    public Task<FeldNachschlagErgebnis> SucheAsync(
+    public async Task<FeldNachschlagErgebnis> SucheAsync(
         FeldNachschlagAnfrage anfrage, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(anfrage);
@@ -42,19 +42,26 @@ public sealed class KatasterFeldNachschlag : IFeldWertNachschlag
 
         if (string.IsNullOrWhiteSpace(_xtfPfad) || !_xtfVorhanden(_xtfPfad))
         {
-            return Fertig(new FeldNachschlagErgebnis.NichtGefunden(
+            return new FeldNachschlagErgebnis.NichtGefunden(
                 "Der Abwasserkataster ist nicht eingerichtet. "
-                + "Die XTF-Datei laesst sich in den Einstellungen hinterlegen."));
+                + "Die XTF-Datei laesst sich in den Einstellungen hinterlegen.");
         }
 
+        // Beim ersten Aufruf entsteht die Tabelle aus einer mehrere hundert
+        // Megabyte grossen Datei. Das darf die Oberflaeche nicht einfrieren.
+        return await Task.Run(() => Suche(anfrage), ct).ConfigureAwait(false);
+    }
+
+    private FeldNachschlagErgebnis Suche(FeldNachschlagAnfrage anfrage)
+    {
         try
         {
             var treffer = SucheSchaechte(anfrage.Schachtnummer);
 
             if (treffer.Count == 0)
             {
-                return Fertig(new FeldNachschlagErgebnis.NichtGefunden(
-                    $"Schacht {anfrage.Schachtnummer} steht nicht im Abwasserkataster."));
+                return new FeldNachschlagErgebnis.NichtGefunden(
+                    $"Schacht {anfrage.Schachtnummer} steht nicht im Abwasserkataster.");
             }
 
             var vorschlaege = treffer
@@ -65,18 +72,18 @@ public sealed class KatasterFeldNachschlag : IFeldWertNachschlag
 
             if (vorschlaege.Count == 0)
             {
-                return Fertig(new FeldNachschlagErgebnis.NichtGefunden(
-                    $"Der Abwasserkataster fuehrt fuer {anfrage.Feldname} keinen Wert."));
+                return new FeldNachschlagErgebnis.NichtGefunden(
+                    $"Der Abwasserkataster fuehrt fuer {anfrage.Feldname} keinen Wert.");
             }
 
             // Zwei Schaechte mit derselben Nummer: nicht raten, sondern fragen.
-            return Fertig(vorschlaege.Count == 1
+            return vorschlaege.Count == 1
                 ? new FeldNachschlagErgebnis.Gefunden(vorschlaege[0])
-                : new FeldNachschlagErgebnis.Mehrdeutig(vorschlaege));
+                : new FeldNachschlagErgebnis.Mehrdeutig(vorschlaege);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Fertig(new FeldNachschlagErgebnis.Fehler(ex.Message));
+            return new FeldNachschlagErgebnis.Fehler(ex.Message);
         }
     }
 
@@ -131,7 +138,4 @@ public sealed class KatasterFeldNachschlag : IFeldWertNachschlag
         "Material" => schacht.Material,
         _ => null
     };
-
-    private static Task<FeldNachschlagErgebnis> Fertig(FeldNachschlagErgebnis ergebnis)
-        => Task.FromResult(ergebnis);
 }
