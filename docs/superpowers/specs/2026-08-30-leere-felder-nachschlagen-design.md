@@ -23,13 +23,16 @@ Ueber 13 Projekte mit zusammen 390 Schaechten:
 | `Strasse` | 374 | **102 (27 %)** | Grundbuch |
 | `Funktion` | 378 | **40 (10 %)** | Kataster |
 
-Bei **Haltungen** gibt es dagegen fast nichts zu holen: Haltungslaenge,
-Rohrmaterial, Nutzungsart und Strasse sind in allen drei geprueften Projekten
-zu 100 % gefuellt (72/72, 37/37, 38/38). Die einzigen Haltungs-Luecken sind
-`Eigentuemer` und `FunktionHierarchisch` — und fuer beide hat der Kataster
-keine Antwort (siehe Nicht-Ziele).
+Bei **Haltungen** ist die Lage deutlich besser. Ueber alle 475 Haltungen aller
+Projekte gemessen: `Rohrmaterial` ist 25-mal leer, `Haltungslaenge_m` 22-mal.
+In den drei zuerst geprueften Projekten (147 Haltungen) waren beide Felder
+sogar vollstaendig gefuellt.
 
-Der Schwerpunkt liegt damit eindeutig bei den **Schaechten**.
+Die grossen Haltungs-Luecken sind `Eigentuemer` und `FunktionHierarchisch` —
+und fuer beide hat der Kataster keine Antwort (siehe Nicht-Ziele).
+
+Der Schwerpunkt liegt damit eindeutig bei den **Schaechten**: 335 Faelle
+gegen 47.
 
 ### Was schon da ist
 
@@ -133,6 +136,33 @@ Zwei Implementierungen:
 - `GrundbuchFeldNachschlag` — verkettet Lage, `IParcelLookup.FindTouchedAsync`
   und `ILandRegistryLookup.ReadAsync`.
 
+#### Platzhalter sind kein Wert
+
+Der Kataster fuehrt fehlende Angaben nicht als leeres Feld, sondern als
+ausgeschriebenen Platzhalter. Im echten Bestand steht woertlich:
+
+```xml
+<Material>unbekannt</Material>
+<Dimension1>0</Dimension1>
+<Status>unbekannt</Status>
+```
+
+Wuerde der Nachschlag diese Werte durchreichen, stuende danach "unbekannt"
+im Protokoll — schlechter als ein leeres Feld, weil es wie eine gepruefte
+Aussage aussieht. `KatasterFeldNachschlag` behandelt `unbekannt`, `unbek.`,
+`0` und Leerstring deshalb als **kein Treffer** und meldet "nicht gefunden".
+
+Wie stark die Regel greift, ist je Attribut sehr verschieden. Ueber 34'403
+Normschaechte gemessen:
+
+- **`Funktion` ist zu 97 % ein echter Wert** (21'664 Kontroll_Einsteigschacht,
+  7'177 Schlammsammler, 3'604 Einlaufschacht, 440 Oelabscheider, 229
+  Dachwasserschacht, 207 Pumpwerk). Nur 1'073 tragen "andere" oder
+  "unbekannt". Die Platzhalter-Regel kostet hier also kaum Treffer.
+- **`Material` und die Dimensionen** tragen dagegen fast durchgehend
+  Platzhalter. `Material` bleibt in der Zuordnungstabelle, wird in der Praxis
+  aber selten einen Wert liefern.
+
 ### 3. `FeldNachschlagUseCase` (Application/UseCases)
 
 Waehlt anhand des Feldnamens die zustaendige Quelle, ruft sie auf und liefert
@@ -187,11 +217,35 @@ bleibt in den Feldmetadaten sichtbar, dass ein Wert nicht aus dem Import
 stammt.
 
 Geschrieben wird ueber die vorhandene Ueberladung
-`SetFieldValue(feld, wert, source, userEdited: true)`. `userEdited: true` ist
-richtig, weil der Mensch den Wert bewusst bestaetigt hat — ein spaeterer
-Import darf ihn dadurch nicht still ueberschreiben. Der vorhandene
+`SetFieldValue(feld, wert, source, userEdited: true)`. Der vorhandene
 Handwert-Schutz von `SchachtRecord` bleibt unveraendert und wird nicht
 umgangen.
+
+### Der Schutz haengt an genau einem Faden
+
+`userEdited: true` ist nicht nur "auch richtig", sondern der **einzige**
+Schutz. Das muss ausdruecklich festgehalten werden, weil die naheliegende
+Gegenannahme falsch ist:
+
+`MergeEngine.cs:124` entscheidet mit
+`if (GetPriority(importSource) > GetPriority(existingSource))` — die
+**hoehere** Prioritaet gewinnt. `GetPriority` endet auf `_ => 0`, neue
+Herkuenfte wie `Kataster` und `Grundbuch` bekommen also Prioritaet 0 und
+verlieren damit gegen **jeden** Import (`Xtf` = 80, `Pdf` = 60, sogar
+`Protocol` = 40). Eine niedrige Prioritaet schuetzt nicht, sie ist das
+Gegenteil davon.
+
+Was tatsaechlich schuetzt, steht dreissig Zeilen frueher in
+`MergeEngine.cs:95`: `if (userEdited) { AddConflict(...); continue; }` —
+noch vor jeder Prioritaetsrechnung. Genau deshalb ist `userEdited: true`
+Pflicht.
+
+Wer spaeter auf den Gedanken kommt, `userEdited: false` sei richtiger ("der
+Wert kommt schliesslich vom Kanton und nicht vom Menschen"), macht jeden
+nachgeschlagenen Wert vollstaendig ungeschuetzt. Ein Test haelt das fest
+(siehe Tests).
+
+`MergeEngine` selbst wird nicht angefasst.
 
 ## Grenzen und Risiken
 
@@ -207,6 +261,11 @@ umgangen.
   woertlich verboten; der Entwurf braucht es nicht.
 - **Die XTF muss konfiguriert sein.** Fehlt `AbwasserkatasterXtfPath`, bleibt
   der Menuepunkt gesperrt mit sichtbarem Grund.
+- **Keine Personendaten im Protokoll.** Die Grundbuchauskunft liefert Namen
+  und Wohnadressen echter Personen. In die Logdatei gehen nur Status, Dauer
+  und Fehlerklasse — nie ein Name, nie eine Adresse. Der Wert selbst steht
+  danach im Projekt, wo er hingehoert; die Logdatei wandert dagegen in
+  Diagnosepakete und Sicherungen.
 
 ## Was unberuehrt bleibt
 
@@ -218,6 +277,8 @@ Aenderung an deren Vertraegen. Kundendateien werden ausschliesslich gelesen.
 
 - `SchachtCadastreExtractor`: Liest Bezeichnung, Funktion und Lage aus einem
   kleinen XTF-Ausschnitt; erkennt eine veraltete Tabelle.
+- `KatasterFeldNachschlag`: `unbekannt`, `unbek.` und `0` ergeben "nicht
+  gefunden" und werden nie als Wert weitergereicht.
 - `FeldNachschlagUseCase`: Waehlt je Feldname die richtige Quelle; meldet
   "nicht gefunden" und "mehrdeutig" als eigene Zustaende statt als Wert.
 - `GrundbuchFeldNachschlag`: Baut aus einer Lage die erwartete kurze Linie;
@@ -226,6 +287,13 @@ Aenderung an deren Vertraegen. Kundendateien werden ausschliesslich gelesen.
   Quelle.
 - Uebernahme: Schreibt mit der neuen `FieldSource` und `userEdited: true`;
   ein bereits gefuelltes Feld wird nicht angeboten.
+- **Merge-Schutz (der wichtigste Test):** Ein Feld mit `FieldSource.Kataster`
+  und `userEdited: true` ueberlebt einen anschliessenden XTF-Import. Der
+  Gegentest gehoert dazu: Dasselbe Feld mit `userEdited: false` wird vom
+  Import ueberschrieben. Ohne diesen zweiten Test sieht die Absicherung
+  staerker aus, als sie ist — er belegt, dass der Schutz wirklich an
+  `userEdited` haengt und nicht an der Herkunft.
+- Kein Personenname und keine Adresse erscheinen in der Logausgabe.
 - Ein Waechter haelt fest, dass es keinen Sammellauf-Befehl gibt.
 
 ## Beweis
@@ -242,13 +310,44 @@ Belegt ist die Arbeit erst, wenn alles zutrifft:
 - Ein bereits gefuelltes Feld bietet den Menuepunkt nicht an.
 - Nach dem Uebernehmen steht in den Feldmetadaten die neue Herkunft.
 
+## Geprueft und verworfen
+
+Damit diese Wege nicht ein zweites Mal untersucht werden:
+
+**Ein Lagefehler im `XtfManholeExtractor` existiert nicht.** Die Vermutung
+lautete, der Leser koenne einen Punkt ausserhalb von `Lage/COORD` erwischen
+(etwa vom Deckel) und brauche einen zusaetzlichen `inLage`-Guard. Nachgeprueft
+an den echten Daten: Von **34'403 untersuchten Abwasserknoten hat kein
+einziger mehr als eine Koordinate** — die Verteilung ist exakt `{1: 34403}`.
+Der Leser setzt `inKnoten` am Start- und am Endelement sauber und liest C1/C2
+nur innerhalb eines Abwasserknotens; ein `Deckel` ist ein Geschwister-Element,
+kein Kind. Ein Guard und ein Regressionstest wuerden hier einen Fehler
+absichern, den es nicht gibt.
+
+**Eine niedrige Merge-Prioritaet als Schutzmechanismus.** Siehe "Der Schutz
+haengt an genau einem Faden" — die Prioritaetsregel wirkt umgekehrt.
+
+**`ManholeGeometry` erweitern statt eine eigene Schachttabelle zu bauen.**
+`ManholeGeometry` und sein Cache dienen der Kartendarstellung und tragen nur
+Name und Koordinaten. Eine Erweiterung um Fachattribute wuerde einen
+funktionierenden Anzeigeweg fuer einen Datenzweck umbauen. Der eigene
+`SchachtCadastreExtractor` bleibt davon getrennt — dieselbe Trennung, die
+`HaltungCadastreExtractor` schon vormacht.
+
 ## Offene Punkte fuer den Umsetzungsplan
 
 1. **Reihenfolge:** Kataster und Grundbuch in einem Schritt oder in zwei? Die
    Kette verlangt Kataster zuerst; der Nutzen liegt beim Grundbuch.
-2. **Haltungen:** Der Entwurf beschraenkt sich auf Schaechte, weil dort alle
-   gemessenen Luecken liegen. Ob `Eigentuemer` auch an Haltungen angeboten
-   wird, ist eine spaetere, additive Entscheidung.
-3. **Parallele Arbeit:** An `SchachtansichtView.xaml` und
+2. **Haltungen:** Der Entwurf beschraenkt sich auf Schaechte, weil dort die
+   grossen Luecken liegen (335 gegen 47 Faelle). `Rohrmaterial` (25 leer) und
+   `Haltungslaenge_m` (22 leer) waeren grundsaetzlich aus dem Kataster
+   erreichbar — das ist eine spaetere, additive Entscheidung. Der Vertrag
+   `IFeldWertNachschlag` ist bewusst so geschnitten, dass ein Haltungsfeld
+   ohne Vertragsaenderung andocken kann.
+3. **`Material`:** bleibt in der Zuordnungstabelle, liefert aber wegen der
+   Platzhalter-Regel voraussichtlich selten einen Wert. Ob der Menuepunkt
+   dafuer ueberhaupt erscheinen soll, entscheidet sich am besten nach dem
+   ersten Praxistest.
+4. **Parallele Arbeit:** An `SchachtansichtView.xaml` und
    `RecordDetailsView` wird derzeit gearbeitet (Detailansicht-Umbau). Der
    Umsetzungsplan muss den Stand zu seinem Beginn erneut pruefen.
