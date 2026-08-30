@@ -109,7 +109,13 @@ public sealed class UriParcelWfsClient : IParcelLookup
     /// uebernommen. Ein blosses Abschneiden vor der ersten Klammer ergaebe eine
     /// verschachtelte und damit ungueltige Geometrie.
     /// </summary>
-    private static IEnumerable<string> ExtrahiereLinienkoerper(IReadOnlyList<string> wktLines)
+    /// <summary>
+    /// Intern sichtbar, damit ein Test das erwartete WKT-Format gegen den
+    /// echten Vertrag pruefen kann statt gegen einen Nachbau. Ein Eintrag ohne
+    /// LINESTRING-Praefix wird stillschweigend verworfen - genau daran ist der
+    /// Schacht-Nachschlag am 2026-08-30 gescheitert.
+    /// </summary>
+    internal static IEnumerable<string> ExtrahiereLinienkoerper(IReadOnlyList<string> wktLines)
     {
         foreach (var linie in wktLines)
         {
