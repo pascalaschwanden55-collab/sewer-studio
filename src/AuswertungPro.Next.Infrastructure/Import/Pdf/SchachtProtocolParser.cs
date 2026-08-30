@@ -54,8 +54,9 @@ internal static class SchachtProtocolParser
                       ?? GetFirst(@"(?<v>" + SewerTextPatterns.GermanDateCore + @")[ \t]*\n[^\n\r]{0,80}\bDatum\b");
         var datum = NormalizeDate(dateRaw);
 
-        var funktion = GetFirst(@"\bSchachttyp\s+(?<v>[^\n\r]+)")?.Trim()
-                       ?? GetFirst(@"\bSchachtfunktion\s+(?<v>[^\n\r]+)")?.Trim();
+        var funktion = SchneideNachbarspalteAb(
+            GetFirst(@"\bSchachttyp\s+(?<v>[^\n\r]+)")?.Trim()
+            ?? GetFirst(@"\bSchachtfunktion\s+(?<v>[^\n\r]+)")?.Trim());
 
         var stammdaten = SchachtStammdatenParser.Parse(normalized);
 
@@ -80,6 +81,53 @@ internal static class SchachtProtocolParser
             Status: status,
             Link: null);
     }
+
+    /// <summary>
+    /// In den Protokollen steht die Schachtfunktion in derselben Textzeile wie
+    /// die naechsten Tabellenspalten ("Dachwasserschacht   Deckeltyp   -   12").
+    /// Eine Regex bis zum Zeilenende nimmt sie mit — deshalb hier abschneiden.
+    ///
+    /// Zwei Regeln, weil eine nicht reicht: Der Spaltenabstand ist meist gross,
+    /// aber bei einer mehrwortigen Funktion ("Einlaufschacht mit
+    /// Schlammsammler Deckeltyp") trennt nur ein einzelnes Leerzeichen. Dann
+    /// hilft allein der bekannte Name der Folgespalte.
+    /// </summary>
+    internal static string? SchneideNachbarspalteAb(string? wert)
+    {
+        if (string.IsNullOrWhiteSpace(wert))
+            return wert;
+
+        var text = wert;
+
+        // 1. Bekannte Folgespalten der Schachtprotokolle.
+        foreach (var spalte in NachbarspaltenNamen)
+        {
+            var i = text.IndexOf(spalte, StringComparison.OrdinalIgnoreCase);
+            if (i > 0)
+                text = text[..i];
+        }
+
+        // 2. Zwei oder mehr Leerzeichen trennen im PDF-Layout die Spalten.
+        var abstand = Regex.Match(text, @"\s{2,}");
+        if (abstand.Success && abstand.Index > 0)
+            text = text[..abstand.Index];
+
+        var sauber = text.Trim();
+        return sauber.Length == 0 ? null : sauber;
+    }
+
+    /// <summary>
+    /// Spaltenueberschriften, die in den Protokollen direkt auf die
+    /// Schachtfunktion folgen. Die Liste darf wachsen, wenn ein weiteres
+    /// Protokolllayout auftaucht.
+    /// </summary>
+    private static readonly string[] NachbarspaltenNamen =
+    [
+        "Deckeltyp",
+        "Belastungsklasse",
+        "Deckeldurchmesser",
+        "Schachtform",
+    ];
 
     /// <summary>
     /// Leitet den Schacht-Status (offen/abgeschlossen) aus Schaeden und explizitem Status-Text ab.
