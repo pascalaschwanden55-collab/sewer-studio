@@ -36,11 +36,16 @@ sie erhalten einen Namensvermerk statt einer Umbenennung.
 
 Die Voruntersuchung hat vier Punkte gefunden, die das Design nicht kannte:
 
-1. **Es sind sechs Waechter, nicht drei.** Zusaetzlich zu den drei genannten
+1. **Es sind sieben Waechter, nicht drei.** Zusaetzlich zu den drei genannten
    brechen beim Loeschen von `KarteViewModel` bzw. `KarteWindow`:
    `InspectionProtocolFileLocatorDependencyTests.cs:45`,
    `KatasterXtfPathResolverDependencyTests.cs:85` (Datei bleibt, nur eine Zeile
    faellt) und `WindowOpenCloseSmokeTests.cs:14`.
+   Den siebten fand erst der Testlauf:
+   `DesignAuditThemeResourceTests.Shell_navigation_uses_unique_semantic_icons`
+   zaehlt die Navigationseintraege (16 -> 15) und bricht schon durch Aufgabe 1.
+   Er war durch Suche nicht auffindbar, weil er die Zahl aus einem
+   Regex-Treffer ableitet und das Wort "Karte" nirgends vorkommt.
 2. **`SettingsProgramCleanupRequestFactory.cs:85`** liest `OfflineBasemapPath`
    als geschuetzten Ordner der Programm-Aufraeumfunktion. Geprueft und
    unbedenklich: Die Aufraeumfunktion durchsucht nur `src`, `tests`, `tools`,
@@ -174,11 +179,9 @@ In `src/AuswertungPro.Next.UI/MainWindow.xaml` den Menuepunkt "Karte..."
                     </MenuItem>
 ```
 
-Und den Menuepunkt "Karte abkoppeln" (Zeilen 133-138) samt dem `<Separator/>`
-direkt darueber (Zeile 132) loeschen:
+Und den Menuepunkt "Karte abkoppeln" (Zeilen 133-138) loeschen:
 
 ```xml
-                    <Separator/>
                     <MenuItem Header="Karte abkoppeln" Click="OpenKarte_Click"
                               ToolTip="Kartenansicht in einem eigenen Fenster oeffnen.">
                         <MenuItem.Icon>
@@ -187,9 +190,11 @@ direkt darueber (Zeile 132) loeschen:
                     </MenuItem>
 ```
 
-Der Separator gehoerte allein zu diesem Eintrag; ohne ihn stuende sonst ein
-Trennstrich zwischen "Fokusmodus" und "System-Monitor oeffnen", der nichts
-mehr trennt.
+**Korrektur bei der Umsetzung:** Der `<Separator/>` in Zeile 132 bleibt stehen.
+Beim Lesen im Umfeld zeigte sich, dass er nicht allein zum Kartenpunkt gehoert:
+Er trennt "Fokusmodus" von den Fenster-Aktionen, und "System-Monitor oeffnen"
+steht weiterhin dahinter. Das Menue "Ansicht" lautet danach: Fokusmodus,
+Trennstrich, System-Monitor oeffnen.
 
 - [ ] **Schritt 5: Abkoppel-Code aus MainWindow.xaml.cs entfernen**
 
@@ -229,6 +234,24 @@ Sie muss deshalb schon jetzt weg, nicht erst in Aufgabe 2.
 
 ```bash
 git rm tests/AuswertungPro.Next.UI.Tests/KarteDockingTests.cs
+```
+
+- [ ] **Schritt 7b: Navigationszaehler anpassen (erst beim Testlauf entdeckt)**
+
+`DesignAuditThemeResourceTests.Shell_navigation_uses_unique_semantic_icons`
+zaehlt die Eintraege der Navigationsliste und erwartet 16. Nach dem Entfernen
+des Kartenpunkts sind es 15. Das ist der siebte Waechter — weder das Design
+noch die Voruntersuchung hatten ihn gefunden, weil er die Zahl aus einem
+Regex-Treffer ableitet und das Wort "Karte" nicht enthaelt.
+
+In `tests/AuswertungPro.Next.UI.Tests/DesignAuditThemeResourceTests.cs`
+Zeile 594 durch zwei Zeilen ersetzen — dieselbe Form wie beim
+Registrierungszaehler, also mit Begruendung in der Historie:
+
+```csharp
+        // 15 -> 16: Navigationspunkt "Dossiers" (Eigentuemerdossier je Liegenschaft).
+        // 16 -> 15: Kartenansicht entfernt; die raeumliche Arbeit laeuft ueber QGIS.
+        Assert.Equal(15, matches.Count);
 ```
 
 - [ ] **Schritt 8: Bauen**

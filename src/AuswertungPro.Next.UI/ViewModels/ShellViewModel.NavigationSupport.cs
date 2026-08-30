@@ -53,7 +53,6 @@ public sealed partial class ShellViewModel
             "Schaechte" => "Schachtdaten anzeigen, kontrollieren und zugehoerige Protokolle oeffnen.",
             "Import" => "Inspektionsdaten, PDFs, Videos und Zusatzquellen ins Projekt uebernehmen.",
             "Export" => "Excel- und PDF-Ausgaben fuer Auswertung und Weitergabe erzeugen.",
-            "Karte" => "Haltungen raeumlich ansehen und von der Karte aus oeffnen.",
             "Medienkonflikte" => "Fehlende, doppelte oder mehrdeutige Medienzuordnungen klaeren.",
             "Druckcenter" => "Dossiers und Berichte fuer Haltungen oder Projektumfang erstellen.",
             "Dossiers" => "Eigentuemerdossiers zusammenstellen, bearbeiten und als PDF ausgeben.",

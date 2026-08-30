@@ -591,7 +591,8 @@ public sealed class DesignAuditThemeResourceTests
         var icons = matches.Select(match => match.Groups["icon"].Value).ToArray();
 
         // 15 -> 16: Navigationspunkt "Dossiers" (Eigentuemerdossier je Liegenschaft).
-        Assert.Equal(16, matches.Count);
+        // 16 -> 15: Kartenansicht entfernt; die raeumliche Arbeit laeuft ueber QGIS.
+        Assert.Equal(15, matches.Count);
         Assert.Equal(icons.Length, icons.Distinct(StringComparer.Ordinal).Count());
         Assert.Contains("new(\"\\uE8F1\", \"Dossiers\"", navBlock);
         Assert.Contains("new(\"\\uE80A\", \"Schacht-Matrix\"", navBlock);

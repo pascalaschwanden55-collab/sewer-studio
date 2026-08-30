@@ -138,18 +138,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             // Segoe MDL2: Import = Download, Export = Upload
             new("\uE896", "Import", () => new Pages.ImportPageViewModel(this, _sp)),
             new("\uE898", "Export", () => new Pages.ExportPageViewModel(this, _sp), canOpenWithoutProject: true),
-            new("\uE707", "Karte", () => new AuswertungPro.Next.UI.Views.Pages.KartePage
-            {
-                DataContext = new Pages.KarteViewModel(
-                    this,
-                    settings: _sp.Settings,
-                    networkFeatures: _sp.NetworkFeatures,
-                    playVideo: KarteVideoLauncher.Create(_sp),
-                    inspectionProtocolFiles: _sp.InspectionProtocolFiles,
-                    katasterXtfPaths: _sp.KatasterXtfPaths,
-                    offlineBasemapPaths: _sp.OfflineBasemapPaths,
-                    basemapLayers: _sp.BasemapLayers)
-            }),
             new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(
                 getProject: () => Project,
                 getProjectFolder: GetProjectFolder,
@@ -393,9 +381,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         OnPropertyChanged(nameof(Project));
         SetStatus($"Projekt: {p.Name}");
         RefreshTitleAndDirty();
-
-        // Kartennetz im Hintergrund vorladen -> die Karte ist beim ersten Oeffnen sofort da.
-        Mapping.KarteNetzVorladen.ImHintergrund(_sp, p);
     }
 
     /// <summary>

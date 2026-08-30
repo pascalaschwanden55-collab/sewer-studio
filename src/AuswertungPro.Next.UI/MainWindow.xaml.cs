@@ -19,7 +19,6 @@ public partial class MainWindow : Window
     private readonly IDialogService _dialogs;
     private bool _isDataContextDisposed;
     private bool _startupEntrancePlayed;
-    private KarteWindow? _detachedKarteWindow;
 
     public MainWindow()
     {
@@ -197,109 +196,6 @@ public partial class MainWindow : Window
             shell?.SetStatus($"KI-Start fehlgeschlagen: {userMessage}");
             sp.Dialogs.Error($"KI konnte nicht gestartet werden:\n{userMessage}", "KI starten");
         }
-    }
-
-    private void OpenKarte_Click(object sender, RoutedEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        if (_detachedKarteWindow is { IsVisible: true } existingWindow)
-        {
-            if (existingWindow.WindowState == WindowState.Minimized)
-                existingWindow.WindowState = WindowState.Normal;
-
-            existingWindow.Activate();
-            return;
-        }
-
-        if (DataContext is not ShellViewModel shell)
-            return;
-
-        if (shell.CurrentPage is KartePage currentPage)
-        {
-            OpenExistingKartePage(shell, currentPage);
-            return;
-        }
-
-        OpenNewKarteWindow(shell);
-    }
-
-    private void OpenExistingKartePage(ShellViewModel shell, KartePage page)
-    {
-        var placeholder = CreateKarteDetachedPlaceholder();
-
-        shell.CurrentPage = placeholder;
-        UpdateLayout();
-
-        var window = new KarteWindow(page)
-        {
-            Owner = this
-        };
-
-        TrackDetachedKarteWindow(window);
-        window.Closing += (_, _) =>
-        {
-            var content = window.TakeContent();
-            if (ReferenceEquals(shell.CurrentPage, placeholder) && content is KartePage dockedPage)
-                shell.CurrentPage = dockedPage;
-        };
-        window.Show();
-    }
-
-    private void OpenNewKarteWindow(ShellViewModel shell)
-    {
-        var page = new KartePage
-        {
-            DataContext = new ViewModels.Pages.KarteViewModel(shell, GetServiceProvider())
-        };
-
-        var window = new KarteWindow(page)
-        {
-            Owner = this
-        };
-
-        TrackDetachedKarteWindow(window);
-        window.Show();
-    }
-
-    private void TrackDetachedKarteWindow(KarteWindow window)
-    {
-        _detachedKarteWindow = window;
-        window.Closed += (_, _) =>
-        {
-            if (ReferenceEquals(_detachedKarteWindow, window))
-                _detachedKarteWindow = null;
-        };
-    }
-
-    private FrameworkElement CreateKarteDetachedPlaceholder()
-    {
-        var panel = new StackPanel
-        {
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            MaxWidth = 420
-        };
-
-        panel.Children.Add(new TextBlock
-        {
-            Text = "Karte ist abgekoppelt",
-            FontSize = 18,
-            FontWeight = FontWeights.SemiBold,
-            TextAlignment = TextAlignment.Center,
-            Foreground = TryFindResource("TextBrush") as Brush
-        });
-
-        panel.Children.Add(new TextBlock
-        {
-            Text = "Schliesse das Kartenfenster, um sie hier wieder anzudocken.",
-            Margin = new Thickness(0, 6, 0, 0),
-            TextAlignment = TextAlignment.Center,
-            Foreground = TryFindResource("MutedBrush") as Brush
-        });
-
-        return panel;
     }
 
     private void OpenSystemMonitor_Click(object sender, RoutedEventArgs e)

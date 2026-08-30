@@ -68,10 +68,6 @@
                 <views:SchattenauswertungPage/>
             </DataTemplate>
 
-            <DataTemplate DataType="{x:Type vm:KarteViewModel}">
-                <views:KartePage/>
-            </DataTemplate>
-
         </ResourceDictionary>
     </Application.Resources>
 </Application>
