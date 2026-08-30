@@ -22,7 +22,22 @@ public enum FieldSource
     /// aber eine eigene Quelle - sonst waere spaeter nicht unterscheidbar, woher ein
     /// Schachtwert stammt.</summary>
     Spro = 8,
-    Manual = 10
+    Manual = 10,
+
+    /// <summary>
+    /// Aus dem amtlichen Abwasserkataster nachgeschlagen und vom Bearbeiter
+    /// bestaetigt. Der Schutz vor dem naechsten Import kommt NICHT von dieser
+    /// Herkunft, sondern allein davon, dass beim Uebernehmen
+    /// userEdited: true gesetzt wird — MergeEngine.GetPriority kennt diesen
+    /// Wert nicht und gibt ihm ueber den Fall-through die 0.
+    /// </summary>
+    Kataster = 11,
+
+    /// <summary>
+    /// Aus der Grundbuchauskunft nachgeschlagen und vom Bearbeiter bestaetigt.
+    /// Fuer den Schutz gilt dasselbe wie bei <see cref="Kataster"/>.
+    /// </summary>
+    Grundbuch = 12
 }
 
 

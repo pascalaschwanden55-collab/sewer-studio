@@ -12,6 +12,10 @@ namespace AuswertungPro.Next.Infrastructure.Map;
 /// </summary>
 public sealed class SchachtCadastreTableFileStore : ISchachtCadastreTableStore
 {
+    /// <summary>Kopfzeile der TSV-Tabelle.</summary>
+    public const string TableHeader =
+        "Bezeichnung\tFunktion\tMaterial\tDimension1\tDimension2\tStatus\tOst\tNord";
+
     public IEnumerable<CadastreSchacht> Extract(string xtfPath)
     {
         // Die Fachdaten stehen am Normschacht, die Koordinaten am
@@ -167,7 +171,7 @@ public sealed class SchachtCadastreTableFileStore : ISchachtCadastreTableStore
         {
             writer.WriteLine(
                 $"# source={xtfPath}\tbytes={sourceInfo.Length}\tmtimeUtc={sourceInfo.LastWriteTimeUtc:O}");
-            writer.WriteLine(SchachtCadastreExtractor.TableHeader);
+            writer.WriteLine(TableHeader);
 
             foreach (var schacht in Extract(xtfPath))
             {
