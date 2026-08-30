@@ -173,6 +173,12 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public bool IsProjectReady => _shell.IsProjectReady;
     public bool IsDataGridReadOnly => !_shell.IsProjectReady;
 
+    /// <summary>
+    /// Schlaegt leere Haltungsfelder beim Kanton nach. Null, wenn das
+    /// ViewModel ohne Dienste entstand.
+    /// </summary>
+    internal AuswertungPro.Next.Application.UseCases.FeldNachschlagUseCase? FeldNachschlag { get; }
+
     public DataPageViewModel(ShellViewModel shell, ServiceProvider services, DataPageStartFilter? startFilter = null)
     {
         _shell = shell;
@@ -441,6 +447,9 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _projectBindingController.Start();
         UpdateLearningInfo();
         LoadTrainedHaltungenAsync().SafeFireAndForget("TrainedHaltungen");
+
+        // Nachschlagen leerer Felder beim Kanton (Kataster/Grundbuch).
+        FeldNachschlag = services.FeldNachschlag;
     }
 
     public void Dispose()

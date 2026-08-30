@@ -83,13 +83,13 @@ public sealed class GrundbuchFeldNachschlagTests
     }
 
     [Fact]
-    public void Die_Punktlinie_wird_wirklich_an_den_Dienst_gegeben()
+    public async Task Die_Punktlinie_wird_wirklich_an_den_Dienst_gegeben()
     {
         var parzellen = new FesteParzellen(Parzelle("439"));
         var dienst = new GrundbuchFeldNachschlag(
             _ => (2692606.892, 1192380.717), parzellen, new FestesGrundbuch(Eintrag("Muster, Hans")));
 
-        _ = dienst.SucheAsync(new FeldNachschlagAnfrage("33429", "Eigentuemer")).Result;
+        await dienst.SucheAsync(new FeldNachschlagAnfrage("33429", "Eigentuemer"));
 
         Assert.NotNull(parzellen.LetzteLinien);
         Assert.Single(parzellen.LetzteLinien!);

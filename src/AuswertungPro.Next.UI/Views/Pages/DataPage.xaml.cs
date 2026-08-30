@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -54,7 +54,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
         FilterChips.StartFilterZurueckgesetzt += EntferneStartFilter;
         _haltungDetailItemFactory = new DataPageDetailItemFactory(
             ResolveManagedComboSpec,
-            CommitHaltungDetailField);
+            CommitHaltungDetailField,
+            BaueNachschlagBefehl);
         _recordDetailsDialogController = new DataPageRecordDetailsDialogController(
             BuildHaltungRecordDetails,
             CreateSuggestMeasuresCommand);
