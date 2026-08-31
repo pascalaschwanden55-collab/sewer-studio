@@ -125,6 +125,29 @@ public sealed class NachschlagKontextmenueTests
                 TextMenue(Textfeld("Haltungslaenge_m", "")),
                 erwarteNachschlag: true);
 
+            // 7b. Ein geleertes Feld muss den Rechtsklick sofort wieder
+            //     anbieten - ohne die Seite neu aufzubauen. Die Vorlage
+            //     entscheidet ueber einen Ausloeser; der greift nur, wenn das
+            //     Feld die Aenderung auch meldet.
+            var geleert = Auswahlfeld("FunktionHierarchisch", verwaltet: false, wert: "Hauptleitung");
+            var box = ComboBoxFuer(geleert);
+            if (box.ContextMenu is not null)
+                befunde.Add("gefuelltes Feld: traegt schon vor dem Leeren ein Menue.");
+
+            geleert.Value = "";
+            Warte();
+
+            if (box.ContextMenu is null)
+            {
+                befunde.Add(
+                    "geleertes Feld: kein Kontextmenue - nach dem Loeschen muss der "
+                    + "Nachschlag sofort wieder erscheinen.");
+            }
+            else if (!Punkte(box.ContextMenu).Any(t => t.Contains("nachschlagen", StringComparison.OrdinalIgnoreCase)))
+            {
+                befunde.Add("geleertes Feld: Menue ohne Nachschlag-Punkt.");
+            }
+
             // 8. Das Stapelfenster muss sich ueberhaupt laden lassen. Ein
             //    erfundener Ressourcenname faellt in WPF sonst still aus -
             //    genau so entstand das unlesbare Vorschlagsfenster.
@@ -182,10 +205,10 @@ public sealed class NachschlagKontextmenueTests
             .Select(m => m.Header?.ToString() ?? "")
             .ToArray();
 
-    private static RecordDetailItem Auswahlfeld(string feld, bool verwaltet)
+    private static RecordDetailItem Auswahlfeld(string feld, bool verwaltet, string wert = "")
         => new(
             label: feld,
-            value: "",
+            value: wert,
             commitValue: _ => { },
             isCombo: true,
             allowFreeText: true,
@@ -227,7 +250,9 @@ public sealed class NachschlagKontextmenueTests
             BauteilArt = BauteilArt.Haltung
         };
 
-    private static ContextMenu? ComboMenue(RecordDetailItem item)
+    private static ContextMenu? ComboMenue(RecordDetailItem item) => ComboBoxFuer(item).ContextMenu;
+
+    private static ComboBox ComboBoxFuer(RecordDetailItem item)
     {
         var quelle = new RecordDetailsView();
         var box = new ComboBox
@@ -236,7 +261,7 @@ public sealed class NachschlagKontextmenueTests
             DataContext = item
         };
         Zeige(box, quelle);
-        return box.ContextMenu;
+        return box;
     }
 
     private static ContextMenu? TextMenue(RecordDetailItem item)
@@ -258,6 +283,13 @@ public sealed class NachschlagKontextmenueTests
     /// Das Feld braucht die Ressourcen der Detailansicht und einen echten
     /// Layoutlauf - erst dann werten die Ausloeser der Vorlage aus.
     /// </summary>
+    /// <summary>Laesst WPF die Ausloeser der Vorlage neu bewerten.</summary>
+    private static void Warte()
+    {
+        System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(
+            () => { }, System.Windows.Threading.DispatcherPriority.Render);
+    }
+
     private static void Zeige(FrameworkElement inhalt, RecordDetailsView quelle)
     {
         var wirt = new Grid();
