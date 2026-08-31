@@ -7,13 +7,15 @@ namespace AuswertungPro.Next.Infrastructure.Dossiers;
 
 /// <summary>
 /// Gemeinsamer Zusammenbau fuer echte Dossier-Ausgabe und Vorschau:
-/// Word-PDF, der feste einseitige Erklaeranhang, danach die uebrigen
-/// Beilagen. Der Pflichtanhang wird nur temporaer geschrieben und gelangt nie
-/// in die Eigentums- oder Bereinigungslogik des Kundenordners.
+/// Word-PDF, der feste einseitige Erklaeranhang, danach die Haltungs- und
+/// Schachtliste und erst zuletzt die uebrigen Beilagen. Erklaerblatt und
+/// Listen werden nur temporaer geschrieben und gelangen nie in die Eigentums-
+/// oder Bereinigungslogik des Kundenordners.
 /// </summary>
 internal sealed class DossierPdfPackageComposer
 {
     internal const string TemporaryFilePrefix = "dossier_zustandsklassen_";
+    internal const string TemporaryComponentListFilePrefix = "dossier_bauteilliste_";
 
     private readonly IPdfMergeService _pdfMerge;
     private readonly IDossierConditionClassPdfService _conditionClassPdf;
@@ -33,6 +35,7 @@ internal sealed class DossierPdfPackageComposer
         string temporaryFolder)
         => Compose(
             wordPdf,
+            [],
             attachmentPaths,
             temporaryFolder,
             out _);
@@ -41,10 +44,34 @@ internal sealed class DossierPdfPackageComposer
         byte[] wordPdf,
         IReadOnlyList<string> attachmentPaths,
         string temporaryFolder,
-        out IReadOnlySet<int> conditionClassPageNumbers)
+        out IReadOnlySet<int> mandatoryPageNumbers)
+        => Compose(
+            wordPdf,
+            [],
+            attachmentPaths,
+            temporaryFolder,
+            out mandatoryPageNumbers);
+
+    /// <param name="componentListPdfs">
+    /// Haltungs- und Schachtliste in dieser Reihenfolge, jeweils frisch aus dem
+    /// aktuellen Dossierstand gerendert. Eine leere Liste bedeutet: dieses
+    /// Dossier hat dazu nichts, das Blatt entfaellt.
+    /// </param>
+    /// <param name="mandatoryPageNumbers">
+    /// Alle automatisch erzeugten Blaetter — Erklaeranhang UND Listen. Sie
+    /// bleiben auch dann in der Ausgabe, wenn die Seitenauswahl sie abwaehlen
+    /// wollte.
+    /// </param>
+    public byte[] Compose(
+        byte[] wordPdf,
+        IReadOnlyList<byte[]> componentListPdfs,
+        IReadOnlyList<string> attachmentPaths,
+        string temporaryFolder,
+        out IReadOnlySet<int> mandatoryPageNumbers)
     {
-        conditionClassPageNumbers = new HashSet<int>();
+        mandatoryPageNumbers = new HashSet<int>();
         ArgumentNullException.ThrowIfNull(wordPdf);
+        ArgumentNullException.ThrowIfNull(componentListPdfs);
         ArgumentNullException.ThrowIfNull(attachmentPaths);
         ArgumentException.ThrowIfNullOrWhiteSpace(temporaryFolder);
 
@@ -60,39 +87,62 @@ internal sealed class DossierPdfPackageComposer
                 "Der Erkläranhang muss genau eine PDF-Seite enthalten.");
         }
 
-        conditionClassPageNumbers = Enumerable
-            .Range(wordPageCount + 1, explanationPageCount)
+        // Erst pruefen, dann schreiben: Eine unlesbare Liste darf keine
+        // Temp-Datei hinterlassen.
+        var componentListPageCount = 0;
+        foreach (var componentList in componentListPdfs)
+        {
+            componentListPageCount += ReadPageCount(
+                componentList,
+                "Die Bauteilliste");
+        }
+
+        var generatedPageCount = explanationPageCount + componentListPageCount;
+        mandatoryPageNumbers = Enumerable
+            .Range(wordPageCount + 1, generatedPageCount)
             .ToHashSet();
 
         Directory.CreateDirectory(temporaryFolder);
         var explanationPath = Path.Combine(
             temporaryFolder,
             TemporaryFilePrefix + Guid.NewGuid().ToString("N") + ".pdf");
+        var componentListPaths = new List<string>(componentListPdfs.Count);
 
         try
         {
             File.WriteAllBytes(explanationPath, explanationPdf);
 
-            var withExplanation = _pdfMerge.MergeWithOriginals(
+            foreach (var componentList in componentListPdfs)
+            {
+                var listPath = Path.Combine(
+                    temporaryFolder,
+                    TemporaryComponentListFilePrefix + Guid.NewGuid().ToString("N") + ".pdf");
+                File.WriteAllBytes(listPath, componentList);
+                componentListPaths.Add(listPath);
+            }
+
+            var withGeneratedPages = _pdfMerge.MergeWithOriginals(
                 wordPdf,
-                [explanationPath]);
+                [explanationPath, .. componentListPaths]);
             var combinedPageCount = ReadPageCount(
-                withExplanation,
+                withGeneratedPages,
                 "Das Dossier mit Erkläranhang");
 
-            if (combinedPageCount != wordPageCount + explanationPageCount)
+            if (combinedPageCount != wordPageCount + generatedPageCount)
             {
                 throw new InvalidOperationException(
                     "Der Erkläranhang konnte nicht sicher in das Dossier eingefügt werden.");
             }
 
             return attachmentPaths.Count == 0
-                ? withExplanation
-                : _pdfMerge.MergeWithOriginals(withExplanation, attachmentPaths);
+                ? withGeneratedPages
+                : _pdfMerge.MergeWithOriginals(withGeneratedPages, attachmentPaths);
         }
         finally
         {
             TryDelete(explanationPath);
+            foreach (var listPath in componentListPaths)
+                TryDelete(listPath);
         }
     }
 

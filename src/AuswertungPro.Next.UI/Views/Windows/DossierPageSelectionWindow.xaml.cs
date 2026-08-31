@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -33,6 +33,7 @@ public partial class DossierPageSelectionWindow : Window
     private readonly byte[] _pdf;
     private readonly IDossierPreviewPageRasterizer _seiten;
     private readonly DossierPageSelection _auswahl;
+    private readonly IReadOnlyDictionary<int, string> _pflichtblattNamen;
     private readonly CancellationTokenSource _lebenszeit = new();
 
     private const uint Vorschaubreite = 260;
@@ -40,14 +41,15 @@ public partial class DossierPageSelectionWindow : Window
     private DossierPageSelectionWindow(
         byte[] pdf,
         int blaetter,
-        IReadOnlySet<int> pflichtblaetter,
+        IReadOnlyDictionary<int, string> pflichtblattNamen,
         IDossierPreviewPageRasterizer seiten)
     {
         InitializeComponent();
 
         _pdf = pdf;
         _seiten = seiten;
-        _auswahl = new DossierPageSelection(blaetter, pflichtblaetter);
+        _pflichtblattNamen = pflichtblattNamen;
+        _auswahl = new DossierPageSelection(blaetter, pflichtblattNamen.Keys);
 
         Closed += (_, _) =>
         {
@@ -73,12 +75,12 @@ public partial class DossierPageSelectionWindow : Window
         ArgumentNullException.ThrowIfNull(seiten);
 
         int blaetter;
-        IReadOnlySet<int> pflichtblaetter;
+        Dictionary<int, string> pflichtblattNamen;
         try
         {
             using var dokument = PdfDocument.Open(pdf);
             blaetter = dokument.NumberOfPages;
-            pflichtblaetter = FindePflichtblaetter(dokument);
+            pflichtblattNamen = LiesPflichtblattNamen(dokument);
         }
         catch (Exception)
         {
@@ -90,7 +92,7 @@ public partial class DossierPageSelectionWindow : Window
         if (blaetter <= 1)
             return new HashSet<int>();
 
-        var fenster = new DossierPageSelectionWindow(pdf, blaetter, pflichtblaetter, seiten)
+        var fenster = new DossierPageSelectionWindow(pdf, blaetter, pflichtblattNamen, seiten)
         {
             Owner = besitzer
         };
@@ -106,21 +108,32 @@ public partial class DossierPageSelectionWindow : Window
     }
 
     private static IReadOnlySet<int> FindePflichtblaetter(PdfDocument dokument)
+        => new HashSet<int>(LiesPflichtblattNamen(dokument).Keys);
+
+    /// <summary>
+    /// Je Pflichtseite ihr Name — Erklaerblatt, Haltungsliste oder Schachtliste.
+    /// Erkannt wird ausschliesslich die unsichtbare Marke, nie der sichtbare
+    /// Titel: Eine Kundenbeilage mit derselben Ueberschrift bleibt abwaehlbar.
+    /// </summary>
+    private static Dictionary<int, string> LiesPflichtblattNamen(PdfDocument dokument)
     {
-        var gefunden = new HashSet<int>();
+        var gefunden = new Dictionary<int, string>();
         foreach (var seite in dokument.GetPages())
         {
             var text = string.Join(" ", seite.GetWords().Select(wort => wort.Text));
-            if (text.Contains(
-                    DossierConditionClassDefinitions.PdfRequiredPageMarker,
-                    StringComparison.Ordinal))
-            {
-                gefunden.Add(seite.Number);
-            }
+            var name = DossierMandatoryPageMarkers.FindLabel(text);
+            if (name is not null)
+                gefunden[seite.Number] = name;
         }
 
         return gefunden;
     }
+
+    /// <summary>Beschriftung einer Blattkarte — WPF-frei und dadurch pruefbar.</summary>
+    internal static string BeschrifteBlatt(int nummer, string? pflichtblattName)
+        => pflichtblattName is null
+            ? $"Blatt {nummer}"
+            : $"Blatt {nummer} · {pflichtblattName} (Pflichtblatt)";
 
     /// <summary>Für jedes Blatt eine Karte — zuerst ohne Bild, damit das Fenster sofort steht.</summary>
     private void BaueKarten()
@@ -132,6 +145,9 @@ public partial class DossierPageSelectionWindow : Window
     private Border BaueKarte(int nummer)
     {
         var istPflichtblatt = _auswahl.IstPflichtblatt(nummer);
+        var pflichtblattName = _pflichtblattNamen.TryGetValue(nummer, out var name)
+            ? name
+            : null;
         var bild = new Image
         {
             Width = Vorschaubreite,
@@ -142,13 +158,11 @@ public partial class DossierPageSelectionWindow : Window
 
         var haken = new CheckBox
         {
-            Content = istPflichtblatt
-                ? $"Blatt {nummer} · Dossier-Erklärung (Pflichtblatt)"
-                : $"Blatt {nummer}",
+            Content = BeschrifteBlatt(nummer, pflichtblattName),
             IsChecked = true,
             IsEnabled = !istPflichtblatt,
             ToolTip = istPflichtblatt
-                ? "Diese Erklärseite gehört zu jedem Eigentümerdossier."
+                ? $"Dieses Blatt ({pflichtblattName}) gehört fest zum Eigentümerdossier."
                 : null,
             Foreground = (Brush)FindResource("TextBrush")
         };

@@ -554,8 +554,10 @@ public sealed partial class DossiersPageViewModel
 
             // Vor dem Schreiben alle Blaetter zeigen: Erst nach dem
             // Zusammenfuehren steht fest, was am Ende in der Datei stuende.
+            // Mit dem Dossierstand statt nur dem Ordner: Nur so koennen Haltungs-
+            // und Schachtliste frisch erzeugt und fest eingefuegt werden.
             var result = await _pdfAssembly.AssembleAsync(
-                request.TargetFolder,
+                request,
                 (pdf, _) => Task.FromResult(_dialogWindows.ChoosePages(pdf)));
 
             StatusMessage = result.Message;

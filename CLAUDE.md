@@ -79,19 +79,31 @@
 - `IDossierComponentListExportService` veroeffentlicht eine Liste erst nach dem bewussten
   Klick auf `Haltungsliste erstellen` oder `Schachtliste erstellen`. Er bindet das Ziel an
   den ausgewaehlten Liegenschaftsordner, schreibt ueber eine Temp-Datei und waehlt bei einer
-  vorhandenen Liste einen freien Namen. Keine bestehende Datei wird ersetzt. Die Listen
-  bleiben eigene Dateien und werden nicht still in `Eigentuemerdossier_komplett.pdf`
-  eingefuegt.
+  vorhandenen Liste einen freien Namen. Keine bestehende Datei wird ersetzt. Diese
+  Dateien im Liegenschaftsordner sind der getrennte Weg fuer eine einzelne Liste; das
+  Gesamt-PDF verwendet sie NICHT, sondern rendert seine Listen selbst neu.
 - `DossierPdfPackageComposer` wird von Ausgabe und Vorschau gemeinsam verwendet. Die feste
-  Reihenfolge ist Word-Dossier, einseitiges Erklaerblatt und danach die normalen
-  Beilagen. Der Composer prueft, dass der Anhang genau eine Seite hat und diese wirklich
-  eingefuegt wurde. Seine Arbeitsdatei liegt nur im Temp-Ordner; Kundenoriginale,
-  Beilagenordner und Manifest bleiben davon unberuehrt. Das Blatt wird auch ohne weitere
-  Beilagen erzeugt und erscheint in der Vorschau als automatisch erzeugte, nicht
-  bearbeitbare Beilage. Eine unsichtbare eindeutige Seitenmarke verhindert
-  die Verwechslung mit Kundenseiten, die denselben sichtbaren Titel tragen. Die
-  Seitenauswahl kennzeichnet die echte Erklaerseite als Pflichtblatt und kann sie
-  nicht abwaehlen; die Ausgabe erzwingt das zusaetzlich unabhaengig von der Oberflaeche.
+  Reihenfolge ist Word-Dossier, einseitiges Erklaerblatt, Haltungsliste, Schachtliste und
+  danach die normalen Beilagen. Der Composer prueft, dass der Erklaeranhang genau eine
+  Seite hat und alle selbst erzeugten Blaetter wirklich eingefuegt wurden. Seine
+  Arbeitsdateien liegen nur im Temp-Ordner; Kundenoriginale,
+  Beilagenordner und Manifest bleiben davon unberuehrt. Das Erklaerblatt wird auch ohne
+  weitere Beilagen erzeugt und erscheint in der Vorschau als automatisch erzeugte, nicht
+  bearbeitbare Beilage. Unsichtbare eindeutige Seitenmarken verhindern
+  die Verwechslung mit Kundenseiten, die denselben sichtbaren Titel tragen: Ihre drei
+  Werte und die zugehoerigen Beschriftungen liegen WPF-frei in
+  `DossierMandatoryPageMarkers`, damit Ausgabe, Vorschau und Seitenauswahl dieselbe Regel
+  lesen. Die Seitenauswahl kennzeichnet jedes so erkannte Blatt namentlich als
+  Pflichtblatt und kann es nicht abwaehlen; die Ausgabe erzwingt das zusaetzlich
+  unabhaengig von der Oberflaeche.
+- `DossierComponentListPdfRenderer` erzeugt Haltungs- und Schachtliste fuer Gesamt-PDF und
+  Vorschau frisch aus dem aktuellen `DossierSnapshot` — genau wie die Protokolle vorher neu
+  gesammelt werden. Er schreibt keine Datei: Die Bytes gehen direkt in den Composer, im
+  Beilagenordner entsteht dadurch nichts. Ohne Haltungen entfaellt die Haltungsliste, ohne
+  Schaechte die Schachtliste; ein Blatt mit blossem Tabellenkopf wird nie erzeugt.
+  `IDossierPdfAssemblyService.AssembleAsync` besitzt dafuer eine Ueberladung mit dem
+  ganzen `DossierExportRequest`; der alte Weg nur ueber den Ordnerpfad bleibt ohne Listen
+  bestehen. Die Erfolgsmeldung nennt die tatsaechlich enthaltenen Listen.
 - `Alles zu einem PDF` sammelt vor der Umwandlung die Protokolle aller aktuell im Dossier
   gewaehlten Haltungen und danach aller Schaechte. Bei Haltungen wird das Original und nur
   ersatzweise das SewerStudio-Protokoll verwendet; Schaechte verlangen ihr Original. Fehlt

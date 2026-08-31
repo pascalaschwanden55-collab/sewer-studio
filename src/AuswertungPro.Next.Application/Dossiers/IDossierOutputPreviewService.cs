@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,10 +23,21 @@ public sealed record DossierOutputPreviewPage(
     bool IsAttachment = false)
 {
     /// <summary>
+    /// Beschriftung des automatisch erzeugten Pflichtblatts, zu dem diese Seite
+    /// gehoert — "Dossier-Erklärung", "Haltungsliste" oder "Schachtliste".
+    /// <c>null</c> heisst: gewoehnliche Word- oder Kundenseite.
+    /// </summary>
+    public string? GeneratedPageLabel { get; init; }
+
+    /// <summary>
     /// Diese Beilage ist eine automatisch erzeugte Seite des festen
     /// Erklaeranhangs und kein Kundenoriginal.
     /// </summary>
-    public bool IsConditionClassExplanation { get; init; }
+    public bool IsConditionClassExplanation
+        => string.Equals(
+            GeneratedPageLabel,
+            DossierMandatoryPageMarkers.ConditionClassExplanationLabel,
+            StringComparison.Ordinal);
 }
 
 /// <summary>Die fertige PDF-Ansicht der kurzlebigen Vorschau.</summary>

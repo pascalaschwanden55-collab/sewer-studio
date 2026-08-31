@@ -24,6 +24,7 @@ namespace AuswertungPro.Next.Infrastructure.Dossiers;
 public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
 {
     private readonly DossierPdfPackageComposer _packageComposer;
+    private readonly DossierComponentListPdfRenderer _componentLists;
     private readonly Func<string, string?, bool> _convertWordToPdf;
 
     public DossierPdfAssemblyService(
@@ -33,6 +34,7 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
             new DossierPdfPackageComposer(
                 pdfMerge ?? throw new ArgumentNullException(nameof(pdfMerge)),
                 DossierConditionClassPdfService.Shared),
+            CreateDefaultComponentListRenderer(),
             convertWordToPdf)
     {
     }
@@ -40,16 +42,63 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
     internal DossierPdfAssemblyService(
         DossierPdfPackageComposer packageComposer,
         Func<string, string?, bool>? convertWordToPdf = null)
+        : this(
+            packageComposer,
+            CreateDefaultComponentListRenderer(),
+            convertWordToPdf)
+    {
+    }
+
+    internal DossierPdfAssemblyService(
+        DossierPdfPackageComposer packageComposer,
+        DossierComponentListPdfRenderer componentLists,
+        Func<string, string?, bool>? convertWordToPdf = null)
     {
         _packageComposer = packageComposer
             ?? throw new ArgumentNullException(nameof(packageComposer));
+        _componentLists = componentLists
+            ?? throw new ArgumentNullException(nameof(componentLists));
         _convertWordToPdf = convertWordToPdf ?? DossierWordPdfConverter.TryConvertToPdf;
     }
 
-    public async Task<DossierPdfAssemblyResult> AssembleAsync(
+    private static DossierComponentListPdfRenderer CreateDefaultComponentListRenderer()
+        => new(new DossierHoldingListPdfService(), new DossierShaftListPdfService());
+
+    public Task<DossierPdfAssemblyResult> AssembleAsync(
         string dossierFolder,
         Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
         CancellationToken ct = default)
+        => AssembleAsync(dossierFolder, [], waehleSeiten, ct);
+
+    public Task<DossierPdfAssemblyResult> AssembleAsync(
+        DossierExportRequest request,
+        Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        // Die Listen entstehen hier und nur hier: als Bytes fuer das Gesamt-PDF.
+        // Im Kundenordner bleiben sie eigene Dateien der beiden Erstellen-Knoepfe.
+        IReadOnlyList<DossierComponentListPdf> componentLists;
+        try
+        {
+            componentLists = _componentLists.Render(request.Dossier, request.Snapshot);
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(Fail(
+                "Die Haltungs- oder Schachtliste konnte nicht erzeugt werden: "
+                + ex.Message));
+        }
+
+        return AssembleAsync(request.TargetFolder, componentLists, waehleSeiten, ct);
+    }
+
+    private async Task<DossierPdfAssemblyResult> AssembleAsync(
+        string dossierFolder,
+        IReadOnlyList<DossierComponentListPdf> componentLists,
+        Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten,
+        CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dossierFolder);
         ct.ThrowIfCancellationRequested();
@@ -84,9 +133,10 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
             var generated = File.ReadAllBytes(wordPdf);
             var merged = _packageComposer.Compose(
                 generated,
+                componentLists.Select(liste => liste.Pdf).ToList(),
                 attachments,
                 Path.GetDirectoryName(wordPdf) ?? Path.GetTempPath(),
-                out var conditionClassPageNumbers);
+                out var mandatoryPageNumbers);
 
             // Zwischen „zusammengefuehrt" und „geschrieben": Erst hier stehen
             // alle Blaetter fest — die aus Word UND die Beilagen. Vorher liesse
@@ -104,8 +154,8 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
                 try
                 {
                     var sichereAuswahl = new HashSet<int>(ausgeschlossen);
-                    foreach (var conditionClassPageNumber in conditionClassPageNumbers)
-                        sichereAuswahl.Remove(conditionClassPageNumber);
+                    foreach (var pflichtseite in mandatoryPageNumbers)
+                        sichereAuswahl.Remove(pflichtseite);
                     merged = DossierPdfPageFilter.Ohne(merged, sichereAuswahl);
                 }
                 catch (InvalidOperationException ex)
@@ -124,15 +174,10 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
             else
                 File.Move(temp, targetPath);
 
-            var note = attachments.Count switch
-            {
-                0 => " (mit Erkläranhang; keine weiteren Beilagen)",
-                1 => " (mit Erkläranhang und 1 Beilage)",
-                _ => $" (mit Erkläranhang und {attachments.Count} Beilagen)"
-            };
-
             return new DossierPdfAssemblyResult(
-                true, targetPath, "Gesamt-PDF erstellt" + note + ".");
+                true,
+                targetPath,
+                "Gesamt-PDF erstellt" + BeschreibeInhalt(componentLists, attachments.Count) + ".");
         }
         catch (OperationCanceledException)
         {
@@ -175,6 +220,26 @@ public sealed class DossierPdfAssemblyService : IDossierPdfAssemblyService
             .EnumerateFiles(folder, "*.pdf", SearchOption.TopDirectoryOnly)
             .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    /// <summary>
+    /// Was in der Datei steckt, in einem Satz: der feste Erklaeranhang, die
+    /// tatsaechlich erzeugten Bauteillisten und die Zahl der Beilagen.
+    /// </summary>
+    private static string BeschreibeInhalt(
+        IReadOnlyList<DossierComponentListPdf> componentLists,
+        int attachmentCount)
+    {
+        var teile = new List<string> { "Erkläranhang" };
+        teile.AddRange(componentLists.Select(liste => liste.Label));
+        teile.Add(attachmentCount switch
+        {
+            0 => "keine weiteren Beilagen",
+            1 => "1 Beilage",
+            _ => $"{attachmentCount} Beilagen"
+        });
+
+        return " (mit " + string.Join(", ", teile) + ")";
     }
 
     private static DossierPdfAssemblyResult Fail(string message)

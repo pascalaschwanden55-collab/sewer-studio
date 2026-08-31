@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 
 using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Reports;
@@ -448,6 +448,15 @@ public sealed class DossierShaftListPdfService : IDossierShaftListPdfService
                     text.TotalPages();
                 });
             });
+
+            // Unsichtbare Seitenmarke: Die Seitenauswahl des Gesamt-PDF erkennt
+            // daran das automatisch erzeugte Pflichtblatt und verwechselt es
+            // nicht mit einer gleich betitelten Kundenbeilage.
+            footer.Item()
+                .Height(2)
+                .Text(DossierMandatoryPageMarkers.ShaftList)
+                .FontSize(1)
+                .FontColor(Colors.White);
         });
     }
 

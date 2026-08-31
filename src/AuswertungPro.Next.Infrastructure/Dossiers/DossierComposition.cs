@@ -41,12 +41,22 @@ public sealed class DossierComposition
         WordExport = new DossierWordTemplateExportService();
         var attachmentCollector = new DossierAttachmentCollector(protocolFiles, protocolPdf);
         var pdfPackageComposer = new DossierPdfPackageComposer(pdfMerge, conditionClassPdf);
+
+        // Haltungs- und Schachtliste gehoeren fest ins Gesamt-PDF. Vorschau und
+        // Ausgabe teilen sich denselben Renderer, damit beide dasselbe zeigen.
+        var componentListRenderer = new DossierComponentListPdfRenderer(
+            holdingListPdf,
+            shaftListPdf);
+
         Attachments = attachmentCollector;
         OutputPreview = new DossierOutputPreviewService(
             WordExport,
             pdfPackageComposer,
+            componentListRenderer,
             attachmentCollector);
-        PdfAssembly = new DossierPdfAssemblyService(pdfPackageComposer);
+        PdfAssembly = new DossierPdfAssemblyService(
+            pdfPackageComposer,
+            componentListRenderer);
 
         // Die Auskunftsleser teilen sich ein Tor nach draussen: ein Zeitlimit,
         // ein Abbruch, Aufrufe der Reihe nach.

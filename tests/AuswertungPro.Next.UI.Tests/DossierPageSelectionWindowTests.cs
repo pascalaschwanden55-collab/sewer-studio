@@ -2,6 +2,9 @@ using System;
 using System.IO;
 using System.Linq;
 
+using AuswertungPro.Next.Application.Dashboard;
+using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.Infrastructure.Dossiers;
 using AuswertungPro.Next.UI.Views.Windows;
 
@@ -44,5 +47,81 @@ public sealed class DossierPageSelectionWindowTests
             speicher.ToArray());
 
         Assert.Empty(pflichtblaetter);
+    }
+
+    [Fact]
+    public void Jede_Seite_der_Haltungsliste_ist_ein_Pflichtblatt()
+    {
+        var pdf = new DossierHoldingListPdfService(templateAssetFolder: Path.GetTempPath())
+            .CreatePdf(DossierHoldingListPdfModelBuilder.Build(
+                Dossier(),
+                Snapshot(holdings: 60, shafts: 0),
+                new DateTime(2026, 8, 31, 9, 0, 0, DateTimeKind.Local)));
+
+        var pflichtblaetter = DossierPageSelectionWindow.FindePflichtblaetter(pdf);
+
+        Assert.True(pflichtblaetter.Count >= 2, "Der Test braucht eine mehrseitige Liste.");
+        Assert.Equal(
+            Enumerable.Range(1, pflichtblaetter.Count),
+            pflichtblaetter.OrderBy(seite => seite));
+    }
+
+    [Fact]
+    public void Jede_Seite_der_Schachtliste_ist_ein_Pflichtblatt()
+    {
+        var pdf = new DossierShaftListPdfService(templateAssetFolder: Path.GetTempPath())
+            .CreatePdf(DossierShaftListPdfModelBuilder.Build(
+                Dossier(),
+                Snapshot(holdings: 0, shafts: 60),
+                new DateTime(2026, 8, 31, 9, 0, 0, DateTimeKind.Local)));
+
+        var pflichtblaetter = DossierPageSelectionWindow.FindePflichtblaetter(pdf);
+
+        Assert.True(pflichtblaetter.Count >= 2, "Der Test braucht eine mehrseitige Liste.");
+    }
+
+    [Fact]
+    public void Die_Beschriftung_nennt_das_jeweilige_Pflichtblatt()
+    {
+        Assert.Equal(
+            "Blatt 3 · Haltungsliste (Pflichtblatt)",
+            DossierPageSelectionWindow.BeschrifteBlatt(3, "Haltungsliste"));
+        Assert.Equal(
+            "Blatt 2 · Dossier-Erklärung (Pflichtblatt)",
+            DossierPageSelectionWindow.BeschrifteBlatt(2, "Dossier-Erklärung"));
+        Assert.Equal("Blatt 5", DossierPageSelectionWindow.BeschrifteBlatt(5, null));
+    }
+
+    private static DossierDefinition Dossier()
+        => new()
+        {
+            Name = "Testliegenschaft",
+            OwnerName = "Muster AG",
+            Address = "Musterweg 1",
+            PostalCode = "6460",
+            Town = "Altdorf"
+        };
+
+    private static DossierSnapshot Snapshot(int holdings, int shafts)
+    {
+        var verteilung = new ZustandVerteilung(Array.Empty<ZustandBucket>());
+        var statistik = new DashboardStatistics(
+            0, 0, 0, 0, verteilung, verteilung,
+            Array.Empty<DashboardBucket>(), Array.Empty<DashboardCostBucket>(), 0, 0, 0, 0, 0);
+
+        return new DossierSnapshot(
+            Guid.NewGuid(),
+            "Testliegenschaft",
+            Enumerable.Range(1, holdings)
+                .Select(index => new DossierHoldingLine(
+                    Guid.NewGuid(), "H" + index, "Musterweg", 12.5, "2", 0m, ""))
+                .ToList(),
+            [],
+            statistik,
+            Enumerable.Range(1, shafts)
+                .Select(index => new DossierShaftLine(
+                    Guid.NewGuid(), "S" + index, "Musterweg", "3", 0m))
+                .ToList(),
+            []);
     }
 }

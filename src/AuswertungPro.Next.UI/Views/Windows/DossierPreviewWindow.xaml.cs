@@ -210,8 +210,8 @@ public partial class DossierPreviewWindow : Window
         if (PageList.SelectedItem is not DossierOutputPreviewNavigationItem item)
             return;
 
-        FieldsHeader.Text = item.OutputPage.IsConditionClassExplanation
-            ? $"Erklärblatt Zustandsklassen — Seite {item.OutputPage.Number} · automatisch erzeugt"
+        FieldsHeader.Text = item.OutputPage.GeneratedPageLabel is { } erzeugt
+            ? $"{erzeugt} — Seite {item.OutputPage.Number} · automatisch erzeugt"
             : item.EditorPage is null
                 ? $"Beilage — Seite {item.OutputPage.Number} · Original, wird nicht verändert"
                 : $"{item.ChapterTitle} — Seite {item.OutputPage.Number}";

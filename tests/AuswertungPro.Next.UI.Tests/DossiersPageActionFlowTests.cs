@@ -295,6 +295,31 @@ public sealed class DossiersPageActionFlowTests : IDisposable
     }
 
     [Fact]
+    public async Task Alles_zu_einem_Pdf_uebergibt_den_Dossierstand_fuer_die_Bauteillisten()
+    {
+        // Nur mit dem Stand koennen Haltungs- und Schachtliste frisch erzeugt
+        // und fest ins Gesamt-PDF gelegt werden. Nur der Ordnerpfad reichte
+        // dafuer nicht.
+        var haltung = Haltung("100-200");
+        Schacht("100");
+        _store.Dokument.Dossiers.Add(new DossierDefinition
+        {
+            Name = "Musterweg 1",
+            HoldingIds = { haltung.Id },
+            ShaftNumbers = { "100" }
+        });
+
+        var flow = new RecordingPdfFlow();
+        var vm = BaueCockpit(flow, flow);
+
+        await vm.AssemblePdfCommand.ExecuteAsync(null);
+
+        Assert.NotNull(flow.LastAssembleRequest);
+        Assert.Equal(1, flow.LastAssembleRequest!.Snapshot.HoldingCount);
+        Assert.Equal(1, flow.LastAssembleRequest.Snapshot.ShaftCount);
+    }
+
+    [Fact]
     public async Task Vor_dem_Gesamt_Pdf_werden_die_Blaetter_gezeigt()
     {
         // Pascal will jedes Blatt sehen und einzeln abwaehlen koennen, bevor
@@ -642,6 +667,12 @@ public sealed class DossiersPageActionFlowTests : IDisposable
             => throw new NotSupportedException();
 
         public Task<DossierPdfAssemblyResult> AssembleAsync(
+            DossierExportRequest request,
+            Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
+            CancellationToken ct = default)
+            => throw new NotSupportedException();
+
+        public Task<DossierPdfAssemblyResult> AssembleAsync(
             string dossierFolder,
             Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
             CancellationToken ct = default)
@@ -700,6 +731,18 @@ public sealed class DossiersPageActionFlowTests : IDisposable
 
         /// <summary>Wurde vor dem Schreiben nach den Blaettern gefragt?</summary>
         public bool WurdeNachBlaetternGefragt { get; private set; }
+
+        /// <summary>Der Dossierstand, mit dem zusammengefuehrt wurde.</summary>
+        public DossierExportRequest? LastAssembleRequest { get; private set; }
+
+        public Task<DossierPdfAssemblyResult> AssembleAsync(
+            DossierExportRequest request,
+            Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
+            CancellationToken ct = default)
+        {
+            LastAssembleRequest = request;
+            return AssembleAsync(request.TargetFolder, waehleSeiten, ct);
+        }
 
         public async Task<DossierPdfAssemblyResult> AssembleAsync(
             string dossierFolder,

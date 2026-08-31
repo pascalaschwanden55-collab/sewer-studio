@@ -33,7 +33,8 @@ public sealed class DossierOutputPreviewServiceTests
                 File.WriteAllBytes(pdfPath!, CreateQuestPdf("WORD-DOSSIER"));
                 return true;
             },
-            composer.Compose,
+            (wordPdf, listen, beilagen, arbeitsordner)
+                => composer.Compose(wordPdf, listen, beilagen, arbeitsordner, out _),
             ReadPreviewPages,
             () => previewRoot,
             collectPreviewAttachments: null);

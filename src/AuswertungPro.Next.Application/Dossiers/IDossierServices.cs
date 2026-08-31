@@ -151,6 +151,17 @@ public interface IDossierPdfAssemblyService
         string dossierFolder,
         Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Derselbe Weg mit dem aktuellen Dossierstand. Nur so koennen Haltungs-
+    /// und Schachtliste frisch erzeugt und fest ins Gesamt-PDF gelegt werden;
+    /// ohne Haltungen beziehungsweise Schaechte entfaellt die jeweilige Liste.
+    /// Beide Listen sind Pflichtblaetter und werden nie entfernt.
+    /// </summary>
+    Task<DossierPdfAssemblyResult> AssembleAsync(
+        DossierExportRequest request,
+        Func<byte[], CancellationToken, Task<IReadOnlySet<int>?>>? waehleSeiten = null,
+        CancellationToken ct = default);
 }
 
 /// <summary>
