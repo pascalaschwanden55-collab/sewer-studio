@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using AuswertungPro.Next.Application.Lookup;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Views.Controls;
 using AuswertungPro.Next.UI.Views.Windows;
 
@@ -148,6 +149,12 @@ public sealed class NachschlagKontextmenueTests
                 befunde.Add("geleertes Feld: Menue ohne Nachschlag-Punkt.");
             }
 
+            // 7c. Ein nachgeschlagener Eigentuemer steht nicht in der festen
+            //     Liste ("Abwasser Uri" gegen die Kurzform "AWU"). Er muss
+            //     trotzdem sichtbar bleiben und die erste Bedienung darf ihn
+            //     nicht durch den ersten Listeneintrag ersetzen.
+            befunde.AddRange(PruefeFremdenEigentuemer());
+
             // 8. Das Stapelfenster muss sich ueberhaupt laden lassen. Ein
             //    erfundener Ressourcenname faellt in WPF sonst still aus -
             //    genau so entstand das unlesbare Vorschlagsfenster.
@@ -250,6 +257,65 @@ public sealed class NachschlagKontextmenueTests
             BauteilArt = BauteilArt.Haltung
         };
 
+    /// <summary>
+    /// Baut das Eigentuemerfeld so, wie die Seiten es bauen, setzt einen Wert
+    /// ausserhalb der Liste und laesst WPF die Bindung zurueckschreiben —
+    /// genau das passiert beim ersten Klick ins Feld.
+    /// </summary>
+    private static IEnumerable<string> PruefeFremdenEigentuemer()
+    {
+        if (!GridDropdownFieldPolicy.TryResolve("Eigentuemer", out var spec))
+        {
+            yield return "Eigentuemer: keine Dropdown-Regel gefunden.";
+            yield break;
+        }
+
+        var item = new RecordDetailItem(
+            label: "Eigentuemer",
+            value: "Abwasser Uri",
+            commitValue: _ => { },
+            isCombo: true,
+            allowFreeText: spec.AllowFreeText,
+            options: new[] { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" })
+        { FieldName = "Eigentuemer", BauteilArt = BauteilArt.Haltung };
+
+        var quelle = new RecordDetailsView();
+        var vorlage = spec.AllowFreeText ? "EditableComboEditorTemplate" : "FixedComboEditorTemplate";
+        var halter = new ContentControl
+        {
+            ContentTemplate = (DataTemplate)quelle.Resources[vorlage],
+            Content = item
+        };
+        Zeige(halter, quelle);
+
+        var combo = SucheCombo(halter);
+        if (combo is null)
+        {
+            yield return "Eigentuemer: kein Auswahlfeld in der Vorlage.";
+            yield break;
+        }
+
+        if (combo.Text != "Abwasser Uri" && combo.SelectedItem?.ToString() != "Abwasser Uri")
+        {
+            yield return
+                "Eigentuemer: Der nachgeschlagene Wert ist im Feld nicht sichtbar "
+                + $"(Text='{combo.Text}', Auswahl='{combo.SelectedItem}').";
+        }
+
+        // Das machen SelectionChanged und LostKeyboardFocus der Detailansicht.
+        var eigenschaft = item.AllowFreeText
+            ? ComboBox.TextProperty
+            : System.Windows.Controls.Primitives.Selector.SelectedItemProperty;
+        combo.GetBindingExpression(eigenschaft)?.UpdateSource();
+
+        if (item.Value != "Abwasser Uri")
+        {
+            yield return
+                $"Eigentuemer: Nach der ersten Bedienung steht '{item.Value}' im Feld "
+                + "statt des nachgeschlagenen Werts.";
+        }
+    }
+
     private static ContextMenu? ComboMenue(RecordDetailItem item) => ComboBoxFuer(item).ContextMenu;
 
     private static ComboBox ComboBoxFuer(RecordDetailItem item)
@@ -300,6 +366,21 @@ public sealed class NachschlagKontextmenueTests
         wirt.Measure(new Size(400, 200));
         wirt.Arrange(new Rect(0, 0, 400, 200));
         wirt.UpdateLayout();
+    }
+
+    private static ComboBox? SucheCombo(DependencyObject wurzel)
+    {
+        if (wurzel is ComboBox gefunden)
+            return gefunden;
+
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(wurzel); i++)
+        {
+            var treffer = SucheCombo(VisualTreeHelper.GetChild(wurzel, i));
+            if (treffer is not null)
+                return treffer;
+        }
+
+        return null;
     }
 
     private static TextBox? SucheTextBox(DependencyObject wurzel)

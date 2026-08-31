@@ -1,4 +1,4 @@
-using System.Runtime.ExceptionServices;
+﻿using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -27,7 +27,10 @@ public sealed class DataPageColumnFactoryTests
 
             var combo = AssertTemplateRoot<ComboBox>(comboColumn.CellEditingTemplate);
             Assert.Equal("Eigentuemer", GetFactoryValue(combo, FrameworkElement.TagProperty));
-            Assert.Equal(false, GetFactoryValue(combo, ComboBox.IsEditableProperty));
+            // Freitext: Ein beim Kanton nachgeschlagener Eigentuemer wie
+            // "Abwasser Uri" steht nicht in der festen Liste und waere in
+            // einem reinen Auswahlfeld nicht darstellbar.
+            Assert.Equal(true, GetFactoryValue(combo, ComboBox.IsEditableProperty));
             AssertFactoryBinding(combo, ComboBox.ItemsSourceProperty, "DataContext.EigentuemerOptions");
         });
     }
