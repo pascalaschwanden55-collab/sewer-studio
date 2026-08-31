@@ -36,7 +36,17 @@ ZIEL = os.path.abspath(os.path.join(HIER, "..", "..", "Export_Vorlage"))
 LETZTE_ZEILE = 5000
 
 GRAU = "FFD6DCE4"
-EIGNER = ["AWU", "Kanton", "Bund", "Gemeinde", "Privat"]
+# Anzeigename und alle Schreibweisen, die dazu zaehlen. Der Anzeigename ist der
+# amtliche Begriff des Kantons; die Kurzform steht daneben, weil sie in
+# gewachsenen Projekten vorkommt. Gezaehlt und summiert wird ueber beide, damit
+# weder ein nachgeschlagener noch ein alter Wert aus der Auswertung faellt.
+EIGNER = [
+    ("Abwasser Uri", ["Abwasser Uri", "AWU"]),
+    ("Kanton Uri", ["Kanton Uri", "Kanton"]),
+    ("Bund", ["Bund"]),
+    ("Gemeinde", ["Gemeinde"]),
+    ("Privat", ["Privat"]),
+]
 AUSFUEHRENDE = ["Abwasser Uri", "Kanalsanierer", "Baumeister", "Gartenbauer"]
 BEDEUTUNG = {"0": "sofort", "1": "kurzfristig", "2": "mittelfristig",
              "3": "langfristig", "4": "kein Bedarf"}
@@ -112,6 +122,12 @@ def _zaehlt_mehrere(bereich, werte):
     return "=" + "+".join('COUNTIF(%s,"%s")' % (bereich, wert) for wert in werte)
 
 
+def _summiert_mehrere(bereich, werte, summenbereich):
+    """Addiert Schreibweisen, ohne einen gespeicherten Zellwert umzudeuten."""
+    return "=" + "+".join(
+        'SUMIF(%s,"%s",%s)' % (bereich, wert, summenbereich) for wert in werte)
+
+
 def _erzwinge_neuberechnung(wb):
     """Kennzahlen und Diagrammquellen werden erst von Excel ausgerechnet."""
     wb.calculation.calcMode = "auto"
@@ -184,8 +200,9 @@ def baue_haltungen(pfad):
             total=("Total Haltungen", "=COUNTA(%s)" % b(2), S.FORMAT_ZAHL))
 
     W.block(ws, 4, 5, "Eigentümer",
-            [(e, S.EIGENTUEMER[e][0], S.EIGENTUEMER[e][1], _zaehlt(b(EIG), e))
-             for e in EIGNER],
+            [(name, S.EIGENTUEMER[name][0], S.EIGENTUEMER[name][1],
+              _zaehlt_mehrere(b(EIG), schreibweisen))
+             for name, schreibweisen in EIGNER],
             spalte_wert=5, total=("Total", "=COUNTA(%s)" % b(EIG), S.FORMAT_ZAHL))
 
     mat_zeilen, mat_farben = _verteilungszeilen(b(4), MATERIALIEN, S.MATERIAL,
@@ -211,9 +228,9 @@ def baue_haltungen(pfad):
             spalte_wert=14, total=("Total", "=COUNTA(%s)" % b(2), S.FORMAT_ZAHL))
 
     W.block(ws, 15, 18, "Kosten nach Eigentümer",
-            [("Total %s" % e, None, False,
-              '=SUMIF(%s,"%s",%s)' % (b(EIG), e, b(KOSTEN)))
-             for e in EIGNER],
+            [("Total %s" % name, None, False,
+              _summiert_mehrere(b(EIG), schreibweisen, b(KOSTEN)))
+             for name, schreibweisen in EIGNER],
             spalte_wert=18, zahlenformat=S.FORMAT_CHF,
             total=("Total gesamt", "=SUM(%s)" % b(KOSTEN), S.FORMAT_CHF))
 
@@ -243,7 +260,7 @@ def baue_haltungen(pfad):
     farben = {
         "Zustandsklassen": [S.ZUSTANDSKLASSE[k][0] for k in "01234"],
         "Sanieren Ja / Nein": [S.SANIEREN["Ja"][0], S.SANIEREN["Nein"][0]],
-        "Eigentümer": [S.EIGENTUEMER[e][0] for e in EIGNER],
+        "Eigentümer": [S.EIGENTUEMER[name][0] for name, _ in EIGNER],
         "Ausgeführt durch": [S.AUSFUEHRUNG[a][0] or "FFBFBFBF" for a in AUSFUEHRENDE] + [GRAU],
         "Sanierungsstatus": [S.STATUS["offen"][0], S.STATUS["abgeschlossen"][0], GRAU],
     }
@@ -267,7 +284,7 @@ def baue_haltungen(pfad):
                         max_row=W.Z_WERT_VON + len(EIGNER) - 1),
                    dict(min_col=18, min_row=W.Z_WERT_VON,
                         max_row=W.Z_WERT_VON + len(EIGNER) - 1),
-                   [S.EIGENTUEMER[e][0] for e in EIGNER],
+                   [S.EIGENTUEMER[name][0] for name, _ in EIGNER],
                    DRITT_X, 0.2, DRITT_B, MENGEN_H,
                    zahlenformat=FORMAT_CHF_KURZ)
 
@@ -331,8 +348,9 @@ def baue_schaechte(pfad):
             spalte_wert=9, total=("Kosten total", "=SUM(%s)" % b(KOSTEN), S.FORMAT_CHF))
 
     W.block(ws, 10, 11, "Eigentümer",
-            [(e, S.EIGENTUEMER[e][0], S.EIGENTUEMER[e][1], _zaehlt(b(EIG), e))
-             for e in EIGNER],
+            [(name, S.EIGENTUEMER[name][0], S.EIGENTUEMER[name][1],
+              _zaehlt_mehrere(b(EIG), schreibweisen))
+             for name, schreibweisen in EIGNER],
             spalte_wert=11, total=("Total", "=COUNTA(%s)" % b(EIG), S.FORMAT_ZAHL))
 
     W.block(ws, 12, 13, "Ausgeführt durch  (färbt Spalte NR.)",
@@ -364,7 +382,7 @@ def baue_schaechte(pfad):
         ("Zustandsklassen", 3, 5, [S.ZUSTANDSKLASSE[k][0] for k in "01234"]),
         ("Sanieren Ja / Nein", 9, 3,
          [S.SANIEREN["Ja"][0], S.SANIEREN["Nein"][0], "FFFFFF00"]),
-        ("Eigentümer", 11, 5, [S.EIGENTUEMER[e][0] for e in EIGNER]),
+        ("Eigentümer", 11, 5, [S.EIGENTUEMER[name][0] for name, _ in EIGNER]),
         ("Ausgeführt durch", 13, 5,
          [S.AUSFUEHRUNG[a][0] or "FFBFBFBF" for a in AUSFUEHRENDE] + [GRAU]),
         ("Sanierungsstatus", 17, 3,

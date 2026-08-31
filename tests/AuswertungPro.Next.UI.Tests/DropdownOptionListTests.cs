@@ -1,4 +1,4 @@
-using AuswertungPro.Next.UI.Services;
+﻿using AuswertungPro.Next.UI.Services;
 using System.Collections.ObjectModel;
 using Xunit;
 
@@ -68,7 +68,11 @@ public sealed class DropdownOptionListTests
 
         DropdownOptionList.EnsureExact(options, DropdownOptionsStore.FixedEigentuemerOptions);
 
-        Assert.Equal(new[] { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" }, options);
+        // Die amtlichen Begriffe des Kantons. "AWU" und "Kanton" stehen nicht
+        // mehr zur Auswahl, bleiben in Altprojekten aber gefaerbt und gezaehlt.
+        Assert.Equal(
+            new[] { "Privat", "Abwasser Uri", "Gemeinde", "Kanton Uri", "Bund", "unbekannt" },
+            options);
     }
 
     [Fact]

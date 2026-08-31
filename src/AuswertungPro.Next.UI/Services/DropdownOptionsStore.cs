@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -39,8 +39,18 @@ public interface IDropdownOptionsStore
 /// <summary>Dateibasierter, atomar schreibender Speicher fuer die editierbaren Auswahllisten.</summary>
 public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
 {
+    /// <summary>
+    /// Die amtlichen Begriffe des Kantons Uri. Gemessen an einer Stichprobe von
+    /// 3000 Leitungen des Abwassernetzes: "Privat", "Abwasser Uri",
+    /// "unbekannt" und die einzelnen Gemeinden. Das Feld traegt deshalb
+    /// Freitext — diese Liste ist ein Vorschlag, keine Schranke.
+    ///
+    /// Die Kurzformen "AWU" und "Kanton" stehen nicht mehr zur Auswahl,
+    /// bleiben in Altprojekten aber gueltig: Beide Excel-Vorlagen faerben und
+    /// zaehlen sie weiterhin gleichwertig.
+    /// </summary>
     private static readonly IReadOnlyList<string> FixedOwners =
-        new[] { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
+        new[] { "Privat", "Abwasser Uri", "Gemeinde", "Kanton Uri", "Bund", "unbekannt" };
 
     private readonly string _optionsDir;
     private readonly string _legacyOptionsDir;

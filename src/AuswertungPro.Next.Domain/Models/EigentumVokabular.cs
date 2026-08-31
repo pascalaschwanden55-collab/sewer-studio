@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -8,16 +8,16 @@ namespace AuswertungPro.Next.Domain.Models;
 /// <summary>
 /// Der Eigentuemer einer Haltung oder eines Schachts — an einer Stelle.
 ///
-/// Massgebend sind hier ausnahmsweise nicht die Norm, sondern die beiden ausgelieferten
-/// Excel-Vorlagen. Sie faerben die Eigentuemerspalte ueber eine bedingte Formatierung mit
-/// EXAKTEM Vergleich: <c>Haltungen.xlsx</c> Spalte O und <c>Schaechte.xlsx</c> Spalte J
-/// pruefen je <c>="AWU"</c>, <c>="Kanton"</c>, <c>="Bund"</c>, <c>="Gemeinde"</c> und
-/// <c>="Privat"</c>. Ein Wert daneben ist zwar sichtbar, bleibt aber farblos.
+/// Massgebend sind die amtlichen Begriffe des Kantons Uri. Im QGIS-Export Zone 1.17
+/// stehen an den 295 Normschaechten "Privat" 204x, "Abwasser Uri" 68x und
+/// "Kanton Uri" 17x; das Abwassernetz des Kantons liefert dieselben Begriffe.
 ///
-/// Die XTF schreibt andere Begriffe: Im QGIS-Export Zone 1.17 stehen an den 295
-/// Normschaechten "Privat" 204x, "Abwasser Uri" 68x und "Kanton Uri" 17x. Ohne diese
-/// Uebersetzung waere die Spalte gefuellt und zwei Drittel der Zeilen ohne Farbe — also
-/// genau das, wofuer die Angabe gebraucht wird, kaputt.
+/// Bis 2026-08-31 uebersetzte diese Klasse sie in die Kurzformen "AWU" und "Kanton",
+/// weil die Excel-Vorlagen ihre Eigentuemerspalte ueber einen EXAKTEN Vergleich
+/// faerben und nur diese fuenf Woerter kannten. Beide Vorlagen tragen jetzt je eine
+/// Regel fuer den amtlichen Begriff UND fuer die Kurzform, und die Kennzahlen zaehlen
+/// ueber beide. Damit gibt es keinen Grund mehr, einen eingelesenen Wert umzuschreiben.
+/// Gespeicherte Kurzformen aus Altprojekten bleiben gueltig, gefaerbt und gezaehlt.
 ///
 /// <see cref="Costs.OwnershipAwuFilter"/> bleibt davon unberuehrt: Er erkennt sowohl
 /// "AWU" als auch jeden Freitext mit "Abwasser Uri" und arbeitet nach der Uebersetzung
@@ -35,10 +35,13 @@ public static class EigentumVokabular
 
     private static readonly Konzept[] Konzepte =
     [
-        // Abwasser Uri fuehrt sich in der XTF als "Abwasser Uri", Pascal im Projekt als
-        // "AWU" — im Bestand 74 Haltungen und 5 Schaechte. Die Vorlage kennt nur "AWU".
-        new(["awu", "abwasser uri", "abwasser uri (awu)", "abwasseruri"], "AWU"),
-        new(["kanton", "kanton uri", "kanton_uri"], "Kanton"),
+        // Der amtliche Begriff gewinnt. Frueher stand hier die Kurzform "AWU",
+        // weil die Excel-Vorlage nur sie faerbte — seit 2026-08-31 faerbt und
+        // zaehlt sie beide Schreibweisen, also darf der eingelesene Wert stehen
+        // bleiben. Die Kurzformen werden weiter gelesen; Altprojekte behalten
+        // ihren gespeicherten Wert unveraendert.
+        new(["awu", "abwasser uri", "abwasser uri (awu)", "abwasseruri"], "Abwasser Uri"),
+        new(["kanton", "kanton uri", "kanton_uri"], "Kanton Uri"),
         new(["bund", "eidgenossenschaft"], "Bund"),
         new(["gemeinde", "einwohnergemeinde", "korporationsgemeinde"], "Gemeinde"),
         new(["privat", "private", "privatperson"], "Privat")

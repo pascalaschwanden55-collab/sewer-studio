@@ -16,12 +16,18 @@ ZUSTANDSKLASSE = {  # 0 = schlechteste, 4 = beste
 # die nur den nackten Zellwert 0..4 vergleicht.
 ZUSTANDSKLASSE_REGEL = {k: (v[0], v[1]) for k, v in ZUSTANDSKLASSE.items()}
 
+# Der Kanton fuehrt die amtlichen Begriffe ("Abwasser Uri", "Kanton Uri"), in
+# Altprojekten stehen die Kurzformen ("AWU", "Kanton"). Beide bekommen dieselbe
+# Farbe: Ein nachgeschlagener Wert soll gefaerbt sein, ein gewachsener Bestand
+# seine Farbe behalten. Umschreiben waere schlimmer - es veraendert Kundendaten.
 EIGENTUEMER = {
-    "AWU":      ("FF548235", True),
-    "Kanton":   ("FFFFFF00", False),
-    "Bund":     ("FFFF8000", True),
-    "Gemeinde": ("FF00B0F0", False),
-    "Privat":   ("FFFF0000", True),
+    "Abwasser Uri": ("FF548235", True),
+    "AWU":          ("FF548235", True),
+    "Kanton Uri":   ("FFFFFF00", False),
+    "Kanton":       ("FFFFFF00", False),
+    "Bund":         ("FFFF8000", True),
+    "Gemeinde":     ("FF00B0F0", False),
+    "Privat":       ("FFFF0000", True),
 }
 # Feld "Ausgefuehrt_durch": faerbt im Programm die Zelle, hier zusaetzlich die
 # Spalte NR. - genau wie in der Legende oben links der Datei 1.15.

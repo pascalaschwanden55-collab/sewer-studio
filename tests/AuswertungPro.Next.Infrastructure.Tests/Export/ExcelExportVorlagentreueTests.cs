@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -384,11 +384,16 @@ public sealed class ExcelExportVorlagentreueTests
         var formeln = blatt.Descendants().Where(e => e.Name.LocalName == "f")
             .Select(e => e.Value).ToArray();
 
+        // Amtlicher Begriff und Kurzform stehen in derselben Zelle addiert
+        // ("=SUMIF(...,\"Abwasser Uri\",...)+SUMIF(...,\"AWU\",...)"), deshalb
+        // wird auf das Vorkommen in einer Formel geprueft und nicht auf eine
+        // Formel, die genau daraus besteht.
         foreach (var eigentuemer in ExcelReportStyle.Eigentuemer)
         {
-            Assert.Contains(
-                $"SUMIF($O$27:$O$5000,\"{eigentuemer.Wert}\",$N$27:$N$5000)",
-                formeln);
+            var gesucht = $"SUMIF($O$27:$O$5000,\"{eigentuemer.Wert}\",$N$27:$N$5000)";
+            Assert.True(
+                formeln.Any(f => f.Contains(gesucht, StringComparison.Ordinal)),
+                $"Der Kostenblock summiert \"{eigentuemer.Wert}\" nicht mit.");
         }
     }
 

@@ -34,9 +34,15 @@ public static class ExcelReportStyle
     /// <summary>Eigentuemer, damit die Zustaendigkeit auf einen Blick sichtbar ist.</summary>
     public static IReadOnlyList<ExcelFarbregel> Eigentuemer { get; } = new[]
     {
+        // Amtlicher Begriff des Kantons und die Kurzform aus Altprojekten
+        // tragen dieselbe Farbe. Ein nachgeschlagener Wert soll gefaerbt sein,
+        // ein gewachsener Bestand seine Farbe behalten; die Vorlage vergleicht
+        // exakt, deshalb braucht jede Schreibweise ihre eigene Regel.
+        new ExcelFarbregel("Abwasser Uri", "FF548235"),
+        new ExcelFarbregel("AWU", "FF548235"),
+        new ExcelFarbregel("Kanton Uri", "FFFFFF00"),
         new ExcelFarbregel("Kanton", "FFFFFF00"),
         new ExcelFarbregel("Bund", "FFFF8000"),
-        new ExcelFarbregel("AWU", "FF548235"),
         new ExcelFarbregel("Gemeinde", "FF00B0F0"),
         new ExcelFarbregel("Privat", "FFFF0000")
     };

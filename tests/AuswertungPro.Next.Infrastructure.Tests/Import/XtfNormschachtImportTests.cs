@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
@@ -139,18 +139,20 @@ public sealed class XtfNormschachtImportTests : IDisposable
     }
 
     [Fact]
-    public void Das_Eigentum_kommt_in_der_Schreibweise_der_Excel_Vorlage_an()
+    public void Das_Eigentum_kommt_im_amtlichen_Begriff_an()
     {
         var p = Importiere();
 
-        // "Abwasser Uri" faerbt die Excel-Zelle nicht, "AWU" schon.
-        Assert.Equal("AWU", Schacht(p, "82265").GetFieldValue(FieldKeys.Owner));
+        // Der amtliche Begriff bleibt stehen; die Excel-Vorlage faerbt ihn seit
+        // 2026-08-31 selbst. Frueher wurde hier auf die Kurzform "AWU"
+        // umgeschrieben, weil nur sie gefaerbt wurde.
+        Assert.Equal("Abwasser Uri", Schacht(p, "82265").GetFieldValue(FieldKeys.Owner));
         Assert.Equal("Privat", Schacht(p, "82099").GetFieldValue(FieldKeys.Owner));
 
-        // Dieselbe Regel muss fuer die Haltung gelten - der Import schrieb dort bisher
-        // den Rohwert und liess die Zelle farblos.
+        // Dieselbe Regel muss fuer die Haltung gelten - der Import schrieb dort einmal
+        // einen unbehandelten Rohwert.
         var haltung = Assert.Single(p.Data);
-        Assert.Equal("AWU", haltung.GetFieldValue(FieldKeys.Owner));
+        Assert.Equal("Abwasser Uri", haltung.GetFieldValue(FieldKeys.Owner));
     }
 
     [Fact]
