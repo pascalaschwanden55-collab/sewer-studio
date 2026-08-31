@@ -148,18 +148,50 @@
                BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="ContextMenu" Value="{StaticResource ManagedOptionsContextMenu}"/>
             <Style.Triggers>
-                <DataTrigger Binding="{Binding HasManagedOptions}" Value="False">
+                <!-- Auswahlliste aus dem Feldkatalog, ohne Optionsverwaltung:
+                     trotzdem nachschlagbar. Hier stand frueher ein pauschales
+                     null - damit verloren FunktionHierarchisch und Nutzungsart
+                     bei den Haltungen jedes Kontextmenue, und der Rechtsklick
+                     zeigte dort gar nichts. -->
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding HasManagedOptions}" Value="False"/>
+                        <Condition Binding="{Binding KannNachschlagen}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="ContextMenu" Value="{StaticResource NachschlagContextMenu}"/>
+                </MultiDataTrigger>
+                <!-- Weder zu verwalten noch nachzuschlagen: gar kein Menue,
+                     sonst poppt ein leeres Kaestchen auf. -->
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding HasManagedOptions}" Value="False"/>
+                        <Condition Binding="{Binding KannNachschlagen}" Value="False"/>
+                    </MultiDataTrigger.Conditions>
                     <Setter Property="ContextMenu" Value="{x:Null}"/>
-                </DataTrigger>
+                </MultiDataTrigger>
             </Style.Triggers>
         </Style>
 
         <DataTemplate x:Key="TextEditorTemplate" DataType="{x:Type windows:RecordDetailItem}">
             <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                      IsReadOnly="{Binding IsReadOnly}"
-                     ContextMenu="{StaticResource NachschlagContextMenu}"
                      PreviewTextInput="NumericTextBox_PreviewTextInput"
-                     DataObject.Pasting="NumericTextBox_Pasting"/>
+                     DataObject.Pasting="NumericTextBox_Pasting">
+                <TextBox.Style>
+                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                        <!-- Das eigene Menue nur dort, wo es etwas zu zeigen
+                             hat. Sonst bleibt das Windows-Standardmenue mit
+                             Ausschneiden/Kopieren/Einfuegen stehen; ein Menue
+                             mit lauter ausgeblendeten Punkten waere ein leeres
+                             Kaestchen und naehme dem Feld die Zwischenablage. -->
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding KannNachschlagen}" Value="True">
+                                <Setter Property="ContextMenu" Value="{StaticResource NachschlagContextMenu}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
         </DataTemplate>
 
         <DataTemplate x:Key="MultilineEditorTemplate" DataType="{x:Type windows:RecordDetailItem}">
