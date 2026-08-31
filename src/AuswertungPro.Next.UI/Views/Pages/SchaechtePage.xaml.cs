@@ -93,7 +93,8 @@ public partial class SchaechtePage : UserControl
             ResolveViewModelCommand,
             CommitSchachtDetailKonsolidiert,
             () => _vm is not null,
-            BaueNachschlagBefehl);
+            BaueNachschlagBefehl,
+            BaueStrassenBefehl);
 
         SchachtansichtView.DetailBuilder = BuildRecordDetailsForAnsicht;
         SchachtansichtView.DamageLineBuilder = SchachtDamageLineBuilder.Build;

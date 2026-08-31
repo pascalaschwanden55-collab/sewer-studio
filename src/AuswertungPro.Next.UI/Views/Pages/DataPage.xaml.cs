@@ -55,7 +55,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
         _haltungDetailItemFactory = new DataPageDetailItemFactory(
             ResolveManagedComboSpec,
             CommitHaltungDetailField,
-            BaueNachschlagBefehl);
+            BaueNachschlagBefehl,
+            BaueStrassenBefehl);
         _recordDetailsDialogController = new DataPageRecordDetailsDialogController(
             BuildHaltungRecordDetails,
             CreateSuggestMeasuresCommand);

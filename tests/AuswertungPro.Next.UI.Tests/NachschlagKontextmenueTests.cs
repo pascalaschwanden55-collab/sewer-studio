@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -96,10 +96,54 @@ public sealed class NachschlagKontextmenueTests
                     + "das nimmt dem Feld Ausschneiden/Kopieren/Einfuegen.");
             }
 
-            // 5. Leeres Textfeld mit Quelle: Nachschlag vorhanden.
+            // 5. Die Strassenuebernahme haengt am leeren Strassenfeld - auch
+            //    an einem Auswahlfeld ohne Optionsverwaltung.
+            var strasse = ComboMenue(Strassenfeld(""));
+            if (strasse is null
+                || !Punkte(strasse).Any(t => t.Contains("übernehmen", StringComparison.OrdinalIgnoreCase)))
+            {
+                befunde.Add("leeres Strassenfeld: die Uebernahme vom Nachbarbauteil fehlt im Menue.");
+            }
+
+            // 5b. Dasselbe im Menue der verwalteten Auswahlfelder. Beide
+            //     Menues fuehren den Punkt getrennt - eine Sabotage an dem
+            //     einen laesst den anderen unberuehrt, und dann prueft nur
+            //     die Haelfte.
+            var strasseVerwaltet = ComboMenue(Strassenfeld("", verwaltet: true));
+            if (strasseVerwaltet is null
+                || !Punkte(strasseVerwaltet).Any(t => t.Contains("übernehmen", StringComparison.OrdinalIgnoreCase)))
+            {
+                befunde.Add("verwaltetes Strassenfeld: die Uebernahme vom Nachbarbauteil fehlt im Menue.");
+            }
+
+            // 6. Ein gefuelltes Strassenfeld traegt gar kein eigenes Menue.
+            if (ComboMenue(Strassenfeld("Linden")) is not null)
+                befunde.Add("gefuelltes Strassenfeld: traegt ein Menue, obwohl nichts zu uebernehmen ist.");
+
+            // 7. Leeres Textfeld mit Quelle: Nachschlag vorhanden.
             Pruefe(befunde, "leeres Textfeld mit Quelle",
                 TextMenue(Textfeld("Haltungslaenge_m", "")),
                 erwarteNachschlag: true);
+
+            // 8. Das Stapelfenster muss sich ueberhaupt laden lassen. Ein
+            //    erfundener Ressourcenname faellt in WPF sonst still aus -
+            //    genau so entstand das unlesbare Vorschlagsfenster.
+            try
+            {
+                var stapel = new StrassenUebernahmeWindow(
+                    "Probe",
+                    "Schacht",
+                    [new StrassenUebernahmeZeile("36262", "Linden", "Haltung 36262-36275")],
+                    ["36268"]);
+                stapel.Measure(new Size(700, 600));
+
+                if (stapel.Gewaehlt.Count != 0)
+                    befunde.Add("Stapelfenster: liefert eine Auswahl, bevor bestaetigt wurde.");
+            }
+            catch (Exception ex)
+            {
+                befunde.Add($"Stapelfenster laesst sich nicht laden: {ex.GetType().Name}: {ex.Message}");
+            }
 
             Assert.True(befunde.Count == 0,
                 $"{befunde.Count} Befunde am Kontextmenue:{Environment.NewLine}  "
@@ -150,6 +194,25 @@ public sealed class NachschlagKontextmenueTests
             nachschlagenCommand: new NichtsTuerBefehl())
         {
             FieldName = feld,
+            BauteilArt = BauteilArt.Haltung
+        };
+
+    /// <summary>
+    /// Ein Strassenfeld ohne Kantonsquelle: bei den Haltungen genau so.
+    /// Nur die Uebernahme vom Nachbarbauteil hat dort etwas zu bieten.
+    /// </summary>
+    private static RecordDetailItem Strassenfeld(string wert, bool verwaltet = false)
+        => new(
+            label: "Strasse",
+            value: wert,
+            commitValue: _ => { },
+            isCombo: true,
+            allowFreeText: true,
+            options: new[] { "a", "b" },
+            editOptionsCommand: verwaltet ? new NichtsTuerBefehl() : null,
+            strasseUebernehmenCommand: new NichtsTuerBefehl())
+        {
+            FieldName = "Strasse",
             BauteilArt = BauteilArt.Haltung
         };
 

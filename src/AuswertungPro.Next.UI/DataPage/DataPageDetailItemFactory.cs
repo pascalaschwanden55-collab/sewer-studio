@@ -19,15 +19,18 @@ public sealed class DataPageDetailItemFactory
     private readonly Func<string, DataPageManagedComboSpec?> _resolveManagedComboSpec;
     private readonly Action<HaltungRecord, string, string> _commitValue;
     private readonly Func<HaltungRecord, string, ICommand?>? _resolveNachschlag;
+    private readonly Func<HaltungRecord, string, ICommand?>? _resolveStrasse;
 
     public DataPageDetailItemFactory(
         Func<string, DataPageManagedComboSpec?> resolveManagedComboSpec,
         Action<HaltungRecord, string, string> commitValue,
-        Func<HaltungRecord, string, ICommand?>? resolveNachschlag = null)
+        Func<HaltungRecord, string, ICommand?>? resolveNachschlag = null,
+        Func<HaltungRecord, string, ICommand?>? resolveStrasse = null)
     {
         _resolveManagedComboSpec = resolveManagedComboSpec ?? throw new ArgumentNullException(nameof(resolveManagedComboSpec));
         _commitValue = commitValue ?? throw new ArgumentNullException(nameof(commitValue));
         _resolveNachschlag = resolveNachschlag;
+        _resolveStrasse = resolveStrasse;
     }
 
     public RecordDetailItem Create(string fieldName, HaltungRecord record)
@@ -42,6 +45,9 @@ public sealed class DataPageDetailItemFactory
         // Nachschlagen beim Kanton: Das Item entscheidet selbst, ob der
         // Menuepunkt sichtbar wird (leeres Feld mit bekannter Quelle).
         var nachschlagen = _resolveNachschlag?.Invoke(record, fieldName);
+        // Strasse vom Nachbarbauteil: eigene Uebertragung im Projekt,
+        // keine amtliche Auskunft - deshalb ein eigener Menuepunkt.
+        var strasse = _resolveStrasse?.Invoke(record, fieldName);
         if (managedCombo is not null)
         {
             return new RecordDetailItem(
@@ -57,7 +63,8 @@ public sealed class DataPageDetailItemFactory
                 addOptionCommand: managedCombo.AddOptionCommand,
                 removeOptionCommand: managedCombo.RemoveOptionCommand,
                 highlightKind: highlightKind,
-                nachschlagenCommand: nachschlagen)
+                nachschlagenCommand: nachschlagen,
+                strasseUebernehmenCommand: strasse)
             { FieldName = fieldName, BauteilArt = BauteilArt.Haltung };
         }
 
@@ -72,7 +79,8 @@ public sealed class DataPageDetailItemFactory
                 allowFreeText: false,
                 options: catalogItems,
                 highlightKind: highlightKind,
-                nachschlagenCommand: nachschlagen)
+                nachschlagenCommand: nachschlagen,
+                strasseUebernehmenCommand: strasse)
             { FieldName = fieldName, BauteilArt = BauteilArt.Haltung };
         }
 
@@ -86,7 +94,8 @@ public sealed class DataPageDetailItemFactory
             isMultiline: isMultiline,
             digitsOnly: digitsOnly,
             highlightKind: highlightKind,
-            nachschlagenCommand: nachschlagen)
+            nachschlagenCommand: nachschlagen,
+            strasseUebernehmenCommand: strasse)
         { FieldName = fieldName, BauteilArt = BauteilArt.Haltung };
     }
 }

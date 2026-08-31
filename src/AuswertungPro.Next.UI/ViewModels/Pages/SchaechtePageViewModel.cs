@@ -57,6 +57,13 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
     internal ISchachtFileTargetResolver SchachtFileTargets => _schachtFileTargets;
 
     public ObservableCollection<SchachtRecord> Records => _shell.Project.SchaechteData;
+
+    /// <summary>
+    /// Das ganze Projekt — die Schachtseite braucht dafuer auch die
+    /// Haltungen: Ober- und Unterschacht liegen an derselben Stelle wie
+    /// die Leitung, also gilt dort dieselbe Strasse.
+    /// </summary>
+    internal Project Project => _shell.Project;
     public ObservableCollection<string> Columns { get; } = new();
 
     public ObservableCollection<string> SanierenOptions { get; }

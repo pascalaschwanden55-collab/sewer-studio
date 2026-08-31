@@ -45,7 +45,8 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
         ICommand? addOptionCommand = null,
         ICommand? removeOptionCommand = null,
         RecordDetailHighlightKind highlightKind = RecordDetailHighlightKind.None,
-        ICommand? nachschlagenCommand = null)
+        ICommand? nachschlagenCommand = null,
+        ICommand? strasseUebernehmenCommand = null)
     {
         Label = label;
         _value = value ?? string.Empty;
@@ -63,6 +64,7 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
         RemoveOptionCommand = removeOptionCommand;
         HighlightKind = highlightKind;
         NachschlagenCommand = nachschlagenCommand;
+        StrasseUebernehmenCommand = strasseUebernehmenCommand;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -89,13 +91,20 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
     public ICommand? RemoveOptionCommand { get; }
     public RecordDetailHighlightKind HighlightKind { get; }
 
-    /// <summary>Schlaegt den Feldwert beim Kanton nach (Kataster oder Grundbuch).</summary>
+    /// <summary>Schlaegt den Feldwert beim Kanton nach (Kataster, Grundbuch oder Abwassernetz).</summary>
     public ICommand? NachschlagenCommand { get; }
 
     /// <summary>
-    /// Ob die Karte zu einem Schacht oder einer Haltung gehoert. Beim Feld
-    /// "Eigentuemer" entscheidet das ueber die Quelle: Grundstueckseigentuemer
-    /// beim Schacht, Netzbetreiber bei der Haltung.
+    /// Uebernimmt die Strasse vom Nachbarbauteil. Ober- und Unterschacht
+    /// liegen an derselben Stelle wie die Haltung, also gilt dort dieselbe
+    /// Adresse — in beide Richtungen.
+    /// </summary>
+    public ICommand? StrasseUebernehmenCommand { get; }
+
+    /// <summary>
+    /// Ob die Karte zu einem Schacht oder einer Haltung gehoert. Die
+    /// Quellentabelle fuehrt beide Arten getrennt, und die Netzabfrage
+    /// braucht die richtige Ebene: Bauwerke oder Leitungen.
     /// </summary>
     public BauteilArt BauteilArt { get; init; } = BauteilArt.Schacht;
 
@@ -108,6 +117,32 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
         => NachschlagenCommand is not null
            && string.IsNullOrWhiteSpace(Value)
            && FeldQuellenTabelle.QuelleFuer(FieldName, BauteilArt) is not null;
+
+    /// <summary>
+    /// Nur am leeren Strassenfeld. Der Nachbarwert ist keine amtliche
+    /// Auskunft, sondern eine Uebertragung im eigenen Projekt — deshalb ein
+    /// eigener Menuepunkt und nicht derselbe wie beim Kanton.
+    /// </summary>
+    public bool KannStrasseUebernehmen
+        => StrasseUebernehmenCommand is not null
+           && string.IsNullOrWhiteSpace(Value)
+           && IstStrassenfeld(FieldName);
+
+    /// <summary>
+    /// Ob das Feld ueberhaupt ein eigenes Kontextmenue braucht. Ohne das
+    /// bliebe an einem Textfeld das Windows-Standardmenue mit
+    /// Ausschneiden/Kopieren/Einfuegen weg und an einem Auswahlfeld poppte
+    /// ein leeres Kaestchen auf.
+    /// </summary>
+    public bool BrauchtEigenesMenue => KannNachschlagen || KannStrasseUebernehmen;
+
+    private static bool IstStrassenfeld(string feldname)
+    {
+        var name = (feldname ?? string.Empty).Trim();
+        // Beide Schreibweisen kommen in echten Projekten vor.
+        return string.Equals(name, "Strasse", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(name, "Straße", StringComparison.OrdinalIgnoreCase);
+    }
     public bool CanEdit => !IsReadOnly;
     public bool HasManagedOptions =>
         EditOptionsCommand is not null ||
@@ -132,6 +167,8 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
             // Sonst bliebe der Nachschlag-Menuepunkt sichtbar, obwohl das
             // Feld gerade gefuellt wurde.
             OnPropertyChanged(nameof(KannNachschlagen));
+            OnPropertyChanged(nameof(KannStrasseUebernehmen));
+            OnPropertyChanged(nameof(BrauchtEigenesMenue));
             _commitValue(_value);
         }
     }

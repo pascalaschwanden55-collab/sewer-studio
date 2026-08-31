@@ -17,19 +17,22 @@ internal sealed class SchaechteRecordDetailsBuilder
     private readonly Action<SchachtRecord, KonsolidiertesSchachtFeld, string?> _commit;
     private readonly Func<bool> _canResolveDropdowns;
     private readonly Func<SchachtRecord, string, ICommand?>? _resolveNachschlag;
+    private readonly Func<SchachtRecord, string, ICommand?>? _resolveStrasse;
 
     internal SchaechteRecordDetailsBuilder(
         Func<string, IEnumerable<string>> resolveOptions,
         Func<string, ICommand?> resolveCommand,
         Action<SchachtRecord, KonsolidiertesSchachtFeld, string?> commit,
         Func<bool>? canResolveDropdowns = null,
-        Func<SchachtRecord, string, ICommand?>? resolveNachschlag = null)
+        Func<SchachtRecord, string, ICommand?>? resolveNachschlag = null,
+        Func<SchachtRecord, string, ICommand?>? resolveStrasse = null)
     {
         _resolveOptions = resolveOptions ?? throw new ArgumentNullException(nameof(resolveOptions));
         _resolveCommand = resolveCommand ?? throw new ArgumentNullException(nameof(resolveCommand));
         _commit = commit ?? throw new ArgumentNullException(nameof(commit));
         _canResolveDropdowns = canResolveDropdowns ?? (() => true);
         _resolveNachschlag = resolveNachschlag;
+        _resolveStrasse = resolveStrasse;
     }
 
     internal List<RecordDetailGroup> Build(
@@ -108,6 +111,9 @@ internal sealed class SchaechteRecordDetailsBuilder
         // Nachschlagen beim Kanton: Das Item entscheidet selbst, ob der
         // Menuepunkt sichtbar wird (leeres Feld mit bekannter Quelle).
         var nachschlagen = _resolveNachschlag?.Invoke(record, field.AnzeigeName);
+        // Strasse vom Nachbarbauteil: eigene Uebertragung im Projekt,
+        // keine amtliche Auskunft - deshalb ein eigener Menuepunkt.
+        var strasse = _resolveStrasse?.Invoke(record, field.AnzeigeName);
         var highlightKind = RecordDetailHighlightPolicy.Resolve(field.AnzeigeName);
         void Commit(string? value) => _commit(record, field, value);
 
@@ -126,7 +132,8 @@ internal sealed class SchaechteRecordDetailsBuilder
                 addOptionCommand: spec.Managed ? _resolveCommand(spec.AddCommand) : null,
                 removeOptionCommand: spec.Managed ? _resolveCommand(spec.RemoveCommand) : null,
                 highlightKind: highlightKind,
-                nachschlagenCommand: nachschlagen)
+                nachschlagenCommand: nachschlagen,
+                strasseUebernehmenCommand: strasse)
             { FieldName = field.AnzeigeName };
         }
 
@@ -143,7 +150,8 @@ internal sealed class SchaechteRecordDetailsBuilder
                 allowFreeText: false,
                 options: ZustandsklasseColorPalette.SelectionOptions,
                 highlightKind: highlightKind,
-                nachschlagenCommand: nachschlagen)
+                nachschlagenCommand: nachschlagen,
+                strasseUebernehmenCommand: strasse)
             { FieldName = field.AnzeigeName };
         }
 
@@ -153,7 +161,8 @@ internal sealed class SchaechteRecordDetailsBuilder
             commitValue: Commit,
             isMultiline: isMultiline,
             highlightKind: highlightKind,
-            nachschlagenCommand: nachschlagen)
+            nachschlagenCommand: nachschlagen,
+            strasseUebernehmenCommand: strasse)
         { FieldName = field.AnzeigeName };
     }
 
