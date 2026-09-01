@@ -1,7 +1,5 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.UI.ViewModels.Protocol;
@@ -31,9 +29,6 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
     [ObservableProperty] private string _validationMessage = string.Empty;
     [ObservableProperty] private string _rangeHint = string.Empty;
 
-    public IRelayCommand ApplyCommand { get; }
-    public IRelayCommand CancelCommand { get; }
-
     public IReadOnlyList<string> SeverityOptions { get; } = new[] { "low", "mid", "high" };
     public string SelectedSource => SelectedCode?.Source ?? string.Empty;
     public string SelectedCanonicalCode => SelectedCode?.CanonicalCode ?? string.Empty;
@@ -56,9 +51,6 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
         {
             GroupOptions.Add(group);
         }
-
-        ApplyCommand = new RelayCommand(() => { });
-        CancelCommand = new RelayCommand(() => { });
 
         InitializeFromEntry();
         RebuildTree();

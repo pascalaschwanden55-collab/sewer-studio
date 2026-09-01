@@ -157,6 +157,19 @@
                           Margin="16,0,0,0"
                           ToolTip="Führt einen Dry-Run durch und zeigt die erwarteten Änderungen, bevor der eigentliche Import startet."/>
             </StackPanel>
+
+            <DockPanel Margin="0,8,0,0">
+                <Button DockPanel.Dock="Right"
+                        Command="{Binding ReloadCatalogCommand}"
+                        Content="Katalog neu laden"
+                        Style="{StaticResource ToolbarButton}"
+                        Padding="10,3"
+                        ToolTip="Liest den VSA-Codekatalog erneut von der eingestellten Quelle."/>
+                <TextBlock Text="{Binding CatalogStatus}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap"/>
+            </DockPanel>
         </StackPanel>
 
         <Border Grid.Row="1" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"

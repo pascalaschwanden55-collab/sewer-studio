@@ -157,7 +157,6 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     // Navigation
     // =================================================================
 
-    [RelayCommand]
     public void SelectTile(TileItem tile)
     {
         switch (CurrentLevel)
@@ -206,7 +205,6 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
     public void NavigateBack()
     {
         if (ShowResultPanel)
@@ -223,14 +221,12 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
             NavigateToLevel(CurrentLevel - 1);
     }
 
-    [RelayCommand]
     public void NavigateToBreadcrumb(int level)
     {
         ShowResultPanel = false;
         NavigateToLevel(level);
     }
 
-    [RelayCommand]
     public void ResetToMainCodes()
     {
         ShowResultPanel = false;

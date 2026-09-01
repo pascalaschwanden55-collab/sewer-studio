@@ -611,6 +611,8 @@
                     <Button Content="Speichern" Width="140" Height="38" Margin="8,0,0,0"
                             Command="{Binding CostCalcVm.SaveCommand}"
                             ToolTip="Aktuelle Kalkulation im Projekt speichern"/>
+                    <Button Content="Schließen" Width="110" Height="38" Margin="8,0,0,0"
+                            Command="{Binding CloseCommand}"/>
                 </WrapPanel>
             </Grid>
         </Border>

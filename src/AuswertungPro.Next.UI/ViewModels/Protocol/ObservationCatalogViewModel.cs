@@ -682,8 +682,6 @@ public sealed partial class ObservationParameterViewModel : ObservableObject
     [ObservableProperty] private bool _isValid = true;
     [ObservableProperty] private string _errorMessage = string.Empty;
 
-    public IRelayCommand<string> SelectClockCommand { get; }
-
     public ObservationParameterViewModel(AppProtocol.CodeParameter parameter, string? existingValue)
     {
         Name = parameter.Name;
@@ -693,14 +691,6 @@ public sealed partial class ObservationParameterViewModel : ObservableObject
         Required = parameter.Required;
         AllowedValues = parameter.AllowedValues?.ToList() ?? new List<string>();
         Value = existingValue ?? string.Empty;
-        SelectClockCommand = new RelayCommand<string>(SetClockValue);
-    }
-
-    private void SetClockValue(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return;
-        Value = value.Trim();
     }
 
     partial void OnValueChanged(string value)

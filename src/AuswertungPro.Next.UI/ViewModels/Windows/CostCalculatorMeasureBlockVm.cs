@@ -37,7 +37,6 @@ public sealed partial class MeasureBlockVm : ObservableObject
     public IRelayCommand<CostLineVm> RemoveLineCommand { get; }
     public IRelayCommand<CostLineVm> MoveLineUpCommand { get; }
     public IRelayCommand<CostLineVm> MoveLineDownCommand { get; }
-    public IRelayCommand SortLinesCommand { get; }
 
     public event Action? BlockChanged;
 
@@ -53,7 +52,6 @@ public sealed partial class MeasureBlockVm : ObservableObject
         RemoveLineCommand = new RelayCommand<CostLineVm>(RemoveLine);
         MoveLineUpCommand = new RelayCommand<CostLineVm>(MoveLineUp);
         MoveLineDownCommand = new RelayCommand<CostLineVm>(MoveLineDown);
-        SortLinesCommand = new RelayCommand(SortLines);
 
         if (template is not null)
         {

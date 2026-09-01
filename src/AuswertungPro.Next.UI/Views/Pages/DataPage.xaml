@@ -160,6 +160,13 @@
                                         <ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
+                                <MenuItem Header="Direkt zur KI-Optimierung"
+                                          Command="{Binding PlacementTarget.DataContext.OptimizeSanierungKiCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding PlacementTarget.DataContext.Selected, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xEA80;" Foreground="{DynamicResource AccentBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
                                 <MenuItem Header="Vorschlag aus Schadenscodes" Click="SuggestMeasuresMenu_Click">
                                     <MenuItem.Icon>
                                         <ui:FluentIcon Glyph="&#xEA80;" Foreground="{DynamicResource AccentBrush}"/>

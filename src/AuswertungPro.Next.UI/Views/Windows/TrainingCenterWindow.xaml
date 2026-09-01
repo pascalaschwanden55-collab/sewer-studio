@@ -42,6 +42,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="Ordner:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <TextBox Grid.Column="1" Text="{Binding RootFolder}" IsReadOnly="True"
@@ -57,7 +58,11 @@
                 </Button>
                 <Button Grid.Column="4" Content="Scannen" Command="{Binding ScanCommand}" Margin="0,0,4,0"/>
                 <Button Grid.Column="5" Content="Speichern" Command="{Binding SaveCommand}" Margin="0,0,8,0"/>
-                <Button Grid.Column="6" Command="{Binding BatchImportAndIndexCommand}"
+                <Button Grid.Column="6" Content="Nach Haltung verteilen…"
+                        Command="{Binding DistributeHaltungCommand}"
+                        ToolTip="PDF, Videoordner und Ausgabe wählen und nach Haltung zusammenführen."
+                        Margin="0,0,8,0"/>
+                <Button Grid.Column="7" Command="{Binding BatchImportAndIndexCommand}"
                         ToolTip="Alle Ordner scannen, Samples generieren, auto-approve, Knowledge Base indizieren"
                         FontWeight="SemiBold" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
@@ -65,10 +70,10 @@
                         <TextBlock Text="Batch-Import + KB" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <Button Grid.Column="7" Content="KB prüfen" Command="{Binding CheckKnowledgeBaseCommand}"
+                <Button Grid.Column="8" Content="KB prüfen" Command="{Binding CheckKnowledgeBaseCommand}"
                         ToolTip="Liest Samples, Embeddings, Versionen und Top-Codes aus der Knowledge Base"
                         Margin="0,0,8,0"/>
-                <Button Grid.Column="8" Command="{Binding ReconcileGoldToKbCommand}"
+                <Button Grid.Column="9" Command="{Binding ReconcileGoldToKbCommand}"
                         ToolTip="Bestätigte Gold-Befunde, die noch nicht in der Knowledge Base stehen, nachträglich indexieren (legt vorher ein Backup an)"
                         FontWeight="SemiBold" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
@@ -76,7 +81,7 @@
                         <TextBlock Text="Gold in KB nachholen"/>
                     </StackPanel>
                 </Button>
-                <Button Grid.Column="9" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
+                <Button Grid.Column="10" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
             </Grid>
         </Border>
@@ -264,7 +269,8 @@
                                 <StackPanel Grid.Row="5" Orientation="Horizontal"
                                             HorizontalAlignment="Right" Margin="0,12,0,0">
                                     <Button Content="Approve" Command="{Binding ApproveSampleCommand}" Margin="0,0,8,0"/>
-                                    <Button Content="Reject" Command="{Binding RejectSampleCommand}"/>
+                                    <Button Content="Reject" Command="{Binding RejectSampleCommand}" Margin="0,0,8,0"/>
+                                    <Button Content="Entfernen" Command="{Binding RemoveSampleCommand}"/>
                                 </StackPanel>
                             </Grid>
                         </Border>

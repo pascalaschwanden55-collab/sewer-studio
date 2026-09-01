@@ -212,6 +212,12 @@
                                       DisplayMemberPath="DisplayName"
                                       SelectionChanged="PreviewModelBox_SelectionChanged"
                                       Margin="0,0,0,6"/>
+                            <Button Content="Modellliste aktualisieren"
+                                    Command="{Binding RefreshPreviewModelsCommand}"
+                                    Style="{StaticResource ToolbarButton}"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,0,0,6"
+                                    ToolTip="Liest die verfügbaren BCC-Testmodelle erneut ein."/>
                             <Button Content="Foto mit gewähltem Modell prüfen"
                                     Command="{Binding RunPreviewDetectionCommand}"
                                     Style="{StaticResource PrimaryButton}"
