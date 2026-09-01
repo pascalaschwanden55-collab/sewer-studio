@@ -6,6 +6,12 @@ using AuswertungPro.Next.Domain.Models.Dossiers;
 
 namespace AuswertungPro.Next.Application.Dossiers.Lookup;
 
+/// <summary>Ergebnis der begrenzten Verzeichnissuche samt sichtbarer Stoerung.</summary>
+public sealed record OwnerDirectoryFillResult(int AppliedCount, string? Unavailable)
+{
+    public bool IsUnavailable => !string.IsNullOrWhiteSpace(Unavailable);
+}
+
 /// <summary>
 /// Ergaenzt Telefon und Mail der Eigentuemer einer Liegenschaft aus dem
 /// Verzeichnis.
@@ -46,12 +52,25 @@ public sealed class OwnerDirectoryLookupUseCase
     public async Task<int> FillAsync(
         DossierDefinition dossier,
         CancellationToken ct = default)
+        => (await FillWithResultAsync(dossier, ct).ConfigureAwait(false)).AppliedCount;
+
+    /// <summary>
+    /// Wie <see cref="FillAsync"/>, meldet aber einen Dienstausfall getrennt von
+    /// einem echten Ergebnis ohne eindeutigen Treffer.
+    /// </summary>
+    public async Task<OwnerDirectoryFillResult> FillWithResultAsync(
+        DossierDefinition dossier,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(dossier);
         ct.ThrowIfCancellationRequested();
 
         if (!_directory.IsConfigured)
-            return 0;
+        {
+            return new OwnerDirectoryFillResult(
+                0,
+                "Die Telefonsuche ist nicht eingerichtet.");
+        }
 
         var gefragt = 0;
         var uebernommen = 0;
@@ -78,11 +97,17 @@ public sealed class OwnerDirectoryLookupUseCase
             {
                 throw;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Ein Ausfall bei einer Person darf die uebrigen nicht kosten.
-                continue;
+                // Bei einer Dienststoerung nicht vier weitere Anfragen senden.
+                // "Nicht gefunden" und "konnte nicht pruefen" bleiben getrennt.
+                return new OwnerDirectoryFillResult(
+                    uebernommen,
+                    "Die Telefonsuche war nicht erreichbar: " + ex.Message);
             }
+
+            if (treffer.IsUnavailable)
+                return new OwnerDirectoryFillResult(uebernommen, treffer.Unavailable);
 
             if (treffer.Unique is not { } eintrag)
                 continue;
@@ -107,6 +132,6 @@ public sealed class OwnerDirectoryLookupUseCase
                 uebernommen++;
         }
 
-        return uebernommen;
+        return new OwnerDirectoryFillResult(uebernommen, null);
     }
 }

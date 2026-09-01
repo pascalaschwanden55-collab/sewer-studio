@@ -148,11 +148,20 @@ public partial class DossierParcelLookupWindow : Window
             var ergebnis = await _lookup.RunAsync(
                 gemeinde.BfsNr, nummer, _holdingIdsByName.Keys.ToList(), fortschritt);
 
+            OwnerDirectoryFillResult? verzeichnis = null;
             if (ergebnis.Dossier is not null
                 && DirectoryBox.IsChecked == true
                 && _directory.IsConfigured)
             {
-                await SucheVerzeichnisAsync(ergebnis.Dossier);
+                verzeichnis = await SucheVerzeichnisAsync(ergebnis.Dossier);
+            }
+
+            if (verzeichnis?.IsUnavailable == true)
+            {
+                ergebnis = ergebnis with
+                {
+                    Warnings = [.. ergebnis.Warnings, "Verzeichnis: " + verzeichnis.Unavailable]
+                };
             }
 
             Zeige(ergebnis);
@@ -173,16 +182,12 @@ public partial class DossierParcelLookupWindow : Window
     /// <see cref="OwnerDirectoryLookupUseCase"/> — im Fenstercode waren sie
     /// von keiner Pruefung gedeckt, obwohl sie eine Nutzungsgrenze sind.
     /// </summary>
-    private async Task SucheVerzeichnisAsync(DossierDefinition dossier)
+    private async Task<OwnerDirectoryFillResult> SucheVerzeichnisAsync(DossierDefinition dossier)
     {
         StatusText.Text = "Verzeichnis: Telefon und Mail werden gesucht…";
 
-        var uebernommen = await new OwnerDirectoryLookupUseCase(_directory)
-            .FillAsync(dossier);
-
-        StatusText.Text = uebernommen == 1
-            ? "Verzeichnis: 1 Eintrag übernommen."
-            : $"Verzeichnis: {uebernommen} Einträge übernommen.";
+        return await new OwnerDirectoryLookupUseCase(_directory)
+            .FillWithResultAsync(dossier);
     }
 
     private void Zeige(DossierParcelLookupResult ergebnis)

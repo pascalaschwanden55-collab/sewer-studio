@@ -23,6 +23,8 @@ public sealed class DossierDirectoryQuotaGuardTests
     {
         Assert.Contains(
             "new OwnerDirectoryLookupUseCase(_directory)", Fenster(), StringComparison.Ordinal);
+        Assert.Contains("FillWithResultAsync", Fenster(), StringComparison.Ordinal);
+        Assert.Contains("Warnings = [.. ergebnis.Warnings", Fenster(), StringComparison.Ordinal);
     }
 
     [Fact]

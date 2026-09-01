@@ -221,8 +221,21 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             return;
         }
 
-        var conflicts = _service.Scan(projectFolder);
-        foreach (var conflict in conflicts)
+        var scan = _service.ScanWithResult(projectFolder);
+        if (!scan.Success)
+        {
+            OpenConflictCount = 0;
+            MissingConflictCount = 0;
+            AmbiguousConflictCount = 0;
+            LearnedMappingCount = _service.GetMappingCount(project);
+            SummaryText = "Konflikte konnten nicht geprueft werden.";
+            LastResult = "";
+            ConflictsError = scan.Error ?? SummaryText;
+            ConflictsState = StatusHostState.Error;
+            return;
+        }
+
+        foreach (var conflict in scan.Cases)
         {
             var row = new MediaConflictRowViewModel(conflict)
             {

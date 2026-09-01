@@ -111,6 +111,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
 
     private DossierDocument _document = new();
     private bool _loaded;
+    private string? _costLoadError;
 
     public DossiersPageViewModel(
         Func<Project> getProject,
@@ -152,8 +153,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         // Einmal zuklappen soll reichen — nicht bei jedem Seitenwechsel erneut.
         _isSummaryCollapsed = _settings.DossierSummaryCollapsed;
 
-        _costs = new DossierCostCache(() => new DossierCostSnapshot(
-            LoadCosts(), LoadSchachtCosts()));
+        _costs = new DossierCostCache(LoadCostSnapshot);
 
         NewDossierCommand = new AsyncRelayCommand(CreateDossierAsync);
         DeleteDossierCommand = new AsyncRelayCommand(DeleteDossierAsync, () => Selected is not null);
@@ -341,6 +341,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
             return;
         }
 
+        var dossierLoadFailed = false;
         try
         {
             _document = await _store.LoadAsync(root, _getProject());
@@ -353,11 +354,17 @@ public sealed partial class DossiersPageViewModel : ObservableObject
             // ueberschreiben, sondern den Grund zeigen.
             _document = new DossierDocument();
             _loaded = false;
+            dossierLoadFailed = true;
             StatusMessage = ex.Message;
         }
 
+        // Auch ohne vorhandenes Dossier muessen beschaedigte Kostendateien
+        // sichtbar werden. Sonst wuerde der Cache erst beim ersten Listeneintrag laden.
+        _ = _costs.Get();
         AreaTitle = _document.Area.AreaTitle;
         RebuildList();
+        if (!dossierLoadFailed && !string.IsNullOrWhiteSpace(_costLoadError))
+            StatusMessage = "Kostendaten nicht lesbar:\n" + _costLoadError;
     }
 
     private void RebuildList()
@@ -387,19 +394,19 @@ public sealed partial class DossiersPageViewModel : ObservableObject
             definition, _getProject(), kosten.Haltungen, kosten.Schaechte);
     }
 
-    private ProjectCostStore LoadCosts()
+    private DossierCostSnapshot LoadCostSnapshot()
     {
-        try
-        {
-            var repository = _costStores.CreateProjectCostStore();
-            return repository.Load(_getProjectFilePath());
-        }
-        catch
-        {
-            // Ohne Kostendaten bleiben die Kennzahlen ohne Geldwerte; das ist
-            // besser als eine Seite, die gar nicht mehr aufgeht.
-            return new ProjectCostStore();
-        }
+        var errors = new List<string>();
+        var haltung = LoadCostFile("costs.json", errors);
+        var matrix = LoadCostFile("schacht_costs.json", errors);
+        var empfehlungen = LoadCostFile("schacht_empfehlungen.json", errors);
+        _costLoadError = errors.Count == 0
+            ? null
+            : string.Join("\n", errors.Distinct(StringComparer.Ordinal));
+
+        return new DossierCostSnapshot(
+            haltung,
+            SchachtCostStoreMerger.Merge(matrix, empfehlungen));
     }
 
     /// <summary>
@@ -413,22 +420,23 @@ public sealed partial class DossiersPageViewModel : ObservableObject
     /// zweite Regel wuerde dem Eigentuemer einen anderen Betrag nennen als der
     /// Ausdruck.
     /// </summary>
-    private ProjectCostStore LoadSchachtCosts()
-    {
-        var matrix = LoadCostFile("schacht_costs.json");
-        var empfehlungen = LoadCostFile("schacht_empfehlungen.json");
-
-        return SchachtCostStoreMerger.Merge(matrix, empfehlungen);
-    }
-
-    private ProjectCostStore LoadCostFile(string fileName)
+    private ProjectCostStore LoadCostFile(string fileName, ICollection<string> errors)
     {
         try
         {
-            return _costStores.CreateProjectCostStore(fileName).Load(_getProjectFilePath());
+            var store = _costStores.CreateProjectCostStore(fileName)
+                .Load(_getProjectFilePath(), out var error);
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                errors.Add(fileName + ": " + error);
+                return new ProjectCostStore();
+            }
+
+            return store;
         }
-        catch
+        catch (Exception ex)
         {
+            errors.Add(fileName + ": " + ex.Message);
             return new ProjectCostStore();
         }
     }

@@ -125,7 +125,7 @@ public sealed class OwnerDirectoryLookupUseCaseTests
     }
 
     [Fact]
-    public async Task Ein_Fehler_bei_einer_Person_stoppt_die_uebrigen_nicht()
+    public async Task Ein_Dienstausfall_stoppt_weitere_Anfragen_und_wird_gemeldet()
     {
         var dienst = new FakeDirectory(name => name == "A"
             ? throw new InvalidOperationException("Dienst weg")
@@ -133,10 +133,30 @@ public sealed class OwnerDirectoryLookupUseCaseTests
 
         var dossier = MitEigentuemern("A", "B");
 
-        var uebernommen = await new OwnerDirectoryLookupUseCase(dienst).FillAsync(dossier);
+        var result = await new OwnerDirectoryLookupUseCase(dienst)
+            .FillWithResultAsync(dossier);
 
-        Assert.Equal(1, uebernommen);
-        Assert.Equal("041", dossier.Owners[1].Phone);
+        Assert.Equal(0, result.AppliedCount);
+        Assert.True(result.IsUnavailable);
+        Assert.Contains("Dienst weg", result.Unavailable, StringComparison.Ordinal);
+        Assert.Equal(new[] { "A" }, dienst.Gefragt);
+        Assert.Equal("", dossier.Owners[1].Phone);
+    }
+
+    [Fact]
+    public async Task Gemeldeter_429_Fehler_wird_nicht_als_null_Treffer_ausgegeben()
+    {
+        var dienst = new FakeDirectory(_ => new DirectoryLookupResult(
+            Array.Empty<DirectoryEntry>(),
+            "Die Telefonsuche antwortete mit 429."));
+        var dossier = MitEigentuemern("A", "B", "C");
+
+        var result = await new OwnerDirectoryLookupUseCase(dienst)
+            .FillWithResultAsync(dossier);
+
+        Assert.True(result.IsUnavailable);
+        Assert.Contains("429", result.Unavailable, StringComparison.Ordinal);
+        Assert.Equal(new[] { "A" }, dienst.Gefragt);
     }
 
     [Fact]

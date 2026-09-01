@@ -20,14 +20,6 @@ public sealed class MediaConflictCenterService
         @"^(?<date>\d{8})_(?<holding>.+?)_VIDEO_(?<kind>MISSING|AMBIGUOUS)\.txt$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
-    private static readonly Regex HoldingPairRegex = new(
-        @"((?:\d{2,}\.\d{2,}|\d{4,})\s*[-]\s*(?:\d{2,}\.\d{2,}|\d{4,}))",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
-    private static readonly Regex NodePrefixRegex = new(
-        @"^\d{1,2}\.",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -68,6 +60,13 @@ public sealed class MediaConflictCenterService
         int Unresolved,
         IReadOnlyList<string> Messages);
 
+    public sealed record ScanResult(
+        IReadOnlyList<MediaConflictCase> Cases,
+        string? Error)
+    {
+        public bool Success => string.IsNullOrWhiteSpace(Error);
+    }
+
     public sealed record LearnedVideoMapping(
         string Fingerprint,
         string SelectedFileName,
@@ -81,9 +80,16 @@ public sealed class MediaConflictCenterService
     }
 
     public IReadOnlyList<MediaConflictCase> Scan(string projectFolder)
+        => ScanWithResult(projectFolder).Cases;
+
+    public ScanResult ScanWithResult(string projectFolder)
     {
         if (string.IsNullOrWhiteSpace(projectFolder))
-            return Array.Empty<MediaConflictCase>();
+        {
+            return new ScanResult(
+                Array.Empty<MediaConflictCase>(),
+                "Der Projektordner fehlt.");
+        }
 
         string holdingsRoot;
         try
@@ -92,13 +98,15 @@ public sealed class MediaConflictCenterService
             holdingsRoot = guard.EnsureSafeDirectoryTarget(
                 Path.Combine(projectFolder, "Haltungen"));
         }
-        catch
+        catch (Exception ex)
         {
-            return Array.Empty<MediaConflictCase>();
+            return new ScanResult(
+                Array.Empty<MediaConflictCase>(),
+                "Der Medien-Konfliktordner konnte nicht sicher geprueft werden: " + ex.Message);
         }
 
         if (!Directory.Exists(holdingsRoot))
-            return Array.Empty<MediaConflictCase>();
+            return new ScanResult(Array.Empty<MediaConflictCase>(), null);
 
         var infoFiles = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(holdingsRoot, "*_VIDEO_*.txt", recursive: true)
             .Where(path =>
@@ -121,11 +129,12 @@ public sealed class MediaConflictCenterService
             }
         }
 
-        return list
+        var cases = list
             .OrderByDescending(x => x.DateStamp ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.HoldingFolderName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.InfoPath, StringComparer.OrdinalIgnoreCase)
             .ToList();
+        return new ScanResult(cases, null);
     }
 
     public int GetMappingCount(Project project)
@@ -738,43 +747,13 @@ public sealed class MediaConflictCenterService
     }
 
     private static string NormalizeHaltungId(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "UNKNOWN";
-
-        var text = NormalizeText(value).Trim();
-        var m = HoldingPairRegex.Match(text);
-        if (m.Success)
-        {
-            var normalized = m.Groups[1].Value.Replace(" ", "").Replace("/", "-");
-            normalized = Regex.Replace(normalized, @"\s*-+\s*", "-", RegexOptions.CultureInvariant);
-            return normalized;
-        }
-
-        return text;
-    }
-
-    private static string NormalizeText(string value)
-        => value.Replace("\r\n", "\n").Replace('\r', '\n').Trim();
+        => HoldingIdNormalizer.NormalizeHaltungId(value);
 
     private static string SanitizePathSegment(string? value)
         => ProjectPathResolver.SanitizePathSegment(value);
 
     private static string StripNodePrefixes(string holdingKey)
-    {
-        if (string.IsNullOrWhiteSpace(holdingKey))
-            return string.Empty;
-
-        var dashIdx = holdingKey.IndexOf('-');
-        if (dashIdx < 0)
-            return NodePrefixRegex.Replace(holdingKey, "");
-
-        var left = holdingKey[..dashIdx];
-        var right = holdingKey[(dashIdx + 1)..];
-        left = NodePrefixRegex.Replace(left, "");
-        right = NodePrefixRegex.Replace(right, "");
-        return $"{left}-{right}";
-    }
+        => HoldingIdNormalizer.StripNodePrefixes(holdingKey);
 
     private static readonly HashSet<string> VideoExtensions = new(MediaFileTypes.VideoExtensions, StringComparer.OrdinalIgnoreCase);
 

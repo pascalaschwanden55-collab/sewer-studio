@@ -35,6 +35,31 @@ public sealed class MediaConflictCenterServiceTests
     }
 
     [JunctionFact]
+    public void ScanWithResult_unterscheidet_unsicheren_Pfad_von_keinen_Konflikten()
+    {
+        var root = TempRoot();
+        var projectRoot = Path.Combine(root, "Projekt");
+        var external = Path.Combine(root, "Fremd");
+        var holdingsLink = Path.Combine(projectRoot, "Haltungen");
+        Directory.CreateDirectory(projectRoot);
+        Directory.CreateDirectory(external);
+        JunctionTestSupport.CreateDirectoryLink(holdingsLink, external);
+
+        try
+        {
+            var result = new MediaConflictCenterService().ScanWithResult(projectRoot);
+
+            Assert.False(result.Success);
+            Assert.Empty(result.Cases);
+            Assert.Contains("nicht sicher geprueft", result.Error, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteLinkAndRoot(holdingsLink, root);
+        }
+    }
+
+    [JunctionFact]
     public void ResolveConflict_SchreibtUndLoeschtNichtDurchVerknuepftenHaltungsordner()
     {
         var root = TempRoot();

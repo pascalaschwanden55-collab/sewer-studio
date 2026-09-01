@@ -74,10 +74,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private bool _disposed;
 
         public IRelayCommand NewCommand { get; }
-        public IRelayCommand OpenCommand { get; }
         public IRelayCommand OpenSelectedCommand { get; }
-        public IRelayCommand ContinueCommand { get; }
-        public IRelayCommand RefreshCommand { get; }
         public IAsyncRelayCommand PrintPreviewPdfCommand { get; }
         public IRelayCommand ClearFilterCommand { get; }
         public IRelayCommand DeleteSelectedCommand { get; }
@@ -86,7 +83,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public IRelayCommand<object?> NavigateDamageCommand { get; }
         public IRelayCommand<object?> NavigateDnCommand { get; }
         public IRelayCommand ToggleProjectListCommand { get; }
-        public bool HasLastProject => !string.IsNullOrWhiteSpace(LastProjectPath) && File.Exists(LastProjectPath);
 
         public OverviewPageViewModel(ShellViewModel shell, ServiceProvider sp)
             : this(
@@ -193,10 +189,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             _dashboardRefreshTimer.Tick += DashboardRefreshTimerTick;
 
             NewCommand = new RelayCommand(NewProject);
-            OpenCommand = new AsyncRelayCommand(OpenProjectAsync);
             OpenSelectedCommand = new AsyncRelayCommand(OpenSelectedProjectAsync, () => SelectedProjectEntry is not null);
-            ContinueCommand = new AsyncRelayCommand(OpenLastProjectAsync, () => HasLastProject);
-            RefreshCommand = new RelayCommand(LoadAllProjects);
             PrintPreviewPdfCommand = new AsyncRelayCommand(PrintPreviewPdfAsync, CanPrintPreviewPdf);
             ClearFilterCommand = new RelayCommand(ClearFilter);
             DeleteSelectedCommand = new RelayCommand(DeleteSelectedProject, () => SelectedProjectEntry is not null);
@@ -369,11 +362,12 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private ProjectCostStore LoadSchachtCostStore(string? projectPath, out string? error)
         {
             var matrix = LoadCostStore(_schachtCostRepo, projectPath, out var matrixError);
+            string? empfehlungenError = null;
             var empfehlungen = _schachtEmpfehlungCostRepo is null
                 ? new ProjectCostStore()
-                : LoadCostStore(_schachtEmpfehlungCostRepo, projectPath, out _);
+                : LoadCostStore(_schachtEmpfehlungCostRepo, projectPath, out empfehlungenError);
 
-            error = matrixError;
+            error = CombineCostLoadErrors(matrixError, empfehlungenError);
             return SchachtCostStoreMerger.Merge(matrix, empfehlungen);
         }
 
@@ -625,13 +619,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         _shell.StartNewProjectDraft();
     }
 
-    private async Task OpenProjectAsync()
-    {
-        if (!await _shell.TryOpenProjectWithDialogAsync())
-            return;
-        AfterProjectOpened();
-    }
-
     private async Task OpenSelectedProjectAsync()
     {
         var path = SelectedProjectEntry?.Path;
@@ -685,7 +672,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         try
         {
-            // Nur ausblenden, NICHT loeschen: die Projektdatei und alle Daten bleiben auf der Platte.
+            // Nur aus der Uebersicht entfernen, NICHT loeschen: Projektdatei und Daten bleiben auf der Platte.
             var wasActive = string.Equals(_settings.LastProjectPath, entry.Path, StringComparison.OrdinalIgnoreCase);
             if (wasActive && !_shell.ConfirmDiscardUnsavedChanges())
                 return;
@@ -695,7 +682,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
             if (wasActive)
             {
-                // Das aktive Projekt wurde ausgeblendet: Dirty-Flag zuruecksetzen und zum
+                // Das aktive Projekt wurde aus der Uebersicht entfernt: Dirty-Flag zuruecksetzen und zum
                 // Start-Bildschirm navigieren. EnterLauncher() baut die OverviewPage neu auf.
                 _shell.Project.Dirty = false;
                 _shell.EnterLauncher();
@@ -710,15 +697,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 $"Entfernen fehlgeschlagen: {UserError.DescribeAndReport(ex, "Letztes Projekt entfernen")}",
                 "Fehler");
         }
-    }
-
-    private async Task OpenLastProjectAsync()
-    {
-        if (!HasLastProject || LastProjectPath is null)
-            return;
-        if (!await _shell.TryOpenProjectAsync(LastProjectPath))
-            return;
-        AfterProjectOpened();
     }
 
     partial void OnSelectedProjectEntryChanged(ProjectOverviewEntry? value)
@@ -838,12 +816,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             AuftragNr: string.Empty,
             Firma: string.Empty,
             Statistics: emptyStatistics);
-    }
-
-    partial void OnLastProjectPathChanged(string? value)
-    {
-        ContinueCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(HasLastProject));
     }
 
 }

@@ -57,12 +57,15 @@ public sealed class OverviewPreviewPdfCommandTests
         Assert.EndsWith(".pdf", name, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void Beschaedigte_kostendatei_zeigt_fehler_und_sperrt_preview_pdf()
+    [Theory]
+    [InlineData("costs.json")]
+    [InlineData("schacht_costs.json")]
+    [InlineData("schacht_empfehlungen.json")]
+    public void Beschaedigte_kostendatei_zeigt_fehler_und_sperrt_preview_pdf(string fileName)
     {
         using var temp = new TempDir();
         var projectPath = Path.Combine(temp.Path, "Projektdateien", "projekt.json");
-        var costsPath = Path.Combine(temp.Path, "Projektdateien", "costs", "costs.json");
+        var costsPath = Path.Combine(temp.Path, "Projektdateien", "costs", fileName);
         Directory.CreateDirectory(Path.GetDirectoryName(costsPath)!);
         File.WriteAllText(costsPath, "{ kaputte kostendaten");
 

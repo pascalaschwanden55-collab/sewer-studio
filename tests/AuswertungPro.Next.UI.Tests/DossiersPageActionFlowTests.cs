@@ -49,7 +49,8 @@ public sealed class DossiersPageActionFlowTests : IDisposable
         IDossierPdfAssemblyService? pdfAssembly = null,
         IDossierComponentListExportService? componentLists = null,
         IDialogService? dialogs = null,
-        ISafeShellOpenService? shellOpen = null)
+        ISafeShellOpenService? shellOpen = null,
+        ICostStoreFactory? costStores = null)
     {
         var vm = new DossiersPageViewModel(
             getProject: () => _project,
@@ -61,7 +62,7 @@ public sealed class DossiersPageActionFlowTests : IDisposable
             attachments: attachments ?? new NichtGebraucht(),
             pdfAssembly: pdfAssembly ?? new NichtGebraucht(),
             dialogWindows: _fenster,
-            costStores: new LeereKosten(),
+            costStores: costStores ?? new LeereKosten(),
             dialogs: dialogs ?? new StilleDialoge(),
             toasts: new ToastService(),
             shellOpen: shellOpen ?? new NichtsOeffnen(),
@@ -94,6 +95,18 @@ public sealed class DossiersPageActionFlowTests : IDisposable
             userEdited: false);
         _project.Data.Add(record);
         return record;
+    }
+
+    [Fact]
+    public async Task Beschaedigte_Kostendatei_wird_im_Cockpit_sichtbar_gemeldet()
+    {
+        var vm = BaueCockpit(costStores: new FehlerhafteKosten("schacht_empfehlungen.json"));
+
+        await vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.Contains("Kostendaten nicht lesbar", vm.StatusMessage, StringComparison.Ordinal);
+        Assert.Contains("schacht_empfehlungen.json", vm.StatusMessage, StringComparison.Ordinal);
+        Assert.Contains("ungueltiges JSON", vm.StatusMessage, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -789,6 +802,49 @@ public sealed class DossiersPageActionFlowTests : IDisposable
             public ProjectCostStore Load(string? projectPath, out string? loadError)
             {
                 loadError = null;
+                return new ProjectCostStore();
+            }
+
+            public void Save(string? projectPath, ProjectCostStore store) { }
+
+            public bool Save(string? projectPath, ProjectCostStore store, out string? saveError)
+            {
+                saveError = null;
+                return true;
+            }
+
+            public string GetStorePath(string projectPath) => projectPath;
+        }
+    }
+
+    private sealed class FehlerhafteKosten(string fehlerDatei) : ICostStoreFactory
+    {
+        public IProjectCostStoreRepository CreateProjectCostStore(string fileName = "costs.json")
+            => new Repository(fileName, fehlerDatei);
+
+        public ICostCatalogStore CreateCostCatalogStore(string? userOverridePath = null)
+            => throw new NotSupportedException();
+
+        public IMeasureTemplateStore CreateMeasureTemplateStore(string? userOverridePath = null)
+            => throw new NotSupportedException();
+
+        public IPositionTemplateStore CreatePositionTemplateStore(string? userOverridePath = null)
+            => throw new NotSupportedException();
+
+        public CostCalculationStores CreateCalculationStores(string projectCostFileName = "costs.json")
+            => throw new NotSupportedException();
+
+        private sealed class Repository(string fileName, string fehlerDatei)
+            : IProjectCostStoreRepository
+        {
+            public ProjectCostStore Load(string? projectPath)
+                => Load(projectPath, out _);
+
+            public ProjectCostStore Load(string? projectPath, out string? loadError)
+            {
+                loadError = string.Equals(fileName, fehlerDatei, StringComparison.Ordinal)
+                    ? "ungueltiges JSON"
+                    : null;
                 return new ProjectCostStore();
             }
 
