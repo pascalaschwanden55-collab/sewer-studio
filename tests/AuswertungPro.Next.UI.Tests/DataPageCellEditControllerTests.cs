@@ -153,6 +153,95 @@ public sealed class DataPageCellEditControllerTests
         Assert.Equal(0, renameCalls);
     }
 
+    [Fact]
+    public void Geaenderter_oberer_Schacht_zieht_den_Haltungsnamen_nach()
+    {
+        var record = Haltung("77565-77564", oben: "77564", unten: "77565");
+        var umbenannt = new List<(string Alt, string Neu)>();
+
+        var shouldSave = Apply(
+            "Schacht_oben",
+            record,
+            "77500",
+            rename: (item, alt, neu) =>
+            {
+                umbenannt.Add((alt, neu));
+                item.SetFieldValue("Haltungsname", neu, FieldSource.Manual, userEdited: true);
+                return true;
+            });
+
+        Assert.True(shouldSave);
+        Assert.Equal("77500", record.GetFieldValue("Schacht_oben"));
+        Assert.Equal(("77565-77564", "77565-77500"), Assert.Single(umbenannt));
+        Assert.Equal("77565-77500", record.GetFieldValue("Haltungsname"));
+    }
+
+    [Fact]
+    public void Geaenderter_unterer_Schacht_zieht_den_Haltungsnamen_nach()
+    {
+        var record = Haltung("77564-77565", oben: "77564", unten: "77565");
+        var umbenannt = new List<(string Alt, string Neu)>();
+
+        Apply(
+            "Schacht_unten",
+            record,
+            "77900",
+            rename: (item, alt, neu) =>
+            {
+                umbenannt.Add((alt, neu));
+                item.SetFieldValue("Haltungsname", neu, FieldSource.Manual, userEdited: true);
+                return true;
+            });
+
+        Assert.Equal(("77564-77565", "77564-77900"), Assert.Single(umbenannt));
+    }
+
+    [Fact]
+    public void Ein_selbst_vergebener_Haltungsname_wird_beim_Schachtwechsel_nicht_umbenannt()
+    {
+        var record = Haltung("Jagdmatt West", oben: "77564", unten: "77565");
+        var umbenannt = new List<string>();
+
+        Apply(
+            "Schacht_oben",
+            record,
+            "77500",
+            rename: (_, _, neu) =>
+            {
+                umbenannt.Add(neu);
+                return true;
+            });
+
+        Assert.Empty(umbenannt);
+        Assert.Equal("77500", record.GetFieldValue("Schacht_oben"));
+        Assert.Equal("Jagdmatt West", record.GetFieldValue("Haltungsname"));
+    }
+
+    [Fact]
+    public void Ein_gescheitertes_Umbenennen_laesst_den_bisherigen_Haltungsnamen_stehen()
+    {
+        var record = Haltung("77565-77564", oben: "77564", unten: "77565");
+
+        var shouldSave = Apply(
+            "Schacht_oben",
+            record,
+            "77500",
+            rename: (_, _, _) => false);
+
+        Assert.True(shouldSave);
+        Assert.Equal("77500", record.GetFieldValue("Schacht_oben"));
+        Assert.Equal("77565-77564", record.GetFieldValue("Haltungsname"));
+    }
+
+    private static HaltungRecord Haltung(string name, string oben, string unten)
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", name, FieldSource.Manual, userEdited: false);
+        record.SetFieldValue("Schacht_oben", oben, FieldSource.Manual, userEdited: false);
+        record.SetFieldValue("Schacht_unten", unten, FieldSource.Manual, userEdited: false);
+        return record;
+    }
+
     private static bool Apply(
         string fieldName,
         HaltungRecord? record,

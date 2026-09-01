@@ -722,6 +722,7 @@ verschobene Klassen oder Projektverweise im normalen Release-Build sichtbar brec
 - `TrainingYoloExportComposition` -> baut das Export-Subsystem einmalig zusammen; der zentrale ServiceProvider delegiert nur
 - `FullBackupComposition`         -> baut Marker, SQLite-Schnappschuss, Manifestpruefung und Vollsicherung einmalig zusammen; die UI liefert nur die aktuelle Quellenfunktion
 - `KnowledgeRealtimeMirrorService` -> gleicht den gesamten KnowledgeRoot beim Start ab und spiegelt danach jede Dateiaenderung auf den Datentraeger `Elements` nach `Brain`
+- `HoldingNameFromShafts`          -> leitet den Haltungsnamen aus `Schacht_oben`/`Schacht_unten` ab und BEHAELT dabei die vorhandene Reihenfolge (im Bestand steht bei Gegenbefahrung auch der untere Schacht vorn). Ein Name, der auf keines der beiden Muster passt, bleibt unangetastet. `DataPageCellEditController.ApplySchachtChange` ist der gemeinsame Weg fuer Tabellen-Edit und Formular-Editor; die Namensaenderung laeuft danach ueber den normalen Umbenennungsweg, damit Verteilordner, Dateien und PDF-Text mitgehen
 - `HoldingRenameFileService`       -> benennt eine Haltung samt Projekt-Verteilordnern und gespeicherten Medienpfaden um; externe Kundenordner sind ausgeschlossen
 - `HoldingFolderRenameTransaction` -> benennt Dateien und Unterordner rekursiv, erkennt abweichende datumsbasierte Alt-Dateinamen und kann jeden ausgefuehrten Schritt zurueckrollen
 - `StoredImportFileService`       -> kopiert Importquellen, loest Namenskollisionen und schreibt die Pfadlisten zentral

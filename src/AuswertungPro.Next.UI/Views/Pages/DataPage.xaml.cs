@@ -598,6 +598,18 @@ public partial class DataPage : System.Windows.Controls.UserControl
             if (!ApplyHoldingNameChange(record, oldValue, next, vm))
                 return;   // Rename fehlgeschlagen -> Name nicht aendern
         }
+        else if (fieldName is DataPageCellEditController.SchachtObenFeld
+                     or DataPageCellEditController.SchachtUntenFeld
+                 && vm is not null)
+        {
+            // Besteht der Haltungsname aus den beiden Schachtnummern, zieht er mit.
+            // Dieselbe Regel wie im Tabellen-Edit — sie darf nicht zweimal dastehen.
+            DataPageCellEditController.ApplySchachtChange(
+                record,
+                fieldName,
+                next,
+                (item, oldValue, newValue) => ApplyHoldingNameChange(item, oldValue, newValue, vm));
+        }
         else
         {
             record.SetFieldValue(fieldName, next, FieldSource.Manual, userEdited: true);

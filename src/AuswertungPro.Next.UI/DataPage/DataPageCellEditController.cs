@@ -1,3 +1,4 @@
+﻿using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.DataPage;
@@ -56,10 +57,62 @@ public static class DataPageCellEditController
             return applyHoldingNameChange(record, oldValue, editedValue ?? oldValue);
         }
 
+        if (fieldName is SchachtObenFeld or SchachtUntenFeld
+            && record is not null
+            && editedValue is not null)
+        {
+            ApplySchachtChange(record, fieldName, editedValue, applyHoldingNameChange);
+            return true;
+        }
+
         if (record is not null && editedValue is not null)
             record.SetFieldValue(fieldName, editedValue, FieldSource.Manual, userEdited: true);
 
         return true;
+    }
+
+    /// <summary>Feldname des oberen Schachts.</summary>
+    public const string SchachtObenFeld = "Schacht_oben";
+
+    /// <summary>Feldname des unteren Schachts.</summary>
+    public const string SchachtUntenFeld = "Schacht_unten";
+
+    /// <summary>
+    /// Aendert eine Schachtnummer und zieht den Haltungsnamen mit, sofern er
+    /// aus genau diesen beiden Nummern besteht. Das Umbenennen laeuft ueber
+    /// denselben Weg wie eine direkte Namensaenderung, damit Verteil-Ordner,
+    /// Dateien und der PDF-Text mitgehen. Scheitert es (Name schon vergeben,
+    /// Ordner gesperrt), bleibt die neue Schachtnummer stehen und der Name
+    /// unveraendert — die Meldung dazu kommt aus dem Umbenennungsweg.
+    ///
+    /// Wird von Tabellen-Edit UND Formular-Editor verwendet; die Regel darf
+    /// nicht an zwei Stellen liegen.
+    /// </summary>
+    public static void ApplySchachtChange(
+        HaltungRecord record,
+        string fieldName,
+        string editedValue,
+        Func<HaltungRecord, string, string, bool> applyHoldingNameChange)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        ArgumentNullException.ThrowIfNull(fieldName);
+        ArgumentNullException.ThrowIfNull(applyHoldingNameChange);
+
+        var alterName = record.GetFieldValue(FieldKeys.HoldingName);
+        var altOben = record.GetFieldValue(SchachtObenFeld);
+        var altUnten = record.GetFieldValue(SchachtUntenFeld);
+
+        record.SetFieldValue(fieldName, editedValue, FieldSource.Manual, userEdited: true);
+
+        var neuerName = HoldingNameFromShafts.Ableiten(
+            alterName,
+            altOben,
+            altUnten,
+            record.GetFieldValue(SchachtObenFeld),
+            record.GetFieldValue(SchachtUntenFeld));
+
+        if (neuerName is not null)
+            applyHoldingNameChange(record, alterName, neuerName);
     }
 
     private static void ApplyRenovationChoice(
