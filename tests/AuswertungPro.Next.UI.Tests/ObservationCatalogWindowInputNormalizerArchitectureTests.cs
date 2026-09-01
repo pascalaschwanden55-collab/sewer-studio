@@ -6,6 +6,23 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class ObservationCatalogWindowInputNormalizerArchitectureTests
 {
     [Fact]
+    public void Uhrlagen_Auswahl_schreibt_den_Wert_direkt_ins_ViewModel()
+    {
+        var xamlPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Windows",
+            "ObservationCatalogWindow.xaml");
+        var xaml = File.ReadAllText(xamlPath);
+
+        Assert.Contains(
+            "<controls:ClockPickerControl Value=\"{Binding Value, UpdateSourceTrigger=PropertyChanged}\" />",
+            xaml,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Fenster_nutzt_zentrale_Protokoll_Normalisierung_und_behaelt_UI_Ablauf()
     {
         var windowPath = RepoFile(

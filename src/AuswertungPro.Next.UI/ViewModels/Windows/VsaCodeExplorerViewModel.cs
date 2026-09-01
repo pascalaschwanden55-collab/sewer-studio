@@ -157,54 +157,6 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     // Navigation
     // =================================================================
 
-    public void SelectTile(TileItem tile)
-    {
-        switch (CurrentLevel)
-        {
-            case 0: // Gruppe gewaehlt
-                SelectedGroupKey = tile.Key;
-                CurrentGroupColor = tile.GroupColor;
-                NavigateToLevel(1);
-                break;
-
-            case 1: // Hauptcode gewaehlt
-                SelectedCodeKey = tile.Key;
-                if (tile.IsFinal)
-                {
-                    var codeDef = GetCurrentVsaCodeDef();
-                    var finalMainCode = codeDef?.FinalCode ?? tile.Key;
-                    if (_catalog.IsSelectableCode(finalMainCode))
-                        ShowFinalResult(finalMainCode, null, null);
-                    return;
-                }
-                NavigateToLevel(2);
-                break;
-
-            case 2: // Char1 gewaehlt
-                SelectedChar1Key = tile.Key;
-                if (tile.IsFinal)
-                {
-                    var cd = GetCurrentVsaCodeDef();
-                    var prefix = cd?.XPrefix == true ? "X" : "";
-                    var finalChar1Code = $"{SelectedCodeKey}{prefix}{tile.Key}";
-                    if (_catalog.IsSelectableCode(finalChar1Code))
-                        ShowFinalResult(finalChar1Code, tile.Key, null);
-                    return;
-                }
-                NavigateToLevel(3);
-                break;
-
-            case 3: // Char2 gewaehlt
-                SelectedChar2Key = tile.Key;
-                var cd2 = GetCurrentVsaCodeDef();
-                var prefix2 = cd2?.XPrefix == true ? "X" : "";
-                var finalCode = $"{SelectedCodeKey}{prefix2}{SelectedChar1Key}{tile.Key}";
-                if (_catalog.IsSelectableCode(finalCode))
-                    ShowFinalResult(finalCode, SelectedChar1Key, tile.Key);
-                break;
-        }
-    }
-
     public void NavigateBack()
     {
         if (ShowResultPanel)

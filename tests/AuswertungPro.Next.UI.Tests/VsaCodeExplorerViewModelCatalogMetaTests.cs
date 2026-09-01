@@ -283,19 +283,6 @@ public sealed class VsaCodeExplorerViewModelCatalogMetaTests
     }
 
     [Fact]
-    public void Legacy_tile_selection_cannot_bypass_manifest_whitelist()
-    {
-        var vm = CreateRealCatalogViewModel();
-
-        vm.SelectTile(new TileItem { Key = "BC" });
-        vm.SelectTile(new TileItem { Key = "BCCYY", IsFinal = true });
-
-        Assert.False(vm.ShowResultPanel);
-        Assert.False(vm.CanConfirm);
-        Assert.Empty(vm.FinalCode);
-    }
-
-    [Fact]
     public void Real_catalog_hides_non_selectable_bdg_other_reason()
     {
         var vm = CreateRealCatalogViewModel();
