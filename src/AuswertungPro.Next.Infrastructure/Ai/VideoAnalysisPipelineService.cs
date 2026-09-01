@@ -268,7 +268,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         }
 
         progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
-            $"{videoResult.Detections.Count} SchÃ¤den erkannt in {videoResult.FramesAnalyzed} Frames.",
+            $"{videoResult.Detections.Count} Schäden erkannt in {videoResult.FramesAnalyzed} Frames.",
             FramesDone: videoResult.FramesAnalyzed,
             FramesTotal: videoResult.FramesAnalyzed));
 
@@ -315,7 +315,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         }
 
         progress?.Report(new PipelineProgress(PipelinePhase.CodeMapping, 100,
-            $"{genResult.MappedEntries.Count(e => e.SuggestedCode != null)} EintrÃ¤ge gemappt.",
+            $"{genResult.MappedEntries.Count(e => e.SuggestedCode != null)} Einträge gemappt.",
             ItemsDone: genResult.MappedEntries.Count,
             ItemsTotal: genResult.MappedEntries.Count));
 

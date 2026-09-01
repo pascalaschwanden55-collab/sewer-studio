@@ -113,7 +113,7 @@ public sealed class FullProtocolGenerationService : IDisposable
                 Document: BuildEmptyDocument(request),
                 MappedEntries: Array.Empty<MappedProtocolEntry>(),
                 Error: null,
-                Warnings: new[] { "Keine SchÃ¤den erkannt." });
+                Warnings: new[] { "Keine Schäden erkannt." });
         }
 
         var mappedEntries = new List<MappedProtocolEntry>();
@@ -142,7 +142,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             .ToArray();
 
         progress?.Report(new CodeMappingProgress(total, total,
-            $"Fertig â€“ {protocolEntries.Count} EintrÃ¤ge gemappt."));
+            $"Fertig – {protocolEntries.Count} Einträge gemappt."));
 
         return new FullProtocolGenerationResult(
             Document: BuildDocument(request, protocolEntries),
@@ -253,7 +253,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             reason = string.IsNullOrWhiteSpace(reason)
                 ? $"KB-Fallback: {fallback.Code}"
                 : $"{reason} | KB-Fallback: {fallback.Code}";
-            warnings.Add("LLM lieferte keinen gÃ¼ltigen Code, KB-Fallback verwendet.");
+            warnings.Add("LLM lieferte keinen gültigen Code, KB-Fallback verwendet.");
         }
 
         // â”€â”€ QualityGate: build EvidenceVector and evaluate â”€â”€
@@ -375,7 +375,7 @@ public sealed class FullProtocolGenerationService : IDisposable
     {
         var basePrompt = "Du bist ein Kanalinspektion-Experte nach DIN EN 13508-2 / VSA-DSS. " +
             "Mappe einen erkannten Befund auf den korrekten Schadenskode. " +
-            "Antworte nur mit gÃ¼ltigem JSON.";
+            "Antworte nur mit gültigem JSON.";
 
         return basePrompt;
     }
@@ -413,7 +413,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             RevisionId = Guid.NewGuid(),
             CreatedAt = DateTimeOffset.UtcNow,
             CreatedBy = "KI (FullProtocolGeneration)",
-            Comment = "Keine SchÃ¤den erkannt",
+            Comment = "Keine Schäden erkannt",
             Entries = new List<ProtocolEntry>()
         };
         return new ProtocolDocument

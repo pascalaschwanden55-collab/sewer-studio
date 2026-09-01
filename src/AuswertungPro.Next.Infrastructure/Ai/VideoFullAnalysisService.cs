@@ -172,14 +172,14 @@ public sealed class VideoFullAnalysisService
                 detections.AddRange(deduplicator.AdvanceAll());
                 _logger.LogDebug("runId={RunId} Frame {Frame}/{Total}: leeres Bild, uebersprungen", runId, frameIndex, totalFrames);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                    $"Frame {frameIndex}/{totalFrames} â€“ kein Bild"));
+                    $"Frame {frameIndex}/{totalFrames} – kein Bild"));
                 continue;
             }
 
             progress?.Report(new VideoAnalysisProgress(
                 frameIndex,
                 totalFrames,
-                $"Frame {frameIndex}/{totalFrames} â€“ Bild extrahiert",
+                $"Frame {frameIndex}/{totalFrames} – Bild extrahiert",
                 FramePreviewPng: frameBytes));
 
             EnhancedFrameAnalysis analysis;
@@ -189,7 +189,7 @@ public sealed class VideoFullAnalysisService
                 progress?.Report(new VideoAnalysisProgress(
                     frameIndex,
                     totalFrames,
-                    $"Frame {frameIndex}/{totalFrames} â€“ KI analysiert Bild...",
+                    $"Frame {frameIndex}/{totalFrames} – KI analysiert Bild...",
                     FramePreviewPng: frameBytes));
 
                 using var visionCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -204,7 +204,7 @@ public sealed class VideoFullAnalysisService
                 _logger.LogWarning("runId={RunId} Frame {Frame}/{Total}: Timeout bei KI-Analyse nach {Timeout:0}s",
                     runId, frameIndex, totalFrames, VisionFrameTimeout.TotalSeconds);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                    $"Frame {frameIndex}/{totalFrames} â€“ Timeout bei KI-Analyse ({VisionFrameTimeout.TotalSeconds:0}s)"));
+                    $"Frame {frameIndex}/{totalFrames} – Timeout bei KI-Analyse ({VisionFrameTimeout.TotalSeconds:0}s)"));
                 failedFrames++;
                 RecordFailure("Timeout", failureReasons);
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true, Failed: true));
@@ -216,7 +216,7 @@ public sealed class VideoFullAnalysisService
             {
                 _logger.LogError(ex, "runId={RunId} Frame {Frame}/{Total}: Fehler bei KI-Analyse", runId, frameIndex, totalFrames);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                    $"Frame {frameIndex}/{totalFrames} â€“ Fehler: {ex.Message}"));
+                    $"Frame {frameIndex}/{totalFrames} – Fehler: {ex.Message}"));
                 failedFrames++;
                 RecordFailure("Modellfehler", failureReasons);
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true, Failed: true));
@@ -277,7 +277,7 @@ public sealed class VideoFullAnalysisService
             progress?.Report(new VideoAnalysisProgress(
                 frameIndex,
                 totalFrames,
-                $"Frame {frameIndex}/{totalFrames} @ {meter:0.0}m â€“ {current.Count} Befunde",
+                $"Frame {frameIndex}/{totalFrames} @ {meter:0.0}m – {current.Count} Befunde",
                 FramePreviewPng: frameBytes,
                 LiveFindings: liveFindings));
         }
@@ -323,7 +323,7 @@ public sealed class VideoFullAnalysisService
         progress?.Report(new VideoAnalysisProgress(totalFrames, totalFrames,
             degraded
                 ? $"{degradedReason} {detections.Count} Schaeden erkannt."
-                : $"Fertig â€“ {detections.Count} SchÃ¤den erkannt."));
+                : $"Fertig – {detections.Count} Schäden erkannt."));
 
         var summary = telemetry.GetSummary();
         await PipelineTraceWriteGuard
@@ -378,5 +378,4 @@ public sealed class VideoFullAnalysisService
 }
 
 // â”€â”€ DTOs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 

@@ -194,7 +194,7 @@ public sealed class CodingSessionService : ICodingSessionService
         var revision = new ProtocolRevision
         {
             CreatedBy = "Codier-Modus",
-            Comment = $"Codier-Session {_session.StartedAt:yyyy-MM-dd HH:mm} â€“ {_session.Events.Count} Ereignisse"
+            Comment = $"Codier-Session {_session.StartedAt:yyyy-MM-dd HH:mm} – {_session.Events.Count} Ereignisse"
         };
 
         var acceptedEvents = AiProtocolAcceptancePolicy
