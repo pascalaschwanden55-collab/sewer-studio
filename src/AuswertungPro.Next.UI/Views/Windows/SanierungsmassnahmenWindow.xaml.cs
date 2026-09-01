@@ -23,6 +23,7 @@ public partial class SanierungsmassnahmenWindow : Window
         InitializeComponent();
         WindowStateManager.Track(this);
         DataContext = vm;
+        Closed += (_, _) => vm.Dispose();
 
         vm.CostCalcVm.Saved += () => Close();
         vm.CloseRequested += () => Close();

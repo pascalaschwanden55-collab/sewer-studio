@@ -41,7 +41,7 @@ public sealed record TrainingSampleGenerationResult(
     int DuplicateSkipped,
     TrainingSampleGenerationOutcome Outcome);
 
-public sealed class TrainingSampleGenerator
+public sealed class TrainingSampleGenerator : IDisposable
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 
@@ -51,6 +51,7 @@ public sealed class TrainingSampleGenerator
     private readonly ICodeCatalogProvider? _codeCatalog;
     private readonly ITrainingFrameStore _frameStore;
     private string? _pdfFramesDir;
+    private bool _disposed;
 
     public TrainingSampleGenerator(
         AiRuntimeSettings cfg,
@@ -64,6 +65,15 @@ public sealed class TrainingSampleGenerator
         _settings = settings ?? new TrainingCenterSettings();
         _codeCatalog = codeCatalog;
         _frameStore = frameStore ?? FrameStore.Current;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        _meterTimeline.Dispose();
     }
 
     public async Task<List<TrainingSample>> GenerateAsync(

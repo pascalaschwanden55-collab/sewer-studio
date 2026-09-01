@@ -15,17 +15,33 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// Bewusst nicht versiegelt: Tests haengen eine feste Folge ueber
 /// <see cref="BuildTimelineAsync"/> ein (siehe dort).
 /// </summary>
-public class MeterTimelineService
+public class MeterTimelineService : IDisposable
 {
     private readonly AiRuntimeSettings _cfg;
     private readonly OsdMeterDetectionService? _osd;
     private readonly int _concurrency;
+    private readonly IDisposable? _ownedResource;
+    private bool _disposed;
 
-    public MeterTimelineService(AiRuntimeSettings cfg, OsdMeterDetectionService? osd = null, int concurrency = 1)
+    public MeterTimelineService(
+        AiRuntimeSettings cfg,
+        OsdMeterDetectionService? osd = null,
+        int concurrency = 1,
+        IDisposable? ownedResource = null)
     {
         _cfg = cfg;
         _osd = osd;
         _concurrency = Math.Max(1, concurrency);
+        _ownedResource = ownedResource;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        _ownedResource?.Dispose();
     }
 
     /// <summary>

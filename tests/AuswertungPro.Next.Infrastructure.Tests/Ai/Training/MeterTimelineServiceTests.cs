@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Ai.Training;
@@ -75,5 +76,36 @@ public sealed class MeterTimelineServiceTests
 
         Assert.Null(MeterTimelineService.InterpolateMeter(folge, 5.0).Meter);
         Assert.Null(MeterTimelineService.InterpolateMeter(folge, 99.0).Meter);
+    }
+
+    [Fact]
+    public void Dispose_gibt_den_besessenen_Netzwerkdienst_genau_einmal_frei()
+    {
+        var resource = new DisposeProbe();
+        var service = new MeterTimelineService(RuntimeSettings(), ownedResource: resource);
+
+        service.Dispose();
+        service.Dispose();
+
+        Assert.Equal(1, resource.Calls);
+    }
+
+    private static AiRuntimeSettings RuntimeSettings()
+        => new(
+            Enabled: true,
+            OllamaBaseUri: new Uri("http://localhost:11434"),
+            VisionModel: "vision",
+            TextModel: "text",
+            EmbedModel: "embed",
+            FfmpegPath: "ffmpeg",
+            OllamaRequestTimeout: TimeSpan.FromMinutes(1),
+            OllamaKeepAlive: "5m",
+            OllamaNumCtx: 2048);
+
+    private sealed class DisposeProbe : IDisposable
+    {
+        public int Calls { get; private set; }
+
+        public void Dispose() => Calls++;
     }
 }

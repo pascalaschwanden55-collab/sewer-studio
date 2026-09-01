@@ -1709,18 +1709,20 @@ public sealed class AnnotationWorkbenchServiceTests
     }
 
     [Fact]
-    public void Dispose_gibt_SamService_und_PipelineClient_frei()
+    public void Dispose_gibt_alle_fenstereigenen_Dienste_frei()
     {
         // Pruefplatz baut SAM-Service + Vision-Client pro Fenster mit eigenem HttpClient.
         // Dispose (beim Fensterschliessen) muss beide freigeben.
         var sam = new FakeSamSegmentationService();
         var client = new FakePipelineClient();
-        var service = CreateService(sam: sam, client: client);
+        var indexer = new DisposableFakeIndexer();
+        var service = CreateService(sam: sam, client: client, indexer: indexer);
 
         service.Dispose();
 
         Assert.True(sam.Disposed);
         Assert.True(client.Disposed);
+        Assert.True(indexer.Disposed);
     }
 
     // ── Hilfen ─────────────────────────────────────────────────────────────
@@ -1734,7 +1736,7 @@ public sealed class AnnotationWorkbenchServiceTests
         IRetrievalService? retrieval = null,
         FakeSampleStore? sampleStore = null,
         ITrainingFrameStore? frameStore = null,
-        FakeIndexer? indexer = null,
+        IKnowledgeBaseIndexer? indexer = null,
         FakeTeacherStore? teacherStore = null,
         FakeClassMap? classMap = null,
         Func<string, byte[]>? readFileBytes = null,
@@ -1970,6 +1972,22 @@ public sealed class AnnotationWorkbenchServiceTests
         }
 
         public void Deindex(string sampleId) => Deindexed.Add(sampleId);
+    }
+
+    private sealed class DisposableFakeIndexer : IKnowledgeBaseIndexer, IDisposable
+    {
+        public bool Disposed { get; private set; }
+
+        public Task<KbIndexOutcome> IndexAsync(
+            IReadOnlyList<TrainingSample> samples,
+            CancellationToken ct)
+            => Task.FromResult(KbIndexOutcome.Empty);
+
+        public void Deindex(string sampleId)
+        {
+        }
+
+        public void Dispose() => Disposed = true;
     }
 
     private sealed class FakeExportService : ITrainingAnnotationExportService

@@ -66,7 +66,7 @@ public sealed class TrainingSampleOsdMeterSourceTests : IDisposable
             OllamaRequestTimeout: TimeSpan.FromMinutes(5),
             OllamaKeepAlive: "24h",
             OllamaNumCtx: 8192);
-        var generator = new TrainingSampleGenerator(
+        using var generator = new TrainingSampleGenerator(
             cfg,
             new FesteTimelineService(cfg, folge),
             new TrainingCenterSettings());
@@ -75,7 +75,8 @@ public sealed class TrainingSampleOsdMeterSourceTests : IDisposable
             CaseId: "H-1",
             FolderPath: _root,
             VideoPath: video,
-            ProtocolPath: protocolPath));
+            ProtocolPath: protocolPath),
+            framesDir: Path.Combine(_root, "frames"));
 
         Assert.Equal(2, ergebnis.Samples.Count);
         var ausSchaetzung = ergebnis.Samples.Single(s => Math.Abs(s.MeterStart - 5.0) < 0.01);

@@ -20,23 +20,27 @@ namespace AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 ///    implemented yet (was previously claimed here but never built).
 /// 4. Every 25 validations: triggers WeightLearningService.ReLearnAsync()
 /// </summary>
-public sealed class FeedbackIngestionService
+public sealed class FeedbackIngestionService : IDisposable
 {
     public int ReLearnInterval { get; set; } = 25;
 
     private readonly ValidationLogger _logger;
     private readonly WeightLearningService _weightLearner;
     private readonly ITrainingSampleIndexer? _sampleIndexer;
+    private readonly IDisposable? _ownedResource;
     private int _feedbackCount;
+    private bool _disposed;
 
     public FeedbackIngestionService(
         ValidationLogger logger,
         WeightLearningService weightLearner,
-        ITrainingSampleIndexer? sampleIndexer = null)
+        ITrainingSampleIndexer? sampleIndexer = null,
+        IDisposable? ownedResource = null)
     {
         _logger = logger;
         _weightLearner = weightLearner;
         _sampleIndexer = sampleIndexer;
+        _ownedResource = ownedResource;
     }
 
     /// <summary>Process user feedback for a detection.</summary>
@@ -127,4 +131,13 @@ public sealed class FeedbackIngestionService
 
     /// <summary>Feedback-Ereignisse, die diese Service-Instanz verarbeitet hat (nicht persistent).</summary>
     public int TotalProcessed => _feedbackCount;
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        _ownedResource?.Dispose();
+    }
 }

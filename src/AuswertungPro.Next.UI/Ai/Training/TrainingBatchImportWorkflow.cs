@@ -74,6 +74,7 @@ public static class TrainingBatchImportWorkflow
                 async () => await request.LoadSamplesAsync().ConfigureAwait(false),
                 request.BatchUi.SetProgressMax,
                 request.BatchUi.Log).ConfigureAwait(false);
+            using var generator = runtimeSetup.Generator;
 
             await TrainingBatchImportCaseLoopController.RunAsync(
                 runtimeSetup.CasesToProcess,

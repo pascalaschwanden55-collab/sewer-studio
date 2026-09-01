@@ -297,6 +297,11 @@ internal static class TrainingStudioWindowDependencyFactory
                 kbHttp ??= new HttpClient { Timeout = ollamaConfig.RequestTimeout };
                 TrainingKnowledgeBaseSampleDeindexer.DeindexWithDefaultInfrastructure(
                     kbHttp, ollamaConfig, sampleId);
+            },
+            dispose: () =>
+            {
+                kbHttp?.Dispose();
+                kbHttp = null;
             });
     }
 

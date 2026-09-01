@@ -78,6 +78,7 @@ public static class TrainingSelectedReviewRuntime
 
         using var scope = openScope();
         var feedback = createFeedback(scope);
+        using var feedbackResource = feedback as IDisposable;
         await approveAsync(item, feedback, queueService, ct, box, mask).ConfigureAwait(false);
     }
 
@@ -120,6 +121,7 @@ public static class TrainingSelectedReviewRuntime
 
         using var scope = openScope();
         var feedback = createFeedback(scope);
+        using var feedbackResource = feedback as IDisposable;
         await rejectAsync(
             item,
             correctedCode,

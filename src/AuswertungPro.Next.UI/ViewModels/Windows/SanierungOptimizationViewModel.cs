@@ -10,12 +10,13 @@ using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
-public sealed partial class SanierungOptimizationViewModel : ObservableObject
+public sealed partial class SanierungOptimizationViewModel : ObservableObject, IDisposable
 {
     private readonly HaltungRecord _record;
     private readonly IAiSanierungOptimizationService _aiService;
     private readonly IAiOptimizationSessionStore _sessionStore;
     private readonly SanierungOptimizationRequest _request;
+    private bool _disposed;
 
     // ── Observable properties ─────────────────────────────────────────────
 
@@ -182,6 +183,16 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
     private void Cancel()
     {
         CloseRequested?.Invoke();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        if (_aiService is IDisposable disposable)
+            disposable.Dispose();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────

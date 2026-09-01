@@ -8,7 +8,7 @@ public sealed class TrainingMeterTimelineServiceFactoryTests
     [Fact]
     public async Task Create_liefert_deaktivierten_meter_service_ohne_osd()
     {
-        var service = TrainingMeterTimelineServiceFactory.Create(RuntimeSettings(enabled: false), concurrency: 4);
+        using var service = TrainingMeterTimelineServiceFactory.Create(RuntimeSettings(enabled: false), concurrency: 4);
 
         var timeline = await service.BuildTimelineAsync(
             videoPath: "nicht-vorhanden.mp4",

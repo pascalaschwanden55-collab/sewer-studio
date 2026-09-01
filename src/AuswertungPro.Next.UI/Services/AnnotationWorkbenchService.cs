@@ -976,5 +976,6 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         (_samService as IDisposable)?.Dispose();
         (_pipelineClient as IDisposable)?.Dispose();
         (_bcaClassifier as IDisposable)?.Dispose();
+        (_kbIndexer as IDisposable)?.Dispose();
     }
 }

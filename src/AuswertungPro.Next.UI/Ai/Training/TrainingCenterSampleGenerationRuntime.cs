@@ -39,7 +39,7 @@ public static class TrainingCenterSampleGenerationRuntime
             .ToRuntimeSettings();
         var settings = await settingsStore.LoadAsync().ConfigureAwait(false);
         var meterSvc = TrainingMeterTimelineServiceFactory.Create(cfg, settings.GpuConcurrency);
-        var generator = new TrainingSampleGenerator(cfg, meterSvc, settings, codeCatalog, frameStore);
+        using var generator = new TrainingSampleGenerator(cfg, meterSvc, settings, codeCatalog, frameStore);
 
         return await generator.GenerateWithDiagnosticsAsync(
             input,
