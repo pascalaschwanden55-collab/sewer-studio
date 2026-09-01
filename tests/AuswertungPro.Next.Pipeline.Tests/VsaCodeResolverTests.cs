@@ -50,6 +50,7 @@ public sealed class VsaCodeResolverTests
     [InlineData("BAFCE", "BAFCE")]     // Untercode: BAF bekannt → akzeptiert
     [InlineData("bcd", "BCD")]         // Kleinbuchstaben → normalisiert
     [InlineData("BCA.E.B", "BCAEB")]   // Punkt-Notation → entfernt
+    [InlineData("BABABCDE", "BABABCDE")] // Acht Zeichen sind die obere erlaubte Grenze
     public void NormalizeFindingCode_ValidCodes_ReturnsNormalized(string input, string expected)
     {
         var result = VsaCodeResolver.NormalizeFindingCode(input);
@@ -61,7 +62,8 @@ public sealed class VsaCodeResolverTests
     [InlineData("")]                   // Leer
     [InlineData("   ")]               // Whitespace
     [InlineData("X")]                  // Zu kurz (1 Zeichen)
-    [InlineData("ABCDEFG")]           // Zu lang (7 Zeichen)
+    [InlineData("ABCDEFG")]           // Unbekannter Hauptcode
+    [InlineData("BABABCDEF")]         // Neun Zeichen sind zu lang
     [InlineData("123")]               // Nur Ziffern
     [InlineData("BA1")]               // Ziffern gemischt
     [InlineData("???")]               // Fragezeichen
@@ -79,6 +81,35 @@ public sealed class VsaCodeResolverTests
         // 2-Zeichen-Gruppen sind keine codierbaren Befunde.
         var result = VsaCodeResolver.NormalizeFindingCode("BA");
         Assert.Null(result);
+    }
+
+    [Fact]
+    public void IsExactSelectableCode_akzeptiert_nur_exakte_auswaehlbare_Katalogcodes()
+    {
+        var groupOnly = Code("BAQ", "Nur Gruppe");
+        groupOnly.IsSelectable = false;
+        var observed = Code("BAR", "Beobachtete Erweiterung");
+        observed.IsObservedExtension = true;
+        VsaCodeResolver.ConfigureCatalog(new InMemoryCodeCatalogProvider(
+        [
+            Code("BAB", "Risse"),
+            groupOnly,
+            observed
+        ]));
+
+        Assert.True(VsaCodeResolver.IsExactSelectableCode("b.a.b"));
+        Assert.False(VsaCodeResolver.IsExactSelectableCode("BABX"));
+        Assert.False(VsaCodeResolver.IsExactSelectableCode("BAQ"));
+        Assert.False(VsaCodeResolver.IsExactSelectableCode("BAR"));
+        Assert.False(VsaCodeResolver.IsExactSelectableCode("BA1"));
+        Assert.False(VsaCodeResolver.IsExactSelectableCode(null));
+    }
+
+    [Fact]
+    public void IsExactSelectableCode_ohne_Katalog_ist_false()
+    {
+        VsaCodeResolver.ConfigureCatalog(null);
+        Assert.False(VsaCodeResolver.IsExactSelectableCode("BAB"));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -107,6 +138,25 @@ public sealed class VsaCodeResolverTests
     [InlineData("Wasserstand in der Sohle", "BDDC")]
     [InlineData("Standing water at invert", "BDDC")]
     [InlineData("Water level visible", "BDDC")]
+    [InlineData("Stutzen sichtbar", "BCA")]
+    [InlineData("Zulauf von rechts", "BCA")]
+    [InlineData("sharp bend", "BCC")]
+    [InlineData("pipe end visible", "BCE")]
+    [InlineData("Ausstieg erreicht", "BCE")]
+    [InlineData("complete collapse", "BAC")]
+    [InlineData("oval pipe", "BAA")]
+    [InlineData("Muffe verschoben", "BAJ")]
+    [InlineData("joint offset", "BAJ")]
+    [InlineData("Bewuchs im Rohr", "BBA")]
+    [InlineData("protruding object", "BAI")]
+    [InlineData("Rost an der Wand", "BAF")]
+    [InlineData("Erosion sichtbar", "BAF")]
+    [InlineData("encrustation", "BBB")]
+    [InlineData("Kalk und Sinter", "BBB")]
+    [InlineData("sediment at invert", "BBC")]
+    [InlineData("silt and debris", "BBC")]
+    [InlineData("puddle at invert", "BDDC")]
+    [InlineData("waterline visible", "BDDC")]
     public void InferCodeFromLabel_KnownLabels_ReturnsCorrectCode(string label, string expected)
     {
         var result = VsaCodeResolver.InferCodeFromLabel(label);

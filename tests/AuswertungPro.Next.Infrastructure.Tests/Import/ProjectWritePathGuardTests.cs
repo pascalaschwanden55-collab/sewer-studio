@@ -5,6 +5,20 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
 public sealed class ProjectWritePathGuardTests
 {
+    [Fact]
+    public void EnsureDirectChild_Akzeptiert_Nur_Unmittelbares_Kind()
+    {
+        var parent = Path.Combine(Path.GetTempPath(), $"ImportParent_{Guid.NewGuid():N}");
+        var child = Path.Combine(parent, "Kind");
+        var nested = Path.Combine(child, "Enkel");
+
+        ImportFileStagingPathGuard.EnsureDirectChild(child, parent);
+        var error = Assert.Throws<IOException>(() =>
+            ImportFileStagingPathGuard.EnsureDirectChild(nested, parent));
+
+        Assert.Contains("Unsicherer Import-Arbeitsordner", error.Message, StringComparison.Ordinal);
+    }
+
     [JunctionFact]
     public void EnsureSafeFileTarget_LehntVerknuepftenProjektrootAb()
     {
