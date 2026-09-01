@@ -374,7 +374,7 @@ public partial class ProtocolObservationsWindow : Window
         _sp.Dialogs.Info("Trainingseintrag gespeichert.", "Training");
     }
 
-    private void ExportPdf()
+    private async void ExportPdf()
     {
         var holding = _record.GetFieldValue("Haltungsname");
         var defaultName = $"Haltungsprotokoll_{SanitizeFilePart(holding)}_{DateTime.Now:yyyyMMdd}.pdf";
@@ -388,6 +388,7 @@ public partial class ProtocolObservationsWindow : Window
 
         try
         {
+            ExportPdfButton.IsEnabled = false;
             var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
             var options = new HaltungsprotokollPdfOptions
             {
@@ -399,8 +400,16 @@ public partial class ProtocolObservationsWindow : Window
                 root = AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(_sp.Settings.LastProjectPath)
                        ?? Path.GetDirectoryName(_sp.Settings.LastProjectPath);
             root ??= "";
-            var pdf = _sp.ProtocolPdfExports.BuildHaltungsprotokollPdf(_project, _record, _doc, root, options);
-            File.WriteAllBytes(output, pdf);
+            await BackgroundFileExportRunner.RunAsync(() =>
+            {
+                var pdf = _sp.ProtocolPdfExports.BuildHaltungsprotokollPdf(
+                    _project,
+                    _record,
+                    _doc,
+                    root,
+                    options);
+                File.WriteAllBytes(output, pdf);
+            });
 
             _sp.Dialogs.Info($"PDF wurde erstellt:\n{output}", "PDF");
         }
@@ -408,6 +417,10 @@ public partial class ProtocolObservationsWindow : Window
         {
             var userMessage = UserError.DescribeAndReport(ex, "Beobachtungs-PDF erstellen");
             _sp.Dialogs.Error($"PDF konnte nicht erstellt werden:\n{userMessage}", "PDF");
+        }
+        finally
+        {
+            ExportPdfButton.IsEnabled = true;
         }
     }
 

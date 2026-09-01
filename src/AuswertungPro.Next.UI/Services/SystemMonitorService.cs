@@ -827,19 +827,35 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         if (File.Exists(nvidiaDriver))
             return nvidiaDriver;
 
-        // Fallback: try from PATH
-        try
+        // PATH ohne Prozessstart durchsuchen. Der Konstruktor laeuft auf dem
+        // UI-Thread; ein Probeprozess mit Timeout konnte den Programmstart
+        // sonst bis zu drei Sekunden blockieren.
+        return FindExecutableOnPath(
+            "nvidia-smi.exe",
+            Environment.GetEnvironmentVariable("PATH"));
+    }
+
+    internal static string? FindExecutableOnPath(string executableName, string? pathVariable)
+    {
+        if (string.IsNullOrWhiteSpace(executableName) || string.IsNullOrWhiteSpace(pathVariable))
+            return null;
+
+        foreach (var rawFolder in pathVariable.Split(
+                     Path.PathSeparator,
+                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            var result = ExternalProcessRunner.RunAsync(
-                "nvidia-smi",
-                ["--version"],
-                TimeSpan.FromSeconds(3),
-                Encoding.UTF8,
-                Encoding.UTF8).GetAwaiter().GetResult();
-            if (result.Success)
-                return "nvidia-smi";
+            try
+            {
+                var folder = Environment.ExpandEnvironmentVariables(rawFolder.Trim('"'));
+                var candidate = Path.Combine(folder, executableName);
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                // Einen ungueltigen PATH-Eintrag ueberspringen.
+            }
         }
-        catch { /* not in PATH */ }
 
         return null;
     }
