@@ -3,6 +3,53 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 
 public sealed class VsaKekCatalogBuilderTests
 {
+    [Fact]
+    public void Build_verarbeitet_ILI_ICM_und_beobachtete_XTF_Codes_ohne_externe_Testdatei()
+    {
+        const string ili = """
+            KanalSchadencode = (
+              !!@ comment = "Anschluss einragend"
+              BAGA,
+            );
+            SchachtSchadencode = (
+              !!@ comment = "Anschluss Schacht"
+              DCAA,
+            );
+            """;
+        const string sectionIcm = """
+            <root>
+              <artistStation>
+                <setAttribute name="Code" toValue="BAG" />
+                <setAttribute name="Q1" toValue="1" />
+                <setPosition />
+              </artistStation>
+            </root>
+            """;
+        const string xtf = """
+            <KanalSchadencode>BCCYY</KanalSchadencode>
+            """;
+
+        var manifest = VsaKekCatalogBuilder.Build(
+            ili,
+            sectionIcm,
+            manholeIcmText: null,
+            observedXtfTexts: [xtf]);
+
+        var baga = RequireCode(manifest, "BAGA");
+        Assert.Equal("BAG", baga.CanonicalCode);
+        Assert.Equal(VsaKekCatalogSources.Ili, baga.Source);
+        Assert.Equal("Anschluss einragend", baga.Title);
+        AssertRequiredNumberParameter(baga, "Q1");
+        Assert.Contains(baga.Parameters, parameter => parameter.Type == "clock");
+
+        var observed = RequireCode(manifest, "BCCYY");
+        Assert.Equal(VsaKekCatalogSources.XtfObserved, observed.Source);
+        Assert.True(observed.IsObservedExtension);
+        Assert.False(observed.IsSelectable);
+
+        Assert.Equal(VsaKekCatalogSources.Ili, RequireCode(manifest, "DCAA").Source);
+    }
+
     private const string VsaKekArchivePath =
         @"D:\Videoprojekte\Erstfeld_Jagdmatt_38454_0426\Erstfeld_Jagdmatt_38454_0426_Export\Bin\Bin.7z";
 
