@@ -118,9 +118,7 @@ internal static class DistributionTargetPreviewBuilder
         {
             var basis = resolver.ResolveSegment(request.FixedPattern, request.SampleContext);
             var jahr = resolver.ResolveSegment("{Jahr}", request.SampleContext);
-            var sanierung = string.IsNullOrWhiteSpace(basis)
-                ? $"Saniert {jahr}".TrimEnd()
-                : $"{basis}_Saniert {jahr}".TrimEnd();
+            var sanierung = DistributionSanierungFolderName.Build(basis, jahr);
             nodes.Add(new DistributionTreeNode(
                 ProjectPathResolver.SanitizePathSegment(sanierung),
                 DistributionTreeNodeKind.Ordner,

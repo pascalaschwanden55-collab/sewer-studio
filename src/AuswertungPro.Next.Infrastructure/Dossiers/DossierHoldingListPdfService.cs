@@ -99,7 +99,7 @@ public sealed class DossierHoldingListPdfService : IDossierHoldingListPdfService
         ArgumentNullException.ThrowIfNull(holdings);
 
         var values = holdings
-            .Select(line => NormalizeConditionValue(line.ConditionClass))
+            .Select(line => DossierConditionClassValue.Normalize(line.ConditionClass))
             .Where(value => value is not null)
             .Select(value => value!.Value)
             .ToList();
@@ -116,7 +116,7 @@ public sealed class DossierHoldingListPdfService : IDossierHoldingListPdfService
 
     internal static (string Background, string Foreground)? ResolveConditionColors(string? value)
     {
-        var normalized = NormalizeConditionValue(value);
+        var normalized = DossierConditionClassValue.Normalize(value);
         if (normalized is null)
             return null;
 
@@ -319,7 +319,7 @@ public sealed class DossierHoldingListPdfService : IDossierHoldingListPdfService
 
     private static void ComposeCondition(IContainer container, string? value)
     {
-        var normalized = NormalizeConditionValue(value);
+        var normalized = DossierConditionClassValue.Normalize(value);
         var colors = ResolveConditionColors(value);
         if (normalized is null || colors is null)
         {
@@ -523,18 +523,6 @@ public sealed class DossierHoldingListPdfService : IDossierHoldingListPdfService
             // Die Liste bleibt auch ohne optionale Bildmarken vollstaendig.
             return null;
         }
-    }
-
-    private static int? NormalizeConditionValue(string? value)
-    {
-        var text = (value ?? string.Empty).Trim();
-        if (text.StartsWith('Z') || text.StartsWith('z'))
-            text = text[1..].Trim();
-
-        return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
-            && parsed is >= 0 and <= 4
-                ? parsed
-                : null;
     }
 
     private static string Display(string? value)

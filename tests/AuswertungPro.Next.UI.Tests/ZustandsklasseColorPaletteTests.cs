@@ -1,4 +1,5 @@
 using System.Windows.Media;
+using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.UI.DataPage;
 using Xunit;
 
@@ -6,6 +7,17 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class ZustandsklasseColorPaletteTests
 {
+    [Fact]
+    public void UI_verwendet_exakt_die_zentrale_Berichtspalette()
+    {
+        foreach (var rule in ExcelReportStyle.Zustandsklassen)
+        {
+            var brush = Assert.IsType<SolidColorBrush>(
+                ZustandsklasseColorPalette.HaltungenPalette[rule.Wert]);
+            Assert.Equal(rule.Farbe[2..], brush.Color.ToString()[3..], ignoreCase: true);
+        }
+    }
+
     [Fact]
     public void SelectionOptions_are_zero_to_four()
     {

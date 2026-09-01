@@ -17,15 +17,8 @@ internal static class ZustandsklasseCellStyleFactory
     private static readonly IReadOnlyDictionary<string, Brush> HaltungenPalette =
         AuswertungPro.Next.UI.DataPage.ZustandsklasseColorPalette.HaltungenPalette;
 
-    // Colors taken from Excel template "Schaechte/Sch�chte.xlsx"
-    private static readonly IReadOnlyDictionary<string, Brush> SchaechtePalette = new Dictionary<string, Brush>(StringComparer.Ordinal)
-    {
-        ["0"] = CreateBrush(0xFF, 0x00, 0x00),
-        ["1"] = CreateBrush(0xFF, 0x66, 0x00),
-        ["2"] = CreateBrush(0xFF, 0xFF, 0x00),
-        ["3"] = CreateBrush(0xA5, 0xA8, 0x32),
-        ["4"] = CreateBrush(0x92, 0xD0, 0x50)
-    };
+    private static readonly IReadOnlyDictionary<string, Brush> SchaechtePalette =
+        AuswertungPro.Next.UI.DataPage.ZustandsklasseColorPalette.HaltungenPalette;
 
     private static readonly IValueConverter HaltungenBackgroundConverter = new PaletteToBackgroundConverter(HaltungenPalette);
     private static readonly IValueConverter SchaechteBackgroundConverter = new PaletteToBackgroundConverter(SchaechtePalette);
@@ -163,10 +156,7 @@ internal static class ZustandsklasseCellStyleFactory
         var text = (value ?? string.Empty)
             .Trim()
             .ToLowerInvariant()
-            .Replace("ä", "�", StringComparison.Ordinal)
-            .Replace("ö", "�", StringComparison.Ordinal)
-            .Replace("ü", "�", StringComparison.Ordinal)
-            .Replace("ß", "�", StringComparison.Ordinal);
+            .Replace("ß", "ss", StringComparison.Ordinal);
 
         if (text.Length == 0)
             return string.Empty;
@@ -181,7 +171,6 @@ internal static class ZustandsklasseCellStyleFactory
 
         text = sb.ToString()
             .Normalize(NormalizationForm.FormC)
-            .Replace("�", "ss", StringComparison.Ordinal)
             .Replace("ue", "u", StringComparison.Ordinal)
             .Replace("ae", "a", StringComparison.Ordinal)
             .Replace("oe", "o", StringComparison.Ordinal)

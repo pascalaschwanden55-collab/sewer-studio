@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Text;
 using AuswertungPro.Next.Application.Costs;
+using AuswertungPro.Next.Infrastructure.Export.Excel;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -21,15 +22,13 @@ public static class ProjectPreviewPdfBuilder
     private const string SoftBackground = "#F8FAFC";
 
     private static readonly IReadOnlyDictionary<string, string> ZustandColors =
-        new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["0"] = "#EF0000",
-            ["1"] = "#FF6B00",
-            ["2"] = "#FFF200",
-            ["3"] = "#A9B42D",
-            ["4"] = "#8FD14F",
-            ["ohne"] = "#9CA3AF"
-        };
+        ExcelReportStyle.Zustandsklassen
+            .ToDictionary(
+                rule => rule.Wert,
+                rule => $"#{rule.Farbe[2..]}",
+                StringComparer.Ordinal)
+            .Append(new KeyValuePair<string, string>("ohne", "#9CA3AF"))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
 
     private static readonly string[] AccentPalette =
     [

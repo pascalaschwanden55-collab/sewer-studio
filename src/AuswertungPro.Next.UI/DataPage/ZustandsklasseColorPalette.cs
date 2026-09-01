@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Windows.Media;
+using AuswertungPro.Next.Infrastructure.Export.Excel;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
@@ -15,14 +16,10 @@ public static class ZustandsklasseColorPalette
     public static IReadOnlyList<string> SelectionOptions { get; } = ["0", "1", "2", "3", "4"];
 
     public static IReadOnlyDictionary<string, Brush> HaltungenPalette { get; } =
-        new Dictionary<string, Brush>(StringComparer.Ordinal)
-        {
-            ["0"] = CreateBrush(0xFF, 0x00, 0x00),
-            ["1"] = CreateBrush(0xFF, 0x66, 0x00),
-            ["2"] = CreateBrush(0xFF, 0xFF, 0x00),
-            ["3"] = CreateBrush(0xAE, 0xB1, 0x35),
-            ["4"] = CreateBrush(0x92, 0xD0, 0x50)
-        };
+        ExcelReportStyle.Zustandsklassen.ToDictionary(
+            rule => rule.Wert,
+            rule => (Brush)CreateBrush(rule.Farbe),
+            StringComparer.Ordinal);
 
     /// <summary>Hintergrund-Brush für eine Zustandsklasse, oder null wenn unbekannt/leer.</summary>
     public static Brush? TryGetBackground(string? value)
@@ -52,9 +49,15 @@ public static class ZustandsklasseColorPalette
         return rounded is >= 0 and <= 4 ? rounded.ToString(CultureInfo.InvariantCulture) : string.Empty;
     }
 
-    private static SolidColorBrush CreateBrush(byte r, byte g, byte b)
+    private static SolidColorBrush CreateBrush(string argb)
     {
-        var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+        if (argb.Length != 8)
+            throw new InvalidOperationException($"Ungueltige ARGB-Farbe: {argb}");
+
+        var brush = new SolidColorBrush(Color.FromRgb(
+            Convert.ToByte(argb.Substring(2, 2), 16),
+            Convert.ToByte(argb.Substring(4, 2), 16),
+            Convert.ToByte(argb.Substring(6, 2), 16)));
         brush.Freeze();
         return brush;
     }

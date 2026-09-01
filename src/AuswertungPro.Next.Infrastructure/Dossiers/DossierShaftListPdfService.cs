@@ -99,7 +99,7 @@ public sealed class DossierShaftListPdfService : IDossierShaftListPdfService
         ArgumentNullException.ThrowIfNull(shafts);
 
         var values = shafts
-            .Select(line => NormalizeConditionValue(line.ConditionClass))
+            .Select(line => DossierConditionClassValue.Normalize(line.ConditionClass))
             .Where(value => value is not null)
             .Select(value => value!.Value)
             .ToList();
@@ -116,7 +116,7 @@ public sealed class DossierShaftListPdfService : IDossierShaftListPdfService
 
     internal static (string Background, string Foreground)? ResolveConditionColors(string? value)
     {
-        var normalized = NormalizeConditionValue(value);
+        var normalized = DossierConditionClassValue.Normalize(value);
         if (normalized is null)
             return null;
 
@@ -222,7 +222,7 @@ public sealed class DossierShaftListPdfService : IDossierShaftListPdfService
         DossierShaftListPdfModel model)
     {
         var classifiedCount = model.Shafts.Count(
-            shaft => NormalizeConditionValue(shaft.ConditionClass) is not null);
+            shaft => DossierConditionClassValue.Normalize(shaft.ConditionClass) is not null);
 
         container.Row(row =>
         {
@@ -331,7 +331,7 @@ public sealed class DossierShaftListPdfService : IDossierShaftListPdfService
 
     private static void ComposeCondition(IContainer container, string? value)
     {
-        var normalized = NormalizeConditionValue(value);
+        var normalized = DossierConditionClassValue.Normalize(value);
         var colors = ResolveConditionColors(value);
         if (normalized is null || colors is null)
         {
@@ -472,18 +472,6 @@ public sealed class DossierShaftListPdfService : IDossierShaftListPdfService
             // Die Schachtliste bleibt auch ohne optionale Bildmarken vollstaendig.
             return null;
         }
-    }
-
-    private static int? NormalizeConditionValue(string? value)
-    {
-        var text = (value ?? string.Empty).Trim();
-        if (text.StartsWith('Z') || text.StartsWith('z'))
-            text = text[1..].Trim();
-
-        return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
-            && parsed is >= 0 and <= 4
-                ? parsed
-                : null;
     }
 
     private static string Display(string? value)
