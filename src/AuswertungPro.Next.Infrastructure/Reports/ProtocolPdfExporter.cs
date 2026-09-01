@@ -19,6 +19,8 @@ namespace AuswertungPro.Next.Application.Reports;
 
 public sealed class ProtocolPdfExporter : IProtocolPdfExporter
 {
+    private static readonly object PdfGenerationGate = new();
+
     private readonly IProtocolPdfAssetResolver _assets;
     private readonly IProtocolPdfLayoutSettings? _layoutSettings;
     private readonly ICodeCatalogProvider? _defaultCodeCatalog;
@@ -66,7 +68,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
 
         var aiSummary = options.ShowAiSummary ? BuildAiSummary(entries, options) : null;
 
-        return Document.Create(container =>
+        return GeneratePdf(() => Document.Create(container =>
         {
             container.Page(page =>
             {
@@ -150,7 +152,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                     x.TotalPages();
                 });
             });
-        }).GeneratePdf();
+        }));
     }
 
     public byte[] BuildHaltungsprotokollPdf(
@@ -217,7 +219,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
         var headerItems = BuildHaltungsprotokollHeaderTable(project, record, inspectionDate, length, holdingLabel);
         var logoBytes = _assets.ResolveLogoBytes(options, projectRootAbs);
 
-        return Document.Create(container =>
+        return GeneratePdf(() => Document.Create(container =>
         {
             container.Page(page =>
             {
@@ -358,7 +360,16 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                     });
                 });
             });
-        }).GeneratePdf();
+        }));
+    }
+
+    private static byte[] GeneratePdf(Func<IDocument> documentFactory)
+    {
+        // QuestPDF kann bei gleichzeitiger Erzeugung mehrerer Protokolle eine
+        // fehlerhafte Textzuordnung schreiben. Dann lesen PDF-Werkzeuge nur
+        // Nullzeichen. Der Export ist selten und wird deshalb bewusst serialisiert.
+        lock (PdfGenerationGate)
+            return documentFactory().GeneratePdf();
     }
 
     public byte[] BuildCsv(ProtocolDocument doc, ProtocolPdfExportOptions? options = null)

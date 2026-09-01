@@ -199,6 +199,50 @@ public sealed class ProtocolPdfPhotoSectionTests
     }
 
     [Fact]
+    public async Task BuildHaltungsprotokollPdf_ParallelMitKaputtenFotos_TextBleibtLesbar()
+    {
+        var entry = new ProtocolEntry
+        {
+            Code = "BAB",
+            Beschreibung = "Riss",
+            MeterStart = 1.25,
+            FotoPaths = ["kaputt.png"],
+            Source = ProtocolEntrySource.Imported
+        };
+        var document = new ProtocolDocument
+        {
+            HaltungId = "100-200",
+            Current = new ProtocolRevision { Entries = [entry] }
+        };
+        var record = new HaltungRecord { Protocol = document };
+        record.SetFieldValue("Haltungsname", "100-200", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue("Haltungslaenge_m", "10", FieldSource.Manual, userEdited: true);
+
+        var exports = Enumerable.Range(0, 12).Select(_ => Task.Run(() =>
+            new ProtocolPdfExporter(new BrokenPhotoAssetResolver()).BuildHaltungsprotokollPdf(
+                new Project { Name = "Paralleltest" },
+                record,
+                document,
+                projectRootAbs: "virtuelles-projekt",
+                new HaltungsprotokollPdfOptions
+                {
+                    IncludePhotos = true,
+                    IncludeHaltungsgrafik = false,
+                    IncludeObservationTable = false
+                })));
+
+        var pdfs = await Task.WhenAll(exports);
+
+        foreach (var pdf in pdfs)
+        {
+            using var parsed = PdfDocument.Open(pdf);
+            var text = parsed.GetPage(2).Text;
+            Assert.Contains("Bild fehlt", text, StringComparison.Ordinal);
+            Assert.Contains("BAB Riss", text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void BuildHaltungsprotokollPdf_DreiFotos_VerwendetZweiFotoseitenInBefundreihenfolge()
     {
         var root = CreateTempDirectory();
@@ -303,6 +347,30 @@ public sealed class ProtocolPdfPhotoSectionTests
             ReadAllBytesCalls++;
             return TransparentPng;
         }
+    }
+
+    private sealed class BrokenPhotoAssetResolver : IProtocolPdfAssetResolver
+    {
+        public byte[]? ResolveLogoBytes(HaltungsprotokollPdfOptions options, string projectRootAbs)
+            => null;
+
+        public IReadOnlyList<string> ResolvePhotoPaths(
+            IReadOnlyList<string> photoPaths,
+            string projectRootAbs,
+            int maxPhotos,
+            Dictionary<string, string?> resolveCache,
+            string? preferredFolder = null)
+            => ["kaputt.png"];
+
+        public string ResolvePhotoPath(
+            string projectRootAbs,
+            string raw,
+            Dictionary<string, string?> resolveCache,
+            string? preferredFolder = null)
+            => "kaputt.png";
+
+        public byte[]? ReadAllBytes(string path)
+            => Encoding.UTF8.GetBytes("Das ist keine Bilddatei.");
     }
 
     private static string CreateTempDirectory()
