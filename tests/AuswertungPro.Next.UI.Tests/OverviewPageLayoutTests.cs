@@ -40,6 +40,24 @@ public sealed class OverviewPageLayoutTests
     }
 
     [Fact]
+    public void Projektliste_bezeichnet_entfernen_eindeutig_und_nicht_als_ausblenden()
+    {
+        var xaml = ReadOverviewXaml();
+
+        Assert.Contains("Content=\"Entfernen\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Projekt nur aus der Übersicht entfernen", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Ausblenden", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Seitenkopf_zeigt_keinen_speicherstatus_unter_der_ueberschrift()
+    {
+        var xaml = ReadOverviewXaml();
+
+        Assert.DoesNotContain("Text=\"{Binding ProjectStatus}\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Projektliste_hat_genug_breite_fuer_vorschaukarten()
     {
         var converter = new ProjectListWidthConverter();

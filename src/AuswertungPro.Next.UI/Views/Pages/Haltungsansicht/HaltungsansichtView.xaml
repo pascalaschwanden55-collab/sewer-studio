@@ -170,7 +170,7 @@
                 <RowDefinition x:Name="SchadenRowDef" Height="240" MinHeight="80"/>
             </Grid.RowDefinitions>
 
-            <controls:RecordDetailsView Grid.Row="0" x:Name="Detail"/>
+            <controls:RecordDetailsView Grid.Row="0" x:Name="Detail" IsCompactLayout="True"/>
 
             <!-- Ziehbarer Splitter: stellt die Hoehe des Schaeden-Panels ein; Hoehe wird gespeichert. -->
             <GridSplitter Grid.Row="1" Height="6" Margin="0,4,0,0"

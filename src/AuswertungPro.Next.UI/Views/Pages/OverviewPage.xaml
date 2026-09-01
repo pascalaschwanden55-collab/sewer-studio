@@ -23,10 +23,10 @@
         </Grid.RowDefinitions>
 
         <DockPanel Margin="0,0,0,14">
-            <StackPanel DockPanel.Dock="Left">
-                <TextBlock Text="Projektübersicht" Style="{StaticResource PageTitle}"/>
-                <TextBlock Text="{Binding ProjectStatus}" Margin="0,4,0,0" Style="{StaticResource Caption}"/>
-            </StackPanel>
+            <TextBlock DockPanel.Dock="Left"
+                       Text="Projektübersicht"
+                       Style="{StaticResource PageTitle}"
+                       VerticalAlignment="Center"/>
             <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <Button Command="{Binding ToggleProjectListCommand}"
                         Style="{StaticResource ToolbarButton}"
@@ -263,10 +263,10 @@
                                 Style="{StaticResource PrimaryButton}"
                                 Margin="0,0,8,0"
                                 Padding="0,6"/>
-                        <Button Content="Ausblenden"
+                        <Button Content="Entfernen"
                                 Command="{Binding DeleteSelectedCommand}"
                                 Margin="0,0,8,0"
-                                ToolTip="Projekt aus der Übersicht ausblenden - Daten bleiben erhalten"
+                                ToolTip="Projekt nur aus der Übersicht entfernen – Daten bleiben erhalten"
                                 Style="{StaticResource SecondaryButton}"
                                 Padding="0,6"/>
                     </UniformGrid>

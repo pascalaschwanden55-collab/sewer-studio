@@ -51,12 +51,10 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="Eigentümerdossiers" Style="{StaticResource PageTitle}"/>
-                    <TextBlock Text="{Binding AreaTitle}"
-                               Style="{StaticResource Caption}"
-                               Margin="0,4,0,0"/>
-                </StackPanel>
+                <TextBlock Grid.Column="0"
+                           Text="Eigentümerdossiers"
+                           Style="{StaticResource PageTitle}"
+                           VerticalAlignment="Center"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="Gebietsangaben" Padding="12,7" Margin="0,0,8,0"

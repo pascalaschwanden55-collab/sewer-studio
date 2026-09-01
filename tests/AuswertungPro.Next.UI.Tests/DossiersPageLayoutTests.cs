@@ -170,3 +170,16 @@ public sealed class DossiersPageCollapsibleHeaderTests
         Assert.Contains("_settings.Save()", quelle, StringComparison.Ordinal);
     }
 }
+
+public sealed class DossiersPageTitleTests
+{
+    [Fact]
+    public void Seitenkopf_zeigt_keinen_gebietstitel_unter_der_ueberschrift()
+    {
+        var xaml = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Views", "Pages", "DossiersPage.xaml"));
+
+        Assert.Contains("Text=\"Eigentümerdossiers\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"{Binding AreaTitle}\"", xaml, StringComparison.Ordinal);
+    }
+}

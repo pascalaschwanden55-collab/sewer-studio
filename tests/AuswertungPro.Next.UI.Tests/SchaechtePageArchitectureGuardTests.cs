@@ -677,7 +677,7 @@ public sealed class SchaechtePageArchitectureGuardTests
     }
 
     [Fact]
-    public void SchaechtePage_uses_zero_to_four_selection_for_zustandsklasse()
+    public void SchaechtePage_uses_field_selection_without_duplicate_zustandsklasse_bar()
     {
         var root = FindRepositoryRoot();
         var pageCode = File.ReadAllText(Path.Combine(
@@ -712,8 +712,8 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("isCombo: true", detailsBuilder);
         Assert.Contains("allowFreeText: false", detailsBuilder);
 
-        Assert.Contains("Zustand 0-4", schachtansichtXaml);
-        Assert.Contains("ZustandsklasseValue_Click", schachtansichtXaml);
+        Assert.DoesNotContain("Zustand 0-4", schachtansichtXaml);
+        Assert.DoesNotContain("ZustandsklasseValue_Click", schachtansichtXaml);
         Assert.Contains("ZkBrushConv", schachtansichtXaml);
     }
 

@@ -60,8 +60,6 @@ public partial class SchachtansichtView : UserControl
         }
     }
 
-    public IReadOnlyList<string> ZustandsklasseOptions => ZustandsklasseColorPalette.SelectionOptions;
-
     public Action<string, SchachtRecord>? ActionRequested { get; set; }
 
     private void SchachtList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -211,13 +209,6 @@ public partial class SchachtansichtView : UserControl
         _ = sender;
         _ = e;
         RaiseAction("details");
-    }
-
-    private void ZustandsklasseValue_Click(object sender, RoutedEventArgs e)
-    {
-        _ = e;
-        if (sender is Button { Tag: string value })
-            RaiseAction($"zustandsklasse:{value}");
     }
 
     private void CtxMoveUp_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("moveup"); }
