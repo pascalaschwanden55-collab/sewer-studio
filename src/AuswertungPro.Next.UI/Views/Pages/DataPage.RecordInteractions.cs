@@ -103,7 +103,14 @@ public partial class DataPage : UserControl
             {
                 _floatingGridWindow.DockBackRequested -= DockGridBack;
                 _floatingGridWindow.Closed -= FloatingGridWindow_Closed;
-                try { _floatingGridWindow.Close(); } catch { }
+                try
+                {
+                    _floatingGridWindow.Close();
+                }
+                catch (Exception closeEx)
+                {
+                    BestEffort.ReportWarning($"[DataPage] Aufraeumen des abgedockten Fensters fehlgeschlagen: {closeEx}");
+                }
                 _floatingGridWindow = null;
             }
         }

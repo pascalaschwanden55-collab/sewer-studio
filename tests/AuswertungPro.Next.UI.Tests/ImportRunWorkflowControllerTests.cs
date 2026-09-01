@@ -715,6 +715,36 @@ public sealed class ImportRunWorkflowControllerTests
     }
 
     [Fact]
+    public async Task RunAsync_meldet_fehlerhafte_Schadensbereinigung_sichtbar_und_im_Protokoll()
+    {
+        var project = new Project();
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            "XTF",
+            "quelle.xtf",
+            (_, _, _) => Result<ImportStats>.Success(
+                new ImportStats(1, 1, 0, 0, 0, [])));
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                project,
+                state,
+                calls,
+                deduplicate: _ => "Bereinigung fehlgeschlagen: Testfehler"),
+            CancellationToken.None);
+
+        Assert.Contains("WARNUNG", state.Summary, StringComparison.Ordinal);
+        Assert.Contains("Bereinigung fehlgeschlagen", state.Details, StringComparison.Ordinal);
+        Assert.Contains(
+            state.LastExportLog!.Entries,
+            entry => entry.Operation == "Primaerschäden bereinigen"
+                     && entry.Status == ImportLogStatus.Error);
+        Assert.NotNull(state.ReplacedProject);
+    }
+
+    [Fact]
     public async Task RunAsync_Speicherfehler_mit_Dateistaging_behaelt_Marker_fuer_Recovery()
     {
         var project = new Project();
@@ -823,7 +853,8 @@ public sealed class ImportRunWorkflowControllerTests
         Func<bool>? saveProject = null,
         Func<string?>? getReportDir = null,
         Func<Project, string>? computeSignature = null,
-        IImportTransactionJournal? journal = null)
+        IImportTransactionJournal? journal = null,
+        Func<Project, string?>? deduplicate = null)
         => new(
             GetProject: getProject ?? (() => project),
             GetProjectPath: getProjectPath ?? (() => @"C:\Projekte\Test\projekt.json"),
@@ -844,7 +875,11 @@ public sealed class ImportRunWorkflowControllerTests
             },
             ShowPreview: showPreview ?? ((_, _) => false),
             ValidatePlausibility: validatePlausibility ?? (_ => Array.Empty<string>()),
-            DeduplicateAllPrimaryDamages: _ => calls.Add("dedup"),
+            DeduplicateAllPrimaryDamages: p =>
+            {
+                calls.Add("dedup");
+                return deduplicate?.Invoke(p);
+            },
             RunAfterImportAsync: (_, label) =>
             {
                 calls.Add($"after:{label}");

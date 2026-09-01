@@ -29,7 +29,7 @@ public sealed record ImportRunWorkflowActions(
     Func<ImportRunLog, string, string> ExportReport,
     Func<ImportPreviewResult, string, bool> ShowPreview,
     Func<Project, IReadOnlyList<string>> ValidatePlausibility,
-    Action<Project> DeduplicateAllPrimaryDamages,
+    Func<Project, string?> DeduplicateAllPrimaryDamages,
     Func<Project, string, Task> RunAfterImportAsync,
     Func<bool> SaveProject,
     Action<string> SetStatus,
@@ -247,7 +247,21 @@ public static class ImportRunWorkflowController
             // veroeffentlichten Zielen (fuer das Recovery-Rollback).
             fileTransaction.Publish();
 
-            actions.DeduplicateAllPrimaryDamages(targetProject);
+            var deduplicationWarning = actions.DeduplicateAllPrimaryDamages(targetProject);
+            if (!string.IsNullOrWhiteSpace(deduplicationWarning))
+            {
+                actions.SetSummaryText(AppendParagraph(
+                    actions.GetSummaryText(),
+                    "WARNUNG: Die importierten Primaerschäden konnten nicht vollständig bereinigt werden."));
+                actions.SetDetailsText(AppendParagraph(
+                    actions.GetDetailsText(),
+                    deduplicationWarning));
+                runLog.AddEntry(
+                    request.Label,
+                    "Primaerschäden bereinigen",
+                    ImportLogStatus.Error,
+                    detail: deduplicationWarning);
+            }
             await actions.RunAfterImportAsync(targetProject, request.Label);
             cancellationToken.ThrowIfCancellationRequested();
 

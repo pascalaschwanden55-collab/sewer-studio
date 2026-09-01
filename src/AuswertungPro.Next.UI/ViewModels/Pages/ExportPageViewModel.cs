@@ -694,6 +694,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             // Amtlichen Kataster laden (einmaliger Tabellen-Bau, danach gecached im SewerStudio-Ordner).
             // Fehlt die Datei, bleibt cadastre null -> Verteilung wie bisher.
             IHaltungCadastreResolver? cadastre = null;
+            string? cadastreWarning = null;
             try
             {
                 var katasterPfad = _katasterXtfPaths.Resolve(
@@ -702,9 +703,12 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
                 if (!string.IsNullOrWhiteSpace(katasterPfad))
                     cadastre = await Task.Run(() => _haltungCadastreIndexes.EnsureAndLoad(katasterPfad));
             }
-            catch
+            catch (Exception ex)
             {
-                // Kataster optional: ohne ihn laeuft die Verteilung wie bisher.
+                var safeCause = UserError.DescribeAndReport(ex, "Dichtheitsverteilung Katasterabgleich");
+                cadastreWarning =
+                    "Der amtliche Kataster konnte nicht geladen werden. Die Verteilung lief ohne " +
+                    $"Katasterabgleich weiter; Ergebnis bitte pruefen. Ursache: {safeCause}";
             }
 
             if (!ProjectIsStillCurrent(
@@ -751,7 +755,15 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
 
             // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
             LastResult = DistributionSummaryBuilder.BuildDichtheitDistributionSummary(results);
-            _shell.SetStatus("Dichtheitsprüfungsprotokolle verteilt");
+            if (cadastreWarning is not null)
+            {
+                LastResult += $"\n\nWARNUNG: {cadastreWarning}";
+                _shell.SetStatus("Dichtheitsprüfungen verteilt – Katasterabgleich fehlgeschlagen");
+            }
+            else
+            {
+                _shell.SetStatus("Dichtheitsprüfungsprotokolle verteilt");
+            }
 
             if (selectedPdfFiles.Length > 0)
                 StorePdfFiles(selectedPdfFiles, projectContext);

@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Import;
@@ -421,7 +422,7 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
     /// Nach jedem Import: Primaere_Schaeden aller Records deduplizieren.
     /// Entfernt doppelte Zeilen (gleicher Code + Meter) aus dem fertigen Text.
     /// </summary>
-    private static void DeduplicateAllPrimaryDamages(Project project)
+    private static string? DeduplicateAllPrimaryDamages(Project project)
     {
         try
         {
@@ -439,10 +440,14 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
                     rec.SetFieldValue("Primaere_Schaeden", clean, source, userEdited: false);
                 }
             }
+
+            return null;
         }
-        catch
+        catch (Exception ex)
         {
-            // Dedup-Fehler sollen Import nicht brechen
+            var safeCause = UserError.DescribeAndReport(ex, "Import Primaerschäden bereinigen");
+            return "Die importierten Primaerschäden wurden übernommen, konnten aber nicht " +
+                   $"vollständig von Doppelungen bereinigt werden: {safeCause}";
         }
     }
 

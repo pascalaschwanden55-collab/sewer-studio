@@ -284,7 +284,7 @@ public sealed class ImportManualWorkflowControllerTests
                 return state.PreviewDecision;
             },
             ValidatePlausibility: _ => [],
-            DeduplicateAllPrimaryDamages: _ => { },
+            DeduplicateAllPrimaryDamages: _ => null,
             RunAfterImportAsync: (_, _) => Task.CompletedTask,
             SaveProject: () =>
             {

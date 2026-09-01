@@ -363,16 +363,6 @@ public partial class TrainingCenterViewModel : ObservableObject
     private void AppendScannedCases(IReadOnlyList<TrainingCase> items)
         => ObservableCollectionContentController.Append(Cases, items);
 
-    /// <summary>Speichert Faelle + Root-Ordner automatisch (ohne UI-Feedback).</summary>
-    private async Task AutoSaveStateAsync()
-    {
-        try
-        {
-            await _store.SaveAsync(TrainingCenterSaveRequestFactory.BuildStateWithDefaults(Cases, _rootFolders));
-        }
-        catch { /* stilles Speichern */ }
-    }
-
     [RelayCommand]
     private async Task SaveAsync()
     {

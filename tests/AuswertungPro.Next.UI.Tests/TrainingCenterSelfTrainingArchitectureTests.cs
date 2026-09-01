@@ -2405,6 +2405,13 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var persistenceSource = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.Persistence.cs"));
         var workflowSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -2419,7 +2426,9 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Ai",
             "Training",
             "TrainingCenterSaveRequestFactory.cs"));
-        var autoSaveSource = ExtractMethodBody(source, "private async Task AutoSaveStateAsync()");
+        var autoSaveSource = ExtractMethodBody(
+            persistenceSource,
+            "private async Task AutoSaveStateAsync()");
         var batchMethod = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
         var saveSource = ExtractMethodBody(source, "private async Task SaveAsync()");
 

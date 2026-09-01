@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Player;
 
@@ -30,6 +31,13 @@ public static class PlayerWindowTimerStopper
 
     private static void TryStop(Action stop)
     {
-        try { stop(); } catch { }
+        try
+        {
+            stop();
+        }
+        catch (Exception ex)
+        {
+            BestEffort.ReportWarning($"[Player] Wiedergabe-Timer konnte nicht gestoppt werden: {ex}");
+        }
     }
 }
