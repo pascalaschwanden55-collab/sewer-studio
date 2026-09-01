@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.VsaCatalog;
@@ -21,11 +22,11 @@ public static class VsaCodeResolver
     /// <summary>
     /// Liest den aktuell konfigurierten Katalog-Provider (zum Sichern/Wiederherstellen in Tests).
     /// </summary>
-    public static ICodeCatalogProvider? CurrentCatalog => _catalogProvider;
+    public static ICodeCatalogProvider? CurrentCatalog => Volatile.Read(ref _catalogProvider);
 
     public static void ConfigureCatalog(ICodeCatalogProvider? catalogProvider)
     {
-        _catalogProvider = catalogProvider;
+        Volatile.Write(ref _catalogProvider, catalogProvider);
     }
 
     /// <summary>
@@ -92,7 +93,7 @@ public static class VsaCodeResolver
     /// </summary>
     public static bool IsExactSelectableCode(string? code)
     {
-        var catalog = _catalogProvider;
+        var catalog = CurrentCatalog;
         if (catalog is null || string.IsNullOrWhiteSpace(code))
             return false;
 
@@ -368,7 +369,7 @@ public static class VsaCodeResolver
 
     private static string? CatalogValidated(string code)
     {
-        if (_catalogProvider is null)
+        if (CurrentCatalog is null)
             return code;
 
         return NormalizeFindingCode(code) is null ? null : code;
@@ -385,7 +386,7 @@ public static class VsaCodeResolver
     private static bool TryGetCatalogDefinition(string code, out CodeDefinition def)
     {
         def = new CodeDefinition();
-        var catalog = _catalogProvider;
+        var catalog = CurrentCatalog;
         if (catalog is null || string.IsNullOrWhiteSpace(code))
             return false;
 

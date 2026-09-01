@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -11,6 +12,7 @@ using System.Windows.Media.Imaging;
 
 using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Dossiers.Preview;
+using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.Infrastructure.Dossiers;
 
 namespace AuswertungPro.Next.UI.Views.Rendering;
@@ -49,14 +51,10 @@ public sealed record DossierPreviewFrameOrigin(Brush? BorderBrush, Thickness Bor
 /// </summary>
 public static class DossierPreviewPageRenderer
 {
-    /// <summary>
-    /// Die eigene Fassung eines festen Textes. Als Feld statt als Parameter
-    /// durch jede Zeichenmethode gereicht: der Zeichner ist einfaedrig, und die
-    /// Alternative waeren acht zusaetzliche Parameter.
-    /// </summary>
-    private static Func<string, string?>? LiteralErsatz;
-    private static Func<string, IReadOnlyList<AuswertungPro.Next.Domain.Models.Dossiers.DossierTextStyleRange>>?
-        LiteralFormate;
+    // Eine Vorschau wird synchron gezeichnet, mehrere Vorschauen koennen aber auf
+    // verschiedenen STA-Threads gleichzeitig laufen. AsyncLocal verhindert, dass
+    // sich deren auftragsbezogene Textfunktionen gegenseitig ueberschreiben.
+    private static readonly AsyncLocal<LiteralCallbacks?> LiteralCallbacksSlot = new();
 
     private static readonly SolidColorBrush Papier = Fest(Color.FromRgb(0xFF, 0xFF, 0xFF));
     private static readonly SolidColorBrush Tinte = Fest(Color.FromRgb(0x00, 0x00, 0x00));
@@ -81,8 +79,7 @@ public static class DossierPreviewPageRenderer
         Func<string, IReadOnlyList<AuswertungPro.Next.Domain.Models.Dossiers.DossierTextStyleRange>>?
             literalStyles = null)
     {
-        LiteralErsatz = literal;
-        LiteralFormate = literalStyles;
+        using var literalScope = new LiteralCallbacksScope(literal, literalStyles);
         ArgumentNullException.ThrowIfNull(page);
         ArgumentNullException.ThrowIfNull(value);
         ArgumentNullException.ThrowIfNull(rows);
@@ -256,8 +253,9 @@ public static class DossierPreviewPageRenderer
 
         if (absatz.TocEntry is { } toc)
         {
+            var callbacks = LiteralCallbacksSlot.Value;
             return DossierPreviewTocRenderer.Render(
-                absatz, toc, erster, LiteralErsatz, LiteralFormate, merke);
+                absatz, toc, erster, callbacks?.Replacement, callbacks?.Styles, merke);
         }
 
         if (absatz.Runs.Count == 1
@@ -277,15 +275,16 @@ public static class DossierPreviewPageRenderer
 
         // Ein Absatz ohne Platzhalter ist fester Text — fuer ihn kann das
         // Dossier eine eigene Fassung fuehren.
-        if (LiteralErsatz is not null && absatz.Runs.All(r => !r.IsField))
+        var literalCallbacks = LiteralCallbacksSlot.Value;
+        if (literalCallbacks?.Replacement is not null && absatz.Runs.All(r => !r.IsField))
         {
             var urtext = string.Concat(absatz.Runs.Select(r => r.Text)).Trim();
-            var ersatz = urtext.Length > 0 ? LiteralErsatz(urtext) : null;
+            var ersatz = urtext.Length > 0 ? literalCallbacks.Replacement(urtext) : null;
 
             if (ersatz is not null)
             {
                 var bereiche = DossierTopicTextFormatting.Normalize(
-                    ersatz, LiteralFormate?.Invoke(urtext));
+                    ersatz, literalCallbacks.Styles?.Invoke(urtext));
 
                 foreach (var segment in DossierTopicTextFormatting.Split(ersatz, bereiche))
                 {
@@ -814,5 +813,21 @@ public static class DossierPreviewPageRenderer
 
         return Fest(Color.FromRgb(
             (byte)((wert >> 16) & 0xFF), (byte)((wert >> 8) & 0xFF), (byte)(wert & 0xFF)));
+    }
+
+    private sealed record LiteralCallbacks(
+        Func<string, string?>? Replacement,
+        Func<string, IReadOnlyList<DossierTextStyleRange>>? Styles);
+
+    private sealed class LiteralCallbacksScope : IDisposable
+    {
+        private readonly LiteralCallbacks? _previous = LiteralCallbacksSlot.Value;
+
+        public LiteralCallbacksScope(
+            Func<string, string?>? replacement,
+            Func<string, IReadOnlyList<DossierTextStyleRange>>? styles)
+            => LiteralCallbacksSlot.Value = new LiteralCallbacks(replacement, styles);
+
+        public void Dispose() => LiteralCallbacksSlot.Value = _previous;
     }
 }
