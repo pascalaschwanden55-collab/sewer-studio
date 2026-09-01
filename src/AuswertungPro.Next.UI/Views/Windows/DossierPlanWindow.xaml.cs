@@ -233,30 +233,14 @@ public partial class DossierPlanWindow : Window
 
     private void OnAccept(object sender, RoutedEventArgs e)
     {
-        var text = WidthBox.Text?.Trim() ?? string.Empty;
-
-        if (text.Length == 0)
+        var result = DossierPlanWidthInputParser.Parse(WidthBox.Text);
+        if (!result.Success)
         {
-            // Leer heisst: die Breite der Vorlage.
-            _breiteCm = null;
-            DialogResult = true;
+            StatusText.Text = result.Error;
             return;
         }
 
-        if (!double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out var cm)
-            && !double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out cm))
-        {
-            StatusText.Text = "Die Breite ist keine Zahl.";
-            return;
-        }
-
-        if (cm is <= 0 or > DossierWordTemplateExportService.PlanMaxWidthCm)
-        {
-            StatusText.Text = "Die Breite muss zwischen 1 und 15 cm liegen.";
-            return;
-        }
-
-        _breiteCm = cm;
+        _breiteCm = result.WidthCm;
         DialogResult = true;
     }
 

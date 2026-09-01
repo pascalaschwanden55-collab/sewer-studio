@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Media;
@@ -338,30 +339,12 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
                 Code = SelectedCode
             };
 
-            if (CurrentOverlay.Q1Mm.HasValue)
-                entry.CodeMeta.Parameters["vsa.q1"] = CurrentOverlay.Q1Mm.Value.ToString("F1");
-            if (CurrentOverlay.Q2Mm.HasValue)
-                entry.CodeMeta.Parameters["vsa.q2"] = CurrentOverlay.Q2Mm.Value.ToString("F1");
-            if (CurrentOverlay.ClockFrom.HasValue)
-                entry.CodeMeta.Parameters["vsa.uhr.von"] = CurrentOverlay.ClockFrom.Value.ToString("F1");
-            if (CurrentOverlay.ClockTo.HasValue)
-                entry.CodeMeta.Parameters["vsa.uhr.bis"] = CurrentOverlay.ClockTo.Value.ToString("F1");
-
-            // Winkelmesser: Bogenwinkel uebertragen
-            if (CurrentOverlay.ArcDegrees.HasValue && CurrentOverlay.ToolType == OverlayToolType.PipeBend)
-                entry.CodeMeta.Parameters["vsa.winkel"] = CurrentOverlay.ArcDegrees.Value.ToString("F1");
+            CodingOverlayQuantificationWriter.ApplyToEntry(entry, CurrentOverlay);
 
             // DN-Kreis: Verhaeltnis zum Haupt-DN uebertragen
             if (CurrentOverlay.DnRatioPercent.HasValue)
-                entry.CodeMeta.Parameters["vsa.dn.ratio"] = CurrentOverlay.DnRatioPercent.Value.ToString("F1");
-            if (CurrentOverlay.FillPercent.HasValue)
-            {
-                var key = CurrentOverlay.ToolType == OverlayToolType.Level
-                          && CurrentOverlay.Points.Count >= 3
-                    ? "vsa.querschnitt.prozent"
-                    : "vsa.fuellgrad.prozent";
-                entry.CodeMeta.Parameters[key] = CurrentOverlay.FillPercent.Value.ToString("F1");
-            }
+                entry.CodeMeta.Parameters["vsa.dn.ratio"] =
+                    CurrentOverlay.DnRatioPercent.Value.ToString("F1", CultureInfo.InvariantCulture);
 
             // Streckenschaden?
             if (CurrentOverlay.ToolType == OverlayToolType.Stretch)
