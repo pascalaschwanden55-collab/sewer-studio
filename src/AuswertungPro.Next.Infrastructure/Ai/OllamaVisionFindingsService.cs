@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
@@ -17,6 +17,28 @@ public sealed record FrameFinding(
 
 public sealed class OllamaVisionFindingsService
 {
+    private static readonly JsonElement ResponseSchema = JsonDocument.Parse("""
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "meter": { "type": ["number", "null"] },
+        "findings": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["low", "mid", "high"]
+        }
+      },
+      "required": ["meter", "findings", "severity"]
+    }
+    """).RootElement.Clone();
+
+    private static readonly IReadOnlySet<string> ValidSeverities =
+        new HashSet<string>(StringComparer.Ordinal) { "low", "mid", "high" };
+
     private readonly OllamaClient _client;
     private readonly string _model;
 
@@ -40,38 +62,44 @@ public sealed class OllamaVisionFindingsService
             "}\n" +
             "Wenn nichts erkennbar: findings=[], severity=\"low\".";
 
-        var raw = await _client.GenerateAsync(_model, prompt, new[] { framePngBase64 }, ct).ConfigureAwait(false);
-        var json = JsonObjectExtractor.TryExtractFirstObject(raw) ?? "{}";
-
         try
         {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
+            var dto = await _client.ChatStructuredWithOptionsAsync<FrameFindingDto>(
+                model: _model,
+                messages:
+                [
+                    new OllamaClient.ChatMessage(
+                        Role: "user",
+                        Content: prompt,
+                        ImagesBase64: [framePngBase64])
+                ],
+                formatSchema: ResponseSchema,
+                options: OllamaDeterministicOptions.Create(),
+                ct: ct).ConfigureAwait(false);
 
-            double? meter = null;
-            if (root.TryGetProperty("meter", out var m) && m.ValueKind is JsonValueKind.Number)
-                meter = m.GetDouble();
-
-            var findings = new List<string>();
-            if (root.TryGetProperty("findings", out var f) && f.ValueKind == JsonValueKind.Array)
+            var raw = JsonSerializer.Serialize(dto);
+            if (dto.Findings is null ||
+                string.IsNullOrWhiteSpace(dto.Severity) ||
+                !ValidSeverities.Contains(dto.Severity))
             {
-                foreach (var it in f.EnumerateArray())
-                {
-                    if (it.ValueKind == JsonValueKind.String)
-                        findings.Add(it.GetString() ?? string.Empty);
-                }
+                return Empty(raw);
             }
 
-            var severity = root.TryGetProperty("severity", out var s) && s.ValueKind == JsonValueKind.String
-                ? s.GetString() ?? "low"
-                : "low";
-
-            return new FrameFinding(meter, findings, severity, raw);
+            return new FrameFinding(dto.Meter, dto.Findings, dto.Severity, raw);
         }
-        catch
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException)
         {
-            return new FrameFinding(null, Array.Empty<string>(), "low", raw);
+            return Empty(raw: null);
         }
     }
+
+    private static FrameFinding Empty(string? raw)
+        => new(null, Array.Empty<string>(), "low", raw);
+
+    private sealed record FrameFindingDto(
+        [property: JsonPropertyName("meter")] double? Meter,
+        [property: JsonPropertyName("findings")] IReadOnlyList<string>? Findings,
+        [property: JsonPropertyName("severity")] string? Severity);
 
 }
