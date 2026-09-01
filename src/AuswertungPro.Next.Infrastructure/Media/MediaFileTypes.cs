@@ -9,12 +9,12 @@ public static class MediaFileTypes
 {
     public static readonly string[] VideoExtensions =
     {
-        ".mp2", ".mpg", ".mpeg", ".mp4", ".avi", ".mov", ".wmv", ".mkv"
+        ".mp2", ".mpg", ".mpeg", ".mp4", ".avi", ".mov", ".wmv", ".mkv", ".webm"
     };
 
     public static readonly string[] ImageExtensions =
     {
-        ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"
+        ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".tif", ".tiff"
     };
 
     public static readonly string VideoDialogFilter =

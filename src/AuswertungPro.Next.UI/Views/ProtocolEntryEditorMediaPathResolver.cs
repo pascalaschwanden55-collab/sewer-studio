@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Infrastructure.Media;
 
 namespace AuswertungPro.Next.UI.Views;
 
@@ -22,14 +23,6 @@ namespace AuswertungPro.Next.UI.Views;
 /// </summary>
 internal sealed class ProtocolEntryEditorMediaPathResolver
 {
-    /// <summary>Erlaubte Medienendungen. Alles andere wird nicht angezeigt.</summary>
-    private static readonly string[] AllowedExtensions =
-    {
-        ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".tif", ".tiff",
-        ".mp4", ".avi", ".mkv", ".mov", ".mpg", ".mpeg", ".wmv", ".webm",
-        ".pdf"
-    };
-
     private readonly string? _projectFolder;
     private readonly Func<string?> _currentProjectPath;
     private readonly Func<string, bool> _fileExists;
@@ -118,8 +111,9 @@ internal sealed class ProtocolEntryEditorMediaPathResolver
     private static bool HasAllowedExtension(string path)
     {
         var extension = Path.GetExtension(path);
-        return !string.IsNullOrEmpty(extension)
-               && AllowedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase);
+        return MediaFileTypes.HasVideoExtension(extension)
+               || MediaFileTypes.HasImageExtension(extension)
+               || string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase);
     }
 
     private bool IsWithinAllowedRoot(string absolutePath, string projectFolder)

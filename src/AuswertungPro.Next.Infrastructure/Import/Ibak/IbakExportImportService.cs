@@ -201,11 +201,10 @@ public sealed class IbakExportImportService : IIbakImportService
     {
         // IBAK-Exporte nutzen L_, L__ oder H__ als Video-Prefix
         var prefixes = new[] { $"L__{holdingKey}", $"L_{holdingKey}", $"H__{holdingKey}" };
-        var videoExtensions = new[] { ".mpg", ".mpeg", ".mp4", ".avi", ".mov" };
 
         var matches = index.Keys
             .Where(k => prefixes.Any(p => HasPrefixAtBoundary(k, p)))
-            .Where(k => videoExtensions.Any(ext => k.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
+            .Where(MediaFileTypes.HasVideoExtension)
             .Select(k => ResolveFile(index, k))
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .Distinct(StringComparer.OrdinalIgnoreCase)

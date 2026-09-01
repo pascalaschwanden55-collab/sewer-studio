@@ -195,6 +195,9 @@ public sealed class ProtocolEntryEditorMediaPathResolverTests
     [InlineData("bild.jpg")]
     [InlineData("bild.PNG")]
     [InlineData("film.mp4")]
+    [InlineData("film.mp2")]
+    [InlineData("film.webm")]
+    [InlineData("animation.gif")]
     [InlineData("protokoll.pdf")]
     public void Medien_Dateien_im_Projekt_bleiben_erlaubt(string dateiname)
     {

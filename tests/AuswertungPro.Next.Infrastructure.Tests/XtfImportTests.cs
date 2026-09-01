@@ -677,16 +677,17 @@ public sealed class XtfImportTests
         }
     }
 
-    [Fact]
-    public void VsaKekImport_SetztVideoLink_AusUntersuchungsDatei()
+    [Theory]
+    [InlineData("wmv")]
+    [InlineData("mp2")]
+    public void VsaKekImport_SetztVideoLink_AusZentralBekanntemVideoformat(string extension)
     {
-        // VSA_KEK-XTF: KEK.Datei mit Klasse=Untersuchung, Objekt=Untersuchungs-TID, Bezeichnung=H_06-001.mpg, Relativpfad=Film.
-        // Erwartet: nach Import ist rec.GetFieldValue("Link") der aufgeloeste Videopfad (enthaelt H_06-001.mpg).
         var dir = Path.Combine(Path.GetTempPath(), $"vsakek-video-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(Path.Combine(dir, "Film"));
+        Directory.CreateDirectory(Path.Combine(dir, "Medien"));
         var xtf = Path.Combine(dir, "test.xtf");
-        File.WriteAllText(Path.Combine(dir, "Film", "H_06-001.mpg"), "dummy-video");
-        File.WriteAllText(xtf, """
+        var fileName = $"H_06-001.{extension}";
+        File.WriteAllText(Path.Combine(dir, "Medien", fileName), "dummy-video");
+        File.WriteAllText(xtf, $$"""
 <?xml version="1.0" encoding="UTF-8"?>
 <TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
   <HEADERSECTION SENDER="Test" VERSION="2.3">
@@ -702,8 +703,8 @@ public sealed class XtfImportTests
         <Art>Film</Art>
         <Klasse>Untersuchung</Klasse>
         <Objekt>U1</Objekt>
-        <Bezeichnung>H_06-001.mpg</Bezeichnung>
-        <Relativpfad>Film</Relativpfad>
+        <Bezeichnung>{{fileName}}</Bezeichnung>
+        <Relativpfad>Medien</Relativpfad>
       </VSA_KEK_2020_LV95.KEK.Datei>
     </VSA_KEK_2020_LV95.KEK>
   </DATASECTION>
@@ -724,7 +725,7 @@ public sealed class XtfImportTests
             var link = rec!.GetFieldValue("Link");
             Assert.False(string.IsNullOrWhiteSpace(link),
                 $"Link-Feld muss den Videopfad enthalten.\n{debug}");
-            Assert.Contains("H_06-001.mpg", link!, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(fileName, link!, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

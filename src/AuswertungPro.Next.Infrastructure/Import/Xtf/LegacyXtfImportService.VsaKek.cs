@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Media;
 using IVsaMediaPathResolver = AuswertungPro.Next.Application.Import.IVsaMediaPathResolver;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
@@ -244,12 +245,11 @@ public sealed partial class LegacyXtfImportService
                 }
             }
 
-            // --- Untersuchungs-Video (Klasse=Untersuchung, Dateierweiterung=mpg/mp4/avi/mpeg ODER relativpfad=Film) ---
+            // --- Untersuchungs-Video (Klasse=Untersuchung, zentral bekanntes Video ODER relativpfad=Film) ---
             if (klasse.Contains("Untersuchung", StringComparison.OrdinalIgnoreCase)
                 && !string.IsNullOrWhiteSpace(objekt))
             {
-                var ext = Path.GetExtension(bezeichnung).ToLowerInvariant();
-                var istVideo = ext is ".mpg" or ".mp4" or ".avi" or ".mpeg"
+                var istVideo = MediaFileTypes.HasVideoExtension(bezeichnung)
                                || relativpfad.Contains("Film", StringComparison.OrdinalIgnoreCase);
                 if (istVideo)
                 {

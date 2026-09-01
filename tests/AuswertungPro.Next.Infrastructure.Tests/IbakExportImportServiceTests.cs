@@ -268,4 +268,37 @@ public sealed class IbakExportImportServiceTests
             try { Directory.Delete(root, recursive: true); } catch { }
         }
     }
+
+    [Theory]
+    [InlineData("wmv")]
+    [InlineData("mkv")]
+    [InlineData("mp2")]
+    public void ImportIbakExport_verlinkt_alle_zentral_erlaubten_Videoformate(string extension)
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ibak-video-format-{Guid.NewGuid():N}");
+        var film = Path.Combine(root, "Film");
+        Directory.CreateDirectory(film);
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        File.WriteAllText(
+            Path.Combine(film, "Daten.txt"),
+            "100-200\n" +
+            "\t00:00:05    1.00 m  BCD     Schaden@!$ibak$!100-200$H\n",
+            Encoding.GetEncoding(1252));
+        var video = Path.Combine(film, $"L__100-200.{extension}");
+        File.WriteAllText(video, "video");
+
+        try
+        {
+            var project = new Project();
+
+            var result = new IbakExportImportService().ImportIbakExport(root, project);
+
+            Assert.True(result.Ok, result.ErrorMessage);
+            Assert.Equal(video, Assert.Single(project.Data).GetFieldValue("Link"));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
 }
