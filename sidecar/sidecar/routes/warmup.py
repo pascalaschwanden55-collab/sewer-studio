@@ -90,10 +90,14 @@ def warmup() -> dict:
     results["classifier"] = _warm_one("YOLO-cls", _load_classifier)
 
     # DINO ueber den echten Pfad (None-Prompt -> Standard-Labels aus den Settings).
-    results["dino"] = _warm_one(
-        "DINO",
-        lambda: dino_wrapper.detect(dummy, None, 0.30, 0.25),
-    )
+    # Der Wrapper meldet normale Inferenzfehler als degraded-Antwort, damit ein
+    # Analyse-Request nicht abstuerzt. Beim Warmup ist das aber kein Erfolg.
+    def _load_dino():
+        response = dino_wrapper.detect(dummy, None, 0.30, 0.25)
+        if getattr(response, "degraded", False):
+            raise RuntimeError(getattr(response, "error", None) or "DINO ist degradiert")
+
+    results["dino"] = _warm_one("DINO", _load_dino)
 
     # SAM direkt laden (braucht keine Box, nur das Modell resident machen).
     def _load_sam():
