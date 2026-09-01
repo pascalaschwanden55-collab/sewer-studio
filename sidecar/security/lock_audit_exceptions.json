@@ -37,6 +37,14 @@
       "aufloesbar_durch": "Upstream-Fix abwarten"
     },
     {
+      "paket": "transformers",
+      "version": "4.57.6",
+      "id": "GHSA-xrqw-3rrv-vx5w",
+      "grund": "CVE-2026-9856, Path Traversal beim Schreiben ueber save_pretrained(). Fix erst in transformers 5.10.0; 5.x bricht Grounding DINO. Der verwundbare Schreibweg wird in dieser Anwendung nicht betreten.",
+      "beleg": "Verwundbar sind save_pretrained() in PreTrainedTokenizerBase und ProcessorMixin ueber praeparierte chat_template-Schluessel einer tokenizer_config.json. Suche am 2026-09-01: kein Treffer fuer 'save_pretrained' im eigenen Python-Code und keiner in groundingdino (dem einzigen transformers-Nutzer). Der Tokenizer wird nur geladen (get_tokenlizer.py: AutoTokenizer.from_pretrained('bert-base-uncased')) und stammt aus der gepinnten lokalen Installation, nicht aus Benutzereingaben. NICHT geprueft wurde transformers 5.10.0 selbst; die 5.x-Unvertraeglichkeit ist an 5.3.0 belegt (siehe PYSEC-2026-2288).",
+      "aufloesbar_durch": "DINO-Weg ohne groundingdino-py 0.4.0, danach transformers >= 5.10.0"
+    },
+    {
       "paket": "setuptools",
       "version": "81.0.0",
       "id": "PYSEC-2026-3447",
