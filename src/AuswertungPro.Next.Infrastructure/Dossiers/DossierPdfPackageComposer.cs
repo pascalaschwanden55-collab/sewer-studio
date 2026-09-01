@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Reports;
+using AuswertungPro.Next.Infrastructure.Media;
 
 using UglyToad.PdfPig;
 
@@ -136,7 +137,10 @@ internal sealed class DossierPdfPackageComposer
 
             return attachmentPaths.Count == 0
                 ? withGeneratedPages
-                : _pdfMerge.MergeWithOriginals(withGeneratedPages, attachmentPaths);
+                : PdfMergeVerification.MergeWithRequiredOriginals(
+                    _pdfMerge,
+                    withGeneratedPages,
+                    attachmentPaths);
         }
         finally
         {

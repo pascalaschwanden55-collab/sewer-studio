@@ -42,6 +42,8 @@ public sealed class DataPagePrintController
     private readonly Func<DataPageDossierPrintAvailability, DossierPrintOptions?> _selectDossierPrintOptions;
     private readonly Func<Project, HaltungRecord, SchachtRecord?, SchachtRecord?, HydraulikCalcResult?, string, DossierPrintOptions, Task<byte[]>> _buildDossierPdfAsync;
     private readonly IPdfMergeService _pdfMerge;
+    private readonly Func<IReadOnlyList<string>, byte[]> _mergeRequiredOriginals;
+    private readonly Func<byte[], IReadOnlyList<string>, byte[]> _mergeWithRequiredOriginals;
     private readonly string _baseDirectory;
     private readonly Func<string, bool> _fileExists;
     private readonly Action<string, byte[]> _writeAllBytes;
@@ -298,6 +300,15 @@ public sealed class DataPagePrintController
             : new DelegatePdfMergeService(
                 mergeOriginals ?? mergeFallback.MergeOriginals,
                 mergeWithOriginals ?? mergeFallback.MergeWithOriginals);
+        // Injizierte Merge-Funktionen sind ein alter Test-/Kompatibilitaetsweg.
+        // Der produktive Dienst wird fuer Dossiers immer auf Vollstaendigkeit geprueft.
+        _mergeRequiredOriginals = mergeOriginals is null
+            ? paths => PdfMergeVerification.MergeRequiredOriginals(_pdfMerge, paths)
+            : mergeOriginals;
+        _mergeWithRequiredOriginals = mergeWithOriginals is null
+            ? (generated, paths) => PdfMergeVerification.MergeWithRequiredOriginals(
+                _pdfMerge, generated, paths)
+            : mergeWithOriginals;
         // Kein stiller statischer Rueckfall: der wuerde sich einen zweiten PDF-Erzeuger
         // ohne die Benutzereinstellung bauen. Die produktiven Aufrufwege reichen den
         // eingebauten Dienst immer durch.
@@ -416,7 +427,7 @@ public sealed class DataPagePrintController
             }
             else
             {
-                pdf = await Task.Run(() => _pdfMerge.MergeOriginals(originalPdfPaths));
+                pdf = await Task.Run(() => _mergeRequiredOriginals(originalPdfPaths));
                 if (pdf.Length == 0)
                     throw new UserFacingException("Die Original-Protokolle konnten nicht zusammengefuehrt werden.");
 
@@ -424,7 +435,7 @@ public sealed class DataPagePrintController
             }
 
             if (!originalsAlreadyMerged && options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0)
-                pdf = await Task.Run(() => _pdfMerge.MergeWithOriginals(pdf, originalPdfPaths));
+                pdf = await Task.Run(() => _mergeWithRequiredOriginals(pdf, originalPdfPaths));
 
             await _writeAllBytesAsync(output, pdf);
             _dialogs.Info($"Dossier wurde erstellt:\n{output}", "Dossier");

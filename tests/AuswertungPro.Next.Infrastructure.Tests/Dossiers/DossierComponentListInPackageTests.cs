@@ -128,6 +128,24 @@ public sealed class DossierComponentListInPackageTests
             SearchOption.TopDirectoryOnly));
     }
 
+    [Fact]
+    public void Paket_stoppt_wenn_eine_angeforderte_Beilage_fehlt()
+    {
+        using var temp = new TempDirectory();
+        var composer = new DossierPdfPackageComposer(
+            new PdfMergeService(),
+            new DossierConditionClassPdfService(templateAssetFolder: temp.Path));
+
+        var error = Assert.Throws<InvalidOperationException>(() => composer.Compose(
+            CreatePdf("WORD-DOSSIER"),
+            [],
+            [Path.Combine(temp.Path, "fehlende-beilage.pdf")],
+            temp.Path,
+            out _));
+
+        Assert.Contains("Beilage fehlt", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static byte[] CreatePdf(string text)
     {
         QuestPDF.Settings.License = LicenseType.Community;
