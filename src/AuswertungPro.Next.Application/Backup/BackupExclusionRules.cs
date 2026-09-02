@@ -26,8 +26,14 @@ public static class BackupExclusionRules
     // zu folgen — und der uebersprungene Eintrag beendete den ganzen Lauf.
     // Der Ordner gehoert ohnehin nicht in die Sicherung: 12 GB, in .gitignore,
     // keine einzige Datei daraus versioniert, jederzeit neu baubar.
+    //
+    // "basemap_tiles" sind nachgeladene Kartenkacheln: rund 600'000 Dateien, die
+    // jeder Spiegellauf mitzaehlte, kopierte und anschliessend erneut hashte,
+    // ohne eine einzige unersetzliche Information zu tragen. Die Programm-
+    // Momentaufnahme laesst sie seit jeher draussen; der Spiegel zog sie bis
+    // 2026-09-02 mit. Sie werden beim naechsten Kartenaufruf neu geladen.
     private static readonly string[] ProgramExcludedNames =
-        { "bin", "obj", ".vs", "node_modules", ".venv", "venv", "__pycache__", ".pytest_cache", ".pytest_tmp", ".tmp", "artifacts" };
+        { "bin", "obj", ".vs", "node_modules", ".venv", "venv", "__pycache__", ".pytest_cache", ".pytest_tmp", ".tmp", "artifacts", "basemap_tiles" };
 
     // Regenerierbare Brocken im KI-Gehirn (mit Nutzer geklaert, 2026-07-03):
     // Trainings-Datensaetze und alte KB-Zwischensicherungen lassen sich neu bauen.

@@ -212,27 +212,37 @@ public sealed class FullBackupService : IFullBackupService
                 "Die Vollsicherung konnte die Versionsstaende nicht sicher bereinigen.");
 
             var skipped = stats.Warnings.Take(200).ToArray();
-            var hashProgressThrottle = Stopwatch.StartNew();
             BackupTargetPathGuard.EnsureTreeIsSafe(backupRoot);
+
+            // Die Pruefphase liest die ganze Sicherung erneut und rechnet jede
+            // SHA-256 nach — bei einer grossen Sicherung ist das der laengste Teil
+            // des Laufs. Sie bekommt deshalb einen EIGENEN Fortschritt, der bei
+            // null beginnt: vorher stand der Balken die ganze Zeit auf 100 % und
+            // sah aus, als haenge die Sicherung.
+            //
+            // Bezugsgroesse ist der ZIELBAUM, nicht die Quelle: Er enthaelt
+            // zusaetzlich Marker, Extras und Manifest und ist deshalb groesser.
+            // Der Vorabdurchlauf liest nur Verzeichniseintraege und faellt neben
+            // dem anschliessenden Lesen aller Dateien nicht ins Gewicht.
+            var checkFiles = 0;
+            var checkBytes = 0L;
+            foreach (var file in EnumerateFiles(backupRoot, BackupVersionRetention.IsVersionsDir))
+            {
+                ct.ThrowIfCancellationRequested();
+                TryAddFileSize(file, ref checkBytes, ref checkFiles);
+            }
+
+            var checkProgress = new ProgressState(checkBytes, checkFiles);
             var manifestFiles = await _manifestIntegrity.CreateEntriesAsync(
                     backupRoot,
-                    file =>
-                    {
-                        if (progress is null || hashProgressThrottle.ElapsedMilliseconds < 250)
-                            return;
-
-                        hashProgressThrottle.Restart();
-                        progress.Report(new FullBackupProgress(
-                            "Pruefe Sicherung",
-                            Path.GetRelativePath(backupRoot, file),
-                            sizeReport.TotalBytes,
-                            sizeReport.TotalBytes,
-                            sizeReport.TotalFiles,
-                            sizeReport.TotalFiles));
-                    },
+                    file => checkProgress.FileDone(
+                        progress,
+                        "Pruefe Sicherung",
+                        Path.GetRelativePath(backupRoot, file),
+                        TryGetFileLength(file)),
                     ct)
                 .ConfigureAwait(false);
-            progressState.Report(progress, "Pruefe Sicherung", "SHA-256 abgeschlossen", force: true);
+            checkProgress.Report(progress, "Pruefe Sicherung", "SHA-256 abgeschlossen", force: true);
             var manifest = BuildManifest(
                 sources, plan, sizeReport, stats, skipped, versionStaende,
                 requiredFreeBytes, confirmedAvailableBytes, manifestFiles);
@@ -257,6 +267,7 @@ public sealed class FullBackupService : IFullBackupService
                 FilesDeleted: stats.Deleted,
                 SkippedFiles: skipped,
                 Duration: started.Elapsed,
+                SkippedFileTotal: stats.Warnings.Count,
                 FilesVerified: stats.Verified,
                 DatabasesSnapshotted: stats.DatabasesSnapshotted,
                 RequiredFreeBytes: requiredFreeBytes,
@@ -281,6 +292,13 @@ public sealed class FullBackupService : IFullBackupService
         BackupTargetPathGuard.EnsureTreeIsSafe(backupRoot);
     }
 
+    private const int MaxGemeldeteFehler = 5;
+
+    /// <summary>
+    /// Bricht bei blockierenden Fehlern ab und nennt dabei ALLE davon, bis zur
+    /// Anzeigegrenze. Frueher stand nur der erste im Dialog — bei mehreren
+    /// fehlenden Quellen blieb der Rest unsichtbar.
+    /// </summary>
     private static void ThrowIfMirrorErrors(
         DirectoryMirror.MirrorStats stats,
         string message)
@@ -288,7 +306,13 @@ public sealed class FullBackupService : IFullBackupService
         if (stats.Errors.Count == 0)
             return;
 
-        throw new IOException($"{message} Fehler: {stats.Errors[0]}");
+        var beispiele = string.Join(Environment.NewLine, stats.Errors.Take(MaxGemeldeteFehler));
+        var rest = stats.Errors.Count > MaxGemeldeteFehler
+            ? $"{Environment.NewLine}... und {stats.Errors.Count - MaxGemeldeteFehler} weitere"
+            : string.Empty;
+
+        throw new IOException(
+            $"{message} {stats.Errors.Count} Fehler:{Environment.NewLine}{beispiele}{rest}");
     }
 
     private FullBackupSizeReport Analyze(
@@ -349,6 +373,19 @@ public sealed class FullBackupService : IFullBackupService
             components,
             components.Sum(c => c.Bytes),
             components.Sum(c => c.FileCount));
+    }
+
+    /// <summary>Dateigroesse fuer die Fortschrittsanzeige; ein Fehler zaehlt als 0.</summary>
+    private static long TryGetFileLength(string file)
+    {
+        try
+        {
+            return new FileInfo(file).Length;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return 0;
+        }
     }
 
     private static void TryAddFileSize(string file, ref long bytes, ref int files)
@@ -560,7 +597,9 @@ public sealed class FullBackupService : IFullBackupService
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                stats.Errors.Add($"{standDir}: Alter Versions-Stand nicht entfernt ({ex.Message})");
+                // Ein stehengebliebener alter Stand kostet nur Platz. Eine verletzte
+                // Zielgrenze wird oben nicht gefangen und bricht weiterhin ab.
+                stats.Warnings.Add($"{standDir}: Alter Versions-Stand nicht entfernt ({ex.Message})");
             }
         }
 
@@ -629,6 +668,7 @@ public sealed class FullBackupService : IFullBackupService
                 Files = c.Files?.Select(f => new { f.SourcePath, f.TargetRelativePath }).ToArray()
             }).ToArray(),
             Files = files,
+            SkippedFileCount = stats.Warnings.Count,
             SkippedFiles = skipped
         };
 
@@ -677,6 +717,7 @@ public sealed class FullBackupService : IFullBackupService
         private readonly Stopwatch _throttle = Stopwatch.StartNew();
         private long _bytesDone;
         private int _filesDone;
+        private bool _reportedOnce;
 
         public void FileDone(
             IProgress<FullBackupProgress>? progress,
@@ -698,9 +739,12 @@ public sealed class FullBackupService : IFullBackupService
             if (progress is null)
                 return;
 
-            if (!force && _throttle.ElapsedMilliseconds < 250 && _filesDone < filesTotal)
+            // Die erste Meldung geht immer sofort raus: sonst bleibt der Balken zu
+            // Beginn einer Phase leer stehen, obwohl bereits gearbeitet wird.
+            if (!force && _reportedOnce && _throttle.ElapsedMilliseconds < 250 && _filesDone < filesTotal)
                 return;
 
+            _reportedOnce = true;
             _throttle.Restart();
             progress.Report(new FullBackupProgress(
                 component,

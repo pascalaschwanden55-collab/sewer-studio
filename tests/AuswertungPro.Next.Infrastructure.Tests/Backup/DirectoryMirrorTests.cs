@@ -392,7 +392,7 @@ public sealed class DirectoryMirrorTests : IDisposable
     }
 
     [Fact]
-    public async Task MirrorSourceAsync_GesperrteQuelldatei_ProtokolliertFehlerUndLaeuftWeiter()
+    public async Task MirrorSourceAsync_GesperrteQuelldatei_WarntUndLaeuftWeiter()
     {
         var source = Path.Combine(_root, "source");
         var backupRoot = Path.Combine(_root, "backup");
@@ -413,7 +413,8 @@ public sealed class DirectoryMirrorTests : IDisposable
 
         Assert.True(File.Exists(Path.Combine(backupRoot, "Ziel", "ok.txt")));
         Assert.False(File.Exists(Path.Combine(backupRoot, "Ziel", "locked.txt")));
-        Assert.Contains(stats.Errors, e => e.Contains("locked.txt", StringComparison.OrdinalIgnoreCase));
+        Assert.Empty(stats.Errors);
+        Assert.Contains(stats.Warnings, e => e.Contains("locked.txt", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -504,7 +505,10 @@ public sealed class DirectoryMirrorTests : IDisposable
         Assert.Equal("alter gueltiger Inhalt", File.ReadAllText(targetFile));
         Assert.Equal(0, stats.Copied);
         Assert.Equal(0, stats.Verified);
-        Assert.Contains(stats.Errors, e => e.Contains("Inhaltspruefung", StringComparison.OrdinalIgnoreCase));
+        // Eine einzelne beschaedigte Kopie ist eine Warnung: Das gueltige Ziel
+        // bleibt stehen, die uebrigen Dateien werden weiter gesichert.
+        Assert.Empty(stats.Errors);
+        Assert.Contains(stats.Warnings, e => e.Contains("Inhaltspruefung", StringComparison.OrdinalIgnoreCase));
         Assert.False(File.Exists(targetFile + DirectoryMirror.TempSuffix));
     }
 

@@ -65,4 +65,10 @@ public sealed record FullBackupResult(
     int FilesVerified = 0,
     int DatabasesSnapshotted = 0,
     long RequiredFreeBytes = 0,
-    long AvailableFreeBytes = 0);
+    long AvailableFreeBytes = 0,
+    /// <summary>
+    /// Gesamtzahl uebersprungener Dateien. <see cref="SkippedFiles"/> ist nur eine
+    /// Stichprobe fuer die Anzeige — ohne diesen Wert meldete die Oberflaeche bei
+    /// vielen uebersprungenen Dateien faelschlich die gedeckelte Zahl.
+    /// </summary>
+    int SkippedFileTotal = 0);

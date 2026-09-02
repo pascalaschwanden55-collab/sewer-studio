@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using AuswertungPro.Next.Application.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Backup;
@@ -143,4 +143,20 @@ public class BackupExclusionRulesTests
     [InlineData("my_artifacts")]
     public void Programm_AehnlicheNamen_BleibenDrin(string name)
         => Assert.False(BackupExclusionRules.IsProgramDirExcluded(name));
+
+    // ── basemap_tiles: nachladbare Kartenkacheln ─────────────────────
+    // Rund 600'000 Dateien, die bei jedem Spiegellauf mitgezaehlt und
+    // geprueft wurden. Die Programm-Momentaufnahme laesst sie seit jeher
+    // draussen; der Spiegel zog sie bis 2026-09-02 mit.
+
+    [Theory]
+    [InlineData("basemap_tiles")]
+    [InlineData("BASEMAP_TILES")]
+    public void Programm_Kartenkacheln_Ausgeschlossen(string name)
+        => Assert.True(BackupExclusionRules.IsProgramDirExcluded(name));
+
+    [Fact]
+    public void Programm_Kartenkacheln_AuchInTiefe_Ausgeschlossen()
+        => Assert.True(BackupExclusionRules.IsProgramDirExcluded(
+            Path.Combine("src", "AuswertungPro.Next.UI", "basemap_tiles")));
 }

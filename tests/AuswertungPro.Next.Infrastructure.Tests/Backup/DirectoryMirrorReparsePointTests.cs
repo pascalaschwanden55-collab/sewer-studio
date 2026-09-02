@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Infrastructure.Backup;
 
@@ -69,7 +69,11 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(backupRoot, "Programm", "verknuepfung")));
         Assert.False(File.Exists(Path.Combine(backupRoot, "Programm", "verknuepfung", "geheim.txt")));
         Assert.Equal(1, stats.Copied);
-        Assert.Contains(stats.Errors, e => e.Contains("verknuepfung", StringComparison.OrdinalIgnoreCase));
+        // Eine Verknuepfung in der QUELLE ist uebersprungener Fremdinhalt und
+        // damit nur eine Warnung. Im ZIEL bleibt sie ein blockierender Fehler —
+        // das prueft RemoveOrphans_Junction_im_spiegel_loescht_keine_fremden_dateien.
+        Assert.Empty(stats.Errors);
+        Assert.Contains(stats.Warnings, e => e.Contains("verknuepfung", StringComparison.OrdinalIgnoreCase));
     }
 
     [JunctionFact]

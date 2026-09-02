@@ -14,7 +14,13 @@ public sealed record SettingsProgramSnapshotWorkflowRequest(
     Action<string> SetStatusText,
     Func<string> GetProgramRoot,
     Func<ProgramSnapshotRequest, IProgress<string>?, CancellationToken, Task<ProgramSnapshotResult>> CreateAsync,
-    Func<DateTime> Now);
+    Func<DateTime> Now,
+    /// <summary>
+    /// Schreibt Grund und Luecken ins Programmlog. Ein abgelehnter Lauf lieferte
+    /// bisher nur einen Dialog und hinterliess keine Spur. null verwendet den
+    /// zentralen Logkanal.
+    /// </summary>
+    Action<string>? Log = null);
 
 /// <summary>
 /// Fuehrt den Benutzer durch die Programm-Momentaufnahme: Ziel waehlen, packen,
@@ -30,6 +36,7 @@ public static class SettingsProgramSnapshotWorkflow
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var log = request.Log ?? (message => BestEffort.ReportWarning(message));
 
         var programRoot = request.GetProgramRoot();
         if (string.IsNullOrWhiteSpace(programRoot))
@@ -59,6 +66,8 @@ public static class SettingsProgramSnapshotWorkflow
 
             if (!result.Success)
             {
+                log($"[Programm-Momentaufnahme] Fehlgeschlagen (Ziel {path}): " +
+                    $"{result.Error ?? "ohne Angabe"}");
                 request.SetStatusText($"Fehler: {result.Error}");
                 request.Dialogs.Error($"Die Momentaufnahme ist fehlgeschlagen:\n{result.Error}", DialogTitle);
                 return;
@@ -82,6 +91,9 @@ public static class SettingsProgramSnapshotWorkflow
             // Eine Sicherung mit Luecken darf nicht wie eine vollstaendige aussehen.
             if (unreadable.Count > 0)
             {
+                foreach (var ordner in unreadable)
+                    log($"[Programm-Momentaufnahme] Ordner nicht gelesen: {ordner}");
+
                 const int maxAnzeige = 10;
                 var liste = string.Join("\n", unreadable.Take(maxAnzeige).Select(d => $"  - {d}"));
                 var mehr = unreadable.Count > maxAnzeige

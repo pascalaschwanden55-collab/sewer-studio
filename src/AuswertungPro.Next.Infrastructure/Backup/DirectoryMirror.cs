@@ -66,10 +66,28 @@ public sealed class DirectoryMirror
         public int Deleted;
         public int Verified;
         public int DatabasesSnapshotted;
-        /// <summary>Format "pfad: grund" — Fehler brechen den Lauf nicht ab.</summary>
+        /// <summary>
+        /// Format "pfad: grund". Blockierend: der Aufrufer bricht den Lauf danach ab,
+        /// weil der Zielstand sonst unsicher oder unvollstaendig bereinigt wuerde.
+        /// </summary>
         public List<string> Errors { get; } = new();
         /// <summary>Nicht-kritische Hinweise, die nach erfolgreichem Lauf sichtbar werden.</summary>
         public List<string> Warnings { get; } = new();
+
+        /// <summary>
+        /// Ordnet einen Fehlschlag ein. Nur eine verletzte Zielgrenze
+        /// (<see cref="BackupTargetBoundary"/>) bricht die Sicherung ab.
+        /// Alles andere — gesperrte Datei, fehlende Rechte, Verknuepfung in der
+        /// Quelle — ist eine sichtbare Warnung: Der bisherige Stand dieser Datei
+        /// bleibt im Spiegel erhalten, alle uebrigen Dateien werden aktualisiert.
+        /// </summary>
+        internal void AddIssue(Exception exception, string message)
+        {
+            if (BackupTargetBoundary.Marks(exception))
+                Errors.Add(message);
+            else
+                Warnings.Add(message);
+        }
     }
 
     /// <summary>
@@ -121,7 +139,12 @@ public sealed class DirectoryMirror
             return;
         }
 
-        foreach (var file in EnumerateFiles(source.SourceRoot, source.IsDirExcluded, stats))
+        foreach (var file in EnumerateFiles(
+                     source.SourceRoot,
+                     source.IsDirExcluded,
+                     stats,
+                     linksAreErrors: false,
+                     onSkippedFile: skipped => PreserveSkippedSourceFile(source, skipped, expectedTargets)))
         {
             ct.ThrowIfCancellationRequested();
 
@@ -146,6 +169,25 @@ public sealed class DirectoryMirror
     /// Markiert den vorhandenen Spiegelbestand einer (jetzt fehlenden) Quelle als erwartet,
     /// damit <see cref="RemoveOrphans"/> ihn nicht in die Versions-Rotation verschiebt.
     /// </summary>
+    /// <summary>
+    /// Schuetzt den bisherigen Spiegelstand einer uebersprungenen Quelldatei.
+    /// Ohne das wuerde <see cref="RemoveOrphans"/> die letzte gute Kopie als
+    /// verwaist behandeln, obwohl die Datei in der Quelle weiterhin existiert.
+    /// </summary>
+    private static void PreserveSkippedSourceFile(
+        BackupSource source, string skippedFile, ISet<string> expectedTargets)
+    {
+        try
+        {
+            var relToSource = Path.GetRelativePath(source.SourceRoot, skippedFile);
+            expectedTargets.Add(Path.Combine(source.TargetRelativeRoot, relToSource));
+        }
+        catch (ArgumentException)
+        {
+            // Ohne bildbaren Zielpfad gibt es nichts zu schuetzen.
+        }
+    }
+
     private static void PreserveExistingMirror(
         string backupRoot, string targetRelativeRoot, ISet<string> expectedTargets)
     {
@@ -182,7 +224,8 @@ public sealed class DirectoryMirror
                                    or UnauthorizedAccessException
                                    or IOException)
         {
-            stats.Errors.Add($"{file.SourcePath}: Quelldatei nicht sicher lesbar ({ex.Message})");
+            stats.AddIssue(ex, $"{file.SourcePath}: Quelldatei nicht sicher lesbar ({ex.Message})");
+            expectedTargets.Add(file.TargetRelativePath);
             return;
         }
 
@@ -201,7 +244,11 @@ public sealed class DirectoryMirror
     public void RemoveOrphans(string backupRoot, ISet<string> expectedTargets, MirrorStats stats)
     {
         BackupTargetPathGuard.EnsureRootIsSafe(backupRoot);
-        foreach (var file in EnumerateFiles(backupRoot, BackupVersionRetention.IsVersionsDir, stats))
+        foreach (var file in EnumerateFiles(
+                     backupRoot,
+                     BackupVersionRetention.IsVersionsDir,
+                     stats,
+                     linksAreErrors: true))
         {
             var rel = Path.GetRelativePath(backupRoot, file);
             if (expectedTargets.Contains(rel))
@@ -228,7 +275,9 @@ public sealed class DirectoryMirror
             }
             catch (Exception ex)
             {
-                stats.Errors.Add($"{file}: Entfernen fehlgeschlagen ({ex.Message})");
+                // Eine stehengebliebene Altdatei im Spiegel ist unschoen, aber
+                // ungefaehrlich — nur eine verletzte Zielgrenze bricht ab.
+                stats.AddIssue(ex, $"{file}: Entfernen fehlgeschlagen ({ex.Message})");
             }
         }
 
@@ -323,7 +372,10 @@ public sealed class DirectoryMirror
                                    or InvalidDataException
                                    or Microsoft.Data.Sqlite.SqliteException)
         {
-            stats.Errors.Add($"{sourceFile}: {ex.Message}");
+            // Eine einzelne gesperrte oder nicht lesbare Quelldatei darf die
+            // gesamte Sicherung nicht scheitern lassen: Ihr Ziel steht bereits
+            // in expectedTargets, der bisherige Stand bleibt also erhalten.
+            stats.AddIssue(ex, $"{sourceFile}: {ex.Message}");
         }
     }
 
@@ -554,21 +606,36 @@ public sealed class DirectoryMirror
                                    or NotSupportedException
                                    or InvalidDataException)
         {
-            stats.Errors.Add($"{targetFile}: Vorversion nicht nach {BackupVersionRetention.VersionsFolderName} verschoben ({ex.Message})");
+            stats.AddIssue(
+                ex,
+                $"{targetFile}: Vorversion nicht nach {BackupVersionRetention.VersionsFolderName} verschoben ({ex.Message})");
         }
     }
 
     /// <summary>
     /// Rekursive Datei-Enumeration, die ausgeschlossene Ordner gar nicht erst betritt
     /// (Muster SafeFileEnumeration: Stack-basiert, Fehler pro Ordner abgefangen).
-    /// Verknuepfungen/Junctions (Dateien wie Ordner) werden uebersprungen und als
-    /// Fehlerzeile gemeldet — dahinter liegt Inhalt ausserhalb des eigenen Baums.
+    /// Verknuepfungen/Junctions (Dateien wie Ordner) werden uebersprungen und
+    /// gemeldet — dahinter liegt Inhalt ausserhalb des eigenen Baums.
     /// Das Praedikat bekommt den Ordnerpfad relativ zum Root.
     /// </summary>
+    /// <param name="linksAreErrors">
+    /// true beim Durchlauf des ZIELBAUMS: dort ist eine Verknuepfung eine verletzte
+    /// Sicherheitsgrenze und muss den Lauf stoppen. false bei einer QUELLE: dort ist
+    /// sie nur ein uebersprungener Fremdinhalt (etwa der Ordner "artifacts" mit
+    /// seinen Verknuepfungen auf die Sidecar-Modelle) und darf die Sicherung nicht
+    /// abbrechen.
+    /// </param>
+    /// <param name="onSkippedFile">
+    /// Wird fuer jede uebersprungene Datei gerufen, damit der Aufrufer ihren
+    /// bisherigen Spiegelstand vor der Verwaisten-Loeschung schuetzen kann.
+    /// </param>
     private static IEnumerable<string> EnumerateFiles(
         string root,
         Func<string, bool>? isDirExcluded,
-        MirrorStats stats)
+        MirrorStats stats,
+        bool linksAreErrors,
+        Action<string>? onSkippedFile = null)
     {
         var stack = new Stack<string>();
         stack.Push(root);
@@ -609,7 +676,8 @@ public sealed class DirectoryMirror
                                            or UnauthorizedAccessException
                                            or InvalidDataException)
                 {
-                    stats.Errors.Add($"{file}: Quelldatei nicht sicher lesbar ({ex.Message})");
+                    Report(stats, linksAreErrors, $"{file}: Quelldatei nicht sicher lesbar ({ex.Message})");
+                    onSkippedFile?.Invoke(file);
                     continue;
                 }
 
@@ -622,7 +690,7 @@ public sealed class DirectoryMirror
                 // der weder gespiegelt noch als verwaist geloescht werden darf.
                 if (ReparsePointGuard.IsReparsePoint(children[i]))
                 {
-                    stats.Errors.Add($"{children[i]}: Verknuepfung/Junction uebersprungen");
+                    Report(stats, linksAreErrors, $"{children[i]}: Verknuepfung/Junction uebersprungen");
                     continue;
                 }
 
@@ -631,6 +699,14 @@ public sealed class DirectoryMirror
                     stack.Push(children[i]);
             }
         }
+    }
+
+    private static void Report(MirrorStats stats, bool asError, string message)
+    {
+        if (asError)
+            stats.Errors.Add(message);
+        else
+            stats.Warnings.Add(message);
     }
 
     private static void DeleteEmptyDirectories(string backupRoot, MirrorStats stats)
@@ -645,7 +721,8 @@ public sealed class DirectoryMirror
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            stats.Errors.Add($"{backupRoot}: Ordner-Aufraeumen fehlgeschlagen ({ex.Message})");
+            // Leere Ordner sind nur Kosmetik — kein Grund, die Sicherung zu verwerfen.
+            stats.Warnings.Add($"{backupRoot}: Ordner-Aufraeumen fehlgeschlagen ({ex.Message})");
             return;
         }
 

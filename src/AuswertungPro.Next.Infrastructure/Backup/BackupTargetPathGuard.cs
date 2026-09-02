@@ -33,7 +33,7 @@ internal static class BackupTargetPathGuard
             var parent = Path.GetDirectoryName(current);
             if (string.IsNullOrWhiteSpace(parent))
             {
-                throw new InvalidDataException(
+                throw BackupTargetBoundary.Fail(
                     $"Zielroot konnte nicht bis zum Laufwerks- oder Freigabe-Root geprueft werden: {root}");
             }
 
@@ -45,7 +45,7 @@ internal static class BackupTargetPathGuard
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
         if (Path.IsPathRooted(relativePath))
-            throw new InvalidDataException($"Zielpfad muss relativ sein: {relativePath}");
+            throw BackupTargetBoundary.Fail($"Zielpfad muss relativ sein: {relativePath}");
 
         var root = Normalize(targetRoot);
         var candidate = Normalize(Path.Combine(root, relativePath));
@@ -66,7 +66,7 @@ internal static class BackupTargetPathGuard
         var candidate = Normalize(targetPath);
         if (!IsSameOrInside(root, candidate))
         {
-            throw new InvalidDataException(
+            throw BackupTargetBoundary.Fail(
                 $"Zielpfad liegt ausserhalb des Sicherungsroots: {candidate}");
         }
 
@@ -78,14 +78,14 @@ internal static class BackupTargetPathGuard
             var parent = Path.GetDirectoryName(current);
             if (string.IsNullOrWhiteSpace(parent))
             {
-                throw new InvalidDataException(
+                throw BackupTargetBoundary.Fail(
                     $"Zielpfad konnte nicht bis zum Sicherungsroot geprueft werden: {candidate}");
             }
 
             current = Normalize(parent);
             if (!IsSameOrInside(root, current))
             {
-                throw new InvalidDataException(
+                throw BackupTargetBoundary.Fail(
                     $"Zielpfad verlaesst den Sicherungsroot: {candidate}");
             }
         }
@@ -113,7 +113,7 @@ internal static class BackupTargetPathGuard
                                        or PathTooLongException
                                        or NotSupportedException)
             {
-                throw new InvalidDataException(
+                throw BackupTargetBoundary.Fail(
                     $"Zielordner konnte nicht sicher geprueft werden: {current}",
                     ex);
             }
@@ -145,7 +145,7 @@ internal static class BackupTargetPathGuard
                                    or PathTooLongException
                                    or NotSupportedException)
         {
-            throw new InvalidDataException(
+            throw BackupTargetBoundary.Fail(
                 $"Zielpfad konnte nicht sicher geprueft werden: {path}",
                 ex);
         }
@@ -153,7 +153,7 @@ internal static class BackupTargetPathGuard
         if (attributes is not null
             && (attributes.Value & FileAttributes.ReparsePoint) != 0)
         {
-            throw new InvalidDataException(
+            throw BackupTargetBoundary.Fail(
                 $"Verknuepfung im Sicherungs-Zielpfad wurde blockiert: {path}");
         }
     }
@@ -196,7 +196,7 @@ internal static class BackupTargetPathGuard
     {
         var pathRoot = Path.GetPathRoot(path);
         if (string.IsNullOrWhiteSpace(pathRoot))
-            throw new InvalidDataException($"Zielpfad besitzt keinen Laufwerks- oder Freigabe-Root: {path}");
+            throw BackupTargetBoundary.Fail($"Zielpfad besitzt keinen Laufwerks- oder Freigabe-Root: {path}");
         return Normalize(pathRoot);
     }
 

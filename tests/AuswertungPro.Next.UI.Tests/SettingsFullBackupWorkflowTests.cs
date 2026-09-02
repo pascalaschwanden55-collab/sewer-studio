@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Application.Backup;
+﻿using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Settings;
@@ -131,6 +131,97 @@ public sealed class SettingsFullBackupWorkflowTests
         }
     }
 
+    [Fact]
+    public async Task RunAsync_schreibt_den_Fehlergrund_ins_Programmlog()
+    {
+        var backup = new FullBackupFake
+        {
+            AnalyzeReport = Report(),
+            RunResult = new FullBackupResult(
+                Success: false,
+                Error: "Zielordner enthaelt bereits Daten",
+                TargetRoot: "",
+                TotalBytes: 0,
+                FilesCopied: 0,
+                FilesUnchanged: 0,
+                FilesDeleted: 0,
+                SkippedFiles: [],
+                Duration: TimeSpan.Zero)
+        };
+        var dialogs = new DialogFake { SelectedFolder = @"E:\Backup", ConfirmResult = true };
+        var log = new List<string>();
+
+        await SettingsFullBackupWorkflow.RunAsync(
+            Request(new AppSettings(), backup, dialogs, new ToastFake(), new FullBackupOperationState(),
+                new List<string>(), DateTime.UtcNow, log),
+            CancellationToken.None);
+
+        // Ohne diese Zeile war der Grund nur im weggeklickten Dialog sichtbar.
+        Assert.Contains(log, eintrag =>
+            eintrag.Contains("Zielordner enthaelt bereits Daten", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RunAsync_schreibt_uebersprungene_Dateien_ins_Programmlog()
+    {
+        var backup = new FullBackupFake
+        {
+            AnalyzeReport = Report(),
+            RunResult = new FullBackupResult(
+                Success: true,
+                Error: null,
+                TargetRoot: @"E:\Backup",
+                TotalBytes: 10,
+                FilesCopied: 1,
+                FilesUnchanged: 0,
+                FilesDeleted: 0,
+                SkippedFiles: [@"C:\gesperrt.txt"],
+                Duration: TimeSpan.FromSeconds(1),
+                SkippedFileTotal: 1)
+        };
+        var dialogs = new DialogFake { SelectedFolder = @"E:\Backup", ConfirmResult = true };
+        var log = new List<string>();
+
+        await SettingsFullBackupWorkflow.RunAsync(
+            Request(new AppSettings(), backup, dialogs, new ToastFake(), new FullBackupOperationState(),
+                new List<string>(), DateTime.UtcNow, log),
+            CancellationToken.None);
+
+        Assert.Contains(log, eintrag => eintrag.Contains("gesperrt.txt", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RunAsync_nennt_die_echte_Zahl_uebersprungener_Dateien()
+    {
+        // Die Liste ist auf 200 Beispiele gedeckelt; gemeldet werden muss die
+        // tatsaechliche Zahl, sonst wirkt eine grosse Luecke harmlos.
+        var beispiele = Enumerable.Range(1, 200).Select(i => $@"C:\datei{i}.txt").ToArray();
+        var backup = new FullBackupFake
+        {
+            AnalyzeReport = Report(),
+            RunResult = new FullBackupResult(
+                Success: true,
+                Error: null,
+                TargetRoot: @"E:\Backup",
+                TotalBytes: 10,
+                FilesCopied: 1,
+                FilesUnchanged: 0,
+                FilesDeleted: 0,
+                SkippedFiles: beispiele,
+                Duration: TimeSpan.FromSeconds(1),
+                SkippedFileTotal: 517)
+        };
+        var dialogs = new DialogFake { SelectedFolder = @"E:\Backup", ConfirmResult = true };
+
+        await SettingsFullBackupWorkflow.RunAsync(
+            Request(new AppSettings(), backup, dialogs, new ToastFake(), new FullBackupOperationState(),
+                new List<string>(), DateTime.UtcNow),
+            CancellationToken.None);
+
+        Assert.Single(dialogs.Warnings);
+        Assert.Contains("517", dialogs.Warnings[0]);
+    }
+
     private static SettingsFullBackupWorkflowRequest Request(
         AppSettings settings,
         IFullBackupService backup,
@@ -138,7 +229,8 @@ public sealed class SettingsFullBackupWorkflowTests
         IToastService toasts,
         FullBackupOperationState state,
         List<string> calls,
-        DateTime nowUtc)
+        DateTime nowUtc,
+        List<string>? log = null)
         => new(
             Settings: settings,
             FullBackup: backup,
@@ -147,7 +239,8 @@ public sealed class SettingsFullBackupWorkflowTests
             Operation: state,
             FlushPendingSave: () => calls.Add("flush"),
             SaveSettingsImmediate: () => calls.Add("save"),
-            UtcNow: () => nowUtc);
+            UtcNow: () => nowUtc,
+            Log: log is null ? null : log.Add);
 
     private static FullBackupSizeReport Report()
         => new(

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -17,7 +17,13 @@ public sealed record SettingsFullBackupWorkflowRequest(
     FullBackupOperationState Operation,
     Action FlushPendingSave,
     Action SaveSettingsImmediate,
-    Func<DateTime> UtcNow);
+    Func<DateTime> UtcNow,
+    /// <summary>
+    /// Schreibt Grund und Umfang eines Fehlschlags ins Programmlog. Ohne das war
+    /// die Ursache nur im Dialog sichtbar und nach dem Wegklicken verloren.
+    /// null verwendet den zentralen Logkanal.
+    /// </summary>
+    Action<string>? Log = null);
 
 public static class SettingsFullBackupWorkflow
 {
@@ -26,6 +32,7 @@ public static class SettingsFullBackupWorkflow
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var log = request.Log ?? (message => BestEffort.ReportWarning(message));
 
         if (request.Operation.IsRunning)
         {
@@ -77,6 +84,11 @@ public static class SettingsFullBackupWorkflow
 
             if (!result.Success)
             {
+                // Der Grund gehoert ins Log, nicht nur in den Dialog: Nach dem
+                // Wegklicken war bisher nirgends nachlesbar, WARUM die Sicherung
+                // scheiterte.
+                log($"[Datensicherung] Fehlgeschlagen (Ziel {targetRoot}): " +
+                    $"{result.Error ?? "ohne Angabe"}");
                 request.Operation.SetStatus($"Fehler: {result.Error}");
                 request.Toasts.Error("Datensicherung fehlgeschlagen.");
                 request.Dialogs.Error(result.Error ?? "Datensicherung fehlgeschlagen.", "Datensicherung");
@@ -108,9 +120,19 @@ public static class SettingsFullBackupWorkflow
 
             if (result.SkippedFiles.Count > 0)
             {
+                // Die Liste ist eine gedeckelte Stichprobe. Gemeldet wird die
+                // tatsaechliche Zahl, damit eine grosse Luecke nicht klein aussieht.
+                var anzahl = Math.Max(result.SkippedFileTotal, result.SkippedFiles.Count);
+                foreach (var uebersprungen in result.SkippedFiles)
+                    log($"[Datensicherung] Uebersprungen: {uebersprungen}");
+                log($"[Datensicherung] Uebersprungene Dateien insgesamt: {anzahl}");
+
                 var sample = string.Join(Environment.NewLine, result.SkippedFiles.Take(10));
                 request.Dialogs.Warn(
-                    $"Einige Dateien konnten nicht gesichert werden ({result.SkippedFiles.Count}).\n\n{sample}",
+                    $"Einige Dateien konnten nicht gesichert werden ({anzahl}).\n\n" +
+                    $"{sample}\n\n" +
+                    "Der bisherige Stand dieser Dateien bleibt in der Sicherung erhalten. " +
+                    "Die vollstaendige Liste steht im Programmlog.",
                     "Datensicherung");
             }
         }
