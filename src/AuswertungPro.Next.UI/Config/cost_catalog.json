@@ -723,6 +723,105 @@
       "price": 0.0,
       "active": true,
       "aliases": []
+    },
+    {
+      "key": "INSTALL_REINIGUNG",
+      "name": "Einrichtung für die Reinigung",
+      "npkCode": "111.001",
+      "chapter": "100",
+      "npkCodeD16": "",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 0.0,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "INSTALL_ZUSTANDSERFASSUNG",
+      "name": "Einrichtung für die Zustandserfassung",
+      "npkCode": "112.001",
+      "chapter": "100",
+      "npkCodeD16": "",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 0.0,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "HAUPTARBEIT_REINIGUNG_KANAL",
+      "name": "Kanalreinigungsfahrzeug inkl. Bedienung",
+      "npkCode": "211.112",
+      "chapter": "200",
+      "npkCodeD16": "",
+      "unit": "h",
+      "type": "Fixed",
+      "price": 202.0,
+      "active": true,
+      "aliases": [
+        "Kanalreinigungsfahrzeug",
+        "Reinigungsfahrzeug"
+      ]
+    },
+    {
+      "key": "HAUPTARBEIT_ROTIERDUESE",
+      "name": "Einsatz der Rotierdüse",
+      "npkCode": "211.312",
+      "chapter": "200",
+      "npkCodeD16": "",
+      "unit": "h",
+      "type": "Fixed",
+      "price": 39.5,
+      "active": true,
+      "aliases": [
+        "Rotodüse",
+        "Rotierdüse"
+      ]
+    },
+    {
+      "key": "HAUPTARBEIT_TV_FAHRWAGEN",
+      "name": "Kanalfernsehfahrzeug color inkl. Bedienung",
+      "npkCode": "222.112",
+      "chapter": "200",
+      "npkCodeD16": "",
+      "unit": "h",
+      "type": "Fixed",
+      "price": 206.5,
+      "active": true,
+      "aliases": [
+        "Kanalfernsehfahrzeug",
+        "TV-Fahrzeug"
+      ]
+    },
+    {
+      "key": "HAUPTARBEIT_FACHARBEITER_TV",
+      "name": "Zusätzlicher Facharbeiter TV/DP",
+      "npkCode": "222.701",
+      "chapter": "200",
+      "npkCodeD16": "",
+      "unit": "h",
+      "type": "Fixed",
+      "price": 83.5,
+      "active": true,
+      "aliases": [
+        "Facharbeiter TV/DP",
+        "Facharbeiter"
+      ]
+    },
+    {
+      "key": "QK_BERICHT_SPEICHERMEDIUM",
+      "name": "Untersuchungsbericht Daten, Fotos, Video auf Datenträger",
+      "npkCode": "234.102",
+      "chapter": "200",
+      "npkCodeD16": "",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 341.5,
+      "active": true,
+      "aliases": [
+        "Kanalfernseh-Untersuchungsbericht",
+        "Untersuchungsbericht"
+      ]
     }
   ]
 }

@@ -30,6 +30,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     // Waehlbare Hauptarbeiten mit fachlicher Kategorie. Kanalroboter (nur Ablagerungen
     // fraesen) und Anschluss einbinden zaehlen zur REPARATUR, auch wenn ihre Katalog-
     // Position ein anderes Kapitel traegt.
+    // UNTERHALT sind Haltungen ohne Sanierung: nur reinigen und/oder TV-kontrollieren
+    // (NPK 135, Abschnitte 111/112, 211, 222, 234). Sie rechnen in Gruppenstunden ab,
+    // deshalb kommt ihre Menge nicht aus der Haltungslaenge.
     private static readonly (string Id, string Kategorie)[] MatrixMeasures =
     {
         ("SCHLAUCHLINER_NADELFILZ", "Renovierung"),
@@ -40,6 +43,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         ("KANALROBOTER", "Reparatur"),
         ("ANSCHLUSS_DICHTEN", "Reparatur"),
         ("ANSCHLUSS_VERSCHLIESSEN", "Reparatur"),
+        ("KANALREINIGUNG_TV", "Unterhalt"),
+        ("KANALREINIGUNG", "Unterhalt"),
+        ("TV_KONTROLLE", "Unterhalt"),
     };
 
     private readonly ShellViewModel _shell;

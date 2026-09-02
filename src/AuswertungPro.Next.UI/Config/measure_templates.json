@@ -251,6 +251,48 @@
         { "group": "Hauptarbeit", "itemKey": "SCHACHT_REGIE_STD", "enabled": true, "defaultQty": 1 },
         { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": false, "defaultQty": 1 }
       ]
+    },
+    {
+      "id": "KANALREINIGUNG_TV",
+      "name": "Kanalreinigung + TV-Kontrolle (NPK 135)",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "INSTALL_REINIGUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "INSTALL_ZUSTANDSERFASSUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_WASSERHALTUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_VD", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "HAUPTARBEIT_REINIGUNG_KANAL", "enabled": true, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "HAUPTARBEIT_ROTIERDUESE", "enabled": true, "defaultQty": 0.25 },
+        { "group": "Hauptarbeit", "itemKey": "HAUPTARBEIT_TV_FAHRWAGEN", "enabled": true, "defaultQty": 0.75 },
+        { "group": "Hauptarbeit", "itemKey": "HAUPTARBEIT_FACHARBEITER_TV", "enabled": true, "defaultQty": 1.75 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_BERICHT_SPEICHERMEDIUM", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "KANALREINIGUNG",
+      "name": "Kanalreinigung (NPK 135)",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "INSTALL_REINIGUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_WASSERHALTUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_VD", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "HAUPTARBEIT_REINIGUNG_KANAL", "enabled": true, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "HAUPTARBEIT_ROTIERDUESE", "enabled": true, "defaultQty": 0.25 },
+        { "group": "Hauptarbeit", "itemKey": "HAUPTARBEIT_FACHARBEITER_TV", "enabled": false, "defaultQty": 1.75 }
+      ]
+    },
+    {
+      "id": "TV_KONTROLLE",
+      "name": "TV-Kontrolle (NPK 135)",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "INSTALL_ZUSTANDSERFASSUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_WASSERHALTUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_VD", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "HAUPTARBEIT_TV_FAHRWAGEN", "enabled": true, "defaultQty": 0.75 },
+        { "group": "Hauptarbeit", "itemKey": "HAUPTARBEIT_FACHARBEITER_TV", "enabled": false, "defaultQty": 1.75 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_BERICHT_SPEICHERMEDIUM", "enabled": true, "defaultQty": 1 }
+      ]
     }
   ]
 }
