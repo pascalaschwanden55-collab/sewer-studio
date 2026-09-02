@@ -1,4 +1,4 @@
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
 using AuswertungPro.Next.Application.Xtf;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
@@ -89,13 +89,296 @@ public sealed class XtfStammdatenPlanBuilderTests
     {
         var record = Haltung("80638-80631");
         record.SetFieldValue(FieldKeys.UsageType, "Mischabwasser", FieldSource.Manual, userEdited: true);
-        record.SetFieldValue(FieldKeys.Street, "Neue Gasse", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.ConnectionType, "Steckmuffen", FieldSource.Manual, userEdited: true);
 
         var position = Assert.Single(Baue(record));
 
         Assert.Equal(2, position.Felder.Count);
-        Assert.Contains(position.Felder, f => f.Name == "Standortname" && f.Neu == "Neue Gasse");
+        Assert.Contains(position.Felder, f => f.Name == "Verbindungsart" && f.Neu == "Steckmuffen");
     }
+
+    // Die Strasse hat in SIA405 mit "Standortname" durchaus ein Ziel. Sie geht auf
+    // ausdrueckliche Anweisung trotzdem nicht mehr hinaus (2026-09-02) — das Feld bleibt
+    // im Programm, die Datei bekommt es nicht. Ohne diesen Test waere die Zeile beim
+    // naechsten Aufraeumen als vergessene Luecke wieder eingebaut.
+    [Fact]
+    public void Die_Strasse_wird_nicht_mehr_exportiert()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.Street, "Neue Gasse", FieldSource.Manual, userEdited: true);
+
+        Assert.Empty(Baue(record));
+        Assert.DoesNotContain("Standortname", XtfStammdatenPlanBuilder.Felder.Keys);
+    }
+
+    // Die sekundaere Abwasseranlage fehlte in der Auswahl ganz, obwohl der Kataster sie
+    // fuehrt. Ein SAA-Wert muss deshalb ebenso hinausgehen wie ein PAA-Wert.
+    [Fact]
+    public void Die_funktionale_Hierarchie_kennt_auch_die_sekundaere_Anlage()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(
+            FieldKeys.HierarchicalFunction, "SAA.Liegenschaftsentwaesserung",
+            FieldSource.Manual, userEdited: true);
+
+        var feld = Assert.Single(Assert.Single(Baue(record)).Felder);
+
+        Assert.Equal("FunktionHierarchisch", feld.Name);
+        Assert.Equal("SAA.Liegenschaftsentwaesserung", feld.Neu);
+    }
+
+    // Ein Wert, den das Modell nicht kennt, wird nicht geschrieben — und der Verzicht
+    // wird gemeldet, statt still zu verschwinden.
+    [Fact]
+    public void Eine_unbekannte_Verbindungsart_wird_nicht_geschrieben()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.ConnectionType, "Klebemuffe", FieldSource.Manual, userEdited: true);
+
+        var plan = Plan(record);
+
+        Assert.Empty(plan.Positionen);
+        Assert.Contains(plan.Hinweise, h => h.Contains("Klebemuffe", StringComparison.Ordinal));
+    }
+
+    // Die Haltungslaenge ist eine Laenge in METERN. Wuerde sie wie eine Abmessung
+    // behandelt, machte SiaAbmessung aus 45,30 m den Wert 45300 — ein Faktor-1000-Fehler,
+    // der in der Datei wie eine gueltige Angabe aussieht.
+    [Theory]
+    [InlineData("45.30", "45.30")]
+    [InlineData("45,30", "45.30")]
+    [InlineData("7", "7.00")]
+    public void Die_Haltungslaenge_geht_als_Meter_hinaus(string eingabe, string erwartet)
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.HoldingLengthMeters, eingabe, FieldSource.Manual, userEdited: true);
+
+        var position = Assert.Single(PlanMitHaltung(record).Positionen);
+        var feld = Assert.Single(position.Felder);
+
+        Assert.Equal("LaengeEffektiv", feld.Name);
+        Assert.Equal(erwartet, feld.Neu);
+    }
+
+    // Der Profiltyp haengt nicht an der Haltung, sondern an einem eigenen Objekt hinter
+    // "RohrprofilRef". Ohne diesen Weg landet er nirgends.
+    [Fact]
+    public void Der_Profiltyp_landet_am_verwiesenen_Rohrprofil()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.ProfileType, "Eiprofil", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(MitProfil)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        var position = Assert.Single(plan.Positionen);
+        var feld = Assert.Single(position.Felder);
+
+        Assert.Equal("ch010wcsRP000001", position.KanalschadenTid);
+        Assert.Equal("Profiltyp", feld.Name);
+        Assert.Equal("Kreisprofil", feld.Alt);
+        Assert.Equal("Eiprofil", feld.Neu);
+    }
+
+    // Zeigen zwei Haltungen auf dasselbe Rohrprofil, wuerde eine Aenderung auch die
+    // fremde Haltung umschreiben. Im Kantonsexport besitzt jede Haltung ihr eigenes
+    // Profil — verlassen wird sich darauf nicht.
+    [Fact]
+    public void Ein_geteiltes_Rohrprofil_wird_nicht_geaendert()
+    {
+        var geteilt = MitProfil.Replace(
+            "</SIA405_Abwasser.SIA405_Abwasser>",
+            """
+              <SIA405_Abwasser.SIA405_Abwasser.Haltung TID="ch010wcsHA000002">
+                <Bezeichnung>80631-80551</Bezeichnung>
+                <RohrprofilRef REF="ch010wcsRP000001" />
+              </SIA405_Abwasser.SIA405_Abwasser.Haltung>
+            </SIA405_Abwasser.SIA405_Abwasser>
+            """,
+            StringComparison.Ordinal);
+
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.ProfileType, "Eiprofil", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(geteilt)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        Assert.Empty(plan.Positionen);
+        Assert.Contains(plan.Hinweise, h => h.Contains("gemeinsam benutzt", StringComparison.Ordinal));
+    }
+
+    // Der Eigentuemer ist in SIA405 kein Text, sondern ein Verweis. Gibt es die
+    // Organisation schon, wird sie benutzt und keine zweite angelegt — die Norm verlangt
+    // Bezeichnung, Typ und UID zusammen als eindeutig.
+    [Fact]
+    public void Ein_bekannter_Eigentuemer_verweist_auf_die_vorhandene_Organisation()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.Owner, "Privat", FieldSource.Manual, userEdited: true);
+
+        var plan = PlanMitVerwaltung(record);
+        var feld = Assert.Single(Assert.Single(plan.Positionen).Felder);
+
+        Assert.Equal("EigentuemerRef", feld.Name);
+        Assert.True(feld.IstVerweis);
+        Assert.Equal("ch1000f000000002", feld.Neu);
+        Assert.Equal("ch1000f000000001", feld.Alt);
+        Assert.Empty(plan.Organisationen);
+    }
+
+    // Steht in der Datei schon der richtige Eigentuemer, entsteht keine Position.
+    // Sonst traege jede Haltung eine Scheinaenderung.
+    [Fact]
+    public void Ein_unveraenderter_Eigentuemer_erzeugt_keine_Position()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.Owner, "Abwasser Uri", FieldSource.Manual, userEdited: true);
+
+        var plan = PlanMitVerwaltung(record);
+
+        Assert.Empty(plan.Positionen);
+        Assert.Empty(plan.Organisationen);
+    }
+
+    [Fact]
+    public void Ein_neuer_Eigentuemer_bekommt_eine_eigene_Organisation()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.Owner, "Gemeinde", FieldSource.Manual, userEdited: true);
+
+        var plan = PlanMitVerwaltung(record);
+        var organisation = Assert.Single(plan.Organisationen);
+        var feld = Assert.Single(Assert.Single(plan.Positionen).Felder);
+
+        Assert.Equal("Gemeinde", organisation.Bezeichnung);
+        Assert.Equal("Gemeinde", organisation.Organisationstyp);
+        Assert.Equal(organisation.Tid, feld.Neu);
+        Assert.NotEqual("ch1000f000000001", organisation.Tid);
+        Assert.NotEqual("ch1000f000000002", organisation.Tid);
+    }
+
+    // Zwei Haltungen mit demselben neuen Eigentuemer teilen sich eine Organisation.
+    [Fact]
+    public void Derselbe_neue_Eigentuemer_erzeugt_nur_eine_Organisation()
+    {
+        var eine = Haltung("80638-80631");
+        eine.SetFieldValue(FieldKeys.Owner, "Gemeinde", FieldSource.Manual, userEdited: true);
+        var andere = Haltung("80631-80551");
+        andere.SetFieldValue(FieldKeys.Owner, "Gemeinde", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { eine, andere },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(MitVerwaltung)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        Assert.Single(plan.Organisationen);
+    }
+
+    // Ohne Organisationen fehlt in der Datei das ganze Topic "Administration". Eines
+    // anzulegen waere ein Eingriff in den Aufbau der Kundendatei.
+    [Fact]
+    public void Ohne_Organisationen_bleibt_der_Eigentuemer_aussen_vor()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.Owner, "Gemeinde", FieldSource.Manual, userEdited: true);
+
+        var plan = Plan(record);
+
+        Assert.Empty(plan.Positionen);
+        Assert.Empty(plan.Organisationen);
+        Assert.Contains(plan.Hinweise, h => h.Contains("keine Organisationen", StringComparison.Ordinal));
+    }
+
+    // "Organisationstyp" ist in SIA405 ein Pflichtfeld. Fuer einen Freitext gibt es
+    // keinen bekannten Typ — geraten wird nicht.
+    [Fact]
+    public void Ein_Eigentuemer_ohne_bekannten_Typ_wird_nicht_geschrieben()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.Owner, "Familie Muster", FieldSource.Manual, userEdited: true);
+
+        var plan = PlanMitVerwaltung(record);
+
+        Assert.Empty(plan.Positionen);
+        Assert.Empty(plan.Organisationen);
+        Assert.Contains(plan.Hinweise, h => h.Contains("Organisationstyp", StringComparison.Ordinal));
+    }
+
+    private static XtfStammdatenPlan PlanMitVerwaltung(HaltungRecord record)
+        => XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(MitVerwaltung)),
+            "SIA405_ABWASSER_2020_LV95");
+
+    /// <summary>
+    /// Aufbau wie im echten Kantonsexport: zwei Kanaele, die beide auf die einzige
+    /// Organisation im Topic <c>Administration</c> zeigen.
+    /// </summary>
+    private const string MitVerwaltung = """
+<?xml version="1.0" encoding="utf-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION VERSION="2.3" SENDER="VSA">
+    <MODELS><MODEL NAME="SIA405_ABWASSER_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="chB0000000000001">
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="ch1000e200000000">
+        <Bezeichnung>80638-80631</Bezeichnung>
+        <Nutzungsart_Ist>Schmutzabwasser</Nutzungsart_Ist>
+        <EigentuemerRef REF="ch1000f000000001" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="ch1000e200000001">
+        <Bezeichnung>80631-80551</Bezeichnung>
+        <Nutzungsart_Ist>Schmutzabwasser</Nutzungsart_Ist>
+        <EigentuemerRef REF="ch1000f000000001" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+    <SIA405_Base_Abwasser_LV95.Administration BID="chB0000000000002">
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="ch1000f000000001">
+        <Letzte_Aenderung>20260821</Letzte_Aenderung>
+        <Bezeichnung>Abwasser Uri</Bezeichnung>
+        <Organisationstyp>Kanton</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="ch1000f000000002">
+        <Letzte_Aenderung>20260821</Letzte_Aenderung>
+        <Bezeichnung>Privat</Bezeichnung>
+        <Organisationstyp>Privat</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+    </SIA405_Base_Abwasser_LV95.Administration>
+  </DATASECTION>
+</TRANSFER>
+""";
+
+    /// <summary>
+    /// Aufbau wie im echten Kantonsexport: Die Haltung zeigt ueber <c>RohrprofilRef</c>
+    /// auf ein eigenes <c>Rohrprofil</c>-Objekt.
+    /// </summary>
+    private const string MitProfil = """
+<?xml version="1.0" encoding="utf-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION VERSION="2.3" SENDER="VSA">
+    <MODELS><MODEL NAME="SIA405_ABWASSER_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_Abwasser.SIA405_Abwasser>
+      <SIA405_Abwasser.SIA405_Abwasser.Haltung TID="ch010wcsHA000001">
+        <Bezeichnung>80638-80631</Bezeichnung>
+        <RohrprofilRef REF="ch010wcsRP000001" />
+      </SIA405_Abwasser.SIA405_Abwasser.Haltung>
+      <SIA405_Abwasser.SIA405_Abwasser.Rohrprofil TID="ch010wcsRP000001">
+        <Bezeichnung>Kreisprofil_0</Bezeichnung>
+        <Profiltyp>Kreisprofil</Profiltyp>
+      </SIA405_Abwasser.SIA405_Abwasser.Rohrprofil>
+    </SIA405_Abwasser.SIA405_Abwasser>
+  </DATASECTION>
+</TRANSFER>
+""";
 
     [Fact]
     public void Ein_leerer_Handwert_loescht_nichts()

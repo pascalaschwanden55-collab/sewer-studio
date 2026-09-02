@@ -58,6 +58,9 @@ public static class XtfStammdatenElementReader
             {
                 var name when name.EndsWith(".Kanal", StringComparison.Ordinal) => "Kanal",
                 var name when name.EndsWith(".Haltung", StringComparison.Ordinal) => "Haltung",
+                var name when name.EndsWith(".Rohrprofil", StringComparison.Ordinal) => "Rohrprofil",
+                var name when name.EndsWith(".Normschacht", StringComparison.Ordinal) => "Normschacht",
+                var name when name.EndsWith(".Organisation", StringComparison.Ordinal) => "Organisation",
                 _ => null
             };
 
@@ -77,8 +80,17 @@ public static class XtfStammdatenElementReader
                 if (string.Equals(kind.Name.LocalName, "Verlauf", StringComparison.Ordinal))
                     continue;
 
-                if (!werte.ContainsKey(kind.Name.LocalName))
-                    werte[kind.Name.LocalName] = kind.Value;
+                if (werte.ContainsKey(kind.Name.LocalName))
+                    continue;
+
+                // Ein Verweis wie <RohrprofilRef REF="ch..." /> traegt seinen Wert im
+                // Attribut, nicht im Text. Ohne diese Zeile waere er eine leere Angabe —
+                // und der Weg von der Haltung zu ihrem Rohrprofil bliebe unauffindbar.
+                var referenz = (string?)kind.Attribute("REF");
+                werte[kind.Name.LocalName] =
+                    kind.IsEmpty || string.IsNullOrEmpty(kind.Value)
+                        ? referenz ?? kind.Value
+                        : kind.Value;
             }
 
             werte.TryGetValue("Bezeichnung", out var bezeichnung);

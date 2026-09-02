@@ -454,6 +454,192 @@ public sealed class XtfRevisionWriterTests : IDisposable
         return (quelle, Path.Combine(_dir, "revision.xtf"));
     }
 
+    /// <summary>
+    /// Aufbau wie im echten Kantonsexport: Der Kanal verweist ueber <c>EigentuemerRef</c>
+    /// auf eine Organisation im eigenen Topic <c>Administration</c>.
+    /// </summary>
+    private const string MitVerwaltung = """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="SIA405_ABWASSER_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="chB0000000000001">
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="ch1000e200000000">
+        <Bezeichnung>80638-80631</Bezeichnung>
+        <Nutzungsart_Ist>Schmutzabwasser</Nutzungsart_Ist>
+        <EigentuemerRef REF="ch1000f000000001" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+    <SIA405_Base_Abwasser_LV95.Administration BID="chB0000000000002">
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="ch1000f000000001">
+        <Letzte_Aenderung>20260821</Letzte_Aenderung>
+        <Bezeichnung>Abwasser Uri</Bezeichnung>
+        <Organisationstyp>Kanton</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+    </SIA405_Base_Abwasser_LV95.Administration>
+  </DATASECTION>
+</TRANSFER>
+""";
+
+    // In INTERLIS stehen die Rollenverweise hinter den Attributen. Ein neues Attribut
+    // darf deshalb nie hinter einem Ref landen — im Echtlauf am Kantonsausschnitt stand
+    // "Verbindungsart" genau dort, weil weder ein Geschwister noch die Modellliste einen
+    // Nachfolger kannten.
+    [Fact]
+    public void Ein_neues_Attribut_landet_vor_den_Verweisen()
+    {
+        var quelle = Path.Combine(_dir, "verwaltung.xtf");
+        File.WriteAllText(quelle, MitVerwaltung);
+        var ziel = Path.Combine(_dir, "verwaltung-revision.xtf");
+
+        var ergebnis = XtfRevisionWriter.Schreibe(
+            quelle,
+            Plan(Position(XtfRevisionAenderung.Geaendert, "ch1000e200000000", "",
+                new XtfRevisionFeld("Verbindungsart", null, "Steckmuffen"))),
+            ziel,
+            new DateOnly(2026, 9, 2));
+
+        Assert.True(ergebnis.Ok, ergebnis.Fehler);
+
+        var kanal = XDocument.Load(ziel).Descendants()
+            .Single(e => e.Name.LocalName.EndsWith(".Kanal", StringComparison.Ordinal));
+        var namen = kanal.Elements().Select(e => e.Name.LocalName).ToList();
+
+        Assert.True(
+            namen.IndexOf("Verbindungsart") < namen.IndexOf("EigentuemerRef"),
+            $"Reihenfolge: {string.Join(", ", namen)}");
+    }
+
+    // Ein Verweis selbst gehoert dagegen zu den Verweisen und wird nicht vorgezogen.
+    [Fact]
+    public void Ein_neuer_Verweis_wird_nicht_vor_die_Attribute_gezogen()
+    {
+        var ohneEigentuemer = MitVerwaltung.Replace(
+            "        <EigentuemerRef REF=\"ch1000f000000001\" />\n", "", StringComparison.Ordinal);
+
+        var quelle = Path.Combine(_dir, "ohne-eigentuemer.xtf");
+        File.WriteAllText(quelle, ohneEigentuemer);
+        var ziel = Path.Combine(_dir, "ohne-eigentuemer-revision.xtf");
+
+        var ergebnis = XtfRevisionWriter.Schreibe(
+            quelle,
+            Plan(Position(XtfRevisionAenderung.Geaendert, "ch1000e200000000", "",
+                new XtfRevisionFeld("EigentuemerRef", null, "ch1000f000000001", IstVerweis: true))),
+            ziel,
+            new DateOnly(2026, 9, 2));
+
+        Assert.True(ergebnis.Ok, ergebnis.Fehler);
+
+        var kanal = XDocument.Load(ziel).Descendants()
+            .Single(e => e.Name.LocalName.EndsWith(".Kanal", StringComparison.Ordinal));
+        var namen = kanal.Elements().Select(e => e.Name.LocalName).ToList();
+
+        Assert.True(
+            namen.IndexOf("EigentuemerRef") > namen.IndexOf("Nutzungsart_Ist"),
+            $"Reihenfolge: {string.Join(", ", namen)}");
+    }
+
+    // Ein Verweis traegt seinen Wert im Attribut REF, nicht im Text. Wuerde er wie ein
+    // gewoehnliches Feld geschrieben, staende die Kennung als Elementtext da und der
+    // alte REF bliebe unveraendert stehen — die Datei zeigte weiterhin auf den falschen
+    // Eigentuemer und saehe dabei geaendert aus.
+    [Fact]
+    public void Ein_Verweis_wird_ins_Attribut_geschrieben()
+    {
+        var quelle = Path.Combine(_dir, "verwaltung.xtf");
+        File.WriteAllText(quelle, MitVerwaltung);
+        var ziel = Path.Combine(_dir, "verwaltung-revision.xtf");
+
+        var ergebnis = XtfRevisionWriter.Schreibe(
+            quelle,
+            Plan(Position(XtfRevisionAenderung.Geaendert, "ch1000e200000000", "",
+                new XtfRevisionFeld("EigentuemerRef", "ch1000f000000001", "chORG000O000001", IstVerweis: true))),
+            ziel,
+            new DateOnly(2026, 9, 2));
+
+        Assert.True(ergebnis.Ok, ergebnis.Fehler);
+
+        var verweis = XDocument.Load(ziel).Descendants()
+            .Single(e => e.Name.LocalName == "EigentuemerRef");
+
+        Assert.Equal("chORG000O000001", (string?)verweis.Attribute("REF"));
+        Assert.Equal("", verweis.Value);
+    }
+
+    [Fact]
+    public void Eine_fehlende_Organisation_wird_im_Verwaltungs_Topic_angelegt()
+    {
+        var quelle = Path.Combine(_dir, "verwaltung.xtf");
+        File.WriteAllText(quelle, MitVerwaltung);
+        var ziel = Path.Combine(_dir, "verwaltung-revision.xtf");
+
+        var plan = Plan(Position(XtfRevisionAenderung.Geaendert, "ch1000e200000000", "",
+            new XtfRevisionFeld("EigentuemerRef", "ch1000f000000001", "chORG000O000001", IstVerweis: true)))
+            with { NeueOrganisationen = new[] { new XtfNeueOrganisation("chORG000O000001", "Privat", "Privat") } };
+
+        var ergebnis = XtfRevisionWriter.Schreibe(quelle, plan, ziel, new DateOnly(2026, 9, 2));
+        Assert.True(ergebnis.Ok, ergebnis.Fehler);
+
+        var doc = XDocument.Load(ziel);
+        var organisationen = doc.Descendants()
+            .Where(e => e.Name.LocalName.EndsWith(".Organisation", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.Equal(2, organisationen.Count);
+
+        var neu = organisationen.Single(e => (string?)e.Attribute("TID") == "chORG000O000001");
+        Assert.Equal("Privat", Kindwert(neu, "Bezeichnung"));
+        Assert.Equal("Privat", Kindwert(neu, "Organisationstyp"));
+        Assert.Equal("aktiv", Kindwert(neu, "Status"));
+        Assert.Equal("20260902", Kindwert(neu, "Letzte_Aenderung"));
+
+        // Sie gehoert in dasselbe Topic wie ihr Vorbild, nicht neben die Kanaele.
+        Assert.Equal(
+            "SIA405_Base_Abwasser_LV95.Administration",
+            neu.Parent!.Name.LocalName);
+    }
+
+    // Eine schon vergebene Kennung waere ein zweites Objekt mit derselben Identitaet.
+    // Lieber gar nichts schreiben als eine Datei, die INTERLIS ablehnt.
+    [Fact]
+    public void Eine_Organisation_mit_belegter_Kennung_schreibt_nichts()
+    {
+        var quelle = Path.Combine(_dir, "verwaltung.xtf");
+        File.WriteAllText(quelle, MitVerwaltung);
+        var ziel = Path.Combine(_dir, "verwaltung-revision.xtf");
+
+        var plan = Plan(Position(XtfRevisionAenderung.Geaendert, "ch1000e200000000", "",
+            new XtfRevisionFeld("EigentuemerRef", null, "ch1000f000000001", IstVerweis: true)))
+            with { NeueOrganisationen = new[] { new XtfNeueOrganisation("ch1000f000000001", "Privat", "Privat") } };
+
+        var ergebnis = XtfRevisionWriter.Schreibe(quelle, plan, ziel);
+
+        Assert.False(ergebnis.Ok);
+        Assert.False(File.Exists(ziel));
+    }
+
+    // Ohne vorhandene Organisation fehlt das Topic "Administration". Der Ausfuehrer
+    // erfindet es nicht — er bricht ab.
+    [Fact]
+    public void Ohne_Vorbild_wird_keine_Organisation_erfunden()
+    {
+        var quelle = Path.Combine(_dir, "stammdaten.xtf");
+        File.WriteAllText(quelle, Stammdaten);
+        var ziel = Path.Combine(_dir, "stammdaten-revision.xtf");
+
+        var plan = Plan(Position(XtfRevisionAenderung.Geaendert, "ch010wcsKA000001", "",
+            new XtfRevisionFeld("EigentuemerRef", null, "chORG000O000001", IstVerweis: true)))
+            with { NeueOrganisationen = new[] { new XtfNeueOrganisation("chORG000O000001", "Privat", "Privat") } };
+
+        var ergebnis = XtfRevisionWriter.Schreibe(quelle, plan, ziel);
+
+        Assert.False(ergebnis.Ok);
+        Assert.False(File.Exists(ziel));
+    }
+
     private static XtfRevisionPlan Plan(params XtfRevisionPosition[] positionen)
         => new("original.xtf", positionen, Array.Empty<string>());
 

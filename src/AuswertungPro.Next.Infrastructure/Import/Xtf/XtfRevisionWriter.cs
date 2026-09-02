@@ -57,6 +57,24 @@ public static class XtfRevisionWriter
 
         int geaendert = 0, neu = 0, entfernt = 0;
 
+        // Zuerst die Organisationen: Eine Position darf erst dann auf sie verweisen,
+        // wenn es das Objekt in der Datei wirklich gibt.
+        var organisationen = 0;
+        foreach (var organisation in plan.Organisationen)
+        {
+            if (!ErzeugeOrganisation(doc, organisation, vergebeneTids, stand))
+                break;
+
+            organisationen++;
+        }
+
+        if (organisationen != plan.Organisationen.Count)
+        {
+            return Fehler(
+                "Eine benoetigte Organisation konnte nicht angelegt werden — es wurde nichts " +
+                $"geschrieben. Geplant: {plan.Organisationen.Count}, angelegt: {organisationen}.");
+        }
+
         foreach (var position in plan.Positionen)
         {
             switch (position.Art)
@@ -66,7 +84,7 @@ public static class XtfRevisionWriter
                         && elementeJeTid.TryGetValue(position.KanalschadenTid, out var zuAendern))
                     {
                         foreach (var feld in position.Felder)
-                            SetzeKind(zuAendern, feld.Name, feld.Neu);
+                            SetzeFeld(zuAendern, feld);
                         // Nur nachfuehren, wo die Datei dieses Feld selbst fuehrt. In der
                         // SIA405-XTF gehoert "Letzte_Aenderung" in die Struktur "Metaattribute"
                         // und nicht direkt an den Kanal — es wird dort deshalb nicht erfunden.
@@ -204,6 +222,102 @@ public static class XtfRevisionWriter
         "Nutzungsart_geplant", "Nutzungsart_Ist", "Rohrlaenge", "Spuelintervall", "Verbindungsart"
     ];
 
+    /// <summary>
+    /// Feldreihenfolge der SIA405-Klasse "Normschacht" — derselbe geerbte Block von
+    /// "Abwasserbauwerk", danach die eigenen Felder des Schachts.
+    ///
+    /// Nur ein Rueckfall: Die drei gepruefeten Lieferungen ordnen den Normschacht anders
+    /// (Kantonsexport: Bezeichnung, Funktion, Material, Dimension1, Dimension2, Status,
+    /// Sanierungsbedarf). Massgebend bleibt deshalb auch hier zuerst ein Geschwister-Objekt
+    /// derselben Datei; diese Liste greift erst, wenn keines das Feld fuehrt.
+    /// </summary>
+    private static readonly string[] NormschachtFeldreihenfolge =
+    [
+        "OBJ_ID", "Metaattribute",
+        "Akten", "Baujahr", "BaulicherZustand", "Baulos", "Bemerkung", "Bezeichnung",
+        "Bruttokosten", "Detailgeometrie", "Ersatzjahr", "Finanzierung", "Inspektionsintervall",
+        "Sanierungsbedarf", "Standortname", "Status", "Subventionen", "WBW_Basisjahr",
+        "WBW_Bauart", "Wiederbeschaffungswert", "Zugaenglichkeit",
+        "Amphibienausstieg", "Dimension1", "Dimension2", "Funktion",
+        "Interventionsmoeglichkeit", "Material", "Oberflaechenzulauf"
+    ];
+
+    /// <summary>Die Modellreihenfolge, die zur Klasse des Objekts passt.</summary>
+    private static string[] Feldreihenfolge(XElement parent)
+        => parent.Name.LocalName.EndsWith(".Normschacht", StringComparison.Ordinal)
+            ? NormschachtFeldreihenfolge
+            : KanalFeldreihenfolge;
+
+    /// <summary>
+    /// Legt eine fehlende Organisation im Topic <c>Administration</c> an.
+    ///
+    /// Vorbild ist eine bereits vorhandene Organisation derselben Datei: Von ihr kommen
+    /// Elementname, Namensraum und die Stelle im Dokument. Ohne Vorbild wird nichts
+    /// erfunden — dann fehlt das Topic, und der Aufbau der Kundendatei bliebe geraten.
+    /// Eine schon vergebene Kennung ist ebenfalls ein harter Abbruch.
+    /// </summary>
+    private static bool ErzeugeOrganisation(
+        XDocument doc,
+        XtfNeueOrganisation organisation,
+        HashSet<string> vergebeneTids,
+        string stand)
+    {
+        if (!vergebeneTids.Add(organisation.Tid))
+            return false;
+
+        var vorbild = doc.Descendants()
+            .LastOrDefault(e => e.Name.LocalName.EndsWith(".Organisation", StringComparison.Ordinal));
+
+        if (vorbild is null)
+            return false;
+
+        var neu = new XElement(vorbild.Name, new XAttribute("TID", organisation.Tid));
+
+        // "Letzte_Aenderung" nur, wo die Datei das Feld selbst fuehrt — sonst waere es
+        // ein erfundenes Feld, wie schon beim Kanal.
+        if (FindeKind(vorbild, "Letzte_Aenderung") is not null)
+            neu.Add(new XElement(vorbild.Name.Namespace + "Letzte_Aenderung", stand));
+
+        neu.Add(new XElement(vorbild.Name.Namespace + "Bezeichnung", organisation.Bezeichnung));
+        neu.Add(new XElement(vorbild.Name.Namespace + "Organisationstyp", organisation.Organisationstyp));
+        neu.Add(new XElement(vorbild.Name.Namespace + "Status", "aktiv"));
+
+        vorbild.AddAfterSelf(neu);
+        return true;
+    }
+
+    /// <summary>
+    /// Schreibt ein Feld — als Text oder, bei einem Verweis, ins Attribut <c>REF</c>.
+    /// </summary>
+    private static void SetzeFeld(XElement parent, XtfRevisionFeld feld)
+    {
+        if (!feld.IstVerweis)
+        {
+            SetzeKind(parent, feld.Name, feld.Neu);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(feld.Neu))
+            return;
+
+        var kind = FindeKind(parent, feld.Name);
+        if (kind is not null)
+        {
+            kind.SetAttributeValue("REF", feld.Neu);
+            return;
+        }
+
+        var neu = new XElement(
+            parent.Name.Namespace + SchreibweiseAusDatei(parent, feld.Name),
+            new XAttribute("REF", feld.Neu!));
+
+        var nachfolger = ErstesFeldDanach(parent, feld.Name);
+        if (nachfolger is null)
+            parent.Add(neu);
+        else
+            nachfolger.AddBeforeSelf(neu);
+    }
+
     private static void SetzeKind(XElement parent, string name, string? wert)
     {
         if (string.IsNullOrWhiteSpace(wert))
@@ -246,19 +360,36 @@ public static class XtfRevisionWriter
         if (ausDerDatei is not null)
             return ausDerDatei;
 
-        var platz = Array.IndexOf(KanalFeldreihenfolge, name);
+        var reihenfolge = Feldreihenfolge(parent);
+        var platz = Array.IndexOf(reihenfolge, name);
         if (platz < 0)
-            return null;
+            return ErsterVerweis(parent, name);
 
         foreach (var kind in parent.Elements())
         {
-            var stelle = Array.IndexOf(KanalFeldreihenfolge, kind.Name.LocalName);
+            var stelle = Array.IndexOf(reihenfolge, kind.Name.LocalName);
             if (stelle > platz)
                 return kind;
         }
 
-        return null;
+        return ErsterVerweis(parent, name);
     }
+
+    /// <summary>
+    /// Das erste Verweis-Element des Objekts — der Punkt, vor dem ein neues Attribut
+    /// noch stehen darf.
+    ///
+    /// In INTERLIS stehen die Rollenverweise (<c>DatenherrRef</c>, <c>EigentuemerRef</c>,
+    /// <c>RohrprofilRef</c>) hinter den Attributen. Ohne diese Regel landete ein Feld,
+    /// das weder ein Geschwister noch die Modellliste einordnen kann, ganz am Ende — im
+    /// Echtlauf am Kantonsausschnitt stand <c>Verbindungsart</c> so hinter
+    /// <c>EigentuemerRef</c>. Ein Verweis selbst gehoert dagegen genau dorthin und wird
+    /// deshalb nicht vorgezogen.
+    /// </summary>
+    private static XElement? ErsterVerweis(XElement parent, string name)
+        => name.EndsWith("Ref", StringComparison.Ordinal)
+            ? null
+            : parent.Elements().FirstOrDefault(e => e.Attribute("REF") is not null);
 
     /// <summary>
     /// Sucht ein Objekt derselben Klasse, das <paramref name="name"/> bereits fuehrt, und

@@ -107,6 +107,29 @@ public static class GridDropdownFieldPolicy
                 "SchachtMaterialOptions",
                 AllowFreeText: false,
                 Managed: false),
+            // Die vier SIA405-Felder der revidierten XTF: feste Wertelisten aus dem
+            // Modell, kein Freitext. Ein getippter Wert waere im Export nicht
+            // abbildbar und wuerde dort still liegen bleiben.
+            "FunktionHierarchisch" => new GridDropdownFieldSpec(
+                optionField,
+                "FunktionHierarchischOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Verbindungsart" => new GridDropdownFieldSpec(
+                optionField,
+                "VerbindungsartOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Bettung_Umhuellung" => new GridDropdownFieldSpec(
+                optionField,
+                "BettungUmhuellungOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Profiltyp" => new GridDropdownFieldSpec(
+                optionField,
+                "ProfiltypOptions",
+                AllowFreeText: false,
+                Managed: false),
             _ => null!
         };
 

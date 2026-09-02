@@ -1,7 +1,17 @@
 # SIA405 Abwasser 2020 LV95 — verbindliche Wertelisten
 
-**Quelle:** Modelldatei `SIA405_Abwasser_2020_2_d_LV95` aus der VSA-Modellablage
-(`https://vsa.ch/models/`, Eintrag `SIA405_ABWASSER_2020_LV95`).
+**Quelle:** Modelldatei `SIA405_Abwasser_2020_1_2_d_LV95-20251129.ili` aus der
+VSA-Modellablage (`https://vsa.ch/models/?dir=2020_1`), Modell
+`SIA405_ABWASSER_2020_1_LV95`, VERSION 29.11.2025. Dazu das Basismodell
+`SIA405_Base_Abwasser_1_2_d_LV95-20231018.ili`, Modell `SIA405_Base_Abwasser_1_LV95`,
+VERSION 18.10.2023.
+
+**Achtung, zwei Generationen:** Der Kantonsexport von Abwasser Uri deklariert im
+Dateikopf `SIA405_ABWASSER_2020_LV95` / 26.06.2021 und `SIA405_Base_Abwasser_LV95` /
+03.11.2020 — die VORIGE Generation. Die aktuelle traegt eine `_1` im Modellnamen. Ein
+Pruefer loest ueber den Modellnamen auf und findet die alte Fassung in der Ablage
+`2020_1` nicht mehr. Die Wertelisten selbst sind zwischen den beiden Generationen fuer
+alle hier gefuehrten Felder identisch — geprueft an 15 Domaenen.
 
 **Warum dieses Dokument:** Eine Exportdatei zeigt, was *vorkommt* — nicht, was *erlaubt*
 ist. Die Auszählung des Kantons Uri (1544 Objekte in Göschenen, 109'871 Haltungen
@@ -213,15 +223,30 @@ XTF-Dateien aber **null Mal** vor. SewerStudio schreibt dort `Z0` bis `Z4` — d
 Schreibweise stimmt also mit ihrer Datenbank ueberein, und der Wert ergaenzt etwas,
 das ihr eigener Export nicht liefert.
 
-## Was der Export jetzt schreibt (Stand 2026-08-29)
+## Was der Export jetzt schreibt (Stand 2026-09-02)
 
 | Feld | Klasse | Projektfeld | Umsetzung |
 |---|---|---|---|
-| `Nutzungsart_Ist` | Kanal | `Nutzungsart_Ist` | `NutzungsartVokabular`, modellabhaengig |
-| `Standortname` | Kanal | `Standortname` | unveraendert |
-| `BaulicherZustand` | Kanal | Zustandsklasse | Ziffer wird zu `Z0`..`Z4` |
+| `Nutzungsart_Ist` | Kanal | `Nutzungsart` | `NutzungsartVokabular`, modellabhaengig |
+| `BaulicherZustand` | Kanal | `Zustandsklasse` | Ziffer wird zu `Z0`..`Z4` |
+| `FunktionHierarchisch` | Kanal | `FunktionHierarchisch` | `SiaKanalVokabular`, 14 Blattwerte |
+| `Verbindungsart` | Kanal | `Verbindungsart` | `SiaKanalVokabular`, 13 Werte |
+| `Bettung_Umhuellung` | Kanal | `Bettung_Umhuellung` | `SiaKanalVokabular`, 14 Werte |
+| `EigentuemerRef` | Kanal | `Eigentuemer` | Verweis auf eine Organisation |
 | `Material` | **Haltung** | `Rohrmaterial` | `MaterialVokabular`, modellabhaengig |
 | `Lichte_Hoehe` | **Haltung** | `DN_mm` | ganze Millimeter, 1..99999 |
+| `LaengeEffektiv` | **Haltung** | `Haltungslaenge_m` | Meter mit zwei Stellen, 0..30000 |
+| `Profiltyp` | **Rohrprofil** | `Profiltyp` | ueber `RohrprofilRef`, 7 Werte |
+| `Funktion` | **Normschacht** | `Funktion` | `SchachtFunktionVokabular` |
+| `Material` | **Normschacht** | `Material` | `SchachtMaterialVokabular`, nur 4 Werte |
+| `Dimension1`/`2` | **Normschacht** | `Dimension` | aus "600 mm" bzw. "1100 x 900 mm" |
+| `BaulicherZustand` | **Normschacht** | `Zustandsklasse` | Ziffer wird zu `Z0`..`Z4` |
+| `EigentuemerRef` | **Normschacht** | `Eigentuemer` | Verweis auf eine Organisation |
+
+**`Standortname` wird nicht mehr geschrieben.** Das Feld `Strasse` bleibt im Programm
+vollstaendig erhalten und bearbeitbar — es geht nur nicht mehr in die Revision
+(Entscheid 2026-09-02). `XtfStammdatenPlanBuilderTests.Die_Strasse_wird_nicht_mehr_exportiert`
+haelt den Verzicht fest, damit die Zeile nicht als vergessene Luecke wieder eingebaut wird.
 
 Geschrieben wird weiterhin ausschliesslich, was der Mensch von Hand gesetzt hat
 (`FieldMeta.UserEdited`). Ein importierter Wert geht nie in die Datei zurueck, aus der
@@ -369,3 +394,125 @@ Nummer `1` auf den ersten Schacht der Liste.
 Die Schluesselfelder fuer das Wiederfinden sind dieselben wie bei WinCan und SchachtPro;
 `XtfSchachtSchluesselfelderTests` haelt das per Reflection fest, damit die drei Listen
 nicht auseinanderlaufen.
+
+---
+
+## Kanal.FunktionHierarchisch — 14 Blattwerte
+
+Zweistufig: `PAA` ist die primaere, `SAA` die sekundaere Abwasseranlage. Nur die
+Blaetter sind gueltige Werte; die beiden Gruppennamen allein sind keine Angabe.
+
+```text
+PAA.andere · PAA.Gewaesser · PAA.Hauptsammelkanal · PAA.Hauptsammelkanal_regional
+PAA.Liegenschaftsentwaesserung · PAA.Sammelkanal · PAA.Sanierungsleitung
+PAA.Strassenentwaesserung · PAA.unbekannt
+SAA.andere · SAA.Liegenschaftsentwaesserung · SAA.Sanierungsleitung
+SAA.Strassenentwaesserung · SAA.unbekannt
+```
+
+Die Auswahl im Programm fuehrte bis 2026-09-02 nur sieben PAA-Werte. Die ganze
+sekundaere Abwasseranlage fehlte, obwohl der Kataster sie fuehrt.
+
+## Kanal.Verbindungsart — 13 Werte
+
+```text
+andere · Elektroschweissmuffen · Flachmuffen · Flansch · Glockenmuffen · Kupplung
+Schraubmuffen · spiegelgeschweisst · Spitzmuffen · Steckmuffen · Ueberschiebmuffen
+unbekannt · Vortriebsrohrkupplung
+```
+
+## Kanal.Bettung_Umhuellung — 14 Werte
+
+```text
+andere · erdverlegt · in_Kanal_aufgehaengt · in_Kanal_einbetoniert · in_Leitungsgang
+in_Vortriebsrohr_Beton · in_Vortriebsrohr_Stahl · Sand · SIA_Typ1 · SIA_Typ2
+SIA_Typ3 · SIA_Typ4 · Sohlbrett · unbekannt
+```
+
+## Organisation.Organisationstyp — 7 Werte
+
+Aus dem Basismodell `SIA405_Base_Abwasser_1_LV95`. Pflichtfeld, ebenso `Status`
+(`aktiv` · `untergegangen`).
+
+```text
+Abwasserverband · Bund · Gemeinde · Gemeindeabteilung
+Genossenschaft_Korporation · Kanton · Privat
+```
+
+Es gibt **kein** `unbekannt`. Die Assoziation zum Eigentuemer hat Kardinalitaet 1 —
+jedes Abwasserbauwerk muss genau eine Organisation referenzieren, Weglassen ist nicht
+erlaubt. Ein Eigentuemer `unbekannt` bekommt deshalb eine eigene Organisation mit
+genau dieser Bezeichnung; als Typ bleibt nur `Privat`, die schwaechste der sieben
+Behauptungen.
+
+`UNIQUE Bezeichnung, Organisationstyp, UID` — dieselbe Bezeichnung darf also nicht
+zweimal mit demselben Typ vorkommen. SewerStudio legt eine Organisation deshalb nur
+an, wenn die Datei sie noch nicht fuehrt, und Haltungen und Schaechte teilen sich
+EIN Organisationsbuch je Datei.
+
+## Der Eigentuemer ist ein Verweis, kein Text
+
+Im Kantonsexport vom 2026-08-21 gibt es genau **eine** Organisation
+(`ch1000f000000001`, "Abwasser Uri", Typ `Kanton`), und alle **174'291**
+`EigentuemerRef` zeigen auf sie. Bei einem gemischten Export (ASTRA, Kanton, Gemeinden,
+Privat) ist die Eigentuemerangabe damit schlicht falsch.
+
+Der echte Bestand fuehrt 27 Eigentuemerwerte plus den leeren:
+
+| Wert | Haltungen | Organisationstyp |
+|---|---|---|
+| Privat | 67'081 | Privat |
+| ASTRA - Bundesamt für Strassen | 14'497 | Bund |
+| Abwasser Uri | 11'063 | **Abwasserverband** |
+| Kanton Uri | 7'239 | Kanton |
+| unbekannt | 4'712 | Privat (erzwungen) |
+| Meliorationsgenossenschaft Reussebene Uri | 1'041 | Genossenschaft_Korporation |
+| Korporation Uri | 908 | Genossenschaft_Korporation |
+| Meliorationsgesellschaft Seedorf | 608 | Genossenschaft_Korporation |
+| 19 Urner Gemeinden | 2'722 | Gemeinde |
+| (leer) | 426 | — |
+
+**`Abwasser Uri` ist ein Abwasserverband, kein Kanton.** Der alte Kantonsexport traegt
+dort `Kanton`; Abwasser Uri hat das am 2026-09-02 korrigiert, SewerStudio folgt
+derselben Entscheidung.
+
+**Der Name wird nie veraendert.** `EigentumVokabular.NachOrganisationstyp` faltet fuer
+den Vergleich (Umlaute auf, Kantonszusatz weg), damit "Bürglen (UR)" als Gemeinde
+erkannt wird — der exportierte Name bleibt zeichengleich `Bürglen (UR)`. Wofuer kein
+Typ belegt ist, entsteht fail-closed keine Organisation.
+
+Noch offen: `Meliorationsgesellschaft Seedorf` steht auf
+`Genossenschaft_Korporation`. Das Modell sagt dazu "Koerperschaft oeffentlichen
+Rechts. Falls privaten Rechtes dann als Privat abbilden." — 608 Haltungen haengen
+daran.
+
+## Lichte_Breite hat kein Ziel
+
+`SIA405_ABWASSER_2020_1_LV95` kennt an der Klasse `Haltung` nur `Lichte_Hoehe`. Eine
+lichte Breite gibt es im ganzen Modell nicht. Das Programmfeld `Lichte_Breite_mm` ist
+deshalb bewusst eine reine Programmangabe fuer Ei-, Maul- und Rechteckprofile und
+wird nicht exportiert — wie `Strasse`.
+
+## Profiltyp haengt am Rohrprofil, nicht an der Haltung
+
+Die Haltung zeigt ueber `RohrprofilRef` auf ein eigenes Objekt der Klasse
+`Rohrprofil`, und dort steht der `Profiltyp`. Im Kantonsexport besitzt jede der
+109'871 Haltungen ihr eigenes Rohrprofil (109'871 Objekte, 1:1) — der Profiltyp laesst
+sich dort also gefahrlos aendern.
+
+Verlassen wird sich darauf nicht: Zeigen mehrere Haltungen auf dasselbe Profil,
+aendert SewerStudio es nicht und meldet den Grund. Sonst wuerde eine Korrektur an
+einer Haltung fremde Haltungen mit umschreiben.
+
+## Die Feldreihenfolge endet vor den Verweisen
+
+Zur bekannten Regel (zuerst ein Geschwister-Objekt der Datei, dann die
+Modellreihenfolge) kommt eine dritte Stufe: Findet keine von beiden einen Nachfolger,
+landet ein neues Attribut **vor dem ersten Verweis-Element**, nicht am Ende des
+Objekts. In INTERLIS stehen die Rollenverweise (`DatenherrRef`, `EigentuemerRef`,
+`RohrprofilRef`) hinter den Attributen.
+
+Im Echtlauf am Kantonsausschnitt stand `Verbindungsart` vorher hinter
+`EigentuemerRef` — die Datei fuehrt das Feld an keinem Kanal, also gab es kein
+Vorbild, und in der Modellliste ist es das letzte. Ein Verweis selbst wird von dieser
+Regel nicht vorgezogen.

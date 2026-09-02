@@ -49,7 +49,14 @@ public static class FieldCatalog
         "VSA_Geschaetzt",
         "Gewaesserschutz",
         "Grundwasserspiegel",
-        "FunktionHierarchisch"
+        FieldKeys.HierarchicalFunction,
+        // Ergaenzt 2026-09-02 fuer die revidierte XTF. Die drei ersten haben in SIA405
+        // ein Ziel (Kanal.Verbindungsart, Kanal.Bettung_Umhuellung, Rohrprofil.Profiltyp);
+        // die lichte Breite hat keines und bleibt eine reine Programmangabe.
+        FieldKeys.ConnectionType,
+        FieldKeys.BeddingEncasement,
+        FieldKeys.ProfileType,
+        FieldKeys.ClearWidthMm
     });
 
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> ComboItems =
@@ -102,12 +109,18 @@ public static class FieldCatalog
             {
                 "", "unterhalb", "oberhalb", "unbekannt"
             }),
-            ["FunktionHierarchisch"] = new ReadOnlyCollection<string>(new List<string>
-            {
-                "", "PAA.Sammelkanal", "PAA.Hauptsammelkanal", "PAA.Hauptsammelkanal_regional",
-                "PAA.Liegenschaftsentwaesserung", "PAA.Sanierungsleitung",
-                "PAA.Strassenentwaesserung", "PAA.Gewaesser"
-            })
+            // Bis 2026-09-02 standen hier sieben handgepflegte PAA-Werte. Die Liste
+            // kommt jetzt aus SiaKanalVokabular und enthaelt alle 14 Blaetter des
+            // Modells — die sekundaere Abwasseranlage (SAA) fehlte ganz, obwohl der
+            // Kataster sie fuehrt. Kein bisheriger Wert faellt weg.
+            [FieldKeys.HierarchicalFunction] = new ReadOnlyCollection<string>(
+                SiaKanalVokabular.FunktionHierarchisch.Auswahl.ToList()),
+            [FieldKeys.ConnectionType] = new ReadOnlyCollection<string>(
+                SiaKanalVokabular.Verbindungsart.Auswahl.ToList()),
+            [FieldKeys.BeddingEncasement] = new ReadOnlyCollection<string>(
+                SiaKanalVokabular.BettungUmhuellung.Auswahl.ToList()),
+            [FieldKeys.ProfileType] = new ReadOnlyCollection<string>(
+                SiaKanalVokabular.Profiltyp.Auswahl.ToList())
         });
 
     public static readonly IReadOnlyDictionary<string, FieldDefinition> Definitions =
@@ -147,7 +160,11 @@ public static class FieldCatalog
             ["VSA_Geschaetzt"] = new("VSA_Geschaetzt", "Note geschätzt", FieldType.Text),
             ["Gewaesserschutz"] = new("Gewaesserschutz", "Gewässerschutz", FieldType.Combo, ComboItems["Gewaesserschutz"]),
             ["Grundwasserspiegel"] = new("Grundwasserspiegel", "Grundwasserspiegel", FieldType.Combo, ComboItems["Grundwasserspiegel"]),
-            ["FunktionHierarchisch"] = new("FunktionHierarchisch", "Funktionale Hierarchie", FieldType.Combo, ComboItems["FunktionHierarchisch"])
+            [FieldKeys.HierarchicalFunction] = new(FieldKeys.HierarchicalFunction, "Funktionale Hierarchie", FieldType.Combo, ComboItems[FieldKeys.HierarchicalFunction]),
+            [FieldKeys.ConnectionType] = new(FieldKeys.ConnectionType, "Verbindungsart", FieldType.Combo, ComboItems[FieldKeys.ConnectionType]),
+            [FieldKeys.BeddingEncasement] = new(FieldKeys.BeddingEncasement, "Bettung/Umhüllung", FieldType.Combo, ComboItems[FieldKeys.BeddingEncasement]),
+            [FieldKeys.ProfileType] = new(FieldKeys.ProfileType, "Profiltyp", FieldType.Combo, ComboItems[FieldKeys.ProfileType]),
+            [FieldKeys.ClearWidthMm] = new(FieldKeys.ClearWidthMm, "Lichte Breite mm", FieldType.Int)
         });
 
     public static FieldDefinition Get(string fieldName)

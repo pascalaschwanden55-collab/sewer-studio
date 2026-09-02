@@ -76,15 +76,29 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
             }
 
             var basis = XtfRevisionPlanBuilder.Build(request.Projekt.Data, elemente, name);
+
+            // Haltungen und Schaechte teilen sich EIN Organisationsbuch je Datei. Zwei
+            // getrennte Buecher wuerden dieselbe Organisation doppelt anlegen oder
+            // dieselbe Kennung zweimal vergeben.
+            var buch = new XtfOrganisationsbuch(stammdaten);
+
             // Die Modellfassung der Datei entscheidet ueber die gueltige Schreibweise
             // mancher Werte (2015 "Regenabwasser" gegen 2020 "Niederschlagsabwasser").
             var stamm = XtfStammdatenPlanBuilder.Build(
                 request.Projekt.Data,
                 stammdaten,
-                XtfStammdatenElementReader.ReadModelName(quelle));
-            var plan = stamm.Positionen.Count == 0
+                XtfStammdatenElementReader.ReadModelName(quelle),
+                buch);
+            var schacht = XtfSchachtPlanBuilder.Build(request.Projekt.SchaechteData, stammdaten, buch);
+
+            var zusatz = stamm.Positionen.Concat(schacht.Positionen).ToList();
+            var plan = zusatz.Count == 0 && buch.Neue.Count == 0
                 ? basis
-                : basis with { Positionen = basis.Positionen.Concat(stamm.Positionen).ToList() };
+                : basis with
+                {
+                    Positionen = basis.Positionen.Concat(zusatz).ToList(),
+                    NeueOrganisationen = buch.Neue
+                };
             bericht.AppendLine(
                 $"{name}: {plan.AnzahlGeaendert} geaendert, {plan.AnzahlNeu} neu, " +
                 $"{plan.AnzahlEntfernt} entfernt, {plan.AnzahlUnveraendert} unveraendert.");
@@ -93,7 +107,7 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
                 bericht.AppendLine($"    offen: {warnung}");
 
             // Hinweise halten den Export nicht auf, muessen aber sichtbar bleiben.
-            foreach (var hinweis in stamm.Hinweise)
+            foreach (var hinweis in stamm.Hinweise.Concat(schacht.Hinweise))
                 bericht.AppendLine($"    Hinweis: {hinweis}");
 
             if (request.NurPruefen)

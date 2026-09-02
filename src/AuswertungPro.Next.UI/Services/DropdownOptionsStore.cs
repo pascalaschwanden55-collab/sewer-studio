@@ -40,17 +40,41 @@ public interface IDropdownOptionsStore
 public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
 {
     /// <summary>
-    /// Die amtlichen Begriffe des Kantons Uri. Gemessen an einer Stichprobe von
-    /// 3000 Leitungen des Abwassernetzes: "Privat", "Abwasser Uri",
-    /// "unbekannt" und die einzelnen Gemeinden. Das Feld traegt deshalb
-    /// Freitext — diese Liste ist ein Vorschlag, keine Schranke.
+    /// Die Eigentuemer des Abwassernetzes im Kanton Uri — der ganze Bestand, nicht
+    /// nur Sammelbegriffe.
     ///
-    /// Die Kurzformen "AWU" und "Kanton" stehen nicht mehr zur Auswahl,
-    /// bleiben in Altprojekten aber gueltig: Beide Excel-Vorlagen faerben und
-    /// zaehlen sie weiterhin gleichwertig.
+    /// Der XTF-Export schreibt den Eigentuemer zeichengleich in die Datei. Stuende in
+    /// der Auswahl nur "Gemeinde", entstuende dort auch nur "Gemeinde" statt der
+    /// Gemeinde, der die Leitung gehoert.
+    ///
+    /// GEMESSEN am 2026-09-02 an `org_eigentuemer` in den lokalen QGIS-Kopien:
+    /// 110297 Leitungen und 68735 Schaechte fuehren exakt dieselben 27 Werte — kein
+    /// Wert kommt nur auf einer Seite vor. Genau drei Gemeinden tragen den
+    /// Kantonszusatz (Altdorf, Buerglen, Seedorf — die Namen gibt es auch in anderen
+    /// Kantonen), die uebrigen 16 stehen ohne. Eine frueher hier genannte Stichprobe
+    /// von 3000 Leitungen ist damit ueberholt.
+    ///
+    /// Die sechs Sammelbegriffe bleiben vorn stehen: Altprojekte fuehren sie, und
+    /// beide Excel-Vorlagen faerben genau sie. Die Kurzformen "AWU" und "Kanton"
+    /// stehen nicht zur Auswahl, bleiben dort aber gueltig und werden mitgezaehlt.
+    ///
+    /// Jeder Eintrag muss einen Organisationstyp haben — ohne ihn laesst der
+    /// XTF-Export den gewaehlten Wert still liegen. `DropdownOptionListTests` haelt
+    /// das fest.
     /// </summary>
     private static readonly IReadOnlyList<string> FixedOwners =
-        new[] { "Privat", "Abwasser Uri", "Gemeinde", "Kanton Uri", "Bund", "unbekannt" };
+        new[]
+        {
+            "Privat", "Abwasser Uri", "Gemeinde", "Kanton Uri", "Bund", "unbekannt",
+            "ASTRA - Bundesamt für Strassen",
+            "Korporation Uri",
+            "Meliorationsgenossenschaft Reussebene Uri",
+            "Meliorationsgesellschaft Seedorf",
+            "Altdorf (UR)", "Andermatt", "Attinghausen", "Bürglen (UR)", "Erstfeld",
+            "Flüelen", "Göschenen", "Gurtnellen", "Hospental", "Isenthal", "Realp",
+            "Schattdorf", "Seedorf (UR)", "Seelisberg", "Silenen", "Sisikon",
+            "Spiringen", "Unterschächen", "Wassen"
+        };
 
     private readonly string _optionsDir;
     private readonly string _legacyOptionsDir;

@@ -27,7 +27,13 @@ public sealed record XtfStammdatenElement(
 /// </summary>
 public sealed record XtfStammdatenPlan(
     IReadOnlyList<XtfRevisionPosition> Positionen,
-    IReadOnlyList<string> Hinweise);
+    IReadOnlyList<string> Hinweise,
+    IReadOnlyList<XtfNeueOrganisation>? NeueOrganisationen = null)
+{
+    /// <summary>Organisationen, die es fuer einen Eigentuemer noch nicht gibt.</summary>
+    public IReadOnlyList<XtfNeueOrganisation> Organisationen
+        => NeueOrganisationen ?? Array.Empty<XtfNeueOrganisation>();
+}
 
 /// <summary>
 /// Erzeugt Planpositionen fuer die Stammdaten der SIA405-XTF.
@@ -51,9 +57,20 @@ public static class XtfStammdatenPlanBuilder
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Nutzungsart_Ist"] = FieldKeys.UsageType,
-            ["Standortname"] = FieldKeys.Street,
-            ["BaulicherZustand"] = FieldKeys.ConditionClass
+            ["BaulicherZustand"] = FieldKeys.ConditionClass,
+            ["FunktionHierarchisch"] = FieldKeys.HierarchicalFunction,
+            ["Verbindungsart"] = FieldKeys.ConnectionType,
+            ["Bettung_Umhuellung"] = FieldKeys.BeddingEncasement
         };
+
+    /// <summary>
+    /// <c>Strasse</c> hat in SIA405 mit <c>Kanal.Standortname</c> zwar ein Ziel, wird
+    /// aber auf ausdrueckliche Anweisung NICHT mehr geschrieben (2026-09-02). Das Feld
+    /// bleibt im Programm vollstaendig erhalten — es geht nur nicht mehr in die Revision.
+    /// Der Eintrag steht hier, damit der Verzicht sichtbar bleibt und nicht als
+    /// vergessene Zeile wieder eingebaut wird.
+    /// </summary>
+    public const string NichtExportiert = FieldKeys.Street;
 
     /// <summary>
     /// Abbildung XTF-Element -> Projektfeld fuer die physische Klasse "Haltung".
@@ -69,11 +86,30 @@ public static class XtfStammdatenPlanBuilder
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Material"] = FieldKeys.PipeMaterial,
-            ["Lichte_Hoehe"] = FieldKeys.NominalDiameterMm
+            ["Lichte_Hoehe"] = FieldKeys.NominalDiameterMm,
+            ["LaengeEffektiv"] = FieldKeys.HoldingLengthMeters
+        };
+
+    /// <summary>
+    /// Abbildung XTF-Element -> Projektfeld fuer die Klasse "Rohrprofil".
+    ///
+    /// Der Profiltyp haengt nicht an der Haltung, sondern an einem eigenen Objekt, auf
+    /// das die Haltung ueber <c>RohrprofilRef</c> zeigt. Im Kantonsexport von Abwasser Uri
+    /// besitzt jede der 109871 Haltungen ihr eigenes Rohrprofil (109871 Objekte, 1:1).
+    /// Verlassen wird sich darauf trotzdem nicht: Ein von mehreren Haltungen benutztes
+    /// Profil wird nicht geaendert, weil die Aenderung sonst fremde Haltungen traefe.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> RohrprofilFelder =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Profiltyp"] = FieldKeys.ProfileType
         };
 
     /// <summary>Obergrenze aus <c>DOMAIN Lichte_Hoehe = 0 .. 99999 [Units.mm]</c>.</summary>
     private const int LichteHoeheMaxMm = 99999;
+
+    /// <summary>Obergrenze aus <c>LaengeEffektiv: 0.00 .. 30000.00 [m]</c>.</summary>
+    private const decimal LaengeMaxMeter = 30000.00m;
 
     /// <summary>
     /// Bringt einen Projektwert in die Schreibweise des XTF-Modells.
@@ -126,6 +162,31 @@ public static class XtfStammdatenPlanBuilder
                 : null;
         }
 
+        // Die Haltungslaenge ist eine Laenge in Metern, keine Abmessung in Millimetern.
+        // SiaAbmessung darf hier deshalb nie angewandt werden — aus 45,30 m wuerde 45300.
+        // Gelesen wird ueber FachzahlParser, damit "45.30" und "45,30" gleich zaehlen.
+        if (string.Equals(xtfName, "LaengeEffektiv", StringComparison.Ordinal))
+        {
+            if (!Common.FachzahlParser.TryParseMeasurement(wert, out var meter))
+                return null;
+
+            return meter is > 0 and <= LaengeMaxMeter
+                ? meter.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                : null;
+        }
+
+        if (string.Equals(xtfName, "FunktionHierarchisch", StringComparison.Ordinal))
+            return SiaKanalVokabular.FunktionHierarchisch.NachNorm(wert);
+
+        if (string.Equals(xtfName, "Verbindungsart", StringComparison.Ordinal))
+            return SiaKanalVokabular.Verbindungsart.NachNorm(wert);
+
+        if (string.Equals(xtfName, "Bettung_Umhuellung", StringComparison.Ordinal))
+            return SiaKanalVokabular.BettungUmhuellung.NachNorm(wert);
+
+        if (string.Equals(xtfName, "Profiltyp", StringComparison.Ordinal))
+            return SiaKanalVokabular.Profiltyp.NachNorm(wert);
+
         if (!string.Equals(xtfName, "Nutzungsart_Ist", StringComparison.Ordinal))
             return wert;
 
@@ -151,7 +212,8 @@ public static class XtfStammdatenPlanBuilder
     public static XtfStammdatenPlan Build(
         IEnumerable<HaltungRecord> haltungen,
         IReadOnlyList<XtfStammdatenElement> elemente,
-        string? modell = null)
+        string? modell = null,
+        XtfOrganisationsbuch? buch = null)
     {
         ArgumentNullException.ThrowIfNull(haltungen);
         ArgumentNullException.ThrowIfNull(elemente);
@@ -165,6 +227,8 @@ public static class XtfStammdatenPlanBuilder
         // sind aber verschiedene Objekte mit verschiedenen Feldern.
         var kanaele = BaueIndex(elemente, "Kanal");
         var haltungenXtf = BaueIndex(elemente, "Haltung");
+        var profile = BaueProfilindex(elemente);
+        buch ??= new XtfOrganisationsbuch(elemente);
 
         foreach (var record in haltungen)
         {
@@ -177,16 +241,34 @@ public static class XtfStammdatenPlanBuilder
 
             if (kanal is null && haltungElement is null)
             {
-                if (HatHandaenderung(record, Felder) || HatHandaenderung(record, HaltungFelder))
+                if (HatHandaenderung(record, Felder)
+                    || HatHandaenderung(record, HaltungFelder)
+                    || HatHandaenderung(record, RohrprofilFelder)
+                    || HatHandaenderung(record, EigentuemerFeldKarte))
+                {
                     hinweise.Add($"{name}: in der XTF nicht gefunden — die Handaenderung bleibt aussen vor.");
+                }
+
                 continue;
             }
 
-            SammlePosition(record, kanal, Felder, name, modell, positionen, hinweise);
+            var eigentuemer = buch.Verweis(
+                kanal,
+                name,
+                record.FieldMeta.TryGetValue(FieldKeys.Owner, out var eigentuemerMeta)
+                    && eigentuemerMeta.UserEdited
+                        ? record.GetFieldValue(FieldKeys.Owner)
+                        : null,
+                hinweise);
+            SammlePosition(record, kanal, Felder, name, modell, positionen, hinweise, eigentuemer);
             SammlePosition(record, haltungElement, HaltungFelder, name, modell, positionen, hinweise);
+
+            var profil = FindeProfil(haltungElement, profile, name, record, hinweise);
+            if (profil is not null)
+                SammlePosition(record, profil, RohrprofilFelder, name, modell, positionen, hinweise);
         }
 
-        return new XtfStammdatenPlan(positionen, hinweise);
+        return new XtfStammdatenPlan(positionen, hinweise, buch.Neue);
     }
 
     /// <summary>
@@ -200,7 +282,8 @@ public static class XtfStammdatenPlanBuilder
         string name,
         string? modell,
         List<XtfRevisionPosition> positionen,
-        List<string> hinweise)
+        List<string> hinweise,
+        XtfRevisionFeld? zusatz = null)
     {
         if (element is null)
         {
@@ -210,6 +293,8 @@ public static class XtfStammdatenPlanBuilder
         }
 
         var felder = new List<XtfRevisionFeld>();
+        if (zusatz is not null)
+            felder.Add(zusatz);
         foreach (var (xtfName, projektFeld) in felderKarte)
         {
             if (!record.FieldMeta.TryGetValue(projektFeld, out var meta) || !meta.UserEdited)
@@ -250,6 +335,96 @@ public static class XtfStammdatenPlanBuilder
             Code: "",
             Meter: null,
             felder));
+    }
+
+    /// <summary>Der Eigentuemer als eigene Feldkarte — er laeuft nicht ueber den Textweg.</summary>
+    internal static readonly IReadOnlyDictionary<string, string> EigentuemerFeldKarte =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["EigentuemerRef"] = FieldKeys.Owner
+        };
+
+    /// <summary>
+    /// Die Rohrprofile der Datei, nachschlagbar ueber ihre Kennung, samt der Zahl der
+    /// Haltungen, die auf sie zeigen.
+    /// </summary>
+    private sealed record Profilindex(
+        IReadOnlyDictionary<string, XtfStammdatenElement> JeTid,
+        IReadOnlyDictionary<string, int> Verweise);
+
+    private static Profilindex BaueProfilindex(IReadOnlyList<XtfStammdatenElement> elemente)
+    {
+        var jeTid = new Dictionary<string, XtfStammdatenElement>(StringComparer.Ordinal);
+        var verweise = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        foreach (var element in elemente)
+        {
+            if (string.Equals(element.Klasse, "Rohrprofil", StringComparison.Ordinal))
+            {
+                jeTid.TryAdd(element.Tid, element);
+                continue;
+            }
+
+            if (!string.Equals(element.Klasse, "Haltung", StringComparison.Ordinal))
+                continue;
+
+            if (!element.Werte.TryGetValue("RohrprofilRef", out var referenz))
+                continue;
+
+            var tid = (referenz ?? "").Trim();
+            if (tid.Length == 0)
+                continue;
+
+            verweise[tid] = verweise.TryGetValue(tid, out var bisher) ? bisher + 1 : 1;
+        }
+
+        return new Profilindex(jeTid, verweise);
+    }
+
+    /// <summary>
+    /// Das Rohrprofil einer Haltung, oder <c>null</c>.
+    ///
+    /// Fail-closed an drei Stellen: ohne Haltungsobjekt, ohne Verweis und bei einem von
+    /// mehreren Haltungen geteilten Profil wird nichts geaendert. Ein geteiltes Profil zu
+    /// aendern wuerde fremde Haltungen mit umschreiben — im Kantonsexport liegt zwar
+    /// je Haltung ein eigenes Profil, andere Lieferungen duerfen das aber anders halten.
+    ///
+    /// Gemeldet wird nur, wenn der Mensch am Profiltyp ueberhaupt etwas geaendert hat.
+    /// </summary>
+    private static XtfStammdatenElement? FindeProfil(
+        XtfStammdatenElement? haltungElement,
+        Profilindex profile,
+        string name,
+        HaltungRecord record,
+        List<string> hinweise)
+    {
+        if (!HatHandaenderung(record, RohrprofilFelder))
+            return null;
+
+        if (haltungElement is null
+            || !haltungElement.Werte.TryGetValue("RohrprofilRef", out var referenz)
+            || string.IsNullOrWhiteSpace(referenz))
+        {
+            hinweise.Add($"{name}: die XTF fuehrt kein Rohrprofil — der Profiltyp bleibt aussen vor.");
+            return null;
+        }
+
+        var tid = referenz.Trim();
+        if (!profile.JeTid.TryGetValue(tid, out var profil))
+        {
+            hinweise.Add($"{name}: das verwiesene Rohrprofil {tid} fehlt in der Datei — Profiltyp nicht geschrieben.");
+            return null;
+        }
+
+        if (profile.Verweise.TryGetValue(tid, out var anzahl) && anzahl > 1)
+        {
+            hinweise.Add(
+                $"{name}: das Rohrprofil {tid} wird von {anzahl} Haltungen gemeinsam benutzt — " +
+                "der Profiltyp wird nicht geaendert, weil das die uebrigen mit umschreiben wuerde.");
+            return null;
+        }
+
+        return profil;
     }
 
     /// <summary>

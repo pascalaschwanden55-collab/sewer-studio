@@ -75,4 +75,48 @@ public sealed class EigentumVokabularTests
         Assert.False(Next.Infrastructure.Costs.OwnershipAwuFilter.IsAwu(
             EigentumVokabular.Normalisieren("Privat")));
     }
+
+    // Der Name geht zeichengleich in die XTF — nur der Typ wird bestimmt. Gemessen am
+    // Abwassernetz des Kantons Uri: 27 Eigentuemerwerte plus der leere.
+    [Theory]
+    [InlineData("Abwasser Uri", "Abwasserverband")]
+    [InlineData("AWU", "Abwasserverband")]
+    [InlineData("Kanton Uri", "Kanton")]
+    [InlineData("Privat", "Privat")]
+    [InlineData("unbekannt", "Privat")]
+    [InlineData("ASTRA - Bundesamt für Strassen", "Bund")]
+    [InlineData("Korporation Uri", "Genossenschaft_Korporation")]
+    [InlineData("Meliorationsgenossenschaft Reussebene Uri", "Genossenschaft_Korporation")]
+    [InlineData("Meliorationsgesellschaft Seedorf", "Genossenschaft_Korporation")]
+    [InlineData("Altdorf (UR)", "Gemeinde")]
+    [InlineData("Bürglen (UR)", "Gemeinde")]
+    [InlineData("Seedorf (UR)", "Gemeinde")]
+    [InlineData("Flüelen", "Gemeinde")]
+    [InlineData("Göschenen", "Gemeinde")]
+    [InlineData("Unterschächen", "Gemeinde")]
+    [InlineData("Wassen", "Gemeinde")]
+    public void Jeder_Bestandswert_bekommt_seinen_Organisationstyp(string eigentuemer, string typ)
+        => Assert.Equal(typ, EigentumVokabular.NachOrganisationstyp(eigentuemer));
+
+    // "Abwasser Uri" ist ein Zweckverband, kein Kanton. Der alte Kantonsexport traegt
+    // dort "Kanton"; Abwasser Uri hat das am 2026-09-02 korrigiert.
+    [Fact]
+    public void Abwasser_Uri_ist_ein_Abwasserverband()
+        => Assert.Equal("Abwasserverband", EigentumVokabular.NachOrganisationstyp("Abwasser Uri"));
+
+    // Fail-closed: Wofuer kein Typ belegt ist, entsteht keine Organisation.
+    [Theory]
+    [InlineData("Schwyz")]
+    [InlineData("Familie Muster")]
+    [InlineData("")]
+    public void Ein_unbekannter_Eigentuemer_bekommt_keinen_Typ(string eigentuemer)
+        => Assert.Null(EigentumVokabular.NachOrganisationstyp(eigentuemer));
+
+    // Die Faltung dient nur dem Vergleich. Der Name selbst darf sie nie zu sehen bekommen.
+    [Theory]
+    [InlineData("Bürglen (UR)")]
+    [InlineData("Unterschächen")]
+    [InlineData("ASTRA - Bundesamt für Strassen")]
+    public void Der_Name_bleibt_zeichengleich(string eigentuemer)
+        => Assert.Equal(eigentuemer, EigentumVokabular.Normalisieren(eigentuemer));
 }

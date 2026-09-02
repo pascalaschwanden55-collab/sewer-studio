@@ -148,6 +148,14 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     /// <summary>Feste Katalogwerte plus eigene Ergaenzungen — Tabelle und Formular zeigen dieselbe Liste.</summary>
     public ObservableCollection<string> RohrmaterialOptions { get; }
     public ObservableCollection<string> AusgefuehrtDurchOptions { get; }
+
+    // Feste SIA405-Wertelisten fuer die revidierte XTF. Kein Freitext und nicht
+    // erweiterbar: Ein getippter Wert haette kein Gegenstueck im Modell und koennte
+    // deshalb nie in eine XTF geschrieben werden.
+    public ObservableCollection<string> FunktionHierarchischOptions { get; }
+    public ObservableCollection<string> VerbindungsartOptions { get; }
+    public ObservableCollection<string> BettungUmhuellungOptions { get; }
+    public ObservableCollection<string> ProfiltypOptions { get; }
     public ObservableCollection<ProtocolEntry> SelectedProtocolEntries => _selectedProtocolController.Entries;
     public DataPageStartFilter? StartFilter { get; }
 
@@ -259,6 +267,14 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         RohrmaterialOptions = new ObservableCollection<string>(
             PipeMaterialOptionList.Compose(_dropdownOptions.LoadRohrmaterialOptions()));
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
+        FunktionHierarchischOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.HierarchicalFunction));
+        VerbindungsartOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.ConnectionType));
+        BettungUmhuellungOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.BeddingEncasement));
+        ProfiltypOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.ProfileType));
         _measureSuggestionController = new DataPageMeasureSuggestionController(
             _dialogs,
             _measureRecommendationService,

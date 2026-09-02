@@ -526,6 +526,25 @@
   Fehlerhinweise, 15 Fehlalarm-Hinweise und 6 Verwechslungen in 4 Klassenpaaren.
   Der fruehere Plan `detect_gold_collection_44a08fe9895e` ist wegen der damals
   fehlenden Verwechslungsliste aufgehoben und darf nicht verwendet werden.
+- Die Lernkurven- und Klassenbreitenlaeufe vom 2026-08-30 liegen ausschliesslich
+  unter `C:\KI_BRAIN\training\diagnostics` und
+  `C:\KI_BRAIN\training\cls_runs`. Sie sind Diagnose ohne Kandidatenmanifest
+  und duerfen nie aktiviert werden. Die Lernkurve spricht auf diesem Datensatz
+  fuer weiteren Nutzen zusaetzlicher Goldboxen; sie beweist weder Materialmangel
+  als alleinigen Engpass noch die Uebertragbarkeit auf die produktive Linie. Die
+  Klassenverengung zeigte keinen belegten Vorteil, veraenderte aber zugleich den
+  Hintergrunddruck. Die einheitliche Nachmessung mit `half=False, batch=4` ergab
+  fuer `BCC_bogen` AP50 0,827 / 0,815 / 0,845 bei 15 / 5 / 2 Klassen. Gegenueber
+  den alten gemischten Pruefeinstellungen aenderte sich AP50 hoechstens um 0,004;
+  diese erklaeren die Stufenunterschiede daher nicht allein. Die Diagnose
+  trainierte mit `fliplr=0.5`, `hsv_h=0.015`,
+  `hsv_s=0.7`, `hsv_v=0.4`, `mosaic=1.0`; der produktive Trainer verwendet
+  `fliplr=0.0`, `hsv_h=0.01`, `hsv_s=0.3`, `hsv_v=0.3`. Zahlen, Belege und
+  Grenzen stehen in
+  `docs/quality/DETECT-LERNKURVE-UND-KLASSENBREITE-2026-08-30.md`.
+  Das vom Referenzlauf abgelegte `yolo26n.pt` wurde am 2026-09-02 in
+  `C:\KI_BRAIN\training\diagnostics\quarantine` verschoben; der Gold-Validator
+  akzeptiert den Plan-Datensatz wieder mit 852 Bildern und 894 Instanzen.
 - `yolo_wrapper._pil_rgb_to_ultralytics_bgr` wandelt dekodierte PIL-RGB-Bilder vor
   jeder Ultralytics-NumPy-Inferenz explizit in zusammenhaengendes BGR um. Detect,
   Legacy-Classification, beide Holdout-Auswerter und seit 2026-08-09 auch der
@@ -1069,11 +1088,35 @@ Altprojekte werden nicht neu importiert: `XtfKanalschadenElementReader` und
 `XtfFindingMatcher` bilden nur beidseitig eindeutige Zuordnungen im Arbeitsspeicher.
 `XtfRevisionPlanBuilder` plant geaenderte, neue und entfernte Befunde;
 `XtfStammdatenPlanBuilder` nimmt nur eindeutig zugeordnete, vom Menschen bearbeitete
-Haltungsfelder `Nutzungsart_Ist` und `Standortname` auf. Offene Faelle sperren den
+Felder auf: am `Kanal` `Nutzungsart_Ist`, `BaulicherZustand`, `FunktionHierarchisch`,
+`Verbindungsart` und `Bettung_Umhuellung`; an der `Haltung` `Material`, `Lichte_Hoehe`
+und `LaengeEffektiv`; am verwiesenen `Rohrprofil` den `Profiltyp`.
+`XtfSchachtPlanBuilder` tut dasselbe fuer den `Normschacht` (`Funktion`, `Material`,
+`Dimension1`/`2`, `BaulicherZustand`) — Schaechte kommen seit 2026-08-30 aus der XTF
+und gehen seit 2026-09-02 auch wieder hinaus. Offene Faelle sperren den
 Schreibweg. `XtfRevisionWriter` wendet nur den geprueften Plan an, veraendert das
 Original nie, ueberschreibt kein Ziel und veroeffentlicht jede Revision ueber eine
 Nebendatei. `ExportPageViewModel` zeigt zuerst den Pruefbericht und schreibt erst
 nach ausdruecklicher Bestaetigung in einen neuen Zeitstempelordner.
+
+Drei Regeln dieses Wegs nie zurueckdrehen:
+
+- **`Strasse` wird bewusst NICHT exportiert** (Entscheid 2026-09-02). Das Feld bleibt
+  im Programm vollstaendig erhalten; `Kanal.Standortname` bekommt es nicht mehr.
+  Ebenso ist `Lichte_Breite_mm` eine reine Programmangabe — `Lichte_Breite` gibt es im
+  Modell `SIA405_ABWASSER_2020_1_LV95` gar nicht.
+- **Der Eigentuemer ist ein Verweis, kein Text.** `XtfOrganisationsbuch` bindet ihn an
+  eine `Organisation` im Topic `Administration` und legt fehlende an; Haltungen und
+  Schaechte teilen sich EIN Buch je Datei. Fuehrt die Datei ueberhaupt keine
+  Organisation, wird auch keine erfunden. Ohne bekannten `Organisationstyp` (Pflichtfeld)
+  entsteht nichts. `Abwasser Uri` ist ein **Abwasserverband**, kein Kanton. Der Name
+  geht zeichengleich hinaus — die Faltung in `EigentumVokabular` dient nur dem
+  Typvergleich.
+- **Der `Profiltyp` haengt am `Rohrprofil`**, auf das die Haltung ueber `RohrprofilRef`
+  zeigt. Ein von mehreren Haltungen geteiltes Profil wird nicht geaendert.
+
+Wertelisten, Messwerte und die belegten Fallen stehen in
+`docs/SIA405-2020-Wertelisten.md`.
 
 Beim Teacher-Store ist die JSON-Karte verbindlich und `classes.txt` nur abgeleitet.
 Scheitert das Schreiben der JSON-Karte, wird die vorherige `classes.txt`
