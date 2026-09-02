@@ -126,6 +126,10 @@ yolo_cls_export/
 yolo_cls_export_v2/
 yolo_cls_runs/
 
+# Erzeugte Bilder (Logo-Entwuerfe usw.) — bleiben lokal, die freigegebenen
+# Assets liegen unter Export_Vorlage/ bzw. im UI-Projekt.
+output/imagegen/
+
 # Tools
 tools/**/output/
 tools/ExcelVorlagenBauer/ausgabe/
