@@ -229,6 +229,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(ILoggerFactory)] = services.LoggerFactory,
             [typeof(IStatusColorService)] = services.StatusColors,
             [typeof(ICodeUsageTracker)] = services.CodeUsage,
+            [typeof(AuswertungPro.Next.Application.Lookup.IQgisBestandLeser)] = services.QgisBestand,
         };
     }
 }

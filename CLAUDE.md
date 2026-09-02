@@ -1123,6 +1123,30 @@ Drei Regeln dieses Wegs nie zurueckdrehen:
 Wertelisten, Messwerte und die belegten Fallen stehen in
 `docs/SIA405-2020-Wertelisten.md`.
 
+`Leere Felder aus QGIS ergaenzen` ist der Gegenweg dazu: je ein Knopf auf der
+Haltungs- und der Schachtseite fuellt LEERE Felder aus den lokalen QGIS-Kopien
+(`IQgisBestandLeser`/`QgisGpkgBestandLeser`, GeoPackage = SQLite, offline). Er
+laeuft ueber `LeereFelderPlanBuilder` (reine Rechnung) und zeigt erst einen
+Bericht; geschrieben wird nach Bestaetigung durch `LeereFelderAnwender`.
+
+Vier Regeln dieses Wegs:
+
+- **Ein gefuelltes Feld wird nie angefasst** — unabhaengig von seiner Herkunft.
+  Der Ausfuehrer prueft das ein zweites Mal, weil zwischen Bericht und
+  Bestaetigung getippt worden sein kann.
+- **Ein mehrdeutiger Name bekommt nichts.** Im Bestand tragen 2574
+  Haltungsnamen und 334 Schachtnamen mehr als ein Objekt.
+- **Geschrieben wird mit `FieldSource.Kataster` und `userEdited: false`.** Ein
+  nachgefuellter Wert ist keine Handeingabe und geht deshalb NICHT in die
+  revidierte XTF zurueck — er stammt aus derselben Quelle.
+- **`unbekannt` fuellt nichts.** Zwei Sperren in `QgisFeldKarte` decken das
+  gemeinsam ab (Rohwert und umgesetzter Wert); keine der beiden entfernen.
+
+Die Pfade stehen in `AppSettings.QgisHaltungenGpkgPath` und
+`QgisSchaechteGpkgPath`. Der bestehende Einzelnachschlag per Rechtsklick
+(`FeldNachschlagUseCase`) bleibt unangetastet — er bedient das Grundbuch, das
+nur Einzelabfragen erlaubt.
+
 Beim Teacher-Store ist die JSON-Karte verbindlich und `classes.txt` nur abgeleitet.
 Scheitert das Schreiben der JSON-Karte, wird die vorherige `classes.txt`
 wiederhergestellt oder eine neu angelegte Kopie entfernt.

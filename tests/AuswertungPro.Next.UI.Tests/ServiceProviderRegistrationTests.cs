@@ -102,9 +102,12 @@ public sealed class ServiceProviderRegistrationTests
         // Schachtlisten bewusst aus dem aktuellen Stand des Eigentuemerdossiers.
         // 154 -> 152: Kartenansicht entfernt (IOfflineBasemapPathResolver,
         // IKarteBasemapLayerFactory). Die raeumliche Arbeit laeuft ueber QGIS.
+        // 152 -> 153: IQgisBestandLeser liest die lokalen GeoPackage-Kopien des
+        // Abwassernetzes fuer "Leere Felder aus QGIS ergaenzen" — offline, ohne den
+        // gedrosselten Netzdienst des Kantons.
         Assert.True(
-            registrations.Count == 152,
-            $"Erwartet 152 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 153,
+            $"Erwartet 153 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(

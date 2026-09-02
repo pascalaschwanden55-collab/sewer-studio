@@ -33,6 +33,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
+    private readonly AuswertungPro.Next.Application.Lookup.IQgisBestandLeser _qgisBestand;
     private readonly AppSettings _settings;
     private readonly AuswertungPro.Next.Application.Vsa.IVsaEvaluationService _vsa;
     private readonly AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider _codeCatalog;
@@ -215,6 +216,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _trainingCases = services.TrainingCases;
         StartFilter = startFilter;
         _measureRecommendationService = services.MeasureRecommendation;
+        _qgisBestand = services.QgisBestand;
         _timers = new DataPageTimerController(
             value => SaveStatus = value,
             value => IsSaveStatusVisible = value,

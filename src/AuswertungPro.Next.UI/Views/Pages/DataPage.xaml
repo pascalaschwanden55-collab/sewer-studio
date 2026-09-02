@@ -145,6 +145,17 @@
 
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
 
+                    <Button Command="{Binding QgisFelderErgaenzenCommand}" IsEnabled="{Binding IsProjectReady}"
+                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                            ToolTip="Leere Felder aus dem QGIS-Bestand ergänzen. Gefüllte Felder bleiben unberührt; vorher erscheint ein Bericht.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE896;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Leere Felder aus QGIS" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
+
                     <Button x:Name="MassnahmenDropdown" Click="DropdownButton_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Sanierungsmaßnahme für die gewählte Haltung bearbeiten">

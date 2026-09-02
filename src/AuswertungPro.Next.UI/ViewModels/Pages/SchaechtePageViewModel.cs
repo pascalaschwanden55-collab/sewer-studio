@@ -140,7 +140,15 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         // Uebergangskonstruktoren kennen den Dienst nicht, dort bleibt der
         // Menuepunkt einfach aus.
         FeldNachschlag = services.FeldNachschlag;
+        QgisBestand = services.QgisBestand;
     }
+
+    /// <summary>
+    /// Der QGIS-Bestand fuer "Leere Felder aus QGIS ergaenzen". Null, wenn das
+    /// ViewModel ueber einen Uebergangskonstruktor ohne Dienste entstand — dann
+    /// bleibt der Knopf einfach aus.
+    /// </summary>
+    internal AuswertungPro.Next.Application.Lookup.IQgisBestandLeser? QgisBestand { get; }
 
     /// <summary>
     /// Schlaegt leere Schachtfelder beim Kanton nach. Null, wenn das
