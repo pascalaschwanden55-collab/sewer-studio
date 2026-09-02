@@ -11,13 +11,15 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 /// </summary>
 public sealed partial class SchaechtePageViewModel
 {
-    /// <summary>Der Knopf bleibt aus, solange der Dienst fehlt oder kein Projekt offen ist.</summary>
-    public bool CanQgisFelderErgaenzen => QgisBestand is not null && _shell.IsProjectReady;
-
+    // Der Knopf haengt an CanMutateShaftData — derselben Schranke wie die uebrigen
+    // aendernden Aktionen der Seite. Sie sperrt auch waehrend eines laufenden
+    // Protokollimports, und die Seite meldet ihre Aenderung bereits. Eine eigene
+    // Eigenschaft ohne Meldung waere beim Laden einmal ausgewertet und danach
+    // fuer immer grau geblieben.
     [RelayCommand]
     private void QgisFelderErgaenzen()
     {
-        if (QgisBestand is null || !_shell.IsProjectReady)
+        if (QgisBestand is null || !CanMutateShaftData)
             return;
 
         QgisNachfuellWorkflow.Fuehre(
