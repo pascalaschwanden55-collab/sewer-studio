@@ -128,6 +128,7 @@ yolo_cls_runs/
 
 # Tools
 tools/**/output/
+tools/ExcelVorlagenBauer/ausgabe/
 tools/ProtocolPipelineDiagnostics/output-smoke/
 tools/SewerStudioTrainingBatch/*.json
 tools/SewerStudioTrainingBatch/*.jpg
