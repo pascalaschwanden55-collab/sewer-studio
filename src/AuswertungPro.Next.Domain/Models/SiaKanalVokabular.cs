@@ -86,6 +86,33 @@ public static class SiaKanalVokabular
         "SIA_Typ1", "SIA_Typ2", "SIA_Typ3", "SIA_Typ4", "Sohlbrett", "unbekannt");
 
     /// <summary>
+    /// <c>Kanal.FunktionHydraulisch</c> — 12 Werte. Im Kataster zu 93,5 % gefuellt
+    /// (92872-mal <c>Freispiegelleitung</c>), also ein echt gepflegtes Feld.
+    /// </summary>
+    public static readonly SiaWerteliste FunktionHydraulisch = new(
+        "andere", "Drainagetransportleitung", "Drosselleitung", "Duekerleitung",
+        "Freispiegelleitung", "Pumpendruckleitung", "Sickerleitung", "Speicherleitung",
+        "Spuelleitung", "unbekannt", "Vakuumleitung", "Versickerungsleitung");
+
+    /// <summary>
+    /// <c>Abwasserbauwerk.Status</c> — 5 Werte aus dem Basismodell
+    /// <c>SIA405_Base_Abwasser_1_LV95</c>. Im Kataster zu 97,8 % gefuellt.
+    /// </summary>
+    public static readonly SiaWerteliste Status = new(
+        "ausser_Betrieb", "in_Betrieb", "tot", "unbekannt", "weitere");
+
+    /// <summary><c>Abwasserbauwerk.Sanierungsbedarf</c> — 6 Werte.</summary>
+    public static readonly SiaWerteliste Sanierungsbedarf = new(
+        "dringend", "keiner", "kurzfristig", "langfristig", "mittelfristig", "unbekannt");
+
+    /// <summary>
+    /// <c>Haltung.Lagebestimmung</c> — 3 Werte. Haengt an der physischen Klasse
+    /// <c>Haltung</c>, nicht am <c>Kanal</c>.
+    /// </summary>
+    public static readonly SiaWerteliste Lagebestimmung = new(
+        "genau", "unbekannt", "ungenau");
+
+    /// <summary>
     /// <c>Kanal.FunktionHierarchisch</c> — zweistufig, deshalb 14 Blattwerte mit Punkt.
     ///
     /// <c>PAA</c> ist die primaere, <c>SAA</c> die sekundaere Abwasseranlage. Nur die

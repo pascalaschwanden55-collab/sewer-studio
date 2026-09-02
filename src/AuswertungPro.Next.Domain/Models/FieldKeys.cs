@@ -70,6 +70,65 @@ public static class FieldKeys
     /// und dem WinCan-Weg und wird nicht exportiert.
     /// </summary>
     public const string ClearWidthMm = "Lichte_Breite_mm";
+
+    // --- Die uebrigen Felder der Kataster-Infobox (2026-09-02) ---
+    // Fuenf davon haben in SIA405 ein Ziel und gehen in die Revision; die sechs
+    // Herkunftsangaben darunter bleiben reine Programmfelder.
+
+    /// <summary>Betriebszustand nach SIA405 (<c>Abwasserbauwerk.Status</c>), 5 Werte.</summary>
+    public const string OperatingStatus = "Status";
+
+    /// <summary>Sanierungsbedarf nach SIA405 (<c>Abwasserbauwerk.Sanierungsbedarf</c>), 6 Werte.</summary>
+    public const string RehabilitationNeed = "Sanierungsbedarf";
+
+    /// <summary>Hydraulische Funktion nach SIA405 (<c>Kanal.FunktionHydraulisch</c>), 12 Werte.</summary>
+    public const string HydraulicFunction = "FunktionHydraulisch";
+
+    /// <summary>Lagegenauigkeit nach SIA405 (<c>Haltung.Lagebestimmung</c>), 3 Werte.</summary>
+    public const string PositionAccuracy = "Lagebestimmung";
+
+    /// <summary>Baujahr nach SIA405 (<c>Abwasserbauwerk.Baujahr</c>), 1800 bis 2100.</summary>
+    public const string ConstructionYear = "Baujahr";
+
+    /// <summary>
+    /// Bruttokosten des Bauwerks aus dem Kataster (<c>Abwasserbauwerk.Bruttokosten</c>).
+    /// NICHT zu verwechseln mit <see cref="Cost"/> — das sind die von SewerStudio
+    /// gerechneten Sanierungskosten. Beide Felder stehen bewusst nebeneinander.
+    /// </summary>
+    public const string GrossCost = "Bruttokosten";
+
+    /// <summary>
+    /// Kennung des Objekts im Kataster. Reines Programmfeld: Die XTF kennt dafuer kein
+    /// Attribut, die Identitaet dort ist die TID.
+    /// </summary>
+    public const string CadastreObjectId = "Objekt_ID";
+
+    /// <summary>
+    /// Datenherr aus dem Kataster. Reines Programmfeld — in SIA405 ist das ein Verweis
+    /// auf eine Organisation, und SewerStudio ist nicht der Datenherr dieser Leitungen.
+    /// </summary>
+    public const string DataOwner = "Datenherr";
+
+    /// <summary>Datenlieferant aus dem Kataster. Reines Programmfeld, wie <see cref="DataOwner"/>.</summary>
+    public const string DataSupplier = "Datenlieferant";
+
+    /// <summary>
+    /// Organisation aus dem Kataster. Reines Programmfeld; im Abwassernetz des Kantons
+    /// ist die Spalte bei allen 110297 Leitungen leer.
+    /// </summary>
+    public const string CadastreOrganisation = "Organisation";
+
+    /// <summary>
+    /// Letzte Aenderung aus dem Kataster. Reines Programmfeld: In der Revision fuehrt
+    /// <c>XtfRevisionWriter</c> dieses Feld selbst nach, wo die Datei es fuehrt.
+    /// </summary>
+    public const string CadastreLastChange = "Letzte_Aenderung";
+
+    /// <summary>
+    /// Aktualisierungsdatum des Katasterauszugs. Reines Programmfeld — SIA405 kennt
+    /// dieses Feld nicht, es ist die Buchhaltung des QGIS-Exports.
+    /// </summary>
+    public const string CadastreUpdatedAt = "Aktualisierungsdatum";
     public const string PdfPath = "PDF_Path";
     public const string PdfEigen = "PDF_Eigen";
     public const string PdfAll = "PDF_All";

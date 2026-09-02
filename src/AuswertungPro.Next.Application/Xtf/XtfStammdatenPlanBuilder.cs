@@ -60,8 +60,40 @@ public static class XtfStammdatenPlanBuilder
             ["BaulicherZustand"] = FieldKeys.ConditionClass,
             ["FunktionHierarchisch"] = FieldKeys.HierarchicalFunction,
             ["Verbindungsart"] = FieldKeys.ConnectionType,
-            ["Bettung_Umhuellung"] = FieldKeys.BeddingEncasement
+            ["Bettung_Umhuellung"] = FieldKeys.BeddingEncasement,
+            ["FunktionHydraulisch"] = FieldKeys.HydraulicFunction,
+            ["Status"] = FieldKeys.OperatingStatus,
+            ["Sanierungsbedarf"] = FieldKeys.RehabilitationNeed,
+            ["Baujahr"] = FieldKeys.ConstructionYear,
+            ["Bruttokosten"] = FieldKeys.GrossCost
         };
+
+    /// <summary>
+    /// Die Felder der Kataster-Infobox OHNE Ziel in der Revision. Sie bleiben im
+    /// Programm sichtbar und bearbeitbar, gehen aber nie in die Datei zurueck.
+    ///
+    /// <c>Strasse</c> haette mit <c>Kanal.Standortname</c> zwar ein Ziel, wird auf
+    /// ausdrueckliche Anweisung trotzdem nicht geschrieben (2026-09-02).
+    /// <c>Lichte_Breite_mm</c> hat im Modell gar keines.
+    /// Die sechs Herkunftsangaben sind der Nachweis, woher ein Datensatz stammt —
+    /// keine Aussage von SewerStudio: Der Datenherr einer Kantonsleitung ist der
+    /// Kanton, nicht der Operateur, und <c>Letzte_Aenderung</c> fuehrt der Schreiber
+    /// dort selbst nach, wo die Datei das Feld kennt.
+    ///
+    /// Die Liste steht hier, damit der Verzicht sichtbar bleibt und nicht als
+    /// vergessene Luecke wieder eingebaut wird; ein Test haelt sie fest.
+    /// </summary>
+    public static readonly IReadOnlyList<string> NichtExportierteFelder =
+    [
+        FieldKeys.Street,
+        FieldKeys.ClearWidthMm,
+        FieldKeys.CadastreObjectId,
+        FieldKeys.DataOwner,
+        FieldKeys.DataSupplier,
+        FieldKeys.CadastreOrganisation,
+        FieldKeys.CadastreLastChange,
+        FieldKeys.CadastreUpdatedAt
+    ];
 
     /// <summary>
     /// <c>Strasse</c> hat in SIA405 mit <c>Kanal.Standortname</c> zwar ein Ziel, wird
@@ -87,7 +119,8 @@ public static class XtfStammdatenPlanBuilder
         {
             ["Material"] = FieldKeys.PipeMaterial,
             ["Lichte_Hoehe"] = FieldKeys.NominalDiameterMm,
-            ["LaengeEffektiv"] = FieldKeys.HoldingLengthMeters
+            ["LaengeEffektiv"] = FieldKeys.HoldingLengthMeters,
+            ["Lagebestimmung"] = FieldKeys.PositionAccuracy
         };
 
     /// <summary>
@@ -110,6 +143,13 @@ public static class XtfStammdatenPlanBuilder
 
     /// <summary>Obergrenze aus <c>LaengeEffektiv: 0.00 .. 30000.00 [m]</c>.</summary>
     private const decimal LaengeMaxMeter = 30000.00m;
+
+    /// <summary>Grenzen aus <c>DOMAIN Jahr = 1800 .. 2100</c> im Basismodell.</summary>
+    private const int JahrMin = 1800;
+    private const int JahrMax = 2100;
+
+    /// <summary>Obergrenze aus <c>Bruttokosten: 0.00 .. 99999999.99 [Units.CHF]</c>.</summary>
+    private const decimal BruttokostenMax = 99_999_999.99m;
 
     /// <summary>
     /// Bringt einen Projektwert in die Schreibweise des XTF-Modells.
@@ -186,6 +226,40 @@ public static class XtfStammdatenPlanBuilder
 
         if (string.Equals(xtfName, "Profiltyp", StringComparison.Ordinal))
             return SiaKanalVokabular.Profiltyp.NachNorm(wert);
+
+        if (string.Equals(xtfName, "FunktionHydraulisch", StringComparison.Ordinal))
+            return SiaKanalVokabular.FunktionHydraulisch.NachNorm(wert);
+
+        if (string.Equals(xtfName, "Status", StringComparison.Ordinal))
+            return SiaKanalVokabular.Status.NachNorm(wert);
+
+        if (string.Equals(xtfName, "Sanierungsbedarf", StringComparison.Ordinal))
+            return SiaKanalVokabular.Sanierungsbedarf.NachNorm(wert);
+
+        if (string.Equals(xtfName, "Lagebestimmung", StringComparison.Ordinal))
+            return SiaKanalVokabular.Lagebestimmung.NachNorm(wert);
+
+        // Baujahr: ganze Jahreszahl im Bereich der Norm (DOMAIN Jahr = 1800 .. 2100).
+        if (string.Equals(xtfName, "Baujahr", StringComparison.Ordinal))
+        {
+            return int.TryParse(wert, System.Globalization.NumberStyles.Integer,
+                       System.Globalization.CultureInfo.InvariantCulture, out var jahr)
+                   && jahr is >= JahrMin and <= JahrMax
+                ? jahr.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : null;
+        }
+
+        // Bruttokosten: Franken mit zwei Stellen, 0.00 bis 99999999.99. Ueber den
+        // FachzahlParser, damit "1250.00" und "1'250.00" gleich zaehlen.
+        if (string.Equals(xtfName, "Bruttokosten", StringComparison.Ordinal))
+        {
+            if (!Common.FachzahlParser.TryParseDecimal(wert, out var franken))
+                return null;
+
+            return franken is >= 0 and <= BruttokostenMax
+                ? franken.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                : null;
+        }
 
         if (!string.Equals(xtfName, "Nutzungsart_Ist", StringComparison.Ordinal))
             return wert;

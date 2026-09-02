@@ -130,6 +130,26 @@ public static class GridDropdownFieldPolicy
                 "ProfiltypOptions",
                 AllowFreeText: false,
                 Managed: false),
+            "FunktionHydraulisch" => new GridDropdownFieldSpec(
+                optionField,
+                "FunktionHydraulischOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Status" => new GridDropdownFieldSpec(
+                optionField,
+                "StatusOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Sanierungsbedarf" => new GridDropdownFieldSpec(
+                optionField,
+                "SanierungsbedarfOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Lagebestimmung" => new GridDropdownFieldSpec(
+                optionField,
+                "LagebestimmungOptions",
+                AllowFreeText: false,
+                Managed: false),
             _ => null!
         };
 

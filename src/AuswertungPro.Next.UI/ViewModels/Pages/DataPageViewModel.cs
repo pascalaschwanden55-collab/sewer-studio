@@ -156,6 +156,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public ObservableCollection<string> VerbindungsartOptions { get; }
     public ObservableCollection<string> BettungUmhuellungOptions { get; }
     public ObservableCollection<string> ProfiltypOptions { get; }
+    public ObservableCollection<string> FunktionHydraulischOptions { get; }
+    public ObservableCollection<string> StatusOptions { get; }
+    public ObservableCollection<string> SanierungsbedarfOptions { get; }
+    public ObservableCollection<string> LagebestimmungOptions { get; }
     public ObservableCollection<ProtocolEntry> SelectedProtocolEntries => _selectedProtocolController.Entries;
     public DataPageStartFilter? StartFilter { get; }
 
@@ -275,6 +279,14 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             FieldCatalog.GetComboItems(FieldKeys.BeddingEncasement));
         ProfiltypOptions = new ObservableCollection<string>(
             FieldCatalog.GetComboItems(FieldKeys.ProfileType));
+        FunktionHydraulischOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.HydraulicFunction));
+        StatusOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.OperatingStatus));
+        SanierungsbedarfOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.RehabilitationNeed));
+        LagebestimmungOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.PositionAccuracy));
         _measureSuggestionController = new DataPageMeasureSuggestionController(
             _dialogs,
             _measureRecommendationService,

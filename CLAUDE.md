@@ -1089,8 +1089,10 @@ Altprojekte werden nicht neu importiert: `XtfKanalschadenElementReader` und
 `XtfRevisionPlanBuilder` plant geaenderte, neue und entfernte Befunde;
 `XtfStammdatenPlanBuilder` nimmt nur eindeutig zugeordnete, vom Menschen bearbeitete
 Felder auf: am `Kanal` `Nutzungsart_Ist`, `BaulicherZustand`, `FunktionHierarchisch`,
-`Verbindungsart` und `Bettung_Umhuellung`; an der `Haltung` `Material`, `Lichte_Hoehe`
-und `LaengeEffektiv`; am verwiesenen `Rohrprofil` den `Profiltyp`.
+`FunktionHydraulisch`, `Verbindungsart`, `Bettung_Umhuellung`, `Status`,
+`Sanierungsbedarf`, `Baujahr` und `Bruttokosten`; an der `Haltung` `Material`,
+`Lichte_Hoehe`, `LaengeEffektiv` und `Lagebestimmung`; am verwiesenen `Rohrprofil`
+den `Profiltyp`. Das ist die Feldliste der Kataster-Infobox von geo.ur.ch.
 `XtfSchachtPlanBuilder` tut dasselbe fuer den `Normschacht` (`Funktion`, `Material`,
 `Dimension1`/`2`, `BaulicherZustand`) — Schaechte kommen seit 2026-08-30 aus der XTF
 und gehen seit 2026-09-02 auch wieder hinaus. Offene Faelle sperren den
@@ -1101,10 +1103,13 @@ nach ausdruecklicher Bestaetigung in einen neuen Zeitstempelordner.
 
 Drei Regeln dieses Wegs nie zurueckdrehen:
 
-- **`Strasse` wird bewusst NICHT exportiert** (Entscheid 2026-09-02). Das Feld bleibt
-  im Programm vollstaendig erhalten; `Kanal.Standortname` bekommt es nicht mehr.
-  Ebenso ist `Lichte_Breite_mm` eine reine Programmangabe — `Lichte_Breite` gibt es im
-  Modell `SIA405_ABWASSER_2020_1_LV95` gar nicht.
+- **Acht Felder bleiben bewusst im Programm.** `XtfStammdatenPlanBuilder.NichtExportierteFelder`
+  fuehrt sie namentlich, ein Test haelt die Liste gegen die Exportkarten: `Strasse`
+  (haette mit `Kanal.Standortname` ein Ziel — Entscheid 2026-09-02),
+  `Lichte_Breite_mm` (gibt es im Modell nicht) sowie die sechs Herkunftsangaben
+  `Objekt_ID`, `Datenherr`, `Datenlieferant`, `Organisation`, `Letzte_Aenderung` und
+  `Aktualisierungsdatum`. Der Datenherr einer Kantonsleitung ist der Kanton, nicht der
+  Operateur; `Letzte_Aenderung` fuehrt der Schreiber ohnehin selbst nach.
 - **Der Eigentuemer ist ein Verweis, kein Text.** `XtfOrganisationsbuch` bindet ihn an
   eine `Organisation` im Topic `Administration` und legt fehlende an; Haltungen und
   Schaechte teilen sich EIN Buch je Datei. Fuehrt die Datei ueberhaupt keine

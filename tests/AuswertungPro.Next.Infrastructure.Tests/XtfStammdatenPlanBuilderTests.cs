@@ -111,6 +111,96 @@ public sealed class XtfStammdatenPlanBuilderTests
         Assert.DoesNotContain("Standortname", XtfStammdatenPlanBuilder.Felder.Keys);
     }
 
+    // Die uebrigen Felder der Kataster-Infobox. Fuellgrad im Abwassernetz des Kantons:
+    // Status 97,8 %, FunktionHydraulisch 93,5 %, Lagebestimmung 98,0 %,
+    // Baujahr 43,0 %, Sanierungsbedarf 30,6 %, Bruttokosten 18,2 %.
+    [Theory]
+    [InlineData("Status", "in_Betrieb", "Status", "in_Betrieb")]
+    [InlineData("Sanierungsbedarf", "mittelfristig", "Sanierungsbedarf", "mittelfristig")]
+    [InlineData("FunktionHydraulisch", "Freispiegelleitung", "FunktionHydraulisch", "Freispiegelleitung")]
+    [InlineData("Baujahr", "1969", "Baujahr", "1969")]
+    [InlineData("Bruttokosten", "1250", "Bruttokosten", "1250.00")]
+    [InlineData("Bruttokosten", "1250,50", "Bruttokosten", "1250.50")]
+    public void Die_Infobox_Felder_gehen_an_den_Kanal(
+        string projektFeld, string eingabe, string xtfName, string erwartet)
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(projektFeld, eingabe, FieldSource.Manual, userEdited: true);
+
+        var feld = Assert.Single(Assert.Single(Baue(record)).Felder);
+
+        Assert.Equal(xtfName, feld.Name);
+        Assert.Equal(erwartet, feld.Neu);
+    }
+
+    // Die Lagebestimmung haengt an der physischen Klasse "Haltung", nicht am "Kanal".
+    [Fact]
+    public void Die_Lagebestimmung_geht_an_die_Haltung()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.PositionAccuracy, "genau", FieldSource.Manual, userEdited: true);
+
+        var position = Assert.Single(PlanMitHaltung(record).Positionen);
+        var feld = Assert.Single(position.Felder);
+
+        Assert.Equal("ch010wcsHA000001", position.KanalschadenTid);
+        Assert.Equal("Lagebestimmung", feld.Name);
+        Assert.Equal("genau", feld.Neu);
+    }
+
+    // Ausserhalb des Wertebereichs wird nichts geschrieben — auch keine gerundete oder
+    // gekappte Fassung. Der Bereich steht in der Norm, nicht im Programm.
+    [Theory]
+    [InlineData("Baujahr", "1799")]
+    [InlineData("Baujahr", "2101")]
+    [InlineData("Baujahr", "vor 1900")]
+    [InlineData("Bruttokosten", "-5")]
+    [InlineData("Status", "stillgelegt")]
+    [InlineData("FunktionHydraulisch", "Freispiegel")]
+    public void Ein_Wert_ausserhalb_der_Norm_wird_nicht_geschrieben(string projektFeld, string eingabe)
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(projektFeld, eingabe, FieldSource.Manual, userEdited: true);
+
+        var plan = Plan(record);
+
+        Assert.Empty(plan.Positionen);
+        Assert.NotEmpty(plan.Hinweise);
+    }
+
+    // Die Herkunftsangaben des Katasters bleiben im Programm, gehen aber nie zurueck.
+    // Der Datenherr einer Kantonsleitung ist der Kanton, nicht der Operateur.
+    [Theory]
+    [InlineData(FieldKeys.CadastreObjectId, "610646")]
+    [InlineData(FieldKeys.DataOwner, "Acht Grad Ost AG, Altdorf")]
+    [InlineData(FieldKeys.DataSupplier, "Acht Grad Ost AG, Altdorf")]
+    [InlineData(FieldKeys.CadastreOrganisation, "unbekannt")]
+    [InlineData(FieldKeys.CadastreLastChange, "14.02.2025")]
+    [InlineData(FieldKeys.CadastreUpdatedAt, "28.08.2026")]
+    [InlineData(FieldKeys.ClearWidthMm, "900")]
+    [InlineData(FieldKeys.Street, "Neue Gasse")]
+    public void Eine_Herkunftsangabe_geht_nie_in_die_Revision(string projektFeld, string eingabe)
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(projektFeld, eingabe, FieldSource.Manual, userEdited: true);
+
+        Assert.Empty(PlanMitHaltung(record).Positionen);
+        Assert.Contains(projektFeld, XtfStammdatenPlanBuilder.NichtExportierteFelder);
+    }
+
+    // Kein Feld darf gleichzeitig exportiert und als nicht exportiert gefuehrt werden.
+    [Fact]
+    public void Die_Verzichtsliste_widerspricht_dem_Export_nicht()
+    {
+        var exportiert = XtfStammdatenPlanBuilder.Felder.Values
+            .Concat(XtfStammdatenPlanBuilder.HaltungFelder.Values)
+            .Concat(XtfStammdatenPlanBuilder.RohrprofilFelder.Values)
+            .Concat(XtfStammdatenPlanBuilder.EigentuemerFeldKarte.Values)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Empty(XtfStammdatenPlanBuilder.NichtExportierteFelder.Where(exportiert.Contains));
+    }
+
     // Die sekundaere Abwasseranlage fehlte in der Auswahl ganz, obwohl der Kataster sie
     // fuehrt. Ein SAA-Wert muss deshalb ebenso hinausgehen wie ein PAA-Wert.
     [Fact]

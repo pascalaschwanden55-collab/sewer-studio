@@ -56,7 +56,22 @@ public static class FieldCatalog
         FieldKeys.ConnectionType,
         FieldKeys.BeddingEncasement,
         FieldKeys.ProfileType,
-        FieldKeys.ClearWidthMm
+        FieldKeys.ClearWidthMm,
+        // Die uebrigen Felder der Kataster-Infobox, ergaenzt 2026-09-02. Die ersten
+        // sechs haben in SIA405 ein Ziel; die sechs Herkunftsangaben danach nicht —
+        // sie sind Nachweis, keine Aussage von SewerStudio.
+        FieldKeys.OperatingStatus,
+        FieldKeys.RehabilitationNeed,
+        FieldKeys.HydraulicFunction,
+        FieldKeys.PositionAccuracy,
+        FieldKeys.ConstructionYear,
+        FieldKeys.GrossCost,
+        FieldKeys.CadastreObjectId,
+        FieldKeys.DataOwner,
+        FieldKeys.DataSupplier,
+        FieldKeys.CadastreOrganisation,
+        FieldKeys.CadastreLastChange,
+        FieldKeys.CadastreUpdatedAt
     });
 
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> ComboItems =
@@ -120,7 +135,15 @@ public static class FieldCatalog
             [FieldKeys.BeddingEncasement] = new ReadOnlyCollection<string>(
                 SiaKanalVokabular.BettungUmhuellung.Auswahl.ToList()),
             [FieldKeys.ProfileType] = new ReadOnlyCollection<string>(
-                SiaKanalVokabular.Profiltyp.Auswahl.ToList())
+                SiaKanalVokabular.Profiltyp.Auswahl.ToList()),
+            [FieldKeys.HydraulicFunction] = new ReadOnlyCollection<string>(
+                SiaKanalVokabular.FunktionHydraulisch.Auswahl.ToList()),
+            [FieldKeys.OperatingStatus] = new ReadOnlyCollection<string>(
+                SiaKanalVokabular.Status.Auswahl.ToList()),
+            [FieldKeys.RehabilitationNeed] = new ReadOnlyCollection<string>(
+                SiaKanalVokabular.Sanierungsbedarf.Auswahl.ToList()),
+            [FieldKeys.PositionAccuracy] = new ReadOnlyCollection<string>(
+                SiaKanalVokabular.Lagebestimmung.Auswahl.ToList())
         });
 
     public static readonly IReadOnlyDictionary<string, FieldDefinition> Definitions =
@@ -164,7 +187,19 @@ public static class FieldCatalog
             [FieldKeys.ConnectionType] = new(FieldKeys.ConnectionType, "Verbindungsart", FieldType.Combo, ComboItems[FieldKeys.ConnectionType]),
             [FieldKeys.BeddingEncasement] = new(FieldKeys.BeddingEncasement, "Bettung/Umhüllung", FieldType.Combo, ComboItems[FieldKeys.BeddingEncasement]),
             [FieldKeys.ProfileType] = new(FieldKeys.ProfileType, "Profiltyp", FieldType.Combo, ComboItems[FieldKeys.ProfileType]),
-            [FieldKeys.ClearWidthMm] = new(FieldKeys.ClearWidthMm, "Lichte Breite mm", FieldType.Int)
+            [FieldKeys.ClearWidthMm] = new(FieldKeys.ClearWidthMm, "Lichte Breite mm", FieldType.Int),
+            [FieldKeys.OperatingStatus] = new(FieldKeys.OperatingStatus, "Status", FieldType.Combo, ComboItems[FieldKeys.OperatingStatus]),
+            [FieldKeys.RehabilitationNeed] = new(FieldKeys.RehabilitationNeed, "Sanierungsbedarf", FieldType.Combo, ComboItems[FieldKeys.RehabilitationNeed]),
+            [FieldKeys.HydraulicFunction] = new(FieldKeys.HydraulicFunction, "Funktion hydraulisch", FieldType.Combo, ComboItems[FieldKeys.HydraulicFunction]),
+            [FieldKeys.PositionAccuracy] = new(FieldKeys.PositionAccuracy, "Lagebestimmung", FieldType.Combo, ComboItems[FieldKeys.PositionAccuracy]),
+            [FieldKeys.ConstructionYear] = new(FieldKeys.ConstructionYear, "Baujahr", FieldType.Int),
+            [FieldKeys.GrossCost] = new(FieldKeys.GrossCost, "Bruttokosten (Kataster)", FieldType.Decimal),
+            [FieldKeys.CadastreObjectId] = new(FieldKeys.CadastreObjectId, "Objekt-ID (Kataster)", FieldType.Text),
+            [FieldKeys.DataOwner] = new(FieldKeys.DataOwner, "Datenherr", FieldType.Text),
+            [FieldKeys.DataSupplier] = new(FieldKeys.DataSupplier, "Datenlieferant", FieldType.Text),
+            [FieldKeys.CadastreOrganisation] = new(FieldKeys.CadastreOrganisation, "Organisation", FieldType.Text),
+            [FieldKeys.CadastreLastChange] = new(FieldKeys.CadastreLastChange, "Letzte Änderung", FieldType.Text),
+            [FieldKeys.CadastreUpdatedAt] = new(FieldKeys.CadastreUpdatedAt, "Aktualisierungsdatum", FieldType.Text)
         });
 
     public static FieldDefinition Get(string fieldName)

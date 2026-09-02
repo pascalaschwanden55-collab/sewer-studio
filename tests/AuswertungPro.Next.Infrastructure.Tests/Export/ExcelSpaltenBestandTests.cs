@@ -44,7 +44,13 @@ public sealed class ExcelSpaltenBestandTests
                  {
                      FieldKeys.ConnectionType, FieldKeys.BeddingEncasement,
                      FieldKeys.ProfileType, FieldKeys.ClearWidthMm,
-                     FieldKeys.HierarchicalFunction
+                     FieldKeys.HierarchicalFunction,
+                     FieldKeys.OperatingStatus, FieldKeys.RehabilitationNeed,
+                     FieldKeys.HydraulicFunction, FieldKeys.PositionAccuracy,
+                     FieldKeys.ConstructionYear, FieldKeys.GrossCost,
+                     FieldKeys.CadastreObjectId, FieldKeys.DataOwner,
+                     FieldKeys.DataSupplier, FieldKeys.CadastreOrganisation,
+                     FieldKeys.CadastreLastChange, FieldKeys.CadastreUpdatedAt
                  })
         {
             var label = FieldCatalog.Get(feld).Label;

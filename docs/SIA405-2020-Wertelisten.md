@@ -232,10 +232,16 @@ das ihr eigener Export nicht liefert.
 | `FunktionHierarchisch` | Kanal | `FunktionHierarchisch` | `SiaKanalVokabular`, 14 Blattwerte |
 | `Verbindungsart` | Kanal | `Verbindungsart` | `SiaKanalVokabular`, 13 Werte |
 | `Bettung_Umhuellung` | Kanal | `Bettung_Umhuellung` | `SiaKanalVokabular`, 14 Werte |
+| `FunktionHydraulisch` | Kanal | `FunktionHydraulisch` | `SiaKanalVokabular`, 12 Werte |
+| `Status` | Kanal | `Status` | `SiaKanalVokabular`, 5 Werte |
+| `Sanierungsbedarf` | Kanal | `Sanierungsbedarf` | `SiaKanalVokabular`, 6 Werte |
+| `Baujahr` | Kanal | `Baujahr` | ganze Jahreszahl, 1800..2100 |
+| `Bruttokosten` | Kanal | `Bruttokosten` | Franken mit zwei Stellen, 0..99999999.99 |
 | `EigentuemerRef` | Kanal | `Eigentuemer` | Verweis auf eine Organisation |
 | `Material` | **Haltung** | `Rohrmaterial` | `MaterialVokabular`, modellabhaengig |
 | `Lichte_Hoehe` | **Haltung** | `DN_mm` | ganze Millimeter, 1..99999 |
 | `LaengeEffektiv` | **Haltung** | `Haltungslaenge_m` | Meter mit zwei Stellen, 0..30000 |
+| `Lagebestimmung` | **Haltung** | `Lagebestimmung` | `SiaKanalVokabular`, 3 Werte |
 | `Profiltyp` | **Rohrprofil** | `Profiltyp` | ueber `RohrprofilRef`, 7 Werte |
 | `Funktion` | **Normschacht** | `Funktion` | `SchachtFunktionVokabular` |
 | `Material` | **Normschacht** | `Material` | `SchachtMaterialVokabular`, nur 4 Werte |
@@ -247,6 +253,22 @@ das ihr eigener Export nicht liefert.
 vollstaendig erhalten und bearbeitbar — es geht nur nicht mehr in die Revision
 (Entscheid 2026-09-02). `XtfStammdatenPlanBuilderTests.Die_Strasse_wird_nicht_mehr_exportiert`
 haelt den Verzicht fest, damit die Zeile nicht als vergessene Luecke wieder eingebaut wird.
+
+### Acht Felder bleiben bewusst im Programm
+
+`XtfStammdatenPlanBuilder.NichtExportierteFelder` fuehrt sie namentlich, ein Test
+haelt die Liste gegen die Exportkarten:
+
+| Feld | Warum nicht |
+|---|---|
+| `Strasse` | haette mit `Kanal.Standortname` ein Ziel — Entscheid 2026-09-02 |
+| `Lichte_Breite_mm` | im Modell gibt es keine lichte Breite |
+| `Objekt_ID` | die XTF kennt kein Feld dafuer, die Identitaet ist die TID |
+| `Datenherr` | in SIA405 ein Organisationsverweis; SewerStudio ist nicht der Datenherr |
+| `Datenlieferant` | dasselbe |
+| `Organisation` | im Kataster bei allen 110297 Leitungen leer |
+| `Letzte_Aenderung` | fuehrt `XtfRevisionWriter` selbst nach, wo die Datei es kennt |
+| `Aktualisierungsdatum` | Buchhaltung des QGIS-Exports, kein SIA405-Feld |
 
 Geschrieben wird weiterhin ausschliesslich, was der Mensch von Hand gesetzt hat
 (`FieldMeta.UserEdited`). Ein importierter Wert geht nie in die Datei zurueck, aus der
@@ -516,3 +538,68 @@ Im Echtlauf am Kantonsausschnitt stand `Verbindungsart` vorher hinter
 `EigentuemerRef` — die Datei fuehrt das Feld an keinem Kanal, also gab es kein
 Vorbild, und in der Modellliste ist es das letzte. Ein Verweis selbst wird von dieser
 Regel nicht vorgezogen.
+
+
+## Was in diesen Feldern wirklich steht
+
+Gemessen am 2026-09-02 an `D:\QGIS_V4.2\Layer\Leitungen Lokal.gpkg`, 110297
+Leitungen. "echt" heisst: weder leer noch `unbekannt`.
+
+| Feld | echt gefuellt | haeufigster Wert |
+|---|---|---|
+| `ka_funktionhierarchisch` | **100,0 %** | SAA.Liegenschaftsentwaesserung (62801) |
+| `ha_lagebestimmung` | 98,0 % | genau |
+| `bw_status` | 97,8 % | in_Betrieb |
+| `ka_funktionhydraulisch` | 93,5 % | Freispiegelleitung (92872) |
+| `bw_baujahr` | 43,0 % | — |
+| `bw_baulicherzustand` | 33,8 % | Z4 |
+| `bw_sanierungsbedarf` | 30,6 % | keiner |
+| `bw_bruttokosten` | 18,2 % | — |
+| `ka_verbindungsart` | **1,0 %** | Steckmuffen (646) |
+| `ka_bettung_umhuellung` | **1,0 %** | SIA_Typ1 (476) |
+| `ha_innenschutz` | 0,1 % | andere |
+| `org_organisation`, `gemeinde` | **0 %** | leer |
+
+Zwei Folgerungen: Die funktionale Hierarchie ist zu **78 % ein SAA-Wert**
+(62801 + 17729 + 5753 von 110297). Die Auswahl in SewerStudio kannte bis
+2026-09-02 keinen einzigen SAA-Wert — fuer vier Fuenftel des Bestands gab es also
+gar keinen passenden Eintrag. Und `Verbindungsart` und `Bettung_Umhuellung` sind im
+Kataster praktisch leer: Dort hat der Rueckweg wenig zu korrigieren, aber viel
+beizutragen.
+
+### 383 Leitungen tragen einen Wert, den das Modell nicht kennt
+
+Ebenfalls gemessen, bei `ka_funktionhierarchisch` — 21 verschiedene Werte, das
+Modell erlaubt 14:
+
+| Wert | Anzahl | Warum ungueltig |
+|---|---|---|
+| `SAA.Sammelkanal` | 247 | `SAA` hat kein `Sammelkanal` |
+| `SAA.Gewaesser` | 94 | `SAA` hat kein `Gewaesser` |
+| `SAA.Hauptsammelkanal` | 15 | `SAA` hat kein `Hauptsammelkanal` |
+| (leer) | 17 | — |
+| `.` | 8 | offensichtlich kaputt |
+| `unbekannt.unbekannt` | 1 | — |
+| `.andere` | 1 | — |
+
+`PAA` hat neun Blaetter, `SAA` nur fuenf (andere, Liegenschaftsentwaesserung,
+Sanierungsleitung, Strassenentwaesserung, unbekannt). Ein INTERLIS-Pruefer lehnt
+diese Werte ab; SewerStudio schreibt sie fail-closed nicht.
+
+## Melioration: kein Eigentuemertyp, aber eine Leitungsfunktion
+
+`Organisationstyp` kennt kein `Melioration` — deshalb stehen
+`Meliorationsgenossenschaft Reussebene Uri` und `Meliorationsgesellschaft Seedorf`
+auf `Genossenschaft_Korporation`.
+
+Das Modell fuehrt den Begriff dafuer an anderer Stelle:
+
+| Feld | Werte |
+|---|---|
+| `Kanal.FunktionMelioration` | Hauptkanal · Sammelkanal · Sauger · unbekannt |
+| `Abwasserknoten.Funktion_Knoten_Melioration` | 8 Werte |
+
+Der Kataster fuehrt diese Spalte nicht: In den 54 Spalten von `Leitungen Lokal`
+kommt "Melioration" nur im Eigentuemernamen vor. 1649 Leitungen gehoeren zwei
+Meliorations-Organisationen, keine einzige ist als Meliorationsleitung
+gekennzeichnet.
