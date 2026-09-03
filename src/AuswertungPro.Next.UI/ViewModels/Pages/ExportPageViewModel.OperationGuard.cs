@@ -1,4 +1,4 @@
-namespace AuswertungPro.Next.UI.ViewModels.Pages;
+﻿namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class ExportPageViewModel
 {
@@ -33,6 +33,21 @@ public sealed partial class ExportPageViewModel
         try
         {
             ErzeugeXtfRevision();
+        }
+        finally
+        {
+            EndProjectOperation();
+        }
+    }
+
+    private void RunXtfNeuWithProjectOperation()
+    {
+        if (!TryBeginProjectOperation(allowsInternalProjectSave: false))
+            return;
+
+        try
+        {
+            ErzeugeXtfNeu();
         }
         finally
         {

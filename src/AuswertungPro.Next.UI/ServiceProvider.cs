@@ -163,6 +163,9 @@ namespace AuswertungPro.Next.UI
 
         /// <summary>Erzeugt revidierte XTF-Dateien aus dem aktuellen Projektstand.</summary>
         public AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService XtfRevisionExport { get; }
+
+        /// <summary>Der Erstexport: eine neue XTF fuer Objekte ohne Katastervorlage.</summary>
+        public AuswertungPro.Next.Application.Xtf.IXtfNeuExportService XtfNeuExport { get; }
         public IProjectContentSignature ProjectContentSignature { get; }
         public IImportTransactionJournal ImportTransactionJournal { get; }
         public IImportTransactionRecoveryService ImportTransactionRecovery { get; }
@@ -471,6 +474,9 @@ namespace AuswertungPro.Next.UI
             ProjectPhotoReferences = new ProjectPhotoReferenceNormalizationService();
             Projects = new JsonProjectRepository(ProjectPhotoReferences);
             XtfRevisionExport = new AuswertungPro.Next.Infrastructure.Import.Xtf.XtfRevisionExportService();
+            XtfNeuExport = new AuswertungPro.Next.Infrastructure.Import.Xtf.XtfNeuExportService(
+                new AuswertungPro.Next.Infrastructure.Lookup.QgisGpkgVerlaufLeser(
+                    () => Settings.QgisHaltungenGpkgPath));
             ProjectContentSignature = new JsonProjectContentSignature();
             ImportTransactionJournal = new FileImportTransactionJournal();
             ImportTransactionRecovery = new ImportTransactionRecoveryService(ImportTransactionJournal);

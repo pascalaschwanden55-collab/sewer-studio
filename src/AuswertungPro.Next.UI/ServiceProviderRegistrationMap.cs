@@ -112,6 +112,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IProgramSnapshotService)] = services.ProgramSnapshot,
             [typeof(IProjectRepository)] = services.Projects,
             [typeof(AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService)] = services.XtfRevisionExport,
+            [typeof(AuswertungPro.Next.Application.Xtf.IXtfNeuExportService)] = services.XtfNeuExport,
             [typeof(ICostStoreFactory)] = services.CostStores,
             [typeof(IProjectPhotoReferenceNormalizer)] = services.ProjectPhotoReferences,
             [typeof(IProjectFileDiscovery)] = services.ProjectFileDiscovery,

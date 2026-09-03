@@ -1130,6 +1130,43 @@ Vier Regeln dieses Wegs nie zurueckdrehen:
 - **Der `Profiltyp` haengt am `Rohrprofil`**, auf das die Haltung ueber `RohrprofilRef`
   zeigt. Ein von mehreren Haltungen geteiltes Profil wird nicht geaendert.
 
+`IXtfNeuExportService`/`XtfNeuExportService` ist der Gegenweg fuer Objekte, die es im
+Kataster noch NICHT gibt — im Projekt Jagdmatt sind das 33 von 72 Haltungen, offenbar
+private Anschlussleitungen. Der Revisionsweg braucht eine Originaldatei; diese Objekte
+haben keine. `XtfNeuPlanBuilder` (reine Rechnung) baut den vollstaendigen SIA405-Verbund
+je Haltung: `Kanal` (logisch), `Haltung` (physisch), `Rohrprofil` und ZWEI
+`Haltungspunkt`e; je Schacht `Normschacht` und `Abwasserknoten`. `XtfNeuWriter` setzt den
+Plan in XML um und entscheidet nichts. Es gilt dasselbe Vokabular wie beim Revisionsweg —
+kein zweiter Uebersetzer.
+
+Fuenf Regeln dieses Wegs nie zurueckdrehen:
+
+- **Die Objektkennungen sind stabil.** Sie werden aus Projekt-Id, Klasse und fachlichem
+  Schluessel abgeleitet (SHA-256, Praefix `chSST`, 16 Zeichen). Waeren sie zufaellig oder
+  ein Zaehler, legte das Zielsystem bei jedem Export neue Objekte an — aus einer Korrektur
+  wuerde eine Verdopplung.
+- **Haltungspunkte heissen nach der HALTUNG, nicht nach dem Schacht.**
+  `Haltungspunkt.Constraint1` verlangt Eindeutigkeit von Bezeichnung plus Datenherr. In
+  einer Kette 1-2, 2-3 teilen sich Nachbarhaltungen ihre Schaechte; nach ihnen benannt,
+  weist der ilivalidator die ganze Datei ab (real passiert, 2026-09-03). Der
+  Kantonsexport macht es aus demselben Grund so. Bei Ueberlaenge (`TEXT*20`) wird gekuerzt
+  und durchnummeriert — die fachliche Zuordnung traegt der Verweis auf den Abwasserknoten,
+  nicht der Text.
+- **Drei Verweise sind Pflicht ({1}):** `DatenherrRef`, `DatenlieferantRef` und am
+  Abwasserbauwerk `EigentuemerRef`. Ohne bekannten Eigentuemer entsteht das Objekt NICHT.
+  Datenherr und Datenlieferant tragen denselben Eintrag — fuer eine Ersterfassung die
+  naheliegende Annahme. Der Bericht verweist auf "Leere Felder aus QGIS ergaenzen".
+- **`Organisation.Status` ist MANDATORY** (`aktiv` | `untergegangen`). Fehlt es, weist der
+  Pruefer die ganze Datei ab.
+- **Die Geometrie kommt aus der QGIS-Kopie**, ueber `IXtfVerlaufQuelle`/
+  `QgisGpkgVerlaufLeser` und die reine Byte-Logik `GpkgGeometrie` (GeoPackage-Kopf plus
+  WKB, LineString und MultiLineString, EPSG:2056). Ein mehrdeutiger Name liefert nichts.
+  `Verlauf` ist im Modell nicht Pflicht: Ohne Treffer geht das Objekt ohne Geometrie
+  hinaus, und der Bericht sagt es.
+
+Belegt am 2026-09-03: 44 Haltungen aus dem echten Projekt Jagdmatt, mit Verlaeufen aus
+`Leitungen Lokal.gpkg`, ergeben eine vom ilivalidator 1.15.0 fehlerfrei akzeptierte Datei.
+
 Wertelisten, Messwerte und die belegten Fallen stehen in
 `docs/SIA405-2020-Wertelisten.md`.
 

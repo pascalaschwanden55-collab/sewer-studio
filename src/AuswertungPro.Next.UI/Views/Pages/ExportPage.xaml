@@ -200,6 +200,30 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Neue XTF: braucht keine Originaldatei, schreibt alles selbst. -->
+                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" Padding="12" CornerRadius="8" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="Neue XTF (Ersterfassung)" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"/>
+                            <TextBlock Text="Schreibt alle Haltungen und Schächte des Projekts als neue SIA405-Datei — für Leitungen, die es im Kataster noch nicht gibt. Braucht keine Originaldatei."
+                                       FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                       TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <Button Command="{Binding ErzeugeXtfNeuCommand}"
+                                    HorizontalAlignment="Left" Padding="14,6"
+                                    ToolTip="Zeigt zuerst, was hineinkommt und was fehlt. Geschrieben wird erst nach deiner Bestätigung.">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE8A5;" Margin="0,0,8,0"
+                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Neue XTF erzeugen" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Text="Der Verlauf kommt aus der QGIS-Kopie, wo die Haltung dort eindeutig zu finden ist."
+                                       FontSize="10" Foreground="{DynamicResource MutedBrush}"
+                                       TextWrapping="Wrap" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="Verzeichnisbaum für die Verteilung"
                                FontWeight="SemiBold" FontSize="12"
                                Foreground="{DynamicResource TextBrush}" Margin="2,2,0,6"/>

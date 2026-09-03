@@ -105,9 +105,12 @@ public sealed class ServiceProviderRegistrationTests
         // 152 -> 153: IQgisBestandLeser liest die lokalen GeoPackage-Kopien des
         // Abwassernetzes fuer "Leere Felder aus QGIS ergaenzen" — offline, ohne den
         // gedrosselten Netzdienst des Kantons.
+        // 153 -> 154: IXtfNeuExportService schreibt eine NEUE SIA405-Datei fuer Objekte
+        // ohne Katastervorlage. Der Revisionsweg braucht eine Originaldatei; private
+        // Anschlussleitungen haben keine.
         Assert.True(
-            registrations.Count == 153,
-            $"Erwartet 153 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 154,
+            $"Erwartet 154 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(

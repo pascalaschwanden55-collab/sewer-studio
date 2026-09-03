@@ -30,6 +30,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
     private readonly AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService _xtfRevisionExport;
+    private readonly AuswertungPro.Next.Application.Xtf.IXtfNeuExportService _xtfNeuExport;
     private readonly IExcelExportService _excelExport;
     private readonly IToastService _toasts;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
@@ -74,6 +75,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
 
     /// <summary>Erzeugt aus dem aktuellen Projektstand revidierte XTF-Dateien.</summary>
     public IRelayCommand ErzeugeXtfRevisionCommand { get; }
+    public IRelayCommand ErzeugeXtfNeuCommand { get; }
 
     /// <summary>Verzeichnisbaum-Karten fuer Haltungen, Schaechte und Dichtheitspruefungen.</summary>
     public IReadOnlyList<DistributionTargetConfigViewModel> DistributionTargets { get; }
@@ -167,6 +169,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         IKatasterXtfPathResolver? katasterXtfPaths,
         IHaltungCadastreIndexProvider? haltungCadastreIndexes,
         AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService? xtfRevisionExport = null,
+        AuswertungPro.Next.Application.Xtf.IXtfNeuExportService? xtfNeuExport = null,
         IShaftDistributionService? shaftDistribution = null,
         Application.Export.IDistributionReconciliationService? distributionReconciliation = null,
         IImportFileStagingService? importFileStaging = null,
@@ -194,7 +197,12 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         BrowseExcelExportRootCommand = new RelayCommand(BrowseExcelExportRoot);
         _xtfRevisionExport = xtfRevisionExport
             ?? new AuswertungPro.Next.Infrastructure.Import.Xtf.XtfRevisionExportService();
+        _xtfNeuExport = xtfNeuExport
+            ?? new AuswertungPro.Next.Infrastructure.Import.Xtf.XtfNeuExportService(
+                new AuswertungPro.Next.Infrastructure.Lookup.QgisGpkgVerlaufLeser(
+                    () => settings?.QgisHaltungenGpkgPath));
         ErzeugeXtfRevisionCommand = new RelayCommand(RunXtfRevisionWithProjectOperation, CanRunProjectExportCommands);
+        ErzeugeXtfNeuCommand = new RelayCommand(RunXtfNeuWithProjectOperation, CanRunProjectExportCommands);
         _patternResolver = patternResolver ?? new DistributionPatternResolver();
         _directoryTreeResolver = directoryTreeResolver ?? new DistributionDirectoryTreeResolver(_patternResolver);
         _katasterXtfPaths = katasterXtfPaths ?? KatasterXtfPathResolver.CompatibilityService;
@@ -382,6 +390,55 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         _toasts.Success(LastResult);
     }
 
+    /// <summary>
+    /// Erzeugt eine NEUE XTF aus dem Projektstand — fuer Objekte, die es im Kataster noch
+    /// nicht gibt. Erst der Bericht, dann auf Bestaetigung die Datei.
+    /// </summary>
+    private void ErzeugeXtfNeu()
+    {
+        var ziel = ExcelExportRoot;
+        if (string.IsNullOrWhiteSpace(ziel))
+            ziel = _dialogs.SelectFolder("Zielordner fuer die neue XTF waehlen");
+        if (string.IsNullOrWhiteSpace(ziel))
+            return;
+
+        var pruefung = _xtfNeuExport.Erzeuge(
+            new AuswertungPro.Next.Application.Xtf.XtfNeuExportRequest(
+                _shell.Project, ziel!, NurPruefen: true));
+
+        if (!pruefung.Ok)
+        {
+            _dialogs.Error(
+                string.IsNullOrWhiteSpace(pruefung.Bericht)
+                    ? pruefung.Fehler ?? "Die Pruefung ist fehlgeschlagen."
+                    : $"{pruefung.Bericht}\n\n{pruefung.Fehler}",
+                "Neue XTF");
+            return;
+        }
+
+        var weiter = _dialogs.ConfirmCancel(
+            $"{pruefung.Bericht}\n\nDie Datei jetzt schreiben?",
+            "Neue XTF");
+        if (weiter != DialogConfirm.Yes)
+        {
+            LastResult = "Export abgebrochen.";
+            return;
+        }
+
+        var ergebnis = _xtfNeuExport.Erzeuge(
+            new AuswertungPro.Next.Application.Xtf.XtfNeuExportRequest(_shell.Project, ziel!));
+
+        if (!ergebnis.Ok)
+        {
+            _dialogs.Error(ergebnis.Fehler ?? ergebnis.Bericht, "Neue XTF");
+            LastResult = "Neue XTF nicht erzeugt.";
+            return;
+        }
+
+        LastResult = $"Neue XTF erzeugt: {System.IO.Path.GetFileName(ergebnis.Datei)}";
+        _toasts.Success(LastResult);
+    }
+
     private void BrowseExcelExportRoot()
     {
         var selected = _dialogs.SelectFolder("Gemeinsamen Excel-Zielordner waehlen");
@@ -429,6 +486,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         DistributeShaftsSanierungCommand.NotifyCanExecuteChanged();
         DistributeDichtheitCommand.NotifyCanExecuteChanged();
         ErzeugeXtfRevisionCommand.NotifyCanExecuteChanged();
+        ErzeugeXtfNeuCommand.NotifyCanExecuteChanged();
     }
 
     public bool ConfirmLeave()

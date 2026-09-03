@@ -1,0 +1,279 @@
+using AuswertungPro.Next.Application.Xtf;
+using AuswertungPro.Next.Domain.Models;
+
+namespace AuswertungPro.Next.Infrastructure.Tests;
+
+/// <summary>
+/// Der Erstexport: Aus dem Projektstand entsteht eine vollstaendige neue SIA405-XTF fuer
+/// Objekte, die es im Kataster noch nicht gibt.
+/// </summary>
+public sealed class XtfNeuPlanBuilderTests
+{
+    [Fact]
+    public void Eine_Haltung_wird_zum_vollstaendigen_Objektverbund()
+    {
+        var plan = XtfNeuPlanBuilder.Build([Haltung()], [Schacht("80401"), Schacht("80409")]);
+
+        Assert.Equal(1, plan.Haltungen);
+        Assert.Equal(2, plan.Schaechte);
+
+        // Kanal, Haltung, 2 Haltungspunkte, Rohrprofil, 2x(Normschacht+Abwasserknoten), Organisation
+        Assert.Equal(
+            new[] { "Abwasserknoten", "Haltung", "Haltungspunkt", "Kanal", "Normschacht",
+                    "Organisation", "Rohrprofil" },
+            plan.Objekte.Select(o => o.Klasse).Distinct().OrderBy(k => k, StringComparer.Ordinal));
+
+        Assert.Equal(2, plan.Objekte.Count(o => o.Klasse == "Haltungspunkt"));
+    }
+
+    [Fact]
+    public void Die_Haltung_verweist_auf_Kanal_Profil_und_beide_Haltungspunkte()
+    {
+        var plan = XtfNeuPlanBuilder.Build([Haltung()], [Schacht("80401"), Schacht("80409")]);
+        var haltung = plan.Objekte.Single(o => o.Klasse == "Haltung");
+
+        var namen = haltung.Verweise.Select(v => v.Name).ToList();
+        Assert.Contains("AbwasserbauwerkRef", namen);
+        Assert.Contains("RohrprofilRef", namen);
+        Assert.Contains("vonHaltungspunktRef", namen);
+        Assert.Contains("nachHaltungspunktRef", namen);
+
+        var kanal = plan.Objekte.Single(o => o.Klasse == "Kanal");
+        Assert.Equal(
+            kanal.Tid,
+            haltung.Verweise.Single(v => v.Name == "AbwasserbauwerkRef").ZielTid);
+    }
+
+    [Fact]
+    public void Der_Haltungspunkt_haengt_am_Abwasserknoten_seines_Schachts()
+    {
+        var plan = XtfNeuPlanBuilder.Build([Haltung()], [Schacht("80401"), Schacht("80409")]);
+
+        var oben = plan.Objekte.Single(o => o.Klasse == "Haltungspunkt"
+            && o.Felder.Any(f => f.Value == "80401-80409_von"));
+        var knoten = plan.Objekte.Single(o => o.Klasse == "Abwasserknoten"
+            && o.Felder.Any(f => f.Value == "80401"));
+
+        Assert.Equal(
+            knoten.Tid,
+            oben.Verweise.Single(v => v.Name == "AbwassernetzelementRef").ZielTid);
+    }
+
+    [Fact]
+    public void Ohne_Eigentuemer_entsteht_kein_Objekt()
+    {
+        // EigentuemerRef ist am Abwasserbauwerk {1} — Pflicht. Eine erfundene
+        // Organisation waere eine Aussage, die niemand getroffen hat.
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.Owner, "", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfNeuPlanBuilder.Build([record], []);
+
+        Assert.Equal(0, plan.Haltungen);
+        Assert.Empty(plan.Objekte);
+        Assert.Contains("Eigentuemer", Assert.Single(plan.Hinweise), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Ein_unbekannter_Organisationstyp_sperrt_das_Objekt()
+    {
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.Owner, "Firma Muster GmbH", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfNeuPlanBuilder.Build([record], []);
+
+        Assert.Equal(0, plan.Haltungen);
+        Assert.Contains("Organisationstyp", Assert.Single(plan.Hinweise), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Die_Organisation_traegt_den_Pflichtstatus_aktiv()
+    {
+        // Ohne "Status" weist der ilivalidator die ganze Datei ab.
+        var organisation = XtfNeuPlanBuilder.Build([Haltung()], []).Objekte
+            .Single(o => o.Klasse == "Organisation");
+
+        Assert.Equal("aktiv", organisation.Felder.Single(f => f.Key == "Status").Value);
+        Assert.True(organisation.ImTopicAdministration);
+    }
+
+    [Fact]
+    public void Dieselben_Daten_ergeben_dieselben_Kennungen()
+    {
+        // Waeren die Kennungen zufaellig, legte das Zielsystem bei jedem Export neue
+        // Objekte an — aus einer Korrektur wuerde eine Verdopplung.
+        var eins = XtfNeuPlanBuilder.Build([Haltung()], [Schacht("80401")], "PROJEKT-A");
+        var zwei = XtfNeuPlanBuilder.Build([Haltung()], [Schacht("80401")], "PROJEKT-A");
+
+        Assert.Equal(
+            eins.Objekte.Select(o => o.Tid),
+            zwei.Objekte.Select(o => o.Tid));
+    }
+
+    [Fact]
+    public void Ein_anderes_Projekt_ergibt_andere_Kennungen()
+    {
+        var a = XtfNeuPlanBuilder.Build([Haltung()], [], "PROJEKT-A");
+        var b = XtfNeuPlanBuilder.Build([Haltung()], [], "PROJEKT-B");
+
+        Assert.Empty(a.Objekte.Select(o => o.Tid).Intersect(b.Objekte.Select(o => o.Tid)));
+    }
+
+    [Fact]
+    public void Jede_Kennung_ist_sechzehn_Zeichen_lang()
+    {
+        // STANDARDOID ist in INTERLIS OID TEXT*16. Fuenfzehn weist der Pruefer ab.
+        var plan = XtfNeuPlanBuilder.Build([Haltung()], [Schacht("80401")]);
+
+        Assert.All(plan.Objekte, o =>
+        {
+            Assert.Equal(16, o.Tid.Length);
+            Assert.True(char.IsLetter(o.Tid[0]));
+            Assert.All(o.Tid, z => Assert.True(char.IsLetterOrDigit(z)));
+        });
+    }
+
+    [Fact]
+    public void Die_Haltungspunkte_erben_Anfang_und_Ende_des_Verlaufs()
+    {
+        var geometrien = new Dictionary<string, XtfNeuGeometrie>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["80401-80409"] = new("Verlauf",
+            [
+                new XtfPunkt(2692610.782, 1192387.247),
+                new XtfPunkt(2692609.662, 1192384.257),
+                new XtfPunkt(2692606.892, 1192380.717)
+            ])
+        };
+
+        var plan = XtfNeuPlanBuilder.Build([Haltung()], [], null, geometrien);
+
+        var haltung = plan.Objekte.Single(o => o.Klasse == "Haltung");
+        Assert.Equal(3, haltung.Geometrie!.Punkte.Count);
+
+        var punkte = plan.Objekte.Where(o => o.Klasse == "Haltungspunkt").ToList();
+        Assert.Equal(2692610.782, punkte[0].Geometrie!.Punkte[0].Ost);
+        Assert.Equal(2692606.892, punkte[1].Geometrie!.Punkte[0].Ost);
+    }
+
+    [Fact]
+    public void Ohne_Verlauf_entsteht_das_Objekt_trotzdem_und_der_Bericht_sagt_es()
+    {
+        var plan = XtfNeuPlanBuilder.Build([Haltung()], []);
+
+        Assert.Equal(1, plan.Haltungen);
+        Assert.Null(plan.Objekte.Single(o => o.Klasse == "Haltung").Geometrie);
+        Assert.Contains(plan.Hinweise, h => h.Contains("Verlauf", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Ein_zu_langer_Name_sperrt_die_Haltung()
+    {
+        // Abwasserbauwerk.Bezeichnung ist MANDATORY TEXT*41.
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.HoldingName, new string('a', 42), FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([record], []);
+
+        Assert.Equal(0, plan.Haltungen);
+        Assert.Contains("42 Zeichen", Assert.Single(plan.Hinweise), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Ein_leeres_Projekt_ergibt_einen_leeren_Plan()
+    {
+        var plan = XtfNeuPlanBuilder.Build([], []);
+
+        Assert.True(plan.Leer);
+        Assert.Empty(plan.Objekte);
+    }
+
+    [Fact]
+    public void Mehrere_Haltungen_teilen_sich_ein_Rohrprofil_und_eine_Organisation()
+    {
+        var zweite = Haltung();
+        zweite.SetFieldValue(FieldKeys.HoldingName, "80409-80538", FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([Haltung(), zweite], []);
+
+        Assert.Equal(2, plan.Haltungen);
+        Assert.Single(plan.Objekte.Where(o => o.Klasse == "Rohrprofil"));
+        Assert.Single(plan.Objekte.Where(o => o.Klasse == "Organisation"));
+    }
+
+    [Fact]
+    public void Zwei_Haltungen_am_selben_Schacht_bekommen_verschiedene_Punktnamen()
+    {
+        // Haltungspunkt.Constraint1 verlangt, dass Bezeichnung und Datenherr zusammen
+        // eindeutig sind. In einer Kette 1-2, 2-3 teilen sich beide Haltungen den
+        // Schacht 2 — nach ihm benannt, wiese der ilivalidator die Datei ab.
+        var zweite = Haltung();
+        zweite.SetFieldValue(FieldKeys.HoldingName, "80409-80538", FieldSource.Manual, true);
+        zweite.SetFieldValue("Schacht_oben", "80409", FieldSource.Manual, true);
+        zweite.SetFieldValue("Schacht_unten", "80538", FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([Haltung(), zweite], []);
+
+        var namen = plan.Objekte
+            .Where(o => o.Klasse == "Haltungspunkt")
+            .Select(o => o.Felder.Single(f => f.Key == "Bezeichnung").Value)
+            .ToList();
+
+        Assert.Equal(4, namen.Count);
+        Assert.Equal(4, namen.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    [Fact]
+    public void Der_Punktname_bleibt_innerhalb_der_Laengengrenze()
+    {
+        // Haltungspunkt.Bezeichnung ist MANDATORY TEXT*20.
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.HoldingName, new string('h', 40), FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([record], []);
+
+        Assert.All(
+            plan.Objekte.Where(o => o.Klasse == "Haltungspunkt"),
+            o => Assert.InRange(o.Felder.Single(f => f.Key == "Bezeichnung").Value.Length, 1, 20));
+    }
+
+    [Fact]
+    public void Auch_gleiche_gekuerzte_Namen_bleiben_unterscheidbar()
+    {
+        // Zwei lange Namen, die sich erst nach dem 20. Zeichen unterscheiden.
+        var a = Haltung();
+        a.SetFieldValue(FieldKeys.HoldingName, new string('h', 30) + "-A", FieldSource.Manual, true);
+        var b = Haltung();
+        b.SetFieldValue(FieldKeys.HoldingName, new string('h', 30) + "-B", FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([a, b], []);
+
+        var namen = plan.Objekte
+            .Where(o => o.Klasse == "Haltungspunkt")
+            .Select(o => o.Felder.Single(f => f.Key == "Bezeichnung").Value)
+            .ToList();
+
+        Assert.Equal(4, namen.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.All(namen, n => Assert.InRange(n.Length, 1, 20));
+    }
+
+    private static HaltungRecord Haltung()
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue(FieldKeys.HoldingName, "80401-80409", FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.Owner, "Privat", FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.ProfileType, "Kreisprofil", FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.UsageType, "Mischabwasser", FieldSource.Manual, true);
+        record.SetFieldValue("Schacht_oben", "80401", FieldSource.Manual, true);
+        record.SetFieldValue("Schacht_unten", "80409", FieldSource.Manual, true);
+        return record;
+    }
+
+    private static SchachtRecord Schacht(string nummer)
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", nummer, FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.Owner, "Privat", FieldSource.Manual, true);
+        return record;
+    }
+}
