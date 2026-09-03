@@ -68,7 +68,7 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <TextBlock Text="Systemleistung"
-                           FontSize="12"
+                           FontSize="{DynamicResource TextS}"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextBrush}"
                            TextTrimming="CharacterEllipsis"/>
@@ -88,14 +88,14 @@
                                                  VerticalAlignment="Center"
                                                  Margin="0,0,4,0"/>
                             <TextBlock Text="LIVE"
-                                       FontSize="8"
+                                       FontSize="{DynamicResource TextXS}"
                                        FontWeight="Bold"
                                        Foreground="White"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                     <TextBlock Text="Live-Monitor"
-                               FontSize="10"
+                               FontSize="{DynamicResource TextXS}"
                                Foreground="{DynamicResource MutedBrush}"
                                Margin="6,0,0,0"
                                TextTrimming="CharacterEllipsis"/>
@@ -111,7 +111,7 @@
                         Style="{StaticResource SecondaryButton}"
                         Click="Detach_Click"
                         ToolTip="System-Monitor in eigenem Fenster öffnen">
-                    <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
+                    <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
                 </Button>
             </Grid>
         </Expander.Header>

@@ -43,19 +43,19 @@
             </Border.RenderTransform>
             <TextBlock Text="{Binding Icon, ElementName=Root}"
                        FontFamily="{DynamicResource FontIcon}"
-                       FontSize="30"
+                       FontSize="{DynamicResource IconHero}"
                        Foreground="{DynamicResource AccentBrush}"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"/>
         </Border>
         <TextBlock Text="{Binding Title, ElementName=Root}"
-                   FontSize="15"
+                   FontSize="{DynamicResource TextL}"
                    FontWeight="SemiBold"
                    HorizontalAlignment="Center"
                    TextAlignment="Center"
                    Margin="0,0,0,4"/>
         <TextBlock Text="{Binding Message, ElementName=Root}"
-                   FontSize="12"
+                   FontSize="{DynamicResource TextS}"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    HorizontalAlignment="Center"
                    TextAlignment="Center"

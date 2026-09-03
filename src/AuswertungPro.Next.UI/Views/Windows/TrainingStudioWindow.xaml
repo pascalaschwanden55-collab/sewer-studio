@@ -151,7 +151,7 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        TextWrapping="Wrap" Margin="0,0,0,6"/>
                             <TextBlock Text="Nur persönlich bestätigte Handlabels mit Box und Segmentierung zählen."
-                                       Foreground="{DynamicResource MutedBrush}" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextXS}"
                                        TextWrapping="Wrap" Margin="0,0,0,6"/>
                             <ScrollViewer MaxHeight="190" VerticalScrollBarVisibility="Auto">
                                 <ItemsControl ItemsSource="{Binding GoldProgressItems}">
@@ -196,7 +196,7 @@
                                        TextWrapping="Wrap"
                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                             <TextBlock Text="Erst deine Box, die sichtbare SAM-Maske und Akzeptieren machen daraus Gold."
-                                       TextWrapping="Wrap" Margin="0,6,0,0" FontSize="11"
+                                       TextWrapping="Wrap" Margin="0,6,0,0" FontSize="{DynamicResource TextXS}"
                                        Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                     </Border>
@@ -248,7 +248,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <TextBlock Text="Blaue Boxen sind nur Vorschau. Als Gold wird nur die rote, von Hand gezogene Box gespeichert."
-                                       Foreground="{DynamicResource MutedBrush}" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextXS}"
                                        TextWrapping="Wrap" Margin="0,6,0,0"/>
                         </StackPanel>
                     </Border>
@@ -284,7 +284,7 @@
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0">
                                                     <TextBlock Text="{Binding VsaCode}" FontWeight="Bold"/>
-                                                    <TextBlock Text="{Binding Klartext}" FontSize="11"
+                                                    <TextBlock Text="{Binding Klartext}" FontSize="{DynamicResource TextXS}"
                                                                Foreground="{DynamicResource TextSecondaryBrush}"
                                                                TextWrapping="Wrap"/>
                                                 </StackPanel>
@@ -293,7 +293,7 @@
                                                            Foreground="{DynamicResource MutedBrush}"/>
                                                 <Border Grid.Column="2" Background="{DynamicResource AccentSubtleBrush}"
                                                         CornerRadius="3" Padding="5,1" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Quelle}" FontSize="10"
+                                                    <TextBlock Text="{Binding Quelle}" FontSize="{DynamicResource TextXS}"
                                                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                 </Border>
                                             </Grid>
@@ -302,7 +302,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <TextBlock Text="Vorschlag anklicken zum Übernehmen. Gespeichert wird erst mit deiner persönlichen Bestätigung."
-                                       Foreground="{DynamicResource MutedBrush}" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextXS}"
                                        TextWrapping="Wrap" Margin="0,6,0,0"/>
                         </StackPanel>
                     </Border>
@@ -315,7 +315,7 @@
                         <StackPanel>
                             <TextBlock Text="Codierung" FontWeight="Bold" Margin="0,0,0,6"/>
 
-                            <TextBlock Text="VSA-Code (Pflicht)" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
+                            <TextBlock Text="VSA-Code (Pflicht)" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
                             <Grid Margin="0,2,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -329,15 +329,15 @@
                                 <Button Grid.Column="1" Content="Codieren… (Katalog)" Style="{StaticResource PrimaryButton}"
                                         Click="OpenCodeExplorer_Click" Margin="6,0,0,0"/>
                             </Grid>
-                            <TextBlock Text="{Binding SelectedCodeLabel}" FontSize="11"
+                            <TextBlock Text="{Binding SelectedCodeLabel}" FontSize="{DynamicResource TextXS}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        TextWrapping="Wrap" Margin="0,-5,0,8"/>
 
-                            <TextBlock Text="Uhrlage (optional)" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
+                            <TextBlock Text="Uhrlage (optional)" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
                             <TextBox Text="{Binding ClockPosition, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
                                      Margin="0,2,0,8"/>
 
-                            <TextBlock Text="Schadensstufe (optional)" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
+                            <TextBlock Text="Schadensstufe (optional)" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
                             <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
                                 <Button Content="1" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity1Brush}"
                                         Foreground="White" FontWeight="Bold"
@@ -356,9 +356,9 @@
                                         Command="{Binding SetSeverityCommand}" CommandParameter="5"/>
                             </StackPanel>
                             <TextBlock Text="{Binding Severity, StringFormat='Gewählt: Stufe {0}', TargetNullValue='Keine Stufe gewaehlt'}"
-                                       FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
 
-                            <TextBlock Text="Beschreibung (mind. 10 Zeichen)" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
+                            <TextBlock Text="Beschreibung (mind. 10 Zeichen)" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
                             <TextBox Text="{Binding Beschreibung, UpdateSourceTrigger=PropertyChanged}"
                                      TextWrapping="Wrap" AcceptsReturn="True" MinHeight="52" Margin="0,2,0,0"/>
                         </StackPanel>
@@ -375,7 +375,7 @@
                                 <Button Content="Korrektur speichern (K)" Style="{StaticResource PrimaryButton}"
                                         Command="{Binding CorrectCommand}" Margin="0,0,0,6"/>
                                 <TextBlock Text="Ein geänderter Code wird als Lernkorrektur zurückgegeben."
-                                           Foreground="{DynamicResource MutedBrush}" FontSize="11"
+                                           Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextXS}"
                                            TextWrapping="Wrap" Margin="0,0,0,6"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -400,7 +400,7 @@
                                     <TextBlock Text="{Binding ImageCompletionPrompt}"
                                                TextWrapping="Wrap"
                                                Foreground="{DynamicResource TextSecondaryBrush}"
-                                               FontSize="11" Margin="0,0,0,8"/>
+                                               FontSize="{DynamicResource TextXS}" Margin="0,0,0,8"/>
                                     <Button Content="Weiteres Ereignis auf diesem Bild"
                                             Style="{StaticResource PrimaryButton}"
                                             Command="{Binding AddAnotherEventCommand}"
@@ -484,7 +484,7 @@
                     <TextBlock Text="{Binding StatusText}" Margin="0,6,0,0" TextWrapping="Wrap"
                                Foreground="{DynamicResource MutedBrush}"/>
                     <!-- Grenzen, die sichtbar ins Fenster gehören (Auftrag) — konstant, kein Tooltip -->
-                    <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" FontSize="11"
+                    <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" FontSize="{DynamicResource TextXS}"
                                Foreground="{DynamicResource WarningBrush}"
                                Text="Nur Bögen — eine leere Liste ist ein gültiges Ergebnis. Jeder zweite schwache Vorschlag ist falsch. Auf HD-Material gibt es keine Meterangabe (Sekunden statt Meter)."/>
                     <TextBlock Text="{Binding HeaderText}" Margin="0,8,0,0" TextWrapping="Wrap"

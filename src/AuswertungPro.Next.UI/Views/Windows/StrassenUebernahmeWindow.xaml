@@ -19,7 +19,7 @@
 
         <TextBlock x:Name="KopfText"
                    Grid.Row="0"
-                   FontSize="15"
+                   FontSize="{DynamicResource TextL}"
                    FontWeight="SemiBold"
                    TextWrapping="Wrap"
                    Margin="0,0,0,14"/>

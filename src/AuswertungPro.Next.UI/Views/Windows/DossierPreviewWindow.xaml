@@ -51,7 +51,7 @@
                                         Margin="0,5,0,2">
                                     <TextBlock Text="{Binding Name}"
                                                Foreground="{DynamicResource TextBrush}"
-                                               FontSize="12"
+                                               FontSize="{DynamicResource TextS}"
                                                FontWeight="SemiBold"
                                                TextWrapping="Wrap"/>
                                 </Border>

@@ -41,7 +41,7 @@
             <StackPanel Grid.Column="0" Margin="0,0,12,0">
                 <TextBlock Text="Gemeinde"/>
                 <ComboBox x:Name="MunicipalityBox" DisplayMemberPath="Name"
-                          Padding="6,4" FontSize="13"/>
+                          Padding="6,4" FontSize="{DynamicResource TextM}"/>
             </StackPanel>
 
             <StackPanel Grid.Column="1" Margin="0,0,12,0">

@@ -23,7 +23,7 @@
                                     Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                     CornerRadius="3" VerticalAlignment="Center" Margin="0,0,8,0">
                                 <TextBlock x:Name="CheckMark" Text="&#x2713;"
-                                           FontSize="13" FontWeight="Bold"
+                                           FontSize="{DynamicResource TextM}" FontWeight="Bold"
                                            Foreground="{DynamicResource AccentBrush}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                            Visibility="Collapsed"/>
@@ -56,7 +56,7 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="Abschnitte für den Druck auswählen:"
-                   FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
+                   FontSize="{DynamicResource TextM}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
                    Margin="0,0,0,12"/>
 
         <StackPanel Grid.Row="1" Margin="8,0,0,0">

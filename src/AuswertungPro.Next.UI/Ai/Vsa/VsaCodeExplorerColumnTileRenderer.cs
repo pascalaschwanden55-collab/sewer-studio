@@ -90,7 +90,7 @@ public static class VsaCodeExplorerColumnTileRenderer
             var descriptionText = new TextBlock
             {
                 Text = presentation.DescriptionText,
-                FontSize = 10,
+                FontSize = 11,
                 Foreground = descriptionBrush,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 Margin = new Thickness(0, 1, 0, 0)
@@ -220,7 +220,7 @@ public static class VsaCodeExplorerColumnTileRenderer
             Child = new TextBlock
             {
                 Text = text,
-                FontSize = 8,
+                FontSize = 11,
                 FontWeight = FontWeights.Bold,
                 Foreground = new SolidColorBrush(color)
             }

@@ -19,7 +19,7 @@
                             Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,8,0"
                             ToolTip="Quellordner der Kanalfernsehdaten wählen — erkennt WinCan/IKAS automatisch, importiert massgebliche Quelle + Pro-Beobachtung-Fotos, archiviert Rohdaten, verteilt Filme/PDFs, alles relativ verlinkt">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8B7;" FontFamily="{DynamicResource FontIcon}" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE8B7;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Import Kanalfernseh-Projekt" VerticalAlignment="Center" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
@@ -28,19 +28,19 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,8,0"
                             ToolTip="Am Ende der Bearbeitung: erzeugt je Haltung das programm-eigene Protokoll (mit Fotos, Suffix _E) in die Verteilung. Das Original-Protokoll bleibt unberuehrt.">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE72C;" FontFamily="{DynamicResource FontIcon}" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE72C;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Protokoll neu generieren" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,4"/>
 
-                    <TextBlock Text="Manuell:" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.7" FontSize="11"/>
+                    <TextBlock Text="Manuell:" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.7" FontSize="{DynamicResource TextXS}"/>
 
                     <Button Command="{Binding ImportPdfCommand}"
                             Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8B5;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE8B5;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Import PDF" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -49,7 +49,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
                             ToolTip="Verteil-Ordner wählen: verteilt Protokolle name-basiert auf Haltungen UND Schächte (rekursiv, legt fehlende Schächte an)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8B5;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE8B5;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Protokolle verteilen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -60,9 +60,9 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
                             ToolTip="XTF/M150/MDB, WinCan, IBAK, KINS, SchachtPro importieren">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE710;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Weitere Quellen" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
@@ -100,7 +100,7 @@
                     <Button Command="{Binding ExportImportSummaryCommand}"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,4,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE9F9;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE9F9;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Import-Report" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -109,7 +109,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
                             ToolTip="Letzten Import-Bericht öffnen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE7C3;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE7C3;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Letzter Bericht" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -118,7 +118,7 @@
                             Style="{StaticResource ToolbarButton}"
                             ToolTip="Bericht-Ordner öffnen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xED25;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xED25;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Berichte" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -129,7 +129,7 @@
                             Style="{StaticResource ToolbarButton}"
                             ToolTip="Alle Medienpfade relativ machen + Fotos ins Projekt holen → Projektordner 1:1 auf anderen PC kopierbar">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8C8;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE8C8;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Projekt portabel machen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -138,7 +138,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="4,0,0,0"
                             ToolTip="Fotos aus einem Quellordner (IKAS/WinCan) den Beobachtungen zuordnen + ins Projekt holen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE91B;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE91B;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Fotos zuordnen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -191,7 +191,7 @@
                             IsEnabled="{Binding CanCancel}"
                             Style="{StaticResource ToolbarButton}"/>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE895;" FontFamily="{DynamicResource FontIcon}" FontSize="14" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="&#xE895;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="{Binding ImportPhase}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="{Binding ImportProgress}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                     </StackPanel>

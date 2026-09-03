@@ -21,7 +21,7 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <TextBlock Text="{Binding Text}" FontSize="10"
+                <TextBlock Text="{Binding Text}" FontSize="{DynamicResource TextXS}"
                            Foreground="{DynamicResource TextBrush}"
                            ToolTip="{Binding RawValue}"/>
             </Border>
@@ -44,7 +44,7 @@
                         Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0"
                         ToolTip="Haltungsdaten in die Excel-Vorlage Haltungen.xlsx exportieren.">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE78C;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="&#xE78C;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="Export Haltungen.xlsx" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -52,7 +52,7 @@
                         Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
                         ToolTip="Schachtdaten in die Excel-Vorlage Schächte.xlsx exportieren.">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE78C;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="&#xE78C;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="Export Schächte.xlsx" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -67,9 +67,9 @@
                         Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                         ToolTip="Haltungen und Schächte in Ordner verteilen">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE72D;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="&#xE72D;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="Verteilen" VerticalAlignment="Center"/>
-                        <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
+                        <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                     </StackPanel>
                     <Button.ContextMenu>
                         <ContextMenu>
@@ -120,7 +120,7 @@
                 Visibility="{Binding IsDistributionInProgress, Converter={StaticResource BoolToVis}}">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="&#xE895;" FontFamily="{DynamicResource FontIcon}" FontSize="14" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="&#xE895;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock Text="{Binding DistributionProgress}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
                 <TextBlock Text="{Binding DistributionPercent, StringFormat=Fortschritt: {0:0}%}"
@@ -143,10 +143,10 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
                 <StackPanel>
                     <TextBlock Text="Zielordner &amp; Verzeichnisbaum"
-                               FontWeight="SemiBold" FontSize="13"
+                               FontWeight="SemiBold" FontSize="{DynamicResource TextM}"
                                Foreground="{DynamicResource TextBrush}" Margin="2,0,0,2"/>
                     <TextBlock Text="Excel nutzt nur einen gemeinsamen Zielordner. Den Verzeichnisbaum stellst du getrennt für Haltungen, Schächte und DP zusammen."
-                               FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                               FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
                                TextWrapping="Wrap" Margin="2,0,0,8"/>
 
                     <!-- Excel: bewusst nur ein gemeinsamer Zielordner, keine Namens- oder Baum-Muster -->
@@ -156,8 +156,8 @@
                             <TextBlock Text="Excel-Export" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
                             <TextBlock Text="Ein gemeinsamer Zielordner für Haltungen.xlsx und Schächte.xlsx"
-                                       FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
-                            <TextBlock Text="Zielordner" FontSize="11"
+                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                            <TextBlock Text="Zielordner" FontSize="{DynamicResource TextXS}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                             <Grid Margin="0,2,0,6">
                                 <Grid.ColumnDefinitions>
@@ -173,7 +173,7 @@
                                 </Button>
                             </Grid>
                             <TextBlock Text="Feste Dateien: Haltungen.xlsx · Schächte.xlsx"
-                                       FontSize="10" Foreground="{DynamicResource MutedBrush}"/>
+                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                     </Border>
 
@@ -196,7 +196,7 @@
                                 </StackPanel>
                             </Button>
                             <TextBlock Text="Ausgabe: XTF-Revision_&lt;Zeitstempel&gt; im Zielordner oben"
-                                       FontSize="10" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0"/>
+                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0"/>
                         </StackPanel>
                     </Border>
 
@@ -219,13 +219,13 @@
                                 </StackPanel>
                             </Button>
                             <TextBlock Text="Der Verlauf kommt aus der QGIS-Kopie, wo die Haltung dort eindeutig zu finden ist."
-                                       FontSize="10" Foreground="{DynamicResource MutedBrush}"
+                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
                                        TextWrapping="Wrap" Margin="0,6,0,0"/>
                         </StackPanel>
                     </Border>
 
                     <TextBlock Text="Verzeichnisbaum für die Verteilung"
-                               FontWeight="SemiBold" FontSize="12"
+                               FontWeight="SemiBold" FontSize="{DynamicResource TextS}"
                                Foreground="{DynamicResource TextBrush}" Margin="2,2,0,6"/>
 
                     <ItemsControl ItemsSource="{Binding DistributionTargets}">
@@ -236,12 +236,12 @@
                                     <StackPanel>
                                         <TextBlock Text="{Binding Titel}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextBrush}"/>
-                                        <TextBlock Text="{Binding Untertitel}" FontSize="11"
+                                        <TextBlock Text="{Binding Untertitel}" FontSize="{DynamicResource TextXS}"
                                                    Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
 
                                         <!-- Eigene Ziel-Wurzel nur fuer die drei Verteilungen -->
                                         <StackPanel Visibility="{Binding ShowRootEditor, Converter={StaticResource BoolToVis}}">
-                                            <TextBlock Text="Ziel-Wurzel" FontSize="11"
+                                            <TextBlock Text="Ziel-Wurzel" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <Grid Margin="0,2,0,6">
                                                 <Grid.ColumnDefinitions>
@@ -270,15 +270,15 @@
                                             <ctrl:DistributionTreePreviewControl Nodes="{Binding TreeNodes}" Margin="0,0,0,8"/>
                                             <Expander Header="Erweitert (Ordner-Bausteine)" IsExpanded="{Binding IsAdvancedExpanded}">
                                                 <StackPanel Margin="0,6,0,0">
-                                                    <TextBlock Text="Verzeichnisbaum" FontSize="11" FontWeight="SemiBold"
+                                                    <TextBlock Text="Verzeichnisbaum" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
                                                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                     <TextBlock Text="Bausteine anklicken. Leere Ebenen werden weggelassen."
-                                                               FontSize="10" Foreground="{DynamicResource MutedBrush}"
+                                                               FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
                                                                TextWrapping="Wrap" Margin="0,1,0,5"/>
 
                                             <!-- Erste freie Ebene -->
                                             <StackPanel Margin="0,0,0,8">
-                                                <TextBlock FontSize="10" Foreground="{DynamicResource MutedBrush}">
+                                                <TextBlock FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}">
                                                     <Run Text="&#x251C;&#x2500; "/><Run Text="1. Ordner (optional)"/>
                                                 </TextBlock>
                                                 <Border Background="{DynamicResource SurfaceSubtleBrush}"
@@ -316,7 +316,7 @@
 
                                             <!-- Zweite freie Ebene -->
                                             <StackPanel Margin="14,0,0,8">
-                                                <TextBlock FontSize="10" Foreground="{DynamicResource MutedBrush}">
+                                                <TextBlock FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}">
                                                     <Run Text="&#x251C;&#x2500; "/><Run Text="2. Unterordner (optional)"/>
                                                 </TextBlock>
                                                 <Border Background="{DynamicResource SurfaceSubtleBrush}"
@@ -354,7 +354,7 @@
 
                                             <!-- Letzte Objekt-Ebene bleibt absichtlich fest -->
                                             <StackPanel Margin="28,0,0,8">
-                                                <TextBlock FontSize="10" Foreground="{DynamicResource MutedBrush}">
+                                                <TextBlock FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}">
                                                     <Run Text="&#x2514;&#x2500; "/><Run Text="Objektordner (fest)"/>
                                                 </TextBlock>
                                                 <Border Background="{DynamicResource SurfaceSubtleBrush}"
@@ -374,7 +374,7 @@
                                         </StackPanel>
 
                                         <!-- Sichtbare Reihenfolge: editierbar bei Excel, fest bei der Verteilung -->
-                                        <TextBlock Text="Dateiname" FontSize="11"
+                                        <TextBlock Text="Dateiname" FontSize="{DynamicResource TextXS}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         <Border Background="{DynamicResource SurfaceSubtleBrush}"
                                                 BorderBrush="{DynamicResource BorderLightBrush}"
@@ -402,7 +402,7 @@
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <TextBlock Text="{Binding Text}" FontSize="10"
+                                                            <TextBlock Text="{Binding Text}" FontSize="{DynamicResource TextXS}"
                                                                        Foreground="{DynamicResource TextBrush}"
                                                                        ToolTip="{Binding RawValue}"/>
                                                         </Border>
@@ -411,7 +411,7 @@
                                             </ItemsControl>
                                         </Border>
 
-                                        <TextBlock Text="{Binding Hinweis}" FontSize="10"
+                                        <TextBlock Text="{Binding Hinweis}" FontSize="{DynamicResource TextXS}"
                                                    Foreground="{DynamicResource MutedBrush}"
                                                    TextWrapping="Wrap" Margin="0,0,0,6"/>
 
@@ -420,9 +420,9 @@
                                                 BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
                                                 CornerRadius="4" Padding="8,6">
                                             <StackPanel>
-                                                <TextBlock Text="Vorschau" FontSize="10"
+                                                <TextBlock Text="Vorschau" FontSize="{DynamicResource TextXS}"
                                                            Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                <TextBlock Text="{Binding Vorschau}" FontFamily="Consolas" FontSize="11"
+                                                <TextBlock Text="{Binding Vorschau}" FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
                                                            Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
                                             </StackPanel>
                                         </Border>

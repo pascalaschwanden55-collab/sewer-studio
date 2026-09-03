@@ -45,7 +45,7 @@
         <TextBlock x:Name="StatusText"
                    Grid.Row="1"
                    HorizontalAlignment="Center"
-                   FontSize="11"
+                   FontSize="{DynamicResource TextXS}"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    Margin="0,4,0,0"
                    IsHitTestVisible="False"/>

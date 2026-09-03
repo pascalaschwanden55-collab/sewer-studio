@@ -187,6 +187,24 @@ UI-Testprojekt: 6257 gruen, 1 rot — `NachschlagKontextmenueTests` (isolierter 
 
 ---
 
+### Stand 2026-09-03 spaet: M1 Schriftskala UMGESETZT (Commit nach 1adbbcb90)
+
+Entscheid Pascal: Reihenfolge „Schrift zuerst", Untergrenze **11 px**. Waechter
+`DesignAuditSchriftskalaTests` (4 Tests, zuerst rot). UI-Testprojekt danach 6262 gruen.
+
+- Tokens in `Controls.xaml`: `TextXS` 11 · `TextS` 12 · `TextM` 13 · `TextL` 15 · `TextXL` 18 ·
+  `TextTitle` 22 · `TextDisplay` 28, dazu `IconHero` 36 fuer die vier grossen Leerzustand-Glyphen.
+- **885 `FontSize`-Stellen** in Seiten, Fenstern, Controls und Dialogen lesen jetzt Tokens:
+  8-11 -> XS (437), 12 -> S (216), 13/13.5 -> M (89), 14-16 -> L (87), 17-21 -> XL (36),
+  22/24 -> Title (15), 30-40 -> Display/IconHero (4). Die Theme-Dateien behalten Zahlen
+  (zwei 10er auf 11 gehoben). Der Splash bleibt aussen vor.
+- Im Code: VSA-Explorer-Kacheln (10 und 8 -> 11), CategoryBars, Hydraulik-Panel und
+  DonutChart-Minimum auf 11. Gezeichnete Beschriftungen auf Video/Grafik/PDF bleiben klein
+  (Positivliste im Test).
+- **Am Bildschirm pruefen:** Die Zusammenlegung 14/16 -> 15 und 20 -> 18 veraendert
+  Abschnitts- und Untertitel um 1-2 px; die dichten Panels (PlayerCodingSidePanel,
+  VsaCodeExplorer, VideoAnalysisPipelineWindow) sind von 10 auf 11 px gewachsen.
+
 ## 6. Waechter, die dieses Audit dauerhaft machen
 
 Neu in `tests/AuswertungPro.Next.UI.Tests/DesignAudit*`:

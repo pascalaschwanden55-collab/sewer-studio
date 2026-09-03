@@ -62,7 +62,7 @@
             <!-- Klartext des eingegebenen Codes, aktualisiert live beim Tippen/Auswaehlen -->
             <TextBlock Text="{Binding ElementName=CodeTextBox, Path=Text, Converter={StaticResource VsaCodeToLabel}}"
                        Foreground="{DynamicResource MutedBrush}"
-                       FontSize="11"
+                       FontSize="{DynamicResource TextXS}"
                        Margin="2,3,0,0"
                        TextWrapping="Wrap" />
         </StackPanel>

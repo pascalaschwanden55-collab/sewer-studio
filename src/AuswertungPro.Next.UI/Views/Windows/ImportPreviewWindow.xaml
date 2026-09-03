@@ -19,9 +19,9 @@
         <Border Grid.Row="0" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}"
                 BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,12">
             <StackPanel>
-                <TextBlock x:Name="HeaderText" FontSize="15" FontWeight="SemiBold"
+                <TextBlock x:Name="HeaderText" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
                            Foreground="{StaticResource TextBrush}"/>
-                <TextBlock x:Name="SubHeaderText" FontSize="12"
+                <TextBlock x:Name="SubHeaderText" FontSize="{DynamicResource TextS}"
                            Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
             </StackPanel>
         </Border>

@@ -17,7 +17,7 @@
 
         <StackPanel Grid.Row="0" Margin="0,0,0,10">
             <TextBlock Text="Welche Blätter kommen ins Gesamt-PDF?"
-                       FontSize="16"
+                       FontSize="{DynamicResource TextL}"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextBrush}"/>
             <TextBlock Margin="0,4,0,0"

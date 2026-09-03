@@ -684,6 +684,17 @@ Waechter `DesignAuditFeinschliffTests` (7 Tests) haelt fest, was nicht zurueckfa
 Der isolierte `NachschlagKontextmenueTests`-Kindprozess hat ein 60-s-Limit und faellt im
 Gesamtlauf unter Last gelegentlich um; allein besteht er in rund 26 s.
 
+**Schriftskala (M1, 2026-09-03, Waechter `DesignAuditSchriftskalaTests`):** Sieben
+`sys:Double`-Tokens in `Controls.xaml` — `TextXS` 11, `TextS` 12, `TextM` 13, `TextL` 15,
+`TextXL` 18, `TextTitle` 22, `TextDisplay` 28 — plus `IconHero` 36 fuer grosse
+Leerzustand-Glyphen. **11 px ist die Untergrenze im ganzen Programm** (Entscheid Pascal).
+Seiten, Fenster, Controls und Dialoge setzen `FontSize` nur noch als
+`{DynamicResource Text…}`; feste Zahlen sind nur in `Theme/*.xaml` (nie unter 11) und im
+`StartupSplashWindow` erlaubt. Im Code duerfen nur gezeichnete Beschriftungen auf Video,
+Grafik und PDF-Nachbildung kleiner als 11 sein (Positivliste im Test). Umgestellt wurden
+885 Stellen: 8-11 -> XS, 12 -> S, 13 -> M, 14-16 -> L, 17-21 -> XL, 22/24 -> Title,
+30-40 -> Display bzw. IconHero.
+
 Nachgelagerte Grossumbauten vom 2026-08-14:
 
 - **Import-Staging vervollstaendigt.** `ImportFileTransaction` ist der gemeinsame

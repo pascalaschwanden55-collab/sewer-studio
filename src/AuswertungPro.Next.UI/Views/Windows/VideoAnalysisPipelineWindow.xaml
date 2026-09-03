@@ -183,9 +183,9 @@
                     <Border Width="4" Height="28" CornerRadius="2" Margin="0,0,10,0"
                             Background="{DynamicResource AccentBrush}"/>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="S E W E R  S T U D I O" FontWeight="Bold" FontSize="11"
+                        <TextBlock Text="S E W E R  S T U D I O" FontWeight="Bold" FontSize="{DynamicResource TextXS}"
                                    FontFamily="Consolas" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,1"/>
-                        <TextBlock Text="PIPELINE ANALYSIS" FontSize="10" FontWeight="SemiBold"
+                        <TextBlock Text="PIPELINE ANALYSIS" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
                                    FontFamily="Consolas" Foreground="{DynamicResource MutedBrush}"/>
                     </StackPanel>
                 </StackPanel>
@@ -194,11 +194,11 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal"
                             VerticalAlignment="Center" HorizontalAlignment="Center">
                     <TextBlock Text="{Binding PhaseLabel}"
-                               FontSize="13" FontWeight="SemiBold"
+                               FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
                                FontFamily="Consolas" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                    <TextBlock Text="  //  " Foreground="{DynamicResource BorderBrush}" FontSize="13" FontFamily="Consolas"/>
+                    <TextBlock Text="  //  " Foreground="{DynamicResource BorderBrush}" FontSize="{DynamicResource TextM}" FontFamily="Consolas"/>
                     <TextBlock Text="{Binding StatusText}"
-                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="Consolas"
+                               FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="Consolas"
                                MaxWidth="400" TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -212,10 +212,10 @@
                             Visibility="{Binding IsMultiModelActive,
                                 Converter={StaticResource BoolToVis}}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="MM" FontFamily="Consolas" FontSize="10"
+                            <TextBlock Text="MM" FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
                                        FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock FontFamily="Consolas" FontSize="10"
+                            <TextBlock FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
                                        Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center">
                                 <Run Text="Skip "/>
                                 <Run Text="{Binding YoloSkippedFrames}" FontWeight="Bold"
@@ -234,7 +234,7 @@
                                                      IsActive="{Binding VideoPhaseActive}"
                                                      Visibility="{Binding VideoPhaseActive,
                                                          Converter={StaticResource BoolToVis}}"/>
-                            <TextBlock FontFamily="Consolas" FontSize="12"
+                            <TextBlock FontFamily="Consolas" FontSize="{DynamicResource TextS}"
                                        Foreground="{DynamicResource AccentBrush}">
                                 <Run Text="Meter "/>
                                 <Run Text="{Binding CurrentMeter}" FontWeight="Bold"/>
@@ -298,7 +298,7 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Style="{StaticResource LabelSmall}" Text="ERKENNEN"/>
-                                    <TextBlock Grid.Row="2" FontSize="10" Foreground="{DynamicResource MutedBrush}" Text="Detection"/>
+                                    <TextBlock Grid.Row="2" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Text="Detection"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarDetectionCount}"
                                                Foreground="{DynamicResource AccentBrush}"/>
@@ -306,7 +306,7 @@
                                                  Style="{StaticResource ThinProgress}"
                                                  Value="{Binding VideoProgressPct}"
                                                  Maximum="100"/>
-                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}">
+                                    <TextBlock Grid.Row="8" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}">
                                         <Run Text="{Binding PillarDetectionCount}"/>
                                         <Run Text=" Schäden"/>
                                     </TextBlock>
@@ -333,7 +333,7 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Style="{StaticResource LabelSmall}" Text="QUANTIFIZIERUNG"/>
-                                    <TextBlock Grid.Row="2" FontSize="10" Foreground="{DynamicResource MutedBrush}" Text="Messung"/>
+                                    <TextBlock Grid.Row="2" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Text="Messung"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarQuantCount}"
                                                Foreground="{DynamicResource SuccessBrush}"/>
@@ -341,7 +341,7 @@
                                                  Style="{StaticResource ThinProgress}"
                                                  Value="{Binding MappingProgressPct}"
                                                  Maximum="100"/>
-                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}">
+                                    <TextBlock Grid.Row="8" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}">
                                         <Run Text="{Binding PillarQuantCount}"/>
                                         <Run Text=" quantifiziert"/>
                                     </TextBlock>
@@ -368,7 +368,7 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Style="{StaticResource LabelSmall}" Text="LOKALISIERUNG"/>
-                                    <TextBlock Grid.Row="2" FontSize="10" Foreground="{DynamicResource MutedBrush}" Text="Position"/>
+                                    <TextBlock Grid.Row="2" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Text="Position"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarLocalCount}"
                                                Foreground="{DynamicResource WarningBrush}"/>
@@ -382,7 +382,7 @@
                                             </Binding>
                                         </ProgressBar.Value>
                                     </ProgressBar>
-                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}">
+                                    <TextBlock Grid.Row="8" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}">
                                         <Run Text="{Binding PillarLocalCount}"/>
                                         <Run Text=" lokalisiert"/>
                                     </TextBlock>
@@ -401,7 +401,7 @@
                             <!-- Speed Selector (rechts) -->
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                                         VerticalAlignment="Center" Margin="12,0,0,0">
-                                <TextBlock Text="Tempo" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
+                                <TextBlock Text="Tempo" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"
                                            VerticalAlignment="Center" Margin="0,0,6,0"/>
                                 <ComboBox x:Name="SpeedModeCombo"
                                           Width="58" Height="22"
@@ -410,7 +410,7 @@
                                           Foreground="{DynamicResource AccentBrush}"
                                           BorderBrush="{DynamicResource BorderBrush}"
                                           BorderThickness="1"
-                                          FontSize="11"
+                                          FontSize="{DynamicResource TextXS}"
                                           FontWeight="SemiBold"
                                           FontFamily="Consolas">
                                     <ComboBoxItem Content="x1" Tag="1" Foreground="{DynamicResource TextBrush}"/>
@@ -420,14 +420,14 @@
                                 </ComboBox>
                                 <Button x:Name="StartButton"
                                         Margin="8,0,0,0"
-                                        FontSize="11"
+                                        FontSize="{DynamicResource TextXS}"
                                         FontWeight="SemiBold"
                                         Foreground="White"
                                         Padding="12,2"
                                         Cursor="Hand"
                                         Click="Start_Click">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" FontSize="11" Margin="0,0,5,0"/>
+                                        <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}" Margin="0,0,5,0"/>
                                         <TextBlock Text="Start"/>
                                     </StackPanel>
                                     <Button.Template>
@@ -449,20 +449,20 @@
                                     <!-- Pulsiert nur, solange die Videophase wirklich laeuft. -->
                                     <controls:NeuralPulseDot Width="12" Height="12"
                                                              IsActive="{Binding VideoPhaseActive}"/>
-                                    <ui:FluentIcon Glyph="&#xE73E;" FontSize="12" Foreground="{DynamicResource SuccessBrush}"
+                                    <ui:FluentIcon Glyph="&#xE73E;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource SuccessBrush}"
                                                    Visibility="{Binding VideoPhaseDone, Converter={StaticResource BoolToVis}}"/>
                                 </Grid>
-                                <TextBlock Text="Video" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-                                <TextBlock FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="4,0,0,0">
+                                <TextBlock Text="Video" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="4,0,0,0">
                                     <Run Text="{Binding FramesAnalyzed}"/>/<Run Text="{Binding TotalFrames}"/>
                                 </TextBlock>
                                 <!-- Restzeit + Durchsatz (nach ETA-Warmup) -->
-                                <TextBlock Text="{Binding EtaText}" FontSize="10" FontFamily="Consolas"
+                                <TextBlock Text="{Binding EtaText}" FontSize="{DynamicResource TextXS}" FontFamily="Consolas"
                                            Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
                                            Margin="10,0,0,0"/>
                             </StackPanel>
                             <!-- Verbindungspfeil: faerbt sich, sobald die Phase dahinter arbeitet — der Fluss zeigt zur Arbeit. -->
-                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="10"
+                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}"
                                        VerticalAlignment="Center" Margin="0,0,16,0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
@@ -495,15 +495,15 @@
                                             </Style>
                                         </controls:NeuralPulseDot.Style>
                                     </controls:NeuralPulseDot>
-                                    <ui:FluentIcon Glyph="&#xE73E;" FontSize="12" Foreground="{DynamicResource SuccessBrush}"
+                                    <ui:FluentIcon Glyph="&#xE73E;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource SuccessBrush}"
                                                    Visibility="{Binding MappingPhaseDone, Converter={StaticResource BoolToVis}}"/>
                                 </Grid>
-                                <TextBlock Text="Mapping" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-                                <TextBlock FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="4,0,0,0">
+                                <TextBlock Text="Mapping" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="4,0,0,0">
                                     <Run Text="{Binding DetectionCount}"/>
                                 </TextBlock>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="10"
+                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}"
                                        VerticalAlignment="Center" Margin="0,0,16,0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
@@ -536,11 +536,11 @@
                                             </Style>
                                         </controls:NeuralPulseDot.Style>
                                     </controls:NeuralPulseDot>
-                                    <ui:FluentIcon Glyph="&#xE73E;" FontSize="12" Foreground="{DynamicResource SuccessBrush}"
+                                    <ui:FluentIcon Glyph="&#xE73E;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource SuccessBrush}"
                                                    Visibility="{Binding IsDone, Converter={StaticResource BoolToVis}}"/>
                                 </Grid>
-                                <TextBlock Text="Protokoll" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-                                <TextBlock FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="4,0,0,0">
+                                <TextBlock Text="Protokoll" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="4,0,0,0">
                                     <Run Text="{Binding HighConfidenceCount}"/>
                                     <Run Text=" HC"/>
                                 </TextBlock>
@@ -555,7 +555,7 @@
                         Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                     <DockPanel>
                         <!-- Status rechts -->
-                        <TextBlock DockPanel.Dock="Right" FontSize="12" FontWeight="SemiBold"
+                        <TextBlock DockPanel.Dock="Right" FontSize="{DynamicResource TextS}" FontWeight="SemiBold"
                                    VerticalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -576,14 +576,14 @@
                         </TextBlock>
                         <!-- Stats inline -->
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" Text="Frames"/>
-                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"
+                            <TextBlock FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" Text="Frames"/>
+                            <TextBlock FontSize="{DynamicResource TextM}" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"
                                        Margin="0,0,16,0" Text="{Binding FramesAnalyzed}"/>
-                            <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" Text="Schäden"/>
-                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
+                            <TextBlock FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" Text="Schäden"/>
+                            <TextBlock FontSize="{DynamicResource TextM}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
                                        Margin="0,0,16,0" Text="{Binding DetectionCount}"/>
-                            <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" Text="Hohe Konf."/>
-                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"
+                            <TextBlock FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" Text="Hohe Konf."/>
+                            <TextBlock FontSize="{DynamicResource TextM}" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"
                                        Text="{Binding HighConfidenceCount}"/>
                         </StackPanel>
                     </DockPanel>
@@ -607,7 +607,7 @@
                                        VerticalAlignment="Center"/>
                             <Button DockPanel.Dock="Right"
                                     x:Name="UndockButton"
-                                    FontSize="10"
+                                    FontSize="{DynamicResource TextXS}"
                                     Foreground="{DynamicResource TextSecondaryBrush}"
                                     Background="{DynamicResource HoverBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}"
@@ -617,7 +617,7 @@
                                     HorizontalAlignment="Right"
                                     Click="Undock_Click">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="10" Margin="0,0,5,0"/>
+                                    <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}" Margin="0,0,5,0"/>
                                     <TextBlock Text="Abdocken"/>
                                 </StackPanel>
                                 <Button.Template>
@@ -649,7 +649,7 @@
                                         IsHitTestVisible="False"/>
                                 <TextBlock Text="Noch kein Frame verfügbar"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
-                                           FontSize="12"
+                                           FontSize="{DynamicResource TextS}"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center">
                                     <TextBlock.Style>
@@ -668,15 +668,15 @@
 
                         <StackPanel Grid.Row="4">
                             <TextBlock Text="{Binding LiveFrameStatus}"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource TextXS}"
                                        Foreground="{DynamicResource AccentBrush}"
                                        TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding LiveFrameInfo}"
-                                       FontSize="10"
+                                       FontSize="{DynamicResource TextXS}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        Margin="0,2,0,0"/>
                             <TextBlock Text="{Binding LiveFrameQuantSummary}"
-                                       FontSize="10"
+                                       FontSize="{DynamicResource TextXS}"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,2,0,0"
                                        TextWrapping="Wrap"/>
@@ -688,7 +688,7 @@
                 <Border Grid.Row="5" CornerRadius="8" Padding="12,8" Margin="0,4,0,0"
                         Background="{DynamicResource DangerSubtleBrush}" BorderBrush="{DynamicResource DangerBrush}" BorderThickness="1"
                         Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Foreground="{DynamicResource DangerBrush}" FontSize="12"
+                    <TextBlock Foreground="{DynamicResource DangerBrush}" FontSize="{DynamicResource TextS}"
                                Text="{Binding ErrorText}" TextWrapping="Wrap"/>
                 </Border>
             </Grid>
@@ -720,14 +720,14 @@
                                       Foreground="{DynamicResource TextBrush}"
                                       BorderBrush="{DynamicResource BorderBrush}"
                                       BorderThickness="1"
-                                      FontSize="11">
+                                      FontSize="{DynamicResource TextXS}">
                                 <ComboBoxItem Content="Kompakt" Foreground="{DynamicResource TextBrush}"/>
                                 <ComboBoxItem Content="Detail" Foreground="{DynamicResource TextBrush}"/>
                             </ComboBox>
 
                             <Border CornerRadius="10" Padding="6,1"
                                     Background="{DynamicResource AccentSubtleBrush}">
-                                <TextBlock FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
+                                <TextBlock FontSize="{DynamicResource TextXS}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
                                            Text="{Binding DetectionCount}"/>
                             </Border>
                         </StackPanel>
@@ -748,7 +748,7 @@
                                        VerticalAlignment="Center"
                                        HorizontalAlignment="Center"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource TextXS}"
                                        Text="Noch keine Erkennungen"
                                        Visibility="Collapsed"
                                        Opacity="0.8"/>
@@ -797,7 +797,7 @@
                                                     <SolidColorBrush Color="{Binding OutcomeColor}" Opacity="0.18"/>
                                                 </Border.Background>
                                                 <TextBlock Text="{Binding OutcomeLabel}"
-                                                           FontSize="10" FontWeight="Bold">
+                                                           FontSize="{DynamicResource TextXS}" FontWeight="Bold">
                                                     <TextBlock.Foreground>
                                                         <SolidColorBrush Color="{Binding OutcomeColor}"/>
                                                     </TextBlock.Foreground>
@@ -812,7 +812,7 @@
                                                 </Ellipse.Fill>
                                             </Ellipse>
                                             <TextBlock Text="{Binding Label}"
-                                                       FontSize="12" FontWeight="SemiBold"
+                                                       FontSize="{DynamicResource TextS}" FontWeight="SemiBold"
                                                        Foreground="{DynamicResource TextBrush}"
                                                        TextTrimming="CharacterEllipsis"
                                                        MaxWidth="160"/>
@@ -821,19 +821,19 @@
                                                     CornerRadius="4" Padding="5,1"
                                                     Background="{DynamicResource AccentSubtleBrush}">
                                                 <TextBlock Text="{Binding Code}"
-                                                           FontFamily="Consolas" FontSize="10"
+                                                           FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
                                                            FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                             </Border>
                                         </DockPanel>
 
                                         <TextBlock Grid.Row="2"
-                                                   FontSize="10"
+                                                   FontSize="{DynamicResource TextXS}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                    Text="{Binding PositionSummary}"/>
 
                                         <!-- Quantifizierung (nur wenn vorhanden) -->
                                         <TextBlock Grid.Row="4"
-                                                   FontSize="10"
+                                                   FontSize="{DynamicResource TextXS}"
                                                    Foreground="{DynamicResource MutedBrush}"
                                                    Text="{Binding QuantSummary}"
                                                    Visibility="{Binding HasQuantification,
@@ -847,7 +847,7 @@
                                             </Grid.ColumnDefinitions>
 
                                             <TextBlock Grid.Column="0"
-                                                       FontFamily="Consolas" FontSize="10"
+                                                       FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                                        Text="{Binding MeterRange}"/>
 
@@ -863,7 +863,7 @@
                                                     </ProgressBar.Foreground>
                                                 </ProgressBar>
                                                 <TextBlock Margin="5,0,0,0"
-                                                           FontFamily="Consolas" FontSize="10"
+                                                           FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
                                                            FontWeight="Bold"
                                                            Text="{Binding ConfidencePct}">
                                                     <TextBlock.Foreground>
@@ -902,7 +902,7 @@
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
             <Grid Margin="16,0">
                 <!-- Stats links -->
-                <TextBlock VerticalAlignment="Center" FontSize="11"
+                <TextBlock VerticalAlignment="Center" FontSize="{DynamicResource TextXS}"
                            Foreground="{DynamicResource MutedBrush}" FontFamily="Consolas"
                            Text="{Binding StatsText}"/>
 

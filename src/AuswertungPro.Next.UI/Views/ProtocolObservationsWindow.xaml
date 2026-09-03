@@ -50,7 +50,7 @@
 
                 <StackPanel Grid.Row="0" Orientation="Vertical">
                     <TextBlock x:Name="HeaderText"
-                               FontSize="17"
+                               FontSize="{DynamicResource TextXL}"
                                FontWeight="SemiBold"
                                Foreground="{StaticResource TextBrush}"/>
                     <TextBlock x:Name="RevisionText"
@@ -115,7 +115,7 @@
                                         CornerRadius="4" Padding="7,2" Margin="2,3"
                                         HorizontalAlignment="Left" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Code}" FontFamily="Consolas"
-                                               FontWeight="SemiBold" FontSize="12"
+                                               FontWeight="SemiBold" FontSize="{DynamicResource TextS}"
                                                Foreground="{Binding Code, Converter={StaticResource CodeGroupBrush}}"/>
                                 </Border>
                             </DataTemplate>

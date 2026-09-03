@@ -66,25 +66,25 @@
                     <Border Style="{StaticResource MetricCardStyle}">
                         <StackPanel>
                             <TextBlock Text="Offen" Style="{StaticResource DetailLabelStyle}"/>
-                            <TextBlock Text="{Binding OpenConflictCount}" FontSize="22" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding OpenConflictCount}" FontSize="{DynamicResource TextTitle}" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
                     <Border Style="{StaticResource MetricCardStyle}">
                         <StackPanel>
                             <TextBlock Text="Fehlend" Style="{StaticResource DetailLabelStyle}"/>
-                            <TextBlock Text="{Binding MissingConflictCount}" FontSize="22" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding MissingConflictCount}" FontSize="{DynamicResource TextTitle}" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
                     <Border Style="{StaticResource MetricCardStyle}">
                         <StackPanel>
                             <TextBlock Text="Mehrdeutig" Style="{StaticResource DetailLabelStyle}"/>
-                            <TextBlock Text="{Binding AmbiguousConflictCount}" FontSize="22" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding AmbiguousConflictCount}" FontSize="{DynamicResource TextTitle}" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
                     <Border Style="{StaticResource MetricCardStyle}">
                         <StackPanel>
                             <TextBlock Text="Gelernt" Style="{StaticResource DetailLabelStyle}"/>
-                            <TextBlock Text="{Binding LearnedMappingCount}" FontSize="22" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding LearnedMappingCount}" FontSize="{DynamicResource TextTitle}" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
                 </WrapPanel>
@@ -102,7 +102,7 @@
                 <Button Command="{Binding RefreshCommand}" Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,4"
                         ToolTip="Medienkonflikte neu scannen und Liste aktualisieren.">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE72C;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="&#xE72C;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Aktualisieren" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -110,7 +110,7 @@
                 <Button Command="{Binding ResolveFromCandidateCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4"
                         ToolTip="Ausgewählten Kandidaten der markierten Haltung zuordnen.">
                     <StackPanel Orientation="Horizontal">
-                        <ui:FluentIcon Glyph="&#xE73E;" FontSize="13" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                        <ui:FluentIcon Glyph="&#xE73E;" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                         <TextBlock Text="Kandidat zuordnen" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -118,7 +118,7 @@
                 <Button Command="{Binding ResolveManualCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4"
                         ToolTip="Videodatei manuell auswählen und zuordnen.">
                     <StackPanel Orientation="Horizontal">
-                        <ui:FluentIcon Glyph="&#xE8E5;" FontSize="13" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                        <ui:FluentIcon Glyph="&#xE8E5;" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                         <TextBlock Text="Video wählen" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -130,7 +130,7 @@
                               BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="10,5">
                         <MenuItem.Header>
                             <StackPanel Orientation="Horizontal">
-                                <ui:FluentIcon Glyph="&#xE712;" FontSize="13" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                                <ui:FluentIcon Glyph="&#xE712;" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                                 <TextBlock Text="Weitere" VerticalAlignment="Center"/>
                             </StackPanel>
                         </MenuItem.Header>
@@ -166,7 +166,7 @@
                     Padding="12">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-                        <TextBlock Text="Offene Fälle" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="Offene Fälle" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"/>
                         <TextBlock Text="Links siehst du alle Konflikte. Rechts kannst du Quellen öffnen, Videos prüfen und die Zuordnung direkt speichern."
                                    Margin="0,4,0,0"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
@@ -214,7 +214,7 @@
                     Padding="12">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <TextBlock Text="Konfliktdetails" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="Konfliktdetails" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Path=SelectedConflict.TypeHint, TargetNullValue='Waehle links einen Konflikt aus, um Details und Aktionen zu sehen.'}"
                                    Margin="0,4,0,12"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
@@ -248,12 +248,12 @@
                                            TextWrapping="Wrap"/>
                                 <TextBlock Text="{Binding SelectedConflict.SuggestedSourcePathText, TargetNullValue=-}"
                                            Foreground="{DynamicResource MutedBrush}"
-                                           FontSize="11"
+                                           FontSize="{DynamicResource TextXS}"
                                            TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
 
-                        <TextBlock Text="Kandidaten" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="Kandidaten" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding SelectedConflict.CandidateSummaryText, TargetNullValue=Keine Auswahl}"
                                    Margin="0,4,0,8"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
@@ -269,7 +269,7 @@
                                             <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextWrapping="Wrap"/>
                                             <TextBlock Text="{Binding DirectoryName}"
                                                        Margin="0,2,0,0"
-                                                       FontSize="11"
+                                                       FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource MutedBrush}"
                                                        TextWrapping="Wrap"/>
                                         </StackPanel>
@@ -278,12 +278,12 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <TextBlock Text="Aktionen" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="Aktionen" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"/>
                         <WrapPanel Margin="0,8,0,0">
                             <Button Command="{Binding PlaySelectedCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
                                     ToolTip="Ausgewählten Videokandidaten im Player prüfen.">
                                 <StackPanel Orientation="Horizontal">
-                                    <ui:FluentIcon Glyph="&#xE768;" FontSize="12" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                                    <ui:FluentIcon Glyph="&#xE768;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                                     <TextBlock Text="Kandidat abspielen"/>
                                 </StackPanel>
                             </Button>
@@ -291,7 +291,7 @@
                             <Button Command="{Binding ResolveFromCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
                                     ToolTip="Diesen Kandidaten als richtige Videodatei übernehmen.">
                                 <StackPanel Orientation="Horizontal">
-                                    <ui:FluentIcon Glyph="&#xE73E;" FontSize="12" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,6,0"/>
+                                    <ui:FluentIcon Glyph="&#xE73E;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,6,0"/>
                                     <TextBlock Text="Kandidat übernehmen"/>
                                 </StackPanel>
                             </Button>
@@ -299,7 +299,7 @@
                             <Button Command="{Binding ResolveManualCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
                                     ToolTip="Andere Videodatei manuell suchen und zuordnen.">
                                 <StackPanel Orientation="Horizontal">
-                                    <ui:FluentIcon Glyph="&#xE8E5;" FontSize="12" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                                    <ui:FluentIcon Glyph="&#xE8E5;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                                     <TextBlock Text="Video manuell wählen"/>
                                 </StackPanel>
                             </Button>
@@ -311,7 +311,7 @@
                                           BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="10,5">
                                     <MenuItem.Header>
                                         <StackPanel Orientation="Horizontal">
-                                            <ui:FluentIcon Glyph="&#xE8A5;" FontSize="12" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                                            <ui:FluentIcon Glyph="&#xE8A5;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                                             <TextBlock Text="Öffnen"/>
                                         </StackPanel>
                                     </MenuItem.Header>

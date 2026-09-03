@@ -33,7 +33,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="Goldstandard-Fotoalbum" FontSize="20" FontWeight="Bold"/>
+                    <TextBlock Text="Goldstandard-Fotoalbum" FontSize="{DynamicResource TextXL}" FontWeight="Bold"/>
                     <TextBlock Text="{Binding SummaryText}" Margin="0,3,0,0"
                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </StackPanel>
@@ -71,7 +71,7 @@
                                     <StackPanel Grid.Column="0">
                                         <TextBlock Text="{Binding DisplayName, Converter={StaticResource PersonalGoldMainCodeToText}}"
                                                    FontWeight="Bold" TextWrapping="Wrap"/>
-                                        <TextBlock FontSize="10"
+                                        <TextBlock FontSize="{DynamicResource TextXS}"
                                                    Foreground="{DynamicResource MutedBrush}">
                                             <Run Text="{Binding FullGoldCount}"/>
                                             <Run Text=" vollständig"/>
@@ -135,7 +135,7 @@
                                                        TextTrimming="CharacterEllipsis"/>
                                             <TextBlock x:Name="GoldState"
                                                        Text="Vollständig"
-                                                       FontSize="10"
+                                                       FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource SuccessBrush}"/>
                                         </StackPanel>
                                     </Border>
@@ -181,7 +181,7 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel DataContext="{Binding SelectedItem}">
                             <TextBlock Text="Ausgewähltes Beispiel"
-                                       FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
+                                       FontWeight="Bold" FontSize="{DynamicResource TextL}" Margin="0,0,0,8"/>
                             <Border Height="245" CornerRadius="5" ClipToBounds="True"
                                     Background="{DynamicResource BgBrush}">
                                 <Image Source="{Binding FramePath, Converter={StaticResource FileToImage}, ConverterParameter=900}"
@@ -189,7 +189,7 @@
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                             </Border>
                             <TextBlock Text="{Binding Code, Converter={StaticResource VsaCodeToText}}"
-                                       FontSize="18" FontWeight="Bold" Margin="0,12,0,4"
+                                       FontSize="{DynamicResource TextXL}" FontWeight="Bold" Margin="0,12,0,4"
                                        TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding Beschreibung}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
@@ -198,7 +198,7 @@
                             <TextBlock Text="{Binding FileStatus}" Margin="0,2"/>
                             <TextBlock Text="{Binding ConfirmedAtUtc, StringFormat={}{0:dd.MM.yyyy HH:mm}}"
                                        Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0"/>
-                            <TextBlock Text="{Binding FramePath}" FontSize="10"
+                            <TextBlock Text="{Binding FramePath}" FontSize="{DynamicResource TextXS}"
                                        FontFamily="Consolas"
                                        Foreground="{DynamicResource MutedBrush}"
                                        TextWrapping="Wrap" Margin="0,8,0,0"/>

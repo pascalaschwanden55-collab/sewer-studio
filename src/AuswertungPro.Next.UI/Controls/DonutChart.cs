@@ -296,7 +296,7 @@ public sealed class DonutChart : Canvas
             panel.Children.Add(new TextBlock
             {
                 Text = CenterLabel,
-                FontSize = Math.Max(10d, size * 0.075d),
+                FontSize = Math.Max(11d, size * 0.075d),
                 TextAlignment = TextAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Foreground = ResolveThemeBrush("MutedBrush", Color.FromRgb(102, 112, 128))

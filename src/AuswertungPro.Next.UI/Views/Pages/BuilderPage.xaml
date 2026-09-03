@@ -201,7 +201,7 @@
                         <TextBlock Text="{Binding BauteilLabelPlural, StringFormat={}{0} (gesamt)}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding TotalRows}"
-                                   FontSize="18"
+                                   FontSize="{DynamicResource TextXL}"
                                    FontWeight="SemiBold"/>
                     </StackPanel>
 
@@ -209,7 +209,7 @@
                         <TextBlock Text="Im Ausdruck"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding FilteredRowsCount}"
-                                   FontSize="18"
+                                   FontSize="{DynamicResource TextXL}"
                                    FontWeight="SemiBold"/>
                     </StackPanel>
 
@@ -217,7 +217,7 @@
                         <TextBlock Text="Netto total"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding NetTotalText}"
-                                   FontSize="18"
+                                   FontSize="{DynamicResource TextXL}"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource AccentBrush}"/>
                     </StackPanel>
@@ -228,13 +228,13 @@
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding RowsWithoutCosts}"
-                                       FontSize="18"
+                                       FontSize="{DynamicResource TextXL}"
                                        FontWeight="SemiBold"/>
                             <TextBlock Text=" / "
-                                       FontSize="18"
+                                       FontSize="{DynamicResource TextXL}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                             <TextBlock Text="{Binding RowsWithoutOwner}"
-                                       FontSize="18"
+                                       FontSize="{DynamicResource TextXL}"
                                        FontWeight="SemiBold"/>
                         </StackPanel>
                     </StackPanel>
@@ -633,7 +633,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <ui:FluentIcon Glyph="&#xE8F1;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                                     <TextBlock Text="NPK-Leistungsverzeichnis" VerticalAlignment="Center"/>
-                                    <ui:FluentIcon Glyph="&#xE70D;" FontSize="10" Foreground="{DynamicResource MutedBrush}" Margin="8,1,0,0"/>
+                                    <ui:FluentIcon Glyph="&#xE70D;" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Margin="8,1,0,0"/>
                                 </StackPanel>
                             </MenuItem.Header>
                             <MenuItem Header="NPK-Offerte (PDF)"

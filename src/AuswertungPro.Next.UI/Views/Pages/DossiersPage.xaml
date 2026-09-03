@@ -137,22 +137,22 @@
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding Owner}"
                                                Foreground="{DynamicResource MutedBrush}"
-                                               FontSize="11"
+                                               FontSize="{DynamicResource TextXS}"
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding Summary}"
                                                Foreground="{DynamicResource MutedBrush}"
-                                               FontSize="11" Margin="0,2,0,0"/>
+                                               FontSize="{DynamicResource TextXS}" Margin="0,2,0,0"/>
                                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
                                         <TextBlock Text="{Binding StatusText}"
                                                    Foreground="{DynamicResource AccentBrush}"
-                                                   FontSize="10"/>
+                                                   FontSize="{DynamicResource TextXS}"/>
                                         <StackPanel Orientation="Horizontal" Margin="8,0,0,0"
                                                     Visibility="{Binding HasMissingParts,
                                                         Converter={StaticResource BoolToVis}}">
-                                            <ui:FluentIcon Glyph="&#xE7BA;" FontSize="10" Foreground="{DynamicResource DangerBrush}" Margin="0,0,3,0"/>
+                                            <ui:FluentIcon Glyph="&#xE7BA;" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource DangerBrush}" Margin="0,0,3,0"/>
                                             <TextBlock Text="Bauteil fehlt"
                                                        Foreground="{DynamicResource DangerBrush}"
-                                                       FontSize="10"/>
+                                                       FontSize="{DynamicResource TextXS}"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
@@ -175,11 +175,11 @@
                                     Converter={StaticResource InverseBoolToVis}}"
                                 x:Name="EmptyState">
                         <TextBlock Text="&#xE8A5;" FontFamily="{DynamicResource FontIcon}"
-                                   FontSize="34" HorizontalAlignment="Center"
+                                   FontSize="{DynamicResource IconHero}" HorizontalAlignment="Center"
                                    Foreground="{DynamicResource MutedBrush}"/>
                         <TextBlock Text="Keine Liegenschaft gewählt"
                                    Foreground="{DynamicResource TextBrush}"
-                                   FontSize="15" Margin="0,10,0,0"
+                                   FontSize="{DynamicResource TextL}" Margin="0,10,0,0"
                                    HorizontalAlignment="Center"/>
                         <TextBlock Text="Links eine Liegenschaft wählen — oder eine neue anlegen."
                                    Foreground="{DynamicResource MutedBrush}"
@@ -210,7 +210,7 @@
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="{Binding DetailTitle}"
                                            Foreground="{DynamicResource TextBrush}"
-                                           FontSize="20" FontWeight="SemiBold"/>
+                                           FontSize="{DynamicResource TextXL}" FontWeight="SemiBold"/>
                                 <TextBlock Text="{Binding DetailSubtitle}"
                                            Foreground="{DynamicResource MutedBrush}"
                                            Margin="0,2,0,0"/>
@@ -219,7 +219,7 @@
                                      Zahlen sollen nicht verschwinden, nur ihr Platz. -->
                                 <TextBlock Text="{Binding SummaryLine}"
                                            Foreground="{DynamicResource TextBrush}"
-                                           FontSize="13" Margin="0,6,0,0"
+                                           FontSize="{DynamicResource TextM}" Margin="0,6,0,0"
                                            TextWrapping="Wrap"
                                            Visibility="{Binding IsSummaryCollapsed,
                                                Converter={StaticResource BoolToVis}}"/>
@@ -233,7 +233,7 @@
 >
                                 <StackPanel Orientation="Horizontal">
                                     <ui:FluentIcon Glyph="{Binding IsSummaryCollapsed, Converter={StaticResource CollapseGlyph}}"
-                                                   FontSize="11" Margin="0,1,6,0"/>
+                                                   FontSize="{DynamicResource TextXS}" Margin="0,1,6,0"/>
                                     <TextBlock Text="Kennzahlen"/>
                                 </StackPanel>
                             </ToggleButton>
@@ -301,7 +301,7 @@
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="Zustand"
                                            Foreground="{DynamicResource MutedBrush}"
-                                           FontSize="11" Margin="0,0,0,4"/>
+                                           FontSize="{DynamicResource TextXS}" Margin="0,0,0,4"/>
                                 <ItemsControl ItemsSource="{Binding ConditionRows}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -313,14 +313,14 @@
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding Label}"
                                                            Foreground="{DynamicResource TextBrush}"
-                                                           FontSize="12"/>
+                                                           FontSize="{DynamicResource TextS}"/>
                                                 <ProgressBar Grid.Column="1"
                                                              Value="{Binding Percent, Mode=OneWay}"
                                                              Maximum="100" Height="8"
                                                              VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="2" Text="{Binding Count}"
                                                            Foreground="{DynamicResource MutedBrush}"
-                                                           FontSize="12"
+                                                           FontSize="{DynamicResource TextS}"
                                                            HorizontalAlignment="Right"/>
                                             </Grid>
                                         </DataTemplate>
@@ -331,13 +331,13 @@
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="Häufigste Schäden"
                                            Foreground="{DynamicResource MutedBrush}"
-                                           FontSize="11" Margin="0,0,0,4"/>
+                                           FontSize="{DynamicResource TextXS}" Margin="0,0,0,4"/>
                                 <ItemsControl ItemsSource="{Binding TopDamages}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding}"
                                                        Foreground="{DynamicResource TextBrush}"
-                                                       FontSize="12" Margin="0,0,0,3"/>
+                                                       FontSize="{DynamicResource TextS}" Margin="0,0,0,3"/>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
@@ -358,10 +358,10 @@
                                         Margin="12,8,12,4">
                                 <TextBlock Text="Leitungen"
                                            Foreground="{DynamicResource MutedBrush}"
-                                           FontSize="11"/>
+                                           FontSize="{DynamicResource TextXS}"/>
                                 <TextBlock Text="{Binding HoldingCountText}"
                                            Foreground="{DynamicResource MutedBrush}"
-                                           FontSize="11" Margin="6,0,0,0"/>
+                                           FontSize="{DynamicResource TextXS}" Margin="6,0,0,0"/>
                             </StackPanel>
 
                             <DataGrid Grid.Row="1"
@@ -447,10 +447,10 @@
                                             Margin="12,8,12,4">
                                     <TextBlock Text="Schächte"
                                                Foreground="{DynamicResource MutedBrush}"
-                                               FontSize="11"/>
+                                               FontSize="{DynamicResource TextXS}"/>
                                     <TextBlock Text="{Binding ShaftCountText}"
                                                Foreground="{DynamicResource MutedBrush}"
-                                               FontSize="11" Margin="6,0,0,0"/>
+                                               FontSize="{DynamicResource TextXS}" Margin="6,0,0,0"/>
                                 </StackPanel>
 
                                 <DataGrid Grid.Row="1"

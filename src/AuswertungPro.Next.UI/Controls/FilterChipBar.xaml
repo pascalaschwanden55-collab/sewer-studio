@@ -125,10 +125,10 @@
     <!-- Filter-Chips fuers Haltungen-Grid: reiner View-Filter (NR bleibt Position).
          Ein Zustandsklassen-Chip zur Zeit; Video/Schaeden kombinieren mit UND. -->
     <WrapPanel VerticalAlignment="Center">
-        <TextBlock Text="Filter:" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"
+        <TextBlock Text="Filter:" FontSize="{DynamicResource TextS}" VerticalAlignment="Center" Margin="0,0,8,0"
                    Foreground="{DynamicResource TextSecondaryBrush}"/>
 
-        <TextBlock Text="ZK" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"
+        <TextBlock Text="ZK" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="0,0,4,0"
                    Foreground="{DynamicResource TextSecondaryBrush}"/>
         <ToggleButton x:Name="Zk0" Content="0" Margin="0,0,3,0" Style="{StaticResource ZustandsklasseChipToggleButton}"
                       Checked="ZkChip_Changed" Unchecked="ZkChip_Changed" ToolTip="Nur Zustandsklasse 0"/>
@@ -156,10 +156,10 @@
                 Visibility="Collapsed" Click="Reset_Click"
                 Style="{StaticResource FilterChipResetButton}"/>
 
-        <TextBlock x:Name="TrefferText" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"
+        <TextBlock x:Name="TrefferText" FontSize="{DynamicResource TextS}" VerticalAlignment="Center" Margin="10,0,0,0"
                    Foreground="{DynamicResource TextSecondaryBrush}"/>
         <TextBlock x:Name="SperrHinweis" Text="(Drag &amp; Drop bei aktivem Filter gesperrt)"
-                   FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="Collapsed"
+                   FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="Collapsed"
                    Foreground="{DynamicResource MutedBrush}"/>
     </WrapPanel>
 </UserControl>

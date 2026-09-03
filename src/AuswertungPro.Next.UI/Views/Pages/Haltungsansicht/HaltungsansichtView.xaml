@@ -121,11 +121,11 @@
                             <StackPanel Orientation="Horizontal">
                                 <!-- Laufende Nummer = Feld NR (automatisch = Position, siehe HaltungRunningNumberService) -->
                                 <TextBlock Text="{Binding Fields[NR]}" Foreground="{DynamicResource TextSecondaryBrush}"
-                                           FontSize="11" Margin="0,0,8,0" MinWidth="16" TextAlignment="Right"/>
+                                           FontSize="{DynamicResource TextXS}" Margin="0,0,8,0" MinWidth="16" TextAlignment="Right"/>
                                 <TextBlock Text="{Binding Fields[Haltungsname]}" Foreground="{DynamicResource TextBrush}"
                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                 <!-- Marker: Gegeninspektion (2. Video Link_G) vorhanden. -->
-                                <ui:FluentIcon Glyph="&#xE8AB;" FontSize="12" Margin="6,0,0,0"
+                                <ui:FluentIcon Glyph="&#xE8AB;" FontSize="{DynamicResource TextS}" Margin="6,0,0,0"
                                                Foreground="{DynamicResource AccentBrush}"
                                                ToolTip="Diese Haltung hat 2 Videos / Inspektionen">
                                     <ui:FluentIcon.Visibility>
@@ -138,7 +138,7 @@
                                     </ui:FluentIcon.Visibility>
                                 </ui:FluentIcon>
                             </StackPanel>
-                            <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"
+                            <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextS}"
                                        TextTrimming="CharacterEllipsis" Margin="0,2,0,0">
                                 <TextBlock.Text>
                                     <MultiBinding Converter="{StaticResource SummaryConv}">
@@ -152,7 +152,7 @@
                         <Border Grid.Column="1" Width="32" Height="22" CornerRadius="4" VerticalAlignment="Center" Margin="8,0,4,0"
                                 Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}">
                             <TextBlock Text="{Binding Fields[Zustandsklasse]}" HorizontalAlignment="Center"
-                                       VerticalAlignment="Center" Foreground="{DynamicResource StatusBadgeTextBrush}" FontSize="12" FontWeight="Bold"/>
+                                       VerticalAlignment="Center" Foreground="{DynamicResource StatusBadgeTextBrush}" FontSize="{DynamicResource TextS}" FontWeight="Bold"/>
                         </Border>
                     </Grid>
                 </DataTemplate>
@@ -185,10 +185,10 @@
                     BorderThickness="1" CornerRadius="10">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,8">
-                        <TextBlock DockPanel.Dock="Left" Text="Primäre Schäden" FontSize="14" FontWeight="SemiBold"
+                        <TextBlock DockPanel.Dock="Left" Text="Primäre Schäden" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                         <Button DockPanel.Dock="Right" x:Name="SchadenAddButton"
-                                Width="28" Height="24" FontSize="16" Padding="0"
+                                Width="28" Height="24" FontSize="{DynamicResource TextL}" Padding="0"
                                 Click="SchadenAdd_Click" ToolTip="Neue Beobachtung codieren">
                             <ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource AccentBrush}"/>
                         </Button>
@@ -198,7 +198,7 @@
                     <Expander x:Name="FotoExpander" DockPanel.Dock="Top" Margin="0,0,0,8"
                               Visibility="Collapsed" IsExpanded="False">
                         <Expander.Header>
-                            <TextBlock x:Name="FotoExpanderHeader" Text="Fotos" FontSize="12" FontWeight="SemiBold"
+                            <TextBlock x:Name="FotoExpanderHeader" Text="Fotos" FontSize="{DynamicResource TextS}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
                         </Expander.Header>
                         <uc:PhotoGalleryPanel x:Name="FotoGalerie" Margin="0,4,0,0"/>
@@ -224,12 +224,12 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="12"
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="{DynamicResource TextS}"
                                                    Foreground="{DynamicResource SuccessBrush}"
                                                    Text="{Binding Converter={StaticResource SchadenMeterConv}}"/>
                                         <Border Grid.Column="1" VerticalAlignment="Center" Margin="6,0" Padding="6,2"
                                                 CornerRadius="4" Background="{DynamicResource AccentBrush}">
-                                            <TextBlock Text="{Binding Code}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+                                            <TextBlock Text="{Binding Code}" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="White"/>
                                         </Border>
                                         <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="6,0" FontWeight="SemiBold"
                                                    TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}"
@@ -237,7 +237,7 @@
                                         <Border Grid.Column="3" VerticalAlignment="Center" Padding="6,2" CornerRadius="4"
                                                 Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                             <TextBlock Text="{Binding Converter={StaticResource SchadenKategorieConv}}"
-                                                       FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         </Border>
                                     </Grid>
                                 </Border>

@@ -23,20 +23,20 @@
 
                         <!-- == 1. Legende: Punkt = Pruef-Status, % = Konfidenz == -->
                         <WrapPanel Orientation="Horizontal" Margin="0,0,0,4">
-                            <TextBlock Text="Punkt:" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Punkt:" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
                             <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource MutedBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="offen" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="offen" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                             <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource SuccessBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="akzeptiert" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="akzeptiert" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                             <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource AccentBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="bearbeitet" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="bearbeitet" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                             <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource DangerBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="abgelehnt" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="%=Konfidenz:" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#x2265;85" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="60-85" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="&lt;60" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource DangerBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="TxtQualityGateStatus" FontSize="10" FontWeight="SemiBold"
+                            <TextBlock Text="abgelehnt" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="%=Konfidenz:" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#x2265;85" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="60-85" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&lt;60" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource DangerBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtQualityGateStatus" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         </WrapPanel>
 
@@ -57,7 +57,7 @@
                                         Style="{DynamicResource PlayerButton}"
                                         Content="Abgleich"
                                         Padding="8,4"
-                                        FontSize="11"
+                                        FontSize="{DynamicResource TextXS}"
                                         Click="RunCodingProtocolMatch_Click"
                                         ToolTip="KI-Befunde mit Import-Protokoll vergleichen"/>
                                 <Button x:Name="BtnAcceptGreenCodingMatches"
@@ -65,7 +65,7 @@
                                         Style="{DynamicResource PlayerButton}"
                                         Content="Grüne als Training"
                                         Padding="8,4"
-                                        FontSize="11"
+                                        FontSize="{DynamicResource TextXS}"
                                         Margin="6,0,8,0"
                                         IsEnabled="False"
                                         Click="CodingAcceptGreenMatches_Click"
@@ -73,7 +73,7 @@
                                 <TextBlock x:Name="TxtCodingProtocolMatchSummary"
                                            Grid.Column="2"
                                            Text="Abgleich: noch nicht ausgeführt"
-                                           FontSize="10"
+                                           FontSize="{DynamicResource TextXS}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            TextWrapping="Wrap"
                                            VerticalAlignment="Center"/>
@@ -94,13 +94,13 @@
                             <Border Grid.Column="0" Style="{DynamicResource PlayerCard}">
                                 <DockPanel>
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                                        <TextBlock Style="{DynamicResource SectionLabel}" Margin="0" FontSize="10">
+                                        <TextBlock Style="{DynamicResource SectionLabel}" Margin="0" FontSize="{DynamicResource TextXS}">
                                             <Run Text="KI-BEFUNDE ("/>
                                             <Run x:Name="RunCodingDefectCount" Text="0"/>
                                             <Run Text=")"/>
                                         </TextBlock>
                                         <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right"
-                                                   FontSize="10"
+                                                   FontSize="{DynamicResource TextXS}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}">
                                             <Run x:Name="RunCodingOpenCount" Text="0"/>
                                             <Run Text=" offen"/>
@@ -109,11 +109,11 @@
 
                                     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,4,0,0">
                                         <Button Style="{DynamicResource PlayerButton}" Padding="4,2"
-                                                FontSize="10"
+                                                FontSize="{DynamicResource TextXS}"
                                                 Click="CodingTakePhoto_Click"
                                                 ToolTip="Foto vom aktuellen Frame für ausgewähltes Ereignis aufnehmen">
                                             <StackPanel Orientation="Horizontal">
-                                                <ui:FluentIcon Glyph="&#xE722;" FontSize="12" Foreground="{DynamicResource AccentBrush}" Margin="0,0,5,0"/>
+                                                <ui:FluentIcon Glyph="&#xE722;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,5,0"/>
                                                 <TextBlock Text="Foto"/>
                                             </StackPanel>
                                         </Button>
@@ -124,7 +124,7 @@
                                              behaviors:CodingEventDragDropBehavior.Enabled="True"
                                              Background="Transparent"
                                              BorderThickness="0"
-                                             FontSize="11"
+                                             FontSize="{DynamicResource TextXS}"
                                              Foreground="{DynamicResource TextBrush}"
                                              MaxHeight="400"
                                              VirtualizingPanel.IsVirtualizing="False"
@@ -215,12 +215,12 @@
                                                         <TextBlock Grid.Column="1"
                                                                    Text="{Binding Entry.Code}"
                                                                    FontFamily="Consolas"
-                                                                   FontWeight="Bold" FontSize="11"
+                                                                   FontWeight="Bold" FontSize="{DynamicResource TextXS}"
                                                                    VerticalAlignment="Top"
                                                                    Margin="0,0,4,0"/>
                                                         <TextBlock Grid.Column="2"
                                                                    Text="{Binding Entry.Beschreibung}"
-                                                                   FontSize="10"
+                                                                   FontSize="{DynamicResource TextXS}"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                                    TextWrapping="Wrap"
                                                                    ToolTip="{Binding Entry.Beschreibung}"
@@ -234,7 +234,7 @@
                                                                 Margin="4,0,0,0"
                                                                 VerticalAlignment="Center">
                                                             <TextBlock x:Name="TxtCodingMatchBadge"
-                                                                       FontSize="10"
+                                                                       FontSize="{DynamicResource TextXS}"
                                                                        FontWeight="SemiBold"
                                                                        Foreground="#F8FAFC"/>
                                                         </Border>
@@ -248,13 +248,13 @@
                                                                 Margin="4,0,0,0"
                                                                 VerticalAlignment="Center"
                                                                 ToolTip="Streckenschaden ohne Ende - Rechtsklick: Streckenschaden schliessen">
-                                                            <TextBlock FontSize="10"
+                                                            <TextBlock FontSize="{DynamicResource TextXS}"
                                                                        FontWeight="Bold"
                                                                        Foreground="#0B1220"/>
                                                         </Border>
                                                         <TextBlock Grid.Column="5" x:Name="TxtStatusIcon"
                                                                    FontFamily="{DynamicResource FontIcon}"
-                                                                   FontSize="11" Margin="2,0,0,0"
+                                                                   FontSize="{DynamicResource TextXS}" Margin="2,0,0,0"
                                                                    VerticalAlignment="Center"/>
                                                     </Grid>
                                                     <Grid Margin="11,1,0,0">
@@ -265,19 +265,19 @@
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,0">
-                                                            <ui:FluentIcon Glyph="&#xE707;" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0"/>
+                                                            <ui:FluentIcon Glyph="&#xE707;" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0"/>
                                                             <TextBlock x:Name="TxtEventMeter"
                                                                        Text="{Binding MeterAtCapture, StringFormat='{}{0:F2}m', Mode=OneWay}"
-                                                                       FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                         </StackPanel>
                                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,8,0"
                                                                     Visibility="{Binding PhotoCount, Converter={StaticResource PositiveIntToVisibility}}">
-                                                            <ui:FluentIcon Glyph="&#xE722;" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,3,0"/>
-                                                            <TextBlock Text="{Binding PhotoCount}" FontSize="10"
+                                                            <ui:FluentIcon Glyph="&#xE722;" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,3,0"/>
+                                                            <TextBlock Text="{Binding PhotoCount}" FontSize="{DynamicResource TextXS}"
                                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                         </StackPanel>
                                                         <TextBlock Grid.Column="2" x:Name="TxtConfidence"
-                                                                 FontSize="10" FontWeight="SemiBold"
+                                                                 FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
                                                                    HorizontalAlignment="Right"/>
                                                     </Grid>
                                                 </StackPanel>
@@ -293,10 +293,10 @@
                                 <StackPanel>
                                     <!-- Kompakte Details: Code + Konfidenz -->
                                     <TextBlock x:Name="TxtInlineDetailCode"
-                                               FontFamily="Consolas" FontSize="16" FontWeight="Bold"
+                                               FontFamily="Consolas" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                                                Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                                     <TextBlock x:Name="TxtInlineDetailDesc"
-                                               FontSize="10" TextWrapping="Wrap"
+                                               FontSize="{DynamicResource TextXS}" TextWrapping="Wrap"
                                                Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
 
                                     <!-- Distanz + Position + Konfidenz -->
@@ -306,22 +306,22 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
-                                            <TextBlock Text="Distanz" FontSize="10"
+                                            <TextBlock Text="Distanz" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtInlineDetailDistance"
-                                                       FontFamily="Consolas" FontSize="11"
+                                                       FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextBrush}"/>
                                         </StackPanel>
                                         <StackPanel>
-                                            <TextBlock Text="Konfidenz" FontSize="10"
+                                            <TextBlock Text="Konfidenz" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtInlineDetailConfidence"
-                                                       FontFamily="Consolas" FontSize="11" FontWeight="Bold"/>
+                                                       FontFamily="Consolas" FontSize="{DynamicResource TextXS}" FontWeight="Bold"/>
                                         </StackPanel>
                                     </Grid>
 
                                     <!-- Status -->
-                                    <TextBlock x:Name="TxtInlineDetailStatus" FontSize="10"
+                                    <TextBlock x:Name="TxtInlineDetailStatus" FontSize="{DynamicResource TextXS}"
                                                Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
 
                                     <!-- Markierte Vorschau des ausgewaehlten KI-Befunds -->
@@ -339,7 +339,7 @@
                                                    Visibility="Collapsed"/>
                                             <TextBlock x:Name="TxtInlineEvidencePreviewStatus"
                                                        Text="Kein Bild"
-                                                       FontSize="10"
+                                                       FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                                        HorizontalAlignment="Center"
                                                        VerticalAlignment="Center"/>
@@ -353,8 +353,8 @@
                                                 Background="#16A34A" Margin="0,0,0,4"
                                                 Click="CodingAcceptDefect_Click">
                                             <StackPanel Orientation="Horizontal">
-                                                <ui:FluentIcon Glyph="&#xE73E;" FontSize="11" Foreground="White" Margin="0,0,5,0"/>
-                                                <TextBlock Text="Akzeptieren" FontSize="10"/>
+                                                <ui:FluentIcon Glyph="&#xE73E;" FontSize="{DynamicResource TextXS}" Foreground="White" Margin="0,0,5,0"/>
+                                                <TextBlock Text="Akzeptieren" FontSize="{DynamicResource TextXS}"/>
                                             </StackPanel>
                                         </Button>
                                         <Button x:Name="BtnInlineEdit"
@@ -362,8 +362,8 @@
                                                 Background="#D97706" Margin="0,0,0,4"
                                                 Click="CodingEditDefect_Click">
                                             <StackPanel Orientation="Horizontal">
-                                                <ui:FluentIcon Glyph="&#xE70F;" FontSize="11" Foreground="White" Margin="0,0,5,0"/>
-                                                <TextBlock Text="Bearbeiten" FontSize="10"/>
+                                                <ui:FluentIcon Glyph="&#xE70F;" FontSize="{DynamicResource TextXS}" Foreground="White" Margin="0,0,5,0"/>
+                                                <TextBlock Text="Bearbeiten" FontSize="{DynamicResource TextXS}"/>
                                             </StackPanel>
                                         </Button>
                                         <Button x:Name="BtnInlineReject"
@@ -371,8 +371,8 @@
                                                 Background="#DC2626"
                                                 Click="CodingRejectDefect_Click">
                                             <StackPanel Orientation="Horizontal">
-                                                <ui:FluentIcon Glyph="&#xE711;" FontSize="11" Foreground="White" Margin="0,0,5,0"/>
-                                                <TextBlock Text="Ablehnen" FontSize="10"/>
+                                                <ui:FluentIcon Glyph="&#xE711;" FontSize="{DynamicResource TextXS}" Foreground="White" Margin="0,0,5,0"/>
+                                                <TextBlock Text="Ablehnen" FontSize="{DynamicResource TextXS}"/>
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>
@@ -383,7 +383,7 @@
                             <Border Grid.Column="4" Style="{DynamicResource PlayerCard}">
                                 <DockPanel>
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                                        <TextBlock Style="{DynamicResource SectionLabel}" Margin="0" FontSize="10">
+                                        <TextBlock Style="{DynamicResource SectionLabel}" Margin="0" FontSize="{DynamicResource TextXS}">
                                             <Run Text="IMPORT ("/>
                                             <Run x:Name="RunImportDefectCount" Text="0"/>
                                             <Run Text=")"/>
@@ -395,7 +395,7 @@
                                              behaviors:CodingEventDragDropBehavior.Enabled="True"
                                              Background="Transparent"
                                              BorderThickness="0"
-                                             FontSize="11"
+                                             FontSize="{DynamicResource TextXS}"
                                              Foreground="{DynamicResource TextBrush}"
                                              MaxHeight="400"
                                              VirtualizingPanel.IsVirtualizing="False"
@@ -470,12 +470,12 @@
                                                         <TextBlock Grid.Column="1"
                                                                    Text="{Binding Entry.Code}"
                                                                    FontFamily="Consolas"
-                                                                   FontWeight="Bold" FontSize="11"
+                                                                   FontWeight="Bold" FontSize="{DynamicResource TextXS}"
                                                                    VerticalAlignment="Top"
                                                                    Margin="0,0,4,0"/>
                                                         <TextBlock Grid.Column="2"
                                                                    Text="{Binding Entry.Beschreibung}"
-                                                                   FontSize="10"
+                                                                   FontSize="{DynamicResource TextXS}"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                                    TextWrapping="Wrap"
                                                                    ToolTip="{Binding Entry.Beschreibung}"
@@ -489,15 +489,15 @@
                                                                 Margin="4,0,0,0"
                                                                 VerticalAlignment="Center">
                                                             <TextBlock x:Name="TxtCodingMatchBadge"
-                                                                       FontSize="10"
+                                                                       FontSize="{DynamicResource TextXS}"
                                                                        FontWeight="SemiBold"
                                                                        Foreground="#F8FAFC"/>
                                                         </Border>
                                                     </Grid>
                                                     <StackPanel Orientation="Horizontal" Margin="11,1,0,0">
-                                                        <ui:FluentIcon Glyph="&#xE707;" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0"/>
+                                                        <ui:FluentIcon Glyph="&#xE707;" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0"/>
                                                         <TextBlock Text="{Binding MeterAtCapture, StringFormat='{}{0:F2}m', Mode=OneWay}"
-                                                                   FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                                   FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                     </StackPanel>
                                                 </StackPanel>
                                             </DataTemplate>
@@ -516,15 +516,15 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
-                                    <TextBlock Text="KALIB." FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                    <TextBlock x:Name="TxtCodingCalibDn" FontSize="10" Foreground="{DynamicResource TextBrush}" Text="DN: &#x2014;"/>
-                                    <TextBlock x:Name="TxtCodingCalibStatus" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Text="&#x2014;"/>
+                                    <TextBlock Text="KALIB." FontSize="{DynamicResource TextXS}" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBlock x:Name="TxtCodingCalibDn" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextBrush}" Text="DN: &#x2014;"/>
+                                    <TextBlock x:Name="TxtCodingCalibStatus" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Text="&#x2014;"/>
                                 </StackPanel>
                                 <WrapPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock x:Name="TxtCodingQ1" FontSize="10" Foreground="{DynamicResource TextBrush}" Text="Q1:&#x2014;" Margin="0,0,8,0"/>
-                                    <TextBlock x:Name="TxtCodingQ2" FontSize="10" Foreground="{DynamicResource TextBrush}" Text="Q2:&#x2014;" Margin="0,0,8,0"/>
-                                    <TextBlock x:Name="TxtCodingClock" FontSize="10" Foreground="{DynamicResource TextBrush}" Text="Uhr:&#x2014;" Margin="0,0,8,0"/>
-                                    <TextBlock x:Name="TxtCodingArc" FontSize="10" Foreground="{DynamicResource TextBrush}" Text="Bogen:&#x2014;"/>
+                                    <TextBlock x:Name="TxtCodingQ1" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextBrush}" Text="Q1:&#x2014;" Margin="0,0,8,0"/>
+                                    <TextBlock x:Name="TxtCodingQ2" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextBrush}" Text="Q2:&#x2014;" Margin="0,0,8,0"/>
+                                    <TextBlock x:Name="TxtCodingClock" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextBrush}" Text="Uhr:&#x2014;" Margin="0,0,8,0"/>
+                                    <TextBlock x:Name="TxtCodingArc" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextBrush}" Text="Bogen:&#x2014;"/>
                                 </WrapPanel>
                             </Grid>
                         </Border>
@@ -536,11 +536,11 @@
                                 <Button x:Name="BtnCodingSelectCode"
                                         Style="{DynamicResource PlayerPrimaryButton}"
                                         Content="Neues Ereignis erfassen"
-                                        Padding="8,6" FontSize="12"
+                                        Padding="8,6" FontSize="{DynamicResource TextS}"
                                         Click="CodingSelectCode_Click"
                                         ToolTip="Öffnet Editor mit Code-Auswahl, Fotos und VSA-Feldern"/>
                                 <TextBlock x:Name="TxtCodingSelectedCode"
-                                           FontSize="11"
+                                           FontSize="{DynamicResource TextXS}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,4,0,0" TextWrapping="Wrap"/>
                                 <!-- Unsichtbar aber vorhanden fuer Kompatibilitaet -->
@@ -571,55 +571,55 @@
 
                                     <Border Grid.Row="0" Grid.Column="0" Style="{DynamicResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="KI-Kriterien erfüllt" FontSize="10"
+                                            <TextBlock Text="KI-Kriterien erfüllt" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatAiCriteriaMet"
-                                                       Text="0" FontSize="20" FontWeight="Bold"
+                                                       Text="0" FontSize="{DynamicResource TextXL}" FontWeight="Bold"
                                                        Foreground="{DynamicResource SuccessBrush}"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="0" Grid.Column="2" Style="{DynamicResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Menschlich bestätigt" FontSize="10"
+                                            <TextBlock Text="Menschlich bestätigt" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatHumanAccepted"
-                                                       Text="0" FontSize="20" FontWeight="Bold"
+                                                       Text="0" FontSize="{DynamicResource TextXL}" FontWeight="Bold"
                                                        Foreground="#2563EB"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="2" Grid.Column="0" Style="{DynamicResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Korrigiert" FontSize="10"
+                                            <TextBlock Text="Korrigiert" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatHumanCorrected"
-                                                       Text="0" FontSize="20" FontWeight="Bold"
+                                                       Text="0" FontSize="{DynamicResource TextXL}" FontWeight="Bold"
                                                        Foreground="{DynamicResource WarningBrush}"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="2" Grid.Column="2" Style="{DynamicResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Abgelehnt" FontSize="10"
+                                            <TextBlock Text="Abgelehnt" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatRejected"
-                                                       Text="0" FontSize="20" FontWeight="Bold"
+                                                       Text="0" FontSize="{DynamicResource TextXL}" FontWeight="Bold"
                                                        Foreground="{DynamicResource DangerBrush}"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="4" Grid.Column="0" Style="{DynamicResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Offen" FontSize="10"
+                                            <TextBlock Text="Offen" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatOpen"
-                                                       Text="0" FontSize="20" FontWeight="Bold"
+                                                       Text="0" FontSize="{DynamicResource TextXL}" FontWeight="Bold"
                                                        Foreground="{DynamicResource MutedBrush}"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="4" Grid.Column="2" Style="{DynamicResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Ø KI-Sicherheit" FontSize="10"
+                                            <TextBlock Text="Ø KI-Sicherheit" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatAvgAiConfidence"
-                                                       Text="&#x2014;" FontSize="20" FontWeight="Bold"
+                                                       Text="&#x2014;" FontSize="{DynamicResource TextXL}" FontWeight="Bold"
                                                        Foreground="{DynamicResource AccentBrush}"/>
                                         </StackPanel>
                                     </Border>

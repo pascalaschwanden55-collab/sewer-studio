@@ -22,7 +22,7 @@
                                   Unchecked="SchachtansichtToggle_Changed"
                                   ToolTip="Zwischen Tabelle und Schachtansicht umschalten">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE7F4;" FontFamily="{DynamicResource FontIcon}" FontSize="13"
+                            <TextBlock Text="&#xE7F4;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Schachtansicht" VerticalAlignment="Center"/>
                         </StackPanel>
@@ -32,19 +32,19 @@
 
                     <Button Command="{Binding SaveCommand}" Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74E;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE74E;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Speichern" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding AddCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE710;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Neu" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding RemoveCommand}" Style="{StaticResource ToolbarButtonDanger}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Löschen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -53,13 +53,13 @@
 
                     <Button Command="{Binding MoveUpCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74A;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE74A;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Hoch" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding MoveDownCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74B;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE74B;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Runter" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -70,7 +70,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Doppelte Schreibweisen desselben Feldes zusammenführen (Zeichensalat aus alten Importen). Zeigt vorher einen Bericht.">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8FD;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE8FD;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Feldnamen aufräumen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -79,7 +79,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Leere Felder aus dem QGIS-Bestand ergänzen. Gefüllte Felder bleiben unberührt; vorher erscheint ein Bericht.">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE896;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE896;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Leere Felder aus QGIS" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -89,21 +89,21 @@
                     <Button Command="{Binding RefreshProtocolCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Verknüpftes Protokoll neu einlesen (Schacht wird neu aufgebaut)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE72C;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE72C;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Aktualisieren" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding ImportProtocolCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Einzelne PDF oder ganzen Ordner einschliesslich Unterordner importieren">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8E5;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE8E5;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Protokoll importieren" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding ErgaenzeStammdatenAusPdfsCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Fehlende Schachtform, Dimension und Schachttiefe aus vorhandenen PDFs erg&#x00E4;nzen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8A5;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE8A5;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="PDF-Daten" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -115,7 +115,7 @@
                             Click="StrassenStapel_Click"
                             ToolTip="Leere Strassenfelder aus den angrenzenden Haltungen f&#x00FC;llen - mit Vorschau, nichts wird &#x00FC;berschrieben">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE71B;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE71B;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Strassen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -146,7 +146,7 @@
                                  TextChanged="SearchBox_TextChanged"/>
                         <Button Margin="4,0,0,0" Style="{StaticResource IconButton}"
                                 Command="{Binding ClearSearchCommand}" ToolTip="Suche zurücksetzen">
-                            <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
+                            <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
                         </Button>
 
                         <TextBlock Text="{Binding SearchResultInfo}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
@@ -157,7 +157,7 @@
                                   IsEnabled="{Binding CanMutateShaftData}"
                                  ToolTip="Zielposition eingeben (1-basiert) und Enter drücken"
                                  KeyDown="MoveToPositionBox_KeyDown"/>
-                        <Button Content="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="12"
+                        <Button Content="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"
                                  Style="{StaticResource IconButton}" Margin="4,0,0,0"
                                  IsEnabled="{Binding CanMutateShaftData}"
                                 ToolTip="Selektierten Schacht an Position verschieben"
@@ -170,7 +170,7 @@
                                  VerticalContentAlignment="Center" Padding="4,2"
                                  ToolTip="Zeilennummer eingeben und Enter drücken"
                                  KeyDown="GoToRowBox_KeyDown"/>
-                        <Button Content="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="12"
+                        <Button Content="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"
                                 Style="{StaticResource IconButton}" Margin="4,0,0,0"
                                 ToolTip="Zu Zeile springen"
                                 Click="GoToRow_Click"/>

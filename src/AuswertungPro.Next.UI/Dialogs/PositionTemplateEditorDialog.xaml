@@ -17,7 +17,7 @@
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
             <TextBlock Text="Baukasten: Positions-Vorlagen" 
-                       FontSize="18" FontWeight="SemiBold" />
+                       FontSize="{DynamicResource TextXL}" FontWeight="SemiBold" />
             <TextBlock Text="Erstellen Sie Vorlagen für Maßnahmen mit wiederverwendbaren Positionen" 
                        Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/>
         </StackPanel>
@@ -36,7 +36,7 @@
             <Border Grid.Column="0" Style="{StaticResource Card}">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-                        <TextBlock Text="Maßnahmen-Gruppen" FontWeight="SemiBold" FontSize="14"/>
+                        <TextBlock Text="Maßnahmen-Gruppen" FontWeight="SemiBold" FontSize="{DynamicResource TextL}"/>
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                             <Button Command="{Binding AddGroupCommand}"
                                     Padding="8,4" MinWidth="80" Margin="0,0,4,0">
@@ -70,9 +70,9 @@
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
                         <DockPanel>
-                            <TextBlock Text="Positionen in: " FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="Positionen in: " FontWeight="SemiBold" FontSize="{DynamicResource TextL}" VerticalAlignment="Center"/>
                             <TextBox Text="{Binding SelectedGroup.Name, UpdateSourceTrigger=PropertyChanged}" 
-                                     FontWeight="SemiBold" FontSize="14" 
+                                     FontWeight="SemiBold" FontSize="{DynamicResource TextL}" 
                                      BorderThickness="0" Background="Transparent"
                                      Margin="4,0,0,0" VerticalAlignment="Center"/>
                         </DockPanel>
@@ -103,12 +103,12 @@
                             <Button Command="{Binding MoveUpCommand}"
                                     Padding="8,4" Width="36" Margin="0,0,4,0" Style="{StaticResource SecondaryButton}"
                                     ToolTip="Nach oben">
-                                <ui:FluentIcon Glyph="&#xE70E;" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <ui:FluentIcon Glyph="&#xE70E;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                             </Button>
                             <Button Command="{Binding MoveDownCommand}"
                                     Padding="8,4" Width="36" Style="{StaticResource SecondaryButton}"
                                     ToolTip="Nach unten">
-                                <ui:FluentIcon Glyph="&#xE70D;" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <ui:FluentIcon Glyph="&#xE70D;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                             </Button>
                         </StackPanel>
                     </StackPanel>
@@ -141,7 +141,7 @@
                                                     Padding="0"
                                                     Width="28" Height="28"
                                                     Click="DeletePosition_Click">
-                                                <ui:FluentIcon Glyph="&#xE74D;" FontSize="14" Foreground="{DynamicResource DangerBrush}"/>
+                                                <ui:FluentIcon Glyph="&#xE74D;" FontSize="{DynamicResource TextL}" Foreground="{DynamicResource DangerBrush}"/>
                                             </Button>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -157,14 +157,14 @@
             <Border Grid.Column="4" Style="{StaticResource Card}">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                        <TextBlock Text="Wartebox" FontWeight="SemiBold" FontSize="14"/>
-                        <TextBlock Text="Verwendete Positionen" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,2,0,0"/>
+                        <TextBlock Text="Wartebox" FontWeight="SemiBold" FontSize="{DynamicResource TextL}"/>
+                        <TextBlock Text="Verwendete Positionen" Foreground="{StaticResource MutedBrush}" FontSize="{DynamicResource TextXS}" Margin="0,2,0,0"/>
                         
                         <Button Command="{Binding RestoreFromStorageCommand}"
                                 Padding="8,4" MinWidth="100" Margin="0,8,0,0"
                                 ToolTip="Position aus Wartebox zurück zur Gruppe">
                             <StackPanel Orientation="Horizontal">
-                                <ui:FluentIcon Glyph="&#xE72B;" FontSize="12" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                                <ui:FluentIcon Glyph="&#xE72B;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                                 <TextBlock Text="Zurückholen"/>
                             </StackPanel>
                         </Button>

@@ -22,7 +22,7 @@
         <!-- Kopf: worum es geht -->
         <TextBlock x:Name="KopfText"
                    Grid.Row="0"
-                   FontSize="15"
+                   FontSize="{DynamicResource TextL}"
                    FontWeight="SemiBold"
                    TextWrapping="Wrap"
                    Margin="0,0,0,14"/>
@@ -35,7 +35,7 @@
                 Padding="12"
                 Margin="0,0,0,12">
             <TextBlock x:Name="TrefferText"
-                       FontSize="14"
+                       FontSize="{DynamicResource TextL}"
                        TextWrapping="Wrap"/>
         </Border>
 

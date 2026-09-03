@@ -188,7 +188,7 @@
                                 </Ellipse.Style>
                             </Ellipse>
                             <TextBlock Text="{Binding AiIndicatorTitle}"
-                                       FontSize="10"
+                                       FontSize="{DynamicResource TextXS}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        VerticalAlignment="Center"/>
@@ -196,7 +196,7 @@
                     </Button>
                     <TextBlock Text="{Binding Project.Name}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
+                               FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" MaxWidth="260"/>
                     <Border Width="1"
                             Height="14"
@@ -204,32 +204,32 @@
                             Background="{DynamicResource BorderBrush}"/>
                     <TextBlock Text="&#xE8FD;"
                                FontFamily="{DynamicResource FontIcon}"
-                               FontSize="12"
+                               FontSize="{DynamicResource TextS}"
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,4,0"/>
                     <TextBlock Text="{Binding Project.Data.Count, StringFormat={}{0} Haltungen}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11"
+                               FontSize="{DynamicResource TextXS}"
                                VerticalAlignment="Center"/>
                     <TextBlock Text="&#xE7F4;"
                                FontFamily="{DynamicResource FontIcon}"
-                               FontSize="12"
+                               FontSize="{DynamicResource TextS}"
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"
                                Margin="12,0,4,0"/>
                     <TextBlock Text="{Binding Project.SchaechteData.Count, StringFormat={}{0} Schaechte}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11"
+                               FontSize="{DynamicResource TextXS}"
                                VerticalAlignment="Center"
                                Margin="0,0,4,0"/>
                     <StackPanel Orientation="Horizontal" Visibility="Collapsed">
                     <TextBlock Text="{Binding Project.Data.Count, StringFormat='  ·  {0} Haltungen'}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11" VerticalAlignment="Center"/>
+                               FontSize="{DynamicResource TextXS}" VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding Project.SchaechteData.Count, StringFormat='  ·  {0} Schächte'}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                               FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="0,0,4,0"/>
                     </StackPanel>
                 </StackPanel>
                 <Grid VerticalAlignment="Center" ClipToBounds="True">
@@ -246,13 +246,13 @@
                         </StackPanel.Style>
                         <TextBlock Text="&#xE946;"
                                    FontFamily="{DynamicResource FontIcon}"
-                                   FontSize="12"
+                                   FontSize="{DynamicResource TextS}"
                                    Foreground="{DynamicResource MutedBrush}"
                                    VerticalAlignment="Center"
                                    Margin="0,0,6,0"/>
                         <TextBlock Text="{Binding Subtitle}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource TextXS}"
                                    VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis"/>
                     </StackPanel>
@@ -278,14 +278,14 @@
                         <TextBlock Grid.Column="0"
                                    Text="&#xE74E;"
                                    FontFamily="{DynamicResource FontIcon}"
-                                   FontSize="12"
+                                   FontSize="{DynamicResource TextS}"
                                    Foreground="{DynamicResource AccentBrush}"
                                    VerticalAlignment="Center"
                                    Margin="0,0,6,0"/>
                         <TextBlock Grid.Column="1"
                                    Text="PC-Ausfallschutz"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource TextXS}"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
                                    Margin="0,0,10,0"/>
@@ -298,14 +298,14 @@
                         <TextBlock Grid.Column="3"
                                    Text="{Binding FullBackupOperation.Percent, StringFormat={}{0:0}%}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource TextXS}"
                                    VerticalAlignment="Center"
                                    Margin="7,0,0,0"/>
                         <TextBlock Grid.Column="4"
                                    Text="{Binding FullBackupOperation.StatusText}"
                                    ToolTip="{Binding FullBackupOperation.CurrentFile}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource TextXS}"
                                    VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis"/>
                     </Grid>
@@ -385,12 +385,12 @@
                     <StackPanel Orientation="Horizontal">
                         <Border Width="4" Height="20" CornerRadius="2" Margin="0,0,10,0"
                                 Background="{DynamicResource AccentBrush}"/>
-                        <TextBlock Text="SEWER STUDIO" FontSize="15" FontWeight="Bold"
+                        <TextBlock Text="SEWER STUDIO" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                                    Foreground="{DynamicResource TextBrush}"
                                    FontFamily="{DynamicResource FontMono}"/>
                     </StackPanel>
                     <TextBlock Text="{Binding Subtitle}" Margin="14,3,0,0"
-                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}"/>
                     <Border Height="2" Margin="0,12,0,0" CornerRadius="1">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
@@ -426,7 +426,7 @@
                                     <TextBlock x:Name="DefaultNavIcon"
                                                Text="{Binding Icon}"
                                                FontFamily="{DynamicResource FontIcon}"
-                                               FontSize="16"
+                                               FontSize="{DynamicResource TextL}"
                                                Width="24"
                                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
                                                HorizontalAlignment="Center"
@@ -487,7 +487,7 @@
                                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                     </Canvas>
                                 </Grid>
-                                <TextBlock Text="{Binding Title}" Margin="10,0,0,0" FontSize="13.5"
+                                <TextBlock Text="{Binding Title}" Margin="10,0,0,0" FontSize="{DynamicResource TextM}"
                                            FontWeight="SemiBold"/>
                             </StackPanel>
                             <DataTemplate.Triggers>
@@ -649,7 +649,7 @@
                             </Style>
                         </Border.Style>
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420">
-                            <TextBlock Text="Bitte zuerst ein Projekt speichern (Datei anlegen)." FontSize="16"
+                            <TextBlock Text="Bitte zuerst ein Projekt speichern (Datei anlegen)." FontSize="{DynamicResource TextL}"
                                        FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" TextAlignment="Center"/>
                             <TextBlock Text="Danach sind alle Funktionen freigeschaltet." Margin="0,6,0,0"
                                        Foreground="{DynamicResource MutedBrush}" TextAlignment="Center"/>

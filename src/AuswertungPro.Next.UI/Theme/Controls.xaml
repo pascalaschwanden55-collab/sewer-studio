@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
                     xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
                     xmlns:vc="clr-namespace:AuswertungPro.Next.UI.Views.Controls">
@@ -45,10 +46,23 @@
          Theme.xaml: GradientStops koennen keine DynamicResource aufnehmen, also braucht jedes
          Theme eigene Stops — und der PageTitle-Style dort erreicht sie nur im eigenen Woerterbuch. -->
 
+    <!-- Schriftskala (Design-Audit 2026-09-03, M1): sieben Stufen, TextXS = 11 ist die Untergrenze
+         im ganzen Programm (Entscheid Pascal 2026-09-03). Oberflaechen lesen nur diese Tokens;
+         XS = Nebenangaben/Chips, S = Tabellen und Beschriftungen, M = Fliesstext, L = Abschnittstitel,
+         XL = Fenstertitel/Kennzahlen, Title = Seitentitel, Display = grosse Kennzahl. -->
+    <sys:Double x:Key="TextXS">11</sys:Double>
+    <sys:Double x:Key="TextS">12</sys:Double>
+    <sys:Double x:Key="TextM">13</sys:Double>
+    <sys:Double x:Key="TextL">15</sys:Double>
+    <sys:Double x:Key="TextXL">18</sys:Double>
+    <sys:Double x:Key="TextTitle">22</sys:Double>
+    <sys:Double x:Key="TextDisplay">28</sys:Double>
     <!-- Schrift-Token: Monospace fuer technische Werte (Code, Meterstand, DN) -->
     <FontFamily x:Key="FontMono">Cascadia Mono, Consolas, Courier New</FontFamily>
     <!-- Einheitliche Icon-Schrift: Fluent unter Windows 11, MDL2 als Fallback. -->
     <FontFamily x:Key="FontIcon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+    <!-- Grosses Leerzustand-Glyph (EmptyState, leere Seiten): ein Symbol, keine Schriftstufe. -->
+    <sys:Double x:Key="IconHero">36</sys:Double>
     <!-- Video-Flaechen: ueber laufendem Bild ist der Grund immer dunkel, unabhaengig vom Hell-/Dunkel-Design.
          Scrim = abdunkelnde Overlay-Flaeche (Bedienleisten, Hinweise); Black = neutrales Schwarz ohne Blaustich. -->
     <SolidColorBrush x:Key="VideoBackgroundBrush" Color="#FF000000"/>
@@ -901,7 +915,7 @@
                     <TextBlock Grid.Column="2"
                                Text="&#xE76C;"
                                FontFamily="{DynamicResource FontIcon}"
-                               FontSize="10"
+                               FontSize="11"
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"
                                Margin="8,0,0,0"/>
@@ -1527,7 +1541,7 @@
                             </Style>
                         </Border.Style>
                         <TextBlock Text="{Binding Shortcut}"
-                                   FontSize="10"
+                                   FontSize="11"
                                    FontFamily="Consolas"
                                    Foreground="{DynamicResource AccentBrush}"/>
                     </Border>

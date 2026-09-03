@@ -486,9 +486,9 @@ public sealed class DesignAuditThemeResourceTests
         var xaml = ReadUiFile("Views", "Pages", "MediaConflictsPage.xaml");
 
         Assert.Contains("xmlns:ui=\"clr-namespace:AuswertungPro.Next.UI\"", xaml);
-        Assert.Contains("Glyph=\"&#xE73E;\" FontSize=\"12\" Foreground=\"{DynamicResource SuccessBrush}\"", xaml);
-        Assert.Contains("Glyph=\"&#xE768;\" FontSize=\"12\" Foreground=\"{DynamicResource AccentBrush}\"", xaml);
-        Assert.Contains("Glyph=\"&#xE8A5;\" FontSize=\"12\" Foreground=\"{DynamicResource AccentBrush}\"", xaml);
+        Assert.Contains("Glyph=\"&#xE73E;\" FontSize=\"{DynamicResource TextS}\" Foreground=\"{DynamicResource SuccessBrush}\"", xaml);
+        Assert.Contains("Glyph=\"&#xE768;\" FontSize=\"{DynamicResource TextS}\" Foreground=\"{DynamicResource AccentBrush}\"", xaml);
+        Assert.Contains("Glyph=\"&#xE8A5;\" FontSize=\"{DynamicResource TextS}\" Foreground=\"{DynamicResource AccentBrush}\"", xaml);
         Assert.Contains("Background=\"{DynamicResource SurfaceSubtleBrush}\"", xaml);
     }
 

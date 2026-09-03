@@ -33,10 +33,10 @@
                 <!-- Titel -->
                 <DockPanel Margin="0,0,0,6">
                     <TextBlock Text="VSA Schadencodierung - VSA-KEK 2020"
-                               FontSize="15" FontWeight="Bold"
+                               FontSize="{DynamicResource TextL}" FontWeight="Bold"
                                Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
                     <TextBlock Text="EN 13508-2 - VSA-KEK 2020"
-                               FontSize="10" Foreground="{StaticResource MutedBrush}"
+                               FontSize="{DynamicResource TextXS}" Foreground="{StaticResource MutedBrush}"
                                VerticalAlignment="Center" Margin="12,0,0,0"/>
                     <Button x:Name="ResetButton" Content="Reset" HorizontalAlignment="Right"
                             Style="{StaticResource ToolbarButton}" MinWidth="50" Padding="8,3"/>
@@ -53,7 +53,7 @@
 
                 <!-- Favoriten-Chips: haeufigste Codes ueberspringen die Kaskade -->
                 <DockPanel x:Name="FavoritenReihe" Margin="0,0,0,8" Visibility="Collapsed">
-                    <TextBlock DockPanel.Dock="Left" Text="HÄUFIG" FontSize="10" FontWeight="Bold"
+                    <TextBlock DockPanel.Dock="Left" Text="HÄUFIG" FontSize="{DynamicResource TextXS}" FontWeight="Bold"
                                Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"
                                Margin="0,0,8,0"/>
                     <WrapPanel x:Name="FavoritenPanel" Orientation="Horizontal"/>
@@ -63,22 +63,22 @@
                 <UniformGrid Columns="4" Margin="0,0,0,2">
                     <StackPanel Margin="0,0,4,0">
                         <Border x:Name="ProgressBar0" Height="3" CornerRadius="1"/>
-                        <TextBlock x:Name="ProgressLabel0" Text="Gruppe" FontSize="10"
+                        <TextBlock x:Name="ProgressLabel0" Text="Gruppe" FontSize="{DynamicResource TextXS}"
                                    Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
                     </StackPanel>
                     <StackPanel Margin="0,0,4,0">
                         <Border x:Name="ProgressBar1" Height="3" CornerRadius="1"/>
-                        <TextBlock x:Name="ProgressLabel1" Text="Hauptcode" FontSize="10"
+                        <TextBlock x:Name="ProgressLabel1" Text="Hauptcode" FontSize="{DynamicResource TextXS}"
                                    Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
                     </StackPanel>
                     <StackPanel Margin="0,0,4,0">
                         <Border x:Name="ProgressBar2" Height="3" CornerRadius="1"/>
-                        <TextBlock x:Name="ProgressLabel2" Text="Char 1" FontSize="10"
+                        <TextBlock x:Name="ProgressLabel2" Text="Char 1" FontSize="{DynamicResource TextXS}"
                                    Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
                     </StackPanel>
                     <StackPanel>
                         <Border x:Name="ProgressBar3" Height="3" CornerRadius="1"/>
-                        <TextBlock x:Name="ProgressLabel3" Text="Char 2" FontSize="10"
+                        <TextBlock x:Name="ProgressLabel3" Text="Char 2" FontSize="{DynamicResource TextXS}"
                                    Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
                     </StackPanel>
                 </UniformGrid>
@@ -114,10 +114,10 @@
                             <SolidColorBrush Color="{StaticResource ColorHeader}"/>
                         </Border.Background>
                         <DockPanel>
-                            <TextBlock Text="1" FontSize="10" FontWeight="Bold" FontFamily="Consolas"
+                            <TextBlock Text="1" FontSize="{DynamicResource TextXS}" FontWeight="Bold" FontFamily="Consolas"
                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
                                        Margin="0,0,6,0" Opacity="0.5"/>
-                            <TextBlock Text="GRUPPE" FontSize="10" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="GRUPPE" FontSize="{DynamicResource TextXS}" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         </DockPanel>
                     </Border>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
@@ -141,10 +141,10 @@
                             <SolidColorBrush Color="{StaticResource ColorHeader}"/>
                         </Border.Background>
                         <DockPanel>
-                            <TextBlock Text="2" FontSize="10" FontWeight="Bold" FontFamily="Consolas"
+                            <TextBlock Text="2" FontSize="{DynamicResource TextXS}" FontWeight="Bold" FontFamily="Consolas"
                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
                                        Margin="0,0,6,0" Opacity="0.5"/>
-                            <TextBlock Text="HAUPTCODE" FontSize="10" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="HAUPTCODE" FontSize="{DynamicResource TextXS}" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         </DockPanel>
                     </Border>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
@@ -168,10 +168,10 @@
                             <SolidColorBrush Color="{StaticResource ColorHeader}"/>
                         </Border.Background>
                         <DockPanel>
-                            <TextBlock Text="3" FontSize="10" FontWeight="Bold" FontFamily="Consolas"
+                            <TextBlock Text="3" FontSize="{DynamicResource TextXS}" FontWeight="Bold" FontFamily="Consolas"
                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
                                        Margin="0,0,6,0" Opacity="0.5"/>
-                            <TextBlock Text="CHARAKT. 1" FontSize="10" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="CHARAKT. 1" FontSize="{DynamicResource TextXS}" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         </DockPanel>
                     </Border>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
@@ -195,10 +195,10 @@
                             <SolidColorBrush Color="{StaticResource ColorHeader}"/>
                         </Border.Background>
                         <DockPanel>
-                            <TextBlock Text="4" FontSize="10" FontWeight="Bold" FontFamily="Consolas"
+                            <TextBlock Text="4" FontSize="{DynamicResource TextXS}" FontWeight="Bold" FontFamily="Consolas"
                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
                                        Margin="0,0,6,0" Opacity="0.5"/>
-                            <TextBlock Text="CHARAKT. 2" FontSize="10" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="CHARAKT. 2" FontSize="{DynamicResource TextXS}" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         </DockPanel>
                     </Border>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
@@ -225,12 +225,12 @@
                                     Padding="14" Margin="0,0,0,12"
                                     BorderBrush="{StaticResource AccentBrush}" BorderThickness="0,0,0,2">
                                 <StackPanel>
-                                    <TextBlock x:Name="TxtFinalCode" FontFamily="Consolas" FontSize="24"
+                                    <TextBlock x:Name="TxtFinalCode" FontFamily="Consolas" FontSize="{DynamicResource TextTitle}"
                                                FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
-                                    <TextBlock x:Name="TxtFinalLabel" FontSize="12"
+                                    <TextBlock x:Name="TxtFinalLabel" FontSize="{DynamicResource TextS}"
                                                Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"
                                                TextWrapping="Wrap"/>
-                                    <TextBlock x:Name="TxtWarn" FontSize="10" Foreground="{StaticResource DangerBrush}"
+                                    <TextBlock x:Name="TxtWarn" FontSize="{DynamicResource TextXS}" Foreground="{StaticResource DangerBrush}"
                                                Margin="0,4,0,0" Visibility="Collapsed"/>
                                 </StackPanel>
                             </Border>
@@ -241,61 +241,61 @@
                                     BorderBrush="{StaticResource BorderBrush}"
                                     Background="{StaticResource CardBrush}">
                                 <StackPanel>
-                                    <TextBlock Text="QUANTIFIZIERUNG" FontSize="10" FontWeight="Bold"
+                                    <TextBlock Text="QUANTIFIZIERUNG" FontSize="{DynamicResource TextXS}" FontWeight="Bold"
                                                Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
 
                                     <!-- Q1 -->
                                     <StackPanel x:Name="Q1Panel" Margin="0,0,0,8">
                                         <DockPanel Margin="0,0,0,3">
-                                            <TextBlock x:Name="TxtQ1Label" FontSize="11" FontWeight="SemiBold"
+                                            <TextBlock x:Name="TxtQ1Label" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
                                                        Foreground="{StaticResource TextBrush}"/>
                                             <Border x:Name="BadgeQ1Pflicht" CornerRadius="2" Padding="4,1"
                                                     Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
-                                                <TextBlock FontSize="10" FontWeight="Bold"/>
+                                                <TextBlock FontSize="{DynamicResource TextXS}" FontWeight="Bold"/>
                                             </Border>
                                         </DockPanel>
                                         <DockPanel>
                                             <TextBox x:Name="TxtQ1Value" Width="100" DockPanel.Dock="Left" Style="{StaticResource WarmTextBox}"/>
-                                            <TextBlock x:Name="TxtQ1Unit" FontSize="12" FontWeight="Bold"
+                                            <TextBlock x:Name="TxtQ1Unit" FontSize="{DynamicResource TextS}" FontWeight="Bold"
                                                        Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center" FontFamily="Consolas"/>
-                                            <TextBlock x:Name="TxtQ1Range" FontSize="10"
+                                            <TextBlock x:Name="TxtQ1Range" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{StaticResource MutedBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center"/>
                                         </DockPanel>
-                                        <TextBlock x:Name="TxtQ1Error" FontSize="10" Foreground="{StaticResource DangerBrush}"
+                                        <TextBlock x:Name="TxtQ1Error" FontSize="{DynamicResource TextXS}" Foreground="{StaticResource DangerBrush}"
                                                    Margin="0,2,0,0" Visibility="Collapsed"/>
                                     </StackPanel>
 
                                     <!-- Q2 -->
                                     <StackPanel x:Name="Q2Panel" Margin="0,0,0,0" Visibility="Collapsed">
                                         <DockPanel Margin="0,0,0,3">
-                                            <TextBlock x:Name="TxtQ2Label" FontSize="11" FontWeight="SemiBold"
+                                            <TextBlock x:Name="TxtQ2Label" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
                                                        Foreground="{StaticResource TextBrush}"/>
                                             <Border CornerRadius="2" Padding="4,1" Margin="6,0,0,0"
                                                     VerticalAlignment="Center">
                                                 <Border.Background>
                                                     <SolidColorBrush Color="{StaticResource ColorWarning}" Opacity="0.15"/>
                                                 </Border.Background>
-                                                <TextBlock Text="OPTIONAL" FontSize="10" FontWeight="Bold"
+                                                <TextBlock Text="OPTIONAL" FontSize="{DynamicResource TextXS}" FontWeight="Bold"
                                                            Foreground="{StaticResource WarningBrush}"/>
                                             </Border>
                                         </DockPanel>
                                         <DockPanel>
                                             <TextBox x:Name="TxtQ2Value" Width="100" DockPanel.Dock="Left" Style="{StaticResource WarmTextBox}"/>
-                                            <TextBlock x:Name="TxtQ2Unit" FontSize="12" FontWeight="Bold"
+                                            <TextBlock x:Name="TxtQ2Unit" FontSize="{DynamicResource TextS}" FontWeight="Bold"
                                                        Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center" FontFamily="Consolas"/>
-                                            <TextBlock x:Name="TxtQ2Range" FontSize="10"
+                                            <TextBlock x:Name="TxtQ2Range" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{StaticResource MutedBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center"/>
                                         </DockPanel>
-                                        <TextBlock x:Name="TxtQ2Error" FontSize="10" Foreground="{StaticResource DangerBrush}"
+                                        <TextBlock x:Name="TxtQ2Error" FontSize="{DynamicResource TextXS}" Foreground="{StaticResource DangerBrush}"
                                                    Margin="0,2,0,0" Visibility="Collapsed"/>
                                     </StackPanel>
 
                                     <!-- Keine Quantifizierung -->
-                                    <TextBlock x:Name="TxtNoQuant" Text="Keine Quantifizierung" FontSize="10"
+                                    <TextBlock x:Name="TxtNoQuant" Text="Keine Quantifizierung" FontSize="{DynamicResource TextXS}"
                                                Foreground="{StaticResource MutedBrush}" Visibility="Collapsed"/>
                                 </StackPanel>
                             </Border>
@@ -306,9 +306,9 @@
                                     BorderBrush="{StaticResource BorderBrush}"
                                     Background="{StaticResource CardBrush}">
                                 <StackPanel>
-                                    <TextBlock x:Name="TxtClockTitle" FontSize="10" FontWeight="Bold"
+                                    <TextBlock x:Name="TxtClockTitle" FontSize="{DynamicResource TextXS}" FontWeight="Bold"
                                                Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
-                                    <TextBlock x:Name="TxtClockHint" FontSize="10"
+                                    <TextBlock x:Name="TxtClockHint" FontSize="{DynamicResource TextXS}"
                                                Foreground="{StaticResource SuccessBrush}" Margin="0,0,0,6"
                                                Visibility="Collapsed"/>
 
@@ -336,24 +336,24 @@
 
                                         <!-- Schnellwahl + Von/Bis (rechts) -->
                                         <StackPanel Grid.Column="2">
-                                            <TextBlock Text="SCHNELLWAHL" FontSize="10" FontWeight="Bold"
+                                            <TextBlock Text="SCHNELLWAHL" FontSize="{DynamicResource TextXS}" FontWeight="Bold"
                                                        Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
                                             <WrapPanel Orientation="Horizontal">
                                                 <Button x:Name="BtnClockScheitel" Content="12 00 Scheitel"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="10" Padding="5,3" Margin="0,0,3,3" Tag="12,00"/>
+                                                        FontSize="{DynamicResource TextXS}" Padding="5,3" Margin="0,0,3,3" Tag="12,00"/>
                                                 <Button x:Name="BtnClockSohle" Content="06 00 Sohle"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="10" Padding="5,3" Margin="0,0,3,3" Tag="06,00"/>
+                                                        FontSize="{DynamicResource TextXS}" Padding="5,3" Margin="0,0,3,3" Tag="06,00"/>
                                                 <Button x:Name="BtnClockRechts" Content="09 03 Rechts"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="10" Padding="5,3" Margin="0,0,3,3" Tag="09,03"/>
+                                                        FontSize="{DynamicResource TextXS}" Padding="5,3" Margin="0,0,3,3" Tag="09,03"/>
                                                 <Button x:Name="BtnClockGesamt" Content="12 12 Gesamt"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="10" Padding="5,3" Margin="0,0,3,3" Tag="12,12"/>
+                                                        FontSize="{DynamicResource TextXS}" Padding="5,3" Margin="0,0,3,3" Tag="12,12"/>
                                                 <Button x:Name="BtnClockKeine" Content="00 00 Keine"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="10" Padding="5,3" Margin="0,0,3,3" Tag="00,00"/>
+                                                        FontSize="{DynamicResource TextXS}" Padding="5,3" Margin="0,0,3,3" Tag="00,00"/>
                                             </WrapPanel>
 
                                             <!-- Von/Bis Anzeige -->
@@ -365,27 +365,27 @@
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0">
-                                                    <TextBlock Text="VON" FontSize="10" Foreground="{StaticResource MutedBrush}"/>
+                                                    <TextBlock Text="VON" FontSize="{DynamicResource TextXS}" Foreground="{StaticResource MutedBrush}"/>
                                                     <TextBox x:Name="TxtClockVon" Width="45" FontFamily="Consolas" Style="{StaticResource WarmTextBox}"
-                                                             FontSize="14" FontWeight="Bold" Padding="3,3"/>
+                                                             FontSize="{DynamicResource TextL}" FontWeight="Bold" Padding="3,3"/>
                                                 </StackPanel>
-                                                <ui:FluentIcon Grid.Column="1" Glyph="&#xE72A;" FontSize="12"
+                                                <ui:FluentIcon Grid.Column="1" Glyph="&#xE72A;" FontSize="{DynamicResource TextS}"
                                                                Foreground="{StaticResource MutedBrush}"
                                                                HorizontalAlignment="Center" VerticalAlignment="Bottom"
                                                                Margin="0,0,0,5"/>
                                                 <StackPanel Grid.Column="2">
-                                                    <TextBlock Text="BIS" FontSize="10" Foreground="{StaticResource MutedBrush}"/>
+                                                    <TextBlock Text="BIS" FontSize="{DynamicResource TextXS}" Foreground="{StaticResource MutedBrush}"/>
                                                     <TextBox x:Name="TxtClockBis" Width="45" FontFamily="Consolas" Style="{StaticResource WarmTextBox}"
-                                                             FontSize="14" FontWeight="Bold" Padding="3,3"/>
+                                                             FontSize="{DynamicResource TextL}" FontWeight="Bold" Padding="3,3"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="3" x:Name="TxtClockTransfer"
-                                                           FontSize="10" Foreground="{StaticResource MutedBrush}"
+                                                           FontSize="{DynamicResource TextXS}" Foreground="{StaticResource MutedBrush}"
                                                            VerticalAlignment="Bottom" Margin="8,0,0,4"
                                                            FontFamily="Consolas"/>
                                             </Grid>
 
                                             <!-- Bedienhinweis -->
-                                            <TextBlock x:Name="TxtClockUsageHint" FontSize="10"
+                                            <TextBlock x:Name="TxtClockUsageHint" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"
                                                        TextWrapping="Wrap"/>
                                         </StackPanel>
@@ -399,14 +399,14 @@
                                 BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                                 Background="{StaticResource BgLightBrush}">
                             <StackPanel HorizontalAlignment="Center">
-                                <ui:FluentIcon Glyph="&#xE76B;" FontSize="20"
+                                <ui:FluentIcon Glyph="&#xE76B;" FontSize="{DynamicResource TextXL}"
                                                Foreground="{StaticResource AccentBrush}"
                                                HorizontalAlignment="Center" Margin="0,2,0,4"/>
-                                <TextBlock Text="Code links wählen" FontSize="13" FontWeight="SemiBold"
+                                <TextBlock Text="Code links wählen" FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
                                            Foreground="{StaticResource TextBrush}"
                                            HorizontalAlignment="Center" Margin="0,0,0,3"/>
                                 <TextBlock Text="Gruppe · Hauptcode · Charakterisierung"
-                                           FontSize="10" Foreground="{StaticResource MutedBrush}"
+                                           FontSize="{DynamicResource TextXS}" Foreground="{StaticResource MutedBrush}"
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
@@ -416,7 +416,7 @@
                                 BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                                 Background="{StaticResource CardBrush}">
                             <StackPanel>
-                                <TextBlock Text="POSITION" FontSize="10" FontWeight="Bold"
+                                <TextBlock Text="POSITION" FontSize="{DynamicResource TextXS}" FontWeight="Bold"
                                            Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -425,12 +425,12 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Meter Start (m)" FontSize="11" FontWeight="SemiBold"
+                                        <TextBlock Text="Meter Start (m)" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
                                                    Margin="0,0,0,3"/>
                                         <TextBox x:Name="TxtMeterStart" Style="{StaticResource WarmTextBox}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Meter Ende (m)" FontSize="11" FontWeight="SemiBold"
+                                        <TextBlock Text="Meter Ende (m)" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
                                                    Margin="0,0,0,3"/>
                                         <TextBox x:Name="TxtMeterEnd" Style="{StaticResource WarmTextBox}"/>
                                     </StackPanel>
@@ -453,7 +453,7 @@
                                           Margin="0,8,0,0"/>
 
                                 <StackPanel Margin="0,8,0,0">
-                                    <TextBlock Text="Videozeit (mm:ss)" FontSize="11" FontWeight="SemiBold"
+                                    <TextBlock Text="Videozeit (mm:ss)" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
                                                Margin="0,0,0,3"/>
                                     <TextBox x:Name="TxtZeit" Width="120" HorizontalAlignment="Left" Style="{StaticResource WarmTextBox}"/>
                                 </StackPanel>
@@ -465,7 +465,7 @@
                                 BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                                 Background="{StaticResource CardBrush}">
                             <StackPanel>
-                                <TextBlock Text="BEMERKUNGEN" FontSize="10" FontWeight="Bold"
+                                <TextBlock Text="BEMERKUNGEN" FontSize="{DynamicResource TextXS}" FontWeight="Bold"
                                            Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
                                 <TextBox x:Name="TxtBemerkungen" AcceptsReturn="True" Style="{StaticResource WarmTextBox}"
                                          TextWrapping="Wrap" MinHeight="40" MaxHeight="80"
@@ -478,7 +478,7 @@
                                 BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                                 Background="{StaticResource CardBrush}">
                             <StackPanel>
-                                <TextBlock Text="FOTOS" FontSize="10" FontWeight="Bold"
+                                <TextBlock Text="FOTOS" FontSize="{DynamicResource TextXS}" FontWeight="Bold"
                                            Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -489,7 +489,7 @@
 
                                     <!-- Foto 1 -->
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Foto 1" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,3"/>
+                                        <TextBlock Text="Foto 1" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Margin="0,0,0,3"/>
                                         <Border Height="90" CornerRadius="4" BorderThickness="1"
                                                 BorderBrush="{StaticResource BorderBrush}"
                                                 Background="{StaticResource BgLightBrush}">
@@ -498,19 +498,19 @@
                                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                                                 <TextBlock x:Name="Foto1Placeholder" Text="Kein Foto"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                           Foreground="{StaticResource MutedBrush}" FontSize="10"/>
+                                                           Foreground="{StaticResource MutedBrush}" FontSize="{DynamicResource TextXS}"/>
                                             </Grid>
                                         </Border>
                                         <Button x:Name="BtnCaptureFoto1" Content="Aus Video"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,3,0,0"
-                                                FontSize="10"/>
+                                                FontSize="{DynamicResource TextXS}"/>
                                         <Button x:Name="BtnMeasureFoto1"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,2,0,0"
-                                                FontSize="10">
+                                                FontSize="{DynamicResource TextXS}">
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                <ui:FluentIcon Glyph="&#xE721;" FontSize="10" Margin="0,0,4,0"/>
+                                                <ui:FluentIcon Glyph="&#xE721;" FontSize="{DynamicResource TextXS}" Margin="0,0,4,0"/>
                                                 <TextBlock Text="Vermessen"/>
                                             </StackPanel>
                                         </Button>
@@ -518,7 +518,7 @@
 
                                     <!-- Foto 2 -->
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Foto 2" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,3"/>
+                                        <TextBlock Text="Foto 2" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Margin="0,0,0,3"/>
                                         <Border Height="90" CornerRadius="4" BorderThickness="1"
                                                 BorderBrush="{StaticResource BorderBrush}"
                                                 Background="{StaticResource BgLightBrush}">
@@ -527,19 +527,19 @@
                                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                                                 <TextBlock x:Name="Foto2Placeholder" Text="Kein Foto"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                           Foreground="{StaticResource MutedBrush}" FontSize="10"/>
+                                                           Foreground="{StaticResource MutedBrush}" FontSize="{DynamicResource TextXS}"/>
                                             </Grid>
                                         </Border>
                                         <Button x:Name="BtnCaptureFoto2" Content="Aus Video"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,3,0,0"
-                                                FontSize="10"/>
+                                                FontSize="{DynamicResource TextXS}"/>
                                         <Button x:Name="BtnMeasureFoto2"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,2,0,0"
-                                                FontSize="10">
+                                                FontSize="{DynamicResource TextXS}">
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                <ui:FluentIcon Glyph="&#xE721;" FontSize="10" Margin="0,0,4,0"/>
+                                                <ui:FluentIcon Glyph="&#xE721;" FontSize="{DynamicResource TextXS}" Margin="0,0,4,0"/>
                                                 <TextBlock Text="Vermessen"/>
                                             </StackPanel>
                                         </Button>
@@ -563,16 +563,16 @@
             <DockPanel>
                 <!-- Code-Vorschau links -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Code:" FontSize="12" Foreground="{StaticResource MutedBrush}"
+                    <TextBlock Text="Code:" FontSize="{DynamicResource TextS}" Foreground="{StaticResource MutedBrush}"
                                VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <TextBlock x:Name="TxtCodePreview" FontFamily="Consolas" FontSize="16"
+                    <TextBlock x:Name="TxtCodePreview" FontFamily="Consolas" FontSize="{DynamicResource TextL}"
                                FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Buttons rechts -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
-                    <TextBlock x:Name="TxtValidation" FontSize="10"
+                    <TextBlock x:Name="TxtValidation" FontSize="{DynamicResource TextXS}"
                                Foreground="{StaticResource DangerBrush}"
                                VerticalAlignment="Center" Margin="0,0,12,0"
                                MaxWidth="300" TextWrapping="Wrap"/>

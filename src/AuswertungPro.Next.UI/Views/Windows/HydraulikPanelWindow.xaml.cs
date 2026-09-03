@@ -210,7 +210,7 @@ public partial class HydraulikPanelWindow : Window
             var hLabel = new TextBlock
             {
                 Text = $"h={hMm:F0} mm",
-                FontSize = 10,
+                FontSize = 11,
                 FontFamily = ConsolasFont,
                 Foreground = LabelDarkBrush
             };

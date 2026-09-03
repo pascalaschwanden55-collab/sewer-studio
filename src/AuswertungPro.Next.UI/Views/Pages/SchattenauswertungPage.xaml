@@ -88,7 +88,7 @@
             <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="6" Padding="12,8" Margin="0,6,0,0"
                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="{Binding FortschrittText}" Foreground="{DynamicResource TextBrush}" FontSize="12"/>
+                    <TextBlock Text="{Binding FortschrittText}" Foreground="{DynamicResource TextBrush}" FontSize="{DynamicResource TextS}"/>
                     <ProgressBar Height="4" Margin="0,6,0,0"
                                  Minimum="0"
                                  Maximum="{Binding FortschrittMax}"
@@ -119,7 +119,7 @@
                           IsReadOnly="True"
                           SelectionMode="Single"
                           HeadersVisibility="Column"
-                          FontSize="13">
+                          FontSize="{DynamicResource TextM}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Haltung" Binding="{Binding Haltung}" Width="150"/>
                         <DataGridTemplateColumn Header="ZK (Ich)" Width="70">
@@ -177,12 +177,12 @@
                     <StackPanel>
                         <TextBlock Text="Begründung der Schatten-KI" Style="{StaticResource SectionTitle}"/>
                         <TextBlock Text="{Binding SelectedRow.Haltung, FallbackValue='Haltung in der Tabelle wählen.'}"
-                                   Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,4,0,10"/>
+                                   Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}" Margin="0,4,0,10"/>
 
                         <TextBlock Text="{Binding SelectedRow.KostenbandText, FallbackValue=''}"
                                    Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding SelectedRow.KiConfidenceText, FallbackValue='', StringFormat='KI-Sicherheit: {0}'}"
-                                   Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,2,0,8"/>
+                                   Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}" Margin="0,2,0,8"/>
 
                         <TextBlock Text="{Binding SelectedRow.KiBegruendung, FallbackValue=''}"
                                    Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>

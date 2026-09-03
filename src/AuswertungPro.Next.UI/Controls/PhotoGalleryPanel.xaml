@@ -21,17 +21,17 @@
                     Style="{StaticResource SecondaryButton}"
                     Click="Detach_Click"
                     ToolTip="In eigenem Fenster öffnen">
-                <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
+                <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
             </Button>
             <TextBlock DockPanel.Dock="Left"
                        Text="Kacheln"
-                       FontSize="11"
+                       FontSize="{DynamicResource TextXS}"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        VerticalAlignment="Center"
                        Margin="0,0,8,0"/>
             <TextBlock DockPanel.Dock="Right"
                        Text="{Binding TileSize, RelativeSource={RelativeSource AncestorType={x:Type local:PhotoGalleryPanel}}, StringFormat={}{0:0}px}"
-                       FontSize="11"
+                       FontSize="{DynamicResource TextXS}"
                        Foreground="{DynamicResource MutedBrush}"
                        VerticalAlignment="Center"
                        Margin="8,0,0,0"/>
@@ -66,7 +66,7 @@
                                     <Image Stretch="UniformToFill"
                                            Source="{Binding Pfad, Converter={StaticResource ThumbConv}}"/>
                                 </Border>
-                                <TextBlock Text="{Binding Beschriftung}" FontSize="10" Margin="0,4,0,0"
+                                <TextBlock Text="{Binding Beschriftung}" FontSize="{DynamicResource TextXS}" Margin="0,4,0,0"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            TextTrimming="CharacterEllipsis" HorizontalAlignment="Center"/>
                             </StackPanel>

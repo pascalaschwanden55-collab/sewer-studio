@@ -15,7 +15,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,10">
-            <TextBlock Text="Positionen (Kostentabelle)" FontSize="18" FontWeight="SemiBold"/>
+            <TextBlock Text="Positionen (Kostentabelle)" FontSize="{DynamicResource TextXL}" FontWeight="SemiBold"/>
             <TextBlock Text="Hier kannst du Positionen hinzufügen, ändern oder löschen."
                        Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/>
         </StackPanel>
@@ -100,7 +100,7 @@
                             </Button>
                         </StackPanel>
 
-                        <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" FontSize="11"
+                        <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" FontSize="{DynamicResource TextXS}"
                                    Foreground="{StaticResource MutedBrush}"
                                    Text="Der Preis richtet sich nach der DN der Haltung. Fehlt eine DN in der Liste, wird automatisch die nächstgelegene genommen. „DN von/bis&#x201C; gleich = genau diese Nennweite."/>
                     </StackPanel>

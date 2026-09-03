@@ -42,7 +42,7 @@
                                     Background="{DynamicResource AccentBrush}"/>
                             <TextBlock Grid.Column="1" Text="{Binding Message}"
                                        Margin="12,10,14,10" TextWrapping="Wrap"
-                                       Foreground="{DynamicResource TextBrush}" FontSize="13"/>
+                                       Foreground="{DynamicResource TextBrush}" FontSize="{DynamicResource TextM}"/>
                             <!-- Lebenslinie: schrumpft ueber die Anzeigedauer des Toasts, damit man
                                  sieht, wie lange er noch bleibt. Fehler-Toasts bleiben bis zum Klick
                                  und bekommen darum keine (Code-Behind blendet sie dann aus). -->

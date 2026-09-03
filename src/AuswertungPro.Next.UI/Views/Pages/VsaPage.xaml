@@ -24,18 +24,18 @@
 
                 <StackPanel Grid.Column="1" Margin="16,14">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="&#xE8EF;" FontFamily="{DynamicResource FontIcon}" FontSize="20"
+                        <TextBlock Text="&#xE8EF;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXL}"
                                    Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <TextBlock Text="VSA-Bewertung" Style="{StaticResource PageTitle}"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                     <TextBlock Text="Berechnet die VSA-Zustandsbewertung für alle Haltungen und Schächte basierend auf den erfassten Schadencodes und dem Regelwerk (SN EN 13508-2)."
-                               TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"
+                               TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextS}"
                                Margin="0,0,0,12"/>
                     <Button Command="{Binding RunCommand}" Style="{StaticResource ActionCardButton}" HorizontalAlignment="Left"
                             ToolTip="VSA-Zustandsbewertung für alle vorhandenen Haltungen und Schächte berechnen.">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" FontSize="14"
+                            <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}"
                                        Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock Text="VSA-Bewertung starten" VerticalAlignment="Center"/>
                         </StackPanel>
@@ -64,7 +64,7 @@
                 CornerRadius="8" Padding="14" Margin="0,0,0,8">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="&#xE73E;" FontFamily="{DynamicResource FontIcon}" FontSize="14"
+                    <TextBlock Text="&#xE73E;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}"
                                Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock Text="Ergebnis" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                 </StackPanel>
@@ -77,10 +77,10 @@
                 Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 CornerRadius="8" Padding="12">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="&#xE946;" FontFamily="{DynamicResource FontIcon}" FontSize="14"
+                <TextBlock Text="&#xE946;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}"
                            Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Top" Margin="0,0,8,0"/>
                 <TextBlock Text="Tipp: Für echte VSA-Klassifizierung müssen die Mapping-JSONs (Anhang C/D) vollständig gepflegt sein."
-                           TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
+                           TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
             </StackPanel>
         </Border>
     </Grid>

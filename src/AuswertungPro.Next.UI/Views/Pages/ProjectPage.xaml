@@ -44,7 +44,7 @@
         <Border Grid.Row="1" Style="{StaticResource Card}" Background="{DynamicResource CardBrush}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <TextBlock Text="Projekt-Infos" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    <TextBlock Text="Projekt-Infos" FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                     <TextBlock Text="Name" Margin="0,12,0,4" Foreground="{DynamicResource MutedBrush}"/>
                     <TextBox Text="{Binding DraftName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     <TextBlock Text="Beschreibung" Margin="0,12,0,4" Foreground="{DynamicResource MutedBrush}"/>

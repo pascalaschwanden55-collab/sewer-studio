@@ -71,7 +71,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding Fields[NR.]}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
-                                           FontSize="11"
+                                           FontSize="{DynamicResource TextXS}"
                                            Margin="0,0,8,0"
                                            MinWidth="16"
                                            TextAlignment="Right"/>
@@ -81,7 +81,7 @@
                                            TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
                             <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
-                                       FontSize="12"
+                                       FontSize="{DynamicResource TextS}"
                                        TextTrimming="CharacterEllipsis"
                                        Margin="0,2,0,0">
                                 <TextBlock.Text>
@@ -104,7 +104,7 @@
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
                                        Foreground="{DynamicResource StatusBadgeTextBrush}"
-                                       FontSize="12"
+                                       FontSize="{DynamicResource TextS}"
                                        FontWeight="Bold"/>
                         </Border>
                     </Grid>
@@ -148,7 +148,7 @@
                     <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,8">
                         <TextBlock DockPanel.Dock="Left"
                                    Text="Sch&#x00E4;den"
-                                   FontSize="14"
+                                   FontSize="{DynamicResource TextL}"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextBrush}"
                                    VerticalAlignment="Center"/>

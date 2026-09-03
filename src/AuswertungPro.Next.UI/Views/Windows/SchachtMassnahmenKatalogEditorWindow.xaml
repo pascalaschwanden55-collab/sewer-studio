@@ -18,8 +18,8 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="Deine Schacht-Massnahmen (Name + Preis)"
-                   FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,4"/>
-        <TextBlock Grid.Row="1" Margin="0,0,0,8" FontSize="11" Foreground="{StaticResource MutedBrush}"
+                   FontSize="{DynamicResource TextL}" FontWeight="Bold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,4"/>
+        <TextBlock Grid.Row="1" Margin="0,0,0,8" FontSize="{DynamicResource TextXS}" Foreground="{StaticResource MutedBrush}"
                    TextWrapping="Wrap"
                    Text="Diese Liste gilt für alle Projekte. Preise sind Vorgaben — pro Schacht kannst du sie später anpassen."/>
 
