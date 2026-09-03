@@ -105,12 +105,28 @@ public sealed class XtfOrganisationsbuch
             : new XtfRevisionFeld("EigentuemerRef", alt.Length == 0 ? null : alt, tid, IstVerweis: true);
     }
 
+    /// <summary>Laenge einer <c>STANDARDOID</c> laut INTERLIS: <c>OID TEXT*16</c>.</summary>
+    private const int OidLaenge = 16;
+
+    /// <summary>
+    /// Eine neue Kennung im Stil der Datei.
+    ///
+    /// <c>STANDARDOID</c> ist in INTERLIS <c>OID TEXT*16</c> — genau sechzehn Zeichen,
+    /// nur Ziffern und Buchstaben. Eine kuerzere weist der offizielle Pruefer
+    /// (ilivalidator) mit "is not a valid OID" ab; genau das ist am 2026-09-03 am
+    /// echten Kantonsausschnitt passiert, als hier noch fuenfzehn Zeichen entstanden.
+    ///
+    /// Die ersten acht Zeichen stammen aus einer vorhandenen Kennung der Datei, damit
+    /// die neue Organisation zum Bestand passt. Die <c>9</c> davor macht einen
+    /// Zusammenstoss mit den fortlaufenden Kennungen des Katasters unwahrscheinlich;
+    /// geprueft wird er trotzdem.
+    /// </summary>
     private string NaechsteTid()
     {
-        for (var i = 1; i < 1_000_000; i++)
+        for (var i = 1; i < 10_000_000; i++)
         {
-            var kandidat = $"{_tidPraefix}O{i:D6}";
-            if (_vergebeneTids.Add(kandidat))
+            var kandidat = $"{_tidPraefix}9{i:D7}";
+            if (kandidat.Length == OidLaenge && _vergebeneTids.Add(kandidat))
                 return kandidat;
         }
 

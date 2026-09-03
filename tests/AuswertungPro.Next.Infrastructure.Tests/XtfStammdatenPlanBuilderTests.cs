@@ -334,6 +334,22 @@ public sealed class XtfStammdatenPlanBuilderTests
         Assert.Empty(plan.Organisationen);
     }
 
+    // STANDARDOID ist in INTERLIS "OID TEXT*16" — genau sechzehn Zeichen, nur Ziffern
+    // und Buchstaben. Der offizielle Pruefer (ilivalidator 1.15.0) weist eine kuerzere
+    // mit "is not a valid OID" ab; genau das ist am 2026-09-03 am echten
+    // Kantonsausschnitt passiert, als hier noch fuenfzehn Zeichen entstanden.
+    [Fact]
+    public void Die_Kennung_einer_neuen_Organisation_ist_eine_gueltige_OID()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.Owner, "Gemeinde", FieldSource.Manual, userEdited: true);
+
+        var tid = Assert.Single(PlanMitVerwaltung(record).Organisationen).Tid;
+
+        Assert.Equal(16, tid.Length);
+        Assert.All(tid, z => Assert.True(char.IsAsciiLetterOrDigit(z), $"Ungueltiges Zeichen '{z}' in {tid}"));
+    }
+
     [Fact]
     public void Ein_neuer_Eigentuemer_bekommt_eine_eigene_Organisation()
     {
