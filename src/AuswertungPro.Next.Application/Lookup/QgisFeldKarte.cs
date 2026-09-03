@@ -66,7 +66,20 @@ public static class QgisFeldKarte
         new("datenherr", FieldKeys.DataOwner, Text),
         new("datenlieferant", FieldKeys.DataSupplier, Text),
         new("letzte_aenderung", FieldKeys.CadastreLastChange, Datum),
-        new("datum_upload_sde", FieldKeys.CadastreUpdatedAt, Datum)
+        new("datum_upload_sde", FieldKeys.CadastreUpdatedAt, Datum),
+
+        // Die beiden Masse einzeln. Die GEONIS-Maske schreibt es selbst dazu:
+        // Dimension1 ist das groesste, Dimension2 das kleinste Innenmass — es sind
+        // also nicht Breite und Laenge in fester Richtung.
+        new("ns_dimension1", FieldKeys.ShaftDimension1Mm, GanzeZahl),
+        new("ns_dimension2", FieldKeys.ShaftDimension2Mm, GanzeZahl),
+
+        // Zwei Spalten der Ebene, die bisher niemand gelesen hat: die Bemerkung ist
+        // bei 16671 Schaechten gefuellt ("Saniert 2018"), die Nutzungsart bei 59961.
+        // Die Nutzungsart bleibt ein reines Programmfeld — SIA405 kennt am
+        // Normschacht kein solches Attribut.
+        new("bw_bemerkung", FieldKeys.Remarks, Text),
+        new("ka_nutzungsart", FieldKeys.UsageType, w => Leer(NutzungsartVokabular.Normalisieren(w)))
     ];
 
     /// <summary>

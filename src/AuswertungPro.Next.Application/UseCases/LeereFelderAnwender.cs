@@ -66,17 +66,22 @@ public static class LeereFelderAnwender
 
         foreach (var record in schaechte)
         {
-            var name = (record.GetFieldValue("Schachtnummer") ?? "").Trim();
+            var name = (record.GetFieldValue(SchachtFeldnamen.Feld(record, "Schachtnummer")) ?? "").Trim();
             if (name.Length == 0 || !jeBauteil.TryGetValue(name, out var positionen))
                 continue;
 
             foreach (var position in positionen)
             {
+                // Geschrieben wird unter dem Namen, den DIESER Datensatz fuehrt —
+                // sonst entstuende neben dem sichtbaren "Eigentümer" ein zweites,
+                // unsichtbares "Eigentuemer".
+                //
                 // FuelleLeeresFeld prueft die Leere selbst und liefert false, wenn
                 // inzwischen etwas darin steht. Gezaehlt wird nur, was wirklich
                 // geschrieben wurde — sonst meldete der Lauf eine Zahl, die er nicht
                 // erfuellt hat.
-                if (record.FuelleLeeresFeld(position.Feld, position.Wert, Herkunft))
+                var feld = SchachtFeldnamen.Feld(record, position.Feld);
+                if (record.FuelleLeeresFeld(feld, position.Wert, Herkunft))
                     geschrieben++;
             }
         }

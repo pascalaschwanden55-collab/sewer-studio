@@ -441,6 +441,21 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         if (!Columns.Any(c => SchaechteColumnPolicy.ResolveOptionField(c) == FieldKeys.LoadClass))
             Columns.Add(FieldKeys.LoadClass);
 
+        // Die Felder, die "Leere Felder aus QGIS ergaenzen" setzt. Ohne Spalte laege
+        // der Wert im Datensatz und waere nirgends zu sehen — von den 16 Feldern
+        // fuehrt die Vorlage nur drei (Funktion, Zustandsklasse, Bemerkungen).
+        //
+        // Verglichen wird ueber SchachtFeldnamen: Die Vorlage schreibt "Eigentümer"
+        // mit Umlaut, das Feld heisst "Eigentuemer" — beides ist dieselbe Spalte und
+        // darf nicht zweimal erscheinen.
+        foreach (var feld in AuswertungPro.Next.Application.Lookup.QgisFeldKarte.Felder(
+                     AuswertungPro.Next.Application.Lookup.BauteilArt.Schacht))
+        {
+            var gefaltet = SchachtFeldnamen.Falte(feld);
+            if (!Columns.Any(c => string.Equals(SchachtFeldnamen.Falte(c), gefaltet, StringComparison.Ordinal)))
+                Columns.Add(feld);
+        }
+
         EnsureRecordColumns();
         UpdateNr();
         LastResult = $"Spalten geladen: {Columns.Count}";

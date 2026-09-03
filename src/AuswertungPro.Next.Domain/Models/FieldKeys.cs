@@ -1,4 +1,4 @@
-namespace AuswertungPro.Next.Domain.Models;
+﻿namespace AuswertungPro.Next.Domain.Models;
 
 /// <summary>
 /// Zentrale Feldnamen, die im Projektformat persistiert werden.
@@ -129,6 +129,19 @@ public static class FieldKeys
     /// dieses Feld nicht, es ist die Buchhaltung des QGIS-Exports.
     /// </summary>
     public const string CadastreUpdatedAt = "Aktualisierungsdatum";
+
+    /// <summary>
+    /// Schachtabmessung 1 in Millimetern — laut GEONIS-Maske das GROESSTE Innenmass.
+    /// Getrennt vom bestehenden Textfeld <c>Dimension</c> ("600 mm", "1100 x 900 mm"),
+    /// das Excel-Bericht, PDF- und SchachtPro-Import weiter fuehren.
+    ///
+    /// Der Name ist bewusst lesbar: Am Schacht ist der Feldname zugleich die
+    /// Spaltenueberschrift in der Tabelle.
+    /// </summary>
+    public const string ShaftDimension1Mm = "Dimension 1 mm";
+
+    /// <summary>Schachtabmessung 2 in Millimetern — das KLEINSTE Innenmass.</summary>
+    public const string ShaftDimension2Mm = "Dimension 2 mm";
     public const string PdfPath = "PDF_Path";
     public const string PdfEigen = "PDF_Eigen";
     public const string PdfAll = "PDF_All";

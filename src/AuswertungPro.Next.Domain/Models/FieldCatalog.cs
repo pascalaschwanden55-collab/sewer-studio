@@ -199,7 +199,9 @@ public static class FieldCatalog
             [FieldKeys.DataSupplier] = new(FieldKeys.DataSupplier, "Datenlieferant", FieldType.Text),
             [FieldKeys.CadastreOrganisation] = new(FieldKeys.CadastreOrganisation, "Organisation", FieldType.Text),
             [FieldKeys.CadastreLastChange] = new(FieldKeys.CadastreLastChange, "Letzte Änderung", FieldType.Text),
-            [FieldKeys.CadastreUpdatedAt] = new(FieldKeys.CadastreUpdatedAt, "Aktualisierungsdatum", FieldType.Text)
+            [FieldKeys.CadastreUpdatedAt] = new(FieldKeys.CadastreUpdatedAt, "Aktualisierungsdatum", FieldType.Text),
+            [FieldKeys.ShaftDimension1Mm] = new(FieldKeys.ShaftDimension1Mm, "Dimension 1 mm", FieldType.Int),
+            [FieldKeys.ShaftDimension2Mm] = new(FieldKeys.ShaftDimension2Mm, "Dimension 2 mm", FieldType.Int)
         });
 
     public static FieldDefinition Get(string fieldName)

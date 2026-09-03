@@ -161,6 +161,46 @@ public sealed class LeereFelderAnwenderTests
         Assert.Contains("nichts zu ergaenzen", bericht, StringComparison.OrdinalIgnoreCase);
     }
 
+    // Am Schacht heissen die Felder nach der Excel-Kopfzeile: Der Eigentuemer steht
+    // dort als "Eigentümer" mit Umlaut, waehrend Import und Nachfuellen "Eigentuemer"
+    // meinen. Ohne Aufloesung entstuende ein zweites, unsichtbares Feld daneben.
+    [Fact]
+    public void Der_Eigentuemer_landet_im_Feld_mit_Umlaut()
+    {
+        var record = new SchachtRecord();
+        record.Fields["Schachtnummer"] = "80089";
+        record.Fields["Eigentümer"] = "";
+
+        var plan = new LeereFelderPlan(
+            BauteilArt.Schacht,
+            new[] { new LeereFeldPosition("80089", FieldKeys.Owner, "Abwasser Uri") },
+            Array.Empty<LeerfeldHinweis>(),
+            GepruefteBauteile: 1);
+
+        Assert.Equal(1, LeereFelderAnwender.WendeAnAufSchaechte(new[] { record }, plan));
+        Assert.Equal("Abwasser Uri", record.GetFieldValue("Eigentümer"));
+        Assert.False(record.Fields.ContainsKey("Eigentuemer"));
+    }
+
+    // Und umgekehrt: Steht im Feld mit Umlaut bereits ein Wert, gilt es als gefuellt.
+    // Sonst wuerde der Lauf danebenschreiben und der sichtbare Wert bliebe der alte.
+    [Fact]
+    public void Ein_gefuelltes_Umlautfeld_wird_nicht_ueberschrieben()
+    {
+        var record = new SchachtRecord();
+        record.Fields["Schachtnummer"] = "80089";
+        record.Fields["Eigentümer"] = "Privat";
+
+        var plan = new LeereFelderPlan(
+            BauteilArt.Schacht,
+            new[] { new LeereFeldPosition("80089", FieldKeys.Owner, "Abwasser Uri") },
+            Array.Empty<LeerfeldHinweis>(),
+            GepruefteBauteile: 1);
+
+        Assert.Equal(0, LeereFelderAnwender.WendeAnAufSchaechte(new[] { record }, plan));
+        Assert.Equal("Privat", record.GetFieldValue("Eigentümer"));
+    }
+
     private static LeereFelderPlan Plan(params LeereFeldPosition[] positionen)
         => new(BauteilArt.Haltung, positionen, Array.Empty<LeerfeldHinweis>(), positionen.Length);
 

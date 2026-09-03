@@ -86,11 +86,15 @@ public static class LeereFelderPlanBuilder
     {
         ArgumentNullException.ThrowIfNull(schaechte);
 
+        // Der Feldname kommt am Schacht aus der Excel-Kopfzeile, nicht aus einem
+        // Katalog: Der Eigentuemer steht dort als "Eigentümer" mit Umlaut, waehrend
+        // Import und Nachfuellen "Eigentuemer" meinen. Ohne die Aufloesung sieht der
+        // Planer ein leeres Feld, wo laengst ein Wert steht.
         return Baue(
             BauteilArt.Schacht,
             schaechte.Select(s => new Bauteilsicht(
-                s.GetFieldValue("Schachtnummer"),
-                feld => s.GetFieldValue(feld))),
+                s.GetFieldValue(SchachtFeldnamen.Feld(s, "Schachtnummer")),
+                feld => s.GetFieldValue(SchachtFeldnamen.Feld(s, feld)))),
             bestand);
     }
 
