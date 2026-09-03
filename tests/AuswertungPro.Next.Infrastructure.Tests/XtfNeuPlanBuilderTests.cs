@@ -321,6 +321,31 @@ public sealed class XtfNeuPlanBuilderTests
         Assert.Equal("Z3", normschacht.Felder.Single(f => f.Key == "BaulicherZustand").Value);
     }
 
+    // Im Projekt Jagdmatt stand an 46 Haltungen eine automatisch erzeugte Bemerkung mit
+    // ueber 150 Zeichen. Der Bericht sagte dazu "hat in SIA405 keinen Wert" — als waere
+    // der Text ein unbekannter Begriff. Tatsaechlich scheitert er nur an der Grenze
+    // TEXT*80, und genau das muss der Bericht sagen, damit jemand kuerzen kann.
+    [Fact]
+    public void Eine_zu_lange_Bemerkung_wird_mit_ihrer_Zeichenzahl_gemeldet()
+    {
+        var lang = new string('x', 150);
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.Remarks, lang, FieldSource.Manual, true);
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(FieldKeys.Remarks, lang, FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([record], [schacht]);
+
+        Assert.DoesNotContain(plan.Hinweise, h => h.Contains("keinen Wert", StringComparison.Ordinal));
+        Assert.Contains(plan.Hinweise, h =>
+            h.StartsWith("80401-80409:", StringComparison.Ordinal)
+            && h.Contains("150 Zeichen", StringComparison.Ordinal)
+            && h.Contains("80", StringComparison.Ordinal));
+        Assert.Contains(plan.Hinweise, h =>
+            h.StartsWith("Schacht 80401:", StringComparison.Ordinal)
+            && h.Contains("150 Zeichen", StringComparison.Ordinal));
+    }
+
     private static HaltungRecord Haltung()
     {
         var record = new HaltungRecord();

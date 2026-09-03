@@ -300,13 +300,24 @@ public static class XtfNeuPlanBuilder
             // "GFK" etwa hat in SIA405 bewusst kein Gegenstueck — es ist nicht dasselbe
             // wie Kunststoff_Polyester_GUP. Ohne diesen Hinweis fehlte das Material
             // spurlos in der Datei, obwohl es im Programm dasteht.
-            hinweise.Add(
-                $"{name}: {xtfName} = \"{roh}\" hat in SIA405 keinen Wert — " +
-                "nicht geschrieben.");
+            hinweise.Add(NichtGeschrieben(name, xtfName, roh));
         }
 
         return felder;
     }
+
+    /// <summary>
+    /// Der Hinweis fuer einen gesetzten Wert, der nicht in die Datei kann. Eine zu lange
+    /// Bemerkung scheitert nur an der Grenze <c>TEXT*80</c>, nicht an einem unbekannten
+    /// Begriff — und genau das muss der Bericht sagen, damit jemand kuerzen kann. Der
+    /// Revisionsweg unterscheidet das schon; hier fehlte es (Jagdmatt, 46 Haltungen).
+    /// </summary>
+    private static string NichtGeschrieben(string wofuer, string xtfName, string roh)
+        => string.Equals(xtfName, "Bemerkung", StringComparison.Ordinal)
+           && XtfStammdatenPlanBuilder.BemerkungZuLang(roh, out var zeichen)
+            ? $"{wofuer}: die Bemerkung ist {zeichen} Zeichen lang, das Modell laesst " +
+              $"{XtfStammdatenPlanBuilder.BemerkungGrenze} zu — nicht geschrieben."
+            : $"{wofuer}: {xtfName} = \"{roh}\" hat in SIA405 keinen Wert — nicht geschrieben.";
 
     private static List<KeyValuePair<string, string>> SchachtFelder(
         SchachtRecord record, string nummer, List<string> hinweise)
@@ -329,9 +340,7 @@ public static class XtfNeuPlanBuilder
                 continue;
             }
 
-            hinweise.Add(
-                $"Schacht {nummer}: {xtfName} = \"{roh}\" hat in SIA405 keinen Wert — " +
-                "nicht geschrieben.");
+            hinweise.Add(NichtGeschrieben($"Schacht {nummer}", xtfName, roh));
         }
 
         var masse = XtfSchachtPlanBuilder.Masse(record, $"Schacht {nummer}", hinweise);
