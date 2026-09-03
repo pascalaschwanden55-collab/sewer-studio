@@ -177,7 +177,6 @@ public sealed class XtfStammdatenPlanBuilderTests
     [InlineData(FieldKeys.CadastreOrganisation, "unbekannt")]
     [InlineData(FieldKeys.CadastreLastChange, "14.02.2025")]
     [InlineData(FieldKeys.CadastreUpdatedAt, "28.08.2026")]
-    [InlineData(FieldKeys.ClearWidthMm, "900")]
     [InlineData(FieldKeys.Street, "Neue Gasse")]
     public void Eine_Herkunftsangabe_geht_nie_in_die_Revision(string projektFeld, string eingabe)
     {
@@ -893,6 +892,80 @@ public sealed class XtfStammdatenPlanBuilderTests
         Assert.Equal("Riss quer", XtfStammdatenPlanBuilder.AlsBemerkung("  Riss \t\n quer  "));
         Assert.Null(XtfStammdatenPlanBuilder.AlsBemerkung("   "));
         Assert.Null(XtfStammdatenPlanBuilder.AlsBemerkung(null));
+    }
+
+    // Die Breite einer Haltung hat in SIA405 kein eigenes Feld: Sie geht als
+    // Hoehen-Breiten-Verhaeltnis ans Rohrprofil, das die Haltung verweist.
+    [Fact]
+    public void Die_Breite_geht_als_Verhaeltnis_ans_Rohrprofil()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.ProfileType, "Rechteckprofil", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "1000", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "600", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(MitProfil)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        var position = Assert.Single(plan.Positionen);
+        Assert.Equal("ch010wcsRP000001", position.KanalschadenTid);
+        var verhaeltnis = Assert.Single(position.Felder, f => f.Name == "HoehenBreitenverhaeltnis");
+        Assert.Null(verhaeltnis.Alt);
+        Assert.Equal("1.66667", verhaeltnis.Neu);
+        Assert.Equal("Rechteckprofil", Assert.Single(position.Felder, f => f.Name == "Profiltyp").Neu);
+    }
+
+    [Fact]
+    public void Eine_Breite_am_Kreisprofil_wird_gemeldet_statt_geschrieben()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "1000", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "600", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(MitProfil)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        Assert.Empty(plan.Positionen);
+        Assert.Contains(plan.Hinweise, h => h.Contains("Kreisprofil", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Eine_runde_Breite_aendert_nichts()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "300", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "300", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(MitProfil)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        Assert.Empty(plan.Positionen);
+        Assert.Empty(plan.Hinweise);
+    }
+
+    [Fact]
+    public void Ein_unveraendertes_Verhaeltnis_wird_nicht_erneut_geschrieben()
+    {
+        var mitVerhaeltnis = MitProfil.Replace(
+            "<Profiltyp>Kreisprofil</Profiltyp>",
+            "<HoehenBreitenverhaeltnis>1.66667</HoehenBreitenverhaeltnis>\n        <Profiltyp>Rechteckprofil</Profiltyp>",
+            StringComparison.Ordinal);
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "1000", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "600", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(mitVerhaeltnis)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        Assert.Empty(plan.Positionen);
     }
 
     private static XtfStammdatenPlan PlanMitHaltung(HaltungRecord record)

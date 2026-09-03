@@ -118,7 +118,10 @@ public static class XtfNeuPlanBuilder
             return false;
 
         var verwaltung = organisationen.Verwaltung(eigentuemer);
-        var profilTid = profile.Verweis(record.GetFieldValue(FieldKeys.ProfileType), verwaltung);
+        var profilTid = profile.Verweis(
+            record.GetFieldValue(FieldKeys.ProfileType),
+            Verhaeltnis(record, name, hinweise),
+            verwaltung);
 
         var geometrie = geometrien is not null && geometrien.TryGetValue(name, out var g) ? g : null;
         if (geometrie is null)
@@ -444,15 +447,51 @@ public static class XtfNeuPlanBuilder
     }
 
     /// <summary>
-    /// Ein Rohrprofil je Profiltyp, von allen passenden Haltungen geteilt. Der Kataster
-    /// legt je Haltung ein eigenes an; das ist erlaubt ({0..*}), blaeht die Datei aber
-    /// ohne Nutzen auf.
+    /// Das Hoehen-Breiten-Verhaeltnis der Haltung fuer ihr Rohrprofil, oder <c>null</c>.
+    ///
+    /// Die Haltung kennt in SIA405 nur die lichte Hoehe; die Breite steckt als Verhaeltnis
+    /// am Rohrprofil. Rund (Breite leer oder gleich der Hoehe) ergibt keines. Zwei
+    /// verschiedene Masse ohne Profiltyp oder mit Kreisprofil widersprechen sich; dann
+    /// wird das gemeldet und nichts geraten.
+    /// </summary>
+    private static string? Verhaeltnis(HaltungRecord record, string name, List<string> hinweise)
+    {
+        var hoehe = record.GetFieldValue(FieldKeys.NominalDiameterMm);
+        var breite = record.GetFieldValue(FieldKeys.ClearWidthMm);
+        var verhaeltnis = XtfRohrprofilVerhaeltnis.Berechne(hoehe, breite);
+        if (verhaeltnis is null)
+            return null;
+
+        var profiltyp = (record.GetFieldValue(FieldKeys.ProfileType) ?? "").Trim();
+        if (profiltyp.Length == 0)
+        {
+            hinweise.Add(
+                $"{name}: Hoehe {hoehe} und Breite {breite}, aber kein Profiltyp — das " +
+                "Hoehen-Breiten-Verhaeltnis wird ohne Profil nicht geschrieben.");
+            return null;
+        }
+
+        if (string.Equals(SiaKanalVokabular.Profiltyp.NachNorm(profiltyp), "Kreisprofil", StringComparison.Ordinal))
+        {
+            hinweise.Add(
+                $"{name}: Kreisprofil mit zwei verschiedenen Massen ({hoehe} x {breite}) — " +
+                "das Hoehen-Breiten-Verhaeltnis wird nicht geschrieben.");
+            return null;
+        }
+
+        return verhaeltnis;
+    }
+
+    /// <summary>
+    /// Ein Rohrprofil je Profiltyp und Hoehen-Breiten-Verhaeltnis, von allen passenden
+    /// Haltungen geteilt. Der Kataster legt je Haltung ein eigenes an; das ist erlaubt
+    /// ({0..*}), blaeht die Datei aber ohne Nutzen auf.
     /// </summary>
     private sealed class Profilbuch(XtfNeuKennungen kennungen, List<XtfNeuObjekt> objekte)
     {
-        private readonly Dictionary<string, string> _jeTyp = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> _jeSchluessel = new(StringComparer.OrdinalIgnoreCase);
 
-        public string? Verweis(string? profiltyp, IReadOnlyList<XtfNeuVerweis> verwaltung)
+        public string? Verweis(string? profiltyp, string? verhaeltnis, IReadOnlyList<XtfNeuVerweis> verwaltung)
         {
             var roh = (profiltyp ?? "").Trim();
             if (roh.Length == 0)
@@ -462,17 +501,25 @@ public static class XtfNeuPlanBuilder
             if (norm is null)
                 return null;
 
-            if (_jeTyp.TryGetValue(norm, out var bekannt))
+            var schluessel = verhaeltnis is null ? norm : $"{norm}|{verhaeltnis}";
+            if (_jeSchluessel.TryGetValue(schluessel, out var bekannt))
                 return bekannt;
 
-            var tid = kennungen.Fuer("Rohrprofil", norm);
-            objekte.Add(new XtfNeuObjekt(
-                "Rohrprofil", tid,
-                [new KeyValuePair<string, string>("Bezeichnung", Kuerze(norm, HaltungspunktNameMax)),
-                 new KeyValuePair<string, string>("Profiltyp", norm)],
-                verwaltung));
+            // Die Bezeichnung ist mit dem Datenherrn zusammen UNIQUE: Zwei Profile
+            // desselben Typs mit verschiedenem Verhaeltnis brauchen verschiedene Namen.
+            var bezeichnung = verhaeltnis is null ? norm : $"{norm} {verhaeltnis}";
+            var felder = new List<KeyValuePair<string, string>>
+            {
+                new("Bezeichnung", Kuerze(bezeichnung, HaltungspunktNameMax))
+            };
+            if (verhaeltnis is not null)
+                felder.Add(new(XtfRohrprofilVerhaeltnis.Attribut, verhaeltnis));
+            felder.Add(new("Profiltyp", norm));
 
-            _jeTyp[norm] = tid;
+            var tid = kennungen.Fuer("Rohrprofil", schluessel);
+            objekte.Add(new XtfNeuObjekt("Rohrprofil", tid, felder, verwaltung));
+
+            _jeSchluessel[schluessel] = tid;
             return tid;
         }
     }

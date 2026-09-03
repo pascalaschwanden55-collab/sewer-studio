@@ -76,7 +76,9 @@ public static class XtfStammdatenPlanBuilder
     ///
     /// <c>Strasse</c> haette mit <c>Kanal.Standortname</c> zwar ein Ziel, wird auf
     /// ausdrueckliche Anweisung trotzdem nicht geschrieben (2026-09-02).
-    /// <c>Lichte_Breite_mm</c> hat im Modell gar keines.
+    /// <c>Lichte_Breite_mm</c> steht NICHT mehr hier: Es hat zwar kein direktes Feld,
+    /// geht aber seit 2026-09-03 als <c>HoehenBreitenverhaeltnis</c> ans Rohrprofil
+    /// (siehe <see cref="XtfRohrprofilVerhaeltnis"/>).
     /// Die sechs Herkunftsangaben sind der Nachweis, woher ein Datensatz stammt —
     /// keine Aussage von SewerStudio: Der Datenherr einer Kantonsleitung ist der
     /// Kanton, nicht der Operateur, und <c>Letzte_Aenderung</c> fuehrt der Schreiber
@@ -88,7 +90,6 @@ public static class XtfStammdatenPlanBuilder
     public static readonly IReadOnlyList<string> NichtExportierteFelder =
     [
         FieldKeys.Street,
-        FieldKeys.ClearWidthMm,
         FieldKeys.CadastreObjectId,
         FieldKeys.DataOwner,
         FieldKeys.DataSupplier,
@@ -416,7 +417,11 @@ public static class XtfStammdatenPlanBuilder
 
             var profil = FindeProfil(haltungElement, profile, name, record, hinweise);
             if (profil is not null)
-                SammlePosition(record, profil, RohrprofilFelder, name, modell, positionen, hinweise);
+            {
+                SammlePosition(
+                    record, profil, RohrprofilFelder, name, modell, positionen, hinweise,
+                    VerhaeltnisFeld(record, profil, name, hinweise));
+            }
         }
 
         return new XtfStammdatenPlan(positionen, hinweise, buch.Neue);
@@ -544,6 +549,59 @@ public static class XtfStammdatenPlanBuilder
     ///
     /// Gemeldet wird nur, wenn der Mensch am Profiltyp ueberhaupt etwas geaendert hat.
     /// </summary>
+    /// <summary>
+    /// Die zwei Programmfelder, aus denen das Hoehen-Breiten-Verhaeltnis des Rohrprofils
+    /// entsteht. Beide zaehlen als Handaenderung am Profil: Wer die Breite oder die
+    /// Hoehe korrigiert, aendert das Verhaeltnis mit.
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<string, string> VerhaeltnisFelder =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [XtfRohrprofilVerhaeltnis.Attribut] = FieldKeys.ClearWidthMm,
+            ["Lichte_Hoehe"] = FieldKeys.NominalDiameterMm
+        };
+
+    /// <summary>
+    /// Das Hoehen-Breiten-Verhaeltnis als Aenderung am Rohrprofil, oder <c>null</c>,
+    /// wenn nichts zu schreiben ist: keine Handaenderung an Hoehe oder Breite, rund
+    /// (Breite leer oder gleich der Hoehe), derselbe Wert wie in der Datei, oder ein
+    /// Widerspruch mit dem Kreisprofil, der gemeldet statt geschrieben wird.
+    /// </summary>
+    private static XtfRevisionFeld? VerhaeltnisFeld(
+        HaltungRecord record,
+        XtfStammdatenElement profil,
+        string name,
+        List<string> hinweise)
+    {
+        if (!HatHandaenderung(record, VerhaeltnisFelder))
+            return null;
+
+        var hoehe = record.GetFieldValue(FieldKeys.NominalDiameterMm);
+        var breite = record.GetFieldValue(FieldKeys.ClearWidthMm);
+        var neu = XtfRohrprofilVerhaeltnis.Berechne(hoehe, breite);
+        if (neu is null)
+            return null;
+
+        var profiltypVonHand = record.FieldMeta.TryGetValue(FieldKeys.ProfileType, out var profilMeta)
+                               && profilMeta.UserEdited;
+        var profiltyp = profiltypVonHand
+            ? NachXtfWert("Profiltyp", record.GetFieldValue(FieldKeys.ProfileType) ?? "")
+            : (profil.Werte.TryGetValue("Profiltyp", out var ausDatei) ? ausDatei : null);
+        if (string.Equals((profiltyp ?? "").Trim(), "Kreisprofil", StringComparison.Ordinal))
+        {
+            hinweise.Add(
+                $"{name}: Kreisprofil mit zwei verschiedenen Massen ({hoehe} x {breite}) — " +
+                "das Hoehen-Breiten-Verhaeltnis wird nicht geschrieben.");
+            return null;
+        }
+
+        profil.Werte.TryGetValue(XtfRohrprofilVerhaeltnis.Attribut, out var alt);
+        alt = (alt ?? "").Trim();
+        return XtfRohrprofilVerhaeltnis.Gleich(alt, neu)
+            ? null
+            : new XtfRevisionFeld(XtfRohrprofilVerhaeltnis.Attribut, alt.Length == 0 ? null : alt, neu);
+    }
+
     private static XtfStammdatenElement? FindeProfil(
         XtfStammdatenElement? haltungElement,
         Profilindex profile,
@@ -551,7 +609,14 @@ public static class XtfStammdatenPlanBuilder
         HaltungRecord record,
         List<string> hinweise)
     {
-        if (!HatHandaenderung(record, RohrprofilFelder))
+        // Hoehe oder Breite von Hand allein reichen nicht: Erst zwei verschiedene Masse
+        // ergeben ein Verhaeltnis, das ans Profil gehoert. Sonst meldete jede korrigierte
+        // Nennweite ein fehlendes Rohrprofil, obwohl es gar nichts zu schreiben gaebe.
+        var verhaeltnisNoetig = HatHandaenderung(record, VerhaeltnisFelder)
+                                && XtfRohrprofilVerhaeltnis.Berechne(
+                                    record.GetFieldValue(FieldKeys.NominalDiameterMm),
+                                    record.GetFieldValue(FieldKeys.ClearWidthMm)) is not null;
+        if (!HatHandaenderung(record, RohrprofilFelder) && !verhaeltnisNoetig)
             return null;
 
         if (haltungElement is null

@@ -158,6 +158,61 @@ public sealed class XtfRundreiseTests
         Assert.Equal("Privat", schacht.GetFieldValue(FieldKeys.Owner));
     }
 
+    // Die Breite eines Rechteck- oder Eiprofils steht in SIA405 als Hoehen-Breiten-
+    // Verhaeltnis am Rohrprofil. Auf dem Rueckweg muss daraus wieder die Breite werden.
+    [Fact]
+    public void Profiltyp_und_Breite_kommen_ueber_das_Rohrprofil_zurueck()
+    {
+        var xml = MitZustand
+            .Replace(
+                "<Lichte_Hoehe>100</Lichte_Hoehe>",
+                "<Lichte_Hoehe>1000</Lichte_Hoehe>\n        <RohrprofilRef REF=\"chSSTPROFIL00001\" />",
+                StringComparison.Ordinal)
+            .Replace(
+                "    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>",
+                """
+                      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil TID="chSSTPROFIL00001">
+                        <Bezeichnung>Rechteckprofil 1.66667</Bezeichnung>
+                        <HoehenBreitenverhaeltnis>1.66667</HoehenBreitenverhaeltnis>
+                        <Profiltyp>Rechteckprofil</Profiltyp>
+                      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil>
+                    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+                """,
+                StringComparison.Ordinal);
+
+        var record = Lies(xml);
+
+        Assert.Equal("1000", record.GetFieldValue(FieldKeys.NominalDiameterMm));
+        Assert.Equal("600", record.GetFieldValue(FieldKeys.ClearWidthMm));
+        Assert.Equal("Rechteckprofil", record.GetFieldValue(FieldKeys.ProfileType));
+        Assert.Equal(FieldSource.Xtf405, record.FieldMeta[FieldKeys.ClearWidthMm].Source);
+    }
+
+    [Fact]
+    public void Ein_Kreisprofil_setzt_die_Breite_gleich_der_Hoehe()
+    {
+        var xml = MitZustand
+            .Replace(
+                "<Lichte_Hoehe>100</Lichte_Hoehe>",
+                "<Lichte_Hoehe>300</Lichte_Hoehe>\n        <RohrprofilRef REF=\"chSSTPROFIL00001\" />",
+                StringComparison.Ordinal)
+            .Replace(
+                "    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>",
+                """
+                      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil TID="chSSTPROFIL00001">
+                        <Bezeichnung>Kreisprofil</Bezeichnung>
+                        <Profiltyp>Kreisprofil</Profiltyp>
+                      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil>
+                    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+                """,
+                StringComparison.Ordinal);
+
+        var record = Lies(xml);
+
+        Assert.Equal("300", record.GetFieldValue(FieldKeys.ClearWidthMm));
+        Assert.Equal("Kreisprofil", record.GetFieldValue(FieldKeys.ProfileType));
+    }
+
     private static HaltungRecord LiesEine() => Assert.Single(LiesProjekt().Data);
 
     private static Project LiesProjekt() => LiesProjektAus(MitZustand);

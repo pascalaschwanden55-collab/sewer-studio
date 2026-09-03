@@ -243,10 +243,27 @@ public static class XtfRevisionWriter
     ];
 
     /// <summary>Die Modellreihenfolge, die zur Klasse des Objekts passt.</summary>
+    /// <summary>
+    /// Feldreihenfolge der SIA405-Klasse "Rohrprofil" (VSA_BaseClass, dann die eigenen
+    /// Felder). Das Hoehen-Breiten-Verhaeltnis steht im Modell VOR dem Profiltyp; im
+    /// Kantonsexport fuehrt kein einziges Rohrprofil das Feld, ein Geschwister-Vorbild
+    /// gibt es dort also nicht.
+    /// </summary>
+    private static readonly string[] RohrprofilFeldreihenfolge =
+    [
+        "OBJ_ID", "Metaattribute",
+        "Bemerkung", "Bezeichnung", "HoehenBreitenverhaeltnis", "Profiltyp"
+    ];
+
     private static string[] Feldreihenfolge(XElement parent)
-        => parent.Name.LocalName.EndsWith(".Normschacht", StringComparison.Ordinal)
-            ? NormschachtFeldreihenfolge
-            : KanalFeldreihenfolge;
+    {
+        var name = parent.Name.LocalName;
+        if (name.EndsWith(".Normschacht", StringComparison.Ordinal))
+            return NormschachtFeldreihenfolge;
+        if (name.EndsWith(".Rohrprofil", StringComparison.Ordinal))
+            return RohrprofilFeldreihenfolge;
+        return KanalFeldreihenfolge;
+    }
 
     /// <summary>
     /// Legt eine fehlende Organisation im Topic <c>Administration</c> an.

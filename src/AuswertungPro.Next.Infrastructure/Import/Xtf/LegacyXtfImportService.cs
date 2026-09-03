@@ -6,7 +6,9 @@ using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
 using ImportLogStatus = AuswertungPro.Next.Application.Import.ImportLogStatus;
 using ImportProgress = AuswertungPro.Next.Application.Import.ImportProgress;
 using IVsaMediaPathResolver = AuswertungPro.Next.Application.Import.IVsaMediaPathResolver;
+using System.Globalization;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Xtf;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 
@@ -414,6 +416,8 @@ public sealed partial class LegacyXtfImportService
         public string VonRef { get; set; } = "";
         public string NachRef { get; set; } = "";
         public string LetzteAenderung { get; set; } = "";
+        /// <summary>Die Kennung des Rohrprofils, das Profiltyp und Hoehen-Breiten-Verhaeltnis traegt.</summary>
+        public string RohrprofilRef { get; set; } = "";
     }
 
     private static List<HaltungRecord> ParseSia405(XDocument doc)
@@ -423,6 +427,7 @@ public sealed partial class LegacyXtfImportService
         var haltungen = new Dictionary<string, HaltungData>(StringComparer.OrdinalIgnoreCase);
         var haltungspunkte = new Dictionary<string, (string Bezeichnung, string? AbwassernetzelementRef)>(StringComparer.OrdinalIgnoreCase);
         var abwasserknoten = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var rohrprofile = new Dictionary<string, (string Profiltyp, string Verhaeltnis)>(StringComparer.OrdinalIgnoreCase);
 
         // Die Organisationen der Datei, damit EigentuemerRef aufgeloest werden kann.
         // Sie stehen im Topic "Administration", also ausserhalb der Fachdaten-Baskets —
@@ -493,9 +498,29 @@ public sealed partial class LegacyXtfImportService
                         case "AbwasserbauwerkRef": hd.KanalRef = (string?)child.Attribute("REF") ?? ""; break;
                         case "vonHaltungspunktRef": hd.VonRef = (string?)child.Attribute("REF") ?? ""; break;
                         case "nachHaltungspunktRef": hd.NachRef = (string?)child.Attribute("REF") ?? ""; break;
+                        case "RohrprofilRef": hd.RohrprofilRef = (string?)child.Attribute("REF") ?? ""; break;
                     }
                 }
                 haltungen[tid!] = hd;
+            }
+
+            // Rohrprofil: Profiltyp und Hoehen-Breiten-Verhaeltnis haengen nicht an der
+            // Haltung, sondern an diesem Objekt. Ohne es kaeme die Breite eines Rechteck-
+            // oder Eiprofils nie im Programm an.
+            if (local.Equals("Rohrprofil", StringComparison.OrdinalIgnoreCase) || local.EndsWith(".Rohrprofil", StringComparison.OrdinalIgnoreCase))
+            {
+                var tid = (string?)node.Attribute("TID");
+                if (string.IsNullOrWhiteSpace(tid)) continue;
+                string profiltyp = "", verhaeltnis = "";
+                foreach (var child in node.Elements())
+                {
+                    switch (child.Name.LocalName)
+                    {
+                        case "Profiltyp": profiltyp = child.Value; break;
+                        case "HoehenBreitenverhaeltnis": verhaeltnis = child.Value; break;
+                    }
+                }
+                rohrprofile[tid!] = (profiltyp, verhaeltnis);
             }
 
             // Haltungspunkt
@@ -580,6 +605,28 @@ public sealed partial class LegacyXtfImportService
 
             var dn = !string.IsNullOrWhiteSpace(hd.LichteHoehe) ? hd.LichteHoehe : hd.LichteBreite;
             if (!string.IsNullOrWhiteSpace(dn)) rec.SetFieldValue("DN_mm", dn, FieldSource.Xtf405, userEdited: false);
+
+            // Die zweite Dimension: Profiltyp und Hoehen-Breiten-Verhaeltnis stehen am
+            // verwiesenen Rohrprofil. Aus Hoehe und Verhaeltnis entsteht die Breite;
+            // beim Kreisprofil ist sie gleich der Hoehe (rund = beide gleich).
+            if (!string.IsNullOrWhiteSpace(hd.RohrprofilRef) && rohrprofile.TryGetValue(hd.RohrprofilRef, out var profil))
+            {
+                var profiltyp = (profil.Profiltyp ?? "").Trim();
+                if (profiltyp.Length > 0 && !string.Equals(profiltyp, "unbekannt", StringComparison.OrdinalIgnoreCase))
+                    rec.SetFieldValue(FieldKeys.ProfileType, profiltyp, FieldSource.Xtf405, userEdited: false);
+
+                var breite = XtfRohrprofilVerhaeltnis.Breite(dn, profil.Verhaeltnis)
+                             ?? (string.Equals(profiltyp, "Kreisprofil", StringComparison.OrdinalIgnoreCase)
+                                 ? SiaAbmessung.NachMillimeter(dn)
+                                 : null);
+                if (breite is > 0)
+                    rec.SetFieldValue(FieldKeys.ClearWidthMm, breite.Value.ToString(CultureInfo.InvariantCulture), FieldSource.Xtf405, userEdited: false);
+            }
+            else if (!string.IsNullOrWhiteSpace(hd.LichteHoehe) && !string.IsNullOrWhiteSpace(hd.LichteBreite))
+            {
+                // Aeltere Modellfassungen fuehren die Breite direkt an der Haltung.
+                rec.SetFieldValue(FieldKeys.ClearWidthMm, hd.LichteBreite.Trim(), FieldSource.Xtf405, userEdited: false);
+            }
 
             var vonKnoten = ResolveKnotenName(hd.VonRef);
             var nachKnoten = ResolveKnotenName(hd.NachRef);

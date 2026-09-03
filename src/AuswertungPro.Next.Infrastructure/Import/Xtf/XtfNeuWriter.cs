@@ -55,7 +55,7 @@ public static class XtfNeuWriter
             "Sanierungsbedarf", "Status",
             "Dimension1", "Dimension2", "Funktion", "Material"
         ],
-        ["Rohrprofil"] = ["Letzte_Aenderung", "Bemerkung", "Bezeichnung", "Profiltyp"],
+        ["Rohrprofil"] = ["Letzte_Aenderung", "Bemerkung", "Bezeichnung", "HoehenBreitenverhaeltnis", "Profiltyp"],
         ["Organisation"] =
         [
             "Letzte_Aenderung", "Bemerkung", "Bezeichnung", "Gemeindenummer",

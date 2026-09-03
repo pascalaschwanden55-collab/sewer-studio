@@ -346,6 +346,87 @@ public sealed class XtfNeuPlanBuilderTests
             && h.Contains("150 Zeichen", StringComparison.Ordinal));
     }
 
+    // Die Haltung kennt in SIA405 nur die lichte Hoehe. Die Breite eines Rechteck- oder
+    // Eiprofils steckt als Hoehen-Breiten-Verhaeltnis am Rohrprofil (1000/600 = 1.66667).
+    [Fact]
+    public void Zwei_verschiedene_Masse_werden_zum_Verhaeltnis_am_Rohrprofil()
+    {
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.ProfileType, "Rechteckprofil", FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "1000", FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "600", FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([record], []);
+
+        var profil = Assert.Single(plan.Objekte, o => o.Klasse == "Rohrprofil");
+        Assert.Equal("1.66667", profil.Felder.Single(f => f.Key == "HoehenBreitenverhaeltnis").Value);
+        Assert.Equal("Rechteckprofil", profil.Felder.Single(f => f.Key == "Profiltyp").Value);
+        Assert.Equal("1000", plan.Objekte.Single(o => o.Klasse == "Haltung").Felder.Single(f => f.Key == "Lichte_Hoehe").Value);
+        Assert.DoesNotContain(plan.Hinweise, h => h.Contains("Verhaeltnis", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Rund_ergibt_kein_Verhaeltnis()
+    {
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "300", FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "300", FieldSource.Manual, true);
+
+        var profil = Assert.Single(XtfNeuPlanBuilder.Build([record], []).Objekte, o => o.Klasse == "Rohrprofil");
+
+        Assert.DoesNotContain(profil.Felder, f => f.Key == "HoehenBreitenverhaeltnis");
+    }
+
+    [Fact]
+    public void Zwei_Masse_am_Kreisprofil_werden_gemeldet_statt_geschrieben()
+    {
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "1000", FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "600", FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([record], []);
+
+        var profil = Assert.Single(plan.Objekte, o => o.Klasse == "Rohrprofil");
+        Assert.DoesNotContain(profil.Felder, f => f.Key == "HoehenBreitenverhaeltnis");
+        Assert.Contains(plan.Hinweise, h => h.Contains("Kreisprofil", StringComparison.Ordinal)
+                                            && h.Contains("1000 x 600", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Zwei_Masse_ohne_Profiltyp_werden_gemeldet()
+    {
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.ProfileType, "", FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "900", FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "600", FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([record], []);
+
+        Assert.DoesNotContain(plan.Objekte, o => o.Klasse == "Rohrprofil");
+        Assert.Contains(plan.Hinweise, h => h.Contains("kein Profiltyp", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Verschiedene_Verhaeltnisse_bekommen_verschiedene_Rohrprofile()
+    {
+        var eins = Haltung();
+        eins.SetFieldValue(FieldKeys.ProfileType, "Eiprofil", FieldSource.Manual, true);
+        eins.SetFieldValue(FieldKeys.NominalDiameterMm, "900", FieldSource.Manual, true);
+        eins.SetFieldValue(FieldKeys.ClearWidthMm, "600", FieldSource.Manual, true);
+        var zwei = Haltung();
+        zwei.SetFieldValue(FieldKeys.HoldingName, "80409-80538", FieldSource.Manual, true);
+        zwei.SetFieldValue(FieldKeys.ProfileType, "Eiprofil", FieldSource.Manual, true);
+        zwei.SetFieldValue(FieldKeys.NominalDiameterMm, "1200", FieldSource.Manual, true);
+        zwei.SetFieldValue(FieldKeys.ClearWidthMm, "800", FieldSource.Manual, true);
+
+        var profile = XtfNeuPlanBuilder.Build([eins, zwei], []).Objekte.Where(o => o.Klasse == "Rohrprofil").ToList();
+
+        // 900/600 und 1200/800 sind dasselbe Verhaeltnis 1.5: ein gemeinsames Profil.
+        var profil = Assert.Single(profile);
+        Assert.Equal("1.5", profil.Felder.Single(f => f.Key == "HoehenBreitenverhaeltnis").Value);
+        Assert.NotEqual(profil.Felder.Single(f => f.Key == "Bezeichnung").Value, "Eiprofil");
+    }
+
     private static HaltungRecord Haltung()
     {
         var record = new HaltungRecord();

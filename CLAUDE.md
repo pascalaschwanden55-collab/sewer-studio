@@ -1113,13 +1113,28 @@ Vier Regeln dieses Wegs nie zurueckdrehen:
   die Bemerkung bewusst VOR der `unbekannt`-Regel heraus: Bei `Funktion` und `Material`
   ist das eine Leerformel, in einem Freitext eine Aussage.
 
-- **Acht Felder bleiben bewusst im Programm.** `XtfStammdatenPlanBuilder.NichtExportierteFelder`
+- **Sieben Felder bleiben bewusst im Programm.** `XtfStammdatenPlanBuilder.NichtExportierteFelder`
   fuehrt sie namentlich, ein Test haelt die Liste gegen die Exportkarten: `Strasse`
-  (haette mit `Kanal.Standortname` ein Ziel — Entscheid 2026-09-02),
-  `Lichte_Breite_mm` (gibt es im Modell nicht) sowie die sechs Herkunftsangaben
-  `Objekt_ID`, `Datenherr`, `Datenlieferant`, `Organisation`, `Letzte_Aenderung` und
-  `Aktualisierungsdatum`. Der Datenherr einer Kantonsleitung ist der Kanton, nicht der
-  Operateur; `Letzte_Aenderung` fuehrt der Schreiber ohnehin selbst nach.
+  (haette mit `Kanal.Standortname` ein Ziel — Entscheid 2026-09-02) sowie die sechs
+  Herkunftsangaben `Objekt_ID`, `Datenherr`, `Datenlieferant`, `Organisation`,
+  `Letzte_Aenderung` und `Aktualisierungsdatum`. Der Datenherr einer Kantonsleitung ist
+  der Kanton, nicht der Operateur; `Letzte_Aenderung` fuehrt der Schreiber ohnehin
+  selbst nach.
+- **Die Breite einer Haltung geht als Verhaeltnis ans Rohrprofil** (seit 2026-09-03,
+  Entscheid Pascal: Haltungen haben zwei Masse wie Schaechte). Die Haltung kennt in
+  SIA405 nur `Lichte_Hoehe`; `Rohrprofil.HoehenBreitenverhaeltnis` (Hoehe geteilt durch
+  Breite, 0.00001 bis 100, in 2020 und 2020_1 gleich) traegt die zweite Dimension.
+  `XtfRohrprofilVerhaeltnis` rechnet hin und zurueck: `DN_mm` ist die Hoehe,
+  `Lichte_Breite_mm` die Breite. Rund heisst Breite leer oder gleich, dann gibt es kein
+  Verhaeltnis. Zwei verschiedene Masse ohne Profiltyp oder mit `Kreisprofil` werden
+  gemeldet, nicht geraten. Erstexport: ein Rohrprofil je Profiltyp UND Verhaeltnis
+  (`Rechteckprofil 1.666`), vom ilivalidator angenommen. Revision: Hoehe oder Breite
+  von Hand zaehlt als Aenderung am Profil, ein geteiltes Profil bleibt unangetastet.
+  Import: `RohrprofilRef` wird aufgeloest, `Profiltyp` uebernommen, Breite = Hoehe /
+  Verhaeltnis; beim Kreisprofil ist die Breite gleich der Hoehe. Im Bestand fuehren
+  alle 110887 Kantonsprofile `Kreisprofil` ohne Verhaeltnis, und keine der 477
+  Projekt-Haltungen trug eine Breite oder einen Profiltyp; das aendert sich erst mit
+  echten Rechteck- und Eiprofilen.
 - **Der Eigentuemer ist ein Verweis, kein Text.** `XtfOrganisationsbuch` bindet ihn an
   eine `Organisation` im Topic `Administration` und legt fehlende an; Haltungen und
   Schaechte teilen sich EIN Buch je Datei. Fuehrt die Datei ueberhaupt keine
