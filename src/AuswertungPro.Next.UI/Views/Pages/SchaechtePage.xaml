@@ -66,6 +66,15 @@
 
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
 
+                    <Button Command="{Binding FeldnamenAufraeumenCommand}" IsEnabled="{Binding CanMutateShaftData}"
+                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                            ToolTip="Doppelte Schreibweisen desselben Feldes zusammenführen (Zeichensalat aus alten Importen). Zeigt vorher einen Bericht.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8FD;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Feldnamen aufräumen" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
                     <Button Command="{Binding QgisFelderErgaenzenCommand}" IsEnabled="{Binding CanMutateShaftData}"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Leere Felder aus dem QGIS-Bestand ergänzen. Gefüllte Felder bleiben unberührt; vorher erscheint ein Bericht.">
