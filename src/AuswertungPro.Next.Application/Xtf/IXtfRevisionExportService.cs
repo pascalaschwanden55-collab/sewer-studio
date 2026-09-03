@@ -6,13 +6,15 @@ public sealed record XtfRevisionExportRequest(
     Project Projekt,
     string ProjektPfad,
     string ZielOrdner,
-    bool NurPruefen = false);
+    bool NurPruefen = false,
+    IReadOnlyList<string>? Quelldateien = null);
 
 public sealed record XtfRevisionExportResult(
     bool Ok,
     string Bericht,
     string? Fehler,
-    IReadOnlyList<string> Dateien);
+    IReadOnlyList<string> Dateien,
+    bool QuelleFehlt = false);
 
 /// <summary>
 /// Erzeugt aus dem aktuellen Projektstand revidierte XTF-Dateien — eine je Originaldatei.
@@ -20,7 +22,9 @@ public sealed record XtfRevisionExportResult(
 /// Die Kundenoriginale werden nur gelesen. Die Revisionen entstehen als neue Dateien in
 /// einem eigenen Ausgabeordner mit Zeitstempel; nichts Bestehendes wird ueberschrieben.
 /// Mit <see cref="XtfRevisionExportRequest.NurPruefen"/> entsteht ausschliesslich der
-/// Bericht, ohne dass eine Datei geschrieben wird.
+/// Bericht, ohne dass eine Datei geschrieben wird. Optional gewaehlte
+/// <see cref="XtfRevisionExportRequest.Quelldateien"/> werden nur gelesen und ersetzen
+/// fuer diesen Lauf die Suche im Projektordner.
 /// </summary>
 public interface IXtfRevisionExportService
 {

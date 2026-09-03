@@ -5,10 +5,10 @@ namespace AuswertungPro.Next.Domain.Models;
 /// <summary>
 /// Eine Werteliste der SIA405-Norm, so wie sie in der Modelldatei steht.
 ///
-/// Anders als <see cref="MaterialVokabular"/> oder <see cref="SchachtMaterialVokabular"/>
-/// gibt es hier keine zweite Begriffswelt: Diese Felder kommen aus dem Kataster bereits
-/// in der Schreibweise der Norm und werden im Programm auch so gefuehrt. Es gibt deshalb
-/// nichts zu uebersetzen — nur zu pruefen.
+/// Die meisten dieser Felder kommen aus dem Kataster bereits in der Schreibweise der
+/// Norm und werden im Programm genauso gefuehrt. Nur der Profiltyp hat mit
+/// <see cref="ProfiltypVokabular"/> eine lesbare Uri-Anzeige fuer
+/// <c>offenes_Profil</c> und alte Werte.
 ///
 /// <see cref="NachNorm"/> ist bewusst fail-closed: Was nicht in der Liste steht, liefert
 /// <c>null</c> und wird nicht in die Datei geschrieben. Ein erfundener Wert waere

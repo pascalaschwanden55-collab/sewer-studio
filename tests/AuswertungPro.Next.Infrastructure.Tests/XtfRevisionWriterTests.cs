@@ -393,6 +393,90 @@ public sealed class XtfRevisionWriterTests : IDisposable
         Assert.Equal("Faserzement", Kindwert(ha1, "Material"));
     }
 
+    private const string MitRohrprofil = """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="SIA405_ABWASSER_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_Abwasser.SIA405_Abwasser BID="B1">
+      <SIA405_Abwasser.SIA405_Abwasser.Rohrprofil TID="RP1">
+        <Bezeichnung>Rechteckprofil_1.66667</Bezeichnung>
+        <HoehenBreitenverhaeltnis>1.66667</HoehenBreitenverhaeltnis>
+        <Profiltyp>Rechteckprofil</Profiltyp>
+      </SIA405_Abwasser.SIA405_Abwasser.Rohrprofil>
+    </SIA405_Abwasser.SIA405_Abwasser>
+  </DATASECTION>
+</TRANSFER>
+""";
+
+    [Fact]
+    public void Eine_explizite_Feldloeschung_entfernt_das_Verhaeltnis_und_aendert_andere_Felder()
+    {
+        var quelle = Path.Combine(_dir, "rohrprofil.xtf");
+        File.WriteAllText(quelle, MitRohrprofil);
+        var ziel = Path.Combine(_dir, "rohrprofil-revision.xtf");
+        var plan = Plan(Position(
+            XtfRevisionAenderung.Geaendert,
+            "RP1",
+            "",
+            new XtfRevisionFeld(
+                "HoehenBreitenverhaeltnis",
+                "1.66667",
+                null,
+                Aktion: XtfRevisionFeldAktion.Entfernen),
+            new XtfRevisionFeld("Profiltyp", "Rechteckprofil", "Kreisprofil")));
+
+        var ergebnis = XtfRevisionWriter.Schreibe(quelle, plan, ziel);
+
+        Assert.True(ergebnis.Ok, ergebnis.Fehler);
+        var profil = XDocument.Load(ziel).Descendants().Single(e => (string?)e.Attribute("TID") == "RP1");
+        Assert.Null(Kindwert(profil, "HoehenBreitenverhaeltnis"));
+        Assert.Equal("Kreisprofil", Kindwert(profil, "Profiltyp"));
+    }
+
+    [Fact]
+    public void Ein_leerer_Neuwert_ohne_Loeschaktion_entfernt_kein_Feld()
+    {
+        var quelle = Path.Combine(_dir, "rohrprofil.xtf");
+        File.WriteAllText(quelle, MitRohrprofil);
+        var ziel = Path.Combine(_dir, "rohrprofil-revision.xtf");
+        var plan = Plan(Position(
+            XtfRevisionAenderung.Geaendert,
+            "RP1",
+            "",
+            new XtfRevisionFeld("HoehenBreitenverhaeltnis", "1.66667", null)));
+
+        var ergebnis = XtfRevisionWriter.Schreibe(quelle, plan, ziel);
+
+        Assert.True(ergebnis.Ok, ergebnis.Fehler);
+        var profil = XDocument.Load(ziel).Descendants().Single(e => (string?)e.Attribute("TID") == "RP1");
+        Assert.Equal("1.66667", Kindwert(profil, "HoehenBreitenverhaeltnis"));
+    }
+
+    [Fact]
+    public void Eine_nicht_anwendbare_Feldloeschung_schreibt_keine_Datei()
+    {
+        var quelle = Path.Combine(_dir, "rohrprofil.xtf");
+        File.WriteAllText(quelle, MitRohrprofil);
+        var ziel = Path.Combine(_dir, "rohrprofil-revision.xtf");
+        var plan = Plan(Position(
+            XtfRevisionAenderung.Geaendert,
+            "RP1",
+            "",
+            new XtfRevisionFeld(
+                "NichtVorhanden",
+                "alt",
+                null,
+                Aktion: XtfRevisionFeldAktion.Entfernen)));
+
+        var ergebnis = XtfRevisionWriter.Schreibe(quelle, plan, ziel);
+
+        Assert.False(ergebnis.Ok);
+        Assert.False(File.Exists(ziel));
+    }
+
     // ---------------------------------------------------------------------------
     // Die Datei bestimmt auch die SCHREIBWEISE, nicht nur die Reihenfolge.
     //

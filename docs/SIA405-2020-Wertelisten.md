@@ -80,6 +80,12 @@ Eiprofil · Kreisprofil · Maulprofil · offenes_Profil · Rechteckprofil
 Spezialprofil · unbekannt
 ```
 
+In der Haltungsmaske stehen diese Werte lesbar und in der Uri-Reihenfolge:
+`Unbekannt`, `Kreisprofil`, `Eiprofil`, `Maulprofil`, `Offenes Profil`,
+`Rechteckprofil`, `Spezialprofil`. Die alte GEONIS-Auswahl `Anderes (A)` gehoerte
+zur Modellfassung 2015. Im Modell 2020 gibt es sie nicht mehr; alte Importwerte
+werden deshalb auf `Spezialprofil` angehoben.
+
 ## Deckel — eigene Klasse mit Attributen
 
 Der `Normschacht` führt keine Deckelangaben, die Klasse `Deckel` dagegen schon:
@@ -114,6 +120,9 @@ Tuere · unbekannt
 - Die Zerlegung des Schachts in **Schachthals, Konus, Ober- und Unterteil**
   mit je Form, Mass und Höhe. Der `Normschacht` ist ein Punktobjekt mit Lage,
   Funktion, Material und zwei Massen.
+- Eine eigene **Schachtform**. Uri fuehrt sie im WebGIS als `Unbekannt`, `Rund`,
+  `Oval`, `Quadratisch`, `Rechteckig`, `Vieleckig`; in der XTF bleiben dafuer
+  `Dimension1` und `Dimension2`.
 - **Zustandserfassung** — die gehört in VSA-DSS / EN 13508-2, nicht in diese XTF.
 - Die **Uhrposition** eines Anschlusses. SIA405 beschreibt Anschlüsse über
   Start- und Endknoten mit Koordinaten.
@@ -223,7 +232,7 @@ XTF-Dateien aber **null Mal** vor. SewerStudio schreibt dort `Z0` bis `Z4` — d
 Schreibweise stimmt also mit ihrer Datenbank ueberein, und der Wert ergaenzt etwas,
 das ihr eigener Export nicht liefert.
 
-## Was der Export jetzt schreibt (Stand 2026-09-02)
+## Was der Export jetzt schreibt (Stand 2026-09-03)
 
 | Feld | Klasse | Projektfeld | Umsetzung |
 |---|---|---|---|
@@ -243,9 +252,10 @@ das ihr eigener Export nicht liefert.
 | `LaengeEffektiv` | **Haltung** | `Haltungslaenge_m` | Meter mit zwei Stellen, 0..30000 |
 | `Lagebestimmung` | **Haltung** | `Lagebestimmung` | `SiaKanalVokabular`, 3 Werte |
 | `Profiltyp` | **Rohrprofil** | `Profiltyp` | ueber `RohrprofilRef`, 7 Werte |
+| `HoehenBreitenverhaeltnis` | **Rohrprofil** | `Lichte_Breite_mm` | `Lichte_Hoehe / Lichte_Breite`, ueber `RohrprofilRef` |
 | `Funktion` | **Normschacht** | `Funktion` | `SchachtFunktionVokabular` |
 | `Material` | **Normschacht** | `Material` | `SchachtMaterialVokabular`, nur 4 Werte |
-| `Dimension1`/`2` | **Normschacht** | `Dimension` | aus "600 mm" bzw. "1100 x 900 mm" |
+| `Dimension1`/`2` | **Normschacht** | `Dimension 1 mm` / `Dimension 2 mm` | ganze Millimeter; fehlendes zweites Mass wird im Programm gleichgesetzt |
 | `BaulicherZustand` | **Normschacht** | `Zustandsklasse` | Ziffer wird zu `Z0`..`Z4` |
 | `EigentuemerRef` | **Normschacht** | `Eigentuemer` | Verweis auf eine Organisation |
 
@@ -254,7 +264,7 @@ vollstaendig erhalten und bearbeitbar — es geht nur nicht mehr in die Revision
 (Entscheid 2026-09-02). `XtfStammdatenPlanBuilderTests.Die_Strasse_wird_nicht_mehr_exportiert`
 haelt den Verzicht fest, damit die Zeile nicht als vergessene Luecke wieder eingebaut wird.
 
-### Acht Felder bleiben bewusst im Programm
+### Sieben Felder bleiben bewusst im Programm
 
 `XtfStammdatenPlanBuilder.NichtExportierteFelder` fuehrt sie namentlich, ein Test
 haelt die Liste gegen die Exportkarten:
@@ -262,7 +272,6 @@ haelt die Liste gegen die Exportkarten:
 | Feld | Warum nicht |
 |---|---|
 | `Strasse` | haette mit `Kanal.Standortname` ein Ziel — Entscheid 2026-09-02 |
-| `Lichte_Breite_mm` | im Modell gibt es keine lichte Breite |
 | `Objekt_ID` | die XTF kennt kein Feld dafuer, die Identitaet ist die TID |
 | `Datenherr` | in SIA405 ein Organisationsverweis; SewerStudio ist nicht der Datenherr |
 | `Datenlieferant` | dasselbe |
@@ -366,7 +375,7 @@ Zwei Fallen fuer einen spaeteren Schacht-Export:
 `Normschacht.Bezeichnung` ist die Schachtnummer und in Zone 1.17 eindeutig (295 von
 295). Die Zuordnung ueber den Namen funktioniert also wie bei den Haltungen.
 
-## Schaechte aus der XTF importieren (Stand 2026-08-30)
+## Schaechte aus der XTF importieren (Stand 2026-09-03)
 
 Bis dahin legte kein XTF-Weg Schaechte an. Gemessen an allen 17 echten Projekten waren
 **alle 122 vorhandenen Eigentumsangaben von Hand gesetzt** (`FieldSource.Manual`), keine
@@ -379,12 +388,14 @@ Uebernommen wird nur, was in der Schachttabelle gebraucht wird:
 | `Bezeichnung` | `Schachtnummer` | unveraendert |
 | `Funktion` | `Funktion` | `SchachtFunktionVokabular` |
 | `Material` | `Material` | `SchachtMaterialVokabular`, `unbekannt` faellt weg |
-| `Dimension1`/`Dimension2` | `Dimension` | `600 mm` bzw. `1100 x 900 mm` |
+| `Dimension1`/`Dimension2` | `Dimension 1 mm` / `Dimension 2 mm` | `600` / `600` bzw. `1100` / `900` |
 | `Eigentuemer` | `Eigentuemer` | `EigentumVokabular` |
+| `BaulicherZustand` | `Zustandsklasse` | `Z0` bis `Z4` werden zu `0` bis `4` |
+| `Status`, `Sanierungsbedarf`, `Baujahr`, `Bemerkung` | gleichnamige Projektfelder | unveraendert bzw. geprueft |
 
-`Status`, `Sanierungsbedarf`, `Baujahr`, `Sohlenkote`, `Lagebestimmung` und die
-Deckelangaben bleiben ausdruecklich draussen — sie sind informativ und stehen im
-Protokoll.
+`Sohlenkote`, `Lagebestimmung` und die Deckelangaben bleiben draussen. Eine
+`Schachtform` kann die XTF nicht liefern, weil der Normschacht kein solches Attribut
+hat; die beiden Innenmasse kommen trotzdem vollstaendig zurueck.
 
 Beleglauf gegen die drei echten Lieferungen:
 
@@ -508,12 +519,14 @@ Noch offen: `Meliorationsgesellschaft Seedorf` steht auf
 Rechts. Falls privaten Rechtes dann als Privat abbilden." — 608 Haltungen haengen
 daran.
 
-## Lichte_Breite hat kein Ziel
+## Lichte_Breite geht als Hoehen-Breiten-Verhaeltnis hinaus
 
 `SIA405_ABWASSER_2020_1_LV95` kennt an der Klasse `Haltung` nur `Lichte_Hoehe`. Eine
-lichte Breite gibt es im ganzen Modell nicht. Das Programmfeld `Lichte_Breite_mm` ist
-deshalb bewusst eine reine Programmangabe fuer Ei-, Maul- und Rechteckprofile und
-wird nicht exportiert — wie `Strasse`.
+direkte lichte Breite gibt es dort nicht. Das Programmfeld `Lichte_Breite_mm` wird
+deshalb zusammen mit `DN_mm` in
+`Rohrprofil.HoehenBreitenverhaeltnis = Hoehe / Breite` umgerechnet. Beim Import wird
+daraus wieder die Breite berechnet. Bei einem Kreisprofil sind beide Masse gleich und
+es braucht kein Verhaeltnis.
 
 ## Profiltyp haengt am Rohrprofil, nicht an der Haltung
 

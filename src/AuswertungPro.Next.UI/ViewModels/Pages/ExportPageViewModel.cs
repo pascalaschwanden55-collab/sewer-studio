@@ -352,14 +352,41 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             return;
 
         var projektPfad = _settings.LastProjectPath ?? "";
+        IReadOnlyList<string>? quellDateien = null;
 
         var pruefung = _xtfRevisionExport.Erzeuge(
             new AuswertungPro.Next.Application.Xtf.XtfRevisionExportRequest(
                 _shell.Project, projektPfad, ziel!, NurPruefen: true));
 
-        if (!pruefung.Ok && pruefung.Dateien.Count == 0 && string.IsNullOrWhiteSpace(pruefung.Bericht))
+        if (pruefung.QuelleFehlt)
         {
-            _dialogs.Error(pruefung.Fehler ?? "Die Pruefung ist fehlgeschlagen.", "Revidierte XTF");
+            var ausgewaehlt = _dialogs.OpenFiles(
+                "XTF-Quelldatei fuer die Revision waehlen",
+                "XTF-Dateien (*.xtf)|*.xtf");
+            if (ausgewaehlt.Length == 0)
+            {
+                LastResult = "Revision abgebrochen — keine XTF-Quelle gewaehlt.";
+                return;
+            }
+
+            quellDateien = ausgewaehlt;
+            pruefung = _xtfRevisionExport.Erzeuge(
+                new AuswertungPro.Next.Application.Xtf.XtfRevisionExportRequest(
+                    _shell.Project,
+                    projektPfad,
+                    ziel!,
+                    NurPruefen: true,
+                    Quelldateien: quellDateien));
+        }
+
+        if (!pruefung.Ok)
+        {
+            _dialogs.Error(
+                string.IsNullOrWhiteSpace(pruefung.Bericht)
+                    ? pruefung.Fehler ?? "Die Pruefung ist fehlgeschlagen."
+                    : pruefung.Bericht,
+                "Revidierte XTF");
+            LastResult = "XTF-Revision konnte nicht geprueft werden.";
             return;
         }
 
@@ -375,7 +402,10 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
 
         var ergebnis = _xtfRevisionExport.Erzeuge(
             new AuswertungPro.Next.Application.Xtf.XtfRevisionExportRequest(
-                _shell.Project, projektPfad, ziel!));
+                _shell.Project,
+                projektPfad,
+                ziel!,
+                Quelldateien: quellDateien));
 
         if (!ergebnis.Ok)
         {
@@ -391,8 +421,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
     }
 
     /// <summary>
-    /// Erzeugt eine NEUE XTF aus dem Projektstand — fuer Objekte, die es im Kataster noch
-    /// nicht gibt. Erst der Bericht, dann auf Bestaetigung die Datei.
+    /// Erzeugt eine eigenstaendige NEUE XTF aus dem ganzen Projektstand. Erst der Bericht,
+    /// dann auf Bestaetigung die Datei.
     /// </summary>
     private void ErzeugeXtfNeu()
     {

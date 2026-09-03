@@ -903,14 +903,20 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
         => WinCanValueNormalizer.NormalizeInspectionDir(raw);
 
     /// <summary>
-    /// Die Untersuchung im Bericht. Der Sortierschluessel ist das glaubwuerdige Startdatum,
-    /// ersatzweise der Zeitstempel des Datensatzes; ein WinCan-Platzhalterdatum erscheint
-    /// so nicht als Aufnahmetag.
+    /// Die Untersuchung im Bericht. Nur ein glaubwuerdiges Startdatum ist ein Aufnahmetag.
+    /// Der technische Sortierschluessel darf die richtige Untersuchung waehlen, wird aber
+    /// nie als Untersuchungsdatum ausgegeben.
     /// </summary>
     private static string Datumstext(WinCanDbInspection inspection)
-        => inspection.SortKey == DateTime.MinValue
-            ? "ohne Datum"
-            : inspection.SortKey.ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    {
+        if (inspection.HatWinCanVorgabedatum)
+            return "WinCan-Platzhalterdatum (kein glaubwuerdiges Untersuchungsdatum)";
+
+        var startdatum = WinCanValueNormalizer.ParseSqliteDate(inspection.StartDate);
+        return startdatum is null
+            ? "ohne glaubwuerdiges Untersuchungsdatum"
+            : startdatum.Value.ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    }
 
     // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeAccessible(string? raw)

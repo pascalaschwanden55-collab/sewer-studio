@@ -546,6 +546,9 @@ public sealed class ExcelTemplateExportService : IExcelExportService
         var alias = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["Haltungsnahme (ID)"] = FieldKeys.HoldingName,
+            // Die UI nennt das Feld genauer "Lichte Hoehe / DN mm". Die bestehende
+            // Kunden-Excelvorlage bleibt unveraendert bei "DN mm".
+            ["DN mm"] = FieldKeys.NominalDiameterMm,
             ["Fliessrichtung"] = "Inspektionsrichtung"
         };
 

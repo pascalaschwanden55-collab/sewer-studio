@@ -79,4 +79,17 @@ public sealed class StartupSplashAnimationPolicyTests
     {
         Assert.Equal(expected, StartupSplashAnimationPolicy.EaseInCubic(t), precision: 10);
     }
+
+    [Theory]
+    [InlineData(960, 520, 520, 2.1, 1.0)]     // Entwurfsmass: Faktor 1
+    [InlineData(864, 960, 520, 2.1, 864 / 520.0)] // kuerzere Kante bestimmt
+    [InlineData(3000, 3000, 520, 2.1, 2.1)]   // nach oben begrenzt
+    [InlineData(40, 40, 520, 2.1, 0.25)]      // nach unten begrenzt
+    [InlineData(0, 500, 520, 2.1, 1.0)]       // ungueltige Flaeche: neutral
+    [InlineData(double.NaN, 500, 520, 2.1, 1.0)]
+    public void SphereScale_bezieht_die_kuerzere_Kante_auf_das_Entwurfsmass(
+        double width, double height, double designEdge, double maxScale, double expected)
+    {
+        Assert.Equal(expected, StartupSplashAnimationPolicy.SphereScale(width, height, designEdge, maxScale), precision: 10);
+    }
 }

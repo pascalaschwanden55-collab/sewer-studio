@@ -107,6 +107,31 @@ public sealed class DropdownExportierbarkeitTests
     }
 
     [Fact]
+    public void Die_Urner_Profilformen_stehen_in_der_Haltungs_Auswahl()
+    {
+        Assert.Equal(
+            [
+                "", "Unbekannt", "Kreisprofil", "Eiprofil", "Maulprofil",
+                "Offenes Profil", "Rechteckprofil", "Spezialprofil"
+            ],
+            FieldCatalog.GetComboItems(FieldKeys.ProfileType));
+
+        var reihenfolge = FieldCatalog.ColumnOrder.ToList();
+        var hoehe = reihenfolge.IndexOf(FieldKeys.NominalDiameterMm);
+        Assert.Equal(hoehe + 1, reihenfolge.IndexOf(FieldKeys.ProfileType));
+        Assert.Equal(hoehe + 2, reihenfolge.IndexOf(FieldKeys.ClearWidthMm));
+        Assert.Equal("Lichte Höhe / DN mm", FieldCatalog.Get(FieldKeys.NominalDiameterMm).Label);
+    }
+
+    [Theory]
+    [InlineData("Offenes Profil", "offenes_Profil")]
+    [InlineData("Anderes", "Spezialprofil")]
+    [InlineData("Kreisprofil (K)", "Kreisprofil")]
+    public void Profilnamen_und_Altdaten_werden_als_gueltige_SIA405_Werte_exportiert(
+        string anzeige, string erwartet)
+        => Assert.Equal(erwartet, ProfiltypVokabular.NachNorm(anzeige));
+
+    [Fact]
     public void GFK_bleibt_waehlbar_weil_das_WebGIS_ihn_fuehrt()
     {
         // Im WebGIS von Uri steht GFK unter der Materialgruppe "Kunststoff".

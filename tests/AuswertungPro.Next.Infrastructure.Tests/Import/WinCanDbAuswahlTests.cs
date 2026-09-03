@@ -121,7 +121,12 @@ public sealed class WinCanDbAuswahlTests
 
             var record = Assert.Single(project.Data);
             Assert.Equal(12, record.Protocol!.Current.Entries.Count);
+            Assert.True(
+                string.IsNullOrWhiteSpace(record.GetFieldValue(FieldKeys.InspectionYear)),
+                "Das WinCan-Vorgabedatum ist kein Untersuchungsdatum.");
             var meldung = Assert.Single(result.Value!.Messages, m => m.Contains("2 Untersuchungen", StringComparison.Ordinal));
+            Assert.Contains("Uebernommen: WinCan-Platzhalterdatum", meldung, StringComparison.Ordinal);
+            Assert.DoesNotContain("07.10.2025", meldung, StringComparison.Ordinal);
             Assert.Contains("4 Befunden", meldung);
             Assert.Contains("06.10.2025", meldung);
         }

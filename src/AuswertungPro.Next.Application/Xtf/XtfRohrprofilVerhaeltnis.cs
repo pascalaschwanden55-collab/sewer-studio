@@ -46,6 +46,24 @@ public static class XtfRohrprofilVerhaeltnis
     }
 
     /// <summary>
+    /// True, wenn die zwei Programmwerte eindeutig ein rundes Profil beschreiben:
+    /// eine gueltige Hoehe und entweder keine Breite oder dieselbe Breite. Ungueltige
+    /// Texte gelten nicht als rund, damit sie nie das vorhandene Verhaeltnis loeschen.
+    /// </summary>
+    public static bool IstRund(string? hoehe, string? breite)
+    {
+        var h = SiaAbmessung.NachMillimeter(hoehe);
+        if (h is not (> 0 and <= 99_999))
+            return false;
+
+        if (string.IsNullOrWhiteSpace(breite))
+            return true;
+
+        var b = SiaAbmessung.NachMillimeter(breite);
+        return b is > 0 and <= 99_999 && h == b;
+    }
+
+    /// <summary>
     /// Die Breite in Millimetern aus Hoehe und Verhaeltnis der Datei, oder <c>null</c>,
     /// wenn eines von beiden fehlt oder unbrauchbar ist.
     /// </summary>

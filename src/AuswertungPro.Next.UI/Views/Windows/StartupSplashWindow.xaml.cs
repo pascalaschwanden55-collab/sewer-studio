@@ -24,17 +24,14 @@ public partial class StartupSplashWindow : Window
     private const double FlareIntervalSeconds = 0.5;
     private const double WaveIntervalSeconds = 2.7;
     private const double WaveDurationSeconds = 1.5;
-    private const double WaveBandWidth = 48;
     private const double GoldenAngle = 2.39996322972865332;
-    private const double CanvasCenterX = 220;
-    private const double CanvasCenterY = 260;
-    private const double ProjectionScale = 170;
     private const double CameraDistance = 4.6;
-    private const double ProgressFullWidth = 920;
-    private const double ProgressReadyWidth = ProgressFullWidth * 0.9;
     private const int DustCount = 70;
     private const double RotationRampSeconds = 2.5;
     private const double SheenCycleSeconds = 2.6;
+    // Bezugsmass des Entwurfs: Bei einer Canvas-Kante von 520 px hat die Kugel den Faktor 1.
+    private const double DesignCanvasEdge = 520;
+    private const double MaxSphereScale = 2.1;
     private static readonly TimeSpan MinimumDisplayTime = TimeSpan.FromMilliseconds(8000);
     private static readonly TimeSpan ReadyProgressDuration = TimeSpan.FromMilliseconds(260);
 
@@ -60,6 +57,21 @@ public partial class StartupSplashWindow : Window
     private double[] _screenY = Array.Empty<double>();
     private double[] _screenDepth = Array.Empty<double>();
 
+    // Geometrie der Kugel: wird beim Laden aus der echten Canvas-Groesse abgeleitet,
+    // damit das Netz auf jedem Bildschirm dieselbe Proportion behaelt.
+    private double _canvasWidth = 960;
+    private double _canvasHeight = 520;
+    private double _centerX = 480;
+    private double _centerY = 260;
+    private double _sphereScale = 1.0;
+    private double _projectionScale = 170;
+    private double _waveBandWidth = 48;
+    private double _waveHalfSpan = 230;
+
+    // Fortschrittsbalken: volle Breite kommt aus dem gerenderten Track, nicht aus einer Konstante.
+    private double _progressFullWidth = 920;
+    private double _progressReadyWidth = 920 * 0.9;
+
     private Ellipse? _coreGlow;
     private Ellipse? _ringInner;
     private Ellipse? _ringMiddle;
@@ -69,8 +81,8 @@ public partial class StartupSplashWindow : Window
     private RotateTransform? _ringOuterRotate;
     private ScaleTransform? _coreGlowScale;
     private Rectangle? _scanLine;
-    private Path? _goldArc;
-    private RotateTransform? _goldArcRotate;
+    private Path? _accentArc;
+    private RotateTransform? _accentArcRotate;
 
     private int _statusIndex;
     private int _pulseColorCursor;
@@ -90,27 +102,27 @@ public partial class StartupSplashWindow : Window
     private bool _readySignaled;
     private Task? _finishTask;
 
-    // Basisnetz (Knoten, Linien, Ringe) bleibt bewusst gedaempft/dunkel als Slate,
-    // damit die farbigen und goldenen Impulse davor klar hervortreten.
-    private static readonly Color AccentDeep = Color.FromRgb(0x33, 0x3B, 0x4B);
-    private static readonly Color AccentBlue = Color.FromRgb(0x48, 0x57, 0x70);
-    private static readonly Color AccentCyan = Color.FromRgb(0x5C, 0x77, 0x88);
-    private static readonly Color NodeCore = Color.FromRgb(0xE6, 0xEB, 0xF0);
-    private static readonly Color LineAccent = Color.FromRgb(0x74, 0x82, 0x96);
-    private static readonly Color ReadyAccent = Color.FromRgb(0x86, 0xCB, 0x92);
+    // Basisnetz auf hellem Grund: Knoten und Linien in Blau-Stahl, Ringe im Rahmengrau
+    // des Programms. Alles bleibt gedaempft, damit die Impulse davor lesbar sind.
+    private static readonly Color AccentDeep = Color.FromRgb(0x9E, 0xAE, 0xC4);
+    private static readonly Color AccentBlue = Color.FromRgb(0x2F, 0x6F, 0xE0);
+    private static readonly Color AccentCyan = Color.FromRgb(0x0E, 0xA5, 0xE9);
+    private static readonly Color NodeCore = Color.FromRgb(0x1D, 0x4E, 0xD8);
+    private static readonly Color LineAccent = Color.FromRgb(0x64, 0x7A, 0x9A);
+    private static readonly Color ReadyAccent = Color.FromRgb(0x15, 0x80, 0x3D);
 
-    // Lebendige Impuls-Palette: kraeftige Farben mit Gold als wiederkehrendem Blickfang.
-    private static readonly Color PulseGold = Color.FromRgb(0xFF, 0xC6, 0x4B);
-    private static readonly Color PulseAmber = Color.FromRgb(0xFF, 0x9D, 0x3A);
-    private static readonly Color PulseCyan = Color.FromRgb(0x3F, 0xC6, 0xF0);
-    private static readonly Color PulseBlue = Color.FromRgb(0x5B, 0x8B, 0xFF);
-    private static readonly Color PulseTeal = Color.FromRgb(0x33, 0xD6, 0xB8);
-    private static readonly Color PulseViolet = Color.FromRgb(0xA9, 0x84, 0xFF);
+    // Impuls-Palette: die Programmfarben (Akzentblau, Info-Cyan, Teal, Indigo) und
+    // sparsam ein warmer Bernsteinton als Blickfang.
+    private static readonly Color PulseBlue = Color.FromRgb(0x25, 0x63, 0xEB);
+    private static readonly Color PulseCyan = Color.FromRgb(0x0E, 0xA5, 0xE9);
+    private static readonly Color PulseTeal = Color.FromRgb(0x0D, 0x94, 0x88);
+    private static readonly Color PulseIndigo = Color.FromRgb(0x4F, 0x46, 0xE5);
+    private static readonly Color PulseSky = Color.FromRgb(0x38, 0xBD, 0xF8);
+    private static readonly Color PulseAmber = Color.FromRgb(0xD9, 0x77, 0x06);
 
-    // Gold taucht mehrfach auf, damit goldene Impulse das Bild praegen, es aber bunt bleibt.
     private static readonly Color[] PulsePalette =
     {
-        PulseGold, PulseAmber, PulseCyan, PulseGold, PulseBlue, PulseTeal, PulseGold, PulseViolet
+        PulseBlue, PulseCyan, PulseTeal, PulseBlue, PulseIndigo, PulseSky, PulseBlue, PulseAmber
     };
 
     private sealed class NeuralNode
@@ -222,15 +234,16 @@ public partial class StartupSplashWindow : Window
         public double Speed { get; }
     }
 
+    // Sachliche Statusmeldungen ohne Versionsangabe. Die letzte Zeile setzt nur der Ready-Pfad.
     private static readonly string[] StatusMessages =
     [
-        "Initialisiere Anwendung...",
-        "Neural Core hochfahren...",
-        "Lokale KI-Modelle vorbereiten...",
-        "Synapsen kalibrieren...",
-        "3D-Neuralnetz synchronisieren...",
-        "VSA-Kataloge und Wissensbasis verbinden...",
-        "SewerStudio " + AppIdentity.DisplayVersion + " bereit"
+        "Anwendung wird gestartet…",
+        "Einstellungen werden geladen…",
+        "Projektdienste werden vorbereitet…",
+        "Lokale KI-Module werden vorbereitet…",
+        "VSA-KEK 2020 Katalog wird verbunden…",
+        "Wissensbasis wird verbunden…",
+        "SewerStudio ist bereit"
     ];
 
     public StartupSplashWindow()
@@ -270,21 +283,51 @@ public partial class StartupSplashWindow : Window
         BeginAnimation(OpacityProperty, windowFade);
         Focus();
 
-        // Versionszeile aus der zentralen Versionsnummer aufbauen.
-        VersionText.Text = AppIdentity.DisplayVersion + "  |  Neural Network Core  |  VSA-KEK 2020  |  Local AI";
-
+        MeasureLayout();
         BuildNeuralNetwork();
         RenderFrame();
         AnimateNetworkFadeIn();
+        FadeIn(OverlineRow, 2200, 800);
         RevealTitle(2600);
         FadeIn(SubText, 3400, 900);
-        FadeIn(VersionText, 3900, 700);
+        FadeIn(TagRow, 3900, 700);
         FadeIn(StatusText, 1100, 650);
         FadeIn(StatusDot, 1100, 650);
+        FadeIn(SkipHint, 4600, 900);
         StartProgressBar();
 
         StartRenderLoop();
         _statusTimer.Start();
+    }
+
+    /// <summary>
+    /// Liest die echte Canvas- und Balkenbreite nach dem ersten Layout und leitet daraus
+    /// Mittelpunkt, Projektionsmass und Wellenbreite der Kugel ab.
+    /// </summary>
+    private void MeasureLayout()
+    {
+        var width = NeuralCanvas.ActualWidth;
+        var height = NeuralCanvas.ActualHeight;
+        if (width > 50 && height > 50)
+        {
+            _canvasWidth = width;
+            _canvasHeight = height;
+        }
+
+        _centerX = _canvasWidth / 2.0;
+        _centerY = _canvasHeight / 2.0;
+        _sphereScale = StartupSplashAnimationPolicy.SphereScale(
+            _canvasWidth, _canvasHeight, DesignCanvasEdge, MaxSphereScale);
+        _projectionScale = 170 * _sphereScale;
+        _waveBandWidth = 48 * _sphereScale;
+        _waveHalfSpan = 230 * _sphereScale;
+
+        var trackWidth = ProgressTrack.ActualWidth;
+        if (trackWidth > 50)
+        {
+            _progressFullWidth = trackWidth;
+            _progressReadyWidth = trackWidth * 0.9;
+        }
     }
 
     private void RevealTitle(int startMs)
@@ -301,7 +344,7 @@ public partial class StartupSplashWindow : Window
 
     private void StartProgressBar()
     {
-        var grow = new DoubleAnimation(0, ProgressReadyWidth, MinimumDisplayTime)
+        var grow = new DoubleAnimation(0, _progressReadyWidth, MinimumDisplayTime)
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
@@ -326,7 +369,7 @@ public partial class StartupSplashWindow : Window
         if (_skipRequested)
         {
             ProgressBar.BeginAnimation(WidthProperty, null);
-            ProgressBar.Width = ProgressFullWidth;
+            ProgressBar.Width = _progressFullWidth;
             _progressDone.TrySetResult(true);
             return;
         }
@@ -346,9 +389,9 @@ public partial class StartupSplashWindow : Window
             return;
 
         _skipRequested = true;
-        StatusText.Text = "Startanimation uebersprungen...";
+        StatusText.Text = "Startanimation uebersprungen…";
         ProgressBar.BeginAnimation(WidthProperty, null);
-        ProgressBar.Width = ProgressFullWidth;
+        ProgressBar.Width = _progressFullWidth;
         _progressDone.TrySetResult(true);
     }
 
@@ -372,7 +415,7 @@ public partial class StartupSplashWindow : Window
         StatusDot.Fill = new SolidColorBrush(ReadyAccent);
         _emitPulses = false;
         TriggerReadyBurst();
-        await AnimateProgressToAsync(ProgressFullWidth, ReadyProgressDuration).ConfigureAwait(true);
+        await AnimateProgressToAsync(_progressFullWidth, ReadyProgressDuration).ConfigureAwait(true);
         _progressDone.TrySetResult(true);
     }
 
@@ -421,6 +464,7 @@ public partial class StartupSplashWindow : Window
             _coreGlowScale.BeginAnimation(ScaleTransform.ScaleYProperty, pulse);
         }
 
+        // Kurzes gruenes Aufleuchten hinter der Wortmarke: dezent, weil der Grund hell ist.
         var titleGlow = new DropShadowEffect
         {
             Color = ReadyAccent,
@@ -429,12 +473,12 @@ public partial class StartupSplashWindow : Window
             Opacity = 0
         };
         TitleText.Effect = titleGlow;
-        var blur = new DoubleAnimation(0, 20, TimeSpan.FromMilliseconds(240))
+        var blur = new DoubleAnimation(0, 18, TimeSpan.FromMilliseconds(240))
         {
             AutoReverse = true,
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
-        var opacity = new DoubleAnimation(0, 0.65, TimeSpan.FromMilliseconds(240))
+        var opacity = new DoubleAnimation(0, 0.35, TimeSpan.FromMilliseconds(240))
         {
             AutoReverse = true,
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
@@ -455,7 +499,7 @@ public partial class StartupSplashWindow : Window
 
         _statusIndex++;
         StatusText.Text = StatusMessages[_statusIndex];
-        StatusDot.Fill = new SolidColorBrush(_statusIndex >= 3 ? AccentCyan : AccentBlue);
+        StatusDot.Fill = new SolidColorBrush(_statusIndex >= 3 ? AccentCyan : PulseBlue);
     }
 
     private static void FadeIn(UIElement element, int startMs, int durMs)

@@ -949,6 +949,190 @@ public sealed class XtfStammdatenPlanBuilderTests
         Assert.Empty(plan.Hinweise);
     }
 
+    [Theory]
+    [InlineData("1000")]
+    [InlineData("")]
+    public void Der_Wechsel_auf_rund_entfernt_das_alte_Verhaeltnis(string breite)
+    {
+        var mitVerhaeltnis = MitProfil.Replace(
+            "<Profiltyp>Kreisprofil</Profiltyp>",
+            "<HoehenBreitenverhaeltnis>1.66667</HoehenBreitenverhaeltnis>\n        <Profiltyp>Rechteckprofil</Profiltyp>",
+            StringComparison.Ordinal);
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "1000", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, breite, FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(mitVerhaeltnis)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        var position = Assert.Single(plan.Positionen);
+        var verhaeltnis = Assert.Single(position.Felder);
+        Assert.Equal("HoehenBreitenverhaeltnis", verhaeltnis.Name);
+        Assert.Equal("1.66667", verhaeltnis.Alt);
+        Assert.Null(verhaeltnis.Neu);
+        Assert.Equal(XtfRevisionFeldAktion.Entfernen, verhaeltnis.Aktion);
+    }
+
+    [Fact]
+    public void Nur_der_Profiltyp_Kreis_mit_zwei_verschiedenen_Massen_wird_gemeldet()
+    {
+        var mitVerhaeltnis = MitProfil.Replace(
+            "<Profiltyp>Kreisprofil</Profiltyp>",
+            "<HoehenBreitenverhaeltnis>1.66667</HoehenBreitenverhaeltnis>\n        <Profiltyp>Rechteckprofil</Profiltyp>",
+            StringComparison.Ordinal);
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "1000", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "600", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ProfileType, "Kreisprofil", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(mitVerhaeltnis)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        Assert.Empty(plan.Positionen);
+        Assert.Contains(plan.Hinweise, h =>
+            h.Contains("Kreisprofil", StringComparison.Ordinal)
+            && h.Contains("1000 x 600", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Ein_Kreisprofil_Masskonflikt_schreibt_keine_halbe_Hoehenaenderung()
+    {
+        var mitKanalUndVerhaeltnis = MitProfil
+            .Replace(
+                "      <SIA405_Abwasser.SIA405_Abwasser.Haltung TID=\"ch010wcsHA000001\">",
+                """
+                      <SIA405_Abwasser.SIA405_Abwasser.Kanal TID="ch010wcsKA000001">
+                        <Bezeichnung>80638-80631</Bezeichnung>
+                        <Nutzungsart_Ist>Schmutzabwasser</Nutzungsart_Ist>
+                      </SIA405_Abwasser.SIA405_Abwasser.Kanal>
+                      <SIA405_Abwasser.SIA405_Abwasser.Haltung TID="ch010wcsHA000001">
+                """,
+                StringComparison.Ordinal)
+            .Replace(
+                "<Profiltyp>Kreisprofil</Profiltyp>",
+                "<HoehenBreitenverhaeltnis>1.66667</HoehenBreitenverhaeltnis>\n        <Profiltyp>Rechteckprofil</Profiltyp>",
+                StringComparison.Ordinal);
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.UsageType, "Mischabwasser", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "1200", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "600", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ProfileType, "Kreisprofil", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(mitKanalUndVerhaeltnis)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        var kanal = Assert.Single(plan.Positionen);
+        Assert.Equal("ch010wcsKA000001", kanal.KanalschadenTid);
+        Assert.Equal("Mischabwasser", Assert.Single(kanal.Felder, f => f.Name == "Nutzungsart_Ist").Neu);
+        Assert.DoesNotContain(plan.Positionen.SelectMany(p => p.Felder), f => f.Name == "Lichte_Hoehe");
+        Assert.DoesNotContain(plan.Positionen, p => p.KanalschadenTid == "ch010wcsRP000001");
+        Assert.Contains(plan.Hinweise, h =>
+            h.Contains("Kreisprofil", StringComparison.Ordinal)
+            && h.Contains("1200 x 600", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Nur_der_Profiltyp_Kreis_entfernt_ein_altes_Verhaeltnis_wenn_die_Masse_nicht_widersprechen()
+    {
+        var mitVerhaeltnis = MitProfil.Replace(
+            "<Profiltyp>Kreisprofil</Profiltyp>",
+            "<HoehenBreitenverhaeltnis>1.66667</HoehenBreitenverhaeltnis>\n        <Profiltyp>Rechteckprofil</Profiltyp>",
+            StringComparison.Ordinal);
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "1000", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ProfileType, "Kreisprofil", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(mitVerhaeltnis)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        var position = Assert.Single(plan.Positionen);
+        Assert.Equal("ch010wcsRP000001", position.KanalschadenTid);
+        Assert.Equal("Kreisprofil", Assert.Single(position.Felder, f => f.Name == "Profiltyp").Neu);
+        var loeschung = Assert.Single(position.Felder, f => f.Name == "HoehenBreitenverhaeltnis");
+        Assert.Equal(XtfRevisionFeldAktion.Entfernen, loeschung.Aktion);
+    }
+
+    [Fact]
+    public void Nur_die_Hoehe_mit_unbearbeiteter_leerer_Breite_loescht_das_Verhaeltnis_nicht()
+    {
+        var mitVerhaeltnis = MitProfil.Replace(
+            "<Profiltyp>Kreisprofil</Profiltyp>",
+            "<HoehenBreitenverhaeltnis>1.66667</HoehenBreitenverhaeltnis>\n        <Profiltyp>Rechteckprofil</Profiltyp>",
+            StringComparison.Ordinal);
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "1200", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "", FieldSource.Xtf, userEdited: false);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(mitVerhaeltnis)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        Assert.Contains(plan.Positionen, p =>
+            p.KanalschadenTid == "ch010wcsHA000001"
+            && p.Felder.Any(f => f.Name == "Lichte_Hoehe" && f.Neu == "1200"));
+        Assert.DoesNotContain(plan.Positionen, p => p.KanalschadenTid == "ch010wcsRP000001");
+    }
+
+    [Fact]
+    public void Eine_unlesbare_Breite_loescht_das_alte_Verhaeltnis_nicht()
+    {
+        var mitVerhaeltnis = MitProfil.Replace(
+            "<Profiltyp>Kreisprofil</Profiltyp>",
+            "<HoehenBreitenverhaeltnis>1.66667</HoehenBreitenverhaeltnis>\n        <Profiltyp>Rechteckprofil</Profiltyp>",
+            StringComparison.Ordinal);
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "1000", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "unlesbar", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(mitVerhaeltnis)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        Assert.Empty(plan.Positionen);
+    }
+
+    [Fact]
+    public void Der_Wechsel_auf_rund_aendert_kein_geteiltes_Profil()
+    {
+        var geteilt = MitProfil
+            .Replace(
+                "<Profiltyp>Kreisprofil</Profiltyp>",
+                "<HoehenBreitenverhaeltnis>1.66667</HoehenBreitenverhaeltnis>\n        <Profiltyp>Rechteckprofil</Profiltyp>",
+                StringComparison.Ordinal)
+            .Replace(
+                "</SIA405_Abwasser.SIA405_Abwasser>",
+                """
+                  <SIA405_Abwasser.SIA405_Abwasser.Haltung TID="ch010wcsHA000002">
+                    <Bezeichnung>80631-80551</Bezeichnung>
+                    <RohrprofilRef REF="ch010wcsRP000001" />
+                  </SIA405_Abwasser.SIA405_Abwasser.Haltung>
+                </SIA405_Abwasser.SIA405_Abwasser>
+                """,
+                StringComparison.Ordinal);
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "1000", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "1000", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(geteilt)),
+            "SIA405_ABWASSER_2020_LV95");
+
+        Assert.Empty(plan.Positionen);
+        Assert.Contains(plan.Hinweise, h => h.Contains("gemeinsam benutzt", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void Ein_unveraendertes_Verhaeltnis_wird_nicht_erneut_geschrieben()
     {

@@ -139,6 +139,57 @@ public sealed class SchachtMasseTests
     }
 
     [Fact]
+    public void Ein_passendes_erstes_Zahlenfeld_wird_mit_dem_zweiten_Altwert_vervollstaendigt()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Dimension", "1100 x 900 mm", FieldSource.Pdf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ShaftDimension1Mm, "1100", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.ShaftDimension2Mm, "", FieldSource.Manual, userEdited: true);
+
+        var geaendert = SchachtMasse.UebernimmAlteTextfelder(record);
+
+        Assert.True(geaendert);
+        Assert.Equal("1100", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("900", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
+        Assert.True(record.FieldMeta[FieldKeys.ShaftDimension1Mm].UserEdited);
+        Assert.Equal(FieldSource.Pdf, record.FieldMeta[FieldKeys.ShaftDimension2Mm].Source);
+        Assert.False(record.FieldMeta[FieldKeys.ShaftDimension2Mm].UserEdited);
+        Assert.False(record.Fields.ContainsKey("Dimension"));
+    }
+
+    [Fact]
+    public void Ein_passendes_zweites_Zahlenfeld_wird_mit_dem_ersten_Altwert_vervollstaendigt()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Dimension", "1100 x 900 mm", FieldSource.Pdf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ShaftDimension2Mm, "900", FieldSource.Manual, userEdited: true);
+
+        var geaendert = SchachtMasse.UebernimmAlteTextfelder(record);
+
+        Assert.True(geaendert);
+        Assert.Equal("1100", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("900", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
+        Assert.True(record.FieldMeta[FieldKeys.ShaftDimension2Mm].UserEdited);
+        Assert.Equal(FieldSource.Pdf, record.FieldMeta[FieldKeys.ShaftDimension1Mm].Source);
+        Assert.False(record.Fields.ContainsKey("Dimension"));
+    }
+
+    [Fact]
+    public void Widerspruechliches_einzelnes_Zahlenfeld_behaelt_den_Alttext()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Dimension", "1100 x 900 mm", FieldSource.Pdf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ShaftDimension1Mm, "1000", FieldSource.Manual, userEdited: true);
+
+        var geaendert = SchachtMasse.UebernimmAlteTextfelder(record);
+
+        Assert.False(geaendert);
+        Assert.Equal("1000", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.True(string.IsNullOrWhiteSpace(record.GetFieldValue(FieldKeys.ShaftDimension2Mm)));
+        Assert.Equal("1100 x 900 mm", record.GetFieldValue("Dimension"));
+    }
+
+    [Fact]
     public void Auch_das_leere_Textfeld_und_Durchmesser_verschwinden()
     {
         var record = new SchachtRecord();

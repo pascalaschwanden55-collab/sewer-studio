@@ -285,8 +285,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         PruefungsresultatOptions = new ObservableCollection<string>(_dropdownOptions.LoadPruefungsresultatOptions());
         ReferenzpruefungOptions = new ObservableCollection<string>(_dropdownOptions.LoadReferenzpruefungOptions());
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
-        SchachtformOptions = new ObservableCollection<string>(
-            new[] { "Rund", "Oval", "Quadratisch", "Rechteckig" });
+        SchachtformOptions = new ObservableCollection<string>(SchachtformVokabular.Auswahl);
         BelastungsklasseOptions = new ObservableCollection<string>(
             FieldCatalog.GetComboItems(FieldKeys.LoadClass));
         // Keine zweite Liste: die Begriffe fuehren die Vokabulare, damit Anzeige und
@@ -428,6 +427,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
 
         foreach (var column in result.Columns)
             Columns.Add(column);
+
+        // Form sowie groesstes und kleinstes Innenmass muessen immer editierbar sein,
+        // auch wenn eine aeltere Excel-Vorlage diese drei GEONIS-Felder noch nicht hat.
+        SchaechteColumnPolicy.ErgaenzeFormUndMasse(Columns);
 
         // Aeltere Schacht-Vorlagen kannten kein "Ausgefuehrt durch". Fuer diese
         // Bestandsdateien bleibt der Rueckfall als editierbare Dropdown-Spalte erhalten.

@@ -183,8 +183,8 @@
                         <StackPanel>
                             <TextBlock Text="Revidierte XTF" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
-                            <TextBlock Text="Schreibt deine Änderungen in eine neue XTF — eine je Originaldatei. Die Originale werden nur gelesen."
-                                       FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                            <TextBlock Text="Schreibt deine Änderungen in eine neue XTF — eine je Originaldatei. Fehlt die gespeicherte Projektkopie, kannst du die passende XTF beim Start auswählen. Die Originale werden nur gelesen."
+                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
                                        TextWrapping="Wrap" Margin="0,0,0,8"/>
                             <Button Command="{Binding ErzeugeXtfRevisionCommand}"
                                     HorizontalAlignment="Left" Padding="14,6"
@@ -200,14 +200,14 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Neue XTF: braucht keine Originaldatei, schreibt alles selbst. -->
+                    <!-- Vollstaendige neue XTF: braucht keine Originaldatei, schreibt alles selbst. -->
                     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
                         <StackPanel>
-                            <TextBlock Text="Neue XTF (Ersterfassung)" FontWeight="SemiBold"
+                            <TextBlock Text="Neue XTF (vollständiges Projekt)" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
-                            <TextBlock Text="Schreibt alle Haltungen und Schächte des Projekts als neue SIA405-Datei — für Leitungen, die es im Kataster noch nicht gibt. Braucht keine Originaldatei."
-                                       FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                            <TextBlock Text="Schreibt alle Haltungen und Schächte des Projekts als eigenständige SIA405-Datei — auch mit vorhandener Objekt-ID. Für Änderungen an bereits bestehenden Katasterobjekten bitte Revidierte XTF verwenden."
+                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
                                        TextWrapping="Wrap" Margin="0,0,0,8"/>
                             <Button Command="{Binding ErzeugeXtfNeuCommand}"
                                     HorizontalAlignment="Left" Padding="14,6"

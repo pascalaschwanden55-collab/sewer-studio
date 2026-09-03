@@ -9,6 +9,13 @@ public enum XtfRevisionAenderung
     Entfernt
 }
 
+/// <summary>Was mit einem einzelnen Feld in einer Revision geschieht.</summary>
+public enum XtfRevisionFeldAktion
+{
+    Setzen,
+    Entfernen
+}
+
 /// <summary>
 /// Ein einzelnes geaendertes Feld mit Alt- und Neuwert — fuer den Pruefbericht.
 ///
@@ -17,8 +24,17 @@ public enum XtfRevisionAenderung
 /// ein Verweis dagegen im Attribut <c>REF</c>
 /// (<c>&lt;EigentuemerRef REF="ch..." /&gt;</c>). <see cref="Neu"/> haelt dann die Kennung
 /// des Zielobjekts, nicht dessen Namen.
+///
+/// Ein leerer Neuwert bedeutet weiterhin nur "nichts setzen". Erst die ausdrueckliche
+/// Aktion <see cref="XtfRevisionFeldAktion.Entfernen"/> darf ein vorhandenes XML-Element
+/// loeschen. Bestehende Aufrufer mit leeren Werten werden dadurch nicht zu Loeschauftraegen.
 /// </summary>
-public sealed record XtfRevisionFeld(string Name, string? Alt, string? Neu, bool IstVerweis = false);
+public sealed record XtfRevisionFeld(
+    string Name,
+    string? Alt,
+    string? Neu,
+    bool IstVerweis = false,
+    XtfRevisionFeldAktion Aktion = XtfRevisionFeldAktion.Setzen);
 
 /// <summary>
 /// Eine Organisation, die es in der Datei noch nicht gibt und die der Ausfuehrer im

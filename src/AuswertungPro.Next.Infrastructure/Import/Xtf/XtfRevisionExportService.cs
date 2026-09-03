@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using AuswertungPro.Next.Application.Xtf;
 
@@ -29,12 +30,33 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
         if (string.IsNullOrWhiteSpace(request.ZielOrdner))
             return Fehler("Es wurde kein Zielordner angegeben.");
 
-        var quellen = FindeQuellen(request.ProjektPfad);
+        List<string> quellen;
+        if (request.Quelldateien is { Count: > 0 })
+        {
+            var pruefung = PruefeExpliziteQuellen(request.Quelldateien);
+            if (pruefung.Fehler is not null)
+                return Fehler(pruefung.Fehler);
+
+            quellen = pruefung.Quellen;
+        }
+        else
+        {
+            try
+            {
+                quellen = FindeQuellen(request.ProjektPfad);
+            }
+            catch (Exception ex)
+            {
+                return Fehler($"Die XTF-Quellen im Projekt konnten nicht gelesen werden: {ex.Message}");
+            }
+        }
+
         if (quellen.Count == 0)
         {
             return Fehler(
                 "Im Projekt wurde keine XTF-Quelldatei gefunden. Gesucht wird unter " +
-                "'Imports\\XTF' und 'Importdateien\\XTF'.");
+                "'Imports\\XTF' und 'Importdateien\\XTF'.",
+                quelleFehlt: true);
         }
 
         var stempel = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -110,14 +132,16 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
             foreach (var hinweis in stamm.Hinweise.Concat(schacht.Hinweise))
                 bericht.AppendLine($"    Hinweis: {hinweis}");
 
-            if (request.NurPruefen)
-                continue;
-
             if (plan.BrauchtEntscheidung)
             {
-                fehler.Add($"{name}: offene Faelle — es wurde nichts geschrieben.");
+                fehler.Add(request.NurPruefen
+                    ? $"{name}: offene Faelle — die Pruefung ist nicht bestanden."
+                    : $"{name}: offene Faelle — es wurde nichts geschrieben.");
                 continue;
             }
+
+            if (request.NurPruefen)
+                continue;
 
             if (plan.OhneAenderung)
             {
@@ -175,15 +199,106 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
 
             foreach (var datei in Directory.GetFiles(ordner, "*.xtf", SearchOption.TopDirectoryOnly))
             {
-                // Gleicher Dateiname in beiden Ablagen: nur einmal verarbeiten.
-                if (!treffer.Any(t => string.Equals(Path.GetFileName(t), Path.GetFileName(datei), StringComparison.OrdinalIgnoreCase)))
+                var gleichnamig = treffer.FirstOrDefault(t =>
+                    string.Equals(
+                        Path.GetFileName(t),
+                        Path.GetFileName(datei),
+                        StringComparison.OrdinalIgnoreCase));
+                if (gleichnamig is null)
+                {
                     treffer.Add(datei);
+                    continue;
+                }
+
+                // Alte und neue Projektablage duerfen dieselbe Importkopie enthalten.
+                // Nur ein belegter Inhaltsvergleich erlaubt das Entdoppeln. Bei zwei
+                // verschiedenen Quellen waere unklar, welche revidiert werden soll.
+                if (!HabenGleichenInhalt(gleichnamig, datei))
+                {
+                    throw new InvalidDataException(
+                        $"Zwei XTF-Projektquellen haben den gleichen Namen " +
+                        $"'{Path.GetFileName(datei)}', aber unterschiedlichen Inhalt: " +
+                        $"'{gleichnamig}' und '{datei}'.");
+                }
             }
         }
 
         return treffer;
     }
 
-    private static XtfRevisionExportResult Fehler(string text)
-        => new(false, text, text, Array.Empty<string>());
+    private static bool HabenGleichenInhalt(string ersterPfad, string zweiterPfad)
+    {
+        if (string.Equals(
+                Path.GetFullPath(ersterPfad),
+                Path.GetFullPath(zweiterPfad),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var ersterInfo = new FileInfo(ersterPfad);
+        var zweiterInfo = new FileInfo(zweiterPfad);
+        if (ersterInfo.Length != zweiterInfo.Length)
+            return false;
+
+        using var ersterStream = File.OpenRead(ersterPfad);
+        using var zweiterStream = File.OpenRead(zweiterPfad);
+        var ersterHash = SHA256.HashData(ersterStream);
+        var zweiterHash = SHA256.HashData(zweiterStream);
+        return CryptographicOperations.FixedTimeEquals(ersterHash, zweiterHash);
+    }
+
+    /// <summary>
+    /// Prueft bewusst gewaehlte Quellen vollstaendig vor dem ersten Export. Gleiche
+    /// Pfade werden nur einmal gelesen. Zwei verschiedene Dateien mit demselben Namen
+    /// werden abgelehnt, weil sie sonst dasselbe Ausgabeziel haetten.
+    /// </summary>
+    private static (List<string> Quellen, string? Fehler) PruefeExpliziteQuellen(
+        IReadOnlyList<string> quellPfade)
+    {
+        var quellen = new List<string>();
+        var bekanntePfade = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var namen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rohPfad in quellPfade)
+        {
+            if (string.IsNullOrWhiteSpace(rohPfad))
+                return ([], "Eine gewaehlte XTF-Quelldatei hat keinen Pfad.");
+
+            string pfad;
+            try
+            {
+                pfad = Path.GetFullPath(rohPfad);
+            }
+            catch (Exception ex)
+            {
+                return ([], $"Der Pfad der XTF-Quelldatei ist ungueltig: {ex.Message}");
+            }
+
+            if (!string.Equals(Path.GetExtension(pfad), ".xtf", StringComparison.OrdinalIgnoreCase))
+                return ([], $"Die Quelldatei '{pfad}' ist keine .xtf-Datei.");
+
+            if (!File.Exists(pfad))
+                return ([], $"Die XTF-Quelldatei wurde nicht gefunden: {pfad}");
+
+            if (!bekanntePfade.Add(pfad))
+                continue;
+
+            var name = Path.GetFileName(pfad);
+            if (namen.TryGetValue(name, out var vorhandenerPfad))
+            {
+                return ([],
+                    $"Zwei gewaehlte XTF-Quellen heissen '{name}'. " +
+                    $"Bitte waehle nur eine davon: '{vorhandenerPfad}' oder '{pfad}'.");
+            }
+
+            namen[name] = pfad;
+            quellen.Add(pfad);
+        }
+
+        return (quellen, null);
+    }
+
+    private static XtfRevisionExportResult Fehler(string text, bool quelleFehlt = false)
+        => new(false, text, text, Array.Empty<string>(), quelleFehlt);
 }

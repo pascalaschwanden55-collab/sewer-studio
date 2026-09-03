@@ -27,9 +27,9 @@ public static class XtfSchachtPlanBuilder
     /// <summary>
     /// Abbildung XTF-Element -> Projektfeld am <c>Normschacht</c>.
     ///
-    /// <c>Dimension1</c> und <c>Dimension2</c> fehlen hier bewusst: Das Programm fuehrt
-    /// beide Masse in EINEM Textfeld ("600 mm", "1100 x 900 mm"). Sie laufen deshalb
-    /// ueber <see cref="Abmessungen"/> und nicht ueber diese Karte.
+    /// <c>Dimension1</c> und <c>Dimension2</c> fehlen hier bewusst: Sie werden gemeinsam
+    /// aus den zwei Zahlenfeldern des Programms gelesen. Nur bei einem noch nicht
+    /// migrierten Altprojekt dient das fruehere Textfeld als Rueckfall.
     /// </summary>
     public static readonly IReadOnlyDictionary<string, string> Felder =
         new Dictionary<string, string>(StringComparer.Ordinal)
@@ -46,7 +46,7 @@ public static class XtfSchachtPlanBuilder
         };
 
     /// <summary>Das Programmfeld mit der Schachtform. In SIA405 gibt es dafuer kein Ziel.</summary>
-    public const string Formfeld = "Schachtform";
+    public const string Formfeld = FieldKeys.ShaftShape;
 
     /// <summary>
     /// Der Wert eines Schachtfeldes, unter dem Namen gelesen, den der Datensatz wirklich
@@ -71,7 +71,7 @@ public static class XtfSchachtPlanBuilder
         return SchachtFeldnamen.Schreibweisen(record, gemeint).Any(record.IsUserEdited);
     }
 
-    /// <summary>Das Projektfeld mit beiden Massen.</summary>
+    /// <summary>Das abgeloeste Textfeld; nur noch Rueckfall fuer nicht migrierte Altprojekte.</summary>
     public const string Dimensionsfeld = "Dimension";
 
     /// <summary>
@@ -113,7 +113,7 @@ public static class XtfSchachtPlanBuilder
     }
 
     /// <summary>
-    /// Die beiden Masse aus dem einen Textfeld des Programms, in Millimetern.
+    /// Die beiden Masse aus dem alten gemeinsamen Textfeld, in Millimetern.
     ///
     /// Gelesen werden "600 mm" (rund) und "1100 x 900 mm" (eckig) — genau die zwei
     /// Schreibweisen, die der PDF- und der XTF-Import erzeugen. Beim runden Schacht
@@ -153,10 +153,10 @@ public static class XtfSchachtPlanBuilder
     /// <summary>
     /// Die beiden Masse eines Schachts in Millimetern.
     ///
-    /// Das Programm fuehrt sie doppelt: getrennt in "Dimension 1 mm" und "Dimension 2 mm"
-    /// (seit 2026-09-02, auf ausdruecklichen Wunsch) und weiterhin zusammen im aelteren
-    /// Textfeld "Dimension" ("600 mm", "1100 x 900 mm"). Die getrennten Felder gewinnen:
-    /// Sie sind die genauere Angabe, und im Zweifel hat sie jemand zuletzt gepflegt.
+    /// Das Programm fuehrt sie in "Dimension 1 mm" und "Dimension 2 mm". Das aeltere
+    /// Textfeld "Dimension" ("600 mm", "1100 x 900 mm") wird nur noch als Rueckfall
+    /// gelesen, falls ein Datensatz nie durch die Projektmigration gelaufen ist. Die
+    /// getrennten Felder gewinnen immer.
     ///
     /// Ist nur eines der beiden gefuellt, gilt der Schacht als rund und der Wert steht in
     /// beiden Feldern — so haelt es auch der Kantonsexport.
@@ -220,9 +220,9 @@ public static class XtfSchachtPlanBuilder
         var gleich = string.Equals(masse.Value.Dimension1, masse.Value.Dimension2, StringComparison.Ordinal);
         var rund = form.StartsWith("rund", StringComparison.OrdinalIgnoreCase)
                    || form.StartsWith("kreis", StringComparison.OrdinalIgnoreCase);
-        var eckigOderOval = form.StartsWith("oval", StringComparison.OrdinalIgnoreCase)
-                            || form.StartsWith("recht", StringComparison.OrdinalIgnoreCase)
-                            || form.StartsWith("quadrat", StringComparison.OrdinalIgnoreCase);
+        var ovalOderRechteckig = form.StartsWith("oval", StringComparison.OrdinalIgnoreCase)
+                                 || form.StartsWith("recht", StringComparison.OrdinalIgnoreCase);
+        var quadratisch = form.StartsWith("quadrat", StringComparison.OrdinalIgnoreCase);
 
         if (rund && !gleich)
         {
@@ -230,8 +230,14 @@ public static class XtfSchachtPlanBuilder
                    $"({masse.Value.Dimension1} x {masse.Value.Dimension2}).";
         }
 
-        if (eckigOderOval && gleich && !form.StartsWith("quadrat", StringComparison.OrdinalIgnoreCase))
+        if (ovalOderRechteckig && gleich)
             return $"Form \"{form}\", aber beide Masse sind gleich ({masse.Value.Dimension1}).";
+
+        if (quadratisch && !gleich)
+        {
+            return $"Form \"{form}\", aber die Masse sind verschieden " +
+                   $"({masse.Value.Dimension1} x {masse.Value.Dimension2}).";
+        }
 
         return null;
     }

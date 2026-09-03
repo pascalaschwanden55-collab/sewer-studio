@@ -136,7 +136,7 @@ public static class XtfNeuWriter
                         new XElement(ns + "ENTRIES",
                             new XAttribute("FOR", "SIA405_ABWASSER_2020_LV95"))),
                     new XElement(ns + "COMMENT",
-                        $"Erstexport aus SewerStudio: {plan.Haltungen} Haltungen, " +
+                        $"Vollstaendiger Neu-Export aus SewerStudio: {plan.Haltungen} Haltungen, " +
                         $"{plan.Schaechte} Schaechte.")),
                 datensektion));
     }

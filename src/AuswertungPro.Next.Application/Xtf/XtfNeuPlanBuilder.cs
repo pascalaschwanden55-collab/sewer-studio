@@ -16,8 +16,10 @@ public sealed record XtfNeuPlan(
 /// Baut aus dem Projektstand die vollstaendige Objektliste einer NEUEN SIA405-XTF.
 ///
 /// Das ist der Gegenpart zu <see cref="XtfStammdatenPlanBuilder"/>: Dort wird eine
-/// vorhandene Kundendatei ergaenzt, hier entsteht eine Datei fuer Objekte, die es im
-/// Kataster noch gar nicht gibt — typischerweise private Anschlussleitungen.
+/// vorhandene Kundendatei ergaenzt, hier entsteht eine eigenstaendige Datei aus dem
+/// ganzen Projektstand. Eine einzelne vorhandene Objekt-ID reicht nicht fuer die TIDs
+/// des ganzen SIA405-Objektverbunds und verhindert diesen Export deshalb nicht. Die
+/// Datei erhaelt eigene, stabile SewerStudio-TIDs.
 ///
 /// Eine Haltung ist in SIA405 kein einzelnes Objekt, sondern ein Verbund:
 ///
@@ -64,7 +66,6 @@ public static class XtfNeuPlanBuilder
         var organisationen = new Organisationsbuch(kennungen, objekte);
         var profile = new Profilbuch(kennungen, objekte);
         var punktnamen = new Punktnamen(HaltungspunktNameMax);
-
         // Schaechte zuerst: Die Haltungspunkte verweisen auf ihre Abwasserknoten.
         var knoten = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var geschriebeneSchaechte = 0;
@@ -79,10 +80,17 @@ public static class XtfNeuPlanBuilder
         {
             if (BaueHaltung(haltung, kennungen, organisationen, profile, punktnamen, objekte,
                             knoten, geometrien, hinweise))
-            {
                 geschriebeneHaltungen++;
-            }
         }
+
+        // Eine Organisation, die nur fuer ein wegen Pflichtfehlern verworfenes Objekt
+        // angelegt wurde, darf nicht als verwaister Rest in der Datei stehen bleiben.
+        var verwendeteTids = objekte
+            .SelectMany(o => o.Verweise)
+            .Select(v => v.ZielTid)
+            .ToHashSet(StringComparer.Ordinal);
+        objekte.RemoveAll(o =>
+            o.Klasse == "Organisation" && !verwendeteTids.Contains(o.Tid));
 
         return new XtfNeuPlan(objekte, hinweise, geschriebeneHaltungen, geschriebeneSchaechte);
     }
@@ -113,27 +121,30 @@ public static class XtfNeuPlanBuilder
             return false;
         }
 
-        // Was der Kataster schon fuehrt, bekommt hier keine neue Kennung. Sonst legte
-        // GEONIS beim Import ein zweites Objekt an, statt das vorhandene zu aktualisieren;
-        // dafuer gibt es den Revisionsweg. Die Objekt-ID stammt aus "Leere Felder aus
-        // QGIS ergaenzen" (real aufgefallen an 78998-79002, Objekt-ID 866789).
+        // Das Feld kann eine lokale QGIS-ID oder die TID einer importierten Haltung
+        // enthalten. Eine einzelne Kennung reicht nicht fuer Kanal, Haltungspunkte,
+        // Knoten und Profil des ganzen Objektverbunds. Der eigenstaendige Export vergibt
+        // deshalb durchgehend eigene chSST-TIDs und warnt vor einem Import in Bestand.
         var objektId = (record.GetFieldValue(FieldKeys.CadastreObjectId) ?? "").Trim();
         if (objektId.Length > 0)
         {
             hinweise.Add(
-                $"{name}: steht bereits im Kataster (Objekt-ID {objektId}) — gehoert in die " +
-                "Revision, nicht in den Erstexport.");
-            return false;
+                $"{name}: Objekt-ID {objektId} vorhanden — wird mit einer eigenen " +
+                "XTF-Kennung exportiert. Fuer eine Aktualisierung im Kataster bitte " +
+                "\"Revidierte XTF\" verwenden.");
         }
 
-        var eigentuemer = organisationen.Verweis(record.GetFieldValue(FieldKeys.Owner), name, hinweise);
-        if (eigentuemer is null)
+        var organisationsverweise = organisationen.Verweise(
+            record.GetFieldValue(FieldKeys.Owner),
+            record.GetFieldValue(FieldKeys.DataOwner),
+            record.GetFieldValue(FieldKeys.DataSupplier),
+            name,
+            hinweise);
+        if (organisationsverweise is null)
             return false;
 
-        var verwaltung = organisationen.Verwaltung(
-            eigentuemer,
-            record.GetFieldValue(FieldKeys.DataOwner),
-            record.GetFieldValue(FieldKeys.DataSupplier));
+        var eigentuemer = organisationsverweise.Value.Eigentuemer;
+        var verwaltung = organisationsverweise.Value.Verwaltung;
         var profilTid = profile.Verweis(
             record.GetFieldValue(FieldKeys.ProfileType),
             Verhaeltnis(record, name, hinweise),
@@ -144,7 +155,8 @@ public static class XtfNeuPlanBuilder
             hinweise.Add($"{name}: kein Verlauf gefunden — die Haltung geht ohne Geometrie hinaus.");
 
         var (vonTid, nachTid) = BaueHaltungspunkte(
-            record, name, kennungen, verwaltung, objekte, knoten, geometrie, punktnamen, hinweise);
+            record, name, kennungen, verwaltung, objekte, knoten,
+            geometrie, punktnamen, hinweise);
 
         var kanalTid = kennungen.Fuer("Kanal", name);
         objekte.Add(new XtfNeuObjekt(
@@ -264,15 +276,26 @@ public static class XtfNeuPlanBuilder
             return false;
         }
 
-        var eigentuemer = organisationen.Verweis(
-            XtfSchachtPlanBuilder.Wert(record, FieldKeys.Owner), $"Schacht {nummer}", hinweise);
-        if (eigentuemer is null)
+        var objektId = (XtfSchachtPlanBuilder.Wert(record, FieldKeys.CadastreObjectId) ?? "").Trim();
+        if (objektId.Length > 0)
+        {
+            hinweise.Add(
+                $"Schacht {nummer}: Objekt-ID {objektId} vorhanden — wird mit einer " +
+                "eigenen XTF-Kennung exportiert. Fuer eine Aktualisierung im Kataster " +
+                "bitte \"Revidierte XTF\" verwenden.");
+        }
+
+        var organisationsverweise = organisationen.Verweise(
+            XtfSchachtPlanBuilder.Wert(record, FieldKeys.Owner),
+            XtfSchachtPlanBuilder.Wert(record, FieldKeys.DataOwner),
+            XtfSchachtPlanBuilder.Wert(record, FieldKeys.DataSupplier),
+            $"Schacht {nummer}",
+            hinweise);
+        if (organisationsverweise is null)
             return false;
 
-        var verwaltung = organisationen.Verwaltung(
-            eigentuemer,
-            XtfSchachtPlanBuilder.Wert(record, FieldKeys.DataOwner),
-            XtfSchachtPlanBuilder.Wert(record, FieldKeys.DataSupplier));
+        var eigentuemer = organisationsverweise.Value.Eigentuemer;
+        var verwaltung = organisationsverweise.Value.Verwaltung;
 
         var schachtTid = kennungen.Fuer("Normschacht", nummer);
         objekte.Add(new XtfNeuObjekt(
@@ -412,18 +435,51 @@ public static class XtfNeuPlanBuilder
     /// <summary>
     /// Vergibt die Organisationen der Datei und die drei Pflichtverweise darauf.
     ///
-    /// Datenherr und Datenlieferant zeigen auf denselben Eintrag wie der Eigentuemer.
-    /// Das ist eine bewusste Standardannahme fuer eine Ersterfassung: Wer die Leitung
-    /// besitzt, hat sie hier auch erfassen lassen. Im Kataster setzt die fuehrende
-    /// Stelle den Datenherrn ohnehin selbst.
+    /// Gesetzte Werte fuer Datenherr und Datenlieferant gewinnen. Nur ein leeres Feld
+    /// faellt auf den Eigentuemer zurueck. Ein unbekannter gesetzter Name sperrt das
+    /// ganze Bauteil, statt still eine andere Organisation einzutragen.
     /// </summary>
     private sealed class Organisationsbuch(XtfNeuKennungen kennungen, List<XtfNeuObjekt> objekte)
     {
         private readonly Dictionary<string, string> _jeName = new(StringComparer.OrdinalIgnoreCase);
 
-        public string? Verweis(string? eigentuemer, string wofuer, List<string> hinweise)
+        public (string Eigentuemer, IReadOnlyList<XtfNeuVerweis> Verwaltung)? Verweise(
+            string? eigentuemer,
+            string? datenherr,
+            string? datenlieferant,
+            string wofuer,
+            List<string> hinweise)
         {
-            var roh = (eigentuemer ?? "").Trim();
+            var eigentuemerName = Pruefe(eigentuemer, "Eigentuemer", wofuer, hinweise);
+            if (eigentuemerName is null)
+                return null;
+
+            var datenherrName = PruefeOderEigentuemer(
+                datenherr, eigentuemerName, "Datenherrn", wofuer, hinweise);
+            if (datenherrName is null)
+                return null;
+
+            var datenlieferantName = PruefeOderEigentuemer(
+                datenlieferant, eigentuemerName, "Datenlieferanten", wofuer, hinweise);
+            if (datenlieferantName is null)
+                return null;
+
+            // Erst nachdem alle drei Namen geprueft sind, entstehen Objekte. So bleibt
+            // bei einem Fehler keine verwaiste Organisation in einer sonst gueltigen Datei.
+            var eigentuemerRef = Erzeuge(eigentuemerName);
+            IReadOnlyList<XtfNeuVerweis> verwaltung =
+            [
+                new("DatenherrRef", Erzeuge(datenherrName)),
+                new("DatenlieferantRef", Erzeuge(datenlieferantName))
+            ];
+
+            return (eigentuemerRef, verwaltung);
+        }
+
+        private static string? Pruefe(
+            string? wert, string rolle, string wofuer, List<string> hinweise)
+        {
+            var roh = (wert ?? "").Trim();
             if (roh.Length == 0)
             {
                 hinweise.Add(
@@ -433,18 +489,36 @@ public static class XtfNeuPlanBuilder
             }
 
             var name = EigentumVokabular.Normalisieren(roh);
-            if (_jeName.TryGetValue(name, out var bekannt))
-                return bekannt;
-
-            var typ = EigentumVokabular.NachOrganisationstyp(name);
-            if (typ is null)
+            if (EigentumVokabular.NachOrganisationstyp(name) is null)
             {
                 hinweise.Add(
-                    $"{wofuer}: fuer den Eigentuemer \"{name}\" ist kein Organisationstyp " +
+                    $"{wofuer}: fuer den {rolle} \"{name}\" ist kein Organisationstyp " +
                     "nach SIA405 bekannt — nicht geschrieben.");
                 return null;
             }
 
+            return name;
+        }
+
+        private static string? PruefeOderEigentuemer(
+            string? wert,
+            string eigentuemer,
+            string rolle,
+            string wofuer,
+            List<string> hinweise)
+        {
+            if (string.IsNullOrWhiteSpace(wert))
+                return eigentuemer;
+
+            return Pruefe(wert, rolle, wofuer, hinweise);
+        }
+
+        private string Erzeuge(string name)
+        {
+            if (_jeName.TryGetValue(name, out var bekannt))
+                return bekannt;
+
+            var typ = EigentumVokabular.NachOrganisationstyp(name)!;
             var tid = kennungen.Fuer("Organisation", name);
             objekte.Add(new XtfNeuObjekt(
                 "Organisation", tid,
@@ -459,26 +533,6 @@ public static class XtfNeuPlanBuilder
 
             _jeName[name] = tid;
             return tid;
-        }
-
-        /// <summary>
-        /// Datenherr und Datenlieferant. Fuehrt der Datensatz sie (aus dem Kataster oder von
-        /// Hand), zeigen die Verweise auf diese Organisationen; sonst auf den Eigentuemer.
-        /// Punkt 2 der Fremdanalyse vom 2026-09-03: Eigentuemer "Privat", Datenherr und
-        /// Datenlieferant "Abwasser Uri" — die Datei setzte alle drei auf "Privat".
-        /// </summary>
-        public IReadOnlyList<XtfNeuVerweis> Verwaltung(string eigentuemer, string? datenherr, string? datenlieferant)
-            => [new("DatenherrRef", Oder(datenherr, eigentuemer)), new("DatenlieferantRef", Oder(datenlieferant, eigentuemer))];
-
-        private string Oder(string? name, string eigentuemer)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                return eigentuemer;
-
-            // Ohne bekannten Organisationstyp entsteht keine Organisation; dann bleibt der
-            // Eigentuemer. Der Hinweis dazu wuerde hier nur wiederholen, was der
-            // Eigentuemerweg schon meldet.
-            return Verweis(name, wofuer: "", hinweise: []) ?? eigentuemer;
         }
     }
 
@@ -507,7 +561,7 @@ public static class XtfNeuPlanBuilder
             return null;
         }
 
-        if (string.Equals(SiaKanalVokabular.Profiltyp.NachNorm(profiltyp), "Kreisprofil", StringComparison.Ordinal))
+        if (string.Equals(ProfiltypVokabular.NachNorm(profiltyp), "Kreisprofil", StringComparison.Ordinal))
         {
             hinweise.Add(
                 $"{name}: Kreisprofil mit zwei verschiedenen Massen ({hoehe} x {breite}) — " +
@@ -533,7 +587,7 @@ public static class XtfNeuPlanBuilder
             if (roh.Length == 0)
                 return null;
 
-            var norm = SiaKanalVokabular.Profiltyp.NachNorm(roh);
+            var norm = ProfiltypVokabular.NachNorm(roh);
             if (norm is null)
                 return null;
 

@@ -10,6 +10,44 @@ namespace AuswertungPro.Next.UI.Tests;
 /// </summary>
 public sealed class SchachtNormAuswahlTests
 {
+    [Fact]
+    public void Die_Urner_Schachtformen_stehen_vollstaendig_im_Dropdown()
+    {
+        Assert.Equal(
+            ["", "Unbekannt", "Rund", "Oval", "Quadratisch", "Rechteckig", "Vieleckig"],
+            SchachtformVokabular.Auswahl);
+
+        Assert.True(GridDropdownFieldPolicy.TryResolve(FieldKeys.ShaftShape, out var spec));
+        Assert.Equal("SchachtformOptions", spec.ItemsSourcePath);
+        Assert.False(spec.AllowFreeText);
+    }
+
+    [Theory]
+    [InlineData("rund", "Rund")]
+    [InlineData("circular", "Rund")]
+    [InlineData("oval", "Oval")]
+    [InlineData("square", "Quadratisch")]
+    [InlineData("rectangular", "Rechteckig")]
+    [InlineData("polygonal", "Vieleckig")]
+    public void Importbegriffe_werden_auf_die_Urner_Schachtformen_angehoben(
+        string roh, string erwartet)
+        => Assert.Equal(erwartet, SchachtformVokabular.Normalisieren(roh));
+
+    [Fact]
+    public void Form_und_beide_Innenmasse_werden_auch_ohne_neue_Vorlage_ergänzt()
+    {
+        var spalten = new List<string> { "Schachtnummer", "Form", "Dimension 1 mm" };
+
+        SchaechteColumnPolicy.ErgaenzeFormUndMasse(spalten);
+
+        Assert.Single(spalten, s => s == "Form");
+        Assert.DoesNotContain(FieldKeys.ShaftShape, spalten);
+        Assert.Single(spalten, s => s == FieldKeys.ShaftDimension1Mm);
+        Assert.Single(spalten, s => s == FieldKeys.ShaftDimension2Mm);
+        Assert.Equal("Grösstes Innenmass mm", SchaechteColumnPolicy.GetDisplayHeader(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("Kleinstes Innenmass mm", SchaechteColumnPolicy.GetDisplayHeader(FieldKeys.ShaftDimension2Mm));
+    }
+
     [Theory]
     [InlineData("Funktion", "SchachtFunktionOptions")]
     [InlineData("Material", "SchachtMaterialOptions")]

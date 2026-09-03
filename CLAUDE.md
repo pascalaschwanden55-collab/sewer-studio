@@ -1128,9 +1128,18 @@ Text-only-Haltungen sicher nachziehen.
 Der Export `IXtfRevisionExportService`/`XtfRevisionExportService` erzeugt aus den
 unveraenderten Projektkopien unter `Imports\XTF` beziehungsweise
 `Importdateien\XTF` und dem aktuellen Projektstand neue revidierte XTF-Dateien.
+Fehlt eine solche Projektkopie, laesst `ExportPageViewModel` fuer diesen Lauf eine
+oder mehrere externe XTF-Dateien waehlen. `XtfRevisionExportRequest.Quelldateien`
+wird vor dem Lauf auf Existenz und Endung geprueft, normalisiert und dedupliziert;
+dieselbe Auswahl gilt fuer Pruefung und Schreiben und bleibt immer rein lesend.
+Gleichnamige Projektkopien werden nur bei belegtem gleichem SHA-256 einmal verwendet;
+unterschiedlicher Inhalt stoppt mit beiden Pfaden, statt still die erste Datei zu nehmen.
+Eine Vorschau mit offenen Entscheidungen liefert `Ok=false`; die UI darf danach
+nicht nach einer Schreibbestaetigung fragen.
 `VsaFinding` traegt dafuer additiv Kanalschaden- und Untersuchungs-TID;
-`HaltungRecord` bewahrt die importierte `XtfHerkunft`; `SchachtRecord` hat keine
-(Schaechte entstehen heute nicht aus XTF).
+`HaltungRecord` bewahrt die importierte `XtfHerkunft`. Eine separate Herkunftsklasse
+am `SchachtRecord` gibt es nicht: `LegacyXtfImportService` bewahrt die TID von Haltung
+und Normschacht als `Objekt_ID`, denn in SIA405 ist die TID die Katasteridentitaet.
 Altprojekte werden nicht neu importiert: `XtfKanalschadenElementReader` und
 `XtfFindingMatcher` bilden nur beidseitig eindeutige Zuordnungen im Arbeitsspeicher.
 `XtfRevisionPlanBuilder` plant geaenderte, neue und entfernte Befunde;
@@ -1148,7 +1157,7 @@ Original nie, ueberschreibt kein Ziel und veroeffentlicht jede Revision ueber ei
 Nebendatei. `ExportPageViewModel` zeigt zuerst den Pruefbericht und schreibt erst
 nach ausdruecklicher Bestaetigung in einen neuen Zeitstempelordner.
 
-Vier Regeln dieses Wegs nie zurueckdrehen:
+Fuenf Regeln dieses Wegs nie zurueckdrehen:
 
 - **Die Bemerkung ist `TEXT*80` und einzeilig.** `XtfStammdatenPlanBuilder.AlsBemerkung`
   macht Umbrueche und Tabulatoren zu Leerzeichen und zieht mehrfache zusammen —
@@ -1177,11 +1186,26 @@ Vier Regeln dieses Wegs nie zurueckdrehen:
   gemeldet, nicht geraten. Erstexport: ein Rohrprofil je Profiltyp UND Verhaeltnis
   (`Rechteckprofil 1.666`), vom ilivalidator angenommen. Revision: Hoehe oder Breite
   von Hand zaehlt als Aenderung am Profil, ein geteiltes Profil bleibt unangetastet.
+  Der Wechsel auf rund entfernt ein vorhandenes altes
+  `HoehenBreitenverhaeltnis` mit einer ausdruecklichen
+  `XtfRevisionFeldAktion.Entfernen`. Eine leere Breite gilt nur dann als bewusste
+  Rund-Angabe, wenn genau dieses Breitenfeld von Hand bearbeitet wurde; eine bloss
+  geaenderte Hoehe oder ein geerbter Leerwert loescht nie XML. Wird nur der Profiltyp
+  auf Kreis gesetzt, entfernen konsistente Masse das alte Verhaeltnis; zwei verschiedene
+  Masse sperren Abmessung und Profil gemeinsam, statt eine halbe Aenderung mit
+  Kreis und Altverhaeltnis zu schreiben. Unabhaengige Haltungsfelder duerfen bleiben.
   Import: `RohrprofilRef` wird aufgeloest, `Profiltyp` uebernommen, Breite = Hoehe /
   Verhaeltnis; beim Kreisprofil ist die Breite gleich der Hoehe. Im Bestand fuehren
   alle 110887 Kantonsprofile `Kreisprofil` ohne Verhaeltnis, und keine der 477
   Projekt-Haltungen trug eine Breite oder einen Profiltyp; das aendert sich erst mit
   echten Rechteck- und Eiprofilen.
+- **Die Profilform-Auswahl folgt Uri, der Export dem aktuellen Modell.**
+  `ProfiltypVokabular` zeigt `Unbekannt`, `Kreisprofil`, `Eiprofil`, `Maulprofil`,
+  `Offenes Profil`, `Rechteckprofil`, `Spezialprofil`. Die alte Uri-Auswahl
+  `Anderes (A)` ist in SIA405 2020 aufgehoben; alte Werte werden beim Laden auf
+  `Spezialprofil` angehoben. `Offenes Profil` geht zeichengenau als
+  `offenes_Profil` in die XTF. In der Haltungsansicht stehen lichte Hoehe/DN,
+  Profilform und lichte Breite direkt nebeneinander.
 - **Der Eigentuemer ist ein Verweis, kein Text.** `XtfOrganisationsbuch` bindet ihn an
   eine `Organisation` im Topic `Administration` und legt fehlende an; Haltungen und
   Schaechte teilen sich EIN Buch je Datei. Fuehrt die Datei ueberhaupt keine
@@ -1192,21 +1216,24 @@ Vier Regeln dieses Wegs nie zurueckdrehen:
 - **Der `Profiltyp` haengt am `Rohrprofil`**, auf das die Haltung ueber `RohrprofilRef`
   zeigt. Ein von mehreren Haltungen geteiltes Profil wird nicht geaendert.
 
-`IXtfNeuExportService`/`XtfNeuExportService` ist der Gegenweg fuer Objekte, die es im
-Kataster noch NICHT gibt — im Projekt Jagdmatt sind das 33 von 72 Haltungen, offenbar
-private Anschlussleitungen. Der Revisionsweg braucht eine Originaldatei; diese Objekte
-haben keine. `XtfNeuPlanBuilder` (reine Rechnung) baut den vollstaendigen SIA405-Verbund
-je Haltung: `Kanal` (logisch), `Haltung` (physisch), `Rohrprofil` und ZWEI
+`IXtfNeuExportService`/`XtfNeuExportService` erzeugt eine eigenstaendige XTF aus dem
+ganzen Projektstand. Der Revisionsweg aktualisiert dagegen eine Originaldatei an ihren
+echten XTF-TIDs. Eine einzelne `Objekt_ID` reicht nicht fuer die Kennungen von Kanal,
+Haltung, Punkten, Knoten und Profil; sie verhindert den vollstaendigen Neu-Export deshalb
+nicht. `XtfNeuPlanBuilder` (reine
+Rechnung) baut den vollstaendigen SIA405-Verbund je Haltung: `Kanal` (logisch),
+`Haltung` (physisch), `Rohrprofil` und ZWEI
 `Haltungspunkt`e; je Schacht `Normschacht` und `Abwasserknoten`. `XtfNeuWriter` setzt den
 Plan in XML um und entscheidet nichts. Es gilt dasselbe Vokabular wie beim Revisionsweg —
 kein zweiter Uebersetzer.
 
-Fuenf Regeln dieses Wegs nie zurueckdrehen:
+Sechs Regeln dieses Wegs nie zurueckdrehen:
 
 - **Die Objektkennungen sind stabil.** Sie werden aus Projekt-Id, Klasse und fachlichem
   Schluessel abgeleitet (SHA-256, Praefix `chSST`, 16 Zeichen). Waeren sie zufaellig oder
   ein Zaehler, legte das Zielsystem bei jedem Export neue Objekte an — aus einer Korrektur
-  wuerde eine Verdopplung.
+  wuerde eine Verdopplung. Das gilt fuer Objekte, die mit einer frueheren SewerStudio-XTF
+  angelegt wurden; ein schon fremd vorhandenes Katasterobjekt wird dadurch nicht erkannt.
 - **Haltungspunkte heissen nach der HALTUNG, nicht nach dem Schacht.**
   `Haltungspunkt.Constraint1` verlangt Eindeutigkeit von Bezeichnung plus Datenherr. In
   einer Kette 1-2, 2-3 teilen sich Nachbarhaltungen ihre Schaechte; nach ihnen benannt,
@@ -1216,18 +1243,33 @@ Fuenf Regeln dieses Wegs nie zurueckdrehen:
   nicht der Text.
 - **Drei Verweise sind Pflicht ({1}):** `DatenherrRef`, `DatenlieferantRef` und am
   Abwasserbauwerk `EigentuemerRef`. Ohne bekannten Eigentuemer entsteht das Objekt NICHT.
-  Datenherr und Datenlieferant tragen denselben Eintrag — fuer eine Ersterfassung die
-  naheliegende Annahme. Der Bericht verweist auf "Leere Felder aus QGIS ergaenzen".
+  Gesetzte Projektwerte fuer Datenherr und Datenlieferant gewinnen; nur ein leeres Feld
+  faellt auf den Eigentuemer zurueck. Ein gesetzter Name ohne bekannten
+  `Organisationstyp` sperrt das Bauteil mit Hinweis, statt still eine andere Organisation
+  einzutragen. Der Bericht verweist auf "Leere Felder aus QGIS ergaenzen".
 - **`Organisation.Status` ist MANDATORY** (`aktiv` | `untergegangen`). Fehlt es, weist der
   Pruefer die ganze Datei ab.
+- **Eine vorhandene Objekt-ID sperrt den Neu-Export nicht.** Haltung und Schacht erhalten eigene
+  stabile `chSST`-Kennungen und der Bericht warnt sichtbar: Beim Import in einen bereits
+  gefuellten Kataster koennen Duplikate entstehen. Fuer eine echte Aktualisierung ist
+  `Revidierte XTF` mit der Originaldatei der sichere Weg.
 - **Die Geometrie kommt aus der QGIS-Kopie**, ueber `IXtfVerlaufQuelle`/
   `QgisGpkgVerlaufLeser` und die reine Byte-Logik `GpkgGeometrie` (GeoPackage-Kopf plus
   WKB, LineString und MultiLineString, EPSG:2056). Ein mehrdeutiger Name liefert nichts.
   `Verlauf` ist im Modell nicht Pflicht: Ohne Treffer geht das Objekt ohne Geometrie
   hinaus, und der Bericht sagt es.
 
-Belegt am 2026-09-03: 44 Haltungen aus dem echten Projekt Jagdmatt, mit Verlaeufen aus
-`Leitungen Lokal.gpkg`, ergeben eine vom ilivalidator 1.15.0 fehlerfrei akzeptierte Datei.
+Der automatische Rundreisetest schreibt eine echte neue SIA405-XTF mit Haltung,
+Schaechten, Profil, Organisationsverweisen und Geometrie und importiert sie wieder.
+Er vergleicht dabei die Katasterfelder, beide Masse und die erhaltenen TIDs.
+Der Seilergasse-Verhaltenstest bildet den gemeldeten Fall nach: Haltung `78998-79002`
+mit Objekt-ID und Schacht `78998` ergeben eine neue Datei mit einer Haltung und
+einem Schacht. Die Revision aendert Kanal, Haltung und Normschacht weiterhin an ihren
+Original-TIDs. Der technische Neu-Export wird vom ilivalidator 1.15.0
+mit null Fehlern akzeptiert. Der originalgetreue Revisionsausschnitt behaelt exakt die
+zwei bereits in der Quelle vorhandenen, ungueltigen Werte `Beton_unbekannt` und fuegt
+keinen neuen Validatorfehler hinzu; der Revisionsweg repariert fremde Ausgangsdaten
+nicht stillschweigend.
 
 Der Rueckweg ueber `LegacyXtfImportService` war dabei an zwei Stellen kaputt, beide auch
 fuer Kantonsdateien:
@@ -1246,6 +1288,10 @@ fuer Kantonsdateien:
   Datensatzes und stellt Bestandsprojekte beim Laden um (`JsonProjectRepository.Load`,
   markiert das Projekt als geaendert). Die alten Textfelder `Dimension` und
   `Durchmesser` werden dabei entfernt; nur ein unlesbarer Text bleibt sichtbar stehen.
+  Ist erst eines der zwei Zahlenfelder vorhanden, wird das fehlende nur ergaenzt, wenn
+  das vorhandene Mass zur entsprechenden Seite des Alttexts passt. Bei Widerspruch bleibt
+  der Alttext zur Kontrolle stehen; eine alte Handmarkierung auf einem leeren Zielfeld
+  blockiert die sichere Ergaenzung nicht.
   PDF-, WinCan-, SchachtPro-, XTF-Import, QGIS-Nachfuellen und der Stammdaten-Nachlauf
   schreiben alle die zwei Zahlen. Anlass: 61 von 392 Schaechten trugen nur den Text,
   2 die Zahlen, und Export und Anzeige zeigten verschiedene Werte.
@@ -1257,6 +1303,12 @@ fuer Kantonsdateien:
   zwei verschiedenen Massen. Das Programmfeld `Schachtform` geht deshalb nicht in die
   Datei; `Formwiderspruch(...)` meldet nur, wenn Form und Masse sich widersprechen
   ("Rund" bei 1100 x 900).
+- **Die Schachtform-Auswahl folgt Uri:** `Unbekannt`, `Rund`, `Oval`, `Quadratisch`,
+  `Rechteckig`, `Vieleckig`. `SchachtformVokabular` hebt bekannte WinCan-,
+  SchachtPro- und Bestandswerte (zum Beispiel `rund`, `circular`, `polygonal`) auf
+  diese Schreibweise. `SchaechteColumnPolicy.ErgaenzeFormUndMasse` stellt sicher,
+  dass Schachtform, groesstes Innenmass und kleinstes Innenmass auch mit einer alten
+  Excel-Vorlage editierbar bleiben.
 - **Der `Normschacht` kennt beim `Material` nur vier Werte** (andere, Beton, Kunststoff,
   unbekannt) — eine viel kuerzere Liste als beim Rohr. `SchachtMaterialVokabular` bildet
   zehn Programmbegriffe darauf ab; ein Waechter haelt fest, dass jeder waehlbare Wert ein
@@ -1275,6 +1327,13 @@ fuer Kantonsdateien:
   Angabe, die der Export zwingend braucht (`EigentuemerRef` ist `{1}`). Ohne sie kam kein
   einziger Schacht aus dem Projekt heraus. Beide Wege lesen jetzt die Organisationen der
   Datei und loesen den Verweis auf.
+- **Katasteridentitaet und Verwaltungsrollen bleiben erhalten.** Der Import schreibt die
+  TID von `Haltung` und `Normschacht` nach `Objekt_ID` und loest `DatenherrRef` sowie
+  `DatenlieferantRef` getrennt auf. Ein leeres altes Textelement darf einen gueltigen
+  Organisationsverweis nicht verdecken. `unbekannt` bleibt als echter Freitext und als
+  Organisationsname erhalten; nur semantische Platzhalterfelder wie Funktion, Material
+  oder Zustand behandeln es als leer. Damit fuehrt ein Rueckimport nicht spaeter zu einer
+  Doppelanlage im Erstexport.
 - **Am `Normschacht` fehlte `BaulicherZustand` ebenso** wie am Kanal.
 - **`ResolveSchachtLabel` nahm zuerst die Bezeichnung des Haltungspunkts.** Die ist ein
   technischer Name (`u-80401_von` im Kantonsexport, `<Haltung>_von` bei uns) und landete
@@ -1291,17 +1350,20 @@ fuer Kantonsdateien:
 - **`Letzte_Aenderung` ist kein Inspektionsdatum.** Es landete in `Datum_Jahr` und
   ueberschrieb dort den echten Aufnahmetag: Aus dem 06.10.2025 wurde der 03.09.2026.
   Jetzt geht es nach `Letzte_Aenderung` (Herkunftsfeld), `Baujahr` nach `Baujahr`.
-- **Der Erstexport ueberspringt, was schon im Kataster steht.** Traegt eine Haltung eine
-  `Objekt_ID`, wuerde ein Erstexport sie in GEONIS ein zweites Mal anlegen; sie gehoert
-  in die Revision. Der Bericht sagt das mit Nummer. `Datenherr` und `Datenlieferant`
-  kommen jetzt aus ihren Feldern statt pauschal vom Eigentuemer (Eigentuemer `Privat`,
-  Datenherr `Abwasser Uri` ergab dreimal `Privat`).
+- **Der Neu-Export schreibt auch Datensaetze mit `Objekt_ID`.** Diese Nummer stammt aus
+  QGIS oder einem frueheren XTF-Import. Eine einzelne ID wird nicht als Kennung des
+  ganzen SIA405-Objektverbunds missverstanden. Die Datei bekommt eigene Kennungen;
+  der Bericht warnt vor moeglichen Duplikaten im vorhandenen GEONIS. `Datenherr` und
+  `Datenlieferant` kommen aus ihren eigenen Feldern statt pauschal vom Eigentuemer.
 - **WinCan: Zwei Untersuchungen je Haltung waehlen nach glaubwuerdigem Datum.** Der
   Vorgabetag `2007-12-31` und alles vor 1990 zaehlen als Platzhalter; dann entscheidet
   der Zeitstempel des Datensatzes. In Seilergasse (`07.638905-78998`) gewann sonst die
   Untersuchung mit 4 Befunden gegen die mit 12, und 9 Fotos und 1 Video fehlten still
   bei "0 Fehler". Eine uebersprungene Untersuchung erscheint jetzt namentlich im
-  Importbericht.
+  Importbericht. Das Platzhalterdatum darf nur die Auswahl steuern und wird selbst nie
+  nach `Datum_Jahr` geschrieben; auch der technische Datensatz-Zeitstempel wird nicht zum
+  erfundenen Inspektionsdatum. Im Bericht heisst ein solcher Wert ausdruecklich
+  `WinCan-Platzhalterdatum`, nicht Aufnahmedatum.
 
 Was im Programm waehlbar ist, muss auch in die Datei gelangen koennen.
 `DropdownExportierbarkeitTests` prueft jeden Eintrag jeder Auswahlliste, die nach SIA405

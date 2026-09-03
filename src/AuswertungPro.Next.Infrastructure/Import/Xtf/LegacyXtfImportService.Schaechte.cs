@@ -44,6 +44,14 @@ public sealed partial class LegacyXtfImportService
                 .FirstOrDefault(e => string.Equals(e.Name.LocalName, name, StringComparison.OrdinalIgnoreCase))
                 ?.Value;
 
+            string? WertOderVerweis(string name, string refName)
+            {
+                var direkt = Kind(name);
+                return string.IsNullOrWhiteSpace(direkt)
+                    ? Verweis(node, refName, organisationen)
+                    : direkt;
+            }
+
             var bezeichnung = (Kind("Bezeichnung") ?? "").Trim();
             if (bezeichnung.Length == 0)
                 continue;
@@ -54,12 +62,15 @@ public sealed partial class LegacyXtfImportService
                 Kind("Material"),
                 Kind("Dimension1"),
                 Kind("Dimension2"),
-                Kind("Eigentuemer") ?? Verweis(node, "EigentuemerRef", organisationen),
+                WertOderVerweis("Eigentuemer", "EigentuemerRef"),
                 Kind("BaulicherZustand"),
                 Kind("Bemerkung"),
                 Kind("Status"),
                 Kind("Sanierungsbedarf"),
-                Kind("Baujahr")));
+                Kind("Baujahr"),
+                WertOderVerweis("Datenherr", "DatenherrRef"),
+                WertOderVerweis("Datenlieferant", "DatenlieferantRef"),
+                (string?)node.Attribute("TID")));
         }
 
         return elemente;

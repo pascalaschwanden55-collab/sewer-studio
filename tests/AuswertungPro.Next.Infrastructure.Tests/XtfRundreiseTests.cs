@@ -108,6 +108,17 @@ public sealed class XtfRundreiseTests
         Assert.Equal("100", record.GetFieldValue(FieldKeys.NominalDiameterMm));
     }
 
+    [Fact]
+    public void Katasterkennungen_bleiben_fuer_Haltung_und_Schacht_erhalten()
+    {
+        // Die XTF fuehrt keine separate Objekt-ID; ihre TID ist die Identitaet. Ohne
+        // dieses Merkmal wuerde der Erstexport vorhandene Katasterobjekte neu anlegen.
+        var projekt = LiesProjekt();
+
+        Assert.Equal("chSSTHALTUNG0001", Assert.Single(projekt.Data).GetFieldValue(FieldKeys.CadastreObjectId));
+        Assert.Equal("chSSTSCHACHT0001", Assert.Single(projekt.SchaechteData).GetFieldValue(FieldKeys.CadastreObjectId));
+    }
+
     [Theory]
     [InlineData("Z0", "0")]
     [InlineData("Z4", "4")]
@@ -134,6 +145,89 @@ public sealed class XtfRundreiseTests
         var record = LiesEine();
 
         Assert.Equal("Privat", record.GetFieldValue(FieldKeys.Owner));
+    }
+
+    [Fact]
+    public void Ein_leeres_Altfeld_verdeckt_keinen_gueltigen_Organisationsverweis()
+    {
+        var xml = MitZustand.Replace(
+            "<EigentuemerRef REF=\"chSSTORGANISAT01\" />",
+            "<Eigentuemer />\n        <EigentuemerRef REF=\"chSSTORGANISAT01\" />",
+            StringComparison.Ordinal);
+
+        var projekt = LiesProjektAus(xml);
+
+        Assert.Equal("Privat", Assert.Single(projekt.Data).GetFieldValue(FieldKeys.Owner));
+        Assert.Equal("Privat", Assert.Single(projekt.SchaechteData).GetFieldValue(FieldKeys.Owner));
+    }
+
+    [Fact]
+    public void Datenherr_und_Datenlieferant_kommen_in_die_eigenen_Felder_zurueck()
+    {
+        var xml = MitZustand
+            .Replace(
+                "<EigentuemerRef REF=\"chSSTORGANISAT01\" />",
+                """
+                <DatenherrRef REF="chSSTDATENHERR01" />
+                        <DatenlieferantRef REF="chSSTDATENLIEF01" />
+                        <EigentuemerRef REF="chSSTORGANISAT01" />
+                """,
+                StringComparison.Ordinal)
+            .Replace(
+                "    </SIA405_Base_Abwasser_LV95.Administration>",
+                """
+                      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="chSSTDATENHERR01">
+                        <Bezeichnung>Abwasser Uri</Bezeichnung>
+                        <Organisationstyp>Amt</Organisationstyp>
+                        <Status>aktiv</Status>
+                      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+                      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="chSSTDATENLIEF01">
+                        <Bezeichnung>Inspektor AG</Bezeichnung>
+                        <Organisationstyp>Privat</Organisationstyp>
+                        <Status>aktiv</Status>
+                      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+                    </SIA405_Base_Abwasser_LV95.Administration>
+                """,
+                StringComparison.Ordinal);
+
+        var projekt = LiesProjektAus(xml);
+        var haltung = Assert.Single(projekt.Data);
+        var schacht = Assert.Single(projekt.SchaechteData);
+
+        Assert.Equal("Abwasser Uri", haltung.GetFieldValue(FieldKeys.DataOwner));
+        Assert.Equal("Inspektor AG", haltung.GetFieldValue(FieldKeys.DataSupplier));
+        Assert.Equal("Abwasser Uri", schacht.GetFieldValue(FieldKeys.DataOwner));
+        Assert.Equal("Inspektor AG", schacht.GetFieldValue(FieldKeys.DataSupplier));
+    }
+
+    [Fact]
+    public void Das_Organisationswort_unbekannt_bleibt_auch_an_der_Haltung_erhalten()
+    {
+        var xml = MitZustand
+            .Replace(
+                "<EigentuemerRef REF=\"chSSTORGANISAT01\" />",
+                """
+                <DatenherrRef REF="chSSTUNBEKANNT01" />
+                        <DatenlieferantRef REF="chSSTUNBEKANNT01" />
+                        <EigentuemerRef REF="chSSTORGANISAT01" />
+                """,
+                StringComparison.Ordinal)
+            .Replace(
+                "    </SIA405_Base_Abwasser_LV95.Administration>",
+                """
+                      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="chSSTUNBEKANNT01">
+                        <Bezeichnung>unbekannt</Bezeichnung>
+                        <Organisationstyp>Privat</Organisationstyp>
+                        <Status>aktiv</Status>
+                      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+                    </SIA405_Base_Abwasser_LV95.Administration>
+                """,
+                StringComparison.Ordinal);
+
+        var haltung = Assert.Single(LiesProjektAus(xml).Data);
+
+        Assert.Equal("unbekannt", haltung.GetFieldValue(FieldKeys.DataOwner));
+        Assert.Equal("unbekannt", haltung.GetFieldValue(FieldKeys.DataSupplier));
     }
 
     [Fact]
@@ -214,6 +308,30 @@ public sealed class XtfRundreiseTests
         Assert.Equal("Kreisprofil", record.GetFieldValue(FieldKeys.ProfileType));
     }
 
+    [Fact]
+    public void Ein_unbekannter_Profiltyp_bleibt_beim_Import_waehlbar()
+    {
+        var xml = MitZustand
+            .Replace(
+                "<Lichte_Hoehe>100</Lichte_Hoehe>",
+                "<Lichte_Hoehe>300</Lichte_Hoehe>\n        <RohrprofilRef REF=\"chSSTPROFIL00001\" />",
+                StringComparison.Ordinal)
+            .Replace(
+                "    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>",
+                """
+                      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil TID="chSSTPROFIL00001">
+                        <Bezeichnung>Unbekannt</Bezeichnung>
+                        <Profiltyp>unbekannt</Profiltyp>
+                      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil>
+                    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+                """,
+                StringComparison.Ordinal);
+
+        var record = Lies(xml);
+
+        Assert.Equal("Unbekannt", record.GetFieldValue(FieldKeys.ProfileType));
+    }
+
     // Punkt 4 der Fremdanalyse vom 2026-09-03: Status, Sanierungsbedarf, beide Funktionen
     // und die Lagebestimmung verschwanden beim Rueckimport, und das Inspektionsdatum
     // 06.10.2025 wurde zum Aenderungsdatum 03.09.2026.
@@ -245,6 +363,115 @@ public sealed class XtfRundreiseTests
         Assert.Equal("genau", record.GetFieldValue(FieldKeys.PositionAccuracy));
         Assert.Equal("03.09.2026", record.GetFieldValue(FieldKeys.CadastreLastChange));
         Assert.True(string.IsNullOrEmpty(record.GetFieldValue("Datum_Jahr")), "Letzte_Aenderung ist kein Inspektionsdatum");
+    }
+
+    [Fact]
+    public void Echter_Erstexport_und_Rueckimport_behalten_Felder_und_Masse()
+    {
+        var ausgang = new Project { Name = "Rundreise", Id = Guid.Parse("11111111-2222-3333-4444-555555555555") };
+        var haltung = new HaltungRecord();
+        haltung.SetFieldValue(FieldKeys.HoldingName, "S1-S2", FieldSource.Manual, true);
+        haltung.SetFieldValue("Schacht_oben", "S1", FieldSource.Manual, true);
+        haltung.SetFieldValue("Schacht_unten", "S2", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.Owner, "Privat", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.DataOwner, "Abwasser Uri", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.DataSupplier, "Abwasser Uri", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.UsageType, "Schmutzabwasser", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.ConditionClass, "0", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.HierarchicalFunction, "SAA.Liegenschaftsentwaesserung", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.HydraulicFunction, "Freispiegelleitung", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.OperatingStatus, "in_Betrieb", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.RehabilitationNeed, "kurzfristig", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.ConstructionYear, "1999", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.GrossCost, "1250.50", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.Remarks, "Rundweg", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.PipeMaterial, "Zement", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.NominalDiameterMm, "1000", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.ClearWidthMm, "600", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.ProfileType, "Rechteckprofil", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.HoldingLengthMeters, "12.5", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.PositionAccuracy, "genau", FieldSource.Manual, true);
+        ausgang.Data.Add(haltung);
+
+        ausgang.SchaechteData.Add(Schacht("S1", "1100", "900"));
+        ausgang.SchaechteData.Add(Schacht("S2", "600", "600"));
+
+        var geometrien = new Dictionary<string, XtfNeuGeometrie>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["S1-S2"] = new("Verlauf", [new(2_690_000, 1_190_000), new(2_690_012, 1_190_005)])
+        };
+        var plan = XtfNeuPlanBuilder.Build(
+            ausgang.Data, ausgang.SchaechteData, ausgang.Id.ToString("N"), geometrien);
+        Assert.Equal(1, plan.Haltungen);
+        Assert.Equal(2, plan.Schaechte);
+
+        var ordner = Path.Combine(Path.GetTempPath(), $"xtf_echte_rundreise_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(ordner);
+        try
+        {
+            var datei = Path.Combine(ordner, "erstexport.xtf");
+            var geschrieben = XtfNeuWriter.Schreibe(plan, datei, new DateOnly(2026, 9, 3));
+            Assert.True(geschrieben.Ok, geschrieben.Fehler);
+
+            var rueckweg = new Project { Name = "Rueckweg" };
+            var statistik = new LegacyXtfImportService().ImportXtfFiles([datei], rueckweg);
+            Assert.Equal(0, statistik.Errors);
+
+            var zurueck = Assert.Single(rueckweg.Data);
+            Assert.Equal("S1-S2", zurueck.GetFieldValue(FieldKeys.HoldingName));
+            Assert.Equal("Privat", zurueck.GetFieldValue(FieldKeys.Owner));
+            Assert.Equal("Abwasser Uri", zurueck.GetFieldValue(FieldKeys.DataOwner));
+            Assert.Equal("Abwasser Uri", zurueck.GetFieldValue(FieldKeys.DataSupplier));
+            Assert.Equal("Schmutzabwasser", zurueck.GetFieldValue(FieldKeys.UsageType));
+            Assert.Equal("0", zurueck.GetFieldValue(FieldKeys.ConditionClass));
+            Assert.Equal("SAA.Liegenschaftsentwaesserung", zurueck.GetFieldValue(FieldKeys.HierarchicalFunction));
+            Assert.Equal("Freispiegelleitung", zurueck.GetFieldValue(FieldKeys.HydraulicFunction));
+            Assert.Equal("in_Betrieb", zurueck.GetFieldValue(FieldKeys.OperatingStatus));
+            Assert.Equal("kurzfristig", zurueck.GetFieldValue(FieldKeys.RehabilitationNeed));
+            Assert.Equal("1999", zurueck.GetFieldValue(FieldKeys.ConstructionYear));
+            Assert.Equal("1250.50", zurueck.GetFieldValue(FieldKeys.GrossCost));
+            Assert.Equal("Rundweg", zurueck.GetFieldValue(FieldKeys.Remarks));
+            Assert.Equal("Zement", zurueck.GetFieldValue(FieldKeys.PipeMaterial));
+            Assert.Equal("1000", zurueck.GetFieldValue(FieldKeys.NominalDiameterMm));
+            Assert.Equal("600", zurueck.GetFieldValue(FieldKeys.ClearWidthMm));
+            Assert.Equal("Rechteckprofil", zurueck.GetFieldValue(FieldKeys.ProfileType));
+            Assert.Equal("12.50", zurueck.GetFieldValue(FieldKeys.HoldingLengthMeters));
+            Assert.Equal("genau", zurueck.GetFieldValue(FieldKeys.PositionAccuracy));
+            Assert.False(string.IsNullOrWhiteSpace(zurueck.GetFieldValue(FieldKeys.CadastreObjectId)));
+
+            var schacht1 = Assert.Single(rueckweg.SchaechteData, s => s.GetFieldValue("Schachtnummer") == "S1");
+            Assert.Equal("1100", schacht1.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+            Assert.Equal("900", schacht1.GetFieldValue(FieldKeys.ShaftDimension2Mm));
+            Assert.Equal("Privat", schacht1.GetFieldValue(FieldKeys.Owner));
+            Assert.Equal("Abwasser Uri", schacht1.GetFieldValue(FieldKeys.DataOwner));
+            Assert.Equal("Abwasser Uri", schacht1.GetFieldValue(FieldKeys.DataSupplier));
+            Assert.Equal("Kontrollschacht", schacht1.GetFieldValue("Funktion"));
+            Assert.Equal("Beton", schacht1.GetFieldValue("Material"));
+            Assert.False(string.IsNullOrWhiteSpace(schacht1.GetFieldValue(FieldKeys.CadastreObjectId)));
+
+            var schacht2 = Assert.Single(rueckweg.SchaechteData, s => s.GetFieldValue("Schachtnummer") == "S2");
+            Assert.Equal("600", schacht2.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+            Assert.Equal("600", schacht2.GetFieldValue(FieldKeys.ShaftDimension2Mm));
+        }
+        finally
+        {
+            if (Directory.Exists(ordner))
+                Directory.Delete(ordner, recursive: true);
+        }
+
+        static SchachtRecord Schacht(string nummer, string dimension1, string dimension2)
+        {
+            var schacht = new SchachtRecord();
+            schacht.SetFieldValue("Schachtnummer", nummer, FieldSource.Manual, true);
+            schacht.SetFieldValue(FieldKeys.Owner, "Privat", FieldSource.Manual, true);
+            schacht.SetFieldValue(FieldKeys.DataOwner, "Abwasser Uri", FieldSource.Manual, true);
+            schacht.SetFieldValue(FieldKeys.DataSupplier, "Abwasser Uri", FieldSource.Manual, true);
+            schacht.SetFieldValue("Funktion", "Kontrollschacht", FieldSource.Manual, true);
+            schacht.SetFieldValue("Material", "Beton", FieldSource.Manual, true);
+            schacht.SetFieldValue(FieldKeys.ShaftDimension1Mm, dimension1, FieldSource.Manual, true);
+            schacht.SetFieldValue(FieldKeys.ShaftDimension2Mm, dimension2, FieldSource.Manual, true);
+            return schacht;
+        }
     }
 
     private static HaltungRecord LiesEine() => Assert.Single(LiesProjekt().Data);

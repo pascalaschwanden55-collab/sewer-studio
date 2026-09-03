@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Xtf;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
@@ -199,6 +200,43 @@ public sealed class XtfNormschachtImportTests : IDisposable
 
         foreach (var feld in new[] { "Sohlenkote", "Deckelmaterial", "Deckelform", "Deckeldurchmesser", "Steighilfe" })
             Assert.True(string.IsNullOrEmpty(s.GetFieldValue(feld)), $"{feld} sollte leer bleiben");
+    }
+
+    [Fact]
+    public void Das_Wort_unbekannt_bleibt_als_Schachtbemerkung_erhalten()
+    {
+        var mitFreitext = Quelle.Replace(
+            "<Bemerkung>Tauchbogen fehlt</Bemerkung>",
+            "<Bemerkung>unbekannt</Bemerkung>",
+            StringComparison.Ordinal);
+
+        var schacht = Schacht(Importiere(mitFreitext), "82265");
+
+        Assert.Equal("unbekannt", schacht.GetFieldValue(FieldKeys.Remarks));
+        Assert.True(string.IsNullOrEmpty(schacht.GetFieldValue("Material")));
+    }
+
+    [Fact]
+    public void Organisationsfelder_werden_nicht_pauschal_als_unbekannt_geloescht()
+    {
+        var paare = XtfNormschachtStammdaten.Feldpaare(new XtfNormschachtElement(
+            "S-1",
+            Funktion: "unbekannt",
+            Material: "unbekannt",
+            Eigentuemer: "unbekannt",
+            BaulicherZustand: "unbekannt",
+            Bemerkung: "unbekannt",
+            Datenherr: "unbekannt",
+            Datenlieferant: "Abwasser Uri (AWU)"));
+        var felder = paare.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
+
+        Assert.False(felder.ContainsKey("Funktion"));
+        Assert.False(felder.ContainsKey("Material"));
+        Assert.False(felder.ContainsKey(FieldKeys.ConditionClass));
+        Assert.Equal("unbekannt", felder[FieldKeys.Remarks]);
+        Assert.Equal("unbekannt", felder[FieldKeys.Owner]);
+        Assert.Equal("unbekannt", felder[FieldKeys.DataOwner]);
+        Assert.Equal("Abwasser Uri", felder[FieldKeys.DataSupplier]);
     }
 
     [Fact]

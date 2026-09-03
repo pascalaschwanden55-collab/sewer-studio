@@ -5,7 +5,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 
 /// <summary>
 /// Der Erstexport: Aus dem Projektstand entsteht eine vollstaendige neue SIA405-XTF fuer
-/// Objekte, die es im Kataster noch nicht gibt.
+/// Eigenstaendiger Voll-Export des Projektstands mit eigenen XTF-Kennungen.
 /// </summary>
 public sealed class XtfNeuPlanBuilderTests
 {
@@ -424,24 +424,69 @@ public sealed class XtfNeuPlanBuilderTests
         // 900/600 und 1200/800 sind dasselbe Verhaeltnis 1.5: ein gemeinsames Profil.
         var profil = Assert.Single(profile);
         Assert.Equal("1.5", profil.Felder.Single(f => f.Key == "HoehenBreitenverhaeltnis").Value);
-        Assert.NotEqual(profil.Felder.Single(f => f.Key == "Bezeichnung").Value, "Eiprofil");
+        Assert.NotEqual("Eiprofil", profil.Felder.Single(f => f.Key == "Bezeichnung").Value);
     }
 
-    // Punkt 1 der Fremdanalyse vom 2026-09-03: 78998-79002 stand mit Objekt-ID 866789
-    // schon im Kataster und bekam im Erstexport trotzdem eine neue Kennung. GEONIS
-    // haette es ein zweites Mal angelegt.
     [Fact]
-    public void Eine_Haltung_mit_Kataster_Objekt_ID_bleibt_draussen_und_wird_gemeldet()
+    public void Eine_Haltung_mit_Qgis_Objekt_ID_wird_mit_eigener_Xtf_Kennung_exportiert()
     {
         var record = Haltung();
         record.SetFieldValue(FieldKeys.CadastreObjectId, "866789", FieldSource.Kataster, false);
 
         var plan = XtfNeuPlanBuilder.Build([record], []);
 
-        Assert.Equal(0, plan.Haltungen);
-        Assert.DoesNotContain(plan.Objekte, o => o.Klasse == "Haltung" || o.Klasse == "Kanal");
+        Assert.Equal(1, plan.Haltungen);
+        var haltung = Assert.Single(plan.Objekte, o => o.Klasse == "Haltung");
+        Assert.StartsWith("chSST", haltung.Tid, StringComparison.Ordinal);
+        Assert.DoesNotContain("866789", haltung.Tid, StringComparison.Ordinal);
         Assert.Contains(plan.Hinweise, h => h.Contains("866789", StringComparison.Ordinal)
-                                            && h.Contains("Revision", StringComparison.Ordinal));
+                                            && h.Contains("Revidierte XTF", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Ein_Schacht_mit_Qgis_Objekt_ID_wird_mit_eigener_Xtf_Kennung_exportiert()
+    {
+        var record = Schacht("78998");
+        record.SetFieldValue(FieldKeys.CadastreObjectId, "768645", FieldSource.Kataster, false);
+
+        var plan = XtfNeuPlanBuilder.Build([], [record]);
+
+        Assert.Equal(1, plan.Schaechte);
+        var schacht = Assert.Single(plan.Objekte, o => o.Klasse == "Normschacht");
+        Assert.StartsWith("chSST", schacht.Tid, StringComparison.Ordinal);
+        Assert.Contains(plan.Hinweise, h => h.Contains("768645", StringComparison.Ordinal)
+                                            && h.Contains("Revidierte XTF", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Seilergasse_mit_Haltungs_Objekt_ID_erzeugt_Haltung_und_Schacht()
+    {
+        var haltung = Haltung();
+        haltung.SetFieldValue(FieldKeys.HoldingName, "78998-79002", FieldSource.Manual, true);
+        haltung.SetFieldValue("Schacht_oben", "78998", FieldSource.Manual, true);
+        haltung.SetFieldValue("Schacht_unten", "79002", FieldSource.Manual, true);
+        haltung.SetFieldValue(FieldKeys.CadastreObjectId, "866789", FieldSource.Kataster, false);
+
+        var plan = XtfNeuPlanBuilder.Build([haltung], [Schacht("78998")]);
+
+        Assert.Equal(1, plan.Haltungen);
+        Assert.Equal(1, plan.Schaechte);
+        Assert.Single(plan.Objekte, o => o.Klasse == "Haltung");
+        Assert.Single(plan.Objekte, o => o.Klasse == "Normschacht");
+        var knoten = Assert.Single(plan.Objekte, o => o.Klasse == "Abwasserknoten");
+        Assert.Contains(plan.Objekte.Where(o => o.Klasse == "Haltungspunkt")
+            .SelectMany(o => o.Verweise), v =>
+                v.Name == "AbwassernetzelementRef" && v.ZielTid == knoten.Tid);
+    }
+
+    [Fact]
+    public void Ein_Schacht_an_einer_neuen_Haltung_bleibt_exportierbar()
+    {
+        var plan = XtfNeuPlanBuilder.Build([Haltung()], [Schacht("80401")]);
+
+        Assert.Equal(1, plan.Haltungen);
+        Assert.Equal(1, plan.Schaechte);
+        Assert.Single(plan.Objekte, o => o.Klasse == "Normschacht");
     }
 
     // Punkt 2 derselben Analyse: Eigentuemer "Privat", Datenherr und Datenlieferant
@@ -474,6 +519,38 @@ public sealed class XtfNeuPlanBuilderTests
         var eigentuemer = kanal.Verweise.Single(v => v.Name == "EigentuemerRef").ZielTid;
         Assert.Equal(eigentuemer, kanal.Verweise.Single(v => v.Name == "DatenherrRef").ZielTid);
         Assert.Single(plan.Objekte.Where(o => o.Klasse == "Organisation"));
+    }
+
+    [Theory]
+    [InlineData(FieldKeys.DataOwner, "Datenherr")]
+    [InlineData(FieldKeys.DataSupplier, "Datenlieferant")]
+    public void Ein_gesetzter_unbekannter_Verwaltungswert_sperrt_die_Haltung(
+        string feld, string rolle)
+    {
+        var record = Haltung();
+        record.SetFieldValue(feld, "Firma Muster GmbH", FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([record], []);
+
+        Assert.Equal(0, plan.Haltungen);
+        Assert.Empty(plan.Objekte);
+        Assert.Contains(plan.Hinweise, h => h.Contains(rolle, StringComparison.Ordinal)
+                                            && h.Contains("Firma Muster GmbH", StringComparison.Ordinal)
+                                            && h.Contains("Organisationstyp", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Ein_gesetzter_unbekannter_Datenherr_sperrt_den_Schacht()
+    {
+        var record = Schacht("78998");
+        record.SetFieldValue(FieldKeys.DataOwner, "Firma Muster GmbH", FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([], [record]);
+
+        Assert.Equal(0, plan.Schaechte);
+        Assert.Empty(plan.Objekte);
+        Assert.Contains(plan.Hinweise, h => h.Contains("Datenherr", StringComparison.Ordinal)
+                                            && h.Contains("Firma Muster GmbH", StringComparison.Ordinal));
     }
 
     private static HaltungRecord Haltung()

@@ -1,4 +1,5 @@
 using System.Globalization;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
@@ -68,7 +69,7 @@ internal static class SchachtProProtocolMapper
         Add(SchachtProFieldNames.DatumJahr, dto.Datum);
         Add(SchachtProFieldNames.Wetter, dto.Wetter);
         Add(SchachtProFieldNames.Funktion, dto.SchachtFunktion);
-        Add(SchachtProFieldNames.Schachtform, dto.Schachtform);
+        Add(SchachtProFieldNames.Schachtform, SchachtformVokabular.Normalisieren(dto.Schachtform));
         Add(SchachtProFieldNames.Medium, dto.Medium);
         Add(SchachtProFieldNames.Material, dto.MaterialSchacht);
         Add(SchachtProFieldNames.Schachttiefe, dto.Tiefe);

@@ -134,7 +134,7 @@ public sealed partial class WinCanDbImportService
 
         // Zusaetzliche Schacht-Stammdaten aus der NODE-Tabelle (bisher gelesen, aber nie gesetzt).
         // Additiv/empty-only ueber SetSchachtField — schliesst dokumentierte Schacht-Datenluecken.
-        SetSchachtField(record, "Schachtform", node.Shape);
+        SetSchachtField(record, FieldKeys.ShaftShape, SchachtformVokabular.Normalisieren(node.Shape));
         // Die Masse leben in den zwei Zahlenfeldern: rund = beide gleich, eckig = beide
         // Kanten. Das Textfeld "Durchmesser" ist seit 2026-09-03 abgeloest. Wie jedes
         // WinCan-Feld nur ergaenzend: Vorhandene Werte bleiben stehen.

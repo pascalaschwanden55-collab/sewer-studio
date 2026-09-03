@@ -4,8 +4,8 @@ using AuswertungPro.Next.Application.Xtf;
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 /// <summary>
-/// Fuehrt den Erstexport zusammen: Verlaeufe holen, Plan bauen, Bericht schreiben und
-/// die neue XTF veroeffentlichen.
+/// Fuehrt den vollstaendigen Neu-Export zusammen: Verlaeufe holen, Plan bauen, Bericht
+/// schreiben und die eigenstaendige XTF veroeffentlichen.
 ///
 /// Jeder Lauf bekommt einen eigenen Dateinamen mit Zeitstempel; nichts Bestehendes wird
 /// ersetzt. Die Objektkennungen bleiben ueber Laeufe hinweg dieselben — nur so wird aus
@@ -42,7 +42,8 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
         {
             return new XtfNeuExportResult(
                 false, bericht,
-                "Es gibt nichts zu exportieren — kein Objekt erfuellt die Pflichtangaben.", null);
+                "Es gibt nichts zu exportieren — kein Objekt erfuellt die Pflichtangaben.",
+                null);
         }
 
         if (request.NurPruefen)
@@ -97,8 +98,8 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
         text.AppendLine();
         text.AppendLine("Die Objektkennungen bleiben bei jedem Export dieselben. Ein zweiter Lauf");
         text.AppendLine("aktualisiert deshalb dieselben Objekte, statt neue anzulegen.");
-        text.AppendLine("Datenherr und Datenlieferant tragen den Eigentuemer — in SIA405 sind beide");
-        text.AppendLine("Pflicht, und fuer eine Ersterfassung ist das die naheliegende Angabe.");
+        text.AppendLine("Datenherr und Datenlieferant kommen aus ihren Projektfeldern. Ist ein Feld");
+        text.AppendLine("leer, gilt der Eigentuemer. Ein gesetzter unbekannter Wert sperrt das Objekt.");
 
         return text.ToString().TrimEnd();
     }
@@ -120,25 +121,33 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
         var ohneSchacht = plan.Hinweise
             .Where(h => h.Contains("ist im Projekt nicht erfasst", StringComparison.Ordinal))
             .Count();
-        var imKataster = plan.Hinweise.Count(h => h.Contains("steht bereits im Kataster", StringComparison.Ordinal));
+        var mitObjektId = plan.Hinweise.Count(h => h.Contains("Objekt-ID", StringComparison.Ordinal));
         var uebrige = plan.Hinweise
             .Where(h => !h.Contains("ohne Eigentuemer", StringComparison.Ordinal)
                      && !h.Contains("kein Verlauf", StringComparison.Ordinal)
                      && !h.Contains("ist im Projekt nicht erfasst", StringComparison.Ordinal)
-                     && !h.Contains("steht bereits im Kataster", StringComparison.Ordinal))
+                     && !h.Contains("Objekt-ID", StringComparison.Ordinal))
             .ToList();
 
         text.AppendLine();
         text.AppendLine("Hinweise:");
 
-        if (imKataster > 0)
+        if (mitObjektId > 0)
         {
-            text.AppendLine(
-                $"  {imKataster} Haltungen stehen bereits im Kataster (Objekt-ID vorhanden) und bleiben");
-            text.AppendLine(
-                "  draussen: Ein Erstexport wuerde sie in GEONIS ein zweites Mal anlegen. Fuer sie");
-            text.AppendLine(
-                "  ist \"XTF revidieren\" der richtige Weg.");
+            if (mitObjektId == 1)
+            {
+                text.AppendLine("  1 Objekt hat eine Objekt-ID und wird trotzdem geschrieben.");
+            }
+            else
+            {
+                text.AppendLine(
+                    $"  {mitObjektId} Objekte haben eine Objekt-ID und werden trotzdem geschrieben.");
+            }
+
+            text.AppendLine("  Eine einzelne ID reicht nicht fuer den ganzen XTF-Objektverbund; die Datei");
+            text.AppendLine("  erhaelt deshalb eigene, gleichbleibende XTF-Kennungen.");
+            text.AppendLine("  Beim Import in einen bereits gefuellten Kataster koennen dadurch Duplikate");
+            text.AppendLine("  entstehen. Fuer eine Aktualisierung bitte \"Revidierte XTF\" verwenden.");
         }
 
         if (ohneEigentuemer > 0)

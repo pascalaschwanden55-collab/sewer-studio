@@ -34,7 +34,7 @@ public sealed class AppIdentityVersion45Tests
     }
 
     [Fact]
-    public void StartupSplash_verwendet_appidentity_und_konsistentes_vsa_kek_2020()
+    public void StartupSplash_zeigt_keine_versionsangabe_und_bleibt_bei_vsa_kek_2020()
     {
         var xaml = File.ReadAllText(RepoFile(
             "src",
@@ -49,9 +49,14 @@ public sealed class AppIdentityVersion45Tests
             "Windows",
             "StartupSplashWindow.xaml.cs"));
 
-        Assert.DoesNotContain("v4.4", xaml, StringComparison.Ordinal);
+        // Entscheid 2026-09-03: Der Startbildschirm traegt keine Versionsnummer mehr.
+        // Die Version bleibt in AppIdentity und den Einstellungen; der Splash liest sie nicht.
+        Assert.DoesNotContain("AppIdentity", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("AppIdentity", codeBehind, StringComparison.Ordinal);
+        Assert.DoesNotContain("VersionText", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("v4.", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("v4.", codeBehind, StringComparison.Ordinal);
         Assert.DoesNotContain("VSA-KEK 2023", codeBehind, StringComparison.Ordinal);
-        Assert.Contains("AppIdentity.DisplayVersion", codeBehind, StringComparison.Ordinal);
         Assert.Contains("VSA-KEK 2020", xaml, StringComparison.Ordinal);
         Assert.Contains("VSA-KEK 2020", codeBehind, StringComparison.Ordinal);
     }

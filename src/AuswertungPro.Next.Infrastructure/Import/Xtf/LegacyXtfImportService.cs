@@ -399,6 +399,8 @@ public sealed partial class LegacyXtfImportService
 
         /// <summary>Die Kennung der verwiesenen Organisation.</summary>
         public string EigentuemerRef { get; set; } = "";
+        public string DatenherrRef { get; set; } = "";
+        public string DatenlieferantRef { get; set; } = "";
         public string Baujahr { get; set; } = "";
         public string Rohrlaenge { get; set; } = "";
         public string Funktion { get; set; } = "";
@@ -475,6 +477,12 @@ public sealed partial class LegacyXtfImportService
                         // Import verloren, und beim naechsten Export fehlte genau er.
                         case "EigentuemerRef":
                             kd.EigentuemerRef = (string?)child.Attribute("REF") ?? "";
+                            break;
+                        case "DatenherrRef":
+                            kd.DatenherrRef = (string?)child.Attribute("REF") ?? "";
+                            break;
+                        case "DatenlieferantRef":
+                            kd.DatenlieferantRef = (string?)child.Attribute("REF") ?? "";
                             break;
                         case "Baujahr": kd.Baujahr = child.Value; break;
                         case "Rohrlaenge": kd.Rohrlaenge = child.Value; break;
@@ -641,13 +649,16 @@ public sealed partial class LegacyXtfImportService
 
             var rec = new HaltungRecord();
             rec.SetFieldValue("Haltungsname", haltungsname, FieldSource.Xtf405, userEdited: false);
+            rec.SetFieldValue(FieldKeys.CadastreObjectId, hd.Tid, FieldSource.Xtf405, userEdited: false);
 
             // Ein Normwert aus der Datei, so wie er dort steht. "unbekannt" ist keine
             // Angabe und wuerde nur einen besseren Wert aus einer anderen Quelle blockieren.
-            void Uebernimm(string feld, string? wert)
+            void Uebernimm(string feld, string? wert, bool unbekanntIstLeer = true)
             {
                 var text = (wert ?? "").Trim();
-                if (text.Length == 0 || string.Equals(text, "unbekannt", StringComparison.OrdinalIgnoreCase))
+                if (text.Length == 0
+                    || (unbekanntIstLeer
+                        && string.Equals(text, "unbekannt", StringComparison.OrdinalIgnoreCase)))
                     return;
                 rec.SetFieldValue(feld, text, FieldSource.Xtf405, userEdited: false);
             }
@@ -663,8 +674,14 @@ public sealed partial class LegacyXtfImportService
             if (!string.IsNullOrWhiteSpace(hd.RohrprofilRef) && rohrprofile.TryGetValue(hd.RohrprofilRef, out var profil))
             {
                 var profiltyp = (profil.Profiltyp ?? "").Trim();
-                if (profiltyp.Length > 0 && !string.Equals(profiltyp, "unbekannt", StringComparison.OrdinalIgnoreCase))
-                    rec.SetFieldValue(FieldKeys.ProfileType, profiltyp, FieldSource.Xtf405, userEdited: false);
+                if (profiltyp.Length > 0)
+                {
+                    rec.SetFieldValue(
+                        FieldKeys.ProfileType,
+                        ProfiltypVokabular.Normalisieren(profiltyp),
+                        FieldSource.Xtf405,
+                        userEdited: false);
+                }
 
                 var breite = XtfRohrprofilVerhaeltnis.Breite(dn, profil.Verhaeltnis)
                              ?? (string.Equals(profiltyp, "Kreisprofil", StringComparison.OrdinalIgnoreCase)
@@ -708,6 +725,11 @@ public sealed partial class LegacyXtfImportService
                 var eigentuemer = EigentumVokabular.Normalisieren(
                     string.IsNullOrWhiteSpace(kanal.Eigentuemer) ? ausVerweis : kanal.Eigentuemer);
                 if (!string.IsNullOrWhiteSpace(eigentuemer)) rec.SetFieldValue("Eigentuemer", eigentuemer, FieldSource.Xtf405, userEdited: false);
+
+                if (organisationen.TryGetValue(kanal.DatenherrRef, out var datenHerr))
+                    Uebernimm(FieldKeys.DataOwner, datenHerr, unbekanntIstLeer: false);
+                if (organisationen.TryGetValue(kanal.DatenlieferantRef, out var datenLieferant))
+                    Uebernimm(FieldKeys.DataSupplier, datenLieferant, unbekanntIstLeer: false);
 
                 // FunktionHierarchisch -> Katalog-Combo "PAA.<Suffix>" / "SAA.<Suffix>" (speist u.a. VSA-Zustandsnote B4)
                 var funktion = NormalizeFunktionHierarchisch(kanal.Funktion);

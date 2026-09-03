@@ -353,6 +353,28 @@ public sealed class XtfSchachtPlanBuilderTests
     }
 
     [Fact]
+    public void Quadratisch_mit_zwei_verschiedenen_Massen_wird_gemeldet()
+    {
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(FieldKeys.ShaftShape, "Quadratisch", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.ShaftDimension1Mm, "1100", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.ShaftDimension2Mm, "900", FieldSource.Manual, true);
+
+        Assert.Contains(Baue(schacht).Hinweise, h => h.Contains("Quadratisch", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Vieleckig_wird_nicht_aus_zwei_Massen_erraten()
+    {
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(FieldKeys.ShaftShape, "Vieleckig", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.ShaftDimension1Mm, "900", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.ShaftDimension2Mm, "900", FieldSource.Manual, true);
+
+        Assert.DoesNotContain(Baue(schacht).Hinweise, h => h.Contains("Vieleckig", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Status_Sanierungsbedarf_und_Baujahr_gehen_mit()
     {
         var schacht = Schacht("80401");

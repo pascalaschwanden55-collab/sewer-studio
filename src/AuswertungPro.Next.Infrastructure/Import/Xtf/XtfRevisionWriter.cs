@@ -83,8 +83,19 @@ public static class XtfRevisionWriter
                     if (position.KanalschadenTid is not null
                         && elementeJeTid.TryGetValue(position.KanalschadenTid, out var zuAendern))
                     {
+                        var vollstaendig = true;
                         foreach (var feld in position.Felder)
-                            SetzeFeld(zuAendern, feld);
+                        {
+                            if (!SetzeFeld(zuAendern, feld))
+                            {
+                                vollstaendig = false;
+                                break;
+                            }
+                        }
+
+                        if (!vollstaendig)
+                            break;
+
                         // Nur nachfuehren, wo die Datei dieses Feld selbst fuehrt. In der
                         // SIA405-XTF gehoert "Letzte_Aenderung" in die Struktur "Metaattribute"
                         // und nicht direkt an den Kanal — es wird dort deshalb nicht erfunden.
@@ -306,22 +317,32 @@ public static class XtfRevisionWriter
     /// <summary>
     /// Schreibt ein Feld — als Text oder, bei einem Verweis, ins Attribut <c>REF</c>.
     /// </summary>
-    private static void SetzeFeld(XElement parent, XtfRevisionFeld feld)
+    private static bool SetzeFeld(XElement parent, XtfRevisionFeld feld)
     {
+        if (feld.Aktion == XtfRevisionFeldAktion.Entfernen)
+        {
+            var zuEntfernen = FindeKind(parent, feld.Name);
+            if (zuEntfernen is null)
+                return false;
+
+            zuEntfernen.Remove();
+            return true;
+        }
+
         if (!feld.IstVerweis)
         {
             SetzeKind(parent, feld.Name, feld.Neu);
-            return;
+            return true;
         }
 
         if (string.IsNullOrWhiteSpace(feld.Neu))
-            return;
+            return true;
 
         var kind = FindeKind(parent, feld.Name);
         if (kind is not null)
         {
             kind.SetAttributeValue("REF", feld.Neu);
-            return;
+            return true;
         }
 
         var neu = new XElement(
@@ -333,6 +354,8 @@ public static class XtfRevisionWriter
             parent.Add(neu);
         else
             nachfolger.AddBeforeSelf(neu);
+
+        return true;
     }
 
     private static void SetzeKind(XElement parent, string name, string? wert)

@@ -64,8 +64,13 @@ internal static class WinCanDbReader
             // traegt bei unvollstaendig erfassten Untersuchungen einen Platzhalter wie
             // 2007-12-31 ein; dann sagt der Zeitstempel des Datensatzes mehr. Real
             // aufgefallen in Seilergasse (07.638905-78998): Die Untersuchung mit 12 Befunden
-            // trug das Platzhalterdatum und verlor gegen eine mit 4 Befunden.
-            var sortKey = Glaubwuerdig(WinCanValueNormalizer.ParseSqliteDate(reader[2]))
+            // trug das Platzhalterdatum und verlor gegen eine mit 4 Befunden. Der technische
+            // Zeitstempel darf die Auswahl ordnen, wird aber nie zum Inspektionsdatum.
+            var startDate = ReadText(reader, 2);
+            var gelesenesStartdatum = WinCanValueNormalizer.ParseSqliteDate(startDate);
+            var hatWinCanVorgabedatum = IstWinCanVorgabetag(gelesenesStartdatum);
+            var glaubwuerdigesStartdatum = Glaubwuerdig(gelesenesStartdatum);
+            var sortKey = glaubwuerdigesStartdatum
                           ?? Glaubwuerdig(WinCanValueNormalizer.ParseSqliteDate(reader[3]))
                           ?? WinCanValueNormalizer.ParseSqliteDate(reader[4])
                           ?? DateTime.MinValue;
@@ -75,7 +80,8 @@ internal static class WinCanDbReader
                 reader.GetString(1),
                 sortKey,
                 ReadText(reader, 5),
-                ReadText(reader, 2)));
+                glaubwuerdigesStartdatum is null ? null : startDate,
+                hatWinCanVorgabedatum));
         }
 
         return list;
@@ -93,6 +99,9 @@ internal static class WinCanDbReader
     /// </summary>
     private static DateTime? Glaubwuerdig(DateTime? datum)
         => datum is { Year: >= 1990 } d && DateOnly.FromDateTime(d) != WinCanVorgabetag ? datum : null;
+
+    private static bool IstWinCanVorgabetag(DateTime? datum)
+        => datum is { } d && DateOnly.FromDateTime(d) == WinCanVorgabetag;
 
     private static Dictionary<string, List<WinCanDbObservation>> LoadObservations(SqliteConnection connection)
     {
@@ -242,7 +251,12 @@ internal sealed record WinCanDbSection(
     string? ConstructionYearText, string? ConstructionDate, string? Memo, string? FromNodeFk, string? ToNodeFk);
 
 internal sealed record WinCanDbInspection(
-    string Pk, string SectionFk, DateTime SortKey, string? InspectionDir, string? StartDate);
+    string Pk,
+    string SectionFk,
+    DateTime SortKey,
+    string? InspectionDir,
+    string? StartDate,
+    bool HatWinCanVorgabedatum);
 
 internal sealed record WinCanDbObservation(
     string Pk, string InspectionFk, string OpCode, string Observation, double? Distance,

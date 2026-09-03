@@ -54,13 +54,17 @@ public partial class StartupSplashWindow
         _screenDepth = new double[_nodes.Count];
     }
 
+    /// <summary>Entwurfsmass (bei Faktor 1) auf die aktuelle Kugelgroesse umrechnen.</summary>
+    private double S(double designValue) => designValue * _sphereScale;
+
     private void BuildBackdrop()
     {
-        _coreGlowScale = new ScaleTransform(1, 1, 230, 230);
+        var glowDiameter = S(460);
+        _coreGlowScale = new ScaleTransform(1, 1, glowDiameter / 2, glowDiameter / 2);
         _coreGlow = new Ellipse
         {
-            Width = 460,
-            Height = 460,
+            Width = glowDiameter,
+            Height = glowDiameter,
             Opacity = 0,
             CacheMode = new BitmapCache(),
             Fill = new RadialGradientBrush
@@ -71,30 +75,45 @@ public partial class StartupSplashWindow
                 RadiusY = 0.5,
                 GradientStops =
                 {
-                    new GradientStop(Color.FromArgb(44, AccentBlue.R, AccentBlue.G, AccentBlue.B), 0.0),
-                    new GradientStop(Color.FromArgb(16, AccentCyan.R, AccentCyan.G, AccentCyan.B), 0.45),
+                    new GradientStop(Color.FromArgb(46, AccentBlue.R, AccentBlue.G, AccentBlue.B), 0.0),
+                    new GradientStop(Color.FromArgb(18, AccentCyan.R, AccentCyan.G, AccentCyan.B), 0.45),
                     new GradientStop(Color.FromArgb(0, AccentDeep.R, AccentDeep.G, AccentDeep.B), 1.0)
                 }
             },
             RenderTransform = _coreGlowScale,
             IsHitTestVisible = false
         };
-        Canvas.SetLeft(_coreGlow, CanvasCenterX - 230);
-        Canvas.SetTop(_coreGlow, CanvasCenterY - 230);
+        Canvas.SetLeft(_coreGlow, _centerX - glowDiameter / 2);
+        Canvas.SetTop(_coreGlow, _centerY - glowDiameter / 2);
         Panel.SetZIndex(_coreGlow, 0);
         NeuralCanvas.Children.Add(_coreGlow);
 
-        _ringOuter = CreateRing(420, 18, AccentDeep, out _ringOuterRotate);
-        _ringMiddle = CreateRing(340, 14, AccentBlue, out _ringMiddleRotate);
-        _ringInner = CreateRing(260, 10, AccentCyan, out _ringInnerRotate);
+        _ringOuter = CreateRing(S(420), 110, AccentDeep, out _ringOuterRotate);
+        _ringMiddle = CreateRing(S(340), 90, AccentBlue, out _ringMiddleRotate);
+        _ringInner = CreateRing(S(260), 80, AccentCyan, out _ringInnerRotate);
 
         // Scanline der Inferenz-Welle: laeuft synchron zum Aktivierungs-Sweep durchs Netz.
+        // Hoehe auf die Kugel begrenzt: Auf hellem Grund darf das Band nicht als Streifen
+        // ueber die ganze Flaeche laufen.
+        var scanHeight = S(500);
         _scanLine = new Rectangle
         {
-            Width = 110,
-            Height = 520,
+            Width = S(110),
+            Height = scanHeight,
             Opacity = 0,
             IsHitTestVisible = false,
+            OpacityMask = new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0),
+                EndPoint = new Point(0, 1),
+                GradientStops =
+                {
+                    new GradientStop(Colors.Transparent, 0.0),
+                    new GradientStop(Colors.Black, 0.3),
+                    new GradientStop(Colors.Black, 0.7),
+                    new GradientStop(Colors.Transparent, 1.0)
+                }
+            },
             Fill = new LinearGradientBrush
             {
                 StartPoint = new Point(0, 0),
@@ -102,53 +121,53 @@ public partial class StartupSplashWindow
                 GradientStops =
                 {
                     new GradientStop(Color.FromArgb(0, AccentCyan.R, AccentCyan.G, AccentCyan.B), 0.0),
-                    new GradientStop(Color.FromArgb(46, AccentCyan.R, AccentCyan.G, AccentCyan.B), 0.5),
+                    new GradientStop(Color.FromArgb(30, AccentCyan.R, AccentCyan.G, AccentCyan.B), 0.5),
                     new GradientStop(Color.FromArgb(0, AccentCyan.R, AccentCyan.G, AccentCyan.B), 1.0)
                 }
             }
         };
-        Canvas.SetTop(_scanLine, 0);
-        Canvas.SetLeft(_scanLine, CanvasCenterX - 230);
+        Canvas.SetTop(_scanLine, _centerY - scanHeight / 2);
+        Canvas.SetLeft(_scanLine, _centerX - _waveHalfSpan);
         Panel.SetZIndex(_scanLine, 3);
         NeuralCanvas.Children.Add(_scanLine);
 
         // Orbitierende Satelliten auf den Ringen (Radius = halber Ringdurchmesser).
-        AddSatellite(210, 0.35, 0.0, AccentDeep, 5);
-        AddSatellite(210, 0.35, Math.PI, AccentBlue, 4);
-        AddSatellite(170, -0.55, 1.1, AccentCyan, 4);
-        AddSatellite(130, 0.85, 2.4, AccentCyan, 3.5);
+        AddSatellite(S(210), 0.35, 0.0, AccentDeep, S(5));
+        AddSatellite(S(210), 0.35, Math.PI, AccentBlue, S(4));
+        AddSatellite(S(170), -0.55, 1.1, AccentCyan, S(4));
+        AddSatellite(S(130), 0.85, 2.4, AccentCyan, S(3.5));
 
-        BuildGoldArc();
+        BuildAccentArc();
         BuildDustField();
     }
 
     /// <summary>
-    /// Kurzes goldenes Leuchtsegment auf dem Aussenring: laeuft etwas schneller
-    /// als der Ring selbst und gibt dem dunklen Bild einen wandernden Gold-Akzent.
+    /// Kurzes blaues Leuchtsegment auf dem Aussenring: laeuft etwas schneller
+    /// als der Ring selbst und gibt dem Bild einen wandernden Akzent.
     /// </summary>
-    private void BuildGoldArc()
+    private void BuildAccentArc()
     {
-        _goldArcRotate = new RotateTransform(0, CanvasCenterX, CanvasCenterY);
-        _goldArc = new Path
+        _accentArcRotate = new RotateTransform(0, _centerX, _centerY);
+        _accentArc = new Path
         {
-            Stroke = new SolidColorBrush(Color.FromArgb(150, PulseGold.R, PulseGold.G, PulseGold.B)),
-            StrokeThickness = 2.2,
+            Stroke = new SolidColorBrush(Color.FromArgb(200, PulseBlue.R, PulseBlue.G, PulseBlue.B)),
+            StrokeThickness = S(2.4),
             StrokeStartLineCap = PenLineCap.Round,
             StrokeEndLineCap = PenLineCap.Round,
             Opacity = 0,
-            Data = BuildArcGeometry(CanvasCenterX, CanvasCenterY, 210, 188, 52),
+            Data = BuildArcGeometry(_centerX, _centerY, S(210), 188, 52),
             Effect = new DropShadowEffect
             {
-                BlurRadius = 12,
+                BlurRadius = 10,
                 ShadowDepth = 0,
-                Color = PulseGold,
-                Opacity = 0.5
+                Color = PulseBlue,
+                Opacity = 0.35
             },
-            RenderTransform = _goldArcRotate,
+            RenderTransform = _accentArcRotate,
             IsHitTestVisible = false
         };
-        Panel.SetZIndex(_goldArc, 2);
-        NeuralCanvas.Children.Add(_goldArc);
+        Panel.SetZIndex(_accentArc, 2);
+        NeuralCanvas.Children.Add(_accentArc);
     }
 
     private static PathGeometry BuildArcGeometry(
@@ -182,17 +201,18 @@ public partial class StartupSplashWindow
     }
 
     /// <summary>
-    /// Feines, dunkles Sternenfeld hinter dem Netz (deterministischer Seed):
-    /// Staubkoerner bleiben ortsfest und pulsieren nur leicht in der Deckkraft.
+    /// Feines Punktfeld hinter dem Netz (deterministischer Seed): Die Koerner bleiben
+    /// ortsfest und pulsieren nur leicht in der Deckkraft. Auf hellem Grund sind sie
+    /// blau-grau statt weiss.
     /// </summary>
     private void BuildDustField()
     {
         var rng = new Random(23);
         for (var i = 0; i < DustCount; i++)
         {
-            var size = 1.0 + rng.NextDouble() * 1.6;
+            var size = (1.2 + rng.NextDouble() * 1.8) * Math.Sqrt(_sphereScale);
             var tint = rng.NextDouble();
-            var color = tint < 0.70 ? LineAccent : tint < 0.92 ? AccentCyan : PulseGold;
+            var color = tint < 0.70 ? LineAccent : tint < 0.92 ? AccentCyan : PulseBlue;
             var dot = new Ellipse
             {
                 Width = size,
@@ -201,13 +221,13 @@ public partial class StartupSplashWindow
                 Fill = new SolidColorBrush(Color.FromArgb(255, color.R, color.G, color.B)),
                 IsHitTestVisible = false
             };
-            Canvas.SetLeft(dot, rng.NextDouble() * 940);
-            Canvas.SetTop(dot, rng.NextDouble() * 500);
+            Canvas.SetLeft(dot, rng.NextDouble() * _canvasWidth);
+            Canvas.SetTop(dot, rng.NextDouble() * _canvasHeight);
             Panel.SetZIndex(dot, 2);
             NeuralCanvas.Children.Add(dot);
             _dust.Add(new BackgroundDust(
                 dot,
-                baseOpacity: 0.05 + rng.NextDouble() * 0.12,
+                baseOpacity: 0.12 + rng.NextDouble() * 0.22,
                 phase: rng.NextDouble() * Math.PI * 2,
                 speed: 0.3 + rng.NextDouble() * 0.9));
         }
@@ -220,13 +240,13 @@ public partial class StartupSplashWindow
             Width = size,
             Height = size,
             Opacity = 0,
-            Fill = new SolidColorBrush(Color.FromArgb(220, color.R, color.G, color.B)),
+            Fill = new SolidColorBrush(Color.FromArgb(230, color.R, color.G, color.B)),
             Effect = new DropShadowEffect
             {
-                BlurRadius = 9,
+                BlurRadius = 8,
                 ShadowDepth = 0,
                 Color = color,
-                Opacity = 0.45
+                Opacity = 0.35
             },
             IsHitTestVisible = false
         };
@@ -245,14 +265,14 @@ public partial class StartupSplashWindow
             Opacity = 0,
             Fill = Brushes.Transparent,
             Stroke = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B)),
-            StrokeThickness = 0.9,
+            StrokeThickness = 1.0,
             StrokeDashArray = { 2, 6, 1, 9 },
             RenderTransform = rotate,
             CacheMode = new BitmapCache(),
             IsHitTestVisible = false
         };
-        Canvas.SetLeft(ring, CanvasCenterX - diameter / 2);
-        Canvas.SetTop(ring, CanvasCenterY - diameter / 2);
+        Canvas.SetLeft(ring, _centerX - diameter / 2);
+        Canvas.SetTop(ring, _centerY - diameter / 2);
         Panel.SetZIndex(ring, 1);
         NeuralCanvas.Children.Add(ring);
         return ring;
@@ -277,8 +297,8 @@ public partial class StartupSplashWindow
 
     private static Ellipse CreateNodeVisual(out SolidColorBrush fillBrush, out SolidColorBrush strokeBrush)
     {
-        fillBrush = new SolidColorBrush(Color.FromArgb(190, AccentBlue.R, AccentBlue.G, AccentBlue.B));
-        strokeBrush = new SolidColorBrush(Color.FromArgb(180, AccentBlue.R, AccentBlue.G, AccentBlue.B));
+        fillBrush = new SolidColorBrush(Color.FromArgb(200, AccentBlue.R, AccentBlue.G, AccentBlue.B));
+        strokeBrush = new SolidColorBrush(Color.FromArgb(190, AccentBlue.R, AccentBlue.G, AccentBlue.B));
 
         return new Ellipse
         {
@@ -332,11 +352,11 @@ public partial class StartupSplashWindow
 
     private void AddConnection(int a, int b)
     {
-        var strokeBrush = new SolidColorBrush(Color.FromArgb(40, LineAccent.R, LineAccent.G, LineAccent.B));
+        var strokeBrush = new SolidColorBrush(Color.FromArgb(60, LineAccent.R, LineAccent.G, LineAccent.B));
         var line = new Line
         {
             Stroke = strokeBrush,
-            StrokeThickness = 0.6,
+            StrokeThickness = 0.7,
             Opacity = 0,
             IsHitTestVisible = false
         };
@@ -393,8 +413,8 @@ public partial class StartupSplashWindow
             _ringMiddleRotate.Angle -= 8.1 * dt;
         if (_ringInnerRotate is not null)
             _ringInnerRotate.Angle += 12.6 * dt;
-        if (_goldArcRotate is not null)
-            _goldArcRotate.Angle += 7.4 * dt;
+        if (_accentArcRotate is not null)
+            _accentArcRotate.Angle += 7.4 * dt;
 
         foreach (var node in _nodes)
             node.Activation = Math.Max(0, node.Activation - 1.2 * dt);
@@ -502,7 +522,7 @@ public partial class StartupSplashWindow
 
             var next = _connections[connIdx];
             var reverse = next.B == nodeIndex;
-            // Kaskaden behalten ueberwiegend ihre Farbe (nur leicht Richtung Cyan), damit Gold golden bleibt.
+            // Kaskaden behalten ueberwiegend ihre Farbe (nur leicht Richtung Cyan).
             var color = Blend(pulse.Color, AccentCyan, 0.18);
             FirePulse(connIdx, color, reverse, pulse.Generation + 1);
         }
@@ -522,8 +542,9 @@ public partial class StartupSplashWindow
 
         // Position und Staerke der Inferenz-Welle (Sweep von links nach rechts).
         var waveActive = _waveT >= 0 && _waveT <= 1.0;
-        var waveX = CanvasCenterX - 230 + _waveT * 460;
+        var waveX = _centerX - _waveHalfSpan + _waveT * _waveHalfSpan * 2;
         var waveStrength = waveActive ? Math.Sin(Math.PI * _waveT) : 0;
+        var nodeScale = Math.Sqrt(_sphereScale);
 
         for (int i = 0; i < _nodes.Count; i++)
         {
@@ -539,22 +560,23 @@ public partial class StartupSplashWindow
             if (waveActive)
             {
                 var waveDist = Math.Abs(px - waveX);
-                if (waveDist < WaveBandWidth)
+                if (waveDist < _waveBandWidth)
                 {
-                    var boost = (1.0 - waveDist / WaveBandWidth) * 0.95 * waveStrength;
+                    var boost = (1.0 - waveDist / _waveBandWidth) * 0.95 * waveStrength;
                     if (boost > node.Activation)
                         node.Activation = boost;
                 }
             }
 
             var depth01 = Clamp01((depth + 1.0) / 2.0);
-            // Tiefennebel: die ferne Hemisphaere wird kleiner und dunkler,
+            // Tiefennebel: die ferne Hemisphaere wird kleiner und blasser,
             // die nahe bleibt unveraendert — dadurch wirkt die Kugel plastisch.
             var fog = StartupSplashAnimationPolicy.DepthFog(depth);
             var size = (4.0 + perspective * 3.4 + depth01 * 3.0)
                 * (1.0 + node.Activation * 0.7)
-                * (0.72 + fog * 0.28);
-            var alpha = (byte)Math.Clamp((80 + depth01 * 150 + node.Activation * 40) * fog, 0, 255);
+                * (0.72 + fog * 0.28)
+                * nodeScale;
+            var alpha = (byte)Math.Clamp((90 + depth01 * 150 + node.Activation * 40) * fog, 0, 255);
             var color = Blend(AccentBlue, NodeCore, 0.22 + depth01 * 0.55 + node.Activation * 0.30);
 
             node.Visual.Width = size;
@@ -576,9 +598,9 @@ public partial class StartupSplashWindow
             {
                 var midX = (_screenX[a] + _screenX[b]) / 2.0;
                 var waveDist = Math.Abs(midX - waveX);
-                if (waveDist < WaveBandWidth)
+                if (waveDist < _waveBandWidth)
                 {
-                    var boost = (1.0 - waveDist / WaveBandWidth) * 0.45 * waveStrength;
+                    var boost = (1.0 - waveDist / _waveBandWidth) * 0.45 * waveStrength;
                     if (boost > connection.Activation)
                         connection.Activation = boost;
                 }
@@ -586,7 +608,7 @@ public partial class StartupSplashWindow
 
             var depth01 = Clamp01((_screenDepth[a] + _screenDepth[b] + 2.0) / 4.0);
             var fog = StartupSplashAnimationPolicy.DepthFog((_screenDepth[a] + _screenDepth[b]) / 2.0);
-            var alpha = (byte)Math.Clamp((18 + depth01 * 70 + connection.Activation * 160) * fog, 0, 235);
+            var alpha = (byte)Math.Clamp((30 + depth01 * 90 + connection.Activation * 140) * fog, 0, 235);
             var color = Blend(LineAccent, AccentCyan, connection.Activation * 0.85 + depth01 * 0.20);
 
             connection.Visual.X1 = _screenX[a];
@@ -594,7 +616,7 @@ public partial class StartupSplashWindow
             connection.Visual.X2 = _screenX[b];
             connection.Visual.Y2 = _screenY[b];
             connection.Visual.StrokeThickness =
-                (0.45 + depth01 * 0.6 + connection.Activation * 1.7) * (0.75 + fog * 0.25);
+                (0.5 + depth01 * 0.7 + connection.Activation * 1.7) * (0.75 + fog * 0.25) * nodeScale;
             connection.StrokeBrush.Color = Color.FromArgb(alpha, color.R, color.G, color.B);
             Panel.SetZIndex(connection.Visual, 8 + (int)(depth01 * 12));
         }
@@ -637,8 +659,8 @@ public partial class StartupSplashWindow
         var elapsed = _animationClock.Elapsed.TotalSeconds;
         var fadeIn = Clamp01((elapsed - 1.0) / 1.0);
         var cycle = elapsed % SheenCycleSeconds / SheenCycleSeconds;
-        ProgressSheenSlide.X = -80 + cycle * (ProgressFullWidth + 160);
-        ProgressSheen.Opacity = 0.6 * fadeIn;
+        ProgressSheenSlide.X = -100 + cycle * (_progressFullWidth + 200);
+        ProgressSheen.Opacity = 0.7 * fadeIn;
     }
 
     private void UpdateScanLine(bool waveActive, double waveX, double waveStrength)
@@ -663,8 +685,8 @@ public partial class StartupSplashWindow
         var fadeIn = Clamp01((_animationClock.Elapsed.TotalSeconds - 0.6) / 1.2);
         foreach (var satellite in _satellites)
         {
-            var px = CanvasCenterX + Math.Cos(satellite.Angle) * satellite.Radius;
-            var py = CanvasCenterY + Math.Sin(satellite.Angle) * satellite.Radius;
+            var px = _centerX + Math.Cos(satellite.Angle) * satellite.Radius;
+            var py = _centerY + Math.Sin(satellite.Angle) * satellite.Radius;
             var size = satellite.Visual.Width;
             Canvas.SetLeft(satellite.Visual, px - size / 2.0);
             Canvas.SetTop(satellite.Visual, py - size / 2.0);
@@ -672,7 +694,7 @@ public partial class StartupSplashWindow
         }
     }
 
-    private static void Project(
+    private void Project(
         double x,
         double y,
         double z,
@@ -690,7 +712,7 @@ public partial class StartupSplashWindow
         var projection = StartupSplashAnimationPolicy.Project(
             x, y, z,
             cosY, sinY, cosX, sinX, cosZ, sinZ,
-            CameraDistance, ProjectionScale, CanvasCenterX, CanvasCenterY);
+            CameraDistance, _projectionScale, _centerX, _centerY);
         px = projection.X;
         py = projection.Y;
         depth = projection.Depth;
@@ -699,6 +721,7 @@ public partial class StartupSplashWindow
 
     private void UpdateActivePulseVisuals()
     {
+        var nodeScale = Math.Sqrt(_sphereScale);
         foreach (var pulse in _activePulses)
         {
             if (pulse.ConnectionIndex < 0 || pulse.ConnectionIndex >= _connections.Count)
@@ -712,7 +735,7 @@ public partial class StartupSplashWindow
             var py = _screenY[a] + (_screenY[b] - _screenY[a]) * t;
             var depth = _screenDepth[a] + (_screenDepth[b] - _screenDepth[a]) * t;
             var depth01 = Clamp01((depth + 1.0) / 2.0);
-            var size = 4.5 + depth01 * 5.0;
+            var size = (4.5 + depth01 * 5.0) * nodeScale;
 
             pulse.Visual.Width = size;
             pulse.Visual.Height = size;
@@ -733,7 +756,7 @@ public partial class StartupSplashWindow
             var px = _screenX[flare.NodeIndex];
             var py = _screenY[flare.NodeIndex];
             var t = flare.T;
-            var size = 8.0 + t * 60.0;
+            var size = (8.0 + t * 60.0) * _sphereScale;
             var opacity = Math.Max(0, 0.85 * (1.0 - t));
 
             flare.Visual.Width = size;
@@ -767,10 +790,10 @@ public partial class StartupSplashWindow
         if (_ringInner is not null)
             _ringInner.Opacity = 0.55 + breath * 0.22;
 
-        if (_goldArc is not null)
+        if (_accentArc is not null)
         {
             var fadeIn = Clamp01((_animationClock.Elapsed.TotalSeconds - 0.7) / 1.4);
-            _goldArc.Opacity = (0.35 + breath * 0.30) * fadeIn;
+            _accentArc.Opacity = (0.45 + breath * 0.30) * fadeIn;
         }
     }
 
@@ -789,10 +812,10 @@ public partial class StartupSplashWindow
             Fill = new SolidColorBrush(Color.FromArgb(255, color.R, color.G, color.B)),
             Effect = new DropShadowEffect
             {
-                BlurRadius = 14,
+                BlurRadius = 12,
                 ShadowDepth = 0,
                 Color = color,
-                Opacity = 0.75
+                Opacity = 0.55
             },
             IsHitTestVisible = false
         };
@@ -819,10 +842,10 @@ public partial class StartupSplashWindow
             Opacity = 0.85,
             Effect = new DropShadowEffect
             {
-                BlurRadius = 14,
+                BlurRadius = 12,
                 ShadowDepth = 0,
                 Color = color,
-                Opacity = 0.5
+                Opacity = 0.4
             },
             IsHitTestVisible = false
         };
@@ -830,5 +853,4 @@ public partial class StartupSplashWindow
         NeuralCanvas.Children.Add(ring);
         _flares.Add(new NodeFlare(nodeIndex, ring, color));
     }
-
 }

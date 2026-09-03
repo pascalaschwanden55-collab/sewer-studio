@@ -43,6 +43,8 @@ public sealed class SchachtPdfImportMappingTests
     [InlineData("Form Oval\nAbmessung 1000 x 800 mm\nSchachttiefe 2.5", "Oval", "1000 x 800 mm", "2.5")]
     [InlineData("Schachtform quadratisch\nDimension 80 cm x 80 cm\nSchachttiefe 250 cm", "Quadratisch", "800 x 800 mm", "2.5")]
     [InlineData("Schachtform rechteckig\nDimension 1.2 x 0.8 m\nSchachttiefe 3 m", "Rechteckig", "1200 x 800 mm", "3")]
+    [InlineData("Schachtform vieleckig\nDimension 1.2 x 0.8 m\nSchachttiefe 3 m", "Vieleckig", "1200 x 800 mm", "3")]
+    [InlineData("Schachtform unbekannt\nDimension 1.2 x 0.8 m\nSchachttiefe 3 m", "Unbekannt", "1200 x 800 mm", "3")]
     [InlineData("Dimension mm 800\nTiefe (Abstich) m 1.79", "Rund", "800 mm", "1.79")]
     [InlineData("Dimension mm 1200 / 800\nTiefe (Abstich) m 2.4", "Rechteckig", "1200 x 800 mm", "2.4")]
     public void ParseSchachtFields_NormalisiertFormDimensionUndSchachttiefe(

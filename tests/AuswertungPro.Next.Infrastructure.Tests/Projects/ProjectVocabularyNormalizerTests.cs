@@ -40,6 +40,24 @@ public sealed class ProjectVocabularyNormalizerTests
     }
 
     [Fact]
+    public void Profiltyp_und_Schachtform_werden_auf_die_Urner_Anzeige_angehoben()
+    {
+        var project = new Project();
+        var haltung = new HaltungRecord();
+        haltung.Fields[FieldKeys.ProfileType] = "offenes_Profil";
+        project.Data.Add(haltung);
+        var schacht = new SchachtRecord();
+        schacht.Fields[FieldKeys.ShaftShape] = "polygonal";
+        project.SchaechteData.Add(schacht);
+
+        var geaendert = ProjectVocabularyNormalizer.Normalize(project);
+
+        Assert.Equal("Offenes Profil", haltung.GetFieldValue(FieldKeys.ProfileType));
+        Assert.Equal("Vieleckig", schacht.GetFieldValue(FieldKeys.ShaftShape));
+        Assert.Equal(2, geaendert);
+    }
+
+    [Fact]
     public void Ein_unbekannter_Wert_bleibt_unveraendert_stehen()
     {
         var project = new Project();
@@ -99,4 +117,5 @@ public sealed class ProjectVocabularyNormalizerTests
         ProjectVocabularyNormalizer.Normalize(project);
         Assert.Equal(0, ProjectVocabularyNormalizer.Normalize(project));
     }
+
 }

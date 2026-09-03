@@ -63,11 +63,8 @@ public static class FieldKeys
 
     /// <summary>
     /// Lichte Breite in Millimetern — bei Ei-, Maul- und Rechteckprofilen die zweite
-    /// Abmessung neben <see cref="NominalDiameterMm"/>.
-    ///
-    /// Bewusst OHNE Ziel in der XTF: <c>SIA405_ABWASSER_2020_1_LV95</c> kennt an der
-    /// Klasse <c>Haltung</c> nur <c>Lichte_Hoehe</c>. Das Feld dient der Dokumentation
-    /// und dem WinCan-Weg und wird nicht exportiert.
+    /// Abmessung neben <see cref="NominalDiameterMm"/>. In SIA405 entsteht daraus am
+    /// Rohrprofil das Hoehen-Breiten-Verhaeltnis.
     /// </summary>
     public const string ClearWidthMm = "Lichte_Breite_mm";
 
@@ -89,6 +86,9 @@ public static class FieldKeys
 
     /// <summary>Baujahr nach SIA405 (<c>Abwasserbauwerk.Baujahr</c>), 1800 bis 2100.</summary>
     public const string ConstructionYear = "Baujahr";
+
+    /// <summary>Form des Schachts nach der Urner GEONIS-Auswahl.</summary>
+    public const string ShaftShape = "Schachtform";
 
     /// <summary>
     /// Bruttokosten des Bauwerks aus dem Kataster (<c>Abwasserbauwerk.Bruttokosten</c>).

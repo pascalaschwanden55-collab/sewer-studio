@@ -84,8 +84,10 @@ public static class SchachtMasse
 
     /// <summary>
     /// Uebernimmt die alten Textfelder eines Bestandsdatensatzes in die zwei Zahlenfelder
-    /// und entfernt sie danach. Sind die Zahlenfelder schon gefuellt, gewinnen sie; der
-    /// Text wird dann nur entfernt. Ein Text, der sich nicht lesen laesst, bleibt stehen:
+    /// und entfernt sie danach. Sind beide Zahlenfelder schon gefuellt, gewinnen sie; der
+    /// Text wird dann nur entfernt. Ist nur ein Zahlenfeld gefuellt, wird das zweite nur
+    /// ergaenzt, wenn das vorhandene Mass zum entsprechenden Textmass passt. Bei einem
+    /// Widerspruch bleibt der Text sichtbar. Ein unlesbarer Text bleibt ebenfalls stehen:
     /// Er verschwindet nicht still, sondern bleibt sichtbar, bis jemand ihn deutet.
     ///
     /// Die Herkunft wandert mit: Eine Handeingabe im Text bleibt eine Handeingabe in den
@@ -115,15 +117,40 @@ public static class SchachtMasse
                     if (masse is null)
                         continue;
 
-                    var zahlenLeer = string.IsNullOrWhiteSpace(record.GetFieldValue(eins))
-                                     && string.IsNullOrWhiteSpace(record.GetFieldValue(zwei));
-                    if (zahlenLeer)
+                    var wertEins = record.GetFieldValue(eins);
+                    var wertZwei = record.GetFieldValue(zwei);
+                    var hatEins = !string.IsNullOrWhiteSpace(wertEins);
+                    var hatZwei = !string.IsNullOrWhiteSpace(wertZwei);
+                    var herkunft = record.FieldMeta.TryGetValue(feld, out var meta) ? meta : null;
+                    var quelle = herkunft?.Source ?? FieldSource.Legacy;
+                    var vonHand = herkunft?.UserEdited ?? false;
+
+                    if (!hatEins && !hatZwei)
                     {
-                        var herkunft = record.FieldMeta.TryGetValue(feld, out var meta) ? meta : null;
-                        var quelle = herkunft?.Source ?? FieldSource.Legacy;
-                        var vonHand = herkunft?.UserEdited ?? false;
-                        record.SetFieldValue(eins, masse.Value.Dimension1, quelle, vonHand);
-                        record.SetFieldValue(zwei, masse.Value.Dimension2, quelle, vonHand);
+                        SchreibeLeeresMigrationsfeld(record, eins, masse.Value.Dimension1, quelle, vonHand);
+                        SchreibeLeeresMigrationsfeld(record, zwei, masse.Value.Dimension2, quelle, vonHand);
+
+                        if (!GleichesMass(record.GetFieldValue(eins), masse.Value.Dimension1)
+                            || !GleichesMass(record.GetFieldValue(zwei), masse.Value.Dimension2))
+                        {
+                            continue;
+                        }
+                    }
+                    else if (hatEins != hatZwei)
+                    {
+                        var vorhandenerWert = hatEins ? wertEins : wertZwei;
+                        var erwarteterWert = hatEins ? masse.Value.Dimension1 : masse.Value.Dimension2;
+                        if (!GleichesMass(vorhandenerWert, erwarteterWert))
+                            continue;
+
+                        var fehlendesFeld = hatEins ? zwei : eins;
+                        var fehlenderWert = hatEins ? masse.Value.Dimension2 : masse.Value.Dimension1;
+                        SchreibeLeeresMigrationsfeld(record, fehlendesFeld, fehlenderWert, quelle, vonHand);
+
+                        // Nur entfernen, wenn die Ergaenzung wirklich angekommen ist. Eine
+                        // kuenftige Schreibsperre darf den letzten Altwert nicht verschlucken.
+                        if (!GleichesMass(record.GetFieldValue(fehlendesFeld), fehlenderWert))
+                            continue;
                     }
                 }
 
@@ -134,6 +161,22 @@ public static class SchachtMasse
         }
 
         return geaendert;
+    }
+
+    private static bool GleichesMass(string? vorhanden, string erwartet)
+        => SiaAbmessung.NachMillimeter(vorhanden) == SiaAbmessung.NachMillimeter(erwartet);
+
+    private static void SchreibeLeeresMigrationsfeld(
+        SchachtRecord record,
+        string feld,
+        string wert,
+        FieldSource quelle,
+        bool vonHand)
+    {
+        if (vonHand)
+            record.SetFieldValue(feld, wert, quelle, userEdited: true);
+        else
+            record.FuelleLeeresFeld(feld, wert, quelle);
     }
 
     /// <summary>Dasselbe fuer alle Schaechte eines Projekts.</summary>

@@ -13,6 +13,8 @@ namespace AuswertungPro.Next.Infrastructure.Projects;
 /// Die Auswahlmenues fuehren nur noch die Begriffe der Norm; ohne Anhebung zeigte ein
 /// Bestandsprojekt dort leer an, obwohl ein Wert gespeichert ist. Gemessen an Zone 1.15
 /// betraf das 19 Haltungen und 10 Schaechte mit "Beton Normalbeton".
+/// Seit 2026-09-03 werden auch Profil- und Schachtformen auf die lesbare Uri-Auswahl
+/// gebracht.
 ///
 /// Zwei Grenzen gelten dabei fest:
 /// <list type="bullet">
@@ -37,12 +39,14 @@ internal static class ProjectVocabularyNormalizer
         {
             geaendert += Hebe(record?.Fields, FieldKeys.UsageType, NutzungsartVokabular.Normalisieren);
             geaendert += Hebe(record?.Fields, FieldKeys.PipeMaterial, MaterialVokabular.Normalisieren);
+            geaendert += Hebe(record?.Fields, FieldKeys.ProfileType, ProfiltypVokabular.Normalisieren);
         }
 
         foreach (var record in project.SchaechteData ?? [])
         {
             geaendert += Hebe(record?.Fields, "Funktion", SchachtFunktionVokabular.Normalisieren);
             geaendert += Hebe(record?.Fields, "Material", SchachtMaterialVokabular.Normalisieren);
+            geaendert += Hebe(record?.Fields, FieldKeys.ShaftShape, SchachtformVokabular.Normalisieren);
         }
 
         return geaendert;

@@ -164,7 +164,7 @@ namespace AuswertungPro.Next.UI
         /// <summary>Erzeugt revidierte XTF-Dateien aus dem aktuellen Projektstand.</summary>
         public AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService XtfRevisionExport { get; }
 
-        /// <summary>Der Erstexport: eine neue XTF fuer Objekte ohne Katastervorlage.</summary>
+        /// <summary>Der vollstaendige Neu-Export mit eigenen, stabilen XTF-Kennungen.</summary>
         public AuswertungPro.Next.Application.Xtf.IXtfNeuExportService XtfNeuExport { get; }
         public IProjectContentSignature ProjectContentSignature { get; }
         public IImportTransactionJournal ImportTransactionJournal { get; }

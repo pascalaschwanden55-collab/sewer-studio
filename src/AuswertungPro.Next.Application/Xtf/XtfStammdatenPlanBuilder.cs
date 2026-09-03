@@ -127,6 +127,15 @@ public static class XtfStammdatenPlanBuilder
         };
 
     /// <summary>
+    /// Bei einem widerspruechlichen Wechsel auf Kreis bleibt nur die Abmessung draussen.
+    /// Unabhaengige Haltungswerte wie Material oder Laenge duerfen weiterhin mitgehen.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string> HaltungFelderOhneAbmessung =
+        HaltungFelder
+            .Where(feld => !string.Equals(feld.Key, "Lichte_Hoehe", StringComparison.Ordinal))
+            .ToDictionary(feld => feld.Key, feld => feld.Value, StringComparer.Ordinal);
+
+    /// <summary>
     /// Abbildung XTF-Element -> Projektfeld fuer die Klasse "Rohrprofil".
     ///
     /// Der Profiltyp haengt nicht an der Haltung, sondern an einem eigenen Objekt, auf
@@ -242,7 +251,7 @@ public static class XtfStammdatenPlanBuilder
             return SiaKanalVokabular.BettungUmhuellung.NachNorm(wert);
 
         if (string.Equals(xtfName, "Profiltyp", StringComparison.Ordinal))
-            return SiaKanalVokabular.Profiltyp.NachNorm(wert);
+            return ProfiltypVokabular.NachNorm(wert);
 
         if (string.Equals(xtfName, "FunktionHydraulisch", StringComparison.Ordinal))
             return SiaKanalVokabular.FunktionHydraulisch.NachNorm(wert);
@@ -396,6 +405,7 @@ public static class XtfStammdatenPlanBuilder
                 if (HatHandaenderung(record, Felder)
                     || HatHandaenderung(record, HaltungFelder)
                     || HatHandaenderung(record, RohrprofilFelder)
+                    || HatHandaenderungAmVerhaeltnis(record)
                     || HatHandaenderung(record, EigentuemerFeldKarte))
                 {
                     hinweise.Add($"{name}: in der XTF nicht gefunden — die Handaenderung bleibt aussen vor.");
@@ -412,15 +422,35 @@ public static class XtfStammdatenPlanBuilder
                         ? record.GetFieldValue(FieldKeys.Owner)
                         : null,
                 hinweise);
+            var konfliktHoehe = "";
+            var konfliktBreite = "";
+            var profilMassKonflikt = ProfiltypWirdKreis(record)
+                                     && HatZweiVerschiedeneMasse(record, out konfliktHoehe, out konfliktBreite);
             SammlePosition(record, kanal, Felder, name, modell, positionen, hinweise, eigentuemer);
-            SammlePosition(record, haltungElement, HaltungFelder, name, modell, positionen, hinweise);
+            SammlePosition(
+                record,
+                haltungElement,
+                profilMassKonflikt ? HaltungFelderOhneAbmessung : HaltungFelder,
+                name,
+                modell,
+                positionen,
+                hinweise);
 
-            var profil = FindeProfil(haltungElement, profile, name, record, hinweise);
-            if (profil is not null)
+            if (profilMassKonflikt)
             {
-                SammlePosition(
-                    record, profil, RohrprofilFelder, name, modell, positionen, hinweise,
-                    VerhaeltnisFeld(record, profil, name, hinweise));
+                hinweise.Add(
+                    $"{name}: Kreisprofil mit zwei verschiedenen Massen ({konfliktHoehe} x {konfliktBreite}) — " +
+                    "Abmessung und Rohrprofil werden nicht geaendert.");
+            }
+            else
+            {
+                var profil = FindeProfil(haltungElement, profile, name, record, hinweise);
+                if (profil is not null)
+                {
+                    SammlePosition(
+                        record, profil, RohrprofilFelder, name, modell, positionen, hinweise,
+                        VerhaeltnisFeld(record, profil, name, hinweise));
+                }
             }
         }
 
@@ -563,9 +593,10 @@ public static class XtfStammdatenPlanBuilder
 
     /// <summary>
     /// Das Hoehen-Breiten-Verhaeltnis als Aenderung am Rohrprofil, oder <c>null</c>,
-    /// wenn nichts zu schreiben ist: keine Handaenderung an Hoehe oder Breite, rund
-    /// (Breite leer oder gleich der Hoehe), derselbe Wert wie in der Datei, oder ein
-    /// Widerspruch mit dem Kreisprofil, der gemeldet statt geschrieben wird.
+    /// wenn nichts zu schreiben ist. Eine bewusst auf leer oder gleich gesetzte Breite
+    /// entfernt ein vorhandenes altes Verhaeltnis ausdruecklich. Dasselbe gilt fuer einen
+    /// eindeutigen Profilwechsel auf Kreis. Ungueltige Masse, derselbe Wert wie in der
+    /// Datei oder ein Widerspruch mit dem Kreisprofil werden nicht geschrieben.
     /// </summary>
     private static XtfRevisionFeld? VerhaeltnisFeld(
         HaltungRecord record,
@@ -573,14 +604,28 @@ public static class XtfStammdatenPlanBuilder
         string name,
         List<string> hinweise)
     {
-        if (!HatHandaenderung(record, VerhaeltnisFelder))
+        var profiltypWirdKreis = ProfiltypWirdKreis(record);
+        if (!HatHandaenderungAmVerhaeltnis(record) && !profiltypWirdKreis)
             return null;
 
         var hoehe = record.GetFieldValue(FieldKeys.NominalDiameterMm);
         var breite = record.GetFieldValue(FieldKeys.ClearWidthMm);
         var neu = XtfRohrprofilVerhaeltnis.Berechne(hoehe, breite);
+
+        profil.Werte.TryGetValue(XtfRohrprofilVerhaeltnis.Attribut, out var alt);
+        alt = (alt ?? "").Trim();
         if (neu is null)
-            return null;
+        {
+            if ((!BreiteWurdeBewusstAufRundGesetzt(record, hoehe, breite) && !profiltypWirdKreis)
+                || alt.Length == 0)
+                return null;
+
+            return new XtfRevisionFeld(
+                XtfRohrprofilVerhaeltnis.Attribut,
+                alt,
+                Neu: null,
+                Aktion: XtfRevisionFeldAktion.Entfernen);
+        }
 
         var profiltypVonHand = record.FieldMeta.TryGetValue(FieldKeys.ProfileType, out var profilMeta)
                                && profilMeta.UserEdited;
@@ -595,8 +640,6 @@ public static class XtfStammdatenPlanBuilder
             return null;
         }
 
-        profil.Werte.TryGetValue(XtfRohrprofilVerhaeltnis.Attribut, out var alt);
-        alt = (alt ?? "").Trim();
         return XtfRohrprofilVerhaeltnis.Gleich(alt, neu)
             ? null
             : new XtfRevisionFeld(XtfRohrprofilVerhaeltnis.Attribut, alt.Length == 0 ? null : alt, neu);
@@ -609,13 +652,14 @@ public static class XtfStammdatenPlanBuilder
         HaltungRecord record,
         List<string> hinweise)
     {
-        // Hoehe oder Breite von Hand allein reichen nicht: Erst zwei verschiedene Masse
-        // ergeben ein Verhaeltnis, das ans Profil gehoert. Sonst meldete jede korrigierte
-        // Nennweite ein fehlendes Rohrprofil, obwohl es gar nichts zu schreiben gaebe.
-        var verhaeltnisNoetig = HatHandaenderung(record, VerhaeltnisFelder)
-                                && XtfRohrprofilVerhaeltnis.Berechne(
-                                    record.GetFieldValue(FieldKeys.NominalDiameterMm),
-                                    record.GetFieldValue(FieldKeys.ClearWidthMm)) is not null;
+        // Zwei verschiedene Masse setzen ein Verhaeltnis. Rund (gleiche Masse oder eine
+        // bewusst geleerte Breite) muss das vorhandene Verhaeltnis entfernen koennen.
+        // Ungueltige Masse duerfen dagegen weder schreiben noch loeschen.
+        var hoehe = record.GetFieldValue(FieldKeys.NominalDiameterMm);
+        var breite = record.GetFieldValue(FieldKeys.ClearWidthMm);
+        var verhaeltnisNoetig = HatHandaenderungAmVerhaeltnis(record)
+                                && (XtfRohrprofilVerhaeltnis.Berechne(hoehe, breite) is not null
+                                    || BreiteWurdeBewusstAufRundGesetzt(record, hoehe, breite));
         if (!HatHandaenderung(record, RohrprofilFelder) && !verhaeltnisNoetig)
             return null;
 
@@ -719,5 +763,47 @@ public static class XtfStammdatenPlanBuilder
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Beim Profilverhaeltnis ist auch das bewusste Leeren der Breite eine Aenderung:
+    /// zusammen mit einer gueltigen Hoehe bedeutet es "rund". Die allgemeine Feldpruefung
+    /// ignoriert leere Werte absichtlich und darf deshalb hier nicht verwendet werden.
+    /// </summary>
+    private static bool HatHandaenderungAmVerhaeltnis(HaltungRecord record)
+        => VerhaeltnisFelder.Values.Any(projektFeld =>
+            record.FieldMeta.TryGetValue(projektFeld, out var meta) && meta.UserEdited);
+
+    /// <summary>
+    /// Eine leere oder gleiche Breite bedeutet nur dann einen bewussten Wechsel auf rund,
+    /// wenn genau dieses Breitenfeld vom Menschen bearbeitet wurde. Eine allein geaenderte
+    /// Hoehe darf eine bloss fehlende importierte Breite nie als Loeschauftrag umdeuten.
+    /// </summary>
+    private static bool BreiteWurdeBewusstAufRundGesetzt(
+        HaltungRecord record,
+        string? hoehe,
+        string? breite)
+        => record.FieldMeta.TryGetValue(FieldKeys.ClearWidthMm, out var meta)
+           && meta.UserEdited
+           && XtfRohrprofilVerhaeltnis.IstRund(hoehe, breite);
+
+    private static bool ProfiltypWirdKreis(HaltungRecord record)
+        => record.FieldMeta.TryGetValue(FieldKeys.ProfileType, out var meta)
+           && meta.UserEdited
+           && string.Equals(
+               NachXtfWert("Profiltyp", record.GetFieldValue(FieldKeys.ProfileType) ?? ""),
+               "Kreisprofil",
+               StringComparison.Ordinal);
+
+    private static bool HatZweiVerschiedeneMasse(
+        HaltungRecord record,
+        out string hoehe,
+        out string breite)
+    {
+        hoehe = (record.GetFieldValue(FieldKeys.NominalDiameterMm) ?? "").Trim();
+        breite = (record.GetFieldValue(FieldKeys.ClearWidthMm) ?? "").Trim();
+        var h = SiaAbmessung.NachMillimeter(hoehe);
+        var b = SiaAbmessung.NachMillimeter(breite);
+        return h is > 0 and <= 99_999 && b is > 0 and <= 99_999 && h != b;
     }
 }

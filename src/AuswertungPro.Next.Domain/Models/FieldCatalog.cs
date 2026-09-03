@@ -16,6 +16,11 @@ public static class FieldCatalog
         FieldKeys.Street,
         FieldKeys.PipeMaterial,
         FieldKeys.NominalDiameterMm,
+        // Profilform und beide Innenmasse stehen zusammen wie in der GEONIS-Maske.
+        // Bei runden Rohren sind Hoehe und Breite gleich, bei Ei-, Maul- und
+        // Rechteckprofilen koennen sie verschieden sein.
+        FieldKeys.ProfileType,
+        FieldKeys.ClearWidthMm,
         FieldKeys.UsageType,
         FieldKeys.HoldingLengthMeters,
         "Inspektionsrichtung",
@@ -50,13 +55,11 @@ public static class FieldCatalog
         "Gewaesserschutz",
         "Grundwasserspiegel",
         FieldKeys.HierarchicalFunction,
-        // Ergaenzt 2026-09-02 fuer die revidierte XTF. Die drei ersten haben in SIA405
-        // ein Ziel (Kanal.Verbindungsart, Kanal.Bettung_Umhuellung, Rohrprofil.Profiltyp);
-        // die lichte Breite hat keines und bleibt eine reine Programmangabe.
+        // Ergaenzt 2026-09-02 fuer die revidierte XTF. Beide haben in SIA405 ein Ziel
+        // (Kanal.Verbindungsart und Kanal.Bettung_Umhuellung). Profiltyp und Breite
+        // stehen bereits oben direkt beim Hoehenmass.
         FieldKeys.ConnectionType,
         FieldKeys.BeddingEncasement,
-        FieldKeys.ProfileType,
-        FieldKeys.ClearWidthMm,
         // Die uebrigen Felder der Kataster-Infobox, ergaenzt 2026-09-02. Die ersten
         // sechs haben in SIA405 ein Ziel; die sechs Herkunftsangaben danach nicht —
         // sie sind Nachweis, keine Aussage von SewerStudio.
@@ -139,7 +142,7 @@ public static class FieldCatalog
             [FieldKeys.BeddingEncasement] = new ReadOnlyCollection<string>(
                 SiaKanalVokabular.BettungUmhuellung.Auswahl.ToList()),
             [FieldKeys.ProfileType] = new ReadOnlyCollection<string>(
-                SiaKanalVokabular.Profiltyp.Auswahl.ToList()),
+                ProfiltypVokabular.Auswahl.ToList()),
             [FieldKeys.HydraulicFunction] = new ReadOnlyCollection<string>(
                 SiaKanalVokabular.FunktionHydraulisch.Auswahl.ToList()),
             [FieldKeys.OperatingStatus] = new ReadOnlyCollection<string>(
@@ -157,7 +160,10 @@ public static class FieldCatalog
             [FieldKeys.HoldingName] = new(FieldKeys.HoldingName, "Haltungsname (ID)", FieldType.Text),
             [FieldKeys.Street] = new(FieldKeys.Street, "Strasse", FieldType.Text),
             [FieldKeys.PipeMaterial] = new(FieldKeys.PipeMaterial, "Rohrmaterial", FieldType.Combo, ComboItems[FieldKeys.PipeMaterial]),
-            [FieldKeys.NominalDiameterMm] = new(FieldKeys.NominalDiameterMm, "DN mm", FieldType.Int),
+            // Bei nicht runden Profilen ist DN fachlich die lichte Hoehe. Der
+            // Excel-Export ordnet diesen genaueren UI-Namen weiter dem bestehenden
+            // Vorlagenkopf "DN mm" zu.
+            [FieldKeys.NominalDiameterMm] = new(FieldKeys.NominalDiameterMm, "Lichte Höhe / DN mm", FieldType.Int),
             [FieldKeys.UsageType] = new(FieldKeys.UsageType, "Nutzungsart", FieldType.Combo, ComboItems[FieldKeys.UsageType]),
             [FieldKeys.HoldingLengthMeters] = new(FieldKeys.HoldingLengthMeters, "Haltungslänge m", FieldType.Decimal),
             ["Inspektionsrichtung"] = new("Inspektionsrichtung", "Inspektionsrichtung", FieldType.Combo, ComboItems["Inspektionsrichtung"]),
@@ -190,7 +196,7 @@ public static class FieldCatalog
             [FieldKeys.HierarchicalFunction] = new(FieldKeys.HierarchicalFunction, "Funktionale Hierarchie", FieldType.Combo, ComboItems[FieldKeys.HierarchicalFunction]),
             [FieldKeys.ConnectionType] = new(FieldKeys.ConnectionType, "Verbindungsart", FieldType.Combo, ComboItems[FieldKeys.ConnectionType]),
             [FieldKeys.BeddingEncasement] = new(FieldKeys.BeddingEncasement, "Bettung/Umhüllung", FieldType.Combo, ComboItems[FieldKeys.BeddingEncasement]),
-            [FieldKeys.ProfileType] = new(FieldKeys.ProfileType, "Profiltyp", FieldType.Combo, ComboItems[FieldKeys.ProfileType]),
+            [FieldKeys.ProfileType] = new(FieldKeys.ProfileType, "Profilform", FieldType.Combo, ComboItems[FieldKeys.ProfileType]),
             [FieldKeys.ClearWidthMm] = new(FieldKeys.ClearWidthMm, "Lichte Breite mm", FieldType.Int),
             [FieldKeys.OperatingStatus] = new(FieldKeys.OperatingStatus, "Status", FieldType.Combo, ComboItems[FieldKeys.OperatingStatus]),
             [FieldKeys.RehabilitationNeed] = new(FieldKeys.RehabilitationNeed, "Sanierungsbedarf", FieldType.Combo, ComboItems[FieldKeys.RehabilitationNeed]),
@@ -204,8 +210,13 @@ public static class FieldCatalog
             [FieldKeys.CadastreOrganisation] = new(FieldKeys.CadastreOrganisation, "Organisation", FieldType.Text),
             [FieldKeys.CadastreLastChange] = new(FieldKeys.CadastreLastChange, "Letzte Änderung", FieldType.Text),
             [FieldKeys.CadastreUpdatedAt] = new(FieldKeys.CadastreUpdatedAt, "Aktualisierungsdatum", FieldType.Text),
-            [FieldKeys.ShaftDimension1Mm] = new(FieldKeys.ShaftDimension1Mm, "Dimension 1 mm", FieldType.Int),
-            [FieldKeys.ShaftDimension2Mm] = new(FieldKeys.ShaftDimension2Mm, "Dimension 2 mm", FieldType.Int)
+            [FieldKeys.ShaftShape] = new(
+                FieldKeys.ShaftShape,
+                "Schachtform",
+                FieldType.Combo,
+                SchachtformVokabular.Auswahl),
+            [FieldKeys.ShaftDimension1Mm] = new(FieldKeys.ShaftDimension1Mm, "Grösstes Innenmass mm", FieldType.Int),
+            [FieldKeys.ShaftDimension2Mm] = new(FieldKeys.ShaftDimension2Mm, "Kleinstes Innenmass mm", FieldType.Int)
         });
 
     public static FieldDefinition Get(string fieldName)

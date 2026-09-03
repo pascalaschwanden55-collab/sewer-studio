@@ -27,12 +27,12 @@ public sealed record XtfNeuExportResult(
     string? Datei);
 
 /// <summary>
-/// Erzeugt aus dem Projektstand eine NEUE SIA405-XTF — fuer Objekte, die es im Kataster
-/// noch nicht gibt.
+/// Erzeugt aus dem ganzen Projektstand eine eigenstaendige, NEUE SIA405-XTF.
 ///
 /// Der Gegenpart ist <see cref="IXtfRevisionExportService"/>: Der ergaenzt eine vorhandene
 /// Kundendatei um Handaenderungen und braucht sie deshalb. Dieser Weg braucht keine
-/// Quelldatei und schreibt alles selbst.
+/// Quelldatei und schreibt alles selbst. Eine einzelne vorhandene Objekt-ID reicht nicht
+/// fuer den ganzen SIA405-Objektverbund; der Neu-Export vergibt deshalb eigene TIDs.
 ///
 /// Exportiert wird, was das Projekt enthaelt. Objekte, denen eine Pflichtangabe fehlt,
 /// erscheinen im Bericht statt in der Datei. Mit

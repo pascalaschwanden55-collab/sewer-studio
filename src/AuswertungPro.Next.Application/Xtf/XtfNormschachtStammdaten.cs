@@ -17,15 +17,18 @@ public sealed record XtfNormschachtElement(
     string? Bemerkung = null,
     string? Status = null,
     string? Sanierungsbedarf = null,
-    string? Baujahr = null);
+    string? Baujahr = null,
+    string? Datenherr = null,
+    string? Datenlieferant = null,
+    string? Tid = null);
 
 /// <summary>
 /// Bildet einen Normschacht der SIA405-XTF auf die Schachtfelder von SewerStudio ab.
 ///
 /// Uebernommen wird, was das Programm am Schacht fuehrt und was der Export wieder
-/// hinausschreibt: Nummer, Funktion, Material, die zwei Masse, Eigentuemer, Zustand,
-/// Bemerkung, Status, Sanierungsbedarf und Baujahr. Sohlenkote, Lagebestimmung und
-/// die Deckelangaben bleiben draussen; sie stehen im Protokoll.
+/// hinausschreibt: Nummer, Funktion, Material, die zwei Masse, Eigentuemer, Datenherr,
+/// Datenlieferant, Zustand, Bemerkung, Status, Sanierungsbedarf und Baujahr. Sohlenkote,
+/// Lagebestimmung und die Deckelangaben bleiben draussen; sie stehen im Protokoll.
 ///
 /// Status, Sanierungsbedarf, Baujahr und Bemerkung fehlten bis 2026-09-03. Die
 /// Rundreise Export, Import, Vergleich zeigte: Was SewerStudio selbst hinausschreibt,
@@ -60,11 +63,12 @@ public static class XtfNormschachtStammdaten
     /// <summary>
     /// Die Feldpaare fuer einen Schachtdatensatz, in stabiler Reihenfolge.
     ///
-    /// Leere und nicht abbildbare Werte fehlen einfach — ein Feld, das nichts aussagt,
-    /// wird nicht gesetzt. Insbesondere <c>unbekannt</c> ist keine Angabe: Im
-    /// Kantonsexport von Abwasser Uri steht es bei 211 von 295 Schaechten beim Material.
-    /// Es wuerde die Spalte fuellen, ohne etwas zu sagen, und dabei einen spaeteren
-    /// besseren Wert aus einer anderen Quelle blockieren.
+    /// Leere und nicht abbildbare Auswahlwerte fehlen einfach. Bei Funktion, Material,
+    /// Zustand und Status ist <c>unbekannt</c> keine Angabe: Im Kantonsexport von
+    /// Abwasser Uri steht es bei 211 von 295 Schaechten beim Material. In einer
+    /// Bemerkung ist dasselbe Wort dagegen echter Freitext. Bei Organisationsfeldern
+    /// entscheidet <see cref="EigentumVokabular"/>; dort darf es nicht vorher pauschal
+    /// entfernt werden.
     /// </summary>
     /// <summary>
     /// "Z0" bis "Z4" aus der XTF zur Ziffer, die das Programm fuehrt. Alles andere —
@@ -93,6 +97,11 @@ public static class XtfNormschachtStammdaten
         foreach (var feld in Nummernfelder)
             paare.Add(new(feld, nummer));
 
+        // SIA405 kennt keine separate OBJ_ID. Die TID ist die Katasteridentitaet und
+        // erlaubt eine spaetere Revision am richtigen Normschacht. Der eigenstaendige
+        // Neu-Export vergibt dagegen bewusst einen vollstaendigen eigenen TID-Verbund.
+        Ergaenze(FieldKeys.CadastreObjectId, element.Tid);
+
         Ergaenze("Funktion", SchachtFunktionVokabular.Normalisieren(element.Funktion));
         Ergaenze("Material", SchachtMaterialVokabular.Normalisieren(element.Material));
 
@@ -105,19 +114,32 @@ public static class XtfNormschachtStammdaten
             paare.Add(new(FieldKeys.ShaftDimension2Mm, masse.Value.Dimension2));
         }
 
-        Ergaenze(FieldKeys.Owner, EigentumVokabular.Normalisieren(element.Eigentuemer));
+        Ergaenze(
+            FieldKeys.Owner,
+            EigentumVokabular.Normalisieren(element.Eigentuemer),
+            unbekanntIstLeer: false);
         Ergaenze(FieldKeys.ConditionClass, Zustandsklasse(element.BaulicherZustand));
-        Ergaenze(FieldKeys.Remarks, element.Bemerkung);
+        Ergaenze(FieldKeys.Remarks, element.Bemerkung, unbekanntIstLeer: false);
         Ergaenze(FieldKeys.OperatingStatus, element.Status);
         Ergaenze(FieldKeys.RehabilitationNeed, element.Sanierungsbedarf);
         Ergaenze(FieldKeys.ConstructionYear, element.Baujahr);
+        Ergaenze(
+            FieldKeys.DataOwner,
+            EigentumVokabular.Normalisieren(element.Datenherr),
+            unbekanntIstLeer: false);
+        Ergaenze(
+            FieldKeys.DataSupplier,
+            EigentumVokabular.Normalisieren(element.Datenlieferant),
+            unbekanntIstLeer: false);
 
         return paare;
 
-        void Ergaenze(string feld, string? wert)
+        void Ergaenze(string feld, string? wert, bool unbekanntIstLeer = true)
         {
             var text = (wert ?? "").Trim();
-            if (text.Length == 0 || string.Equals(text, "unbekannt", StringComparison.OrdinalIgnoreCase))
+            if (text.Length == 0
+                || (unbekanntIstLeer
+                    && string.Equals(text, "unbekannt", StringComparison.OrdinalIgnoreCase)))
                 return;
 
             paare.Add(new(feld, text));
