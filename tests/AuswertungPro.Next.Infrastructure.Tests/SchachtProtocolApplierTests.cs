@@ -19,7 +19,9 @@ public sealed class SchachtProtocolApplierTests
         Assert.Equal("74467", record.GetFieldValue("Schachtnummer"));
         Assert.Equal("Kontrollschacht", record.GetFieldValue("Funktion"));
         Assert.Equal("Rund", record.GetFieldValue("Schachtform"));
-        Assert.Equal("1000 mm", record.GetFieldValue("Dimension"));
+        Assert.Equal("1000", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("1000", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
+        Assert.False(record.Fields.ContainsKey("Dimension"));
         Assert.Equal("2.35", record.GetFieldValue("Schachttiefe"));
         Assert.Equal("C:/x/quelle.pdf", record.GetFieldValue("PDF_Path"));
         Assert.NotNull(record.Protocol);

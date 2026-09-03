@@ -13,19 +13,31 @@ public sealed record XtfNormschachtElement(
     string? Dimension1 = null,
     string? Dimension2 = null,
     string? Eigentuemer = null,
-    string? BaulicherZustand = null);
+    string? BaulicherZustand = null,
+    string? Bemerkung = null,
+    string? Status = null,
+    string? Sanierungsbedarf = null,
+    string? Baujahr = null);
 
 /// <summary>
 /// Bildet einen Normschacht der SIA405-XTF auf die Schachtfelder von SewerStudio ab.
 ///
-/// Uebernommen wird nur, was in der Schachttabelle wirklich gebraucht wird: Nummer,
-/// Funktion, Material, Dimension und Eigentuemer. Status, Sanierungsbedarf, Baujahr,
-/// Sohlenkote, Lagebestimmung und die Deckelangaben bleiben bewusst draussen — sie sind
-/// informativ und stehen im Protokoll.
+/// Uebernommen wird, was das Programm am Schacht fuehrt und was der Export wieder
+/// hinausschreibt: Nummer, Funktion, Material, die zwei Masse, Eigentuemer, Zustand,
+/// Bemerkung, Status, Sanierungsbedarf und Baujahr. Sohlenkote, Lagebestimmung und
+/// die Deckelangaben bleiben draussen; sie stehen im Protokoll.
+///
+/// Status, Sanierungsbedarf, Baujahr und Bemerkung fehlten bis 2026-09-03. Die
+/// Rundreise Export, Import, Vergleich zeigte: Was SewerStudio selbst hinausschreibt,
+/// kam nicht zurueck. Beim Import gewinnt die Datei, nur so sind GEONIS und
+/// SewerStudio nach einem Austausch identisch.
+///
+/// Die Masse landen in den zwei Zahlenfeldern von <see cref="Schacht.SchachtMasse"/>,
+/// nicht mehr im alten Textfeld <c>Dimension</c>.
 ///
 /// Die Feldnamen folgen der Konvention des PDF-, WinCan- und SchachtPro-Imports
-/// (<c>Schachtnummer</c>, <c>NR.</c>, <c>Nr.</c>, <c>Funktion</c>, <c>Material</c>,
-/// <c>Dimension</c>), damit ein Schacht aus verschiedenen Quellen derselbe bleibt.
+/// (<c>Schachtnummer</c>, <c>NR.</c>, <c>Nr.</c>, <c>Funktion</c>, <c>Material</c>),
+/// damit ein Schacht aus verschiedenen Quellen derselbe bleibt.
 ///
 /// Reine Werte-Logik ohne Zustand und ohne Dateizugriff.
 /// </summary>
@@ -83,9 +95,22 @@ public static class XtfNormschachtStammdaten
 
         Ergaenze("Funktion", SchachtFunktionVokabular.Normalisieren(element.Funktion));
         Ergaenze("Material", SchachtMaterialVokabular.Normalisieren(element.Material));
-        Ergaenze("Dimension", Dimension(element.Dimension1, element.Dimension2));
+
+        // Dimension1/Dimension2 tragen laut Modell den Typ Abmessung (Millimeter, Null =
+        // unbekannt). Fehlt eines, gilt das vorhandene fuer beide Richtungen.
+        var masse = Schacht.SchachtMasse.AusZwei(element.Dimension1, element.Dimension2);
+        if (masse is not null)
+        {
+            paare.Add(new(FieldKeys.ShaftDimension1Mm, masse.Value.Dimension1));
+            paare.Add(new(FieldKeys.ShaftDimension2Mm, masse.Value.Dimension2));
+        }
+
         Ergaenze(FieldKeys.Owner, EigentumVokabular.Normalisieren(element.Eigentuemer));
         Ergaenze(FieldKeys.ConditionClass, Zustandsklasse(element.BaulicherZustand));
+        Ergaenze(FieldKeys.Remarks, element.Bemerkung);
+        Ergaenze(FieldKeys.OperatingStatus, element.Status);
+        Ergaenze(FieldKeys.RehabilitationNeed, element.Sanierungsbedarf);
+        Ergaenze(FieldKeys.ConstructionYear, element.Baujahr);
 
         return paare;
 
@@ -97,31 +122,5 @@ public static class XtfNormschachtStammdaten
 
             paare.Add(new(feld, text));
         }
-    }
-
-    /// <summary>
-    /// Die Schachtdimension als Text, in der Schreibweise der Bestandsdaten:
-    /// <c>600 mm</c> beim runden Schacht, <c>1100 x 900 mm</c> beim eckigen.
-    ///
-    /// Das Format stammt aus dem PDF-Import, der in den echten Projekten
-    /// <c>600 mm</c> und <c>100 x 100 mm</c> geschrieben hat. Ein zweites Format
-    /// daneben waere in derselben Excel-Spalte nur verwirrend.
-    ///
-    /// <c>Dimension1</c> und <c>Dimension2</c> tragen laut Modell den Typ
-    /// <c>SIA405_Base_Abwasser.Abmessung</c> und stehen damit in Millimetern; die Null
-    /// bedeutet unbekannt. <c>null</c> heisst hier: keine brauchbare Angabe.
-    /// </summary>
-    public static string? Dimension(string? erstes, string? zweites)
-    {
-        var a = SiaAbmessung.NachMillimeter(erstes);
-        var b = SiaAbmessung.NachMillimeter(zweites);
-
-        // Fehlt eines der beiden Masse, gilt das vorhandene fuer beide Richtungen.
-        a ??= b;
-        b ??= a;
-        if (a is null || b is null)
-            return null;
-
-        return a == b ? $"{a} mm" : $"{a} x {b} mm";
     }
 }

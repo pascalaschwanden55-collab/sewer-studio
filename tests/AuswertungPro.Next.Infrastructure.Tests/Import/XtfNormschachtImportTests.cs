@@ -1,4 +1,4 @@
-﻿using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
@@ -70,6 +70,7 @@ public sealed class XtfNormschachtImportTests : IDisposable
         <Material>unbekannt</Material>
         <Dimension1>1100</Dimension1>
         <Dimension2>900</Dimension2>
+        <Bemerkung>Tauchbogen fehlt</Bemerkung>
         <Eigentuemer>Abwasser Uri</Eigentuemer>
       </SIA405_Abwasser.SIA405_Abwasser.Normschacht>
     </SIA405_Abwasser.SIA405_Abwasser>
@@ -160,9 +161,12 @@ public sealed class XtfNormschachtImportTests : IDisposable
     {
         var p = Importiere();
 
-        // Bestandsformat aus dem PDF-Import: "600 mm" bzw. "100 x 100 mm".
-        Assert.Equal("600 mm", Schacht(p, "82099").GetFieldValue("Dimension"));
-        Assert.Equal("1100 x 900 mm", Schacht(p, "82265").GetFieldValue("Dimension"));
+        // Die Masse leben in zwei Zahlenfeldern: rund = beide gleich, eckig = zwei Werte.
+        Assert.Equal("600", Schacht(p, "82099").GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("600", Schacht(p, "82099").GetFieldValue(FieldKeys.ShaftDimension2Mm));
+        Assert.Equal("1100", Schacht(p, "82265").GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("900", Schacht(p, "82265").GetFieldValue(FieldKeys.ShaftDimension2Mm));
+        Assert.False(Schacht(p, "82099").Fields.ContainsKey("Dimension"));
     }
 
     [Fact]
@@ -181,17 +185,20 @@ public sealed class XtfNormschachtImportTests : IDisposable
     }
 
     [Fact]
-    public void Die_informativen_Felder_bleiben_draussen()
+    public void Status_Baujahr_und_Bemerkung_kommen_an_die_Deckelangaben_nicht()
     {
-        // Entscheid: Status, Sanierungsbedarf, Baujahr und die Deckelangaben bleiben im
-        // Protokoll und gehoeren nicht in die Schachttabelle.
-        var s = Schacht(Importiere(), "82099");
+        // Bis 2026-09-03 blieben Status, Sanierungsbedarf, Baujahr und Bemerkung draussen.
+        // Die Rundreise Export, Import, Vergleich zeigte: Was SewerStudio selbst
+        // hinausschreibt, kam nicht zurueck. "unbekannt" bleibt weiterhin keine Angabe.
+        var p = Importiere();
+        var s = Schacht(p, "82099");
+        Assert.Equal("in_Betrieb", s.GetFieldValue(FieldKeys.OperatingStatus));
+        Assert.Equal("1975", s.GetFieldValue(FieldKeys.ConstructionYear));
+        Assert.True(string.IsNullOrEmpty(s.GetFieldValue(FieldKeys.RehabilitationNeed)), "unbekannt ist keine Angabe");
+        Assert.Equal("Tauchbogen fehlt", Schacht(p, "82265").GetFieldValue(FieldKeys.Remarks));
 
-        foreach (var feld in new[] { "Status", "Sanierungsbedarf", "Baujahr", "Sohlenkote",
-                                     "Deckelmaterial", "Deckelform", "Deckeldurchmesser", "Steighilfe" })
-        {
+        foreach (var feld in new[] { "Sohlenkote", "Deckelmaterial", "Deckelform", "Deckeldurchmesser", "Steighilfe" })
             Assert.True(string.IsNullOrEmpty(s.GetFieldValue(feld)), $"{feld} sollte leer bleiben");
-        }
     }
 
     [Fact]

@@ -179,15 +179,17 @@ public sealed class LeereFelderPlanBuilderTests
     // --- Schaechte ---
 
     [Fact]
-    public void Eine_runde_Schachtdimension_steht_in_einem_Feld()
+    public void Eine_runde_Schachtdimension_fuellt_beide_Zahlenfelder_gleich()
     {
         var plan = LeereFelderPlanBuilder.BaueFuerSchaechte(
             new[] { Schacht("80401") },
             Bestand(BauteilArt.Schacht,
                 ("80401", ("ns_dimension1", "600")), ("80401", ("ns_dimension2", "600"))));
 
-        var position = Assert.Single(plan.Positionen, p => p.Feld == "Dimension");
-        Assert.Equal("600 mm", position.Wert);
+        Assert.Equal("600", Assert.Single(plan.Positionen, p => p.Feld == FieldKeys.ShaftDimension1Mm).Wert);
+        Assert.Equal("600", Assert.Single(plan.Positionen, p => p.Feld == FieldKeys.ShaftDimension2Mm).Wert);
+        // Das alte Textfeld wird nicht mehr angeboten.
+        Assert.DoesNotContain(plan.Positionen, p => p.Feld == "Dimension");
     }
 
     [Fact]
@@ -198,7 +200,8 @@ public sealed class LeereFelderPlanBuilderTests
             Bestand(BauteilArt.Schacht,
                 ("80401", ("ns_dimension1", "1100")), ("80401", ("ns_dimension2", "900"))));
 
-        Assert.Equal("1100 x 900 mm", Assert.Single(plan.Positionen, p => p.Feld == "Dimension").Wert);
+        Assert.Equal("1100", Assert.Single(plan.Positionen, p => p.Feld == FieldKeys.ShaftDimension1Mm).Wert);
+        Assert.Equal("900", Assert.Single(plan.Positionen, p => p.Feld == FieldKeys.ShaftDimension2Mm).Wert);
     }
 
     // Der AWU-Export schreibt am Schacht Werte aus der ROHR-Materialliste.

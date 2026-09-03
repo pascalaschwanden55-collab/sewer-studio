@@ -87,17 +87,17 @@ public sealed class LeereFelderAnwenderTests
     {
         var record = new SchachtRecord();
         record.SetFieldValue("Schachtnummer", "33461", FieldSource.Xtf, userEdited: false);
-        record.SetFieldValue("Dimension", "120 x 120 mm", FieldSource.Manual, userEdited: true);
-        record.Fields["Dimension"] = "";
+        record.SetFieldValue(FieldKeys.ShaftDimension1Mm, "120", FieldSource.Manual, userEdited: true);
+        record.Fields[FieldKeys.ShaftDimension1Mm] = "";
 
         var plan = new LeereFelderPlan(
             BauteilArt.Schacht,
-            new[] { new LeereFeldPosition("33461", "Dimension", "600 mm") },
+            new[] { new LeereFeldPosition("33461", FieldKeys.ShaftDimension1Mm, "600") },
             Array.Empty<LeerfeldHinweis>(),
             GepruefteBauteile: 1);
 
         Assert.Equal(1, LeereFelderAnwender.WendeAnAufSchaechte(new[] { record }, plan));
-        Assert.Equal("600 mm", record.GetFieldValue("Dimension"));
+        Assert.Equal("600", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
     }
 
     // Die gezaehlte Zahl muss stimmen. Vorher zaehlte der Ausfuehrer jeden Versuch,

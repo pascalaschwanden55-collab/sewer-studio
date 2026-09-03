@@ -143,7 +143,8 @@ public sealed class XtfRundreiseTests
         Assert.Equal("78998", schacht.GetFieldValue("Schachtnummer"));
         Assert.Equal("Kontrollschacht", schacht.GetFieldValue("Funktion"));
         Assert.Equal("Beton", schacht.GetFieldValue("Material"));
-        Assert.Equal("800 mm", schacht.GetFieldValue("Dimension"));
+        Assert.Equal("800", schacht.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("800", schacht.GetFieldValue(FieldKeys.ShaftDimension2Mm));
     }
 
     [Fact]

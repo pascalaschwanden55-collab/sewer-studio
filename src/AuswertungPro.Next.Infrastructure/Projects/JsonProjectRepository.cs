@@ -70,6 +70,14 @@ public sealed class JsonProjectRepository : IProjectRepository
             // die Herkunft bleibt unangetastet - deshalb wird das Projekt dadurch auch
             // nicht als geaendert markiert.
             ProjectVocabularyNormalizer.Normalize(project);
+
+            // Die Schachtmasse leben seit 2026-09-03 nur noch in den zwei Zahlenfeldern.
+            // Ein Bestandsprojekt mit dem alten Textfeld ("1100 x 900 mm") wird hier
+            // umgestellt; das ist eine echte Aenderung und wird beim naechsten Speichern
+            // festgehalten.
+            if (AuswertungPro.Next.Application.Schacht.SchachtMasse.UebernimmAlteTextfelder(project.SchaechteData) > 0)
+                project.Dirty = true;
+
             return Result<Project>.Success(project);
         }
         catch (Exception ex)

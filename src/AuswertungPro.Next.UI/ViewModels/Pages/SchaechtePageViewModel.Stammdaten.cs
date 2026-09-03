@@ -85,7 +85,8 @@ public sealed partial class SchaechtePageViewModel
                     record.GetFieldValue("PDF_Path"),
                     record.GetFieldValue("Link"),
                     record.GetFieldValue("Schachtform"),
-                    record.GetFieldValue("Dimension"),
+                    // Die Masse leben in zwei Zahlenfeldern; fuer "fehlt noch" genuegt das erste.
+                    record.GetFieldValue(Domain.Models.SchachtFeldnamen.Feld(record, Domain.Models.FieldKeys.ShaftDimension1Mm)),
                     record.GetFieldValue("Schachttiefe")))
                 .ToList();
         }

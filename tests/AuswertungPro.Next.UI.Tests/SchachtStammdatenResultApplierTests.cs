@@ -36,11 +36,12 @@ public sealed class SchachtStammdatenResultApplierTests
                 alreadyComplete: 3));
 
         Assert.Equal("rund", record.GetFieldValue("Schachtform"));
-        Assert.Equal("1200", record.GetFieldValue("Dimension"));
+        Assert.Equal("1200", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("1200", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
         Assert.Equal("2.40", record.GetFieldValue("Schachttiefe"));
         Assert.Equal("bleibt", record.GetFieldValue("Notiz"));
         Assert.Equal(
-            ["Fields[Schachtform]", "Fields[Dimension]", "Fields[Schachttiefe]"],
+            ["Fields[Schachtform]", "Fields[Dimension 1 mm]", "Fields[Dimension 2 mm]", "Fields[Schachttiefe]"],
             changedFields);
         Assert.Equal(1, result.ChangedShaftCount);
         Assert.Equal(3, result.AddedFieldCount);
@@ -79,7 +80,7 @@ public sealed class SchachtStammdatenResultApplierTests
                 ]));
 
         Assert.Equal("eckig", record.GetFieldValue("Schachtform"));
-        Assert.Empty(record.GetFieldValue("Dimension"));
+        Assert.Empty(record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
         Assert.Equal("2.00", record.GetFieldValue("Schachttiefe"));
         Assert.Equal(1, result.ChangedShaftCount);
         Assert.Equal(1, result.AddedFieldCount);
@@ -108,7 +109,8 @@ public sealed class SchachtStammdatenResultApplierTests
     {
         var record = new SchachtRecord();
         record.SetFieldValue("Schachtform", "rund");
-        record.SetFieldValue("Dimension", "1000");
+        record.SetFieldValue(FieldKeys.ShaftDimension1Mm, "1000");
+        record.SetFieldValue(FieldKeys.ShaftDimension2Mm, "1000");
         record.SetFieldValue("Schachttiefe", "2.00");
 
         var result = SchachtStammdatenResultApplier.Apply(
@@ -125,7 +127,7 @@ public sealed class SchachtStammdatenResultApplierTests
                 ]));
 
         Assert.Equal("rund", record.GetFieldValue("Schachtform"));
-        Assert.Equal("1000", record.GetFieldValue("Dimension"));
+        Assert.Equal("1000", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
         Assert.Equal("2.00", record.GetFieldValue("Schachttiefe"));
         Assert.Equal(0, result.ChangedShaftCount);
         Assert.Equal(0, result.AddedFieldCount);
@@ -275,7 +277,8 @@ public sealed class SchachtStammdatenResultApplierTests
                 alreadyComplete: 0));
 
         Assert.Equal("", record.GetFieldValue("Schachtform"));
-        Assert.Equal("1200", record.GetFieldValue("Dimension"));
+        Assert.Equal("1200", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("1200", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
         Assert.Equal(2, result.AddedFieldCount);
     }
 }

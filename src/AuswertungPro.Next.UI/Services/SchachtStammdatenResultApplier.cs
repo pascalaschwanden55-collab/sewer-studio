@@ -38,7 +38,17 @@ internal static class SchachtStammdatenResultApplier
 
             var recordChanged = false;
             recordChanged |= SetIfMissing(record, "Schachtform", addition.Schachtform, ref addedFields);
-            recordChanged |= SetIfMissing(record, "Dimension", addition.Dimension, ref addedFields);
+            // Die Masse leben in den zwei Zahlenfeldern; sie zaehlen als ein Feld.
+            if (AuswertungPro.Next.Application.Schacht.SchachtMasse.Schreibe(
+                    record,
+                    AuswertungPro.Next.Application.Schacht.SchachtMasse.Lies(addition.Dimension),
+                    FieldSource.Pdf,
+                    userEdited: false,
+                    nurLeere: true))
+            {
+                addedFields++;
+                recordChanged = true;
+            }
             recordChanged |= SetIfMissing(record, "Schachttiefe", addition.Schachttiefe, ref addedFields);
             if (recordChanged)
                 changedShafts++;

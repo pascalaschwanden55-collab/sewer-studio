@@ -401,7 +401,9 @@ public sealed class WinCanDbImportSchachtTests
                 string.Equals(s.GetFieldValue("Schachtnummer"), "06", StringComparison.OrdinalIgnoreCase));
             Assert.NotNull(schacht);
             Assert.Equal("rund", schacht!.GetFieldValue("Schachtform"));
-            Assert.Equal("1000", schacht.GetFieldValue("Durchmesser"));
+            Assert.Equal("1000", schacht.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+            Assert.Equal("1000", schacht.GetFieldValue(FieldKeys.ShaftDimension2Mm));
+            Assert.False(schacht.Fields.ContainsKey("Durchmesser"));
             Assert.Equal("2500", schacht.GetFieldValue("Schachttiefe"));
             Assert.False(string.IsNullOrWhiteSpace(schacht.GetFieldValue("Material")));
         }

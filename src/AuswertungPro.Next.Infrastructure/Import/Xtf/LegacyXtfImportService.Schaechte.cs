@@ -55,7 +55,11 @@ public sealed partial class LegacyXtfImportService
                 Kind("Dimension1"),
                 Kind("Dimension2"),
                 Kind("Eigentuemer") ?? Verweis(node, "EigentuemerRef", organisationen),
-                Kind("BaulicherZustand")));
+                Kind("BaulicherZustand"),
+                Kind("Bemerkung"),
+                Kind("Status"),
+                Kind("Sanierungsbedarf"),
+                Kind("Baujahr")));
         }
 
         return elemente;

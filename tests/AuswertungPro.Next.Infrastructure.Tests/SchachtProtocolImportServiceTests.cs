@@ -208,7 +208,8 @@ public sealed class SchachtProtocolImportServiceTests
         Assert.Equal("74467", schacht.GetFieldValue("Schachtnummer"));
         Assert.Equal("Kontrollschacht", schacht.GetFieldValue("Funktion"));
         Assert.Equal("Rund", schacht.GetFieldValue("Schachtform"));
-        Assert.Equal("1000 mm", schacht.GetFieldValue("Dimension"));
+        Assert.Equal("1000", schacht.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("1000", schacht.GetFieldValue(FieldKeys.ShaftDimension2Mm));
         Assert.Equal("2.35", schacht.GetFieldValue("Schachttiefe"));
         Assert.Equal("Schaechte_Verteilt/74467/quelle.pdf", schacht.GetFieldValue("PDF_Path"));
         Assert.NotNull(schacht.Protocol);

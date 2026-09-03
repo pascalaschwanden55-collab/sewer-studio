@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Schacht;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -39,7 +40,7 @@ internal static class SchachtProtocolApplier
         WriteProtocolField(target, "Ausfuehrung Datum/Jahr", parsed.Datum, rebuildFromProtocol, onlyMissing);
         WriteProtocolField(target, "Funktion", parsed.Funktion, rebuildFromProtocol, onlyMissing);
         WriteProtocolField(target, "Schachtform", parsed.Schachtform, rebuildFromProtocol, onlyMissing);
-        WriteProtocolField(target, "Dimension", parsed.Dimension, rebuildFromProtocol, onlyMissing);
+        WriteDimension(target, parsed.Dimension, rebuildFromProtocol, onlyMissing);
         WriteProtocolField(target, "Schachttiefe", parsed.Schachttiefe, rebuildFromProtocol, onlyMissing);
         WriteProtocolField(target, "Primaere Schaeden", parsed.PrimaereSchaeden, rebuildFromProtocol, onlyMissing);
         WriteProtocolField(target, "Bemerkungen", parsed.Bemerkungen, rebuildFromProtocol, onlyMissing);
@@ -141,6 +142,31 @@ internal static class SchachtProtocolApplier
 
         if (rebuildFromProtocol)
             ClearSchachtField(record, logicalField);
+    }
+
+    /// <summary>
+    /// Die Masse aus dem PDF ("1000 mm", "1200 x 800 mm") landen in den zwei
+    /// Zahlenfeldern, nicht mehr im alten Textfeld. Ergaenzungsmodus und Neuaufbau
+    /// gelten wie fuer jedes andere Protokollfeld.
+    /// </summary>
+    private static void WriteDimension(
+        SchachtRecord record,
+        string? value,
+        bool rebuildFromProtocol,
+        bool fillMissingOnly)
+    {
+        var masse = SchachtMasse.Lies(value);
+        if (masse is not null)
+        {
+            SchachtMasse.Schreibe(record, masse, FieldSource.Pdf, userEdited: false, nurLeere: fillMissingOnly);
+            return;
+        }
+
+        if (rebuildFromProtocol)
+        {
+            ClearSchachtField(record, FieldKeys.ShaftDimension1Mm);
+            ClearSchachtField(record, FieldKeys.ShaftDimension2Mm);
+        }
     }
 
     private static void ClearSchachtField(SchachtRecord record, string logicalField)

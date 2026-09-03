@@ -1177,11 +1177,20 @@ fuer Kantonsdateien:
   stehen, solange KEIN bewertbarer Befund vorliegt. Mit Befunden rechnet SewerStudio
   weiterhin selbst. Entscheid Pascal 2026-09-03: Beim Import gewinnt die Datei — nur so
   sind GEONIS und SewerStudio nach einem Austausch identisch.
-- **Die Schachtmasse kommen aus den getrennten Feldern.** Das Programm fuehrt sie
-  doppelt: `Dimension 1 mm` / `Dimension 2 mm` (seit 2026-09-02) und weiterhin im
-  aelteren Textfeld `Dimension` ("600 mm", "1100 x 900 mm"). `XtfSchachtPlanBuilder.Masse`
-  bevorzugt die getrennten und meldet einen Widerspruch. Ist nur eines gefuellt, gilt der
-  Schacht als rund und der Wert steht in beiden Feldern.
+- **Die Schachtmasse leben nur noch in `Dimension 1 mm` / `Dimension 2 mm`** (Entscheid
+  Pascal 2026-09-03: rund = 600 / 600, oval = 1100 / 900). `SchachtMasse` in
+  `Application/Schacht` ist die eine Regel dafuer: Sie liest die alten Texte ("600 mm",
+  "1100 x 900 mm", "0.60/1.00"), schreibt beide Felder unter der Schreibweise des
+  Datensatzes und stellt Bestandsprojekte beim Laden um (`JsonProjectRepository.Load`,
+  markiert das Projekt als geaendert). Die alten Textfelder `Dimension` und
+  `Durchmesser` werden dabei entfernt; nur ein unlesbarer Text bleibt sichtbar stehen.
+  PDF-, WinCan-, SchachtPro-, XTF-Import, QGIS-Nachfuellen und der Stammdaten-Nachlauf
+  schreiben alle die zwei Zahlen. Anlass: 61 von 392 Schaechten trugen nur den Text,
+  2 die Zahlen, und Export und Anzeige zeigten verschiedene Werte.
+  `XtfSchachtPlanBuilder.Masse` liest den Text nur noch als Rueckfall fuer ein Projekt,
+  das nie ueber `Load` gegangen ist. Ist nur eines der zwei Felder gefuellt, gilt der
+  Schacht als rund und der Wert steht in beiden. `Schachtform` bleibt ein eigenes Feld
+  (220 Schaechte tragen eine Form, 160 davon ohne Mass); SIA405 hat dafuer kein Ziel.
 - **SIA405 kennt am `Normschacht` keine Form.** Ein ovaler Schacht ist dort einer mit
   zwei verschiedenen Massen. Das Programmfeld `Schachtform` geht deshalb nicht in die
   Datei; `Formwiderspruch(...)` meldet nur, wenn Form und Masse sich widersprechen

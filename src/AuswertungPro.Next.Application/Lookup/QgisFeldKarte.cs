@@ -82,16 +82,8 @@ public static class QgisFeldKarte
         new("ka_nutzungsart", FieldKeys.UsageType, w => Leer(NutzungsartVokabular.Normalisieren(w)))
     ];
 
-    /// <summary>
-    /// Die Dimension steht im Programm als EIN Text ("600 mm", "1100 x 900 mm"),
-    /// im Bestand dagegen in zwei Spalten. Deshalb eine eigene Regel und keine
-    /// Zeile in der Tabelle oben.
-    /// </summary>
-    public const string SchachtDimensionsfeld = "Dimension";
-
     public static IReadOnlyList<string> Felder(BauteilArt art)
         => Tabelle(art).Select(z => z.Feld)
-            .Concat(art == BauteilArt.Schacht ? [SchachtDimensionsfeld] : Array.Empty<string>())
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
@@ -105,12 +97,6 @@ public static class QgisFeldKarte
     public static string? Wert(QgisBauteil bauteil, string feld, BauteilArt art)
     {
         ArgumentNullException.ThrowIfNull(bauteil);
-
-        if (art == BauteilArt.Schacht
-            && string.Equals(feld, SchachtDimensionsfeld, StringComparison.Ordinal))
-        {
-            return Dimension(bauteil);
-        }
 
         foreach (var zuordnung in Tabelle(art))
         {
@@ -214,29 +200,4 @@ public static class QgisFeldKarte
         return zahl.ToString("0.##", CultureInfo.GetCultureInfo("de-CH"));
     }
 
-    /// <summary>
-    /// Die Schachtdimension aus beiden Spalten, in der Schreibweise der
-    /// Bestandsdaten: <c>600 mm</c> beim runden, <c>1100 x 900 mm</c> beim
-    /// eckigen Schacht. Dieselbe Form wie beim XTF- und PDF-Import.
-    /// </summary>
-    private static string? Dimension(QgisBauteil bauteil)
-    {
-        var eins = Millimeter(bauteil, "ns_dimension1");
-        if (eins is null)
-            return null;
-
-        var zwei = Millimeter(bauteil, "ns_dimension2");
-        return zwei is null || zwei == eins
-            ? $"{eins} mm"
-            : $"{eins} x {zwei} mm";
-    }
-
-    private static long? Millimeter(QgisBauteil bauteil, string spalte)
-    {
-        if (!bauteil.Werte.TryGetValue(spalte, out var roh))
-            return null;
-
-        var text = GanzeZahl((roh ?? "").Trim());
-        return text is null ? null : long.Parse(text, CultureInfo.InvariantCulture);
-    }
 }

@@ -84,8 +84,14 @@ internal static class SchachtProProtocolMapper
             dimension = $"{dto.Laenge.Trim()} x {dto.Breite.Trim()}";
         }
 
-        Add(SchachtProFieldNames.Dimension, dimension);
-        Add(SchachtProFieldNames.Durchmesser, dimension);
+        // Die Masse leben in den zwei Zahlenfeldern; die Textfelder "Dimension" und
+        // "Durchmesser" sind seit 2026-09-03 abgeloest.
+        var masse = AuswertungPro.Next.Application.Schacht.SchachtMasse.Lies(dimension);
+        if (masse is not null)
+        {
+            Add(Domain.Models.FieldKeys.ShaftDimension1Mm, masse.Value.Dimension1);
+            Add(Domain.Models.FieldKeys.ShaftDimension2Mm, masse.Value.Dimension2);
+        }
 
         if (dto.Doppelschacht)
             Add(SchachtProFieldNames.Doppelschacht, "Ja");

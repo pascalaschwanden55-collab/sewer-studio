@@ -48,8 +48,10 @@ public sealed partial class SchachtProImportServiceTests
         Assert.Equal("S-100", s100.GetFieldValue("Nr."));
         Assert.Equal("Kontrollschacht", s100.GetFieldValue("Funktion"));
         Assert.Equal("rund", s100.GetFieldValue("Schachtform"));
-        Assert.Equal("1000", s100.GetFieldValue("Dimension"));
-        Assert.Equal("1000", s100.GetFieldValue("Durchmesser"));
+        Assert.Equal("1000", s100.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("1000", s100.GetFieldValue(FieldKeys.ShaftDimension2Mm));
+        Assert.False(s100.Fields.ContainsKey("Dimension"));
+        Assert.False(s100.Fields.ContainsKey("Durchmesser"));
         Assert.Equal("2.50", s100.GetFieldValue("Schachttiefe"));
         Assert.Equal("Beton", s100.GetFieldValue("Material"));
         Assert.Equal("12.07.2026", s100.GetFieldValue("Ausführung Datum/Jahr"));
@@ -93,8 +95,8 @@ public sealed partial class SchachtProImportServiceTests
         // --- Schacht S-200 (oval: Dimension aus Laenge x Breite) ---
         var s200 = project.SchaechteData.Single(r => r.GetFieldValue("Schachtnummer") == "S-200");
         Assert.Equal("oval", s200.GetFieldValue("Schachtform"));
-        Assert.Equal("800 x 600", s200.GetFieldValue("Dimension"));
-        Assert.Equal("800 x 600", s200.GetFieldValue("Durchmesser"));
+        Assert.Equal("800", s200.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("600", s200.GetFieldValue(FieldKeys.ShaftDimension2Mm));
         Assert.Equal("800", s200.GetFieldValue("Schachtlänge"));
         Assert.Equal("600", s200.GetFieldValue("Schachtbreite"));
 

@@ -170,7 +170,8 @@ public sealed class SchachtPdfImportMappingTests
             Assert.Equal("1085605", record.GetFieldValue("Schachtnummer"));
             Assert.Equal("Kontrollschacht", record.GetFieldValue("Funktion"));
             Assert.Equal("Rechteckig", record.GetFieldValue("Schachtform"));
-            Assert.Equal("1200 x 800 mm", record.GetFieldValue("Dimension"));
+            Assert.Equal("1200", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+            Assert.Equal("800", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
             Assert.Equal("2.35", record.GetFieldValue("Schachttiefe"));
             Assert.Equal("18.06.2026", record.GetFieldValue("Ausführung\nDatum/Jahr"));
             Assert.Equal("offen", record.GetFieldValue("Status\noffen/abgeschlossen"));
@@ -227,7 +228,7 @@ public sealed class SchachtPdfImportMappingTests
 
             Assert.Equal(0, stats.Errors);
             Assert.Equal("Von Hand geprueft", record.GetFieldValue("Funktion"));
-            Assert.Equal("1000 mm", record.GetFieldValue("Dimension"));
+            Assert.Equal("1000", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
             Assert.Equal("C:/bestand/alt.pdf", record.GetFieldValue("PDF_Path"));
             Assert.Equal("Bestand", Assert.Single(record.Protocol.Current.Entries).Code);
             Assert.Empty(record.Protocol.History);
