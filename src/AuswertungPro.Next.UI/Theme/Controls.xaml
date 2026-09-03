@@ -49,6 +49,15 @@
     <FontFamily x:Key="FontMono">Cascadia Mono, Consolas, Courier New</FontFamily>
     <!-- Einheitliche Icon-Schrift: Fluent unter Windows 11, MDL2 als Fallback. -->
     <FontFamily x:Key="FontIcon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+    <!-- Video-Flaechen: ueber laufendem Bild ist der Grund immer dunkel, unabhaengig vom Hell-/Dunkel-Design.
+         Scrim = abdunkelnde Overlay-Flaeche (Bedienleisten, Hinweise); Black = neutrales Schwarz ohne Blaustich. -->
+    <SolidColorBrush x:Key="VideoBackgroundBrush" Color="#FF000000"/>
+    <SolidColorBrush x:Key="VideoScrimBrush" Color="#DD111318"/>
+    <SolidColorBrush x:Key="VideoScrimStrongBrush" Color="#EE111318"/>
+    <SolidColorBrush x:Key="VideoScrimSoftBrush" Color="#CC111318"/>
+    <SolidColorBrush x:Key="VideoScrimBlackBrush" Color="#CC000000"/>
+    <SolidColorBrush x:Key="VideoScrimBlackStrongBrush" Color="#DD000000"/>
+    <SolidColorBrush x:Key="VideoScrimBlackSoftBrush" Color="#B8000000"/>
     <!-- Eine gemeinsame, ruhige Chevron-Form fuer ComboBox, Expander und TreeView. -->
     <StreamGeometry x:Key="ChevronGeometry">M 1,1 L 5,5 L 1,9</StreamGeometry>
     <!-- Zell-Style fuer technische Grid-Spalten (einmal definiert, keine Inline-Duplikation). -->
@@ -58,6 +67,7 @@
 
     <!-- ═══ COMBOBOX ═══ -->
     <Style TargetType="{x:Type ComboBox}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="MinHeight" Value="36"/>
         <Setter Property="Padding" Value="10,8"/>
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
@@ -205,6 +215,7 @@
 
     <!-- ═══ CHECKBOX ═══ -->
     <Style TargetType="{x:Type CheckBox}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -264,6 +275,7 @@
     </Style>
 
     <Style TargetType="{x:Type RadioButton}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -363,6 +375,7 @@
     </Style>
 
     <Style TargetType="{x:Type Expander}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -456,6 +469,7 @@
     </Style>
 
     <Style TargetType="{x:Type TreeViewItem}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="IsExpanded" Value="False"/>
         <Setter Property="Template">
@@ -558,6 +572,7 @@
     </Style>
 
     <Style TargetType="{x:Type GridViewColumnHeader}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
@@ -1214,6 +1229,7 @@
     </Style>
 
     <Style TargetType="{x:Type TabItem}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
         <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="Padding" Value="16,10"/>
@@ -1249,6 +1265,7 @@
 
     <!-- ═══ SLIDER ═══ -->
     <Style TargetType="{x:Type Slider}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Height" Value="24"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>

@@ -22,11 +22,11 @@ internal sealed class DossierTextUndoController
         ArgumentNullException.ThrowIfNull(wurzel);
 
         _rueckgaengig = ErzeugeKnopf(
-            "↶",
+            "\uE7A7",
             "Rückgängig (Strg+Z)",
             ApplicationCommands.Undo);
         _wiederholen = ErzeugeKnopf(
-            "↷",
+            "\uE7A6",
             "Wiederholen (Strg+Y)",
             ApplicationCommands.Redo);
 
@@ -91,14 +91,13 @@ internal sealed class DossierTextUndoController
     {
         var knopf = new Button
         {
-            Content = symbol,
+            Content = new FluentIcon { Glyph = symbol, FontSize = 15 },
             Command = befehl,
             Focusable = false,
             MinWidth = 34,
             MinHeight = 28,
             Padding = new Thickness(7, 1, 7, 2),
             Margin = new Thickness(0, 0, 4, 0),
-            FontSize = 18,
             ToolTip = beschreibung
         };
         AutomationProperties.SetName(knopf, beschreibung);

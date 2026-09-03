@@ -21,7 +21,7 @@
                    FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,4"/>
         <TextBlock Grid.Row="1" Margin="0,0,0,8" FontSize="11" Foreground="{StaticResource MutedBrush}"
                    TextWrapping="Wrap"
-                   Text="Diese Liste gilt fuer alle Projekte. Preise sind Vorgaben — pro Schacht kannst du sie spaeter anpassen."/>
+                   Text="Diese Liste gilt für alle Projekte. Preise sind Vorgaben — pro Schacht kannst du sie später anpassen."/>
 
         <DataGrid Grid.Row="2" ItemsSource="{Binding Zeilen}" SelectedItem="{Binding Selected, Mode=TwoWay}"
                   AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"

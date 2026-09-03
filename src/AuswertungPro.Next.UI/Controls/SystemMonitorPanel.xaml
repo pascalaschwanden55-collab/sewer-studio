@@ -110,7 +110,7 @@
                         VerticalAlignment="Center"
                         Style="{StaticResource SecondaryButton}"
                         Click="Detach_Click"
-                        ToolTip="System-Monitor in eigenem Fenster oeffnen">
+                        ToolTip="System-Monitor in eigenem Fenster öffnen">
                     <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
                 </Button>
             </Grid>

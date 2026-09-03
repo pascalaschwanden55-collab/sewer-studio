@@ -44,10 +44,7 @@ public sealed class DossierRevisionRowFocusTests
             Assert.Equal(4, Nachfahren(host).OfType<RichTextBox>().Count());
             var entfernen = Assert.Single(Nachfahren(host)
                 .OfType<Button>()
-                .Where(button => string.Equals(
-                    button.Content as string,
-                    "✕",
-                    StringComparison.Ordinal)));
+                .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE711" }));
             Assert.False(entfernen.IsEnabled);
 
             Nachfahren(host).OfType<RichTextBox>().First().AppendText("1");
@@ -112,10 +109,7 @@ public sealed class DossierRevisionRowFocusTests
                         StringComparison.Ordinal)));
                 var rueckgaengig = Assert.Single(Nachfahren(host)
                     .OfType<Button>()
-                    .Where(button => string.Equals(
-                        button.Content as string,
-                        "↶",
-                        StringComparison.Ordinal)));
+                    .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A7" }));
                 Assert.Equal(Visibility.Visible, alleFelder.Visibility);
                 Assert.Equal(Visibility.Visible, rueckgaengig.Visibility);
 
@@ -167,10 +161,7 @@ public sealed class DossierRevisionRowFocusTests
 
                 var undo = Assert.Single(Nachfahren(host)
                     .OfType<Button>()
-                    .Where(button => string.Equals(
-                        button.Content as string,
-                        "↶",
-                        StringComparison.Ordinal)));
+                    .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A7" }));
                 var undoCommand = Assert.IsType<RoutedUICommand>(undo.Command);
                 Assert.Same(editor, undo.CommandTarget);
                 Assert.True(undoCommand.CanExecute(null, undo.CommandTarget));
@@ -181,10 +172,7 @@ public sealed class DossierRevisionRowFocusTests
 
                 var redo = Assert.Single(Nachfahren(host)
                     .OfType<Button>()
-                    .Where(button => string.Equals(
-                        button.Content as string,
-                        "↷",
-                        StringComparison.Ordinal)));
+                    .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A6" }));
                 var redoCommand = Assert.IsType<RoutedUICommand>(redo.Command);
                 Assert.Same(editor, redo.CommandTarget);
                 Assert.True(redoCommand.CanExecute(null, redo.CommandTarget));
@@ -231,20 +219,14 @@ public sealed class DossierRevisionRowFocusTests
 
                 var alterKnopf = Assert.Single(Nachfahren(host)
                     .OfType<Button>()
-                    .Where(button => string.Equals(
-                        button.Content as string,
-                        "↶",
-                        StringComparison.Ordinal)));
+                    .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A7" }));
                 Assert.Same(altesFeld, alterKnopf.CommandTarget);
 
                 panel.Baue(ChangePage(), [ChangeField()]);
 
                 var neuerKnopf = Assert.Single(Nachfahren(host)
                     .OfType<Button>()
-                    .Where(button => string.Equals(
-                        button.Content as string,
-                        "↶",
-                        StringComparison.Ordinal)));
+                    .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A7" }));
                 Assert.Same(alterKnopf, neuerKnopf);
                 Assert.Null(neuerKnopf.CommandTarget);
             }

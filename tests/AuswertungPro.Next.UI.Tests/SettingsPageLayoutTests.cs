@@ -41,7 +41,7 @@ public sealed class SettingsPageLayoutTests
         Assert.Contains("Header=\"Datenordner und Logs\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Programmbereinigung\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CleanProgramDataCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Pruefen und bereinigen\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Prüfen und bereinigen\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Wiederherstellung\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Importquellen\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Referenzdaten\"", xaml, StringComparison.Ordinal);

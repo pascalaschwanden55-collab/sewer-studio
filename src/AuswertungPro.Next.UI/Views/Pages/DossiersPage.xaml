@@ -146,11 +146,14 @@
                                         <TextBlock Text="{Binding StatusText}"
                                                    Foreground="{DynamicResource AccentBrush}"
                                                    FontSize="10"/>
-                                        <TextBlock Text="  ⚠ Bauteil fehlt"
-                                                   Foreground="{DynamicResource DangerBrush}"
-                                                   FontSize="10"
-                                                   Visibility="{Binding HasMissingParts,
-                                                       Converter={StaticResource BoolToVis}}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="8,0,0,0"
+                                                    Visibility="{Binding HasMissingParts,
+                                                        Converter={StaticResource BoolToVis}}">
+                                            <ui:FluentIcon Glyph="&#xE7BA;" FontSize="10" Foreground="{DynamicResource DangerBrush}" Margin="0,0,3,0"/>
+                                            <TextBlock Text="Bauteil fehlt"
+                                                       Foreground="{DynamicResource DangerBrush}"
+                                                       FontSize="10"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
                             </DataTemplate>
@@ -227,8 +230,13 @@
                                           Padding="10,5"
                                           IsChecked="{Binding IsSummaryCollapsed, Mode=TwoWay}"
                                           ToolTip="Klappt Kennzahlen, Zustand und Schadensliste zu. Der gewonnene Platz geht an die Tabellen der Leitungen und Schächte; der Zusammenzug bleibt als Zeile stehen."
-                                          Content="{Binding IsSummaryCollapsed,
-                                              Converter={StaticResource CollapseGlyph}}"/>
+>
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="{Binding IsSummaryCollapsed, Converter={StaticResource CollapseGlyph}}"
+                                                   FontSize="11" Margin="0,1,6,0"/>
+                                    <TextBlock Text="Kennzahlen"/>
+                                </StackPanel>
+                            </ToggleButton>
                         </Grid>
 
                         <!-- Warnung fehlende Leitungen -->

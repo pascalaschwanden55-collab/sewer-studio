@@ -127,7 +127,7 @@ public sealed class DossierEmptyListFieldTests
             Assert.Equal("Zweiter Text", dossier.Topics[1].Text);
 
             var remove = Descendants(editor).OfType<Button>()
-                .Where(button => Equals(button.Content, "✕"))
+                .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE711" })
                 .ToList();
             Assert.Equal(2, remove.Count);
             remove[1].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));

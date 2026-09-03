@@ -87,7 +87,7 @@
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
 
                     <Button Command="{Binding RefreshProtocolCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Verknuepftes Protokoll neu einlesen (Schacht wird neu aufgebaut)">
+                            ToolTip="Verknüpftes Protokoll neu einlesen (Schacht wird neu aufgebaut)">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE72C;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Aktualisieren" VerticalAlignment="Center"/>

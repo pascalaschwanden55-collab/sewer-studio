@@ -177,11 +177,11 @@ public static class DossierExactPreviewPageRenderer
                     VerticalAlignment = VerticalAlignment.Center,
                     Children =
                     {
-                        new TextBlock
+                        new FluentIcon
                         {
-                            Text = "📷",
-                            FontFamily = new FontFamily("Segoe UI Emoji"),
+                            Glyph = "\uE722",
                             FontSize = 16,
+                            Foreground = new SolidColorBrush(Color.FromRgb(0x20, 0x3E, 0x64)),
                             Margin = new Thickness(0, 0, 8, 0),
                             VerticalAlignment = VerticalAlignment.Center
                         },

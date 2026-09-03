@@ -170,14 +170,14 @@ public partial class DossiersPage : UserControl
 }
 
 /// <summary>
-/// Das Zeichen des Umschalters am Kopfblock: zugeklappt zeigt es nach unten
+/// Das Fluent-Glyph des Umschalters am Kopfblock: zugeklappt zeigt es nach unten
 /// („aufklappen"), aufgeklappt nach oben („zuklappen"). Es zeigt also immer,
 /// was der Klick bewirkt — nicht, wie der Zustand gerade ist.
 /// </summary>
 public sealed class CollapseGlyphConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        => value is bool zugeklappt && zugeklappt ? "▾  Kennzahlen" : "▴  Kennzahlen";
+        => value is bool zugeklappt && zugeklappt ? "\uE70D" : "\uE70E"; // Fluent: Chevron unten / oben
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => throw new NotSupportedException();

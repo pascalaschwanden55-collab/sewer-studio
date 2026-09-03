@@ -27,7 +27,7 @@
                         Margin="8,0,0,0"
                         Style="{StaticResource SecondaryButton}"
                         Visibility="{Binding IsDraft, Converter={StaticResource BoolToVis}}"
-                        ToolTip="Projektanlage abbrechen und zur Uebersicht zurueckkehren."/>
+                        ToolTip="Projektanlage abbrechen und zur Übersicht zurückkehren."/>
                 <Button Content="Speichern unter" Command="{Binding SaveAsCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
                         Visibility="{Binding IsNotDraft, Converter={StaticResource BoolToVis}}"
                         ToolTip="Projekt unter einem neuen Pfad speichern."/>
@@ -37,7 +37,7 @@
                         Visibility="{Binding IsNotDraft, Converter={StaticResource BoolToVis}}"
                         ToolTip="Alle Projektdaten speichern." />
                 <Button Content="Programm schließen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180"
-                        ToolTip="SewerStudio beenden. Ungespeicherte Aenderungen werden vorher abgefragt." />
+                        ToolTip="SewerStudio beenden. Ungespeicherte Änderungen werden vorher abgefragt." />
             </StackPanel>
         </Grid>
 

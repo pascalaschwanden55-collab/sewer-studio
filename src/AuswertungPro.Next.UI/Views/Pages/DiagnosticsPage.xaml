@@ -10,7 +10,7 @@
 
         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
             <Button Content="Log aktualisieren" Command="{Binding RefreshCommand}" Style="{StaticResource SecondaryButton}"/>
-            <Button Content="Log-Ordner oeffnen" Command="{Binding OpenLogFolderCommand}"
+            <Button Content="Log-Ordner öffnen" Command="{Binding OpenLogFolderCommand}"
                     Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"/>
             <Button Content="Diagnosepaket erstellen" Command="{Binding CreatePackageCommand}"
                     Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"/>

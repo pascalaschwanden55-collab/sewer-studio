@@ -626,19 +626,31 @@
                     <Menu Margin="0,0,0,4"
                           Background="Transparent"
                           VerticalAlignment="Center">
-                        <MenuItem Header="NPK-Leistungsverzeichnis  ▾"
-                                  Padding="12,6"
+                        <MenuItem Padding="12,6"
                                   FontWeight="SemiBold"
                                   ToolTip="Projektweite NPK-135-Ausgaben: immer Haltungen UND Schächte im Eigentum AWU, unabhängig vom gewählten Bereich.">
+                            <MenuItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE8F1;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                                    <TextBlock Text="NPK-Leistungsverzeichnis" VerticalAlignment="Center"/>
+                                    <ui:FluentIcon Glyph="&#xE70D;" FontSize="10" Foreground="{DynamicResource MutedBrush}" Margin="8,1,0,0"/>
+                                </StackPanel>
+                            </MenuItem.Header>
                             <MenuItem Header="NPK-Offerte (PDF)"
                                       Command="{Binding ExportNpkOfferPdfCommand}"
-                                      ToolTip="Formatierte NPK-135-Offerte mit Deckblatt, Konditionen, Kapitelübersicht und Positionen."/>
+                                      ToolTip="Formatierte NPK-135-Offerte mit Deckblatt, Konditionen, Kapitelübersicht und Positionen.">
+                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE749;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                            </MenuItem>
                             <MenuItem Header="Leistungsverzeichnis (CSV)"
                                       Command="{Binding ExportNpkLeistungsverzeichnisCommand}"
-                                      ToolTip="Eine NPK-Positionsliste über alle gefilterten Haltungen (Mengen zusammengezählt, ByDN je DN getrennt)."/>
+                                      ToolTip="Eine NPK-Positionsliste über alle gefilterten Haltungen (Mengen zusammengezählt, ByDN je DN getrennt).">
+                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8FD;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                            </MenuItem>
                             <MenuItem Header="Leistungsverzeichnis (Excel)"
                                       Command="{Binding ExportNpkLeistungsverzeichnisExcelCommand}"
-                                      ToolTip="Formatiertes Excel mit zwei Reitern: 'Zum Ausfüllen' (leere Preise für die Firma, Totale als Formeln) und 'Kalkulation (intern)' mit euren Schätzpreisen."/>
+                                      ToolTip="Formatiertes Excel mit zwei Reitern: 'Zum Ausfüllen' (leere Preise für die Firma, Totale als Formeln) und 'Kalkulation (intern)' mit euren Schätzpreisen.">
+                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                            </MenuItem>
                         </MenuItem>
                     </Menu>
                 </WrapPanel>

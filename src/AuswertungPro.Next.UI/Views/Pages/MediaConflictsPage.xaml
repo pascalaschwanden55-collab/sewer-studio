@@ -108,7 +108,7 @@
                 </Button>
 
                 <Button Command="{Binding ResolveFromCandidateCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4"
-                        ToolTip="Ausgewaehlten Kandidaten der markierten Haltung zuordnen.">
+                        ToolTip="Ausgewählten Kandidaten der markierten Haltung zuordnen.">
                     <StackPanel Orientation="Horizontal">
                         <ui:FluentIcon Glyph="&#xE73E;" FontSize="13" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                         <TextBlock Text="Kandidat zuordnen" VerticalAlignment="Center"/>
@@ -116,7 +116,7 @@
                 </Button>
 
                 <Button Command="{Binding ResolveManualCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4"
-                        ToolTip="Videodatei manuell auswaehlen und zuordnen.">
+                        ToolTip="Videodatei manuell auswählen und zuordnen.">
                     <StackPanel Orientation="Horizontal">
                         <ui:FluentIcon Glyph="&#xE8E5;" FontSize="13" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                         <TextBlock Text="Video wählen" VerticalAlignment="Center"/>
@@ -135,12 +135,18 @@
                             </StackPanel>
                         </MenuItem.Header>
                         <MenuItem Header="Gelernte Quelle zuordnen"
-                                  Command="{Binding DataContext.ResolveSuggestedCommand, ElementName=MediaConflictsRoot}"/>
+                                  Command="{Binding DataContext.ResolveSuggestedCommand, ElementName=MediaConflictsRoot}">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE73E;" Foreground="{DynamicResource SuccessBrush}"/></MenuItem.Icon>
+                        </MenuItem>
                         <MenuItem Header="Auto-Resolve (gelernt)"
-                                  Command="{Binding DataContext.AutoResolveLearnedCommand, ElementName=MediaConflictsRoot}"/>
+                                  Command="{Binding DataContext.AutoResolveLearnedCommand, ElementName=MediaConflictsRoot}">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xEA80;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                        </MenuItem>
                         <Separator/>
                         <MenuItem Header="Mappings löschen"
-                                  Command="{Binding DataContext.ClearLearnedMappingsCommand, ElementName=MediaConflictsRoot}"/>
+                                  Command="{Binding DataContext.ClearLearnedMappingsCommand, ElementName=MediaConflictsRoot}">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74D;" Foreground="{DynamicResource DangerBrush}"/></MenuItem.Icon>
+                        </MenuItem>
                     </MenuItem>
                 </Menu>
             </WrapPanel>
@@ -275,7 +281,7 @@
                         <TextBlock Text="Aktionen" FontSize="14" FontWeight="SemiBold"/>
                         <WrapPanel Margin="0,8,0,0">
                             <Button Command="{Binding PlaySelectedCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
-                                    ToolTip="Ausgewaehlten Videokandidaten im Player pruefen.">
+                                    ToolTip="Ausgewählten Videokandidaten im Player prüfen.">
                                 <StackPanel Orientation="Horizontal">
                                     <ui:FluentIcon Glyph="&#xE768;" FontSize="12" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                                     <TextBlock Text="Kandidat abspielen"/>
@@ -283,7 +289,7 @@
                             </Button>
 
                             <Button Command="{Binding ResolveFromCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
-                                    ToolTip="Diesen Kandidaten als richtige Videodatei uebernehmen.">
+                                    ToolTip="Diesen Kandidaten als richtige Videodatei übernehmen.">
                                 <StackPanel Orientation="Horizontal">
                                     <ui:FluentIcon Glyph="&#xE73E;" FontSize="12" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,6,0"/>
                                     <TextBlock Text="Kandidat übernehmen"/>
@@ -310,20 +316,34 @@
                                         </StackPanel>
                                     </MenuItem.Header>
                                     <MenuItem Header="Gelernte Quelle abspielen"
-                                              Command="{Binding DataContext.PlaySuggestedSourceCommand, ElementName=MediaConflictsRoot}"/>
+                                              Command="{Binding DataContext.PlaySuggestedSourceCommand, ElementName=MediaConflictsRoot}">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
                                     <MenuItem Header="PDF öffnen"
-                                              Command="{Binding DataContext.OpenPdfCommand, ElementName=MediaConflictsRoot}"/>
+                                              Command="{Binding DataContext.OpenPdfCommand, ElementName=MediaConflictsRoot}">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
                                     <MenuItem Header="Kandidat im Explorer"
-                                              Command="{Binding DataContext.OpenSelectedCandidateCommand, ElementName=MediaConflictsRoot}"/>
+                                              Command="{Binding DataContext.OpenSelectedCandidateCommand, ElementName=MediaConflictsRoot}">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
                                     <MenuItem Header="Gelernte Quelle im Explorer"
-                                              Command="{Binding DataContext.OpenSuggestedSourceCommand, ElementName=MediaConflictsRoot}"/>
+                                              Command="{Binding DataContext.OpenSuggestedSourceCommand, ElementName=MediaConflictsRoot}">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
                                     <MenuItem Header="Info-Datei"
-                                              Command="{Binding DataContext.OpenInfoCommand, ElementName=MediaConflictsRoot}"/>
+                                              Command="{Binding DataContext.OpenInfoCommand, ElementName=MediaConflictsRoot}">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE946;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
                                     <MenuItem Header="Haltungsordner"
-                                              Command="{Binding DataContext.OpenHoldingFolderCommand, ElementName=MediaConflictsRoot}"/>
+                                              Command="{Binding DataContext.OpenHoldingFolderCommand, ElementName=MediaConflictsRoot}">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8B7;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
                                     <Separator/>
                                     <MenuItem Header="Gelernte Quelle übernehmen"
-                                              Command="{Binding DataContext.ResolveSuggestedCommand, ElementName=MediaConflictsRoot}"/>
+                                              Command="{Binding DataContext.ResolveSuggestedCommand, ElementName=MediaConflictsRoot}">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE73E;" Foreground="{DynamicResource SuccessBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
                                 </MenuItem>
                             </Menu>
                         </WrapPanel>

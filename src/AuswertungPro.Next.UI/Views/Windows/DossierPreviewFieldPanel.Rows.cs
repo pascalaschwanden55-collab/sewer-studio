@@ -74,17 +74,17 @@ internal sealed partial class DossierPreviewFieldPanel
             var werkzeuge = new StackPanel { Orientation = Orientation.Horizontal };
             DockPanel.SetDock(werkzeuge, Dock.Right);
 
-            werkzeuge.Children.Add(Kleiner("▲", "Nach oben",
-                () => Verschiebe(typ, stelle, -1, wirt, feld)));
-            werkzeuge.Children.Add(Kleiner("▼", "Nach unten",
-                () => Verschiebe(typ, stelle, +1, wirt, feld)));
-            var entfernen = Kleiner("✕", "Zeile entfernen", () =>
+            werkzeuge.Children.Add(Kleiner(string.Empty, "Nach oben",
+                () => Verschiebe(typ, stelle, -1, wirt, feld)).MitGlyph("\uE74A"));
+            werkzeuge.Children.Add(Kleiner(string.Empty, "Nach unten",
+                () => Verschiebe(typ, stelle, +1, wirt, feld)).MitGlyph("\uE74B"));
+            var entfernen = Kleiner(string.Empty, "Zeile entfernen", () =>
             {
                 typ.Liste.RemoveAt(stelle);
                 FuelleZeilenEditor(wirt, feld);
                 _zeichneBlatt();
                 Betone(feld.Key);
-            });
+            }).MitGlyph("\uE711");
             werkzeuge.Children.Add(entfernen);
 
             void AktualisiereEntfernen()

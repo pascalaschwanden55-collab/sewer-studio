@@ -50,6 +50,10 @@
     <SolidColorBrush x:Key="RowHoverBrush" Color="#FF2D3440"/>
     <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#FF3A424D"/>
     <SolidColorBrush x:Key="OverlayBrush" Color="#DD161B22"/>
+    <!-- Halbtransparente Abdunkelung hinter Wartefeldern (BusyOverlay). -->
+    <SolidColorBrush x:Key="ScrimBrush" Color="#99050810"/>
+    <!-- Schrift auf farbigen Zustandsklassen-Abzeichen (Z0-Z4): deren Farben sind in beiden Designs gleich. -->
+    <SolidColorBrush x:Key="StatusBadgeTextBrush" Color="#FF0A0F1A"/>
 
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource ColorSuccess}"/>
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ColorDanger}"/>

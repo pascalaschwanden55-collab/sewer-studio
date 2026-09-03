@@ -1,6 +1,7 @@
 <Window x:Class="AuswertungPro.Next.UI.Views.Windows.VsaCodeExplorerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        ui:WindowFx.Entrance="True"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         Title="VSA Schadencodierung - VSA-KEK 2020"

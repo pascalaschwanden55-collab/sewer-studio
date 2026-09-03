@@ -657,6 +657,33 @@ zurueckgedreht werden:
 - `TrainingCenterViewModel` gibt seinen eigenen Knowledge-Base-HTTP-Client beim
   Schliessen des Fensters frei. Dispose ist mehrfach sicher aufrufbar.
 
+### Design-Feinschliff 2026-09-03 (Audit `docs/DESIGN-AUDIT-2026-09-03.md`, Q1-Q6)
+
+Waechter `DesignAuditFeinschliffTests` (7 Tests) haelt fest, was nicht zurueckfallen darf:
+
+- Sichtbare Texte (`Content/Header/Text/ToolTip/Title`, auch `StringFormat` in Bindungen)
+  schreiben echte Umlaute. Die `ae/oe/ue`-Konvention gilt nur fuer Quellcode und
+  Kommentare. Schweizer `ss` bleibt (kein `ß`).
+- Menuepunkte mit literalem `Header` tragen ein `MenuItem.Icon` (Fluent-Glyph); nur
+  checkbare Punkte, Menueleisten-Koepfe (`_Datei`) und Punkte mit eigenem Header-Inhalt
+  sind frei.
+- Bedienelemente verwenden `ui:FluentIcon` statt Textsymbolen (`▲▼✕⚠📷↶↷⟲⟳`); gerade
+  Pfeile im Fliesstext bleiben erlaubt. Im Code liefert die Erweiterung
+  `FluentGlyphKnopf.MitGlyph(...)` Glyph plus zugaenglichen Namen aus dem Tooltip.
+  Ausnahmen mit Grund: `DataPageConverters` (Tabellen-Haekchen), `ShellViewModel` (Punkt
+  fuer „ungespeichert" im Fenstertitel).
+- Jedes Fenster traegt `ui:WindowFx.Entrance="True"`; ausgenommen MainWindow, PlayerWindow,
+  LiveFrameWindow, StartupSplashWindow.
+- `KeyboardFocusVisual` sitzt auch auf CheckBox, RadioButton, ComboBox, Expander,
+  TreeViewItem, TabItem, Slider und GridViewColumnHeader.
+- Feste Farbwerte (`#RRGGBB`) gibt es nur in den sechs Video-Dateien (PlayerWindow,
+  PlayerCodingSidePanel, LiveFrameWindow, PhotoMeasurementWindow, StartupSplashWindow,
+  PipeGraphTimeline). Neue Tokens: `ScrimBrush`, `StatusBadgeTextBrush` (je Theme) und
+  `Video*Brush` (theme-unabhaengig in `Controls.xaml`) fuer die Player-Abdunkelungen.
+
+Der isolierte `NachschlagKontextmenueTests`-Kindprozess hat ein 60-s-Limit und faellt im
+Gesamtlauf unter Last gelegentlich um; allein besteht er in rund 26 s.
+
 Nachgelagerte Grossumbauten vom 2026-08-14:
 
 - **Import-Staging vervollstaendigt.** `ImportFileTransaction` ist der gemeinsame

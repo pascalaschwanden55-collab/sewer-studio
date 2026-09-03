@@ -103,7 +103,7 @@
                             <TextBlock Text="{Binding Fields[Zustandsklasse]}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
-                                       Foreground="#000000"
+                                       Foreground="{DynamicResource StatusBadgeTextBrush}"
                                        FontSize="12"
                                        FontWeight="Bold"/>
                         </Border>

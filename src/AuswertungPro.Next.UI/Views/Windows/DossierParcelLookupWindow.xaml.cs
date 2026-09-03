@@ -197,13 +197,15 @@ public partial class DossierParcelLookupWindow : Window
 
         foreach (var warnung in ergebnis.Warnings)
         {
-            ResultPanel.Children.Add(new TextBlock
+            var warnzeile = new TextBlock
             {
-                Text = "⚠ " + warnung,
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = (System.Windows.Media.Brush)FindResource("DangerBrush"),
                 Margin = new Thickness(0, 0, 0, 6)
-            });
+            };
+            warnzeile.Inlines.Add(new System.Windows.Documents.InlineUIContainer(new FluentIcon { Glyph = "\uE7BA", FontSize = 12, Margin = new Thickness(0, 0, 5, -1) }));
+            warnzeile.Inlines.Add(new System.Windows.Documents.Run(warnung));
+            ResultPanel.Children.Add(warnzeile);
         }
 
         if (ergebnis.Dossier is null)
@@ -239,19 +241,18 @@ public partial class DossierParcelLookupWindow : Window
 
         foreach (var eigentuemer in ergebnis.Dossier.Owners)
         {
-            var text = eigentuemer.Name;
-            if (!string.IsNullOrWhiteSpace(eigentuemer.Phone))
-                text += "   ☎ " + eigentuemer.Phone;
-            if (!string.IsNullOrWhiteSpace(eigentuemer.Mail))
-                text += "   ✉ " + eigentuemer.Mail;
-
-            ResultPanel.Children.Add(new TextBlock
+            var zeile = new TextBlock
             {
-                Text = "• " + text,
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = (System.Windows.Media.Brush)FindResource("TextBrush"),
                 FontSize = 13
-            });
+            };
+            zeile.Inlines.Add(new System.Windows.Documents.Run("• " + eigentuemer.Name));
+            if (!string.IsNullOrWhiteSpace(eigentuemer.Phone))
+                Kontakt(zeile, "\uE717", eigentuemer.Phone);
+            if (!string.IsNullOrWhiteSpace(eigentuemer.Mail))
+                Kontakt(zeile, "\uE715", eigentuemer.Mail);
+            ResultPanel.Children.Add(zeile);
         }
 
         if (DirectoryBox.IsChecked == true && _directory.IsConfigured)
@@ -393,4 +394,12 @@ public partial class DossierParcelLookupWindow : Window
     }
 
     private void OnCancel(object sender, RoutedEventArgs e) => DialogResult = false;
+
+    /// <summary>Haengt Fluent-Glyph (Telefon/Mail) und Wert als Inline-Kontakt an eine Textzeile.</summary>
+    private static void Kontakt(TextBlock zeile, string glyph, string wert)
+    {
+        zeile.Inlines.Add(new System.Windows.Documents.Run("   "));
+        zeile.Inlines.Add(new System.Windows.Documents.InlineUIContainer(new FluentIcon { Glyph = glyph, FontSize = 12, Margin = new Thickness(0, 0, 4, -1) }));
+        zeile.Inlines.Add(new System.Windows.Documents.Run(wert));
+    }
 }

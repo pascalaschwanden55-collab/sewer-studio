@@ -1,6 +1,7 @@
 <Window x:Class="AuswertungPro.Next.UI.Views.Windows.SanierungsmassnahmenWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        ui:WindowFx.Entrance="True"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         xmlns:domain="clr-namespace:AuswertungPro.Next.Domain.Models;assembly=AuswertungPro.Next.Domain"
@@ -252,9 +253,9 @@
                                 </TextBlock.Style>
                             </TextBlock>
                             <Border Visibility="{Binding OptimizationVm.IsFallback, Converter={StaticResource BoolToVis}}"
-                                    Background="#7F2F00" Margin="0,8,0,0" Padding="8,4" CornerRadius="3">
+                                    Background="{DynamicResource WarningSubtleBrush}" Margin="0,8,0,0" Padding="8,4" CornerRadius="3">
                                 <TextBlock Text="FALLBACK AKTIV - KI-Vorschlag wurde durch Regelprüfung verworfen"
-                                           Foreground="#FF8C00" FontSize="10" FontWeight="Bold"/>
+                                           Foreground="{DynamicResource WarningTextBrush}" FontSize="10" FontWeight="Bold"/>
                             </Border>
                         </StackPanel>
                     </Border>
@@ -283,7 +284,7 @@
                                     </Border>
                                     <!-- Warning badge -->
                                     <Border CornerRadius="8" Padding="6,2"
-                                            Background="#FF8C00"
+                                            Background="{DynamicResource WarningBrush}"
                                             Visibility="{Binding WarningCount, Converter={StaticResource IntToVis}}">
                                         <TextBlock Foreground="White" FontSize="10" FontWeight="Bold">
                                             <Run Text="{Binding WarningCount, Mode=OneWay}"/>
@@ -311,7 +312,7 @@
                                             <Button.Template>
                                                 <ControlTemplate TargetType="Button">
                                                     <Border x:Name="Bd" Margin="0,0,0,4" Padding="6,4"
-                                                            CornerRadius="3" Background="#1A3B82F6">
+                                                            CornerRadius="3" Background="{DynamicResource AccentSubtleBrush}">
                                                         <ContentPresenter/>
                                                     </Border>
                                                     <ControlTemplate.Triggers>

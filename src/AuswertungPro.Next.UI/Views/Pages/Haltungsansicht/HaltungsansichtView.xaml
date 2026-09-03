@@ -152,7 +152,7 @@
                         <Border Grid.Column="1" Width="32" Height="22" CornerRadius="4" VerticalAlignment="Center" Margin="8,0,4,0"
                                 Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}">
                             <TextBlock Text="{Binding Fields[Zustandsklasse]}" HorizontalAlignment="Center"
-                                       VerticalAlignment="Center" Foreground="#000000" FontSize="12" FontWeight="Bold"/>
+                                       VerticalAlignment="Center" Foreground="{DynamicResource StatusBadgeTextBrush}" FontSize="12" FontWeight="Bold"/>
                         </Border>
                     </Grid>
                 </DataTemplate>
@@ -228,7 +228,7 @@
                                                    Foreground="{DynamicResource SuccessBrush}"
                                                    Text="{Binding Converter={StaticResource SchadenMeterConv}}"/>
                                         <Border Grid.Column="1" VerticalAlignment="Center" Margin="6,0" Padding="6,2"
-                                                CornerRadius="4" Background="#1E3A8A">
+                                                CornerRadius="4" Background="{DynamicResource AccentBrush}">
                                             <TextBlock Text="{Binding Code}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
                                         </Border>
                                         <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="6,0" FontWeight="SemiBold"

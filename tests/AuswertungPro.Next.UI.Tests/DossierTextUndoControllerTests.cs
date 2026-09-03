@@ -25,9 +25,9 @@ public sealed class DossierTextUndoControllerTests
             var buttons = Nachfahren(controller.View).OfType<Button>().ToList();
 
             var undo = Assert.Single(buttons.Where(button =>
-                string.Equals(button.Content as string, "↶", StringComparison.Ordinal)));
+                button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A7" }));
             var redo = Assert.Single(buttons.Where(button =>
-                string.Equals(button.Content as string, "↷", StringComparison.Ordinal)));
+                button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A6" }));
 
             Assert.Same(ApplicationCommands.Undo, undo.Command);
             Assert.Same(ApplicationCommands.Redo, redo.Command);

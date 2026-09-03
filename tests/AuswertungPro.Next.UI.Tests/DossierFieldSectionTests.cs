@@ -413,11 +413,11 @@ public sealed class DossierFieldSectionTests
             Assert.True(panel.SpringeZu(target));
             var buttons = Nachfahren(host)
                 .OfType<Button>()
-                .Select(button => button.Content?.ToString())
+                .Select(button => button.Content as string ?? button.ToolTip as string)
                 .ToList();
             Assert.Contains("JPG / Plan wählen…", buttons);
-            Assert.Contains("⟲", buttons);
-            Assert.Contains("⟳", buttons);
+            Assert.Contains("90° nach links", buttons);
+            Assert.Contains("90° nach rechts", buttons);
             Assert.Contains("Zuschneiden…", buttons);
         });
     }

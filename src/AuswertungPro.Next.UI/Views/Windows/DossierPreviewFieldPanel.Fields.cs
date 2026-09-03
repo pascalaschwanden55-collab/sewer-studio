@@ -533,8 +533,8 @@ internal sealed partial class DossierPreviewFieldPanel
         leiste.Children.Add(Kleiner("JPG / Plan wählen…", "Werkleitungsplan als JPG, PNG oder PDF wählen",
             async () => await WaehlePlanAsync(feld, anzeige)));
 
-        leiste.Children.Add(Kleiner("⟲", "90° nach links", () => Drehe(feld, anzeige, 270)));
-        leiste.Children.Add(Kleiner("⟳", "90° nach rechts", () => Drehe(feld, anzeige, 90)));
+        leiste.Children.Add(Kleiner(string.Empty, "90° nach links", () => Drehe(feld, anzeige, 270)).MitGlyph("\uE7AD", gespiegelt: true));
+        leiste.Children.Add(Kleiner(string.Empty, "90° nach rechts", () => Drehe(feld, anzeige, 90)).MitGlyph("\uE7AD"));
         leiste.Children.Add(Kleiner("180°", "Auf den Kopf stellen", () => Drehe(feld, anzeige, 180)));
 
         leiste.Children.Add(Kleiner("Zuschneiden…",

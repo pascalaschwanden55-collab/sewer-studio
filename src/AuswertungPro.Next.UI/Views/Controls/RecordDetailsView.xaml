@@ -60,6 +60,7 @@
                 </MenuItem.Style>
             </MenuItem>
             <MenuItem Header="Zurücksetzen auf Standard" Command="{Binding ResetOptionsCommand}">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE7A7;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                 <MenuItem.Style>
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Style.Triggers>
@@ -72,6 +73,7 @@
             </MenuItem>
             <MenuItem Header="Wert hinzufügen" Command="{Binding AddOptionCommand}"
                       CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                 <MenuItem.Style>
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Style.Triggers>
@@ -84,6 +86,7 @@
             </MenuItem>
             <MenuItem Header="Wert entfernen" Command="{Binding RemoveOptionCommand}"
                       CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE738;" Foreground="{DynamicResource DangerBrush}"/></MenuItem.Icon>
                 <MenuItem.Style>
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Style.Triggers>
@@ -313,7 +316,7 @@
                     <Button x:Name="CustomizeResetButton" Content="Standard wiederherstellen"
                             Padding="10,4" Margin="8,0,0,0" Click="CustomizeReset_Click"
                             Visibility="{Binding IsCustomizing, ElementName=Root, Converter={StaticResource BoolToVis}}"
-                            ToolTip="Spalten, Reihenfolge und ausgeblendete Felder auf die Werkseinstellung zuruecksetzen"/>
+                            ToolTip="Spalten, Reihenfolge und ausgeblendete Felder auf die Werkseinstellung zurücksetzen"/>
                     <Button x:Name="CustomizeDoneButton" Content="Fertig"
                             Padding="14,4" Margin="8,0,0,0" Click="CustomizeDone_Click"
                             Style="{StaticResource PrimaryButton}"
@@ -491,7 +494,7 @@
                                                             Padding="4,0" Margin="4,0,0,0" VerticalAlignment="Top"
                                                             Background="Transparent" BorderThickness="0"
                                                             Click="HideField_Click"
-                                                            ToolTip="Dieses Feld ausblenden (Wert und Exporte bleiben unveraendert)"
+                                                            ToolTip="Dieses Feld ausblenden (Wert und Exporte bleiben unverändert)"
                                                             Visibility="{Binding IsCustomizing, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}, Converter={StaticResource BoolToVis}}"/>
                                                     <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextSecondaryBrush}"
                                                                FontWeight="SemiBold" TextWrapping="Wrap"

@@ -87,10 +87,14 @@
                             <Button Content="Entfernen"
                         ToolTip="Entfernt das gewählte Thema aus dem Gebiet. Dossiers, die dafür einen eigenen Text führen, behalten ihn." Width="82" Height="28" Margin="0,0,6,0"
                                     Click="OnRemoveTopic"/>
-                            <Button Content="▲" Width="34" Height="28" Margin="0,0,6,0"
-                                    ToolTip="Nach oben" Click="OnTopicUp"/>
-                            <Button Content="▼" Width="34" Height="28"
-                                    ToolTip="Nach unten" Click="OnTopicDown"/>
+                            <Button Width="34" Height="28" Margin="0,0,6,0"
+                                    ToolTip="Nach oben" AutomationProperties.Name="Nach oben" Click="OnTopicUp">
+                                <ui:FluentIcon Glyph="&#xE74A;"/>
+                            </Button>
+                            <Button Width="34" Height="28"
+                                    ToolTip="Nach unten" AutomationProperties.Name="Nach unten" Click="OnTopicDown">
+                                <ui:FluentIcon Glyph="&#xE74B;"/>
+                            </Button>
                         </StackPanel>
 
                         <ListBox x:Name="TopicList" DisplayMemberPath="Title"/>

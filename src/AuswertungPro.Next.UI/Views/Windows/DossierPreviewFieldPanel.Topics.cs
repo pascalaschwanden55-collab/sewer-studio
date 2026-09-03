@@ -116,7 +116,7 @@ internal sealed partial class DossierPreviewFieldPanel
 
         if (!vomGebiet)
         {
-            var entfernen = Kleiner("✕", "Diese Zeile entfernen", () =>
+            var entfernen = Kleiner(string.Empty, "Diese Zeile entfernen", () =>
             {
                 if (draft is not null)
                 {
@@ -132,7 +132,7 @@ internal sealed partial class DossierPreviewFieldPanel
                 FuelleThemenEditor(wirt, feld);
                 _zeichneBlatt();
                 Betone(feld.Key);
-            });
+            }).MitGlyph("\uE711");
 
             DockPanel.SetDock(entfernen, Dock.Right);
             kopf.Children.Add(entfernen);

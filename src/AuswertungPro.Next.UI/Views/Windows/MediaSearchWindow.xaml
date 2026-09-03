@@ -1,6 +1,8 @@
 <Window x:Class="AuswertungPro.Next.UI.Views.Windows.MediaSearchWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        ui:WindowFx.Entrance="True"
         xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="Medien suchen und verlinken" Height="720" Width="1100"

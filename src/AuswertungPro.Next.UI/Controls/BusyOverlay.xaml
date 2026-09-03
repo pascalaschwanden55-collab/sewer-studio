@@ -4,7 +4,7 @@
              x:Name="Root">
     <!-- Halbtransparenter Scrim: blockiert bewusst die Eingabe waehrend eines Langlaeufers.
          Sichtbarkeit/Fade steuert der Code-Behind ueber die IsActive-DP. -->
-    <Grid x:Name="ScrimRoot" Visibility="Collapsed" Opacity="0" Background="#66101418">
+    <Grid x:Name="ScrimRoot" Visibility="Collapsed" Opacity="0" Background="{DynamicResource ScrimBrush}">
         <Border Background="{DynamicResource CardBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 CornerRadius="{DynamicResource RadiusL}" Padding="26,22"

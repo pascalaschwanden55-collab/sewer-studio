@@ -28,10 +28,18 @@
                    Text="Mit gedrückter Maustaste einen Rahmen aufziehen und „Zuschneiden“ drücken. Das Bild wird proportional in die originale Planfläche eingepasst. Das Original bleibt unverändert — bearbeitet wird eine temporäre Kopie."/>
 
         <WrapPanel Grid.Row="1" Margin="0,0,0,10">
-            <Button x:Name="LeftButton" Content="⟲" Width="40" Height="30" Margin="0,0,6,0"
-                    ToolTip="90° nach links" Click="OnRotateLeft"/>
-            <Button x:Name="RightButton" Content="⟳" Width="40" Height="30" Margin="0,0,6,0"
-                    ToolTip="90° nach rechts" Click="OnRotateRight"/>
+            <Button x:Name="LeftButton" Width="40" Height="30" Margin="0,0,6,0"
+                    ToolTip="90° nach links" AutomationProperties.Name="90° nach links" Click="OnRotateLeft">
+                <ui:FluentIcon Glyph="&#xE7AD;" RenderTransformOrigin="0.5,0.5">
+                    <ui:FluentIcon.RenderTransform>
+                        <ScaleTransform ScaleX="-1"/>
+                    </ui:FluentIcon.RenderTransform>
+                </ui:FluentIcon>
+            </Button>
+            <Button x:Name="RightButton" Width="40" Height="30" Margin="0,0,6,0"
+                    ToolTip="90° nach rechts" AutomationProperties.Name="90° nach rechts" Click="OnRotateRight">
+                <ui:FluentIcon Glyph="&#xE7AD;"/>
+            </Button>
             <Button x:Name="HalfButton" Content="180°" Width="52" Height="30" Margin="0,0,14,0"
                     ToolTip="Auf den Kopf stellen" Click="OnRotateHalf"/>
 

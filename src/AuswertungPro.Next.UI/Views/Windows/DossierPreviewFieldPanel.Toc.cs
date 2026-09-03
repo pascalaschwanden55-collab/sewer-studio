@@ -76,17 +76,17 @@ internal sealed partial class DossierPreviewFieldPanel
             var kopf = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
             var werkzeuge = new StackPanel { Orientation = Orientation.Horizontal };
             DockPanel.SetDock(werkzeuge, Dock.Right);
-            werkzeuge.Children.Add(Kleiner("▲", "Punkt nach oben", () =>
-                VerschiebeVerzeichnispunkt(stelle, -1, wirt, feld)));
-            werkzeuge.Children.Add(Kleiner("▼", "Punkt nach unten", () =>
-                VerschiebeVerzeichnispunkt(stelle, +1, wirt, feld)));
-            werkzeuge.Children.Add(Kleiner("✕", "Punkt entfernen", () =>
+            werkzeuge.Children.Add(Kleiner(string.Empty, "Punkt nach oben", () =>
+                VerschiebeVerzeichnispunkt(stelle, -1, wirt, feld)).MitGlyph("\uE74A"));
+            werkzeuge.Children.Add(Kleiner(string.Empty, "Punkt nach unten", () =>
+                VerschiebeVerzeichnispunkt(stelle, +1, wirt, feld)).MitGlyph("\uE74B"));
+            werkzeuge.Children.Add(Kleiner(string.Empty, "Punkt entfernen", () =>
             {
                 _dossier.TocAttachments.RemoveAt(stelle);
                 FuelleVerzeichnisEditor(wirt, feld);
                 _zeichneBlatt();
                 Betone(feld.Key);
-            }));
+            }).MitGlyph("\uE711"));
 
             kopf.Children.Add(werkzeuge);
             kopf.Children.Add(new TextBlock

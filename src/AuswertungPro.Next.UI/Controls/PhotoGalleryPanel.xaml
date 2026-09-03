@@ -20,7 +20,7 @@
                     Margin="8,0,0,0"
                     Style="{StaticResource SecondaryButton}"
                     Click="Detach_Click"
-                    ToolTip="In eigenem Fenster oeffnen">
+                    ToolTip="In eigenem Fenster öffnen">
                 <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="12"/>
             </Button>
             <TextBlock DockPanel.Dock="Left"

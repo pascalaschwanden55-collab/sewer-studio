@@ -1,6 +1,7 @@
 <Window x:Class="AuswertungPro.Next.UI.Views.Windows.TrainingCenterWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        ui:WindowFx.Entrance="True"
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
