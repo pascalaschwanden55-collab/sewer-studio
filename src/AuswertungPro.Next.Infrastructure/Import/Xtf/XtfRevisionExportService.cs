@@ -178,6 +178,23 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
     /// Sucht die XTF-Quellen unterhalb des Projektordners. Liegt die Projektdatei in
     /// 'Projektdateien', gilt der Ordner darueber als Projektwurzel.
     /// </summary>
+    public IReadOnlyList<AuswertungPro.Next.Application.UseCases.Xtf.XtfProjektkopie> FindeProjektkopien(string? projektPfad)
+    {
+        try
+        {
+            return FindeQuellen(projektPfad)
+                .Select(pfad => new AuswertungPro.Next.Application.UseCases.Xtf.XtfProjektkopie(pfad, File.GetLastWriteTime(pfad)))
+                .OrderByDescending(kopie => kopie.GeaendertLokal)
+                .ToList();
+        }
+        catch (Exception)
+        {
+            // Die Anzeige vor dem Start darf an einer unlesbaren Ablage nicht scheitern;
+            // der eigentliche Lauf meldet den Fehler dann ausdruecklich.
+            return [];
+        }
+    }
+
     internal static List<string> FindeQuellen(string? projektPfad)
     {
         var treffer = new List<string>();

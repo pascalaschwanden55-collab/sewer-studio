@@ -177,52 +177,85 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Revidierte XTF: nutzt denselben Zielordner. Kundenoriginale werden nur gelesen. -->
+                    <!-- XTF-Export: zwei Wege in Klartext. Welcher empfohlen wird, entscheidet das Projekt
+                         (XtfExportAuswahl): mit Importkopie "aktualisieren", ohne Kopie "neu erstellen".
+                         Die Normbegriffe Revision/Erstexport stehen nur noch in den Details und Tooltips. -->
+                    <TextBlock Text="XTF an den Kataster" FontWeight="SemiBold" Margin="2,6,0,2"
+                               Foreground="{DynamicResource TextBrush}"/>
+                    <TextBlock Text="{Binding XtfOriginalZeile}" FontSize="{DynamicResource TextXS}"
+                               Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="2,0,0,8"/>
+
+                    <!-- Weg 1: Bestehende Katasterdaten aktualisieren (Revision an den Original-Kennungen). -->
                     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
                         <StackPanel>
-                            <TextBlock Text="Revidierte XTF" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextBrush}"/>
-                            <TextBlock Text="Schreibt deine Änderungen in eine neue XTF — eine je Originaldatei. Fehlt die gespeicherte Projektkopie, kannst du die passende XTF beim Start auswählen. Die Originale werden nur gelesen."
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Bestehende Katasterdaten aktualisieren" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                <Border Background="{DynamicResource SuccessSubtleBrush}" CornerRadius="{DynamicResource RadiusPill}"
+                                        Padding="8,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                        Visibility="{Binding XtfAktualisierenEmpfohlen, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="empfohlen" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SuccessTextBrush}"/>
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="Schreibt deine Änderungen in eine neue Datei mit den bisherigen Kataster-Kennungen — der Kataster erkennt seine Objekte wieder. Die Originale werden nur gelesen."
                                        FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
-                                       TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                       TextWrapping="Wrap" Margin="0,2,0,8"/>
                             <Button Command="{Binding ErzeugeXtfRevisionCommand}"
                                     HorizontalAlignment="Left" Padding="14,6"
-                                    ToolTip="Prüft zuerst, zeigt das Ergebnis und schreibt erst nach deiner Bestätigung.">
+                                    ToolTip="Prüft zuerst, zeigt die Änderungen und schreibt erst nach deiner Bestätigung (technisch: Revision).">
                                 <StackPanel Orientation="Horizontal">
                                     <ui:FluentIcon Glyph="&#xE7C3;" Margin="0,0,8,0"
                                                    Foreground="{DynamicResource AccentBrush}"/>
-                                    <TextBlock Text="Revidierte XTF erzeugen" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Änderungen prüfen und schreiben" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            <TextBlock Text="Ausgabe: XTF-Revision_&lt;Zeitstempel&gt; im Zielordner oben"
-                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- Vollstaendige neue XTF: braucht keine Originaldatei, schreibt alles selbst. -->
+                    <!-- Weg 2: Neue eigenstaendige XTF (Erstexport mit eigenen Kennungen). -->
                     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
                         <StackPanel>
-                            <TextBlock Text="Neue XTF (vollständiges Projekt)" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextBrush}"/>
-                            <TextBlock Text="Schreibt alle Haltungen und Schächte des Projekts als eigenständige SIA405-Datei — auch mit vorhandener Objekt-ID. Für Änderungen an bereits bestehenden Katasterobjekten bitte Revidierte XTF verwenden."
-                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
-                                       TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Neue eigenständige XTF erstellen" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                <Border Background="{DynamicResource SuccessSubtleBrush}" CornerRadius="{DynamicResource RadiusPill}"
+                                        Padding="8,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                        Visibility="{Binding XtfNeuEmpfohlen, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="empfohlen" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SuccessTextBrush}"/>
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="{Binding XtfNeuHinweis}"
+                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource WarningTextBrush}"
+                                       TextWrapping="Wrap" Margin="0,2,0,8"/>
                             <Button Command="{Binding ErzeugeXtfNeuCommand}"
                                     HorizontalAlignment="Left" Padding="14,6"
-                                    ToolTip="Zeigt zuerst, was hineinkommt und was fehlt. Geschrieben wird erst nach deiner Bestätigung.">
+                                    ToolTip="Schreibt alle Haltungen und Schächte des Projekts als eigene SIA405-Datei mit neuen Kennungen. Zeigt zuerst, was hineinkommt und was fehlt (technisch: Erstexport).">
                                 <StackPanel Orientation="Horizontal">
                                     <ui:FluentIcon Glyph="&#xE8A5;" Margin="0,0,8,0"
                                                    Foreground="{DynamicResource AccentBrush}"/>
-                                    <TextBlock Text="Neue XTF erzeugen" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Neue XTF erstellen" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            <TextBlock Text="Der Verlauf kommt aus der QGIS-Kopie, wo die Haltung dort eindeutig zu finden ist."
-                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
-                                       TextWrapping="Wrap" Margin="0,6,0,0"/>
                         </StackPanel>
                     </Border>
+
+                    <!-- Nach dem Schreiben: direkt zum Ergebnis. -->
+                    <StackPanel Orientation="Horizontal" Margin="2,0,0,8"
+                                Visibility="{Binding HatXtfOrdner, Converter={StaticResource BoolToVis}}">
+                        <Button Command="{Binding OeffneXtfOrdnerCommand}" Padding="12,5"
+                                ToolTip="Zeigt den Ausgabeordner der zuletzt erzeugten XTF im Explorer.">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:FluentIcon Glyph="&#xE838;" Margin="0,0,8,0" Foreground="{DynamicResource MutedBrush}"/>
+                                <TextBlock Text="Ordner öffnen" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="{Binding LetzterXtfOrdner}" FontSize="{DynamicResource TextXS}"
+                                   Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    </StackPanel>
 
                     <TextBlock Text="Verzeichnisbaum für die Verteilung"
                                FontWeight="SemiBold" FontSize="{DynamicResource TextS}"

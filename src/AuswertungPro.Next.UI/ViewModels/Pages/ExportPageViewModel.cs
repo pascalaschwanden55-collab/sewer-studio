@@ -12,6 +12,7 @@ using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.Application.UseCases.Import;
+using AuswertungPro.Next.Application.UseCases.Xtf;
 using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Import;
@@ -31,6 +32,9 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
     private readonly IDialogService _dialogs;
     private readonly AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService _xtfRevisionExport;
     private readonly AuswertungPro.Next.Application.Xtf.IXtfNeuExportService _xtfNeuExport;
+    private readonly IExplorerRevealService _explorerReveal;
+    private XtfExportAuswahl _xtfAuswahl = XtfExportAuswahl.Aus([]);
+    private string? _letzterXtfOrdner;
     private readonly IExcelExportService _excelExport;
     private readonly IToastService _toasts;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
@@ -96,7 +100,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             haltungCadastreIndexes: sp.HaltungCadastreIndexes,
             shaftDistribution: sp.ShaftDistribution,
             importFileStaging: sp.ImportFileStaging,
-            importTransactionJournal: sp.ImportTransactionJournal)
+            importTransactionJournal: sp.ImportTransactionJournal,
+            explorerReveal: sp.ExplorerReveal)
     {
     }
 
@@ -173,7 +178,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         IShaftDistributionService? shaftDistribution = null,
         Application.Export.IDistributionReconciliationService? distributionReconciliation = null,
         IImportFileStagingService? importFileStaging = null,
-        IImportTransactionJournal? importTransactionJournal = null)
+        IImportTransactionJournal? importTransactionJournal = null,
+        IExplorerRevealService? explorerReveal = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -203,6 +209,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
                     () => settings?.QgisHaltungenGpkgPath));
         ErzeugeXtfRevisionCommand = new RelayCommand(RunXtfRevisionWithProjectOperation, CanRunProjectExportCommands);
         ErzeugeXtfNeuCommand = new RelayCommand(RunXtfNeuWithProjectOperation, CanRunProjectExportCommands);
+        _explorerReveal = explorerReveal ?? new Infrastructure.Common.ExplorerRevealLauncher();
+        OeffneXtfOrdnerCommand = new RelayCommand(OeffneXtfOrdner, () => HatXtfOrdner);
         _patternResolver = patternResolver ?? new DistributionPatternResolver();
         _directoryTreeResolver = directoryTreeResolver ?? new DistributionDirectoryTreeResolver(_patternResolver);
         _katasterXtfPaths = katasterXtfPaths ?? KatasterXtfPathResolver.CompatibilityService;
@@ -213,6 +221,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         _importFileStaging = importFileStaging;
         _importTransactionJournal = importTransactionJournal;
         _settings.MigrateLegacyExcelExportRoot();
+        AktualisiereXtfAuswahl();
         _excelExportRoot = _settings.ExcelExportRoot;
         DistributionTargets = BuildDistributionTargets(_patternResolver);
         _shell.RegisterShellOperationGuard(_shellOperationGuard);
@@ -338,137 +347,6 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         };
     }
 
-    /// <summary>
-    /// Erzeugt die revidierten XTF-Dateien. Zuerst laeuft eine reine Pruefung; erst nach
-    /// ausdruecklicher Bestaetigung wird geschrieben. Kundenoriginale werden nur gelesen,
-    /// die Revisionen landen in einem neuen Ordner mit Zeitstempel.
-    /// </summary>
-    private void ErzeugeXtfRevision()
-    {
-        var ziel = ExcelExportRoot;
-        if (string.IsNullOrWhiteSpace(ziel))
-            ziel = _dialogs.SelectFolder("Zielordner fuer die revidierte XTF waehlen");
-        if (string.IsNullOrWhiteSpace(ziel))
-            return;
-
-        var projektPfad = _settings.LastProjectPath ?? "";
-        IReadOnlyList<string>? quellDateien = null;
-
-        var pruefung = _xtfRevisionExport.Erzeuge(
-            new AuswertungPro.Next.Application.Xtf.XtfRevisionExportRequest(
-                _shell.Project, projektPfad, ziel!, NurPruefen: true));
-
-        if (pruefung.QuelleFehlt)
-        {
-            var ausgewaehlt = _dialogs.OpenFiles(
-                "XTF-Quelldatei fuer die Revision waehlen",
-                "XTF-Dateien (*.xtf)|*.xtf");
-            if (ausgewaehlt.Length == 0)
-            {
-                LastResult = "Revision abgebrochen — keine XTF-Quelle gewaehlt.";
-                return;
-            }
-
-            quellDateien = ausgewaehlt;
-            pruefung = _xtfRevisionExport.Erzeuge(
-                new AuswertungPro.Next.Application.Xtf.XtfRevisionExportRequest(
-                    _shell.Project,
-                    projektPfad,
-                    ziel!,
-                    NurPruefen: true,
-                    Quelldateien: quellDateien));
-        }
-
-        if (!pruefung.Ok)
-        {
-            _dialogs.Error(
-                string.IsNullOrWhiteSpace(pruefung.Bericht)
-                    ? pruefung.Fehler ?? "Die Pruefung ist fehlgeschlagen."
-                    : pruefung.Bericht,
-                "Revidierte XTF");
-            LastResult = "XTF-Revision konnte nicht geprueft werden.";
-            return;
-        }
-
-        var weiter = _dialogs.ConfirmCancel(
-            $"{pruefung.Bericht}\n\nDie Revision jetzt schreiben?\n" +
-            "Die Originaldateien werden dabei nur gelesen.",
-            "Revidierte XTF");
-        if (weiter != DialogConfirm.Yes)
-        {
-            LastResult = "Revision abgebrochen.";
-            return;
-        }
-
-        var ergebnis = _xtfRevisionExport.Erzeuge(
-            new AuswertungPro.Next.Application.Xtf.XtfRevisionExportRequest(
-                _shell.Project,
-                projektPfad,
-                ziel!,
-                Quelldateien: quellDateien));
-
-        if (!ergebnis.Ok)
-        {
-            _dialogs.Error($"{ergebnis.Bericht}", "Revidierte XTF");
-            LastResult = "Revision nicht vollstaendig erzeugt.";
-            return;
-        }
-
-        LastResult = ergebnis.Dateien.Count == 0
-            ? "Keine Aenderung — keine Revision noetig."
-            : $"Revidierte XTF erzeugt: {ergebnis.Dateien.Count} Datei(en).";
-        _toasts.Success(LastResult);
-    }
-
-    /// <summary>
-    /// Erzeugt eine eigenstaendige NEUE XTF aus dem ganzen Projektstand. Erst der Bericht,
-    /// dann auf Bestaetigung die Datei.
-    /// </summary>
-    private void ErzeugeXtfNeu()
-    {
-        var ziel = ExcelExportRoot;
-        if (string.IsNullOrWhiteSpace(ziel))
-            ziel = _dialogs.SelectFolder("Zielordner fuer die neue XTF waehlen");
-        if (string.IsNullOrWhiteSpace(ziel))
-            return;
-
-        var pruefung = _xtfNeuExport.Erzeuge(
-            new AuswertungPro.Next.Application.Xtf.XtfNeuExportRequest(
-                _shell.Project, ziel!, NurPruefen: true));
-
-        if (!pruefung.Ok)
-        {
-            _dialogs.Error(
-                string.IsNullOrWhiteSpace(pruefung.Bericht)
-                    ? pruefung.Fehler ?? "Die Pruefung ist fehlgeschlagen."
-                    : $"{pruefung.Bericht}\n\n{pruefung.Fehler}",
-                "Neue XTF");
-            return;
-        }
-
-        var weiter = _dialogs.ConfirmCancel(
-            $"{pruefung.Bericht}\n\nDie Datei jetzt schreiben?",
-            "Neue XTF");
-        if (weiter != DialogConfirm.Yes)
-        {
-            LastResult = "Export abgebrochen.";
-            return;
-        }
-
-        var ergebnis = _xtfNeuExport.Erzeuge(
-            new AuswertungPro.Next.Application.Xtf.XtfNeuExportRequest(_shell.Project, ziel!));
-
-        if (!ergebnis.Ok)
-        {
-            _dialogs.Error(ergebnis.Fehler ?? ergebnis.Bericht, "Neue XTF");
-            LastResult = "Neue XTF nicht erzeugt.";
-            return;
-        }
-
-        LastResult = $"Neue XTF erzeugt: {System.IO.Path.GetFileName(ergebnis.Datei)}";
-        _toasts.Success(LastResult);
-    }
-
     private void BrowseExcelExportRoot()
     {
         var selected = _dialogs.SelectFolder("Gemeinsamen Excel-Zielordner waehlen");
@@ -517,6 +395,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         DistributeDichtheitCommand.NotifyCanExecuteChanged();
         ErzeugeXtfRevisionCommand.NotifyCanExecuteChanged();
         ErzeugeXtfNeuCommand.NotifyCanExecuteChanged();
+        OeffneXtfOrdnerCommand.NotifyCanExecuteChanged();
+        AktualisiereXtfAuswahl();
     }
 
     public bool ConfirmLeave()

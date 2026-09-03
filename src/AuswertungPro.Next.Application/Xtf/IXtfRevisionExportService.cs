@@ -29,4 +29,11 @@ public sealed record XtfRevisionExportResult(
 public interface IXtfRevisionExportService
 {
     XtfRevisionExportResult Erzeuge(XtfRevisionExportRequest request);
+
+    /// <summary>
+    /// Die Importkopien der Original-XTF im Projekt, neueste zuerst — dieselbe Suche, die
+    /// <see cref="Erzeuge"/> ohne ausdrueckliche Quelldateien verwendet. Leer ohne Projektpfad
+    /// oder ohne Ablage; wirft nie, damit die Seite vor dem Start etwas anzeigen kann.
+    /// </summary>
+    IReadOnlyList<UseCases.Xtf.XtfProjektkopie> FindeProjektkopien(string? projektPfad);
 }

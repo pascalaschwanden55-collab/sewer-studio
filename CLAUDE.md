@@ -1216,6 +1216,19 @@ Fuenf Regeln dieses Wegs nie zurueckdrehen:
 - **Der `Profiltyp` haengt am `Rohrprofil`**, auf das die Haltung ueber `RohrprofilRef`
   zeigt. Ein von mehreren Haltungen geteiltes Profil wird nicht geaendert.
 
+Die Exportseite spricht seit 2026-09-03 Klartext: **„Bestehende Katasterdaten aktualisieren"**
+(technisch Revision) und **„Neue eigenstaendige XTF erstellen"** (technisch Erstexport).
+`XtfExportAuswahl` (`Application/UseCases/Xtf`, reine Rechnung) entscheidet aus den
+Importkopien des Projekts (`IXtfRevisionExportService.FindeProjektkopien`, dieselbe Suche wie
+beim Schreiben), welcher Weg das Abzeichen „empfohlen" traegt: mit Kopie Aktualisieren
+(sonst Duplikate im Kataster), ohne Kopie Neu (dann gibt es nichts zu aktualisieren). Die
+Zeile „Original: <Datei> — Importkopie vom <Datum>" steht vor dem Start; fehlt die Kopie,
+sagt sie das, und der Lauf fragt beim Start nach der Datei. Nach dem Schreiben zeigt
+„Ordner oeffnen" den Ausgabeordner ueber `IExplorerRevealService`. Die XTF-Logik des
+ViewModels liegt in `ExportPageViewModel.Xtf.cs` (Hauptdatei bleibt unter 1000 Zeilen).
+Offen (Schritt 2): Alt/Neu-Tabelle vor dem Schreiben und Auslagerung des Ablaufs in einen
+UseCase.
+
 `IXtfNeuExportService`/`XtfNeuExportService` erzeugt eine eigenstaendige XTF aus dem
 ganzen Projektstand. Der Revisionsweg aktualisiert dagegen eine Originaldatei an ihren
 echten XTF-TIDs. Eine einzelne `Objekt_ID` reicht nicht fuer die Kennungen von Kanal,

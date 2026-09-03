@@ -62,13 +62,15 @@ public sealed class ExportPageXtfRevisionSourceSelectionTests
         Assert.True(revision.Requests[1].NurPruefen);
         Assert.Equal([quelle], revision.Requests[2].Quelldateien);
         Assert.False(revision.Requests[2].NurPruefen);
-        Assert.Contains("Revidierte XTF erzeugt", vm.LastResult, StringComparison.Ordinal);
+        Assert.Contains("Katasterdaten aktualisiert", vm.LastResult, StringComparison.Ordinal);
         Assert.False(vm.IsPageBusy);
     }
 
     private sealed class RevisionExportFake : IXtfRevisionExportService
     {
         public List<XtfRevisionExportRequest> Requests { get; } = [];
+
+        public IReadOnlyList<AuswertungPro.Next.Application.UseCases.Xtf.XtfProjektkopie> FindeProjektkopien(string? projektPfad) => [];
 
         public XtfRevisionExportResult Erzeuge(XtfRevisionExportRequest request)
         {
