@@ -1183,6 +1183,25 @@ fuer Kantonsdateien:
   Bezeichnung bleibt nur der Rueckfall. Das benachbarte `ResolveKnotenName` machte es
   immer schon richtig herum.
 
+Was im Programm waehlbar ist, muss auch in die Datei gelangen koennen.
+`DropdownExportierbarkeitTests` prueft jeden Eintrag jeder Auswahlliste, die nach SIA405
+fuehrt, gegen `NachXtfWert`. Ein neuer Wert ohne Ziel macht den Waechter rot und muss
+entweder einen Normwert bekommen oder namentlich als Ausnahme eingetragen werden.
+
+Zwei Ausnahmen sind belegt und bleiben waehlbar: `GFK` und `Guss`. Das WebGIS von Uri
+fuehrt beide (GFK als Kunststoffart, Code 1001; Guss als Gruppe ueber duktil und
+Grauguss), beide ohne `NORM_CODE` — SIA405 kennt sie nicht. Ein leerer `NORM_CODE`
+heisst also NICHT "kein offizieller Begriff", sondern nur "kein Gegenstueck in der
+Norm"; diese Verwechslung hat am 2026-09-03 fast dazu gefuehrt, `GFK` aus der Auswahl
+zu werfen. Der Export meldet solche Werte stattdessen namentlich im Bericht.
+
+Die Zustandsklasse bietet seit 2026-09-03 nur noch `0` bis `4` an. Die fruehere `5`
+gibt es in SIA405 nicht und kam in 21 Projekten kein einziges Mal vor.
+
+Das Material fuehrt Uri im WebGIS zweistufig: erst die Gruppe (Unbekannt, Beton, Stahl,
+Kunststoff, Guss, Andere), dann die Art. SewerStudio kennt bisher nur die Art — die
+Gruppe laesst sich daraus ableiten, wenn sie einmal gebraucht wird.
+
 Wertelisten, Messwerte und die belegten Fallen stehen in
 `docs/SIA405-2020-Wertelisten.md`.
 

@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 
 namespace AuswertungPro.Next.Domain.Models;
 
@@ -41,7 +41,13 @@ public static class MaterialVokabular
     /// 2015-Datei nichts geschrieben. VSA veroeffentlicht das 2015-Modell nicht mehr,
     /// deshalb ist die Liste nur so lang wie die Belege reichen.
     /// </param>
-    private sealed record Konzept(string[] Gelesen, string App, string? Norm, string? Bis2015 = null);
+/// <param name="NurLesbar">
+    /// True fuer einen Begriff, der zwar erkannt wird, aber NICHT im Dropdown steht.
+    /// Gemeint sind Werte ohne Norm-Entsprechung, die auch sonst nirgends vorkommen —
+    /// sie waeren nur eine Falle: waehlbar, aber beim Export lautlos verloren.
+    /// </param>
+    private sealed record Konzept(
+        string[] Gelesen, string App, string? Norm, string? Bis2015 = null, bool NurLesbar = false);
 
     private static readonly Konzept[] Konzepte =
     [
@@ -102,6 +108,11 @@ public static class MaterialVokabular
         // "Guss" allein sagt nicht, ob duktil oder Grauguss - beide stehen einzeln
         // in der Liste. "GFK" ist nicht dasselbe wie Kunststoff_Polyester_GUP.
         new(["guss"], "Guss", null),
+        // GFK bleibt waehlbar: Im WebGIS von Uri steht der Begriff in der Materialliste
+        // unter der Gruppe "Kunststoff" (AWKS_MATERIAL_HALTUNG, Code 1001). Sein leerer
+        // NORM_CODE heisst nur, dass SIA405 kein Gegenstueck kennt — nicht, dass der
+        // Begriff nicht offiziell waere. In eine XTF kann er deshalb nicht; der Export
+        // meldet das namentlich, statt den Wert stillschweigend fallenzulassen.
         new(["gfk", "glasfaser", "glasfaserverstaerkter kunststoff",
              "glasfaserverstärkter kunststoff (gfk)"], "GFK", null)
     ];
@@ -117,12 +128,16 @@ public static class MaterialVokabular
     /// <summary>
     /// Die Auswahl im Programm: leer plus genau ein Begriff je Werkstoff.
     /// Keine zweite Schreibweise daneben — "PVC" wird weiterhin gelesen, steht aber
-    /// nicht zur Auswahl. Damit kann kein Listeneintrag einen ungueltigen Wert in
-    /// eine XTF schreiben.
+    /// nicht zur Auswahl.
+    ///
+    /// Bis 2026-09-03 stand hier, kein Listeneintrag koenne einen ungueltigen Wert in
+    /// eine XTF schreiben — das stimmte nicht: "GFK" und "Guss" haben keinen Normwert
+    /// und verschwanden beim Export lautlos. Beide bleiben waehlbar, weil das WebGIS
+    /// von Uri sie fuehrt; der Export meldet sie jetzt namentlich im Bericht.
     /// </summary>
     public static readonly IReadOnlyList<string> Auswahl = new ReadOnlyCollection<string>(
         new[] { "" }
-            .Concat(Konzepte.Select(k => k.App))
+            .Concat(Konzepte.Where(k => !k.NurLesbar).Select(k => k.App))
             .Distinct(StringComparer.Ordinal)
             .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
             .ToList());

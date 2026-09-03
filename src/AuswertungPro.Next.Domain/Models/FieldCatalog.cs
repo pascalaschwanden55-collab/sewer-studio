@@ -90,9 +90,13 @@ public static class FieldCatalog
             {
                 "", "In Fliessrichtung", "Gegen Fliessrichtung"
             }),
+            // Die Zustandsklasse geht nach VSA von Z0 (schlechtester Zustand) bis Z4.
+            // Bis 2026-09-03 stand hier zusaetzlich eine "5": In SIA405 gibt es sie nicht,
+            // sie waere beim Export verloren gegangen. In 21 Projekten kam sie kein
+            // einziges Mal vor — weder bei Haltungen noch bei Schaechten.
             [FieldKeys.ConditionClass] = new ReadOnlyCollection<string>(new List<string>
             {
-                "", "0", "1", "2", "3", "4", "5"
+                "", "0", "1", "2", "3", "4"
             }),
             [FieldKeys.RenovationDecision] = new ReadOnlyCollection<string>(new List<string>
             {
