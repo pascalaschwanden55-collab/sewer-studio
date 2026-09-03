@@ -23,7 +23,13 @@ public sealed class XtfRundreiseTests
   <DATASECTION>
     <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="chB0000000000001">
       <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="chSSTSCHACHT0001">
+        <BaulicherZustand>Z2</BaulicherZustand>
         <Bezeichnung>78998</Bezeichnung>
+        <Dimension1>800</Dimension1>
+        <Dimension2>800</Dimension2>
+        <Funktion>Kontrollschacht</Funktion>
+        <Material>Beton</Material>
+        <EigentuemerRef REF="chSSTORGANISAT01" />
       </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
       <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="chSSTKNOTEN00001">
         <Bezeichnung>78998</Bezeichnung>
@@ -40,6 +46,7 @@ public sealed class XtfRundreiseTests
         <BaulicherZustand>Z0</BaulicherZustand>
         <Bezeichnung>78998-79002</Bezeichnung>
         <Nutzungsart_Ist>Schmutzabwasser</Nutzungsart_Ist>
+        <EigentuemerRef REF="chSSTORGANISAT01" />
       </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
       <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="chSSTHALTUNG0001">
         <Bezeichnung>78998-79002</Bezeichnung>
@@ -50,6 +57,13 @@ public sealed class XtfRundreiseTests
         <AbwasserbauwerkRef REF="chSSTKANAL000001" />
       </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
     </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+    <SIA405_Base_Abwasser_LV95.Administration BID="chB0000000000002">
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="chSSTORGANISAT01">
+        <Bezeichnung>Privat</Bezeichnung>
+        <Organisationstyp>Privat</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+    </SIA405_Base_Abwasser_LV95.Administration>
   </DATASECTION>
 </TRANSFER>
 """;
@@ -110,9 +124,46 @@ public sealed class XtfRundreiseTests
         Assert.Equal(erwartet, record.GetFieldValue("Zustandsklasse"));
     }
 
-    private static HaltungRecord LiesEine() => Lies(MitZustand);
+    [Fact]
+    public void Der_Eigentuemer_kommt_aus_dem_Verweis_auf_die_Organisation()
+    {
+        // In SIA405 ist der Eigentuemer kein Text, sondern ein Verweis. Wer nur nach
+        // einem Element "Eigentuemer" sucht, findet nichts — und beim naechsten Export
+        // fehlt genau die Angabe, die dort Pflicht ist.
+        var record = LiesEine();
 
-    private static HaltungRecord Lies(string xml)
+        Assert.Equal("Privat", record.GetFieldValue(FieldKeys.Owner));
+    }
+
+    [Fact]
+    public void Auch_der_Schacht_kommt_vollstaendig_zurueck()
+    {
+        var schacht = Assert.Single(LiesProjekt().SchaechteData);
+
+        Assert.Equal("78998", schacht.GetFieldValue("Schachtnummer"));
+        Assert.Equal("Kontrollschacht", schacht.GetFieldValue("Funktion"));
+        Assert.Equal("Beton", schacht.GetFieldValue("Material"));
+        Assert.Equal("800 mm", schacht.GetFieldValue("Dimension"));
+    }
+
+    [Fact]
+    public void Der_Schacht_behaelt_Zustand_und_Eigentuemer()
+    {
+        // Beide fehlten bis 2026-09-03: BaulicherZustand wurde am Normschacht nicht
+        // gelesen, und der Eigentuemer stand als Verweis da, nicht als Text.
+        var schacht = Assert.Single(LiesProjekt().SchaechteData);
+
+        Assert.Equal("2", schacht.GetFieldValue(FieldKeys.ConditionClass));
+        Assert.Equal("Privat", schacht.GetFieldValue(FieldKeys.Owner));
+    }
+
+    private static HaltungRecord LiesEine() => Assert.Single(LiesProjekt().Data);
+
+    private static Project LiesProjekt() => LiesProjektAus(MitZustand);
+
+    private static HaltungRecord Lies(string xml) => Assert.Single(LiesProjektAus(xml).Data);
+
+    private static Project LiesProjektAus(string xml)
     {
         var ordner = Path.Combine(Path.GetTempPath(), $"rundreise_{Guid.NewGuid():N}");
         Directory.CreateDirectory(ordner);
@@ -124,7 +175,7 @@ public sealed class XtfRundreiseTests
             var stats = new LegacyXtfImportService().ImportXtfFiles([datei], projekt);
 
             Assert.True(stats.Errors == 0, string.Join(" | ", stats.Messages));
-            return Assert.Single(projekt.Data);
+            return projekt;
         }
         finally
         {

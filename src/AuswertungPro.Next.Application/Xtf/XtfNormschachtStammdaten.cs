@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Xtf;
 
@@ -12,7 +12,8 @@ public sealed record XtfNormschachtElement(
     string? Material = null,
     string? Dimension1 = null,
     string? Dimension2 = null,
-    string? Eigentuemer = null);
+    string? Eigentuemer = null,
+    string? BaulicherZustand = null);
 
 /// <summary>
 /// Bildet einen Normschacht der SIA405-XTF auf die Schachtfelder von SewerStudio ab.
@@ -53,6 +54,21 @@ public static class XtfNormschachtStammdaten
     /// Es wuerde die Spalte fuellen, ohne etwas zu sagen, und dabei einen spaeteren
     /// besseren Wert aus einer anderen Quelle blockieren.
     /// </summary>
+    /// <summary>
+    /// "Z0" bis "Z4" aus der XTF zur Ziffer, die das Programm fuehrt. Alles andere —
+    /// "unbekannt", leer, ein unerwarteter Text — liefert <c>null</c> und setzt nichts.
+    ///
+    /// Dieselbe Regel gilt fuer Haltungen; sie steht hier, damit beide Wege sie teilen.
+    /// </summary>
+    public static string? Zustandsklasse(string? ausDerDatei)
+    {
+        var wert = (ausDerDatei ?? "").Trim();
+        if (wert.Length != 2 || (wert[0] != 'Z' && wert[0] != 'z'))
+            return null;
+
+        return wert[1] is >= '0' and <= '4' ? wert[1].ToString() : null;
+    }
+
     public static IReadOnlyList<KeyValuePair<string, string>> Feldpaare(XtfNormschachtElement element)
     {
         ArgumentNullException.ThrowIfNull(element);
@@ -69,6 +85,7 @@ public static class XtfNormschachtStammdaten
         Ergaenze("Material", SchachtMaterialVokabular.Normalisieren(element.Material));
         Ergaenze("Dimension", Dimension(element.Dimension1, element.Dimension2));
         Ergaenze(FieldKeys.Owner, EigentumVokabular.Normalisieren(element.Eigentuemer));
+        Ergaenze(FieldKeys.ConditionClass, Zustandsklasse(element.BaulicherZustand));
 
         return paare;
 

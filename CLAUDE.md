@@ -1177,6 +1177,13 @@ fuer Kantonsdateien:
   stehen, solange KEIN bewertbarer Befund vorliegt. Mit Befunden rechnet SewerStudio
   weiterhin selbst. Entscheid Pascal 2026-09-03: Beim Import gewinnt die Datei — nur so
   sind GEONIS und SewerStudio nach einem Austausch identisch.
+- **Der Eigentuemer wurde nie aufgeloest.** In SIA405 ist er ein Verweis auf eine
+  `Organisation` im Topic `Administration`, kein Text. Der Import suchte nur nach einem
+  Element `Eigentuemer` und fand in einer normkonformen Datei nichts — ausgerechnet die
+  Angabe, die der Export zwingend braucht (`EigentuemerRef` ist `{1}`). Ohne sie kam kein
+  einziger Schacht aus dem Projekt heraus. Beide Wege lesen jetzt die Organisationen der
+  Datei und loesen den Verweis auf.
+- **Am `Normschacht` fehlte `BaulicherZustand` ebenso** wie am Kanal.
 - **`ResolveSchachtLabel` nahm zuerst die Bezeichnung des Haltungspunkts.** Die ist ein
   technischer Name (`u-80401_von` im Kantonsexport, `<Haltung>_von` bei uns) und landete
   so in `Schacht_oben`. Jetzt gilt zuerst der `Abwasserknoten` — er IST der Schacht —, die

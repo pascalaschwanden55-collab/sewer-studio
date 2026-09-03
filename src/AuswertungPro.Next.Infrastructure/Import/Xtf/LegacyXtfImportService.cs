@@ -394,6 +394,9 @@ public sealed partial class LegacyXtfImportService
         /// </summary>
         public string BaulicherZustand { get; set; } = "";
         public string Eigentuemer { get; set; } = "";
+
+        /// <summary>Die Kennung der verwiesenen Organisation.</summary>
+        public string EigentuemerRef { get; set; } = "";
         public string Baujahr { get; set; } = "";
         public string Rohrlaenge { get; set; } = "";
         public string Funktion { get; set; } = "";
@@ -420,6 +423,11 @@ public sealed partial class LegacyXtfImportService
         var haltungen = new Dictionary<string, HaltungData>(StringComparer.OrdinalIgnoreCase);
         var haltungspunkte = new Dictionary<string, (string Bezeichnung, string? AbwassernetzelementRef)>(StringComparer.OrdinalIgnoreCase);
         var abwasserknoten = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        // Die Organisationen der Datei, damit EigentuemerRef aufgeloest werden kann.
+        // Sie stehen im Topic "Administration", also ausserhalb der Fachdaten-Baskets —
+        // deshalb ueber das ganze Dokument gelesen.
+        var organisationen = LiesOrganisationen(doc);
 
         var baskets = doc.Descendants()
             .Where(e => e.Name.LocalName.EndsWith("SIA405_Abwasser.SIA405_Abwasser", StringComparison.OrdinalIgnoreCase))
@@ -448,6 +456,13 @@ public sealed partial class LegacyXtfImportService
                         case "Zugaenglichkeit": kd.Zugaenglichkeit = child.Value; break;
                         case "BaulicherZustand": kd.BaulicherZustand = child.Value; break;
                         case "Eigentuemer": kd.Eigentuemer = child.Value; break;
+                        // In SIA405 ist der Eigentuemer ein Verweis, kein Text. Die
+                        // Kennung wird gemerkt und spaeter gegen die Organisationen der
+                        // Datei aufgeloest — ohne das ging der Eigentuemer bei jedem
+                        // Import verloren, und beim naechsten Export fehlte genau er.
+                        case "EigentuemerRef":
+                            kd.EigentuemerRef = (string?)child.Attribute("REF") ?? "";
+                            break;
                         case "Baujahr": kd.Baujahr = child.Value; break;
                         case "Rohrlaenge": kd.Rohrlaenge = child.Value; break;
                         case "Funktionhierarchisch": kd.Funktion = child.Value; break;
@@ -582,7 +597,11 @@ public sealed partial class LegacyXtfImportService
                 if (!string.IsNullOrWhiteSpace(kanal.Bemerkung)) rec.SetFieldValue("Bemerkungen", kanal.Bemerkung, FieldSource.Xtf405, userEdited: false);
                 // Der Rohwert der XTF ("Abwasser Uri") faerbt die Eigentuemerspalte der
                 // Excel-Vorlage nicht - sie vergleicht exakt gegen "AWU".
-                var eigentuemer = EigentumVokabular.Normalisieren(kanal.Eigentuemer);
+                var ausVerweis = organisationen.TryGetValue(kanal.EigentuemerRef ?? "", out var orgName)
+                    ? orgName
+                    : null;
+                var eigentuemer = EigentumVokabular.Normalisieren(
+                    string.IsNullOrWhiteSpace(kanal.Eigentuemer) ? ausVerweis : kanal.Eigentuemer);
                 if (!string.IsNullOrWhiteSpace(eigentuemer)) rec.SetFieldValue("Eigentuemer", eigentuemer, FieldSource.Xtf405, userEdited: false);
 
                 // Funktionhierarchisch -> Katalog-Combo "PAA.<Suffix>" (speist u.a. VSA-Zustandsnote B4)
