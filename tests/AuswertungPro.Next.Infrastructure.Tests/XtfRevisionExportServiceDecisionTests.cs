@@ -40,6 +40,39 @@ public sealed class XtfRevisionExportServiceDecisionTests
         }
     }
 
+    [Fact]
+    public void Pruefung_liefert_den_Plan_mit_fuer_die_Vorschau()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "xtf-revision-plan-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        var quelle = Path.Combine(temp, "mehrdeutig.xtf");
+        File.WriteAllText(quelle, MehrdeutigeQuelle);
+
+        try
+        {
+            var projekt = new Project();
+            projekt.Data.Add(MehrdeutigeHaltung(Path.GetFileName(quelle)));
+
+            var ergebnis = new XtfRevisionExportService().Erzeuge(
+                new XtfRevisionExportRequest(
+                    projekt,
+                    Path.Combine(temp, "projekt.json"),
+                    Path.Combine(temp, "Ausgabe"),
+                    NurPruefen: true,
+                    Quelldateien: [quelle]));
+
+            // Auch eine nicht bestandene Pruefung traegt ihren Plan: Die Vorschau zeigt daraus,
+            // was offen ist, statt nur einen Textbericht.
+            var plan = Assert.Single(ergebnis.Plaene ?? []);
+            Assert.Equal("mehrdeutig.xtf", plan.Quelldatei);
+            Assert.True(plan.BrauchtEntscheidung);
+        }
+        finally
+        {
+            try { Directory.Delete(temp, recursive: true); } catch { }
+        }
+    }
+
     private static HaltungRecord MehrdeutigeHaltung(string quelldatei)
     {
         var erster = Eintrag();

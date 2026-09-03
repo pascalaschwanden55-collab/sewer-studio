@@ -108,9 +108,11 @@ public sealed class ServiceProviderRegistrationTests
         // 153 -> 154: IXtfNeuExportService schreibt eine NEUE SIA405-Datei fuer Objekte
         // ohne Katastervorlage. Der Revisionsweg braucht eine Originaldatei; private
         // Anschlussleitungen haben keine.
+        // 154 -> 155: IXtfExportVorschauDialog zeigt vor dem XTF-Schreiben die Alt/Neu-Tabelle
+        // im eigenen Fenster; der Ablauf liegt im UseCase, das ViewModel verdrahtet nur.
         Assert.True(
-            registrations.Count == 154,
-            $"Erwartet 154 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 155,
+            $"Erwartet 155 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(

@@ -1226,8 +1226,23 @@ Zeile „Original: <Datei> — Importkopie vom <Datum>" steht vor dem Start; feh
 sagt sie das, und der Lauf fragt beim Start nach der Datei. Nach dem Schreiben zeigt
 „Ordner oeffnen" den Ausgabeordner ueber `IExplorerRevealService`. Die XTF-Logik des
 ViewModels liegt in `ExportPageViewModel.Xtf.cs` (Hauptdatei bleibt unter 1000 Zeilen).
-Offen (Schritt 2): Alt/Neu-Tabelle vor dem Schreiben und Auslagerung des Ablaufs in einen
-UseCase.
+
+Der Ablauf selbst liegt seit Schritt 2 in `XtfAktualisierenUseCase` und
+`XtfNeuErstellenUseCase` (`Application/UseCases/Xtf`, Request/Actions/Ergebnis): pruefen,
+bei fehlender Kopie die Original-XTF erfragen, Vorschau bestaetigen lassen, erst dann
+schreiben. Eine gescheiterte Pruefung zeigt den Fehler und fragt NIE nach Bestaetigung;
+vor der Bestaetigung wird nie geschrieben (Tests `XtfExportUseCaseTests`). Die Vorschau
+`XtfExportVorschau` ist reine Darstellung des `XtfRevisionPlan`: eine Zeile
+„3 Objekte geaendert · 0 neu · 0 entfernt", eine Tabelle Objekt / Feld / Original /
+Neuer Wert (Feldnamen in Klartext, `Dimension1`+`Dimension2` als eine Zeile
+„500 x 500 -> 1100 x 900", Entfernen sichtbar), hoechstens drei sichtbare Warnungen,
+der ganze Bericht unter „Details anzeigen". Dafuer traegt `XtfRevisionExportResult`
+additiv `Plaene`, und `XtfRevisionPosition` das Feld `Objekt` („Haltung"/„Schacht";
+Befunde bleiben leer und heissen „Befund <Code> bei <m> m"). Das Fenster
+`XtfExportVorschauWindow` zeigt im Fehlerfall dieselbe Anordnung rot mit nur
+„Schliessen"; `IXtfExportVorschauDialog` ist im ServiceProvider registriert. Das
+ViewModel enthaelt keinen eigenen Ablauf mehr — es leiht dem UseCase Dateiwahl und
+beide Fenster.
 
 `IXtfNeuExportService`/`XtfNeuExportService` erzeugt eine eigenstaendige XTF aus dem
 ganzen Projektstand. Der Revisionsweg aktualisiert dagegen eine Originaldatei an ihren

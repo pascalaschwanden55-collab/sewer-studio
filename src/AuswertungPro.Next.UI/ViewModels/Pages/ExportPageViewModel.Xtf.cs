@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+using System;
 using AuswertungPro.Next.Application.UseCases.Xtf;
 using AuswertungPro.Next.UI.Services;
 using CommunityToolkit.Mvvm.Input;
@@ -9,7 +8,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 /// <summary>
 /// XTF an den Kataster: zwei Wege in der Sprache des Nutzers. Aktualisieren = Revision an den
 /// Original-Kennungen, Neu = Erstexport mit eigenen Kennungen. Welcher Weg empfohlen wird,
-/// entscheidet <see cref="XtfExportAuswahl"/> aus den Importkopien des Projekts.
+/// entscheidet <see cref="XtfExportAuswahl"/> aus den Importkopien des Projekts. Der Ablauf
+/// selbst (pruefen, Quelle erfragen, Vorschau, schreiben) liegt in
+/// <see cref="XtfAktualisierenUseCase"/> und <see cref="XtfNeuErstellenUseCase"/>; hier wird
+/// nur verdrahtet, was die Oberflaeche dazu leiht.
 /// </summary>
 public sealed partial class ExportPageViewModel
 {
@@ -38,142 +40,56 @@ public sealed partial class ExportPageViewModel
 
     public bool HatXtfOrdner => !string.IsNullOrWhiteSpace(_letzterXtfOrdner);
 
-    /// <summary>
-    /// Erzeugt die revidierten XTF-Dateien. Zuerst laeuft eine reine Pruefung; erst nach
-    /// ausdruecklicher Bestaetigung wird geschrieben. Kundenoriginale werden nur gelesen,
-    /// die Revisionen landen in einem neuen Ordner mit Zeitstempel.
-    /// </summary>
+    /// <summary>Bestehende Katasterdaten aktualisieren — Vorschau, dann schreiben.</summary>
     private void ErzeugeXtfRevision()
     {
-        var ziel = ExcelExportRoot;
-        if (string.IsNullOrWhiteSpace(ziel))
-            ziel = _dialogs.SelectFolder("Zielordner fuer die revidierte XTF waehlen");
-        if (string.IsNullOrWhiteSpace(ziel))
+        var ziel = Zielordner("Zielordner für die aktualisierte XTF wählen");
+        if (ziel is null)
             return;
 
-        var projektPfad = _settings.LastProjectPath ?? "";
-        IReadOnlyList<string>? quellDateien = null;
-
-        var pruefung = _xtfRevisionExport.Erzeuge(
-            new AuswertungPro.Next.Application.Xtf.XtfRevisionExportRequest(
-                _shell.Project, projektPfad, ziel!, NurPruefen: true));
-
-        if (pruefung.QuelleFehlt)
-        {
-            var ausgewaehlt = _dialogs.OpenFiles(
-                "XTF-Quelldatei fuer die Revision waehlen",
-                "XTF-Dateien (*.xtf)|*.xtf");
-            if (ausgewaehlt.Length == 0)
-            {
-                LastResult = "Revision abgebrochen — keine XTF-Quelle gewaehlt.";
-                return;
-            }
-
-            quellDateien = ausgewaehlt;
-            pruefung = _xtfRevisionExport.Erzeuge(
-                new AuswertungPro.Next.Application.Xtf.XtfRevisionExportRequest(
-                    _shell.Project,
-                    projektPfad,
-                    ziel!,
-                    NurPruefen: true,
-                    Quelldateien: quellDateien));
-        }
-
-        if (!pruefung.Ok)
-        {
-            _dialogs.Error(
-                string.IsNullOrWhiteSpace(pruefung.Bericht)
-                    ? pruefung.Fehler ?? "Die Pruefung ist fehlgeschlagen."
-                    : pruefung.Bericht,
-                "Revidierte XTF");
-            LastResult = "XTF-Revision konnte nicht geprueft werden.";
-            return;
-        }
-
-        var weiter = _dialogs.ConfirmCancel(
-            $"{pruefung.Bericht}\n\nDie Revision jetzt schreiben?\n" +
-            "Die Originaldateien werden dabei nur gelesen.",
-            "Revidierte XTF");
-        if (weiter != DialogConfirm.Yes)
-        {
-            LastResult = "Revision abgebrochen.";
-            return;
-        }
-
-        var ergebnis = _xtfRevisionExport.Erzeuge(
-            new AuswertungPro.Next.Application.Xtf.XtfRevisionExportRequest(
-                _shell.Project,
-                projektPfad,
-                ziel!,
-                Quelldateien: quellDateien));
-
-        if (!ergebnis.Ok)
-        {
-            _dialogs.Error($"{ergebnis.Bericht}", "Revidierte XTF");
-            LastResult = "Revision nicht vollstaendig erzeugt.";
-            return;
-        }
-
-        if (ergebnis.Dateien.Count > 0)
-            LetzterXtfOrdner = Path.GetDirectoryName(ergebnis.Dateien[0]);
-
-        LastResult = ergebnis.Dateien.Count switch
-        {
-            0 => "Keine Änderung gegenüber dem Kataster — nichts geschrieben.",
-            1 => "Katasterdaten aktualisiert: 1 Datei geschrieben.",
-            var n => $"Katasterdaten aktualisiert: {n} Dateien geschrieben."
-        };
-        _toasts.Success(LastResult);
+        var ergebnis = XtfAktualisierenUseCase.Execute(
+            _xtfRevisionExport,
+            new XtfAktualisierenRequest(_shell.Project, _settings.LastProjectPath ?? "", ziel),
+            XtfAktionen());
+        Uebernimm(ergebnis);
     }
 
-    /// <summary>
-    /// Erzeugt eine eigenstaendige NEUE XTF aus dem ganzen Projektstand. Erst der Bericht,
-    /// dann auf Bestaetigung die Datei.
-    /// </summary>
+    /// <summary>Neue eigenstaendige XTF erstellen — Bericht als Vorschau, dann schreiben.</summary>
     private void ErzeugeXtfNeu()
+    {
+        var ziel = Zielordner("Zielordner für die neue XTF wählen");
+        if (ziel is null)
+            return;
+
+        var ergebnis = XtfNeuErstellenUseCase.Execute(
+            _xtfNeuExport,
+            new AuswertungPro.Next.Application.Xtf.XtfNeuExportRequest(_shell.Project, ziel),
+            XtfAktionen());
+        Uebernimm(ergebnis);
+    }
+
+    /// <summary>Was der Ablauf von der Oberflaeche braucht: Dateiwahl, Vorschaufenster, Fehlerfenster.</summary>
+    private XtfExportActions XtfAktionen() => new(
+        () => _dialogs.OpenFiles("Original-XTF für die Aktualisierung wählen", "XTF-Dateien (*.xtf)|*.xtf"),
+        _xtfVorschau.Bestaetige,
+        _xtfVorschau.ZeigeFehler);
+
+    private string? Zielordner(string frage)
     {
         var ziel = ExcelExportRoot;
         if (string.IsNullOrWhiteSpace(ziel))
-            ziel = _dialogs.SelectFolder("Zielordner fuer die neue XTF waehlen");
-        if (string.IsNullOrWhiteSpace(ziel))
+            ziel = _dialogs.SelectFolder(frage);
+        return string.IsNullOrWhiteSpace(ziel) ? null : ziel;
+    }
+
+    private void Uebernimm(XtfExportErgebnis ergebnis)
+    {
+        LastResult = ergebnis.Meldung;
+        if (!ergebnis.Geschrieben)
             return;
 
-        var pruefung = _xtfNeuExport.Erzeuge(
-            new AuswertungPro.Next.Application.Xtf.XtfNeuExportRequest(
-                _shell.Project, ziel!, NurPruefen: true));
-
-        if (!pruefung.Ok)
-        {
-            _dialogs.Error(
-                string.IsNullOrWhiteSpace(pruefung.Bericht)
-                    ? pruefung.Fehler ?? "Die Pruefung ist fehlgeschlagen."
-                    : $"{pruefung.Bericht}\n\n{pruefung.Fehler}",
-                "Neue XTF");
-            return;
-        }
-
-        var weiter = _dialogs.ConfirmCancel(
-            $"{pruefung.Bericht}\n\nDie Datei jetzt schreiben?",
-            "Neue XTF");
-        if (weiter != DialogConfirm.Yes)
-        {
-            LastResult = "Export abgebrochen.";
-            return;
-        }
-
-        var ergebnis = _xtfNeuExport.Erzeuge(
-            new AuswertungPro.Next.Application.Xtf.XtfNeuExportRequest(_shell.Project, ziel!));
-
-        if (!ergebnis.Ok)
-        {
-            _dialogs.Error(ergebnis.Fehler ?? ergebnis.Bericht, "Neue XTF");
-            LastResult = "Neue XTF nicht erzeugt.";
-            return;
-        }
-
-        LetzterXtfOrdner = Path.GetDirectoryName(ergebnis.Datei);
-        LastResult = $"Neue XTF erstellt: {Path.GetFileName(ergebnis.Datei)}";
-        _toasts.Success(LastResult);
+        LetzterXtfOrdner = ergebnis.Ordner;
+        _toasts.Success(ergebnis.Meldung);
     }
 
     /// <summary>

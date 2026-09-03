@@ -522,7 +522,8 @@ public static class XtfStammdatenPlanBuilder
             name,
             Code: "",
             Meter: null,
-            felder));
+            felder,
+            Objekt: "Haltung"));
     }
 
     /// <summary>Der Eigentuemer als eigene Feldkarte — er laeuft nicht ueber den Textweg.</summary>

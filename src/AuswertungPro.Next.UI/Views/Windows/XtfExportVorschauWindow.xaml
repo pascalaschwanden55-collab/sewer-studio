@@ -1,0 +1,111 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.XtfExportVorschauWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        ui:WindowFx.Entrance="True"
+        Title="SewerStudio — XTF-Vorschau"
+        Width="860" Height="620"
+        MinWidth="600" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgBrush}"
+        Foreground="{DynamicResource TextBrush}">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
+    <!-- Vorschau vor dem Schreiben: eine Zeile Zusammenfassung, die Tabelle Alt/Neu, hoechstens drei
+         sichtbare Warnungen, der ganze Bericht erst unter "Details anzeigen". Im Fehlerfall dieselbe
+         Anordnung mit rotem Kopf und nur "Schliessen". -->
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="{Binding Titel}" FontSize="{DynamicResource TextXL}" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6"/>
+
+        <!-- Zusammenfassung: gruen bei Vorschau, rot bei Fehler -->
+        <Border Grid.Row="1" Padding="12,8" CornerRadius="{DynamicResource RadiusM}" Margin="0,0,0,10"
+                Background="{DynamicResource SuccessSubtleBrush}"
+                Visibility="{Binding IstVorschau, Converter={StaticResource BoolToVis}}">
+            <StackPanel Orientation="Horizontal">
+                <ui:FluentIcon Glyph="&#xE73E;" Foreground="{DynamicResource SuccessTextBrush}" Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding Zusammenfassung}" FontWeight="SemiBold" TextWrapping="Wrap"
+                           Foreground="{DynamicResource SuccessTextBrush}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+        <Border Grid.Row="1" Padding="12,8" CornerRadius="{DynamicResource RadiusM}" Margin="0,0,0,10"
+                Background="{DynamicResource DangerSubtleBrush}"
+                Visibility="{Binding IstFehler, Converter={StaticResource BoolToVis}}">
+            <StackPanel Orientation="Horizontal">
+                <ui:FluentIcon Glyph="&#xE7BA;" Foreground="{DynamicResource DangerTextBrush}" Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding Zusammenfassung}" FontWeight="SemiBold" TextWrapping="Wrap"
+                           Foreground="{DynamicResource DangerTextBrush}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Tabelle Alt/Neu (nur beim Aktualisieren) -->
+        <DataGrid Grid.Row="2" ItemsSource="{Binding Zeilen}" AutoGenerateColumns="False" IsReadOnly="True"
+                  HeadersVisibility="Column" SelectionMode="Single" CanUserResizeRows="False"
+                  Visibility="{Binding HatZeilen, Converter={StaticResource BoolToVis}}"
+                  FontSize="{DynamicResource TextM}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Objekt" Binding="{Binding Objekt}" Width="2*"/>
+                <DataGridTextColumn Header="Feld" Binding="{Binding Feld}" Width="1.2*"/>
+                <DataGridTextColumn Header="Original" Binding="{Binding Alt}" Width="1.2*"/>
+                <DataGridTextColumn Header="Neuer Wert" Binding="{Binding Neu}" Width="1.2*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+        <TextBlock Grid.Row="2" Text="{Binding OhneTabelleHinweis}" TextWrapping="Wrap" VerticalAlignment="Top"
+                   Foreground="{DynamicResource MutedBrush}"
+                   Visibility="{Binding OhneZeilen, Converter={StaticResource BoolToVis}}"/>
+
+        <!-- Warnungen: hoechstens drei Zeilen -->
+        <ItemsControl Grid.Row="3" ItemsSource="{Binding KurzeWarnungen}" Margin="0,10,0,0"
+                      Visibility="{Binding HatWarnungen, Converter={StaticResource BoolToVis}}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                        <ui:FluentIcon Glyph="&#xE7BA;" FontSize="{DynamicResource TextXS}"
+                                       Foreground="{DynamicResource WarningTextBrush}" Margin="0,2,6,0" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource WarningTextBrush}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Details: der vollstaendige Bericht, eingeklappt -->
+        <Expander Grid.Row="4" Header="Details anzeigen" Margin="0,10,0,0" IsExpanded="{Binding DetailsOffen, Mode=TwoWay}">
+            <TextBox Text="{Binding Details, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                     FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextS}"
+                     MaxHeight="220" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0"/>
+        </Expander>
+
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button x:Name="AbbrechenButton" Content="Abbrechen" Padding="16,6" Margin="0,0,8,0" IsCancel="True"
+                    Visibility="{Binding IstVorschau, Converter={StaticResource BoolToVis}}"
+                    ToolTip="Schliesst die Vorschau. Es wird nichts geschrieben."/>
+            <Button x:Name="SchreibenButton" Style="{StaticResource PrimaryButton}" Padding="18,6" IsDefault="True"
+                    Visibility="{Binding IstVorschau, Converter={StaticResource BoolToVis}}"
+                    ToolTip="Schreibt die Datei in den Zielordner. Die Originale werden nur gelesen."
+                    Click="OnSchreiben">
+                <StackPanel Orientation="Horizontal">
+                    <ui:FluentIcon Glyph="&#xE74E;" Foreground="White" Margin="0,0,8,0"/>
+                    <TextBlock Text="Jetzt schreiben" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="SchliessenButton" Content="Schliessen" Padding="16,6" IsCancel="True"
+                    Visibility="{Binding IstFehler, Converter={StaticResource BoolToVis}}"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -33,6 +33,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
     private readonly AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService _xtfRevisionExport;
     private readonly AuswertungPro.Next.Application.Xtf.IXtfNeuExportService _xtfNeuExport;
     private readonly IExplorerRevealService _explorerReveal;
+    private readonly IXtfExportVorschauDialog _xtfVorschau;
     private XtfExportAuswahl _xtfAuswahl = XtfExportAuswahl.Aus([]);
     private string? _letzterXtfOrdner;
     private readonly IExcelExportService _excelExport;
@@ -101,7 +102,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             shaftDistribution: sp.ShaftDistribution,
             importFileStaging: sp.ImportFileStaging,
             importTransactionJournal: sp.ImportTransactionJournal,
-            explorerReveal: sp.ExplorerReveal)
+            explorerReveal: sp.ExplorerReveal,
+            xtfVorschau: sp.XtfExportVorschau)
     {
     }
 
@@ -179,7 +181,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         Application.Export.IDistributionReconciliationService? distributionReconciliation = null,
         IImportFileStagingService? importFileStaging = null,
         IImportTransactionJournal? importTransactionJournal = null,
-        IExplorerRevealService? explorerReveal = null)
+        IExplorerRevealService? explorerReveal = null,
+        IXtfExportVorschauDialog? xtfVorschau = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -210,6 +213,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         ErzeugeXtfRevisionCommand = new RelayCommand(RunXtfRevisionWithProjectOperation, CanRunProjectExportCommands);
         ErzeugeXtfNeuCommand = new RelayCommand(RunXtfNeuWithProjectOperation, CanRunProjectExportCommands);
         _explorerReveal = explorerReveal ?? new Infrastructure.Common.ExplorerRevealLauncher();
+        _xtfVorschau = xtfVorschau ?? new XtfExportVorschauDialogService();
         OeffneXtfOrdnerCommand = new RelayCommand(OeffneXtfOrdner, () => HatXtfOrdner);
         _patternResolver = patternResolver ?? new DistributionPatternResolver();
         _directoryTreeResolver = directoryTreeResolver ?? new DistributionDirectoryTreeResolver(_patternResolver);

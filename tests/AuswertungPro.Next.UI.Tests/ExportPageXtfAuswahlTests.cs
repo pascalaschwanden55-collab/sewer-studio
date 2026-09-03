@@ -116,7 +116,8 @@ public sealed class ExportPageXtfAuswahlTests
                 services.KatasterXtfPaths,
                 services.HaltungCadastreIndexes,
                 xtfRevisionExport: new RevisionFake(kopien, Ausgabe),
-                explorerReveal: Explorer);
+                explorerReveal: Explorer,
+                xtfVorschau: new VorschauFake());
         }
 
         public void Dispose()
@@ -138,6 +139,12 @@ public sealed class ExportPageXtfAuswahlTests
                 ? new XtfRevisionExportResult(true, "3 Objekte geändert · 0 neu · 0 entfernt", null, [])
                 : new XtfRevisionExportResult(true, "Geschrieben.", null,
                     [Path.Combine(ausgabe, "XTF-Revision_20260903_145901", "Leitungen_Export_Seilergasse.xtf")]);
+    }
+
+    private sealed class VorschauFake : IXtfExportVorschauDialog
+    {
+        public bool Bestaetige(XtfExportVorschau vorschau) => true;
+        public void ZeigeFehler(XtfExportVorschau vorschau) => Assert.Fail(vorschau.Zusammenfassung);
     }
 
     private sealed class ExplorerFake : IExplorerRevealService

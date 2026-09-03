@@ -14,7 +14,8 @@ public sealed record XtfRevisionExportResult(
     string Bericht,
     string? Fehler,
     IReadOnlyList<string> Dateien,
-    bool QuelleFehlt = false);
+    bool QuelleFehlt = false,
+    IReadOnlyList<XtfRevisionPlan>? Plaene = null);
 
 /// <summary>
 /// Erzeugt aus dem aktuellen Projektstand revidierte XTF-Dateien — eine je Originaldatei.

@@ -49,11 +49,12 @@ public sealed class ExportPageXtfRevisionSourceSelectionTests
             services.DistributionDirectoryTree,
             services.KatasterXtfPaths,
             services.HaltungCadastreIndexes,
-            xtfRevisionExport: revision);
+            xtfRevisionExport: revision,
+            xtfVorschau: new VorschauFake());
 
         vm.ErzeugeXtfRevisionCommand.Execute(null);
 
-        Assert.Equal("XTF-Quelldatei fuer die Revision waehlen", dialogs.OpenFilesTitle);
+        Assert.Equal("Original-XTF für die Aktualisierung wählen", dialogs.OpenFilesTitle);
         Assert.Equal("XTF-Dateien (*.xtf)|*.xtf", dialogs.OpenFilesFilter);
         Assert.Equal(3, revision.Requests.Count);
         Assert.Null(revision.Requests[0].Quelldateien);
@@ -64,6 +65,12 @@ public sealed class ExportPageXtfRevisionSourceSelectionTests
         Assert.False(revision.Requests[2].NurPruefen);
         Assert.Contains("Katasterdaten aktualisiert", vm.LastResult, StringComparison.Ordinal);
         Assert.False(vm.IsPageBusy);
+    }
+
+    private sealed class VorschauFake : IXtfExportVorschauDialog
+    {
+        public bool Bestaetige(AuswertungPro.Next.Application.UseCases.Xtf.XtfExportVorschau vorschau) => true;
+        public void ZeigeFehler(AuswertungPro.Next.Application.UseCases.Xtf.XtfExportVorschau vorschau) => Assert.Fail(vorschau.Zusammenfassung);
     }
 
     private sealed class RevisionExportFake : IXtfRevisionExportService

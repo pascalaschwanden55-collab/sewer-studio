@@ -65,6 +65,7 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
         var bericht = new StringBuilder();
         var geschrieben = new List<string>();
         var fehler = new List<string>();
+        var plaene = new List<XtfRevisionPlan>();
 
         foreach (var quelle in quellen)
         {
@@ -121,6 +122,7 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
                     Positionen = basis.Positionen.Concat(zusatz).ToList(),
                     NeueOrganisationen = buch.Neue
                 };
+            plaene.Add(plan);
             bericht.AppendLine(
                 $"{name}: {plan.AnzahlGeaendert} geaendert, {plan.AnzahlNeu} neu, " +
                 $"{plan.AnzahlEntfernt} entfernt, {plan.AnzahlUnveraendert} unveraendert.");
@@ -171,7 +173,8 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
             fehler.Count == 0,
             bericht.ToString().TrimEnd(),
             fehler.Count == 0 ? null : string.Join("\n", fehler),
-            geschrieben);
+            geschrieben,
+            Plaene: plaene);
     }
 
     /// <summary>

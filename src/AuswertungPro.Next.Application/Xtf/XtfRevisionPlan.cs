@@ -51,6 +51,10 @@ public sealed record XtfNeueOrganisation(string Tid, string Bezeichnung, string 
 /// Eine Position des Plans: genau ein Kanalschaden und was mit ihm geschieht.
 /// <see cref="KanalschadenTid"/> ist bei <see cref="XtfRevisionAenderung.Neu"/> leer —
 /// die Kennung vergibt erst der Ausfuehrer.
+///
+/// <see cref="Objekt"/> ist die Beschriftung fuer die Vorschau bei Stammdaten-Positionen
+/// ("Haltung", "Schacht"); Befund-Positionen lassen es leer und werden ueber Code und Meter
+/// benannt.
 /// </summary>
 public sealed record XtfRevisionPosition(
     XtfRevisionAenderung Art,
@@ -59,7 +63,8 @@ public sealed record XtfRevisionPosition(
     string HaltungName,
     string Code,
     double? Meter,
-    IReadOnlyList<XtfRevisionFeld> Felder);
+    IReadOnlyList<XtfRevisionFeld> Felder,
+    string? Objekt = null);
 
 /// <summary>
 /// Der unveraenderliche Plan fuer eine revidierte XTF: eine vollstaendige Liste dessen,

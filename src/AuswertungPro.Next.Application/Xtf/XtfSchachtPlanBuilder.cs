@@ -304,7 +304,8 @@ public static class XtfSchachtPlanBuilder
                 nummer,
                 Code: "",
                 Meter: null,
-                felder));
+                felder,
+                Objekt: "Schacht"));
         }
 
         return new XtfStammdatenPlan(positionen, hinweise, buch.Neue);

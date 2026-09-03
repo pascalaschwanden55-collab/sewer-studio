@@ -102,6 +102,7 @@ namespace AuswertungPro.Next.UI
         public ISettingsQuarantineStore SettingsQuarantine { get; }
         public ISettingsMigrationService SettingsMigration { get; }
         public IExplorerRevealService ExplorerReveal { get; }
+        public IXtfExportVorschauDialog XtfExportVorschau { get; }
         public ISafeShellOpenService ShellOpen { get; }
         public IFolderOpenService FolderOpen { get; }
         public IProgramRootLocator ProgramRootLocator { get; }
@@ -372,6 +373,7 @@ namespace AuswertungPro.Next.UI
             SettingsRestorePoints = new SettingsRestorePointStore();
             SettingsFiles = SettingsStore.CreateDefault(SettingsRestorePoints);
             ExplorerReveal = new ExplorerRevealLauncher();
+            XtfExportVorschau = new XtfExportVorschauDialogService();
             ShellOpen = new SafeShellOpenService();
             FolderOpen = new FolderOpenService(ShellOpen);
             ProgramRootLocator = new ProgramRootFileLocator();
