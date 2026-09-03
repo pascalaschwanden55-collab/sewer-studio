@@ -130,7 +130,7 @@ public static class XtfNeuPlanBuilder
         var kanalTid = kennungen.Fuer("Kanal", name);
         objekte.Add(new XtfNeuObjekt(
             "Kanal", kanalTid,
-            Sachfelder(record, name, XtfStammdatenPlanBuilder.Felder),
+            Sachfelder(record, name, XtfStammdatenPlanBuilder.Felder, hinweise),
             [.. verwaltung, new XtfNeuVerweis("EigentuemerRef", eigentuemer)]));
 
         var haltungTid = kennungen.Fuer("Haltung", name);
@@ -146,7 +146,7 @@ public static class XtfNeuPlanBuilder
 
         objekte.Add(new XtfNeuObjekt(
             "Haltung", haltungTid,
-            Sachfelder(record, name, XtfStammdatenPlanBuilder.HaltungFelder),
+            Sachfelder(record, name, XtfStammdatenPlanBuilder.HaltungFelder, hinweise),
             haltungVerweise,
             geometrie));
 
@@ -255,7 +255,7 @@ public static class XtfNeuPlanBuilder
         var schachtTid = kennungen.Fuer("Normschacht", nummer);
         objekte.Add(new XtfNeuObjekt(
             "Normschacht", schachtTid,
-            SchachtFelder(record, nummer),
+            SchachtFelder(record, nummer, hinweise),
             [.. verwaltung, new XtfNeuVerweis("EigentuemerRef", eigentuemer)]));
 
         // Der Abwasserknoten ist der Anschlusspunkt des Schachts ans Netz.
@@ -275,7 +275,8 @@ public static class XtfNeuPlanBuilder
     /// Wahrheit. Was nicht eindeutig passt, bleibt weg statt geraten zu werden.
     /// </summary>
     private static List<KeyValuePair<string, string>> Sachfelder(
-        HaltungRecord record, string name, IReadOnlyDictionary<string, string> karte)
+        HaltungRecord record, string name, IReadOnlyDictionary<string, string> karte,
+        List<string> hinweise)
     {
         var felder = new List<KeyValuePair<string, string>>
         {
@@ -290,13 +291,25 @@ public static class XtfNeuPlanBuilder
 
             var wert = XtfStammdatenPlanBuilder.NachXtfWert(xtfName, roh, "SIA405_ABWASSER_2020_LV95");
             if (!string.IsNullOrEmpty(wert))
+            {
                 felder.Add(new(xtfName, wert));
+                continue;
+            }
+
+            // Ein gesetzter, aber nicht abbildbarer Wert darf nicht still verschwinden.
+            // "GFK" etwa hat in SIA405 bewusst kein Gegenstueck — es ist nicht dasselbe
+            // wie Kunststoff_Polyester_GUP. Ohne diesen Hinweis fehlte das Material
+            // spurlos in der Datei, obwohl es im Programm dasteht.
+            hinweise.Add(
+                $"{name}: {xtfName} = \"{roh}\" hat in SIA405 keinen Wert — " +
+                "nicht geschrieben.");
         }
 
         return felder;
     }
 
-    private static List<KeyValuePair<string, string>> SchachtFelder(SchachtRecord record, string nummer)
+    private static List<KeyValuePair<string, string>> SchachtFelder(
+        SchachtRecord record, string nummer, List<string> hinweise)
     {
         var felder = new List<KeyValuePair<string, string>>
         {
@@ -311,7 +324,14 @@ public static class XtfNeuPlanBuilder
 
             var wert = XtfSchachtPlanBuilder.NachXtfWert(xtfName, roh);
             if (!string.IsNullOrEmpty(wert))
+            {
                 felder.Add(new(xtfName, wert));
+                continue;
+            }
+
+            hinweise.Add(
+                $"Schacht {nummer}: {xtfName} = \"{roh}\" hat in SIA405 keinen Wert — " +
+                "nicht geschrieben.");
         }
 
         var masse = XtfSchachtPlanBuilder.Abmessungen(

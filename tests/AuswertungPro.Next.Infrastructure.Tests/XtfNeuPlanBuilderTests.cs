@@ -257,6 +257,36 @@ public sealed class XtfNeuPlanBuilderTests
         Assert.All(namen, n => Assert.InRange(n.Length, 1, 20));
     }
 
+    [Fact]
+    public void Ein_nicht_abbildbarer_Wert_verschwindet_nicht_still()
+    {
+        // "GFK" hat in SIA405 bewusst kein Gegenstueck — es ist nicht dasselbe wie
+        // Kunststoff_Polyester_GUP. Ohne Hinweis fehlte das Material spurlos in der
+        // Datei, obwohl es im Programm dasteht (real aufgefallen am Projekt "Test").
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.PipeMaterial, "GFK", FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([record], []);
+
+        var haltung = plan.Objekte.Single(o => o.Klasse == "Haltung");
+        Assert.DoesNotContain(haltung.Felder, f => f.Key == "Material");
+        Assert.Contains(plan.Hinweise, h =>
+            h.Contains("Material", StringComparison.Ordinal)
+            && h.Contains("GFK", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Ein_abbildbares_Material_geht_hinaus()
+    {
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.PipeMaterial, "Steinzeug", FieldSource.Manual, true);
+
+        var haltung = XtfNeuPlanBuilder.Build([record], []).Objekte
+            .Single(o => o.Klasse == "Haltung");
+
+        Assert.Equal("Steinzeug", haltung.Felder.Single(f => f.Key == "Material").Value);
+    }
+
     private static HaltungRecord Haltung()
     {
         var record = new HaltungRecord();
