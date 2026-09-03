@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace AuswertungPro.Next.Domain.Models;
@@ -57,6 +57,51 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
 
     public string GetFieldValue(string fieldName)
         => Fields.TryGetValue(fieldName, out var v) ? v ?? "" : "";
+
+    /// <summary>
+    /// Fuellt ein LEERES Feld aus einer automatischen Quelle und setzt dabei die
+    /// Herkunft neu. Liefert <c>false</c>, wenn das Feld Inhalt hat — dann wird
+    /// nichts angefasst.
+    ///
+    /// Warum es diesen Weg neben <c>SetFieldValue</c> braucht: Dort weist der
+    /// Handwert-Schutz jeden automatischen Schreibvorgang auf ein Feld mit
+    /// <c>UserEdited</c> ab. Diese Markierung bleibt aber stehen, wenn der
+    /// Bearbeiter den Inhalt im Raster loescht — die Bindung schreibt direkt in
+    /// <see cref="Fields"/> und laesst <see cref="FieldMeta"/> unberuehrt. Das Feld
+    /// ist danach leer und trotzdem geschuetzt; ein Nachfuelllauf prallte
+    /// stillschweigend daran ab (gemessen 2026-09-03 an Schacht 33461).
+    ///
+    /// An einem leeren Feld hat der Schutz keinen Gegenstand: Es gibt dort keine
+    /// Arbeit zu bewahren. Die Leere entscheidet, nicht die alte Markierung. Weil
+    /// der Wert nicht von Hand kommt, wird <c>UserEdited</c> dabei auf <c>false</c>
+    /// gesetzt — sonst ginge er spaeter als Handeingabe in die revidierte XTF.
+    /// </summary>
+    public bool FuelleLeeresFeld(string fieldName, string? value, FieldSource source)
+    {
+        if (!string.IsNullOrWhiteSpace(GetFieldValue(fieldName)))
+            return false;
+
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        Fields[fieldName] = value!;
+
+        if (!FieldMeta.TryGetValue(fieldName, out var meta))
+        {
+            meta = new FieldMetadata { FieldName = fieldName };
+            FieldMeta[fieldName] = meta;
+        }
+
+        meta.Source = source;
+        meta.UserEdited = false;
+        meta.LastUpdatedUtc = DateTime.UtcNow;
+        ModifiedAtUtc = DateTime.UtcNow;
+
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Fields)));
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs($"Fields[{fieldName}]"));
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ModifiedAtUtc)));
+        return true;
+    }
 
     public void SetFieldValue(string fieldName, string? value, FieldSource source, bool userEdited)
     {

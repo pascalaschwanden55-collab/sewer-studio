@@ -44,11 +44,12 @@ public static class LeereFelderAnwender
 
             foreach (var position in positionen)
             {
-                if (!string.IsNullOrWhiteSpace(record.GetFieldValue(position.Feld)))
-                    continue;
-
-                record.SetFieldValue(position.Feld, position.Wert, Herkunft, userEdited: false);
-                geschrieben++;
+                // FuelleLeeresFeld prueft die Leere selbst und liefert false, wenn
+                // inzwischen etwas darin steht. Gezaehlt wird nur, was wirklich
+                // geschrieben wurde — sonst meldete der Lauf eine Zahl, die er nicht
+                // erfuellt hat.
+                if (record.FuelleLeeresFeld(position.Feld, position.Wert, Herkunft))
+                    geschrieben++;
             }
         }
 
@@ -71,11 +72,12 @@ public static class LeereFelderAnwender
 
             foreach (var position in positionen)
             {
-                if (!string.IsNullOrWhiteSpace(record.GetFieldValue(position.Feld)))
-                    continue;
-
-                record.SetFieldValue(position.Feld, position.Wert, Herkunft, userEdited: false);
-                geschrieben++;
+                // FuelleLeeresFeld prueft die Leere selbst und liefert false, wenn
+                // inzwischen etwas darin steht. Gezaehlt wird nur, was wirklich
+                // geschrieben wurde — sonst meldete der Lauf eine Zahl, die er nicht
+                // erfuellt hat.
+                if (record.FuelleLeeresFeld(position.Feld, position.Wert, Herkunft))
+                    geschrieben++;
             }
         }
 

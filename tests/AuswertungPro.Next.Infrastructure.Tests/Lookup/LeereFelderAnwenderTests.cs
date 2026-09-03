@@ -57,6 +57,67 @@ public sealed class LeereFelderAnwenderTests
         Assert.Equal("Beton", record.GetFieldValue(FieldKeys.PipeMaterial));
     }
 
+    // Der Fall aus dem echten Projekt: Der Bearbeiter loescht den Inhalt einer Zelle
+    // im Raster. Die Bindung schreibt dabei direkt in Fields und laesst FieldMeta
+    // unberuehrt — das Feld ist danach LEER, traegt aber weiter UserEdited=true.
+    //
+    // Der Schutz in SetFieldValue weist einen automatischen Schreibvorgang auf ein
+    // handmarkiertes Feld ab. An einem leeren Feld ist dieser Schutz sinnlos: Es gibt
+    // dort keine Arbeit zu schuetzen, und der Nachfuelllauf hat sichtbar gemeldet,
+    // dass er es fuellen wuerde. In Jagdmatt trifft das Schacht 33461 (Dimension
+    // leer, UserEdited=true).
+    [Fact]
+    public void Ein_leeres_Feld_mit_alter_Handmarkierung_wird_trotzdem_gefuellt()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.PipeMaterial, "Beton", FieldSource.Manual, userEdited: true);
+        record.Fields[FieldKeys.PipeMaterial] = "";   // wie das Leeren im Raster
+
+        var geschrieben = LeereFelderAnwender.WendeAnAufHaltungen(
+            new[] { record },
+            Plan(new LeereFeldPosition("80638-80631", FieldKeys.PipeMaterial, "Steinzeug")));
+
+        Assert.Equal(1, geschrieben);
+        Assert.Equal("Steinzeug", record.GetFieldValue(FieldKeys.PipeMaterial));
+        Assert.False(record.FieldMeta[FieldKeys.PipeMaterial].UserEdited);
+    }
+
+    [Fact]
+    public void Auch_am_Schacht_wird_ein_leeres_handmarkiertes_Feld_gefuellt()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", "33461", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue("Dimension", "120 x 120 mm", FieldSource.Manual, userEdited: true);
+        record.Fields["Dimension"] = "";
+
+        var plan = new LeereFelderPlan(
+            BauteilArt.Schacht,
+            new[] { new LeereFeldPosition("33461", "Dimension", "600 mm") },
+            Array.Empty<LeerfeldHinweis>(),
+            GepruefteBauteile: 1);
+
+        Assert.Equal(1, LeereFelderAnwender.WendeAnAufSchaechte(new[] { record }, plan));
+        Assert.Equal("600 mm", record.GetFieldValue("Dimension"));
+    }
+
+    // Die gezaehlte Zahl muss stimmen. Vorher zaehlte der Ausfuehrer jeden Versuch,
+    // auch einen abgewiesenen — die Meldung "12 Felder ergaenzt" waere gelogen gewesen.
+    [Fact]
+    public void Gezaehlt_wird_nur_was_wirklich_geschrieben_wurde()
+    {
+        var gefuellt = Haltung("80638-80631");
+        gefuellt.SetFieldValue(FieldKeys.PipeMaterial, "Beton", FieldSource.Manual, userEdited: true);
+        var leer = Haltung("80631-80551");
+
+        var geschrieben = LeereFelderAnwender.WendeAnAufHaltungen(
+            new[] { gefuellt, leer },
+            Plan(
+                new LeereFeldPosition("80638-80631", FieldKeys.PipeMaterial, "Steinzeug"),
+                new LeereFeldPosition("80631-80551", FieldKeys.PipeMaterial, "Zement")));
+
+        Assert.Equal(1, geschrieben);
+    }
+
     [Fact]
     public void Ein_Datensatz_ausserhalb_des_Plans_bleibt_unberuehrt()
     {
