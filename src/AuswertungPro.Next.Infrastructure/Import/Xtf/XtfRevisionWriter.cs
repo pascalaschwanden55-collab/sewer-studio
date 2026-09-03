@@ -377,14 +377,23 @@ public static class XtfRevisionWriter
 
     /// <summary>
     /// Das erste Verweis-Element des Objekts — der Punkt, vor dem ein neues Attribut
-    /// noch stehen darf.
+    /// noch stehen darf. Nur ein Rueckfall, wenn weder ein Geschwister-Objekt noch die
+    /// Modellliste eine Stelle kennen.
     ///
-    /// In INTERLIS stehen die Rollenverweise (<c>DatenherrRef</c>, <c>EigentuemerRef</c>,
-    /// <c>RohrprofilRef</c>) hinter den Attributen. Ohne diese Regel landete ein Feld,
-    /// das weder ein Geschwister noch die Modellliste einordnen kann, ganz am Ende — im
-    /// Echtlauf am Kantonsausschnitt stand <c>Verbindungsart</c> so hinter
-    /// <c>EigentuemerRef</c>. Ein Verweis selbst gehoert dagegen genau dorthin und wird
-    /// deshalb nicht vorgezogen.
+    /// ACHTUNG, hier weicht die Kundendatei von der Norm ab, und diese Regel folgt der
+    /// Datei. Das INTERLIS-Referenzhandbuch (eCH-0031 V2.1.0, Kapitel 4.3) schreibt das
+    /// "Zwiebelprinzip" vor: je Vererbungsstufe zuerst die Rollen, dann die Attribute,
+    /// dann die eingebetteten Beziehungen — DANN erst die naechste Stufe. Danach
+    /// gehoerten <c>DatenherrRef</c> (an <c>VSA_BaseClass</c>) und <c>EigentuemerRef</c>
+    /// (an <c>Abwasserbauwerk</c>) VOR die Attribute des <c>Kanal</c> wie
+    /// <c>Verbindungsart</c>.
+    ///
+    /// Der Kantonsexport von Abwasser Uri haelt sich nicht daran: Dort stehen alle
+    /// Verweise am Ende, hinter allen Attributen. Eine Revision dieser Datei bleibt
+    /// deshalb besser bei deren eigener Ordnung, statt mitten im Bestand eine zweite
+    /// einzufuehren — das Ergebnis waere innerhalb derselben Datei uneinheitlich.
+    ///
+    /// Ein Verweis selbst wird nie vorgezogen; er gehoert zu den Verweisen.
     /// </summary>
     private static XElement? ErsterVerweis(XElement parent, string name)
         => name.EndsWith("Ref", StringComparison.Ordinal)

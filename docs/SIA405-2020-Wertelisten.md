@@ -526,6 +526,42 @@ Verlassen wird sich darauf nicht: Zeigen mehrere Haltungen auf dasselbe Profil,
 aendert SewerStudio es nicht und meldet den Grund. Sonst wuerde eine Korrektur an
 einer Haltung fremde Haltungen mit umschreiben.
 
+## Die Feldreihenfolge: was die Norm sagt und was die Datei tut
+
+Das INTERLIS-Referenzhandbuch (eCH-0031 V2.1.0 vom 24.04.2024, Kapitel 4.3)
+schreibt das **Zwiebelprinzip** vor:
+
+> "Zuerst werden alle Rollen der Basisklasse, dann alle Attribute/Referenzattribute
+> der Basisklasse, dann alle eingebetteten Beziehungen der Basisklasse, dann alle
+> Attribute/Referenzattribute der Erweiterung, dann alle eingebetteten Beziehungen
+> der Erweiterung codiert, etc. Innerhalb der gleichen Erweiterungsstufe werden die
+> Attribute/Referenzattribute und Rollen gemaess ihrer Definitionsreihenfolge in der
+> Modelldatei codiert."
+
+Fuer den `Kanal` hiesse das der Reihe nach:
+
+| Stufe | Inhalt |
+|---|---|
+| `VSA_BaseClass` | Attribute, dann `DatenherrRef`, `DatenlieferantRef` |
+| `Abwasserbauwerk` | `Akten` … `Zugaenglichkeit`, dann `EigentuemerRef`, `BetreiberRef` |
+| `Abwassernetzelement` | Attribute, dann Beziehungen |
+| `Kanal` | `Bettung_Umhuellung` … `Verbindungsart` |
+
+**Der Kantonsexport haelt sich nicht daran.** Dort stehen alle Verweise am Ende,
+hinter allen Attributen — `Verbindungsart` muesste nach der Norm hinter
+`DatenherrRef` stehen, in der Datei steht es davor.
+
+`XtfRevisionWriter` folgt deshalb der Datei, nicht der Norm: Zuerst ein
+Geschwister-Objekt derselben Datei, dann die Modellliste, und als letzter
+Rueckfall vor dem ersten Verweis. Eine Revision, die mitten im Bestand eine
+zweite Ordnung einfuehrte, waere innerhalb derselben Datei uneinheitlich.
+
+**Fuer INTERLIS 2.4 waere ausserdem der Verweis selbst anders zu schreiben:**
+2.3 verwendet `REF="..."`, 2.4 `ili:ref="..."`. Alle heutigen Modelle und alle
+gelieferten Dateien sind 2.3 (`INTERLIS 2.3;` im Modell,
+`xmlns="http://www.interlis.ch/INTERLIS2.3"` in der Datei), der Schreiber deshalb
+auch.
+
 ## Die Feldreihenfolge endet vor den Verweisen
 
 Zur bekannten Regel (zuerst ein Geschwister-Objekt der Datei, dann die
