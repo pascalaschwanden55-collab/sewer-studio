@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using System.Text.Json.Nodes;
@@ -385,6 +385,14 @@ public sealed partial class LegacyXtfImportService
         public string Nutzungsart { get; set; } = "";
         public string Bemerkung { get; set; } = "";
         public string Zugaenglichkeit { get; set; } = "";
+
+        /// <summary>
+        /// Die Zustandsklasse aus der Datei (Z0 bis Z4). Sie wurde frueher nicht gelesen,
+        /// wodurch jeder Import den Zustand verlor: Die nachlaufende VSA-Bewertung fand in
+        /// einer Stammdaten-XTF keine Befunde und setzte "Leitung i.O." (Klasse 4). Aus
+        /// einem exportierten Z0 wurde so beim Zurueckimportieren eine 4.
+        /// </summary>
+        public string BaulicherZustand { get; set; } = "";
         public string Eigentuemer { get; set; } = "";
         public string Baujahr { get; set; } = "";
         public string Rohrlaenge { get; set; } = "";
@@ -438,6 +446,7 @@ public sealed partial class LegacyXtfImportService
                         case "Nutzungsart_Ist": kd.Nutzungsart = child.Value; break;
                         case "Bemerkung": kd.Bemerkung = child.Value; break;
                         case "Zugaenglichkeit": kd.Zugaenglichkeit = child.Value; break;
+                        case "BaulicherZustand": kd.BaulicherZustand = child.Value; break;
                         case "Eigentuemer": kd.Eigentuemer = child.Value; break;
                         case "Baujahr": kd.Baujahr = child.Value; break;
                         case "Rohrlaenge": kd.Rohrlaenge = child.Value; break;
@@ -513,9 +522,13 @@ public sealed partial class LegacyXtfImportService
             if (string.IsNullOrWhiteSpace(refTid)) return null;
             if (haltungspunkte.TryGetValue(refTid, out var hp))
             {
-                if (!string.IsNullOrWhiteSpace(hp.Bezeichnung)) return hp.Bezeichnung;
+                // Der Abwasserknoten IST der Schacht; die Bezeichnung des Haltungspunkts
+                // ist nur ein technischer Name. Im Kantonsexport heisst er "u-80401_von",
+                // im SewerStudio-Export "<Haltung>_von" — beides sind keine Schachtnummern.
+                // Die umgekehrte Reihenfolge schrieb genau diese Namen in "Schacht_oben".
                 if (!string.IsNullOrWhiteSpace(hp.AbwassernetzelementRef) && abwasserknoten.TryGetValue(hp.AbwassernetzelementRef, out var knBez))
                     return knBez;
+                if (!string.IsNullOrWhiteSpace(hp.Bezeichnung)) return hp.Bezeichnung;
             }
             return null;
         }
@@ -590,6 +603,13 @@ public sealed partial class LegacyXtfImportService
                         rec.SetFieldValue("Offen_abgeschlossen", "offen", FieldSource.Xtf405, userEdited: false);
                 }
 
+                // Zustandsklasse aus der Datei uebernehmen. Sie gewinnt beim Import
+                // bewusst gegen jede eigene Rechnung: Nur so sind die Daten in GEONIS
+                // und in SewerStudio nach einem Austausch identisch.
+                var zustand = ZustandsklasseAusXtf(kanal.BaulicherZustand);
+                if (zustand is not null)
+                    rec.SetFieldValue("Zustandsklasse", zustand, FieldSource.Xtf405, userEdited: false);
+
                 // Zugaenglichkeit als Bemerkung ergänzen
                 if (!string.IsNullOrWhiteSpace(kanal.Zugaenglichkeit) && !string.Equals(kanal.Zugaenglichkeit, "unbekannt", StringComparison.OrdinalIgnoreCase))
                 {
@@ -609,6 +629,19 @@ public sealed partial class LegacyXtfImportService
         }
 
         return records;
+    }
+
+    /// <summary>
+    /// "Z0" bis "Z4" aus der XTF zur Ziffer, die das Programm fuehrt. Alles andere —
+    /// "unbekannt", leer, ein unerwarteter Text — liefert <c>null</c> und setzt nichts.
+    /// </summary>
+    private static string? ZustandsklasseAusXtf(string? roh)
+    {
+        var wert = (roh ?? "").Trim();
+        if (wert.Length != 2 || (wert[0] != 'Z' && wert[0] != 'z'))
+            return null;
+
+        return wert[1] is >= '0' and <= '4' ? wert[1].ToString() : null;
     }
 
     // Bekannte FunktionHierarchisch-Suffixe (ohne "PAA."-Praefix), passend zu FieldCatalog.ComboItems.

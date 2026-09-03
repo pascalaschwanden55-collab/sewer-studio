@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -118,7 +118,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
             var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
 
-            ApplyRecordFields(record, d, s, b, classified.Any(c => c.Approximated));
+            ApplyRecordFields(record, d, s, b, classified.Any(c => c.Approximated), classified.Count > 0);
 
             results.Add(d);
             results.Add(s);
@@ -163,7 +163,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
         var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
 
-        ApplyRecordFields(record, d, s, b, classified.Any(c => c.Approximated));
+        ApplyRecordFields(record, d, s, b, classified.Any(c => c.Approximated), classified.Count > 0);
 
         return Result<bool>.Success(true);
     }
@@ -194,7 +194,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
             var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
 
-            ApplyRecordFields(record, d, s, b, classified.Any(c => c.Approximated));
+            ApplyRecordFields(record, d, s, b, classified.Any(c => c.Approximated), classified.Count > 0);
 
             results.Add(d);
             results.Add(s);
@@ -228,7 +228,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
         var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
 
-        ApplyRecordFields(record, d, s, b, classified.Any(c => c.Approximated));
+        ApplyRecordFields(record, d, s, b, classified.Any(c => c.Approximated), classified.Count > 0);
 
         return Result<bool>.Success(true);
     }
@@ -714,12 +714,21 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
     // ── Record-Felder setzen ─────────────────────────────────────────────
 
+    /// <summary>
+    /// True, wenn das Feld seinen Wert aus einer SIA405-Datei hat und nicht leer ist.
+    /// </summary>
+    private static bool StammtAusXtf(HaltungRecord record, string feld)
+        => !string.IsNullOrWhiteSpace(record.GetFieldValue(feld))
+           && record.FieldMeta.TryGetValue(feld, out var meta)
+           && meta.Source is FieldSource.Xtf405 or FieldSource.Xtf;
+
     private static void ApplyRecordFields(
         HaltungRecord record,
         VsaConditionResult dResult,
         VsaConditionResult sResult,
         VsaConditionResult bResult,
-        bool approximated = false)
+        bool approximated = false,
+        bool hatBefunde = true)
     {
         record.SetFieldValue("VSA_Zustandsnote_D", FmtNote(dResult.Zustandsnote), FieldSource.Legacy, userEdited: false);
         record.SetFieldValue("VSA_Zustandsnote_S", FmtNote(sResult.Zustandsnote), FieldSource.Legacy, userEdited: false);
@@ -730,8 +739,15 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             .Where(v => v is not null).Select(v => v!.Value).ToList();
         var worstZn = allZn.Count > 0 ? (double?)allZn.Min() : null;
 
-        record.SetFieldValue("Zustandsklasse", VsaConditionScorer.MapZustandsklasse(worstZn), FieldSource.Legacy, userEdited: false);
-        record.SetFieldValue("Pruefungsresultat", VsaConditionScorer.BuildPruefungsresultat(worstZn), FieldSource.Legacy, userEdited: false);
+        // Ohne einen einzigen bewertbaren Befund ist die Note keine Messung, sondern die
+        // Annahme "Leitung i.O." (Klasse 4). Eine aus einer XTF uebernommene Zustandsklasse
+        // wiegt dann schwerer — sonst wird aus einem importierten Z0 beim ersten Aufruf der
+        // VSA-Seite eine 4, und die Daten in GEONIS und SewerStudio laufen auseinander.
+        if (hatBefunde || !StammtAusXtf(record, "Zustandsklasse"))
+        {
+            record.SetFieldValue("Zustandsklasse", VsaConditionScorer.MapZustandsklasse(worstZn), FieldSource.Legacy, userEdited: false);
+            record.SetFieldValue("Pruefungsresultat", VsaConditionScorer.BuildPruefungsresultat(worstZn), FieldSource.Legacy, userEdited: false);
+        }
 
         // Markierung, wenn die Note (teilweise) auf Naeherungswerten beruht (fehlende Messwerte).
         record.SetFieldValue("VSA_Geschaetzt", approximated ? "ja" : "", FieldSource.Legacy, userEdited: false);

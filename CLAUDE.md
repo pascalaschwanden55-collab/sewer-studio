@@ -1167,6 +1167,22 @@ Fuenf Regeln dieses Wegs nie zurueckdrehen:
 Belegt am 2026-09-03: 44 Haltungen aus dem echten Projekt Jagdmatt, mit Verlaeufen aus
 `Leitungen Lokal.gpkg`, ergeben eine vom ilivalidator 1.15.0 fehlerfrei akzeptierte Datei.
 
+Der Rueckweg ueber `LegacyXtfImportService` war dabei an zwei Stellen kaputt, beide auch
+fuer Kantonsdateien:
+
+- **`BaulicherZustand` wurde gar nicht gelesen.** Die nachlaufende VSA-Bewertung fand in
+  einer Stammdaten-XTF keine Befunde und setzte "Leitung i.O." (Klasse 4) — aus einem
+  exportierten `Z0` wurde beim Zurueckimportieren eine `4`. Der Import uebernimmt den Wert
+  jetzt als `FieldSource.Xtf405`, und `VsaEvaluationService.ApplyRecordFields` laesst ihn
+  stehen, solange KEIN bewertbarer Befund vorliegt. Mit Befunden rechnet SewerStudio
+  weiterhin selbst. Entscheid Pascal 2026-09-03: Beim Import gewinnt die Datei — nur so
+  sind GEONIS und SewerStudio nach einem Austausch identisch.
+- **`ResolveSchachtLabel` nahm zuerst die Bezeichnung des Haltungspunkts.** Die ist ein
+  technischer Name (`u-80401_von` im Kantonsexport, `<Haltung>_von` bei uns) und landete
+  so in `Schacht_oben`. Jetzt gilt zuerst der `Abwasserknoten` — er IST der Schacht —, die
+  Bezeichnung bleibt nur der Rueckfall. Das benachbarte `ResolveKnotenName` machte es
+  immer schon richtig herum.
+
 Wertelisten, Messwerte und die belegten Fallen stehen in
 `docs/SIA405-2020-Wertelisten.md`.
 
