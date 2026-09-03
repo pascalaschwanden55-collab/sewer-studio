@@ -1,4 +1,4 @@
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
 using AuswertungPro.Next.Application.Xtf;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
@@ -233,6 +233,44 @@ public sealed class XtfSchachtPlanBuilderTests
 
         Assert.Empty(plan.Positionen);
         Assert.Contains(plan.Hinweise, h => h.Contains("mehrfach", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Die_Schachtbemerkung_geht_hinaus()
+    {
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(
+            FieldKeys.Remarks, "Deckel nicht zu oeffnen", FieldSource.Manual, userEdited: true);
+
+        var feld = Assert.Single(Assert.Single(Baue(schacht).Positionen).Felder);
+
+        Assert.Equal("Bemerkung", feld.Name);
+        Assert.Equal("Deckel nicht zu oeffnen", feld.Neu);
+    }
+
+    [Fact]
+    public void Das_Wort_unbekannt_bleibt_in_einer_Bemerkung_stehen()
+    {
+        // Bei Funktion und Material ist "unbekannt" eine Leerformel und wird verworfen.
+        // In einem Freitext ist es eine Aussage und muss bleiben.
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(FieldKeys.Remarks, "unbekannt", FieldSource.Manual, userEdited: true);
+
+        var feld = Assert.Single(Assert.Single(Baue(schacht).Positionen).Felder);
+
+        Assert.Equal("unbekannt", feld.Neu);
+    }
+
+    [Fact]
+    public void Eine_zu_lange_Schachtbemerkung_wird_gemeldet_statt_gekuerzt()
+    {
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(FieldKeys.Remarks, new string('a', 81), FieldSource.Manual, userEdited: true);
+
+        var plan = Baue(schacht);
+
+        Assert.Empty(plan.Positionen);
+        Assert.Contains("81 Zeichen", Assert.Single(plan.Hinweise), StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<XtfStammdatenElement> Elemente()

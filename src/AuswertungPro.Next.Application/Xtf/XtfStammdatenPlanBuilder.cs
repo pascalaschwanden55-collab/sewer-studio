@@ -1,3 +1,4 @@
+﻿using System.Text;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Xtf;
@@ -50,8 +51,8 @@ public static class XtfStammdatenPlanBuilder
     /// Abbildung XTF-Element -> Projektfeld. Bewusst kurz gehalten: Nur Felder, deren
     /// Bedeutung in beiden Modellen eindeutig dieselbe ist.
     ///
-    /// Alle drei haengen an der SIA405-Klasse "Kanal"; <c>BaulicherZustand</c> ist von der
-    /// Oberklasse "Abwasserbauwerk" geerbt.
+    /// Alle haengen an der SIA405-Klasse "Kanal"; <c>BaulicherZustand</c> und
+    /// <c>Bemerkung</c> sind von der Oberklasse "Abwasserbauwerk" geerbt.
     /// </summary>
     public static readonly IReadOnlyDictionary<string, string> Felder =
         new Dictionary<string, string>(StringComparer.Ordinal)
@@ -65,7 +66,8 @@ public static class XtfStammdatenPlanBuilder
             ["Status"] = FieldKeys.OperatingStatus,
             ["Sanierungsbedarf"] = FieldKeys.RehabilitationNeed,
             ["Baujahr"] = FieldKeys.ConstructionYear,
-            ["Bruttokosten"] = FieldKeys.GrossCost
+            ["Bruttokosten"] = FieldKeys.GrossCost,
+            ["Bemerkung"] = FieldKeys.Remarks
         };
 
     /// <summary>
@@ -152,6 +154,17 @@ public static class XtfStammdatenPlanBuilder
     private const decimal BruttokostenMax = 99_999_999.99m;
 
     /// <summary>
+    /// <c>Abwasserbauwerk.Bemerkung</c> ist im Modell <c>TEXT*80</c> — hoechstens
+    /// achtzig Zeichen, und <c>TEXT</c> heisst in INTERLIS ausdruecklich einzeilig
+    /// (mehrzeilig waere <c>MTEXT</c>, wie es daneben bei <c>Akten</c> steht).
+    ///
+    /// Die Grenze ist real: Im Kantonsexport ist die laengste Bemerkung exakt
+    /// achtzig Zeichen lang und mitten im Wort abgeschnitten
+    /// ("... Versickerungss"). Der Schreiber dort kappt also selbst.
+    /// </summary>
+    private const int BemerkungMaxZeichen = 80;
+
+    /// <summary>
     /// Bringt einen Projektwert in die Schreibweise des XTF-Modells.
     ///
     /// <c>BaulicherZustand</c>: Das Projekt fuehrt die Zustandsklasse als blosse Ziffer,
@@ -190,6 +203,9 @@ public static class XtfStammdatenPlanBuilder
 
             return wert.Length == 1 && wert[0] is >= '0' and <= '4' ? "Z" + wert : null;
         }
+
+        if (string.Equals(xtfName, "Bemerkung", StringComparison.Ordinal))
+            return AlsBemerkung(wert);
 
         if (string.Equals(xtfName, "Material", StringComparison.Ordinal))
             return MaterialVokabular.NachModell(wert, IstModell2020OderNeuer(modell));
@@ -265,6 +281,67 @@ public static class XtfStammdatenPlanBuilder
             return wert;
 
         return NutzungsartVokabular.NachModell(wert, IstModell2020OderNeuer(modell));
+    }
+
+    /// <summary>
+    /// Eine Bemerkung fuer <c>TEXT*80</c>, oder <c>null</c>, wenn sie nicht hineinpasst.
+    ///
+    /// Umbrueche und Tabulatoren werden zu Leerzeichen und mehrfache Leerzeichen
+    /// zusammengezogen: <c>TEXT</c> ist einzeilig, und ein Umbruch traegt keine Aussage,
+    /// die dabei verloren ginge.
+    ///
+    /// Ueberlaenge dagegen wird NICHT gekuerzt, sondern abgelehnt. Kuerzen verliert
+    /// Inhalt, und zwar unsichtbar — der Nutzer saehe im Programm den ganzen Satz und in
+    /// der Datei den halben. Der Bericht nennt stattdessen Haltung und Zeichenzahl,
+    /// damit die Kuerzung dort entsteht, wo jemand den Sinn kennt.
+    /// </summary>
+    public static string? AlsBemerkung(string? text)
+    {
+        var einzeilig = new StringBuilder((text ?? "").Length);
+        var letzteWarLeer = true;
+
+        foreach (var zeichen in text ?? "")
+        {
+            var ist = char.IsWhiteSpace(zeichen) ? ' ' : zeichen;
+            if (ist == ' ')
+            {
+                if (letzteWarLeer)
+                    continue;
+
+                letzteWarLeer = true;
+            }
+            else
+            {
+                letzteWarLeer = false;
+            }
+
+            einzeilig.Append(ist);
+        }
+
+        var fertig = einzeilig.ToString().TrimEnd();
+        return fertig.Length is > 0 and <= BemerkungMaxZeichen ? fertig : null;
+    }
+
+    /// <summary>
+    /// True, wenn eine Bemerkung allein an der Laengengrenze des Modells scheitert.
+    /// Dann sagt der Bericht das auch so, statt einen unbekannten Begriff zu vermuten.
+    /// Haltung und Schacht teilen sich diese Pruefung — beide erben das Feld von
+    /// <c>Abwasserbauwerk</c> und damit dieselbe Grenze.
+    /// </summary>
+    public static bool BemerkungZuLang(string? roh, out int zeichen)
+    {
+        zeichen = (roh ?? "").Trim().Length;
+        return zeichen > BemerkungMaxZeichen;
+    }
+
+    /// <summary>Die Zeichengrenze des Modells fuer <c>Bemerkung</c>.</summary>
+    public static int BemerkungGrenze => BemerkungMaxZeichen;
+
+    private static bool IstZuLang(string xtfName, string roh, out int zeichen)
+    {
+        zeichen = 0;
+        return string.Equals(xtfName, "Bemerkung", StringComparison.Ordinal)
+            && BemerkungZuLang(roh, out zeichen);
     }
 
     /// <summary>
@@ -382,9 +459,11 @@ public static class XtfStammdatenPlanBuilder
                 // verschwinden — und erst recht nicht geraten werden.
                 if (roh.Length > 0)
                 {
-                    hinweise.Add(
-                        $"{name}: {xtfName} = \"{roh}\" passt in dieser XTF zu keinem " +
-                        "gueltigen Wert — nicht geschrieben.");
+                    hinweise.Add(IstZuLang(xtfName, roh, out var zeichen)
+                        ? $"{name}: die Bemerkung ist {zeichen} Zeichen lang, das Modell " +
+                          $"laesst {BemerkungMaxZeichen} zu — nicht geschrieben."
+                        : $"{name}: {xtfName} = \"{roh}\" passt in dieser XTF zu keinem " +
+                          "gueltigen Wert — nicht geschrieben.");
                 }
 
                 continue;

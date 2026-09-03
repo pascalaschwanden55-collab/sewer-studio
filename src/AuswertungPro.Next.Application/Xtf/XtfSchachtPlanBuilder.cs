@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Xtf;
 
@@ -36,7 +36,8 @@ public static class XtfSchachtPlanBuilder
         {
             ["Funktion"] = "Funktion",
             ["Material"] = "Material",
-            ["BaulicherZustand"] = FieldKeys.ConditionClass
+            ["BaulicherZustand"] = FieldKeys.ConditionClass,
+            ["Bemerkung"] = FieldKeys.Remarks
         };
 
     /// <summary>Das Projektfeld mit beiden Massen.</summary>
@@ -60,6 +61,12 @@ public static class XtfSchachtPlanBuilder
         var wert = (projektWert ?? "").Trim();
         if (wert.Length == 0)
             return null;
+
+        // Die Bemerkung geht bewusst VOR der "unbekannt"-Regel heraus: Bei Funktion und
+        // Material ist "unbekannt" eine Leerformel, in einem Freitext dagegen eine
+        // echte Aussage ("Material unbekannt, Deckel nicht zu oeffnen").
+        if (string.Equals(xtfName, "Bemerkung", StringComparison.Ordinal))
+            return XtfStammdatenPlanBuilder.AlsBemerkung(wert);
 
         var norm = xtfName switch
         {
@@ -198,8 +205,12 @@ public static class XtfSchachtPlanBuilder
                 if (roh.Length > 0)
                 {
                     hinweise.Add(
-                        $"Schacht {nummer}: {xtfName} = \"{roh}\" passt zu keinem gueltigen " +
-                        "Wert nach SIA405 — nicht geschrieben.");
+                        string.Equals(xtfName, "Bemerkung", StringComparison.Ordinal)
+                        && XtfStammdatenPlanBuilder.BemerkungZuLang(roh, out var zeichen)
+                            ? $"Schacht {nummer}: die Bemerkung ist {zeichen} Zeichen lang, das " +
+                              $"Modell laesst {XtfStammdatenPlanBuilder.BemerkungGrenze} zu — nicht geschrieben."
+                            : $"Schacht {nummer}: {xtfName} = \"{roh}\" passt zu keinem gueltigen " +
+                              "Wert nach SIA405 — nicht geschrieben.");
                 }
 
                 continue;

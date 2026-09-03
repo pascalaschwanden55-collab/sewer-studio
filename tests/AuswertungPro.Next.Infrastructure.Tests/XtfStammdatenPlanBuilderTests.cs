@@ -823,6 +823,78 @@ public sealed class XtfStammdatenPlanBuilderTests
         Assert.Single(plan.Hinweise);
     }
 
+    [Fact]
+    public void Eine_bearbeitete_Bemerkung_kommt_in_den_Plan()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(
+            FieldKeys.Remarks, "Wurzeln bei Meter 12 entfernt", FieldSource.Manual, userEdited: true);
+
+        var position = Assert.Single(Baue(record));
+
+        var feld = Assert.Single(position.Felder);
+        Assert.Equal("Bemerkung", feld.Name);
+        Assert.Equal("Wurzeln bei Meter 12 entfernt", feld.Neu);
+    }
+
+    [Fact]
+    public void Eine_nicht_bearbeitete_Bemerkung_bleibt_draussen()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.Remarks, "aus dem Import", FieldSource.Xtf, userEdited: false);
+
+        Assert.Empty(Baue(record));
+    }
+
+    [Fact]
+    public void Ein_Zeilenumbruch_wird_zu_einem_Leerzeichen()
+    {
+        // TEXT ist in INTERLIS einzeilig; mehrzeilig waere MTEXT.
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(
+            FieldKeys.Remarks, "Erste Zeile\r\nZweite Zeile", FieldSource.Manual, userEdited: true);
+
+        var feld = Assert.Single(Assert.Single(Baue(record)).Felder);
+
+        Assert.Equal("Erste Zeile Zweite Zeile", feld.Neu);
+        Assert.DoesNotContain('\n', feld.Neu!);
+    }
+
+    [Fact]
+    public void Genau_achtzig_Zeichen_passen_noch()
+    {
+        var record = Haltung("80638-80631");
+        var text = new string('a', 80);
+        record.SetFieldValue(FieldKeys.Remarks, text, FieldSource.Manual, userEdited: true);
+
+        var feld = Assert.Single(Assert.Single(Baue(record)).Felder);
+
+        Assert.Equal(text, feld.Neu);
+    }
+
+    [Fact]
+    public void Eine_zu_lange_Bemerkung_wird_nicht_geschrieben_und_der_Bericht_nennt_die_Zeichenzahl()
+    {
+        // Das Modell laesst TEXT*80 zu. Kuerzen wuerde Inhalt unsichtbar verlieren.
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.Remarks, new string('a', 81), FieldSource.Manual, userEdited: true);
+
+        var plan = Plan(record);
+
+        Assert.Empty(plan.Positionen);
+        var hinweis = Assert.Single(plan.Hinweise);
+        Assert.Contains("81 Zeichen", hinweis, StringComparison.Ordinal);
+        Assert.Contains("80", hinweis, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Die_Bemerkung_zieht_mehrfache_Leerzeichen_zusammen_und_trimmt()
+    {
+        Assert.Equal("Riss quer", XtfStammdatenPlanBuilder.AlsBemerkung("  Riss \t\n quer  "));
+        Assert.Null(XtfStammdatenPlanBuilder.AlsBemerkung("   "));
+        Assert.Null(XtfStammdatenPlanBuilder.AlsBemerkung(null));
+    }
+
     private static XtfStammdatenPlan PlanMitHaltung(HaltungRecord record)
         => XtfStammdatenPlanBuilder.Build(
             new[] { record },

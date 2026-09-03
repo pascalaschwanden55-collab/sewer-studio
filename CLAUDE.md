@@ -1090,18 +1090,28 @@ Altprojekte werden nicht neu importiert: `XtfKanalschadenElementReader` und
 `XtfStammdatenPlanBuilder` nimmt nur eindeutig zugeordnete, vom Menschen bearbeitete
 Felder auf: am `Kanal` `Nutzungsart_Ist`, `BaulicherZustand`, `FunktionHierarchisch`,
 `FunktionHydraulisch`, `Verbindungsart`, `Bettung_Umhuellung`, `Status`,
-`Sanierungsbedarf`, `Baujahr` und `Bruttokosten`; an der `Haltung` `Material`,
-`Lichte_Hoehe`, `LaengeEffektiv` und `Lagebestimmung`; am verwiesenen `Rohrprofil`
-den `Profiltyp`. Das ist die Feldliste der Kataster-Infobox von geo.ur.ch.
+`Sanierungsbedarf`, `Baujahr`, `Bruttokosten` und `Bemerkung`; an der `Haltung`
+`Material`, `Lichte_Hoehe`, `LaengeEffektiv` und `Lagebestimmung`; am verwiesenen
+`Rohrprofil` den `Profiltyp`. Das ist die Feldliste der Kataster-Infobox von geo.ur.ch.
 `XtfSchachtPlanBuilder` tut dasselbe fuer den `Normschacht` (`Funktion`, `Material`,
-`Dimension1`/`2`, `BaulicherZustand`) — Schaechte kommen seit 2026-08-30 aus der XTF
-und gehen seit 2026-09-02 auch wieder hinaus. Offene Faelle sperren den
+`Dimension1`/`2`, `BaulicherZustand`, `Bemerkung`) — Schaechte kommen seit 2026-08-30
+aus der XTF und gehen seit 2026-09-02 auch wieder hinaus. Offene Faelle sperren den
 Schreibweg. `XtfRevisionWriter` wendet nur den geprueften Plan an, veraendert das
 Original nie, ueberschreibt kein Ziel und veroeffentlicht jede Revision ueber eine
 Nebendatei. `ExportPageViewModel` zeigt zuerst den Pruefbericht und schreibt erst
 nach ausdruecklicher Bestaetigung in einen neuen Zeitstempelordner.
 
-Drei Regeln dieses Wegs nie zurueckdrehen:
+Vier Regeln dieses Wegs nie zurueckdrehen:
+
+- **Die Bemerkung ist `TEXT*80` und einzeilig.** `XtfStammdatenPlanBuilder.AlsBemerkung`
+  macht Umbrueche und Tabulatoren zu Leerzeichen und zieht mehrfache zusammen —
+  `TEXT` ist in INTERLIS einzeilig, mehrzeilig waere `MTEXT`. Ueberlaenge wird dagegen
+  NICHT gekuerzt, sondern abgelehnt; der Bericht nennt Haltung beziehungsweise Schacht
+  und die Zeichenzahl. Kuerzen verloere Inhalt unsichtbar: Im Programm staende der ganze
+  Satz, in der Datei der halbe. Genau so kappt der Kantonsexport heute — seine laengste
+  Bemerkung ist exakt achtzig Zeichen lang und endet mitten im Wort. Am Schacht laeuft
+  die Bemerkung bewusst VOR der `unbekannt`-Regel heraus: Bei `Funktion` und `Material`
+  ist das eine Leerformel, in einem Freitext eine Aussage.
 
 - **Acht Felder bleiben bewusst im Programm.** `XtfStammdatenPlanBuilder.NichtExportierteFelder`
   fuehrt sie namentlich, ein Test haelt die Liste gegen die Exportkarten: `Strasse`
