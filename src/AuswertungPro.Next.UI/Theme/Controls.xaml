@@ -25,6 +25,9 @@
     <CornerRadius x:Key="RadiusM">6</CornerRadius>
     <CornerRadius x:Key="RadiusL">8</CornerRadius>
     <CornerRadius x:Key="RadiusXL">10</CornerRadius>
+    <CornerRadius x:Key="RadiusXXL">14</CornerRadius>
+    <!-- Pille/Kreis: rundet jede Kante voll aus (Abzeichen, runde Symbolflaechen). -->
+    <CornerRadius x:Key="RadiusPill">999</CornerRadius>
 
     <!-- ═══ ELEVATION (Tiefen-Hierarchie statt dicker Rahmen) ═══ -->
     <!-- S=Karten/Chips, M=Popups/Toasts, L=Dialoge/Overlays.

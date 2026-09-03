@@ -9,7 +9,7 @@
     </UserControl.Resources>
     <Border Background="{DynamicResource SurfaceSubtleBrush}"
             BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
-            CornerRadius="6" Padding="10,8">
+            CornerRadius="{DynamicResource RadiusM}" Padding="10,8">
         <ItemsControl ItemsSource="{Binding Nodes, ElementName=Root}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>

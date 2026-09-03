@@ -80,7 +80,7 @@
                                 MinWidth="34"
                                 Height="24"
                                 Background="{DynamicResource AccentSubtleBrush}"
-                                CornerRadius="6"
+                                CornerRadius="{DynamicResource RadiusM}"
                                 Padding="8,2"
                                 VerticalAlignment="Top">
                             <TextBlock Text="{Binding ProjectEntries.Count}"
@@ -93,7 +93,7 @@
                     </Grid>
 
                     <Border Grid.Row="1"
-                            CornerRadius="6"
+                            CornerRadius="{DynamicResource RadiusM}"
                             BorderThickness="1"
                             BorderBrush="{DynamicResource BorderLightBrush}"
                             Background="{DynamicResource BgLightBrush}"
@@ -160,7 +160,7 @@
                                             <!-- Projektkarte: Doppelklick oeffnet das Projekt — hier ist der
                                                  Lift beim Zeigen ein Versprechen, das eingeloest wird. -->
                                             <Border x:Name="ItemBorder"
-                                                    CornerRadius="6"
+                                                    CornerRadius="{DynamicResource RadiusM}"
                                                     BorderThickness="1"
                                                     BorderBrush="{DynamicResource BorderLightBrush}"
                                                     Background="{DynamicResource CardBrush}"
@@ -229,7 +229,7 @@
                                             <Border HorizontalAlignment="Left"
                                                     MaxWidth="178"
                                                     Background="{DynamicResource AccentSubtleBrush}"
-                                                    CornerRadius="5"
+                                                    CornerRadius="{DynamicResource RadiusM}"
                                                     Padding="6,2">
                                                 <TextBlock Text="{Binding StatsText}"
                                                            FontSize="{DynamicResource TextXS}"
@@ -489,7 +489,7 @@
                                                     </Grid.ColumnDefinitions>
                                                     <Border Width="10"
                                                             Height="10"
-                                                            CornerRadius="5"
+                                                            CornerRadius="{DynamicResource RadiusM}"
                                                             Background="{Binding Key, Converter={StaticResource ZustandsklasseBrush}}"
                                                             VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/>
@@ -542,7 +542,7 @@
                                                     </Grid.ColumnDefinitions>
                                                     <Border Width="10"
                                                             Height="10"
-                                                            CornerRadius="5"
+                                                            CornerRadius="{DynamicResource RadiusM}"
                                                             Background="{Binding Key, Converter={StaticResource ZustandsklasseBrush}}"
                                                             VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/>

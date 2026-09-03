@@ -37,7 +37,7 @@
 
             <!-- Deine Liste (klickbar) -->
             <Border Grid.Column="0" Background="{StaticResource CardBrush}"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10">
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="10">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="DEINE LISTE"
                                FontSize="{DynamicResource TextXS}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
@@ -80,7 +80,7 @@
 
             <!-- Gewaehlte Positionen -->
             <Border Grid.Column="2" Background="{StaticResource CardBrush}"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10">
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="10">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="GEWÄHLT FÜR DIESEN SCHACHT"
                                FontSize="{DynamicResource TextXS}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"

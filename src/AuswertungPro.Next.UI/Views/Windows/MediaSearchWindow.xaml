@@ -5,7 +5,7 @@
         ui:WindowFx.Entrance="True"
         xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
-        Title="Medien suchen und verlinken" Height="720" Width="1100"
+        Title="SewerStudio — Medien suchen und verlinken" Height="720" Width="1100"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         MinWidth="800" MinHeight="500">

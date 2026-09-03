@@ -4,9 +4,10 @@
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
-        Title="Protokolleintrag bearbeiten"
+        Title="SewerStudio — Protokolleintrag bearbeiten"
         Width="720"
         Height="560"
+        MinWidth="500" MinHeight="390"
         WindowStartupLocation="CenterOwner">
         <Window.Resources>
             <x:Array x:Key="ClockPositions" Type="{x:Type sys:String}"

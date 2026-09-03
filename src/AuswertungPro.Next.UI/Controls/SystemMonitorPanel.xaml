@@ -75,7 +75,7 @@
                 <StackPanel Grid.Row="1"
                             Orientation="Horizontal"
                             Margin="0,1,0,0">
-                    <Border CornerRadius="5"
+                    <Border CornerRadius="{DynamicResource RadiusM}"
                             Padding="5,1"
                             Background="{DynamicResource SuccessBrush}"
                             BorderThickness="0"
@@ -118,7 +118,7 @@
 
         <Border Margin="0,5,0,0"
                 Padding="6"
-                CornerRadius="8"
+                CornerRadius="{DynamicResource RadiusL}"
                 BorderThickness="1"
                 BorderBrush="{DynamicResource BorderBrush}"
                 Background="{DynamicResource HeaderBrush}"
@@ -152,7 +152,7 @@
                         <Border Grid.Row="1"
                                 Grid.ColumnSpan="2"
                                 Style="{StaticResource MetricTrack}">
-                            <Border CornerRadius="4"
+                            <Border CornerRadius="{DynamicResource RadiusS}"
                                     HorizontalAlignment="Left"
                                     Background="{Binding CpuPercent, Converter={StaticResource PercentToColorConverter}}">
                                 <Border.Width>
@@ -229,7 +229,7 @@
                         <Border Grid.Row="1"
                                 Grid.ColumnSpan="2"
                                 Style="{StaticResource MetricTrack}">
-                            <Border CornerRadius="4"
+                            <Border CornerRadius="{DynamicResource RadiusS}"
                                     HorizontalAlignment="Left"
                                     Background="{Binding RamPercent, Converter={StaticResource PercentToColorConverter}}">
                                 <Border.Width>
@@ -308,7 +308,7 @@
                         <Border Grid.Row="1"
                                 Grid.ColumnSpan="2"
                                 Style="{StaticResource MetricTrack}">
-                            <Border CornerRadius="4"
+                            <Border CornerRadius="{DynamicResource RadiusS}"
                                     HorizontalAlignment="Left"
                                     Background="{Binding GpuPercent, Converter={StaticResource PercentToColorConverter}}">
                                 <Border.Width>
@@ -360,7 +360,7 @@
                         <Border Grid.Row="1"
                                 Grid.ColumnSpan="2"
                                 Style="{StaticResource MetricTrack}">
-                            <Border CornerRadius="4"
+                            <Border CornerRadius="{DynamicResource RadiusS}"
                                     HorizontalAlignment="Left"
                                     Background="{Binding GpuMemPercent, Converter={StaticResource PercentToColorConverter}}">
                                 <Border.Width>

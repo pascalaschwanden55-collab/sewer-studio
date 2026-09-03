@@ -383,7 +383,7 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Margin="16,16,16,8">
                     <StackPanel Orientation="Horizontal">
-                        <Border Width="4" Height="20" CornerRadius="2" Margin="0,0,10,0"
+                        <Border Width="4" Height="20" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,10,0"
                                 Background="{DynamicResource AccentBrush}"/>
                         <TextBlock Text="SEWER STUDIO" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                                    Foreground="{DynamicResource TextBrush}"
@@ -391,7 +391,7 @@
                     </StackPanel>
                     <TextBlock Text="{Binding Subtitle}" Margin="14,3,0,0"
                                Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}"/>
-                    <Border Height="2" Margin="0,12,0,0" CornerRadius="1">
+                    <Border Height="2" Margin="0,12,0,0" CornerRadius="{DynamicResource RadiusS}">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                 <GradientStop Color="{DynamicResource ColorAccent}" Offset="0"/>
@@ -529,7 +529,7 @@
                                                  nicht alle Eintraege denselben teilen. -->
                                             <Border x:Name="AccentStrip" Grid.Column="0"
                                                     Background="{DynamicResource AccentBarBrush}"
-                                                    CornerRadius="1.5" Margin="0,6" Opacity="0"
+                                                    CornerRadius="{DynamicResource RadiusS}" Margin="0,6" Opacity="0"
                                                     RenderTransformOrigin="0.5,0.5">
                                                 <Border.RenderTransform>
                                                     <ScaleTransform x:Name="AccentStripScale" ScaleY="0.4"/>
@@ -539,10 +539,10 @@
                                                  per MouseEnter/MouseLeave animiert (weicher Uebergang). -->
                                             <Border x:Name="HoverOverlay" Grid.Column="1"
                                                     Background="{DynamicResource HoverBrush}"
-                                                    CornerRadius="6" Margin="4,0,0,0"
+                                                    CornerRadius="{DynamicResource RadiusM}" Margin="4,0,0,0"
                                                     Opacity="0"/>
                                             <Border x:Name="bd" Grid.Column="1" Background="Transparent"
-                                                    CornerRadius="6" Padding="2"
+                                                    CornerRadius="{DynamicResource RadiusM}" Padding="2"
                                                     Margin="4,0,0,0">
                                                 <ContentPresenter/>
                                             </Border>
@@ -637,7 +637,7 @@
             <Border Style="{StaticResource Card}">
                 <Grid>
                     <ctrl:AnimatedContentControl Content="{Binding CurrentPage}"/>
-                    <Border Background="{DynamicResource OverlayBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8">
+                    <Border Background="{DynamicResource OverlayBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>

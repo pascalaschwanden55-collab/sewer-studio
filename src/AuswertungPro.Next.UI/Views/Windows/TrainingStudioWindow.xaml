@@ -4,8 +4,9 @@
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
-        Title="Training Studio — Prüfplatz (Vorschau)"
-        Height="900" Width="1500"
+        Title="SewerStudio — Training Studio (Prüfplatz)"
+        Height="900"
+        MinWidth="1050" MinHeight="630" Width="1500"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}"
         Foreground="{DynamicResource TextBrush}"
@@ -26,7 +27,7 @@
         </Grid.RowDefinitions>
 
         <!-- ── Kopfzeile: Quellen + Fortschritt ───────────────────────────── -->
-        <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" CornerRadius="6"
+        <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" CornerRadius="{DynamicResource RadiusM}"
                 Padding="12,8" Margin="0,0,0,8">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -109,7 +110,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- Bild + Box/Masken-Overlay -->
-            <Border Grid.Column="0" Background="{DynamicResource CardBrush}" CornerRadius="6"
+            <Border Grid.Column="0" Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="6" Margin="0,0,8,0">
                 <Grid>
@@ -132,7 +133,7 @@
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <!-- Persönlicher Goldstand -->
-                    <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
+                    <Border Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                             Padding="12,10" Margin="0,0,0,8">
                         <StackPanel>
@@ -184,7 +185,7 @@
                     </Border>
 
                     <!-- Bereits vom Operateur codierte PDF-Quelle; noch kein Gold. -->
-                    <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
+                    <Border Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
                             BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
                             Padding="12,10" Margin="0,0,0,8"
                             Visibility="{Binding HasSourceSuggestion, Converter={StaticResource BoolToVis}}">
@@ -202,7 +203,7 @@
                     </Border>
 
                     <!-- Reiner Modelltest: automatische Treffer werden nie als Gold gespeichert. -->
-                    <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
+                    <Border Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                             Padding="12,10" Margin="0,0,0,8"
                             IsEnabled="{Binding IsAnnotationEntryEnabled}">
@@ -254,7 +255,7 @@
                     </Border>
 
                     <!-- KI-Vorschlag -->
-                    <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
+                    <Border Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                             Padding="12,10" Margin="0,0,0,8"
                             IsEnabled="{Binding IsAnnotationEntryEnabled}">
@@ -264,7 +265,7 @@
                                     Command="{Binding FotoMitKiPruefenCommand}"
                                     ToolTip="Prüft das ganze Foto und zeigt allgemeine VSA-Vorschläge. Deine Handdaten werden nicht verändert oder gespeichert."
                                     HorizontalAlignment="Left" Margin="0,0,0,6"/>
-                            <Border Background="{DynamicResource WarningBrush}" CornerRadius="4" Padding="8,4"
+                            <Border Background="{DynamicResource WarningBrush}" CornerRadius="{DynamicResource RadiusS}" Padding="8,4"
                                     Margin="0,0,0,6"
                                     Visibility="{Binding ShowQualityWarning, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="{Binding QualityWarning}" Foreground="White" TextWrapping="Wrap"/>
@@ -292,7 +293,7 @@
                                                            VerticalAlignment="Center" Margin="8,0"
                                                            Foreground="{DynamicResource MutedBrush}"/>
                                                 <Border Grid.Column="2" Background="{DynamicResource AccentSubtleBrush}"
-                                                        CornerRadius="3" Padding="5,1" VerticalAlignment="Center">
+                                                        CornerRadius="{DynamicResource RadiusS}" Padding="5,1" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Quelle}" FontSize="{DynamicResource TextXS}"
                                                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                 </Border>
@@ -308,7 +309,7 @@
                     </Border>
 
                     <!-- Codierung -->
-                    <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
+                    <Border Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                             Padding="12,10" Margin="0,0,0,8"
                             IsEnabled="{Binding IsAnnotationEntryEnabled}">
@@ -365,7 +366,7 @@
                     </Border>
 
                     <!-- Aktionen -->
-                    <Border Background="{DynamicResource CardBrush}" CornerRadius="6"
+                    <Border Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                             Padding="12,10">
                         <StackPanel>
@@ -391,7 +392,7 @@
 
                             <Border Background="{DynamicResource AccentSubtleBrush}"
                                     BorderBrush="{DynamicResource AccentBrush}"
-                                    BorderThickness="1" CornerRadius="5" Padding="9"
+                                    BorderThickness="1" CornerRadius="{DynamicResource RadiusM}" Padding="9"
                                     Margin="0,8,0,0"
                                     Visibility="{Binding IsAwaitingImageCompletion, Converter={StaticResource BoolToVis}}">
                                 <StackPanel>
@@ -417,7 +418,7 @@
         </Grid>
 
         <!-- ── Warteschlange (Thumbnails) ─────────────────────────────────── -->
-        <Border Grid.Row="2" Background="{DynamicResource CardBrush}" CornerRadius="6"
+        <Border Grid.Row="2" Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
                 BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
                 Padding="8" Margin="0,8,0,0" MaxHeight="96">
             <ListBox x:Name="PdfThumbnailQueue"
@@ -445,7 +446,7 @@
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Border Width="110" Height="72" Margin="0,0,6,0" CornerRadius="4"
+                            <Border Width="110" Height="72" Margin="0,0,6,0" CornerRadius="{DynamicResource RadiusS}"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <Image Source="{Binding FramePath, Converter={StaticResource FileToImage}, ConverterParameter=160}"
                                        Stretch="UniformToFill"/>
@@ -464,7 +465,7 @@
                 <TextBlock FontWeight="Bold" Text="Bogen-Vorschläge (Video-Durchlauf)"/>
             </Expander.Header>
             <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="6" Padding="10" MaxHeight="560">
+                    CornerRadius="{DynamicResource RadiusM}" Padding="10" MaxHeight="560">
                 <StackPanel>
                     <WrapPanel VerticalAlignment="Center">
                         <Button Content="Video wählen…" Style="{StaticResource ToolbarButton}"
@@ -530,7 +531,7 @@
                             </DataGrid.Columns>
                         </DataGrid>
                         <Border Grid.Column="1" BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1" CornerRadius="4" Padding="4">
+                                BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" Padding="4">
                             <StackPanel>
                                 <Image Source="{Binding PeakImage}" MaxHeight="240" Stretch="Uniform"/>
                                 <MediaElement Source="{Binding ClipPath}" MaxHeight="200" Stretch="Uniform"
@@ -546,7 +547,7 @@
         </Expander>
 
         <!-- ── Statuszeile ────────────────────────────────────────────────── -->
-        <Border Grid.Row="4" Background="{DynamicResource HeaderBrush}" CornerRadius="6"
+        <Border Grid.Row="4" Background="{DynamicResource HeaderBrush}" CornerRadius="{DynamicResource RadiusM}"
                 Padding="12,6" Margin="0,8,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>

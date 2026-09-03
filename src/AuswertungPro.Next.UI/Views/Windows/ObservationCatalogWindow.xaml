@@ -4,7 +4,7 @@
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
-        Title="SN EN 13508-2 Beobachtungskatalog für Haltungen &amp; Leitungen"
+        Title="SewerStudio — Beobachtungskatalog SN EN 13508-2"
         Width="1400"
         Height="780"
         MinWidth="1100"

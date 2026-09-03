@@ -15,7 +15,7 @@
                     Margin="8,0,0,0"
                     Background="{DynamicResource CardGlassBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
-                    CornerRadius="10" Padding="6,4,6,4"
+                    CornerRadius="{DynamicResource RadiusXL}" Padding="6,4,6,4"
                     BorderThickness="1">
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Auto">
@@ -24,13 +24,13 @@
                         <!-- == 1. Legende: Punkt = Pruef-Status, % = Konfidenz == -->
                         <WrapPanel Orientation="Horizontal" Margin="0,0,0,4">
                             <TextBlock Text="Punkt:" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                            <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource MutedBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Border Width="8" Height="8" CornerRadius="{DynamicResource RadiusS}" Background="{DynamicResource MutedBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
                             <TextBlock Text="offen" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource SuccessBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Border Width="8" Height="8" CornerRadius="{DynamicResource RadiusS}" Background="{DynamicResource SuccessBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
                             <TextBlock Text="akzeptiert" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource AccentBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Border Width="8" Height="8" CornerRadius="{DynamicResource RadiusS}" Background="{DynamicResource AccentBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
                             <TextBlock Text="bearbeitet" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource DangerBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Border Width="8" Height="8" CornerRadius="{DynamicResource RadiusS}" Background="{DynamicResource DangerBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
                             <TextBlock Text="abgelehnt" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
                             <TextBlock Text="%=Konfidenz:" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
                             <TextBlock Text="&#x2265;85" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,5,0" VerticalAlignment="Center"/>
@@ -45,7 +45,7 @@
                                 Background="#16202D"
                                 BorderBrush="#334155"
                                 BorderThickness="1"
-                                CornerRadius="6">
+                                CornerRadius="{DynamicResource RadiusM}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -177,7 +177,7 @@
                                                         <ControlTemplate TargetType="ListBoxItem">
                                                             <Border x:Name="Bd"
                                                                     Background="{TemplateBinding Background}"
-                                                                    CornerRadius="6"
+                                                                    CornerRadius="{DynamicResource RadiusM}"
                                                                     Padding="{TemplateBinding Padding}"
                                                                     Cursor="Hand">
                                                                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
@@ -229,7 +229,7 @@
                                                                 Grid.Column="3"
                                                                 Visibility="Collapsed"
                                                                 Background="#334155"
-                                                                CornerRadius="4"
+                                                                CornerRadius="{DynamicResource RadiusS}"
                                                                 Padding="4,1"
                                                                 Margin="4,0,0,0"
                                                                 VerticalAlignment="Center">
@@ -243,7 +243,7 @@
                                                                 Grid.Column="4"
                                                                 Visibility="Collapsed"
                                                                 Background="{DynamicResource WarningBrush}"
-                                                                CornerRadius="4"
+                                                                CornerRadius="{DynamicResource RadiusS}"
                                                                 Padding="4,1"
                                                                 Margin="4,0,0,0"
                                                                 VerticalAlignment="Center"
@@ -330,7 +330,7 @@
                                             Background="#05070A"
                                             BorderBrush="{DynamicResource BorderBrush}"
                                             BorderThickness="1"
-                                            CornerRadius="6"
+                                            CornerRadius="{DynamicResource RadiusM}"
                                             ClipToBounds="True">
                                         <Grid>
                                             <Image x:Name="ImgInlineEvidencePreview"
@@ -433,7 +433,7 @@
                                                         <ControlTemplate TargetType="ListBoxItem">
                                                             <Border x:Name="Bd"
                                                                     Background="{TemplateBinding Background}"
-                                                                    CornerRadius="6"
+                                                                    CornerRadius="{DynamicResource RadiusM}"
                                                                     Padding="{TemplateBinding Padding}"
                                                                     Cursor="Hand">
                                                                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
@@ -464,7 +464,7 @@
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
                                                         <Border Grid.Column="0" Width="7" Height="7"
-                                                                CornerRadius="4"
+                                                                CornerRadius="{DynamicResource RadiusS}"
                                                                 Background="{DynamicResource AccentBrush}"
                                                                 Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="1"
@@ -484,7 +484,7 @@
                                                                 Grid.Column="3"
                                                                 Visibility="Collapsed"
                                                                 Background="#334155"
-                                                                CornerRadius="4"
+                                                                CornerRadius="{DynamicResource RadiusS}"
                                                                 Padding="4,1"
                                                                 Margin="4,0,0,0"
                                                                 VerticalAlignment="Center">

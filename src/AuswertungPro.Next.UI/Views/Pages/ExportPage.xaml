@@ -8,7 +8,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <pages:DistributionVariantToBoolConverter x:Key="VariantToBool"/>
         <DataTemplate x:Key="PatternPartTemplate">
-            <Border Padding="7,3" Margin="0,0,4,3" CornerRadius="9" BorderThickness="1">
+            <Border Padding="7,3" Margin="0,0,4,3" CornerRadius="{DynamicResource RadiusL}" BorderThickness="1">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
@@ -38,7 +38,7 @@
 
         <!-- Export Toolbar Card -->
         <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                Padding="6,4" CornerRadius="8" Margin="0,0,0,8">
+                Padding="6,4" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
                 <Button Command="{Binding ExportCommand}"
                         Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0"
@@ -61,7 +61,7 @@
 
         <!-- Verteilungs-Card -->
         <Border Grid.Row="1" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                Padding="6,4" CornerRadius="8" Margin="0,0,0,8">
+                Padding="6,4" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
                 <Button Click="DropdownButton_Click"
                         Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
@@ -116,7 +116,7 @@
 
         <!-- Fortschrittsanzeige -->
         <Border Grid.Row="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                Padding="10" Margin="0,0,0,8" CornerRadius="8"
+                Padding="10" Margin="0,0,0,8" CornerRadius="{DynamicResource RadiusL}"
                 Visibility="{Binding IsDistributionInProgress, Converter={StaticResource BoolToVis}}">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -151,7 +151,7 @@
 
                     <!-- Excel: bewusst nur ein gemeinsamer Zielordner, keine Namens- oder Baum-Muster -->
                     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Padding="12" CornerRadius="8" Margin="0,0,0,8">
+                            BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
                         <StackPanel>
                             <TextBlock Text="Excel-Export" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
@@ -179,7 +179,7 @@
 
                     <!-- Revidierte XTF: nutzt denselben Zielordner. Kundenoriginale werden nur gelesen. -->
                     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Padding="12" CornerRadius="8" Margin="0,0,0,8">
+                            BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
                         <StackPanel>
                             <TextBlock Text="Revidierte XTF" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
@@ -202,7 +202,7 @@
 
                     <!-- Neue XTF: braucht keine Originaldatei, schreibt alles selbst. -->
                     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Padding="12" CornerRadius="8" Margin="0,0,0,8">
+                            BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
                         <StackPanel>
                             <TextBlock Text="Neue XTF (Ersterfassung)" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
@@ -232,7 +232,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                        BorderThickness="1" Padding="12" CornerRadius="8" Margin="0,0,0,8">
+                                        BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Titel}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextBrush}"/>
@@ -283,7 +283,7 @@
                                                 </TextBlock>
                                                 <Border Background="{DynamicResource SurfaceSubtleBrush}"
                                                         BorderBrush="{DynamicResource BorderLightBrush}"
-                                                        BorderThickness="1" CornerRadius="4"
+                                                        BorderThickness="1" CornerRadius="{DynamicResource RadiusS}"
                                                         Padding="6,5" MinHeight="34" Margin="14,2,0,5">
                                                     <ItemsControl ItemsSource="{Binding OrdnerPatternParts}"
                                                                   ItemTemplate="{StaticResource PatternPartTemplate}">
@@ -321,7 +321,7 @@
                                                 </TextBlock>
                                                 <Border Background="{DynamicResource SurfaceSubtleBrush}"
                                                         BorderBrush="{DynamicResource BorderLightBrush}"
-                                                        BorderThickness="1" CornerRadius="4"
+                                                        BorderThickness="1" CornerRadius="{DynamicResource RadiusS}"
                                                         Padding="6,5" MinHeight="34" Margin="14,2,0,5">
                                                     <ItemsControl ItemsSource="{Binding UnterordnerPatternParts}"
                                                                   ItemTemplate="{StaticResource PatternPartTemplate}">
@@ -359,7 +359,7 @@
                                                 </TextBlock>
                                                 <Border Background="{DynamicResource SurfaceSubtleBrush}"
                                                         BorderBrush="{DynamicResource BorderLightBrush}"
-                                                        BorderThickness="1" CornerRadius="4"
+                                                        BorderThickness="1" CornerRadius="{DynamicResource RadiusS}"
                                                         Padding="6,5" MinHeight="34" Margin="14,2,0,0">
                                                     <ItemsControl ItemsSource="{Binding ObjectFolderPatternParts}"
                                                                   ItemTemplate="{StaticResource PatternPartTemplate}">
@@ -378,7 +378,7 @@
                                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         <Border Background="{DynamicResource SurfaceSubtleBrush}"
                                                 BorderBrush="{DynamicResource BorderLightBrush}"
-                                                BorderThickness="1" CornerRadius="4"
+                                                BorderThickness="1" CornerRadius="{DynamicResource RadiusS}"
                                                 Padding="6,5" MinHeight="34" Margin="0,2,0,6">
                                             <ItemsControl ItemsSource="{Binding DateiPatternParts}">
                                                 <ItemsControl.ItemsPanel>
@@ -389,7 +389,7 @@
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <Border Padding="7,3" Margin="0,0,4,3"
-                                                                CornerRadius="9" BorderThickness="1">
+                                                                CornerRadius="{DynamicResource RadiusL}" BorderThickness="1">
                                                             <Border.Style>
                                                                 <Style TargetType="Border">
                                                                     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
@@ -418,7 +418,7 @@
                                         <!-- Live-Vorschau des vollstaendigen Zielpfads -->
                                         <Border Background="{DynamicResource SurfaceSubtleBrush}"
                                                 BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
-                                                CornerRadius="4" Padding="8,6">
+                                                CornerRadius="{DynamicResource RadiusS}" Padding="8,6">
                                             <StackPanel>
                                                 <TextBlock Text="Vorschau" FontSize="{DynamicResource TextXS}"
                                                            Foreground="{DynamicResource TextSecondaryBrush}"/>

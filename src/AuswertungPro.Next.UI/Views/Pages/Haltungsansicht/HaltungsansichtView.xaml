@@ -149,7 +149,7 @@
                                 </TextBlock.Text>
                             </TextBlock>
                         </StackPanel>
-                        <Border Grid.Column="1" Width="32" Height="22" CornerRadius="4" VerticalAlignment="Center" Margin="8,0,4,0"
+                        <Border Grid.Column="1" Width="32" Height="22" CornerRadius="{DynamicResource RadiusS}" VerticalAlignment="Center" Margin="8,0,4,0"
                                 Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}">
                             <TextBlock Text="{Binding Fields[Zustandsklasse]}" HorizontalAlignment="Center"
                                        VerticalAlignment="Center" Foreground="{DynamicResource StatusBadgeTextBrush}" FontSize="{DynamicResource TextS}" FontWeight="Bold"/>
@@ -182,7 +182,7 @@
 
             <Border Grid.Row="2" Margin="0,4,0,0" Padding="12"
                     Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                    BorderThickness="1" CornerRadius="10">
+                    BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,8">
                         <TextBlock DockPanel.Dock="Left" Text="Primäre Schäden" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
@@ -216,7 +216,7 @@
                             <DataTemplate>
                                 <Border Margin="0,2" Padding="8,5"
                                         Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                        BorderThickness="1" CornerRadius="6">
+                                        BorderThickness="1" CornerRadius="{DynamicResource RadiusM}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="64"/>
@@ -228,13 +228,13 @@
                                                    Foreground="{DynamicResource SuccessBrush}"
                                                    Text="{Binding Converter={StaticResource SchadenMeterConv}}"/>
                                         <Border Grid.Column="1" VerticalAlignment="Center" Margin="6,0" Padding="6,2"
-                                                CornerRadius="4" Background="{DynamicResource AccentBrush}">
+                                                CornerRadius="{DynamicResource RadiusS}" Background="{DynamicResource AccentBrush}">
                                             <TextBlock Text="{Binding Code}" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="White"/>
                                         </Border>
                                         <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="6,0" FontWeight="SemiBold"
                                                    TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}"
                                                    Text="{Binding Converter={StaticResource SchadenKlartextConv}}"/>
-                                        <Border Grid.Column="3" VerticalAlignment="Center" Padding="6,2" CornerRadius="4"
+                                        <Border Grid.Column="3" VerticalAlignment="Center" Padding="6,2" CornerRadius="{DynamicResource RadiusS}"
                                                 Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                             <TextBlock Text="{Binding Converter={StaticResource SchadenKategorieConv}}"
                                                        FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"/>

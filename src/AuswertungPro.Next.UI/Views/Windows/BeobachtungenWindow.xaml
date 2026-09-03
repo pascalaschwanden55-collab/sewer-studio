@@ -5,7 +5,7 @@
         ui:WindowFx.Entrance="True"
         xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
         xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
-        Title="Beobachtungen"
+        Title="SewerStudio — Beobachtungen"
         Width="1120"
         Height="460"
         MinWidth="760"
@@ -37,7 +37,7 @@
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 Background="{DynamicResource CardBrush}"
-                CornerRadius="8"
+                CornerRadius="{DynamicResource RadiusL}"
                 Padding="10"
                 Margin="0,0,0,8">
             <DockPanel LastChildFill="False">
@@ -61,7 +61,7 @@
         <Border Grid.Row="1"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
-                CornerRadius="8"
+                CornerRadius="{DynamicResource RadiusL}"
                 Background="{DynamicResource CardBrush}">
             <DataGrid x:Name="EntriesGrid"
                       AutoGenerateColumns="False"

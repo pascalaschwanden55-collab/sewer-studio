@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
-        Title="Hydraulik-PDF — Druckoptionen"
+        Title="SewerStudio — Hydraulik-PDF drucken"
         Width="380" Height="340"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
@@ -21,7 +21,7 @@
                         <StackPanel Orientation="Horizontal">
                             <Border x:Name="Bd" Width="18" Height="18"
                                     Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                    CornerRadius="3" VerticalAlignment="Center" Margin="0,0,8,0">
+                                    CornerRadius="{DynamicResource RadiusS}" VerticalAlignment="Center" Margin="0,0,8,0">
                                 <TextBlock x:Name="CheckMark" Text="&#x2713;"
                                            FontSize="{DynamicResource TextM}" FontWeight="Bold"
                                            Foreground="{DynamicResource AccentBrush}"

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
-        Title="Schacht-Massnahmen-Liste bearbeiten"
+        Title="SewerStudio — Schacht-Massnahmen-Liste bearbeiten"
         Width="560" Height="520"
         MinWidth="440" MinHeight="360"
         WindowStartupLocation="CenterOwner"

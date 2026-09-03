@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
-        Title="Bogen-Vorschlag" Height="860" Width="1180"
+        Title="SewerStudio — Bogen-Vorschlag" Height="860"
+        MinWidth="830" MinHeight="600" Width="1180"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgLightBrush}">
     <Grid Margin="12">
@@ -19,7 +20,7 @@
         <!-- Das Spitzenbild gross: Beurteilen braucht Pixel, kein Daumen. -->
         <Border Grid.Row="1" Background="{DynamicResource CardBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                CornerRadius="6" Padding="4">
+                CornerRadius="{DynamicResource RadiusM}" Padding="4">
             <Image x:Name="GrossBild" Stretch="Uniform"/>
         </Border>
 

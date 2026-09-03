@@ -39,7 +39,7 @@
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 Background="{DynamicResource CardBrush}"
-                CornerRadius="8"
+                CornerRadius="{DynamicResource RadiusL}"
                 Padding="10"
                 Margin="0,0,0,10">
             <Grid>
@@ -70,7 +70,7 @@
         <Border Grid.Row="1"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
-                CornerRadius="8"
+                CornerRadius="{DynamicResource RadiusL}"
                 Background="{DynamicResource CardBrush}">
             <DataGrid x:Name="EntriesGrid"
                       AutoGenerateColumns="False"
@@ -112,7 +112,7 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Border Background="{Binding Code, Converter={StaticResource CodeGroupBrush}, ConverterParameter=subtle}"
-                                        CornerRadius="4" Padding="7,2" Margin="2,3"
+                                        CornerRadius="{DynamicResource RadiusS}" Padding="7,2" Margin="2,3"
                                         HorizontalAlignment="Left" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Code}" FontFamily="Consolas"
                                                FontWeight="SemiBold" FontSize="{DynamicResource TextS}"
@@ -138,7 +138,7 @@
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 Background="{DynamicResource CardBrush}"
-                CornerRadius="8"
+                CornerRadius="{DynamicResource RadiusL}"
                 Padding="8">
             <WrapPanel HorizontalAlignment="Right">
                 <Button x:Name="NewButton" Content="Neu" Width="100" Style="{StaticResource FooterButtonStyle}"/>

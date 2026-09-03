@@ -56,12 +56,12 @@
                 </ListBox.ItemsPanel>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Margin="4" Padding="4" CornerRadius="6" Cursor="Hand"
+                        <Border Margin="4" Padding="4" CornerRadius="{DynamicResource RadiusM}" Cursor="Hand"
                                 Background="{DynamicResource HeaderBrush}"
                                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                 MouseLeftButtonUp="Foto_Click">
                             <StackPanel Width="{Binding TileSize, RelativeSource={RelativeSource AncestorType={x:Type local:PhotoGalleryPanel}}}">
-                                <Border CornerRadius="4" ClipToBounds="True"
+                                <Border CornerRadius="{DynamicResource RadiusS}" ClipToBounds="True"
                                         Height="{Binding TileSize, RelativeSource={RelativeSource AncestorType={x:Type local:PhotoGalleryPanel}}, Converter={StaticResource TileHeightConv}}">
                                     <Image Stretch="UniformToFill"
                                            Source="{Binding Pfad, Converter={StaticResource ThumbConv}}"/>

@@ -12,7 +12,7 @@
 
         <!-- VSA-Bewertung Card -->
         <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                CornerRadius="10" Padding="0" Margin="0,0,0,12">
+                CornerRadius="{DynamicResource RadiusXL}" Padding="0" Margin="0,0,0,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="4"/>
@@ -61,7 +61,7 @@
 
         <!-- Ergebnis -->
         <Border Grid.Row="1" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                CornerRadius="8" Padding="14" Margin="0,0,0,8">
+                CornerRadius="{DynamicResource RadiusL}" Padding="14" Margin="0,0,0,8">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                     <TextBlock Text="&#xE73E;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}"
@@ -75,7 +75,7 @@
         <!-- Hinweis -->
         <Border Grid.Row="2" VerticalAlignment="Top"
                 Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                CornerRadius="8" Padding="12">
+                CornerRadius="{DynamicResource RadiusL}" Padding="12">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="&#xE946;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}"
                            Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Top" Margin="0,0,8,0"/>

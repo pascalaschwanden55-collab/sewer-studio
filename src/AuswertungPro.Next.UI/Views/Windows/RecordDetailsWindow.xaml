@@ -5,7 +5,7 @@
         ui:WindowFx.Entrance="True"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
         x:Name="Root"
-        Title="Details" Width="1360" Height="860" MinWidth="980" MinHeight="680"
+        Title="SewerStudio — Details" Width="1360" Height="860" MinWidth="980" MinHeight="680"
         WindowStartupLocation="CenterOwner" WindowStyle="SingleBorderWindow"
         AllowsTransparency="False" ResizeMode="CanResize">
     <Grid Margin="18">

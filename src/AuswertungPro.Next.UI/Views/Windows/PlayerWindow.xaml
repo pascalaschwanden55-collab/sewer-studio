@@ -5,7 +5,7 @@
         xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
         xmlns:win="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
-        Title="Video"
+        Title="SewerStudio — Video"
         Width="1180"
         Height="760"
         MinWidth="920"
@@ -57,7 +57,7 @@
                             <Border Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="6"
+                                    CornerRadius="{DynamicResource RadiusM}"
                                     Padding="{TemplateBinding Padding}"
                                     TextElement.Foreground="{TemplateBinding Foreground}"
                                     TextBlock.Foreground="{TemplateBinding Foreground}">
@@ -155,7 +155,7 @@
                 <Border Grid.Column="0"
                         Margin="0,2,14,2"
                         Background="{DynamicResource AccentBrush}"
-                        CornerRadius="999"/>
+                        CornerRadius="{DynamicResource RadiusPill}"/>
 
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="Videoplayer"
@@ -256,7 +256,7 @@
 
                     <Border x:Name="AiStatusBadge"
                             HorizontalAlignment="Right" VerticalAlignment="Top"
-                            Margin="12" CornerRadius="8" Padding="10,5"
+                            Margin="12" CornerRadius="{DynamicResource RadiusL}" Padding="10,5"
                             Background="{DynamicResource VideoScrimBrush}"
                             BorderBrush="{DynamicResource AccentBrush}"
                             BorderThickness="1" Visibility="Collapsed">
@@ -279,7 +279,7 @@
                 <!-- Kalibrierungs-Hinweis -->
                 <Border x:Name="CodingCalibrationHint"
                         HorizontalAlignment="Center" VerticalAlignment="Top"
-                        Margin="0,8,0,0" Background="{DynamicResource VideoScrimBlackStrongBrush}" CornerRadius="8"
+                        Margin="0,8,0,0" Background="{DynamicResource VideoScrimBlackStrongBrush}" CornerRadius="{DynamicResource RadiusL}"
                         Padding="16,8" Visibility="Collapsed">
                     <StackPanel>
                         <TextBlock Text="KALIBRIERUNG" FontSize="{DynamicResource TextS}" FontWeight="Bold"
@@ -292,7 +292,7 @@
                 <!-- KI-Bestaetigungs-Panel (bei Gelb/Rot: Video angehalten, User entscheidet) -->
                 <Border x:Name="CodingConfirmationPanel" Visibility="Collapsed"
                         HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Background="{DynamicResource VideoScrimStrongBrush}" CornerRadius="12" Padding="20,16"
+                        Background="{DynamicResource VideoScrimStrongBrush}" CornerRadius="{DynamicResource RadiusXXL}" Padding="20,16"
                         BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <StackPanel MaxWidth="420">
                         <!-- Ampel-Farbe + KI-Vorschlag -->
@@ -355,7 +355,7 @@
                 <!-- LiveDetection-Bestaetigungs-Panel (bei Befund: Video angehalten, User entscheidet) -->
                 <Border x:Name="DetectionConfirmationPanel" Visibility="Collapsed"
                         HorizontalAlignment="Center" VerticalAlignment="Bottom"
-                        Margin="0,0,0,24" Background="{DynamicResource VideoScrimStrongBrush}" CornerRadius="12"
+                        Margin="0,0,0,24" Background="{DynamicResource VideoScrimStrongBrush}" CornerRadius="{DynamicResource RadiusXXL}"
                         Padding="20,12" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1.5"
                         Panel.ZIndex="30">
                     <StackPanel MaxWidth="480">
@@ -395,7 +395,7 @@
                 <!-- Mess-Anzeige -->
                 <Border x:Name="CodingMeasurementPanel"
                         HorizontalAlignment="Center" VerticalAlignment="Bottom"
-                        Margin="0,0,0,8" Background="{DynamicResource VideoScrimBlackBrush}" CornerRadius="8"
+                        Margin="0,0,0,8" Background="{DynamicResource VideoScrimBlackBrush}" CornerRadius="{DynamicResource RadiusL}"
                         Padding="12,6" Visibility="Collapsed">
                     <TextBlock x:Name="TxtCodingMeasurement"
                                Foreground="White" FontSize="{DynamicResource TextM}"
@@ -414,7 +414,7 @@
                                    VerticalAlignment="Stretch" Opacity="0.8"/>
                         <!-- Analyse-Badge oben rechts -->
                         <Border HorizontalAlignment="Right" VerticalAlignment="Top"
-                                Margin="8" Padding="8,4" CornerRadius="6"
+                                Margin="8" Padding="8,4" CornerRadius="{DynamicResource RadiusM}"
                                 Background="{DynamicResource VideoScrimBrush}">
                             <StackPanel Orientation="Horizontal">
                                 <Ellipse Width="6" Height="6" Fill="{DynamicResource WarningBrush}" Margin="0,0,5,0"
@@ -435,7 +435,7 @@
                 <Border x:Name="OsdMeterBadge"
                         HorizontalAlignment="Left" VerticalAlignment="Top"
                         Margin="12" Padding="10,5"
-                        Background="{DynamicResource VideoScrimBrush}" CornerRadius="8"
+                        Background="{DynamicResource VideoScrimBrush}" CornerRadius="{DynamicResource RadiusL}"
                         Visibility="Collapsed">
                     <TextBlock x:Name="TxtOsdMeter"
                                Foreground="{DynamicResource AccentBrush}"
@@ -509,7 +509,7 @@
                            PlacementTarget="{Binding ElementName=BtnToolsDropdown}">
                         <Border Background="{DynamicResource BgLightBrush}"
                                 BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1" CornerRadius="8" Padding="8">
+                                BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="8">
                             <StackPanel>
                                 <!-- Kalibrieren -->
                                 <Button x:Name="BtnCodingCalibrate" Style="{StaticResource MarkToolPopupButton}"
@@ -583,7 +583,7 @@
                            IsOpen="{Binding IsChecked, ElementName=CodingHealthToggle}"
                            StaysOpen="False" AllowsTransparency="True">
                         <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                CornerRadius="6" Padding="10" Margin="0,4,0,0">
+                                CornerRadius="{DynamicResource RadiusM}" Padding="10" Margin="0,4,0,0">
                             <StackPanel MinWidth="220">
                                 <TextBlock Text="KI-Pipeline" Foreground="{DynamicResource TextBrush}" FontSize="{DynamicResource TextS}"
                                            FontWeight="SemiBold" Margin="0,0,0,4"/>
@@ -635,7 +635,7 @@
                     <!-- Eingabemarker: Freitext + Schnellauswahl -->
                     <Border x:Name="EingabemarkerPopup" Visibility="Collapsed"
                             Margin="6,0,0,0" VerticalAlignment="Center"
-                            Background="{DynamicResource HeaderBrush}" CornerRadius="6"
+                            Background="{DynamicResource HeaderBrush}" CornerRadius="{DynamicResource RadiusM}"
                             BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2"
                             Padding="6,4">
                         <StackPanel Orientation="Horizontal">
@@ -678,7 +678,7 @@
                             </ComboBox>
                             <Border Background="{DynamicResource SurfaceSubtleBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                    CornerRadius="4" Padding="5,2" Margin="6,0,0,0" VerticalAlignment="Center">
+                                    CornerRadius="{DynamicResource RadiusS}" Padding="5,2" Margin="6,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Text="Enter" Foreground="{DynamicResource TextSecondaryBrush}"
                                            FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}"/>
                             </Border>
@@ -716,7 +716,7 @@
                 <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- Naechster Code am aktuellen Meter -->
                     <Border x:Name="CodingCurrentCodeBadge"
-                            Background="{DynamicResource HeaderBrush}" CornerRadius="8"
+                            Background="{DynamicResource HeaderBrush}" CornerRadius="{DynamicResource RadiusL}"
                             Padding="8,3" Margin="0,0,8,0" Visibility="Collapsed">
                         <TextBlock x:Name="TxtCodingCurrentCode"
                                    FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
@@ -732,7 +732,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{DynamicResource HeaderBrush}" CornerRadius="8"
+                                <Border Background="{DynamicResource HeaderBrush}" CornerRadius="{DynamicResource RadiusL}"
                                         Padding="10,4" Margin="0,0,6,0" VerticalAlignment="Center"
                                         ToolTip="{Binding FullTooltip, Mode=OneWay}">
                                     <StackPanel Orientation="Horizontal">
@@ -789,7 +789,7 @@
 
             <!-- YOLO-Statusanzeige -->
             <Border x:Name="YoloStatusBar" Visibility="Collapsed"
-                    Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="4"
+                    Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="{DynamicResource RadiusS}"
                     Padding="10,4" Margin="0,0,0,8">
                 <StackPanel Orientation="Horizontal">
                     <Ellipse x:Name="YoloDot" Width="8" Height="8"
@@ -936,7 +936,7 @@
                                PlacementTarget="{Binding ElementName=ManualMarkButton}">
                             <Border Background="{DynamicResource BgLightBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}"
-                                    BorderThickness="1" CornerRadius="8" Padding="6">
+                                    BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="6">
                                 <StackPanel>
                                     <Button Click="MarkTool_Punkt_Click" Padding="12,6"
                                             Style="{StaticResource MarkToolPopupButton}">
@@ -1034,7 +1034,7 @@
                         <Border Background="{DynamicResource CardBrush}"
                                 BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="8"
+                                CornerRadius="{DynamicResource RadiusL}"
                                 Padding="8">
                             <WrapPanel>
                                 <ToggleButton x:Name="Speed05Button" Style="{StaticResource SpeedToggleButton}" Content="0.5x" Click="Speed05_Click"
@@ -1121,7 +1121,7 @@
                 Grid.RowSpan="6"
                 Visibility="Collapsed"
                 Background="{DynamicResource VideoScrimBlackSoftBrush}"
-                CornerRadius="8"
+                CornerRadius="{DynamicResource RadiusL}"
                 MouseDown="CloseShortcutOverlay_Click">
             <Border HorizontalAlignment="Center"
                     VerticalAlignment="Center"

@@ -3,9 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
-        Title="Blätter für das Gesamt-PDF"
+        Title="SewerStudio — Blätter für das Gesamt-PDF"
         Width="1080"
         Height="820"
+        MinWidth="760" MinHeight="570"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}">
     <Grid Margin="14">

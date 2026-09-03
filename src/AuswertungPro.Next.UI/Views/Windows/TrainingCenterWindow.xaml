@@ -27,7 +27,7 @@
         </Grid.RowDefinitions>
 
         <!-- Top Bar -->
-        <Border Grid.Row="0" Padding="10" CornerRadius="6"
+        <Border Grid.Row="0" Padding="10" CornerRadius="{DynamicResource RadiusM}"
                 Background="{DynamicResource CardBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1" Margin="0,0,0,8">
@@ -88,7 +88,7 @@
         </Border>
 
         <!-- Row 1: Trainingsstand -->
-        <Border Grid.Row="1" Background="{DynamicResource CardBrush}" CornerRadius="6" Padding="12,8" Margin="0,0,0,4">
+        <Border Grid.Row="1" Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="12,8" Margin="0,0,0,4">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -100,7 +100,7 @@
 
                 <!-- Ampel-Kreis + Label -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,16,0">
-                    <Border Width="14" Height="14" CornerRadius="7"
+                    <Border Width="14" Height="14" CornerRadius="{DynamicResource RadiusM}"
                             VerticalAlignment="Center" Margin="0,0,8,0"
                             Background="{Binding KbReadinessBrush}"/>
                     <TextBlock Text="{Binding KbReadinessLabel}" Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold"/>
@@ -160,7 +160,7 @@
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <Border Grid.Column="1" Margin="12,0,0,0" Padding="10" CornerRadius="6"
+                    <Border Grid.Column="1" Margin="12,0,0,0" Padding="10" CornerRadius="{DynamicResource RadiusM}"
                             Background="{DynamicResource CardBrush}"
                             BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1">
@@ -229,7 +229,7 @@
                         </DataGrid>
 
                         <!-- Sample-Vorschau -->
-                        <Border Grid.Column="1" Margin="12,0,0,0" Padding="10" CornerRadius="6"
+                        <Border Grid.Column="1" Margin="12,0,0,0" Padding="10" CornerRadius="{DynamicResource RadiusM}"
                                 Background="{DynamicResource CardBrush}"
                                 BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1">
@@ -336,7 +336,7 @@
                     </StackPanel>
 
                     <!-- ═══ Row 2: Pipeline-Stage-Leiste ═══ -->
-                    <Border Grid.Row="2" Background="{DynamicResource CardBrush}" CornerRadius="6" Padding="12,8">
+                    <Border Grid.Row="2" Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="12,8">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <!-- Stage 0: Timeline -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage0">
@@ -377,7 +377,7 @@
                     </Border>
 
                     <!-- ═══ Row 4: Service-Indikatoren + aktueller Eintrag ═══ -->
-                    <Border Grid.Row="4" Background="{DynamicResource CardBrush}" CornerRadius="6" Padding="10,6">
+                    <Border Grid.Row="4" Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10,6">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -388,21 +388,21 @@
 
                             <!-- 5 Service-Dots -->
                             <StackPanel Orientation="Horizontal" Grid.Column="0">
-                                <Border Width="10" Height="10" CornerRadius="5" Background="{DynamicResource MutedBrush}" x:Name="SvcOsd"
+                                <Border Width="10" Height="10" CornerRadius="{DynamicResource RadiusM}" Background="{DynamicResource MutedBrush}" x:Name="SvcOsd"
                                         ToolTip="OSD-Meter-Erkennung" Margin="0,0,6,0"/>
-                                <Border Width="10" Height="10" CornerRadius="5" Background="{DynamicResource MutedBrush}" x:Name="SvcFrame"
+                                <Border Width="10" Height="10" CornerRadius="{DynamicResource RadiusM}" Background="{DynamicResource MutedBrush}" x:Name="SvcFrame"
                                         ToolTip="Frame-Extraktion" Margin="0,0,6,0"/>
-                                <Border Width="10" Height="10" CornerRadius="5" Background="{DynamicResource MutedBrush}" x:Name="SvcQwen"
+                                <Border Width="10" Height="10" CornerRadius="{DynamicResource RadiusM}" Background="{DynamicResource MutedBrush}" x:Name="SvcQwen"
                                         ToolTip="Qwen VL KI-Analyse" Margin="0,0,6,0"/>
-                                <Border Width="10" Height="10" CornerRadius="5" Background="{DynamicResource MutedBrush}" x:Name="SvcCompare"
+                                <Border Width="10" Height="10" CornerRadius="{DynamicResource RadiusM}" Background="{DynamicResource MutedBrush}" x:Name="SvcCompare"
                                         ToolTip="Deterministischer Vergleich" Margin="0,0,6,0"/>
-                                <Border Width="10" Height="10" CornerRadius="5" Background="{DynamicResource MutedBrush}" x:Name="SvcTech"
+                                <Border Width="10" Height="10" CornerRadius="{DynamicResource RadiusM}" Background="{DynamicResource MutedBrush}" x:Name="SvcTech"
                                         ToolTip="Technik-Bewertung" Margin="0,0,6,0"/>
                                 <TextBlock Text="Services" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="4,0,0,0"/>
                             </StackPanel>
 
                             <!-- Aktives Modell -->
-                            <Border Grid.Column="1" CornerRadius="4" Padding="8,2" Margin="12,0,0,0"
+                            <Border Grid.Column="1" CornerRadius="{DynamicResource RadiusS}" Padding="8,2" Margin="12,0,0,0"
                                     IsEnabled="{Binding IsModelActive, Mode=OneWay}"
                                     x:Name="ActiveModelBorder" Background="{DynamicResource BgLightBrush}">
                                 <StackPanel Orientation="Horizontal">
@@ -441,7 +441,7 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- Spalte 1: Live-Frame -->
-                        <Border Grid.Column="0" Background="{DynamicResource BgLightBrush}" CornerRadius="6" Padding="6">
+                        <Border Grid.Column="0" Background="{DynamicResource BgLightBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="6">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -449,7 +449,7 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 <TextBlock Text="Live-Frame" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <Border Grid.Row="1" Background="{DynamicResource CardBrush}" CornerRadius="4">
+                                <Border Grid.Row="1" Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusS}">
                                     <Image Stretch="Uniform" StretchDirection="DownOnly"
                                            Source="{Binding LiveFramePath, Mode=OneWay, Converter={StaticResource FileToImage}}" Margin="2"/>
                                 </Border>
@@ -467,7 +467,7 @@
                             </Grid.RowDefinitions>
 
                             <!-- Match-Rate-Balken (gestapelt) -->
-                            <Border Grid.Row="0" Background="{DynamicResource BgLightBrush}" CornerRadius="6" Padding="8">
+                            <Border Grid.Row="0" Background="{DynamicResource BgLightBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="8">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -498,20 +498,20 @@
                                     </Grid>
                                     <!-- Legende -->
                                     <StackPanel Grid.Row="4" Orientation="Horizontal">
-                                        <Border Width="8" Height="8" Background="{DynamicResource SuccessBrush}" CornerRadius="2" Margin="0,0,3,0"/>
+                                        <Border Width="8" Height="8" Background="{DynamicResource SuccessBrush}" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,3,0"/>
                                         <TextBlock Text="{Binding ExactPercent, Mode=OneWay, StringFormat=P0}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}" Margin="0,0,10,0"/>
-                                        <Border Width="8" Height="8" Background="{DynamicResource WarningBrush}" CornerRadius="2" Margin="0,0,3,0"/>
+                                        <Border Width="8" Height="8" Background="{DynamicResource WarningBrush}" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,3,0"/>
                                         <TextBlock Text="{Binding PartialPercent, Mode=OneWay, StringFormat=P0}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}" Margin="0,0,10,0"/>
-                                        <Border Width="8" Height="8" Background="{DynamicResource DangerBrush}" CornerRadius="2" Margin="0,0,3,0"/>
+                                        <Border Width="8" Height="8" Background="{DynamicResource DangerBrush}" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,3,0"/>
                                         <TextBlock Text="{Binding MismatchPercent, Mode=OneWay, StringFormat=P0}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}" Margin="0,0,10,0"/>
-                                        <Border Width="8" Height="8" Background="{DynamicResource MutedBrush}" CornerRadius="2" Margin="0,0,3,0"/>
+                                        <Border Width="8" Height="8" Background="{DynamicResource MutedBrush}" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,3,0"/>
                                         <TextBlock Text="{Binding NoFindingsPercent, Mode=OneWay, StringFormat=P0}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}"/>
                                     </StackPanel>
                                 </Grid>
                             </Border>
 
                             <!-- Log / Batch-Import Bereich -->
-                            <Border Grid.Row="2" Background="{DynamicResource BgLightBrush}" CornerRadius="6" Padding="6">
+                            <Border Grid.Row="2" Background="{DynamicResource BgLightBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="6">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -540,7 +540,7 @@
                             </Grid.RowDefinitions>
 
                             <!-- Ergebnis-Verlauf (scrollbare Liste) -->
-                            <Border Grid.Row="0" Background="{DynamicResource BgLightBrush}" CornerRadius="6" Padding="6">
+                            <Border Grid.Row="0" Background="{DynamicResource BgLightBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="6">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -553,7 +553,7 @@
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Padding="4,2" Margin="0,1" CornerRadius="3"
+                                                <Border Padding="4,2" Margin="0,1" CornerRadius="{DynamicResource RadiusS}"
                                                         Background="{DynamicResource CardBrush}">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
@@ -568,7 +568,7 @@
                                                         <TextBlock Grid.Column="2" Text="{Binding Meter, StringFormat=F1}" Foreground="{DynamicResource TextSecondaryBrush}"
                                                                    FontSize="{DynamicResource TextXS}" VerticalAlignment="Center"/>
                                                         <!-- Farbiger Level-Indikator -->
-                                                        <Border Grid.Column="3" HorizontalAlignment="Right" Padding="4,1" CornerRadius="3"
+                                                        <Border Grid.Column="3" HorizontalAlignment="Right" Padding="4,1" CornerRadius="{DynamicResource RadiusS}"
                                                                 x:Name="LevelBorder">
                                                             <TextBlock Text="{Binding Level}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextBrush}" FontWeight="Bold"/>
                                                         </Border>
@@ -595,7 +595,7 @@
                             </Border>
 
                             <!-- Code-Verteilung (Balken pro Code) -->
-                            <Border Grid.Row="2" Background="{DynamicResource BgLightBrush}" CornerRadius="6" Padding="6"
+                            <Border Grid.Row="2" Background="{DynamicResource BgLightBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="6"
                                     MaxHeight="200">
                                 <Grid>
                                     <Grid.RowDefinitions>
@@ -706,7 +706,7 @@
                             </ListBox.ItemContainerStyle>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Padding="4,2" CornerRadius="3">
+                                    <Border Padding="4,2" CornerRadius="{DynamicResource RadiusS}">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Background" Value="Transparent"/>
@@ -746,7 +746,7 @@
 
                         <!-- Rechte Spalte: Karte mit Detailansicht (leer wenn kein Eintrag gewaehlt) -->
                         <Border Grid.Column="2"
-                                Background="{DynamicResource BgLightBrush}" CornerRadius="6" Padding="12">
+                                Background="{DynamicResource BgLightBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="12">
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
                                     <!-- Frame-Bild mit optionalem Box-Zeichnen (B5) -->
@@ -869,7 +869,7 @@
                     <StackPanel Margin="8">
 
                         <!-- Coverage-Analyse -->
-                        <Border Background="{DynamicResource BgLightBrush}" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                        <Border Background="{DynamicResource BgLightBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Text="Coverage-Analyse" Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold" FontSize="{DynamicResource TextM}"/>
                                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}" Margin="0,4,0,0">
@@ -883,7 +883,7 @@
                         </Border>
 
                         <!-- Genauigkeit pro Code -->
-                        <Border Background="{DynamicResource BgLightBrush}" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                        <Border Background="{DynamicResource BgLightBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Text="Genauigkeit pro Code (Top 8)" Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold" FontSize="{DynamicResource TextM}"/>
                                 <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextXS}" Margin="0,2,0,4"
@@ -895,7 +895,7 @@
                         </Border>
 
                         <!-- Problematische KB-Samples -->
-                        <Border Background="{DynamicResource BgLightBrush}" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                        <Border Background="{DynamicResource BgLightBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10" Margin="0,0,0,8">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Problematische KB-Samples: " Foreground="{DynamicResource TextBrush}" FontSize="{DynamicResource TextM}"/>
                                 <TextBlock Text="{Binding KbStaleSampleCount, Mode=OneWay}"
@@ -904,7 +904,7 @@
                         </Border>
 
                         <!-- Match-Rate Trend: Kurve statt Text-Pfeil; Details bleiben als Text darunter -->
-                        <Border Background="{DynamicResource BgLightBrush}" CornerRadius="6" Padding="10">
+                        <Border Background="{DynamicResource BgLightBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Match-Rate Trend (letzte Läufe)" Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold" FontSize="{DynamicResource TextM}"/>
@@ -951,7 +951,7 @@
                     </Grid.RowDefinitions>
 
                     <!-- Filter-Leiste -->
-                    <Border Grid.Row="0" Padding="8" CornerRadius="4" Margin="0,0,0,8"
+                    <Border Grid.Row="0" Padding="8" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,0,8"
                             Background="{DynamicResource HeaderBrush}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <DockPanel>
@@ -992,7 +992,7 @@
                     </Border>
 
                     <!-- Thumbnail-Galerie -->
-                    <Border Grid.Row="1" CornerRadius="4"
+                    <Border Grid.Row="1" CornerRadius="{DynamicResource RadiusS}"
                             Background="{DynamicResource CardBrush}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -1005,7 +1005,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border x:Name="ThumbBorder" Margin="4" Padding="4" CornerRadius="4"
+                                        <Border x:Name="ThumbBorder" Margin="4" Padding="4" CornerRadius="{DynamicResource RadiusS}"
                                                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                                 Background="{DynamicResource HeaderBrush}"
                                                 Cursor="Hand"
@@ -1034,7 +1034,7 @@
                                   Background="Transparent" Margin="0,2"/>
 
                     <!-- Detail-Ansicht -->
-                    <Border Grid.Row="3" CornerRadius="4" Padding="8"
+                    <Border Grid.Row="3" CornerRadius="{DynamicResource RadiusS}" Padding="8"
                             Background="{DynamicResource CardBrush}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <Grid x:Name="TeacherDetailPanel" Visibility="Collapsed">
@@ -1082,7 +1082,7 @@
         </Grid>
 
         <!-- Status Bar -->
-        <Border Grid.Row="4" Padding="8" CornerRadius="6" Margin="0,4,0,0"
+        <Border Grid.Row="4" Padding="8" CornerRadius="{DynamicResource RadiusM}" Margin="0,4,0,0"
                 Background="{DynamicResource HeaderBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1">

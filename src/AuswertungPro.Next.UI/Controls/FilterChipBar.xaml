@@ -21,7 +21,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="5"
+                                CornerRadius="{DynamicResource RadiusM}"
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center"
@@ -79,12 +79,12 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="5"
+                                    CornerRadius="{DynamicResource RadiusM}"
                                     Padding="{TemplateBinding Padding}"/>
                             <Border x:Name="activeRing"
                                     BorderBrush="{DynamicResource TextBrush}"
                                     BorderThickness="2"
-                                    CornerRadius="5"
+                                    CornerRadius="{DynamicResource RadiusM}"
                                     Opacity="0"/>
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"

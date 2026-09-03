@@ -75,7 +75,7 @@
 
         <!-- Status / Warnung / Fortschritt -->
         <StackPanel Grid.Row="1" Margin="0,0,0,10">
-            <Border Background="{DynamicResource HeaderBrush}" CornerRadius="6" Padding="12,8">
+            <Border Background="{DynamicResource HeaderBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="12,8">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -85,7 +85,7 @@
                     <TextBlock Grid.Column="1" Text="{Binding Zusammenfassung}" Foreground="{DynamicResource MutedBrush}" Margin="12,0,0,0"/>
                 </Grid>
             </Border>
-            <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="6" Padding="12,8" Margin="0,6,0,0"
+            <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="12,8" Margin="0,6,0,0"
                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
                     <TextBlock Text="{Binding FortschrittText}" Foreground="{DynamicResource TextBrush}" FontSize="{DynamicResource TextS}"/>
@@ -98,7 +98,7 @@
                 </StackPanel>
             </Border>
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1"
-                    CornerRadius="6" Padding="12,8" Margin="0,6,0,0"
+                    CornerRadius="{DynamicResource RadiusM}" Padding="12,8" Margin="0,6,0,0"
                     Visibility="{Binding StoreWarnung, Converter={x:Static local:StringToVisibilityConverter.Instance}}">
                 <TextBlock Text="{Binding StoreWarnung}" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap"/>
             </Border>

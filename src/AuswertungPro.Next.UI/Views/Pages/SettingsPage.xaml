@@ -83,7 +83,7 @@
                                     Background="{DynamicResource CardBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
-                                    CornerRadius="6"
+                                    CornerRadius="{DynamicResource RadiusM}"
                                     Padding="10,10,0,10">
                                 <DockPanel LastChildFill="True">
                                     <TextBlock DockPanel.Dock="Top"
@@ -217,7 +217,7 @@
                                 <Border x:Name="AccentStrip"
                                         Grid.Column="0"
                                         Background="{DynamicResource AccentBarBrush}"
-                                        CornerRadius="1.5"
+                                        CornerRadius="{DynamicResource RadiusS}"
                                         Margin="0,6"
                                         Opacity="0"/>
                                 <Border x:Name="HeaderChrome"
@@ -225,7 +225,7 @@
                                         Background="Transparent"
                                         BorderBrush="Transparent"
                                         BorderThickness="1"
-                                        CornerRadius="6"
+                                        CornerRadius="{DynamicResource RadiusM}"
                                         Padding="{TemplateBinding Padding}"
                                         Margin="4,0,0,0">
                                     <ContentPresenter ContentSource="Header"
@@ -310,7 +310,7 @@
                                                             Background="{DynamicResource SurfaceSubtleBrush}"
                                                             BorderBrush="{DynamicResource BorderBrush}"
                                                             BorderThickness="1"
-                                                            CornerRadius="15">
+                                                            CornerRadius="{DynamicResource RadiusXXL}">
                                                         <Grid>
                                                             <Ellipse x:Name="Thumb"
                                                                      Width="24"
@@ -839,7 +839,7 @@
                                         Background="{DynamicResource SurfaceSubtleBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="4"
+                                        CornerRadius="{DynamicResource RadiusS}"
                                         Padding="8,4"
                                         Margin="0,0,8,8">
                                     <TextBlock Text="{Binding PipelineYoloConfidence, StringFormat={}{0:P0}}"
@@ -869,7 +869,7 @@
                                         Background="{DynamicResource SurfaceSubtleBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="4"
+                                        CornerRadius="{DynamicResource RadiusS}"
                                         Padding="8,4"
                                         Margin="0,0,8,8">
                                     <TextBlock Text="{Binding PipelineDinoBoxThreshold, StringFormat={}{0:P0}}"
@@ -899,7 +899,7 @@
                                         Background="{DynamicResource SurfaceSubtleBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="4"
+                                        CornerRadius="{DynamicResource RadiusS}"
                                         Padding="8,4"
                                         Margin="0,0,8,8">
                                     <TextBlock Text="{Binding PipelineDinoTextThreshold, StringFormat={}{0:P0}}"
@@ -1036,7 +1036,7 @@
         <!-- ── 1. Uebersicht ──────────────────────────────────────────── -->
         <Border Margin="0,0,0,16" Padding="14,12"
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
+                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
             <StackPanel>
                 <TextBlock Text="1. Programmüberblick" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
@@ -1057,7 +1057,7 @@
         <!-- ── 2. Seitennavigation ────────────────────────────────────── -->
         <Border Margin="0,0,0,16" Padding="14,12"
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
+                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
             <StackPanel>
                 <TextBlock Text="2. Seiten und Navigation" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
@@ -1143,7 +1143,7 @@
         <!-- ── 3. Fenster und Dialoge ─────────────────────────────────── -->
         <Border Margin="0,0,0,16" Padding="14,12"
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
+                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
             <StackPanel>
                 <TextBlock Text="3. Fenster und Dialoge" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
@@ -1220,7 +1220,7 @@
         <!-- ── 4. KI-Module ───────────────────────────────────────────── -->
         <Border Margin="0,0,0,16" Padding="14,12"
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
+                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
             <StackPanel>
                 <TextBlock Text="4. KI-Module und Pipeline" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
@@ -1326,7 +1326,7 @@
         <!-- ── 5. Import-Formate ──────────────────────────────────────── -->
         <Border Margin="0,0,0,16" Padding="14,12"
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
+                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
             <StackPanel>
                 <TextBlock Text="5. Unterstützte Import-Formate" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
@@ -1374,7 +1374,7 @@
         <!-- ── 6. Export und Berichte ─────────────────────────────────── -->
         <Border Margin="0,0,0,16" Padding="14,12"
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
+                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
             <StackPanel>
                 <TextBlock Text="6. Export und Berichte" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
@@ -1414,7 +1414,7 @@
         <!-- ── 7. VSA-Zustandsbewertung ───────────────────────────────── -->
         <Border Margin="0,0,0,16" Padding="14,12"
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
+                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
             <StackPanel>
                 <TextBlock Text="7. VSA-Zustandsbewertung" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
@@ -1449,7 +1449,7 @@
         <!-- ── 8. Kostenrechner ───────────────────────────────────────── -->
         <Border Margin="0,0,0,16" Padding="14,12"
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
+                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
             <StackPanel>
                 <TextBlock Text="8. Kostenrechner und Sanierung" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
@@ -1482,7 +1482,7 @@
         <!-- ── 9. Tastaturkuerzel ─────────────────────────────────────── -->
         <Border Margin="0,0,0,16" Padding="14,12"
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
+                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
             <StackPanel>
                 <TextBlock Text="9. Tastaturkürzel" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
@@ -1522,7 +1522,7 @@
         <!-- ── 10. Umgebungsvariablen ─────────────────────────────────── -->
         <Border Margin="0,0,0,16" Padding="14,12"
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
+                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
             <StackPanel>
                 <TextBlock Text="10. KI-Konfiguration (Umgebungsvariablen)" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
@@ -1572,7 +1572,7 @@
         <!-- ── Version ────────────────────────────────────────────────── -->
         <Border Margin="0,0,0,20" Padding="14,10"
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
+                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
             <StackPanel>
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
                            TextAlignment="Center"

@@ -98,7 +98,7 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Grid x:Name="BalkenHost" Margin="4,6">
-                                <Border HorizontalAlignment="Left" CornerRadius="2"
+                                <Border HorizontalAlignment="Left" CornerRadius="{DynamicResource RadiusS}"
                                         Background="{DynamicResource AccentBrush}" Opacity="0.35"
                                         ToolTip="{Binding Total, StringFormat='{}{0:N2} CHF'}">
                                     <Border.Width>

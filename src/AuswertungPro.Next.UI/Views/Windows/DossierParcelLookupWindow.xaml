@@ -3,8 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
-        Title="Neue Liegenschaft"
+        Title="SewerStudio — Neue Liegenschaft"
         Width="820" Height="700"
+        MinWidth="570" MinHeight="490"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}">
 
@@ -60,7 +61,7 @@
         </Grid>
 
         <Border Grid.Row="2" Margin="0,14,0,0" Padding="12"
-                Background="{DynamicResource SurfaceBrush}" CornerRadius="4">
+                Background="{DynamicResource SurfaceBrush}" CornerRadius="{DynamicResource RadiusS}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel x:Name="ResultPanel">
                     <TextBlock Text="Noch nichts abgefragt." FontStyle="Italic"/>

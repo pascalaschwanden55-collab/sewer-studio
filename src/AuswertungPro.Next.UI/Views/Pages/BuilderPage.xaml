@@ -358,7 +358,7 @@
                                Margin="0,8,0,4"/>
                     <Border BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1"
-                            CornerRadius="6"
+                            CornerRadius="{DynamicResource RadiusM}"
                             Padding="6">
                         <ScrollViewer MaxHeight="180"
                                       VerticalScrollBarVisibility="Auto"

@@ -695,6 +695,15 @@ Grafik und PDF-Nachbildung kleiner als 11 sein (Positivliste im Test). Umgestell
 885 Stellen: 8-11 -> XS, 12 -> S, 13 -> M, 14-16 -> L, 17-21 -> XL, 22/24 -> Title,
 30-40 -> Display bzw. IconHero.
 
+**Fenster und Rundungen (Waechter `DesignAuditFensterUndRundungenTests`):** Einzelne
+`CornerRadius`-Zahlen ausserhalb des Themes gibt es nicht mehr — nur `RadiusS` 4, `RadiusM` 6,
+`RadiusL` 8, `RadiusXL` 10, `RadiusXXL` 14, `RadiusPill` 999 (vierteilige Werte wie `8,8,0,0`
+und `0` bleiben erlaubt). Jeder Fenstertitel heisst `SewerStudio — <Aufgabe>` oder ist
+gebunden; nur MainWindow und Splash sind frei. Jedes veraenderbare Fenster (ohne
+`SizeToContent`/`NoResize`) traegt `MinWidth` und `MinHeight`. `Margin`/`Padding` sind
+bewusst NICHT auf ein Raster gezwungen worden (216 Werte, jedes Layout gleichzeitig) —
+Abstaende bleiben Handarbeit je Fenster.
+
 Nachgelagerte Grossumbauten vom 2026-08-14:
 
 - **Import-Staging vervollstaendigt.** `ImportFileTransaction` ist der gemeinsame

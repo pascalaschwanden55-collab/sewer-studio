@@ -3,9 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
-        Title="Code-Katalog"
+        Title="SewerStudio — Code-Katalog"
         Width="1050"
         Height="680"
+        MinWidth="740" MinHeight="480"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="12">
         <Grid.RowDefinitions>
@@ -44,7 +45,7 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <Border Grid.Row="1" Grid.Column="1" Padding="12" BorderThickness="1" CornerRadius="8">
+        <Border Grid.Row="1" Grid.Column="1" Padding="12" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
             <StackPanel>
                 <TextBlock Text="Detail" FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Margin="0,0,0,10" />
                 <TextBlock Text="Code" />

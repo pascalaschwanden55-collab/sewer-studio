@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
-        Title="Import-Vorschau" Width="900" Height="620"
+        Title="SewerStudio — Import-Vorschau" Width="900" Height="620"
+        MinWidth="630" MinHeight="430"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgLightBrush}">
 
@@ -17,7 +18,7 @@
 
         <!-- Header -->
         <Border Grid.Row="0" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,12">
+                BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="12,8" Margin="0,0,0,12">
             <StackPanel>
                 <TextBlock x:Name="HeaderText" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
                            Foreground="{StaticResource TextBrush}"/>

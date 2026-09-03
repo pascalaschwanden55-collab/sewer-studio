@@ -205,6 +205,29 @@ Entscheid Pascal: Reihenfolge „Schrift zuerst", Untergrenze **11 px**. Waechte
   Abschnitts- und Untertitel um 1-2 px; die dichten Panels (PlayerCodingSidePanel,
   VsaCodeExplorer, VideoAnalysisPipelineWindow) sind von 10 auf 11 px gewachsen.
 
+### Stand 2026-09-03 spaet: Rundungen + Fensterkoepfe UMGESETZT (Harmonisierung, Teil 2)
+
+Waechter `DesignAuditFensterUndRundungenTests` (3 Tests, zuerst rot). UI-Testprojekt 6265 gruen.
+
+- **Rundungen:** 281 einzelne `CornerRadius`-Zahlen ausserhalb des Themes lesen jetzt Tokens:
+  1-4 -> `RadiusS` (89), 5-7 -> `RadiusM` (104), 8/9 -> `RadiusL` (56), 10 -> `RadiusXL` (24),
+  12-15 -> neues `RadiusXXL` 14 (7), 36/999 -> neues `RadiusPill` (2). Vierteilige Werte
+  (`8,8,0,0`) bleiben als bewusste halbe Rundungen erlaubt, `0` ebenfalls.
+- **Fenstertitel:** 34 Fenster tragen jetzt das Muster `SewerStudio — <Aufgabe>` (vorher 8).
+  Umbenannt (jeweils mit Praefix): `Text` -> `Textvorschau`, `PhotoAssistant — Foto vermessen`
+  -> `Foto vermessen`, `Live-Frame Vorschau` -> `Live-Bild`, `Hydraulik-PDF — Druckoptionen`
+  -> `Hydraulik-PDF drucken`, `VSA Schadencodierung - VSA-KEK 2020` -> `VSA-Codierung
+  (VSA-KEK 2020)`, `Training Studio — Pruefplatz (Vorschau)` -> `Training Studio (Pruefplatz)`,
+  `SN EN 13508-2 Beobachtungskatalog fuer Haltungen & Leitungen` -> `Beobachtungskatalog
+  SN EN 13508-2`. Gebundene Titel (Sanierung, Schacht-Massnahmen, Hauptfenster) bleiben.
+- **Mindestgroessen:** 20 veraenderbare Fenster ohne `MinWidth`/`MinHeight` haben jetzt
+  70 % ihrer Startgroesse als Minimum (mindestens 360 x 300). Fenster mit `SizeToContent`
+  oder `NoResize` brauchen keines.
+- **Bewusst nicht gemacht:** `Margin`/`Padding` auf ein Raster zwingen. 216 verschiedene
+  Werte in 16'000 Zeilen zu verschieben veraendert jedes Layout gleichzeitig, und ohne
+  Sichtpruefung waere das ein Blindflug. Neue Bausteine sollen die Radius-, Schrift- und
+  Farb-Tokens verwenden; Abstaende bleiben Handarbeit je Fenster.
+
 ## 6. Waechter, die dieses Audit dauerhaft machen
 
 Neu in `tests/AuswertungPro.Next.UI.Tests/DesignAudit*`:

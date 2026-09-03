@@ -4,7 +4,7 @@
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
-        Title="Goldstandard-Fotoalbum"
+        Title="SewerStudio — Goldstandard-Fotoalbum"
         Width="1380" Height="850" MinWidth="900" MinHeight="560"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}"
@@ -23,7 +23,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Padding="14,10" CornerRadius="7"
+        <Border Grid.Row="0" Padding="14,10" CornerRadius="{DynamicResource RadiusM}"
                 Background="{DynamicResource HeaderBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 Margin="0,0,0,8">
@@ -51,7 +51,7 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Padding="8" CornerRadius="7"
+            <Border Grid.Column="0" Padding="8" CornerRadius="{DynamicResource RadiusM}"
                     Background="{DynamicResource CardBrush}"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                 <DockPanel>
@@ -77,7 +77,7 @@
                                             <Run Text=" vollständig"/>
                                         </TextBlock>
                                     </StackPanel>
-                                    <Border Grid.Column="1" CornerRadius="10" MinWidth="28"
+                                    <Border Grid.Column="1" CornerRadius="{DynamicResource RadiusXL}" MinWidth="28"
                                             Padding="7,2" VerticalAlignment="Center"
                                             Background="{DynamicResource AccentSubtleBrush}">
                                         <TextBlock Text="{Binding TotalCount}"
@@ -99,7 +99,7 @@
                     <ColumnDefinition Width="360"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" CornerRadius="7"
+                <Border Grid.Column="0" CornerRadius="{DynamicResource RadiusM}"
                         Background="{DynamicResource CardBrush}"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                         Margin="0,0,8,0">
@@ -118,12 +118,12 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Border x:Name="AlbumTile" Width="190" Margin="6"
-                                            Padding="6" CornerRadius="6"
+                                            Padding="6" CornerRadius="{DynamicResource RadiusM}"
                                             Background="{DynamicResource HeaderBrush}"
                                             BorderBrush="{DynamicResource BorderBrush}"
                                             BorderThickness="1">
                                         <StackPanel>
-                                            <Border Height="118" CornerRadius="4"
+                                            <Border Height="118" CornerRadius="{DynamicResource RadiusS}"
                                                     ClipToBounds="True"
                                                     Background="{DynamicResource BgBrush}">
                                                 <Image Source="{Binding FramePath, Converter={StaticResource FileToImage}, ConverterParameter=260}"
@@ -175,14 +175,14 @@
                     </Grid>
                 </Border>
 
-                <Border Grid.Column="1" Padding="12" CornerRadius="7"
+                <Border Grid.Column="1" Padding="12" CornerRadius="{DynamicResource RadiusM}"
                         Background="{DynamicResource CardBrush}"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel DataContext="{Binding SelectedItem}">
                             <TextBlock Text="Ausgewähltes Beispiel"
                                        FontWeight="Bold" FontSize="{DynamicResource TextL}" Margin="0,0,0,8"/>
-                            <Border Height="245" CornerRadius="5" ClipToBounds="True"
+                            <Border Height="245" CornerRadius="{DynamicResource RadiusM}" ClipToBounds="True"
                                     Background="{DynamicResource BgBrush}">
                                 <Image Source="{Binding FramePath, Converter={StaticResource FileToImage}, ConverterParameter=900}"
                                        Stretch="Uniform"
@@ -208,7 +208,7 @@
             </Grid>
         </Grid>
 
-        <Border Grid.Row="2" Padding="10,6" CornerRadius="6" Margin="0,8,0,0"
+        <Border Grid.Row="2" Padding="10,6" CornerRadius="{DynamicResource RadiusM}" Margin="0,8,0,0"
                 Background="{DynamicResource HeaderBrush}">
             <TextBlock Text="Das Album ist nur eine Ansicht. Es verändert keine Bilder oder Trainingsdaten."
                        Foreground="{DynamicResource TextSecondaryBrush}"/>

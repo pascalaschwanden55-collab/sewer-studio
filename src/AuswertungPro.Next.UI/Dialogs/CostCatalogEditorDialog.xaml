@@ -59,7 +59,7 @@
             <!-- DN-Preis-Editor fuer die gewaehlte ByDN-Position (Liner/Manschette) -->
             <Border Grid.Column="1" Margin="12,0,0,0" Padding="12"
                     Background="{DynamicResource CardBrush}"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8">
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
                 <StackPanel>
                     <TextBlock Text="{Binding SelectedDnHeader}" FontWeight="SemiBold"
                                TextWrapping="Wrap" Margin="0,0,0,10"/>

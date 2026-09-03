@@ -54,7 +54,7 @@
 
         <StackPanel Orientation="Vertical" Margin="0,0,0,4">
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Padding="8" Margin="0,0,0,8" CornerRadius="6">
+                    Padding="8" Margin="0,0,0,8" CornerRadius="{DynamicResource RadiusM}">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -69,7 +69,7 @@
             </Border>
 
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Padding="8" Margin="0,0,0,8" CornerRadius="6">
+                    Padding="8" Margin="0,0,0,8" CornerRadius="{DynamicResource RadiusM}">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -85,7 +85,7 @@
             </Border>
 
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Padding="8" Margin="0,0,0,8" CornerRadius="6">
+                    Padding="8" Margin="0,0,0,8" CornerRadius="{DynamicResource RadiusM}">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -104,7 +104,7 @@
             </Border>
 
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Padding="4,3" CornerRadius="8">
+                    Padding="4,3" CornerRadius="{DynamicResource RadiusL}">
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="HaltungsansichtToggle"
                                   Style="{StaticResource CompactToggleButton}"
@@ -358,7 +358,7 @@
                                                     <ToggleButton x:Name="AlignTopButton" Style="{StaticResource AlignToggleButtonStyle}"
                                                                   ToolTip="Vertikal oben" Click="AlignTopButton_Click">
                                                         <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                            <Border BorderThickness="1" CornerRadius="1"
+                                                            <Border BorderThickness="1" CornerRadius="{DynamicResource RadiusS}"
                                                                     BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
                                                             <Border Height="2" Width="8" VerticalAlignment="Top" Margin="0,2,0,0"
                                                                     Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
@@ -367,7 +367,7 @@
                                                     <ToggleButton x:Name="AlignMiddleButton" Style="{StaticResource AlignToggleButtonStyle}"
                                                                   ToolTip="Vertikal mitte" Click="AlignMiddleButton_Click">
                                                         <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                            <Border BorderThickness="1" CornerRadius="1"
+                                                            <Border BorderThickness="1" CornerRadius="{DynamicResource RadiusS}"
                                                                     BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
                                                             <Border Height="2" Width="8" VerticalAlignment="Center"
                                                                     Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
@@ -376,7 +376,7 @@
                                                     <ToggleButton x:Name="AlignBottomButton" Style="{StaticResource AlignToggleButtonStyle}"
                                                                   ToolTip="Vertikal unten" Click="AlignBottomButton_Click">
                                                         <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                            <Border BorderThickness="1" CornerRadius="1"
+                                                            <Border BorderThickness="1" CornerRadius="{DynamicResource RadiusS}"
                                                                     BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
                                                             <Border Height="2" Width="8" VerticalAlignment="Bottom" Margin="0,0,0,2"
                                                                     Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
@@ -401,7 +401,7 @@
             </Border>
 
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Padding="4" Margin="0,4,0,0" CornerRadius="4">
+                    Padding="4" Margin="0,4,0,0" CornerRadius="{DynamicResource RadiusS}">
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="Suche Haltung:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -453,7 +453,7 @@
             <!-- Platzhalter (sichtbar wenn DataGrid abgedockt) -->
             <Border x:Name="UndockedPlaceholder" Visibility="Collapsed" Grid.Row="1"
                     Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                    BorderThickness="1" CornerRadius="8" Margin="8" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Margin="8" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="40,30">
                     <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource IconHero}"
                                Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,12"/>

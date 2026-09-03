@@ -13,7 +13,7 @@
 
         <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,12">
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Padding="4,3" CornerRadius="8">
+                    Padding="4,3" CornerRadius="{DynamicResource RadiusL}">
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="SchachtansichtToggle"
                                   Style="{StaticResource CompactToggleButton}"
@@ -135,7 +135,7 @@
             </Border>
 
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Padding="6" Margin="0,8,0,0" CornerRadius="6">
+                    Padding="6" Margin="0,8,0,0" CornerRadius="{DynamicResource RadiusM}">
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="Suche Schacht:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -241,21 +241,21 @@
                                 <ToggleButton x:Name="AlignTopButton" Style="{StaticResource AlignToggleButtonStyle}"
                                               ToolTip="Vertikal oben" Click="AlignTopButton_Click">
                                     <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Border BorderThickness="1" CornerRadius="1" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                        <Border BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
                                         <Border Height="2" Width="8" VerticalAlignment="Top" Margin="0,2,0,0" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
                                     </Grid>
                                 </ToggleButton>
                                 <ToggleButton x:Name="AlignMiddleButton" Style="{StaticResource AlignToggleButtonStyle}"
                                               ToolTip="Vertikal mitte" Click="AlignMiddleButton_Click">
                                     <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Border BorderThickness="1" CornerRadius="1" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                        <Border BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
                                         <Border Height="2" Width="8" VerticalAlignment="Center" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
                                     </Grid>
                                 </ToggleButton>
                                 <ToggleButton x:Name="AlignBottomButton" Style="{StaticResource AlignToggleButtonStyle}"
                                               ToolTip="Vertikal unten" Click="AlignBottomButton_Click">
                                     <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Border BorderThickness="1" CornerRadius="1" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                        <Border BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
                                         <Border Height="2" Width="8" VerticalAlignment="Bottom" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
                                     </Grid>
                                 </ToggleButton>

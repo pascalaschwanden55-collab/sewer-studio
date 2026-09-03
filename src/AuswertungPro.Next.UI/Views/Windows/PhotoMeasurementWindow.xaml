@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         ui:WindowFx.Entrance="True"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
-        Title="PhotoAssistant — Foto vermessen"
+        Title="SewerStudio — Foto vermessen"
         Width="1100" Height="750"
         MinWidth="900" MinHeight="650"
         Background="{DynamicResource BgBrush}"
@@ -30,7 +30,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6" Padding="6,3"
+                                CornerRadius="{DynamicResource RadiusM}" Padding="6,3"
                                 ToolTip="{TemplateBinding ToolTip}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -67,7 +67,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
-                                CornerRadius="6" Padding="12,4"
+                                CornerRadius="{DynamicResource RadiusM}" Padding="12,4"
                                 BorderThickness="1" BorderBrush="#44FFFFFF">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -108,7 +108,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
-                                CornerRadius="4" Padding="4,2"
+                                CornerRadius="{DynamicResource RadiusS}" Padding="4,2"
                                 BorderThickness="1" BorderBrush="#44FFFFFF">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -344,7 +344,7 @@
             </Border>
 
             <!-- Mitte: Foto + Canvas -->
-            <Border Grid.Column="1" Background="Black" CornerRadius="6" ClipToBounds="True">
+            <Border Grid.Column="1" Background="Black" CornerRadius="{DynamicResource RadiusM}" ClipToBounds="True">
                 <Grid x:Name="PhotoContainer" SizeChanged="PhotoContainer_SizeChanged">
                     <Image x:Name="PhotoImage" Stretch="Uniform"
                            RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -378,7 +378,7 @@
                             Visibility="Collapsed"/>
 
                     <!-- OSD -->
-                    <Border Background="#CC1E293B" CornerRadius="4" Padding="6" Margin="0,8,0,0">
+                    <Border Background="#CC1E293B" CornerRadius="{DynamicResource RadiusS}" Padding="6" Margin="0,8,0,0">
                         <StackPanel>
                             <TextBlock x:Name="TxtDnInfo" Text="DN —" FontSize="{DynamicResource TextXS}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"/>

@@ -96,7 +96,7 @@
                         <Border Grid.Column="1"
                                 Width="32"
                                 Height="22"
-                                CornerRadius="4"
+                                CornerRadius="{DynamicResource RadiusS}"
                                 VerticalAlignment="Center"
                                 Margin="8,0,4,0"
                                 Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}">
@@ -143,7 +143,7 @@
                     Background="{DynamicResource CardBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="10">
+                    CornerRadius="{DynamicResource RadiusXL}">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,8">
                         <TextBlock DockPanel.Dock="Left"
@@ -173,7 +173,7 @@
                                         Background="{DynamicResource HeaderBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="6">
+                                        CornerRadius="{DynamicResource RadiusM}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="140"/>

@@ -112,7 +112,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="5"
+                                CornerRadius="{DynamicResource RadiusM}"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -142,7 +142,7 @@
         <Border Grid.Row="0" Margin="0,0,0,16" Padding="0,0,0,14"
                 BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderBrush}">
             <StackPanel Orientation="Horizontal">
-                <Border Width="38" Height="38" CornerRadius="8" Margin="0,0,14,0"
+                <Border Width="38" Height="38" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,14,0"
                         Background="{DynamicResource AccentBrush}">
                     <ui:FluentIcon Glyph="&#xEB42;" FontSize="{DynamicResource TextXL}" Foreground="White"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -169,7 +169,7 @@
                 <StackPanel>
                     <!-- Haltungsdaten Card -->
                     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" CornerRadius="10" Margin="0,0,0,14">
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}" Margin="0,0,0,14">
                         <StackPanel>
                             <TextBlock Style="{StaticResource SectionHeader}" Text="HALTUNGSDATEN"/>
 
@@ -264,7 +264,7 @@
 
                     <!-- Querschnitt-Grafik -->
                     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,14">
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}" Padding="12" Margin="0,0,0,14">
                         <StackPanel HorizontalAlignment="Center">
                             <Canvas x:Name="PipeCrossSection" Width="180" Height="180"
                                     ClipToBounds="True"/>
@@ -279,7 +279,7 @@
 
                     <!-- Info-Hinweis -->
                     <Border Background="{DynamicResource BgLightBrush}" BorderBrush="{DynamicResource AccentBrush}"
-                            BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="12,10" Margin="0,0,0,8">
                         <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource AccentBrush}"
                                    LineHeight="17">
                             <Run FontWeight="Bold" Text="Integration:"/>
@@ -294,7 +294,7 @@
                 <!-- No results placeholder -->
                 <StackPanel>
                     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" CornerRadius="10" Padding="40"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}" Padding="40"
                             Visibility="{Binding HasResult, Converter={StaticResource InvertBoolToVis}}">
                         <TextBlock Text="Bitte alle Eingabewerte ausfüllen"
                                    Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextM}"
@@ -305,7 +305,7 @@
 
                         <!-- ── Teilfüllung ── -->
                         <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1" CornerRadius="10" Margin="0,0,0,12">
+                                BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}" Margin="0,0,0,12">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionHeader}" Text="TEILFÜLLUNG (IST-ZUSTAND)"/>
                                 <StackPanel Margin="0,0,0,6">
@@ -345,7 +345,7 @@
 
                         <!-- ── Vollfüllung ── -->
                         <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1" CornerRadius="10" Margin="0,0,0,12">
+                                BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}" Margin="0,0,0,12">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionHeader}" Text="VOLLFÜLLUNG (REFERENZ)"/>
                                 <StackPanel Margin="0,0,0,6">
@@ -365,7 +365,7 @@
 
                         <!-- ── Kennzahlen ── -->
                         <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1" CornerRadius="10" Margin="0,0,0,12">
+                                BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}" Margin="0,0,0,12">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionHeader}" Text="HYDRAULISCHE KENNZAHLEN"/>
                                 <StackPanel Margin="0,0,0,6">
@@ -404,7 +404,7 @@
                         </Border>
 
                         <!-- ── Ablagerungsverhalten ── -->
-                        <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Margin="0,0,0,12"
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusXL}" Margin="0,0,0,12"
                                 x:Name="AblagerungBorder" BorderThickness="1">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionHeader}">
@@ -437,7 +437,7 @@
 
                         <!-- ── VSA-Bewertung ── -->
                         <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1" CornerRadius="10" Padding="14,12">
+                                BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}" Padding="14,12">
                             <StackPanel>
                                 <TextBlock Text="Hydraulische Bewertung (VSA)" FontSize="{DynamicResource TextM}"
                                            FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"

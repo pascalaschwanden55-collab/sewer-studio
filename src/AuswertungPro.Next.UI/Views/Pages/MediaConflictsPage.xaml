@@ -38,7 +38,7 @@
         <Border Background="{DynamicResource CardGlassBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
-                CornerRadius="14"
+                CornerRadius="{DynamicResource RadiusXXL}"
                 Padding="18"
                 Margin="0,0,0,8">
             <Grid>
@@ -96,7 +96,7 @@
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 Padding="8"
-                CornerRadius="10"
+                CornerRadius="{DynamicResource RadiusXL}"
                 Margin="0,0,0,8">
             <WrapPanel>
                 <Button Command="{Binding RefreshCommand}" Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,4"
@@ -162,7 +162,7 @@
                     Background="{DynamicResource CardBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="10"
+                    CornerRadius="{DynamicResource RadiusXL}"
                     Padding="12">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
@@ -210,7 +210,7 @@
                     Background="{DynamicResource CardBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="10"
+                    CornerRadius="{DynamicResource RadiusXL}"
                     Padding="12">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
@@ -238,7 +238,7 @@
                         <Border Background="{DynamicResource HeaderBrush}"
                                 BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="10"
+                                CornerRadius="{DynamicResource RadiusXL}"
                                 Padding="12"
                                 Margin="0,0,0,12">
                             <StackPanel>

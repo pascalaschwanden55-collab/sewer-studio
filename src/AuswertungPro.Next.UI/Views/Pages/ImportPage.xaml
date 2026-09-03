@@ -13,7 +13,7 @@
         <StackPanel Margin="0,0,0,16">
             <!-- Import Toolbar Card -->
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Padding="6,4" CornerRadius="8">
+                    Padding="6,4" CornerRadius="{DynamicResource RadiusL}">
                 <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
                     <Button Command="{Binding ImportKanalProjektCommand}"
                             Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,8,0"
@@ -173,7 +173,7 @@
         </StackPanel>
 
         <Border Grid.Row="1" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                Padding="8" Margin="0,0,0,8" CornerRadius="8">
+                Padding="8" Margin="0,0,0,8" CornerRadius="{DynamicResource RadiusL}">
             <Border.Style>
                 <Style TargetType="Border">
                     <Setter Property="Visibility" Value="Collapsed"/>

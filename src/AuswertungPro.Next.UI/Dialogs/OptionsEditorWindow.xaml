@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         ui:WindowFx.Entrance="True"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
-        Title="Listen bearbeiten" Height="350" Width="400" WindowStartupLocation="CenterOwner">
+        Title="SewerStudio — Listen bearbeiten" Height="350"
+        MinWidth="360" MinHeight="300" Width="400" WindowStartupLocation="CenterOwner">
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

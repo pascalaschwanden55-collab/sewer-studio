@@ -3,9 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
-        Title="Code auswählen"
+        Title="SewerStudio — Code auswählen"
         Width="1080"
         Height="700"
+        MinWidth="760" MinHeight="490"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -52,7 +53,7 @@
                             <TextBlock Text="{Binding Label}" />
                             <Border Margin="6,0,0,0"
                                     Padding="4,1"
-                                    CornerRadius="2"
+                                    CornerRadius="{DynamicResource RadiusS}"
                                     Background="{DynamicResource CardBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
@@ -86,7 +87,7 @@
                             <TextBlock Text="{Binding Label}" />
                             <Border Margin="6,0,0,0"
                                     Padding="4,1"
-                                    CornerRadius="2"
+                                    CornerRadius="{DynamicResource RadiusS}"
                                     Background="{DynamicResource WarningSubtleBrush}"
                                     BorderBrush="{DynamicResource WarningBrush}"
                                     BorderThickness="1"

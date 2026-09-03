@@ -44,7 +44,7 @@
         <Border Grid.Row="0"
                 Background="{DynamicResource CardGlassBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="1" CornerRadius="14" Padding="18" Margin="0,0,0,8">
+                BorderThickness="1" CornerRadius="{DynamicResource RadiusXXL}" Padding="18" Margin="0,0,0,8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -88,7 +88,7 @@
             <Border Grid.Column="0"
                     Background="{DynamicResource CardGlassBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
-                    BorderThickness="1" CornerRadius="14" Padding="12">
+                    BorderThickness="1" CornerRadius="{DynamicResource RadiusXXL}" Padding="12">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -166,7 +166,7 @@
             <Border Grid.Column="2"
                     Background="{DynamicResource CardGlassBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
-                    BorderThickness="1" CornerRadius="14" Padding="18">
+                    BorderThickness="1" CornerRadius="{DynamicResource RadiusXXL}" Padding="18">
 
                 <Grid>
                     <!-- Leerzustand -->
@@ -242,7 +242,7 @@
                         <!-- Warnung fehlende Leitungen -->
                         <Border Grid.Row="1"
                                 Background="{DynamicResource DangerSubtleBrush}"
-                                CornerRadius="8" Padding="12,8" Margin="0,0,0,12"
+                                CornerRadius="{DynamicResource RadiusL}" Padding="12,8" Margin="0,0,0,12"
                                 Visibility="{Binding HasMissingWarning,
                                     Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="{Binding MissingWarning}"
@@ -347,7 +347,7 @@
                         <!-- Leitungen -->
                         <Border Grid.Row="4"
                                 BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1" CornerRadius="10">
+                                BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}">
                           <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -436,7 +436,7 @@
                         <!-- Schächte -->
                         <Border Grid.Row="6"
                                 BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1" CornerRadius="10">
+                                BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -562,7 +562,7 @@
         <Border Grid.Row="2" Margin="0,8,0,0" Padding="12,8"
                 Background="{DynamicResource HeaderBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="1" CornerRadius="10">
+                BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}">
             <Grid>
                 <TextBlock Text="{Binding StatusMessage}"
                            Foreground="{DynamicResource MutedBrush}"

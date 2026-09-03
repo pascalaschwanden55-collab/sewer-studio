@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              MinHeight="68">
 
-    <Border Background="#1E293B" CornerRadius="10" Padding="12,8"
+    <Border Background="#1E293B" CornerRadius="{DynamicResource RadiusXL}" Padding="12,8"
             BorderBrush="#334155" BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
@@ -25,7 +25,7 @@
             </Grid>
 
             <!-- Timeline-Balken mit Markern + Playhead -->
-            <Border Grid.Row="1" Background="#334155" CornerRadius="6"
+            <Border Grid.Row="1" Background="#334155" CornerRadius="{DynamicResource RadiusM}"
                     Height="36" x:Name="TimelineBar"
                     MouseLeftButtonDown="TimelineBar_MouseLeftButtonDown"
                     MouseMove="TimelineBar_MouseMove"
@@ -34,7 +34,7 @@
                 <Grid ClipToBounds="True">
                     <!-- Fortschritts-Fuellbalken -->
                     <Border x:Name="ProgressFill"
-                            Background="#333B82F6" CornerRadius="6"
+                            Background="#333B82F6" CornerRadius="{DynamicResource RadiusM}"
                             HorizontalAlignment="Left" Width="0"/>
 
                     <!-- Marker-Canvas (Defekt-Punkte) -->
