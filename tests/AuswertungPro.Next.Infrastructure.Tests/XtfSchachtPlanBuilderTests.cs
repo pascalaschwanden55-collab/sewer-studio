@@ -273,6 +273,100 @@ public sealed class XtfSchachtPlanBuilderTests
         Assert.Contains("81 Zeichen", Assert.Single(plan.Hinweise), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Die_getrennten_Massfelder_gewinnen_gegen_das_alte_Textfeld()
+    {
+        // Seit 2026-09-02 gibt es "Dimension 1 mm" und "Dimension 2 mm" neben dem
+        // aelteren Textfeld "Dimension". Bis 2026-09-03 las der Export nur das alte —
+        // wer die getrennten Felder pflegte, bekam gar keine Masse in die Datei.
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(FieldKeys.ShaftDimension1Mm, "1100", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.ShaftDimension2Mm, "900", FieldSource.Manual, true);
+
+        var felder = Assert.Single(Baue(schacht).Positionen).Felder;
+
+        Assert.Equal("1100", felder.Single(f => f.Name == "Dimension1").Neu);
+        Assert.Equal("900", felder.Single(f => f.Name == "Dimension2").Neu);
+    }
+
+    [Fact]
+    public void Ein_rundes_Mass_steht_in_beiden_Feldern()
+    {
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(FieldKeys.ShaftDimension1Mm, "600", FieldSource.Manual, true);
+
+        var felder = Assert.Single(Baue(schacht).Positionen).Felder;
+
+        Assert.Equal("600", felder.Single(f => f.Name == "Dimension1").Neu);
+        Assert.Equal("600", felder.Single(f => f.Name == "Dimension2").Neu);
+    }
+
+    [Fact]
+    public void Das_alte_Textfeld_bleibt_der_Rueckfall()
+    {
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue("Dimension", "1100 x 900 mm", FieldSource.Manual, true);
+
+        var felder = Assert.Single(Baue(schacht).Positionen).Felder;
+
+        Assert.Equal("1100", felder.Single(f => f.Name == "Dimension1").Neu);
+        Assert.Equal("900", felder.Single(f => f.Name == "Dimension2").Neu);
+    }
+
+    [Fact]
+    public void Widersprechen_sich_beide_Angaben_wird_das_gemeldet()
+    {
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue("Dimension", "600 mm", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.ShaftDimension1Mm, "1100", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.ShaftDimension2Mm, "900", FieldSource.Manual, true);
+
+        var plan = Baue(schacht);
+
+        // Geschrieben werden die getrennten Felder, aber der Bericht sagt es.
+        Assert.Equal("1100", Assert.Single(plan.Positionen).Felder.Single(f => f.Name == "Dimension1").Neu);
+        Assert.Contains(plan.Hinweise, h => h.Contains("600", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Eine_Form_die_nicht_zu_den_Massen_passt_wird_gemeldet()
+    {
+        // SIA405 kennt am Normschacht keine Form; ein ovaler Schacht ist dort einer mit
+        // zwei verschiedenen Massen. Ein Widerspruch deutet auf einen Tippfehler.
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue("Schachtform", "Rund", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.ShaftDimension1Mm, "1100", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.ShaftDimension2Mm, "900", FieldSource.Manual, true);
+
+        Assert.Contains(Baue(schacht).Hinweise, h => h.Contains("Rund", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Oval_mit_zwei_Massen_ist_kein_Widerspruch()
+    {
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue("Schachtform", "Oval", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.ShaftDimension1Mm, "1100", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.ShaftDimension2Mm, "900", FieldSource.Manual, true);
+
+        Assert.DoesNotContain(Baue(schacht).Hinweise, h => h.Contains("Oval", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Status_Sanierungsbedarf_und_Baujahr_gehen_mit()
+    {
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(FieldKeys.OperatingStatus, "in_Betrieb", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.RehabilitationNeed, "kurzfristig", FieldSource.Manual, true);
+        schacht.SetFieldValue(FieldKeys.ConstructionYear, "1985", FieldSource.Manual, true);
+
+        var felder = Assert.Single(Baue(schacht).Positionen).Felder;
+
+        Assert.Equal("in_Betrieb", felder.Single(f => f.Name == "Status").Neu);
+        Assert.Equal("kurzfristig", felder.Single(f => f.Name == "Sanierungsbedarf").Neu);
+        Assert.Equal("1985", felder.Single(f => f.Name == "Baujahr").Neu);
+    }
+
     private static IReadOnlyList<XtfStammdatenElement> Elemente()
         => XtfStammdatenElementReader.Parse(XDocument.Parse(Kantonsexport));
 

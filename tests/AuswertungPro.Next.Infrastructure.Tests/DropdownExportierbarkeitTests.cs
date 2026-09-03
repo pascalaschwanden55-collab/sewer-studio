@@ -74,6 +74,29 @@ public sealed class DropdownExportierbarkeitTests
             ". Entweder einen Normwert ergaenzen oder den Wert aus der Auswahl nehmen.");
     }
 
+    /// <summary>Die Auswahllisten am Schacht mit ihrem Ziel im Normschacht.</summary>
+    public static TheoryData<IReadOnlyList<string>, string, string> Schachtfelder() => new()
+    {
+        { SchachtFunktionVokabular.Auswahl, "Funktion", "Schachtfunktion" },
+        { SchachtMaterialVokabular.Auswahl, "Material", "Schachtmaterial" }
+    };
+
+    [Theory]
+    [MemberData(nameof(Schachtfelder))]
+    public void Jeder_waehlbare_Schachtwert_findet_ein_Ziel(
+        IReadOnlyList<string> werte, string xtfName, string label)
+    {
+        // Der Normschacht kennt beim Material nur vier Werte — eine viel kuerzere Liste
+        // als beim Rohr. Genau diese Verwechslung hat der AWU-Exporter gemacht.
+        var ohneZiel = werte
+            .Where(w => !string.IsNullOrWhiteSpace(w))
+            .Where(w => !string.Equals(w, "unbekannt", StringComparison.OrdinalIgnoreCase))
+            .Where(w => string.IsNullOrEmpty(XtfSchachtPlanBuilder.NachXtfWert(xtfName, w)))
+            .ToList();
+
+        Assert.True(ohneZiel.Count == 0, $"{label}: {string.Join(", ", ohneZiel)}");
+    }
+
     [Fact]
     public void Die_Zustandsklasse_kennt_nur_Z0_bis_Z4()
     {

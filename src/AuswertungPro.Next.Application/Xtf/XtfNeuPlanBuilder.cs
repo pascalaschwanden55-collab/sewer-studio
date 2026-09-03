@@ -334,12 +334,15 @@ public static class XtfNeuPlanBuilder
                 "nicht geschrieben.");
         }
 
-        var masse = XtfSchachtPlanBuilder.Abmessungen(
-            XtfSchachtPlanBuilder.Wert(record, XtfSchachtPlanBuilder.Dimensionsfeld));
+        var masse = XtfSchachtPlanBuilder.Masse(record, $"Schacht {nummer}", hinweise);
         if (masse is not null)
         {
             felder.Add(new("Dimension1", masse.Value.Dimension1));
             felder.Add(new("Dimension2", masse.Value.Dimension2));
+
+            var widerspruch = XtfSchachtPlanBuilder.Formwiderspruch(record, masse);
+            if (widerspruch is not null)
+                hinweise.Add($"Schacht {nummer}: {widerspruch}");
         }
 
         return felder;

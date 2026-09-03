@@ -37,8 +37,16 @@ public static class XtfSchachtPlanBuilder
             ["Funktion"] = "Funktion",
             ["Material"] = "Material",
             ["BaulicherZustand"] = FieldKeys.ConditionClass,
-            ["Bemerkung"] = FieldKeys.Remarks
+            ["Bemerkung"] = FieldKeys.Remarks,
+            // Alle drei erbt der Normschacht von "Abwasserbauwerk"; sie fehlten bis
+            // 2026-09-03, obwohl das Programm sie fuehrt und die GEONIS-Maske sie zeigt.
+            ["Status"] = FieldKeys.OperatingStatus,
+            ["Sanierungsbedarf"] = FieldKeys.RehabilitationNeed,
+            ["Baujahr"] = FieldKeys.ConstructionYear
         };
+
+    /// <summary>Das Programmfeld mit der Schachtform. In SIA405 gibt es dafuer kein Ziel.</summary>
+    public const string Formfeld = "Schachtform";
 
     /// <summary>
     /// Der Wert eines Schachtfeldes, unter dem Namen gelesen, den der Datensatz wirklich
@@ -96,6 +104,8 @@ public static class XtfSchachtPlanBuilder
             "Funktion" => SchachtFunktionVokabular.NachNorm(wert),
             "Material" => SchachtMaterialVokabular.NachNorm(wert),
             "BaulicherZustand" => XtfStammdatenPlanBuilder.NachXtfWert("BaulicherZustand", wert),
+            "Status" or "Sanierungsbedarf" or "Baujahr"
+                => XtfStammdatenPlanBuilder.NachXtfWert(xtfName, wert, "SIA405_ABWASSER_2020_LV95"),
             _ => null
         };
 
@@ -138,6 +148,92 @@ public static class XtfSchachtPlanBuilder
         return (
             erstes.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
             zweites.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    /// Die beiden Masse eines Schachts in Millimetern.
+    ///
+    /// Das Programm fuehrt sie doppelt: getrennt in "Dimension 1 mm" und "Dimension 2 mm"
+    /// (seit 2026-09-02, auf ausdruecklichen Wunsch) und weiterhin zusammen im aelteren
+    /// Textfeld "Dimension" ("600 mm", "1100 x 900 mm"). Die getrennten Felder gewinnen:
+    /// Sie sind die genauere Angabe, und im Zweifel hat sie jemand zuletzt gepflegt.
+    ///
+    /// Ist nur eines der beiden gefuellt, gilt der Schacht als rund und der Wert steht in
+    /// beiden Feldern — so haelt es auch der Kantonsexport.
+    ///
+    /// Widersprechen sich getrennte und zusammengesetzte Angabe, wird das gemeldet.
+    /// </summary>
+    public static (string Dimension1, string Dimension2)? Masse(
+        SchachtRecord record, string wofuer, List<string>? hinweise = null)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+
+        var getrennt = AusGetrenntenFeldern(record);
+        var zusammen = Abmessungen(Wert(record, Dimensionsfeld));
+
+        if (getrennt is null)
+            return zusammen;
+
+        if (zusammen is not null && zusammen != getrennt)
+        {
+            hinweise?.Add(
+                $"{wofuer}: \"{Dimensionsfeld}\" sagt {zusammen.Value.Dimension1} x " +
+                $"{zusammen.Value.Dimension2}, die getrennten Felder sagen " +
+                $"{getrennt.Value.Dimension1} x {getrennt.Value.Dimension2} — " +
+                "geschrieben werden die getrennten Felder.");
+        }
+
+        return getrennt;
+    }
+
+    private static (string Dimension1, string Dimension2)? AusGetrenntenFeldern(SchachtRecord record)
+    {
+        var eins = SiaAbmessung.NachMillimeter(Wert(record, FieldKeys.ShaftDimension1Mm));
+        var zwei = SiaAbmessung.NachMillimeter(Wert(record, FieldKeys.ShaftDimension2Mm));
+
+        if (eins is not > 0 && zwei is not > 0)
+            return null;
+
+        // Ein rundes Rohr traegt denselben Wert in beiden Feldern.
+        var d1 = eins is > 0 ? eins.Value : zwei!.Value;
+        var d2 = zwei is > 0 ? zwei.Value : eins!.Value;
+
+        var kultur = System.Globalization.CultureInfo.InvariantCulture;
+        return (d1.ToString(kultur), d2.ToString(kultur));
+    }
+
+    /// <summary>
+    /// Prueft, ob die angegebene Form zu den Massen passt. SIA405 kennt am Normschacht
+    /// keine Form — ein ovaler Schacht ist dort schlicht einer mit zwei verschiedenen
+    /// Massen. Deshalb geht die Form nicht in die Datei; ein Widerspruch zwischen ihr
+    /// und den Massen waere aber ein Hinweis auf einen Tippfehler.
+    /// </summary>
+    public static string? Formwiderspruch(
+        SchachtRecord record, (string Dimension1, string Dimension2)? masse)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+
+        var form = (Wert(record, Formfeld) ?? "").Trim();
+        if (form.Length == 0 || masse is null)
+            return null;
+
+        var gleich = string.Equals(masse.Value.Dimension1, masse.Value.Dimension2, StringComparison.Ordinal);
+        var rund = form.StartsWith("rund", StringComparison.OrdinalIgnoreCase)
+                   || form.StartsWith("kreis", StringComparison.OrdinalIgnoreCase);
+        var eckigOderOval = form.StartsWith("oval", StringComparison.OrdinalIgnoreCase)
+                            || form.StartsWith("recht", StringComparison.OrdinalIgnoreCase)
+                            || form.StartsWith("quadrat", StringComparison.OrdinalIgnoreCase);
+
+        if (rund && !gleich)
+        {
+            return $"Form \"{form}\", aber die Masse sind verschieden " +
+                   $"({masse.Value.Dimension1} x {masse.Value.Dimension2}).";
+        }
+
+        if (eckigOderOval && gleich && !form.StartsWith("quadrat", StringComparison.OrdinalIgnoreCase))
+            return $"Form \"{form}\", aber beide Masse sind gleich ({masse.Value.Dimension1}).";
+
+        return null;
     }
 
     /// <param name="buch">
@@ -242,12 +338,16 @@ public static class XtfSchachtPlanBuilder
             Ergaenze(xtfName, neu);
         }
 
-        if (record.IsUserEdited(Dimensionsfeld))
+        // Die Masse kommen aus den getrennten Feldern, ersatzweise aus dem alten
+        // Textfeld. Handgesetzt sein muss nur EINES davon.
+        if (IstHandgesetzt(record, Dimensionsfeld)
+            || IstHandgesetzt(record, FieldKeys.ShaftDimension1Mm)
+            || IstHandgesetzt(record, FieldKeys.ShaftDimension2Mm))
         {
-            var roh = (Wert(record, Dimensionsfeld) ?? "").Trim();
-            var masse = Abmessungen(roh);
+            var masse = Masse(record, $"Schacht {nummer}", hinweise);
             if (masse is null)
             {
+                var roh = (Wert(record, Dimensionsfeld) ?? "").Trim();
                 if (roh.Length > 0)
                     hinweise.Add($"Schacht {nummer}: die Dimension \"{roh}\" ist nicht lesbar — nicht geschrieben.");
             }
@@ -255,6 +355,10 @@ public static class XtfSchachtPlanBuilder
             {
                 Ergaenze("Dimension1", masse.Value.Dimension1);
                 Ergaenze("Dimension2", masse.Value.Dimension2);
+
+                var widerspruch = Formwiderspruch(record, masse);
+                if (widerspruch is not null)
+                    hinweise.Add($"Schacht {nummer}: {widerspruch}");
             }
         }
 
@@ -305,7 +409,13 @@ public static class XtfSchachtPlanBuilder
                 return true;
         }
 
-        return (IstHandgesetzt(record, Dimensionsfeld) && !string.IsNullOrWhiteSpace(Wert(record, Dimensionsfeld)))
-            || (IstHandgesetzt(record, FieldKeys.Owner) && !string.IsNullOrWhiteSpace(Wert(record, FieldKeys.Owner)));
+        foreach (var feld in new[] { Dimensionsfeld, FieldKeys.ShaftDimension1Mm, FieldKeys.ShaftDimension2Mm })
+        {
+            if (IstHandgesetzt(record, feld) && !string.IsNullOrWhiteSpace(Wert(record, feld)))
+                return true;
+        }
+
+        return IstHandgesetzt(record, FieldKeys.Owner)
+               && !string.IsNullOrWhiteSpace(Wert(record, FieldKeys.Owner));
     }
 }

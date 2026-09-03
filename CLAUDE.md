@@ -1094,7 +1094,7 @@ Felder auf: am `Kanal` `Nutzungsart_Ist`, `BaulicherZustand`, `FunktionHierarchi
 `Material`, `Lichte_Hoehe`, `LaengeEffektiv` und `Lagebestimmung`; am verwiesenen
 `Rohrprofil` den `Profiltyp`. Das ist die Feldliste der Kataster-Infobox von geo.ur.ch.
 `XtfSchachtPlanBuilder` tut dasselbe fuer den `Normschacht` (`Funktion`, `Material`,
-`Dimension1`/`2`, `BaulicherZustand`, `Bemerkung`) — Schaechte kommen seit 2026-08-30
+`Dimension1`/`2`, `BaulicherZustand`, `Bemerkung`, `Status`, `Sanierungsbedarf`, `Baujahr`) — Schaechte kommen seit 2026-08-30
 aus der XTF und gehen seit 2026-09-02 auch wieder hinaus. Offene Faelle sperren den
 Schreibweg. `XtfRevisionWriter` wendet nur den geprueften Plan an, veraendert das
 Original nie, ueberschreibt kein Ziel und veroeffentlicht jede Revision ueber eine
@@ -1177,6 +1177,20 @@ fuer Kantonsdateien:
   stehen, solange KEIN bewertbarer Befund vorliegt. Mit Befunden rechnet SewerStudio
   weiterhin selbst. Entscheid Pascal 2026-09-03: Beim Import gewinnt die Datei — nur so
   sind GEONIS und SewerStudio nach einem Austausch identisch.
+- **Die Schachtmasse kommen aus den getrennten Feldern.** Das Programm fuehrt sie
+  doppelt: `Dimension 1 mm` / `Dimension 2 mm` (seit 2026-09-02) und weiterhin im
+  aelteren Textfeld `Dimension` ("600 mm", "1100 x 900 mm"). `XtfSchachtPlanBuilder.Masse`
+  bevorzugt die getrennten und meldet einen Widerspruch. Ist nur eines gefuellt, gilt der
+  Schacht als rund und der Wert steht in beiden Feldern.
+- **SIA405 kennt am `Normschacht` keine Form.** Ein ovaler Schacht ist dort einer mit
+  zwei verschiedenen Massen. Das Programmfeld `Schachtform` geht deshalb nicht in die
+  Datei; `Formwiderspruch(...)` meldet nur, wenn Form und Masse sich widersprechen
+  ("Rund" bei 1100 x 900).
+- **Der `Normschacht` kennt beim `Material` nur vier Werte** (andere, Beton, Kunststoff,
+  unbekannt) — eine viel kuerzere Liste als beim Rohr. `SchachtMaterialVokabular` bildet
+  zehn Programmbegriffe darauf ab; ein Waechter haelt fest, dass jeder waehlbare Wert ein
+  Ziel hat. Importierte Fremdwerte wie "Steinzeug" stehen nicht im Dropdown und werden
+  beim Export namentlich gemeldet.
 - **Schachtfelder muessen ueber `SchachtFeldnamen` gelesen werden.** Sie heissen nach
   der Kopfzeile der Excel-Vorlage: Der Eigentuemer steht dort unter `Eigentümer` mit
   Umlaut, `FieldKeys.Owner` lautet aber `Eigentuemer`. Beide Exportwege griffen direkt
