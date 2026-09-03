@@ -113,11 +113,27 @@ public static class XtfNeuPlanBuilder
             return false;
         }
 
+        // Was der Kataster schon fuehrt, bekommt hier keine neue Kennung. Sonst legte
+        // GEONIS beim Import ein zweites Objekt an, statt das vorhandene zu aktualisieren;
+        // dafuer gibt es den Revisionsweg. Die Objekt-ID stammt aus "Leere Felder aus
+        // QGIS ergaenzen" (real aufgefallen an 78998-79002, Objekt-ID 866789).
+        var objektId = (record.GetFieldValue(FieldKeys.CadastreObjectId) ?? "").Trim();
+        if (objektId.Length > 0)
+        {
+            hinweise.Add(
+                $"{name}: steht bereits im Kataster (Objekt-ID {objektId}) — gehoert in die " +
+                "Revision, nicht in den Erstexport.");
+            return false;
+        }
+
         var eigentuemer = organisationen.Verweis(record.GetFieldValue(FieldKeys.Owner), name, hinweise);
         if (eigentuemer is null)
             return false;
 
-        var verwaltung = organisationen.Verwaltung(eigentuemer);
+        var verwaltung = organisationen.Verwaltung(
+            eigentuemer,
+            record.GetFieldValue(FieldKeys.DataOwner),
+            record.GetFieldValue(FieldKeys.DataSupplier));
         var profilTid = profile.Verweis(
             record.GetFieldValue(FieldKeys.ProfileType),
             Verhaeltnis(record, name, hinweise),
@@ -253,7 +269,10 @@ public static class XtfNeuPlanBuilder
         if (eigentuemer is null)
             return false;
 
-        var verwaltung = organisationen.Verwaltung(eigentuemer);
+        var verwaltung = organisationen.Verwaltung(
+            eigentuemer,
+            XtfSchachtPlanBuilder.Wert(record, FieldKeys.DataOwner),
+            XtfSchachtPlanBuilder.Wert(record, FieldKeys.DataSupplier));
 
         var schachtTid = kennungen.Fuer("Normschacht", nummer);
         objekte.Add(new XtfNeuObjekt(
@@ -442,8 +461,25 @@ public static class XtfNeuPlanBuilder
             return tid;
         }
 
-        public IReadOnlyList<XtfNeuVerweis> Verwaltung(string organisation)
-            => [new("DatenherrRef", organisation), new("DatenlieferantRef", organisation)];
+        /// <summary>
+        /// Datenherr und Datenlieferant. Fuehrt der Datensatz sie (aus dem Kataster oder von
+        /// Hand), zeigen die Verweise auf diese Organisationen; sonst auf den Eigentuemer.
+        /// Punkt 2 der Fremdanalyse vom 2026-09-03: Eigentuemer "Privat", Datenherr und
+        /// Datenlieferant "Abwasser Uri" — die Datei setzte alle drei auf "Privat".
+        /// </summary>
+        public IReadOnlyList<XtfNeuVerweis> Verwaltung(string eigentuemer, string? datenherr, string? datenlieferant)
+            => [new("DatenherrRef", Oder(datenherr, eigentuemer)), new("DatenlieferantRef", Oder(datenlieferant, eigentuemer))];
+
+        private string Oder(string? name, string eigentuemer)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return eigentuemer;
+
+            // Ohne bekannten Organisationstyp entsteht keine Organisation; dann bleibt der
+            // Eigentuemer. Der Hinweis dazu wuerde hier nur wiederholen, was der
+            // Eigentuemerweg schon meldet.
+            return Verweis(name, wofuer: "", hinweise: []) ?? eigentuemer;
+        }
     }
 
     /// <summary>

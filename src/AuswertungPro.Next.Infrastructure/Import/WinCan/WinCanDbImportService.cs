@@ -213,10 +213,23 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
 
                     found++;
 
-                    var inspection = inspections
+                    var kandidaten = inspections
                         .Where(i => i.SectionFk == section.Pk)
                         .OrderByDescending(i => i.SortKey)
-                        .FirstOrDefault();
+                        .ToList();
+                    var inspection = kandidaten.FirstOrDefault();
+
+                    // Mehr als eine Untersuchung je Haltung: Nur die neueste kommt ins
+                    // Protokoll. Das darf nicht still passieren; in Seilergasse gingen so
+                    // 12 Befunde, 9 Fotos und 1 Video verloren, bei "0 Fehler" im Bericht.
+                    foreach (var uebersprungen in kandidaten.Skip(1))
+                    {
+                        var befunde = obsByInspection.TryGetValue(uebersprungen.Pk, out var liste) ? liste.Count : 0;
+                        messages.Add(
+                            $"Haltung {section.Key}: WinCan fuehrt {kandidaten.Count} Untersuchungen. " +
+                            $"Uebernommen: {Datumstext(inspection!)}; uebersprungen: {Datumstext(uebersprungen)} " +
+                            $"mit {befunde} Befunden.");
+                    }
 
                     // Stammdaten + Schaechte ueber die zentrale MergeEngine (Leer-Schutz, Import-
                     // Prioritaet Legacy < Pdf < Xtf, Konfliktprotokoll) statt bedingungsloser
@@ -888,6 +901,16 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeInspectionDir(string? raw)
         => WinCanValueNormalizer.NormalizeInspectionDir(raw);
+
+    /// <summary>
+    /// Die Untersuchung im Bericht. Der Sortierschluessel ist das glaubwuerdige Startdatum,
+    /// ersatzweise der Zeitstempel des Datensatzes; ein WinCan-Platzhalterdatum erscheint
+    /// so nicht als Aufnahmetag.
+    /// </summary>
+    private static string Datumstext(WinCanDbInspection inspection)
+        => inspection.SortKey == DateTime.MinValue
+            ? "ohne Datum"
+            : inspection.SortKey.ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture);
 
     // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeAccessible(string? raw)

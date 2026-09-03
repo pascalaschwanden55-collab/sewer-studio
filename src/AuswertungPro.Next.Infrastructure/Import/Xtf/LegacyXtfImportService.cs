@@ -402,6 +402,13 @@ public sealed partial class LegacyXtfImportService
         public string Baujahr { get; set; } = "";
         public string Rohrlaenge { get; set; } = "";
         public string Funktion { get; set; } = "";
+        // Die uebrigen Kanalfelder, die SewerStudio selbst hinausschreibt. Bis 2026-09-03
+        // wurden sie nicht gelesen; die Rundreise Export, Import, Vergleich verlor sie.
+        public string FunktionHydraulisch { get; set; } = "";
+        public string Sanierungsbedarf { get; set; } = "";
+        public string Verbindungsart { get; set; } = "";
+        public string BettungUmhuellung { get; set; } = "";
+        public string Bruttokosten { get; set; } = "";
     }
 
     private sealed class HaltungData
@@ -418,6 +425,7 @@ public sealed partial class LegacyXtfImportService
         public string LetzteAenderung { get; set; } = "";
         /// <summary>Die Kennung des Rohrprofils, das Profiltyp und Hoehen-Breiten-Verhaeltnis traegt.</summary>
         public string RohrprofilRef { get; set; } = "";
+        public string Lagebestimmung { get; set; } = "";
     }
 
     private static List<HaltungRecord> ParseSia405(XDocument doc)
@@ -470,8 +478,17 @@ public sealed partial class LegacyXtfImportService
                             break;
                         case "Baujahr": kd.Baujahr = child.Value; break;
                         case "Rohrlaenge": kd.Rohrlaenge = child.Value; break;
+                        // Das Modell schreibt "FunktionHierarchisch" mit grossem H. Die zwei
+                        // anderen Schreibweisen stammen aus aelteren Lieferungen; bis
+                        // 2026-09-03 fehlte ausgerechnet die des Modells.
+                        case "FunktionHierarchisch": kd.Funktion = child.Value; break;
                         case "Funktionhierarchisch": kd.Funktion = child.Value; break;
                         case "Funktion_hierarchisch": kd.Funktion = child.Value; break;
+                        case "FunktionHydraulisch": kd.FunktionHydraulisch = child.Value; break;
+                        case "Sanierungsbedarf": kd.Sanierungsbedarf = child.Value; break;
+                        case "Verbindungsart": kd.Verbindungsart = child.Value; break;
+                        case "Bettung_Umhuellung": kd.BettungUmhuellung = child.Value; break;
+                        case "Bruttokosten": kd.Bruttokosten = child.Value; break;
                     }
                 }
                 kanaele[tid!] = kd;
@@ -499,6 +516,7 @@ public sealed partial class LegacyXtfImportService
                         case "vonHaltungspunktRef": hd.VonRef = (string?)child.Attribute("REF") ?? ""; break;
                         case "nachHaltungspunktRef": hd.NachRef = (string?)child.Attribute("REF") ?? ""; break;
                         case "RohrprofilRef": hd.RohrprofilRef = (string?)child.Attribute("REF") ?? ""; break;
+                        case "Lagebestimmung": hd.Lagebestimmung = child.Value; break;
                     }
                 }
                 haltungen[tid!] = hd;
@@ -557,7 +575,7 @@ public sealed partial class LegacyXtfImportService
         }
 
         // Hilfsfunktion für Schacht-Label
-        string? ResolveSchachtLabel(string? refTid)
+        string? ResolveSchachtLabel(string? refTid, string haltungsname, bool oben)
         {
             if (string.IsNullOrWhiteSpace(refTid)) return null;
             if (haltungspunkte.TryGetValue(refTid, out var hp))
@@ -568,9 +586,32 @@ public sealed partial class LegacyXtfImportService
                 // Die umgekehrte Reihenfolge schrieb genau diese Namen in "Schacht_oben".
                 if (!string.IsNullOrWhiteSpace(hp.AbwassernetzelementRef) && abwasserknoten.TryGetValue(hp.AbwassernetzelementRef, out var knBez))
                     return knBez;
+
+                // Ohne Knoten: Heisst der Punkt "<Haltung>_von" / "<Haltung>_nach" und der
+                // Haltungsname ist "oben-unten", dann steckt der Schacht im Haltungsnamen.
+                // So kam beim Rueckimport eines SewerStudio-Exports "78998-79002_nach" in
+                // "Schacht_unten" an, obwohl "79002" gemeint war.
+                var ausHaltung = SchachtAusHaltungsname(hp.Bezeichnung, haltungsname, oben);
+                if (ausHaltung is not null) return ausHaltung;
+
                 if (!string.IsNullOrWhiteSpace(hp.Bezeichnung)) return hp.Bezeichnung;
             }
             return null;
+        }
+
+        static string? SchachtAusHaltungsname(string? punktname, string haltungsname, bool oben)
+        {
+            var punkt = (punktname ?? "").Trim();
+            var name = (haltungsname ?? "").Trim();
+            var erwartet = name + (oben ? "_von" : "_nach");
+            if (name.Length == 0 || !string.Equals(punkt, erwartet, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            var trenner = name.IndexOf('-');
+            if (trenner <= 0 || trenner >= name.Length - 1 || name.IndexOf('-', trenner + 1) >= 0)
+                return null;
+
+            return oben ? name[..trenner] : name[(trenner + 1)..];
         }
 
         string? ResolveKnotenName(string? refTid)
@@ -600,6 +641,16 @@ public sealed partial class LegacyXtfImportService
 
             var rec = new HaltungRecord();
             rec.SetFieldValue("Haltungsname", haltungsname, FieldSource.Xtf405, userEdited: false);
+
+            // Ein Normwert aus der Datei, so wie er dort steht. "unbekannt" ist keine
+            // Angabe und wuerde nur einen besseren Wert aus einer anderen Quelle blockieren.
+            void Uebernimm(string feld, string? wert)
+            {
+                var text = (wert ?? "").Trim();
+                if (text.Length == 0 || string.Equals(text, "unbekannt", StringComparison.OrdinalIgnoreCase))
+                    return;
+                rec.SetFieldValue(feld, text, FieldSource.Xtf405, userEdited: false);
+            }
             if (!string.IsNullOrWhiteSpace(hd.Laenge)) rec.SetFieldValue("Haltungslaenge_m", hd.Laenge, FieldSource.Xtf405, userEdited: false);
             if (!string.IsNullOrWhiteSpace(material)) rec.SetFieldValue("Rohrmaterial", material, FieldSource.Xtf405, userEdited: false);
 
@@ -633,9 +684,16 @@ public sealed partial class LegacyXtfImportService
             // Keine Inspektionsrichtung: SIA405 ist der Kataster-Bestand und kennt keine Untersuchung.
             // Sie kommt aus der VSA-KEK-Untersuchung (<Fliessrichtung>), siehe ParseVsaKek.
 
-            var datum = NormalizeDate_yyyymmdd(hd.LetzteAenderung);
-            if (!string.IsNullOrWhiteSpace(datum))
-                rec.SetFieldValue("Datum_Jahr", datum, FieldSource.Xtf405, userEdited: false);
+            // Letzte_Aenderung ist das Aenderungsdatum des Datensatzes im Kataster, kein
+            // Inspektionsdatum. Bis 2026-09-03 landete es in "Datum_Jahr" und ueberschrieb
+            // dort das echte Inspektionsdatum aus WinCan: Aus 06.10.2025 wurde 03.09.2026.
+            // Es gehoert in das Herkunftsfeld, das auch das QGIS-Nachfuellen verwendet.
+            var letzteAenderung = NormalizeDate_yyyymmdd(hd.LetzteAenderung);
+            if (!string.IsNullOrWhiteSpace(letzteAenderung))
+                rec.SetFieldValue(FieldKeys.CadastreLastChange, letzteAenderung, FieldSource.Xtf405, userEdited: false);
+
+            if (!string.IsNullOrWhiteSpace(hd.Lagebestimmung) && !string.Equals(hd.Lagebestimmung.Trim(), "unbekannt", StringComparison.OrdinalIgnoreCase))
+                rec.SetFieldValue(FieldKeys.PositionAccuracy, hd.Lagebestimmung.Trim(), FieldSource.Xtf405, userEdited: false);
 
             if (kanal is not null)
             {
@@ -651,13 +709,22 @@ public sealed partial class LegacyXtfImportService
                     string.IsNullOrWhiteSpace(kanal.Eigentuemer) ? ausVerweis : kanal.Eigentuemer);
                 if (!string.IsNullOrWhiteSpace(eigentuemer)) rec.SetFieldValue("Eigentuemer", eigentuemer, FieldSource.Xtf405, userEdited: false);
 
-                // Funktionhierarchisch -> Katalog-Combo "PAA.<Suffix>" (speist u.a. VSA-Zustandsnote B4)
+                // FunktionHierarchisch -> Katalog-Combo "PAA.<Suffix>" / "SAA.<Suffix>" (speist u.a. VSA-Zustandsnote B4)
                 var funktion = NormalizeFunktionHierarchisch(kanal.Funktion);
                 if (!string.IsNullOrWhiteSpace(funktion)) rec.SetFieldValue("FunktionHierarchisch", funktion, FieldSource.Xtf405, userEdited: false);
 
-                // Baujahr -> Datum_Jahr (falls leer)
-                if (!string.IsNullOrWhiteSpace(kanal.Baujahr) && string.IsNullOrWhiteSpace(rec.GetFieldValue("Datum_Jahr")))
-                    rec.SetFieldValue("Datum_Jahr", kanal.Baujahr, FieldSource.Xtf405, userEdited: false);
+                // Baujahr ist das Baujahr, kein Inspektionsdatum. Bis 2026-09-03 fuellte es
+                // ersatzweise "Datum_Jahr"; jetzt geht es in das Feld, das der Export liest.
+                Uebernimm(FieldKeys.ConstructionYear, kanal.Baujahr);
+
+                // Die uebrigen Kanalfelder, die der Export selbst hinausschreibt. Ohne sie
+                // verlor die Rundreise Export, Import, Vergleich genau diese Werte.
+                Uebernimm(FieldKeys.OperatingStatus, kanal.Status);
+                Uebernimm(FieldKeys.RehabilitationNeed, kanal.Sanierungsbedarf);
+                Uebernimm(FieldKeys.HydraulicFunction, kanal.FunktionHydraulisch);
+                Uebernimm(FieldKeys.ConnectionType, kanal.Verbindungsart);
+                Uebernimm(FieldKeys.BeddingEncasement, kanal.BettungUmhuellung);
+                Uebernimm(FieldKeys.GrossCost, kanal.Bruttokosten);
 
                 // Status -> offen/abgeschlossen (wie PS)
                 var status = kanal.Status ?? "";
@@ -686,8 +753,8 @@ public sealed partial class LegacyXtfImportService
             }
 
             // Schacht-Labels (optional, für Debug/Logging)
-            var schachtOben = ResolveSchachtLabel(hd.VonRef);
-            var schachtUnten = ResolveSchachtLabel(hd.NachRef);
+            var schachtOben = ResolveSchachtLabel(hd.VonRef, haltungsname, oben: true);
+            var schachtUnten = ResolveSchachtLabel(hd.NachRef, haltungsname, oben: false);
             if (!string.IsNullOrWhiteSpace(schachtOben)) rec.SetFieldValue("Schacht_oben", schachtOben, FieldSource.Xtf405, userEdited: false);
             if (!string.IsNullOrWhiteSpace(schachtUnten)) rec.SetFieldValue("Schacht_unten", schachtUnten, FieldSource.Xtf405, userEdited: false);
 
@@ -729,6 +796,13 @@ public sealed partial class LegacyXtfImportService
         var v = (raw ?? "").Trim();
         if (string.IsNullOrWhiteSpace(v))
             return "";
+
+        // Ein Normwert wie "SAA.Liegenschaftsentwaesserung" geht unveraendert durch.
+        // Frueher wurde jeder Wert auf "PAA." umgeschrieben; die sekundaere Anlage (SAA)
+        // fiel dabei heraus, obwohl der Kataster sie fuehrt und der Export sie schreibt.
+        var norm = SiaKanalVokabular.FunktionHierarchisch.NachNorm(v);
+        if (norm is not null && !norm.EndsWith(".unbekannt", StringComparison.OrdinalIgnoreCase))
+            return norm;
 
         if (v.StartsWith("PAA.", StringComparison.OrdinalIgnoreCase))
             v = v.Substring(4);

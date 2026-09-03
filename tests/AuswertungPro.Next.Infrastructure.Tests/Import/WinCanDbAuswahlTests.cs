@@ -80,6 +80,57 @@ public sealed class WinCanDbAuswahlTests
         knotenUnten.ExecuteNonQuery();
     }
 
+    // Punkt 5 der Fremdanalyse vom 2026-09-03 (Seilergasse, 07.638905-78998): Zwei
+    // Untersuchungen derselben Haltung. Die vollstaendige mit 12 Befunden trug das
+    // WinCan-Platzhalterdatum 2007-12-31, die andere mit 4 Befunden ein echtes Datum.
+    // Der Import nahm die mit 4 und meldete "0 Fehler"; 12 Befunde, 9 Fotos und 1 Video
+    // fehlten still.
+    [Fact]
+    public void ZweiUntersuchungen_PlatzhalterdatumVerliertNicht_UndDerBerichtNenntDieUebersprungene()
+    {
+        var root = NeuerTempOrdner("wincan-zwei-untersuchungen");
+        var dbDir = Path.Combine(root, "DB");
+        Directory.CreateDirectory(dbDir);
+        try
+        {
+            var db3 = Path.Combine(dbDir, "projekt.db3");
+            ErzeugeDatenDb3(db3, "07.638905-78998");
+            using (var conn = new SqliteConnection($"Data Source={db3};"))
+            {
+                conn.Open();
+                void Exec(string sql)
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = sql;
+                    cmd.ExecuteNonQuery();
+                }
+                Exec(@"INSERT INTO SECINSP(INS_PK, INS_Section_FK, INS_StartDate, INS_StartTime, INS_TimeStamp, INS_InspectionDir)
+                       VALUES('I-KURZ', 'SEC1', '2025-10-06 13:33:03', '2025-10-06 13:33:03', '2025-10-07 15:29:14', '2');");
+                Exec(@"INSERT INTO SECINSP(INS_PK, INS_Section_FK, INS_StartDate, INS_StartTime, INS_TimeStamp, INS_InspectionDir)
+                       VALUES('I-VOLL', 'SEC1', '2007-12-31 23:27:20', '2007-12-31 23:27:20', '2025-10-07 15:29:21', '1');");
+                for (var i = 0; i < 4; i++)
+                    Exec($"INSERT INTO SECOBS(OBS_PK, OBS_Inspection_FK, OBS_OpCode, OBS_Observation, OBS_Distance, OBS_SortOrder) VALUES('K{i}', 'I-KURZ', 'BCD', 'Rohranfang', '{i}.0', '{i}');");
+                for (var i = 0; i < 12; i++)
+                    Exec($"INSERT INTO SECOBS(OBS_PK, OBS_Inspection_FK, OBS_OpCode, OBS_Observation, OBS_Distance, OBS_SortOrder) VALUES('V{i}', 'I-VOLL', 'BAB', 'Riss', '{i}.5', '{i}');");
+            }
+            SqliteConnection.ClearAllPools();
+
+            var project = new Project();
+            var result = new WinCanDbImportService().ImportWinCanExport(root, project);
+            Assert.True(result.Ok, result.ErrorMessage);
+
+            var record = Assert.Single(project.Data);
+            Assert.Equal(12, record.Protocol!.Current.Entries.Count);
+            var meldung = Assert.Single(result.Value!.Messages, m => m.Contains("2 Untersuchungen", StringComparison.Ordinal));
+            Assert.Contains("4 Befunden", meldung);
+            Assert.Contains("06.10.2025", meldung);
+        }
+        finally
+        {
+            Aufraeumen(root);
+        }
+    }
+
     // WinCan-Metadatenbank: gueltiges SQLite, aber ohne die fachlichen Tabellen.
     // Wird absichtlich groesser gemacht als die Datendatei.
     private static void ErzeugeMetaDb3(string db3Path, long fuellGroesse)

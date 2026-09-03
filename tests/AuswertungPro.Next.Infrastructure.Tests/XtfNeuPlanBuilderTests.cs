@@ -427,6 +427,55 @@ public sealed class XtfNeuPlanBuilderTests
         Assert.NotEqual(profil.Felder.Single(f => f.Key == "Bezeichnung").Value, "Eiprofil");
     }
 
+    // Punkt 1 der Fremdanalyse vom 2026-09-03: 78998-79002 stand mit Objekt-ID 866789
+    // schon im Kataster und bekam im Erstexport trotzdem eine neue Kennung. GEONIS
+    // haette es ein zweites Mal angelegt.
+    [Fact]
+    public void Eine_Haltung_mit_Kataster_Objekt_ID_bleibt_draussen_und_wird_gemeldet()
+    {
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.CadastreObjectId, "866789", FieldSource.Kataster, false);
+
+        var plan = XtfNeuPlanBuilder.Build([record], []);
+
+        Assert.Equal(0, plan.Haltungen);
+        Assert.DoesNotContain(plan.Objekte, o => o.Klasse == "Haltung" || o.Klasse == "Kanal");
+        Assert.Contains(plan.Hinweise, h => h.Contains("866789", StringComparison.Ordinal)
+                                            && h.Contains("Revision", StringComparison.Ordinal));
+    }
+
+    // Punkt 2 derselben Analyse: Eigentuemer "Privat", Datenherr und Datenlieferant
+    // "Abwasser Uri" — die Datei setzte alle drei auf "Privat".
+    [Fact]
+    public void Datenherr_und_Datenlieferant_kommen_aus_den_Feldern_nicht_vom_Eigentuemer()
+    {
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.DataOwner, "Abwasser Uri", FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.DataSupplier, "Abwasser Uri", FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([record], []);
+
+        var kanal = plan.Objekte.Single(o => o.Klasse == "Kanal");
+        var organisationen = plan.Objekte.Where(o => o.Klasse == "Organisation").ToList();
+        Assert.Equal(2, organisationen.Count);
+        var privat = organisationen.Single(o => o.Felder.Any(f => f.Value == "Privat"));
+        var awu = organisationen.Single(o => o.Felder.Any(f => f.Value == "Abwasser Uri"));
+        Assert.Equal(privat.Tid, kanal.Verweise.Single(v => v.Name == "EigentuemerRef").ZielTid);
+        Assert.Equal(awu.Tid, kanal.Verweise.Single(v => v.Name == "DatenherrRef").ZielTid);
+        Assert.Equal(awu.Tid, kanal.Verweise.Single(v => v.Name == "DatenlieferantRef").ZielTid);
+    }
+
+    [Fact]
+    public void Ohne_Datenherr_traegt_der_Eigentuemer_die_Verwaltung()
+    {
+        var plan = XtfNeuPlanBuilder.Build([Haltung()], []);
+
+        var kanal = plan.Objekte.Single(o => o.Klasse == "Kanal");
+        var eigentuemer = kanal.Verweise.Single(v => v.Name == "EigentuemerRef").ZielTid;
+        Assert.Equal(eigentuemer, kanal.Verweise.Single(v => v.Name == "DatenherrRef").ZielTid);
+        Assert.Single(plan.Objekte.Where(o => o.Klasse == "Organisation"));
+    }
+
     private static HaltungRecord Haltung()
     {
         var record = new HaltungRecord();

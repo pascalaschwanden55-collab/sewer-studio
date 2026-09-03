@@ -1231,9 +1231,30 @@ fuer Kantonsdateien:
 - **Am `Normschacht` fehlte `BaulicherZustand` ebenso** wie am Kanal.
 - **`ResolveSchachtLabel` nahm zuerst die Bezeichnung des Haltungspunkts.** Die ist ein
   technischer Name (`u-80401_von` im Kantonsexport, `<Haltung>_von` bei uns) und landete
-  so in `Schacht_oben`. Jetzt gilt zuerst der `Abwasserknoten` — er IST der Schacht —, die
-  Bezeichnung bleibt nur der Rueckfall. Das benachbarte `ResolveKnotenName` machte es
+  so in `Schacht_oben`. Jetzt gilt zuerst der `Abwasserknoten` — er IST der Schacht —,
+  danach der Haltungsname (`78998-79002_nach` bei Haltung `78998-79002` ergibt `79002`),
+  und erst zuletzt die Bezeichnung selbst. Das benachbarte `ResolveKnotenName` machte es
   immer schon richtig herum.
+- **Sieben weitere Kanalfelder wurden nie gelesen** (2026-09-03): `Status`,
+  `Sanierungsbedarf`, `FunktionHydraulisch`, `Verbindungsart`, `Bettung_Umhuellung`,
+  `Bruttokosten` und an der Haltung `Lagebestimmung`. Der Export schrieb sie, der Import
+  warf sie weg. `FunktionHierarchisch` fehlte sogar in genau der Schreibweise des
+  Modells (gelesen wurden nur `Funktionhierarchisch` und `Funktion_hierarchisch`), und
+  jeder Wert wurde auf `PAA.` umgeschrieben — ein `SAA.`-Wert ging dabei verloren.
+- **`Letzte_Aenderung` ist kein Inspektionsdatum.** Es landete in `Datum_Jahr` und
+  ueberschrieb dort den echten Aufnahmetag: Aus dem 06.10.2025 wurde der 03.09.2026.
+  Jetzt geht es nach `Letzte_Aenderung` (Herkunftsfeld), `Baujahr` nach `Baujahr`.
+- **Der Erstexport ueberspringt, was schon im Kataster steht.** Traegt eine Haltung eine
+  `Objekt_ID`, wuerde ein Erstexport sie in GEONIS ein zweites Mal anlegen; sie gehoert
+  in die Revision. Der Bericht sagt das mit Nummer. `Datenherr` und `Datenlieferant`
+  kommen jetzt aus ihren Feldern statt pauschal vom Eigentuemer (Eigentuemer `Privat`,
+  Datenherr `Abwasser Uri` ergab dreimal `Privat`).
+- **WinCan: Zwei Untersuchungen je Haltung waehlen nach glaubwuerdigem Datum.** Der
+  Vorgabetag `2007-12-31` und alles vor 1990 zaehlen als Platzhalter; dann entscheidet
+  der Zeitstempel des Datensatzes. In Seilergasse (`07.638905-78998`) gewann sonst die
+  Untersuchung mit 4 Befunden gegen die mit 12, und 9 Fotos und 1 Video fehlten still
+  bei "0 Fehler". Eine uebersprungene Untersuchung erscheint jetzt namentlich im
+  Importbericht.
 
 Was im Programm waehlbar ist, muss auch in die Datei gelangen koennen.
 `DropdownExportierbarkeitTests` prueft jeden Eintrag jeder Auswahlliste, die nach SIA405

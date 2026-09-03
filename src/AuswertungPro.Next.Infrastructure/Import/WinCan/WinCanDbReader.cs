@@ -60,8 +60,13 @@ internal static class WinCanDbReader
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
-            var sortKey = WinCanValueNormalizer.ParseSqliteDate(reader[2])
-                          ?? WinCanValueNormalizer.ParseSqliteDate(reader[3])
+            // Das Startdatum ist die erste Wahl, aber nur, wenn es glaubwuerdig ist. WinCan
+            // traegt bei unvollstaendig erfassten Untersuchungen einen Platzhalter wie
+            // 2007-12-31 ein; dann sagt der Zeitstempel des Datensatzes mehr. Real
+            // aufgefallen in Seilergasse (07.638905-78998): Die Untersuchung mit 12 Befunden
+            // trug das Platzhalterdatum und verlor gegen eine mit 4 Befunden.
+            var sortKey = Glaubwuerdig(WinCanValueNormalizer.ParseSqliteDate(reader[2]))
+                          ?? Glaubwuerdig(WinCanValueNormalizer.ParseSqliteDate(reader[3]))
                           ?? WinCanValueNormalizer.ParseSqliteDate(reader[4])
                           ?? DateTime.MinValue;
 
@@ -75,6 +80,19 @@ internal static class WinCanDbReader
 
         return list;
     }
+
+    /// <summary>
+    /// Der Tag, den WinCan VX als Vorgabe in INS_StartDate eintraegt, solange niemand ein
+    /// Datum erfasst hat ("2007-12-31 23:27:20", ohne Bruchteilsekunden). Gemessen in der
+    /// Seilergasse-Datenbank; eine echte Aufnahme traegt dort Bruchteilsekunden.
+    /// </summary>
+    private static readonly DateOnly WinCanVorgabetag = new(2007, 12, 31);
+
+    /// <summary>
+    /// Ein Datum vor 1990 oder der WinCan-Vorgabetag ist ein Platzhalter, kein Aufnahmetag.
+    /// </summary>
+    private static DateTime? Glaubwuerdig(DateTime? datum)
+        => datum is { Year: >= 1990 } d && DateOnly.FromDateTime(d) != WinCanVorgabetag ? datum : null;
 
     private static Dictionary<string, List<WinCanDbObservation>> LoadObservations(SqliteConnection connection)
     {

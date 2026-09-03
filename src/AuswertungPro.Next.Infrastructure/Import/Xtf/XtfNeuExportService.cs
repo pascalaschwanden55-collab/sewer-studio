@@ -120,14 +120,26 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
         var ohneSchacht = plan.Hinweise
             .Where(h => h.Contains("ist im Projekt nicht erfasst", StringComparison.Ordinal))
             .Count();
+        var imKataster = plan.Hinweise.Count(h => h.Contains("steht bereits im Kataster", StringComparison.Ordinal));
         var uebrige = plan.Hinweise
             .Where(h => !h.Contains("ohne Eigentuemer", StringComparison.Ordinal)
                      && !h.Contains("kein Verlauf", StringComparison.Ordinal)
-                     && !h.Contains("ist im Projekt nicht erfasst", StringComparison.Ordinal))
+                     && !h.Contains("ist im Projekt nicht erfasst", StringComparison.Ordinal)
+                     && !h.Contains("steht bereits im Kataster", StringComparison.Ordinal))
             .ToList();
 
         text.AppendLine();
         text.AppendLine("Hinweise:");
+
+        if (imKataster > 0)
+        {
+            text.AppendLine(
+                $"  {imKataster} Haltungen stehen bereits im Kataster (Objekt-ID vorhanden) und bleiben");
+            text.AppendLine(
+                "  draussen: Ein Erstexport wuerde sie in GEONIS ein zweites Mal anlegen. Fuer sie");
+            text.AppendLine(
+                "  ist \"XTF revidieren\" der richtige Weg.");
+        }
 
         if (ohneEigentuemer > 0)
         {

@@ -88,13 +88,14 @@ public sealed class XtfRundreiseTests
     }
 
     [Fact]
-    public void Ohne_Abwasserknoten_bleibt_die_Bezeichnung_der_Rueckfall()
+    public void Ohne_Abwasserknoten_kommt_der_Schacht_aus_dem_Haltungsnamen()
     {
-        // Der zweite Haltungspunkt hat keinen Knoten — dann ist sein Name das Beste,
-        // was die Datei hergibt. Besser als gar nichts, aber erkennbar technisch.
+        // Der zweite Haltungspunkt hat keinen Knoten. Sein Name "78998-79002_nach" ist
+        // technisch; der Schacht steckt im Haltungsnamen: "79002". Frueher landete der
+        // technische Name in "Schacht_unten".
         var record = LiesEine();
 
-        Assert.Equal("78998-79002_nach", record.GetFieldValue("Schacht_unten"));
+        Assert.Equal("79002", record.GetFieldValue("Schacht_unten"));
     }
 
     [Fact]
@@ -211,6 +212,39 @@ public sealed class XtfRundreiseTests
 
         Assert.Equal("300", record.GetFieldValue(FieldKeys.ClearWidthMm));
         Assert.Equal("Kreisprofil", record.GetFieldValue(FieldKeys.ProfileType));
+    }
+
+    // Punkt 4 der Fremdanalyse vom 2026-09-03: Status, Sanierungsbedarf, beide Funktionen
+    // und die Lagebestimmung verschwanden beim Rueckimport, und das Inspektionsdatum
+    // 06.10.2025 wurde zum Aenderungsdatum 03.09.2026.
+    [Fact]
+    public void Die_Kanalfelder_kommen_zurueck_und_das_Aenderungsdatum_ist_kein_Inspektionsdatum()
+    {
+        var xml = MitZustand
+            .Replace(
+                "<Nutzungsart_Ist>Schmutzabwasser</Nutzungsart_Ist>",
+                """
+                <Sanierungsbedarf>kurzfristig</Sanierungsbedarf>
+                        <Status>in_Betrieb</Status>
+                        <FunktionHierarchisch>SAA.Liegenschaftsentwaesserung</FunktionHierarchisch>
+                        <FunktionHydraulisch>Freispiegelleitung</FunktionHydraulisch>
+                        <Nutzungsart_Ist>Schmutzabwasser</Nutzungsart_Ist>
+                """,
+                StringComparison.Ordinal)
+            .Replace(
+                "<Lichte_Hoehe>100</Lichte_Hoehe>",
+                "<Letzte_Aenderung>20260903</Letzte_Aenderung>\n        <Lichte_Hoehe>100</Lichte_Hoehe>\n        <Lagebestimmung>genau</Lagebestimmung>",
+                StringComparison.Ordinal);
+
+        var record = Lies(xml);
+
+        Assert.Equal("in_Betrieb", record.GetFieldValue(FieldKeys.OperatingStatus));
+        Assert.Equal("kurzfristig", record.GetFieldValue(FieldKeys.RehabilitationNeed));
+        Assert.Equal("SAA.Liegenschaftsentwaesserung", record.GetFieldValue(FieldKeys.HierarchicalFunction));
+        Assert.Equal("Freispiegelleitung", record.GetFieldValue(FieldKeys.HydraulicFunction));
+        Assert.Equal("genau", record.GetFieldValue(FieldKeys.PositionAccuracy));
+        Assert.Equal("03.09.2026", record.GetFieldValue(FieldKeys.CadastreLastChange));
+        Assert.True(string.IsNullOrEmpty(record.GetFieldValue("Datum_Jahr")), "Letzte_Aenderung ist kein Inspektionsdatum");
     }
 
     private static HaltungRecord LiesEine() => Assert.Single(LiesProjekt().Data);
