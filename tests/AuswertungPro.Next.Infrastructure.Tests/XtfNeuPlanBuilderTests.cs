@@ -287,6 +287,40 @@ public sealed class XtfNeuPlanBuilderTests
         Assert.Equal("Steinzeug", haltung.Felder.Single(f => f.Key == "Material").Value);
     }
 
+    [Fact]
+    public void Ein_Schacht_mit_Umlaut_im_Feldnamen_geht_trotzdem_mit()
+    {
+        // Schachtfelder heissen nach der Kopfzeile der Excel-Vorlage. Der Eigentuemer
+        // steht dort unter "Eigentümer" mit Umlaut, FieldKeys.Owner lautet aber
+        // "Eigentuemer". Wer direkt danach greift, findet nichts — und weil der
+        // Eigentuemer in SIA405 Pflicht ist, fiel dann JEDER Schacht aus dem Export.
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "78998", FieldSource.Manual, true);
+        schacht.SetFieldValue("Eigentümer", "Privat", FieldSource.Manual, true);
+        schacht.SetFieldValue("Funktion", "Kontrollschacht", FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([], [schacht]);
+
+        Assert.Equal(1, plan.Schaechte);
+        Assert.Single(plan.Objekte.Where(o => o.Klasse == "Normschacht"));
+    }
+
+    [Fact]
+    public void Auch_Dimension_und_Zustand_werden_unter_jeder_Schreibweise_gefunden()
+    {
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "78998", FieldSource.Manual, true);
+        schacht.SetFieldValue("Eigentümer", "Privat", FieldSource.Manual, true);
+        schacht.SetFieldValue("Dimension", "600 mm", FieldSource.Manual, true);
+        schacht.SetFieldValue("Zustandsklasse", "3", FieldSource.Manual, true);
+
+        var normschacht = XtfNeuPlanBuilder.Build([], [schacht]).Objekte
+            .Single(o => o.Klasse == "Normschacht");
+
+        Assert.Equal("600", normschacht.Felder.Single(f => f.Key == "Dimension1").Value);
+        Assert.Equal("Z3", normschacht.Felder.Single(f => f.Key == "BaulicherZustand").Value);
+    }
+
     private static HaltungRecord Haltung()
     {
         var record = new HaltungRecord();

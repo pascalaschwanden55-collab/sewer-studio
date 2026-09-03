@@ -1177,6 +1177,13 @@ fuer Kantonsdateien:
   stehen, solange KEIN bewertbarer Befund vorliegt. Mit Befunden rechnet SewerStudio
   weiterhin selbst. Entscheid Pascal 2026-09-03: Beim Import gewinnt die Datei — nur so
   sind GEONIS und SewerStudio nach einem Austausch identisch.
+- **Schachtfelder muessen ueber `SchachtFeldnamen` gelesen werden.** Sie heissen nach
+  der Kopfzeile der Excel-Vorlage: Der Eigentuemer steht dort unter `Eigentümer` mit
+  Umlaut, `FieldKeys.Owner` lautet aber `Eigentuemer`. Beide Exportwege griffen direkt
+  auf den Katalognamen zu und fanden nichts — und weil der Eigentuemer in SIA405 Pflicht
+  ist, fiel dadurch JEDER Schacht aus dem Export. `XtfSchachtPlanBuilder.Wert(...)` und
+  `IstHandgesetzt(...)` sind der gemeinsame Weg; direkt `record.GetFieldValue(...)` auf
+  einem `SchachtRecord` ist im XTF-Kontext ein Fehler.
 - **Der Eigentuemer wurde nie aufgeloest.** In SIA405 ist er ein Verweis auf eine
   `Organisation` im Topic `Administration`, kein Text. Der Import suchte nur nach einem
   Element `Eigentuemer` und fand in einer normkonformen Datei nichts — ausgerechnet die

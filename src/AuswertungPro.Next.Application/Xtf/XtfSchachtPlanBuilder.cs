@@ -40,6 +40,29 @@ public static class XtfSchachtPlanBuilder
             ["Bemerkung"] = FieldKeys.Remarks
         };
 
+    /// <summary>
+    /// Der Wert eines Schachtfeldes, unter dem Namen gelesen, den der Datensatz wirklich
+    /// fuehrt.
+    ///
+    /// Schachtfelder heissen nach der Kopfzeile der Excel-Vorlage, nicht nach dem
+    /// Katalog: Der Eigentuemer steht dort unter "Eigentümer" mit Umlaut, waehrend
+    /// <see cref="FieldKeys.Owner"/> "Eigentuemer" lautet. Wer direkt danach greift,
+    /// findet nichts — und beim Export fehlte dann jeder Schacht, weil der Eigentuemer
+    /// in SIA405 Pflicht ist (real aufgefallen am 2026-09-03).
+    /// </summary>
+    public static string? Wert(SchachtRecord record, string gemeint)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return record.GetFieldValue(SchachtFeldnamen.Feld(record, gemeint));
+    }
+
+    /// <summary>True, wenn der Mensch dieses Feld gesetzt hat — unter jeder Schreibweise.</summary>
+    public static bool IstHandgesetzt(SchachtRecord record, string gemeint)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return SchachtFeldnamen.Schreibweisen(record, gemeint).Any(record.IsUserEdited);
+    }
+
     /// <summary>Das Projektfeld mit beiden Massen.</summary>
     public const string Dimensionsfeld = "Dimension";
 
@@ -140,7 +163,7 @@ public static class XtfSchachtPlanBuilder
 
         foreach (var record in schaechte)
         {
-            var nummer = (record.GetFieldValue(Nummernfeld) ?? "").Trim();
+            var nummer = (Wert(record, Nummernfeld) ?? "").Trim();
             if (nummer.Length == 0)
                 continue;
 
@@ -164,7 +187,7 @@ public static class XtfSchachtPlanBuilder
             var eigentuemer = buch.Verweis(
                 element,
                 $"Schacht {nummer}",
-                record.IsUserEdited(FieldKeys.Owner) ? record.GetFieldValue(FieldKeys.Owner) : null,
+                IstHandgesetzt(record, FieldKeys.Owner) ? Wert(record, FieldKeys.Owner) : null,
                 hinweise);
             if (eigentuemer is not null)
                 felder.Insert(0, eigentuemer);
@@ -198,7 +221,7 @@ public static class XtfSchachtPlanBuilder
             if (!record.IsUserEdited(projektFeld))
                 continue;
 
-            var roh = (record.GetFieldValue(projektFeld) ?? "").Trim();
+            var roh = (Wert(record, projektFeld) ?? "").Trim();
             var neu = NachXtfWert(xtfName, roh);
             if (string.IsNullOrEmpty(neu))
             {
@@ -221,7 +244,7 @@ public static class XtfSchachtPlanBuilder
 
         if (record.IsUserEdited(Dimensionsfeld))
         {
-            var roh = (record.GetFieldValue(Dimensionsfeld) ?? "").Trim();
+            var roh = (Wert(record, Dimensionsfeld) ?? "").Trim();
             var masse = Abmessungen(roh);
             if (masse is null)
             {
@@ -278,11 +301,11 @@ public static class XtfSchachtPlanBuilder
     {
         foreach (var projektFeld in Felder.Values)
         {
-            if (record.IsUserEdited(projektFeld) && !string.IsNullOrWhiteSpace(record.GetFieldValue(projektFeld)))
+            if (IstHandgesetzt(record, projektFeld) && !string.IsNullOrWhiteSpace(Wert(record, projektFeld)))
                 return true;
         }
 
-        return (record.IsUserEdited(Dimensionsfeld) && !string.IsNullOrWhiteSpace(record.GetFieldValue(Dimensionsfeld)))
-            || (record.IsUserEdited(FieldKeys.Owner) && !string.IsNullOrWhiteSpace(record.GetFieldValue(FieldKeys.Owner)));
+        return (IstHandgesetzt(record, Dimensionsfeld) && !string.IsNullOrWhiteSpace(Wert(record, Dimensionsfeld)))
+            || (IstHandgesetzt(record, FieldKeys.Owner) && !string.IsNullOrWhiteSpace(Wert(record, FieldKeys.Owner)));
     }
 }

@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Xtf;
 
@@ -230,7 +230,7 @@ public static class XtfNeuPlanBuilder
         Dictionary<string, string> knoten,
         List<string> hinweise)
     {
-        var nummer = (record.GetFieldValue(XtfSchachtPlanBuilder.Nummernfeld) ?? "").Trim();
+        var nummer = (XtfSchachtPlanBuilder.Wert(record, XtfSchachtPlanBuilder.Nummernfeld) ?? "").Trim();
         if (nummer.Length == 0)
         {
             hinweise.Add("Ein Schacht ohne Nummer kann nicht geschrieben werden.");
@@ -246,7 +246,7 @@ public static class XtfNeuPlanBuilder
         }
 
         var eigentuemer = organisationen.Verweis(
-            record.GetFieldValue(FieldKeys.Owner), $"Schacht {nummer}", hinweise);
+            XtfSchachtPlanBuilder.Wert(record, FieldKeys.Owner), $"Schacht {nummer}", hinweise);
         if (eigentuemer is null)
             return false;
 
@@ -318,7 +318,7 @@ public static class XtfNeuPlanBuilder
 
         foreach (var (xtfName, projektFeld) in XtfSchachtPlanBuilder.Felder)
         {
-            var roh = (record.GetFieldValue(projektFeld) ?? "").Trim();
+            var roh = (XtfSchachtPlanBuilder.Wert(record, projektFeld) ?? "").Trim();
             if (roh.Length == 0)
                 continue;
 
@@ -335,7 +335,7 @@ public static class XtfNeuPlanBuilder
         }
 
         var masse = XtfSchachtPlanBuilder.Abmessungen(
-            record.GetFieldValue(XtfSchachtPlanBuilder.Dimensionsfeld));
+            XtfSchachtPlanBuilder.Wert(record, XtfSchachtPlanBuilder.Dimensionsfeld));
         if (masse is not null)
         {
             felder.Add(new("Dimension1", masse.Value.Dimension1));
