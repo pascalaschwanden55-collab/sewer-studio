@@ -92,8 +92,12 @@ Pascal
 
 ## Notiz fuer mich
 
-Punkt 2 der Mail (HoehenBreitenverhaeltnis, Lichte_Breite) und die OBJ_ID aus
-Punkt 1 setzen den XTF-Export im Programm voraus. Der ist im aktuellen Stand
-noch nicht gebaut — die Testdatei vom 03.09. war von Hand erstellt. Vor der
-zweiten Testdatei brauche ich: OBJ_ID im SIA-405-Import mitfuehren, Rohrprofil,
-Schacht-Dimension1/2, Exporter mit Pruefung und Protokoll.
+Der Rueckschrieb ist im Programm gebaut (`tools/GeonisXtfExport`, siehe
+`docs/GEONIS-INTERLIS-SCHNITTSTELLE-2026-09.md`, Kapitel 6). Die zweite Testdatei
+kommt also aus dem Programm und nicht mehr von Hand.
+
+Vor dem Versand an Trigonet:
+
+1. `dotnet build AuswertungPro.sln` und `dotnet test AuswertungPro.sln`.
+2. Trockenlauf gegen die echte Kataster-XTF, Protokoll lesen.
+3. Erzeugte Datei mit ilivalidator pruefen.

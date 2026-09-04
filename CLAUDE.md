@@ -631,6 +631,47 @@ bereits sichtbar am Bildrand. Eine Auswahl darf nur im sichtbaren Bild beginnen.
 Beim Beginn einer neuen Box entfernt das ViewModel die alte Maske und den alten
 Vorschlag sofort; eine alte Maske darf nie zusammen mit einer neuen Box erscheinen.
 
+## GEONIS-Rueckschrieb (SIA405-XTF-Export)
+
+Der Weg zurueck in den Kataster ist neu und bewusst klein gehalten. Er erzeugt aus einem
+geprueften Projekt eine SIA405-Transferdatei, die GEONIS ueber die `OBJ_ID` aktualisiert.
+
+```text
+Projekt (geprueft)
+  -> ISia405KatasterIndexReader liest die Kataster-XTF (1. Durchgang: Identitaet + Ist-Werte)
+  -> ISia405ExportPlanBuilder erzeugt genau einen Plan (reine Regeln, kein Dateizugriff)
+  -> ISia405ExportProtokollWriter schreibt IMMER zuerst das Aenderungsprotokoll
+  -> ISia405ObjektQuelltextLeser holt die betroffenen Objekte im Original (2. Durchgang)
+  -> ISia405XtfWriter schreibt die Transferdatei
+```
+
+Verbindliche Regeln:
+
+- **Schluessel ist die `OBJ_ID` aus dem Katasterexport**, nie die Bezeichnung. Die Bezeichnung
+  dient nur dem Wiederfinden im Kataster; kommt sie dort mehrfach vor, wird das Objekt
+  verworfen und protokolliert. Kein "bester Treffer".
+- Geschrieben wird immer das **vollstaendige Originalobjekt** mit ausgetauschten Werten.
+  Halbe Objekte waeren nicht modellgueltig. Welche Attribute GEONIS uebernehmen darf, sagt
+  das Protokoll, nicht die Datei.
+- Beurteilt und damit aenderbar sind nur: Haltung `Lichte_Hoehe`, `Lichte_Breite`, `Material`;
+  Kanal `Baulicher_Zustand`, `Bemerkung`; Normschacht `Dimension1`, `Dimension2`,
+  `Baulicher_Zustand`, `Bemerkung`; dazu jeweils `Letzte_Aenderung`. Bewusst nicht dabei:
+  Geometrie, Hoehenlagen, Topologie, Nutzungsart, Eigentuemer, Baujahr und `LaengeEffektiv`
+  (gemessene Laenge ist nicht die Katasterlaenge).
+- Werte werden nicht erfunden: Modell, Kopfangaben, Materialschreibweisen, die Werte von
+  `Baulicher_Zustand`, die Datumsschreibweise (DATE oder XMLDate) und die Reihenfolge der
+  Attribut-Elemente stammen alle aus der Quelldatei. Unbekannte Werte werden nicht
+  geschrieben, sondern begruendet uebersprungen.
+- Ein leeres Programmfeld heisst nie "loeschen", sondern "nicht angefasst".
+- Das Rohrprofil der Haltung wird unveraendert mitgeliefert, damit GEONIS die Breite ueber
+  `HoehenBreitenverhaeltnis` ableiten kann; fehlt der Wert bei einem Kreisprofil, wird 1 gesetzt.
+- `tools/GeonisXtfExport` ist der Aufrufweg (`--projekt`, `--kataster`, `--ziel`,
+  `--trockenlauf`). `GeonisXtfExportRuntime` ist der einzige Aufbaupunkt; eine
+  Oberflaechen-Schaltflaeche gibt es noch nicht.
+
+Fachlicher Hintergrund, Attributliste und offene Punkte mit Trigonet:
+`docs/GEONIS-INTERLIS-SCHNITTSTELLE-2026-09.md`.
+
 ## Aktive Few-Shot-Wege
 
 - Produktiv gibt es zwei Laufzeit-Kontextwege. Beide liefern Prompt-Beispiele und

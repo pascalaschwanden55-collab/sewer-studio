@@ -3,7 +3,8 @@
 **Stand:** 2026-09-04
 **Grundlage:** Mail Andreas Sidler (Trigonet AG) vom 04.09.2026 als Antwort auf die
 Testdatei vom 03.09.2026 (eine Haltung 78998-79002, ein Schacht 78998).
-**Status:** Konzept. Es ist noch nichts gebaut. Im HEAD gibt es keinen XTF-Export.
+**Status:** Der Rueckschrieb ist gebaut (Kapitel 6). Offen sind der erste Lauf gegen die
+echte Katasterdatei und die Antworten von Trigonet (Kapitel 7).
 
 ## 1 Ergebnis des ersten Tests
 
@@ -132,25 +133,50 @@ ist die Abbildung 1:1 (`0` → `Z0`). Das muss vor dem ersten Produktivlauf
 schriftlich bestaetigt sein — eine gedrehte Skala wuerde jede Prioritaetenliste
 im WebGIS auf den Kopf stellen.
 
-## 6 Luecken in SewerStudio (Ist-Zustand HEAD, ehrlich)
+## 6 Stand in SewerStudio (2026-09-04 gebaut)
 
-1. **Es gibt keinen XTF-Export.** Gelesen wird SIA 405 in
-   `src/AuswertungPro.Next.Infrastructure/Import/Xtf/LegacyXtfImportService.cs`
-   (`ParseSia405`); einen Schreiber gibt es nirgends im Code und auch nicht in der
-   Historie. Die Testdatei vom 03.09. stammt nicht aus dem Programm.
-2. **Die OBJ_ID wird beim SIA-405-Import weggeworfen.** Nur der VSA-KEK-Zweig
-   liest `OBJ_ID` (fuer Kanalschaeden). Fuer Haltung, Kanal, Abwasserknoten und
-   Normschacht muessen `OBJ_ID` und Herkunft additiv mitgefuehrt werden, sonst
-   ist Vorschlag A gar nicht moeglich.
-3. **Kein Rohrprofil.** Der Import kennt nur `Lichte_Hoehe`/`Lichte_Breite` und
-   nutzt die Breite bloss als Ersatzwert fuer DN.
-4. **Schacht-Datenhaltung passt noch nicht.** `SchachtRecord` fuehrt ein
-   Textfeld `Dimension` aus dem PDF-Protokoll, nicht `Dimension1`/`Dimension2`,
-   und es gibt keinen Normschacht-Import aus dem XTF.
-5. **Kein Exportprotokoll und keine Exportpruefung**, die Kapitel 2 verlangt.
+Der Rueckschrieb ist jetzt im Programm vorhanden. Vorher gab es nur den Import; die
+Testdatei vom 03.09. war von Hand erstellt.
 
-Reihenfolge fuer den Bau: erst 2 (klein, additiv, empty-only), dann 3/4, dann der
-Exporter als eigener Service mit Interface samt Trockenlauf und Protokoll.
+Neu gebaut:
+
+| Baustein | Aufgabe |
+|---|---|
+| `Sia405KatasterIndexReader` | liest die Kataster-XTF streamend: OBJ_ID, Ist-Werte, Modellangaben, Materialschreibweisen, Zustandswerte, Attributreihenfolge |
+| `Sia405ExportPlanBuilder` | reine Regeln: was darf geschrieben werden, was nicht — mit Begruendung |
+| `Sia405ObjektQuelltextLeser` | holt im zweiten Durchgang die betroffenen Objekte im Original |
+| `Sia405XtfWriter` | schreibt die Transferdatei im Modell der Quelldatei |
+| `Sia405ExportProtokollWriter` | schreibt das Aenderungsprotokoll (alt -> neu, plus alles Uebersprungene) |
+| `GeonisXtfExportWorkflow` | feste Reihenfolge: lesen, planen, protokollieren, erst dann schreiben |
+| `tools/GeonisXtfExport` | Aufrufweg mit `--trockenlauf` |
+
+Aufruf:
+
+```text
+GeonisXtfExport --projekt <projekt.json> --kataster <kataster.xtf> --ziel <ordner>
+                [--datum yyyy-MM-dd] [--trockenlauf]
+```
+
+Kernentscheidungen, die im Code stecken:
+
+1. **Schluessel ist die OBJ_ID aus dem Katasterexport.** Der Operateur muss sie nicht
+   mitfuehren; das Programm holt sie beim Export aus derselben Datei, aus der der Bestand
+   stammt. Eine mehrfach vorkommende Bezeichnung fuehrt nie zu einem Schreibvorgang.
+2. **Vollstaendige Objekte statt Teilobjekte.** Ein Objekt mit nur drei Attributen waere
+   nicht modellgueltig. Die Datei enthaelt darum das Originalobjekt mit ausgetauschten
+   Werten — welche Attribute GEONIS uebernimmt, sagt das Protokoll.
+3. **Nichts wird erfunden.** Modell, Kopf, Materialschreibweise, Zustandswerte,
+   Datumsschreibweise und die Reihenfolge der Attribute kommen aus der Quelldatei. Was dort
+   nicht vorkommt, wird nicht geschrieben, sondern begruendet uebersprungen.
+4. **Protokoll immer, Datei nur bei Bedarf.** `--trockenlauf` erzeugt nur die Aenderungsliste.
+
+Noch offen:
+
+- Keine Schaltflaeche in der Oberflaeche; der Aufruf laeuft ueber das Werkzeug.
+- Der Schachtzustand wird aus dem Feld `Zustandsklasse` des Schachtdatensatzes gelesen.
+  Heisst die Spalte in der Schachtvorlage anders, bleibt der Wert leer (sichtbar im Protokoll).
+- Schachtmaterial und Schachtfunktion werden bewusst nicht zurueckgeschrieben.
+- Ein Lauf gegen die echte Katasterdatei und eine Pruefung mit ilivalidator stehen aus.
 
 ## 7 Offene Fragen an Trigonet (fuer das Telefon)
 
@@ -170,9 +196,12 @@ Exporter als eigener Service mit Interface samt Trockenlauf und Protokoll.
 
 ## 8 Naechste Schritte
 
-1. Antwortmail und Telefon mit Trigonet (Entwurf:
+1. `dotnet build AuswertungPro.sln` und `dotnet test AuswertungPro.sln` auf dem
+   Arbeitsplatz laufen lassen (der Code entstand ohne .NET-SDK).
+2. Trockenlauf gegen die echte Kataster-XTF und das Testprojekt; Protokoll pruefen.
+3. Erzeugte Datei mit ilivalidator gegen das Modell pruefen, bevor sie an Trigonet geht.
+4. Antwortmail und Telefon mit Trigonet (Entwurf:
    `docs/betrieb/2026-09-04-antwort-trigonet-mailentwurf.md`).
-2. Nach der Klaerung des Schluessels: `OBJ_ID` im SIA-405-Import mitfuehren.
-3. XTF-Export als eigener Service mit Interface, Trockenlauf und Protokoll bauen.
-4. Zweiter Testlauf mit derselben Haltung plus einem bewusst gewaehlten
-   Duplikatfall, damit die Schluesselregel im echten Bestand geprueft ist.
+5. Zweiter Testlauf mit derselben Haltung plus einem bewusst gewaehlten Duplikatfall,
+   damit die Schluesselregel am echten Bestand sichtbar wird.
+6. Danach entscheiden, ob eine Schaltflaeche in der Oberflaeche dazukommt.
