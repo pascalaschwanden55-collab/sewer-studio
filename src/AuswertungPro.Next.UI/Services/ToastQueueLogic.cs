@@ -14,7 +14,12 @@ public enum ToastSeverity
 }
 
 /// <summary>Ein Toast: kurze, nicht-blockierende Statusmeldung unten rechts.</summary>
-public sealed record ToastItem(long Id, string Message, ToastSeverity Severity)
+public sealed record ToastItem(
+    long Id,
+    string Message,
+    ToastSeverity Severity,
+    string? AktionText = null,
+    Action? Aktion = null)
 {
     /// <summary>Anzeigedauer in ms; null = bleibt bis Klick (nur Error).</summary>
     public long? DurationMs => Severity switch
@@ -23,6 +28,9 @@ public sealed record ToastItem(long Id, string Message, ToastSeverity Severity)
         ToastSeverity.Error => null,
         _ => 3000, // Success / Info
     };
+
+    /// <summary>True, wenn der Toast einen anklickbaren Link traegt.</summary>
+    public bool HatAktion => !string.IsNullOrWhiteSpace(AktionText) && Aktion is not null;
 }
 
 /// <summary>
@@ -66,11 +74,20 @@ public sealed class ToastQueueLogic
     /// Ist ein Slot frei, wird sie sofort sichtbar; sonst wandert sie in die Warteschlange.
     /// </summary>
     public long? Show(string message, ToastSeverity severity, long nowMs)
+        => Show(message, severity, nowMs, aktionText: null, aktion: null);
+
+    /// <summary>Reiht eine Meldung mit optionaler Aktion ein.</summary>
+    public long? Show(
+        string message,
+        ToastSeverity severity,
+        long nowMs,
+        string? aktionText,
+        Action? aktion)
     {
         if (string.IsNullOrWhiteSpace(message))
             return null;
 
-        var item = new ToastItem(++_nextId, message.Trim(), severity);
+        var item = new ToastItem(++_nextId, message.Trim(), severity, aktionText, aktion);
         if (_active.Count < MaxVisible)
             _active.Add(new ActiveToast(item, nowMs));
         else

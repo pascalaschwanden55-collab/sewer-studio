@@ -27,7 +27,8 @@ public partial class MainWindow : Window
         var services = GetServiceProvider();
         _dialogs = services.Dialogs;
         // Toast-Senke mit dem sichtbaren Host verbinden (nicht-blockierende Erfolgsmeldungen).
-        services.Toasts.AttachSink((message, severity) => ToastHostControl.Enqueue(message, severity));
+        services.Toasts.AttachSink((message, severity, aktionText, aktion)
+            => ToastHostControl.Enqueue(message, severity, aktionText, aktion));
         // AP-06: Startwarnung zur Wissensdatenbank anzeigen, sobald der Host bereit ist
         // (anderer/leerer KB-Ordner, z.B. verlorene Umgebungsvariable SEWERSTUDIO_KNOWLEDGE_ROOT).
         if (!string.IsNullOrEmpty(services.KnowledgeRootStartupWarning))
