@@ -195,8 +195,8 @@
                                 Margin="0,6,0,0"
                                 Style="{StaticResource ToolbarButton}"
                                 Click="ShowShortcutOverlay_Click"
-                                ToolTip="Tastenkürzel anzeigen"
-                                AutomationProperties.Name="Tastenkürzel anzeigen">
+                                ToolTip="Tastenkürzel anzeigen — F1"
+                                AutomationProperties.Name="Tastenkürzel anzeigen — F1">
                             <ui:FluentIcon Glyph="&#xE897;" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}"/>
                         </Button>
                     </StackPanel>
@@ -824,6 +824,7 @@
                            Margin="0,0,12,0"
                            VerticalAlignment="Center"
                            Style="{StaticResource PlayerTimeText}"
+                           ToolTip="5 Sekunden zurück — Pfeil links"
                            Text="00:00"/>
 
                 <Grid Grid.Column="1">
@@ -854,6 +855,7 @@
                            Margin="12,0,0,0"
                            VerticalAlignment="Center"
                            Style="{StaticResource PlayerTimeText}"
+                           ToolTip="5 Sekunden vor — Pfeil rechts"
                            Text="00:00"/>
             </Grid>
         </Border>
@@ -870,21 +872,21 @@
 
                 <WrapPanel Grid.Column="0" Margin="0,0,18,0" VerticalAlignment="Center">
                     <Button Style="{StaticResource PlayerPrimaryButton}" Margin="0,0,6,0" Click="Play_Click"
-                            ToolTip="Video abspielen (Leertaste)">
+                            ToolTip="Abspielen / Pause — Leertaste">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Play" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource PlayerButton}" Margin="0,0,6,0" Click="Pause_Click"
-                            ToolTip="Video pausieren (Leertaste)">
+                            ToolTip="Abspielen / Pause — Leertaste">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE769;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Pause" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource PlayerButton}" Click="Stop_Click"
-                            ToolTip="Wiedergabe stoppen und zum Anfang zurücksetzen">
+                            ToolTip="Stopp — Taste S">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE71A;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Stop" VerticalAlignment="Center"/>
@@ -918,7 +920,7 @@
                                   Style="{StaticResource SpeedToggleButton}"
                                   Margin="0,0,6,0"
                                   Click="LiveDetection_Click"
-                                  ToolTip="Live-KI: Echtzeit-Schadenserkennung während Wiedergabe (D)">
+                                  ToolTip="Erkennung ein/aus — Taste D">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE945;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Live-KI" VerticalAlignment="Center"/>
@@ -929,7 +931,7 @@
                         <Button x:Name="ManualMarkButton"
                                 Style="{StaticResource PlayerButton}"
                                 Click="ManualMark_Click"
-                                ToolTip="Markieren: Werkzeug wählen (M)">
+                                ToolTip="Bereich markieren — Taste M">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE7C8;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                 <TextBlock x:Name="TxtMarkToolName" Text="Markieren" VerticalAlignment="Center"/>
@@ -1015,7 +1017,7 @@
                                       MinHeight="28"
                                       Padding="8,3"
                                       Margin="8,0,0,0"
-                                      ToolTip="Geschwindigkeitsstufen anzeigen">
+                                      ToolTip="Schneller — Taste +">
                             <TextBlock Text="&#xE712;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
                         </ToggleButton>
                         <Slider x:Name="SpeedSlider"
@@ -1027,7 +1029,7 @@
                                 IsSnapToTickEnabled="True"
                                 IsMoveToPointEnabled="True"
                                 ValueChanged="SpeedSlider_ValueChanged"
-                                ToolTip="Wiedergabegeschwindigkeit als Slider setzen"/>
+                                ToolTip="Langsamer — Taste −"/>
                     </DockPanel>
                     <Popup PlacementTarget="{Binding ElementName=SpeedPresetButton}"
                            Placement="Top"
