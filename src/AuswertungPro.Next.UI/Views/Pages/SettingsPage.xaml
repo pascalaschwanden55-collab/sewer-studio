@@ -272,9 +272,26 @@
                         Width="140"
                         ToolTip="Alle geänderten Einstellungen dauerhaft speichern."/>
                 <TextBlock Text="Einstellungen" Style="{StaticResource PageTitle}" Margin="0,0,12,0"/>
+                <!-- Filtert die Gruppen ueber alle Reiter; Umlaute und ae/oe/ue gelten gleich. -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,12,0">
+                    <ui:FluentIcon Glyph="&#xE721;"
+                                   Foreground="{DynamicResource MutedBrush}"
+                                   Margin="0,0,6,0"/>
+                    <TextBox x:Name="SucheBox"
+                             Width="260"
+                             TextChanged="SucheBox_TextChanged"
+                             AutomationProperties.Name="Einstellung suchen"
+                             ToolTip="Einstellung suchen — zeigt nur passende Gruppen und springt zum ersten Reiter mit Treffer."/>
+                    <TextBlock x:Name="SucheTreffer"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="{DynamicResource TextXS}"
+                               Foreground="{DynamicResource MutedBrush}"/>
+                </StackPanel>
             </DockPanel>
 
             <TabControl Grid.Row="1"
+                        x:Name="EinstellungsReiter"
                         Style="{StaticResource SettingsNavigationTabs}"
                         ItemContainerStyle="{StaticResource SettingsNavigationMenuItem}">
                 <TabItem Header="Allgemein"
