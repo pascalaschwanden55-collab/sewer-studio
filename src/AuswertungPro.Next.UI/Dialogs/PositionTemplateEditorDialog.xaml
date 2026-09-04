@@ -102,12 +102,14 @@
                             </Button>
                             <Button Command="{Binding MoveUpCommand}"
                                     Padding="8,4" Width="36" Margin="0,0,4,0" Style="{StaticResource SecondaryButton}"
-                                    ToolTip="Nach oben">
+                                    ToolTip="Nach oben"
+                                    AutomationProperties.Name="Nach oben">
                                 <ui:FluentIcon Glyph="&#xE70E;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                             </Button>
                             <Button Command="{Binding MoveDownCommand}"
                                     Padding="8,4" Width="36" Style="{StaticResource SecondaryButton}"
-                                    ToolTip="Nach unten">
+                                    ToolTip="Nach unten"
+                                    AutomationProperties.Name="Nach unten">
                                 <ui:FluentIcon Glyph="&#xE70D;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                             </Button>
                         </StackPanel>
@@ -138,6 +140,7 @@
                                         <DataTemplate>
                                             <Button Foreground="{DynamicResource DangerBrush}" Background="Transparent" BorderThickness="0"
                                                     ToolTip="Position löschen"
+                                                    AutomationProperties.Name="Position löschen"
                                                     Padding="0"
                                                     Width="28" Height="28"
                                                     Click="DeletePosition_Click">

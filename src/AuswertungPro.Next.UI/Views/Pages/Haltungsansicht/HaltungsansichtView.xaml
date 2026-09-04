@@ -189,7 +189,8 @@
                                    Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                         <Button DockPanel.Dock="Right" x:Name="SchadenAddButton"
                                 Width="28" Height="24" FontSize="{DynamicResource TextL}" Padding="0"
-                                Click="SchadenAdd_Click" ToolTip="Neue Beobachtung codieren">
+                                Click="SchadenAdd_Click" ToolTip="Neue Beobachtung codieren"
+                                AutomationProperties.Name="Neue Beobachtung codieren">
                             <ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource AccentBrush}"/>
                         </Button>
                     </DockPanel>

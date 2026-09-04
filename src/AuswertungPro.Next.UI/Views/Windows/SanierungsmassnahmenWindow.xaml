@@ -446,18 +446,21 @@
                                                             Foreground="{DynamicResource DangerBrush}" Style="{x:Null}"
                                                             Command="{Binding DataContext.CostCalcVm.RemoveMeasureCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                             CommandParameter="{Binding}"
-                                                            ToolTip="Maßnahme entfernen" Margin="8,0,0,0">
+                                                            ToolTip="Massnahme entfernen"
+                                                            AutomationProperties.Name="Massnahme entfernen" Margin="8,0,0,0">
                                                         <ui:FluentIcon Glyph="&#xE74D;" Foreground="{DynamicResource DangerBrush}"/>
                                                     </Button>
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
                                                         <Button Width="28" Height="28" Style="{x:Null}"
                                                                 Command="{Binding DataContext.CostCalcVm.MoveMeasureUpCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                CommandParameter="{Binding}" ToolTip="Nach oben">
+                                                                CommandParameter="{Binding}" ToolTip="Nach oben"
+                                                                AutomationProperties.Name="Nach oben">
                                                             <ui:FluentIcon Glyph="&#xE70E;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                         </Button>
                                                         <Button Width="28" Height="28" Margin="6,0,0,0" Style="{x:Null}"
                                                                 Command="{Binding DataContext.CostCalcVm.MoveMeasureDownCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                CommandParameter="{Binding}" ToolTip="Nach unten">
+                                                                CommandParameter="{Binding}" ToolTip="Nach unten"
+                                                                AutomationProperties.Name="Nach unten">
                                                             <ui:FluentIcon Glyph="&#xE70D;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                         </Button>
                                                     </StackPanel>
@@ -513,19 +516,22 @@
                                                                         <Button Width="22" Height="22" Padding="0" Margin="0,0,2,0"
                                                                                 Style="{x:Null}"
                                                                                 Command="{Binding DataContext.MoveLineUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                                                CommandParameter="{Binding}" ToolTip="Nach oben">
+                                                                                CommandParameter="{Binding}" ToolTip="Nach oben"
+                                                                                AutomationProperties.Name="Nach oben">
                                                                             <ui:FluentIcon Glyph="&#xE70E;" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                                         </Button>
                                                                         <Button Width="22" Height="22" Padding="0" Margin="0,0,2,0"
                                                                                 Style="{x:Null}"
                                                                                 Command="{Binding DataContext.MoveLineDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                                                CommandParameter="{Binding}" ToolTip="Nach unten">
+                                                                                CommandParameter="{Binding}" ToolTip="Nach unten"
+                                                                                AutomationProperties.Name="Nach unten">
                                                                             <ui:FluentIcon Glyph="&#xE70D;" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                                         </Button>
                                                                         <Button Width="22" Height="22" Padding="0"
                                                                                 Style="{x:Null}" Foreground="{DynamicResource DangerBrush}"
                                                                                 Command="{Binding DataContext.RemoveLineCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                                                CommandParameter="{Binding}" ToolTip="Position entfernen">
+                                                                                CommandParameter="{Binding}" ToolTip="Position entfernen"
+                                                                                AutomationProperties.Name="Position entfernen">
                                                                             <ui:FluentIcon Glyph="&#xE74D;" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource DangerBrush}"/>
                                                                         </Button>
                                                                     </StackPanel>

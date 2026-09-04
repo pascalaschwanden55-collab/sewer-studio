@@ -54,6 +54,7 @@
                 <Button Grid.Column="3"
                         Command="{Binding ClearRootFoldersCommand}"
                         ToolTip="Ordnerauswahl zurücksetzen"
+                        AutomationProperties.Name="Ordnerauswahl zurücksetzen"
                         Padding="6,2" Margin="0,0,8,0">
                     <ui:FluentIcon Glyph="&#xE711;" Foreground="{DynamicResource MutedBrush}"/>
                 </Button>

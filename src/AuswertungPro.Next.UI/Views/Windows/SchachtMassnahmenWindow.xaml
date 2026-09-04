@@ -67,6 +67,7 @@
                                                Foreground="{StaticResource TextSecondaryBrush}"/>
                                     <Button Grid.Column="2" Width="26" Height="24" Padding="0"
                                             ToolTip="In Auswahl übernehmen"
+                                            AutomationProperties.Name="In Auswahl übernehmen"
                                             Command="{Binding DataContext.HinzufuegenCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}">
                                         <ui:FluentIcon Glyph="&#xE710;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource AccentBrush}"/>
@@ -102,7 +103,8 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Width="24" Height="24" Padding="0" Margin="2,0"
-                                                ToolTip="Entfernen" Foreground="{StaticResource DangerBrush}"
+                                                ToolTip="Entfernen" AutomationProperties.Name="Entfernen"
+                                                Foreground="{StaticResource DangerBrush}"
                                                 Command="{Binding DataContext.EntfernenCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding}">
                                             <ui:FluentIcon Glyph="&#xE74D;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource DangerBrush}"/>

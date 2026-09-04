@@ -436,7 +436,8 @@
                                 <Button Grid.Row="0" Grid.Column="2"
                                         Command="{Binding BrowseProjectPathCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        ToolTip="Projektdatei auswählen.">
+                                        ToolTip="Projektdatei auswählen."
+                                        AutomationProperties.Name="Projektdatei auswählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
 
@@ -447,7 +448,8 @@
                                 <Button Grid.Row="1" Grid.Column="2"
                                         Command="{Binding BrowseProjectsRootCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        ToolTip="Standardordner für Projekte auswählen.">
+                                        ToolTip="Standardordner für Projekte auswählen."
+                                        AutomationProperties.Name="Standardordner für Projekte auswählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
 
@@ -458,7 +460,8 @@
                                 <Button Grid.Row="2" Grid.Column="2"
                                         Command="{Binding BrowseAbwasserkatasterXtfPathCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        ToolTip="Abwasserkataster-XTF für die Kartenansicht auswählen.">
+                                        ToolTip="Abwasserkataster-XTF für die Kartenansicht auswählen."
+                                        AutomationProperties.Name="Abwasserkataster-XTF für die Kartenansicht auswählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
                             </Grid>
@@ -620,7 +623,9 @@
                                          Style="{StaticResource SettingsTextInput}"/>
                                 <Button Grid.Column="2"
                                         Command="{Binding BrowseVideoFolderCommand}"
-                                        Style="{StaticResource SettingsBrowseButton}">
+                                        Style="{StaticResource SettingsBrowseButton}"
+                                        ToolTip="Video-Ordner wählen"
+                                        AutomationProperties.Name="Video-Ordner wählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
                             </Grid>
@@ -639,7 +644,9 @@
                                          Style="{StaticResource SettingsTextInput}"/>
                                 <Button Grid.Column="2"
                                         Command="{Binding BrowsePdfToTextCommand}"
-                                        Style="{StaticResource SettingsBrowseButton}">
+                                        Style="{StaticResource SettingsBrowseButton}"
+                                        ToolTip="pdftotext.exe auswählen"
+                                        AutomationProperties.Name="pdftotext.exe auswählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
                             </Grid>
@@ -682,7 +689,9 @@
                                          Style="{StaticResource SettingsTextInput}"/>
                                 <Button Grid.Row="0" Grid.Column="2"
                                         Command="{Binding BrowseKantonUriXtfDirectoryCommand}"
-                                        Style="{StaticResource SettingsBrowseButton}">
+                                        Style="{StaticResource SettingsBrowseButton}"
+                                        ToolTip="XTF-Ordner Kanton Uri auswählen"
+                                        AutomationProperties.Name="XTF-Ordner Kanton Uri auswählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
                                 <TextBlock Grid.Row="1"

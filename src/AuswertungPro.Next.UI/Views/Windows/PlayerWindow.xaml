@@ -195,7 +195,8 @@
                                 Margin="0,6,0,0"
                                 Style="{StaticResource ToolbarButton}"
                                 Click="ShowShortcutOverlay_Click"
-                                ToolTip="Tastenkürzel anzeigen">
+                                ToolTip="Tastenkürzel anzeigen"
+                                AutomationProperties.Name="Tastenkürzel anzeigen">
                             <ui:FluentIcon Glyph="&#xE897;" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}"/>
                         </Button>
                     </StackPanel>
@@ -465,7 +466,8 @@
                 <!-- Meter-Navigation -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
                     <Button Style="{StaticResource PlayerButton}" Padding="8,6"
-                            Click="CodingPrevious_Click" ToolTip="Zurück (Step)">
+                            Click="CodingPrevious_Click" ToolTip="Zurück (Step)"
+                            AutomationProperties.Name="Zurück (Step)">
                         <ui:FluentIcon Glyph="&#xE76B;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource AccentBrush}"/>
                     </Button>
                     <TextBlock x:Name="TxtCodingMeter"
@@ -474,7 +476,8 @@
                                VerticalAlignment="Center" Margin="8,0"
                                Text="0.00m"/>
                     <Button Style="{StaticResource PlayerButton}" Padding="8,6"
-                            Click="CodingNext_Click" ToolTip="Weiter (Step)">
+                            Click="CodingNext_Click" ToolTip="Weiter (Step)"
+                            AutomationProperties.Name="Weiter (Step)">
                         <ui:FluentIcon Glyph="&#xE76C;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource AccentBrush}"/>
                     </Button>
                     <TextBlock x:Name="TxtCodingRange"

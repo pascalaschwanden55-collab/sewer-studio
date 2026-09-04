@@ -168,7 +168,8 @@
                                          ToolTip="Dieser Ordner gilt für beide Excel-Dateien."/>
                                 <Button Grid.Column="1" Command="{Binding BrowseExcelExportRootCommand}"
                                         Margin="4,0,0,0" Padding="10,0"
-                                        ToolTip="Gemeinsamen Excel-Zielordner wählen">
+                                        ToolTip="Gemeinsamen Excel-Zielordner wählen"
+                                        AutomationProperties.Name="Gemeinsamen Excel-Zielordner wählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
                             </Grid>
@@ -285,7 +286,8 @@
                                                          ToolTip="Basis-Ordner. Leer = beim Verteilen per Dialog fragen."/>
                                                 <Button Grid.Column="1" Command="{Binding BrowseRootCommand}"
                                                         Margin="4,0,0,0" Padding="10,0"
-                                                        ToolTip="Ziel-Wurzel wählen">
+                                                        ToolTip="Ziel-Wurzel wählen"
+                                                        AutomationProperties.Name="Ziel-Wurzel wählen">
                                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                                 </Button>
                                             </Grid>
