@@ -103,6 +103,70 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
     }
 
     [JunctionFact]
+    public async Task MirrorSourceAsync_Junction_auf_ausgeschlossenem_Ordner_meldet_nichts()
+    {
+        // Realer Fall (2026-09-04): Ein Node-Hilfsskript legte im Programmordner die
+        // Junction "node_modules" in den Codex-Zwischenspeicher. Der Name steht in
+        // BackupExclusionRules ohnehin auf der Ausschlussliste — es fehlt also nichts.
+        // Trotzdem meldete jeder Sicherungslauf eine Warnung, weil die Junction-Pruefung
+        // vor der Ausschlusspruefung lief.
+        var source = Path.Combine(_root, "quelle");
+        var backupRoot = Path.Combine(_root, "backup");
+        var foreign = Path.Combine(_root, "fremd");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(foreign);
+        File.WriteAllText(Path.Combine(source, "eigen.txt"), "eigen");
+        File.WriteAllText(Path.Combine(foreign, "paket.txt"), "fremd");
+
+        var junction = Path.Combine(source, "node_modules");
+        CreateDirectoryLinkOrSkip(junction, foreign);
+
+        var mirror = new DirectoryMirror(null);
+        var stats = new DirectoryMirror.MirrorStats();
+
+        await mirror.MirrorSourceAsync(
+            new BackupSource(source, "Programm", BackupExclusionRules.IsProgramDirExcluded),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            stats);
+
+        // Der fremde Inhalt bleibt draussen — wie bisher.
+        Assert.True(File.Exists(Path.Combine(backupRoot, "Programm", "eigen.txt")));
+        Assert.False(Directory.Exists(Path.Combine(backupRoot, "Programm", "node_modules")));
+        // Aber der Lauf bleibt still: ein ausgeschlossener Ordner ist kein Befund.
+        Assert.Empty(stats.Errors);
+        Assert.Empty(stats.Warnings);
+    }
+
+    [JunctionFact]
+    public async Task MirrorSourceAsync_Junction_ausserhalb_der_Ausschlussliste_wird_weiter_gemeldet()
+    {
+        // Gegenprobe: Die Ausschlussliste darf den Verknuepfungsschutz nicht global
+        // stummschalten. Ein nicht ausgeschlossener Name meldet weiterhin.
+        var source = Path.Combine(_root, "quelle");
+        var backupRoot = Path.Combine(_root, "backup");
+        var foreign = Path.Combine(_root, "fremd");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(foreign);
+        File.WriteAllText(Path.Combine(foreign, "geheim.txt"), "geheim");
+
+        var junction = Path.Combine(source, "kundendaten");
+        CreateDirectoryLinkOrSkip(junction, foreign);
+
+        var mirror = new DirectoryMirror(null);
+        var stats = new DirectoryMirror.MirrorStats();
+
+        await mirror.MirrorSourceAsync(
+            new BackupSource(source, "Programm", BackupExclusionRules.IsProgramDirExcluded),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            stats);
+
+        Assert.False(File.Exists(Path.Combine(backupRoot, "Programm", "kundendaten", "geheim.txt")));
+        Assert.Contains(stats.Warnings, w => w.Contains("kundendaten", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [JunctionFact]
     public async Task MirrorFileAsync_Junction_im_Ziel_schreibt_keine_fremde_Datei()
     {
         var source = Path.Combine(_root, "quelle.txt");

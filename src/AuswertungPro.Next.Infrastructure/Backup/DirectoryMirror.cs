@@ -686,6 +686,18 @@ public sealed class DirectoryMirror
 
             for (var i = children.Length - 1; i >= 0; i--)
             {
+                // Ausschluss ZUERST: Ein ohnehin ausgeschlossener Ordner (bin, obj,
+                // node_modules, artifacts, .venv) ist kein Befund — auch dann nicht,
+                // wenn er als Verknuepfung angelegt wurde. Stand die Junction-Pruefung
+                // davor, meldete jeder Lauf eine Warnung ueber Inhalt, der gar nicht
+                // gesichert werden soll (real 2026-09-04: node_modules als Junction in
+                // den Codex-Zwischenspeicher). Am Ergebnis aendert die Reihenfolge
+                // nichts: Ausgeschlossene Ordner werden so oder so nicht betreten und
+                // landen so oder so nicht in expectedTargets.
+                var relDir = Path.GetRelativePath(root, children[i]);
+                if (isDirExcluded is not null && isDirExcluded(relDir))
+                    continue;
+
                 // Junction/Symlink nicht betreten: dahinter liegt fremder Inhalt,
                 // der weder gespiegelt noch als verwaist geloescht werden darf.
                 if (ReparsePointGuard.IsReparsePoint(children[i]))
@@ -694,9 +706,7 @@ public sealed class DirectoryMirror
                     continue;
                 }
 
-                var relDir = Path.GetRelativePath(root, children[i]);
-                if (isDirExcluded is null || !isDirExcluded(relDir))
-                    stack.Push(children[i]);
+                stack.Push(children[i]);
             }
         }
     }
