@@ -480,6 +480,16 @@ public static partial class HoldingFolderDistributor
                         if (result.Success && result.HoldingFolder is not null && chunk.Parsed.Haltung is not null)
                             distributedHoldings[NormalizeHaltungId(chunk.Parsed.Haltung)] = result.HoldingFolder;
                     }
+                    catch (Exception ex)
+                    {
+                        // Ein Stolperstein bei EINER Haltung darf die uebrigen nicht mitreissen.
+                        // In Goeschenen (2026-09-04) brach so die ganze Sammeldatei ab, und alle
+                        // 239 Haltungsprotokolle fehlten anschliessend im Projekt.
+                        var haltung = string.IsNullOrWhiteSpace(chunk.Parsed.Haltung)
+                            ? $"Seiten {pageRange}"
+                            : chunk.Parsed.Haltung!;
+                        results.Add(new DistributionResult(false, $"{haltung}: {ex.Message}", pdfPath, null, null, null, null, null, VideoMatchStatus.NotChecked));
+                    }
                     finally
                     {
                         AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (File.Exists(tempPdfPath)) File.Delete(tempPdfPath); }, "PDF-Verteilung: Temp loeschen");

@@ -1043,6 +1043,26 @@ Protokollrevisionen.
 Der manuelle PDF-Stapellauf bleibt bewusst getrennt vom fehlertoleranten PDF-Scan des
 `ImportPostProcessingController`, weil beide verschiedene Fehlerregeln haben.
 
+Ein WinCan-GEP liefert ALLE Haltungsprotokolle in EINER Sammeldatei (`Misc\Docu\<Projekt>.pdf`,
+List & Label); Einzeldateien je Haltung gibt es nicht. `HoldingFolderDistributor` teilt sie
+anhand der Titelzeile `Haltungsinspektion - <Datum> - <Haltung>` auf. Drei Regeln dieses Wegs
+nie zurueckdrehen (Goeschenen 2026-09-04: 239 Haltungsordner, 0 Protokolle, Bericht meldete
+trotzdem „0 Fehler"):
+
+- **Das Seitenbudget traegt ein ganzes Gemeinde-GEP.** `PdfImportSafetyPolicy.DefaultMaxPages`
+  ist 5000. Goeschenen brauchte fuer 239 aufgenommene Haltungen 1003 Seiten (rund vier je
+  Haltung) und fiel mit dem alten Budget 1000 um drei Seiten durch. Der vorsorgliche Schutz
+  gegen pathologische Dateien (Audit K10/S3) bleibt; `SEWERSTUDIO_MAX_PDF_PAGES` hebt ihn
+  weiter an.
+- **Ein Stolperstein bei einer Haltung reisst die uebrigen nicht mit.** Der `try/catch` in
+  `HoldingFolderDistributor.DistributeFiles` sitzt INNERHALB der Chunk-Schleife. Umschloss er
+  wie frueher alle Chunks, machte ein einziger Fehlschlag aus 239 Erfolgen ein einziges
+  Fehlerergebnis.
+- **Ein nicht verteiltes Protokoll steht im Bericht.** `KanalImportDistributionService` zaehlt
+  jedes Fehlerergebnis als Fehler und schreibt die ersten zehn Gruende namentlich
+  (`Haltungsprotokolle nicht verteilt: <n>`); frueher uebersprang ein blosses `continue` sie
+  still. Genau dieses Muster hatte schon in Hellgasse 38 Protokolle verschluckt.
+
 Geldrelevante Kosten-, Mengen- und Laengentexte in Kostenrechner, Matrix und Export
 laufen zentral ueber `FachzahlParser` und nie ueber `CurrentCulture`: Punkt oder Komma
 als Dezimaltrenner sowie korrekt gruppierte Schweizer Apostroph-/Leerzeichenwerte

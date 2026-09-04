@@ -96,10 +96,18 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
                     primaryProtocolPdf,
                     fileStaging);
 
+                // Ein Protokoll, das nicht in seinen Haltungsordner kam, MUSS im Bericht stehen.
+                // Bis 2026-09-04 wurde jedes Fehlerergebnis hier still uebersprungen: In Goeschenen
+                // meldete der Lauf "0 Original-Protokolle, 0 Fehler", obwohl alle 239 fehlten.
+                var nichtVerteilt = new List<string>();
+
                 foreach (var r in results)
                 {
                     if (!r.Success)
+                    {
+                        nichtVerteilt.Add(r.Message);
                         continue;
+                    }
                     if (!string.IsNullOrWhiteSpace(r.DestVideoPath))
                         videos++;
                     if (string.IsNullOrWhiteSpace(r.DestPdfPath) || string.IsNullOrWhiteSpace(r.HoldingFolder))
@@ -118,6 +126,19 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
                     // PDF_Path = verteiltes ORIGINAL-Protokoll (Menü „Haltungsprotokoll Original öffnen").
                     record.SetFieldValue(FieldKeys.PdfPath, r.DestPdfPath!, FieldSource.Legacy, userEdited: false);
                     origs++;
+                }
+
+                if (nichtVerteilt.Count > 0)
+                {
+                    // Die ersten Gruende ausschreiben, den Rest zaehlen — ein Sammelprotokoll kann
+                    // hunderte Haltungen enthalten, und der Bericht soll lesbar bleiben.
+                    const int SichtbareGruende = 10;
+                    errors += nichtVerteilt.Count;
+                    messages.Add($"Haltungsprotokolle nicht verteilt: {nichtVerteilt.Count}");
+                    foreach (var grund in nichtVerteilt.Take(SichtbareGruende))
+                        messages.Add($"  nicht verteilt: {grund}");
+                    if (nichtVerteilt.Count > SichtbareGruende)
+                        messages.Add($"  ... und {nichtVerteilt.Count - SichtbareGruende} weitere");
                 }
             }
             catch (Exception ex)

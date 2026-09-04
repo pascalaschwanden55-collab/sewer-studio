@@ -14,7 +14,14 @@ public static class PdfImportSafetyPolicy
     // vorsorgliche Obergrenze gegen pathologische Dateien (Stabilitaets-Audit K10/S3) und
     // ist per SEWERSTUDIO_MAX_PDF_MB zusaetzlich anpassbar.
     public const long DefaultMaxPdfBytes = 2048L * 1024 * 1024;
-    public const int DefaultMaxPages = 1_000;
+
+    // Ein WinCan-GEP liefert ALLE Haltungsprotokolle in einer Sammeldatei. Goeschenen 2026
+    // brauchte fuer 239 aufgenommene Haltungen 1003 Seiten (rund vier je Haltung) und fiel
+    // damit knapp durch das alte Budget von 1000 — der Verteiler verlor daraufhin still
+    // alle 239 Protokolle. 5000 traegt ein ganzes Gemeinde-GEP (rund 1200 Haltungen);
+    // der vorsorgliche Schutz gegen pathologische Dateien (Audit K10/S3) bleibt bestehen
+    // und ist per SEWERSTUDIO_MAX_PDF_PAGES weiter anpassbar.
+    public const int DefaultMaxPages = 5_000;
 
     /// <summary>
     /// Umgebungsvariable (Megabyte), um das PDF-Groessen-Budget auf leistungsfaehiger
