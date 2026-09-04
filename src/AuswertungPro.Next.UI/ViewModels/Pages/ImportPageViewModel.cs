@@ -117,7 +117,8 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
         _reportNavigationController = new Services.ImportReportNavigationController(
             dialogs,
             () => _settings.LastProjectPath,
-            path => Services.SafeShellOpen.TryOpen(path, out _));
+            path => Services.SafeShellOpen.TryOpen(path, out _),
+            toasts: sp.Toasts);
         _summaryExportController = new Services.ImportSummaryExportController(
             dialogs,
             sp.ImportSummaryExporter,

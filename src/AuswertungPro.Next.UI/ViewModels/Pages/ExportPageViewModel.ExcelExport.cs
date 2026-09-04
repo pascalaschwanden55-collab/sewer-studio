@@ -48,7 +48,10 @@ public sealed partial class ExportPageViewModel
             LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
             _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
             if (res.Ok)
-                _toasts.Success($"Haltungen exportiert: {Path.GetFileName(outPath)}");
+                _toasts.Success(
+                    $"Haltungen exportiert: {Path.GetFileName(outPath)}",
+                    "Ordner öffnen",
+                    () => _explorerReveal.TryReveal(outPath, out _));
             else
                 _toasts.Error(res.ErrorMessage ?? "Haltungs-Export fehlgeschlagen.");
         }
@@ -122,7 +125,10 @@ public sealed partial class ExportPageViewModel
             LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
             _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
             if (res.Ok)
-                _toasts.Success($"Schächte exportiert: {Path.GetFileName(outPath)}");
+                _toasts.Success(
+                    $"Schächte exportiert: {Path.GetFileName(outPath)}",
+                    "Ordner öffnen",
+                    () => _explorerReveal.TryReveal(outPath, out _));
             else
                 _toasts.Error(res.ErrorMessage ?? "Schacht-Export fehlgeschlagen.");
         }

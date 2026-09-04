@@ -55,6 +55,11 @@ public sealed class ExportPageXtfAuswahlTests
 
         welt.Vm.OeffneXtfOrdnerCommand.Execute(null);
         Assert.Equal(erwartet, welt.Explorer.Geoeffnet);
+
+        Assert.Equal("Ordner öffnen", welt.Toasts.LetzterAktionText);
+        welt.Explorer.Zuruecksetzen();
+        welt.Toasts.LetzteAktion!();
+        Assert.Equal(erwartet, welt.Explorer.Geoeffnet);
     }
 
     [Fact]
@@ -82,6 +87,7 @@ public sealed class ExportPageXtfAuswahlTests
 
         public ExportPageViewModel Vm { get; }
         public ExplorerFake Explorer { get; } = new();
+        public ToastFake Toasts { get; } = new();
         public string Ausgabe { get; }
         private readonly string _temp = Path.Combine(Path.GetTempPath(), "ExportPageXtfAuswahl_" + Guid.NewGuid().ToString("N"));
 
@@ -107,7 +113,7 @@ public sealed class ExportPageXtfAuswahlTests
                 settings,
                 dialogs,
                 services.ExcelExport,
-                new ToastFake(),
+                Toasts,
                 services.CostFieldSync,
                 services.CostStores.CreateProjectCostStore(),
                 services.StoredImportFiles,
@@ -157,6 +163,8 @@ public sealed class ExportPageXtfAuswahlTests
             error = null;
             return true;
         }
+
+        public void Zuruecksetzen() => Geoeffnet = null;
     }
 
     private sealed class DialogFake : IDialogService
@@ -175,7 +183,15 @@ public sealed class ExportPageXtfAuswahlTests
 
     private sealed class ToastFake : IToastService
     {
+        public string? LetzterAktionText { get; private set; }
+        public Action? LetzteAktion { get; private set; }
+
         public void Success(string message) { }
+        public void Success(string message, string aktionText, Action aktion)
+        {
+            LetzterAktionText = aktionText;
+            LetzteAktion = aktion;
+        }
         public void Info(string message) { }
         public void Warning(string message) { }
         public void Error(string message) => Assert.Fail(message);

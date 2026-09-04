@@ -8,16 +8,19 @@ internal sealed class ImportReportNavigationController
     private readonly IDialogService _dialogs;
     private readonly Func<string?> _getProjectPath;
     private readonly Func<string, bool> _tryOpen;
+    private readonly IToastService? _toasts;
     private string? _lastReportPath;
 
     public ImportReportNavigationController(
         IDialogService dialogs,
         Func<string?> getProjectPath,
-        Func<string, bool> tryOpen)
+        Func<string, bool> tryOpen,
+        IToastService? toasts = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _getProjectPath = getProjectPath ?? throw new ArgumentNullException(nameof(getProjectPath));
         _tryOpen = tryOpen ?? throw new ArgumentNullException(nameof(tryOpen));
+        _toasts = toasts;
     }
 
     public string? GetReportDirectory()
@@ -32,7 +35,16 @@ internal sealed class ImportReportNavigationController
     }
 
     public void SetLastReportPath(string? path)
-        => _lastReportPath = path;
+    {
+        _lastReportPath = path;
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        _toasts?.Success(
+            "Import abgeschlossen — Bericht liegt bereit.",
+            "Bericht öffnen",
+            OpenLastReport);
+    }
 
     public void OpenLastReport()
     {

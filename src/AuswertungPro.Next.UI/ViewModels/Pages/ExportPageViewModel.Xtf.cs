@@ -89,7 +89,7 @@ public sealed partial class ExportPageViewModel
             return;
 
         LetzterXtfOrdner = ergebnis.Ordner;
-        _toasts.Success(ergebnis.Meldung);
+        _toasts.Success(ergebnis.Meldung, "Ordner öffnen", OeffneXtfOrdner);
     }
 
     /// <summary>
