@@ -228,6 +228,16 @@ Waechter `DesignAuditFensterUndRundungenTests` (3 Tests, zuerst rot). UI-Testpro
   Sichtpruefung waere das ein Blindflug. Neue Bausteine sollen die Radius-, Schrift- und
   Farb-Tokens verwenden; Abstaende bleiben Handarbeit je Fenster.
 
+### Stand 2026-09-04: M2, M3, M4 UMGESETZT
+
+- M2: Toast mit Link („Ordner oeffnen" nach Excel/XTF, „Bericht oeffnen" nach Import);
+  Hover-Lift auf Fotokarten, gestaffeltes Einblenden im Dossier-Cockpit.
+- M3: 24 Icon-Knoepfe mit vorlesbarem Namen (3 davon erhielten erst einen Tooltip);
+  9 Player-Tooltips nennen ihre Taste.
+- M4: Suchfeld in den Einstellungen (6 Reiter, alle 16 Inhaltsgruppen, umlaut-tolerant).
+  Die fruehere Zahl 17 enthielt die `GroupBox`-Style-Definition.
+- Offen bleibt L1 (Abstands-Raster) — bewusst, siehe Abschnitt 5.
+
 ## 6. Waechter, die dieses Audit dauerhaft machen
 
 Neu in `tests/AuswertungPro.Next.UI.Tests/DesignAudit*`:

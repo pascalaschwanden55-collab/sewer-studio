@@ -704,6 +704,19 @@ gebunden; nur MainWindow und Splash sind frei. Jedes veraenderbare Fenster (ohne
 bewusst NICHT auf ein Raster gezwungen worden (216 Werte, jedes Layout gleichzeitig) —
 Abstaende bleiben Handarbeit je Fenster.
 
+**Feedback, Bedienbarkeit, Suche (M2-M4, 2026-09-04):** `IToastService.Success(message,
+aktionText, aktion)` zeigt einen Link im Toast (Standardmethode; Fakes brauchen sie nicht).
+Excel- und XTF-Export toasten mit „Ordner oeffnen", der Importbericht mit „Bericht oeffnen"
+(`ImportReportNavigationController`). Fotokarten tragen `ui:HoverFx.Lift`, das Dossier-Cockpit
+`ui:EntranceFx.Stagger`. Jeder Icon-Knopf hat `AutomationProperties.Name` UND `ToolTip`
+(Waechter in `DesignAuditAccessibilityTests`); Player-Knoepfe nennen ihre Taste im Tooltip
+(`DesignAuditPlayerShortcutTests`, Quelle `PlayerKeyboardShortcutPolicy`). Die Einstellungen
+haben ein Suchfeld: `SettingsSearchMatcher` (reiner Abgleich, Umlaut-tolerant, UND) und
+`SettingsSearchController` (blendet `GroupBox`-Gruppen aus, springt zum ersten Reiter mit
+Treffer). Neue Gruppen brauchen nichts weiter — der Controller liest Ueberschrift, Texte,
+Haekchen und Tooltips selbst. Der aktuelle Seiteninhalt umfasst 16 Gruppen; die fruehere Zahl
+17 zaehlte die `GroupBox`-Style-Definition mit.
+
 Nachgelagerte Grossumbauten vom 2026-08-14:
 
 - **Import-Staging vervollstaendigt.** `ImportFileTransaction` ist der gemeinsame
