@@ -1767,6 +1767,32 @@ Drei Regeln nie zurueckdrehen:
 C#-Weg gegen die Repo-Fixture `tests/Fixtures/PipeEndSuggestions/` laufen; die
 Soll-Werte stammen aus dem Abnahmeweg (Modell direkt) auf demselben Video.
 
+### KI-Vorschlaege im Codiermodus (seit 2026-09-05)
+
+Beim Eintritt in den Codiermodus laeuft `CodingSuggestionScanUseCase`
+(`Application/UseCases/CodingSuggestions`) im Hintergrund: zuerst der Bogen-Durchlauf
+mit dem festen Pin `CodingBendCandidatePin` (`bcc_nc15_seed46_20260808`), dann
+Rohranfang/Rohrende ueber die gepinnten Lernstufen. Ergebnis ist ein
+`CodingSuggestionSet` mit Meterspur (`BendSuggestionScanResult.MeterTrack`). Die Karte
+"KI-Vorschlaege" im Seitenpanel und die Marker unter dem Regler zeigen es; Bestaetigen
+folgt `CodingSuggestionConfirmPolicy`: Bogen oeffnet das Codierfenster mit `BCC`,
+Rohranfang legt BCD bei 0 m an, Rohrende legt BCE mit dem Spurmeter an und schlaegt bei
+leerer `Haltungslaenge_m` diesen Wert vor (`FieldSource.Protocol`). Schalter:
+`AppSettings.CodingSuggestionsEnabled` (Standard ein). Die Verdrahtung im Player liegt
+in `PlayerWindow.Coding.Suggestions.cs`; der Abbruch beim Verlassen haengt am
+Teardown neben der Import-Referenz.
+
+Vier Regeln nie zurueckdrehen:
+
+- **Bogen vor Anfang/Ende, nie parallel** — alle drei Gewichte teilen `YOLO_TEST`.
+- **Jeder Teil faellt fuer sich aus**; ein technischer Fehler ist `Fehler` mit Text,
+  nie eine leere Liste. `OperationCanceledException` geht immer durch.
+- **Ein geschaetzter Meter wird nie Vorgabe oder Laenge**; ein fehlender Meter wird nie
+  als `0,0` gezeigt.
+- **Mindestens ein gezeigter Vorschlag markiert die Haltung im Sitzungsgedaechtnis**
+  (`ICodingSuggestionExposure`), damit Goldsamples dieser Haltung `SuggestionShown`
+  tragen und den unbeeinflussten Messbestand nicht verfaelschen.
+
 Der gleich parametrische Vergleich vom 2026-07-28 (`conf=0,25`, `imgsz=1280`)
 zeigt fuer `bcc_bogen_b50b37ab8a4f` auf den drei wirklich unbekannten,
 geschuetzten BCC-Bildern 3/3 Treffer und eine mittlere Box-IoU von 0,8607.
