@@ -84,6 +84,14 @@ public sealed record BendSuggestionScanActions(
     public Action<IReadOnlyList<BendFrameDetection>>? ReportDetections { get; init; }
 }
 
+/// <summary>
+/// Ein Punkt der Meterspur des ganzen Videos: pro ausgewertetem Bild der
+/// plausibilisierte und lueckengefuellte Meterstand. <see cref="IsEstimated"/>
+/// heisst "aus Nachbarn gefuellt" — brauchbar zum Einordnen, nie als gemessener
+/// Wert (Laengenvorschlag) zu verwenden.
+/// </summary>
+public sealed record MeterTrackPoint(double TimeSeconds, double Meter, bool IsEstimated);
+
 /// <summary>Ergebnis eines Vorabdurchlaufs.</summary>
 public sealed record BendSuggestionScanResult(
     bool IsUsable,
@@ -96,7 +104,12 @@ public sealed record BendSuggestionScanResult(
     string WeightSha256,
     double MinConfidence,
     double StrongConfidence,
-    string WorkpointSource = "");
+    string WorkpointSource = "",
+    IReadOnlyList<MeterTrackPoint>? MeterTrack = null)
+{
+    /// <summary>Meterspur des Videos; leer, wenn der Durchlauf nicht lief.</summary>
+    public IReadOnlyList<MeterTrackPoint> MeterTrack { get; init; } = MeterTrack ?? Array.Empty<MeterTrackPoint>();
+}
 
 /// <summary>
 /// Vorabdurchlauf eines Videos: Bilder holen, je Bild das gepinnte Modell fragen,
@@ -177,6 +190,14 @@ public static class BendSuggestionScanUseCase
         var gefuellt = MeterSequenceGapFiller.Fill(geprueft, new MeterGapFillOptions())
             .ToDictionary(reading => reading.TimeSeconds);
 
+        // Die ganze Spur geht hinaus: Der Codiermodus braucht am Rohrende den
+        // Meterstand auch dort, wo kein Bogen ist.
+        var meterTrack = gefuellt.Values
+            .Where(reading => reading.Meter.HasValue)
+            .OrderBy(reading => reading.TimeSeconds)
+            .Select(reading => new MeterTrackPoint(reading.TimeSeconds, reading.Meter!.Value, reading.IsEstimated))
+            .ToList();
+
         var detections = treffer
             .Select(trefferBild =>
             {
@@ -200,6 +221,7 @@ public static class BendSuggestionScanUseCase
             request.WeightSha256,
             options.MinConfidence,
             options.StrongConfidence,
-            calibration?.Source ?? "");
+            calibration?.Source ?? "",
+            meterTrack);
     }
 }

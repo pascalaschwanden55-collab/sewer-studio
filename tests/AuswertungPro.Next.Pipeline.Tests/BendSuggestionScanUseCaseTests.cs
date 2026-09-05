@@ -241,6 +241,45 @@ public sealed class BendSuggestionScanUseCaseTests
         Assert.True(einziger.MeterIsEstimated);
     }
 
+    [Fact]
+    public async Task Die_Meterspur_traegt_jede_gelesene_oder_gefuellte_Sekunde()
+    {
+        // Der Codiermodus braucht am Rohrende den Meterstand — auch dort, wo kein
+        // Bogen ist. Deshalb geht die ganze plausibilisierte, lueckengefuellte
+        // Folge hinaus, nicht nur die Treffer.
+        var ergebnis = await BendSuggestionScanUseCase.ExecuteAsync(
+            Auftrag(),
+            Kalibrierung(),
+            Aktionen(
+                extract: _ => Task.FromResult(Bilder(5)),
+                detect: (bild, _) => Task.FromResult(bild.Index == 3
+                    ? BendFrameResult.NoBend with { Meter = null }
+                    : BendFrameResult.NoBend with { Meter = 0.5 * bild.Index })),
+            CancellationToken.None);
+
+        Assert.True(ergebnis.IsUsable);
+        Assert.Equal(5, ergebnis.MeterTrack.Count);
+        var dritte = ergebnis.MeterTrack.Single(p => p.TimeSeconds == 12.0);
+        Assert.True(dritte.IsEstimated);
+        Assert.Equal(1.5, dritte.Meter, 3);
+        Assert.All(ergebnis.MeterTrack.Where(p => p.TimeSeconds != 12.0), p => Assert.False(p.IsEstimated));
+    }
+
+    [Fact]
+    public async Task Ohne_Arbeitspunkt_ist_die_Meterspur_leer_und_nie_null()
+    {
+        var ergebnis = await BendSuggestionScanUseCase.ExecuteAsync(
+            Auftrag(),
+            calibration: null,
+            Aktionen(
+                extract: _ => Task.FromResult(Bilder(2)),
+                detect: (_, _) => Task.FromResult(BendFrameResult.NoBend)),
+            CancellationToken.None);
+
+        Assert.False(ergebnis.IsUsable);
+        Assert.Empty(ergebnis.MeterTrack);
+    }
+
     private static BendSuggestionScanRequest Auftrag() => new()
     {
         VideoPath = @"D:\Videos\H_1-2.mpg",
