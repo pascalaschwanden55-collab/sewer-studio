@@ -16,7 +16,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// HTTP client for the Python FastAPI Vision Sidecar.
 /// Pattern mirrors OllamaClient – simple, typed HTTP calls.
 /// </summary>
-public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
+public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClient, IDisposable
 {
     public const string ExpectedSidecarVersion = "1.2.0";
     private readonly HttpClient _http;
@@ -205,6 +205,50 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
         => GetAsync<BccTestCandidatesResponse>(
             "/detect/yolo/bcc-test/candidates",
             ct);
+
+    /// <summary>
+    /// Freigegebene Bild-Einordner (Rohranfang/Rohrende) samt gemessener Guete.
+    /// </summary>
+    public Task<LernstufenResponse> GetLernstufenAsync(CancellationToken ct = default)
+        => GetAsync<LernstufenResponse>("/classify/lernstufen", ct);
+
+    /// <summary>
+    /// Ordnet EIN Bild mit einer exakt per Klasse und Gewicht-SHA-256 angehefteten
+    /// Lernstufe ein. Ein Modellpfad ist nicht Teil dieses Vertrags; Klasse und
+    /// Hash werden vor dem Senden gegen das Sidecar-Muster geprueft.
+    /// </summary>
+    public async Task<LernstufeResponse> ClassifyLernstufeAsync(
+        LernstufeRequest request,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!IsLernstufeKlasse(request.Klasse) || !IsSha256(request.GewichtSha256))
+        {
+            throw new ArgumentException(
+                "Fuer eine Lernstufe sind ein Klassenname (a-z, _) und ein SHA-256 des Gewichts erforderlich.",
+                nameof(request));
+        }
+
+        return await PostInferenceAsync<LernstufeRequest, LernstufeResponse>(
+                "/classify/lernstufe",
+                "Lernstufe",
+                request,
+                ct)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>Sidecar-Muster ^[a-z][a-z_]{0,31}$ (LernstufeRequest.klasse).</summary>
+    private static bool IsLernstufeKlasse(string? value)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length > 32 || !char.IsAsciiLetterLower(value[0]))
+            return false;
+        foreach (var character in value)
+        {
+            if (!char.IsAsciiLetterLower(character) && character != '_')
+                return false;
+        }
+        return true;
+    }
 
     /// <summary>
     /// Grounding DINO open-vocabulary detection.

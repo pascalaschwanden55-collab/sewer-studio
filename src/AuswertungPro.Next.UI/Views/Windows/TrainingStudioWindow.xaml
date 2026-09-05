@@ -462,7 +462,7 @@
                   Background="{DynamicResource CardBrush}"
                   Foreground="{DynamicResource TextPrimaryBrush}">
             <Expander.Header>
-                <TextBlock FontWeight="Bold" Text="Bogen-Vorschläge (Video-Durchlauf)"/>
+                <TextBlock FontWeight="Bold" Text="Vorschläge aus dem Video-Durchlauf (Rohranfang, Rohrende, Bögen)"/>
             </Expander.Header>
             <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     CornerRadius="{DynamicResource RadiusM}" Padding="10" MaxHeight="560">
@@ -487,7 +487,7 @@
                     <!-- Grenzen, die sichtbar ins Fenster gehören (Auftrag) — konstant, kein Tooltip -->
                     <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" FontSize="{DynamicResource TextXS}"
                                Foreground="{DynamicResource WarningBrush}"
-                               Text="Nur Bögen — eine leere Liste ist ein gültiges Ergebnis. Jeder zweite schwache Vorschlag ist falsch. Auf HD-Material gibt es keine Meterangabe (Sekunden statt Meter)."/>
+                               Text="Rohranfang und Rohrende: genau ein Vorschlag je Video, Abnahme 85 bzw. 89 % (Sekunde statt Meter). Bögen: eine leere Liste ist ein gültiges Ergebnis, jeder zweite schwache Vorschlag ist falsch. Auf HD-Material gibt es keine Meterangabe."/>
                     <TextBlock Text="{Binding HeaderText}" Margin="0,8,0,0" TextWrapping="Wrap"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextSecondaryBrush}"/>
@@ -508,6 +508,7 @@
                                   HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                                   Background="Transparent" MaxHeight="320" Margin="0,0,8,0">
                             <DataGrid.Columns>
+                                <DataGridTextColumn Header="Art" Binding="{Binding ArtText}" Width="130"/>
                                 <DataGridTextColumn Header="Ort" Binding="{Binding OrtText}" Width="*"/>
                                 <DataGridTextColumn Header="Stufe" Binding="{Binding StufeText}" Width="70">
                                     <DataGridTextColumn.ElementStyle>

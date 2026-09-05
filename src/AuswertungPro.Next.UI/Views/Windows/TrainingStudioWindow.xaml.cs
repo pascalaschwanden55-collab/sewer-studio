@@ -102,7 +102,7 @@ public partial class TrainingStudioWindow : Window
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Video einer Haltung für die Bogen-Vorschläge wählen",
+            Title = "Video einer Haltung für den Vorabdurchlauf wählen (Rohranfang, Rohrende, Bögen)",
             Filter = "Videos (*.mpg;*.mpeg;*.mp4;*.avi;*.mov;*.mkv)|*.mpg;*.mpeg;*.mp4;*.avi;*.mov;*.mkv|Alle Dateien (*.*)|*.*",
             CheckFileExists = true,
             Multiselect = false,

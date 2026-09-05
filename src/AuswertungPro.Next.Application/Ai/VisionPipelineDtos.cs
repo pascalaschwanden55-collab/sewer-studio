@@ -353,3 +353,44 @@ public sealed record PipelineHealthCheckResult(
     int? StatusCode,
     SidecarHealthResponse? Health,
     string? Error);
+
+// ── Lernstufen (Rohranfang/Rohrende): /classify/lernstufen und /classify/lernstufe ──
+
+/// <summary>
+/// Eine freigegebene Lernstufe, wie der Sidecar sie fuehrt. Der Client waehlt
+/// daraus eine Klasse und schickt ihren Gewicht-Hash zurueck; einen Modellpfad
+/// kann er nicht vorgeben.
+/// </summary>
+public sealed record LernstufeInfo(
+    [property: JsonPropertyName("klasse")] string Klasse,
+    [property: JsonPropertyName("gewicht_sha256")] string GewichtSha256,
+    [property: JsonPropertyName("freigabe_sha256")] string FreigabeSha256,
+    [property: JsonPropertyName("precision")] double Precision,
+    [property: JsonPropertyName("recall")] double Recall,
+    [property: JsonPropertyName("regel")] string Regel
+);
+
+public sealed record LernstufenResponse(
+    [property: JsonPropertyName("lernstufen")] IReadOnlyList<LernstufeInfo> Lernstufen
+);
+
+/// <summary>Klasse und erwarteter Gewicht-Hash fuer EIN Bild. Kein Modellpfad.</summary>
+/// <param name="Imgsz">Bildgroesse der Abnahme (cls_runs/*_640); der Sidecar-Standard ist derselbe Wert.</param>
+public sealed record LernstufeRequest(
+    [property: JsonPropertyName("image_base64")] string ImageBase64,
+    [property: JsonPropertyName("klasse")] string Klasse,
+    [property: JsonPropertyName("gewicht_sha256")] string GewichtSha256,
+    [property: JsonPropertyName("imgsz")] int Imgsz = 640
+);
+
+/// <summary>Nur eine Konfidenz fuer das GANZE Bild — diese Modelle liefern keine Box.</summary>
+public sealed record LernstufeResponse(
+    [property: JsonPropertyName("klasse")] string Klasse,
+    [property: JsonPropertyName("konfidenz")] double Konfidenz,
+    [property: JsonPropertyName("gewicht_sha256")] string GewichtSha256,
+    [property: JsonPropertyName("freigabe_sha256")] string FreigabeSha256,
+    [property: JsonPropertyName("precision")] double Precision,
+    [property: JsonPropertyName("recall")] double Recall,
+    [property: JsonPropertyName("device")] string? Device,
+    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs
+);

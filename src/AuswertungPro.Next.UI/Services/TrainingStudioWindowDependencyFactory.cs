@@ -14,10 +14,12 @@ using AuswertungPro.Next.Application.Ai.Workbench;       // IAnnotationWorkbench
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Media;              // IVideoFrameExtractor, IVideoClipExtractor
 using AuswertungPro.Next.Application.UseCases.BendSuggestions;
+using AuswertungPro.Next.Application.UseCases.PipeEndSuggestions;
 using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
 using AuswertungPro.Next.Application.UseCases.GoldQualityReview;
 using AuswertungPro.Next.Infrastructure.Ai;              // OllamaClient, BcaFineCodeClassifier
 using AuswertungPro.Next.Infrastructure.Ai.BendSuggestions;
+using AuswertungPro.Next.Infrastructure.Ai.PipeEndSuggestions;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;       // ToOllamaConfig
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;     // VisionPipelineClient, SidecarTelemetryWriter
@@ -165,6 +167,16 @@ internal static class TrainingStudioWindowDependencyFactory
             ?? new VideoFrameExtractionService(ProcessOutputReader.Current);
         IVideoClipExtractor clips = services?.VideoClipExtraction
             ?? new VideoClipExtractionService(ProcessOutputReader.Current);
+        // Rohranfang/Rohrende: nur mit einem Client, der die Lernstufen-Endpunkte kennt.
+        // Ein fremder Vision-Client (Tests, Designer) laesst den Bogen-Weg unveraendert.
+        IPipeEndSuggestionScanService? pipeEndScan = services?.PipeEndSuggestionScan
+            ?? (pipeline is ILernstufeClient lernstufen
+                ? new PipeEndSuggestionScanService(
+                    new VideoFrameSequenceExtractor(),
+                    lernstufen.ClassifyLernstufeAsync,
+                    resolveFfmpeg,
+                    () => Path.Combine(Path.GetTempPath(), "auswertungpro-anfang-ende-scan"))
+                : null);
 
         return new BendSuggestionListViewModel(
             scan,
@@ -173,7 +185,8 @@ internal static class TrainingStudioWindowDependencyFactory
             clips,
             resolveFfmpeg,
             marshalToUi,
-            log: text => services?.Logger.LogInformation("{Meldung}", text));
+            log: text => services?.Logger.LogInformation("{Meldung}", text),
+            pipeEndScan: pipeEndScan);
     }
 
     private static IGoldQualityReviewQueueUseCase CreateGoldQualityReview(

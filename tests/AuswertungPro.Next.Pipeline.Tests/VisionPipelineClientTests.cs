@@ -636,6 +636,100 @@ public class VisionPipelineClientTests
         Assert.Equal(640, result.ImageWidth);
     }
 
+    // ── Lernstufen (Rohranfang/Rohrende): Vertrag zu /classify/lernstufen und /classify/lernstufe ──
+
+    [Fact]
+    public async Task GetLernstufenAsync_liest_die_freigegebenen_Lernstufen_mit_Token()
+    {
+        var handler = new CaptureHandler("""
+        {
+            "lernstufen": [
+                {
+                    "klasse": "rohranfang",
+                    "gewicht_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "freigabe_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                    "precision": 0.8545,
+                    "recall": 0.9783,
+                    "regel": "Die staerkste gruppierte Meldung des Modells im GANZEN Video. Kein Zeitfenster."
+                }
+            ]
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "lernstufen-token");
+
+        var antwort = await client.GetLernstufenAsync();
+
+        var stufe = Assert.Single(antwort.Lernstufen);
+        Assert.Equal("rohranfang", stufe.Klasse);
+        Assert.Equal(new string('a', 64), stufe.GewichtSha256);
+        Assert.Equal(0.8545, stufe.Precision, 4);
+        Assert.Equal(0.9783, stufe.Recall, 4);
+        Assert.Contains("staerkste", stufe.Regel);
+        Assert.Equal("/classify/lernstufen", handler.LastRequestPath);
+        Assert.Equal("lernstufen-token", handler.LastSidecarToken);
+    }
+
+    [Fact]
+    public async Task ClassifyLernstufeAsync_sendet_Klasse_Hash_Bild_und_Bildgroesse_aber_keinen_Pfad()
+    {
+        var handler = new CaptureHandler("""
+        {
+            "klasse": "rohrende",
+            "konfidenz": 0.91,
+            "gewicht_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "freigabe_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "precision": 0.8889,
+            "recall": 0.8837,
+            "device": "cuda:0",
+            "inference_time_ms": 9.5
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "lernstufen-token");
+
+        var antwort = await client.ClassifyLernstufeAsync(
+            new LernstufeRequest("abc", "rohrende", new string('a', 64)));
+
+        Assert.Equal("rohrende", antwort.Klasse);
+        Assert.Equal(0.91, antwort.Konfidenz, 3);
+        Assert.Equal(new string('a', 64), antwort.GewichtSha256);
+        Assert.Equal("cuda:0", antwort.Device);
+        Assert.Equal("/classify/lernstufe", handler.LastRequestPath);
+        Assert.Equal("lernstufen-token", handler.LastSidecarToken);
+        using var request = JsonDocument.Parse(Assert.IsType<string>(handler.LastRequestBody));
+        var wurzel = request.RootElement;
+        Assert.Equal("abc", wurzel.GetProperty("image_base64").GetString());
+        Assert.Equal("rohrende", wurzel.GetProperty("klasse").GetString());
+        Assert.Equal(new string('a', 64), wurzel.GetProperty("gewicht_sha256").GetString());
+        // Die Freigabe wurde mit imgsz 640 gemessen; der Sidecar-Standard ist derselbe Wert.
+        Assert.Equal(640, wurzel.GetProperty("imgsz").GetInt32());
+        Assert.DoesNotContain("path", handler.LastRequestBody, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ClassifyLernstufeAsync_lehnt_ungueltige_Klasse_oder_Hash_vor_dem_Senden_ab()
+    {
+        var handler = new CaptureHandler("{}");
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "lernstufen-token");
+
+        // Klassenname ausserhalb des Sidecar-Musters ^[a-z][a-z_]{0,31}$ ...
+        await Assert.ThrowsAsync<ArgumentException>(() => client.ClassifyLernstufeAsync(
+            new LernstufeRequest("abc", "Rohranfang-1", new string('a', 64))));
+        // ... und ein Hash, der kein SHA-256 ist.
+        await Assert.ThrowsAsync<ArgumentException>(() => client.ClassifyLernstufeAsync(
+            new LernstufeRequest("abc", "rohranfang", "kein-hash")));
+
+        Assert.Null(handler.LastRequestPath);
+    }
+
     private sealed class CaptureHandler(string json) : HttpMessageHandler
     {
         public string? LastSidecarToken { get; private set; }

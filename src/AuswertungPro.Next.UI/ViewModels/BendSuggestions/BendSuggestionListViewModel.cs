@@ -8,8 +8,10 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Linq;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.UseCases.BendSuggestions;
+using AuswertungPro.Next.Application.UseCases.PipeEndSuggestions;
 
 namespace AuswertungPro.Next.UI.ViewModels.BendSuggestions;
 
@@ -44,6 +46,12 @@ public sealed partial class BendSuggestionListViewModel : ObservableObject, IDis
     private readonly Action<Action> _marshalToUi;
     private readonly Action<string> _log;
 
+    /// <summary>
+    /// Rohranfang/Rohrende aus den freigegebenen Lernstufen; optional, damit der
+    /// Bogen-Weg ohne Sidecar-Lernstufen unveraendert laeuft.
+    /// </summary>
+    private readonly IPipeEndSuggestionScanService? _pipeEndScan;
+
     private CancellationTokenSource? _scanCts;
     private CancellationTokenSource? _previewCts;
 
@@ -54,7 +62,8 @@ public sealed partial class BendSuggestionListViewModel : ObservableObject, IDis
         IVideoClipExtractor clipExtractor,
         Func<string> resolveFfmpegPath,
         Action<Action>? marshalToUi = null,
-        Action<string>? log = null)
+        Action<string>? log = null,
+        IPipeEndSuggestionScanService? pipeEndScan = null)
     {
         _scanService = scanService ?? throw new ArgumentNullException(nameof(scanService));
         _exposure = exposure ?? throw new ArgumentNullException(nameof(exposure));
@@ -63,6 +72,7 @@ public sealed partial class BendSuggestionListViewModel : ObservableObject, IDis
         _resolveFfmpegPath = resolveFfmpegPath ?? throw new ArgumentNullException(nameof(resolveFfmpegPath));
         _marshalToUi = marshalToUi ?? (aktion => aktion());
         _log = log ?? (_ => { });
+        _pipeEndScan = pipeEndScan;
     }
 
     [ObservableProperty] private string? _videoPath;
@@ -115,6 +125,12 @@ public sealed partial class BendSuggestionListViewModel : ObservableObject, IDis
             return;
         }
 
+        // Ein neuer Durchlauf ersetzt die alte Liste ganz — auch dann, wenn der
+        // Bogen-Teil ohne Arbeitspunkt endet und nur Rohranfang/Rohrende liefern.
+        Suggestions.Clear();
+        HeaderText = string.Empty;
+        ResultInfoText = string.Empty;
+
         var request = new BendSuggestionScanWorkflowRequest
         {
             Scan = new BendSuggestionScanRequest
@@ -129,17 +145,43 @@ public sealed partial class BendSuggestionListViewModel : ObservableObject, IDis
             Scan: (scan, abbruch, fortschritt) => _scanService.ScanAsync(scan, abbruch, fortschritt),
             IsBusy: () => IsBusy,
             SetBusy: wert => AufUi(() => IsBusy = wert),
-            ResetCancellation: () =>
-            {
-                _scanCts?.Dispose();
-                _scanCts = new CancellationTokenSource();
-                return _scanCts.Token;
-            },
+            ResetCancellation: ResetScanCancellation,
             SetStatusText: text => AufUi(() => StatusText = text),
             Log: _log,
             PublishResult: (ergebnis, zugehoerigeHaltung) => AufUi(() => PublishResult(ergebnis, zugehoerigeHaltung)));
 
         await BendSuggestionScanWorkflow.RunAsync(request, actions).ConfigureAwait(false);
+
+        if (_pipeEndScan is null)
+            return;
+
+        // Rohranfang und Rohrende laufen NACH dem Bogen, unabhaengig von dessen
+        // Ausgang: Ein fehlender Bogen-Arbeitspunkt sagt nichts ueber die Lernstufen.
+        var pipeEndRequest = new PipeEndSuggestionScanWorkflowRequest
+        {
+            Scan = new PipeEndScanRequest { VideoPath = videoPath },
+            Haltung = haltung
+        };
+        var pipeEndActions = new PipeEndSuggestionScanWorkflowActions(
+            Scan: (scan, abbruch, fortschritt) => _pipeEndScan.ScanAsync(scan, abbruch, fortschritt),
+            // Der Doppelstart ist bereits durch den Befehl (AllowConcurrentExecutions=false)
+            // und den ersten Ablauf gesperrt; der Busy-Wert des ersten Ablaufs kommt je nach
+            // Marshal erst spaeter an und darf den zweiten Teil nicht still ueberspringen.
+            IsBusy: () => false,
+            SetBusy: wert => AufUi(() => IsBusy = wert),
+            ResetCancellation: ResetScanCancellation,
+            SetStatusText: text => AufUi(() => StatusText = text),
+            Log: _log,
+            PublishResult: (ergebnis, zugehoerigeHaltung) => AufUi(() => PublishPipeEndResult(ergebnis, zugehoerigeHaltung)));
+
+        await PipeEndSuggestionScanWorkflow.RunAsync(pipeEndRequest, pipeEndActions).ConfigureAwait(false);
+    }
+
+    private CancellationToken ResetScanCancellation()
+    {
+        _scanCts?.Dispose();
+        _scanCts = new CancellationTokenSource();
+        return _scanCts.Token;
     }
 
     /// <summary>Bricht den eigenen Durchlauf ab (eigene CancellationTokenSource je Lauf).</summary>
@@ -182,6 +224,41 @@ public sealed partial class BendSuggestionListViewModel : ObservableObject, IDis
 
         _exposure.MarkExposed(haltung);
     }
+
+    /// <summary>
+    /// Fuegt Rohranfang und Rohrende in dieselbe Liste ein und ordnet alles nach
+    /// Videozeit, wie der Mensch die Haltung abfaehrt. Auch eine leere Liste gilt
+    /// als angezeigt — die folgende Codierung dieser Haltung ist beeinflusst.
+    /// </summary>
+    private void PublishPipeEndResult(PipeEndScanResult ergebnis, string haltung)
+    {
+        foreach (var vorschlag in ergebnis.Suggestions)
+        {
+            var pin = ergebnis.Pins.FirstOrDefault(p => p.Kind == vorschlag.Kind);
+            Suggestions.Add(BendSuggestionRowViewModel.FromPipeEnd(vorschlag, pin?.Precision ?? 0.0));
+        }
+
+        var geordnet = Suggestions.OrderBy(zeile => zeile.PeakTimeSeconds).ToList();
+        Suggestions.Clear();
+        foreach (var zeile in geordnet)
+            Suggestions.Add(zeile);
+
+        var abnahme = string.Join(
+            "\n",
+            ergebnis.Pins.Select(pin =>
+                $"{PipeEndKinds.Label(pin.Kind)}: Abnahme Precision {Prozent(pin.Precision)}, "
+                + $"Recall {Prozent(pin.Recall)} (Freigabe 2026-08-12, genau ein Vorschlag je Video)"));
+        HeaderText = string.IsNullOrEmpty(HeaderText) ? abnahme : HeaderText + "\n" + abnahme;
+
+        var laufzeit = $"Rohranfang/Rohrende: {ergebnis.FramesAnalyzed} Bilder, Laufzeit {ergebnis.Duration.TotalSeconds:0} s";
+        ResultInfoText = string.IsNullOrEmpty(ResultInfoText) ? laufzeit : ResultInfoText + " · " + laufzeit;
+
+        _exposure.MarkExposed(haltung);
+    }
+
+    /// <summary>"85 %" mit normalem Leerzeichen — bewusst nicht ueber das Kulturformat.</summary>
+    private static string Prozent(double anteil)
+        => Math.Round(anteil * 100.0).ToString("0", Deutsch) + " %";
 
     partial void OnSelectedSuggestionChanged(BendSuggestionRowViewModel? value)
     {

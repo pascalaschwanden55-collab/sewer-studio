@@ -115,3 +115,82 @@ def test_waehlen_verlangt_den_richtigen_hash(freigabeordner: Path, tmp_path: Pat
 def test_ungueltige_klassennamen_werden_abgewiesen(klasse: str, freigabeordner: Path) -> None:
     with pytest.raises(lw.LernstufeError):
         lw.waehlen(klasse, "a" * 64)
+
+
+def test_einordnen_letterboxt_das_bild_wie_die_abnahme(
+        freigabeordner: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Die Freigabe wurde mit letterbox_pil(640) VOR dem predict gemessen.
+
+    Das Gewicht traegt nur Resize+CenterCrop: Ohne Letterbox schneidet Ultralytics
+    von einem 720x576-Bild links und rechts je 80 Pixel ab und misst ein anderes
+    Modell als das freigegebene (Gegenprobe 2026-09-04: bis 0,79 Abweichung je Bild,
+    Spitzenmoment verschoben).
+    """
+    import base64
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    from sidecar.models import yolo_wrapper as yw
+
+    gewicht = _gewicht(tmp_path)
+    _freigabe_schreiben(freigabeordner, "rohranfang", gewicht)
+    sha = hashlib.sha256(gewicht.read_bytes()).hexdigest()
+
+    class FakeProbs:
+        data = [0.25, 0.75]
+
+    class FakeErgebnis:
+        probs = FakeProbs()
+
+    class FakeModell:
+        names = {0: "kein_rohranfang", 1: "rohranfang"}
+
+        def __init__(self) -> None:
+            self.quellen: list[tuple[object, int]] = []
+
+        def predict(self, source, imgsz, verbose):  # noqa: ANN001
+            self.quellen.append((source, imgsz))
+            return [FakeErgebnis()]
+
+    modell = FakeModell()
+
+    class FakeZustand:
+        model = modell
+
+    class FakeGpu:
+        def discard_foreign_content(self, slot, content_id):  # noqa: ANN001
+            return None
+
+        def acquire_busy(self, slot):  # noqa: ANN001
+            return "besitzer"
+
+        def release_busy(self, slot, besitzer):  # noqa: ANN001
+            return None
+
+        def ensure_loaded(self, slot, device, loader, content_id=None):  # noqa: ANN001
+            return FakeZustand()
+
+    monkeypatch.setattr(lw, "gpu_manager", FakeGpu())
+    monkeypatch.setattr(lw, "_geraet", lambda: "cpu")
+
+    # SD-Bild 720x576 mit rotem linken Rand — genau der Streifen, den ein CenterCrop verliert.
+    bild = Image.new("RGB", (720, 576), (40, 40, 40))
+    for x in range(40):
+        for y in range(576):
+            bild.putpixel((x, y), (255, 0, 0))
+    puffer = io.BytesIO()
+    bild.save(puffer, format="PNG")
+    b64 = base64.b64encode(puffer.getvalue()).decode("ascii")
+
+    ergebnis = lw.einordnen(b64, "rohranfang", sha, imgsz=640)
+
+    assert ergebnis["konfidenz"] == pytest.approx(0.75)
+    ((quelle, imgsz),) = modell.quellen
+    assert imgsz == 640
+    assert quelle.shape[:2] == (640, 640)
+    erwartet = np.ascontiguousarray(np.asarray(yw._letterbox_rgb(bild, 640))[:, :, ::-1])
+    assert np.array_equal(quelle, erwartet)
+    # Der rote Rand liegt im letterboxten Bild links bei Spalte 0..35, Zeile 64..575 (BGR: Rot = Kanal 2).
+    assert int(quelle[300, 10, 2]) == 255 and int(quelle[300, 10, 0]) == 0

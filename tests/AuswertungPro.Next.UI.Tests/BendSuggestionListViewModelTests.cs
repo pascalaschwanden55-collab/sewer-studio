@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.UseCases.BendSuggestions;
+using AuswertungPro.Next.Application.UseCases.PipeEndSuggestions;
 using AuswertungPro.Next.UI.ViewModels.BendSuggestions;
 using Xunit;
 
@@ -204,6 +206,184 @@ public sealed class BendSuggestionListViewModelTests
         var clipAufruf = Assert.Single(clips.Aufrufe);   // nur die zweite Stelle kam bis zum Clip
         Assert.Equal(TimeSpan.FromSeconds(57.0), clipAufruf.Von);
         Assert.Equal(@"C:\temp\clip.mp4", vm.ClipPath);
+    }
+
+    // ── Rohranfang und Rohrende in derselben Liste ──────────────────────────
+
+    [Fact]
+    public async Task Mit_Anfang_Ende_Dienst_steht_alles_nach_Videozeit_in_einer_Liste()
+    {
+        var (vm, scan, anfangEnde, _, _, exposure) = ErzeugeVmMitAnfangEnde();
+        vm.SetVideo(VideoPfad);
+        scan.Ergebnis = Erfolg(Vorschlag(meterStart: 9.42, meterEnd: 9.42, peak: 100.0));
+        anfangEnde.Ergebnis = AnfangEnde(
+            new PipeEndSuggestion(PipeEndKind.Rohranfang, 2.0, 4.0, 3.0, 0.97, 3),
+            new PipeEndSuggestion(PipeEndKind.Rohrende, 212.0, 216.0, 214.0, 0.99, 5));
+
+        await vm.StartScanCommand.ExecuteAsync(null);
+
+        var anfrage = Assert.Single(anfangEnde.Anfragen);
+        Assert.Equal(VideoPfad, anfrage.VideoPath);
+        Assert.Equal(3, vm.Suggestions.Count);
+        Assert.Equal("BCD Rohranfang", vm.Suggestions[0].ArtText);
+        Assert.Equal("BCC Bogen", vm.Suggestions[1].ArtText);
+        Assert.Equal("BCE Rohrende", vm.Suggestions[2].ArtText);
+        Assert.Equal("Sekunde 3 (Meterstand nicht gelesen)", vm.Suggestions[0].OrtText);
+        Assert.Equal("Sekunde 214 (Meterstand nicht gelesen)", vm.Suggestions[2].OrtText);
+        // Die Stufe einer Anfang/Ende-Zeile ist die gemessene Abnahme, nicht "stark/schwach".
+        Assert.Equal("Abnahme 85 %", vm.Suggestions[0].StufeText);
+        Assert.Equal("Abnahme 89 %", vm.Suggestions[2].StufeText);
+        Assert.Equal("0,97", vm.Suggestions[0].KonfidenzText);
+        Assert.Equal(3, vm.Suggestions[0].FrameCount);
+        Assert.Contains("Rohranfang", vm.HeaderText);
+        Assert.Contains("85 %", vm.HeaderText);
+        Assert.Equal(new[] { Haltung }, exposure.Vermerkt.Distinct());
+    }
+
+    [Fact]
+    public async Task Ohne_Treffer_meldet_der_Status_dass_Anfang_und_Ende_nicht_gefunden_wurden()
+    {
+        var (vm, scan, anfangEnde, _, _, _) = ErzeugeVmMitAnfangEnde();
+        vm.SetVideo(VideoPfad);
+        scan.Ergebnis = Erfolg();
+        anfangEnde.Ergebnis = AnfangEnde();
+
+        await vm.StartScanCommand.ExecuteAsync(null);
+
+        Assert.Empty(vm.Suggestions);
+        Assert.Contains("kein Rohranfang", vm.StatusText);
+        Assert.Contains("kein Rohrende", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task Ein_Fehler_beim_Anfang_Ende_Durchlauf_laesst_die_Bogenliste_stehen()
+    {
+        var (vm, scan, anfangEnde, _, _, _) = ErzeugeVmMitAnfangEnde();
+        vm.SetVideo(VideoPfad);
+        scan.Ergebnis = Erfolg(Vorschlag(meterStart: 9.42, meterEnd: 9.42));
+        anfangEnde.Fehler = new InvalidOperationException("Keine freigegebene Lernstufe 'rohranfang' mit diesem Hash.");
+
+        await vm.StartScanCommand.ExecuteAsync(null);
+
+        var zeile = Assert.Single(vm.Suggestions);
+        Assert.Equal("BCC Bogen", zeile.ArtText);
+        Assert.Contains("Keine freigegebene Lernstufe", vm.StatusText);
+        Assert.False(vm.IsBusy);
+    }
+
+    [Fact]
+    public async Task Der_Anfang_Ende_Durchlauf_laeuft_auch_ohne_Bogen_Arbeitspunkt()
+    {
+        var (vm, scan, anfangEnde, _, _, exposure) = ErzeugeVmMitAnfangEnde();
+        vm.SetVideo(VideoPfad);
+        scan.Ergebnis = new BendSuggestionScanResult(
+            false,
+            "Fuer diesen Kandidaten ist kein gemessener Arbeitspunkt hinterlegt.",
+            Array.Empty<BendSuggestion>(), 0, 0, TimeSpan.Zero,
+            BendSuggestionListViewModel.KandidatId, "sha", 0.0, 0.0);
+        anfangEnde.Ergebnis = AnfangEnde(
+            new PipeEndSuggestion(PipeEndKind.Rohranfang, 2.0, 4.0, 3.0, 0.97, 3));
+
+        await vm.StartScanCommand.ExecuteAsync(null);
+
+        var zeile = Assert.Single(vm.Suggestions);
+        Assert.Equal("BCD Rohranfang", zeile.ArtText);
+        Assert.Equal(new[] { Haltung }, exposure.Vermerkt.Distinct());
+    }
+
+    [Fact]
+    public async Task Ein_neuer_Durchlauf_entfernt_die_alten_Zeilen_zuerst()
+    {
+        var (vm, scan, anfangEnde, _, _, _) = ErzeugeVmMitAnfangEnde();
+        vm.SetVideo(VideoPfad);
+        scan.Ergebnis = Erfolg(Vorschlag(meterStart: 9.42, meterEnd: 9.42));
+        anfangEnde.Ergebnis = AnfangEnde(
+            new PipeEndSuggestion(PipeEndKind.Rohranfang, 2.0, 4.0, 3.0, 0.97, 3));
+        await vm.StartScanCommand.ExecuteAsync(null);
+        Assert.Equal(2, vm.Suggestions.Count);
+
+        scan.Ergebnis = Erfolg();
+        anfangEnde.Ergebnis = AnfangEnde();
+        await vm.StartScanCommand.ExecuteAsync(null);
+
+        Assert.Empty(vm.Suggestions);
+    }
+
+    [Fact]
+    public async Task Die_Vorschau_einer_Anfang_Ende_Zeile_laedt_Bild_und_Clip_der_Stelle()
+    {
+        var (vm, _, _, frames, clips, _) = ErzeugeVmMitAnfangEnde();
+        vm.SetVideo(VideoPfad);
+        var zeile = BendSuggestionRowViewModel.FromPipeEnd(
+            new PipeEndSuggestion(PipeEndKind.Rohrende, 212.0, 216.0, 214.0, 0.99, 5),
+            precision: 0.8889);
+
+        vm.SelectedSuggestion = zeile;
+        await vm.PreviewLoadTask;
+
+        var bildAufruf = Assert.Single(frames.Aufrufe);
+        Assert.Equal(TimeSpan.FromSeconds(214.0), bildAufruf.Bei);
+        var clipAufruf = Assert.Single(clips.Aufrufe);
+        Assert.Equal(TimeSpan.FromSeconds(209.0), clipAufruf.Von);   // 212 s - 3 s Puffer
+        Assert.Equal(TimeSpan.FromSeconds(219.0), clipAufruf.Bis);   // 216 s + 3 s Puffer
+        Assert.NotNull(vm.PeakImage);
+    }
+
+    [Fact]
+    public void Eine_Bogenzeile_traegt_weiterhin_Art_und_Stufe_wie_bisher()
+    {
+        var zeile = new BendSuggestionRowViewModel(Vorschlag(meterStart: 9.42, meterEnd: 9.42));
+
+        Assert.Equal("BCC Bogen", zeile.ArtText);
+        Assert.Equal("stark", zeile.StufeText);
+        Assert.NotNull(zeile.Suggestion);
+    }
+
+    private static PipeEndScanResult AnfangEnde(params PipeEndSuggestion[] stellen)
+        => new(
+            stellen,
+            FramesAnalyzed: 550,
+            Duration: TimeSpan.FromSeconds(40),
+            Pins: PipeEndLernstufePins.All);
+
+    private static (
+        BendSuggestionListViewModel Vm,
+        FakeScanService Scan,
+        FakePipeEndScanService AnfangEnde,
+        FakeFrameExtractor Frames,
+        FakeClipExtractor Clips,
+        FakeExposure Exposure) ErzeugeVmMitAnfangEnde()
+    {
+        var scan = new FakeScanService();
+        var anfangEnde = new FakePipeEndScanService();
+        var frames = new FakeFrameExtractor();
+        var clips = new FakeClipExtractor();
+        var exposure = new FakeExposure();
+        var vm = new BendSuggestionListViewModel(
+            scan,
+            exposure,
+            frames,
+            clips,
+            resolveFfmpegPath: () => @"C:\ffmpeg\bin\ffmpeg.exe",
+            marshalToUi: aktion => aktion(),
+            pipeEndScan: anfangEnde);
+        return (vm, scan, anfangEnde, frames, clips, exposure);
+    }
+
+    private sealed class FakePipeEndScanService : IPipeEndSuggestionScanService
+    {
+        public List<PipeEndScanRequest> Anfragen { get; } = new();
+        public PipeEndScanResult Ergebnis { get; set; } = AnfangEnde();
+        public Exception? Fehler { get; set; }
+
+        public Task<PipeEndScanResult> ScanAsync(
+            PipeEndScanRequest request,
+            CancellationToken cancellationToken,
+            IProgress<PipeEndScanProgress>? progress = null)
+        {
+            Anfragen.Add(request);
+            return Fehler is null ? Task.FromResult(Ergebnis) : Task.FromException<PipeEndScanResult>(Fehler);
+        }
     }
 
     // ── Geruest ─────────────────────────────────────────────────────────────

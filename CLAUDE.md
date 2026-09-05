@@ -1656,6 +1656,45 @@ ohne Abweichung zum Prototyp, fuenf Stellen feldgleich. Messgrundlagen:
 (77,6 % Recall auf 85 protokollierten Boegen, 60,3 % Precision nach blinder
 Clip-Pruefung).
 
+### Rohranfang und Rohrende im Vorabdurchlauf (seit 2026-09-04)
+
+Dieselbe Liste im Training Studio (Expander "Vorschlaege aus dem Video-Durchlauf")
+zeigt neben den Boegen je Video hoechstens EINEN Rohranfang (BCD) und EIN Rohrende
+(BCE). Quelle sind die zwei freigegebenen Lernstufen des Sidecars
+(`GET /classify/lernstufen`, `POST /classify/lernstufe`; Freigaben unter
+`C:\KI_BRAIN	raining\lernstufenreigaben`, Regel "staerkste gruppierte Meldung
+im GANZEN Video, kein Zeitfenster", Abnahme 2026-08-12 an Clips: Rohranfang
+Precision 85 % / Recall 98 %, Rohrende 89 % / 88 %). Aufbau:
+`PipeEndSuggestionScanWorkflow` -> `IPipeEndSuggestionScanService`/
+`PipeEndSuggestionScanService` (Verdrahtung) -> `PipeEndSuggestionScanUseCase`
+(Bilder einmal holen, je Klasse NACHEINANDER ueber alle Bilder, weil beide
+Lernstufen den Slot `YOLO_TEST` teilen und ein Wechsel je Bild das Gewicht neu
+laden wuerde) -> `PipeEndSuggestionRule` (Boden 0,10, Luecke 3 s, Schwelle 0,50,
+Rohrende blendet die ersten 3 s aus, Rohranfang nicht; bei Gleichstand die
+fruehere Stelle). `PipeEndLernstufePins` pinnt Klasse und Gewicht-SHA-256; der
+Sidecar-Client (`ILernstufeClient`, eigener kleiner Vertrag neben
+`IVisionPipelineClient`) prueft beides an jeder Antwort. Die Lernstufen lesen
+keinen Meterstand; die Zeile nennt ehrlich die Videosekunde, die Stufe heisst
+"Abnahme 85 %" statt stark/schwach. Der Durchlauf laeuft NACH dem Bogen und
+unabhaengig von dessen Arbeitspunkt; jeder Durchlauf ersetzt die Liste ganz.
+
+Drei Regeln nie zurueckdrehen:
+
+- **Der Sidecar letterboxt VOR dem predict** (`lernstufe_wrapper.einordnen`,
+  `_letterbox_rgb(bild, imgsz)`). Die Gewichte tragen nur Resize+CenterCrop;
+  ohne Letterbox schnitt Ultralytics von 720x576 links und rechts je 80 Pixel ab.
+  Gegenprobe 2026-09-04 auf `07.6588-6587`: bis 0,79 Abweichung je Bild und ein
+  verschobener Spitzenmoment beim Rohranfang; mit Letterbox ist der Sidecar-Weg
+  bildgenau der Abnahmeweg (`lernstufe_vorschlagspruefung.py`, `letterbox_pil(640)`).
+- **Abtastrate 1 Bild je Sekunde, imgsz 640, Schwelle 0,50** sind Teil der Freigabe,
+  keine Stellschrauben. Wer sie aendert, misst die Freigabe neu.
+- **Ein anderes Gewicht braucht eine neue Freigabe UND neue Pins** (SHA, Precision,
+  Recall) — die Messung gehoert zum Gewicht.
+
+`PipeEndSuggestionLiveAcceptanceTests` (MachineIntegrationFact) laesst den echten
+C#-Weg gegen die Repo-Fixture `tests/Fixtures/PipeEndSuggestions/` laufen; die
+Soll-Werte stammen aus dem Abnahmeweg (Modell direkt) auf demselben Video.
+
 Der gleich parametrische Vergleich vom 2026-07-28 (`conf=0,25`, `imgsz=1280`)
 zeigt fuer `bcc_bogen_b50b37ab8a4f` auf den drei wirklich unbekannten,
 geschuetzten BCC-Bildern 3/3 Treffer und eine mittlere Box-IoU von 0,8607.

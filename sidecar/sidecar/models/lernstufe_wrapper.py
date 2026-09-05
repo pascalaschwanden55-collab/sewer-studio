@@ -220,7 +220,12 @@ def _laden(stufe: Lernstufe, device: str):
 def einordnen(image_base64: str, klasse: str, erwarteter_sha256: str, imgsz: int = 640) -> dict:
     """Sagt, wie sicher das ganze Bild die Klasse zeigt. Keine Box."""
     stufe = waehlen(klasse, erwarteter_sha256)
-    bild = yolo_wrapper.decode_image(image_base64)
+    # Letterbox VOR dem predict — genau wie die Abnahme (lernstufe_vorschlagspruefung.py,
+    # letterbox_pil(640)). Das Gewicht traegt nur Resize+CenterCrop: ohne diesen Schritt
+    # schneidet Ultralytics von einem 720x576-Bild links und rechts je 80 Pixel ab und
+    # misst ein anderes Modell als das freigegebene (Gegenprobe 2026-09-04: bis 0,79
+    # Abweichung je Bild, Spitzenmoment des Rohranfangs verschoben).
+    bild = yolo_wrapper._letterbox_rgb(yolo_wrapper.decode_image(image_base64), imgsz)
     device = _geraet()
 
     # Das Lock teilen sich beide Nutzer des Slots YOLO_TEST (Audit S-H1).
