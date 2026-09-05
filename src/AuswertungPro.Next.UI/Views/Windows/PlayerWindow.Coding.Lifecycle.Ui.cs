@@ -58,6 +58,10 @@ public partial class PlayerWindow
             new CodingModeBackgroundServicesWorkflowActions(
                 StartCodingAiInitialization: () => _codingPipelineHealthController.InitializeAsync().SafeFireAndForget("InitCodingAi"),
                 StartCodingOsdTimer: StartCodingOsdTimer,
-                ShowInitialOsdMeterBadge: () => CodingOsdBadgeControls.ShowInitial(OsdMeterBadge, TxtOsdMeter)));
+                ShowInitialOsdMeterBadge: () => CodingOsdBadgeControls.ShowInitial(OsdMeterBadge, TxtOsdMeter),
+                StartSuggestionScan: StartSuggestionScan));
     }
+
+    /// <summary>Wird in PlayerWindow.Coding.Suggestions.cs ausgefuellt.</summary>
+    private void StartSuggestionScan() { }
 }
