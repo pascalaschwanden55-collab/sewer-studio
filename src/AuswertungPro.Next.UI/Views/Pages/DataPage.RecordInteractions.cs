@@ -412,13 +412,6 @@ public partial class DataPage : UserControl
         ExecuteRecordMenuCommand(sender, vm, vm.SuggestMeasuresCommand, "Massnahmen");
     }
 
-    private void SuggestAllMeasuresMenu_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is not DataPageViewModel vm)
-            return;
-        vm.SuggestAllMeasuresCommand.Execute(null);
-    }
-
     private void MediaSearchMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)

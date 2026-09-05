@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
@@ -14,7 +13,6 @@ public sealed class DataPageMeasureSuggestionController
     private readonly IDialogService _dialogs;
     private readonly IMeasureRecommendationService _recommendations;
     private readonly Func<HaltungRecord?> _getSelected;
-    private readonly Func<IReadOnlyList<HaltungRecord>> _getRecords;
     private readonly Action<string> _addRecommendedOption;
     private readonly Action _markProjectDirty;
     private readonly Action<string> _setStatus;
@@ -24,7 +22,6 @@ public sealed class DataPageMeasureSuggestionController
         IDialogService dialogs,
         IMeasureRecommendationService recommendations,
         Func<HaltungRecord?> getSelected,
-        Func<IReadOnlyList<HaltungRecord>> getRecords,
         Action<string> addRecommendedOption,
         Action markProjectDirty,
         Action<string> setStatus,
@@ -33,7 +30,6 @@ public sealed class DataPageMeasureSuggestionController
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _recommendations = recommendations ?? throw new ArgumentNullException(nameof(recommendations));
         _getSelected = getSelected ?? throw new ArgumentNullException(nameof(getSelected));
-        _getRecords = getRecords ?? throw new ArgumentNullException(nameof(getRecords));
         _addRecommendedOption = addRecommendedOption ?? throw new ArgumentNullException(nameof(addRecommendedOption));
         _markProjectDirty = markProjectDirty ?? throw new ArgumentNullException(nameof(markProjectDirty));
         _setStatus = setStatus ?? throw new ArgumentNullException(nameof(setStatus));
@@ -82,61 +78,4 @@ public sealed class DataPageMeasureSuggestionController
         _dialogs.Info(summary, "Empfohlene Sanierungsmassnahmen");
     }
 
-    public void SuggestAll()
-    {
-        var records = _getRecords();
-        if (records.Count == 0)
-        {
-            _dialogs.Info("Keine Haltungen vorhanden.", "Massnahmen");
-            return;
-        }
-
-        var filled = 0;
-        var skipped = 0;
-        var noSuggestion = 0;
-
-        foreach (var record in records)
-        {
-            var pruefung = (record.GetFieldValue("Pruefungsresultat") ?? "").Trim();
-            var existingMeasures = (record.GetFieldValue("Empfohlene_Sanierungsmassnahmen") ?? "").Trim();
-            var hasDamageCodes = record.VsaFindings is not null && record.VsaFindings.Count > 0
-                || !string.IsNullOrWhiteSpace(record.GetFieldValue("Primaere_Schaeden"));
-
-            if (!string.IsNullOrWhiteSpace(existingMeasures))
-            {
-                record.FieldMeta.TryGetValue("Empfohlene_Sanierungsmassnahmen", out var meta);
-                if (meta is not null && meta.UserEdited)
-                {
-                    skipped++;
-                    continue;
-                }
-            }
-
-            if (!string.Equals(pruefung, "Sanierungsbedarf", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(pruefung, "beobachten", StringComparison.OrdinalIgnoreCase)
-                && !hasDamageCodes)
-            {
-                skipped++;
-                continue;
-            }
-
-            var recommendation = _recommendations.Recommend(record, maxSuggestions: 5);
-            if (recommendation.Measures.Count == 0)
-            {
-                noSuggestion++;
-                continue;
-            }
-
-            DataPageSanierungCostMapper.ApplyRecommendation(record, recommendation);
-            foreach (var suggestion in recommendation.Measures)
-                _addRecommendedOption(suggestion);
-
-            filled++;
-        }
-
-        if (filled > 0)
-            _markProjectDirty();
-
-        _setStatus($"Maßnahmen: {filled} Haltungen befüllt, {skipped} übersprungen, {noSuggestion} ohne Vorschlag");
-    }
 }

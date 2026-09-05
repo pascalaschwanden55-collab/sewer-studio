@@ -199,7 +199,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 xtfImport: _sp.XtfImport,
                 pdfImport: _sp.PdfImport,
                 vsaEvaluation: _sp.Vsa,
-                measureRecommendation: _sp.MeasureRecommendation,
                 setStatus: SetStatus,
                 createImportRestorePoint: TryCreateImportRestorePoint,
                 refreshTitleAndDirty: RefreshTitleAndDirty)),

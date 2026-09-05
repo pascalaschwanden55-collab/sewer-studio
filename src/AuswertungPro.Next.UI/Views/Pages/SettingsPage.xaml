@@ -1074,8 +1074,8 @@
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="{DynamicResource TextS}" LineHeight="20" Margin="0,8,0,0">
                     Der typische Arbeitsablauf: Projekt erstellen, Inspektionsdaten importieren (PDF/XTF/WinCan/IBAK),
-                    Videos verknüpfen, KI-Analyse durchführen, VSA-Bewertung berechnen, Sanierungsmaßnahmen
-                    vorschlagen und Ergebnisse als Excel/PDF exportieren.
+                    Videos verknüpfen, KI-Analyse durchführen, VSA-Bewertung berechnen, je Haltung bewusst
+                    einen Sanierungsvorschlag erstellen und Ergebnisse als Excel/PDF exportieren.
                 </TextBlock>
             </StackPanel>
         </Border>
@@ -1106,7 +1106,7 @@
                     Zentrale Datenseite für alle Kanalsegmente (Haltungen). Bearbeitbares DataGrid mit Suche,
                     Zoom, Zeilenhöhe, Spaltenausrichtung und Multi-Monitor-Support (Abdocken auf zweiten Bildschirm).
                     Kontextmenü bietet Zugriff auf Protokolle, Videoanalyse, Sanierungsmaßnahmen und Kostenrechner.
-                    Toolbar-Dropdowns: Sanierungsmaßnahmen (Kostenrechner, Vorschlag aus Schadenscodes, Alle Maßnahmen vorschlagen)
+                    Toolbar-Dropdowns: Sanierungsmaßnahmen (Kostenrechner und Vorschlag je Haltung aus Schadenscodes)
                     und Medien suchen (automatische Video/PDF-Verknüpfung).
                 </TextBlock>
 

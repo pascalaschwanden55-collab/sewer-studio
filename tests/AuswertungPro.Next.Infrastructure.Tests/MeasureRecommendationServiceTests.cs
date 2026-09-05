@@ -1,6 +1,9 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 using System.Linq;
+using System.IO.Compression;
+using System.Text.Json;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -98,11 +101,114 @@ public sealed class MeasureRecommendationServiceTests : IDisposable
         Assert.Equal(2, result.Measures.Count);
     }
 
+    [Fact]
+    public void Recommend_RohranfangUndRohrende_LiefernKeineSanierungsmassnahme()
+    {
+        var svc = NewService();
+        Assert.False(svc.Learn(Record(
+            "0.00m BCD Rohranfang\n16.85m BCE Rohrende",
+            "Schlauchliner (GFK)")));
+
+        var result = svc.Recommend(Record(
+            "0.00m BCD Rohranfang\n16.85m BCE Rohrende",
+            measures: null));
+
+        Assert.Empty(result.Measures);
+    }
+
+    [Fact]
+    public void LegacyLerndaten_WerdenBeimLadenVonMeterUndBestandescodesBereinigt()
+    {
+        var fakeId = Guid.NewGuid();
+        var validId = Guid.NewGuid();
+        var legacyStore = new
+        {
+            Version = 2,
+            LearnedSamples = new[]
+            {
+                $"{fakeId:N}|000M;BCD;BCE|Schlauchliner (GFK)||||||",
+                $"{validId:N}|000M;BAB;BCD|Kurzliner||||||"
+            },
+            ByCode = new Dictionary<string, Dictionary<string, int>>
+            {
+                ["000M"] = new() { ["Schlauchliner (GFK)"] = 10 },
+                ["BCD"] = new() { ["Schlauchliner (GFK)"] = 10 },
+                ["BAB"] = new() { ["Kurzliner"] = 1 }
+            },
+            ByCodeSignature = new Dictionary<string, object>()
+        };
+        File.WriteAllText(_storePath, JsonSerializer.Serialize(legacyStore));
+
+        var svc = NewService();
+        var stats = svc.GetStats();
+
+        Assert.Equal(1, stats.TotalSamples);
+        Assert.Equal(1, stats.DistinctDamageCodes);
+        Assert.Empty(svc.Recommend(Record("0.00m BCD Rohranfang", null)).Measures);
+        Assert.Equal(new[] { "Kurzliner" }, svc.Recommend(Record("BAB Riss", null)).Measures);
+
+        using var migrated = JsonDocument.Parse(File.ReadAllText(_storePath));
+        Assert.Equal(3, migrated.RootElement.GetProperty("Version").GetInt32());
+        Assert.False(migrated.RootElement.GetProperty("ByCode").TryGetProperty("000M", out _));
+        Assert.False(migrated.RootElement.GetProperty("ByCode").TryGetProperty("BCD", out _));
+    }
+
+    [Fact]
+    public void LegacyModell_WirdNichtMehrVerwendet()
+    {
+        var writer = NewService();
+        Assert.True(writer.Learn(Record("BAB Riss", "Kurzliner")));
+
+        using (var stream = File.Open(_modelPath, FileMode.Create, FileAccess.Write, FileShare.None))
+        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create))
+        {
+            var entry = zip.CreateEntry("model.json");
+            using var entryStream = entry.Open();
+            JsonSerializer.Serialize(entryStream, new
+            {
+                Version = 1,
+                TrainedAtUtc = DateTime.UtcNow,
+                TotalSamples = 999,
+                ByCode = new Dictionary<string, Dictionary<string, int>>
+                {
+                    ["BAB"] = new() { ["Schlauchliner (GFK)"] = 999 }
+                },
+                ByCodeSignature = new Dictionary<string, object>()
+            });
+        }
+
+        var reader = NewService();
+        var result = reader.Recommend(Record("BAB Riss", null));
+
+        Assert.Equal(new[] { "Kurzliner" }, result.Measures);
+        Assert.False(result.UsedTrainedModel);
+    }
+
     // ── Learn ───────────────────────────────────────────────────────
 
     [Fact]
     public void Learn_NotUserConfirmed_ReturnsFalse()
         => Assert.False(NewService().Learn(Record("BAB", "Inliner", measuresUserEdited: false)));
+
+    [Fact]
+    public void Learn_Automatikvorschlag_Erst_nach_Handkorrektur()
+    {
+        var service = NewService();
+        var record = Record("BAB Riss", "Automatischer Vorschlag", measuresUserEdited: false);
+
+        Assert.False(service.Learn(record));
+
+        record.SetFieldValue(
+            "Empfohlene_Sanierungsmassnahmen",
+            "Mein Vorschlag",
+            FieldSource.Manual,
+            userEdited: true);
+
+        Assert.True(service.Learn(record));
+        Assert.Equal(
+            new[] { "Mein Vorschlag" },
+            service.Recommend(Record("BAB Riss", measures: null)).Measures);
+    }
 
     [Fact]
     public void Learn_NoMeasures_ReturnsFalse()

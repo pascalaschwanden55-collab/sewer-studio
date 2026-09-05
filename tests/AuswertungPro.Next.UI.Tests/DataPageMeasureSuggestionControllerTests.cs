@@ -97,67 +97,10 @@ public sealed class DataPageMeasureSuggestionControllerTests
             dialogs.LastInfo);
     }
 
-    [Fact]
-    public void SuggestAll_meldet_leere_liste_ohne_dirty_status()
-    {
-        var dialogs = new CapturingDialogService();
-        var dirty = 0;
-        var statuses = new List<string>();
-        var controller = CreateController(
-            dialogs,
-            new FakeMeasureRecommendationService(_ => Recommendation(new[] { "Inliner" })),
-            records: new List<HaltungRecord>(),
-            markDirty: () => dirty++,
-            setStatus: statuses.Add);
-
-        controller.SuggestAll();
-
-        Assert.Equal(("Keine Haltungen vorhanden.", "Massnahmen"), dialogs.LastInfo);
-        Assert.Equal(0, dirty);
-        Assert.Empty(statuses);
-    }
-
-    [Fact]
-    public void SuggestAll_fuellt_geeignete_haltungen_und_zaehlt_skips_und_leere_empfehlungen()
-    {
-        var fill = Record("H1", pruefung: "Sanierungsbedarf");
-        var manual = Record("H2", pruefung: "Sanierungsbedarf", existingMeasures: "Manuell", userEditedMeasures: true);
-        var clean = Record("H3", pruefung: "Keine");
-        var noSuggestion = Record("H4", pruefung: "beobachten");
-        var records = new List<HaltungRecord> { fill, manual, clean, noSuggestion };
-        var dialogs = new CapturingDialogService();
-        var options = new ObservableCollection<string>();
-        var statuses = new List<string>();
-        var dirty = 0;
-        var service = new FakeMeasureRecommendationService(record =>
-            ReferenceEquals(record, noSuggestion)
-                ? MeasureRecommendationResult.Empty
-                : Recommendation(new[] { "Kurzliner" }));
-        var controller = CreateController(
-            dialogs,
-            service,
-            records: records,
-            recommendedOptions: options,
-            markDirty: () => dirty++,
-            setStatus: statuses.Add);
-
-        controller.SuggestAll();
-
-        Assert.Equal("Kurzliner", fill.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
-        Assert.Equal("Manuell", manual.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
-        Assert.True(string.IsNullOrEmpty(clean.GetFieldValue("Empfohlene_Sanierungsmassnahmen")));
-        Assert.True(string.IsNullOrEmpty(noSuggestion.GetFieldValue("Empfohlene_Sanierungsmassnahmen")));
-        Assert.Equal(new[] { "Kurzliner" }, options);
-        Assert.Equal(1, dirty);
-        Assert.Equal("Maßnahmen: 1 Haltungen befüllt, 2 übersprungen, 1 ohne Vorschlag", statuses.Single());
-        Assert.Equal(new[] { fill, noSuggestion }, service.RequestedRecords);
-    }
-
     private static DataPageMeasureSuggestionController CreateController(
         CapturingDialogService dialogs,
         IMeasureRecommendationService service,
         HaltungRecord? selected = null,
-        IReadOnlyList<HaltungRecord>? records = null,
         ObservableCollection<string>? recommendedOptions = null,
         Action? markDirty = null,
         Action<string>? setStatus = null,
@@ -166,7 +109,6 @@ public sealed class DataPageMeasureSuggestionControllerTests
             dialogs,
             service,
             getSelected: () => selected,
-            getRecords: () => records ?? Array.Empty<HaltungRecord>(),
             addRecommendedOption: value => AddIfMissing(recommendedOptions ?? new ObservableCollection<string>(), value),
             markProjectDirty: markDirty ?? (() => { }),
             setStatus: setStatus ?? (_ => { }),

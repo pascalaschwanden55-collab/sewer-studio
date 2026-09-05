@@ -38,16 +38,35 @@ internal static class MeasureRecordParser
             return string.Empty;
 
         var text = value.Trim().ToUpperInvariant();
-        text = Regex.Replace(text, @"[^A-Z0-9_]", "");
 
-        if (text.Length < 2 || text.Length > 12)
+        // VSA-Codes bestehen aus Buchstaben. Ziffern duerfen nicht still entfernt
+        // werden: Sonst wird z.B. "0.00m" zum erfundenen Code "000M" und ein
+        // Operator-Code wie "A01" landet ebenfalls in den Lerndaten.
+        if (Regex.IsMatch(text, @"[0-9_]"))
             return string.Empty;
-        if (!text.Any(char.IsLetter))
+
+        text = Regex.Replace(text, @"[^A-Z]", "");
+
+        if (text.Length < 2 || text.Length > 8)
             return string.Empty;
         if (text is "SCHADEN" or "SCHAEDEN" or "KEINE")
             return string.Empty;
 
         return text;
+    }
+
+    /// <summary>
+    /// Nur bauliche Schaeden (BA...) und betriebliche Schaeden (BB...) sind
+    /// eine belastbare Grundlage fuer eine Sanierungsmassnahme. BC beschreibt
+    /// Bestandesmerkmale wie Anschluss, Bogen, Rohranfang/-ende; BD ist eine
+    /// allgemeine Zustandsangabe. Beides darf das Massnahmenmodell nicht lernen.
+    /// </summary>
+    internal static bool IsMeasureRelevantDamageCode(string? value)
+    {
+        var code = NormalizeCode(value);
+        return code.Length >= 3
+            && (code.StartsWith("BA", StringComparison.Ordinal)
+                || code.StartsWith("BB", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -89,7 +108,7 @@ internal static class MeasureRecordParser
         foreach (var finding in record.VsaFindings)
         {
             var code = NormalizeCode(finding.KanalSchadencode);
-            if (!string.IsNullOrWhiteSpace(code))
+            if (IsMeasureRelevantDamageCode(code))
                 result.Add(code);
         }
 
@@ -99,11 +118,22 @@ internal static class MeasureRecordParser
             var lines = primary.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries);
             foreach (var line in lines)
             {
-                var firstToken = line
-                    .Split(new[] { ' ', '\t', '@', '(', ')', ':', ';', ',', '|' }, StringSplitOptions.RemoveEmptyEntries)
-                    .FirstOrDefault();
-                var code = NormalizeCode(firstToken);
-                if (!string.IsNullOrWhiteSpace(code))
+                var parsed = PrimaryDamageLineParser.ParsePrimaryDamageLine(line);
+                var rawCode = parsed?.Code;
+
+                // Alte Projekte enthalten vereinzelt Zeilen, die nur aus dem Code
+                // bestehen. Diese bleiben unterstuetzt, ohne wieder den ersten
+                // beliebigen Token (z.B. eine Meterangabe) zu akzeptieren.
+                if (rawCode is null && Regex.IsMatch(
+                        line.Trim(),
+                        @"^[A-Z]{2,6}(?:\.[A-Z]{1,2})?$",
+                        RegexOptions.IgnoreCase))
+                {
+                    rawCode = line.Trim();
+                }
+
+                var code = NormalizeCode(rawCode);
+                if (IsMeasureRelevantDamageCode(code))
                     result.Add(code);
             }
         }

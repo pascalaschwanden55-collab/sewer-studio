@@ -97,6 +97,22 @@ public sealed class DataPageSanierungCostMapperTests
     }
 
     [Fact]
+    public void ClearAutomaticRecommendation_LeertNurAutomatischGesetzteFelder()
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue("Empfohlene_Sanierungsmassnahmen", "Alt", FieldSource.Unknown, userEdited: false);
+        record.SetFieldValue("Kosten", "1000", FieldSource.Unknown, userEdited: false);
+        record.SetFieldValue("Renovierung_Inliner_m", "12", FieldSource.Manual, userEdited: true);
+
+        var changed = DataPageSanierungCostMapper.ClearAutomaticRecommendation(record);
+
+        Assert.True(changed);
+        Assert.Equal("", record.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
+        Assert.Equal("", record.GetFieldValue("Kosten"));
+        Assert.Equal("12", record.GetFieldValue("Renovierung_Inliner_m"));
+    }
+
+    [Fact]
     public void ApplyCosts_schreibt_keine_explizite_null_fuer_anschluesse()
     {
         var record = new HaltungRecord();

@@ -1,4 +1,4 @@
-﻿using AuswertungPro.Next.UI.Dialogs;
+using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Services;
 using System;
@@ -139,7 +139,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public IRelayCommand<HaltungRecord?> OpenCostsCommand { get; }
     public IRelayCommand<HaltungRecord?> RestoreCostsCommand { get; }
     public IRelayCommand<HaltungRecord?> SuggestMeasuresCommand { get; }
-    public IRelayCommand SuggestAllMeasuresCommand { get; }
     public IRelayCommand<HaltungRecord?> OptimizeSanierungKiCommand { get; }
     public IRelayCommand SearchAndLinkMediaCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenHydraulikCommand { get; }
@@ -304,7 +303,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             _dialogs,
             _measureRecommendationService,
             () => Selected,
-            () => Records,
             value => AddOptionIfMissing(EmpfohleneSanierungsmassnahmenOptions, value),
             () =>
             {
@@ -476,7 +474,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         OpenCostsCommand = new RelayCommand<HaltungRecord?>(OpenCosts, CanOpenCosts);
         RestoreCostsCommand = new RelayCommand<HaltungRecord?>(RestoreCosts, CanRestoreCosts);
         SuggestMeasuresCommand = new RelayCommand<HaltungRecord?>(SuggestMeasures, CanSuggestMeasures);
-        SuggestAllMeasuresCommand = new RelayCommand(SuggestAllMeasures);
         OptimizeSanierungKiCommand = new RelayCommand<HaltungRecord?>(OpenSanierungOptimizationWindow, CanOpenCosts);
         SearchAndLinkMediaCommand = new RelayCommand(OpenMediaSearchWindow);
         OpenHydraulikCommand = new RelayCommand<HaltungRecord?>(OpenHydraulikPanel);
@@ -711,15 +708,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private void SuggestMeasures(HaltungRecord? record)
     {
         _measureSuggestionController.Suggest(record);
-    }
-
-    /// <summary>
-    /// Batch: Fuer alle Haltungen mit Sanierungsbedarf (oder fehlenden Massnahmen)
-    /// automatisch Sanierungsmassnahmen vorschlagen.
-    /// </summary>
-    public void SuggestAllMeasures()
-    {
-        _measureSuggestionController.SuggestAll();
     }
 
     private void OpenSanierungOptimizationWindow(HaltungRecord? record)

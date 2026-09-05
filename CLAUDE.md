@@ -764,6 +764,18 @@ verschobene Klassen oder Projektverweise im normalen Release-Build sichtbar brec
 - `QuickScanSession`               → Impl (Infrastructure): baut ffmpeg-Pfad, eigenen `OllamaClient` und `QuickScanService`, besitzt den Client (`IDisposable`). Erzeugt ueber `ServiceProvider.CreateQuickScanSession(cfg)`; der Player-`QuickScanController` newt keine KI-Infrastruktur mehr
 - `KnowledgeBaseManager`          → SQLite-KB: Samples + Embeddings indexieren/retrieven
 - `TrainingSamplesStore`          → JSON-Trainingssamples speichern/mergen
+- `MeasureRecommendationService`  → lernt bestaetigte Sanierungsmassnahmen nur aus echten
+  BA-/BB-Schadenscodes. `MeasureRecordParser` liest Meter-zuerst-, PDF- und Altzeilen ueber
+  `PrimaryDamageLineParser`; Meterwerte, Operator-Codes sowie BC-Bestandesmerkmale und
+  BD-Allgemeinzustand gelangen nicht ins Modell. `MeasureRecommendationPersistence`
+  haelt die reine Bereinigungs-/Migrationslogik aus dem IO-Service heraus. Beim ersten Laden migriert
+  `measures_learning.json` atomar auf Version 3 (mit `.bak`) und verwirft ein altes
+  Modell der Version 1. Bis zum erneuten Training werden die bereinigten Lerndaten direkt
+  verwendet. Die VSA-Bewertung veraendert keine Sanierungsmassnahmen. Ein Vorschlag wird
+  nur bewusst fuer die ausgewaehlte Haltung erzeugt; einen Stapelbefehl gibt es dafuer
+  nicht. Der Automatikvorschlag ist noch kein Lernfall. Erst die
+  anschliessend von der Fachperson bearbeitete und gespeicherte Fassung wird gelernt.
+  Hand- und Importwerte bleiben geschuetzt.
 - `PhotoMeasurementGeometryService` → stabile oeffentliche Fassade fuer reine Fotomessungs-Geometrie
 - `PhotoMeasurementAnglePlanBuilder` → getrennte Winkel-, Abzweig-, Kreis- und Bogenplanung ohne UI-Zustand
 - `PipelinePipeRadarRenderer` → zustandslose WPF-Zeichnung des Rohr-Radars; das Fenster liefert nur Daten, Modus und Groesse

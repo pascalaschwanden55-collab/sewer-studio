@@ -1,9 +1,7 @@
 using System;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Vsa;
@@ -22,7 +20,6 @@ public sealed partial class VsaPageViewModel : ObservableObject
     private readonly IXtfImportService _xtfImport;
     private readonly IPdfImportService _pdfImport;
     private readonly IVsaEvaluationService _vsaEvaluation;
-    private readonly IMeasureRecommendationService _measureRecommendation;
     private readonly Action<string> _setStatus;
     private readonly Action<string> _createImportRestorePoint;
     private readonly Action _refreshTitleAndDirty;
@@ -44,7 +41,6 @@ public sealed partial class VsaPageViewModel : ObservableObject
             xtfImport: sp.XtfImport,
             pdfImport: sp.PdfImport,
             vsaEvaluation: sp.Vsa,
-            measureRecommendation: sp.MeasureRecommendation,
             setStatus: shell.SetStatus,
             createImportRestorePoint: shell.TryCreateImportRestorePoint,
             refreshTitleAndDirty: shell.RefreshTitleAndDirty)
@@ -60,7 +56,6 @@ public sealed partial class VsaPageViewModel : ObservableObject
         IXtfImportService xtfImport,
         IPdfImportService pdfImport,
         IVsaEvaluationService vsaEvaluation,
-        IMeasureRecommendationService measureRecommendation,
         Action<string> setStatus,
         Action<string> createImportRestorePoint,
         Action refreshTitleAndDirty)
@@ -73,7 +68,6 @@ public sealed partial class VsaPageViewModel : ObservableObject
         _xtfImport = xtfImport ?? throw new ArgumentNullException(nameof(xtfImport));
         _pdfImport = pdfImport ?? throw new ArgumentNullException(nameof(pdfImport));
         _vsaEvaluation = vsaEvaluation ?? throw new ArgumentNullException(nameof(vsaEvaluation));
-        _measureRecommendation = measureRecommendation ?? throw new ArgumentNullException(nameof(measureRecommendation));
         _setStatus = setStatus ?? throw new ArgumentNullException(nameof(setStatus));
         _createImportRestorePoint = createImportRestorePoint ?? throw new ArgumentNullException(nameof(createImportRestorePoint));
         _refreshTitleAndDirty = refreshTitleAndDirty ?? throw new ArgumentNullException(nameof(refreshTitleAndDirty));
@@ -116,7 +110,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
         finally
         {
             IsBusy = false;
-            _refreshTitleAndDirty(); // SuggestMeasuresForAll kann Project.Dirty gesetzt haben
+            _refreshTitleAndDirty();
         }
     }
 
@@ -213,90 +207,12 @@ public sealed partial class VsaPageViewModel : ObservableObject
             .Select(r => double.TryParse(r.GetFieldValue("VSA_Zustandsnote_D").Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : (double?)null)
             .Where(d => d is not null).Select(d => d!.Value).DefaultIfEmpty(4.0).Average();
 
-        // Nach VSA-Bewertung: automatisch Sanierungsmassnahmen fuer betroffene Haltungen vorschlagen
-        var measureResult = SuggestMeasuresForAll();
-
         var diag = project.Metadata.TryGetValue("VSA_Diag", out var d) ? d : "";
-        var measureInfo = measureResult.Filled > 0
-            ? $"\nSanierungsmassnahmen: {measureResult.Filled} Haltungen befuellt, {measureResult.Skipped} uebersprungen."
-            : "";
         Summary = importSb.ToString() +
                   $"\nBerechnet für {count} Records. Ø Zustandsnote D: {avgD:0.00}.\n" +
                   (string.IsNullOrWhiteSpace(diag) ? "" : (diag + "\n")) +
-                  measureInfo +
                   "\nHinweis: Klassifizierungstabellen sind im Skeleton nur beispielhaft.";
-        _setStatus("VSA berechnet" + (measureResult.Filled > 0 ? $" + {measureResult.Filled} Maßnahmen" : ""));
-    }
-
-    private record struct MeasureBatchResult(int Filled, int Skipped, int NoSuggestion);
-
-    private MeasureBatchResult SuggestMeasuresForAll()
-    {
-        var project = _getProject();
-        var filled = 0;
-        var skipped = 0;
-        var noSuggestion = 0;
-
-        foreach (var record in project.Data)
-        {
-            var pruefung = (record.GetFieldValue("Pruefungsresultat") ?? "").Trim();
-            var existing = (record.GetFieldValue("Empfohlene_Sanierungsmassnahmen") ?? "").Trim();
-            var hasDamage = record.VsaFindings is not null && record.VsaFindings.Count > 0
-                || !string.IsNullOrWhiteSpace(record.GetFieldValue("Primaere_Schaeden"));
-
-            // Manuell bearbeitete Massnahmen nicht ueberschreiben
-            if (!string.IsNullOrWhiteSpace(existing))
-            {
-                var meta = record.FieldMeta.GetValueOrDefault("Empfohlene_Sanierungsmassnahmen");
-                if (meta is not null && meta.UserEdited)
-                {
-                    skipped++;
-                    continue;
-                }
-            }
-
-            // Nur Records mit Sanierungsbedarf/beobachten oder Schadenscodes
-            if (!string.Equals(pruefung, "Sanierungsbedarf", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(pruefung, "beobachten", StringComparison.OrdinalIgnoreCase)
-                && !hasDamage)
-            {
-                skipped++;
-                continue;
-            }
-
-            var rec = _measureRecommendation.Recommend(record, maxSuggestions: 5);
-            if (rec.Measures.Count == 0)
-            {
-                noSuggestion++;
-                continue;
-            }
-
-            var value = string.Join(Environment.NewLine, rec.Measures);
-            record.SetFieldValue("Empfohlene_Sanierungsmassnahmen", value, FieldSource.Unknown, userEdited: false);
-
-            if (rec.EstimatedTotalCost is not null)
-                record.SetFieldValue("Kosten", rec.EstimatedTotalCost.Value.ToString("0.00", CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
-            if (rec.RenovierungInlinerM is not null)
-                record.SetFieldValue("Renovierung_Inliner_m", rec.RenovierungInlinerM.Value.ToString("0.00", CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
-            if (rec.RenovierungInlinerStk is not null)
-                record.SetFieldValue("Renovierung_Inliner_Stk", rec.RenovierungInlinerStk.Value.ToString(CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
-            if (rec.AnschluesseVerpressen is not null)
-                record.SetFieldValue("Anschluesse_verpressen", rec.AnschluesseVerpressen.Value.ToString(CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
-            if (rec.ReparaturManschette is not null)
-                record.SetFieldValue("Reparatur_Manschette", rec.ReparaturManschette.Value.ToString(CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
-            if (rec.ReparaturKurzliner is not null)
-                record.SetFieldValue("Reparatur_Kurzliner", rec.ReparaturKurzliner.Value.ToString(CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
-
-            filled++;
-        }
-
-        if (filled > 0)
-        {
-            project.ModifiedAtUtc = DateTime.UtcNow;
-            project.Dirty = true;
-        }
-
-        return new MeasureBatchResult(filled, skipped, noSuggestion);
+        _setStatus("VSA berechnet");
     }
 }
 

@@ -140,11 +140,11 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
 
             var model = new TrainedMeasureModel
             {
-                Version = 1,
+                Version = MeasureRecommendationPersistence.CurrentModelVersion,
                 TrainedAtUtc = DateTime.UtcNow,
                 TotalSamples = sampleCount,
-                ByCode = CloneByCode(_store.ByCode),
-                ByCodeSignature = CloneByCodeSignature(_store.ByCodeSignature)
+                ByCode = MeasureRecommendationPersistence.CloneByCode(_store.ByCode),
+                ByCodeSignature = MeasureRecommendationPersistence.CloneByCodeSignature(_store.ByCodeSignature)
             };
 
             try
@@ -271,50 +271,41 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
         if (!File.Exists(_storePath))
             return;
 
+        var shouldPersistMigration = false;
         try
         {
             var json = File.ReadAllText(_storePath);
             var loaded = JsonSerializer.Deserialize<MeasureLearningStore>(json, JsonOptions);
             if (loaded is null)
                 return;
-
-            _store.Version = loaded.Version > 0 ? loaded.Version : 2;
-            _store.LearnedSamples = loaded.LearnedSamples is null
-                ? new HashSet<string>(StringComparer.Ordinal)
-                : new HashSet<string>(loaded.LearnedSamples, StringComparer.Ordinal);
-
-            _store.ByCode = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
-            foreach (var codeEntry in loaded.ByCode ?? new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase))
+            if (loaded.Version > MeasureRecommendationPersistence.CurrentStoreVersion)
             {
-                var code = NormalizeCode(codeEntry.Key);
-                if (string.IsNullOrWhiteSpace(code))
-                    continue;
-
-                var measureMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                foreach (var measureEntry in codeEntry.Value)
-                {
-                    var measure = NormalizeMeasure(measureEntry.Key);
-                    if (string.IsNullOrWhiteSpace(measure) || measureEntry.Value <= 0)
-                        continue;
-                    measureMap[measure] = measureEntry.Value;
-                }
-
-                if (measureMap.Count > 0)
-                    _store.ByCode[code] = measureMap;
+                BestEffort.ReportWarning(
+                    $"[MeasureRecommendationService] Lernspeicher-Version {loaded.Version} ist neuer als unterstuetzt ({MeasureRecommendationPersistence.CurrentStoreVersion}).");
+                return;
             }
-
-            _store.ByCodeSignature = new Dictionary<string, CostAggregate>(StringComparer.OrdinalIgnoreCase);
-            foreach (var entry in loaded.ByCodeSignature ?? new Dictionary<string, CostAggregate>(StringComparer.OrdinalIgnoreCase))
-            {
-                if (string.IsNullOrWhiteSpace(entry.Key) || entry.Value is null)
-                    continue;
-                _store.ByCodeSignature[entry.Key] = entry.Value;
-            }
+            (_store, shouldPersistMigration) = MeasureRecommendationPersistence.SanitizeStore(loaded);
         }
         catch (Exception ex)
         {
             BestEffort.ReportWarning($"[MeasureRecommendationService] Fehler beim Laden: {ex.Message}");
             _store = new MeasureLearningStore();
+            return;
+        }
+
+        if (shouldPersistMigration)
+        {
+            try
+            {
+                // AtomicTextFileWriter legt beim Ersetzen automatisch eine .bak-Datei an.
+                SaveUnsafe();
+            }
+            catch (Exception ex)
+            {
+                // Die bereinigten Werte bleiben im Speicher nutzbar. Ein Schreibfehler
+                // darf Empfehlungen nicht wieder auf die ungefilterten Daten zuruecksetzen.
+                BestEffort.ReportWarning($"[MeasureRecommendationService] Migration konnte nicht gespeichert werden: {ex.Message}");
+            }
         }
     }
 
@@ -326,7 +317,7 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
 
         var saveModel = new MeasureLearningStore
         {
-            Version = 2,
+            Version = MeasureRecommendationPersistence.CurrentStoreVersion,
             LearnedSamples = new HashSet<string>(_store.LearnedSamples, StringComparer.Ordinal),
             ByCode = _store.ByCode.ToDictionary(
                 x => x.Key,
@@ -352,8 +343,8 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
         }
 
         var lastWriteUtc = File.GetLastWriteTimeUtc(_modelPath);
-        if (_model is not null && _modelLastWriteUtc == lastWriteUtc)
-            return true;
+        if (_modelLastWriteUtc == lastWriteUtc)
+            return _model is not null;
 
         try
         {
@@ -376,8 +367,18 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
                 return false;
             }
 
-            loaded.ByCode = CloneByCode(loaded.ByCode);
-            loaded.ByCodeSignature = CloneByCodeSignature(loaded.ByCodeSignature);
+            // Modelle der alten Version koennen die fehlerhaften Meter-/BC-Codes
+            // enthalten. Sie werden bewusst nicht mehr verwendet; bis zum naechsten
+            // Training dient der bereits bereinigte Lernspeicher als Quelle.
+            if (loaded.Version < MeasureRecommendationPersistence.CurrentModelVersion)
+            {
+                _model = null;
+                _modelLastWriteUtc = lastWriteUtc;
+                return false;
+            }
+
+            loaded.ByCode = MeasureRecommendationPersistence.CloneByCode(loaded.ByCode);
+            loaded.ByCodeSignature = MeasureRecommendationPersistence.CloneByCodeSignature(loaded.ByCodeSignature);
 
             _model = loaded;
             _modelLastWriteUtc = lastWriteUtc;
@@ -387,7 +388,7 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
         {
             BestEffort.ReportWarning($"[MeasureRecommendationService] Modell-Laden fehlgeschlagen: {ex.Message}");
             _model = null;
-            _modelLastWriteUtc = null;
+            _modelLastWriteUtc = lastWriteUtc;
             return false;
         }
     }
@@ -403,62 +404,6 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
         var entry = zip.CreateEntry("model.json", CompressionLevel.Optimal);
         using var entryStream = entry.Open();
         JsonSerializer.Serialize(entryStream, model, JsonOptions);
-    }
-
-    private static Dictionary<string, Dictionary<string, int>> CloneByCode(
-        IDictionary<string, Dictionary<string, int>> source)
-    {
-        var result = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var codeEntry in source)
-        {
-            var code = NormalizeCode(codeEntry.Key);
-            if (string.IsNullOrWhiteSpace(code))
-                continue;
-
-            var measureMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            foreach (var measureEntry in codeEntry.Value)
-            {
-                var measure = NormalizeMeasure(measureEntry.Key);
-                if (string.IsNullOrWhiteSpace(measure) || measureEntry.Value <= 0)
-                    continue;
-                measureMap[measure] = measureEntry.Value;
-            }
-
-            if (measureMap.Count > 0)
-                result[code] = measureMap;
-        }
-
-        return result;
-    }
-
-    private static Dictionary<string, CostAggregate> CloneByCodeSignature(
-        IDictionary<string, CostAggregate> source)
-    {
-        var result = new Dictionary<string, CostAggregate>(StringComparer.OrdinalIgnoreCase);
-        foreach (var entry in source)
-        {
-            if (string.IsNullOrWhiteSpace(entry.Key) || entry.Value is null)
-                continue;
-
-            var value = entry.Value;
-            result[entry.Key] = new CostAggregate
-            {
-                Samples = Math.Max(0, value.Samples),
-                TotalCostSum = value.TotalCostSum,
-                TotalCostCount = Math.Max(0, value.TotalCostCount),
-                InlinerMetersSum = value.InlinerMetersSum,
-                InlinerMetersCount = Math.Max(0, value.InlinerMetersCount),
-                InlinerStkSum = value.InlinerStkSum,
-                InlinerStkCount = Math.Max(0, value.InlinerStkCount),
-                AnschluesseVerpressenSum = value.AnschluesseVerpressenSum,
-                AnschluesseVerpressenCount = Math.Max(0, value.AnschluesseVerpressenCount),
-                ReparaturManschetteSum = value.ReparaturManschetteSum,
-                ReparaturManschetteCount = Math.Max(0, value.ReparaturManschetteCount),
-                ReparaturKurzlinerSum = value.ReparaturKurzlinerSum,
-                ReparaturKurzlinerCount = Math.Max(0, value.ReparaturKurzlinerCount)
-            };
-        }
-        return result;
     }
 
     private static string BuildSampleSignature(Guid recordId, IReadOnlyList<string> codes, IReadOnlyList<string> measures, MeasureRecordParser.CostSnapshot costs)
@@ -503,45 +448,5 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
 
     private static List<string> ParseMeasures(string? raw)
         => MeasureRecordParser.ParseMeasures(raw);
-
-    private static string NormalizeMeasure(string? value)
-        => MeasureRecordParser.NormalizeMeasure(value);
-
-    private static string NormalizeCode(string? value)
-        => MeasureRecordParser.NormalizeCode(value);
-
-    private sealed class MeasureLearningStore
-    {
-        public int Version { get; set; } = 2;
-        public HashSet<string> LearnedSamples { get; set; } = new(StringComparer.Ordinal);
-        public Dictionary<string, Dictionary<string, int>> ByCode { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-        public Dictionary<string, CostAggregate> ByCodeSignature { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-    }
-
-    private sealed class CostAggregate
-    {
-        public int Samples { get; set; }
-        public decimal TotalCostSum { get; set; }
-        public int TotalCostCount { get; set; }
-        public decimal InlinerMetersSum { get; set; }
-        public int InlinerMetersCount { get; set; }
-        public int InlinerStkSum { get; set; }
-        public int InlinerStkCount { get; set; }
-        public int AnschluesseVerpressenSum { get; set; }
-        public int AnschluesseVerpressenCount { get; set; }
-        public int ReparaturManschetteSum { get; set; }
-        public int ReparaturManschetteCount { get; set; }
-        public int ReparaturKurzlinerSum { get; set; }
-        public int ReparaturKurzlinerCount { get; set; }
-    }
-
-    private sealed class TrainedMeasureModel
-    {
-        public int Version { get; set; } = 1;
-        public DateTime TrainedAtUtc { get; set; } = DateTime.UtcNow;
-        public int TotalSamples { get; set; }
-        public Dictionary<string, Dictionary<string, int>> ByCode { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-        public Dictionary<string, CostAggregate> ByCodeSignature { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-    }
 
 }
