@@ -75,7 +75,11 @@ public partial class PlayerWindow
                 CodingAcceptGreenMatches: CodingAcceptGreenMatches_Click,
                 ImportShowPhotos: ImportShowPhotos_Click,
                 ImportEdit: ImportEdit_Click,
-                ImportConfirmToBrain: ImportConfirmToBrain_Click));
+                ImportConfirmToBrain: ImportConfirmToBrain_Click,
+                SuggestionsDoubleClick: (_, _) => SuggestionSeek_Click(this, new System.Windows.RoutedEventArgs()),
+                SuggestionSeek: SuggestionSeek_Click,
+                SuggestionConfirm: SuggestionConfirm_Click,
+                SuggestionReject: SuggestionReject_Click));
 
     private void InitializeCodingSidePanelControllers()
     {

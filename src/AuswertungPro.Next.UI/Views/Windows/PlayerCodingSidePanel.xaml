@@ -380,131 +380,204 @@
                             </Border>
 
                             <!-- Rechte Spalte: Import-Codierung (Referenz) -->
-                            <Border Grid.Column="4" Style="{DynamicResource PlayerCard}">
-                                <DockPanel>
-                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                                        <TextBlock Style="{DynamicResource SectionLabel}" Margin="0" FontSize="{DynamicResource TextXS}">
-                                            <Run Text="IMPORT ("/>
-                                            <Run x:Name="RunImportDefectCount" Text="0"/>
-                                            <Run Text=")"/>
-                                        </TextBlock>
-                                    </DockPanel>
+                            <Grid Grid.Column="4">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Style="{DynamicResource PlayerCard}">
+                                    <DockPanel>
+                                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                                            <TextBlock Style="{DynamicResource SectionLabel}" Margin="0" FontSize="{DynamicResource TextXS}">
+                                                <Run Text="IMPORT ("/>
+                                                <Run x:Name="RunImportDefectCount" Text="0"/>
+                                                <Run Text=")"/>
+                                            </TextBlock>
+                                        </DockPanel>
 
-                                    <ListBox x:Name="LstImportEvents"
-                                             behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
-                                             behaviors:CodingEventDragDropBehavior.Enabled="True"
-                                             Background="Transparent"
-                                             BorderThickness="0"
-                                             FontSize="{DynamicResource TextXS}"
-                                             Foreground="{DynamicResource TextBrush}"
-                                             MaxHeight="400"
-                                             VirtualizingPanel.IsVirtualizing="False"
-                                             ScrollViewer.CanContentScroll="False"
-                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                             IsHitTestVisible="True"
-                                             MouseDoubleClick="ImportEvents_DoubleClick">
-                                        <ListBox.ContextMenu>
-                                            <ContextMenu>
-                                                <MenuItem Header="Bestätigen → ins KI-Brain" Click="ImportConfirmToBrain_Click">
-                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8FB;" Foreground="{DynamicResource SuccessBrush}"/></MenuItem.Icon>
-                                                </MenuItem>
-                                                <MenuItem Header="Bestätigen (als Training übernehmen)" Click="ImportConfirm_Click">
-                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8FB;" Foreground="{DynamicResource SuccessBrush}"/></MenuItem.Icon>
-                                                </MenuItem>
-                                                <MenuItem Header="Fotos anzeigen" Click="ImportShowPhotos_Click">
-                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8B9;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                                                </MenuItem>
-                                                <MenuItem Header="Bearbeiten (Code / BBox ziehen)" Click="ImportEdit_Click">
-                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                                                </MenuItem>
-                                                <MenuItem Header="Zum Zeitpunkt springen" Click="ImportSeek_Click">
-                                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE823;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                                                </MenuItem>
-                                            </ContextMenu>
-                                        </ListBox.ContextMenu>
-                                        <ListBox.ItemContainerStyle>
-                                            <Style TargetType="ListBoxItem">
-                                                <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
-                                                <Setter Property="Margin" Value="0,1"/>
-                                                <Setter Property="Padding" Value="4,3"/>
-                                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="ListBoxItem">
-                                                            <Border x:Name="Bd"
-                                                                    Background="{TemplateBinding Background}"
-                                                                    CornerRadius="{DynamicResource RadiusM}"
-                                                                    Padding="{TemplateBinding Padding}"
-                                                                    Cursor="Hand">
-                                                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
-                                                            </Border>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsSelected" Value="True">
-                                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBrush}"/>
-                                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                                                    <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBrush}"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </ListBox.ItemContainerStyle>
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel>
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <Border Grid.Column="0" Width="7" Height="7"
-                                                                CornerRadius="{DynamicResource RadiusS}"
-                                                                Background="{DynamicResource AccentBrush}"
-                                                                Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Grid.Column="1"
-                                                                   Text="{Binding Entry.Code}"
-                                                                   FontFamily="Consolas"
-                                                                   FontWeight="Bold" FontSize="{DynamicResource TextXS}"
-                                                                   VerticalAlignment="Top"
-                                                                   Margin="0,0,4,0"/>
-                                                        <TextBlock Grid.Column="2"
-                                                                   Text="{Binding Entry.Beschreibung}"
-                                                                   FontSize="{DynamicResource TextXS}"
-                                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                   TextWrapping="Wrap"
-                                                                   ToolTip="{Binding Entry.Beschreibung}"
-                                                                   VerticalAlignment="Top"/>
-                                                        <Border x:Name="CodingMatchBadge"
-                                                                Grid.Column="3"
-                                                                Visibility="Collapsed"
-                                                                Background="#334155"
-                                                                CornerRadius="{DynamicResource RadiusS}"
-                                                                Padding="4,1"
-                                                                Margin="4,0,0,0"
-                                                                VerticalAlignment="Center">
-                                                            <TextBlock x:Name="TxtCodingMatchBadge"
+                                        <ListBox x:Name="LstImportEvents"
+                                                 behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
+                                                 behaviors:CodingEventDragDropBehavior.Enabled="True"
+                                                 Background="Transparent"
+                                                 BorderThickness="0"
+                                                 FontSize="{DynamicResource TextXS}"
+                                                 Foreground="{DynamicResource TextBrush}"
+                                                 MaxHeight="400"
+                                                 VirtualizingPanel.IsVirtualizing="False"
+                                                 ScrollViewer.CanContentScroll="False"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 IsHitTestVisible="True"
+                                                 MouseDoubleClick="ImportEvents_DoubleClick">
+                                            <ListBox.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Bestätigen → ins KI-Brain" Click="ImportConfirmToBrain_Click">
+                                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8FB;" Foreground="{DynamicResource SuccessBrush}"/></MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="Bestätigen (als Training übernehmen)" Click="ImportConfirm_Click">
+                                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8FB;" Foreground="{DynamicResource SuccessBrush}"/></MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="Fotos anzeigen" Click="ImportShowPhotos_Click">
+                                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8B9;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="Bearbeiten (Code / BBox ziehen)" Click="ImportEdit_Click">
+                                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="Zum Zeitpunkt springen" Click="ImportSeek_Click">
+                                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE823;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                                    </MenuItem>
+                                                </ContextMenu>
+                                            </ListBox.ContextMenu>
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="ListBoxItem">
+                                                    <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
+                                                    <Setter Property="Margin" Value="0,1"/>
+                                                    <Setter Property="Padding" Value="4,3"/>
+                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="ListBoxItem">
+                                                                <Border x:Name="Bd"
+                                                                        Background="{TemplateBinding Background}"
+                                                                        CornerRadius="{DynamicResource RadiusM}"
+                                                                        Padding="{TemplateBinding Padding}"
+                                                                        Cursor="Hand">
+                                                                    <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsSelected" Value="True">
+                                                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBrush}"/>
+                                                                        <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                                        <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                                                                    </Trigger>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBrush}"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <Border Grid.Column="0" Width="7" Height="7"
+                                                                    CornerRadius="{DynamicResource RadiusS}"
+                                                                    Background="{DynamicResource AccentBrush}"
+                                                                    Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding Entry.Code}"
+                                                                       FontFamily="Consolas"
+                                                                       FontWeight="Bold" FontSize="{DynamicResource TextXS}"
+                                                                       VerticalAlignment="Top"
+                                                                       Margin="0,0,4,0"/>
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{Binding Entry.Beschreibung}"
                                                                        FontSize="{DynamicResource TextXS}"
-                                                                       FontWeight="SemiBold"
-                                                                       Foreground="#F8FAFC"/>
-                                                        </Border>
-                                                    </Grid>
-                                                    <StackPanel Orientation="Horizontal" Margin="11,1,0,0">
-                                                        <ui:FluentIcon Glyph="&#xE707;" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0"/>
-                                                        <TextBlock Text="{Binding MeterAtCapture, StringFormat='{}{0:F2}m', Mode=OneWay}"
-                                                                   FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                       TextWrapping="Wrap"
+                                                                       ToolTip="{Binding Entry.Beschreibung}"
+                                                                       VerticalAlignment="Top"/>
+                                                            <Border x:Name="CodingMatchBadge"
+                                                                    Grid.Column="3"
+                                                                    Visibility="Collapsed"
+                                                                    Background="#334155"
+                                                                    CornerRadius="{DynamicResource RadiusS}"
+                                                                    Padding="4,1"
+                                                                    Margin="4,0,0,0"
+                                                                    VerticalAlignment="Center">
+                                                                <TextBlock x:Name="TxtCodingMatchBadge"
+                                                                           FontSize="{DynamicResource TextXS}"
+                                                                           FontWeight="SemiBold"
+                                                                           Foreground="#F8FAFC"/>
+                                                            </Border>
+                                                        </Grid>
+                                                        <StackPanel Orientation="Horizontal" Margin="11,1,0,0">
+                                                            <ui:FluentIcon Glyph="&#xE707;" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0"/>
+                                                            <TextBlock Text="{Binding MeterAtCapture, StringFormat='{}{0:F2}m', Mode=OneWay}"
+                                                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                        </StackPanel>
                                                     </StackPanel>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                                </DockPanel>
-                            </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </DockPanel>
+                                </Border>
+                                <Border Grid.Row="1" Style="{DynamicResource PlayerCard}" Margin="0,4,0,0">
+                                    <DockPanel>
+                                        <TextBlock x:Name="TxtSuggestionHeader"
+                                                   DockPanel.Dock="Top"
+                                                   Style="{DynamicResource SectionLabel}"
+                                                   Margin="0,0,0,4"
+                                                   FontSize="{DynamicResource TextXS}"
+                                                   Text="KI-VORSCHLÄGE"
+                                                   ToolTip="Vorschläge der KI aus dem Vorabdurchlauf: Bogen, Rohranfang, Rohrende. Nichts wird ohne Bestätigen eingetragen."/>
+                                        <TextBlock x:Name="TxtSuggestionHint"
+                                                   DockPanel.Dock="Bottom"
+                                                   FontSize="{DynamicResource TextXS}"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   TextWrapping="Wrap"
+                                                   Visibility="Collapsed"/>
+                                        <ListBox x:Name="LstSuggestions"
+                                                 Background="Transparent"
+                                                 BorderThickness="0"
+                                                 FontSize="{DynamicResource TextXS}"
+                                                 Foreground="{DynamicResource TextBrush}"
+                                                 MaxHeight="180"
+                                                 MouseDoubleClick="Suggestions_DoubleClick">
+                                            <ListBox.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Zum Zeitpunkt springen" Click="SuggestionSeek_Click">
+                                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE823;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="Bestätigen" Click="SuggestionConfirm_Click">
+                                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8FB;" Foreground="{DynamicResource SuccessBrush}"/></MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="Ablehnen" Click="SuggestionReject_Click">
+                                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE711;" Foreground="{DynamicResource DangerBrush}"/></MenuItem.Icon>
+                                                    </MenuItem>
+                                                </ContextMenu>
+                                            </ListBox.ContextMenu>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal" ToolTip="{Binding Text}">
+                                                        <StackPanel.Style>
+                                                            <Style TargetType="StackPanel">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsConfirmed}" Value="True">
+                                                                        <Setter Property="Opacity" Value="0.45"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </StackPanel.Style>
+                                                        <ui:FluentIcon Glyph="{Binding Glyph}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource SecondaryAccentBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding Text}" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center"/>
+                                                        <ui:FluentIcon Glyph="&#xE73E;" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource SuccessBrush}" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                            <ui:FluentIcon.Style>
+                                                                <Style TargetType="ui:FluentIcon">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsConfirmed}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </ui:FluentIcon.Style>
+                                                        </ui:FluentIcon>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </DockPanel>
+                                </Border>
+                            </Grid>
                         </Grid>
 
                         <!-- == 4. Kalibrierung + Messung (kompakt) == -->

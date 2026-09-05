@@ -16,10 +16,10 @@ public sealed class CodingSuggestionRow : INotifyPropertyChanged
         Text = CodingSuggestionText.Zeile(suggestion);
         Glyph = suggestion.Kind switch
         {
-            CodingSuggestionKind.Bogen => "",       // Bogen: gebogener Pfeil
-            CodingSuggestionKind.Rohranfang => "",  // Rohranfang: Pfeil nach rechts
-            CodingSuggestionKind.Rohrende => "",    // Rohrende: Haken
-            _ => ""
+            CodingSuggestionKind.Bogen => "\uE7AD",       // Bogen: gebogener Pfeil
+            CodingSuggestionKind.Rohranfang => "\uE72A",  // Rohranfang: Pfeil nach rechts
+            CodingSuggestionKind.Rohrende => "\uE73E",    // Rohrende: Haken
+            _ => "\uE946"
         };
     }
 

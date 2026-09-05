@@ -47,6 +47,10 @@ public partial class PlayerCodingSidePanel : UserControl
     public event RoutedEventHandler? ImportShowPhotosRequested;
     public event RoutedEventHandler? ImportEditRequested;
     public event RoutedEventHandler? ImportConfirmToBrainRequested;
+    public event MouseButtonEventHandler? SuggestionsDoubleClickRequested;
+    public event RoutedEventHandler? SuggestionSeekRequested;
+    public event RoutedEventHandler? SuggestionConfirmRequested;
+    public event RoutedEventHandler? SuggestionRejectRequested;
     public event RoutedEventHandler? CodingSelectCodeRequested;
     public event RoutedEventHandler? CodingCreateEventRequested;
     public event RoutedEventHandler? CodingProtocolMatchRequested;
@@ -70,6 +74,10 @@ public partial class PlayerCodingSidePanel : UserControl
     private void ImportShowPhotos_Click(object sender, RoutedEventArgs e) => ImportShowPhotosRequested?.Invoke(sender, e);
     private void ImportEdit_Click(object sender, RoutedEventArgs e) => ImportEditRequested?.Invoke(sender, e);
     private void ImportConfirmToBrain_Click(object sender, RoutedEventArgs e) => ImportConfirmToBrainRequested?.Invoke(sender, e);
+    private void Suggestions_DoubleClick(object sender, MouseButtonEventArgs e) => SuggestionsDoubleClickRequested?.Invoke(sender, e);
+    private void SuggestionSeek_Click(object sender, RoutedEventArgs e) => SuggestionSeekRequested?.Invoke(sender, e);
+    private void SuggestionConfirm_Click(object sender, RoutedEventArgs e) => SuggestionConfirmRequested?.Invoke(sender, e);
+    private void SuggestionReject_Click(object sender, RoutedEventArgs e) => SuggestionRejectRequested?.Invoke(sender, e);
     private void CodingSelectCode_Click(object sender, RoutedEventArgs e) => CodingSelectCodeRequested?.Invoke(sender, e);
     private void CodingCreateEvent_Click(object sender, RoutedEventArgs e) => CodingCreateEventRequested?.Invoke(sender, e);
     private void RunCodingProtocolMatch_Click(object sender, RoutedEventArgs e) => CodingProtocolMatchRequested?.Invoke(sender, e);
