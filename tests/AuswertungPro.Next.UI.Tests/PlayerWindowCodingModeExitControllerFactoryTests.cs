@@ -271,7 +271,8 @@ public sealed class PlayerWindowCodingModeExitControllerFactoryTests
                     {
                         AiStates.FrameReadinessController.Reset();
                         OsdMeterController.ResetRecentMeter();
-                    }));
+                    },
+                    CancelSuggestionScan: () => { }));
 
         private CodingBoundaryContext CreateBoundaryContext()
             => new(

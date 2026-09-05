@@ -61,7 +61,4 @@ public partial class PlayerWindow
                 ShowInitialOsdMeterBadge: () => CodingOsdBadgeControls.ShowInitial(OsdMeterBadge, TxtOsdMeter),
                 StartSuggestionScan: StartSuggestionScan));
     }
-
-    /// <summary>Wird in PlayerWindow.Coding.Suggestions.cs ausgefuellt.</summary>
-    private void StartSuggestionScan() { }
 }

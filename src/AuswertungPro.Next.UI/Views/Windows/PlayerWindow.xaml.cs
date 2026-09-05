@@ -477,7 +477,8 @@ public partial class PlayerWindow : Window
                 Actions: new PlayerWindowCodingModeExitActions(
                     CloseOpenStreckenschaeden: CloseOpenStreckenschaeden,
                     HideInlineDefectDetail: HideInlineDefectDetail,
-                    ResetFrameReadiness: ResetFrameReadiness)));
+                    ResetFrameReadiness: ResetFrameReadiness,
+                    CancelSuggestionScan: CancelSuggestionScan)));
         _playerSliderInputController = new PlayerSliderInputController(_playerControllers);
         var liveDetectionTrainingControllers = LiveDetectionTrainingControllerSetFactory.Create(
             new LiveDetectionTrainingControllerSetDependencies(

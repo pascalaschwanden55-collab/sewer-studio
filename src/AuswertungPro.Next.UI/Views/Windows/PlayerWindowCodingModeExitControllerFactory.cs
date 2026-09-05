@@ -32,7 +32,8 @@ internal sealed record PlayerWindowCodingModeExitControls(
 internal sealed record PlayerWindowCodingModeExitActions(
     Func<double, bool> CloseOpenStreckenschaeden,
     Action HideInlineDefectDetail,
-    Action ResetFrameReadiness);
+    Action ResetFrameReadiness,
+    Action CancelSuggestionScan);
 
 internal sealed record PlayerWindowCodingModeExitControllerDependencies(
     CodingRuntimeStateControllerSet RuntimeStates,
@@ -112,8 +113,13 @@ internal static class PlayerWindowCodingModeExitControllerFactory
             // Beim Fenster-Schliessen wird ueber ExitCodingMode ebenfalls dieser Teardown ausgefuehrt.
             DisposeAnalysisCancellation:
                 dependencies.AiStates.RuntimeOwner.Controller.Dispose,
-            ClearImportReferenceEvents: () => CodingImportReferenceStateResetter.ClearEvents(
-                dependencies.ProtocolStates.ImportReferenceEvents.Events),
+            ClearImportReferenceEvents: () =>
+            {
+                // KI-Vorschlaege gehoeren wie die Import-Referenz zur Sitzung: beim Verlassen weg.
+                dependencies.Actions.CancelSuggestionScan();
+                CodingImportReferenceStateResetter.ClearEvents(
+                    dependencies.ProtocolStates.ImportReferenceEvents.Events);
+            },
             ResetProtocolMatchState: () =>
             {
                 dependencies.ProtocolStates.ProtocolMatchState.Reset();
