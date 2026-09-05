@@ -577,7 +577,7 @@
                                     </StackPanel>
                                 </Button>
 
-                                <ProgressBar Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                <ProgressBar Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
                                              Height="4"
                                              Margin="0,0,0,8"
                                              IsIndeterminate="True"
@@ -809,6 +809,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Autostart" Style="{StaticResource SettingsFieldLabel}"/>
@@ -817,13 +818,20 @@
                                           IsChecked="{Binding StartAiOnProgramStart}"
                                           Style="{StaticResource SettingsFieldCheckBox}"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Start" Style="{StaticResource SettingsFieldLabel}"/>
-                                <Button Grid.Row="1" Grid.Column="1"
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Codiermodus" Style="{StaticResource SettingsFieldLabel}"/>
+                                <CheckBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                          Content="KI-Vorschläge beim Codieren (Bogen, Rohranfang, Rohrende)"
+                                          IsChecked="{Binding CodingSuggestionsEnabled}"
+                                          ToolTip="Beim Öffnen des Codiermodus prüft die KI das Video im Hintergrund und schlägt Bogen, Rohranfang und Rohrende zum Bestätigen vor."
+                                          Style="{StaticResource SettingsFieldCheckBox}"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Start" Style="{StaticResource SettingsFieldLabel}"/>
+                                <Button Grid.Row="2" Grid.Column="1"
                                         Content="KI jetzt starten"
                                         Command="{Binding StartAiCommand}"
                                         HorizontalAlignment="Left"
                                         Style="{StaticResource SettingsActionButton}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="2"
+                                <TextBlock Grid.Row="2" Grid.Column="2"
                                            Text="{Binding AiStartupStatusText}"
                                            Margin="10,0,0,8"
                                            VerticalAlignment="Center"

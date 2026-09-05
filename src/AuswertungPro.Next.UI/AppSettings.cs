@@ -363,6 +363,12 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
     // AI / Ollama settings (overrides env vars if set)
     public bool AiStartOnProgramStart { get; set; }
+
+    /// <summary>
+    /// Vorabdurchlauf (Bogen, Rohranfang, Rohrende) beim Oeffnen des Codiermodus.
+    /// Standard ein; ein fehlender Wert in settings.json bleibt ein.
+    /// </summary>
+    public bool CodingSuggestionsEnabled { get; set; } = true;
     public bool? AiEnabled { get; set; }
     public string? AiOllamaUrl { get; set; }
     public string? AiVisionModel { get; set; }

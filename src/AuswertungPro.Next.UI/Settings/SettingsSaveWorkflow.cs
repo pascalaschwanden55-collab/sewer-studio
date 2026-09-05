@@ -28,7 +28,8 @@ public sealed record SettingsSaveValues(
     double PipelineYoloConfidence,
     double PipelineDinoBoxThreshold,
     double PipelineDinoTextThreshold,
-    string? SearchChApiKey = null);
+    string? SearchChApiKey = null,
+    bool CodingSuggestionsEnabled = true);
 
 public sealed record SettingsSaveWorkflowRequest(
     AppSettings Settings,
@@ -71,6 +72,7 @@ public static class SettingsSaveWorkflow
         settings.VideoOutput = NormalizeVideoOutput(values.VideoOutput);
         settings.UiTheme = ThemeManager.NormalizeTheme(values.UiTheme);
         settings.AiStartOnProgramStart = values.StartAiOnProgramStart;
+        settings.CodingSuggestionsEnabled = values.CodingSuggestionsEnabled;
         settings.PipelineYoloConfidence = ClampThreshold(values.PipelineYoloConfidence);
         settings.PipelineDinoBoxThreshold = ClampThreshold(values.PipelineDinoBoxThreshold);
         settings.PipelineDinoTextThreshold = ClampThreshold(values.PipelineDinoTextThreshold);

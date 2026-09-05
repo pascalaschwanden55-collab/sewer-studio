@@ -78,6 +78,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     /// <summary>Anzahl Fotos je Seite in den selbst erzeugten Haltungsprotokollen.</summary>
     [ObservableProperty] private int _protocolPhotosPerPage;
     [ObservableProperty] private bool _startAiOnProgramStart;
+    [ObservableProperty] private bool _codingSuggestionsEnabled = true;
     [ObservableProperty] private double _pipelineYoloConfidence = DefaultYoloConfidence;
     [ObservableProperty] private double _pipelineDinoBoxThreshold = DefaultDinoBoxThreshold;
     [ObservableProperty] private double _pipelineDinoTextThreshold = DefaultDinoTextThreshold;
@@ -317,6 +318,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         // die Einstellungen ohne Aenderung neu schreiben.
         _protocolPhotosPerPage = ProtocolPdfPhotoLayout.Normalize(_settings.ProtocolPhotosPerPage);
         StartAiOnProgramStart = _settings.AiStartOnProgramStart;
+        CodingSuggestionsEnabled = _settings.CodingSuggestionsEnabled;
         var pipelineConfig = AiSettingsFactory
             .Load(AppSettingsAiSettingsProvider.ToSource(_settings))
             .ToPipelineConfig();
@@ -502,7 +504,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
                 PipelineYoloConfidence,
                 PipelineDinoBoxThreshold,
                 PipelineDinoTextThreshold,
-                SearchChApiKey),
+                SearchChApiKey,
+                CodingSuggestionsEnabled),
             _settings.Save,
             _katasterXtfPaths));
     }
