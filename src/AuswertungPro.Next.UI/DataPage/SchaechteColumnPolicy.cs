@@ -39,6 +39,22 @@ internal static class SchaechteColumnPolicy
         }
     }
 
+    /// <summary>
+    /// Ergaenzt die Spalte fuer die GEONIS-Kennung, wenn die Vorlage sie nicht fuehrt.
+    /// Sie wird von "Katasterkennungen ergaenzen" gefuellt und ist ohne Spalte unsichtbar.
+    /// </summary>
+    public static void ErgaenzeKatasterKennung(ICollection<string> columns)
+    {
+        ArgumentNullException.ThrowIfNull(columns);
+
+        var vorhanden = columns.Any(c => string.Equals(
+            SchachtFeldnamen.Falte(c),
+            SchachtFeldnamen.Falte(FieldKeys.GeonisId),
+            StringComparison.Ordinal));
+        if (!vorhanden)
+            columns.Add(FieldKeys.GeonisId);
+    }
+
     public static bool TryResolveDropdownColumnSpec(string columnName, out GridDropdownFieldSpec spec)
     {
         var optionField = ResolveOptionField(columnName);
@@ -110,6 +126,9 @@ internal static class SchaechteColumnPolicy
             return "Sanieren Ja/Nein";
 
         var gefaltet = SchachtFeldnamen.Falte(columnName);
+        if (string.Equals(gefaltet, SchachtFeldnamen.Falte(FieldKeys.GeonisId), StringComparison.Ordinal))
+            return "GEONIS-Kennung";
+
         if (string.Equals(
                 gefaltet,
                 SchachtFeldnamen.Falte(FieldKeys.ShaftDimension1Mm),

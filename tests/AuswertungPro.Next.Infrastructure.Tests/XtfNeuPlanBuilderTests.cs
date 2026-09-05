@@ -365,10 +365,30 @@ public sealed class XtfNeuPlanBuilderTests
         Assert.DoesNotContain(plan.Hinweise, h => h.Contains("Verhaeltnis", StringComparison.Ordinal));
     }
 
-    [Fact]
-    public void Rund_ergibt_kein_Verhaeltnis()
+    // GEONIS fuehrt neben der Hoehe die Breite und rechnet sie aus dem Verhaeltnis.
+    // Ein Kreisprofil traegt deshalb 1 — bei gleichen Massen wie ohne Breite
+    // (Wunsch Trigonet 2026-09-04).
+    [Theory]
+    [InlineData("300", "300")]
+    [InlineData("300", "")]
+    [InlineData("", "")]
+    public void Rund_ergibt_am_Kreisprofil_das_Verhaeltnis_1(string hoehe, string breite)
     {
         var record = Haltung();
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, hoehe, FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, breite, FieldSource.Manual, true);
+
+        var profil = Assert.Single(XtfNeuPlanBuilder.Build([record], []).Objekte, o => o.Klasse == "Rohrprofil");
+
+        Assert.Equal("1", profil.Felder.Single(f => f.Key == "HoehenBreitenverhaeltnis").Value);
+        Assert.Equal("Kreisprofil", profil.Felder.Single(f => f.Key == "Bezeichnung").Value);
+    }
+
+    [Fact]
+    public void Rund_ohne_Kreisprofil_ergibt_kein_Verhaeltnis()
+    {
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.ProfileType, "Rechteckprofil", FieldSource.Manual, true);
         record.SetFieldValue(FieldKeys.NominalDiameterMm, "300", FieldSource.Manual, true);
         record.SetFieldValue(FieldKeys.ClearWidthMm, "300", FieldSource.Manual, true);
 

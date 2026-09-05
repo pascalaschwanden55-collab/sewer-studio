@@ -193,6 +193,16 @@ public partial class HaltungsansichtView : UserControl
     private void CtxCosts_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("costs"); }
     private void CtxDelete_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("delete"); }
 
+    /// <summary>
+    /// Baut das Formular der gewaehlten Haltung neu auf. Noetig nach Sammellaeufen wie
+    /// "Katasterkennungen ergaenzen" oder "Leere Felder aus QGIS": Das Formular ist eine
+    /// Momentaufnahme der Feldwerte beim Auswaehlen und hoert nicht auf spaetere
+    /// Aenderungen am Datensatz — die Tabelle schon. Ohne Neuaufbau stand die frisch
+    /// geschriebene GEONIS-Kennung im Datensatz, aber das offene Formular blieb leer
+    /// (gemessen 2026-09-04 an der Seilergasse).
+    /// </summary>
+    public void AktualisiereDetail() => RefreshDetail();
+
     private void RefreshDetail()
     {
         if (!IsVisible)

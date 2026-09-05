@@ -86,11 +86,16 @@ public sealed class DataPageDetailItemFactory
 
         var isMultiline = fieldName is "Primaere_Schaeden" or "Bemerkungen" or "Empfohlene_Sanierungsmassnahmen";
         var digitsOnly = def.Type == FieldType.Int;
+        // Die GEONIS-Kennung ist nur Anzeige: Die Wahrheit liegt im Geonis-Objekt des
+        // Datensatzes, und der Export liest dort. Eine Handeingabe hier liefe daran
+        // vorbei und zeigte etwas anderes, als in die Datei geht.
+        var isReadOnly = string.Equals(fieldName, FieldKeys.GeonisId, StringComparison.Ordinal);
 
         return new RecordDetailItem(
             label,
             value,
             commitValue: next => _commitValue(record, fieldName, next),
+            isReadOnly: isReadOnly,
             isMultiline: isMultiline,
             digitsOnly: digitsOnly,
             highlightKind: highlightKind,

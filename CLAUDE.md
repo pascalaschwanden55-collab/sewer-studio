@@ -1214,17 +1214,20 @@ Fuenf Regeln dieses Wegs nie zurueckdrehen:
   SIA405 nur `Lichte_Hoehe`; `Rohrprofil.HoehenBreitenverhaeltnis` (Hoehe geteilt durch
   Breite, 0.00001 bis 100, in 2020 und 2020_1 gleich) traegt die zweite Dimension.
   `XtfRohrprofilVerhaeltnis` rechnet hin und zurueck: `DN_mm` ist die Hoehe,
-  `Lichte_Breite_mm` die Breite. Rund heisst Breite leer oder gleich, dann gibt es kein
-  Verhaeltnis. Zwei verschiedene Masse ohne Profiltyp oder mit `Kreisprofil` werden
-  gemeldet, nicht geraten. Erstexport: ein Rohrprofil je Profiltyp UND Verhaeltnis
+  `Lichte_Breite_mm` die Breite. Rund heisst Breite leer oder gleich; ein Kreisprofil
+  traegt dann seit 2026-09-04 das Verhaeltnis `1` (Wunsch Trigonet: GEONIS fuehrt die
+  Breite neben der Hoehe und rechnet sie daraus; ohne den Wert bliebe sie leer). Zwei
+  verschiedene Masse ohne Profiltyp oder mit `Kreisprofil` werden gemeldet, nicht
+  geraten. Erstexport: ein Rohrprofil je Profiltyp UND Verhaeltnis
   (`Rechteckprofil 1.666`), vom ilivalidator angenommen. Revision: Hoehe oder Breite
   von Hand zaehlt als Aenderung am Profil, ein geteiltes Profil bleibt unangetastet.
-  Der Wechsel auf rund entfernt ein vorhandenes altes
-  `HoehenBreitenverhaeltnis` mit einer ausdruecklichen
-  `XtfRevisionFeldAktion.Entfernen`. Eine leere Breite gilt nur dann als bewusste
+  Der Wechsel auf rund setzt ein vorhandenes altes
+  `HoehenBreitenverhaeltnis` auf `1` und ergaenzt ein fehlendes (frueher wurde es mit
+  `XtfRevisionFeldAktion.Entfernen` geloescht; die Aktion bleibt fuer den Writer
+  erhalten). Eine leere Breite gilt nur dann als bewusste
   Rund-Angabe, wenn genau dieses Breitenfeld von Hand bearbeitet wurde; eine bloss
-  geaenderte Hoehe oder ein geerbter Leerwert loescht nie XML. Wird nur der Profiltyp
-  auf Kreis gesetzt, entfernen konsistente Masse das alte Verhaeltnis; zwei verschiedene
+  geaenderte Hoehe oder ein geerbter Leerwert schreibt nie XML. Wird nur der Profiltyp
+  auf Kreis gesetzt, setzen konsistente Masse das Verhaeltnis auf `1`; zwei verschiedene
   Masse sperren Abmessung und Profil gemeinsam, statt eine halbe Aenderung mit
   Kreis und Altverhaeltnis zu schreiben. Unabhaengige Haltungsfelder duerfen bleiben.
   Import: `RohrprofilRef` wird aufgeloest, `Profiltyp` uebernommen, Breite = Hoehe /
@@ -1471,6 +1474,63 @@ Die Pfade stehen in `AppSettings.QgisHaltungenGpkgPath` und
 `QgisSchaechteGpkgPath`. Der bestehende Einzelnachschlag per Rechtsklick
 (`FeldNachschlagUseCase`) bleibt unangetastet — er bedient das Grundbuch, das
 nur Einzelabfragen erlaubt.
+
+`Katasterkennungen ergaenzen` (seit 2026-09-04, je ein Knopf auf Haltungs- und
+Schachtseite neben `Leere Felder aus QGIS`) uebernimmt die SIA405-Kennungen, unter
+denen GEONIS jedes Bauteil fuehrt, aus der Kennungstabelle
+`AppSettings.KatasterKennungenGpkgPath` (Standard
+`D:\QGIS_V4.2\Layer\Kataster_Kennungen_GEONIS_2024-12.gpkg`, gebaut aus der
+GEONIS-Kopie `D:\Fachwissen\ArcGis\Stand_Dezember_2024_uri_abwasser.gdb`; Tabellen
+`haltungen`, `schaechte`, `herkunft`). Weg: `IKatasterKennungLeser`/
+`KatasterKennungGpkgLeser` -> `KatasterKennungPlanBuilder` (reine Rechnung) ->
+Bericht -> `KatasterKennungAnwender`. Ergebnis ist das additive typisierte Objekt
+`HaltungRecord.Geonis` bzw. `SchachtRecord.Geonis` (`GeonisKennungen`: Haltung, Kanal,
+beide Haltungspunkte samt GEONIS-Namen wie `A75394`, Rohrprofil samt Typ; Knoten,
+Bauwerk). Der Neu-Export (`XtfNeuPlanBuilder`) schreibt diese Kennungen als TID, damit
+GEONIS die Objekte wiedererkennt statt Duplikate anzulegen.
+
+Fuenf Regeln dieses Wegs nie zurueckdrehen:
+
+- **Der Schluessel ist die GEONIS-`SIA405_ID`** (16 Zeichen, Praefix `ch23h1a4`,
+  bei 99,97 % der Haltungen/Schaechte belegt). Das sichtbare Feld `Objekt_ID` (Label
+  `Objekt-ID (Lisag)`) bleibt unangetastet: Dort steht bei aus QGIS gefuellten
+  Haltungen die Lisag-Nummer aus dem WFS-Dienst geo.ur.ch, die bei jeder
+  Veroeffentlichung neu vergeben wird (866789 -> 867034) und in GEONIS nicht existiert. Sichtbar ist die Kennung im getrennten Anzeigefeld
+  `FieldKeys.GeonisId` (`GEONIS_Kennung`, Label `GEONIS-Kennung`; am Schacht ueber
+  `SchaechteColumnPolicy.ErgaenzeKatasterKennung`). Es spiegelt nur die Hauptkennung,
+  die Wahrheit bleibt das `Geonis`-Objekt; ein leeres Anzeigefeld bei vorhandener
+  Kennung zieht der Knopf als `NurAnzeige`-Position nach. Das Feld steht in
+  `NichtExportierteFelder` und geht nie als Sachfeld in eine XTF.
+- **Nur bei genau einem Treffer.** Direkter Name zuerst, bei Haltungen danach die
+  Gegenrichtung (dann werden die zwei Punktkennungen vertauscht und
+  `RichtungGedreht` gesetzt). Mehrdeutig heisst nichts: In der Kopie tragen 389 echte
+  Haltungsnamen und 467 echte Schachtnamen mehr als ein Objekt.
+- **Eine vorhandene Kennung wird nie ersetzt** — sie kann aus einem neueren
+  GEONIS-Export stammen. Das gilt auch fuer eine TID, die ein XTF-Import nur in
+  `Objekt_ID` abgelegt hat: Hat sie SIA405-Form und widerspricht der Kopie, bekommt das
+  Bauteil nichts (`Abweichend`). Nur Kennungen, keine Fachwerte: Die Kopie ist alt.
+- **Das Anzeigefeld `GEONIS-Kennung` ist schreibgeschuetzt** (Formular beider Seiten,
+  Haltungstabelle, Schachtraster). Der Export liest ausschliesslich das `Geonis`-Objekt.
+- **`GeonisKennungen.GeonisGeaendert`** traegt das GEONIS-Aenderungsdatum aus der Kopie
+  (`GN_LAST_EDITED_DATE`) als Ausgangsstand fuer einen spaeteren Konfliktschutz. In die
+  XTF geht es NICHT; `Letzte_Aenderung` ist dort der Exporttag. Ein Aenderungsmanifest
+  mit Ausgangswerten je Objekt existiert noch nicht — der Neu-Export ist ein Voll-Export.
+- **Ein Rohrprofil wird in GEONIS geteilt** (56 Profile fuer 102'317 Haltungen). Seine
+  Kennung verwendet der Export nur bei gleichem Profiltyp und ohne
+  Hoehen-Breiten-Verhaeltnis; sonst eigenes Profil plus Hinweis
+  `Rohrprofil weicht vom Kataster ab`.
+- **Nur STANDARDOID-Form** (`SiaObjektkennung.IstGueltig`): Alles andere wird
+  ignoriert, statt eine ungueltige TID zu schreiben.
+
+Bauskript der Kennungstabelle: `tools/KatasterKennungen/bau_kennungen.sh` (ogr2ogr aus
+der gdb-Kopie, Git Bash, GDAL_DATA und TEMP auf Windows-Pfade setzen).
+Belegt 2026-09-04 (Live-Abfragen, nicht archiviert; Praefix-Muster an 13 Stichproben
+beobachtet): Der oeffentliche WFS-Dienst der Lisag (geo.ur.ch, Layer
+`leitungen:abw_abwasserknoten`)
+traegt fuer Schaechte `xtf_id` = `ch24gwkd` + dieselben acht Objektzeichen wie die
+GEONIS-Kennung; fuer Haltungen fehlt sie dort. Die GEONIS-Konfiguration
+(`D:\Fachwissen\ArcGis\GEONIS_AWU_2022`) enthaelt einen FME-Import im
+UPDATE-Modus (Match ueber GlobalId, keine Geometrie) fuer SIA405 2015.
 
 Beim Teacher-Store ist die JSON-Karte verbindlich und `classes.txt` nur abgeleitet.
 Scheitert das Schreiben der JSON-Karte, wird die vorherige `classes.txt`

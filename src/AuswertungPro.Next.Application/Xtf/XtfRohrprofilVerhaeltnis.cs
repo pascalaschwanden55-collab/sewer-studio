@@ -13,8 +13,10 @@ namespace AuswertungPro.Next.Application.Xtf;
 /// Lichte_Hoehe 900 mit Eiprofil und Verhaeltnis 1.5.
 ///
 /// Im Programm stehen Hoehe in <see cref="FieldKeys.NominalDiameterMm"/> und Breite in
-/// <see cref="FieldKeys.ClearWidthMm"/>. Rund heisst: beide gleich oder Breite leer. Dann
-/// gibt es kein Verhaeltnis, so haelt es auch der Kantonsexport.
+/// <see cref="FieldKeys.ClearWidthMm"/>. Rund heisst: beide gleich oder Breite leer.
+/// <see cref="Berechne"/> liefert dann nichts; die Exportwege schreiben fuer ein
+/// Kreisprofil stattdessen <see cref="Rund"/> = 1 (seit 2026-09-04, Wunsch Trigonet:
+/// GEONIS fuehrt neben der Hoehe die Breite und rechnet sie aus dem Verhaeltnis).
 ///
 /// Reine Rechnung, hin und zurueck, damit Export und Import dieselbe Zahl sehen.
 /// </summary>
@@ -22,6 +24,9 @@ public static class XtfRohrprofilVerhaeltnis
 {
     /// <summary>Das Attribut am <c>Rohrprofil</c>, wie es im Modell heisst.</summary>
     public const string Attribut = "HoehenBreitenverhaeltnis";
+
+    /// <summary>Das Verhaeltnis eines runden Profils: Hoehe gleich Breite.</summary>
+    public const string Rund = "1";
 
     private const double Minimum = 0.00001d;
     private const double Maximum = 100d;

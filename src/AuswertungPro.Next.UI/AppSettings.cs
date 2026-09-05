@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -28,6 +28,9 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public const string DefaultQgisLayerDirectory = @"D:\QGIS_V4.2\Layer";
     public const string DefaultQgisHaltungenGpkgPath = DefaultQgisLayerDirectory + @"\Leitungen Lokal.gpkg";
     public const string DefaultQgisSchaechteGpkgPath = DefaultQgisLayerDirectory + @"\Schächte-Selektioniert-Ausführung_durch.gpkg";
+    // Die Kennungstabelle aus der GEONIS-Kopie: nur SIA405-Kennungen je Haltung
+    // und Schacht, damit ein Neu-Export Objekte schreibt, die GEONIS wiedererkennt.
+    public const string DefaultKatasterKennungenGpkgPath = DefaultQgisLayerDirectory + @"\Kataster_Kennungen_GEONIS_2024-12.gpkg";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -336,6 +339,10 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public string QgisHaltungenGpkgPath { get; set; } = DefaultQgisHaltungenGpkgPath;
     public string QgisSchaechteGpkgPath { get; set; } = DefaultQgisSchaechteGpkgPath;
 
+    // Quelle fuer "Katasterkennungen ergaenzen". Fehlt die Datei, meldet der
+    // Knopf das und aendert nichts.
+    public string KatasterKennungenGpkgPath { get; set; } = DefaultKatasterKennungenGpkgPath;
+
     // VSA Zustandklassifizierung v2: Shadow-Vergleich gegen Legacy-Engine.
     // Null bedeutet Default an.
     public bool? VsaClassificationShadowEnabled { get; set; }
@@ -582,6 +589,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         settings.KantonUriXtfDirectory ??= DefaultKantonUriXtfDirectory;
         settings.QgisHaltungenGpkgPath ??= DefaultQgisHaltungenGpkgPath;
         settings.QgisSchaechteGpkgPath ??= DefaultQgisSchaechteGpkgPath;
+        settings.KatasterKennungenGpkgPath ??= DefaultKatasterKennungenGpkgPath;
         settings.UiTheme = ThemeManager.NormalizeTheme(settings.UiTheme);
         settings.PhotoGalleryTileSize = Math.Clamp(settings.PhotoGalleryTileSize, 80d, 260d);
         settings.PlayerVolume = Math.Clamp(settings.PlayerVolume, 0, 100);

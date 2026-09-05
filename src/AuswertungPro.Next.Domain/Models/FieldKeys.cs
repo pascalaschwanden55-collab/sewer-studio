@@ -104,6 +104,17 @@ public static class FieldKeys
     public const string CadastreObjectId = "Objekt_ID";
 
     /// <summary>
+    /// Die Kennung, unter der GEONIS das Bauteil fuehrt (<c>SIA405_ID</c>, 16 Zeichen,
+    /// Praefix <c>ch23h1a4</c>). Reines Anzeigefeld: Die Wahrheit liegt im typisierten
+    /// <c>Geonis</c>-Objekt des Datensatzes, das auch die Kennungen der Verbundobjekte
+    /// traegt; dieses Feld spiegelt nur die Hauptkennung, damit sie im Formular und in
+    /// der Tabelle sichtbar ist. Getrennt von <see cref="CadastreObjectId"/>: Dort steht
+    /// die Nummer aus dem WFS-Dienst der Lisag (geo.ur.ch), die bei jeder
+    /// Veroeffentlichung neu vergeben wird.
+    /// </summary>
+    public const string GeonisId = "GEONIS_Kennung";
+
+    /// <summary>
     /// Datenherr aus dem Kataster. Reines Programmfeld — in SIA405 ist das ein Verweis
     /// auf eine Organisation, und SewerStudio ist nicht der Datenherr dieser Leitungen.
     /// </summary>

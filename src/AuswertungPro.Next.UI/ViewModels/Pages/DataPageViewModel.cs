@@ -31,9 +31,19 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 {
     public event Action? RecordsOrderChanged;
 
+    /// <summary>
+    /// Ein Sammellauf hat Feldwerte der Datensaetze geschrieben (Katasterkennungen,
+    /// QGIS-Nachfuellen). Die Seite baut daraufhin das offene Formular neu auf; die
+    /// Tabelle braucht das nicht, sie hoert auf die Datensaetze selbst.
+    /// </summary>
+    public event Action? FelderExternErgaenzt;
+
+    private void MeldeFelderExternErgaenzt() => FelderExternErgaenzt?.Invoke();
+
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
     private readonly AuswertungPro.Next.Application.Lookup.IQgisBestandLeser _qgisBestand;
+    private readonly AuswertungPro.Next.Application.Lookup.IKatasterKennungLeser _katasterKennungen;
     private readonly AppSettings _settings;
     private readonly AuswertungPro.Next.Application.Vsa.IVsaEvaluationService _vsa;
     private readonly AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider _codeCatalog;
@@ -217,6 +227,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         StartFilter = startFilter;
         _measureRecommendationService = services.MeasureRecommendation;
         _qgisBestand = services.QgisBestand;
+        _katasterKennungen = services.KatasterKennungen;
         _timers = new DataPageTimerController(
             value => SaveStatus = value,
             value => IsSaveStatusVisible = value,

@@ -16,10 +16,29 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     // Protokolldokument (Beobachtungen pro Bauteil).
     public AuswertungPro.Next.Domain.Protocol.ProtocolDocument? Protocol { get; set; }
 
+    /// <summary>
+    /// Die Kennungen, unter denen GEONIS dieses Bauteil und seinen Objektverbund fuehrt.
+    /// Null, solange sie nie aus dem Kataster uebernommen wurden. Setzen ueber
+    /// <see cref="SetzeGeonisKennungen"/>, damit die Aenderung gemeldet wird.
+    /// </summary>
+    public GeonisKennungen? Geonis { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime ModifiedAtUtc { get; set; } = DateTime.UtcNow;
 
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>
+    /// Uebernimmt die GEONIS-Kennungen und meldet die Aenderung wie ein Feldwert,
+    /// damit Speichern-Status und Bindungen sie sehen.
+    /// </summary>
+    public void SetzeGeonisKennungen(GeonisKennungen? kennungen)
+    {
+        Geonis = kennungen;
+        ModifiedAtUtc = DateTime.UtcNow;
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Geonis)));
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ModifiedAtUtc)));
+    }
 
     public string GetFieldValue(string fieldName)
         => Fields.TryGetValue(fieldName, out var v) ? v ?? "" : "";

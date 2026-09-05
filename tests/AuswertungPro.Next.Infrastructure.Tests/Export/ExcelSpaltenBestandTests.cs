@@ -48,7 +48,7 @@ public sealed class ExcelSpaltenBestandTests
                      FieldKeys.OperatingStatus, FieldKeys.RehabilitationNeed,
                      FieldKeys.HydraulicFunction, FieldKeys.PositionAccuracy,
                      FieldKeys.ConstructionYear, FieldKeys.GrossCost,
-                     FieldKeys.CadastreObjectId, FieldKeys.DataOwner,
+                     FieldKeys.CadastreObjectId, FieldKeys.GeonisId, FieldKeys.DataOwner,
                      FieldKeys.DataSupplier, FieldKeys.CadastreOrganisation,
                      FieldKeys.CadastreLastChange, FieldKeys.CadastreUpdatedAt
                  })

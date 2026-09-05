@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
@@ -234,6 +234,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IStatusColorService)] = services.StatusColors,
             [typeof(ICodeUsageTracker)] = services.CodeUsage,
             [typeof(AuswertungPro.Next.Application.Lookup.IQgisBestandLeser)] = services.QgisBestand,
+            [typeof(AuswertungPro.Next.Application.Lookup.IKatasterKennungLeser)] = services.KatasterKennungen,
         };
     }
 }

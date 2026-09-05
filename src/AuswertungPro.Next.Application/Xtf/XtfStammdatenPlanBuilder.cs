@@ -91,6 +91,7 @@ public static class XtfStammdatenPlanBuilder
     [
         FieldKeys.Street,
         FieldKeys.CadastreObjectId,
+        FieldKeys.GeonisId,
         FieldKeys.DataOwner,
         FieldKeys.DataSupplier,
         FieldKeys.CadastreOrganisation,
@@ -595,9 +596,11 @@ public static class XtfStammdatenPlanBuilder
     /// <summary>
     /// Das Hoehen-Breiten-Verhaeltnis als Aenderung am Rohrprofil, oder <c>null</c>,
     /// wenn nichts zu schreiben ist. Eine bewusst auf leer oder gleich gesetzte Breite
-    /// entfernt ein vorhandenes altes Verhaeltnis ausdruecklich. Dasselbe gilt fuer einen
-    /// eindeutigen Profilwechsel auf Kreis. Ungueltige Masse, derselbe Wert wie in der
-    /// Datei oder ein Widerspruch mit dem Kreisprofil werden nicht geschrieben.
+    /// setzt das Verhaeltnis auf 1 — ein altes anderes wird ersetzt, ein fehlendes
+    /// ergaenzt (GEONIS rechnet die Breite daraus; Wunsch Trigonet 2026-09-04). Dasselbe
+    /// gilt fuer einen eindeutigen Profilwechsel auf Kreis. Ungueltige Masse, derselbe
+    /// Wert wie in der Datei oder ein Widerspruch mit dem Kreisprofil werden nicht
+    /// geschrieben.
     /// </summary>
     private static XtfRevisionFeld? VerhaeltnisFeld(
         HaltungRecord record,
@@ -617,15 +620,15 @@ public static class XtfStammdatenPlanBuilder
         alt = (alt ?? "").Trim();
         if (neu is null)
         {
-            if ((!BreiteWurdeBewusstAufRundGesetzt(record, hoehe, breite) && !profiltypWirdKreis)
-                || alt.Length == 0)
+            if (!BreiteWurdeBewusstAufRundGesetzt(record, hoehe, breite) && !profiltypWirdKreis)
                 return null;
 
-            return new XtfRevisionFeld(
-                XtfRohrprofilVerhaeltnis.Attribut,
-                alt,
-                Neu: null,
-                Aktion: XtfRevisionFeldAktion.Entfernen);
+            return XtfRohrprofilVerhaeltnis.Gleich(alt, XtfRohrprofilVerhaeltnis.Rund)
+                ? null
+                : new XtfRevisionFeld(
+                    XtfRohrprofilVerhaeltnis.Attribut,
+                    alt.Length == 0 ? null : alt,
+                    XtfRohrprofilVerhaeltnis.Rund);
         }
 
         var profiltypVonHand = record.FieldMeta.TryGetValue(FieldKeys.ProfileType, out var profilMeta)

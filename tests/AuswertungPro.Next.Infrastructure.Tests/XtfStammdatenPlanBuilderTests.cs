@@ -933,8 +933,10 @@ public sealed class XtfStammdatenPlanBuilderTests
         Assert.Contains(plan.Hinweise, h => h.Contains("Kreisprofil", StringComparison.Ordinal));
     }
 
+    // Rund ist am Kreisprofil das Verhaeltnis 1 (Wunsch Trigonet 2026-09-04): Eine
+    // von Hand gleich gesetzte Breite ergaenzt es an einem Profil, das keines fuehrt.
     [Fact]
-    public void Eine_runde_Breite_aendert_nichts()
+    public void Eine_runde_Breite_ergaenzt_das_Verhaeltnis_1()
     {
         var record = Haltung("80638-80631");
         record.SetFieldValue(FieldKeys.NominalDiameterMm, "300", FieldSource.Xtf, userEdited: false);
@@ -945,6 +947,31 @@ public sealed class XtfStammdatenPlanBuilderTests
             XtfStammdatenElementReader.Parse(XDocument.Parse(MitProfil)),
             "SIA405_ABWASSER_2020_LV95");
 
+        var position = Assert.Single(plan.Positionen);
+        var verhaeltnis = Assert.Single(position.Felder);
+        Assert.Equal("HoehenBreitenverhaeltnis", verhaeltnis.Name);
+        Assert.Null(verhaeltnis.Alt);
+        Assert.Equal("1", verhaeltnis.Neu);
+        Assert.Equal(XtfRevisionFeldAktion.Setzen, verhaeltnis.Aktion);
+        Assert.Empty(plan.Hinweise);
+    }
+
+    [Fact]
+    public void Eine_runde_Breite_an_einem_Profil_mit_Verhaeltnis_1_aendert_nichts()
+    {
+        var mitEins = MitProfil.Replace(
+            "<Profiltyp>Kreisprofil</Profiltyp>",
+            "<HoehenBreitenverhaeltnis>1</HoehenBreitenverhaeltnis>\n        <Profiltyp>Kreisprofil</Profiltyp>",
+            StringComparison.Ordinal);
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "300", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ClearWidthMm, "300", FieldSource.Manual, userEdited: true);
+
+        var plan = XtfStammdatenPlanBuilder.Build(
+            new[] { record },
+            XtfStammdatenElementReader.Parse(XDocument.Parse(mitEins)),
+            "SIA405_ABWASSER_2020_LV95");
+
         Assert.Empty(plan.Positionen);
         Assert.Empty(plan.Hinweise);
     }
@@ -952,7 +979,7 @@ public sealed class XtfStammdatenPlanBuilderTests
     [Theory]
     [InlineData("1000")]
     [InlineData("")]
-    public void Der_Wechsel_auf_rund_entfernt_das_alte_Verhaeltnis(string breite)
+    public void Der_Wechsel_auf_rund_setzt_das_alte_Verhaeltnis_auf_1(string breite)
     {
         var mitVerhaeltnis = MitProfil.Replace(
             "<Profiltyp>Kreisprofil</Profiltyp>",
@@ -971,8 +998,8 @@ public sealed class XtfStammdatenPlanBuilderTests
         var verhaeltnis = Assert.Single(position.Felder);
         Assert.Equal("HoehenBreitenverhaeltnis", verhaeltnis.Name);
         Assert.Equal("1.66667", verhaeltnis.Alt);
-        Assert.Null(verhaeltnis.Neu);
-        Assert.Equal(XtfRevisionFeldAktion.Entfernen, verhaeltnis.Aktion);
+        Assert.Equal("1", verhaeltnis.Neu);
+        Assert.Equal(XtfRevisionFeldAktion.Setzen, verhaeltnis.Aktion);
     }
 
     [Fact]
@@ -1038,7 +1065,7 @@ public sealed class XtfStammdatenPlanBuilderTests
     }
 
     [Fact]
-    public void Nur_der_Profiltyp_Kreis_entfernt_ein_altes_Verhaeltnis_wenn_die_Masse_nicht_widersprechen()
+    public void Nur_der_Profiltyp_Kreis_setzt_ein_altes_Verhaeltnis_auf_1_wenn_die_Masse_nicht_widersprechen()
     {
         var mitVerhaeltnis = MitProfil.Replace(
             "<Profiltyp>Kreisprofil</Profiltyp>",
@@ -1057,8 +1084,10 @@ public sealed class XtfStammdatenPlanBuilderTests
         var position = Assert.Single(plan.Positionen);
         Assert.Equal("ch010wcsRP000001", position.KanalschadenTid);
         Assert.Equal("Kreisprofil", Assert.Single(position.Felder, f => f.Name == "Profiltyp").Neu);
-        var loeschung = Assert.Single(position.Felder, f => f.Name == "HoehenBreitenverhaeltnis");
-        Assert.Equal(XtfRevisionFeldAktion.Entfernen, loeschung.Aktion);
+        var verhaeltnis = Assert.Single(position.Felder, f => f.Name == "HoehenBreitenverhaeltnis");
+        Assert.Equal("1.66667", verhaeltnis.Alt);
+        Assert.Equal("1", verhaeltnis.Neu);
+        Assert.Equal(XtfRevisionFeldAktion.Setzen, verhaeltnis.Aktion);
     }
 
     [Fact]

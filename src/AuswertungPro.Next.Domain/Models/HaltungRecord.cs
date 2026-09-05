@@ -24,6 +24,13 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
     /// </summary>
     public XtfHerkunft? XtfHerkunft { get; set; }
 
+    /// <summary>
+    /// Die Kennungen, unter denen GEONIS dieses Bauteil und seinen Objektverbund fuehrt.
+    /// Null, solange sie nie aus dem Kataster uebernommen wurden. Setzen ueber
+    /// <see cref="SetzeGeonisKennungen"/>, damit die Aenderung gemeldet wird.
+    /// </summary>
+    public GeonisKennungen? Geonis { get; set; }
+
     // Optionaler Protokolleintrag fuer Code-Picker/Parametrisierung.
     public AuswertungPro.Next.Domain.Protocol.ProtocolEntry? ProtocolEntry { get; set; }
 
@@ -138,6 +145,18 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
     /// <see cref="SetFieldValue"/> liefen. Bewusst KEIN Collection-Replace: der wuerde die
     /// virtualisierte Haltungsliste neu aufbauen und Scroll-Position samt Auswahl verwerfen.
     /// </summary>
+    /// <summary>
+    /// Uebernimmt die GEONIS-Kennungen und meldet die Aenderung wie ein Feldwert,
+    /// damit Speichern-Status und Bindungen sie sehen.
+    /// </summary>
+    public void SetzeGeonisKennungen(GeonisKennungen? kennungen)
+    {
+        Geonis = kennungen;
+        ModifiedAtUtc = DateTime.UtcNow;
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Geonis)));
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ModifiedAtUtc)));
+    }
+
     public void RaiseAllFieldsChanged()
         => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Fields)));
 }

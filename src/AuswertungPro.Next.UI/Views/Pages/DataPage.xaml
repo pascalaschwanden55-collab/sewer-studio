@@ -154,6 +154,15 @@
                         </StackPanel>
                     </Button>
 
+                    <Button Command="{Binding KatasterKennungenErgaenzenCommand}" IsEnabled="{Binding IsProjectReady}"
+                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                            ToolTip="GEONIS-Kennungen aus der Kennungstabelle übernehmen, damit der XTF-Export dieselben Objekte wie der Kataster trägt. Nur Kennungen, keine Fachwerte; vorher erscheint ein Bericht.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8A5;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Katasterkennungen" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
 
                     <Button x:Name="MassnahmenDropdown" Click="DropdownButton_Click"

@@ -132,11 +132,13 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (e.OldValue is DataPageViewModel oldVm)
         {
             oldVm.RecordsOrderChanged -= ResetSort;
+            oldVm.FelderExternErgaenzt -= HaltungsansichtView.AktualisiereDetail;
             oldVm.PropertyChanged -= ViewModel_PropertyChanged;
         }
         if (e.NewValue is DataPageViewModel newVm)
         {
             newVm.RecordsOrderChanged += ResetSort;
+            newVm.FelderExternErgaenzt += HaltungsansichtView.AktualisiereDetail;
             newVm.PropertyChanged += ViewModel_PropertyChanged;
             ApplyHaltungsansichtSettings(newVm);
             _combinedFilter = new DataPageCombinedFilter(
@@ -193,6 +195,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 ComboBox_SelectionChanged);
 
             var setup = DataPageColumnSetup.Apply(col, field);
+            // Die GEONIS-Kennung ist nur Anzeige: Der Export liest das Geonis-Objekt des
+            // Datensatzes, eine Handeingabe in der Zelle liefe daran vorbei.
+            if (string.Equals(field, FieldKeys.GeonisId, StringComparison.Ordinal))
+                col.IsReadOnly = true;
             Grid.Columns.Add(col);
 
             _columnAlignmentToolbar.SetAlignment(

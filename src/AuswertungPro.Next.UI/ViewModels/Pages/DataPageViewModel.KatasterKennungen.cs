@@ -6,29 +6,27 @@ using CommunityToolkit.Mvvm.Input;
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 /// <summary>
-/// "Leere Felder aus QGIS ergänzen" für die Haltungen.
+/// "Katasterkennungen ergänzen" für die Haltungen.
 ///
-/// Der Ablauf liegt in <see cref="QgisNachfuellWorkflow"/>, die Regeln in
-/// <see cref="LeereFelderPlanBuilder"/> und <see cref="LeereFelderAnwender"/> —
+/// Der Ablauf liegt in <see cref="KatasterKennungWorkflow"/>, die Regeln in
+/// <see cref="KatasterKennungPlanBuilder"/> und <see cref="KatasterKennungAnwender"/> —
 /// hier steht nur die Verbindung zur Seite.
 /// </summary>
 public sealed partial class DataPageViewModel
 {
     [RelayCommand]
-    private void QgisFelderErgaenzen()
+    private void KatasterKennungenErgaenzen()
     {
         if (!_shell.IsProjectReady)
             return;
 
-        var ergebnis = QgisNachfuellWorkflow.Fuehre(
+        var ergebnis = KatasterKennungWorkflow.Fuehre(
             BauteilArt.Haltung,
-            _qgisBestand,
+            _katasterKennungen,
             _dialogs,
-            bestand => LeereFelderPlanBuilder.BaueFuerHaltungen(Records, bestand),
-            plan => LeereFelderAnwender.WendeAnAufHaltungen(Records, plan));
+            bestand => KatasterKennungPlanBuilder.BaueFuerHaltungen(Records, bestand),
+            plan => KatasterKennungAnwender.WendeAnAufHaltungen(Records, plan));
 
-        // Die Tabelle aktualisiert sich von selbst: HaltungRecord.SetFieldValue
-        // meldet jede geaenderte Zelle ueber PropertyChanged.
         SaveStatus = ergebnis.Meldung;
         IsSaveStatusVisible = true;
         if (ergebnis.Ausgefuehrt)

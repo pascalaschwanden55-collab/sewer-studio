@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SchaechtePage"
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SchaechtePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
@@ -81,6 +81,15 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE896;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Leere Felder aus QGIS" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding KatasterKennungenErgaenzenCommand}" IsEnabled="{Binding CanMutateShaftData}"
+                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                            ToolTip="GEONIS-Kennungen aus der Kennungstabelle übernehmen, damit der XTF-Export dieselben Objekte wie der Kataster trägt. Nur Kennungen, keine Fachwerte; vorher erscheint ein Bericht.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8A5;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Katasterkennungen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 

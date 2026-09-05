@@ -155,10 +155,17 @@ internal sealed class SchaechteRecordDetailsBuilder
             { FieldName = field.AnzeigeName };
         }
 
+        // Die GEONIS-Kennung ist nur Anzeige (Wahrheit: Geonis-Objekt, dort liest der Export).
+        var isReadOnly = string.Equals(
+            SchachtFeldnamen.Falte(field.AnzeigeName),
+            SchachtFeldnamen.Falte(FieldKeys.GeonisId),
+            StringComparison.Ordinal);
+
         return new RecordDetailItem(
             label,
             field.Wert,
             commitValue: Commit,
+            isReadOnly: isReadOnly,
             isMultiline: isMultiline,
             highlightKind: highlightKind,
             nachschlagenCommand: nachschlagen,

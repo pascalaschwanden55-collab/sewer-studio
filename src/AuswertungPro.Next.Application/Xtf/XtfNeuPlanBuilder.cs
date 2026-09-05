@@ -1,4 +1,5 @@
-﻿using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Application.Lookup;
+using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Xtf;
 
@@ -125,8 +126,21 @@ public static class XtfNeuPlanBuilder
         // enthalten. Eine einzelne Kennung reicht nicht fuer Kanal, Haltungspunkte,
         // Knoten und Profil des ganzen Objektverbunds. Der eigenstaendige Export vergibt
         // deshalb durchgehend eigene chSST-TIDs und warnt vor einem Import in Bestand.
+        // Traegt die Haltung ihre GEONIS-Kennungen (ueber "Katasterkennungen ergaenzen"
+        // oder einen GEONIS-Import), schreibt der Export genau diese TIDs. Dann findet
+        // der Kataster seine Objekte wieder, statt Duplikate anzulegen.
+        var geonis = record.Geonis;
+        var mitGeonis = geonis is not null && SiaObjektkennung.IstGueltig(geonis.Haltung);
         var objektId = (record.GetFieldValue(FieldKeys.CadastreObjectId) ?? "").Trim();
-        if (objektId.Length > 0)
+        if (mitGeonis)
+        {
+            hinweise.Add(
+                $"{name}: GEONIS-Kennung {geonis!.Haltung} aus dem Kataster verwendet" +
+                (geonis.RichtungGedreht
+                    ? " — die Haltung heisst im Projekt in der Gegenrichtung zum Kataster."
+                    : "."));
+        }
+        else if (objektId.Length > 0)
         {
             hinweise.Add(
                 $"{name}: Objekt-ID {objektId} vorhanden — wird mit einer eigenen " +
@@ -148,7 +162,10 @@ public static class XtfNeuPlanBuilder
         var profilTid = profile.Verweis(
             record.GetFieldValue(FieldKeys.ProfileType),
             Verhaeltnis(record, name, hinweise),
-            verwaltung);
+            verwaltung,
+            mitGeonis ? geonis : null,
+            name,
+            hinweise);
 
         var geometrie = geometrien is not null && geometrien.TryGetValue(name, out var g) ? g : null;
         if (geometrie is null)
@@ -156,15 +173,17 @@ public static class XtfNeuPlanBuilder
 
         var (vonTid, nachTid) = BaueHaltungspunkte(
             record, name, kennungen, verwaltung, objekte, knoten,
-            geometrie, punktnamen, hinweise);
+            geometrie, punktnamen, mitGeonis ? geonis : null, hinweise);
 
-        var kanalTid = kennungen.Fuer("Kanal", name);
+        var kanalTid = mitGeonis && SiaObjektkennung.IstGueltig(geonis!.Kanal)
+            ? geonis.Kanal!
+            : kennungen.Fuer("Kanal", name);
         objekte.Add(new XtfNeuObjekt(
             "Kanal", kanalTid,
             Sachfelder(record, name, XtfStammdatenPlanBuilder.Felder, hinweise),
             [.. verwaltung, new XtfNeuVerweis("EigentuemerRef", eigentuemer)]));
 
-        var haltungTid = kennungen.Fuer("Haltung", name);
+        var haltungTid = mitGeonis ? geonis!.Haltung! : kennungen.Fuer("Haltung", name);
         List<XtfNeuVerweis> haltungVerweise =
         [
             new("vonHaltungspunktRef", vonTid),
@@ -208,17 +227,20 @@ public static class XtfNeuPlanBuilder
         IReadOnlyDictionary<string, string> knoten,
         XtfNeuGeometrie? verlauf,
         Punktnamen punktnamen,
+        GeonisKennungen? geonis,
         List<string> hinweise)
     {
         var vonTid = EinHaltungspunkt(
             name, "von", (record.GetFieldValue(SchachtObenFeld) ?? "").Trim(),
             kennungen, verwaltung, objekte, knoten,
-            verlauf?.Punkte.FirstOrDefault(), punktnamen, hinweise);
+            verlauf?.Punkte.FirstOrDefault(), punktnamen,
+            geonis?.VonPunkt, geonis?.VonPunktBezeichnung, hinweise);
 
         var nachTid = EinHaltungspunkt(
             name, "nach", (record.GetFieldValue(SchachtUntenFeld) ?? "").Trim(),
             kennungen, verwaltung, objekte, knoten,
-            verlauf?.Punkte.LastOrDefault(), punktnamen, hinweise);
+            verlauf?.Punkte.LastOrDefault(), punktnamen,
+            geonis?.NachPunkt, geonis?.NachPunktBezeichnung, hinweise);
 
         return (vonTid, nachTid);
     }
@@ -233,10 +255,19 @@ public static class XtfNeuPlanBuilder
         IReadOnlyDictionary<string, string> knoten,
         XtfPunkt? lage,
         Punktnamen punktnamen,
+        string? katasterTid,
+        string? katasterName,
         List<string> hinweise)
     {
-        var bezeichnung = punktnamen.Eindeutig($"{haltung}_{seite}");
-        var tid = kennungen.Fuer("Haltungspunkt", $"{haltung}|{seite}");
+        // Mit GEONIS-Kennung traegt der Punkt auch den Namen des Katasters (z. B.
+        // "A75394"): Derselbe Punkt, derselbe Name — sonst saehe der Import eine
+        // Umbenennung, wo keine ist.
+        var mitKataster = SiaObjektkennung.IstGueltig(katasterTid);
+        var wunsch = mitKataster && !string.IsNullOrWhiteSpace(katasterName)
+            ? katasterName.Trim()
+            : $"{haltung}_{seite}";
+        var bezeichnung = punktnamen.Eindeutig(wunsch);
+        var tid = mitKataster ? katasterTid! : kennungen.Fuer("Haltungspunkt", $"{haltung}|{seite}");
         List<XtfNeuVerweis> verweise = [.. verwaltung];
 
         if (schacht.Length > 0 && knoten.TryGetValue(schacht, out var knotenTid))
@@ -276,8 +307,17 @@ public static class XtfNeuPlanBuilder
             return false;
         }
 
+        var geonis = record.Geonis;
+        var mitGeonis = geonis is not null && SiaObjektkennung.IstGueltig(geonis.Knoten);
+        var mitBauwerk = mitGeonis && SiaObjektkennung.IstGueltig(geonis!.Bauwerk);
         var objektId = (XtfSchachtPlanBuilder.Wert(record, FieldKeys.CadastreObjectId) ?? "").Trim();
-        if (objektId.Length > 0)
+        if (mitGeonis)
+        {
+            hinweise.Add(
+                $"Schacht {nummer}: GEONIS-Kennung {geonis!.Knoten} aus dem Kataster verwendet" +
+                (mitBauwerk ? "." : " — das Bauwerk hat dort keine Kennung und bekommt eine eigene."));
+        }
+        else if (objektId.Length > 0)
         {
             hinweise.Add(
                 $"Schacht {nummer}: Objekt-ID {objektId} vorhanden — wird mit einer " +
@@ -297,14 +337,14 @@ public static class XtfNeuPlanBuilder
         var eigentuemer = organisationsverweise.Value.Eigentuemer;
         var verwaltung = organisationsverweise.Value.Verwaltung;
 
-        var schachtTid = kennungen.Fuer("Normschacht", nummer);
+        var schachtTid = mitBauwerk ? geonis!.Bauwerk! : kennungen.Fuer("Normschacht", nummer);
         objekte.Add(new XtfNeuObjekt(
             "Normschacht", schachtTid,
             SchachtFelder(record, nummer, hinweise),
             [.. verwaltung, new XtfNeuVerweis("EigentuemerRef", eigentuemer)]));
 
         // Der Abwasserknoten ist der Anschlusspunkt des Schachts ans Netz.
-        var knotenTid = kennungen.Fuer("Abwasserknoten", nummer);
+        var knotenTid = mitGeonis ? geonis!.Knoten! : kennungen.Fuer("Abwasserknoten", nummer);
         objekte.Add(new XtfNeuObjekt(
             "Abwasserknoten", knotenTid,
             [new KeyValuePair<string, string>("Bezeichnung", Kuerze(nummer, HaltungspunktNameMax))],
@@ -549,10 +589,15 @@ public static class XtfNeuPlanBuilder
         var hoehe = record.GetFieldValue(FieldKeys.NominalDiameterMm);
         var breite = record.GetFieldValue(FieldKeys.ClearWidthMm);
         var verhaeltnis = XtfRohrprofilVerhaeltnis.Berechne(hoehe, breite);
-        if (verhaeltnis is null)
-            return null;
-
         var profiltyp = (record.GetFieldValue(FieldKeys.ProfileType) ?? "").Trim();
+        var istKreis = string.Equals(ProfiltypVokabular.NachNorm(profiltyp), "Kreisprofil", StringComparison.Ordinal);
+
+        // Rund (Breite leer oder gleich) ist am Kreisprofil das Verhaeltnis 1. GEONIS
+        // fuehrt neben der Hoehe die Breite und rechnet sie daraus; ohne den Wert bliebe
+        // sie dort leer (Wunsch Trigonet 2026-09-04).
+        if (verhaeltnis is null)
+            return istKreis ? XtfRohrprofilVerhaeltnis.Rund : null;
+
         if (profiltyp.Length == 0)
         {
             hinweise.Add(
@@ -561,7 +606,7 @@ public static class XtfNeuPlanBuilder
             return null;
         }
 
-        if (string.Equals(ProfiltypVokabular.NachNorm(profiltyp), "Kreisprofil", StringComparison.Ordinal))
+        if (istKreis)
         {
             hinweise.Add(
                 $"{name}: Kreisprofil mit zwei verschiedenen Massen ({hoehe} x {breite}) — " +
@@ -581,7 +626,13 @@ public static class XtfNeuPlanBuilder
     {
         private readonly Dictionary<string, string> _jeSchluessel = new(StringComparer.OrdinalIgnoreCase);
 
-        public string? Verweis(string? profiltyp, string? verhaeltnis, IReadOnlyList<XtfNeuVerweis> verwaltung)
+        public string? Verweis(
+            string? profiltyp,
+            string? verhaeltnis,
+            IReadOnlyList<XtfNeuVerweis> verwaltung,
+            GeonisKennungen? geonis,
+            string wofuer,
+            List<string> hinweise)
         {
             var roh = (profiltyp ?? "").Trim();
             if (roh.Length == 0)
@@ -591,13 +642,35 @@ public static class XtfNeuPlanBuilder
             if (norm is null)
                 return null;
 
+            // Ein Rohrprofil wird in GEONIS von vielen Haltungen geteilt. Seine Kennung
+            // darf der Export nur wiederverwenden, wenn es wirklich dasselbe Profil
+            // ist — sonst schriebe ein Import den Typ ALLER Haltungen an diesem Profil
+            // um. Bei Abweichung bekommt die Haltung ein eigenes Profil, und der
+            // Bericht nennt den Unterschied.
+            if (geonis is not null && SiaObjektkennung.IstGueltig(geonis.Rohrprofil))
+            {
+                var katasterTyp = (geonis.RohrprofilTyp ?? "").Trim();
+                var rund = verhaeltnis is null || verhaeltnis == XtfRohrprofilVerhaeltnis.Rund;
+                if (rund && string.Equals(katasterTyp, norm, StringComparison.Ordinal))
+                    return Kataster(geonis.Rohrprofil!, norm, verhaeltnis, verwaltung);
+
+                hinweise.Add(
+                    $"{wofuer}: Rohrprofil weicht vom Kataster ab (Kataster: " +
+                    $"{(katasterTyp.Length == 0 ? "unbekannt" : katasterTyp)}, Projekt: {norm}" +
+                    (verhaeltnis is null ? "" : $" {verhaeltnis}") +
+                    ") — die Haltung bekommt ein eigenes Profil.");
+            }
+
             var schluessel = verhaeltnis is null ? norm : $"{norm}|{verhaeltnis}";
             if (_jeSchluessel.TryGetValue(schluessel, out var bekannt))
                 return bekannt;
 
             // Die Bezeichnung ist mit dem Datenherrn zusammen UNIQUE: Zwei Profile
             // desselben Typs mit verschiedenem Verhaeltnis brauchen verschiedene Namen.
-            var bezeichnung = verhaeltnis is null ? norm : $"{norm} {verhaeltnis}";
+            // Das runde Verhaeltnis 1 gehoert zum Kreisprofil und braucht keinen Zusatz.
+            var bezeichnung = verhaeltnis is null || verhaeltnis == XtfRohrprofilVerhaeltnis.Rund
+                ? norm
+                : $"{norm} {verhaeltnis}";
             var felder = new List<KeyValuePair<string, string>>
             {
                 new("Bezeichnung", Kuerze(bezeichnung, HaltungspunktNameMax))
@@ -607,6 +680,27 @@ public static class XtfNeuPlanBuilder
             felder.Add(new("Profiltyp", norm));
 
             var tid = kennungen.Fuer("Rohrprofil", schluessel);
+            objekte.Add(new XtfNeuObjekt("Rohrprofil", tid, felder, verwaltung));
+
+            _jeSchluessel[schluessel] = tid;
+            return tid;
+        }
+
+        /// <summary>Das GEONIS-Profil unter seiner eigenen Kennung, je Kennung genau einmal.</summary>
+        private string Kataster(string tid, string norm, string? verhaeltnis, IReadOnlyList<XtfNeuVerweis> verwaltung)
+        {
+            var schluessel = "kataster|" + tid;
+            if (_jeSchluessel.TryGetValue(schluessel, out var bekannt))
+                return bekannt;
+
+            var felder = new List<KeyValuePair<string, string>>
+            {
+                new("Bezeichnung", Kuerze(norm, HaltungspunktNameMax))
+            };
+            if (verhaeltnis is not null)
+                felder.Add(new(XtfRohrprofilVerhaeltnis.Attribut, verhaeltnis));
+            felder.Add(new("Profiltyp", norm));
+
             objekte.Add(new XtfNeuObjekt("Rohrprofil", tid, felder, verwaltung));
 
             _jeSchluessel[schluessel] = tid;

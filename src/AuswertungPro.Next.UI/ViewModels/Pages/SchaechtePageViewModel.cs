@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -141,6 +141,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         // Menuepunkt einfach aus.
         FeldNachschlag = services.FeldNachschlag;
         QgisBestand = services.QgisBestand;
+        KatasterKennungen = services.KatasterKennungen;
     }
 
     /// <summary>
@@ -149,6 +150,12 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
     /// bleibt der Knopf einfach aus.
     /// </summary>
     internal AuswertungPro.Next.Application.Lookup.IQgisBestandLeser? QgisBestand { get; }
+
+    /// <summary>
+    /// Die Kennungstabelle fuer "Katasterkennungen ergaenzen". Null, wenn das
+    /// ViewModel ueber einen Uebergangskonstruktor ohne Dienste entstand.
+    /// </summary>
+    internal AuswertungPro.Next.Application.Lookup.IKatasterKennungLeser? KatasterKennungen { get; }
 
     /// <summary>
     /// Schlaegt leere Schachtfelder beim Kanton nach. Null, wenn das
@@ -431,6 +438,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         // Form sowie groesstes und kleinstes Innenmass muessen immer editierbar sein,
         // auch wenn eine aeltere Excel-Vorlage diese drei GEONIS-Felder noch nicht hat.
         SchaechteColumnPolicy.ErgaenzeFormUndMasse(Columns);
+        SchaechteColumnPolicy.ErgaenzeKatasterKennung(Columns);
 
         // Aeltere Schacht-Vorlagen kannten kein "Ausgefuehrt durch". Fuer diese
         // Bestandsdateien bleibt der Rueckfall als editierbare Dropdown-Spalte erhalten.

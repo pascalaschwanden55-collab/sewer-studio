@@ -203,7 +203,12 @@ public partial class SchaechtePage : UserControl
                             UpdateSourceTrigger = UpdateSourceTrigger.LostFocus
                         },
                         Width = DataGridLength.SizeToHeader,
-                        MinWidth = 90
+                        MinWidth = 90,
+                        // Die GEONIS-Kennung ist nur Anzeige; der Export liest das Geonis-Objekt.
+                        IsReadOnly = string.Equals(
+                            SchachtFeldnamen.Falte(col),
+                            SchachtFeldnamen.Falte(FieldKeys.GeonisId),
+                            StringComparison.Ordinal)
                     };
                 }
 

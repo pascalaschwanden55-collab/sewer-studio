@@ -97,7 +97,8 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
 
         text.AppendLine();
         text.AppendLine("Die Objektkennungen bleiben bei jedem Export dieselben. Ein zweiter Lauf");
-        text.AppendLine("aktualisiert deshalb dieselben Objekte, statt neue anzulegen.");
+        text.AppendLine("aktualisiert deshalb dieselben Objekte, statt neue anzulegen. Bauteile mit");
+        text.AppendLine("GEONIS-Kennung (\"Katasterkennungen ergaenzen\") tragen die Kennung des Katasters.");
         text.AppendLine("Datenherr und Datenlieferant kommen aus ihren Projektfeldern. Ist ein Feld");
         text.AppendLine("leer, gilt der Eigentuemer. Ein gesetzter unbekannter Wert sperrt das Objekt.");
 
@@ -122,15 +123,52 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
             .Where(h => h.Contains("ist im Projekt nicht erfasst", StringComparison.Ordinal))
             .Count();
         var mitObjektId = plan.Hinweise.Count(h => h.Contains("Objekt-ID", StringComparison.Ordinal));
+        var mitGeonis = plan.Hinweise.Count(h => h.Contains("GEONIS-Kennung", StringComparison.Ordinal));
+        var gedreht = plan.Hinweise.Count(h => h.Contains("Gegenrichtung zum Kataster", StringComparison.Ordinal));
+        var ohneBauwerk = plan.Hinweise.Count(h => h.Contains("hat dort keine Kennung", StringComparison.Ordinal));
+        var profilAbweichend = plan.Hinweise
+            .Where(h => h.Contains("Rohrprofil weicht vom Kataster ab", StringComparison.Ordinal))
+            .ToList();
         var uebrige = plan.Hinweise
             .Where(h => !h.Contains("ohne Eigentuemer", StringComparison.Ordinal)
                      && !h.Contains("kein Verlauf", StringComparison.Ordinal)
                      && !h.Contains("ist im Projekt nicht erfasst", StringComparison.Ordinal)
-                     && !h.Contains("Objekt-ID", StringComparison.Ordinal))
+                     && !h.Contains("Objekt-ID", StringComparison.Ordinal)
+                     && !h.Contains("GEONIS-Kennung", StringComparison.Ordinal)
+                     && !h.Contains("Rohrprofil weicht vom Kataster ab", StringComparison.Ordinal))
             .ToList();
 
         text.AppendLine();
         text.AppendLine("Hinweise:");
+
+        if (mitGeonis > 0)
+        {
+            text.AppendLine(mitGeonis == 1
+                ? "  1 Objekt traegt seine GEONIS-Kennung aus dem Kataster."
+                : $"  {mitGeonis} Objekte tragen ihre GEONIS-Kennung aus dem Kataster.");
+            text.AppendLine("  Der Kataster erkennt diese Objekte beim Import wieder und aktualisiert sie,");
+            text.AppendLine("  statt neue anzulegen.");
+            if (gedreht > 0)
+            {
+                text.AppendLine(
+                    $"  {gedreht} davon heissen im Projekt in der Gegenrichtung zum Kataster; die");
+                text.AppendLine("  Punktkennungen sind entsprechend vertauscht.");
+            }
+
+            if (ohneBauwerk > 0)
+            {
+                text.AppendLine(
+                    $"  {ohneBauwerk} Schaechte haben im Kataster nur eine Knoten-, keine Bauwerkskennung;");
+                text.AppendLine("  ihr Bauwerk bekommt eine eigene Kennung.");
+            }
+        }
+
+        // Ein abweichendes Profil ist eine fachliche Aussage an den Kataster — jede
+        // Zeile einzeln, damit klar ist, welche Haltung betroffen ist.
+        foreach (var hinweis in profilAbweichend.Take(20))
+            text.AppendLine($"  {hinweis}");
+        if (profilAbweichend.Count > 20)
+            text.AppendLine($"  … und {profilAbweichend.Count - 20} weitere Haltungen mit abweichendem Profil.");
 
         if (mitObjektId > 0)
         {

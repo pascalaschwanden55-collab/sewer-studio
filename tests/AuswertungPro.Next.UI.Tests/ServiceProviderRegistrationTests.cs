@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Import;
@@ -110,9 +110,15 @@ public sealed class ServiceProviderRegistrationTests
         // Anschlussleitungen haben keine.
         // 154 -> 155: IXtfExportVorschauDialog zeigt vor dem XTF-Schreiben die Alt/Neu-Tabelle
         // im eigenen Fenster; der Ablauf liegt im UseCase, das ViewModel verdrahtet nur.
+        // 155 -> 156: IPipeEndSuggestionScanService fragt die freigegebenen Bild-Einordner
+        // fuer Rohranfang und Rohrende (Sidecar /classify/lernstufe) im Vorabdurchlauf des
+        // Training Studios — derselbe Weg wie der Bogen-Copilot, ohne eigenen Client.
+        // 156 -> 157: IKatasterKennungLeser liest die SIA405-Kennungen aus der GEONIS-Kopie
+        // fuer "Katasterkennungen ergaenzen" — die QGIS-Kopien (Lisag-WFS) tragen nur eine Lisag-Nummer,
+        // die beim Veroeffentlichen wechselt; ohne die GEONIS-Kennung legt ein Import Duplikate an.
         Assert.True(
-            registrations.Count == 155,
-            $"Erwartet 155 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 157,
+            $"Erwartet 157 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(
