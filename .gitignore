@@ -170,3 +170,8 @@ training/class_maps/*.vor_freigabe_*
 
 # Editable-Installation des Sidecars (pip install -e) legt das an — Build-Ausgabe.
 *.egg-info/
+
+# Fremde Werkzeugablagen im Hauptordner (kein Programmbestandteil)
+node_modules/
+outputs/
+/build_sewerstudio_value.mjs
