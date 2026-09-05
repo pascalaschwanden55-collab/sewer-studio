@@ -848,6 +848,13 @@
                             VerticalAlignment="Center"
                             Height="28"
                             ClipToBounds="False"/>
+                    <!-- KI-Vorschläge (Bogen, Rohranfang, Rohrende): eigene Spur unter dem Regler -->
+                    <Canvas x:Name="SuggestionMarkerCanvas"
+                            IsHitTestVisible="True"
+                            VerticalAlignment="Bottom"
+                            Height="8"
+                            Margin="0,0,0,-6"
+                            ClipToBounds="False"/>
                 </Grid>
 
                 <TextBlock x:Name="DurationText"
