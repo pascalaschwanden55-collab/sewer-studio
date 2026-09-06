@@ -27,6 +27,19 @@ public partial class HaltungFelderDrawer : UserControl
         set => SetValue(TitelProperty, value);
     }
 
+    public static readonly DependencyProperty HinweisProperty = DependencyProperty.Register(
+        nameof(Hinweis), typeof(string), typeof(HaltungFelderDrawer), new PropertyMetadata(string.Empty));
+
+    /// <summary>
+    /// Sichtbarer Hinweis in der Kopfzeile, zum Beispiel eine verworfene Eingabe nach einem
+    /// Konflikt mit einer neueren Tabellenkorrektur (W01). Leer = kein Hinweis.
+    /// </summary>
+    public string Hinweis
+    {
+        get => (string)GetValue(HinweisProperty);
+        set => SetValue(HinweisProperty, value);
+    }
+
     public static readonly DependencyProperty IsOpenProperty = DependencyProperty.Register(
         nameof(IsOpen), typeof(bool), typeof(HaltungFelderDrawer),
         new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,

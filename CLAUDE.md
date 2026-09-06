@@ -777,7 +777,8 @@ erweiterte `DesignAuditSchriftskalaTests`, `DesignAuditContrastTests`, `DesignAu
   gemerkt und erst nach dem Rueckschreiben der Bindung angezeigt. Der Rueckschreibweg der
   `DataPageDetailItemFactory` vergleicht `Ausgangswert` und aktuellen Datensatzwert
   (`IstKonflikt`): Hat sich der Datensatz seit der Anzeige geaendert, bleibt die neuere Korrektur
-  stehen, das Formular zeigt sie, und die verworfene Eingabe wird als Toast gemeldet. Nie wieder
+  stehen, das Formular zeigt sie, und die verworfene Eingabe steht als Hinweis in der Kopfzeile
+  der Eingabefelder (kein Service-Locator in der Seite, `UiArchitectureGuardTests`). Nie wieder
   eine Momentaufnahme still ueber einen neueren Wert schreiben. Waechter:
   `DataPageFormularTabelleAbgleichTests` (Ablauf Alt -> Neue Tabellenkorrektur -> Zusatz).
 - Nicht umgesetzt (Etappe 2): Uebersichtsseite, Schaechte, Player, Training Studio, Chip „Naechste

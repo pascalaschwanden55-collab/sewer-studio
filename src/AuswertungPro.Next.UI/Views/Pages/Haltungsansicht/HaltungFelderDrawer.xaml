@@ -3,9 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
+             xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
              x:Name="Root">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <pages:StringNotEmptyToVisibilityConverter x:Key="TextSichtbar"/>
     </UserControl.Resources>
     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
@@ -25,6 +27,12 @@
                 <TextBlock DockPanel.Dock="Left" Text="{Binding Titel, ElementName=Root}" Margin="10,0,0,0"
                            VerticalAlignment="Center" FontFamily="{DynamicResource FontMono}"
                            Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <!-- Konflikthinweis (W01): verworfene Eingabe nach einer neueren Tabellenkorrektur -->
+                <TextBlock DockPanel.Dock="Left" Text="{Binding Hinweis, ElementName=Root}" Margin="14,0,0,0"
+                           VerticalAlignment="Center" FontSize="{DynamicResource TextS}" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource WarningTextBrush}"
+                           ToolTip="{Binding Hinweis, ElementName=Root}"
+                           Visibility="{Binding Hinweis, ElementName=Root, Converter={StaticResource TextSichtbar}}"/>
                 <Button DockPanel.Dock="Right" Click="AlleZu_Click" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0"
                         ToolTip="Alle Themen zuklappen" AutomationProperties.Name="Alle Themen zuklappen">
                     <TextBlock Text="Alle zu"/>

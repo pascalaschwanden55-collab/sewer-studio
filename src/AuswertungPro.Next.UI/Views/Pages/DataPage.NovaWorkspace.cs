@@ -56,6 +56,7 @@ public partial class DataPage
     {
         _felderSync?.Dispose();
         _felderSync = null;
+        FelderDrawer.Hinweis = string.Empty;
 
         if (DataContext is not DataPageViewModel vm || vm.Selected is not { } record)
         {
