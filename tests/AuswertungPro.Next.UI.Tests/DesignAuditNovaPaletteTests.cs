@@ -53,6 +53,21 @@ public sealed class DesignAuditNovaPaletteTests
         Assert.True(Kontrast(ReadColor(xaml, "ColorTextFaint"), ReadColor(xaml, "ColorCard")) >= 4.5);
     }
 
+    [Theory]
+    [InlineData("ThemeLight.xaml")]
+    [InlineData("Theme.xaml")]
+    public void Werkzeugknoepfe_und_Chips_sind_Pillen_und_der_Tabellenkopf_ist_in_Kapitaelchen(string datei)
+    {
+        var xaml = Xaml(datei);
+        string Stil(string key) => Regex.Match(xaml, $"<Style x:Key=\"{key}\"[\\s\\S]*?\n    </Style>").Value;
+        Assert.Contains("CornerRadius=\"999\"", Stil("ToolbarButton"));
+        Assert.Contains("CornerRadius=\"999\"", Stil("ToolbarButtonAccent"));
+        Assert.Contains("CornerRadius=\"999\"", Stil("CompactToggleButton"));
+        var header = Regex.Match(xaml, "<Style TargetType=\"\\{x:Type DataGridColumnHeader\\}\">[\\s\\S]*?\n    </Style>").Value;
+        Assert.Contains("Typography.Capitals=\"AllSmallCaps\"", header);
+        Assert.Contains("Foreground\" Value=\"{DynamicResource MutedBrush}\"", header);
+    }
+
     internal static string Xaml(string datei)
         => File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", datei));
 
