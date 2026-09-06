@@ -381,6 +381,14 @@
                 Background="{DynamicResource NavPanelBrush}" BorderThickness="0,0,1,0"
                 BorderBrush="{DynamicResource BorderBrush}">
             <DockPanel>
+                <DockPanel.Resources>
+                    <!-- Nova-Etappe 1: Leiste in vier Gruppen. Keine Sortierung, die NavItems stehen bereits gruppenweise. -->
+                    <CollectionViewSource x:Key="GroupedNavItems" Source="{Binding NavItems}">
+                        <CollectionViewSource.GroupDescriptions>
+                            <PropertyGroupDescription PropertyName="Group"/>
+                        </CollectionViewSource.GroupDescriptions>
+                    </CollectionViewSource>
+                </DockPanel.Resources>
                 <StackPanel DockPanel.Dock="Top" Margin="16,16,16,8">
                     <StackPanel Orientation="Horizontal">
                         <Border Width="4" Height="20" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,10,0"
@@ -409,8 +417,20 @@
 
 
                 <ListBox x:Name="SidebarNavList"
-                         ItemsSource="{Binding NavItems}" SelectedItem="{Binding SelectedNavItem}"
+                         ItemsSource="{Binding Source={StaticResource GroupedNavItems}}" SelectedItem="{Binding SelectedNavItem}"
                          BorderThickness="0" Background="Transparent" Margin="8,4,8,8">
+                    <ListBox.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" Margin="10,10,10,2"
+                                               FontSize="{DynamicResource TextXS}" FontWeight="Bold"
+                                               Foreground="{DynamicResource MutedBrush}"
+                                               Typography.Capitals="AllSmallCaps"/>
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ListBox.GroupStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,4">
