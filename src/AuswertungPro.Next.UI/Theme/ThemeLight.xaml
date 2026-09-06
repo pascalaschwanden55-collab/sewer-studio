@@ -31,6 +31,10 @@
     <Color x:Key="ColorDanger">#FFDC2626</Color>
     <Color x:Key="ColorWarning">#FFB45309</Color>
     <Color x:Key="ColorInfo">#FF0EA5E9</Color>
+    <!-- KI: eigene Farbe getrennt vom Akzent, damit KI-Vorschlag und Bedienelement unterscheidbar sind -->
+    <Color x:Key="ColorKi">#FF0A7F8E</Color>
+    <Color x:Key="ColorKiSubtle">#FFDDEFF1</Color>
+    <Color x:Key="ColorKiText">#FF0A6E7C</Color>
 
     <!-- ── SOLID BRUSHES ── -->
     <SolidColorBrush x:Key="BgLightBrush" Color="{StaticResource ColorBgLight}"/>
@@ -65,6 +69,9 @@
     <SolidColorBrush x:Key="DangerTextBrush" Color="#FFDC2626"/>
     <SolidColorBrush x:Key="WarningTextBrush" Color="#FFB45309"/>
     <SolidColorBrush x:Key="InfoTextBrush" Color="#FF0369A1"/>
+    <SolidColorBrush x:Key="KiBrush" Color="{StaticResource ColorKi}"/>
+    <SolidColorBrush x:Key="KiSubtleBrush" Color="{StaticResource ColorKiSubtle}"/>
+    <SolidColorBrush x:Key="KiTextBrush" Color="{StaticResource ColorKiText}"/>
 
     <!-- Subtle-Hintergruende fuer Erfolg-/Fehler-Abzeichen (Badges) — hell abgestimmt -->
     <SolidColorBrush x:Key="SuccessSubtleBrush" Color="#FFDCFCE7"/>
