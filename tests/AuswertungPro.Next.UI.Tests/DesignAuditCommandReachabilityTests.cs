@@ -63,6 +63,6 @@ public sealed class DesignAuditCommandReachabilityTests
     {
         var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml"));
         var toolbar = xaml[..xaml.IndexOf("x:Name=\"GridHost\"", StringComparison.Ordinal)];
-        Assert.Equal(1, Regex.Matches(toolbar, "Style=\"\\{StaticResource ToolbarButtonAccent\\}\"").Count);
+        Assert.Single(Regex.Matches(toolbar, "Style=\"\\{StaticResource ToolbarButtonAccent\\}\""));
     }
 }

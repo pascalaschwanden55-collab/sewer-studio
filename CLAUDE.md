@@ -733,6 +733,43 @@ Nachgelagerte Grossumbauten vom 2026-08-14:
   liegen unter `Infrastructure/Ai/Backup`; `KnowledgeBackupService.BackupResult` und
   die bisherigen Aufrufer bleiben unveraendert.
 
+### Nova-Etappe 1 (2026-09-06, Leiste und Haltungsseite)
+
+Quelle ist der freigegebene Prototyp `docs/reviews/2026-09-06-nova/optimiert/v2/`, Plan
+`docs/superpowers/plans/2026-09-06-nova-wpf-etappe-1.md`, Abnahme
+`docs/reviews/2026-09-06-nova/wpf-etappe-1/ABNAHME.md`. Umgesetzt und durch Waechter gehalten
+(`ZustandsklasseInkPolicyTests`, `ShellNavigationGroupsTests`, `DataPageColumnViewCatalogTests`,
+`DataPageWorkspaceLayoutPolicyTests`, `HaltungFelderDrawerFilterTests`, `DesignAuditNovaHaltungenTests`,
+erweiterte `DesignAuditSchriftskalaTests`, `DesignAuditContrastTests`, `DesignAuditCommandReachabilityTests`):
+
+- Zustandsklassen-Marken (Chips in Haltungs- und Schachtansicht, Uebersicht) tragen eine Textfarbe je
+  Klasse mit mindestens 4,5:1 (`ZustandsklasseInkPolicy`, `ZustandsklasseInkConverter`). Die
+  Tabellenzellen behalten ihre schwarze Tinte aus `ZustandsklasseCellStyleFactory`.
+- KI-Farbtoken `KiBrush`, `KiSubtleBrush`, `KiTextBrush` in beiden Themes, getrennt vom Akzent;
+  `KiTextBrush` erreicht auf `CardBrush` und `KiSubtleBrush` den Normaltext-Kontrast.
+- Die Leiste ist in Projekt, Daten, Bewertung, System gruppiert (`ShellNavigationGroups`, `NavItem.Group`,
+  `CollectionViewSource` ohne Sortierung); der Systemmonitor ist ein zugeklappter Aufklapper mit
+  `NeuralPulseDot` und dem Text „Analyse bereit" beziehungsweise „Pruefung noetig". Die Schriftskala
+  gilt seit dieser Etappe auch fuer `Setter Property="FontSize"` (22 XAML-Dateien umgestellt).
+- Haltungen: eine Hauptaktion (Speichern, `ToolbarButtonAccent`), sichtbar Neu, Loeschen, `Video pruefen`
+  und der Knopf `Weitere Aktionen`, dessen Kontextmenue alle bisherigen Aktionen samt Ansicht-Menue
+  und Abdocken traegt; Gruppenkoepfe sind dort keine deaktivierten Menuepunkte (XamlActionWiringGuard).
+  Spaltenansichten Kompakt, Stammdaten, Bewertung, Sanierung, Kosten, Alle
+  (`DataPageColumnViewCatalog`, `DataPageColumnViewController` blendet nur Sichtbarkeit; gespeichert in
+  `DataPageLayout.ActiveColumnView`). `PDF_Path` ist keine Haltungsspalte und steht deshalb nicht in Kompakt.
+- Standardlayout der Haltungen: Liste | Uebersicht rechts (`HaltungUebersichtPanel`, nur lesend,
+  Doppelklick auf einen Schaden = Beobachtungen) | Eingabefelder unten (`HaltungFelderDrawer`, die
+  Themen des `DataPageRecordDetailsBuilder` nebeneinander als Expander ueber den unveraenderten
+  `RecordDetailsView`, Feldsuche nur ueber die Beschriftung). Beide Trennlinien merken sich ihre Lage
+  ueber `SplitterPersistenceBehavior` mit `ViewPersonalization.ViewKey="DataPage"` und den Schluesseln
+  `HaltungenUebersicht` / `HaltungenEingabefelder`; `DataPageWorkspaceLayoutPolicy` haelt bei
+  1366 x 768 mindestens sieben Zeilen sichtbar. Die alte Haltungsansicht bleibt ueber den Toggle
+  erreichbar; `AppSettings.ShowHaltungenNovaLayout=false` macht sie wieder zum Standard. Beim Wechsel
+  werden Spalten und Zeilen der Arbeitsflaeche auf 0 gesetzt, damit keine Luecke bleibt.
+- Nicht umgesetzt (Etappe 2): Uebersichtsseite, Schaechte, Player, Training Studio, Chip „Naechste
+  Aufgabe" (braucht einen fachlichen Pruefstatus je Haltung), Palettenwechsel Glas/Cockpit,
+  animierte Symbole ueber den bestehenden `MotionSettings`-Rahmen hinaus.
+
 ## Build & Test
 ```bash
 dotnet build AuswertungPro.sln
