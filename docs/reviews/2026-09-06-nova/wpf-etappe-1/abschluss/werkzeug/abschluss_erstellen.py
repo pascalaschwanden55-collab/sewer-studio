@@ -23,9 +23,13 @@ assert chosen['Rohrmaterial'] == 'Steinzeug'
 assert chosen['Gefaelle_Promille'] == '2,5'
 assert all(f['DN_mm'] == '300' for f in fields)
 assert sum(f['Rohrmaterial'] == 'Beton' for f in fields) == 13
+assert sum(bool(f.get('GEONIS_Kennung')) for f in fields) == 14
+assert sum(bool(f.get('Link')) for f in fields) == 1
+assert Path(chosen['Link']).resolve() == (probe/'medien/10001-10002.mp4').resolve()
 validation = {'sourceSha256Before': before, 'sourceSha256After': after,
     'sourceFilesUnchanged': True, 'recordCount': len(records), 'dn300Count': 14,
-    'betonCount': 13, 'steinzeugCount': 1, 'selectedSlopePromille': chosen['Gefaelle_Promille'],
+    'betonCount': 13, 'steinzeugCount': 1, 'geonisIdCount': 14, 'videoLinkCount': 1,
+    'selectedSlopePromille': chosen['Gefaelle_Promille'],
     'projectSha256': sha(probe/'projekt/Projektdateien/projekt.json')}
 (out/'datenpruefung.json').write_text(json.dumps(validation, ensure_ascii=False, indent=2), encoding='utf-8')
 shutil.copy2(tmp/'sicherung.json', out/'sicherung.json')

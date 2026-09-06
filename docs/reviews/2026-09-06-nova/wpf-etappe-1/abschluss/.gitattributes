@@ -1,0 +1,5 @@
+# Nachweisdateien beim Checkout bytegleich erhalten (SHA256.json).
+* text eol=lf
+*.png -text
+*.pdf -text
+*.zip -text

@@ -35,6 +35,9 @@ md=out/'ABSCHLUSS.md'
 if marker not in md.read_text(encoding='utf-8'):
     with md.open('a',encoding='utf-8') as stream:
         stream.write('\n\n'+marker+'\n\nPlaywright/Chromium: 1920 × 1080 und 1280 × 720 ohne horizontales Seitenüberlaufen. Prüfliste aufgeklappt, 18 Aktionsgruppen vorhanden; keine fehlenden Bilder. Zehn lokale Dateilinks liefern HTTP 200. Startansicht und Gesamtseite visuell kontrolliert, Bilder in `html-pruefbilder.zip`. Die Datenarchive wurden vollständig zur Integritätsprüfung zurückgelesen. Die Seite benötigt keinen Internetzugriff.\n')
+for path in out.rglob('*'):
+    if path.is_file() and (path.suffix in ('.md','.json','.html','.py','.ps1','.cs','.csproj') or path.name=='.gitattributes'):
+        path.write_bytes(path.read_bytes().replace(b'\r\n',b'\n'))
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
 manifest={str(p.relative_to(out)):sha(p) for p in sorted(out.rglob('*')) if p.is_file() and p.name!='SHA256.json'}
 (out/'SHA256.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
