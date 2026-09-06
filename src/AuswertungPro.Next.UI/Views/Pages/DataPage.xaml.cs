@@ -74,12 +74,11 @@ public partial class DataPage : System.Windows.Controls.UserControl
         HaltungsansichtView.DetailBuilder = BuildHaltungRecordDetailsForAnsicht;
         HaltungsansichtView.ActionRequested = RouteHaltungsansichtAction;
 
-        // Standardansicht beim Oeffnen der Haltungen-Seite: Haltungsansicht (Liste + Detail)
-        // statt der Tabelle. IsChecked loest HaltungsansichtToggle_Changed; die Sichtbarkeiten
-        // werden zusaetzlich explizit gesetzt (robust gegen Event-Timing).
-        HaltungsansichtToggle.IsChecked = true;
-        HaltungsansichtView.Visibility = Visibility.Visible;
-        Grid.Visibility = Visibility.Collapsed;
+        // Standardansicht beim Oeffnen der Haltungen-Seite: Nova-Arbeitsflaeche (Liste, Uebersicht
+        // rechts, Eingabefelder unten). Die Einstellung ShowHaltungenNovaLayout wird beim
+        // DataContext-Wechsel in InitNovaWorkspace angewendet; hier nur der robuste Grundzustand.
+        HaltungsansichtToggle.IsChecked = false;
+        ApplyHaltungsansichtSichtbarkeit();
 
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
         _searchDebounceTimer.Tick += (_, __) =>
@@ -125,6 +124,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 DockGridBack();
         };
         DataContextChanged += DataPage_DataContextChanged;
+        SizeChanged += (_, __) => ApplyDrawerHeight();
     }
 
     private void DataPage_DataContextChanged(object? sender, DependencyPropertyChangedEventArgs e)
@@ -133,14 +133,17 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             oldVm.RecordsOrderChanged -= ResetSort;
             oldVm.FelderExternErgaenzt -= HaltungsansichtView.AktualisiereDetail;
+            oldVm.FelderExternErgaenzt -= AktualisiereFelderDrawer;
             oldVm.PropertyChanged -= ViewModel_PropertyChanged;
         }
         if (e.NewValue is DataPageViewModel newVm)
         {
             newVm.RecordsOrderChanged += ResetSort;
             newVm.FelderExternErgaenzt += HaltungsansichtView.AktualisiereDetail;
+            newVm.FelderExternErgaenzt += AktualisiereFelderDrawer;
             newVm.PropertyChanged += ViewModel_PropertyChanged;
             ApplyHaltungsansichtSettings(newVm);
+            InitNovaWorkspace(newVm);
             _combinedFilter = new DataPageCombinedFilter(
                 newVm.SearchText,
                 FilterChips.CurrentFilter,
@@ -166,13 +169,15 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         _ = sender;
         // Aussen gewaehlte Haltung (z.B. Klick auf der Karte) in der Liste sichtbar scrollen.
-        if (e.PropertyName == nameof(ViewModels.Pages.DataPageViewModel.Selected)
-            && DataContext is ViewModels.Pages.DataPageViewModel vm
-            && vm.Selected is { } selected)
+        if (e.PropertyName == nameof(ViewModels.Pages.DataPageViewModel.Selected))
         {
-            Dispatcher.InvokeAsync(
-                () => Grid.ScrollIntoView(selected),
-                System.Windows.Threading.DispatcherPriority.Background);
+            AktualisiereFelderDrawer();
+            if (DataContext is ViewModels.Pages.DataPageViewModel vm && vm.Selected is { } selected)
+            {
+                Dispatcher.InvokeAsync(
+                    () => Grid.ScrollIntoView(selected),
+                    System.Windows.Threading.DispatcherPriority.Background);
+            }
         }
     }
 
@@ -490,9 +495,18 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         _ = sender;
         _ = e;
+        ApplyHaltungsansichtSichtbarkeit();
+    }
+
+    // Haltungsansicht sichtbar -> Tabelle, Uebersicht, Eingabefelder und Trennlinien ausgeblendet; sonst umgekehrt.
+    private void ApplyHaltungsansichtSichtbarkeit()
+    {
+        if (HaltungsansichtView is null || Grid is null)
+            return;
         var showAnsicht = HaltungsansichtToggle.IsChecked == true;
         HaltungsansichtView.Visibility = showAnsicht ? Visibility.Visible : Visibility.Collapsed;
         Grid.Visibility = showAnsicht ? Visibility.Collapsed : Visibility.Visible;
+        SetNovaWorkspaceVisible(!showAnsicht);
     }
 
     private void ShowHaltungRecordDetails(HaltungRecord record)

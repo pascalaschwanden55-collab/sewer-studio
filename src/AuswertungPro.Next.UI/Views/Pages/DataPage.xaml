@@ -419,14 +419,21 @@
         </ItemsControl>
 
         <!-- GridHost: Container fuer DataGrid oder Platzhalter wenn abgedockt -->
-        <Grid x:Name="GridHost" Grid.Row="2">
+        <Grid x:Name="GridHost" Grid.Row="2" behaviors:ViewPersonalization.ViewKey="DataPage">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition x:Name="DrawerSplitterRow" Height="6"/>
+                <RowDefinition x:Name="DrawerRow" Height="220" MinHeight="120"/>
             </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition x:Name="SideSplitterCol" Width="6"/>
+                <ColumnDefinition x:Name="SideCol" Width="320" MinWidth="240" MaxWidth="560"/>
+            </Grid.ColumnDefinitions>
 
             <!-- Filter-Chips: reiner View-Filter (NR bleibt Position; Verschieben gesperrt bei aktivem Filter) -->
-            <uc:FilterChipBar x:Name="FilterChips" Grid.Row="0" Margin="2,0,2,6"/>
+            <uc:FilterChipBar x:Name="FilterChips" Grid.Row="0" Grid.ColumnSpan="3" Margin="2,0,2,6"/>
 
             <!-- Platzhalter (sichtbar wenn DataGrid abgedockt) -->
             <Border x:Name="UndockedPlaceholder" Visibility="Collapsed" Grid.Row="1"
@@ -570,8 +577,27 @@
                 </uc:EmptyStateControl.Style>
             </uc:EmptyStateControl>
 
-            <!-- Haltungsansicht: alternative Sicht zur Tabelle, anfangs ausgeblendet -->
-            <haltung:HaltungsansichtView x:Name="HaltungsansichtView" Grid.Row="1" Visibility="Collapsed"/>
+            <!-- Haltungsansicht: alternative Sicht zur Tabelle, ueber den Toggle erreichbar -->
+            <haltung:HaltungsansichtView x:Name="HaltungsansichtView" Grid.Row="1" Grid.ColumnSpan="3" Visibility="Collapsed"/>
+
+            <!-- Nova-Etappe 1: Uebersicht rechts und Eingabefelder unten; beide Trennlinien merken sich ihre Lage -->
+            <GridSplitter x:Name="SideSplitter" Grid.Row="1" Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
+                          Background="{DynamicResource BorderBrush}"
+                          behaviors:SplitterPersistenceBehavior.IsEnabled="True"
+                          behaviors:SplitterPersistenceBehavior.SplitterKey="HaltungenUebersicht"
+                          behaviors:SplitterPersistenceBehavior.TargetColumnIndex="2"
+                          behaviors:SplitterPersistenceBehavior.MinSize="240"
+                          behaviors:SplitterPersistenceBehavior.MaxSize="560"
+                          ToolTip="Breite der Übersicht" AutomationProperties.Name="Breite der Übersicht"/>
+            <haltung:HaltungUebersichtPanel x:Name="Uebersicht" Grid.Row="1" Grid.Column="2" Margin="8,0,0,0"
+                                            Record="{Binding Selected}" Entries="{Binding SelectedProtocolEntries}"/>
+            <GridSplitter x:Name="DrawerSplitter" Grid.Row="2" Grid.ColumnSpan="3" Height="6" HorizontalAlignment="Stretch"
+                          ResizeDirection="Rows" Background="{DynamicResource BorderBrush}"
+                          behaviors:SplitterPersistenceBehavior.IsEnabled="True"
+                          behaviors:SplitterPersistenceBehavior.SplitterKey="HaltungenEingabefelder"
+                          behaviors:SplitterPersistenceBehavior.TargetRowIndex="3"
+                          ToolTip="Höhe der Eingabefelder" AutomationProperties.Name="Höhe der Eingabefelder"/>
+            <haltung:HaltungFelderDrawer x:Name="FelderDrawer" Grid.Row="3" Grid.ColumnSpan="3" Margin="0,4,0,0"/>
         </Grid>
     </Grid>
 </UserControl>
