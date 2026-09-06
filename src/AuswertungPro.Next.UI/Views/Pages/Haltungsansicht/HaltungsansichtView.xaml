@@ -7,10 +7,12 @@
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
              xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
              xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
+             xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage"
              x:Name="Root">
     <UserControl.Resources>
         <local:HaltungSummaryConverter x:Key="SummaryConv"/>
         <local:ZustandsklasseBrushConverter x:Key="ZkBrushConv"/>
+        <dp:ZustandsklasseInkConverter x:Key="ZkInkConv"/>
         <local:SchadenMeterConverter x:Key="SchadenMeterConv"/>
         <local:SchadenKlartextConverter x:Key="SchadenKlartextConv"/>
         <local:SchadenKategorieConverter x:Key="SchadenKategorieConv"/>
@@ -152,7 +154,7 @@
                         <Border Grid.Column="1" Width="32" Height="22" CornerRadius="{DynamicResource RadiusS}" VerticalAlignment="Center" Margin="8,0,4,0"
                                 Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}">
                             <TextBlock Text="{Binding Fields[Zustandsklasse]}" HorizontalAlignment="Center"
-                                       VerticalAlignment="Center" Foreground="{DynamicResource StatusBadgeTextBrush}" FontSize="{DynamicResource TextS}" FontWeight="Bold"/>
+                                       VerticalAlignment="Center" Foreground="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkInkConv}}" FontSize="{DynamicResource TextS}" FontWeight="Bold"/>
                         </Border>
                     </Grid>
                 </DataTemplate>

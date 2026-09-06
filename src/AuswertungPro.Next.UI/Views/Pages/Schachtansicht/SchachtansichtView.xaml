@@ -4,10 +4,12 @@
              xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Schachtansicht"
+             xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage"
              x:Name="Root">
     <UserControl.Resources>
         <local:SchachtSummaryConverter x:Key="SummaryConv"/>
         <local:SchachtZustandsklasseBrushConverter x:Key="ZkBrushConv"/>
+        <dp:ZustandsklasseInkConverter x:Key="ZkInkConv"/>
     </UserControl.Resources>
 
     <Grid Margin="8">
@@ -103,7 +105,7 @@
                             <TextBlock Text="{Binding Fields[Zustandsklasse]}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
-                                       Foreground="{DynamicResource StatusBadgeTextBrush}"
+                                       Foreground="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkInkConv}}"
                                        FontSize="{DynamicResource TextS}"
                                        FontWeight="Bold"/>
                         </Border>
