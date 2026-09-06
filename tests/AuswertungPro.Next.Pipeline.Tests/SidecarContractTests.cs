@@ -92,7 +92,9 @@ public class SidecarContractTests
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null)
         {
-            if (Directory.Exists(Path.Combine(dir.FullName, ".git"))
+            // In einem git-Worktree ist ".git" eine Datei, kein Ordner.
+            var gitMarker = Path.Combine(dir.FullName, ".git");
+            if ((Directory.Exists(gitMarker) || File.Exists(gitMarker))
                 && Directory.Exists(Path.Combine(dir.FullName, "sidecar")))
             {
                 return dir.FullName;

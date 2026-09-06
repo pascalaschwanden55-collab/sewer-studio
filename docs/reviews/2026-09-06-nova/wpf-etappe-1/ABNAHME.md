@@ -55,6 +55,22 @@ Vollstaendiger Lauf `tests/AuswertungPro.Next.UI.Tests` nach dem Solution-Build 
 **6383 bestanden, 3 uebersprungen, 0 Fehler** (6386 gesamt, 1 min 42 s). Die drei Skips sind die
 im `UebersprungeneTestsWaechterTests` namentlich erlaubten Stellen.
 
+Gesamte Solution (`dotnet test AuswertungPro.sln --no-build`, alle vier Testprojekte):
+
+| Projekt | bestanden | uebersprungen | Fehler |
+|---|---|---|---|
+| ProjectModernizer.Tests | 62 | 0 | 0 |
+| Infrastructure.Tests | 6008 | 6 | 0 |
+| UI.Tests | 6383 | 3 | 0 |
+| Pipeline.Tests (erster Lauf) | 2528 | 3 | 17 |
+| Pipeline.Tests (nach Helferkorrektur) | 2545 | 3 | 0 |
+
+Die 17 Fehler waren alle `SidecarContractTests` mit `Could not locate repository root`:
+Der Helfer `FindRepoRoot` verlangte einen ORDNER `.git`; in einem git-Worktree ist `.git`
+eine Datei. Kein Bezug zur Etappe. Der Helfer akzeptiert jetzt beides (eine Zeile im
+Testprojekt, kein Produktcode); danach 2545 gruen. Der Nachschlag-Kindprozess
+(`NachschlagKontextmenueTests`) ist in diesem Lauf nicht umgefallen.
+
 ## Bekannte Grenzen
 
 - Die Sichtpruefungen (A10, A12 bis A18) sind nicht ersetzt, sondern offen. Die Rechenregel fuer
