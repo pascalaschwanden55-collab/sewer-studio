@@ -56,7 +56,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
             ResolveManagedComboSpec,
             CommitHaltungDetailField,
             BaueNachschlagBefehl,
-            BaueStrassenBefehl);
+            BaueStrassenBefehl,
+            MeldeFormularKonflikt);
         _recordDetailsDialogController = new DataPageRecordDetailsDialogController(
             BuildHaltungRecordDetails,
             CreateSuggestMeasuresCommand);
@@ -125,6 +126,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         };
         DataContextChanged += DataPage_DataContextChanged;
         SizeChanged += (_, __) => ApplyDrawerHeight();
+        VerdrahteNovaWorkspace();
     }
 
     private void DataPage_DataContextChanged(object? sender, DependencyPropertyChangedEventArgs e)
@@ -605,6 +607,19 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 vm.RemoveRohrmaterialOptionCommand),
             _ => null
         };
+    }
+
+    /// <summary>
+    /// Nova-Etappe 1 (Nachpruefung W01): Der Datensatz hat sich seit der Anzeige geaendert
+    /// (Tabelle oder Dienst). Die neuere Korrektur bleibt stehen; die Formulareingabe wird
+    /// nicht still darueber geschrieben, sondern sichtbar gemeldet.
+    /// </summary>
+    private static void MeldeFormularKonflikt(string fieldName, string aktuellerWert, string eingabe)
+    {
+        var label = FieldCatalog.Get(fieldName).Label;
+        var text = $"„{label}“ wurde inzwischen auf „{aktuellerWert}“ geändert. Die Eingabe „{eingabe}“ wurde nicht übernommen.";
+        if (App.Services is ServiceProvider sp)
+            sp.Toasts.Warning(text);
     }
 
     private void CommitHaltungDetailField(HaltungRecord record, string fieldName, string? value)

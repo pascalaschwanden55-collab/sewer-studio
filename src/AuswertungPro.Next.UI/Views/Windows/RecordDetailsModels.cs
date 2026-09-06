@@ -50,6 +50,7 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
     {
         Label = label;
         _value = value ?? string.Empty;
+        Ausgangswert = _value;
         _commitValue = commitValue;
         IsReadOnly = isReadOnly;
         IsMultiline = isMultiline;
@@ -161,16 +162,67 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
                 return;
 
             _value = next;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(IsEmpty));
-            OnPropertyChanged(nameof(SelectedOption));
-            // Sonst bliebe der Nachschlag-Menuepunkt sichtbar, obwohl das
-            // Feld gerade gefuellt wurde.
-            OnPropertyChanged(nameof(KannNachschlagen));
-            OnPropertyChanged(nameof(KannStrasseUebernehmen));
-            OnPropertyChanged(nameof(BrauchtEigenesMenue));
+            MeldeWertGeaendert();
             _commitValue(_value);
         }
+    }
+
+    /// <summary>
+    /// Der Datensatzwert, auf dem der angezeigte Text beruht. Er wird nur beim Uebernehmen aus
+    /// dem Datensatz gesetzt, nie waehrend der Bearbeitung. Der Rueckschreibweg vergleicht ihn
+    /// mit dem aktuellen Datensatzwert und erkennt so eine inzwischen erfolgte Aenderung
+    /// (Nova-Etappe 1, Nachpruefung W01: Tabelle und Formular sind gleichzeitig sichtbar).
+    /// </summary>
+    public string Ausgangswert { get; private set; }
+
+    /// <summary>
+    /// Der Editor dieses Feldes hat den Tastaturfokus. Externe Aenderungen ersetzen den Text
+    /// dann nicht unter dem Cursor, sondern werden bis <see cref="BeendeBearbeitung"/> gemerkt.
+    /// </summary>
+    public bool IsEditing { get; set; }
+
+    private string? _ausstehenderDatensatzwert;
+
+    /// <summary>
+    /// Wert aus dem Datensatz uebernehmen, ohne ihn zurueckzuschreiben. Waehrend der
+    /// Bearbeitung wird er nur gemerkt; der Ausgangswert bleibt der angezeigte Stand.
+    /// </summary>
+    public void UebernehmeAusDatensatz(string? wert)
+    {
+        var next = wert ?? string.Empty;
+        if (IsEditing)
+        {
+            _ausstehenderDatensatzwert = next;
+            return;
+        }
+
+        _ausstehenderDatensatzwert = null;
+        Ausgangswert = next;
+        if (string.Equals(_value, next, StringComparison.Ordinal))
+            return;
+
+        _value = next;
+        MeldeWertGeaendert();
+    }
+
+    /// <summary>Bearbeitung beendet: einen waehrenddessen gemerkten Datensatzwert jetzt anzeigen.</summary>
+    public void BeendeBearbeitung()
+    {
+        IsEditing = false;
+        if (_ausstehenderDatensatzwert is { } ausstehend)
+            UebernehmeAusDatensatz(ausstehend);
+    }
+
+    private void MeldeWertGeaendert()
+    {
+        OnPropertyChanged(nameof(Value));
+        OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(SelectedOption));
+        // Sonst bliebe der Nachschlag-Menuepunkt sichtbar, obwohl das
+        // Feld gerade gefuellt wurde.
+        OnPropertyChanged(nameof(KannNachschlagen));
+        OnPropertyChanged(nameof(KannStrasseUebernehmen));
+        OnPropertyChanged(nameof(BrauchtEigenesMenue));
     }
 
     public string SelectedOption

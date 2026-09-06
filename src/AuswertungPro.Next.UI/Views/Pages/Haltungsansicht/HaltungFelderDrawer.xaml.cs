@@ -27,6 +27,24 @@ public partial class HaltungFelderDrawer : UserControl
         set => SetValue(TitelProperty, value);
     }
 
+    public static readonly DependencyProperty IsOpenProperty = DependencyProperty.Register(
+        nameof(IsOpen), typeof(bool), typeof(HaltungFelderDrawer),
+        new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+            (d, _) => ((HaltungFelderDrawer)d).IsOpenChanged?.Invoke(d, EventArgs.Empty)));
+
+    /// <summary>
+    /// Aufgeklappt (Themen sichtbar) oder zugeklappt (nur die Kopfzeile). Die Seite reagiert
+    /// darauf und gibt der Liste beim Zuklappen die Flaeche zurueck (Nachpruefung W03).
+    /// </summary>
+    public bool IsOpen
+    {
+        get => (bool)GetValue(IsOpenProperty);
+        set => SetValue(IsOpenProperty, value);
+    }
+
+    /// <summary>Wird bei jedem Wechsel von <see cref="IsOpen"/> ausgeloest.</summary>
+    public event EventHandler? IsOpenChanged;
+
     public static readonly DependencyProperty GroupsProperty = DependencyProperty.Register(
         nameof(Groups), typeof(IReadOnlyList<RecordDetailGroup>), typeof(HaltungFelderDrawer),
         new PropertyMetadata(null, (d, _) => ((HaltungFelderDrawer)d).Filtern()));

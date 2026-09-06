@@ -410,22 +410,34 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Systemmonitor: Nova-Etappe 1 als Aufklapper. Im Alltag steht nur "Analyse bereit";
-                     Rechnerauslastung und Sensoren sind eine Ebene tiefer. -->
+                <!-- Systemmonitor: Nova-Etappe 1 als Aufklapper. Der Kopf heisst bewusst "Systemleistung":
+                     Der Monitor misst Rechner und Sensoren, nicht die Bereitschaft der KI (Nachpruefung W02).
+                     Gesperrte Sensoren (Speicherintegritaet) werden getrennt gemeldet. -->
                 <Expander DockPanel.Dock="Bottom" Margin="12,4,12,12" IsExpanded="False"
                           Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                          ToolTip="Rechnerauslastung und KI-Bereitschaft, aufklappbar"
-                          AutomationProperties.Name="Leistung und KI-Bereitschaft">
+                          ToolTip="Rechnerauslastung und Sensoren, aufklappbar"
+                          AutomationProperties.Name="Systemleistung">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <ctrl:NeuralPulseDot Width="10" Height="10" Margin="0,0,8,0" IsActive="True"/>
+                            <ctrl:NeuralPulseDot Width="10" Height="10" Margin="0,0,8,0" ToolTip="Laufende Messwerte des Rechners">
+                                <ctrl:NeuralPulseDot.Style>
+                                    <Style TargetType="ctrl:NeuralPulseDot">
+                                        <Setter Property="IsActive" Value="True"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Monitor.IsSensorBlocked}" Value="True">
+                                                <Setter Property="IsActive" Value="False"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ctrl:NeuralPulseDot.Style>
+                            </ctrl:NeuralPulseDot>
                             <TextBlock FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="Analyse bereit"/>
+                                        <Setter Property="Text" Value="Systemleistung"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Monitor.IsSensorBlocked}" Value="True">
-                                                <Setter Property="Text" Value="Prüfung nötig"/>
+                                                <Setter Property="Text" Value="Sensoren gesperrt"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>

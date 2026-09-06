@@ -749,7 +749,9 @@ erweiterte `DesignAuditSchriftskalaTests`, `DesignAuditContrastTests`, `DesignAu
   `KiTextBrush` erreicht auf `CardBrush` und `KiSubtleBrush` den Normaltext-Kontrast.
 - Die Leiste ist in Projekt, Daten, Bewertung, System gruppiert (`ShellNavigationGroups`, `NavItem.Group`,
   `CollectionViewSource` ohne Sortierung); der Systemmonitor ist ein zugeklappter Aufklapper mit
-  `NeuralPulseDot` und dem Text „Analyse bereit" beziehungsweise „Pruefung noetig". Die Schriftskala
+  `NeuralPulseDot` und dem Kopf „Systemleistung", bei gesperrten Sensoren „Sensoren gesperrt"
+  (Nachpruefung W02: `IsSensorBlocked` beschreibt Hardwaresensoren, nicht die KI; eine echte
+  Bereitschaftsanzeige braucht die KI-Pruefungen und ist noch nicht gebaut). Die Schriftskala
   gilt seit dieser Etappe auch fuer `Setter Property="FontSize"` (22 XAML-Dateien umgestellt).
 - Haltungen: eine Hauptaktion (Speichern, `ToolbarButtonAccent`), sichtbar Neu, Loeschen, `Video pruefen`
   und der Knopf `Weitere Aktionen`, dessen Kontextmenue alle bisherigen Aktionen samt Ansicht-Menue
@@ -765,7 +767,19 @@ erweiterte `DesignAuditSchriftskalaTests`, `DesignAuditContrastTests`, `DesignAu
   `HaltungenUebersicht` / `HaltungenEingabefelder`; `DataPageWorkspaceLayoutPolicy` haelt bei
   1366 x 768 mindestens sieben Zeilen sichtbar. Die alte Haltungsansicht bleibt ueber den Toggle
   erreichbar; `AppSettings.ShowHaltungenNovaLayout=false` macht sie wieder zum Standard. Beim Wechsel
-  werden Spalten und Zeilen der Arbeitsflaeche auf 0 gesetzt, damit keine Luecke bleibt.
+  werden Spalten und Zeilen der Arbeitsflaeche auf 0 gesetzt, damit keine Luecke bleibt. Zugeklappte
+  Eingabefelder lassen nur die Kopfzeile stehen und geben der Liste die Flaeche zurueck
+  (`HaltungFelderDrawer.IsOpen`, Nachpruefung W03, Waechter `DataPageNovaLayoutIsolatedSmokeTests`).
+- **Tabelle und Formular teilen sich den Datensatz live (Nachpruefung W01).** `DataPageDetailLiveSync`
+  haengt an `HaltungRecord.PropertyChanged` und schreibt jede Feldaenderung ueber
+  `RecordDetailItem.UebernehmeAusDatensatz` ohne Rueckschreiben ins Formular. Waehrend ein Editor den
+  Tastaturfokus hat (`IsEditing`, gesetzt vom `RecordDetailsView`), wird eine externe Aenderung nur
+  gemerkt und erst nach dem Rueckschreiben der Bindung angezeigt. Der Rueckschreibweg der
+  `DataPageDetailItemFactory` vergleicht `Ausgangswert` und aktuellen Datensatzwert
+  (`IstKonflikt`): Hat sich der Datensatz seit der Anzeige geaendert, bleibt die neuere Korrektur
+  stehen, das Formular zeigt sie, und die verworfene Eingabe wird als Toast gemeldet. Nie wieder
+  eine Momentaufnahme still ueber einen neueren Wert schreiben. Waechter:
+  `DataPageFormularTabelleAbgleichTests` (Ablauf Alt -> Neue Tabellenkorrektur -> Zusatz).
 - Nicht umgesetzt (Etappe 2): Uebersichtsseite, Schaechte, Player, Training Studio, Chip „Naechste
   Aufgabe" (braucht einen fachlichen Pruefstatus je Haltung), Palettenwechsel Glas/Cockpit,
   animierte Symbole ueber den bestehenden `MotionSettings`-Rahmen hinaus.

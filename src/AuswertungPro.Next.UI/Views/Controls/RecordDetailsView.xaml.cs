@@ -7,6 +7,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Views.Windows;
 
@@ -28,7 +29,33 @@ public partial class RecordDetailsView : UserControl
 {
     private static readonly Regex NonNumericRegex = new("[^0-9]", RegexOptions.Compiled);
 
-    public RecordDetailsView() => InitializeComponent();
+    public RecordDetailsView()
+    {
+        InitializeComponent();
+        // Nova-Etappe 1 (W01): Solange ein Editor den Tastaturfokus hat, ersetzt eine externe
+        // Aenderung (Tabelle, Dienst) den Text nicht unter dem Cursor; sie wird im Item gemerkt
+        // und nach dem Rueckschreiben uebernommen. Der Konfliktschutz sitzt in der Fabrik.
+        AddHandler(Keyboard.GotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(Editor_GotKeyboardFocus), handledEventsToo: true);
+        AddHandler(Keyboard.LostKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(Editor_LostKeyboardFocus), handledEventsToo: true);
+    }
+
+    private void Editor_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        _ = sender;
+        if (e.OriginalSource is (TextBox or ComboBox) and FrameworkElement { DataContext: RecordDetailItem item })
+            item.IsEditing = true;
+    }
+
+    private void Editor_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        _ = sender;
+        if (e.OriginalSource is not FrameworkElement { DataContext: RecordDetailItem item } || !item.IsEditing)
+            return;
+        if (e.NewFocus is FrameworkElement { DataContext: RecordDetailItem neu } && ReferenceEquals(neu, item))
+            return;
+        // Erst NACH dem LostFocus-Rueckschreiben der Bindung, sonst wuerde die Eingabe vorher ersetzt.
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(item.BeendeBearbeitung));
+    }
 
     public static readonly DependencyProperty HeaderProperty =
         DependencyProperty.Register(nameof(Header), typeof(string), typeof(RecordDetailsView),

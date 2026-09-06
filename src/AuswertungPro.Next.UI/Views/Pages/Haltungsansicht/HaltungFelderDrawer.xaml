@@ -12,7 +12,8 @@
         <DockPanel>
             <!-- Kopfzeile: Auf/Zu, Haltungsname, Feldsuche, Alle auf / Alle zu -->
             <DockPanel DockPanel.Dock="Top" Margin="10,6" LastChildFill="False">
-                <ToggleButton x:Name="OpenToggle" DockPanel.Dock="Left" IsChecked="True"
+                <ToggleButton x:Name="OpenToggle" DockPanel.Dock="Left"
+                              IsChecked="{Binding IsOpen, ElementName=Root, Mode=TwoWay}"
                               Style="{StaticResource CompactToggleButton}"
                               ToolTip="Eingabefelder auf- oder zuklappen"
                               AutomationProperties.Name="Eingabefelder auf- oder zuklappen">
@@ -36,9 +37,10 @@
                          TextChanged="FeldSuche_TextChanged"
                          ToolTip="Feld suchen, zum Beispiel Baujahr" AutomationProperties.Name="Feld suchen"/>
             </DockPanel>
-            <!-- Die vier Themen des Detail-Builders nebeneinander, jedes einzeln aufklappbar -->
+            <!-- Die Themen des Detail-Builders nebeneinander, jedes einzeln aufklappbar.
+                 Zugeklappt bleibt nur die Kopfzeile; die Seite schrumpft dann die Zeile (W03). -->
             <ScrollViewer VerticalScrollBarVisibility="Auto"
-                          Visibility="{Binding IsChecked, ElementName=OpenToggle, Converter={StaticResource BoolToVis}}">
+                          Visibility="{Binding IsOpen, ElementName=Root, Converter={StaticResource BoolToVis}}">
                 <ItemsControl x:Name="Themen" ItemsSource="{Binding SichtbareGruppen, ElementName=Root}" Margin="8">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>

@@ -12,7 +12,7 @@ Quelle: Prototyp `docs/reviews/2026-09-06-nova/optimiert/v2/SewerStudio-Nova-Opt
 | 1 | `24c0132b5` | Zustandsklassen-Marken: Textfarbe je Klasse mit mindestens 4,5:1 Kontrast |
 | 2 | `5742d02ba` | Theme: KI-Farbtoken in Hell und Dunkel mit Kontrastwaechter |
 | 3 | `dc1305b0d` | Leiste: Navigation in die Gruppen Projekt, Daten, Bewertung, System |
-| 4 | `41b770207` | Leiste: Systemmonitor als Aufklapper „Analyse bereit"; Schriftskala gilt auch fuer Stil-Setter |
+| 4 | `41b770207` | Leiste: Systemmonitor als Aufklapper (seit W02: „Systemleistung"); Schriftskala gilt auch fuer Stil-Setter |
 | 5 | `09e268528` | Haltungen: Werkzeugleiste mit einer Hauptaktion, Video pruefen und Weitere Aktionen |
 | 6 | `fbcfb4552` | Haltungen: Spaltenansichten Kompakt, Stammdaten, Bewertung, Sanierung, Kosten, Alle |
 | 7 | `88b772dfe` | Haltungen: Liste, Uebersicht rechts und Eingabefelder unten mit gespeicherten Trennlinien |
@@ -30,7 +30,7 @@ Ergebnis: **bestanden** / **fehlgeschlagen** / **offen** (manuell, noch nicht ge
 | A4 | KI-Token in beiden Themes, Kontrast auf Karte und KI-Flaeche | bestanden | `DesignAuditContrastTests.Ki_text_reaches_normal_text_contrast_on_card_and_ki_subtle` |
 | A5 | Leiste in vier Gruppen, Reihenfolge stabil, jeder Eintrag einer Gruppe zugeordnet | bestanden | `ShellNavigationGroupsTests` |
 | A6 | Schriftskala auch in `Setter Property="FontSize"` (keine festen Zahlen unter 11) | bestanden | `DesignAuditSchriftskalaTests` (erweitert) |
-| A7 | Systemmonitor als Aufklapper mit Pulspunkt, zugeklappt beim Start | bestanden | `MainWindow.xaml` (Expander `IsExpanded="False"`, `NeuralPulseDot IsActive="True"`), `DesignAuditThemeResourceTests` |
+| A7 | Systemmonitor als Aufklapper mit Pulspunkt, zugeklappt beim Start; Kopf „Systemleistung", bei gesperrten Sensoren „Sensoren gesperrt" und ruhender Punkt | bestanden | `MainWindow.xaml` (Expander `IsExpanded="False"`, Style-Trigger auf `Monitor.IsSensorBlocked`), `DesignAuditThemeResourceTests`; Nachpruefung W02 |
 | A8 | Haltungen-Werkzeugleiste: genau eine Hauptaktion, `Video pruefen` mit `PlayVideoCommand`, alle bisherigen Befehle ueber `Weitere Aktionen` erreichbar | bestanden | `DesignAuditCommandReachabilityTests` (+2), `DataPageToolbarLayoutTests`, `XamlActionWiringGuardTests` |
 | A9 | Spaltenansichten: sechs Ansichten, Haltungsname immer vorn, jedes Feld im `FieldCatalog` | bestanden | `DataPageColumnViewCatalogTests` |
 | A10 | Spaltenansicht nach Neustart erhalten (`DataPageLayout.ActiveColumnView`) | offen | Sichtpruefung am Programm: Ansicht „Kompakt" waehlen, Programm neu starten, Chip bleibt aktiv |
@@ -71,11 +71,28 @@ eine Datei. Kein Bezug zur Etappe. Der Helfer akzeptiert jetzt beides (eine Zeil
 Testprojekt, kein Produktcode); danach 2545 gruen. Der Nachschlag-Kindprozess
 (`NachschlagKontextmenueTests`) ist in diesem Lauf nicht umgefallen.
 
+## Nachpruefung W01 bis W03 (Codex, 6. September 2026)
+
+Quelle: `nachpruefung/NACHPRUEFUNG.md` mit Gegenprobe `nachpruefung/nachweise/gegenprobe.json`.
+Alle drei Befunde wurden am Code bestaetigt und behoben.
+
+| Nr. | Befund | Korrektur | Beleg |
+|---|---|---|---|
+| W01 | Formular zeigte eine Momentaufnahme; eine Formulareingabe konnte eine neuere Tabellenkorrektur ueberschreiben | `DataPageDetailLiveSync` haelt die Felder ueber `HaltungRecord.PropertyChanged` gleich; `RecordDetailItem` kennt `Ausgangswert`, `IsEditing`, `UebernehmeAusDatensatz`, `BeendeBearbeitung`; `RecordDetailsView` setzt den Bearbeitungszustand ueber den Tastaturfokus; der Rueckschreibweg der Fabrik (`IstKonflikt`) behaelt die neuere Korrektur und meldet die verworfene Eingabe als Toast | `DataPageFormularTabelleAbgleichTests` (6 Tests, darunter exakt der Ablauf der Gegenprobe) |
+| W02 | „Analyse bereit" hing nur an Hardwaresensoren | Kopf „Systemleistung", bei `IsSensorBlocked` „Sensoren gesperrt" mit ruhendem Pulspunkt; Tooltip und zugaenglicher Name angepasst; eine echte KI-Bereitschaft bleibt Etappe 2 | `MainWindow.xaml`, `DesignAuditThemeResourceTests` |
+| W03 | Zuklappen liess die Zeile bei 220 px stehen | `HaltungFelderDrawer.IsOpen` mit Ereignis; die Seite setzt die Zeile auf Auto (nur Kopfzeile), blendet die Trennlinie aus und stellt beim Oeffnen Mindesthoehe, Trennlinie und Hoehe wieder her | `DataPageNovaLayoutIsolatedSmokeTests` (Kindprozess mit echten App-Ressourcen: offen >= 120 px, zu < 80 px, wieder offen >= 120 px) |
+
+Die Nachpruefung nannte ausserdem fehlende Laufprotokolle und den fehlenden Release-Build. Beides
+liegt jetzt unter `nachweise/` (siehe Nachtrag „Release-Lauf" am Ende).
+
 ## Bekannte Grenzen
 
 - Die Sichtpruefungen (A10, A12 bis A18) sind nicht ersetzt, sondern offen. Die Rechenregel fuer
   sieben Zeilen ist geprueft; ob die reale Zeilenhoehe (`GridMinRowHeight`, Standard 38 px) bei
   125 % und 150 % dieselbe Zahl ergibt, zeigt erst das Foto.
+- Der Bearbeitungszustand (`IsEditing`) wird ueber den Tastaturfokus gesetzt. Ein Editor, der ohne
+  Fokusverlust schreibt (Auswahlliste per Maus), meldet einen Konflikt sofort und zeigt den
+  Datensatzwert; das ist gewollt, aber am Programm noch nicht gesehen.
 - `RecordDetailsView` zeigt in den Eingabefeldern seinen Kopfbereich mit leerem `Header`; falls das
   am Programm als Leerraum stoert, ist ein Sichtbarkeits-Trigger im Control die richtige Stelle,
   nicht ein zweiter Detail-Renderer.

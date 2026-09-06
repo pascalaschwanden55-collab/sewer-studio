@@ -10,7 +10,9 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 /// Nova-Etappe 1: Arbeitsflaeche der Haltungen-Seite mit Liste, Uebersicht rechts und
 /// Eingabefeldern unten. Beide Trennlinien merken sich ihre Lage ueber
 /// SplitterPersistenceBehavior (ViewKey "DataPage"); die Standardhoehe der Eingabefelder
-/// kommt aus DataPageWorkspaceLayoutPolicy (sieben Zeilen bleiben sichtbar).
+/// kommt aus DataPageWorkspaceLayoutPolicy (sieben Zeilen bleiben sichtbar). Die
+/// Eingabefelder bleiben ueber DataPageDetailLiveSync mit dem Datensatz gleich, weil Tabelle
+/// und Formular gemeinsam sichtbar sind (Nachpruefung W01).
 /// </summary>
 public partial class DataPage
 {
@@ -22,10 +24,22 @@ public partial class DataPage
     private const double SideColMax = 560;
     private const double TabellenkopfHoehe = 32;
 
-    /// <summary>Verdrahtet Uebersicht und Eingabefelder mit dem ViewModel und waehlt die Standardansicht.</summary>
-    private void InitNovaWorkspace(DataPageViewModel vm)
+    private DataPageDetailLiveSync? _felderSync;
+
+    /// <summary>
+    /// Einmalige Verdrahtung im Konstruktor, unabhaengig vom ViewModel: Der Doppelklick in der
+    /// Uebersicht und das Auf-/Zuklappen der Eingabefelder (Nachpruefung W03) muessen auch
+    /// funktionieren, bevor ein DataContext gesetzt ist.
+    /// </summary>
+    private void VerdrahteNovaWorkspace()
     {
         Uebersicht.BeobachtungenRequested = record => RouteHaltungsansichtAction("beobachtungen", record);
+        FelderDrawer.IsOpenChanged += (_, _) => ApplyDrawerOpenState();
+    }
+
+    /// <summary>Verbindet Uebersicht und Eingabefelder mit dem ViewModel und waehlt die Standardansicht.</summary>
+    private void InitNovaWorkspace(DataPageViewModel vm)
+    {
         AktualisiereFelderDrawer();
 
         // Standardansicht: Nova-Arbeitsflaeche; die bisherige Haltungsansicht bleibt ueber den Toggle
@@ -34,20 +48,33 @@ public partial class DataPage
         ApplyHaltungsansichtSichtbarkeit();
     }
 
-    /// <summary>Eingabefelder neu aus der gewaehlten Haltung aufbauen (Auswahlwechsel, externe Feldaenderung).</summary>
+    /// <summary>
+    /// Eingabefelder neu aus der gewaehlten Haltung aufbauen (Auswahlwechsel, externe Feldaenderung)
+    /// und den Live-Abgleich mit genau diesem Datensatz anschliessen.
+    /// </summary>
     private void AktualisiereFelderDrawer()
     {
-        if (DataContext is not DataPageViewModel vm)
-            return;
+        _felderSync?.Dispose();
+        _felderSync = null;
 
-        FelderDrawer.Titel = vm.Selected?.GetFieldValue("Haltungsname") ?? string.Empty;
-        FelderDrawer.Groups = vm.Selected is { } record ? BuildHaltungRecordDetailsForAnsicht(record) : null;
+        if (DataContext is not DataPageViewModel vm || vm.Selected is not { } record)
+        {
+            FelderDrawer.Titel = string.Empty;
+            FelderDrawer.Groups = null;
+            return;
+        }
+
+        var gruppen = BuildHaltungRecordDetailsForAnsicht(record);
+        FelderDrawer.Titel = record.GetFieldValue("Haltungsname");
+        FelderDrawer.Groups = gruppen;
+        _felderSync = new DataPageDetailLiveSync(record, gruppen);
     }
 
     /// <summary>Hoehe der Eingabefelder aus Flaeche, Zeilenhoehe und gespeicherter Lage der Trennlinie.</summary>
     private void ApplyDrawerHeight()
     {
-        if (DataContext is not DataPageViewModel vm || GridHost.ActualHeight <= 0 || !IstNovaArbeitsflaecheSichtbar)
+        if (DataContext is not DataPageViewModel vm || GridHost.ActualHeight <= 0
+            || !IstNovaArbeitsflaecheSichtbar || !FelderDrawer.IsOpen)
             return;
 
         var gespeichert = SplitterPersistenceCore.TryGetStored(NovaViewKey, DrawerSplitterKey, out var s) ? s : (double?)null;
@@ -56,6 +83,35 @@ public partial class DataPage
     }
 
     private bool IstNovaArbeitsflaecheSichtbar => FelderDrawer.Visibility == Visibility.Visible;
+
+    /// <summary>
+    /// Auf- oder zugeklappte Eingabefelder: Zugeklappt bleibt nur die Kopfzeile stehen, die Zeile
+    /// schrumpft auf Auto und die Trennlinie verschwindet. Aufgeklappt gelten Mindesthoehe,
+    /// Trennlinie und die gespeicherte beziehungsweise berechnete Hoehe wieder.
+    /// </summary>
+    private void ApplyDrawerOpenState()
+    {
+        if (!IstNovaArbeitsflaecheSichtbar)
+            return;
+
+        if (FelderDrawer.IsOpen)
+        {
+            DrawerSplitter.Visibility = Visibility.Visible;
+            DrawerSplitterRow.Height = new GridLength(DataPageWorkspaceLayoutPolicy.SplitterHoehe);
+            DrawerRow.MinHeight = DataPageWorkspaceLayoutPolicy.MinDrawer;
+            // Kam die Zeile aus dem zugeklappten Zustand (Auto), zuerst eine feste Hoehe geben.
+            if (DrawerRow.Height.IsAuto)
+                DrawerRow.Height = new GridLength(DataPageWorkspaceLayoutPolicy.MinDrawer);
+            ApplyDrawerHeight();
+        }
+        else
+        {
+            DrawerSplitter.Visibility = Visibility.Collapsed;
+            DrawerSplitterRow.Height = new GridLength(0);
+            DrawerRow.MinHeight = 0;
+            DrawerRow.Height = GridLength.Auto;
+        }
+    }
 
     /// <summary>
     /// Blendet Uebersicht, Eingabefelder und beide Trennlinien ein oder aus. Die festen Spalten-
@@ -70,7 +126,6 @@ public partial class DataPage
         var v = sichtbar ? Visibility.Visible : Visibility.Collapsed;
         Uebersicht.Visibility = v;
         SideSplitter.Visibility = v;
-        DrawerSplitter.Visibility = v;
         FelderDrawer.Visibility = v;
 
         if (sichtbar)
@@ -82,12 +137,11 @@ public partial class DataPage
                 ? Math.Clamp(w, SideColMin, SideColMax)
                 : SideColStandard;
             SideCol.Width = new GridLength(breite);
-            DrawerSplitterRow.Height = new GridLength(DataPageWorkspaceLayoutPolicy.SplitterHoehe);
-            DrawerRow.MinHeight = DataPageWorkspaceLayoutPolicy.MinDrawer;
-            ApplyDrawerHeight();
+            ApplyDrawerOpenState();
         }
         else
         {
+            DrawerSplitter.Visibility = Visibility.Collapsed;
             SideSplitterCol.Width = new GridLength(0);
             SideCol.MinWidth = 0;
             SideCol.Width = new GridLength(0);
