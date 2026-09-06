@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Specialized;
 using AuswertungPro.Next.Application.UseCases.NaechsteAufgabe;
 using AuswertungPro.Next.Domain.Models;
 using CommunityToolkit.Mvvm.Input;
