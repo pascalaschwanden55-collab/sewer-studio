@@ -98,3 +98,30 @@ liegt jetzt unter `nachweise/` (siehe Nachtrag „Release-Lauf" am Ende).
   nicht ein zweiter Detail-Renderer.
 - Nicht Teil der Etappe: Uebersichtsseite, Schaechte, Player, Training Studio, Chip „Naechste
   Aufgabe", Palettenwechsel Glas/Cockpit.
+
+## Nachtrag: Release-Lauf (6. September 2026, nach W01 bis W03)
+
+Befehle im Worktree `C:\Sewer-Studio_KI_4.5-nova`, Stand `da273697e`:
+
+```bash
+dotnet build AuswertungPro.sln -c Release
+dotnet test AuswertungPro.sln -c Release --no-build --logger trx --results-directory <nachweise>/testlauf-release
+```
+
+Build: 0 Fehler, 0 Warnungen (`nachweise/release-build.log`).
+
+| Projekt | bestanden | uebersprungen | Fehler |
+|---|---|---|---|
+| ProjectModernizer.Tests | 62 | 0 | 0 |
+| Pipeline.Tests | 2545 | 3 | 0 |
+| Infrastructure.Tests | 6008 | 6 | 0 |
+| UI.Tests | 6393 | 4 | 0 |
+
+Protokolle: `nachweise/release-test.log` (Konsole) und `nachweise/testlauf-release.zip` (vier TRX-Dateien
+mit `SHA256SUMS.txt`). Der vierte Skip im UI-Projekt ist der Elternprozess-Eintrag des neuen
+`DataPageNovaLayoutIsolatedSmokeTests` (gleiches Muster wie die bestehenden isolierten WPF-Tests; die
+Skip-Stelle liegt im gemeinsamen `IsolatedWpfFactAttribute`, der Skip-Waechter bleibt gruen).
+
+Ein erster Release-Lauf davor hatte genau einen Fehler: `UiArchitectureGuardTests` meldete den
+Zugriff auf `App.Services` im Konflikthinweis von W01. Die Meldung wurde in die Kopfzeile der
+Eingabefelder verlegt (`da273697e`); der hier dokumentierte Lauf ist die Wiederholung danach.
