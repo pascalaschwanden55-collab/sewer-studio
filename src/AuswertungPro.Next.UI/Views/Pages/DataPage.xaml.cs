@@ -200,6 +200,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             if (string.Equals(field, FieldKeys.GeonisId, StringComparison.Ordinal))
                 col.IsReadOnly = true;
             Grid.Columns.Add(col);
+            _columnFields[col] = field;
 
             _columnAlignmentToolbar.SetAlignment(
                 col,
@@ -209,6 +210,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         Grid.FrozenColumnCount = 2;
         RestoreLayoutFromSettings();
+        InitColumnViews();
         ResetSort();
     }
 

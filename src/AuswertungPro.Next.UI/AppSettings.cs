@@ -664,6 +664,8 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
 public sealed class DataPageLayoutSettings
 {
+    /// <summary>Gewaehlte Spaltenansicht der Haltungsliste (Schluessel aus DataPageColumnViewCatalog). Leer = alle Spalten.</summary>
+    public string ActiveColumnView { get; set; } = "alle";
     public double GridMinRowHeight { get; set; } = 38d;
     public double GridZoom { get; set; } = 1.0d;
     public bool IsColumnReorderEnabled { get; set; }
