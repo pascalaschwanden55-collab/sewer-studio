@@ -22,7 +22,7 @@
             <Setter Property="MinHeight" Value="30"/>
             <Setter Property="Padding" Value="12,5"/>
             <Setter Property="Margin" Value="0,0,8,0"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
         </Style>
 
     </Window.Resources>

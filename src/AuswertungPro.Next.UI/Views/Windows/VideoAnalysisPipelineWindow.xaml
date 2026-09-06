@@ -27,7 +27,7 @@
         </Style>
 
         <Style x:Key="LabelSmall" TargetType="TextBlock">
-            <Setter Property="FontSize"         Value="10"/>
+            <Setter Property="FontSize"         Value="{DynamicResource TextXS}"/>
             <Setter Property="FontWeight"       Value="Bold"/>
             <Setter Property="Foreground"       Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="FontFamily"       Value="Consolas"/>
@@ -35,7 +35,7 @@
         </Style>
 
         <Style x:Key="ValueLarge" TargetType="TextBlock">
-            <Setter Property="FontSize"   Value="24"/>
+            <Setter Property="FontSize"   Value="{DynamicResource TextTitle}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontFamily" Value="Consolas"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
@@ -55,7 +55,7 @@
             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground"   Value="White"/>
             <Setter Property="FontWeight"   Value="SemiBold"/>
-            <Setter Property="FontSize"     Value="13"/>
+            <Setter Property="FontSize"     Value="{DynamicResource TextM}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding"      Value="20,9"/>
             <Setter Property="Cursor"       Value="Hand"/>
@@ -75,7 +75,7 @@
         <Style x:Key="BtnCancel" TargetType="Button">
             <Setter Property="Background"   Value="{DynamicResource HoverBrush}"/>
             <Setter Property="Foreground"   Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="FontSize"     Value="13"/>
+            <Setter Property="FontSize"     Value="{DynamicResource TextM}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush"  Value="{DynamicResource BorderBrush}"/>
             <Setter Property="Padding"      Value="20,9"/>

@@ -327,10 +327,10 @@
                            FontWeight="SemiBold" Foreground="{StaticResource TextBrush}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="FontSize" Value="26"/>
+                            <Setter Property="FontSize" Value="{DynamicResource TextDisplay}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsCompactLayout, ElementName=Root}" Value="True">
-                                    <Setter Property="FontSize" Value="22"/>
+                                    <Setter Property="FontSize" Value="{DynamicResource TextTitle}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -344,7 +344,7 @@
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsCompactLayout, ElementName=Root}" Value="True">
                                     <Setter Property="Margin" Value="0,3,0,0"/>
-                                    <Setter Property="FontSize" Value="12"/>
+                                    <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -400,11 +400,11 @@
                                            PreviewMouseMove="ColumnHandle_PreviewMouseMove">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="FontSize" Value="18"/>
+                                            <Setter Property="FontSize" Value="{DynamicResource TextXL}"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
                                                              Value="True">
-                                                    <Setter Property="FontSize" Value="15"/>
+                                                    <Setter Property="FontSize" Value="{DynamicResource TextL}"/>
                                                 </DataTrigger>
                                                 <!-- Im Anpassen-Modus laedt der Spaltentitel zum Ziehen ein. -->
                                                 <DataTrigger Binding="{Binding IsCustomizing, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
@@ -425,7 +425,7 @@
                                                 <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
                                                              Value="True">
                                                     <Setter Property="Margin" Value="0,2,0,8"/>
-                                                    <Setter Property="FontSize" Value="11"/>
+                                                    <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -502,11 +502,11 @@
                                                                PreviewMouseMove="FieldHandle_PreviewMouseMove">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
-                                                                <Setter Property="FontSize" Value="12"/>
+                                                                <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
                                                                                  Value="True">
-                                                                        <Setter Property="FontSize" Value="11"/>
+                                                                        <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
                                                                     </DataTrigger>
                                                                     <!-- Nur im Anpassen-Modus laedt die Beschriftung zum Ziehen ein. -->
                                                                     <DataTrigger Binding="{Binding IsCustomizing, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"

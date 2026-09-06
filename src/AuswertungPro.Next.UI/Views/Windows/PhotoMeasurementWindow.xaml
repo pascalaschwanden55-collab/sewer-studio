@@ -21,7 +21,7 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#55FFFFFF"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -59,7 +59,7 @@
             <Setter Property="MinWidth" Value="80"/>
             <Setter Property="Height" Value="34"/>
             <Setter Property="Margin" Value="0,4"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextM}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -100,7 +100,7 @@
             <Setter Property="MinWidth" Value="36"/>
             <Setter Property="Height" Value="26"/>
             <Setter Property="Margin" Value="2,0"/>
-            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Background" Value="#CC1E293B"/>
             <Setter Property="Cursor" Value="Hand"/>

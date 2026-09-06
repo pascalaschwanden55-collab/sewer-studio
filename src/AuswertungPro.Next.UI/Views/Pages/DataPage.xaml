@@ -18,7 +18,7 @@
             <Setter Property="MinHeight" Value="48"/>
             <Setter Property="MinWidth" Value="140"/>
             <Setter Property="Padding" Value="24,12"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextL}"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -30,13 +30,13 @@
             <Setter Property="MinHeight" Value="28"/>
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="Padding" Value="10,4"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
         </Style>
         <Style x:Key="CompactToggleButton" TargetType="ToggleButton">
             <Setter Property="MinHeight" Value="28"/>
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="Padding" Value="10,4"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>

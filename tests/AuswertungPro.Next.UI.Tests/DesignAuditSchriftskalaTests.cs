@@ -34,6 +34,11 @@ public sealed class DesignAuditSchriftskalaTests
         var zuKlein = new Regex("FontSize=\"(?:[0-9]|10)(?:\\.[0-9]+)?\"", RegexOptions.Compiled);
         var treffer = SucheInXaml(zuKlein, _ => true);
         Assert.True(treffer.Count == 0, "Schrift unter 11 px (Entscheid 2026-09-03: TextXS = 11 ist die Untergrenze):\n" + string.Join("\n", treffer));
+
+        // Nova-Etappe 1: Auch Stil-Setter zaehlen. Vorher rutschten 9 px im Systemmonitor durch.
+        var zuKleinSetter = new Regex("Property=\"FontSize\"\\s+Value=\"(?:[0-9]|10)(?:\\.[0-9]+)?\"", RegexOptions.Compiled);
+        var trefferSetter = SucheInXaml(zuKleinSetter, _ => true);
+        Assert.True(trefferSetter.Count == 0, "Stil-Setter unter 11 px:\n" + string.Join("\n", trefferSetter));
     }
 
     [Fact]
@@ -41,7 +46,7 @@ public sealed class DesignAuditSchriftskalaTests
     {
         // Theme-Dateien definieren die Stile (Zahlen erlaubt). Der Startbildschirm hat eine eigene
         // Choreografie mit 76-px-Wortmarke und bleibt wie bei Farben und Eintritt aussen vor.
-        var literal = new Regex("FontSize=\"[0-9]", RegexOptions.Compiled);
+        var literal = new Regex("FontSize=\"[0-9]|Property=\"FontSize\"\\s+Value=\"[0-9]", RegexOptions.Compiled);
         var treffer = SucheInXaml(literal, datei =>
             !datei.Contains($"{Path.DirectorySeparatorChar}Theme{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
             && Path.GetFileName(datei) != "StartupSplashWindow.xaml");

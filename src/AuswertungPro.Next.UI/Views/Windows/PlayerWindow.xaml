@@ -28,13 +28,13 @@
             <Style x:Key="PlayerButton" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
                 <Setter Property="MinHeight" Value="36"/>
                 <Setter Property="Padding" Value="14,7"/>
-                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
             </Style>
 
             <Style x:Key="PlayerPrimaryButton" TargetType="Button" BasedOn="{StaticResource ToolbarButtonAccent}">
                 <Setter Property="MinHeight" Value="36"/>
                 <Setter Property="Padding" Value="14,7"/>
-                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
             </Style>
 
             <Style x:Key="MarkToolPopupButton" TargetType="Button">
@@ -48,7 +48,7 @@
                 <Setter Property="Margin" Value="0,0,0,6"/>
                 <Setter Property="Padding" Value="12,9"/>
                 <Setter Property="MinWidth" Value="150"/>
-                <Setter Property="FontSize" Value="12.5"/>
+                <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Template">

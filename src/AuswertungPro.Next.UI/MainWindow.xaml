@@ -410,10 +410,31 @@
                     </Border>
                 </StackPanel>
 
-                <!-- System Monitor -->
-                <ctrl:SystemMonitorPanel DockPanel.Dock="Bottom"
-                                         DataContext="{Binding Monitor}"
-                                         Margin="12,4,12,12"/>
+                <!-- Systemmonitor: Nova-Etappe 1 als Aufklapper. Im Alltag steht nur "Analyse bereit";
+                     Rechnerauslastung und Sensoren sind eine Ebene tiefer. -->
+                <Expander DockPanel.Dock="Bottom" Margin="12,4,12,12" IsExpanded="False"
+                          Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                          ToolTip="Rechnerauslastung und KI-Bereitschaft, aufklappbar"
+                          AutomationProperties.Name="Leistung und KI-Bereitschaft">
+                    <Expander.Header>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <ctrl:NeuralPulseDot Width="10" Height="10" Margin="0,0,8,0" IsActive="True"/>
+                            <TextBlock FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="Analyse bereit"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Monitor.IsSensorBlocked}" Value="True">
+                                                <Setter Property="Text" Value="Prüfung nötig"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Expander.Header>
+                    <ctrl:SystemMonitorPanel DataContext="{Binding Monitor}" Margin="0,6,0,0"/>
+                </Expander>
 
 
                 <ListBox x:Name="SidebarNavList"
