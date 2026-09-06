@@ -1,0 +1,62 @@
+[
+  {
+    "id": "R01",
+    "priority": 1,
+    "title": "Player startet trotz abgebrochenem Wechsel",
+    "steps": "Haltung 07.6588-6587 wählen, Baujahr ändern, zur Übersicht gehen und „Nächste Haltung prüfen“ anklicken. In der Rückfrage „Abbrechen, hier bleiben“ wählen.",
+    "actual": "Die Auswahl bleibt auf 07.6588-6587, aber der Player für 78998-79002 ist bereits geöffnet. Vor dem Abbruch sind Rückfrage und Player gleichzeitig offen; der Fokus liegt im Player hinter der Rückfrage.",
+    "fix": "Den vollständigen Wechsel samt Player erst nach Speichern oder Verwerfen ausführen. Abbrechen beendet die ganze angeforderte Aktion. Dasselbe Muster auf die KI-Aufgabenliste anwenden.",
+    "done": "Bei Abbrechen bleiben Auswahl und Entwurf erhalten, der neue Player bleibt geschlossen. Bei Zustimmung gehören Auswahl, Formular und Player zur gleichen Haltung.",
+    "source": "SewerStudio-Nova-Optimiert.html:1413, 1419–1421, 1432–1444. JSON: wechselVorAbbruch / wechselNachAbbruch."
+  },
+  {
+    "id": "R02",
+    "priority": 1,
+    "title": "Freigabe bleibt nach Änderungen gültig",
+    "steps": "Training Studio öffnen und die vorhandenen Angaben akzeptieren. Danach VSA-Code und Beschreibung leeren. „Für Training freigeben“ anklicken.",
+    "actual": "Die Freigabe bleibt aktiv und meldet Erfolg trotz leerer Pflichtfelder. Die Bestätigung bezieht sich damit nicht mehr auf die aktuellen Angaben. Es wurde dabei kein echtes Trainingssample geschrieben.",
+    "fix": "Bestätigung an einen bestimmten Stand der Felder binden. Jede fachliche Änderung hebt sie auf. Auch die Freigabe selbst muss aktuelle Pflichtfelder und Bestätigung erneut prüfen.",
+    "done": "Änderungen an Code, Beschreibung, Uhrlage, Stufe oder der zugehörigen Bildauswahl sperren die Freigabe bis zur erneuten Bestätigung.",
+    "source": "SewerStudio-Nova-Optimiert.html:1702, 1718–1720. JSON: training."
+  },
+  {
+    "id": "R03",
+    "priority": 1,
+    "title": "Speicherfehler wird als Erfolg gemeldet",
+    "steps": "Baujahr ändern. Im isolierten Prüf-Browser beim Schreiben einen QuotaExceededError auslösen und „Speichern“ anklicken. Die Seite neu laden.",
+    "actual": "Die Meldung behauptet, der Wert sei im Browserspeicher abgelegt. Die Änderungsmarke verschwindet. Nach Neuladen steht wieder das alte Baujahr 1978 statt 2002. Dies war eine kontrollierte Fehlereinspeisung; der echte Browserspeicher des Anwenders wurde nicht gefüllt.",
+    "fix": "Speichern muss Erfolg oder Fehler zurückmelden. Bei Fehler den Entwurf und die Änderungsmarke erhalten. „Speichern und wechseln“ darf dann nicht wechseln.",
+    "done": "Ein erzwungener Speicherfehler zeigt eine verständliche Meldung. Die Eingabe bleibt verfügbar und ein späterer erfolgreicher Versuch funktioniert.",
+    "source": "SewerStudio-Nova-Optimiert.html:1062–1064, 1280–1284, 1442–1450. JSON: speicherFehler."
+  },
+  {
+    "id": "R04",
+    "priority": 2,
+    "title": "Tastenkürzel verlässt den offenen Dialog",
+    "steps": "Player öffnen und Strg+K drücken.",
+    "actual": "Der Fokus springt in die globale Suche hinter dem Player. Die Tab-Begrenzung schützt nur die erste und letzte Position innerhalb des Dialogs; dieses Tastenkürzel umgeht sie.",
+    "fix": "Globale Aktionen bei einem offenen modalen Fenster passend sperren oder innerhalb des Fensters anbieten. Nur die oberste Dialogebene darf den Fokus erhalten.",
+    "done": "Strg+K und Tab verlassen weder Player noch Codierfenster. Nach Schliessen kehrt der Fokus an eine sichtbare, passende Stelle zurück.",
+    "source": "SewerStudio-Nova-Optimiert.html:1293–1334. JSON: dialogSuche."
+  },
+  {
+    "id": "R05",
+    "priority": 2,
+    "title": "Kontrastziel ist noch nicht überall erreicht",
+    "steps": "Helle Diagnose sowie helles und dunkles Training Studio öffnen. Die dunkle Codierung mit leerem Feld „Meter Ende“ prüfen.",
+    "actual": "Gemessen: „INFO“ hell 3,31:1, „WARN“ hell 4,05:1; „SAM-Maske“ hell 3,52:1 und dunkel 1,81:1; „Hand-Box“ dunkel 3,05:1. Der Platzhalter „nur Streckenschaden“ liegt dunkel bei 3,44:1. Diese Texte sind 11–13 Pixel gross.",
+    "fix": "Textfarben auf den farbigen Marken je Thema abstimmen. Diagnosefarben und Platzhalter anpassen. Den Test auf alle Seiten, Arbeitsfenster und Eingabefelder ausweiten.",
+    "done": "Die genannten normalen Texte erreichen mindestens 4,5:1. Messungen berücksichtigen tatsächliche Hintergründe und Platzhalter. Verläufe werden gesondert geprüft.",
+    "source": "SewerStudio-Nova-Optimiert.html:209, 1000–1001; pruefung.js:176–193. JSON: kontrast."
+  },
+  {
+    "id": "R06",
+    "priority": 1,
+    "title": "„Beenden ohne Übernahme“ behält den Befund",
+    "steps": "Player öffnen, ein neues Ereignis erfassen und im Codierfenster übernehmen. Danach im Player „Beenden ohne Übernahme“ wählen und den Player erneut öffnen.",
+    "actual": "Die Befundzahl bleibt bei vier statt ursprünglich drei. Der neue Befund steht weiter im gemeinsamen Datenbestand und erscheint beim erneuten Öffnen. Der Abbruch im Codierfenster selbst funktioniert; dieser Fehler betrifft den anschliessenden Player-Abbruch.",
+    "fix": "Player-Änderungen in einem eigenen Entwurf halten. Erst „Codierung übernehmen“ schreibt sie in den gemeinsamen Beispielbestand. „Beenden ohne Übernahme“ verwirft diesen Entwurf.",
+    "done": "Neue, bearbeitete und gelöschte Befunde sowie Prüfstatus werden beim Player-Abbruch zurückgesetzt. Bei Übernahme bleiben sie erhalten.",
+    "source": "SewerStudio-Nova-Optimiert.html:941, 1303–1310, 1705–1707. JSON: player_abbruch."
+  }
+]

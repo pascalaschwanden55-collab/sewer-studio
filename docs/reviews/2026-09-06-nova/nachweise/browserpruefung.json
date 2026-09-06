@@ -1,0 +1,323 @@
+{
+  "hauptprobe": {
+    "base": {
+      "title": "SewerStudio Nova Komplett",
+      "charset": "UTF-8",
+      "mode": "BackCompat",
+      "doctype": false,
+      "lang": "",
+      "viewportMeta": false,
+      "pages": 15,
+      "windows": 3,
+      "buttons": 272,
+      "inlineButtonHandlers": 18,
+      "nav": [
+        {
+          "name": "●Übersicht",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "▤Projekt",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "≡Haltungen",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "◯Schächte",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "↓Import",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "↑Export",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "⚠Medienkonflikte",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "⎙Druckcenter",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "☰Dossiers",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "▦Sanierungs-Matrix",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "▦Schacht-Matrix",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "◑Schattenauswertung",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "✓VSA",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "⚙Diagnose",
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "name": "⚙Einstellungen",
+          "tabIndex": 0,
+          "role": null
+        }
+      ],
+      "minTextSize": 9,
+      "fonts": "loaded"
+    },
+    "nextButtonPage": "page-overview",
+    "pages": [
+      {
+        "page": "page-overview",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 956,
+        "buttons": 3
+      },
+      {
+        "page": "page-projekt",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 539,
+        "buttons": 7
+      },
+      {
+        "page": "page-haltungen",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 869,
+        "buttons": 44
+      },
+      {
+        "page": "page-schaechte",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 869,
+        "buttons": 26
+      },
+      {
+        "page": "page-import",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 858,
+        "buttons": 17
+      },
+      {
+        "page": "page-export",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 726,
+        "buttons": 15
+      },
+      {
+        "page": "page-medien",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 645,
+        "buttons": 14
+      },
+      {
+        "page": "page-druck",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 959,
+        "buttons": 13
+      },
+      {
+        "page": "page-dossiers",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 713,
+        "buttons": 20
+      },
+      {
+        "page": "page-matrix",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 554,
+        "buttons": 6
+      },
+      {
+        "page": "page-smatrix",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 248,
+        "buttons": 2
+      },
+      {
+        "page": "page-schatten",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 472,
+        "buttons": 3
+      },
+      {
+        "page": "page-vsa",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 376,
+        "buttons": 1
+      },
+      {
+        "page": "page-diagnose",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 258,
+        "buttons": 3
+      },
+      {
+        "page": "page-einstellungen",
+        "right": 1418,
+        "viewport": 1440,
+        "contentHeight": 1081,
+        "buttons": 18
+      }
+    ],
+    "rowBefore": "SCHACHT OBEN\n78998\nSCHACHT UNTEN\n79002\nMATERIAL\nBeton\nDN / PROFIL\n300 · Kreis\nLÄNGE\n42.30 m\nINSPEKTION\n06.10.2025",
+    "rowAfter": {
+      "heading": "07.6588-6587",
+      "facts": "SCHACHT OBEN\n78998\nSCHACHT UNTEN\n79002\nMATERIAL\nBeton\nDN / PROFIL\n300 · Kreis\nLÄNGE\n42.30 m\nINSPEKTION\n06.10.2025"
+    },
+    "chipsBefore": 1,
+    "chipsAfter": 0,
+    "shaftLabelsBefore": 29,
+    "shaftLabelsAfter": 1,
+    "canvasStillChangesWhenQuiet": true,
+    "dialog": {
+      "roleCount": 0,
+      "focusInside": false,
+      "activeTag": "BUTTON"
+    },
+    "windowsAfterCoding": 0,
+    "width1366": {
+      "viewport": 1367,
+      "doc": 1367,
+      "right": 1366.6666412353516
+    },
+    "width1000": {
+      "viewport": 1000,
+      "doc": 1007,
+      "visibleNavChildren": 15,
+      "mainRight": 1006.6885986328125
+    }
+  },
+  "zusatzprobe": {
+    "record": {
+      "row": "07.6588-6587\tGotthardstrasse\tPVC\t250\t28.10\tZ4\t\n\t▶\tPDF",
+      "heading": "07.6588-6587",
+      "facts": "SCHACHT OBEN\n78998\nSCHACHT UNTEN\n79002\nMATERIAL\nBeton\nDN / PROFIL\n300 · Kreis\nLÄNGE\n42.30 m\nINSPEKTION\n06.10.2025"
+    },
+    "training": {
+      "viewport": 1440,
+      "panelLeft": 1378.7691650390625,
+      "panelRight": 1698.7664184570312,
+      "panelWidth": 319.99725341796875,
+      "visibleWidth": 61.2308349609375
+    },
+    "rows": {
+      "viewportHeight": 768,
+      "ancestors": [
+        {
+          "cls": "tablewrap",
+          "top": 317.40679931640625,
+          "bottom": 436.36238861083984,
+          "overflow": "auto"
+        },
+        {
+          "cls": "card",
+          "top": 316.52960205078125,
+          "bottom": 437.2395782470703,
+          "overflow": "hidden"
+        },
+        {
+          "cls": "content",
+          "top": 163.73355102539062,
+          "bottom": 768.4210510253906,
+          "overflow": "auto"
+        },
+        {
+          "cls": "",
+          "top": 0,
+          "bottom": 768.4210205078125,
+          "overflow": "hidden"
+        }
+      ],
+      "rows": [
+        {
+          "top": 368.09210205078125,
+          "bottom": 412.95229721069336
+        },
+        {
+          "top": 412.9523010253906,
+          "bottom": 457.81249618530273
+        },
+        {
+          "top": 457.8125,
+          "bottom": 502.6726951599121
+        },
+        {
+          "top": 502.6726989746094,
+          "bottom": 547.5328941345215
+        },
+        {
+          "top": 547.5328979492188,
+          "bottom": 592.3930931091309
+        },
+        {
+          "top": 592.39306640625,
+          "bottom": 637.2532615661621
+        },
+        {
+          "top": 637.2532958984375,
+          "bottom": 682.1134910583496
+        },
+        {
+          "top": 682.1134643554688,
+          "bottom": 726.9736595153809
+        },
+        {
+          "top": 726.9736938476562,
+          "bottom": 771.8338890075684
+        },
+        {
+          "top": 771.8338623046875,
+          "bottom": 816.6940574645996
+        }
+      ]
+    },
+    "keyboardAfterExportEnter": "page-overview",
+    "preview": {
+      "title": "SewerStudio Nova",
+      "pages": 2,
+      "mode": "BackCompat",
+      "doctype": false,
+      "lang": ""
+    }
+  }
+}

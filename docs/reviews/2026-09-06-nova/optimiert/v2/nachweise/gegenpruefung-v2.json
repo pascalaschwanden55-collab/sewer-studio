@@ -1,0 +1,724 @@
+{
+  "gegenproben": {
+    "auswahl": {
+      "name": "07.6588-6587",
+      "material": "PVC",
+      "dn": "250",
+      "laenge": "28.1",
+      "detail": "07.6588-6587"
+    },
+    "feldsuche": {
+      "vorher": 30,
+      "nachher": 30
+    },
+    "abbrechen": "07.6588-6587",
+    "gespeichert": "2001",
+    "kennzahlen": {
+      "anzahl": 14,
+      "geprueft": 8,
+      "dringend": 3,
+      "text": "8 von 14 Haltungen fachlich geprüft (57,1 %). 4 von der KI analysiert und noch nicht geprüft, 2 ohne Analyse. 3 Haltungen dringend (Z0 oder Z1). Beispielbestand mit 14 Haltungen und 8 Schächten.",
+      "anzeige": "3Haltungen"
+    },
+    "layout": [
+      {
+        "breite": 1367,
+        "hoehe": 768,
+        "zeilen": 7
+      },
+      {
+        "breite": 1440,
+        "hoehe": 900,
+        "zeilen": 9
+      },
+      {
+        "breite": 1920,
+        "hoehe": 1081,
+        "zeilen": 12
+      }
+    ],
+    "codierung": {
+      "vorher": {
+        "id": "h01",
+        "position": 197,
+        "befunde": 3
+      },
+      "nachher": {
+        "id": "h01",
+        "position": 197,
+        "befunde": 3,
+        "player": true,
+        "vsa": false
+      }
+    },
+    "ruhig": {
+      "bildUnveraendert": true,
+      "schleife": false
+    },
+    "wechselVorAbbruch": {
+      "auswahl": "h02",
+      "player": null,
+      "dialoge": [
+        "winConfirm"
+      ],
+      "fokus": "cfSave"
+    },
+    "wechselNachAbbruch": {
+      "auswahl": "h02",
+      "player": null,
+      "dialoge": [],
+      "form": "07.6588-6587",
+      "playerName": ""
+    },
+    "dialogSuche": {
+      "fokus": "gsearch",
+      "offeneDialoge": [],
+      "fokusImOberstenDialog": null
+    },
+    "dialogSucheImPlayer": {
+      "fokus": "plTimeline",
+      "fokusImOberstenDialog": true
+    },
+    "training": {
+      "vorherFreigabeAktiv": false,
+      "nachBestaetigungAktiv": true,
+      "nachLeerenAktiv": false,
+      "meldung": "Akzeptiert (Vorschau)\nKein Goldsample wurde geschrieben.",
+      "hinweis": "Angaben nach der Bestätigung geändert. Zum Freigeben erneut akzeptieren.",
+      "nachKlickAktiv": false
+    },
+    "speicherFehler": {
+      "meldung": "Nicht gespeichertSpeichern fehlgeschlagen: Der Browserspeicher hat die Daten nicht angenommen (zum Beispiel voll oder gesperrt). Die Eingabe bleibt erhalten, du kannst es erneut versuchen.",
+      "dirty": true,
+      "wert": 1978,
+      "nachNeuladen": 1978
+    },
+    "skriptfehler": []
+  },
+  "kontrast": [
+    {
+      "theme": "Light",
+      "page": "overview",
+      "count": 135,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "projekt",
+      "count": 107,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "haltungen",
+      "count": 212,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "schaechte",
+      "count": 193,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "import",
+      "count": 115,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "export",
+      "count": 105,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "medien",
+      "count": 138,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "druck",
+      "count": 134,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "dossiers",
+      "count": 138,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "matrix",
+      "count": 179,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "smatrix",
+      "count": 132,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "schatten",
+      "count": 75,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "vsa",
+      "count": 73,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "diagnose",
+      "count": 81,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "einstellungen",
+      "count": 95,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "player",
+      "count": 75,
+      "minSize": 12,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "codierung",
+      "count": 68,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "training",
+      "count": 56,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "overview",
+      "count": 135,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "projekt",
+      "count": 107,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "haltungen",
+      "count": 212,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "schaechte",
+      "count": 193,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "import",
+      "count": 115,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "export",
+      "count": 105,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "medien",
+      "count": 138,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "druck",
+      "count": 134,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "dossiers",
+      "count": 138,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "matrix",
+      "count": 179,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "smatrix",
+      "count": 132,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "schatten",
+      "count": 75,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "vsa",
+      "count": 73,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "diagnose",
+      "count": 81,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "einstellungen",
+      "count": 95,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "player",
+      "count": 75,
+      "minSize": 12,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "codierung",
+      "count": 68,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "training",
+      "count": 56,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    }
+  ],
+  "player_abbruch": {
+    "vorher": 3,
+    "nachCodierung": 3,
+    "nachBeenden": {
+      "playerOffen": false,
+      "befunde": 3,
+      "neuerBefundVorhanden": false
+    },
+    "beimWiederoeffnenImPlayer": false
+  },
+  "kontrast_zusammenfassung": [
+    {
+      "theme": "Light",
+      "page": "overview",
+      "count": 135,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "projekt",
+      "count": 107,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "haltungen",
+      "count": 212,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "schaechte",
+      "count": 193,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "import",
+      "count": 115,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "export",
+      "count": 105,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "medien",
+      "count": 138,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "druck",
+      "count": 134,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "dossiers",
+      "count": 138,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "matrix",
+      "count": 179,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "smatrix",
+      "count": 132,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "schatten",
+      "count": 75,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "vsa",
+      "count": 73,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "diagnose",
+      "count": 81,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "einstellungen",
+      "count": 95,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "player",
+      "count": 75,
+      "minSize": 12,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "codierung",
+      "count": 68,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Light",
+      "page": "training",
+      "count": 56,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "overview",
+      "count": 135,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "projekt",
+      "count": 107,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "haltungen",
+      "count": 212,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "schaechte",
+      "count": 193,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "import",
+      "count": 115,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "export",
+      "count": 105,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "medien",
+      "count": 138,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "druck",
+      "count": 134,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "dossiers",
+      "count": 138,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "matrix",
+      "count": 179,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "smatrix",
+      "count": 132,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "schatten",
+      "count": 75,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "vsa",
+      "count": 73,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "diagnose",
+      "count": 81,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "einstellungen",
+      "count": 95,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "player",
+      "count": 75,
+      "minSize": 12,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "codierung",
+      "count": 68,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    },
+    {
+      "theme": "Dark",
+      "page": "training",
+      "count": 56,
+      "minSize": 11,
+      "lows": 0,
+      "uncertain": 0,
+      "lowsDetail": []
+    }
+  ]
+}
