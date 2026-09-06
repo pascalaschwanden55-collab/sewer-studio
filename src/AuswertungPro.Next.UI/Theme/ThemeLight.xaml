@@ -7,10 +7,15 @@
          ═══════════════════════════════════════════════════════════ -->
 
     <!-- ── ACCENT ── -->
-    <Color x:Key="ColorAccent">#FF2563EB</Color>
-    <Color x:Key="ColorAccentHover">#FF1D4ED8</Color>
+    <Color x:Key="ColorAccent">#FF1B5FD1</Color>
+    <Color x:Key="ColorAccentHover">#FF154FB0</Color>
     <Color x:Key="ColorAccentLight">#FF3B82F6</Color>
-    <Color x:Key="ColorAccentSubtle">#FFD6E4F7</Color>
+    <Color x:Key="ColorAccentSubtle">#1C1B5FD1</Color>
+
+    <!-- Nova-Etappe 2: Akzent nur als Text (Prototyp accent-text), gedaempfter Text (faint), Glasrand -->
+    <Color x:Key="ColorAccentText">#FF154FB0</Color>
+    <Color x:Key="ColorTextFaint">#FF4F5F78</Color>
+    <Color x:Key="ColorGlassBorder">#24142850</Color>
 
     <!-- Sichtbare Auswahl: eigene Flaeche, lesbarer Text und deutliche Kontur. -->
     <Color x:Key="ColorSelection">#FFD6E4F7</Color>
@@ -21,18 +26,18 @@
     <SolidColorBrush x:Key="SelectionBorderBrush" Color="{StaticResource ColorSelectionBorder}"/>
 
     <!-- ── SURFACES — Subtle blue-steel tint ── -->
-    <Color x:Key="ColorBgLight">#FFF0F3F8</Color>
-    <Color x:Key="ColorBgMid">#FFE6EBF3</Color>
-    <Color x:Key="ColorCard">#FFFCFDFF</Color>
-    <Color x:Key="ColorCardGlass">#FFFCFDFF</Color>
-    <Color x:Key="ColorHeader">#FFE8EDF5</Color>
-    <Color x:Key="ColorBorder">#FF9EAEC4</Color>
-    <Color x:Key="ColorBorderLight">#FFCDD6E4</Color>
+    <Color x:Key="ColorBgLight">#FFEEF2F7</Color>
+    <Color x:Key="ColorBgMid">#FFE4EAF2</Color>
+    <Color x:Key="ColorCard">#FFFFFFFF</Color>
+    <Color x:Key="ColorCardGlass">#FFFFFFFF</Color>
+    <Color x:Key="ColorHeader">#FFF6F8FB</Color>
+    <Color x:Key="ColorBorder">#FFD3DAE5</Color>
+    <Color x:Key="ColorBorderLight">#FFE4E9F0</Color>
 
     <!-- ── TEXT — WCAG AAA contrast ── -->
-    <Color x:Key="ColorTextPrimary">#FF0A0F1A</Color>
-    <Color x:Key="ColorTextSecondary">#FF1C2536</Color>
-    <Color x:Key="ColorTextMuted">#FF3D4D63</Color>
+    <Color x:Key="ColorTextPrimary">#FF14213A</Color>
+    <Color x:Key="ColorTextSecondary">#FF44546E</Color>
+    <Color x:Key="ColorTextMuted">#FF4F5F78</Color>
 
     <!-- ── SEMANTIC ── -->
     <Color x:Key="ColorSuccess">#FF15803D</Color>
@@ -58,6 +63,9 @@
     <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource ColorAccentHover}"/>
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="{StaticResource ColorAccentSubtle}"/>
     <SolidColorBrush x:Key="BorderLightBrush" Color="{StaticResource ColorBorderLight}"/>
+    <SolidColorBrush x:Key="AccentTextBrush" Color="{StaticResource ColorAccentText}"/>
+    <SolidColorBrush x:Key="FaintBrush" Color="{StaticResource ColorTextFaint}"/>
+    <SolidColorBrush x:Key="GlassBorderBrush" Color="{StaticResource ColorGlassBorder}"/>
     <SolidColorBrush x:Key="HoverBrush" Color="#FFE8EDF5"/>
     <SolidColorBrush x:Key="RowHoverBrush" Color="#FFE8EDF5"/>
     <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#FFDAE1ED"/>
@@ -141,19 +149,15 @@
 
     <!-- ── GRADIENT BRUSHES ── -->
     <LinearGradientBrush x:Key="BgBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#FFF0F3F8" Offset="0"/>
+        <GradientStop Color="#FFEEF2F7" Offset="0"/>
         <GradientStop Color="#FFEAEFF6" Offset="0.5"/>
-        <GradientStop Color="#FFE5EBF4" Offset="1"/>
+        <GradientStop Color="#FFE4EAF2" Offset="1"/>
     </LinearGradientBrush>
 
     <SolidColorBrush x:Key="GlassBrush" Color="Transparent"/>
 
-    <!-- Nav sidebar: blue-steel tinted panel -->
-    <LinearGradientBrush x:Key="NavPanelBrush" StartPoint="0.5,0" EndPoint="0.5,1">
-        <GradientStop Color="#FFF3F5FA" Offset="0"/>
-        <GradientStop Color="#FFEDF0F7" Offset="0.5"/>
-        <GradientStop Color="#FFE7ECF4" Offset="1"/>
-    </LinearGradientBrush>
+    <!-- Nav sidebar: Nova-Glasleiste (72 % Weiss, Inventar 1.7) -->
+    <SolidColorBrush x:Key="NavPanelBrush" Color="#B8FFFFFF"/>
 
     <!-- ═══════════════════════════════════════════════════════════
          WINDOW
@@ -216,12 +220,12 @@
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="CornerRadius" Value="10"/>
         <Setter Property="Padding" Value="20"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="Effect">
             <Setter.Value>
-                <DropShadowEffect Color="#161E3050" BlurRadius="20" ShadowDepth="3" Direction="270" Opacity="1"/>
+                <DropShadowEffect Color="#FF101C33" BlurRadius="20" ShadowDepth="6" Direction="270" Opacity="0.08"/>
             </Setter.Value>
         </Setter>
     </Style>
@@ -696,16 +700,12 @@
         <Setter Property="CanUserAddRows" Value="False"/>
         <Setter Property="CanUserDeleteRows" Value="False"/>
         <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-        <Setter Property="HorizontalGridLinesBrush">
-            <Setter.Value>
-                <SolidColorBrush Color="#FFCDD6E4"/>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderLightBrush}"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="RowBackground" Value="{DynamicResource CardBrush}"/>
         <Setter Property="AlternatingRowBackground">
             <Setter.Value>
-                <SolidColorBrush Color="#FFF3F5FA"/>
+                <SolidColorBrush Color="#FFFAFBFD"/>
             </Setter.Value>
         </Setter>
         <Setter Property="AlternationCount" Value="2"/>
@@ -725,18 +725,10 @@
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="Background">
-            <Setter.Value>
-                <SolidColorBrush Color="#FFE4EAF4"/>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="BorderThickness" Value="0,0,1,1"/>
-        <Setter Property="BorderBrush">
-            <Setter.Value>
-                <SolidColorBrush Color="#FFCDD6E4"/>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="DataGridColumnHeader">
