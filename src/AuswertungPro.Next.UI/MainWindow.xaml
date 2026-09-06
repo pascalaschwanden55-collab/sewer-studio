@@ -8,6 +8,9 @@
         ui:Fluent.Backdrop="Mica"
         WindowStartupLocation="CenterScreen"
         Closing="MainWindow_Closing">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
     <Window.InputBindings>
         <KeyBinding Key="F11" Command="{Binding ToggleFocusModeCommand}"/>
         <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}"/>
@@ -44,7 +47,23 @@
                     </ToolTip>
                 </Button.ToolTip>
             </Button>
-            <Menu>
+            <!-- Nova-Etappe 2: Aufgaben-Chip (Inventar 3.4) -->
+            <Button DockPanel.Dock="Right" Margin="0,2,8,2" Padding="12,4" MinHeight="0"
+                    Command="{Binding NaechsteAufgabePruefenCommand}"
+                    Style="{StaticResource ToolbarButton}"
+                    Background="{DynamicResource KiSubtleBrush}" BorderBrush="{DynamicResource KiSubtleBrush}"
+                    ToolTip="Nächste fachliche Aufgabe: Haltung öffnen und Video prüfen"
+                    AutomationProperties.Name="Nächste fachliche Aufgabe">
+                <Button.Visibility>
+                    <Binding Path="IsProjectReady" Converter="{StaticResource BoolToVis}"/>
+                </Button.Visibility>
+                <StackPanel Orientation="Horizontal">
+                    <ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource KiTextBrush}" Margin="0,0,6,0"/>
+                    <TextBlock Text="{Binding NaechsteAufgabeText}" FontSize="{DynamicResource TextS}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource KiTextBrush}"/>
+                </StackPanel>
+            </Button>
+            <Menu DockPanel.Dock="Left">
                 <Menu.Style>
                     <Style TargetType="Menu" BasedOn="{StaticResource {x:Type Menu}}"/>
                 </Menu.Style>
@@ -132,6 +151,10 @@
                     </MenuItem>
                 </MenuItem>
             </Menu>
+            <!-- Brotkrume: Projekt / Seite -->
+            <TextBlock DockPanel.Dock="Left" Text="{Binding Brotkrume}" Margin="12,0,8,0" VerticalAlignment="Center"
+                       FontSize="{DynamicResource TextM}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
+                       TextTrimming="CharacterEllipsis"/>
         </DockPanel>
         <!-- Statusleiste: links Status, rechts Projektname + Haltungszahl (bleibt auch in F11 sichtbar) -->
         <Border DockPanel.Dock="Bottom"
@@ -448,6 +471,10 @@
                     <ctrl:SystemMonitorPanel DataContext="{Binding Monitor}" Margin="0,6,0,0"/>
                 </Expander>
 
+                <!-- Nova-Etappe 2: Speicherstand der Fusszeile (Inventar 3.2) -->
+                <TextBlock DockPanel.Dock="Bottom" Margin="16,0,16,10" Text="{Binding SpeicherstandText}"
+                           FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource FaintBrush}"
+                           TextTrimming="CharacterEllipsis" ToolTip="Projekt und Zeit der letzten Speicherung"/>
 
                 <ListBox x:Name="SidebarNavList"
                          ItemsSource="{Binding Source={StaticResource GroupedNavItems}}" SelectedItem="{Binding SelectedNavItem}"
@@ -540,7 +567,7 @@
                                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                     </Canvas>
                                 </Grid>
-                                <TextBlock Text="{Binding Title}" Margin="10,0,0,0" FontSize="{DynamicResource TextM}"
+                                <TextBlock Text="{Binding DisplayTitle}" Margin="10,0,0,0" FontSize="{DynamicResource TextM}"
                                            FontWeight="SemiBold"/>
                             </StackPanel>
                             <DataTemplate.Triggers>

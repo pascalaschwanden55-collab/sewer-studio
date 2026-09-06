@@ -240,6 +240,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         OpenTemplateEditorCommand = new RelayCommand(OpenTemplateEditor);
         ToggleFocusModeCommand = new RelayCommand(() => IsFocusMode = !IsFocusMode);
 
+        InitNova();
         EnterLauncher();
         Monitor.Start();
 
@@ -363,6 +364,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             : "SewerStudio";
         Title = Project.Dirty ? $"● {name}" : name;
         OnPropertyChanged(nameof(IsDirty));
+        AktualisiereNovaKopfzeile();
     }
 
     private void RefreshNavigationAvailability()
@@ -390,6 +392,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     {
         BindingOperations.EnableCollectionSynchronization(p.Data, _collectionLock);
         BindingOperations.EnableCollectionSynchronization(p.SchaechteData, _collectionLock);
+        BeobachteHaltungsliste(p);
     }
 
     public void NavigateTo(string title)

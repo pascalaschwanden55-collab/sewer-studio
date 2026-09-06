@@ -278,6 +278,7 @@ public sealed partial class ShellViewModel
         }
         IsProjectReady = true;
         HasPersistedProject = true;
+        MerkeSpeicherung();
         RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
         SetStatus("Gespeichert");
         _sp.Toasts.Success("Projekt gespeichert");
