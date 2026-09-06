@@ -212,6 +212,52 @@ public sealed class SchaechteRecordDetailsBuilderTests
         Assert.Contains("Testfehler", errors[0], StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ShaftRename_FremdesPdf_ErreichtDenSchreibdienstNicht()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "schacht-rename-ownership", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var external = Path.Combine(root, "Original.pdf");
+        File.WriteAllText(external, "Kundenoriginal");
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", "123");
+        record.SetFieldValue(FieldKeys.PdfAll, external);
+        var rewriter = new RecordingPdfTextLayerRewriter();
+        var errors = new List<string>();
+        try
+        {
+            var success = SchaechteShaftRenameController.Apply(
+                new RecordingShaftRenameService(ShaftRenameService.ShaftRenameResult.Ok(false, 0)),
+                rewriter, record, "123", "456", Path.Combine(root, "Projekt", "projekt.json"),
+                new Project(), (message, _) => errors.Add(message));
+
+            Assert.False(success);
+            Assert.Equal(0, rewriter.BatchCalls);
+            Assert.Equal("123", record.GetFieldValue("Schachtnummer"));
+            Assert.Equal("Kundenoriginal", File.ReadAllText(external));
+            Assert.Single(errors);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void CollectPdfPaths_ArchivkopieIstKeineBeschreibbareArbeitskopie()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "schacht-archive-ownership", Guid.NewGuid().ToString("N"));
+        var archive = Path.Combine(root, "Importdateien", "PDF", "Original.pdf");
+        Directory.CreateDirectory(Path.GetDirectoryName(archive)!);
+        File.WriteAllText(archive, "Archivoriginal");
+        var record = new SchachtRecord();
+        record.SetFieldValue(FieldKeys.PdfPath, archive);
+        try
+        {
+            Assert.Throws<IOException>(() =>
+                SchaechteShaftRenameController.CollectPdfPaths(record, Path.Combine(root, "projekt.json")));
+            Assert.Equal("Archivoriginal", File.ReadAllText(archive));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     private sealed class RecordingShaftRenameService(
         ShaftRenameService.ShaftRenameResult result) : IShaftRenameService
     {

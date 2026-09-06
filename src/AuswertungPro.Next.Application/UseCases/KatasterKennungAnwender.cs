@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -192,8 +192,9 @@ public static class KatasterKennungBericht
         var fehlend = plan.Anzahl(KatasterKennungGrund.NichtGefunden);
         var vorhanden = plan.Anzahl(KatasterKennungGrund.BereitsVorhanden);
         var abweichend = plan.Anzahl(KatasterKennungGrund.Abweichend);
+        var herkunftUnklar = plan.Anzahl(KatasterKennungGrund.HerkunftUnklar);
 
-        if (mehrdeutig + fehlend + vorhanden + abweichend > 0)
+        if (mehrdeutig + fehlend + vorhanden + abweichend + herkunftUnklar > 0)
         {
             text.AppendLine();
             text.AppendLine("Nicht übernommen:");
@@ -214,8 +215,36 @@ public static class KatasterKennungBericht
             if (abweichend > 0)
             {
                 text.AppendLine(
-                    $"    {abweichend} tragen eine ANDERE GEONIS-Kennung — sie bleibt stehen.");
+                    $"    {abweichend} tragen eine ANDERE, belegte GEONIS-Kennung — sie bleibt stehen.");
             }
+
+            if (herkunftUnklar > 0)
+            {
+                text.AppendLine(
+                    $"    {herkunftUnklar} tragen eine andere Kennung unbekannter Herkunft —");
+                text.AppendLine("      sie bleibt stehen und der Fall gehört geprüft.");
+            }
+        }
+
+        // Der Unterschied wird in der Praxis oft verwechselt: Ein Neu-Export gelingt
+        // immer, legt in einem gefuellten Kataster aber neue Objekte an. Erst der
+        // vollstaendige Objektverbund macht daraus ein Wiedererkennen.
+        text.AppendLine();
+        text.AppendLine("Was das für den GEONIS-Weg bedeutet:");
+        text.AppendLine(
+            $"    {plan.AbgleichMoeglich} {bauteil} mit vollständigem Objektverbund — GEONIS kann");
+        text.AppendLine("      die vorhandenen Objekte wiedererkennen.");
+        if (plan.NurNeuExport > 0)
+        {
+            text.AppendLine(
+                $"    {plan.NurNeuExport} {bauteil} nur für einen Neu-Export — dabei entstehen in einem");
+            text.AppendLine("      gefüllten Kataster neue Objekte statt einer Aktualisierung.");
+        }
+
+        if (plan.Ungeklaert > 0)
+        {
+            text.AppendLine(
+                $"    {plan.Ungeklaert} {bauteil} mit ungeklärter Zuordnung — von Hand zu klären.");
         }
 
         text.AppendLine();

@@ -1,0 +1,18 @@
+{
+  "html": [
+    {
+      "file": "paket-1.html",
+      "links": 6,
+      "duplicate_ids": false
+    },
+    {
+      "file": "ueberblick.html",
+      "links": 72,
+      "duplicate_ids": false
+    }
+  ],
+  "source_hashes": "unverändert seit letzter Prüfung",
+  "local_skill_candidate": "Skill is valid!",
+  "browser": "Desktop 1440x1000 und Mobil 390x844 visuell geprüft; Tabelle geöffnet; keine Browserfehler",
+  "global_skill": "Freigegebenen Patch angewendet; globale Datei validiert"
+}

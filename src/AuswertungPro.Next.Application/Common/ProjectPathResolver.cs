@@ -10,6 +10,28 @@ namespace AuswertungPro.Next.Application.Common;
 /// </summary>
 public static class ProjectPathResolver
 {
+    /// <summary>Schreibzugriff verlangt Projektbesitz und einen verknuepfungsfreien Pfad.</summary>
+    public static string EnsureWritableProjectPath(string rawPath, string? projectFilePath)
+    {
+        var root = ProjectFileLocator.ProjectRootFromFile(projectFilePath);
+        if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(rawPath))
+            throw new IOException("Ohne gespeichertes Projekt dürfen Dateipfade nicht geändert werden.");
+
+        var full = ProjectMutationPathPolicy.EnsureSafePath(
+            root,
+            Path.IsPathRooted(rawPath) ? rawPath : Path.Combine(root, rawPath),
+            ReadPathAttributes);
+        ProjectMutationPathPolicy.EnsureWorkingCopy(root, full);
+        return full;
+    }
+
+    private static FileAttributes? ReadPathAttributes(string path)
+    {
+        try { return File.GetAttributes(path); }
+        catch (FileNotFoundException) { return null; }
+        catch (DirectoryNotFoundException) { return null; }
+    }
+
     /// <summary>
     /// Loest einen Pfad auf, der relativ (zum Projektordner) oder absolut sein kann.
     /// Gibt den absoluten Pfad zurueck, wenn die Datei existiert, sonst null.

@@ -286,74 +286,32 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                         continue;
                     }
 
-                    var entries = new List<ProtocolEntry>();
-                    foreach (var obs in obsList.OrderBy(o => o.SortOrder))
+                    var entries = BaueBefahrungsEintraege(
+                        obsList, mediaByObs, fileIndex, section.Key, messages, out var videoPfade, out var medienfehler);
+                    errors += medienfehler;
+
+                    var fingerprint = BefahrungsFingerabdruck(section.Key, inspection, obsList, mediaByObs);
+                    var erstanlage = record.Protocol is null;
+                    // Derselbe Quellstand darf zwischenzeitliche Protokollkorrekturen
+                    // beim Wiederholungsimport nicht ersetzen.
+                    if (record.Protocol?.Current.ImportFingerprint != fingerprint)
                     {
-                        // Wurzel-Fix: rohen WinCan-OpCode normalisieren (Punkt-Trenner und Meter-Suffixe
-                        // entfernen, Hauptcode + Laenge gegen Katalog pruefen), damit typischer Parsing-Muell
-                        // nicht ins Protokoll und spaeter ins Training gelangt. CodeMeta.Code erbt entry.Code.
-                        var rawCode = obs.OpCode ?? "";
-                        var normalizedCode = VsaCodeValidator.TryNormalizeKnownCode(rawCode) ?? "";
-                        if (normalizedCode.Length == 0 && !string.IsNullOrWhiteSpace(rawCode))
-                            messages.Add($"WinCan: Code '{rawCode}' unbekannt/ungueltig - leer uebernommen (Haltung {section.Key}).");
-
-                        var entry = new ProtocolEntry
-                        {
-                            Code = normalizedCode,
-                            Beschreibung = obs.Observation ?? "",
-                            MeterStart = obs.Distance,
-                            MeterEnd = obs.Distance.HasValue && obs.ContDefectLength.HasValue && obs.ContDefectLength.Value > 0
-                                ? obs.Distance.Value + obs.ContDefectLength.Value
-                                : obs.Distance,
-                            IsStreckenschaden = obs.ContDefectLength.HasValue && obs.ContDefectLength.Value > 0,
-                            Mpeg = obs.TimeCtr,
-                            Zeit = ParseTimeSpan(obs.TimeCtr),
-                            Source = ProtocolEntrySource.Imported
-                        };
-
-                        var parameters = BuildObsParameters(obs);
-                        if (parameters.Count > 0)
-                        {
-                            entry.CodeMeta = new ProtocolEntryCodeMeta
-                            {
-                                Code = entry.Code,
-                                Parameters = parameters,
-                                UpdatedAt = DateTimeOffset.UtcNow
-                            };
-                        }
-
-                        if (mediaByObs.TryGetValue(obs.Pk, out var mediaList))
-                        {
-                            foreach (var media in mediaList)
-                            {
-                                if (string.IsNullOrWhiteSpace(media.FileName))
-                                    continue;
-
-                                // Ein leerer Medientyp in der Datenbank darf eine vorhandene
-                                // Datei nicht verwerfen — dann entscheidet die Dateiendung.
-                                var medientyp = WinCanValueNormalizer.MedientypOderEndung(
-                                    media.FileType, media.FileName);
-
-                                if (IsVideo(medientyp))
-                                {
-                                    var videoPath = ResolveFile(fileIndex, media.FileName);
-                                    if (!string.IsNullOrWhiteSpace(videoPath))
-                                        record.SetFieldValue("Link", videoPath, FieldSource.Legacy, userEdited: false);
-                                }
-                                else if (IsImage(medientyp))
-                                {
-                                    var photoPath = ResolveFile(fileIndex, media.FileName);
-                                    if (!string.IsNullOrWhiteSpace(photoPath))
-                                        entry.FotoPaths.Add(photoPath);
-                                }
-                            }
-                        }
-
-                        entries.Add(entry);
+                        ApplyProtocol(record, entries, protocolService);
+                        UpdateFindings(record, entries);
+                    }
+                    if (erstanlage && record.Protocol is { } angelegt)
+                    {
+                        angelegt.Original.ImportFingerprint = fingerprint;
+                        angelegt.Original.ImportVideoPaths = videoPfade.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                     }
 
-                    ApplyProtocol(record, entries, protocolService);
-                    UpdateFindings(record, entries);
+                    // ERST nach ApplyProtocol: Der Aufruf baut das Protokolldokument neu
+                    // auf und wuerde eine vorher angehaengte Revision wieder verwerfen.
+                    var weitere = UebernehmeWeitereBefahrungen(
+                        record, datensatzName, inspection, kandidaten,
+                        obsByInspection, mediaByObs, fileIndex, section.Key, videoPfade, messages, out var weitereMedienfehler);
+                    errors += weitereMedienfehler;
+                    uncertain += weitere;
                     LinkSectionPdf(record, section.Key, fileIndex);
 
                     // Primaere_Schaeden (abgeleiteter Zusammenfassungstext) ebenfalls ueber die
@@ -730,6 +688,23 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
             return null;
         }
 
+        // WinCan legt unter Misc\Exchange oft mehrere Exporte derselben Zone ab. Bis
+        // 2026-09-05 wurden alle gelesen: Andermatt Zone 2.11 meldete dadurch "144
+        // gefunden" fuer dreimal dieselben 48 Untersuchungen. Die Auswahl nimmt den
+        // inhaltsreichsten Export je Untersuchungsmenge und begruendet jede Ablehnung.
+        var auswahl = Application.UseCases.Import.Quellen.XtfExportAuswahl.Waehle(
+            xtfFiles
+                .Select(pfad => new Application.UseCases.Import.Quellen.XtfExportKandidat(
+                    pfad, _xtfQuellenPruefer.Pruefe(pfad)))
+                .ToList());
+
+        var xtfEntscheide = auswahl.Entscheide
+            .Select(e => $"{(e.Uebernommen ? "verwendet" : "uebersprungen")}: {Path.GetFileName(e.Pfad)} — {e.Grund}")
+            .ToList();
+
+        if (auswahl.Uebernommen.Count > 0)
+            xtfFiles = auswahl.Uebernommen.ToList();
+
         ctx?.Log.AddEntry("WinCan", "XTF_Fallback", ImportLogStatus.Info,
             detail: $"SDF nicht lesbar, verwende {xtfFiles.Count} XTF-Datei(en) als Fallback: {string.Join(", ", xtfFiles.Select(Path.GetFileName))}");
 
@@ -747,6 +722,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                 $"SDF-Datenbank erkannt, aber nicht direkt lesbar (SQL Server Compact, kein .NET 8 Treiber).",
                 $"{xtfFiles.Count} XTF-Datei(en) gefunden, aber Import fehlgeschlagen: {xtfResult.ErrorMessage ?? "unbekannter Fehler"}"
             };
+            errMessages.AddRange(xtfEntscheide);
             return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 1, 0, errMessages));
         }
 
@@ -757,6 +733,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
             $"SDF-Datenbank erkannt, aber nicht direkt lesbar (SQL Server Compact, kein .NET 8 Treiber).",
             $"Stattdessen {xtfFiles.Count} XTF-Export(e) aus Misc/Exchange importiert."
         };
+        messages.AddRange(xtfEntscheide);
         messages.AddRange(xtfResult.Value.Messages);
 
         // Medien aus dem WinCan VX Projektordner verknuepfen
@@ -775,18 +752,34 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     /// <summary>
     /// Verknuepft Video- und Foto-Dateien aus dem WinCan VX Projektordner mit importierten Haltungen.
     /// </summary>
-    private static void LinkMediaFromFileIndex(
+    // internal statt private: Der Weg ist ohne SDF-Datenbank direkt pruefbar
+    // (WinCanMedienVerknuepfungTests).
+    internal void LinkMediaFromFileIndex(
         Project project, Dictionary<string, List<string>> fileIndex, List<string> messages)
     {
         var linked = 0;
+        var erneuert = 0;
         foreach (var record in project.Data)
         {
             var haltungsname = record.GetFieldValue("Haltungsname");
             if (string.IsNullOrWhiteSpace(haltungsname)) continue;
 
-            // Bereits ein Video verlinkt?
-            var existingLink = record.GetFieldValue("Link");
-            if (!string.IsNullOrWhiteSpace(existingLink)) continue;
+            // Ein vorhandener Link zaehlt nur, wenn die Datei auch wirklich da ist.
+            // Bis 2026-09-05 verhinderte JEDER nicht leere Link die Ersatzsuche — auch
+            // ein toter. Projektinterne relative Links bleiben unangetastet: Sie zeigen
+            // ins Zielprojekt und duerfen hier nie durch einen Quellpfad ersetzt werden.
+            var existingLink = (record.GetFieldValue("Link") ?? "").Trim();
+            var linkIstTot = false;
+            if (existingLink.Length > 0)
+            {
+                if (!Path.IsPathFullyQualified(existingLink))
+                    continue;
+
+                if (File.Exists(existingLink))
+                    continue;
+
+                linkIstTot = true;
+            }
 
             var candidates = fileIndex
                 .Where(kv => HoldingTextNormalizer.ContainsKeyAtBoundary(kv.Key, haltungsname))
@@ -798,22 +791,53 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                            && MediaFileTypes.VideoExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
                 })
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Take(2)
                 .ToList();
 
-            if (candidates.Count == 1)
+            if (candidates.Count == 0)
             {
-                record.SetFieldValue("Link", candidates[0], Domain.Models.FieldSource.Legacy, userEdited: false);
+                if (linkIstTot)
+                {
+                    messages.Add(
+                        $"Video {haltungsname}: der gespeicherte Pfad existiert nicht mehr "
+                        + $"({Path.GetFileName(existingLink)}) und es wurde kein Ersatz gefunden.");
+                }
+
+                continue;
+            }
+
+            // Zwei bytegleiche Kopien sind EINE Aufnahme, nicht zwei Kandidaten.
+            var wahl = MedienKandidatenAuswahl.Waehle(_medienInhalt.Pruefe(candidates));
+            if (wahl.Pfad is null)
+            {
+                messages.Add($"Video {haltungsname} nicht verknuepft: {wahl.Grund}");
+                continue;
+            }
+
+            record.SetFieldValue("Link", wahl.Pfad, Domain.Models.FieldSource.Legacy, userEdited: false);
+            if (linkIstTot)
+            {
+                erneuert++;
+                messages.Add(
+                    $"Video {haltungsname}: gespeicherter Pfad war tot, neu aufgeloest auf "
+                    + Path.GetFileName(wahl.Pfad));
+            }
+            else
+            {
                 linked++;
             }
-            else if (candidates.Count > 1)
+
+            if (wahl.Herkunftspfade.Count > 1)
             {
-                messages.Add($"Medien nicht verknuepft: mehrere Video-Kandidaten fuer {haltungsname}.");
+                messages.Add(
+                    $"Video {haltungsname}: {wahl.Herkunftspfade.Count} bytegleiche Kopien im Ordner "
+                    + $"({string.Join(", ", wahl.Herkunftspfade.Select(Path.GetFileName).Distinct(StringComparer.OrdinalIgnoreCase))}).");
             }
         }
 
         if (linked > 0)
             messages.Add($"Medien verknuepft: {linked} Videos aus dem WinCan VX Projektordner zugeordnet.");
+        if (erneuert > 0)
+            messages.Add($"Medien erneuert: {erneuert} tote Videoverweise neu aufgeloest.");
     }
 
     private static IReadOnlyList<string> FindMdbCandidates(string exportRoot)

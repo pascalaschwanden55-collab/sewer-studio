@@ -10,7 +10,8 @@ public enum PdfDokumentTyp
     TvProtokoll,
     Dichtheitspruefung,
     PlanSituation,
-    Deckblatt
+    Deckblatt,
+    Schachtprotokoll
 }
 
 /// <summary>
@@ -47,6 +48,12 @@ public static class PdfDokumentTypErkennung
         if (LooksLikeTvProtokoll(text))
             return PdfDokumentTyp.TvProtokoll;
 
+        // Schachtmasse und Anschlussnummern dürfen nicht als Haltungspaar in
+        // den teuren Haltungs-/OCR-Lauf gelangen. Gemischte TV-Berichte bleiben
+        // durch die vorherige positive TV-Erkennung weiterhin berücksichtigt.
+        if (HasShaftMarkers(text))
+            return PdfDokumentTyp.Schachtprotokoll;
+
         if (LooksLikePlanSituation(text, fileName, hasText))
             return PdfDokumentTyp.PlanSituation;
 
@@ -58,6 +65,10 @@ public static class PdfDokumentTypErkennung
 
     public static string? ReadPdfTextPrefix(string path, int maxPages = 6)
         => TextPrefixReader.ReadPdfTextPrefix(path, maxPages);
+
+    internal static bool HasShaftMarkers(string? text)
+        => ContainsAny(text, "Schachtprotokoll", "Schachtinspektion", "Schachtbericht", "SCHACHTPRO",
+            "Schacht Nr", "SchachtNr", "Schacht-Nr", "Schachtnummer");
 
     private static bool LooksLikeDichtheitspruefung(string? text, string? fileName)
     {

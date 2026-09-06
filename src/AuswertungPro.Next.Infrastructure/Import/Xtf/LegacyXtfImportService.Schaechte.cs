@@ -1,6 +1,7 @@
 ﻿using System.Xml.Linq;
 using AuswertungPro.Next.Application.Xtf;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
 
@@ -165,6 +166,141 @@ public sealed partial class LegacyXtfImportService
 
         return beruehrt;
     }
+
+    /// <summary>
+    /// Fuehrt die Schachtbegehungen einer VSA-KEK-Datei mit dem Projekt zusammen.
+    ///
+    /// Zwei Begehungen desselben Schachts sind EIN Bauwerk — der zweite Lauf trifft
+    /// denselben Datensatz. Ein vorhandenes Protokoll wird nie ersetzt: Es kann von Hand
+    /// bearbeitet worden sein, und ein Import darf das nicht ueberschreiben.
+    /// </summary>
+    private static int MergeVsaKekSchaechteIntoProject(
+        Project project,
+        IReadOnlyList<XtfSchachtUntersuchung> begehungen,
+        ImportStats stats,
+        ImportRunContext? ctx = null)
+    {
+        var beruehrt = 0;
+
+        foreach (var begehung in begehungen)
+        {
+            var schluessel = NormalizeHoldingKey(begehung.Nummer);
+            if (string.IsNullOrWhiteSpace(schluessel))
+                continue;
+
+            var ziel = FindeSchacht(project, schluessel);
+            if (ziel is null)
+            {
+                ziel = new SchachtRecord();
+                if (ctx is null)
+                    project.SchaechteData.Add(ziel);
+                else
+                    ctx.WithCollectionLock(() => project.SchaechteData.Add(ziel));
+                stats.CreatedRecords++;
+            }
+
+            ziel.SetFieldValue("Schachtnummer", begehung.Nummer.Trim(), FieldSource.Xtf, userEdited: false);
+
+            if (!string.IsNullOrWhiteSpace(begehung.Zeitpunkt))
+                ziel.SetFieldValue(FieldKeys.InspectionYear, begehung.Zeitpunkt, FieldSource.Xtf, userEdited: false);
+
+            // Erfassungsart und Operateur gehoeren zur Untersuchung, nicht zu den
+            // Stammdaten. "Ausgefuehrt_durch" ist bewusst NICHT das Ziel — dort steht
+            // die ausfuehrende Firmenart einer Sanierung, kein Kamerabediener.
+            var kontext = new List<string>();
+            if (!string.IsNullOrWhiteSpace(begehung.Erfassungsart))
+                kontext.Add($"Erfassung: {begehung.Erfassungsart.Trim()}");
+            if (!string.IsNullOrWhiteSpace(begehung.Operateur))
+                kontext.Add($"Operateur: {begehung.Operateur.Trim()}");
+            if (kontext.Count > 0)
+                ziel.SetFieldValue("Bemerkungen", string.Join(", ", kontext), FieldSource.Xtf, userEdited: false);
+
+            if (begehung.Eintraege.Count > 0)
+                LegeBegehungAb(ziel, begehung, stats);
+
+            beruehrt++;
+        }
+
+        return beruehrt;
+    }
+
+    /// <summary>
+    /// Legt die Schaeden einer Begehung ab, ohne je etwas zu ueberschreiben.
+    ///
+    /// Der erste Bestand wird Original und Arbeitskopie. Jede weitere Begehung — und
+    /// jede Begehung zu einem bereits vorhandenen Protokoll — kommt als zusaetzliche
+    /// Revision in die Historie und wird gemeldet.
+    ///
+    /// Gemessen an Andermatt Zone 2.11: Schacht 2200 wurde zweimal begangen. Wer die
+    /// zweite Begehung einfach auslaesst, verliert 11 Schachtschaeden still; wer sie
+    /// als Ersatz einsetzt, verliert die 11 der ersten. Beides waere falsch — welche
+    /// Begehung gilt, entscheidet die Fachperson.
+    /// </summary>
+    private static void LegeBegehungAb(
+        SchachtRecord ziel,
+        XtfSchachtUntersuchung begehung,
+        ImportStats stats)
+    {
+        // Die ursprüngliche Untersuchung ist bereits erhalten, auch wenn Current
+        // inzwischen von Hand geändert wurde. Gleiche Schäden bei anderer TID oder
+        // anderem Datum bleiben dagegen eine eigene Begehung.
+        if (!string.IsNullOrEmpty(begehung.ImportFingerprint) && ziel.Protocol is { } vorhanden
+            && new[] { vorhanden.Original, vorhanden.Current }.Concat(vorhanden.History ?? [])
+                .Any(r => r?.ImportFingerprint == begehung.ImportFingerprint))
+            return;
+
+        var beschriftung = string.IsNullOrWhiteSpace(begehung.Zeitpunkt)
+            ? "Import aus VSA-KEK-XTF (Schachtbegehung)"
+            : $"Import aus VSA-KEK-XTF (Schachtbegehung vom {begehung.Zeitpunkt})";
+
+        if (!HatProtokollinhalt(ziel))
+        {
+            ziel.Protocol = new ProtocolDocument
+            {
+                HaltungId = begehung.Nummer.Trim(),
+                Original = new ProtocolRevision
+                {
+                    ImportFingerprint = begehung.ImportFingerprint,
+                    Comment = beschriftung,
+                    Entries = begehung.Eintraege.Select(ProtocolEntryCloner.CloneLegacyProtocolEntry).ToList()
+                },
+                Current = new ProtocolRevision
+                {
+                    ImportFingerprint = begehung.ImportFingerprint,
+                    Comment = "Arbeitskopie",
+                    Entries = begehung.Eintraege.Select(ProtocolEntryCloner.CloneLegacyProtocolEntry).ToList()
+                }
+            };
+            return;
+        }
+
+        var dokument = ziel.Protocol!;
+        dokument.History ??= new List<ProtocolRevision>();
+        dokument.History.Add(new ProtocolRevision
+        {
+            ImportFingerprint = begehung.ImportFingerprint,
+            Comment = "Weitere " + beschriftung,
+            Entries = begehung.Eintraege.Select(ProtocolEntryCloner.CloneLegacyProtocolEntry).ToList()
+        });
+
+        stats.Uncertain++;
+        stats.Messages.Add(new ImportMessage
+        {
+            Level = "Warn",
+            Context = "XTF",
+            Message = $"Schacht {begehung.Nummer.Trim()}: weitere Begehung"
+                      + (string.IsNullOrWhiteSpace(begehung.Zeitpunkt) ? "" : $" vom {begehung.Zeitpunkt}")
+                      + $" mit {begehung.Eintraege.Count} Schaden/Schaeden als Revision abgelegt. "
+                      + "Welche Begehung gilt, muss von Hand entschieden werden."
+        });
+    }
+
+    /// <summary>Traegt der Schacht schon Protokollzeilen, die ein Import nicht ersetzen darf?</summary>
+    private static bool HatProtokollinhalt(SchachtRecord record)
+        => record.Protocol is { } dokument
+           && ((dokument.Original?.Entries.Count ?? 0) > 0
+               || (dokument.Current?.Entries.Count ?? 0) > 0
+               || (dokument.History?.Count ?? 0) > 0);
 
     /// <summary>
     /// Sucht einen Schacht ueber seine Nummer. Die Schluesselfelder sind dieselben, die

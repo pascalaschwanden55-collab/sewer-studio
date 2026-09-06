@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
@@ -21,6 +22,13 @@ public sealed class ShaftDistributionService : IShaftDistributionService
             : new ProgressAdapter(request.Progress);
         if (request.FileStaging is null)
         {
+            if (request.PdfFiles is not { Count: > 0 } && !string.IsNullOrWhiteSpace(request.PdfSourceFolder))
+            {
+                var skipped = new List<string>();
+                var pdfs = SafeFileEnumeration.EnumerateFilesSafe(request.PdfSourceFolder, "*.pdf", skippedDirectories: skipped).ToList();
+                if (pdfs.Count == 0 && skipped.Count == 0)
+                    return new ShaftDistributionResult([], false);
+            }
             return new ShaftDistributionResult(
                 RunLegacy(request, request.DestinationFolder, progress)
                     .Select(ToDirectItem)
@@ -30,7 +38,33 @@ public sealed class ShaftDistributionService : IShaftDistributionService
 
         EnsureDestinationInsideProject(request.FileStaging, request.DestinationFolder);
         using var output = new StagedDistributionOutput();
-        var temporary = RunLegacy(request, output.OutputRoot, progress);
+        var sources = request.PdfFiles is { Count: > 0 }
+            ? request.PdfFiles.Select(p => new ImportReadableFile(p, p)).ToList()
+            : request.FileStaging.EnumerateReadableFiles(
+                request.PdfSourceFolder ?? throw new ArgumentException("PDF-Quellordner fehlt."),
+                "*.pdf", SearchOption.AllDirectories);
+        var temporary = new List<HoldingFolderDistributor.DistributionResult>();
+        var logicalSources = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var source in sources)
+        {
+            try
+            {
+                var readPath = source.ReadPath;
+                if (new ImportFileStagingPathGuard(request.FileStaging.ProjectRoot).IsWithinProject(source.TargetPath))
+                    readPath = request.FileStaging.ResolveReadPath(source.TargetPath);
+                else if (!ImportSourcePathGuard.TryInspectFile(readPath, out readPath, out var exists, out var error) || !exists)
+                    throw new IOException(error ?? "Quelldatei fehlt.");
+                var readable = output.CreateReadableCopy(readPath, Path.GetFileName(source.TargetPath));
+                logicalSources[readable] = source.TargetPath;
+                temporary.AddRange(RunLegacy(request with { PdfFiles = [readable] }, output.OutputRoot, progress));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                temporary.Add(new HoldingFolderDistributor.DistributionResult(
+                    false, $"Schachtprotokoll nicht lesbar: {ex.Message}", source.TargetPath,
+                    null, null, null, null, null, HoldingFolderDistributor.VideoMatchStatus.NotChecked));
+            }
+        }
         output.StageAll(request.FileStaging, request.DestinationFolder);
         var items = temporary.Select(result =>
         {
@@ -41,7 +75,7 @@ public sealed class ShaftDistributionService : IShaftDistributionService
             return new ShaftDistributionItem(
                 result.Success,
                 result.Message,
-                result.SourcePdfPath,
+                logicalSources.GetValueOrDefault(result.SourcePdfPath, result.SourcePdfPath),
                 target,
                 read,
                 output.MapPath(result.HoldingFolder, request.DestinationFolder));
@@ -57,31 +91,29 @@ public sealed class ShaftDistributionService : IShaftDistributionService
         string destinationFolder,
         IProgress<HoldingFolderDistributor.DistributionProgress>? progress)
     {
-        if (request.PdfFiles is { Count: > 0 })
-        {
-            return HoldingFolderDistributor.DistributeShaftFiles(
-                pdfFiles: request.PdfFiles,
+        var skipped = new List<string>();
+        var candidates = request.PdfFiles is { Count: > 0 }
+            ? request.PdfFiles
+            : !string.IsNullOrWhiteSpace(request.PdfSourceFolder)
+                ? SafeFileEnumeration.EnumerateFilesSafe(request.PdfSourceFolder, "*.pdf", skippedDirectories: skipped).ToList()
+                : throw new ArgumentException("PDF-Dateien oder PDF-Quellordner fehlen.", nameof(request));
+        var selected = candidates.Where(ShaftPdfRelevance.ShouldProcess).ToList();
+        var results = new List<HoldingFolderDistributor.DistributionResult>();
+        if (selected.Count > 0)
+            results.AddRange(HoldingFolderDistributor.DistributeShaftFiles(
+                pdfFiles: selected,
                 destGemeindeFolder: destinationFolder,
                 moveInsteadOfCopy: false,
                 overwrite: false,
                 project: request.Project,
                 progress: progress,
                 directoryConfig: request.DirectoryConfig,
-                variant: request.Variant);
-        }
-
-        if (string.IsNullOrWhiteSpace(request.PdfSourceFolder))
-            throw new ArgumentException("PDF-Dateien oder PDF-Quellordner fehlen.", nameof(request));
-
-        return HoldingFolderDistributor.DistributeShafts(
-            pdfSourceFolder: request.PdfSourceFolder,
-            destGemeindeFolder: destinationFolder,
-            moveInsteadOfCopy: false,
-            overwrite: false,
-            project: request.Project,
-            progress: progress,
-            directoryConfig: request.DirectoryConfig,
-            variant: request.Variant);
+                variant: request.Variant));
+        foreach (var path in skipped)
+            results.Add(new HoldingFolderDistributor.DistributionResult(false,
+                "PDF-Quellordner nicht lesbar: " + path, path, null, null, null, null, null,
+                HoldingFolderDistributor.VideoMatchStatus.NotChecked));
+        return results;
     }
 
     private static ShaftDistributionItem ToDirectItem(

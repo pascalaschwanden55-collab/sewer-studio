@@ -7,6 +7,40 @@
 - **Entwickler:** Solo, kein kommerzielles Ziel
 - **Hardware:** Intel Core Ultra 9 285K · ASUS RTX 5090 32GB · 64GB DDR5
 
+## Audit Paket 1 — Dateischutz und Wiederherstellung (06.09.2026)
+
+- `ProjectPathResolver.EnsureWritableProjectPath` verlangt den Projektroot aus
+  `ProjectFileLocator`. `ProjectMutationPathPolicy` prueft mit injizierten
+  Dateiattributen die Ordnergrenze und alle bestehenden Pfadvorfahren auf
+  Verknuepfungen/Junctions. Fremdpfade und Schreibziele in `Imports`,
+  `Importdateien`, `Projektdateien` und `__RESTORE_POINTS` werden abgewiesen.
+- `ShaftRenameFileService` behaelt Interface, statische Fassade und Registrierung.
+  Sein vorhandenes Datei-I/O bleibt als begrenzte Altlast in `Application/Common`;
+  eine Verlagerung ist kein Bestandteil dieses Pakets.
+- `UseCases/Schaechte/ShaftRenamePlan` plant Dateien, tiefste Unterordner, Haupt-
+  und Fotoordner gemeinsam. Der Ausfuehrer prueft alle Zielkonflikte vorab, schreibt
+  ohne Ueberschreiben und nimmt ausgefuehrte Schritte bei Fehlern rueckwaerts zurueck.
+  Ein bekannter Schachtwurzelordner hat Vorrang vor gleichnamigen Unterordnern.
+- `ShaftProtocolPathChanges` zieht Foto-/Originalfoto-/Videoverweise in Original,
+  Current und History mit demselben Plan nach. Unbewegte Archiv-/Quellverweise
+  bleiben gleich. Inhalte und historische Aenderungsprotokolltexte werden nicht
+  neu geschrieben. `SchaechteShaftRenameController` prueft PDF-Schreibpfade erneut.
+- `JsonProjectRepository.Load` weist JSON-`null` mit `APP-LOAD` ab. Dadurch
+  ueberspringt die bestehende Wiederherstellung ungueltige Sicherungen und sucht
+  die naechste gueltige. `{}` und alte Version-1-Projekte bleiben lesbar.
+- Feste Nachweise: `ShaftRenameSafetyTests`, `ProjectNullRecoveryTests`,
+  `SchaechteRecordDetailsBuilderTests`. Der Junction-Bestandswaechter erwartet jetzt
+  85 statt 84 echte Tests, weil ein neuer Schutzfall dazugekommen ist.
+- Grenzen: Kein dauerhaftes Transaktionsjournal gegen Stromausfall. Eine
+  rueckgaengige Dateioperation kann selbst scheitern; dann wird der Fehler gemeldet.
+  PDF-Inhaltskorrekturen sind weiterhin ein nachgelagerter, separat gemeldeter Schritt.
+  Gleichzeitiges Austauschen eines Pfades durch andere Prozesse ist durch die
+  managed Pfadvorpruefung nicht atomar ausgeschlossen.
+- Bericht und genaue Testergebnisse: `docs/audits/2026-09-06-programmaudit/PAKET-1-ERGEBNIS.md`.
+- Auditpraezisierung: Am 06.09.2026 sechs dokumentierte Python-Sicherheitsausnahmen
+  in zwei Paketen; die fuenf vom 14.08. sind ein historischer Stand.
+  CI-Lauf 33967264002 belegt 46,61 % bei 45,35 % Grenze. A10 bleibt Paket 2.
+
 ## AI-Pipeline (Ist-Zustand, HEAD)
 - C# steuert Geschaeftslogik, UI, Dedup, QualityGate und Persistenz.
 - Sidecar `sidecar/sidecar/` liefert YOLO, Grounding DINO und SAM ueber HTTP.
@@ -681,8 +715,11 @@ Waechter `DesignAuditFeinschliffTests` (7 Tests) haelt fest, was nicht zurueckfa
   PipeGraphTimeline). Neue Tokens: `ScrimBrush`, `StatusBadgeTextBrush` (je Theme) und
   `Video*Brush` (theme-unabhaengig in `Controls.xaml`) fuer die Player-Abdunkelungen.
 
-Der isolierte `NachschlagKontextmenueTests`-Kindprozess hat ein 60-s-Limit und faellt im
-Gesamtlauf unter Last gelegentlich um; allein besteht er in rund 26 s.
+Nachpruefung 2026-09-06: Der `NachschlagKontextmenueTests`-Kindprozess erreicht das
+60-s-Limit auch einzeln. Die fruehere Aussage "allein rund 26 s gruen" ist fuer den
+aktuellen Stand nicht mehr belastbar. Hängepunkt und Produktursache bleiben offen
+(A05, `docs/audits/2026-09-06-programmaudit/`).
+Der Paket-1-Gesamtlauf bestand diesen Test einmal in 1,56 s; das ist keine Ursachenbehebung.
 
 **Schriftskala (M1, 2026-09-03, Waechter `DesignAuditSchriftskalaTests`):** Sieben
 `sys:Double`-Tokens in `Controls.xaml` — `TextXS` 11, `TextS` 12, `TextM` 13, `TextL` 15,
@@ -1357,6 +1394,13 @@ fuer Kantonsdateien:
   stehen, solange KEIN bewertbarer Befund vorliegt. Mit Befunden rechnet SewerStudio
   weiterhin selbst. Entscheid Pascal 2026-09-03: Beim Import gewinnt die Datei — nur so
   sind GEONIS und SewerStudio nach einem Austausch identisch.
+- **Am Schacht wird die Zustandsklasse NIE berechnet** (Entscheid Pascal 2026-09-05).
+  Bei der Haltung rechnet `VsaEvaluationService` aus den Befunden; am Schacht setzt sie
+  die Fachperson von Hand. Ein Import darf allenfalls einen Wert uebernehmen, den die
+  Quelle ausdruecklich nennt (SIA405 `BaulicherZustand`, WinCan `Condition`), aber
+  niemals selbst einen aus Schachtschaeden ableiten. Der VSA-KEK-Schachtimport legt die
+  Schaeden deshalb nur als Protokoll ab; Waechter:
+  `AlteVsaKekSchachtImportTests.SchachtbegehungBerechnetKeineZustandsklasse`.
 - **Die Schachtmasse leben nur noch in `Dimension 1 mm` / `Dimension 2 mm`** (Entscheid
   Pascal 2026-09-03: rund = 600 / 600, oval = 1100 / 900). `SchachtMasse` in
   `Application/Schacht` ist die eine Regel dafuer: Sie liest die alten Texte ("600 mm",
@@ -2845,9 +2889,58 @@ Codes sind hierarchisch aufgebaut: **Hauptcode** (2-3 Buchstaben) + **Char1** (U
   Startwert ersetzt werden.
 
 ## Coding-Regeln
+### Projektimport: nachgeprüfte Regeln (05.09.2026)
+
+- `PdfDokumentTypErkennung` erkennt Schachtprotokolle als eigenen Typ.
+  `KanalImportDistributionService` schliesst diese vor dem Haltungs-Split aus.
+  Göschenen 2026 enthält 261 solche PDFs; deren Schachtmasse wurden sonst als
+  Haltungspaare fehlgelesen und durch den teuren Haltungs-/OCR-Weg geschickt.
+  Positive TV-Merkmale behalten Vorrang für gemischte Sammelberichte.
+- Umgekehrt prüft `ShaftPdfRelevance` vor dem Schachtverteiler alle Seiten ohne
+  OCR. Nur durchgehend eindeutig fremde Dokumente werden übersprungen; unklare,
+  leere/Bild- und Schachtseiten bleiben erhalten. WinCan-Projektdeckblätter werden
+  nur mit den drei Merkmalen Projekt/Kunde/Unternehmer und ohne Schachtbezug erkannt.
+  Im gemischten Bericht trennen eindeutige Haltungsseiten die Schachtabschnitte,
+  ohne selbst OCR auszulösen oder an den vorherigen Schacht angehängt zu werden.
+- Umgekehrt prüft `ShaftPdfRelevance` vor dem Schachtverteiler alle Seiten ohne
+  OCR. Nur durchgehend eindeutig fremde Dokumente werden übersprungen; unklare,
+  leere/Bild- und Schachtseiten bleiben erhalten. WinCan-Projektdeckblätter werden
+  nur mit den drei Merkmalen Projekt/Kunde/Unternehmer und ohne Schachtbezug erkannt.
+  Im gemischten Bericht trennen eindeutige Haltungsseiten die Schachtabschnitte,
+  ohne selbst OCR auszulösen oder an den vorherigen Schacht angehängt zu werden.
+- `XtfQuellenPruefer` liest Modell und XML-Objekte mit Unterlesern und liefert
+  `XtfQuellenmerkmale.Inhaltsbelege`. `XtfExportAuswahl` verwirft eine Quelle nur
+  bei belegter Inhalts-Teilmenge, nie allein wegen gleicher Objektzahlen.
+  Umnummerierte TID-/REF-Graphen werden konservativ als weitere Quelle behalten.
+- `Befahrungsrollen` trennt Kamerarichtung von Videorolle. Die aktive WinCan-
+  Untersuchung bestimmt das Hauptvideo; upstream allein belegt keine Gegenfahrt.
+- `ProtocolRevision.ImportFingerprint` und `ImportVideoPaths` sind optionale,
+  rückwärtskompatible Quellmetadaten. WinCan und Schacht-XTF vermeiden damit
+  identische zusätzliche Revisionen. Der Kanalverteiler übernimmt auch Videos
+  weiterer Untersuchungen ins Projekt und relativiert die Revisionsverweise.
+- `ShaftDistributionService` liest vorbereitete Archiv-PDFs über die gemeinsame
+  Importtransaktion. `StagedDistributionOutput` erhält logische Dateiendungen und
+  trennt gleichnamige Eingaben in privaten Unterordnern.
+- `ImportProjektdateiPruefer` prüft vorhandene Verweise gegen sichere und lesbare
+  Projektdateien bzw. die vorbereitete Lesesicht. `ImportBestandsbilanz.DateienGeprueft`
+  unterscheidet diese Prüfung vom blossen Zählen gespeicherter Pfade. Fehlende
+  referenzierte WinCan-Medien und Verteilfehler gehören in die Fehlerbilanz.
+- XTF-Feldherkunft beweist nicht, dass eine TID ersetzbar ist. Abweichende
+  importierte Kennungen blockieren den Katasterabgleich als Prüffall;
+  nachweislich eigene `chSST`-Exportkennungen dürfen weiterhin ergänzt werden.
+- Nach dem letzten Importschritt und vor Veröffentlichung prüft der Ein-Knopf-
+  Controller erneut den Abbruch. Keine Veröffentlichung bei abgebrochenem Lauf.
+- Nachweis und Abnahmegrenzen: `docs/PROJEKTIMPORT-TERRA-FORTSCHRITT.md`, oberster Abschnitt.
+
+### Allgemein
 - Bestehenden Code nur aendern wenn explizit gefragt
 - Neue Features als separate Services mit Interface
 - Tests breit einsetzen: Parser, Import, Pipeline, KnowledgeBase, UI-ViewModels und QualityGate. Keine riskanten Logik-Aenderungen ohne fokussierten Test.
 - Keine NuGet-Pakete ohne Rueckfrage
 - Kommentare auf Deutsch
 - JSON-Schema fuer alle Qwen-Outputs (strict, kein freier Text)
+
+
+## Nova-Abschluss: Video-Kopienregel (2026-09-06)
+
+Die Behandlung mehrdeutiger Video-Treffer liegt vollstaendig in `HoldingDistribution/VideoKopienAufloeser.LoeseTreffer`. `HoldingFolderDistributor.FindVideo` delegiert darauf; die grosse Verteilerklasse bleibt unter ihrer bisherigen Groessengrenze. Bestehende Medienkopien- und Importtests pruefen unveraendertes Verhalten.

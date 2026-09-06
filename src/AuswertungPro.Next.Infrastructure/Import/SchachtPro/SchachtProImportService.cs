@@ -524,6 +524,8 @@ public sealed class SchachtProImportService : ISchachtProImportService
     private static ProtocolRevision CloneRevision(ProtocolRevision revision) => new()
     {
         BasedOnRevisionId = revision.RevisionId,
+        ImportFingerprint = revision.ImportFingerprint,
+        ImportVideoPaths = revision.ImportVideoPaths?.ToList(),
         CreatedBy = revision.CreatedBy,
         Comment = revision.Comment,
         Entries = revision.Entries.Select(ClonePreservingIdentity).ToList(),

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -35,6 +35,16 @@ public sealed record PlausibilitaetsUrteil(
         new(PlausibilitaetsStufe.Gruen, "", Array.Empty<string>(), "");
 
     public bool BrauchtRueckfrage => Stufe == PlausibilitaetsStufe.Rueckfrage;
+
+    /// <summary>
+    /// Ob ueberhaupt eine Sollzahl vorlag. <c>false</c> heisst: Dieser Importweg liefert
+    /// kein Quellenprotokoll, das Tor konnte also gar nichts pruefen.
+    ///
+    /// Bewusst eine eigene Angabe und keine neue Stufe: Der Ablauf bleibt fuer alle
+    /// bisherigen Aufrufer identisch (kein zusaetzlicher Dialog), aber der Abschluss darf
+    /// nicht mehr "geprueft und in Ordnung" behaupten, wo nie etwas geprueft wurde.
+    /// </summary>
+    public bool Geprueft { get; init; } = true;
 
     /// <summary>
     /// Ehrlicher Abbruchtext. Bewusst NICHT "nichts veraendert": Vor dem Tor koennen
@@ -84,7 +94,7 @@ public static class ImportPlausibilitaetsTor
         int bearbeiteteHaltungen)
     {
         if (quellen is null || quellen.AlleVersuche.Count == 0)
-            return PlausibilitaetsUrteil.Gruen;
+            return PlausibilitaetsUrteil.Gruen with { Geprueft = false };
 
         var zeilen = quellen.AlleVersuche.Select(v => v.Berichtszeile(Dateiname)).ToList();
         var tauglich = quellen.Anzahl(QuellenTauglichkeit.Tauglich);

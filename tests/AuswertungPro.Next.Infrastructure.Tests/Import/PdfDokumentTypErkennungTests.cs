@@ -9,6 +9,18 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
 public sealed class PdfDokumentTypErkennungTests
 {
+    [Theory]
+    [InlineData("SCHACHTPRO Projekt: Test Datum: 13.08.2026Schachtprotokoll Schacht Nr. 10051STAMMDATEN & SKIZZE")]
+    [InlineData("Schachtinspektion Schacht 9072")]
+    [InlineData("Schachtbericht 1234")]
+    public void ErkenneText_SchachtHatEigenenVerteilweg(string text)
+        => Assert.Equal(PdfDokumentTyp.Schachtprotokoll, PdfDokumentTypErkennung.ErkenneText(text, "10051.pdf"));
+
+    [Fact]
+    public void ErkenneText_GemischtesSammelprotokollBleibtImHaltungsweg()
+        => Assert.Equal(PdfDokumentTyp.TvProtokoll,
+            PdfDokumentTypErkennung.ErkenneText("Schachtprotokoll 1234\nHaltungsinspektion 1234-5678"));
+
     [Fact]
     public void ErkenneText_DichtheitspruefungNachSia190()
     {

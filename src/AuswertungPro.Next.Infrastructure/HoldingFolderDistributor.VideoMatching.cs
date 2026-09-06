@@ -56,10 +56,12 @@ public static partial class HoldingFolderDistributor
         string haltung,
         string dateStamp,
         bool recursiveVideoSearch,
-        IReadOnlyList<string>? videoFilesCache = null)
+        IReadOnlyList<string>? videoFilesCache = null,
+        AuswertungPro.Next.Application.Import.IMedienInhaltsIndex? medienInhalt = null)
     {
         var files = videoFilesCache ?? EnumerateVideoFiles(videoSourceFolder, recursiveVideoSearch);
-        return HoldingVideoMatching.FindVideo(videoFileNameFromPdf, haltung, dateStamp, files);
+        return HoldingDistribution.VideoKopienAufloeser.LoeseTreffer(
+            HoldingVideoMatching.FindVideo(videoFileNameFromPdf, haltung, dateStamp, files), medienInhalt);
     }
 
 

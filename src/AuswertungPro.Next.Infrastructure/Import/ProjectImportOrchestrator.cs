@@ -31,6 +31,12 @@ public sealed record OneClickImportResult(
 
     /// <summary>Protokoll der geprueften Importquellen. Null = kein Urteil moeglich.</summary>
     public QuellenwahlErgebnis? Quellenprotokoll { get; init; }
+
+    /// <summary>Fehler nach Schritten getrennt; Summe muss <see cref="Errors"/> entsprechen.</summary>
+    public ImportFehlerbilanz Fehlerbilanz { get; init; } = ImportFehlerbilanz.Leer;
+
+    /// <summary>Was nach dem Lauf im Projekt steht — Videos, Protokolle, Befunde.</summary>
+    public ImportBestandsbilanz? Bestand { get; init; }
 }
 
 /// <summary>
@@ -71,6 +77,9 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     private readonly IKinsGesamtprotokollLocator _kinsGesamtprotokollLocator;
     private readonly IImportMediaDistributionService _mediaDistributor;
 
+    // Derselbe Dienst wie der manuelle Befehl "Schacht Verteilen" — kein zweiter Splitter.
+    private readonly IShaftDistributionService _shaftDistribution;
+
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
         IWinCanDbImportService winCan,
@@ -88,7 +97,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         IKinsDvdTextEnricher? kinsDvdTextEnricher = null,
         IKinsDbfWhitelistEnricher? kinsDbfWhitelistEnricher = null,
         IKinsGesamtprotokollLocator? kinsGesamtprotokollLocator = null,
-        IImportMediaDistributionService? mediaDistributor = null)
+        IImportMediaDistributionService? mediaDistributor = null,
+        IShaftDistributionService? shaftDistribution = null)
     {
         _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
@@ -107,6 +117,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         _kinsDbfWhitelistEnricher = kinsDbfWhitelistEnricher ?? Kins.KinsDbfWhitelistEnricher.Current;
         _kinsGesamtprotokollLocator = kinsGesamtprotokollLocator ?? Kins.KinsGesamtprotokollLocator.Current;
         _mediaDistributor = mediaDistributor ?? new MediaDistributionService();
+        _shaftDistribution = shaftDistribution ?? new ShaftDistributionService();
     }
 
     /// <summary>
@@ -142,7 +153,9 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         {
             ErwarteteHaltungen = result.ErwarteteHaltungen,
             BearbeiteteHaltungen = result.BearbeiteteHaltungen,
-            Quellenprotokoll = result.Quellenprotokoll
+            Quellenprotokoll = result.Quellenprotokoll,
+            Fehlerbilanz = result.Fehlerbilanz,
+            Bestand = result.Bestand
         };
     }
 
@@ -156,8 +169,12 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         var found         = 0;
         var created       = 0;
         var updated       = 0;
-        var errors        = 0;
         var conflictCount = 0;
+        // Fehler werden ab 2026-09-05 schrittweise gezaehlt statt als blosse Gesamtzahl.
+        // Vorher verlor der Lauf Fehler unbemerkt: Die Fotoverteilung zaehlte gar nicht
+        // mit, und die Kopierfehler der name-basierten Protokollverteilung wurden nie
+        // gelesen. "0 Fehler" war deshalb keine Aussage ueber Vollstaendigkeit.
+        var fehlerbilanz  = new ImportFehlerbilanzSammler();
         // Getrennt von found/created: nur Haltungen, ohne Schaechte. Grundlage fuer das
         // Plausibilitaetstor vor der Veroeffentlichung.
         var erwarteteHaltungen   = 0;
@@ -165,6 +182,12 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         QuellenwahlErgebnis? quellenprotokoll = null;
 
         var ct = ctx?.CancellationToken ?? System.Threading.CancellationToken.None;
+
+        // Der Abbruch wird an jeder Schrittgrenze geprueft, nicht nur tief im
+        // Katasterabgleich. Bis 2026-09-05 lief ein abgebrochener Ein-Knopf-Import
+        // vollstaendig zu Ende und kopierte dabei Gigabyte; ein Abbruch ist kein
+        // Fehler und wird deshalb weitergeworfen, statt als Fehlermeldung zu enden.
+        ct.ThrowIfCancellationRequested();
 
         // ------------------------------------------------------------------
         // Schritt 1: Projektstruktur sicherstellen
@@ -175,7 +198,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         }
         catch (Exception ex)
         {
-            errors++;
+            fehlerbilanz.Melde("Projektstruktur", $"EnsureCreated fehlgeschlagen: {ex.Message}");
             messages.Add($"EnsureCreated fehlgeschlagen: {ex.Message}");
         }
 
@@ -205,10 +228,13 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         }
         catch (Exception ex)
         {
-            errors++;
+            fehlerbilanz.Melde("Formaterkennung", $"Formaterkennung fehlgeschlagen: {ex.Message}");
             messages.Add($"Formaterkennung fehlgeschlagen: {ex.Message}");
             return new OneClickImportResult(
-                KanalExportFormat.Unknown, found, created, updated, errors, conflictCount, messages);
+                KanalExportFormat.Unknown, found, created, updated, fehlerbilanz.Gesamt, conflictCount, messages)
+            {
+                Fehlerbilanz = fehlerbilanz.Bilanz()
+            };
         }
 
         // Bei unbekanntem oder mehrdeutigem Format sofort abbrechen
@@ -216,7 +242,10 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         {
             messages.Add($"Import abgebrochen: {det.Reason}");
             return new OneClickImportResult(
-                det.Format, found, created, updated, errors, conflictCount, messages);
+                det.Format, found, created, updated, fehlerbilanz.Gesamt, conflictCount, messages)
+            {
+                Fehlerbilanz = fehlerbilanz.Bilanz()
+            };
         }
 
         messages.AddRange(BuildSourceDecisionMessages(det));
@@ -224,6 +253,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         // Schritt 4: Quelldateien archivieren
         // ------------------------------------------------------------------
+        ct.ThrowIfCancellationRequested();
         try
         {
             var archiveResult = _sourceArchiver.Archive(
@@ -240,7 +270,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 projectFolder,
                 ctx?.FileStaging);
             messages.AddRange(planResult.Messages);
-            errors += planResult.Errors;
+            fehlerbilanz.Melde("Plan-PDF", planResult.Errors, planResult.Messages);
             if (planResult.Copied > 0 || planResult.Reused > 0 || planResult.Errors > 0)
             {
                 messages.Add(
@@ -248,15 +278,17 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                     $"{planResult.Errors} Fehler.");
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            errors++;
+            fehlerbilanz.Melde("Archivierung", $"Archivierung fehlgeschlagen: {ex.Message}");
             messages.Add($"Archivierung fehlgeschlagen: {ex.Message}");
         }
 
         // ------------------------------------------------------------------
         // Schritt 5: Parsen
         // ------------------------------------------------------------------
+        ct.ThrowIfCancellationRequested();
         try
         {
             Result<ImportStats> parseResult;
@@ -299,7 +331,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 found   += parseResult.Value.Found;
                 created += parseResult.Value.Created;
                 updated += parseResult.Value.Updated;
-                errors  += parseResult.Value.Errors;
+                fehlerbilanz.Melde("Quelle einlesen", parseResult.Value.Errors, parseResult.Value.Messages);
                 // Fuer das Plausibilitaetstor: getrennte Haltungszahlen und das
                 // Quellenprotokoll bis zum Ein-Knopf-Controller durchreichen.
                 erwarteteHaltungen += parseResult.Value.ErwarteteHaltungen;
@@ -309,15 +341,69 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             }
             else
             {
-                errors++;
+                fehlerbilanz.Melde("Quelle einlesen",
+                    $"Parse fehlgeschlagen [{parseResult.ErrorCode}]: {parseResult.ErrorMessage}");
                 messages.Add(
                     $"Parse fehlgeschlagen [{parseResult.ErrorCode}]: {parseResult.ErrorMessage}");
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            errors++;
+            fehlerbilanz.Melde("Quelle einlesen", $"Parse-Ausnahme: {ex.Message}");
             messages.Add($"Parse-Ausnahme: {ex.Message}");
+        }
+
+        // ------------------------------------------------------------------
+        // Schritt 5a: Ergaenzende XTF-Quellen desselben Ordners
+        // ------------------------------------------------------------------
+        // Gemessen am 2026-09-05 an allen drei IBAK-Projekten:
+        //
+        //   Goeschenen Unterdorfstrasse: IBAK-Weg 86 Haltungen, 0 Schaechte,
+        //     2 Videolinks — die danebenliegende XTF traegt 90 Haltungen,
+        //     71 Schaechte, 86 Videolinks und 425 Fotos.
+        //   Erstfeld Jagdmatt: gar keine XTF; der IBAK-Weg ist die einzige Quelle.
+        //   Buerglen Gosmergasse: nur eine Organisationsliste ohne Fachdaten.
+        //
+        // Der IBAK-Weg bleibt deshalb der Hauptweg — er wird ergaenzt, nicht ersetzt.
+        // Die MergeEngine entscheidet je Feld (Xtf schlaegt Legacy, Handeingaben bleiben).
+        //
+        // Bewusst NUR fuer IBAK: Bei WinCan und IKAS ist kein solcher Bedarf gemessen,
+        // und ein zusaetzlicher XTF-Lauf koennte dort gepruefte Werte verschieben.
+        if (det.Format == KanalExportFormat.Ibak)
+        {
+            try
+            {
+                var ergaenzend = FindeErgaenzendeXtfQuellen(sourceFolder, det);
+                if (ergaenzend.Count > 0)
+                {
+                    var vorher = project.Data.Count;
+                    var vorherSchaechte = project.SchaechteData.Count;
+                    var xtfErgebnis = _xtf.ImportXtfFiles(ergaenzend, project, ctx);
+                    if (xtfErgebnis.Ok && xtfErgebnis.Value is not null)
+                    {
+                        messages.AddRange(xtfErgebnis.Value.Messages);
+                        fehlerbilanz.Melde(
+                            "Ergaenzende XTF-Quelle", xtfErgebnis.Value.Errors, xtfErgebnis.Value.Messages);
+                        messages.Add(
+                            $"Ergaenzende XTF-Quellen: {ergaenzend.Count} gelesen, "
+                            + $"{project.Data.Count - vorher} Haltungen und "
+                            + $"{project.SchaechteData.Count - vorherSchaechte} Schaechte dazugekommen.");
+                    }
+                    else
+                    {
+                        fehlerbilanz.Melde("Ergaenzende XTF-Quelle",
+                            $"XTF-Ergaenzung fehlgeschlagen: {xtfErgebnis.ErrorMessage}");
+                        messages.Add($"Ergaenzende XTF-Quelle fehlgeschlagen: {xtfErgebnis.ErrorMessage}");
+                    }
+                }
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                fehlerbilanz.Melde("Ergaenzende XTF-Quelle", $"XTF-Ergaenzung fehlgeschlagen: {ex.Message}");
+                messages.Add($"Ergaenzende XTF-Quelle fehlgeschlagen: {ex.Message}");
+            }
         }
 
         // ------------------------------------------------------------------
@@ -349,7 +435,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             }
             catch (Exception ex)
             {
-                errors++;
+                fehlerbilanz.Melde("KINS-Anreicherung", $"KINS-Anreicherung fehlgeschlagen: {ex.Message}");
                 messages.Add($"KINS-Anreicherung fehlgeschlagen: {ex.Message}");
             }
         }
@@ -453,6 +539,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         // Schritt 7: Medien verteilen
         // ------------------------------------------------------------------
+        ct.ThrowIfCancellationRequested();
         try
         {
             // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) — KEINE Videos/Original-PDFs und KEINE Schacht-
@@ -472,6 +559,9 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 IncludeSchacht: false,
                 FileStaging: ctx?.FileStaging));
             messages.AddRange(mediaResult.Messages);
+            // Bis 2026-09-05 standen diese Fehler nur im Text und fehlten in der
+            // Gesamtzahl — ein Fotofehler machte den Lauf trotzdem "fehlerfrei".
+            fehlerbilanz.Melde("Fotoverteilung", mediaResult.Errors, mediaResult.Messages);
 
             // 7b) Video + ORIGINAL-Protokoll (NUR das maßgebliche PDF, ein PDF/Haltung) flach+datumsbenannt
             //     verteilen; beide relativ verlinkt (PDF_Path = Original). Das eigene _E-Protokoll wird hier
@@ -493,23 +583,37 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 archivedPdfDir,
                 ctx?.CollectionLock,
                 ctx?.FileStaging);
-            // Nur HALTUNG-Treffer duerfen den inhaltsbasierten Gesamtprotokoll-Split unterdruecken —
-            // der Split verteilt HALTUNGS-Protokolle. Ein reiner Schacht-Treffer darf ihn NICHT abschalten.
-            var nameBasedHaltungHits = nameBased?.HaltungProtokolle ?? 0;
             if (nameBased is not null)
             {
                 messages.Add($"Protokolle name-basiert verteilt: {nameBased.HaltungProtokolle} Haltungen, {nameBased.SchachtProtokolle} Schächte, {nameBased.SchaechteAngelegt} Schächte angelegt.");
                 foreach (var nz in nameBased.NichtZugeordnet)
                     messages.Add($"Protokoll nicht zugeordnet: {nz}");
+
+                // ProtocolDistributionReport.Meldungen sind die Kopierfehler je Datei.
+                // Sie wurden bis 2026-09-05 gesammelt, aber nie gelesen: Ein Protokoll
+                // konnte still verloren gehen, waehrend der Bericht "0 Fehler" meldete.
+                foreach (var meldung in nameBased.Meldungen)
+                    messages.Add($"Protokoll nicht kopiert: {meldung}");
+                fehlerbilanz.Melde(
+                    "Name-basierte Protokollverteilung",
+                    nameBased.Meldungen.Count,
+                    nameBased.Meldungen);
             }
 
+            // Der Sammelprotokoll-Split laeuft IMMER, wenn es ueberhaupt ein Protokoll gibt.
+            //
+            // Bis 2026-09-05 schaltete ein einziger name-basierter Treffer ihn global ab:
+            // Ein Ordner mit einem Einzelprotokoll fuer Haltung A und einem Sammelprotokoll
+            // fuer B und C liess B und C leer. Der Schutz gegen doppelte Verknuepfungen
+            // liegt jetzt dort, wo er hingehoert — eine schon versorgte Haltung behaelt in
+            // KanalImportDistributionService ihren Verweis aus dem Einzelprotokoll.
             var distResult = _kanalDistributor.Distribute(
                 project, projectFolder, archivedPdfDir, sourceFolder,
-                splitPdf: nameBasedHaltungHits == 0 && (det.Format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null),
+                splitPdf: det.Format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null,
                 primaryProtocolPdf: kinsGesamtprotokoll,
                 fileStaging: ctx?.FileStaging);
             messages.AddRange(distResult.Messages);
-            errors += distResult.Errors;
+            fehlerbilanz.Melde("Video- und Protokollverteilung", distResult.Errors, distResult.Messages);
             var recordsCreatedByDistribution = Math.Max(0, project.Data.Count - recordCountBeforeDistribution);
             if (recordsCreatedByDistribution > 0)
             {
@@ -533,24 +637,37 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             if (dpResult.Verteilt > 0 || dpResult.NichtZugeordnet > 0 || dpResult.Uebersprungen > 0)
                 messages.Add($"Dichtheitspruefung: {dpResult.Verteilt} Protokolle verteilt, {dpResult.NichtZugeordnet} nicht zugeordnet, {dpResult.Uebersprungen} bereits vorhanden.");
 
-            // HINWEIS: Schächte verteilt der Import bewusst NICHT (includeSchacht:false oben) — das macht der
-            // Anwender manuell über „Schacht Verteilen" mit dem separaten Schacht-Gesamtauszug-PDF, damit kein
-            // falsches/ganzes PDF automatisch an die Schächte gehängt wird.
+            // 7d) Schachtprotokolle aus dem Archiv verteilen.
+            //
+            // Bis 2026-09-05 blieb dieser Schritt dem manuellen Befehl „Schacht Verteilen"
+            // ueberlassen — ein vollstaendiger Projektimport liess die Schaechte also leer.
+            // Es laeuft derselbe Dienst wie beim manuellen Weg, dieselbe Staging-Sitzung
+            // und dieselbe Verknuepfungsregel; ein zweiter Splitter entsteht nicht.
+            //
+            // Die Sorge dahinter bleibt gueltig und ist jetzt in der Regel abgebildet:
+            // Es wird KEIN Schacht angelegt, und ein vorhandener Verweis wird nicht
+            // ersetzt. Ein Haltungsprotokoll faellt beim Schacht-Parser durch und wird
+            // gemeldet, nicht an beide Endschaechte gehaengt.
+            var schachtMeldungen = VerteileSchachtprotokolle(
+                project, projectFolder, archivedPdfDir, ctx?.FileStaging, fehlerbilanz);
+            messages.AddRange(schachtMeldungen);
 
             messages.Add(
                 $"Verteilung: {mediaResult.FilesCopied} Fotos/Dateien, {distResult.VideosDistributed} Videos, " +
                 $"{distResult.OriginalProtocolsDistributed} Original-Protokolle, " +
                 $"{mediaResult.Errors + distResult.Errors} Fehler.");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            errors++;
+            fehlerbilanz.Melde("Medienverteilung", $"Medienverteilung fehlgeschlagen: {ex.Message}");
             messages.Add($"Medienverteilung fehlgeschlagen: {ex.Message}");
         }
 
         // ------------------------------------------------------------------
         // Schritt 8: Projekt als geaendert markieren
         // ------------------------------------------------------------------
+        ctx?.CancellationToken.ThrowIfCancellationRequested();
         project.Dirty = true;
 
         if (found == 0 && HasDataSourceSignal(det, sourceFolder))
@@ -560,13 +677,129 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 "Bitte Report pruefen; die Herstellerquelle wurde vermutlich nicht gelesen oder enthaelt ein unbekanntes Schema.");
         }
 
+        // Bestandsaufnahme zum Schluss: was ist wirklich angekommen. Bewusst KEINE
+        // erfundene Sollzahl — die Bewertung bleibt beim Menschen.
+        var dateipruefung = ImportProjektdateiPruefer.Pruefe(project, projectFolder, ctx?.FileStaging);
+        var bestand = dateipruefung.Bestand;
+        fehlerbilanz.Melde("Abschliessende Dateiprüfung", dateipruefung.Fehler.Count, dateipruefung.Fehler);
+        messages.AddRange(dateipruefung.Fehler);
+        messages.AddRange(bestand.Berichtszeilen());
+
         return new OneClickImportResult(
-            det.Format, found, created, updated, errors, conflictCount, messages)
+            det.Format, found, created, updated, fehlerbilanz.Gesamt, conflictCount, messages)
         {
             ErwarteteHaltungen = erwarteteHaltungen,
             BearbeiteteHaltungen = bearbeiteteHaltungen,
-            Quellenprotokoll = quellenprotokoll
+            Quellenprotokoll = quellenprotokoll,
+            Fehlerbilanz = fehlerbilanz.Bilanz(),
+            Bestand = bestand
         };
+    }
+
+    /// <summary>
+    /// Verteilt die Schachtprotokolle des Archivs und verknuepft sie mit den Schaechten.
+    ///
+    /// Verwendet denselben <see cref="IShaftDistributionService"/> wie der manuelle Weg
+    /// „Schacht Verteilen" und dieselbe Verknuepfungsregel
+    /// (<see cref="SchachtProtokollVerknuepfung"/>). Ein Fehler hier darf den Import
+    /// nicht abbrechen — die Haltungen sind zu diesem Zeitpunkt bereits versorgt.
+    /// </summary>
+    private IReadOnlyList<string> VerteileSchachtprotokolle(
+        Project project,
+        string projectFolder,
+        string archivedPdfDir,
+        IImportFileStagingSession? fileStaging,
+        ImportFehlerbilanzSammler fehlerbilanz)
+    {
+        var meldungen = new List<string>();
+
+        try
+        {
+            var ergebnis = _shaftDistribution.Distribute(new ShaftDistributionRequest(
+                Project: project,
+                DestinationFolder: Path.Combine(projectFolder, ProjectStructure.SchaechteVerteilt),
+                PdfFiles: null,
+                PdfSourceFolder: archivedPdfDir,
+                FileStaging: fileStaging));
+
+            var erfolgreich = ergebnis.Items.Where(i => i.Success).ToList();
+            if (erfolgreich.Count == 0 && ergebnis.Items.Count == 0)
+                return meldungen;
+
+            var verknuepfung = SchachtProtokollVerknuepfung.Verknuepfe(
+                erfolgreich
+                    .Where(i => !string.IsNullOrWhiteSpace(i.TargetPdfPath)
+                                && !string.IsNullOrWhiteSpace(i.ShaftFolder))
+                    .Select(i => (i.TargetPdfPath!, i.ShaftFolder!, i.SourcePdfPath))
+                    .ToList(),
+                project,
+                projectFolder);
+
+            meldungen.Add(
+                $"Schachtprotokolle: {erfolgreich.Count} verteilt, "
+                + $"{verknuepfung.Verknuepft} mit einem Schacht verknuepft.");
+            meldungen.AddRange(verknuepfung.Meldungen);
+
+            // Ein Protokollteil, der nicht abgelegt werden konnte, MUSS im Bericht stehen.
+            // Ein reines "Parse failed" auf einer Haltungs-PDF ist dagegen erwartet und
+            // wird nicht als Schachtfehler gemeldet.
+            foreach (var fehlgeschlagen in ergebnis.Items.Where(i => !i.Success))
+            {
+                if (fehlgeschlagen.Message.StartsWith("Parse failed", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                meldungen.Add(
+                    $"Schachtprotokoll {Path.GetFileName(fehlgeschlagen.SourcePdfPath)} "
+                    + $"nicht verteilt: {fehlgeschlagen.Message}");
+                fehlerbilanz.Melde("Schachtprotokolle", meldungen[^1]);
+            }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            meldungen.Add($"Schachtprotokolle nicht verteilt: {ex.Message}");
+            fehlerbilanz.Melde("Schachtprotokolle", meldungen[^1]);
+        }
+
+        return meldungen;
+    }
+
+    /// <summary>
+    /// Die XTF-Dateien eines Ordners, die zusaetzlich zur Hauptquelle Fachdaten tragen.
+    ///
+    /// Es gelten dieselben Regeln wie bei der Erkennung: Nur Dateien mit Inspektions-
+    /// oder Katasterinhalt, mehrere Exporte derselben Zone werden auf den
+    /// inhaltsreichsten zusammengefasst, und eine bereits als Hauptquelle gelesene Datei
+    /// wird nicht ein zweites Mal verarbeitet.
+    ///
+    /// Eine reine Organisationsliste — in Buerglen 2206 Eintraege ohne einen einzigen
+    /// Fachdatensatz — faellt dabei heraus.
+    /// </summary>
+    private static IReadOnlyList<string> FindeErgaenzendeXtfQuellen(
+        string sourceFolder,
+        KanalExportDetection det)
+    {
+        // Nur was der Hauptweg wirklich gelesen hat, gilt als erledigt. Die Erkennung
+        // FINDET eine SIA405-Datei auch im IBAK-Ordner — gelesen wird sie dort nicht.
+        // Sie deshalb auszuschliessen kostete in Goeschenen Unterdorfstrasse 592
+        // Bauwerke, darunter alle Normschaechte (gemessen 2026-09-05).
+        var schonGelesen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hauptwegLiestXtf = det.Format is KanalExportFormat.Ikas or KanalExportFormat.Kins;
+        if (hauptwegLiestXtf)
+        {
+            if (!string.IsNullOrWhiteSpace(det.VsaKekXtfPath))
+                schonGelesen.Add(det.VsaKekXtfPath!);
+            if (!string.IsNullOrWhiteSpace(det.Sia405XtfPath))
+                schonGelesen.Add(det.Sia405XtfPath!);
+        }
+
+        // Bewusst FachlicheXtfQuellen und nicht die Kandidaten-Markierung: Letztere sagt
+        // "von diesem Importweg verwendet" — und der IBAK-Weg verwendet gar keine XTF.
+        return det.FachlicheXtfQuellen
+            .Where(pfad => !schonGelesen.Contains(pfad))
+            .ToList();
     }
 
     /// <summary>

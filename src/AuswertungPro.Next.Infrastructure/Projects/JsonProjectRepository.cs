@@ -45,7 +45,9 @@ public sealed class JsonProjectRepository : IProjectRepository
                 return Result<Project>.Fail("APP-NOTFOUND", $"Datei nicht gefunden: {path}");
 
             var json = File.ReadAllText(path);
-            var project = JsonSerializer.Deserialize<Project>(json, SerializerOptions) ?? new Project();
+            var project = JsonSerializer.Deserialize<Project>(json, SerializerOptions);
+            if (project is null)
+                return Result<Project>.Fail("APP-LOAD", "Die Datei enthält kein gültiges Projekt (JSON-null).");
             if (project.Version > CurrentVersion)
             {
                 return Result<Project>.Fail(

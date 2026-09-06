@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Application.Lookup;
@@ -25,8 +25,14 @@ public enum KatasterKennungGrund
     /// <summary>Das Bauteil traegt dieselbe Kennung schon.</summary>
     BereitsVorhanden,
 
-    /// <summary>Das Bauteil traegt eine ANDERE Kennung — die bleibt stehen.</summary>
-    Abweichend
+    /// <summary>Das Bauteil traegt eine ANDERE bestaetigte Kennung — die bleibt stehen.</summary>
+    Abweichend,
+
+    /// <summary>
+    /// Das Bauteil traegt eine andere Kennung unbekannter Herkunft. Sie wird nicht
+    /// ueberschrieben, der Fall gehoert aber geprueft.
+    /// </summary>
+    HerkunftUnklar
 }
 
 public sealed record KatasterKennungHinweis(string Bauteil, KatasterKennungGrund Grund);
@@ -52,6 +58,25 @@ public sealed record KatasterKennungPlan(
     public int Neu => Positionen.Count - NurAnzeige;
 
     public int Anzahl(KatasterKennungGrund grund) => Hinweise.Count(h => h.Grund == grund);
+
+    /// <summary>
+    /// Bauteile, deren ganzer Objektverbund bekannt ist — nur bei ihnen kann GEONIS die
+    /// vorhandenen Objekte wiedererkennen.
+    /// </summary>
+    public int AbgleichMoeglich => Positionen.Count(p =>
+        GeonisVerbund.Bestimme(p.Kennung, Art) == GeonisVerbundStand.AbgleichMoeglich);
+
+    /// <summary>
+    /// Bauteile mit unvollstaendigem Verbund. Ein Neu-Export gelingt, legt in einem
+    /// gefuellten Kataster aber neue Objekte an statt die vorhandenen zu aendern.
+    /// </summary>
+    public int NurNeuExport => Positionen.Count - AbgleichMoeglich;
+
+    /// <summary>Bauteile, deren Zuordnung offen ist und die von Hand geklaert werden muessen.</summary>
+    public int Ungeklaert =>
+        Anzahl(KatasterKennungGrund.Mehrdeutig)
+        + Anzahl(KatasterKennungGrund.Abweichend)
+        + Anzahl(KatasterKennungGrund.HerkunftUnklar);
 }
 
 /// <summary>
@@ -81,11 +106,19 @@ public static class KatasterKennungPlanBuilder
 
         return Baue(
             BauteilArt.Haltung,
-            haltungen.Select(h => new Bauteilsicht(
-                h.GetFieldValue(FieldKeys.HoldingName),
-                h.Geonis,
-                string.IsNullOrWhiteSpace(h.GetFieldValue(FieldKeys.GeonisId)),
-                h.GetFieldValue(FieldKeys.CadastreObjectId))),
+            haltungen.Select(h =>
+            {
+                var (quelle, handgesetzt) = LiesHerkunft(h.FieldMeta, FieldKeys.CadastreObjectId);
+                return new Bauteilsicht(
+                    h.GetFieldValue(FieldKeys.HoldingName),
+                    h.Geonis,
+                    string.IsNullOrWhiteSpace(h.GetFieldValue(FieldKeys.GeonisId)),
+                    h.GetFieldValue(FieldKeys.CadastreObjectId))
+                {
+                    ObjektIdQuelle = quelle,
+                    ObjektIdHandgesetzt = handgesetzt
+                };
+            }),
             bestand,
             mitGegenrichtung: true);
     }
@@ -97,11 +130,20 @@ public static class KatasterKennungPlanBuilder
 
         return Baue(
             BauteilArt.Schacht,
-            schaechte.Select(s => new Bauteilsicht(
-                s.GetFieldValue(SchachtFeldnamen.Feld(s, "Schachtnummer")),
-                s.Geonis,
-                string.IsNullOrWhiteSpace(s.GetFieldValue(SchachtFeldnamen.Feld(s, FieldKeys.GeonisId))),
-                s.GetFieldValue(SchachtFeldnamen.Feld(s, FieldKeys.CadastreObjectId)))),
+            schaechte.Select(s =>
+            {
+                var feld = SchachtFeldnamen.Feld(s, FieldKeys.CadastreObjectId);
+                var (quelle, handgesetzt) = LiesHerkunft(s.FieldMeta, feld);
+                return new Bauteilsicht(
+                    s.GetFieldValue(SchachtFeldnamen.Feld(s, "Schachtnummer")),
+                    s.Geonis,
+                    string.IsNullOrWhiteSpace(s.GetFieldValue(SchachtFeldnamen.Feld(s, FieldKeys.GeonisId))),
+                    s.GetFieldValue(feld))
+                {
+                    ObjektIdQuelle = quelle,
+                    ObjektIdHandgesetzt = handgesetzt
+                };
+            }),
             bestand,
             mitGegenrichtung: false);
     }
@@ -126,7 +168,20 @@ public static class KatasterKennungPlanBuilder
     }
 
     private sealed record Bauteilsicht(
-        string? Name, GeonisKennungen? Vorhanden, bool AnzeigeLeer, string? ObjektId);
+        string? Name, GeonisKennungen? Vorhanden, bool AnzeigeLeer, string? ObjektId)
+    {
+        /// <summary>Herkunft des Werts in <see cref="ObjektId"/>.</summary>
+        public FieldSource ObjektIdQuelle { get; init; } = FieldSource.Unknown;
+
+        /// <summary>Wurde <see cref="ObjektId"/> von Hand gesetzt oder bestaetigt?</summary>
+        public bool ObjektIdHandgesetzt { get; init; }
+    }
+
+    private static (FieldSource Quelle, bool Handgesetzt) LiesHerkunft(
+        IReadOnlyDictionary<string, FieldMetadata> feldmetadaten, string feld)
+        => feldmetadaten.TryGetValue(feld, out var meta)
+            ? (meta.Source, meta.UserEdited)
+            : (FieldSource.Unknown, false);
 
     private static KatasterKennungPlan Baue(
         BauteilArt art, IEnumerable<Bauteilsicht> bauteile, KatasterKennungBestand bestand,
@@ -171,16 +226,24 @@ public static class KatasterKennungPlanBuilder
                 continue;
             }
 
-            // Ein XTF-Import legt die TID der Datei in Objekt_ID ab, ohne das Geonis-Objekt
-            // zu fuellen. Hat sie SIA405-Form und widerspricht der Tabelle, stammt sie aus
-            // einer neueren Quelle als die Kopie — dann gewinnt sie, und nichts wird
-            // uebernommen. Stimmt sie ueberein, fehlen nur die Verbundkennungen.
+            // Nur eine nachweislich lokale Exportkennung ist ersetzbar. Eine
+            // importierte XTF-TID kann eine echte GEONIS-Kennung sein; allein die
+            // Feldherkunft erlaubt deshalb keinen Austausch gegen eine andere ID.
             var importiert = (bauteil.ObjektId ?? "").Trim();
-            if (SiaObjektkennung.IstGueltig(importiert)
-                && !string.Equals(importiert, kennung.Hauptkennung, StringComparison.Ordinal))
+            if (!string.Equals(importiert, kennung.Hauptkennung, StringComparison.Ordinal))
             {
-                hinweise.Add(new KatasterKennungHinweis(name, KatasterKennungGrund.Abweichend));
-                continue;
+                var herkunft = KatasterKennungHerkunft.Bestimme(
+                    importiert, bauteil.ObjektIdQuelle, bauteil.ObjektIdHandgesetzt);
+
+                if (KatasterKennungHerkunft.BlockiertUebernahme(herkunft))
+                {
+                    hinweise.Add(new KatasterKennungHinweis(
+                        name,
+                        herkunft == KennungsHerkunft.BestaetigtesGeonis
+                            ? KatasterKennungGrund.Abweichend
+                            : KatasterKennungGrund.HerkunftUnklar));
+                    continue;
+                }
             }
 
             positionen.Add(new KatasterKennungPosition(name, kennung, gedreht));

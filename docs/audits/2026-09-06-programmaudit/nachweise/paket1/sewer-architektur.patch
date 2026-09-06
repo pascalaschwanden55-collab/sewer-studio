@@ -1,0 +1,57 @@
+--- sewer-architektur/SKILL.md
++++ sewer-architektur/SKILL.md
+@@ -5,9 +5,9 @@
+ 
+ # SewerStudio-Architektur
+ 
+-Geprüfter Stand: 2026-09-05
+-
+-Zuletzt mit Code geprüft: 2026-09-05
++Geprüfter Stand: 2026-09-06 (Paket 1; übrige Karte zuletzt 05.09.2026)
++
++Zuletzt mit Code geprüft: 2026-09-06 (Dateischutz und Wiederherstellung)
+ 
+ ## Verbindliche Grundlage
+ 
+@@ -17,6 +17,41 @@
+ - Keine God-Class erweitern. Fachlogik in kleine Services legen; UI-Code bleibt dünn.
+ - Öffentliche Fassaden und gespeicherte Formate bei Aufräumarbeiten erhalten.
+ - Keine neuen NuGet-Pakete oder großen Umbauten ohne Rücksprache.
++
++## Audit Paket 1 — Dateischutz und Wiederherstellung (06.09.2026)
++
++- `ProjectPathResolver.EnsureWritableProjectPath` verlangt den Projektroot aus
++  `ProjectFileLocator`. `ProjectMutationPathPolicy` prueft mit injizierten
++  Dateiattributen die Ordnergrenze und alle bestehenden Pfadvorfahren auf
++  Verknuepfungen/Junctions. Fremdpfade und Schreibziele in `Imports`,
++  `Importdateien`, `Projektdateien` und `__RESTORE_POINTS` werden abgewiesen.
++- `ShaftRenameFileService` behaelt Interface, statische Fassade und Registrierung.
++  Sein vorhandenes Datei-I/O bleibt als begrenzte Altlast in `Application/Common`;
++  eine Verlagerung ist kein Bestandteil dieses Pakets.
++- `UseCases/Schaechte/ShaftRenamePlan` plant Dateien, tiefste Unterordner, Haupt-
++  und Fotoordner gemeinsam. Der Ausfuehrer prueft alle Zielkonflikte vorab, schreibt
++  ohne Ueberschreiben und nimmt ausgefuehrte Schritte bei Fehlern rueckwaerts zurueck.
++  Ein bekannter Schachtwurzelordner hat Vorrang vor gleichnamigen Unterordnern.
++- `ShaftProtocolPathChanges` zieht Foto-/Originalfoto-/Videoverweise in Original,
++  Current und History mit demselben Plan nach. Unbewegte Archiv-/Quellverweise
++  bleiben gleich. Inhalte und historische Aenderungsprotokolltexte werden nicht
++  neu geschrieben. `SchaechteShaftRenameController` prueft PDF-Schreibpfade erneut.
++- `JsonProjectRepository.Load` weist JSON-`null` mit `APP-LOAD` ab. Dadurch
++  ueberspringt die bestehende Wiederherstellung ungueltige Sicherungen und sucht
++  die naechste gueltige. `{}` und alte Version-1-Projekte bleiben lesbar.
++- Feste Nachweise: `ShaftRenameSafetyTests`, `ProjectNullRecoveryTests`,
++  `SchaechteRecordDetailsBuilderTests`. Der Junction-Bestandswaechter erwartet jetzt
++  85 statt 84 echte Tests, weil ein neuer Schutzfall dazugekommen ist.
++- Grenzen: Kein dauerhaftes Transaktionsjournal gegen Stromausfall. Eine
++  rueckgaengige Dateioperation kann selbst scheitern; dann wird der Fehler gemeldet.
++  PDF-Inhaltskorrekturen sind weiterhin ein nachgelagerter, separat gemeldeter Schritt.
++  Gleichzeitiges Austauschen eines Pfades durch andere Prozesse ist durch die
++  managed Pfadvorpruefung nicht atomar ausgeschlossen.
++- Bericht und genaue Testergebnisse: `docs/audits/2026-09-06-programmaudit/PAKET-1-ERGEBNIS.md`.
++- Auditpraezisierung: Am 06.09.2026 sechs dokumentierte Python-Sicherheitsausnahmen
++  in zwei Paketen; die fuenf vom 14.08. sind ein historischer Stand.
++  A05 bestand im Paket-1-Gesamtlauf einmal in 1,56 s; die Ursache bleibt offen.
++  CI-Lauf 33967264002 belegt 46,61 % bei 45,35 % Grenze. A10 bleibt Paket 2.
+ 
+ ## Projektimport: nachgeprüfte Regeln (05.09.2026)
+ 

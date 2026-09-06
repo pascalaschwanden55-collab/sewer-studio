@@ -1652,6 +1652,29 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task Ein_Knopf_Abbruch_im_letzten_Importschritt_veroeffentlicht_nichts()
+    {
+        using var abbruch = new CancellationTokenSource();
+        var calls = new List<string>();
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var importer = new OneClickImporterFake(OneClickProjectImportFormat.WinCan) { OnImport = abbruch.Cancel };
+        var controller = new ImportOneClickProjectController(dialogs, () => importer,
+            new OneClickReportWriterFake(), fileStaging: new OneClickStagingServiceFake(new OneClickStagingSessionFake(calls)));
+        var project = new Project();
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            GetProjectFolder: () => @"C:\Projekt", GetProject: () => project,
+            DeepCopyProject: _ => new Project(), ReplaceProject: _ => calls.Add("replace"),
+            CollectionLock: new object(), SaveProject: () => { calls.Add("save"); return true; },
+            SetProgress: _ => { }, AppendSummary: _ => { }, AppendDetails: _ => { },
+            CancellationToken: abbruch.Token));
+        Assert.DoesNotContain("publish", calls);
+        Assert.DoesNotContain("replace", calls);
+        Assert.DoesNotContain("save", calls);
+        Assert.Contains("Import abgebrochen", dialogs.LastInfoMessage);
+        Assert.Equal(string.Empty, dialogs.LastErrorMessage);
+    }
+
     private sealed class OneClickImporterFake : IOneClickProjectImportService
     {
         private readonly OneClickProjectImportFormat _format;

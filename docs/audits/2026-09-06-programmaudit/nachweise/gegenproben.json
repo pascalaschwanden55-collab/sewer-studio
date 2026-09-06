@@ -1,0 +1,72 @@
+[
+  {
+    "test": "Projektdatei laden",
+    "input": "null",
+    "ok": true,
+    "holdings": 0
+  },
+  {
+    "test": "Projektdatei laden",
+    "input": "{}",
+    "ok": true,
+    "holdings": 0
+  },
+  {
+    "test": "Projektdatei laden",
+    "input": "{broken",
+    "ok": false,
+    "holdings": -1
+  },
+  {
+    "test": "Wiederherstellung mit null-Sicherung",
+    "result": {
+      "Recovered": true,
+      "Project": {
+        "Version": 2,
+        "Name": "Neues Projekt",
+        "Description": "",
+        "Id": "b40a4253-a70e-40c3-b60f-fe0d11d1a8a3",
+        "CreatedAtUtc": "2026-09-06T08:15:42.0985041Z",
+        "ModifiedAtUtc": "2026-09-06T08:15:42.0985042Z",
+        "AppVersion": "0.1.0",
+        "Metadata": {
+          "Zone": "",
+          "Gemeinde": "",
+          "Strasse": "",
+          "FirmaName": "",
+          "FirmaAdresse": "",
+          "FirmaTelefon": "",
+          "FirmaEmail": "",
+          "Bearbeiter": "",
+          "Auftraggeber": "",
+          "AuftragNr": "",
+          "InspektionsDatum": "",
+          "Sanieren": "Nein",
+          "Eigentuemer": "Privat"
+        },
+        "Data": [],
+        "SchaechteData": [],
+        "ImportHistory": [],
+        "Conflicts": [],
+        "LastCommittedImportTxId": null
+      },
+      "RecoveredFromPath": "C:\\Sewer-Studio_KI_4.5\\.tmp\\programmaudit-2026-09-06\\repros2\\Recovery\\projekt.json.bak",
+      "QuarantinedPath": "C:\\Sewer-Studio_KI_4.5\\.tmp\\programmaudit-2026-09-06\\repros2\\Recovery\\projekt.corrupt-20260906_101542.json"
+    },
+    "originalStillAtOriginalPath": false
+  },
+  {
+    "test": "Schachtumbenennung mit projektfremder Quelle",
+    "success": true,
+    "sourceFolderStillExists": false,
+    "originalStillAtOriginalPath": false,
+    "movedOutsideProject": true
+  },
+  {
+    "test": "Schacht-PDF im Unterordner",
+    "success": true,
+    "savedReferenceExists": false,
+    "actualPdfRemainsUnderOldName": true,
+    "storedPath": "C:/Sewer-Studio_KI_4.5/.tmp/programmaudit-2026-09-06/repros2/Projekt/Schaechte_Verteilt/987/Sanierung/987.pdf"
+  }
+]

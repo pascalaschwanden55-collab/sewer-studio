@@ -211,21 +211,45 @@ public sealed partial class LegacyXtfImportService
         // VSA_KEK verarbeiten, wenn NICHT bereits erfolgreich als SIA405 importiert
         if (!sia405Imported && isVsa)
         {
-            var records = ParseVsaKek(doc, path, mediaPaths, out _);
-            stats.Found += records.Count;
+            var ergebnis = ParseVsaKek(doc, path, mediaPaths, out _);
+            stats.Found += ergebnis.Haltungen.Count;
 
-            foreach (var rec in records)
+            foreach (var rec in ergebnis.Haltungen)
                 MergeRecordIntoProject(project, rec, FieldSource.Xtf, stats, ctx);
+
+            var beruehrteSchaechte = MergeVsaKekSchaechteIntoProject(project, ergebnis.Schaechte, stats, ctx);
 
             project.ImportHistory.Add(new JsonObject
             {
                 ["type"] = "xtf",
                 ["file"] = Path.GetFileName(path),
                 ["timestampUtc"] = DateTime.UtcNow.ToString("o"),
-                ["count"] = records.Count
+                ["count"] = ergebnis.Haltungen.Count,
+                ["schaechte"] = beruehrteSchaechte
             });
 
-            stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF", Message = $"Importiert {records.Count} Untersuchungen aus {Path.GetFileName(path)}" });
+            // Bauwerke, Untersuchungen und ungeklaerte Faelle getrennt zaehlen. Eine
+            // einzige Zahl "Untersuchungen" liess frueher offen, wie viele Bauwerke
+            // daraus wurden — und verdeckte, dass Schaechte als Haltungen ankamen.
+            stats.Messages.Add(new ImportMessage
+            {
+                Level = "Info",
+                Context = "XTF",
+                Message = $"{Path.GetFileName(path)}: {ergebnis.Untersuchungen} Untersuchungen gelesen — "
+                          + $"{ergebnis.Haltungen.Count} Haltung(en), {beruehrteSchaechte} Schaecht(e), "
+                          + $"{ergebnis.Offene.Count} ungeklaert."
+            });
+
+            foreach (var offen in ergebnis.Offene)
+            {
+                stats.Uncertain++;
+                stats.Messages.Add(new ImportMessage
+                {
+                    Level = "Warn",
+                    Context = "XTF",
+                    Message = $"Untersuchung \"{offen.Bezeichnung}\" nicht zugeordnet: {offen.Grund}"
+                });
+            }
         }
 
         if (!isSia405 && !isVsa)

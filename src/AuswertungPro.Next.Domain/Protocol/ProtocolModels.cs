@@ -79,6 +79,14 @@ public sealed class ProtocolChange
 
 public sealed class ProtocolRevision
 {
+    /// <summary>Beleg der eingelesenen Untersuchung; unabhängig von späteren Handeingaben.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? ImportFingerprint { get; set; }
+
+    /// <summary>Videos genau dieser Untersuchung, auch bei ungeklärter Haupt-/Gegenrolle.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? ImportVideoPaths { get; set; }
+
     public Guid RevisionId { get; set; } = Guid.NewGuid();
     public Guid? BasedOnRevisionId { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

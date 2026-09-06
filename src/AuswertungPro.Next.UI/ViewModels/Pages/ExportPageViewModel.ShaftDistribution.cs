@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -116,10 +116,18 @@ public sealed partial class ExportPageViewModel
             fileTransaction?.StampProject(projectContext.Project);
             var results = batch.Items.Select(ToLegacyDistributionResult).ToList();
             var summary = DistributionSummaryBuilder.BuildShaftDistributionSummary(results);
-            var pdfUpdated = ApplyPdfPathsToSchachtRecords(
-                results,
+            var verknuepfung = SchachtProtokollVerknuepfung.Verknuepfe(
+                batch.Items
+                    .Where(item => item.Success
+                                   && !string.IsNullOrWhiteSpace(item.TargetPdfPath)
+                                   && !string.IsNullOrWhiteSpace(item.ShaftFolder))
+                    .Select(item => (item.TargetPdfPath!, item.ShaftFolder!, item.SourcePdfPath))
+                    .ToList(),
                 projectContext.Project,
                 projectRoot);
+            var pdfUpdated = verknuepfung.Verknuepft;
+            foreach (var offen in verknuepfung.Meldungen)
+                summary += offen + Environment.NewLine;
             var saved = true;
             if (fileTransaction is not null)
             {
@@ -212,64 +220,5 @@ public sealed partial class ExportPageViewModel
         {
             return false;
         }
-    }
-
-    private static int ApplyPdfPathsToSchachtRecords(
-        IReadOnlyList<HoldingFolderDistributor.DistributionResult> results,
-        Project project,
-        string? projectRoot)
-    {
-        var updated = 0;
-        foreach (var result in results)
-        {
-            if (!result.Success
-                || string.IsNullOrWhiteSpace(result.DestPdfPath)
-                || string.IsNullOrWhiteSpace(result.HoldingFolder))
-            {
-                continue;
-            }
-
-            var record = FindShaftRecord(project, result.HoldingFolder);
-            if (record is null)
-                continue;
-
-            record.SetFieldValue(
-                "PDF_Path",
-                ProjectPathResolver.MakeRelativeIfInsideProject(
-                    result.DestPdfPath,
-                    projectRoot));
-            updated++;
-        }
-
-        if (updated > 0)
-        {
-            project.ModifiedAtUtc = DateTime.UtcNow;
-            project.Dirty = true;
-        }
-
-        return updated;
-    }
-
-    private static SchachtRecord? FindShaftRecord(
-        Project project,
-        string shaftFolder)
-    {
-        var segments = shaftFolder.Split(
-            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        for (var index = segments.Length - 1; index >= 0; index--)
-        {
-            var folderName = ProjectPathResolver.SanitizePathSegment(segments[index]);
-            var record = project.SchaechteData.FirstOrDefault(x =>
-                string.Equals(
-                    ProjectPathResolver.SanitizePathSegment(
-                        (x.GetFieldValue("Schachtnummer") ?? "").Trim()),
-                    folderName,
-                    StringComparison.OrdinalIgnoreCase));
-            if (record is not null)
-                return record;
-        }
-
-        return null;
     }
 }

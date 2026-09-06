@@ -369,9 +369,16 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
     /// </summary>
     private async Task ImportKanalProjektAsync()
     {
-        await RunWithSharedImportLockAsync(
-            () => _oneClickProjectController.ExecuteAsync(
-                new Services.ImportOneClickProjectActions(
+        // Derselbe Abbruchanschluss wie beim manuellen Import: Der Ein-Knopf-Weg kopiert
+        // ganze Projekte und muss sich anhalten lassen.
+        _importCts?.Dispose();
+        _importCts = new CancellationTokenSource();
+        CanCancel = true;
+        try
+        {
+            await RunWithSharedImportLockAsync(
+                () => _oneClickProjectController.ExecuteAsync(
+                    new Services.ImportOneClickProjectActions(
                     GetProjectFolder: _shell.GetProjectFolder,
                     GetProject: () => _shell.Project,
                     DeepCopyProject: _projects.DeepCopy,
@@ -382,7 +389,13 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
                     AppendSummary: value => SummaryText += value,
                     AppendDetails: value => DetailsText += value,
                     ComputeSignature: _contentSignature.Compute,
-                    GetProjectPath: () => _settings.LastProjectPath)));
+                        GetProjectPath: () => _settings.LastProjectPath,
+                        CancellationToken: _importCts.Token)));
+        }
+        finally
+        {
+            CanCancel = false;
+        }
     }
 
     private Task RunVsaAfterImport(Project project, string sourceLabel)

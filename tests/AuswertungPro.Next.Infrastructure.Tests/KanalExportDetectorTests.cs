@@ -187,9 +187,12 @@ public sealed class KanalExportDetectorTests
     {
         // Arrange: nur VSA_KEK-XTF, kein KIAS-Pattern (kein .fdb/Film)
         using var tmp = new TempDir();
+        // Seit 2026-09-05 liest die Erkennung den Modellnamen aus dem XML-Kopf statt
+        // die Datei als Text nach einer Zeichenfolge zu durchsuchen. Eine echte XTF ist
+        // INTERLIS-XML; die frueher hier stehende reine Textzeile war kein realer Fall.
         File.WriteAllText(
             System.IO.Path.Combine(tmp.Path, "export.xtf"),
-            "Irgendwas VSA_KEK_2020_LV95 noch mehr Text");
+            "<TRANSFER><HEADERSECTION><MODEL NAME=\"VSA_KEK_2020_LV95\" /></HEADERSECTION></TRANSFER>");
 
         // Act
         var result = KanalExportDetector.Detect(tmp.Path);
@@ -267,9 +270,10 @@ public sealed class KanalExportDetectorTests
         Directory.CreateDirectory(dbDir);
         File.WriteAllText(System.IO.Path.Combine(dbDir, "proj.db3"), "wincan-data");
 
+        // Echte XTF statt blossem Text — siehe Kommentar im IKAS-Test oben.
         File.WriteAllText(
             System.IO.Path.Combine(tmp.Path, "export.xtf"),
-            "Inhalt mit VSA_KEK_2020_LV95 Referenz");
+            "<TRANSFER><HEADERSECTION><MODEL NAME=\"VSA_KEK_2020_LV95\" /></HEADERSECTION></TRANSFER>");
 
         // Act
         var result = KanalExportDetector.Detect(tmp.Path);

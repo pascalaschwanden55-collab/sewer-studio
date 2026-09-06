@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Application.Common;
+﻿using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using AuswertungPro.Next.Application.UseCases.Import;
@@ -17,7 +17,8 @@ internal sealed record ImportOneClickProjectActions(
     Action<string> AppendSummary,
     Action<string> AppendDetails,
     Func<Project, string>? ComputeSignature = null,
-    Func<string?>? GetProjectPath = null);
+    Func<string?>? GetProjectPath = null,
+    CancellationToken CancellationToken = default);
 
 /// <summary>Steuert den vollständigen Ein-Knopf-Import eines Kanalfernseh-Projekts.</summary>
 internal sealed class ImportOneClickProjectController
@@ -89,8 +90,11 @@ internal sealed class ImportOneClickProjectController
 
             actions.SetProgress(
                 "Kanalfernseh-Projekt importieren: erkennen -> archivieren -> parsen -> verteilen...");
+            // Bis 2026-09-05 stand hier CancellationToken.None: Der Ein-Knopf-Import
+            // liess sich nicht abbrechen, auch wenn er Gigabyte kopierte. Der manuelle
+            // Weg hatte diesen Anschluss laengst.
             var context = new ImportRunContext(
-                CancellationToken.None,
+                actions.CancellationToken,
                 null,
                 new ImportRunLog(),
                 collectionLock: actions.CollectionLock,
@@ -105,6 +109,19 @@ internal sealed class ImportOneClickProjectController
             {
                 result = await Task.Run(() =>
                     _createImporter().Import(sourceFolder, projectFolder, targetProject, context));
+                actions.CancellationToken.ThrowIfCancellationRequested();
+            }
+            // Ein Abbruch durch den Benutzer ist kein Fehler: Er bekommt einen Hinweis,
+            // keinen roten Fehlerdialog. Die angelegten Dateien werden auf demselben Weg
+            // zurueckgenommen wie bei einem echten Fehlschlag.
+            catch (OperationCanceledException)
+            {
+                actions.SetProgress(string.Empty);
+                var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
+                _dialogs.Info(
+                    "Import abgebrochen - Projektdaten wurden nicht uebernommen." + rollback,
+                    "Import Kanalfernseh-Projekt");
+                return;
             }
             catch (Exception ex)
             {
@@ -170,6 +187,14 @@ internal sealed class ImportOneClickProjectController
             if (!DarfUebernehmen(urteil, folderBeforeRun, ref legacyRollbackEnabled))
                 return;
 
+            if (actions.CancellationToken.IsCancellationRequested)
+            {
+                var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
+                _dialogs.Info("Import abgebrochen - Projektdaten wurden nicht uebernommen." + rollback,
+                    "Import Kanalfernseh-Projekt");
+                return;
+            }
+
             // Ab hier besitzt ausschliesslich der persistente Marker die Ruecknahme.
             // Das Ordner-Ledger darf veroeffentlichte Dateien nie wieder loeschen.
             legacyRollbackEnabled = false;
@@ -192,7 +217,13 @@ internal sealed class ImportOneClickProjectController
                 : $"Import uebernommen, aber Speichern fehlgeschlagen ({result.Format}):";
             summary += $"\n  {result.Found} Haltungen ({result.Created} neu, {result.Updated} aktualisiert)"
                 + $"\n  {result.Errors} Fehler, {result.Conflicts} Feld-Konflikte"
+                + $"\n  {OneClickImportVollstaendigkeit.Beschreibe(result)}"
                 + "\n  Rohdaten archiviert, Filme/Fotos verteilt (Report in __IMPORT_REPORTS\\)";
+            // Ehrlicher Abschluss: "0 Fehler" ist keine Vollstaendigkeitszusage, wenn der
+            // Lauf gar keine Sollzahl hatte, und jeder fehlerhafte Schritt wird benannt
+            // (Audit 2026-09-05).
+            foreach (var zeile in result.Fehlerbilanz.Berichtszeilen(maxGruendeJeSchritt: 3))
+                summary += "\n  " + zeile;
             if (!saved)
             {
                 summary += "\n  Hinweis: Die Projektdaten liegen nur im Arbeitsspeicher. " +

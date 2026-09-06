@@ -125,24 +125,42 @@ public sealed class KatasterKennungPlanBuilderTests
             KatasterKennungBericht.Schreibe(plan, "x"), StringComparison.Ordinal);
     }
 
-    // Ein XTF-Import legt die TID in Objekt_ID ab. Widerspricht sie der Kopie, stammt sie
-    // aus einer neueren Quelle und gewinnt; stimmt sie ueberein, fehlen nur die
-    // Verbundkennungen und die Uebernahme laeuft.
+    // Geaendert am 2026-09-05 (Arbeitspaket 10): Bis dahin sperrte JEDE Kennung in
+    // SIA405-Form eine abweichende Kopie — die Annahme lautete "gueltige Form heisst,
+    // sie stammt aus einer neueren Katasterquelle". Das ist nicht belegt: Eine XTF-TID
+    // von WinCan sieht genauso aus (ch2585eaef000001) und ist doch nur die Zeilennummer
+    // in einer Exportdatei.
+    //
+    // Der Schutz ist damit nicht schwaecher, sondern an die HERKUNFT gebunden:
+    // Eine bestaetigte Katasterkennung sperrt weiterhin, eine importierte Dateikennung
+    // nicht mehr.
     [Fact]
-    public void Eine_importierte_TID_in_Objekt_ID_sperrt_eine_abweichende_Kopie()
+    public void Nur_eine_belegte_Kennung_sperrt_eine_abweichende_Kopie()
     {
         var bestand = Bestand(BauteilArt.Haltung, HaltungKennung("78998-79002"));
-        var abweichend = Haltung("78998-79002");
-        abweichend.SetFieldValue(FieldKeys.CadastreObjectId, "ch23h1a4NEUERXTF", FieldSource.Xtf405, false);
+
+        // Aus einer importierten Datei: sperrt NICHT mehr.
+        var ausDatei = Haltung("78998-79002");
+        ausDatei.SetFieldValue(FieldKeys.CadastreObjectId, "ch23h1a4NEUERXTF", FieldSource.Xtf405, false);
+
+        // Dieselbe Kennung: die Verbundkennungen duerfen nachgezogen werden.
         var gleich = Haltung("78998-79002");
         gleich.SetFieldValue(FieldKeys.CadastreObjectId, HaltungId, FieldSource.Xtf405, false);
+
+        // Die Lisag-Nummer aus dem WFS hat keine SIA-Form und sagt ohnehin nichts.
         var lisag = Haltung("78998-79002");
         lisag.SetFieldValue(FieldKeys.CadastreObjectId, "866789", FieldSource.Kataster, false);
 
-        var plan = KatasterKennungPlanBuilder.BaueFuerHaltungen([abweichend, gleich, lisag], bestand);
+        // Aus dem Kataster bestaetigt: sperrt weiterhin.
+        var bestaetigt = Haltung("78998-79002");
+        bestaetigt.SetFieldValue(FieldKeys.CadastreObjectId, "ch23h1a4ANDERES0", FieldSource.Kataster, false);
+
+        var plan = KatasterKennungPlanBuilder.BaueFuerHaltungen(
+            [ausDatei, gleich, lisag, bestaetigt], bestand);
 
         Assert.Equal(2, plan.Positionen.Count);
         Assert.Equal(1, plan.Anzahl(KatasterKennungGrund.Abweichend));
+        Assert.Equal(1, plan.Anzahl(KatasterKennungGrund.HerkunftUnklar));
     }
 
     [Fact]

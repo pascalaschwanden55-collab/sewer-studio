@@ -487,6 +487,14 @@ public static partial class HoldingFolderDistributor
 
         foreach (var page in pages)
         {
+            if (Import.ShaftPdfRelevance.IsHoldingPage(page.Text))
+            {
+                if (currentPages is not null && currentParsed is not null)
+                    chunks.Add(new PdfShaftChunk(currentPages, currentParsed));
+                currentPages = null;
+                currentParsed = null;
+                continue;
+            }
             var parsed = ParseSchachtPdfPageWithOcrFallback(page);
             if (!parsed.Success)
             {

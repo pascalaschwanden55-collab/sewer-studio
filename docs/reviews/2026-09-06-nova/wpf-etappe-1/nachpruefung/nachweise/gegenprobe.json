@@ -1,0 +1,26 @@
+[
+  {
+    "result": "constructed",
+    "width": 1100,
+    "height": 650,
+    "applicationStartupInvoked": false,
+    "projectLoaded": false
+  },
+  {
+    "check": "W01_FormularSnapshot",
+    "shownAfterChange": "Alt",
+    "actualAfterChange": "Neue Tabellenkorrektur",
+    "finalValue": "Alt + Zusatz im Formular",
+    "staleValueReproduced": true,
+    "newerValueOverwritten": true,
+    "scope": "Produktfactory, Datensatz und produktiver CommitHaltungDetailField; ohne ViewModel, Autosave oder vollstaendige Oberflaechenbedienung",
+    "projectLoaded": false
+  },
+  {
+    "check": "W03_FormularZuklappen",
+    "heightBefore": 220,
+    "heightAfter": 220,
+    "checkedAfter": false,
+    "scope": "Layout ohne ViewModel und ohne Fensterstart"
+  }
+]

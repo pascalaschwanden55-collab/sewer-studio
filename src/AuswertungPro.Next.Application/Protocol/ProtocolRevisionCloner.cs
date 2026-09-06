@@ -21,6 +21,8 @@ public static class ProtocolRevisionCloner
         {
             RevisionId = Guid.NewGuid(),
             BasedOnRevisionId = source.BasedOnRevisionId,
+            ImportFingerprint = source.ImportFingerprint,
+            ImportVideoPaths = source.ImportVideoPaths?.ToList(),
             CreatedAt = DateTimeOffset.UtcNow,
             CreatedBy = user,
             Comment = comment,

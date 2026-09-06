@@ -1,0 +1,34 @@
+{
+  "checkedAtUtc": "2026-09-06T15:10:18.853995+00:00",
+  "branch": "feature/nova-etappe-1",
+  "head": "a09d414ec14d1ec9eac361bb79a4b68d285212ad",
+  "base": "69fd0a671",
+  "commitCount": 9,
+  "worktreeClean": true,
+  "mainHead": "69fd0a671524503d5b680789b04feb2759956795",
+  "mainStatusLineCount": 82,
+  "trackedPathOverlap": [
+    "CLAUDE.md"
+  ],
+  "mergeNotExecuted": true,
+  "productBuildNotRepeated": true,
+  "testScope": "42 gezielte Tests aus vorhandener Debug-Assembly; kein erneuter Gesamtlauf",
+  "sourceToBinaryBuildIdentity": "Nicht durch eigenen Neuaufbau verifiziert. Codebefunde separat am Branch-Quelltext kontrolliert.",
+  "assemblies": [
+    {
+      "path": "C:\\Sewer-Studio_KI_4.5-nova\\src\\AuswertungPro.Next.UI\\bin\\Debug\\net10.0-windows10.0.19041\\SewerStudio.dll",
+      "sha256": "28115c38029f5c9d061334d7971b5780194158bd8877507b7cedc7d8d2a23115",
+      "lastWriteUtc": "2026-09-06T14:40:04.329446+00:00"
+    },
+    {
+      "path": "C:\\Sewer-Studio_KI_4.5-nova\\src\\AuswertungPro.Next.UI\\bin\\Debug\\net10.0-windows10.0.19041\\AuswertungPro.Next.Domain.dll",
+      "sha256": "bc1cd40e638b411be6822993c148a969fdbf0fcd0491375ae185274ce676b545",
+      "lastWriteUtc": "2026-09-06T14:39:48.235740+00:00"
+    },
+    {
+      "path": "C:\\Sewer-Studio_KI_4.5-nova\\tests\\AuswertungPro.Next.UI.Tests\\bin\\Debug\\net10.0-windows10.0.19041\\AuswertungPro.Next.UI.Tests.dll",
+      "sha256": "ec2f81b4a9ecbce88d9cc50c78e5485d91461491c86ae73c400293f46eabda32",
+      "lastWriteUtc": "2026-09-06T14:43:13.469212+00:00"
+    }
+  ]
+}

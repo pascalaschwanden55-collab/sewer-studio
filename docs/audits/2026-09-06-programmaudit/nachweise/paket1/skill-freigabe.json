@@ -1,0 +1,9 @@
+{
+  "target": "C:\\Users\\Besitzer\\.codex\\skills\\sewer-architektur\\SKILL.md",
+  "approved_patch": "sewer-architektur.patch",
+  "applied_at": "2026-09-06T09:43:09.118069+00:00",
+  "before_sha256": "d0636877e3da5526534629770458b6059c42924b115b65e88dac0e064d2ec622",
+  "after_sha256": "902f59e04d93f70aebcf16dc37e7ad4d4a4507e78cdfdec44b9de1fcbde5931a",
+  "validation": "Skill is valid!",
+  "user_approval": "ja — Freigabe für den globalen Architektur-Skill"
+}

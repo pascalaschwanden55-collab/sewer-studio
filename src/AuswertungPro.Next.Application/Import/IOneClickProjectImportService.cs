@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Import;
 
@@ -34,6 +34,15 @@ public sealed record OneClickProjectImportResult(
 
     /// <summary>Protokoll der geprueften Importquellen. Null = kein Urteil moeglich.</summary>
     public AuswertungPro.Next.Application.UseCases.Import.Quellen.QuellenwahlErgebnis? Quellenprotokoll { get; init; }
+
+    /// <summary>
+    /// Fehler nach Schritten getrennt. <see cref="ImportFehlerbilanz.Gesamt"/> muss
+    /// <see cref="Errors"/> entsprechen; sonst hat ein Teilschritt seine Fehler verloren.
+    /// </summary>
+    public ImportFehlerbilanz Fehlerbilanz { get; init; } = ImportFehlerbilanz.Leer;
+
+    /// <summary>Was nach dem Lauf im Projekt steht — Videos, Protokolle, Befunde.</summary>
+    public ImportBestandsbilanz? Bestand { get; init; }
 }
 
 /// <summary>Importiert einen vollständigen Kanalfernseh-Projektordner.</summary>

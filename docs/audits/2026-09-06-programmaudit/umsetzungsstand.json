@@ -1,0 +1,15 @@
+{
+  "date": "2026-09-06",
+  "fixed": [
+    "A01",
+    "A02",
+    "A03"
+  ],
+  "passed": 15120,
+  "failed": 1,
+  "skipped": 12,
+  "remaining_failure": "A04",
+  "A05": "Dieser Lauf bestanden; frühere Hänger nicht behoben",
+  "global_architecture_skill": "Nach ausdrücklicher Nutzerfreigabe aktualisiert und validiert",
+  "report": "PAKET-1-ERGEBNIS.md"
+}

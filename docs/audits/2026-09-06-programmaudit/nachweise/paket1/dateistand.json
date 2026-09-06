@@ -1,0 +1,46 @@
+[
+  {
+    "path": "src/AuswertungPro.Next.Application/Common/ProjectPathResolver.cs",
+    "sha256": "4830f4d4e6bce0c63e3fb79669ff5a86096e937dc81eb791d84398ea4747654d"
+  },
+  {
+    "path": "src/AuswertungPro.Next.Application/Common/ProjectMutationPathPolicy.cs",
+    "sha256": "21fff1ecc0505daad1fd6576e4c2ec5f9fd6d31593d53a7485899fd8f93c0199"
+  },
+  {
+    "path": "src/AuswertungPro.Next.Application/Common/ShaftRenameService.cs",
+    "sha256": "ec45ede40e2db6c6c4e0557376ee5f7040b7d55291ae12f0066ba034c5374f44"
+  },
+  {
+    "path": "src/AuswertungPro.Next.Application/UseCases/Schaechte/ShaftRenamePlan.cs",
+    "sha256": "b4587f16137479cad8b24f7dccbabb7e7880d85534ab4aeb9c2fa0e1b70d3d79"
+  },
+  {
+    "path": "src/AuswertungPro.Next.Application/UseCases/Schaechte/ShaftProtocolPathChanges.cs",
+    "sha256": "f5c791e47989a9b60cd5df830d1711715a9004c848410a377254157a7739c86c"
+  },
+  {
+    "path": "src/AuswertungPro.Next.Infrastructure/Projects/JsonProjectRepository.cs",
+    "sha256": "3a4a2d97a3305d4a801e9524359ff9559b07943eefc19401e549776b40d4f2ff"
+  },
+  {
+    "path": "src/AuswertungPro.Next.UI/DataPage/SchaechteShaftRenameController.cs",
+    "sha256": "d66e35879fe4b4c113b03c3cf7f6a0180824d09973293970eb0d67e815bf79ce"
+  },
+  {
+    "path": "tests/AuswertungPro.Next.Infrastructure.Tests/ShaftRenameSafetyTests.cs",
+    "sha256": "5fef20294ffcc66fdfee0114b39e315844a87bf0b55cad0c58f805b80fbcef1c"
+  },
+  {
+    "path": "tests/AuswertungPro.Next.Infrastructure.Tests/Projects/ProjectNullRecoveryTests.cs",
+    "sha256": "8a6c0bcfe7361497f8f96b76a7d8e98a618310c1d6b31d0cdf83f72ddd059bdd"
+  },
+  {
+    "path": "tests/AuswertungPro.Next.Infrastructure.Tests/Backup/JunctionCapabilityGateTests.cs",
+    "sha256": "fbf5a7e0b4915214a8eef5065f59bd5aa7625d14e632e537c168ff88592f688f"
+  },
+  {
+    "path": "tests/AuswertungPro.Next.UI.Tests/SchaechteRecordDetailsBuilderTests.cs",
+    "sha256": "2499c4893f25d5b3750184779a95005b509b2d771609ac486abe555b274f4bf7"
+  }
+]

@@ -1,0 +1,257 @@
+[
+  {
+    "id": "A01",
+    "priority": "Sofort",
+    "kind": "Fehler bestätigt",
+    "title": "Schachtumbenennung kann Kundenoriginale verändern",
+    "consequence": "Beim Ändern einer Schachtnummer kann ein Ordner ausserhalb des Projekts verschoben werden. Auch fremde PDF-Dateien gelangen ungefiltert zur Textkorrektur.",
+    "proof": "Künstliches Projekt und getrennte Kundenquelle angelegt. Umbenennung 123 → 456 meldet Erfolg. Der ursprüngliche Quellenordner verschwindet; die Datei liegt danach ausserhalb des Projekts unter 456/456.pdf. Die Oberfläche ruft genau diesen Dienst auf. Zusätzlich sammelt CollectPdfPaths absolute fremde PDF-Pfade ohne Eigentumsprüfung. Diese zweite Variante ist durch den Aufrufpfad belegt; eine echte Kunden-PDF wurde nicht verändert.",
+    "remedy": "Vor jeder Änderung Projektgrenze und Verknüpfungen prüfen. Pfade ausserhalb des Projektordners abweisen. PDF-Korrektur nur in eigenen Arbeitsdateien; Importarchive bleiben geschützt. Alle beteiligten Ordner gemeinsam vorprüfen.",
+    "acceptance": "Originalpfad und SHA-256 bleiben bei Umbenennung unverändert. Tests für absolute Fremdpfade, fehlenden Projektpfad, Junctions und vorhandene Zielordner bestehen. Änderungen treffen nur eigene Projektkopien.",
+    "source": [
+      [
+        "src/AuswertungPro.Next.Application/Common/ShaftRenameService.cs",
+        127
+      ],
+      [
+        "src/AuswertungPro.Next.UI/DataPage/SchaechteShaftRenameController.cs",
+        33
+      ],
+      [
+        "src/AuswertungPro.Next.UI/DataPage/SchaechteShaftRenameController.cs",
+        63
+      ],
+      [
+        "src/AuswertungPro.Next.Infrastructure/HoldingDistribution/PdfTextLayerRewriter.cs",
+        55
+      ]
+    ],
+    "package": "Paket 1"
+  },
+  {
+    "id": "A02",
+    "priority": "Hoch",
+    "kind": "Fehler bestätigt",
+    "title": "Schacht-PDF im Unterordner wird nach Umbenennung nicht mehr gefunden",
+    "consequence": "Die gespeicherte Verknüpfung zeigt auf eine Datei, die so nicht existiert. Das Programm meldet trotzdem Erfolg.",
+    "proof": "Testdatei Schaechte_Verteilt/789/Sanierung/789.pdf. Umbenennung 789 → 987: Ordner heisst danach 987, Datei weiterhin 789.pdf. Gespeicherter Verweis erwartet jedoch Sanierung/987.pdf. File.Exists liefert false.",
+    "remedy": "Dateiumbenennungen und Verweise aus demselben geprüften Änderungsplan ableiten. Unterordner und Fotoordner einbeziehen. Fehler eines Teilordners als Fehler melden und vorherige Änderungen zurückrollen.",
+    "acceptance": "Nach erfolgreichem Umbenennen existiert jeder zuvor existierende verknüpfte Pfad. Unterordner, mehrere PDFs und Zielkollisionen sind abgedeckt.",
+    "source": [
+      [
+        "src/AuswertungPro.Next.Application/Common/ShaftRenameService.cs",
+        226
+      ],
+      [
+        "src/AuswertungPro.Next.Application/Common/ShaftRenameService.cs",
+        278
+      ]
+    ],
+    "package": "Paket 1"
+  },
+  {
+    "id": "A03",
+    "priority": "Hoch",
+    "kind": "Fehler bestätigt",
+    "title": "Ungültige Projektdatei wird als leeres Projekt akzeptiert",
+    "consequence": "Ein beschädigtes Projekt kann scheinbar leer geöffnet werden. Die Wiederherstellung kann mit einer unbrauchbaren Sicherung Erfolg melden.",
+    "proof": "JsonProjectRepository.Load mit Dateiinhalt null liefert Ok=true und null Haltungen. Gegenprobe {broken wird korrekt abgewiesen. TryRecover mit beschädigter Hauptdatei und einer null-Sicherung liefert Recovered=true, ein leeres Projekt und verschiebt die Hauptdatei in Quarantäne. Die Quarantäne bleibt erhalten; eine endgültige Löschung wurde nicht beobachtet.",
+    "remedy": "JSON-null und unpassende Wurzeltypen ablehnen. Vor der Wiederherstellung die Struktur prüfen. Ungültige Sicherungen überspringen und die nächste gültige versuchen. Alte zulässige Projektformate weiterhin unterstützen.",
+    "acceptance": "null-Hauptdatei wird nicht normal geöffnet. null-Sicherung wird übersprungen. Eine ältere gültige Sicherung wird verwendet. Ein absichtlich leeres, gültiges Projekt bleibt lesbar.",
+    "source": [
+      [
+        "src/AuswertungPro.Next.Infrastructure/Projects/JsonProjectRepository.cs",
+        44
+      ],
+      [
+        "src/AuswertungPro.Next.Infrastructure/Projects/ProjectRecoveryService.cs",
+        63
+      ]
+    ],
+    "package": "Paket 1"
+  },
+  {
+    "id": "A04",
+    "priority": "Hoch",
+    "kind": "Testfehler bestätigt",
+    "title": "Eine zu grosse Klasse ist weiter gewachsen",
+    "consequence": "Die vereinbarte Architekturprüfung schlägt fehl. Weitere Änderungen an dieser zentralen Importklasse werden schwerer überprüfbar.",
+    "proof": "MaintainabilityFitnessTests.Partial_types_cannot_hide_growth_across_many_small_files schlägt im Gesamtlauf und im Wiederholungslauf fehl. HoldingFolderDistributor: 3.071 Zeilen in sechs Dateien; erlaubter Bestand 3.064. Auch sieben zusätzliche Zeilen verletzen die bewusst feste Wachstumsgrenze. Die sieben zusätzlichen Zeilen stammen aus dem bereits vorhandenen, nicht committeten Import-Arbeitsbaum; nicht aus dem unveränderten Commit vom Vortag.",
+    "remedy": "Die neu hinzugekommene Verantwortung in einen passenden kleinen Dienst verlagern. Bestehende öffentliche Aufrufe behalten. Die Grenze nicht einfach hochsetzen.",
+    "acceptance": "Architekturtest besteht ohne Erhöhung der erlaubten Klassengrösse. Betroffene Import- und Verteilungstests bleiben grün.",
+    "source": [
+      [
+        "tests/AuswertungPro.Next.UI.Tests/MaintainabilityFitnessTests.cs",
+        17
+      ],
+      [
+        "tests/AuswertungPro.Next.UI.Tests/MaintainabilityFitnessTests.cs",
+        118
+      ],
+      [
+        "src/AuswertungPro.Next.Infrastructure/HoldingFolderDistributor.cs",
+        1
+      ]
+    ],
+    "package": "Paket 2"
+  },
+  {
+    "id": "A05",
+    "priority": "Hoch",
+    "kind": "Prüfung blockiert",
+    "title": "Ein Oberflächentest bleibt wiederholt hängen",
+    "consequence": "Die Funktionsprüfung der Nachschlagmenüs ist auf diesem Rechner nicht erfolgreich abgeschlossen. Der vollständige Testweg bleibt rot.",
+    "proof": "NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern scheitert zweimal am 60-Sekunden-Limit im getrennten WPF-Prozess. Die Wiederholung ohne Abdeckungsmessung und mit normalen Windows-Rechten scheitert ebenfalls. Der genaue Hängepunkt und ein entsprechender Fehler der laufenden Anwendung sind damit noch nicht bewiesen. Die Nachprüfung des Nutzers bestätigt das Limit auch einzeln. Eine reine Lastabhängigkeit ist damit keine ausreichende Erklärung. Der namentliche Auszug aus ui-rerun.log liegt unter nachweise/paket1/nachschlag-nachweis.md.",
+    "remedy": "Den getrennten Testprozess mit Schrittmarken oder Thread-Aufzeichnung untersuchen. Den wartenden Oberflächenaufruf eingrenzen. Erst dann Test oder Produktcode gezielt korrigieren.",
+    "acceptance": "Der isolierte Kontextmenütest und danach die ganze UI-Suite bestehen. Die Menüs erscheinen bei leeren Feldern und erhalten fremde Eigentümerwerte.",
+    "source": [
+      [
+        "tests/AuswertungPro.Next.UI.Tests/NachschlagKontextmenueTests.cs",
+        48
+      ],
+      [
+        "tests/AuswertungPro.Next.UI.Tests/StaTestRunner.cs",
+        33
+      ]
+    ],
+    "package": "Paket 2"
+  },
+  {
+    "id": "A06",
+    "priority": "Hoch",
+    "kind": "Konflikt bestätigt",
+    "title": "Trainingsprüfungen kollidieren mit einem gleichnamigen Python-Paket",
+    "consequence": "Drei Testdateien werden bei normalem Aufruf gar nicht geladen. Fehler in diesen Hilfsprogrammen könnten unbemerkt bleiben.",
+    "proof": "In der vorhandenen Sidecar-Umgebung wird training aus dem installierten SAM-2-Paket geladen. training.scripts existiert dort nicht. Betroffen sind test_osd_archiv_abdeckung_messung.py, test_osd_layout_review_bericht.py und test_osd_prefix_fallback_bericht.py. Ein nur für den Audit verwendeter Namensraum-Lader führt ihre 13 Tests erfolgreich aus. Der normale Aufruf bleibt fehlerhaft.",
+    "remedy": "Den lokalen Trainingsbereich eindeutig paketieren oder eindeutige Importe verwenden. Trainings- und Review-Tests in die automatische Prüfung aufnehmen. Die produktive Paketkombination zusätzlich reproduzierbar testen.",
+    "acceptance": "Alle Trainingsdateien werden mit dem normalen dokumentierten Aufruf ohne besonderen Audit-Lader gesammelt und geprüft. Der gleiche Aufruf läuft in CI.",
+    "source": [
+      [
+        "training/scripts/tests/test_osd_archiv_abdeckung_messung.py",
+        8
+      ],
+      [
+        "training/scripts/tests/test_osd_layout_review_bericht.py",
+        3
+      ],
+      [
+        "training/scripts/tests/test_osd_prefix_fallback_bericht.py",
+        3
+      ],
+      [
+        ".github/workflows/ci.yml",
+        80
+      ]
+    ],
+    "package": "Paket 2"
+  },
+  {
+    "id": "A07",
+    "priority": "Mittel",
+    "kind": "Komponente fehlt",
+    "title": "Der zusätzliche Trainingsagent besitzt noch vier leere Arbeitsschritte",
+    "consequence": "Dieser Hilfsagent kann Export, Training, Bewertung und Vergleich noch nicht durchgängig ausführen. Das betrifft den zusätzlichen Python-Agenten; die WPF-Trainingsfunktionen sind eigenständig vorhanden.",
+    "proof": "training/agent/schicht1.py ruft export_dataset.py, train_detect.py, run_eval.py und doppellauf.py unter training/scripts auf. Alle vier Dateien fehlen. Der Code meldet das ehrlich mit ok=false und TODO. Bestehende Agententests machen daraus keinen fertigen Trainingsablauf.",
+    "remedy": "Die vier Schritte an vorhandene geprüfte Dienste anbinden oder den Agenten sichtbar als unfertig kennzeichnen. Keine zweite, abweichende Export- oder Freigabelogik aufbauen.",
+    "acceptance": "Ein kleiner vollständiger Agentendurchlauf erzeugt einen Datensatz, einen Kandidaten und einen Vergleichsbericht. Modellfreigabe bleibt ein gesonderter, gemessener Schritt.",
+    "source": [
+      [
+        "training/agent/schicht1.py",
+        19
+      ],
+      [
+        "training/agent/schicht1.py",
+        56
+      ]
+    ],
+    "package": "Paket 4"
+  },
+  {
+    "id": "A08",
+    "priority": "Hoch",
+    "kind": "Freigabe fehlt",
+    "title": "9/10-Erkennungsqualität ist nicht belegt",
+    "consequence": "Viele bestandene Softwaretests belegen noch keine zuverlässige Schadenserkennung. Die KI braucht eine getrennte fachliche Abnahme.",
+    "proof": "sidecar/models/model_qualification.json kennzeichnet den alten YOLO-Detektor ausdrücklich als qualified=false wegen nahezu gleicher Boxen auf unterschiedlichen Bildern. active.json beschreibt einen separaten Klassifikator und historische 57-Bilder-Messungen; das ist kein aktueller Gesamtnachweis. DINO und SAM sind zusätzliche Verfahren. Die Sperre des ungeeigneten Detektors ist eine sinnvolle Schutzfunktion.",
+    "remedy": "Klare Abnahmedaten nach Haltungen trennen. Fehler je Schadenklasse, Leerbild-Fehlalarme, Meter- und Zeitfehler sowie Laufzeiten messen. Nur Kandidaten mit vollständigem Bericht freigeben. Bei Rückfall oder fehlendem Modell einen verständlichen Status anzeigen.",
+    "acceptance": "Ein unabhängiger, versionierter Videosatz erreicht vorher fachlich festgelegte Grenzwerte. Datenaufteilung, Modellhash, Klassenkarte und Ergebnisbericht sind nachvollziehbar. Keine Freigabe allein wegen erfolgreichem GPU-Start.",
+    "source": [
+      [
+        "sidecar/models/model_qualification.json",
+        1
+      ],
+      [
+        "sidecar/models/active.json",
+        1
+      ],
+      [
+        "tests/AuswertungPro.Next.Pipeline.Tests/SidecarE2eSmokeContractTests.cs",
+        103
+      ]
+    ],
+    "package": "Paket 3"
+  },
+  {
+    "id": "A09",
+    "priority": "Hoch",
+    "kind": "Bekannte Restlücke",
+    "title": "Die Python-Sicherheitsprüfung enthält weiterhin Ausnahmen",
+    "consequence": "Der Sicherheitscheck ist dokumentiert, aber nicht frei von bekannten Meldungen. Ein Teil der Modellumgebung ist nicht durch diesen Paketcheck abgedeckt.",
+    "proof": "Aktueller Online-Lauf: 88 PyPI-Pins geprüft, sechs Meldungen durch sechs vorhandene Ausnahmen gedeckt. Betroffen sind setuptools 81.0.0 und transformers 4.57.6. Drei CUDA-/Git-Pins bleiben ungeprüft. NuGet meldet für 52 Projekte keine bekannten verwundbaren Pakete. uv bestätigt die Verträglichkeit aller 91 installierten Python-Pakete; das ist keine Sicherheitsfreigabe.",
+    "remedy": "Für jede Ausnahme Verantwortlichen, Begründung, betroffenen Aufrufpfad und erneuten Prüftermin festhalten. Eine kompatible modernisierte Modellumgebung getrennt erproben. Die drei Sonderpakete separat beurteilen.",
+    "acceptance": "Keine neue unbegründete Meldung. Ausnahmen besitzen aktuellen Nachweis und Termin. Die tatsächlich verwendete Kombination besteht Modell-, Sicherheits- und Integrationstests.",
+    "source": [
+      [
+        "sidecar/security/lock_audit_exceptions.json",
+        1
+      ],
+      [
+        "sidecar/requirements-lock.txt",
+        1
+      ],
+      [
+        "sidecar/security/audit_lock.py",
+        1
+      ]
+    ],
+    "package": "Paket 3"
+  },
+  {
+    "id": "A10",
+    "priority": "Mittel",
+    "kind": "Qualitätsprüfung rot",
+    "title": "Die Abdeckungsgrenze ist veraltet und misst nicht nur Produktcode",
+    "consequence": "Die automatische Abdeckungsprüfung scheitert trotz gestiegener Rohquote. Ihre Zahl eignet sich nicht als direkte Aussage über alle Programmfunktionen.",
+    "proof": "GitHub-Lauf 33967264002 vom 05.09.2026, Commit c1021e76: Alle vier .NET-Testschritte bestanden; der anschliessende Schritt Testabdeckung pruefen scheitert. Er meldet 358.420 von 768.970 Zeilen = 46,61 % bei 45,35 % Grenze und verlangt das Nachziehen auf 46,61 %. Der lokale Auditlauf liefert 46,58 %. Die getrennte lokale Produktcode-Auswertung vereinigt Dateipfad und Zeilennummer: 74,59 % unter src. Diese Quoten haben verschiedene Nenner. CI-Metadaten und Originalprotokoll wurden am 06.09.2026 direkt über GitHub CLI nachgeprüft und gesichert.",
+    "remedy": "Die bestehende CI-Grenze anhand des bereits belegten GitHub-Laufs 33967264002 mit 46,61 % nachziehen; einen beibehaltenen Puffer ausdrücklich dokumentieren. Keinen lokalen Messwert verwenden. Eine spätere getrennte Produktcode-Grenze benötigt eine eigene belastbare CI-Messung.",
+    "acceptance": "Dokumentierter Messumfang, reproduzierbare Quote und grünes Abdeckungstor. Ein mehrfach eingebundenes Modul zählt nur einmal in der Produktquote.",
+    "source": [
+      [
+        ".github/scripts/check-coverage.ps1",
+        47
+      ],
+      [
+        ".github/coverage-baseline.json",
+        1
+      ]
+    ],
+    "package": "Paket 2"
+  },
+  {
+    "id": "A11",
+    "priority": "Hoch",
+    "kind": "Schnittstelle offen",
+    "title": "GEONIS-Rückabgleich ist noch kein vollständiger Arbeitsablauf",
+    "consequence": "Ein gültiger XTF-Export allein verhindert keine Konflikte mit zwischenzeitlichen Änderungen in GEONIS.",
+    "proof": "Der aktuelle Import-Fortschrittsbericht nennt zwei offene Teile ausdrücklich: kein Änderungsmanifest mit Ausgangswerten je Objekt und keine vorhandene INTERLIS2→GEONIS-Abgleichsschnittstelle. Vorhandene Export-, Kennungs- und Rundreisetests bestehen. Es wurde im Audit keine echte GEONIS-Datenbank beschrieben.",
+    "remedy": "Neu-Export und Rückabgleich im Programm klar unterscheiden. Einen Plan mit Ausgangswerten und Konfliktbehandlung entwerfen. Den Import in das Zielsystem gemeinsam an einer getrennten Testdatenbank abnehmen.",
+    "acceptance": "Zwischenzeitliche Änderungen werden als Konflikte angezeigt. Ein freigegebener Abgleich verändert ausschliesslich die vorgesehenen Objekte. Unbeteiligte Objekte bleiben gleich.",
+    "source": [
+      [
+        "docs/PROJEKTIMPORT-TERRA-FORTSCHRITT.md",
+        1370
+      ]
+    ],
+    "package": "Paket 4"
+  }
+]
