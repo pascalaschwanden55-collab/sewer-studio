@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
+using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Theme;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
@@ -23,13 +25,13 @@ public static class DataGridWrappingTextColumnFactory
                 Mode = BindingMode.TwoWay,
                 UpdateSourceTrigger = UpdateSourceTrigger.LostFocus
             },
-            ElementStyle = CreateDisplayStyle(implicitStyleResolver(typeof(TextBlock))),
+            ElementStyle = CreateDisplayStyle(implicitStyleResolver(typeof(TextBlock)), fieldName),
             EditingElementStyle = CreateEditStyle(implicitStyleResolver(typeof(TextBox))),
             Width = DataGridLength.SizeToHeader
         };
     }
 
-    private static Style CreateDisplayStyle(Style? baseStyle)
+    private static Style CreateDisplayStyle(Style? baseStyle, string fieldName)
     {
         var style = new Style(typeof(TextBlock), baseStyle);
         style.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding("Foreground")
@@ -39,6 +41,13 @@ public static class DataGridWrappingTextColumnFactory
         style.Setters.Add(new Setter(TextBlock.TextWrappingProperty, TextWrapping.NoWrap));
         style.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
         style.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
+        if (DataPageColumnStyleRules.IstNamensspalte(fieldName))
+            style.Setters.Add(new Setter(TextBlock.FontWeightProperty, FontWeights.SemiBold));
+        if (DataPageColumnStyleRules.IstZahlenspalte(fieldName))
+        {
+            style.Setters.Add(new Setter(TextBlock.FontFamilyProperty, System.Windows.Application.Current?.TryFindResource("FontMono") ?? new FontFamily("Consolas")));
+            style.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Right));
+        }
         return style;
     }
 
