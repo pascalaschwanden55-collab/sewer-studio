@@ -57,6 +57,20 @@ public partial class RecordDetailsView : UserControl
         Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(item.BeendeBearbeitung));
     }
 
+    public static readonly DependencyProperty IsHeaderVisibleProperty =
+        DependencyProperty.Register(nameof(IsHeaderVisible), typeof(bool), typeof(RecordDetailsView),
+            new PropertyMetadata(true));
+
+    /// <summary>
+    /// Kopfbereich (Titel, Untertitel, Anpassen) anzeigen. Die Eingabefelder unter der Haltungsliste
+    /// (Nova-Etappe 1) tragen ihre Ueberschrift selbst im Expander und blenden ihn aus.
+    /// </summary>
+    public bool IsHeaderVisible
+    {
+        get => (bool)GetValue(IsHeaderVisibleProperty);
+        set => SetValue(IsHeaderVisibleProperty, value);
+    }
+
     public static readonly DependencyProperty HeaderProperty =
         DependencyProperty.Register(nameof(Header), typeof(string), typeof(RecordDetailsView),
             new PropertyMetadata("Details"));

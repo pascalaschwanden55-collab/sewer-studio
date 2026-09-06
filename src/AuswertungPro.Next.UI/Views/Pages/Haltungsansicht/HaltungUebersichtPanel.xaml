@@ -13,6 +13,20 @@
     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="12">
         <DockPanel DataContext="{Binding Record, ElementName=Root}">
+            <!-- Ohne Auswahl: Hinweis statt leerer Beschriftungen -->
+            <TextBlock DockPanel.Dock="Bottom" Text="Keine Haltung gewählt. Links eine Zeile wählen."
+                       Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,8,0,0">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
             <!-- Kopf: Titel, Haltungsname, Zustandsklasse als Chip mit lesbarer Tinte -->
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                 <Border DockPanel.Dock="Right" HorizontalAlignment="Right" MinWidth="34" Height="22" Padding="6,0"

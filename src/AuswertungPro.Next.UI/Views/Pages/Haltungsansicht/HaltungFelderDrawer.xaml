@@ -58,7 +58,7 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Expander IsExpanded="True" Margin="0,0,8,0" Header="{Binding Title}" VerticalAlignment="Top">
-                                <controls:RecordDetailsView IsCompactLayout="True" Groups="{Binding EinzelGruppe}"/>
+                                <controls:RecordDetailsView IsCompactLayout="True" IsHeaderVisible="False" Groups="{Binding EinzelGruppe}"/>
                             </Expander>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

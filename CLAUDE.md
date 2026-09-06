@@ -764,8 +764,12 @@ erweiterte `DesignAuditSchriftskalaTests`, `DesignAuditContrastTests`, `DesignAu
   Themen des `DataPageRecordDetailsBuilder` nebeneinander als Expander ueber den unveraenderten
   `RecordDetailsView`, Feldsuche nur ueber die Beschriftung). Beide Trennlinien merken sich ihre Lage
   ueber `SplitterPersistenceBehavior` mit `ViewPersonalization.ViewKey="DataPage"` und den Schluesseln
-  `HaltungenUebersicht` / `HaltungenEingabefelder`; `DataPageWorkspaceLayoutPolicy` haelt bei
-  1366 x 768 mindestens sieben Zeilen sichtbar. Die alte Haltungsansicht bleibt ueber den Toggle
+  `HaltungenUebersicht` / `HaltungenEingabefelder`; `DataPageWorkspaceLayoutPolicy.Berechne` haelt
+  mindestens sieben Zeilen sichtbar und klappt die Eingabefelder bei Platzmangel automatisch zu
+  (Sichtprobe 06.09.2026: bei 1366 x 768 bleiben nur rund 400 px fuer Liste und Eingabefelder;
+  aufgeklappt sind es 5 Zeilen). Die Anbindung liegt in `DataPageNovaWorkspaceController`, die
+  Partial-Klasse `DataPage` reicht nur ihre Elemente herein (Waechter: 2000 Zeilen). Der
+  Detail-Renderer laeuft dort mit `RecordDetailsView.IsHeaderVisible=false`. Die alte Haltungsansicht bleibt ueber den Toggle
   erreichbar; `AppSettings.ShowHaltungenNovaLayout=false` macht sie wieder zum Standard. Beim Wechsel
   werden Spalten und Zeilen der Arbeitsflaeche auf 0 gesetzt, damit keine Luecke bleibt. Zugeklappte
   Eingabefelder lassen nur die Kopfzeile stehen und geben der Liste die Flaeche zurueck

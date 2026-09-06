@@ -609,18 +609,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
         };
     }
 
-    /// <summary>
-    /// Nova-Etappe 1 (Nachpruefung W01): Der Datensatz hat sich seit der Anzeige geaendert
-    /// (Tabelle oder Dienst). Die neuere Korrektur bleibt stehen; die Formulareingabe wird
-    /// nicht still darueber geschrieben, sondern in der Kopfzeile der Eingabefelder gemeldet.
-    /// Kein Service-Locator: Die Meldung bleibt in der Seite (UiArchitectureGuardTests).
-    /// </summary>
-    private void MeldeFormularKonflikt(string fieldName, string aktuellerWert, string eingabe)
-    {
-        var label = FieldCatalog.Get(fieldName).Label;
-        FelderDrawer.Hinweis = $"„{label}“ wurde inzwischen auf „{aktuellerWert}“ geändert. Die Eingabe „{eingabe}“ wurde nicht übernommen.";
-    }
-
     private void CommitHaltungDetailField(HaltungRecord record, string fieldName, string? value)
     {
         var next = value ?? string.Empty;

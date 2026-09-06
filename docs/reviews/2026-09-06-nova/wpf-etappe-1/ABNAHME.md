@@ -33,18 +33,18 @@ Ergebnis: **bestanden** / **fehlgeschlagen** / **offen** (manuell, noch nicht ge
 | A7 | Systemmonitor als Aufklapper mit Pulspunkt, zugeklappt beim Start; Kopf „Systemleistung", bei gesperrten Sensoren „Sensoren gesperrt" und ruhender Punkt | bestanden | `MainWindow.xaml` (Expander `IsExpanded="False"`, Style-Trigger auf `Monitor.IsSensorBlocked`), `DesignAuditThemeResourceTests`; Nachpruefung W02 |
 | A8 | Haltungen-Werkzeugleiste: genau eine Hauptaktion, `Video pruefen` mit `PlayVideoCommand`, alle bisherigen Befehle ueber `Weitere Aktionen` erreichbar | bestanden | `DesignAuditCommandReachabilityTests` (+2), `DataPageToolbarLayoutTests`, `XamlActionWiringGuardTests` |
 | A9 | Spaltenansichten: sechs Ansichten, Haltungsname immer vorn, jedes Feld im `FieldCatalog` | bestanden | `DataPageColumnViewCatalogTests` |
-| A10 | Spaltenansicht nach Neustart erhalten (`DataPageLayout.ActiveColumnView`) | offen | Sichtpruefung am Programm: Ansicht „Kompakt" waehlen, Programm neu starten, Chip bleibt aktiv |
+| A10 | Spaltenansicht nach Neustart erhalten (`DataPageLayout.ActiveColumnView`) | bestanden | Sichtprobe: Chip „Kompakt" in Phase 1 gewaehlt, nach Neustart `chip_kompakt_aktiv = On` (`nachweise/sichtprobe/bericht-phase2.json`, `p2-01-haltungen-1366x768.png`) |
 | A11 | Eingabefelder unten: mindestens sieben Zeilen sichtbar bei 1366 x 768 (Rechenregel) | bestanden | `DataPageWorkspaceLayoutPolicyTests` (556 px Flaeche, 32 px Zeile, 32 px Kopf) |
-| A12 | Sieben Zeilen sichtbar bei 1366 x 768 am laufenden Programm, Windows-Skalierung 100 % | offen | Bildschirmfoto `nachweise/haltungen-1366x768-100.png` anlegen |
-| A13 | Dasselbe bei Skalierung 125 % und 150 % | offen | Bildschirmfotos `nachweise/haltungen-125.png`, `nachweise/haltungen-150.png` |
-| A14 | Uebersicht rechts zeigt Name, Zustandsklasse, Material, DN, Laenge, Inspektion und Primaere Schaeden der gewaehlten Haltung | offen (XAML belegt) | `DesignAuditNovaHaltungenTests.Uebersicht_verwendet_die_Zustandsklassen_Tinte`; Sichtpruefung am Programm |
-| A15 | Eingabefelder in den Themen des Detail-Builders, Feldsuche „Baujahr" laesst nur dieses Feld stehen | bestanden (Regel) / offen (Sicht) | `HaltungFelderDrawerFilterTests`; Sichtpruefung am Programm |
-| A16 | Trennlinien (Uebersicht-Breite, Eingabefelder-Hoehe) merken sich ihre Lage nach Neustart | offen | `SplitterPersistenceBehavior` mit `ViewKey="DataPage"` verdrahtet (`DesignAuditNovaHaltungenTests`); Sichtpruefung: ziehen, neu starten, Lage vergleichen |
-| A17 | Toggle „Haltungsansicht" zeigt weiter die alte Ansicht; Uebersicht, Eingabefelder und Trennlinien verschwinden dabei ohne Luecke | offen | `DataPage.NovaWorkspace.cs` `SetNovaWorkspaceVisible`; Sichtpruefung am Programm |
-| A18 | Jede Aktion aus „Weitere Aktionen" einmal ausgeloest (Medien suchen, Leere Felder aus QGIS, Katasterkennungen, Strassen, drei Sanierungs-, zwei Hydraulik-Punkte, Dossier, Abdocken, Ansicht-Punkte) | offen | Am Programm mit geoeffnetem Projekt; jeder Punkt traegt weiter denselben Command wie vor der Etappe (`DesignAuditCommandReachabilityTests`) |
+| A12 | Sieben Zeilen sichtbar bei 1366 x 768 am laufenden Programm, Windows-Skalierung 100 % | bestanden (mit Aenderung) | Sichtprobe: `sichtbare_zeilen = 7` (`p1-01-haltungen-1366x768.png`). Nur weil die Eingabefelder bei Platzmangel automatisch zugeklappt werden; aufgeklappt bleiben 5 Zeilen (Abschnitt „Sichtprobe") |
+| A13 | Dasselbe bei Skalierung 125 % und 150 % | offen | Die Windows-Skalierung wurde nicht autonom umgestellt (Systemeinstellung der Arbeitsstation). Bleibt bei Pascal |
+| A14 | Uebersicht rechts zeigt Name, Zustandsklasse, Material, DN, Laenge, Inspektion und Primaere Schaeden der gewaehlten Haltung | bestanden | Sichtprobe: `uebersicht_texte = Z2, 10003-10004, Steinzeug, 350, 35.9, 2026, BCD Rohranfang …` (`p1-02-zeile3-uebersicht.png`); ohne Auswahl Hinweis „Keine Haltung gewaehlt" |
+| A15 | Eingabefelder in den Themen des Detail-Builders, Feldsuche „Baujahr" laesst nur dieses Feld stehen | bestanden | `HaltungFelderDrawerFilterTests`; Sichtprobe: fuenf Themen (`p1-03b-eingabefelder-auf.png`), Suche „Baujahr" laesst ein Eingabefeld im Thema „Weitere Angaben" (`p1-04-feldsuche-baujahr.png`, `feldsuche_baujahr_editfelder = 1`) |
+| A16 | Trennlinien (Uebersicht-Breite, Eingabefelder-Hoehe) merken sich ihre Lage nach Neustart | bestanden (Breite) / bedingt (Hoehe) | Sichtprobe: Uebersicht 312 -> 372 px gezogen, nach Neustart 372 px. Eingabefelder 116 -> 186 px gezogen und gespeichert; nach Neustart bei 1366 x 768 gilt die Hoehenregel (Platzmangel: zugeklappt, geoeffnet 116 px). Die gespeicherte Hoehe wirkt erst, wenn sieben Zeilen daneben Platz haben |
+| A17 | Toggle „Haltungsansicht" zeigt weiter die alte Ansicht; Uebersicht, Eingabefelder und Trennlinien verschwinden dabei ohne Luecke | bestanden | Sichtprobe `p1-08-haltungsansicht.png`: alte Liste plus Detail ueber die ganze Breite, `FelderDrawer` nicht mehr im Automationsbaum; zurueck 5 Zeilen |
+| A18 | Jede Aktion aus „Weitere Aktionen" einmal ausgeloest | teilweise | Sichtprobe: Menue geoeffnet, 16 Punkte plus Untermenues sichtbar (`p1-05-weitere-aktionen.png`, `weitere_aktionen_punkte`). Die Punkte selbst wurden im kuenstlichen Projekt nicht ausgeloest (QGIS, Kataster, Hydraulik, Dossier brauchen echte Daten); ihre Befehle sind unveraendert (`DesignAuditCommandReachabilityTests`) |
 | A19 | `DataPage.xaml.cs` bleibt unter 1000 Zeilen; neue Logik in `DataPage.ColumnViews.cs` und `DataPage.NovaWorkspace.cs` | bestanden | 875 Zeilen; `MaintainabilityFitnessTests` |
 | A20 | Kundenoriginale unberuehrt: seit `69fd0a671` nur Pfade unter `src`, `tests`, `docs` und `CLAUDE.md` geaendert | bestanden | `git diff --name-only 69fd0a671..HEAD` liefert keinen anderen Pfad |
-| A21 | Die App wurde in dieser Etappe nicht autonom gestartet | bestanden (bewusst) | Autosave „bei jeder Aenderung" koennte das geoeffnete Projekt schreiben; Sichtpruefungen A10, A12-A18 bleiben deshalb bei Pascal |
+| A21 | Die App wurde nur isoliert gestartet | bestanden | Eigener Einstellungsordner (`SEWERSTUDIO_APPDATA_DIR`), kuenstliches Projekt mit 14 Haltungen, Wissensordner ueber `SEWERSTUDIO_KNOWLEDGE_ROOT` auf den echten `C:\KI_BRAIN` (der KI-Spiegel haette sonst eine leere Quelle gesehen; Log: „0 kopiert, 116739 unveraendert, 0 entfernt"). Pascals Einstellungen und Projekte wurden nicht beruehrt |
 
 ## Testlauf
 
@@ -98,6 +98,56 @@ liegt jetzt unter `nachweise/` (siehe Nachtrag „Release-Lauf" am Ende).
   nicht ein zweiter Detail-Renderer.
 - Nicht Teil der Etappe: Uebersichtsseite, Schaechte, Player, Training Studio, Chip „Naechste
   Aufgabe", Palettenwechsel Glas/Cockpit.
+
+## Sichtprobe am laufenden Programm (6. September 2026, 1366 x 768, 100 %)
+
+Werkzeug: `nachweise/sichtprobe/werkzeug/` (PowerShell mit UI-Automation, `profil.py` fuer den
+isolierten Einstellungsordner, `ProjektBauer` erzeugt das Projekt ueber das echte
+`JsonProjectRepository`). Ablauf und Messwerte: `bericht-phase1.json` (hell, frisches Profil) und
+`bericht-phase2.json` (dunkel, nach Neustart). Bildschirmfotos `p1-*.png`, `p2-*.png`.
+
+| Messung | Phase 1 | Phase 2 (Neustart, dunkel) |
+|---|---|---|
+| Fenster | 1366 x 768 | 1366 x 768 |
+| Sichtbare Zeilen beim Oeffnen | 7 | 7 |
+| Eingabefelder beim Oeffnen | zugeklappt, 50 px | zugeklappt, 50 px |
+| Eingabefelder vom Benutzer geoeffnet | 116 px, 5 Zeilen | 116 px, 5 Zeilen |
+| Uebersicht-Breite | 312 px, gezogen auf 372 px | 372 px (gespeichert) |
+| Chip „Kompakt" | gewaehlt | aktiv (gespeichert) |
+| Feldsuche „Baujahr" | 1 Eingabefeld | – |
+| „Weitere Aktionen" | 16 Punkte + Untermenues | – |
+| Haltungsansicht-Toggle | alte Ansicht, keine Luecke | – |
+
+Drei Erkenntnisse daraus, alle im Code nachgezogen:
+
+1. **Sieben Zeilen gehen bei 1366 x 768 nur mit zugeklappten Eingabefeldern.** Die vier
+   Werkzeugzeilen ueber der Liste (KI-Status, Werkzeugleiste, Suche, Spaltenansichten) plus
+   Filterzeile lassen rund 400 px fuer Liste und Eingabefelder; sieben Zeilen zu 38 px plus
+   Tabellenkopf brauchen 320 px. `DataPageWorkspaceLayoutPolicy.Berechne` liefert deshalb
+   `Zugeklappt`, wenn Mindesthoehe plus sieben Zeilen nicht passen; `DataPageNovaWorkspaceController`
+   klappt dann automatisch zu, und ein spaeteres Oeffnen durch den Benutzer bleibt bis zum
+   naechsten Seitenaufbau bestehen. Auf groesseren Bildschirmen bleiben die Eingabefelder offen.
+2. **Die gespeicherte Trennlinienhoehe darf das Zuklappen nicht aufheben.** `SplitterPersistenceBehavior`
+   schreibt beim Laden der Trennlinie die gespeicherte Hoehe in die Zeile, auch wenn sie
+   ausgeblendet ist; der Controller wendet nach `Loaded` den Zustand erneut an (erster Lauf: 219 px
+   Zeile bei zugeklapptem Kopf, 3 sichtbare Zeilen).
+3. **Der Detail-Renderer zeigte in jedem Thema seinen eigenen Kopf „Details".** `RecordDetailsView`
+   hat jetzt `IsHeaderVisible`; die Eingabefelder blenden ihn aus, die Ueberschrift traegt der Expander.
+
+Ausserdem: Die Uebersicht zeigt ohne Auswahl „Keine Haltung gewaehlt", und die Anbindung der
+Arbeitsflaeche liegt in `DataPageNovaWorkspaceController` (Waechter `MaintainabilityFitnessTests`
+hatte die Partial-Klasse `DataPage` bei 2011 Zeilen gestoppt).
+
+Offen nach der Sichtprobe:
+
+- Skalierung 125 % und 150 % (A13) — Systemeinstellung, nicht autonom umgestellt.
+- Im dunklen Thema ist der aktive `CompactToggleButton` (Chip „Kompakt", Toggle „Eingabefelder")
+  kontrastarm, und die gewaehlte Tabellenzeile erscheint hell mit hellem Text (`p2-02-nach-neustart-geoeffnet.png`).
+  Beides sind bestehende Theme-Stile, nicht Teil dieser Etappe; gehoert in den Palettenwechsel
+  Glas/Cockpit der Etappe 2.
+- Die gespeicherte Hoehe der Eingabefelder wird in einem Fenster ohne Platz fuer sieben Zeilen
+  nicht angewendet (A16); dort gilt die Mindesthoehe.
+- Der Konflikthinweis (W01) wurde nur per Test, nicht am Programm ausgeloest.
 
 ## Nachtrag: Release-Lauf (6. September 2026, nach W01 bis W03)
 

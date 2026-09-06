@@ -284,6 +284,10 @@
                     <Setter Property="BorderThickness" Value="1"/>
                     <Setter Property="CornerRadius" Value="12"/>
                     <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsHeaderVisible, ElementName=Root}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+
                         <DataTrigger Binding="{Binding IsCompactLayout, ElementName=Root}" Value="True">
                             <Setter Property="Margin" Value="0,0,0,8"/>
                             <Setter Property="Padding" Value="14,10"/>
