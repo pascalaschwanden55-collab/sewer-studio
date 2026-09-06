@@ -149,7 +149,21 @@ Offen nach der Sichtprobe:
   nicht angewendet (A16); dort gilt die Mindesthoehe.
 - Der Konflikthinweis (W01) wurde nur per Test, nicht am Programm ausgeloest.
 
-## Nachtrag: Release-Lauf (6. September 2026, nach W01 bis W03)
+## Nachtrag: Release-Lauf nach der Sichtprobe (6. September 2026, Stand `45cbb3fdc`)
+
+Gleiche Befehle wie unten. Build: 0 Fehler, 0 Warnungen (`nachweise/release-build.log`).
+
+| Projekt | bestanden | uebersprungen | Fehler |
+|---|---|---|---|
+| ProjectModernizer.Tests | 62 | 0 | 0 |
+| Pipeline.Tests | 2545 | 3 | 0 |
+| Infrastructure.Tests | 6008 | 6 | 0 |
+| UI.Tests | 6395 | 4 | 0 |
+
+Protokolle: `nachweise/release-test.log` und `nachweise/testlauf-release.zip` (vier TRX-Dateien mit
+`SHA256SUMS.txt`); dieser Lauf ersetzt die Protokolle des Laufs `da273697e`.
+
+## Nachtrag: Release-Lauf (6. September 2026, nach W01 bis W03, Stand `da273697e`)
 
 Befehle im Worktree `C:\Sewer-Studio_KI_4.5-nova`, Stand `da273697e`:
 
