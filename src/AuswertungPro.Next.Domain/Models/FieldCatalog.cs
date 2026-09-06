@@ -167,6 +167,7 @@ public static class FieldCatalog
             [FieldKeys.NominalDiameterMm] = new(FieldKeys.NominalDiameterMm, "Lichte Höhe / DN mm", FieldType.Int),
             [FieldKeys.UsageType] = new(FieldKeys.UsageType, "Nutzungsart", FieldType.Combo, ComboItems[FieldKeys.UsageType]),
             [FieldKeys.HoldingLengthMeters] = new(FieldKeys.HoldingLengthMeters, "Haltungslänge m", FieldType.Decimal),
+            [FieldKeys.SlopePromille] = new(FieldKeys.SlopePromille, "Gefälle ‰", FieldType.Decimal),
             ["Inspektionsrichtung"] = new("Inspektionsrichtung", "Inspektionsrichtung", FieldType.Combo, ComboItems["Inspektionsrichtung"]),
             ["Primaere_Schaeden"] = new("Primaere_Schaeden", "Primäre Schäden", FieldType.Multiline),
             [FieldKeys.ConditionClass] = new(FieldKeys.ConditionClass, "Zustandsklasse", FieldType.Combo, ComboItems[FieldKeys.ConditionClass]),

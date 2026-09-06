@@ -7,27 +7,27 @@
         <ctrl:PercentToColorConverter x:Key="PercentToColorConverter"/>
 
         <Style x:Key="MetricTitleText" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
 
         <Style x:Key="MetricDetailText" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="9.5"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="Opacity" Value="0.95"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
 
         <Style x:Key="MetricTinyText" TargetType="TextBlock" BasedOn="{StaticResource MetricDetailText}">
-            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
         </Style>
 
         <Style x:Key="MetricPercentText" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Consolas"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextL}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="TextAlignment" Value="Right"/>
             <Setter Property="MinWidth" Value="36"/>

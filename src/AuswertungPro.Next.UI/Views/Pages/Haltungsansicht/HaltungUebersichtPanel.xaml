@@ -1,0 +1,98 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.Haltungsansicht.HaltungUebersichtPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
+             xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage"
+             x:Name="Root">
+    <UserControl.Resources>
+        <local:SchadenMeterConverter x:Key="SchadenMeterConv"/>
+        <local:SchadenKlartextConverter x:Key="SchadenKlartextConv"/>
+        <local:ZustandsklasseBrushConverter x:Key="ZkBrushConv"/>
+        <dp:ZustandsklasseInkConverter x:Key="ZkInkConv"/>
+    </UserControl.Resources>
+    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="12">
+        <DockPanel DataContext="{Binding Record, ElementName=Root}">
+            <!-- Ohne Auswahl: Hinweis statt leerer Beschriftungen -->
+            <TextBlock DockPanel.Dock="Bottom" Text="Keine Haltung gewählt. Links eine Zeile wählen."
+                       Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,8,0,0">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <!-- Kopf: Titel, Haltungsname, Zustandsklasse als Chip mit lesbarer Tinte -->
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                <Border DockPanel.Dock="Right" HorizontalAlignment="Right" MinWidth="34" Height="22" Padding="6,0"
+                        CornerRadius="{DynamicResource RadiusS}"
+                        Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}"
+                        ToolTip="Zustandsklasse">
+                    <TextBlock Text="{Binding Fields[Zustandsklasse], StringFormat=Z{0}}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               FontSize="{DynamicResource TextS}" FontWeight="SemiBold"
+                               Foreground="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkInkConv}}"/>
+                </Border>
+                <TextBlock Text="Übersicht" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Fields[Haltungsname]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                           FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextTrimming="CharacterEllipsis"/>
+            </DockPanel>
+            <!-- Eckdaten -->
+            <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,0,0,8">
+                <StackPanel Margin="0,0,8,6">
+                    <TextBlock Text="Material" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{Binding Fields[Rohrmaterial]}" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextBrush}"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,0,6">
+                    <TextBlock Text="DN mm" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{Binding Fields[DN_mm]}" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextBrush}"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,8,6">
+                    <TextBlock Text="Länge m" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{Binding Fields[Haltungslaenge_m]}" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextBrush}"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,0,6">
+                    <TextBlock Text="Inspektion" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{Binding Fields[Datum_Jahr]}" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextBrush}"/>
+                </StackPanel>
+            </UniformGrid>
+            <TextBlock DockPanel.Dock="Top" Text="Primäre Schäden" FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextBrush}" Margin="0,4,0,6"/>
+            <!-- Schadensliste: Doppelklick oeffnet die Beobachtungen wie in der Haltungsansicht -->
+            <ListBox ItemsSource="{Binding Entries, ElementName=Root}" BorderThickness="0" Background="Transparent"
+                     MouseDoubleClick="Schaden_MouseDoubleClick" AutomationProperties.Name="Primäre Schäden"
+                     ToolTip="Doppelklick öffnet die Beobachtungen"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="{DynamicResource RadiusS}"
+                                    Padding="6,2" Margin="0,0,8,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Code}" FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold"
+                                           FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/>
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="{Binding Converter={StaticResource SchadenKlartextConv}}"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextBrush}"/>
+                            <TextBlock Grid.Column="2" Text="{Binding Converter={StaticResource SchadenMeterConv}}"
+                                       FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+    </Border>
+</UserControl>

@@ -770,6 +770,62 @@ Nachgelagerte Grossumbauten vom 2026-08-14:
   liegen unter `Infrastructure/Ai/Backup`; `KnowledgeBackupService.BackupResult` und
   die bisherigen Aufrufer bleiben unveraendert.
 
+### Nova-Etappe 1 (2026-09-06, Leiste und Haltungsseite)
+
+Quelle ist der freigegebene Prototyp `docs/reviews/2026-09-06-nova/optimiert/v2/`, Plan
+`docs/superpowers/plans/2026-09-06-nova-wpf-etappe-1.md`, Abnahme
+`docs/reviews/2026-09-06-nova/wpf-etappe-1/ABNAHME.md`. Umgesetzt und durch Waechter gehalten
+(`ZustandsklasseInkPolicyTests`, `ShellNavigationGroupsTests`, `DataPageColumnViewCatalogTests`,
+`DataPageWorkspaceLayoutPolicyTests`, `HaltungFelderDrawerFilterTests`, `DesignAuditNovaHaltungenTests`,
+erweiterte `DesignAuditSchriftskalaTests`, `DesignAuditContrastTests`, `DesignAuditCommandReachabilityTests`):
+
+- Zustandsklassen-Marken (Chips in Haltungs- und Schachtansicht, Uebersicht) tragen eine Textfarbe je
+  Klasse mit mindestens 4,5:1 (`ZustandsklasseInkPolicy`, `ZustandsklasseInkConverter`). Die
+  Tabellenzellen behalten ihre schwarze Tinte aus `ZustandsklasseCellStyleFactory`.
+- KI-Farbtoken `KiBrush`, `KiSubtleBrush`, `KiTextBrush` in beiden Themes, getrennt vom Akzent;
+  `KiTextBrush` erreicht auf `CardBrush` und `KiSubtleBrush` den Normaltext-Kontrast.
+- Die Leiste ist in Projekt, Daten, Bewertung, System gruppiert (`ShellNavigationGroups`, `NavItem.Group`,
+  `CollectionViewSource` ohne Sortierung); der Systemmonitor ist ein zugeklappter Aufklapper mit
+  `NeuralPulseDot` und dem Kopf „Systemleistung", bei gesperrten Sensoren „Sensoren gesperrt"
+  (Nachpruefung W02: `IsSensorBlocked` beschreibt Hardwaresensoren, nicht die KI; eine echte
+  Bereitschaftsanzeige braucht die KI-Pruefungen und ist noch nicht gebaut). Die Schriftskala
+  gilt seit dieser Etappe auch fuer `Setter Property="FontSize"` (22 XAML-Dateien umgestellt).
+- Haltungen: eine Hauptaktion (Speichern, `ToolbarButtonAccent`), sichtbar Neu, Loeschen, `Video pruefen`
+  und der Knopf `Weitere Aktionen`, dessen Kontextmenue alle bisherigen Aktionen samt Ansicht-Menue
+  und Abdocken traegt; Gruppenkoepfe sind dort keine deaktivierten Menuepunkte (XamlActionWiringGuard).
+  Spaltenansichten Kompakt, Stammdaten, Bewertung, Sanierung, Kosten, Alle
+  (`DataPageColumnViewCatalog`, `DataPageColumnViewController` blendet nur Sichtbarkeit; gespeichert in
+  `DataPageLayout.ActiveColumnView`). `PDF_Path` ist keine Haltungsspalte und steht deshalb nicht in Kompakt.
+- Standardlayout der Haltungen: Liste | Uebersicht rechts (`HaltungUebersichtPanel`, nur lesend,
+  Doppelklick auf einen Schaden = Beobachtungen) | Eingabefelder unten (`HaltungFelderDrawer`, die
+  Themen des `DataPageRecordDetailsBuilder` nebeneinander als Expander ueber den unveraenderten
+  `RecordDetailsView`, Feldsuche nur ueber die Beschriftung). Beide Trennlinien merken sich ihre Lage
+  ueber `SplitterPersistenceBehavior` mit `ViewPersonalization.ViewKey="DataPage"` und den Schluesseln
+  `HaltungenUebersicht` / `HaltungenEingabefelder`; `DataPageWorkspaceLayoutPolicy.Berechne` haelt
+  mindestens sieben Zeilen sichtbar und klappt die Eingabefelder bei Platzmangel automatisch zu
+  (Sichtprobe 06.09.2026: bei 1366 x 768 bleiben nur rund 400 px fuer Liste und Eingabefelder;
+  aufgeklappt sind es 5 Zeilen). Die Anbindung liegt in `DataPageNovaWorkspaceController`, die
+  Partial-Klasse `DataPage` reicht nur ihre Elemente herein (Waechter: 2000 Zeilen). Der
+  Detail-Renderer laeuft dort mit `RecordDetailsView.IsHeaderVisible=false`. Die alte Haltungsansicht bleibt ueber den Toggle
+  erreichbar; `AppSettings.ShowHaltungenNovaLayout=false` macht sie wieder zum Standard. Beim Wechsel
+  werden Spalten und Zeilen der Arbeitsflaeche auf 0 gesetzt, damit keine Luecke bleibt. Zugeklappte
+  Eingabefelder lassen nur die Kopfzeile stehen und geben der Liste die Flaeche zurueck
+  (`HaltungFelderDrawer.IsOpen`, Nachpruefung W03, Waechter `DataPageNovaLayoutIsolatedSmokeTests`).
+- **Tabelle und Formular teilen sich den Datensatz live (Nachpruefung W01).** `DataPageDetailLiveSync`
+  haengt an `HaltungRecord.PropertyChanged` und schreibt jede Feldaenderung ueber
+  `RecordDetailItem.UebernehmeAusDatensatz` ohne Rueckschreiben ins Formular. Waehrend ein Editor den
+  Tastaturfokus hat (`IsEditing`, gesetzt vom `RecordDetailsView`), wird eine externe Aenderung nur
+  gemerkt und erst nach dem Rueckschreiben der Bindung angezeigt. Der Rueckschreibweg der
+  `DataPageDetailItemFactory` vergleicht `Ausgangswert` und aktuellen Datensatzwert
+  (`IstKonflikt`): Hat sich der Datensatz seit der Anzeige geaendert, bleibt die neuere Korrektur
+  stehen, das Formular zeigt sie, und die verworfene Eingabe steht als Hinweis in der Kopfzeile
+  der Eingabefelder (kein Service-Locator in der Seite, `UiArchitectureGuardTests`). Nie wieder
+  eine Momentaufnahme still ueber einen neueren Wert schreiben. Waechter:
+  `DataPageFormularTabelleAbgleichTests` (Ablauf Alt -> Neue Tabellenkorrektur -> Zusatz).
+- Nicht umgesetzt (Etappe 2): Uebersichtsseite, Schaechte, Player, Training Studio, Chip „Naechste
+  Aufgabe" (braucht einen fachlichen Pruefstatus je Haltung), Palettenwechsel Glas/Cockpit,
+  animierte Symbole ueber den bestehenden `MotionSettings`-Rahmen hinaus.
+
 ## Build & Test
 ```bash
 dotnet build AuswertungPro.sln
@@ -2944,3 +3000,13 @@ Codes sind hierarchisch aufgebaut: **Hauptcode** (2-3 Buchstaben) + **Char1** (U
 ## Nova-Abschluss: Video-Kopienregel (2026-09-06)
 
 Die Behandlung mehrdeutiger Video-Treffer liegt vollstaendig in `HoldingDistribution/VideoKopienAufloeser.LoeseTreffer`. `HoldingFolderDistributor.FindVideo` delegiert darauf; die grosse Verteilerklasse bleibt unter ihrer bisherigen Groessengrenze. Bestehende Medienkopien- und Importtests pruefen unveraendertes Verhalten.
+
+
+## Nova-Nachpruefung abgeschlossen (2026-09-06)
+
+- Mindest-Bildschirmaufloesung laut Nutzer: Full HD (1920 x 1080). 1366 x 768 ist lediglich eine zusaetzliche Fensterprobe. Windows-Skalierung 125 und 150 Prozent wurde auf Full HD nach einem Neustart des isolierten Pruefhosts gemessen. 150 Prozent ergibt weniger Arbeitsflaeche; F11 schafft mehr Tabellenplatz.
+- `DataPageHydraulikReportCalculator` verwendet fuer Einzel-PDF und Dossier das Projektgefaelle in Promille. DN und Gefaelle muessen positiv und endlich sein; keine stillen Ersatzwerte 300 mm / 5 Promille. Die Berichtskonvention bleibt Halbfuellung (DN / 2); Materialzustand und Temperatur kommen weiterhin aus den Panel-Einstellungen. Der Bericht ist keine Kopie der frei veraenderten Panel-Berechnung.
+- `FieldCatalog.Definitions` benennt den vorhandenen Schluessel `SlopePromille` als Gefaelle in Promille. `DataPageRecordDetailsBuilder` bietet ihn immer als Stammdaten-Eingabe an, auch ohne bisherigen Projektwert. Die feste `ColumnOrder` fuer Tabellenexporte bleibt erhalten; das gespeicherte Dictionary-Format aendert sich nicht.
+- `DataPageProjectBindingController` aktualisiert bei Aenderungen der Haltungsliste auch die Auswahlbefehle. Nach oben/unten reagiert damit ohne erneute Auswahl. Keine zusaetzliche Kartenrueckmeldung.
+- Auswahlfarben und die Zellentext-Vererbung sind in beiden Themes vereinheitlicht. Kontextmenues besitzen einen ScrollViewer, damit auf Full HD bei 150 Prozent auch die letzten Eintraege erreichbar sind. Keine neuen Abhaengigkeiten oder Registrierungen.
+- Nachweise, Pruefgrenzen und verstaendliche HTML-Uebersicht: `docs/reviews/2026-09-06-nova/wpf-etappe-1/abschluss/`. Die isolierte Bedienprobe startet weder produktiven App-Startup noch Spiegel oder QGIS-Bruecke und belegt keine vollstaendige Programmabnahme.

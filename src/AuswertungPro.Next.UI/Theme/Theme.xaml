@@ -12,6 +12,14 @@
     <Color x:Key="ColorAccentLight">#FF6CB6FF</Color>
     <Color x:Key="ColorAccentSubtle">#FF1C3050</Color>
 
+    <!-- Sichtbare Auswahl: eigene Flaeche, lesbarer Text und deutliche Kontur. -->
+    <Color x:Key="ColorSelection">#FF30587A</Color>
+    <Color x:Key="ColorSelectionText">#FFE6EDF3</Color>
+    <Color x:Key="ColorSelectionBorder">#FF6CB6FF</Color>
+    <SolidColorBrush x:Key="SelectionBackgroundBrush" Color="{StaticResource ColorSelection}"/>
+    <SolidColorBrush x:Key="SelectionTextBrush" Color="{StaticResource ColorSelectionText}"/>
+    <SolidColorBrush x:Key="SelectionBorderBrush" Color="{StaticResource ColorSelectionBorder}"/>
+
     <!-- ── SURFACES — Layered depth: BgMid < BgLight < Card < Header ── -->
     <Color x:Key="ColorBgLight">#FF21262D</Color>
     <Color x:Key="ColorBgMid">#FF1A1F26</Color>
@@ -31,6 +39,10 @@
     <Color x:Key="ColorDanger">#FFF85149</Color>
     <Color x:Key="ColorWarning">#FFD29922</Color>
     <Color x:Key="ColorInfo">#FF539BF5</Color>
+    <!-- KI: eigene Farbe getrennt vom Akzent, damit KI-Vorschlag und Bedienelement unterscheidbar sind -->
+    <Color x:Key="ColorKi">#FF3FD6C6</Color>
+    <Color x:Key="ColorKiSubtle">#FF1E3A44</Color>
+    <Color x:Key="ColorKiText">#FF7FE6DA</Color>
 
     <!-- ── SOLID BRUSHES ── -->
     <SolidColorBrush x:Key="BgLightBrush" Color="{StaticResource ColorBgLight}"/>
@@ -65,6 +77,9 @@
     <SolidColorBrush x:Key="DangerTextBrush" Color="#FFFF7B72"/>
     <SolidColorBrush x:Key="WarningTextBrush" Color="#FFD29922"/>
     <SolidColorBrush x:Key="InfoTextBrush" Color="#FF79C0FF"/>
+    <SolidColorBrush x:Key="KiBrush" Color="{StaticResource ColorKi}"/>
+    <SolidColorBrush x:Key="KiSubtleBrush" Color="{StaticResource ColorKiSubtle}"/>
+    <SolidColorBrush x:Key="KiTextBrush" Color="{StaticResource ColorKiText}"/>
 
     <!-- Subtle-Hintergruende fuer Erfolg-/Fehler-Abzeichen (Badges) — dunkel abgestimmt -->
     <SolidColorBrush x:Key="SuccessSubtleBrush" Color="#FF14432A"/>
@@ -554,18 +569,44 @@
         <Setter Property="MinHeight" Value="30"/>
         <Setter Property="MinWidth" Value="0"/>
         <Setter Property="Padding" Value="10,4"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
         <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="SelectionSurface" CornerRadius="4"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
         <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource RowHoverBrush}"/>
+            </Trigger>
             <Trigger Property="IsChecked" Value="True">
-                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
-                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource SelectionBorderBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource SelectionBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource SelectionTextBrush}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource SelectionBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="2"/>
+                <Setter Property="Padding" Value="9,3"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.55"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -726,12 +767,10 @@
         <Setter Property="Padding" Value="4,2"/>
         <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background">
-                    <Setter.Value>
-                        <SolidColorBrush Color="{StaticResource ColorAccentSubtle}"/>
-                    </Setter.Value>
-                </Setter>
-                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource SelectionBackgroundBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource SelectionBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Foreground" Value="{DynamicResource SelectionTextBrush}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -742,11 +781,9 @@
                 <Setter Property="Background" Value="{DynamicResource RowHoverBrush}"/>
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background">
-                    <Setter.Value>
-                        <SolidColorBrush Color="{StaticResource ColorAccentSubtle}"/>
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="Background" Value="{DynamicResource SelectionBackgroundBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource SelectionBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
             </Trigger>
         </Style.Triggers>
     </Style>

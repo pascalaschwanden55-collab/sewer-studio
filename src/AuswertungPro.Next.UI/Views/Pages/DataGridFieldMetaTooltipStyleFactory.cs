@@ -8,7 +8,8 @@ public static class DataGridFieldMetaTooltipStyleFactory
 {
     public static Style Create(string fieldName, Style? baseStyle)
     {
-        var style = new Style(typeof(DataGridCell), baseStyle);
+        var style = new Style(typeof(DataGridCell),
+            baseStyle ?? Theme.ApplicationStyleResolver.FindImplicit(typeof(DataGridCell)));
 
         var tooltip = new TextBlock();
         var binding = new MultiBinding { StringFormat = "Quelle: {0} | UserEdited: {1} | Konflikt: {2}" };

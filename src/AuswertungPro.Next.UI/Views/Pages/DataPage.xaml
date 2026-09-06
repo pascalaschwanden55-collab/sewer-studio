@@ -5,7 +5,8 @@
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
              xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
-             xmlns:haltung="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht">
+             xmlns:haltung="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
+             xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage">
     <UserControl.Resources>
         <local:CountToMarkConverter x:Key="Foto1Mark" MinCount="1"/>
         <local:CountToMarkConverter x:Key="Foto2Mark" MinCount="2"/>
@@ -18,7 +19,7 @@
             <Setter Property="MinHeight" Value="48"/>
             <Setter Property="MinWidth" Value="140"/>
             <Setter Property="Padding" Value="24,12"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextL}"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -30,24 +31,16 @@
             <Setter Property="MinHeight" Value="28"/>
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="Padding" Value="10,4"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
         </Style>
-        <Style x:Key="CompactToggleButton" TargetType="ToggleButton">
+        <Style x:Key="PageCompactToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource CompactToggleButton}">
             <Setter Property="MinHeight" Value="28"/>
-            <Setter Property="MinWidth" Value="0"/>
-            <Setter Property="Padding" Value="10,4"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="Cursor" Value="Hand"/>
         </Style>
     </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
@@ -107,7 +100,7 @@
                     Padding="4,3" CornerRadius="{DynamicResource RadiusL}">
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="HaltungsansichtToggle"
-                                  Style="{StaticResource CompactToggleButton}"
+                                  Style="{StaticResource PageCompactToggleButton}"
                                   Margin="0,0,6,0"
                                   Checked="HaltungsansichtToggle_Changed"
                                   Unchecked="HaltungsansichtToggle_Changed"
@@ -145,36 +138,48 @@
 
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
 
-                    <Button Command="{Binding QgisFelderErgaenzenCommand}" IsEnabled="{Binding IsProjectReady}"
+                    <!-- Nova-Etappe 1: direkt sichtbar bleiben Speichern, Neu, Loeschen, Video pruefen.
+                         Alles Seltene liegt unveraendert (gleiche Handler, gleiche Commands) unter "Weitere Aktionen". -->
+                    <Button Command="{Binding PlayVideoCommand}" CommandParameter="{Binding Selected}"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Leere Felder aus dem QGIS-Bestand ergänzen. Gefüllte Felder bleiben unberührt; vorher erscheint ein Bericht.">
+                            ToolTip="Video der gewählten Haltung im Player prüfen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE896;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Leere Felder aus QGIS" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-
-                    <Button Command="{Binding KatasterKennungenErgaenzenCommand}" IsEnabled="{Binding IsProjectReady}"
-                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="GEONIS-Kennungen aus der Kennungstabelle übernehmen, damit der XTF-Export dieselben Objekte wie der Kataster trägt. Nur Kennungen, keine Fachwerte; vorher erscheint ein Bericht.">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8A5;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Katasterkennungen" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Video prüfen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
 
-                    <Button x:Name="MassnahmenDropdown" Click="DropdownButton_Click"
+                    <Button x:Name="WeitereAktionenDropdown" Click="DropdownButton_Click"
+                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Sanierungsmaßnahme für die gewählte Haltung bearbeiten">
+                            ToolTip="Weitere Aktionen: Daten, Fachlich, Ansicht"
+                            AutomationProperties.Name="Weitere Aktionen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE90F;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Sanierungsmaßnahme" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE712;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Weitere Aktionen" VerticalAlignment="Center"/>
                             <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
+                                <MenuItem Header="Medien suchen" Click="MediaSearchMenu_Click"
+                                          ToolTip="Videos und PDFs automatisch suchen und mit Haltungen verlinken">
+                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xED25;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Leere Felder aus QGIS" Command="{Binding QgisFelderErgaenzenCommand}" IsEnabled="{Binding IsProjectReady}"
+                                          ToolTip="Leere Felder aus dem QGIS-Bestand ergänzen. Gefüllte Felder bleiben unberührt; vorher erscheint ein Bericht.">
+                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE896;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Katasterkennungen" Command="{Binding KatasterKennungenErgaenzenCommand}" IsEnabled="{Binding IsProjectReady}"
+                                          ToolTip="GEONIS-Kennungen aus der Kennungstabelle übernehmen. Nur Kennungen, keine Fachwerte; vorher erscheint ein Bericht.">
+                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Strassen" Click="StrassenStapel_Click"
+                                          ToolTip="Leere Strassenfelder aus den zugehörigen Schächten füllen, mit Vorschau, nichts wird überschrieben">
+                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE71B;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
                                 <MenuItem Header="Sanierungsmaßnahme bearbeiten" Click="CostsMenu_Click">
                                     <MenuItem.Icon>
                                         <ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/>
@@ -192,38 +197,7 @@
                                         <ui:FluentIcon Glyph="&#xEA80;" Foreground="{DynamicResource AccentBrush}"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
-                            </ContextMenu>
-                        </Button.ContextMenu>
-                    </Button>
 
-                    <Button x:Name="MediaSearchButton" Click="MediaSearchMenu_Click"
-                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Videos und PDFs automatisch suchen und mit Haltungen verlinken">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xED25;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Medien suchen" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-
-                    <Button x:Name="StrassenStapelButton" Click="StrassenStapel_Click"
-                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Leere Strassenfelder aus den zugeh&#x00F6;rigen Sch&#x00E4;chten f&#x00FC;llen - mit Vorschau, nichts wird &#x00FC;berschrieben">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE71B;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Strassen" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-
-                    <Button x:Name="HydraulikDropdown" Click="DropdownButton_Click"
-                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Hydraulik-Berechnung und Bericht">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:FluentIcon Glyph="&#xE8EF;" FontSize="{DynamicResource TextL}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
-                            <TextBlock Text="Hydraulik" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
-                        </StackPanel>
-                        <Button.ContextMenu>
-                            <ContextMenu>
                                 <MenuItem Header="Hydraulik berechnen" Click="HydraulikMenu_Click">
                                     <MenuItem.Icon>
                                         <ui:FluentIcon Glyph="&#xE8EF;" Foreground="{DynamicResource AccentBrush}"/>
@@ -234,41 +208,15 @@
                                         <ui:FluentIcon Glyph="&#xE749;" Foreground="{DynamicResource AccentBrush}"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
-                            </ContextMenu>
-                        </Button.ContextMenu>
-                    </Button>
 
-                    <Button x:Name="DossierPrintButton" Click="DossierPrint_Click"
-                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Haltungsdossier als PDF drucken (Sektionen auswählbar)">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE7C3;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Dossier" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-
-                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
-
-                    <Button x:Name="UndockButton" Click="UndockGrid_Click"
-                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="DataGrid in separatem Fenster öffnen (Multi-Monitor)">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Abdocken" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-
-                    <Button x:Name="AnsichtDropdown" Click="DropdownButton_Click"
-                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
-                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Zeilen, Spalten und Darstellung anpassen">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE7B3;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Ansicht" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
-                        </StackPanel>
-                        <Button.ContextMenu>
-                            <ContextMenu>
+                                <MenuItem Header="Dossier" Click="DossierPrint_Click" ToolTip="Haltungsdossier als PDF drucken (Sektionen auswählbar)">
+                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE7C3;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem x:Name="UndockButton" Header="Abdocken" Click="UndockGrid_Click"
+                                          ToolTip="Tabelle in separatem Fenster öffnen (Multi-Monitor)">
+                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A7;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                </MenuItem>
                                 <MenuItem Header="Nach oben" Command="{Binding MoveUpCommand}">
                                     <MenuItem.Icon>
                                         <ui:FluentIcon Glyph="&#xE74A;" Foreground="{DynamicResource MutedBrush}"/>
@@ -396,6 +344,7 @@
                                 <Separator/>
                                 <MenuItem Header="Fokusmodus (F11)" IsCheckable="True"
                                           IsChecked="{Binding PlacementTarget.Tag.IsFocusMode, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=TwoWay}"/>
+
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
@@ -442,15 +391,40 @@
             </Border>
         </StackPanel>
 
+        <!-- Nova-Etappe 1: Spaltenansichten. Nur Sichtbarkeit; Werte und Export bleiben unberuehrt. -->
+        <ItemsControl x:Name="ColumnViewChips" Grid.Row="1" Margin="2,0,2,6"
+                      ItemsSource="{Binding Source={x:Static dp:DataPageColumnViewCatalog.Views}}"
+                      AutomationProperties.Name="Spaltenansicht">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <ToggleButton Style="{StaticResource PageCompactToggleButton}" Margin="0,0,6,0" Tag="{Binding Key}"
+                                  Click="ColumnViewChip_Click"
+                                  ToolTip="{Binding Titel}" AutomationProperties.Name="{Binding Titel}">
+                        <TextBlock Text="{Binding Titel}"/>
+                    </ToggleButton>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
         <!-- GridHost: Container fuer DataGrid oder Platzhalter wenn abgedockt -->
-        <Grid x:Name="GridHost" Grid.Row="1">
+        <Grid x:Name="GridHost" Grid.Row="2" behaviors:ViewPersonalization.ViewKey="DataPage">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition x:Name="DrawerSplitterRow" Height="6"/>
+                <RowDefinition x:Name="DrawerRow" Height="220" MinHeight="120"/>
             </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition x:Name="SideSplitterCol" Width="6"/>
+                <ColumnDefinition x:Name="SideCol" Width="320" MinWidth="240" MaxWidth="560"/>
+            </Grid.ColumnDefinitions>
 
             <!-- Filter-Chips: reiner View-Filter (NR bleibt Position; Verschieben gesperrt bei aktivem Filter) -->
-            <uc:FilterChipBar x:Name="FilterChips" Grid.Row="0" Margin="2,0,2,6"/>
+            <uc:FilterChipBar x:Name="FilterChips" Grid.Row="0" Grid.ColumnSpan="3" Margin="2,0,2,6"/>
 
             <!-- Platzhalter (sichtbar wenn DataGrid abgedockt) -->
             <Border x:Name="UndockedPlaceholder" Visibility="Collapsed" Grid.Row="1"
@@ -594,8 +568,27 @@
                 </uc:EmptyStateControl.Style>
             </uc:EmptyStateControl>
 
-            <!-- Haltungsansicht: alternative Sicht zur Tabelle, anfangs ausgeblendet -->
-            <haltung:HaltungsansichtView x:Name="HaltungsansichtView" Grid.Row="1" Visibility="Collapsed"/>
+            <!-- Haltungsansicht: alternative Sicht zur Tabelle, ueber den Toggle erreichbar -->
+            <haltung:HaltungsansichtView x:Name="HaltungsansichtView" Grid.Row="1" Grid.ColumnSpan="3" Visibility="Collapsed"/>
+
+            <!-- Nova-Etappe 1: Uebersicht rechts und Eingabefelder unten; beide Trennlinien merken sich ihre Lage -->
+            <GridSplitter x:Name="SideSplitter" Grid.Row="1" Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
+                          Background="{DynamicResource BorderBrush}"
+                          behaviors:SplitterPersistenceBehavior.IsEnabled="True"
+                          behaviors:SplitterPersistenceBehavior.SplitterKey="HaltungenUebersicht"
+                          behaviors:SplitterPersistenceBehavior.TargetColumnIndex="2"
+                          behaviors:SplitterPersistenceBehavior.MinSize="240"
+                          behaviors:SplitterPersistenceBehavior.MaxSize="560"
+                          ToolTip="Breite der Übersicht" AutomationProperties.Name="Breite der Übersicht"/>
+            <haltung:HaltungUebersichtPanel x:Name="Uebersicht" Grid.Row="1" Grid.Column="2" Margin="8,0,0,0"
+                                            Record="{Binding Selected}" Entries="{Binding SelectedProtocolEntries}"/>
+            <GridSplitter x:Name="DrawerSplitter" Grid.Row="2" Grid.ColumnSpan="3" Height="6" HorizontalAlignment="Stretch"
+                          ResizeDirection="Rows" Background="{DynamicResource BorderBrush}"
+                          behaviors:SplitterPersistenceBehavior.IsEnabled="True"
+                          behaviors:SplitterPersistenceBehavior.SplitterKey="HaltungenEingabefelder"
+                          behaviors:SplitterPersistenceBehavior.TargetRowIndex="3"
+                          ToolTip="Höhe der Eingabefelder" AutomationProperties.Name="Höhe der Eingabefelder"/>
+            <haltung:HaltungFelderDrawer x:Name="FelderDrawer" Grid.Row="3" Grid.ColumnSpan="3" Margin="0,4,0,0"/>
         </Grid>
     </Grid>
 </UserControl>

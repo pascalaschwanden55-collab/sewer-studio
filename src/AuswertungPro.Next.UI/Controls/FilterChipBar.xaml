@@ -6,7 +6,7 @@
             <Setter Property="MinHeight" Value="26"/>
             <Setter Property="MinWidth" Value="28"/>
             <Setter Property="Padding" Value="9,3"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -63,7 +63,7 @@
             <Setter Property="MinHeight" Value="26"/>
             <Setter Property="MinWidth" Value="28"/>
             <Setter Property="Padding" Value="9,3"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="Black"/>
@@ -115,7 +115,7 @@
             <Setter Property="MinHeight" Value="26"/>
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="Padding" Value="10,3"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>

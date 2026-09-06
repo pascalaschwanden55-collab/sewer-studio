@@ -39,9 +39,13 @@ public sealed partial class ShellViewModel
             Title = title;
             CreatePage = createPage;
             CanOpenWithoutProject = canOpenWithoutProject ?? ShellNavigationPolicy.CanOpenWithoutProject(title);
+            Group = ShellNavigationGroups.GroupOf(title);
         }
 
         public string Icon { get; }
+
+        /// <summary>Gruppe in der linken Leiste (Projekt, Daten, Bewertung, System).</summary>
+        public string Group { get; }
 
         public string Title { get; }
 

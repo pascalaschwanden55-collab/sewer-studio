@@ -11,7 +11,7 @@ public sealed class DataPageToolbarLayoutTests
     public void AnsichtDropdown_contains_grid_display_controls()
     {
         var xaml = ReadDataPageXaml();
-        var menu = ExtractContextMenu(xaml, "x:Name=\"AnsichtDropdown\"");
+        var menu = ExtractContextMenu(xaml, "x:Name=\"WeitereAktionenDropdown\"");
 
         Assert.Contains("Zeilenhöhe:", menu);
         Assert.Contains("GridMinRowHeight", menu);
@@ -26,7 +26,7 @@ public sealed class DataPageToolbarLayoutTests
     public void HydraulikActions_are_grouped_in_one_dropdown()
     {
         var xaml = ReadDataPageXaml();
-        var menu = ExtractContextMenu(xaml, "x:Name=\"HydraulikDropdown\"");
+        var menu = ExtractContextMenu(xaml, "x:Name=\"WeitereAktionenDropdown\"");
 
         Assert.Contains("HydraulikMenu_Click", menu);
         Assert.Contains("HydraulikPrint_Click", menu);

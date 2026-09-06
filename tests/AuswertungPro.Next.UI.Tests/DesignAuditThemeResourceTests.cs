@@ -113,7 +113,9 @@ public sealed class DesignAuditThemeResourceTests
         var shell = ReadUiFile("ViewModels", "ShellViewModel.cs");
 
         Assert.Contains("Header=\"Sanierungsmaßnahme bearbeiten\"", dataPage);
-        Assert.Contains("Text=\"Sanierungsmaßnahme\"", dataPage);
+        // Nova-Etappe 1: der Einstieg liegt unter "Weitere Aktionen", der Text bleibt sichtbar.
+        Assert.Contains("Sanierungsmaßnahme bearbeiten", dataPage);
+        Assert.Contains("x:Name=\"WeitereAktionenDropdown\"", dataPage);
         Assert.Contains("NavigateToSanierungsMatrix", shell);
         Assert.Contains("OpenSanierungsMatrix(record);", viewModel);
         Assert.Contains("singleHoldingMode: true", viewModel);

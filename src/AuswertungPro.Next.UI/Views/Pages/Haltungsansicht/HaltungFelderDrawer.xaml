@@ -1,0 +1,69 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.Haltungsansicht.HaltungFelderDrawer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+             xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
+             xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
+             x:Name="Root">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <pages:StringNotEmptyToVisibilityConverter x:Key="TextSichtbar"/>
+    </UserControl.Resources>
+    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
+        <DockPanel>
+            <!-- Kopfzeile: Auf/Zu, Haltungsname, Feldsuche, Alle auf / Alle zu -->
+            <DockPanel DockPanel.Dock="Top" Margin="10,6" LastChildFill="False">
+                <ToggleButton x:Name="OpenToggle" DockPanel.Dock="Left"
+                              IsChecked="{Binding IsOpen, ElementName=Root, Mode=TwoWay}"
+                              Style="{StaticResource CompactToggleButton}"
+                              ToolTip="Eingabefelder auf- oder zuklappen"
+                              AutomationProperties.Name="Eingabefelder auf- oder zuklappen">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:FluentIcon Glyph="&#xE70D;" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Eingabefelder" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ToggleButton>
+                <TextBlock DockPanel.Dock="Left" Text="{Binding Titel, ElementName=Root}" Margin="10,0,0,0"
+                           VerticalAlignment="Center" FontFamily="{DynamicResource FontMono}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <!-- Konflikthinweis (W01): verworfene Eingabe nach einer neueren Tabellenkorrektur -->
+                <TextBlock DockPanel.Dock="Left" Text="{Binding Hinweis, ElementName=Root}" Margin="14,0,0,0"
+                           VerticalAlignment="Center" FontSize="{DynamicResource TextS}" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource WarningTextBrush}"
+                           ToolTip="{Binding Hinweis, ElementName=Root}"
+                           Visibility="{Binding Hinweis, ElementName=Root, Converter={StaticResource TextSichtbar}}"/>
+                <Button DockPanel.Dock="Right" Click="AlleZu_Click" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0"
+                        ToolTip="Alle Themen zuklappen" AutomationProperties.Name="Alle Themen zuklappen">
+                    <TextBlock Text="Alle zu"/>
+                </Button>
+                <Button DockPanel.Dock="Right" Click="AlleAuf_Click" Style="{StaticResource ToolbarButton}"
+                        ToolTip="Alle Themen aufklappen" AutomationProperties.Name="Alle Themen aufklappen">
+                    <TextBlock Text="Alle auf"/>
+                </Button>
+                <TextBox DockPanel.Dock="Right" x:Name="FeldSuche" Width="220" Margin="0,0,8,0"
+                         TextChanged="FeldSuche_TextChanged"
+                         ToolTip="Feld suchen, zum Beispiel Baujahr" AutomationProperties.Name="Feld suchen"/>
+            </DockPanel>
+            <!-- Die Themen des Detail-Builders nebeneinander, jedes einzeln aufklappbar.
+                 Zugeklappt bleibt nur die Kopfzeile; die Seite schrumpft dann die Zeile (W03). -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding IsOpen, ElementName=Root, Converter={StaticResource BoolToVis}}">
+                <ItemsControl x:Name="Themen" ItemsSource="{Binding SichtbareGruppen, ElementName=Root}" Margin="8">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="1"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Expander IsExpanded="True" Margin="0,0,8,0" Header="{Binding Title}" VerticalAlignment="Top">
+                                <controls:RecordDetailsView IsCompactLayout="True" IsHeaderVisible="False" Groups="{Binding EinzelGruppe}"/>
+                            </Expander>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+    </Border>
+</UserControl>

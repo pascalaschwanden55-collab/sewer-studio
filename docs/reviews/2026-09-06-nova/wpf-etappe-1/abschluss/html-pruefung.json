@@ -1,0 +1,24 @@
+{
+  "browser": "Playwright Chromium",
+  "viewports": [
+    {
+      "width": 1920,
+      "height": 1080,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "horizontalOverflow": false
+    }
+  ],
+  "visibleActionRowsWhenExpanded": 18,
+  "missingImages": 0,
+  "httpLinksChecked": 10,
+  "httpLinksStatus": 200,
+  "screenshotsVisuallyReviewed": [
+    "fullhd.png",
+    "gesamt.png"
+  ],
+  "note": "Lokale Browserfenster-Pruefung; keine neue Windows-DPI-Messung. Alle Links bleiben relativ und funktionieren auch beim direkten Oeffnen der HTML-Datei."
+}

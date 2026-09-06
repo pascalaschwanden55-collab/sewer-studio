@@ -10,6 +10,17 @@ public sealed class DesignAuditContrastTests
     [Theory]
     [InlineData("Theme.xaml")]
     [InlineData("ThemeLight.xaml")]
+    public void Auswahl_bleibt_lesbar_und_ihre_Kontur_erkennbar(string themeFile)
+    {
+        var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+        Assert.True(Contrast(ReadColor(xaml, "ColorSelectionText"), ReadColor(xaml, "ColorSelection")) >= 4.5);
+        Assert.True(Contrast(ReadColor(xaml, "ColorSelectionBorder"), ReadColor(xaml, "ColorSelection")) >= 3);
+        Assert.True(Contrast(ReadColor(xaml, "ColorSelectionBorder"), ReadColor(xaml, "ColorCard")) >= 3);
+    }
+
+    [Theory]
+    [InlineData("Theme.xaml")]
+    [InlineData("ThemeLight.xaml")]
     public void Primary_and_success_buttons_reach_normal_text_contrast(string themeFile)
     {
         var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
@@ -17,6 +28,20 @@ public sealed class DesignAuditContrastTests
         Assert.True(Contrast("#FFFFFFFF", ReadColor(xaml, "ColorAccent")) >= 4.5);
         Assert.True(Contrast("#FFFFFFFF", ReadColor(xaml, "ColorAccentHover")) >= 4.5);
         Assert.True(Contrast("#FFFFFFFF", ReadColor(xaml, "ColorSuccess")) >= 4.5);
+    }
+
+    [Theory]
+    [InlineData("Theme.xaml")]
+    [InlineData("ThemeLight.xaml")]
+    public void Ki_text_reaches_normal_text_contrast_on_card_and_ki_subtle(string themeFile)
+    {
+        // Nova-Etappe 1: KI-Farbe getrennt vom Akzent, lesbar auf Karte und auf der KI-Flaeche.
+        var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+        Assert.True(Contrast(ReadColor(xaml, "ColorKiText"), ReadColor(xaml, "ColorCard")) >= 4.5);
+        Assert.True(Contrast(ReadColor(xaml, "ColorKiText"), ReadColor(xaml, "ColorKiSubtle")) >= 4.5);
+        Assert.Contains("x:Key=\"KiBrush\"", xaml);
+        Assert.Contains("x:Key=\"KiSubtleBrush\"", xaml);
+        Assert.Contains("x:Key=\"KiTextBrush\"", xaml);
     }
 
     [Fact]

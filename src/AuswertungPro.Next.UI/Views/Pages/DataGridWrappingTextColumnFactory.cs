@@ -32,6 +32,10 @@ public static class DataGridWrappingTextColumnFactory
     private static Style CreateDisplayStyle(Style? baseStyle)
     {
         var style = new Style(typeof(TextBlock), baseStyle);
+        style.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding("Foreground")
+        {
+            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
+        }));
         style.Setters.Add(new Setter(TextBlock.TextWrappingProperty, TextWrapping.NoWrap));
         style.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
         style.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));

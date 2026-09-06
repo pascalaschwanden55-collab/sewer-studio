@@ -24,7 +24,9 @@ public static class DataPageRecordDetailsBuilder
 
         var itemsByField = new Dictionary<string, RecordDetailItem>(StringComparer.Ordinal);
 
-        foreach (var column in FieldCatalog.ColumnOrder.Where(x => added.Add(x)))
+        // Das Projektgefaelle ist auch bei alten Projekten ohne gespeicherten Wert
+        // editierbar. Die feste Spaltenfolge fuer CSV/Excel bleibt dabei erhalten.
+        foreach (var column in FieldCatalog.ColumnOrder.Append(FieldKeys.SlopePromille).Where(x => added.Add(x)))
         {
             if (IsExcluded(column)) continue;
             var groupName = ResolveGroup(column);
@@ -62,7 +64,7 @@ public static class DataPageRecordDetailsBuilder
         {
             "NR" or "Haltungsname" or "Strasse" or "DN_mm" or "Rohrmaterial"
                 or "Nutzungsart" or "Haltungslaenge_m" or "Inspektionsrichtung"
-                or "Eigentuemer" or "FunktionHierarchisch"
+                or "Eigentuemer" or "FunktionHierarchisch" or FieldKeys.SlopePromille
                 // Anfangs- und Endschacht stehen nicht im Feldkatalog, gehoeren
                 // fachlich aber zu den Stammdaten der Haltung.
                 or "Schacht_oben" or "Schacht_unten"

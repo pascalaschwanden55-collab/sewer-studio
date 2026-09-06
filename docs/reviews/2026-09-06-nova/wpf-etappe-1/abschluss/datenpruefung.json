@@ -1,0 +1,19 @@
+{
+  "sourceSha256Before": {
+    "kennungen.gpkg": "794dd5bed58609d8156e4ccf9a378c27ef710b791dcd7456d068e4decf98d5e9",
+    "leitungen.gpkg": "c90eed47c5d147647be4e0c6de25901dc5eb24011eecc533ed6486872066afd1",
+    "schaechte.gpkg": "c45f2ee4bb3880c931187c6a7c72bb1c2107ac726204b453afb1ac025c284aa9"
+  },
+  "sourceSha256After": {
+    "kennungen.gpkg": "794dd5bed58609d8156e4ccf9a378c27ef710b791dcd7456d068e4decf98d5e9",
+    "leitungen.gpkg": "c90eed47c5d147647be4e0c6de25901dc5eb24011eecc533ed6486872066afd1",
+    "schaechte.gpkg": "c45f2ee4bb3880c931187c6a7c72bb1c2107ac726204b453afb1ac025c284aa9"
+  },
+  "sourceFilesUnchanged": true,
+  "recordCount": 14,
+  "dn300Count": 14,
+  "betonCount": 13,
+  "steinzeugCount": 1,
+  "selectedSlopePromille": "2,5",
+  "projectSha256": "1d1df246cae38ba5d0a67ba35a6ed13d87af5a8025c6aa3a897e8b494b2340dc"
+}

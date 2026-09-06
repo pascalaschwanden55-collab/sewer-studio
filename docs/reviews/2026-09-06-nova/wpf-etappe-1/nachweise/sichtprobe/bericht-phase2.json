@@ -1,0 +1,55 @@
+﻿{
+    "phase":  2,
+    "start":  "2026-09-06T18:09:48",
+    "schritte":  [
+                     {
+                         "schritt":  "fenster",
+                         "wert":  "1366x768 Titel=SewerStudio"
+                     },
+                     {
+                         "schritt":  "knopf_oeffnen_gefunden",
+                         "wert":  true
+                     },
+                     {
+                         "schritt":  "projekt_offen",
+                         "wert":  "Nova-Sichtprobe – SewerStudio"
+                     },
+                     {
+                         "schritt":  "sichtbare_zeilen",
+                         "wert":  7
+                     },
+                     {
+                         "schritt":  "tabelle_hoehe",
+                         "wert":  325
+                     },
+                     {
+                         "schritt":  "eingabefelder_hoehe",
+                         "wert":  50
+                     },
+                     {
+                         "schritt":  "eingabefelder_offen",
+                         "wert":  0
+                     },
+                     {
+                         "schritt":  "uebersicht_breite",
+                         "wert":  372
+                     },
+                     {
+                         "schritt":  "chip_kompakt_aktiv",
+                         "wert":  1
+                     },
+                     {
+                         "schritt":  "eingabefelder_hoehe_nach_neustart_geoeffnet",
+                         "wert":  116
+                     },
+                     {
+                         "schritt":  "sichtbare_zeilen_geoeffnet",
+                         "wert":  5
+                     },
+                     {
+                         "schritt":  "beendet",
+                         "wert":  "sauber beendet"
+                     }
+                 ],
+    "ende":  "2026-09-06T18:10:21"
+}

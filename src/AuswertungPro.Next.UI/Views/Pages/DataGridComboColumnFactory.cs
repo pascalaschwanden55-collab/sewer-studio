@@ -77,6 +77,10 @@ public static class DataGridComboColumnFactory
     {
         var displayFactory = new FrameworkElementFactory(typeof(TextBlock));
         displayFactory.SetBinding(TextBlock.TextProperty, new Binding($"Fields[{fieldName}]"));
+        displayFactory.SetBinding(TextBlock.ForegroundProperty, new Binding("Foreground")
+        {
+            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
+        });
         displayFactory.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
         displayFactory.SetBinding(TextBlock.VerticalAlignmentProperty, new Binding("VerticalContentAlignment")
         {

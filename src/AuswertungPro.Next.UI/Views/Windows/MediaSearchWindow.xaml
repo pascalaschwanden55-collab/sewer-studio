@@ -15,7 +15,7 @@
 
         <Style x:Key="LabelText" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextM}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 

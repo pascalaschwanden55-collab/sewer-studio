@@ -7,6 +7,30 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageRecordDetailsBuilderTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Projektgefaelle_ist_einmal_editierbar_und_wird_vom_bericht_verwendet(bool vorhanden)
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "300", FieldSource.Manual, true);
+        if (vorhanden)
+            record.SetFieldValue(FieldKeys.SlopePromille, "1", FieldSource.Manual, true);
+        var factory = new DataPageDetailItemFactory(_ => null,
+            (r, key, value) => r.SetFieldValue(key, value, FieldSource.Manual, true));
+
+        var groups = DataPageRecordDetailsBuilder.Build(record, key => factory.Create(key, record));
+        var slope = Assert.Single(groups.SelectMany(g => g.Items), i => i.FieldName == FieldKeys.SlopePromille);
+        Assert.Equal("Gefälle ‰", slope.Label);
+        Assert.Contains(slope, groups.Single(g => g.Kind == RecordDetailGroupKind.MasterData).Items);
+        slope.Value = "2,5";
+
+        var calculation = AuswertungPro.Next.Application.DataPage.DataPageHydraulikReportCalculator
+            .BuildReportCalculation(record, new AuswertungPro.Next.Application.Hydraulik.HydraulikPanelSettings());
+        Assert.NotNull(calculation);
+        Assert.Equal(2.5, calculation.Gefaelle_Promille);
+    }
+
     // Anfangs- und Endschacht gehoeren fachlich zu den Stammdaten der Haltung.
     // Sie stehen nicht im Feldkatalog, sondern kommen als freie Projektfelder herein -
     // frueher landeten sie deshalb ungefragt in "Weitere Angaben".

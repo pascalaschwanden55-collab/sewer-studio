@@ -174,6 +174,9 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     // Haltungsansicht: per GridSplitter einstellbare Hoehe des "Primaere Schaeden"-Panels (in px).
     public double HaltungsansichtSchadenHeight { get; set; } = 240d;
 
+    /// <summary>Nova-Etappe 1: Liste mit Uebersicht rechts und Eingabefeldern unten als Standard. false = bisherige Haltungsansicht.</summary>
+    public bool ShowHaltungenNovaLayout { get; set; } = true;
+
     // Schachtansicht: per GridSplitter einstellbare Hoehe des "Schaeden"-Panels (in px).
     public double SchachtansichtSchadenHeight { get; set; } = 240d;
 
@@ -664,6 +667,8 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
 public sealed class DataPageLayoutSettings
 {
+    /// <summary>Gewaehlte Spaltenansicht der Haltungsliste (Schluessel aus DataPageColumnViewCatalog). Leer = alle Spalten.</summary>
+    public string ActiveColumnView { get; set; } = "alle";
     public double GridMinRowHeight { get; set; } = 38d;
     public double GridZoom { get; set; } = 1.0d;
     public bool IsColumnReorderEnabled { get; set; }
