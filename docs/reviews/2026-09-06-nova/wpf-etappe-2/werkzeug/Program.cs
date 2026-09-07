@@ -23,8 +23,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 /// Isolierter Pruefhost der Nova-Etappe 2. Er startet NICHT das produktive Programm:
 /// eigenes AppData-Verzeichnis, eigener Wissensordner, kein Application.OnStartup
 /// (also kein Echtzeitspiegel, keine QGIS-Bruecke, kein KI-Prozessstart).
-/// Aufruf: Pruefhost.exe &lt;Theme&gt; &lt;Seite&gt; &lt;Ausgabe.png&gt; [Breite Hoehe]
+/// Aufruf: Pruefhost.exe &lt;Theme&gt; &lt;Seite&gt; &lt;Ausgabe.png&gt; [Breite Hoehe] [Variante]
 /// Seiten: Uebersicht | Haltungen | Schaechte | Import | Einstellungen | Player | TrainingStudio
+/// Varianten (Etappe 2b): "" = erste Zeile gewaehlt (Standard) | "alle" = zusaetzlich die
+/// Spaltenansicht "Alle Spalten" waehlen | "ohneauswahl" = keine Zeile waehlen (Leerzustand).
 /// </summary>
 internal static class Program
 {
@@ -43,6 +45,7 @@ internal static class Program
     static readonly string AppXaml = @"C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.UI\App.xaml";
     static string AppliedTheme = "Dark";
     static string AppliedPage = "Haltungen";
+    static string AppliedVariant = "";
 
     [STAThread]
     static int Main(string[] args)
@@ -75,8 +78,10 @@ internal static class Program
         var ausgabe = args.ElementAtOrDefault(2);
         var breite = double.TryParse(args.ElementAtOrDefault(3), out var b) ? b : 1920;
         var hoehe = double.TryParse(args.ElementAtOrDefault(4), out var h) ? h : 1080;
+        var variante = (args.ElementAtOrDefault(5) ?? string.Empty).Trim().ToLowerInvariant();
         AppliedTheme = theme;
         AppliedPage = seite;
+        AppliedVariant = variante;
 
         var projectPath = Path.Combine(Root, "projekt", "Projektdateien", "projekt.json");
         Directory.CreateDirectory(Path.GetDirectoryName(projectPath)!);
@@ -161,9 +166,15 @@ internal static class Program
                 }
                 else if (schritt == 2)
                 {
+                    // Variante "ohneauswahl": bewusst nichts waehlen, damit die Uebersicht
+                    // ihren Leerzustand zeigt (Etappe 2b, Task 6).
+                    if (variante == "ohneauswahl")
+                    {
+                        // nichts tun
+                    }
                     // Erste Zeile waehlen: erst dann zeigen Uebersichtskarte, Rohrring und
                     // Eingabefelder echte Werte statt des Leerzustands.
-                    if (shell.CurrentPage is AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel datenseite)
+                    else if (shell.CurrentPage is AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel datenseite)
                     {
                         var haltung = shell.Project.Data.FirstOrDefault(
                             r => r.GetFieldValue(FieldKeys.HoldingName) == "10001-10002");
@@ -178,6 +189,10 @@ internal static class Program
                 }
                 else if (schritt == 3)
                 {
+                    // Variante "alle": denselben Weg wie ein Klick des Benutzers gehen — den
+                    // Chip der Spaltenansicht ausloesen. Damit gilt genau die Programmlogik.
+                    if (variante == "alle")
+                        WaehleSpaltenansicht(window, "alle");
                     if (seite == "TrainingStudio")
                     {
                         var studio = new AuswertungPro.Next.UI.Views.Windows.TrainingStudioWindow(services)
@@ -238,6 +253,26 @@ internal static class Program
     }
 
     /// <summary>
+    /// Loest den Spaltenansicht-Chip mit dem gesuchten Schluessel aus (Tag == Schluessel).
+    /// Bewusst ueber das Click-Ereignis des Umschalters: so laeuft genau der Weg des
+    /// Benutzers samt Speichern der Ansicht, ohne eine zweite Steuerlogik im Pruefhost.
+    /// </summary>
+    static void WaehleSpaltenansicht(Window window, string schluessel)
+    {
+        var chip = Descendants(window)
+            .OfType<System.Windows.Controls.Primitives.ToggleButton>()
+            .FirstOrDefault(t => (t.Tag as string) == schluessel);
+        if (chip is null)
+        {
+            File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"),
+                $"Spaltenansicht-Chip '{schluessel}' nicht gefunden{Environment.NewLine}");
+            return;
+        }
+        chip.IsChecked = true;
+        chip.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+    }
+
+    /// <summary>
     /// Ersetzt den durchsichtigen Mica-Hintergrund durch die Theme-Flaeche. Nur fuer das
     /// Bildschirmfoto: Im laufenden Programm zeichnet Windows die Mica-Flaeche selbst.
     /// </summary>
@@ -264,29 +299,79 @@ internal static class Program
         enc.Save(fs);
     }
 
+    static readonly string[] Strassen = ["Gotthardstrasse", "Dorfstrasse", "Bahnhofweg", "Seestrasse", "Kirchgasse"];
+    static readonly string[] Materialien = ["Beton", "Steinzeug", "PVC", "PE", "Guss"];
+    static readonly string[] Nennweiten = ["200", "250", "300", "400", "500", "600", "800"];
+    static readonly string[] Laengen = ["24.6", "31.2", "38.5", "42.0", "17.8", "55.4", "63.1", "29.9"];
+
+    /// <summary>
+    /// Etappe 2b: 40 Haltungen, die dem echten Projekt aehneln — gemischte Pruefstaende,
+    /// Zustandsklassen 0 bis 4 UND leer, mehrzeilige "Primaere Schaeden" wie aus einem
+    /// Import, bei jeder zweiten Haltung ein Videopfad und bei jeder dritten eine PDF.
+    /// Alles kuenstlich; es wird keine Kundendatei gelesen.
+    /// </summary>
     static void CreateProject(string path)
     {
-        var project = new Project { Name = "Nova Etappe 2", Description = "Nur kuenstliche Daten" };
+        var project = new Project { Name = "Nova Etappe 2b", Description = "Nur kuenstliche Daten" };
         project.EnsureMetadataDefaults();
         var video = Path.Combine(Root, "medien", "10001-10002.mp4");
-        for (var i = 0; i < 14; i++)
+        var pdf = Path.Combine(Root, "medien", "protokoll.pdf");
+        for (var i = 0; i < 40; i++)
         {
+            var name = $"{10001 + i}-{10002 + i}";
             var record = project.CreateNewRecord();
             void Set(string key, string value) => record.SetFieldValue(key, value, FieldSource.Manual, false);
-            Set(FieldKeys.HoldingName, $"{10001 + i}-{10002 + i}");
+            Set(FieldKeys.HoldingName, name);
             Set("NR", (i + 1).ToString());
-            Set(FieldKeys.Street, i == 0 ? "" : "Teststrasse");
-            Set(FieldKeys.PipeMaterial, i == 0 ? "" : "Beton");
-            Set(FieldKeys.NominalDiameterMm, "300");
-            Set(FieldKeys.HoldingLengthMeters, "30");
-            Set(FieldKeys.ConditionClass, (i % 5).ToString());
-            Set(FieldKeys.InspectionYear, "2026");
-            Set(FieldKeys.UsageType, "Mischabwasser");
+            Set(FieldKeys.Street, Strassen[i % Strassen.Length]);
+            // Der Haltungsname haengt an den beiden Schaechten; ohne diese zwei Felder
+            // haette die Gruppe "Stammdaten" im echten Projekt zwei Eingaben weniger.
+            Set("Schacht_oben", (10001 + i).ToString());
+            Set("Schacht_unten", (10002 + i).ToString());
+            Set("Inspektionsrichtung", i % 5 == 4 ? "gegen Fliessrichtung" : "in Fliessrichtung");
+            Set(FieldKeys.PipeMaterial, Materialien[i % Materialien.Length]);
+            Set(FieldKeys.NominalDiameterMm, Nennweiten[i % Nennweiten.Length]);
+            Set(FieldKeys.ProfileType, i % 7 == 3 ? "Eiprofil" : "Kreisprofil");
+            Set(FieldKeys.ClearWidthMm, Nennweiten[i % Nennweiten.Length]);
+            Set(FieldKeys.HoldingLengthMeters, Laengen[i % Laengen.Length]);
+            // Sechster Fall bleibt bewusst leer: der Chip muss dann den gestrichelten
+            // Strich "nicht berechnet" zeigen und nie eine erfundene Klasse.
+            if (i % 6 != 5)
+                Set(FieldKeys.ConditionClass, (i % 5).ToString());
+            Set(FieldKeys.InspectionYear, (2024 + i % 3).ToString());
+            Set(FieldKeys.ConstructionYear, (1960 + i % 40).ToString());
+            Set(FieldKeys.UsageType, i % 3 == 0 ? "Mischabwasser" : i % 3 == 1 ? "Schmutzabwasser" : "Regenabwasser");
+            Set(FieldKeys.SlopePromille, (5 + i % 12).ToString());
+            Set(FieldKeys.Owner, i % 2 == 0 ? "Gemeinde" : "Privat");
             Set(FieldKeys.Remarks, "Kuenstliche Bedienprobe");
-            if (i == 0)
+            Set(FieldKeys.PrimaryDamages, PrimaereSchaeden(i));
+
+            // Vier Pruefstaende im Wechsel, damit alle Ampel- und Pruefungstexte im Bild stehen.
+            switch (i % 4)
             {
-                Set(FieldKeys.Link, video);
-                record.Protocol = BaueProtokoll($"{10001 + i}-{10002 + i}");
+                case 0: // fachlich geprueft, KI-Befunde bestaetigt
+                    Set(FieldKeys.WorkflowStatus, "abgeschlossen");
+                    record.Protocol = BaueProtokoll(name, offeneKiBefunde: 0);
+                    break;
+                case 1: // KI analysiert, Pruefung offen (zwei offene Befunde)
+                    record.Protocol = BaueProtokoll(name, offeneKiBefunde: 2);
+                    break;
+                case 2: // fachlich geprueft, aber noch ein offener KI-Befund
+                    Set(FieldKeys.WorkflowStatus, "abgeschlossen");
+                    record.Protocol = BaueProtokoll(name, offeneKiBefunde: 1);
+                    break;
+                default: // nicht analysiert
+                    Set(FieldKeys.WorkflowStatus, "offen");
+                    break;
+            }
+
+            if (i % 2 == 0) Set(FieldKeys.Link, video);
+            if (i % 3 == 0) Set(FieldKeys.PdfPath, pdf);
+            if (i % 5 == 0)
+            {
+                Set(FieldKeys.RenovationDecision, "Ja");
+                Set(FieldKeys.RecommendedRehabilitationMeasures, "Kurzliner, Anschluss verpressen");
+                Set(FieldKeys.Cost, (1800 + i * 125).ToString());
             }
             project.AddRecord(record);
         }
@@ -296,13 +381,33 @@ internal static class Program
     }
 
     /// <summary>
-    /// Zwei Beobachtungen mit echter Uhrlage und Stufe; die erste traegt einen offenen
-    /// KI-Befund (Ai.Accepted = false). Damit zeigen Rohrring, Uebersicht und der
-    /// Aufgaben-Chip "Naechste Aufgabe" echte Werte statt Rueckfallwerte.
+    /// Mehrzeiliger Schadenstext wie aus einem echten Import (Meter, Code, Uhrlage, Stufe).
+    /// Vier Zeilen: damit ist im Bild belegbar, dass die Zelle in "Alle Spalten" auf
+    /// hoechstens drei Zeilen begrenzt wird und den Rest nur im Tooltip fuehrt.
     /// </summary>
-    static ProtocolDocument BaueProtokoll(string haltung)
+    static string PrimaereSchaeden(int i)
     {
-        ProtocolEntry Eintrag(string code, string text, double meter, string von, string bis, string stufe, bool kiOffen)
+        if (i % 4 == 3) return string.Empty;
+        var zeilen = new List<string>
+        {
+            $"{(4.2 + i % 7):0.00} m  BABA  Riss laengs, 10-2 Uhr, Stufe 4",
+            $"{(12.8 + i % 5):0.00} m  BBCA  Ablagerung Sand, Querschnitt 15 %, 5-7 Uhr, Stufe 2",
+            $"{(21.3 + i % 9):0.00} m  BAJB  Verschobene Rohrverbindung versetzt, 3 Uhr, Stufe 3"
+        };
+        if (i % 2 == 0)
+            zeilen.Add($"{(28.9 + i % 4):0.00} m  BCAA  Seitlicher Anschluss einragend, 10 Uhr, Stufe 2");
+        return string.Join(Environment.NewLine, zeilen);
+    }
+
+    /// <summary>
+    /// Drei Beobachtungen mit echter Uhrlage und Stufe. <paramref name="offeneKiBefunde"/>
+    /// legt fest, wie viele davon ein noch NICHT bestaetigter KI-Befund sind
+    /// (Ai.Accepted = false); die uebrigen KI-Befunde gelten als bestaetigt. Damit zeigen
+    /// Ampel, Uebersicht und Rohrring echte Werte statt Rueckfallwerte.
+    /// </summary>
+    static ProtocolDocument BaueProtokoll(string haltung, int offeneKiBefunde)
+    {
+        ProtocolEntry Eintrag(string code, string text, double meter, string von, string bis, string stufe, bool? kiBestaetigt)
         {
             var e = new ProtocolEntry
             {
@@ -310,44 +415,51 @@ internal static class Program
                 Beschreibung = text,
                 MeterStart = meter,
                 MeterEnd = meter,
-                Source = kiOffen ? ProtocolEntrySource.Ai : ProtocolEntrySource.Manual,
+                Source = kiBestaetigt is null ? ProtocolEntrySource.Manual : ProtocolEntrySource.Ai,
                 CodeMeta = new ProtocolEntryCodeMeta { Code = code, Severity = stufe }
             };
             e.CodeMeta.Parameters["Uhr_von"] = von;
             e.CodeMeta.Parameters["Uhr_bis"] = bis;
-            if (kiOffen)
+            if (kiBestaetigt is not null)
                 e.Ai = new ProtocolEntryAiMeta
                 {
                     SuggestedCode = code,
                     Confidence = 0.72,
-                    Accepted = false,
+                    Accepted = kiBestaetigt.Value,
                     Reason = "Kuenstlicher Vorschlag der Bedienprobe"
                 };
             return e;
         }
 
         var current = new ProtocolRevision();
-        current.Entries.Add(Eintrag("BAB", "Riss laengs", 4.2, "10", "2", "4", kiOffen: true));
-        current.Entries.Add(Eintrag("BBC", "Ablagerung", 12.8, "5", "7", "2", kiOffen: false));
+        current.Entries.Add(Eintrag("BAB", "Riss laengs", 4.2, "10", "2", "4", kiBestaetigt: offeneKiBefunde >= 1 ? false : true));
+        current.Entries.Add(Eintrag("BAJ", "Verschobene Rohrverbindung", 21.3, "3", "3", "3", kiBestaetigt: offeneKiBefunde >= 2 ? false : true));
+        current.Entries.Add(Eintrag("BBC", "Ablagerung", 12.8, "5", "7", "2", kiBestaetigt: null));
         var original = new ProtocolRevision();
         foreach (var e in current.Entries)
             original.Entries.Add(ProtocolEntryCloner.CloneLegacyProtocolEntry(e));
         return new ProtocolDocument { HaltungId = haltung, Original = original, Current = current };
     }
 
-    /// <summary>Sechs Schaechte; der erste ist oval mit zwei verschiedenen Innenmassen.</summary>
+    /// <summary>
+    /// Acht Schaechte mit Form und beiden Innenmassen (rund 600/600, oval 1100/900). Der
+    /// sechste traegt bewusst keine Zustandsklasse, damit der Chip dort den gestrichelten
+    /// Strich zeigt; zwei Drittel fuehren eine PDF, damit der Protokoll-Knopf sichtbar ist.
+    /// </summary>
     static void BaueSchaechte(Project project)
     {
-        for (var i = 0; i < 6; i++)
+        var pdf = Path.Combine(Root, "medien", "protokoll.pdf");
+        for (var i = 0; i < 8; i++)
         {
             var schacht = new SchachtRecord();
             void Set(string key, string value) => schacht.SetFieldValue(key, value, FieldSource.Manual, false);
             Set("Schachtnummer", (10001 + i).ToString());
-            Set("Strasse", "Teststrasse");
-            Set("Funktion", "Normschacht");
-            Set("Material", "Beton");
-            Set(FieldKeys.ConditionClass, (i % 5).ToString());
-            if (i == 0)
+            Set("Strasse", Strassen[i % Strassen.Length]);
+            Set("Funktion", i % 3 == 0 ? "Normschacht" : i % 3 == 1 ? "Kontrollschacht" : "Einlaufschacht");
+            Set("Material", Materialien[i % Materialien.Length]);
+            if (i % 6 != 5)
+                Set(FieldKeys.ConditionClass, (i % 5).ToString());
+            if (i % 4 == 0)
             {
                 Set(FieldKeys.ShaftShape, "Oval");
                 Set(FieldKeys.ShaftDimension1Mm, "1100");
@@ -359,6 +471,7 @@ internal static class Program
                 Set(FieldKeys.ShaftDimension1Mm, "600");
                 Set(FieldKeys.ShaftDimension2Mm, "600");
             }
+            if (i % 3 != 2) Set(FieldKeys.PdfPath, pdf);
             project.SchaechteData.Add(schacht);
         }
     }
@@ -383,11 +496,51 @@ internal static class Program
             return bounds.Top >= -0.1 && bounds.Bottom <= viewport.ActualHeight + 0.1;
         });
         var dpi = VisualTreeHelper.GetDpi(window);
-        File.WriteAllText(Path.Combine(Root, $"messung-{AppliedPage}-{AppliedTheme}.json"), JsonSerializer.Serialize(new
+        // Etappe 2b: sichtbare Spalten und der aktive Ansichts-Chip gehoeren zum Nachweis.
+        var sichtbareSpalten = grid?.Columns
+            .Where(c => c.Visibility == Visibility.Visible)
+            .Select(c => c.Header?.ToString() ?? "?")
+            .ToArray() ?? [];
+        var aktiverChip = Descendants(window)
+            .OfType<System.Windows.Controls.Primitives.ToggleButton>()
+            .Where(t => t.IsChecked == true && t.Tag is string)
+            .Select(t => (string)t.Tag!)
+            .FirstOrDefault();
+        // Zellprobe der ersten sichtbaren Zeile: Ausrichtung und tatsaechliche Hoehe je Zelle.
+        // Nur so ist "Zahlen rechts" und "hoechstens drei Zeilen" nachpruefbar statt geschaetzt.
+        var ersteZeile = rows.FirstOrDefault();
+        var zellen = ersteZeile is null ? [] : Descendants(ersteZeile).OfType<DataGridCell>()
+            .Where(c => c.Column?.Visibility == Visibility.Visible)
+            .Select(c =>
+            {
+                var text = Descendants(c).OfType<TextBlock>().FirstOrDefault();
+                return new
+                {
+                    spalte = c.Column?.Header?.ToString() ?? "?",
+                    zellBreite = Math.Round(c.ActualWidth, 1),
+                    zellHoehe = Math.Round(c.ActualHeight, 1),
+                    textBreite = text is null ? 0 : Math.Round(text.ActualWidth, 1),
+                    textHoehe = text is null ? 0 : Math.Round(text.ActualHeight, 1),
+                    ausrichtung = text?.TextAlignment.ToString(),
+                    waagrecht = text?.HorizontalAlignment.ToString(),
+                    schrift = (text?.FontFamily?.Source)
+                };
+            }).ToArray();
+        var variantSuffix = string.IsNullOrEmpty(AppliedVariant) ? "" : "-" + AppliedVariant;
+        File.WriteAllText(Path.Combine(Root, $"messung-{AppliedPage}{variantSuffix}-{AppliedTheme}.json"), JsonSerializer.Serialize(new
         {
             utc = DateTime.UtcNow,
             theme = AppliedTheme,
             seite = AppliedPage,
+            variante = AppliedVariant,
+            aktiveSpaltenansicht = aktiverChip,
+            spaltenSichtbar = sichtbareSpalten.Length,
+            spalten = sichtbareSpalten,
+            // In "Alle Spalten" ist die Zeilenhoehe bewusst Auto (double.NaN); JSON kennt
+            // dafuer keinen Wert, deshalb hier als null.
+            zeilenhoehe = grid is null || double.IsNaN(grid.RowHeight) ? (double?)null : grid.RowHeight,
+            datensaetze = grid?.Items.Count,
+            zellprobe = zellen,
             width = window.ActualWidth,
             height = window.ActualHeight,
             zielFenster = ziel.GetType().Name,

@@ -962,6 +962,78 @@ ausserhalb von `AuswertungPro.sln`.
   `Window.Background` auf Transparent, und ein `RenderTargetBitmap` erfasst die vom
   Windows-Compositor gemalte Flaeche nicht.
 
+### Nova-Etappe 2b (2026-09-07, Tabellen, Suche und Eingabefelder)
+
+Anlass ist Pascals Bild vom 07.09. aus einem echten Projekt: alte Tabelle, Ansicht
+„Alle Spalten 52", eine mehrzeilige Schadenzelle, nur sechs sichtbare Zeilen und
+`{DependencyProperty.UnsetValue}` bei DN und Profil. Plan
+`docs/superpowers/plans/2026-09-07-nova-wpf-etappe-2b.md`, Abnahme mit sechs Bildern
+`docs/reviews/2026-09-06-nova/wpf-etappe-2b/ABNAHME.md`.
+
+- Der Tabellenkopf steht in echten Grossbuchstaben (`GrossbuchstabenConverter`, Ressource
+  `Grossbuchstaben` in `App.xaml`) statt in Kapitaelchen: `Typography.Capitals` greift mit der
+  Programmschrift nicht. Das Kopf-Template gilt programmweit fuer alle `DataGrid`.
+- **Vier virtuelle Statusspalten** KI, Pruefung, Video, Protokoll (`NovaStatusSpalten`,
+  Schluessel mit Praefix `Nova_`). Sie sind KEINE Felder: nicht im `FieldCatalog`, nie in einem
+  Export, nie als Feld im gespeicherten Spaltenlayout. Layout-Speicherung und -Wiederherstellung
+  ueberspringen sie ueber `NovaStatusSpalten.IstVirtuell`. Gebaut werden sie von
+  `HaltungStatusColumnFactory` (Ampel, Badge, zwei Knoepfe) aus der WPF-freien Regel
+  `HaltungZeilenStatus.Bestimme` (Application/UseCases/NaechsteAufgabe); Schaechte haben
+  dafuer `SchachtZeilenStatus` und `SchaechteProtokollColumnFactory`.
+- Die Zustandsklasse ist im Nova-Layout eine Marke (`ZustandsklasseChipColumnFactory`,
+  gemeinsam fuer Haltungen und Schaechte); `SchaechteZustandsklasseColumnFactory` ist darin
+  aufgegangen. Der Chip-Editor schreibt **nur bei einer echten Auswahl**: Beim blossen Oeffnen
+  der Auswahlliste darf kein Wert und keine Handmarkierung entstehen, sonst wuerde ein Blick in
+  die Liste den Wert der Zeile stempeln. Ohne gueltige Klasse steht ein gestrichelter Strich
+  mit dem Hinweis „nicht berechnet" — nie eine erfundene Z4.
+- `DataPageHaltungColumnBuilder` baut die Spalten der Haltungstabelle ausserhalb von
+  `DataPage` (Zeilengrenze 2000 je Teildatei). `DataPageZeilenhoehePolicy` sagt, welche Ansicht
+  einzeilig ist (kompakt, stammdaten, sanierung, kosten); dort gilt die Zeilenhoehe aus dem
+  Token `RowHeightCompact` (36). „Alle Spalten" und „Bewertung" bleiben auf `Auto`, und eine
+  Zelle mit Zeilenumbruechen wird dort auf **hoechstens drei Zeilen** begrenzt
+  (`DataPageColumnStyleRules.MaximaleZellenhoehe` 54) mit Volltext im Hinweis. Diese Grenze gilt
+  nur im Nova-Layout; die alte Haltungsansicht bleibt unveraendert und ihr „Kompakt" behaelt
+  den rohen Videopfad `Link`, weil es dort keine Statusspalten gibt.
+- „Kompakt" wird **einmalig** zum Standard (`KompaktStartRegel`): Ist
+  `DataPageLayoutSettings.NovaKompaktEinmalGesetzt` noch `false`, wird die Ansicht auf
+  „kompakt" gesetzt und das Flag gesetzt. Danach zaehlt ausschliesslich die Wahl des Benutzers,
+  auch wenn er wieder „Alle Spalten" waehlt. Gilt gleich fuer Haltungen und Schaechte.
+- Die Suche ist eine Pille rechts in der Werkzeugleiste (Haltungen mit Tastenmarke F3,
+  Schaechte ohne). „Verschieben auf Position" und „Gehe zu Zeile" haben keine eigene Zeile mehr;
+  sie sind Menuepunkte unter `Weitere Aktionen -> Reihenfolge` und oeffnen ein `Popup` mit
+  Eingabefeld — fuer beide Layouts gleich. `PopupFocusHelper` setzt den Tastaturfokus in das
+  Feld und schliesst mit Escape. **Die Filterzeile bleibt** (Entscheid Pascal 07.09.), direkt
+  unter den Spaltenchips.
+- Die Eingabefelder stehen in den vier Prototyp-Themen; die Prototyp-Feldliste ist eine
+  **Mindestliste, keine Ausschlussliste**. Daraus werden Stammdaten 17, Bewertung 9,
+  Sanierung 11, Kosten und Bemerkungen 3: `Schacht_oben`/`Schacht_unten` bleiben in den
+  Stammdaten (der Haltungsname haengt an den Schaechten), das Gefaelle ebenso,
+  `Renovierung_Inliner_Stk` in der Sanierung. Alles Uebrige steht in „Weitere Angaben"
+  (zugeklappt) — kein Feld verschwindet. Die Themennamen gelten auch im alten Detailfenster,
+  weil beide denselben `DataPageRecordDetailsBuilder` verwenden.
+- `HaltungFaktenText.Zusammen` ignoriert `null`, Leeres und alles, was nicht Zeichenkette ist
+  oder mit `{` beginnt; die Konverter geben `DependencyProperty.UnsetValue` als `null` weiter.
+  Ohne gewaehlte Zeile zeigt `HaltungUebersichtPanel` nur den Leerzustand — kein Rohrring,
+  keine Fakten, kein Fehltext.
+- Waechter: `DesignAuditNovaTabelleTests`, `DesignAuditNovaHaltungenTests`,
+  `DesignAuditNovaSchaechteTests`, `GrossbuchstabenConverterTests`,
+  `DataPageColumnStyleRulesTests`, `DataPageColumnViewCatalogTests`,
+  `SchaechteColumnViewCatalogTests`, `NovaStatusSpaltenTests`,
+  `DataPageColumnViewControllerTests`, `DataPageZeilenhoehePolicyTests`,
+  `HaltungStatusColumnFactoryTests`, `ZustandsklasseChipColumnFactoryTests`,
+  `SchaechteZustandsklasseColumnFactoryTests`, `SchaechteProtokollColumnFactoryTests`,
+  `PopupFocusHelperTests`, `DataPageRecordDetailsBuilderTests`,
+  `HaltungFelderDrawerFilterTests`, `HaltungFaktenTextConverterTests`,
+  `DataGridColumnHeaderGrossbuchstabenIsolatedSmokeTests` sowie WPF-frei
+  `HaltungZeilenStatusTests`, `SchachtZeilenStatusTests`, `HaltungFaktenTextTests`,
+  `HaltungRecordProtokollMeldungTests`.
+- Offen und in der Abnahme belegt: Zahlen stehen in der Tabelle weiterhin links, weil
+  `DataPageColumnSetup.Apply` nur fuer `Kosten` eine rechte Ausrichtung liefert und
+  `DataGridColumnLayoutController` damit die `TextAlignment.Right`-Regel der Spaltenfabrik
+  ueberschreibt. Bei Full HD mit offenen Eingabefeldern sind zehn statt der geplanten zwoelf
+  Zeilen ganz sichtbar. Spalten sind `SizeToHeader` breit und schneiden laengere Werte ohne
+  Auslassungspunkte ab. Windows-Skalierung 125 und 150 Prozent ist nicht gemessen.
+
 ## Build & Test
 ```bash
 dotnet build AuswertungPro.sln
