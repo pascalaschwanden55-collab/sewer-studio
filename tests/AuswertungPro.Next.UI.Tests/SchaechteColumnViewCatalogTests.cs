@@ -67,18 +67,29 @@ public sealed class SchaechteColumnViewCatalogTests
     }
 
     /// <summary>
-    /// Nova-Etappe 2b, Task 6: In "Kompakt" und "Dokumente und Medien" steht das Protokoll als
-    /// Knopf (virtuelle Spalte), nicht als roher Dateipfad. Bearbeitet wird der Pfad weiterhin
-    /// in "Alle Spalten" und in den Eingabefeldern.
+    /// Nova-Etappe 2b, Task 6: In "Kompakt" steht das Protokoll als Knopf (virtuelle Spalte),
+    /// nicht als roher Dateipfad — dort zaehlt der Ueberblick.
     /// </summary>
-    [Theory]
-    [InlineData("kompakt")]
-    [InlineData("medien")]
-    public void Protokoll_erscheint_als_Knopf_statt_als_Pfad(string schluessel)
+    [Fact]
+    public void In_Kompakt_ersetzt_der_Knopf_den_Protokollpfad()
     {
-        var ansicht = SchaechteColumnViewCatalog.Resolve(schluessel);
+        var ansicht = SchaechteColumnViewCatalog.Resolve("kompakt");
         Assert.Contains(NovaStatusSpalten.Protokoll, ansicht.Felder!);
         Assert.DoesNotContain(FieldKeys.PdfPath, ansicht.Felder!);
+    }
+
+    /// <summary>
+    /// Nova-Fixwelle 2b (F5, Ruling): In "Dokumente und Medien" stehen Knopf UND Pfad. Dort
+    /// geht es um genau diese Dateien; ein falscher Pfad muss ohne Wechsel nach
+    /// "Alle Spalten" zu korrigieren sein.
+    /// </summary>
+    [Fact]
+    public void Dokumente_und_Medien_zeigt_Knopf_und_bearbeitbaren_Pfad()
+    {
+        var ansicht = SchaechteColumnViewCatalog.Resolve("medien");
+        Assert.Contains(NovaStatusSpalten.Protokoll, ansicht.Felder!);
+        Assert.Contains(FieldKeys.PdfPath, ansicht.Felder!);
+        Assert.Contains(FieldKeys.PdfEigen, ansicht.Felder!);
     }
 
     /// <summary>"Alle Spalten" fuehrt keine eigene Liste und zeigt deshalb auch den Pfad.</summary>
