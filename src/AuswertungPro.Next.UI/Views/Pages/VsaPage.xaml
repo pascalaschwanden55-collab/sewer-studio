@@ -3,83 +3,89 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls">
-    <!-- Drei feste Karten (Bewertung, Ergebnis, Hinweis): duerfen gestaffelt einschweben. -->
-    <Grid ui:EntranceFx.Stagger="True">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <ctrl:NovaPageHeader Grid.Row="0" Title="VSA-Bewertung" Subtitle="Zustandsklasse und Noten nach VSA-KEK 2020"/>
 
-        <!-- VSA-Bewertung Card -->
-        <Border Grid.Row="1" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                CornerRadius="{DynamicResource RadiusXL}" Padding="0" Margin="0,0,0,12">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="4"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+        <!-- Drei feste Karten (Bewertung, Ergebnis, Hinweis): duerfen gestaffelt einschweben. -->
+        <Grid Grid.Row="1" ui:EntranceFx.Stagger="True">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-                <!-- Accent Strip -->
-                <Border Background="{DynamicResource AccentBrush}" CornerRadius="10,0,0,10"/>
+            <!-- VSA-Bewertung Card -->
+            <Border Grid.Row="0" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="{DynamicResource RadiusXL}" Padding="0" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="4"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="1" Margin="16,14">
-                    <TextBlock Text="Berechnet die VSA-Zustandsbewertung für alle Haltungen und Schächte basierend auf den erfassten Schadencodes und dem Regelwerk (SN EN 13508-2)."
-                               TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextS}"
-                               Margin="0,0,0,12"/>
-                    <Button Command="{Binding RunCommand}" Style="{StaticResource ActionCardButton}" HorizontalAlignment="Left"
-                            ToolTip="VSA-Zustandsbewertung für alle vorhandenen Haltungen und Schächte berechnen.">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}"
-                                       Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="VSA-Bewertung starten" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                    <!-- Accent Strip -->
+                    <Border Background="{DynamicResource AccentBrush}" CornerRadius="10,0,0,10"/>
 
-                    <!-- S10: Sichtbares Lade-Feedback waehrend die Bewertung im Hintergrund laeuft.
-                         Der Button wird durch das AsyncRelayCommand automatisch gesperrt. -->
-                    <ProgressBar IsIndeterminate="True" Height="4" Margin="0,10,0,0">
-                        <ProgressBar.Style>
-                            <Style TargetType="ProgressBar">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ProgressBar.Style>
-                    </ProgressBar>
+                    <StackPanel Grid.Column="1" Margin="16,14">
+                        <TextBlock Text="Berechnet die VSA-Zustandsbewertung für alle Haltungen und Schächte basierend auf den erfassten Schadencodes und dem Regelwerk (SN EN 13508-2)."
+                                   TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextS}"
+                                   Margin="0,0,0,12"/>
+                        <Button Command="{Binding RunCommand}" Style="{StaticResource ActionCardButton}" HorizontalAlignment="Left"
+                                ToolTip="VSA-Zustandsbewertung für alle vorhandenen Haltungen und Schächte berechnen.">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}"
+                                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="VSA-Bewertung starten" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- S10: Sichtbares Lade-Feedback waehrend die Bewertung im Hintergrund laeuft.
+                             Der Button wird durch das AsyncRelayCommand automatisch gesperrt. -->
+                        <ProgressBar IsIndeterminate="True" Height="4" Margin="0,10,0,0">
+                            <ProgressBar.Style>
+                                <Style TargetType="ProgressBar">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ProgressBar.Style>
+                        </ProgressBar>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Ergebnis -->
+            <Border Grid.Row="1" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="{DynamicResource RadiusL}" Padding="14" Margin="0,0,0,8">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="&#xE73E;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}"
+                                   Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Ergebnis" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}"/>
                 </StackPanel>
-            </Grid>
-        </Border>
+            </Border>
 
-        <!-- Ergebnis -->
-        <Border Grid.Row="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                CornerRadius="{DynamicResource RadiusL}" Padding="14" Margin="0,0,0,8">
-            <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="&#xE73E;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}"
-                               Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="Ergebnis" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+            <!-- Hinweis -->
+            <Border Grid.Row="2" VerticalAlignment="Top"
+                    Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="{DynamicResource RadiusL}" Padding="12">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE946;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}"
+                               Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Top" Margin="0,0,8,0"/>
+                    <TextBlock Text="Tipp: Für echte VSA-Klassifizierung müssen die Mapping-JSONs (Anhang C/D) vollständig gepflegt sein."
+                               TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
                 </StackPanel>
-                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}"/>
-            </StackPanel>
-        </Border>
-
-        <!-- Hinweis -->
-        <Border Grid.Row="3" VerticalAlignment="Top"
-                Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                CornerRadius="{DynamicResource RadiusL}" Padding="12">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="&#xE946;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}"
-                           Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Top" Margin="0,0,8,0"/>
-                <TextBlock Text="Tipp: Für echte VSA-Klassifizierung müssen die Mapping-JSONs (Anhang C/D) vollständig gepflegt sein."
-                           TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
-            </StackPanel>
-        </Border>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

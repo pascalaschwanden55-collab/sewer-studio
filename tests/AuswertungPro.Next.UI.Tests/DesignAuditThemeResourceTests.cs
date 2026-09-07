@@ -635,17 +635,18 @@ public sealed class DesignAuditThemeResourceTests
 
     private static void AssertPageTitle(string xaml, string title)
     {
-        // Nova-Etappe 2, Task 18: Der Titel liegt seither meist im gemeinsamen
-        // NovaPageHeader-Control (ctrl:NovaPageHeader Title="..."). Dessen eigenes XAML
-        // traegt fest Style="{StaticResource PageTitle}" ohne Akzentfarbe
-        // (siehe DesignAuditNovaSeitenkoepfeTests.Seitenkopf_verwendet_den_PageTitle_Stil);
-        // eine Seite mit diesem Control braucht deshalb keine eigene literale TextBlock-Pruefung mehr.
+        // Nova-Etappe 2, Task 18 + Fix-Runde 1: Der Titel liegt seither meist im gemeinsamen
+        // NovaPageHeader-Control (…:NovaPageHeader Title="..."). Statt hier nur die Existenz des
+        // Controls zu pruefen, wird zusaetzlich dessen eigenes Template (Controls/NovaPageHeader.xaml)
+        // an genau denselben Kriterien wie ein literaler Seiten-TextBlock gemessen: PageTitle-Stil
+        // gesetzt (Static ODER Dynamic - siehe Ruling zur Theme-Umschaltung), keine Akzentfarbe.
         var headerMarker = $"Title=\"{title}\"";
         var headerIndex = xaml.IndexOf(headerMarker, StringComparison.Ordinal);
         if (headerIndex >= 0)
         {
-            var headerStart = xaml.LastIndexOf("<ctrl:NovaPageHeader", headerIndex, StringComparison.Ordinal);
+            var headerStart = xaml.LastIndexOf(":NovaPageHeader", headerIndex, StringComparison.Ordinal);
             Assert.True(headerStart >= 0, $"Title {title} NovaPageHeader could not be read.");
+            AssertNovaPageHeaderTitleElement();
             return;
         }
 
@@ -659,6 +660,33 @@ public sealed class DesignAuditThemeResourceTests
         var element = xaml[elementStart..elementEnd];
 
         Assert.Contains("Style=\"{StaticResource PageTitle}\"", element);
+        Assert.DoesNotContain("NeonCyanBrush", element);
+        Assert.DoesNotContain("AccentBrush", element);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: Prueft das gemeinsame Control selbst statt sich auf die blosse Existenz des
+    /// Tags zu verlassen. Der Titel-TextBlock im ControlTemplate bindet ueber
+    /// <c>{TemplateBinding Title}</c>, nicht ueber einen literalen Seitentext.
+    /// </summary>
+    private static void AssertNovaPageHeaderTitleElement()
+    {
+        var headerXaml = ReadUiFile("Controls", "NovaPageHeader.xaml");
+        var marker = "Text=\"{TemplateBinding Title}\"";
+        var textIndex = headerXaml.IndexOf(marker, StringComparison.Ordinal);
+        Assert.True(textIndex >= 0, "NovaPageHeader.xaml: Titel-TextBlock (TemplateBinding Title) wurde nicht gefunden.");
+
+        var elementStart = headerXaml.LastIndexOf("<TextBlock", textIndex, StringComparison.Ordinal);
+        var elementEnd = headerXaml.IndexOf("/>", textIndex, StringComparison.Ordinal);
+        Assert.True(elementStart >= 0 && elementEnd > elementStart, "NovaPageHeader.xaml: Titel-TextBlock konnte nicht gelesen werden.");
+        var element = headerXaml[elementStart..elementEnd];
+
+        // Ruling (Fix-Runde 1): Static ODER Dynamic ist am Control zulaessig - anders als bei
+        // Seiten-Titeln erzwingt dieser Waechter keine bestimmte Form.
+        Assert.True(
+            element.Contains("Style=\"{StaticResource PageTitle}\"", StringComparison.Ordinal)
+                || element.Contains("Style=\"{DynamicResource PageTitle}\"", StringComparison.Ordinal),
+            "NovaPageHeader.xaml: Titel-TextBlock traegt weder Static- noch DynamicResource PageTitle.");
         Assert.DoesNotContain("NeonCyanBrush", element);
         Assert.DoesNotContain("AccentBrush", element);
     }

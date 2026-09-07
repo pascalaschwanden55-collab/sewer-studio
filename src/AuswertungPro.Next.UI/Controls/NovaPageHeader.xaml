@@ -7,13 +7,22 @@
          (z. B. per x:Name) referenzierte Elemente im Aktionen-Inhalt sperrt (MC3093 beim Build). -->
     <Style TargetType="{x:Type controls:NovaPageHeader}">
         <Setter Property="Margin" Value="0,0,0,12"/>
+        <!-- Fix-Runde 1: Ein Control ist per Default fokussierbar/Tabstopp (anders als ein
+             UserControl, das Focusable=False mitbringt). Der Seitenkopf zeigt nur Text und
+             fremde Aktionen (die selbst fokussierbar bleiben) - er selbst darf keinen
+             Tab-Stopp und keinen Fokusrahmen erzeugen. -->
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsTabStop" Value="False"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type controls:NovaPageHeader}">
                     <DockPanel>
                         <ContentPresenter DockPanel.Dock="Right" Content="{TemplateBinding Aktionen}" VerticalAlignment="Center"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="{TemplateBinding Title}" Style="{StaticResource PageTitle}"/>
+                            <!-- Ruling (Fix-Runde 1): DynamicResource, nicht Static - der Style liegt in
+                                 App.Resources und wuerde bei StaticResource die Theme-Farbe der Titel-
+                                 Unterstreichung beim Hell/Dunkel-Wechsel einfrieren. -->
+                            <TextBlock x:Name="TitleText" Text="{TemplateBinding Title}" Style="{DynamicResource PageTitle}"/>
                             <!-- Kollabiert bei leerem Untertitel (z. B. Einstellungen), damit kein leerer Rand bleibt. -->
                             <TextBlock x:Name="SubtitleText"
                                        Text="{TemplateBinding Subtitle}" Margin="10,0,0,3" VerticalAlignment="Bottom"
