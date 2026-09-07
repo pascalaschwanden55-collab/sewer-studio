@@ -52,4 +52,18 @@ public sealed class DataPageColumnViewCatalogTests
         Assert.Equal(7, DataPageColumnViewCatalog.Resolve("kompakt").Anzahl(40));
         Assert.Equal(40, DataPageColumnViewCatalog.Resolve("alle").Anzahl(40));
     }
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 1: "NR" ist nur in "Alle Spalten" wahr. Keine der benannten
+    /// Ansichten fuehrt "NR" in ihrer Feldliste, und <see cref="DataPageColumnView.Enthaelt"/>
+    /// bleibt bei gesetzter Feldliste strikt (kein Rueckfall auf "alle Felder gelten").
+    /// </summary>
+    [Fact]
+    public void Kompakt_zeigt_keine_NR_Spalte()
+    {
+        foreach (var v in DataPageColumnViewCatalog.Views.Where(v => v.Key != "alle"))
+            Assert.False(v.Enthaelt("NR"), $"{v.Key} zeigt NR");
+
+        Assert.True(DataPageColumnViewCatalog.Resolve("alle").Enthaelt("NR"));
+    }
 }

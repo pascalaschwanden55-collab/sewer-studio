@@ -7,6 +7,12 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// <summary>
 /// Nova-Etappe 2 (Inventar 4.3, NUM_COLS): Namensspalte fett, Zahlenspalten rechtsbuendig in
 /// der Datenschrift. Reine Regel; die Spaltenfabriken wenden sie nur an.
+///
+/// Nova-Etappe 2b: deckt zusaetzlich Baujahr, alle Sanierungsmengen (Renovierung Inliner,
+/// Anschluesse verpressen, Reparatur Manschette/Kurzliner, Linerendmanschette, Erneuerung
+/// Neubau) sowie beide Schachtmasse ab. Ein im Task-1-Brief genanntes Feld "Tiefe_m" gibt es
+/// weder in <see cref="FieldKeys"/> noch in <see cref="FieldCatalog"/> — es wird bewusst nicht
+/// aufgenommen (siehe Bericht Nova-Etappe 2b, Task 1).
 /// </summary>
 public static class DataPageColumnStyleRules
 {

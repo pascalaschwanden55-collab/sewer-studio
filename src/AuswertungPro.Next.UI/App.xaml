@@ -4,7 +4,8 @@
     <Application.Resources>
         <ResourceDictionary xmlns:vm="clr-namespace:AuswertungPro.Next.UI.ViewModels.Pages"
                     xmlns:views="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
-                    xmlns:conv="clr-namespace:AuswertungPro.Next.UI.Views.Windows">
+                    xmlns:conv="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
+                    xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls">
             <ResourceDictionary.MergedDictionaries>
                  <ResourceDictionary Source="Theme/ThemeLight.xaml" />
                 <ResourceDictionary Source="Theme/Controls.xaml" />
@@ -15,6 +16,12 @@
                  "VsaCodeToLabel" = nur die Bedeutung (fuer eigene Bedeutung-Spalten). -->
             <conv:VsaCodeToTextConverter x:Key="VsaCodeToText"/>
             <conv:VsaCodeToLabelConverter x:Key="VsaCodeToLabel"/>
+
+            <!-- Nova-Etappe 2b: Tabellenkopf in Grossbuchstaben (App-weite Registrierung laut
+                 Auftrag; die DataGridColumnHeader-Vorlage in Theme.xaml/ThemeLight.xaml traegt
+                 zusaetzlich eine lokale Kopie, weil eine dort separat geladene ResourceDictionary
+                 diese Anwendungsressource beim Parsen sonst nicht per StaticResource findet. -->
+            <controls:GrossbuchstabenConverter x:Key="Grossbuchstaben"/>
 
 
             <!-- MVVM: ViewModel -> View -->

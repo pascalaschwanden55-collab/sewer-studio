@@ -52,4 +52,17 @@ public sealed class SchaechteColumnViewCatalogTests
     [Fact]
     public void Alle_Spalten_zaehlt_den_ganzen_Bestand()
         => Assert.Equal(4, SchaechteColumnViewCatalog.Resolve("alle").Anzahl(new[] { "a", "b", "c", "d" }));
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 1: dieselbe NR-Regel gilt fuer die Schachtliste. Keine benannte
+    /// Ansicht fuehrt "NR"; nur "Alle Spalten" zeigt sie.
+    /// </summary>
+    [Fact]
+    public void Kompakt_zeigt_keine_NR_Spalte()
+    {
+        foreach (var v in SchaechteColumnViewCatalog.Views.Where(v => v.Key != "alle"))
+            Assert.False(v.Enthaelt("NR"), $"{v.Key} zeigt NR");
+
+        Assert.True(SchaechteColumnViewCatalog.Resolve("alle").Enthaelt("NR"));
+    }
 }

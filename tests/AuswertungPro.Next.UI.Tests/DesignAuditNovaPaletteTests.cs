@@ -56,7 +56,7 @@ public sealed class DesignAuditNovaPaletteTests
     [Theory]
     [InlineData("ThemeLight.xaml")]
     [InlineData("Theme.xaml")]
-    public void Werkzeugknoepfe_und_Chips_sind_Pillen_und_der_Tabellenkopf_ist_in_Kapitaelchen(string datei)
+    public void Werkzeugknoepfe_und_Chips_sind_Pillen_und_der_Tabellenkopf_schreibt_gross(string datei)
     {
         var xaml = Xaml(datei);
         string Stil(string key) => Regex.Match(xaml, $"<Style x:Key=\"{key}\"[\\s\\S]*?\n    </Style>").Value;
@@ -66,7 +66,11 @@ public sealed class DesignAuditNovaPaletteTests
         Assert.Contains("CornerRadius=\"15\"", Stil("CompactToggleButton"));
         Assert.DoesNotContain("CornerRadius=\"999\"", xaml);
         var header = Regex.Match(xaml, "<Style TargetType=\"\\{x:Type DataGridColumnHeader\\}\">[\\s\\S]*?\n    </Style>").Value;
-        Assert.Contains("Typography.Capitals=\"AllSmallCaps\"", header);
+        // Nova-Etappe 2b: Kapitaelchen greifen mit der Programmschrift nicht (siehe
+        // DesignAuditNovaTabelleTests). Der Kopf schreibt jetzt echte Grossbuchstaben ueber
+        // GrossbuchstabenConverter statt Typography.Capitals.
+        Assert.DoesNotContain("Typography.Capitals", header);
+        Assert.Contains("GrossbuchstabenConverter", header);
         Assert.Contains("Foreground\" Value=\"{DynamicResource MutedBrush}\"", header);
     }
 
