@@ -705,8 +705,13 @@ public sealed class SchaechtePageArchitectureGuardTests
             "SchachtansichtView.xaml"));
 
         Assert.Contains("private DataGridColumn CreateZustandsklasseColumn(", pageCode);
-        Assert.Contains("DataGridComboBoxColumn", pageCode);
-        Assert.Contains("ZustandsklasseColorPalette.SelectionOptions", pageCode);
+        // B6: Die Spalte liegt in einer eigenen Fabrik. Ihr Anzeigetext muss die Tinte der Zelle
+        // tragen, sonst faerbt ihn der implizite TextBlock-Stil (im Dunkeln weiss auf Gelb).
+        Assert.Contains("SchaechteZustandsklasseColumnFactory.Create(", pageCode);
+        var spaltenFabrik = File.ReadAllText(Path.Combine(
+            root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechteZustandsklasseColumnFactory.cs"));
+        Assert.Contains("ZustandsklasseColorPalette.SelectionOptions", spaltenFabrik);
+        Assert.Contains("typeof(DataGridCell)", spaltenFabrik);
         Assert.Contains("SchaechteRecordDetailsBuilder", pageCode);
         Assert.Contains("private RecordDetailItem CreateItem(", detailsBuilder);
         Assert.Contains("isCombo: true", detailsBuilder);

@@ -248,20 +248,7 @@ public partial class SchaechtePage : UserControl
     }
 
     private DataGridColumn CreateZustandsklasseColumn(string recordField)
-    {
-        return new DataGridComboBoxColumn
-        {
-            Header = GetDisplayHeader(recordField),
-            ItemsSource = ZustandsklasseColorPalette.SelectionOptions,
-            SelectedItemBinding = new Binding($"Fields[{recordField}]")
-            {
-                Mode = BindingMode.TwoWay,
-                UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
-            },
-            Width = DataGridLength.SizeToHeader,
-            MinWidth = 90
-        };
-    }
+        => SchaechteZustandsklasseColumnFactory.Create(recordField, GetDisplayHeader(recordField));
 
     private void Grid_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
     {

@@ -42,6 +42,33 @@ internal static class NovaRenderingChecks
         }
     }
 
+    /// <summary>
+    /// Nova-Fixwelle B6: Die Zustandsklasse der Schachtliste ist eine Auswahlspalte. Ihr
+    /// Anzeigetext muss die Tinte der Zelle tragen (schwarz auf der Klassenfarbe), sonst faerbt
+    /// ihn der implizite TextBlock-Stil des Themes — im Dunkeln weiss auf Gelb.
+    /// </summary>
+    internal static void SchachtZustandsklasseBleibtSchwarz()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Zustandsklasse", "2", FieldSource.Manual, false);
+
+        var spalte = SchaechteZustandsklasseColumnFactory.Create("Zustandsklasse", "Zustandsklasse");
+        spalte.CellTemplate.Seal();
+        var anzeige = Assert.IsType<TextBlock>(spalte.CellTemplate.LoadContent());
+
+        var zelle = new DataGridCell
+        {
+            DataContext = record,
+            Style = DataGridColorCellStyleFactory.CreateSchaechteStyle("Zustandsklasse"),
+            Content = anzeige
+        };
+        Arrange(zelle, 180, 40);
+        anzeige.GetBindingExpression(TextBlock.ForegroundProperty)?.UpdateTarget();
+
+        Assert.Equal("2", anzeige.Text);
+        Assert.Equal(Colors.Black, Assert.IsType<SolidColorBrush>(anzeige.Foreground).Color);
+    }
+
     internal static void LongMenuCanScrollToItsLastAction()
     {
         var menu = new ContextMenu { MaxHeight = 240 };

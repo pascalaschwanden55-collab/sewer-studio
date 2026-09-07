@@ -104,7 +104,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
 
     public IReadOnlyList<AutoSaveModeOption> AutoSaveModeOptions { get; } =
     [
-        new(AutoSaveMode.OnEachChange, "Bei jeder Aenderung"),
+        new(AutoSaveMode.OnEachChange, "Bei jeder Änderung"),
         new(AutoSaveMode.Every5Minutes, "Alle 5 Minuten"),
         new(AutoSaveMode.Every10Minutes, "Alle 10 Minuten"),
         new(AutoSaveMode.Disabled, "Aus")

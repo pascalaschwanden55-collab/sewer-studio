@@ -111,6 +111,7 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
                 Assert.Equal(ColorOf(app.FindResource("SelectionBackgroundBrush")), ColorOf(cell.Background));
                 Assert.Equal(ColorOf(app.FindResource("SelectionTextBrush")), ColorOf(cell.Foreground));
                 NovaRenderingChecks.ColorColumnsUseTheirCellForeground();
+                NovaRenderingChecks.SchachtZustandsklasseBleibtSchwarz();
                 NovaRenderingChecks.LongMenuCanScrollToItsLastAction();
             }
 

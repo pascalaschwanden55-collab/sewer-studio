@@ -838,9 +838,22 @@ ausserhalb von `AuswertungPro.sln`.
   `AccentTextBrush`, `FaintBrush` und `GlassBorderBrush`. Der dunkle Akzent bleibt `#2563EB`,
   die Zustandsfarben Z0-Z4 bleiben unveraendert.
 - Werkzeugknoepfe, Chips und Umschalter sind Pillen (`ToolbarButton`, `ToolbarButtonAccent`,
-  `CompactToggleButton` mit `CornerRadius="999"`), der Tabellenkopf steht in Kapitaelchen.
-  WPF begrenzt einen Eckenradius auf halbe Breite UND halbe Hoehe und zeichnet daraus eine
-  Ellipse, keine Kapsel; das ist als Befund B1 der Abnahme offen und noch nicht entschieden.
+  `CompactToggleButton`), der Tabellenkopf steht in Kapitaelchen. **Eine Kapsel traegt den Radius
+  ihrer halben ECHTEN Hoehe, nie 999.** WPF teilt den Eckenradius getrennt auf Breite UND Hoehe
+  auf; ein zu grosser Wert ergibt auf einer flachen, breiten Flaeche eine Ellipse mit spitzen
+  Enden statt einer Kapsel (Befund B1). Tokens in `Theme/Controls.xaml`: `RadiusPill` 15
+  (Bedienelemente mit `MinHeight` 30), `RadiusChip` 11 (Abzeichen mit rund 22 px Hoehe),
+  `RadiusBar` 5 (Fortschrittsbalken mit 10 px Hoehe), `RadiusCircle` 36 (die 72-px-Kreisflaeche
+  des Leerzustands). Waechter: `DesignAuditFensterUndRundungenTests`.
+- Der implizite `TextBlock`-Stil beider Themes setzt `Foreground` selbst und schlaegt damit die
+  Vererbung. Die vier Knopfvorlagen (Basis-`Button`, `ToolbarButton`, `ToolbarButtonAccent`,
+  `CompactToggleButton`) reichen ihre Tinte deshalb ueber eine eigene, engere Fassung in
+  `ContentPresenter.Resources` an den Inhalt durch (B7). Dieselben Vorlagen richten ihren Inhalt
+  jetzt nach `HorizontalContentAlignment`/`VerticalContentAlignment` aus statt fest mittig —
+  ohne das bleibt ein gestreckter Knopfinhalt (Balken, rechtsbuendige Zaehler) unsichtbar.
+- Eingabefelder und Knopf-Umrisse tragen den neuen Token `InputBorderBrush` (hell `#828FA4`,
+  dunkel `#64769C`): mindestens 3:1 gegen `CardBrush`. Der Kartenrand (`BorderBrush`) bleibt
+  bewusst hell (Glas-Look). Waechter: `DesignAuditContrastTests`.
 - `HaltungPruefstatus` (offen / KI analysiert / abgeschlossen) und `NaechsteAufgabeRegel`
   liegen WPF-frei in `Application/UseCases/NaechsteAufgabe`. Der Chip der Kopfzeile zeigt die
   erste KI-analysierte Haltung, sonst die erste offene mit Video.
@@ -853,48 +866,101 @@ ausserhalb von `AuswertungPro.sln`.
   `AiRuntimeStatusTracker.Current`. Das ist die KI-Bereitschaft, nicht der Sensorzustand.
 - `ProjektUebersichtPage` erscheint nur im Arbeitsbereich mit fertigem Projekt; ohne Projekt
   bleibt die bisherige `OverviewPage` der Startbildschirm. Die Kennzahlen kommen WPF-frei aus
-  `ProjektUebersichtKennzahlen`. Der Donut des Prototyps ist bewusst durch eine anklickbare
-  Legende ersetzt.
+  `ProjektUebersichtKennzahlen`; Schachtfelder liest sie ueber `SchachtFeldnamen`. Der Donut des
+  Prototyps ist bewusst durch eine anklickbare Legende ersetzt.
+- `AppSettings.ShowUebersichtNovaLayout` (Standard `true`) und der checkbare Menuepunkt
+  `Ansicht -> Klassische Uebersicht` (`ShellViewModel.KlassischeUebersicht`) geben bei offenem
+  Projekt die klassische `OverviewPage` zurueck — sie traegt Projektliste, Vorschau und die
+  Vorschau-PDF. Die neue Seite hat dafuer einen eigenen Knopf `Vorschau-PDF`; beide Wege laufen
+  ueber denselben `ProjektVorschauPdfUseCase` (Dateiname, Reihenfolge, Meldungen liegen dort).
+  Die Zeilen unter „Haeufigste Schaeden" fuehren wie die Balken der klassischen Uebersicht in
+  die gefilterte Haltungsliste.
 - `ICodingSuggestionRegistry` merkt je Haltung den letzten Vorabdurchlauf fuer die Karte
   „KI-Vorabdurchlauf diese Sitzung"; es ist die 159. Registrierung im `ServiceProvider`
-  (`ServiceProviderRegistrationTests`).
+  (`ServiceProviderRegistrationTests`). Gemerkt wird ein Durchlauf erst NACH der
+  Staleness-Pruefung und nur, wenn mindestens ein Teil wirklich gelaufen ist
+  (`CodingSuggestionMerkRegel`); ein abgeschalteter Vorabdurchlauf taeuscht sonst Arbeit vor.
+  Ohne Fund zeigt die Karte den Grund (`Hinweis`) statt eines leeren Abzeichens.
 - Der Umschalter „Alte Haltungsansicht" sitzt im Menue `Weitere Aktionen`, nicht mehr in der
   Werkzeugleiste. Chips und Themen tragen ihre Anzahl als hochgestellten Zaehler.
 - `RohrringGeometrie` folgt der erfassten Uhrlage (`Uhr_von`/`Uhr_bis` samt Aliassen); die
   frueher benutzte Indexregel ist nur noch der Rueckfall ohne Uhrlage. 0 Grad ist 12 Uhr.
+  Gezeichnet und gelistet werden nur Schaeden: `SchadensgruppenRegel` (Application/Common) ist
+  die EINE Quelle dafuer, was ein Schaden ist (BA-/BB-Hauptcodes aus dem VSA-Katalog) — dieselbe
+  Regel wie im Cockpit (`DashboardStatisticsBuilder`). Bestandsaufnahme (BCD Rohranfang, BCE
+  Rohrende, BCA Anschluss, BCC Bogen) gehoert nicht dazu. Die Reihenfolge ist Stufe absteigend,
+  bei Gleichstand der kleinere Meterwert. Nie eine zweite Kopie dieser Regel anlegen.
+- `HaltungUebersichtPanel` hoert zusaetzlich auf `HaltungRecord.PropertyChanged` (Pruefung und
+  Video haengen an Feldern, nicht am Wechsel des Datensatzes) und marshallt wie
+  `SchachtUebersichtPanel` auf den UI-Thread. Der Threadvertrag steht am Setter von
+  `SchachtRecord.Protocol`: Die Meldung laeuft auf dem setzenden Thread, UI-Abonnenten
+  marshallen selbst. Das Panel liegt in einem Bildlauf; nur die Schadenliste bekommt die
+  Reststrecke, und ein leeres Eckdatenfeld zeigt einen Gedankenstrich (`HaltungFaktenText`)
+  statt einer nackten Einheit.
 - Die Schachtseite hat dasselbe dreiteilige Layout wie die Haltungen
   (`SchaechteNovaWorkspaceController`, `SchachtUebersichtPanel`, Spaltensaetze in
   `SchaechteColumnViewCatalog`). `AppSettings.ShowSchaechteNovaLayout=false` gibt die alte
-  Ansicht zurueck. Am Schacht wird die Zustandsklasse weiterhin nie berechnet.
+  Ansicht zurueck; dann verschwinden auch die Spaltenchips, weil es keine Spalten mehr gibt.
+  Am Schacht wird die Zustandsklasse weiterhin nie berechnet.
+- **Schachtfelder werden ueber `SchachtFeldnamen` gelesen UND verglichen.** Der Datensatz fuehrt
+  sie unter der Kopfzeile der Excel-Vorlage („Eigentümer" mit Umlaut), Katalog und Import
+  schreiben „Eigentuemer". `DataPageColumnViewController` bekommt deshalb den Faltvergleich
+  gereicht (`DataPageColumnView.Enthaelt/Anzahl`), sonst blendet die Ansicht „Sanierung und
+  Kosten" die Spalte still aus. Der Chip zaehlt nur wirklich vorhandene Spalten.
+- Die Zustandsklasse der Schachtliste ist eine eigene Vorlagenspalte
+  (`SchaechteZustandsklasseColumnFactory`): Text zum Anzeigen, Auswahl zum Bearbeiten. Eine
+  `DataGridComboBoxColumn` taugt dafuer nicht — ihr Anzeigeelement ist ein internes
+  ComboBox-Abkoemmling, ein `ElementStyle` mit `TargetType="TextBlock"` wirft dort sogar, und die
+  Ziffer bekommt am Ende die Farbe des impliziten `TextBlock`-Stils (im Dunkeln weiss auf Gelb,
+  Befund B6). Die Anzeige bindet ihre Tinte direkt an die `DataGridCell`.
 - Der Player hat einen kompakten Kopf und die Bedienleiste des Prototyps; alles Seltene liegt
   im Menue `Weitere ▾`. Die Zeitleiste zeigt die Schadensmarken der Haltung.
-- Das Training Studio steht in drei Spalten 210 | * | 330 mit den drei nummerierten Schritten
+- Das Training Studio steht in drei Spalten (Werkzeuge 240 mit `MinWidth` 210 und `MaxWidth` 240,
+  dann `*`, dann 330) mit den drei nummerierten Schritten
   KI-Vorschlag, Fachliche Codierung und Freigabe fuer Training. Einen Knopf „Fuer Training
   freigeben" gibt es bewusst nicht; die Freigabe bleibt das Export-Register im Training Center.
 - `NetzHintergrund` zeichnet das Leitungsnetz aus einem Formen-Pool (keine Neuanlage je Bild);
   `AppSettings.HintergrundEngine` schaltet ihn, die Einstellungen melden die Aenderung ueber
   `MotionSettings.EngineChanged`. Sichtbar ist er nur in Kopfzeile, Raendern und hinter der Leiste.
 - `NovaPageHeader` ist der einheitliche Seitenkopf mit Untertitel auf elf Seiten.
-- Waechter: `DesignAuditNovaPaletteTests` (6), `DesignAuditNovaHaltungenTests` (7),
+- Auswahlfelder: WPF leitet `ComboBox.SelectionBoxItemTemplate` NICHT aus `DisplayMemberPath` ab
+  — die Eigenschaft bleibt null. Die eigene ComboBox-Vorlage bindet sie korrekt, hat damit aber
+  nichts in der Hand und faellt auf `ToString()` zurueck (Befund B5, mit
+  `ComboBoxAnzeigeIsolatedSmokeTests` als Produktfehler nachgewiesen).
+  `ComboBoxAnzeigeTemplateSelector` schliesst die Luecke; ein ausdruecklicher
+  `ItemTemplateSelector` hat weiterhin Vorrang.
+- `TabControl` uebertraegt die Inhaltsausrichtung des GEWAEHLTEN Reiters auf den Inhaltsbereich.
+  Mit `VerticalContentAlignment="Center"` stand der Seiteninhalt der Einstellungen mittig und
+  liess ueber der ersten Gruppe rund 200 px leer (Befund B8); der Reiterstil streckt jetzt.
+- Ein Aufklapper mit `StaysOpen="False"` schliesst sich beim Klick auf seinen eigenen Knopf
+  selbst; ohne Zeitregel oeffnete ihn derselbe Klick sofort wieder. `PopupToggle`/`PopupToggleGate`
+  ist der gemeinsame Weg (Player und Training Studio, Knopf „Weitere").
+- Waechter: `DesignAuditNovaPaletteTests` (7), `DesignAuditNovaHaltungenTests` (7),
   `DesignAuditNovaSchaechteTests` (5), `DesignAuditNovaPlayerTests` (3),
   `DesignAuditNovaTrainingStudioTests` (4), `DesignAuditNovaUebersichtTests` (2),
   `DesignAuditNovaSeitenkoepfeTests` (4), `NetzHintergrundTests` (3),
   `NovaPageHeaderIsolatedSmokeTests` (1), `SchaechteNovaLayoutIsolatedSmokeTests` (2),
   `ShellNovaKopfzeileTests` (3), `KiBereitschaftRegelTests` (1),
-  `SchaechteColumnViewCatalogTests` (2) sowie WPF-frei
+  `SchaechteColumnViewCatalogTests` (6), `ComboBoxAnzeigeIsolatedSmokeTests` (1),
+  `SettingsPageLayoutIsolatedSmokeTests` (1), `PopupToggleGateTests` (4),
+  `ZustandsklasseInkPolicyTests` (6) sowie WPF-frei
   `GlobaleSucheRegelTests` (2), `NaechsteAufgabeRegelTests` (6),
-  `ProjektUebersichtKennzahlenTests` (3), `RohrringGeometrieTests` (3),
-  `CodingSuggestionRegistryTests` (3).
+  `ProjektUebersichtKennzahlenTests` (3), `RohrringGeometrieTests` (7),
+  `SchadensgruppenRegelTests` (4), `HaltungFaktenTextTests` (5),
+  `ProjektVorschauPdfUseCaseTests` (6), `CodingSuggestionRegistryTests` (3),
+  `CodingSuggestionMerkRegelTests` (7).
 - Ein Glyph gehoert in ein `ui:FluentIcon`, nicht in `Button.Content`. Der implizite
   `TextBlock`-Style beider Themes setzt `FontFamily` und `Foreground` selbst und schlaegt die
   Vererbung vom Knopf; ein Glyph als reiner Content erscheint deshalb als leeres Kaestchen und
   eine Akzentbeschriftung als dunkler Text. Behoben in `DataPage.xaml`, `SchaechtePage.xaml`
-  und `RecordDetailsView.xaml`; die uebrigen Faelle stehen als Befunde B6/B7 in der Abnahme.
-- Offen laut Abnahme: Ellipsen statt Kapseln (B1), Tastenmarke im Suchfeld (B2), abgeschnittene
-  Fakten der Haltungsuebersicht (B3), zu schmale linke Spalte im Training Studio (B4),
-  Auswahlfelder mit Rohtext statt `DisplayMemberPath` (B5, Altbestand), Zellentinte und
-  Akzentbeschriftung (B6/B7). Nicht gemessen wurde Windows-Skalierung 125 und 150 Prozent;
-  das bleibt eine Sichtpruefung durch Pascal beim Merge.
+  und `RecordDetailsView.xaml`; die Tinte der Knopfvorlagen und der farbigen Zellen ist seit der
+  Fixwelle vom 07.09.2026 zentral geloest (B6/B7 oben).
+- Die Befunde B1 bis B8 und die Schlussreview F1 bis F7 sind in der Fixwelle vom 07.09.2026
+  abgearbeitet; Stand und Grenzen stehen in der Abnahme. Nicht gemessen wurde Windows-Skalierung
+  125 und 150 Prozent; das bleibt eine Sichtpruefung durch Pascal beim Merge. Der Pruefhost malt
+  fuer das Bildschirmfoto die Mica-Flaeche des Fensters aus — `Fluent.Backdrop="Mica"` setzt
+  `Window.Background` auf Transparent, und ein `RenderTargetBitmap` erfasst die vom
+  Windows-Compositor gemalte Flaeche nicht.
 
 ## Build & Test
 ```bash

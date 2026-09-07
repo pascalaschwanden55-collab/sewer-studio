@@ -210,6 +210,12 @@ internal static class Program
                     timer.Stop();
                     try
                     {
+                        // Fluent.Backdrop="Mica" setzt Window.Background auf Transparent; die
+                        // Flaeche malt danach der Windows-Compositor, den RenderTargetBitmap
+                        // NICHT erfasst. Ohne diese Zeile ist die Kopfleiste im Bild durchsichtig
+                        // und jede Kontrastbeurteilung daran waere falsch.
+                        MaleMicaFlaecheAus(window);
+                        MaleMicaFlaecheAus(zielFenster!);
                         Messe(window, zielFenster!);
                         if (!string.IsNullOrWhiteSpace(ausgabe))
                             Foto(zielFenster!, ausgabe!);
@@ -229,6 +235,18 @@ internal static class Program
         };
         timer.Start();
         Dispatcher.Run();
+    }
+
+    /// <summary>
+    /// Ersetzt den durchsichtigen Mica-Hintergrund durch die Theme-Flaeche. Nur fuer das
+    /// Bildschirmfoto: Im laufenden Programm zeichnet Windows die Mica-Flaeche selbst.
+    /// </summary>
+    static void MaleMicaFlaecheAus(Window w)
+    {
+        if (w.Background is SolidColorBrush { Color.A: < 255 } or null)
+            w.Background = (Brush?)w.TryFindResource("BgBrush")
+                ?? (Brush?)w.TryFindResource("BgLightBrush")
+                ?? System.Windows.Media.Brushes.White;
     }
 
     /// <summary>Bildschirmfoto des Fensters, 1:1 in Geraetepixeln (96 dpi = keine Skalierung).</summary>

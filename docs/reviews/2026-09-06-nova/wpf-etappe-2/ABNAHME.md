@@ -1,6 +1,9 @@
 # Nova WPF-Etappe 2 — Abnahme
 
-Stand: 07.09.2026 · Branch `feature/nova-etappe-2` · Worktree `C:\Sewer-Studio_KI_4.5-nova`
+Stand: 07.09.2026 (Fixwelle) · Branch `feature/nova-etappe-2` · Worktree `C:\Sewer-Studio_KI_4.5-nova`
+
+Alle zwölf Bilder wurden nach der Fixwelle neu erzeugt; die Befunde B1–B8 und die
+Schlussreview F1–F7 sind unten mit Status geführt.
 
 Grundlage: freigegebener Prototyp `docs/reviews/2026-09-06-nova/optimiert/v2/`,
 Inventar `docs/reviews/2026-09-06-nova/wpf-etappe-2/PROTOTYP-INVENTAR.md`,
@@ -38,22 +41,22 @@ ein ovaler Schacht 1100 × 900, ein künstlicher Videoclip).
 | Aufgabe | Prüfpunkt | Nachweis | Ergebnis |
 |---|---|---|---|
 | 1 Paletten-Tokens | Hell · Glas und Dunkel · Cockpit als Theme-Tokens, Karten und Leiste | alle zwölf Bilder | bestanden |
-| 2 Pillen, Chips, Tabellenkopf | Chips mit Zählern, Tabellenkopf in Grossbuchstaben, runde Knöpfe | `haltungen-hell`, `schaechte-hell` | **abweichend** — die runde Form wird als Ellipse gezeichnet, siehe Befund B1 |
+| 2 Pillen, Chips, Tabellenkopf | Chips mit Zählern, Tabellenkopf in Grossbuchstaben, runde Knöpfe | `haltungen-hell`, `schaechte-hell` | bestanden (B1 behoben: Kapseln mit geraden Flanken) |
 | 3 Tabellen-Feinschliff | Name fett, Zahlen rechts in Datenschrift | `haltungen-hell` | bestanden |
 | 4 Prüfstatus und „Nächste Aufgabe" | Regel liefert die KI-analysierte Haltung | Chip „Nächste Aufgabe: 10001-10002 prüfen" in allen Bildern | bestanden |
 | 5 Kopfzeile | Brotkrume `Projekt / Seite`, Aufgaben-Chip, Speicherstand | Kopfzeile aller Bilder, Fusszeile „Geladen: projekt.json" | bestanden |
-| 6 Globale Suche Strg+K | Suchfeld mit Tastenmarke in der Kopfzeile | `uebersicht-hell` | **abweichend** — Form und Tastenmarke, siehe Befund B1/B2 |
+| 6 Globale Suche Strg+K | Suchfeld mit Tastenmarke in der Kopfzeile | `uebersicht-hell` | bestanden (B1/B2 behoben: Kapsel, Marke innen, Platzhaltertext) |
 | 7 KI-Bereitschaft | Aufklapper unten links mit echtem Zustand | „KI nicht gestartet" in allen Bildern | bestanden |
 | 8 Kennzahlen | Haltungen/Schächte/dringend/Kosten aus einem Bestand | `uebersicht-hell` (14 · 6 · 6 · 0 CHF) | bestanden |
 | 9 Sitzungsregister | Karte „KI-Vorabdurchlauf diese Sitzung" | `uebersicht-hell` | bestanden |
 | 10 Seite „Übersicht" | Hero, Kennzahlen, Zustand, häufigste Schäden, Projekte, Stammdaten | `uebersicht-hell`, `uebersicht-dunkel` | bestanden (Donut bewusst durch Legende ersetzt) |
 | 11 Umschalter, Zähler, gross anzeigen | Spaltenansichten mit Zählern, Themen mit Zählern | `haltungen-hell` (Kompakt 7 … Alle Spalten 52) | bestanden |
-| 12 Übersicht rechts | Rohrring mit echter Uhrlage, Fakten, Schadenliste, KI-Hinweis | `haltungen-hell` | **abweichend** — Fakten werden abgeschnitten, siehe Befund B3 |
+| 12 Übersicht rechts | Rohrring mit echter Uhrlage, Fakten, Schadenliste, KI-Hinweis | `haltungen-hell` | bestanden (B3 behoben: Bildlauf, alle Werte vollständig, „–" statt leerer Einheit) |
 | 13 Schächte-Werkzeugleiste | Hauptaktionen, „Weitere Aktionen", fünf Spaltenansichten | `schaechte-hell` | bestanden |
 | 14 Schachtansicht rechts | Schachtform mit zwei Massen, Fakten, Hinweis „nie berechnet" | `schaechte-hell` (1100 × 900) | bestanden |
 | 15 Player | kompakter Kopf, Bedienleiste, „Weitere ▾", Schadensmarken | `player-hell` | bestanden (Videobild siehe Grenze G2) |
-| 16 Training Studio | drei Spalten 210 \| * \| 330, drei nummerierte Schritte | `training-hell` | **abweichend** — linke Spalte schneidet ab, siehe Befund B4 |
-| 17 Einstellungen | Design-Umschalter, Hintergrund-Engine, Bewegung | `einstellungen-hell`, `einstellungen-dunkel` | **abweichend** — zwei Auswahlfelder zeigen Rohtext, siehe Befund B5 |
+| 16 Training Studio | drei Spalten 240 \| * \| 330, drei nummerierte Schritte | `training-hell` | bestanden (B4 behoben: Spalte 210–240, Umbruch, Liste und Vorschau untereinander) |
+| 17 Einstellungen | Design-Umschalter, Hintergrund-Engine, Bewegung | `einstellungen-hell`, `einstellungen-dunkel` | bestanden (B5 behoben: Beschriftung statt Rohtext; B8: keine Leerfläche mehr) |
 | 18 Seitenkopf | `NovaPageHeader` mit Untertitel | `import-hell` („Import — Kanalfernseh-Projekte, Protokolle, Medien"), `einstellungen-hell` | bestanden |
 | 19 Abnahme | Prüfhost, zwölf Bilder, Release-Gesamtlauf, Doku | diese Datei, `werkzeug/`, `bilder/` | bestanden |
 
@@ -61,9 +64,9 @@ ein ovaler Schacht 1100 × 900, ein künstlicher Videoclip).
 
 ## 3 Befunde
 
-Die folgenden Punkte sind an den Bildern belegt. Sie wurden in dieser Aufgabe
-bewusst **nicht** selbst umgebaut, weil sie Gestaltungsentscheide der Etappe 2
-oder Altbestand betreffen. Entscheid liegt bei Pascal.
+Die folgenden Punkte waren an den Bildern der ersten Abnahme belegt. Sie sind in der
+Fixwelle vom 07.09.2026 abgearbeitet; der Status steht bei jedem Punkt. Die Bilder in
+`bilder/` zeigen den Stand NACH der Fixwelle.
 
 ### B1 — Runde Knöpfe werden zu Ellipsen (durchgängig, wichtigster Punkt)
 
@@ -144,20 +147,51 @@ Textvordergrund statt des weissen Knopfvordergrunds. Sichtbar bei „Im Player p
 Knöpfe, deren Inhalt ein eigener `TextBlock` mit gesetzter Farbe ist (zum Beispiel
 „Speichern"), sind korrekt weiss.
 
-### B8 — Kleinere Punkte
+### B8 — Kleinere Punkte (Stand der ersten Abnahme)
 
-- Brotkrume und Seitentitel sind im dunklen Theme kontrastarm
-  (`haltungen-dunkel.png`, Kopfzeile).
-- Das Symbol des aktiven Leisteneintrags ist im dunklen Theme auf der hellen
-  Auswahlfläche kaum zu sehen (`uebersicht-dunkel.png`, „Übersicht").
-- Auf der Einstellungsseite bleibt zwischen Seitenkopf und der ersten Gruppe
-  „Darstellung und Diagnose" rund 200 px leere Fläche
-  (`einstellungen-hell.png`).
-- Die Zahlen der Zustandslegende stehen hochgestellt direkt am Text
-  („Z4 · kein Handlungsbedarf²"); im Prototyp stehen sie rechtsbündig in einer
-  eigenen Spalte (`uebersicht-hell.png`).
-- Im Training Studio meldet die Statuszeile „Pruefe lokale Vision-KI…" — ein
-  sichtbarer Text ohne Umlaut (`training-hell.png`).
+- Brotkrume und Seitentitel waren im dunklen Theme kontrastarm (`haltungen-dunkel.png`).
+- Das Symbol des aktiven Leisteneintrags war im dunklen Theme kaum zu sehen
+  (`uebersicht-dunkel.png`).
+- Auf der Einstellungsseite blieb zwischen Seitenkopf und der ersten Gruppe rund 200 px
+  leere Fläche (`einstellungen-hell.png`).
+- Die Zahlen der Zustandslegende standen hochgestellt direkt am Text
+  („Z4 · kein Handlungsbedarf²").
+- Im Training Studio meldete die Statuszeile „Pruefe lokale Vision-KI…" — ein sichtbarer
+  Text ohne Umlaut.
+
+---
+
+### Status der Befunde nach der Fixwelle (Commit siehe `final-fix-report.md`)
+
+| Befund | Status | Was gemacht wurde |
+|---|---|---|
+| B1 Ellipsen statt Kapseln | **behoben** | `RadiusPill` ist 15 (halbe Höhe der 30-px-Bedienelemente); neu `RadiusChip` 11, `RadiusBar` 5, `RadiusCircle` 36. Nachweis: gerade Flanken an „Speichern", den Spaltenchips und den Balken der Übersicht. |
+| B2 Tastenmarke ragt aus dem Suchfeld | **behoben** | Suchfeld mit fester Höhe 30, Marke vertikal zentriert innerhalb der Kapsel, Platzhalter „Haltung, Schacht oder Strasse suchen" im leeren Feld. |
+| B3 Fakten abgeschnitten | **behoben** | Das Panel liegt in einem `ScrollViewer`; nur die Schadenliste bekommt die Reststrecke. Leere Felder zeigen „–" statt „ m" oder „ · ". |
+| B4 Linke Spalte des Training Studios | **behoben** | Spalte 240 px mit `MinWidth` 210 / `MaxWidth` 240, kein waagrechter Bildlauf mehr (dadurch brechen Texte um), Liste und Vorschau untereinander. Grenze: Die Vorschlagstabelle bringt in der schmalen Spalte ihren eigenen waagrechten Bildlauf mit. |
+| B5 Auswahlfelder zeigen ToString | **behoben, Produktfehler** | Mit `ComboBoxAnzeigeIsolatedSmokeTests` nachgewiesen: WPF leitet `SelectionBoxItemTemplate` NICHT aus `DisplayMemberPath` ab. `ComboBoxAnzeigeTemplateSelector` schliesst die Lücke. |
+| B6 Zellentinte der Zustandsklassen | **behoben** | Die Zustandsklasse der Schachtliste ist eine eigene Vorlagenspalte; ihr Anzeigetext bindet die Tinte an die `DataGridCell`. Gemessen im Bild: reines Schwarz auf Gelb. |
+| B7 Akzentknöpfe dunkel beschriftet | **behoben** | Die vier Knopfvorlagen reichen ihre Tinte über `ContentPresenter.Resources` an den Inhalt durch. |
+| B8 Kleinere Punkte | **behoben / Grenze** | Brotkrume und Leistensymbol: **Prüfhost-Effekt**, siehe Grenze G6 — der Prüfhost malt die Mica-Fläche jetzt aus, die Kopfzeile ist im Bild lesbar. Leerfläche der Einstellungen: behoben (der Reiterinhalt war mittig ausgerichtet). Legendenzähler: eigene rechte Spalte. „Pruefe lokale Vision-KI…" und „Bei jeder Aenderung": echte Umlaute. |
+
+### Schlussreview F1–F7
+
+| Befund | Status | Was gemacht wurde |
+|---|---|---|
+| F1 Rohrring/Schadenliste zeigen Bestandscodes | **behoben** | `SchadensgruppenRegel` (Application/Common) ist die gemeinsame Quelle für Cockpit, Rohrring und Schadenliste. Nur BA-/BB-Hauptcodes, Stufe absteigend, bei Gleichstand kleinerer Meterwert. |
+| F2 Schacht-Spaltenansichten vergleichen ordinal | **behoben** | Vergleich und Zähler laufen über `SchachtFeldnamen.Falte`; `SchachtUebersichtPanel` und `ProjektUebersichtKennzahlen` lesen Schachtfelder ebenso. |
+| F3 Alte Übersicht unerreichbar | **behoben, bewusste Änderung** | Menü `Ansicht → Klassische Übersicht` (`AppSettings.ShowUebersichtNovaLayout`, Standard `true`). Die neue Seite bekam „Vorschau-PDF" und anklickbare Schadenzeilen; beide Wege laufen über `ProjektVorschauPdfUseCase`. `OverviewPreviewPdfCommandTests` prüft jetzt über den Bedienweg. |
+| F4 Sitzungsregister merkt leere Durchläufe | **behoben** | `CodingSuggestionMerkRegel`: erst nach der Staleness-Prüfung merken und nur, wenn ein Teil wirklich lief. Ohne Fund zeigt die Karte den Grund. |
+| F5 `PruefungText`/`VideoText` nur bei Record-Wechsel | **behoben** | Das Panel hört auf `HaltungRecord.PropertyChanged`, mit derselben An-/Abmeldung wie bei den Entries. |
+| F6 Threadvertrag `SchachtRecord.Protocol` | **behoben** | `SchachtUebersichtPanel` marshallt auf den Dispatcher; der Vertrag steht am Setter. |
+| F7 `ColorBorder` zu kontrastarm | **behoben** | Neuer Token `InputBorderBrush` (hell `#828FA4`, dunkel `#64769C`) für Eingabefelder und Knopf-Umrisse, ≥ 3:1 gegen `CardBrush`. Der Kartenrand bleibt hell. |
+
+### Bewusste Änderung: Umschalter „Klassische Übersicht"
+
+Bei offenem Projekt zeigt „Übersicht" weiterhin die neue Projektübersicht. Der checkbare
+Menüpunkt `Ansicht → Klassische Übersicht` gibt die bisherige Seite zurück — sie trägt
+Projektliste, Vorschau und Vorschau-PDF und bleibt ohne Projekt ohnehin der Startbildschirm.
+Muster und Speicherort entsprechen dem Umschalter „Alte Haltungsansicht".
 
 ### In dieser Aufgabe behobene Kleinigkeiten
 
@@ -213,6 +247,8 @@ Aus den Zwischenberichten übernommen, bewusst offen gelassen:
 
 ## 6 Gesamtlauf
 
+Erste Abnahme (Release):
+
 ```
 dotnet build AuswertungPro.sln -c Release      → 0 Fehler, 0 Warnungen
 dotnet test  AuswertungPro.sln -c Release --no-build
@@ -233,6 +269,28 @@ Er startet einen echten PowerShell-Prozess und erwartet, dass er innerhalb einer
 beendet ist; gezielte Wiederholung und der zweite vollständige Gesamtlauf sind grün.
 Der Fehler ist damit last- und zeitabhängig und hat nichts mit dieser Etappe zu tun —
 weder der Dienst noch sein Test wurden angefasst.
+
+Nach der Fixwelle (Debug):
+
+```
+dotnet build AuswertungPro.sln -c Debug        → 0 Fehler, 0 Warnungen
+dotnet test  AuswertungPro.sln -c Debug --no-build
+```
+
+| Testprojekt | bestanden | übersprungen | Fehler |
+|---|---|---|---|
+| ProjectModernizer.Tests | 62 | 0 | 0 |
+| AuswertungPro.Next.Pipeline.Tests | 2562 | 3 | 0 |
+| AuswertungPro.Next.Infrastructure.Tests | 6234 | 6 | 0 |
+| AuswertungPro.Next.UI.Tests | 6521 | 10 | 0 |
+
+Summe 15 379 bestanden, 19 übersprungen, 0 Fehler.
+
+In einem Zwischenlauf fiel dabei einmal
+`KatasterHaltungFeldNachschlagTests.Die_Suche_laeuft_nicht_auf_dem_aufrufenden_Thread` um —
+er misst, auf welchem Thread eine Suche läuft, und ist damit last- und zeitabhängig. Gezielt
+wiederholt und im abschliessenden Gesamtlauf ist er grün. Weder der Dienst noch sein Test
+wurden angefasst.
 
 Die übersprungenen Tests sind die bekannten maschinengebundenen Abnahmen
 (Sidecar, echtes Video, Live-Dienste) sowie der Selbst-Übersprung der isolierten
@@ -259,6 +317,15 @@ WPF-Smoketests, die ihre Arbeit in einem Kindprozess leisten.
   (`TryOpenProject`, `EnterWorkspaceOn`, Auswahl setzen, `PlayVideoCommand`),
   nicht über Maus- und Tastatureingaben. Menüs, Kontextmenüs, Aufklapper und
   Tastenkürzel sind damit nicht bildlich belegt.
+- **G6 — Der Prüfhost malt die Mica-Fläche aus.** `Fluent.Backdrop="Mica"` setzt
+  `Window.Background` auf Transparent; die Fläche zeichnet der Windows-Compositor, den ein
+  `RenderTargetBitmap` nicht erfasst. In der ersten Abnahme war die Kopfleiste im Bild deshalb
+  durchsichtig, und die daraus abgeleitete Aussage „Brotkrume kontrastarm" war ein Messfehler
+  des Prüfhosts, kein Produktfehler (gemessen: die Schrift trägt `#EAF0FA`, der Hintergrund
+  hatte Alpha 0). Der Prüfhost setzt vor dem Foto die Theme-Fläche ein.
+- **G7 — Vorschlagstabelle im Training Studio.** Die Liste „Vorschläge aus dem
+  Video-Durchlauf" hat fünf Spalten und steht in einer 240 px breiten Werkzeugspalte. Sie bringt
+  dafür ihren eigenen waagrechten Bildlauf mit; abgeschnitten wird nichts, eng ist es trotzdem.
 - **G5 — Nur zwei Themes, sieben Ansichten.** Die übrigen Seiten (Projekt, Export,
   Medienkonflikte, Druckcenter, Dossiers, die drei Bewertungsseiten, Diagnose)
   sind nur über ihre Wächtertests abgedeckt, nicht über Bilder.

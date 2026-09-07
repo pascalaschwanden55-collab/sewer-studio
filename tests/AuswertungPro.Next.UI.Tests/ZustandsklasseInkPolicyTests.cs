@@ -42,21 +42,22 @@ public sealed class ZustandsklasseInkPolicyTests
     }
 
     /// <summary>
-    /// Nova-Fixwelle B6: Der Zellstil setzt schwarze Tinte an der DataGridCell, doch der implizite
-    /// TextBlock-Stil des dunklen Themes setzt Foreground selbst und schlaegt die Vererbung —
-    /// die Ziffern standen weiss auf Gelb. Der Zellstil bringt seine eigene, engere Fassung mit.
+    /// Nova-Fixwelle B6: Die Zustandsklasse der Schachtliste war eine <c>DataGridComboBoxColumn</c>.
+    /// Deren Anzeigeelement ist ein internes ComboBox-Abkoemmling; die Ziffer bekam ihre Farbe am
+    /// Ende vom impliziten TextBlock-Stil des Themes und stand im Dunkeln weiss auf Gelb. Die
+    /// Spalte zeigt jetzt eine eigene Zellvorlage mit Text zum Anzeigen und Auswahl zum Bearbeiten.
+    /// Die tatsaechlich gezeichnete Tinte prueft <c>NovaRenderingChecks.SchachtZustandsklasseBleibtSchwarz</c>
+    /// im STA-Kindprozess.
     /// </summary>
     [Fact]
-    public void Zellstil_bindet_die_Textfarbe_an_die_Zelle()
+    public void Zustandsklasse_der_Schachtliste_hat_getrennte_Vorlagen_fuer_Anzeige_und_Auswahl()
     {
-        var stil = AuswertungPro.Next.UI.Views.Pages.ZustandsklasseCellStyleFactory.CreateHaltungenStyle("Zustandsklasse");
+        var spalte = AuswertungPro.Next.UI.Views.Pages.SchaechteZustandsklasseColumnFactory.Create("Zustandsklasse", "Zustandsklasse");
 
-        var textStil = Assert.IsType<Style>(stil.Resources[typeof(System.Windows.Controls.TextBlock)]);
-        var setter = Assert.IsType<Setter>(Assert.Single(textStil.Setters));
-        Assert.Equal(System.Windows.Controls.TextBlock.ForegroundProperty, setter.Property);
-        var bindung = Assert.IsType<System.Windows.Data.Binding>(setter.Value);
-        Assert.Equal(nameof(System.Windows.Controls.Control.Foreground), bindung.Path.Path);
-        Assert.Equal(typeof(System.Windows.Controls.DataGridCell), bindung.RelativeSource?.AncestorType);
+        Assert.NotNull(spalte.CellTemplate);
+        Assert.NotNull(spalte.CellEditingTemplate);
+        Assert.Equal(typeof(System.Windows.Controls.TextBlock), spalte.CellTemplate.VisualTree.Type);
+        Assert.Equal(typeof(System.Windows.Controls.ComboBox), spalte.CellEditingTemplate.VisualTree.Type);
     }
 
     /// <summary>Auf jeder Klassenflaeche erreicht die schwarze Zellentinte mindestens 4,5:1.</summary>

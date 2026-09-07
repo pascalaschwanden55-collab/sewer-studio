@@ -277,8 +277,8 @@
                         <Border.RenderTransform>
                             <ScaleTransform x:Name="MainScale"/>
                         </Border.RenderTransform>
-                        <ContentPresenter HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                         RecognizesAccessKey="True">
                         <!-- B7: Der implizite TextBlock-Stil setzt Foreground selbst und schlaegt
                              damit die Vererbung. Ein Knopfinhalt aus eigenen TextBlocks bekaeme sonst
@@ -397,8 +397,8 @@
                             CornerRadius="15"
                             Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
-                        <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                           RecognizesAccessKey="True">
                         <!-- B7: Der implizite TextBlock-Stil setzt Foreground selbst und schlaegt
                              damit die Vererbung. Ein Knopfinhalt aus eigenen TextBlocks bekaeme sonst
@@ -460,8 +460,8 @@
                             CornerRadius="15"
                             Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
-                        <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                           RecognizesAccessKey="True">
                         <!-- B7: Der implizite TextBlock-Stil setzt Foreground selbst und schlaegt
                              damit die Vererbung. Ein Knopfinhalt aus eigenen TextBlocks bekaeme sonst
@@ -621,7 +621,8 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Padding="{TemplateBinding Padding}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                           RecognizesAccessKey="True">
                         <!-- B7: Der implizite TextBlock-Stil setzt Foreground selbst und schlaegt
                              damit die Vererbung. Ein Knopfinhalt aus eigenen TextBlocks bekaeme sonst

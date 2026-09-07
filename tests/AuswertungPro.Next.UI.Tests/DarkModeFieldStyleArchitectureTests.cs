@@ -102,7 +102,8 @@ public sealed class DarkModeFieldStyleArchitectureTests
             && Attribute(style, "Key") is null));
         AssertSetter(comboBoxStyle, "Background", "{DynamicResource CardBrush}");
         AssertSetter(comboBoxStyle, "Foreground", "{DynamicResource TextBrush}");
-        AssertSetter(comboBoxStyle, "BorderBrush", "{DynamicResource BorderBrush}");
+        // F7: Eingabefelder tragen die kontraststarke Eingabekontur, nicht den hellen Kartenrand.
+        AssertSetter(comboBoxStyle, "BorderBrush", "{DynamicResource InputBorderBrush}");
 
         var dropdownBorder = Assert.Single(comboBoxStyle.Descendants().Where(element =>
             element.Name.LocalName == "Border" && Attribute(element, "Name") == "DropdownBorder"));

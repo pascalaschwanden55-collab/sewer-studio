@@ -177,13 +177,15 @@
                                     <Button Content="Abbrechen" Style="{StaticResource ToolbarButtonDanger}"
                                             Command="{Binding CancelScanCommand}"
                                             IsEnabled="{Binding IsBusy}" Margin="6,0,0,0"/>
-                                    <TextBlock Margin="0,6,0,0" VerticalAlignment="Center" TextWrapping="Wrap"
-                                               Foreground="{DynamicResource TextSecondaryBrush}">
-                                        <Run Text="Haltung:"/>
-                                        <Run Text="{Binding Haltung, TargetNullValue='—'}"/>
-                                        <Run Text="{Binding VideoPath, StringFormat=' · {0}', TargetNullValue=''}"/>
-                                    </TextBlock>
                                 </WrapPanel>
+                                <!-- B4: In der schmalen Werkzeugspalte steht die Haltung unter den
+                                     Knoepfen, sonst draengt sie sich neben "Abbrechen". -->
+                                <TextBlock Margin="0,6,0,0" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextSecondaryBrush}">
+                                    <Run Text="Haltung:"/>
+                                    <Run Text="{Binding Haltung, TargetNullValue='—'}"/>
+                                    <Run Text="{Binding VideoPath, StringFormat=' · {0}', TargetNullValue=''}"/>
+                                </TextBlock>
                                 <TextBlock Text="{Binding StatusText}" Margin="0,6,0,0" TextWrapping="Wrap"
                                            Foreground="{DynamicResource MutedBrush}"/>
                                 <!-- Grenzen, die sichtbar ins Fenster gehören (Auftrag) — konstant, kein Tooltip -->
