@@ -69,7 +69,7 @@ public sealed class HaltungStatusColumnFactoryTests
             WpfBindungsPumpe.Leeren();
 
             var punkte = zeile.Children.OfType<Ellipse>().ToList();
-            Assert.Equal(4, punkte.Count);
+            Assert.Equal(5, punkte.Count);
             Assert.Single(punkte, p => p.Visibility == Visibility.Visible);
             Assert.All(punkte, p => Assert.Equal(9d, p.Width));
             Assert.Equal("1 offen", zeile.Children.OfType<TextBlock>().Single().Text);
@@ -153,6 +153,28 @@ public sealed class HaltungStatusColumnFactoryTests
             Assert.Equal(Visibility.Collapsed, protokoll.Children.OfType<Button>().Single().Visibility);
             Assert.Equal(HaltungProtokollQuelle.OhneProtokollHinweis,
                 protokoll.Children.OfType<TextBlock>().Single().ToolTip);
+        });
+    }
+
+    /// <summary>
+    /// Nova-Fixwelle 2b (F2): Eine Haltung mit lauter bestaetigten KI-Befunden zeigt "bestätigt"
+    /// mit gruenem Punkt — nicht mehr "keine Analyse".
+    /// </summary>
+    [Fact]
+    public void Bestaetigte_KI_Befunde_zeigen_bestaetigt_mit_gruenem_Punkt()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var traeger = Assert.IsType<ContentControl>(HaltungStatusColumnFactory.Ki("KI").CellTemplate.LoadContent());
+            var zeile = Assert.IsType<StackPanel>(traeger.ContentTemplate.LoadContent());
+            var revision = new ProtocolRevision();
+            revision.Entries.Add(new ProtocolEntry { Code = "BAB", Ai = new ProtocolEntryAiMeta { Accepted = true } });
+            zeile.DataContext = HaltungZeilenStatus.Bestimme(
+                new HaltungRecord { Protocol = new ProtocolDocument { Current = revision } });
+            WpfBindungsPumpe.Leeren();
+
+            Assert.Equal("bestätigt", zeile.Children.OfType<TextBlock>().Single().Text);
+            Assert.Single(zeile.Children.OfType<Ellipse>().Where(p => p.Visibility == Visibility.Visible));
         });
     }
 

@@ -95,6 +95,9 @@ public static class HaltungStatusColumnFactory
 
         zeile.AppendChild(Ampel(KiAmpel.KeineAnalyse, "MutedBrush"));
         zeile.AppendChild(Ampel(KiAmpel.Offen, "WarningBrush"));
+        // Fixwelle F2: "bestätigt" ist ein eigener Zustand — die KI hat gerechnet, alles ist
+        // angenommen, die Haltung aber noch nicht abgeschlossen. Punkt gruen wie "geprüft".
+        zeile.AppendChild(Ampel(KiAmpel.Bestaetigt, "SuccessBrush"));
         zeile.AppendChild(Ampel(KiAmpel.Geprueft, "SuccessBrush"));
         zeile.AppendChild(Ampel(KiAmpel.Kritisch, "DangerBrush"));
 

@@ -4,8 +4,11 @@ using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.UseCases.NaechsteAufgabe;
 
-/// <summary>Ampelfarbe der KI-Statusspalte (Inventar 4.3, Nova-Etappe 2b).</summary>
-public enum KiAmpel { KeineAnalyse, Offen, Geprueft, Kritisch }
+/// <summary>
+/// Ampelfarbe der KI-Statusspalte (Inventar 4.3, Nova-Etappe 2b).
+/// <see cref="Bestaetigt"/> kam mit der Fixwelle dazu (F2).
+/// </summary>
+public enum KiAmpel { KeineAnalyse, Offen, Bestaetigt, Geprueft, Kritisch }
 
 /// <summary>Ergebnis der Zeilenstatus-Regel fuer eine Haltungszeile.</summary>
 public sealed record HaltungZeilenStatusErgebnis(
@@ -24,12 +27,18 @@ public sealed record HaltungZeilenStatusErgebnis(
 /// darauf auf). Reine Rechnung ohne Datenaenderung; nutzt <see cref="HaltungPruefstatus"/>
 /// wieder, statt dessen Logik zu kopieren.
 ///
-/// Ampelregel: ohne jede Analyse (<see cref="HaltungPruefstand.Offen"/>) gilt
-/// <see cref="KiAmpel.KeineAnalyse"/>. Sonst zaehlt jeder noch nicht bestaetigte KI-Befund
-/// (auch bei bereits "abgeschlossen" markierter Haltung): gibt es mindestens einen, gilt
-/// <see cref="KiAmpel.Offen"/> mit der Anzahl im Text. Ohne offene KI-Befunde entscheidet die
-/// Zustandsklasse: 0 oder 1 gilt als <see cref="KiAmpel.Kritisch"/>, alles andere (auch eine
-/// fehlende Klasse) als <see cref="KiAmpel.Geprueft"/>.
+/// Ampelregel (Nova-Fixwelle 2b, F2): Die KI-Spalte spricht ueber die KI, nicht ueber den
+/// Arbeitsablauf. Massgeblich ist deshalb, ob im Protokoll ueberhaupt KI-Eintraege stehen.
+/// Keine KI-Eintraege heisst <see cref="KiAmpel.KeineAnalyse"/> — auch an einer fachlich
+/// abgeschlossenen Haltung, denn dort hat schlicht nie eine KI gerechnet. Gibt es KI-Eintraege
+/// und mindestens einen noch nicht bestaetigten, gilt <see cref="KiAmpel.Offen"/> mit der
+/// Anzahl im Text. Ist keiner mehr offen, aber die Haltung noch nicht abgeschlossen, gilt
+/// <see cref="KiAmpel.Bestaetigt"/> ("bestätigt") — vorher stand dort faelschlich
+/// "keine Analyse". Erst mit abgeschlossener Haltung heisst es "geprüft"; die Zustandsklasse
+/// 0 oder 1 faerbt das als <see cref="KiAmpel.Kritisch"/> ein.
+///
+/// <see cref="HaltungPruefstatus"/> bleibt unveraendert: Aufgaben-Chip und Uebersicht lesen
+/// weiter dieselbe fachliche Regel.
 /// </summary>
 public static class HaltungZeilenStatus
 {
@@ -38,15 +47,18 @@ public static class HaltungZeilenStatus
         ArgumentNullException.ThrowIfNull(record);
 
         var pruefstand = HaltungPruefstatus.Bestimme(record);
+        var kiEintraege = ZaehleKiEintraege(record);
         var offeneBefunde = ZaehleOffeneKiBefunde(record);
 
-        var (ampel, ampelText) = pruefstand == HaltungPruefstand.Offen
+        var (ampel, ampelText) = kiEintraege == 0
             ? (KiAmpel.KeineAnalyse, "keine Analyse")
             : offeneBefunde > 0
                 ? (KiAmpel.Offen, $"{offeneBefunde} offen")
-                : IstKritischeZustandsklasse(record)
-                    ? (KiAmpel.Kritisch, "geprüft")
-                    : (KiAmpel.Geprueft, "geprüft");
+                : pruefstand != HaltungPruefstand.Abgeschlossen
+                    ? (KiAmpel.Bestaetigt, "bestätigt")
+                    : IstKritischeZustandsklasse(record)
+                        ? (KiAmpel.Kritisch, "geprüft")
+                        : (KiAmpel.Geprueft, "geprüft");
 
         return new HaltungZeilenStatusErgebnis(
             ampel,
@@ -63,6 +75,16 @@ public static class HaltungZeilenStatus
     {
         var entries = record.Protocol?.Current?.Entries;
         return entries is null ? 0 : entries.Count(e => !e.IsDeleted && e.Ai is { Accepted: false });
+    }
+
+    /// <summary>
+    /// Wie viele nicht geloeschte Protokolleintraege stammen ueberhaupt von der KI? Genau das
+    /// unterscheidet "keine Analyse" von "bestätigt" — ein Eintrag von Hand zaehlt nicht mit.
+    /// </summary>
+    private static int ZaehleKiEintraege(HaltungRecord record)
+    {
+        var entries = record.Protocol?.Current?.Entries;
+        return entries is null ? 0 : entries.Count(e => !e.IsDeleted && e.Ai is not null);
     }
 
     /// <summary>

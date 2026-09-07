@@ -15,7 +15,8 @@ public sealed class HaltungZeilenStatusTests
         string pdfPath = "",
         string pdfEigen = "",
         string pdfAll = "",
-        int offeneKiBefunde = 0)
+        int offeneKiBefunde = 0,
+        int bestaetigteKiBefunde = 0)
     {
         var r = new HaltungRecord();
         r.SetFieldValue(FieldKeys.HoldingName, "1-2", FieldSource.Manual, false);
@@ -26,12 +27,14 @@ public sealed class HaltungZeilenStatusTests
         r.SetFieldValue(FieldKeys.PdfEigen, pdfEigen, FieldSource.Manual, false);
         r.SetFieldValue(FieldKeys.PdfAll, pdfAll, FieldSource.Manual, false);
 
-        if (offeneKiBefunde > 0)
+        if (offeneKiBefunde > 0 || bestaetigteKiBefunde > 0)
         {
             r.Protocol = new ProtocolDocument();
             r.Protocol.Current ??= new ProtocolRevision();
             for (var i = 0; i < offeneKiBefunde; i++)
                 r.Protocol.Current.Entries.Add(new ProtocolEntry { Code = "BAB", Ai = new ProtocolEntryAiMeta { Accepted = false, Confidence = 0.9 } });
+            for (var i = 0; i < bestaetigteKiBefunde; i++)
+                r.Protocol.Current.Entries.Add(new ProtocolEntry { Code = "BAB", Ai = new ProtocolEntryAiMeta { Accepted = true, Confidence = 0.9 } });
         }
 
         return r;
@@ -74,7 +77,8 @@ public sealed class HaltungZeilenStatusTests
     [Fact]
     public void Abgeschlossen_und_Z1_ist_kritisch()
     {
-        var ergebnis = HaltungZeilenStatus.Bestimme(Haltung(status: "abgeschlossen", zustandsklasse: "1"));
+        var ergebnis = HaltungZeilenStatus.Bestimme(
+            Haltung(status: "abgeschlossen", zustandsklasse: "1", bestaetigteKiBefunde: 1));
 
         Assert.Equal(KiAmpel.Kritisch, ergebnis.Ampel);
         Assert.Equal("geprüft", ergebnis.AmpelText);
@@ -85,7 +89,8 @@ public sealed class HaltungZeilenStatusTests
     [Fact]
     public void Abgeschlossen_und_Z4_ist_geprueft_nicht_kritisch()
     {
-        var ergebnis = HaltungZeilenStatus.Bestimme(Haltung(status: "abgeschlossen", zustandsklasse: "4"));
+        var ergebnis = HaltungZeilenStatus.Bestimme(
+            Haltung(status: "abgeschlossen", zustandsklasse: "4", bestaetigteKiBefunde: 1));
 
         Assert.Equal(KiAmpel.Geprueft, ergebnis.Ampel);
         Assert.Equal("geprüft", ergebnis.AmpelText);
@@ -94,7 +99,59 @@ public sealed class HaltungZeilenStatusTests
 
     [Fact]
     public void Zustandsklasse_0_ist_ebenfalls_kritisch()
-        => Assert.Equal(KiAmpel.Kritisch, HaltungZeilenStatus.Bestimme(Haltung(status: "abgeschlossen", zustandsklasse: "0")).Ampel);
+        => Assert.Equal(
+            KiAmpel.Kritisch,
+            HaltungZeilenStatus.Bestimme(Haltung(status: "abgeschlossen", zustandsklasse: "0", bestaetigteKiBefunde: 1)).Ampel);
+
+    /// <summary>
+    /// Nova-Fixwelle 2b (F2): Die KI-Spalte spricht ueber die KI. Alles bestaetigt und noch
+    /// nicht abgeschlossen heisst "bestätigt" — vorher stand dort faelschlich "keine Analyse".
+    /// </summary>
+    [Fact]
+    public void Alles_bestaetigt_und_noch_nicht_abgeschlossen_heisst_bestaetigt()
+    {
+        var ergebnis = HaltungZeilenStatus.Bestimme(Haltung(bestaetigteKiBefunde: 3));
+
+        Assert.Equal(KiAmpel.Bestaetigt, ergebnis.Ampel);
+        Assert.Equal("bestätigt", ergebnis.AmpelText);
+        Assert.Equal(0, ergebnis.OffeneBefunde);
+        Assert.Equal(HaltungPruefstand.Offen, ergebnis.Pruefstand);
+    }
+
+    /// <summary>
+    /// Eine fachlich abgeschlossene Haltung OHNE jeden KI-Eintrag ist fuer die KI-Spalte
+    /// weiterhin "keine Analyse" — die Pruefungsspalte sagt getrennt "fachlich geprüft".
+    /// </summary>
+    [Fact]
+    public void Abgeschlossen_ohne_KI_Eintraege_bleibt_keine_Analyse()
+    {
+        var ergebnis = HaltungZeilenStatus.Bestimme(Haltung(status: "abgeschlossen", zustandsklasse: "2"));
+
+        Assert.Equal(KiAmpel.KeineAnalyse, ergebnis.Ampel);
+        Assert.Equal("keine Analyse", ergebnis.AmpelText);
+        Assert.Equal(HaltungPruefstand.Abgeschlossen, ergebnis.Pruefstand);
+    }
+
+    /// <summary>Ein offener Befund schlaegt bestaetigte Nachbarn — die Zahl bleibt sichtbar.</summary>
+    [Fact]
+    public void Ein_offener_Befund_neben_bestaetigten_bleibt_offen()
+    {
+        var ergebnis = HaltungZeilenStatus.Bestimme(Haltung(offeneKiBefunde: 1, bestaetigteKiBefunde: 4));
+
+        Assert.Equal(KiAmpel.Offen, ergebnis.Ampel);
+        Assert.Equal("1 offen", ergebnis.AmpelText);
+    }
+
+    /// <summary>Ein Eintrag von Hand (ohne KI-Marke) ist keine Analyse.</summary>
+    [Fact]
+    public void Ein_reiner_Handeintrag_zaehlt_nicht_als_Analyse()
+    {
+        var r = Haltung();
+        r.Protocol = new ProtocolDocument { Current = new ProtocolRevision() };
+        r.Protocol.Current!.Entries.Add(new ProtocolEntry { Code = "BAB" });
+
+        Assert.Equal(KiAmpel.KeineAnalyse, HaltungZeilenStatus.Bestimme(r).Ampel);
+    }
 
     [Fact]
     public void PruefungText_stammt_aus_HaltungPruefstatus()
