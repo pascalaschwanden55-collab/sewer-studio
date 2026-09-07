@@ -74,6 +74,13 @@ public sealed record DashboardStatistics(
     /// <summary>Schachtkosten als Text.</summary>
     public string SchachtSanierungsKostenText => FormatChf(SchachtSanierungsKosten);
 
+    /// <summary>
+    /// Haltungs- und Schachtkosten zusammen als Text, dieselbe Formatierung wie die beiden
+    /// Einzeltexte (Nova-Etappe 2, Uebersichtsseite: eine Apostroph-Glyphe statt einer
+    /// zweiten eigenen Zahlenformatierung in der UI).
+    /// </summary>
+    public string SanierungskostenGesamtText => FormatChf(HaltungSanierungsKosten + SchachtSanierungsKosten);
+
     private static string FormatChf(decimal value)
         => Math.Round(value, 0, MidpointRounding.AwayFromZero)
             .ToString("N0", CultureInfo.GetCultureInfo("de-CH"));

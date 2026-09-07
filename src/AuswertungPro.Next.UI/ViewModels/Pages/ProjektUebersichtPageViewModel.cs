@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -28,6 +29,7 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
     private readonly ShellViewModel _shell;
     private readonly ServiceProvider _sp;
     private readonly ICodingSuggestionRegistry _register;
+    private readonly ObservableCollection<HaltungRecord> _beobachteteListe;
 
     [ObservableProperty] private string _heroTitel = string.Empty;
     [ObservableProperty] private string _heroText = string.Empty;
@@ -47,9 +49,12 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
         _sp = sp;
         _register = sp.CodingSuggestionRegistry;
         _register.Geaendert += OnRegisterGeaendert;
-        _shell.Project.Data.CollectionChanged += (_, _) => Aktualisiere();
+        _beobachteteListe = _shell.Project.Data;
+        _beobachteteListe.CollectionChanged += OnHaltungenGeaendert;
         Aktualisiere();
     }
+
+    private void OnHaltungenGeaendert(object? sender, NotifyCollectionChangedEventArgs e) => Aktualisiere();
 
     /// <summary>
     /// Marshallt <see cref="ICodingSuggestionRegistry.Geaendert"/> auf den WPF-UI-Thread. Das
@@ -76,14 +81,10 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
 
         var statistik = BaueStatistik(p);
         Statistik = statistik;
-        SanierungskostenText = (statistik.HaltungSanierungsKosten + statistik.SchachtSanierungsKosten)
-            .ToString("#,##0", DeCh).Replace('’', '\'');
+        SanierungskostenText = statistik.SanierungskostenGesamtText;
 
         ZustandLegende.Clear();
-        var anzahlJeKlasse = p.Data
-            .GroupBy(r => DashboardStatisticsBuilder.NormalizeZustandsklasse(r.GetFieldValue(FieldKeys.ConditionClass)))
-            .ToDictionary(g => g.Key, g => g.Count());
-        foreach (var z in BaueZustandLegende(anzahlJeKlasse))
+        foreach (var z in BaueZustandLegende(ZaehleZustandsklassen(p.Data)))
             ZustandLegende.Add(z);
 
         Schaeden.Clear();
@@ -133,12 +134,21 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
         return error is null ? store : new ProjectCostStore();
     }
 
+    /// <summary>
+    /// Zaehlt Haltungen je normalisierter Zustandsklasse (Schluessel wie
+    /// <see cref="DashboardStatisticsBuilder.NormalizeZustandsklasse"/>: "0".."4" oder "ohne").
+    /// </summary>
+    internal static IReadOnlyDictionary<string, int> ZaehleZustandsklassen(IEnumerable<HaltungRecord> haltungen)
+        => haltungen
+            .GroupBy(r => DashboardStatisticsBuilder.NormalizeZustandsklasse(r.GetFieldValue(FieldKeys.ConditionClass)))
+            .ToDictionary(g => g.Key, g => g.Count());
+
     internal static IReadOnlyList<ZustandZeile> BaueZustandLegende(IReadOnlyDictionary<string, int> anzahlJeKlasse)
     {
         (string Klasse, string Label)[] reihenfolge =
         [
             ("4", "Z4 · kein Handlungsbedarf"), ("3", "Z3 · langfristig"), ("2", "Z2 · mittelfristig"),
-            ("1", "Z1 · kurzfristig"), ("0", "Z0 · sofort"), ("", "nicht berechnet")
+            ("1", "Z1 · kurzfristig"), ("0", "Z0 · sofort"), ("ohne", "nicht berechnet")
         ];
         return reihenfolge
             .Select(r => new ZustandZeile(r.Klasse, r.Label, anzahlJeKlasse.TryGetValue(r.Klasse, out var n) ? n : 0))
@@ -181,5 +191,9 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
             _shell.TryOpenProject(pfad);
     }
 
-    public void Dispose() => _register.Geaendert -= OnRegisterGeaendert;
+    public void Dispose()
+    {
+        _register.Geaendert -= OnRegisterGeaendert;
+        _beobachteteListe.CollectionChanged -= OnHaltungenGeaendert;
+    }
 }
