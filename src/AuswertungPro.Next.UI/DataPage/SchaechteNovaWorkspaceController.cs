@@ -14,9 +14,11 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// <summary>
 /// Nova-Etappe 2: Arbeitsflaeche der Schaechte-Seite mit Liste, Schachtansicht rechts und
 /// Eingabefeldern unten. Kopie von <see cref="DataPageNovaWorkspaceController"/> (Hoehenregel,
-/// Trennlinien, Auf-/Zuklappen). Am Schacht wird die Zustandsklasse nie berechnet und es gibt
-/// keinen Live-Abgleich mit dem Formular (kein <see cref="DataPageDetailLiveSync"/>) - die
-/// Eingabefelder werden bei jedem Auswahlwechsel und jeder Feldaenderung einfach neu aufgebaut.
+/// Trennlinien, Auf-/Zuklappen). Am Schacht wird die Zustandsklasse nie berechnet; der
+/// Formular-Live-Abgleich (<see cref="DataPageDetailLiveSync"/>, Fix-Runde 1) laeuft trotzdem
+/// genauso wie bei den Haltungen mit, ueber dieselbe generische Ueberladung auf
+/// <see cref="SchachtRecord"/>. Ein Feldwert wird dadurch ohne Neuaufbau der ganzen Drawer-Gruppen
+/// nachgezogen (kein Fokusverlust bei jedem Tastendruck).
 /// </summary>
 public sealed class SchaechteNovaWorkspaceController
 {
@@ -50,6 +52,7 @@ public sealed class SchaechteNovaWorkspaceController
     // bleibt seine Wahl bis zum naechsten Seitenaufbau bestehen.
     private bool _drawerAutomatischZugeklappt;
     private bool _drawerVomBenutzerGeoeffnet;
+    private DataPageDetailLiveSync? _felderSync;
 
     public SchaechteNovaWorkspaceController(
         Elemente elemente,
@@ -90,11 +93,16 @@ public sealed class SchaechteNovaWorkspaceController
     }
 
     /// <summary>
-    /// Eingabefelder neu aus dem gewaehlten Schacht aufbauen (Auswahlwechsel, Feldaenderung,
-    /// Wechsel der alten Schachtansicht). Ohne Auswahl bleibt der Drawer leer.
+    /// Eingabefelder neu aus dem gewaehlten Schacht aufbauen (Auswahlwechsel, Wechsel der alten
+    /// Schachtansicht) und den Live-Abgleich mit genau diesem Datensatz anschliessen. Eine reine
+    /// Feldaenderung am bereits angezeigten Schacht rebuildet die Gruppen NICHT erneut (das wuerde
+    /// den Bearbeitungsfokus verlieren) - dafuer sorgt <see cref="_felderSync"/>. Ohne Auswahl
+    /// bleibt der Drawer leer.
     /// </summary>
     public void AktualisiereFelderDrawer()
     {
+        _felderSync?.Dispose();
+        _felderSync = null;
         _e.FelderDrawer.Hinweis = string.Empty;
 
         if (_vm() is not { } vm || vm.Selected is not { } record)
@@ -104,8 +112,22 @@ public sealed class SchaechteNovaWorkspaceController
             return;
         }
 
+        var gruppen = _detailBuilder(record);
         _e.FelderDrawer.Titel = record.GetFieldValue("Schachtnummer");
-        _e.FelderDrawer.Groups = _detailBuilder(record);
+        _e.FelderDrawer.Groups = gruppen;
+        _felderSync = new DataPageDetailLiveSync(record, record.GetFieldValue, gruppen);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: Sicherheitsnetz fuer einen In-Place-Neuaufbau des gewaehlten Schachts (zum
+    /// Beispiel "Aktualisieren" liest das Protokoll neu ein), bei dem <c>Record</c> referenzgleich
+    /// bleibt. Aktualisiert die Schachtansicht rechts (Schaeden/Grundriss/Masstext) und baut die
+    /// Eingabefelder neu auf.
+    /// </summary>
+    public void AktualisiereAnzeige()
+    {
+        _e.Uebersicht.Aktualisiere();
+        AktualisiereFelderDrawer();
     }
 
     private bool IstSichtbar => _e.FelderDrawer.Visibility == Visibility.Visible;

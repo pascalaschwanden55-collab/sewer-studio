@@ -610,6 +610,7 @@ public partial class SchaechtePage : UserControl
         _ = sender;
         if (string.IsNullOrWhiteSpace(e.PropertyName) || e.PropertyName.StartsWith("Fields[", StringComparison.Ordinal))
             MarkProjectDirty();
+        AktualisiereNovaAnzeige();
     }
 
     private void MarkProjectDirty()

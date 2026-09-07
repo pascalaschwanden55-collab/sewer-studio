@@ -2,9 +2,13 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using System.Windows.Shapes;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Pages;
 using AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
+using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -115,6 +119,71 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
                 NovaRenderingChecks.ColorColumnsUseTheirCellForeground();
                 NovaRenderingChecks.LongMenuCanScrollToItsLastAction();
             }
+
+            WpfIsolatedTestProcess.MarkChildScenarioCompleted();
+        });
+    }
+
+    private static readonly string PanelChildTestName =
+        typeof(SchaechteNovaLayoutIsolatedSmokeTests).FullName
+        + "."
+        + nameof(Kindprozess_Schachtuebersicht_folgt_Datensatzaenderungen_ohne_neue_Bindung);
+
+    [Fact]
+    public async Task Schachtuebersicht_folgt_Datensatzaenderungen_in_eigenem_Wpf_Prozess()
+    {
+        Assert.Null(System.Windows.Application.Current);
+        var result = await WpfIsolatedTestProcess.RunAsync(PanelChildTestName, TimeSpan.FromSeconds(60));
+
+        Assert.Null(System.Windows.Application.Current);
+        Assert.False(result.TimedOut, result.DescribeFailure());
+        Assert.True(result.ExitCode == 0, result.DescribeFailure());
+        Assert.True(result.ChildScenarioCompleted, result.DescribeFailure());
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: Das Panel bleibt an <c>Record</c> gebunden (keine neue Bindung, kein
+    /// Auswahlwechsel) und muss trotzdem zwei Faelle nachziehen: eine reine Feldaenderung
+    /// (Grundriss folgt der Schachtform ueber <c>PropertyChanged</c>) und einen In-Place-Ersatz
+    /// des Protokolls ohne eigene Feldmeldung (nachgezogen ueber die oeffentliche
+    /// <c>Aktualisiere()</c>-Methode, wie es der Controller nach "Aktualisieren" tut).
+    /// </summary>
+    [IsolatedWpfFact]
+    public void Kindprozess_Schachtuebersicht_folgt_Datensatzaenderungen_ohne_neue_Bindung()
+    {
+        StaTestRunner.Run(() =>
+        {
+            Assert.Null(System.Windows.Application.Current);
+            var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            app.InitializeComponent();
+
+            var record = new SchachtRecord();
+            var panel = new SchachtUebersichtPanel { Record = record };
+            Layout(panel);
+
+            var kreis = Assert.IsType<Ellipse>(panel.FindName("Kreis"));
+            var oval = Assert.IsType<Ellipse>(panel.FindName("Oval"));
+            Assert.Equal(Visibility.Visible, kreis.Visibility);
+            Assert.Equal(Visibility.Collapsed, oval.Visibility);
+
+            // Reine Feldaenderung am selben Datensatz (kein neues Record, kein neuer Bindungswert):
+            // Das Panel haengt an SchachtRecord.PropertyChanged und rechnet den Grundriss neu.
+            record.SetFieldValue(FieldKeys.ShaftShape, "Oval");
+            Layout(panel);
+            Assert.Equal(Visibility.Collapsed, kreis.Visibility);
+            Assert.Equal(Visibility.Visible, oval.Visibility);
+
+            // In-Place-Neuaufbau (z. B. "Aktualisieren"): Protocol wird ersetzt, ohne dass
+            // SchachtRecord dafuer ein PropertyChanged auslöst. Aktualisiere() ist das
+            // Sicherheitsnetz dafuer.
+            Assert.Null(panel.Entries);
+            record.Protocol = new ProtocolDocument
+            {
+                Current = new ProtocolRevision { Entries = { new ProtocolEntry { Code = "BAB" } } }
+            };
+            panel.Aktualisiere();
+            Layout(panel);
+            Assert.Equal(1, panel.Entries?.Count);
 
             WpfIsolatedTestProcess.MarkChildScenarioCompleted();
         });
