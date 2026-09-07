@@ -6,8 +6,7 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 
 /// <summary>
 /// Nova-Etappe 2b, Task 4: Suche als Pille (F3 fokussiert sie), Popup "Reihenfolge"
-/// (Verschieben auf Position, Gehe zu Zeile) unter "Weitere Aktionen". Die alte Ansicht
-/// behaelt ihre unveraenderte Suche-Zeile.
+/// (Verschieben auf Position, Gehe zu Zeile) unter "Weitere Aktionen".
 /// </summary>
 public partial class DataPage
 {
@@ -30,7 +29,7 @@ public partial class DataPage
         if (e.Key != Key.F3)
             return;
 
-        var box = NovaLayoutAktiv ? (System.Windows.Controls.TextBox)NovaSearchBox : SearchBox;
+        var box = NovaLayoutAktiv ? NovaSearchBox : SearchBox;
         box.Focus();
         box.SelectAll();
         e.Handled = true;
@@ -39,4 +38,12 @@ public partial class DataPage
     /// <summary>Oeffnet/schliesst das Popup "Reihenfolge".</summary>
     private void ReihenfolgeMenu_Click(object sender, RoutedEventArgs e)
         => (_reihenfolgeToggle ??= new PopupToggle(ReihenfolgePopup)).Umschalten();
+
+    /// <summary>Fix-Runde 1: Fokus liegt sofort im ersten Feld.</summary>
+    private void ReihenfolgePopup_Opened(object sender, System.EventArgs e)
+        => PopupFocusHelper.FokussiereErstesFeld(MoveToPositionBox);
+
+    /// <summary>Fix-Runde 1: Escape schliesst das Popup, Fokus zurueck an den Menueknopf.</summary>
+    private void ReihenfolgePopup_PreviewKeyDown(object sender, KeyEventArgs e)
+        => e.Handled = PopupFocusHelper.SchliesseBeiEscape(e.Key, ReihenfolgePopup, WeitereAktionenDropdown);
 }

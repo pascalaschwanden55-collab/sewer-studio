@@ -52,4 +52,35 @@ public sealed class DataPageColumnViewControllerTests
         Assert.Equal("kompakt", key);
         Assert.True(flagNeu);
     }
+
+    /// <summary>Fix-Runde 1: WendeAn mutiert das Layout und speichert nur bei einer echten Aenderung.</summary>
+    [Fact]
+    public void WendeAn_setzt_Kompakt_und_Flag_und_speichert_bei_einer_Bestandsinstallation()
+    {
+        var layout = new AuswertungPro.Next.UI.DataPageLayoutSettings { ActiveColumnView = "alle" };
+        var gespeichert = 0;
+
+        KompaktStartRegel.WendeAn(layout, () => gespeichert++);
+
+        Assert.Equal("kompakt", layout.ActiveColumnView);
+        Assert.True(layout.NovaKompaktEinmalGesetzt);
+        Assert.Equal(1, gespeichert);
+    }
+
+    [Fact]
+    public void WendeAn_speichert_nicht_wenn_das_Flag_bereits_gesetzt_ist()
+    {
+        var layout = new AuswertungPro.Next.UI.DataPageLayoutSettings
+        {
+            ActiveColumnView = "bewertung",
+            NovaKompaktEinmalGesetzt = true
+        };
+        var gespeichert = 0;
+
+        KompaktStartRegel.WendeAn(layout, () => gespeichert++);
+
+        Assert.Equal("bewertung", layout.ActiveColumnView);
+        Assert.True(layout.NovaKompaktEinmalGesetzt);
+        Assert.Equal(0, gespeichert);
+    }
 }

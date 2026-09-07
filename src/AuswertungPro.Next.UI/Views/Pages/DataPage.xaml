@@ -350,9 +350,11 @@
                          Gehe zu Zeile) - dieselben Befehle wie bisher, nur nicht mehr staendig
                          sichtbar in der Werkzeugleiste. Schliesslogik ueber PopupToggle. -->
                     <Popup x:Name="ReihenfolgePopup" StaysOpen="False" Placement="Bottom" AllowsTransparency="True"
-                           PlacementTarget="{Binding ElementName=WeitereAktionenDropdown}">
+                           PlacementTarget="{Binding ElementName=WeitereAktionenDropdown}"
+                           Opened="ReihenfolgePopup_Opened">
                         <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1" CornerRadius="{DynamicResource RadiusM}" Padding="10">
+                                BorderThickness="1" CornerRadius="{DynamicResource RadiusM}" Padding="10"
+                                PreviewKeyDown="ReihenfolgePopup_PreviewKeyDown">
                             <StackPanel Width="270">
                                 <TextBlock Text="Reihenfolge" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">

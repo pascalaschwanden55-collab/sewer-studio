@@ -129,4 +129,20 @@ public sealed class DesignAuditNovaHaltungenTests
         Assert.Contains("Key.F3", code);
         Assert.Contains("NovaSearchBox", code);
     }
+
+    /// <summary>
+    /// Fix-Runde 1: Das Popup "Reihenfolge" setzt beim Oeffnen den Fokus ins erste Feld
+    /// (Popup.Opened) und schliesst bei Escape wieder mit Fokus zurueck an den Menueknopf.
+    /// </summary>
+    [Fact]
+    public void Reihenfolge_Popup_fokussiert_beim_Oeffnen_und_schliesst_bei_Escape()
+    {
+        var xaml = Xaml("Views", "Pages", "DataPage.xaml");
+        Assert.Contains("Opened=\"ReihenfolgePopup_Opened\"", xaml);
+        Assert.Contains("PreviewKeyDown=\"ReihenfolgePopup_PreviewKeyDown\"", xaml);
+
+        var code = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.NovaSucheUndReihenfolge.cs"));
+        Assert.Contains("PopupFocusHelper.FokussiereErstesFeld(MoveToPositionBox)", code);
+        Assert.Contains("PopupFocusHelper.SchliesseBeiEscape(e.Key, ReihenfolgePopup, WeitereAktionenDropdown)", code);
+    }
 }

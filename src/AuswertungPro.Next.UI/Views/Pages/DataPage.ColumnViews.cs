@@ -4,7 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Media;
+using AuswertungPro.Next.UI.Behaviors;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 
@@ -63,30 +63,17 @@ public partial class DataPage
 
     private void SyncColumnViewChips()
     {
-        foreach (var chip in FindVisualChildren<ToggleButton>(ColumnViewChips))
+        foreach (var chip in VisualTreeSafe.FindDescendants<ToggleButton>(ColumnViewChips))
         {
             chip.IsChecked = string.Equals(chip.Tag as string, _columnViews?.ActiveKey, StringComparison.OrdinalIgnoreCase);
             if (chip.DataContext is DataPageColumnView view)
             {
                 // Der Zaehler steht in der Chip-Vorlage; fehlt er (fremde Vorlage), wird nichts gesetzt
                 // statt eine Ausnahme zu werfen.
-                var zaehler = FindVisualChildren<TextBlock>(chip).FirstOrDefault(t => t.Name == "ChipZaehler");
+                var zaehler = VisualTreeSafe.FindDescendants<TextBlock>(chip).FirstOrDefault(t => t.Name == "ChipZaehler");
                 if (zaehler is not null)
                     zaehler.Text = view.Anzahl(_columnFields.Values.ToList()).ToString();
             }
-        }
-    }
-
-    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T : DependencyObject
-    {
-        var count = VisualTreeHelper.GetChildrenCount(root);
-        for (var i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is T typed)
-                yield return typed;
-            foreach (var nested in FindVisualChildren<T>(child))
-                yield return nested;
         }
     }
 }
