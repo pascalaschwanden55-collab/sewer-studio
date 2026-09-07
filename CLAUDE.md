@@ -979,7 +979,7 @@ Anlass ist Pascals Bild vom 07.09. aus einem echten Projekt: alte Tabelle, Ansic
   ueberspringen sie ueber `NovaStatusSpalten.IstVirtuell`. Gebaut werden sie von
   `HaltungStatusColumnFactory` (Ampel, Badge, zwei Knoepfe) aus der WPF-freien Regel
   `HaltungZeilenStatus.Bestimme` (Application/UseCases/NaechsteAufgabe); Schaechte haben
-  dafuer `SchachtZeilenStatus` und `SchaechteProtokollColumnFactory`.
+  dafuer `SchachtProtokollQuelle` und `SchaechteProtokollColumnFactory`.
 - Die Zustandsklasse ist im Nova-Layout eine Marke (`ZustandsklasseChipColumnFactory`,
   gemeinsam fuer Haltungen und Schaechte); `SchaechteZustandsklasseColumnFactory` ist darin
   aufgegangen. Der Chip-Editor schreibt **nur bei einer echten Auswahl**: Beim blossen Oeffnen
@@ -989,8 +989,8 @@ Anlass ist Pascals Bild vom 07.09. aus einem echten Projekt: alte Tabelle, Ansic
 - `DataPageHaltungColumnBuilder` baut die Spalten der Haltungstabelle ausserhalb von
   `DataPage` (Zeilengrenze 2000 je Teildatei). `DataPageZeilenhoehePolicy` sagt, welche Ansicht
   einzeilig ist (kompakt, stammdaten, sanierung, kosten); dort gilt die Zeilenhoehe aus dem
-  Token `RowHeightCompact` (36). „Alle Spalten" und „Bewertung" bleiben auf `Auto`, und eine
-  Zelle mit Zeilenumbruechen wird dort auf **hoechstens drei Zeilen** begrenzt
+  Token `RowHeightCompact` (34, siehe Fixwelle). „Alle Spalten" und „Bewertung" bleiben auf
+  `Auto`, und eine Zelle mit Zeilenumbruechen wird dort auf **hoechstens drei Zeilen** begrenzt
   (`DataPageColumnStyleRules.MaximaleZellenhoehe` 54) mit Volltext im Hinweis. Diese Grenze gilt
   nur im Nova-Layout; die alte Haltungsansicht bleibt unveraendert und ihr „Kompakt" behaelt
   den rohen Videopfad `Link`, weil es dort keine Statusspalten gibt.
@@ -1011,10 +1011,11 @@ Anlass ist Pascals Bild vom 07.09. aus einem echten Projekt: alte Tabelle, Ansic
   `Renovierung_Inliner_Stk` in der Sanierung. Alles Uebrige steht in „Weitere Angaben"
   (zugeklappt) — kein Feld verschwindet. Die Themennamen gelten auch im alten Detailfenster,
   weil beide denselben `DataPageRecordDetailsBuilder` verwenden.
-- `HaltungFaktenText.Zusammen` ignoriert `null`, Leeres und alles, was nicht Zeichenkette ist
-  oder mit `{` beginnt; die Konverter geben `DependencyProperty.UnsetValue` als `null` weiter.
-  Ohne gewaehlte Zeile zeigt `HaltungUebersichtPanel` nur den Leerzustand — kein Rohrring,
-  keine Fakten, kein Fehltext.
+- `HaltungFaktenText.Zusammen` ist eine reine Textregel: Sie sieht nur Zeichenketten und
+  wirft `null`, Leeres und alles weg, was mit `{` beginnt. Den WPF-Sonderwert
+  `DependencyProperty.UnsetValue` sieht sie nie — die Konverter bilden ihn vorher auf `null`
+  ab. Ohne gewaehlte Zeile zeigt `HaltungUebersichtPanel` nur den Leerzustand — kein
+  Rohrring, keine Fakten, kein Fehltext.
 - Waechter: `DesignAuditNovaTabelleTests`, `DesignAuditNovaHaltungenTests`,
   `DesignAuditNovaSchaechteTests`, `GrossbuchstabenConverterTests`,
   `DataPageColumnStyleRulesTests`, `DataPageColumnViewCatalogTests`,
@@ -1025,14 +1026,67 @@ Anlass ist Pascals Bild vom 07.09. aus einem echten Projekt: alte Tabelle, Ansic
   `PopupFocusHelperTests`, `DataPageRecordDetailsBuilderTests`,
   `HaltungFelderDrawerFilterTests`, `HaltungFaktenTextConverterTests`,
   `DataGridColumnHeaderGrossbuchstabenIsolatedSmokeTests` sowie WPF-frei
-  `HaltungZeilenStatusTests`, `SchachtZeilenStatusTests`, `HaltungFaktenTextTests`,
-  `HaltungRecordProtokollMeldungTests`.
-- Offen und in der Abnahme belegt: Zahlen stehen in der Tabelle weiterhin links, weil
-  `DataPageColumnSetup.Apply` nur fuer `Kosten` eine rechte Ausrichtung liefert und
-  `DataGridColumnLayoutController` damit die `TextAlignment.Right`-Regel der Spaltenfabrik
-  ueberschreibt. Bei Full HD mit offenen Eingabefeldern sind zehn statt der geplanten zwoelf
-  Zeilen ganz sichtbar. Spalten sind `SizeToHeader` breit und schneiden laengere Werte ohne
-  Auslassungspunkte ab. Windows-Skalierung 125 und 150 Prozent ist nicht gemessen.
+  `HaltungZeilenStatusTests`, `SchachtProtokollQuelleTests`, `HaltungProtokollQuelleTests`,
+  `HaltungFaktenTextTests`, `HaltungRecordProtokollMeldungTests`, `NovaSpaltenbreitenTests`,
+  `DataPageZeilenhoehePolicyTests`, `DesignAuditLaufzeittexteTests`,
+  `DesignAuditContrastTests`.
+
+### Nova-Fixwelle 2b (07.09.2026, F1-F5 und P1-P6 behoben)
+
+Bericht `.superpowers/sdd/2026-09-07-nova-wpf-etappe-2b/final-fix-report.md`, Abnahme
+`docs/reviews/2026-09-06-nova/wpf-etappe-2b/ABNAHME.md` (Abschnitt 0a). Sechs Regeln, die
+nicht zurueckfallen duerfen:
+
+- **Die Statusspalten befragen kein Dateisystem.** `HaltungProtokollQuelle` (Muster
+  `SchachtProtokollQuelle`) sagt nur, ob ein Pfad HINTERLEGT ist: `PDF_Path`, `PDF_Eigen`,
+  `PDF_All` und ein `Link` mit `.pdf`-Endung. Bei tausenden Zeilen waere eine echte
+  Dateipruefung je Zelle ein Ordnerlauf je Bild. Der Gedankenstrich nennt deshalb
+  ausdruecklich den zweiten Weg („das Kontextmenue sucht im Projekt", „Video pruefen sucht
+  im Ordner"); ein Knopf erscheint nur bei hinterlegtem Pfad, und ob die Datei noch da ist,
+  meldet erst der Oeffner.
+- **Die KI-Ampel spricht ueber die KI, nicht ueber den Arbeitsablauf.** Massgeblich ist, ob
+  im Protokoll ueberhaupt KI-Eintraege stehen: keine heisst `KeineAnalyse` — auch an einer
+  fachlich abgeschlossenen Haltung. Alles bestaetigt und noch nicht abgeschlossen heisst
+  `Bestaetigt` („bestätigt", gruener Punkt); abgeschlossen bleibt `Geprueft` („geprüft")
+  beziehungsweise `Kritisch` bei Zustandsklasse 0 oder 1. `HaltungPruefstatus` ist davon
+  unberuehrt und bleibt die Quelle fuer Aufgaben-Chip und Uebersicht.
+- **Zahlen stehen rechts.** `DataPageColumnSetup.Apply` liefert die rechte Ausrichtung fuer
+  jede `DataPageColumnStyleRules.IstZahlenspalte`; die Schachtliste vergleicht dabei
+  gefaltet (`SchachtFeldnamen.Falte`). Ohne das schrieb der `DataGridColumnLayoutController`
+  seine linke Vorgabe in Zell- und Textstil und schlug damit das `TextAlignment.Right` der
+  Spaltenfabrik. Eine gespeicherte Nutzerausrichtung gewinnt weiterhin, weil sie erst mit
+  `RestoreLayoutFromSettings` gelesen wird.
+- **`RowHeightCompact` (34) allein reicht nicht.** Die Tabelle traegt zusaetzlich die frei
+  einstellbare Mindesthoehe `AppSettings.GridMinRowHeight` (Werkseinstellung 38), gebunden
+  an `MinRowHeight`. Sie ist groesser und hat das Token vollstaendig ausgehebelt — eine
+  Gegenprobe mit Token 24 ergab weiterhin 38 px je Zeile. In einzeiligen Nova-Ansichten
+  gilt jetzt die kleinere der beiden Zahlen (`DataPageZeilenhoehePolicy.Mindesthoehe`,
+  angewendet von `DataPageZeilenhoehenAnwender` — bewusst AUSSERHALB der `DataPage`-
+  Teildateien, die zusammen unter 2000 Zeilen bleiben muessen). Gemessen bei 1920 x 1080
+  mit offener Schublade: 12 ganze Zeilen.
+- **Lange Werte werden gekuerzt, nicht abgeschnitten.** Standard-Textspalten tragen im
+  Nova-Layout `TextTrimming=CharacterEllipsis` (Schaechte ueber `NovaTextZellenStil`), und
+  jede Nova-Zelle zeigt den Volltext oben im Hinweis. `NovaSpaltenbreiten` gibt Name 150,
+  Strasse 120 und Material 100 als START-, nicht als Mindestbreite; ein gespeichertes
+  Spaltenlayout gewinnt.
+- **Sichtbare C#-Laufzeittexte tragen Umlaute.** `DesignAuditLaufzeittexteTests` prueft die
+  drei Quellen (`LearningReadinessPresenter`, beide RecordDetails-Builder) und sieht nur
+  Zeichenketten MIT Leerzeichen — Feldschluessel wie `Gefaelle_Promille` sind
+  Datenschluessel, keine Beschriftungen, und duerfen ihre Schreibweise nie aendern.
+
+Kleineres, ebenfalls fest: Der Tabellenkopf erbt Groesse und Tinte per RelativeSource vom
+`DataGridColumnHeader` (vorher gewann die String-Vorlage gegen jeden Setter, auch gegen
+einen abgeleiteten `ColumnHeaderStyle`); die Grossschreibung bleibt bewusst nur auf den
+Nova-Tabellen. Die Kopf-Ziehgriffe zeichnen nur rechts eine 1 px schmale Linie in
+`BorderBrush` — der Kontrastwaechter prueft, dass sie sich nicht staerker vom Kopfgrund
+abhebt als der Kopftext (im hellen Theme ist heller unauffaellig, im dunklen auffaellig;
+„nicht heller als die Tinte" waere deshalb die falsche Regel). Die Suchpille steht rechts
+IN der Werkzeugleiste. „Dokumente und Medien" der Schaechte fuehrt `PDF_Path` neben dem
+Knopf weiter als bearbeitbare Spalte. „Kompakt" wird nur im Nova-Layout einmalig zum
+Standard. „Spalte leeren" tut auf einer virtuellen Statusspalte nichts — sonst waere ein
+erfundener Feldname in jeden Datensatz geschrieben worden.
+
+Offen bleibt: Windows-Skalierung 125 und 150 Prozent ist nicht gemessen.
 
 ## Build & Test
 ```bash
