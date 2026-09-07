@@ -55,8 +55,11 @@ public partial class DataPage
             chip.IsChecked = string.Equals(chip.Tag as string, _columnViews?.ActiveKey, StringComparison.OrdinalIgnoreCase);
             if (chip.DataContext is DataPageColumnView view)
             {
-                var zaehler = FindVisualChildren<TextBlock>(chip).First(t => t.Name == "ChipZaehler");
-                zaehler.Text = view.Anzahl(_columnFields.Count).ToString();
+                // Der Zaehler steht in der Chip-Vorlage; fehlt er (fremde Vorlage), wird nichts gesetzt
+                // statt eine Ausnahme zu werfen.
+                var zaehler = FindVisualChildren<TextBlock>(chip).FirstOrDefault(t => t.Name == "ChipZaehler");
+                if (zaehler is not null)
+                    zaehler.Text = view.Anzahl(_columnFields.Values.ToList()).ToString();
             }
         }
     }

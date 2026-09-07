@@ -49,9 +49,9 @@ public static class ProjektUebersichtRechner
             Offen: stand.Count(x => x == HaltungPruefstand.Offen),
             GesamtlaengeM: h.Sum(Laenge),
             Schaechte: s.Count,
-            SchaechteMitProtokoll: s.Count(x => Gefuellt(x.GetFieldValue(FieldKeys.PdfPath))),
+            SchaechteMitProtokoll: s.Count(x => Gefuellt(SchachtWert(x, FieldKeys.PdfPath))),
             DringendHaltungen: h.Count(r => Dringend(r.GetFieldValue(FieldKeys.ConditionClass))),
-            DringendSchaechte: s.Count(x => Dringend(x.GetFieldValue(FieldKeys.ConditionClass))),
+            DringendSchaechte: s.Count(x => Dringend(SchachtWert(x, FieldKeys.ConditionClass))),
             Stammdaten: new[]
             {
                 St("Material", r => r.GetFieldValue(FieldKeys.PipeMaterial)),
@@ -60,6 +60,14 @@ public static class ProjektUebersichtRechner
                 St("GEONIS", r => r.Geonis?.Haltung ?? r.GetFieldValue(FieldKeys.GeonisId))
             });
     }
+
+    /// <summary>
+    /// Nova-Fixwelle F2: Ein Schacht fuehrt seine Felder unter der Kopfzeile der Excel-Vorlage
+    /// ("Eigentümer" mit Umlaut), nicht unter dem Katalognamen. Ein direkter
+    /// <c>GetFieldValue</c> findet dann nichts und die Kennzahl zaehlt still null.
+    /// </summary>
+    private static string? SchachtWert(SchachtRecord record, string feld)
+        => record.GetFieldValue(SchachtFeldnamen.Feld(record, feld));
 
     public static string HeroText(ProjektUebersichtKennzahlen k)
     {

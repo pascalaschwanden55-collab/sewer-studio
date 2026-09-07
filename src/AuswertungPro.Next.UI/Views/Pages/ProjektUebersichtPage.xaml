@@ -44,6 +44,9 @@
                                 <StackPanel Orientation="Horizontal"><ui:FluentIcon Glyph="&#xE768;" Margin="0,0,6,0"/><TextBlock Text="Nächste Haltung prüfen"/></StackPanel>
                             </Button>
                             <Button Command="{Binding HaltungenOeffnenCommand}" Style="{StaticResource ToolbarButton}" Margin="8,0,0,0" Content="Haltungen öffnen" ToolTip="Zur Haltungsliste"/>
+                            <!-- F3: Derselbe Weg wie auf der klassischen Übersicht. -->
+                            <Button Command="{Binding VorschauPdfCommand}" Style="{StaticResource ToolbarButton}" Margin="8,0,0,0"
+                                    Content="Vorschau-PDF" ToolTip="Projektvorschau als PDF speichern"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -64,9 +67,33 @@
                                             <Button DockPanel.Dock="Right" Content="Prüfen" Style="{StaticResource ToolbarButton}" Padding="8,2" MinHeight="0"
                                                     Command="{Binding DataContext.KiLaufPruefenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Haltung}"
                                                     ToolTip="Haltung öffnen und Video prüfen"/>
-                                            <Border DockPanel.Dock="Left" Background="{DynamicResource KiSubtleBrush}" CornerRadius="{DynamicResource RadiusPill}" Padding="8,2" Margin="0,0,8,0">
+                                            <!-- F4: Ohne Fund kein leeres Abzeichen, sondern der Hinweis. -->
+                                            <Border DockPanel.Dock="Left" Background="{DynamicResource KiSubtleBrush}" CornerRadius="{DynamicResource RadiusChip}" Padding="8,2" Margin="0,0,8,0">
                                                 <TextBlock Text="{Binding Badge}" FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{DynamicResource KiTextBrush}"/>
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Badge}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
                                             </Border>
+                                            <TextBlock DockPanel.Dock="Left" Text="{Binding Hinweis}" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                       FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Hinweis}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                             <TextBlock Text="{Binding Meta}" VerticalAlignment="Center" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
                                         </DockPanel>
                                     </Border>
@@ -108,14 +135,17 @@
                         <ItemsControl ItemsSource="{Binding ZustandLegende}" AutomationProperties.Name="Zustandsklassen">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
+                                    <!-- B8: Der Zähler steht rechtsbündig in einer eigenen Spalte, nicht hochgestellt am Text. -->
                                     <Button Command="{Binding DataContext.ZustandFilterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Klasse}"
-                                            Style="{StaticResource ToolbarButton}" HorizontalContentAlignment="Stretch" Margin="0,0,0,4" Background="Transparent" BorderBrush="Transparent"
+                                            Style="{StaticResource ToolbarButton}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,4"
+                                            Background="Transparent" BorderBrush="Transparent"
                                             ToolTip="Haltungen dieser Klasse in der Liste zeigen">
-                                        <DockPanel>
-                                            <Border DockPanel.Dock="Left" Width="12" Height="12" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,8,0" Background="{Binding Klasse, Converter={StaticResource ZkBrushConv}}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"/>
-                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Anzahl}" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextBrush}"/>
-                                            <TextBlock Text="{Binding Label}" Foreground="{DynamicResource TextBrush}"/>
-                                        </DockPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="12" Height="12" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,8,0" VerticalAlignment="Center" Background="{Binding Klasse, Converter={StaticResource ZkBrushConv}}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Label}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Anzahl}" Margin="12,0,0,0" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                        </Grid>
                                     </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -134,17 +164,24 @@
                         <ItemsControl ItemsSource="{Binding Schaeden}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,3">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="64"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Hauptcode}" FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold" FontSize="{DynamicResource TextS}" VerticalAlignment="Center"/>
-                                        <Grid Grid.Column="1" Height="10" VerticalAlignment="Center">
-                                            <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="{DynamicResource RadiusPill}"/>
-                                            <Border Background="{DynamicResource AccentBrush}" CornerRadius="{DynamicResource RadiusPill}" HorizontalAlignment="Left">
-                                                <Border.Width><MultiBinding Converter="{StaticResource AnteilBreite}"><Binding Path="Anteil"/><Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}"/></MultiBinding></Border.Width>
-                                            </Border>
+                                    <!-- F3: Die ganze Zeile führt in die gefilterte Haltungsliste, wie der Balken der klassischen Übersicht. -->
+                                    <Button Command="{Binding DataContext.SchadenFilterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding Hauptcode}"
+                                            Style="{StaticResource ToolbarButton}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                            Background="Transparent" BorderBrush="Transparent" Padding="6,2" MinHeight="0" Margin="0,1"
+                                            ToolTip="Haltungen mit diesem Hauptcode in der Liste zeigen">
+                                        <Grid Margin="0,3">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="64"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Hauptcode}" FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold" FontSize="{DynamicResource TextS}" VerticalAlignment="Center"/>
+                                            <Grid Grid.Column="1" Height="10" VerticalAlignment="Center">
+                                                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="{DynamicResource RadiusBar}"/>
+                                                <Border Background="{DynamicResource AccentBrush}" CornerRadius="{DynamicResource RadiusBar}" HorizontalAlignment="Left">
+                                                    <Border.Width><MultiBinding Converter="{StaticResource AnteilBreite}"><Binding Path="Anteil"/><Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}"/></MultiBinding></Border.Width>
+                                                </Border>
+                                            </Grid>
+                                            <TextBlock Grid.Column="2" Margin="10,0,0,0" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextS}" VerticalAlignment="Center"><Run Text="{Binding Anzahl, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Klartext, Mode=OneWay}"/></TextBlock>
                                         </Grid>
-                                        <TextBlock Grid.Column="2" Margin="10,0,0,0" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextS}" VerticalAlignment="Center"><Run Text="{Binding Anzahl, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Klartext, Mode=OneWay}"/></TextBlock>
-                                    </Grid>
+                                    </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -176,8 +213,8 @@
                         <Grid Margin="0,3"><Grid.ColumnDefinitions><ColumnDefinition Width="64"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding Feld}" FontSize="{DynamicResource TextS}" VerticalAlignment="Center"/>
                             <Grid Grid.Column="1" Height="10" VerticalAlignment="Center">
-                                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="{DynamicResource RadiusPill}"/>
-                                <Border CornerRadius="{DynamicResource RadiusPill}" HorizontalAlignment="Left" Background="{Binding Stufe, Converter={StaticResource ZkBrushConv}}">
+                                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="{DynamicResource RadiusBar}"/>
+                                <Border CornerRadius="{DynamicResource RadiusBar}" HorizontalAlignment="Left" Background="{Binding Stufe, Converter={StaticResource ZkBrushConv}}">
                                     <Border.Width><MultiBinding Converter="{StaticResource AnteilBreite}" ConverterParameter="prozent"><Binding Path="Prozent"/><Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}"/></MultiBinding></Border.Width>
                                 </Border>
                             </Grid>

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
+using System.Linq;
+using AuswertungPro.Next.Application.UseCases.Uebersicht;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.DataPage;
@@ -100,4 +102,25 @@ public sealed class ZahlSichtbarConverter : IValueConverter
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         => value is int n && n > 0 ? Visibility.Visible : Visibility.Collapsed;
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
+/// <summary>
+/// Ein Eckdatenwert der Uebersicht; leer wird zum Gedankenstrich. Der optionale
+/// ConverterParameter ist die Einheit ("m").
+/// </summary>
+public sealed class FaktWertConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => HaltungFaktenText.Wert(value?.ToString(), parameter?.ToString());
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
+/// <summary>Mehrere Eckdatenwerte in einer Zelle ("300 · Kreisprofil"); alle leer = Gedankenstrich.</summary>
+public sealed class FaktZusammenConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        => HaltungFaktenText.Zusammen((values ?? Array.Empty<object>()).Select(v => v?.ToString()));
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        => Array.Empty<object>();
 }

@@ -37,8 +37,8 @@ public sealed class ProjektUebersichtPageViewModelTests
     [Fact]
     public void KiLaufzeile_fasst_Vorschlaege_zusammen()
     {
-        var zeile = ProjektUebersichtPageViewModel.BaueKiLaufZeile("78998-79002", new[] { ("Bogen", "Meter 9,42"), ("Rohrende", "Sekunde 214") });
+        var zeile = ProjektUebersichtPageViewModel.BaueKiLaufZeile("78998-79002", new[] { ("Bogen", "Meter 9.42"), ("Rohrende", "Sekunde 214") });
         Assert.Equal("Bogen · Rohrende", zeile.Badge);
-        Assert.Equal("78998-79002 · Meter 9,42, Sekunde 214", zeile.Meta);
+        Assert.Equal("78998-79002 · Meter 9.42, Sekunde 214", zeile.Meta);
     }
 }

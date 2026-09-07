@@ -31,7 +31,7 @@
         <Border x:Name="IconCircle"
                 Width="72"
                 Height="72"
-                CornerRadius="{DynamicResource RadiusPill}"
+                CornerRadius="{DynamicResource RadiusCircle}"
                 Background="{DynamicResource AccentSubtleBrush}"
                 BorderBrush="{DynamicResource AccentBrush}"
                 BorderThickness="1"

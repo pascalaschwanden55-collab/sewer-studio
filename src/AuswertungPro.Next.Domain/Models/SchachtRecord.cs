@@ -22,6 +22,12 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     /// Abonnenten bemerkt wird. Ohne Abonnenten ist das harmlos, auch bei der
     /// JSON-Deserialisierung: Der Setter wird dabei ganz normal ueber Reflection aufgerufen,
     /// nur meldet noch niemand mit.
+    ///
+    /// Threadvertrag (Nova-Fixwelle F6): Die Meldung laeuft SYNCHRON auf dem Thread, der den
+    /// Setter aufruft. Import, Stammdatennachlauf und Neueinlesen arbeiten im Hintergrund —
+    /// ein UI-Abonnent muss die Meldung deshalb selbst auf den Dispatcher schieben
+    /// (Muster: <c>SchachtUebersichtPanel.OnRecordPropertyChanged</c>). Der Setter marshallt
+    /// bewusst nicht selbst: Die Domaene kennt kein WPF.
     /// </summary>
     public AuswertungPro.Next.Domain.Protocol.ProtocolDocument? Protocol
     {

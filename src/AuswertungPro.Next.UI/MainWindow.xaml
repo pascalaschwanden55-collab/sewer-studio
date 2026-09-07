@@ -70,18 +70,39 @@
             </Button>
             <!-- Nova-Etappe 2: globale Suche Strg+K (Inventar 8.5); nach dem Aufgaben-Chip
                  deklariert, damit sie optisch naeher an der Brotkrume (links vom Chip) steht. -->
+            <!-- B1/B2: Feste Hoehe 30 wie die Werkzeugknoepfe, damit RadiusPill (15) eine echte
+                 Kapsel ergibt. Die Tastenmarke sitzt vertikal zentriert INNERHALB der Kapsel
+                 (Hoehe Auto statt volle Feldhoehe), und das leere Feld zeigt seinen Platzhalter. -->
             <Grid DockPanel.Dock="Right" Margin="0,2,8,2" MinWidth="300" VerticalAlignment="Center">
-                <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                        CornerRadius="{DynamicResource RadiusPill}" Padding="10,2">
+                <Border Height="30" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource InputBorderBrush}" BorderThickness="1"
+                        CornerRadius="{DynamicResource RadiusPill}" Padding="10,0">
                     <DockPanel>
-                        <ui:FluentIcon DockPanel.Dock="Left" Glyph="&#xE721;" Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0"/>
-                        <Border DockPanel.Dock="Right" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="{DynamicResource RadiusS}" Padding="6,1">
+                        <ui:FluentIcon DockPanel.Dock="Left" Glyph="&#xE721;" Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <Border DockPanel.Dock="Right" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="{DynamicResource RadiusS}"
+                                Padding="6,1" Margin="6,0,0,0" Height="Auto" VerticalAlignment="Center">
                             <TextBlock Text="Strg K" FontSize="{DynamicResource TextXS}" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource MutedBrush}"/>
                         </Border>
-                        <TextBox x:Name="GlobaleSucheBox" BorderThickness="0" Background="Transparent" MinWidth="200"
-                                 Text="{Binding GlobaleSuche.Text, UpdateSourceTrigger=PropertyChanged}"
-                                 KeyDown="GlobaleSucheBox_KeyDown"
-                                 ToolTip="Haltung, Schacht oder Strasse suchen" AutomationProperties.Name="Haltung, Schacht oder Strasse suchen"/>
+                        <Grid>
+                            <TextBox x:Name="GlobaleSucheBox" BorderThickness="0" Background="Transparent" MinWidth="200"
+                                     MinHeight="0" Padding="0" VerticalContentAlignment="Center"
+                                     Text="{Binding GlobaleSuche.Text, UpdateSourceTrigger=PropertyChanged}"
+                                     KeyDown="GlobaleSucheBox_KeyDown"
+                                     ToolTip="Haltung, Schacht oder Strasse suchen" AutomationProperties.Name="Haltung, Schacht oder Strasse suchen"/>
+                            <TextBlock Text="Haltung, Schacht oder Strasse suchen" IsHitTestVisible="False"
+                                       VerticalAlignment="Center" Margin="2,0,0,0"
+                                       FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, ElementName=GlobaleSucheBox}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
                     </DockPanel>
                 </Border>
                 <Popup IsOpen="{Binding GlobaleSuche.ListeOffen, Mode=TwoWay}" StaysOpen="False" PlacementTarget="{Binding ElementName=GlobaleSucheBox}"
@@ -180,6 +201,9 @@
                 <MenuItem Header="_Ansicht">
                     <MenuItem Header="Fokusmodus" InputGestureText="F11" IsCheckable="True" IsChecked="{Binding IsFocusMode, Mode=TwoWay}"
                               ToolTip="Sidebar und Menü ausblenden, um mehr Arbeitsfläche zu erhalten."/>
+                    <MenuItem x:Name="KlassischeUebersichtToggle" Header="Klassische Übersicht" IsCheckable="True"
+                              IsChecked="{Binding KlassischeUebersicht, Mode=TwoWay}"
+                              ToolTip="Zeigt bei offenem Projekt wieder die bisherige Übersicht mit Projektliste, Vorschau und Vorschau-PDF."/>
                     <Separator/>
                     <MenuItem Header="System-Monitor öffnen" Click="OpenSystemMonitor_Click"
                               ToolTip="System-Monitor in einem eigenen Fenster öffnen.">
@@ -482,7 +506,7 @@
                           AutomationProperties.Name="KI-Bereitschaft und Systemleistung">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <ctrl:NeuralPulseDot Width="10" Height="10" Margin="0,0,8,0" ToolTip="Laufende Messwerte des Rechners">
+                            <ctrl:NeuralPulseDot Width="10" Height="10" Margin="0,0,8,0" ToolTip="Bereitschaft der lokalen KI; aufgeklappt stehen Rechnerauslastung und Sensoren">
                                 <ctrl:NeuralPulseDot.Style>
                                     <Style TargetType="ctrl:NeuralPulseDot">
                                         <Setter Property="IsActive" Value="{Binding IstKiBereit}"/>

@@ -154,7 +154,11 @@
             <Setter Property="FontSize" Value="{DynamicResource TextM}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <!-- B8: TabControl uebertraegt die Inhaltsausrichtung des GEWAEHLTEN Reiters auf den
+                 Inhaltsbereich. Mit "Center" stand der Seiteninhalt mittig und liess ueber der
+                 ersten Gruppe rund 200 px leer. Die Kopfzeile des Reiters richtet sich in ihrer
+                 eigenen Vorlage aus und bleibt davon unberuehrt. -->
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
             <Setter Property="HeaderTemplate">
                 <Setter.Value>
                     <DataTemplate>

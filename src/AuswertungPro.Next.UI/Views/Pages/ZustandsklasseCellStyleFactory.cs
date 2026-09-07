@@ -70,7 +70,27 @@ internal static class ZustandsklasseCellStyleFactory
             Mode = BindingMode.OneWay,
             Converter = foregroundConverter
         }));
+        style.Resources.Add(typeof(TextBlock), ZellTextStil());
         return style;
+    }
+
+    /// <summary>
+    /// B6: Die Zelle setzt ihre Tinte (schwarz auf der farbigen Flaeche), doch der Textblock in
+    /// der Zelle bekommt seine Farbe vom impliziten <c>TextBlock</c>-Stil des Themes — und ein
+    /// Stil-Setter schlaegt die Vererbung. Im dunklen Theme wurden die Ziffern dadurch weiss auf
+    /// Gelb. Diese engere Fassung liegt in den Ressourcen des ZELLstils, wird beim Textblock also
+    /// vor dem Theme gefunden und nimmt die Tinte der Zelle.
+    /// </summary>
+    private static Style ZellTextStil()
+    {
+        var stil = new Style(typeof(TextBlock));
+        stil.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding(nameof(Control.Foreground))
+        {
+            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor) { AncestorType = typeof(DataGridCell) },
+            Mode = BindingMode.OneWay
+        }));
+        stil.Seal();
+        return stil;
     }
 
     private static SolidColorBrush CreateBrush(byte r, byte g, byte b)

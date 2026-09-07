@@ -10,6 +10,34 @@ public sealed record DataPageColumnView(string Key, string Titel, IReadOnlyList<
 {
     /// <summary>Spaltenzahl dieser Ansicht; ohne eigene Feldliste gilt die Gesamtzahl aller Spalten.</summary>
     public int Anzahl(int alleSpalten) => Felder?.Count ?? alleSpalten;
+
+    /// <summary>
+    /// Nova-Fixwelle F2: Zaehlt nur Felder, welche die Tabelle wirklich als Spalte fuehrt.
+    /// Der Chip darf keine Spalte versprechen, die es in diesem Projekt gar nicht gibt.
+    /// <paramref name="falte"/> ist der Namensvergleich der Liste (bei Schaechten
+    /// <c>SchachtFeldnamen.Falte</c>, sonst ein reiner Ordinalvergleich).
+    /// </summary>
+    public int Anzahl(IReadOnlyCollection<string> vorhandeneFelder, Func<string, string>? falte = null)
+    {
+        ArgumentNullException.ThrowIfNull(vorhandeneFelder);
+        if (Felder is null)
+            return vorhandeneFelder.Count;
+
+        var norm = falte ?? (name => name);
+        var vorhanden = new HashSet<string>(vorhandeneFelder.Select(norm), StringComparer.Ordinal);
+        return Felder.Count(feld => vorhanden.Contains(norm(feld)));
+    }
+
+    /// <summary>Gehoert die Spalte <paramref name="feld"/> zu dieser Ansicht?</summary>
+    public bool Enthaelt(string feld, Func<string, string>? falte = null)
+    {
+        if (Felder is null)
+            return true;
+
+        var norm = falte ?? (name => name);
+        var gesucht = norm(feld ?? string.Empty);
+        return Felder.Any(f => string.Equals(norm(f), gesucht, StringComparison.Ordinal));
+    }
 }
 
 /// <summary>

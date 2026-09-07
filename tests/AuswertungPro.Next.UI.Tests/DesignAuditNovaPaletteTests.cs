@@ -60,12 +60,43 @@ public sealed class DesignAuditNovaPaletteTests
     {
         var xaml = Xaml(datei);
         string Stil(string key) => Regex.Match(xaml, $"<Style x:Key=\"{key}\"[\\s\\S]*?\n    </Style>").Value;
-        Assert.Contains("CornerRadius=\"999\"", Stil("ToolbarButton"));
-        Assert.Contains("CornerRadius=\"999\"", Stil("ToolbarButtonAccent"));
-        Assert.Contains("CornerRadius=\"999\"", Stil("CompactToggleButton"));
+        // B1: 15 = halbe Hoehe der drei Vorlagen (MinHeight 30). 999 ergab in WPF eine Ellipse.
+        Assert.Contains("CornerRadius=\"15\"", Stil("ToolbarButton"));
+        Assert.Contains("CornerRadius=\"15\"", Stil("ToolbarButtonAccent"));
+        Assert.Contains("CornerRadius=\"15\"", Stil("CompactToggleButton"));
+        Assert.DoesNotContain("CornerRadius=\"999\"", xaml);
         var header = Regex.Match(xaml, "<Style TargetType=\"\\{x:Type DataGridColumnHeader\\}\">[\\s\\S]*?\n    </Style>").Value;
         Assert.Contains("Typography.Capitals=\"AllSmallCaps\"", header);
         Assert.Contains("Foreground\" Value=\"{DynamicResource MutedBrush}\"", header);
+    }
+
+    /// <summary>
+    /// Nova-Fixwelle B7: Der implizite TextBlock-Stil setzt Foreground selbst und schlaegt damit
+    /// die Vererbung. Ein Knopfinhalt aus eigenen TextBlocks bekam dadurch die normale Textfarbe
+    /// statt der Knopffarbe (dunkle Schrift auf blauem Akzent). Die vier Knopfvorlagen reichen die
+    /// Tinte deshalb ausdruecklich durch.
+    /// </summary>
+    [Theory]
+    [InlineData("ThemeLight.xaml")]
+    [InlineData("Theme.xaml")]
+    public void Knopfvorlagen_reichen_ihre_Tinte_an_den_Inhalt_durch(string datei)
+    {
+        var xaml = Xaml(datei);
+        string Stil(string key) => Regex.Match(xaml, $"<Style x:Key=\"{key}\"[\\s\\S]*?\n    </Style>").Value;
+        var basis = Regex.Match(xaml, "<Style TargetType=\"\\{x:Type Button\\}\">[\\s\\S]*?\n    </Style>").Value;
+
+        foreach (var (name, block, anker) in new[]
+                 {
+                     ("Button", basis, "Button"),
+                     ("ToolbarButton", Stil("ToolbarButton"), "Button"),
+                     ("ToolbarButtonAccent", Stil("ToolbarButtonAccent"), "Button"),
+                     ("CompactToggleButton", Stil("CompactToggleButton"), "ToggleButton")
+                 })
+        {
+            Assert.True(block.Length > 0, $"{datei}: Vorlage {name} nicht gefunden");
+            Assert.Contains("<ContentPresenter.Resources>", block);
+            Assert.Contains($"RelativeSource AncestorType={anker}", block);
+        }
     }
 
     [Fact]

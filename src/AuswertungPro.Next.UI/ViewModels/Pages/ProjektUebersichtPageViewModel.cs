@@ -5,12 +5,14 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.Dashboard;
 using AuswertungPro.Next.Application.UseCases.CodingSuggestions;
 using AuswertungPro.Next.Application.UseCases.Uebersicht;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -18,7 +20,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed record ZustandZeile(string Klasse, string Label, int Anzahl);
 public sealed record SchadenZeile(string Hauptcode, string Klartext, int Anzahl, double Anteil);
-public sealed record KiLaufZeile(string Haltung, string Badge, string Meta);
+/// <param name="Badge">Die gefundenen Arten ("Bogen · Rohrende"); leer, wenn nichts gefunden wurde.</param>
+/// <param name="Hinweis">F4: Steht anstelle eines leeren Abzeichens ("keine Vorschläge" oder der Grund).</param>
+public sealed record KiLaufZeile(string Haltung, string Badge, string Meta, string Hinweis = "");
 public sealed record ProjektZeile(string Name, string Pfad, string Meta);
 
 /// <summary>Nova-Etappe 2, Inventar 4.1: Uebersicht des offenen Projekts. Alle Zahlen aus einem Bestand.</summary>
@@ -95,11 +99,14 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
 
         KiLaeufe.Clear();
         foreach (var lauf in _register.Heute())
-            KiLaeufe.Add(BaueKiLaufZeile(lauf.Haltung, lauf.Set.Suggestions
-                .Select(s => (s.Kind.ToString(), s.Meter is { } m && !s.MeterIsEstimated
-                    ? $"Meter {m.ToString("0.00", DeCh)}"
-                    : $"Sekunde {s.PeakTimeSeconds:0}"))
-                .ToList()));
+            KiLaeufe.Add(BaueKiLaufZeile(
+                lauf.Haltung,
+                lauf.Set.Suggestions
+                    .Select(s => (CodingSuggestionText.Art(s.Kind), s.Meter is { } m && !s.MeterIsEstimated
+                        ? $"Meter {m.ToString("0.00", DeCh)}"
+                        : $"Sekunde {s.PeakTimeSeconds:0}"))
+                    .ToList(),
+                CodingSuggestionMerkRegel.Hinweis(lauf.Set)));
 
         LetzteProjekte.Clear();
         foreach (var pfad in (_sp.Settings.RecentProjectPaths ?? new List<string>()).Take(3))
@@ -155,18 +162,58 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
             .ToList();
     }
 
-    internal static KiLaufZeile BaueKiLaufZeile(string haltung, IReadOnlyList<(string Art, string Ort)> vorschlaege)
+    internal static KiLaufZeile BaueKiLaufZeile(
+        string haltung,
+        IReadOnlyList<(string Art, string Ort)> vorschlaege,
+        string hinweis = "")
     {
         var arten = vorschlaege.Select(v => v.Art).Distinct().ToList();
         var orte = vorschlaege.Select(v => v.Ort).Where(o => !string.IsNullOrWhiteSpace(o)).Distinct().ToList();
         return new KiLaufZeile(
             haltung,
             string.Join(" · ", arten),
-            orte.Count == 0 ? haltung : $"{haltung} · {string.Join(", ", orte)}");
+            orte.Count == 0 ? haltung : $"{haltung} · {string.Join(", ", orte)}",
+            arten.Count == 0 ? hinweis : string.Empty);
     }
 
     [RelayCommand]
     private void HaltungenOeffnen() => _shell.NavigateTo("Haltungen");
+
+    /// <summary>
+    /// F3: Vorschau-PDF wie auf der klassischen Uebersicht. Derselbe UseCase, derselbe
+    /// Dateiname, dieselben Meldungen; die Vorschau selbst kommt aus <see cref="ProjectPreviewFactory"/>
+    /// mit denselben Kosten-Speichern wie <see cref="BaueStatistik"/>.
+    /// </summary>
+    [RelayCommand]
+    private async Task VorschauPdfAsync()
+        => await ProjektVorschauPdfWorkflow.AusfuehrenAsync(
+            BaueDruckbareVorschau,
+            _sp.Dialogs,
+            "Keine Projektvorschau zum Drucken vorhanden.");
+
+    private ProjectPreview? BaueDruckbareVorschau()
+    {
+        var pfad = _sp.Settings.LastProjectPath;
+        if (string.IsNullOrWhiteSpace(pfad))
+            return null;
+
+        var hCosts = LadeKostenSpeicher(_sp.CostStores.CreateProjectCostStore(), pfad);
+        var matrix = LadeKostenSpeicher(_sp.CostStores.CreateProjectCostStore("schacht_costs.json"), pfad);
+        var empfehlungen = LadeKostenSpeicher(_sp.CostStores.CreateProjectCostStore("schacht_empfehlungen.json"), pfad);
+        return ProjectPreviewFactory.FromProject(_shell.Project, pfad, hCosts, SchachtCostStoreMerger.Merge(matrix, empfehlungen));
+    }
+
+    /// <summary>
+    /// F3: Klick auf eine Zeile unter "Haeufigste Schaeden" — derselbe Weg wie der Balken der
+    /// klassischen Uebersicht (<c>OverviewPageViewModel.NavigateDamage</c>).
+    /// </summary>
+    [RelayCommand]
+    private void SchadenFilter(string? hauptcode)
+    {
+        if (string.IsNullOrWhiteSpace(hauptcode))
+            return;
+        _shell.NavigateToDataPage(DataPageStartFilter.FromDashboardSchaden(hauptcode));
+    }
 
     [RelayCommand]
     private void ZustandFilter(string? klasse)

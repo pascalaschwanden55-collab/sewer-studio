@@ -77,7 +77,19 @@ public partial class SchachtUebersichtPanel : UserControl
         panel.Aktualisiere();
     }
 
-    private void OnRecordPropertyChanged(object? sender, PropertyChangedEventArgs e) => Aktualisiere();
+    /// <summary>
+    /// Nova-Fixwelle F6: <see cref="SchachtRecord.PropertyChanged"/> feuert auf dem setzenden
+    /// Thread — ein Import oder Nachlauf im Hintergrund meldet also nicht auf dem UI-Thread.
+    /// <see cref="Aktualisiere"/> setzt aber Abhaengigkeitseigenschaften und die Sichtbarkeit von
+    /// Formen; das darf nur der UI-Thread. Muster wie <c>ProjektUebersichtPageViewModel.OnRegisterGeaendert</c>.
+    /// </summary>
+    private void OnRecordPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (Dispatcher.CheckAccess())
+            Aktualisiere();
+        else
+            Dispatcher.BeginInvoke(new Action(Aktualisiere));
+    }
 
     private void AbmeldenVonRecord()
     {
@@ -103,7 +115,9 @@ public partial class SchachtUebersichtPanel : UserControl
     /// <summary>Waehlt Kreis/Oval/Rechteck nach der erfassten Schachtform und schreibt den Masstext.</summary>
     private void AktualisiereGrundriss(SchachtRecord? record)
     {
-        var form = SchachtformVokabular.Normalisieren(record?.GetFieldValue(FieldKeys.ShaftShape));
+        // F2: Schachtfelder ueber SchachtFeldnamen lesen — der Datensatz fuehrt sie unter der
+        // Kopfzeile der Excel-Vorlage, nicht unter dem Katalognamen.
+        var form = SchachtformVokabular.Normalisieren(Wert(record, FieldKeys.ShaftShape));
         Kreis.Visibility = Visibility.Collapsed;
         Oval.Visibility = Visibility.Collapsed;
         Quadrat.Visibility = Visibility.Collapsed;
@@ -115,8 +129,12 @@ public partial class SchachtUebersichtPanel : UserControl
         };
         sichtbar.Visibility = Visibility.Visible;
 
-        var d1 = (record?.GetFieldValue(FieldKeys.ShaftDimension1Mm) ?? "").Trim();
-        var d2 = (record?.GetFieldValue(FieldKeys.ShaftDimension2Mm) ?? "").Trim();
+        var d1 = (Wert(record, FieldKeys.ShaftDimension1Mm) ?? "").Trim();
+        var d2 = (Wert(record, FieldKeys.ShaftDimension2Mm) ?? "").Trim();
         MassText.Text = d1.Length == 0 && d2.Length == 0 ? "" : $"{d1} × {d2}";
     }
+
+    /// <summary>Feldwert eines Schachts unter der Schreibweise, die der Datensatz wirklich fuehrt.</summary>
+    private static string? Wert(SchachtRecord? record, string feld)
+        => record is null ? null : record.GetFieldValue(SchachtFeldnamen.Feld(record, feld));
 }

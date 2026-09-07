@@ -12,8 +12,16 @@ public sealed class DesignAuditNovaTrainingStudioTests
     public void Drei_Spalten_mit_Prototyp_Breiten_und_Titelchip()
     {
         var xaml = Xaml();
-        Assert.Contains("<ColumnDefinition Width=\"210\"/>", xaml);
+        // B4: Das Prototypmass 210 bleibt die MINDESTbreite der Werkzeugspalte; sie darf auf
+        // hoechstens 240 wachsen, damit nichts abgeschnitten wird.
+        var werkzeugspalte = Regex.Match(xaml, "<ColumnDefinition Width=\"(?<w>[0-9]+)\" MinWidth=\"210\" MaxWidth=\"240\"/>");
+        Assert.True(werkzeugspalte.Success, "Werkzeugspalte ohne MinWidth 210 / MaxWidth 240");
+        var breite = int.Parse(werkzeugspalte.Groups["w"].Value);
+        Assert.InRange(breite, 210, 240);
         Assert.Contains("<ColumnDefinition Width=\"330\"/>", xaml);
+        // Ohne diese Zeile misst die Spalte ihre Kinder mit unendlicher Breite: Texte brechen
+        // dann nicht um und der Rand schneidet sie ab.
+        Assert.Contains("HorizontalScrollBarVisibility=\"Disabled\" Margin=\"0,0,12,0\"", xaml);
         Assert.Contains("Text=\"{Binding KiBereitschaftText}\"", xaml);
         Assert.Contains("Training Studio (Prüfplatz)", xaml);
     }

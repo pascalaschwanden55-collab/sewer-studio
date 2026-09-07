@@ -11,112 +11,164 @@
         <local:SchadenStufeQuelleConverter x:Key="SchadenStufeQuelleConv"/>
         <local:ZustandsklasseBrushConverter x:Key="ZkBrushConv"/>
         <local:ZahlSichtbarConverter x:Key="ZahlSichtbar"/>
+        <local:FaktWertConverter x:Key="FaktWert"/>
+        <local:FaktZusammenConverter x:Key="FaktZusammen"/>
         <dp:ZustandsklasseInkConverter x:Key="ZkInkConv"/>
         <Style x:Key="FaktLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
         </Style>
-        <Style x:Key="FaktWert" TargetType="TextBlock">
+        <Style x:Key="FaktWertStil" TargetType="TextBlock">
             <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontFamily" Value="{DynamicResource FontMono}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
     </UserControl.Resources>
     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="12">
-        <DockPanel DataContext="{Binding Record, ElementName=Root}">
-            <!-- KI-Hinweis: nur sichtbar, solange die Auswahl offene KI-Vorschlaege hat -->
-            <Border DockPanel.Dock="Bottom" Background="{DynamicResource KiSubtleBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10,8" Margin="0,8,0,0"
-                    Visibility="{Binding OffeneKiBefunde, ElementName=Root, Converter={StaticResource ZahlSichtbar}}">
-                <StackPanel>
-                    <TextBlock Text="KI-Vorschläge warten auf fachliche Bestätigung" TextWrapping="Wrap"
-                               FontWeight="SemiBold" Foreground="{DynamicResource KiTextBrush}"/>
-                    <TextBlock Text="{Binding OffeneKiBefunde, ElementName=Root, StringFormat={}{0} offen. Die Ampel wird erst grün\, wenn zwei unabhängige Belegquellen vorliegen und du bestätigt hast.}" TextWrapping="Wrap" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource KiTextBrush}"/>
-                    <Button Content="Im Player prüfen" Click="ImPlayer_Click" Style="{StaticResource ToolbarButtonAccent}" HorizontalAlignment="Left" Margin="0,6,0,0" ToolTip="Video dieser Haltung im Player öffnen"/>
-                </StackPanel>
-            </Border>
-            <!-- Ohne Auswahl: Hinweis statt leerer Beschriftungen -->
-            <TextBlock DockPanel.Dock="Bottom" Text="Keine Haltung gewählt. Links eine Zeile wählen."
-                       Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,8,0,0">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
-            <!-- Kopf: Titel, Haltungsname, Zustandsklasse als Chip mit lesbarer Tinte -->
-            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-                <Border DockPanel.Dock="Right" HorizontalAlignment="Right" MinWidth="34" Height="22" Padding="6,0"
-                        CornerRadius="{DynamicResource RadiusS}"
-                        Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}"
-                        ToolTip="Zustandsklasse">
-                    <TextBlock Text="{Binding Fields[Zustandsklasse], StringFormat=Z{0}}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                               FontSize="{DynamicResource TextS}" FontWeight="SemiBold"
-                               Foreground="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkInkConv}}"/>
+        <!-- B3: Alles in einem Bildlauf. Nur die Schadenliste bekommt die Reststrecke (*);
+             jede Zeile darueber und darunter misst sich selbst (Auto). So wird kein Wert
+             mehr auf halber Hoehe abgeschnitten, auch wenn die Spalte schmal ist. -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      DataContext="{Binding Record, ElementName=Root}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Kopf: Titel, Haltungsname, Zustandsklasse als Chip mit lesbarer Tinte -->
+                <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                    <Border DockPanel.Dock="Right" HorizontalAlignment="Right" MinWidth="34" Height="22" Padding="6,0"
+                            CornerRadius="{DynamicResource RadiusS}"
+                            Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}"
+                            ToolTip="Zustandsklasse">
+                        <TextBlock Text="{Binding Fields[Zustandsklasse], StringFormat=Z{0}}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   FontSize="{DynamicResource TextS}" FontWeight="SemiBold"
+                                   Foreground="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkInkConv}}"/>
+                    </Border>
+                    <TextBlock Text="Übersicht" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Fields[Haltungsname]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                               FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextTrimming="CharacterEllipsis"/>
+                </DockPanel>
+
+                <!-- Rohrring: bis zu drei Uhrlagen-Boegen der schwersten Schaeden -->
+                <local:RohrringControl Grid.Row="1" Entries="{Binding Schaeden, ElementName=Root}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,8"/>
+
+                <!-- Eckdaten; ein leeres Feld zeigt einen Gedankenstrich statt einer nackten Einheit -->
+                <UniformGrid Grid.Row="2" Columns="2" Margin="0,0,0,8">
+                    <StackPanel Margin="0,0,8,6"><TextBlock Text="Schacht oben" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Schacht_oben], Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                    <StackPanel Margin="0,0,0,6"><TextBlock Text="Schacht unten" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Schacht_unten], Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                    <StackPanel Margin="0,0,8,6"><TextBlock Text="Material" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Rohrmaterial], Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                    <StackPanel Margin="0,0,0,6"><TextBlock Text="DN / Profil" Style="{StaticResource FaktLabel}"/>
+                        <TextBlock Style="{StaticResource FaktWertStil}">
+                            <TextBlock.Text>
+                                <MultiBinding Converter="{StaticResource FaktZusammen}">
+                                    <Binding Path="Fields[DN_mm]" Mode="OneWay"/>
+                                    <Binding Path="Fields[Profiltyp]" Mode="OneWay"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,8,6"><TextBlock Text="Länge" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Haltungslaenge_m], Converter={StaticResource FaktWert}, ConverterParameter=m}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                    <StackPanel Margin="0,0,0,6"><TextBlock Text="Inspektion" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Datum_Jahr], Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                    <StackPanel Margin="0,0,8,6"><TextBlock Text="Prüfung" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding PruefungText, ElementName=Root, Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                    <StackPanel Margin="0,0,0,6"><TextBlock Text="Video" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding VideoText, ElementName=Root, Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                </UniformGrid>
+
+                <!-- Ohne Auswahl: Hinweis statt leerer Beschriftungen -->
+                <TextBlock Grid.Row="3" Text="Keine Haltung gewählt. Links eine Zeile wählen."
+                           Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <TextBlock Grid.Row="4" Text="Primäre Schäden" FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextBrush}" Margin="0,4,0,6"/>
+
+                <!-- Schadensliste: nur BA-/BB-Schaeden, schwerste zuerst.
+                     Doppelklick oeffnet die Beobachtungen wie in der Haltungsansicht. -->
+                <ListBox Grid.Row="5" ItemsSource="{Binding Schaeden, ElementName=Root}" BorderThickness="0" Background="Transparent"
+                         MouseDoubleClick="Schaden_MouseDoubleClick" AutomationProperties.Name="Primäre Schäden"
+                         ToolTip="Doppelklick öffnet die Beobachtungen"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,2">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="{DynamicResource RadiusS}"
+                                            Padding="6,2" Margin="0,0,8,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Converter={StaticResource SchadenCodeConv}}" FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold"
+                                                   FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/>
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Text="{Binding Converter={StaticResource SchadenKlartextConv}}"
+                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Converter={StaticResource SchadenMeterConv}}"
+                                               FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                               Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                </Grid>
+                                <!-- Zweite Zeile: Stufe, Quelle (fachlich/KI) und Freigabestatus -->
+                                <TextBlock Text="{Binding Converter={StaticResource SchadenStufeQuelleConv}}"
+                                           FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
+                                           Margin="34,0,0,0" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBlock Grid.Row="6" Text="Keine baulichen oder betrieblichen Schäden erfasst."
+                           Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}" TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Schaeden.Count, ElementName=Root}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <!-- KI-Hinweis: nur sichtbar, solange die Auswahl offene KI-Vorschlaege hat -->
+                <Border Grid.Row="7" Background="{DynamicResource KiSubtleBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10,8" Margin="0,8,0,0"
+                        Visibility="{Binding OffeneKiBefunde, ElementName=Root, Converter={StaticResource ZahlSichtbar}}">
+                    <StackPanel>
+                        <TextBlock Text="KI-Vorschläge warten auf fachliche Bestätigung" TextWrapping="Wrap"
+                                   FontWeight="SemiBold" Foreground="{DynamicResource KiTextBrush}"/>
+                        <TextBlock Text="{Binding OffeneKiBefunde, ElementName=Root, StringFormat={}{0} offen. Die Ampel wird erst grün\, wenn zwei unabhängige Belegquellen vorliegen und du bestätigt hast.}" TextWrapping="Wrap" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource KiTextBrush}"/>
+                        <Button Content="Im Player prüfen" Click="ImPlayer_Click" Style="{StaticResource ToolbarButtonAccent}" HorizontalAlignment="Left" Margin="0,6,0,0" ToolTip="Video dieser Haltung im Player öffnen"/>
+                    </StackPanel>
                 </Border>
-                <TextBlock Text="Übersicht" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Fields[Haltungsname]}" Margin="10,0,0,0" VerticalAlignment="Center"
-                           FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}"
-                           TextTrimming="CharacterEllipsis"/>
-            </DockPanel>
-            <!-- Rohrring: bis zu drei Uhrlagen-Boegen der aktuellen Schaeden -->
-            <local:RohrringControl DockPanel.Dock="Top" Entries="{Binding Entries, ElementName=Root}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-            <!-- Eckdaten -->
-            <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,0,0,8">
-                <StackPanel Margin="0,0,8,6"><TextBlock Text="Schacht oben" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Schacht_oben]}" Style="{StaticResource FaktWert}"/></StackPanel>
-                <StackPanel Margin="0,0,0,6"><TextBlock Text="Schacht unten" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Schacht_unten]}" Style="{StaticResource FaktWert}"/></StackPanel>
-                <StackPanel Margin="0,0,8,6"><TextBlock Text="Material" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Rohrmaterial]}" Style="{StaticResource FaktWert}"/></StackPanel>
-                <StackPanel Margin="0,0,0,6"><TextBlock Text="DN / Profil" Style="{StaticResource FaktLabel}"/><TextBlock Style="{StaticResource FaktWert}"><Run Text="{Binding Fields[DN_mm], Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding Fields[Profiltyp], Mode=OneWay}"/></TextBlock></StackPanel>
-                <StackPanel Margin="0,0,8,6"><TextBlock Text="Länge" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Haltungslaenge_m], StringFormat={}{0} m}" Style="{StaticResource FaktWert}"/></StackPanel>
-                <StackPanel Margin="0,0,0,6"><TextBlock Text="Inspektion" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Datum_Jahr]}" Style="{StaticResource FaktWert}"/></StackPanel>
-                <StackPanel Margin="0,0,8,6"><TextBlock Text="Prüfung" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding PruefungText, ElementName=Root}" Style="{StaticResource FaktWert}"/></StackPanel>
-                <StackPanel Margin="0,0,0,6"><TextBlock Text="Video" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding VideoText, ElementName=Root}" Style="{StaticResource FaktWert}" TextTrimming="CharacterEllipsis"/></StackPanel>
-            </UniformGrid>
-            <TextBlock DockPanel.Dock="Top" Text="Primäre Schäden" FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextBrush}" Margin="0,4,0,6"/>
-            <!-- Schadensliste: Doppelklick oeffnet die Beobachtungen wie in der Haltungsansicht -->
-            <ListBox ItemsSource="{Binding Entries, ElementName=Root}" BorderThickness="0" Background="Transparent"
-                     MouseDoubleClick="Schaden_MouseDoubleClick" AutomationProperties.Name="Primäre Schäden"
-                     ToolTip="Doppelklick öffnet die Beobachtungen"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Margin="0,2">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="{DynamicResource RadiusS}"
-                                        Padding="6,2" Margin="0,0,8,0" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Converter={StaticResource SchadenCodeConv}}" FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold"
-                                               FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/>
-                                </Border>
-                                <TextBlock Grid.Column="1" Text="{Binding Converter={StaticResource SchadenKlartextConv}}"
-                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource TextBrush}"/>
-                                <TextBlock Grid.Column="2" Text="{Binding Converter={StaticResource SchadenMeterConv}}"
-                                           FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}"
-                                           Margin="8,0,0,0" VerticalAlignment="Center"/>
-                            </Grid>
-                            <!-- Zweite Zeile: Stufe, Quelle (fachlich/KI) und Freigabestatus -->
-                            <TextBlock Text="{Binding Converter={StaticResource SchadenStufeQuelleConv}}"
-                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
-                                       Margin="34,0,0,0" TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </DockPanel>
+            </Grid>
+        </ScrollViewer>
     </Border>
 </UserControl>

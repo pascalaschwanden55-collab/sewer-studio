@@ -187,6 +187,13 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     /// <summary>Nova-Etappe 2: Liste mit Schachtansicht rechts und Eingabefeldern unten als Standard. false = bisherige Schachtansicht.</summary>
     public bool ShowSchaechteNovaLayout { get; set; } = true;
 
+    /// <summary>
+    /// Nova-Fixwelle F3: Bei offenem Projekt zeigt "Uebersicht" die neue Projektuebersicht.
+    /// false schaltet auf die klassische Uebersichtsseite zurueck (Menue "Ansicht &#8594;
+    /// Klassische Uebersicht"), die weiterhin Projektliste, Vorschau und Vorschau-PDF traegt.
+    /// </summary>
+    public bool ShowUebersichtNovaLayout { get; set; } = true;
+
     // Foto-Galerie: Kachelbreite im Haltungs-/Schachtdetail.
     public double PhotoGalleryTileSize { get; set; } = 124d;
 

@@ -56,6 +56,10 @@ public partial class SchaechtePage
         var showAnsicht = SchachtansichtToggle.IsChecked == true;
         SchachtansichtView.Visibility = showAnsicht ? Visibility.Visible : Visibility.Collapsed;
         Grid.Visibility = showAnsicht ? Visibility.Collapsed : Visibility.Visible;
+        // Die Spaltenansichten gehoeren zur Tabelle. In der alten Schachtansicht gibt es keine
+        // Spalten, die sie ein- oder ausblenden koennten — die Chips verschwinden deshalb mit.
+        if (ColumnViewChips is not null)
+            ColumnViewChips.Visibility = showAnsicht ? Visibility.Collapsed : Visibility.Visible;
         SetNovaWorkspaceVisible(!showAnsicht);
     }
 }

@@ -155,7 +155,7 @@
                     </StackPanel>
                 </Button>
                 <Border x:Name="CodierModusChip" DockPanel.Dock="Right" Background="{DynamicResource KiSubtleBrush}"
-                        CornerRadius="{DynamicResource RadiusPill}" Padding="10,2" Margin="10,0,0,0"
+                        CornerRadius="{DynamicResource RadiusChip}" Padding="10,2" Margin="10,0,0,0"
                         VerticalAlignment="Center" Visibility="Collapsed">
                     <TextBlock Text="Codier-Modus" FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{DynamicResource KiTextBrush}"/>
                 </Border>

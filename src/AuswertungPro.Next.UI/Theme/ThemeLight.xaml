@@ -33,6 +33,10 @@
     <Color x:Key="ColorHeader">#FFF6F8FB</Color>
     <Color x:Key="ColorBorder">#FFD3DAE5</Color>
     <Color x:Key="ColorBorderLight">#FFE4E9F0</Color>
+    <!-- F7: Der Kartenrand bleibt bewusst hell (Glas-Look). Eingabefelder und
+         Knopf-Umrisse brauchen dagegen eine erkennbare Kontur: mindestens 3:1
+         gegen die Kartenflaeche (WCAG 1.4.11, Bedienelement-Umriss). -->
+    <Color x:Key="ColorInputBorder">#FF828FA4</Color>
 
     <!-- ── TEXT — WCAG AAA contrast ── -->
     <Color x:Key="ColorTextPrimary">#FF14213A</Color>
@@ -63,6 +67,7 @@
     <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource ColorAccentHover}"/>
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="{StaticResource ColorAccentSubtle}"/>
     <SolidColorBrush x:Key="BorderLightBrush" Color="{StaticResource ColorBorderLight}"/>
+    <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource ColorInputBorder}"/>
     <SolidColorBrush x:Key="AccentTextBrush" Color="{StaticResource ColorAccentText}"/>
     <SolidColorBrush x:Key="FaintBrush" Color="{StaticResource ColorTextFaint}"/>
     <SolidColorBrush x:Key="GlassBorderBrush" Color="{StaticResource ColorGlassBorder}"/>
@@ -274,7 +279,17 @@
                         </Border.RenderTransform>
                         <ContentPresenter HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        RecognizesAccessKey="True"/>
+                                        RecognizesAccessKey="True">
+                        <!-- B7: Der implizite TextBlock-Stil setzt Foreground selbst und schlaegt
+                             damit die Vererbung. Ein Knopfinhalt aus eigenen TextBlocks bekaeme sonst
+                             die normale Textfarbe statt der Knopffarbe. Deshalb hier eine engere
+                             Fassung, die die Tinte vom Knopf uebernimmt. -->
+                        <ContentPresenter.Resources>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            </Style>
+                        </ContentPresenter.Resources>
+                    </ContentPresenter>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -370,7 +385,7 @@
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -379,12 +394,22 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="999"
+                            CornerRadius="15"
                             Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
                         <ContentPresenter HorizontalAlignment="Center"
                                           VerticalAlignment="Center"
-                                          RecognizesAccessKey="True"/>
+                                          RecognizesAccessKey="True">
+                        <!-- B7: Der implizite TextBlock-Stil setzt Foreground selbst und schlaegt
+                             damit die Vererbung. Ein Knopfinhalt aus eigenen TextBlocks bekaeme sonst
+                             die normale Textfarbe statt der Knopffarbe. Deshalb hier eine engere
+                             Fassung, die die Tinte vom Knopf uebernimmt. -->
+                        <ContentPresenter.Resources>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            </Style>
+                        </ContentPresenter.Resources>
+                    </ContentPresenter>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -432,12 +457,22 @@
                     <Border Name="bd"
                             Background="{StaticResource AccentBarBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="999"
+                            CornerRadius="15"
                             Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
                         <ContentPresenter HorizontalAlignment="Center"
                                           VerticalAlignment="Center"
-                                          RecognizesAccessKey="True"/>
+                                          RecognizesAccessKey="True">
+                        <!-- B7: Der implizite TextBlock-Stil setzt Foreground selbst und schlaegt
+                             damit die Vererbung. Ein Knopfinhalt aus eigenen TextBlocks bekaeme sonst
+                             die normale Textfarbe statt der Knopffarbe. Deshalb hier eine engere
+                             Fassung, die die Tinte vom Knopf uebernimmt. -->
+                        <ContentPresenter.Resources>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            </Style>
+                        </ContentPresenter.Resources>
+                    </ContentPresenter>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -576,18 +611,28 @@
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="SelectionSurface" CornerRadius="999"
+                    <Border x:Name="SelectionSurface" CornerRadius="15"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                          RecognizesAccessKey="True"/>
+                                          RecognizesAccessKey="True">
+                        <!-- B7: Der implizite TextBlock-Stil setzt Foreground selbst und schlaegt
+                             damit die Vererbung. Ein Knopfinhalt aus eigenen TextBlocks bekaeme sonst
+                             die normale Textfarbe statt der Knopffarbe. Deshalb hier eine engere
+                             Fassung, die die Tinte vom Knopf uebernimmt. -->
+                        <ContentPresenter.Resources>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                            </Style>
+                        </ContentPresenter.Resources>
+                    </ContentPresenter>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -619,7 +664,7 @@
     <Style TargetType="{x:Type TextBox}">
         <Setter Property="MinHeight" Value="36"/>
         <Setter Property="Padding" Value="10,8"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>

@@ -28,7 +28,7 @@ internal sealed class TrainingStudioAiReadinessWorkflow
     {
         ArgumentNullException.ThrowIfNull(progress);
 
-        progress.Report("Pruefe lokale Vision-KI...");
+        progress.Report("Prüfe lokale Vision-KI...");
         var health = await _checkHealth(ct).ConfigureAwait(false);
         if (health.IsReachable && health.IsAuthorized && health.Error is null)
             return new TrainingStudioAiReadinessResult(true, "Vision-KI bereit. Foto laden und Box ziehen.");
@@ -37,7 +37,7 @@ internal sealed class TrainingStudioAiReadinessWorkflow
         {
             return new TrainingStudioAiReadinessResult(
                 false,
-                "Vision-KI laeuft, aber die Anmeldung stimmt nicht. Bitte Sidecar-Token pruefen.");
+                "Vision-KI läuft, aber die Anmeldung stimmt nicht. Bitte Sidecar-Token prüfen.");
         }
 
         if (health.IsReachable)
@@ -53,7 +53,7 @@ internal sealed class TrainingStudioAiReadinessWorkflow
         {
             return new TrainingStudioAiReadinessResult(
                 false,
-                "Vision-KI konnte nicht gestartet werden. Bitte Startskript und Einstellungen pruefen.");
+                "Vision-KI konnte nicht gestartet werden. Bitte Startskript und Einstellungen prüfen.");
         }
 
         return new TrainingStudioAiReadinessResult(

@@ -79,10 +79,16 @@ public partial class PlayerWindow
                     _codingSuggestions.SetPercent(p);
             });
             var set = await service.ScanAsync(request, cts.Token, fortschritt);
-            registry.Merke(request.Haltung, set);
 
             if (!ReferenceEquals(_suggestionScanCts, cts))
                 return; // ein spaeterer Codiermodus hat uebernommen
+
+            // F4: Erst nach der Staleness-Pruefung merken, und nur einen Durchlauf, bei dem
+            // mindestens ein Teil wirklich gelaufen ist. Ein abgeschalteter oder komplett
+            // nicht verfuegbarer Lauf taeuchte in der Uebersicht sonst Arbeit vor.
+            if (CodingSuggestionMerkRegel.SollMerken(set))
+                registry.Merke(request.Haltung, set);
+
             _codingSuggestions.Apply(set);
             SuggestionMarkers.Build(_codingSuggestions.Rows);
         }

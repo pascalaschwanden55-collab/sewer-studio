@@ -41,6 +41,37 @@ public sealed class ZustandsklasseInkPolicyTests
         Assert.True(brush.IsFrozen);
     }
 
+    /// <summary>
+    /// Nova-Fixwelle B6: Der Zellstil setzt schwarze Tinte an der DataGridCell, doch der implizite
+    /// TextBlock-Stil des dunklen Themes setzt Foreground selbst und schlaegt die Vererbung —
+    /// die Ziffern standen weiss auf Gelb. Der Zellstil bringt seine eigene, engere Fassung mit.
+    /// </summary>
+    [Fact]
+    public void Zellstil_bindet_die_Textfarbe_an_die_Zelle()
+    {
+        var stil = AuswertungPro.Next.UI.Views.Pages.ZustandsklasseCellStyleFactory.CreateHaltungenStyle("Zustandsklasse");
+
+        var textStil = Assert.IsType<Style>(stil.Resources[typeof(System.Windows.Controls.TextBlock)]);
+        var setter = Assert.IsType<Setter>(Assert.Single(textStil.Setters));
+        Assert.Equal(System.Windows.Controls.TextBlock.ForegroundProperty, setter.Property);
+        var bindung = Assert.IsType<System.Windows.Data.Binding>(setter.Value);
+        Assert.Equal(nameof(System.Windows.Controls.Control.Foreground), bindung.Path.Path);
+        Assert.Equal(typeof(System.Windows.Controls.DataGridCell), bindung.RelativeSource?.AncestorType);
+    }
+
+    /// <summary>Auf jeder Klassenflaeche erreicht die schwarze Zellentinte mindestens 4,5:1.</summary>
+    [Fact]
+    public void Schwarze_Zellentinte_reicht_auf_jeder_Klassenflaeche()
+    {
+        foreach (var klasse in ZustandsklasseColorPalette.SelectionOptions)
+        {
+            var brush = (SolidColorBrush)ZustandsklasseColorPalette.HaltungenPalette[klasse];
+            Assert.True(
+                ZustandsklasseInkPolicy.Contrast(ZustandsklasseInkPolicy.DarkInk, brush.Color) >= 4.5,
+                $"Z{klasse}: schwarze Tinte erreicht nur {ZustandsklasseInkPolicy.Contrast(ZustandsklasseInkPolicy.DarkInk, brush.Color):0.00}");
+        }
+    }
+
     [Fact]
     public void Unbekannte_Klasse_liefert_keine_Farbe()
     {

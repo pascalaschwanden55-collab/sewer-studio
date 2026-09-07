@@ -38,7 +38,7 @@
                            FontWeight="Bold" FontSize="{DynamicResource TextL}"
                            VerticalAlignment="Center"/>
                 <Border Grid.Column="1" Background="{DynamicResource KiSubtleBrush}"
-                        CornerRadius="{DynamicResource RadiusPill}" Padding="8,3"
+                        CornerRadius="{DynamicResource RadiusChip}" Padding="8,3"
                         Margin="12,0,0,0" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <ctrl:NeuralPulseDot Width="10" Height="10"
@@ -58,7 +58,10 @@
         <!-- ── Arbeitsfläche: 210 | * | 330, jede Spalte scrollt selbst ────────── -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="210"/>
+                <!-- B4: Prototypmass 210 bleibt die Mindestbreite; die Werkzeugspalte darf auf
+                     hoechstens 240 wachsen, damit Knopfbeschriftungen und Hinweise vollstaendig
+                     stehen. Mehr Platz gehoert dem Bild in der Mitte. -->
+                <ColumnDefinition Width="240" MinWidth="210" MaxWidth="240"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -66,7 +69,7 @@
                  Eigener Name, weil ein laufender PDF-Import ausschliesslich diese
                  Werkzeugspalte sperrt (SetPdfImportUiBusy). -->
             <ScrollViewer x:Name="PdfSourceToolbar" Grid.Column="0" VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Auto" Margin="0,0,12,0">
+                          HorizontalScrollBarVisibility="Disabled" Margin="0,0,12,0">
                 <StackPanel>
                     <Button Content="Fotos laden…" Style="{StaticResource ToolbarButton}"
                             Click="LoadPhotos_Click"
@@ -174,7 +177,7 @@
                                     <Button Content="Abbrechen" Style="{StaticResource ToolbarButtonDanger}"
                                             Command="{Binding CancelScanCommand}"
                                             IsEnabled="{Binding IsBusy}" Margin="6,0,0,0"/>
-                                    <TextBlock Margin="12,0,0,0" VerticalAlignment="Center"
+                                    <TextBlock Margin="0,6,0,0" VerticalAlignment="Center" TextWrapping="Wrap"
                                                Foreground="{DynamicResource TextSecondaryBrush}">
                                         <Run Text="Haltung:"/>
                                         <Run Text="{Binding Haltung, TargetNullValue='—'}"/>
@@ -192,12 +195,15 @@
                                            Foreground="{DynamicResource TextSecondaryBrush}"/>
                                 <TextBlock Text="{Binding ResultInfoText}" Margin="0,2,0,0" TextWrapping="Wrap"
                                            Foreground="{DynamicResource MutedBrush}"/>
+                                <!-- B4: In der schmalen Werkzeugspalte stehen Liste und Vorschau
+                                     untereinander. Die Tabelle bringt ihren eigenen waagrechten
+                                     Bildlauf mit; nichts wird abgeschnitten. -->
                                 <Grid Margin="0,8,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="300"/>
-                                    </Grid.ColumnDefinitions>
-                                    <DataGrid Grid.Column="0"
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <DataGrid Grid.Row="0"
                                               ItemsSource="{Binding Suggestions}"
                                               SelectedItem="{Binding SelectedSuggestion}"
                                               AutoGenerateColumns="False" IsReadOnly="True"
@@ -205,7 +211,7 @@
                                               MouseDoubleClick="BendSuggestionGrid_MouseDoubleClick"
                                               ToolTip="Doppelklick öffnet die Grossansicht mit Bild und Clip."
                                               HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                                              Background="Transparent" MaxHeight="220" Margin="0,0,8,0">
+                                              Background="Transparent" MaxHeight="220" Margin="0,0,0,8">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="Art" Binding="{Binding ArtText}" Width="130"/>
                                             <DataGridTextColumn Header="Ort" Binding="{Binding OrtText}" Width="*"/>
@@ -230,7 +236,7 @@
                                             <DataGridTextColumn Header="Bilder" Binding="{Binding FrameCount}" Width="60"/>
                                         </DataGrid.Columns>
                                     </DataGrid>
-                                    <Border Grid.Column="1" BorderBrush="{DynamicResource BorderBrush}"
+                                    <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush}"
                                             BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" Padding="4">
                                         <StackPanel>
                                             <Image Source="{Binding PeakImage}" MaxHeight="240" Stretch="Uniform"/>
@@ -512,7 +518,7 @@
                                             Foreground="White" FontWeight="Bold"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="5"/>
                                 </StackPanel>
-                                <TextBlock Text="{Binding Severity, StringFormat='Gewählt: Stufe {0}', TargetNullValue='Keine Stufe gewaehlt'}"
+                                <TextBlock Text="{Binding Severity, StringFormat='Gewählt: Stufe {0}', TargetNullValue='Keine Stufe gewählt'}"
                                            FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
 
                                 <TextBlock Text="Beschreibung (mind. 10 Zeichen)" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>

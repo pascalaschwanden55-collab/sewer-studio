@@ -12,6 +12,7 @@ using AuswertungPro.Next.Application.Dashboard;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.Projects;
+using AuswertungPro.Next.Application.UseCases.Uebersicht;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI.Services;
 using System.Windows.Threading;
@@ -429,38 +430,15 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             if (!CanPrintPreviewPdf())
                 return;
 
-            var preview = BuildPrintablePreview();
-            if (preview is null)
-            {
-                _dialogs.Info("Keine Projektvorschau zum Drucken vorhanden.", "Projektvorschau");
-                return;
-            }
-
-            var output = _dialogs.SaveFile(
-                "Projektvorschau PDF speichern",
-                "PDF (*.pdf)|*.pdf",
-                defaultExt: "pdf",
-                defaultFileName: BuildPreviewPdfFileName(preview.Name));
-            if (string.IsNullOrWhiteSpace(output))
-                return;
-
             IsPreviewPdfExportInProgress = true;
             try
             {
-                var target = Path.GetFullPath(output);
-                var directory = Path.GetDirectoryName(target);
-                if (!string.IsNullOrWhiteSpace(directory))
-                    Directory.CreateDirectory(directory);
-
-                var pdf = await Task.Run(() => ProjectPreviewPdfBuilder.Build(preview));
-                await File.WriteAllBytesAsync(target, pdf);
-                _dialogs.Info($"PDF erstellt:\n{target}", "Projektvorschau");
-            }
-            catch (Exception ex)
-            {
-                _dialogs.Error(
-                    $"PDF konnte nicht erstellt werden:\n{UserError.DescribeAndReport(ex, "Projektvorschau PDF erstellen")}",
-                    "Projektvorschau");
+                // F3: Derselbe Ablauf wie auf der neuen Uebersichtsseite. Er liegt einmal im
+                // UseCase; hier wird nur angeschlossen.
+                await ProjektVorschauPdfWorkflow.AusfuehrenAsync(
+                    BuildPrintablePreview,
+                    _dialogs,
+                    "Keine Projektvorschau zum Drucken vorhanden.");
             }
             finally
             {
@@ -490,22 +468,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
 
         internal static string BuildPreviewPdfFileName(string? projectName)
-        {
-            var safeName = SanitizeFilePart(string.IsNullOrWhiteSpace(projectName) ? "Projekt" : projectName);
-            return $"Projektvorschau_{safeName}_{DateTime.Now:yyyyMMdd}.pdf";
-        }
-
-        private static string SanitizeFilePart(string? value)
-        {
-            var text = (value ?? string.Empty).Trim();
-            if (text.Length == 0)
-                return "Projekt";
-
-            foreach (var invalid in Path.GetInvalidFileNameChars())
-                text = text.Replace(invalid, '_');
-
-            return string.IsNullOrWhiteSpace(text) ? "Projekt" : text;
-        }
+            => ProjektVorschauPdfUseCase.Dateiname(projectName);
 
         private void NavigateCondition(object? key)
         {

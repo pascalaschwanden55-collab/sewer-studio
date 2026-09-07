@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -184,9 +185,35 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
             Layout(panel);
             Assert.Equal(0, panel.OffeneKiBefunde);
 
+            // F1: Ring und Liste zeigen nur Schaeden. Bestandsaufnahme (BCD/BCE/BCA/BCC) gehört
+            // nicht dazu, und die schwerere Stufe steht vorn.
+            panelEntries.Add(Eintrag("BCD", stufe: null));
+            panelEntries.Add(Eintrag("BBC", stufe: "1"));
+            panelEntries.Add(Eintrag("BAC", stufe: "4"));
+            Layout(panel);
+            Assert.Equal(new[] { "BAC", "BBC" }, panel.Schaeden.Select(e => e.Code).ToArray());
+
+            // F5: Prüfung und Video hängen an Feldern des Datensatzes. Wird derselbe Datensatz
+            // verändert, wechselt die Record-Eigenschaft nicht — das Panel muss trotzdem nachziehen.
+            var record = new AuswertungPro.Next.Domain.Models.HaltungRecord();
+            panel.Record = record;
+            Layout(panel);
+            Assert.Equal("kein Video", panel.VideoText);
+
+            record.SetFieldValue(
+                AuswertungPro.Next.Domain.Models.FieldKeys.Link,
+                @"D:\Medien\10001-10002.mp4",
+                AuswertungPro.Next.Domain.Models.FieldSource.Manual,
+                false);
+            Layout(panel);
+            Assert.Equal("10001-10002.mp4", panel.VideoText);
+
             WpfIsolatedTestProcess.MarkChildScenarioCompleted();
         });
     }
+
+    private static ProtocolEntry Eintrag(string code, string? stufe)
+        => new() { Code = code, Beschreibung = code, CodeMeta = new ProtocolEntryCodeMeta { Code = code, Severity = stufe } };
 
     private static Color ColorOf(object brush) => Assert.IsType<SolidColorBrush>(brush).Color;
 

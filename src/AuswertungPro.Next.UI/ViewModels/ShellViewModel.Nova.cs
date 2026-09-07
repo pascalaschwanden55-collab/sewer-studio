@@ -27,6 +27,30 @@ public partial class ShellViewModel
     /// die Einstellungen-Seite meldet eine Aenderung ueber <see cref="MotionSettings.EngineChanged"/>.</summary>
     public bool HintergrundEngine => _sp.Settings.HintergrundEngine;
 
+    /// <summary>
+    /// Nova-Fixwelle F3: Menue "Ansicht &#8594; Klassische Uebersicht". Bei offenem Projekt zeigt
+    /// "Uebersicht" sonst die neue Projektuebersicht; die klassische Seite bleibt darueber
+    /// erreichbar — sie traegt Projektliste, Vorschau und die Vorschau-PDF. Muster wie der
+    /// Umschalter "Alte Haltungsansicht".
+    /// </summary>
+    public bool KlassischeUebersicht
+    {
+        get => !_sp.Settings.ShowUebersichtNovaLayout;
+        set
+        {
+            if (value == KlassischeUebersicht)
+                return;
+
+            _sp.Settings.ShowUebersichtNovaLayout = !value;
+            _sp.Settings.Save();
+            OnPropertyChanged();
+
+            // Steht die Uebersicht gerade offen, sofort mit der anderen Seite neu aufbauen.
+            if (SelectedNavItem is { } aktiv && string.Equals(aktiv.Title, "Uebersicht", StringComparison.OrdinalIgnoreCase))
+                SetCurrentPage(aktiv.CreatePage());
+        }
+    }
+
     /// <summary>Globale Suche der Kopfzeile (Strg+K, Inventar 8.5).</summary>
     public GlobaleSucheViewModel GlobaleSuche { get; private set; } = null!;
     public IRelayCommand GlobaleSucheFokusCommand { get; private set; } = null!;

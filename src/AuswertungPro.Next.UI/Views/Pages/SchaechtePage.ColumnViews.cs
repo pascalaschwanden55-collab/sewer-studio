@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 
@@ -47,7 +48,10 @@ public partial class SchaechtePage
                 vm.Settings.SchaechtePageLayout = layout;
                 vm.Settings.Save();
             },
-            SchaechteColumnViewCatalog.Resolve);
+            SchaechteColumnViewCatalog.Resolve,
+            // F2: Schachtspalten heissen nach der Kopfzeile der Excel-Vorlage ("Eigentümer"),
+            // der Katalog schreibt teils "Eigentuemer". Derselbe Vergleich wie SchachtFeldnamen.
+            SchachtFeldnamen.Falte);
         _columnViews.Apply(_columnViews.ActiveKey);
         SyncColumnViewChips();
 
@@ -100,8 +104,11 @@ public partial class SchaechtePage
             chip.IsChecked = string.Equals(chip.Tag as string, _columnViews?.ActiveKey, StringComparison.OrdinalIgnoreCase);
             if (chip.DataContext is DataPageColumnView view)
             {
-                var zaehler = FindVisualChildren<TextBlock>(chip).First(t => t.Name == "ChipZaehler");
-                zaehler.Text = view.Anzahl(_columnFields.Count).ToString();
+                // Der Zaehler steht in der Chip-Vorlage; fehlt er (fremde Vorlage), wird nichts gesetzt
+                // statt eine Ausnahme zu werfen.
+                var zaehler = FindVisualChildren<TextBlock>(chip).FirstOrDefault(t => t.Name == "ChipZaehler");
+                if (zaehler is not null)
+                    zaehler.Text = view.Anzahl(_columnFields.Values.ToList(), _columnViews?.Falte).ToString();
             }
         }
     }

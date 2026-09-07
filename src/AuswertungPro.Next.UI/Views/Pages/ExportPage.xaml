@@ -196,7 +196,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Bestehende Katasterdaten aktualisieren" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
-                                <Border Background="{DynamicResource SuccessSubtleBrush}" CornerRadius="{DynamicResource RadiusPill}"
+                                <Border Background="{DynamicResource SuccessSubtleBrush}" CornerRadius="{DynamicResource RadiusChip}"
                                         Padding="8,1" Margin="8,0,0,0" VerticalAlignment="Center"
                                         Visibility="{Binding XtfAktualisierenEmpfohlen, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="empfohlen" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
@@ -225,7 +225,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Neue eigenständige XTF erstellen" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
-                                <Border Background="{DynamicResource SuccessSubtleBrush}" CornerRadius="{DynamicResource RadiusPill}"
+                                <Border Background="{DynamicResource SuccessSubtleBrush}" CornerRadius="{DynamicResource RadiusChip}"
                                         Padding="8,1" Margin="8,0,0,0" VerticalAlignment="Center"
                                         Visibility="{Binding XtfNeuEmpfohlen, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="empfohlen" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"

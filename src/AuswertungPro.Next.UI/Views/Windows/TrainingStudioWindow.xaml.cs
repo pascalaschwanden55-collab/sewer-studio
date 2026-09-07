@@ -14,6 +14,7 @@ using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
 using AuswertungPro.Next.Application.UseCases.TrainingStudioSegmentation;
 using AuswertungPro.Next.Domain.Protocol;            // ProtocolEntry (Codierfenster-Ergebnis)
 using AuswertungPro.Next.UI.Ai.Pipeline;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
@@ -511,8 +512,12 @@ public partial class TrainingStudioWindow : Window
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
+    // StaysOpen="False" schliesst den Aufklapper schon beim Klick auf diesen Knopf; ohne die
+    // Zeitregel oeffnete ihn derselbe Klick sofort wieder (PopupToggle).
+    private PopupToggle? _weitereToggle;
+
     private void StudioWeitereButton_Click(object sender, RoutedEventArgs e)
-        => StudioWeiterePopup.IsOpen = !StudioWeiterePopup.IsOpen;
+        => (_weitereToggle ??= new PopupToggle(StudioWeiterePopup)).Umschalten();
 
     /// <summary>
     /// Schritt 3 "Freigabe fuer Training" oeffnet dasselbe Training Center wie

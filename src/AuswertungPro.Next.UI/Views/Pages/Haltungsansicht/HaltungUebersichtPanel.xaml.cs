@@ -1,12 +1,15 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using AuswertungPro.Next.Application.UseCases.NaechsteAufgabe;
+using AuswertungPro.Next.Application.UseCases.Uebersicht;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -21,15 +24,28 @@ namespace AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
 /// geleert und neu gefuellt, ohne Property-Wechsel). Deshalb wird zusaetzlich auf
 /// <see cref="INotifyCollectionChanged"/> gehoert; die alte Sammlung wird beim Wechsel und beim
 /// Entladen des Controls wieder abgemeldet.
+///
+/// Nova-Fixwelle F1: Ring und Liste zeigen nur Schaeden (BA*/BB* nach
+/// <see cref="RohrringGeometrie.Schaeden"/>), nicht die Bestandsaufnahme BCD/BCE/BCA.
+/// Nova-Fixwelle F5: <see cref="PruefungText"/> und <see cref="VideoText"/> haengen an Feldern des
+/// Datensatzes. Wird derselbe Datensatz veraendert (Video verknuepft, Protokoll gesetzt), wechselt
+/// die Record-Eigenschaft nicht — deshalb wird zusaetzlich auf
+/// <see cref="HaltungRecord.PropertyChanged"/> gehoert, mit derselben An-/Abmeldung wie bei den
+/// Entries.
 /// </summary>
 public partial class HaltungUebersichtPanel : UserControl
 {
     private INotifyCollectionChanged? _abonnierteEntries;
+    private HaltungRecord? _abonnierterRecord;
 
     public HaltungUebersichtPanel()
     {
         InitializeComponent();
-        Unloaded += (_, _) => AbmeldenVonEntries();
+        Unloaded += (_, _) =>
+        {
+            AbmeldenVonEntries();
+            AbmeldenVonRecord();
+        };
     }
 
     public static readonly DependencyProperty RecordProperty = DependencyProperty.Register(
@@ -45,12 +61,24 @@ public partial class HaltungUebersichtPanel : UserControl
     public static readonly DependencyProperty EntriesProperty = DependencyProperty.Register(
         nameof(Entries), typeof(IEnumerable), typeof(HaltungUebersichtPanel), new PropertyMetadata(null, OnEntriesChanged));
 
-    /// <summary>Primaere Schaeden der gewaehlten Haltung (ProtocolEntry-Liste des ViewModels).</summary>
+    /// <summary>Alle Protokolleintraege der gewaehlten Haltung (ProtocolEntry-Liste des ViewModels).</summary>
     public IEnumerable? Entries
     {
         get => (IEnumerable?)GetValue(EntriesProperty);
         set => SetValue(EntriesProperty, value);
     }
+
+    private static readonly DependencyPropertyKey SchaedenPropertyKey = DependencyProperty.RegisterReadOnly(
+        nameof(Schaeden), typeof(IReadOnlyList<ProtocolEntry>), typeof(HaltungUebersichtPanel),
+        new PropertyMetadata(Array.Empty<ProtocolEntry>()));
+
+    public static readonly DependencyProperty SchaedenProperty = SchaedenPropertyKey.DependencyProperty;
+
+    /// <summary>
+    /// Nur die Schaeden aus <see cref="Entries"/>, schwerste zuerst. Quelle fuer die Liste
+    /// "Primaere Schaeden" und fuer den Rohrring.
+    /// </summary>
+    public IReadOnlyList<ProtocolEntry> Schaeden => (IReadOnlyList<ProtocolEntry>)GetValue(SchaedenProperty);
 
     public static readonly DependencyProperty PruefungTextProperty = DependencyProperty.Register(
         nameof(PruefungText), typeof(string), typeof(HaltungUebersichtPanel), new PropertyMetadata(string.Empty));
@@ -103,20 +131,16 @@ public partial class HaltungUebersichtPanel : UserControl
     private static void OnRecordChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var panel = (HaltungUebersichtPanel)d;
+        panel.AbmeldenVonRecord();
         if (e.NewValue is HaltungRecord record)
         {
-            panel.PruefungText = HaltungPruefstatus.Text(HaltungPruefstatus.Bestimme(record));
-            var link = record.GetFieldValue(FieldKeys.Link);
-            panel.VideoText = string.IsNullOrWhiteSpace(link) ? "kein Video" : Path.GetFileName(link);
+            record.PropertyChanged += panel.OnRecordPropertyChanged;
+            panel._abonnierterRecord = record;
         }
-        else
-        {
-            panel.PruefungText = string.Empty;
-            panel.VideoText = "kein Video";
-        }
+        panel.AktualisiereRecordTexte();
         // Pruefung/Video haengen an Record, offene KI-Befunde an Entries — beide Ableitungen
         // beim Haltungswechsel gemeinsam neu ziehen, falls Entries bereits gebunden ist.
-        panel.AktualisiereOffeneKiBefunde();
+        panel.AktualisiereSchaeden();
     }
 
     private static void OnEntriesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -128,11 +152,34 @@ public partial class HaltungUebersichtPanel : UserControl
             incc.CollectionChanged += panel.OnEntriesCollectionChanged;
             panel._abonnierteEntries = incc;
         }
-        panel.AktualisiereOffeneKiBefunde();
+        panel.AktualisiereSchaeden();
     }
 
     private void OnEntriesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        => AktualisiereOffeneKiBefunde();
+        => AktualisiereSchaeden();
+
+    /// <summary>
+    /// Nova-Fixwelle F5: Eine Feldaenderung am gewaehlten Datensatz (Video verknuepft,
+    /// Protokoll ersetzt, Zustandsklasse gesetzt) zieht Pruefung, Video und die Schadenliste nach.
+    /// </summary>
+    private void OnRecordPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // Wie beim Schachtpanel (F6): Die Meldung kommt auf dem setzenden Thread; die
+        // Abhaengigkeitseigenschaften gehoeren dem UI-Thread.
+        if (Dispatcher.CheckAccess())
+        {
+            AktualisiereRecordTexte();
+            AktualisiereSchaeden();
+        }
+        else
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                AktualisiereRecordTexte();
+                AktualisiereSchaeden();
+            }));
+        }
+    }
 
     private void AbmeldenVonEntries()
     {
@@ -142,10 +189,37 @@ public partial class HaltungUebersichtPanel : UserControl
         _abonnierteEntries = null;
     }
 
-    /// <summary>Offene KI-Befunde aus dem aktuellen Stand von <see cref="Entries"/> neu zaehlen.</summary>
-    private void AktualisiereOffeneKiBefunde()
+    private void AbmeldenVonRecord()
     {
-        var entries = Entries?.OfType<ProtocolEntry>() ?? Enumerable.Empty<ProtocolEntry>();
-        OffeneKiBefunde = entries.Count(x => x.Ai is { Accepted: false });
+        if (_abonnierterRecord is null)
+            return;
+        _abonnierterRecord.PropertyChanged -= OnRecordPropertyChanged;
+        _abonnierterRecord = null;
+    }
+
+    /// <summary>Pruefstatus und Videoname aus dem aktuellen Stand von <see cref="Record"/>.</summary>
+    private void AktualisiereRecordTexte()
+    {
+        if (Record is { } record)
+        {
+            PruefungText = HaltungPruefstatus.Text(HaltungPruefstatus.Bestimme(record));
+            var link = record.GetFieldValue(FieldKeys.Link);
+            VideoText = string.IsNullOrWhiteSpace(link) ? "kein Video" : Path.GetFileName(link);
+        }
+        else
+        {
+            PruefungText = string.Empty;
+            VideoText = "kein Video";
+        }
+    }
+
+    /// <summary>Schadenliste und offene KI-Befunde aus dem aktuellen Stand von <see cref="Entries"/>.</summary>
+    private void AktualisiereSchaeden()
+    {
+        var entries = (Entries?.OfType<ProtocolEntry>() ?? Enumerable.Empty<ProtocolEntry>()).ToList();
+        SetValue(SchaedenPropertyKey, RohrringGeometrie.Schaeden(entries));
+        // Offene KI-Vorschlaege zaehlen ueber ALLE Eintraege: Auch ein unbestaetigter
+        // Bogen oder Rohranfang braucht die fachliche Bestaetigung.
+        OffeneKiBefunde = entries.Count(x => !x.IsDeleted && x.Ai is { Accepted: false });
     }
 }
