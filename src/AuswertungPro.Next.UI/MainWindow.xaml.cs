@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using AuswertungPro.Next.Application.Common;
@@ -42,7 +43,14 @@ public partial class MainWindow : Window
             DateTime.UtcNow);
         if (backupReminder.ShouldRemind && !string.IsNullOrWhiteSpace(backupReminder.Message))
             services.Toasts.Warning(backupReminder.Message);
-        DataContext = new ShellViewModel(services);
+        var shellViewModel = new ShellViewModel(services);
+        // Nova-Etappe 2: Strg+K fokussiert das globale Suchfeld (Inventar 8.5).
+        shellViewModel.GlobaleSucheFokusAngefordert += () =>
+        {
+            GlobaleSucheBox.Focus();
+            GlobaleSucheBox.SelectAll();
+        };
+        DataContext = shellViewModel;
     }
 
     public async Task PlayStartupEntranceAsync()
@@ -197,6 +205,13 @@ public partial class MainWindow : Window
             shell?.SetStatus($"KI-Start fehlgeschlagen: {userMessage}");
             sp.Dialogs.Error($"KI konnte nicht gestartet werden:\n{userMessage}", "KI starten");
         }
+    }
+
+    private void GlobaleSucheBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (DataContext is not ShellViewModel vm) return;
+        if (e.Key == Key.Enter) { vm.GlobaleSuche.WaehleErstenOderMarkierten(); e.Handled = true; }
+        else if (e.Key == Key.Escape) { vm.GlobaleSuche.ListeOffen = false; e.Handled = true; }
     }
 
     private void OpenSystemMonitor_Click(object sender, RoutedEventArgs e)

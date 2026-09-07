@@ -16,6 +16,7 @@
         <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}"/>
         <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenProjectCommand}"/>
         <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewProjectCommand}"/>
+        <KeyBinding Key="K" Modifiers="Control" Command="{Binding GlobaleSucheFokusCommand}"/>
     </Window.InputBindings>
     <Grid>
     <DockPanel>
@@ -47,6 +48,34 @@
                     </ToolTip>
                 </Button.ToolTip>
             </Button>
+            <!-- Nova-Etappe 2: globale Suche Strg+K (Inventar 8.5) -->
+            <Grid DockPanel.Dock="Right" Margin="0,2,8,2" MinWidth="300" VerticalAlignment="Center">
+                <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                        CornerRadius="{DynamicResource RadiusPill}" Padding="10,2">
+                    <DockPanel>
+                        <ui:FluentIcon DockPanel.Dock="Left" Glyph="&#xE721;" Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0"/>
+                        <Border DockPanel.Dock="Right" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="{DynamicResource RadiusS}" Padding="6,1">
+                            <TextBlock Text="Strg K" FontSize="{DynamicResource TextXS}" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource MutedBrush}"/>
+                        </Border>
+                        <TextBox x:Name="GlobaleSucheBox" BorderThickness="0" Background="Transparent" MinWidth="200"
+                                 Text="{Binding GlobaleSuche.Text, UpdateSourceTrigger=PropertyChanged}"
+                                 KeyDown="GlobaleSucheBox_KeyDown"
+                                 ToolTip="Haltung, Schacht oder Strasse suchen" AutomationProperties.Name="Haltung, Schacht oder Strasse suchen"/>
+                    </DockPanel>
+                </Border>
+                <Popup IsOpen="{Binding GlobaleSuche.ListeOffen, Mode=TwoWay}" StaysOpen="False" PlacementTarget="{Binding ElementName=GlobaleSucheBox}"
+                       Placement="Bottom" AllowsTransparency="True">
+                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            CornerRadius="{DynamicResource RadiusM}" MinWidth="320" MaxHeight="320" Padding="4">
+                        <StackPanel>
+                            <ListBox ItemsSource="{Binding GlobaleSuche.Treffer}" SelectedItem="{Binding GlobaleSuche.Gewaehlt, Mode=TwoWay}"
+                                     DisplayMemberPath="Text" BorderThickness="0" AutomationProperties.Name="Suchtreffer"/>
+                            <TextBlock Text="{Binding GlobaleSuche.LeerText}" Margin="8,4" Foreground="{DynamicResource MutedBrush}"
+                                       FontSize="{DynamicResource TextS}"/>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+            </Grid>
             <!-- Nova-Etappe 2: Aufgaben-Chip (Inventar 3.4) -->
             <Button DockPanel.Dock="Right" Margin="0,2,8,2" Padding="12,4" MinHeight="0"
                     Command="{Binding NaechsteAufgabePruefenCommand}"

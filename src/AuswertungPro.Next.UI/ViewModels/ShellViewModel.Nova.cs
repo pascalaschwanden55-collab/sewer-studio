@@ -16,9 +16,18 @@ public partial class ShellViewModel
     public string SpeicherstandText => ShellNovaKopfzeile.Speicherstand(IsProjectReady ? Project.Name : null, _letzteSpeicherungLokal, IsProjectReady && Project.Dirty);
     public IRelayCommand NaechsteAufgabePruefenCommand { get; private set; } = null!;
 
+    /// <summary>Globale Suche der Kopfzeile (Strg+K, Inventar 8.5).</summary>
+    public GlobaleSucheViewModel GlobaleSuche { get; private set; } = null!;
+    public IRelayCommand GlobaleSucheFokusCommand { get; private set; } = null!;
+
+    /// <summary>Wird ausgeloest, wenn Strg+K gedrueckt wurde; das Fenster fokussiert das Suchfeld.</summary>
+    public event Action? GlobaleSucheFokusAngefordert;
+
     private void InitNova()
     {
         NaechsteAufgabePruefenCommand = new RelayCommand(NaechsteAufgabePruefen, () => NaechsteAufgabe is not null);
+        GlobaleSuche = new GlobaleSucheViewModel(this);
+        GlobaleSucheFokusCommand = new RelayCommand(() => GlobaleSucheFokusAngefordert?.Invoke());
         PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(SelectedNavItem) or nameof(IsProjectReady) or nameof(Project))
