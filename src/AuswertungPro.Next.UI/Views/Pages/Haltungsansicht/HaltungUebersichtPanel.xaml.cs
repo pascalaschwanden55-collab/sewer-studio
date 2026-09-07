@@ -70,7 +70,8 @@ public partial class HaltungUebersichtPanel : UserControl
 
     private static readonly DependencyPropertyKey SchaedenPropertyKey = DependencyProperty.RegisterReadOnly(
         nameof(Schaeden), typeof(IReadOnlyList<ProtocolEntry>), typeof(HaltungUebersichtPanel),
-        new PropertyMetadata(Array.Empty<ProtocolEntry>()));
+        // Liste statt Array: die XAML-Bindung liest Count, ein Array kennt nur Length.
+        new PropertyMetadata(new List<ProtocolEntry>()));
 
     public static readonly DependencyProperty SchaedenProperty = SchaedenPropertyKey.DependencyProperty;
 

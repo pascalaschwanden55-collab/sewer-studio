@@ -215,7 +215,7 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <TextBlock Text="Konfliktdetails" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Path=SelectedConflict.TypeHint, TargetNullValue='Waehle links einen Konflikt aus, um Details und Aktionen zu sehen.'}"
+                        <TextBlock Text="{Binding Path=SelectedConflict.TypeHint, TargetNullValue='Wähle links einen Konflikt aus, um Details und Aktionen zu sehen.'}"
                                    Margin="0,4,0,12"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
