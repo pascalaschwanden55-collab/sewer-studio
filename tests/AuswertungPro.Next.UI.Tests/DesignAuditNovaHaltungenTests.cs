@@ -66,4 +66,12 @@ public sealed class DesignAuditNovaHaltungenTests
         Assert.Contains("{Binding Anzahl}", xaml);
         Assert.Contains("AutomationProperties.Name=\"Eingabefelder gross anzeigen\"", xaml);
     }
+
+    [Fact]
+    public void Uebersicht_zeigt_Rohrring_Fakten_und_KI_Hinweis()
+    {
+        var xaml = Xaml("Views", "Pages", "Haltungsansicht", "HaltungUebersichtPanel.xaml");
+        foreach (var t in new[] { "local:RohrringControl", "Schacht oben", "Schacht unten", "DN / Profil", "Prüfung", "Video", "Im Player prüfen", "KI-Vorschläge warten auf fachliche Bestätigung" })
+            Assert.Contains(t, xaml);
+    }
 }

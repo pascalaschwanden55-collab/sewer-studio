@@ -67,6 +67,11 @@ public sealed class DataPageNovaWorkspaceController
     public void Verdrahte()
     {
         _e.Uebersicht.BeobachtungenRequested = _beobachtungen;
+        _e.Uebersicht.PlayerRequested = r =>
+        {
+            if (_vm() is { } vm && vm.PlayVideoCommand.CanExecute(r))
+                vm.PlayVideoCommand.Execute(r);
+        };
         _e.FelderDrawer.IsOpenChanged += (_, _) =>
         {
             // Nur beim Oeffnen auswerten: Das automatische Zuklappen setzt das Flag selbst und

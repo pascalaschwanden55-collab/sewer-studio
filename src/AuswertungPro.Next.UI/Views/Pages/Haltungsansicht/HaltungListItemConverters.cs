@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
@@ -55,5 +56,48 @@ public sealed class SchadenKategorieConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         => value is ProtocolEntry e ? SchadenZeileFormatter.Kategorie(e.Code) : string.Empty;
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
+/// <summary>ProtocolEntry → Code (Badge in der Schadensliste der Uebersicht).</summary>
+public sealed class SchadenCodeConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is ProtocolEntry e ? e.Code : string.Empty;
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
+/// <summary>
+/// ProtocolEntry → zweite Zeile der Schadensliste: Stufe, Quelle (fachlich/KI) und Freigabestatus.
+/// Die Textbildung liegt als testbare statische Methode vor.
+/// </summary>
+public sealed class SchadenStufeQuelleConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is ProtocolEntry e ? Text(e) : string.Empty;
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+
+    /// <summary>"Stufe n · KI-Vorschlag, Konfidenz 0.91 (Modellsicherheit) · offen" bzw. " · fachlich erfasst".</summary>
+    internal static string Text(ProtocolEntry e)
+    {
+        var teile = new List<string>();
+        if (e.CodeMeta?.Severity is { Length: > 0 } stufe)
+            teile.Add($"Stufe {stufe}");
+        teile.Add(e.Ai is not null
+            ? $"KI-Vorschlag, Konfidenz {e.Ai.Confidence.ToString("0.00", CultureInfo.InvariantCulture)} (Modellsicherheit)"
+            : "fachlich erfasst");
+        if (e.Ai is { Accepted: false })
+            teile.Add("offen");
+        else if (e.Ai is { Accepted: true })
+            teile.Add("bestätigt");
+        return string.Join(" · ", teile);
+    }
+}
+
+/// <summary>Zahl groesser 0 -> sichtbar, sonst eingeklappt (KI-Hinweis nur bei offenen Befunden).</summary>
+public sealed class ZahlSichtbarConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is int n && n > 0 ? Visibility.Visible : Visibility.Collapsed;
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
 }
