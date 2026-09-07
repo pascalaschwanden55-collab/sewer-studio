@@ -100,6 +100,16 @@ internal static class Program
             KatasterKennungenGpkgPath = Path.Combine(Root, "quellen", "kennungen.gpkg")
         };
 
+        // Fixwelle Runde 2: Der Pruefhost startet bewusst MIT einem alten gespeicherten
+        // Spaltenlayout — so, wie es in einer bestehenden Installation liegt: alles
+        // linksbuendig, alles auf Kopfbreite. Ohne das wuerde jedes Bild nur den Neuaufbau
+        // zeigen und die einmalige Migration (ZahlenRechtsMigration) waere nicht belegt.
+        // Nur die Haltungsseite: Ein gespeichertes Layout legt auch die Spaltenreihenfolge
+        // fest. Fuer die Schachtseite ist die echte Reihenfolge des Projekts hier nicht
+        // bekannt, und eine erfundene wuerde das Bild verfaelschen — die Migration ist dort
+        // ueber ZahlenRechtsMigrationTests belegt.
+        settings.DataPageLayout = AltesLayout();
+
         var app = new ProbeApp { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         // App.xaml enthaelt die echten View-Templates. Nur die Ressourcen laden:
         // eine App-Unterklasse aus einer fremden Assembly kann deren BAML nicht initialisieren.
@@ -480,6 +490,43 @@ internal static class Program
             if (i % 3 != 2) Set(FieldKeys.PdfPath, pdf);
             project.SchaechteData.Add(schacht);
         }
+    }
+
+    /// <summary>
+    /// Ein gespeichertes Spaltenlayout aus der Zeit vor der Fixwelle: jede Spalte
+    /// linksbuendig und 72 px breit (Kopfbreite), die Kompakt-Migration bereits gelaufen.
+    /// Nur so ist im Bild belegbar, dass die einmalige Migration greift.
+    /// </summary>
+    static DataPageLayoutSettings AltesLayout()
+    {
+        string[] felder =
+        [
+            FieldKeys.HoldingName, "Strasse", FieldKeys.PipeMaterial, FieldKeys.NominalDiameterMm,
+            FieldKeys.HoldingLengthMeters, FieldKeys.ConditionClass
+        ];
+
+        var layout = new DataPageLayoutSettings
+        {
+            ActiveColumnView = "kompakt",
+            NovaKompaktEinmalGesetzt = true,
+            ZahlenRechtsEinmalGesetzt = false
+        };
+
+        for (var i = 0; i < felder.Length; i++)
+        {
+            layout.Columns.Add(new DataPageColumnLayout
+            {
+                FieldName = felder[i],
+                DisplayIndex = i,
+                WidthValue = 72d,
+                WidthUnitType = "Pixel",
+                HorizontalAlignment = "Left",
+                VerticalAlignment = "Center",
+                IsVisible = true
+            });
+        }
+
+        return layout;
     }
 
     static IEnumerable<DependencyObject> Descendants(DependencyObject element)

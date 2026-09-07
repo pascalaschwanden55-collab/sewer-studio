@@ -71,6 +71,28 @@ public sealed class DataGridStandardTextColumnFactoryTests
         });
     }
 
+    /// <summary>
+    /// Nova-Fixwelle 2b, Runde 2: Eine rechtsbuendige Zahl braucht ein rechtes Polster, sonst
+    /// klebt sie an der Nachbarspalte („200Kreisprofil"). Textspalten bekommen es nicht.
+    /// </summary>
+    [Fact]
+    public void Zahlenspalten_haben_ein_rechtes_Polster()
+    {
+        RunOnSta(() =>
+        {
+            var zahl = DataGridStandardTextColumnFactory.Create("DN_mm", "DN MM");
+            var polster = Assert.Single(
+                zahl.ElementStyle.Setters.OfType<System.Windows.Setter>(),
+                setter => setter.Property == System.Windows.FrameworkElement.MarginProperty);
+            Assert.Equal(new System.Windows.Thickness(0, 0, 6, 0), polster.Value);
+
+            var text = DataGridStandardTextColumnFactory.Create("Strasse", "STRASSE");
+            Assert.DoesNotContain(
+                text.ElementStyle.Setters.OfType<System.Windows.Setter>(),
+                setter => setter.Property == System.Windows.FrameworkElement.MarginProperty);
+        });
+    }
+
     private static void RunOnSta(Action action)
     {
         Exception? exception = null;

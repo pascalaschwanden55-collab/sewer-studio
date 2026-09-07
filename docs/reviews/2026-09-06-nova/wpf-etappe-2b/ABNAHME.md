@@ -42,6 +42,38 @@ Zusätzlich aus der Restliste: Zustandsklassen-Marke der Übersicht über den ge
 Konverter, „Kompakt" nur im Nova-Layout einmalig, „Spalte leeren" auf virtuellen Spalten
 wirkungslos (`70e81b727`).
 
+### Runde 2 (Re-Review, 07.09.2026)
+
+| Punkt | Kurz | Stand | Commit |
+|---|---|---|---|
+| R1 (Major) | Schacht-Rechtsklick schrieb `Nova_Protokoll` in jeden Datensatz | behoben — gemeinsamer Controller plus Sperre am Datensatz | `8d89f60df` |
+| R2 | P1/P3 wirkten nur ohne gespeichertes Layout | behoben — einmalige Migration `ZahlenRechtsMigration` | `4f1f79ea1` |
+| R3 | Zahlen klebten an der Nachbarspalte | behoben — rechtes Polster 6 px | `4f1f79ea1` |
+| R4 | Regler „Zeilenhöhe" wirkte erst beim nächsten Seitenaufbau | behoben | `4f1f79ea1` |
+
+**R1 war ein echter Datenschaden, nicht nur ein Schönheitsfehler.** Die Schachtseite hatte
+einen zweiten, eigenen Rechtsklickpfad und kannte deshalb den Schutz aus `70e81b727` nicht:
+„Spalte leeren" auf dem Kopf der Protokollspalte schrieb `Nova_Protokoll` mit
+Handmarkierung in JEDEN Schachtdatensatz und damit in die gespeicherte Projektdatei. Beide
+Seiten laufen jetzt durch `DataPageRightClickController`; zusätzlich weisen `HaltungRecord`
+und `SchachtRecord` einen Schlüssel mit dem Präfix `Nova_` auf allen Schreibwegen mit
+`ArgumentException` ab (`VirtuelleSpalte`, Domäne). Bewusst kein stilles Ignorieren — ein
+verschluckter Schreibversuch sieht für den Aufrufer wie ein Erfolg aus.
+
+**Zur Migration (R2):** Das Bild `haltungen-hell.png` entsteht seit Runde 2 mit einem
+vorbelegten ALTEN Spaltenlayout (alles linksbündig, alles 72 px breit) — so, wie es in einer
+bestehenden Installation liegt. Deshalb sind DN, Länge und Zustandsklasse dort nur 72 px
+breit und ihre Köpfe gekürzt: Eine gespeicherte Breite wird nie verkleinert, und eine
+Startbreite gibt es nur für Name, Strasse und Material. Genau das ist der Nachweis — die
+Zellprobe zeigt trotz gespeichertem `Left` jetzt `Right`.
+
+**„Bestätigt" neben „nicht analysiert" ist kein Widerspruch.** In der Zeile 10004-10005
+steht in der KI-Spalte „bestätigt" und in der Prüfungsspalte „nicht analysiert". Das ist eine
+bewusste Paarung: Die KI-Spalte sagt, was die KI gemacht hat (gerechnet, alles bestätigt);
+die Prüfungsspalte liest `HaltungPruefstatus` und das ist „offen", solange weder das Feld
+offen/abgeschlossen gesetzt ist noch ein offener KI-Befund vorliegt. Der Fall heisst im
+Prüfhost genau so: KI gerechnet, alles bestätigt, Arbeitsablauf-Feld leer.
+
 **Die eigentliche Ursache von P2 war eine andere als in der Meldung vermutet.** Nicht die
 Höhe der Schublade, sondern die frei einstellbare Mindest-Zeilenhöhe
 (`AppSettings.GridMinRowHeight`, Werkseinstellung 38) hat das Token `RowHeightCompact`
@@ -302,12 +334,12 @@ dotnet test  AuswertungPro.sln -c Release --no-build → Exit-Code 0
 |---|---|---|---|
 | ProjectModernizer.Tests | 62 | 0 | 0 |
 | AuswertungPro.Next.Pipeline.Tests | 2562 | 3 | 0 |
-| AuswertungPro.Next.Infrastructure.Tests | 6278 | 6 | 0 |
-| AuswertungPro.Next.UI.Tests | 6736 | 11 | 0 |
+| AuswertungPro.Next.Infrastructure.Tests | 6291 | 6 | 0 |
+| AuswertungPro.Next.UI.Tests | 6748 | 11 | 0 |
 
-Summe **15 638 bestanden, 20 übersprungen, 0 Fehler** — in einem Durchgang, ohne
-Wiederholung. Der Lauf brauchte rund vier Minuten. (Vor der Fixwelle: 15 564 bestanden
-und eine Analysewarnung.)
+Summe **15 663 bestanden, 20 übersprungen, 0 Fehler** — in einem Durchgang, ohne
+Wiederholung. Der Lauf brauchte rund vier Minuten. (Vor der Fixwelle: 15 564 bestanden und
+eine Analysewarnung; nach Runde 1: 15 638.)
 
 Die drei bekannten zeitabhängigen Wackler sind in diesem Lauf **nicht** umgefallen:
 `SidecarRestartServiceTests.Lifetime_stop_tracked_beendet_nur_den_eigenen_prozess` und

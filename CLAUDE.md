@@ -1055,15 +1055,24 @@ nicht zurueckfallen duerfen:
   gefaltet (`SchachtFeldnamen.Falte`). Ohne das schrieb der `DataGridColumnLayoutController`
   seine linke Vorgabe in Zell- und Textstil und schlug damit das `TextAlignment.Right` der
   Spaltenfabrik. Eine gespeicherte Nutzerausrichtung gewinnt weiterhin, weil sie erst mit
-  `RestoreLayoutFromSettings` gelesen wird.
+  `RestoreLayoutFromSettings` gelesen wird — und genau deshalb braucht es die einmalige
+  `ZahlenRechtsMigration` (Flag `DataPageLayoutSettings.ZahlenRechtsEinmalGesetzt`, VOR dem
+  Wiederherstellen, Haltungen und Schaechte): In einer bestehenden Installation steht im
+  gespeicherten Layout ueberall `Left` und die Kopfbreite, sonst wirkte die neue Regel dort
+  nie. Sie hebt die Ausrichtung jeder Zahlenspalte einmal auf `Right` und Breiten NUR an —
+  eine in Pixeln gespeicherte Handbreite wird nie verkleinert; eine Breite ohne
+  Pixel-Einheit (`SizeToHeader`) ist keine Wahl des Benutzers und wird durch die Startbreite
+  ersetzt. Rechtsbuendige Zahlen tragen 6 px rechtes Polster (`NovaTextZellenStil.ZahlenPolster`),
+  sonst kleben sie an der Nachbarspalte.
 - **`RowHeightCompact` (34) allein reicht nicht.** Die Tabelle traegt zusaetzlich die frei
   einstellbare Mindesthoehe `AppSettings.GridMinRowHeight` (Werkseinstellung 38), gebunden
   an `MinRowHeight`. Sie ist groesser und hat das Token vollstaendig ausgehebelt — eine
   Gegenprobe mit Token 24 ergab weiterhin 38 px je Zeile. In einzeiligen Nova-Ansichten
   gilt jetzt die kleinere der beiden Zahlen (`DataPageZeilenhoehePolicy.Mindesthoehe`,
   angewendet von `DataPageZeilenhoehenAnwender` — bewusst AUSSERHALB der `DataPage`-
-  Teildateien, die zusammen unter 2000 Zeilen bleiben muessen). Gemessen bei 1920 x 1080
-  mit offener Schublade: 12 ganze Zeilen.
+  Teildateien, die zusammen unter 2000 Zeilen bleiben muessen). Die Seite wendet das auch bei
+  jeder Aenderung von `GridMinRowHeight` erneut an, damit der Regler sofort greift. Gemessen
+  bei 1920 x 1080 mit offener Schublade: 12 ganze Zeilen.
 - **Lange Werte werden gekuerzt, nicht abgeschnitten.** Standard-Textspalten tragen im
   Nova-Layout `TextTrimming=CharacterEllipsis` (Schaechte ueber `NovaTextZellenStil`), und
   jede Nova-Zelle zeigt den Volltext oben im Hinweis. `NovaSpaltenbreiten` gibt Name 150,
@@ -1083,8 +1092,18 @@ abhebt als der Kopftext (im hellen Theme ist heller unauffaellig, im dunklen auf
 „nicht heller als die Tinte" waere deshalb die falsche Regel). Die Suchpille steht rechts
 IN der Werkzeugleiste. „Dokumente und Medien" der Schaechte fuehrt `PDF_Path` neben dem
 Knopf weiter als bearbeitbare Spalte. „Kompakt" wird nur im Nova-Layout einmalig zum
-Standard. „Spalte leeren" tut auf einer virtuellen Statusspalte nichts — sonst waere ein
-erfundener Feldname in jeden Datensatz geschrieben worden.
+Standard.
+
+**Eine virtuelle Statusspalte darf nie in `Fields` landen.** Das Praefix `Nova_` liegt als
+eine Wahrheit in der Domaene (`VirtuelleSpalte`); `NovaStatusSpalten.IstVirtuell` leitet nur
+dorthin weiter. `HaltungRecord` und `SchachtRecord` weisen einen solchen Schluessel auf ALLEN
+Schreibwegen mit `ArgumentException` ab — bewusst kein stilles Ignorieren, denn ein
+verschluckter Schreibversuch sieht fuer den Aufrufer wie ein Erfolg aus. Der Rechtsklick
+beider Seiten laeuft ausserdem durch denselben `DataPageRightClickController`. Anlass:
+Die Schachtseite hatte einen zweiten, eigenen Rechtsklickpfad ohne diesen Schutz und schrieb
+bei „Spalte leeren" auf der Protokollspalte `Nova_Protokoll` mit Handmarkierung in JEDEN
+Schachtdatensatz und damit in die Projektdatei (Re-Review 07.09.2026). Zwei Wege zu
+derselben Entscheidung heisst, dass nur einer den Schutz bekommt.
 
 Offen bleibt: Windows-Skalierung 125 und 150 Prozent ist nicht gemessen.
 

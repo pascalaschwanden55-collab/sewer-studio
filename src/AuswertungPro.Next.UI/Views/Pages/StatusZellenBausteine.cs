@@ -25,17 +25,17 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 internal static class StatusZellenBausteine
 {
     /// <summary>
-    /// Ein Knopf mit ToolTip UND vorlesbarem Namen: Ein Glyph oder ein Kuerzel wie "PDF" laesst
-    /// sich nicht vorlesen. Der Parameter ist immer der Datensatz der Zeile.
-    /// </summary>
-    /// <summary>
     /// Nova-Fixwelle 2b (P2): Ein Knopf IN der Tabelle ist 24 px hoch, nicht 28 wie in einer
     /// Werkzeugleiste. Gemessen war genau er der hoechste Zellinhalt und bestimmte damit die
-    /// Zeilenhoehe der ganzen Tabelle — die Zeilenhoehe aus <c>RowHeightCompact</c> ist nur eine
-    /// Untergrenze und konnte dagegen nichts ausrichten.
+    /// Zeilenhoehe der ganzen Tabelle — die Zeilenhoehe aus <c>RowHeightCompact</c> ist nur
+    /// eine Untergrenze und konnte dagegen nichts ausrichten.
     /// </summary>
     private const double KnopfHoeheInDerZelle = 24;
 
+    /// <summary>
+    /// Ein Knopf mit ToolTip UND vorlesbarem Namen: Ein Glyph oder ein Kuerzel wie "PDF" laesst
+    /// sich nicht vorlesen. Der Parameter ist immer der Datensatz der Zeile.
+    /// </summary>
     internal static FrameworkElementFactory Aktionsknopf(
         BindingBase befehl,
         BindingBase name,

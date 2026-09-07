@@ -19,6 +19,9 @@ public partial class DataPage
     private readonly Dictionary<DataGridColumn, string> _columnFields = new();
     private DataPageColumnViewController? _columnViews;
 
+    /// <summary>Der Schluessel der aktuell gewaehlten Spaltenansicht; null vor dem Aufbau.</summary>
+    private string? AktiveSpaltenansicht => _columnViews?.ActiveKey;
+
     private void InitColumnViews()
     {
         if (DataContext is not DataPageViewModel vm)

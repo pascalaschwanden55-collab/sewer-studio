@@ -692,6 +692,19 @@ public sealed class DataPageLayoutSettings
     /// und Schaechte (<c>SchaechtePageLayout</c>), da beide dieselbe Klasse verwenden.
     /// </summary>
     public bool NovaKompaktEinmalGesetzt { get; set; }
+
+    /// <summary>
+    /// Nova-Fixwelle 2b, Runde 2: Die Regel „Zahlen stehen rechts" wirkt nur beim Aufbau
+    /// neuer Spalten. In einer bestehenden Installation liegt aber ein gespeichertes
+    /// Spaltenlayout mit <c>HorizontalAlignment = Left</c> vor und gewinnt — dort staenden
+    /// DN und Laenge weiter links. Ist dieses Flag noch nicht gesetzt, hebt
+    /// <c>ZahlenRechtsMigration</c> die gespeicherte Ausrichtung aller Zahlenspalten genau
+    /// einmal auf Right und die gespeicherten Breiten von Name, Strasse und Material nur
+    /// dann an, wenn sie unter der Startbreite liegen. Danach zaehlt wieder ausschliesslich,
+    /// was der Benutzer eingestellt hat. Gilt fuer Haltungen und Schaechte.
+    /// </summary>
+    public bool ZahlenRechtsEinmalGesetzt { get; set; }
+
     public double GridMinRowHeight { get; set; } = 38d;
     public double GridZoom { get; set; } = 1.0d;
     public bool IsColumnReorderEnabled { get; set; }

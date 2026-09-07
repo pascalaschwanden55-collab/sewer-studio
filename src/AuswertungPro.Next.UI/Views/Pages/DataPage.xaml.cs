@@ -185,6 +185,13 @@ public partial class DataPage : System.Windows.Controls.UserControl
                     System.Windows.Threading.DispatcherPriority.Background);
             }
         }
+
+        // Nova-Fixwelle 2b, Runde 2: Der Regler "Zeilenhoehe" veraendert die Mindesthoehe der
+        // Tabelle. In einer einzeiligen Nova-Ansicht gilt dort die kompakte Hoehe als
+        // Obergrenze — das muss auch beim Verstellen greifen und nicht erst beim naechsten
+        // Aufbau der Seite.
+        if (e.PropertyName == nameof(ViewModels.Pages.DataPageViewModel.GridMinRowHeight))
+            WendeZeilenhoeheAn(AktiveSpaltenansicht);
     }
 
     private void EnsureColumns()

@@ -39,6 +39,9 @@ public static class DataGridStandardTextColumnFactory
         {
             displayStyle.Setters.Add(new Setter(TextBlock.FontFamilyProperty, System.Windows.Application.Current?.TryFindResource("FontMono") ?? new FontFamily("Consolas")));
             displayStyle.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Right));
+            // Nova-Fixwelle 2b, Runde 2: Ein rechtsbuendiger Wert steht sonst an der Zellkante
+            // und klebt an der Nachbarspalte ("200Kreisprofil").
+            displayStyle.Setters.Add(new Setter(FrameworkElement.MarginProperty, NovaTextZellenStil.ZahlenPolster));
         }
         return new DataGridTextColumn
         {

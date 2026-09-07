@@ -223,7 +223,9 @@ public partial class SchaechtePage : UserControl
                         },
                         // Nova-Fixwelle 2b (P3): Ein zu langer Wert wird mit Auslassungspunkten
                         // gekuerzt statt hart abgeschnitten ("KontrollschachDorfstrasse").
-                        ElementStyle = NovaTextZellenStil.MitAuslassungspunkten(),
+                        // Runde 2: Zahlenspalten bekommen zusaetzlich das rechte Polster.
+                        ElementStyle = NovaTextZellenStil.MitAuslassungspunkten(
+                            DataPageColumnStyleRules.IstZahlenspalte(col, SchachtFeldnamen.Falte)),
                         Width = DataGridLength.SizeToHeader,
                         MinWidth = 90,
                         // Die GEONIS-Kennung ist nur Anzeige; der Export liest das Geonis-Objekt.
@@ -369,6 +371,11 @@ public partial class SchaechtePage : UserControl
     private void RestoreLayoutFromSettings()
     {
         var layout = Settings.SchaechtePageLayout;
+
+        // Nova-Fixwelle 2b, Runde 2: VOR dem Wiederherstellen; Schachtfelder heissen nach der
+        // Kopfzeile der Excel-Vorlage, deshalb der gefaltete Vergleich.
+        if (layout is not null)
+            ZahlenRechtsMigration.WendeAn(layout, Settings.Save, SchachtFeldnamen.Falte);
 
         _isRestoringLayout = true;
         try
