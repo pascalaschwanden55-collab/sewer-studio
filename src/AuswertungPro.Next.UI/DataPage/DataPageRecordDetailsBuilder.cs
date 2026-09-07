@@ -3,8 +3,50 @@ using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
+/// <summary>
+/// Baut die Themen der Haltungs-Eingabefelder (Formular-Detailfenster und
+/// <see cref="AuswertungPro.Next.UI.Views.Pages.Haltungsansicht.HaltungFelderDrawer"/>).
+///
+/// Nova-Etappe 2b: vier feste Themen nach dem freigegebenen Prototyp (Inventar 9.1) mit
+/// exakter Feldliste und Reihenfolge — Stammdaten (14), Bewertung (9), Sanierung (10),
+/// Kosten und Bemerkungen (3). Alle uebrigen Projektfelder (auch Katasterfelder, Schacht_oben/
+/// Schacht_unten, NR, das Gefaelle und Primaere_Schaeden) bleiben im fuenften Thema
+/// "Weitere Angaben", damit kein Feld verschwindet.
+/// </summary>
 public static class DataPageRecordDetailsBuilder
 {
+    // Reihenfolge exakt nach docs/reviews/2026-09-06-nova/wpf-etappe-2/PROTOTYP-INVENTAR.md
+    // Abschnitt 9.1 "Stammdaten (14)".
+    private static readonly string[] StammdatenReihenfolge =
+    {
+        FieldKeys.HoldingName, FieldKeys.Street, FieldKeys.PipeMaterial, FieldKeys.NominalDiameterMm,
+        FieldKeys.ProfileType, FieldKeys.ClearWidthMm, FieldKeys.UsageType, FieldKeys.HoldingLengthMeters,
+        "Inspektionsrichtung", FieldKeys.InspectionYear, FieldKeys.ConstructionYear, FieldKeys.Owner,
+        FieldKeys.GeonisId, FieldKeys.CadastreObjectId
+    };
+
+    // Inventar 9.1 "Bewertung (9)".
+    private static readonly string[] BewertungReihenfolge =
+    {
+        FieldKeys.ConditionClass, "VSA_Zustandsnote_D", "VSA_Zustandsnote_S", "VSA_Zustandsnote_B",
+        "VSA_Geschaetzt", "Pruefungsresultat", "Referenzpruefung", "Gewaesserschutz", "Grundwasserspiegel"
+    };
+
+    // Inventar 9.1 "Sanierung (10)". Renovierung_Inliner_Stk steht dort bewusst NICHT in der
+    // Liste (nur "inliner" = Meter) und landet deshalb in "Weitere Angaben".
+    private static readonly string[] SanierungReihenfolge =
+    {
+        FieldKeys.RenovationDecision, FieldKeys.RecommendedRehabilitationMeasures, FieldKeys.LinerRenovationMeters,
+        FieldKeys.ConnectionsToGrout, FieldKeys.RepairSleeve, FieldKeys.LinerEndSleeve, FieldKeys.ShortLinerRepair,
+        "Erneuerung_Neubau_m", FieldKeys.RehabilitationExecutor, FieldKeys.WorkflowStatus
+    };
+
+    // Inventar 9.1 "Kosten und Bemerkungen (3)".
+    private static readonly string[] KostenUndBemerkungenReihenfolge =
+    {
+        FieldKeys.Cost, FieldKeys.Link, FieldKeys.Remarks
+    };
+
     public static List<RecordDetailGroup> Build(
         HaltungRecord record,
         Func<string, RecordDetailItem> createItem,
@@ -13,26 +55,20 @@ public static class DataPageRecordDetailsBuilder
         var groups = new List<RecordDetailGroup>();
         var added = new HashSet<string>(StringComparer.Ordinal);
         bool IsExcluded(string field) => excludeFields is not null && excludeFields.Contains(field);
-        var buckets = new Dictionary<string, List<RecordDetailItem>>(StringComparer.Ordinal)
-        {
-            ["Stammdaten"] = new(),
-            ["Zustand & Inspektion"] = new(),
-            ["Sanierung & Kosten"] = new(),
-            ["Dokumente & Medien"] = new(),
-            ["Weitere Angaben"] = new()
-        };
 
         var itemsByField = new Dictionary<string, RecordDetailItem>(StringComparer.Ordinal);
+        // Reihenfolge aller erzeugten Felder (Katalog zuerst, dann freie Projektfelder
+        // alphabetisch) — sie bleibt die Anzeigereihenfolge in "Weitere Angaben".
+        var alleFelderReihenfolge = new List<string>();
 
         // Das Projektgefaelle ist auch bei alten Projekten ohne gespeicherten Wert
         // editierbar. Die feste Spaltenfolge fuer CSV/Excel bleibt dabei erhalten.
         foreach (var column in FieldCatalog.ColumnOrder.Append(FieldKeys.SlopePromille).Where(x => added.Add(x)))
         {
             if (IsExcluded(column)) continue;
-            var groupName = ResolveGroup(column);
             var item = createItem(column);
             itemsByField[column] = item;
-            buckets[groupName].Add(item);
+            alleFelderReihenfolge.Add(column);
         }
 
         foreach (var extraField in record.Fields.Keys
@@ -42,68 +78,77 @@ public static class DataPageRecordDetailsBuilder
             if (IsExcluded(extraField)) continue;
             var item = createItem(extraField);
             itemsByField[extraField] = item;
-            // Auch freie Projektfelder laufen durch die Gruppenregel; alles
-            // Unbekannte liefert sie weiterhin als "Weitere Angaben" zurueck.
-            buckets[ResolveGroup(extraField)].Add(item);
+            alleFelderReihenfolge.Add(extraField);
         }
 
         WireSanierungSichtbarkeit(itemsByField);
 
-        AddGroup(groups, buckets, "Stammdaten", "Identifikation und Lage der Haltung.", RecordDetailGroupKind.MasterData);
-        AddGroup(groups, buckets, "Zustand & Inspektion", "Bewertung, Schaeden und Pruefresultate.", RecordDetailGroupKind.Condition);
-        AddGroup(groups, buckets, "Sanierung & Kosten", "Massnahmen, Kosten und Mengenangaben.", RecordDetailGroupKind.RenovationCosts);
-        AddGroup(groups, buckets, "Dokumente & Medien", "Verknuepfte Dateien, PDFs und Links.", RecordDetailGroupKind.Documents);
-        AddGroup(groups, buckets, "Weitere Angaben", "Felder ohne klare Zuordnung.", RecordDetailGroupKind.Additional);
+        var zugewiesen = new HashSet<string>(StringComparer.Ordinal);
+
+        AddThemenGruppe(groups, itemsByField, zugewiesen, "Stammdaten",
+            "Identifikation und Lage der Haltung.", RecordDetailGroupKind.MasterData, StammdatenReihenfolge);
+        AddThemenGruppe(groups, itemsByField, zugewiesen, "Bewertung",
+            "Zustandsklasse, Zustandsnoten und Pruefresultate.", RecordDetailGroupKind.Rating, BewertungReihenfolge);
+        AddThemenGruppe(groups, itemsByField, zugewiesen, "Sanierung",
+            "Massnahmen und Mengenangaben zur Sanierung.", RecordDetailGroupKind.Renovation, SanierungReihenfolge);
+        AddThemenGruppe(groups, itemsByField, zugewiesen, "Kosten und Bemerkungen",
+            "Kosten, Video-Link und Bemerkungen.", RecordDetailGroupKind.CostsRemarks, KostenUndBemerkungenReihenfolge);
+
+        var weitereItems = alleFelderReihenfolge
+            .Where(f => !zugewiesen.Contains(f))
+            .Select(f => itemsByField[f])
+            .ToList();
+        if (weitereItems.Count > 0)
+            groups.Add(new RecordDetailGroup(
+                "Weitere Angaben", "Felder ohne klare Zuordnung.", weitereItems, RecordDetailGroupKind.Additional));
 
         return groups;
     }
 
+    /// <summary>
+    /// Liefert den Thementitel eines Feldnamens. Ein unbekanntes Feld liefert
+    /// "Weitere Angaben" — dort landen auch alle Projektfelder, die nicht in einer der
+    /// vier festen Themenlisten stehen.
+    /// </summary>
     public static string ResolveGroup(string fieldName)
     {
-        return fieldName switch
-        {
-            "NR" or "Haltungsname" or "Strasse" or "DN_mm" or "Rohrmaterial"
-                or "Nutzungsart" or "Haltungslaenge_m" or "Inspektionsrichtung"
-                or "Eigentuemer" or "FunktionHierarchisch" or FieldKeys.SlopePromille
-                // Anfangs- und Endschacht stehen nicht im Feldkatalog, gehoeren
-                // fachlich aber zu den Stammdaten der Haltung.
-                or "Schacht_oben" or "Schacht_unten"
-                => "Stammdaten",
-
-            "Zustandsklasse" or "VSA_Zustandsnote_D" or "VSA_Zustandsnote_S"
-                or "VSA_Zustandsnote_B" or "Primaere_Schaeden" or "Pruefungsresultat"
-                or "Referenzpruefung" or "Datum_Jahr" or "Ausgefuehrt_durch"
-                or "Gewaesserschutz" or "Grundwasserspiegel"
-                => "Zustand & Inspektion",
-
-            "Sanieren_JaNein" or "Empfohlene_Sanierungsmassnahmen" or "Kosten"
-                or "Renovierung_Inliner_Stk" or "Renovierung_Inliner_m"
-                or "Anschluesse_verpressen" or "Reparatur_Manschette"
-                or "Linerendmanschette_LEM"
-                or "Reparatur_Kurzliner" or "Erneuerung_Neubau_m"
-                or "Offen_abgeschlossen"
-                => "Sanierung & Kosten",
-
-            "Link" => "Dokumente & Medien",
-
-            _ => "Weitere Angaben"
-        };
+        if (Array.IndexOf(StammdatenReihenfolge, fieldName) >= 0) return "Stammdaten";
+        if (Array.IndexOf(BewertungReihenfolge, fieldName) >= 0) return "Bewertung";
+        if (Array.IndexOf(SanierungReihenfolge, fieldName) >= 0) return "Sanierung";
+        if (Array.IndexOf(KostenUndBemerkungenReihenfolge, fieldName) >= 0) return "Kosten und Bemerkungen";
+        return "Weitere Angaben";
     }
 
-    private static void AddGroup(
+    /// <summary>
+    /// Fuegt eine feste Themen-Gruppe in der vorgegebenen Feldreihenfolge hinzu. Ein Feld,
+    /// das (etwa durch <c>excludeFields</c>) keinen Eintrag in <paramref name="itemsByField"/>
+    /// hat, wird uebersprungen statt eine Luecke zu erzeugen.
+    /// </summary>
+    private static void AddThemenGruppe(
         ICollection<RecordDetailGroup> groups,
-        IReadOnlyDictionary<string, List<RecordDetailItem>> buckets,
+        IReadOnlyDictionary<string, RecordDetailItem> itemsByField,
+        HashSet<string> zugewiesen,
         string title,
         string description,
-        RecordDetailGroupKind kind)
+        RecordDetailGroupKind kind,
+        IReadOnlyList<string> reihenfolge)
     {
-        if (!buckets.TryGetValue(title, out var items) || items.Count == 0)
-            return;
+        var items = new List<RecordDetailItem>(reihenfolge.Count);
+        foreach (var feld in reihenfolge)
+        {
+            if (!itemsByField.TryGetValue(feld, out var item)) continue;
+            items.Add(item);
+            zugewiesen.Add(feld);
+        }
 
-        groups.Add(new RecordDetailGroup(title, description, items, kind));
+        if (items.Count > 0)
+            groups.Add(new RecordDetailGroup(title, description, items, kind));
     }
 
     // Folgefelder der Sanierungs-Gruppe: nur sinnvoll, wenn ueberhaupt saniert wird.
+    // Diese Liste ist bewusst unabhaengig von der Themen-Zuordnung: Auch das jetzt in
+    // "Kosten und Bemerkungen" stehende Feld "Kosten" und das in "Weitere Angaben"
+    // stehende "Renovierung_Inliner_Stk" bleiben ausgeblendet, solange "Sanieren" = Nein ist.
     private static readonly string[] SanierungFolgeFelder =
     {
         "Empfohlene_Sanierungsmassnahmen", "Kosten",

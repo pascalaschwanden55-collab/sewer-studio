@@ -21,7 +21,14 @@ public enum RecordDetailGroupKind
     MasterData,
     Condition,
     RenovationCosts,
-    Documents
+    Documents,
+
+    // Nova-Etappe 2b: eigene Kinds fuer die vier Haltungs-Themen aus dem Prototyp.
+    // Condition/RenovationCosts/Documents bleiben unveraendert fuer den Schacht-Builder
+    // (SchaechteRecordDetailsBuilder) und die Dokumente-Ausblendung im kompakten Detailfenster.
+    Rating,
+    Renovation,
+    CostsRemarks
 }
 
 public sealed class RecordDetailItem : INotifyPropertyChanged

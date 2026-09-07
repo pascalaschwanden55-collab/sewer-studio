@@ -74,7 +74,7 @@
                               Style="{StaticResource ThemenListStyle}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Expander IsExpanded="True" Margin="0,0,8,0" VerticalAlignment="Top">
+                            <Expander IsExpanded="{Binding IstStandardAufgeklappt, Mode=OneTime}" Margin="0,0,8,0" VerticalAlignment="Top">
                                 <Expander.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>

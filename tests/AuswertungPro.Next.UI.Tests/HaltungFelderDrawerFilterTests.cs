@@ -42,4 +42,21 @@ public sealed class HaltungFelderDrawerFilterTests
         var thema = Assert.Single(HaltungFelderDrawer.Filtere(gruppen, null));
         Assert.Equal(2, thema.Anzahl);
     }
+
+    /// <summary>
+    /// Nova-Etappe 2b: "Weitere Angaben" (alle Projektfelder ausserhalb der vier festen
+    /// Prototyp-Themen) startet standardmaessig zugeklappt; die uebrigen Themen bleiben offen.
+    /// </summary>
+    [Fact]
+    public void Weitere_Angaben_startet_zugeklappt_andere_Themen_bleiben_offen()
+    {
+        var themen = HaltungFelderDrawer.Filtere(
+            [Gruppe("Stammdaten", "Baujahr"), Gruppe("Weitere Angaben", "Z_Extra")], null);
+
+        var stammdaten = themen.Single(t => t.Title == "Stammdaten");
+        var weitere = themen.Single(t => t.Title == "Weitere Angaben");
+
+        Assert.True(stammdaten.IstStandardAufgeklappt);
+        Assert.False(weitere.IstStandardAufgeklappt);
+    }
 }
