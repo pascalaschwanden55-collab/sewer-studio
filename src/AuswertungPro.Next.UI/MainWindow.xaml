@@ -478,10 +478,10 @@
                           AutomationProperties.Name="KI-Bereitschaft und Systemleistung">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <ctrl:NeuralPulseDot Width="10" Height="10" Margin="0,0,8,0" ToolTip="Laufende Messwerte des Rechners"
-                                                  IsActive="{Binding IstKiBereit}">
+                            <ctrl:NeuralPulseDot Width="10" Height="10" Margin="0,0,8,0" ToolTip="Laufende Messwerte des Rechners">
                                 <ctrl:NeuralPulseDot.Style>
                                     <Style TargetType="ctrl:NeuralPulseDot">
+                                        <Setter Property="IsActive" Value="{Binding IstKiBereit}"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Monitor.IsSensorBlocked}" Value="True">
                                                 <Setter Property="IsActive" Value="False"/>
