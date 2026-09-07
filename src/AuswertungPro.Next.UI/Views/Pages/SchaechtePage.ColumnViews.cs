@@ -38,8 +38,11 @@ public partial class SchaechtePage
             return;
 
         // Task 4: Kompakt wird bei einer bestehenden Installation genau einmal zum Standard.
+        // Nova-Fixwelle 2b (C2): NUR im Nova-Layout. Die alte Schachtansicht behaelt ihre
+        // gespeicherte Spaltenansicht.
         vm.Settings.SchaechtePageLayout ??= new DataPageLayoutSettings();
-        KompaktStartRegel.WendeAn(vm.Settings.SchaechtePageLayout, vm.Settings.Save);
+        if (vm.Settings.ShowSchaechteNovaLayout)
+            KompaktStartRegel.WendeAn(vm.Settings.SchaechtePageLayout, vm.Settings.Save);
 
         _columnViews = new DataPageColumnViewController(
             Grid,

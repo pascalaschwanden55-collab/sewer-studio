@@ -14,6 +14,7 @@
         <local:FaktWertConverter x:Key="FaktWert"/>
         <local:FaktZusammenConverter x:Key="FaktZusammen"/>
         <dp:ZustandsklasseInkConverter x:Key="ZkInkConv"/>
+        <dp:ZustandsklasseChipTextConverter x:Key="ZkChipTextConv"/>
         <Style x:Key="FaktLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -64,7 +65,10 @@
                                 CornerRadius="{DynamicResource RadiusS}"
                                 Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}"
                                 ToolTip="Zustandsklasse">
-                            <TextBlock Text="{Binding Fields[Zustandsklasse], StringFormat=Z{0}}"
+                            <!-- Nova-Fixwelle 2b (C1): Derselbe Konverter wie in der Tabellenmarke.
+                                 Mit StringFormat stand bei einer leeren oder unbekannten Klasse ein
+                                 nacktes "Z" da; jetzt ist es der Gedankenstrich "nicht berechnet". -->
+                            <TextBlock Text="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkChipTextConv}}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        FontSize="{DynamicResource TextS}" FontWeight="SemiBold"
                                        Foreground="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkInkConv}}"/>

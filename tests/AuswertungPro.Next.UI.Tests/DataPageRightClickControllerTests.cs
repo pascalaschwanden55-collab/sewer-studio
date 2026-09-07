@@ -60,4 +60,42 @@ public sealed class DataPageRightClickControllerTests
 
         Assert.Equal(DataPageRightClickAction.None, result.Action);
     }
+
+    /// <summary>
+    /// Nova-Fixwelle 2b (C3): Eine virtuelle Statusspalte (Nova_*) ist kein Feld. "Spalte
+    /// leeren" wuerde dort einen Feldnamen erfinden und in jeden Datensatz schreiben. Der
+    /// Rechtsklick auf ihren Kopf tut deshalb nichts.
+    /// </summary>
+    [Theory]
+    [InlineData("Nova_KI")]
+    [InlineData("Nova_Pruefung")]
+    [InlineData("Nova_Video")]
+    [InlineData("Nova_Protokoll")]
+    public void Eine_virtuelle_Statusspalte_laesst_sich_nicht_leeren(string feld)
+    {
+        var result = DataPageRightClickController.Resolve(
+            clearColumnMode: true,
+            columnFieldName: feld,
+            columnDisplayName: feld,
+            rowItem: null);
+
+        Assert.Equal(DataPageRightClickAction.None, result.Action);
+        Assert.Null(result.FieldName);
+    }
+
+    /// <summary>Ein Klick in die Zeile waehlt sie weiterhin aus, statt gar nichts zu tun.</summary>
+    [Fact]
+    public void Auf_einer_virtuellen_Spalte_bleibt_die_Zeilenauswahl()
+    {
+        var row = new object();
+
+        var result = DataPageRightClickController.Resolve(
+            clearColumnMode: true,
+            columnFieldName: "Nova_KI",
+            columnDisplayName: "KI",
+            rowItem: row);
+
+        Assert.Equal(DataPageRightClickAction.SelectRow, result.Action);
+        Assert.Same(row, result.RowItem);
+    }
 }

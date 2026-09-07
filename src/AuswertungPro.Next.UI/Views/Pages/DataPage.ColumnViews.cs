@@ -31,8 +31,12 @@ public partial class DataPage
         ColumnViewChips.ItemsSource = DataPageColumnViewCatalog.ViewsFuer(nova);
 
         // Task 4: Kompakt wird bei einer bestehenden Installation genau einmal zum Standard.
+        // Nova-Fixwelle 2b (C2): NUR im Nova-Layout. Wer bewusst die alte Haltungsansicht
+        // benutzt, hat sich fuer den alten Aufbau entschieden und behaelt dort seine
+        // gespeicherte Spaltenansicht.
         vm.Settings.DataPageLayout ??= new DataPageLayoutSettings();
-        KompaktStartRegel.WendeAn(vm.Settings.DataPageLayout, vm.Settings.Save);
+        if (nova)
+            KompaktStartRegel.WendeAn(vm.Settings.DataPageLayout, vm.Settings.Save);
 
         _columnViews = new DataPageColumnViewController(
             Grid,

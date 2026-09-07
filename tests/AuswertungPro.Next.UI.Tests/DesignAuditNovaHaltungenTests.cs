@@ -41,6 +41,20 @@ public sealed class DesignAuditNovaHaltungenTests
         Assert.DoesNotContain("Foreground=\"White\"", xaml);
     }
 
+    /// <summary>
+    /// Nova-Fixwelle 2b (C1): Die Marke in der Kopfzeile der Uebersicht schreibt ihren Text mit
+    /// demselben Konverter wie die Tabellenmarke. Mit <c>StringFormat=Z{0}</c> stand bei einer
+    /// leeren oder unbekannten Klasse ein nacktes "Z" da — der Gedankenstrich ist der getrennte
+    /// Zustand "nicht berechnet".
+    /// </summary>
+    [Fact]
+    public void Die_Marke_der_Uebersicht_zeigt_ohne_Klasse_einen_Gedankenstrich()
+    {
+        var xaml = Xaml("Views", "Pages", "Haltungsansicht", "HaltungUebersichtPanel.xaml");
+        Assert.Contains("ZustandsklasseChipTextConverter", xaml);
+        Assert.DoesNotContain("StringFormat=Z{0}", xaml);
+    }
+
     [Fact]
     public void Nova_Arbeitsflaeche_ist_per_Einstellung_der_Standard()
     {
