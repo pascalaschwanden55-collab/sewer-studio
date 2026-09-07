@@ -30,8 +30,9 @@ public sealed class OverviewPreviewPdfCommandTests
         shell.Project.Name = "Projekt A";
         shell.Project.Data.Add(Holding("H1"));
         shell.MarkProjectReady();
-        shell.EnterWorkspaceOn("Uebersicht");
-        var vm = Assert.IsType<OverviewPageViewModel>(shell.CurrentPage);
+        // Nova-Etappe 2: "Uebersicht" zeigt im offenen Projekt die neue Seite; die
+        // Vorschau-PDF bleibt eine Funktion von OverviewPageViewModel (Start/Launcher).
+        var vm = new OverviewPageViewModel(shell, services);
 
         Assert.True(vm.PrintPreviewPdfCommand.CanExecute(null));
         await vm.PrintPreviewPdfCommand.ExecuteAsync(null);
@@ -88,8 +89,9 @@ public sealed class OverviewPreviewPdfCommandTests
         shell.Project.Name = "Projekt mit kaputten Kosten";
         shell.Project.Data.Add(Holding("H1"));
         shell.MarkProjectReady();
-        shell.EnterWorkspaceOn("Uebersicht");
-        var vm = Assert.IsType<OverviewPageViewModel>(shell.CurrentPage);
+        // Nova-Etappe 2: "Uebersicht" zeigt im offenen Projekt die neue Seite; die
+        // Vorschau-PDF bleibt eine Funktion von OverviewPageViewModel (Start/Launcher).
+        var vm = new OverviewPageViewModel(shell, services);
 
         Assert.Equal("Kostendaten nicht lesbar", vm.DashboardCostText);
         Assert.False(vm.PrintPreviewPdfCommand.CanExecute(null));

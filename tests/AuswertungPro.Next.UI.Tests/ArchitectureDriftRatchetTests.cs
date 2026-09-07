@@ -34,6 +34,11 @@ public sealed class ArchitectureDriftRatchetTests
         "ViewModels/Pages/MediaConflictsPageViewModel.cs",
         "ViewModels/Pages/OverviewPageViewModel.cs",
         "ViewModels/Pages/ProjectPageViewModel.cs",
+        // Nova-Etappe 2: ShellViewModel ruft alle Seiten-ViewModels ueber denselben
+        // "(this, _sp)"-Fabrikweg auf (Vorgabe der Etappe: ShellViewModel.cs bekommt nur
+        // die eine Nav-Zeile). Dieselbe bereits akzeptierte Schuld wie bei den 13
+        // Geschwister-Seiten oben/unten, keine neue Kategorie.
+        "ViewModels/Pages/ProjektUebersichtPageViewModel.cs",
         "ViewModels/Pages/SanierungsMatrixPageViewModel.cs",
         "ViewModels/Pages/SchachtSanierungsMatrixPageViewModel.cs",
         "ViewModels/Pages/SchaechtePageViewModel.cs",
