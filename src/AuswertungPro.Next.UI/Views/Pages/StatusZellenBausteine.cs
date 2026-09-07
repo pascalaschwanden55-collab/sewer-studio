@@ -11,8 +11,12 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 /// von Haltungs- und Schachtliste.
 ///
 /// Beide Listen zeigen dieselbe Zelle: entweder einen kleinen Knopf, der eine bereits
-/// vorhandene Aktion der Seite mit dem Datensatz der Zeile aufruft, oder — wenn es nichts zu
-/// oeffnen gibt — einen Gedankenstrich mit Hinweis. Nie ein toter Knopf.
+/// vorhandene Aktion der Seite mit dem Datensatz der Zeile aufruft, oder — wenn nichts
+/// hinterlegt ist — einen Gedankenstrich mit Hinweis.
+///
+/// Nova-Fixwelle 2b (F1): Einen Knopf gibt es genau dann, wenn ein Pfad hinterlegt ist. Ob die
+/// Datei wirklich noch da ist, sagt erst der Oeffner — die Zelle prueft das nicht, weil sie
+/// sonst je Zeile das Dateisystem befragen muesste.
 ///
 /// Was sich je Liste unterscheidet, kommt als Bindung herein: der Befehl, der vorlesbare Name
 /// und die Sichtbarkeit. Der Rest (Stil, Hinweis, Parameter, Ausrichtung) ist hier einmal

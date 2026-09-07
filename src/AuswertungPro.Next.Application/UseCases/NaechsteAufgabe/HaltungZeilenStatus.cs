@@ -66,13 +66,11 @@ public static class HaltungZeilenStatus
     }
 
     /// <summary>
-    /// Feldnamen wie im ExcelTemplateExportService-Linkvertrag (siehe
-    /// <c>ExcelSchachtFeldzuordnung</c>): irgendeines der drei Protokollfelder genuegt.
+    /// Nova-Fixwelle 2b (F1): Die Antwort kommt aus der gemeinsamen Kandidatenregel
+    /// <see cref="HaltungProtokollQuelle"/> — hinterlegter Pfad mit .pdf-Endung, kein
+    /// Dateizugriff je Zeile.
     /// </summary>
-    private static bool HatProtokoll(HaltungRecord record)
-        => !string.IsNullOrWhiteSpace(record.GetFieldValue(FieldKeys.PdfPath))
-           || !string.IsNullOrWhiteSpace(record.GetFieldValue(FieldKeys.PdfEigen))
-           || !string.IsNullOrWhiteSpace(record.GetFieldValue(FieldKeys.PdfAll));
+    private static bool HatProtokoll(HaltungRecord record) => HaltungProtokollQuelle.Vorhanden(record);
 
     private static bool IstKritischeZustandsklasse(HaltungRecord record)
         => TryParseZustandsklasse(record, out var klasse) && klasse <= 1;

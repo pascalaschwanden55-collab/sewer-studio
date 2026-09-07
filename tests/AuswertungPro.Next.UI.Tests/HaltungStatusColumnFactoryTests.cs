@@ -145,13 +145,35 @@ public sealed class HaltungStatusColumnFactoryTests
             var videoStrich = video.Children.OfType<TextBlock>().Single();
             Assert.Equal(Visibility.Visible, videoStrich.Visibility);
             Assert.Equal("–", videoStrich.Text);
-            Assert.Equal("kein Video", videoStrich.ToolTip);
+            Assert.Equal(HaltungProtokollQuelle.OhneVideoHinweis, videoStrich.ToolTip);
 
             var protokoll = Assert.IsType<Grid>(HaltungStatusColumnFactory.Protokoll("PROTOKOLL").CellTemplate.LoadContent());
             protokoll.DataContext = leer;
             WpfBindungsPumpe.Leeren();
             Assert.Equal(Visibility.Collapsed, protokoll.Children.OfType<Button>().Single().Visibility);
-            Assert.Equal("kein Protokoll", protokoll.Children.OfType<TextBlock>().Single().ToolTip);
+            Assert.Equal(HaltungProtokollQuelle.OhneProtokollHinweis,
+                protokoll.Children.OfType<TextBlock>().Single().ToolTip);
+        });
+    }
+
+    /// <summary>
+    /// Nova-Fixwelle 2b (F1): Ein Videopfad allein macht noch keinen Protokoll-Knopf, und ein
+    /// PDF-Pfad keinen Video-Knopf. Beide Zellen lesen ihre eigene Regel.
+    /// </summary>
+    [Fact]
+    public void Ein_Videopfad_allein_zeigt_keinen_Protokoll_Knopf()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var record = new HaltungRecord();
+            record.SetFieldValue(FieldKeys.Link, @"D:\Medien@01-10002.mp4", FieldSource.Manual, userEdited: true);
+
+            var protokoll = Assert.IsType<Grid>(HaltungStatusColumnFactory.Protokoll("PROTOKOLL").CellTemplate.LoadContent());
+            protokoll.DataContext = record;
+            WpfBindungsPumpe.Leeren();
+
+            Assert.Equal(Visibility.Collapsed, protokoll.Children.OfType<Button>().Single().Visibility);
+            Assert.Equal(Visibility.Visible, protokoll.Children.OfType<TextBlock>().Single().Visibility);
         });
     }
 

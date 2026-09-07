@@ -22,6 +22,11 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 /// Video und Protokoll rufen die bereits vorhandenen Befehle der Seite
 /// (<c>PlayVideoCommand</c>, <c>OpenOriginalPdfCommand</c>) mit dem Datensatz der Zeile —
 /// es entsteht kein zweiter Weg zu Video oder PDF.
+///
+/// Nova-Fixwelle 2b (F1): Der Knopf erscheint nur bei einem HINTERLEGTEN Pfad
+/// (<see cref="HaltungProtokollQuelle"/>, <c>HaltungPruefstatus.HatVideo</c>). Die Zelle
+/// befragt bewusst kein Dateisystem; der Gedankenstrich sagt deshalb, dass Kontextmenue und
+/// "Video pruefen" trotzdem noch im Projekt beziehungsweise im Ordner suchen.
 /// </summary>
 public static class HaltungStatusColumnFactory
 {
@@ -165,7 +170,8 @@ public static class HaltungStatusColumnFactory
             "Video {0} abspielen",
             glyph));
         huelle.AppendChild(StatusZellenBausteine.Fehlt(
-            Sichtbarkeit(HaltungStatusSichtbarkeitConverter.KeinVideo), "kein Video"));
+            Sichtbarkeit(HaltungStatusSichtbarkeitConverter.KeinVideo),
+            HaltungProtokollQuelle.OhneVideoHinweis));
         return huelle;
     }
 
@@ -181,7 +187,8 @@ public static class HaltungStatusColumnFactory
             StatusZellenBausteine.Kuerzel("PDF"),
             breite: 36d));
         huelle.AppendChild(StatusZellenBausteine.Fehlt(
-            Sichtbarkeit(HaltungStatusSichtbarkeitConverter.KeinProtokoll), "kein Protokoll"));
+            Sichtbarkeit(HaltungStatusSichtbarkeitConverter.KeinProtokoll),
+            HaltungProtokollQuelle.OhneProtokollHinweis));
         return huelle;
     }
 
