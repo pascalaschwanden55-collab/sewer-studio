@@ -36,7 +36,9 @@ public sealed class SchaechteProtokollColumnFactoryTests
     {
         StaTestRunner.Run(() =>
         {
-            var (knopf, strich) = Zelle(pdfPfad: @"D:\Projekt\Schaechte\78998.pdf");
+            var (knopf, strich) = Zelle(
+                ("Schachtnummer", "78998"),
+                (FieldKeys.PdfPath, @"D:\Projekt\Schaechte\78998.pdf"));
 
             Assert.Equal(Visibility.Visible, knopf.Visibility);
             Assert.Equal(Visibility.Collapsed, strich.Visibility);
@@ -58,7 +60,7 @@ public sealed class SchaechteProtokollColumnFactoryTests
     {
         StaTestRunner.Run(() =>
         {
-            var (knopf, strich) = Zelle(pdfPfad: null);
+            var (knopf, strich) = Zelle(("Schachtnummer", "78998"));
 
             Assert.Equal(Visibility.Collapsed, knopf.Visibility);
             Assert.Equal(Visibility.Visible, strich.Visibility);
@@ -67,20 +69,65 @@ public sealed class SchaechteProtokollColumnFactoryTests
         });
     }
 
+    /// <summary>
+    /// Fix-Runde 1: Der Knopf erscheint genau dann, wenn der Oeffner etwas oeffnen wuerde.
+    /// Nur PDF_Eigen (oder PDF_All) ist fuer ihn keine Quelle; ein Link auf eine PDF dagegen schon.
+    /// </summary>
+    [Fact]
+    public void Ein_anderes_PDF_Feld_allein_zeigt_keinen_Knopf()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var (knopf, strich) = Zelle((FieldKeys.PdfEigen, @"D:\Projekt\Schaechte\78998.pdf"));
+
+            Assert.Equal(Visibility.Collapsed, knopf.Visibility);
+            Assert.Equal(Visibility.Visible, strich.Visibility);
+        });
+    }
+
+    [Fact]
+    public void Ein_Link_auf_eine_PDF_zeigt_den_Knopf()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var (knopf, strich) = Zelle((FieldKeys.Link, @"D:\Projekt\Schaechte\78998.pdf"));
+
+            Assert.Equal(Visibility.Visible, knopf.Visibility);
+            Assert.Equal(Visibility.Collapsed, strich.Visibility);
+        });
+    }
+
+    /// <summary>
+    /// Der vorlesbare Name nimmt die Schachtnummer ueber dieselbe Regel wie die Seite
+    /// (<see cref="SchaechteColumnPolicy.GetSchachtNumber"/>) — auch aus der Spalte "Nr.".
+    /// Ohne Nummer bleibt es beim schlichten Namen statt bei einer Luecke im Satz.
+    /// </summary>
+    [Fact]
+    public void Der_Name_nimmt_die_Schachtnummer_wie_die_Seite()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var (mitNr, _) = Zelle(("Nr.", "12"), (FieldKeys.PdfPath, @"D:\a.pdf"));
+            Assert.Equal("Protokoll 12 öffnen", AutomationProperties.GetName(mitNr));
+
+            var (ohneNr, _) = Zelle((FieldKeys.PdfPath, @"D:\a.pdf"));
+            Assert.Equal("Protokoll öffnen", AutomationProperties.GetName(ohneNr));
+        });
+    }
+
     /// <summary>Die Spalte ist virtuell: kein Feld, deshalb auch nichts fuer die Layout-Speicherung.</summary>
     [Fact]
     public void Der_Schluessel_der_Spalte_ist_virtuell()
         => Assert.True(NovaStatusSpalten.IstVirtuell(NovaStatusSpalten.Protokoll));
 
-    private static (Button Knopf, TextBlock Strich) Zelle(string? pdfPfad)
+    private static (Button Knopf, TextBlock Strich) Zelle(params (string Feld, string Wert)[] felder)
     {
         var spalte = SchaechteProtokollColumnFactory.Create("PROTOKOLL");
         var wurzel = Assert.IsType<Grid>(spalte.CellTemplate.LoadContent());
 
         var record = new SchachtRecord();
-        record.SetFieldValue("Schachtnummer", "78998", FieldSource.Manual, userEdited: false);
-        if (!string.IsNullOrWhiteSpace(pdfPfad))
-            record.SetFieldValue(FieldKeys.PdfPath, pdfPfad, FieldSource.Manual, userEdited: false);
+        foreach (var (feld, wert) in felder)
+            record.SetFieldValue(feld, wert, FieldSource.Manual, userEdited: false);
 
         wurzel.DataContext = record;
         WpfBindungsPumpe.Leeren();

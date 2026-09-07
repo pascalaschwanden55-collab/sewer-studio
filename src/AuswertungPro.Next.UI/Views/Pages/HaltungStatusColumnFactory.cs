@@ -158,14 +158,14 @@ public static class HaltungStatusColumnFactory
         var glyph = new FrameworkElementFactory(typeof(FluentIcon));
         glyph.SetValue(FluentIcon.GlyphProperty, VideoGlyph);
 
-        var knopf = Aktionsknopf(
+        huelle.AppendChild(Aktionsknopf(
             nameof(DataPageViewModel.PlayVideoCommand),
             HaltungStatusSichtbarkeitConverter.Video,
             "Video abspielen",
-            "Video {0} abspielen");
-        knopf.AppendChild(glyph);
-        huelle.AppendChild(knopf);
-        huelle.AppendChild(Fehlt(HaltungStatusSichtbarkeitConverter.KeinVideo, "kein Video"));
+            "Video {0} abspielen",
+            glyph));
+        huelle.AppendChild(StatusZellenBausteine.Fehlt(
+            Sichtbarkeit(HaltungStatusSichtbarkeitConverter.KeinVideo), "kein Video"));
         return huelle;
     }
 
@@ -173,68 +173,48 @@ public static class HaltungStatusColumnFactory
     {
         var huelle = new FrameworkElementFactory(typeof(Grid));
 
-        var beschriftung = new FrameworkElementFactory(typeof(TextBlock));
-        beschriftung.SetValue(TextBlock.TextProperty, "PDF");
-        beschriftung.SetResourceReference(TextBlock.FontSizeProperty, "TextXS");
-        beschriftung.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
-
-        var knopf = Aktionsknopf(
+        huelle.AppendChild(Aktionsknopf(
             nameof(DataPageViewModel.OpenOriginalPdfCommand),
             HaltungStatusSichtbarkeitConverter.Protokoll,
             "Protokoll öffnen",
-            "Protokoll {0} öffnen");
-        knopf.SetValue(FrameworkElement.WidthProperty, 36d);
-        knopf.AppendChild(beschriftung);
-        huelle.AppendChild(knopf);
-        huelle.AppendChild(Fehlt(HaltungStatusSichtbarkeitConverter.KeinProtokoll, "kein Protokoll"));
+            "Protokoll {0} öffnen",
+            StatusZellenBausteine.Kuerzel("PDF"),
+            breite: 36d));
+        huelle.AppendChild(StatusZellenBausteine.Fehlt(
+            Sichtbarkeit(HaltungStatusSichtbarkeitConverter.KeinProtokoll), "kein Protokoll"));
         return huelle;
     }
 
     /// <summary>
     /// Ein Knopf, der den vorhandenen Seitenbefehl mit dem Datensatz der Zeile aufruft. Der
     /// Befehl haengt am DataContext des DataGrid (dem ViewModel), der Parameter an der Zeile.
-    /// Tooltip UND vorlesbarer Name werden gesetzt: Ein Glyph laesst sich nicht vorlesen.
+    /// Aufbau und Zubehoer liegen im gemeinsamen <see cref="StatusZellenBausteine"/>; hier steht
+    /// nur, was fuer die Haltungsliste gilt.
     /// </summary>
     private static FrameworkElementFactory Aktionsknopf(
         string befehl,
         string sichtbarkeitsParameter,
         string hinweis,
-        string namensMuster)
-    {
-        var knopf = new FrameworkElementFactory(typeof(Button));
-        knopf.SetResourceReference(FrameworkElement.StyleProperty, "IconButton");
-        knopf.SetValue(FrameworkElement.ToolTipProperty, hinweis);
-        knopf.SetBinding(AutomationProperties.NameProperty, new Binding($"Fields[{FieldKeys.HoldingName}]")
-        {
-            Mode = BindingMode.OneWay,
-            StringFormat = namensMuster
-        });
-        knopf.SetBinding(ButtonBase.CommandProperty, new Binding($"DataContext.{befehl}")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
-        });
-        knopf.SetBinding(ButtonBase.CommandParameterProperty, new Binding("."));
-        knopf.SetBinding(
-            UIElement.VisibilityProperty,
-            HaltungZeilenStatusConverter.Bindung(HaltungStatusSichtbarkeitConverter.Instance, sichtbarkeitsParameter));
-        return knopf;
-    }
+        string namensMuster,
+        FrameworkElementFactory inhalt,
+        double? breite = null)
+        => StatusZellenBausteine.Aktionsknopf(
+            befehl: new Binding($"DataContext.{befehl}")
+            {
+                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
+            },
+            name: new Binding($"Fields[{FieldKeys.HoldingName}]")
+            {
+                Mode = BindingMode.OneWay,
+                StringFormat = namensMuster
+            },
+            hinweis: hinweis,
+            sichtbarkeit: Sichtbarkeit(sichtbarkeitsParameter),
+            inhalt: inhalt,
+            breite: breite);
 
-    /// <summary>Kein Video beziehungsweise kein Protokoll: ein Gedankenstrich mit Hinweis.</summary>
-    private static FrameworkElementFactory Fehlt(string sichtbarkeitsParameter, string hinweis)
-    {
-        var strich = new FrameworkElementFactory(typeof(TextBlock));
-        strich.SetValue(TextBlock.TextProperty, "–");
-        strich.SetValue(FrameworkElement.ToolTipProperty, hinweis);
-        strich.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
-        strich.SetResourceReference(TextBlock.FontSizeProperty, "TextS");
-        strich.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
-        strich.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
-        strich.SetBinding(
-            UIElement.VisibilityProperty,
-            HaltungZeilenStatusConverter.Bindung(HaltungStatusSichtbarkeitConverter.Instance, sichtbarkeitsParameter));
-        return strich;
-    }
+    private static MultiBinding Sichtbarkeit(string parameter)
+        => HaltungZeilenStatusConverter.Bindung(HaltungStatusSichtbarkeitConverter.Instance, parameter);
 
     private static Binding Aufzaehlung(string pfad, string wert)
         => new(pfad)

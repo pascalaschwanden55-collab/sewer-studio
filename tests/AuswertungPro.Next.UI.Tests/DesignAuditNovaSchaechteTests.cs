@@ -123,7 +123,53 @@ public sealed class DesignAuditNovaSchaechteTests
         var aufbau = Regex.Match(code, @"private void RebuildColumns\(\)[\s\S]*?\n    \}");
         Assert.True(aufbau.Success, "RebuildColumns nicht gefunden");
 
-        Assert.Equal(1, Regex.Matches(aufbau.Value, @"GetDisplayHeader\(").Count);
+        Assert.Single(Regex.Matches(aufbau.Value, @"GetDisplayHeader\("));
         Assert.Contains("GrossbuchstabenConverter.Anwenden(kopf)", aufbau.Value);
+    }
+
+    /// <summary>
+    /// Task 6, Fix-Runde 1: Eine echte Auswahl in der Zustandsklassen-Marke muss als
+    /// Handeingabe gestempelt werden — nur handgesetzte Felder gehen in die XTF. Die Seite merkt
+    /// sich dafuer den Wert beim Oeffnen der Zelle und schreibt beim Schliessen nur bei echter
+    /// Aenderung; das Projekt gilt danach als geaendert.
+    /// </summary>
+    [Fact]
+    public void Eine_Auswahl_der_Zustandsklasse_wird_gestempelt_und_meldet_die_Aenderung()
+    {
+        var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
+
+        Assert.Contains("_zustandsklasseBeimOeffnen", code);
+        var commit = Regex.Match(code, @"private void Grid_CellEditEnding[\s\S]*?\n    \}");
+        Assert.True(commit.Success, "Grid_CellEditEnding nicht gefunden");
+        Assert.Contains("SchaechteFieldEditController.ApplyZustandsklasse(", commit.Value);
+        Assert.Contains("MarkProjectDirty();", commit.Value);
+    }
+
+    /// <summary>
+    /// Task 6, Fix-Runde 1: Knopf und Gedankenstrich der Statusspalten kommen in beiden Listen
+    /// aus demselben Baustein — sonst driften Stil, Hinweis und vorlesbarer Name auseinander.
+    /// </summary>
+    [Fact]
+    public void Knopfzellen_beider_Listen_kommen_aus_einem_Baustein()
+    {
+        foreach (var datei in new[] { "HaltungStatusColumnFactory.cs", "SchaechteProtokollColumnFactory.cs" })
+        {
+            var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", datei));
+            Assert.Contains("StatusZellenBausteine.Aktionsknopf(", code);
+            Assert.Contains("StatusZellenBausteine.Fehlt(", code);
+        }
+    }
+
+    /// <summary>
+    /// Task 6, Fix-Runde 1: Auch die Schachtansicht zeigt fuer ein leeres Eckdatenfeld den
+    /// Gedankenstrich statt einer leeren Zeile unter der Beschriftung.
+    /// </summary>
+    [Fact]
+    public void Schachtansicht_zeigt_leere_Eckdaten_als_Gedankenstrich()
+    {
+        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
+        Assert.Contains("haltung:FaktWertConverter", xaml);
+        foreach (var feld in new[] { "Funktion", "Material", "Schachttiefe", "Baujahr", "Belastungsklasse", "Inspektionsdatum" })
+            Assert.Contains($"Fields[{feld}], Converter={{StaticResource FaktWertConv}}", xaml);
     }
 }

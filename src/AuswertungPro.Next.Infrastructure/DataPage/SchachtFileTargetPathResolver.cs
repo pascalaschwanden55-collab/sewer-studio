@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.UseCases.NaechsteAufgabe;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.DataPage;
@@ -10,18 +11,17 @@ public sealed class SchachtFileTargetPathResolver : ISchachtFileTargetResolver
     {
         ArgumentNullException.ThrowIfNull(record);
 
-        var pdfPath = ResolvePdfCandidate(record.GetFieldValue(FieldKeys.PdfPath), projectFilePath);
-        if (!string.IsNullOrWhiteSpace(pdfPath))
-            return pdfPath;
-
-        var link = record.GetFieldValue(FieldKeys.Link);
-        if (string.IsNullOrWhiteSpace(link)
-            || !link.Trim().EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        // Welche Felder ueberhaupt in Frage kommen, sagt die gemeinsame Regel — dieselbe, die
+        // in der Schachtliste ueber den Protokollknopf entscheidet. Ob der Pfad wirklich
+        // existiert und wie ein relativer aufzuloesen ist, bleibt hier.
+        foreach (var kandidat in SchachtProtokollQuelle.Kandidaten(record))
         {
-            return null;
+            var pfad = ResolvePdfCandidate(kandidat, projectFilePath);
+            if (!string.IsNullOrWhiteSpace(pfad))
+                return pfad;
         }
 
-        return ResolvePdfCandidate(link, projectFilePath);
+        return null;
     }
 
     public string? ResolveExplorerTarget(SchachtRecord record, string? projectFilePath)

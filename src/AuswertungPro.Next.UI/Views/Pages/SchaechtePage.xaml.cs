@@ -57,6 +57,13 @@ public partial class SchaechtePage : UserControl
     private readonly NachschlagTor _nachschlagTor = new();
     private bool _isRestoringLayout;
 
+    /// <summary>
+    /// Der Wert der Zustandsklasse beim Oeffnen der Zelle (Task 6, Fix-Runde 1). Nur damit
+    /// laesst sich beim Schliessen sagen, ob wirklich eine andere Klasse gewaehlt wurde: Die
+    /// Marke ist eine Vorlagenspalte, deren Editierelement der Textleser nicht lesen kann.
+    /// </summary>
+    private string? _zustandsklasseBeimOeffnen;
+
     public SchaechtePage()
     {
         InitializeComponent();
@@ -521,6 +528,13 @@ public partial class SchaechtePage : UserControl
     private void Grid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
     {
         _ = sender;
+
+        _zustandsklasseBeimOeffnen = e.Row?.Item is SchachtRecord geoeffnet
+            && e.Column?.GetValue(FrameworkElement.TagProperty) is string feld
+            && IsZustandsklasseColumn(feld)
+                ? geoeffnet.GetFieldValue(feld)
+                : null;
+
         if (e.Row?.Item is not SchachtRecord record
             || DataContext is not SchaechtePageViewModel vm
             || vm.CanMutateRecord(record, "Schachtfeld aendern"))
@@ -534,6 +548,9 @@ public partial class SchaechtePage : UserControl
     private void Grid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
     {
         _ = sender;
+
+        var zustandsklasseBeimOeffnen = _zustandsklasseBeimOeffnen;
+        _zustandsklasseBeimOeffnen = null;
 
         if (e.EditAction != DataGridEditAction.Commit)
             return;
@@ -550,6 +567,20 @@ public partial class SchaechtePage : UserControl
 
         if (IsCostColumn(recordField))
         {
+            MarkProjectDirty();
+            ApplySearchFilter();
+            return;
+        }
+
+        // Die Zustandsklasse steht in einer Vorlagenspalte: Ihr Editierelement ist ein
+        // ContentPresenter, aus dem der Textleser nichts holen kann. Die Auswahl hat ihren Wert
+        // ueber die Bindung schon geschrieben — hier wird nur noch Herkunft und Handmarkierung
+        // nachgezogen, und das nur bei echter Aenderung.
+        if (IsZustandsklasseColumn(recordField))
+        {
+            if (!SchaechteFieldEditController.ApplyZustandsklasse(recordField, record, zustandsklasseBeimOeffnen))
+                return;
+
             MarkProjectDirty();
             ApplySearchFilter();
             return;

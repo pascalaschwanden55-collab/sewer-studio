@@ -1,7 +1,5 @@
 using System.Windows;
-using System.Windows.Automation;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using AuswertungPro.Next.UI.DataPage;
 
@@ -49,52 +47,21 @@ public static class SchaechteProtokollColumnFactory
     {
         var huelle = new FrameworkElementFactory(typeof(Grid));
         huelle.AppendChild(Knopf());
-        huelle.AppendChild(Fehlt());
+        huelle.AppendChild(StatusZellenBausteine.Fehlt(
+            SchachtProtokollSichtbarkeitConverter.Bindung(SchachtProtokollSichtbarkeitConverter.KeinProtokoll),
+            "kein Protokoll"));
         return huelle;
     }
 
     private static FrameworkElementFactory Knopf()
-    {
-        var beschriftung = new FrameworkElementFactory(typeof(TextBlock));
-        beschriftung.SetValue(TextBlock.TextProperty, "PDF");
-        beschriftung.SetResourceReference(TextBlock.FontSizeProperty, "TextXS");
-        beschriftung.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
-
-        var knopf = new FrameworkElementFactory(typeof(Button));
-        knopf.SetResourceReference(FrameworkElement.StyleProperty, "IconButton");
-        knopf.SetValue(FrameworkElement.WidthProperty, 36d);
-        // Ein Glyph oder ein Kuerzel laesst sich nicht vorlesen: Hinweis UND Name werden gesetzt.
-        knopf.SetValue(FrameworkElement.ToolTipProperty, "Protokoll öffnen");
-        knopf.SetBinding(AutomationProperties.NameProperty, new Binding("Fields[Schachtnummer]")
-        {
-            Mode = BindingMode.OneWay,
-            StringFormat = "Protokoll {0} öffnen"
-        });
-        knopf.SetBinding(ButtonBase.CommandProperty, new Binding(nameof(SchaechtePage.ProtokollOeffnenCommand))
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(SchaechtePage), 1)
-        });
-        knopf.SetBinding(ButtonBase.CommandParameterProperty, new Binding("."));
-        knopf.SetBinding(
-            UIElement.VisibilityProperty,
-            SchachtProtokollSichtbarkeitConverter.Bindung(SchachtProtokollSichtbarkeitConverter.Protokoll));
-        knopf.AppendChild(beschriftung);
-        return knopf;
-    }
-
-    /// <summary>Kein Protokoll: ein Gedankenstrich mit Hinweis — nie ein toter Knopf.</summary>
-    private static FrameworkElementFactory Fehlt()
-    {
-        var strich = new FrameworkElementFactory(typeof(TextBlock));
-        strich.SetValue(TextBlock.TextProperty, "–");
-        strich.SetValue(FrameworkElement.ToolTipProperty, "kein Protokoll");
-        strich.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
-        strich.SetResourceReference(TextBlock.FontSizeProperty, "TextS");
-        strich.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
-        strich.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
-        strich.SetBinding(
-            UIElement.VisibilityProperty,
-            SchachtProtokollSichtbarkeitConverter.Bindung(SchachtProtokollSichtbarkeitConverter.KeinProtokoll));
-        return strich;
-    }
+        => StatusZellenBausteine.Aktionsknopf(
+            befehl: new Binding(nameof(SchaechtePage.ProtokollOeffnenCommand))
+            {
+                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(SchaechtePage), 1)
+            },
+            name: SchachtProtokollSichtbarkeitConverter.Bindung(SchachtProtokollNameConverter.Instance),
+            hinweis: "Protokoll öffnen",
+            sichtbarkeit: SchachtProtokollSichtbarkeitConverter.Bindung(SchachtProtokollSichtbarkeitConverter.Protokoll),
+            inhalt: StatusZellenBausteine.Kuerzel("PDF"),
+            breite: 36d);
 }

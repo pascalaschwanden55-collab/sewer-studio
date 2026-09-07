@@ -19,8 +19,11 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 /// Klasse erscheint ein gestrichelt umrandeter Gedankenstrich mit dem Hinweis
 /// "nicht berechnet" — ein Strich ist der getrennte Zustand und darf nie als Z4 gelesen werden.
 ///
-/// Bearbeiten bleibt moeglich: Die Bearbeitungsvorlage ist dieselbe Auswahl 0 bis 4 wie in
-/// <see cref="SchaechteZustandsklasseColumnFactory"/>.
+/// Bearbeiten bleibt moeglich: Die Bearbeitungsvorlage ist die Auswahl 0 bis 4 aus
+/// <see cref="ZustandsklasseColorPalette.SelectionOptions"/>. Die Auswahl schreibt ueber die
+/// TwoWay-Bindung direkt in <c>Fields</c>; Herkunft und Handmarkierung setzt der Zellen-Commit
+/// der jeweiligen Seite nach (<c>DataPageCellEditController</c> beziehungsweise
+/// <c>SchaechteFieldEditController.ApplyZustandsklasse</c>).
 /// </summary>
 public static class ZustandsklasseChipColumnFactory
 {
