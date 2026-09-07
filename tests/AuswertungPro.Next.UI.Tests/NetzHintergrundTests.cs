@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Reflection;
+using System.Windows.Shapes;
 using AuswertungPro.Next.UI.Controls;
 using Xunit;
 
@@ -38,6 +39,10 @@ public sealed class NetzHintergrundTests
     /// und prueft am echten Formen-Pool: zwei aufeinanderfolgende Zeichne()-Aufrufe ohne
     /// zwischenzeitlichen Schritt() duerfen die Kinderzahl von Flaeche nicht erhoehen, und die
     /// Formen selbst bleiben dieselben Objekte (kein Neuanlegen).
+    ///
+    /// Fix-Runde 2 (Re-Reviewer): der Formen-Pool darf die urspruengliche Zeichenreihenfolge
+    /// nicht umkehren. Knoten liegen ueber den Linien (wie vor dem Formen-Pool); das letzte
+    /// Kind von Flaeche.Children muss deshalb weiterhin eine Ellipse sein, keine Line.
     /// </summary>
     [Fact]
     public void Zeichne_erhoeht_die_Kinderzahl_bei_wiederholten_Aufrufen_nicht()
@@ -68,8 +73,12 @@ public sealed class NetzHintergrundTests
 
             Assert.Equal(ersteAnzahl, zweiteAnzahl);
             Assert.Equal(zweiteAnzahl, dritteAnzahl);
-            // Nicht nur gleich viele -- dieselben Formen-Objekte (Pool statt Neuanlage).
+            // Nicht nur gleich viele, sondern dieselben Formen-Objekte (Pool statt Neuanlage).
             Assert.Equal(ersteFormen, zweiteFormen);
+
+            // Fix-Runde 2: Knoten liegen weiterhin ueber den Linien (letztes Kind = oberste
+            // Zeichenebene in einem Canvas).
+            Assert.IsType<Ellipse>(control.Flaeche.Children[control.Flaeche.Children.Count - 1]);
         });
     }
 }

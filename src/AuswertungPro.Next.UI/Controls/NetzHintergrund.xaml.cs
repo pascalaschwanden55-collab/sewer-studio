@@ -182,8 +182,12 @@ public partial class NetzHintergrund : UserControl
             {
                 var neu = new Line { StrokeThickness = 1, IsHitTestVisible = false };
                 neu.SetResourceReference(Shape.StrokeProperty, "AccentBrush");
+                // Knoten liegen (aus NeuesModellUndStandbild) bereits im Canvas, bevor je eine
+                // Linie existiert. Damit die Knoten weiterhin ueber den Linien liegen (wie vor
+                // dem Formen-Pool), wird jede neue Linie VOR die Knoten eingefuegt: am Index
+                // ihrer eigenen Position im Linien-Pool, direkt hinter der letzten Linie.
+                Flaeche.Children.Insert(i, neu);
                 _linienFormen.Add(neu);
-                Flaeche.Children.Add(neu);
             }
 
             var v = verbindungen[i];
