@@ -24,6 +24,12 @@ public partial class DataPage
         if (DataContext is not DataPageViewModel vm)
             return;
 
+        // Fix-Runde 1 (F5): In der alten Haltungsansicht gibt es die vier virtuellen
+        // Statusspalten nicht; dort gelten dieselben Ansichten ohne sie, und "Kompakt" fuehrt
+        // weiter den rohen Videopfad. Chips und Aufloesung lesen deshalb dieselbe Liste.
+        var nova = NovaLayoutAktiv;
+        ColumnViewChips.ItemsSource = DataPageColumnViewCatalog.ViewsFuer(nova);
+
         _columnViews = new DataPageColumnViewController(
             Grid,
             column => _columnFields.TryGetValue(column, out var field) ? field : null,
@@ -34,7 +40,8 @@ public partial class DataPage
                 layout.ActiveColumnView = key;
                 vm.Settings.DataPageLayout = layout;
                 vm.Settings.Save();
-            });
+            },
+            resolve: key => DataPageColumnViewCatalog.Resolve(key, nova));
         _columnViews.Apply(_columnViews.ActiveKey);
         WendeZeilenhoeheAn(_columnViews.ActiveKey);
         SyncColumnViewChips();

@@ -86,6 +86,7 @@ public sealed class DataPageCellEditControllerTests
         Assert.Equal(1, optionCalls);
     }
 
+    /// <summary>Ohne bekannten Ausgangswert bleibt der bisherige Weg: der Wert wird gestempelt.</summary>
     [Fact]
     public void Zustandsklasse_ohne_neuen_wert_markiert_bisherigen_wert_manuell()
     {
@@ -95,6 +96,54 @@ public sealed class DataPageCellEditControllerTests
 
         Assert.True(shouldSave);
         Assert.Equal("3", record.GetFieldValue("Zustandsklasse"));
+        Assert.True(record.FieldMeta["Zustandsklasse"].UserEdited);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (F2): Die Zustandsklasse steht im Nova-Layout in einer Vorlagenspalte; deren
+    /// Bearbeitungselement kann der Textleser nicht lesen (<c>editedValue</c> ist null). Ohne
+    /// Vergleich mit dem Wert beim Oeffnen stempelte schon das blosse Anklicken der Zelle den
+    /// Wert als Handeingabe und loeste einen Speicherlauf aus.
+    /// </summary>
+    [Fact]
+    public void Zustandsklasse_ohne_aenderung_wird_nicht_als_handeingabe_gestempelt()
+    {
+        var record = RecordWith("Zustandsklasse", "3");
+
+        var shouldSave = Apply("Zustandsklasse", record, editedValue: null, wertBeimOeffnen: "3");
+
+        Assert.False(shouldSave);
+        Assert.Equal("3", record.GetFieldValue("Zustandsklasse"));
+        Assert.False(record.FieldMeta["Zustandsklasse"].UserEdited);
+    }
+
+    /// <summary>Ein Wert, den die Auswahlliste nicht kennt, bleibt beim Oeffnen und Schliessen stehen.</summary>
+    [Fact]
+    public void Zustandsklasse_behaelt_einen_unbekannten_wert_beim_blossen_oeffnen()
+    {
+        var record = RecordWith("Zustandsklasse", "2,4");
+
+        var shouldSave = Apply("Zustandsklasse", record, editedValue: null, wertBeimOeffnen: "2,4");
+
+        Assert.False(shouldSave);
+        Assert.Equal("2,4", record.GetFieldValue("Zustandsklasse"));
+        Assert.False(record.FieldMeta["Zustandsklasse"].UserEdited);
+    }
+
+    /// <summary>
+    /// Eine echte Auswahl schreibt die Bindung direkt in den Datensatz; der Commit stempelt sie
+    /// danach als Handeingabe und laesst speichern.
+    /// </summary>
+    [Fact]
+    public void Zustandsklasse_mit_echter_aenderung_wird_gestempelt_und_gespeichert()
+    {
+        var record = RecordWith("Zustandsklasse", "3");
+        record.Fields["Zustandsklasse"] = "1";
+
+        var shouldSave = Apply("Zustandsklasse", record, editedValue: null, wertBeimOeffnen: "3");
+
+        Assert.True(shouldSave);
+        Assert.Equal("1", record.GetFieldValue("Zustandsklasse"));
         Assert.True(record.FieldMeta["Zustandsklasse"].UserEdited);
     }
 
@@ -248,7 +297,8 @@ public sealed class DataPageCellEditControllerTests
         string? editedValue,
         bool confirm = true,
         Action<string, string?>? ensure = null,
-        Func<HaltungRecord, string, string, bool>? rename = null)
+        Func<HaltungRecord, string, string, bool>? rename = null,
+        string? wertBeimOeffnen = null)
         => DataPageCellEditController.Apply(
             fieldName,
             record,
@@ -259,7 +309,8 @@ public sealed class DataPageCellEditControllerTests
             {
                 item.SetFieldValue("Haltungsname", newValue, FieldSource.Manual, userEdited: true);
                 return true;
-            }));
+            }),
+            wertBeimOeffnen);
 
     private static HaltungRecord RecordWith(string fieldName, string value)
     {

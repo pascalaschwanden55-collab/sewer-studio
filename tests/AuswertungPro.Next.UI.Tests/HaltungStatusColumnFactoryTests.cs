@@ -177,6 +177,35 @@ public sealed class HaltungStatusColumnFactoryTests
         });
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (F6): Die Befehlsnamen stehen als <c>nameof</c> in der Fabrik. Dieser Test
+    /// prueft zusaetzlich gegen den echten Typ — ein umbenannter Befehl macht den Waechter rot,
+    /// statt die Knoepfe still wirkungslos werden zu lassen.
+    /// </summary>
+    [Fact]
+    public void Beide_Knopfbefehle_gibt_es_wirklich_am_DataPageViewModel()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var vm = typeof(AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel);
+
+            foreach (var (spalte, name) in new[]
+                     {
+                         (HaltungStatusColumnFactory.Video("VIDEO"), "PlayVideoCommand"),
+                         (HaltungStatusColumnFactory.Protokoll("PROTOKOLL"), "OpenOriginalPdfCommand")
+                     })
+            {
+                var zelle = Assert.IsType<Grid>(spalte.CellTemplate.LoadContent());
+                var knopf = zelle.Children.OfType<Button>().Single();
+                var pfad = Assert.IsType<Binding>(
+                    BindingOperations.GetBinding(knopf, ButtonBase.CommandProperty)).Path.Path;
+
+                Assert.Equal($"DataContext.{name}", pfad);
+                Assert.NotNull(vm.GetProperty(name));
+            }
+        });
+    }
+
     private static HaltungRecord MitOffenenKiBefunden(int anzahl)
     {
         var revision = new ProtocolRevision();

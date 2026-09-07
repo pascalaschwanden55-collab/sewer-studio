@@ -25,6 +25,29 @@ public sealed class DataGridStandardTextColumnFactoryTests
         });
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (F4): Die Drei-Zeilen-Grenze gilt nur im Nova-Layout. Die alte
+    /// Haltungsansicht bleibt unveraendert — dort wird keine Zelle gekuerzt.
+    /// </summary>
+    [Fact]
+    public void Die_Hoehengrenze_gilt_nur_auf_ausdruecklichen_Wunsch()
+    {
+        RunOnSta(() =>
+        {
+            var ohne = DataGridStandardTextColumnFactory.Create("Bemerkungen", "Bemerkungen");
+            Assert.DoesNotContain(
+                ohne.ElementStyle.Setters.OfType<System.Windows.Setter>(),
+                setter => setter.Property == System.Windows.FrameworkElement.MaxHeightProperty);
+
+            var mit = DataGridStandardTextColumnFactory.Create(
+                "Bemerkungen", "Bemerkungen", UpdateSourceTrigger.LostFocus, hoeheBegrenzen: true);
+            Assert.Contains(
+                mit.ElementStyle.Setters.OfType<System.Windows.Setter>(),
+                setter => setter.Property == System.Windows.FrameworkElement.MaxHeightProperty
+                    && Equals(setter.Value, AuswertungPro.Next.UI.DataPage.DataPageColumnStyleRules.MaximaleZellenhoehe));
+        });
+    }
+
     private static void RunOnSta(Action action)
     {
         Exception? exception = null;

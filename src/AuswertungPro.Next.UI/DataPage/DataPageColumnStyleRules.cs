@@ -36,6 +36,13 @@ public static class DataPageColumnStyleRules
     /// </summary>
     public const double MaximaleZellenhoehe = 54;
 
+    /// <summary>
+    /// Die eine Spalte mit bewusst langem Fliesstext. Sie bekommt die eigene Umbruchvorlage
+    /// (mehrzeiliger Editor) und im Nova-Layout den Volltext im Hinweis.
+    /// </summary>
+    public static bool IstUmbruchspalte(string feld)
+        => string.Equals(feld, FieldKeys.RecommendedRehabilitationMeasures, StringComparison.Ordinal);
+
     public static bool IstNamensspalte(string feld) => string.Equals(feld, FieldKeys.HoldingName, StringComparison.Ordinal);
 
     public static bool IstZahlenspalte(string feld) => Zahlen.Contains(feld);

@@ -23,6 +23,17 @@ public sealed class DataPageZeilenhoehePolicyTests
     public void Alle_Spalten_und_Bewertung_bleiben_auf_Auto(string schluessel)
         => Assert.False(DataPageZeilenhoehePolicy.IstEinzeilig(schluessel));
 
+    /// <summary>
+    /// Fix-Runde 1 (Minor): Eine unbekannte oder fehlende Ansicht bleibt auf Auto. Lieber eine
+    /// zu hohe Zeile als ein abgeschnittener Wert.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("gibt-es-nicht")]
+    public void Unbekannte_Ansichten_bleiben_auf_Auto(string? schluessel)
+        => Assert.False(DataPageZeilenhoehePolicy.IstEinzeilig(schluessel));
+
     /// <summary>Jede Ansicht des Katalogs ist eindeutig entschieden; nichts bleibt ungeregelt.</summary>
     [Fact]
     public void Jede_bekannte_Ansicht_hat_eine_Entscheidung()

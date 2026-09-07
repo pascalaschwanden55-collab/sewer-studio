@@ -7,6 +7,7 @@ using System.Windows.Shapes;
 using AuswertungPro.Next.Application.UseCases.NaechsteAufgabe;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.UI.ViewModels.Pages;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
@@ -158,7 +159,7 @@ public static class HaltungStatusColumnFactory
         glyph.SetValue(FluentIcon.GlyphProperty, VideoGlyph);
 
         var knopf = Aktionsknopf(
-            "PlayVideoCommand",
+            nameof(DataPageViewModel.PlayVideoCommand),
             HaltungStatusSichtbarkeitConverter.Video,
             "Video abspielen",
             "Video {0} abspielen");
@@ -178,7 +179,7 @@ public static class HaltungStatusColumnFactory
         beschriftung.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
 
         var knopf = Aktionsknopf(
-            "OpenOriginalPdfCommand",
+            nameof(DataPageViewModel.OpenOriginalPdfCommand),
             HaltungStatusSichtbarkeitConverter.Protokoll,
             "Protokoll öffnen",
             "Protokoll {0} öffnen");

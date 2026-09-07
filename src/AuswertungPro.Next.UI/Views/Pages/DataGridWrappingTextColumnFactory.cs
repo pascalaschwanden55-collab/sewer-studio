@@ -9,13 +9,18 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 
 public static class DataGridWrappingTextColumnFactory
 {
-    public static DataGridTextColumn Create(string fieldName, string header)
-        => Create(fieldName, header, ApplicationStyleResolver.FindImplicit);
+    public static DataGridTextColumn Create(string fieldName, string header, bool hoeheBegrenzen = false)
+        => Create(fieldName, header, ApplicationStyleResolver.FindImplicit, hoeheBegrenzen);
 
+    /// <param name="hoeheBegrenzen">
+    /// Nova-Etappe 2b: hoechstens drei Zeilen je Zelle. Gilt nur im Nova-Layout; die alte
+    /// Haltungsansicht bleibt unveraendert (Fix-Runde 1, F4).
+    /// </param>
     internal static DataGridTextColumn Create(
         string fieldName,
         string header,
-        Func<Type, Style?> implicitStyleResolver)
+        Func<Type, Style?> implicitStyleResolver,
+        bool hoeheBegrenzen = false)
     {
         return new DataGridTextColumn
         {
@@ -25,13 +30,13 @@ public static class DataGridWrappingTextColumnFactory
                 Mode = BindingMode.TwoWay,
                 UpdateSourceTrigger = UpdateSourceTrigger.LostFocus
             },
-            ElementStyle = CreateDisplayStyle(implicitStyleResolver(typeof(TextBlock)), fieldName),
+            ElementStyle = CreateDisplayStyle(implicitStyleResolver(typeof(TextBlock)), fieldName, hoeheBegrenzen),
             EditingElementStyle = CreateEditStyle(implicitStyleResolver(typeof(TextBox))),
             Width = DataGridLength.SizeToHeader
         };
     }
 
-    private static Style CreateDisplayStyle(Style? baseStyle, string fieldName)
+    private static Style CreateDisplayStyle(Style? baseStyle, string fieldName, bool hoeheBegrenzen)
     {
         var style = new Style(typeof(TextBlock), baseStyle);
         style.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding("Foreground")
@@ -41,13 +46,11 @@ public static class DataGridWrappingTextColumnFactory
         style.Setters.Add(new Setter(TextBlock.TextWrappingProperty, TextWrapping.NoWrap));
         style.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
         style.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
-        // Nova-Etappe 2b: hoechstens drei Zeilen je Zelle, den Volltext gibt es im Hinweis.
-        // Ein Text mit Zeilenumbruechen zog sonst die ganze Tabellenzeile auf (Bild 07.09.).
-        style.Setters.Add(new Setter(FrameworkElement.MaxHeightProperty, DataPageColumnStyleRules.MaximaleZellenhoehe));
-        style.Setters.Add(new Setter(FrameworkElement.ToolTipProperty, new Binding($"Fields[{fieldName}]")));
-        var ohneInhalt = new DataTrigger { Binding = new Binding($"Fields[{fieldName}]"), Value = string.Empty };
-        ohneInhalt.Setters.Add(new Setter(ToolTipService.IsEnabledProperty, false));
-        style.Triggers.Add(ohneInhalt);
+        // Nova-Etappe 2b: hoechstens drei Zeilen je Zelle. Ein Text mit Zeilenumbruechen zog
+        // sonst die ganze Tabellenzeile auf (Bild 07.09.). Den Volltext traegt der Hinweis der
+        // Zelle (DataGridFieldMetaTooltipStyleFactory) zusammen mit der Herkunftszeile.
+        if (hoeheBegrenzen)
+            style.Setters.Add(new Setter(FrameworkElement.MaxHeightProperty, DataPageColumnStyleRules.MaximaleZellenhoehe));
         if (DataPageColumnStyleRules.IstNamensspalte(fieldName))
             style.Setters.Add(new Setter(TextBlock.FontWeightProperty, FontWeights.SemiBold));
         if (DataPageColumnStyleRules.IstZahlenspalte(fieldName))

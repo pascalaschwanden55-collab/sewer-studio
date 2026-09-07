@@ -59,6 +59,34 @@ public static class DataPageColumnViewCatalog
         new("alle", "Alle Spalten", null)
     ];
 
-    public static DataPageColumnView Resolve(string? key)
-        => Views.FirstOrDefault(v => string.Equals(v.Key, key, StringComparison.OrdinalIgnoreCase)) ?? Views[^1];
+    /// <summary>
+    /// Fix-Runde 1 (F5): Dieselben Ansichten fuer die alte Haltungsansicht. Dort gibt es die vier
+    /// virtuellen Statusspalten nicht — "Kompakt" fuehrt deshalb weiter den rohen Videopfad
+    /// <c>Link</c>, sonst waere die Videoangabe dort ersatzlos verschwunden.
+    /// </summary>
+    public static IReadOnlyList<DataPageColumnView> AltansichtViews { get; } =
+        Views.Select(OhneVirtuelleSpalten).ToList();
+
+    /// <summary>Die Ansichten des aktiven Layouts.</summary>
+    public static IReadOnlyList<DataPageColumnView> ViewsFuer(bool nova) => nova ? Views : AltansichtViews;
+
+    public static DataPageColumnView Resolve(string? key) => Resolve(key, nova: true);
+
+    public static DataPageColumnView Resolve(string? key, bool nova)
+    {
+        var views = ViewsFuer(nova);
+        return views.FirstOrDefault(v => string.Equals(v.Key, key, StringComparison.OrdinalIgnoreCase)) ?? views[^1];
+    }
+
+    private static DataPageColumnView OhneVirtuelleSpalten(DataPageColumnView view)
+    {
+        if (view.Felder is null)
+            return view;
+
+        var felder = view.Felder.Where(f => !NovaStatusSpalten.IstVirtuell(f)).ToList();
+        if (string.Equals(view.Key, "kompakt", StringComparison.Ordinal))
+            felder.Add(FieldKeys.Link);
+
+        return view with { Felder = felder };
+    }
 }

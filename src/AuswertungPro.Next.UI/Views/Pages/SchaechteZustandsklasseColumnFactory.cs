@@ -23,11 +23,23 @@ internal static class SchaechteZustandsklasseColumnFactory
         => new()
         {
             Header = header,
-            CellTemplate = new DataTemplate { VisualTree = Anzeige(recordField) },
-            CellEditingTemplate = new DataTemplate { VisualTree = Auswahl(recordField) },
+            CellTemplate = Vorlage(Anzeige(recordField)),
+            CellEditingTemplate = Vorlage(Auswahl(recordField)),
             Width = DataGridLength.SizeToHeader,
             MinWidth = 90
         };
+
+    /// <summary>
+    /// Eine fertige, versiegelte Zellvorlage. Versiegelt wird gleich beim Bauen: WPF versiegelt
+    /// eine Vorlage sonst erst beim ersten Anwenden, und vorher laesst sich ihr Baum nicht
+    /// erzeugen (das brauchen die Tests).
+    /// </summary>
+    private static DataTemplate Vorlage(FrameworkElementFactory inhalt)
+    {
+        var vorlage = new DataTemplate { VisualTree = inhalt };
+        vorlage.Seal();
+        return vorlage;
+    }
 
     private static FrameworkElementFactory Anzeige(string recordField)
     {

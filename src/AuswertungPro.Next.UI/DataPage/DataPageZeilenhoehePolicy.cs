@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
@@ -14,7 +15,13 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// </summary>
 public static class DataPageZeilenhoehePolicy
 {
+    /// <summary>
+    /// Die Ansichten ohne lange Textspalte. Bewusst eine Positivliste: Eine unbekannte oder
+    /// fehlende Ansicht bleibt auf Auto und schneidet damit nichts ab.
+    /// </summary>
+    private static readonly HashSet<string> Einzeilig =
+        new(["kompakt", "stammdaten", "sanierung", "kosten"], StringComparer.OrdinalIgnoreCase);
+
     public static bool IstEinzeilig(string? ansichtsSchluessel)
-        => !string.Equals(ansichtsSchluessel, "alle", StringComparison.OrdinalIgnoreCase)
-        && !string.Equals(ansichtsSchluessel, "bewertung", StringComparison.OrdinalIgnoreCase);
+        => ansichtsSchluessel is not null && Einzeilig.Contains(ansichtsSchluessel);
 }

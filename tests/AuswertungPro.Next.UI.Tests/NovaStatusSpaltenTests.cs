@@ -69,6 +69,37 @@ public sealed class NovaStatusSpaltenTests
         });
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (F3): Auch die Reihenfolge darf ein handgesetzter Nova-Eintrag nicht steuern.
+    /// Die Statusspalten bleiben hinter den echten Feldern, egal welchen DisplayIndex das
+    /// gespeicherte Layout fuer sie nennt.
+    /// </summary>
+    [Fact]
+    public void Ein_alter_Layout_Eintrag_verschiebt_keine_virtuelle_Spalte()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var spalten = Spalten();
+            new DataGridColumnLayoutController().Restore(spalten, new DataPageLayoutSettings
+            {
+                Columns =
+                [
+                    // Der Eintrag wollte die KI-Spalte ganz nach vorn ziehen.
+                    new DataPageColumnLayout { FieldName = NovaStatusSpalten.Ki, IsVisible = true, DisplayIndex = 0 },
+                    new DataPageColumnLayout { FieldName = FieldKeys.HoldingName, IsVisible = true, DisplayIndex = 1 }
+                ]
+            });
+
+            var reihenfolge = spalten
+                .OrderBy(s => s.DisplayIndex)
+                .Select(s => (string?)s.GetValue(FrameworkElement.TagProperty))
+                .ToArray();
+
+            Assert.Equal(FieldKeys.HoldingName, reihenfolge[0]);
+            Assert.Equal(NovaStatusSpalten.Alle.ToArray(), reihenfolge.Skip(1).Select(n => n ?? "").ToArray());
+        });
+    }
+
     private static List<DataGridColumn> Spalten()
     {
         var name = new DataGridTextColumn();

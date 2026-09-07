@@ -14,7 +14,15 @@ public static class DataPageColumnSetup
     /// statt einer ganzflaechig eingefaerbten Zelle. Fuer diese Spalte wird die Farbzelle
     /// deshalb bewusst nicht gesetzt; die alte Haltungsansicht behaelt sie unveraendert.
     /// </param>
-    public static DataPageColumnSetupResult Apply(DataGridColumn column, string fieldName, bool farbzelle = true)
+    /// <param name="volltextHinweis">
+    /// Fix-Runde 1 (F4): Eine auf drei Zeilen gekuerzte Zelle zeigt ihren Volltext oben im
+    /// Hinweis, die Herkunftszeile bleibt darunter erhalten.
+    /// </param>
+    public static DataPageColumnSetupResult Apply(
+        DataGridColumn column,
+        string fieldName,
+        bool farbzelle = true,
+        bool volltextHinweis = false)
     {
         ArgumentNullException.ThrowIfNull(column);
 
@@ -24,7 +32,7 @@ public static class DataPageColumnSetup
         if (colorStyle is not null)
             column.CellStyle = colorStyle;
 
-        column.CellStyle = DataGridFieldMetaTooltipStyleFactory.Create(fieldName, column.CellStyle);
+        column.CellStyle = DataGridFieldMetaTooltipStyleFactory.Create(fieldName, column.CellStyle, volltextHinweis);
         column.CanUserResize = true;
         column.MinWidth = fieldName == "NR" ? 56 : 72;
 

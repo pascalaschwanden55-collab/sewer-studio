@@ -84,6 +84,65 @@ public sealed class ZustandsklasseChipColumnFactoryTests
         });
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (F1): Ein Wert, den die Auswahlliste nicht kennt ("2,4" aus einem Import,
+    /// "nicht berechnet"), darf durch blosses Oeffnen und Schliessen des Editors nicht
+    /// verschwinden — und schon gar nicht als Handeingabe gelten. Eine TwoWay-Bindung auf
+    /// <c>SelectedItem</c> setzt genau in diesem Fall null zurueck in den Datensatz.
+    /// </summary>
+    [Theory]
+    [InlineData("2,4")]
+    [InlineData("nicht berechnet")]
+    public void Ein_unbekannter_Wert_ueberlebt_das_Oeffnen_und_Schliessen_des_Editors(string wert)
+    {
+        StaTestRunner.Run(() =>
+        {
+            var spalte = ZustandsklasseChipColumnFactory.Create(FieldKeys.ConditionClass, "ZUSTANDSKLASSE");
+            var record = new HaltungRecord();
+            record.SetFieldValue(FieldKeys.ConditionClass, wert, FieldSource.Xtf405, userEdited: false);
+
+            var editor = Assert.IsType<ComboBox>(spalte.CellEditingTemplate.LoadContent());
+            editor.DataContext = record;
+            // Erst das Erzeugen der Eintraege laesst den Selector den Wert suchen; ohne Layout
+            // haelt er den fremden Text nur fest und der Test bewiese nichts.
+            Layout(editor);
+            WpfBindungsPumpe.Leeren();
+
+            // Ohne Auswahl wieder zu: die Bindungsquelle loesen, wie beim Schliessen der Zelle.
+            editor.DataContext = null;
+            WpfBindungsPumpe.Leeren();
+
+            Assert.Equal(wert, record.GetFieldValue(FieldKeys.ConditionClass));
+            Assert.False(record.FieldMeta[FieldKeys.ConditionClass].UserEdited);
+        });
+    }
+
+    /// <summary>Eine echte Auswahl schreibt weiterhin — sonst waere das Feld unbedienbar.</summary>
+    [Fact]
+    public void Eine_echte_Auswahl_wird_uebernommen()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var spalte = ZustandsklasseChipColumnFactory.Create(FieldKeys.ConditionClass, "ZUSTANDSKLASSE");
+            var record = new HaltungRecord();
+            var editor = Assert.IsType<ComboBox>(spalte.CellEditingTemplate.LoadContent());
+            editor.DataContext = record;
+            WpfBindungsPumpe.Leeren();
+
+            editor.SelectedItem = "3";
+            WpfBindungsPumpe.Leeren();
+
+            Assert.Equal("3", DataGridEditedTextValueResolver.Resolve(editor));
+        });
+    }
+
+    private static void Layout(FrameworkElement element)
+    {
+        element.Measure(new Size(200, 40));
+        element.Arrange(new Rect(0, 0, 200, 40));
+        element.UpdateLayout();
+    }
+
     private static (Border Gefuellt, Grid Leer) Marken(string wert)
     {
         var spalte = ZustandsklasseChipColumnFactory.Create(FieldKeys.ConditionClass, "ZUSTANDSKLASSE");

@@ -43,6 +43,39 @@ public sealed class DataPageColumnViewCatalogTests
         Assert.True(DataPageColumnViewCatalog.Resolve("alle").Enthaelt(FieldKeys.Link));
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (F5): In der alten Haltungsansicht gibt es die Statusspalten nicht. Dort
+    /// fuehrt "Kompakt" weiter den rohen Videopfad, sonst waere die Videoangabe ersatzlos weg.
+    /// </summary>
+    [Fact]
+    public void Die_Altansicht_kennt_keine_virtuellen_Spalten_und_behaelt_den_Videopfad()
+    {
+        var altKompakt = DataPageColumnViewCatalog.Resolve("kompakt", nova: false);
+        Assert.True(altKompakt.Enthaelt(FieldKeys.Link));
+        Assert.Equal(7, altKompakt.Felder!.Count);
+
+        foreach (var view in DataPageColumnViewCatalog.AltansichtViews)
+            foreach (var feld in view.Felder ?? Array.Empty<string>())
+                Assert.False(NovaStatusSpalten.IstVirtuell(feld), $"{view.Key}: {feld}");
+
+        // Schluessel, Titel und Reihenfolge bleiben in beiden Layouts gleich.
+        Assert.Equal(
+            DataPageColumnViewCatalog.Views.Select(v => v.Key),
+            DataPageColumnViewCatalog.AltansichtViews.Select(v => v.Key));
+        Assert.Same(DataPageColumnViewCatalog.Views, DataPageColumnViewCatalog.ViewsFuer(nova: true));
+        Assert.Same(DataPageColumnViewCatalog.AltansichtViews, DataPageColumnViewCatalog.ViewsFuer(nova: false));
+    }
+
+    /// <summary>Alle Felder der Altansicht sind echte Felder des Katalogs.</summary>
+    [Fact]
+    public void Jedes_Feld_der_Altansicht_existiert_im_Feldkatalog()
+    {
+        var bekannt = new HashSet<string>(FieldCatalog.ColumnOrder, StringComparer.Ordinal);
+        foreach (var v in DataPageColumnViewCatalog.AltansichtViews)
+            foreach (var f in v.Felder ?? Array.Empty<string>())
+                Assert.True(bekannt.Contains(f), $"{v.Key}: {f} fehlt im FieldCatalog");
+    }
+
     [Fact]
     public void Alle_hat_keine_Feldliste_und_ist_der_Rueckfall()
     {

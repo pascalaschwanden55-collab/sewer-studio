@@ -132,7 +132,10 @@ public sealed class DataGridColumnLayoutController
                 .Select(column =>
                 {
                     var field = GetFieldName(column);
-                    if (field is not null && byField.TryGetValue(field, out var state))
+                    // Auch hier gilt: Eine virtuelle Statusspalte hat kein Feld. Ohne diese
+                    // Pruefung koennte ein handgesetzter Nova_*-Eintrag sie im Raster verschieben.
+                    if (field is not null && !NovaStatusSpalten.IstVirtuell(field)
+                        && byField.TryGetValue(field, out var state))
                         return new { Column = column, Target = state.DisplayIndex, HasState = true };
                     return new { Column = column, Target = column.DisplayIndex, HasState = false };
                 })
