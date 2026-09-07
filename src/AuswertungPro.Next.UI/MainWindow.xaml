@@ -467,19 +467,21 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Systemmonitor: Nova-Etappe 1 als Aufklapper. Der Kopf heisst bewusst "Systemleistung":
-                     Der Monitor misst Rechner und Sensoren, nicht die Bereitschaft der KI (Nachpruefung W02).
-                     Gesperrte Sensoren (Speicherintegritaet) werden getrennt gemeldet. -->
+                <!-- Systemmonitor: Nova-Etappe 1 als Aufklapper, Kopf seit Etappe 2 Task 7 die KI-Bereitschaft
+                     (KiBereitschaftRegel, BEWERTUNG N10: "Analyse bereit"/"Pruefung noetig" statt Modellnamen).
+                     Modell-/Detailtext (AiDisplayStatusLabel) und Rechner-/Sensordaten stehen erst im
+                     aufgeklappten Inhalt. Gesperrte Sensoren (Speicherintegritaet) werden weiterhin getrennt
+                     im Kopf gemeldet ("Sensoren gesperrt", Nachpruefung W02). -->
                 <Expander DockPanel.Dock="Bottom" Margin="12,4,12,12" IsExpanded="False"
                           Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                          ToolTip="Rechnerauslastung und Sensoren, aufklappbar"
-                          AutomationProperties.Name="Systemleistung">
+                          ToolTip="KI-Bereitschaft; aufgeklappt: Rechnerauslastung und Sensoren"
+                          AutomationProperties.Name="KI-Bereitschaft und Systemleistung">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <ctrl:NeuralPulseDot Width="10" Height="10" Margin="0,0,8,0" ToolTip="Laufende Messwerte des Rechners">
+                            <ctrl:NeuralPulseDot Width="10" Height="10" Margin="0,0,8,0" ToolTip="Laufende Messwerte des Rechners"
+                                                  IsActive="{Binding IstKiBereit}">
                                 <ctrl:NeuralPulseDot.Style>
                                     <Style TargetType="ctrl:NeuralPulseDot">
-                                        <Setter Property="IsActive" Value="True"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Monitor.IsSensorBlocked}" Value="True">
                                                 <Setter Property="IsActive" Value="False"/>
@@ -488,10 +490,10 @@
                                     </Style>
                                 </ctrl:NeuralPulseDot.Style>
                             </ctrl:NeuralPulseDot>
-                            <TextBlock FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}">
+                            <TextBlock FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
+                                       Text="{Binding KiBereitschaftText}">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="Systemleistung"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Monitor.IsSensorBlocked}" Value="True">
                                                 <Setter Property="Text" Value="Sensoren gesperrt"/>
@@ -502,7 +504,10 @@
                             </TextBlock>
                         </StackPanel>
                     </Expander.Header>
-                    <ctrl:SystemMonitorPanel DataContext="{Binding Monitor}" Margin="0,6,0,0"/>
+                    <StackPanel Margin="0,6,0,0">
+                        <TextBlock Text="{Binding AiDisplayStatusLabel}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,4,0,4"/>
+                        <ctrl:SystemMonitorPanel DataContext="{Binding Monitor}"/>
+                    </StackPanel>
                 </Expander>
 
                 <!-- Nova-Etappe 2: Speicherstand der Fusszeile (Inventar 3.2) -->

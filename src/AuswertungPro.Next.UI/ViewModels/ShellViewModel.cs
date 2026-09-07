@@ -300,6 +300,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         AiRuntimeTitle = status.Title;
         AiRuntimeStatusLabel = status.StatusText;
         AiRuntimeLoadedModels = status.ModelText;
+        OnPropertyChanged(nameof(KiBereitschaftText));
+        OnPropertyChanged(nameof(IstKiBereit));
     }
 
     private void OnAiActivityChanged(bool active, string label)

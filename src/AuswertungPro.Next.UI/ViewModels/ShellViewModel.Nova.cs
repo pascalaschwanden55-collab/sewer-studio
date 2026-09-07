@@ -1,6 +1,7 @@
 using System;
 using AuswertungPro.Next.Application.UseCases.NaechsteAufgabe;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Services;
 using CommunityToolkit.Mvvm.Input;
 
 namespace AuswertungPro.Next.UI.ViewModels;
@@ -15,6 +16,10 @@ public partial class ShellViewModel
     public string NaechsteAufgabeText => IsProjectReady ? NaechsteAufgabeRegel.ChipText(NaechsteAufgabe) : string.Empty;
     public string SpeicherstandText => ShellNovaKopfzeile.Speicherstand(IsProjectReady ? Project.Name : null, _letzteSpeicherungLokal, IsProjectReady && Project.Dirty);
     public IRelayCommand NaechsteAufgabePruefenCommand { get; private set; } = null!;
+
+    /// <summary>KI-Bereitschaft im Leisten-Aufklapper (Task 7, BEWERTUNG N10).</summary>
+    public string KiBereitschaftText => KiBereitschaftRegel.Text(KiBereitschaftRegel.Bestimme(AiRuntimeStatusTracker.Current));
+    public bool IstKiBereit => KiBereitschaftRegel.Bestimme(AiRuntimeStatusTracker.Current) == KiBereitschaft.Bereit;
 
     /// <summary>Globale Suche der Kopfzeile (Strg+K, Inventar 8.5).</summary>
     public GlobaleSucheViewModel GlobaleSuche { get; private set; } = null!;
