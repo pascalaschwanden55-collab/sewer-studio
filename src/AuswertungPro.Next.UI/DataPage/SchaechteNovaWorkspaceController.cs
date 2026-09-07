@@ -118,18 +118,6 @@ public sealed class SchaechteNovaWorkspaceController
         _felderSync = new DataPageDetailLiveSync(record, record.GetFieldValue, gruppen);
     }
 
-    /// <summary>
-    /// Fix-Runde 1: Sicherheitsnetz fuer einen In-Place-Neuaufbau des gewaehlten Schachts (zum
-    /// Beispiel "Aktualisieren" liest das Protokoll neu ein), bei dem <c>Record</c> referenzgleich
-    /// bleibt. Aktualisiert die Schachtansicht rechts (Schaeden/Grundriss/Masstext) und baut die
-    /// Eingabefelder neu auf.
-    /// </summary>
-    public void AktualisiereAnzeige()
-    {
-        _e.Uebersicht.Aktualisiere();
-        AktualisiereFelderDrawer();
-    }
-
     private bool IstSichtbar => _e.FelderDrawer.Visibility == Visibility.Visible;
 
     /// <summary>

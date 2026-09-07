@@ -17,12 +17,14 @@ namespace AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 /// dafuer. Der Knopf "Protokoll (PDF)" fuehrt ueber denselben Aktionsweg wie die alte
 /// Schachtansicht.
 ///
-/// Fix-Runde 1: Ein In-Place-Neuaufbau des gewaehlten Schachts (zum Beispiel "Aktualisieren"
+/// Fix-Runde 1/2: Ein In-Place-Neuaufbau des gewaehlten Schachts (zum Beispiel "Aktualisieren"
 /// liest das Protokoll neu ein) laesst <c>Record</c> referenzgleich; die Fakten-Felder ziehen ueber
 /// die normale WPF-Bindung an <c>Fields[...]</c> ohnehin nach, aber Schaeden und Grundriss werden
 /// nur einmal beim Binden berechnet. Das Panel meldet sich deshalb zusaetzlich auf
 /// <see cref="SchachtRecord.PropertyChanged"/> an und rechnet bei jeder Meldung neu; die alte
-/// Meldung wird beim Wechsel und beim Entladen wieder abgemeldet.
+/// Meldung wird beim Wechsel und beim Entladen wieder abgemeldet. Seit Fix-Runde 2 meldet auch
+/// der <see cref="SchachtRecord.Protocol"/>-Setter selbst (<c>nameof(Protocol)</c>), ein
+/// In-Place-Ersatz des Protokolls kommt also ohne externes Sicherheitsnetz an.
 /// </summary>
 public partial class SchachtUebersichtPanel : UserControl
 {
@@ -87,9 +89,9 @@ public partial class SchachtUebersichtPanel : UserControl
 
     /// <summary>
     /// Berechnet Schaeden, Grundriss und Masstext aus dem aktuellen <see cref="Record"/> neu.
-    /// Oeffentlich, damit ein aufrufender Controller nach einem In-Place-Neuaufbau ohne eigene
-    /// Feldmeldung (zum Beispiel ein ersetztes <c>Protocol</c>) gezielt nachziehen kann; das
-    /// abonnierte <see cref="SchachtRecord.PropertyChanged"/> ruft dieselbe Methode automatisch auf.
+    /// Wird vom abonnierten <see cref="SchachtRecord.PropertyChanged"/> automatisch aufgerufen
+    /// (auch bei einem ersetzten <c>Protocol</c>, seit dessen Setter selbst meldet); oeffentlich
+    /// nur fuer Tests und einen bewussten manuellen Anstoss.
     /// </summary>
     public void Aktualisiere()
     {

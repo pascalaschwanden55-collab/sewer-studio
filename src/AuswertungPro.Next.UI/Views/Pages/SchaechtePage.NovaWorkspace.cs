@@ -39,13 +39,6 @@ public partial class SchaechtePage
 
     private void AktualisiereFelderDrawer() => _novaWorkspace?.AktualisiereFelderDrawer();
 
-    /// <summary>
-    /// Fix-Runde 1: Sicherheitsnetz fuer einen In-Place-Neuaufbau des gewaehlten Schachts (zum
-    /// Beispiel "Aktualisieren" liest das Protokoll neu ein) ohne eigene Feldmeldung. Von
-    /// <c>RecordPropertyChanged</c> aufgerufen.
-    /// </summary>
-    private void AktualisiereNovaAnzeige() => _novaWorkspace?.AktualisiereAnzeige();
-
     private void ApplyDrawerHeight() => _novaWorkspace?.ApplyDrawerHeight();
 
     // Vor VerdrahteNovaWorkspace (waehrend InitializeComponent) gilt der XAML-Grundzustand.

@@ -142,11 +142,12 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
     }
 
     /// <summary>
-    /// Fix-Runde 1: Das Panel bleibt an <c>Record</c> gebunden (keine neue Bindung, kein
-    /// Auswahlwechsel) und muss trotzdem zwei Faelle nachziehen: eine reine Feldaenderung
-    /// (Grundriss folgt der Schachtform ueber <c>PropertyChanged</c>) und einen In-Place-Ersatz
-    /// des Protokolls ohne eigene Feldmeldung (nachgezogen ueber die oeffentliche
-    /// <c>Aktualisiere()</c>-Methode, wie es der Controller nach "Aktualisieren" tut).
+    /// Fix-Runde 1/2: Das Panel bleibt an <c>Record</c> gebunden (keine neue Bindung, kein
+    /// Auswahlwechsel) und muss trotzdem zwei Faelle nachziehen, beide allein ueber
+    /// <c>SchachtRecord.PropertyChanged</c>: eine reine Feldaenderung (Grundriss folgt der
+    /// Schachtform) und ein In-Place-Ersatz des Protokolls (der <c>Protocol</c>-Setter meldet
+    /// sich seit Fix-Runde 2 selbst mit <c>nameof(Protocol)</c>). Der Test ruft
+    /// <c>Aktualisiere()</c> bewusst NICHT direkt auf, damit die echte Meldekette geprueft wird.
     /// </summary>
     [IsolatedWpfFact]
     public void Kindprozess_Schachtuebersicht_folgt_Datensatzaenderungen_ohne_neue_Bindung()
@@ -173,15 +174,14 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
             Assert.Equal(Visibility.Collapsed, kreis.Visibility);
             Assert.Equal(Visibility.Visible, oval.Visibility);
 
-            // In-Place-Neuaufbau (z. B. "Aktualisieren"): Protocol wird ersetzt, ohne dass
-            // SchachtRecord dafuer ein PropertyChanged auslöst. Aktualisiere() ist das
-            // Sicherheitsnetz dafuer.
+            // In-Place-Neuaufbau (z. B. "Aktualisieren"): Protocol wird ersetzt. SchachtRecord.Protocol
+            // meldet sich seit Fix-Runde 2 selbst (PropertyChanged(nameof(Protocol))) - das Panel zieht
+            // die neue Schadensliste allein ueber diese Meldung nach, ohne Aktualisiere() direkt zu rufen.
             Assert.Null(panel.Entries);
             record.Protocol = new ProtocolDocument
             {
                 Current = new ProtocolRevision { Entries = { new ProtocolEntry { Code = "BAB" } } }
             };
-            panel.Aktualisiere();
             Layout(panel);
             Assert.Equal(1, panel.Entries?.Count);
 
