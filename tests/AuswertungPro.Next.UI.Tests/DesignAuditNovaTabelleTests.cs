@@ -96,7 +96,7 @@ public sealed class DesignAuditNovaTabelleTests
 
         Assert.Contains("<sys:Double x:Key=\"ZustandsklasseChipBreite\">34</sys:Double>", controls);
         Assert.Contains("<sys:Double x:Key=\"ZustandsklasseChipHoehe\">22</sys:Double>", controls);
-        Assert.Contains("<sys:Double x:Key=\"RowHeightCompact\">36</sys:Double>", controls);
+        Assert.Contains("<sys:Double x:Key=\"RowHeightCompact\">34</sys:Double>", controls);
     }
 
     /// <summary>

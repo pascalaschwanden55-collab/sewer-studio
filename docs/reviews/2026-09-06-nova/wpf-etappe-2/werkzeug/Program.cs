@@ -551,6 +551,12 @@ internal static class Program
             dpiX = dpi.PixelsPerInchX,
             dpiY = dpi.PixelsPerInchY,
             fullRows,
+            // Fixwelle P2: Die nutzbare Hoehe der Tabelle gehoert zum Nachweis — ohne sie ist
+            // "eine Zeile fehlt" nicht von "zwanzig Pixel fehlen" zu unterscheiden.
+            viewportHoehe = viewport is null ? 0 : Math.Round(viewport.ActualHeight, 1),
+            // Die tatsaechlichen Hoehen der ersten Zeilen: Die erste ist die gewaehlte und
+            // deshalb um ihre Auswahlkontur hoeher als die uebrigen.
+            zeilenHoehen = rows.Take(6).Select(r => Math.Round(r.ActualHeight, 1)).ToArray(),
             windowCount = System.Windows.Application.Current?.Windows.Count,
             selected = grid?.SelectedItem?.ToString()
         }, new JsonSerializerOptions { WriteIndented = true }));

@@ -28,6 +28,14 @@ internal static class StatusZellenBausteine
     /// Ein Knopf mit ToolTip UND vorlesbarem Namen: Ein Glyph oder ein Kuerzel wie "PDF" laesst
     /// sich nicht vorlesen. Der Parameter ist immer der Datensatz der Zeile.
     /// </summary>
+    /// <summary>
+    /// Nova-Fixwelle 2b (P2): Ein Knopf IN der Tabelle ist 24 px hoch, nicht 28 wie in einer
+    /// Werkzeugleiste. Gemessen war genau er der hoechste Zellinhalt und bestimmte damit die
+    /// Zeilenhoehe der ganzen Tabelle — die Zeilenhoehe aus <c>RowHeightCompact</c> ist nur eine
+    /// Untergrenze und konnte dagegen nichts ausrichten.
+    /// </summary>
+    private const double KnopfHoeheInDerZelle = 24;
+
     internal static FrameworkElementFactory Aktionsknopf(
         BindingBase befehl,
         BindingBase name,
@@ -38,6 +46,8 @@ internal static class StatusZellenBausteine
     {
         var knopf = new FrameworkElementFactory(typeof(Button));
         knopf.SetResourceReference(FrameworkElement.StyleProperty, "IconButton");
+        knopf.SetValue(FrameworkElement.HeightProperty, KnopfHoeheInDerZelle);
+        knopf.SetValue(FrameworkElement.MinHeightProperty, KnopfHoeheInDerZelle);
         knopf.SetValue(FrameworkElement.ToolTipProperty, hinweis);
         knopf.SetBinding(AutomationProperties.NameProperty, name);
         knopf.SetBinding(ButtonBase.CommandProperty, befehl);

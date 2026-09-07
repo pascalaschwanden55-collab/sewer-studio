@@ -273,11 +273,18 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
     /// Nova-Etappe 2b, Task 4: Ohne DataContext liefert NovaLayoutAktiv true (Standard) — die
     /// Suchpille ist sichtbar, die alte Suche-Zeile ist es nicht, und die Filterzeile
     /// (Spaltenchips und FilterChipBar) bleibt erreichbar.
+    ///
+    /// Nova-Fixwelle 2b (P2): Die Pille steht jetzt IN der Werkzeugleiste (rechts angedockt),
+    /// nicht mehr in einer eigenen Zeile darunter — deshalb ein StackPanel im DockPanel der
+    /// Leiste statt einer eigenen Karte.
     /// </summary>
     private static void PruefeNovaSucheUndFilter(Views.Pages.DataPage page)
     {
-        var novaSuche = Assert.IsType<Border>(page.FindName("NovaSucheLeiste"));
+        var novaSuche = Assert.IsType<StackPanel>(page.FindName("NovaSucheLeiste"));
         Assert.Equal(Visibility.Visible, novaSuche.Visibility);
+        Assert.Equal(Dock.Right, DockPanel.GetDock(novaSuche));
+        var leiste = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.FindAncestor<DockPanel>(novaSuche);
+        Assert.NotNull(leiste);
 
         var alteSuche = Assert.IsType<Border>(page.FindName("AlteSucheLeiste"));
         Assert.Equal(Visibility.Collapsed, alteSuche.Visibility);

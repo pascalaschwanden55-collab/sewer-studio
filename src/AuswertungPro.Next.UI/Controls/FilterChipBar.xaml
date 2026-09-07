@@ -3,9 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <Style x:Key="FilterChipToggleButton" TargetType="ToggleButton">
-            <Setter Property="MinHeight" Value="26"/>
+            <!-- Nova-Fixwelle 2b (P2): Die Filterzeile ist Beiwerk und wird kompakt (24 px
+                 hoch statt 26, engeres Polster). Jede gesparte Zeile geht an die Tabelle. -->
+            <Setter Property="MinHeight" Value="24"/>
             <Setter Property="MinWidth" Value="28"/>
-            <Setter Property="Padding" Value="9,3"/>
+            <Setter Property="Padding" Value="8,1"/>
             <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -60,9 +62,11 @@
         </Style>
 
         <Style x:Key="ZustandsklasseChipToggleButton" TargetType="ToggleButton">
-            <Setter Property="MinHeight" Value="26"/>
+            <!-- Nova-Fixwelle 2b (P2): Die Filterzeile ist Beiwerk und wird kompakt (24 px
+                 hoch statt 26, engeres Polster). Jede gesparte Zeile geht an die Tabelle. -->
+            <Setter Property="MinHeight" Value="24"/>
             <Setter Property="MinWidth" Value="28"/>
-            <Setter Property="Padding" Value="9,3"/>
+            <Setter Property="Padding" Value="8,1"/>
             <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -112,9 +116,9 @@
         </Style>
 
         <Style x:Key="FilterChipResetButton" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
-            <Setter Property="MinHeight" Value="26"/>
+            <Setter Property="MinHeight" Value="24"/>
             <Setter Property="MinWidth" Value="0"/>
-            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="Padding" Value="9,1"/>
             <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>

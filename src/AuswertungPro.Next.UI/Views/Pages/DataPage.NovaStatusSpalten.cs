@@ -29,12 +29,15 @@ public partial class DataPage
         if (Grid is null)
             return;
 
-        Grid.RowHeight = NovaLayoutAktiv && DataPageZeilenhoehePolicy.IstEinzeilig(ansichtsSchluessel)
-            ? EinzeiligeZeilenhoehe()
-            : double.NaN;
+        DataPageZeilenhoehenAnwender.WendeAn(
+            Grid,
+            NovaLayoutAktiv && DataPageZeilenhoehePolicy.IstEinzeilig(ansichtsSchluessel),
+            EinzeiligeZeilenhoehe(),
+            (DataContext as DataPageViewModel)?.GridMinRowHeight
+                ?? DataPageGridLayoutController.DefaultGridMinRowHeight);
     }
 
     /// <summary>Zeilenhoehe aus dem Token <c>RowHeightCompact</c>; ohne Ressourcen gilt sein Wert aus Controls.xaml.</summary>
     private double EinzeiligeZeilenhoehe()
-        => TryFindResource("RowHeightCompact") is double hoehe && hoehe > 0 ? hoehe : 36d;
+        => TryFindResource("RowHeightCompact") is double hoehe && hoehe > 0 ? hoehe : 34d;
 }
