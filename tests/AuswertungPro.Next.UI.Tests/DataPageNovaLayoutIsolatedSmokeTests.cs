@@ -67,6 +67,17 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
             Assert.True(drawerRow.ActualHeight >= 120, $"Wieder aufgeklappt: {drawerRow.ActualHeight} px");
             Assert.Equal(6, splitterRow.ActualHeight);
 
+            // Fix-Runde 1 (Inventar 4.3/8.6, Spec = Prototyp): "Gross anzeigen" stellt die Themen
+            // in zwei Spalten statt in einer Zeile dar.
+            drawer.IsTall = true;
+            Layout(page);
+            var themen = Assert.IsType<ItemsControl>(drawer.FindName("Themen"));
+            var themenPanel = FindDescendant<UniformGrid>(themen);
+            Assert.NotNull(themenPanel);
+            Assert.Equal(2, themenPanel!.Columns);
+            drawer.IsTall = false;
+            Layout(page);
+
             foreach (var theme in new[] { ThemeManager.Dark, ThemeManager.Light })
             {
                 var file = theme == ThemeManager.Dark ? "Theme.xaml" : "ThemeLight.xaml";
@@ -105,6 +116,20 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
     }
 
     private static Color ColorOf(object brush) => Assert.IsType<SolidColorBrush>(brush).Color;
+
+    private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
+    {
+        var count = VisualTreeHelper.GetChildrenCount(root);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is T typed)
+                return typed;
+            if (FindDescendant<T>(child) is { } nested)
+                return nested;
+        }
+        return null;
+    }
 
     private static void Layout(UIElement element)
     {

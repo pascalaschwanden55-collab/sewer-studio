@@ -64,9 +64,10 @@ public partial class HaltungFelderDrawer : UserControl
             (d, _) => ((HaltungFelderDrawer)d).IsTallChanged?.Invoke(d, EventArgs.Empty)));
 
     /// <summary>
-    /// „Gross anzeigen": die Eingabefelder-Zeile bekommt beim Einschalten 60 % der Arbeitsflaeche
-    /// (Inventar 8.6). Die Groesse wird nicht gespeichert; beim Ausschalten gilt wieder die
-    /// normale, gespeicherte Hoehe.
+    /// „Gross anzeigen" (Inventar 4.3/8.6, Spec = Prototyp): die Themen stehen in zwei Spalten
+    /// statt in einer Zeile, und die Eingabefelder-Zeile bekommt eine 60-Prozent-Wunschhoehe der
+    /// Arbeitsflaeche — geklemmt auf dieselbe Sieben-Zeilen-Regel wie jede andere Hoehe. Die
+    /// Groesse wird nicht gespeichert; beim Ausschalten gilt wieder die normale, gespeicherte Hoehe.
     /// </summary>
     public bool IsTall
     {
