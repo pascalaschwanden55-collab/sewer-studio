@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
-             xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors">
+             xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls">
     <UserControl.Resources>
         <pages:DruckcenterRowKindToBoolConverter x:Key="BereichToBool"/>
     </UserControl.Resources>
@@ -24,66 +25,59 @@
                 Style="{StaticResource Card}"
                 Padding="14"
                 Margin="0,0,0,10">
-            <DockPanel LastChildFill="False">
-                <StackPanel DockPanel.Dock="Left">
-                    <TextBlock Text="Druckcenter"
-                               Style="{StaticResource PageTitle}"/>
-                    <TextBlock Text="Filterbarer Ausdruck mit Kosten-, Eigentümer- und Positionszusammenfassung"
-                               Style="{StaticResource Caption}"/>
-
-                    <!-- Bereichsumschalter: wechselt Datenquelle und Kostendatei gemeinsam. -->
-                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <TextBlock Text="Bereich:"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,8,0"
+            <StackPanel>
+                <ctrl:NovaPageHeader Title="Druckcenter" Subtitle="Listen, Statistik und NPK-Leistungsverzeichnis" Margin="0,0,0,8">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Ansicht:" VerticalAlignment="Center" Margin="0,0,6,0"
                                    Foreground="{DynamicResource MutedBrush}"/>
-                        <RadioButton Content="Haltungen"
-                                     GroupName="DruckcenterBereich"
-                                     Padding="14,4"
-                                     Margin="0,0,6,0"
-                                     ToolTip="Haltungen mit Kosten aus der Sanierungs-Matrix (costs.json)."
-                                     IsChecked="{Binding Bereich, Converter={StaticResource BereichToBool}, ConverterParameter=Haltung, Mode=TwoWay}"/>
-                        <RadioButton Content="Schächte"
-                                     GroupName="DruckcenterBereich"
-                                     Padding="14,4"
-                                     ToolTip="Schächte mit Kosten aus der Schacht-Matrix (schacht_costs.json)."
-                                     IsChecked="{Binding Bereich, Converter={StaticResource BereichToBool}, ConverterParameter=Schacht, Mode=TwoWay}"/>
+                        <ComboBox x:Name="SavedViewsBox"
+                                  IsEditable="True"
+                                  Width="160"
+                                  Margin="0,0,6,0"
+                                  SelectionChanged="SavedViewsBox_SelectionChanged"
+                                  ToolTip="Benannte Ansicht (Filter + Spalten + Sortierung): Name eintippen und Speichern, oder eine gespeicherte Ansicht auswählen."/>
+                        <Button Content="Ansicht speichern"
+                                Click="SaveViewButton_Click"
+                                Style="{StaticResource SecondaryButton}"
+                                Margin="0,0,6,0"/>
+                        <Button Content="Löschen"
+                                Click="DeleteViewButton_Click"
+                                Style="{StaticResource SecondaryButton}"
+                                Margin="0,0,14,0"/>
+                        <Button Content="Aktualisieren"
+                                Command="{Binding RefreshCommand}"
+                                Style="{StaticResource SecondaryButton}"
+                                Margin="0,0,8,0"/>
+                        <Button Content="Spalten…"
+                                Click="SpaltenButton_Click"
+                                ToolTip="Spalten ein-/ausblenden. Breite und Reihenfolge lassen sich direkt in der Tabelle ziehen; alles wird pro Ansicht gemerkt."
+                                Style="{StaticResource SecondaryButton}"
+                                Margin="0,0,8,0"/>
+                        <Button Content="Filter zurücksetzen"
+                                Command="{Binding ResetFiltersCommand}"
+                                Style="{StaticResource SecondaryButton}"/>
                     </StackPanel>
-                </StackPanel>
+                </ctrl:NovaPageHeader>
 
-                <StackPanel DockPanel.Dock="Right"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="Ansicht:" VerticalAlignment="Center" Margin="0,0,6,0"
+                <!-- Bereichsumschalter: wechselt Datenquelle und Kostendatei gemeinsam. -->
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Bereich:"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"
                                Foreground="{DynamicResource MutedBrush}"/>
-                    <ComboBox x:Name="SavedViewsBox"
-                              IsEditable="True"
-                              Width="160"
-                              Margin="0,0,6,0"
-                              SelectionChanged="SavedViewsBox_SelectionChanged"
-                              ToolTip="Benannte Ansicht (Filter + Spalten + Sortierung): Name eintippen und Speichern, oder eine gespeicherte Ansicht auswählen."/>
-                    <Button Content="Ansicht speichern"
-                            Click="SaveViewButton_Click"
-                            Style="{StaticResource SecondaryButton}"
-                            Margin="0,0,6,0"/>
-                    <Button Content="Löschen"
-                            Click="DeleteViewButton_Click"
-                            Style="{StaticResource SecondaryButton}"
-                            Margin="0,0,14,0"/>
-                    <Button Content="Aktualisieren"
-                            Command="{Binding RefreshCommand}"
-                            Style="{StaticResource SecondaryButton}"
-                            Margin="0,0,8,0"/>
-                    <Button Content="Spalten…"
-                            Click="SpaltenButton_Click"
-                            ToolTip="Spalten ein-/ausblenden. Breite und Reihenfolge lassen sich direkt in der Tabelle ziehen; alles wird pro Ansicht gemerkt."
-                            Style="{StaticResource SecondaryButton}"
-                            Margin="0,0,8,0"/>
-                    <Button Content="Filter zurücksetzen"
-                            Command="{Binding ResetFiltersCommand}"
-                            Style="{StaticResource SecondaryButton}"/>
+                    <RadioButton Content="Haltungen"
+                                 GroupName="DruckcenterBereich"
+                                 Padding="14,4"
+                                 Margin="0,0,6,0"
+                                 ToolTip="Haltungen mit Kosten aus der Sanierungs-Matrix (costs.json)."
+                                 IsChecked="{Binding Bereich, Converter={StaticResource BereichToBool}, ConverterParameter=Haltung, Mode=TwoWay}"/>
+                    <RadioButton Content="Schächte"
+                                 GroupName="DruckcenterBereich"
+                                 Padding="14,4"
+                                 ToolTip="Schächte mit Kosten aus der Schacht-Matrix (schacht_costs.json)."
+                                 IsChecked="{Binding Bereich, Converter={StaticResource BereichToBool}, ConverterParameter=Schacht, Mode=TwoWay}"/>
                 </StackPanel>
-            </DockPanel>
+            </StackPanel>
         </Border>
 
         <Border Grid.Row="1"

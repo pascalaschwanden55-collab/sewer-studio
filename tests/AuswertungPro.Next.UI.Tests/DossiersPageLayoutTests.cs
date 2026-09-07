@@ -179,7 +179,9 @@ public sealed class DossiersPageTitleTests
         var xaml = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "Views", "Pages", "DossiersPage.xaml"));
 
-        Assert.Contains("Text=\"Eigentümerdossiers\"", xaml, StringComparison.Ordinal);
+        // Nova-Etappe 2, Task 18: Der Titel liegt seither im gemeinsamen NovaPageHeader-Control.
+        Assert.Contains("Title=\"Eigentümerdossiers\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"{Binding AreaTitle}\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Title=\"{Binding AreaTitle}\"", xaml, StringComparison.Ordinal);
     }
 }

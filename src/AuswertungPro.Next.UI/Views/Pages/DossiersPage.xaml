@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
-             xmlns:dossiers="clr-namespace:AuswertungPro.Next.Domain.Models.Dossiers;assembly=AuswertungPro.Next.Domain">
+             xmlns:dossiers="clr-namespace:AuswertungPro.Next.Domain.Models.Dossiers;assembly=AuswertungPro.Next.Domain"
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -45,18 +46,8 @@
                 Background="{DynamicResource CardGlassBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1" CornerRadius="{DynamicResource RadiusXXL}" Padding="18" Margin="0,0,0,8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Column="0"
-                           Text="Eigentümerdossiers"
-                           Style="{StaticResource PageTitle}"
-                           VerticalAlignment="Center"/>
-
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <ctrl:NovaPageHeader Title="Eigentümerdossiers" Subtitle="eine Liegenschaft, ihre Leitungen und Schächte" Margin="0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="Gebietsangaben" Padding="12,7" Margin="0,0,8,0"
                             ToolTip="Angaben, die für ALLE Dossiers dieses Projekts gelten: Gebietstitel, Ansprechpartner, Unternehmer, örtliche Bauleitung, Ausführungstermin, Fusszeile und die Standardthemen. Ein einzelnes Dossier darf jedes Feld überschreiben."
                             Command="{Binding EditAreaCommand}"/>
@@ -73,7 +64,7 @@
                             ToolTip="Legt für alle Parzellen des Projekts auf einmal Dossiers an. Die Parzellen kommen aus den Leitungsnamen, die Eigentümer aus dem Grundbuch. Sie sehen die Vorschläge vorher und wählen aus."
                             Command="{Binding CreateFromProjectCommand}"/>
                 </StackPanel>
-            </Grid>
+            </ctrl:NovaPageHeader>
         </Border>
 
         <!-- Inhalt -->

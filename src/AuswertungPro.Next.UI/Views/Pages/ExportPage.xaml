@@ -33,11 +33,14 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <ctrl:NovaPageHeader Grid.Row="0" Title="Export" Subtitle="Excel, Verteilung, Kataster"/>
+
         <!-- Export Toolbar Card -->
-        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+        <Border Grid.Row="1" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 Padding="6,4" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
                 <Button Command="{Binding ExportCommand}"
@@ -60,7 +63,7 @@
         </Border>
 
         <!-- Verteilungs-Card -->
-        <Border Grid.Row="1" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+        <Border Grid.Row="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 Padding="6,4" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
                 <Button Click="DropdownButton_Click"
@@ -115,7 +118,7 @@
         </Border>
 
         <!-- Fortschrittsanzeige -->
-        <Border Grid.Row="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+        <Border Grid.Row="3" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 Padding="10" Margin="0,0,0,8" CornerRadius="{DynamicResource RadiusL}"
                 Visibility="{Binding IsDistributionInProgress, Converter={StaticResource BoolToVis}}">
             <StackPanel>
@@ -134,7 +137,7 @@
         </Border>
 
         <!-- Ziel-/Namensvorlagen-Konfiguration + Ergebnis der letzten Verteilung -->
-        <Grid Grid.Row="3">
+        <Grid Grid.Row="4">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>

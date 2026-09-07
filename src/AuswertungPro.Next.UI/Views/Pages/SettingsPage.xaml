@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:settings="clr-namespace:AuswertungPro.Next.UI.Settings"
-             xmlns:ui="clr-namespace:AuswertungPro.Next.UI">
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <Style x:Key="SettingsSectionGroupBox" TargetType="{x:Type GroupBox}">
@@ -264,31 +265,31 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-            <DockPanel Grid.Row="0" Margin="0,0,0,12">
-                <Button DockPanel.Dock="Right"
-                        Content="Speichern"
-                        Command="{Binding SaveCommand}"
-                        Style="{StaticResource PrimaryButton}"
-                        Width="140"
-                        ToolTip="Alle geänderten Einstellungen dauerhaft speichern."/>
-                <TextBlock Text="Einstellungen" Style="{StaticResource PageTitle}" Margin="0,0,12,0"/>
-                <!-- Filtert die Gruppen ueber alle Reiter; Umlaute und ae/oe/ue gelten gleich. -->
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,12,0">
-                    <ui:FluentIcon Glyph="&#xE721;"
-                                   Foreground="{DynamicResource MutedBrush}"
-                                   Margin="0,0,6,0"/>
-                    <TextBox x:Name="SucheBox"
-                             Width="260"
-                             TextChanged="SucheBox_TextChanged"
-                             AutomationProperties.Name="Einstellung suchen"
-                             ToolTip="Einstellung suchen — zeigt nur passende Gruppen und springt zum ersten Reiter mit Treffer."/>
-                    <TextBlock x:Name="SucheTreffer"
-                               Margin="8,0,0,0"
-                               VerticalAlignment="Center"
-                               FontSize="{DynamicResource TextXS}"
-                               Foreground="{DynamicResource MutedBrush}"/>
+            <ctrl:NovaPageHeader Grid.Row="0" Title="Einstellungen" Margin="0,0,0,12">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Filtert die Gruppen ueber alle Reiter; Umlaute und ae/oe/ue gelten gleich. -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <ui:FluentIcon Glyph="&#xE721;"
+                                       Foreground="{DynamicResource MutedBrush}"
+                                       Margin="0,0,6,0"/>
+                        <TextBox x:Name="SucheBox"
+                                 Width="260"
+                                 TextChanged="SucheBox_TextChanged"
+                                 AutomationProperties.Name="Einstellung suchen"
+                                 ToolTip="Einstellung suchen — zeigt nur passende Gruppen und springt zum ersten Reiter mit Treffer."/>
+                        <TextBlock x:Name="SucheTreffer"
+                                   Margin="8,0,0,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="{DynamicResource TextXS}"
+                                   Foreground="{DynamicResource MutedBrush}"/>
+                    </StackPanel>
+                    <Button Content="Speichern"
+                            Command="{Binding SaveCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Width="140"
+                            ToolTip="Alle geänderten Einstellungen dauerhaft speichern."/>
                 </StackPanel>
-            </DockPanel>
+            </ctrl:NovaPageHeader>
 
             <TabControl Grid.Row="1"
                         x:Name="EinstellungsReiter"

@@ -8,6 +8,7 @@
             <ResourceDictionary.MergedDictionaries>
                  <ResourceDictionary Source="Theme/ThemeLight.xaml" />
                 <ResourceDictionary Source="Theme/Controls.xaml" />
+                <ResourceDictionary Source="Controls/NovaPageHeader.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- VSA-Code → Klartext, app-weit: "VsaCodeToText" = "CODE — Bedeutung" (inline),
