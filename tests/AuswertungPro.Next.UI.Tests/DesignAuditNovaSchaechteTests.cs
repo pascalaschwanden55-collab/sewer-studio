@@ -59,4 +59,20 @@ public sealed class DesignAuditNovaSchaechteTests
         Assert.Contains("AutomationProperties.Name=\"Schachtgrundriss\"", xaml);
         Assert.Contains("ZustandsklasseInkConverter", xaml);
     }
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 4: Suche als Pille rechts, gleiches Muster wie die globale Suche
+    /// in MainWindow.xaml (RadiusPill, InputBorderBrush, Lupe). Ohne F3-Marke - die bleibt den
+    /// Haltungen vorbehalten.
+    /// </summary>
+    [Fact]
+    public void Werkzeugleiste_zeigt_die_Suche_als_Pille_ohne_F3_Marke()
+    {
+        var xaml = Xaml();
+        Assert.Contains("{DynamicResource RadiusPill}", xaml);
+        Assert.Contains("{DynamicResource InputBorderBrush}", xaml);
+        Assert.Contains("Suche Schacht", xaml);
+        Assert.DoesNotContain("Text=\"F3\"", xaml);
+        Assert.DoesNotContain("PreviewKeyDown=\"", xaml);
+    }
 }

@@ -52,6 +52,8 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
             var page = new Views.Pages.SchaechtePage();
             Layout(page);
 
+            PruefeSucheUndFilter(page);
+
             var drawer = Assert.IsType<HaltungFelderDrawer>(page.FindName("FelderDrawer"));
             var drawerRow = Assert.IsType<RowDefinition>(page.FindName("DrawerRow"));
             var splitterRow = Assert.IsType<RowDefinition>(page.FindName("DrawerSplitterRow"));
@@ -187,6 +189,21 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
 
             WpfIsolatedTestProcess.MarkChildScenarioCompleted();
         });
+    }
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 4: Die Suche steht als Pille rechts (ohne F3-Marke), und die
+    /// Spaltenchips (Filterzeile der Schachtliste) bleiben sichtbar.
+    /// </summary>
+    private static void PruefeSucheUndFilter(Views.Pages.SchaechtePage page)
+    {
+        var searchBox = Assert.IsType<TextBox>(page.FindName("SearchBox"));
+        var pillBorder = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.FindAncestor<Border>(searchBox);
+        Assert.NotNull(pillBorder);
+        Assert.Equal(15d, pillBorder!.CornerRadius.TopLeft);
+
+        var columnViewChips = Assert.IsType<ItemsControl>(page.FindName("ColumnViewChips"));
+        Assert.Equal(Visibility.Visible, columnViewChips.Visibility);
     }
 
     private static Color ColorOf(object brush) => Assert.IsType<SolidColorBrush>(brush).Color;

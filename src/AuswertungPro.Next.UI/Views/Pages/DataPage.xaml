@@ -6,7 +6,8 @@
              xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:haltung="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
-             xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage">
+             xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage"
+             PreviewKeyDown="DataPage_PreviewKeyDown">
     <UserControl.Resources>
         <local:CountToMarkConverter x:Key="Foto1Mark" MinCount="1"/>
         <local:CountToMarkConverter x:Key="Foto2Mark" MinCount="2"/>
@@ -215,6 +216,14 @@
                                         <ui:FluentIcon Glyph="&#xE74B;" Foreground="{DynamicResource MutedBrush}"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
+                                <!-- Nova-Etappe 2b, Task 4: Verschieben auf Position und Gehe zu Zeile stehen
+                                     nicht mehr in der Werkzeugleiste, sondern hier im Popup "Reihenfolge". -->
+                                <MenuItem Header="Reihenfolge" Click="ReihenfolgeMenu_Click"
+                                          ToolTip="Zeile an eine Position verschieben oder zu einer Zeile springen">
+                                    <MenuItem.Icon>
+                                        <ui:FluentIcon Glyph="&#xE8CB;" Foreground="{DynamicResource MutedBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
                                 <Separator/>
                                 <MenuItem Header="Spalten anordnen" IsCheckable="True" IsChecked="{Binding IsColumnReorderEnabled}"/>
                                 <MenuItem x:Name="ClearColumnMenuItem" Header="Spalte leeren" IsCheckable="True"
@@ -336,10 +345,55 @@
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
+
+                    <!-- Nova-Etappe 2b, Task 4: Popup fuer "Reihenfolge" (Verschieben auf Position,
+                         Gehe zu Zeile) - dieselben Befehle wie bisher, nur nicht mehr staendig
+                         sichtbar in der Werkzeugleiste. Schliesslogik ueber PopupToggle. -->
+                    <Popup x:Name="ReihenfolgePopup" StaysOpen="False" Placement="Bottom" AllowsTransparency="True"
+                           PlacementTarget="{Binding ElementName=WeitereAktionenDropdown}">
+                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="{DynamicResource RadiusM}" Padding="10">
+                            <StackPanel Width="270">
+                                <TextBlock Text="Reihenfolge" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="Verschieben auf Pos.:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="130"/>
+                                    <TextBox x:Name="MoveToPositionBox" Width="60" VerticalAlignment="Center"
+                                             VerticalContentAlignment="Center" Padding="4,2"
+                                             ToolTip="Zielposition eingeben (1-basiert) und Enter drücken"
+                                             KeyDown="MoveToPositionBox_KeyDown"/>
+                                    <!-- Glyph als ui:FluentIcon: ein reiner Button-Content erbt die Icon-Schrift
+                                         nicht, weil der implizite TextBlock-Style des Themes sie ueberschreibt. -->
+                                    <Button Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                                            AutomationProperties.Name="Selektierte Zeile an Position verschieben"
+                                            ToolTip="Selektierte Zeile an Position verschieben"
+                                            Click="MoveToPosition_Click">
+                                        <ui:FluentIcon Glyph="&#xE72A;" FontSize="{DynamicResource TextS}"/>
+                                    </Button>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Gehe zu Zeile:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="130"/>
+                                    <TextBox x:Name="GoToRowBox" Width="60" VerticalAlignment="Center"
+                                             VerticalContentAlignment="Center" Padding="4,2"
+                                             ToolTip="Zeilennummer eingeben und Enter drücken"
+                                             KeyDown="GoToRowBox_KeyDown"/>
+                                    <Button Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                                            AutomationProperties.Name="Zu Zeile springen"
+                                            ToolTip="Zu Zeile springen"
+                                            Click="GoToRow_Click">
+                                        <ui:FluentIcon Glyph="&#xE72A;" FontSize="{DynamicResource TextS}"/>
+                                    </Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
                 </StackPanel>
             </Border>
 
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            <!-- Nova-Etappe 2b, Task 4: Die alte Suche-Zeile (Beschriftung + Feld) bleibt fuer die
+                 alte Ansicht (ShowHaltungenNovaLayout=false) exakt erhalten; die Sichtbarkeit
+                 beider Zeilen setzt der Code-behind (NovaLayoutAktiv), weil AppSettings kein
+                 INotifyPropertyChanged fuer ein direktes Binding besitzt. -->
+            <Border x:Name="AlteSucheLeiste" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="4" Margin="0,4,0,0" CornerRadius="{DynamicResource RadiusS}">
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -352,36 +406,54 @@
                             <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
                         </Button>
                         <TextBlock Text="{Binding SearchResultInfo}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
-
-                        <TextBlock Text="Verschieben auf Pos.:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="20,0,6,0"/>
-                        <TextBox x:Name="MoveToPositionBox" Width="60" VerticalAlignment="Center"
-                                 VerticalContentAlignment="Center" Padding="4,2"
-                                 ToolTip="Zielposition eingeben (1-basiert) und Enter drücken"
-                                 KeyDown="MoveToPositionBox_KeyDown"/>
-                        <!-- Glyph als ui:FluentIcon: ein reiner Button-Content erbt die Icon-Schrift
-                             nicht, weil der implizite TextBlock-Style des Themes sie ueberschreibt. -->
-                        <Button Style="{StaticResource IconButton}" Margin="4,0,0,0"
-                                AutomationProperties.Name="Selektierte Zeile an Position verschieben"
-                                ToolTip="Selektierte Zeile an Position verschieben"
-                                Click="MoveToPosition_Click">
-                            <ui:FluentIcon Glyph="&#xE72A;" FontSize="{DynamicResource TextS}"/>
-                        </Button>
-
-                        <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="8,4"/>
-
-                        <TextBlock Text="Gehe zu Zeile:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBox x:Name="GoToRowBox" Width="60" VerticalAlignment="Center"
-                                 VerticalContentAlignment="Center" Padding="4,2"
-                                 ToolTip="Zeilennummer eingeben und Enter drücken"
-                                 KeyDown="GoToRowBox_KeyDown"/>
-                        <Button Style="{StaticResource IconButton}" Margin="4,0,0,0"
-                                AutomationProperties.Name="Zu Zeile springen"
-                                ToolTip="Zu Zeile springen"
-                                Click="GoToRow_Click">
-                            <ui:FluentIcon Glyph="&#xE72A;" FontSize="{DynamicResource TextS}"/>
-                        </Button>
                     </StackPanel>
                 </StackPanel>
+            </Border>
+
+            <!-- Nova-Etappe 2b, Task 4: Suche als Pille rechts in der Werkzeugleiste, gleiches
+                 Muster wie die globale Suche in MainWindow.xaml (RadiusPill, InputBorderBrush,
+                 Lupe als ui:FluentIcon, Tastenmarke "F3"). Nur im Nova-Layout sichtbar. -->
+            <Border x:Name="NovaSucheLeiste" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    Padding="4" Margin="0,4,0,0" CornerRadius="{DynamicResource RadiusS}" Visibility="Collapsed">
+                <DockPanel LastChildFill="False">
+                    <Border DockPanel.Dock="Right" Height="30" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource InputBorderBrush}"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusPill}" Padding="10,0" MinWidth="230" VerticalAlignment="Center">
+                        <DockPanel>
+                            <ui:FluentIcon DockPanel.Dock="Left" Glyph="&#xE721;" Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <Border DockPanel.Dock="Right" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="{DynamicResource RadiusS}"
+                                    Padding="6,1" Margin="6,0,0,0" Height="Auto" VerticalAlignment="Center">
+                                <TextBlock Text="F3" FontSize="{DynamicResource TextXS}" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource MutedBrush}"/>
+                            </Border>
+                            <Button DockPanel.Dock="Right" Margin="6,0,0,0" Style="{StaticResource IconButton}"
+                                    Command="{Binding ClearSearchCommand}" ToolTip="Suche zurücksetzen">
+                                <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
+                            </Button>
+                            <Grid>
+                                <TextBox x:Name="NovaSearchBox" BorderThickness="0" Background="Transparent" MinWidth="140"
+                                         MinHeight="0" Padding="0" VerticalContentAlignment="Center"
+                                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         TextChanged="SearchBox_TextChanged"
+                                         ToolTip="Haltung suchen (F3)" AutomationProperties.Name="Suche Haltung"/>
+                                <TextBlock Text="Suche Haltung" IsHitTestVisible="False"
+                                           VerticalAlignment="Center" Margin="2,0,0,0"
+                                           FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Text, ElementName=NovaSearchBox}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </DockPanel>
+                    </Border>
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding SearchResultInfo}" Foreground="{DynamicResource TextBrush}"
+                               VerticalAlignment="Center" Margin="0,0,10,0"/>
+                </DockPanel>
             </Border>
         </StackPanel>
 

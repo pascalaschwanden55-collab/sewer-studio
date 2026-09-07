@@ -683,6 +683,15 @@ public sealed class DataPageLayoutSettings
 {
     /// <summary>Gewaehlte Spaltenansicht der Haltungsliste (Schluessel aus DataPageColumnViewCatalog). Leer = alle Spalten.</summary>
     public string ActiveColumnView { get; set; } = "alle";
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 4: Kompakt wird nur EINMAL als Standard gesetzt, wenn eine
+    /// bestehende Installation aktualisiert wird (das Flag ist dann noch nicht gesetzt).
+    /// Danach zaehlt ausschliesslich die vom Benutzer gewaehlte Ansicht — siehe
+    /// <c>KompaktStartRegel</c>. Gilt gleichermassen fuer Haltungen (<c>DataPageLayout</c>)
+    /// und Schaechte (<c>SchaechtePageLayout</c>), da beide dieselbe Klasse verwenden.
+    /// </summary>
+    public bool NovaKompaktEinmalGesetzt { get; set; }
     public double GridMinRowHeight { get; set; } = 38d;
     public double GridZoom { get; set; } = 1.0d;
     public bool IsColumnReorderEnabled { get; set; }

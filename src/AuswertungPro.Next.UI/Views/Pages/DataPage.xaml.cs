@@ -82,6 +82,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         // DataContext-Wechsel in InitNovaWorkspace angewendet; hier nur der robuste Grundzustand.
         HaltungsansichtToggle.IsChecked = false;
         ApplyHaltungsansichtSichtbarkeit();
+        ApplyNovaSucheSichtbarkeit(); // Task 4: Suche-Zeile passend zum Layout (Pille vs. alte Zeile)
 
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
         _searchDebounceTimer.Tick += (_, __) =>
@@ -147,6 +148,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             newVm.FelderExternErgaenzt += AktualisiereFelderDrawer;
             newVm.PropertyChanged += ViewModel_PropertyChanged;
             ApplyHaltungsansichtSettings(newVm);
+            ApplyNovaSucheSichtbarkeit();
             InitNovaWorkspace(newVm);
             _combinedFilter = new DataPageCombinedFilter(
                 newVm.SearchText,

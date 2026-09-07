@@ -30,6 +30,10 @@ public partial class DataPage
         var nova = NovaLayoutAktiv;
         ColumnViewChips.ItemsSource = DataPageColumnViewCatalog.ViewsFuer(nova);
 
+        // Task 4: Kompakt wird bei einer bestehenden Installation genau einmal zum Standard.
+        vm.Settings.DataPageLayout ??= new DataPageLayoutSettings();
+        KompaktStartRegel.WendeAn(vm.Settings.DataPageLayout, vm.Settings.Save);
+
         _columnViews = new DataPageColumnViewController(
             Grid,
             column => _columnFields.TryGetValue(column, out var field) ? field : null,

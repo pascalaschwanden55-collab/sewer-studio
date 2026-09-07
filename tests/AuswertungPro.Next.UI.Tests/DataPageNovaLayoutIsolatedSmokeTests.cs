@@ -51,6 +51,7 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
             Layout(page);
 
             PruefeNovaSpalten(page);
+            PruefeNovaSucheUndFilter(page);
 
             var drawer = Assert.IsType<HaltungFelderDrawer>(page.FindName("FelderDrawer"));
             var drawerRow = Assert.IsType<RowDefinition>(page.FindName("DrawerRow"));
@@ -260,6 +261,34 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
         Assert.Equal(erwartet, sichtbar);
 
         ansichten.Apply("alle");
+    }
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 4: Ohne DataContext liefert NovaLayoutAktiv true (Standard) — die
+    /// Suchpille ist sichtbar, die alte Suche-Zeile ist es nicht, und die Filterzeile
+    /// (Spaltenchips und FilterChipBar) bleibt erreichbar.
+    /// </summary>
+    private static void PruefeNovaSucheUndFilter(Views.Pages.DataPage page)
+    {
+        var novaSuche = Assert.IsType<Border>(page.FindName("NovaSucheLeiste"));
+        Assert.Equal(Visibility.Visible, novaSuche.Visibility);
+
+        var alteSuche = Assert.IsType<Border>(page.FindName("AlteSucheLeiste"));
+        Assert.Equal(Visibility.Collapsed, alteSuche.Visibility);
+
+        var novaSearchBox = Assert.IsType<TextBox>(page.FindName("NovaSearchBox"));
+        var pillBorder = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.FindAncestor<Border>(novaSearchBox);
+        Assert.NotNull(pillBorder);
+        Assert.Equal(15d, pillBorder!.CornerRadius.TopLeft);
+
+        var columnViewChips = Assert.IsType<ItemsControl>(page.FindName("ColumnViewChips"));
+        Assert.Equal(Visibility.Visible, columnViewChips.Visibility);
+
+        var filterChips = Assert.IsType<AuswertungPro.Next.UI.Controls.FilterChipBar>(page.FindName("FilterChips"));
+        Assert.Equal(Visibility.Visible, filterChips.Visibility);
+
+        var reihenfolgePopup = Assert.IsType<Popup>(page.FindName("ReihenfolgePopup"));
+        Assert.False(reihenfolgePopup.IsOpen);
     }
 
     private static Color ColorOf(object brush) => Assert.IsType<SolidColorBrush>(brush).Color;

@@ -37,6 +37,10 @@ public partial class SchaechtePage
         if (DataContext is not SchaechtePageViewModel vm)
             return;
 
+        // Task 4: Kompakt wird bei einer bestehenden Installation genau einmal zum Standard.
+        vm.Settings.SchaechtePageLayout ??= new DataPageLayoutSettings();
+        KompaktStartRegel.WendeAn(vm.Settings.SchaechtePageLayout, vm.Settings.Save);
+
         _columnViews = new DataPageColumnViewController(
             Grid,
             column => _columnFields.TryGetValue(column, out var field) ? field : null,
