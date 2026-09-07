@@ -346,8 +346,10 @@ internal static class Program
             Set(FieldKeys.Remarks, "Kuenstliche Bedienprobe");
             Set(FieldKeys.PrimaryDamages, PrimaereSchaeden(i));
 
-            // Vier Pruefstaende im Wechsel, damit alle Ampel- und Pruefungstexte im Bild stehen.
-            switch (i % 4)
+            // Fuenf Pruefstaende im Wechsel, damit alle Ampel- und Pruefungstexte im Bild
+            // stehen. Fall 3 kam mit der Fixwelle (F2) dazu: KI gerechnet, alles bestaetigt,
+            // Haltung aber noch nicht abgeschlossen — die Ampel sagt dann "bestätigt".
+            switch (i % 5)
             {
                 case 0: // fachlich geprueft, KI-Befunde bestaetigt
                     Set(FieldKeys.WorkflowStatus, "abgeschlossen");
@@ -359,6 +361,10 @@ internal static class Program
                 case 2: // fachlich geprueft, aber noch ein offener KI-Befund
                     Set(FieldKeys.WorkflowStatus, "abgeschlossen");
                     record.Protocol = BaueProtokoll(name, offeneKiBefunde: 1);
+                    break;
+                case 3: // KI gerechnet, alles bestaetigt, noch nicht abgeschlossen
+                    Set(FieldKeys.WorkflowStatus, "offen");
+                    record.Protocol = BaueProtokoll(name, offeneKiBefunde: 0);
                     break;
                 default: // nicht analysiert
                     Set(FieldKeys.WorkflowStatus, "offen");
