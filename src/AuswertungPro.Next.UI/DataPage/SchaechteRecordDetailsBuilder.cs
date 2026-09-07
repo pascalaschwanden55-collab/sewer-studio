@@ -71,9 +71,9 @@ internal sealed class SchaechteRecordDetailsBuilder
 
         WireRenovationVisibility(renovationSwitch, renovationDependents);
         AddGroup(groups, buckets, "Stammdaten", "Identifikation und Lage des Schachts.", RecordDetailGroupKind.MasterData);
-        AddGroup(groups, buckets, "Zustand und Inspektion", "Bewertung, Schaeden und Pruefresultate.", RecordDetailGroupKind.Condition);
+        AddGroup(groups, buckets, "Zustand und Inspektion", "Bewertung, Schäden und Prüfresultate.", RecordDetailGroupKind.Condition);
         AddGroup(groups, buckets, "Sanierung und Kosten", "Massnahmen, Kosten und Mengenangaben.", RecordDetailGroupKind.RenovationCosts);
-        AddGroup(groups, buckets, "Dokumente und Medien", "Verknuepfte Dateien, PDFs und Links.", RecordDetailGroupKind.Documents);
+        AddGroup(groups, buckets, "Dokumente und Medien", "Verknüpfte Dateien, PDFs und Links.", RecordDetailGroupKind.Documents);
         AddGroup(groups, buckets, "Weitere Angaben", "Felder ohne klare Zuordnung.", RecordDetailGroupKind.Additional);
         return groups;
     }
