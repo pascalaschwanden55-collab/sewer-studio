@@ -507,6 +507,29 @@ public partial class TrainingStudioWindow : Window
         window.Show();
     }
 
+    // ── Titelzeile / linke Spalte: Fenstersteuerung und "Weitere"-Popup ──────
+
+    private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void StudioWeitereButton_Click(object sender, RoutedEventArgs e)
+        => StudioWeiterePopup.IsOpen = !StudioWeiterePopup.IsOpen;
+
+    /// <summary>
+    /// Schritt 3 "Freigabe fuer Training" oeffnet dasselbe Training Center wie
+    /// MainWindow.OpenTrainingCenter_Click — keine eigene Oeffnungslogik.
+    /// </summary>
+    private void OpenTrainingCenter_Click(object sender, RoutedEventArgs e)
+    {
+        if (_services is null)
+        {
+            _vm.StatusText = "Training Center ist nur im laufenden SewerStudio verfuegbar.";
+            return;
+        }
+
+        var window = new TrainingCenterWindow(_services) { Owner = this };
+        window.Show();
+    }
+
     // ── VSA-Codierfenster (dasselbe wie im Codiermodus) ──────────────────────
 
     private void OpenCodeExplorer_Click(object sender, RoutedEventArgs e)
@@ -648,6 +671,12 @@ public partial class TrainingStudioWindow : Window
         if (area.Width <= 0 || area.Height <= 0)
             return;
 
+        // Box-Geometrie einmal berechnen — beide Beschriftungen (Hand-Box oben,
+        // Maske unten) haengen an derselben Box.
+        Rect? boxBounds = _vm.CurrentBox is { } currentBox
+            ? TrainingStudioImageGeometryMapper.ToCanvasRect(area, currentBox)
+            : null;
+
         // SAM-Maske zuerst zeichnen, damit die rote Auswahl immer oben sichtbar bleibt.
         if (_vm.Segmentation is not null)
         {
@@ -661,6 +690,8 @@ public partial class TrainingStudioWindow : Window
                 maskValidation.IsValid);
             if (!result.Rendered && !string.IsNullOrWhiteSpace(result.ErrorMessage))
                 _vm.StatusText = result.ErrorMessage;
+            else if (boxBounds is { } maskLabelBounds)
+                AddOverlayBadge(_vm.Segmentation.StatusText, maskLabelBounds.X, maskLabelBounds.Bottom, "SuccessBrush");
         }
 
         // Automatische Modelltreffer bleiben blau und getrennt von der roten Hand-Box.
@@ -668,9 +699,8 @@ public partial class TrainingStudioWindow : Window
             DrawPreviewDetections(area, source);
 
         // Gezogene Box immer als oberste Ebene.
-        if (_vm.CurrentBox is { } b)
+        if (boxBounds is { } bounds)
         {
-            var bounds = TrainingStudioImageGeometryMapper.ToCanvasRect(area, b);
             var rect = new Rectangle
             {
                 Stroke = Brushes.OrangeRed,
@@ -683,7 +713,31 @@ public partial class TrainingStudioWindow : Window
             Canvas.SetLeft(rect, bounds.X);
             Canvas.SetTop(rect, bounds.Y);
             OverlayCanvas.Children.Add(rect);
+
+            AddOverlayBadge("Hand-Box", bounds.X, bounds.Y - 18, "DangerBrush");
         }
+    }
+
+    /// <summary>Kleines Beschriftungs-Badge (Hintergrundfarbe + Statuskontrast-Text) an einer Canvas-Position.</summary>
+    private void AddOverlayBadge(string text, double left, double top, string backgroundResourceKey)
+    {
+        var badge = new Border
+        {
+            Background = (Brush)FindResource(backgroundResourceKey),
+            CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(4, 1, 4, 1),
+            IsHitTestVisible = false,
+            Child = new TextBlock
+            {
+                Text = text,
+                Foreground = (Brush)FindResource("StatusBadgeTextBrush"),
+                FontSize = (double)FindResource("TextXS"),
+                FontWeight = FontWeights.SemiBold,
+            },
+        };
+        Canvas.SetLeft(badge, left);
+        Canvas.SetTop(badge, top);
+        OverlayCanvas.Children.Add(badge);
     }
 
     private void DrawPreviewDetections(Rect area, BitmapSource source)
