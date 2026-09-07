@@ -58,6 +58,11 @@ public partial class PlayerWindow
         _shortcutOverlayController.Hide();
     }
 
+    private void Close_Click(object sender, System.Windows.RoutedEventArgs e) => Close();
+
+    private void WeitereDropdown_Click(object sender, System.Windows.RoutedEventArgs e)
+        => WeiterePopup.IsOpen = !WeiterePopup.IsOpen;
+
     private void ShortcutOverlayCard_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         => e.Handled = true;
 

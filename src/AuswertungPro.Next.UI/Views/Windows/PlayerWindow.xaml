@@ -141,67 +141,37 @@
             <RowDefinition Height="Auto"/>      <!-- Controls -->
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0"
-                Style="{StaticResource PlayerCard}"
-                Margin="0,0,0,12"
-                Padding="16,14">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="6"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <Border Grid.Column="0"
-                        Margin="0,2,14,2"
-                        Background="{DynamicResource AccentBrush}"
-                        CornerRadius="{DynamicResource RadiusPill}"/>
-
-                <StackPanel Grid.Column="1">
-                    <TextBlock Text="Videoplayer"
-                               Foreground="{DynamicResource AccentBrush}"
-                               FontSize="{DynamicResource TextS}"
-                               FontWeight="SemiBold"/>
-                    <TextBlock x:Name="VideoNameText"
-                               Margin="0,4,0,0"
-                               Text="Video"
-                               Foreground="{DynamicResource TextBrush}"
-                               FontSize="{DynamicResource TextXL}"
-                               FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis"/>
-                    <TextBlock x:Name="VideoPathText"
-                               Margin="0,4,0,0"
-                               Style="{StaticResource PlayerLabelText}"
-                               TextTrimming="CharacterEllipsis"/>
-                </StackPanel>
-
-                <Border Grid.Column="2"
-                        Margin="16,0,0,0"
-                        Style="{StaticResource PlayerMetaCard}"
-                        VerticalAlignment="Center">
-                    <StackPanel>
-                        <TextBlock Text="Hotkeys"
-                                   Style="{StaticResource PlayerLabelText}"
-                                   HorizontalAlignment="Right"/>
-                        <TextBlock Text="Space Pause, Pfeile +/-5s, +/- Geschwindigkeit"
-                                   Foreground="{DynamicResource TextBrush}"
-                                   FontSize="{DynamicResource TextS}"
-                                   TextAlignment="Right"/>
-                        <Button HorizontalAlignment="Right"
-                                Width="28"
-                                Height="24"
-                                MinWidth="28"
-                                Padding="0"
-                                Margin="0,6,0,0"
-                                Style="{StaticResource ToolbarButton}"
-                                Click="ShowShortcutOverlay_Click"
-                                ToolTip="Tastenkürzel anzeigen — F1"
-                                AutomationProperties.Name="Tastenkürzel anzeigen — F1">
-                            <ui:FluentIcon Glyph="&#xE897;" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}"/>
-                        </Button>
+        <Border Grid.Row="0" x:Name="PlayerKopfzeile" Style="{StaticResource PlayerCard}" Margin="0,0,0,8" Padding="12,8">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Style="{StaticResource PlayerButton}" Padding="10,4" Margin="6,0,0,0"
+                        Click="Close_Click" ToolTip="Player schliessen" AutomationProperties.Name="Player schliessen">
+                    <TextBlock Text="Schliessen" FontSize="{DynamicResource TextS}"/>
+                </Button>
+                <Button DockPanel.Dock="Right" Style="{StaticResource PlayerButton}" Padding="10,4"
+                        Click="ShowShortcutOverlay_Click" ToolTip="Tastenkürzel anzeigen — F1" AutomationProperties.Name="Tastenkürzel anzeigen — F1">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:FluentIcon Glyph="&#xE897;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Tastenkürzel F1" FontSize="{DynamicResource TextS}"/>
                     </StackPanel>
+                </Button>
+                <Border x:Name="CodierModusChip" DockPanel.Dock="Right" Background="{DynamicResource KiSubtleBrush}"
+                        CornerRadius="{DynamicResource RadiusPill}" Padding="10,2" Margin="10,0,0,0"
+                        VerticalAlignment="Center" Visibility="Collapsed">
+                    <TextBlock Text="Codier-Modus" FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{DynamicResource KiTextBrush}"/>
                 </Border>
-            </Grid>
+                <ui:FluentIcon DockPanel.Dock="Left" Glyph="&#xE768;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <DockPanel LastChildFill="True" VerticalAlignment="Center">
+                    <TextBlock DockPanel.Dock="Left" Text="Video · " VerticalAlignment="Center"
+                               FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    <TextBlock x:Name="VideoNameText" DockPanel.Dock="Left" Text="Video" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" MaxWidth="260"
+                               FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    <TextBlock DockPanel.Dock="Left" Text=" · " VerticalAlignment="Center"
+                               FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    <TextBlock x:Name="VideoPathText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               FontSize="{DynamicResource TextL}" FontWeight="Normal" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </DockPanel>
+            </DockPanel>
         </Border>
 
         <!-- Video-Bereich: Grid mit optionalem Seitenpanel -->
@@ -867,268 +837,267 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="5"
-                Style="{StaticResource PlayerCard}"
-                Padding="14,12">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <WrapPanel Grid.Column="0" Margin="0,0,18,0" VerticalAlignment="Center">
-                    <Button Style="{StaticResource PlayerPrimaryButton}" Margin="0,0,6,0" Click="Play_Click"
-                            ToolTip="Abspielen / Pause — Leertaste">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Play" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource PlayerButton}" Margin="0,0,6,0" Click="Pause_Click"
-                            ToolTip="Abspielen / Pause — Leertaste">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE769;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Pause" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource PlayerButton}" Click="Stop_Click"
-                            ToolTip="Stopp — Taste S">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE71A;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Stop" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-
-                    <Border Width="1" Height="24" Margin="8,0"
-                            Background="{DynamicResource BorderBrush}"/>
-
-                    <ToggleButton x:Name="QuickScanButton"
-                                  Style="{StaticResource SpeedToggleButton}"
-                                  Margin="0,0,6,0"
-                                  Click="QuickScan_Click"
-                                  ToolTip="Schnell-Scan: KI-Heatmap auf der Timeline erzeugen">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE9D9;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Schnell-Scan" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ToggleButton>
-
-                    <TextBlock x:Name="QuickScanStatusText"
-                               VerticalAlignment="Center"
-                               FontSize="{DynamicResource TextXS}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Visibility="Collapsed"/>
-
-                    <Border Width="1" Height="24" Margin="8,0"
-                            Background="{DynamicResource BorderBrush}"/>
-
-                    <ToggleButton x:Name="LiveDetectionButton"
-                                  Style="{StaticResource SpeedToggleButton}"
-                                  Margin="0,0,6,0"
-                                  Click="LiveDetection_Click"
-                                  ToolTip="Erkennung ein/aus — Taste D">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE945;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Live-KI" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ToggleButton>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,0,6,0">
-                        <Button x:Name="ManualMarkButton"
-                                Style="{StaticResource PlayerButton}"
-                                Click="ManualMark_Click"
-                                ToolTip="Bereich markieren — Taste M">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE7C8;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="TxtMarkToolName" Text="Markieren" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Popup x:Name="MarkToolPopup" StaysOpen="False" Placement="Top"
-                               PlacementTarget="{Binding ElementName=ManualMarkButton}">
-                            <Border Background="{DynamicResource BgLightBrush}"
-                                    BorderBrush="{DynamicResource BorderBrush}"
-                                    BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="6">
-                                <StackPanel>
-                                    <Button Click="MarkTool_Punkt_Click" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" Margin="0,0,14,0"/>
-                                            <TextBlock Text="Punkt (Klick)"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="MarkTool_Ellipse_Click" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="16" Height="10" Stroke="{DynamicResource AccentBrush}"
-                                                     StrokeThickness="1.5" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Ellipse"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="MarkTool_Freihand_Click" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource AccentBrush}" Width="22" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Freihand"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="MarkTool_Rechteck_Click" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <ui:FluentIcon Glyph="&#xE739;" Foreground="{DynamicResource AccentBrush}" Width="22" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Rechteck"/>
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-                            </Border>
-                        </Popup>
+        <Border x:Name="Bedienleiste" Grid.Row="5" Style="{StaticResource PlayerCard}" Padding="14,12">
+            <WrapPanel VerticalAlignment="Center">
+                <Button Style="{StaticResource PlayerPrimaryButton}" Margin="0,0,6,0" Click="Play_Click"
+                        ToolTip="Abspielen / Pause — Leertaste">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Play" VerticalAlignment="Center"/>
                     </StackPanel>
+                </Button>
+                <Button Style="{StaticResource PlayerButton}" Margin="0,0,6,0" Click="Pause_Click"
+                        ToolTip="Abspielen / Pause — Leertaste">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE769;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Pause" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource PlayerButton}" Margin="0,0,6,0" Click="Stop_Click"
+                        ToolTip="Stopp — Taste S">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE71A;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Stop" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
-                    <Button x:Name="CodingModeButton"
-                            Style="{StaticResource PlayerPrimaryButton}"
-                            Margin="6,0,0,0"
-                            Click="CodingMode_Click"
-                            ToolTip="Codier-Modus: Haltung komplett durchcodieren mit Overlay-Werkzeugen (C)">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE70F;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Codier-Modus" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                <Border Width="1" Height="24" Margin="8,0"
+                        Background="{DynamicResource BorderBrush}"/>
 
-                    <Button x:Name="CodingScreenshotButton"
+                <DockPanel LastChildFill="True" Width="200" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <ToggleButton x:Name="SpeedPresetButton"
+                                  DockPanel.Dock="Right"
+                                  Style="{StaticResource SpeedToggleButton}"
+                                  MinHeight="28"
+                                  Padding="8,3"
+                                  Margin="8,0,0,0"
+                                  ToolTip="Schneller — Taste +">
+                        <TextBlock Text="&#xE712;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
+                    </ToggleButton>
+                    <Slider x:Name="SpeedSlider"
+                            Minimum="0.25"
+                            Maximum="8"
+                            Value="1"
+                            Ticks="0.25,0.5,1,1.5,2,4,8"
+                            TickPlacement="BottomRight"
+                            IsSnapToTickEnabled="True"
+                            IsMoveToPointEnabled="True"
+                            ValueChanged="SpeedSlider_ValueChanged"
+                            ToolTip="Langsamer — Taste −"/>
+                </DockPanel>
+                <Popup PlacementTarget="{Binding ElementName=SpeedPresetButton}"
+                       Placement="Top"
+                       StaysOpen="False"
+                       AllowsTransparency="True"
+                       IsOpen="{Binding IsChecked, ElementName=SpeedPresetButton, Mode=TwoWay}">
+                    <Border Background="{DynamicResource CardBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{DynamicResource RadiusL}"
+                            Padding="8">
+                        <WrapPanel>
+                            <ToggleButton x:Name="Speed05Button" Style="{StaticResource SpeedToggleButton}" Content="0.5x" Click="Speed05_Click"
+                                          ToolTip="Halbe Geschwindigkeit - für detaillierte Inspektion"/>
+                            <ToggleButton x:Name="Speed1Button" Style="{StaticResource SpeedToggleButton}" Content="1x" Click="Speed1_Click"
+                                          ToolTip="Normale Wiedergabegeschwindigkeit"/>
+                            <ToggleButton x:Name="Speed15Button" Style="{StaticResource SpeedToggleButton}" Content="1.5x" Click="Speed15_Click"
+                                          ToolTip="1.5-fache Geschwindigkeit"/>
+                            <ToggleButton x:Name="Speed2Button" Style="{StaticResource SpeedToggleButton}" Content="2x" Click="Speed2_Click"
+                                          ToolTip="Doppelte Geschwindigkeit"/>
+                            <ToggleButton x:Name="Speed4Button" Style="{StaticResource SpeedToggleButton}" Content="4x" Click="Speed4_Click"
+                                          ToolTip="4-fache Geschwindigkeit - schneller Überblick"/>
+                            <ToggleButton x:Name="Speed8Button" Style="{StaticResource SpeedToggleButton}" Content="8x" Margin="0" Click="Speed8_Click"
+                                          ToolTip="8-fache Geschwindigkeit - maximaler Schnellvorlauf"/>
+                        </WrapPanel>
+                    </Border>
+                </Popup>
+
+                <Border Width="1" Height="24" Margin="8,0"
+                        Background="{DynamicResource BorderBrush}"/>
+
+                <ToggleButton x:Name="LiveDetectionButton"
+                              Style="{StaticResource SpeedToggleButton}"
+                              Margin="0,0,6,0"
+                              Click="LiveDetection_Click"
+                              ToolTip="Erkennung ein/aus — Taste D">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE945;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Live-KI" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ToggleButton>
+
+                <ToggleButton x:Name="QuickScanButton"
+                              Style="{StaticResource SpeedToggleButton}"
+                              Margin="0,0,6,0"
+                              Click="QuickScan_Click"
+                              ToolTip="Schnell-Scan: KI-Heatmap auf der Timeline erzeugen">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE9D9;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Schnell-Scan" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ToggleButton>
+
+                <TextBlock x:Name="QuickScanStatusText"
+                           VerticalAlignment="Center"
+                           Margin="0,0,6,0"
+                           FontSize="{DynamicResource TextXS}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Visibility="Collapsed"/>
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,6,0">
+                    <Button x:Name="ManualMarkButton"
                             Style="{StaticResource PlayerButton}"
-                            Margin="6,0,0,0"
-                            Click="CodingScreenshot_Click"
-                            ToolTip="Screen: ganzes Fenster (mit Boxen) in die Zwischenablage kopieren">
+                            Click="ManualMark_Click"
+                            ToolTip="Bereich markieren — Taste M">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE722;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Screen" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE7C8;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtMarkToolName" Text="Markieren" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-
-                    <TextBlock x:Name="LiveDetectionStatusText"
-                               VerticalAlignment="Center"
-                               FontSize="{DynamicResource TextXS}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Visibility="Collapsed"/>
-                </WrapPanel>
-
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,18,0">
-                    <TextBlock Text="Wiedergabegeschwindigkeit"
-                               Style="{StaticResource PlayerLabelText}"
-                               Margin="0,0,0,6"/>
-                    <DockPanel LastChildFill="True" Width="260">
-                        <ToggleButton x:Name="SpeedPresetButton"
-                                      DockPanel.Dock="Right"
-                                      Style="{StaticResource SpeedToggleButton}"
-                                      MinHeight="28"
-                                      Padding="8,3"
-                                      Margin="8,0,0,0"
-                                      ToolTip="Schneller — Taste +">
-                            <TextBlock Text="&#xE712;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
-                        </ToggleButton>
-                        <Slider x:Name="SpeedSlider"
-                                Minimum="0.25"
-                                Maximum="8"
-                                Value="1"
-                                Ticks="0.25,0.5,1,1.5,2,4,8"
-                                TickPlacement="BottomRight"
-                                IsSnapToTickEnabled="True"
-                                IsMoveToPointEnabled="True"
-                                ValueChanged="SpeedSlider_ValueChanged"
-                                ToolTip="Langsamer — Taste −"/>
-                    </DockPanel>
-                    <Popup PlacementTarget="{Binding ElementName=SpeedPresetButton}"
-                           Placement="Top"
-                           StaysOpen="False"
-                           AllowsTransparency="True"
-                           IsOpen="{Binding IsChecked, ElementName=SpeedPresetButton, Mode=TwoWay}">
-                        <Border Background="{DynamicResource CardBrush}"
+                    <Popup x:Name="MarkToolPopup" StaysOpen="False" Placement="Top"
+                           PlacementTarget="{Binding ElementName=ManualMarkButton}">
+                        <Border Background="{DynamicResource BgLightBrush}"
                                 BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="{DynamicResource RadiusL}"
-                                Padding="8">
-                            <WrapPanel>
-                                <ToggleButton x:Name="Speed05Button" Style="{StaticResource SpeedToggleButton}" Content="0.5x" Click="Speed05_Click"
-                                              ToolTip="Halbe Geschwindigkeit - für detaillierte Inspektion"/>
-                                <ToggleButton x:Name="Speed1Button" Style="{StaticResource SpeedToggleButton}" Content="1x" Click="Speed1_Click"
-                                              ToolTip="Normale Wiedergabegeschwindigkeit"/>
-                                <ToggleButton x:Name="Speed15Button" Style="{StaticResource SpeedToggleButton}" Content="1.5x" Click="Speed15_Click"
-                                              ToolTip="1.5-fache Geschwindigkeit"/>
-                                <ToggleButton x:Name="Speed2Button" Style="{StaticResource SpeedToggleButton}" Content="2x" Click="Speed2_Click"
-                                              ToolTip="Doppelte Geschwindigkeit"/>
-                                <ToggleButton x:Name="Speed4Button" Style="{StaticResource SpeedToggleButton}" Content="4x" Click="Speed4_Click"
-                                              ToolTip="4-fache Geschwindigkeit - schneller Überblick"/>
-                                <ToggleButton x:Name="Speed8Button" Style="{StaticResource SpeedToggleButton}" Content="8x" Margin="0" Click="Speed8_Click"
-                                              ToolTip="8-fache Geschwindigkeit - maximaler Schnellvorlauf"/>
-                            </WrapPanel>
+                                BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="6">
+                            <StackPanel>
+                                <Button Click="MarkTool_Punkt_Click" Padding="12,6"
+                                        Style="{StaticResource MarkToolPopupButton}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" Margin="0,0,14,0"/>
+                                        <TextBlock Text="Punkt (Klick)"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="MarkTool_Ellipse_Click" Padding="12,6"
+                                        Style="{StaticResource MarkToolPopupButton}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="16" Height="10" Stroke="{DynamicResource AccentBrush}"
+                                                 StrokeThickness="1.5" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Ellipse"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="MarkTool_Freihand_Click" Padding="12,6"
+                                        Style="{StaticResource MarkToolPopupButton}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource AccentBrush}" Width="22" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Freihand"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="MarkTool_Rechteck_Click" Padding="12,6"
+                                        Style="{StaticResource MarkToolPopupButton}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:FluentIcon Glyph="&#xE739;" Foreground="{DynamicResource AccentBrush}" Width="22" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Rechteck"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
                         </Border>
                     </Popup>
                 </StackPanel>
 
-                <StackPanel Grid.Column="2" VerticalAlignment="Center" Width="170" Margin="0,0,18,0">
-                    <TextBlock Text="Lautstärke"
-                               Style="{StaticResource PlayerLabelText}"
-                               Margin="0,0,0,6"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="42"/>
-                        </Grid.ColumnDefinitions>
-                        <ToggleButton x:Name="MuteButton"
-                                      Grid.Column="0"
-                                      Style="{StaticResource SpeedToggleButton}"
-                                      Width="32"
-                                      MinHeight="28"
-                                      Padding="0"
-                                      Margin="0,0,8,0"
-                                      Click="MuteButton_Click"
-                                      ToolTip="Ton stummschalten">
-                            <TextBlock x:Name="MuteIconText"
-                                       Text="&#xE767;"
-                                       FontFamily="{DynamicResource FontIcon}"
-                                       FontSize="{DynamicResource TextM}"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </ToggleButton>
-                        <Slider x:Name="VolumeSlider"
-                                Grid.Column="1"
-                                Minimum="0"
-                                Maximum="100"
-                                Value="80"
-                                TickFrequency="10"
-                                IsMoveToPointEnabled="True"
-                                ValueChanged="VolumeSlider_ValueChanged"
-                                ToolTip="Lautstärke 0 bis 100 Prozent"/>
-                        <TextBlock x:Name="VolumeText"
-                                   Grid.Column="2"
-                                   Text="80%"
-                                   FontFamily="Consolas, Cascadia Mono"
-                                   FontSize="{DynamicResource TextXS}"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   VerticalAlignment="Center"
-                                   TextAlignment="Right"/>
-                    </Grid>
-                </StackPanel>
-
-                <Border Grid.Column="3"
-                        Style="{StaticResource PlayerMetaCard}"
-                        VerticalAlignment="Center">
-                    <StackPanel>
-                        <TextBlock Text="Aktuelle Rate"
-                                   Style="{StaticResource PlayerLabelText}"
-                                   HorizontalAlignment="Right"/>
-                        <TextBlock x:Name="RateText"
-                                   Foreground="{DynamicResource TextBrush}"
-                                   FontSize="{DynamicResource TextXL}"
-                                   FontWeight="SemiBold"
-                                   HorizontalAlignment="Right"
-                                   Text="1.00x"/>
+                <Button x:Name="CodingModeButton"
+                        Style="{StaticResource PlayerPrimaryButton}"
+                        Margin="0,0,6,0"
+                        Click="CodingMode_Click"
+                        ToolTip="Codier-Modus: Haltung komplett durchcodieren mit Overlay-Werkzeugen (C)">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE70F;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Codier-Modus" VerticalAlignment="Center"/>
                     </StackPanel>
-                </Border>
-            </Grid>
+                </Button>
+
+                <Button x:Name="WeitereDropdownButton"
+                        Style="{StaticResource PlayerButton}"
+                        Click="WeitereDropdown_Click"
+                        ToolTip="Weitere Player-Werkzeuge"
+                        AutomationProperties.Name="Weitere Player-Werkzeuge">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Weitere" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ui:FluentIcon Glyph="&#xE70D;" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Popup x:Name="WeiterePopup" StaysOpen="False" Placement="Top"
+                       PlacementTarget="{Binding ElementName=WeitereDropdownButton}">
+                    <Border Background="{DynamicResource CardBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{DynamicResource RadiusM}"
+                            Padding="10">
+                        <StackPanel Width="200">
+                            <Button x:Name="CodingScreenshotButton"
+                                    Style="{StaticResource PlayerButton}"
+                                    HorizontalAlignment="Stretch"
+                                    Margin="0,0,0,10"
+                                    Click="CodingScreenshot_Click"
+                                    ToolTip="Screen: ganzes Fenster (mit Boxen) in die Zwischenablage kopieren">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE722;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Screen" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <TextBlock Text="Lautstärke"
+                                       Style="{StaticResource PlayerLabelText}"
+                                       Margin="0,0,0,6"/>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="42"/>
+                                </Grid.ColumnDefinitions>
+                                <ToggleButton x:Name="MuteButton"
+                                              Grid.Column="0"
+                                              Style="{StaticResource SpeedToggleButton}"
+                                              Width="32"
+                                              MinHeight="28"
+                                              Padding="0"
+                                              Margin="0,0,8,0"
+                                              Click="MuteButton_Click"
+                                              ToolTip="Ton stummschalten">
+                                    <TextBlock x:Name="MuteIconText"
+                                               Text="&#xE767;"
+                                               FontFamily="{DynamicResource FontIcon}"
+                                               FontSize="{DynamicResource TextM}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </ToggleButton>
+                                <Slider x:Name="VolumeSlider"
+                                        Grid.Column="1"
+                                        Minimum="0"
+                                        Maximum="100"
+                                        Value="80"
+                                        TickFrequency="10"
+                                        IsMoveToPointEnabled="True"
+                                        ValueChanged="VolumeSlider_ValueChanged"
+                                        ToolTip="Lautstärke 0 bis 100 Prozent"/>
+                                <TextBlock x:Name="VolumeText"
+                                           Grid.Column="2"
+                                           Text="80%"
+                                           FontFamily="Consolas, Cascadia Mono"
+                                           FontSize="{DynamicResource TextXS}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center"
+                                           TextAlignment="Right"/>
+                            </Grid>
+
+                            <TextBlock Text="Aktuelle Rate"
+                                       Style="{StaticResource PlayerLabelText}"/>
+                            <TextBlock x:Name="RateText"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       FontSize="{DynamicResource TextXL}"
+                                       FontWeight="SemiBold"
+                                       Text="1.00x"/>
+
+                            <TextBlock x:Name="LiveDetectionStatusText"
+                                       Margin="0,10,0,0"
+                                       FontSize="{DynamicResource TextXS}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Visibility="Collapsed"/>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+            </WrapPanel>
         </Border>
+        <!-- Ende Bedienleiste -->
         <Border x:Name="ShortcutOverlay"
                 Grid.RowSpan="6"
                 Visibility="Collapsed"

@@ -72,7 +72,8 @@
         <Style x:Key="SectionLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Setter Property="Typography.Capitals" Value="AllSmallCaps"/>
             <Setter Property="Margin" Value="0,0,0,6"/>
         </Style>
 

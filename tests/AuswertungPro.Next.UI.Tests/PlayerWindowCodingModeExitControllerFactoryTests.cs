@@ -314,6 +314,7 @@ public sealed class PlayerWindowCodingModeExitControllerFactoryTests
                 CodingSidePanel: new Border(),
                 CodingSidePanelColumn: new ColumnDefinition(),
                 CodingToolbar: new Border(),
+                CodierModusChip: new Border(),
                 CodingTimelinePanel: new Border(),
                 CodingCalibrationHint: new Border(),
                 CodingMeasurementPanel: new Border(),
