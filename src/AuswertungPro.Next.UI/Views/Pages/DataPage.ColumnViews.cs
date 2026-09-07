@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -50,7 +51,14 @@ public partial class DataPage
     private void SyncColumnViewChips()
     {
         foreach (var chip in FindVisualChildren<ToggleButton>(ColumnViewChips))
+        {
             chip.IsChecked = string.Equals(chip.Tag as string, _columnViews?.ActiveKey, StringComparison.OrdinalIgnoreCase);
+            if (chip.DataContext is DataPageColumnView view)
+            {
+                var zaehler = FindVisualChildren<TextBlock>(chip).First(t => t.Name == "ChipZaehler");
+                zaehler.Text = view.Anzahl(_columnFields.Count).ToString();
+            }
+        }
     }
 
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T : DependencyObject

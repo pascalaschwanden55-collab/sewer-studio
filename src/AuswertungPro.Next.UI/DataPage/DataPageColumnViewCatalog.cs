@@ -6,7 +6,11 @@ using AuswertungPro.Next.Domain.Models;
 namespace AuswertungPro.Next.UI.DataPage;
 
 /// <summary>Eine gespeicherte Spaltenansicht der Haltungsliste. Felder == null bedeutet alle Spalten.</summary>
-public sealed record DataPageColumnView(string Key, string Titel, IReadOnlyList<string>? Felder);
+public sealed record DataPageColumnView(string Key, string Titel, IReadOnlyList<string>? Felder)
+{
+    /// <summary>Spaltenzahl dieser Ansicht; ohne eigene Feldliste gilt die Gesamtzahl aller Spalten.</summary>
+    public int Anzahl(int alleSpalten) => Felder?.Count ?? alleSpalten;
+}
 
 /// <summary>
 /// Feste Spaltensaetze aus dem Nova-Prototyp. Reine Daten, keine WPF-Abhaengigkeit: Der

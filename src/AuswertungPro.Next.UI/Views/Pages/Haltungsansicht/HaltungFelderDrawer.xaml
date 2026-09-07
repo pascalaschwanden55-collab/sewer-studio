@@ -33,6 +33,10 @@
                            Foreground="{DynamicResource WarningTextBrush}"
                            ToolTip="{Binding Hinweis, ElementName=Root}"
                            Visibility="{Binding Hinweis, ElementName=Root, Converter={StaticResource TextSichtbar}}"/>
+                <ToggleButton DockPanel.Dock="Right" IsChecked="{Binding IsTall, ElementName=Root, Mode=TwoWay}" Style="{StaticResource CompactToggleButton}" Margin="6,0,0,0"
+                              ToolTip="Eingabefelder gross anzeigen" AutomationProperties.Name="Eingabefelder gross anzeigen">
+                    <ui:FluentIcon Glyph="&#xE740;"/>
+                </ToggleButton>
                 <Button DockPanel.Dock="Right" Click="AlleZu_Click" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0"
                         ToolTip="Alle Themen zuklappen" AutomationProperties.Name="Alle Themen zuklappen">
                     <TextBlock Text="Alle zu"/>
@@ -57,7 +61,13 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Expander IsExpanded="True" Margin="0,0,8,0" Header="{Binding Title}" VerticalAlignment="Top">
+                            <Expander IsExpanded="True" Margin="0,0,8,0" VerticalAlignment="Top">
+                                <Expander.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Anzahl}" Margin="8,0,0,0" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                                    </StackPanel>
+                                </Expander.Header>
                                 <controls:RecordDetailsView IsCompactLayout="True" IsHeaderVisible="False" Groups="{Binding EinzelGruppe}"/>
                             </Expander>
                         </DataTemplate>

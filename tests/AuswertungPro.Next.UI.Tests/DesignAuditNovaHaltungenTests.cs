@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.RegularExpressions;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -45,5 +46,24 @@ public sealed class DesignAuditNovaHaltungenTests
     {
         var settings = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "AppSettings.cs"));
         Assert.Contains("public bool ShowHaltungenNovaLayout { get; set; } = true;", settings);
+    }
+
+    [Fact]
+    public void Der_Umschalter_zur_alten_Haltungsansicht_liegt_im_Menue_und_nicht_in_der_Werkzeugleiste()
+    {
+        var xaml = Xaml("Views", "Pages", "DataPage.xaml");
+        var toggle = Regex.Match(xaml, "<MenuItem x:Name=\"HaltungsansichtToggle\"[\\s\\S]*?/>|<MenuItem x:Name=\"HaltungsansichtToggle\"[\\s\\S]*?</MenuItem>");
+        Assert.True(toggle.Success, "HaltungsansichtToggle muss ein MenuItem sein");
+        Assert.Contains("IsCheckable=\"True\"", toggle.Value);
+        Assert.Contains("Header=\"Alte Haltungsansicht\"", toggle.Value);
+        Assert.DoesNotContain("<ToggleButton x:Name=\"HaltungsansichtToggle\"", xaml);
+    }
+
+    [Fact]
+    public void Eingabefelder_haben_Zaehler_je_Thema_und_einen_Knopf_gross_anzeigen()
+    {
+        var xaml = Xaml("Views", "Pages", "Haltungsansicht", "HaltungFelderDrawer.xaml");
+        Assert.Contains("{Binding Anzahl}", xaml);
+        Assert.Contains("AutomationProperties.Name=\"Eingabefelder gross anzeigen\"", xaml);
     }
 }

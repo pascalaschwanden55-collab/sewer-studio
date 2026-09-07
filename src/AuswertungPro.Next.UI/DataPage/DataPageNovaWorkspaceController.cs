@@ -82,6 +82,20 @@ public sealed class DataPageNovaWorkspaceController
         // SplitterPersistenceBehavior schreibt beim Laden der Trennlinie die gespeicherte Hoehe in die
         // Zeile, auch wenn die Eingabefelder gerade zugeklappt sind. Danach den Zustand erneut anwenden.
         _e.DrawerSplitter.Loaded += (_, _) => ApplyDrawerOpenState();
+        // "Gross anzeigen" (Inventar 8.6): oeffnet mit und setzt 60 % der Arbeitsflaeche; die
+        // Groesse wird nicht gespeichert. Ausschalten stellt die normale Hoehe wieder her.
+        _e.FelderDrawer.IsTallChanged += (_, _) =>
+        {
+            if (_e.FelderDrawer.IsTall)
+            {
+                _e.FelderDrawer.IsOpen = true;
+                _e.DrawerRow.Height = new GridLength(Math.Max(
+                    DataPageWorkspaceLayoutPolicy.MinDrawer,
+                    (_e.GridHost.ActualHeight - _e.FilterChips.ActualHeight) * 0.6));
+            }
+            else
+                ApplyDrawerHeight();
+        };
     }
 
     /// <summary>

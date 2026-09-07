@@ -58,6 +58,25 @@ public partial class HaltungFelderDrawer : UserControl
     /// <summary>Wird bei jedem Wechsel von <see cref="IsOpen"/> ausgeloest.</summary>
     public event EventHandler? IsOpenChanged;
 
+    public static readonly DependencyProperty IsTallProperty = DependencyProperty.Register(
+        nameof(IsTall), typeof(bool), typeof(HaltungFelderDrawer),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+            (d, _) => ((HaltungFelderDrawer)d).IsTallChanged?.Invoke(d, EventArgs.Empty)));
+
+    /// <summary>
+    /// „Gross anzeigen": die Eingabefelder-Zeile bekommt beim Einschalten 60 % der Arbeitsflaeche
+    /// (Inventar 8.6). Die Groesse wird nicht gespeichert; beim Ausschalten gilt wieder die
+    /// normale, gespeicherte Hoehe.
+    /// </summary>
+    public bool IsTall
+    {
+        get => (bool)GetValue(IsTallProperty);
+        set => SetValue(IsTallProperty, value);
+    }
+
+    /// <summary>Wird bei jedem Wechsel von <see cref="IsTall"/> ausgeloest.</summary>
+    public event EventHandler? IsTallChanged;
+
     public static readonly DependencyProperty GroupsProperty = DependencyProperty.Register(
         nameof(Groups), typeof(IReadOnlyList<RecordDetailGroup>), typeof(HaltungFelderDrawer),
         new PropertyMetadata(null, (d, _) => ((HaltungFelderDrawer)d).Filtern()));
@@ -81,7 +100,11 @@ public partial class HaltungFelderDrawer : UserControl
     }
 
     /// <summary>Ein Thema mit genau einer Gruppe, damit RecordDetailsView es unveraendert rendert.</summary>
-    public sealed record ThemaAnzeige(string Title, IReadOnlyList<RecordDetailGroup> EinzelGruppe);
+    public sealed record ThemaAnzeige(string Title, IReadOnlyList<RecordDetailGroup> EinzelGruppe)
+    {
+        /// <summary>Anzahl der Felder in diesem Thema, fuer den Zaehler im Expander-Kopf.</summary>
+        public int Anzahl => EinzelGruppe.Sum(g => g.Items.Count);
+    }
 
     /// <summary>Reine Filterregel: nur Felder, deren Beschriftung den Suchtext enthaelt.</summary>
     internal static IReadOnlyList<ThemaAnzeige> Filtere(IReadOnlyList<RecordDetailGroup>? gruppen, string? suche)

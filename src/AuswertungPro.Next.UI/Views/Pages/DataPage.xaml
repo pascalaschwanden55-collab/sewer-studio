@@ -99,21 +99,6 @@
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="4,3" CornerRadius="{DynamicResource RadiusL}">
                 <StackPanel Orientation="Horizontal">
-                    <ToggleButton x:Name="HaltungsansichtToggle"
-                                  Style="{StaticResource PageCompactToggleButton}"
-                                  Margin="0,0,6,0"
-                                  Checked="HaltungsansichtToggle_Changed"
-                                  Unchecked="HaltungsansichtToggle_Changed"
-                                  ToolTip="Zwischen Tabelle und Haltungsansicht umschalten">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8FD;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}"
-                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Haltungsansicht" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ToggleButton>
-
-                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
-
                     <Button Command="{Binding SaveCommand}"
                             Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
@@ -213,6 +198,9 @@
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE7C3;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
                                 </MenuItem>
                                 <Separator/>
+                                <MenuItem x:Name="HaltungsansichtToggle" Header="Alte Haltungsansicht" IsCheckable="True"
+                                          Checked="HaltungsansichtToggle_Changed" Unchecked="HaltungsansichtToggle_Changed"
+                                          ToolTip="Liste links und Formularkarten statt Tabelle, Übersicht und Eingabefeldern"/>
                                 <MenuItem x:Name="UndockButton" Header="Abdocken" Click="UndockGrid_Click"
                                           ToolTip="Tabelle in separatem Fenster öffnen (Multi-Monitor)">
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A7;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
@@ -401,9 +389,11 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <ToggleButton Style="{StaticResource PageCompactToggleButton}" Margin="0,0,6,0" Tag="{Binding Key}"
-                                  Click="ColumnViewChip_Click"
-                                  ToolTip="{Binding Titel}" AutomationProperties.Name="{Binding Titel}">
-                        <TextBlock Text="{Binding Titel}"/>
+                                  Click="ColumnViewChip_Click" ToolTip="{Binding Titel}" AutomationProperties.Name="{Binding Titel}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Titel}"/>
+                            <TextBlock x:Name="ChipZaehler" Margin="6,0,0,0" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                        </StackPanel>
                     </ToggleButton>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
