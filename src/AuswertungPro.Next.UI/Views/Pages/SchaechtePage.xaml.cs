@@ -221,6 +221,9 @@ public partial class SchaechtePage : UserControl
                             Mode = BindingMode.TwoWay,
                             UpdateSourceTrigger = UpdateSourceTrigger.LostFocus
                         },
+                        // Nova-Fixwelle 2b (P3): Ein zu langer Wert wird mit Auslassungspunkten
+                        // gekuerzt statt hart abgeschnitten ("KontrollschachDorfstrasse").
+                        ElementStyle = NovaTextZellenStil.MitAuslassungspunkten(),
                         Width = DataGridLength.SizeToHeader,
                         MinWidth = 90,
                         // Die GEONIS-Kennung ist nur Anzeige; der Export liest das Geonis-Objekt.
@@ -238,7 +241,14 @@ public partial class SchaechtePage : UserControl
                 // in der ganzen Zelle: sonst stuende der Chip auf einer zweiten Farbflaeche.
                 if (!istZustandsklasse)
                     ApplyColorStyle(column, col);
+                // Nova-Fixwelle 2b (P3): Volltext oben im Hinweis, Herkunftszeile darunter —
+                // dieselbe Regel wie in der Haltungsliste.
+                column.CellStyle = DataGridFieldMetaTooltipStyleFactory.Create(col, column.CellStyle, mitVolltext: true);
                 column.MinWidth = 90;
+                // Startbreite aus dem Prototyp; ein gespeichertes Spaltenlayout gewinnt, weil
+                // es erst mit RestoreLayoutFromSettings gelesen wird.
+                if (NovaSpaltenbreiten.Startbreite(col, SchachtFeldnamen.Falte) is double startbreite)
+                    column.Width = new DataGridLength(startbreite);
                 Grid.Columns.Add(column);
                 _columnFields[column] = col;
 

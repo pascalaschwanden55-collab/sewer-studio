@@ -42,11 +42,20 @@ internal static class DataPageHaltungColumnBuilder
                 ? ZustandsklasseChipColumnFactory.Create(field, Grossschrift(def.Label))
                 : DataPageColumnFactory.Create(field, def.Label, lostKeyboardFocus, selectionChanged, novaLayout);
 
+            // Nova-Fixwelle 2b (P3): Im Nova-Layout traegt JEDE Spalte den Volltext oben im
+            // Hinweis, nicht nur die Umbruchspalte — die Zellen kuerzen jetzt mit
+            // Auslassungspunkten, und ein gekuerzter Wert muss ohne Verbreitern lesbar sein.
+            // Die Herkunftszeile bleibt darunter unveraendert.
             var setup = DataPageColumnSetup.Apply(
                 column,
                 field,
                 farbzelle: !chipSpalte,
-                volltextHinweis: novaLayout && DataPageColumnStyleRules.IstUmbruchspalte(field));
+                volltextHinweis: novaLayout);
+
+            // Startbreite aus dem Prototyp; ein gespeichertes Spaltenlayout gewinnt, weil es
+            // erst mit RestoreLayoutFromSettings gelesen wird.
+            if (novaLayout && NovaSpaltenbreiten.Startbreite(field) is double breite)
+                column.Width = new DataGridLength(breite);
 
             // Die GEONIS-Kennung ist nur Anzeige: Der Export liest das Geonis-Objekt des
             // Datensatzes, eine Handeingabe in der Zelle liefe daran vorbei.

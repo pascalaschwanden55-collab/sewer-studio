@@ -48,6 +48,29 @@ public sealed class DataGridStandardTextColumnFactoryTests
         });
     }
 
+    /// <summary>
+    /// Nova-Fixwelle 2b (P3): Im Nova-Layout kuerzt eine zu schmale Zelle mit
+    /// Auslassungspunkten. Die alte Haltungsansicht bleibt unveraendert.
+    /// </summary>
+    [Fact]
+    public void Auslassungspunkte_gibt_es_nur_im_Nova_Layout()
+    {
+        RunOnSta(() =>
+        {
+            var ohne = DataGridStandardTextColumnFactory.Create("Strasse", "STRASSE");
+            Assert.DoesNotContain(
+                ohne.ElementStyle.Setters.OfType<System.Windows.Setter>(),
+                setter => setter.Property == TextBlock.TextTrimmingProperty);
+
+            var mit = DataGridStandardTextColumnFactory.Create(
+                "Strasse", "STRASSE", UpdateSourceTrigger.LostFocus, hoeheBegrenzen: true);
+            var trimming = Assert.Single(
+                mit.ElementStyle.Setters.OfType<System.Windows.Setter>(),
+                setter => setter.Property == TextBlock.TextTrimmingProperty);
+            Assert.Equal(System.Windows.TextTrimming.CharacterEllipsis, trimming.Value);
+        });
+    }
+
     private static void RunOnSta(Action action)
     {
         Exception? exception = null;
