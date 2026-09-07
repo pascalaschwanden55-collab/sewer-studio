@@ -68,6 +68,17 @@ public sealed class DesignAuditNovaPaletteTests
         Assert.Contains("Foreground\" Value=\"{DynamicResource MutedBrush}\"", header);
     }
 
+    [Fact]
+    public void Einstellungen_nennen_die_Stimmungen_des_Prototyps_und_die_Hintergrund_Engine()
+    {
+        var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SettingsPage.xaml"));
+        Assert.Contains("Hell · Glas", xaml);
+        Assert.Contains("Dunkel · Cockpit", xaml);
+        Assert.Contains("IsChecked=\"{Binding HintergrundEngine}\"", xaml);
+        var main = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "MainWindow.xaml"));
+        Assert.Contains("<ctrl:NetzHintergrund", main);
+    }
+
     internal static string Xaml(string datei)
         => File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", datei));
 

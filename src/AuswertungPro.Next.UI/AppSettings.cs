@@ -157,6 +157,10 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     // gilt false, und MotionSettings folgt dann der Windows-Systemeinstellung.
     public bool ReduceMotion { get; set; }
 
+    // Nova-Etappe 2: leises Leitungsnetz im Fensterhintergrund, reine Optik. Standard an;
+    // ReduceMotion und ein inaktives Fenster halten die Engine unabhaengig davon an.
+    public bool HintergrundEngine { get; set; } = true;
+
     // Video player tuning
     public bool VideoHwDecoding { get; set; } = true;
     public bool VideoDropLateFrames { get; set; } = true;

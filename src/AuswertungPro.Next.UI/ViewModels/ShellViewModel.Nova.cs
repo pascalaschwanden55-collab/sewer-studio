@@ -1,6 +1,7 @@
 using System;
 using AuswertungPro.Next.Application.UseCases.NaechsteAufgabe;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Services;
 using CommunityToolkit.Mvvm.Input;
 
@@ -21,6 +22,11 @@ public partial class ShellViewModel
     public string KiBereitschaftText => KiBereitschaftRegel.Text(KiBereitschaftRegel.Bestimme(AiRuntimeStatusTracker.Current));
     public bool IstKiBereit => KiBereitschaftRegel.Bestimme(AiRuntimeStatusTracker.Current) == KiBereitschaft.Bereit;
 
+    /// <summary>Nova-Etappe 2: Hintergrund-Engine (Leitungsnetz), MainWindow bindet
+    /// <c>NetzHintergrund.IsEngineEnabled</c> darauf. Das Control kennt AppSettings nicht selbst;
+    /// die Einstellungen-Seite meldet eine Aenderung ueber <see cref="MotionSettings.EngineChanged"/>.</summary>
+    public bool HintergrundEngine => _sp.Settings.HintergrundEngine;
+
     /// <summary>Globale Suche der Kopfzeile (Strg+K, Inventar 8.5).</summary>
     public GlobaleSucheViewModel GlobaleSuche { get; private set; } = null!;
     public IRelayCommand GlobaleSucheFokusCommand { get; private set; } = null!;
@@ -38,7 +44,11 @@ public partial class ShellViewModel
             if (e.PropertyName is nameof(SelectedNavItem) or nameof(IsProjectReady) or nameof(Project))
                 AktualisiereNovaKopfzeile();
         };
+        MotionSettings.EngineChanged += OnHintergrundEngineGeaendert;
     }
+
+    /// <summary>Die Einstellungen-Seite hat die Engine umgeschaltet; die Shell-Eigenschaft neu melden.</summary>
+    private void OnHintergrundEngineGeaendert() => OnPropertyChanged(nameof(HintergrundEngine));
 
     /// <summary>Nach Projektwechsel, Speichern, Listenaenderung: alle drei Texte neu.</summary>
     public void AktualisiereNovaKopfzeile()

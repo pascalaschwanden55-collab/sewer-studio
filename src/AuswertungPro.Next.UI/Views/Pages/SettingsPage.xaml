@@ -315,11 +315,12 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Design" Style="{StaticResource SettingsFieldLabel}"/>
                                 <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">
-                                        <TextBlock Text="Hell" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Hell · Glas" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0"/>
                                         <ToggleButton IsChecked="{Binding IsDarkTheme, Mode=TwoWay}" Width="64" Height="30">
                                             <ToggleButton.Template>
                                                 <ControlTemplate TargetType="ToggleButton">
@@ -350,7 +351,7 @@
                                                 </ControlTemplate>
                                             </ToggleButton.Template>
                                         </ToggleButton>
-                                        <TextBlock Text="Dunkel" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="8,0,0,0"/>
+                                        <TextBlock Text="Dunkel · Cockpit" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="8,0,0,0"/>
                                 </StackPanel>
                                 <Button Grid.Row="0" Grid.Column="2"
                                         Content="Anwenden"
@@ -372,8 +373,15 @@
                                           Style="{StaticResource SettingsFieldCheckBox}"
                                           ToolTip="Schaltet dauerhafte Puls- und Leuchteffekte ab. Rückmeldung beim Zeigen und Klicken bleibt erhalten. Wirkt ab dem nächsten Fensteraufbau. Nicht angehakt: SewerStudio folgt der Windows-Einstellung für Animationen."/>
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Diagnose" Style="{StaticResource SettingsFieldLabel}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Hintergrund" Style="{StaticResource SettingsFieldLabel}"/>
                                 <CheckBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
+                                          Content="Hintergrund-Engine (Leitungsnetz im Hintergrund, nur Optik)"
+                                          IsChecked="{Binding HintergrundEngine}"
+                                          Style="{StaticResource SettingsFieldCheckBox}"
+                                          ToolTip="Zeichnet ein leises, sich bewegendes Leitungsnetz hinter der Oberfläche. Reine Optik, reagiert nicht auf Eingaben. Pausiert automatisch bei reduzierter Bewegung und wenn ein Dialog im Vordergrund steht."/>
+
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Diagnose" Style="{StaticResource SettingsFieldLabel}"/>
+                                <CheckBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2"
                                           Content="Fehlercodes anzeigen"
                                           IsChecked="{Binding EnableDiagnostics}"
                                           Style="{StaticResource SettingsFieldCheckBox}"/>

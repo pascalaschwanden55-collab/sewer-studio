@@ -12,6 +12,7 @@ using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Settings;
 using AuswertungPro.Next.UI.Dossiers;
@@ -277,6 +278,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         _disposed = true;
         AiActivityTracker.ActiveChanged -= OnAiActivityChanged;
         AiRuntimeStatusTracker.Changed -= ApplyAiRuntimeStatus;
+        MotionSettings.EngineChanged -= OnHintergrundEngineGeaendert;
         UnregisterShellOperationGuards();
         Monitor.Dispose();
         SetCurrentPage(null);

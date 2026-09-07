@@ -19,7 +19,11 @@
         <KeyBinding Key="K" Modifiers="Control" Command="{Binding GlobaleSucheFokusCommand}"/>
     </Window.InputBindings>
     <Grid>
-    <DockPanel>
+    <!-- Nova-Etappe 2: leises Leitungsnetz hinter der ganzen Oberflaeche (reine Optik,
+         IsHitTestVisible="False"); das DockPanel bekommt deshalb einen durchsichtigen
+         Hintergrund, das Fenster selbst behaelt seine BgBrush. -->
+    <ctrl:NetzHintergrund IsEngineEnabled="{Binding HintergrundEngine}"/>
+    <DockPanel Background="Transparent">
         <!-- Kopfzeile: Menue + Knopf "Projekt wechseln"; nur im Workspace sichtbar -->
         <DockPanel DockPanel.Dock="Top">
             <DockPanel.Style>
@@ -541,7 +545,11 @@
                                                                Shortcut="{Binding ToolTipShortcut}"/>
                                     </ToolTip>
                                 </StackPanel.ToolTip>
-                                <Grid Width="24" Height="18" VerticalAlignment="Center">
+                                <Grid Width="24" Height="18" VerticalAlignment="Center"
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Grid.RenderTransform>
+                                        <ScaleTransform x:Name="NavIconScale"/>
+                                    </Grid.RenderTransform>
                                     <TextBlock x:Name="DefaultNavIcon"
                                                Text="{Binding Icon}"
                                                FontFamily="{DynamicResource FontIcon}"
@@ -622,6 +630,33 @@
                                     <Setter TargetName="DefaultNavIcon" Property="Visibility" Value="Collapsed"/>
                                     <Setter TargetName="VsaNavIcon" Property="Visibility" Value="Visible"/>
                                 </DataTrigger>
+                                <!-- Symbol-Hover (Nova-Etappe 2): kurze Ereignis-Rueckmeldung, laeuft wie
+                                     der HoverOverlay-Hover des Eintrags immer (kein ReduceMotion-Schalter
+                                     im Bestand fuer diese Kategorie, siehe Klassenkommentar MotionSettings). -->
+                                <EventTrigger RoutedEvent="MouseEnter">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="NavIconScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1.12" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="NavIconScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1.12" Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <EventTrigger RoutedEvent="MouseLeave">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="NavIconScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="NavIconScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1" Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
