@@ -257,127 +257,137 @@
                     <ColumnDefinition Width="330"/>
                 </Grid.ColumnDefinitions>
 
-            <!-- ── Mitte: Bild + Overlay, Warteschlange, Modelltest am Foto ────────── -->
-            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,12,0">
-                <StackPanel>
-                    <TextBlock Margin="0,0,0,6"
-                               HorizontalAlignment="Left" VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis"
-                               Text="{Binding CurrentImagePath, TargetNullValue='Keine Warteschlange geladen'}"/>
+            <!-- ── Mitte: Bild + Overlay, Warteschlange, Modelltest am Foto ──────────
+                 Zeilen Auto (Pfad) / * (Bild) / Auto (Thumbnails) / Auto (Modelltest) — direkt im
+                 Grid statt in einem ScrollViewer, sonst haette die "*"-Bildzeile keine Hoehe
+                 (ein ScrollViewer bietet seinem Inhalt unbegrenzte Hoehe an). So passt sich das
+                 Bild wie im Prototyp der verfuegbaren Hoehe an; Thumbnails und Modelltest bleiben
+                 immer sichtbar. -->
+            <Grid Grid.Column="0" Margin="0,0,12,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                    <!-- Bild + Box/Masken-Overlay -->
-                    <Border Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                            Padding="6" Height="440" Margin="0,0,0,8">
-                        <Grid>
-                            <Image x:Name="FrameImage" Stretch="Uniform"
-                                   Source="{Binding CurrentImagePath, Converter={StaticResource FileToImage}, ConverterParameter=Original}"/>
-                            <!-- Overlay: Box-Zeichnen + Maskenkontur (Code-behind, reine Geometrie) -->
-                            <Canvas x:Name="OverlayCanvas" Background="Transparent"
-                                    IsHitTestVisible="{Binding IsAnnotationEntryEnabled}"
-                                    MouseLeftButtonDown="OverlayCanvas_MouseLeftButtonDown"
-                                    MouseMove="OverlayCanvas_MouseMove"
-                                    MouseLeftButtonUp="OverlayCanvas_MouseLeftButtonUp"/>
-                            <TextBlock Text="Ziehe mit der Maus eine Box um den Schaden."
-                                       HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,10"
-                                       Foreground="{DynamicResource MutedBrush}" FontStyle="Italic"
-                                       IsHitTestVisible="False"/>
-                        </Grid>
-                    </Border>
+                <TextBlock Grid.Row="0" Margin="0,0,0,6"
+                           HorizontalAlignment="Left" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis"
+                           Text="{Binding CurrentImagePath, TargetNullValue='Keine Warteschlange geladen'}"/>
 
-                    <!-- ── Warteschlange (Thumbnails) ─────────────────────────────── -->
-                    <Border Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
-                            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
-                            Padding="8" Margin="0,0,0,8" MaxHeight="96">
-                        <ListBox x:Name="PdfThumbnailQueue"
-                                 ItemsSource="{Binding Items}"
-                                 SelectedIndex="{Binding CurrentIndex, Mode=OneWay}"
-                                 SelectionChanged="PdfThumbnailQueue_SelectionChanged"
-                                 Background="Transparent"
-                                 BorderThickness="0"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                 ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                                 ScrollViewer.CanContentScroll="True"
-                                 VirtualizingPanel.IsVirtualizing="True"
-                                 VirtualizingPanel.VirtualizationMode="Recycling">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <VirtualizingStackPanel Orientation="Horizontal"/>
-                                    </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                                <ListBox.ItemContainerStyle>
-                                    <Style TargetType="ListBoxItem">
-                                        <Setter Property="Padding" Value="0"/>
-                                        <Setter Property="Margin" Value="0"/>
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                    </Style>
-                                </ListBox.ItemContainerStyle>
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Width="110" Height="72" Margin="0,0,6,0" CornerRadius="{DynamicResource RadiusS}"
-                                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                            <Image Source="{Binding FramePath, Converter={StaticResource FileToImage}, ConverterParameter=160}"
-                                                   Stretch="UniformToFill"/>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                        </ListBox>
-                    </Border>
+                <!-- Bild + Box/Masken-Overlay -->
+                <Border Grid.Row="1" Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                        Padding="6" Margin="0,0,0,8">
+                    <Grid>
+                        <Image x:Name="FrameImage" Stretch="Uniform"
+                               Source="{Binding CurrentImagePath, Converter={StaticResource FileToImage}, ConverterParameter=Original}"/>
+                        <!-- Overlay: Box-Zeichnen + Maskenkontur (Code-behind, reine Geometrie) -->
+                        <Canvas x:Name="OverlayCanvas" Background="Transparent"
+                                IsHitTestVisible="{Binding IsAnnotationEntryEnabled}"
+                                MouseLeftButtonDown="OverlayCanvas_MouseLeftButtonDown"
+                                MouseMove="OverlayCanvas_MouseMove"
+                                MouseLeftButtonUp="OverlayCanvas_MouseLeftButtonUp"/>
+                        <TextBlock Text="Ziehe mit der Maus eine Box um den Schaden."
+                                   HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,10"
+                                   Foreground="{DynamicResource MutedBrush}" FontStyle="Italic"
+                                   IsHitTestVisible="False"/>
+                    </Grid>
+                </Border>
 
-                    <!-- Reiner Modelltest: automatische Treffer werden nie als Gold gespeichert. -->
-                    <Border Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                            Padding="12,10"
-                            IsEnabled="{Binding IsAnnotationEntryEnabled}">
-                        <StackPanel>
-                            <TextBlock Text="Modelltest am Foto" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <ComboBox x:Name="PreviewModelBox"
-                                      ItemsSource="{Binding PreviewModelOptions}"
-                                      SelectedItem="{Binding SelectedPreviewModel}"
-                                      DisplayMemberPath="DisplayName"
-                                      SelectionChanged="PreviewModelBox_SelectionChanged"
-                                      Margin="0,0,0,6"/>
-                            <Button Content="Modellliste aktualisieren"
-                                    Command="{Binding RefreshPreviewModelsCommand}"
-                                    Style="{StaticResource ToolbarButton}"
-                                    HorizontalAlignment="Left"
-                                    Margin="0,0,0,6"
-                                    ToolTip="Liest die verfügbaren BCC-Testmodelle erneut ein."/>
-                            <Button Content="Foto mit gewähltem Modell prüfen"
-                                    Command="{Binding RunPreviewDetectionCommand}"
-                                    Style="{StaticResource PrimaryButton}"
-                                    HorizontalAlignment="Left"
-                                    Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding PreviewDetectionSummary}"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap" Margin="0,0,0,6"/>
-                            <ItemsControl ItemsSource="{Binding PreviewDetections}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0,2">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="{Binding DisplayText}"
-                                                       Foreground="DeepSkyBlue"
-                                                       FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding Confidence, StringFormat={}{0:P0}}"
-                                                       Foreground="{DynamicResource MutedBrush}"
-                                                       Margin="8,0,0,0"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <TextBlock Text="Blaue Boxen sind nur Vorschau. Als Gold wird nur die rote, von Hand gezogene Box gespeichert."
-                                       Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextXS}"
-                                       TextWrapping="Wrap" Margin="0,6,0,0"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
+                <!-- ── Warteschlange (Thumbnails) ─────────────────────────────── -->
+                <Border Grid.Row="2" Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
+                        BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                        Padding="8" Margin="0,0,0,8" MaxHeight="96">
+                    <ListBox x:Name="PdfThumbnailQueue"
+                             ItemsSource="{Binding Items}"
+                             SelectedIndex="{Binding CurrentIndex, Mode=OneWay}"
+                             SelectionChanged="PdfThumbnailQueue_SelectionChanged"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                             ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                             ScrollViewer.CanContentScroll="True"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <VirtualizingStackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="110" Height="72" Margin="0,0,6,0" CornerRadius="{DynamicResource RadiusS}"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <Image Source="{Binding FramePath, Converter={StaticResource FileToImage}, ConverterParameter=160}"
+                                               Stretch="UniformToFill"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+
+                <!-- Reiner Modelltest: automatische Treffer werden nie als Gold gespeichert. -->
+                <Border Grid.Row="3" Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                        Padding="12,10"
+                        IsEnabled="{Binding IsAnnotationEntryEnabled}">
+                    <StackPanel>
+                        <TextBlock Text="Modelltest am Foto" FontWeight="Bold" Margin="0,0,0,6"/>
+                        <ComboBox x:Name="PreviewModelBox"
+                                  ItemsSource="{Binding PreviewModelOptions}"
+                                  SelectedItem="{Binding SelectedPreviewModel}"
+                                  DisplayMemberPath="DisplayName"
+                                  SelectionChanged="PreviewModelBox_SelectionChanged"
+                                  Margin="0,0,0,6"/>
+                        <Button Content="Modellliste aktualisieren"
+                                Command="{Binding RefreshPreviewModelsCommand}"
+                                Style="{StaticResource ToolbarButton}"
+                                HorizontalAlignment="Left"
+                                Margin="0,0,0,6"
+                                ToolTip="Liest die verfügbaren BCC-Testmodelle erneut ein."/>
+                        <Button Content="Foto mit gewähltem Modell prüfen"
+                                Command="{Binding RunPreviewDetectionCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                HorizontalAlignment="Left"
+                                Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding PreviewDetectionSummary}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap" Margin="0,0,0,6"/>
+                        <ItemsControl ItemsSource="{Binding PreviewDetections}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding DisplayText}"
+                                                   Foreground="DeepSkyBlue"
+                                                   FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Confidence, StringFormat={}{0:P0}}"
+                                                   Foreground="{DynamicResource MutedBrush}"
+                                                   Margin="8,0,0,0"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="Blaue Boxen sind nur Vorschau. Als Gold wird nur die rote, von Hand gezogene Box gespeichert."
+                                   Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextXS}"
+                                   TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
 
             <!-- ── Rechts: 1 · KI-Vorschlag / 2 · Fachliche Codierung / 3 · Freigabe ── -->
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">

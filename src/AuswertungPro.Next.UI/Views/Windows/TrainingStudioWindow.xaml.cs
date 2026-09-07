@@ -689,9 +689,20 @@ public partial class TrainingStudioWindow : Window
                 area,
                 maskValidation.IsValid);
             if (!result.Rendered && !string.IsNullOrWhiteSpace(result.ErrorMessage))
+            {
                 _vm.StatusText = result.ErrorMessage;
-            else if (boxBounds is { } maskLabelBounds)
+            }
+            else if (result.Rendered && boxBounds is { } maskLabelBounds)
+            {
                 AddOverlayBadge(_vm.Segmentation.StatusText, maskLabelBounds.X, maskLabelBounds.Bottom, "SuccessBrush");
+            }
+            else if (!result.Rendered && boxBounds is { } notRenderedBounds)
+            {
+                // Keine gerenderte Maske und kein Fehlertext (z. B. leere Maske ohne RLE):
+                // Segmentierung ist vorhanden, aber nicht darstellbar — orange statt gruen,
+                // "formal sichtbar, aber nicht goldfaehig" (CLAUDE.md, Trainings-Studio-Regeln).
+                AddOverlayBadge(_vm.Segmentation.StatusText, notRenderedBounds.X, notRenderedBounds.Bottom, "WarningBrush");
+            }
         }
 
         // Automatische Modelltreffer bleiben blau und getrennt von der roten Hand-Box.
@@ -714,7 +725,7 @@ public partial class TrainingStudioWindow : Window
             Canvas.SetTop(rect, bounds.Y);
             OverlayCanvas.Children.Add(rect);
 
-            AddOverlayBadge("Hand-Box", bounds.X, bounds.Y - 18, "DangerBrush");
+            AddOverlayBadge("Hand-Box", bounds.X, Math.Max(0, bounds.Y - 18), "DangerBrush");
         }
     }
 
