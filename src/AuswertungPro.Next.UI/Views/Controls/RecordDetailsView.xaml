@@ -18,7 +18,11 @@
         <ItemsPanelTemplate x:Key="CompactDetailFieldPanel"><StackPanel Orientation="Vertical"/></ItemsPanelTemplate>
 
         <!-- Die Spalte einer Gruppe ist ihre Position in der Liste (UniformGrid).
-             Nur "Dokumente & Medien" bleibt in der kompakten Ansicht aussen vor. -->
+             Nur eine Gruppe mit Kind=Documents bleibt in der kompakten Ansicht aussen vor —
+             das betrifft aktuell "Dokumente und Medien" im Schacht-Builder
+             (SchaechteRecordDetailsBuilder). Der Haltungs-Builder (Nova-Etappe 2b) erzeugt
+             keine Documents-Gruppe mehr; sein Thema "Kosten und Bemerkungen" traegt
+             bewusst den eigenen Kind-Wert CostsRemarks, damit es hier NICHT ausgeblendet wird. -->
         <Style x:Key="CompactDetailGroupContainerStyle" TargetType="ContentPresenter">
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Style.Triggers>

@@ -7,8 +7,10 @@ namespace AuswertungPro.Next.UI.Tests;
 
 /// <summary>
 /// Nova-Etappe 2b: die Haltungs-Eingabefelder folgen den vier festen Themen aus dem
-/// Prototyp (Inventar 9.1) mit exakter Feldliste und Reihenfolge; alles Uebrige landet in
-/// "Weitere Angaben".
+/// Prototyp (Inventar 9.1). Fix-Runde 1: die Prototyp-Liste ist eine Mindestliste, keine
+/// Ausschlussliste — drei fachlich zugehoerige Felder (Schacht_oben/Schacht_unten, Gefaelle,
+/// Renovierung_Inliner_Stk), die der Prototyp nicht kennt, sind ergaenzt. Alles Uebrige
+/// landet in "Weitere Angaben".
 /// </summary>
 public sealed class DataPageRecordDetailsBuilderTests
 {
@@ -27,9 +29,9 @@ public sealed class DataPageRecordDetailsBuilderTests
         var groups = DataPageRecordDetailsBuilder.Build(record, key => factory.Create(key, record));
         var slope = Assert.Single(groups.SelectMany(g => g.Items), i => i.FieldName == FieldKeys.SlopePromille);
         Assert.Equal("Gefälle ‰", slope.Label);
-        // Das Gefaelle steht nicht in einer der vier festen Prototyp-Feldlisten (Inventar 9.1)
-        // und landet deshalb bewusst in "Weitere Angaben", nicht mehr in den Stammdaten.
-        Assert.Contains(slope, groups.Single(g => g.Kind == RecordDetailGroupKind.Additional).Items);
+        // Fix-Runde 1: Das Gefaelle ist eine bewusste Ergaenzung der Stammdaten (CLAUDE.md:
+        // immer als Stammdaten-Eingabe), auch wenn Inventar 9.1 es nicht auffuehrt.
+        Assert.Contains(slope, groups.Single(g => g.Kind == RecordDetailGroupKind.MasterData).Items);
         slope.Value = "2,5";
 
         var calculation = AuswertungPro.Next.Application.DataPage.DataPageHydraulikReportCalculator
@@ -38,12 +40,11 @@ public sealed class DataPageRecordDetailsBuilderTests
         Assert.Equal(2.5, calculation.Gefaelle_Promille);
     }
 
-    // Anfangs- und Endschacht stehen nicht im Feldkatalog und nicht in einer der vier festen
-    // Prototyp-Feldlisten (Inventar 9.1 kennt sie nicht). Sie landen deshalb bewusst in
-    // "Weitere Angaben" statt zu verschwinden — frueher (vor Nova-Etappe 2b) waren sie als
-    // Sonderfall den Stammdaten zugeordnet.
+    // Anfangs- und Endschacht stehen nicht im Feldkatalog. Fix-Runde 1: sie sind trotzdem eine
+    // bewusste Ergaenzung der Stammdaten (der Haltungsname haengt an den Schaechten), nicht
+    // Teil von "Weitere Angaben".
     [Fact]
-    public void Build_verliert_Anfangs_und_Endschacht_nicht_sondern_zeigt_sie_unter_Weitere_Angaben()
+    public void Build_stellt_Anfangs_und_Endschacht_zu_den_Stammdaten()
     {
         var record = new HaltungRecord();
         record.Fields["Schacht_oben"] = "36262";
@@ -53,30 +54,36 @@ public sealed class DataPageRecordDetailsBuilderTests
             record,
             fieldName => new RecordDetailItem(fieldName, fieldName, _ => { }));
 
-        var weitere = groups.Single(g => g.Title == "Weitere Angaben");
-        Assert.Contains(weitere.Items, item => item.Label == "Schacht_oben");
-        Assert.Contains(weitere.Items, item => item.Label == "Schacht_unten");
-
         var stammdaten = groups.Single(g => g.Title == "Stammdaten");
-        Assert.DoesNotContain(stammdaten.Items, item => item.Label == "Schacht_oben");
-        Assert.DoesNotContain(stammdaten.Items, item => item.Label == "Schacht_unten");
+        Assert.Contains(stammdaten.Items, item => item.Label == "Schacht_oben");
+        Assert.Contains(stammdaten.Items, item => item.Label == "Schacht_unten");
+
+        var weitere = groups.SingleOrDefault(g => g.Title == "Weitere Angaben");
+        if (weitere is not null)
+        {
+            Assert.DoesNotContain(weitere.Items, item => item.Label == "Schacht_oben");
+            Assert.DoesNotContain(weitere.Items, item => item.Label == "Schacht_unten");
+        }
     }
 
     /// <summary>
-    /// Jedes Feld der vier Prototyp-Themen (Inventar 9.1) und eine Auswahl bekannter,
-    /// aber bewusst nicht mehr in einer Themenliste stehender Felder — alles Uebrige
-    /// (inklusive eines unbekannten Feldes) muss "Weitere Angaben" ergeben.
+    /// Jedes Feld der vier Prototyp-Themen (Inventar 9.1, ergaenzt um die drei Fix-Runde-1-
+    /// Felder) und eine Auswahl bekannter, aber bewusst nicht zugeordneter Felder — alles
+    /// Uebrige (inklusive eines unbekannten Feldes) muss "Weitere Angaben" ergeben.
     /// </summary>
     [Theory]
-    // Stammdaten (14)
+    // Stammdaten (17 = 14 aus Inventar 9.1 + Schacht_oben/Schacht_unten + Gefaelle)
     [InlineData(FieldKeys.HoldingName, "Stammdaten")]
     [InlineData(FieldKeys.Street, "Stammdaten")]
+    [InlineData("Schacht_oben", "Stammdaten")]
+    [InlineData("Schacht_unten", "Stammdaten")]
     [InlineData(FieldKeys.PipeMaterial, "Stammdaten")]
     [InlineData(FieldKeys.NominalDiameterMm, "Stammdaten")]
     [InlineData(FieldKeys.ProfileType, "Stammdaten")]
     [InlineData(FieldKeys.ClearWidthMm, "Stammdaten")]
     [InlineData(FieldKeys.UsageType, "Stammdaten")]
     [InlineData(FieldKeys.HoldingLengthMeters, "Stammdaten")]
+    [InlineData(FieldKeys.SlopePromille, "Stammdaten")]
     [InlineData("Inspektionsrichtung", "Stammdaten")]
     [InlineData(FieldKeys.InspectionYear, "Stammdaten")]
     [InlineData(FieldKeys.ConstructionYear, "Stammdaten")]
@@ -93,10 +100,11 @@ public sealed class DataPageRecordDetailsBuilderTests
     [InlineData("Referenzpruefung", "Bewertung")]
     [InlineData("Gewaesserschutz", "Bewertung")]
     [InlineData("Grundwasserspiegel", "Bewertung")]
-    // Sanierung (10)
+    // Sanierung (11 = 10 aus Inventar 9.1 + Renovierung_Inliner_Stk)
     [InlineData(FieldKeys.RenovationDecision, "Sanierung")]
     [InlineData(FieldKeys.RecommendedRehabilitationMeasures, "Sanierung")]
     [InlineData(FieldKeys.LinerRenovationMeters, "Sanierung")]
+    [InlineData(FieldKeys.LinerRenovationCount, "Sanierung")]
     [InlineData(FieldKeys.ConnectionsToGrout, "Sanierung")]
     [InlineData(FieldKeys.RepairSleeve, "Sanierung")]
     [InlineData(FieldKeys.LinerEndSleeve, "Sanierung")]
@@ -109,11 +117,7 @@ public sealed class DataPageRecordDetailsBuilderTests
     [InlineData(FieldKeys.Link, "Kosten und Bemerkungen")]
     [InlineData(FieldKeys.Remarks, "Kosten und Bemerkungen")]
     // Bekannte Felder ausserhalb der vier Themenlisten und ein unbekanntes Feld
-    [InlineData(FieldKeys.LinerRenovationCount, "Weitere Angaben")]
     [InlineData("Primaere_Schaeden", "Weitere Angaben")]
-    [InlineData("Schacht_oben", "Weitere Angaben")]
-    [InlineData("Schacht_unten", "Weitere Angaben")]
-    [InlineData(FieldKeys.SlopePromille, "Weitere Angaben")]
     [InlineData("NR", "Weitere Angaben")]
     [InlineData(FieldKeys.HierarchicalFunction, "Weitere Angaben")]
     [InlineData("Feld_Das_Nicht_Im_Katalog_Ist", "Weitere Angaben")]
@@ -168,14 +172,18 @@ public sealed class DataPageRecordDetailsBuilderTests
     public void Build_zeigt_Stammdaten_in_Prototyp_Reihenfolge()
     {
         var record = new HaltungRecord();
+        record.Fields["Schacht_oben"] = "36262";
+        record.Fields["Schacht_unten"] = "36275";
         var groups = DataPageRecordDetailsBuilder.Build(
             record, fieldName => new RecordDetailItem(fieldName, fieldName, _ => { }));
 
         var stammdaten = groups.Single(g => g.Title == "Stammdaten");
         Assert.Equal(new[]
         {
-            FieldKeys.HoldingName, FieldKeys.Street, FieldKeys.PipeMaterial, FieldKeys.NominalDiameterMm,
+            FieldKeys.HoldingName, FieldKeys.Street, "Schacht_oben", "Schacht_unten",
+            FieldKeys.PipeMaterial, FieldKeys.NominalDiameterMm,
             FieldKeys.ProfileType, FieldKeys.ClearWidthMm, FieldKeys.UsageType, FieldKeys.HoldingLengthMeters,
+            FieldKeys.SlopePromille,
             "Inspektionsrichtung", FieldKeys.InspectionYear, FieldKeys.ConstructionYear, FieldKeys.Owner,
             FieldKeys.GeonisId, FieldKeys.CadastreObjectId
         }, stammdaten.Items.Select(i => i.Label));
@@ -207,6 +215,7 @@ public sealed class DataPageRecordDetailsBuilderTests
         Assert.Equal(new[]
         {
             FieldKeys.RenovationDecision, FieldKeys.RecommendedRehabilitationMeasures, FieldKeys.LinerRenovationMeters,
+            FieldKeys.LinerRenovationCount,
             FieldKeys.ConnectionsToGrout, FieldKeys.RepairSleeve, FieldKeys.LinerEndSleeve, FieldKeys.ShortLinerRepair,
             "Erneuerung_Neubau_m", FieldKeys.RehabilitationExecutor, FieldKeys.WorkflowStatus
         }, sanierung.Items.Select(i => i.Label));

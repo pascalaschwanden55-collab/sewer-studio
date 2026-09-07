@@ -7,20 +7,27 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// Baut die Themen der Haltungs-Eingabefelder (Formular-Detailfenster und
 /// <see cref="AuswertungPro.Next.UI.Views.Pages.Haltungsansicht.HaltungFelderDrawer"/>).
 ///
-/// Nova-Etappe 2b: vier feste Themen nach dem freigegebenen Prototyp (Inventar 9.1) mit
-/// exakter Feldliste und Reihenfolge — Stammdaten (14), Bewertung (9), Sanierung (10),
-/// Kosten und Bemerkungen (3). Alle uebrigen Projektfelder (auch Katasterfelder, Schacht_oben/
-/// Schacht_unten, NR, das Gefaelle und Primaere_Schaeden) bleiben im fuenften Thema
+/// Nova-Etappe 2b, Fix-Runde 1: die Prototyp-Liste (Inventar 9.1) ist eine Mindestliste,
+/// keine Ausschlussliste. Vier feste Themen mit exakter Reihenfolge — Stammdaten (17),
+/// Bewertung (9), Sanierung (11), Kosten und Bemerkungen (3). Drei fachlich zugehoerige
+/// Felder, die im Prototyp fehlen, sind bewusst ergaenzt: Schacht_oben/Schacht_unten direkt
+/// nach der Strasse (der Haltungsname haengt an den Schaechten), das Gefaelle nach der
+/// Haltungslaenge (CLAUDE.md: immer als Stammdaten-Eingabe) und Renovierung_Inliner_Stk
+/// direkt nach Renovierung_Inliner_m in der Sanierung. Alle uebrigen Projektfelder (auch die
+/// SIA405-Katasterfelder, NR und Primaere_Schaeden) bleiben im fuenften Thema
 /// "Weitere Angaben", damit kein Feld verschwindet.
 /// </summary>
 public static class DataPageRecordDetailsBuilder
 {
-    // Reihenfolge exakt nach docs/reviews/2026-09-06-nova/wpf-etappe-2/PROTOTYP-INVENTAR.md
-    // Abschnitt 9.1 "Stammdaten (14)".
+    // Reihenfolge nach docs/reviews/2026-09-06-nova/wpf-etappe-2/PROTOTYP-INVENTAR.md
+    // Abschnitt 9.1 "Stammdaten (14)", ergaenzt um Schacht_oben/Schacht_unten (nach der
+    // Strasse) und das Gefaelle (nach der Haltungslaenge) — Fix-Runde 1: 17 Felder.
     private static readonly string[] StammdatenReihenfolge =
     {
-        FieldKeys.HoldingName, FieldKeys.Street, FieldKeys.PipeMaterial, FieldKeys.NominalDiameterMm,
+        FieldKeys.HoldingName, FieldKeys.Street, "Schacht_oben", "Schacht_unten",
+        FieldKeys.PipeMaterial, FieldKeys.NominalDiameterMm,
         FieldKeys.ProfileType, FieldKeys.ClearWidthMm, FieldKeys.UsageType, FieldKeys.HoldingLengthMeters,
+        FieldKeys.SlopePromille,
         "Inspektionsrichtung", FieldKeys.InspectionYear, FieldKeys.ConstructionYear, FieldKeys.Owner,
         FieldKeys.GeonisId, FieldKeys.CadastreObjectId
     };
@@ -32,11 +39,12 @@ public static class DataPageRecordDetailsBuilder
         "VSA_Geschaetzt", "Pruefungsresultat", "Referenzpruefung", "Gewaesserschutz", "Grundwasserspiegel"
     };
 
-    // Inventar 9.1 "Sanierung (10)". Renovierung_Inliner_Stk steht dort bewusst NICHT in der
-    // Liste (nur "inliner" = Meter) und landet deshalb in "Weitere Angaben".
+    // Inventar 9.1 "Sanierung (10)", ergaenzt um Renovierung_Inliner_Stk direkt nach
+    // Renovierung_Inliner_m — Fix-Runde 1: 11 Felder.
     private static readonly string[] SanierungReihenfolge =
     {
         FieldKeys.RenovationDecision, FieldKeys.RecommendedRehabilitationMeasures, FieldKeys.LinerRenovationMeters,
+        FieldKeys.LinerRenovationCount,
         FieldKeys.ConnectionsToGrout, FieldKeys.RepairSleeve, FieldKeys.LinerEndSleeve, FieldKeys.ShortLinerRepair,
         "Erneuerung_Neubau_m", FieldKeys.RehabilitationExecutor, FieldKeys.WorkflowStatus
     };
@@ -88,7 +96,7 @@ public static class DataPageRecordDetailsBuilder
         AddThemenGruppe(groups, itemsByField, zugewiesen, "Stammdaten",
             "Identifikation und Lage der Haltung.", RecordDetailGroupKind.MasterData, StammdatenReihenfolge);
         AddThemenGruppe(groups, itemsByField, zugewiesen, "Bewertung",
-            "Zustandsklasse, Zustandsnoten und Pruefresultate.", RecordDetailGroupKind.Rating, BewertungReihenfolge);
+            "Zustandsklasse, Zustandsnoten und Prüfresultate.", RecordDetailGroupKind.Rating, BewertungReihenfolge);
         AddThemenGruppe(groups, itemsByField, zugewiesen, "Sanierung",
             "Massnahmen und Mengenangaben zur Sanierung.", RecordDetailGroupKind.Renovation, SanierungReihenfolge);
         AddThemenGruppe(groups, itemsByField, zugewiesen, "Kosten und Bemerkungen",
@@ -146,9 +154,9 @@ public static class DataPageRecordDetailsBuilder
     }
 
     // Folgefelder der Sanierungs-Gruppe: nur sinnvoll, wenn ueberhaupt saniert wird.
-    // Diese Liste ist bewusst unabhaengig von der Themen-Zuordnung: Auch das jetzt in
-    // "Kosten und Bemerkungen" stehende Feld "Kosten" und das in "Weitere Angaben"
-    // stehende "Renovierung_Inliner_Stk" bleiben ausgeblendet, solange "Sanieren" = Nein ist.
+    // Diese Liste ist bewusst unabhaengig von der Themen-Zuordnung: Auch das in
+    // "Kosten und Bemerkungen" stehende Feld "Kosten" bleibt ausgeblendet, solange
+    // "Sanieren" = Nein ist — obwohl es nicht mehr im selben Thema wie "Sanieren_JaNein" steht.
     private static readonly string[] SanierungFolgeFelder =
     {
         "Empfohlene_Sanierungsmassnahmen", "Kosten",
