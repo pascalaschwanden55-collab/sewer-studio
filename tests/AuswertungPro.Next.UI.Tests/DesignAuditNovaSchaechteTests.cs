@@ -37,4 +37,26 @@ public sealed class DesignAuditNovaSchaechteTests
         Assert.Contains("Grid.Columns.CollectionChanged", code);
         Assert.Contains("_reapplyGeplant", code);
     }
+
+    [Fact]
+    public void Schaechte_haben_Schachtansicht_rechts_und_Eingabefelder_unten_mit_gespeicherten_Trennlinien()
+    {
+        var xaml = Xaml();
+        Assert.Contains("schachtansicht:SchachtUebersichtPanel", xaml);
+        Assert.Contains("haltung:HaltungFelderDrawer", xaml);
+        Assert.Contains("SplitterKey=\"SchaechteSchachtansicht\"", xaml);
+        Assert.Contains("SplitterKey=\"SchaechteEingabefelder\"", xaml);
+        Assert.Contains("ViewPersonalization.ViewKey=\"SchaechtePage\"", xaml);
+        var settings = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "AppSettings.cs"));
+        Assert.Contains("public bool ShowSchaechteNovaLayout { get; set; } = true;", settings);
+    }
+
+    [Fact]
+    public void Schachtansicht_erklaert_die_Handbewertung_und_zeigt_den_Grundriss()
+    {
+        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
+        Assert.Contains("Am Schacht wird die Zustandsklasse nie berechnet", xaml);
+        Assert.Contains("AutomationProperties.Name=\"Schachtgrundriss\"", xaml);
+        Assert.Contains("ZustandsklasseInkConverter", xaml);
+    }
 }

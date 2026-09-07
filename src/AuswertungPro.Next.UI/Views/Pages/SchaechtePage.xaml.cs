@@ -99,9 +99,10 @@ public partial class SchaechtePage : UserControl
         SchachtansichtView.DetailBuilder = BuildRecordDetailsForAnsicht;
         SchachtansichtView.DamageLineBuilder = SchachtDamageLineBuilder.Build;
         SchachtansichtView.ActionRequested = RouteSchachtansichtAction;
-        SchachtansichtToggle.IsChecked = true;
-        SchachtansichtView.Visibility = Visibility.Visible;
-        Grid.Visibility = Visibility.Collapsed;
+        // Robuster Grundzustand bis zum DataContext-Wechsel (wie DataPage): Standard ist die
+        // Nova-Arbeitsflaeche; OnDataContextChanged wendet ShowSchaechteNovaLayout an.
+        SchachtansichtToggle.IsChecked = false;
+        ApplySchachtansichtSichtbarkeit();
 
         DataContextChanged += OnDataContextChanged;
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
@@ -120,6 +121,8 @@ public partial class SchaechtePage : UserControl
             _layoutSaveDebounceTimer.Stop();
             SaveLayoutToSettings();
         };
+        SizeChanged += (_, __) => ApplyDrawerHeight();
+        VerdrahteNovaWorkspace();
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -146,6 +149,7 @@ public partial class SchaechtePage : UserControl
             ApplySearchFilter,
             _vm.SchachtCostCatalog);
         _subscriptionController.Switch(_vm.Columns, _vm.Records, () => _vm.Records);
+        InitNovaWorkspace(_vm);
     }
 
     private void RebuildColumns()
@@ -265,6 +269,7 @@ public partial class SchaechtePage : UserControl
         _ = e;
 
         _columnAlignmentToolbar.TrackSelectedCells();
+        AktualisiereFelderDrawer();
     }
 
     private void Grid_CurrentCellChanged(object sender, EventArgs e)
@@ -660,9 +665,8 @@ public partial class SchaechtePage : UserControl
     {
         _ = sender;
         _ = e;
-        var showAnsicht = SchachtansichtToggle.IsChecked == true;
-        SchachtansichtView.Visibility = showAnsicht ? Visibility.Visible : Visibility.Collapsed;
-        Grid.Visibility = showAnsicht ? Visibility.Collapsed : Visibility.Visible;
+        ApplySchachtansichtSichtbarkeit();
+        AktualisiereFelderDrawer();
     }
 
     private void RouteSchachtansichtAction(string actionKey, SchachtRecord record)

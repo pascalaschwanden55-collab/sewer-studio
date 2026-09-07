@@ -5,6 +5,8 @@
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage"
              xmlns:schachtansicht="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Schachtansicht"
+             xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
+             xmlns:haltung="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
              Loaded="ColumnViews_Loaded">
     <Grid>
         <Grid.RowDefinitions>
@@ -286,8 +288,21 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
+        <!-- Nova-Etappe 2: GridHost traegt Tabelle, alte Schachtansicht, Schachtansicht rechts
+             (Nova) und Eingabefelder unten; beide Trennlinien merken sich ihre Lage. -->
+        <Grid x:Name="GridHost" Grid.Row="2" behaviors:ViewPersonalization.ViewKey="SchaechtePage">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition x:Name="DrawerSplitterRow" Height="6"/>
+                <RowDefinition x:Name="DrawerRow" Height="Auto" MinHeight="0"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition x:Name="SideSplitterCol" Width="6"/>
+                <ColumnDefinition x:Name="SideCol" Width="320" MinWidth="240" MaxWidth="560"/>
+            </Grid.ColumnDefinitions>
+
         <DataGrid x:Name="Grid"
-                  Grid.Row="2"
                   ItemsSource="{Binding Records}"
                   SelectedItem="{Binding Selected, Mode=TwoWay}"
                   AutoGenerateColumns="False"
@@ -344,11 +359,11 @@
         </DataGrid>
 
         <schachtansicht:SchachtansichtView x:Name="SchachtansichtView"
-                                           Grid.Row="2"
+                                           Grid.Row="0" Grid.ColumnSpan="3"
                                            IsEnabled="{Binding CanMutateShaftData}"
                                            Visibility="Collapsed"/>
 
-        <uc:EmptyStateControl Grid.Row="2"
+        <uc:EmptyStateControl Grid.Row="0"
                               IsHitTestVisible="False"
                               Icon="&#xE8A5;"
                               Title="Noch keine Schächte"
@@ -370,6 +385,27 @@
                 </Style>
             </uc:EmptyStateControl.Style>
         </uc:EmptyStateControl>
+
+        <!-- Nova-Etappe 2: Schachtansicht rechts und Eingabefelder unten; beide Trennlinien
+             merken sich ihre Lage. -->
+        <GridSplitter x:Name="SideSplitter" Grid.Row="0" Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
+                      Background="{DynamicResource BorderBrush}"
+                      behaviors:SplitterPersistenceBehavior.IsEnabled="True"
+                      behaviors:SplitterPersistenceBehavior.SplitterKey="SchaechteSchachtansicht"
+                      behaviors:SplitterPersistenceBehavior.TargetColumnIndex="2"
+                      behaviors:SplitterPersistenceBehavior.MinSize="240"
+                      behaviors:SplitterPersistenceBehavior.MaxSize="560"
+                      ToolTip="Breite der Schachtansicht" AutomationProperties.Name="Breite der Schachtansicht"/>
+        <schachtansicht:SchachtUebersichtPanel x:Name="Uebersicht" Grid.Row="0" Grid.Column="2" Margin="8,0,0,0"
+                                               Record="{Binding Selected}"/>
+        <GridSplitter x:Name="DrawerSplitter" Grid.Row="1" Grid.ColumnSpan="3" Height="6" HorizontalAlignment="Stretch"
+                      ResizeDirection="Rows" Background="{DynamicResource BorderBrush}"
+                      behaviors:SplitterPersistenceBehavior.IsEnabled="True"
+                      behaviors:SplitterPersistenceBehavior.SplitterKey="SchaechteEingabefelder"
+                      behaviors:SplitterPersistenceBehavior.TargetRowIndex="2"
+                      ToolTip="Höhe der Eingabefelder" AutomationProperties.Name="Höhe der Eingabefelder"/>
+        <haltung:HaltungFelderDrawer x:Name="FelderDrawer" Grid.Row="2" Grid.ColumnSpan="3" Margin="0,4,0,0"/>
+        </Grid>
 
         <Grid Grid.Row="3" Margin="0,10,0,0">
             <Grid.ColumnDefinitions>
