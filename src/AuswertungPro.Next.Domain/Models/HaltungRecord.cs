@@ -34,8 +34,30 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
     // Optionaler Protokolleintrag fuer Code-Picker/Parametrisierung.
     public AuswertungPro.Next.Domain.Protocol.ProtocolEntry? ProtocolEntry { get; set; }
 
-    // Protokolldokument (mehrere Beobachtungen + Historie).
-    public AuswertungPro.Next.Domain.Protocol.ProtocolDocument? Protocol { get; set; }
+    private AuswertungPro.Next.Domain.Protocol.ProtocolDocument? _protocol;
+
+    /// <summary>
+    /// Protokolldokument (mehrere Beobachtungen + Historie). Der Setter meldet sich wie ein
+    /// Feldwert (<c>PropertyChanged(nameof(Protocol))</c>), damit ein In-Place-Ersatz — ein neu
+    /// eingelesenes Protokoll oder ein KI-Lauf, der den Datensatz sonst referenzgleich laesst —
+    /// von Abonnenten bemerkt wird. Nova-Etappe 2b: Die Statusspalten KI und Pruefung der
+    /// Haltungstabelle rechnen aus dem Protokoll und blieben ohne diese Meldung stehen.
+    /// Gleiche Regel wie bei <see cref="SchachtRecord.Protocol"/>.
+    ///
+    /// Threadvertrag: Die Meldung laeuft SYNCHRON auf dem Thread, der den Setter aufruft.
+    /// Import, Stammdatennachlauf und Neueinlesen arbeiten im Hintergrund — ein UI-Abonnent
+    /// muss die Meldung deshalb selbst auf den Dispatcher schieben. Der Setter marshallt
+    /// bewusst nicht selbst: Die Domaene kennt kein WPF.
+    /// </summary>
+    public AuswertungPro.Next.Domain.Protocol.ProtocolDocument? Protocol
+    {
+        get => _protocol;
+        set
+        {
+            _protocol = value;
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Protocol)));
+        }
+    }
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime ModifiedAtUtc { get; set; } = DateTime.UtcNow;
