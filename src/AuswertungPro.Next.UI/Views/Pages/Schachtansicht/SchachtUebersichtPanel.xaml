@@ -14,7 +14,19 @@
         <Style x:Key="FaktWert" TargetType="TextBlock"><Setter Property="FontSize" Value="{DynamicResource TextS}"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="FontFamily" Value="{DynamicResource FontMono}"/><Setter Property="Foreground" Value="{DynamicResource TextBrush}"/></Style>
     </UserControl.Resources>
     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="12">
-        <DockPanel DataContext="{Binding Record, ElementName=Root}">
+        <Grid>
+        <!-- Task 6: Ohne gewaehlten Schacht bleibt der ganze Inhalt weg; sonst stehen Grundriss,
+             leere Beschriftungen und Knoepfe ohne Bezug da. -->
+        <DockPanel x:Name="Inhalt" DataContext="{Binding Record, ElementName=Root}">
+            <DockPanel.Style>
+                <Style TargetType="DockPanel">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DockPanel.Style>
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                 <Border DockPanel.Dock="Right" MinWidth="34" Height="22" Padding="6,0" CornerRadius="{DynamicResource RadiusS}" Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}" ToolTip="Zustandsklasse (von Hand gesetzt)">
                     <TextBlock Text="{Binding Fields[Zustandsklasse], StringFormat=Z{0}}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkInkConv}}"/>
@@ -52,5 +64,21 @@
                 </ListBox.ItemTemplate>
             </ListBox>
         </DockPanel>
+
+            <TextBlock x:Name="Leerzustand" Text="Kein Schacht gewählt. Links eine Zeile wählen."
+                       Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"
+                       VerticalAlignment="Top" HorizontalAlignment="Left">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
     </Border>
 </UserControl>

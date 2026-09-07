@@ -75,4 +75,55 @@ public sealed class DesignAuditNovaSchaechteTests
         Assert.DoesNotContain("Text=\"F3\"", xaml);
         Assert.DoesNotContain("PreviewKeyDown=\"", xaml);
     }
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 6: Ohne gewaehlte Zeile zeigt die Schachtansicht NUR den
+    /// Leerzustand — kein Grundriss, keine leeren Beschriftungen, keine Knoepfe.
+    /// </summary>
+    [Fact]
+    public void Schachtansicht_zeigt_ohne_Auswahl_nur_den_Leerzustand()
+    {
+        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
+        Assert.Contains("x:Name=\"Leerzustand\"", xaml);
+        Assert.Contains("Kein Schacht gewählt. Links eine Zeile wählen.", xaml);
+
+        var inhalt = Regex.Match(xaml, @"<DockPanel x:Name=""Inhalt""[\s\S]*?</DockPanel.Style>");
+        Assert.True(inhalt.Success, "Inhalt der Schachtansicht braucht einen eigenen Sichtbarkeitsschalter");
+        Assert.Contains("<DataTrigger Binding=\"{Binding Record, ElementName=Root}\" Value=\"{x:Null}\">", inhalt.Value);
+        Assert.Contains("<Setter Property=\"Visibility\" Value=\"Collapsed\"/>", inhalt.Value);
+    }
+
+    /// <summary>
+    /// Task 6: Die Zustandsklasse der Schachtliste verwendet die gemeinsame Marke, das
+    /// Protokoll den gemeinsamen Knopf. Keine zweite Schachtfabrik daneben.
+    /// </summary>
+    [Fact]
+    public void Zustandsklasse_und_Protokoll_kommen_aus_den_gemeinsamen_Fabriken()
+    {
+        var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
+        var protokoll = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.Protokollspalte.cs"));
+
+        Assert.Contains("ZustandsklasseChipColumnFactory.Create(", code);
+        Assert.DoesNotContain("SchaechteZustandsklasseColumnFactory", code);
+        Assert.Contains("SchaechteProtokollColumnFactory.Create(", protokoll);
+        Assert.False(
+            File.Exists(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechteZustandsklasseColumnFactory.cs")),
+            "Die eigene Schachtfabrik ist durch die gemeinsame Marke ersetzt.");
+    }
+
+    /// <summary>
+    /// Task 6 (Review-Minor aus Task 1): Der Anzeigename einer Spalte wird genau EINMAL geholt
+    /// und danach gross geschrieben. Vorher setzte der Textspalten-Zweig den Kopf selbst und
+    /// direkt darunter wurde er nochmals gelesen und ueberschrieben.
+    /// </summary>
+    [Fact]
+    public void Tabellenkopf_wird_einmal_geholt_und_gross_geschrieben()
+    {
+        var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
+        var aufbau = Regex.Match(code, @"private void RebuildColumns\(\)[\s\S]*?\n    \}");
+        Assert.True(aufbau.Success, "RebuildColumns nicht gefunden");
+
+        Assert.Equal(1, Regex.Matches(aufbau.Value, @"GetDisplayHeader\(").Count);
+        Assert.Contains("GrossbuchstabenConverter.Anwenden(kopf)", aufbau.Value);
+    }
 }

@@ -65,4 +65,24 @@ public sealed class SchaechteColumnViewCatalogTests
 
         Assert.True(SchaechteColumnViewCatalog.Resolve("alle").Enthaelt("NR"));
     }
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 6: In "Kompakt" und "Dokumente und Medien" steht das Protokoll als
+    /// Knopf (virtuelle Spalte), nicht als roher Dateipfad. Bearbeitet wird der Pfad weiterhin
+    /// in "Alle Spalten" und in den Eingabefeldern.
+    /// </summary>
+    [Theory]
+    [InlineData("kompakt")]
+    [InlineData("medien")]
+    public void Protokoll_erscheint_als_Knopf_statt_als_Pfad(string schluessel)
+    {
+        var ansicht = SchaechteColumnViewCatalog.Resolve(schluessel);
+        Assert.Contains(NovaStatusSpalten.Protokoll, ansicht.Felder!);
+        Assert.DoesNotContain(FieldKeys.PdfPath, ansicht.Felder!);
+    }
+
+    /// <summary>"Alle Spalten" fuehrt keine eigene Liste und zeigt deshalb auch den Pfad.</summary>
+    [Fact]
+    public void Alle_Spalten_zeigt_den_Protokollpfad_weiterhin()
+        => Assert.True(SchaechteColumnViewCatalog.Resolve("alle").Enthaelt(FieldKeys.PdfPath, SchachtFeldnamen.Falte));
 }

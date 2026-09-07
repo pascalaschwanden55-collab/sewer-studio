@@ -114,7 +114,7 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
                 Assert.Equal(ColorOf(app.FindResource("SelectionBackgroundBrush")), ColorOf(cell.Background));
                 Assert.Equal(ColorOf(app.FindResource("SelectionTextBrush")), ColorOf(cell.Foreground));
                 NovaRenderingChecks.ColorColumnsUseTheirCellForeground();
-                NovaRenderingChecks.SchachtZustandsklasseBleibtSchwarz();
+                NovaRenderingChecks.SchachtZustandsklasseMarkeBleibtLesbar();
                 NovaRenderingChecks.LongMenuCanScrollToItsLastAction();
             }
 
@@ -171,6 +171,12 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
             ringEntries.Clear();
             Layout(ring);
             Assert.Empty(ring.Boegen);
+
+            // Task 6: Ohne gewaehlte Haltung steht nur der Leerzustand da - kein Rohrring,
+            // keine leeren Beschriftungen und vor allem kein "{DependencyProperty.UnsetValue}".
+            var leeresPanel = new HaltungUebersichtPanel();
+            Layout(leeresPanel);
+            NovaRenderingChecks.OhneAuswahlNurLeerzustand(leeresPanel);
 
             var panelEntries = new ObservableCollection<ProtocolEntry>();
             var panel = new HaltungUebersichtPanel { Entries = panelEntries };

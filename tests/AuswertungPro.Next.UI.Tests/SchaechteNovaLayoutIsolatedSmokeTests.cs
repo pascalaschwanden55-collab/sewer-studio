@@ -160,6 +160,12 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
             var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             app.InitializeComponent();
 
+            // Task 6: Ohne gewaehlten Schacht steht nur der Leerzustand da - kein Grundriss,
+            // keine leeren Beschriftungen, kein Protokollknopf.
+            var leeresPanel = new SchachtUebersichtPanel();
+            Layout(leeresPanel);
+            NovaRenderingChecks.OhneAuswahlNurLeerzustand(leeresPanel);
+
             var record = new SchachtRecord();
             var panel = new SchachtUebersichtPanel { Record = record };
             Layout(panel);

@@ -37,4 +37,30 @@ public sealed class HaltungFaktenTextTests
     [Fact]
     public void Alle_Teile_leer_ergibt_den_Gedankenstrich()
         => Assert.Equal(HaltungFaktenText.Leer, HaltungFaktenText.Zusammen(new string?[] { null, "" }));
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 6: Ohne gewaehlte Zeile liefert WPF fuer eine Feldbindung
+    /// <c>DependencyProperty.UnsetValue</c>. Wird das stur in Text verwandelt, steht in der
+    /// Uebersicht "{DependencyProperty.UnsetValue}" — genau der Fehltext aus Pascals Bild vom
+    /// 07.09. bei DN / Profil. Ein solcher Platzhalter ist kein Wert und faellt weg.
+    /// </summary>
+    [Theory]
+    [InlineData("{DependencyProperty.UnsetValue}")]
+    [InlineData("{Bindungsfehler}")]
+    public void Der_Text_einer_nicht_gesetzten_Bindung_gilt_als_leer(string platzhalter)
+    {
+        Assert.True(HaltungFaktenText.IstLeer(platzhalter));
+        Assert.Equal(HaltungFaktenText.Leer, HaltungFaktenText.Wert(platzhalter));
+        Assert.Equal(HaltungFaktenText.Leer, HaltungFaktenText.Wert(platzhalter, "m"));
+        Assert.Equal(HaltungFaktenText.Leer, HaltungFaktenText.Zusammen(new[] { platzhalter }));
+    }
+
+    [Fact]
+    public void Ein_Platzhalter_neben_einem_echten_Wert_faellt_weg()
+        => Assert.Equal("Kreisprofil", HaltungFaktenText.Zusammen(new[] { "{DependencyProperty.UnsetValue}", "Kreisprofil" }));
+
+    /// <summary>Ein echter Wert bleibt ein echter Wert - die Regel greift nur am Zeilenanfang.</summary>
+    [Fact]
+    public void Ein_Wert_mit_geschweifter_Klammer_in_der_Mitte_bleibt_stehen()
+        => Assert.Equal("Beton {alt}", HaltungFaktenText.Wert("Beton {alt}"));
 }

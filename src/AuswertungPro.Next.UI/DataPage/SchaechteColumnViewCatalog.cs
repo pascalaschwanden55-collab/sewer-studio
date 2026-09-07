@@ -12,10 +12,12 @@ public static class SchaechteColumnViewCatalog
 
     public static IReadOnlyList<DataPageColumnView> Views { get; } =
     [
-        new("kompakt", "Kompakt", [Nummer, "Strasse", "Funktion", "Material", FieldKeys.ShaftDimension1Mm, FieldKeys.ShaftDimension2Mm, FieldKeys.ShaftShape, FieldKeys.ConditionClass, FieldKeys.PdfPath]),
+        // Nova-Etappe 2b: Das Protokoll steht als Knopf (virtuelle Spalte), nicht als roher
+        // Dateipfad. Bearbeitet wird der Pfad in "Alle Spalten" und in den Eingabefeldern.
+        new("kompakt", "Kompakt", [Nummer, "Strasse", "Funktion", "Material", FieldKeys.ShaftDimension1Mm, FieldKeys.ShaftDimension2Mm, FieldKeys.ShaftShape, FieldKeys.ConditionClass, NovaStatusSpalten.Protokoll]),
         new("zustand", "Zustand und Inspektion", [Nummer, FieldKeys.ConditionClass, "Pruefungsresultat", "Dichtheit", "Referenzpruefung", "Gewaesserschutz", "Grundwasserspiegel", FieldKeys.LoadClass, "Inspektionsdatum"]),
         new("sanierung", "Sanierung und Kosten", [Nummer, FieldKeys.RenovationDecision, FieldKeys.RecommendedRehabilitationMeasures, FieldKeys.RehabilitationExecutor, FieldKeys.WorkflowStatus, FieldKeys.Cost, "Eigentümer"]),
-        new("medien", "Dokumente und Medien", [Nummer, FieldKeys.PdfPath, FieldKeys.PdfEigen, FieldKeys.Link, "Fotos"]),
+        new("medien", "Dokumente und Medien", [Nummer, NovaStatusSpalten.Protokoll, FieldKeys.PdfEigen, FieldKeys.Link, "Fotos"]),
         new("alle", "Alle Spalten", null)
     ];
 

@@ -145,4 +145,24 @@ public sealed class DesignAuditNovaHaltungenTests
         Assert.Contains("PopupFocusHelper.FokussiereErstesFeld(MoveToPositionBox)", code);
         Assert.Contains("PopupFocusHelper.SchliesseBeiEscape(e.Key, ReihenfolgePopup, WeitereAktionenDropdown)", code);
     }
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 6: Ohne gewaehlte Zeile zeigt die Uebersicht NUR den Leerzustand.
+    /// Vorher standen Rohrring, alle Beschriftungen und leere Werte da — und weil eine
+    /// Feldbindung ohne Datensatz DependencyProperty.UnsetValue liefert, bei DN / Profil sogar
+    /// der Fehltext "{DependencyProperty.UnsetValue}" (Pascals Bild vom 07.09.).
+    /// </summary>
+    [Fact]
+    public void Uebersicht_zeigt_ohne_Auswahl_nur_den_Leerzustand()
+    {
+        var xaml = Xaml("Views", "Pages", "Haltungsansicht", "HaltungUebersichtPanel.xaml");
+        Assert.Contains("x:Name=\"Leerzustand\"", xaml);
+        Assert.Contains("Keine Haltung gewählt. Links eine Zeile wählen.", xaml);
+
+        // Der ganze Inhalt haengt an einem einzigen Sichtbarkeitsschalter: Record == null.
+        var inhalt = Regex.Match(xaml, @"<ScrollViewer x:Name=""Inhalt""[\s\S]*?</ScrollViewer.Style>");
+        Assert.True(inhalt.Success, "Inhalt der Uebersicht braucht einen eigenen Sichtbarkeitsschalter");
+        Assert.Contains("<DataTrigger Binding=\"{Binding Record, ElementName=Root}\" Value=\"{x:Null}\">", inhalt.Value);
+        Assert.Contains("<Setter Property=\"Visibility\" Value=\"Collapsed\"/>", inhalt.Value);
+    }
 }

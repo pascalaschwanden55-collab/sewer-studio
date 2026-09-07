@@ -29,14 +29,26 @@
     </UserControl.Resources>
     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="12">
+        <Grid>
         <!-- B3: Alles in einem Bildlauf. Nur die Schadenliste bekommt die Reststrecke (*);
              jede Zeile darueber und darunter misst sich selbst (Auto). So wird kein Wert
              mehr auf halber Hoehe abgeschnitten, auch wenn die Spalte schmal ist. -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+        <ScrollViewer x:Name="Inhalt" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                       DataContext="{Binding Record, ElementName=Root}">
+            <!-- Task 6: Ohne gewaehlte Haltung bleibt der ganze Inhalt weg. Sonst stehen leere
+                 Beschriftungen da, und eine Feldbindung ohne Datensatz zeigt den Fehltext
+                 "{DependencyProperty.UnsetValue}". -->
+            <ScrollViewer.Style>
+                <Style TargetType="ScrollViewer">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ScrollViewer.Style>
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -89,27 +101,12 @@
                     <StackPanel Margin="0,0,0,6"><TextBlock Text="Video" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding VideoText, ElementName=Root, Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
                 </UniformGrid>
 
-                <!-- Ohne Auswahl: Hinweis statt leerer Beschriftungen -->
-                <TextBlock Grid.Row="3" Text="Keine Haltung gewählt. Links eine Zeile wählen."
-                           Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-
-                <TextBlock Grid.Row="4" Text="Primäre Schäden" FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
+                <TextBlock Grid.Row="3" Text="Primäre Schäden" FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
                            Foreground="{DynamicResource TextBrush}" Margin="0,4,0,6"/>
 
                 <!-- Schadensliste: nur BA-/BB-Schaeden, schwerste zuerst.
                      Doppelklick oeffnet die Beobachtungen wie in der Haltungsansicht. -->
-                <ListBox Grid.Row="5" ItemsSource="{Binding Schaeden, ElementName=Root}" BorderThickness="0" Background="Transparent"
+                <ListBox Grid.Row="4" ItemsSource="{Binding Schaeden, ElementName=Root}" BorderThickness="0" Background="Transparent"
                          MouseDoubleClick="Schaden_MouseDoubleClick" AutomationProperties.Name="Primäre Schäden"
                          ToolTip="Doppelklick öffnet die Beobachtungen"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -144,7 +141,7 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <TextBlock Grid.Row="6" Text="Keine baulichen oder betrieblichen Schäden erfasst."
+                <TextBlock Grid.Row="5" Text="Keine baulichen oder betrieblichen Schäden erfasst."
                            Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}" TextWrapping="Wrap">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
@@ -159,7 +156,7 @@
                 </TextBlock>
 
                 <!-- KI-Hinweis: nur sichtbar, solange die Auswahl offene KI-Vorschlaege hat -->
-                <Border Grid.Row="7" Background="{DynamicResource KiSubtleBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10,8" Margin="0,8,0,0"
+                <Border Grid.Row="6" Background="{DynamicResource KiSubtleBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10,8" Margin="0,8,0,0"
                         Visibility="{Binding OffeneKiBefunde, ElementName=Root, Converter={StaticResource ZahlSichtbar}}">
                     <StackPanel>
                         <TextBlock Text="KI-Vorschläge warten auf fachliche Bestätigung" TextWrapping="Wrap"
@@ -170,5 +167,21 @@
                 </Border>
             </Grid>
         </ScrollViewer>
+
+            <TextBlock x:Name="Leerzustand" Text="Keine Haltung gewählt. Links eine Zeile wählen."
+                       Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"
+                       VerticalAlignment="Top" HorizontalAlignment="Left">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
     </Border>
 </UserControl>

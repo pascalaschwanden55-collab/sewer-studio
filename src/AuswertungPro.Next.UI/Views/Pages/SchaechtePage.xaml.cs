@@ -167,14 +167,22 @@ public partial class SchaechtePage : UserControl
         {
             foreach (var col in _vm.Columns)
             {
+                // Nova-Etappe 2b: Der Anzeigename wird EINMAL geholt; der Tabellenkopf schreibt
+                // gross (siehe DataPageColumnFactory, GrossbuchstabenConverter-Doku).
+                // GetDisplayHeader bleibt selbst unveraendert, weil SchaechteRecordDetailsBuilder
+                // denselben Text auch als normale Feldbeschriftung im Formular verwendet.
+                var kopf = GetDisplayHeader(col);
+                var grossKopf = GrossbuchstabenConverter.Anwenden(kopf) ?? kopf;
+
+                var istZustandsklasse = IsZustandsklasseColumn(col);
                 DataGridColumn column;
                 if (IsCostColumn(col))
                 {
                     column = DataGridCostColumnFactory.Create(col, col);
                 }
-                else if (IsZustandsklasseColumn(col))
+                else if (istZustandsklasse)
                 {
-                    column = CreateZustandsklasseColumn(col);
+                    column = CreateZustandsklasseColumn(col, grossKopf);
                 }
                 else if (TryResolveDropdownColumnSpec(col, out var spec))
                 {
@@ -201,7 +209,6 @@ public partial class SchaechtePage : UserControl
                 {
                     column = new DataGridTextColumn
                     {
-                        Header = GetDisplayHeader(col),
                         Binding = new Binding($"Fields[{col}]")
                         {
                             Mode = BindingMode.TwoWay,
@@ -217,14 +224,13 @@ public partial class SchaechtePage : UserControl
                     };
                 }
 
-                // Nova-Etappe 2b: Der Tabellenkopf schreibt gross (siehe DataPageColumnFactory,
-                // GrossbuchstabenConverter-Doku). GetDisplayHeader bleibt selbst unveraendert,
-                // weil SchaechteRecordDetailsBuilder denselben Text auch als normale
-                // Feldbeschriftung im Formular verwendet.
-                var kopf = GetDisplayHeader(col);
-                column.Header = GrossbuchstabenConverter.Anwenden(kopf) ?? kopf;
+                column.Header = grossKopf;
                 column.SetValue(FrameworkElement.TagProperty, col);
-                ApplyColorStyle(column, col);
+
+                // Die Zustandsklasse traegt ihre Farbe seit Etappe 2b in der Marke, nicht mehr
+                // in der ganzen Zelle: sonst stuende der Chip auf einer zweiten Farbflaeche.
+                if (!istZustandsklasse)
+                    ApplyColorStyle(column, col);
                 column.MinWidth = 90;
                 Grid.Columns.Add(column);
                 _columnFields[column] = col;
@@ -234,6 +240,8 @@ public partial class SchaechtePage : UserControl
                     : HorizontalAlignment.Left;
                 _columnAlignmentToolbar.SetAlignment(column, defaultHorizontal, VerticalAlignment.Center);
             }
+
+            ErgaenzeProtokollspalte();
         }
         finally
         {
@@ -253,8 +261,12 @@ public partial class SchaechtePage : UserControl
             column.CellStyle = colorStyle;
     }
 
-    private DataGridColumn CreateZustandsklasseColumn(string recordField)
-        => SchaechteZustandsklasseColumnFactory.Create(recordField, GetDisplayHeader(recordField));
+    /// <summary>
+    /// Nova-Etappe 2b: dieselbe Marke wie in der Haltungsliste. Anzeigen als Chip mit lesbarer
+    /// Tinte, bearbeiten weiterhin als Auswahl 0 bis 4.
+    /// </summary>
+    private DataGridColumn CreateZustandsklasseColumn(string recordField, string header)
+        => ZustandsklasseChipColumnFactory.Create(recordField, header);
 
     private void Grid_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
     {
