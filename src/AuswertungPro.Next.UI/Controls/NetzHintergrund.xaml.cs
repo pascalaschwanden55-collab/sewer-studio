@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
@@ -40,6 +40,12 @@ public partial class NetzHintergrund : UserControl
     private NetzHintergrundModell? _modell;
     private DispatcherTimer? _timer;
     private Window? _fenster;
+
+    // Formen-Pool statt Neuanlage je Bild: Knoten sind fix (Anzahl/Radius aendern sich nicht,
+    // solange das Modell lebt), Linien wachsen bei Bedarf und werden nie entfernt; nur
+    // ueberzaehlige verstecken sich (Visibility=Collapsed). Vermeidet GC-Druck bei ~30 Bildern/s.
+    private readonly List<Ellipse> _knotenFormen = new();
+    private readonly List<Line> _linienFormen = new();
 
     public NetzHintergrund()
     {
@@ -84,13 +90,32 @@ public partial class NetzHintergrund : UserControl
     }
 
     /// <summary>Neues, zur aktuellen Groesse passendes Modell; ein Schritt fuer ein sofort
-    /// sichtbares, leicht bewegtes Standbild, bevor der Timer ueberhaupt entscheidet.</summary>
+    /// sichtbares, leicht bewegtes Standbild, bevor der Timer ueberhaupt entscheidet.
+    /// Der Formen-Pool passt nur hier neu zur (moeglicherweise geaenderten) Knotenzahl;
+    /// deshalb wird nur hier der Canvas geleert, nie in <see cref="Zeichne"/> selbst.</summary>
     private void NeuesModellUndStandbild()
     {
         var breite = (int)Math.Max(1, ActualWidth);
         var hoehe = (int)Math.Max(1, ActualHeight);
         _modell = new NetzHintergrundModell(breite, hoehe);
         _modell.Schritt();
+
+        Flaeche.Children.Clear();
+        _knotenFormen.Clear();
+        _linienFormen.Clear();
+        foreach (var k in _modell.Knoten)
+        {
+            var punkt = new Ellipse
+            {
+                Width = k.R * 2,
+                Height = k.R * 2,
+                IsHitTestVisible = false
+            };
+            punkt.SetResourceReference(Shape.FillProperty, "GlassBorderBrush");
+            _knotenFormen.Add(punkt);
+            Flaeche.Children.Add(punkt);
+        }
+
         Zeichne();
     }
 
@@ -133,42 +158,47 @@ public partial class NetzHintergrund : UserControl
         Zeichne();
     }
 
+    /// <summary>Schreibt nur Position/Deckkraft in den bestehenden Formen-Pool; legt nie neue
+    /// Knoten an und leert den Canvas nicht. Der Linien-Pool waechst bei mehr Verbindungen als
+    /// bisher gebraucht; ueberzaehlige Linien vom letzten Bild werden nur versteckt, nicht
+    /// entfernt. So entsteht bei ~30 Bildern/s kein Neuanlage-/GC-Druck durch diese Methode.</summary>
     private void Zeichne()
     {
-        Flaeche.Children.Clear();
         if (_modell is null)
             return;
 
-        foreach (var v in _modell.Verbindungen())
+        for (var i = 0; i < _modell.Knoten.Count && i < _knotenFormen.Count; i++)
         {
-            var a = _modell.Knoten[v.A];
-            var b = _modell.Knoten[v.B];
-            var linie = new Line
-            {
-                X1 = a.X,
-                Y1 = a.Y,
-                X2 = b.X,
-                Y2 = b.Y,
-                StrokeThickness = 1,
-                Opacity = LinienDeckkraft * v.Alpha,
-                IsHitTestVisible = false
-            };
-            linie.SetResourceReference(Shape.StrokeProperty, "AccentBrush");
-            Flaeche.Children.Add(linie);
-        }
-
-        foreach (var k in _modell.Knoten)
-        {
-            var punkt = new Ellipse
-            {
-                Width = k.R * 2,
-                Height = k.R * 2,
-                IsHitTestVisible = false
-            };
-            punkt.SetResourceReference(Shape.FillProperty, "GlassBorderBrush");
+            var k = _modell.Knoten[i];
+            var punkt = _knotenFormen[i];
             Canvas.SetLeft(punkt, k.X - k.R);
             Canvas.SetTop(punkt, k.Y - k.R);
-            Flaeche.Children.Add(punkt);
         }
+
+        var verbindungen = _modell.Verbindungen();
+        for (var i = 0; i < verbindungen.Count; i++)
+        {
+            if (i >= _linienFormen.Count)
+            {
+                var neu = new Line { StrokeThickness = 1, IsHitTestVisible = false };
+                neu.SetResourceReference(Shape.StrokeProperty, "AccentBrush");
+                _linienFormen.Add(neu);
+                Flaeche.Children.Add(neu);
+            }
+
+            var v = verbindungen[i];
+            var a = _modell.Knoten[v.A];
+            var b = _modell.Knoten[v.B];
+            var linie = _linienFormen[i];
+            linie.X1 = a.X;
+            linie.Y1 = a.Y;
+            linie.X2 = b.X;
+            linie.Y2 = b.Y;
+            linie.Opacity = LinienDeckkraft * v.Alpha;
+            linie.Visibility = Visibility.Visible;
+        }
+
+        for (var i = verbindungen.Count; i < _linienFormen.Count; i++)
+            _linienFormen[i].Visibility = Visibility.Collapsed;
     }
 }
