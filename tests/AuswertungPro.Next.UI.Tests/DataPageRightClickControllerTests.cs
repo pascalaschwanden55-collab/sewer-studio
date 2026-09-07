@@ -1,3 +1,4 @@
+using System.IO;
 using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -97,5 +98,29 @@ public sealed class DataPageRightClickControllerTests
 
         Assert.Equal(DataPageRightClickAction.SelectRow, result.Action);
         Assert.Same(row, result.RowItem);
+    }
+
+    /// <summary>
+    /// Nova-Fixwelle 2b, Runde 2: BEIDE Seiten muessen durch diesen Controller laufen. Die
+    /// Schachtseite entschied vorher selbst und kannte den Schutz gegen virtuelle Spalten
+    /// nicht — „Spalte leeren" auf dem Kopf der Protokollspalte schrieb dort
+    /// <c>Nova_Protokoll</c> in jeden Datensatz. Zwei Wege zu derselben Entscheidung heisst,
+    /// dass nur einer den Schutz bekommt.
+    /// </summary>
+    [Theory]
+    [InlineData("DataPage.xaml.cs")]
+    [InlineData("SchaechtePage.xaml.cs")]
+    public void Beide_Seiten_entscheiden_den_Rechtsklick_ueber_diesen_Controller(string datei)
+    {
+        var quelle = File.ReadAllText(
+            TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", datei));
+
+        Assert.Contains("DataPageRightClickController.Resolve(", quelle);
+
+        // Geleert wird nur im Zweig des Controllers. Ein eigener Zweig, der die
+        // Haekchen-Einstellung selbst auswertet, waere genau der alte Fehler.
+        Assert.Contains("case DataPageRightClickAction.ClearColumn", quelle);
+        Assert.DoesNotContain("if (ClearColumnModeButton.IsChecked == true)", quelle);
+        Assert.DoesNotContain("if (ClearColumnMenuItem.IsChecked == true)", quelle);
     }
 }

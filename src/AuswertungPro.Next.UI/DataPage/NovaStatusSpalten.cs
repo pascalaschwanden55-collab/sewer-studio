@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
@@ -28,6 +29,11 @@ public static class NovaStatusSpalten
     /// -Wiederherstellung muessen solche Spalten ueberspringen, sonst landete eine Spalte ohne
     /// Feld als vermeintliches Feld in <c>settings.json</c>.
     /// </summary>
-    public static bool IstVirtuell(string? feld)
-        => feld is not null && feld.StartsWith("Nova_", StringComparison.Ordinal);
+    /// <remarks>
+    /// Nova-Fixwelle 2b, Runde 2: Die Praefixregel selbst liegt in der Domaene
+    /// (<see cref="VirtuelleSpalte"/>), weil <c>HaltungRecord</c> und <c>SchachtRecord</c>
+    /// dort einen solchen Schluessel abweisen muessen. Hier bleibt nur die Weiterleitung —
+    /// es darf keine zweite Wahrheit ueber das Praefix geben.
+    /// </remarks>
+    public static bool IstVirtuell(string? feld) => VirtuelleSpalte.IstVirtuell(feld);
 }

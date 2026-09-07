@@ -107,6 +107,8 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
     /// </summary>
     public bool FuelleLeeresFeld(string fieldName, string? value, FieldSource source)
     {
+        VirtuelleSpalte.WeiseAb(fieldName, nameof(fieldName));
+
         if (!string.IsNullOrWhiteSpace(GetFieldValue(fieldName)))
             return false;
 
@@ -134,6 +136,10 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
 
     public void SetFieldValue(string fieldName, string? value, FieldSource source, bool userEdited)
     {
+        // Nova-Fixwelle 2b, Runde 2: Eine virtuelle Tabellenspalte ist kein Feld und darf
+        // nie in Fields landen (siehe VirtuelleSpalte).
+        VirtuelleSpalte.WeiseAb(fieldName, nameof(fieldName));
+
         value ??= "";
 
         // Record-Level Setter: keep this as a simple assignment.

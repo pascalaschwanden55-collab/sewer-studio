@@ -144,6 +144,12 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
 
     private FeldSchreibErgebnis WriteField(string fieldName, string? value, FieldSource source, bool? userEdited)
     {
+        // Nova-Fixwelle 2b, Runde 2: Eine virtuelle Tabellenspalte ist kein Feld und darf
+        // nie in Fields landen. Genau hier ist am 07.09.2026 "Nova_Protokoll" in jeden
+        // Schachtdatensatz gelaufen (siehe VirtuelleSpalte). Der Schutz sitzt am
+        // gemeinsamen Schreibweg, damit ihn keine der vier Ueberladungen umgehen kann.
+        VirtuelleSpalte.WeiseAb(fieldName, nameof(fieldName));
+
         value ??= "";
         var unveraendert = Fields.TryGetValue(fieldName, out var bisher)
                            && string.Equals(bisher ?? "", value, StringComparison.Ordinal);

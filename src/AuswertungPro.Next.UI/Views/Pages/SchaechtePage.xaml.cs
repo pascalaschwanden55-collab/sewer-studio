@@ -834,27 +834,37 @@ public partial class SchaechtePage : UserControl
             GetCurrentProject(),
             (message, title) => DialogHost.Current.Error(message, title));
 
+    /// <summary>
+    /// Nova-Fixwelle 2b, Runde 2: Derselbe <see cref="DataPageRightClickController"/> wie auf
+    /// der Haltungsseite. Vorher entschied dieser Pfad selbst — und kannte den Schutz gegen
+    /// virtuelle Spalten nicht: „Spalte leeren" auf dem Kopf der Protokollspalte schrieb
+    /// <c>Nova_Protokoll</c> in JEDEN Schachtdatensatz. Zwei Wege zu derselben Entscheidung
+    /// heisst, dass nur einer den Schutz bekommt.
+    /// </summary>
     private void Grid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (ClearColumnModeButton.IsChecked == true)
-        {
-            var header = VisualTreeSafe.FindAncestor<DataGridColumnHeader>((DependencyObject)e.OriginalSource);
-            if (header?.Column is not null)
-            {
-                var fieldName = header.Column.GetValue(FrameworkElement.TagProperty) as string;
-                if (!string.IsNullOrWhiteSpace(fieldName))
-                {
-                    var displayName = header.Column.Header?.ToString() ?? fieldName;
-                    ClearColumn(fieldName, displayName);
-                    e.Handled = true;
-                    return;
-                }
-            }
-        }
+        if (e.OriginalSource is not DependencyObject originalSource)
+            return;
 
-        var row = VisualTreeSafe.FindAncestor<DataGridRow>((DependencyObject)e.OriginalSource);
-        if (row is not null)
-            Grid.SelectedItem = row.Item;
+        var header = VisualTreeSafe.FindAncestor<DataGridColumnHeader>(originalSource);
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>(originalSource);
+
+        var ergebnis = DataPageRightClickController.Resolve(
+            ClearColumnModeButton.IsChecked == true,
+            header?.Column.GetValue(FrameworkElement.TagProperty) as string,
+            header?.Column.Header?.ToString(),
+            row?.Item);
+
+        switch (ergebnis.Action)
+        {
+            case DataPageRightClickAction.ClearColumn when ergebnis.FieldName is { } feld:
+                ClearColumn(feld, ergebnis.DisplayName ?? feld);
+                e.Handled = true;
+                break;
+            case DataPageRightClickAction.SelectRow:
+                Grid.SelectedItem = ergebnis.RowItem;
+                break;
+        }
     }
 
     private void ClearColumn(string fieldName, string displayName)
