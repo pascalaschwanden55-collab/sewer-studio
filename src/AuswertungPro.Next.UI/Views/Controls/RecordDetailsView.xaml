@@ -493,13 +493,17 @@
                                                 </Border.Style>
                                                 <StackPanel>
                                                     <DockPanel>
-                                                    <Button DockPanel.Dock="Right" Content="&#xE711;"
-                                                            FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource TextXS}"
+                                                    <!-- Glyph als ui:FluentIcon: ein reiner Button-Content erbt die Icon-Schrift
+                                                         nicht, weil der implizite TextBlock-Style des Themes sie ueberschreibt. -->
+                                                    <Button DockPanel.Dock="Right"
                                                             Padding="4,0" Margin="4,0,0,0" VerticalAlignment="Top"
                                                             Background="Transparent" BorderThickness="0"
                                                             Click="HideField_Click"
+                                                            AutomationProperties.Name="Feld ausblenden"
                                                             ToolTip="Dieses Feld ausblenden (Wert und Exporte bleiben unverändert)"
-                                                            Visibility="{Binding IsCustomizing, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}, Converter={StaticResource BoolToVis}}"/>
+                                                            Visibility="{Binding IsCustomizing, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}, Converter={StaticResource BoolToVis}}">
+                                                        <ui:FluentIcon Glyph="&#xE711;" FontSize="{DynamicResource TextXS}"/>
+                                                    </Button>
                                                     <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextSecondaryBrush}"
                                                                FontWeight="SemiBold" TextWrapping="Wrap"
                                                                PreviewMouseLeftButtonDown="FieldHandle_PreviewMouseLeftButtonDown"

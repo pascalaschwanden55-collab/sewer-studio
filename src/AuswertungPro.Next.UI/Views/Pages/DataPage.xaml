@@ -358,10 +358,14 @@
                                  VerticalContentAlignment="Center" Padding="4,2"
                                  ToolTip="Zielposition eingeben (1-basiert) und Enter drücken"
                                  KeyDown="MoveToPositionBox_KeyDown"/>
-                        <Button Content="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"
-                                Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                        <!-- Glyph als ui:FluentIcon: ein reiner Button-Content erbt die Icon-Schrift
+                             nicht, weil der implizite TextBlock-Style des Themes sie ueberschreibt. -->
+                        <Button Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                                AutomationProperties.Name="Selektierte Zeile an Position verschieben"
                                 ToolTip="Selektierte Zeile an Position verschieben"
-                                Click="MoveToPosition_Click"/>
+                                Click="MoveToPosition_Click">
+                            <ui:FluentIcon Glyph="&#xE72A;" FontSize="{DynamicResource TextS}"/>
+                        </Button>
 
                         <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="8,4"/>
 
@@ -370,10 +374,12 @@
                                  VerticalContentAlignment="Center" Padding="4,2"
                                  ToolTip="Zeilennummer eingeben und Enter drücken"
                                  KeyDown="GoToRowBox_KeyDown"/>
-                        <Button Content="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"
-                                Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                        <Button Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                                AutomationProperties.Name="Zu Zeile springen"
                                 ToolTip="Zu Zeile springen"
-                                Click="GoToRow_Click"/>
+                                Click="GoToRow_Click">
+                            <ui:FluentIcon Glyph="&#xE72A;" FontSize="{DynamicResource TextS}"/>
+                        </Button>
                     </StackPanel>
                 </StackPanel>
             </Border>

@@ -826,6 +826,76 @@ erweiterte `DesignAuditSchriftskalaTests`, `DesignAuditContrastTests`, `DesignAu
   Aufgabe" (braucht einen fachlichen Pruefstatus je Haltung), Palettenwechsel Glas/Cockpit,
   animierte Symbole ueber den bestehenden `MotionSettings`-Rahmen hinaus.
 
+### Nova-Etappe 2 (2026-09-07, ganze Oberflaeche)
+
+Quelle bleibt der Prototyp `docs/reviews/2026-09-06-nova/optimiert/v2/`, Inventar
+`docs/reviews/2026-09-06-nova/wpf-etappe-2/PROTOTYP-INVENTAR.md`, Abnahme
+`docs/reviews/2026-09-06-nova/wpf-etappe-2/ABNAHME.md` samt zwoelf Bildschirmfotos unter
+`bilder/`. Der isolierte Pruefhost liegt in `wpf-etappe-2/werkzeug/` und bleibt bewusst
+ausserhalb von `AuswertungPro.sln`.
+
+- Beide Themes tragen die Paletten Hell·Glas und Dunkel·Cockpit als Tokens; neu sind
+  `AccentTextBrush`, `FaintBrush` und `GlassBorderBrush`. Der dunkle Akzent bleibt `#2563EB`,
+  die Zustandsfarben Z0-Z4 bleiben unveraendert.
+- Werkzeugknoepfe, Chips und Umschalter sind Pillen (`ToolbarButton`, `ToolbarButtonAccent`,
+  `CompactToggleButton` mit `CornerRadius="999"`), der Tabellenkopf steht in Kapitaelchen.
+  WPF begrenzt einen Eckenradius auf halbe Breite UND halbe Hoehe und zeichnet daraus eine
+  Ellipse, keine Kapsel; das ist als Befund B1 der Abnahme offen und noch nicht entschieden.
+- `HaltungPruefstatus` (offen / KI analysiert / abgeschlossen) und `NaechsteAufgabeRegel`
+  liegen WPF-frei in `Application/UseCases/NaechsteAufgabe`. Der Chip der Kopfzeile zeigt die
+  erste KI-analysierte Haltung, sonst die erste offene mit Video.
+- `ShellNovaKopfzeile` liefert Brotkrume (`Projekt / Seite`) und Speicherstand;
+  `ShellNavigationTitles.Anzeige` macht aus den ASCII-Schluesseln die Anzeigenamen mit Umlauten.
+- Die globale Suche laeuft ueber `GlobaleSucheRegel` (WPF-frei) und `GlobaleSucheViewModel`;
+  Strg+K fokussiert das Feld, Pfeiltasten und Enter waehlen ueber `MarkiertIndex`, nie ueber
+  `SelectedItem` (sonst erreichen die Pfeiltasten die Liste nicht).
+- `KiBereitschaftRegel` bestimmt den Kopf des Leisten-Aufklappers aus
+  `AiRuntimeStatusTracker.Current`. Das ist die KI-Bereitschaft, nicht der Sensorzustand.
+- `ProjektUebersichtPage` erscheint nur im Arbeitsbereich mit fertigem Projekt; ohne Projekt
+  bleibt die bisherige `OverviewPage` der Startbildschirm. Die Kennzahlen kommen WPF-frei aus
+  `ProjektUebersichtKennzahlen`. Der Donut des Prototyps ist bewusst durch eine anklickbare
+  Legende ersetzt.
+- `ICodingSuggestionRegistry` merkt je Haltung den letzten Vorabdurchlauf fuer die Karte
+  „KI-Vorabdurchlauf diese Sitzung"; es ist die 159. Registrierung im `ServiceProvider`
+  (`ServiceProviderRegistrationTests`).
+- Der Umschalter „Alte Haltungsansicht" sitzt im Menue `Weitere Aktionen`, nicht mehr in der
+  Werkzeugleiste. Chips und Themen tragen ihre Anzahl als hochgestellten Zaehler.
+- `RohrringGeometrie` folgt der erfassten Uhrlage (`Uhr_von`/`Uhr_bis` samt Aliassen); die
+  frueher benutzte Indexregel ist nur noch der Rueckfall ohne Uhrlage. 0 Grad ist 12 Uhr.
+- Die Schachtseite hat dasselbe dreiteilige Layout wie die Haltungen
+  (`SchaechteNovaWorkspaceController`, `SchachtUebersichtPanel`, Spaltensaetze in
+  `SchaechteColumnViewCatalog`). `AppSettings.ShowSchaechteNovaLayout=false` gibt die alte
+  Ansicht zurueck. Am Schacht wird die Zustandsklasse weiterhin nie berechnet.
+- Der Player hat einen kompakten Kopf und die Bedienleiste des Prototyps; alles Seltene liegt
+  im Menue `Weitere ▾`. Die Zeitleiste zeigt die Schadensmarken der Haltung.
+- Das Training Studio steht in drei Spalten 210 | * | 330 mit den drei nummerierten Schritten
+  KI-Vorschlag, Fachliche Codierung und Freigabe fuer Training. Einen Knopf „Fuer Training
+  freigeben" gibt es bewusst nicht; die Freigabe bleibt das Export-Register im Training Center.
+- `NetzHintergrund` zeichnet das Leitungsnetz aus einem Formen-Pool (keine Neuanlage je Bild);
+  `AppSettings.HintergrundEngine` schaltet ihn, die Einstellungen melden die Aenderung ueber
+  `MotionSettings.EngineChanged`. Sichtbar ist er nur in Kopfzeile, Raendern und hinter der Leiste.
+- `NovaPageHeader` ist der einheitliche Seitenkopf mit Untertitel auf elf Seiten.
+- Waechter: `DesignAuditNovaPaletteTests` (6), `DesignAuditNovaHaltungenTests` (7),
+  `DesignAuditNovaSchaechteTests` (5), `DesignAuditNovaPlayerTests` (3),
+  `DesignAuditNovaTrainingStudioTests` (4), `DesignAuditNovaUebersichtTests` (2),
+  `DesignAuditNovaSeitenkoepfeTests` (4), `NetzHintergrundTests` (3),
+  `NovaPageHeaderIsolatedSmokeTests` (1), `SchaechteNovaLayoutIsolatedSmokeTests` (2),
+  `ShellNovaKopfzeileTests` (3), `KiBereitschaftRegelTests` (1),
+  `SchaechteColumnViewCatalogTests` (2) sowie WPF-frei
+  `GlobaleSucheRegelTests` (2), `NaechsteAufgabeRegelTests` (6),
+  `ProjektUebersichtKennzahlenTests` (3), `RohrringGeometrieTests` (3),
+  `CodingSuggestionRegistryTests` (3).
+- Ein Glyph gehoert in ein `ui:FluentIcon`, nicht in `Button.Content`. Der implizite
+  `TextBlock`-Style beider Themes setzt `FontFamily` und `Foreground` selbst und schlaegt die
+  Vererbung vom Knopf; ein Glyph als reiner Content erscheint deshalb als leeres Kaestchen und
+  eine Akzentbeschriftung als dunkler Text. Behoben in `DataPage.xaml`, `SchaechtePage.xaml`
+  und `RecordDetailsView.xaml`; die uebrigen Faelle stehen als Befunde B6/B7 in der Abnahme.
+- Offen laut Abnahme: Ellipsen statt Kapseln (B1), Tastenmarke im Suchfeld (B2), abgeschnittene
+  Fakten der Haltungsuebersicht (B3), zu schmale linke Spalte im Training Studio (B4),
+  Auswahlfelder mit Rohtext statt `DisplayMemberPath` (B5, Altbestand), Zellentinte und
+  Akzentbeschriftung (B6/B7). Nicht gemessen wurde Windows-Skalierung 125 und 150 Prozent;
+  das bleibt eine Sichtpruefung durch Pascal beim Merge.
+
 ## Build & Test
 ```bash
 dotnet build AuswertungPro.sln

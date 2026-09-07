@@ -31,7 +31,8 @@
             <Border DockPanel.Dock="Bottom" Background="{DynamicResource KiSubtleBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10,8" Margin="0,8,0,0"
                     Visibility="{Binding OffeneKiBefunde, ElementName=Root, Converter={StaticResource ZahlSichtbar}}">
                 <StackPanel>
-                    <TextBlock Text="KI-Vorschläge warten auf fachliche Bestätigung" FontWeight="SemiBold" Foreground="{DynamicResource KiTextBrush}"/>
+                    <TextBlock Text="KI-Vorschläge warten auf fachliche Bestätigung" TextWrapping="Wrap"
+                               FontWeight="SemiBold" Foreground="{DynamicResource KiTextBrush}"/>
                     <TextBlock Text="{Binding OffeneKiBefunde, ElementName=Root, StringFormat={}{0} offen. Die Ampel wird erst grün\, wenn zwei unabhängige Belegquellen vorliegen und du bestätigt hast.}" TextWrapping="Wrap" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource KiTextBrush}"/>
                     <Button Content="Im Player prüfen" Click="ImPlayer_Click" Style="{StaticResource ToolbarButtonAccent}" HorizontalAlignment="Left" Margin="0,6,0,0" ToolTip="Video dieser Haltung im Player öffnen"/>
                 </StackPanel>
