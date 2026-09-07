@@ -1,6 +1,7 @@
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
@@ -13,6 +14,13 @@ public static class DataPageColumnFactory
         KeyboardFocusChangedEventHandler lostKeyboardFocus,
         SelectionChangedEventHandler selectionChanged)
     {
+        // Nova-Etappe 2b: Der Tabellenkopf schreibt gross (Kapitaelchen greifen mit der
+        // Programmschrift nicht). Die Umwandlung passiert hier statt im Kopf-Template, weil
+        // Theme.xaml/ThemeLight.xaml von PageTitleUnderlineTests roh per XamlReader.Load
+        // geladen werden und dort keinen eigenen Konverter-Typ referenzieren duerfen (siehe
+        // GrossbuchstabenConverter-Doku).
+        header = GrossbuchstabenConverter.Anwenden(header) ?? header;
+
         if (GridDropdownFieldPolicy.TryResolve(fieldName, out var comboSpec))
         {
             return comboSpec.Managed

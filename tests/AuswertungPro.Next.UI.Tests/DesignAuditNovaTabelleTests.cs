@@ -23,14 +23,21 @@ public sealed class DesignAuditNovaTabelleTests
         // Letter-Spacing). Die alte Regel darf nicht mehr im Kopf-Template stehen.
         Assert.DoesNotContain("Typography.Capitals", header);
 
-        // Nur String-Koepfe werden umgewandelt: eine typgebundene DataTemplate fuer sys:String,
-        // die den GrossbuchstabenConverter verwendet. Ein nicht-textueller Kopf durchlaeuft
-        // diese Vorlage nicht und behaelt den bisherigen ContentPresenter ohne ContentTemplate.
+        // Nur String-Koepfe bekommen die typografische Behandlung: eine typgebundene DataTemplate
+        // fuer sys:String. Die Grossschreibung selbst passiert NICHT hier per Konverter, sondern
+        // beim Erzeugen der Spalte (DataPageColumnFactoryTests,
+        // GrossbuchstabenConverterTests): Theme.xaml/ThemeLight.xaml werden von
+        // PageTitleUnderlineTests roh per XamlReader.Load geladen, wo ein eigener Klassenverweis
+        // (auch nur als Ressource, egal wie tief verschachtelt) mit "unbekannter Typ" scheitert —
+        // dieser Waechter haelt das bewusst fest. Ein nicht-textueller Kopf durchlaeuft diese
+        // Vorlage nicht und behaelt den bisherigen ContentPresenter ohne ContentTemplate.
         Assert.Contains("DataType=\"{x:Type sys:String}\"", header);
-        Assert.Contains("GrossbuchstabenConverter", header);
-        Assert.Contains("Converter={StaticResource Grossbuchstaben}", header);
+        Assert.Contains("Text=\"{Binding}\"", header);
+        Assert.DoesNotContain("controls:", header);
+        Assert.DoesNotContain("Converter=", header);
         Assert.Contains("<ContentPresenter VerticalAlignment=\"Center\"/>", header);
         Assert.Contains("FontSize=\"{DynamicResource TextXS}\"", header);
         Assert.Contains("Foreground=\"{DynamicResource MutedBrush}\"", header);
+        Assert.Contains("TextTrimming=\"CharacterEllipsis\"", header);
     }
 }

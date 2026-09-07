@@ -3,17 +3,19 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.UI.Views.Pages;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 /// <summary>
 /// Nova-Etappe 2b, Task 1: Der reine Text-Waechter <see cref="DesignAuditNovaTabelleTests"/>
-/// prueft nur die XAML-Quelle. Dieser Test baut einen echten <see cref="DataGridColumnHeader"/>
-/// mit den echten App-Ressourcen auf und belegt, dass die neue Vorlage tatsaechlich laedt (keine
-/// XamlParseException ueber eine Ressource, die aus Theme.xaml/ThemeLight.xaml heraus nicht
-/// gefunden wird) und einen String-Kopf sichtbar in Grossbuchstaben zeigt — in beiden Themes.
-/// Laeuft wie die anderen WPF-Smoke-Tests in einem eigenen Kindprozess; kein Projekt, kein
-/// ViewModel, kein Fensterstart.
+/// prueft nur die XAML-Quelle. Dieser Test baut eine echte Haltungsspalte ueber
+/// <see cref="DataPageColumnFactory.Create"/> (Grossschreibung passiert dort, siehe
+/// GrossbuchstabenConverter-Doku) und rendert ihren Kopf mit den echten App-Ressourcen. Er
+/// belegt, dass die neue Kopf-Vorlage tatsaechlich laedt (keine XamlParseException) und den
+/// bereits grossgeschriebenen Text unveraendert anzeigt — in beiden Themes. Laeuft wie die
+/// anderen WPF-Smoke-Tests in einem eigenen Kindprozess; kein Projekt, kein ViewModel, kein
+/// Fensterstart.
 /// </summary>
 [Collection("IsolatedWpf")]
 public sealed class DataGridColumnHeaderGrossbuchstabenIsolatedSmokeTests
@@ -44,6 +46,11 @@ public sealed class DataGridColumnHeaderGrossbuchstabenIsolatedSmokeTests
             var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             app.InitializeComponent();
 
+            // Echte Haltungsspalte wie in DataPage.EnsureColumns; die Grossschreibung passiert
+            // hier in der Fabrik, nicht im Kopf-Template.
+            var spalte = DataPageColumnFactory.Create("Strasse", "Strasse", (_, __) => { }, (_, __) => { });
+            Assert.Equal("STRASSE", spalte.Header);
+
             foreach (var theme in new[] { ThemeManager.Dark, ThemeManager.Light })
             {
                 var file = theme == ThemeManager.Dark ? "Theme.xaml" : "ThemeLight.xaml";
@@ -52,7 +59,7 @@ public sealed class DataGridColumnHeaderGrossbuchstabenIsolatedSmokeTests
                     Source = new Uri($"/SewerStudio;component/Theme/{file}", UriKind.Relative)
                 };
 
-                var header = new DataGridColumnHeader { Content = "strasse" };
+                var header = new DataGridColumnHeader { Content = spalte.Header };
                 header.Measure(new Size(200, 40));
                 header.Arrange(new Rect(0, 0, 200, 40));
                 header.UpdateLayout();

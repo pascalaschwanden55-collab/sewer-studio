@@ -17,10 +17,12 @@
             <conv:VsaCodeToTextConverter x:Key="VsaCodeToText"/>
             <conv:VsaCodeToLabelConverter x:Key="VsaCodeToLabel"/>
 
-            <!-- Nova-Etappe 2b: Tabellenkopf in Grossbuchstaben (App-weite Registrierung laut
-                 Auftrag; die DataGridColumnHeader-Vorlage in Theme.xaml/ThemeLight.xaml traegt
-                 zusaetzlich eine lokale Kopie, weil eine dort separat geladene ResourceDictionary
-                 diese Anwendungsressource beim Parsen sonst nicht per StaticResource findet. -->
+            <!-- Nova-Etappe 2b: String -> Grossbuchstaben, app-weit verfuegbar fuer echte
+                 Text-Bindings. Der Tabellenkopf (Theme.xaml/ThemeLight.xaml) verwendet dafuer
+                 bewusst NICHT diese Ressource, sondern ruft GrossbuchstabenConverter.Anwenden
+                 direkt beim Erzeugen der Spalte auf (siehe Klassendoku): Diese beiden Dateien
+                 werden von PageTitleUnderlineTests roh per XamlReader.Load geladen, wo weder
+                 App.xaml noch die Typzuordnung der SewerStudio-Assembly bekannt sind. -->
             <controls:GrossbuchstabenConverter x:Key="Grossbuchstaben"/>
 
 

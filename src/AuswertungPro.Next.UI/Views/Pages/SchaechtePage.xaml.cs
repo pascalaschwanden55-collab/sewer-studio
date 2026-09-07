@@ -15,6 +15,7 @@ using AuswertungPro.Next.Application.Lookup;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Behaviors;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
@@ -216,7 +217,12 @@ public partial class SchaechtePage : UserControl
                     };
                 }
 
-                column.Header = GetDisplayHeader(col);
+                // Nova-Etappe 2b: Der Tabellenkopf schreibt gross (siehe DataPageColumnFactory,
+                // GrossbuchstabenConverter-Doku). GetDisplayHeader bleibt selbst unveraendert,
+                // weil SchaechteRecordDetailsBuilder denselben Text auch als normale
+                // Feldbeschriftung im Formular verwendet.
+                var kopf = GetDisplayHeader(col);
+                column.Header = GrossbuchstabenConverter.Anwenden(kopf) ?? kopf;
                 column.SetValue(FrameworkElement.TagProperty, col);
                 ApplyColorStyle(column, col);
                 column.MinWidth = 90;

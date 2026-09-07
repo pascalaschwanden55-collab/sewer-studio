@@ -67,10 +67,10 @@ public sealed class DesignAuditNovaPaletteTests
         Assert.DoesNotContain("CornerRadius=\"999\"", xaml);
         var header = Regex.Match(xaml, "<Style TargetType=\"\\{x:Type DataGridColumnHeader\\}\">[\\s\\S]*?\n    </Style>").Value;
         // Nova-Etappe 2b: Kapitaelchen greifen mit der Programmschrift nicht (siehe
-        // DesignAuditNovaTabelleTests). Der Kopf schreibt jetzt echte Grossbuchstaben ueber
-        // GrossbuchstabenConverter statt Typography.Capitals.
+        // DesignAuditNovaTabelleTests). Die Grossschreibung passiert beim Erzeugen der Spalte
+        // (GrossbuchstabenConverter.Anwenden), nicht mehr ueber Typography.Capitals im Kopf-Template.
         Assert.DoesNotContain("Typography.Capitals", header);
-        Assert.Contains("GrossbuchstabenConverter", header);
+        Assert.Contains("DataType=\"{x:Type sys:String}\"", header);
         Assert.Contains("Foreground\" Value=\"{DynamicResource MutedBrush}\"", header);
     }
 
