@@ -47,9 +47,9 @@ wirkungslos (`70e81b727`).
 | Punkt | Kurz | Stand | Commit |
 |---|---|---|---|
 | R1 (Major) | Schacht-Rechtsklick schrieb `Nova_Protokoll` in jeden Datensatz | behoben — gemeinsamer Controller plus Sperre am Datensatz | `8d89f60df` |
-| R2 | P1/P3 wirkten nur ohne gespeichertes Layout | behoben — einmalige Migration `ZahlenRechtsMigration` | `4f1f79ea1` |
-| R3 | Zahlen klebten an der Nachbarspalte | behoben — rechtes Polster 6 px | `4f1f79ea1` |
-| R4 | Regler „Zeilenhöhe" wirkte erst beim nächsten Seitenaufbau | behoben | `4f1f79ea1` |
+| R2 | P1/P3 wirkten nur ohne gespeichertes Layout | behoben — einmalige Migration `ZahlenRechtsMigration` | `0401ff757` |
+| R3 | Zahlen klebten an der Nachbarspalte | behoben — rechtes Polster 6 px | `0401ff757` |
+| R4 | Regler „Zeilenhöhe" wirkte erst beim nächsten Seitenaufbau | behoben | `0401ff757` |
 
 **R1 war ein echter Datenschaden, nicht nur ein Schönheitsfehler.** Die Schachtseite hatte
 einen zweiten, eigenen Rechtsklickpfad und kannte deshalb den Schutz aus `70e81b727` nicht:
