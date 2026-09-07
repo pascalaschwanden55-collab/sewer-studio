@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
@@ -36,7 +37,12 @@ public static class DataPageColumnSetup
         column.CanUserResize = true;
         column.MinWidth = fieldName == "NR" ? 56 : 72;
 
-        var defaultHorizontalAlignment = string.Equals(fieldName, "Kosten", StringComparison.Ordinal)
+        // Nova-Fixwelle 2b (P1): Zahlen stehen rechts — und zwar ALLE Zahlenspalten, nicht nur
+        // "Kosten". Die Spaltenfabrik setzt zwar TextAlignment.Right, aber der
+        // DataGridColumnLayoutController schreibt danach die hier gelieferte Ausrichtung in
+        // Zell- und Textstil und gewann damit gegen die Fabrik. Eine gespeicherte
+        // Nutzerausrichtung behaelt Vorrang: Sie wird erst danach aus dem Layout gelesen.
+        var defaultHorizontalAlignment = DataPageColumnStyleRules.IstZahlenspalte(fieldName)
             ? HorizontalAlignment.Right
             : HorizontalAlignment.Left;
 

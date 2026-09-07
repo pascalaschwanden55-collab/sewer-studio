@@ -46,4 +46,24 @@ public static class DataPageColumnStyleRules
     public static bool IstNamensspalte(string feld) => string.Equals(feld, FieldKeys.HoldingName, StringComparison.Ordinal);
 
     public static bool IstZahlenspalte(string feld) => Zahlen.Contains(feld);
+
+    /// <summary>
+    /// Nova-Fixwelle 2b (P1): Dieselbe Frage fuer die Schachtliste. Dort heissen die Felder
+    /// nach der Kopfzeile der Excel-Vorlage, nicht nach dem Katalog — deshalb wird mit
+    /// <paramref name="falte"/> (in der Praxis <c>SchachtFeldnamen.Falte</c>) verglichen.
+    /// Ohne Faltung gilt der reine Ordinalvergleich.
+    /// </summary>
+    public static bool IstZahlenspalte(string feld, Func<string, string>? falte)
+    {
+        if (falte is null)
+            return IstZahlenspalte(feld);
+
+        var gesucht = falte(feld ?? string.Empty);
+        foreach (var bekannt in Zahlen)
+        {
+            if (string.Equals(falte(bekannt), gesucht, StringComparison.Ordinal))
+                return true;
+        }
+        return false;
+    }
 }

@@ -49,4 +49,28 @@ public sealed class DataPageColumnStyleRulesTests
     [InlineData(FieldKeys.ShaftDimension2Mm, true)]
     public void Alle_Brief_Zahlenspalten_der_Etappe_2b_sind_rechtsbuendig(string feld, bool erwartet)
         => Assert.Equal(erwartet, DataPageColumnStyleRules.IstZahlenspalte(feld));
+
+    /// <summary>
+    /// Nova-Fixwelle 2b (P1): Die Schachtliste fuehrt ihre Felder nach der Excel-Kopfzeile.
+    /// Mit der Faltung findet die Regel die beiden Schachtmasse auch in abweichender
+    /// Schreibweise; ohne Faltung bleibt es beim reinen Ordinalvergleich.
+    /// </summary>
+    [Theory]
+    [InlineData("Dimension 1 mm")]
+    [InlineData("Dimension 2 mm")]
+    [InlineData("dimension1mm")]
+    [InlineData("Dimension-1-mm")]
+    public void Die_Schachtmasse_gelten_gefaltet_als_Zahlenspalte(string feld)
+        => Assert.True(DataPageColumnStyleRules.IstZahlenspalte(feld, SchachtFeldnamen.Falte));
+
+    [Fact]
+    public void Ohne_Faltung_gilt_weiterhin_der_reine_Namensvergleich()
+    {
+        Assert.True(DataPageColumnStyleRules.IstZahlenspalte("Dimension 1 mm", falte: null));
+        Assert.False(DataPageColumnStyleRules.IstZahlenspalte("dimension1mm", falte: null));
+    }
+
+    [Fact]
+    public void Eine_Textspalte_bleibt_auch_gefaltet_keine_Zahlenspalte()
+        => Assert.False(DataPageColumnStyleRules.IstZahlenspalte("Strasse", SchachtFeldnamen.Falte));
 }

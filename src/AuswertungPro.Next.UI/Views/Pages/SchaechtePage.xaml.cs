@@ -242,9 +242,14 @@ public partial class SchaechtePage : UserControl
                 Grid.Columns.Add(column);
                 _columnFields[column] = col;
 
-                var defaultHorizontal = IsCostColumn(col)
-                    ? HorizontalAlignment.Right
-                    : HorizontalAlignment.Left;
+                // Nova-Fixwelle 2b (P1): Zahlen stehen rechts, auch die beiden Schachtmasse.
+                // Schachtfelder heissen nach der Excel-Kopfzeile, deshalb der gefaltete
+                // Vergleich. Eine gespeicherte Nutzerausrichtung gewinnt weiterhin: Sie kommt
+                // erst mit RestoreLayoutFromSettings.
+                var defaultHorizontal =
+                    IsCostColumn(col) || DataPageColumnStyleRules.IstZahlenspalte(col, SchachtFeldnamen.Falte)
+                        ? HorizontalAlignment.Right
+                        : HorizontalAlignment.Left;
                 _columnAlignmentToolbar.SetAlignment(column, defaultHorizontal, VerticalAlignment.Center);
             }
 
