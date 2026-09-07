@@ -195,13 +195,18 @@ public partial class DataPage : System.Windows.Controls.UserControl
         foreach (var field in FieldCatalog.ColumnOrder)
         {
             var def = FieldCatalog.Get(field);
-            var col = DataPageColumnFactory.Create(
-                field,
-                def.Label,
-                ComboBox_LostKeyboardFocus,
-                ComboBox_SelectionChanged);
+            // Nova-Etappe 2b: Die Zustandsklasse traegt im Nova-Layout eine Marke in der Zelle
+            // statt einer ganzflaechig eingefaerbten Zelle; die alte Ansicht bleibt unveraendert.
+            var chipSpalte = IstNovaZustandsklasseSpalte(field);
+            var col = chipSpalte
+                ? ZustandsklasseChipColumnFactory.Create(field, Grossschrift(def.Label))
+                : DataPageColumnFactory.Create(
+                    field,
+                    def.Label,
+                    ComboBox_LostKeyboardFocus,
+                    ComboBox_SelectionChanged);
 
-            var setup = DataPageColumnSetup.Apply(col, field);
+            var setup = DataPageColumnSetup.Apply(col, field, farbzelle: !chipSpalte);
             // Die GEONIS-Kennung ist nur Anzeige: Der Export liest das Geonis-Objekt des
             // Datensatzes, eine Handeingabe in der Zelle liefe daran vorbei.
             if (string.Equals(field, FieldKeys.GeonisId, StringComparison.Ordinal))
@@ -214,6 +219,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 setup.DefaultHorizontalAlignment,
                 setup.DefaultVerticalAlignment);
         }
+
+        ErgaenzeNovaStatusSpalten();
 
         Grid.FrozenColumnCount = 2;
         RestoreLayoutFromSettings();

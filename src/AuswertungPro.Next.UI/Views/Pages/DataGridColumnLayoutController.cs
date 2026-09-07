@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Theme;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
@@ -105,6 +106,10 @@ public sealed class DataGridColumnLayoutController
             {
                 if (GetFieldName(column) is not { } fieldName)
                     continue;
+                // Nova-Etappe 2b: Virtuelle Statusspalten haben kein Feld. Ein alter oder
+                // fremder Layout-Eintrag darf sie deshalb weder verstecken noch verschieben.
+                if (NovaStatusSpalten.IstVirtuell(fieldName))
+                    continue;
                 if (!byField.TryGetValue(fieldName, out var state))
                     continue;
 
@@ -173,7 +178,10 @@ public sealed class DataGridColumnLayoutController
                     IsVisible = column.Visibility == Visibility.Visible
                 };
             })
-            .Where(x => !string.IsNullOrWhiteSpace(x.FieldName))
+            // Nova-Etappe 2b: Nur echte Felder werden gespeichert. Eine virtuelle Statusspalte
+            // (Nova_*) ist kein Feld und darf nie als Feld in settings.json landen; ihre
+            // Sichtbarkeit steuert allein die Spaltenansicht.
+            .Where(x => !string.IsNullOrWhiteSpace(x.FieldName) && !NovaStatusSpalten.IstVirtuell(x.FieldName))
             .ToList();
 
         // Sicherheitsnetz: niemals einen All-Hidden-Zustand persistieren (waere sofort

@@ -9,13 +9,18 @@ public sealed record DataPageColumnSetupResult(
 
 public static class DataPageColumnSetup
 {
-    public static DataPageColumnSetupResult Apply(DataGridColumn column, string fieldName)
+    /// <param name="farbzelle">
+    /// Nova-Etappe 2b: Im Nova-Layout traegt die Zustandsklasse eine Marke ("Chip") in der Zelle
+    /// statt einer ganzflaechig eingefaerbten Zelle. Fuer diese Spalte wird die Farbzelle
+    /// deshalb bewusst nicht gesetzt; die alte Haltungsansicht behaelt sie unveraendert.
+    /// </param>
+    public static DataPageColumnSetupResult Apply(DataGridColumn column, string fieldName, bool farbzelle = true)
     {
         ArgumentNullException.ThrowIfNull(column);
 
         column.SetValue(FrameworkElement.TagProperty, fieldName);
 
-        var colorStyle = DataGridColorCellStyleFactory.CreateHaltungenStyle(fieldName);
+        var colorStyle = farbzelle ? DataGridColorCellStyleFactory.CreateHaltungenStyle(fieldName) : null;
         if (colorStyle is not null)
             column.CellStyle = colorStyle;
 

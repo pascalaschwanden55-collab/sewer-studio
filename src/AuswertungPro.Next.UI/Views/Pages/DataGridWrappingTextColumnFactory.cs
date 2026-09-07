@@ -41,6 +41,13 @@ public static class DataGridWrappingTextColumnFactory
         style.Setters.Add(new Setter(TextBlock.TextWrappingProperty, TextWrapping.NoWrap));
         style.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
         style.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
+        // Nova-Etappe 2b: hoechstens drei Zeilen je Zelle, den Volltext gibt es im Hinweis.
+        // Ein Text mit Zeilenumbruechen zog sonst die ganze Tabellenzeile auf (Bild 07.09.).
+        style.Setters.Add(new Setter(FrameworkElement.MaxHeightProperty, DataPageColumnStyleRules.MaximaleZellenhoehe));
+        style.Setters.Add(new Setter(FrameworkElement.ToolTipProperty, new Binding($"Fields[{fieldName}]")));
+        var ohneInhalt = new DataTrigger { Binding = new Binding($"Fields[{fieldName}]"), Value = string.Empty };
+        ohneInhalt.Setters.Add(new Setter(ToolTipService.IsEnabledProperty, false));
+        style.Triggers.Add(ohneInhalt);
         if (DataPageColumnStyleRules.IstNamensspalte(fieldName))
             style.Setters.Add(new Setter(TextBlock.FontWeightProperty, FontWeights.SemiBold));
         if (DataPageColumnStyleRules.IstZahlenspalte(fieldName))

@@ -26,6 +26,16 @@ public static class DataPageColumnStyleRules
         FieldKeys.ShaftDimension1Mm, FieldKeys.ShaftDimension2Mm
     };
 
+    /// <summary>
+    /// Nova-Etappe 2b: Hoechstens drei Zeilen je Tabellenzelle (rund 18 px Zeilenhoehe).
+    ///
+    /// Anlass ist Pascals Bild vom 07.09.: Ein Zellinhalt mit Zeilenumbruechen ("Primaere
+    /// Schaeden", "Empfohlene Massnahmen") zog die ganze Zeile auf und liess in "Alle Spalten"
+    /// nur sechs Haltungen sichtbar. Der Wert wird nur angezeigt begrenzt — gespeicherter Text,
+    /// Bearbeitung und Export bleiben vollstaendig.
+    /// </summary>
+    public const double MaximaleZellenhoehe = 54;
+
     public static bool IstNamensspalte(string feld) => string.Equals(feld, FieldKeys.HoldingName, StringComparison.Ordinal);
 
     public static bool IstZahlenspalte(string feld) => Zahlen.Contains(feld);

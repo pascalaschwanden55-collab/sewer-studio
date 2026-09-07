@@ -82,6 +82,15 @@ public partial class DataPage
 
     private void RestoreLayoutFromSettings()
     {
+        // Wie beim Speichern: Ohne gebundenes ViewModel gibt es keine Einstellungen. Dann wird
+        // kein Zugriff auf Vm/Settings erzwungen (wuerde werfen) — die Spalten bleiben in ihrer
+        // Aufbaureihenfolge, statt den Seitenaufbau abzubrechen.
+        if (DataContext is not AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel)
+        {
+            _columnLayoutController.Restore(Grid.Columns, layout: null);
+            return;
+        }
+
         var layout = Settings.DataPageLayout;
         _columnLayoutController.Restore(Grid.Columns, layout);
     }

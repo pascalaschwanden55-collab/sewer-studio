@@ -36,6 +36,7 @@ public partial class DataPage
                 vm.Settings.Save();
             });
         _columnViews.Apply(_columnViews.ActiveKey);
+        WendeZeilenhoeheAn(_columnViews.ActiveKey);
         SyncColumnViewChips();
     }
 
@@ -45,6 +46,7 @@ public partial class DataPage
             return;
 
         _columnViews.Apply(key);
+        WendeZeilenhoeheAn(_columnViews.ActiveKey);
         SyncColumnViewChips();
     }
 

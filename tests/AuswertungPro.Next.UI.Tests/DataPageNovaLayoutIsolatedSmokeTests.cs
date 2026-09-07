@@ -50,6 +50,8 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
             var page = new Views.Pages.DataPage();
             Layout(page);
 
+            PruefeNovaSpalten(page);
+
             var drawer = Assert.IsType<HaltungFelderDrawer>(page.FindName("FelderDrawer"));
             var drawerRow = Assert.IsType<RowDefinition>(page.FindName("DrawerRow"));
             var splitterRow = Assert.IsType<RowDefinition>(page.FindName("DrawerSplitterRow"));
@@ -215,6 +217,50 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
 
     private static ProtocolEntry Eintrag(string code, string? stufe)
         => new() { Code = code, Beschreibung = code, CodeMeta = new ProtocolEntryCodeMeta { Code = code, Severity = stufe } };
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 3: Die fertig aufgebaute Seite fuehrt die vier Statusspalten, die
+    /// Zustandsklasse ist eine Marke (Vorlagenspalte statt Textspalte), und "Kompakt" zeigt
+    /// genau die zehn Spalten des Prototyps.
+    /// </summary>
+    private static void PruefeNovaSpalten(Views.Pages.DataPage page)
+    {
+        // Die Spalten baut der Loaded-Handler der Seite. Ohne Fenster gibt es keine
+        // PresentationSource, und WPF loest Loaded dann nie aus — deshalb hier bewusst selbst.
+        page.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent, page));
+
+        var grid = Assert.IsType<DataGrid>(page.FindName("Grid"));
+        var felder = grid.Columns.ToDictionary(
+            spalte => spalte,
+            spalte => spalte.GetValue(FrameworkElement.TagProperty) as string);
+
+        foreach (var schluessel in AuswertungPro.Next.UI.DataPage.NovaStatusSpalten.Alle)
+            Assert.Contains(schluessel, felder.Values);
+
+        var zustandsklasse = grid.Columns.Single(
+            spalte => (string?)spalte.GetValue(FrameworkElement.TagProperty)
+                == AuswertungPro.Next.Domain.Models.FieldKeys.ConditionClass);
+        Assert.IsType<DataGridTemplateColumn>(zustandsklasse);
+
+        var ansichten = new AuswertungPro.Next.UI.DataPage.DataPageColumnViewController(
+            grid,
+            spalte => felder[spalte],
+            () => "kompakt",
+            _ => { });
+        ansichten.Apply("kompakt");
+
+        var sichtbar = grid.Columns
+            .Where(spalte => spalte.Visibility == Visibility.Visible)
+            .Select(spalte => (string?)spalte.GetValue(FrameworkElement.TagProperty))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        var erwartet = AuswertungPro.Next.UI.DataPage.DataPageColumnViewCatalog.Resolve("kompakt").Felder!
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(erwartet, sichtbar);
+
+        ansichten.Apply("alle");
+    }
 
     private static Color ColorOf(object brush) => Assert.IsType<SolidColorBrush>(brush).Color;
 

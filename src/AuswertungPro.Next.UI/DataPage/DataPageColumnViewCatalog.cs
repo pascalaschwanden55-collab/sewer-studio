@@ -48,9 +48,12 @@ public static class DataPageColumnViewCatalog
 {
     public static IReadOnlyList<DataPageColumnView> Views { get; } =
     [
-        new("kompakt", "Kompakt", [FieldKeys.HoldingName, FieldKeys.Street, FieldKeys.PipeMaterial, FieldKeys.NominalDiameterMm, FieldKeys.HoldingLengthMeters, FieldKeys.ConditionClass, FieldKeys.Link]),
+        // Nova-Etappe 2b: Kompakt ist genau der Prototyp v2 — sechs Feldspalten und die vier
+        // virtuellen Statusspalten. Der frueher hier gefuehrte rohe Videopfad (FieldKeys.Link)
+        // ist durch die Spalte "Video" ersetzt; bearbeitbar bleibt er in "Alle Spalten".
+        new("kompakt", "Kompakt", [FieldKeys.HoldingName, FieldKeys.Street, FieldKeys.PipeMaterial, FieldKeys.NominalDiameterMm, FieldKeys.HoldingLengthMeters, FieldKeys.ConditionClass, NovaStatusSpalten.Ki, NovaStatusSpalten.Pruefung, NovaStatusSpalten.Video, NovaStatusSpalten.Protokoll]),
         new("stammdaten", "Stammdaten", [FieldKeys.HoldingName, FieldKeys.Street, FieldKeys.PipeMaterial, FieldKeys.NominalDiameterMm, FieldKeys.ClearWidthMm, FieldKeys.ProfileType, FieldKeys.UsageType, FieldKeys.HoldingLengthMeters, FieldKeys.InspectionYear, FieldKeys.ConstructionYear, FieldKeys.Owner, FieldKeys.GeonisId, FieldKeys.CadastreObjectId]),
-        new("bewertung", "Bewertung", [FieldKeys.HoldingName, FieldKeys.ConditionClass, "VSA_Zustandsnote_D", "VSA_Zustandsnote_S", "VSA_Zustandsnote_B", "VSA_Geschaetzt", "Pruefungsresultat", "Referenzpruefung", "Gewaesserschutz", "Grundwasserspiegel"]),
+        new("bewertung", "Bewertung", [FieldKeys.HoldingName, FieldKeys.ConditionClass, "VSA_Zustandsnote_D", "VSA_Zustandsnote_S", "VSA_Zustandsnote_B", "VSA_Geschaetzt", "Pruefungsresultat", "Referenzpruefung", "Gewaesserschutz", "Grundwasserspiegel", NovaStatusSpalten.Pruefung]),
         new("sanierung", "Sanierung", [FieldKeys.HoldingName, FieldKeys.RenovationDecision, FieldKeys.RecommendedRehabilitationMeasures, FieldKeys.LinerRenovationMeters, FieldKeys.ConnectionsToGrout, FieldKeys.RepairSleeve, FieldKeys.LinerEndSleeve, FieldKeys.ShortLinerRepair, "Erneuerung_Neubau_m", FieldKeys.RehabilitationExecutor, FieldKeys.WorkflowStatus]),
         new("kosten", "Kosten", [FieldKeys.HoldingName, FieldKeys.Street, FieldKeys.ConditionClass, FieldKeys.RecommendedRehabilitationMeasures, FieldKeys.Cost, FieldKeys.RehabilitationExecutor, FieldKeys.WorkflowStatus, FieldKeys.Owner]),
         new("alle", "Alle Spalten", null)
