@@ -74,6 +74,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private string _uiTheme = ThemeManager.Light;
     [ObservableProperty] private bool _isDarkTheme;
     [ObservableProperty] private bool _reduceMotion;
+    [ObservableProperty] private bool _hintergrundEngine;
 
     /// <summary>Anzahl Fotos je Seite in den selbst erzeugten Haltungsprotokollen.</summary>
     [ObservableProperty] private int _protocolPhotosPerPage;
@@ -103,7 +104,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
 
     public IReadOnlyList<AutoSaveModeOption> AutoSaveModeOptions { get; } =
     [
-        new(AutoSaveMode.OnEachChange, "Bei jeder Aenderung"),
+        new(AutoSaveMode.OnEachChange, "Bei jeder Änderung"),
         new(AutoSaveMode.Every5Minutes, "Alle 5 Minuten"),
         new(AutoSaveMode.Every10Minutes, "Alle 10 Minuten"),
         new(AutoSaveMode.Disabled, "Aus")
@@ -314,6 +315,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         UiTheme = ThemeManager.NormalizeTheme(_settings.UiTheme);
         IsDarkTheme = string.Equals(UiTheme, ThemeManager.Dark, StringComparison.Ordinal);
         ReduceMotion = _settings.ReduceMotion;
+        HintergrundEngine = _settings.HintergrundEngine;
         // Direkt ins Feld: ueber die Eigenschaft wuerde das blosse Oeffnen der Seite
         // die Einstellungen ohne Aenderung neu schreiben.
         _protocolPhotosPerPage = ProtocolPdfPhotoLayout.Normalize(_settings.ProtocolPhotosPerPage);
@@ -389,6 +391,15 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         _settings.ReduceMotion = value;
         _settings.SaveImmediate();
         MotionSettings.Configure(value);
+    }
+
+    partial void OnHintergrundEngineChanged(bool value)
+    {
+        // Sofort speichern (Muster wie ReduceMotion oben); die Shell hoert auf das statische
+        // Ereignis und meldet ihre Eigenschaft neu; das Control kennt AppSettings selbst nicht.
+        _settings.HintergrundEngine = value;
+        _settings.SaveImmediate();
+        MotionSettings.RaiseEngineChanged();
     }
 
     partial void OnProtocolPhotosPerPageChanged(int value)

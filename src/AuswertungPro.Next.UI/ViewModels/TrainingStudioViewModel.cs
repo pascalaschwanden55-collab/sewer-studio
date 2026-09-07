@@ -117,6 +117,8 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
     [ObservableProperty] private double? _clockPosition;
     [ObservableProperty] private int? _severity;
     [ObservableProperty] private string _statusText = string.Empty;
+    [ObservableProperty] private string _kiBereitschaftText = "KI nicht gestartet";   // Titelchip
+    [ObservableProperty] private bool _istKiBereit;                                    // Titelchip-Puls
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartAiCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddAnotherEventCommand))]
@@ -308,6 +310,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
             });
             var result = await _ensureAiReady(progress, ct);
             acceptsProgress = false;
+            (IstKiBereit, KiBereitschaftText) = (result.Ready, result.Ready ? "Analyse bereit" : "Prüfung nötig");
             if (result.Ready)
                 await RefreshPreviewModelsAsync(ct);
             StatusText = result.StatusText;

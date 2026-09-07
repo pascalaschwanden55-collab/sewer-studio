@@ -1,0 +1,21 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.Haltungsansicht.RohrringControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="Root" Width="200" Height="120"
+             AutomationProperties.Name="Rohrquerschnitt mit Uhrlagen">
+    <Canvas>
+        <Ellipse Canvas.Left="50" Canvas.Top="10" Width="100" Height="100" Fill="{DynamicResource BgLightBrush}" Stroke="{DynamicResource BorderBrush}" StrokeThickness="6"/>
+        <Ellipse Canvas.Left="50" Canvas.Top="10" Width="100" Height="100" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.5" Opacity="0.6"/>
+        <ItemsControl x:Name="BoegenItems" ItemsSource="{Binding Boegen, ElementName=Root}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Path Data="{Binding Pfad}" Stroke="{Binding Pinsel}" StrokeThickness="6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" ToolTip="{Binding Tooltip}"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Canvas.Left="94" Canvas.Top="0" Text="12" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+        <TextBlock Canvas.Left="156" Canvas.Top="53" Text="3" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+        <TextBlock Canvas.Left="97" Canvas.Top="108" Text="6" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+        <TextBlock Canvas.Left="38" Canvas.Top="53" Text="9" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+    </Canvas>
+</UserControl>

@@ -61,7 +61,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
     public ObservableCollection<MeasureOption> MeasureOptions { get; } = new();
 
     [ObservableProperty] private string _pageTitle = "Schacht-Matrix";
-    [ObservableProperty] private string _pageSubtitle = "Pro Schacht eine Massnahme waehlen — Menge (Stk/Std/m) selbst eingeben.";
+    [ObservableProperty] private string _pageSubtitle = "Massnahmen und Kosten je Schacht";
     [ObservableProperty] private decimal _gesamtTotal;
     [ObservableProperty] private decimal _maxRowTotal;
     [ObservableProperty] private int _belegteSchaechte;

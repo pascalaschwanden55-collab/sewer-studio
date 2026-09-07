@@ -44,6 +44,23 @@ public sealed class DesignAuditContrastTests
         Assert.Contains("x:Key=\"KiTextBrush\"", xaml);
     }
 
+    /// <summary>
+    /// Nova-Fixwelle F7: Der Kartenrand bleibt bewusst hell (Glas-Look). Eingabefelder und
+    /// Knopf-Umrisse brauchen dagegen eine erkennbare Kontur — mindestens 3:1 gegen die
+    /// Kartenflaeche (WCAG 1.4.11, Bedienelement-Umriss).
+    /// </summary>
+    [Theory]
+    [InlineData("Theme.xaml")]
+    [InlineData("ThemeLight.xaml")]
+    public void Eingabekontur_hebt_sich_von_der_Karte_ab(string themeFile)
+    {
+        var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+        Assert.Contains("x:Key=\"InputBorderBrush\"", xaml);
+        Assert.True(
+            Contrast(ReadColor(xaml, "ColorInputBorder"), ReadColor(xaml, "ColorCard")) >= 3,
+            $"{themeFile}: InputBorderBrush erreicht auf CardBrush keine 3:1.");
+    }
+
     [Fact]
     public void Muted_dark_text_and_light_warning_text_reach_normal_text_contrast()
     {

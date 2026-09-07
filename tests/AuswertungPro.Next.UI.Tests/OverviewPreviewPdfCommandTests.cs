@@ -30,6 +30,9 @@ public sealed class OverviewPreviewPdfCommandTests
         shell.Project.Name = "Projekt A";
         shell.Project.Data.Add(Holding("H1"));
         shell.MarkProjectReady();
+        // F3: über den Bedienweg statt per Direktaufruf — Menü "Ansicht → Klassische
+        // Übersicht" einschalten, danach in der Leiste auf "Uebersicht" wechseln.
+        shell.KlassischeUebersicht = true;
         shell.EnterWorkspaceOn("Uebersicht");
         var vm = Assert.IsType<OverviewPageViewModel>(shell.CurrentPage);
 
@@ -88,6 +91,7 @@ public sealed class OverviewPreviewPdfCommandTests
         shell.Project.Name = "Projekt mit kaputten Kosten";
         shell.Project.Data.Add(Holding("H1"));
         shell.MarkProjectReady();
+        shell.KlassischeUebersicht = true;
         shell.EnterWorkspaceOn("Uebersicht");
         var vm = Assert.IsType<OverviewPageViewModel>(shell.CurrentPage);
 
@@ -95,6 +99,35 @@ public sealed class OverviewPreviewPdfCommandTests
         Assert.False(vm.PrintPreviewPdfCommand.CanExecute(null));
         Assert.Empty(dialogs.SaveFileCalls);
         Assert.False(File.Exists(output));
+    }
+
+    /// <summary>
+    /// F3: Ohne den Umschalter zeigt "Uebersicht" bei offenem Projekt die neue Seite; erst
+    /// "Ansicht → Klassische Übersicht" liefert die alte Seite mit der Vorschau-PDF.
+    /// </summary>
+    [Fact]
+    public void Der_Umschalter_entscheidet_welche_Uebersicht_die_Leiste_oeffnet()
+    {
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+        using var shell = new ShellViewModel(services, new SystemMonitorService(enableHardwareSensorInit: false));
+        shell.Project.Data.Add(Holding("H1"));
+        shell.MarkProjectReady();
+
+        shell.EnterWorkspaceOn("Uebersicht");
+        Assert.IsType<ProjektUebersichtPageViewModel>(shell.CurrentPage);
+        Assert.False(shell.KlassischeUebersicht);
+
+        shell.KlassischeUebersicht = true;
+        Assert.IsType<OverviewPageViewModel>(shell.CurrentPage);
+        Assert.False(services.Settings.ShowUebersichtNovaLayout);
+
+        shell.KlassischeUebersicht = false;
+        Assert.IsType<ProjektUebersichtPageViewModel>(shell.CurrentPage);
     }
 
     private static HaltungRecord Holding(string name)

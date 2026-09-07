@@ -12,6 +12,7 @@ using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Settings;
 using AuswertungPro.Next.UI.Dossiers;
@@ -131,7 +132,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
         NavItems = new List<NavItem>
         {
-            new("\uE9D2", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp), canOpenWithoutProject: true),
+            // F3: Bei offenem Projekt die neue Uebersicht, ausser der Benutzer hat im Menue
+            // "Ansicht" die klassische Uebersicht gewaehlt. Ohne Projekt gilt immer die
+            // klassische Seite — sie ist zugleich der Projektstarter.
+            new("\uE9D2", "Uebersicht", () => CurrentMode == ShellMode.Workspace && IsProjectReady && _sp.Settings.ShowUebersichtNovaLayout
+                ? new Pages.ProjektUebersichtPageViewModel(this, _sp)
+                : new Pages.OverviewPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this, _sp)),
             new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this, _sp)),
@@ -240,6 +246,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         OpenTemplateEditorCommand = new RelayCommand(OpenTemplateEditor);
         ToggleFocusModeCommand = new RelayCommand(() => IsFocusMode = !IsFocusMode);
 
+        InitNova();
         EnterLauncher();
         Monitor.Start();
 
@@ -276,6 +283,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         _disposed = true;
         AiActivityTracker.ActiveChanged -= OnAiActivityChanged;
         AiRuntimeStatusTracker.Changed -= ApplyAiRuntimeStatus;
+        MotionSettings.EngineChanged -= OnHintergrundEngineGeaendert;
         UnregisterShellOperationGuards();
         Monitor.Dispose();
         SetCurrentPage(null);
@@ -299,6 +307,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         AiRuntimeTitle = status.Title;
         AiRuntimeStatusLabel = status.StatusText;
         AiRuntimeLoadedModels = status.ModelText;
+        OnPropertyChanged(nameof(KiBereitschaftText));
+        OnPropertyChanged(nameof(IstKiBereit));
     }
 
     private void OnAiActivityChanged(bool active, string label)
@@ -363,6 +373,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             : "SewerStudio";
         Title = Project.Dirty ? $"● {name}" : name;
         OnPropertyChanged(nameof(IsDirty));
+        AktualisiereNovaKopfzeile();
     }
 
     private void RefreshNavigationAvailability()
@@ -390,6 +401,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     {
         BindingOperations.EnableCollectionSynchronization(p.Data, _collectionLock);
         BindingOperations.EnableCollectionSynchronization(p.SchaechteData, _collectionLock);
+        BeobachteHaltungsliste(p);
     }
 
     public void NavigateTo(string title)

@@ -15,4 +15,15 @@ public sealed partial class ServiceProvider
             BendSuggestionScan,
             PipeEndSuggestionScan,
             CodingSuggestionExposure);
+
+    private ICodingSuggestionRegistry? _codingSuggestionRegistry;
+
+    /// <summary>
+    /// Sitzungsgedaechtnis der Vorabdurchlauf-Ergebnisse fuer die Uebersicht (Karte
+    /// "KI-Vorabdurchlauf", Nova-Etappe 2) — bewusst Singleton je Programmlauf, wie
+    /// <see cref="CodingSuggestionScan"/> lazy statt im Konstruktor von ServiceProvider.cs
+    /// erzeugt (MaintainabilityFitnessTests: hoechstens 1000 Zeilen je Produktivdatei).
+    /// </summary>
+    public ICodingSuggestionRegistry CodingSuggestionRegistry
+        => _codingSuggestionRegistry ??= new CodingSuggestionRegistry();
 }

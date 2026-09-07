@@ -465,6 +465,7 @@ public partial class PlayerWindow : Window
                     CodingSidePanel: CodingSidePanel,
                     CodingSidePanelColumn: CodingSidePanelColumn,
                     CodingToolbar: CodingToolbar,
+                    CodierModusChip: CodierModusChip,
                     CodingTimelinePanel: CodingTimelinePanel,
                     CodingCalibrationHint: CodingCalibrationHint,
                     CodingMeasurementPanel: CodingMeasurementPanel,

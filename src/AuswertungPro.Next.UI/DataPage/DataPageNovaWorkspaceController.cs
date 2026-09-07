@@ -67,6 +67,11 @@ public sealed class DataPageNovaWorkspaceController
     public void Verdrahte()
     {
         _e.Uebersicht.BeobachtungenRequested = _beobachtungen;
+        _e.Uebersicht.PlayerRequested = r =>
+        {
+            if (_vm() is { } vm && vm.PlayVideoCommand.CanExecute(r))
+                vm.PlayVideoCommand.Execute(r);
+        };
         _e.FelderDrawer.IsOpenChanged += (_, _) =>
         {
             // Nur beim Oeffnen auswerten: Das automatische Zuklappen setzt das Flag selbst und
@@ -82,6 +87,15 @@ public sealed class DataPageNovaWorkspaceController
         // SplitterPersistenceBehavior schreibt beim Laden der Trennlinie die gespeicherte Hoehe in die
         // Zeile, auch wenn die Eingabefelder gerade zugeklappt sind. Danach den Zustand erneut anwenden.
         _e.DrawerSplitter.Loaded += (_, _) => ApplyDrawerOpenState();
+        // "Gross anzeigen" (Inventar 4.3/8.6): oeffnet mit und wechselt in ApplyDrawerHeight auf
+        // eine 60-Prozent-Wunschhoehe, die dieselbe Sieben-Zeilen-Regel wie jede andere Hoehe
+        // durchlaeuft (kein eigener Rechenweg am Policy vorbei). Die Groesse wird nicht gespeichert;
+        // Ausschalten stellt die normale gespeicherte Hoehe wieder her.
+        _e.FelderDrawer.IsTallChanged += (_, _) =>
+        {
+            _e.FelderDrawer.IsOpen = true;
+            ApplyDrawerHeight();
+        };
     }
 
     /// <summary>
@@ -119,15 +133,23 @@ public sealed class DataPageNovaWorkspaceController
 
     private bool IstSichtbar => _e.FelderDrawer.Visibility == Visibility.Visible;
 
-    /// <summary>Hoehe der Eingabefelder aus Flaeche, Zeilenhoehe und gespeicherter Lage der Trennlinie.</summary>
+    /// <summary>
+    /// Hoehe der Eingabefelder aus Flaeche, Zeilenhoehe und gespeicherter Lage der Trennlinie.
+    /// "Gross anzeigen" (<see cref="HaltungFelderDrawer.IsTall"/>) ersetzt dabei nur die
+    /// Wunschhoehe durch 60 % der Arbeitsflaeche; dieselbe <see cref="DataPageWorkspaceLayoutPolicy.Berechne"/>
+    /// klemmt sie weiterhin auf die Sieben-Zeilen-Regel, sodass der Zustand auch Resize und
+    /// Zu-/Aufklappen uebersteht.
+    /// </summary>
     public void ApplyDrawerHeight()
     {
         if (_vm() is not { } vm || _e.GridHost.ActualHeight <= 0 || !IstSichtbar || !_e.FelderDrawer.IsOpen)
             return;
 
-        var gespeichert = SplitterPersistenceCore.TryGetStored(NovaViewKey, DrawerSplitterKey, out var s) ? s : (double?)null;
         // Die Filterzeile liegt im selben Raster ueber der Liste und zaehlt nicht zur Flaeche.
         var flaeche = _e.GridHost.ActualHeight - _e.FilterChips.ActualHeight;
+        double? gespeichert = _e.FelderDrawer.IsTall
+            ? Math.Round(flaeche * 0.6)
+            : SplitterPersistenceCore.TryGetStored(NovaViewKey, DrawerSplitterKey, out var s) ? s : null;
         var layout = DataPageWorkspaceLayoutPolicy.Berechne(flaeche, vm.GridMinRowHeight, TabellenkopfHoehe, gespeichert);
         if (layout.Zugeklappt && !_drawerVomBenutzerGeoeffnet)
         {

@@ -2,9 +2,11 @@ using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.UseCases.Suche;
 using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
@@ -42,7 +44,14 @@ public partial class MainWindow : Window
             DateTime.UtcNow);
         if (backupReminder.ShouldRemind && !string.IsNullOrWhiteSpace(backupReminder.Message))
             services.Toasts.Warning(backupReminder.Message);
-        DataContext = new ShellViewModel(services);
+        var shellViewModel = new ShellViewModel(services);
+        // Nova-Etappe 2: Strg+K fokussiert das globale Suchfeld (Inventar 8.5).
+        shellViewModel.GlobaleSucheFokusAngefordert += () =>
+        {
+            GlobaleSucheBox.Focus();
+            GlobaleSucheBox.SelectAll();
+        };
+        DataContext = shellViewModel;
     }
 
     public async Task PlayStartupEntranceAsync()
@@ -197,6 +206,29 @@ public partial class MainWindow : Window
             shell?.SetStatus($"KI-Start fehlgeschlagen: {userMessage}");
             sp.Dialogs.Error($"KI konnte nicht gestartet werden:\n{userMessage}", "KI starten");
         }
+    }
+
+    private void GlobaleSucheBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (DataContext is not ShellViewModel vm) return;
+        if (e.Key == Key.Enter) { vm.GlobaleSuche.WaehleErstenOderMarkierten(); e.Handled = true; }
+        else if (e.Key == Key.Escape) { vm.GlobaleSuche.ListeOffen = false; e.Handled = true; }
+        else if (e.Key == Key.Down) { vm.GlobaleSuche.MarkiereNaechsten(); e.Handled = true; }
+        else if (e.Key == Key.Up) { vm.GlobaleSuche.MarkiereVorherigen(); e.Handled = true; }
+    }
+
+    /// <summary>Mausklick auf einen Suchtreffer waehlt ihn, ohne den Fokus aus dem Textfeld zu nehmen
+    /// (die ListBox ist absichtlich Focusable="False", Inventar 3.5). Verwendet
+    /// ItemsControl.ContainerFromElement statt eigenem VisualTree-Aufstieg, weil e.OriginalSource
+    /// auch ein ContentElement (z.B. ein Text-Run) ohne Visual sein kann.</summary>
+    private void GlobaleSucheTreffer_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not ShellViewModel vm) return;
+        if (sender is not ItemsControl itemsControl) return;
+        if (e.OriginalSource is not UIElement element) return;
+
+        if (itemsControl.ContainerFromElement(element) is ListBoxItem { Content: GlobaleSucheTreffer treffer })
+            vm.GlobaleSuche.Waehle(treffer);
     }
 
     private void OpenSystemMonitor_Click(object sender, RoutedEventArgs e)

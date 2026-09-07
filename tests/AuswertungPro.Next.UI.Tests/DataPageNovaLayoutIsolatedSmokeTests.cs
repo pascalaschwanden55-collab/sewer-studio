@@ -1,7 +1,10 @@
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Pages;
 using AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
@@ -67,6 +70,17 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
             Assert.True(drawerRow.ActualHeight >= 120, $"Wieder aufgeklappt: {drawerRow.ActualHeight} px");
             Assert.Equal(6, splitterRow.ActualHeight);
 
+            // Fix-Runde 1 (Inventar 4.3/8.6, Spec = Prototyp): "Gross anzeigen" stellt die Themen
+            // in zwei Spalten statt in einer Zeile dar.
+            drawer.IsTall = true;
+            Layout(page);
+            var themen = Assert.IsType<ItemsControl>(drawer.FindName("Themen"));
+            var themenPanel = FindDescendant<UniformGrid>(themen);
+            Assert.NotNull(themenPanel);
+            Assert.Equal(2, themenPanel!.Columns);
+            drawer.IsTall = false;
+            Layout(page);
+
             foreach (var theme in new[] { ThemeManager.Dark, ThemeManager.Light })
             {
                 var file = theme == ThemeManager.Dark ? "Theme.xaml" : "ThemeLight.xaml";
@@ -97,6 +111,7 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
                 Assert.Equal(ColorOf(app.FindResource("SelectionBackgroundBrush")), ColorOf(cell.Background));
                 Assert.Equal(ColorOf(app.FindResource("SelectionTextBrush")), ColorOf(cell.Foreground));
                 NovaRenderingChecks.ColorColumnsUseTheirCellForeground();
+                NovaRenderingChecks.SchachtZustandsklasseBleibtSchwarz();
                 NovaRenderingChecks.LongMenuCanScrollToItsLastAction();
             }
 
@@ -104,7 +119,118 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
         });
     }
 
+    private static readonly string RohrringChildTestName =
+        typeof(DataPageNovaLayoutIsolatedSmokeTests).FullName
+        + "."
+        + nameof(Kindprozess_Rohrring_und_KI_Hinweis_folgen_derselben_Entries_Instanz);
+
+    [Fact]
+    public async Task Rohrring_und_KI_Hinweis_aktualisieren_sich_in_eigenem_Wpf_Prozess()
+    {
+        Assert.Null(System.Windows.Application.Current);
+        var result = await WpfIsolatedTestProcess.RunAsync(RohrringChildTestName, TimeSpan.FromSeconds(60));
+
+        Assert.Null(System.Windows.Application.Current);
+        Assert.False(result.TimedOut, result.DescribeFailure());
+        Assert.True(result.ExitCode == 0, result.DescribeFailure());
+        Assert.True(result.ChildScenarioCompleted, result.DescribeFailure());
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: DataPageViewModel.SelectedProtocolEntries ist EINE feste
+    /// ObservableCollection-Instanz, die beim Haltungswechsel nur geleert und neu gefuellt
+    /// wird (kein Property-Wechsel, keine neue Bindungsquelle). RohrringControl und
+    /// HaltungUebersichtPanel muessen deshalb auf CollectionChanged der bereits gebundenen
+    /// Sammlung reagieren, nicht nur einmal beim ersten Binden rechnen.
+    /// </summary>
+    [IsolatedWpfFact]
+    public void Kindprozess_Rohrring_und_KI_Hinweis_folgen_derselben_Entries_Instanz()
+    {
+        StaTestRunner.Run(() =>
+        {
+            Assert.Null(System.Windows.Application.Current);
+            var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            app.InitializeComponent();
+
+            var ringEntries = new ObservableCollection<ProtocolEntry>();
+            var ring = new RohrringControl { Entries = ringEntries };
+            Layout(ring);
+            Assert.Empty(ring.Boegen);
+
+            ringEntries.Add(new ProtocolEntry
+            {
+                Code = "BAB",
+                CodeMeta = new ProtocolEntryCodeMeta { Parameters = { ["Uhr_von"] = "12" } }
+            });
+            Layout(ring);
+            Assert.Single(ring.Boegen);
+
+            ringEntries.Clear();
+            Layout(ring);
+            Assert.Empty(ring.Boegen);
+
+            var panelEntries = new ObservableCollection<ProtocolEntry>();
+            var panel = new HaltungUebersichtPanel { Entries = panelEntries };
+            Layout(panel);
+            Assert.Equal(0, panel.OffeneKiBefunde);
+
+            panelEntries.Add(new ProtocolEntry
+            {
+                Code = "BAB",
+                Ai = new ProtocolEntryAiMeta { Accepted = false }
+            });
+            Layout(panel);
+            Assert.Equal(1, panel.OffeneKiBefunde);
+
+            panelEntries.Clear();
+            Layout(panel);
+            Assert.Equal(0, panel.OffeneKiBefunde);
+
+            // F1: Ring und Liste zeigen nur Schaeden. Bestandsaufnahme (BCD/BCE/BCA/BCC) gehört
+            // nicht dazu, und die schwerere Stufe steht vorn.
+            panelEntries.Add(Eintrag("BCD", stufe: null));
+            panelEntries.Add(Eintrag("BBC", stufe: "1"));
+            panelEntries.Add(Eintrag("BAC", stufe: "4"));
+            Layout(panel);
+            Assert.Equal(new[] { "BAC", "BBC" }, panel.Schaeden.Select(e => e.Code).ToArray());
+
+            // F5: Prüfung und Video hängen an Feldern des Datensatzes. Wird derselbe Datensatz
+            // verändert, wechselt die Record-Eigenschaft nicht — das Panel muss trotzdem nachziehen.
+            var record = new AuswertungPro.Next.Domain.Models.HaltungRecord();
+            panel.Record = record;
+            Layout(panel);
+            Assert.Equal("kein Video", panel.VideoText);
+
+            record.SetFieldValue(
+                AuswertungPro.Next.Domain.Models.FieldKeys.Link,
+                @"D:\Medien\10001-10002.mp4",
+                AuswertungPro.Next.Domain.Models.FieldSource.Manual,
+                false);
+            Layout(panel);
+            Assert.Equal("10001-10002.mp4", panel.VideoText);
+
+            WpfIsolatedTestProcess.MarkChildScenarioCompleted();
+        });
+    }
+
+    private static ProtocolEntry Eintrag(string code, string? stufe)
+        => new() { Code = code, Beschreibung = code, CodeMeta = new ProtocolEntryCodeMeta { Code = code, Severity = stufe } };
+
     private static Color ColorOf(object brush) => Assert.IsType<SolidColorBrush>(brush).Color;
+
+    private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
+    {
+        var count = VisualTreeHelper.GetChildrenCount(root);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is T typed)
+                return typed;
+            if (FindDescendant<T>(child) is { } nested)
+                return nested;
+        }
+        return null;
+    }
 
     private static void Layout(UIElement element)
     {

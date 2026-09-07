@@ -278,6 +278,7 @@ public sealed partial class ShellViewModel
         }
         IsProjectReady = true;
         HasPersistedProject = true;
+        MerkeSpeicherung();
         RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
         SetStatus("Gespeichert");
         _sp.Toasts.Success("Projekt gespeichert");
@@ -320,6 +321,7 @@ public sealed partial class ShellViewModel
         _sp.Settings.Save();
         MarkProjectReady();
         HasPersistedProject = true;
+        MerkeSpeicherung();
         RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
         SetStatus($"Gespeichert: {Path.GetFileName(path)}");
         _sp.Toasts.Success($"Gespeichert: {Path.GetFileName(path)}");

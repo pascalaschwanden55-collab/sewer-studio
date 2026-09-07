@@ -49,6 +49,9 @@ public sealed partial class ShellViewModel
 
         public string Title { get; }
 
+        /// <summary>Anzeigename mit echten Umlauten (Nova-Etappe 2); Title bleibt der ASCII-Schluessel fuer Trigger/Vergleiche.</summary>
+        public string DisplayTitle => ShellNavigationTitles.Anzeige(Title);
+
         public string ToolTipDescription => Title switch
         {
             "Uebersicht" => "Projekt-Cockpit mit Zustands-, Kosten- und Fortschrittsauswertung.",

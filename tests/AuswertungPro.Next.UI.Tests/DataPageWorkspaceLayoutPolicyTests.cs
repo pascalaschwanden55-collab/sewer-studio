@@ -46,4 +46,25 @@ public sealed class DataPageWorkspaceLayoutPolicyTests
         Assert.False(layout.Zugeklappt);
         Assert.Equal(124, layout.Hoehe);
     }
+
+    // "Gross anzeigen" (Fix-Runde 1, Inventar 4.3/8.6): die 60-Prozent-Wunschhoehe laeuft durch
+    // dieselbe Regel wie jede gespeicherte Hoehe und wird deshalb ebenso auf sieben Zeilen
+    // geklemmt beziehungsweise zugeklappt, wenn selbst die Mindesthoehe nicht mehr passt.
+    [Fact]
+    public void Grosse_Anzeige_klappt_zu_wenn_selbst_die_Mindesthoehe_nicht_mehr_passt()
+    {
+        // fuerListe = 54 + 7*32 = 278; maxDrawer = 400 - 278 - 6 = 116 < MinDrawer 120.
+        var layout = DataPageWorkspaceLayoutPolicy.Berechne(gesamtHoehe: 400, zeilenHoehe: 32, kopfHoehe: 54, gespeichert: 240);
+        Assert.True(layout.Zugeklappt);
+        Assert.Equal(DataPageWorkspaceLayoutPolicy.MinDrawer, layout.Hoehe);
+    }
+
+    [Fact]
+    public void Grosse_Anzeige_bleibt_bei_reichlich_Flaeche_bei_der_60_Prozent_Wunschhoehe()
+    {
+        // fuerListe = 54 + 7*32 = 278; maxDrawer = 900 - 278 - 6 = 616 >= 540.
+        var layout = DataPageWorkspaceLayoutPolicy.Berechne(gesamtHoehe: 900, zeilenHoehe: 32, kopfHoehe: 54, gespeichert: 540);
+        Assert.False(layout.Zugeklappt);
+        Assert.Equal(540, layout.Hoehe);
+    }
 }

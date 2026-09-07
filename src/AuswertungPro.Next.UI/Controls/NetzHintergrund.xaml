@@ -1,0 +1,10 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Controls.NetzHintergrund"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             IsHitTestVisible="False">
+    <!-- Nova-Etappe 2: leises Leitungsnetz im Fensterhintergrund, reine Optik ohne Eingabe.
+         Der Code-Behind zeichnet Knoten und Verbindungen aus NetzHintergrundModell; der
+         Timer laeuft nur bei aktivem Fenster, eingeschalteter Engine, sichtbarem Control und
+         ohne "Bewegung reduzieren"; sonst bleibt ein einmaliges Standbild stehen. -->
+    <Canvas x:Name="Flaeche" ClipToBounds="True"/>
+</UserControl>

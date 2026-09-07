@@ -1,6 +1,7 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.ProjectPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls">
     <UserControl.Resources>
         <!-- Eingebauter Converter: bool -> Visibility (True=Visible, False=Collapsed) -->
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -11,12 +12,8 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal" Grid.Column="0">
+        <ctrl:NovaPageHeader Title="Projekt" Subtitle="Stammdaten des offenen Projekts" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal">
                 <!-- Im Draft-Modus: Projekt anlegen; sonst: Speichern unter -->
                 <Button Content="Projekt anlegen"
                         Command="{Binding AnlegenCommand}"
@@ -31,15 +28,13 @@
                 <Button Content="Speichern unter" Command="{Binding SaveAsCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
                         Visibility="{Binding IsNotDraft, Converter={StaticResource BoolToVis}}"
                         ToolTip="Projekt unter einem neuen Pfad speichern."/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Grid.Column="1" HorizontalAlignment="Right">
-                <Button Content="Projekt speichern" Command="{Binding SaveCommand}" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="0,0,8,0"
+                <Button Content="Projekt speichern" Command="{Binding SaveCommand}" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="8,0,0,0"
                         Visibility="{Binding IsNotDraft, Converter={StaticResource BoolToVis}}"
                         ToolTip="Alle Projektdaten speichern." />
-                <Button Content="Programm schließen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180"
+                <Button Content="Programm schließen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="8,0,0,0"
                         ToolTip="SewerStudio beenden. Ungespeicherte Änderungen werden vorher abgefragt." />
             </StackPanel>
-        </Grid>
+        </ctrl:NovaPageHeader>
 
         <Border Grid.Row="1" Style="{StaticResource Card}" Background="{DynamicResource CardBrush}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">

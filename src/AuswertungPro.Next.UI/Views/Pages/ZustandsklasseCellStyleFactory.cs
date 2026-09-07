@@ -73,6 +73,7 @@ internal static class ZustandsklasseCellStyleFactory
         return style;
     }
 
+
     private static SolidColorBrush CreateBrush(byte r, byte g, byte b)
     {
         var brush = new SolidColorBrush(Color.FromRgb(r, g, b));

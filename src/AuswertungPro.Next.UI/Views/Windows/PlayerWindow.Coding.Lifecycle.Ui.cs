@@ -38,13 +38,17 @@ public partial class PlayerWindow
     {
         CodingModeShowUiWorkflow.Execute(
             new CodingModeShowUiWorkflowActions(
-                ShowCodingSurface: () => CodingModeChromeControls.ShowCodingSurface(
-                    CodingOverlayPopup,
-                    CodingOverlayCanvas,
-                    CodingSidePanel,
-                    CodingSidePanelColumn,
-                    CodingToolbar,
-                    GetCodingSidePanelWidth()),
+                ShowCodingSurface: () =>
+                {
+                    CodingModeChromeControls.ShowCodingSurface(
+                        CodingOverlayPopup,
+                        CodingOverlayCanvas,
+                        CodingSidePanel,
+                        CodingSidePanelColumn,
+                        CodingToolbar,
+                        GetCodingSidePanelWidth());
+                    CodierModusChip.Visibility = Visibility.Visible;
+                },
                 UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
                 UpdateCodingOverlayCursor: UpdateCodingOverlayCursor,
                 ScheduleLoadedViewportUpdate: () => PlayerDispatcherScheduler.ScheduleLoaded(

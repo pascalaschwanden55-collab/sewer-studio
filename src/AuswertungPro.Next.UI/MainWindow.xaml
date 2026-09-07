@@ -8,14 +8,22 @@
         ui:Fluent.Backdrop="Mica"
         WindowStartupLocation="CenterScreen"
         Closing="MainWindow_Closing">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
     <Window.InputBindings>
         <KeyBinding Key="F11" Command="{Binding ToggleFocusModeCommand}"/>
         <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}"/>
         <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenProjectCommand}"/>
         <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewProjectCommand}"/>
+        <KeyBinding Key="K" Modifiers="Control" Command="{Binding GlobaleSucheFokusCommand}"/>
     </Window.InputBindings>
     <Grid>
-    <DockPanel>
+    <!-- Nova-Etappe 2: leises Leitungsnetz hinter der ganzen Oberflaeche (reine Optik,
+         IsHitTestVisible="False"); das DockPanel bekommt deshalb einen durchsichtigen
+         Hintergrund, das Fenster selbst behaelt seine BgBrush. -->
+    <ctrl:NetzHintergrund IsEngineEnabled="{Binding HintergrundEngine}"/>
+    <DockPanel Background="Transparent">
         <!-- Kopfzeile: Menue + Knopf "Projekt wechseln"; nur im Workspace sichtbar -->
         <DockPanel DockPanel.Dock="Top">
             <DockPanel.Style>
@@ -44,7 +52,77 @@
                     </ToolTip>
                 </Button.ToolTip>
             </Button>
-            <Menu>
+            <!-- Nova-Etappe 2: Aufgaben-Chip (Inventar 3.4) -->
+            <Button DockPanel.Dock="Right" Margin="0,2,8,2" Padding="12,4" MinHeight="0"
+                    Command="{Binding NaechsteAufgabePruefenCommand}"
+                    Style="{StaticResource ToolbarButton}"
+                    Background="{DynamicResource KiSubtleBrush}" BorderBrush="{DynamicResource KiSubtleBrush}"
+                    ToolTip="Nächste fachliche Aufgabe: Haltung öffnen und Video prüfen"
+                    AutomationProperties.Name="Nächste fachliche Aufgabe">
+                <Button.Visibility>
+                    <Binding Path="IsProjectReady" Converter="{StaticResource BoolToVis}"/>
+                </Button.Visibility>
+                <StackPanel Orientation="Horizontal">
+                    <ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource KiTextBrush}" Margin="0,0,6,0"/>
+                    <TextBlock Text="{Binding NaechsteAufgabeText}" FontSize="{DynamicResource TextS}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource KiTextBrush}"/>
+                </StackPanel>
+            </Button>
+            <!-- Nova-Etappe 2: globale Suche Strg+K (Inventar 8.5); nach dem Aufgaben-Chip
+                 deklariert, damit sie optisch naeher an der Brotkrume (links vom Chip) steht. -->
+            <!-- B1/B2: Feste Hoehe 30 wie die Werkzeugknoepfe, damit RadiusPill (15) eine echte
+                 Kapsel ergibt. Die Tastenmarke sitzt vertikal zentriert INNERHALB der Kapsel
+                 (Hoehe Auto statt volle Feldhoehe), und das leere Feld zeigt seinen Platzhalter. -->
+            <Grid DockPanel.Dock="Right" Margin="0,2,8,2" MinWidth="300" VerticalAlignment="Center">
+                <Border Height="30" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource InputBorderBrush}" BorderThickness="1"
+                        CornerRadius="{DynamicResource RadiusPill}" Padding="10,0">
+                    <DockPanel>
+                        <ui:FluentIcon DockPanel.Dock="Left" Glyph="&#xE721;" Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <Border DockPanel.Dock="Right" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="{DynamicResource RadiusS}"
+                                Padding="6,1" Margin="6,0,0,0" Height="Auto" VerticalAlignment="Center">
+                            <TextBlock Text="Strg K" FontSize="{DynamicResource TextXS}" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource MutedBrush}"/>
+                        </Border>
+                        <Grid>
+                            <TextBox x:Name="GlobaleSucheBox" BorderThickness="0" Background="Transparent" MinWidth="200"
+                                     MinHeight="0" Padding="0" VerticalContentAlignment="Center"
+                                     Text="{Binding GlobaleSuche.Text, UpdateSourceTrigger=PropertyChanged}"
+                                     KeyDown="GlobaleSucheBox_KeyDown"
+                                     ToolTip="Haltung, Schacht oder Strasse suchen" AutomationProperties.Name="Haltung, Schacht oder Strasse suchen"/>
+                            <TextBlock Text="Haltung, Schacht oder Strasse suchen" IsHitTestVisible="False"
+                                       VerticalAlignment="Center" Margin="2,0,0,0"
+                                       FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, ElementName=GlobaleSucheBox}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+                <Popup IsOpen="{Binding GlobaleSuche.ListeOffen, Mode=TwoWay}" StaysOpen="False" PlacementTarget="{Binding ElementName=GlobaleSucheBox}"
+                       Placement="Bottom" AllowsTransparency="True">
+                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            CornerRadius="{DynamicResource RadiusM}" MinWidth="320" MaxHeight="320" Padding="4">
+                        <StackPanel>
+                            <!-- Fokus bleibt im Textfeld: Markierung laeuft ueber MarkiertIndex/Pfeiltasten,
+                                 nicht ueber SelectedItem (sonst wuerden Pfeiltasten die Liste nie erreichen). -->
+                            <ListBox ItemsSource="{Binding GlobaleSuche.Treffer}" SelectedIndex="{Binding GlobaleSuche.MarkiertIndex, Mode=TwoWay}"
+                                     DisplayMemberPath="Text" BorderThickness="0" Focusable="False"
+                                     PreviewMouseLeftButtonUp="GlobaleSucheTreffer_Click"
+                                     AutomationProperties.Name="Suchtreffer"/>
+                            <TextBlock Text="{Binding GlobaleSuche.LeerText}" Margin="8,4" Foreground="{DynamicResource MutedBrush}"
+                                       FontSize="{DynamicResource TextS}"/>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+            </Grid>
+            <Menu DockPanel.Dock="Left">
                 <Menu.Style>
                     <Style TargetType="Menu" BasedOn="{StaticResource {x:Type Menu}}"/>
                 </Menu.Style>
@@ -123,6 +201,9 @@
                 <MenuItem Header="_Ansicht">
                     <MenuItem Header="Fokusmodus" InputGestureText="F11" IsCheckable="True" IsChecked="{Binding IsFocusMode, Mode=TwoWay}"
                               ToolTip="Sidebar und Menü ausblenden, um mehr Arbeitsfläche zu erhalten."/>
+                    <MenuItem x:Name="KlassischeUebersichtToggle" Header="Klassische Übersicht" IsCheckable="True"
+                              IsChecked="{Binding KlassischeUebersicht, Mode=TwoWay}"
+                              ToolTip="Zeigt bei offenem Projekt wieder die bisherige Übersicht mit Projektliste, Vorschau und Vorschau-PDF."/>
                     <Separator/>
                     <MenuItem Header="System-Monitor öffnen" Click="OpenSystemMonitor_Click"
                               ToolTip="System-Monitor in einem eigenen Fenster öffnen.">
@@ -132,6 +213,10 @@
                     </MenuItem>
                 </MenuItem>
             </Menu>
+            <!-- Brotkrume: Projekt / Seite -->
+            <TextBlock DockPanel.Dock="Left" Text="{Binding Brotkrume}" Margin="12,0,8,0" VerticalAlignment="Center"
+                       FontSize="{DynamicResource TextM}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
+                       TextTrimming="CharacterEllipsis"/>
         </DockPanel>
         <!-- Statusleiste: links Status, rechts Projektname + Haltungszahl (bleibt auch in F11 sichtbar) -->
         <Border DockPanel.Dock="Bottom"
@@ -410,19 +495,21 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Systemmonitor: Nova-Etappe 1 als Aufklapper. Der Kopf heisst bewusst "Systemleistung":
-                     Der Monitor misst Rechner und Sensoren, nicht die Bereitschaft der KI (Nachpruefung W02).
-                     Gesperrte Sensoren (Speicherintegritaet) werden getrennt gemeldet. -->
+                <!-- Systemmonitor: Nova-Etappe 1 als Aufklapper, Kopf seit Etappe 2 Task 7 die KI-Bereitschaft
+                     (KiBereitschaftRegel, BEWERTUNG N10: "Analyse bereit"/"Pruefung noetig" statt Modellnamen).
+                     Modell-/Detailtext (AiDisplayStatusLabel) und Rechner-/Sensordaten stehen erst im
+                     aufgeklappten Inhalt. Gesperrte Sensoren (Speicherintegritaet) werden weiterhin getrennt
+                     im Kopf gemeldet ("Sensoren gesperrt", Nachpruefung W02). -->
                 <Expander DockPanel.Dock="Bottom" Margin="12,4,12,12" IsExpanded="False"
                           Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                          ToolTip="Rechnerauslastung und Sensoren, aufklappbar"
-                          AutomationProperties.Name="Systemleistung">
+                          ToolTip="KI-Bereitschaft; aufgeklappt: Rechnerauslastung und Sensoren"
+                          AutomationProperties.Name="KI-Bereitschaft und Systemleistung">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <ctrl:NeuralPulseDot Width="10" Height="10" Margin="0,0,8,0" ToolTip="Laufende Messwerte des Rechners">
+                            <ctrl:NeuralPulseDot Width="10" Height="10" Margin="0,0,8,0" ToolTip="Bereitschaft der lokalen KI; aufgeklappt stehen Rechnerauslastung und Sensoren">
                                 <ctrl:NeuralPulseDot.Style>
                                     <Style TargetType="ctrl:NeuralPulseDot">
-                                        <Setter Property="IsActive" Value="True"/>
+                                        <Setter Property="IsActive" Value="{Binding IstKiBereit}"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Monitor.IsSensorBlocked}" Value="True">
                                                 <Setter Property="IsActive" Value="False"/>
@@ -431,10 +518,10 @@
                                     </Style>
                                 </ctrl:NeuralPulseDot.Style>
                             </ctrl:NeuralPulseDot>
-                            <TextBlock FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}">
+                            <TextBlock FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
+                                       Text="{Binding KiBereitschaftText}">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="Systemleistung"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Monitor.IsSensorBlocked}" Value="True">
                                                 <Setter Property="Text" Value="Sensoren gesperrt"/>
@@ -445,9 +532,16 @@
                             </TextBlock>
                         </StackPanel>
                     </Expander.Header>
-                    <ctrl:SystemMonitorPanel DataContext="{Binding Monitor}" Margin="0,6,0,0"/>
+                    <StackPanel Margin="0,6,0,0">
+                        <TextBlock Text="{Binding AiDisplayStatusLabel}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,4,0,4"/>
+                        <ctrl:SystemMonitorPanel DataContext="{Binding Monitor}"/>
+                    </StackPanel>
                 </Expander>
 
+                <!-- Nova-Etappe 2: Speicherstand der Fusszeile (Inventar 3.2) -->
+                <TextBlock DockPanel.Dock="Bottom" Margin="16,0,16,10" Text="{Binding SpeicherstandText}"
+                           FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource FaintBrush}"
+                           TextTrimming="CharacterEllipsis" ToolTip="Projekt und Zeit der letzten Speicherung"/>
 
                 <ListBox x:Name="SidebarNavList"
                          ItemsSource="{Binding Source={StaticResource GroupedNavItems}}" SelectedItem="{Binding SelectedNavItem}"
@@ -475,7 +569,11 @@
                                                                Shortcut="{Binding ToolTipShortcut}"/>
                                     </ToolTip>
                                 </StackPanel.ToolTip>
-                                <Grid Width="24" Height="18" VerticalAlignment="Center">
+                                <Grid Width="24" Height="18" VerticalAlignment="Center"
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Grid.RenderTransform>
+                                        <ScaleTransform x:Name="NavIconScale"/>
+                                    </Grid.RenderTransform>
                                     <TextBlock x:Name="DefaultNavIcon"
                                                Text="{Binding Icon}"
                                                FontFamily="{DynamicResource FontIcon}"
@@ -540,7 +638,7 @@
                                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                     </Canvas>
                                 </Grid>
-                                <TextBlock Text="{Binding Title}" Margin="10,0,0,0" FontSize="{DynamicResource TextM}"
+                                <TextBlock Text="{Binding DisplayTitle}" Margin="10,0,0,0" FontSize="{DynamicResource TextM}"
                                            FontWeight="SemiBold"/>
                             </StackPanel>
                             <DataTemplate.Triggers>
@@ -556,6 +654,33 @@
                                     <Setter TargetName="DefaultNavIcon" Property="Visibility" Value="Collapsed"/>
                                     <Setter TargetName="VsaNavIcon" Property="Visibility" Value="Visible"/>
                                 </DataTrigger>
+                                <!-- Symbol-Hover (Nova-Etappe 2): kurze Ereignis-Rueckmeldung, laeuft wie
+                                     der HoverOverlay-Hover des Eintrags immer (kein ReduceMotion-Schalter
+                                     im Bestand fuer diese Kategorie, siehe Klassenkommentar MotionSettings). -->
+                                <EventTrigger RoutedEvent="MouseEnter">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="NavIconScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1.12" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="NavIconScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1.12" Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <EventTrigger RoutedEvent="MouseLeave">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="NavIconScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="NavIconScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1" Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

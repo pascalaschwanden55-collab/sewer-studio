@@ -157,6 +157,10 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     // gilt false, und MotionSettings folgt dann der Windows-Systemeinstellung.
     public bool ReduceMotion { get; set; }
 
+    // Nova-Etappe 2: leises Leitungsnetz im Fensterhintergrund, reine Optik. Standard an;
+    // ReduceMotion und ein inaktives Fenster halten die Engine unabhaengig davon an.
+    public bool HintergrundEngine { get; set; } = true;
+
     // Video player tuning
     public bool VideoHwDecoding { get; set; } = true;
     public bool VideoDropLateFrames { get; set; } = true;
@@ -179,6 +183,16 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
     // Schachtansicht: per GridSplitter einstellbare Hoehe des "Schaeden"-Panels (in px).
     public double SchachtansichtSchadenHeight { get; set; } = 240d;
+
+    /// <summary>Nova-Etappe 2: Liste mit Schachtansicht rechts und Eingabefeldern unten als Standard. false = bisherige Schachtansicht.</summary>
+    public bool ShowSchaechteNovaLayout { get; set; } = true;
+
+    /// <summary>
+    /// Nova-Fixwelle F3: Bei offenem Projekt zeigt "Uebersicht" die neue Projektuebersicht.
+    /// false schaltet auf die klassische Uebersichtsseite zurueck (Menue "Ansicht &#8594;
+    /// Klassische Uebersicht"), die weiterhin Projektliste, Vorschau und Vorschau-PDF traegt.
+    /// </summary>
+    public bool ShowUebersichtNovaLayout { get; set; } = true;
 
     // Foto-Galerie: Kachelbreite im Haltungs-/Schachtdetail.
     public double PhotoGalleryTileSize { get; set; } = 124d;

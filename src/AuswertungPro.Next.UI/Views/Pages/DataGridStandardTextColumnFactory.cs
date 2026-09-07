@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
+using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Theme;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
@@ -17,6 +19,13 @@ public static class DataGridStandardTextColumnFactory
         {
             RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
         }));
+        if (DataPageColumnStyleRules.IstNamensspalte(fieldName))
+            displayStyle.Setters.Add(new Setter(TextBlock.FontWeightProperty, FontWeights.SemiBold));
+        if (DataPageColumnStyleRules.IstZahlenspalte(fieldName))
+        {
+            displayStyle.Setters.Add(new Setter(TextBlock.FontFamilyProperty, System.Windows.Application.Current?.TryFindResource("FontMono") ?? new FontFamily("Consolas")));
+            displayStyle.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Right));
+        }
         return new DataGridTextColumn
         {
             Header = header,

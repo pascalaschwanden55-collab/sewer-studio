@@ -41,6 +41,38 @@ public sealed class ZustandsklasseInkPolicyTests
         Assert.True(brush.IsFrozen);
     }
 
+    /// <summary>
+    /// Nova-Fixwelle B6: Die Zustandsklasse der Schachtliste war eine <c>DataGridComboBoxColumn</c>.
+    /// Deren Anzeigeelement ist ein internes ComboBox-Abkoemmling; die Ziffer bekam ihre Farbe am
+    /// Ende vom impliziten TextBlock-Stil des Themes und stand im Dunkeln weiss auf Gelb. Die
+    /// Spalte zeigt jetzt eine eigene Zellvorlage mit Text zum Anzeigen und Auswahl zum Bearbeiten.
+    /// Die tatsaechlich gezeichnete Tinte prueft <c>NovaRenderingChecks.SchachtZustandsklasseBleibtSchwarz</c>
+    /// im STA-Kindprozess.
+    /// </summary>
+    [Fact]
+    public void Zustandsklasse_der_Schachtliste_hat_getrennte_Vorlagen_fuer_Anzeige_und_Auswahl()
+    {
+        var spalte = AuswertungPro.Next.UI.Views.Pages.SchaechteZustandsklasseColumnFactory.Create("Zustandsklasse", "Zustandsklasse");
+
+        Assert.NotNull(spalte.CellTemplate);
+        Assert.NotNull(spalte.CellEditingTemplate);
+        Assert.Equal(typeof(System.Windows.Controls.TextBlock), spalte.CellTemplate.VisualTree.Type);
+        Assert.Equal(typeof(System.Windows.Controls.ComboBox), spalte.CellEditingTemplate.VisualTree.Type);
+    }
+
+    /// <summary>Auf jeder Klassenflaeche erreicht die schwarze Zellentinte mindestens 4,5:1.</summary>
+    [Fact]
+    public void Schwarze_Zellentinte_reicht_auf_jeder_Klassenflaeche()
+    {
+        foreach (var klasse in ZustandsklasseColorPalette.SelectionOptions)
+        {
+            var brush = (SolidColorBrush)ZustandsklasseColorPalette.HaltungenPalette[klasse];
+            Assert.True(
+                ZustandsklasseInkPolicy.Contrast(ZustandsklasseInkPolicy.DarkInk, brush.Color) >= 4.5,
+                $"Z{klasse}: schwarze Tinte erreicht nur {ZustandsklasseInkPolicy.Contrast(ZustandsklasseInkPolicy.DarkInk, brush.Color):0.00}");
+        }
+    }
+
     [Fact]
     public void Unbekannte_Klasse_liefert_keine_Farbe()
     {

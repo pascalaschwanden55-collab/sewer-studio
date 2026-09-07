@@ -45,4 +45,11 @@ public sealed class DataPageColumnViewCatalogTests
         }
         Assert.Equal(6, DataPageColumnViewCatalog.Views.Count);
     }
+
+    [Fact]
+    public void Jede_Ansicht_nennt_ihre_Spaltenzahl()
+    {
+        Assert.Equal(7, DataPageColumnViewCatalog.Resolve("kompakt").Anzahl(40));
+        Assert.Equal(40, DataPageColumnViewCatalog.Resolve("alle").Anzahl(40));
+    }
 }

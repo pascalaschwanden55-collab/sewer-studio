@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -73,6 +74,13 @@ public sealed record DashboardStatistics(
 
     /// <summary>Schachtkosten als Text.</summary>
     public string SchachtSanierungsKostenText => FormatChf(SchachtSanierungsKosten);
+
+    /// <summary>
+    /// Haltungs- und Schachtkosten zusammen als Text, dieselbe Formatierung wie die beiden
+    /// Einzeltexte (Nova-Etappe 2, Uebersichtsseite: eine Apostroph-Glyphe statt einer
+    /// zweiten eigenen Zahlenformatierung in der UI).
+    /// </summary>
+    public string SanierungskostenGesamtText => FormatChf(HaltungSanierungsKosten + SchachtSanierungsKosten);
 
     private static string FormatChf(decimal value)
         => Math.Round(value, 0, MidpointRounding.AwayFromZero)
@@ -331,26 +339,12 @@ public static class DashboardStatisticsBuilder
         }
     }
 
-    private static string NormalizeDamageGroup(string? code)
-    {
-        var text = new string((code ?? string.Empty).Trim().ToUpperInvariant().TakeWhile(char.IsLetterOrDigit).ToArray());
-        if (text.Length == 0)
-            return string.Empty;
+    // Nova-Fixwelle F1: Normalisierung und BA/BB-Pruefung liegen in der gemeinsamen
+    // WPF-freien Quelle SchadensgruppenRegel; Rohrring und Schadenliste der
+    // Haltungsuebersicht verwenden dieselbe Regel.
+    private static string NormalizeDamageGroup(string? code) => SchadensgruppenRegel.Hauptcode(code);
 
-        return text.Length <= 3 ? text : text[..3];
-    }
-
-    private static bool IsDashboardDamageGroup(string code)
-    {
-        if (code.Length != 3)
-            return false;
-
-        if (!code.StartsWith("BA", StringComparison.OrdinalIgnoreCase)
-            && !code.StartsWith("BB", StringComparison.OrdinalIgnoreCase))
-            return false;
-
-        return VsaCodeTree.Groups.TryGetValue(code[..2], out var group) && group.Codes.ContainsKey(code);
-    }
+    private static bool IsDashboardDamageGroup(string code) => SchadensgruppenRegel.IstSchadensgruppe(code);
 
     private static string FormatDamageLabel(string code)
     {

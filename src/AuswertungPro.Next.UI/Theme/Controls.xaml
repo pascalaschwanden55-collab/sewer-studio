@@ -26,8 +26,18 @@
     <CornerRadius x:Key="RadiusL">8</CornerRadius>
     <CornerRadius x:Key="RadiusXL">10</CornerRadius>
     <CornerRadius x:Key="RadiusXXL">14</CornerRadius>
-    <!-- Pille/Kreis: rundet jede Kante voll aus (Abzeichen, runde Symbolflaechen). -->
-    <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+    <!-- Kapselformen. WPF teilt den Eckenradius getrennt auf Breite UND Hoehe auf: Ein
+         zu grosser Wert (frueher 999) ergibt auf einer breiten, flachen Flaeche keine Kapsel,
+         sondern eine Ellipse mit spitzen Enden. Deshalb traegt jede Kapsel den Radius ihrer
+         halben ECHTEN Hoehe. -->
+    <!-- Bedienelemente mit MinHeight 30: ToolbarButton, ToolbarButtonAccent, CompactToggleButton, Suchfeld. -->
+    <CornerRadius x:Key="RadiusPill">15</CornerRadius>
+    <!-- Abzeichen und Chips mit rund 22 px Hoehe (Text 12 px plus 2-3 px Innenabstand). -->
+    <CornerRadius x:Key="RadiusChip">11</CornerRadius>
+    <!-- Fortschritts- und Anteilsbalken mit 10 px Hoehe. -->
+    <CornerRadius x:Key="RadiusBar">5</CornerRadius>
+    <!-- Die 72-px-Kreisflaeche des Leerzustands. -->
+    <CornerRadius x:Key="RadiusCircle">36</CornerRadius>
 
     <!-- ═══ ELEVATION (Tiefen-Hierarchie statt dicker Rahmen) ═══ -->
     <!-- S=Karten/Chips, M=Popups/Toasts, L=Dialoge/Overlays.
@@ -83,13 +93,17 @@
     </Style>
 
     <!-- ═══ COMBOBOX ═══ -->
+    <!-- B5: WPF leitet SelectionBoxItemTemplate NICHT aus DisplayMemberPath ab. Ohne diesen
+         Auswaehler zeigt das geschlossene Feld ToString() des Optionsobjekts. -->
+    <controls:ComboBoxAnzeigeTemplateSelector x:Key="ComboBoxAnzeigeSelector"/>
+
     <Style TargetType="{x:Type ComboBox}">
         <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="MinHeight" Value="36"/>
         <Setter Property="Padding" Value="10,8"/>
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -136,6 +150,7 @@
                         <ContentPresenter x:Name="ContentSite"
                                         Content="{TemplateBinding SelectionBoxItem}"
                                         ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                        ContentTemplateSelector="{StaticResource ComboBoxAnzeigeSelector}"
                                         ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
                                         Margin="{TemplateBinding Padding}"
                                         VerticalAlignment="Center"

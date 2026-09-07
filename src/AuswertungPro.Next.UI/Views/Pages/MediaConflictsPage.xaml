@@ -48,7 +48,7 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel>
-                    <TextBlock Text="Medienkonflikte" Style="{StaticResource PageTitle}"/>
+                    <controls:NovaPageHeader Title="Medienkonflikte" Subtitle="Videos, die keiner Haltung sicher zugeordnet sind" Margin="0"/>
                     <TextBlock Text="Fehlende oder mehrdeutige Videozuordnungen zentral prüfen, öffnen und direkt auflösen."
                                Margin="0,4,0,0"
                                Style="{StaticResource Body}"
@@ -215,7 +215,7 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <TextBlock Text="Konfliktdetails" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Path=SelectedConflict.TypeHint, TargetNullValue='Waehle links einen Konflikt aus, um Details und Aktionen zu sehen.'}"
+                        <TextBlock Text="{Binding Path=SelectedConflict.TypeHint, TargetNullValue='Wähle links einen Konflikt aus, um Details und Aktionen zu sehen.'}"
                                    Margin="0,4,0,12"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>

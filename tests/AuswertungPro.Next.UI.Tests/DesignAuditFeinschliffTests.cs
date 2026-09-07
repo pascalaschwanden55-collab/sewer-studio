@@ -255,14 +255,21 @@ public sealed class DesignAuditFeinschliffTests
             Assert.DoesNotContain($"Background=\"{wert}\"", player);
     }
 
-    /// <summary>Literal bleibt; bei Bindungen zaehlt nur der sichtbare StringFormat-Text; sonst nichts.</summary>
+    /// <summary>Literal bleibt; bei Bindungen zaehlen der sichtbare StringFormat-Text und der
+    /// TargetNullValue-Ersatztext (mit oder ohne einfache Anfuehrungszeichen); sonst nichts.</summary>
     private static string? SichtbarerAnteil(string wert)
     {
         if (!wert.StartsWith('{'))
             return wert;
 
+        var sichtbar = new List<string>();
         var format = Regex.Match(wert, "StringFormat=(?:\\{\\})?([^,}]*)");
-        return format.Success ? format.Groups[1].Value : null;
+        if (format.Success)
+            sichtbar.Add(format.Groups[1].Value);
+        var ersatz = Regex.Match(wert, "TargetNullValue='([^']*)'|TargetNullValue=([^,}]*)");
+        if (ersatz.Success)
+            sichtbar.Add(ersatz.Groups[1].Success ? ersatz.Groups[1].Value : ersatz.Groups[2].Value);
+        return sichtbar.Count == 0 ? null : string.Join(" ", sichtbar);
     }
 
     private static IEnumerable<string> AlleXamlDateien()

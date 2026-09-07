@@ -19,6 +19,7 @@ internal sealed record PlayerWindowCodingModeExitControls(
     FrameworkElement CodingSidePanel,
     ColumnDefinition CodingSidePanelColumn,
     FrameworkElement CodingToolbar,
+    FrameworkElement CodierModusChip,
     FrameworkElement CodingTimelinePanel,
     FrameworkElement CodingCalibrationHint,
     FrameworkElement CodingMeasurementPanel,
@@ -138,15 +139,19 @@ internal static class PlayerWindowCodingModeExitControllerFactory
                 controls.DetectionCanvas,
                 controls.DetectionOverlay,
                 hideOverlay),
-            HideCodingSurface: () => CodingModeChromeControls.HideCodingSurface(
-                controls.CodingOverlayPopup,
-                controls.CodingOverlayCanvas,
-                controls.CodingSidePanel,
-                controls.CodingSidePanelColumn,
-                controls.CodingToolbar,
-                controls.CodingTimelinePanel,
-                controls.CodingCalibrationHint,
-                controls.CodingMeasurementPanel),
+            HideCodingSurface: () =>
+            {
+                CodingModeChromeControls.HideCodingSurface(
+                    controls.CodingOverlayPopup,
+                    controls.CodingOverlayCanvas,
+                    controls.CodingSidePanel,
+                    controls.CodingSidePanelColumn,
+                    controls.CodingToolbar,
+                    controls.CodingTimelinePanel,
+                    controls.CodingCalibrationHint,
+                    controls.CodingMeasurementPanel);
+                controls.CodierModusChip.Visibility = Visibility.Collapsed;
+            },
             HideInlineDefectDetail: dependencies.Actions.HideInlineDefectDetail,
             HideOsdBadge: () => CodingOsdBadgeControls.Hide(controls.OsdMeterBadge),
             ShowLiveDetectionEntry: isDetecting => CodingModeChromeControls.ShowLiveDetectionEntry(
@@ -211,6 +216,7 @@ internal static class PlayerWindowCodingModeExitControllerFactory
         ArgumentNullException.ThrowIfNull(controls.CodingSidePanel);
         ArgumentNullException.ThrowIfNull(controls.CodingSidePanelColumn);
         ArgumentNullException.ThrowIfNull(controls.CodingToolbar);
+        ArgumentNullException.ThrowIfNull(controls.CodierModusChip);
         ArgumentNullException.ThrowIfNull(controls.CodingTimelinePanel);
         ArgumentNullException.ThrowIfNull(controls.CodingCalibrationHint);
         ArgumentNullException.ThrowIfNull(controls.CodingMeasurementPanel);

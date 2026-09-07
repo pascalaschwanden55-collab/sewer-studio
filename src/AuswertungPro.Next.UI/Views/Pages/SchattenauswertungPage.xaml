@@ -1,7 +1,8 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SchattenauswertungPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages">
+             xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <local:ZustandsklasseToBrushConverter x:Key="ZustandsklasseBrush"/>
@@ -33,13 +34,8 @@
         </Grid.RowDefinitions>
 
         <!-- Kopf: Titel + Lauf-Steuerung -->
-        <DockPanel Margin="0,0,0,10">
-            <StackPanel DockPanel.Dock="Left">
-                <TextBlock Text="Schattenauswertung" Style="{StaticResource PageTitle}"/>
-                <TextBlock Style="{StaticResource Caption}" Margin="0,4,0,0"
-                           Text="Eigenständige KI-Auswertung aus der Codierung — nur lesend, deine Auswertung bleibt unberührt."/>
-            </StackPanel>
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+        <ctrl:NovaPageHeader Title="Schattenauswertung" Subtitle="dein Urteil neben dem der KI, ändert keine Projektdaten" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <CheckBox Content="mit KI-Empfehlung"
                           IsChecked="{Binding MitKi}"
                           VerticalAlignment="Center"
@@ -71,7 +67,7 @@
                         Command="{Binding StartenCommand}"
                         Style="{StaticResource ToolbarButtonAccent}"/>
             </StackPanel>
-        </DockPanel>
+        </ctrl:NovaPageHeader>
 
         <!-- Status / Warnung / Fortschritt -->
         <StackPanel Grid.Row="1" Margin="0,0,0,10">

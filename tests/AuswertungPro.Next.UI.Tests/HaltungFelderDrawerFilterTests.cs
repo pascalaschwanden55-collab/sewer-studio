@@ -9,6 +9,9 @@ public sealed class HaltungFelderDrawerFilterTests
     private static RecordDetailGroup Gruppe(string titel, params string[] labels)
         => new(titel, string.Empty, labels.Select(l => new RecordDetailItem(l, "wert", _ => { })).ToList());
 
+    private static RecordDetailItem Item(string label)
+        => new(label, "wert", _ => { });
+
     [Fact]
     public void Ohne_Suchtext_bleiben_alle_Themen_mit_allen_Feldern()
     {
@@ -31,4 +34,12 @@ public sealed class HaltungFelderDrawerFilterTests
     [Fact]
     public void Null_Gruppen_ergeben_eine_leere_Liste()
         => Assert.Empty(HaltungFelderDrawer.Filtere(null, "x"));
+
+    [Fact]
+    public void Thema_zaehlt_seine_Felder()
+    {
+        var gruppen = new[] { new RecordDetailGroup("Stammdaten", "", new[] { Item("Strasse"), Item("Baujahr") }) };
+        var thema = Assert.Single(HaltungFelderDrawer.Filtere(gruppen, null));
+        Assert.Equal(2, thema.Anzahl);
+    }
 }

@@ -1,0 +1,228 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.ProjektUebersichtPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
+             xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage"
+             xmlns:haltung="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
+             xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages">
+    <UserControl.Resources>
+        <haltung:ZustandsklasseBrushConverter x:Key="ZkBrushConv"/>
+        <dp:ZustandsklasseInkConverter x:Key="ZkInkConv"/>
+        <local:AnteilBreiteConverter x:Key="AnteilBreite"/>
+        <Style x:Key="KpiLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Setter Property="Typography.Capitals" Value="AllSmallCaps"/>
+        </Style>
+        <Style x:Key="KpiWert" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource TextDisplay}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        </Style>
+        <Style x:Key="KarteTitel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource TextL}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <!-- Hero -->
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="1.4*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding HeroTitel}" FontSize="{DynamicResource TextTitle}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                        <TextBlock Text="{Binding HeroText}" TextWrapping="Wrap" Margin="0,8,0,12" Foreground="{DynamicResource TextSecondaryBrush}" MaxWidth="560" HorizontalAlignment="Left"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Command="{Binding NaechsteHaltungPruefenCommand}" Style="{StaticResource ToolbarButtonAccent}" ToolTip="Erste offene Haltung öffnen und ihr Video prüfen">
+                                <StackPanel Orientation="Horizontal"><ui:FluentIcon Glyph="&#xE768;" Margin="0,0,6,0"/><TextBlock Text="Nächste Haltung prüfen"/></StackPanel>
+                            </Button>
+                            <Button Command="{Binding HaltungenOeffnenCommand}" Style="{StaticResource ToolbarButton}" Margin="8,0,0,0" Content="Haltungen öffnen" ToolTip="Zur Haltungsliste"/>
+                            <!-- F3: Derselbe Weg wie auf der klassischen Übersicht. -->
+                            <Button Command="{Binding VorschauPdfCommand}" Style="{StaticResource ToolbarButton}" Margin="8,0,0,0"
+                                    Content="Vorschau-PDF" ToolTip="Projektvorschau als PDF speichern"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <TextBlock Text="KI-Vorabdurchlauf" Style="{StaticResource KarteTitel}"/>
+                            <TextBlock Text="diese Sitzung" Margin="8,0,0,0" VerticalAlignment="Bottom" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}"/>
+                        </DockPanel>
+                        <TextBlock DockPanel.Dock="Bottom" Text="Noch kein Vorabdurchlauf in dieser Sitzung. Der Durchlauf startet beim Eintritt in den Codiermodus." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}">
+                            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding KiLaeufe.Count}" Value="0"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                        </TextBlock>
+                        <ItemsControl ItemsSource="{Binding KiLaeufe}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource HeaderBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="8,6" Margin="0,0,0,6">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="Prüfen" Style="{StaticResource ToolbarButton}" Padding="8,2" MinHeight="0"
+                                                    Command="{Binding DataContext.KiLaufPruefenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Haltung}"
+                                                    ToolTip="Haltung öffnen und Video prüfen"/>
+                                            <!-- F4: Ohne Fund kein leeres Abzeichen, sondern der Hinweis. -->
+                                            <Border DockPanel.Dock="Left" Background="{DynamicResource KiSubtleBrush}" CornerRadius="{DynamicResource RadiusChip}" Padding="8,2" Margin="0,0,8,0">
+                                                <TextBlock Text="{Binding Badge}" FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{DynamicResource KiTextBrush}"/>
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Badge}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                            </Border>
+                                            <TextBlock DockPanel.Dock="Left" Text="{Binding Hinweis}" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                       FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Hinweis}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding Meta}" VerticalAlignment="Center" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DockPanel>
+                </Border>
+            </Grid>
+            <!-- KPIs -->
+            <UniformGrid Grid.Row="1" Columns="4" Margin="-6,0,-6,6">
+                <Border Style="{StaticResource Card}" Margin="6"><StackPanel>
+                    <TextBlock Text="Haltungen" Style="{StaticResource KpiLabel}"/>
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Kennzahlen.Haltungen}" Style="{StaticResource KpiWert}"/><TextBlock Text="{Binding Kennzahlen.Geprueft, StringFormat=geprüft {0}}" Margin="8,0,0,6" VerticalAlignment="Bottom" Foreground="{DynamicResource MutedBrush}"/></StackPanel>
+                    <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"><Run Text="Gesamtlänge "/><Run Text="{Binding Kennzahlen.GesamtlaengeM, StringFormat={}{0:0} m, Mode=OneWay}"/><Run Text=" · KI analysiert "/><Run Text="{Binding Kennzahlen.KiAnalysiert, Mode=OneWay}"/><Run Text=" · offen "/><Run Text="{Binding Kennzahlen.Offen, Mode=OneWay}"/></TextBlock>
+                </StackPanel></Border>
+                <Border Style="{StaticResource Card}" Margin="6"><StackPanel>
+                    <TextBlock Text="Schächte" Style="{StaticResource KpiLabel}"/>
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Kennzahlen.Schaechte}" Style="{StaticResource KpiWert}"/><TextBlock Text="{Binding Kennzahlen.SchaechteMitProtokoll, StringFormat=mit Protokoll {0}}" Margin="8,0,0,6" VerticalAlignment="Bottom" Foreground="{DynamicResource MutedBrush}"/></StackPanel>
+                    <TextBlock Text="Zustandsklasse immer von Hand" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
+                </StackPanel></Border>
+                <Border Style="{StaticResource Card}" Margin="6"><StackPanel>
+                    <TextBlock Text="Dringend (Z0/Z1)" Style="{StaticResource KpiLabel}"/>
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Kennzahlen.DringendHaltungen}" Style="{StaticResource KpiWert}" Foreground="{DynamicResource DangerTextBrush}"/><TextBlock Text="Haltungen" Margin="8,0,0,6" VerticalAlignment="Bottom" Foreground="{DynamicResource MutedBrush}"/></StackPanel>
+                    <TextBlock Text="{Binding Kennzahlen.DringendSchaechte, StringFormat=dazu {0} Schächte}" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
+                </StackPanel></Border>
+                <Border Style="{StaticResource Card}" Margin="6"><StackPanel>
+                    <TextBlock Text="Sanierungskosten" Style="{StaticResource KpiLabel}"/>
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="{Binding SanierungskostenText}" Style="{StaticResource KpiWert}"/><TextBlock Text="CHF" Margin="8,0,0,6" VerticalAlignment="Bottom" Foreground="{DynamicResource MutedBrush}"/></StackPanel>
+                    <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"><Run Text="Haltungen "/><Run Text="{Binding Statistik.HaltungSanierungsKostenText, Mode=OneWay}"/><Run Text=" · Schächte "/><Run Text="{Binding Statistik.SchachtSanierungsKostenText, Mode=OneWay}"/><Run Text=" · ohne MWST"/></TextBlock>
+                </StackPanel></Border>
+            </UniformGrid>
+            <!-- Zustand + Schaeden -->
+            <Grid Grid.Row="2" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource Card}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="Zustand Haltungen" Style="{StaticResource KarteTitel}" Margin="0,0,0,8"/>
+                        <ItemsControl ItemsSource="{Binding ZustandLegende}" AutomationProperties.Name="Zustandsklassen">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <!-- B8: Der Zähler steht rechtsbündig in einer eigenen Spalte, nicht hochgestellt am Text. -->
+                                    <Button Command="{Binding DataContext.ZustandFilterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Klasse}"
+                                            Style="{StaticResource ToolbarButton}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,4"
+                                            Background="Transparent" BorderBrush="Transparent"
+                                            ToolTip="Haltungen dieser Klasse in der Liste zeigen">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="12" Height="12" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,8,0" VerticalAlignment="Center" Background="{Binding Klasse, Converter={StaticResource ZkBrushConv}}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Label}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Anzahl}" Margin="12,0,0,0" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DockPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <TextBlock Text="Häufigste Schäden" Style="{StaticResource KarteTitel}"/>
+                            <TextBlock Text="VSA-KEK Hauptcode, aus den Befunden gezählt" Margin="8,0,0,0" VerticalAlignment="Bottom" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                        </DockPanel>
+                        <TextBlock DockPanel.Dock="Bottom" Text="Keine Befunde" Foreground="{DynamicResource MutedBrush}">
+                            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Schaeden.Count}" Value="0"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                        </TextBlock>
+                        <ItemsControl ItemsSource="{Binding Schaeden}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <!-- F3: Die ganze Zeile führt in die gefilterte Haltungsliste, wie der Balken der klassischen Übersicht. -->
+                                    <Button Command="{Binding DataContext.SchadenFilterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding Hauptcode}"
+                                            Style="{StaticResource ToolbarButton}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                            Background="Transparent" BorderBrush="Transparent" Padding="6,2" MinHeight="0" Margin="0,1"
+                                            ToolTip="Haltungen mit diesem Hauptcode in der Liste zeigen">
+                                        <Grid Margin="0,3">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="64"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Hauptcode}" FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold" FontSize="{DynamicResource TextS}" VerticalAlignment="Center"/>
+                                            <Grid Grid.Column="1" Height="10" VerticalAlignment="Center">
+                                                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="{DynamicResource RadiusBar}"/>
+                                                <Border Background="{DynamicResource AccentBrush}" CornerRadius="{DynamicResource RadiusBar}" HorizontalAlignment="Left">
+                                                    <Border.Width><MultiBinding Converter="{StaticResource AnteilBreite}"><Binding Path="Anteil"/><Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}"/></MultiBinding></Border.Width>
+                                                </Border>
+                                            </Grid>
+                                            <TextBlock Grid.Column="2" Margin="10,0,0,0" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextS}" VerticalAlignment="Center"><Run Text="{Binding Anzahl, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Klartext, Mode=OneWay}"/></TextBlock>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DockPanel>
+                </Border>
+            </Grid>
+            <!-- Projekte / Verfahren / Stammdaten -->
+            <UniformGrid Grid.Row="3" Columns="3" Margin="-6,0,-6,0">
+                <Border Style="{StaticResource Card}" Margin="6"><DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Projekte" Style="{StaticResource KarteTitel}" Margin="0,0,0,8"/>
+                    <ItemsControl ItemsSource="{Binding LetzteProjekte}"><ItemsControl.ItemTemplate><DataTemplate>
+                        <Button Command="{Binding DataContext.ProjektOeffnenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Pfad}" Style="{StaticResource ToolbarButton}" HorizontalContentAlignment="Left" Margin="0,0,0,4" ToolTip="{Binding Pfad}">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                        </Button>
+                    </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                </DockPanel></Border>
+                <Border Style="{StaticResource Card}" Margin="6"><DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Sanierungsverfahren" Style="{StaticResource KarteTitel}" Margin="0,0,0,8"/>
+                    <TextBlock DockPanel.Dock="Bottom" Text="Keine Kosten erfasst" Foreground="{DynamicResource MutedBrush}">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Statistik.HasVerfahren}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                    </TextBlock>
+                    <ItemsControl ItemsSource="{Binding Statistik.Sanierungsverfahren}"><ItemsControl.ItemTemplate><DataTemplate>
+                        <DockPanel Margin="0,3"><TextBlock DockPanel.Dock="Right" Text="{Binding QtyText, Mode=OneWay}" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextS}"/><TextBlock Text="{Binding Label}" FontSize="{DynamicResource TextS}"/></DockPanel>
+                    </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                </DockPanel></Border>
+                <Border Style="{StaticResource Card}" Margin="6"><DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8"><TextBlock Text="Stammdaten" Style="{StaticResource KarteTitel}"/><TextBlock Text="Vollständigkeit" Margin="8,0,0,0" VerticalAlignment="Bottom" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}"/></DockPanel>
+                    <ItemsControl ItemsSource="{Binding Kennzahlen.Stammdaten}"><ItemsControl.ItemTemplate><DataTemplate>
+                        <Grid Margin="0,3"><Grid.ColumnDefinitions><ColumnDefinition Width="64"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Feld}" FontSize="{DynamicResource TextS}" VerticalAlignment="Center"/>
+                            <Grid Grid.Column="1" Height="10" VerticalAlignment="Center">
+                                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="{DynamicResource RadiusBar}"/>
+                                <Border CornerRadius="{DynamicResource RadiusBar}" HorizontalAlignment="Left" Background="{Binding Stufe, Converter={StaticResource ZkBrushConv}}">
+                                    <Border.Width><MultiBinding Converter="{StaticResource AnteilBreite}" ConverterParameter="prozent"><Binding Path="Prozent"/><Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}"/></MultiBinding></Border.Width>
+                                </Border>
+                            </Grid>
+                            <TextBlock Grid.Column="2" Margin="10,0,0,0" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextS}" VerticalAlignment="Center"><Run Text="{Binding Gefuellt, Mode=OneWay}"/><Run Text="/"/><Run Text="{Binding Gesamt, Mode=OneWay}"/></TextBlock>
+                        </Grid>
+                    </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                </DockPanel></Border>
+            </UniformGrid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

@@ -55,6 +55,7 @@ public partial class PlayerWindow
         _codingSuggestions.BeginScan();
         RunSuggestionScanAsync(
                 provider.CodingSuggestionScan,
+                provider.CodingSuggestionRegistry,
                 new CodingSuggestionScanRequest(videoPath, haltung, settings?.CodingSuggestionsEnabled ?? true),
                 cts)
             .SafeFireAndForget("CodingSuggestionScan");
@@ -62,6 +63,7 @@ public partial class PlayerWindow
 
     private async Task RunSuggestionScanAsync(
         ICodingSuggestionScanService service,
+        ICodingSuggestionRegistry registry,
         CodingSuggestionScanRequest request,
         CancellationTokenSource cts)
     {
@@ -80,6 +82,13 @@ public partial class PlayerWindow
 
             if (!ReferenceEquals(_suggestionScanCts, cts))
                 return; // ein spaeterer Codiermodus hat uebernommen
+
+            // F4: Erst nach der Staleness-Pruefung merken, und nur einen Durchlauf, bei dem
+            // mindestens ein Teil wirklich gelaufen ist. Ein abgeschalteter oder komplett
+            // nicht verfuegbarer Lauf taeuchte in der Uebersicht sonst Arbeit vor.
+            if (CodingSuggestionMerkRegel.SollMerken(set))
+                registry.Merke(request.Haltung, set);
+
             _codingSuggestions.Apply(set);
             SuggestionMarkers.Build(_codingSuggestions.Rows);
         }

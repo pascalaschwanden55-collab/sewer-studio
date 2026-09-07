@@ -18,6 +18,7 @@ public sealed record DataPageStartFilter(string FieldName, string Value)
         "DN_mm" when Value == "?" => "DN unbekannt",
         "DN_mm" => $"DN {Value}",
         "Primaere_Schaeden" => $"Schaden {Value}",
+        "Strasse" => $"Strasse {Value}",
         _ => $"{FieldName}: {Value}"
     };
 
@@ -40,6 +41,7 @@ public sealed record DataPageStartFilter(string FieldName, string Value)
             "Zustandsklasse" => MatchesZustand(record),
             "DN_mm" => string.Equals(NormalizeDnKey(record.GetFieldValue("DN_mm")), Value, StringComparison.OrdinalIgnoreCase),
             "Primaere_Schaeden" => EnumerateDamageGroups(record).Any(c => string.Equals(c, Value, StringComparison.OrdinalIgnoreCase)),
+            "Strasse" => string.Equals(record.GetFieldValue(FieldKeys.Street), Value, StringComparison.OrdinalIgnoreCase),
             _ => false
         };
     }

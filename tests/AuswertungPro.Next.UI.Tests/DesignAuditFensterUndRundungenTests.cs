@@ -17,7 +17,12 @@ public sealed class DesignAuditFensterUndRundungenTests
     public void Rundungen_kommen_aus_den_Radius_Tokens()
     {
         var controls = File.ReadAllText(Path.Combine(UiRoot, "Theme", "Controls.xaml"));
-        foreach (var (key, wert) in new[] { ("RadiusS", "4"), ("RadiusM", "6"), ("RadiusL", "8"), ("RadiusXL", "10"), ("RadiusXXL", "14"), ("RadiusPill", "999") })
+        // B1: WPF teilt den Eckenradius getrennt auf Breite UND Hoehe auf. Ein zu grosser Wert
+        // (frueher 999) ergibt auf einer flachen, breiten Flaeche keine Kapsel, sondern eine
+        // Ellipse mit spitzen Enden. Jede Kapselform traegt deshalb die halbe ECHTE Hoehe:
+        // Pill 15 (Bedienelemente MinHeight 30), Chip 11 (Abzeichen ~22), Bar 5 (Balken 10),
+        // Circle 36 (die 72-px-Kreisflaeche des Leerzustands).
+        foreach (var (key, wert) in new[] { ("RadiusS", "4"), ("RadiusM", "6"), ("RadiusL", "8"), ("RadiusXL", "10"), ("RadiusXXL", "14"), ("RadiusPill", "15"), ("RadiusChip", "11"), ("RadiusBar", "5"), ("RadiusCircle", "36") })
             Assert.Contains($"<CornerRadius x:Key=\"{key}\">{wert}</CornerRadius>", controls);
 
         // Eine einzelne Zahl ist eine Stufe der Skala; vierteilige Werte (z. B. 8,8,0,0) sind bewusst

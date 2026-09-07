@@ -103,6 +103,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IPipeEndSuggestionScanService)] = services.PipeEndSuggestionScan,
             [typeof(ICodingSuggestionScanService)] = services.CodingSuggestionScan,
             [typeof(ICodingSuggestionExposure)] = services.CodingSuggestionExposure,
+            [typeof(ICodingSuggestionRegistry)] = services.CodingSuggestionRegistry,
             [typeof(ITrainingFfmpegPathResolver)] = services.TrainingFfmpegPaths,
             [typeof(ISidecarScriptLocator)] = services.SidecarScripts,
             [typeof(ISidecarTokenResolver)] = services.SidecarTokens,

@@ -99,21 +99,6 @@
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="4,3" CornerRadius="{DynamicResource RadiusL}">
                 <StackPanel Orientation="Horizontal">
-                    <ToggleButton x:Name="HaltungsansichtToggle"
-                                  Style="{StaticResource PageCompactToggleButton}"
-                                  Margin="0,0,6,0"
-                                  Checked="HaltungsansichtToggle_Changed"
-                                  Unchecked="HaltungsansichtToggle_Changed"
-                                  ToolTip="Zwischen Tabelle und Haltungsansicht umschalten">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8FD;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}"
-                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Haltungsansicht" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ToggleButton>
-
-                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
-
                     <Button Command="{Binding SaveCommand}"
                             Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
@@ -213,6 +198,9 @@
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE7C3;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
                                 </MenuItem>
                                 <Separator/>
+                                <MenuItem x:Name="HaltungsansichtToggle" Header="Alte Haltungsansicht" IsCheckable="True"
+                                          Checked="HaltungsansichtToggle_Changed" Unchecked="HaltungsansichtToggle_Changed"
+                                          ToolTip="Liste links und Formularkarten statt Tabelle, Übersicht und Eingabefeldern"/>
                                 <MenuItem x:Name="UndockButton" Header="Abdocken" Click="UndockGrid_Click"
                                           ToolTip="Tabelle in separatem Fenster öffnen (Multi-Monitor)">
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A7;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
@@ -370,10 +358,14 @@
                                  VerticalContentAlignment="Center" Padding="4,2"
                                  ToolTip="Zielposition eingeben (1-basiert) und Enter drücken"
                                  KeyDown="MoveToPositionBox_KeyDown"/>
-                        <Button Content="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"
-                                Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                        <!-- Glyph als ui:FluentIcon: ein reiner Button-Content erbt die Icon-Schrift
+                             nicht, weil der implizite TextBlock-Style des Themes sie ueberschreibt. -->
+                        <Button Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                                AutomationProperties.Name="Selektierte Zeile an Position verschieben"
                                 ToolTip="Selektierte Zeile an Position verschieben"
-                                Click="MoveToPosition_Click"/>
+                                Click="MoveToPosition_Click">
+                            <ui:FluentIcon Glyph="&#xE72A;" FontSize="{DynamicResource TextS}"/>
+                        </Button>
 
                         <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="8,4"/>
 
@@ -382,10 +374,12 @@
                                  VerticalContentAlignment="Center" Padding="4,2"
                                  ToolTip="Zeilennummer eingeben und Enter drücken"
                                  KeyDown="GoToRowBox_KeyDown"/>
-                        <Button Content="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"
-                                Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                        <Button Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                                AutomationProperties.Name="Zu Zeile springen"
                                 ToolTip="Zu Zeile springen"
-                                Click="GoToRow_Click"/>
+                                Click="GoToRow_Click">
+                            <ui:FluentIcon Glyph="&#xE72A;" FontSize="{DynamicResource TextS}"/>
+                        </Button>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -401,9 +395,11 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <ToggleButton Style="{StaticResource PageCompactToggleButton}" Margin="0,0,6,0" Tag="{Binding Key}"
-                                  Click="ColumnViewChip_Click"
-                                  ToolTip="{Binding Titel}" AutomationProperties.Name="{Binding Titel}">
-                        <TextBlock Text="{Binding Titel}"/>
+                                  Click="ColumnViewChip_Click" ToolTip="{Binding Titel}" AutomationProperties.Name="{Binding Titel}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Titel}"/>
+                            <TextBlock x:Name="ChipZaehler" Margin="6,0,0,0" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                        </StackPanel>
                     </ToggleButton>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
