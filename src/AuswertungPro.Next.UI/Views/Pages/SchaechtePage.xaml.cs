@@ -217,6 +217,7 @@ public partial class SchaechtePage : UserControl
                 ApplyColorStyle(column, col);
                 column.MinWidth = 90;
                 Grid.Columns.Add(column);
+                _columnFields[column] = col;
 
                 var defaultHorizontal = IsCostColumn(col)
                     ? HorizontalAlignment.Right

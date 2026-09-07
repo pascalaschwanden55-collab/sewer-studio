@@ -15,25 +15,28 @@ public sealed class DataPageColumnViewController
     private readonly DataGrid _grid;
     private readonly Func<DataGridColumn, string?> _fieldNameOf;
     private readonly Action<string> _store;
+    private readonly Func<string?, DataPageColumnView> _resolve;
 
     public DataPageColumnViewController(
         DataGrid grid,
         Func<DataGridColumn, string?> fieldNameOf,
         Func<string?> getStored,
-        Action<string> store)
+        Action<string> store,
+        Func<string?, DataPageColumnView>? resolve = null)
     {
         _grid = grid ?? throw new ArgumentNullException(nameof(grid));
         _fieldNameOf = fieldNameOf ?? throw new ArgumentNullException(nameof(fieldNameOf));
         ArgumentNullException.ThrowIfNull(getStored);
         _store = store ?? throw new ArgumentNullException(nameof(store));
-        ActiveKey = DataPageColumnViewCatalog.Resolve(getStored()).Key;
+        _resolve = resolve ?? DataPageColumnViewCatalog.Resolve;
+        ActiveKey = _resolve(getStored()).Key;
     }
 
     public string ActiveKey { get; private set; }
 
     public void Apply(string? key)
     {
-        var view = DataPageColumnViewCatalog.Resolve(key);
+        var view = _resolve(key);
         foreach (var column in _grid.Columns)
         {
             var field = _fieldNameOf(column);
