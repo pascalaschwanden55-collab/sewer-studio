@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -16,6 +17,11 @@ public sealed record BogenAnzeige(Geometry Pfad, Brush Pinsel, string Tooltip);
 /// Rohrquerschnitt mit bis zu drei Uhrlagen-Boegen (Inventar 5.1). Reine Darstellung: Die
 /// Geometrie kommt aus <see cref="RohrringGeometrie"/>, die Farbe je Stufe aus den
 /// Severity-Themebrushes. 0 Grad = 12 Uhr, im Uhrzeigersinn.
+///
+/// Fix-Runde 1: Die gebundene Sammlung ist beim Haltungswechsel dieselbe Instanz (nur geleert
+/// und neu gefuellt, ohne Property-Wechsel). Deshalb wird zusaetzlich auf
+/// <see cref="INotifyCollectionChanged"/> gehoert; die alte Sammlung wird beim Wechsel und beim
+/// Entladen des Controls wieder abgemeldet.
 /// </summary>
 public partial class RohrringControl : UserControl
 {
@@ -23,7 +29,13 @@ public partial class RohrringControl : UserControl
     private const double MittelpunktY = 60;
     private const double Radius = 50;
 
-    public RohrringControl() => InitializeComponent();
+    private INotifyCollectionChanged? _abonnierteEntries;
+
+    public RohrringControl()
+    {
+        InitializeComponent();
+        Unloaded += (_, _) => AbmeldenVonEntries();
+    }
 
     public static readonly DependencyProperty EntriesProperty = DependencyProperty.Register(
         nameof(Entries), typeof(IReadOnlyList<ProtocolEntry>), typeof(RohrringControl),
@@ -48,11 +60,34 @@ public partial class RohrringControl : UserControl
     private static void OnEntriesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var control = (RohrringControl)d;
-        var entries = e.NewValue as IReadOnlyList<ProtocolEntry> ?? Array.Empty<ProtocolEntry>();
+        control.AbmeldenVonEntries();
+        if (e.NewValue is INotifyCollectionChanged incc)
+        {
+            incc.CollectionChanged += control.OnEntriesCollectionChanged;
+            control._abonnierteEntries = incc;
+        }
+        control.AktualisiereBoegen();
+    }
+
+    private void OnEntriesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        => AktualisiereBoegen();
+
+    private void AbmeldenVonEntries()
+    {
+        if (_abonnierteEntries is null)
+            return;
+        _abonnierteEntries.CollectionChanged -= OnEntriesCollectionChanged;
+        _abonnierteEntries = null;
+    }
+
+    /// <summary>Boegen aus dem aktuellen Stand von <see cref="Entries"/> neu berechnen.</summary>
+    private void AktualisiereBoegen()
+    {
+        var entries = Entries ?? Array.Empty<ProtocolEntry>();
         var boegen = RohrringGeometrie.Boegen(entries)
-            .Select(b => new BogenAnzeige(control.PfadFuer(b), control.PinselFuer(b.Stufe), b.Tooltip))
+            .Select(b => new BogenAnzeige(PfadFuer(b), PinselFuer(b.Stufe), b.Tooltip))
             .ToList();
-        control.SetValue(BoegenPropertyKey, boegen);
+        SetValue(BoegenPropertyKey, boegen);
     }
 
     private Geometry PfadFuer(RohrringBogen b)
@@ -70,6 +105,8 @@ public partial class RohrringControl : UserControl
         return geometrie;
     }
 
+    // MutedBrush ist ein garantiert vorhandener Theme-Token (Theme.xaml/ThemeLight.xaml);
+    // kein fester Pinsel als Rueckfall.
     private Brush PinselFuer(int stufe)
-        => TryFindResource($"Severity{stufe}Brush") as Brush ?? Brushes.Gray;
+        => (TryFindResource($"Severity{stufe}Brush") as Brush) ?? (TryFindResource("MutedBrush") as Brush)!;
 }

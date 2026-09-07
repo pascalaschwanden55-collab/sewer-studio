@@ -1,7 +1,9 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Pages;
 using AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
@@ -110,6 +112,77 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
                 NovaRenderingChecks.ColorColumnsUseTheirCellForeground();
                 NovaRenderingChecks.LongMenuCanScrollToItsLastAction();
             }
+
+            WpfIsolatedTestProcess.MarkChildScenarioCompleted();
+        });
+    }
+
+    private static readonly string RohrringChildTestName =
+        typeof(DataPageNovaLayoutIsolatedSmokeTests).FullName
+        + "."
+        + nameof(Kindprozess_Rohrring_und_KI_Hinweis_folgen_derselben_Entries_Instanz);
+
+    [Fact]
+    public async Task Rohrring_und_KI_Hinweis_aktualisieren_sich_in_eigenem_Wpf_Prozess()
+    {
+        Assert.Null(System.Windows.Application.Current);
+        var result = await WpfIsolatedTestProcess.RunAsync(RohrringChildTestName, TimeSpan.FromSeconds(60));
+
+        Assert.Null(System.Windows.Application.Current);
+        Assert.False(result.TimedOut, result.DescribeFailure());
+        Assert.True(result.ExitCode == 0, result.DescribeFailure());
+        Assert.True(result.ChildScenarioCompleted, result.DescribeFailure());
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: DataPageViewModel.SelectedProtocolEntries ist EINE feste
+    /// ObservableCollection-Instanz, die beim Haltungswechsel nur geleert und neu gefuellt
+    /// wird (kein Property-Wechsel, keine neue Bindungsquelle). RohrringControl und
+    /// HaltungUebersichtPanel muessen deshalb auf CollectionChanged der bereits gebundenen
+    /// Sammlung reagieren, nicht nur einmal beim ersten Binden rechnen.
+    /// </summary>
+    [IsolatedWpfFact]
+    public void Kindprozess_Rohrring_und_KI_Hinweis_folgen_derselben_Entries_Instanz()
+    {
+        StaTestRunner.Run(() =>
+        {
+            Assert.Null(System.Windows.Application.Current);
+            var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            app.InitializeComponent();
+
+            var ringEntries = new ObservableCollection<ProtocolEntry>();
+            var ring = new RohrringControl { Entries = ringEntries };
+            Layout(ring);
+            Assert.Empty(ring.Boegen);
+
+            ringEntries.Add(new ProtocolEntry
+            {
+                Code = "BAB",
+                CodeMeta = new ProtocolEntryCodeMeta { Parameters = { ["Uhr_von"] = "12" } }
+            });
+            Layout(ring);
+            Assert.Single(ring.Boegen);
+
+            ringEntries.Clear();
+            Layout(ring);
+            Assert.Empty(ring.Boegen);
+
+            var panelEntries = new ObservableCollection<ProtocolEntry>();
+            var panel = new HaltungUebersichtPanel { Entries = panelEntries };
+            Layout(panel);
+            Assert.Equal(0, panel.OffeneKiBefunde);
+
+            panelEntries.Add(new ProtocolEntry
+            {
+                Code = "BAB",
+                Ai = new ProtocolEntryAiMeta { Accepted = false }
+            });
+            Layout(panel);
+            Assert.Equal(1, panel.OffeneKiBefunde);
+
+            panelEntries.Clear();
+            Layout(panel);
+            Assert.Equal(0, panel.OffeneKiBefunde);
 
             WpfIsolatedTestProcess.MarkChildScenarioCompleted();
         });

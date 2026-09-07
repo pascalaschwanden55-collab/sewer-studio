@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -15,10 +16,21 @@ namespace AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
 /// Uebersicht rechts neben der Liste: Rohrring, Eckdaten und Primaere Schaeden der gewaehlten
 /// Haltung, nur lesend. Der Doppelklick auf einen Schaden fuehrt auf denselben Weg wie die
 /// Haltungsansicht (Beobachtungen); der KI-Hinweis fuehrt in den Player.
+///
+/// Fix-Runde 1: Die gebundene Entries-Sammlung ist beim Haltungswechsel dieselbe Instanz (nur
+/// geleert und neu gefuellt, ohne Property-Wechsel). Deshalb wird zusaetzlich auf
+/// <see cref="INotifyCollectionChanged"/> gehoert; die alte Sammlung wird beim Wechsel und beim
+/// Entladen des Controls wieder abgemeldet.
 /// </summary>
 public partial class HaltungUebersichtPanel : UserControl
 {
-    public HaltungUebersichtPanel() => InitializeComponent();
+    private INotifyCollectionChanged? _abonnierteEntries;
+
+    public HaltungUebersichtPanel()
+    {
+        InitializeComponent();
+        Unloaded += (_, _) => AbmeldenVonEntries();
+    }
 
     public static readonly DependencyProperty RecordProperty = DependencyProperty.Register(
         nameof(Record), typeof(HaltungRecord), typeof(HaltungUebersichtPanel), new PropertyMetadata(null, OnRecordChanged));
@@ -102,12 +114,38 @@ public partial class HaltungUebersichtPanel : UserControl
             panel.PruefungText = string.Empty;
             panel.VideoText = "kein Video";
         }
+        // Pruefung/Video haengen an Record, offene KI-Befunde an Entries — beide Ableitungen
+        // beim Haltungswechsel gemeinsam neu ziehen, falls Entries bereits gebunden ist.
+        panel.AktualisiereOffeneKiBefunde();
     }
 
     private static void OnEntriesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var panel = (HaltungUebersichtPanel)d;
-        var entries = (e.NewValue as IEnumerable)?.OfType<ProtocolEntry>() ?? Enumerable.Empty<ProtocolEntry>();
-        panel.OffeneKiBefunde = entries.Count(x => x.Ai is { Accepted: false });
+        panel.AbmeldenVonEntries();
+        if (e.NewValue is INotifyCollectionChanged incc)
+        {
+            incc.CollectionChanged += panel.OnEntriesCollectionChanged;
+            panel._abonnierteEntries = incc;
+        }
+        panel.AktualisiereOffeneKiBefunde();
+    }
+
+    private void OnEntriesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        => AktualisiereOffeneKiBefunde();
+
+    private void AbmeldenVonEntries()
+    {
+        if (_abonnierteEntries is null)
+            return;
+        _abonnierteEntries.CollectionChanged -= OnEntriesCollectionChanged;
+        _abonnierteEntries = null;
+    }
+
+    /// <summary>Offene KI-Befunde aus dem aktuellen Stand von <see cref="Entries"/> neu zaehlen.</summary>
+    private void AktualisiereOffeneKiBefunde()
+    {
+        var entries = Entries?.OfType<ProtocolEntry>() ?? Enumerable.Empty<ProtocolEntry>();
+        OffeneKiBefunde = entries.Count(x => x.Ai is { Accepted: false });
     }
 }
