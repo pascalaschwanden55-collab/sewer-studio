@@ -25,7 +25,25 @@ public sealed class CodingSuggestionRegistry : ICodingSuggestionRegistry
         lock (_gate)
             _runs[key] = new CodingSuggestionRun(key, DateTimeOffset.Now, set);
 
-        Geaendert?.Invoke();
+        // Jeden Abonnenten einzeln und gekapselt aufrufen: Ein fehlerhafter Abonnent
+        // darf den Vorabdurchlauf nicht als gescheitert erscheinen lassen. Ausserdem
+        // wuerde ein einzelner geworfener Delegate bei Action.Invoke() die Aufrufkette
+        // abbrechen und die restlichen Abonnenten nie erreichen.
+        var abonnenten = Geaendert?.GetInvocationList();
+        if (abonnenten is null)
+            return;
+        foreach (var abonnent in abonnenten)
+        {
+            try
+            {
+                ((Action)abonnent)();
+            }
+            catch (Exception)
+            {
+                // Bewusst verschluckt: Der Produzent (z. B. der Player-Scan) darf durch
+                // einen fehlerhaften Abonnenten nicht selbst fehlschlagen.
+            }
+        }
     }
 
     public IReadOnlyList<CodingSuggestionRun> Heute()

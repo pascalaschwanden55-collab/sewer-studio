@@ -1,3 +1,4 @@
+using System;
 using AuswertungPro.Next.Application.UseCases.CodingSuggestions;
 using Xunit;
 
@@ -26,5 +27,20 @@ public sealed class CodingSuggestionRegistryTests
         var reg = new CodingSuggestionRegistry();
         reg.Merke(" ", CodingSuggestionSet.Leer("a"));
         Assert.Empty(reg.Heute());
+    }
+
+    [Fact]
+    public void Ein_werfender_Abonnent_stoppt_weder_Merke_noch_die_uebrigen_Abonnenten()
+    {
+        var reg = new CodingSuggestionRegistry();
+        var zweiterAufgerufen = false;
+        reg.Geaendert += () => throw new InvalidOperationException("kaputter Abonnent");
+        reg.Geaendert += () => zweiterAufgerufen = true;
+
+        var ausnahme = Record.Exception(() => reg.Merke("1-2", CodingSuggestionSet.Leer("a")));
+
+        Assert.Null(ausnahme);
+        Assert.True(zweiterAufgerufen);
+        Assert.Single(reg.Heute());
     }
 }
