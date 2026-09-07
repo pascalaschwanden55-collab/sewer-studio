@@ -12,14 +12,21 @@ namespace AuswertungPro.Next.UI.Tests;
 /// </summary>
 public sealed class DesignAuditNovaTabelleTests
 {
+    /// <summary>Der ganze DataGridColumnHeader-Stil eines Themes als Text.</summary>
+    private static string Kopfstil(string datei)
+    {
+        var xaml = DesignAuditNovaPaletteTests.Xaml(datei);
+        var header = Regex.Match(xaml, "<Style TargetType=\"\\{x:Type DataGridColumnHeader\\}\">[\\s\\S]*?\n    </Style>").Value;
+        Assert.True(header.Length > 0, $"{datei}: DataGridColumnHeader-Stil nicht gefunden");
+        return header;
+    }
+
     [Theory]
     [InlineData("ThemeLight.xaml")]
     [InlineData("Theme.xaml")]
     public void Tabellenkopf_schreibt_gross(string datei)
     {
-        var xaml = DesignAuditNovaPaletteTests.Xaml(datei);
-        var header = Regex.Match(xaml, "<Style TargetType=\"\\{x:Type DataGridColumnHeader\\}\">[\\s\\S]*?\n    </Style>").Value;
-        Assert.True(header.Length > 0, $"{datei}: DataGridColumnHeader-Stil nicht gefunden");
+        var header = Kopfstil(datei);
 
         // Kapitaelchen greifen mit der Programmschrift nicht (Prototyp: echte Grossbuchstaben,
         // Letter-Spacing). Die alte Regel darf nicht mehr im Kopf-Template stehen.
@@ -38,9 +45,44 @@ public sealed class DesignAuditNovaTabelleTests
         Assert.DoesNotContain("controls:", header);
         Assert.DoesNotContain("Converter=", header);
         Assert.Contains("<ContentPresenter VerticalAlignment=\"Center\"/>", header);
-        Assert.Contains("FontSize=\"{DynamicResource TextXS}\"", header);
-        Assert.Contains("Foreground=\"{DynamicResource MutedBrush}\"", header);
         Assert.Contains("TextTrimming=\"CharacterEllipsis\"", header);
+
+        // Nova-Fixwelle 2b (F4): Groesse und Tinte erbt die Vorlage vom Kopf. Vorher standen
+        // sie fest im Template und gewannen gegen jeden Setter — auch gegen einen abgeleiteten
+        // ColumnHeaderStyle, der eine Spalte einfaerben will.
+        Assert.Contains(
+            "FontSize=\"{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type DataGridColumnHeader}}}\"",
+            header);
+        Assert.Contains(
+            "Foreground=\"{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type DataGridColumnHeader}}}\"",
+            header);
+        // Damit die Vererbung ueberhaupt etwas liefert, muss der Kopfstil selbst Groesse und
+        // Tinte setzen — die Groesse als Token, nicht als nackte Zahl.
+        Assert.Contains("<Setter Property=\"FontSize\" Value=\"{DynamicResource TextXS}\"/>", header);
+        Assert.Contains("<Setter Property=\"Foreground\" Value=\"{DynamicResource MutedBrush}\"/>", header);
+    }
+
+    /// <summary>
+    /// Nova-Fixwelle 2b (P4): Die Ziehgriffe zwischen den Kopfzellen tragen eine eigene
+    /// Vorlage. Ohne sie zeichnete WPF seine Standardoptik — im dunklen Theme fast weiss und
+    /// damit auffaelliger als der Kopftext. Nur der rechte Griff zeigt eine Linie, sonst
+    /// staende an jeder Spaltengrenze eine doppelte.
+    /// </summary>
+    [Theory]
+    [InlineData("ThemeLight.xaml")]
+    [InlineData("Theme.xaml")]
+    public void Die_Kopfgriffe_zeichnen_hoechstens_eine_dezente_Trennlinie(string datei)
+    {
+        var header = Kopfstil(datei);
+
+        Assert.Contains("x:Key=\"KopfGriffOhneLinie\"", header);
+        Assert.Contains("x:Key=\"KopfGriffTrennlinie\"", header);
+        Assert.Contains("PART_LeftHeaderGripper\" Style=\"{StaticResource KopfGriffOhneLinie}\"", header);
+        Assert.Contains("PART_RightHeaderGripper\" Style=\"{StaticResource KopfGriffTrennlinie}\"", header);
+        Assert.Contains("Fill=\"{DynamicResource BorderBrush}\"", header);
+
+        // Der Ziehbereich bleibt: 6 px breit, Cursor SizeWE.
+        Assert.Equal(2, Regex.Matches(header, "Width=\"6\" Cursor=\"SizeWE\"").Count);
     }
 
     /// <summary>
