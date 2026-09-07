@@ -9,6 +9,7 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
 using AuswertungPro.Next.Application.Ai.Training.Inventory;
 using AuswertungPro.Next.Application.UseCases.BendSuggestions;
+using AuswertungPro.Next.Application.UseCases.CodingSuggestions;
 using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
 using AuswertungPro.Next.UI.Ai.Training;
 using Microsoft.Extensions.Logging;
@@ -119,9 +120,11 @@ public sealed class ServiceProviderRegistrationTests
         // 157 -> 158: ICodingSuggestionScanService fuehrt im Codiermodus den Vorabdurchlauf
         // (Bogen, dann Rohranfang/Rohrende) und setzt das Sitzungsgedaechtnis — der Player
         // kennt nur diesen Vertrag, keine Modellwahl.
+        // 158 -> 159: ICodingSuggestionRegistry merkt den letzten Vorabdurchlauf je Haltung
+        // (Sitzungsgedaechtnis fuer die Karte "KI-Vorabdurchlauf" in der Uebersicht, Nova-Etappe 2).
         Assert.True(
-            registrations.Count == 158,
-            $"Erwartet 158 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 159,
+            $"Erwartet 159 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(
@@ -212,6 +215,9 @@ public sealed class ServiceProviderRegistrationTests
         Assert.Same(
             services.CodingSuggestionExposure,
             registrations[typeof(ICodingSuggestionExposure)]);
+        Assert.Same(
+            services.CodingSuggestionRegistry,
+            registrations[typeof(ICodingSuggestionRegistry)]);
         Assert.Same(
             services.VideoClipExtraction,
             registrations[typeof(IVideoClipExtractor)]);

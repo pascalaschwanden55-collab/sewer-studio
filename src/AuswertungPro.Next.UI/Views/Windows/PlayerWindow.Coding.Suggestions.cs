@@ -55,6 +55,7 @@ public partial class PlayerWindow
         _codingSuggestions.BeginScan();
         RunSuggestionScanAsync(
                 provider.CodingSuggestionScan,
+                provider.CodingSuggestionRegistry,
                 new CodingSuggestionScanRequest(videoPath, haltung, settings?.CodingSuggestionsEnabled ?? true),
                 cts)
             .SafeFireAndForget("CodingSuggestionScan");
@@ -62,6 +63,7 @@ public partial class PlayerWindow
 
     private async Task RunSuggestionScanAsync(
         ICodingSuggestionScanService service,
+        ICodingSuggestionRegistry registry,
         CodingSuggestionScanRequest request,
         CancellationTokenSource cts)
     {
@@ -77,6 +79,7 @@ public partial class PlayerWindow
                     _codingSuggestions.SetPercent(p);
             });
             var set = await service.ScanAsync(request, cts.Token, fortschritt);
+            registry.Merke(request.Haltung, set);
 
             if (!ReferenceEquals(_suggestionScanCts, cts))
                 return; // ein spaeterer Codiermodus hat uebernommen
