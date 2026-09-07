@@ -78,7 +78,6 @@ using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
 using AuswertungPro.Next.Application.UseCases.BendSuggestions;
-using AuswertungPro.Next.Application.UseCases.CodingSuggestions;
 
 namespace AuswertungPro.Next.UI
 {
@@ -294,9 +293,6 @@ namespace AuswertungPro.Next.UI
         // Sitzungsgedaechtnis der angesehenen Vorschlagslisten — bewusst Singleton: Das
         // Gedaechtnis muss den ganzen Programmlauf leben, ein Neustart setzt es zurueck.
         public ICodingSuggestionExposure CodingSuggestionExposure { get; }
-        // Sitzungsgedaechtnis der Vorabdurchlauf-Ergebnisse fuer die Uebersicht (Karte
-        // "KI-Vorabdurchlauf", Nova-Etappe 2) — ebenfalls bewusst Singleton je Programmlauf.
-        public ICodingSuggestionRegistry CodingSuggestionRegistry { get; }
         public IVideoClipExtractor VideoClipExtraction { get; }
         public ITelemetryPathResolver TelemetryPaths { get; }
         public ISidecarTelemetryWriter SidecarTelemetry { get; }
@@ -700,7 +696,6 @@ namespace AuswertungPro.Next.UI
                 FfmpegExecutables.ResolveFfmpeg,
                 () => Path.Combine(Path.GetTempPath(), "auswertungpro-bogen-scan"));
             CodingSuggestionExposure = new CodingSuggestionExposure();
-            CodingSuggestionRegistry = new CodingSuggestionRegistry();
             VideoClipExtraction = new VideoClipExtractionService(ProcessOutputs);
             // Picker-Anordnung wie ISYBAU/WinCan (kuratierter VsaCodeTree), aber Mengen-/Uhrlage-
             // Regeln aus dem aktuellen VSA-Katalog – Codes sind EN-13508-/VSA-konform (geprueft).
