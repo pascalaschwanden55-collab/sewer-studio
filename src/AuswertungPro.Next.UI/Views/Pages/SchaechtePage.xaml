@@ -59,11 +59,6 @@
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
-                                <MenuItem IsEnabled="False" Focusable="False" StaysOpenOnClick="True">
-                                    <MenuItem.Header>
-                                        <TextBlock Text="DATEN" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" Margin="2,4"/>
-                                    </MenuItem.Header>
-                                </MenuItem>
                                 <MenuItem Header="PDF-Daten" Command="{Binding ErgaenzeStammdatenAusPdfsCommand}"
                                           ToolTip="Fehlende Schachtform, Dimension und Schachttiefe aus vorhandenen PDFs ergänzen">
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
@@ -76,11 +71,11 @@
                                           ToolTip="Leere Felder aus dem QGIS-Bestand ergänzen. Gefüllte Felder bleiben unberührt; vorher erscheint ein Bericht.">
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE896;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
                                 </MenuItem>
-                                <MenuItem Header="Katasterkennungen" Command="{Binding KatasterKennungenErgaenzenCommand}"
+                                <MenuItem Header="Katasterkennungen" Command="{Binding KatasterKennungenErgaenzenCommand}" IsEnabled="{Binding CanMutateShaftData}"
                                           ToolTip="GEONIS-Kennungen aus der Kennungstabelle übernehmen, damit der XTF-Export dieselben Objekte wie der Kataster trägt. Nur Kennungen, keine Fachwerte; vorher erscheint ein Bericht.">
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
                                 </MenuItem>
-                                <MenuItem Header="Feldnamen aufräumen" Command="{Binding FeldnamenAufraeumenCommand}"
+                                <MenuItem Header="Feldnamen aufräumen" Command="{Binding FeldnamenAufraeumenCommand}" IsEnabled="{Binding CanMutateShaftData}"
                                           ToolTip="Doppelte Schreibweisen desselben Feldes zusammenführen (Zeichensalat aus alten Importen). Zeigt vorher einen Bericht.">
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8FD;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
                                 </MenuItem>
@@ -89,11 +84,6 @@
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE71B;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
                                 </MenuItem>
                                 <Separator/>
-                                <MenuItem IsEnabled="False" Focusable="False" StaysOpenOnClick="True">
-                                    <MenuItem.Header>
-                                        <TextBlock Text="REIHENFOLGE" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" Margin="2,4"/>
-                                    </MenuItem.Header>
-                                </MenuItem>
                                 <MenuItem Header="Hoch" Command="{Binding MoveUpCommand}">
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74A;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                                 </MenuItem>
@@ -101,11 +91,6 @@
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74B;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                                 </MenuItem>
                                 <Separator/>
-                                <MenuItem IsEnabled="False" Focusable="False" StaysOpenOnClick="True">
-                                    <MenuItem.Header>
-                                        <TextBlock Text="FACHLICH" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" Margin="2,4"/>
-                                    </MenuItem.Header>
-                                </MenuItem>
                                 <MenuItem Header="Sanierungsmassnahmen..." Click="SanierungsmassnahmenMenu_Click">
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                                 </MenuItem>
@@ -116,11 +101,6 @@
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                                 </MenuItem>
                                 <Separator/>
-                                <MenuItem IsEnabled="False" Focusable="False" StaysOpenOnClick="True">
-                                    <MenuItem.Header>
-                                        <TextBlock Text="ANSICHT" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" Margin="2,4"/>
-                                    </MenuItem.Header>
-                                </MenuItem>
                                 <MenuItem Header="Ansicht anpassen" ToolTip="Position, Zeile, Zeilenhöhe, Zoom und Ausrichtung">
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE713;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                                     <MenuItem StaysOpenOnClick="True">

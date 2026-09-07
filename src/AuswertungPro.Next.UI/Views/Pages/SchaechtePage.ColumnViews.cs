@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using System.Windows.Threading;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 
@@ -19,6 +21,8 @@ public partial class SchaechtePage
 {
     private readonly Dictionary<DataGridColumn, string> _columnFields = new();
     private DataPageColumnViewController? _columnViews;
+    private bool _columnsChangedHooked;
+    private bool _reapplyGeplant;
 
     private void ColumnViews_Loaded(object sender, RoutedEventArgs e)
     {
@@ -46,6 +50,33 @@ public partial class SchaechtePage
             SchaechteColumnViewCatalog.Resolve);
         _columnViews.Apply(_columnViews.ActiveKey);
         SyncColumnViewChips();
+
+        // Die Schachtspalten werden pro Projekt neu aufgebaut (RebuildColumns); dort darf
+        // ausser der einen erlaubten _columnFields-Zeile nichts ergaenzt werden. Ein erneuter
+        // Spaltenaufbau (Reset+Add auf Grid.Columns) loest die aktive Ansicht deshalb hier nach,
+        // sobald die neuen Spalten stehen (Background-Prioritaet, einmalig pro Aufbau).
+        if (!_columnsChangedHooked)
+        {
+            _columnsChangedHooked = true;
+            Grid.Columns.CollectionChanged += Grid_ColumnsChangedForColumnViews;
+        }
+    }
+
+    private void Grid_ColumnsChangedForColumnViews(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        _ = sender;
+        if (_reapplyGeplant)
+            return;
+        if (e.Action != NotifyCollectionChangedAction.Reset && e.Action != NotifyCollectionChangedAction.Add)
+            return;
+
+        _reapplyGeplant = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+        {
+            _reapplyGeplant = false;
+            _columnViews?.Apply(_columnViews.ActiveKey);
+            SyncColumnViewChips();
+        }));
     }
 
     private void ColumnViewChip_Click(object sender, RoutedEventArgs e)
@@ -59,6 +90,11 @@ public partial class SchaechtePage
 
     private void SyncColumnViewChips()
     {
+        // Ein vorheriger Spaltenaufbau hinterlaesst sonst tote Eintraege (alte DataGridColumn-
+        // Objekte); ohne Bereinigung zaehlt "Alle Spalten" zu viele Spalten.
+        foreach (var veraltet in _columnFields.Keys.Where(spalte => !Grid.Columns.Contains(spalte)).ToList())
+            _columnFields.Remove(veraltet);
+
         foreach (var chip in FindVisualChildren<ToggleButton>(ColumnViewChips))
         {
             chip.IsChecked = string.Equals(chip.Tag as string, _columnViews?.ActiveKey, StringComparison.OrdinalIgnoreCase);
