@@ -683,6 +683,28 @@ public sealed class DataPageLayoutSettings
 {
     /// <summary>Gewaehlte Spaltenansicht der Haltungsliste (Schluessel aus DataPageColumnViewCatalog). Leer = alle Spalten.</summary>
     public string ActiveColumnView { get; set; } = "alle";
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 4: Kompakt wird nur EINMAL als Standard gesetzt, wenn eine
+    /// bestehende Installation aktualisiert wird (das Flag ist dann noch nicht gesetzt).
+    /// Danach zaehlt ausschliesslich die vom Benutzer gewaehlte Ansicht — siehe
+    /// <c>KompaktStartRegel</c>. Gilt gleichermassen fuer Haltungen (<c>DataPageLayout</c>)
+    /// und Schaechte (<c>SchaechtePageLayout</c>), da beide dieselbe Klasse verwenden.
+    /// </summary>
+    public bool NovaKompaktEinmalGesetzt { get; set; }
+
+    /// <summary>
+    /// Nova-Fixwelle 2b, Runde 2: Die Regel „Zahlen stehen rechts" wirkt nur beim Aufbau
+    /// neuer Spalten. In einer bestehenden Installation liegt aber ein gespeichertes
+    /// Spaltenlayout mit <c>HorizontalAlignment = Left</c> vor und gewinnt — dort staenden
+    /// DN und Laenge weiter links. Ist dieses Flag noch nicht gesetzt, hebt
+    /// <c>ZahlenRechtsMigration</c> die gespeicherte Ausrichtung aller Zahlenspalten genau
+    /// einmal auf Right und die gespeicherten Breiten von Name, Strasse und Material nur
+    /// dann an, wenn sie unter der Startbreite liegen. Danach zaehlt wieder ausschliesslich,
+    /// was der Benutzer eingestellt hat. Gilt fuer Haltungen und Schaechte.
+    /// </summary>
+    public bool ZahlenRechtsEinmalGesetzt { get; set; }
+
     public double GridMinRowHeight { get; set; } = 38d;
     public double GridZoom { get; set; } = 1.0d;
     public bool IsColumnReorderEnabled { get; set; }

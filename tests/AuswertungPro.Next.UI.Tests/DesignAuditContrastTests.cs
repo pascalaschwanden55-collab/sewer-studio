@@ -61,6 +61,31 @@ public sealed class DesignAuditContrastTests
             $"{themeFile}: InputBorderBrush erreicht auf CardBrush keine 3:1.");
     }
 
+    /// <summary>
+    /// Nova-Fixwelle 2b (P4): Die Trennlinie zwischen den Kopfzellen ist Beiwerk. Sie darf sich
+    /// deshalb nicht staerker vom Kopfgrund abheben als der Kopftext selbst — genau das war im
+    /// dunklen Theme der Fehler (Standardgriff von WPF, fast weiss auf dunkelblauem Kopf).
+    ///
+    /// Die Regel ist bewusst als Kontrast formuliert und nicht als "nicht heller": Im hellen
+    /// Theme ist eine Linie HELLER als die Tinte gerade das Unauffaellige, im dunklen das
+    /// Auffaellige. Der Vergleich gegen den Kopfgrund gilt in beiden Themes gleich.
+    /// </summary>
+    [Theory]
+    [InlineData("Theme.xaml")]
+    [InlineData("ThemeLight.xaml")]
+    public void Die_Kopf_Trennlinie_draengt_sich_nicht_vor_den_Kopftext(string themeFile)
+    {
+        var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+
+        var grund = ReadColor(xaml, "ColorHeader");
+        var linie = Contrast(ReadColor(xaml, "ColorBorder"), grund);
+        var tinte = Contrast(ReadColor(xaml, "ColorTextMuted"), grund);
+
+        Assert.True(
+            linie < tinte,
+            $"{themeFile}: Kopf-Trennlinie {linie:0.00}:1 gegen den Kopfgrund, Kopftext nur {tinte:0.00}:1.");
+    }
+
     [Fact]
     public void Muted_dark_text_and_light_warning_text_reach_normal_text_contrast()
     {

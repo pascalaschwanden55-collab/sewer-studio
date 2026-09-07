@@ -13,12 +13,30 @@ public static class HaltungFaktenText
     /// <summary>Der Platzhalter fuer ein leeres Feld.</summary>
     public const string Leer = "–";
 
+    /// <summary>
+    /// Zaehlt <paramref name="wert"/> als leer? Leer sind: nichts, nur Leerzeichen — und der
+    /// Text einer nicht gesetzten Bindung.
+    ///
+    /// Task 6: Ohne gewaehlte Zeile liefert WPF fuer eine Feldbindung
+    /// <c>DependencyProperty.UnsetValue</c>. Wird das stur in Text verwandelt, steht in der
+    /// Uebersicht "{DependencyProperty.UnsetValue}" (Pascals Bild vom 07.09., DN / Profil).
+    /// Solche Platzhalter beginnen immer mit einer geschweiften Klammer; ein Fachwert tut das
+    /// nie. Die Uebersicht bekommt deshalb hier dieselbe Antwort wie fuer ein leeres Feld.
+    /// Diese Klasse bleibt dabei WPF-frei — sie kennt nur den Text.
+    /// </summary>
+    public static bool IstLeer(string? wert)
+    {
+        var text = (wert ?? string.Empty).Trim();
+        return text.Length == 0 || text.StartsWith('{');
+    }
+
     /// <summary>Ein einzelner Wert, wahlweise mit Einheit ("30" + " m" = "30 m"; leer = "–").</summary>
     public static string Wert(string? wert, string? einheit = null)
     {
-        var text = (wert ?? string.Empty).Trim();
-        if (text.Length == 0)
+        if (IstLeer(wert))
             return Leer;
+
+        var text = (wert ?? string.Empty).Trim();
         var suffix = (einheit ?? string.Empty).Trim();
         return suffix.Length == 0 ? text : $"{text} {suffix}";
     }
@@ -30,8 +48,8 @@ public static class HaltungFaktenText
     public static string Zusammen(IEnumerable<string?> teile, string trenner = " · ")
     {
         var gefuellt = (teile ?? Enumerable.Empty<string?>())
+            .Where(t => !IstLeer(t))
             .Select(t => (t ?? string.Empty).Trim())
-            .Where(t => t.Length > 0)
             .ToList();
         return gefuellt.Count == 0 ? Leer : string.Join(trenner, gefuellt);
     }

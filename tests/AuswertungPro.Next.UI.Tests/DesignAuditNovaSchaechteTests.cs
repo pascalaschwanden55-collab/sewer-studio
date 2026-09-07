@@ -59,4 +59,117 @@ public sealed class DesignAuditNovaSchaechteTests
         Assert.Contains("AutomationProperties.Name=\"Schachtgrundriss\"", xaml);
         Assert.Contains("ZustandsklasseInkConverter", xaml);
     }
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 4: Suche als Pille rechts, gleiches Muster wie die globale Suche
+    /// in MainWindow.xaml (RadiusPill, InputBorderBrush, Lupe). Ohne F3-Marke - die bleibt den
+    /// Haltungen vorbehalten.
+    /// </summary>
+    [Fact]
+    public void Werkzeugleiste_zeigt_die_Suche_als_Pille_ohne_F3_Marke()
+    {
+        var xaml = Xaml();
+        Assert.Contains("{DynamicResource RadiusPill}", xaml);
+        Assert.Contains("{DynamicResource InputBorderBrush}", xaml);
+        Assert.Contains("Suche Schacht", xaml);
+        Assert.DoesNotContain("Text=\"F3\"", xaml);
+        Assert.DoesNotContain("PreviewKeyDown=\"", xaml);
+    }
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 6: Ohne gewaehlte Zeile zeigt die Schachtansicht NUR den
+    /// Leerzustand — kein Grundriss, keine leeren Beschriftungen, keine Knoepfe.
+    /// </summary>
+    [Fact]
+    public void Schachtansicht_zeigt_ohne_Auswahl_nur_den_Leerzustand()
+    {
+        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
+        Assert.Contains("x:Name=\"Leerzustand\"", xaml);
+        Assert.Contains("Kein Schacht gewählt. Links eine Zeile wählen.", xaml);
+
+        var inhalt = Regex.Match(xaml, @"<DockPanel x:Name=""Inhalt""[\s\S]*?</DockPanel.Style>");
+        Assert.True(inhalt.Success, "Inhalt der Schachtansicht braucht einen eigenen Sichtbarkeitsschalter");
+        Assert.Contains("<DataTrigger Binding=\"{Binding Record, ElementName=Root}\" Value=\"{x:Null}\">", inhalt.Value);
+        Assert.Contains("<Setter Property=\"Visibility\" Value=\"Collapsed\"/>", inhalt.Value);
+    }
+
+    /// <summary>
+    /// Task 6: Die Zustandsklasse der Schachtliste verwendet die gemeinsame Marke, das
+    /// Protokoll den gemeinsamen Knopf. Keine zweite Schachtfabrik daneben.
+    /// </summary>
+    [Fact]
+    public void Zustandsklasse_und_Protokoll_kommen_aus_den_gemeinsamen_Fabriken()
+    {
+        var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
+        var protokoll = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.Protokollspalte.cs"));
+
+        Assert.Contains("ZustandsklasseChipColumnFactory.Create(", code);
+        Assert.DoesNotContain("SchaechteZustandsklasseColumnFactory", code);
+        Assert.Contains("SchaechteProtokollColumnFactory.Create(", protokoll);
+        Assert.False(
+            File.Exists(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechteZustandsklasseColumnFactory.cs")),
+            "Die eigene Schachtfabrik ist durch die gemeinsame Marke ersetzt.");
+    }
+
+    /// <summary>
+    /// Task 6 (Review-Minor aus Task 1): Der Anzeigename einer Spalte wird genau EINMAL geholt
+    /// und danach gross geschrieben. Vorher setzte der Textspalten-Zweig den Kopf selbst und
+    /// direkt darunter wurde er nochmals gelesen und ueberschrieben.
+    /// </summary>
+    [Fact]
+    public void Tabellenkopf_wird_einmal_geholt_und_gross_geschrieben()
+    {
+        var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
+        var aufbau = Regex.Match(code, @"private void RebuildColumns\(\)[\s\S]*?\n    \}");
+        Assert.True(aufbau.Success, "RebuildColumns nicht gefunden");
+
+        Assert.Single(Regex.Matches(aufbau.Value, @"GetDisplayHeader\("));
+        Assert.Contains("GrossbuchstabenConverter.Anwenden(kopf)", aufbau.Value);
+    }
+
+    /// <summary>
+    /// Task 6, Fix-Runde 1: Eine echte Auswahl in der Zustandsklassen-Marke muss als
+    /// Handeingabe gestempelt werden — nur handgesetzte Felder gehen in die XTF. Die Seite merkt
+    /// sich dafuer den Wert beim Oeffnen der Zelle und schreibt beim Schliessen nur bei echter
+    /// Aenderung; das Projekt gilt danach als geaendert.
+    /// </summary>
+    [Fact]
+    public void Eine_Auswahl_der_Zustandsklasse_wird_gestempelt_und_meldet_die_Aenderung()
+    {
+        var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
+
+        Assert.Contains("_zustandsklasseBeimOeffnen", code);
+        var commit = Regex.Match(code, @"private void Grid_CellEditEnding[\s\S]*?\n    \}");
+        Assert.True(commit.Success, "Grid_CellEditEnding nicht gefunden");
+        Assert.Contains("SchaechteFieldEditController.ApplyZustandsklasse(", commit.Value);
+        Assert.Contains("MarkProjectDirty();", commit.Value);
+    }
+
+    /// <summary>
+    /// Task 6, Fix-Runde 1: Knopf und Gedankenstrich der Statusspalten kommen in beiden Listen
+    /// aus demselben Baustein — sonst driften Stil, Hinweis und vorlesbarer Name auseinander.
+    /// </summary>
+    [Fact]
+    public void Knopfzellen_beider_Listen_kommen_aus_einem_Baustein()
+    {
+        foreach (var datei in new[] { "HaltungStatusColumnFactory.cs", "SchaechteProtokollColumnFactory.cs" })
+        {
+            var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", datei));
+            Assert.Contains("StatusZellenBausteine.Aktionsknopf(", code);
+            Assert.Contains("StatusZellenBausteine.Fehlt(", code);
+        }
+    }
+
+    /// <summary>
+    /// Task 6, Fix-Runde 1: Auch die Schachtansicht zeigt fuer ein leeres Eckdatenfeld den
+    /// Gedankenstrich statt einer leeren Zeile unter der Beschriftung.
+    /// </summary>
+    [Fact]
+    public void Schachtansicht_zeigt_leere_Eckdaten_als_Gedankenstrich()
+    {
+        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
+        Assert.Contains("haltung:FaktWertConverter", xaml);
+        foreach (var feld in new[] { "Funktion", "Material", "Schachttiefe", "Baujahr", "Belastungsklasse", "Inspektionsdatum" })
+            Assert.Contains($"Fields[{feld}], Converter={{StaticResource FaktWertConv}}", xaml);
+    }
 }

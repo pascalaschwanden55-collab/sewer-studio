@@ -57,4 +57,19 @@ public static class VisualTreeSafe
 
         return null;
     }
+
+    /// <summary>Alle Nachkommen vom Typ <typeparamref name="T"/> im visuellen Baum (Tiefensuche).</summary>
+    public static System.Collections.Generic.IEnumerable<T> FindDescendants<T>(DependencyObject root)
+        where T : DependencyObject
+    {
+        var count = VisualTreeHelper.GetChildrenCount(root);
+        for (var index = 0; index < count; index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+            if (child is T match)
+                yield return match;
+            foreach (var nested in FindDescendants<T>(child))
+                yield return nested;
+        }
+    }
 }

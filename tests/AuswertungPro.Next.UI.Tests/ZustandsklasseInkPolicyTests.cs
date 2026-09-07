@@ -42,21 +42,22 @@ public sealed class ZustandsklasseInkPolicyTests
     }
 
     /// <summary>
-    /// Nova-Fixwelle B6: Die Zustandsklasse der Schachtliste war eine <c>DataGridComboBoxColumn</c>.
-    /// Deren Anzeigeelement ist ein internes ComboBox-Abkoemmling; die Ziffer bekam ihre Farbe am
-    /// Ende vom impliziten TextBlock-Stil des Themes und stand im Dunkeln weiss auf Gelb. Die
-    /// Spalte zeigt jetzt eine eigene Zellvorlage mit Text zum Anzeigen und Auswahl zum Bearbeiten.
-    /// Die tatsaechlich gezeichnete Tinte prueft <c>NovaRenderingChecks.SchachtZustandsklasseBleibtSchwarz</c>
-    /// im STA-Kindprozess.
+    /// Nova-Fixwelle B6, seit Etappe 2b als gemeinsame Marke: Die Zustandsklasse der
+    /// Schachtliste war eine <c>DataGridComboBoxColumn</c>. Deren Anzeigeelement ist ein
+    /// internes ComboBox-Abkoemmling; die Ziffer bekam ihre Farbe am Ende vom impliziten
+    /// TextBlock-Stil des Themes und stand im Dunkeln weiss auf Gelb. Haltungs- und Schachtliste
+    /// verwenden jetzt dieselbe Fabrik: Marke zum Anzeigen, Auswahl 0 bis 4 zum Bearbeiten. Die
+    /// tatsaechlich gezeichnete Tinte prueft
+    /// <c>NovaRenderingChecks.SchachtZustandsklasseMarkeBleibtLesbar</c> im STA-Kindprozess.
     /// </summary>
     [Fact]
     public void Zustandsklasse_der_Schachtliste_hat_getrennte_Vorlagen_fuer_Anzeige_und_Auswahl()
     {
-        var spalte = AuswertungPro.Next.UI.Views.Pages.SchaechteZustandsklasseColumnFactory.Create("Zustandsklasse", "Zustandsklasse");
+        var spalte = AuswertungPro.Next.UI.Views.Pages.ZustandsklasseChipColumnFactory.Create("Zustandsklasse", "Zustandsklasse");
 
         Assert.NotNull(spalte.CellTemplate);
         Assert.NotNull(spalte.CellEditingTemplate);
-        Assert.Equal(typeof(System.Windows.Controls.TextBlock), spalte.CellTemplate.VisualTree.Type);
+        Assert.Equal(typeof(System.Windows.Controls.Grid), spalte.CellTemplate.VisualTree.Type);
         Assert.Equal(typeof(System.Windows.Controls.ComboBox), spalte.CellEditingTemplate.VisualTree.Type);
     }
 

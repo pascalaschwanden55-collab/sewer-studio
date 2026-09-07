@@ -50,6 +50,9 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
             var page = new Views.Pages.DataPage();
             Layout(page);
 
+            PruefeNovaSpalten(page);
+            PruefeNovaSucheUndFilter(page);
+
             var drawer = Assert.IsType<HaltungFelderDrawer>(page.FindName("FelderDrawer"));
             var drawerRow = Assert.IsType<RowDefinition>(page.FindName("DrawerRow"));
             var splitterRow = Assert.IsType<RowDefinition>(page.FindName("DrawerSplitterRow"));
@@ -111,7 +114,7 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
                 Assert.Equal(ColorOf(app.FindResource("SelectionBackgroundBrush")), ColorOf(cell.Background));
                 Assert.Equal(ColorOf(app.FindResource("SelectionTextBrush")), ColorOf(cell.Foreground));
                 NovaRenderingChecks.ColorColumnsUseTheirCellForeground();
-                NovaRenderingChecks.SchachtZustandsklasseBleibtSchwarz();
+                NovaRenderingChecks.SchachtZustandsklasseMarkeBleibtLesbar();
                 NovaRenderingChecks.LongMenuCanScrollToItsLastAction();
             }
 
@@ -169,6 +172,12 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
             Layout(ring);
             Assert.Empty(ring.Boegen);
 
+            // Task 6: Ohne gewaehlte Haltung steht nur der Leerzustand da - kein Rohrring,
+            // keine leeren Beschriftungen und vor allem kein "{DependencyProperty.UnsetValue}".
+            var leeresPanel = new HaltungUebersichtPanel();
+            Layout(leeresPanel);
+            NovaRenderingChecks.OhneAuswahlNurLeerzustand(leeresPanel);
+
             var panelEntries = new ObservableCollection<ProtocolEntry>();
             var panel = new HaltungUebersichtPanel { Entries = panelEntries };
             Layout(panel);
@@ -215,6 +224,85 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
 
     private static ProtocolEntry Eintrag(string code, string? stufe)
         => new() { Code = code, Beschreibung = code, CodeMeta = new ProtocolEntryCodeMeta { Code = code, Severity = stufe } };
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 3: Die fertig aufgebaute Seite fuehrt die vier Statusspalten, die
+    /// Zustandsklasse ist eine Marke (Vorlagenspalte statt Textspalte), und "Kompakt" zeigt
+    /// genau die zehn Spalten des Prototyps.
+    /// </summary>
+    private static void PruefeNovaSpalten(Views.Pages.DataPage page)
+    {
+        // Die Spalten baut der Loaded-Handler der Seite. Ohne Fenster gibt es keine
+        // PresentationSource, und WPF loest Loaded dann nie aus — deshalb hier bewusst selbst.
+        page.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent, page));
+
+        var grid = Assert.IsType<DataGrid>(page.FindName("Grid"));
+        var felder = grid.Columns.ToDictionary(
+            spalte => spalte,
+            spalte => spalte.GetValue(FrameworkElement.TagProperty) as string);
+
+        foreach (var schluessel in AuswertungPro.Next.UI.DataPage.NovaStatusSpalten.Alle)
+            Assert.Contains(schluessel, felder.Values);
+
+        var zustandsklasse = grid.Columns.Single(
+            spalte => (string?)spalte.GetValue(FrameworkElement.TagProperty)
+                == AuswertungPro.Next.Domain.Models.FieldKeys.ConditionClass);
+        Assert.IsType<DataGridTemplateColumn>(zustandsklasse);
+
+        var ansichten = new AuswertungPro.Next.UI.DataPage.DataPageColumnViewController(
+            grid,
+            spalte => felder[spalte],
+            () => "kompakt",
+            _ => { });
+        ansichten.Apply("kompakt");
+
+        var sichtbar = grid.Columns
+            .Where(spalte => spalte.Visibility == Visibility.Visible)
+            .Select(spalte => (string?)spalte.GetValue(FrameworkElement.TagProperty))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        var erwartet = AuswertungPro.Next.UI.DataPage.DataPageColumnViewCatalog.Resolve("kompakt").Felder!
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(erwartet, sichtbar);
+
+        ansichten.Apply("alle");
+    }
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 4: Ohne DataContext liefert NovaLayoutAktiv true (Standard) — die
+    /// Suchpille ist sichtbar, die alte Suche-Zeile ist es nicht, und die Filterzeile
+    /// (Spaltenchips und FilterChipBar) bleibt erreichbar.
+    ///
+    /// Nova-Fixwelle 2b (P2): Die Pille steht jetzt IN der Werkzeugleiste (rechts angedockt),
+    /// nicht mehr in einer eigenen Zeile darunter — deshalb ein StackPanel im DockPanel der
+    /// Leiste statt einer eigenen Karte.
+    /// </summary>
+    private static void PruefeNovaSucheUndFilter(Views.Pages.DataPage page)
+    {
+        var novaSuche = Assert.IsType<StackPanel>(page.FindName("NovaSucheLeiste"));
+        Assert.Equal(Visibility.Visible, novaSuche.Visibility);
+        Assert.Equal(Dock.Right, DockPanel.GetDock(novaSuche));
+        var leiste = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.FindAncestor<DockPanel>(novaSuche);
+        Assert.NotNull(leiste);
+
+        var alteSuche = Assert.IsType<Border>(page.FindName("AlteSucheLeiste"));
+        Assert.Equal(Visibility.Collapsed, alteSuche.Visibility);
+
+        var novaSearchBox = Assert.IsType<TextBox>(page.FindName("NovaSearchBox"));
+        var pillBorder = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.FindAncestor<Border>(novaSearchBox);
+        Assert.NotNull(pillBorder);
+        Assert.Equal(15d, pillBorder!.CornerRadius.TopLeft);
+
+        var columnViewChips = Assert.IsType<ItemsControl>(page.FindName("ColumnViewChips"));
+        Assert.Equal(Visibility.Visible, columnViewChips.Visibility);
+
+        var filterChips = Assert.IsType<AuswertungPro.Next.UI.Controls.FilterChipBar>(page.FindName("FilterChips"));
+        Assert.Equal(Visibility.Visible, filterChips.Visibility);
+
+        var reihenfolgePopup = Assert.IsType<Popup>(page.FindName("ReihenfolgePopup"));
+        Assert.False(reihenfolgePopup.IsOpen);
+    }
 
     private static Color ColorOf(object brush) => Assert.IsType<SolidColorBrush>(brush).Color;
 

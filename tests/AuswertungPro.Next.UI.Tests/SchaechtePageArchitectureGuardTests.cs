@@ -705,13 +705,14 @@ public sealed class SchaechtePageArchitectureGuardTests
             "SchachtansichtView.xaml"));
 
         Assert.Contains("private DataGridColumn CreateZustandsklasseColumn(", pageCode);
-        // B6: Die Spalte liegt in einer eigenen Fabrik. Ihr Anzeigetext muss die Tinte der Zelle
-        // tragen, sonst faerbt ihn der implizite TextBlock-Stil (im Dunkeln weiss auf Gelb).
-        Assert.Contains("SchaechteZustandsklasseColumnFactory.Create(", pageCode);
+        // B6/Etappe 2b: Die Spalte liegt in der gemeinsamen Marken-Fabrik von Haltungs- und
+        // Schachtliste. Sie traegt ihre eigene lesbare Tinte (ZustandsklasseInkPolicy), statt
+        // sie vom impliziten TextBlock-Stil zu erben (im Dunkeln weiss auf Gelb).
+        Assert.Contains("ZustandsklasseChipColumnFactory.Create(", pageCode);
         var spaltenFabrik = File.ReadAllText(Path.Combine(
-            root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechteZustandsklasseColumnFactory.cs"));
+            root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "ZustandsklasseChipColumnFactory.cs"));
         Assert.Contains("ZustandsklasseColorPalette.SelectionOptions", spaltenFabrik);
-        Assert.Contains("typeof(DataGridCell)", spaltenFabrik);
+        Assert.Contains("ZustandsklasseInkConverter", spaltenFabrik);
         Assert.Contains("SchaechteRecordDetailsBuilder", pageCode);
         Assert.Contains("private RecordDetailItem CreateItem(", detailsBuilder);
         Assert.Contains("isCombo: true", detailsBuilder);

@@ -7,6 +7,12 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// <summary>
 /// Nova-Etappe 2 (Inventar 4.3, NUM_COLS): Namensspalte fett, Zahlenspalten rechtsbuendig in
 /// der Datenschrift. Reine Regel; die Spaltenfabriken wenden sie nur an.
+///
+/// Nova-Etappe 2b: deckt zusaetzlich Baujahr, alle Sanierungsmengen (Renovierung Inliner,
+/// Anschluesse verpressen, Reparatur Manschette/Kurzliner, Linerendmanschette, Erneuerung
+/// Neubau) sowie beide Schachtmasse ab. Ein im Task-1-Brief genanntes Feld "Tiefe_m" gibt es
+/// weder in <see cref="FieldKeys"/> noch in <see cref="FieldCatalog"/> — es wird bewusst nicht
+/// aufgenommen (siehe Bericht Nova-Etappe 2b, Task 1).
 /// </summary>
 public static class DataPageColumnStyleRules
 {
@@ -20,7 +26,44 @@ public static class DataPageColumnStyleRules
         FieldKeys.ShaftDimension1Mm, FieldKeys.ShaftDimension2Mm
     };
 
+    /// <summary>
+    /// Nova-Etappe 2b: Hoechstens drei Zeilen je Tabellenzelle (rund 18 px Zeilenhoehe).
+    ///
+    /// Anlass ist Pascals Bild vom 07.09.: Ein Zellinhalt mit Zeilenumbruechen ("Primaere
+    /// Schaeden", "Empfohlene Massnahmen") zog die ganze Zeile auf und liess in "Alle Spalten"
+    /// nur sechs Haltungen sichtbar. Der Wert wird nur angezeigt begrenzt — gespeicherter Text,
+    /// Bearbeitung und Export bleiben vollstaendig.
+    /// </summary>
+    public const double MaximaleZellenhoehe = 54;
+
+    /// <summary>
+    /// Die eine Spalte mit bewusst langem Fliesstext. Sie bekommt die eigene Umbruchvorlage
+    /// (mehrzeiliger Editor) und im Nova-Layout den Volltext im Hinweis.
+    /// </summary>
+    public static bool IstUmbruchspalte(string feld)
+        => string.Equals(feld, FieldKeys.RecommendedRehabilitationMeasures, StringComparison.Ordinal);
+
     public static bool IstNamensspalte(string feld) => string.Equals(feld, FieldKeys.HoldingName, StringComparison.Ordinal);
 
     public static bool IstZahlenspalte(string feld) => Zahlen.Contains(feld);
+
+    /// <summary>
+    /// Nova-Fixwelle 2b (P1): Dieselbe Frage fuer die Schachtliste. Dort heissen die Felder
+    /// nach der Kopfzeile der Excel-Vorlage, nicht nach dem Katalog — deshalb wird mit
+    /// <paramref name="falte"/> (in der Praxis <c>SchachtFeldnamen.Falte</c>) verglichen.
+    /// Ohne Faltung gilt der reine Ordinalvergleich.
+    /// </summary>
+    public static bool IstZahlenspalte(string feld, Func<string, string>? falte)
+    {
+        if (falte is null)
+            return IstZahlenspalte(feld);
+
+        var gesucht = falte(feld ?? string.Empty);
+        foreach (var bekannt in Zahlen)
+        {
+            if (string.Equals(falte(bekannt), gesucht, StringComparison.Ordinal))
+                return true;
+        }
+        return false;
+    }
 }

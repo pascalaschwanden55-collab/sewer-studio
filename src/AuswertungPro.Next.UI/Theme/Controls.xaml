@@ -76,6 +76,14 @@
     <FontFamily x:Key="FontIcon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
     <!-- Grosses Leerzustand-Glyph (EmptyState, leere Seiten): ein Symbol, keine Schriftstufe. -->
     <sys:Double x:Key="IconHero">36</sys:Double>
+    <!-- Nova-Etappe 2b (Inventar 4.3): einzeilige Tabellenzeile in Kompakt, Stammdaten,
+         Sanierung und Kosten. "Alle Spalten" und "Bewertung" bleiben auf Auto. -->
+    <!-- Nova-Fixwelle 2b (P2): 34 statt 36 — gemessen im Pruefhost, damit bei 1920x1080 mit
+         offenen Eingabefeldern zwoelf Zeilen ganz sichtbar sind. -->
+    <sys:Double x:Key="RowHeightCompact">34</sys:Double>
+    <!-- Masse der Zustandsklassen-Marke in Haltungs- und Schachtliste (Prototyp v2). -->
+    <sys:Double x:Key="ZustandsklasseChipBreite">34</sys:Double>
+    <sys:Double x:Key="ZustandsklasseChipHoehe">22</sys:Double>
     <!-- Video-Flaechen: ueber laufendem Bild ist der Grund immer dunkel, unabhaengig vom Hell-/Dunkel-Design.
          Scrim = abdunkelnde Overlay-Flaeche (Bedienleisten, Hinweise); Black = neutrales Schwarz ohne Blaustich. -->
     <SolidColorBrush x:Key="VideoBackgroundBrush" Color="#FF000000"/>

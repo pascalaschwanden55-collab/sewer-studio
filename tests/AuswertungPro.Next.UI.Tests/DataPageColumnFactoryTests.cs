@@ -22,7 +22,8 @@ public sealed class DataPageColumnFactoryTests
                 NoSelectionChanged);
 
             var comboColumn = Assert.IsType<DataGridTemplateColumn>(column);
-            Assert.Equal("Eigentuemer", comboColumn.Header);
+            // Nova-Etappe 2b: der Kopf schreibt gross (GrossbuchstabenConverter.Anwenden).
+            Assert.Equal("EIGENTUEMER", comboColumn.Header);
             Assert.Equal(DataGridLengthUnitType.SizeToHeader, comboColumn.Width.UnitType);
 
             var combo = AssertTemplateRoot<ComboBox>(comboColumn.CellEditingTemplate);
@@ -86,6 +87,26 @@ public sealed class DataPageColumnFactoryTests
             var binding = Assert.IsType<Binding>(column.Binding);
             Assert.Equal("Fields[Haltungsname]", binding.Path.Path);
             Assert.Equal(UpdateSourceTrigger.Explicit, binding.UpdateSourceTrigger);
+        });
+    }
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 1: der Tabellenkopf schreibt gross, unabhaengig vom Spaltentyp
+    /// (Kombinationsfeld, Kosten, Text mit Umbruch, normaler Text). Die Umwandlung passiert hier
+    /// beim Erzeugen der Spalte statt im Kopf-Template (siehe GrossbuchstabenConverter-Doku).
+    /// </summary>
+    [Theory]
+    [InlineData("Eigentuemer", "Eigentuemer")]
+    [InlineData("Empfohlene_Sanierungsmassnahmen", "Empfehlung")]
+    [InlineData("Kosten", "Kosten")]
+    [InlineData("Bemerkungen", "Bemerkungen")]
+    [InlineData("Haltungsname", "Strasse gemischt")]
+    public void Create_schreibt_den_Spaltenkopf_gross(string fieldName, string header)
+    {
+        RunOnSta(() =>
+        {
+            var column = DataPageColumnFactory.Create(fieldName, header, NoKeyboardFocus, NoSelectionChanged);
+            Assert.Equal(header.ToUpperInvariant(), column.Header);
         });
     }
 

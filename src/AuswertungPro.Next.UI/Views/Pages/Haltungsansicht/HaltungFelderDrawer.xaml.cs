@@ -100,11 +100,20 @@ public partial class HaltungFelderDrawer : UserControl
         private set => SetValue(SichtbareGruppenProperty, value);
     }
 
+    /// <summary>Thementitel, das standardmaessig zugeklappt startet (Nova-Etappe 2b).</summary>
+    private const string WeitereAngabenTitel = "Weitere Angaben";
+
     /// <summary>Ein Thema mit genau einer Gruppe, damit RecordDetailsView es unveraendert rendert.</summary>
     public sealed record ThemaAnzeige(string Title, IReadOnlyList<RecordDetailGroup> EinzelGruppe)
     {
         /// <summary>Anzahl der Felder in diesem Thema, fuer den Zaehler im Expander-Kopf.</summary>
         public int Anzahl => EinzelGruppe.Sum(g => g.Items.Count);
+
+        /// <summary>
+        /// Vier feste Prototyp-Themen starten aufgeklappt; "Weitere Angaben" (alle uebrigen
+        /// Projektfelder) startet zugeklappt, damit es nicht vom eigentlichen Formular ablenkt.
+        /// </summary>
+        public bool IstStandardAufgeklappt => Title != WeitereAngabenTitel;
     }
 
     /// <summary>Reine Filterregel: nur Felder, deren Beschriftung den Suchtext enthaelt.</summary>

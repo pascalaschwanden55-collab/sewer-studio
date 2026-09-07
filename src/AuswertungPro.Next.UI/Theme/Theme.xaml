@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
     <!-- ═══════════════════════════════════════════════════════════
          SCI-FI ENGINEERING — Sharp contrast, subtle futuristic tint
@@ -771,7 +772,9 @@
     <!-- DataGrid Header — Steel-blue tinted -->
     <Style TargetType="{x:Type DataGridColumnHeader}">
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="FontSize" Value="12"/>
+        <!-- Fixwelle F4: Der Kopf traegt seine Groesse als Setter, damit die Vorlage sie erben
+             kann. Der Wert ist derselbe wie bisher im Template (TextXS). -->
+        <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
         <Setter Property="Padding" Value="10,8"/>
         <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
@@ -780,20 +783,72 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="DataGridColumnHeader">
+                    <ControlTemplate.Resources>
+                        <!-- Nova-Etappe 2b: Nur String-Koepfe schreiben gross (Kapitaelchen greifen mit
+                             der Programmschrift nicht). Ein eigener Kopf-Inhalt (kein String) durchlaeuft
+                             diese Vorlage nicht und behaelt den bisherigen Presenter. Die Umwandlung
+                             selbst passiert NICHT hier (kein Konverter-Objektelement, siehe
+                             GrossbuchstabenConverter-Doku: PageTitleUnderlineTests laedt diese Datei roh
+                             per XamlReader.Load, wo ein eigener Klassenverweis mit "unbekannter Typ"
+                             scheitert), sondern schon beim Erzeugen der Spalte
+                             (DataGridColumnFactory.Create / SchaechtePage.RebuildColumns rufen
+                             GrossbuchstabenConverter.Anwenden auf). Diese Vorlage bindet den bereits
+                             fertigen String nur noch unveraendert. -->
+                        <DataTemplate DataType="{x:Type sys:String}">
+                            <!-- Nova-Fixwelle 2b (F4): Groesse und Tinte kommen vom Kopf selbst,
+                                 nicht fest aus dieser Vorlage. Vorher gewann die Vorlage gegen
+                                 jeden Setter des Kopfstils — auch gegen einen abgeleiteten
+                                 ColumnHeaderStyle, der eine Spalte einfaerben will. Es ist eine
+                                 RelativeSource-Bindung und kein TemplateBinding: Diese
+                                 DataTemplate liegt in ControlTemplate.Resources und gehoert
+                                 damit nicht zum Vorlagenbaum. -->
+                            <TextBlock Text="{Binding}"
+                                       FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type DataGridColumnHeader}}}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type DataGridColumnHeader}}}"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate>
+                        <!-- Nova-Fixwelle 2b (P4): Die Ziehgriffe zwischen den Kopfzellen hatten
+                             keine eigene Vorlage und trugen deshalb die Standardoptik von WPF —
+                             im dunklen Theme fast weiss und damit kontrastreicher als der
+                             Kopftext selbst. Jetzt zeichnet nur der rechte Griff eine 1 px
+                             schmale Trennlinie in der Rahmenfarbe des Themes; der linke Griff
+                             bleibt unsichtbar, sonst staende an jeder Grenze eine doppelte
+                             Linie. Der Ziehbereich (6 px, Cursor) bleibt unveraendert. -->
+                        <Style x:Key="KopfGriffOhneLinie" TargetType="{x:Type Thumb}">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="{x:Type Thumb}">
+                                        <Border Background="Transparent"/>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                        <Style x:Key="KopfGriffTrennlinie" TargetType="{x:Type Thumb}" BasedOn="{StaticResource KopfGriffOhneLinie}">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="{x:Type Thumb}">
+                                        <Border Background="Transparent">
+                                            <Rectangle Width="1" HorizontalAlignment="Right"
+                                                       Fill="{DynamicResource BorderBrush}"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ControlTemplate.Resources>
                     <Grid>
                         <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}"
-                                Typography.Capitals="AllSmallCaps">
+                                Padding="{TemplateBinding Padding}">
                             <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
-                        <Thumb x:Name="PART_LeftHeaderGripper"
-                               HorizontalAlignment="Left" Width="6"
-                               Background="Transparent" Cursor="SizeWE"/>
-                        <Thumb x:Name="PART_RightHeaderGripper"
-                               HorizontalAlignment="Right" Width="6"
-                               Background="Transparent" Cursor="SizeWE"/>
+                        <Thumb x:Name="PART_LeftHeaderGripper" Style="{StaticResource KopfGriffOhneLinie}"
+                               HorizontalAlignment="Left" Width="6" Cursor="SizeWE"/>
+                        <Thumb x:Name="PART_RightHeaderGripper" Style="{StaticResource KopfGriffTrennlinie}"
+                               HorizontalAlignment="Right" Width="6" Cursor="SizeWE"/>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>

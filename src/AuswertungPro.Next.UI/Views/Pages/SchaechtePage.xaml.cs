@@ -15,6 +15,7 @@ using AuswertungPro.Next.Application.Lookup;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Behaviors;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
@@ -55,6 +56,13 @@ public partial class SchaechtePage : UserControl
     // nur eine Abfrage zur Zeit.
     private readonly NachschlagTor _nachschlagTor = new();
     private bool _isRestoringLayout;
+
+    /// <summary>
+    /// Der Wert der Zustandsklasse beim Oeffnen der Zelle (Task 6, Fix-Runde 1). Nur damit
+    /// laesst sich beim Schliessen sagen, ob wirklich eine andere Klasse gewaehlt wurde: Die
+    /// Marke ist eine Vorlagenspalte, deren Editierelement der Textleser nicht lesen kann.
+    /// </summary>
+    private string? _zustandsklasseBeimOeffnen;
 
     public SchaechtePage()
     {
@@ -166,14 +174,22 @@ public partial class SchaechtePage : UserControl
         {
             foreach (var col in _vm.Columns)
             {
+                // Nova-Etappe 2b: Der Anzeigename wird EINMAL geholt; der Tabellenkopf schreibt
+                // gross (siehe DataPageColumnFactory, GrossbuchstabenConverter-Doku).
+                // GetDisplayHeader bleibt selbst unveraendert, weil SchaechteRecordDetailsBuilder
+                // denselben Text auch als normale Feldbeschriftung im Formular verwendet.
+                var kopf = GetDisplayHeader(col);
+                var grossKopf = GrossbuchstabenConverter.Anwenden(kopf) ?? kopf;
+
+                var istZustandsklasse = IsZustandsklasseColumn(col);
                 DataGridColumn column;
                 if (IsCostColumn(col))
                 {
                     column = DataGridCostColumnFactory.Create(col, col);
                 }
-                else if (IsZustandsklasseColumn(col))
+                else if (istZustandsklasse)
                 {
-                    column = CreateZustandsklasseColumn(col);
+                    column = CreateZustandsklasseColumn(col, grossKopf);
                 }
                 else if (TryResolveDropdownColumnSpec(col, out var spec))
                 {
@@ -200,12 +216,16 @@ public partial class SchaechtePage : UserControl
                 {
                     column = new DataGridTextColumn
                     {
-                        Header = GetDisplayHeader(col),
                         Binding = new Binding($"Fields[{col}]")
                         {
                             Mode = BindingMode.TwoWay,
                             UpdateSourceTrigger = UpdateSourceTrigger.LostFocus
                         },
+                        // Nova-Fixwelle 2b (P3): Ein zu langer Wert wird mit Auslassungspunkten
+                        // gekuerzt statt hart abgeschnitten ("KontrollschachDorfstrasse").
+                        // Runde 2: Zahlenspalten bekommen zusaetzlich das rechte Polster.
+                        ElementStyle = NovaTextZellenStil.MitAuslassungspunkten(
+                            DataPageColumnStyleRules.IstZahlenspalte(col, SchachtFeldnamen.Falte)),
                         Width = DataGridLength.SizeToHeader,
                         MinWidth = 90,
                         // Die GEONIS-Kennung ist nur Anzeige; der Export liest das Geonis-Objekt.
@@ -216,18 +236,36 @@ public partial class SchaechtePage : UserControl
                     };
                 }
 
-                column.Header = GetDisplayHeader(col);
+                column.Header = grossKopf;
                 column.SetValue(FrameworkElement.TagProperty, col);
-                ApplyColorStyle(column, col);
+
+                // Die Zustandsklasse traegt ihre Farbe seit Etappe 2b in der Marke, nicht mehr
+                // in der ganzen Zelle: sonst stuende der Chip auf einer zweiten Farbflaeche.
+                if (!istZustandsklasse)
+                    ApplyColorStyle(column, col);
+                // Nova-Fixwelle 2b (P3): Volltext oben im Hinweis, Herkunftszeile darunter —
+                // dieselbe Regel wie in der Haltungsliste.
+                column.CellStyle = DataGridFieldMetaTooltipStyleFactory.Create(col, column.CellStyle, mitVolltext: true);
                 column.MinWidth = 90;
+                // Startbreite aus dem Prototyp; ein gespeichertes Spaltenlayout gewinnt, weil
+                // es erst mit RestoreLayoutFromSettings gelesen wird.
+                if (NovaSpaltenbreiten.Startbreite(col, SchachtFeldnamen.Falte) is double startbreite)
+                    column.Width = new DataGridLength(startbreite);
                 Grid.Columns.Add(column);
                 _columnFields[column] = col;
 
-                var defaultHorizontal = IsCostColumn(col)
-                    ? HorizontalAlignment.Right
-                    : HorizontalAlignment.Left;
+                // Nova-Fixwelle 2b (P1): Zahlen stehen rechts, auch die beiden Schachtmasse.
+                // Schachtfelder heissen nach der Excel-Kopfzeile, deshalb der gefaltete
+                // Vergleich. Eine gespeicherte Nutzerausrichtung gewinnt weiterhin: Sie kommt
+                // erst mit RestoreLayoutFromSettings.
+                var defaultHorizontal =
+                    IsCostColumn(col) || DataPageColumnStyleRules.IstZahlenspalte(col, SchachtFeldnamen.Falte)
+                        ? HorizontalAlignment.Right
+                        : HorizontalAlignment.Left;
                 _columnAlignmentToolbar.SetAlignment(column, defaultHorizontal, VerticalAlignment.Center);
             }
+
+            ErgaenzeProtokollspalte();
         }
         finally
         {
@@ -247,8 +285,12 @@ public partial class SchaechtePage : UserControl
             column.CellStyle = colorStyle;
     }
 
-    private DataGridColumn CreateZustandsklasseColumn(string recordField)
-        => SchaechteZustandsklasseColumnFactory.Create(recordField, GetDisplayHeader(recordField));
+    /// <summary>
+    /// Nova-Etappe 2b: dieselbe Marke wie in der Haltungsliste. Anzeigen als Chip mit lesbarer
+    /// Tinte, bearbeiten weiterhin als Auswahl 0 bis 4.
+    /// </summary>
+    private DataGridColumn CreateZustandsklasseColumn(string recordField, string header)
+        => ZustandsklasseChipColumnFactory.Create(recordField, header);
 
     private void Grid_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
     {
@@ -329,6 +371,11 @@ public partial class SchaechtePage : UserControl
     private void RestoreLayoutFromSettings()
     {
         var layout = Settings.SchaechtePageLayout;
+
+        // Nova-Fixwelle 2b, Runde 2: VOR dem Wiederherstellen; Schachtfelder heissen nach der
+        // Kopfzeile der Excel-Vorlage, deshalb der gefaltete Vergleich.
+        if (layout is not null)
+            ZahlenRechtsMigration.WendeAn(layout, Settings.Save, SchachtFeldnamen.Falte);
 
         _isRestoringLayout = true;
         try
@@ -503,6 +550,13 @@ public partial class SchaechtePage : UserControl
     private void Grid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
     {
         _ = sender;
+
+        _zustandsklasseBeimOeffnen = e.Row?.Item is SchachtRecord geoeffnet
+            && e.Column?.GetValue(FrameworkElement.TagProperty) is string feld
+            && IsZustandsklasseColumn(feld)
+                ? geoeffnet.GetFieldValue(feld)
+                : null;
+
         if (e.Row?.Item is not SchachtRecord record
             || DataContext is not SchaechtePageViewModel vm
             || vm.CanMutateRecord(record, "Schachtfeld aendern"))
@@ -516,6 +570,9 @@ public partial class SchaechtePage : UserControl
     private void Grid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
     {
         _ = sender;
+
+        var zustandsklasseBeimOeffnen = _zustandsklasseBeimOeffnen;
+        _zustandsklasseBeimOeffnen = null;
 
         if (e.EditAction != DataGridEditAction.Commit)
             return;
@@ -532,6 +589,20 @@ public partial class SchaechtePage : UserControl
 
         if (IsCostColumn(recordField))
         {
+            MarkProjectDirty();
+            ApplySearchFilter();
+            return;
+        }
+
+        // Die Zustandsklasse steht in einer Vorlagenspalte: Ihr Editierelement ist ein
+        // ContentPresenter, aus dem der Textleser nichts holen kann. Die Auswahl hat ihren Wert
+        // ueber die Bindung schon geschrieben — hier wird nur noch Herkunft und Handmarkierung
+        // nachgezogen, und das nur bei echter Aenderung.
+        if (IsZustandsklasseColumn(recordField))
+        {
+            if (!SchaechteFieldEditController.ApplyZustandsklasse(recordField, record, zustandsklasseBeimOeffnen))
+                return;
+
             MarkProjectDirty();
             ApplySearchFilter();
             return;
@@ -770,27 +841,37 @@ public partial class SchaechtePage : UserControl
             GetCurrentProject(),
             (message, title) => DialogHost.Current.Error(message, title));
 
+    /// <summary>
+    /// Nova-Fixwelle 2b, Runde 2: Derselbe <see cref="DataPageRightClickController"/> wie auf
+    /// der Haltungsseite. Vorher entschied dieser Pfad selbst — und kannte den Schutz gegen
+    /// virtuelle Spalten nicht: „Spalte leeren" auf dem Kopf der Protokollspalte schrieb
+    /// <c>Nova_Protokoll</c> in JEDEN Schachtdatensatz. Zwei Wege zu derselben Entscheidung
+    /// heisst, dass nur einer den Schutz bekommt.
+    /// </summary>
     private void Grid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (ClearColumnModeButton.IsChecked == true)
-        {
-            var header = VisualTreeSafe.FindAncestor<DataGridColumnHeader>((DependencyObject)e.OriginalSource);
-            if (header?.Column is not null)
-            {
-                var fieldName = header.Column.GetValue(FrameworkElement.TagProperty) as string;
-                if (!string.IsNullOrWhiteSpace(fieldName))
-                {
-                    var displayName = header.Column.Header?.ToString() ?? fieldName;
-                    ClearColumn(fieldName, displayName);
-                    e.Handled = true;
-                    return;
-                }
-            }
-        }
+        if (e.OriginalSource is not DependencyObject originalSource)
+            return;
 
-        var row = VisualTreeSafe.FindAncestor<DataGridRow>((DependencyObject)e.OriginalSource);
-        if (row is not null)
-            Grid.SelectedItem = row.Item;
+        var header = VisualTreeSafe.FindAncestor<DataGridColumnHeader>(originalSource);
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>(originalSource);
+
+        var ergebnis = DataPageRightClickController.Resolve(
+            ClearColumnModeButton.IsChecked == true,
+            header?.Column.GetValue(FrameworkElement.TagProperty) as string,
+            header?.Column.Header?.ToString(),
+            row?.Item);
+
+        switch (ergebnis.Action)
+        {
+            case DataPageRightClickAction.ClearColumn when ergebnis.FieldName is { } feld:
+                ClearColumn(feld, ergebnis.DisplayName ?? feld);
+                e.Handled = true;
+                break;
+            case DataPageRightClickAction.SelectRow:
+                Grid.SelectedItem = ergebnis.RowItem;
+                break;
+        }
     }
 
     private void ClearColumn(string fieldName, string displayName)

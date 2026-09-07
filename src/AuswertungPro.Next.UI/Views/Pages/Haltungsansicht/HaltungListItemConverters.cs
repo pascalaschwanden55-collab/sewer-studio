@@ -107,11 +107,15 @@ public sealed class ZahlSichtbarConverter : IValueConverter
 /// <summary>
 /// Ein Eckdatenwert der Uebersicht; leer wird zum Gedankenstrich. Der optionale
 /// ConverterParameter ist die Einheit ("m").
+///
+/// Task 6: Ohne gewaehlten Datensatz liefert WPF <see cref="DependencyProperty.UnsetValue"/>.
+/// Dessen ToString() ist der sichtbare Fehltext "{DependencyProperty.UnsetValue}" — deshalb
+/// wird er zuerst zu null, bevor die WPF-freie Regel ihn sieht.
 /// </summary>
 public sealed class FaktWertConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        => HaltungFaktenText.Wert(value?.ToString(), parameter?.ToString());
+        => HaltungFaktenText.Wert(FaktWerte.AlsText(value), parameter?.ToString());
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
 }
 
@@ -119,8 +123,20 @@ public sealed class FaktWertConverter : IValueConverter
 public sealed class FaktZusammenConverter : IMultiValueConverter
 {
     public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
-        => HaltungFaktenText.Zusammen((values ?? Array.Empty<object>()).Select(v => v?.ToString()));
+        => HaltungFaktenText.Zusammen((values ?? Array.Empty<object>()).Select(FaktWerte.AlsText));
 
     public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
         => Array.Empty<object>();
+}
+
+/// <summary>Gemeinsame Leseregel der beiden Eckdaten-Konverter.</summary>
+internal static class FaktWerte
+{
+    /// <summary>
+    /// Der Text eines Bindungswerts. Eine nicht gesetzte Bindung
+    /// (<see cref="DependencyProperty.UnsetValue"/>) ist kein Wert und wird zu null; die
+    /// Uebersicht zeigt dafuer denselben Gedankenstrich wie fuer ein leeres Feld.
+    /// </summary>
+    internal static string? AlsText(object? wert)
+        => wert is null || wert == DependencyProperty.UnsetValue ? null : wert.ToString();
 }

@@ -7,6 +7,9 @@
     <UserControl.Resources>
         <local:SchachtZustandsklasseBrushConverter x:Key="ZkBrushConv"/>
         <dp:ZustandsklasseInkConverter x:Key="ZkInkConv"/>
+        <!-- Task 6: Leere Eckdaten zeigen denselben Gedankenstrich wie im Haltungspanel,
+             statt eine leere Zeile unter der Beschriftung. -->
+        <haltung:FaktWertConverter x:Key="FaktWertConv"/>
         <haltung:SchadenMeterConverter x:Key="SchadenMeterConv"/>
         <haltung:SchadenKlartextConverter x:Key="SchadenKlartextConv"/>
         <haltung:SchadenStufeQuelleConverter x:Key="SchadenStufeQuelleConv"/>
@@ -14,43 +17,71 @@
         <Style x:Key="FaktWert" TargetType="TextBlock"><Setter Property="FontSize" Value="{DynamicResource TextS}"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="FontFamily" Value="{DynamicResource FontMono}"/><Setter Property="Foreground" Value="{DynamicResource TextBrush}"/></Style>
     </UserControl.Resources>
     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="12">
-        <DockPanel DataContext="{Binding Record, ElementName=Root}">
-            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-                <Border DockPanel.Dock="Right" MinWidth="34" Height="22" Padding="6,0" CornerRadius="{DynamicResource RadiusS}" Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}" ToolTip="Zustandsklasse (von Hand gesetzt)">
-                    <TextBlock Text="{Binding Fields[Zustandsklasse], StringFormat=Z{0}}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkInkConv}}"/>
-                </Border>
-                <TextBlock Text="Schachtansicht" FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Fields[Schachtnummer]}" Margin="10,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+        <Grid>
+            <!-- Task 6: Ohne gewaehlten Schacht bleibt der ganze Inhalt weg; sonst stehen Grundriss,
+                 leere Beschriftungen und Knoepfe ohne Bezug da. -->
+            <DockPanel x:Name="Inhalt" DataContext="{Binding Record, ElementName=Root}">
+                <DockPanel.Style>
+                    <Style TargetType="DockPanel">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DockPanel.Style>
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <Border DockPanel.Dock="Right" MinWidth="34" Height="22" Padding="6,0" CornerRadius="{DynamicResource RadiusS}" Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}" ToolTip="Zustandsklasse (von Hand gesetzt)">
+                        <TextBlock Text="{Binding Fields[Zustandsklasse], StringFormat=Z{0}}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkInkConv}}"/>
+                    </Border>
+                    <TextBlock Text="Schachtansicht" FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Fields[Schachtnummer]}" Margin="10,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </DockPanel>
+                <Canvas DockPanel.Dock="Top" Width="200" Height="120" HorizontalAlignment="Center" Margin="0,0,0,8" AutomationProperties.Name="Schachtgrundriss">
+                    <Ellipse x:Name="Kreis" Canvas.Left="50" Canvas.Top="10" Width="100" Height="100" Fill="{DynamicResource BgLightBrush}" Stroke="{DynamicResource BorderBrush}" StrokeThickness="6"/>
+                    <Ellipse x:Name="Oval" Canvas.Left="38" Canvas.Top="10" Width="124" Height="100" Fill="{DynamicResource BgLightBrush}" Stroke="{DynamicResource BorderBrush}" StrokeThickness="6" Visibility="Collapsed"/>
+                    <Rectangle x:Name="Quadrat" Canvas.Left="45" Canvas.Top="10" Width="110" Height="100" RadiusX="6" RadiusY="6" Fill="{DynamicResource BgLightBrush}" Stroke="{DynamicResource BorderBrush}" StrokeThickness="6" Visibility="Collapsed"/>
+                    <TextBlock x:Name="MassText" Canvas.Left="0" Canvas.Top="50" Width="200" TextAlignment="Center" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                </Canvas>
+                <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,0,0,8">
+                    <StackPanel Margin="0,0,8,6"><TextBlock Text="Funktion" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Funktion], Converter={StaticResource FaktWertConv}}" Style="{StaticResource FaktWert}"/></StackPanel>
+                    <StackPanel Margin="0,0,0,6"><TextBlock Text="Material" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Material], Converter={StaticResource FaktWertConv}}" Style="{StaticResource FaktWert}"/></StackPanel>
+                    <StackPanel Margin="0,0,8,6"><TextBlock Text="Tiefe" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Schachttiefe], Converter={StaticResource FaktWertConv}}" Style="{StaticResource FaktWert}"/></StackPanel>
+                    <StackPanel Margin="0,0,0,6"><TextBlock Text="Baujahr" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Baujahr], Converter={StaticResource FaktWertConv}}" Style="{StaticResource FaktWert}"/></StackPanel>
+                    <StackPanel Margin="0,0,8,6"><TextBlock Text="Belastungsklasse" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Belastungsklasse], Converter={StaticResource FaktWertConv}}" Style="{StaticResource FaktWert}"/></StackPanel>
+                    <StackPanel Margin="0,0,0,6"><TextBlock Text="Inspektion" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Inspektionsdatum], Converter={StaticResource FaktWertConv}}" Style="{StaticResource FaktWert}"/></StackPanel>
+                </UniformGrid>
+                <TextBlock DockPanel.Dock="Bottom" Text="Am Schacht wird die Zustandsklasse nie berechnet. Die Fachperson setzt sie von Hand." TextWrapping="Wrap" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0"/>
+                <Button DockPanel.Dock="Bottom" Content="Protokoll (PDF)" Click="Pdf_Click" Style="{StaticResource ToolbarButton}" HorizontalAlignment="Left" Margin="0,8,0,0" ToolTip="Schachtprotokoll öffnen"/>
+                <TextBlock DockPanel.Dock="Top" Text="Schäden" FontSize="{DynamicResource TextM}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,4,0,6"/>
+                <ListBox ItemsSource="{Binding Entries, ElementName=Root}" BorderThickness="0" Background="Transparent" AutomationProperties.Name="Schäden" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="{DynamicResource RadiusS}" Padding="6,2" Margin="0,0,8,0" VerticalAlignment="Top"><TextBlock Text="{Binding Code}" FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/></Border>
+                                <StackPanel Grid.Column="1"><TextBlock Text="{Binding Converter={StaticResource SchadenKlartextConv}}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}"/><TextBlock Text="{Binding Converter={StaticResource SchadenStufeQuelleConv}}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/></StackPanel>
+                                <TextBlock Grid.Column="2" Text="{Binding Converter={StaticResource SchadenMeterConv}}" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="8,0,0,0"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </DockPanel>
-            <Canvas DockPanel.Dock="Top" Width="200" Height="120" HorizontalAlignment="Center" Margin="0,0,0,8" AutomationProperties.Name="Schachtgrundriss">
-                <Ellipse x:Name="Kreis" Canvas.Left="50" Canvas.Top="10" Width="100" Height="100" Fill="{DynamicResource BgLightBrush}" Stroke="{DynamicResource BorderBrush}" StrokeThickness="6"/>
-                <Ellipse x:Name="Oval" Canvas.Left="38" Canvas.Top="10" Width="124" Height="100" Fill="{DynamicResource BgLightBrush}" Stroke="{DynamicResource BorderBrush}" StrokeThickness="6" Visibility="Collapsed"/>
-                <Rectangle x:Name="Quadrat" Canvas.Left="45" Canvas.Top="10" Width="110" Height="100" RadiusX="6" RadiusY="6" Fill="{DynamicResource BgLightBrush}" Stroke="{DynamicResource BorderBrush}" StrokeThickness="6" Visibility="Collapsed"/>
-                <TextBlock x:Name="MassText" Canvas.Left="0" Canvas.Top="50" Width="200" TextAlignment="Center" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
-            </Canvas>
-            <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,0,0,8">
-                <StackPanel Margin="0,0,8,6"><TextBlock Text="Funktion" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Funktion]}" Style="{StaticResource FaktWert}"/></StackPanel>
-                <StackPanel Margin="0,0,0,6"><TextBlock Text="Material" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Material]}" Style="{StaticResource FaktWert}"/></StackPanel>
-                <StackPanel Margin="0,0,8,6"><TextBlock Text="Tiefe" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Schachttiefe]}" Style="{StaticResource FaktWert}"/></StackPanel>
-                <StackPanel Margin="0,0,0,6"><TextBlock Text="Baujahr" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Baujahr]}" Style="{StaticResource FaktWert}"/></StackPanel>
-                <StackPanel Margin="0,0,8,6"><TextBlock Text="Belastungsklasse" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Belastungsklasse]}" Style="{StaticResource FaktWert}"/></StackPanel>
-                <StackPanel Margin="0,0,0,6"><TextBlock Text="Inspektion" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Inspektionsdatum]}" Style="{StaticResource FaktWert}"/></StackPanel>
-            </UniformGrid>
-            <TextBlock DockPanel.Dock="Bottom" Text="Am Schacht wird die Zustandsklasse nie berechnet. Die Fachperson setzt sie von Hand." TextWrapping="Wrap" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0"/>
-            <Button DockPanel.Dock="Bottom" Content="Protokoll (PDF)" Click="Pdf_Click" Style="{StaticResource ToolbarButton}" HorizontalAlignment="Left" Margin="0,8,0,0" ToolTip="Schachtprotokoll öffnen"/>
-            <TextBlock DockPanel.Dock="Top" Text="Schäden" FontSize="{DynamicResource TextM}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,4,0,6"/>
-            <ListBox ItemsSource="{Binding Entries, ElementName=Root}" BorderThickness="0" Background="Transparent" AutomationProperties.Name="Schäden" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Margin="0,2">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="{DynamicResource RadiusS}" Padding="6,2" Margin="0,0,8,0" VerticalAlignment="Top"><TextBlock Text="{Binding Code}" FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/></Border>
-                            <StackPanel Grid.Column="1"><TextBlock Text="{Binding Converter={StaticResource SchadenKlartextConv}}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}"/><TextBlock Text="{Binding Converter={StaticResource SchadenStufeQuelleConv}}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/></StackPanel>
-                            <TextBlock Grid.Column="2" Text="{Binding Converter={StaticResource SchadenMeterConv}}" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="8,0,0,0"/>
-                        </Grid>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </DockPanel>
+
+            <TextBlock x:Name="Leerzustand" Text="Kein Schacht gewählt. Links eine Zeile wählen."
+                       Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"
+                       VerticalAlignment="Top" HorizontalAlignment="Left">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
     </Border>
 </UserControl>

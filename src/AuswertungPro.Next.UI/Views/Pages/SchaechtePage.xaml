@@ -258,18 +258,42 @@
                     </Button>
                 </StackPanel>
 
+                <!-- Nova-Etappe 2b, Task 4: Suche als Pille rechts, gleiches Muster wie die
+                     globale Suche in MainWindow.xaml (RadiusPill, InputBorderBrush, Lupe als
+                     ui:FluentIcon). Ohne Tastenmarke - F3 bleibt den Haltungen vorbehalten. -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Suche Schacht:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBox x:Name="SearchBox"
-                             Width="200"
-                             VerticalAlignment="Center"
-                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             TextChanged="SearchBox_TextChanged"/>
-                    <Button Margin="4,0,0,0" Style="{StaticResource IconButton}"
-                            Command="{Binding ClearSearchCommand}" ToolTip="Suche zurücksetzen">
-                        <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
-                    </Button>
-                    <TextBlock Text="{Binding SearchResultInfo}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    <TextBlock Text="{Binding SearchResultInfo}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <Border Height="30" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource InputBorderBrush}" BorderThickness="1"
+                            CornerRadius="{DynamicResource RadiusPill}" Padding="10,0" MinWidth="230" VerticalAlignment="Center">
+                        <DockPanel>
+                            <ui:FluentIcon DockPanel.Dock="Left" Glyph="&#xE721;" Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <Button DockPanel.Dock="Right" Margin="6,0,0,0" Style="{StaticResource IconButton}"
+                                    Command="{Binding ClearSearchCommand}" ToolTip="Suche zurücksetzen">
+                                <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
+                            </Button>
+                            <Grid>
+                                <TextBox x:Name="SearchBox" BorderThickness="0" Background="Transparent" MinWidth="150"
+                                         MinHeight="0" Padding="0" VerticalContentAlignment="Center"
+                                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         TextChanged="SearchBox_TextChanged"
+                                         ToolTip="Schacht suchen" AutomationProperties.Name="Suche Schacht"/>
+                                <TextBlock Text="Suche Schacht" IsHitTestVisible="False"
+                                           VerticalAlignment="Center" Margin="2,0,0,0"
+                                           FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </DockPanel>
+                    </Border>
                 </StackPanel>
             </DockPanel>
         </Border>

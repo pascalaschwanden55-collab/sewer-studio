@@ -29,6 +29,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private AuswertungPro.Next.Application.Vsa.IVsaEvaluationService Vsa => Vm.Vsa;
     private AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog => Vm.CodeCatalog;
     private bool _columnsBuilt;
+    /// <summary>Feldwert beim Oeffnen der Zelle; erkennt beim Schliessen eine echte Aenderung.</summary>
+    private string? _wertBeimOeffnen;
     private System.Windows.Point _dragStartPoint;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DataGridColumnLayoutController _columnLayoutController = new();
@@ -80,6 +82,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         // DataContext-Wechsel in InitNovaWorkspace angewendet; hier nur der robuste Grundzustand.
         HaltungsansichtToggle.IsChecked = false;
         ApplyHaltungsansichtSichtbarkeit();
+        ApplyNovaSucheSichtbarkeit(); // Task 4: Suche-Zeile passend zum Layout (Pille vs. alte Zeile)
 
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
         _searchDebounceTimer.Tick += (_, __) =>
@@ -145,6 +148,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             newVm.FelderExternErgaenzt += AktualisiereFelderDrawer;
             newVm.PropertyChanged += ViewModel_PropertyChanged;
             ApplyHaltungsansichtSettings(newVm);
+            ApplyNovaSucheSichtbarkeit();
             InitNovaWorkspace(newVm);
             _combinedFilter = new DataPageCombinedFilter(
                 newVm.SearchText,
@@ -181,6 +185,13 @@ public partial class DataPage : System.Windows.Controls.UserControl
                     System.Windows.Threading.DispatcherPriority.Background);
             }
         }
+
+        // Nova-Fixwelle 2b, Runde 2: Der Regler "Zeilenhoehe" veraendert die Mindesthoehe der
+        // Tabelle. In einer einzeiligen Nova-Ansicht gilt dort die kompakte Hoehe als
+        // Obergrenze — das muss auch beim Verstellen greifen und nicht erst beim naechsten
+        // Aufbau der Seite.
+        if (e.PropertyName == nameof(ViewModels.Pages.DataPageViewModel.GridMinRowHeight))
+            WendeZeilenhoeheAn(AktiveSpaltenansicht);
     }
 
     private void EnsureColumns()
@@ -192,27 +203,19 @@ public partial class DataPage : System.Windows.Controls.UserControl
         _columnLayoutController.Clear();
         _columnAlignmentToolbar.ClearActiveColumn();
 
-        foreach (var field in FieldCatalog.ColumnOrder)
+        var spalten = DataPageHaltungColumnBuilder.Baue(
+            NovaLayoutAktiv,
+            ComboBox_LostKeyboardFocus,
+            ComboBox_SelectionChanged);
+
+        foreach (var spalte in spalten)
         {
-            var def = FieldCatalog.Get(field);
-            var col = DataPageColumnFactory.Create(
-                field,
-                def.Label,
-                ComboBox_LostKeyboardFocus,
-                ComboBox_SelectionChanged);
-
-            var setup = DataPageColumnSetup.Apply(col, field);
-            // Die GEONIS-Kennung ist nur Anzeige: Der Export liest das Geonis-Objekt des
-            // Datensatzes, eine Handeingabe in der Zelle liefe daran vorbei.
-            if (string.Equals(field, FieldKeys.GeonisId, StringComparison.Ordinal))
-                col.IsReadOnly = true;
-            Grid.Columns.Add(col);
-            _columnFields[col] = field;
-
+            Grid.Columns.Add(spalte.Column);
+            _columnFields[spalte.Column] = spalte.Feld;
             _columnAlignmentToolbar.SetAlignment(
-                col,
-                setup.DefaultHorizontalAlignment,
-                setup.DefaultVerticalAlignment);
+                spalte.Column,
+                spalte.Setup.DefaultHorizontalAlignment,
+                spalte.Setup.DefaultVerticalAlignment);
         }
 
         Grid.FrozenColumnCount = 2;
@@ -243,6 +246,15 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void Grid_PreparingCellForEdit(object sender, DataGridPreparingCellForEditEventArgs e)
     {
+        // Fix-Runde 1 (F2): Den Wert beim Oeffnen merken. Nur so laesst sich beim Schliessen
+        // sagen, ob wirklich etwas geaendert wurde — bei einer Vorlagenspalte (Zustandsklasse)
+        // liefert der Textleser kein Ergebnis, und ohne diesen Vergleich galt jedes blosse
+        // Anklicken als Handeingabe.
+        _wertBeimOeffnen = e.Row?.Item is HaltungRecord record
+            && e.Column.GetValue(FrameworkElement.TagProperty) is string feld
+                ? record.GetFieldValue(feld)
+                : null;
+
         if (e.EditingElement is TextBox tb)
         {
             tb.SelectAll();
@@ -782,6 +794,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void Grid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
     {
+        var wertBeimOeffnen = _wertBeimOeffnen;
+        _wertBeimOeffnen = null;
+
         if (e.EditAction != DataGridEditAction.Commit)
             return;
         if (e.Column.GetValue(FrameworkElement.TagProperty) is not string fieldName)
@@ -798,7 +813,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
             editedValue,
             (message, title) => Dialogs.ConfirmWarn(message, title, defaultNo: true),
             vm.EnsureOptionForField,
-            (item, oldValue, newValue) => ApplyHoldingNameChange(item, oldValue, newValue, vm));
+            (item, oldValue, newValue) => ApplyHoldingNameChange(item, oldValue, newValue, vm),
+            wertBeimOeffnen);
         if (!shouldSave)
             return;
 

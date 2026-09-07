@@ -15,7 +15,8 @@ public static class DataPageCellEditController
         string? editedValue,
         Func<string, string, bool> confirmSwitchOffRenovation,
         Action<string, string?> ensureOptionForField,
-        Func<HaltungRecord, string, string, bool> applyHoldingNameChange)
+        Func<HaltungRecord, string, string, bool> applyHoldingNameChange,
+        string? wertBeimOeffnen = null)
     {
         ArgumentNullException.ThrowIfNull(fieldName);
         ArgumentNullException.ThrowIfNull(confirmSwitchOffRenovation);
@@ -43,11 +44,20 @@ public static class DataPageCellEditController
 
         if (fieldName == "Zustandsklasse" && record is not null)
         {
-            record.SetFieldValue(
-                fieldName,
-                editedValue ?? record.GetFieldValue(fieldName),
-                FieldSource.Manual,
-                userEdited: true);
+            // Die Zustandsklasse steht im Nova-Layout in einer Vorlagenspalte (Marke mit
+            // Auswahl 0 bis 4). Deren Bearbeitungselement kann der Textleser nicht lesen; der
+            // Wert steht nach einer echten Auswahl bereits im Datensatz. Deshalb wird hier der
+            // aktuelle Wert gestempelt — aber nur, wenn er sich seit dem Oeffnen der Zelle
+            // wirklich geaendert hat. Fix-Runde 1 (F2): Vorher stempelte schon das blosse
+            // Oeffnen und Schliessen den Wert als Handeingabe und loeste einen Speicherlauf aus.
+            var neuerWert = editedValue ?? record.GetFieldValue(fieldName);
+            if (wertBeimOeffnen is not null
+                && string.Equals(neuerWert, wertBeimOeffnen, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            record.SetFieldValue(fieldName, neuerWert, FieldSource.Manual, userEdited: true);
             return true;
         }
 
@@ -92,7 +102,8 @@ public static class DataPageCellEditController
         HaltungRecord record,
         string fieldName,
         string editedValue,
-        Func<HaltungRecord, string, string, bool> applyHoldingNameChange)
+        Func<HaltungRecord, string, string, bool> applyHoldingNameChange,
+        string? wertBeimOeffnen = null)
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(fieldName);
