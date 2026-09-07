@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.UseCases.Suche;
 using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
@@ -212,6 +213,22 @@ public partial class MainWindow : Window
         if (DataContext is not ShellViewModel vm) return;
         if (e.Key == Key.Enter) { vm.GlobaleSuche.WaehleErstenOderMarkierten(); e.Handled = true; }
         else if (e.Key == Key.Escape) { vm.GlobaleSuche.ListeOffen = false; e.Handled = true; }
+        else if (e.Key == Key.Down) { vm.GlobaleSuche.MarkiereNaechsten(); e.Handled = true; }
+        else if (e.Key == Key.Up) { vm.GlobaleSuche.MarkiereVorherigen(); e.Handled = true; }
+    }
+
+    /// <summary>Mausklick auf einen Suchtreffer waehlt ihn, ohne den Fokus aus dem Textfeld zu nehmen
+    /// (die ListBox ist absichtlich Focusable="False", Inventar 3.5). Verwendet
+    /// ItemsControl.ContainerFromElement statt eigenem VisualTree-Aufstieg, weil e.OriginalSource
+    /// auch ein ContentElement (z.B. ein Text-Run) ohne Visual sein kann.</summary>
+    private void GlobaleSucheTreffer_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not ShellViewModel vm) return;
+        if (sender is not ItemsControl itemsControl) return;
+        if (e.OriginalSource is not UIElement element) return;
+
+        if (itemsControl.ContainerFromElement(element) is ListBoxItem { Content: GlobaleSucheTreffer treffer })
+            vm.GlobaleSuche.Waehle(treffer);
     }
 
     private void OpenSystemMonitor_Click(object sender, RoutedEventArgs e)

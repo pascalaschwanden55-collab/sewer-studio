@@ -38,7 +38,7 @@ public static class GlobaleSucheRegel
         foreach (var s in schaechte)
         {
             var nummer = schachtNummer(s);
-            var strasse = s.GetFieldValue("Strasse");
+            var strasse = s.GetFieldValue(FieldKeys.Street);
             if (Passt(nummer) || Passt(strasse))
                 ergebnis.Add(new(GlobaleSucheArt.Schacht, string.IsNullOrWhiteSpace(strasse) ? $"Schacht {nummer}" : $"Schacht {nummer} · {strasse}", s));
             if (Passt(strasse) && !strassen.Contains(strasse!, StringComparer.OrdinalIgnoreCase))
