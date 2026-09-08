@@ -113,4 +113,16 @@ public sealed class DesignAuditOptikNachpruefungTests
         Assert.Contains("Content=\"Projekt speichern\" Command=\"{Binding SaveCommand}\" Style=\"{StaticResource ToolbarButtonAccent}\"", projekt);
         Assert.DoesNotContain("CloseButton_Click", Ui("Views", "Pages", "ProjectPage.xaml.cs"));
     }
+
+    /// <summary>O19: Einstellungsgruppen sind Karten, nicht die zweiteilige GroupBox-Vorlage.</summary>
+    [Fact]
+    public void Einstellungsgruppen_verwenden_eine_Kartenvorlage()
+    {
+        var xaml = Ui("Views", "Pages", "SettingsPage.xaml");
+        var stilStart = xaml.IndexOf("x:Key=\"SettingsSectionGroupBox\"", StringComparison.Ordinal);
+        var stil = xaml[stilStart..xaml.IndexOf("</Style>", stilStart, StringComparison.Ordinal)];
+        Assert.Contains("<ControlTemplate TargetType=\"GroupBox\">", stil);
+        Assert.Contains("CornerRadius=\"{DynamicResource RadiusL}\"", stil);
+        Assert.Contains("DataType=\"{x:Type sys:String}\"", stil);
+    }
 }

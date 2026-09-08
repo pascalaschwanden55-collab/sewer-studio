@@ -1,17 +1,52 @@
 ﻿<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SettingsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              xmlns:settings="clr-namespace:AuswertungPro.Next.UI.Settings"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <!-- Optik-Nachpruefung O19: Karte mit Titelzeile statt der zweiteiligen Theme-GroupBox
+             (breiter Doppelrahmen im Dunkelmodus). Der Kopf ist ein String; ein eigener
+             TextBlock setzt Groesse und Tinte selbst (B7: der implizite TextBlock-Stil
+             schlaegt TextElement.*). -->
         <Style x:Key="SettingsSectionGroupBox" TargetType="{x:Type GroupBox}">
             <Setter Property="Margin" Value="0,0,0,12"/>
-            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Padding" Value="14,12"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GroupBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{DynamicResource RadiusL}"
+                                Padding="{TemplateBinding Padding}">
+                            <!-- Grid statt DockPanel: SettingsPageLayoutTests verlangt fuer diese Seite
+                                 Grid-Zeilen (einheitliche Label/Eingabe/Aktion-Zeilen). -->
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <ContentPresenter Grid.Row="0" ContentSource="Header" Margin="0,0,0,10">
+                                    <ContentPresenter.Resources>
+                                        <DataTemplate DataType="{x:Type sys:String}">
+                                            <TextBlock Text="{Binding}" FontWeight="SemiBold"
+                                                       FontSize="{DynamicResource TextL}"
+                                                       Foreground="{DynamicResource TextBrush}"/>
+                                        </DataTemplate>
+                                    </ContentPresenter.Resources>
+                                </ContentPresenter>
+                                <ContentPresenter Grid.Row="1"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style x:Key="SettingsTabScrollViewer" TargetType="{x:Type ScrollViewer}">
             <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
