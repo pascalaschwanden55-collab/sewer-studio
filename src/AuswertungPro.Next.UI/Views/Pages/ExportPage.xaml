@@ -475,7 +475,21 @@
             <!-- Ergebnis der letzten Verteilung -->
             <TextBox Grid.Row="1" Text="{Binding LastResult}" AcceptsReturn="True" TextWrapping="Wrap"
                      IsReadOnly="True" VerticalScrollBarVisibility="Auto" MaxHeight="140" Margin="0,8,0,0"
-                     Foreground="{DynamicResource MutedBrush}"/>
+                     Foreground="{DynamicResource MutedBrush}">
+                <!-- Optik-Nachpruefung O7: ohne Ergebnis kein leerer umrandeter Kasten. -->
+                <TextBox.Style>
+                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding LastResult}" Value="">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding LastResult}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
         </Grid>
 
         <!-- Lade-Overlay fuer den xlsx-Export (deckt alle Zeilen ab) -->

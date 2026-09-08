@@ -51,4 +51,24 @@ public sealed class DesignAuditOptikNachpruefungTests
         var xaml = Ui("Controls", "FilterChipBar.xaml");
         Assert.Contains("RelativeSource={RelativeSource AncestorType=ToggleButton}", xaml);
     }
+
+    /// <summary>O7: Leere Suchfelder tragen einen Platzhalter; leere Statuszeilen verschwinden.</summary>
+    [Fact]
+    public void Suchfelder_tragen_Platzhalter_und_leere_Statuszeilen_verschwinden()
+    {
+        var drawer = Ui("Views", "Pages", "Haltungsansicht", "HaltungFelderDrawer.xaml");
+        Assert.Contains("Text=\"Feld suchen\"", drawer);
+        Assert.Contains("Binding=\"{Binding Text, ElementName=FeldSuche}\" Value=\"\"", drawer);
+
+        var settings = Ui("Views", "Pages", "SettingsPage.xaml");
+        Assert.Contains("Text=\"Einstellung suchen\"", settings);
+        Assert.Contains("Binding=\"{Binding Text, ElementName=SucheBox}\" Value=\"\"", settings);
+
+        var export = Ui("Views", "Pages", "ExportPage.xaml");
+        Assert.Contains("<DataTrigger Binding=\"{Binding LastResult}\" Value=\"\">", export);
+
+        var dossiers = Ui("Views", "Pages", "DossiersPage.xaml");
+        Assert.Contains("<Condition Binding=\"{Binding StatusMessage}\" Value=\"\"/>", dossiers);
+        Assert.Contains("<Condition Binding=\"{Binding IsBusy}\" Value=\"False\"/>", dossiers);
+    }
 }

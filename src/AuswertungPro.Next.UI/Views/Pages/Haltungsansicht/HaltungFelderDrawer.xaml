@@ -62,9 +62,27 @@
                         ToolTip="Alle Themen aufklappen" AutomationProperties.Name="Alle Themen aufklappen">
                     <TextBlock Text="Alle auf"/>
                 </Button>
-                <TextBox DockPanel.Dock="Right" x:Name="FeldSuche" Width="220" Margin="0,0,8,0"
-                         TextChanged="FeldSuche_TextChanged"
-                         ToolTip="Feld suchen, zum Beispiel Baujahr" AutomationProperties.Name="Feld suchen"/>
+                <!-- Optik-Nachpruefung O7: Platzhalter wie in der Suchpille der Haltungsseite —
+                     ein leerer Kasten ohne Hinweis war nicht als Suche erkennbar. -->
+                <Grid DockPanel.Dock="Right" Width="220" Margin="0,0,8,0">
+                    <TextBox x:Name="FeldSuche"
+                             TextChanged="FeldSuche_TextChanged"
+                             ToolTip="Feld suchen, zum Beispiel Baujahr" AutomationProperties.Name="Feld suchen"/>
+                    <TextBlock Text="Feld suchen" IsHitTestVisible="False"
+                               VerticalAlignment="Center" Margin="8,0,0,0"
+                               FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=FeldSuche}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
             </DockPanel>
             <!-- Die Themen des Detail-Builders nebeneinander, jedes einzeln aufklappbar.
                  Zugeklappt bleibt nur die Kopfzeile; die Seite schrumpft dann die Zeile (W03). -->

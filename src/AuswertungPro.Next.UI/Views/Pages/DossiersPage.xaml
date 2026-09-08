@@ -554,6 +554,27 @@
                 Background="{DynamicResource HeaderBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}">
+            <!-- Optik-Nachpruefung O7: Fusszeile nur mit Meldung oder waehrend der Arbeit. -->
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding StatusMessage}" Value=""/>
+                                <Condition Binding="{Binding IsBusy}" Value="False"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding StatusMessage}" Value="{x:Null}"/>
+                                <Condition Binding="{Binding IsBusy}" Value="False"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </MultiDataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <Grid>
                 <TextBlock Text="{Binding StatusMessage}"
                            Foreground="{DynamicResource MutedBrush}"

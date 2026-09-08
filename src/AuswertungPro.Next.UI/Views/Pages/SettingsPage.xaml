@@ -276,11 +276,27 @@
                         <ui:FluentIcon Glyph="&#xE721;"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,0,6,0"/>
-                        <TextBox x:Name="SucheBox"
-                                 Width="260"
-                                 TextChanged="SucheBox_TextChanged"
-                                 AutomationProperties.Name="Einstellung suchen"
-                                 ToolTip="Einstellung suchen — zeigt nur passende Gruppen und springt zum ersten Reiter mit Treffer."/>
+                        <Grid Width="260">
+                            <TextBox x:Name="SucheBox"
+                                     TextChanged="SucheBox_TextChanged"
+                                     AutomationProperties.Name="Einstellung suchen"
+                                     ToolTip="Einstellung suchen — zeigt nur passende Gruppen und springt zum ersten Reiter mit Treffer."/>
+                            <!-- Optik-Nachpruefung O7: Platzhalter, sichtbar nur bei leerem Feld. -->
+                            <TextBlock Text="Einstellung suchen" IsHitTestVisible="False"
+                                       VerticalAlignment="Center" Margin="8,0,0,0"
+                                       FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, ElementName=SucheBox}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
                         <TextBlock x:Name="SucheTreffer"
                                    Margin="8,0,0,0"
                                    VerticalAlignment="Center"
