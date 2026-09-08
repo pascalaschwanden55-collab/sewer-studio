@@ -102,7 +102,7 @@ Die Messungen sind unter [nachweise](nachweise) abgelegt.
 - Erste gezielte Nachpr?fung: 274 bestanden, 7 ?bersprungen, 0 Fehler.
 - Vier Fotoabl?ufe (Haltungen/Sch?chte ? hell/dunkel): alle Exit 0; Men?-R?ckwege und
   unver?nderte Projektdaten in den vier `ansichtswechsel-*.json` best?tigt.
-- Vollst?ndiger finaler Release-Build: 0 Warnungen, 0 Fehler; [Buildprotokoll](nachweise/release-build-final.log).
+- Vollst?ndiger finaler Release-Build: 0 Warnungen, 0 Fehler; [Buildprotokoll](nachweise/release-build-final.txt).
 - Der erste volle Testlauf enthielt neben dem bekannten Nachschlag-Test noch zwei Fehler
   in den eigenen unvollst?ndigen Testdaten und einen veralteten erwarteten Spaltentitel.
   Diese wurden korrigiert; der Oberfl?chenlauf wurde vollst?ndig wiederholt. Der urspr?ngliche
@@ -124,7 +124,7 @@ Der schon vor diesem Branch bekannte Kindprozess scheitert am Zeitlimit; gem?ss 
 kein Regress dieser Arbeit. Der vollst?ndige Lauf ist deshalb formal weiterhin rot.
 Es wurden keine Tests deaktiviert. Neue Wiederladef?lle und der verst?rkte Schachttest bestehen.
 Maschinenlesbare Zahlen: [tests-final.json](nachweise/tests-final.json);
-[abschliessendes UI-Protokoll](nachweise/ui-final.log). Die drei ?brigen Testprojekte stammen
+[abschliessendes UI-Protokoll](nachweise/ui-final.txt). Die drei ?brigen Testprojekte stammen
 vom vollst?ndigen Gesamtlauf; nach den letzten Anpassungen der UI-Testdaten und des
 Kopftext-W?chters wurde der komplette UI-Lauf wiederholt.
 
