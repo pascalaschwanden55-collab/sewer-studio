@@ -132,6 +132,22 @@ public sealed class SchaechteNovaWorkspaceController
         _felderSync = new DataPageDetailLiveSync(record, record.GetFieldValue, gruppen);
     }
 
+    /// <summary>
+    /// Leert die Eingabefelder und entsorgt ihren Live-Abgleich. Gebraucht, sobald die Seite die
+    /// Aufklapp-Liste zeigt: Das Formular steht dann in der aufgeklappten Zeile, und ein zweiter
+    /// Live-Sync auf denselben Datensatz waere verschwendete Arbeit und ein zweiter Schreibweg
+    /// auf dasselbe Formular (Fix-Runde 1 zu Task 6, dasselbe Muster wie
+    /// <see cref="DataPageNovaWorkspaceController.LeereFelderDrawer"/>).
+    /// </summary>
+    public void LeereFelderDrawer()
+    {
+        _felderSync?.Dispose();
+        _felderSync = null;
+        _e.FelderDrawer.Hinweis = string.Empty;
+        _e.FelderDrawer.Titel = string.Empty;
+        _e.FelderDrawer.Groups = null;
+    }
+
     private bool IstSichtbar => _e.FelderDrawer.Visibility == Visibility.Visible;
 
     /// <summary>
@@ -188,9 +204,6 @@ public sealed class SchaechteNovaWorkspaceController
             _e.DrawerRow.Height = GridLength.Auto;
         }
     }
-
-    /// <summary>Blendet Uebersicht und Eingabefelder gemeinsam ein oder aus.</summary>
-    public void SetzeSichtbar(bool sichtbar) => SetzeSichtbar(sichtbar, sichtbar);
 
     /// <summary>
     /// Blendet Uebersicht und Eingabefelder getrennt ein oder aus (Task 6, Aufklapp-Liste). Die

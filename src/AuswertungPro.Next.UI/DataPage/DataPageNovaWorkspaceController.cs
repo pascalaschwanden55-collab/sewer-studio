@@ -212,12 +212,6 @@ public sealed class DataPageNovaWorkspaceController
     }
 
     /// <summary>
-    /// Blendet Uebersicht, Eingabefelder und beide Trennlinien gemeinsam ein oder aus
-    /// (alte Haltungsansicht: alles aus).
-    /// </summary>
-    public void SetzeSichtbar(bool sichtbar) => SetzeSichtbar(sichtbar, sichtbar);
-
-    /// <summary>
     /// Blendet Uebersicht und Eingabefelder getrennt ein oder aus. Die festen Spalten- und
     /// Zeilenmasse werden dabei mit auf 0 gesetzt, sonst bliebe eine Luecke. Getrennt gebraucht
     /// wird das von der Aufklapp-Liste: Dort bleibt die Uebersicht rechts, waehrend die

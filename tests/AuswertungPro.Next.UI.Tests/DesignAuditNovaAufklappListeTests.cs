@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -57,10 +58,13 @@ public sealed class DesignAuditNovaAufklappListeTests
         Assert.Contains("ToolTip=", knopf.Value, StringComparison.Ordinal);
         Assert.Contains("AutomationProperties.Name=", knopf.Value, StringComparison.Ordinal);
 
-        var konverter = File.ReadAllText(RepoFile(
-            "src", "AuswertungPro.Next.UI", "Views", "Pages", "Haltungsansicht", "HaltungAufklappListeConverters.cs"));
-        Assert.Contains("\"Haltung aufklappen\"", konverter, StringComparison.Ordinal);
-        Assert.Contains("\"Haltung zuklappen\"", konverter, StringComparison.Ordinal);
+        // Fix-Runde 1 zu Task 6: Die Endungen werden seither nur an EINER Stelle gebildet
+        // (AufklappenEndung/ZuklappenEndung), damit die Schacht-Liste (ConverterParameter=
+        // Schacht) und die Haltungs-Konstanten nicht auseinanderlaufen koennen. Statt des
+        // frueheren Quelltext-Scans nach den Literalen wird deshalb der tatsaechliche,
+        // weiterhin unveraenderte Wert geprueft.
+        Assert.Equal("Haltung aufklappen", PfeilBeschriftungConverter.Aufklappen);
+        Assert.Equal("Haltung zuklappen", PfeilBeschriftungConverter.Zuklappen);
     }
 
     /// <summary>

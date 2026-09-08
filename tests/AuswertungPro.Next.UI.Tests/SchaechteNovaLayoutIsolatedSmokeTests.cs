@@ -130,6 +130,104 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
         });
     }
 
+    private static readonly string FormularChildTestName =
+        typeof(SchaechteNovaLayoutIsolatedSmokeTests).FullName
+        + "."
+        + nameof(Kindprozess_prueft_Formular_je_Ansicht);
+
+    [Fact]
+    public async Task Formular_je_Ansicht_laeuft_in_eigenem_Wpf_Prozess()
+    {
+        Assert.Null(System.Windows.Application.Current);
+        var result = await WpfIsolatedTestProcess.RunAsync(FormularChildTestName, TimeSpan.FromSeconds(60));
+
+        Assert.Null(System.Windows.Application.Current);
+        Assert.False(result.TimedOut, result.DescribeFailure());
+        Assert.True(result.ExitCode == 0, result.DescribeFailure());
+        Assert.True(result.ChildScenarioCompleted, result.DescribeFailure());
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 zu Task 6 (Review-Befund, hoch): Es gibt genau EIN Formular je Schacht. In
+    /// der Tabellenansicht traegt es die Eingabefelder-Schublade, in der Aufklapp-Liste die
+    /// aufgeklappte Zeile — und der Rueckweg fuellt die Schublade wieder.
+    ///
+    /// Vorher rief <c>SchaechtePage.NovaWorkspace.cs</c> <c>AktualisiereFelderDrawer()</c>
+    /// ungeprueft (ohne auf <c>ListeSichtbar</c> zu schauen). In der Aufklapp-Liste blieb dadurch
+    /// ein zweiter, unsichtbarer <see cref="AuswertungPro.Next.UI.DataPage.DataPageDetailLiveSync"/>
+    /// auf demselben Datensatz bestehen — genau das Muster, das die Haltungsseite in Fix-Runde 1
+    /// schon einmal hatte (<c>DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht</c>).
+    /// Der Test prueft zusaetzlich, dass der Sync nach <c>LeereFelderDrawer()</c> wirklich
+    /// ENTSORGT ist (nicht nur unsichtbar): Eine Feldaenderung am Datensatz darf das schon
+    /// gebaute, aber verlassene <see cref="RecordDetailItem"/> nicht mehr erreichen.
+    ///
+    /// Bewusst OHNE <c>SchaechtePage</c>: Die Seite schreibt mit einem echten ViewModel beim
+    /// <c>Loaded</c>/<c>Unloaded</c> in die echte settings.json. Geprueft wird deshalb der
+    /// Controller, den die Seite ruft, mit einem echten ViewModel und der echten Schublade.
+    /// </summary>
+    [IsolatedWpfFact]
+    public void Kindprozess_prueft_Formular_je_Ansicht()
+    {
+        StaTestRunner.Run(() =>
+        {
+            Assert.Null(System.Windows.Application.Current);
+            var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            app.InitializeComponent();
+
+            using var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(_ => { });
+            var services = new AuswertungPro.Next.UI.ServiceProvider(
+                new AppSettings { EnableRestorePoints = false },
+                new AuswertungPro.Next.Application.Diagnostics.DiagnosticsOptions(),
+                loggerFactory.CreateLogger("test"),
+                loggerFactory);
+            using var shell = new AuswertungPro.Next.UI.ViewModels.ShellViewModel(
+                services, new SystemMonitorService(enableHardwareSensorInit: false));
+
+            var record = new SchachtRecord();
+            record.SetFieldValue("Schachtnummer", "S-1", FieldSource.Manual, userEdited: true);
+            record.SetFieldValue("Baujahr", "1970", FieldSource.Manual, userEdited: true);
+            shell.Project.SchaechteData.Add(record);
+            shell.NavigateToShaft(record);
+            var vm = Assert.IsType<AuswertungPro.Next.UI.ViewModels.Pages.SchaechtePageViewModel>(shell.CurrentPage);
+            Assert.Same(record, vm.Selected);
+
+            var drawer = new HaltungFelderDrawer();
+            var controller = new AuswertungPro.Next.UI.DataPage.SchaechteNovaWorkspaceController(
+                new AuswertungPro.Next.UI.DataPage.SchaechteNovaWorkspaceController.Elemente(
+                    new Grid(), new RowDefinition(), new RowDefinition(),
+                    new ColumnDefinition(), new ColumnDefinition(), new GridSplitter(), new GridSplitter(),
+                    new SchachtUebersichtPanel(), drawer),
+                () => vm,
+                r => [new AuswertungPro.Next.UI.Views.Windows.RecordDetailGroup(
+                    "Stammdaten", string.Empty,
+                    [new AuswertungPro.Next.UI.Views.Windows.RecordDetailItem("Baujahr", r.GetFieldValue("Baujahr"), _ => { })])],
+                _ => { });
+
+            // Tabellenansicht: die Schublade traegt das Formular des gewaehlten Schachts.
+            controller.AktualisiereFelderDrawer();
+            Assert.NotNull(drawer.Groups);
+            Assert.Equal("S-1", drawer.Titel);
+            var altesItem = drawer.Groups!.Single().Items.Single();
+            Assert.Equal("1970", altesItem.Value);
+
+            // Aufklapp-Liste: die Schublade wird geleert, nicht nur ausgeblendet — UND ihr
+            // Live-Sync wird entsorgt, sonst liefe er unsichtbar auf demselben Datensatz weiter.
+            controller.LeereFelderDrawer();
+            Assert.Null(drawer.Groups);
+            Assert.Equal(string.Empty, drawer.Titel);
+            record.SetFieldValue("Baujahr", "2020", FieldSource.Manual, userEdited: true);
+            Assert.Equal("1970", altesItem.Value); // unveraendert: entsorgt, nicht nur unsichtbar
+
+            // Und zurueck zur Tabelle: derselbe Weg fuellt sie wieder, mit dem aktuellen Wert.
+            controller.AktualisiereFelderDrawer();
+            Assert.NotNull(drawer.Groups);
+            Assert.Equal("S-1", drawer.Titel);
+            Assert.Equal("2020", drawer.Groups!.Single().Items.Single().Value);
+
+            WpfIsolatedTestProcess.MarkChildScenarioCompleted();
+        });
+    }
+
     private static readonly string PanelChildTestName =
         typeof(SchaechteNovaLayoutIsolatedSmokeTests).FullName
         + "."

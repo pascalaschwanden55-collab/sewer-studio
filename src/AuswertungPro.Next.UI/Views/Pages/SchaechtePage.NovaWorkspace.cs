@@ -38,7 +38,20 @@ public partial class SchaechtePage
         WendeSchachtAnsichtAn();
     }
 
-    private void AktualisiereFelderDrawer() => _novaWorkspace?.AktualisiereFelderDrawer();
+    /// <summary>
+    /// Die Eingabefelder unten gehoeren zur Tabelle. Zeigt die Seite die Aufklapp-Liste, wird
+    /// die Schublade geleert und ihr Live-Abgleich entsorgt: ein Formular je Datensatz
+    /// (Fix-Runde 1 zu Task 6, dasselbe Muster wie <c>DataPage.AktualisiereFelderDrawer</c>).
+    /// Ohne das lief in der Liste ein zweiter <see cref="DataPageDetailLiveSync"/> auf demselben
+    /// Schacht mit, den niemand sah und niemand entsorgte.
+    /// </summary>
+    private void AktualisiereFelderDrawer()
+    {
+        if (_ansichtSchacht?.ListeSichtbar == true)
+            _novaWorkspace?.LeereFelderDrawer();
+        else
+            _novaWorkspace?.AktualisiereFelderDrawer();
+    }
 
     private void ApplyDrawerHeight() => _novaWorkspace?.ApplyDrawerHeight();
 }

@@ -63,16 +63,26 @@ public sealed class SchmaleBreiteConverter : IValueConverter
 /// </summary>
 public sealed class PfeilBeschriftungConverter : IValueConverter
 {
-    public const string Aufklappen = "Haltung aufklappen";
-    public const string Zuklappen = "Haltung zuklappen";
-
     /// <summary>Nomen, wenn kein ConverterParameter gesetzt ist.</summary>
     private const string StandardNomen = "Haltung";
+
+    // Fix-Runde 1 zu Task 6: Die Endungen stehen NUR hier. Aufklappen/Zuklappen (unten) und
+    // Convert() bildeten den Text vorher an zwei Stellen unabhaengig ("Haltung aufklappen" als
+    // Literal, $"{nomen} aufklappen" im Konverter) — bei einer Aenderung der Endung waeren beide
+    // auseinandergelaufen, ohne dass ein Test es gemerkt haette.
+    private const string AufklappenEndung = " aufklappen";
+    private const string ZuklappenEndung = " zuklappen";
+
+    /// <summary>Bleiben als Konstanten (nicht "static readonly"): Tests vergleichen sie ueber
+    /// Musterabgleich ("is PfeilBeschriftungConverter.Aufklappen or ..."), der eine echte
+    /// Kompilierzeit-Konstante verlangt. Stringverkettung von Konstanten bleibt konstant.</summary>
+    public const string Aufklappen = StandardNomen + AufklappenEndung;
+    public const string Zuklappen = StandardNomen + ZuklappenEndung;
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         var nomen = parameter as string ?? StandardNomen;
-        return value is true ? $"{nomen} zuklappen" : $"{nomen} aufklappen";
+        return value is true ? nomen + ZuklappenEndung : nomen + AufklappenEndung;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
