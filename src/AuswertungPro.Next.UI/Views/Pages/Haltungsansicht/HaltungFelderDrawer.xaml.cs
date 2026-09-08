@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
@@ -100,38 +100,17 @@ public partial class HaltungFelderDrawer : UserControl
         private set => SetValue(SichtbareGruppenProperty, value);
     }
 
-    /// <summary>Thementitel, das standardmaessig zugeklappt startet (Nova-Etappe 2b).</summary>
-    private const string WeitereAngabenTitel = "Weitere Angaben";
-
-    /// <summary>Ein Thema mit genau einer Gruppe, damit RecordDetailsView es unveraendert rendert.</summary>
-    public sealed record ThemaAnzeige(string Title, IReadOnlyList<RecordDetailGroup> EinzelGruppe)
-    {
-        /// <summary>Anzahl der Felder in diesem Thema, fuer den Zaehler im Expander-Kopf.</summary>
-        public int Anzahl => EinzelGruppe.Sum(g => g.Items.Count);
-
-        /// <summary>
-        /// Vier feste Prototyp-Themen starten aufgeklappt; "Weitere Angaben" (alle uebrigen
-        /// Projektfelder) startet zugeklappt, damit es nicht vom eigentlichen Formular ablenkt.
-        /// </summary>
-        public bool IstStandardAufgeklappt => Title != WeitereAngabenTitel;
-    }
-
-    /// <summary>Reine Filterregel: nur Felder, deren Beschriftung den Suchtext enthaelt.</summary>
+    /// <summary>
+    /// Reine Filterregel: nur Felder, deren Beschriftung den Suchtext enthaelt. Reihenfolge,
+    /// Zaehler und die Regel "Weitere Angaben startet zugeklappt" liegen gemeinsam mit der
+    /// Aufklapp-Liste in <see cref="HaltungThemenGruppierung"/> — keine zweite Kopie.
+    /// </summary>
     internal static IReadOnlyList<ThemaAnzeige> Filtere(IReadOnlyList<RecordDetailGroup>? gruppen, string? suche)
-    {
-        var q = (suche ?? string.Empty).Trim();
-        return (gruppen ?? Array.Empty<RecordDetailGroup>())
-            .Select(g => q.Length == 0
-                ? g
-                : g with { Items = g.Items.Where(i => i.Label.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList() })
-            .Where(g => g.Items.Count > 0)
-            .Select(g => new ThemaAnzeige(g.Title, new[] { g }))
-            .ToList();
-    }
+        => HaltungThemenGruppierung.Filtere(gruppen, suche);
 
     private void FeldSuche_TextChanged(object sender, TextChangedEventArgs e) => Filtern();
 
-    private void Filtern() => SichtbareGruppen = Filtere(Groups, FeldSuche?.Text);
+    private void Filtern() => SichtbareGruppen = HaltungThemenGruppierung.Filtere(Groups, FeldSuche?.Text);
 
     private void AlleAuf_Click(object sender, RoutedEventArgs e) => SetzeAlle(true);
 

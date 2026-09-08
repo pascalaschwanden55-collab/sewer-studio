@@ -69,18 +69,5 @@ public partial class DataPage
     }
 
     private void SyncColumnViewChips()
-    {
-        foreach (var chip in VisualTreeSafe.FindDescendants<ToggleButton>(ColumnViewChips))
-        {
-            chip.IsChecked = string.Equals(chip.Tag as string, _columnViews?.ActiveKey, StringComparison.OrdinalIgnoreCase);
-            if (chip.DataContext is DataPageColumnView view)
-            {
-                // Der Zaehler steht in der Chip-Vorlage; fehlt er (fremde Vorlage), wird nichts gesetzt
-                // statt eine Ausnahme zu werfen.
-                var zaehler = VisualTreeSafe.FindDescendants<TextBlock>(chip).FirstOrDefault(t => t.Name == "ChipZaehler");
-                if (zaehler is not null)
-                    zaehler.Text = view.Anzahl(_columnFields.Values.ToList()).ToString();
-            }
-        }
-    }
+        => ColumnViewChipSync.Wende(ColumnViewChips, _columnViews?.ActiveKey, _columnFields.Values);
 }

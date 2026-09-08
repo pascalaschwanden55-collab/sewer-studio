@@ -28,20 +28,33 @@ public partial class DataPage
     /// <summary>Verbindet Uebersicht und Eingabefelder mit dem ViewModel und waehlt die Standardansicht.</summary>
     private void InitNovaWorkspace(DataPageViewModel vm)
     {
+        _novaWorkspace?.VerbindeKatalog();
         AktualisiereFelderDrawer();
         // Standardansicht: Nova-Arbeitsflaeche; die bisherige Haltungsansicht bleibt ueber den Toggle
         // erreichbar und wird Standard, wenn die Einstellung aus ist.
         HaltungsansichtToggle.IsChecked = !vm.Settings.ShowHaltungenNovaLayout;
-        ApplyHaltungsansichtSichtbarkeit();
+        WendeAnsichtAn();
     }
 
-    private void AktualisiereFelderDrawer() => _novaWorkspace?.AktualisiereFelderDrawer();
+    /// <summary>
+    /// Die Eingabefelder unten gehoeren zur Tabelle. Zeigt die Seite die Aufklapp-Liste, wird
+    /// die Schublade geleert und ihr Live-Abgleich entsorgt: ein Formular je Datensatz.
+    /// </summary>
+    private void AktualisiereFelderDrawer()
+    {
+        if (_ansicht?.ListeSichtbar == true)
+            _novaWorkspace?.LeereFelderDrawer();
+        else
+            _novaWorkspace?.AktualisiereFelderDrawer();
+    }
 
     private void ApplyDrawerHeight() => _novaWorkspace?.ApplyDrawerHeight();
 
     // Vor VerdrahteNovaWorkspace (waehrend InitializeComponent) gilt der XAML-Grundzustand.
-    private void SetNovaWorkspaceVisible(bool sichtbar) => _novaWorkspace?.SetzeSichtbar(sichtbar);
+    private void SetNovaWorkspaceVisible(bool uebersicht, bool eingabefelder)
+        => _novaWorkspace?.SetzeSichtbar(uebersicht, eingabefelder);
 
+    /// <summary>W01: Die Weiche zwischen Liste und Schublade liegt im Ansichtsumschalter.</summary>
     private void MeldeFormularKonflikt(string fieldName, string aktuellerWert, string eingabe)
-        => _novaWorkspace?.MeldeKonflikt(fieldName, aktuellerWert, eingabe);
+        => _ansicht?.MeldeKonflikt(fieldName, aktuellerWert, eingabe);
 }

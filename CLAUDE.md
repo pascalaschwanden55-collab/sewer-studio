@@ -1107,6 +1107,40 @@ derselben Entscheidung heisst, dass nur einer den Schutz bekommt.
 
 Offen bleibt: Windows-Skalierung 125 und 150 Prozent ist nicht gemessen.
 
+### Nova: Aufklapp-Listen und Grafiken (2026-09-08)
+
+Stand und ehrliche Abnahmegrenzen: `docs/reviews/2026-09-06-nova/aufklapp-liste/ABNAHME.md`.
+
+- `AppSettings.HaltungenAnsicht` und `SchaechteAnsicht` haben den Standard `"liste"`.
+  `HaltungenAnsichtRegel` wird von beiden Ansichtsumschaltern verwendet; die Tabelle
+  bleibt unter Weitere Aktionen / Ansicht erreichbar. Spaltenchips und Abdocken gehoeren
+  zur Tabelle. Genau ein Datensatz ist aufklappbar; blosse Auswahl klappt nicht auf.
+- `HaltungAufklappListe` und `SchachtAufklappListe` teilen Themenbildung, Tastenregel,
+  Zustandskonverter und `DataPageDetailLiveSync`. `DataPageAufklappListeController` und
+  `SchaechteAufklappListeController` besitzen den jeweiligen Formular-Abgleich. Genau
+  EIN Formular je Datensatz: Unsichtbare Schubladen werden mit `LeereFelderDrawer`
+  geleert und ihr Abgleich entsorgt. Der Tabellen-Rueckweg baut ihn wieder auf.
+  Nach erneutem `Verdrahte` wird auch ein bereits offenes Listenformular wieder verbunden.
+- `HaltungAufklappTastenregel`: Escape aus einem Editor holt zuerst den Fokus auf die
+  Zeile, damit die normale Eingabe zurueckgeschrieben wird. Erst der zweite Escape
+  klappt zu. Ein ausdruecklicher Haltungssprung nutzt `DataPageViewModel.ZeigeHaltung`.
+- `HaltungsgrafikAnsichtBuilder` liest das aktuelle Protokoll ausschliesslich.
+  Niemals `ResolveEntriesForExport` in einer Ansicht verwenden: Dieser Exportweg
+  repariert Eintraege. `HaltungsgrafikSvgBuilder` liefert mit `nurRohr` nur die Rohrsaeule.
+- `SchachtgrafikAnsichtBuilder` liest Schachtfelder ueber `SchachtFeldnamen` und
+  angeschlossene Haltungen aus der vom ViewModel gereichten Liste. Keine
+  Zustandsberechnung am Schacht. `SchachtSchadenKategorieRegel` verwendet Text nur bei
+  bekannten Bauteilnamen aus `SchachtBauteilNamen`, mit Wortgrenze und Negationswaechter.
+- `SvgTeilmengeZeichner`, `SvgTeilmengeDefinitionen`, `SvgWert` und `SvgFarbZuordnung`
+  sind der SVG-Vertrag: Neue Builder-Elemente oder Attribute verlangen eine Erweiterung
+  des Zeichners und der Teilmengen-Tests. Unbekanntes wirft; das Control zeigt einen
+  ehrlichen Leer-/Fehlerzustand. Beide Grafik-Controls verbinden ihre Datensatzmeldungen
+  nach `Loaded` erneut, auch wenn dieselbe Instanz und derselbe Datensatz zurueckkehren.
+- Nachpruefungen: `NovaGrafikWiederladenTests`, `NovaListenWiederverbindenTests`,
+  `SchaechteNovaLayoutIsolatedSmokeTests` sowie die vorhandenen Listen-, Grafik- und
+  Gestaltungswaechter. Der isolierte Pruefhost kennt `haltungenliste` und `schaechteliste`
+  und prueft den Menuewechsel auf echten Seiten mit eigenem Profil.
+
 ## Build & Test
 ```bash
 dotnet build AuswertungPro.sln

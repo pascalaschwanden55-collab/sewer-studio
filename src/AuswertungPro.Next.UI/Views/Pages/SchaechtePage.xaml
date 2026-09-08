@@ -4,10 +4,31 @@
              xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage"
+             xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
              xmlns:schachtansicht="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Schachtansicht"
              xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
              xmlns:haltung="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
              Loaded="ColumnViews_Loaded">
+    <UserControl.Resources>
+        <!-- Nova, Aufklapp-Liste (Task 6): EIN Zeilen-Kontextmenue fuer Tabelle UND Liste — wie
+             bei den Haltungen (HaltungZeilenMenue). Zwei Wege zu denselben Aktionen hiessen,
+             dass nur einer die Pruefungen bekommt. -->
+        <ContextMenu x:Key="SchachtZeilenMenue">
+            <MenuItem Header="Details anzeigen..." Click="DetailsMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE946;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Sanierungsmassnahmen..." Click="SanierungsmassnahmenMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <Separator/>
+            <MenuItem Header="Protokoll (PDF)..." Click="ProtokollMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Gehe zu Ordner" Click="OpenContainingFolderMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+    </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -250,6 +271,15 @@
                                 <MenuItem x:Name="ClearColumnModeButton" Header="Spalte leeren" IsCheckable="True"
                                           IsEnabled="{Binding CanMutateShaftData}"
                                           ToolTip="Aktivieren, dann auf Spaltentitel klicken um Spalte zu leeren"/>
+                                <!-- Nova, Aufklapp-Liste (Task 6): Die drei Ansichten der Schachtseite sind
+                                     EINE Gruppe, wie bei den Haltungen. Genau einer der beiden Nova-Punkte
+                                     ist angehakt. -->
+                                <MenuItem x:Name="AnsichtListeMenu" Header="Aufklapp-Liste" IsCheckable="True" Tag="liste"
+                                          Click="AnsichtMenu_Click"
+                                          ToolTip="Schächte als Liste; die gewählte Zeile klappt mit allen Feldern auf"/>
+                                <MenuItem x:Name="AnsichtTabelleMenu" Header="Tabelle" IsCheckable="True" Tag="tabelle"
+                                          Click="AnsichtMenu_Click"
+                                          ToolTip="Schächte als Tabelle mit Spaltenansichten und Eingabefeldern unten"/>
                                 <MenuItem x:Name="SchachtansichtToggle" Header="Alte Schachtansicht" IsCheckable="True"
                                           Checked="SchachtansichtToggle_Changed" Unchecked="SchachtansichtToggle_Changed"
                                           ToolTip="Zwischen Tabelle und Schachtansicht umschalten"/>
@@ -365,28 +395,21 @@
                   PreviewMouseWheel="Grid_PreviewMouseWheel"
                   PreviewMouseDoubleClick="Grid_PreviewMouseDoubleClick"
                   PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown"
-                  PreviewMouseLeftButtonDown="Grid_QgisReselectOnClick">
+                  PreviewMouseLeftButtonDown="Grid_QgisReselectOnClick"
+                  ContextMenu="{StaticResource SchachtZeilenMenue}">
             <DataGrid.LayoutTransform>
                 <ScaleTransform ScaleX="{Binding GridZoom}" ScaleY="{Binding GridZoom}"/>
             </DataGrid.LayoutTransform>
-            <DataGrid.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Details anzeigen..." Click="DetailsMenu_Click">
-                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE946;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                    </MenuItem>
-                    <MenuItem Header="Sanierungsmassnahmen..." Click="SanierungsmassnahmenMenu_Click">
-                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                    </MenuItem>
-                    <Separator/>
-                    <MenuItem Header="Protokoll (PDF)..." Click="ProtokollMenu_Click">
-                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                    </MenuItem>
-                    <MenuItem Header="Gehe zu Ordner" Click="OpenContainingFolderMenu_Click">
-                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                    </MenuItem>
-                </ContextMenu>
-            </DataGrid.ContextMenu>
         </DataGrid>
+
+        <!-- Nova, Aufklapp-Liste (Task 6): Standardansicht der Schaechte. Sie liegt in derselben
+             Zelle wie die Tabelle und bindet dieselbe Ansicht der Datensaetze; Suche und
+             Filterzeile wirken dadurch ohne zweiten Weg. Das Zeilen-Kontextmenue ist dasselbe. -->
+        <schachtansicht:SchachtAufklappListe x:Name="AufklappListe" Grid.Row="0"
+                                             ItemsSource="{Binding Records}"
+                                             SelectedItem="{Binding Selected, Mode=TwoWay}"
+                                             ProtokollCommand="{Binding ProtokollOeffnenCommand, RelativeSource={RelativeSource AncestorType={x:Type local:SchaechtePage}}}"
+                                             ZeilenMenue="{StaticResource SchachtZeilenMenue}"/>
 
         <schachtansicht:SchachtansichtView x:Name="SchachtansichtView"
                                            Grid.Row="0" Grid.ColumnSpan="3"

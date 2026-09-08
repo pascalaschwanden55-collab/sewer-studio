@@ -99,6 +99,16 @@ public sealed class DataPageNovaWorkspaceController
     }
 
     /// <summary>
+    /// Reicht den aktiven Codekatalog des ViewModels an die Uebersicht weiter. Die Haltungsgrafik
+    /// braucht ihn fuer die Klartexte; die Seite selbst holt keinen Dienst.
+    /// </summary>
+    public void VerbindeKatalog()
+    {
+        if (_vm() is { } vm)
+            _e.Uebersicht.Catalog = vm.CodeCatalog;
+    }
+
+    /// <summary>
     /// Eingabefelder neu aus der gewaehlten Haltung aufbauen (Auswahlwechsel, externe Feldaenderung)
     /// und den Live-Abgleich mit genau diesem Datensatz anschliessen.
     /// </summary>
@@ -122,14 +132,25 @@ public sealed class DataPageNovaWorkspaceController
     }
 
     /// <summary>
+    /// Leert die Eingabefelder und entsorgt ihren Live-Abgleich. Gebraucht, sobald die Seite die
+    /// Aufklapp-Liste zeigt: Zwei Formulare am selben Datensatz waeren doppelte Arbeit, und ein
+    /// Konflikthinweis landete im unsichtbaren.
+    /// </summary>
+    public void LeereFelderDrawer()
+    {
+        _felderSync?.Dispose();
+        _felderSync = null;
+        _e.FelderDrawer.Hinweis = string.Empty;
+        _e.FelderDrawer.Titel = string.Empty;
+        _e.FelderDrawer.Groups = null;
+    }
+
+    /// <summary>
     /// Nachpruefung W01: Der Datensatz hat sich seit der Anzeige geaendert. Die neuere Korrektur
     /// bleibt; die verworfene Eingabe steht als Hinweis in der Kopfzeile der Eingabefelder.
     /// </summary>
     public void MeldeKonflikt(string fieldName, string aktuellerWert, string eingabe)
-    {
-        var label = FieldCatalog.Get(fieldName).Label;
-        _e.FelderDrawer.Hinweis = $"„{label}“ wurde inzwischen auf „{aktuellerWert}“ geändert. Die Eingabe „{eingabe}“ wurde nicht übernommen.";
-    }
+        => _e.FelderDrawer.Hinweis = DataPageKonfliktHinweis.Text(fieldName, aktuellerWert, eingabe);
 
     private bool IstSichtbar => _e.FelderDrawer.Visibility == Visibility.Visible;
 
@@ -191,17 +212,18 @@ public sealed class DataPageNovaWorkspaceController
     }
 
     /// <summary>
-    /// Blendet Uebersicht, Eingabefelder und beide Trennlinien ein oder aus. Die festen Spalten-
-    /// und Zeilenmasse werden dabei mit auf 0 gesetzt, sonst bliebe bei der Haltungsansicht eine Luecke.
+    /// Blendet Uebersicht und Eingabefelder getrennt ein oder aus. Die festen Spalten- und
+    /// Zeilenmasse werden dabei mit auf 0 gesetzt, sonst bliebe eine Luecke. Getrennt gebraucht
+    /// wird das von der Aufklapp-Liste: Dort bleibt die Uebersicht rechts, waehrend die
+    /// Eingabefelder-Schublade verschwindet — das Formular steht in der aufgeklappten Zeile.
     /// </summary>
-    public void SetzeSichtbar(bool sichtbar)
+    public void SetzeSichtbar(bool uebersicht, bool eingabefelder)
     {
-        var v = sichtbar ? Visibility.Visible : Visibility.Collapsed;
-        _e.Uebersicht.Visibility = v;
-        _e.SideSplitter.Visibility = v;
-        _e.FelderDrawer.Visibility = v;
+        _e.Uebersicht.Visibility = uebersicht ? Visibility.Visible : Visibility.Collapsed;
+        _e.SideSplitter.Visibility = uebersicht ? Visibility.Visible : Visibility.Collapsed;
+        _e.FelderDrawer.Visibility = eingabefelder ? Visibility.Visible : Visibility.Collapsed;
 
-        if (sichtbar)
+        if (uebersicht)
         {
             _e.SideSplitterCol.Width = new GridLength(DataPageWorkspaceLayoutPolicy.SplitterHoehe);
             _e.SideCol.MinWidth = SideColMin;
@@ -210,14 +232,21 @@ public sealed class DataPageNovaWorkspaceController
                 ? Math.Clamp(w, SideColMin, SideColMax)
                 : SideColStandard;
             _e.SideCol.Width = new GridLength(breite);
+        }
+        else
+        {
+            _e.SideSplitterCol.Width = new GridLength(0);
+            _e.SideCol.MinWidth = 0;
+            _e.SideCol.Width = new GridLength(0);
+        }
+
+        if (eingabefelder)
+        {
             ApplyDrawerOpenState();
         }
         else
         {
             _e.DrawerSplitter.Visibility = Visibility.Collapsed;
-            _e.SideSplitterCol.Width = new GridLength(0);
-            _e.SideCol.MinWidth = 0;
-            _e.SideCol.Width = new GridLength(0);
             _e.DrawerSplitterRow.Height = new GridLength(0);
             _e.DrawerRow.MinHeight = 0;
             _e.DrawerRow.Height = new GridLength(0);

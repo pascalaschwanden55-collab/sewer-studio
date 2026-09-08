@@ -6,8 +6,10 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Services;
+using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.UI.Views.Pages;
 using AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
+using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -51,6 +53,8 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
             Layout(page);
 
             PruefeNovaSpalten(page);
+            PruefeStandardIstDieAufklappListe(page);
+            WechsleAufDieTabelle(page);
             PruefeNovaSucheUndFilter(page);
 
             var drawer = Assert.IsType<HaltungFelderDrawer>(page.FindName("FelderDrawer"));
@@ -83,6 +87,7 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
             Assert.Equal(2, themenPanel!.Columns);
             drawer.IsTall = false;
             Layout(page);
+            WechsleZurueckZurListe(page, drawer);
 
             foreach (var theme in new[] { ThemeManager.Dark, ThemeManager.Light })
             {
@@ -302,6 +307,160 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
 
         var reihenfolgePopup = Assert.IsType<Popup>(page.FindName("ReihenfolgePopup"));
         Assert.False(reihenfolgePopup.IsOpen);
+    }
+
+    private static readonly string FormularChildTestName =
+        typeof(DataPageNovaLayoutIsolatedSmokeTests).FullName
+        + "."
+        + nameof(Kindprozess_prueft_Formular_je_Ansicht);
+
+    [Fact]
+    public async Task Formular_je_Ansicht_laeuft_in_eigenem_Wpf_Prozess()
+    {
+        Assert.Null(System.Windows.Application.Current);
+        var result = await WpfIsolatedTestProcess.RunAsync(FormularChildTestName, TimeSpan.FromSeconds(60));
+
+        Assert.Null(System.Windows.Application.Current);
+        Assert.False(result.TimedOut, result.DescribeFailure());
+        Assert.True(result.ExitCode == 0, result.DescribeFailure());
+        Assert.True(result.ChildScenarioCompleted, result.DescribeFailure());
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (3) und Fix-Runde 2 (3): Es gibt genau EIN Formular je Datensatz. In der
+    /// Tabellenansicht traegt es die Eingabefelder-Schublade, in der Aufklapp-Liste die
+    /// aufgeklappte Zeile — und der Rueckweg fuellt die Schublade wieder.
+    ///
+    /// Bewusst OHNE <c>DataPage</c>: Die Seite schreibt mit einem echten ViewModel beim
+    /// <c>Loaded</c> (KompaktStartRegel) und beim <c>Unloaded</c> (SaveLayoutToSettings) in die
+    /// echte settings.json des Benutzers. Geprueft wird deshalb der Controller, den die Seite
+    /// ruft, mit einem echten ViewModel und der echten Schublade.
+    /// </summary>
+    [IsolatedWpfFact]
+    public void Kindprozess_prueft_Formular_je_Ansicht()
+    {
+        StaTestRunner.Run(() =>
+        {
+            Assert.Null(System.Windows.Application.Current);
+            var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            app.InitializeComponent();
+
+            using var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(_ => { });
+            var services = new AuswertungPro.Next.UI.ServiceProvider(
+                new AppSettings { EnableRestorePoints = false },
+                new AuswertungPro.Next.Application.Diagnostics.DiagnosticsOptions(),
+                loggerFactory.CreateLogger("test"),
+                loggerFactory);
+            using var shell = new AuswertungPro.Next.UI.ViewModels.ShellViewModel(
+                services, new SystemMonitorService(enableHardwareSensorInit: false));
+
+            var record = new AuswertungPro.Next.Domain.Models.HaltungRecord();
+            record.SetFieldValue(
+                AuswertungPro.Next.Domain.Models.FieldKeys.HoldingName,
+                "10001-10002",
+                AuswertungPro.Next.Domain.Models.FieldSource.Manual,
+                userEdited: true);
+            shell.Project.Data.Add(record);
+            shell.NavigateToHolding(record);
+            var vm = Assert.IsType<AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel>(shell.CurrentPage);
+            Assert.Same(record, vm.Selected);
+
+            var drawer = new HaltungFelderDrawer();
+            var controller = new AuswertungPro.Next.UI.DataPage.DataPageNovaWorkspaceController(
+                new AuswertungPro.Next.UI.DataPage.DataPageNovaWorkspaceController.Elemente(
+                    new Grid(), new Border(), new RowDefinition(), new RowDefinition(),
+                    new ColumnDefinition(), new ColumnDefinition(), new GridSplitter(), new GridSplitter(),
+                    new HaltungUebersichtPanel(), drawer),
+                () => vm,
+                _ => [new RecordDetailGroup("Stammdaten", string.Empty, [new RecordDetailItem("Baujahr", "1970", _ => { })])],
+                _ => { });
+
+            // Tabellenansicht: die Schublade traegt das Formular der gewaehlten Haltung.
+            controller.AktualisiereFelderDrawer();
+            Assert.NotNull(drawer.Groups);
+            Assert.Equal("10001-10002", drawer.Titel);
+
+            // Aufklapp-Liste: die Schublade wird geleert, nicht nur ausgeblendet.
+            controller.LeereFelderDrawer();
+            Assert.Null(drawer.Groups);
+            Assert.Equal(string.Empty, drawer.Titel);
+
+            // Und zurueck zur Tabelle: derselbe Weg fuellt sie wieder.
+            controller.AktualisiereFelderDrawer();
+            Assert.NotNull(drawer.Groups);
+            Assert.Equal("10001-10002", drawer.Titel);
+
+            WpfIsolatedTestProcess.MarkChildScenarioCompleted();
+        });
+    }
+
+    /// <summary>
+    /// Nova, Aufklapp-Liste (Task 2): Die Seite startet mit der Liste. Die Tabelle, ihre
+    /// Spaltenchips und die Eingabefelder-Schublade sind weg; die Uebersicht rechts bleibt.
+    /// </summary>
+    private static void PruefeStandardIstDieAufklappListe(Views.Pages.DataPage page)
+    {
+        var liste = Assert.IsType<HaltungAufklappListe>(page.FindName("AufklappListe"));
+        var grid = Assert.IsType<DataGrid>(page.FindName("Grid"));
+        var chips = Assert.IsType<ItemsControl>(page.FindName("ColumnViewChips"));
+        var drawer = Assert.IsType<HaltungFelderDrawer>(page.FindName("FelderDrawer"));
+        var uebersicht = Assert.IsType<HaltungUebersichtPanel>(page.FindName("Uebersicht"));
+        var drawerRow = Assert.IsType<RowDefinition>(page.FindName("DrawerRow"));
+
+        Assert.Equal(Visibility.Visible, liste.Visibility);
+        Assert.Equal(Visibility.Collapsed, grid.Visibility);
+        Assert.Equal(Visibility.Collapsed, chips.Visibility);
+        Assert.Equal(Visibility.Collapsed, drawer.Visibility);
+        Assert.Equal(Visibility.Visible, uebersicht.Visibility);
+        Assert.Equal(0, drawerRow.ActualHeight);
+
+        // Das Zeilen-Kontextmenue ist dasselbe wie an der Tabelle — kein zweiter Befehlsweg.
+        Assert.NotNull(liste.ZeilenMenue);
+        Assert.Same(grid.ContextMenu, liste.ZeilenMenue);
+    }
+
+    /// <summary>
+    /// Der Menuepunkt "Tabelle" schaltet um. Geklickt wird der echte Punkt, damit auch die
+    /// Verdrahtung im XAML geprueft ist.
+    /// </summary>
+    private static void WechsleAufDieTabelle(Views.Pages.DataPage page)
+    {
+        var tabelleMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtTabelleMenu"));
+        var listeMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtListeMenu"));
+        Assert.True(listeMenu.IsChecked, "Beim Start muss \"Aufklapp-Liste\" angehakt sein.");
+
+        tabelleMenu.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Layout(page);
+
+        var liste = Assert.IsType<HaltungAufklappListe>(page.FindName("AufklappListe"));
+        var grid = Assert.IsType<DataGrid>(page.FindName("Grid"));
+        Assert.Equal(Visibility.Collapsed, liste.Visibility);
+        Assert.Equal(Visibility.Visible, grid.Visibility);
+        Assert.True(tabelleMenu.IsChecked);
+        Assert.False(listeMenu.IsChecked);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (3): Zurueck zur Liste — die Eingabefelder-Schublade wird dabei geleert, nicht
+    /// nur ausgeblendet. Sonst haengen zwei Formulare am selben Datensatz, und der
+    /// Konflikthinweis landet im unsichtbaren.
+    /// </summary>
+    private static void WechsleZurueckZurListe(Views.Pages.DataPage page, HaltungFelderDrawer drawer)
+    {
+        drawer.Titel = "10001-10002";
+        drawer.Hinweis = "Ein alter Hinweis";
+        drawer.Groups = [new RecordDetailGroup("Stammdaten", string.Empty, [new RecordDetailItem("Baujahr", "1970", _ => { })])];
+
+        var listeMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtListeMenu"));
+        listeMenu.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Layout(page);
+
+        var liste = Assert.IsType<HaltungAufklappListe>(page.FindName("AufklappListe"));
+        Assert.Equal(Visibility.Visible, liste.Visibility);
+        Assert.Equal(Visibility.Collapsed, drawer.Visibility);
+        Assert.Null(drawer.Groups);
+        Assert.Equal(string.Empty, drawer.Titel);
+        Assert.Equal(string.Empty, drawer.Hinweis);
     }
 
     private static Color ColorOf(object brush) => Assert.IsType<SolidColorBrush>(brush).Color;

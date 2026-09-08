@@ -4,14 +4,14 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Shapes;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 
 /// <summary>
-/// Schachtansicht rechts neben der Liste (Nova-Etappe 2): Grundriss, Fakten und Schaeden des
+/// Schachtansicht rechts neben der Liste (Nova-Etappe 2): Schachtgrafik, Fakten und Schaeden des
 /// gewaehlten Schachts, nur lesend. Anders als die Haltungs-Uebersicht liest das Panel seine
 /// Schaeden selbst aus <see cref="SchachtRecord.Protocol"/> - es gibt kein eigenes ViewModel-Feld
 /// dafuer. Der Knopf "Protokoll (PDF)" fuehrt ueber denselben Aktionsweg wie die alte
@@ -19,12 +19,13 @@ namespace AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 ///
 /// Fix-Runde 1/2: Ein In-Place-Neuaufbau des gewaehlten Schachts (zum Beispiel "Aktualisieren"
 /// liest das Protokoll neu ein) laesst <c>Record</c> referenzgleich; die Fakten-Felder ziehen ueber
-/// die normale WPF-Bindung an <c>Fields[...]</c> ohnehin nach, aber Schaeden und Grundriss werden
-/// nur einmal beim Binden berechnet. Das Panel meldet sich deshalb zusaetzlich auf
-/// <see cref="SchachtRecord.PropertyChanged"/> an und rechnet bei jeder Meldung neu; die alte
-/// Meldung wird beim Wechsel und beim Entladen wieder abgemeldet. Seit Fix-Runde 2 meldet auch
-/// der <see cref="SchachtRecord.Protocol"/>-Setter selbst (<c>nameof(Protocol)</c>), ein
-/// In-Place-Ersatz des Protokolls kommt also ohne externes Sicherheitsnetz an.
+/// die normale WPF-Bindung an <c>Fields[...]</c> ohnehin nach, aber Schaeden werden nur einmal
+/// beim Binden berechnet (die Schachtgrafik zieht selbst nach, siehe <c>SchachtgrafikControl</c>).
+/// Das Panel meldet sich deshalb zusaetzlich auf <see cref="SchachtRecord.PropertyChanged"/> an
+/// und rechnet bei jeder Meldung neu; die alte Meldung wird beim Wechsel und beim Entladen wieder
+/// abgemeldet. Seit Fix-Runde 2 meldet auch der <see cref="SchachtRecord.Protocol"/>-Setter selbst
+/// (<c>nameof(Protocol)</c>), ein In-Place-Ersatz des Protokolls kommt also ohne externes
+/// Sicherheitsnetz an.
 /// </summary>
 public partial class SchachtUebersichtPanel : UserControl
 {
@@ -54,6 +55,30 @@ public partial class SchachtUebersichtPanel : UserControl
     {
         get => (IReadOnlyList<ProtocolEntry>?)GetValue(EntriesProperty);
         private set => SetValue(EntriesProperty, value);
+    }
+
+    public static readonly DependencyProperty HaltungenProperty = DependencyProperty.Register(
+        nameof(Haltungen), typeof(IReadOnlyList<HaltungRecord>), typeof(SchachtUebersichtPanel), new PropertyMetadata(null));
+
+    /// <summary>
+    /// Alle Haltungen des Projekts, von der Seite gereicht. Die Schachtgrafik braucht sie, um die
+    /// an diesen Schacht angeschlossenen Zu- und Ablaeufe zu finden — kein Service-Locator im
+    /// Panel oder im Control.
+    /// </summary>
+    public IReadOnlyList<HaltungRecord>? Haltungen
+    {
+        get => (IReadOnlyList<HaltungRecord>?)GetValue(HaltungenProperty);
+        set => SetValue(HaltungenProperty, value);
+    }
+
+    public static readonly DependencyProperty CatalogProperty = DependencyProperty.Register(
+        nameof(Catalog), typeof(ICodeCatalogProvider), typeof(SchachtUebersichtPanel), new PropertyMetadata(null));
+
+    /// <summary>Aktiver Codekatalog fuer die Klartexte der Schachtgrafik; wird von der Seite gesetzt.</summary>
+    public ICodeCatalogProvider? Catalog
+    {
+        get => (ICodeCatalogProvider?)GetValue(CatalogProperty);
+        set => SetValue(CatalogProperty, value);
     }
 
     /// <summary>Knopf "Protokoll (PDF)": oeffnet das Schachtprotokoll ueber denselben Weg wie die Seite.</summary>
@@ -100,41 +125,16 @@ public partial class SchachtUebersichtPanel : UserControl
     }
 
     /// <summary>
-    /// Berechnet Schaeden, Grundriss und Masstext aus dem aktuellen <see cref="Record"/> neu.
-    /// Wird vom abonnierten <see cref="SchachtRecord.PropertyChanged"/> automatisch aufgerufen
-    /// (auch bei einem ersetzten <c>Protocol</c>, seit dessen Setter selbst meldet); oeffentlich
-    /// nur fuer Tests und einen bewussten manuellen Anstoss.
+    /// Berechnet die Schaeden aus dem aktuellen <see cref="Record"/> neu. Wird vom abonnierten
+    /// <see cref="SchachtRecord.PropertyChanged"/> automatisch aufgerufen (auch bei einem
+    /// ersetzten <c>Protocol</c>, seit dessen Setter selbst meldet); oeffentlich nur fuer Tests
+    /// und einen bewussten manuellen Anstoss. Die Schachtgrafik liest Form, Masse und Schaeden
+    /// selbst aus <c>Record</c> (siehe <c>SchachtgrafikAnsichtBuilder</c>) und braucht dafuer
+    /// keinen eigenen Aufruf hier.
     /// </summary>
     public void Aktualisiere()
     {
         var record = Record;
         Entries = record?.Protocol?.Current?.Entries?.Where(x => !x.IsDeleted).ToList();
-        AktualisiereGrundriss(record);
     }
-
-    /// <summary>Waehlt Kreis/Oval/Rechteck nach der erfassten Schachtform und schreibt den Masstext.</summary>
-    private void AktualisiereGrundriss(SchachtRecord? record)
-    {
-        // F2: Schachtfelder ueber SchachtFeldnamen lesen — der Datensatz fuehrt sie unter der
-        // Kopfzeile der Excel-Vorlage, nicht unter dem Katalognamen.
-        var form = SchachtformVokabular.Normalisieren(Wert(record, FieldKeys.ShaftShape));
-        Kreis.Visibility = Visibility.Collapsed;
-        Oval.Visibility = Visibility.Collapsed;
-        Quadrat.Visibility = Visibility.Collapsed;
-        Shape sichtbar = form switch
-        {
-            "Oval" or "Rechteckig" => Oval,
-            "Quadratisch" => Quadrat,
-            _ => Kreis
-        };
-        sichtbar.Visibility = Visibility.Visible;
-
-        var d1 = (Wert(record, FieldKeys.ShaftDimension1Mm) ?? "").Trim();
-        var d2 = (Wert(record, FieldKeys.ShaftDimension2Mm) ?? "").Trim();
-        MassText.Text = d1.Length == 0 && d2.Length == 0 ? "" : $"{d1} × {d2}";
-    }
-
-    /// <summary>Feldwert eines Schachts unter der Schreibweise, die der Datensatz wirklich fuehrt.</summary>
-    private static string? Wert(SchachtRecord? record, string feld)
-        => record is null ? null : record.GetFieldValue(SchachtFeldnamen.Feld(record, feld));
 }

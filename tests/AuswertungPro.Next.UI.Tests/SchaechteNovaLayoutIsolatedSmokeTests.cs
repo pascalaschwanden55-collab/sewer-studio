@@ -52,18 +52,22 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
             var page = new Views.Pages.SchaechtePage();
             Layout(page);
 
+            // Nova, Aufklapp-Liste (Task 6): Standard ist die Liste; die Eingabefelder-Schublade
+            // gehoert erst zur Tabelle.
+            PruefeStandardIstDieAufklappListe(page);
+            WechsleAufDieTabelle(page);
             PruefeSucheUndFilter(page);
 
             var drawer = Assert.IsType<HaltungFelderDrawer>(page.FindName("FelderDrawer"));
             var drawerRow = Assert.IsType<RowDefinition>(page.FindName("DrawerRow"));
             var splitterRow = Assert.IsType<RowDefinition>(page.FindName("DrawerSplitterRow"));
 
-            // Ausgangszustand aus dem XAML-Grundraster (Auto/MinHeight 0): ohne Projekt und ohne
-            // Umschalten bleibt die Zeile bei ihrer natuerlichen Kopfzeilenhoehe. Erst ein
-            // tatsaechlicher IsOpen-Wechsel loest ApplyDrawerOpenState aus und setzt die feste
-            // Hoehe (siehe SchaechteNovaWorkspaceController.ApplyDrawerOpenState).
+            // Aufgeklappt seit dem Wechsel auf die Tabelle (ApplyDrawerOpenState laeuft dabei
+            // ueber SchaechteNovaWorkspaceController.SetzeSichtbar(uebersicht, eingabefelder)).
             Assert.True(drawer.IsOpen);
-            Assert.True(drawerRow.Height.IsAuto, $"Grundzustand: {drawerRow.Height}");
+            var offen = drawerRow.ActualHeight;
+            Assert.True(offen >= 120, $"Aufgeklappt: {offen} px");
+            Assert.Equal(6, splitterRow.ActualHeight);
 
             drawer.IsOpen = false;
             Layout(page);
@@ -126,6 +130,106 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
         });
     }
 
+    private static readonly string FormularChildTestName =
+        typeof(SchaechteNovaLayoutIsolatedSmokeTests).FullName
+        + "."
+        + nameof(Kindprozess_prueft_Formular_je_Ansicht);
+
+    [Fact]
+    public async Task Formular_je_Ansicht_laeuft_in_eigenem_Wpf_Prozess()
+    {
+        Assert.Null(System.Windows.Application.Current);
+        var result = await WpfIsolatedTestProcess.RunAsync(FormularChildTestName, TimeSpan.FromSeconds(60));
+
+        Assert.Null(System.Windows.Application.Current);
+        Assert.False(result.TimedOut, result.DescribeFailure());
+        Assert.True(result.ExitCode == 0, result.DescribeFailure());
+        Assert.True(result.ChildScenarioCompleted, result.DescribeFailure());
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 zu Task 6 (Review-Befund, hoch): Es gibt genau EIN Formular je Schacht. In
+    /// der Tabellenansicht traegt es die Eingabefelder-Schublade, in der Aufklapp-Liste die
+    /// aufgeklappte Zeile — und der Rueckweg fuellt die Schublade wieder.
+    ///
+    /// Vorher rief <c>SchaechtePage.NovaWorkspace.cs</c> <c>AktualisiereFelderDrawer()</c>
+    /// ungeprueft (ohne auf <c>ListeSichtbar</c> zu schauen). In der Aufklapp-Liste blieb dadurch
+    /// ein zweiter, unsichtbarer <see cref="AuswertungPro.Next.UI.DataPage.DataPageDetailLiveSync"/>
+    /// auf demselben Datensatz bestehen — genau das Muster, das die Haltungsseite in Fix-Runde 1
+    /// schon einmal hatte (<c>DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht</c>).
+    /// Der Test prueft zusaetzlich, dass der Sync nach <c>LeereFelderDrawer()</c> wirklich
+    /// ENTSORGT ist (nicht nur unsichtbar): Eine Feldaenderung am Datensatz darf das schon
+    /// gebaute, aber verlassene <see cref="RecordDetailItem"/> nicht mehr erreichen.
+    ///
+    /// Bewusst OHNE <c>SchaechtePage</c>: Die Seite schreibt mit einem echten ViewModel beim
+    /// <c>Loaded</c>/<c>Unloaded</c> in die echte settings.json. Geprueft wird deshalb der
+    /// Controller, den die Seite ruft, mit einem echten ViewModel und der echten Schublade.
+    /// </summary>
+    [IsolatedWpfFact]
+    public void Kindprozess_prueft_Formular_je_Ansicht()
+    {
+        StaTestRunner.Run(() =>
+        {
+            Assert.Null(System.Windows.Application.Current);
+            var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            app.InitializeComponent();
+
+            using var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(_ => { });
+            var services = new AuswertungPro.Next.UI.ServiceProvider(
+                new AppSettings { EnableRestorePoints = false },
+                new AuswertungPro.Next.Application.Diagnostics.DiagnosticsOptions(),
+                loggerFactory.CreateLogger("test"),
+                loggerFactory);
+            using var shell = new AuswertungPro.Next.UI.ViewModels.ShellViewModel(
+                services, new SystemMonitorService(enableHardwareSensorInit: false));
+
+            var record = new SchachtRecord();
+            record.SetFieldValue("Schachtnummer", "S-1", FieldSource.Manual, userEdited: true);
+            record.SetFieldValue("Baujahr", "1970", FieldSource.Manual, userEdited: true);
+            shell.Project.SchaechteData.Add(record);
+            shell.NavigateToShaft(record);
+            var vm = Assert.IsType<AuswertungPro.Next.UI.ViewModels.Pages.SchaechtePageViewModel>(shell.CurrentPage);
+            Assert.Same(record, vm.Selected);
+
+            var drawer = new HaltungFelderDrawer();
+            var controller = new AuswertungPro.Next.UI.DataPage.SchaechteNovaWorkspaceController(
+                new AuswertungPro.Next.UI.DataPage.SchaechteNovaWorkspaceController.Elemente(
+                    new Grid(), new RowDefinition(), new RowDefinition(),
+                    new ColumnDefinition(), new ColumnDefinition(), new GridSplitter(), new GridSplitter(),
+                    new SchachtUebersichtPanel(), drawer),
+                () => vm,
+                r => [new AuswertungPro.Next.UI.Views.Windows.RecordDetailGroup(
+                    "Stammdaten", string.Empty,
+                    [new AuswertungPro.Next.UI.Views.Windows.RecordDetailItem("Baujahr", r.GetFieldValue("Baujahr"), _ => { }) { FieldName = "Baujahr" }])],
+                _ => { });
+
+            // Tabellenansicht: die Schublade traegt das Formular des gewaehlten Schachts.
+            controller.AktualisiereFelderDrawer();
+            Assert.NotNull(drawer.Groups);
+            Assert.Equal("S-1", drawer.Titel);
+            var altesItem = drawer.Groups!.Single().Items.Single();
+            Assert.Equal("1970", altesItem.Value);
+            record.SetFieldValue("Baujahr", "1980", FieldSource.Manual, userEdited: true);
+            Assert.Equal("1980", altesItem.Value); // Abgleich ist vor dem Entsorgen wirklich aktiv
+
+            // Aufklapp-Liste: die Schublade wird geleert, nicht nur ausgeblendet — UND ihr
+            // Live-Sync wird entsorgt, sonst liefe er unsichtbar auf demselben Datensatz weiter.
+            controller.LeereFelderDrawer();
+            Assert.Null(drawer.Groups);
+            Assert.Equal(string.Empty, drawer.Titel);
+            record.SetFieldValue("Baujahr", "2020", FieldSource.Manual, userEdited: true);
+            Assert.Equal("1980", altesItem.Value); // unveraendert: entsorgt, nicht nur unsichtbar
+
+            // Und zurueck zur Tabelle: derselbe Weg fuellt sie wieder, mit dem aktuellen Wert.
+            controller.AktualisiereFelderDrawer();
+            Assert.NotNull(drawer.Groups);
+            Assert.Equal("S-1", drawer.Titel);
+            Assert.Equal("2020", drawer.Groups!.Single().Items.Single().Value);
+
+            WpfIsolatedTestProcess.MarkChildScenarioCompleted();
+        });
+    }
+
     private static readonly string PanelChildTestName =
         typeof(SchaechteNovaLayoutIsolatedSmokeTests).FullName
         + "."
@@ -160,38 +264,45 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
             var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             app.InitializeComponent();
 
-            // Task 6: Ohne gewaehlten Schacht steht nur der Leerzustand da - kein Grundriss,
+            // Task 6: Ohne gewaehlten Schacht steht nur der Leerzustand da - keine Schachtgrafik,
             // keine leeren Beschriftungen, kein Protokollknopf.
             var leeresPanel = new SchachtUebersichtPanel();
             Layout(leeresPanel);
             NovaRenderingChecks.OhneAuswahlNurLeerzustand(leeresPanel);
+            var leereGrafik = Assert.IsType<SchachtgrafikControl>(leeresPanel.FindName("Grafik"));
+            leereGrafik.ZeichneJetzt();
+            Assert.Equal(0, leereGrafik.SymbolAnzahl);
 
             var record = new SchachtRecord();
             var panel = new SchachtUebersichtPanel { Record = record };
             Layout(panel);
 
-            var kreis = Assert.IsType<Ellipse>(panel.FindName("Kreis"));
-            var oval = Assert.IsType<Ellipse>(panel.FindName("Oval"));
-            Assert.Equal(Visibility.Visible, kreis.Visibility);
-            Assert.Equal(Visibility.Collapsed, oval.Visibility);
-
-            // Reine Feldaenderung am selben Datensatz (kein neues Record, kein neuer Bindungswert):
-            // Das Panel haengt an SchachtRecord.PropertyChanged und rechnet den Grundriss neu.
-            record.SetFieldValue(FieldKeys.ShaftShape, "Oval");
-            Layout(panel);
-            Assert.Equal(Visibility.Collapsed, kreis.Visibility);
-            Assert.Equal(Visibility.Visible, oval.Visibility);
+            // Task 5: Die Schachtgrafik (senkrechter Schnitt) ersetzt den frueheren Grundriss-Kreis.
+            var grafik = Assert.IsType<SchachtgrafikControl>(panel.FindName("Grafik"));
+            grafik.ZeichneJetzt();
+            Assert.Equal(0, grafik.SymbolAnzahl);
 
             // In-Place-Neuaufbau (z. B. "Aktualisieren"): Protocol wird ersetzt. SchachtRecord.Protocol
             // meldet sich seit Fix-Runde 2 selbst (PropertyChanged(nameof(Protocol))) - das Panel zieht
             // die neue Schadensliste allein ueber diese Meldung nach, ohne Aktualisiere() direkt zu rufen.
+            // Dieselbe Meldung erreicht auch die Schachtgrafik (sie abonniert sich selbst).
             Assert.Null(panel.Entries);
             record.Protocol = new ProtocolDocument
             {
-                Current = new ProtocolRevision { Entries = { new ProtocolEntry { Code = "BAB" } } }
+                Current = new ProtocolRevision
+                {
+                    Entries =
+                    {
+                        new ProtocolEntry { Code = "BAB" },
+                        new ProtocolEntry { Code = "BAC" },
+                        new ProtocolEntry { Code = "BBA" },
+                    }
+                }
             };
             Layout(panel);
-            Assert.Equal(1, panel.Entries?.Count);
+            Assert.Equal(3, panel.Entries?.Count);
+            grafik.ZeichneJetzt();
+            Assert.Equal(3, grafik.SymbolAnzahl);
 
             WpfIsolatedTestProcess.MarkChildScenarioCompleted();
         });
@@ -199,7 +310,8 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
 
     /// <summary>
     /// Nova-Etappe 2b, Task 4: Die Suche steht als Pille rechts (ohne F3-Marke), und die
-    /// Spaltenchips (Filterzeile der Schachtliste) bleiben sichtbar.
+    /// Spaltenchips (Filterzeile der Schachtliste) bleiben sichtbar. Gilt fuer die Tabelle —
+    /// die Aufklapp-Liste blendet die Chips aus (siehe <see cref="PruefeStandardIstDieAufklappListe"/>).
     /// </summary>
     private static void PruefeSucheUndFilter(Views.Pages.SchaechtePage page)
     {
@@ -210,6 +322,56 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
 
         var columnViewChips = Assert.IsType<ItemsControl>(page.FindName("ColumnViewChips"));
         Assert.Equal(Visibility.Visible, columnViewChips.Visibility);
+    }
+
+    /// <summary>
+    /// Nova, Aufklapp-Liste (Task 6): Ohne Umschalten zeigt die Schachtseite die Liste, nicht
+    /// die Tabelle — genau wie bei den Haltungen (<c>DataPageNovaLayoutIsolatedSmokeTests</c>).
+    /// </summary>
+    private static void PruefeStandardIstDieAufklappListe(Views.Pages.SchaechtePage page)
+    {
+        var liste = Assert.IsType<SchachtAufklappListe>(page.FindName("AufklappListe"));
+        var grid = Assert.IsType<DataGrid>(page.FindName("Grid"));
+        var chips = Assert.IsType<ItemsControl>(page.FindName("ColumnViewChips"));
+        var drawer = Assert.IsType<HaltungFelderDrawer>(page.FindName("FelderDrawer"));
+        var uebersicht = Assert.IsType<SchachtUebersichtPanel>(page.FindName("Uebersicht"));
+
+        Assert.Equal(Visibility.Visible, liste.Visibility);
+        Assert.Equal(Visibility.Collapsed, grid.Visibility);
+        Assert.Equal(Visibility.Collapsed, chips.Visibility);
+        Assert.Equal(Visibility.Collapsed, drawer.Visibility);
+        Assert.Equal(Visibility.Visible, uebersicht.Visibility);
+
+        // Das Zeilen-Kontextmenue ist dasselbe wie an der Tabelle — kein zweiter Befehlsweg.
+        Assert.NotNull(liste.ZeilenMenue);
+        Assert.Same(liste.ZeilenMenue, grid.ContextMenu);
+
+        var listeMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtListeMenu"));
+        var tabelleMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtTabelleMenu"));
+        Assert.True(listeMenu.IsChecked, "Beim Start muss \"Aufklapp-Liste\" angehakt sein.");
+        Assert.False(tabelleMenu.IsChecked);
+    }
+
+    /// <summary>
+    /// Nova, Aufklapp-Liste (Task 6): Umschalten auf die Tabelle — dieselbe Auswahl (Selected)
+    /// ueberlebt den Wechsel, weil beide Ansichten dieselbe Sammlung binden.
+    /// </summary>
+    private static void WechsleAufDieTabelle(Views.Pages.SchaechtePage page)
+    {
+        var tabelleMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtTabelleMenu"));
+        var listeMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtListeMenu"));
+
+        tabelleMenu.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Layout(page);
+
+        var liste = Assert.IsType<SchachtAufklappListe>(page.FindName("AufklappListe"));
+        var grid = Assert.IsType<DataGrid>(page.FindName("Grid"));
+        var chips = Assert.IsType<ItemsControl>(page.FindName("ColumnViewChips"));
+        Assert.Equal(Visibility.Collapsed, liste.Visibility);
+        Assert.Equal(Visibility.Visible, grid.Visibility);
+        Assert.Equal(Visibility.Visible, chips.Visibility);
+        Assert.True(tabelleMenu.IsChecked);
+        Assert.False(listeMenu.IsChecked);
     }
 
     private static Color ColorOf(object brush) => Assert.IsType<SolidColorBrush>(brush).Color;

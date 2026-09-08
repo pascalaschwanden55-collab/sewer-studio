@@ -1,0 +1,10 @@
+  AuswertungPro.Next.Domain -> C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.Domain\bin\Debug\net10.0\AuswertungPro.Next.Domain.dll
+  AuswertungPro.Next.Application -> C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.Application\bin\Debug\net10.0\AuswertungPro.Next.Application.dll
+  AuswertungPro.Next.Infrastructure -> C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.Infrastructure\bin\Debug\net10.0\AuswertungPro.Next.Infrastructure.dll
+  AuswertungPro.Next.UI -> C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.UI\bin\Debug\net10.0-windows10.0.19041\SewerStudio.dll
+
+Der Buildvorgang wurde erfolgreich ausgeführt.
+    0 Warnung(en)
+    0 Fehler
+
+Verstrichene Zeit 00:00:09.18

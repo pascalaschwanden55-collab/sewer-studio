@@ -17,6 +17,9 @@ using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
+using AuswertungPro.Next.UI.Views.Controls;
+using AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
+using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 using Microsoft.Extensions.Logging.Abstractions;
 
 /// <summary>
@@ -27,8 +30,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 /// Seiten: Uebersicht | Haltungen | Schaechte | Import | Einstellungen | Player | TrainingStudio
 /// Varianten (Etappe 2b): "" = erste Zeile gewaehlt (Standard) | "alle" = zusaetzlich die
 /// Spaltenansicht "Alle Spalten" waehlen | "ohneauswahl" = keine Zeile waehlen (Leerzustand).
+/// Schachtvariante: "schaechteliste" auf Seite Schaechte verwendet denselben Fotoablauf.
+/// Variante (Aufklapp-Liste, 2026-09-08): "haltungenliste" (nur Seite Haltungen) fotografiert
+/// die neue Standardansicht zuerst zugeklappt, klappt danach die erste Haltung auf und
+/// fotografiert erneut. Aus EINEM uebergebenen Ausgabepfad je Theme werden zwei Dateien
+/// "-zu-"/"-auf-" abgeleitet (siehe <see cref="AbgeleitetePfade"/>).
 /// </summary>
-internal static class Program
+internal static partial class Program
 {
     private sealed class ProbeApp : System.Windows.Application
     {
@@ -40,12 +48,13 @@ internal static class Program
         }
     }
 
-    static readonly string Root = @"C:\Sewer-Studio_KI_4.5-nova\.tmp\nova-etappe2\bedienung";
+    static readonly string Root = @"C:\Sewer-Studio_KI_4.5-nova\.tmp\nova-abnahme-codex\bedienung";
     static readonly string Bin = @"C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.UI\bin\Debug\net10.0-windows10.0.19041";
     static readonly string AppXaml = @"C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.UI\App.xaml";
     static string AppliedTheme = "Dark";
     static string AppliedPage = "Haltungen";
     static string AppliedVariant = "";
+    static bool PruefungFehlgeschlagen;
 
     [STAThread]
     static int Main(string[] args)
@@ -65,7 +74,7 @@ internal static class Program
             var path = candidates.FirstOrDefault(File.Exists) ?? candidates[^1];
             return File.Exists(path) ? AssemblyLoadContext.Default.LoadFromAssemblyPath(path) : null;
         };
-        try { Run(args); return 0; }
+        try { Run(args); return PruefungFehlgeschlagen ? 1 : 0; }
         catch (Exception ex) { File.WriteAllText(Path.Combine(Root, "host-fehler.txt"), ex.ToString()); return 1; }
     }
 
@@ -82,6 +91,9 @@ internal static class Program
         AppliedTheme = theme;
         AppliedPage = seite;
         AppliedVariant = variante;
+        // Aufgabe 3 "Bilder": eigener Fotoweg fuer die Aufklapp-Liste statt der DataGrid-Messung.
+        var istAufklappListe = (seite == "Haltungen" && variante == "haltungenliste")
+            || (seite == "Schaechte" && variante == "schaechteliste");
 
         var projectPath = Path.Combine(Root, "projekt", "Projektdateien", "projekt.json");
         Directory.CreateDirectory(Path.GetDirectoryName(projectPath)!);
@@ -233,6 +245,13 @@ internal static class Program
                 else if (schritt >= 5)
                 {
                     timer.Stop();
+                    if (istAufklappListe)
+                    {
+                        // Eigener Ablauf mit einer zweiten, verzoegerten Aufnahme (siehe unten);
+                        // der normale Einzelbild-Pfad passt hier nicht.
+                        FotografiereAufklappListe(window, ausgabe);
+                        return;
+                    }
                     try
                     {
                         // Fluent.Backdrop="Mica" setzt Window.Background auf Transparent; die
@@ -255,7 +274,8 @@ internal static class Program
             }
             catch (Exception ex)
             {
-                File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"), ex + Environment.NewLine);
+                PruefungFehlgeschlagen = true;
+                    File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"), ex + Environment.NewLine);
             }
         };
         timer.Start();
@@ -280,6 +300,180 @@ internal static class Program
         }
         chip.IsChecked = true;
         chip.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+    }
+
+    /// <summary>
+    /// Aufgabe 3 "Bilder" (2026-09-08): fotografiert die Haltungs-Aufklapp-Liste erst
+    /// zugeklappt, klappt danach ueber <see cref="HaltungAufklappListe.KlappeAuf"/> die erste
+    /// Haltung auf und fotografiert nach 2 Sekunden Wartezeit ein zweites Mal. Ein synchrones
+    /// Sleep wuerde den Dispatcher blockieren und wuerde weder Layout noch Eintrittsanimation
+    /// der neu aufgebauten Themen fertig rendern lassen; deshalb ein zweiter, einmaliger Timer.
+    /// </summary>
+    static void FotografiereAufklappListe(Window window, string? ausgabeBasis)
+    {
+        try
+        {
+            MaleMicaFlaecheAus(window);
+            var (zuPfad, aufPfad) = AbgeleitetePfade(ausgabeBasis);
+            MesseAufklappListe(window, "zu");
+            if (zuPfad is not null)
+                Foto(window, zuPfad);
+
+            var shell = (ShellViewModel)window.DataContext;
+            if (AppliedPage == "Schaechte")
+            {
+                var liste = Descendants(window).OfType<SchachtAufklappListe>().Single();
+                liste.KlappeAuf(shell.Project.SchaechteData.First());
+            }
+            else
+            {
+                var liste = FindeAufklappListe(window) ?? throw new InvalidOperationException("Haltungsliste fehlt");
+                liste.KlappeAuf(shell.Project.Data.First(r => r.GetFieldValue(FieldKeys.HoldingName) == "10001-10002"));
+            }
+
+            var warten = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            warten.Tick += (_, _) =>
+            {
+                warten.Stop();
+                try
+                {
+                    MaleMicaFlaecheAus(window);
+                    MesseAufklappListe(window, "auf");
+                    if (aufPfad is not null)
+                        Foto(window, aufPfad);
+                    PruefeAnsichtswechsel(window);
+                }
+                catch (Exception ex)
+                {
+                    PruefungFehlgeschlagen = true;
+                    File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"), ex + Environment.NewLine);
+                }
+                finally
+                {
+                    System.Windows.Application.Current!.Shutdown();
+                    Dispatcher.CurrentDispatcher.BeginInvokeShutdown(DispatcherPriority.Background);
+                }
+            };
+            warten.Start();
+        }
+        catch (Exception ex)
+        {
+            PruefungFehlgeschlagen = true;
+                    File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"), ex + Environment.NewLine);
+            System.Windows.Application.Current!.Shutdown();
+            Dispatcher.CurrentDispatcher.BeginInvokeShutdown(DispatcherPriority.Background);
+        }
+    }
+
+    /// <summary>
+    /// Leitet aus EINEM Ausgabepfad je Theme (z. B. ".../haltungen-liste-hell.png") die zwei
+    /// Dateinamen fuer zu- und aufgeklappten Zustand ab: ".../haltungen-liste-zu-hell.png" und
+    /// ".../haltungen-liste-auf-hell.png". Traegt der Dateiname keinen erkennbaren
+    /// "-hell"/"-dunkel"-Suffix, wird "-zu"/"-auf" nur vor der Endung eingefuegt.
+    /// </summary>
+    static (string? Zu, string? Auf) AbgeleitetePfade(string? ausgabe)
+    {
+        if (string.IsNullOrWhiteSpace(ausgabe))
+            return (null, null);
+
+        var vollpfad = Path.GetFullPath(ausgabe);
+        var verzeichnis = Path.GetDirectoryName(vollpfad)!;
+        var endung = Path.GetExtension(vollpfad);
+        var stamm = Path.GetFileNameWithoutExtension(vollpfad);
+
+        string basis, themeSuffix;
+        if (stamm.EndsWith("-hell", StringComparison.OrdinalIgnoreCase))
+        {
+            basis = stamm[..^"-hell".Length];
+            themeSuffix = "-hell";
+        }
+        else if (stamm.EndsWith("-dunkel", StringComparison.OrdinalIgnoreCase))
+        {
+            basis = stamm[..^"-dunkel".Length];
+            themeSuffix = "-dunkel";
+        }
+        else
+        {
+            basis = stamm;
+            themeSuffix = "";
+        }
+
+        return (
+            Path.Combine(verzeichnis, $"{basis}-zu{themeSuffix}{endung}"),
+            Path.Combine(verzeichnis, $"{basis}-auf{themeSuffix}{endung}"));
+    }
+
+    /// <summary>
+    /// Sucht das Control "AufklappListe" (x:Name in DataPage.xaml) im sichtbaren Baum. Es gibt
+    /// in der ganzen App nur eine Instanz; der Typfilter am Ende ist nur ein sicherer Rueckfall,
+    /// falls der Name aus irgendeinem Grund nicht gesetzt sein sollte.
+    /// </summary>
+    static HaltungAufklappListe? FindeAufklappListe(Window window)
+    {
+        var treffer = Descendants(window).OfType<HaltungAufklappListe>().ToArray();
+        return treffer.FirstOrDefault(c => c.Name == "AufklappListe") ?? treffer.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Eigene Messung fuer die Aufklapp-Liste (Aufgabe 3 "Bilder"): Die generische
+    /// <see cref="Messe"/> zielt auf die DataGrid-Tabelle, die im Listenlayout unsichtbar
+    /// bleibt. <paramref name="zustand"/> ist "zu" oder "auf" und geht als Dateisuffix mit,
+    /// damit beide Aufnahmen derselben Variante nebeneinander bestehen bleiben.
+    /// </summary>
+    static void MesseAufklappListe(Window window, string zustand)
+    {
+        FrameworkElement? liste = AppliedPage == "Schaechte"
+            ? Descendants(window).OfType<SchachtAufklappListe>().SingleOrDefault()
+            : FindeAufklappListe(window);
+        var listBox = liste is null ? null : Descendants(liste).OfType<ListBox>().FirstOrDefault(l => l.Name == "Liste");
+        var viewport = listBox is null ? null : Descendants(listBox).OfType<ScrollContentPresenter>().FirstOrDefault();
+        var zeilen = listBox is null
+            ? Array.Empty<ListBoxItem>()
+            : Descendants(listBox).OfType<ListBoxItem>().Where(z => z.IsVisible).ToArray();
+
+        // "Sichtbare Kopfzeile" = jede Zeile (auf- oder zugeklappt), deren Kopf im Ausschnitt
+        // liegt. Die Kopfzeile ist immer der obere Teil der ListBoxItem-Flaeche; bei der
+        // aufgeklappten Zeile reicht dieselbe Flaeche ueber den Ausschnitt hinaus, ihr Kopf
+        // bleibt trotzdem sichtbar, solange die Ueberschneidung positiv ist.
+        var sichtbareKopfzeilen = viewport is null ? 0 : zeilen.Count(z =>
+        {
+            var bounds = z.TransformToAncestor(viewport).TransformBounds(new Rect(z.RenderSize));
+            return bounds.Bottom > 0 && bounds.Top < viewport.ActualHeight;
+        });
+
+        object? offeneHaltung = liste switch {
+            HaltungAufklappListe h => h.Aufgeklappt,
+            SchachtAufklappListe s => s.Aufgeklappt,
+            _ => null
+        };
+        var offeneZeile = offeneHaltung is null ? null : zeilen.FirstOrDefault(z => ReferenceEquals(z.DataContext, offeneHaltung));
+        var recordDetailsViewImBaum = liste is null ? 0 : Descendants(liste).OfType<RecordDetailsView>().Count();
+        var dpi = VisualTreeHelper.GetDpi(window);
+
+        File.WriteAllText(Path.Combine(Root, $"messung-{AppliedPage}-{AppliedVariant}-{zustand}-{AppliedTheme}.json"), JsonSerializer.Serialize(new
+        {
+            utc = DateTime.UtcNow,
+            theme = AppliedTheme,
+            seite = AppliedPage,
+            variante = AppliedVariant,
+            zustand,
+            listeGefunden = liste is not null,
+            zeilenGesamt = zeilen.Length,
+            sichtbareKopfzeilen,
+            recordDetailsViewImBaum,
+            offenesObjekt = offeneHaltung switch {
+                HaltungRecord h => h.GetFieldValue(FieldKeys.HoldingName),
+                SchachtRecord s => s.GetFieldValue("Schachtnummer"), _ => null },
+            hoeheOffeneZeile = offeneZeile is null ? 0d : Math.Round(offeneZeile.ActualHeight, 1),
+            viewportHoehe = viewport is null ? 0 : Math.Round(viewport.ActualHeight, 1),
+            width = window.ActualWidth,
+            height = window.ActualHeight,
+            primaryWidth = SystemParameters.PrimaryScreenWidth,
+            primaryHeight = SystemParameters.PrimaryScreenHeight,
+            dpiX = dpi.PixelsPerInchX,
+            dpiY = dpi.PixelsPerInchY,
+            windowCount = System.Windows.Application.Current?.Windows.Count
+        }, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     /// <summary>
@@ -461,6 +655,11 @@ internal static class Program
     /// Acht Schaechte mit Form und beiden Innenmassen (rund 600/600, oval 1100/900). Der
     /// sechste traegt bewusst keine Zustandsklasse, damit der Chip dort den gestrichelten
     /// Strich zeigt; zwei Drittel fuehren eine PDF, damit der Protokoll-Knopf sichtbar ist.
+    /// Fuer die Schachtgrafik (Task 5, senkrechter Schnitt) traegt der dritte Schacht bewusst
+    /// keine Tiefe (Hinweistext "Tiefe nicht erfasst"), die uebrigen eine Tiefe zwischen 2 und
+    /// 3.6 m; die ersten drei tragen zusaetzlich ein kleines Bauteil-Protokoll wie aus einem
+    /// PDF-Schachtprotokollimport (Code = Bauteilname, Beschreibung = Schadenstext), damit alle
+    /// drei Zonen (Konus, Schachtwand/Anschluss, Sohle) je einmal ein Symbol zeigen.
     /// </summary>
     static void BaueSchaechte(Project project)
     {
@@ -488,8 +687,25 @@ internal static class Program
                 Set(FieldKeys.ShaftDimension2Mm, "600");
             }
             if (i % 3 != 2) Set(FieldKeys.PdfPath, pdf);
+            if (i != 2)
+                Set("Schachttiefe", (2.0 + i * 0.2).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
+            if (i < 3)
+                schacht.Protocol = BaueSchachtprotokoll();
             project.SchaechteData.Add(schacht);
         }
+    }
+
+    /// <summary>Ein kleines Bauteil-Protokoll wie aus dem PDF-Schachtprotokollimport (drei Zonen).</summary>
+    static ProtocolDocument BaueSchachtprotokoll()
+    {
+        var current = new ProtocolRevision();
+        current.Entries.Add(new ProtocolEntry { Code = "Konus", Beschreibung = "gerissen" });
+        current.Entries.Add(new ProtocolEntry { Code = "Anschluss", Beschreibung = "mangelhaft eingebunden" });
+        current.Entries.Add(new ProtocolEntry { Code = "Bankett", Beschreibung = "Ablagerung" });
+        var original = new ProtocolRevision();
+        foreach (var e in current.Entries)
+            original.Entries.Add(ProtocolEntryCloner.CloneLegacyProtocolEntry(e));
+        return new ProtocolDocument { Original = original, Current = current };
     }
 
     /// <summary>

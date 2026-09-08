@@ -93,6 +93,20 @@ public sealed class SchaechteNovaWorkspaceController
     }
 
     /// <summary>
+    /// Reicht den aktiven Codekatalog und alle Haltungen des Projekts an die Schachtansicht
+    /// weiter. Die Schachtgrafik braucht den Katalog fuer die Klartexte der Schaeden und die
+    /// Haltungen, um die an diesen Schacht angeschlossenen Zu- und Ablaeufe zu finden — die Seite
+    /// selbst holt dafuer keinen Dienst.
+    /// </summary>
+    public void VerbindeKatalog()
+    {
+        if (_vm() is not { } vm)
+            return;
+        _e.Uebersicht.Catalog = vm.CodeCatalog;
+        _e.Uebersicht.Haltungen = vm.Project.Data;
+    }
+
+    /// <summary>
     /// Eingabefelder neu aus dem gewaehlten Schacht aufbauen (Auswahlwechsel, Wechsel der alten
     /// Schachtansicht) und den Live-Abgleich mit genau diesem Datensatz anschliessen. Eine reine
     /// Feldaenderung am bereits angezeigten Schacht rebuildet die Gruppen NICHT erneut (das wuerde
@@ -116,6 +130,22 @@ public sealed class SchaechteNovaWorkspaceController
         _e.FelderDrawer.Titel = record.GetFieldValue("Schachtnummer");
         _e.FelderDrawer.Groups = gruppen;
         _felderSync = new DataPageDetailLiveSync(record, record.GetFieldValue, gruppen);
+    }
+
+    /// <summary>
+    /// Leert die Eingabefelder und entsorgt ihren Live-Abgleich. Gebraucht, sobald die Seite die
+    /// Aufklapp-Liste zeigt: Das Formular steht dann in der aufgeklappten Zeile, und ein zweiter
+    /// Live-Sync auf denselben Datensatz waere verschwendete Arbeit und ein zweiter Schreibweg
+    /// auf dasselbe Formular (Fix-Runde 1 zu Task 6, dasselbe Muster wie
+    /// <see cref="DataPageNovaWorkspaceController.LeereFelderDrawer"/>).
+    /// </summary>
+    public void LeereFelderDrawer()
+    {
+        _felderSync?.Dispose();
+        _felderSync = null;
+        _e.FelderDrawer.Hinweis = string.Empty;
+        _e.FelderDrawer.Titel = string.Empty;
+        _e.FelderDrawer.Groups = null;
     }
 
     private bool IstSichtbar => _e.FelderDrawer.Visibility == Visibility.Visible;
@@ -176,18 +206,19 @@ public sealed class SchaechteNovaWorkspaceController
     }
 
     /// <summary>
-    /// Blendet Schachtansicht, Eingabefelder und beide Trennlinien ein oder aus. Die festen
-    /// Spalten- und Zeilenmasse werden dabei mit auf 0 gesetzt, sonst bliebe bei der alten
-    /// Schachtansicht eine Luecke.
+    /// Blendet Uebersicht und Eingabefelder getrennt ein oder aus (Task 6, Aufklapp-Liste). Die
+    /// festen Spalten- und Zeilenmasse werden dabei mit auf 0 gesetzt, sonst bliebe eine Luecke.
+    /// Getrennt gebraucht wird das von der Aufklapp-Liste: Dort bleibt die Schachtansicht
+    /// rechts, waehrend die Eingabefelder-Schublade verschwindet — das Formular steht in der
+    /// aufgeklappten Zeile.
     /// </summary>
-    public void SetzeSichtbar(bool sichtbar)
+    public void SetzeSichtbar(bool uebersicht, bool eingabefelder)
     {
-        var v = sichtbar ? Visibility.Visible : Visibility.Collapsed;
-        _e.Uebersicht.Visibility = v;
-        _e.SideSplitter.Visibility = v;
-        _e.FelderDrawer.Visibility = v;
+        _e.Uebersicht.Visibility = uebersicht ? Visibility.Visible : Visibility.Collapsed;
+        _e.SideSplitter.Visibility = uebersicht ? Visibility.Visible : Visibility.Collapsed;
+        _e.FelderDrawer.Visibility = eingabefelder ? Visibility.Visible : Visibility.Collapsed;
 
-        if (sichtbar)
+        if (uebersicht)
         {
             _e.SideSplitterCol.Width = new GridLength(DataPageWorkspaceLayoutPolicy.SplitterHoehe);
             _e.SideCol.MinWidth = SideColMin;
@@ -196,14 +227,21 @@ public sealed class SchaechteNovaWorkspaceController
                 ? Math.Clamp(w, SideColMin, SideColMax)
                 : SideColStandard;
             _e.SideCol.Width = new GridLength(breite);
+        }
+        else
+        {
+            _e.SideSplitterCol.Width = new GridLength(0);
+            _e.SideCol.MinWidth = 0;
+            _e.SideCol.Width = new GridLength(0);
+        }
+
+        if (eingabefelder)
+        {
             ApplyDrawerOpenState();
         }
         else
         {
             _e.DrawerSplitter.Visibility = Visibility.Collapsed;
-            _e.SideSplitterCol.Width = new GridLength(0);
-            _e.SideCol.MinWidth = 0;
-            _e.SideCol.Width = new GridLength(0);
             _e.DrawerSplitterRow.Height = new GridLength(0);
             _e.DrawerRow.MinHeight = 0;
             _e.DrawerRow.Height = new GridLength(0);

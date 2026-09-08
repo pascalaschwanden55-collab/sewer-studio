@@ -181,11 +181,26 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     /// <summary>Nova-Etappe 1: Liste mit Uebersicht rechts und Eingabefeldern unten als Standard. false = bisherige Haltungsansicht.</summary>
     public bool ShowHaltungenNovaLayout { get; set; } = true;
 
+    /// <summary>
+    /// Nova, Aufklapp-Liste: Welche der beiden Nova-Ansichten die Haltungsseite zeigt —
+    /// "liste" (Standard, Formular in der aufgeklappten Zeile) oder "tabelle". Unbekannte
+    /// Werte gelten als "liste" (<see cref="DataPage.HaltungenAnsichtRegel"/>).
+    /// </summary>
+    public string HaltungenAnsicht { get; set; } = "liste";
+
     // Schachtansicht: per GridSplitter einstellbare Hoehe des "Schaeden"-Panels (in px).
     public double SchachtansichtSchadenHeight { get; set; } = 240d;
 
     /// <summary>Nova-Etappe 2: Liste mit Schachtansicht rechts und Eingabefeldern unten als Standard. false = bisherige Schachtansicht.</summary>
     public bool ShowSchaechteNovaLayout { get; set; } = true;
+
+    /// <summary>
+    /// Nova, Aufklapp-Liste (Task 6): Welche der beiden Nova-Ansichten die Schachtseite zeigt —
+    /// "liste" (Standard, Formular in der aufgeklappten Zeile) oder "tabelle". Unbekannte
+    /// Werte gelten als "liste" (dieselbe Regel wie bei den Haltungen,
+    /// <see cref="DataPage.HaltungenAnsichtRegel"/>).
+    /// </summary>
+    public string SchaechteAnsicht { get; set; } = "liste";
 
     /// <summary>
     /// Nova-Fixwelle F3: Bei offenem Projekt zeigt "Uebersicht" die neue Projektuebersicht.

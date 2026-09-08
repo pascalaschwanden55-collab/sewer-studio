@@ -12,17 +12,6 @@ public partial class DataPage
 {
     private PopupToggle? _reihenfolgeToggle;
 
-    /// <summary>Kein INotifyPropertyChanged auf AppSettings -> imperativ wie ApplyHaltungsansichtSichtbarkeit.</summary>
-    private void ApplyNovaSucheSichtbarkeit()
-    {
-        if (AlteSucheLeiste is null || NovaSucheLeiste is null)
-            return;
-
-        var nova = NovaLayoutAktiv;
-        AlteSucheLeiste.Visibility = nova ? Visibility.Collapsed : Visibility.Visible;
-        NovaSucheLeiste.Visibility = nova ? Visibility.Visible : Visibility.Collapsed;
-    }
-
     /// <summary>F3 fokussiert die sichtbare Suche (nur Haltungen; Schaechte ohne F3-Marke).</summary>
     private void DataPage_PreviewKeyDown(object sender, KeyEventArgs e)
     {

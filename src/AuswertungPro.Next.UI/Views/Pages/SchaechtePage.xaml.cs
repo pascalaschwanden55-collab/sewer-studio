@@ -109,8 +109,8 @@ public partial class SchaechtePage : UserControl
         SchachtansichtView.ActionRequested = RouteSchachtansichtAction;
         // Robuster Grundzustand bis zum DataContext-Wechsel (wie DataPage): Standard ist die
         // Nova-Arbeitsflaeche; OnDataContextChanged wendet ShowSchaechteNovaLayout an.
+        // Die Ansicht selbst wendet VerdrahteAufklappListe() am Ende des Konstruktors an.
         SchachtansichtToggle.IsChecked = false;
-        ApplySchachtansichtSichtbarkeit();
 
         DataContextChanged += OnDataContextChanged;
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
@@ -118,6 +118,9 @@ public partial class SchaechtePage : UserControl
 
         Loaded += (_, __) =>
         {
+            // Nach einem Unloaded sind Controller und Abo abgemeldet; WPF kann dieselbe Seite
+            // wieder laden. Verdrahte() ist mehrfach sicher aufrufbar.
+            _aufklappListe?.Verdrahte();
             _columnAlignmentToolbar.UpdateButtons();
             ApplySearchFilter();
         };
@@ -128,9 +131,11 @@ public partial class SchaechtePage : UserControl
             _searchDebounceTimer.Stop();
             _layoutSaveDebounceTimer.Stop();
             SaveLayoutToSettings();
+            _aufklappListe?.Dispose();
         };
         SizeChanged += (_, __) => ApplyDrawerHeight();
         VerdrahteNovaWorkspace();
+        VerdrahteAufklappListe();
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -143,6 +148,7 @@ public partial class SchaechtePage : UserControl
             _subscriptionController.Detach();
             _massnahmenController = null;
             SchachtansichtView.Settings = null;
+            VerdrahteAufklappAbo(null);
             return;
         }
 
@@ -158,6 +164,7 @@ public partial class SchaechtePage : UserControl
             _vm.SchachtCostCatalog);
         _subscriptionController.Switch(_vm.Columns, _vm.Records, () => _vm.Records);
         InitNovaWorkspace(_vm);
+        VerdrahteAufklappAbo(_vm);
     }
 
     private void RebuildColumns()
@@ -723,8 +730,7 @@ public partial class SchaechtePage : UserControl
     {
         _ = sender;
         _ = e;
-        ApplySchachtansichtSichtbarkeit();
-        AktualisiereFelderDrawer();
+        WendeSchachtAnsichtAn();
     }
 
     private void RouteSchachtansichtAction(string actionKey, SchachtRecord record)
