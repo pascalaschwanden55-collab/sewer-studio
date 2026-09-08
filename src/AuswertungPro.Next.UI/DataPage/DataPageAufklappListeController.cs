@@ -97,11 +97,29 @@ public sealed class DataPageAufklappListeController : IDisposable
         => _liste.Hinweis = DataPageKonfliktHinweis.Text(fieldName, aktuellerWert, eingabe);
 
     /// <summary>
-    /// Gehoert die aufgeklappte Haltung noch zum Projekt? Ohne ViewModel (Test, Seitenaufbau)
-    /// wird die Frage nicht gestellt — dann zaehlt allein, was die Liste zeigt.
+    /// Gehoert die aufgeklappte Haltung noch zum Bestand? Gefragt werden beide Quellen, die es
+    /// wissen koennen: das ViewModel, sobald die Seite eines gesetzt hat, und die Liste selbst.
+    /// Es ist dieselbe Sammlung — die Seite bindet <c>Records</c> —, aber die Liste kann die
+    /// Frage auch ohne ViewModel beantworten, und genau das braucht der Seitenaufbau.
     /// </summary>
     private bool IstNochInDerListe(HaltungRecord record)
-        => _vm() is not { } vm || vm.Records.Contains(record);
+    {
+        if (_vm() is { } vm && !vm.Records.Contains(record))
+            return false;
+
+        return _liste.ItemsSource is not System.Collections.IEnumerable quelle || Enthaelt(quelle, record);
+    }
+
+    private static bool Enthaelt(System.Collections.IEnumerable quelle, HaltungRecord record)
+    {
+        foreach (var eintrag in quelle)
+        {
+            if (ReferenceEquals(eintrag, record))
+                return true;
+        }
+
+        return false;
+    }
 
     private void OnAufgeklapptChanged(object? sender, EventArgs e) => AktualisiereFormular();
 

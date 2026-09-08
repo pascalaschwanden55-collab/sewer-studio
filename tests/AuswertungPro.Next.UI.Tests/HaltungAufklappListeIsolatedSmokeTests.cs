@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -53,7 +54,7 @@ public sealed class HaltungAufklappListeIsolatedSmokeTests
             var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             app.InitializeComponent();
 
-            var datensaetze = Enumerable.Range(1, 40).Select(Datensatz).ToList();
+            var datensaetze = new ObservableCollection<HaltungRecord>(Enumerable.Range(1, 40).Select(Datensatz));
             var fabrik = new DataPageDetailItemFactory(
                 _ => null,
                 (record, feld, wert) => record.SetFieldValue(feld, wert, FieldSource.Manual, userEdited: true));
@@ -166,24 +167,10 @@ public sealed class HaltungAufklappListeIsolatedSmokeTests
             Layout(liste);
             Assert.Null(liste.Aufgeklappt);
 
-            // Fix-Runde 1: Escape AUS einem Eingabefeld klappt nicht zu — die Eingabe wird auf
-            // dem normalen Weg zurueckgeschrieben, das Formular bleibt stehen.
+            // Escape auf der Zeile klappt zu. Der Weg AUS einem Eingabefeld heraus braucht
+            // echten Tastaturfokus und steht deshalb im Fenster-Szenario weiter unten.
             liste.KlappeAuf(datensaetze[3]);
             Layout(liste);
-            var editor = Alle<TextBox>(liste)
-                .First(t => t.DataContext is RecordDetailItem { FieldName: Bemerkungen });
-            var item = (RecordDetailItem)editor.DataContext;
-            item.IsEditing = true;
-            editor.Text = "Im Feld getippt";
-            editor.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
-
-            Assert.True(liste.VerarbeiteTaste(Key.Escape, editor));
-            Assert.Same(datensaetze[3], liste.Aufgeklappt);
-            Assert.Equal("Im Feld getippt", datensaetze[3].GetFieldValue(Bemerkungen));
-            Assert.Equal(FieldSource.Manual, datensaetze[3].FieldMeta[Bemerkungen].Source);
-            Assert.True(datensaetze[3].FieldMeta[Bemerkungen].UserEdited);
-
-            // Erst der zweite Escape, jetzt auf der Zeile, klappt zu.
             Assert.True(liste.VerarbeiteTaste(Key.Escape, Zeile(liste, datensaetze[3])));
             Layout(liste);
             Assert.Null(liste.Aufgeklappt);
@@ -199,6 +186,19 @@ public sealed class HaltungAufklappListeIsolatedSmokeTests
             var leer = new HaltungAufklappListe();
             Layout(leer);
             Assert.Empty(Alle<RecordDetailsView>(leer));
+
+            // Fix-Runde 2: Verschwindet die aufgeklappte Haltung (geloescht, Projektwechsel),
+            // klappt die Liste wirklich zu — sonst bliebe der Pfeil gedreht.
+            liste.KlappeAuf(datensaetze[5]);
+            Layout(liste);
+            Assert.NotNull(liste.Themen);
+
+            datensaetze.RemoveAt(5);
+            controller.AktualisiereFormular();
+            Layout(liste);
+            Assert.Null(liste.Aufgeklappt);
+            Assert.Null(liste.Themen);
+            Assert.Empty(Alle<RecordDetailsView>(liste));
 
             controller.Dispose();
             WpfIsolatedTestProcess.MarkChildScenarioCompleted();
