@@ -77,3 +77,31 @@ public sealed class DataPageAufklappListeController { // Muster DataPageNovaWork
 
 - [ ] Release-Gesamtlauf `dotnet build AuswertungPro.sln -c Release && dotnet test AuswertungPro.sln -c Release --no-build` → 0 Fehler, 0 Warnungen; Zahlen in die Abnahme. Bilder ansehen: Kopfzeilen einzeilig, Pfeil dreht, fünf Themen nebeneinander mit Zählern, Felder editierbar sichtbar, Übersicht rechts gefüllt, kein Fehltext; mindestens 12 Kopfzeilen bei zugeklappter Liste (Full HD).
 - [ ] Commit „Haltungen: Abnahme der Aufklapp-Liste mit Pruefhost-Bildern, CLAUDE.md nachgefuehrt". Kein Merge, kein Push durch den Umsetzer.
+
+### Task 4: Haltungsgrafik des Protokolls in der Übersicht (statt Rohrring)
+
+**Spec-Ergänzung (Pascal 08.09.):** „Bei der Haltung die Haltungsgrafik wie beim Erstellen eines AWU-Haltungsprotokolls, analog WinCan im Nova-Stil." Quelle der Zeichnung ist `Application/Reports/HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(...)` (senkrechtes Rohr in Aufnahmerichtung, Schadenssymbole über `DamageSymbolRenderer`, Meter-Skala, Fliesspfeil, Schachtknoten, Label-Tabelle), verwendet von `ProtocolPdfExporter` (~Z. 876). Das Programm hat keinen SVG-Renderer für WPF.
+
+**Files:**
+- Create: `src/AuswertungPro.Next.UI/Controls/SvgTeilmengeZeichner.cs` (zeichnet die von unseren Buildern verwendete SVG-Teilmenge — `rect`, `line`, `circle`, `polygon`, `polyline`, `path` (M/L/A/Z wie im Builder), `text` (x, y, text-anchor, font-size, font-weight), `g` mit `transform="translate|rotate"` — als WPF-Shapes auf ein `Canvas`; Farben werden über eine Zuordnungstabelle Builder-Farbe → Theme-Token (`TextBrush`, `MutedBrush`, `BorderBrush`, `AccentBrush`, Zustandsfarben, `FaintBrush`) gemappt; unbekannte Elemente/Attribute → `NotSupportedException` mit Elementname)
+- Create: `src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsgrafikControl.xaml(.cs)` (DP `Record`, `Catalog` (aus `App.Services`? nein: von der Seite gesetzt), `FlowDown`; baut das SVG über den Builder mit denselben Argumenten wie der PDF-Weg (Länge, Einträge ohne gelöschte, Fotonummern leer, Start-/Endknoten aus `Schacht_oben`/`Schacht_unten`, `brand` = Akzentfarbe des Themes, Höhe an die Panelhöhe angepasst über `overrideHeight`) und zeichnet es über den Zeichner; `Viewbox` Uniform; Tooltip je Symbol mit Code + Klartext (Titel aus dem SVG `<title>` falls vorhanden, sonst aus dem Eintrag))
+- Modify: `HaltungUebersichtPanel.xaml(.cs)`: die Grafik ersetzt den Rohrring (RohrringControl bleibt als Klasse erhalten, nicht mehr im Panel; Wächter `DesignAuditNovaHaltungenTests`/`RohrringGeometrieTests` entsprechend anpassen — Geometrie-Tests bleiben, XAML-Wächter auf die Grafik umstellen); Live-Aktualisierung wie bisher (Protokoll-/Feldwechsel zeichnet neu, gedrosselt auf einen Dispatcher-Durchlauf)
+- Test: `SvgTeilmengeZeichnerTests` (STA: jedes Element der Teilmenge → passendes Shape mit Position/Farbe; unbekanntes Element wirft), Wächter `HaltungsgrafikSvgBuilderTeilmengeTests` (WPF-frei: ein repräsentatives SVG des Builders mit allen Symbolarten enthält nur Elemente/Attribute der Teilmenge — Grep über den Builder-Quelltext UND ein erzeugtes SVG), `HaltungsgrafikControlIsolatedSmokeTests` (Kindprozess: Panel mit Haltung mit drei Befunden zeigt Grafik mit drei Symbolen, ohne Auswahl nichts, dunkles Theme ohne feste Farben), `DesignAuditNovaHaltungenTests` erweitert.
+
+- [ ] Nova-Stil: Strichstärken/Schriften aus dem SVG übernehmen, Farben nur über Tokens; die Beschriftungstabelle unter der Grafik verwendet `FontMono`/`TextXS`; Zustandsfarben Z0-Z4 unverändert.
+- [ ] Grün: Build; Filter `"SvgTeilmenge|HaltungsgrafikSvgBuilder|HaltungsgrafikControl|HaltungUebersicht|DesignAudit|XamlActionWiring|UiArchitectureGuard|MaintainabilityFitness|UebersprungeneTests|DataPageNovaLayoutIsolated"`. Commit „Haltungen: Haltungsgrafik des Protokolls in der Übersicht".
+
+### Task 5: Schachtgrafik in der Schachtansicht (analog WinCan)
+
+**Spec-Ergänzung (Pascal 08.09.):** „Beim Schacht könnte da eine Schachtgrafik sein" — WinCan-Art: senkrechter Schnitt. Es gibt keine bestehende Schachtgrafik im Programm.
+
+**Files:**
+- Create: `src/AuswertungPro.Next.Application/Reports/SchachtgrafikSvgBuilder.cs` (WPF-frei, gleiche SVG-Teilmenge wie Task 4): Deckel oben mit Schachtnummer, Konus, Schachtwand, Sohle als Zonen (Beschriftung links, `MutedBrush`-Farbe), Tiefe (`Tiefe_m`) als Masslinie rechts, Innenmasse (`Dimension 1 mm` × `Dimension 2 mm`) unter der Sohle, Fliesspfeil; angeschlossene Haltungen als kurze Rohrstummel links (Zulauf: Haltungen mit `Schacht_unten` = Schachtnummer) und rechts (Ablauf: `Schacht_oben` = Schachtnummer) mit Haltungsname und DN; Schäden aus dem Schachtprotokoll nach Ort (`Konus`/`Schachtwand`/`Sohle`/`Anschluss`; Zuordnung über eine WPF-freie `SchachtSchadenOrtRegel` aus dem Eintrag: Feld `Ort`/Text; unbekannt → Schachtwand) mit `DamageSymbolRenderer`-Symbol in der Zone und Label-Tabelle wie bei der Haltung (Code, Klartext, Stufe). Keine erfundenen Werte: fehlende Tiefe/Masse → Zone ohne Masslinie, Hinweis „Tiefe nicht erfasst".
+- Create: `Views/Pages/Schachtansicht/SchachtgrafikControl.xaml(.cs)` (DP `Record`, `Haltungen` (IReadOnlyList<HaltungRecord> der Seite), zeichnet über `SvgTeilmengeZeichner`), ersetzt den Grundriss-Kreis in `SchachtUebersichtPanel` (Grundriss-Masstext bleibt in der Grafik enthalten).
+- Test: `SchachtgrafikSvgBuilderTests` (WPF-frei: Zonen, Zu-/Abläufe je Richtung, Schaden je Ort in der richtigen Zone, fehlende Tiefe), `SchachtSchadenOrtRegelTests`, `SchaechteNovaLayoutIsolatedSmokeTests` erweitert (Grafik sichtbar, drei Schäden = drei Symbole), `DesignAuditNovaSchaechteTests` erweitert.
+
+- [ ] Grün: Build; Filter `"Schachtgrafik|SchachtSchadenOrt|SchachtUebersicht|SchaechteNovaLayoutIsolated|DesignAudit|XamlActionWiring|UiArchitectureGuard|MaintainabilityFitness|UebersprungeneTests"`. Commit „Schächte: Schachtgrafik analog WinCan in der Schachtansicht".
+
+### Task 6: Abnahme-Nachtrag für beide Grafiken
+
+- [ ] Prüfhost: Bilder `haltungen-liste-auf-hell/dunkel` (Grafik sichtbar) und `schaechte-grafik-hell/dunkel` neu; ABNAHME.md (aufklapp-liste) um Abschnitt „Grafiken" ergänzen; CLAUDE.md-Abschnitt ergänzen (SVG-Teilmenge als Vertrag: neue SVG-Elemente im Builder brauchen den Zeichner); Release-Gesamtlauf 0/0. Commit „Nova: Haltungs- und Schachtgrafik abgenommen".
