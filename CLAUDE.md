@@ -1141,6 +1141,35 @@ Stand und ehrliche Abnahmegrenzen: `docs/reviews/2026-09-06-nova/aufklapp-liste/
   Gestaltungswaechter. Der isolierte Pruefhost kennt `haltungenliste` und `schaechteliste`
   und prueft den Menuewechsel auf echten Seiten mit eigenem Profil.
 
+### Optik-Nachpruefung (08.09.2026, O1-O19 aus dem Gesamtaudit)
+
+Befunde mit Bildbelegen: `docs/reviews/2026-09-08-redesign-gesamtaudit/OPTIK-NACHPRUEFUNG.md`,
+Plan `docs/superpowers/plans/2026-09-08-optik-nachpruefung-umsetzung.md`.
+Umgesetzt sind O1-O7, O10-O12 und O16-O19; Waechter `DesignAuditOptikNachpruefungTests` (8)
+sowie Erweiterungen in `DesignAuditNovaSeitenkoepfeTests` (jetzt 5), `DesignAuditContrastTests`,
+`DesignAuditFeinschliffTests` und `DesignAuditLaufzeittexteTests`. Nicht zurueckdrehen:
+
+- **Der `PageTitle`-Stil traegt seine Akzentlinie als `TextDecoration` 7 px unter der
+  Grundlinie.** Ein Untertitel gehoert deshalb NEBEN den Titel (wie im `NovaPageHeader`),
+  nie in eine Zeile darunter — sonst wirkt er durchgestrichen (Matrix-Seiten, O1).
+- **Der Farbwaechter sieht auch Setter in Triggern** (`Property="Background" Value="#…"`).
+  Hervorhebungen im Formular und im Sanierungsmassnahmen-Fenster laufen ueber die Tokens
+  `Sanieren*`, `Ausgefuehrt*`, `DangerRowBrush`, `WarningRowBrush`, `Uebertragen*` (O2).
+- **Ein Abzeichen nimmt die Text-Tinte seiner Flaeche**: `SuccessTextBrush` auf
+  `SuccessSubtleBrush` (5,8:1 dunkel, 4,6:1 hell), nie `SuccessBrush` (2,3:1 dunkel). Der
+  Kontrastwaechter prueft die Paare der Pruefung-Abzeichen in beiden Themen (O17).
+- **Tinte in Vorlagen ueber `ContentPresenter.Resources` durchreichen** (B7-Falle) — auch
+  bei `ToggleButton`-Chips. Die ZK-Filterchips nehmen ihre Tinte aus
+  `ZustandsklasseInkPolicy`, nicht aus `Brushes.Black` (O18).
+- **Sichtbare Texte: kein `ß`.** Der Umlaut-Waechter meldet jetzt auch das scharfe ß; der
+  Laufzeittext-Waechter kennt die beiden Matrix-ViewModels, die Kosten-/Massnahmen-
+  Controller und die Fotomess-Hinweise (O4/O5). Anlass: 57 Stellen in 27 Dateien.
+- **Ein Hauptknopf je Seite als Pille** (`ToolbarButtonAccent`); `PrimaryButton` gibt es
+  in `Views/Pages` nur noch in der klassischen `OverviewPage`. Beenden liegt allein im
+  Menue `Datei` (O11). Die Einstellungsgruppen sind Karten mit Grid-Kopf — ein nacktes
+  `<DockPanel>` verbietet `SettingsPageLayoutTests` auf dieser Seite (O19).
+- Offen fuer einen Folgeplan: O8, O9, O13, O14, O15 und Abschnitt F der Nachpruefung.
+
 ## Build & Test
 ```bash
 dotnet build AuswertungPro.sln
