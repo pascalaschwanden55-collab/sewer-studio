@@ -20,6 +20,14 @@ namespace AuswertungPro.Next.Application.UseCases.NaechsteAufgabe;
 /// </summary>
 public static class SchachtProtokollQuelle
 {
+    /// <summary>
+    /// Hinweis am Gedankenstrich der Protokollspalte (Task 6, Aufklapp-Liste). Derselbe
+    /// Wortlaut wie <c>HaltungProtokollQuelle.OhneProtokollHinweis</c> — der Oeffner sucht auch
+    /// hier ueber dasselbe Kontextmenue weiter, wenn kein Pfad hinterlegt ist.
+    /// </summary>
+    public const string OhneProtokollHinweis =
+        "kein hinterlegtes Protokoll — das Kontextmenü sucht im Projekt";
+
     /// <summary>Die moeglichen Protokollpfade in Pruefreihenfolge; leer, wenn es keinen gibt.</summary>
     public static IReadOnlyList<string> Kandidaten(SchachtRecord record)
     {

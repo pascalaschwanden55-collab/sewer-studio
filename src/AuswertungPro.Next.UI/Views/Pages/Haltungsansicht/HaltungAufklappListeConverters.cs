@@ -54,16 +54,26 @@ public sealed class SchmaleBreiteConverter : IValueConverter
 
 /// <summary>
 /// Nova, Aufklapp-Liste: Beschriftung und vorlesbarer Name des Pfeilknopfs. Er sagt, was der
-/// Klick TUT — an einer offenen Haltung also "zuklappen". Eine feste Beschriftung waere fuer
+/// Klick TUT — an einer offenen Zeile also "zuklappen". Eine feste Beschriftung waere fuer
 /// einen Screenreader an der offenen Zeile schlicht falsch.
+///
+/// Task 6: Die Schacht-Aufklapp-Liste (<c>SchachtAufklappListe</c>) verwendet denselben
+/// Konverter mit <c>ConverterParameter=Schacht</c>; ohne Parameter bleibt "Haltung" das
+/// Nomen (Ruecksicht auf die bestehende Haltungsseite, die keinen Parameter setzt).
 /// </summary>
 public sealed class PfeilBeschriftungConverter : IValueConverter
 {
     public const string Aufklappen = "Haltung aufklappen";
     public const string Zuklappen = "Haltung zuklappen";
 
+    /// <summary>Nomen, wenn kein ConverterParameter gesetzt ist.</summary>
+    private const string StandardNomen = "Haltung";
+
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        => value is true ? Zuklappen : Aufklappen;
+    {
+        var nomen = parameter as string ?? StandardNomen;
+        return value is true ? $"{nomen} zuklappen" : $"{nomen} aufklappen";
+    }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => Binding.DoNothing;

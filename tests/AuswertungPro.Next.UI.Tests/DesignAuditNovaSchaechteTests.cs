@@ -196,4 +196,64 @@ public sealed class DesignAuditNovaSchaechteTests
         foreach (var feld in new[] { "Funktion", "Material", "Schachttiefe", "Baujahr", "Belastungsklasse", "Inspektionsdatum" })
             Assert.Contains($"Fields[{feld}], Converter={{StaticResource FaktWertConv}}", xaml);
     }
+
+    /// <summary>
+    /// Nova, Aufklapp-Liste (2026-09-08, Task 6 des Plans "Haltungen als Aufklapp-Liste"):
+    /// Die drei Ansichten der Schachtseite (Liste, Tabelle, alte Schachtansicht) sind eine
+    /// Gruppe im Menue "Weitere Aktionen", genau wie bei den Haltungen.
+    /// </summary>
+    [Fact]
+    public void Ansicht_Liste_und_Tabelle_stehen_als_Gruppe_neben_der_alten_Schachtansicht()
+    {
+        var xaml = Xaml();
+        Assert.Contains("x:Name=\"AnsichtListeMenu\" Header=\"Aufklapp-Liste\" IsCheckable=\"True\" Tag=\"liste\"", xaml);
+        Assert.Contains("x:Name=\"AnsichtTabelleMenu\" Header=\"Tabelle\" IsCheckable=\"True\" Tag=\"tabelle\"", xaml);
+        Assert.Contains("Click=\"AnsichtMenu_Click\"", xaml);
+        Assert.Matches(new Regex(
+            "<MenuItem x:Name=\"AnsichtTabelleMenu\"[\\s\\S]*?/>\\s*<MenuItem x:Name=\"SchachtansichtToggle\""),
+            xaml);
+
+        var settings = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "AppSettings.cs"));
+        Assert.Contains("public string SchaechteAnsicht { get; set; } = \"liste\";", settings);
+    }
+
+    /// <summary>
+    /// Task 6: Die Schaechte-Liste bindet dieselbe Sammlung und dasselbe Zeilen-Kontextmenue
+    /// wie die Tabelle — kein zweiter Weg auf Auswahl, Suche oder Protokoll-Oeffner.
+    /// </summary>
+    [Fact]
+    public void Aufklapp_Liste_bindet_dieselbe_Sammlung_und_dasselbe_Kontextmenue_wie_die_Tabelle()
+    {
+        var xaml = Xaml();
+        Assert.Contains("<schachtansicht:SchachtAufklappListe x:Name=\"AufklappListe\"", xaml);
+        Assert.Contains("ItemsSource=\"{Binding Records}\"", xaml);
+        Assert.Contains("SelectedItem=\"{Binding Selected, Mode=TwoWay}\"", xaml);
+        Assert.Contains("ContextMenu=\"{StaticResource SchachtZeilenMenue}\"", xaml);
+        Assert.Contains("ZeilenMenue=\"{StaticResource SchachtZeilenMenue}\"", xaml);
+        Assert.Contains(
+            "ProtokollCommand=\"{Binding ProtokollOeffnenCommand, RelativeSource={RelativeSource AncestorType={x:Type local:SchaechtePage}}}\"",
+            xaml);
+    }
+
+    /// <summary>
+    /// Task 6: Formularaufbau, Live-Abgleich, Tastenregel und Themenbildung der Schacht-Liste
+    /// sind geteilte Bausteine mit den Haltungen — keine zweite Fassung derselben Logik.
+    /// </summary>
+    [Fact]
+    public void Schacht_Aufklapp_Liste_verwendet_die_geteilten_Bausteine_der_Haltungen()
+    {
+        var controllerCode = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile(
+            "src", "AuswertungPro.Next.UI", "DataPage", "SchaechteAufklappListeController.cs"));
+        Assert.Contains("HaltungThemenGruppierung.Bilde(", controllerCode);
+        Assert.Contains("new DataPageDetailLiveSync(", controllerCode);
+
+        var controlCode = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile(
+            "src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtAufklappListe.xaml.cs"));
+        Assert.Contains("HaltungAufklappTastenregel.Bestimme(", controlCode);
+
+        var umschalterCode = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile(
+            "src", "AuswertungPro.Next.UI", "DataPage", "SchaechteAnsichtUmschalter.cs"));
+        Assert.Contains("HaltungenAnsichtRegel.Bestimme(", umschalterCode);
+        Assert.Contains("HaltungenAnsichtRegel.Normalisiere(", umschalterCode);
+    }
 }

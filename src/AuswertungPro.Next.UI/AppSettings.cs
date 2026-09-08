@@ -195,6 +195,14 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public bool ShowSchaechteNovaLayout { get; set; } = true;
 
     /// <summary>
+    /// Nova, Aufklapp-Liste (Task 6): Welche der beiden Nova-Ansichten die Schachtseite zeigt —
+    /// "liste" (Standard, Formular in der aufgeklappten Zeile) oder "tabelle". Unbekannte
+    /// Werte gelten als "liste" (dieselbe Regel wie bei den Haltungen,
+    /// <see cref="DataPage.HaltungenAnsichtRegel"/>).
+    /// </summary>
+    public string SchaechteAnsicht { get; set; } = "liste";
+
+    /// <summary>
     /// Nova-Fixwelle F3: Bei offenem Projekt zeigt "Uebersicht" die neue Projektuebersicht.
     /// false schaltet auf die klassische Uebersichtsseite zurueck (Menue "Ansicht &#8594;
     /// Klassische Uebersicht"), die weiterhin Projektliste, Vorschau und Vorschau-PDF traegt.
