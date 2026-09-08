@@ -160,38 +160,45 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
             var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             app.InitializeComponent();
 
-            // Task 6: Ohne gewaehlten Schacht steht nur der Leerzustand da - kein Grundriss,
+            // Task 6: Ohne gewaehlten Schacht steht nur der Leerzustand da - keine Schachtgrafik,
             // keine leeren Beschriftungen, kein Protokollknopf.
             var leeresPanel = new SchachtUebersichtPanel();
             Layout(leeresPanel);
             NovaRenderingChecks.OhneAuswahlNurLeerzustand(leeresPanel);
+            var leereGrafik = Assert.IsType<SchachtgrafikControl>(leeresPanel.FindName("Grafik"));
+            leereGrafik.ZeichneJetzt();
+            Assert.Equal(0, leereGrafik.SymbolAnzahl);
 
             var record = new SchachtRecord();
             var panel = new SchachtUebersichtPanel { Record = record };
             Layout(panel);
 
-            var kreis = Assert.IsType<Ellipse>(panel.FindName("Kreis"));
-            var oval = Assert.IsType<Ellipse>(panel.FindName("Oval"));
-            Assert.Equal(Visibility.Visible, kreis.Visibility);
-            Assert.Equal(Visibility.Collapsed, oval.Visibility);
-
-            // Reine Feldaenderung am selben Datensatz (kein neues Record, kein neuer Bindungswert):
-            // Das Panel haengt an SchachtRecord.PropertyChanged und rechnet den Grundriss neu.
-            record.SetFieldValue(FieldKeys.ShaftShape, "Oval");
-            Layout(panel);
-            Assert.Equal(Visibility.Collapsed, kreis.Visibility);
-            Assert.Equal(Visibility.Visible, oval.Visibility);
+            // Task 5: Die Schachtgrafik (senkrechter Schnitt) ersetzt den frueheren Grundriss-Kreis.
+            var grafik = Assert.IsType<SchachtgrafikControl>(panel.FindName("Grafik"));
+            grafik.ZeichneJetzt();
+            Assert.Equal(0, grafik.SymbolAnzahl);
 
             // In-Place-Neuaufbau (z. B. "Aktualisieren"): Protocol wird ersetzt. SchachtRecord.Protocol
             // meldet sich seit Fix-Runde 2 selbst (PropertyChanged(nameof(Protocol))) - das Panel zieht
             // die neue Schadensliste allein ueber diese Meldung nach, ohne Aktualisiere() direkt zu rufen.
+            // Dieselbe Meldung erreicht auch die Schachtgrafik (sie abonniert sich selbst).
             Assert.Null(panel.Entries);
             record.Protocol = new ProtocolDocument
             {
-                Current = new ProtocolRevision { Entries = { new ProtocolEntry { Code = "BAB" } } }
+                Current = new ProtocolRevision
+                {
+                    Entries =
+                    {
+                        new ProtocolEntry { Code = "BAB" },
+                        new ProtocolEntry { Code = "BAC" },
+                        new ProtocolEntry { Code = "BBA" },
+                    }
+                }
             };
             Layout(panel);
-            Assert.Equal(1, panel.Entries?.Count);
+            Assert.Equal(3, panel.Entries?.Count);
+            grafik.ZeichneJetzt();
+            Assert.Equal(3, grafik.SymbolAnzahl);
 
             WpfIsolatedTestProcess.MarkChildScenarioCompleted();
         });

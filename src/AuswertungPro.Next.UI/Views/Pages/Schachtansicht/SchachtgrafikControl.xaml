@@ -1,0 +1,14 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.Schachtansicht.SchachtgrafikControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root"
+             AutomationProperties.Name="Schachtgrafik"
+             ToolTip="Schachtgrafik: senkrechter Schnitt mit Konus, Schachtwand, Sohle, Zu-/Ablauf und Schadenssymbolen">
+    <Grid ClipToBounds="True">
+        <!-- Die Grafik behaelt ihr Seitenverhaeltnis; die Viewbox passt sie in die Spalte ein. -->
+        <Viewbox x:Name="Buehne" Stretch="Uniform" StretchDirection="Both"/>
+        <TextBlock x:Name="Hinweis" Visibility="Collapsed" TextWrapping="Wrap"
+                   VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center"
+                   FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}"/>
+    </Grid>
+</UserControl>

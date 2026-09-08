@@ -52,12 +52,33 @@ public sealed class DesignAuditNovaSchaechteTests
     }
 
     [Fact]
-    public void Schachtansicht_erklaert_die_Handbewertung_und_zeigt_den_Grundriss()
+    public void Schachtansicht_erklaert_die_Handbewertung_und_zeigt_die_Schachtgrafik()
     {
         var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
         Assert.Contains("Am Schacht wird die Zustandsklasse nie berechnet", xaml);
-        Assert.Contains("AutomationProperties.Name=\"Schachtgrundriss\"", xaml);
+        Assert.Contains("<local:SchachtgrafikControl", xaml);
         Assert.Contains("ZustandsklasseInkConverter", xaml);
+    }
+
+    /// <summary>
+    /// Nova, Aufklapp-Liste (Task 5): Die Schachtgrafik ersetzt den frueheren Grundriss-Kreis
+    /// (senkrechter Schnitt statt Draufsicht) und bekommt Haltungen und Katalog von der Seite
+    /// gereicht — kein Service-Locator im Panel oder im Control.
+    /// </summary>
+    [Fact]
+    public void Schachtgrafik_ersetzt_den_Grundriss_und_bekommt_Haltungen_und_Katalog_von_der_Seite()
+    {
+        var panelXaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
+        Assert.DoesNotContain("AutomationProperties.Name=\"Schachtgrundriss\"", panelXaml);
+        Assert.DoesNotContain("x:Name=\"Kreis\"", panelXaml);
+        Assert.DoesNotContain("x:Name=\"Oval\"", panelXaml);
+        Assert.DoesNotContain("x:Name=\"Quadrat\"", panelXaml);
+        Assert.Contains("Haltungen=\"{Binding Haltungen, ElementName=Root}\"", panelXaml);
+        Assert.Contains("Catalog=\"{Binding Catalog, ElementName=Root}\"", panelXaml);
+
+        var controlCode = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtgrafikControl.xaml.cs"));
+        Assert.DoesNotContain("App.Services", controlCode);
+        Assert.DoesNotContain("ServiceProvider.Current", controlCode);
     }
 
     /// <summary>
@@ -78,7 +99,10 @@ public sealed class DesignAuditNovaSchaechteTests
 
     /// <summary>
     /// Nova-Etappe 2b, Task 6: Ohne gewaehlte Zeile zeigt die Schachtansicht NUR den
-    /// Leerzustand — kein Grundriss, keine leeren Beschriftungen, keine Knoepfe.
+    /// Leerzustand — keine Schachtgrafik, keine leeren Beschriftungen, keine Knoepfe.
+    /// Task 5: <c>Inhalt</c> ist seit der Schachtgrafik ein <c>ScrollViewer</c> (Muster
+    /// <c>HaltungUebersichtPanel</c>), kein <c>DockPanel</c> mehr — ohne Bildlauf wuerde die
+    /// mindestens 320 px hohe Grafik die Eckdaten und die Schadenliste abschneiden.
     /// </summary>
     [Fact]
     public void Schachtansicht_zeigt_ohne_Auswahl_nur_den_Leerzustand()
@@ -87,7 +111,7 @@ public sealed class DesignAuditNovaSchaechteTests
         Assert.Contains("x:Name=\"Leerzustand\"", xaml);
         Assert.Contains("Kein Schacht gewählt. Links eine Zeile wählen.", xaml);
 
-        var inhalt = Regex.Match(xaml, @"<DockPanel x:Name=""Inhalt""[\s\S]*?</DockPanel.Style>");
+        var inhalt = Regex.Match(xaml, @"<ScrollViewer x:Name=""Inhalt""[\s\S]*?</ScrollViewer.Style>");
         Assert.True(inhalt.Success, "Inhalt der Schachtansicht braucht einen eigenen Sichtbarkeitsschalter");
         Assert.Contains("<DataTrigger Binding=\"{Binding Record, ElementName=Root}\" Value=\"{x:Null}\">", inhalt.Value);
         Assert.Contains("<Setter Property=\"Visibility\" Value=\"Collapsed\"/>", inhalt.Value);

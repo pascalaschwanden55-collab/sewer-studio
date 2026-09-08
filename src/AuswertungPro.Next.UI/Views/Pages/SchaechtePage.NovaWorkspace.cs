@@ -30,6 +30,7 @@ public partial class SchaechtePage
     /// <summary>Verbindet Uebersicht und Eingabefelder mit dem ViewModel und waehlt die Standardansicht.</summary>
     private void InitNovaWorkspace(SchaechtePageViewModel vm)
     {
+        _novaWorkspace?.VerbindeKatalog();
         AktualisiereFelderDrawer();
         // Standardansicht: Nova-Arbeitsflaeche; die alte Schachtansicht bleibt ueber den Toggle
         // erreichbar und wird Standard, wenn die Einstellung aus ist.

@@ -142,7 +142,15 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         FeldNachschlag = services.FeldNachschlag;
         QgisBestand = services.QgisBestand;
         KatasterKennungen = services.KatasterKennungen;
+        CodeCatalog = services.CodeCatalog;
     }
+
+    /// <summary>
+    /// Aktiver Codekatalog fuer die Klartexte der Schachtgrafik. Null, wenn das ViewModel ueber
+    /// einen Uebergangskonstruktor ohne Dienste entstand — dann bleibt die Grafik bei Code ohne
+    /// Klartext.
+    /// </summary>
+    internal AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? CodeCatalog { get; }
 
     /// <summary>
     /// Der QGIS-Bestand fuer "Leere Felder aus QGIS ergaenzen". Null, wenn das

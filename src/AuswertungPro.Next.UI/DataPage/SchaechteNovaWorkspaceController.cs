@@ -93,6 +93,20 @@ public sealed class SchaechteNovaWorkspaceController
     }
 
     /// <summary>
+    /// Reicht den aktiven Codekatalog und alle Haltungen des Projekts an die Schachtansicht
+    /// weiter. Die Schachtgrafik braucht den Katalog fuer die Klartexte der Schaeden und die
+    /// Haltungen, um die an diesen Schacht angeschlossenen Zu- und Ablaeufe zu finden — die Seite
+    /// selbst holt dafuer keinen Dienst.
+    /// </summary>
+    public void VerbindeKatalog()
+    {
+        if (_vm() is not { } vm)
+            return;
+        _e.Uebersicht.Catalog = vm.CodeCatalog;
+        _e.Uebersicht.Haltungen = vm.Project.Data;
+    }
+
+    /// <summary>
     /// Eingabefelder neu aus dem gewaehlten Schacht aufbauen (Auswahlwechsel, Wechsel der alten
     /// Schachtansicht) und den Live-Abgleich mit genau diesem Datensatz anschliessen. Eine reine
     /// Feldaenderung am bereits angezeigten Schacht rebuildet die Gruppen NICHT erneut (das wuerde
