@@ -102,6 +102,18 @@ public sealed class DataPageAufklappListeController { // Muster DataPageNovaWork
 
 - [ ] Grün: Build; Filter `"Schachtgrafik|SchachtSchadenOrt|SchachtUebersicht|SchaechteNovaLayoutIsolated|DesignAudit|XamlActionWiring|UiArchitectureGuard|MaintainabilityFitness|UebersprungeneTests"`. Commit „Schächte: Schachtgrafik analog WinCan in der Schachtansicht".
 
-### Task 6: Abnahme-Nachtrag für beide Grafiken
+### Task 6: Schächte als Aufklapp-Liste im gleichen Stil
 
-- [ ] Prüfhost: Bilder `haltungen-liste-auf-hell/dunkel` (Grafik sichtbar) und `schaechte-grafik-hell/dunkel` neu; ABNAHME.md (aufklapp-liste) um Abschnitt „Grafiken" ergänzen; CLAUDE.md-Abschnitt ergänzen (SVG-Teilmenge als Vertrag: neue SVG-Elemente im Builder brauchen den Zeichner); Release-Gesamtlauf 0/0. Commit „Nova: Haltungs- und Schachtgrafik abgenommen".
+**Spec-Ergänzung (Pascal 08.09.):** „Schächte im gleichen Stil." Kopfzeile mit den Kompakt-Spalten der Schachtliste (Schachtnummer, Strasse, Funktion, Material, Innenmass 1, Innenmass 2, Schachtform, Zustandsklasse-Marke, Protokoll-Knopf), aufgeklappt die Themen des `SchaechteRecordDetailsBuilder` (Stammdaten, Zustand und Inspektion, Sanierung und Kosten, Dokumente und Medien, Weitere Angaben).
+
+**Files:**
+- Modify/Create: Das Control aus Task 1 so verallgemeinern, dass es beide Datensatztypen trägt (z. B. Basis `AufklappListe` mit `DataTemplate`-Auswahl für die Kopfzeile: `HaltungKopfzeile`/`SchachtKopfzeile`; Formularaufbau über `Func<object, IReadOnlyList<RecordDetailGroup>>`; Themen über `HaltungThemenGruppierung` (Haltung) bzw. die Reihenfolge des Schacht-Builders). Schachtfelder über `SchachtFeldnamen` lesen (Umlaut-Falle „Eigentümer").
+- Create: `src/AuswertungPro.Next.UI/DataPage/SchaechteAufklappListeController.cs` (Live-Abgleich über den bestehenden Schacht-Weg: `DataPageDetailLiveSync` generalisiert für `SchachtRecord`, Rückschreiben über den bestehenden Schacht-Formularweg der `SchaechteNovaWorkspaceController`/`SchaechteFieldEditController` — kein zweiter Schreibpfad; Zustandsklasse als Handwert mit `FieldSource.Manual`, `userEdited:true`).
+- Modify: `AppSettings.SchaechteAnsicht` („liste" Standard | „tabelle"), `HaltungenAnsichtRegel` wiederverwenden (parametrisiert), `SchaechtePage.xaml` (Liste in der Zelle der Tabelle, Menü `Weitere Aktionen → Ansicht` mit „Aufklapp-Liste"/„Tabelle" neben „Alte Schachtansicht"; Schublade und Spaltenchips in der Liste aus; Schachtansicht rechts (mit Schachtgrafik aus Task 5) bleibt und folgt der Auswahl; Suche als Pille bleibt).
+- Test: `SchaechteAufklappListeIsolatedSmokeTests` (Kindprozess wie Task 1: 20 Schächte → nur Kopfzeilen; aufklappen → fünf Themen mit Zählern; Feldänderung stempelt Manual/UserEdited; Zustandsklasse-Auswahl schreibt nur bei echter Auswahl), `DesignAuditNovaSchaechteTests` erweitert, `SchaechteNovaLayoutIsolatedSmokeTests` erweitert (Standard Liste, Umschalten auf Tabelle).
+
+- [ ] Grün: Build; Filter `"AufklappListe|SchaechteAufklapp|SchaechteNovaLayoutIsolated|DesignAuditNovaSchaechte|DesignAudit|XamlActionWiring|UiArchitectureGuard|MaintainabilityFitness|UebersprungeneTests"`. Commit „Schächte: Aufklapp-Liste als Standardansicht im gleichen Stil".
+
+### Task 7: Abnahme-Nachtrag für Grafiken und Schacht-Liste
+
+- [ ] Prüfhost: Bilder `haltungen-liste-auf-hell/dunkel` (Grafik sichtbar), `schaechte-liste-zu/auf-hell/dunkel` (Schachtgrafik sichtbar) neu; ABNAHME.md (aufklapp-liste) um Abschnitte „Grafiken" und „Schächte" ergänzen; CLAUDE.md-Abschnitt ergänzen (SVG-Teilmenge als Vertrag: neue SVG-Elemente im Builder brauchen den Zeichner; beide Seiten Standard „liste"); Release-Gesamtlauf 0/0. Commit „Nova: Grafiken und Schacht-Liste abgenommen".
