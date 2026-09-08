@@ -52,18 +52,22 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
             var page = new Views.Pages.SchaechtePage();
             Layout(page);
 
+            // Nova, Aufklapp-Liste (Task 6): Standard ist die Liste; die Eingabefelder-Schublade
+            // gehoert erst zur Tabelle.
+            PruefeStandardIstDieAufklappListe(page);
+            WechsleAufDieTabelle(page);
             PruefeSucheUndFilter(page);
 
             var drawer = Assert.IsType<HaltungFelderDrawer>(page.FindName("FelderDrawer"));
             var drawerRow = Assert.IsType<RowDefinition>(page.FindName("DrawerRow"));
             var splitterRow = Assert.IsType<RowDefinition>(page.FindName("DrawerSplitterRow"));
 
-            // Ausgangszustand aus dem XAML-Grundraster (Auto/MinHeight 0): ohne Projekt und ohne
-            // Umschalten bleibt die Zeile bei ihrer natuerlichen Kopfzeilenhoehe. Erst ein
-            // tatsaechlicher IsOpen-Wechsel loest ApplyDrawerOpenState aus und setzt die feste
-            // Hoehe (siehe SchaechteNovaWorkspaceController.ApplyDrawerOpenState).
+            // Aufgeklappt seit dem Wechsel auf die Tabelle (ApplyDrawerOpenState laeuft dabei
+            // ueber SchaechteNovaWorkspaceController.SetzeSichtbar(uebersicht, eingabefelder)).
             Assert.True(drawer.IsOpen);
-            Assert.True(drawerRow.Height.IsAuto, $"Grundzustand: {drawerRow.Height}");
+            var offen = drawerRow.ActualHeight;
+            Assert.True(offen >= 120, $"Aufgeklappt: {offen} px");
+            Assert.Equal(6, splitterRow.ActualHeight);
 
             drawer.IsOpen = false;
             Layout(page);
@@ -206,7 +210,8 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
 
     /// <summary>
     /// Nova-Etappe 2b, Task 4: Die Suche steht als Pille rechts (ohne F3-Marke), und die
-    /// Spaltenchips (Filterzeile der Schachtliste) bleiben sichtbar.
+    /// Spaltenchips (Filterzeile der Schachtliste) bleiben sichtbar. Gilt fuer die Tabelle —
+    /// die Aufklapp-Liste blendet die Chips aus (siehe <see cref="PruefeStandardIstDieAufklappListe"/>).
     /// </summary>
     private static void PruefeSucheUndFilter(Views.Pages.SchaechtePage page)
     {
@@ -217,6 +222,56 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
 
         var columnViewChips = Assert.IsType<ItemsControl>(page.FindName("ColumnViewChips"));
         Assert.Equal(Visibility.Visible, columnViewChips.Visibility);
+    }
+
+    /// <summary>
+    /// Nova, Aufklapp-Liste (Task 6): Ohne Umschalten zeigt die Schachtseite die Liste, nicht
+    /// die Tabelle — genau wie bei den Haltungen (<c>DataPageNovaLayoutIsolatedSmokeTests</c>).
+    /// </summary>
+    private static void PruefeStandardIstDieAufklappListe(Views.Pages.SchaechtePage page)
+    {
+        var liste = Assert.IsType<SchachtAufklappListe>(page.FindName("AufklappListe"));
+        var grid = Assert.IsType<DataGrid>(page.FindName("Grid"));
+        var chips = Assert.IsType<ItemsControl>(page.FindName("ColumnViewChips"));
+        var drawer = Assert.IsType<HaltungFelderDrawer>(page.FindName("FelderDrawer"));
+        var uebersicht = Assert.IsType<SchachtUebersichtPanel>(page.FindName("Uebersicht"));
+
+        Assert.Equal(Visibility.Visible, liste.Visibility);
+        Assert.Equal(Visibility.Collapsed, grid.Visibility);
+        Assert.Equal(Visibility.Collapsed, chips.Visibility);
+        Assert.Equal(Visibility.Collapsed, drawer.Visibility);
+        Assert.Equal(Visibility.Visible, uebersicht.Visibility);
+
+        // Das Zeilen-Kontextmenue ist dasselbe wie an der Tabelle — kein zweiter Befehlsweg.
+        Assert.NotNull(liste.ZeilenMenue);
+        Assert.Same(liste.ZeilenMenue, grid.ContextMenu);
+
+        var listeMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtListeMenu"));
+        var tabelleMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtTabelleMenu"));
+        Assert.True(listeMenu.IsChecked, "Beim Start muss \"Aufklapp-Liste\" angehakt sein.");
+        Assert.False(tabelleMenu.IsChecked);
+    }
+
+    /// <summary>
+    /// Nova, Aufklapp-Liste (Task 6): Umschalten auf die Tabelle — dieselbe Auswahl (Selected)
+    /// ueberlebt den Wechsel, weil beide Ansichten dieselbe Sammlung binden.
+    /// </summary>
+    private static void WechsleAufDieTabelle(Views.Pages.SchaechtePage page)
+    {
+        var tabelleMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtTabelleMenu"));
+        var listeMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtListeMenu"));
+
+        tabelleMenu.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Layout(page);
+
+        var liste = Assert.IsType<SchachtAufklappListe>(page.FindName("AufklappListe"));
+        var grid = Assert.IsType<DataGrid>(page.FindName("Grid"));
+        var chips = Assert.IsType<ItemsControl>(page.FindName("ColumnViewChips"));
+        Assert.Equal(Visibility.Collapsed, liste.Visibility);
+        Assert.Equal(Visibility.Visible, grid.Visibility);
+        Assert.Equal(Visibility.Visible, chips.Visibility);
+        Assert.True(tabelleMenu.IsChecked);
+        Assert.False(listeMenu.IsChecked);
     }
 
     private static Color ColorOf(object brush) => Assert.IsType<SolidColorBrush>(brush).Color;

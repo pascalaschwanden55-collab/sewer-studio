@@ -35,32 +35,10 @@ public partial class SchaechtePage
         // Standardansicht: Nova-Arbeitsflaeche; die alte Schachtansicht bleibt ueber den Toggle
         // erreichbar und wird Standard, wenn die Einstellung aus ist.
         SchachtansichtToggle.IsChecked = !vm.Settings.ShowSchaechteNovaLayout;
-        ApplySchachtansichtSichtbarkeit();
+        WendeSchachtAnsichtAn();
     }
 
     private void AktualisiereFelderDrawer() => _novaWorkspace?.AktualisiereFelderDrawer();
 
     private void ApplyDrawerHeight() => _novaWorkspace?.ApplyDrawerHeight();
-
-    // Vor VerdrahteNovaWorkspace (waehrend InitializeComponent) gilt der XAML-Grundzustand.
-    private void SetNovaWorkspaceVisible(bool sichtbar) => _novaWorkspace?.SetzeSichtbar(sichtbar);
-
-    /// <summary>
-    /// Schachtansicht sichtbar -&gt; Tabelle, Uebersicht, Eingabefelder und Trennlinien
-    /// ausgeblendet; sonst umgekehrt. Wird sowohl vom robusten Grundzustand im Konstruktor als
-    /// auch vom Umschalter <c>SchachtansichtToggle_Changed</c> aufgerufen.
-    /// </summary>
-    private void ApplySchachtansichtSichtbarkeit()
-    {
-        if (SchachtansichtView is null || Grid is null)
-            return;
-        var showAnsicht = SchachtansichtToggle.IsChecked == true;
-        SchachtansichtView.Visibility = showAnsicht ? Visibility.Visible : Visibility.Collapsed;
-        Grid.Visibility = showAnsicht ? Visibility.Collapsed : Visibility.Visible;
-        // Die Spaltenansichten gehoeren zur Tabelle. In der alten Schachtansicht gibt es keine
-        // Spalten, die sie ein- oder ausblenden koennten — die Chips verschwinden deshalb mit.
-        if (ColumnViewChips is not null)
-            ColumnViewChips.Visibility = showAnsicht ? Visibility.Collapsed : Visibility.Visible;
-        SetNovaWorkspaceVisible(!showAnsicht);
-    }
 }

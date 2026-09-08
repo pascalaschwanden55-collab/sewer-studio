@@ -81,4 +81,25 @@ public sealed class SchachtSchadenOrtRegelTests
         var eintrag = new ProtocolEntry { Code = "", Beschreibung = "Anschluss mangelhaft eingebunden" };
         Assert.Equal(SchachtZone.Anschluss, SchachtSchadenOrtRegel.Bestimme(eintrag));
     }
+
+    /// <summary>
+    /// Das manuelle VSA-Codierfenster speichert denselben Ort unter dem allgemeinen
+    /// Parameter-Schluessel "vsa.schachtbereich" (klein, mit Punkt) statt "Schachtbereich"
+    /// (VSA-KEK-Import) — beide muessen erkannt werden.
+    /// </summary>
+    [Fact]
+    public void Der_Schluessel_vsa_schachtbereich_aus_dem_manuellen_Codierfenster_wird_erkannt()
+    {
+        var eintrag = new ProtocolEntry
+        {
+            Code = "BAB",
+            Beschreibung = "Riss",
+            CodeMeta = new ProtocolEntryCodeMeta
+            {
+                Parameters = { ["vsa.schachtbereich"] = "Sohle" }
+            }
+        };
+
+        Assert.Equal(SchachtZone.Sohle, SchachtSchadenOrtRegel.Bestimme(eintrag));
+    }
 }

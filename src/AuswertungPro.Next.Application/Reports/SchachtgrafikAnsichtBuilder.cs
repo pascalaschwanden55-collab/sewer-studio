@@ -56,7 +56,10 @@ public static class SchachtgrafikAnsichtBuilder
         var schaeden = eintraege
             .Select(e =>
             {
-                var kategorie = DamageSymbolClassifier.ResolveDamageSymbolCategory(e.Code);
+                // Der PDF-Schachtprotokollimport traegt im Code den Bauteilnamen, keinen VSA-Code —
+                // SchachtSchadenKategorieRegel ergaenzt deshalb den bekannten Schadenstext als
+                // Fallback, statt jeden Schaden generisch darzustellen (siehe dortige Grenzen).
+                var kategorie = SchachtSchadenKategorieRegel.Bestimme(e.Code, e.Beschreibung);
                 return new SchachtgrafikSchadenEintrag(
                     SchachtSchadenOrtRegel.Bestimme(e),
                     kategorie,

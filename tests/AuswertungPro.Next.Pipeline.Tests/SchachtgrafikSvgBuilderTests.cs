@@ -56,9 +56,13 @@ public sealed class SchachtgrafikSvgBuilderTests
         Assert.Contains("1100 × 900", svg);
     }
 
-    /// <summary>Hoechstens vier Stummel je Seite; der Rest steht als Zaehler.</summary>
+    /// <summary>
+    /// Fix-Runde 1 (Controller-Sichtprobe): hoechstens ZWEI Stummel je Seite werden beschriftet,
+    /// der Rest steht als Zaehler — bei mehr als zwei ueberlappten sich die Beschriftungen in der
+    /// schmalen Spalte.
+    /// </summary>
     [Fact]
-    public void Zulaeufe_werden_ab_fuenf_auf_vier_plus_Zaehler_gekuerzt()
+    public void Hoechstens_zwei_Stummel_je_Seite_werden_beschriftet_der_Rest_als_Zaehler()
     {
         var zulaeufe = Enumerable.Range(1, 5)
             .Select(i => new SchachtgrafikStummel($"H{i}", "DN200"))
@@ -66,22 +70,39 @@ public sealed class SchachtgrafikSvgBuilderTests
 
         var (svg, _) = Baue(zulaeufe: zulaeufe);
 
-        for (var i = 1; i <= 4; i++)
-            Assert.Contains($"H{i} DN200", svg);
+        Assert.Contains("H1 DN200", svg);
+        Assert.Contains("H2 DN200", svg);
+        Assert.DoesNotContain("H3", svg);
+        Assert.DoesNotContain("H4", svg);
         Assert.DoesNotContain("H5", svg);
-        Assert.Contains("+1", svg);
+        Assert.Contains("+3", svg);
     }
 
     /// <summary>Zulauf und Ablauf werden unabhaengig voneinander gezeichnet.</summary>
     [Fact]
     public void Zulauf_und_Ablauf_erscheinen_beide_und_unabhaengig_je_Seite()
     {
-        var (svg, _) = Baue(
-            zulaeufe: [new SchachtgrafikStummel("77457-77453", "DN300")],
-            ablaeufe: [new SchachtgrafikStummel("77453-77449", "DN250")]);
+        var (_, marken) = Baue(
+            zulaeufe: [new SchachtgrafikStummel("H1", "DN300")],
+            ablaeufe: [new SchachtgrafikStummel("H9", "DN250")]);
 
-        Assert.Contains("DN300", svg);
-        Assert.Contains("DN250", svg);
+        Assert.Contains(marken, m => m.Tooltip == "H1 DN300");
+        Assert.Contains(marken, m => m.Tooltip == "H9 DN250");
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: Eine lange Beschriftung ("Name DN200") wird mit Auslassungspunkten gekuerzt,
+    /// bleibt aber im Hinweistext der Marke vollstaendig erhalten.
+    /// </summary>
+    [Fact]
+    public void Eine_lange_Stummel_Beschriftung_wird_gekuerzt_der_Volltext_bleibt_im_Tooltip()
+    {
+        var stummel = new SchachtgrafikStummel("77457-77453", "DN300");
+        var (svg, marken) = Baue(zulaeufe: [stummel]);
+
+        Assert.DoesNotContain("77457-77453 DN300", svg);
+        Assert.Contains("…", svg);
+        Assert.Contains(marken, m => m.Tooltip == "77457-77453 DN300");
     }
 
     /// <summary>
@@ -138,6 +159,17 @@ public sealed class SchachtgrafikSvgBuilderTests
     {
         var (svg, _) = Baue(schachtnummer: "12345");
         Assert.Contains(">12345<", svg);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (Controller-Ruling): Ein Schacht ist kein Rohr, sondern ein Bauwerk mit
+    /// realer Ausdehnung — der gezeichnete Schachtkoerper bleibt mindestens ein Drittel der
+    /// Zeichenbreite breit.
+    /// </summary>
+    [Fact]
+    public void Der_Schachtkoerper_ist_mindestens_ein_Drittel_der_Zeichenbreite_breit()
+    {
+        Assert.True(SchachtgrafikSvgBuilder.SchachtkoerperDurchmesser >= SchachtgrafikSvgBuilder.Width / 3d);
     }
 
     private static (string Svg, System.Collections.Generic.IReadOnlyList<SchachtgrafikMarke> Marken) Baue(

@@ -57,7 +57,7 @@
                     <!-- Schachtgrafik des Protokolls: senkrechter Schnitt (WinCan-Art) statt des
                          frueheren Grundriss-Kreises. Der Masstext steht in der Grafik unter der
                          Sohle; er wird hier nicht mehr separat gefuehrt. -->
-                    <local:SchachtgrafikControl x:Name="Grafik" Grid.Row="1" Height="340" Margin="0,0,0,8"
+                    <local:SchachtgrafikControl x:Name="Grafik" Grid.Row="1" Height="500" Margin="0,0,0,8"
                                                  HorizontalAlignment="Stretch"
                                                  Record="{Binding Record, ElementName=Root}"
                                                  Haltungen="{Binding Haltungen, ElementName=Root}"

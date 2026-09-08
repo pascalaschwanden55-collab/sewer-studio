@@ -22,11 +22,15 @@ public enum SchachtZone
 /// Ordnet einen Protokolleintrag des Schachts einer Zeichenzone der Schachtgrafik zu.
 /// WPF-frei, wie <see cref="DamageSymbolClassifier"/>.
 ///
-/// Zwei Quellen liefern heute einen Ort: Der PDF-Schachtprotokollimport
-/// (<c>SchachtProtocolApplier</c>) schreibt den Bauteilnamen direkt als
-/// <see cref="ProtocolEntry.Code"/> (z.B. "Konus", "Bankett", "Schachtrohr"); der
-/// VSA-KEK-XTF-Import traegt ihn strukturiert als <c>CodeMeta.Parameters["Schachtbereich"]</c>
-/// (VSA-Kuerzel A/B/D/F/H/I/J). Fuer diese Kuerzel gibt es in dieser Codebasis keinen
+/// Drei Quellen liefern heute einen Ort, unter DREI verschiedenen Parameter-Schluesseln fuer
+/// dieselbe fachliche Angabe: Der PDF-Schachtprotokollimport (<c>SchachtProtocolApplier</c>)
+/// schreibt den Bauteilnamen direkt als <see cref="ProtocolEntry.Code"/> (z.B. "Konus",
+/// "Bankett", "Schachtrohr"); der VSA-KEK-XTF-Import traegt ihn strukturiert als
+/// <c>CodeMeta.Parameters["Schachtbereich"]</c> (Grossschreibung, ohne Punkt); das manuelle
+/// VSA-Codierfenster (<c>ObservationCatalogWindow</c>/<c>VsaParameterMerger</c>) speichert
+/// dieselbe Angabe dagegen unter <c>CodeMeta.Parameters["vsa.schachtbereich"]</c> (klein, mit
+/// Punkt — die allgemeine Parameter-Konvention der Haltungs-Codierung). Beide Schluessel tragen
+/// ein VSA-Kuerzel A/B/D/F/H/I/J. Fuer diese Kuerzel gibt es in dieser Codebasis keinen
 /// belegten fachlichen Klartext — sie werden deshalb nicht gedeutet, sondern wie jeder
 /// unbekannte Wert auf die Schachtwand gelegt. Keine erfundene Zuordnung.
 /// </summary>
@@ -40,7 +44,10 @@ public static class SchachtSchadenOrtRegel
         var parameter = entry.CodeMeta?.Parameters;
         if (parameter is { Count: > 0 })
         {
-            foreach (var schluessel in new[] { "Ort", "Schachtbereich" })
+            // "Ort" ist ein moeglicher freier Zielschluessel; "Schachtbereich" (VSA-KEK-Import)
+            // und "vsa.schachtbereich" (manuelles VSA-Codierfenster) sind dieselbe fachliche
+            // Angabe unter zwei verschiedenen Schreibweisen — siehe Klassendokumentation.
+            foreach (var schluessel in new[] { "Ort", "Schachtbereich", "vsa.schachtbereich" })
             {
                 if (parameter.TryGetValue(schluessel, out var wert) && AusText(wert) is { } ausParameter)
                     return ausParameter;
