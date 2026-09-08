@@ -126,10 +126,7 @@ public sealed class DataPageNovaWorkspaceController
     /// bleibt; die verworfene Eingabe steht als Hinweis in der Kopfzeile der Eingabefelder.
     /// </summary>
     public void MeldeKonflikt(string fieldName, string aktuellerWert, string eingabe)
-    {
-        var label = FieldCatalog.Get(fieldName).Label;
-        _e.FelderDrawer.Hinweis = $"„{label}“ wurde inzwischen auf „{aktuellerWert}“ geändert. Die Eingabe „{eingabe}“ wurde nicht übernommen.";
-    }
+        => _e.FelderDrawer.Hinweis = DataPageKonfliktHinweis.Text(fieldName, aktuellerWert, eingabe);
 
     private bool IstSichtbar => _e.FelderDrawer.Visibility == Visibility.Visible;
 
