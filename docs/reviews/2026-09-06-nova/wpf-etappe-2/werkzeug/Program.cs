@@ -642,6 +642,11 @@ internal static class Program
     /// Acht Schaechte mit Form und beiden Innenmassen (rund 600/600, oval 1100/900). Der
     /// sechste traegt bewusst keine Zustandsklasse, damit der Chip dort den gestrichelten
     /// Strich zeigt; zwei Drittel fuehren eine PDF, damit der Protokoll-Knopf sichtbar ist.
+    /// Fuer die Schachtgrafik (Task 5, senkrechter Schnitt) traegt der dritte Schacht bewusst
+    /// keine Tiefe (Hinweistext "Tiefe nicht erfasst"), die uebrigen eine Tiefe zwischen 2 und
+    /// 3.6 m; die ersten drei tragen zusaetzlich ein kleines Bauteil-Protokoll wie aus einem
+    /// PDF-Schachtprotokollimport (Code = Bauteilname, Beschreibung = Schadenstext), damit alle
+    /// drei Zonen (Konus, Schachtwand/Anschluss, Sohle) je einmal ein Symbol zeigen.
     /// </summary>
     static void BaueSchaechte(Project project)
     {
@@ -669,8 +674,25 @@ internal static class Program
                 Set(FieldKeys.ShaftDimension2Mm, "600");
             }
             if (i % 3 != 2) Set(FieldKeys.PdfPath, pdf);
+            if (i != 2)
+                Set("Schachttiefe", (2.0 + i * 0.2).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
+            if (i < 3)
+                schacht.Protocol = BaueSchachtprotokoll();
             project.SchaechteData.Add(schacht);
         }
+    }
+
+    /// <summary>Ein kleines Bauteil-Protokoll wie aus dem PDF-Schachtprotokollimport (drei Zonen).</summary>
+    static ProtocolDocument BaueSchachtprotokoll()
+    {
+        var current = new ProtocolRevision();
+        current.Entries.Add(new ProtocolEntry { Code = "Konus", Beschreibung = "gerissen" });
+        current.Entries.Add(new ProtocolEntry { Code = "Anschluss", Beschreibung = "mangelhaft eingebunden" });
+        current.Entries.Add(new ProtocolEntry { Code = "Bankett", Beschreibung = "Ablagerung" });
+        var original = new ProtocolRevision();
+        foreach (var e in current.Entries)
+            original.Entries.Add(ProtocolEntryCloner.CloneLegacyProtocolEntry(e));
+        return new ProtocolDocument { Original = original, Current = current };
     }
 
     /// <summary>
