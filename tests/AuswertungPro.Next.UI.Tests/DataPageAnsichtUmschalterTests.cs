@@ -68,7 +68,7 @@ public sealed class DataPageAnsichtUmschalterTests
             Assert.True(p.TabelleSchalter.IsChecked);
             Assert.False(p.ListeSchalter.IsChecked);
             Assert.True(p.AbdockenSchalter.IsEnabled);
-            Assert.Equal(DataPageAnsichtUmschalter.AbdockenMoeglich, p.AbdockenSchalter.ToolTip);
+            Assert.Equal(DataPageAnsichtUmschalter.AbdockenTabelle, p.AbdockenSchalter.ToolTip);
         });
     }
 

@@ -21,7 +21,7 @@ public sealed class DataPageAnsichtUmschalter
     public const string AbdockenNurTabelle = "Abdocken gilt für die Tabelle";
 
     /// <summary>Der bisherige Hinweis am Menuepunkt "Abdocken".</summary>
-    public const string AbdockenMoeglich = "Tabelle in separatem Fenster öffnen (Multi-Monitor)";
+    public const string AbdockenTabelle = "Tabelle in separatem Fenster öffnen (Multi-Monitor)";
 
     /// <summary>Die benannten Elemente der Haltungsseite aus DataPage.xaml.</summary>
     public sealed record Elemente(
@@ -96,7 +96,7 @@ public sealed class DataPageAnsichtUmschalter
         // hier auch das Abdocken selbst, damit kein zweites Fenster entsteht.
         var abdockbar = sicht.AbdockenMoeglich || sicht.AlteAnsicht;
         _e.AbdockenSchalter.IsEnabled = abdockbar && _e.AlteAnsichtSchalter.IsEnabled;
-        _e.AbdockenSchalter.ToolTip = abdockbar ? AbdockenMoeglich : AbdockenNurTabelle;
+        _e.AbdockenSchalter.ToolTip = abdockbar ? AbdockenTabelle : AbdockenNurTabelle;
         // Abgedockt bleibt die Ansicht, wie sie ist: Ein Wechsel wuerde die Tabelle aus dem
         // fremden Fenster herausschalten. Der Schalter der alten Ansicht sperrt dort schon
         // heute; die beiden Nova-Punkte folgen ihm.
