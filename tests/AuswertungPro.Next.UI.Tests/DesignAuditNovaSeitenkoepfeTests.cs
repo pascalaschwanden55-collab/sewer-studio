@@ -52,6 +52,31 @@ public sealed class DesignAuditNovaSeitenkoepfeTests
         Assert.DoesNotContain(":NovaPageHeader", xaml);
     }
 
+    /// <summary>
+    /// Optik-Nachpruefung O1: Der PageTitle-Stil zeichnet seine Akzentlinie als TextDecoration
+    /// 7 px unter der Grundlinie. Steht der Untertitel direkt darunter, laeuft die Linie durch
+    /// seinen Text ("durchgestrichen", Bild Light-Sanierungs-Matrix.png). Auf beiden Matrix-
+    /// Seiten muss der Untertitel deshalb NEBEN dem Titel stehen — wie im NovaPageHeader.
+    /// </summary>
+    [Theory]
+    [InlineData("SanierungsMatrixPage.xaml")]
+    [InlineData("SchachtSanierungsMatrixPage.xaml")]
+    public void Matrix_Untertitel_steht_neben_dem_Titel_und_nicht_unter_der_Akzentlinie(string datei)
+    {
+        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", datei));
+        var titel = xaml.IndexOf("Text=\"{Binding PageTitle}\"", System.StringComparison.Ordinal);
+        Assert.True(titel >= 0, "Titelbindung fehlt");
+
+        var panelStart = xaml.LastIndexOf("<StackPanel", titel, System.StringComparison.Ordinal);
+        var panelTag = xaml[panelStart..xaml.IndexOf('>', panelStart)];
+        Assert.Contains("Orientation=\"Horizontal\"", panelTag);
+
+        var untertitelBlock = xaml[titel..xaml.IndexOf("</StackPanel>", titel, System.StringComparison.Ordinal)];
+        Assert.Contains("Text=\"{Binding PageSubtitle}\"", untertitelBlock);
+        Assert.Contains("VerticalAlignment=\"Bottom\"", untertitelBlock);
+        Assert.DoesNotContain("Margin=\"0,2,0,0\"", untertitelBlock);
+    }
+
     [Fact]
     public void Einstellungen_traegt_den_Nova_Seitenkopf_ohne_Untertitel()
     {

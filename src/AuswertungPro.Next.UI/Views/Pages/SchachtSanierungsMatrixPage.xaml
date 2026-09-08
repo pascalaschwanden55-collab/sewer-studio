@@ -16,9 +16,11 @@
         <!-- Kopf -->
         <Border Grid.Row="0" Style="{StaticResource Card}" Padding="14" Margin="0,0,0,10">
             <DockPanel LastChildFill="False">
-                <StackPanel DockPanel.Dock="Left">
+                <!-- Untertitel NEBEN dem Titel, siehe SanierungsMatrixPage (Optik-Nachpruefung O1). -->
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="{Binding PageTitle}" Style="{StaticResource PageTitle}"/>
-                    <TextBlock Text="{Binding PageSubtitle}" Style="{StaticResource Caption}" Margin="0,2,0,0"/>
+                    <TextBlock Text="{Binding PageSubtitle}" Style="{StaticResource Caption}"
+                               Margin="10,0,0,3" VerticalAlignment="Bottom"/>
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <StackPanel Margin="0,0,18,0" VerticalAlignment="Center">
