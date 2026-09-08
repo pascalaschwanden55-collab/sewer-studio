@@ -27,4 +27,28 @@ public sealed class DesignAuditOptikNachpruefungTests
         Assert.DoesNotContain("Foreground=\"{Binding SchattenKlasse, Converter={StaticResource ZustandsklasseBrush}}\"", xaml);
         Assert.Equal(2, Regex.Matches(xaml, "CornerRadius=\"\\{DynamicResource RadiusChip\\}\"").Count);
     }
+
+    /// <summary>O17: Das Erfolgs-Abzeichen nimmt die Text-Tinte, nicht die Flaechenfarbe.</summary>
+    [Fact]
+    public void Pruefung_Abzeichen_verwenden_die_Text_Tinte_auf_der_Erfolgsflaeche()
+    {
+        var code = Ui("Views", "Pages", "HaltungStatusColumnFactory.cs");
+        Assert.Contains("Kapsel(HaltungPruefstand.Abgeschlossen, \"SuccessSubtleBrush\", \"SuccessTextBrush\")", code);
+        Assert.DoesNotContain("\"SuccessSubtleBrush\", \"SuccessBrush\"", code);
+    }
+
+    /// <summary>
+    /// O18: Die ZK-Filterchips nehmen ihre Tinte aus der Ink-Regel und reichen sie an der
+    /// B7-Falle vorbei (impliziter TextBlock-Stil) bis zur Ziffer durch.
+    /// </summary>
+    [Fact]
+    public void Zustandsklassen_Filterchips_nehmen_die_Tinte_aus_der_Ink_Regel()
+    {
+        var code = Ui("Controls", "FilterChipBar.xaml.cs");
+        Assert.DoesNotContain("Brushes.Black", code);
+        Assert.Contains("ZustandsklasseInkPolicy.InkFor", code);
+
+        var xaml = Ui("Controls", "FilterChipBar.xaml");
+        Assert.Contains("RelativeSource={RelativeSource AncestorType=ToggleButton}", xaml);
+    }
 }

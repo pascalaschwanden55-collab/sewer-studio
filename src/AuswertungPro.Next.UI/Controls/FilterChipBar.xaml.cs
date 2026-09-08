@@ -40,7 +40,11 @@ public partial class FilterChipBar : UserControl
                 continue;
 
             chip.Background = background;
-            chip.Foreground = Brushes.Black;
+            // Optik-Nachpruefung O18: dieselbe Tintenregel wie die Marken der Tabelle
+            // (mindestens 4,5:1 auf jeder Klassenfarbe) statt festem Schwarz.
+            var tinte = new SolidColorBrush(ZustandsklasseInkPolicy.InkFor(((SolidColorBrush)background).Color));
+            tinte.Freeze();
+            chip.Foreground = tinte;
         }
     }
 

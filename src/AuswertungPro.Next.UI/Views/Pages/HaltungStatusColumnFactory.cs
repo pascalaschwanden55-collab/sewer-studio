@@ -130,7 +130,9 @@ public static class HaltungStatusColumnFactory
         var huelle = new FrameworkElementFactory(typeof(Grid));
         huelle.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Left);
         huelle.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
-        huelle.AppendChild(Kapsel(HaltungPruefstand.Abgeschlossen, "SuccessSubtleBrush", "SuccessBrush"));
+        // Optik-Nachpruefung O17: SuccessBrush auf SuccessSubtleBrush war im Dunkeln 2,3:1.
+        // SuccessTextBrush ist die fuer Text auf der Erfolgsflaeche gedachte Tinte (beide Themen).
+        huelle.AppendChild(Kapsel(HaltungPruefstand.Abgeschlossen, "SuccessSubtleBrush", "SuccessTextBrush"));
         huelle.AppendChild(Kapsel(HaltungPruefstand.KiAnalysiert, "KiSubtleBrush", "KiTextBrush"));
         huelle.AppendChild(Kapsel(HaltungPruefstand.Offen, "SurfaceSubtleBrush", "MutedBrush"));
         return huelle;

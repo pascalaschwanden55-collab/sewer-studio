@@ -45,6 +45,24 @@ public sealed class DesignAuditContrastTests
     }
 
     /// <summary>
+    /// Optik-Nachpruefung O17: Das Abzeichen „fachlich geprueft" stand im Dunkeln mit
+    /// SuccessBrush (#15803D) auf SuccessSubtleBrush (#14432A) — 2,3:1. Die Abzeichen der
+    /// Pruefung-Spalte (HaltungStatusColumnFactory.Kapsel) muessen auf ihrer eigenen Flaeche
+    /// Normaltext-Kontrast erreichen: Erfolg mit SuccessTextBrush, Offen mit ColorTextMuted.
+    /// </summary>
+    [Theory]
+    [InlineData("Theme.xaml")]
+    [InlineData("ThemeLight.xaml")]
+    public void Pruefung_Abzeichen_erreichen_Normaltext_Kontrast_auf_ihrer_Flaeche(string themeFile)
+    {
+        var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+        Assert.True(Contrast(ReadBrushColor(xaml, "SuccessTextBrush"), ReadBrushColor(xaml, "SuccessSubtleBrush")) >= 4.5,
+            "SuccessTextBrush auf SuccessSubtleBrush unter 4,5:1");
+        Assert.True(Contrast(ReadColor(xaml, "ColorTextMuted"), ReadBrushColor(xaml, "SurfaceSubtleBrush")) >= 4.5,
+            "MutedBrush auf SurfaceSubtleBrush unter 4,5:1");
+    }
+
+    /// <summary>
     /// Nova-Fixwelle F7: Der Kartenrand bleibt bewusst hell (Glas-Look). Eingabefelder und
     /// Knopf-Umrisse brauchen dagegen eine erkennbare Kontur — mindestens 3:1 gegen die
     /// Kartenflaeche (WCAG 1.4.11, Bedienelement-Umriss).
@@ -124,6 +142,16 @@ public sealed class DesignAuditContrastTests
             xaml,
             $"<Color\\s+x:Key=\"{Regex.Escape(key)}\">(?<value>#[0-9A-Fa-f]{{8}})</Color>");
         Assert.True(match.Success, $"Theme-Farbe {key} fehlt.");
+        return match.Groups["value"].Value;
+    }
+
+    /// <summary>Pinsel mit festem Farbwert (kein StaticResource auf eine Color).</summary>
+    private static string ReadBrushColor(string xaml, string key)
+    {
+        var match = Regex.Match(
+            xaml,
+            $"<SolidColorBrush\\s+x:Key=\"{Regex.Escape(key)}\"\\s+Color=\"(?<value>#[0-9A-Fa-f]{{8}})\"");
+        Assert.True(match.Success, $"Theme-Pinsel {key} mit festem Farbwert fehlt.");
         return match.Groups["value"].Value;
     }
 
