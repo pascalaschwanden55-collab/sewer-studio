@@ -17,6 +17,8 @@ using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
+using AuswertungPro.Next.UI.Views.Controls;
+using AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
 using Microsoft.Extensions.Logging.Abstractions;
 
 /// <summary>
@@ -27,6 +29,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 /// Seiten: Uebersicht | Haltungen | Schaechte | Import | Einstellungen | Player | TrainingStudio
 /// Varianten (Etappe 2b): "" = erste Zeile gewaehlt (Standard) | "alle" = zusaetzlich die
 /// Spaltenansicht "Alle Spalten" waehlen | "ohneauswahl" = keine Zeile waehlen (Leerzustand).
+/// Variante (Aufklapp-Liste, 2026-09-08): "haltungenliste" (nur Seite Haltungen) fotografiert
+/// die neue Standardansicht zuerst zugeklappt, klappt danach die erste Haltung auf und
+/// fotografiert erneut. Aus EINEM uebergebenen Ausgabepfad je Theme werden zwei Dateien
+/// "-zu-"/"-auf-" abgeleitet (siehe <see cref="AbgeleitetePfade"/>).
 /// </summary>
 internal static class Program
 {
@@ -82,6 +88,9 @@ internal static class Program
         AppliedTheme = theme;
         AppliedPage = seite;
         AppliedVariant = variante;
+        // Aufgabe 3 "Bilder": eigener Fotoweg fuer die Aufklapp-Liste statt der DataGrid-Messung.
+        var istHaltungenListe = string.Equals(seite, "Haltungen", StringComparison.OrdinalIgnoreCase)
+            && variante == "haltungenliste";
 
         var projectPath = Path.Combine(Root, "projekt", "Projektdateien", "projekt.json");
         Directory.CreateDirectory(Path.GetDirectoryName(projectPath)!);
@@ -233,6 +242,13 @@ internal static class Program
                 else if (schritt >= 5)
                 {
                     timer.Stop();
+                    if (istHaltungenListe)
+                    {
+                        // Eigener Ablauf mit einer zweiten, verzoegerten Aufnahme (siehe unten);
+                        // der normale Einzelbild-Pfad passt hier nicht.
+                        FotografiereHaltungenListe(window, ausgabe);
+                        return;
+                    }
                     try
                     {
                         // Fluent.Backdrop="Mica" setzt Window.Background auf Transparent; die
@@ -280,6 +296,171 @@ internal static class Program
         }
         chip.IsChecked = true;
         chip.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+    }
+
+    /// <summary>
+    /// Aufgabe 3 "Bilder" (2026-09-08): fotografiert die Haltungs-Aufklapp-Liste erst
+    /// zugeklappt, klappt danach ueber <see cref="HaltungAufklappListe.KlappeAuf"/> die erste
+    /// Haltung auf und fotografiert nach 2 Sekunden Wartezeit ein zweites Mal. Ein synchrones
+    /// Sleep wuerde den Dispatcher blockieren und wuerde weder Layout noch Eintrittsanimation
+    /// der neu aufgebauten Themen fertig rendern lassen; deshalb ein zweiter, einmaliger Timer.
+    /// </summary>
+    static void FotografiereHaltungenListe(Window window, string? ausgabeBasis)
+    {
+        try
+        {
+            MaleMicaFlaecheAus(window);
+            var (zuPfad, aufPfad) = AbgeleitetePfade(ausgabeBasis);
+            MesseAufklappListe(window, "zu");
+            if (zuPfad is not null)
+                Foto(window, zuPfad);
+
+            var liste = FindeAufklappListe(window);
+            if (liste is null)
+            {
+                File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"),
+                    "AufklappListe-Control nicht gefunden" + Environment.NewLine);
+            }
+            else
+            {
+                var shell = (ShellViewModel)window.DataContext;
+                var haltung = shell.Project.Data.FirstOrDefault(
+                    r => r.GetFieldValue(FieldKeys.HoldingName) == "10001-10002");
+                liste.KlappeAuf(haltung);
+            }
+
+            var warten = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            warten.Tick += (_, _) =>
+            {
+                warten.Stop();
+                try
+                {
+                    MaleMicaFlaecheAus(window);
+                    MesseAufklappListe(window, "auf");
+                    if (aufPfad is not null)
+                        Foto(window, aufPfad);
+                }
+                catch (Exception ex)
+                {
+                    File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"), ex + Environment.NewLine);
+                }
+                finally
+                {
+                    System.Windows.Application.Current!.Shutdown();
+                    Dispatcher.CurrentDispatcher.BeginInvokeShutdown(DispatcherPriority.Background);
+                }
+            };
+            warten.Start();
+        }
+        catch (Exception ex)
+        {
+            File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"), ex + Environment.NewLine);
+            System.Windows.Application.Current!.Shutdown();
+            Dispatcher.CurrentDispatcher.BeginInvokeShutdown(DispatcherPriority.Background);
+        }
+    }
+
+    /// <summary>
+    /// Leitet aus EINEM Ausgabepfad je Theme (z. B. ".../haltungen-liste-hell.png") die zwei
+    /// Dateinamen fuer zu- und aufgeklappten Zustand ab: ".../haltungen-liste-zu-hell.png" und
+    /// ".../haltungen-liste-auf-hell.png". Traegt der Dateiname keinen erkennbaren
+    /// "-hell"/"-dunkel"-Suffix, wird "-zu"/"-auf" nur vor der Endung eingefuegt.
+    /// </summary>
+    static (string? Zu, string? Auf) AbgeleitetePfade(string? ausgabe)
+    {
+        if (string.IsNullOrWhiteSpace(ausgabe))
+            return (null, null);
+
+        var vollpfad = Path.GetFullPath(ausgabe);
+        var verzeichnis = Path.GetDirectoryName(vollpfad)!;
+        var endung = Path.GetExtension(vollpfad);
+        var stamm = Path.GetFileNameWithoutExtension(vollpfad);
+
+        string basis, themeSuffix;
+        if (stamm.EndsWith("-hell", StringComparison.OrdinalIgnoreCase))
+        {
+            basis = stamm[..^"-hell".Length];
+            themeSuffix = "-hell";
+        }
+        else if (stamm.EndsWith("-dunkel", StringComparison.OrdinalIgnoreCase))
+        {
+            basis = stamm[..^"-dunkel".Length];
+            themeSuffix = "-dunkel";
+        }
+        else
+        {
+            basis = stamm;
+            themeSuffix = "";
+        }
+
+        return (
+            Path.Combine(verzeichnis, $"{basis}-zu{themeSuffix}{endung}"),
+            Path.Combine(verzeichnis, $"{basis}-auf{themeSuffix}{endung}"));
+    }
+
+    /// <summary>
+    /// Sucht das Control "AufklappListe" (x:Name in DataPage.xaml) im sichtbaren Baum. Es gibt
+    /// in der ganzen App nur eine Instanz; der Typfilter am Ende ist nur ein sicherer Rueckfall,
+    /// falls der Name aus irgendeinem Grund nicht gesetzt sein sollte.
+    /// </summary>
+    static HaltungAufklappListe? FindeAufklappListe(Window window)
+    {
+        var treffer = Descendants(window).OfType<HaltungAufklappListe>().ToArray();
+        return treffer.FirstOrDefault(c => c.Name == "AufklappListe") ?? treffer.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Eigene Messung fuer die Aufklapp-Liste (Aufgabe 3 "Bilder"): Die generische
+    /// <see cref="Messe"/> zielt auf die DataGrid-Tabelle, die im Listenlayout unsichtbar
+    /// bleibt. <paramref name="zustand"/> ist "zu" oder "auf" und geht als Dateisuffix mit,
+    /// damit beide Aufnahmen derselben Variante nebeneinander bestehen bleiben.
+    /// </summary>
+    static void MesseAufklappListe(Window window, string zustand)
+    {
+        var liste = FindeAufklappListe(window);
+        var listBox = liste is null ? null : Descendants(liste).OfType<ListBox>().FirstOrDefault(l => l.Name == "Liste");
+        var viewport = listBox is null ? null : Descendants(listBox).OfType<ScrollContentPresenter>().FirstOrDefault();
+        var zeilen = listBox is null
+            ? Array.Empty<ListBoxItem>()
+            : Descendants(listBox).OfType<ListBoxItem>().Where(z => z.IsVisible).ToArray();
+
+        // "Sichtbare Kopfzeile" = jede Zeile (auf- oder zugeklappt), deren Kopf im Ausschnitt
+        // liegt. Die Kopfzeile ist immer der obere Teil der ListBoxItem-Flaeche; bei der
+        // aufgeklappten Zeile reicht dieselbe Flaeche ueber den Ausschnitt hinaus, ihr Kopf
+        // bleibt trotzdem sichtbar, solange die Ueberschneidung positiv ist.
+        var sichtbareKopfzeilen = viewport is null ? 0 : zeilen.Count(z =>
+        {
+            var bounds = z.TransformToAncestor(viewport).TransformBounds(new Rect(z.RenderSize));
+            return bounds.Bottom > 0 && bounds.Top < viewport.ActualHeight;
+        });
+
+        var offeneHaltung = liste?.Aufgeklappt;
+        var offeneZeile = offeneHaltung is null ? null : zeilen.FirstOrDefault(z => ReferenceEquals(z.DataContext, offeneHaltung));
+        var recordDetailsViewImBaum = liste is null ? 0 : Descendants(liste).OfType<RecordDetailsView>().Count();
+        var dpi = VisualTreeHelper.GetDpi(window);
+
+        File.WriteAllText(Path.Combine(Root, $"messung-{AppliedPage}-{AppliedVariant}-{zustand}-{AppliedTheme}.json"), JsonSerializer.Serialize(new
+        {
+            utc = DateTime.UtcNow,
+            theme = AppliedTheme,
+            seite = AppliedPage,
+            variante = AppliedVariant,
+            zustand,
+            listeGefunden = liste is not null,
+            zeilenGesamt = zeilen.Length,
+            sichtbareKopfzeilen,
+            recordDetailsViewImBaum,
+            offeneHaltung = offeneHaltung?.GetFieldValue(FieldKeys.HoldingName),
+            hoeheOffeneZeile = offeneZeile is null ? 0d : Math.Round(offeneZeile.ActualHeight, 1),
+            viewportHoehe = viewport is null ? 0 : Math.Round(viewport.ActualHeight, 1),
+            width = window.ActualWidth,
+            height = window.ActualHeight,
+            primaryWidth = SystemParameters.PrimaryScreenWidth,
+            primaryHeight = SystemParameters.PrimaryScreenHeight,
+            dpiX = dpi.PixelsPerInchX,
+            dpiY = dpi.PixelsPerInchY,
+            windowCount = System.Windows.Application.Current?.Windows.Count
+        }, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     /// <summary>
