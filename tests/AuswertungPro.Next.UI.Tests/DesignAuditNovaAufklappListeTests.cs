@@ -40,14 +40,52 @@ public sealed class DesignAuditNovaAufklappListeTests
         Assert.DoesNotContain("RecordDetailsView", ausserhalb, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Fix-Runde 1: Beschriftung und vorlesbarer Name des Pfeils wechseln mit dem Zustand — an
+    /// einer offenen Haltung heisst der Klick "zuklappen". Beide haengen am selben Konverter.
+    /// </summary>
     [Fact]
-    public void Der_Pfeil_traegt_einen_vorlesbaren_Namen_und_dreht_beim_Aufklappen()
+    public void Der_Pfeil_traegt_einen_wechselnden_vorlesbaren_Namen_und_dreht_beim_Aufklappen()
     {
         var xaml = Xaml();
-        Assert.Contains("AutomationProperties.Name=\"Haltung aufklappen\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ToolTip=\"Haltung auf- oder zuklappen\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Converter={StaticResource PfeilBeschriftung}", xaml, StringComparison.Ordinal);
         Assert.Contains("&#xE76C;", xaml, StringComparison.Ordinal);
         Assert.Contains("<RotateTransform Angle=\"90\"/>", xaml, StringComparison.Ordinal);
+
+        var knopf = Regex.Match(xaml, "<Button Grid.Column=\"0\" Click=\"Pfeil_Click\"[\\s\\S]*?>");
+        Assert.True(knopf.Success, "Pfeilknopf nicht gefunden");
+        Assert.Contains("ToolTip=", knopf.Value, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=", knopf.Value, StringComparison.Ordinal);
+
+        var konverter = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Views", "Pages", "Haltungsansicht", "HaltungAufklappListeConverters.cs"));
+        Assert.Contains("\"Haltung aufklappen\"", konverter, StringComparison.Ordinal);
+        Assert.Contains("\"Haltung zuklappen\"", konverter, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: Video und Protokoll nennen die Haltung im vorlesbaren Namen — genau wie
+    /// <c>StatusZellenBausteine</c> in der Tabelle. "Video abspielen" allein sagt einem
+    /// Screenreader nicht, um welche Haltung es geht.
+    /// </summary>
+    [Fact]
+    public void Video_und_Protokoll_nennen_die_Haltung_im_vorlesbaren_Namen()
+    {
+        var xaml = Xaml();
+        Assert.Contains("StringFormat='Video {0} abspielen'", xaml, StringComparison.Ordinal);
+        Assert.Contains("StringFormat='Protokoll {0} öffnen'", xaml, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: Der Auf-/Zuklappzustand eines Themas gehoert dem Thema (TwoWay), nicht dem
+    /// Expander — sonst setzt ihn jedes Scrollen und jeder Wechsel der Anordnung zurueck.
+    /// </summary>
+    [Fact]
+    public void Der_Zustand_der_Themen_haengt_am_Thema()
+    {
+        var xaml = Xaml();
+        Assert.Contains("IsExpanded=\"{Binding IstAufgeklappt, Mode=TwoWay}\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Mode=OneTime", xaml, StringComparison.Ordinal);
     }
 
     [Fact]

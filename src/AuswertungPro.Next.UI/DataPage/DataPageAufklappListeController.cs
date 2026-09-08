@@ -67,9 +67,19 @@ public sealed class DataPageAufklappListeController : IDisposable
         _liste.Hinweis = string.Empty;
 
         var record = _liste.Aufgeklappt;
-        if (record is null || _liste.DetailBuilder is null || !IstNochInDerListe(record))
+        if (record is null || _liste.DetailBuilder is null)
         {
             _liste.ZeigeThemen(null);
+            return;
+        }
+
+        if (!IstNochInDerListe(record))
+        {
+            // Geloescht oder Projektwechsel: nicht nur die Themen leeren, sondern wirklich
+            // zuklappen. Sonst bliebe der Pfeil gedreht und die Liste behauptete, da sei noch
+            // etwas offen. Der erneute AufgeklapptChanged laeuft oben mit record == null aus.
+            _liste.ZeigeThemen(null);
+            _liste.KlappeZu();
             return;
         }
 

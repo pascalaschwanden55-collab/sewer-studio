@@ -51,3 +51,20 @@ public sealed class SchmaleBreiteConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => Binding.DoNothing;
 }
+
+/// <summary>
+/// Nova, Aufklapp-Liste: Beschriftung und vorlesbarer Name des Pfeilknopfs. Er sagt, was der
+/// Klick TUT — an einer offenen Haltung also "zuklappen". Eine feste Beschriftung waere fuer
+/// einen Screenreader an der offenen Zeile schlicht falsch.
+/// </summary>
+public sealed class PfeilBeschriftungConverter : IValueConverter
+{
+    public const string Aufklappen = "Haltung aufklappen";
+    public const string Zuklappen = "Haltung zuklappen";
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is true ? Zuklappen : Aufklappen;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}

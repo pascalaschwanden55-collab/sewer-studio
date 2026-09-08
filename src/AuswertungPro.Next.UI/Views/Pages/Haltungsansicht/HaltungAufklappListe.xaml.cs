@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Behaviors;
 using AuswertungPro.Next.UI.DataPage;
@@ -139,6 +140,13 @@ public partial class HaltungAufklappListe : UserControl
         SelectedItem = record;
         Liste.ScrollIntoView(record);
         Aufgeklappt = record;
+        // Zweiter Lauf, nachdem das Formular gebaut und gemessen ist: Die Zeile ist jetzt um ein
+        // Vielfaches hoeher, und ohne das rutscht ihr Kopf beim Aufklappen aus dem Bild.
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+        {
+            if (ReferenceEquals(Aufgeklappt, record))
+                Liste.ScrollIntoView(record);
+        }));
     }
 
     /// <summary>Schliesst die aufgeklappte Haltung; die Auswahl bleibt bestehen.</summary>
@@ -161,25 +169,41 @@ public partial class HaltungAufklappListe : UserControl
         e.Handled = true;
     }
 
-    /// <summary>
-    /// Enter und Leertaste klappen die gewaehlte Haltung auf oder zu, Escape klappt zu.
-    /// Enter/Leertaste zaehlen nur, solange die Zeile selbst den Fokus hat — im Formular
-    /// darunter gehoert die Leertaste dem Eingabefeld.
-    /// </summary>
     private void Liste_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape)
-        {
-            KlappeZu();
+        if (VerarbeiteTaste(e.Key, e.OriginalSource as DependencyObject))
             e.Handled = true;
-            return;
+    }
+
+    /// <summary>
+    /// Wendet die <see cref="HaltungAufklappTastenregel"/> auf eine Taste an und meldet, ob sie
+    /// verbraucht wurde. Eigene Methode, damit die Regel samt Wirkung ohne echtes Tastaturgeraet
+    /// pruefbar bleibt.
+    /// </summary>
+    internal bool VerarbeiteTaste(Key taste, DependencyObject? quelle)
+    {
+        var zeile = quelle is null ? null : VisualTreeSafe.FindAncestor<ListBoxItem>(quelle);
+        var aktion = HaltungAufklappTastenregel.Bestimme(
+            taste,
+            inEinerZeile: zeile is not null,
+            aufDerZeile: ReferenceEquals(quelle, zeile));
+
+        switch (aktion)
+        {
+            case AufklappTastenAktion.Schalten:
+                Schalte(zeile?.DataContext as HaltungRecord);
+                return true;
+            case AufklappTastenAktion.Zuklappen:
+                KlappeZu();
+                return true;
+            case AufklappTastenAktion.FokusAufZeile:
+                // Der Fokuswechsel loest den normalen LostFocus-Rueckschreibweg des Feldes aus;
+                // die Eingabe geht dabei nicht verloren.
+                zeile?.Focus();
+                return true;
+            default:
+                return false;
         }
-
-        if (e.Key is not (Key.Enter or Key.Space) || e.OriginalSource is not ListBoxItem zeile)
-            return;
-
-        Schalte(zeile.DataContext as HaltungRecord);
-        e.Handled = true;
     }
 
     /// <summary>

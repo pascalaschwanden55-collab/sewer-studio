@@ -32,6 +32,7 @@
         <uc:GrossbuchstabenConverter x:Key="Grossbuchstaben"/>
         <local:HaltungAufgeklapptConverter x:Key="IstAufgeklappt"/>
         <local:SchmaleBreiteConverter x:Key="IstSchmal"/>
+        <local:PfeilBeschriftungConverter x:Key="PfeilBeschriftung"/>
         <!-- Leerer Wert wird zum Gedankenstrich, nie zu einer nackten Einheit. -->
         <local:FaktWertConverter x:Key="FaktWert"/>
         <dp:HaltungZeilenStatusConverter x:Key="ZeilenStatus"/>
@@ -178,7 +179,8 @@
                             Command="{Binding VideoCommand, RelativeSource={RelativeSource AncestorType=local:HaltungAufklappListe}}"
                             CommandParameter="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
                             Visibility="{Binding HatVideo, Converter={StaticResource BoolSichtbar}}"
-                            ToolTip="Video abspielen" AutomationProperties.Name="Video abspielen">
+                            ToolTip="Video abspielen"
+                            AutomationProperties.Name="{Binding DataContext.Fields[Haltungsname], RelativeSource={RelativeSource AncestorType=ListBoxItem}, StringFormat='Video {0} abspielen'}">
                         <ui:FluentIcon Glyph="&#xE768;"/>
                     </Button>
                     <TextBlock Text="–" Style="{StaticResource ZellenText}" HorizontalAlignment="Center"
@@ -191,7 +193,8 @@
                             Command="{Binding ProtokollCommand, RelativeSource={RelativeSource AncestorType=local:HaltungAufklappListe}}"
                             CommandParameter="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
                             Visibility="{Binding HatProtokoll, Converter={StaticResource BoolSichtbar}}"
-                            ToolTip="Protokoll öffnen" AutomationProperties.Name="Protokoll öffnen">
+                            ToolTip="Protokoll öffnen"
+                            AutomationProperties.Name="{Binding DataContext.Fields[Haltungsname], RelativeSource={RelativeSource AncestorType=ListBoxItem}, StringFormat='Protokoll {0} öffnen'}">
                         <TextBlock Text="PDF" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"/>
                     </Button>
                     <TextBlock Text="–" Style="{StaticResource ZellenText}" HorizontalAlignment="Center"
@@ -248,7 +251,9 @@
                     <ItemsControl ItemsSource="{Binding}" Style="{StaticResource ThemenListStil}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Expander IsExpanded="{Binding IstStandardAufgeklappt, Mode=OneTime}" Margin="0,0,8,0" VerticalAlignment="Top">
+                                <!-- TwoWay: Der Zustand gehoert dem Thema, nicht dem Expander. Beim Scrollen und beim
+                                     Wechsel der Anordnung an der 1100-px-Schwelle wird der Expander neu gebaut. -->
+                                <Expander IsExpanded="{Binding IstAufgeklappt, Mode=TwoWay}" Margin="0,0,8,0" VerticalAlignment="Top">
                                     <Expander.Header>
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
@@ -322,6 +327,9 @@
                 </Grid>
             </Border>
 
+            <!-- CacheLength 1 ITEM statt der Vorgabe "eine Seite": Der Cache haelt Zeilen
+                 ausserhalb des Bildes am Leben. Bei einer normalen Liste ist das guenstig, hier
+                 haengen davon dutzende Eingabefelder der aufgeklappten Haltung ab. -->
             <ListBox x:Name="Liste"
                      ItemsSource="{Binding ItemsSource, ElementName=Root}"
                      SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
@@ -336,11 +344,22 @@
                      ScrollViewer.CanContentScroll="True"
                      VirtualizingStackPanel.IsVirtualizing="True"
                      VirtualizingStackPanel.VirtualizationMode="Standard"
-                     VirtualizingPanel.ScrollUnit="Pixel">
+                     VirtualizingPanel.ScrollUnit="Pixel"
+                     VirtualizingPanel.CacheLength="1"
+                     VirtualizingPanel.CacheLengthUnit="Item">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel>
                             <Grid MinHeight="{DynamicResource RowHeightCompact}" Margin="8,0">
+                                <!-- Ist DIESE Zeile die aufgeklappte? Einmal je Zeile gerechnet und
+                                     im Tag abgelegt, damit Beschriftung und vorlesbarer Name des
+                                     Pfeils als normale Attribute daran binden koennen. -->
+                                <Grid.Tag>
+                                    <MultiBinding Converter="{StaticResource IstAufgeklappt}">
+                                        <Binding/>
+                                        <Binding Path="Aufgeklappt" RelativeSource="{RelativeSource AncestorType=local:HaltungAufklappListe}"/>
+                                    </MultiBinding>
+                                </Grid.Tag>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="{StaticResource SpaltePfeil}"/>
                                     <ColumnDefinition Width="{StaticResource SpalteName}"/>
@@ -358,8 +377,8 @@
 
                                 <Button Grid.Column="0" Click="Pfeil_Click" Style="{DynamicResource IconButton}"
                                         Width="24" Height="24" MinHeight="24"
-                                        ToolTip="Haltung auf- oder zuklappen"
-                                        AutomationProperties.Name="Haltung aufklappen">
+                                        ToolTip="{Binding Tag, RelativeSource={RelativeSource AncestorType=Grid}, Converter={StaticResource PfeilBeschriftung}}"
+                                        AutomationProperties.Name="{Binding Tag, RelativeSource={RelativeSource AncestorType=Grid}, Converter={StaticResource PfeilBeschriftung}}">
                                     <ui:FluentIcon Glyph="&#xE76C;" Style="{StaticResource ChevronStil}"/>
                                 </Button>
 

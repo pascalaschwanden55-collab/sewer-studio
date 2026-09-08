@@ -79,6 +79,31 @@ public sealed class HaltungThemenGruppierungTests
     }
 
     /// <summary>
+    /// Fix-Runde 1: Der Auf-/Zuklappzustand gehoert dem Thema, nicht dem Expander — sonst faende
+    /// der Benutzer nach jedem Scrollen wieder die Vorgabe vor.
+    /// </summary>
+    [Fact]
+    public void Der_Zustand_eines_Themas_startet_auf_der_Vorgabe_und_bleibt_dann_stehen()
+    {
+        var themen = HaltungThemenGruppierung.Bilde(
+            [Gruppe("Stammdaten", "Baujahr"), Gruppe("Weitere Angaben", "Z_Extra")]);
+
+        var stammdaten = themen.Single(t => t.Title == "Stammdaten");
+        var weitere = themen.Single(t => t.Title == "Weitere Angaben");
+        Assert.True(stammdaten.IstAufgeklappt);
+        Assert.False(weitere.IstAufgeklappt);
+
+        stammdaten.IstAufgeklappt = false;
+        weitere.IstAufgeklappt = true;
+
+        Assert.False(stammdaten.IstAufgeklappt);
+        Assert.True(weitere.IstAufgeklappt);
+        // Die Vorgabe selbst bleibt unveraendert; sie ist eine Regel, kein Zustand.
+        Assert.True(stammdaten.IstStandardAufgeklappt);
+        Assert.False(weitere.IstStandardAufgeklappt);
+    }
+
+    /// <summary>
     /// Waechter: Die Eingabefelder-Schublade darf keine zweite Kopie der Gruppierung fuehren.
     /// Beide Ansichten muessen dieselbe Reihenfolge und dieselben Zaehler zeigen.
     /// </summary>

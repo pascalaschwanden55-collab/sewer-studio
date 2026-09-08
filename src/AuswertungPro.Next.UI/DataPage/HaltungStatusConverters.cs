@@ -19,7 +19,14 @@ public sealed class HaltungZeilenStatusConverter : IMultiValueConverter
 {
     public static readonly HaltungZeilenStatusConverter Instance = new();
 
-    /// <summary>Die Bindungsquellen in fester Reihenfolge; die Seite baut daraus die MultiBinding.</summary>
+    /// <summary>
+    /// Die Bindungsquellen in fester Reihenfolge; die Tabelle baut daraus ihre MultiBinding.
+    ///
+    /// Die Aufklapp-Liste (<c>HaltungAufklappListe.xaml</c>) deklariert dieselben drei Quellen
+    /// direkt im XAML, weil ihre Zellen dort stehen und nicht im Code entstehen. Wer hier eine
+    /// Quelle ergaenzt, muss sie auch dort ergaenzen — sonst meldet sich die eine Ansicht bei
+    /// einer Aenderung neu und die andere nicht.
+    /// </summary>
     public static MultiBinding Bindung(IMultiValueConverter converter, object? parameter = null)
     {
         ArgumentNullException.ThrowIfNull(converter);

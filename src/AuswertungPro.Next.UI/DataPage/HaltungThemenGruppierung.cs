@@ -17,8 +17,26 @@ public sealed record ThemaAnzeige(string Title, IReadOnlyList<RecordDetailGroup>
     /// <summary>
     /// Die vier festen Prototyp-Themen starten aufgeklappt; "Weitere Angaben" (alle uebrigen
     /// Projektfelder) startet zugeklappt, damit es nicht vom eigentlichen Formular ablenkt.
+    /// Das ist die Vorgabe, nicht der aktuelle Zustand.
     /// </summary>
     public bool IstStandardAufgeklappt => Title != HaltungThemenGruppierung.WeitereAngabenTitel;
+
+    private bool? _istAufgeklappt;
+
+    /// <summary>
+    /// Der aktuelle Auf-/Zuklappzustand des Themas; Vorgabe ist
+    /// <see cref="IstStandardAufgeklappt"/>.
+    ///
+    /// Er gehoert bewusst hierher und nicht an den Expander: Die Aufklapp-Liste virtualisiert,
+    /// und beim Wechsel der Themenanordnung an der 1100-px-Schwelle werden die Expander neu
+    /// gebaut. Laege der Zustand nur im Bedienelement, faende der Benutzer nach jedem Scrollen
+    /// wieder die Vorgabe vor.
+    /// </summary>
+    public bool IstAufgeklappt
+    {
+        get => _istAufgeklappt ?? IstStandardAufgeklappt;
+        set => _istAufgeklappt = value;
+    }
 }
 
 /// <summary>
