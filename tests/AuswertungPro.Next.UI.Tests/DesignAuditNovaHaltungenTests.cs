@@ -81,12 +81,46 @@ public sealed class DesignAuditNovaHaltungenTests
         Assert.Contains("AutomationProperties.Name=\"Eingabefelder gross anzeigen\"", xaml);
     }
 
+    /// <summary>
+    /// Nova, Aufklapp-Liste (Task 4): In der Uebersicht steht die Haltungsgrafik des Protokolls
+    /// (Spec-Ergaenzung Pascal 08.09.) statt des Rohrrings. Eckdaten und KI-Hinweis bleiben.
+    /// </summary>
     [Fact]
-    public void Uebersicht_zeigt_Rohrring_Fakten_und_KI_Hinweis()
+    public void Uebersicht_zeigt_Haltungsgrafik_Fakten_und_KI_Hinweis()
     {
         var xaml = Xaml("Views", "Pages", "Haltungsansicht", "HaltungUebersichtPanel.xaml");
-        foreach (var t in new[] { "local:RohrringControl", "Schacht oben", "Schacht unten", "DN / Profil", "Prüfung", "Video", "Im Player prüfen", "KI-Vorschläge warten auf fachliche Bestätigung" })
+        foreach (var t in new[] { "local:HaltungsgrafikControl", "Schacht oben", "Schacht unten", "DN / Profil", "Prüfung", "Video", "Im Player prüfen", "KI-Vorschläge warten auf fachliche Bestätigung" })
             Assert.Contains(t, xaml);
+
+        // Der Rohrring wird nicht mehr gebunden, bleibt aber samt Geometrie im Programm.
+        Assert.DoesNotContain("local:RohrringControl", xaml);
+        Assert.True(File.Exists(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Haltungsansicht", "RohrringControl.xaml")));
+        Assert.True(File.Exists(RepoFile("src", "AuswertungPro.Next.Application", "UseCases", "Uebersicht", "RohrringGeometrie.cs")));
+    }
+
+    /// <summary>
+    /// Die Grafik braucht den aktiven Codekatalog fuer ihre Klartexte. Er kommt von der Seite
+    /// ueber den Arbeitsflaechen-Controller — kein Dienstezugriff im Panel oder in der Seite.
+    /// </summary>
+    [Fact]
+    public void Die_Haltungsgrafik_bekommt_ihren_Codekatalog_von_der_Seite()
+    {
+        var xaml = Xaml("Views", "Pages", "Haltungsansicht", "HaltungUebersichtPanel.xaml");
+        Assert.Contains("Catalog=\"{Binding Catalog, ElementName=Root}\"", xaml);
+
+        var controller = File.ReadAllText(
+            RepoFile("src", "AuswertungPro.Next.UI", "DataPage", "DataPageNovaWorkspaceController.cs"));
+        Assert.Contains("public void VerbindeKatalog()", controller, StringComparison.Ordinal);
+        Assert.Contains("_e.Uebersicht.Catalog = vm.CodeCatalog;", controller, StringComparison.Ordinal);
+
+        var seite = File.ReadAllText(
+            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.NovaWorkspace.cs"));
+        Assert.Contains("_novaWorkspace?.VerbindeKatalog();", seite, StringComparison.Ordinal);
+
+        // Die Grafik selbst holt sich keinen Dienst.
+        var control = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Views", "Pages", "Haltungsansicht", "HaltungsgrafikControl.xaml.cs"));
+        Assert.DoesNotContain("App.Services", control, StringComparison.Ordinal);
     }
 
     /// <summary>

@@ -99,6 +99,16 @@ public sealed class DataPageNovaWorkspaceController
     }
 
     /// <summary>
+    /// Reicht den aktiven Codekatalog des ViewModels an die Uebersicht weiter. Die Haltungsgrafik
+    /// braucht ihn fuer die Klartexte; die Seite selbst holt keinen Dienst.
+    /// </summary>
+    public void VerbindeKatalog()
+    {
+        if (_vm() is { } vm)
+            _e.Uebersicht.Catalog = vm.CodeCatalog;
+    }
+
+    /// <summary>
     /// Eingabefelder neu aus der gewaehlten Haltung aufbauen (Auswahlwechsel, externe Feldaenderung)
     /// und den Live-Abgleich mit genau diesem Datensatz anschliessen.
     /// </summary>

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.UseCases.NaechsteAufgabe;
 using AuswertungPro.Next.Application.UseCases.Uebersicht;
 using AuswertungPro.Next.Domain.Models;
@@ -16,16 +17,20 @@ using AuswertungPro.Next.Domain.Protocol;
 namespace AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
 
 /// <summary>
-/// Uebersicht rechts neben der Liste: Rohrring, Eckdaten und Primaere Schaeden der gewaehlten
-/// Haltung, nur lesend. Der Doppelklick auf einen Schaden fuehrt auf denselben Weg wie die
-/// Haltungsansicht (Beobachtungen); der KI-Hinweis fuehrt in den Player.
+/// Uebersicht rechts neben der Liste: Haltungsgrafik des Protokolls, Eckdaten und Primaere
+/// Schaeden der gewaehlten Haltung, nur lesend. Der Doppelklick auf einen Schaden fuehrt auf
+/// denselben Weg wie die Haltungsansicht (Beobachtungen); der KI-Hinweis fuehrt in den Player.
 ///
 /// Fix-Runde 1: Die gebundene Entries-Sammlung ist beim Haltungswechsel dieselbe Instanz (nur
 /// geleert und neu gefuellt, ohne Property-Wechsel). Deshalb wird zusaetzlich auf
 /// <see cref="INotifyCollectionChanged"/> gehoert; die alte Sammlung wird beim Wechsel und beim
 /// Entladen des Controls wieder abgemeldet.
 ///
-/// Nova-Fixwelle F1: Ring und Liste zeigen nur Schaeden (BA*/BB* nach
+/// Nova, Aufklapp-Liste (Task 4): Statt des Rohrrings steht hier die Haltungsgrafik des
+/// Protokolls. <see cref="RohrringControl"/> und <see cref="RohrringGeometrie"/> bleiben im
+/// Programm; das Panel bindet sie nicht mehr.
+///
+/// Nova-Fixwelle F1: Die Schadenliste zeigt nur Schaeden (BA*/BB* nach
 /// <see cref="RohrringGeometrie.Schaeden"/>), nicht die Bestandsaufnahme BCD/BCE/BCA.
 /// Nova-Fixwelle F5: <see cref="PruefungText"/> und <see cref="VideoText"/> haengen an Feldern des
 /// Datensatzes. Wird derselbe Datensatz veraendert (Video verknuepft, Protokoll gesetzt), wechselt
@@ -77,9 +82,22 @@ public partial class HaltungUebersichtPanel : UserControl
 
     /// <summary>
     /// Nur die Schaeden aus <see cref="Entries"/>, schwerste zuerst. Quelle fuer die Liste
-    /// "Primaere Schaeden" und fuer den Rohrring.
+    /// "Primaere Schaeden".
     /// </summary>
     public IReadOnlyList<ProtocolEntry> Schaeden => (IReadOnlyList<ProtocolEntry>)GetValue(SchaedenProperty);
+
+    public static readonly DependencyProperty CatalogProperty = DependencyProperty.Register(
+        nameof(Catalog), typeof(ICodeCatalogProvider), typeof(HaltungUebersichtPanel), new PropertyMetadata(null));
+
+    /// <summary>
+    /// Aktiver VSA-Codekatalog fuer die Klartexte der Haltungsgrafik. Die Seite reicht ihn
+    /// herein; das Panel holt sich keinen Dienst selbst.
+    /// </summary>
+    public ICodeCatalogProvider? Catalog
+    {
+        get => (ICodeCatalogProvider?)GetValue(CatalogProperty);
+        set => SetValue(CatalogProperty, value);
+    }
 
     public static readonly DependencyProperty PruefungTextProperty = DependencyProperty.Register(
         nameof(PruefungText), typeof(string), typeof(HaltungUebersichtPanel), new PropertyMetadata(string.Empty));

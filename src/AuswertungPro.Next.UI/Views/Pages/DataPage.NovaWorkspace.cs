@@ -28,6 +28,7 @@ public partial class DataPage
     /// <summary>Verbindet Uebersicht und Eingabefelder mit dem ViewModel und waehlt die Standardansicht.</summary>
     private void InitNovaWorkspace(DataPageViewModel vm)
     {
+        _novaWorkspace?.VerbindeKatalog();
         AktualisiereFelderDrawer();
         // Standardansicht: Nova-Arbeitsflaeche; die bisherige Haltungsansicht bleibt ueber den Toggle
         // erreichbar und wird Standard, wenn die Einstellung aus ist.

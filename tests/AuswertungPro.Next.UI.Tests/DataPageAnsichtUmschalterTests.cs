@@ -254,7 +254,7 @@ public sealed class DataPageAnsichtUmschalterTests
             p.Umschalter.Waehle("liste");
 
             Assert.Equal([p.Datensaetze[2]], p.Umschalter.MarkierteZeilen(p.Datensaetze[2]));
-            Assert.Equal(1, p.Tabelle.SelectedItems.Count);
+            Assert.Single(p.Tabelle.SelectedItems);
             // Ohne gewaehlte Haltung wird nichts geloescht.
             Assert.Empty(p.Umschalter.MarkierteZeilen(null));
         });

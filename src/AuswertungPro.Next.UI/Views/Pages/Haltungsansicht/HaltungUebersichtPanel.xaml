@@ -80,9 +80,11 @@
                                    TextTrimming="CharacterEllipsis"/>
                     </DockPanel>
 
-                    <!-- Rohrring: bis zu drei Uhrlagen-Boegen der schwersten Schaeden -->
-                    <local:RohrringControl Grid.Row="1" Entries="{Binding Schaeden, ElementName=Root}"
-                                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                    <!-- Haltungsgrafik des Protokolls: dieselbe Zeichnung wie im PDF, in Theme-Farben -->
+                    <local:HaltungsgrafikControl Grid.Row="1" Margin="0,0,0,8"
+                                                 Record="{Binding Record, ElementName=Root}"
+                                                 Entries="{Binding Entries, ElementName=Root}"
+                                                 Catalog="{Binding Catalog, ElementName=Root}"/>
 
                     <!-- Eckdaten; ein leeres Feld zeigt einen Gedankenstrich statt einer nackten Einheit -->
                     <UniformGrid Grid.Row="2" Columns="2" Margin="0,0,0,8">
