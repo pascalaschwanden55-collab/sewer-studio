@@ -91,6 +91,43 @@ public sealed class HaltungsgrafikAnsichtBuilderTests
         Assert.Contains("↑ Fliessrichtung", mitVorgabe!.Svg, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Die Uebersicht ist rein lesend. Der Exportweg repariert beim Aufloesen Fotopfade und
+    /// Codemetadaten im Datensatz und spiegelt bei einem Abbruch die Gegenfahrt-Meter — beides
+    /// darf beim blossen Anzeigen nicht passieren.
+    /// </summary>
+    [Fact]
+    public void Das_Zeichnen_veraendert_das_Protokoll_nicht()
+    {
+        var record = Haltung();
+        record.Protocol!.Current.Entries.Add(Eintrag("BDC", 20.0));
+        record.Protocol.Current.Entries.Add(Eintrag("BAC", 2.0));
+        var vorher = record.Protocol.Current.Entries
+            .Select(e => (e.Code, e.MeterStart, e.MeterEnd))
+            .ToList();
+
+        Assert.NotNull(HaltungsgrafikAnsichtBuilder.Baue(record, catalog: null, hoehe: 700));
+
+        var nachher = record.Protocol.Current.Entries
+            .Select(e => (e.Code, e.MeterStart, e.MeterEnd))
+            .ToList();
+        Assert.Equal(vorher, nachher);
+    }
+
+    /// <summary>Ein geloeschter Eintrag gehoert nicht in die Grafik.</summary>
+    [Fact]
+    public void Geloeschte_Eintraege_werden_nicht_gezeichnet()
+    {
+        var record = Haltung();
+        record.Protocol!.Current.Entries[0].IsDeleted = true;
+
+        var ansicht = HaltungsgrafikAnsichtBuilder.Baue(record, catalog: null, hoehe: 700);
+
+        Assert.NotNull(ansicht);
+        Assert.Equal(2, ansicht!.Marken.Count);
+        Assert.DoesNotContain(ansicht.Marken, marke => marke.Tooltip.StartsWith("BAB", StringComparison.Ordinal));
+    }
+
     private static HaltungRecord Haltung()
     {
         var record = new HaltungRecord();

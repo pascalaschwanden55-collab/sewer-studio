@@ -111,6 +111,13 @@ public sealed class SvgTeilmengeZeichnerTests
 
             // Standard ist linksbuendig.
             Assert.Equal(10d, Canvas.GetLeft(texte[2]), 3);
+
+            // Ohne Farbangabe gilt die Textfarbe des Themes, nicht das schwarze SVG-Standard-
+            // fuellen: Ein Wechsel des Tokens faerbt den Text mit.
+            host.Resources["TextBrush"] = new SolidColorBrush(Colors.Purple);
+            host.UpdateLayout();
+            Assert.Equal(Colors.Purple, Farbe(texte[1].Foreground));
+            Assert.Equal(Colors.Purple, Farbe(texte[0].Foreground));
         });
     }
 

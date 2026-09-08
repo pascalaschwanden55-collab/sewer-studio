@@ -28,6 +28,8 @@ public sealed record HaltungsgrafikAnsicht(
 ///
 /// Fotonummern bleiben bewusst leer: Sie stammen im PDF aus dem Fototeil, den es in der
 /// Uebersicht nicht gibt. Eine erfundene Nummer waere schlimmer als ein Gedankenstrich.
+///
+/// Die Anzeige ist rein lesend: Sie veraendert weder Protokoll noch Datensatz.
 /// </summary>
 public static class HaltungsgrafikAnsichtBuilder
 {
@@ -60,7 +62,13 @@ public static class HaltungsgrafikAnsichtBuilder
 
         hoehe = Math.Clamp(hoehe, HoeheMinimum, HoeheMaximum);
 
-        var aufgeloest = ProtocolPdfEntryResolver.ResolveEntriesForExport(record, record.Protocol ?? new ProtocolDocument());
+        // Bewusst NICHT ueber ProtocolPdfEntryResolver.ResolveEntriesForExport: Der Exportweg
+        // repariert dabei bestehende Eintraege im Datensatz (Fotopfade, Codemetadaten). Eine
+        // Uebersicht darf beim blossen Anzeigen nichts am Protokoll aendern. Gezeigt wird
+        // deshalb genau der Stand, den auch die Schadenliste daneben liest.
+        var aufgeloest = (record.Protocol?.Current?.Entries ?? [])
+            .Where(e => !e.IsDeleted)
+            .ToList();
         var laenge = ProtocolPdfEntryResolver.ResolveHoldingLength(record, aufgeloest);
         if (laenge is not > 0)
             return null;

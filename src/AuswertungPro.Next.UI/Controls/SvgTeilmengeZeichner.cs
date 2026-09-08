@@ -321,8 +321,10 @@ public static class SvgTeilmengeZeichner
             block.FontFamily = TextElement.GetFontFamily(quelle);
         }
 
+        // Anders als bei Flaechen bekommt ein Text ohne Farbangabe bewusst die Textfarbe des
+        // Themes: In SVG waere er schwarz, und schwarz auf dunklem Grund ist unlesbar.
         var fuellung = (string?)knoten.Attribute("fill");
-        if (!IstOhneFarbe(fuellung))
+        if (!string.Equals(fuellung?.Trim(), "none", StringComparison.OrdinalIgnoreCase))
             SvgFarbZuordnung.Setze(block, TextBlock.ForegroundProperty, fuellung);
 
         block.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
