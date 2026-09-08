@@ -34,11 +34,11 @@
                         <TextBlock Text="{Binding PauschalenText}"
                                    Visibility="{Binding HasPauschalen, Converter={StaticResource BoolToVis}}"
                                    Opacity="0.78" HorizontalAlignment="Right"/>
-                        <TextBlock Text="{Binding BelegteHaltungen, StringFormat='{}{0} Haltungen mit Maßnahme'}"
+                        <TextBlock Text="{Binding BelegteHaltungen, StringFormat='{}{0} Haltungen mit Massnahme'}"
                                    Opacity="0.7" HorizontalAlignment="Right"/>
                     </StackPanel>
                     <Button Content="Preise / Katalog" Command="{Binding KatalogBearbeitenCommand}" Margin="0,0,8,0"
-                            ToolTip="Den (einen) Preis-Katalog bearbeiten — Preise pro m / Stk / DN. Wird nach dem Schließen sofort angewendet."/>
+                            ToolTip="Den (einen) Preis-Katalog bearbeiten — Preise pro m / Stk / DN. Wird nach dem Schliessen sofort angewendet."/>
                     <Button Content="Neu laden" Command="{Binding ReloadCommand}" Margin="0,0,8,0"/>
                     <Button Content="Speichern" Command="{Binding SpeichernCommand}"
                             Style="{StaticResource PrimaryButton}"/>
@@ -87,7 +87,7 @@
                     <DataGridTextColumn Header="Länge m" Binding="{Binding Laenge}" IsReadOnly="True" Width="80"/>
                     <DataGridTextColumn Header="Anschl." Binding="{Binding Anschluesse}" IsReadOnly="True" Width="70"/>
 
-                    <DataGridTemplateColumn Header="Maßnahmen" Width="2*">
+                    <DataGridTemplateColumn Header="Massnahmen" Width="2*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Grid>
@@ -327,7 +327,7 @@
                                                         VerticalAlignment="Center"
                                                         Command="{Binding DataContext.SaveTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
-                                                        ToolTip="Die aktuellen Positionen dieser Maßnahme als Vorlage sichern (gilt für neue Projekte)."/>
+                                                        ToolTip="Die aktuellen Positionen dieser Massnahme als Vorlage sichern (gilt für neue Projekte)."/>
                                                 <TextBlock Text="{Binding MeasureName}"
                                                            Style="{StaticResource Body}"
                                                            FontWeight="SemiBold"

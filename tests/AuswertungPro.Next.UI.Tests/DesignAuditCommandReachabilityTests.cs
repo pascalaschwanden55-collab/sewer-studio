@@ -35,7 +35,7 @@ public sealed class DesignAuditCommandReachabilityTests
     [InlineData("Video prüfen")]
     [InlineData("Leere Felder aus QGIS")]
     [InlineData("Katasterkennungen")]
-    [InlineData("Sanierungsmaßnahme bearbeiten")]
+    [InlineData("Sanierungsmassnahme bearbeiten")]
     [InlineData("Direkt zur KI-Optimierung")]
     [InlineData("Vorschlag für diese Haltung erstellen")]
     [InlineData("Medien suchen")]

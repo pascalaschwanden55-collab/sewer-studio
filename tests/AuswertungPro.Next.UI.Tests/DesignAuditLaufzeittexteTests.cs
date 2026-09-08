@@ -29,7 +29,14 @@ public sealed class DesignAuditLaufzeittexteTests
     [
         ["src", "AuswertungPro.Next.Application", "DataPage", "LearningReadinessPresenter.cs"],
         ["src", "AuswertungPro.Next.UI", "DataPage", "SchaechteRecordDetailsBuilder.cs"],
-        ["src", "AuswertungPro.Next.UI", "DataPage", "DataPageRecordDetailsBuilder.cs"]
+        ["src", "AuswertungPro.Next.UI", "DataPage", "DataPageRecordDetailsBuilder.cs"],
+        // Optik-Nachpruefung O5: Untertitel und Statuszeilen der beiden Matrix-Seiten sowie
+        // die Meldungen der Kosten-/Massnahmen-Controller sind sichtbare Texte.
+        ["src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "SanierungsMatrixPageViewModel.cs"],
+        ["src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "SchachtSanierungsMatrixPageViewModel.cs"],
+        ["src", "AuswertungPro.Next.UI", "DataPage", "DataPageCostRestoreController.cs"],
+        ["src", "AuswertungPro.Next.UI", "DataPage", "DataPageMeasureSuggestionController.cs"],
+        ["src", "AuswertungPro.Next.UI", "Views", "Windows", "PhotoMeasurementToolPresentationPolicy.cs"]
     ];
 
     /// <summary>
@@ -39,7 +46,8 @@ public sealed class DesignAuditLaufzeittexteTests
     private static readonly string[] Ersatzschreibweisen =
     [
         "Faell", "Schaetz", "aehnlich", "Gruen", "Schaed", "Pruef", "Verknuepf",
-        "Loesch", "Oeffn", "Groess", "Naechst", "Ueber", "Zustaend", "Maengel", "Bemuehung"
+        "Loesch", "Oeffn", "Groess", "Naechst", "Ueber", "Zustaend", "Maengel", "Bemuehung",
+        "waehl", "oeffn", "Anschluess", "Schaecht"
     ];
 
     [Fact]
@@ -48,8 +56,9 @@ public sealed class DesignAuditLaufzeittexteTests
         var funde = (from teile in Quellen
                      let pfad = RepoFile(teile)
                      from text in Zeichenketten(File.ReadAllText(pfad))
-                     from wort in Ersatzschreibweisen
-                     where text.Contains(wort, System.StringComparison.Ordinal)
+                     let wort = Ersatzschreibweisen.FirstOrDefault(w => text.Contains(w, System.StringComparison.Ordinal))
+                                ?? (text.Contains('ß') ? "ß statt ss" : null)
+                     where wort is not null
                      select $"{Path.GetFileName(pfad)}: \"{text}\" ({wort})").ToList();
 
         Assert.True(funde.Count == 0, "Sichtbare Texte ohne Umlaut:\n" + string.Join("\n", funde));

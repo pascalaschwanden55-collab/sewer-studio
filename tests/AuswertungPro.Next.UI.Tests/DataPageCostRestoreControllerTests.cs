@@ -33,7 +33,7 @@ public sealed class DataPageCostRestoreControllerTests
 
         controller.Restore(Record("H1"));
 
-        Assert.Equal(("Projekt bitte zuerst speichern/oeffnen, um Kosten wiederherzustellen.", "Kosten/Massnahmen"), dialogs.LastInfo);
+        Assert.Equal(("Projekt bitte zuerst speichern/öffnen, um Kosten wiederherzustellen.", "Kosten/Massnahmen"), dialogs.LastInfo);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class DataPageCostRestoreControllerTests
         var appliedItem = Assert.Single(applied);
         Assert.Same(record, appliedItem.Record);
         Assert.Same(cost, appliedItem.Cost);
-        Assert.Equal("Kosten/Maßnahmen wiederhergestellt: H1", statuses.Single());
+        Assert.Equal("Kosten/Massnahmen wiederhergestellt: H1", statuses.Single());
     }
 
     private static DataPageCostRestoreController CreateController(

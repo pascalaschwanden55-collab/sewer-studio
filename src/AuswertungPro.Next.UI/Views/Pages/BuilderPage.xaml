@@ -168,7 +168,7 @@
                     <CheckBox Content="Nur mit Kosten"
                               IsChecked="{Binding OnlyWithCost, Mode=TwoWay}"
                               Margin="0,0,16,0"/>
-                    <CheckBox Content="Nur mit Maßnahmen"
+                    <CheckBox Content="Nur mit Massnahmen"
                               IsChecked="{Binding OnlyWithMeasures, Mode=TwoWay}"/>
                 </WrapPanel>
             </StackPanel>
@@ -467,7 +467,7 @@
                     <!-- Kopf folgt dem Bereich; DataGridColumn liegt ausserhalb des VisualTree
                          und kann darum nicht binden — wird im Code-Behind gesetzt. -->
                     <DataGridTextColumn x:Name="BauteilColumn" Header="Haltung" SortMemberPath="Holding" Binding="{Binding Holding}" Width="170"/>
-                    <DataGridTextColumn Header="Straße" SortMemberPath="Street" Binding="{Binding Street}" Width="170"/>
+                    <DataGridTextColumn Header="Strasse" SortMemberPath="Street" Binding="{Binding Street}" Width="170"/>
                     <DataGridTextColumn Header="Eigentümer" SortMemberPath="Owner" Binding="{Binding Owner}" Width="160"/>
                     <DataGridTextColumn Header="Ausgeführt durch" SortMemberPath="ExecutedBy" Binding="{Binding ExecutedBy}" Width="160"/>
                     <DataGridTextColumn Header="Sanieren" SortMemberPath="Sanieren" Binding="{Binding Sanieren}" Width="90"/>
@@ -475,7 +475,7 @@
                     <DataGridTextColumn Header="Status" SortMemberPath="Status" Binding="{Binding Status}" Width="130"/>
                     <DataGridTextColumn Header="Jahr" SortMemberPath="Year" Binding="{Binding Year}" Width="80"/>
                     <DataGridTextColumn Header="Zustand" SortMemberPath="Zustand" Binding="{Binding Zustand}" Width="90"/>
-                    <DataGridTextColumn Header="Maßnahmen (Vorschau)" SortMemberPath="MeasuresPreview" Binding="{Binding MeasuresPreview}" Width="2*"/>
+                    <DataGridTextColumn Header="Massnahmen (Vorschau)" SortMemberPath="MeasuresPreview" Binding="{Binding MeasuresPreview}" Width="2*"/>
                     <DataGridTextColumn Header="Kostenquelle" SortMemberPath="CostSource" Binding="{Binding CostSource}" Width="140"/>
                     <DataGridTextColumn Header="Netto" SortMemberPath="NetCost" Binding="{Binding NetCostText}" Width="130">
                         <DataGridTextColumn.ElementStyle>

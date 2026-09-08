@@ -78,7 +78,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
     {
     }
 
-    [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
+    [Obsolete("Übergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
     public SchachtSanierungsMatrixPageViewModel(
         Func<Project> getProject,
         Func<string?> getProjectPath,
@@ -195,8 +195,8 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         SelectedRow = Rows.FirstOrDefault();
 
         Status = Rows.Count == 0
-            ? "Keine Schaechte geladen (Projekt mit importierten Schacht-Protokollen oeffnen)."
-            : $"{Rows.Count} Schaechte geladen.";
+            ? "Keine Schächte geladen (Projekt mit importierten Schacht-Protokollen öffnen)."
+            : $"{Rows.Count} Schächte geladen.";
 
         var calculationLoadError = BuildCalculationLoadError();
         if (_storeLoadError is not null)
@@ -399,7 +399,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
 
         _touchedSchaechte.Clear();
         _hasUnsavedChanges = false;
-        Status = $"Schacht-Kosten gespeichert ({_store.ByHolding.Count} Schacht/Schaechte).";
+        Status = $"Schacht-Kosten gespeichert ({_store.ByHolding.Count} Schacht/Schächte).";
         _dashboardRefresh.NotifyCostsChanged();
     }
 

@@ -48,7 +48,7 @@ public sealed class DataPageCostRestoreController
         var projectPath = _getProjectPath();
         if (string.IsNullOrWhiteSpace(projectPath))
         {
-            _dialogs.Info("Projekt bitte zuerst speichern/oeffnen, um Kosten wiederherzustellen.", "Kosten/Massnahmen");
+            _dialogs.Info("Projekt bitte zuerst speichern/öffnen, um Kosten wiederherzustellen.", "Kosten/Massnahmen");
             return;
         }
 
@@ -63,6 +63,6 @@ public sealed class DataPageCostRestoreController
         }
 
         _applyCosts(record, cost);
-        _setStatus($"Kosten/Maßnahmen wiederhergestellt: {holding}");
+        _setStatus($"Kosten/Massnahmen wiederhergestellt: {holding}");
     }
 }

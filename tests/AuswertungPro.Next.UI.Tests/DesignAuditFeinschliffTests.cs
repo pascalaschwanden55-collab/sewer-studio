@@ -48,7 +48,8 @@ public sealed class DesignAuditFeinschliffTests
                     if (wert is null)
                         continue;
 
-                    if (UmlautErsatz.IsMatch(wert))
+                    // Optik-Nachpruefung O4: Schweizer Schreibweise ist ss, kein scharfes ß.
+                    if (UmlautErsatz.IsMatch(wert) || wert.Contains('ß'))
                         treffer.Add($"{Relativ(datei)}:{i + 1}: {m.Groups[1].Value}=\"{wert}\"");
                 }
             }
@@ -56,7 +57,7 @@ public sealed class DesignAuditFeinschliffTests
 
         Assert.True(
             treffer.Count == 0,
-            "Sichtbare Texte schreiben Umlaute als ae/oe/ue. Die Konvention gilt nur fuer den Quellcode, nicht fuer das, was der Nutzer liest:\n"
+            "Sichtbare Texte schreiben Umlaute als ae/oe/ue oder ein scharfes ß (Schweizer Schreibweise ist ss). Die Konvention ae/oe/ue gilt nur fuer den Quellcode, nicht fuer das, was der Nutzer liest:\n"
             + string.Join("\n", treffer));
     }
 

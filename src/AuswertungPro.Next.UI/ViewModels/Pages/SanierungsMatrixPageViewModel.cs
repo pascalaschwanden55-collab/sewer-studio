@@ -99,7 +99,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
 
     [ObservableProperty] private bool _isSingleHoldingMode;
     [ObservableProperty] private string _pageTitle = "Sanierungs-Matrix";
-    [ObservableProperty] private string _pageSubtitle = "Pro Haltung eine Hauptarbeit waehlen - Meter, DN und Anschluesse kommen automatisch.";
+    [ObservableProperty] private string _pageSubtitle = "Pro Haltung eine Hauptarbeit wählen – Meter, DN und Anschlüsse kommen automatisch.";
     [ObservableProperty] private decimal _gesamtTotal;
     [ObservableProperty] private decimal _pauschalenTotal;
     [ObservableProperty] private int _pauschalenHaltungen;
@@ -112,8 +112,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     [ObservableProperty] private int _belegteHaltungen;
     [ObservableProperty] private string _status = "";
     [ObservableProperty] private SanierungMatrixRowVm? _selectedRow;
-    [ObservableProperty] private string _detailTitle = "Keine Haltung gewaehlt";
-    [ObservableProperty] private string _detailSubtitle = "Links eine Haltung waehlen.";
+    [ObservableProperty] private string _detailTitle = "Keine Haltung gewählt";
+    [ObservableProperty] private string _detailSubtitle = "Links eine Haltung wählen.";
     [ObservableProperty] private string _detailTotal = "";
     [ObservableProperty] private string _detailEditStatus = "";
     [ObservableProperty] private bool _isDetailDirty;
@@ -183,7 +183,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         }
 
         SelectedRow = row;
-        Status = $"Sanierungs-Matrix: {row.Holding} gewaehlt.";
+        Status = $"Sanierungs-Matrix: {row.Holding} gewählt.";
         return true;
     }
 
@@ -328,7 +328,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         }
 
         Status = Rows.Count == 0
-            ? "Keine Haltungen geladen (Projekt mit Haltungen oeffnen)."
+            ? "Keine Haltungen geladen (Projekt mit Haltungen öffnen)."
             : IsSingleHoldingMode
                 ? $"Sanierungsmassnahme geladen: {SelectedRow?.Holding}"
                 : $"{Rows.Count} Haltungen geladen.";
@@ -430,7 +430,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         }
 
         PageTitle = "Sanierungs-Matrix";
-        PageSubtitle = "Pro Haltung eine Hauptarbeit waehlen - Meter, DN und Anschluesse kommen automatisch.";
+        PageSubtitle = "Pro Haltung eine Hauptarbeit wählen – Meter, DN und Anschlüsse kommen automatisch.";
     }
 
     private void BuildMeasureOptions()
@@ -693,8 +693,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         {
             _detailSession = null;
             SelectedDetailMeasures = new ObservableCollection<SanierungsMatrixDetailEditMeasureVm>();
-            DetailTitle = "Keine Haltung gewaehlt";
-            DetailSubtitle = "Links eine Haltung waehlen.";
+            DetailTitle = "Keine Haltung gewählt";
+            DetailSubtitle = "Links eine Haltung wählen.";
             DetailTotal = "";
             DetailEditStatus = "";
             IsDetailDirty = false;
@@ -784,7 +784,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         _detailSession.MarkClean();
         DetailSubtitle = _detailRow.MeasuresSummary;
         UpdateDetailStateFromSession();
-        DetailEditStatus = "Uebernommen - noch nicht gespeichert";
+        DetailEditStatus = "Übernommen – noch nicht gespeichert";
         RecomputeGesamt();
         Status = $"Detail uebernommen: {_detailRow.Holding}, Total {_detailRow.Total:N2} CHF - 'Speichern' schreibt costs.json.";
     }

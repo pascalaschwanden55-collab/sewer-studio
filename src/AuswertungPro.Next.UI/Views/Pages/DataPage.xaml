@@ -74,7 +74,7 @@
             <MenuItem Header="Gehe zu Ordner" Click="OpenContainingFolderMenu_Click">
                 <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="Sanierungsmaßnahmen..." Click="CostsMenu_Click">
+            <MenuItem Header="Sanierungsmassnahmen..." Click="CostsMenu_Click">
                 <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
             </MenuItem>
             <Separator/>
@@ -141,7 +141,7 @@
                 </Border.Style>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse Width="12" Height="12" Fill="{Binding LearningTrafficLightColor}" Margin="0,0,8,0" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1"/>
-                    <TextBlock Text="{Binding LearningTrafficLightText}" Foreground="{DynamicResource TextBrush}" Margin="0,0,12,0" />
+                    <TextBlock Text="{Binding LearningTrafficLightText, StringFormat='KI-Lernampel {0}'}" Foreground="{DynamicResource TextBrush}" Margin="0,0,12,0" />
                     <TextBlock Text="{Binding LearningInfo}" Foreground="{DynamicResource TextBrush}" />
                 </StackPanel>
             </Border>
@@ -263,7 +263,7 @@
                                         <MenuItem.Icon><ui:FluentIcon Glyph="&#xE71B;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
                                     </MenuItem>
                                     <Separator/>
-                                    <MenuItem Header="Sanierungsmaßnahme bearbeiten" Click="CostsMenu_Click">
+                                    <MenuItem Header="Sanierungsmassnahme bearbeiten" Click="CostsMenu_Click">
                                         <MenuItem.Icon>
                                             <ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/>
                                         </MenuItem.Icon>

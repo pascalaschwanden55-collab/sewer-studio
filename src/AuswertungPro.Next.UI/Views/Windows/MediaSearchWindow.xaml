@@ -158,7 +158,7 @@
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
                     <Button x:Name="ApplyButton" Content="Anwenden" Click="Apply_Click"
                             Style="{DynamicResource PrimaryButton}" IsEnabled="False" Margin="0,0,8,0"/>
-                    <Button x:Name="CloseButton" Content="Schließen" Click="Close_Click"
+                    <Button x:Name="CloseButton" Content="Schliessen" Click="Close_Click"
                             Style="{DynamicResource SecondaryButton}"/>
                 </StackPanel>
                 <TextBlock x:Name="SummaryText" Style="{StaticResource LabelText}"

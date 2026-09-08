@@ -147,7 +147,7 @@
                 <Button x:Name="OverlayButton" Content="Im Video einblenden" Width="160" Style="{StaticResource FooterButtonStyle}"/>
                 <Button x:Name="TrainButton" Content="Als Training speichern" Width="160" Style="{StaticResource FooterButtonStyle}"/>
                 <Button x:Name="ExportPdfButton" Content="Haltungsprotokoll PDF" Width="180" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="CloseButton" Content="Schließen" Width="110" Style="{StaticResource FooterButtonStyle}" Margin="0" IsCancel="True"/>
+                <Button x:Name="CloseButton" Content="Schliessen" Width="110" Style="{StaticResource FooterButtonStyle}" Margin="0" IsCancel="True"/>
             </WrapPanel>
         </Border>
     </Grid>

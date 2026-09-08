@@ -142,7 +142,7 @@
                                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8B9;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                                                 </MenuItem>
                                                 <Separator/>
-                                                <MenuItem Header="Streckenschaden schließen (Ende hier)"
+                                                <MenuItem Header="Streckenschaden schliessen (Ende hier)"
                                                           Click="CodingEventCloseStretch_Click"
                                                           FontWeight="SemiBold"
                                                           ToolTip="Nur für eine Zeile mit der Marke OFFEN">

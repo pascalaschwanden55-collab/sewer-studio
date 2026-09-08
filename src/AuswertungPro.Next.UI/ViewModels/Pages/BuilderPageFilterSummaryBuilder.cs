@@ -37,7 +37,7 @@ public static class BuilderPageFilterSummaryBuilder
             parts.Add($"Suche='{search}'");
         }
 
-        parts.Add($"Treffer={filteredRowsCount}/{totalRows}");
+        parts.Add($"Treffer: {filteredRowsCount} von {totalRows}");
         return string.Join(" | ", parts);
     }
 

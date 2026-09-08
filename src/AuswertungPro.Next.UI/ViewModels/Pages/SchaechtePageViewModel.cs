@@ -477,7 +477,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
 
         EnsureRecordColumns();
         UpdateNr();
-        LastResult = $"Spalten geladen: {Columns.Count}";
+        LastResult = "";
     }
 
     private void EnsureRecordColumns()

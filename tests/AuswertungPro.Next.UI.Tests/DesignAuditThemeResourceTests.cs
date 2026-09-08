@@ -73,7 +73,7 @@ public sealed class DesignAuditThemeResourceTests
         var xaml = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml");
         var code = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml.cs");
 
-        Assert.Contains("Header=\"Maßnahmen\"", xaml);
+        Assert.Contains("Header=\"Massnahmen\"", xaml);
         Assert.Contains("Text=\"{Binding PageTitle}\"", xaml);
         Assert.Contains("Text=\"{Binding PageSubtitle}\"", xaml);
         Assert.Contains("DataContext.MeasureOptions", xaml);
@@ -112,9 +112,9 @@ public sealed class DesignAuditThemeResourceTests
         var dataPage = ReadUiFile("Views", "Pages", "DataPage.xaml");
         var shell = ReadUiFile("ViewModels", "ShellViewModel.cs");
 
-        Assert.Contains("Header=\"Sanierungsmaßnahme bearbeiten\"", dataPage);
+        Assert.Contains("Header=\"Sanierungsmassnahme bearbeiten\"", dataPage);
         // Nova-Etappe 1: der Einstieg liegt unter "Weitere Aktionen", der Text bleibt sichtbar.
-        Assert.Contains("Sanierungsmaßnahme bearbeiten", dataPage);
+        Assert.Contains("Sanierungsmassnahme bearbeiten", dataPage);
         Assert.Contains("x:Name=\"WeitereAktionenDropdown\"", dataPage);
         Assert.Contains("NavigateToSanierungsMatrix", shell);
         Assert.Contains("OpenSanierungsMatrix(record);", viewModel);

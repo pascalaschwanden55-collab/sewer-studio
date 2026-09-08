@@ -103,7 +103,7 @@
                     <MenuItem Header="Gehe zu Ordner" Click="CtxOpenFolder_Click">
                         <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Sanierungsmaßnahmen..." Click="CtxCosts_Click">
+                    <MenuItem Header="Sanierungsmassnahmen..." Click="CtxCosts_Click">
                         <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>

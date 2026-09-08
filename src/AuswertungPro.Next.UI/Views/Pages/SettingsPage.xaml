@@ -1203,7 +1203,7 @@
                     Klick auf einen Code-Marker springt direkt zur Schadenstelle im Video.
                 </TextBlock>
 
-                <TextBlock Text="Sanierungsmaßnahmen" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
+                <TextBlock Text="Sanierungsmassnahmen" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextS}" Margin="0,0,0,10">
                     Vereinheitlichtes Fenster für Kostenberechnung und KI-Optimierung.
                     Linkes Panel: Haltungskontext (DN, Material, Länge, Zustandsklasse), regelbasierte
