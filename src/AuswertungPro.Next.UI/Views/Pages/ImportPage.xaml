@@ -39,10 +39,8 @@
 
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,4"/>
 
-                    <TextBlock Text="Manuell:" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.7" FontSize="{DynamicResource TextXS}"/>
-
                     <Button Command="{Binding ImportPdfCommand}"
-                            Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0">
+                            Style="{StaticResource ToolbarButton}" Margin="0,0,4,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8B5;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Import PDF" VerticalAlignment="Center"/>
@@ -169,10 +167,13 @@
                         Style="{StaticResource ToolbarButton}"
                         Padding="10,3"
                         ToolTip="Liest den VSA-Codekatalog erneut von der eingestellten Quelle."/>
+                <!-- Optik-Nachpruefung O12: zwei volle Windows-Pfade in einer Zeile sind Laerm —
+                     gekuerzt anzeigen, vollstaendig im Hinweis. -->
                 <TextBlock Text="{Binding CatalogStatus}"
+                           ToolTip="{Binding CatalogStatus}"
                            VerticalAlignment="Center"
                            Foreground="{DynamicResource TextSecondaryBrush}"
-                           TextWrapping="Wrap"/>
+                           TextTrimming="CharacterEllipsis"/>
             </DockPanel>
         </StackPanel>
 

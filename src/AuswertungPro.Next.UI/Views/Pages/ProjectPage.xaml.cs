@@ -20,10 +20,4 @@ public partial class ProjectPage : System.Windows.Controls.UserControl
             e.Handled = true;
         }
     }
-
-    private void CloseButton_Click(object sender, RoutedEventArgs e)
-    {
-        var window = Window.GetWindow(this);
-        window?.Close();
-    }
 }

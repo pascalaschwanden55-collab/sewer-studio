@@ -28,11 +28,11 @@
                 <Button Content="Speichern unter" Command="{Binding SaveAsCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
                         Visibility="{Binding IsNotDraft, Converter={StaticResource BoolToVis}}"
                         ToolTip="Projekt unter einem neuen Pfad speichern."/>
-                <Button Content="Projekt speichern" Command="{Binding SaveCommand}" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="8,0,0,0"
+                <!-- Optik-Nachpruefung O11: eine Hauptaktion. Beenden gehoert ins Menue Datei,
+                     nicht neben Speichern. -->
+                <Button Content="Projekt speichern" Command="{Binding SaveCommand}" Style="{StaticResource ToolbarButtonAccent}" Margin="8,0,0,0"
                         Visibility="{Binding IsNotDraft, Converter={StaticResource BoolToVis}}"
                         ToolTip="Alle Projektdaten speichern." />
-                <Button Content="Programm schliessen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="8,0,0,0"
-                        ToolTip="SewerStudio beenden. Ungespeicherte Änderungen werden vorher abgefragt." />
             </StackPanel>
         </ctrl:NovaPageHeader>
 

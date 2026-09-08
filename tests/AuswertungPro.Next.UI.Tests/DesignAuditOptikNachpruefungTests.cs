@@ -85,4 +85,32 @@ public sealed class DesignAuditOptikNachpruefungTests
         Assert.Contains("HatErgebnis = true;", vm);
         Assert.Contains("HatErgebnis = false;", vm);
     }
+
+    /// <summary>
+    /// O11/O12: Der Hauptknopf einer Seite ist die blaue Pille (ToolbarButtonAccent), nicht das
+    /// blaue Rechteck (PrimaryButton). Import hat genau einen Hauptknopf; die Projektseite
+    /// beendet das Programm nicht neben „Speichern" (dafuer gibt es Datei → Beenden).
+    /// </summary>
+    [Fact]
+    public void Seiten_haben_eine_Hauptaktion_als_Pille_und_keinen_PrimaryButton_mehr()
+    {
+        var seiten = Directory.EnumerateFiles(
+                RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages"), "*.xaml", SearchOption.TopDirectoryOnly)
+            .Where(p => Path.GetFileName(p) != "OverviewPage.xaml"); // klassische Uebersicht bleibt unveraendert
+        foreach (var seite in seiten)
+            Assert.False(File.ReadAllText(seite).Contains("PrimaryButton", StringComparison.Ordinal),
+                $"{Path.GetFileName(seite)} verwendet noch PrimaryButton");
+
+        var import = Ui("Views", "Pages", "ImportPage.xaml");
+        Assert.Equal(1, Regex.Matches(import, "ToolbarButtonAccent").Count);
+        Assert.DoesNotContain("Text=\"Manuell:\"", import);
+        Assert.Contains("Text=\"{Binding CatalogStatus}\"", import);
+        Assert.Contains("ToolTip=\"{Binding CatalogStatus}\"", import);
+
+        var projekt = Ui("Views", "Pages", "ProjectPage.xaml");
+        Assert.DoesNotContain("Programm schliessen", projekt);
+        Assert.DoesNotContain("Programm schließen", projekt);
+        Assert.Contains("Content=\"Projekt speichern\" Command=\"{Binding SaveCommand}\" Style=\"{StaticResource ToolbarButtonAccent}\"", projekt);
+        Assert.DoesNotContain("CloseButton_Click", Ui("Views", "Pages", "ProjectPage.xaml.cs"));
+    }
 }

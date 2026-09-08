@@ -605,7 +605,7 @@
                             Margin="0,0,8,4"
                             ToolTip="Kostenzusammenstellung über alle (gefilterten) Haltungen. Für eine einzelne Haltung: Rechtsklick auf die Zeile in der Tabelle.">
                         <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+                            <Style TargetType="Button" BasedOn="{StaticResource ToolbarButtonAccent}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsPdfExportInProgress}" Value="True">
                                         <Setter Property="IsEnabled" Value="False"/>

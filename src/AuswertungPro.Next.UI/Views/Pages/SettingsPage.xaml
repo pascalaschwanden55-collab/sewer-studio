@@ -305,7 +305,7 @@
                     </StackPanel>
                     <Button Content="Speichern"
                             Command="{Binding SaveCommand}"
-                            Style="{StaticResource PrimaryButton}"
+                            Style="{StaticResource ToolbarButtonAccent}"
                             Width="140"
                             ToolTip="Alle geänderten Einstellungen dauerhaft speichern."/>
                 </StackPanel>

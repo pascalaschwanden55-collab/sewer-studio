@@ -41,7 +41,7 @@
                             ToolTip="Den (einen) Preis-Katalog bearbeiten — Preise pro m / Stk / DN. Wird nach dem Schliessen sofort angewendet."/>
                     <Button Content="Neu laden" Command="{Binding ReloadCommand}" Margin="0,0,8,0"/>
                     <Button Content="Speichern" Command="{Binding SpeichernCommand}"
-                            Style="{StaticResource PrimaryButton}"/>
+                            Style="{StaticResource ToolbarButtonAccent}"/>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -290,7 +290,7 @@
                             <Button Content="Übernehmen"
                                     Command="{Binding DetailUebernehmenCommand}"
                                     IsEnabled="{Binding IsDetailDirty}"
-                                    Style="{StaticResource PrimaryButton}"
+                                    Style="{StaticResource ToolbarButtonAccent}"
                                     Margin="0,0,6,0"/>
                             <Button Content="Verwerfen"
                                     Command="{Binding DetailVerwerfenCommand}"
