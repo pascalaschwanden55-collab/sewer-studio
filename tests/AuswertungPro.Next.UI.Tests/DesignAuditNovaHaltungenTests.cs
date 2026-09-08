@@ -278,4 +278,53 @@ public sealed class DesignAuditNovaHaltungenTests
         foreach (var datei in Directory.EnumerateFiles(seite, "DataPage*.cs"))
             Assert.DoesNotContain("ApplyHaltungsansichtSichtbarkeit", File.ReadAllText(datei));
     }
+    /// <summary>
+    /// Fix-Runde 1 (3): In der Aufklapp-Liste steht das Formular in der aufgeklappten Zeile. Die
+    /// Eingabefelder-Schublade wird dann nicht nur ausgeblendet, sondern geleert UND ihr
+    /// Live-Abgleich entsorgt — sonst haengen zwei Formulare am selben Datensatz und der
+    /// Konflikthinweis landet im unsichtbaren.
+    /// </summary>
+    [Fact]
+    public void Das_unsichtbare_Formular_wird_entsorgt_nicht_nur_ausgeblendet()
+    {
+        var controller = File.ReadAllText(
+            RepoFile("src", "AuswertungPro.Next.UI", "DataPage", "DataPageNovaWorkspaceController.cs"));
+        var methode = Regex.Match(controller, @"public void LeereFelderDrawer\(\)[\s\S]*?
+    \}");
+        Assert.True(methode.Success, "LeereFelderDrawer fehlt");
+        Assert.Contains("_felderSync?.Dispose();", methode.Value, StringComparison.Ordinal);
+        Assert.Contains("_felderSync = null;", methode.Value, StringComparison.Ordinal);
+        Assert.Contains("Groups = null;", methode.Value, StringComparison.Ordinal);
+
+        var seite = File.ReadAllText(
+            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.NovaWorkspace.cs"));
+        Assert.Contains("_ansicht?.ListeSichtbar == true", seite, StringComparison.Ordinal);
+        Assert.Contains("LeereFelderDrawer()", seite, StringComparison.Ordinal);
+
+        // Die Weiche fuer den Konflikthinweis liegt im Umschalter, nicht in der Seite.
+        Assert.Contains("_ansicht?.MeldeKonflikt(", seite, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (5): Das geteilte Zeilenmenue haengt an zwei verschiedenen Elementen. Ein
+    /// <c>{Binding …}</c> ohne <c>PlacementTarget</c> zeigt deshalb je nach Ansicht woanders hin —
+    /// die Punkte duerfen ihre Haltung nur ueber das PlacementTarget oder ueber Click finden.
+    /// </summary>
+    [Fact]
+    public void Das_geteilte_Zeilenmenue_bindet_nur_ueber_PlacementTarget()
+    {
+        var xaml = Xaml("Views", "Pages", "DataPage.xaml");
+        var menue = Regex.Match(xaml, @"<ContextMenu x:Key=""HaltungZeilenMenue"">[\s\S]*?</ContextMenu>");
+        Assert.True(menue.Success, "Das geteilte Zeilenmenue fehlt");
+
+        foreach (Match bindung in Regex.Matches(menue.Value, @"\{Binding [^}]*\}"))
+        {
+            // DynamicResource-Farben und Click-Punkte sind davon nicht betroffen.
+            Assert.Contains("PlacementTarget", bindung.Value, StringComparison.Ordinal);
+        }
+
+        // Der Loeschpunkt traegt seine Marke, damit der Umschalter ihn ohne x:Name findet
+        // (in einem Ressourcenteil gibt es keinen Namescope der Seite).
+        Assert.Contains("Tag=\"loeschen\"", menue.Value, StringComparison.Ordinal);
+    }
 }

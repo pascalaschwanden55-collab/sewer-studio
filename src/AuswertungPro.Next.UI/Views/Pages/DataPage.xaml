@@ -78,7 +78,7 @@
                 <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
             </MenuItem>
             <Separator/>
-            <MenuItem Header="Markierte Zeilen löschen" Click="DeleteSelectedRows_Click"
+            <MenuItem Header="Markierte Zeilen löschen" Click="DeleteSelectedRows_Click" Tag="loeschen"
                       InputGestureText="Del" Foreground="{DynamicResource DangerBrush}">
                 <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74D;" Foreground="{DynamicResource DangerBrush}"/></MenuItem.Icon>
             </MenuItem>

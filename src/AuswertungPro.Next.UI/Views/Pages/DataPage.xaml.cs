@@ -39,7 +39,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private readonly DataPageRecordDetailsDialogController _recordDetailsDialogController;
     private readonly DataPageBeobachtungenController _beobachtungenController;
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
-    private bool _isUndocking;
     private bool _startFilterApplied;
     private DataPageCombinedFilter _combinedFilter = DataPageCombinedFilter.Aus;
 
@@ -111,6 +110,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
         Loaded += (_, __) =>
         {
             ApplyHaltungsansichtSettings();
+            // Nach einem Unloaded ist der Aufklapp-Controller entsorgt; WPF kann dieselbe
+            // Seite wieder laden. Verdrahte() ist mehrfach sicher aufrufbar.
+            _aufklappListe?.Verdrahte();
             EnsureColumns();
             ApplyStartFilter();
             _columnAlignmentToolbar.UpdateButtons();
@@ -120,10 +122,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
             _searchDebounceTimer.Stop();
             _layoutSaveDebounceTimer.Stop();
             SaveLayoutToSettings();
-            // Wenn die Seite gewechselt wird, Grid zurueck docken
-            // NICHT waehrend des Abdock-Vorgangs ausfuehren!
-            if (_floatingGridWindow is not null && !_isUndocking)
-                DockGridBack();
+            _docking?.BeimVerlassen();
+            _aufklappListe?.Dispose();
+            if (DataContext is DataPageViewModel altesVm)
+                altesVm.HaltungAnzeigen -= ZeigeHaltungInListe;
         };
         DataContextChanged += DataPage_DataContextChanged;
         SizeChanged += (_, __) => ApplyDrawerHeight();
@@ -470,7 +472,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private void DeleteSelectedRows()
     {
         if (DataContext is not DataPageViewModel vm) return;
-        vm.RemoveRecords(Grid.SelectedItems.OfType<HaltungRecord>().ToList());
+        vm.RemoveRecords(_ansicht?.MarkierteZeilen(vm.Selected) ?? []);
     }
 
     // ── Haltung Record Details ──────────────────────────────────────────

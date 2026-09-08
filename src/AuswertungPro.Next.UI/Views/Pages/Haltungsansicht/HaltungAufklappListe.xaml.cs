@@ -159,8 +159,17 @@ public partial class HaltungAufklappListe : UserControl
     /// </summary>
     public void ScrolleZurAuswahl()
     {
-        if (SelectedItem is { } record)
-            Liste.ScrollIntoView(record);
+        if (SelectedItem is not { } record)
+            return;
+
+        // Wie in KlappeAuf: Erst nach dem Bauen und Messen der Zeilen steht fest, wo die Zeile
+        // liegt. Ein sofortiges ScrollIntoView trifft direkt nach einem Ansichtswechsel daneben.
+        Liste.ScrollIntoView(record);
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+        {
+            if (ReferenceEquals(SelectedItem, record))
+                Liste.ScrollIntoView(record);
+        }));
     }
 
     public static readonly DependencyProperty ZeilenMenueProperty = DependencyProperty.Register(

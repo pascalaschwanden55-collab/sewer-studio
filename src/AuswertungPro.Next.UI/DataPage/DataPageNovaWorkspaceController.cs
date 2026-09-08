@@ -122,6 +122,20 @@ public sealed class DataPageNovaWorkspaceController
     }
 
     /// <summary>
+    /// Leert die Eingabefelder und entsorgt ihren Live-Abgleich. Gebraucht, sobald die Seite die
+    /// Aufklapp-Liste zeigt: Zwei Formulare am selben Datensatz waeren doppelte Arbeit, und ein
+    /// Konflikthinweis landete im unsichtbaren.
+    /// </summary>
+    public void LeereFelderDrawer()
+    {
+        _felderSync?.Dispose();
+        _felderSync = null;
+        _e.FelderDrawer.Hinweis = string.Empty;
+        _e.FelderDrawer.Titel = string.Empty;
+        _e.FelderDrawer.Groups = null;
+    }
+
+    /// <summary>
     /// Nachpruefung W01: Der Datensatz hat sich seit der Anzeige geaendert. Die neuere Korrektur
     /// bleibt; die verworfene Eingabe steht als Hinweis in der Kopfzeile der Eingabefelder.
     /// </summary>

@@ -35,7 +35,17 @@ public partial class DataPage
         WendeAnsichtAn();
     }
 
-    private void AktualisiereFelderDrawer() => _novaWorkspace?.AktualisiereFelderDrawer();
+    /// <summary>
+    /// Die Eingabefelder unten gehoeren zur Tabelle. Zeigt die Seite die Aufklapp-Liste, wird
+    /// die Schublade geleert und ihr Live-Abgleich entsorgt: ein Formular je Datensatz.
+    /// </summary>
+    private void AktualisiereFelderDrawer()
+    {
+        if (_ansicht?.ListeSichtbar == true)
+            _novaWorkspace?.LeereFelderDrawer();
+        else
+            _novaWorkspace?.AktualisiereFelderDrawer();
+    }
 
     private void ApplyDrawerHeight() => _novaWorkspace?.ApplyDrawerHeight();
 
@@ -43,6 +53,7 @@ public partial class DataPage
     private void SetNovaWorkspaceVisible(bool uebersicht, bool eingabefelder)
         => _novaWorkspace?.SetzeSichtbar(uebersicht, eingabefelder);
 
+    /// <summary>W01: Die Weiche zwischen Liste und Schublade liegt im Ansichtsumschalter.</summary>
     private void MeldeFormularKonflikt(string fieldName, string aktuellerWert, string eingabe)
-        => _novaWorkspace?.MeldeKonflikt(fieldName, aktuellerWert, eingabe);
+        => _ansicht?.MeldeKonflikt(fieldName, aktuellerWert, eingabe);
 }

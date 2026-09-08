@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.Domain.Models;
@@ -23,9 +25,18 @@ public sealed class DataPageAnsichtUmschalter
     /// <summary>Der bisherige Hinweis am Menuepunkt "Abdocken".</summary>
     public const string AbdockenTabelle = "Tabelle in separatem Fenster öffnen (Multi-Monitor)";
 
+    /// <summary>Loeschen in der Tabelle: Dort kann der Benutzer mehrere Zeilen markieren.</summary>
+    public const string LoeschenTabelle = "Markierte Zeilen löschen";
+
+    /// <summary>Loeschen in der Liste: Dort gibt es genau eine gewaehlte Haltung, und kein Del.</summary>
+    public const string LoeschenListe = "Haltung löschen";
+
+    /// <summary>Kennzeichnet den Loeschpunkt im geteilten Zeilenmenue (statt eines Namens im Ressourcenteil).</summary>
+    public const string LoeschenMarke = "loeschen";
+
     /// <summary>Die benannten Elemente der Haltungsseite aus DataPage.xaml.</summary>
     public sealed record Elemente(
-        FrameworkElement Tabelle,
+        DataGrid Tabelle,
         FrameworkElement AlteAnsicht,
         HaltungAufklappListe Liste,
         FrameworkElement Spaltenchips,
@@ -34,12 +45,15 @@ public sealed class DataPageAnsichtUmschalter
         MenuItem AlteAnsichtSchalter,
         MenuItem ListeSchalter,
         MenuItem TabelleSchalter,
-        MenuItem AbdockenSchalter);
+        MenuItem AbdockenSchalter,
+        ContextMenu ZeilenMenue);
 
     private readonly Elemente _e;
     private readonly Func<AppSettings?> _settings;
     private readonly Action _speichern;
     private readonly Action<bool, bool> _setzeArbeitsflaeche;
+    private readonly Action<string, string, string> _konfliktAnListe;
+    private readonly Action<string, string, string> _konfliktAnSchublade;
 
     /// <param name="speichern">
     /// Speichert die Einstellungen. Bewusst ein eigener Rueckruf und kein direkter Aufruf von
@@ -50,17 +64,56 @@ public sealed class DataPageAnsichtUmschalter
         Elemente elemente,
         Func<AppSettings?> settings,
         Action speichern,
-        Action<bool, bool> setzeArbeitsflaeche)
+        Action<bool, bool> setzeArbeitsflaeche,
+        Action<string, string, string> konfliktAnListe,
+        Action<string, string, string> konfliktAnSchublade)
     {
         _e = elemente ?? throw new ArgumentNullException(nameof(elemente));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _speichern = speichern ?? throw new ArgumentNullException(nameof(speichern));
         _setzeArbeitsflaeche = setzeArbeitsflaeche ?? throw new ArgumentNullException(nameof(setzeArbeitsflaeche));
+        _konfliktAnListe = konfliktAnListe ?? throw new ArgumentNullException(nameof(konfliktAnListe));
+        _konfliktAnSchublade = konfliktAnSchublade ?? throw new ArgumentNullException(nameof(konfliktAnSchublade));
+    }
+
+    /// <summary>
+    /// W01: Die verworfene Eingabe gehoert in die Kopfzeile des Formulars, das sie gezeigt hat —
+    /// in der Listenansicht die aufgeklappte Zeile, sonst die Eingabefelder-Schublade. Ohne diese
+    /// Weiche meldete jeder Konflikt in die Schublade, die in der Liste gar nicht sichtbar ist.
+    /// </summary>
+    public void MeldeKonflikt(string feld, string aktuellerWert, string eingabe)
+    {
+        if (ListeZeigtFormular)
+            _konfliktAnListe(feld, aktuellerWert, eingabe);
+        else
+            _konfliktAnSchublade(feld, aktuellerWert, eingabe);
+    }
+
+    /// <summary>
+    /// Was die SICHTBARE Ansicht markiert hat. Die Mehrfachauswahl der Tabelle ueberlebt einen
+    /// Ansichtswechsel; ohne diese Unterscheidung loeschte die Liste fuenf Haltungen, obwohl nur
+    /// eine markiert aussieht.
+    /// </summary>
+    public IReadOnlyList<HaltungRecord> MarkierteZeilen(HaltungRecord? gewaehlt)
+    {
+        if (!ListeSichtbar)
+            return _e.Tabelle.SelectedItems.OfType<HaltungRecord>().ToList();
+
+        return gewaehlt is null ? [] : [gewaehlt];
     }
 
     // Die Wahl dieses Programmlaufs. Sie zaehlt nur, solange es noch keine Einstellungen gibt
     // (Seitenaufbau vor dem ViewModel); sobald welche da sind, gewinnen die gespeicherten.
     private string? _gewaehltOhneEinstellungen;
+
+    /// <summary>Zeigt die Seite gerade die Aufklapp-Liste?</summary>
+    public bool ListeSichtbar => _e.Liste.Visibility == Visibility.Visible;
+
+    /// <summary>
+    /// Steht das bearbeitbare Formular gerade in der Liste? Nur dann gehoert ein Konflikthinweis
+    /// dorthin; sonst in die Eingabefelder-Schublade der Tabelle.
+    /// </summary>
+    public bool ListeZeigtFormular => ListeSichtbar && _e.Liste.Aufgeklappt is not null;
 
     /// <summary>Die gespeicherte Nova-Ansicht, normalisiert ("liste" oder "tabelle").</summary>
     public string Gewaehlt
@@ -103,8 +156,26 @@ public sealed class DataPageAnsichtUmschalter
         _e.ListeSchalter.IsEnabled = _e.AlteAnsichtSchalter.IsEnabled;
         _e.TabelleSchalter.IsEnabled = _e.AlteAnsichtSchalter.IsEnabled;
 
+        // Der Loeschpunkt im geteilten Zeilenmenue sagt, was er wirklich tut. In der Liste ist
+        // genau eine Haltung gewaehlt, und die Del-Taste loescht dort nicht — dann darf auch
+        // kein Tastenkuerzel danebenstehen.
+        foreach (var punkt in _e.ZeilenMenue.Items.OfType<MenuItem>())
+        {
+            if (punkt.Tag as string != LoeschenMarke)
+                continue;
+            punkt.Header = sicht.Liste ? LoeschenListe : LoeschenTabelle;
+            punkt.InputGestureText = sicht.Liste ? string.Empty : "Del";
+        }
+
         if (sicht.Liste)
+        {
+            // Die Mehrfachauswahl der Tabelle ueberlebt den Wechsel sonst unsichtbar weiter —
+            // und "Loeschen" nimmt sich dann fuenf Haltungen, obwohl eine markiert aussieht.
+            _e.Tabelle.SelectedItems.Clear();
+            if (_e.Liste.SelectedItem is { } gewaehlt)
+                _e.Tabelle.SelectedItem = gewaehlt;
             _e.Liste.ScrolleZurAuswahl();
+        }
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Runtime.ExceptionServices;
 using System.Threading;
@@ -173,6 +174,113 @@ public sealed class DataPageAnsichtUmschalterTests
         });
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (7): Eine gespeicherte Wahl gilt beim Seitenaufbau — der erste
+    /// <c>WendeAn</c> liest die Einstellungen, nicht den Standard.
+    /// </summary>
+    [Fact]
+    public void Eine_gespeicherte_Tabellenansicht_gilt_schon_beim_Aufbau()
+    {
+        RunOnSta(() =>
+        {
+            var p = new Pruefstand();
+            p.Settings.HaltungenAnsicht = "tabelle";
+
+            p.Umschalter.WendeAn();
+
+            Assert.Equal(Visibility.Visible, p.Tabelle.Visibility);
+            Assert.Equal(Visibility.Collapsed, p.Liste.Visibility);
+            Assert.True(p.TabelleSchalter.IsChecked);
+            // Beim Aufbau wird nichts gespeichert.
+            Assert.Equal(0, p.Gespeichert);
+        });
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (1): Der Konfliktrueckruf der Formularfabrik meldete immer in die
+    /// Eingabefelder-Schublade — in der Listenansicht ist die gar nicht sichtbar, die verworfene
+    /// Eingabe verschwand also spurlos. Gemeldet wird jetzt an das Formular, das sie gezeigt hat.
+    /// </summary>
+    [Fact]
+    public void Ein_Konflikt_landet_in_dem_Formular_das_ihn_gezeigt_hat()
+    {
+        RunOnSta(() =>
+        {
+            var p = new Pruefstand();
+            p.Umschalter.WendeAn();
+
+            // Liste sichtbar, aber nichts aufgeklappt: Das Formular steht nicht in der Liste.
+            Assert.False(p.Umschalter.ListeZeigtFormular);
+            p.Umschalter.MeldeKonflikt("Bemerkungen", "Neu", "Alt + Zusatz");
+            Assert.Empty(p.KonflikteListe);
+            Assert.Single(p.KonflikteSchublade);
+
+            // Aufgeklappte Haltung: Der Hinweis gehoert in ihre Kopfzeile.
+            p.Liste.KlappeAuf(p.Datensaetze[1]);
+            Assert.True(p.Umschalter.ListeZeigtFormular);
+            p.Umschalter.MeldeKonflikt("Bemerkungen", "Neu", "Alt + Zusatz");
+            Assert.Equal(("Bemerkungen", "Neu", "Alt + Zusatz"), Assert.Single(p.KonflikteListe));
+            Assert.Single(p.KonflikteSchublade);
+
+            // Tabellenansicht: wieder die Schublade, auch wenn die Liste noch etwas offen haette.
+            p.Umschalter.Waehle("tabelle");
+            Assert.False(p.Umschalter.ListeZeigtFormular);
+            p.Umschalter.MeldeKonflikt("Bemerkungen", "Neu", "Alt + Zusatz");
+            Assert.Single(p.KonflikteListe);
+            Assert.Equal(2, p.KonflikteSchublade.Count);
+        });
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (2): Die Mehrfachauswahl der Tabelle ueberlebte den Ansichtswechsel. In der
+    /// Liste sah eine Haltung markiert aus, geloescht wurden fuenf.
+    /// </summary>
+    [Fact]
+    public void Geloescht_wird_nur_was_die_sichtbare_Ansicht_markiert_hat()
+    {
+        RunOnSta(() =>
+        {
+            var p = new Pruefstand();
+            p.Tabelle.SelectionMode = DataGridSelectionMode.Extended;
+            p.Tabelle.ItemsSource = p.Datensaetze;
+            p.Umschalter.Waehle("tabelle");
+            foreach (var record in p.Datensaetze)
+                p.Tabelle.SelectedItems.Add(record);
+
+            Assert.Equal(4, p.Umschalter.MarkierteZeilen(p.Datensaetze[0]).Count);
+
+            // Wechsel auf die Liste: Die Tabellenauswahl wird auf die eine gewaehlte reduziert.
+            p.Liste.SelectedItem = p.Datensaetze[2];
+            p.Umschalter.Waehle("liste");
+
+            Assert.Equal([p.Datensaetze[2]], p.Umschalter.MarkierteZeilen(p.Datensaetze[2]));
+            Assert.Equal(1, p.Tabelle.SelectedItems.Count);
+            // Ohne gewaehlte Haltung wird nichts geloescht.
+            Assert.Empty(p.Umschalter.MarkierteZeilen(null));
+        });
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (2): Der Loeschpunkt im geteilten Zeilenmenue sagt, was er wirklich tut. In der
+    /// Liste gilt kein Del — dann darf auch kein Tastenkuerzel danebenstehen.
+    /// </summary>
+    [Fact]
+    public void Der_Loeschpunkt_nennt_die_richtige_Menge_und_das_richtige_Kuerzel()
+    {
+        RunOnSta(() =>
+        {
+            var p = new Pruefstand();
+
+            p.Umschalter.Waehle("liste");
+            Assert.Equal(DataPageAnsichtUmschalter.LoeschenListe, p.LoeschenSchalter.Header);
+            Assert.Equal(string.Empty, p.LoeschenSchalter.InputGestureText);
+
+            p.Umschalter.Waehle("tabelle");
+            Assert.Equal(DataPageAnsichtUmschalter.LoeschenTabelle, p.LoeschenSchalter.Header);
+            Assert.Equal("Del", p.LoeschenSchalter.InputGestureText);
+        });
+    }
+
     /// <summary>Die Elemente der Seite als schlichte Controls; nur die Liste ist das echte Control.</summary>
     private sealed class Pruefstand
     {
@@ -181,13 +289,18 @@ public sealed class DataPageAnsichtUmschalterTests
             Datensaetze = new ObservableCollection<HaltungRecord>(
                 Enumerable.Range(1, 4).Select(Datensatz));
             Liste = new HaltungAufklappListe { ItemsSource = Datensaetze };
+            // Das geteilte Zeilenmenue traegt den Loeschpunkt; der Umschalter findet ihn ueber
+            // seine Marke im Tag (im Ressourcenteil gibt es keinen x:Name).
+            ZeilenMenue.Items.Add(LoeschenSchalter);
             Umschalter = new DataPageAnsichtUmschalter(
                 new DataPageAnsichtUmschalter.Elemente(
                     Tabelle, AlteAnsicht, Liste, Spaltenchips, AlteSuche, NovaSuche,
-                    AlteAnsichtSchalter, ListeSchalter, TabelleSchalter, AbdockenSchalter),
+                    AlteAnsichtSchalter, ListeSchalter, TabelleSchalter, AbdockenSchalter, ZeilenMenue),
                 () => Settings,
                 () => Gespeichert++,
-                (uebersicht, felder) => Arbeitsflaeche = (uebersicht, felder));
+                (uebersicht, felder) => Arbeitsflaeche = (uebersicht, felder),
+                (feld, aktuell, eingabe) => KonflikteListe.Add((feld, aktuell, eingabe)),
+                (feld, aktuell, eingabe) => KonflikteSchublade.Add((feld, aktuell, eingabe)));
         }
 
         public ObservableCollection<HaltungRecord> Datensaetze { get; }
@@ -205,6 +318,10 @@ public sealed class DataPageAnsichtUmschalterTests
         public MenuItem ListeSchalter { get; } = new() { IsCheckable = true, Tag = "liste" };
         public MenuItem TabelleSchalter { get; } = new() { IsCheckable = true, Tag = "tabelle" };
         public MenuItem AbdockenSchalter { get; } = new();
+        public MenuItem LoeschenSchalter { get; } = new() { Tag = DataPageAnsichtUmschalter.LoeschenMarke };
+        public ContextMenu ZeilenMenue { get; } = new();
+        public List<(string Feld, string Aktuell, string Eingabe)> KonflikteListe { get; } = [];
+        public List<(string Feld, string Aktuell, string Eingabe)> KonflikteSchublade { get; } = [];
 
         private static HaltungRecord Datensatz(int nummer)
         {

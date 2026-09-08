@@ -20,23 +20,53 @@ public partial class DataPage
         _ansicht = new DataPageAnsichtUmschalter(
             new DataPageAnsichtUmschalter.Elemente(
                 Grid, HaltungsansichtView, AufklappListe, ColumnViewChips, AlteSucheLeiste,
-                NovaSucheLeiste, HaltungsansichtToggle, AnsichtListeMenu, AnsichtTabelleMenu, UndockButton),
+                NovaSucheLeiste, HaltungsansichtToggle, AnsichtListeMenu, AnsichtTabelleMenu,
+                UndockButton, (System.Windows.Controls.ContextMenu)FindResource("HaltungZeilenMenue")),
             () => (DataContext as DataPageViewModel)?.Settings,
             () => (DataContext as DataPageViewModel)?.Settings.Save(),
-            (uebersicht, felder) => SetNovaWorkspaceVisible(uebersicht, felder));
+            (uebersicht, felder) => SetNovaWorkspaceVisible(uebersicht, felder),
+            (feld, aktuell, eingabe) => _aufklappListe?.MeldeKonflikt(feld, aktuell, eingabe),
+            (feld, aktuell, eingabe) => _novaWorkspace?.MeldeKonflikt(feld, aktuell, eingabe));
+        _docking = new DataPageDockingHost(
+            new DataPageDockingHost.Elemente(
+                GridHost, Grid, HaltungsansichtView, UndockedPlaceholder, UndockButton, HaltungsansichtToggle),
+            () => DataContext as DataPageViewModel,
+            (text, titel) => (DataContext as DataPageViewModel)?.Dialogs.Warn(text, titel),
+            WendeAnsichtAn);
         WendeAnsichtAn();
     }
 
-    /// <summary>Ansicht anwenden und einen noch offenen Sprung von aussen nachholen.</summary>
+    /// <summary>Ansicht anwenden, Formulare nachziehen, offenen Sprung von aussen nachholen.</summary>
     private void WendeAnsichtAn()
     {
         _ansicht?.WendeAn();
+        AktualisiereFormulare();
         _ansicht?.ZeigeHaltung((DataContext as DataPageViewModel)?.NimmAnzeigeAuftrag());
+    }
+
+    /// <summary>
+    /// Genau ein Formular je Datensatz: In der Liste steht es in der aufgeklappten Zeile, in der
+    /// Tabelle in der Schublade. Das jeweils unsichtbare wird entsorgt, nicht nur ausgeblendet.
+    /// </summary>
+    private void AktualisiereFormulare()
+    {
+        if (_ansicht?.ListeSichtbar != true)
+            AufklappListe.KlappeZu();
+        _aufklappListe?.AktualisiereFormular();
+        AktualisiereFelderDrawer();
     }
 
     private void HaltungsansichtToggle_Changed(object sender, RoutedEventArgs e) => WendeAnsichtAn();
 
-    private void AnsichtMenu_Click(object sender, RoutedEventArgs e) => _ansicht?.Waehle(sender);
+    /// <summary>
+    /// Ansicht aus dem Menue waehlen. Danach laeuft derselbe Weg wie beim Seitenaufbau — sonst
+    /// bliebe das Formular der vorigen Ansicht stehen.
+    /// </summary>
+    private void AnsichtMenu_Click(object sender, RoutedEventArgs e)
+    {
+        _ansicht?.Waehle(sender);
+        WendeAnsichtAn();
+    }
 
     /// <summary>Auswahl gewechselt: offenes Formular pruefen und die Zeile in Sicht scrollen.</summary>
     private void AktualisiereAufklappListe()

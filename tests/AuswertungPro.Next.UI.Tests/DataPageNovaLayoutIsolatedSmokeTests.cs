@@ -8,6 +8,7 @@ using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Pages;
 using AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
+using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -85,6 +86,7 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
             Assert.Equal(2, themenPanel!.Columns);
             drawer.IsTall = false;
             Layout(page);
+            WechsleZurueckZurListe(page, drawer);
 
             foreach (var theme in new[] { ThemeManager.Dark, ThemeManager.Light })
             {
@@ -350,6 +352,29 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
         Assert.Equal(Visibility.Visible, grid.Visibility);
         Assert.True(tabelleMenu.IsChecked);
         Assert.False(listeMenu.IsChecked);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (3): Zurueck zur Liste — die Eingabefelder-Schublade wird dabei geleert, nicht
+    /// nur ausgeblendet. Sonst haengen zwei Formulare am selben Datensatz, und der
+    /// Konflikthinweis landet im unsichtbaren.
+    /// </summary>
+    private static void WechsleZurueckZurListe(Views.Pages.DataPage page, HaltungFelderDrawer drawer)
+    {
+        drawer.Titel = "10001-10002";
+        drawer.Hinweis = "Ein alter Hinweis";
+        drawer.Groups = [new RecordDetailGroup("Stammdaten", string.Empty, [new RecordDetailItem("Baujahr", "1970", _ => { })])];
+
+        var listeMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtListeMenu"));
+        listeMenu.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Layout(page);
+
+        var liste = Assert.IsType<HaltungAufklappListe>(page.FindName("AufklappListe"));
+        Assert.Equal(Visibility.Visible, liste.Visibility);
+        Assert.Equal(Visibility.Collapsed, drawer.Visibility);
+        Assert.Null(drawer.Groups);
+        Assert.Equal(string.Empty, drawer.Titel);
+        Assert.Equal(string.Empty, drawer.Hinweis);
     }
 
     private static Color ColorOf(object brush) => Assert.IsType<SolidColorBrush>(brush).Color;
