@@ -78,6 +78,22 @@ public sealed class SchachtgrafikSvgBuilderTests
         Assert.Contains("+3", svg);
     }
 
+    /// <summary>
+    /// Fix-Runde 2 (Minor): Der "+n"-Zaehler bekommt eine eigene Hinweisflaeche mit den Namen
+    /// der dadurch ausgeblendeten Haltungen — sonst bleiben sie ohne jeden Anhaltspunkt.
+    /// </summary>
+    [Fact]
+    public void Der_Zaehler_fuer_ausgeblendete_Stummel_traegt_deren_Namen_im_Tooltip()
+    {
+        var zulaeufe = Enumerable.Range(1, 5)
+            .Select(i => new SchachtgrafikStummel($"H{i}", "DN200"))
+            .ToList();
+
+        var (_, marken) = Baue(zulaeufe: zulaeufe);
+
+        Assert.Contains(marken, m => m.Tooltip == "H3, H4, H5");
+    }
+
     /// <summary>Zulauf und Ablauf werden unabhaengig voneinander gezeichnet.</summary>
     [Fact]
     public void Zulauf_und_Ablauf_erscheinen_beide_und_unabhaengig_je_Seite()

@@ -269,7 +269,20 @@ public static class SchachtgrafikSvgBuilder
             }
 
             if (rest > 0)
-                Beschriftung(sb, textX, positionen[^1] + 4, $"+{rest}", anker, farbe: "#4B5563");
+            {
+                var restY = positionen[^1];
+                Beschriftung(sb, textX, restY + 4, $"+{rest}", anker, farbe: "#4B5563");
+
+                // Fix-Runde 2 (Minor): Der Zaehler bekommt eine Hinweisflaeche mit den Namen der
+                // dadurch ausgeblendeten Haltungen — sonst bleiben sie ohne jeden Anhaltspunkt.
+                var verdeckt = string.Join(", ", stummel.Skip(MaxStummelJeSeite).Select(s => s.Name));
+                marken.Add(new SchachtgrafikMarke(
+                    links ? textX - 60 : textX,
+                    restY - 8d,
+                    60d,
+                    16d,
+                    verdeckt));
+            }
         }
 
         void ZeichneSchaeden(

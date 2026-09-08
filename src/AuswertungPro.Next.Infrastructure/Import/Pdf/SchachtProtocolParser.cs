@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Reports;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
@@ -10,22 +11,11 @@ namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 internal static class SchachtProtocolParser
 {
     /// <summary>
-    /// Reihenfolge der Bauteile fuer die Schadens-Sortierung (Anzeigereihenfolge).
+    /// Reihenfolge der Bauteile fuer die Schadens-Sortierung (Anzeigereihenfolge). Uebernimmt
+    /// <see cref="SchachtBauteilNamen.Kanonisch"/> (Application) als die eine Wahrheit — die
+    /// Schachtgrafik prueft dort, ob ein Code ueberhaupt einer dieser Bauteilnamen ist.
     /// </summary>
-    internal static readonly string[] SchachtComponentOrder =
-    {
-        "Schacht",
-        "Schachtdeckel",
-        "Deckelrahmen",
-        "Schachthals",
-        "Konus",
-        "Schachtrohr",
-        "Bankett",
-        "Durchlaufrinne",
-        "Anschluss",
-        "Leiter/Steigeisen",
-        "Tauchbogen"
-    };
+    internal static readonly string[] SchachtComponentOrder = SchachtBauteilNamen.Kanonisch.ToArray();
 
     /// <summary>
     /// Parst alle relevanten Felder aus dem Volltext eines Schachtprotokolls.
