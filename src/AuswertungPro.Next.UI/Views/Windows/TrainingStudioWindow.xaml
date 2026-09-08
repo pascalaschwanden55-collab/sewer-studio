@@ -503,23 +503,26 @@
                                          Margin="0,2,0,8"/>
 
                                 <TextBlock Text="Schadensstufe (optional)" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
-                                    <Button Content="1" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity1Brush}"
+                                <!-- Optik-Nachpruefung O3 (R3): fuenf gleich breite Knoepfe ueber die ganze
+                                     Spaltenbreite — als StackPanel mit fester Breite liefen 4 und 5 rechts
+                                     aus der 330-px-Spalte. -->
+                                <UniformGrid Columns="5" Margin="0,2,0,8">
+                                    <Button Content="1" Margin="0,0,4,0" Background="{DynamicResource Severity1Brush}"
                                             Foreground="White" FontWeight="Bold"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="1"/>
-                                    <Button Content="2" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity2Brush}"
+                                    <Button Content="2" Margin="0,0,4,0" Background="{DynamicResource Severity2Brush}"
                                             Foreground="White" FontWeight="Bold"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="2"/>
-                                    <Button Content="3" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity3Brush}"
+                                    <Button Content="3" Margin="0,0,4,0" Background="{DynamicResource Severity3Brush}"
                                             Foreground="White" FontWeight="Bold"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="3"/>
-                                    <Button Content="4" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity4Brush}"
+                                    <Button Content="4" Margin="0,0,4,0" Background="{DynamicResource Severity4Brush}"
                                             Foreground="White" FontWeight="Bold"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="4"/>
-                                    <Button Content="5" Width="40" Background="{DynamicResource Severity5Brush}"
+                                    <Button Content="5" Background="{DynamicResource Severity5Brush}"
                                             Foreground="White" FontWeight="Bold"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="5"/>
-                                </StackPanel>
+                                </UniformGrid>
                                 <TextBlock Text="{Binding Severity, StringFormat='Gewählt: Stufe {0}', TargetNullValue='Keine Stufe gewählt'}"
                                            FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
 

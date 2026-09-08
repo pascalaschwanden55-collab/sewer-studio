@@ -125,4 +125,17 @@ public sealed class DesignAuditOptikNachpruefungTests
         Assert.Contains("CornerRadius=\"{DynamicResource RadiusL}\"", stil);
         Assert.Contains("DataType=\"{x:Type sys:String}\"", stil);
     }
+
+    /// <summary>O3 / R3: Die fuenf Stufenknoepfe teilen sich die Breite, statt rechts auszulaufen.</summary>
+    [Fact]
+    public void Schadensstufen_1_bis_5_teilen_sich_die_Breite_in_einem_UniformGrid()
+    {
+        var xaml = Ui("Views", "Windows", "TrainingStudioWindow.xaml");
+        var start = xaml.IndexOf("Text=\"Schadensstufe (optional)\"", StringComparison.Ordinal);
+        Assert.True(start >= 0);
+        var ausschnitt = xaml[start..xaml.IndexOf("Beschreibung (mind. 10 Zeichen)", start, StringComparison.Ordinal)];
+        Assert.Contains("<UniformGrid Columns=\"5\"", ausschnitt);
+        Assert.DoesNotContain("Width=\"40\"", ausschnitt);
+        Assert.Equal(5, Regex.Matches(ausschnitt, "CommandParameter=\"[1-5]\"").Count);
+    }
 }
