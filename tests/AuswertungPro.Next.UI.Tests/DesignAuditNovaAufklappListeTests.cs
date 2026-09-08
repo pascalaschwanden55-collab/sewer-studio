@@ -148,7 +148,7 @@ public sealed class DesignAuditNovaAufklappListeTests
     {
         var xaml = Xaml();
         Assert.Contains("GrossbuchstabenConverter", xaml, StringComparison.Ordinal);
-        foreach (var beschriftung in new[] { "Haltung", "Strasse", "Material", "DN", "Länge", "Zustand", "KI", "Prüfung", "Video", "Protokoll" })
+        foreach (var beschriftung in new[] { "Haltung", "Strasse", "Material", "DN", "Länge", "Zustand", "KI", "Prüfung", "Video", "PDF" })
             Assert.Contains($"Source={beschriftung},", xaml, StringComparison.Ordinal);
     }
 

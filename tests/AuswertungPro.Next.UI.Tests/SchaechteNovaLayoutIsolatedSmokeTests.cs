@@ -200,7 +200,7 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
                 () => vm,
                 r => [new AuswertungPro.Next.UI.Views.Windows.RecordDetailGroup(
                     "Stammdaten", string.Empty,
-                    [new AuswertungPro.Next.UI.Views.Windows.RecordDetailItem("Baujahr", r.GetFieldValue("Baujahr"), _ => { })])],
+                    [new AuswertungPro.Next.UI.Views.Windows.RecordDetailItem("Baujahr", r.GetFieldValue("Baujahr"), _ => { }) { FieldName = "Baujahr" }])],
                 _ => { });
 
             // Tabellenansicht: die Schublade traegt das Formular des gewaehlten Schachts.
@@ -209,6 +209,8 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
             Assert.Equal("S-1", drawer.Titel);
             var altesItem = drawer.Groups!.Single().Items.Single();
             Assert.Equal("1970", altesItem.Value);
+            record.SetFieldValue("Baujahr", "1980", FieldSource.Manual, userEdited: true);
+            Assert.Equal("1980", altesItem.Value); // Abgleich ist vor dem Entsorgen wirklich aktiv
 
             // Aufklapp-Liste: die Schublade wird geleert, nicht nur ausgeblendet — UND ihr
             // Live-Sync wird entsorgt, sonst liefe er unsichtbar auf demselben Datensatz weiter.
@@ -216,7 +218,7 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
             Assert.Null(drawer.Groups);
             Assert.Equal(string.Empty, drawer.Titel);
             record.SetFieldValue("Baujahr", "2020", FieldSource.Manual, userEdited: true);
-            Assert.Equal("1970", altesItem.Value); // unveraendert: entsorgt, nicht nur unsichtbar
+            Assert.Equal("1980", altesItem.Value); // unveraendert: entsorgt, nicht nur unsichtbar
 
             // Und zurueck zur Tabelle: derselbe Weg fuellt sie wieder, mit dem aktuellen Wert.
             controller.AktualisiereFelderDrawer();

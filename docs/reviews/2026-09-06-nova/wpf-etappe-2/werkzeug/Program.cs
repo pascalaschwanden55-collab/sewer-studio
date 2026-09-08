@@ -19,6 +19,7 @@ using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.Views.Controls;
 using AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
+using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 using Microsoft.Extensions.Logging.Abstractions;
 
 /// <summary>
@@ -29,12 +30,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 /// Seiten: Uebersicht | Haltungen | Schaechte | Import | Einstellungen | Player | TrainingStudio
 /// Varianten (Etappe 2b): "" = erste Zeile gewaehlt (Standard) | "alle" = zusaetzlich die
 /// Spaltenansicht "Alle Spalten" waehlen | "ohneauswahl" = keine Zeile waehlen (Leerzustand).
+/// Schachtvariante: "schaechteliste" auf Seite Schaechte verwendet denselben Fotoablauf.
 /// Variante (Aufklapp-Liste, 2026-09-08): "haltungenliste" (nur Seite Haltungen) fotografiert
 /// die neue Standardansicht zuerst zugeklappt, klappt danach die erste Haltung auf und
 /// fotografiert erneut. Aus EINEM uebergebenen Ausgabepfad je Theme werden zwei Dateien
 /// "-zu-"/"-auf-" abgeleitet (siehe <see cref="AbgeleitetePfade"/>).
 /// </summary>
-internal static class Program
+internal static partial class Program
 {
     private sealed class ProbeApp : System.Windows.Application
     {
@@ -46,12 +48,13 @@ internal static class Program
         }
     }
 
-    static readonly string Root = @"C:\Sewer-Studio_KI_4.5-nova\.tmp\nova-etappe2\bedienung";
+    static readonly string Root = @"C:\Sewer-Studio_KI_4.5-nova\.tmp\nova-abnahme-codex\bedienung";
     static readonly string Bin = @"C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.UI\bin\Debug\net10.0-windows10.0.19041";
     static readonly string AppXaml = @"C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.UI\App.xaml";
     static string AppliedTheme = "Dark";
     static string AppliedPage = "Haltungen";
     static string AppliedVariant = "";
+    static bool PruefungFehlgeschlagen;
 
     [STAThread]
     static int Main(string[] args)
@@ -71,7 +74,7 @@ internal static class Program
             var path = candidates.FirstOrDefault(File.Exists) ?? candidates[^1];
             return File.Exists(path) ? AssemblyLoadContext.Default.LoadFromAssemblyPath(path) : null;
         };
-        try { Run(args); return 0; }
+        try { Run(args); return PruefungFehlgeschlagen ? 1 : 0; }
         catch (Exception ex) { File.WriteAllText(Path.Combine(Root, "host-fehler.txt"), ex.ToString()); return 1; }
     }
 
@@ -89,8 +92,8 @@ internal static class Program
         AppliedPage = seite;
         AppliedVariant = variante;
         // Aufgabe 3 "Bilder": eigener Fotoweg fuer die Aufklapp-Liste statt der DataGrid-Messung.
-        var istHaltungenListe = string.Equals(seite, "Haltungen", StringComparison.OrdinalIgnoreCase)
-            && variante == "haltungenliste";
+        var istAufklappListe = (seite == "Haltungen" && variante == "haltungenliste")
+            || (seite == "Schaechte" && variante == "schaechteliste");
 
         var projectPath = Path.Combine(Root, "projekt", "Projektdateien", "projekt.json");
         Directory.CreateDirectory(Path.GetDirectoryName(projectPath)!);
@@ -242,11 +245,11 @@ internal static class Program
                 else if (schritt >= 5)
                 {
                     timer.Stop();
-                    if (istHaltungenListe)
+                    if (istAufklappListe)
                     {
                         // Eigener Ablauf mit einer zweiten, verzoegerten Aufnahme (siehe unten);
                         // der normale Einzelbild-Pfad passt hier nicht.
-                        FotografiereHaltungenListe(window, ausgabe);
+                        FotografiereAufklappListe(window, ausgabe);
                         return;
                     }
                     try
@@ -271,7 +274,8 @@ internal static class Program
             }
             catch (Exception ex)
             {
-                File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"), ex + Environment.NewLine);
+                PruefungFehlgeschlagen = true;
+                    File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"), ex + Environment.NewLine);
             }
         };
         timer.Start();
@@ -305,7 +309,7 @@ internal static class Program
     /// Sleep wuerde den Dispatcher blockieren und wuerde weder Layout noch Eintrittsanimation
     /// der neu aufgebauten Themen fertig rendern lassen; deshalb ein zweiter, einmaliger Timer.
     /// </summary>
-    static void FotografiereHaltungenListe(Window window, string? ausgabeBasis)
+    static void FotografiereAufklappListe(Window window, string? ausgabeBasis)
     {
         try
         {
@@ -315,18 +319,16 @@ internal static class Program
             if (zuPfad is not null)
                 Foto(window, zuPfad);
 
-            var liste = FindeAufklappListe(window);
-            if (liste is null)
+            var shell = (ShellViewModel)window.DataContext;
+            if (AppliedPage == "Schaechte")
             {
-                File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"),
-                    "AufklappListe-Control nicht gefunden" + Environment.NewLine);
+                var liste = Descendants(window).OfType<SchachtAufklappListe>().Single();
+                liste.KlappeAuf(shell.Project.SchaechteData.First());
             }
             else
             {
-                var shell = (ShellViewModel)window.DataContext;
-                var haltung = shell.Project.Data.FirstOrDefault(
-                    r => r.GetFieldValue(FieldKeys.HoldingName) == "10001-10002");
-                liste.KlappeAuf(haltung);
+                var liste = FindeAufklappListe(window) ?? throw new InvalidOperationException("Haltungsliste fehlt");
+                liste.KlappeAuf(shell.Project.Data.First(r => r.GetFieldValue(FieldKeys.HoldingName) == "10001-10002"));
             }
 
             var warten = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
@@ -339,9 +341,11 @@ internal static class Program
                     MesseAufklappListe(window, "auf");
                     if (aufPfad is not null)
                         Foto(window, aufPfad);
+                    PruefeAnsichtswechsel(window);
                 }
                 catch (Exception ex)
                 {
+                    PruefungFehlgeschlagen = true;
                     File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"), ex + Environment.NewLine);
                 }
                 finally
@@ -354,7 +358,8 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"), ex + Environment.NewLine);
+            PruefungFehlgeschlagen = true;
+                    File.AppendAllText(Path.Combine(Root, "ui-fehler.txt"), ex + Environment.NewLine);
             System.Windows.Application.Current!.Shutdown();
             Dispatcher.CurrentDispatcher.BeginInvokeShutdown(DispatcherPriority.Background);
         }
@@ -417,7 +422,9 @@ internal static class Program
     /// </summary>
     static void MesseAufklappListe(Window window, string zustand)
     {
-        var liste = FindeAufklappListe(window);
+        FrameworkElement? liste = AppliedPage == "Schaechte"
+            ? Descendants(window).OfType<SchachtAufklappListe>().SingleOrDefault()
+            : FindeAufklappListe(window);
         var listBox = liste is null ? null : Descendants(liste).OfType<ListBox>().FirstOrDefault(l => l.Name == "Liste");
         var viewport = listBox is null ? null : Descendants(listBox).OfType<ScrollContentPresenter>().FirstOrDefault();
         var zeilen = listBox is null
@@ -434,7 +441,11 @@ internal static class Program
             return bounds.Bottom > 0 && bounds.Top < viewport.ActualHeight;
         });
 
-        var offeneHaltung = liste?.Aufgeklappt;
+        object? offeneHaltung = liste switch {
+            HaltungAufklappListe h => h.Aufgeklappt,
+            SchachtAufklappListe s => s.Aufgeklappt,
+            _ => null
+        };
         var offeneZeile = offeneHaltung is null ? null : zeilen.FirstOrDefault(z => ReferenceEquals(z.DataContext, offeneHaltung));
         var recordDetailsViewImBaum = liste is null ? 0 : Descendants(liste).OfType<RecordDetailsView>().Count();
         var dpi = VisualTreeHelper.GetDpi(window);
@@ -450,7 +461,9 @@ internal static class Program
             zeilenGesamt = zeilen.Length,
             sichtbareKopfzeilen,
             recordDetailsViewImBaum,
-            offeneHaltung = offeneHaltung?.GetFieldValue(FieldKeys.HoldingName),
+            offenesObjekt = offeneHaltung switch {
+                HaltungRecord h => h.GetFieldValue(FieldKeys.HoldingName),
+                SchachtRecord s => s.GetFieldValue("Schachtnummer"), _ => null },
             hoeheOffeneZeile = offeneZeile is null ? 0d : Math.Round(offeneZeile.ActualHeight, 1),
             viewportHoehe = viewport is null ? 0 : Math.Round(viewport.ActualHeight, 1),
             width = window.ActualWidth,

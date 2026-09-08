@@ -33,7 +33,17 @@ public partial class SchachtgrafikControl : UserControl
     public SchachtgrafikControl()
     {
         InitializeComponent();
-        Loaded += (_, _) => FordereNeuzeichnenAn();
+        Loaded += (_, _) =>
+        {
+            // Dieselbe Instanz kann nach Unloaded wieder in die Seite eingesetzt werden.
+            AbmeldenVonDatensatz();
+            if (Record is { } record)
+            {
+                record.PropertyChanged += OnDatensatzGeaendert;
+                _abonnierterDatensatz = record;
+            }
+            FordereNeuzeichnenAn();
+        };
         IsVisibleChanged += OnIsVisibleChanged;
         Unloaded += (_, _) => AbmeldenVonDatensatz();
     }

@@ -33,7 +33,23 @@ public partial class HaltungsgrafikControl : UserControl
     public HaltungsgrafikControl()
     {
         InitializeComponent();
-        Loaded += (_, _) => FordereNeuzeichnenAn();
+        Loaded += (_, _) =>
+        {
+            // Dieselbe Instanz kann nach Unloaded wieder in die Seite eingesetzt werden.
+            AbmeldenVonDatensatz();
+            if (Record is { } record)
+            {
+                record.PropertyChanged += OnDatensatzGeaendert;
+                _abonnierterDatensatz = record;
+            }
+            AbmeldenVonEintraegen();
+            if (Entries is INotifyCollectionChanged sammlung)
+            {
+                sammlung.CollectionChanged += OnEintraegeGeaendert;
+                _abonnierteEintraege = sammlung;
+            }
+            FordereNeuzeichnenAn();
+        };
         IsVisibleChanged += OnIsVisibleChanged;
         Unloaded += (_, _) =>
         {

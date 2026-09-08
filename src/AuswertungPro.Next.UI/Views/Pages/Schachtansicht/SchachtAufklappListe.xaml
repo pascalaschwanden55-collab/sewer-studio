@@ -230,11 +230,11 @@
                     <TextBlock Grid.Column="4" Style="{StaticResource KopfText}" Text="{Binding Source=Material, Converter={StaticResource Grossbuchstaben}}"/>
                     <!-- Zwei Woerter: keine Binding-Source-Markuperweiterung (Leerzeichen im Wert),
                          deshalb hier bereits gross geschrieben statt ueber den Konverter. -->
-                    <TextBlock Grid.Column="5" Style="{StaticResource KopfTextRechts}" Text="INNENMASS 1"/>
-                    <TextBlock Grid.Column="6" Style="{StaticResource KopfTextRechts}" Text="INNENMASS 2"/>
+                    <TextBlock Grid.Column="5" Style="{StaticResource KopfTextRechts}" Text="INNEN 1" ToolTip="Innenmass 1 in mm"/>
+                    <TextBlock Grid.Column="6" Style="{StaticResource KopfTextRechts}" Text="INNEN 2" ToolTip="Innenmass 2 in mm"/>
                     <TextBlock Grid.Column="7" Style="{StaticResource KopfText}" Text="{Binding Source=Form, Converter={StaticResource Grossbuchstaben}}"/>
                     <TextBlock Grid.Column="8" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=Zustand, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="9" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=Protokoll, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="9" Style="{StaticResource KopfText}" TextAlignment="Center" Text="PDF" ToolTip="Protokoll"/>
                 </Grid>
             </Border>
 

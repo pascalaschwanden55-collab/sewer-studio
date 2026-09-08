@@ -154,7 +154,7 @@
                     <Border Background="{DynamicResource SuccessSubtleBrush}" BorderBrush="{DynamicResource SuccessBrush}" BorderThickness="1"
                             CornerRadius="{DynamicResource RadiusPill}" Padding="8,1"
                             Visibility="{Binding Pruefstand, Converter={StaticResource Aufzaehlung}, ConverterParameter=Abgeschlossen}">
-                        <TextBlock Text="{Binding PruefungText}" Foreground="{DynamicResource SuccessBrush}"
+                        <TextBlock Text="{Binding PruefungText}" Foreground="{DynamicResource SuccessTextBrush}"
                                    FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                     </Border>
                     <Border Background="{DynamicResource KiSubtleBrush}" BorderBrush="{DynamicResource KiTextBrush}" BorderThickness="1"
@@ -323,7 +323,7 @@
                     <TextBlock Grid.Column="7" Style="{StaticResource KopfText}" Text="{Binding Source=KI, Converter={StaticResource Grossbuchstaben}}"/>
                     <TextBlock Grid.Column="8" Style="{StaticResource KopfText}" Text="{Binding Source=Prüfung, Converter={StaticResource Grossbuchstaben}}"/>
                     <TextBlock Grid.Column="9" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=Video, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="10" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=Protokoll, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="10" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=PDF, Converter={StaticResource Grossbuchstaben}}" ToolTip="Protokoll"/>
                 </Grid>
             </Border>
 

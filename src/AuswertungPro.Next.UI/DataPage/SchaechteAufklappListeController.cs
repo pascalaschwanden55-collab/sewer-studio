@@ -48,6 +48,8 @@ public sealed class SchaechteAufklappListeController : IDisposable
         _liste.DetailBuilder = _detailBuilder;
         _liste.AufgeklapptChanged += OnAufgeklapptChanged;
         _verdrahtet = true;
+        // Ein nach Unloaded noch offenes Formular braucht wieder seinen Live-Abgleich.
+        AktualisiereFormular();
     }
 
     /// <summary>

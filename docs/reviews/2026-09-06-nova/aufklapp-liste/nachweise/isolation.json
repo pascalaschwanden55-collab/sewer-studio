@@ -1,0 +1,17 @@
+{
+  "process": 48700,
+  "productAssembly": "C:\\Sewer-Studio_KI_4.5-nova\\src\\AuswertungPro.Next.UI\\bin\\Debug\\net10.0-windows10.0.19041\\SewerStudio.dll",
+  "profile": "C:\\Sewer-Studio_KI_4.5-nova\\.tmp\\nova-abnahme-codex\\bedienung\\profil",
+  "KnowledgeRoot": "C:\\Sewer-Studio_KI_4.5-nova\\.tmp\\nova-abnahme-codex\\bedienung\\wissen",
+  "EvalSetRoot": "C:\\Sewer-Studio_KI_4.5-nova\\.tmp\\nova-abnahme-codex\\bedienung\\wissen\\eval_set",
+  "theme": "Dark",
+  "seite": "Schaechte",
+  "breite": 1920,
+  "hoehe": 1080,
+  "applicationOnStartupInvoked": false,
+  "realtimeMirrorStarted": false,
+  "qgisBridgeStarted": false,
+  "QgisHaltungenGpkgPath": "C:\\Sewer-Studio_KI_4.5-nova\\.tmp\\nova-abnahme-codex\\bedienung\\quellen\\leitungen.gpkg",
+  "QgisSchaechteGpkgPath": "C:\\Sewer-Studio_KI_4.5-nova\\.tmp\\nova-abnahme-codex\\bedienung\\quellen\\schaechte.gpkg",
+  "KatasterKennungenGpkgPath": "C:\\Sewer-Studio_KI_4.5-nova\\.tmp\\nova-abnahme-codex\\bedienung\\quellen\\kennungen.gpkg"
+}
