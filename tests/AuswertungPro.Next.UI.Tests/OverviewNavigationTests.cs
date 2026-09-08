@@ -58,6 +58,32 @@ public sealed class OverviewNavigationTests
         Assert.Equal("Haltungen", scope.Shell.SelectedNavItem?.Title);
         var dataPage = Assert.IsType<DataPageViewModel>(scope.Shell.CurrentPage);
         Assert.Same(record, dataPage.Selected);
+
+        // Nova, Aufklapp-Liste: Beim Seitenwechsel gibt es die Seite noch nicht. Der Auftrag
+        // bleibt deshalb liegen, bis sie ihn abholt — sonst ginge genau der erste Sprung
+        // verloren und die Haltung waere nur gewaehlt, nicht aufgeklappt.
+        Assert.Same(record, dataPage.NimmAnzeigeAuftrag());
+        Assert.Null(dataPage.NimmAnzeigeAuftrag());
+    }
+
+    [Fact]
+    public void Ein_Sprung_bei_offener_Haltungsseite_meldet_sich_direkt_statt_liegen_zu_bleiben()
+    {
+        using var scope = CreateOverview();
+        var record = new HaltungRecord();
+        record.SetFieldValue(FieldKeys.HoldingName, "36051-36329", FieldSource.Manual, userEdited: true);
+        scope.Shell.Project.Data.Add(record);
+        scope.Shell.NavigateToHolding(record);
+        var dataPage = Assert.IsType<DataPageViewModel>(scope.Shell.CurrentPage);
+        dataPage.NimmAnzeigeAuftrag();
+
+        HaltungRecord? gemeldet = null;
+        dataPage.HaltungAnzeigen += r => gemeldet = r;
+        dataPage.ZeigeHaltung(record);
+
+        Assert.Same(record, gemeldet);
+        // Kein zweiter Weg: Die Seite hat es gehoert, also bleibt nichts liegen.
+        Assert.Null(dataPage.NimmAnzeigeAuftrag());
     }
 
     [Fact]

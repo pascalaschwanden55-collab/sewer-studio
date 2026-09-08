@@ -181,6 +181,13 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     /// <summary>Nova-Etappe 1: Liste mit Uebersicht rechts und Eingabefeldern unten als Standard. false = bisherige Haltungsansicht.</summary>
     public bool ShowHaltungenNovaLayout { get; set; } = true;
 
+    /// <summary>
+    /// Nova, Aufklapp-Liste: Welche der beiden Nova-Ansichten die Haltungsseite zeigt —
+    /// "liste" (Standard, Formular in der aufgeklappten Zeile) oder "tabelle". Unbekannte
+    /// Werte gelten als "liste" (<see cref="DataPage.HaltungenAnsichtRegel"/>).
+    /// </summary>
+    public string HaltungenAnsicht { get; set; } = "liste";
+
     // Schachtansicht: per GridSplitter einstellbare Hoehe des "Schaeden"-Panels (in px).
     public double SchachtansichtSchadenHeight { get; set; } = 240d;
 

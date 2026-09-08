@@ -51,6 +51,8 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
             Layout(page);
 
             PruefeNovaSpalten(page);
+            PruefeStandardIstDieAufklappListe(page);
+            WechsleAufDieTabelle(page);
             PruefeNovaSucheUndFilter(page);
 
             var drawer = Assert.IsType<HaltungFelderDrawer>(page.FindName("FelderDrawer"));
@@ -302,6 +304,52 @@ public sealed class DataPageNovaLayoutIsolatedSmokeTests
 
         var reihenfolgePopup = Assert.IsType<Popup>(page.FindName("ReihenfolgePopup"));
         Assert.False(reihenfolgePopup.IsOpen);
+    }
+
+    /// <summary>
+    /// Nova, Aufklapp-Liste (Task 2): Die Seite startet mit der Liste. Die Tabelle, ihre
+    /// Spaltenchips und die Eingabefelder-Schublade sind weg; die Uebersicht rechts bleibt.
+    /// </summary>
+    private static void PruefeStandardIstDieAufklappListe(Views.Pages.DataPage page)
+    {
+        var liste = Assert.IsType<HaltungAufklappListe>(page.FindName("AufklappListe"));
+        var grid = Assert.IsType<DataGrid>(page.FindName("Grid"));
+        var chips = Assert.IsType<ItemsControl>(page.FindName("ColumnViewChips"));
+        var drawer = Assert.IsType<HaltungFelderDrawer>(page.FindName("FelderDrawer"));
+        var uebersicht = Assert.IsType<HaltungUebersichtPanel>(page.FindName("Uebersicht"));
+        var drawerRow = Assert.IsType<RowDefinition>(page.FindName("DrawerRow"));
+
+        Assert.Equal(Visibility.Visible, liste.Visibility);
+        Assert.Equal(Visibility.Collapsed, grid.Visibility);
+        Assert.Equal(Visibility.Collapsed, chips.Visibility);
+        Assert.Equal(Visibility.Collapsed, drawer.Visibility);
+        Assert.Equal(Visibility.Visible, uebersicht.Visibility);
+        Assert.Equal(0, drawerRow.ActualHeight);
+
+        // Das Zeilen-Kontextmenue ist dasselbe wie an der Tabelle — kein zweiter Befehlsweg.
+        Assert.NotNull(liste.ZeilenMenue);
+        Assert.Same(grid.ContextMenu, liste.ZeilenMenue);
+    }
+
+    /// <summary>
+    /// Der Menuepunkt "Tabelle" schaltet um. Geklickt wird der echte Punkt, damit auch die
+    /// Verdrahtung im XAML geprueft ist.
+    /// </summary>
+    private static void WechsleAufDieTabelle(Views.Pages.DataPage page)
+    {
+        var tabelleMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtTabelleMenu"));
+        var listeMenu = Assert.IsType<MenuItem>(page.FindName("AnsichtListeMenu"));
+        Assert.True(listeMenu.IsChecked, "Beim Start muss \"Aufklapp-Liste\" angehakt sein.");
+
+        tabelleMenu.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Layout(page);
+
+        var liste = Assert.IsType<HaltungAufklappListe>(page.FindName("AufklappListe"));
+        var grid = Assert.IsType<DataGrid>(page.FindName("Grid"));
+        Assert.Equal(Visibility.Collapsed, liste.Visibility);
+        Assert.Equal(Visibility.Visible, grid.Visibility);
+        Assert.True(tabelleMenu.IsChecked);
+        Assert.False(listeMenu.IsChecked);
     }
 
     private static Color ColorOf(object brush) => Assert.IsType<SolidColorBrush>(brush).Color;

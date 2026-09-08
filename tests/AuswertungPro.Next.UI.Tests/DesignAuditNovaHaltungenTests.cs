@@ -179,4 +179,103 @@ public sealed class DesignAuditNovaHaltungenTests
         Assert.Contains("<DataTrigger Binding=\"{Binding Record, ElementName=Root}\" Value=\"{x:Null}\">", inhalt.Value);
         Assert.Contains("<Setter Property=\"Visibility\" Value=\"Collapsed\"/>", inhalt.Value);
     }
+    /// <summary>
+    /// Nova, Aufklapp-Liste (Task 2): Die Liste steht in derselben Zelle wie die Tabelle und
+    /// bindet dieselbe Ansicht der Datensaetze. Nur so wirken Suche und Filterzeile ohne
+    /// zweiten Weg, und die Auswahl ueberlebt den Wechsel der Ansicht.
+    /// </summary>
+    [Fact]
+    public void Die_Aufklapp_Liste_steht_in_derselben_Zelle_wie_die_Tabelle()
+    {
+        var xaml = Xaml("Views", "Pages", "DataPage.xaml");
+        var liste = Regex.Match(xaml, @"<haltung:HaltungAufklappListe[\s\S]*?/>");
+        Assert.True(liste.Success, "HaltungAufklappListe fehlt in DataPage.xaml");
+        Assert.Contains("x:Name=\"AufklappListe\"", liste.Value);
+        Assert.Contains("Grid.Row=\"1\"", liste.Value);
+        Assert.Contains("Grid.Column=\"0\"", liste.Value);
+        Assert.Contains("ItemsSource=\"{Binding Records}\"", liste.Value);
+        Assert.Contains("SelectedItem=\"{Binding Selected, Mode=TwoWay}\"", liste.Value);
+        // Video und Protokoll sind die vorhandenen Befehle der Seite, kein zweiter Weg.
+        Assert.Contains("VideoCommand=\"{Binding PlayVideoCommand}\"", liste.Value);
+        Assert.Contains("ProtokollCommand=\"{Binding OpenOriginalPdfCommand}\"", liste.Value);
+
+        // Die Tabelle bindet dieselbe Ansicht — eine Sammlung, eine Auswahl.
+        Assert.Contains("<DataGrid x:Name=\"Grid\"", xaml);
+        Assert.Equal(2, Regex.Matches(xaml, @"SelectedItem=""\{Binding Selected, Mode=TwoWay\}""").Count);
+    }
+
+    /// <summary>
+    /// Die drei Ansichten stehen als Gruppe im Menue "Weitere Aktionen". Genau einer der beiden
+    /// Nova-Punkte ist angehakt; deaktivierte Gruppenkoepfe gibt es nicht (XamlActionWiringGuard).
+    /// </summary>
+    [Fact]
+    public void Das_Menue_fuehrt_Aufklapp_Liste_Tabelle_und_die_alte_Ansicht()
+    {
+        var xaml = Xaml("Views", "Pages", "DataPage.xaml");
+
+        foreach (var (name, header, tag) in new[]
+                 {
+                     ("AnsichtListeMenu", "Aufklapp-Liste", "liste"),
+                     ("AnsichtTabelleMenu", "Tabelle", "tabelle")
+                 })
+        {
+            var punkt = Regex.Match(xaml, @"<MenuItem x:Name=""" + name + @"""[\s\S]*?/>");
+            Assert.True(punkt.Success, name + " fehlt");
+            Assert.Contains("Header=\"" + header + "\"", punkt.Value);
+            Assert.Contains("IsCheckable=\"True\"", punkt.Value);
+            Assert.Contains("Tag=\"" + tag + "\"", punkt.Value);
+            Assert.Contains("Click=\"AnsichtMenu_Click\"", punkt.Value);
+        }
+
+        Assert.Contains("Header=\"Alte Haltungsansicht\"", xaml);
+        // Der Hinweis am gesperrten Abdocken muss sichtbar sein duerfen.
+        Assert.Contains("ToolTipService.ShowOnDisabled=\"True\"", xaml);
+    }
+
+    /// <summary>
+    /// Tabelle und Liste teilen sich EIN Zeilen-Kontextmenue. Zwei Wege zu denselben Aktionen
+    /// hiessen, dass nur einer die Pruefungen bekommt (Re-Review 07.09.2026, Schachtseite).
+    /// </summary>
+    [Fact]
+    public void Tabelle_und_Liste_teilen_sich_dasselbe_Zeilen_Kontextmenue()
+    {
+        var xaml = Xaml("Views", "Pages", "DataPage.xaml");
+        Assert.Single(Regex.Matches(xaml, @"<ContextMenu x:Key=""HaltungZeilenMenue"">"));
+        Assert.Contains("ContextMenu=\"{StaticResource HaltungZeilenMenue}\"", xaml);
+        Assert.Contains("ZeilenMenue=\"{StaticResource HaltungZeilenMenue}\"", xaml);
+        Assert.DoesNotContain("<DataGrid.ContextMenu>", xaml);
+
+        // Die Liste reicht das Menue an ihre ListBox und waehlt bei Rechtsklick zuerst die Zeile.
+        var listeXaml = Xaml("Views", "Pages", "Haltungsansicht", "HaltungAufklappListe.xaml");
+        Assert.Contains("ContextMenu=\"{Binding ZeilenMenue, ElementName=Root}\"", listeXaml);
+        Assert.Contains("PreviewMouseRightButtonDown=\"Liste_PreviewMouseRightButtonDown\"", listeXaml);
+    }
+
+    /// <summary>Die Aufklapp-Liste ist die Standardansicht der Haltungen.</summary>
+    [Fact]
+    public void Die_Aufklapp_Liste_ist_per_Einstellung_der_Standard()
+    {
+        var settings = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "AppSettings.cs"));
+        Assert.Contains("public string HaltungenAnsicht { get; set; } = \"liste\";", settings);
+    }
+
+    /// <summary>
+    /// Spaltenchips, Eingabefelder und Abdocken haengen an der Ansicht — und die Entscheidung
+    /// darueber faellt an genau einer Stelle. Die Seite selbst darf sie nicht ein zweites Mal
+    /// treffen (frueher: ApplyHaltungsansichtSichtbarkeit in DataPage.xaml.cs).
+    /// </summary>
+    [Fact]
+    public void Chips_Eingabefelder_und_Abdocken_haengen_an_einer_einzigen_Ansichtsregel()
+    {
+        var umschalter = File.ReadAllText(
+            RepoFile("src", "AuswertungPro.Next.UI", "DataPage", "DataPageAnsichtUmschalter.cs"));
+        Assert.Contains("HaltungenAnsichtRegel.Bestimme", umschalter);
+        Assert.Contains("_e.Spaltenchips.Visibility", umschalter);
+        Assert.Contains("_setzeArbeitsflaeche(sicht.Uebersicht, sicht.Eingabefelder)", umschalter);
+        Assert.Contains("AbdockenNurTabelle", umschalter);
+
+        var seite = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages");
+        foreach (var datei in Directory.EnumerateFiles(seite, "DataPage*.cs"))
+            Assert.DoesNotContain("ApplyHaltungsansichtSichtbarkeit", File.ReadAllText(datei));
+    }
 }

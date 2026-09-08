@@ -338,6 +338,8 @@
                      Background="Transparent" BorderThickness="0"
                      KeyDown="Liste_KeyDown"
                      MouseDoubleClick="Liste_MouseDoubleClick"
+                     PreviewMouseRightButtonDown="Liste_PreviewMouseRightButtonDown"
+                     ContextMenu="{Binding ZeilenMenue, ElementName=Root}"
                      AutomationProperties.Name="Haltungen"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"

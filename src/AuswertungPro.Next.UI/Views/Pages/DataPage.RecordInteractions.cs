@@ -69,6 +69,7 @@ public partial class DataPage : UserControl
                 UndockButton,
                 HaltungsansichtToggle);
             _floatingGridWindow.SetGridContent(active);
+            WendeAnsichtAn();
 
             // Fensterposition aus Settings laden
             var settings = Settings;
@@ -156,6 +157,8 @@ public partial class DataPage : UserControl
         {
             _undockedView = null;
         }
+
+        WendeAnsichtAn();
     }
 
     private void FloatingGridWindow_Closed(object? sender, EventArgs e)

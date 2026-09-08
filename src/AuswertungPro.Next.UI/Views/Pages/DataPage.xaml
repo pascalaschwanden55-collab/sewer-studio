@@ -34,6 +34,55 @@
             <Setter Property="Padding" Value="10,4"/>
             <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
         </Style>
+        <!-- Nova, Aufklapp-Liste: EIN Zeilen-Kontextmenue fuer Tabelle UND Liste. Zwei Wege zu
+             denselben Aktionen hiessen, dass nur einer die Pruefungen bekommt. Es enthaelt nur
+             Zeilenaktionen; spaltenbezogene Punkte wie "Spalte leeren" stehen unter
+             "Weitere Aktionen" und gelten allein fuer die Tabelle. -->
+        <ContextMenu x:Key="HaltungZeilenMenue">
+            <MenuItem Header="Position nach oben" Click="MoveRecordUpMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74A;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Position nach unten" Click="MoveRecordDownMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74B;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <Separator/>
+            <MenuItem Header="Beobachtungen..." Click="BeobachtungenMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE890;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="KI-Videoanalyse..."
+                      AutomationProperties.Name="KI-Videoanalyse fuer die gewaehlte Haltung starten"
+                      Command="{Binding PlacementTarget.DataContext.OpenVideoAiPipelineCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xEA80;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <Separator/>
+            <MenuItem Header="Play" Click="PlayMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Play (Gegeninspektion)" Click="PlayGegenMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="PrintAwuHaltungsprotokollMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE749;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="OpenOriginalPdfMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Dichtheitsprüfung (PDF) öffnen..." Click="OpenDichtheitPdfMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Gehe zu Ordner" Click="OpenContainingFolderMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Sanierungsmaßnahmen..." Click="CostsMenu_Click">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+            <Separator/>
+            <MenuItem Header="Markierte Zeilen löschen" Click="DeleteSelectedRows_Click"
+                      InputGestureText="Del" Foreground="{DynamicResource DangerBrush}">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74D;" Foreground="{DynamicResource DangerBrush}"/></MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
         <Style x:Key="PageCompactToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource CompactToggleButton}">
             <Setter Property="MinHeight" Value="28"/>
         </Style>
@@ -247,10 +296,20 @@
                                         <MenuItem.Icon><ui:FluentIcon Glyph="&#xE7C3;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
                                     </MenuItem>
                                     <Separator/>
+                                    <!-- Nova, Aufklapp-Liste: Die drei Ansichten der Haltungsseite sind EINE
+                                         Gruppe. Genau einer der beiden Nova-Punkte ist angehakt; solange die
+                                         Tabelle abgedockt ist, sperrt der Umschalter alle drei. -->
+                                    <MenuItem x:Name="AnsichtListeMenu" Header="Aufklapp-Liste" IsCheckable="True" Tag="liste"
+                                              Click="AnsichtMenu_Click"
+                                              ToolTip="Haltungen als Liste; die gewählte Haltung klappt mit allen Feldern auf"/>
+                                    <MenuItem x:Name="AnsichtTabelleMenu" Header="Tabelle" IsCheckable="True" Tag="tabelle"
+                                              Click="AnsichtMenu_Click"
+                                              ToolTip="Haltungen als Tabelle mit Spaltenansichten und Eingabefeldern unten"/>
                                     <MenuItem x:Name="HaltungsansichtToggle" Header="Alte Haltungsansicht" IsCheckable="True"
                                               Checked="HaltungsansichtToggle_Changed" Unchecked="HaltungsansichtToggle_Changed"
                                               ToolTip="Liste links und Formularkarten statt Tabelle, Übersicht und Eingabefeldern"/>
                                     <MenuItem x:Name="UndockButton" Header="Abdocken" Click="UndockGrid_Click"
+                                              ToolTipService.ShowOnDisabled="True"
                                               ToolTip="Tabelle in separatem Fenster öffnen (Multi-Monitor)">
                                         <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A7;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                                     </MenuItem>
@@ -565,57 +624,11 @@
                       PreviewMouseWheel="Grid_PreviewMouseWheel"
                       PreviewMouseDoubleClick="Grid_PreviewMouseDoubleClick"
                       PreviewKeyDown="Grid_PreviewKeyDown"
-                      LoadingRow="Grid_LoadingRow">
+                      LoadingRow="Grid_LoadingRow"
+                      ContextMenu="{StaticResource HaltungZeilenMenue}">
                 <DataGrid.LayoutTransform>
                     <ScaleTransform ScaleX="{Binding GridZoom}" ScaleY="{Binding GridZoom}"/>
                 </DataGrid.LayoutTransform>
-                <DataGrid.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="Position nach oben" Click="MoveRecordUpMenu_Click">
-                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74A;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="Position nach unten" Click="MoveRecordDownMenu_Click">
-                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74B;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                        </MenuItem>
-                        <Separator/>
-                        <MenuItem Header="Beobachtungen..." Click="BeobachtungenMenu_Click">
-                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE890;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="KI-Videoanalyse..."
-                                  AutomationProperties.Name="KI-Videoanalyse fuer die gewaehlte Haltung starten"
-                                  Command="{Binding PlacementTarget.DataContext.OpenVideoAiPipelineCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
-                                  CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}">
-                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xEA80;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
-                        </MenuItem>
-                        <Separator/>
-                        <MenuItem Header="Play" Click="PlayMenu_Click">
-                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="Play (Gegeninspektion)" Click="PlayGegenMenu_Click">
-                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="PrintAwuHaltungsprotokollMenu_Click">
-                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE749;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="OpenOriginalPdfMenu_Click">
-                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="Dichtheitsprüfung (PDF) öffnen..." Click="OpenDichtheitPdfMenu_Click">
-                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="Gehe zu Ordner" Click="OpenContainingFolderMenu_Click">
-                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="Sanierungsmaßnahmen..." Click="CostsMenu_Click">
-                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                        </MenuItem>
-                        <Separator/>
-                        <MenuItem Header="Markierte Zeilen löschen" Click="DeleteSelectedRows_Click"
-                                  InputGestureText="Del" Foreground="{DynamicResource DangerBrush}">
-                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74D;" Foreground="{DynamicResource DangerBrush}"/></MenuItem.Icon>
-                        </MenuItem>
-                    </ContextMenu>
-                </DataGrid.ContextMenu>
             </DataGrid>
 
             <uc:EmptyStateControl x:Name="EmptyTablePlaceholder"
@@ -641,6 +654,16 @@
                     </Style>
                 </uc:EmptyStateControl.Style>
             </uc:EmptyStateControl>
+
+            <!-- Nova, Aufklapp-Liste: Standardansicht der Haltungen. Sie liegt in derselben Zelle
+                 wie die Tabelle und bindet dieselbe Ansicht der Datensaetze; Suche und Filterzeile
+                 wirken dadurch ohne zweiten Weg. Das Zeilen-Kontextmenue ist dasselbe. -->
+            <haltung:HaltungAufklappListe x:Name="AufklappListe" Grid.Row="1" Grid.Column="0"
+                                          ItemsSource="{Binding Records}"
+                                          SelectedItem="{Binding Selected, Mode=TwoWay}"
+                                          VideoCommand="{Binding PlayVideoCommand}"
+                                          ProtokollCommand="{Binding OpenOriginalPdfCommand}"
+                                          ZeilenMenue="{StaticResource HaltungZeilenMenue}"/>
 
             <!-- Haltungsansicht: alternative Sicht zur Tabelle, ueber den Toggle erreichbar -->
             <haltung:HaltungsansichtView x:Name="HaltungsansichtView" Grid.Row="1" Grid.ColumnSpan="3" Visibility="Collapsed"/>

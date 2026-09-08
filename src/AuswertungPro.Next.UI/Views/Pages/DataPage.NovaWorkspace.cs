@@ -32,7 +32,7 @@ public partial class DataPage
         // Standardansicht: Nova-Arbeitsflaeche; die bisherige Haltungsansicht bleibt ueber den Toggle
         // erreichbar und wird Standard, wenn die Einstellung aus ist.
         HaltungsansichtToggle.IsChecked = !vm.Settings.ShowHaltungenNovaLayout;
-        ApplyHaltungsansichtSichtbarkeit();
+        WendeAnsichtAn();
     }
 
     private void AktualisiereFelderDrawer() => _novaWorkspace?.AktualisiereFelderDrawer();
@@ -40,7 +40,8 @@ public partial class DataPage
     private void ApplyDrawerHeight() => _novaWorkspace?.ApplyDrawerHeight();
 
     // Vor VerdrahteNovaWorkspace (waehrend InitializeComponent) gilt der XAML-Grundzustand.
-    private void SetNovaWorkspaceVisible(bool sichtbar) => _novaWorkspace?.SetzeSichtbar(sichtbar);
+    private void SetNovaWorkspaceVisible(bool uebersicht, bool eingabefelder)
+        => _novaWorkspace?.SetzeSichtbar(uebersicht, eingabefelder);
 
     private void MeldeFormularKonflikt(string fieldName, string aktuellerWert, string eingabe)
         => _novaWorkspace?.MeldeKonflikt(fieldName, aktuellerWert, eingabe);

@@ -152,6 +152,44 @@ public partial class HaltungAufklappListe : UserControl
     /// <summary>Schliesst die aufgeklappte Haltung; die Auswahl bleibt bestehen.</summary>
     public void KlappeZu() => Aufgeklappt = null;
 
+    /// <summary>
+    /// Scrollt die gewaehlte Zeile in Sicht. Die Seite ruft das nach einem Auswahlwechsel von
+    /// aussen (Pfeiltasten, Suche, Sprung aus dem Dossier) — die Liste klappt dabei bewusst
+    /// nichts auf.
+    /// </summary>
+    public void ScrolleZurAuswahl()
+    {
+        if (SelectedItem is { } record)
+            Liste.ScrollIntoView(record);
+    }
+
+    public static readonly DependencyProperty ZeilenMenueProperty = DependencyProperty.Register(
+        nameof(ZeilenMenue), typeof(ContextMenu), typeof(HaltungAufklappListe), new PropertyMetadata(null));
+
+    /// <summary>
+    /// Das Kontextmenue der Zeile. Die Seite reicht dasselbe Menue herein, das auch an der
+    /// Tabelle haengt (Video, Protokoll, Beobachtungen, Position verschieben); es gibt keinen
+    /// zweiten Befehlsweg. Spaltenbezogene Punkte hat dieses Menue nicht.
+    /// </summary>
+    public ContextMenu? ZeilenMenue
+    {
+        get => (ContextMenu?)GetValue(ZeilenMenueProperty);
+        set => SetValue(ZeilenMenueProperty, value);
+    }
+
+    /// <summary>
+    /// Rechtsklick waehlt zuerst die getroffene Zeile aus — wie in der Tabelle. Sonst wirkte
+    /// das Menue auf die vorher gewaehlte Haltung.
+    /// </summary>
+    private void Liste_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject quelle
+            && VisualTreeSafe.FindAncestor<ListBoxItem>(quelle)?.DataContext is HaltungRecord record)
+        {
+            SelectedItem = record;
+        }
+    }
+
     /// <summary>Auf- oder zuklappen; dieselbe Haltung nochmals klappt sie zu.</summary>
     public void Schalte(HaltungRecord? record)
     {

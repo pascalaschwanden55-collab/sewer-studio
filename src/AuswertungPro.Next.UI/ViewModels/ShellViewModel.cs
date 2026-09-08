@@ -438,7 +438,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         if (CurrentPage is not Pages.DataPageViewModel dataPage)
             return;
 
-        dataPage.Selected = record;
+        // Ausdruecklicher Sprung: in der Aufklapp-Liste klappt die Haltung dabei auf.
+        dataPage.ZeigeHaltung(record);
         var name = record.GetFieldValue(FieldKeys.HoldingName) ?? "(ohne Name)";
         SetStatus($"Haltung geoeffnet: {name}");
     }

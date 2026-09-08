@@ -188,17 +188,24 @@ public sealed class DataPageNovaWorkspaceController
     }
 
     /// <summary>
-    /// Blendet Uebersicht, Eingabefelder und beide Trennlinien ein oder aus. Die festen Spalten-
-    /// und Zeilenmasse werden dabei mit auf 0 gesetzt, sonst bliebe bei der Haltungsansicht eine Luecke.
+    /// Blendet Uebersicht, Eingabefelder und beide Trennlinien gemeinsam ein oder aus
+    /// (alte Haltungsansicht: alles aus).
     /// </summary>
-    public void SetzeSichtbar(bool sichtbar)
-    {
-        var v = sichtbar ? Visibility.Visible : Visibility.Collapsed;
-        _e.Uebersicht.Visibility = v;
-        _e.SideSplitter.Visibility = v;
-        _e.FelderDrawer.Visibility = v;
+    public void SetzeSichtbar(bool sichtbar) => SetzeSichtbar(sichtbar, sichtbar);
 
-        if (sichtbar)
+    /// <summary>
+    /// Blendet Uebersicht und Eingabefelder getrennt ein oder aus. Die festen Spalten- und
+    /// Zeilenmasse werden dabei mit auf 0 gesetzt, sonst bliebe eine Luecke. Getrennt gebraucht
+    /// wird das von der Aufklapp-Liste: Dort bleibt die Uebersicht rechts, waehrend die
+    /// Eingabefelder-Schublade verschwindet — das Formular steht in der aufgeklappten Zeile.
+    /// </summary>
+    public void SetzeSichtbar(bool uebersicht, bool eingabefelder)
+    {
+        _e.Uebersicht.Visibility = uebersicht ? Visibility.Visible : Visibility.Collapsed;
+        _e.SideSplitter.Visibility = uebersicht ? Visibility.Visible : Visibility.Collapsed;
+        _e.FelderDrawer.Visibility = eingabefelder ? Visibility.Visible : Visibility.Collapsed;
+
+        if (uebersicht)
         {
             _e.SideSplitterCol.Width = new GridLength(DataPageWorkspaceLayoutPolicy.SplitterHoehe);
             _e.SideCol.MinWidth = SideColMin;
@@ -207,14 +214,21 @@ public sealed class DataPageNovaWorkspaceController
                 ? Math.Clamp(w, SideColMin, SideColMax)
                 : SideColStandard;
             _e.SideCol.Width = new GridLength(breite);
+        }
+        else
+        {
+            _e.SideSplitterCol.Width = new GridLength(0);
+            _e.SideCol.MinWidth = 0;
+            _e.SideCol.Width = new GridLength(0);
+        }
+
+        if (eingabefelder)
+        {
             ApplyDrawerOpenState();
         }
         else
         {
             _e.DrawerSplitter.Visibility = Visibility.Collapsed;
-            _e.SideSplitterCol.Width = new GridLength(0);
-            _e.SideCol.MinWidth = 0;
-            _e.SideCol.Width = new GridLength(0);
             _e.DrawerSplitterRow.Height = new GridLength(0);
             _e.DrawerRow.MinHeight = 0;
             _e.DrawerRow.Height = new GridLength(0);
