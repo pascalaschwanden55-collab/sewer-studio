@@ -71,4 +71,18 @@ public sealed class DesignAuditOptikNachpruefungTests
         Assert.Contains("<Condition Binding=\"{Binding StatusMessage}\" Value=\"\"/>", dossiers);
         Assert.Contains("<Condition Binding=\"{Binding IsBusy}\" Value=\"False\"/>", dossiers);
     }
+
+    /// <summary>O10: Kein gruener Haken vor „Noch keine Berechnung" — das Symbol folgt HatErgebnis.</summary>
+    [Fact]
+    public void VSA_Ergebnis_Symbol_folgt_dem_Zustand()
+    {
+        var xaml = Ui("Views", "Pages", "VsaPage.xaml");
+        Assert.Contains("<DataTrigger Binding=\"{Binding HatErgebnis}\" Value=\"True\">", xaml);
+        Assert.DoesNotContain("Text=\"&#xE73E;\" FontFamily=\"{DynamicResource FontIcon}\"", xaml);
+
+        var vm = Ui("ViewModels", "Pages", "VsaPageViewModel.cs");
+        Assert.Contains("private bool _hatErgebnis;", vm);
+        Assert.Contains("HatErgebnis = true;", vm);
+        Assert.Contains("HatErgebnis = false;", vm);
+    }
 }

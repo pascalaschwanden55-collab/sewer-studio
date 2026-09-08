@@ -29,6 +29,9 @@ public sealed partial class VsaPageViewModel : ObservableObject
     /// <summary>S10: True waehrend die (synchrone) Bewertung im Hintergrund laeuft.</summary>
     [ObservableProperty] private bool _isBusy;
 
+    /// <summary>Wahr nur nach einem erfolgreich beendeten Lauf; steuert das Symbol der Ergebniskarte (O10).</summary>
+    [ObservableProperty] private bool _hatErgebnis;
+
     public IAsyncRelayCommand RunCommand { get; }
 
     public VsaPageViewModel(ShellViewModel shell, ServiceProvider sp)
@@ -80,6 +83,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
     {
         // AsyncRelayCommand sperrt Mehrfachstarts bereits selbst (CanExecute waehrend des Laufs).
         IsBusy = true;
+        HatErgebnis = false;
         Summary = "VSA-Bewertung laeuft, bitte warten...";
         _setStatus("VSA-Bewertung läuft...");
         try
@@ -212,6 +216,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
                   $"\nBerechnet für {count} Records. Ø Zustandsnote D: {avgD:0.00}.\n" +
                   (string.IsNullOrWhiteSpace(diag) ? "" : (diag + "\n")) +
                   "\nHinweis: Klassifizierungstabellen sind im Skeleton nur beispielhaft.";
+        HatErgebnis = true;
         _setStatus("VSA berechnet");
     }
 }
