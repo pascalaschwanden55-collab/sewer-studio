@@ -95,13 +95,19 @@ internal static class SvgWert
         }
     }
 
+    /// <summary>
+    /// Zerlegt eine Zahlenliste. Ein nicht lesbares Token wird nicht still uebersprungen —
+    /// unsere Bauer schreiben ausschliesslich Zahlen mit Punkt als Dezimaltrenner, ein fremdes
+    /// Token waere ein neuer, bewusst zu pruefender Fall.
+    /// </summary>
     private static List<double> Zerlege(string? text)
     {
         var zahlen = new List<double>();
         foreach (var teil in (text ?? string.Empty).Split([' ', ',', '\t', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries))
         {
-            if (double.TryParse(teil, NumberStyles.Float, CultureInfo.InvariantCulture, out var zahl))
-                zahlen.Add(zahl);
+            if (!double.TryParse(teil, NumberStyles.Float, CultureInfo.InvariantCulture, out var zahl))
+                throw new NotSupportedException($"SVG-Teilmenge: Zahl '{teil}' ist nicht lesbar.");
+            zahlen.Add(zahl);
         }
 
         return zahlen;

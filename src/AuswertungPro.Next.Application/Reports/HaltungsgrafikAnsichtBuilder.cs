@@ -33,8 +33,11 @@ public sealed record HaltungsgrafikAnsicht(
 /// </summary>
 public static class HaltungsgrafikAnsichtBuilder
 {
-    /// <summary>Feste Breite der Grafik (wie im PDF).</summary>
+    /// <summary>Feste Breite der vollen Grafik (wie im PDF).</summary>
     public const int Breite = HaltungsgrafikSvgBuilder.Width;
+
+    /// <summary>Breite der reinen Rohrsaeule ohne Beschriftungstabelle.</summary>
+    public const int RohrBreite = HaltungsgrafikSvgBuilder.RohrBreite;
 
     /// <summary>
     /// Markenfarbe der Grafik. Bewusst der Standardwert des Builders: Die Oberflaeche bildet
@@ -50,17 +53,27 @@ public static class HaltungsgrafikAnsichtBuilder
     /// Baut die Grafik der Haltung. Gibt <c>null</c> zurueck, wenn keine belastbare Laenge
     /// vorliegt — ohne Laenge gibt es keinen Massstab, und eine geratene Laenge waere eine
     /// erfundene Angabe.
+    ///
+    /// <paramref name="hoehe"/> ist optional: Ohne Vorgabe gilt dieselbe Standardhoehe wie im
+    /// PDF-Weg (<see cref="HaltungsgrafikExportSizing.ChooseSvgHeight"/>, gestaffelt nach der
+    /// Anzahl Eintraege statt fest 700). Die schmale Rohrsaeule der Uebersicht gibt trotzdem
+    /// bewusst eine eigene, auf ihre feste Anzeigehoehe abgestimmte Zahl vor — sie waere sonst
+    /// bei vielen Eintraegen groesser als der Bildschirmplatz und die Beschriftung liefe unter
+    /// die Lesbarkeitsgrenze.
+    ///
+    /// <paramref name="nurRohr"/> laesst die Beschriftungstabelle weg und liefert nur die
+    /// schmale Rohrsaeule. In einer schmalen Spalte ist die volle, A4-proportionierte Grafik
+    /// sonst unlesbar klein.
     /// </summary>
     public static HaltungsgrafikAnsicht? Baue(
         HaltungRecord? record,
         ICodeCatalogProvider? catalog,
-        int hoehe,
-        bool? flowDownVorgabe = null)
+        int? hoehe = null,
+        bool? flowDownVorgabe = null,
+        bool nurRohr = false)
     {
         if (record is null)
             return null;
-
-        hoehe = Math.Clamp(hoehe, HoeheMinimum, HoeheMaximum);
 
         // Bewusst NICHT ueber ProtocolPdfEntryResolver.ResolveEntriesForExport: Der Exportweg
         // repariert dabei bestehende Eintraege im Datensatz (Fotopfade, Codemetadaten). Eine
@@ -76,6 +89,10 @@ public static class HaltungsgrafikAnsichtBuilder
         var eintraege = CounterInspectionStationingNormalizer.NormalizeForExport(aufgeloest, laenge)
             .OrderBy(e => e.MeterStart ?? e.MeterEnd ?? double.MaxValue)
             .ToList();
+        var effektiveHoehe = Math.Clamp(
+            hoehe ?? HaltungsgrafikExportSizing.ChooseSvgHeight(eintraege.Count),
+            HoeheMinimum,
+            HoeheMaximum);
         var luecken = InspectionGapDetector.DetectUnknownGaps(eintraege, laenge);
         var (start, ende) = Knoten(record);
         var flowDown = flowDownVorgabe
@@ -89,11 +106,14 @@ public static class HaltungsgrafikAnsichtBuilder
             ende,
             flowDown,
             Markenfarbe,
-            hoehe,
+            effektiveHoehe,
             luecken,
-            catalog);
+            catalog,
+            nurRohr);
 
-        return new HaltungsgrafikAnsicht(svg, Breite, hoehe, Marken(eintraege, laenge.Value, hoehe, catalog));
+        var breite = nurRohr ? RohrBreite : Breite;
+        return new HaltungsgrafikAnsicht(
+            svg, breite, effektiveHoehe, Marken(eintraege, laenge.Value, effektiveHoehe, catalog, nurRohr));
     }
 
     /// <summary>
@@ -118,8 +138,11 @@ public static class HaltungsgrafikAnsichtBuilder
         IReadOnlyList<ProtocolEntry> eintraege,
         double laenge,
         int hoehe,
-        ICodeCatalogProvider? catalog)
+        ICodeCatalogProvider? catalog,
+        bool nurRohr)
     {
+        // Die reine Rohrsaeule steht als Ganzes um denselben Betrag nach rechts gerueckt.
+        var versatz = nurRohr ? HaltungsgrafikSvgBuilder.RohrVersatz : 0;
         var top = (double)HaltungsgrafikSvgBuilder.MarginTop
                   + HaltungsgrafikSvgBuilder.HeaderHeight
                   + HaltungsgrafikSvgBuilder.NodeZone;
@@ -130,7 +153,7 @@ public static class HaltungsgrafikAnsichtBuilder
 
         return labels
             .Select(label => new HaltungsgrafikMarke(
-                HaltungsgrafikSvgBuilder.LineX - MarkeGroesse / 2d,
+                HaltungsgrafikSvgBuilder.LineX + versatz - MarkeGroesse / 2d,
                 label.TargetY - MarkeGroesse / 2d,
                 MarkeGroesse,
                 MarkeGroesse,

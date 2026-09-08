@@ -151,11 +151,18 @@ public static class SvgTeilmengeZeichner
             PruefeBaum(kind);
     }
 
+    /// <summary>
+    /// Prueft jeden Buchstaben eines Pfad-<c>d</c>-Attributs gegen <see cref="ErlaubtePfadbefehle"/>.
+    /// Gross-/Kleinschreibung zaehlt bewusst mit: In SVG ist ein Grossbuchstabe absolut und ein
+    /// Kleinbuchstabe relativ — unsere Bauer schreiben ausschliesslich absolut. Ein
+    /// <c>char.ToUpperInvariant</c> vor dem Vergleich wuerde einen relativen Befehl (z.B. 'l')
+    /// unbemerkt durchlassen, obwohl er anders gezeichnet wird als sein absolutes Gegenstueck.
+    /// </summary>
     private static void PruefePfad(string? daten)
     {
         foreach (var zeichen in daten ?? string.Empty)
         {
-            if (char.IsLetter(zeichen) && !ErlaubtePfadbefehle.Contains(char.ToUpperInvariant(zeichen)))
+            if (char.IsLetter(zeichen) && !ErlaubtePfadbefehle.Contains(zeichen))
                 throw new NotSupportedException($"SVG-Teilmenge: Pfadbefehl '{zeichen}' wird nicht gezeichnet.");
         }
     }

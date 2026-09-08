@@ -28,11 +28,13 @@ public partial class HaltungsgrafikControl : UserControl
     private INotifyCollectionChanged? _abonnierteEintraege;
     private HaltungRecord? _abonnierterDatensatz;
     private bool _neuzeichnenAngefordert;
+    private bool _neuzeichnenAusstehend;
 
     public HaltungsgrafikControl()
     {
         InitializeComponent();
         Loaded += (_, _) => FordereNeuzeichnenAn();
+        IsVisibleChanged += OnIsVisibleChanged;
         Unloaded += (_, _) =>
         {
             AbmeldenVonEintraegen();
@@ -91,17 +93,36 @@ public partial class HaltungsgrafikControl : UserControl
         set => SetValue(FlowDownProperty, value);
     }
 
-    public static readonly DependencyProperty SvgHoeheProperty = DependencyProperty.Register(
-        nameof(SvgHoehe), typeof(int), typeof(HaltungsgrafikControl),
-        new PropertyMetadata(700, OnNeuZeichnen));
+    public static readonly DependencyProperty NurRohrProperty = DependencyProperty.Register(
+        nameof(NurRohr), typeof(bool), typeof(HaltungsgrafikControl),
+        new PropertyMetadata(false, OnNeuZeichnen));
 
     /// <summary>
-    /// Zeichenhoehe der Grafik in SVG-Einheiten (Breite ist fest). Standard ist die Hoehe des
-    /// PDF-Wegs; mehr Hoehe gibt den Beschriftungszeilen mehr Platz.
+    /// Zeichnet nur die Rohrsaeule (Rohr, Meter-Skala, Symbole, Schachtknoten, Fliesspfeil) ohne
+    /// die Beschriftungstabelle. In einer schmalen Spalte ist die volle Grafik unlesbar klein;
+    /// dort ist die Schadenliste daneben die Legende.
     /// </summary>
-    public int SvgHoehe
+    public bool NurRohr
     {
-        get => (int)GetValue(SvgHoeheProperty);
+        get => (bool)GetValue(NurRohrProperty);
+        set => SetValue(NurRohrProperty, value);
+    }
+
+    public static readonly DependencyProperty SvgHoeheProperty = DependencyProperty.Register(
+        nameof(SvgHoehe), typeof(int?), typeof(HaltungsgrafikControl),
+        new PropertyMetadata(null, OnNeuZeichnen));
+
+    /// <summary>
+    /// Zeichenhoehe der Grafik in SVG-Einheiten (die Breite ergibt sich aus <see cref="NurRohr"/>).
+    /// <c>null</c> laesst <see cref="HaltungsgrafikAnsichtBuilder.Baue"/> dieselbe Standardhoehe
+    /// wie den PDF-Weg waehlen (gestaffelt nach Anzahl Eintraege statt fest 700). Sie bestimmt
+    /// zusammen mit der Anzeigehoehe den Massstab: Ist die Zeichnung nicht groesser als die
+    /// Flaeche, bleibt die Schrift lesbar. Die schmale Rohrsaeule der Uebersicht setzt deshalb
+    /// bewusst eine eigene, auf ihre feste Anzeigehoehe abgestimmte Zahl statt der Vorgabe.
+    /// </summary>
+    public int? SvgHoehe
+    {
+        get => (int?)GetValue(SvgHoeheProperty);
         set => SetValue(SvgHoeheProperty, value);
     }
 
@@ -166,10 +187,18 @@ public partial class HaltungsgrafikControl : UserControl
 
     /// <summary>
     /// Buendelt mehrere Anlaesse (Feld, Protokoll, Katalog) zu einem Neuaufbau. Die Meldung des
-    /// Datensatzes kommt auf dem setzenden Thread; die Zeichenflaeche gehoert dem UI-Thread.
+    /// Datensatzes kommt auf dem setzenden Thread; <see cref="_neuzeichnenAngefordert"/> gehoert
+    /// dagegen dem UI-Thread und wird deshalb erst dort angefasst — ein Aufruf von aussen
+    /// wechselt zuerst dorthin.
     /// </summary>
     private void FordereNeuzeichnenAn()
     {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(FordereNeuzeichnenAn));
+            return;
+        }
+
         if (_neuzeichnenAngefordert)
             return;
 
@@ -177,8 +206,28 @@ public partial class HaltungsgrafikControl : UserControl
         Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
         {
             _neuzeichnenAngefordert = false;
+
+            // Ohne sichtbare Flaeche (z.B. die Uebersicht zeigt gerade den Leerzustand) lohnt
+            // sich das Xml-Parsen und Formen-Erzeugen nicht. Der Hintergrund-Durchlauf laeuft
+            // NACH Layout und Trigger-Auswertung, IsVisible spiegelt hier schon den endgueltigen
+            // Zustand. Nachgeholt wird beim naechsten Sichtbarwerden ueber OnIsVisibleChanged.
+            if (!IsVisible)
+            {
+                _neuzeichnenAusstehend = true;
+                return;
+            }
+
             Zeichne();
         }));
+    }
+
+    private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (!IsVisible || !_neuzeichnenAusstehend)
+            return;
+
+        _neuzeichnenAusstehend = false;
+        FordereNeuzeichnenAn();
     }
 
     /// <summary>
@@ -188,6 +237,7 @@ public partial class HaltungsgrafikControl : UserControl
     internal void ZeichneJetzt()
     {
         _neuzeichnenAngefordert = false;
+        _neuzeichnenAusstehend = false;
         Zeichne();
     }
 
@@ -202,25 +252,32 @@ public partial class HaltungsgrafikControl : UserControl
             return;
         }
 
-        var ansicht = HaltungsgrafikAnsichtBuilder.Baue(Record, Catalog, SvgHoehe, FlowDown);
-        if (ansicht is null)
-        {
-            ZeigeHinweis("Ohne erfasste Haltungslänge gibt es keinen Massstab für die Grafik.");
-            return;
-        }
-
         try
         {
+            var ansicht = HaltungsgrafikAnsichtBuilder.Baue(Record, Catalog, SvgHoehe, FlowDown, NurRohr);
+            if (ansicht is null)
+            {
+                ZeigeHinweis("Ohne erfasste Haltungslänge gibt es keinen Massstab für die Grafik.");
+                return;
+            }
+
             var flaeche = SvgTeilmengeZeichner.Zeichne(ansicht.Svg, this);
             ErgaenzeHinweisflaechen(flaeche, ansicht);
             Buehne.Child = flaeche;
             SetValue(SymbolAnzahlPropertyKey, ansicht.Marken.Count);
             ZeigeHinweis(null);
         }
-        catch (NotSupportedException ex)
+        catch (OperationCanceledException)
         {
-            // Ein neues SVG-Element im Bauer darf die Seite nicht abstuerzen lassen, aber es
-            // darf auch nicht still verschwinden. Der Waechtertest faengt den Fall vorher ab.
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Ein neues SVG-Element im Bauer, ein Steuerzeichen im Befundtext (XmlException) oder
+            // ein kaputter Geometry-String (FormatException) duerfen die Oberflaeche beim blossen
+            // Anzeigen nicht abstuerzen lassen. Der Waechtertest faengt neue Faelle vorher ab.
+            Buehne.Child = null;
+            SetValue(SymbolAnzahlPropertyKey, 0);
             ZeigeHinweis("Die Haltungsgrafik kann nicht gezeichnet werden: " + ex.Message);
         }
     }

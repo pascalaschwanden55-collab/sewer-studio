@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
@@ -47,6 +48,9 @@ public sealed class HaltungsgrafikControlIsolatedSmokeTests
             OhneHaltungBleibtDieFlaecheLeer();
             DreiBefundeErgebenDreiHinweisflaechen();
             OhneLaengeStehtEinEhrlicherHinweis();
+            EinSteuerzeichenImTextStuerztNichtAb();
+            EinFehlerBeimAufloesenZeigtHinweisStattAbsturz();
+            DieRohrsaeuleBleibtLesbar();
             DasPanelZeigtDieGrafikStattDesRohrrings();
             DieFarbenFolgenDemTheme(app);
 
@@ -102,6 +106,97 @@ public sealed class HaltungsgrafikControlIsolatedSmokeTests
         Assert.Contains("Haltungslänge", Hinweis(grafik).Text, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (Review B.1): Ein Steuerzeichen im Befundtext liess den WPF-XmlReader beim
+    /// blossen Anzeigen mit einer XmlException abstuerzen, weil <c>EscapeSvgText</c> es nicht
+    /// bereinigte und <c>Baue()</c> ausserhalb des Try-Blocks stand. Jetzt wird das Steuerzeichen
+    /// entfernt und die Grafik zeichnet normal weiter — kein Absturz, kein Hinweistext noetig.
+    /// </summary>
+    private static void EinSteuerzeichenImTextStuerztNichtAb()
+    {
+        var record = Haltung();
+        record.Protocol!.Current.Entries[0].Beschreibung = "Riss \u0002 quer";
+        var grafik = new HaltungsgrafikControl { Record = record };
+        Zeichnen(grafik);
+
+        Assert.Equal(3, grafik.SymbolAnzahl);
+        Assert.NotNull(Buehne(grafik).Child);
+        Assert.Equal(Visibility.Collapsed, Hinweis(grafik).Visibility);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (Review B.1, Kernfall): Vorher stand <c>Baue()</c> AUSSERHALB des Try-Blocks —
+    /// nur ein Fehler beim Zeichnen selbst wurde gefangen, nicht beim Aufloesen der Grafik. Ein
+    /// kaputter Katalog (hier absichtlich) liess das Programm beim blossen Auswaehlen der Haltung
+    /// abstuerzen. Jetzt zeigt die Flaeche einen Hinweis statt eine Ausnahme durchzureichen.
+    /// </summary>
+    private static void EinFehlerBeimAufloesenZeigtHinweisStattAbsturz()
+    {
+        var grafik = new HaltungsgrafikControl { Record = Haltung(), Catalog = new KaputterKatalog() };
+        Zeichnen(grafik);
+
+        Assert.Null(Buehne(grafik).Child);
+        Assert.Equal(0, grafik.SymbolAnzahl);
+        Assert.Equal(Visibility.Visible, Hinweis(grafik).Visibility);
+        Assert.Contains("nicht gezeichnet werden", Hinweis(grafik).Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>Katalog, der bei jedem Zugriff wirft — steht nur fuer einen echten Fehlerfall.</summary>
+    private sealed class KaputterKatalog : ICodeCatalogProvider
+    {
+        public IReadOnlyList<CodeDefinition> GetAll() => throw new InvalidOperationException("Katalog kaputt.");
+        public bool TryGet(string code, out CodeDefinition def) => throw new InvalidOperationException("Katalog kaputt.");
+        public void Save(IReadOnlyList<CodeDefinition> codes) => throw new InvalidOperationException("Katalog kaputt.");
+        public IReadOnlyList<string> AllowedCodes() => throw new InvalidOperationException("Katalog kaputt.");
+        public IReadOnlyList<string> Validate(IReadOnlyList<CodeDefinition>? codes = null) => throw new InvalidOperationException("Katalog kaputt.");
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (Sichtprobe im Pruefhost): Die volle Grafik war in der Uebersicht Pixelstaub —
+    /// das Rohr ein Strich, die Texte unlesbar. In der schmalen Spalte wird deshalb nur die
+    /// Rohrsaeule gezeichnet, und der Massstab muss so bleiben, dass man sie lesen kann.
+    /// </summary>
+    private static void DieRohrsaeuleBleibtLesbar()
+    {
+        var grafik = new HaltungsgrafikControl
+        {
+            Record = Haltung(),
+            NurRohr = true,
+            SvgHoehe = 310,
+            Height = 360
+        };
+        // Breite wie die Uebersicht in der Standardbreite der Spalte.
+        grafik.Measure(new Size(300, 360));
+        grafik.Arrange(new Rect(0, 0, 300, 360));
+        grafik.UpdateLayout();
+        grafik.ZeichneJetzt();
+        grafik.UpdateLayout();
+
+        var buehne = Buehne(grafik);
+        var flaeche = Assert.IsType<Canvas>(buehne.Child);
+        var skala = Math.Min(buehne.ActualWidth / flaeche.Width, buehne.ActualHeight / flaeche.Height);
+        Assert.True(skala >= 1d, $"Die Rohrsaeule wird verkleinert: Massstab {skala:0.00}");
+
+        // Die Rohrsaeule steht in einer verschobenen Gruppe, deshalb tief suchen.
+        var formen = AlleKinder(flaeche).ToList();
+        var rohr = formen.OfType<Rectangle>().First(r => r.Fill is LinearGradientBrush);
+        Assert.True(
+            rohr.Width * skala >= 3d,
+            $"Rohr nur {rohr.Width * skala:0.0} px breit auf dem Bildschirm");
+
+        var texte = formen.OfType<TextBlock>().ToList();
+        Assert.NotEmpty(texte);
+        foreach (var text in texte)
+        {
+            Assert.True(
+                text.FontSize * skala >= 9d,
+                $"Beschriftung \"{text.Text}\" nur {text.FontSize * skala:0.0} px gross");
+        }
+
+        // Die Beschriftungstabelle ist weg; die Schadenliste daneben ist die Legende.
+        Assert.DoesNotContain(texte, t => t.Text == "OP Kürzel");
+    }
+
     private static void DasPanelZeigtDieGrafikStattDesRohrrings()
     {
         var panel = new HaltungUebersichtPanel { Record = Haltung() };
@@ -112,7 +207,8 @@ public sealed class HaltungsgrafikControlIsolatedSmokeTests
         Assert.Null(Nachfahre<RohrringControl>(panel));
         var grafik = Nachfahre<HaltungsgrafikControl>(panel);
         Assert.NotNull(grafik);
-        grafik!.ZeichneJetzt();
+        Assert.True(grafik!.NurRohr, "In der Uebersicht wird nur die Rohrsaeule gezeichnet.");
+        grafik.ZeichneJetzt();
         Assert.Equal(3, grafik.SymbolAnzahl);
     }
 
@@ -157,6 +253,20 @@ public sealed class HaltungsgrafikControlIsolatedSmokeTests
         grafik.UpdateLayout();
         grafik.ZeichneJetzt();
         grafik.UpdateLayout();
+    }
+
+    /// <summary>Alle Elemente einer Zeichenflaeche, auch die in verschobenen Gruppen.</summary>
+    private static IEnumerable<FrameworkElement> AlleKinder(Canvas flaeche)
+    {
+        foreach (var kind in flaeche.Children.OfType<FrameworkElement>())
+        {
+            yield return kind;
+            if (kind is Canvas gruppe)
+            {
+                foreach (var enkel in AlleKinder(gruppe))
+                    yield return enkel;
+            }
+        }
     }
 
     private static T? Nachfahre<T>(DependencyObject wurzel) where T : DependencyObject

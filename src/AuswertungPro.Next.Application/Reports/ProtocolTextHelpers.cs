@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -179,15 +180,47 @@ public static class ProtocolTextHelpers
 
     /// <summary>
     /// Escaped Sonderzeichen (&lt; &gt; &amp; &quot; &apos;) fuer die Einbettung in SVG-Textelemente.
+    /// Steuerzeichen unterhalb 0x20 (ausser Tab/CR/LF) sind in XML nicht erlaubt und werden vorher
+    /// entfernt: Ohne diese Bereinigung liess ein Steuerzeichen im Befundtext (z.B. aus
+    /// fehlerhaftem OCR-Import) den WPF-XmlReader beim blossen Anzeigen der Grafik mit einer
+    /// XmlException abstuerzen — die Oberflaeche fing das ab, aber die Grafik blieb dabei leer.
     /// </summary>
     public static string EscapeSvgText(string text)
     {
         if (string.IsNullOrEmpty(text))
             return string.Empty;
-        return text.Replace("&", "&amp;")
+        return EntferneUnerlaubteSteuerzeichen(text)
+            .Replace("&", "&amp;")
             .Replace("<", "&lt;")
             .Replace(">", "&gt;")
             .Replace("\"", "&quot;")
             .Replace("'", "&apos;");
     }
+
+    private static string EntferneUnerlaubteSteuerzeichen(string text)
+    {
+        var hatSteuerzeichen = false;
+        foreach (var zeichen in text)
+        {
+            if (IstUnerlaubtesSteuerzeichen(zeichen))
+            {
+                hatSteuerzeichen = true;
+                break;
+            }
+        }
+
+        if (!hatSteuerzeichen)
+            return text;
+
+        var puffer = new StringBuilder(text.Length);
+        foreach (var zeichen in text)
+        {
+            if (!IstUnerlaubtesSteuerzeichen(zeichen))
+                puffer.Append(zeichen);
+        }
+        return puffer.ToString();
+    }
+
+    private static bool IstUnerlaubtesSteuerzeichen(char zeichen)
+        => zeichen < 0x20 && zeichen != '\t' && zeichen != '\r' && zeichen != '\n';
 }

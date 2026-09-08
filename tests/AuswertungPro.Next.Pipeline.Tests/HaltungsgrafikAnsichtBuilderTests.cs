@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -112,6 +113,135 @@ public sealed class HaltungsgrafikAnsichtBuilderTests
             .Select(e => (e.Code, e.MeterStart, e.MeterEnd))
             .ToList();
         Assert.Equal(vorher, nachher);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (Review B.2): Ein passendes <see cref="VsaFinding"/> wuerde ueber
+    /// <c>ProtocolPdfEntryResolver.ResolveEntriesForExport</c> Fotopfade und Codemetadaten
+    /// NACHTRAEGLICH in den bestehenden Eintrag schreiben (Reparatur fuer den Export) und koennte
+    /// sogar einen zusaetzlichen Eintrag anlegen. Die vorherige Pruefung (nur Code/Meter) haette
+    /// genau das nicht bemerkt, weil die Reparatur diese drei Felder unveraendert laesst.
+    /// </summary>
+    [Fact]
+    public void Ein_passendes_VsaFinding_repariert_den_Eintrag_nicht()
+    {
+        var record = Haltung();
+        var eintrag = record.Protocol!.Current.Entries[0]; // BAB @ 3.2, ohne Foto/Parameter
+        var vorherFotos = eintrag.FotoPaths.ToList();
+        var vorherParameterAnzahl = eintrag.CodeMeta!.Parameters.Count;
+        var vorherAnzahl = record.Protocol.Current.Entries.Count;
+
+        record.VsaFindings.Add(new VsaFinding
+        {
+            KanalSchadencode = eintrag.Code,
+            MeterStart = eintrag.MeterStart,
+            FotoPath = @"C:\irgendwo\foto.jpg",
+            Quantifizierung1 = "50"
+        });
+
+        Assert.NotNull(HaltungsgrafikAnsichtBuilder.Baue(record, catalog: null, hoehe: 700));
+
+        Assert.Equal(vorherAnzahl, record.Protocol.Current.Entries.Count);
+        Assert.Equal(vorherFotos, eintrag.FotoPaths);
+        Assert.Equal(vorherParameterAnzahl, eintrag.CodeMeta.Parameters.Count);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: Ohne Vorgabe gilt dieselbe gestaffelte Standardhoehe wie im PDF-Weg
+    /// (<see cref="HaltungsgrafikExportSizing.ChooseSvgHeight"/>) statt einer festen 700 —
+    /// eine Haltung mit vielen Eintraegen bekommt mehr Platz. Eine ausdrueckliche Vorgabe
+    /// (z.B. die auf ihre feste Anzeigehoehe abgestimmte Rohrsaeule der Uebersicht) sticht
+    /// weiterhin.
+    /// </summary>
+    [Fact]
+    public void Ohne_Hoehenvorgabe_waechst_die_Standardhoehe_mit_der_Eintragszahl()
+    {
+        var wenig = Haltung();
+        var ansichtWenig = HaltungsgrafikAnsichtBuilder.Baue(wenig, catalog: null);
+        Assert.NotNull(ansichtWenig);
+        Assert.Equal(700, ansichtWenig!.Hoehe);
+
+        var viele = Haltung();
+        viele.Protocol!.Current.Entries.Clear();
+        for (var i = 0; i < 30; i++)
+            viele.Protocol.Current.Entries.Add(Eintrag("BAB", 1.0 + i));
+
+        var ansichtViele = HaltungsgrafikAnsichtBuilder.Baue(viele, catalog: null);
+        Assert.NotNull(ansichtViele);
+        Assert.Equal(HaltungsgrafikExportSizing.ChooseSvgHeight(30), ansichtViele!.Hoehe);
+        Assert.True(ansichtViele.Hoehe > 700, "Mehr Eintraege sollen mehr Platz auf dem Rohr bekommen.");
+
+        var mitVorgabe = HaltungsgrafikAnsichtBuilder.Baue(viele, catalog: null, hoehe: 310);
+        Assert.NotNull(mitVorgabe);
+        Assert.Equal(310, mitVorgabe!.Hoehe);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: Die volle Grafik ist A4-proportioniert und wird in der schmalen Uebersicht
+    /// unlesbar klein. <c>nurRohr</c> laesst die Beschriftungstabelle weg und liefert die schmale
+    /// Rohrsaeule — Rohr, Skala, Symbole, Schachtknoten und Fliesspfeil bleiben.
+    /// </summary>
+    [Fact]
+    public void Nur_Rohr_laesst_die_Beschriftungstabelle_weg()
+    {
+        var record = Haltung();
+        record.SetFieldValue("Inspektionsrichtung", "In Fliessrichtung", FieldSource.Manual, true);
+
+        var saeule = HaltungsgrafikAnsichtBuilder.Baue(record, catalog: null, hoehe: 340, nurRohr: true);
+        Assert.NotNull(saeule);
+        Assert.Equal(HaltungsgrafikSvgBuilder.RohrBreite, saeule!.Breite);
+
+        // Weg: Spaltenkopf, Spalten-Zuschnitte und die Label-Zeilen.
+        foreach (var weg in new[] { "OP Kürzel", "Zustand", "MPEG", "clipPath", "clip-path" })
+            Assert.DoesNotContain(weg, saeule.Svg, StringComparison.Ordinal);
+
+        // Da: Rohr, Skala, Schachtknoten, Fliesspfeil auf dem Rohr, Symbole.
+        foreach (var da in new[] { "url(#pipeGrad)", ">10001<", ">10002<", "url(#flowGrad)", "<circle" })
+            Assert.Contains(da, saeule.Svg, StringComparison.Ordinal);
+
+        // Weg: die Wellen und die gedrehte Beschriftung am linken Rand — sie lagen genau auf
+        // den Meterzahlen (Sichtprobe im Pruefhost).
+        Assert.DoesNotContain("Fliessrichtung", saeule.Svg, StringComparison.Ordinal);
+
+        // Die Saeule steht als Ganzes gerueckt, damit die Meterbeschriftung nicht abgeschnitten wird.
+        Assert.Contains($"<g transform='translate({HaltungsgrafikSvgBuilder.RohrVersatz},0)'>", saeule.Svg, StringComparison.Ordinal);
+        Assert.EndsWith("</g></svg>", saeule.Svg, StringComparison.Ordinal);
+
+        // Die Hinweisflaechen wandern mit.
+        Assert.All(saeule.Marken, marke => Assert.True(marke.X > 0 && marke.X + marke.Breite < HaltungsgrafikSvgBuilder.RohrBreite));
+    }
+
+    /// <summary>Der PDF-Weg bleibt der Standardfall und behaelt seine Tabelle.</summary>
+    [Fact]
+    public void Der_volle_Weg_bleibt_unveraendert()
+    {
+        var voll = HaltungsgrafikAnsichtBuilder.Baue(Haltung(), catalog: null, hoehe: 700);
+
+        Assert.NotNull(voll);
+        Assert.Equal(HaltungsgrafikSvgBuilder.Width, voll!.Breite);
+        Assert.Contains("OP Kürzel", voll.Svg, StringComparison.Ordinal);
+        Assert.Contains("clipPath", voll.Svg, StringComparison.Ordinal);
+        Assert.DoesNotContain("<g transform=", voll.Svg, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (Review B.1): Ein Steuerzeichen im Befundtext (etwa aus fehlerhaftem
+    /// OCR-Import) liess den WPF-XmlReader beim blossen Anzeigen mit einer <c>XmlException</c>
+    /// abstuerzen, weil <c>EscapeSvgText</c> es nicht bereinigte. Das erzeugte SVG ist jetzt
+    /// immer gueltiges XML.
+    /// </summary>
+    [Fact]
+    public void Ein_Steuerzeichen_im_Befundtext_bleibt_gueltiges_Xml()
+    {
+        var record = Haltung();
+        record.Protocol!.Current.Entries[0].Beschreibung = "Riss \u0002 quer";
+
+        var ansicht = HaltungsgrafikAnsichtBuilder.Baue(record, catalog: null, hoehe: 700);
+
+        Assert.NotNull(ansicht);
+        Assert.DoesNotContain('\u0002', ansicht!.Svg);
+        // Wirft eine XmlException, wenn ein Steuerzeichen uebrig geblieben waere.
+        XDocument.Parse(ansicht.Svg);
     }
 
     /// <summary>Ein geloeschter Eintrag gehoert nicht in die Grafik.</summary>

@@ -33,6 +33,10 @@ public sealed class HaltungsgrafikSvgBuilderTeilmengeTests
         SvgTeilmengeZeichner.PruefeTeilmenge(BeispielSvg(flowDown: true));
         SvgTeilmengeZeichner.PruefeTeilmenge(BeispielSvg(flowDown: false));
         SvgTeilmengeZeichner.PruefeTeilmenge(BeispielSvg(flowDown: null));
+        // Fix-Runde 1: auch die reine Rohrsaeule der Uebersicht.
+        SvgTeilmengeZeichner.PruefeTeilmenge(BeispielSvg(flowDown: true, nurRohr: true));
+        // Fix-Runde 1 (Review B.6): auch mit gefuellter Fotonummern-Spalte.
+        SvgTeilmengeZeichner.PruefeTeilmenge(BeispielSvg(flowDown: true, mitFotonummern: true));
     }
 
     /// <summary>Jedes Element und jedes Attribut des Beispiels steht in der Teilmenge.</summary>
@@ -82,6 +86,53 @@ public sealed class HaltungsgrafikSvgBuilderTeilmengeTests
         // Gegenprobe, damit der Waechter nicht still leer laeuft, falls das Muster einmal
         // nicht mehr greift.
         foreach (var pflicht in new[] { "svg", "defs", "rect", "line", "circle", "text", "path", "polygon", "ellipse" })
+            Assert.Contains(pflicht, gefunden);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (Review B.6): Quelltext-Gegenprobe fuer Attribute — analog zur
+    /// Element-Gegenprobe oben, aber fuer die geschriebenen Attributnamen. Ein Attribut wird
+    /// gegen die GESAMTE erlaubte Attributmenge geprueft (nicht je Element), weil sich
+    /// Elementname und Attribut im Quelltext oft ueber mehrere aneinandergehaengte
+    /// <c>sb.Append</c>-Aufrufe verteilen (siehe <see cref="DamageSymbolRenderer"/>) — eine
+    /// Zuordnung je Zeile waere hier nicht zuverlaessig.
+    /// </summary>
+    [Fact]
+    public void Der_Quelltext_schreibt_nur_Attribute_der_Teilmenge()
+    {
+        var muster = new Regex(@"(?<![A-Za-z0-9_-])([a-zA-Z][a-zA-Z0-9-]*)='", RegexOptions.Compiled);
+        var bekannt = new HashSet<string>(
+            SvgTeilmengeZeichner.UnterstuetzteAttribute.Values.SelectMany(a => a),
+            StringComparer.Ordinal);
+        // xmlns ist eine XML-Namensraumangabe, keine Fachangabe — der Zeichner ueberspringt sie
+        // ausdruecklich (IsNamespaceDeclaration) und braucht dafuer keine eigene Zuordnung.
+        bekannt.Add("xmlns");
+
+        var unbekannt = new List<string>();
+        var gefunden = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var datei in Quelldateien)
+        {
+            foreach (var zeile in Codezeilen(datei))
+            {
+                foreach (Match treffer in muster.Matches(zeile))
+                {
+                    var name = treffer.Groups[1].Value;
+                    gefunden.Add(name);
+                    if (!bekannt.Contains(name))
+                        unbekannt.Add($"{datei}: {name}='");
+                }
+            }
+        }
+
+        Assert.True(
+            unbekannt.Count == 0,
+            "Der Grafikbauer schreibt SVG-Attribute, die der Zeichner nicht kennt:\n"
+            + string.Join("\n", unbekannt.Distinct()));
+
+        // Gegenprobe, damit der Waechter nicht still leer laeuft, falls das Muster einmal
+        // nicht mehr greift.
+        foreach (var pflicht in new[] { "x", "y", "width", "height", "fill", "stroke", "d", "points" })
             Assert.Contains(pflicht, gefunden);
     }
 
@@ -159,8 +210,10 @@ public sealed class HaltungsgrafikSvgBuilderTeilmengeTests
     /// <summary>
     /// Ein SVG mit allen Symbolarten des Klassifizierers, Strecken- und Punktschaden,
     /// Seitenanschluss mit und ohne Uhrlage, Abbruch und einem nicht inspizierten Bereich.
+    /// <paramref name="mitFotonummern"/> fuellt zusaetzlich die Fotonummern-Spalte (Fix-Runde 1,
+    /// Review B.6) — ohne Beispiel dafuer bliebe dieser Zweig ungeprueft.
     /// </summary>
-    private static string BeispielSvg(bool? flowDown)
+    private static string BeispielSvg(bool? flowDown, bool nurRohr = false, bool mitFotonummern = false)
     {
         var eintraege = new List<ProtocolEntry>();
         var meter = 1.0;
@@ -189,17 +242,22 @@ public sealed class HaltungsgrafikSvgBuilderTeilmengeTests
         eintraege.Add(Eintrag("BCA", 46.0));
         eintraege.Add(Eintrag("BDC", 48.0));
 
+        var photoNumbers = mitFotonummern
+            ? eintraege.Select((e, i) => (e, i)).ToDictionary(p => p.e, p => (p.i + 1).ToString())
+            : null;
+
         return HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(
             50.0,
             eintraege,
-            photoNumbers: null,
+            photoNumbers,
             "10001",
             "10002",
             flowDown,
             HaltungsgrafikAnsichtBuilder.Markenfarbe,
             overrideHeight: 700,
             unknownGaps: [new InspectionGap(20.0, 24.0)],
-            catalog: null);
+            catalog: null,
+            nurRohr);
     }
 
     private static ProtocolEntry Eintrag(string code, double meter)

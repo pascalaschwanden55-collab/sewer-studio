@@ -80,8 +80,15 @@
                                    TextTrimming="CharacterEllipsis"/>
                     </DockPanel>
 
-                    <!-- Haltungsgrafik des Protokolls: dieselbe Zeichnung wie im PDF, in Theme-Farben -->
+                    <!-- Haltungsgrafik des Protokolls: dieselbe Zeichnung wie im PDF, in Theme-Farben.
+                         Hier nur die Rohrsaeule ohne Beschriftungstabelle - die volle Grafik ist
+                         A4-breit und wird in dieser Spalte unlesbar klein; die Schadenliste
+                         darunter ist die Legende. 360 px Anzeigehoehe zu 310 SVG-Einheiten heisst
+                         Massstab 1,16: auch die kleinste Beschriftung (8 SVG-Einheiten an den
+                         Anschluessen) bleibt ueber 9 px. -->
                     <local:HaltungsgrafikControl Grid.Row="1" Margin="0,0,0,8"
+                                                 NurRohr="True" SvgHoehe="310"
+                                                 Height="360" HorizontalAlignment="Stretch"
                                                  Record="{Binding Record, ElementName=Root}"
                                                  Entries="{Binding Entries, ElementName=Root}"
                                                  Catalog="{Binding Catalog, ElementName=Root}"/>

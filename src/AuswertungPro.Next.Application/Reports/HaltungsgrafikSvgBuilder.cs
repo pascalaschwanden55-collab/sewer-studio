@@ -32,6 +32,19 @@ public static class HaltungsgrafikSvgBuilder
     public const int RightMargin = 6;
 
     /// <summary>
+    /// Breite der reinen Rohrsaeule (<c>nurRohr</c>). Die volle Grafik ist A4-proportioniert und
+    /// wird in einer schmalen Spalte unlesbar klein; ohne Beschriftungstabelle passt die Saeule
+    /// in eine schmale, hohe Flaeche.
+    /// </summary>
+    public const int RohrBreite = 130;
+
+    /// <summary>
+    /// Versatz der Rohrsaeule nach rechts. Die Meterbeschriftung steht rechtsbuendig links vom
+    /// Rohr und ragte sonst ueber den linken Blattrand hinaus.
+    /// </summary>
+    public const int RohrVersatz = 10;
+
+    /// <summary>
     /// Erstellt den vollstaendigen SVG-String fuer die Haltungsgrafik.
     /// </summary>
     public static string BuildHaltungsgrafikSvg(
@@ -59,6 +72,11 @@ public static class HaltungsgrafikSvgBuilder
     /// <summary>
     /// Erstellt die Haltungsgrafik und verwendet den optionalen Katalog fuer
     /// die Klartexte der Beobachtungs-Labels.
+    ///
+    /// <paramref name="nurRohr"/> zeichnet ausschliesslich die Rohrsaeule (Rohr, Meter-Skala,
+    /// Schadenssymbole, Schachtknoten, Fliesspfeil) ohne Spaltenkopf und Beschriftungstabelle.
+    /// Gedacht fuer die schmale Uebersicht im Programm, wo die Schadenliste daneben die Legende
+    /// ist. Der PDF-Weg bleibt unveraendert der Standardfall.
     /// </summary>
     public static string BuildHaltungsgrafikSvg(
         double length,
@@ -70,9 +88,10 @@ public static class HaltungsgrafikSvgBuilder
         string brand,
         int? overrideHeight,
         IReadOnlyList<InspectionGap>? unknownGaps,
-        ICodeCatalogProvider? catalog)
+        ICodeCatalogProvider? catalog,
+        bool nurRohr = false)
     {
-        var width = Width;
+        var width = nurRohr ? RohrBreite : Width;
         var height = overrideHeight ?? Height;
         var marginTop = MarginTop;
         var headerHeight = HeaderHeight;
@@ -157,32 +176,43 @@ public static class HaltungsgrafikSvgBuilder
         sb.Append("<feMerge><feMergeNode/><feMergeNode in='SourceGraphic'/></feMerge>");
         sb.Append("</filter>");
 
-        // ClipPath-Definitionen fuer jede Spalte
-        sb.Append($"<clipPath id='clipMeter'><rect x='{Svg(colMeterX)}' y='0' width='{Svg(colMeterWidth - 2)}' height='{height}'/></clipPath>");
-        sb.Append($"<clipPath id='clipCode'><rect x='{Svg(colCodeX)}' y='0' width='{Svg(colCodeWidth - 2)}' height='{height}'/></clipPath>");
-        sb.Append($"<clipPath id='clipZustand'><rect x='{Svg(colZustandX)}' y='0' width='{Svg(colZustandWidth - 2)}' height='{height}'/></clipPath>");
-        sb.Append($"<clipPath id='clipMpeg'><rect x='{Svg(colMpegX)}' y='0' width='{Svg(colMpegWidth - 2)}' height='{height}'/></clipPath>");
-        sb.Append($"<clipPath id='clipFoto'><rect x='{Svg(colFotoX)}' y='0' width='{Svg(colFotoWidth - 2)}' height='{height}'/></clipPath>");
-        sb.Append($"<clipPath id='clipStufe'><rect x='{Svg(colStufeX)}' y='0' width='{Svg(colStufeWidth - 2)}' height='{height}'/></clipPath>");
+        // ClipPath-Definitionen fuer jede Spalte (nur fuer die Beschriftungstabelle)
+        if (!nurRohr)
+        {
+            sb.Append($"<clipPath id='clipMeter'><rect x='{Svg(colMeterX)}' y='0' width='{Svg(colMeterWidth - 2)}' height='{height}'/></clipPath>");
+            sb.Append($"<clipPath id='clipCode'><rect x='{Svg(colCodeX)}' y='0' width='{Svg(colCodeWidth - 2)}' height='{height}'/></clipPath>");
+            sb.Append($"<clipPath id='clipZustand'><rect x='{Svg(colZustandX)}' y='0' width='{Svg(colZustandWidth - 2)}' height='{height}'/></clipPath>");
+            sb.Append($"<clipPath id='clipMpeg'><rect x='{Svg(colMpegX)}' y='0' width='{Svg(colMpegWidth - 2)}' height='{height}'/></clipPath>");
+            sb.Append($"<clipPath id='clipFoto'><rect x='{Svg(colFotoX)}' y='0' width='{Svg(colFotoWidth - 2)}' height='{height}'/></clipPath>");
+            sb.Append($"<clipPath id='clipStufe'><rect x='{Svg(colStufeX)}' y='0' width='{Svg(colStufeWidth - 2)}' height='{height}'/></clipPath>");
+        }
         sb.Append("</defs>");
 
-        // --- Card-Style Spaltenheader ---
-        var hdrBgY = marginTop - 2;
-        var hdrBgH = headerHeight + 4;
-        sb.Append($"<rect x='{Svg(tableX - 4)}' y='{Svg(hdrBgY)}' width='{Svg(tableWidth + 8)}' height='{Svg(hdrBgH)}' rx='4' ry='4' fill='#FFFFFF' stroke='#D1D5DB' stroke-width='0.6'/>");
+        // Die reine Rohrsaeule wird als Ganzes nach rechts gerueckt, damit die rechtsbuendige
+        // Meterbeschriftung nicht ueber den linken Blattrand hinausragt.
+        if (nurRohr)
+            sb.Append($"<g transform='translate({Svg(RohrVersatz)},0)'>");
 
-        sb.Append($"<text x='{Svg(colMeterX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>m+</text>");
-        sb.Append($"<text x='{Svg(colCodeX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>OP Kürzel</text>");
-        sb.Append($"<text x='{Svg(colZustandX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>Zustand</text>");
-        sb.Append($"<text x='{Svg(colMpegX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>MPEG</text>");
-        sb.Append($"<text x='{Svg(colFotoX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>Foto</text>");
-        sb.Append($"<text x='{Svg(colStufeX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>Stufe</text>");
+        // --- Card-Style Spaltenheader (nur mit Beschriftungstabelle) ---
+        if (!nurRohr)
+        {
+            var hdrBgY = marginTop - 2;
+            var hdrBgH = headerHeight + 4;
+            sb.Append($"<rect x='{Svg(tableX - 4)}' y='{Svg(hdrBgY)}' width='{Svg(tableWidth + 8)}' height='{Svg(hdrBgH)}' rx='4' ry='4' fill='#FFFFFF' stroke='#D1D5DB' stroke-width='0.6'/>");
 
-        // Vertikale Spaltentrennlinien
-        foreach (var cx in new[] { colCodeX, colZustandX, colMpegX, colFotoX, colStufeX })
-            sb.Append($"<line x1='{Svg(cx - 3)}' y1='{Svg(hdrBgY + 3)}' x2='{Svg(cx - 3)}' y2='{Svg(hdrBgY + hdrBgH - 3)}' stroke='#D1D5DB' stroke-width='0.5'/>");
+            sb.Append($"<text x='{Svg(colMeterX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>m+</text>");
+            sb.Append($"<text x='{Svg(colCodeX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>OP Kürzel</text>");
+            sb.Append($"<text x='{Svg(colZustandX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>Zustand</text>");
+            sb.Append($"<text x='{Svg(colMpegX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>MPEG</text>");
+            sb.Append($"<text x='{Svg(colFotoX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>Foto</text>");
+            sb.Append($"<text x='{Svg(colStufeX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>Stufe</text>");
 
-        sb.Append($"<line x1='{Svg(tableX - 4)}' y1='{Svg(headerLineY)}' x2='{Svg(width - rightMargin + 4)}' y2='{Svg(headerLineY)}' stroke='#D1D5DB' stroke-width='0.8'/>");
+            // Vertikale Spaltentrennlinien
+            foreach (var cx in new[] { colCodeX, colZustandX, colMpegX, colFotoX, colStufeX })
+                sb.Append($"<line x1='{Svg(cx - 3)}' y1='{Svg(hdrBgY + 3)}' x2='{Svg(cx - 3)}' y2='{Svg(hdrBgY + hdrBgH - 3)}' stroke='#D1D5DB' stroke-width='0.5'/>");
+
+            sb.Append($"<line x1='{Svg(tableX - 4)}' y1='{Svg(headerLineY)}' x2='{Svg(width - rightMargin + 4)}' y2='{Svg(headerLineY)}' stroke='#D1D5DB' stroke-width='0.8'/>");
+        }
 
         // --- Alternating tick background stripes ---
         var tickStep = HaltungsgrafikScaleCalculator.ChooseTickStep(length);
@@ -229,6 +259,9 @@ public static class HaltungsgrafikSvgBuilder
                 sb.Append($"<rect x='{Svg(lineX - pipeHalf - 2)}' y='{Svg(y1)}' width='{Svg(pipeWidth + 4)}' height='{Svg(h)}' fill='url(#unknownHatch)' opacity='0.95' rx='2'/>");
                 sb.Append($"<line x1='{Svg(lineX - pipeHalf - 4)}' y1='{Svg(y1)}' x2='{Svg(lineX + pipeHalf + 4)}' y2='{Svg(y1)}' stroke='#6B7280' stroke-width='1.2' stroke-dasharray='3,2'/>");
                 sb.Append($"<line x1='{Svg(lineX - pipeHalf - 4)}' y1='{Svg(y2)}' x2='{Svg(lineX + pipeHalf + 4)}' y2='{Svg(y2)}' stroke='#6B7280' stroke-width='1.2' stroke-dasharray='3,2'/>");
+
+                if (nurRohr)
+                    continue;
 
                 var labelY = y1 + h / 2d;
                 var labelText = $"Unbekannt {gap.StartMeter:0.00}-{gap.EndMeter:0.00} m";
@@ -310,46 +343,52 @@ public static class HaltungsgrafikSvgBuilder
                           $"fill='url(#flowGrad)' stroke='white' stroke-width='1.5' filter='url(#flowGlow)'/>");
             }
 
-            // Wellenlinien (3 Wellen) am linken Rand - weiter aussen als frueher,
-            // weil links jetzt die 1-5-Uhr-Anschluesse liegen (WinCan-Draufsicht).
-            var waveX = 16d;
-            var waveCenterY = (top + bottom) / 2.0;
-            var waveLen = 40d; // Laenge der Wellenlinien
-            var waveAmp = 2.5; // Amplitude der Wellen
-            var waveSpacing = 6d; // Abstand zwischen Wellenlinien
-
-            for (var wi = -1; wi <= 1; wi++)
+            // In der reinen Rohrsaeule bleibt es beim grossen Pfeil auf dem Rohr: Wellen und
+            // gedrehte Beschriftung stehen am linken Rand genau dort, wo im schmalen Ausschnitt
+            // die Meterzahlen liegen — sie wuerden sich ueberlagern.
+            if (!nurRohr)
             {
-                var wy = waveCenterY + wi * waveSpacing;
-                var waveStartY = wy - waveLen / 2;
-                // SVG-Pfad fuer Sinuswelle (vertikal, da Rohr vertikal)
-                var wavePath = new StringBuilder();
-                wavePath.Append($"M {Svg(waveX)} {Svg(waveStartY)}");
-                var segments = 8;
-                var segLen = waveLen / segments;
-                for (var si = 0; si < segments; si++)
+                // Wellenlinien (3 Wellen) am linken Rand - weiter aussen als frueher,
+                // weil links jetzt die 1-5-Uhr-Anschluesse liegen (WinCan-Draufsicht).
+                var waveX = 16d;
+                var waveCenterY = (top + bottom) / 2.0;
+                var waveLen = 40d; // Laenge der Wellenlinien
+                var waveAmp = 2.5; // Amplitude der Wellen
+                var waveSpacing = 6d; // Abstand zwischen Wellenlinien
+
+                for (var wi = -1; wi <= 1; wi++)
                 {
-                    var cy1 = waveStartY + si * segLen + segLen * 0.33;
-                    var cy2 = waveStartY + si * segLen + segLen * 0.66;
-                    var ey = waveStartY + (si + 1) * segLen;
-                    var dx = (si % 2 == 0) ? waveAmp : -waveAmp;
-                    wavePath.Append($" C {Svg(waveX + dx)} {Svg(cy1)}, {Svg(waveX + dx)} {Svg(cy2)}, {Svg(waveX)} {Svg(ey)}");
+                    var wy = waveCenterY + wi * waveSpacing;
+                    var waveStartY = wy - waveLen / 2;
+                    // SVG-Pfad fuer Sinuswelle (vertikal, da Rohr vertikal)
+                    var wavePath = new StringBuilder();
+                    wavePath.Append($"M {Svg(waveX)} {Svg(waveStartY)}");
+                    var segments = 8;
+                    var segLen = waveLen / segments;
+                    for (var si = 0; si < segments; si++)
+                    {
+                        var cy1 = waveStartY + si * segLen + segLen * 0.33;
+                        var cy2 = waveStartY + si * segLen + segLen * 0.66;
+                        var ey = waveStartY + (si + 1) * segLen;
+                        var dx = (si % 2 == 0) ? waveAmp : -waveAmp;
+                        wavePath.Append($" C {Svg(waveX + dx)} {Svg(cy1)}, {Svg(waveX + dx)} {Svg(cy2)}, {Svg(waveX)} {Svg(ey)}");
+                    }
+                    sb.Append($"<path d='{wavePath}' fill='none' stroke='{flowColor}' stroke-width='1.2' opacity='0.6'/>");
                 }
-                sb.Append($"<path d='{wavePath}' fill='none' stroke='{flowColor}' stroke-width='1.2' opacity='0.6'/>");
+
+                // Kleiner Richtungspfeil am Ende der Wellen
+                var waveArrowY = flowDown.Value ? waveCenterY + waveLen / 2 + 4 : waveCenterY - waveLen / 2 - 4;
+                var waTip = flowDown.Value ? waveArrowY + 5 : waveArrowY - 5;
+                sb.Append($"<polygon points='{Svg(waveX - 3)},{Svg(waveArrowY)} {Svg(waveX + 3)},{Svg(waveArrowY)} {Svg(waveX)},{Svg(waTip)}' " +
+                          $"fill='{flowColor}' opacity='0.7'/>");
+
+                // Rotierter Label-Text
+                var midY = (top + bottom) / 2.0;
+                var flowLabel = flowDown.Value ? "↓ Fliessrichtung" : "↑ Fliessrichtung";
+                var rotation = flowDown.Value ? 90 : -90;
+                sb.Append($"<text x='{Svg(waveX - 9)}' y='{Svg(midY)}' font-size='9' fill='{flowColorDark}' font-weight='600' text-anchor='middle' font-family='sans-serif' " +
+                          $"transform='rotate({rotation} {Svg(waveX - 9)} {Svg(midY)})'>{EscapeSvgText(flowLabel)}</text>");
             }
-
-            // Kleiner Richtungspfeil am Ende der Wellen
-            var waveArrowY = flowDown.Value ? waveCenterY + waveLen / 2 + 4 : waveCenterY - waveLen / 2 - 4;
-            var waTip = flowDown.Value ? waveArrowY + 5 : waveArrowY - 5;
-            sb.Append($"<polygon points='{Svg(waveX - 3)},{Svg(waveArrowY)} {Svg(waveX + 3)},{Svg(waveArrowY)} {Svg(waveX)},{Svg(waTip)}' " +
-                      $"fill='{flowColor}' opacity='0.7'/>");
-
-            // Rotierter Label-Text
-            var midY = (top + bottom) / 2.0;
-            var flowLabel = flowDown.Value ? "↓ Fliessrichtung" : "↑ Fliessrichtung";
-            var rotation = flowDown.Value ? 90 : -90;
-            sb.Append($"<text x='{Svg(waveX - 9)}' y='{Svg(midY)}' font-size='9' fill='{flowColorDark}' font-weight='600' text-anchor='middle' font-family='sans-serif' " +
-                      $"transform='rotate({rotation} {Svg(waveX - 9)} {Svg(midY)})'>{EscapeSvgText(flowLabel)}</text>");
         }
 
         // --- Streckenschaeden (schraffierte Rohr-Abschnitte) ---
@@ -482,6 +521,15 @@ public static class HaltungsgrafikSvgBuilder
         }
 
         // --- Beobachtungs-Labels ---
+        // In der reinen Rohrsaeule entfallen Bezugslinien und Beschriftungstabelle: Die
+        // Schadenliste neben der Grafik ist dort die Legende.
+        if (nurRohr)
+        {
+            sb.Append("</g>");
+            sb.Append("</svg>");
+            return sb.ToString();
+        }
+
         var labels = HaltungsgrafikLabelLayout.BuildHaltungsgrafikLabels(
             entries,
             length,
