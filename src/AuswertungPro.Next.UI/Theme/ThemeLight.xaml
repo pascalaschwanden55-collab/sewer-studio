@@ -99,6 +99,15 @@
     <SolidColorBrush x:Key="SuccessSubtleBrush" Color="#FFDCFCE7"/>
     <SolidColorBrush x:Key="DangerSubtleBrush" Color="#FFFEE2E2"/>
     <SolidColorBrush x:Key="WarningSubtleBrush" Color="#FFFFF3CD"/>
+    <!-- Optik-Nachpruefung O2: siehe Theme.xaml. Die hellen Werte sind die bisherigen. -->
+    <SolidColorBrush x:Key="SanierenSubtleBrush" Color="#FFEAF6E3"/>
+    <SolidColorBrush x:Key="SanierenBorderBrush" Color="#FF6AA84F"/>
+    <SolidColorBrush x:Key="AusgefuehrtSubtleBrush" Color="#FFE4F3FA"/>
+    <SolidColorBrush x:Key="AusgefuehrtBorderBrush" Color="#FF00A2D6"/>
+    <SolidColorBrush x:Key="DangerRowBrush" Color="#33FF4444"/>
+    <SolidColorBrush x:Key="WarningRowBrush" Color="#33FF8C00"/>
+    <SolidColorBrush x:Key="UebertragenSubtleBrush" Color="#FFD7F5DD"/>
+    <SolidColorBrush x:Key="UebertragenTextBrush" Color="#FF0F3D1F"/>
 
     <!-- ── DESIGNSTUDIE: Zweit-Akzent (Teal), Severity-Skala, Akzent-Verlauf ── -->
     <Color x:Key="ColorSecondaryAccent">#FF0891B2</Color>

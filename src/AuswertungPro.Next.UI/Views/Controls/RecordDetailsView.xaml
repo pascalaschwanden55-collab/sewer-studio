@@ -485,12 +485,12 @@
                                                                 <Setter Property="CornerRadius" Value="8"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding HighlightKind}" Value="{x:Static windows:RecordDetailHighlightKind.Sanieren}">
-                                                                <Setter Property="Background" Value="#EAF6E3"/>
-                                                                <Setter Property="BorderBrush" Value="#6AA84F"/>
+                                                                <Setter Property="Background" Value="{DynamicResource SanierenSubtleBrush}"/>
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource SanierenBorderBrush}"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding HighlightKind}" Value="{x:Static windows:RecordDetailHighlightKind.AusgefuehrtDurch}">
-                                                                <Setter Property="Background" Value="#E4F3FA"/>
-                                                                <Setter Property="BorderBrush" Value="#00A2D6"/>
+                                                                <Setter Property="Background" Value="{DynamicResource AusgefuehrtSubtleBrush}"/>
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource AusgefuehrtBorderBrush}"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>

@@ -317,10 +317,10 @@
                                                     </Border>
                                                     <ControlTemplate.Triggers>
                                                         <DataTrigger Binding="{Binding Severity}" Value="Error">
-                                                            <Setter TargetName="Bd" Property="Background" Value="#33FF4444"/>
+                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource DangerRowBrush}"/>
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Severity}" Value="Warning">
-                                                            <Setter TargetName="Bd" Property="Background" Value="#33FF8C00"/>
+                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource WarningRowBrush}"/>
                                                         </DataTrigger>
                                                         <Trigger Property="IsMouseOver" Value="True">
                                                             <Setter TargetName="Bd" Property="Opacity" Value="0.7"/>
@@ -339,7 +339,7 @@
                                                                     <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding Severity}" Value="Warning">
-                                                                    <Setter Property="Foreground" Value="#FF8C00"/>
+                                                                    <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -490,8 +490,8 @@
                                                         <Style TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Type DataGridRow}}">
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding TransferMarked}" Value="True">
-                                                                    <Setter Property="Background" Value="#D7F5DD"/>
-                                                                    <Setter Property="Foreground" Value="#0F3D1F"/>
+                                                                    <Setter Property="Background" Value="{DynamicResource UebertragenSubtleBrush}"/>
+                                                                    <Setter Property="Foreground" Value="{DynamicResource UebertragenTextBrush}"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>

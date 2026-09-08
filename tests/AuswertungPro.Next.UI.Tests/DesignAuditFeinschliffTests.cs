@@ -221,7 +221,12 @@ public sealed class DesignAuditFeinschliffTests
             "PlayerWindow.xaml", "PlayerCodingSidePanel.xaml", "LiveFrameWindow.xaml",
             "PhotoMeasurementWindow.xaml", "StartupSplashWindow.xaml", "PipeGraphTimeline.xaml"
         };
-        var festeFarbe = new Regex("\\b(Background|Foreground|BorderBrush|Fill|Stroke)=\"#[0-9A-Fa-f]{6,8}\"", RegexOptions.Compiled);
+        // Optik-Nachpruefung O2: auch die Setter-Form in Triggern (<Setter Property="Background"
+        // Value="#..."/>) zaehlt — so kam die hellgruene Sanieren-Karte in den Dunkelmodus.
+        var festeFarbe = new Regex(
+            "\\b(Background|Foreground|BorderBrush|Fill|Stroke)=\"#[0-9A-Fa-f]{6,8}\""
+            + "|Property=\"(Background|Foreground|BorderBrush|Fill|Stroke)\"\\s+Value=\"#[0-9A-Fa-f]{6,8}\"",
+            RegexOptions.Compiled);
         var treffer = new List<string>();
 
         foreach (var datei in AlleXamlDateien())

@@ -99,6 +99,18 @@
     <SolidColorBrush x:Key="SuccessSubtleBrush" Color="#FF14432A"/>
     <SolidColorBrush x:Key="DangerSubtleBrush" Color="#FF4A1A1A"/>
     <SolidColorBrush x:Key="WarningSubtleBrush" Color="#FF493719"/>
+    <!-- Optik-Nachpruefung O2: Hervorhebungen im Eingabeformular (Sanieren / Ausgefuehrt durch)
+         und im Sanierungsmassnahmen-Fenster. Vorher feste Hellwerte in Triggern — im Dunkeln
+         eine leuchtende Karte mit unlesbarem Text. Die Zeilenfarben sind halbtransparent und
+         gelten deshalb in beiden Themen gleich. -->
+    <SolidColorBrush x:Key="SanierenSubtleBrush" Color="#FF1B3A24"/>
+    <SolidColorBrush x:Key="SanierenBorderBrush" Color="#FF6AA84F"/>
+    <SolidColorBrush x:Key="AusgefuehrtSubtleBrush" Color="#FF14303F"/>
+    <SolidColorBrush x:Key="AusgefuehrtBorderBrush" Color="#FF3FB7E6"/>
+    <SolidColorBrush x:Key="DangerRowBrush" Color="#33FF4444"/>
+    <SolidColorBrush x:Key="WarningRowBrush" Color="#33FF8C00"/>
+    <SolidColorBrush x:Key="UebertragenSubtleBrush" Color="#FF1B3A24"/>
+    <SolidColorBrush x:Key="UebertragenTextBrush" Color="#FF9BE7A9"/>
 
     <!-- ── DESIGNSTUDIE: Zweit-Akzent (Teal), Severity-Skala, Akzent-Verlauf — dunkel abgestimmt ── -->
     <Color x:Key="ColorSecondaryAccent">#FF22D3EE</Color>
