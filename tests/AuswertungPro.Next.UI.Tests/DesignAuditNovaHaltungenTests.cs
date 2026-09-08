@@ -327,4 +327,67 @@ public sealed class DesignAuditNovaHaltungenTests
         // (in einem Ressourcenteil gibt es keinen Namescope der Seite).
         Assert.Contains("Tag=\"loeschen\"", menue.Value, StringComparison.Ordinal);
     }
+    /// <summary>
+    /// Fix-Runde 2 (1): Das Abo des Sprungs von aussen muss symmetrisch sein. <c>Unloaded</c>
+    /// meldete ab, <c>Loaded</c> nicht wieder an — nach einem Unload/Load derselben Seite blieb
+    /// der Sprung aus Dossier, Karte und Suche tot, und das faellt nicht auf, weil die Haltung
+    /// trotzdem ausgewaehlt wird und nur das Aufklappen fehlt.
+    ///
+    /// Der Weg laeuft ueber genau eine Stelle (<c>VerbindeAnzeigeAuftrag</c>), die immer zuerst
+    /// abmeldet und deshalb mehrfach sicher ist.
+    /// </summary>
+    [Fact]
+    public void Das_Abo_des_Sprungs_von_aussen_ist_symmetrisch()
+    {
+        var seite = File.ReadAllText(
+            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml.cs"));
+        var geladen = Regex.Match(seite, @"Loaded \+= \(_, __\) =>\s*\{[\s\S]*?
+        \};");
+        var entladen = Regex.Match(seite, @"Unloaded \+= \(_, __\) =>\s*\{[\s\S]*?
+        \};");
+        Assert.True(geladen.Success && entladen.Success, "Loaded/Unloaded der Seite nicht gefunden");
+        Assert.Contains("VerbindeAnzeigeAuftrag(true)", geladen.Value, StringComparison.Ordinal);
+        Assert.Contains("VerbindeAnzeigeAuftrag(false)", entladen.Value, StringComparison.Ordinal);
+        // Der Controller der Liste wird beim Entladen entsorgt und beim Laden neu verdrahtet.
+        Assert.Contains("_aufklappListe?.Dispose()", entladen.Value, StringComparison.Ordinal);
+        Assert.Contains("_aufklappListe?.Verdrahte()", geladen.Value, StringComparison.Ordinal);
+
+        var anbindung = File.ReadAllText(
+            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.AufklappListe.cs"));
+        var methode = Regex.Match(anbindung, @"private void VerbindeAnzeigeAuftrag\(bool an\)[\s\S]*?
+    \}");
+        Assert.True(methode.Success, "VerbindeAnzeigeAuftrag fehlt");
+        Assert.Contains("HaltungAnzeigen -= ZeigeHaltungInListe;", methode.Value, StringComparison.Ordinal);
+        Assert.Contains("HaltungAnzeigen += ZeigeHaltungInListe;", methode.Value, StringComparison.Ordinal);
+        // Erst abmelden, dann anmelden: sonst haengt der Sprung nach zwei Laeufen doppelt.
+        Assert.True(
+            methode.Value.IndexOf("-= ZeigeHaltungInListe", StringComparison.Ordinal)
+            < methode.Value.IndexOf("+= ZeigeHaltungInListe", StringComparison.Ordinal),
+            "VerbindeAnzeigeAuftrag muss zuerst abmelden.");
+    }
+
+    /// <summary>
+    /// Fix-Runde 2 (2): <c>Waehle</c> wendet die Ansicht selbst an. Ein zweiter
+    /// <c>WendeAnsichtAn()</c> im Menue-Handler waere derselbe Lauf ein zweites Mal — samt einem
+    /// zweiten <c>NimmAnzeigeAuftrag</c>.
+    /// </summary>
+    [Fact]
+    public void Der_Menue_Handler_wendet_die_Ansicht_nicht_zweimal_an()
+    {
+        var anbindung = File.ReadAllText(
+            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.AufklappListe.cs"));
+        var handler = Regex.Match(anbindung, @"private void AnsichtMenu_Click\([\s\S]*?
+    \}");
+        Assert.True(handler.Success, "AnsichtMenu_Click fehlt");
+        Assert.Contains("_ansicht?.Waehle(sender)", handler.Value, StringComparison.Ordinal);
+        Assert.Contains("AktualisiereFormulare()", handler.Value, StringComparison.Ordinal);
+        Assert.DoesNotContain("WendeAnsichtAn()", handler.Value, StringComparison.Ordinal);
+
+        var umschalter = File.ReadAllText(
+            RepoFile("src", "AuswertungPro.Next.UI", "DataPage", "DataPageAnsichtUmschalter.cs"));
+        var waehle = Regex.Match(umschalter, @"public void Waehle\(string\? ansicht\)[\s\S]*?
+    \}");
+        Assert.True(waehle.Success, "Waehle(string) fehlt");
+        Assert.Contains("WendeAn();", waehle.Value, StringComparison.Ordinal);
+    }
 }

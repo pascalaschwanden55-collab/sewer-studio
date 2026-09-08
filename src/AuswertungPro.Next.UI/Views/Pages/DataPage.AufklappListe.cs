@@ -59,13 +59,13 @@ public partial class DataPage
     private void HaltungsansichtToggle_Changed(object sender, RoutedEventArgs e) => WendeAnsichtAn();
 
     /// <summary>
-    /// Ansicht aus dem Menue waehlen. Danach laeuft derselbe Weg wie beim Seitenaufbau — sonst
-    /// bliebe das Formular der vorigen Ansicht stehen.
+    /// Ansicht aus dem Menue waehlen. <c>Waehle</c> wendet sie selbst an; nachzuziehen sind nur
+    /// die Formulare — sonst bliebe das der vorigen Ansicht stehen.
     /// </summary>
     private void AnsichtMenu_Click(object sender, RoutedEventArgs e)
     {
         _ansicht?.Waehle(sender);
-        WendeAnsichtAn();
+        AktualisiereFormulare();
     }
 
     /// <summary>Auswahl gewechselt: offenes Formular pruefen und die Zeile in Sicht scrollen.</summary>
@@ -77,4 +77,20 @@ public partial class DataPage
 
     /// <summary>Sprung aus Dossier, Karte oder Suche: die Haltung in der Liste aufklappen.</summary>
     private void ZeigeHaltungInListe(HaltungRecord record) => _ansicht?.ZeigeHaltung(record);
+
+    /// <summary>
+    /// Abo des Sprungs von aussen, symmetrisch: <c>Unloaded</c> meldet ab, <c>Loaded</c> meldet
+    /// wieder an. Wird dieselbe Seite erneut geladen, waere der Sprung sonst tot — und das faellt
+    /// niemandem auf, weil die Haltung trotzdem ausgewaehlt wird, nur eben nicht aufklappt.
+    /// Mehrfach sicher aufrufbar: Es wird immer zuerst abgemeldet.
+    /// </summary>
+    private void VerbindeAnzeigeAuftrag(bool an)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+
+        vm.HaltungAnzeigen -= ZeigeHaltungInListe;
+        if (an)
+            vm.HaltungAnzeigen += ZeigeHaltungInListe;
+    }
 }

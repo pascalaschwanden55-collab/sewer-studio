@@ -110,9 +110,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         Loaded += (_, __) =>
         {
             ApplyHaltungsansichtSettings();
-            // Nach einem Unloaded ist der Aufklapp-Controller entsorgt; WPF kann dieselbe
-            // Seite wieder laden. Verdrahte() ist mehrfach sicher aufrufbar.
+            // Nach einem Unloaded sind Controller und Abo abgemeldet; WPF kann dieselbe Seite
+            // wieder laden. Beide Aufrufe sind mehrfach sicher.
             _aufklappListe?.Verdrahte();
+            VerbindeAnzeigeAuftrag(true);
             EnsureColumns();
             ApplyStartFilter();
             _columnAlignmentToolbar.UpdateButtons();
@@ -124,8 +125,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             SaveLayoutToSettings();
             _docking?.BeimVerlassen();
             _aufklappListe?.Dispose();
-            if (DataContext is DataPageViewModel altesVm)
-                altesVm.HaltungAnzeigen -= ZeigeHaltungInListe;
+            VerbindeAnzeigeAuftrag(false);
         };
         DataContextChanged += DataPage_DataContextChanged;
         SizeChanged += (_, __) => ApplyDrawerHeight();
