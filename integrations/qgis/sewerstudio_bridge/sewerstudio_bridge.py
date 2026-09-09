@@ -5,6 +5,8 @@ from pathlib import Path
 
 from .bridge_http import fetch_bridge_bytes, fetch_bridge_json
 from .zoom_ziel import ZOOM_MASSSTAB, zoom_ziel
+# Live-Videoposition: eigenstaendiges Modul, eigener schneller Takt.
+from .video_position import VideoPositionAnzeige, baue_bedienfeld
 
 try:
     from qgis.PyQt.QtGui import QAction
@@ -377,6 +379,19 @@ class SewerStudioBridgeDock(QDockWidget):
         self.status_label = QLabel("Nicht verbunden.")
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
+
+        # --- Live-Videoposition -------------------------------------------
+        # Laeuft unabhaengig vom Poll-Takt der uebrigen Ebenen (dort 1-60 s,
+        # hier 250 ms), zeichnet ohne Layer direkt auf den Kartenleinwand.
+        self.video_anzeige = VideoPositionAnzeige(
+            self.iface,
+            lambda: self.url_edit.text().strip() or DEFAULT_BRIDGE_URL,
+            self._log_warning,
+        )
+        layout.addWidget(baue_bedienfeld(root, self.video_anzeige,
+                                         lambda: self.url_edit.text().strip() or DEFAULT_BRIDGE_URL,
+                                         self._set_status))
+        # ------------------------------------------------------------------
         layout.addStretch(1)
         self.setWidget(root)
 
@@ -490,6 +505,10 @@ class SewerStudioBridgeDock(QDockWidget):
     def stop(self):
         if self.timer.isActive():
             self.timer.stop()
+        anzeige = getattr(self, "video_anzeige", None)
+        if anzeige is not None:
+            anzeige.simulation_stoppen()
+            anzeige.stoppen()
 
     def refresh_remote_layers(self):
         self._save_settings()

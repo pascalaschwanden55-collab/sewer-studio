@@ -2,7 +2,13 @@
 name=SewerStudio Bridge
 description=Loads SewerStudio export and live bridge layers in QGIS.
 about=Internal SewerStudio connector for restoring the QGIS integration after QGIS profile or version changes.
-version=0.8.11
+ Neu in 0.9.0: Live-Videoposition. Waehrend ein Kanal-TV-Video laeuft, zeigt ein Marker in der Karte,
+ bei welchem Meter der Haltung das Video steht; der bereits abgefahrene Teil wird eingefaerbt.
+ Eigener schneller Takt (Standard 250 ms) unabhaengig vom Poll-Intervall der uebrigen Ebenen,
+ ohne eigenen Layer (Zeichnung direkt auf dem Kartenleinwand). Optional folgt die Karte der Position,
+ und ein Klick in die Karte laesst das Video an diese Stelle springen (POST /qgis/seek).
+ Benoetigt in SewerStudio den Endpunkt GET /qgis/video_position.json - siehe video_position_endpunkt.md.
+version=0.9.0
 qgisMinimumVersion=3.28
 qgisMaximumVersion=4.99
 author=SewerStudio
