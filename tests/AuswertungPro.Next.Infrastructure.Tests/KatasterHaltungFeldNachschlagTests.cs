@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Lookup;
 using AuswertungPro.Next.Infrastructure.Lookup;
@@ -120,9 +121,14 @@ public sealed class KatasterHaltungFeldNachschlagTests
     }
 
     [Fact]
-    public async Task Die_Suche_laeuft_nicht_auf_dem_aufrufenden_Thread()
+    public void Die_Suche_laeuft_nicht_auf_dem_aufrufenden_Thread()
     {
-        var aufrufer = Environment.CurrentManagedThreadId;
+        // Der Aufruf laeuft auf einem EIGENEN Thread, nicht auf dem des Testlaufs:
+        // Der gehoert dem Threadpool, und sobald ein await ihn freigibt, darf
+        // Task.Run genau ihn wiederverwenden. Der Vergleich war dadurch zufaellig
+        // mal gleich und der Test mal rot, obwohl die Arbeit korrekt ausgelagert
+        // wurde. Ein eigener Thread ist nie ein Threadpool-Thread.
+        var aufrufer = 0;
         int? gelesen = null;
 
         var dienst = new KatasterHaltungFeldNachschlag(
@@ -132,7 +138,13 @@ public sealed class KatasterHaltungFeldNachschlagTests
             leseOrganisation: _ => { gelesen = Environment.CurrentManagedThreadId; return "Abwasser Uri"; },
             xtfVorhanden: _ => true);
 
-        await dienst.SucheAsync(new FeldNachschlagAnfrage("36262-36275", "Eigentuemer"));
+        var faden = new Thread(() =>
+        {
+            aufrufer = Environment.CurrentManagedThreadId;
+            dienst.SucheAsync(new FeldNachschlagAnfrage("36262-36275", "Eigentuemer")).GetAwaiter().GetResult();
+        });
+        faden.Start();
+        Assert.True(faden.Join(TimeSpan.FromSeconds(30)), "Die Suche kam nicht zurueck.");
 
         Assert.NotNull(gelesen);
         Assert.NotEqual(aufrufer, gelesen!.Value);

@@ -196,11 +196,18 @@ public sealed class GrundbuchFeldNachschlagTests
     }
 
     [Fact]
-    public async Task Die_Lage_wird_nicht_auf_dem_aufrufenden_Thread_geholt()
+    public void Die_Lage_wird_nicht_auf_dem_aufrufenden_Thread_geholt()
     {
         // LiesLage baut beim ersten Aufruf die Tabelle aus einer 467-MB-Datei.
         // Liefe das auf dem Oberflaechen-Thread, wuerde das Programm einfrieren.
-        var aufrufer = Environment.CurrentManagedThreadId;
+        //
+        // Der Aufruf laeuft dafuer auf einem EIGENEN Thread, nicht auf dem des
+        // Testlaufs: Der gehoert dem Threadpool, und sobald ein await ihn
+        // freigibt, darf Task.Run genau ihn wiederverwenden. Der Vergleich war
+        // dadurch zufaellig mal gleich und der Test mal rot, obwohl die Arbeit
+        // korrekt ausgelagert wurde. Ein eigener Thread ist nie ein
+        // Threadpool-Thread — damit misst der Vergleich wirklich die Auslagerung.
+        var aufrufer = 0;
         int? lageThread = null;
 
         var dienst = new GrundbuchFeldNachschlag(
@@ -208,7 +215,13 @@ public sealed class GrundbuchFeldNachschlagTests
             new FesteParzellen(Parzelle("439")),
             new FestesGrundbuch(Eintrag("Muster, Hans")));
 
-        await dienst.SucheAsync(new FeldNachschlagAnfrage("33429", "Eigentuemer"));
+        var faden = new Thread(() =>
+        {
+            aufrufer = Environment.CurrentManagedThreadId;
+            dienst.SucheAsync(new FeldNachschlagAnfrage("33429", "Eigentuemer")).GetAwaiter().GetResult();
+        });
+        faden.Start();
+        Assert.True(faden.Join(TimeSpan.FromSeconds(30)), "Die Suche kam nicht zurueck.");
 
         Assert.NotNull(lageThread);
         Assert.NotEqual(aufrufer, lageThread!.Value);
