@@ -45,8 +45,10 @@ public sealed class ShaftDistributionService : IShaftDistributionService
                 "*.pdf", SearchOption.AllDirectories);
         var temporary = new List<HoldingFolderDistributor.DistributionResult>();
         var logicalSources = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var processed = 0;
         foreach (var source in sources)
         {
+            request.Progress?.Report(new ShaftDistributionProgress(processed, sources.Count, source.TargetPath));
             try
             {
                 var readPath = source.ReadPath;
@@ -56,7 +58,7 @@ public sealed class ShaftDistributionService : IShaftDistributionService
                     throw new IOException(error ?? "Quelldatei fehlt.");
                 var readable = output.CreateReadableCopy(readPath, Path.GetFileName(source.TargetPath));
                 logicalSources[readable] = source.TargetPath;
-                temporary.AddRange(RunLegacy(request with { PdfFiles = [readable] }, output.OutputRoot, progress));
+                temporary.AddRange(RunLegacy(request with { PdfFiles = [readable] }, output.OutputRoot, null));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
             {
@@ -64,7 +66,10 @@ public sealed class ShaftDistributionService : IShaftDistributionService
                     false, $"Schachtprotokoll nicht lesbar: {ex.Message}", source.TargetPath,
                     null, null, null, null, null, HoldingFolderDistributor.VideoMatchStatus.NotChecked));
             }
+            processed++;
+            request.Progress?.Report(new ShaftDistributionProgress(processed, sources.Count, source.TargetPath));
         }
+        request.Progress?.Report(new ShaftDistributionProgress(0, 0, null));
         output.StageAll(request.FileStaging, request.DestinationFolder);
         var items = temporary.Select(result =>
         {

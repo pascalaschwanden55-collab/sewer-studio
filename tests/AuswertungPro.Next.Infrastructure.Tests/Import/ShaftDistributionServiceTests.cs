@@ -141,6 +141,38 @@ public sealed class ShaftDistributionServiceTests
         finally { Directory.Delete(root, true); }
     }
 
+    [Fact]
+    public void Staging_Fortschritt_zaehlt_alle_Quellen_auch_Lesefehler()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "shaft-progress-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var projectPath = Path.Combine(root, "projekt.json");
+            File.WriteAllText(projectPath, "{}");
+            var source = Path.Combine(root, "Schacht.pdf");
+            WritePdf(source);
+            var missing = Path.Combine(root, "fehlt.pdf");
+            var messages = new List<ShaftDistributionProgress>();
+            using var staging = new ImportFileStagingService().Begin(projectPath)!;
+            var result = new ShaftDistributionService().Distribute(new ShaftDistributionRequest(
+                new Project(), Path.Combine(root, ProjectStructure.SchaechteVerteilt),
+                PdfFiles: [source, missing], Progress: new SofortFortschritt(messages.Add), FileStaging: staging));
+
+            Assert.Equal(new[] { 0, 1, 1, 2 }, messages.Where(p => p.Total == 2).Select(p => p.Processed));
+            Assert.Contains(messages, p => p.CurrentFile == missing && p.Processed == 2);
+            Assert.Equal(0, messages[^1].Total); // Nacharbeit ist keine weitere Quelldatei.
+            Assert.Contains(result.Items, i => !i.Success && i.SourcePdfPath == missing);
+            Assert.All(result.Items.Where(i => i.Success), i => Assert.False(File.Exists(i.TargetPdfPath)));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    private sealed class SofortFortschritt(Action<ShaftDistributionProgress> melden) : IProgress<ShaftDistributionProgress>
+    {
+        public void Report(ShaftDistributionProgress value) => melden(value);
+    }
+
     private static void WritePdf(string path)
     {
         using var builder = new PdfDocumentBuilder();

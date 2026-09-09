@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Ibak;
 using AuswertungPro.Next.Infrastructure.Import;
@@ -20,6 +21,30 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 /// </summary>
 public sealed class ProjectImportOrchestratorTests
 {
+    [Fact]
+    public void Import_meldet_sieben_Anzeigeschritte_und_Medienzaehler()
+    {
+        var (sourceDir, projectDir) = ErstelleMiniIkasFixture();
+        try
+        {
+            var messages = new System.Collections.Generic.List<ImportProgress>();
+            var context = new ImportRunContext(default, new SofortFortschritt(messages.Add), new ImportRunLog());
+            new ProjectImportOrchestrator(new XtfImportServiceAdapter(), new WinCanDbImportService())
+                .Import(sourceDir, projectDir, new Project(), context);
+
+            Assert.Equal(new[] { "Vorbereiten", "Archivieren", "Quelldaten", "Medien", "Haltungsprotokolle", "Schachtprotokolle", "Abschliessen" }
+                .Select((name, index) => ImportFortschrittText.Phase(index + 1, name)), messages.Select(p => p.Phase).Distinct());
+            Assert.Contains(messages, p => p.Phase == ImportFortschrittText.Phase(4, "Medien") && p.Total == 1 && p.Current == 1);
+            Assert.Equal(0, messages[^1].Total);
+        }
+        finally { Directory.Delete(Path.GetDirectoryName(sourceDir)!, true); }
+    }
+
+    private sealed class SofortFortschritt(Action<ImportProgress> melden) : IProgress<ImportProgress>
+    {
+        public void Report(ImportProgress value) => melden(value);
+    }
+
     [JunctionFact]
     public void DatenquellenSignal_BetrittKeineUntergeordneteVerknuepfung()
     {

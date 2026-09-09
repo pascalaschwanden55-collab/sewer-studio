@@ -36,6 +36,11 @@
     <CornerRadius x:Key="RadiusChip">11</CornerRadius>
     <!-- Fortschritts- und Anteilsbalken mit 10 px Hoehe. -->
     <CornerRadius x:Key="RadiusBar">5</CornerRadius>
+    <sys:Double x:Key="ImportBarHeight">10</sys:Double>
+    <sys:Double x:Key="ImportPulseSize">14</sys:Double>
+    <Thickness x:Key="ImportCardPadding">12</Thickness>
+    <Thickness x:Key="ImportRowGap">0,0,0,8</Thickness>
+    <Thickness x:Key="ImportItemGap">8,0,0,0</Thickness>
     <!-- Die 72-px-Kreisflaeche des Leerzustands. -->
     <CornerRadius x:Key="RadiusCircle">36</CornerRadius>
 
@@ -710,6 +715,46 @@
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
                         </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Importkarte: eigene Vorlage, damit andere Balken ihre bisherigen Masse behalten. -->
+    <Style x:Key="ImportProgressBar" TargetType="ProgressBar">
+        <Setter Property="Height" Value="{DynamicResource ImportBarHeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ProgressBar">
+                    <Border x:Name="PART_Track" Background="{TemplateBinding Background}"
+                            CornerRadius="{DynamicResource RadiusBar}">
+                        <Border x:Name="PART_Indicator" HorizontalAlignment="Left"
+                                Background="{TemplateBinding Foreground}"
+                                CornerRadius="{DynamicResource RadiusBar}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsIndeterminate" Value="True"/>
+                                <Condition Property="IsVisible" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <MultiTrigger.EnterActions>
+                                <BeginStoryboard Name="Waiting">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="PART_Indicator"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="0.25" To="1" Duration="0:0:1"
+                                                         AutoReverse="True" RepeatBehavior="Forever"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.EnterActions>
+                            <MultiTrigger.ExitActions>
+                                <RemoveStoryboard BeginStoryboardName="Waiting"/>
+                            </MultiTrigger.ExitActions>
+                        </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>

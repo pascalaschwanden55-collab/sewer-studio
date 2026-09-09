@@ -177,7 +177,7 @@
         </StackPanel>
 
         <Border Grid.Row="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                Padding="8" Margin="0,0,0,8" CornerRadius="{DynamicResource RadiusL}">
+                Padding="{DynamicResource ImportCardPadding}" Margin="{DynamicResource ImportRowGap}" CornerRadius="{DynamicResource RadiusL}">
             <Border.Style>
                 <Style TargetType="Border">
                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -189,18 +189,28 @@
                 </Style>
             </Border.Style>
             <StackPanel>
-                <DockPanel Margin="0,0,0,6">
+                <DockPanel Margin="{DynamicResource ImportRowGap}">
                     <Button DockPanel.Dock="Right" Command="{Binding CancelImportCommand}"
-                            Content="Abbrechen" Margin="8,0,0,0" Padding="12,2"
+                            Content="Abbrechen" Margin="{DynamicResource ImportItemGap}"
                             IsEnabled="{Binding CanCancel}"
                             Style="{StaticResource ToolbarButton}"/>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE895;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="{Binding ImportPhase}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="{Binding ImportProgress}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-                    </StackPanel>
+                    <ctrl:NeuralPulseDot DockPanel.Dock="Left" IsActive="{Binding IsImportInProgress}"
+                                         Width="{DynamicResource ImportPulseSize}" Height="{DynamicResource ImportPulseSize}"
+                                         DotBrush="{DynamicResource AccentBrush}"/>
+                    <TextBlock Text="{Binding ImportPhase}" Foreground="{DynamicResource TextBrush}"
+                               FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
+                               VerticalAlignment="Center" Margin="{DynamicResource ImportItemGap}" TextWrapping="Wrap"/>
                 </DockPanel>
-                <ProgressBar Height="6" Maximum="100" Value="{Binding ImportProgressPercent}"/>
+                <DockPanel Margin="{DynamicResource ImportRowGap}">
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding ImportCounter}" Margin="{DynamicResource ImportItemGap}"
+                               FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/>
+                    <TextBlock Text="{Binding ImportProgress}" Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="{DynamicResource TextS}" TextTrimming="CharacterEllipsis" ToolTip="{Binding ImportProgress}"/>
+                </DockPanel>
+                <ProgressBar Style="{StaticResource ImportProgressBar}" Maximum="100" Value="{Binding ImportProgressPercent, Mode=OneWay}"
+                             IsIndeterminate="{Binding ImportIsIndeterminate}" AutomationProperties.Name="Fortschritt im laufenden Importschritt"/>
+                <TextBlock Text="{Binding ImportRemaining}" Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontSize="{DynamicResource TextS}" TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
 

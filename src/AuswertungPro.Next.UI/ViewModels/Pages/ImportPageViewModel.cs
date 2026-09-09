@@ -35,6 +35,9 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
     [ObservableProperty] private string _detailsText = "";
     [ObservableProperty] private string _importProgress = "";
     [ObservableProperty] private double _importProgressPercent;
+    [ObservableProperty] private bool _importIsIndeterminate = true;
+    [ObservableProperty] private string _importCounter = "";
+    [ObservableProperty] private string _importRemaining = "";
     [ObservableProperty] private string _importPhase = "";
     [ObservableProperty] private bool _isImportInProgress;
     [ObservableProperty] private bool _canCancel;
@@ -159,7 +162,15 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
 
     partial void OnIsImportInProgressChanged(bool value)
     {
-        _ = value;
+        if (value)
+        {
+            ImportPhase = "";
+            ImportProgress = "";
+            ImportIsIndeterminate = true;
+            ImportProgressPercent = 0;
+            ImportCounter = "";
+            ImportRemaining = "";
+        }
         ImportPdfCommand.NotifyCanExecuteChanged();
         ImportSchachtPdfsFolderCommand.NotifyCanExecuteChanged();
         ImportXtfCommand.NotifyCanExecuteChanged();
@@ -244,8 +255,8 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
             // bis zum vollstaendigen Abschluss. Der innere Importlauf darf sie daher
             // nicht vorzeitig freigeben.
             SetIsImportInProgress: _ => { },
-            SetProgressPercent: value => ImportProgressPercent = value,
-            SetPhase: value => ImportPhase = value,
+            SetProgressPercent: value => { ImportProgressPercent = value; ImportIsIndeterminate = value <= 0; },
+            SetPhase: value => { ImportPhase = value; ImportIsIndeterminate = true; },
             SetProgressText: value => ImportProgress = value,
             GetSummaryText: () => SummaryText,
             SetSummaryText: value => SummaryText = value,
@@ -390,7 +401,12 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
                     AppendDetails: value => DetailsText += value,
                     ComputeSignature: _contentSignature.Compute,
                         GetProjectPath: () => _settings.LastProjectPath,
-                        CancellationToken: _importCts.Token)));
+                        CancellationToken: _importCts.Token,
+                        SetPhase: value => ImportPhase = value,
+                        SetProgressPercent: value => ImportProgressPercent = value,
+                        SetIndeterminate: value => ImportIsIndeterminate = value,
+                        SetCounter: value => ImportCounter = value,
+                        SetRemaining: value => ImportRemaining = value)));
         }
         finally
         {

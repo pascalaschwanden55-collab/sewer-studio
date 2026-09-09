@@ -1675,6 +1675,39 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
         Assert.Equal(string.Empty, dialogs.LastErrorMessage);
     }
 
+    [Fact]
+    public async Task Ein_Knopf_Import_meldet_Datei_und_Zaehler_waehrend_des_Laufs()
+    {
+        using var angezeigt = new ManualResetEventSlim();
+        var meldungen = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var prozente = new System.Collections.Concurrent.ConcurrentQueue<double>();
+        OneClickImporterFake importer = null!;
+        importer = new OneClickImporterFake(OneClickProjectImportFormat.WinCan)
+        {
+            OnImport = () =>
+            {
+                Assert.NotNull(importer.Context?.Progress);
+                importer.Context!.Progress!.Report(new ImportProgress(
+                    ImportFortschrittText.Phase(6, "Schachtprotokolle"), 3, 12, "",
+                    @"C:\Quelle\Schacht42.pdf"));
+                Assert.True(angezeigt.Wait(TimeSpan.FromSeconds(10)), "Fortschritt kam nicht waehrend des Laufs an.");
+            }
+        };
+        var project = new Project();
+        var controller = new ImportOneClickProjectController(
+            new DialogFake { SelectedFolder = @"C:\Quelle" }, () => importer, new OneClickReportWriterFake());
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            () => @"C:\Projekt", () => project, _ => new Project(), _ => { }, new object(), () => true,
+            meldungen.Enqueue, _ => { }, _ => { },
+            SetProgressPercent: prozente.Enqueue,
+            SetCounter: value => { if (value == "3 von 12") angezeigt.Set(); }));
+
+        Assert.True(angezeigt.IsSet);
+        Assert.Contains("Datei: Schacht42.pdf", meldungen);
+        Assert.Contains(25, prozente);
+        Assert.Equal("", meldungen.Last());
+    }
+
     private sealed class OneClickImporterFake : IOneClickProjectImportService
     {
         private readonly OneClickProjectImportFormat _format;

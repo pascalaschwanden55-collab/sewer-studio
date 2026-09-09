@@ -1,5 +1,17 @@
 # SewerStudio — AI Sewer Inspection System
 
+## Ein-Knopf-Import: Fortschritt (09.09.2026)
+
+`ImportOneClickProjectController` reicht einen echten UI-Fortschrittskanal weiter.
+`ProjectImportOrchestrator` buendelt den bestehenden Ablauf in sieben Anzeigeschritte:
+Vorbereiten, Archivieren, Quelldaten, Medien, Haltungsprotokolle, Schachtprotokolle,
+Abschliessen. `ImportFortschrittText` und `ImportRestzeitSchaetzer` sind reine Regeln
+in `Application/Import`; die Restzeit gilt erst ab drei erledigten Einheiten und
+ausschliesslich fuer den laufenden Schritt. Medien zaehlen Haltungen. Der vorbereitete
+`ShaftDistributionService` meldet Quellenversuche ueber alle PDFs statt wiederholt
+1 von 1; seine Verarbeitungs- und Fehlerregeln bleiben gleich. Unzaehlbare Arbeit
+erscheint unbestimmt. Details und Nachweise: `docs/IMPORT-FORTSCHRITT.md`.
+
 ## Projekt-Kontext
 - **App:** WPF / .NET 10, MVVM, Windows 11
 - **Zweck:** Automatisierte Kanalinspektion, ~3000 Videos aus Kanal-TV-Exporten

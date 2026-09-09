@@ -18,7 +18,12 @@ internal sealed record ImportOneClickProjectActions(
     Action<string> AppendDetails,
     Func<Project, string>? ComputeSignature = null,
     Func<string?>? GetProjectPath = null,
-    CancellationToken CancellationToken = default);
+    CancellationToken CancellationToken = default,
+    Action<string>? SetPhase = null,
+    Action<double>? SetProgressPercent = null,
+    Action<bool>? SetIndeterminate = null,
+    Action<string>? SetCounter = null,
+    Action<string>? SetRemaining = null);
 
 /// <summary>Steuert den vollständigen Ein-Knopf-Import eines Kanalfernseh-Projekts.</summary>
 internal sealed class ImportOneClickProjectController
@@ -80,6 +85,27 @@ internal sealed class ImportOneClickProjectController
         ImportFileTransaction? fileTransaction = null;
         var legacyRollbackEnabled = true;
         var projectCommitted = false;
+        var receiveProgress = true;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var estimator = new ImportRestzeitSchaetzer();
+        void ShowProgress(ImportProgress value)
+        {
+            actions.SetPhase?.Invoke(value.Phase);
+            actions.SetProgress(ImportFortschrittText.Datei(value));
+            actions.SetProgressPercent?.Invoke(ImportFortschrittText.Prozent(value));
+            actions.SetIndeterminate?.Invoke(!ImportFortschrittText.IstBestimmt(value));
+            actions.SetCounter?.Invoke(ImportFortschrittText.Zaehler(value));
+            var remaining = estimator.Aktualisiere(value, clock.Elapsed);
+            // Nur diese Kanaele melden sicher erledigte Dateien bzw. Haltungen.
+            var countable = value.Phase == ImportFortschrittText.Phase(4, "Medien")
+                || value.Phase == ImportFortschrittText.Phase(6, "Schachtprotokolle");
+            actions.SetRemaining?.Invoke(ImportFortschrittText.Restzeit(value.Phase, countable ? remaining : null));
+        }
+        var progress = new Progress<ImportProgress>(value =>
+        {
+            if (receiveProgress)
+                ShowProgress(value);
+        });
         try
         {
             var staging = _fileStaging?.Begin(actions.GetProjectPath?.Invoke());
@@ -88,14 +114,14 @@ internal sealed class ImportOneClickProjectController
                 staging,
                 _transactionJournal);
 
-            actions.SetProgress(
-                "Kanalfernseh-Projekt importieren: erkennen -> archivieren -> parsen -> verteilen...");
+            ShowProgress(new ImportProgress(ImportFortschrittText.Phase(1, "Vorbereiten"), 0, 0,
+                "Import wird vorbereitet …"));
             // Bis 2026-09-05 stand hier CancellationToken.None: Der Ein-Knopf-Import
             // liess sich nicht abbrechen, auch wenn er Gigabyte kopierte. Der manuelle
             // Weg hatte diesen Anschluss laengst.
             var context = new ImportRunContext(
                 actions.CancellationToken,
-                null,
+                progress,
                 new ImportRunLog(),
                 collectionLock: actions.CollectionLock,
                 fileStaging: staging);
@@ -109,6 +135,9 @@ internal sealed class ImportOneClickProjectController
             {
                 result = await Task.Run(() =>
                     _createImporter().Import(sourceFolder, projectFolder, targetProject, context));
+                receiveProgress = false;
+                ShowProgress(new ImportProgress(ImportFortschrittText.Phase(7, "Abschliessen"), 0, 0,
+                    "Ergebnis prüfen und Projekt speichern …"));
                 actions.CancellationToken.ThrowIfCancellationRequested();
             }
             // Ein Abbruch durch den Benutzer ist kein Fehler: Er bekommt einen Hinweis,
@@ -116,6 +145,7 @@ internal sealed class ImportOneClickProjectController
             // zurueckgenommen wie bei einem echten Fehlschlag.
             catch (OperationCanceledException)
             {
+                receiveProgress = false;
                 actions.SetProgress(string.Empty);
                 var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
                 _dialogs.Info(
@@ -125,6 +155,7 @@ internal sealed class ImportOneClickProjectController
             }
             catch (Exception ex)
             {
+                receiveProgress = false;
                 actions.SetProgress(string.Empty);
                 var userMessage = UserError.DescribeAndReport(ex, "Kanalfernseh-Projekt importieren");
                 var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
@@ -133,8 +164,6 @@ internal sealed class ImportOneClickProjectController
                     "Import Kanalfernseh-Projekt");
                 return;
             }
-            actions.SetProgress(string.Empty);
-
             if (result.Format is OneClickProjectImportFormat.Unknown or OneClickProjectImportFormat.Ambiguous)
             {
                 var hint = string.Join("\n", result.Messages.Take(6));
@@ -255,6 +284,7 @@ internal sealed class ImportOneClickProjectController
         }
         finally
         {
+            receiveProgress = false;
             var cleanup = fileTransaction?.Cleanup();
             if (cleanup is { StagingCleanupSucceeded: false, StagingCleanupError: { } error })
             {
@@ -262,6 +292,12 @@ internal sealed class ImportOneClickProjectController
                     "\n\nDatei-Arbeitsordner konnte nicht vollstaendig aufgeraeumt werden: " +
                     error.Message);
             }
+            actions.SetPhase?.Invoke(string.Empty);
+            actions.SetProgress(string.Empty);
+            actions.SetProgressPercent?.Invoke(0);
+            actions.SetIndeterminate?.Invoke(true);
+            actions.SetCounter?.Invoke(string.Empty);
+            actions.SetRemaining?.Invoke(string.Empty);
         }
     }
 

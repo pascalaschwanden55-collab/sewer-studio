@@ -182,6 +182,13 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         QuellenwahlErgebnis? quellenprotokoll = null;
 
         var ct = ctx?.CancellationToken ?? System.Threading.CancellationToken.None;
+        void Melde(int schritt, string name, string text)
+            => ctx?.Progress?.Report(new ImportProgress(ImportFortschrittText.Phase(schritt, name), 0, 0, text));
+        var parseContext = ctx is null ? null : new ImportRunContext(ct,
+            new Fortschritt<ImportProgress>(p => ctx.Progress?.Report(p with
+            {
+                Phase = ImportFortschrittText.Phase(3, "Quelldaten")
+            })), ctx.Log, ctx.DryRun, ctx.CollectionLock, ctx.FileStaging);
 
         // Der Abbruch wird an jeder Schrittgrenze geprueft, nicht nur tief im
         // Katasterabgleich. Bis 2026-09-05 lief ein abgebrochener Ein-Knopf-Import
@@ -192,6 +199,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         // Schritt 1: Projektstruktur sicherstellen
         // ------------------------------------------------------------------
+        Melde(1, "Vorbereiten", "Projektordner vorbereiten …");
         try
         {
             _projectStructure.EnsureCreated(projectFolder);
@@ -205,6 +213,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         // Schritt 2: Restore-Point (best-effort)
         // ------------------------------------------------------------------
+        Melde(1, "Vorbereiten", "Wiederherstellungspunkt anlegen …");
         try
         {
             // Bugfix AP-02: Neue Projekte legen projekt.json unter Projektdateien\ ab,
@@ -221,6 +230,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         // Schritt 3: Formatentkennung
         // ------------------------------------------------------------------
+        Melde(1, "Vorbereiten", "Format erkennen …");
         KanalExportDetection det;
         try
         {
@@ -253,6 +263,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         // Schritt 4: Quelldateien archivieren
         // ------------------------------------------------------------------
+        Melde(2, "Archivieren", "Quelldateien archivieren …");
         ct.ThrowIfCancellationRequested();
         try
         {
@@ -288,6 +299,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         // Schritt 5: Parsen
         // ------------------------------------------------------------------
+        Melde(3, "Quelldaten", "Quelldaten einlesen …");
         ct.ThrowIfCancellationRequested();
         try
         {
@@ -295,12 +307,12 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
 
             if (det.Format == KanalExportFormat.Ikas)
             {
-                parseResult = _xtf.ImportXtfFiles(new[] { det.VsaKekXtfPath! }, project, ctx);
+                parseResult = _xtf.ImportXtfFiles(new[] { det.VsaKekXtfPath! }, project, parseContext);
             }
             else if (det.Format == KanalExportFormat.Ibak)
             {
                 parseResult = _ibak is not null
-                    ? _ibak.ImportIbakExport(sourceFolder, project, ctx)
+                    ? _ibak.ImportIbakExport(sourceFolder, project, parseContext)
                     : Result<ImportStats>.Success(new ImportStats(
                         Found: 0,
                         Created: 0,
@@ -314,16 +326,16 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 // KINS: massgebliche Quelle ist das VSAKEK-XTF (wie IKAS);
                 // alte DVDs ohne XTF laufen ueber den kiDVDaten.txt-Import.
                 if (det.VsaKekXtfPath is not null)
-                    parseResult = _xtf.ImportXtfFiles(new[] { det.VsaKekXtfPath }, project, ctx);
+                    parseResult = _xtf.ImportXtfFiles(new[] { det.VsaKekXtfPath }, project, parseContext);
                 else if (_kins is not null)
-                    parseResult = _kins.ImportKinsExport(sourceFolder, project, ctx);
+                    parseResult = _kins.ImportKinsExport(sourceFolder, project, parseContext);
                 else
                     parseResult = Result<ImportStats>.Fail(
                         "KINS_SERVICE_MISSING", "KINS ohne XTF erkannt, aber kein KINS-Importservice verfuegbar.");
             }
             else // WinCan
             {
-                parseResult = _winCan.ImportWinCanExport(sourceFolder, project, ctx);
+                parseResult = _winCan.ImportWinCanExport(sourceFolder, project, parseContext);
             }
 
             if (parseResult.Ok && parseResult.Value is not null)
@@ -372,6 +384,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // und ein zusaetzlicher XTF-Lauf koennte dort gepruefte Werte verschieben.
         if (det.Format == KanalExportFormat.Ibak)
         {
+            Melde(3, "Quelldaten", "Ergänzende XTF-Quellen prüfen …");
             try
             {
                 var ergaenzend = FindeErgaenzendeXtfQuellen(sourceFolder, det);
@@ -379,7 +392,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 {
                     var vorher = project.Data.Count;
                     var vorherSchaechte = project.SchaechteData.Count;
-                    var xtfErgebnis = _xtf.ImportXtfFiles(ergaenzend, project, ctx);
+                    var xtfErgebnis = _xtf.ImportXtfFiles(ergaenzend, project, parseContext);
                     if (xtfErgebnis.Ok && xtfErgebnis.Value is not null)
                     {
                         messages.AddRange(xtfErgebnis.Value.Messages);
@@ -411,6 +424,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         if (det.Format == KanalExportFormat.Kins)
         {
+            Melde(3, "Quelldaten", "KINS-Angaben ergänzen …");
             try
             {
                 // 1. Numerische XTF-Bezeichnungen → "{Schacht_oben}-{Schacht_unten}"
@@ -454,6 +468,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         //
         // Muss VOR der Verteilung laufen (Schritt 7): die Zielordner werden nach dem
         // Haltungsnamen benannt.
+        Melde(3, "Quelldaten", "Haltungsnummern mit dem Kataster abgleichen …");
         try
         {
             var katasterDateien = FindeKatasterDateien(projectFolder, det.Sia405XtfPath);
@@ -485,6 +500,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         if (det.Format == KanalExportFormat.Ikas && det.Sia405XtfPath != null)
         {
+            Melde(3, "Quelldaten", "SIA405-Angaben ergänzen …");
             try
             {
                 // SIA405-XTF in ein temporaeres Projekt importieren
@@ -539,6 +555,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         // Schritt 7: Medien verteilen
         // ------------------------------------------------------------------
+        Melde(4, "Medien", "Fotos je Haltung verteilen …");
         ct.ThrowIfCancellationRequested();
         try
         {
@@ -547,7 +564,9 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             var mediaResult = _mediaDistributor.Distribute(new ImportMediaDistributionRequest(
                 projectFolder,
                 project,
-                Progress: null,
+                Progress: new Fortschritt<ImportMediaDistributionProgress>(p => ctx?.Progress?.Report(
+                    new ImportProgress(ImportFortschrittText.Phase(4, "Medien"), p.Processed, p.Total,
+                        "Fotos je Haltung verteilen …", p.CurrentFile))),
                 CancellationToken: ct,
                 DryRun: false,
                 // CollectionLock aus dem Lauf-Kontext: die Verteilung mutiert die
@@ -568,6 +587,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             //     NICHT erzeugt — das macht der ProtocolRegenerationService („Protokoll neu generieren").
             //     KINS: Der Seiten-Split laeuft auf dem expliziten Gesamtprotokoll aus der Quelle
             //     (*_Protokoll.pdf) — die Auto-Wahl "groesste Archiv-PDF" traefe sonst Plaene/fremde PDFs.
+            Melde(5, "Haltungsprotokolle", "Videos und Protokolle zuordnen …");
             var kinsGesamtprotokoll = det.Format == KanalExportFormat.Kins
                 ? _kinsGesamtprotokollLocator.Finde(sourceFolder)
                 : null;
@@ -607,6 +627,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             // fuer B und C liess B und C leer. Der Schutz gegen doppelte Verknuepfungen
             // liegt jetzt dort, wo er hingehoert — eine schon versorgte Haltung behaelt in
             // KanalImportDistributionService ihren Verweis aus dem Einzelprotokoll.
+            Melde(5, "Haltungsprotokolle", "Sammelprotokolle aufteilen und Videos verteilen …");
             var distResult = _kanalDistributor.Distribute(
                 project, projectFolder, archivedPdfDir, sourceFolder,
                 splitPdf: det.Format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null,
@@ -627,6 +648,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             //     gemeinsam im Haltungen_Verteilt-Ordner. Sicher erkannte DP-PDFs
             //     duerfen auch in neutralen Dokumente-Ordnern liegen; die KI-Zweitmeinung
             //     bleibt auf DP-/Dichtheits-Ordner begrenzt.
+            Melde(5, "Haltungsprotokolle", "Dichtheitsprotokolle verteilen …");
             var dpResult = _dichtheitDistributor.Distribute(
                 project,
                 projectFolder,
@@ -648,8 +670,12 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             // Es wird KEIN Schacht angelegt, und ein vorhandener Verweis wird nicht
             // ersetzt. Ein Haltungsprotokoll faellt beim Schacht-Parser durch und wird
             // gemeldet, nicht an beide Endschaechte gehaengt.
+            Melde(6, "Schachtprotokolle", "Schachtprotokolle prüfen und verteilen …");
             var schachtMeldungen = VerteileSchachtprotokolle(
-                project, projectFolder, archivedPdfDir, ctx?.FileStaging, fehlerbilanz);
+                project, projectFolder, archivedPdfDir, ctx?.FileStaging, fehlerbilanz,
+                new Fortschritt<ShaftDistributionProgress>(p => ctx?.Progress?.Report(
+                    new ImportProgress(ImportFortschrittText.Phase(6, "Schachtprotokolle"), p.Processed,
+                        p.Total, "Schachtprotokolle prüfen und verteilen …", p.CurrentFile))));
             messages.AddRange(schachtMeldungen);
 
             messages.Add(
@@ -667,6 +693,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         // ------------------------------------------------------------------
         // Schritt 8: Projekt als geaendert markieren
         // ------------------------------------------------------------------
+        Melde(7, "Abschliessen", "Projektdateien prüfen …");
         ctx?.CancellationToken.ThrowIfCancellationRequested();
         project.Dirty = true;
 
@@ -709,7 +736,8 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         string projectFolder,
         string archivedPdfDir,
         IImportFileStagingSession? fileStaging,
-        ImportFehlerbilanzSammler fehlerbilanz)
+        ImportFehlerbilanzSammler fehlerbilanz,
+        IProgress<ShaftDistributionProgress>? progress)
     {
         var meldungen = new List<string>();
 
@@ -720,6 +748,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 DestinationFolder: Path.Combine(projectFolder, ProjectStructure.SchaechteVerteilt),
                 PdfFiles: null,
                 PdfSourceFolder: archivedPdfDir,
+                Progress: progress,
                 FileStaging: fileStaging));
 
             var erfolgreich = ergebnis.Items.Where(i => i.Success).ToList();
@@ -879,6 +908,12 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
            || AnyFile(sourceFolder, "Daten.txt")
            || AnyFile(sourceFolder, "*.fdb")
            || AnyFile(sourceFolder, "*.xtf");
+
+    // Synchron weiterreichen: Nur der aeussere UI-Kanal wechselt den Thread.
+    private sealed class Fortschritt<T>(Action<T> melden) : IProgress<T>
+    {
+        public void Report(T value) => melden(value);
+    }
 
     private static bool AnyFile(string root, string pattern)
     {
