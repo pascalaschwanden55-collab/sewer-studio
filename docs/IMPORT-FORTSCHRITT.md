@@ -73,5 +73,9 @@ Nachweise: `ImportFortschrittTextTests`, `ImportRestzeitSchaetzerTests`,
 - Architektur-Skill ergaenzt und mit `quick_validate.py` erfolgreich validiert.
 - Vollstaendige Pipeline-Tests: 2648 bestanden, 3 vorgesehene Auslassungen.
 - Vollstaendige ProjectModernizer-Tests: 62 bestanden.
+- Nach dem separat vorliegenden QGIS-4-Commit wurden ausschliesslich die veralteten
+  Pfaderwartungen in `QgisPluginPackagingTests` angepasst (eigener Test-Commit).
+  Erneuter vollstaendiger Release-Build: 0 Warnungen, 0 Fehler; vollstaendige
+  Release-UI-Tests danach: 6903 bestanden, 19 vorgesehene Auslassungen, 0 Fehler.
 
 Kein laufendes SewerStudio wurde beendet.

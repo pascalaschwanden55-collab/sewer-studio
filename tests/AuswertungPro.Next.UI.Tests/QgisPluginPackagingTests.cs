@@ -216,7 +216,7 @@ public sealed class QgisPluginPackagingTests
         var script = File.ReadAllText(RepoFile("integrations", "qgis", "install-sewerstudio-bridge.ps1"));
         var readme = File.ReadAllText(RepoFile("integrations", "qgis", "README.md"));
 
-        Assert.Contains("QGIS3", script);
+        Assert.Contains("QGIS4\\profiles\\default\\python\\plugins", script);
         Assert.Contains("QGIS*", script);
         Assert.Contains("python\\plugins", script);
         Assert.Contains("Copy-Item", script);
@@ -225,8 +225,8 @@ public sealed class QgisPluginPackagingTests
         Assert.Contains("Datenvertrag", readme);
 
         // Zentrale Plugin-Ablage: jede Installation sichert Ordner + versioniertes ZIP
-        // nach D:\QGIS_V4.03\AWU_Plugins (Nutzer-Konvention fuer ALLE QGIS-Plugins).
-        Assert.Contains(@"D:\QGIS_V4.03\AWU_Plugins", script);
+        // nach D:\QGIS_V4.2\AWU_Plugins (Nutzer-Konvention fuer ALLE QGIS-Plugins).
+        Assert.Contains(@"D:\QGIS_V4.2\AWU_Plugins", script);
         Assert.Contains("Compress-Archive", script);
     }
 
