@@ -28,7 +28,7 @@ Danach QGIS neu starten und unter `Erweiterungen > Erweiterungen verwalten`
 `SewerStudio Bridge` aktivieren.
 
 Jede Installation sichert das Plugin zusaetzlich ins zentrale Plugin-Archiv
-`D:\QGIS_V4.03\AWU_Plugins` (entpackter Ordner + versioniertes ZIP, gleiche
+`D:\QGIS_V4.2\AWU_Plugins` (entpackter Ordner + versioniertes ZIP, gleiche
 Konvention wie die uebrigen AWU-Plugins). Anderer Ort: `-BackupDir <Pfad>`.
 
 ## Nutzung

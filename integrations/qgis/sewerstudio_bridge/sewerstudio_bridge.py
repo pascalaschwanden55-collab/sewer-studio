@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 from .bridge_http import fetch_bridge_bytes, fetch_bridge_json
+from .zoom_ziel import ZOOM_MASSSTAB, zoom_ziel
 
 try:
     from qgis.PyQt.QtGui import QAction
@@ -35,6 +36,7 @@ from qgis.core import (
     QgsMarkerSymbol,
     QgsMessageLog,
     QgsPalLayerSettings,
+    QgsPointXY,
     QgsProject,
     QgsRectangle,
     QgsRendererCategory,
@@ -888,8 +890,25 @@ class SewerStudioBridgeDock(QDockWidget):
             self._log_warning(f"Zoom-Transformation fehlgeschlagen: {ex}")
             return
 
-        extent.scale(1.3)
-        canvas.setExtent(extent)
+        # Fester Massstab 1:100 statt "Ausdehnung plus Rand": Vorher hing der
+        # Massstab an der Laenge der Haltung — kurze Haltung nah, lange weit weg.
+        # Jetzt erscheint jedes Bauteil gleich gross.
+        ziel = zoom_ziel(
+            extent.xMinimum(), extent.yMinimum(), extent.xMaximum(), extent.yMaximum())
+        gezoomt = False
+        if ziel is not None:
+            try:
+                canvas.setCenter(QgsPointXY(ziel.mitte_x, ziel.mitte_y))
+                canvas.zoomScale(ziel.massstab)
+                gezoomt = True
+            except Exception as ex:  # Zoom ist Komfort — nie den Poll abbrechen
+                self._log_warning(
+                    f"Zoom auf Massstab 1:{ZOOM_MASSSTAB:.0f} fehlgeschlagen: {ex}")
+
+        # Rueckfall auf den bisherigen Weg: lieber ungenau gezoomt als gar nicht.
+        if not gezoomt:
+            extent.scale(1.3)
+            canvas.setExtent(extent)
         canvas.refresh()
         # Aufblinken wie beim QGIS-"Objekte hervorheben": macht die gezoomte
         # Haltung bzw. den Schacht sofort sichtbar (mehrfaches Blinken).
