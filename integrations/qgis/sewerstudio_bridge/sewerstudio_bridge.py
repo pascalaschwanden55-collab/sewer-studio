@@ -390,7 +390,8 @@ class SewerStudioBridgeDock(QDockWidget):
         )
         layout.addWidget(baue_bedienfeld(root, self.video_anzeige,
                                          lambda: self.url_edit.text().strip() or DEFAULT_BRIDGE_URL,
-                                         self._set_status))
+                                         self._set_status,
+                                         self.settings, SETTINGS_PREFIX))
         # ------------------------------------------------------------------
         layout.addStretch(1)
         self.setWidget(root)

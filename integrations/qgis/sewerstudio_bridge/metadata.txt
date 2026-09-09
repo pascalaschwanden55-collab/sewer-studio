@@ -11,7 +11,10 @@ about=Internal SewerStudio connector for restoring the QGIS integration after QG
  Behoben in 0.9.1: Zeigen mehrere Ebenen auf dieselbe Datei (z.B. "Schaeden" und "Nicht-Schaeden"
  als zwei Abfragen auf damages.geojson), wurde beim Aktualisieren nur EINE davon neu geladen.
  Die uebrigen zeigten weiter den Stand des vorherigen Projekts.
-version=0.9.1
+ Behoben in 0.9.2: "aktiv", Takt und "Karte folgt" der Videoposition werden gemerkt.
+ Vorher war "aktiv" nach jedem QGIS-Start wieder aus, und die Videoposition blieb still -
+ sie sah kaputt aus, obwohl SewerStudio korrekt lieferte.
+version=0.9.2
 qgisMinimumVersion=3.28
 qgisMaximumVersion=4.99
 author=SewerStudio

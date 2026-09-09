@@ -394,8 +394,13 @@ class SprungWerkzeug(QgsMapToolEmitPoint):
             self._meldung(warnung or "Sprung nicht moeglich.")
 
 
-def baue_bedienfeld(parent, anzeige, url_getter, meldung):
-    """Kompaktes Bedienfeld, das im Bruecken-Dock unten angehaengt wird."""
+def baue_bedienfeld(parent, anzeige, url_getter, meldung, settings=None, praefix=None):
+    """Kompaktes Bedienfeld, das im Bruecken-Dock unten angehaengt wird.
+
+    settings/praefix sind optional: Sind sie gesetzt, merkt sich das Feld
+    "aktiv", Takt und "Karte folgt" ueber QGIS-Sitzungen hinweg. Ohne sie
+    verhaelt es sich wie frueher (beim Start aus).
+    """
     box = QGroupBox("Videoposition (live)", parent)
     lay = QVBoxLayout(box)
     lay.setSpacing(4)
@@ -470,4 +475,38 @@ def baue_bedienfeld(parent, anzeige, url_getter, meldung):
                            if anzeige.laeuft() else None)
     zeiger.start(400)
     box._zeiger = zeiger
+
+    # Gespeicherten Stand ERST JETZT setzen — nach allen connect-Aufrufen, damit
+    # das Setzen die Anzeige wirklich startet und nicht nur das Haekchen malt.
+    #
+    # Ohne dieses Merken war "aktiv" nach jedem QGIS-Start wieder aus, und die
+    # Videoposition blieb still: Sie sah kaputt aus, obwohl alles lief. Der
+    # Sprung-Modus wird bewusst NICHT wiederhergestellt — er uebernimmt das
+    # Kartenwerkzeug, und das gehoert nicht ungefragt beim Start passiert.
+    if settings is not None and praefix:
+        def _bool(name, standard):
+            wert = settings.value(f"{praefix}/{name}", standard)
+            if isinstance(wert, bool):
+                return wert
+            return str(wert).strip().lower() in ("true", "1", "ja", "yes")
+
+        try:
+            gespeicherter_takt = int(settings.value(f"{praefix}/videoTaktMs", takt.value()))
+        except (TypeError, ValueError):
+            gespeicherter_takt = takt.value()
+        takt.setValue(max(takt.minimum(), min(takt.maximum(), gespeicherter_takt)))
+        folgen.setChecked(_bool("videoKarteFolgt", True))
+        schalter.setChecked(_bool("videoAktiv", False))
+
+        def _merken():
+            settings.setValue(f"{praefix}/videoAktiv", schalter.isChecked())
+            settings.setValue(f"{praefix}/videoKarteFolgt", folgen.isChecked())
+            settings.setValue(f"{praefix}/videoTaktMs", takt.value())
+        schalter.toggled.connect(lambda _=None: _merken())
+        folgen.toggled.connect(lambda _=None: _merken())
+        takt.valueChanged.connect(lambda _=None: _merken())
+    else:
+        # Ohne Speicher gilt weiterhin die Vorgabe des Widgets.
+        anzeige.folgen = folgen.isChecked()
+
     return box
