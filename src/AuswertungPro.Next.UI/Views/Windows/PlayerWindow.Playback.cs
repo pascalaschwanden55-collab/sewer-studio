@@ -33,6 +33,12 @@ public partial class PlayerWindow
             .Success;
     }
 
+    /// <summary>Zustand fuer die QGIS-Bruecke; die Regeln liegen im Controller.</summary>
+    internal static Application.Video.VideoPositionEingang? TryBuildVideoPosition()
+        => LastOpenedWindow.Current is { } fenster
+            ? QgisVideoPositionController.Baue(fenster._playerPlaybackController, fenster._protocolContext)
+            : null;
+
     private bool TryGetCurrentTimeInternal(out TimeSpan time)
         => _playerPlaybackController.TryGetCurrentTime(out time);
 

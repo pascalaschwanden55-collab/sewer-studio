@@ -69,6 +69,44 @@ internal sealed class BoundedHttpRequestReader(TextReader reader)
     }
 
     /// <summary>
+    /// Rumpf der Anfrage mit genau <paramref name="contentLengthBytes"/> Bytes, hoechstens
+    /// aber <paramref name="maxBytes"/>. <c>null</c> bei Ueberlaenge; ein leerer Rumpf ist "".
+    ///
+    /// Gezaehlt werden BYTES, nicht Zeichen: Content-Length ist eine Byte-Angabe, und ein
+    /// Umlaut braucht in UTF-8 zwei davon. Wer stattdessen Zeichen zaehlt, schneidet einen
+    /// Rumpf mit Umlaut hinten ab — das Ergebnis ist unlesbares JSON statt eines
+    /// erkennbaren Fehlers. Weil in UTF-8 jedes Zeichen mindestens ein Byte belegt, reicht
+    /// ein Puffer von <paramref name="contentLengthBytes"/> Zeichen immer aus.
+    /// </summary>
+    public async Task<string?> ReadBodyAsync(int contentLengthBytes, int maxBytes, CancellationToken cancellationToken)
+    {
+        if (contentLengthBytes <= 0)
+            return "";
+        if (contentLengthBytes > maxBytes)
+            return null;
+
+        var puffer = new char[contentLengthBytes];
+        var gelesen = 0;
+
+        while (gelesen < puffer.Length)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var anzahl = await _reader
+                .ReadAsync(puffer.AsMemory(gelesen, puffer.Length - gelesen), cancellationToken)
+                .ConfigureAwait(false);
+            if (anzahl == 0)
+                break; // Verbindung endete frueher als angekuendigt.
+
+            gelesen += anzahl;
+            if (Encoding.UTF8.GetByteCount(puffer, 0, gelesen) >= contentLengthBytes)
+                break;
+        }
+
+        return new string(puffer, 0, gelesen);
+    }
+
+    /// <summary>
     /// Eine Zeile bis <c>\n</c>, hoechstens <paramref name="maxChars"/> Zeichen.
     /// <c>null</c> bei Ueberlaenge oder Dateiende ohne Zeilenende.
     /// </summary>

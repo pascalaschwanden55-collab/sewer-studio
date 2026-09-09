@@ -82,6 +82,22 @@ def hole_position(base_url, timeout=0.8):
         return None, None              # SewerStudio laeuft gerade nicht
 
 
+def _fehlertext(fehler):
+    """Klartext aus der Fehlerantwort, oder None. Wirft nie."""
+    try:
+        rumpf = fehler.read()
+    except Exception:
+        return None
+    if not rumpf:
+        return None
+    try:
+        wert = json.loads(rumpf.decode("utf-8", "replace")).get("error")
+    except (ValueError, AttributeError):
+        return None
+    wert = (wert or "").strip()
+    return wert or None
+
+
 def sende_sprung(base_url, haltung, meter, timeout=1.0):
     """Meldet SewerStudio, im Video an diesen Meter zu springen."""
     base = (base_url or "").strip().rstrip("/")
@@ -97,6 +113,12 @@ def sende_sprung(base_url, haltung, meter, timeout=1.0):
                      timeout=timeout) as antwort:
             return antwort.status in (200, 202, 204), None
     except HTTPError as ex:
+        # SewerStudio legt den Grund als Klartext bei ("es laeuft kein Video",
+        # "im Video laeuft eine andere Haltung"). Den zeigen wir, statt eine
+        # Nummer zu melden oder zu raten, der Endpunkt fehle.
+        grund = _fehlertext(ex)
+        if grund:
+            return False, grund
         if ex.code == 404:
             return False, "SewerStudio kennt %s noch nicht." % SEEK_ENDPUNKT
         return False, "Sprung fehlgeschlagen (HTTP %s)." % ex.code

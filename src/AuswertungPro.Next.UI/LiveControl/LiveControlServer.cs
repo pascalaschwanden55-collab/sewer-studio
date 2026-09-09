@@ -259,13 +259,14 @@ public sealed class LiveControlServer : IDisposable
 
     private async Task<LiveHttpResponse> DispatchAsync(LiveHttpRequest request)
     {
-        // QGIS-Bridge: rein lesende GET-Endpunkte, damit das QGIS-Plugin seine Layer
-        // auch dann bekommt, wenn Live-Control denselben Port haelt. Seit dem
-        // Gesamtaudit 2026-08-14 ist auch hier eine Anmeldung Pflicht — vorher war
-        // dieser Weg der offene Nebeneingang zu denselben Projekt- und Geodaten.
-        // Gueltig ist das QGIS-Bridge-Token oder das Live-Control-Token.
+        // QGIS-Bridge: lesende GET-Endpunkte fuer die Layer des Plugins und der eine
+        // schreibende POST-Weg (/qgis/seek, Klick in der Karte laesst das Video
+        // springen) — damit beides auch dann geht, wenn Live-Control denselben Port
+        // haelt. Seit dem Gesamtaudit 2026-08-14 ist auch hier eine Anmeldung Pflicht;
+        // vorher war dieser Weg der offene Nebeneingang zu denselben Projekt- und
+        // Geodaten. Gueltig ist das QGIS-Bridge-Token oder das Live-Control-Token.
         if (_qgisProcessor is not null
-            && request.Method == "GET"
+            && request.Method is "GET" or "POST"
             && QgisBridgeRequestProcessor.IsBridgePath(request.Path))
         {
             var qgisErlaubt = QgisBridgeToken.Matches(_qgisToken, request.QgisToken)
@@ -281,7 +282,9 @@ public sealed class LiveControlServer : IDisposable
                                   + $"im Header {QgisBridgeToken.HeaderName} senden."
                     });
 
-            var bridge = await _qgisProcessor.HandleAsync(request.Path).ConfigureAwait(false);
+            var bridge = request.Method == "POST"
+                ? await _qgisProcessor.HandlePostAsync(request.Path, request.Body).ConfigureAwait(false)
+                : await _qgisProcessor.HandleAsync(request.Path).ConfigureAwait(false);
             return new LiveHttpResponse(bridge.StatusCode, Payload: null, RawBody: bridge.Body, ContentType: bridge.ContentType);
         }
 

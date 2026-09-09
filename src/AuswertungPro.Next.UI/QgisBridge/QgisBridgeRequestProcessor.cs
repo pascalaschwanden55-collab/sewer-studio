@@ -55,6 +55,27 @@ internal sealed class QgisBridgeRequestProcessor
         }
     }
 
+    /// <summary>
+    /// Schreibender Weg (zurzeit nur /qgis/seek). Braucht bewusst KEINEN
+    /// Projekt-Snapshot: Ein Sprung im offenen Video beruehrt weder Projekt noch
+    /// Geodaten, und das Bauen des Snapshots waere Arbeit ohne Zweck.
+    /// </summary>
+    public async Task<QgisBridgeResponse> HandlePostAsync(string path, string? body)
+    {
+        try
+        {
+            return await Task.Run(() => _router.RoutePost(path, body)).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // Nach aussen nur eine neutrale Meldung (Gesamtaudit 2026-08-14, P1-3).
+            _logger.LogWarning(ex, "QGIS-Bridge Schreibweg fehlgeschlagen fuer {Path}.", path);
+            return QgisBridgeEndpointRouter.Error(
+                500,
+                "Anfrage konnte nicht beantwortet werden. Einzelheiten stehen im SewerStudio-Protokoll.");
+        }
+    }
+
     private Task<QgisProjectSnapshot> CaptureSnapshotAsync()
         => _app.Dispatcher.InvokeAsync(() =>
         {

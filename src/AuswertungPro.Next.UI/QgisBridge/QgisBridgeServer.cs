@@ -13,7 +13,8 @@ namespace AuswertungPro.Next.UI.QgisBridge;
 /// Wird nur gestartet, wenn Live-Control den Port nicht bereits haelt —
 /// in dem Fall liefert der LiveControlServer die /qgis-Endpunkte selbst aus.
 /// Die eigentliche Verarbeitung liegt im <see cref="QgisBridgeRequestProcessor"/>.
-/// Bewusste Einzelplatz-Grenze: nur IPv4-Loopback und nur GET/HEAD. Zusaetzlich ist
+/// Bewusste Einzelplatz-Grenze: nur IPv4-Loopback, nur GET/HEAD und — seit dem
+/// Rueckweg aus der Karte — POST auf genau einen Pfad (/qgis/seek). Zusaetzlich ist
 /// seit dem Gesamtaudit 2026-08-14 ein Token Pflicht (<see cref="QgisBridgeToken"/>):
 /// Loopback allein schuetzt nicht davor, dass ein anderes lokales Programm Projekt-
 /// und Geodaten abruft.
@@ -119,14 +120,14 @@ internal sealed class QgisBridgeServer : IDisposable
             if (request is null)
                 return;
 
-            var (method, path, token) = request.Value;
+            var (method, path, token, body) = request.Value;
             QgisBridgeResponse response;
-            if (method is not ("GET" or "HEAD"))
+            if (method is not ("GET" or "HEAD" or "POST"))
             {
                 response = new QgisBridgeResponse(
                     405,
                     "application/json; charset=utf-8",
-                    JsonSerializer.SerializeToUtf8Bytes(new { ok = false, error = "Nur GET ist erlaubt." }));
+                    JsonSerializer.SerializeToUtf8Bytes(new { ok = false, error = "Nur GET und POST sind erlaubt." }));
             }
             else if (!QgisBridgeToken.Matches(_token, token))
             {
@@ -141,6 +142,10 @@ internal sealed class QgisBridgeServer : IDisposable
                         hinweis = $"Token aus der Datei {QgisBridgeToken.FileName} im SewerStudio-AppData-Ordner "
                                   + $"im Header {QgisBridgeToken.HeaderName} senden."
                     }));
+            }
+            else if (method == "POST")
+            {
+                response = await _processor.HandlePostAsync(path, body).ConfigureAwait(false);
             }
             else
             {
@@ -164,7 +169,13 @@ internal sealed class QgisBridgeServer : IDisposable
         }
     }
 
-    private static async Task<(string Method, string Path, string? Token)?> ReadRequestAsync(
+    /// <summary>
+    /// Rumpfgrenze fuer POST. Ein Sprungauftrag ist ein Haltungsname und eine Zahl —
+    /// mehr als 8 KiB kann kein ehrlicher Auftrag brauchen.
+    /// </summary>
+    private const int MaxBodyBytes = 8 * 1024;
+
+    private static async Task<(string Method, string Path, string? Token, string? Body)?> ReadRequestAsync(
         NetworkStream stream,
         CancellationToken cancellationToken)
     {
@@ -185,14 +196,28 @@ internal sealed class QgisBridgeServer : IDisposable
             return null;
 
         string? token = null;
+        var contentLength = 0;
         foreach (var line in headerLines)
         {
             var separator = line.IndexOf(':');
             if (separator <= 0)
                 continue;
 
-            if (string.Equals(line[..separator].Trim(), QgisBridgeToken.HeaderName, StringComparison.OrdinalIgnoreCase))
+            var name = line[..separator].Trim();
+            if (string.Equals(name, QgisBridgeToken.HeaderName, StringComparison.OrdinalIgnoreCase))
                 token = line[(separator + 1)..].Trim();
+            else if (string.Equals(name, "Content-Length", StringComparison.OrdinalIgnoreCase)
+                     && !int.TryParse(line[(separator + 1)..].Trim(), out contentLength))
+                return null; // Angekuendigte Laenge unlesbar: nichts raten.
+        }
+
+        var method = parts[0].ToUpperInvariant();
+        string? body = null;
+        if (method == "POST")
+        {
+            body = await begrenzt.ReadBodyAsync(contentLength, MaxBodyBytes, cancellationToken).ConfigureAwait(false);
+            if (body is null)
+                return null; // Rumpf zu gross.
         }
 
         var path = parts[1];
@@ -200,7 +225,7 @@ internal sealed class QgisBridgeServer : IDisposable
         if (queryIndex >= 0)
             path = path[..queryIndex];
 
-        return (parts[0].ToUpperInvariant(), path, token);
+        return (method, path, token, body);
     }
 
     private static async Task WriteResponseAsync(

@@ -29,6 +29,7 @@ using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.LiveControl;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.QgisBridge;
 using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.UI.Services;
@@ -190,6 +191,15 @@ namespace AuswertungPro.Next.UI
                 };
                 MainWindow = mainWindow;
                 mainWindow.Show();
+                // Die Bruecke FRAGT die laufende Videoposition beim Player ab; der Player
+                // meldet nichts und weiss davon nichts. Gilt fuer beide Wege (eigener
+                // Server und Live-Control), weil beide denselben Router verwenden.
+                QgisBridgeVideoPosition.SetzeQuelle(QgisVideoPositionController.Lies);
+                // Rueckweg: Klick in der QGIS-Karte springt im offenen Video an diese
+                // Stelle. Mehr kann dieser Weg nicht — er oeffnet kein Video, wechselt
+                // keine Haltung und veraendert keine Daten.
+                QgisBridgeVideoSprung.SetzeZiel(QgisVideoPositionController.Springe);
+
                 // Haelt Live-Control bereits Port 8765, liefert ER die /qgis-Endpunkte mit aus —
                 // dann braucht es keinen zweiten Listener (Port-Konflikt).
                 if (_liveControlServer is null)

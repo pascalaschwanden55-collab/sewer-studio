@@ -39,15 +39,30 @@ Die Umrechnung Meter -> Koordinate macht QGIS selbst: die Geometrie der aktiven
 Haltung liegt als Layer "SewerStudio - Aktuelle Haltung" bereits vor. Weichen
 Video- und Katasterlaenge voneinander ab, wird anteilig skaliert.
 
-## POST /qgis/seek  (optional, fuer den Rueckweg)
+## POST /qgis/seek  (Rueckweg)
 
 Klickt der Benutzer in QGIS auf die Haltung, meldet das Plugin die Stelle:
 
     { "haltung": "80475-80462", "meter": 18.75 }
 
-Erwartet wird 200, 202 oder 204. SewerStudio rechnet den Meterwert in eine
-Videozeit zurueck (dieselben Stuetzstellen, umgekehrte Richtung) und springt
-dorthin. Fehlt der Endpunkt, meldet das Plugin das im Status und aendert nichts.
+SewerStudio rechnet den Meterwert in eine Videozeit zurueck (dieselben
+Stuetzstellen, umgekehrte Richtung) und springt dorthin.
+
+Antworten:
+
+    200   gesprungen
+    400   Rumpf unverstaendlich, oder der Meterwert ist keine brauchbare Zahl
+    404   es laeuft kein Video (oder der Endpunkt fehlt in dieser Version)
+    409   im Video laeuft eine andere Haltung, oder zu dieser Stelle ist keine
+          Videozeit bestimmbar
+
+Jede Antwort ausser 200 traegt einen Klartext in "error"; das Plugin zeigt ihn
+im Status an. Fehlt der Endpunkt ganz, aendert sich in QGIS nichts.
+
+Der Sprung ist die einzige Wirkung: Er oeffnet kein Video, wechselt keine
+Haltung, waehlt nichts aus und veraendert keine Projektdaten. Gesprungen wird
+ausschliesslich in der Haltung, die gerade laeuft — die Gegenfahrt
+("80462-80475") ist dabei eine andere Haltung und ergibt 409.
 
 ## Bedienung in QGIS
 

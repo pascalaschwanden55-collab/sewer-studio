@@ -68,6 +68,14 @@ HTTP-Bridge (liefert SewerStudio ab Version 4.5 live auf `http://127.0.0.1:8765`
 - `GET /qgis/schaechte.geojson` — alle Kataster-Schächte mit Projektbezug
 - `GET /qgis/current_schacht.geojson` — aktuell gewählter Schacht
 - `GET /qgis/schacht_sanierungstyp.geojson` — Schächte nach `Ausgefuehrt durch`
+- `GET /qgis/video_position.json` — Live-Position der Videowiedergabe (Haltung, Meter,
+  Zeit, Länge, `meterQuelle`). Läuft kein Video oder ist der Meterstand nicht
+  bestimmbar: `404`, das Plugin bleibt dann still.
+- `POST /qgis/seek` — Rückweg: `{"haltung": "...", "meter": 12.4}` springt im
+  **offenen** Video an diese Stelle. Gesprungen wird nur in der Haltung, die gerade
+  läuft; ein Klick auf eine andere Haltung ergibt `409`.
+
+Einzelheiten zu beiden Wegen: `sewerstudio_bridge/video_position_endpunkt.md`.
 
 Hinweise zum Bridge-Server:
 
@@ -85,8 +93,13 @@ Hinweise zum Bridge-Server:
 ### Sicherheitsgrenze
 
 Die Live-Bridge ist bewusst fuer einen Windows-Einzelplatz ausgelegt. Sie bindet nur an
-`127.0.0.1`, akzeptiert ausschliesslich `GET`/`HEAD` und liefert nur Projekt- und
-Geometriedaten zum Lesen.
+`127.0.0.1` und akzeptiert `GET`/`HEAD` sowie `POST` auf genau einem Pfad.
+
+Alle Lesewege liefern nur Projekt- und Geometriedaten. Der einzige schreibende Weg ist
+`POST /qgis/seek`, und er kann genau eines: im bereits offenen Video an eine andere
+Stelle springen. Er oeffnet kein Video, wechselt keine Haltung, waehlt nichts aus und
+veraendert keine Daten. Sein Rumpf ist auf 8 KiB begrenzt, jeder andere Pfad ergibt
+auch per `POST` ein `404`.
 
 Zusaetzlich ist seit dem Gesamtaudit vom 2026-08-14 ein Token Pflicht. Vorher genuegte
 Loopback allein — damit konnte jedes andere Programm auf demselben PC Projekt- und
