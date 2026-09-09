@@ -636,12 +636,17 @@ class SewerStudioBridgeDock(QDockWidget):
 
         # Zuerst die Ebene suchen, die auf DIESELBE Datei zeigt (auch eine vom Nutzer
         # gestylte) — dann bleibt beim Neuladen ihr Stil erhalten. Sonst per Name.
-        existing = self._find_layer_by_source(file_path) or self._find_layer_named(layer_name)
+        gleiche_quelle = self._find_layers_by_source(file_path)
+        existing = gleiche_quelle[0] if gleiche_quelle else self._find_layer_named(layer_name)
         if existing is not None:
             if self._same_source(existing, file_path):
-                existing.reload()
-                existing.updateExtents()
-                existing.triggerRepaint()
+                # ALLE Ebenen auf dieser Datei neu laden, nicht nur die erste:
+                # "Schaeden" und "Nicht-Schaeden" teilen sich eine Datei und
+                # unterscheiden sich nur durch ihre Abfrage.
+                for ebene in (gleiche_quelle or [existing]):
+                    ebene.reload()
+                    ebene.updateExtents()
+                    ebene.triggerRepaint()
                 return existing
 
             if self._switch_layer_source(existing, file_path, layer_name):
@@ -838,15 +843,29 @@ class SewerStudioBridgeDock(QDockWidget):
         return None
 
     @staticmethod
-    def _find_layer_by_source(file_path):
-        # Findet eine geladene Ebene, deren Datenquelle auf DIESELBE Datei zeigt —
-        # unabhaengig vom Ebenennamen. So wird die vom Nutzer gestylte Ebene getroffen.
+    def _find_layers_by_source(file_path):
+        # ALLE geladenen Ebenen, deren Datenquelle auf DIESELBE Datei zeigt —
+        # unabhaengig vom Ebenennamen. So werden die vom Nutzer gestylten Ebenen
+        # getroffen.
+        #
+        # Bewusst eine Liste, kein einzelner Treffer: Auf eine Datei zeigen oft
+        # mehrere Ebenen, die sich nur durch ihre Abfrage unterscheiden — etwa
+        # "Schaeden" (code LIKE 'BA%' ...) und "Nicht-Schaeden" (NOT LIKE ...) auf
+        # derselben damages.geojson. Wer hier beim ersten Treffer aufhoert, laedt
+        # genau eine davon neu; die uebrigen zeigen weiter den Stand des vorherigen
+        # Projekts, ohne dass irgendetwas nach einem Fehler aussieht.
         target = os.path.normcase(os.path.normpath(str(file_path)))
+        treffer = []
         for layer in QgsProject.instance().mapLayers().values():
             source = (layer.source() or "").split("|")[0]
             if os.path.normcase(os.path.normpath(source)) == target:
-                return layer
-        return None
+                treffer.append(layer)
+        return treffer
+
+    @classmethod
+    def _find_layer_by_source(cls, file_path):
+        treffer = cls._find_layers_by_source(file_path)
+        return treffer[0] if treffer else None
 
     @staticmethod
     def _same_source(layer, file_path):

@@ -8,7 +8,10 @@ about=Internal SewerStudio connector for restoring the QGIS integration after QG
  ohne eigenen Layer (Zeichnung direkt auf dem Kartenleinwand). Optional folgt die Karte der Position,
  und ein Klick in die Karte laesst das Video an diese Stelle springen (POST /qgis/seek).
  Benoetigt in SewerStudio den Endpunkt GET /qgis/video_position.json - siehe video_position_endpunkt.md.
-version=0.9.0
+ Behoben in 0.9.1: Zeigen mehrere Ebenen auf dieselbe Datei (z.B. "Schaeden" und "Nicht-Schaeden"
+ als zwei Abfragen auf damages.geojson), wurde beim Aktualisieren nur EINE davon neu geladen.
+ Die uebrigen zeigten weiter den Stand des vorherigen Projekts.
+version=0.9.1
 qgisMinimumVersion=3.28
 qgisMaximumVersion=4.99
 author=SewerStudio
