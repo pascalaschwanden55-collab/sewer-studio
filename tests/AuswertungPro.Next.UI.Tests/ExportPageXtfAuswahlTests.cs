@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.UseCases.Xtf;
@@ -36,6 +36,7 @@ public sealed class ExportPageXtfAuswahlTests
 
         Assert.False(welt.Vm.XtfAktualisierenEmpfohlen);
         Assert.True(welt.Vm.XtfNeuEmpfohlen);
+        Assert.True(welt.Vm.XtfNurAenderungen);
         Assert.StartsWith("Keine Importkopie im Projekt", welt.Vm.XtfOriginalZeile, StringComparison.Ordinal);
     }
 
@@ -68,9 +69,9 @@ public sealed class ExportPageXtfAuswahlTests
         var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "ExportPage.xaml"));
 
         Assert.Contains("Bestehende Katasterdaten aktualisieren", xaml, StringComparison.Ordinal);
-        Assert.Contains("Neue eigenständige XTF erstellen", xaml, StringComparison.Ordinal);
+        Assert.Contains("Vollständige neue XTF mit allen belegten Normfeldern", xaml, StringComparison.Ordinal);
         Assert.Contains("{Binding XtfOriginalZeile}", xaml, StringComparison.Ordinal);
-        Assert.Contains("{Binding XtfNeuHinweis}", xaml, StringComparison.Ordinal);
+        Assert.Contains("{Binding XtfVollstaendig}", xaml, StringComparison.Ordinal);
         Assert.Contains("{Binding XtfAktualisierenEmpfohlen, Converter={StaticResource BoolToVis}}", xaml, StringComparison.Ordinal);
         Assert.Contains("{Binding XtfNeuEmpfohlen, Converter={StaticResource BoolToVis}}", xaml, StringComparison.Ordinal);
         Assert.Contains("{Binding OeffneXtfOrdnerCommand}", xaml, StringComparison.Ordinal);
@@ -78,6 +79,28 @@ public sealed class ExportPageXtfAuswahlTests
         Assert.DoesNotContain("Content=\"Revidierte XTF erzeugen\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Revidierte XTF erzeugen\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Neue XTF erzeugen\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Fme_Abgleich_verwendet_in_Vorschau_und_Datei_nur_Aenderungen()
+    {
+        using var welt = new Testwelt(kopien: []);
+        welt.Vm.ErzeugeXtfNeuCommand.Execute(null);
+        Assert.Collection(welt.NeuExport.Requests,
+            r => { Assert.True(r.NurPruefen); Assert.True(r.NurAenderungen); },
+            r => { Assert.False(r.NurPruefen); Assert.True(r.NurAenderungen); });
+    }
+
+    [Fact]
+    public void Erstexport_ist_bewusst_waehlbar_und_liefert_reines_SIA405_in_beiden_Schritten()
+    {
+        using var welt = new Testwelt(kopien: []);
+        welt.Vm.XtfVollstaendig = true;
+        welt.Vm.ErzeugeXtfNeuCommand.Execute(null);
+        Assert.Equal(2, welt.NeuExport.Requests.Count);
+        Assert.All(welt.NeuExport.Requests, r => { Assert.False(r.NurAenderungen); Assert.False(r.MitZusatzangaben); });
+        welt.Vm.XtfVollstaendig = false;
+        Assert.True(welt.Vm.XtfNurAenderungen);
     }
 
     private sealed class Testwelt : IDisposable
@@ -88,6 +111,7 @@ public sealed class ExportPageXtfAuswahlTests
         public ExportPageViewModel Vm { get; }
         public ExplorerFake Explorer { get; } = new();
         public ToastFake Toasts { get; } = new();
+        public NeuExportFake NeuExport { get; } = new();
         public string Ausgabe { get; }
         private readonly string _temp = Path.Combine(Path.GetTempPath(), "ExportPageXtfAuswahl_" + Guid.NewGuid().ToString("N"));
 
@@ -122,6 +146,7 @@ public sealed class ExportPageXtfAuswahlTests
                 services.KatasterXtfPaths,
                 services.HaltungCadastreIndexes,
                 xtfRevisionExport: new RevisionFake(kopien, Ausgabe),
+                xtfNeuExport: NeuExport,
                 explorerReveal: Explorer,
                 xtfVorschau: new VorschauFake());
         }
@@ -145,6 +170,17 @@ public sealed class ExportPageXtfAuswahlTests
                 ? new XtfRevisionExportResult(true, "3 Objekte geändert · 0 neu · 0 entfernt", null, [])
                 : new XtfRevisionExportResult(true, "Geschrieben.", null,
                     [Path.Combine(ausgabe, "XTF-Revision_20260903_145901", "Leitungen_Export_Seilergasse.xtf")]);
+    }
+
+    private sealed class NeuExportFake : IXtfNeuExportService
+    {
+        public List<XtfNeuExportRequest> Requests { get; } = [];
+        public XtfNeuExportResult Erzeuge(XtfNeuExportRequest request)
+        {
+            Requests.Add(request);
+            return new(true, "Nur Aenderungen.", null,
+                request.NurPruefen ? null : Path.Combine(request.ZielOrdner, "Aenderungen.xtf"));
+        }
     }
 
     private sealed class VorschauFake : IXtfExportVorschauDialog

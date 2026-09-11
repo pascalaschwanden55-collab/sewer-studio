@@ -1,0 +1,25 @@
+INTERLIS 2.3;
+
+!! Zusatzangaben zu Objekten derselben XTF; kein Bestandteil des SIA405-Modells.
+MODEL SewerStudio_Zusatz_2026 (de) AT "mailto:Pascal.Aschwanden@abwasser-uri.ch"
+  VERSION "2026-09-07" =
+  TOPIC Zusatzdaten =
+    OID AS INTERLIS.STANDARDOID;
+    CLASS Zusatzangabe =
+      !! TID des Bauwerks oder der Haltung in derselben Transferdatei.
+      ObjektTid : MANDATORY TEXT*16;
+      Feld : MANDATORY TEXT*80;
+      Wert : MANDATORY MTEXT;
+      UNIQUE ObjektTid, Feld;
+    END Zusatzangabe;
+    !! Nur diese Eintraege sind Schreibauftraege. Alle anderen Objekte sind Kontext.
+    CLASS Aenderung =
+      ObjektTid : MANDATORY TEXT*16;
+      !! Standardattribut oder Zusatz:<Feldname>; Bauwerksart bedeutet Typpruefung.
+      Feld : MANDATORY TEXT*80;
+      !! UTC im ISO-8601-Format, Zeitpunkt der Feldbearbeitung in SewerStudio.
+      GeaendertAm : MANDATORY TEXT*30;
+      UNIQUE ObjektTid, Feld;
+    END Aenderung;
+  END Zusatzdaten;
+END SewerStudio_Zusatz_2026.

@@ -1,0 +1,176 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Controls.ObjektakteView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        Background="{DynamicResource CardBrush}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="Sichtbarkeit"/>
+        <Style x:Key="NurMitText" TargetType="TextBlock">
+            <Style.Triggers>
+                <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger>
+            </Style.Triggers>
+        </Style>
+        <ItemsPanelTemplate x:Key="FeldSpalten">
+            <UniformGrid Columns="{Binding Spalten, RelativeSource={RelativeSource AncestorType=controls:ObjektakteView}}"/>
+        </ItemsPanelTemplate>
+        <DataTemplate x:Key="FeldZeile">
+            <Grid Margin="0,3,16,3">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="145"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,10,0"
+                           FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}" ToolTip="{Binding Herkunft}"/>
+                <StackPanel Grid.Column="1">
+                    <WrapPanel Visibility="{Binding DataContext.Anpassen, RelativeSource={RelativeSource AncestorType=controls:ObjektakteView}, Converter={StaticResource Sichtbarkeit}}">
+                        <CheckBox Content="Sichtbar" IsChecked="{Binding Sichtbar}" Margin="0,2,12,2"/>
+                        <CheckBox Content="Meine Übersicht" IsChecked="{Binding Favorit}"/>
+                    </WrapPanel>
+                    <TextBox Text="{Binding Text, UpdateSourceTrigger=LostFocus}" IsReadOnly="{Binding Feld.NurLesen}"
+                             MinHeight="30" MaxHeight="110" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                             AutomationProperties.Name="{Binding Label}">
+                        <TextBox.Style><Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                            <Style.Triggers><DataTrigger Binding="{Binding HatBearbeitbareAuswahl}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger></Style.Triggers>
+                        </Style></TextBox.Style>
+                    </TextBox>
+                    <ComboBox ItemsSource="{Binding Optionen}" SelectedItem="{Binding Auswahl}" Text="{Binding Text, UpdateSourceTrigger=LostFocus}"
+                              IsEditable="True" IsTextSearchEnabled="True" TextSearch.TextPath="Label" DisplayMemberPath="Anzeige"
+                              MaxDropDownHeight="280" MinHeight="30" AutomationProperties.Name="{Binding Label}"
+                              ToolTip="Auswählen oder einen vorhandenen Sonderwert eingeben. Rechtsklick: Liste bearbeiten">
+                        <ComboBox.ContextMenu>
+                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                <MenuItem Header="Liste bearbeiten…" Command="{Binding ListeBearbeitenCommand}"
+                                          ToolTip="Eigene Einträge ergänzen, Einträge umbenennen oder ausblenden — für alle Projekte">
+                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </ComboBox.ContextMenu>
+                        <ComboBox.Style><Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers><DataTrigger Binding="{Binding HatBearbeitbareAuswahl}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger></Style.Triggers>
+                        </Style></ComboBox.Style>
+                    </ComboBox>
+                    <TextBlock Text="{Binding Hinweis}" Style="{StaticResource NurMitText}" TextWrapping="Wrap" Foreground="{DynamicResource FaintBrush}" FontSize="{DynamicResource TextXS}"/>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="ListenZeile">
+            <Expander Header="{Binding Titel}" Margin="0,6,0,2">
+                <StackPanel Margin="12,4">
+                    <DockPanel Margin="0,0,0,4">
+                        <Button DockPanel.Dock="Right" Command="{Binding NeuCommand}"
+                                Visibility="{Binding DarfAnlegen, Converter={StaticResource Sichtbarkeit}}"
+                                Style="{StaticResource ToolbarButton}"
+                                ToolTip="Einen neuen Eintrag in dieser Liste anlegen und öffnen"
+                                AutomationProperties.Name="Neuer Eintrag in dieser Liste">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:FluentIcon Glyph="&#xE710;" Margin="0,0,6,0"/>
+                                <TextBlock Text="Neu" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="{Binding Spalten}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                    </DockPanel>
+                    <TextBlock Text="{Binding Hinweis}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"
+                               Style="{StaticResource NurMitText}"/>
+                    <ItemsControl ItemsSource="{Binding Zeilen}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding Anzeige}" HorizontalContentAlignment="Left"
+                                        Command="{Binding DataContext.OeffnenCommand,
+                                                  RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}"
+                                        Style="{StaticResource ToolbarButton}" Margin="0,1"
+                                        ToolTip="Diesen Eintrag in der Maske öffnen"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Expander>
+        </DataTemplate>
+    </UserControl.Resources>
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Top">
+            <DockPanel Margin="0,0,0,8">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="Speichern" Command="{Binding SpeichernCommand}" Style="{StaticResource ToolbarButton}" Margin="8,0,0,0"/>
+                    <Button Content="Alle auf" Command="{Binding AlleAufCommand}" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0"/>
+                    <Button Content="Alle zu" Command="{Binding AlleZuCommand}" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0"/>
+                    <Button Click="Mehr_Click" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0"
+                            ToolTip="Weitere Aktionen: Bauteile, Ansicht, Zusatzdatei"
+                            AutomationProperties.Name="Weitere Aktionen">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:FluentIcon Glyph="&#xE712;" Margin="0,0,6,0"/>
+                            <TextBlock Text="Mehr" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button.ContextMenu><ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="Deckel hinzufügen" Command="{Binding NeuerDeckelCommand}">
+                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Sanierung hinzufügen" Command="{Binding NeueSanierungCommand}">
+                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Als Hauptdeckel setzen" Command="{Binding HauptdeckelCommand}">
+                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE735;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                            </MenuItem>
+                            <Separator/>
+                            <MenuItem Header="Ansicht anpassen" IsCheckable="True" IsChecked="{Binding Anpassen}"/>
+                            <MenuItem Header="Nur Meine Übersicht" IsCheckable="True" IsChecked="{Binding NurFavoriten}"/>
+                            <Separator/>
+                            <MenuItem Header="Zusatzdatei exportieren" Command="{Binding ExportierenCommand}">
+                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE898;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Zusatzdatei einlesen" Command="{Binding ImportierenCommand}">
+                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE896;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu></Button.ContextMenu>
+                    </Button>
+                </StackPanel>
+                <ComboBox ItemsSource="{Binding Objekte}" DisplayMemberPath="Titel" SelectedValuePath="Akte" SelectedValue="{Binding Auswahl}"
+                          MinWidth="150" MaxWidth="330" HorizontalAlignment="Left" AutomationProperties.Name="Objekt in der Akte wählen"/>
+            </DockPanel>
+            <DockPanel Margin="0,0,0,8">
+                <TextBlock DockPanel.Dock="Left" Text="Suchen" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="{DynamicResource MutedBrush}"/>
+                <TextBox Text="{Binding Suche, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Felder und Werte suchen"
+                         ToolTip="Felder und Werte suchen, auch ausgeblendete"/>
+            </DockPanel>
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Meldung}" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"
+                   TextWrapping="Wrap" Margin="0,8,0,0"/>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <ItemsControl ItemsSource="{Binding KopfFelder}" ItemsPanel="{StaticResource FeldSpalten}" ItemTemplate="{StaticResource FeldZeile}" Margin="4,0,0,10"/>
+                <TextBlock Text="{Binding Tiefe}" Style="{StaticResource NurMitText}" Margin="4,0,0,8"/>
+                <ItemsControl ItemsSource="{Binding Suchtreffer}" Visibility="{Binding Sucht, Converter={StaticResource Sichtbarkeit}}" Margin="0,0,0,8">
+                    <ItemsControl.ItemTemplate><DataTemplate>
+                        <Button Command="{Binding DataContext.TrefferOeffnenCommand, RelativeSource={RelativeSource AncestorType=controls:ObjektakteView}}"
+                                CommandParameter="{Binding}" HorizontalContentAlignment="Left" Margin="0,0,0,3">
+                            <TextBlock Text="{Binding Titel}" TextWrapping="Wrap"/>
+                        </Button>
+                    </DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding Abschnitte}">
+                    <ItemsControl.ItemTemplate><DataTemplate>
+                        <Border Background="{DynamicResource SurfaceSubtleBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,0,5">
+                            <Expander IsExpanded="{Binding Offen, Mode=TwoWay}" Background="{DynamicResource SurfaceSubtleBrush}" Padding="8,5">
+                                <Expander.Header><StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Titel}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Umfang}" Margin="12,0,0,0" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}" VerticalAlignment="Center"/>
+                                </StackPanel></Expander.Header>
+                                <StackPanel Background="{DynamicResource CardBrush}" Margin="0,6,0,0">
+                                    <ItemsControl ItemsSource="{Binding Felder}" ItemsPanel="{StaticResource FeldSpalten}" ItemTemplate="{StaticResource FeldZeile}" Margin="8,4,0,4"/>
+                                    <ItemsControl ItemsSource="{Binding Listen}" ItemTemplate="{StaticResource ListenZeile}" Margin="8,0"/>
+                                </StackPanel>
+                            </Expander>
+                        </Border>
+                    </DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Expander Header="Originalwerte und Herkunft" Margin="8,5">
+                    <TextBox Text="{Binding Quellen, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"/>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

@@ -284,6 +284,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         AiActivityTracker.ActiveChanged -= OnAiActivityChanged;
         AiRuntimeStatusTracker.Changed -= ApplyAiRuntimeStatus;
         MotionSettings.EngineChanged -= OnHintergrundEngineGeaendert;
+        GlobaleSuche?.Dispose();
         UnregisterShellOperationGuards();
         Monitor.Dispose();
         SetCurrentPage(null);

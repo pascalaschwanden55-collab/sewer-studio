@@ -311,30 +311,30 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
             var zielname = $"{stamp}_{san}{namenszusatz}{ext}";
             string dest;
             var wiederverwendet = false;
-            if (fileStaging is null)
+
+            // Liegt im Zielordner schon dieselbe Datei, wird sie wiederverwendet statt ein
+            // zweites Mal kopiert. Gesucht wird im GANZEN Ordner, nicht nur unter dem
+            // Wunschnamen: Dieselbe Aufnahme kommt ueber zwei Wege mit zwei Namen an —
+            // der Haltungs-Verteiler benennt sie nach dem Aufnahmedatum, dieser Rueckfall
+            // nach Datum und Aufnahmezusatz. In Buerglen (2026-09-09) lag deshalb jedes
+            // der 19 Videos doppelt im Projekt, 3397 von 6803 MB waren reine Dopplung.
+            // Ein abweichender Bestand bekommt weiterhin einen freien Namen.
+            var vorhanden = FindeGleicheDatei(dir, safeLink, ext, fileStaging);
+            if (vorhanden is not null)
+            {
+                dest = vorhanden;
+                wiederverwendet = true;
+            }
+            else if (fileStaging is null)
             {
                 var writePathGuard = new ProjectWritePathGuard(projectFolder);
                 dir = writePathGuard.EnsureSafeDirectoryTarget(dir);
                 Directory.CreateDirectory(dir);
 
-                // Liegt am Zielort schon dieselbe Datei, wird sie wiederverwendet statt ein
-                // zweites Mal kopiert. Ohne diese Pruefung legte jeder erneute Import
-                // desselben Ordners eine weitere Kopie "..._1.mpg" an und verbog den Link
-                // darauf (gemessen 2026-09-05). Ein abweichender Bestand bekommt weiterhin
-                // einen freien Namen — dieselbe Regel wie in der Dichtheitsverteilung und
-                // im Staging-Weg, die beide schon so arbeiten.
                 var wunsch = writePathGuard.EnsureSafeFileTarget(Path.Combine(dir, zielname));
-                if (File.Exists(wunsch) && FileContentComparer.FilesEqual(wunsch, safeLink))
-                {
-                    dest = wunsch;
-                    wiederverwendet = true;
-                }
-                else
-                {
-                    dest = writePathGuard.EnsureSafeFileTarget(UniquePath(wunsch));
-                    writePathGuard.EnsureSafeFileTarget(dest);
-                    File.Copy(safeLink, dest, overwrite: false);
-                }
+                dest = writePathGuard.EnsureSafeFileTarget(UniquePath(wunsch));
+                writePathGuard.EnsureSafeFileTarget(dest);
+                File.Copy(safeLink, dest, overwrite: false);
             }
             else
             {
@@ -359,6 +359,53 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
             messages.Add($"Video {haltung}{namenszusatz}: {ex.Message}");
             return VideoVerteilung.Fehler;
         }
+    }
+
+    /// <summary>
+    /// Sucht im Zielordner eine inhaltsgleiche Datei derselben Endung und liefert deren
+    /// logischen Projektpfad. Der Vergleich ist byteweise
+    /// (<see cref="FileContentComparer"/>) — Name, Groesse oder Zeitstempel allein sind
+    /// im Projekt nie ein Beleg fuer Gleichheit.
+    ///
+    /// Waehrend eines Importlaufs zaehlt die gemeinsame Lesesicht aus bereits
+    /// veroeffentlichten und erst vorbereiteten Dateien: Sonst saehe der Rueckfall die
+    /// Kopie des Haltungs-Verteilers nicht, die noch im Arbeitsordner liegt.
+    ///
+    /// Jeder Lesefehler ergibt <c>null</c> — dann wird kopiert. Eine zusaetzliche Kopie
+    /// ist der harmlosere Ausgang als ein Verweis auf eine ungepruefte Datei.
+    /// </summary>
+    private static string? FindeGleicheDatei(
+        string zielOrdner,
+        string quelle,
+        string endung,
+        IImportFileStagingSession? fileStaging)
+    {
+        try
+        {
+            IEnumerable<(string Ziel, string Lesepfad)> kandidaten =
+                fileStaging is null
+                    ? (Directory.Exists(zielOrdner)
+                        ? Directory.EnumerateFiles(zielOrdner).Select(p => (p, p))
+                        : Array.Empty<(string, string)>())
+                    : fileStaging
+                        .EnumerateReadableFiles(zielOrdner, "*", SearchOption.TopDirectoryOnly)
+                        .Select(f => (f.TargetPath, f.ReadPath));
+
+            foreach (var (ziel, lesepfad) in kandidaten
+                         .Where(k => Path.GetExtension(k.Ziel).Equals(endung, StringComparison.OrdinalIgnoreCase))
+                         .OrderBy(k => k.Ziel, StringComparer.OrdinalIgnoreCase))
+            {
+                if (File.Exists(lesepfad) && FileContentComparer.FilesEqual(lesepfad, quelle))
+                    return ziel;
+            }
+        }
+        catch (Exception ex)
+        {
+            AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
+                $"[KanalImport] Dublettenpruefung im Zielordner uebersprungen: {zielOrdner}: {ex.Message}");
+        }
+
+        return null;
     }
 
     private IReadOnlyList<HoldingFolderDistributor.DistributionResult> DistributeOriginalProtocol(
@@ -588,6 +635,7 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
             PdfDokumentTyp.TvProtokoll => 100,
             PdfDokumentTyp.PlanSituation => -1000,
             PdfDokumentTyp.Dichtheitspruefung => -900,
+            PdfDokumentTyp.Aushaerteprotokoll => -900,
             PdfDokumentTyp.Deckblatt => -800,
             PdfDokumentTyp.Schachtprotokoll => -1000,
             _ => 0

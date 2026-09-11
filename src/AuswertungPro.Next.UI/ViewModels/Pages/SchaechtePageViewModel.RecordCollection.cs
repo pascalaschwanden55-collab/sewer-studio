@@ -97,8 +97,7 @@ public sealed partial class SchaechtePageViewModel
 
     private void MarkRecordCollectionChanged()
     {
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
+        ScheduleAutoSave();
     }
 
     private void SetSelectedWithoutRequiredFieldWarning(SchachtRecord? record)

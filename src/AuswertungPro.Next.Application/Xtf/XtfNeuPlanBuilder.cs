@@ -8,7 +8,9 @@ public sealed record XtfNeuPlan(
     IReadOnlyList<XtfNeuObjekt> Objekte,
     IReadOnlyList<string> Hinweise,
     int Haltungen,
-    int Schaechte)
+    int Schaechte,
+    bool NurAenderungen = false,
+    bool Dss = false)
 {
     public bool Leer => Haltungen == 0 && Schaechte == 0;
 }
@@ -178,9 +180,11 @@ public static class XtfNeuPlanBuilder
         var kanalTid = mitGeonis && SiaObjektkennung.IstGueltig(geonis!.Kanal)
             ? geonis.Kanal!
             : kennungen.Fuer("Kanal", name);
+        var kanalFelder = Sachfelder(record, name, XtfStammdatenPlanBuilder.Felder, hinweise);
+        XtfBauwerkFelder.ErgaenzeGemeinsame(kanalFelder, record.GetFieldValue, name, hinweise);
         objekte.Add(new XtfNeuObjekt(
             "Kanal", kanalTid,
-            Sachfelder(record, name, XtfStammdatenPlanBuilder.Felder, hinweise),
+            kanalFelder,
             [.. verwaltung, new XtfNeuVerweis("EigentuemerRef", eigentuemer)]));
 
         var haltungTid = mitGeonis ? geonis!.Haltung! : kennungen.Fuer("Haltung", name);
@@ -299,11 +303,11 @@ public static class XtfNeuPlanBuilder
             return false;
         }
 
-        if (nummer.Length > BauwerkNameMax)
+        if (nummer.Length > 20)
         {
             hinweise.Add(
                 $"Schacht {nummer}: der Name ist {nummer.Length} Zeichen lang, das Modell " +
-                $"laesst {BauwerkNameMax} zu — nicht geschrieben.");
+                "laesst 20 zu — nicht geschrieben.");
             return false;
         }
 
@@ -337,10 +341,18 @@ public static class XtfNeuPlanBuilder
         var eigentuemer = organisationsverweise.Value.Eigentuemer;
         var verwaltung = organisationsverweise.Value.Verwaltung;
 
-        var schachtTid = mitBauwerk ? geonis!.Bauwerk! : kennungen.Fuer("Normschacht", nummer);
+        var klasse = AbwasserbauwerkVokabular.Klasse(
+            XtfSchachtPlanBuilder.Wert(record, FieldKeys.ShaftStructureType),
+            XtfSchachtPlanBuilder.Wert(record, "Funktion"));
+        if (klasse is null)
+        {
+            hinweise.Add($"Schacht {nummer}: unbekannte Bauwerksart \"{XtfSchachtPlanBuilder.Wert(record, FieldKeys.ShaftStructureType)}\" — nicht geschrieben.");
+            return false;
+        }
+        var schachtTid = mitBauwerk ? geonis!.Bauwerk! : kennungen.Fuer(klasse, nummer);
         objekte.Add(new XtfNeuObjekt(
-            "Normschacht", schachtTid,
-            SchachtFelder(record, nummer, hinweise),
+            klasse, schachtTid,
+            XtfBauwerkFelder.Schacht(record, nummer, klasse, hinweise),
             [.. verwaltung, new XtfNeuVerweis("EigentuemerRef", eigentuemer)]));
 
         // Der Abwasserknoten ist der Anschlusspunkt des Schachts ans Netz.
@@ -404,43 +416,6 @@ public static class XtfNeuPlanBuilder
               $"{XtfStammdatenPlanBuilder.BemerkungGrenze} zu — nicht geschrieben."
             : $"{wofuer}: {xtfName} = \"{roh}\" hat in SIA405 keinen Wert — nicht geschrieben.";
 
-    private static List<KeyValuePair<string, string>> SchachtFelder(
-        SchachtRecord record, string nummer, List<string> hinweise)
-    {
-        var felder = new List<KeyValuePair<string, string>>
-        {
-            new("Bezeichnung", nummer)
-        };
-
-        foreach (var (xtfName, projektFeld) in XtfSchachtPlanBuilder.Felder)
-        {
-            var roh = (XtfSchachtPlanBuilder.Wert(record, projektFeld) ?? "").Trim();
-            if (roh.Length == 0)
-                continue;
-
-            var wert = XtfSchachtPlanBuilder.NachXtfWert(xtfName, roh);
-            if (!string.IsNullOrEmpty(wert))
-            {
-                felder.Add(new(xtfName, wert));
-                continue;
-            }
-
-            hinweise.Add(NichtGeschrieben($"Schacht {nummer}", xtfName, roh));
-        }
-
-        var masse = XtfSchachtPlanBuilder.Masse(record, $"Schacht {nummer}", hinweise);
-        if (masse is not null)
-        {
-            felder.Add(new("Dimension1", masse.Value.Dimension1));
-            felder.Add(new("Dimension2", masse.Value.Dimension2));
-
-            var widerspruch = XtfSchachtPlanBuilder.Formwiderspruch(record, masse);
-            if (widerspruch is not null)
-                hinweise.Add($"Schacht {nummer}: {widerspruch}");
-        }
-
-        return felder;
-    }
 
     /// <summary>
     /// Vergibt eindeutige Haltungspunkt-Bezeichnungen innerhalb der Laengengrenze.

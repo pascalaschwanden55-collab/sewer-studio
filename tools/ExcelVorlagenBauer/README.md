@@ -41,10 +41,27 @@ python -m venv .venv
 
 ## Was die Vorlage traegt
 
-Logo, sechs Diagramme, die Farblegende oben links, alle Kennzahlenbloecke mit
+Logo, sieben Diagramme, die Farblegende oben links, alle Kennzahlenbloecke mit
 Formeln, die bedingte Formatierung, Titelband, Kopfzeile, Druckeinrichtung und
 **genau eine gestaltete Musterzeile**. Der C#-Export schreibt nur Werte, kopiert
 den Stil dieser Musterzeile nach unten und setzt die Zeilenhoehe.
+
+Auf ausdruecklichen Nutzerwunsch bleibt seit der Korrektur vom 08.09.2026
+alles auf genau einem Tabellenblatt je Export. Diagramme und Projektkennzahlen
+stehen oben, die vollstaendige Liste darunter. Keine weiteren Blaetter und keine
+zusaetzliche Lesefassung. Die 27 Haltungs-/17 Schachtspalten bleiben erhalten.
+`arbeitsliste.py` ergaenzt SUBTOTAL(103/109) in Zeile 24 fuer sichtbare Anzahl,
+Haltungslaenge und Kosten. Gesamtsummen in Zeile 23 bleiben unabhaengig vom Filter.
+Titel/Kopf/Daten behalten die Vertragszeilen 25/26/27. Kennungen bleiben beim
+Scrollen fixiert. Lange Texte bleiben vollstaendig in ihren Originalzellen;
+der volle Inhalt ist in Excels Bearbeitungsleiste zugaenglich.
+Alle Spalten werden gemeinsam auf einer A3-Seitenbreite gedruckt; die Hoehe
+folgt der Zeilenzahl. `ExcelArbeitsansicht` begrenzt nur den Druckbereich und
+setzt den Projektdruckkopf. `ExcelDrucktitel` normalisiert die Wiederholungs-
+bereiche vor der erneuten Dateipruefung weiterhin auf absolute Bezüge.
+Keine neue Registrierung und keine Aenderung von Projektformaten/Schnittstellen.
+`ExcelArbeitsansichtTests` prueft genau ein Blatt, Spaltenbestand, Textinhalt,
+Filter-/Gesamtsummen, Leerprojekte und Druckeinstellungen.
 
 Der Export faerbt bewusst nichts selbst ein. Die Ampelfarben kommen aus der
 bedingten Formatierung — nur so folgt die Farbe dem Wert auch dann noch, wenn

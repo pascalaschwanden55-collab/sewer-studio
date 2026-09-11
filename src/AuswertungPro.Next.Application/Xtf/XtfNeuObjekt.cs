@@ -34,7 +34,10 @@ public sealed record XtfNeuObjekt(
     IReadOnlyList<KeyValuePair<string, string>> Felder,
     IReadOnlyList<XtfNeuVerweis> Verweise,
     XtfNeuGeometrie? Geometrie = null,
-    bool ImTopicAdministration = false);
+    bool ImTopicAdministration = false,
+    bool ImTopicZusatz = false,
+    IReadOnlyDictionary<string, string>? Strukturen = null,
+    bool OhneTid = false);
 
 /// <summary>
 /// Vergibt die Objektkennungen (<c>TID</c>/<c>OBJ_ID</c>) fuer eine neu erzeugte XTF.

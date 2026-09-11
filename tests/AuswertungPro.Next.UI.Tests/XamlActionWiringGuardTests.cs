@@ -131,14 +131,18 @@ public sealed class XamlActionWiringGuardTests
         var findings = new List<string>();
         foreach (var viewModel in viewModels)
         {
-            var viewPath = FindAssociatedView(viewModel.Name, xamlFiles);
-            if (viewPath is null)
+            var viewPaths = FindAssociatedViews(viewModel.Name, xamlFiles);
+            if (viewPaths.Count == 0)
                 continue;
 
-            var viewCode = File.ReadAllText(viewPath);
-            var codeBehindPath = viewPath + ".cs";
-            if (File.Exists(codeBehindPath))
-                viewCode += Environment.NewLine + File.ReadAllText(codeBehindPath);
+            var viewCode = string.Join(Environment.NewLine, viewPaths.Select(path =>
+            {
+                var text = File.ReadAllText(path);
+                var codeBehindPath = path + ".cs";
+                return File.Exists(codeBehindPath)
+                    ? text + Environment.NewLine + File.ReadAllText(codeBehindPath)
+                    : text;
+            }));
 
             foreach (var command in DeclaredCommands(viewModel.Text))
             {
@@ -157,7 +161,7 @@ public sealed class XamlActionWiringGuardTests
 
                 findings.Add(
                     $"{Path.GetRelativePath(FindRepositoryRoot(), viewModel.MainPath)}: " +
-                    $"{command} wird in {Path.GetFileName(viewPath)} nicht aufgerufen.");
+                    $"{command} wird in {string.Join(", ", viewPaths.Select(Path.GetFileName))} nicht aufgerufen.");
             }
         }
 
@@ -197,7 +201,10 @@ public sealed class XamlActionWiringGuardTests
         return commands.Distinct(StringComparer.Ordinal).ToList();
     }
 
-    private static string? FindAssociatedView(string viewModelName, IReadOnlyList<string> xamlFiles)
+    // Ein ViewModel kann mehrere zugehoerige Ansichten haben: ObjektakteViewModel bedient die
+    // gemeinsame ObjektakteView (Aufklappliste) UND das ObjektakteWindow, das sie nur einbettet.
+    // Geprueft werden deshalb alle Treffer zusammen; ein Befehl darf in einer davon haengen.
+    private static IReadOnlyList<string> FindAssociatedViews(string viewModelName, IReadOnlyList<string> xamlFiles)
     {
         var baseName = viewModelName.EndsWith("ViewModel", StringComparison.Ordinal)
             ? viewModelName[..^"ViewModel".Length]
@@ -205,6 +212,7 @@ public sealed class XamlActionWiringGuardTests
         var candidates = new[]
         {
             baseName,
+            baseName + "View",
             baseName + "Window",
             baseName + "Dialog",
             baseName + "Page"
@@ -214,7 +222,8 @@ public sealed class XamlActionWiringGuardTests
                 Path.GetFileNameWithoutExtension(path),
                 candidate,
                 StringComparison.OrdinalIgnoreCase)))
-            .FirstOrDefault(path => path is not null);
+            .OfType<string>()
+            .ToList();
     }
 
     private static bool ContainsIdentifier(string source, string identifier)

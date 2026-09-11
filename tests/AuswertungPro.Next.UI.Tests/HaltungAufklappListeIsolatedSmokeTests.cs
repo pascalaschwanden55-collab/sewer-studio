@@ -55,6 +55,7 @@ public sealed class HaltungAufklappListeIsolatedSmokeTests
             app.InitializeComponent();
 
             var datensaetze = new ObservableCollection<HaltungRecord>(Enumerable.Range(1, 40).Select(Datensatz));
+            AuswertungPro.Next.Application.Common.HaltungRunningNumberService.AssignNr(datensaetze);
             var fabrik = new DataPageDetailItemFactory(
                 _ => null,
                 (record, feld, wert) => record.SetFieldValue(feld, wert, FieldSource.Manual, userEdited: true));
@@ -75,6 +76,24 @@ public sealed class HaltungAufklappListeIsolatedSmokeTests
             var zeilenAmAnfang = Alle<ListBoxItem>(liste).Count;
             Assert.InRange(zeilenAmAnfang, 1, datensaetze.Count - 1);
 
+            // Die Nummer bleibt beim Filtern die Projektposition und folgt einer Neunummerierung.
+            Assert.Contains(Alle<TextBlock>(liste), t => t.Text == "Nr.");
+            var nummerText = Alle<TextBlock>(Zeile(liste, datensaetze[1]))
+                .Single(t => Equals(t.ToolTip, "Laufende Nummer im Projekt"));
+            Assert.Equal("2", nummerText.Text);
+            var ansicht = System.Windows.Data.CollectionViewSource.GetDefaultView(datensaetze);
+            ansicht.Filter = item => ReferenceEquals(item, datensaetze[1]);
+            Layout(liste);
+            nummerText = Alle<TextBlock>(Zeile(liste, datensaetze[1]))
+                .Single(t => Equals(t.ToolTip, "Laufende Nummer im Projekt"));
+            Assert.Equal("2", nummerText.Text);
+            datensaetze[1].SetFieldValue("NR", "7", FieldSource.Manual, userEdited: true);
+            Layout(liste);
+            Assert.Equal("7", nummerText.Text);
+            datensaetze[1].SetFieldValue("NR", "2", FieldSource.Manual, userEdited: true);
+            ansicht.Filter = null;
+            Layout(liste);
+
             // Aufklappen: genau ein Formular mit den fuenf Themen des Detail-Builders.
             liste.KlappeAuf(datensaetze[0]);
             Layout(liste);
@@ -85,7 +104,7 @@ public sealed class HaltungAufklappListeIsolatedSmokeTests
             Assert.Equal(
                 ["Stammdaten", "Bewertung", "Sanierung", "Kosten und Bemerkungen", "Weitere Angaben"],
                 themen.Select(t => t.Title));
-            Assert.Equal([17, 9, 11, 3], themen.Take(4).Select(t => t.Anzahl));
+            Assert.Equal([23, 11, 11, 4], themen.Take(4).Select(t => t.Anzahl));
             Assert.True(themen[4].Anzahl > 0, "Weitere Angaben darf nicht leer sein");
             // Vier Formulare: Das zugeklappte Thema "Weitere Angaben" baut seinen Inhalt erst
             // beim Aufklappen auf — ein collapsed ContentPresenter wird nie gemessen.

@@ -182,7 +182,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         IImportFileStagingService? importFileStaging = null,
         IImportTransactionJournal? importTransactionJournal = null,
         IExplorerRevealService? explorerReveal = null,
-        IXtfExportVorschauDialog? xtfVorschau = null)
+        IXtfExportVorschauDialog? xtfVorschau = null,
+        AuswertungPro.Next.Application.Projects.IObjektaktenPaketService? objektaktenPakete = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -214,6 +215,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         ErzeugeXtfNeuCommand = new RelayCommand(RunXtfNeuWithProjectOperation, CanRunProjectExportCommands);
         _explorerReveal = explorerReveal ?? new Infrastructure.Common.ExplorerRevealLauncher();
         _xtfVorschau = xtfVorschau ?? new XtfExportVorschauDialogService();
+        _objektaktenPakete = objektaktenPakete ?? new Infrastructure.Projects.ObjektaktenPaketService();
         OeffneXtfOrdnerCommand = new RelayCommand(OeffneXtfOrdner, () => HatXtfOrdner);
         _patternResolver = patternResolver ?? new DistributionPatternResolver();
         _directoryTreeResolver = directoryTreeResolver ?? new DistributionDirectoryTreeResolver(_patternResolver);

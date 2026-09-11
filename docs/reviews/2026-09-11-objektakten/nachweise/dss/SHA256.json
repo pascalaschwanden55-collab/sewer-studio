@@ -1,0 +1,22 @@
+{
+  "alle-felder.xtf": "7589f14710421457169debe484cb54fb3d40ee077943685aa3c0f6947d9dfa12",
+  "dss-abnahme.txt": "245986a6da3f25c840cc59a146b850ee0fe98e6488b8db6fbffa4b9ae966d343",
+  "dss-attributabdeckung.json": "2ae349779e79d9ba555e17e4af8d2461bba8dc0d20cd2126c870a3de296d6e19",
+  "dss-dev-build.txt": "d135cf22e1c608ded15ad57b7097895caed8ebc9057b5130e2c4fd42df6bdeec",
+  "dss-infrastruktur-abschluss.txt": "c61a371a8ee006e901448c753fac93c7742547603bc703d7cd7e80298b0c1a14",
+  "dss-infrastruktur-tests.txt": "da723b3a54608cd39fa8a7ac3aa3a7288b40e9bc120cdf388f5b6388db4c9ba2",
+  "dss-modernizer-tests.txt": "c97b1c2aafa71184c9453041a2eefa487ca1ca639848dfc8fccb6fd6ee8ae75a",
+  "dss-pipeline-tests.txt": "372320cf418d22709035f49cfeb32ba7866862df1a8b8317f103559747100260",
+  "dss-release-build.txt": "64365c7e774ac57464bac93b2065af5e64d539e0b98568b31aa9560d9b687b55",
+  "dss-smoke.txt": "138fe9e98863cd2aa43e3ca15f895c8f6dca65a27dd5845d7432daa08fe85a48",
+  "dss-ui-abschluss.txt": "1b3ba90f2342b744d6697005d3165c397466d85e0894a2c2de6d06df701c15f1",
+  "dss-ui-tests.txt": "124b858ee25621c420a7a4499fc4bab3956193f67886ab6a7f66644b480cff81",
+  "dss-validator-alle-felder.txt": "9d3c307e2a8297ac5188acd12cc822aa432899d0c90e6df224cf6f93e2994489",
+  "dss-validator-echt-haltung.txt": "cc994fd73a95b06351cd2cc8d2063557ad885a1c6739985f764eaa3a0895dd3c",
+  "dss-validator-echt-schacht.txt": "0b3164ce77db5dcd7bf725e1f575c610b125353568dc9911d6620c9027ebaf9c",
+  "dss-validator-gegenrichtung.txt": "1ae19e3d625bd901cf2fb1390d3150dc2fc5d59a0d7ecad5a0fc092f10816e78",
+  "dss-validator-lieferung.txt": "2c55aec1c1400f0b40eff7cccb4ef41634af489f269c326a4f0e58b3e6f08cca",
+  "gegenrichtung.xtf": "345b791d861ff6957d52542f36426811109e5c2ca701eb4e7c4cecc8815b6b36",
+  "lieferung.xtf": "18a18be54467501d1f09251ce154bf864366e604b792e155f5b128c65e549f7b",
+  "Pruefprobe.cs": "a1bb4a34f7841a53b1d900adaa72105e53d538ea37c5453f8834c7ba78caad23"
+}

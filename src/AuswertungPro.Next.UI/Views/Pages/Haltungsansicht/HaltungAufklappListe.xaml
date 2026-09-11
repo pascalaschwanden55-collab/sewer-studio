@@ -14,6 +14,7 @@
              Werte. SharedSizeGroup waere der uebliche Weg, misst bei Virtualisierung aber nur
              die gerade erzeugten Zeilen und laesst die Kopfzeile springen. -->
         <GridLength x:Key="SpaltePfeil">28</GridLength>
+        <GridLength x:Key="SpalteNr">56</GridLength>
         <GridLength x:Key="SpalteName">170</GridLength>
         <GridLength x:Key="SpalteStrasse">140</GridLength>
         <GridLength x:Key="SpalteMaterial">110</GridLength>
@@ -223,7 +224,7 @@
 
         <!-- Das Formular der EINEN aufgeklappten Haltung. Es steht ausschliesslich hier; jede
              andere Zeile traegt einen ContentControl ohne Inhalt. -->
-        <DataTemplate x:Key="FormularVorlage">
+        <DataTemplate x:Key="KurzformularVorlage">
             <Border x:Name="FormularWurzel" Margin="8,2,8,10" Padding="10,8"
                     Background="{DynamicResource CardBrush}"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -241,6 +242,9 @@
                                    Foreground="{DynamicResource WarningTextBrush}"
                                    ToolTip="{Binding Hinweis, RelativeSource={RelativeSource AncestorType=local:HaltungAufklappListe}}"
                                    Visibility="{Binding Hinweis, RelativeSource={RelativeSource AncestorType=local:HaltungAufklappListe}, Converter={StaticResource TextSichtbar}}"/>
+                        <Button DockPanel.Dock="Right" Content="Ansicht anpassen" Click="AnsichtAnpassen_Click"
+                                Style="{DynamicResource ToolbarButton}" Margin="6,0,0,0"
+                                ToolTip="Felder verschieben, ausblenden und wieder einblenden"/>
                         <Button DockPanel.Dock="Right" Content="Alle zu" Click="AlleZu_Click"
                                 Style="{DynamicResource ToolbarButton}" Margin="6,0,0,0"
                                 ToolTip="Alle Themen zuklappen" AutomationProperties.Name="Alle Themen zuklappen"/>
@@ -278,6 +282,31 @@
              ContentPresenter rendert seine ContentTemplate auch bei Content=null — mit der
              Vorlage als Grundzustand haette jede der 300 Zeilen den leeren Formularrahmen samt
              Kopfzeile getragen (gemessen: 8 sichtbare Zeilen, 8 Rahmen). -->
+        <DataTemplate x:Key="ObjektformularVorlage">
+            <TabControl Margin="8,2,8,10" HorizontalContentAlignment="Stretch">
+                <TabItem Header="Alle Angaben" IsSelected="True">
+                    <controls:ObjektakteView Height="620"
+                        DataContext="{Binding Objektakte, RelativeSource={RelativeSource AncestorType=local:HaltungAufklappListe}}"/>
+                </TabItem>
+                <TabItem Header="Kurzansicht">
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource KurzformularVorlage}"/>
+                </TabItem>
+            </TabControl>
+        </DataTemplate>
+        <DataTemplate x:Key="FormularVorlage">
+            <ContentControl Content="{Binding}">
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Setter Property="ContentTemplate" Value="{StaticResource ObjektformularVorlage}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Objektakte, RelativeSource={RelativeSource AncestorType=local:HaltungAufklappListe}}" Value="{x:Null}">
+                                <Setter Property="ContentTemplate" Value="{StaticResource KurzformularVorlage}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
+        </DataTemplate>
         <Style x:Key="FormularTraeger" TargetType="ContentControl">
             <Style.Triggers>
                 <DataTrigger Value="True">
@@ -297,10 +326,12 @@
     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
         <DockPanel>
+            <controls:ListenReihenfolgeLeiste x:Name="ReihenfolgeLeiste" DockPanel.Dock="Top"/>
             <!-- Beschriftungszeile ueber der Liste, in Grossbuchstaben wie der Tabellenkopf. -->
             <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
                 <Grid>
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="{StaticResource SpalteNr}"/>
                         <ColumnDefinition Width="{StaticResource SpaltePfeil}"/>
                         <ColumnDefinition Width="{StaticResource SpalteName}"/>
                         <ColumnDefinition Width="{StaticResource SpalteStrasse}"/>
@@ -314,16 +345,17 @@
                         <ColumnDefinition Width="{StaticResource SpalteProtokoll}"/>
                         <ColumnDefinition Width="{StaticResource SpalteRest}"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="1" Style="{StaticResource KopfText}" Text="{Binding Source=Haltung, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="2" Style="{StaticResource KopfText}" Text="{Binding Source=Strasse, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="3" Style="{StaticResource KopfText}" Text="{Binding Source=Material, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="4" Style="{StaticResource KopfTextRechts}" Text="{Binding Source=DN, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="5" Style="{StaticResource KopfTextRechts}" Text="{Binding Source=Länge, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="6" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=Zustand, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="7" Style="{StaticResource KopfText}" Text="{Binding Source=KI, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="8" Style="{StaticResource KopfText}" Text="{Binding Source=Prüfung, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="9" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=Video, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="10" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=PDF, Converter={StaticResource Grossbuchstaben}}" ToolTip="Protokoll"/>
+                    <TextBlock Grid.Column="0" Style="{StaticResource KopfTextRechts}" Text="Nr." ToolTip="Laufende Nummer im Projekt"/>
+                    <TextBlock Grid.Column="2" Style="{StaticResource KopfText}" Text="{Binding Source=Haltung, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="3" Style="{StaticResource KopfText}" Text="{Binding Source=Strasse, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="4" Style="{StaticResource KopfText}" Text="{Binding Source=Material, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="5" Style="{StaticResource KopfTextRechts}" Text="{Binding Source=DN, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="6" Style="{StaticResource KopfTextRechts}" Text="{Binding Source=Länge, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="7" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=Zustand, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="8" Style="{StaticResource KopfText}" Text="{Binding Source=KI, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="9" Style="{StaticResource KopfText}" Text="{Binding Source=Prüfung, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="10" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=Video, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="11" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=PDF, Converter={StaticResource Grossbuchstaben}}" ToolTip="Protokoll"/>
                 </Grid>
             </Border>
 
@@ -363,6 +395,7 @@
                                     </MultiBinding>
                                 </Grid.Tag>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{StaticResource SpalteNr}"/>
                                     <ColumnDefinition Width="{StaticResource SpaltePfeil}"/>
                                     <ColumnDefinition Width="{StaticResource SpalteName}"/>
                                     <ColumnDefinition Width="{StaticResource SpalteStrasse}"/>
@@ -377,32 +410,38 @@
                                     <ColumnDefinition Width="{StaticResource SpalteRest}"/>
                                 </Grid.ColumnDefinitions>
 
-                                <Button Grid.Column="0" Click="Pfeil_Click" Style="{DynamicResource IconButton}"
+                                <Border Grid.Column="0" Tag="ReihenfolgeGriff" Background="Transparent" Cursor="SizeAll"
+                                        ToolTip="An der Nr. ziehen, um die Zeile zu verschieben">
+                                    <TextBlock Style="{StaticResource ZellenTextMonoRechts}"
+                                               Text="{Binding Fields[NR]}" ToolTip="Laufende Nummer im Projekt"/>
+                                </Border>
+
+                                <Button Grid.Column="1" Click="Pfeil_Click" Style="{DynamicResource IconButton}"
                                         Width="24" Height="24" MinHeight="24"
                                         ToolTip="{Binding Tag, RelativeSource={RelativeSource AncestorType=Grid}, Converter={StaticResource PfeilBeschriftung}}"
                                         AutomationProperties.Name="{Binding Tag, RelativeSource={RelativeSource AncestorType=Grid}, Converter={StaticResource PfeilBeschriftung}}">
                                     <ui:FluentIcon Glyph="&#xE76C;" Style="{StaticResource ChevronStil}"/>
                                 </Button>
 
-                                <TextBlock Grid.Column="1" Style="{StaticResource ZellenTextMono}" FontWeight="SemiBold"
+                                <TextBlock Grid.Column="2" Style="{StaticResource ZellenTextMono}" FontWeight="SemiBold"
                                            Text="{Binding Fields[Haltungsname], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Haltungsname], Converter={StaticResource FaktWert}}"/>
-                                <TextBlock Grid.Column="2" Style="{StaticResource ZellenText}"
+                                <TextBlock Grid.Column="3" Style="{StaticResource ZellenText}"
                                            Text="{Binding Fields[Strasse], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Strasse], Converter={StaticResource FaktWert}}"/>
-                                <TextBlock Grid.Column="3" Style="{StaticResource ZellenText}"
+                                <TextBlock Grid.Column="4" Style="{StaticResource ZellenText}"
                                            Text="{Binding Fields[Rohrmaterial], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Rohrmaterial], Converter={StaticResource FaktWert}}"/>
-                                <TextBlock Grid.Column="4" Style="{StaticResource ZellenTextMonoRechts}"
+                                <TextBlock Grid.Column="5" Style="{StaticResource ZellenTextMonoRechts}"
                                            Text="{Binding Fields[DN_mm], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[DN_mm], Converter={StaticResource FaktWert}}"/>
-                                <TextBlock Grid.Column="5" Style="{StaticResource ZellenTextMonoRechts}"
+                                <TextBlock Grid.Column="6" Style="{StaticResource ZellenTextMonoRechts}"
                                            Text="{Binding Fields[Haltungslaenge_m], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Haltungslaenge_m], Converter={StaticResource FaktWert}}"/>
 
                                 <!-- Zustandsklasse als Marke; ein Strich ist der getrennte Zustand
                                      "nicht berechnet" und darf nie als Z4 gelesen werden. -->
-                                <Grid Grid.Column="6">
+                                <Grid Grid.Column="7">
                                     <Border Width="{DynamicResource ZustandsklasseChipBreite}" Height="{DynamicResource ZustandsklasseChipHoehe}"
                                             CornerRadius="{DynamicResource RadiusS}" HorizontalAlignment="Center" VerticalAlignment="Center"
                                             Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkChipGrund}}"
@@ -424,7 +463,7 @@
                                     </Grid>
                                 </Grid>
 
-                                <ContentControl Grid.Column="7" Grid.ColumnSpan="4" VerticalAlignment="Center"
+                                <ContentControl Grid.Column="8" Grid.ColumnSpan="4" VerticalAlignment="Center"
                                                 ContentTemplate="{StaticResource StatusVorlage}">
                                     <ContentControl.Content>
                                         <MultiBinding Converter="{StaticResource ZeilenStatus}">

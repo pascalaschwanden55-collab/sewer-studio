@@ -1,0 +1,30 @@
+{
+  "Infrastructure": {
+    "total": 6332,
+    "executed": 6326,
+    "passed": 6326,
+    "failed": 0,
+    "notExecuted": 6
+  },
+  "UI": {
+    "total": 6919,
+    "executed": 6901,
+    "passed": 6901,
+    "failed": 0,
+    "notExecuted": 18
+  },
+  "Pipeline": {
+    "total": 2651,
+    "executed": 2648,
+    "passed": 2648,
+    "failed": 0,
+    "notExecuted": 3
+  },
+  "Modernizer": {
+    "total": 62,
+    "executed": 62,
+    "passed": 62,
+    "failed": 0,
+    "notExecuted": 0
+  }
+}

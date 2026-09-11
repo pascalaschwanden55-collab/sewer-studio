@@ -28,6 +28,7 @@ public sealed class DirectoryMirror
     private readonly string? _versionsStandName;
     private readonly Action<string>? _afterTemporaryFileWritten;
     private readonly ISqliteSnapshotCopier _sqliteSnapshots;
+    private readonly Action<string>? _preserveTarget;
 
     /// <param name="versionsStandName">
     /// Stand-Name dieses Laufs (aus <see cref="BackupVersionRetention.BuildStandName"/>):
@@ -50,11 +51,13 @@ public sealed class DirectoryMirror
     internal DirectoryMirror(
         string? versionsStandName,
         Action<string>? afterTemporaryFileWritten,
-        ISqliteSnapshotCopier sqliteSnapshots)
+        ISqliteSnapshotCopier sqliteSnapshots,
+        Action<string>? preserveTarget = null)
     {
         _versionsStandName = versionsStandName;
         _afterTemporaryFileWritten = afterTemporaryFileWritten;
         _sqliteSnapshots = sqliteSnapshots ?? throw new ArgumentNullException(nameof(sqliteSnapshots));
+        _preserveTarget = preserveTarget;
     }
 
     /// <summary>Laufende Zaehler eines Spiegel-Laufs (ueber alle Quellen geteilt).</summary>
@@ -218,6 +221,11 @@ public sealed class DirectoryMirror
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
+            if (file.WarnIfMissing)
+            {
+                expectedTargets.Add(file.TargetRelativePath);
+                stats.Warnings.Add($"{file.SourcePath}: Verknüpfte Datei fehlt; keine aktuelle Kopie gesichert.");
+            }
             return;
         }
         catch (Exception ex) when (ex is InvalidDataException
@@ -268,7 +276,10 @@ public sealed class DirectoryMirror
             {
                 BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, file);
                 if (_versionsStandName is null)
+                {
+                    _preserveTarget?.Invoke(file);
                     File.Delete(file);
+                }
                 else
                     MoveToVersions(backupRoot, rel, file);
                 stats.Deleted++;
@@ -341,6 +352,7 @@ public sealed class DirectoryMirror
             try
             {
                 BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
+                _preserveTarget?.Invoke(tempFile);
                 var copiedInfo = await CopyNormalFileVerifiedAsync(
                         sourceFile, backupRoot, tempFile, ct)
                     .ConfigureAwait(false);
@@ -388,11 +400,11 @@ public sealed class DirectoryMirror
         var timestampDifference = targetInfo.Exists
             ? (targetInfo.LastWriteTimeUtc - sourceInfo.LastWriteTimeUtc).Duration()
             : TimeSpan.MaxValue;
-        var unchanged = sameLength && timestampDifference == TimeSpan.Zero;
+        var unchanged = false;
 
         // FAT/exFAT runden Zeitstempel auf bis zu zwei Sekunden. Bei einem kleinen,
         // aber echten Unterschied darf gleiche Dateigroesse allein nicht genuegen.
-        if (!unchanged && sameLength && timestampDifference <= TimestampToleranz)
+        if (sameLength && timestampDifference <= TimestampToleranz)
         {
             unchanged = await FilesHaveSameContentAsync(
                     sourceInfo.FullName,
@@ -424,6 +436,9 @@ public sealed class DirectoryMirror
         try
         {
             BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
+            _preserveTarget?.Invoke(tempFile);
+            foreach (var suffix in new[] { "-wal", "-shm", "-journal" })
+                _preserveTarget?.Invoke(tempFile + suffix);
             await _sqliteSnapshots.CreateVerifiedSnapshotAsync(
                     sourceFile, tempFile, _afterTemporaryFileWritten, ct)
                 .ConfigureAwait(false);
@@ -593,6 +608,7 @@ public sealed class DirectoryMirror
     /// </summary>
     private void TryMoveOldVersionAside(string backupRoot, string targetRel, string targetFile, MirrorStats stats)
     {
+        _preserveTarget?.Invoke(targetFile);
         if (_versionsStandName is null || !File.Exists(targetFile))
             return;
 

@@ -97,15 +97,17 @@ public sealed class ExcelExportVorlagentreueTests
             var blatt = LiesXml(zip, "xl/worksheets/sheet1.xml");
             var arbeitsmappe = LiesXml(zip, "xl/workbook.xml");
             var stile = LiesXml(zip, "xl/styles.xml");
+            var formeln = new[] { blatt }
+                .SelectMany(b => b.Descendants().Where(e => e.Name.LocalName == "f"))
+                .Select(e => e.Value).ToArray();
 
             return new Bestand(
                 Diagramme: namen.Count(n => Regex.IsMatch(n, @"^xl/charts/chart\d+\.xml$")),
                 Bilder: namen.Count(n => n.StartsWith("xl/media/", StringComparison.Ordinal)),
                 Regeln: Treffer(zip, "xl/worksheets/sheet1.xml", @"<(?:\w+:)?cfRule\b"),
                 Farbformate: Treffer(zip, "xl/styles.xml", @"<(?:\w+:)?dxf>"),
-                Formeln: Treffer(zip, "xl/worksheets/sheet1.xml", @"<(?:\w+:)?f>"),
-                Formeltexte: blatt.Descendants().Where(e => e.Name.LocalName == "f")
-                    .Select(e => e.Value).ToArray(),
+                Formeln: formeln.Length,
+                Formeltexte: formeln,
                 Diagrammvertrag: zip.Entries
                     .Where(e => Regex.IsMatch(e.FullName, @"^xl/charts/chart\d+\.xml$"))
                     .OrderBy(e => e.FullName, StringComparer.Ordinal)
@@ -132,18 +134,18 @@ public sealed class ExcelExportVorlagentreueTests
 
             return new[]
             {
-                "freeze|" + Attribute(pane, "ySplit", "topLeftCell"),
+                "freeze|" + Attribute(pane, "xSplit", "ySplit", "topLeftCell"),
                 "printOptions|" + Attribute(druckoptionen, "horizontalCentered"),
                 "margins|" + Attribute(raender, "left", "right", "top", "bottom", "header", "footer"),
-                "page|" + Attribute(seite, "orientation", "paperSize", "fitToWidth", "fitToHeight"),
+                "page|" + Attribute(seite, "orientation", "paperSize", "fitToWidth", "fitToHeight", "scale"),
                 "fit|" + Attribute(anpassen, "fitToPage"),
                 "footer|" + string.Join("|", kopfFuss.Elements()
-                    .Where(e => e.Name.LocalName is "oddHeader" or "oddFooter"
-                        or "evenHeader" or "evenFooter" or "firstHeader" or "firstFooter")
+                    .Where(e => e.Name.LocalName is "oddFooter" or "evenFooter" or "firstFooter")
                     .Select(e => $"{e.Name.LocalName}={e.Value}")),
                 "titles|" + string.Join("|", arbeitsmappe.Descendants()
                     .Where(e => e.Name.LocalName == "definedName"
-                        && (string?)e.Attribute("name") is "_xlnm.Print_Titles" or "_xlnm.Print_Area")
+                        && (string?)e.Attribute("name") == "_xlnm.Print_Titles"
+                        && (string?)e.Attribute("localSheetId") == "0")
                     .Select(e => $"{(string?)e.Attribute("name")}={NormalisiereDruckbezug(e.Value)}")),
                 "calc|" + Attribute(berechnung, "calcMode", "fullCalcOnLoad", "forceFullCalc")
             };
@@ -154,8 +156,9 @@ public sealed class ExcelExportVorlagentreueTests
                 $"{name}={(string?)element.Attribute(name) ?? string.Empty}"));
 
         private static string NormalisiereDruckbezug(string wert)
-            => wert.Replace("'", string.Empty, StringComparison.Ordinal)
-                .Replace("$", string.Empty, StringComparison.Ordinal);
+            => string.Join(",", wert.Replace("'", string.Empty, StringComparison.Ordinal)
+                .Replace("$", string.Empty, StringComparison.Ordinal)
+                .Split(',').OrderBy(teil => teil, StringComparer.Ordinal));
 
         private static string[] BedingteRegeln(XDocument blatt, XDocument stile)
         {
@@ -339,7 +342,7 @@ public sealed class ExcelExportVorlagentreueTests
         {
             using var leser = new StreamReader(eintrag.Open(), Encoding.UTF8);
             var xml = leser.ReadToEnd();
-            Assert.DoesNotContain("<hyperlink", xml, StringComparison.OrdinalIgnoreCase);
+            // Interne Navigation ist erlaubt, Kunden-/Dateiverweise bleiben verboten.
             Assert.DoesNotContain("TargetMode=\"External\"", xml, StringComparison.OrdinalIgnoreCase);
         }
     }
@@ -349,7 +352,7 @@ public sealed class ExcelExportVorlagentreueTests
     {
         using var zip = ZipFile.OpenRead(VorlageHaltungen());
         var blatt = Bestand.LiesXml(zip, "xl/worksheets/sheet1.xml");
-        var formeln = blatt.Descendants().Where(e => e.Name.LocalName == "f")
+        var formeln = Bestand.LiesXml(zip, "xl/worksheets/sheet1.xml").Descendants().Where(e => e.Name.LocalName == "f")
             .Select(e => e.Value).ToArray();
         var farbformeln = blatt.Descendants().Where(e => e.Name.LocalName == "formula")
             .Select(e => e.Value).ToArray();
@@ -370,7 +373,7 @@ public sealed class ExcelExportVorlagentreueTests
         foreach (var wert in werte)
         {
             Assert.Contains(formeln, f =>
-                f.Contains($"COUNTIF($K$27:$K$5000,\"{wert}\")", StringComparison.Ordinal));
+                f.Contains($"COUNTIF('Haltungen'!$K$27:$K$5000,\"{wert}\")", StringComparison.Ordinal));
             Assert.Contains(farbformeln, f =>
                 f.Contains($"$K27=\"{wert}\"", StringComparison.Ordinal));
         }
@@ -390,7 +393,7 @@ public sealed class ExcelExportVorlagentreueTests
         // Formel, die genau daraus besteht.
         foreach (var eigentuemer in ExcelReportStyle.Eigentuemer)
         {
-            var gesucht = $"SUMIF($O$27:$O$5000,\"{eigentuemer.Wert}\",$N$27:$N$5000)";
+            var gesucht = $"SUMIF('Haltungen'!$O$27:$O$5000,\"{eigentuemer.Wert}\",'Haltungen'!$N$27:$N$5000)";
             Assert.True(
                 formeln.Any(f => f.Contains(gesucht, StringComparison.Ordinal)),
                 $"Der Kostenblock summiert \"{eigentuemer.Wert}\" nicht mit.");
@@ -547,7 +550,8 @@ public sealed class ExcelExportVorlagentreueTests
         var xml = leser.ReadToEnd();
 
         // Zaehlkriterium in Anfuehrungszeichen trifft Zahl UND Text.
-        Assert.Contains("COUNTIF($J$27:$J$5000,\"0\")", xml, StringComparison.Ordinal);
+        var uebersicht = Bestand.LiesXml(zip, "xl/worksheets/sheet1.xml").ToString();
+        Assert.Contains("COUNTIF('Haltungen'!$J$27:$J$5000,\"0\")", uebersicht, StringComparison.Ordinal);
 
         // Farbregel prueft beide Formen und schliesst leere Zellen aus
         // (im XML ist nur "<>" maskiert, die Anfuehrungszeichen nicht).

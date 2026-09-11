@@ -227,6 +227,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _measureRecommendationService = services.MeasureRecommendation;
         _qgisBestand = services.QgisBestand;
         _katasterKennungen = services.KatasterKennungen;
+        _geoShop = services.GeoShop;
+        ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("haltung", () => _shell.Project, Settings,
+            () => _shell.IsProjectReady, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
+            services.ObjektaktenListenErgaenzungen);
+        ObjektakteCommand = Services.ObjektaktenDialog.Befehl("haltung", () => _shell.Project, () => Selected?.Id,
+            Settings, () => _shell.IsProjectReady, () => _shell.MarkProjectDirty(), Save, services.ObjektaktenPakete, _dialogs,
+            services.ObjektaktenListenErgaenzungen);
         _timers = new DataPageTimerController(
             value => SaveStatus = value,
             value => IsSaveStatusVisible = value,

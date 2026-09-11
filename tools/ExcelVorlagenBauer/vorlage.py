@@ -24,6 +24,7 @@ from openpyxl.utils import get_column_letter as SP
 
 import stil as S
 import werkzeug as W
+import arbeitsliste as A
 
 HIER = os.path.dirname(os.path.abspath(__file__))
 LOGO = os.path.join(HIER, "logo.png")
@@ -191,7 +192,7 @@ def baue_haltungen(pfad):
     erste = W.Z_DATEN
 
     ZK, PRUEF, SAN, KOSTEN, EIG, AD, STATUS = 10, 11, 12, 14, 15, 16, 26
-    b = lambda sp: _bereich(sp, erste)
+    b = lambda sp: "'Haltungen'!" + _bereich(sp, erste)
 
     W.block(ws, 1, 3, "Zustandsklasse",
             [("%s  %s" % (k, BEDEUTUNG[k]), S.ZUSTANDSKLASSE[k][0], S.ZUSTANDSKLASSE[k][1],
@@ -288,6 +289,7 @@ def baue_haltungen(pfad):
                    DRITT_X, 0.2, DRITT_B, MENGEN_H,
                    zahlenformat=FORMAT_CHF_KURZ)
 
+    ws = A.anlegen(wb, "Haltungen", BREITE_HALTUNGEN, LETZTE_ZEILE)
     W.titelband(ws, 27, "", [(19, 25, "Ausmass"), (26, 27, "Status")])
     W.tabellenkopf(ws, KOPF_HALTUNGEN)
 
@@ -313,6 +315,7 @@ def baue_haltungen(pfad):
     W.zebra_regel(ws, "A%d:%s%d" % (erste, SP(27), LETZTE_ZEILE))
 
     W.blatt_abschluss(ws, 27, LETZTE_ZEILE)
+    A.abschliessen(ws)
     wb.save(pfad)
 
 
@@ -328,7 +331,7 @@ def baue_schaechte(pfad):
     erste = W.Z_DATEN
 
     ZK, SAN, KOSTEN, EIG, AD, BELK, STATUS = 6, 7, 9, 10, 11, 15, 16
-    b = lambda sp: _bereich(sp, erste)
+    b = lambda sp: "'Schaechte'!" + _bereich(sp, erste)
 
     W.block(ws, 1, 3, "Zustandsklasse",
             [("%s  %s" % (k, BEDEUTUNG[k]), S.ZUSTANDSKLASSE[k][0], S.ZUSTANDSKLASSE[k][1],
@@ -392,13 +395,13 @@ def baue_schaechte(pfad):
         W.anteilsbalken(ws, titel,
                         dict(min_col=spalte, min_row=W.Z_WERT_VON,
                              max_row=W.Z_WERT_VON + anzahl - 1),
-                        farbe, BALKEN_X, 0.2 + i * BALKEN_H, BALKEN_B, BALKEN_H)
+                        farbe, BALKEN_X * 0.8, 0.2 + i * BALKEN_H, BALKEN_B * 0.8, BALKEN_H)
     W.mengenbalken(ws, "Funktion",
                    dict(min_col=4, min_row=W.Z_WERT_VON,
                         max_row=W.Z_WERT_VON + len(fkt_zeilen) - 1),
                    dict(min_col=6, min_row=W.Z_WERT_VON,
                         max_row=W.Z_WERT_VON + len(fkt_zeilen) - 1),
-                   fkt_farben, MENGEN_X, 0.2, MENGEN_B, MENGEN_H)
+                   fkt_farben, MENGEN_X * 0.8, 0.2, MENGEN_B * 0.8, MENGEN_H)
     W.mengenbalken(ws, "Abdeckungen nach Belastungsklasse",
                    dict(min_col=14, min_row=W.Z_WERT_VON,
                         max_row=W.Z_WERT_VON + 5),
@@ -406,8 +409,9 @@ def baue_schaechte(pfad):
                         max_row=W.Z_WERT_VON + 5),
                    ["FF9DC3E6", "FF76A5AF", "FF4472C4", "FF2F5597",
                     "FF8497B0", "FF44546A"],
-                   DRITT_X, 0.2, DRITT_B, MENGEN_H)
+                   DRITT_X * 0.8, 0.2, DRITT_B * 0.8, MENGEN_H)
 
+    ws = A.anlegen(wb, "Schaechte", BREITE_SCHAECHTE, LETZTE_ZEILE)
     W.titelband(ws, 17, "", [(14, 15, "Ausmass"), (16, 17, "Status")])
     W.tabellenkopf(ws, KOPF_SCHAECHTE)
 
@@ -430,6 +434,7 @@ def baue_schaechte(pfad):
     W.zebra_regel(ws, "A%d:%s%d" % (erste, SP(17), LETZTE_ZEILE))
 
     W.blatt_abschluss(ws, 17, LETZTE_ZEILE)
+    A.abschliessen(ws)
     wb.save(pfad)
 
 

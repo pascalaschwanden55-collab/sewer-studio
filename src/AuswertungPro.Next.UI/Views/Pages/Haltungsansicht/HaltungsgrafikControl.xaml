@@ -7,6 +7,9 @@
     <Grid ClipToBounds="True">
         <!-- Die Grafik behaelt ihr Seitenverhaeltnis; die Viewbox passt sie in die Spalte ein. -->
         <Viewbox x:Name="Buehne" Stretch="Uniform" StretchDirection="Both"/>
+        <ScrollViewer x:Name="KlartextBildlauf" Visibility="Collapsed"
+                      HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                      HorizontalContentAlignment="Left" VerticalContentAlignment="Top"/>
         <TextBlock x:Name="Hinweis" Visibility="Collapsed" TextWrapping="Wrap"
                    VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center"
                    FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}"/>

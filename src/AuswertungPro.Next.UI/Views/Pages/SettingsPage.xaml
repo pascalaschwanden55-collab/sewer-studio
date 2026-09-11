@@ -996,13 +996,18 @@
 
                         <GroupBox Header="PC-Ausfall-Schutz" Style="{StaticResource SettingsSectionGroupBox}">
                             <StackPanel>
-                                <TextBlock Text="Datensicherung (kompletter PC-Ausfall-Schutz)" Margin="0,0,0,6" Foreground="{DynamicResource MutedBrush}"/>
-                                <TextBlock Text="Spiegelt Programm, Git-Verlauf, Projekte, KI-Gehirn, Einstellungen und Logs in einen gewählten Ordner. Projektvideos sind standardmässig aus Platzgründen ausgeschaltet."
+                                <TextBlock Text="Datensicherung für einen PC-Ausfall" Margin="0,0,0,6" Foreground="{DynamicResource MutedBrush}"/>
+                                <TextBlock Text="Sichert Programm, Git-Verlauf, Projekte, verknüpfte Dateien, KI-Gehirn und Einstellungen. Videos sind standardmässig eingeschaltet. Eine Wiederherstellung benötigt zusätzlich die Programminstallation."
                                            TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}" Margin="0,0,0,8"/>
                                 <CheckBox Content="Projektvideos ebenfalls sichern"
                                           IsChecked="{Binding IncludeProjectVideosInFullBackup}"
                                           Margin="0,0,0,8"
                                           ToolTip="Kann die Sicherung je nach Videobestand stark vergrössern."/>
+                                <TextBlock Text="Weitere Sicherungsordner (ein vollständiger Pfad pro Zeile, z. B. Ihre GeoShop-Ablage)"
+                                           TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding AdditionalBackupFoldersText, UpdateSourceTrigger=LostFocus}"
+                                         AcceptsReturn="True" MinHeight="55" MaxHeight="120"
+                                         VerticalScrollBarVisibility="Auto" Margin="0,0,0,8"/>
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <Button Content="Datensicherung erstellen..."

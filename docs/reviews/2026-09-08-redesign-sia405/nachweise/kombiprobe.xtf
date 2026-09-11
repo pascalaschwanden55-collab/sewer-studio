@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="SewerStudio" VERSION="2.3">
+    <MODELS>
+      <MODEL NAME="SIA405_ABWASSER_2020_LV95" URI="http://www.sia.ch/405" VERSION="26.06.2021" />
+      <MODEL NAME="SIA405_Base_Abwasser_LV95" URI="http://www.vsa.ch/models" VERSION="03.11.2020" />
+    </MODELS>
+    <ALIAS>
+      <ENTRIES FOR="SIA405_ABWASSER_2020_LV95" />
+    </ALIAS>
+    <COMMENT>Vollstaendiger Neu-Export aus SewerStudio: 0 Haltungen, 1 Schaechte.</COMMENT>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="chB0000000000001">
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Spezialbauwerk TID="chSST37F40F63271">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>AUDIT-KOMBI</Bezeichnung>
+        <Funktion>Kombischacht</Funktion>
+        <DatenherrRef REF="chSST3CB4093CC35" />
+        <DatenlieferantRef REF="chSST3CB4093CC35" />
+        <EigentuemerRef REF="chSST3CB4093CC35" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Spezialbauwerk>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="chSSTDCCD3F4B4EB">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>AUDIT-KOMBI</Bezeichnung>
+        <AbwasserbauwerkRef REF="chSST37F40F63271" />
+        <DatenherrRef REF="chSST3CB4093CC35" />
+        <DatenlieferantRef REF="chSST3CB4093CC35" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten>
+    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+    <SIA405_Base_Abwasser_LV95.Administration BID="chB0000000000002">
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="chSST3CB4093CC35">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>Privat</Bezeichnung>
+        <Organisationstyp>Privat</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+    </SIA405_Base_Abwasser_LV95.Administration>
+  </DATASECTION>
+</TRANSFER>

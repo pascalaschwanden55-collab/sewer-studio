@@ -217,7 +217,8 @@ public partial class SchaechtePage : UserControl
                                 spec.RemoveCommand,
                                 spec.AddCommand)
                             : null,
-                        useSelectedItemWhenNotFreeText: spec.Managed);
+                        useSelectedItemWhenNotFreeText: spec.Managed,
+                        itemsBinding: SchachtNormoptionen.FuerSpalte(col));
                 }
                 else
                 {
@@ -686,8 +687,7 @@ public partial class SchaechtePage : UserControl
         if (project is null)
             return;
 
-        project.ModifiedAtUtc = DateTime.UtcNow;
-        project.Dirty = true;
+        _vm.ScheduleAutoSave();
     }
 
     private static Project? GetCurrentProject()
@@ -784,7 +784,11 @@ public partial class SchaechtePage : UserControl
             "SchachtformOptions" => _vm.SchachtformOptions,
             "BelastungsklasseOptions" => _vm.BelastungsklasseOptions,
             "SchachtFunktionOptions" => _vm.SchachtFunktionOptions,
+            "BauwerksartOptions" => _vm.BauwerksartOptions,
+            "VersickerungsartOptions" => _vm.VersickerungsartOptions,
             "SchachtMaterialOptions" => _vm.SchachtMaterialOptions,
+            "StatusOptions" => _vm.StatusOptions,
+            "SanierungsbedarfOptions" => _vm.SanierungsbedarfOptions,
             _ => Array.Empty<string>()
         };
     }

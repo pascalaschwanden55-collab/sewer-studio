@@ -1,0 +1,132 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION VERSION="2.3" SENDER="SewerStudio">
+    <MODELS>
+      <MODEL NAME="DSS_2020_1_LV95" VERSION="18.10.2023" URI="http://www.vsa.ch/models" />
+      <MODEL NAME="SIA405_Base_Abwasser_1_LV95" VERSION="18.10.2023" URI="http://www.vsa.ch/models" />
+    </MODELS>
+    <COMMENT>DSS-Neuexport aus gespeichertem Projektstand.
+DSS_2020_1_LV95: belegte GeoShop-Felder, Deckel und Ereignisse als Normobjekte. Aktuelle Eingaben haben Vorrang.
+chTEST0000000001: Haltungspunkte und Verlauf in Projektrichtung gedreht; Original-TIDs bleiben erhalten.
+39 DSS-Feldwerte; 1 Deckel; 2 Unterhalts-/Sanierungsereignisse.</COMMENT>
+  </HEADERSECTION>
+  <DATASECTION>
+    <DSS_2020_1_LV95.Siedlungsentwaesserung BID="chB0000000000001">
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Haltung TID="chTEST0000000001">
+        <Letzte_Aenderung>20260911</Letzte_Aenderung>
+        <Bemerkung>Leitungstext</Bemerkung>
+        <Bezeichnung>B-A</Bezeichnung>
+        <LaengeEffektiv>40.00</LaengeEffektiv>
+        <Reliner_Material>Polyesterharz_Glasfaserlaminat</Reliner_Material>
+        <Verlauf xmlns="http://www.interlis.ch/INTERLIS2.3">
+          <POLYLINE>
+            <COORD>
+              <C1>2680020.000</C1>
+              <C2>1200000.000</C2>
+            </COORD>
+            <ARC>
+              <C1>2680000.000</C1>
+              <C2>1200000.000</C2>
+              <A1>2680010.000</A1>
+              <A2>1200005.000</A2>
+            </ARC>
+          </POLYLINE>
+        </Verlauf>
+        <AbwasserbauwerkRef REF="chTEST0000000002" />
+        <vonHaltungspunktRef REF="chTEST0000000004" />
+        <nachHaltungspunktRef REF="chTEST0000000003" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Haltung>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Kanal TID="chTEST0000000002">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bemerkung>Bauwerkstext</Bemerkung>
+        <Bezeichnung>A-B</Bezeichnung>
+        <Spuelintervall>10.00</Spuelintervall>
+        <EigentuemerRef REF="chTEST0000000005" />
+        <BetreiberRef REF="chTEST0000000005" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Kanal>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt TID="chTEST0000000003">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>A-B_von</Bezeichnung>
+        <Kote>448.910</Kote>
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt TID="chTEST0000000004">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>A-B_nach</Bezeichnung>
+        <Kote>448.360</Kote>
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten TID="chTEST0000000010">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>B</Bezeichnung>
+        <Sohlenkote>448.360</Sohlenkote>
+        <AbwasserbauwerkRef REF="chTEST0000000011" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Normschacht TID="chTEST0000000011">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>B</Bezeichnung>
+        <EigentuemerRef REF="chTEST0000000005" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Normschacht>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Deckel TID="chTEST0000000012">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>Deckel B</Bezeichnung>
+        <Kote>451.125</Kote>
+        <Material>Guss_mit_Betonfuellung</Material>
+        <AbwasserbauwerkRef REF="chTEST0000000011" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Deckel>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Einstiegshilfe TID="chTEST0000000014">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>Einstieg B</Bezeichnung>
+        <Art>Steigeisen</Art>
+        <AbwasserbauwerkRef REF="chTEST0000000011" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Einstiegshilfe>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Erhaltungsereignis_AbwasserbauwerkAssoc>
+        <AbwasserbauwerkRef REF="chTEST0000000011" />
+        <Erhaltungsereignis_AbwasserbauwerkAssocRef REF="chTEST0000000013" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Erhaltungsereignis_AbwasserbauwerkAssoc>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Unterhalt TID="chTEST0000000013">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>Liner 2025</Bezeichnung>
+        <Zeitpunkt>20250917</Zeitpunkt>
+        <Art>Sanierung_Renovierung</Art>
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+        <Ausfuehrende_FirmaRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Unterhalt>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Unterhalt TID="chSSTE89DA9C1854">
+        <Letzte_Aenderung>20260911</Letzte_Aenderung>
+        <Bezeichnung>Reparatur 2026</Bezeichnung>
+        <Zeitpunkt>20260911</Zeitpunkt>
+        <Art>Sanierung_Reparatur</Art>
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Unterhalt>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Erhaltungsereignis_AbwasserbauwerkAssoc>
+        <AbwasserbauwerkRef REF="chTEST0000000011" />
+        <Erhaltungsereignis_AbwasserbauwerkAssocRef REF="chSSTE89DA9C1854" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Erhaltungsereignis_AbwasserbauwerkAssoc>
+    </DSS_2020_1_LV95.Siedlungsentwaesserung>
+    <SIA405_Base_Abwasser_1_LV95.Administration BID="chB0000000000002">
+      <SIA405_Base_Abwasser_1_LV95.Administration.Organisation TID="chTEST0000000005">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>Privat</Bezeichnung>
+        <Organisationstyp>Privat</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_1_LV95.Administration.Organisation>
+    </SIA405_Base_Abwasser_1_LV95.Administration>
+  </DATASECTION>
+</TRANSFER>

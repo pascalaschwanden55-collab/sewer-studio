@@ -1,16 +1,17 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
 public sealed class SchachtFunktionVokabularTests
 {
     // Die 22 Werte der Modelldatei SIA405_Abwasser_2020_2_d_LV95.
-    // Fettabscheider fehlt hier bewusst - siehe eigener Test weiter unten.
+    // Alle 22 Normfunktionen muessen ohne Bedeutungsverlust zurueckgeschrieben werden.
     [Theory]
     [InlineData("Absturzbauwerk")]
     [InlineData("andere")]
     [InlineData("Be_Entlueftung")]
     [InlineData("Behandlungsanlage")]
+    [InlineData("Fettabscheider")]
     [InlineData("Bodenablauf")]
     [InlineData("Dachwasserschacht")]
     [InlineData("Einlaufschacht")]
@@ -59,7 +60,6 @@ public sealed class SchachtFunktionVokabularTests
     [Theory]
     [InlineData("Sickerschacht")]
     [InlineData("Spezialbauwerk")]
-    [InlineData("Fettabscheider")]
     public void Ohne_passenden_Normwert_bleibt_der_Begriff_im_Programm_erhalten(string schachtPro)
     {
         // Wichtig: "andere" ist der Wert fuer die XTF, nicht fuer die Anzeige.
@@ -69,15 +69,9 @@ public sealed class SchachtFunktionVokabularTests
     }
 
     [Fact]
-    public void Fettabscheider_geht_bewusst_auf_andere_obwohl_es_ihn_im_Modell_gibt()
+    public void Fettabscheider_bleibt_beim_Export_zeichengenau_erhalten()
     {
-        // Entscheid Pascal 2026-08-29. Das Modell kennt "Fettabscheider", der
-        // AWU-Bestand benutzt ihn aber in 64420 Schaechten kein einziges Mal.
-        // Deshalb wie AWU: andere. Folge - ein aus einer XTF gelesener
-        // "Fettabscheider" kaeme beim Schreiben als "andere" zurueck. Praktisch
-        // folgenlos, weil der Export nur handgeaenderte Felder schreibt und der
-        // Wert im Bestand nicht vorkommt.
-        Assert.Equal("andere", SchachtFunktionVokabular.NachNorm("Fettabscheider"));
+        Assert.Equal("Fettabscheider", SchachtFunktionVokabular.NachNorm("Fettabscheider"));
     }
 
     [Fact]

@@ -45,12 +45,16 @@ public static class DataGridComboColumnFactory
         bool allowFreeText,
         bool bindIsProjectReady,
         DataGridComboColumnMenuCommands? menuCommands = null,
-        bool useSelectedItemWhenNotFreeText = true)
+        bool useSelectedItemWhenNotFreeText = true,
+        BindingBase? itemsBinding = null)
     {
         ArgumentNullException.ThrowIfNull(lostKeyboardFocus);
         ArgumentNullException.ThrowIfNull(selectionChanged);
 
         var displayFactory = CreateDisplayFactory(fieldName);
+        var normAnzeige = new AuswertungPro.Next.UI.DataPage.SiaBegriffAnzeige();
+        if (itemsSourcePath is "SchachtFunktionOptions" or "VersickerungsartOptions")
+            displayFactory.SetBinding(TextBlock.TextProperty, new Binding($"Fields[{fieldName}]") { Converter = normAnzeige });
         var comboFactory = CreateComboFactory(
             fieldName,
             itemsSourcePath,
@@ -63,6 +67,14 @@ public static class DataGridComboColumnFactory
 
         if (menuCommands is not null)
             comboFactory.SetValue(FrameworkElement.ContextMenuProperty, CreateContextMenu(menuCommands));
+        if (itemsBinding is not null)
+            comboFactory.SetBinding(ComboBox.ItemsSourceProperty, itemsBinding);
+        if (itemsSourcePath is "SchachtFunktionOptions" or "VersickerungsartOptions")
+        {
+            var text = new FrameworkElementFactory(typeof(TextBlock));
+            text.SetBinding(TextBlock.TextProperty, new Binding { Converter = normAnzeige });
+            comboFactory.SetValue(ItemsControl.ItemTemplateProperty, new DataTemplate { VisualTree = text });
+        }
 
         return new DataGridTemplateColumn
         {

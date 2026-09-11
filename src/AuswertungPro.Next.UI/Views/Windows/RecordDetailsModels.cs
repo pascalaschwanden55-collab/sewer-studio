@@ -31,7 +31,7 @@ public enum RecordDetailGroupKind
     CostsRemarks
 }
 
-public sealed class RecordDetailItem : INotifyPropertyChanged
+public sealed class RecordDetailItem : INotifyPropertyChanged, IDataErrorInfo
 {
     private readonly Action<string> _commitValue;
     private string _value;
@@ -91,7 +91,25 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
     public bool IsCombo { get; }
     public bool AllowFreeText { get; }
     public bool DigitsOnly { get; }
-    public IEnumerable<string> Options { get; }
+    public Func<string, string?>? PruefeWert { get; init; }
+    public string Error => PruefeWert?.Invoke(Value) ?? string.Empty;
+    public string this[string propertyName] => propertyName == nameof(Value) ? Error : string.Empty;
+    public IEnumerable<string> Options { get; private set; }
+    private bool _wechseltOptionen;
+
+    /// <summary>Ein Listenwechsel darf einen bestehenden Wert niemals als Nebenwirkung loeschen.</summary>
+    public void ErsetzeOptionen(IEnumerable<string> options)
+    {
+        _wechseltOptionen = true;
+        try
+        {
+            Options = options.ToArray();
+            OnPropertyChanged(nameof(Options));
+            OnPropertyChanged(nameof(SelectedOption));
+            OnPropertyChanged(nameof(AuswahlHinweis));
+        }
+        finally { _wechseltOptionen = false; }
+    }
     public ICommand? EditOptionsCommand { get; }
     public ICommand? PreviewOptionsCommand { get; }
     public ICommand? ResetOptionsCommand { get; }
@@ -164,6 +182,7 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
         get => _value;
         set
         {
+            if (_wechseltOptionen) return;
             var next = value ?? string.Empty;
             if (string.Equals(_value, next, StringComparison.Ordinal))
                 return;
@@ -223,6 +242,7 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
     private void MeldeWertGeaendert()
     {
         OnPropertyChanged(nameof(Value));
+        OnPropertyChanged(nameof(AuswahlHinweis));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(SelectedOption));
         // Sonst bliebe der Nachschlag-Menuepunkt sichtbar, obwohl das
@@ -239,6 +259,10 @@ public sealed class RecordDetailItem : INotifyPropertyChanged
     }
 
     public bool IsEmpty => string.IsNullOrWhiteSpace(_value);
+
+    /// <summary>Altwerte ausserhalb einer festen Liste bleiben sichtbar, ohne ungueltige neue Optionen anzubieten.</summary>
+    public string AuswahlHinweis => IsCombo && !AllowFreeText && !IsEmpty && !Options.Contains(Value)
+        ? $"Gespeichert: {Value}. Bitte Auswahl prüfen." : string.Empty;
 
     private bool _isHiddenByUser;
 

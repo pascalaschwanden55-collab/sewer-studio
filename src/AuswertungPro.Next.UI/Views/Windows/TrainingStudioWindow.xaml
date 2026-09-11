@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.TrainingStudioWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.TrainingStudioWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
@@ -504,19 +504,19 @@
 
                                 <TextBlock Text="Schadensstufe (optional)" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
-                                    <Button Content="1" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity1Brush}"
+                                    <Button Content="1" Width="40" MinWidth="40" Margin="0,0,4,0" Background="{DynamicResource Severity1Brush}"
                                             Foreground="White" FontWeight="Bold"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="1"/>
-                                    <Button Content="2" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity2Brush}"
+                                    <Button Content="2" Width="40" MinWidth="40" Margin="0,0,4,0" Background="{DynamicResource Severity2Brush}"
                                             Foreground="White" FontWeight="Bold"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="2"/>
-                                    <Button Content="3" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity3Brush}"
+                                    <Button Content="3" Width="40" MinWidth="40" Margin="0,0,4,0" Background="{DynamicResource Severity3Brush}"
                                             Foreground="White" FontWeight="Bold"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="3"/>
-                                    <Button Content="4" Width="40" Margin="0,0,4,0" Background="{DynamicResource Severity4Brush}"
+                                    <Button Content="4" Width="40" MinWidth="40" Margin="0,0,4,0" Background="{DynamicResource Severity4Brush}"
                                             Foreground="White" FontWeight="Bold"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="4"/>
-                                    <Button Content="5" Width="40" Background="{DynamicResource Severity5Brush}"
+                                    <Button Content="5" Width="40" MinWidth="40" Background="{DynamicResource Severity5Brush}"
                                             Foreground="White" FontWeight="Bold"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="5"/>
                                 </StackPanel>

@@ -156,4 +156,102 @@ public class PdfDokumentTypErkennungNormSchreibweiseTests
             PdfDokumentTyp.Dichtheitspruefung,
             PdfDokumentTypErkennung.ErkenneText("AusgefuehrtnachSIANorm205", fileName: null));
     }
+
+    // -----------------------------------------------------------------
+    // Buerglen 2026-09-09: Die zehn Dichtheitspruefungen der Quelle heissen "DP H66.pdf"
+    // und sind reine Scans ohne Textebene. Weder das Kuerzel noch der Inhalt wurden
+    // erkannt — alle zehn landeten im Schachtordner statt bei ihrer Haltung.
+    // -----------------------------------------------------------------
+
+    [Theory]
+    [InlineData("DP H66.pdf")]
+    [InlineData("DP_H66.pdf")]
+    [InlineData("2026-08-17 DP H66.pdf")]
+    public void ErkenneText_DpImDateinamenGiltAlsDichtheitspruefung(string dateiname)
+        => Assert.Equal(
+            PdfDokumentTyp.Dichtheitspruefung,
+            PdfDokumentTypErkennung.ErkenneText(text: null, dateiname));
+
+    [Theory]
+    [InlineData("Adapterplan.pdf")]
+    [InlineData("Deponie DPS Bericht.pdf")]
+    [InlineData("Schachtprotokoll 60248.pdf")]
+    public void ErkenneText_DpNurAlsEigenesWort(string dateiname)
+        => Assert.NotEqual(
+            PdfDokumentTyp.Dichtheitspruefung,
+            PdfDokumentTypErkennung.ErkenneText(text: null, dateiname));
+
+    [Fact]
+    public void ErkenneText_DpKuerzelGiltNurBeimScanOhneTextebene()
+    {
+        // Ist Text lesbar, entscheidet weiterhin allein der Inhalt: Das Kuerzel im
+        // Dateinamen darf ein Schachtprotokoll nicht zur Dichtheitspruefung machen.
+        Assert.Equal(
+            PdfDokumentTyp.Schachtprotokoll,
+            PdfDokumentTypErkennung.ErkenneText("Schachtprotokoll Schacht Nr. 60248", "DP H66.pdf"));
+    }
+
+    [Fact]
+    public void ErkenneText_DruckpruefprotokollOhneDasWortDichtheit()
+    {
+        // Wortlaut des realen Scans (GKS Cahenzli, per OCR gelesen).
+        var typ = PdfDokumentTypErkennung.ErkenneText(
+            "Druckpruefprotokoll\nVon Schacht: 60248\nBis Schacht: 60247\nHaltung: H66\n"
+            + "Pruefstrecke [m]: 22.80\nNorm: SIA 190",
+            fileName: null);
+
+        Assert.Equal(PdfDokumentTyp.Dichtheitspruefung, typ);
+    }
+
+    [Fact]
+    public void ErkenneText_AushaerteprotokollIstEinEigenerTyp()
+    {
+        var typ = PdfDokumentTypErkennung.ErkenneText(
+            "Aushaerteprotokoll\nHaltung: H66\nLinertyp: S+ Standard\nLampenleistung [w]: 650",
+            fileName: null);
+
+        Assert.Equal(PdfDokumentTyp.Aushaerteprotokoll, typ);
+    }
+
+    [Theory]
+    [InlineData("Aushärteprotokoll\nHaltung: H66")]
+    [InlineData("Aushärtungsprotokoll\nHaltung: H66")]
+    [InlineData("AushaertungsprotokollHaltungH66")]
+    // Reale OCR-Lesungen desselben Titels aus dem Buerglen-Bestand: Der Umlaut in der
+    // grossen Titelschrift wird unzuverlaessig erkannt. Ohne diese Toleranz fielen drei
+    // von neun Aushaerteprotokollen still aus der Verteilung.
+    [InlineData("Aushirteprotokoll\nHaltung: H14")]
+    [InlineData("Aushfarteprotokoll\nHaltung: H12 H13")]
+    public void ErkenneText_AushaertungInAllenBelegtenSchreibweisen(string text)
+        => Assert.Equal(PdfDokumentTyp.Aushaerteprotokoll, PdfDokumentTypErkennung.ErkenneText(text));
+
+    [Fact]
+    public void ErkenneText_AushaertungAuchOhneLesbarenTitel()
+    {
+        // Zweiter, umlautfreier Beleg: Lampenleistung und Linertyp gibt es nur im
+        // Aushaerteprotokoll. Er traegt, wenn die Titelzeile ganz verlesen wurde.
+        var typ = PdfDokumentTypErkennung.ErkenneText(
+            "GKS Cahenzli AG\nHaltung: H73 H74\nLinertyp: S+ Standard\nLampenleistung [w]: 650");
+
+        Assert.Equal(PdfDokumentTyp.Aushaerteprotokoll, typ);
+    }
+
+    [Fact]
+    public void ErkenneText_EinzelnesLampenwortMachtNochKeinAushaerteprotokoll()
+        => Assert.NotEqual(
+            PdfDokumentTyp.Aushaerteprotokoll,
+            PdfDokumentTypErkennung.ErkenneText("Rechnung Position Lampenleistung 650 W"));
+
+    [Fact]
+    public void ErkenneText_AushaerteprotokollIstKeineDichtheitspruefung()
+    {
+        // Beide sind Begleitprotokolle derselben Sanierung und tragen aehnliche
+        // Kopfdaten. Ein Aushaerteprotokoll hat aber keinen Pruefdruck und keine
+        // Schaechte — es darf nicht als Dichtheitspruefung durchgehen.
+        var typ = PdfDokumentTypErkennung.ErkenneText(
+            "Aushaerteprotokoll\nHaltung: H66\nDruck p(t) [mbar]\nRohrdurchmesser [mm]: 300",
+            "Aushärtungsprotokoll H66.pdf");
+
+        Assert.Equal(PdfDokumentTyp.Aushaerteprotokoll, typ);
+    }
 }

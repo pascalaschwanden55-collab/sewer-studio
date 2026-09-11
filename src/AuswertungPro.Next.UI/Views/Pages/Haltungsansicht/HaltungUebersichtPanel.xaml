@@ -31,31 +31,26 @@
     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="12">
         <Grid>
-            <!-- B3: Alles in einem Bildlauf. Nur die Schadenliste bekommt die Reststrecke (*);
-                 jede Zeile darueber und darunter misst sich selbst (Auto). So wird kein Wert
-                 mehr auf halber Hoehe abgeschnitten, auch wenn die Spalte schmal ist. -->
-            <ScrollViewer x:Name="Inhalt" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+            <!-- Die Grafik erhaelt die freie Hoehe. Eckdaten und Schadenliste bleiben
+                 in einem eigenen, bei Bedarf aufklappbaren Bildlauf erreichbar. -->
+            <Grid x:Name="Inhalt"
                           DataContext="{Binding Record, ElementName=Root}">
                 <!-- Task 6: Ohne gewaehlte Haltung bleibt der ganze Inhalt weg. Sonst stehen leere
                      Beschriftungen da, und eine Feldbindung ohne Datensatz zeigt den Fehltext
                      "{DependencyProperty.UnsetValue}". -->
-                <ScrollViewer.Style>
-                    <Style TargetType="ScrollViewer">
+                <Grid.Style>
+                    <Style TargetType="Grid">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </ScrollViewer.Style>
+                </Grid.Style>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
@@ -80,21 +75,25 @@
                                    TextTrimming="CharacterEllipsis"/>
                     </DockPanel>
 
-                    <!-- Haltungsgrafik des Protokolls: dieselbe Zeichnung wie im PDF, in Theme-Farben.
-                         Hier nur die Rohrsaeule ohne Beschriftungstabelle - die volle Grafik ist
-                         A4-breit und wird in dieser Spalte unlesbar klein; die Schadenliste
-                         darunter ist die Legende. 360 px Anzeigehoehe zu 310 SVG-Einheiten heisst
-                         Massstab 1,16: auch die kleinste Beschriftung (8 SVG-Einheiten an den
-                         Anschluessen) bleibt ueber 9 px. -->
+                    <!-- Die Meterachse nutzt die freie Hoehe; Klartexte bleiben in Bildschirmgroesse.
+                         Bei vielen Beobachtungen scrollt die ganze Grafik ohne verkleinerte Schrift. -->
                     <local:HaltungsgrafikControl Grid.Row="1" Margin="0,0,0,8"
-                                                 NurRohr="True" SvgHoehe="310"
-                                                 Height="360" HorizontalAlignment="Stretch"
+                                                 NurRohr="True" MitKlartext="True" MinHeight="240"
+                                                 FotoOeffnen="{Binding FotoOeffnen, ElementName=Root}"
+                                                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                                  Record="{Binding Record, ElementName=Root}"
                                                  Entries="{Binding Entries, ElementName=Root}"
                                                  Catalog="{Binding Catalog, ElementName=Root}"/>
-
+                    <Expander Grid.Row="2" Header="Eckdaten und primäre Schäden" IsExpanded="False">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="300">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
                     <!-- Eckdaten; ein leeres Feld zeigt einen Gedankenstrich statt einer nackten Einheit -->
-                    <UniformGrid Grid.Row="2" Columns="2" Margin="0,0,0,8">
+                    <UniformGrid Grid.Row="0" Columns="2" Margin="0,0,0,8">
                         <StackPanel Margin="0,0,8,6"><TextBlock Text="Schacht oben" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Schacht_oben], Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
                         <StackPanel Margin="0,0,0,6"><TextBlock Text="Schacht unten" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Schacht_unten], Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
                         <StackPanel Margin="0,0,8,6"><TextBlock Text="Material" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Rohrmaterial], Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
@@ -114,12 +113,12 @@
                         <StackPanel Margin="0,0,0,6"><TextBlock Text="Video" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding VideoText, ElementName=Root, Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
                     </UniformGrid>
 
-                    <TextBlock Grid.Row="3" Text="Primäre Schäden" FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
+                    <TextBlock Grid.Row="1" Text="Primäre Schäden" FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}" Margin="0,4,0,6"/>
 
                     <!-- Schadensliste: nur BA-/BB-Schaeden, schwerste zuerst.
                          Doppelklick oeffnet die Beobachtungen wie in der Haltungsansicht. -->
-                    <ListBox Grid.Row="4" ItemsSource="{Binding Schaeden, ElementName=Root}" BorderThickness="0" Background="Transparent"
+                    <ListBox Grid.Row="2" ItemsSource="{Binding Schaeden, ElementName=Root}" BorderThickness="0" Background="Transparent"
                              MouseDoubleClick="Schaden_MouseDoubleClick" AutomationProperties.Name="Primäre Schäden"
                              ToolTip="Doppelklick öffnet die Beobachtungen"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -154,7 +153,7 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <TextBlock Grid.Row="5" Text="Keine baulichen oder betrieblichen Schäden erfasst."
+                    <TextBlock Grid.Row="3" Text="Keine baulichen oder betrieblichen Schäden erfasst."
                                Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}" TextWrapping="Wrap">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
@@ -169,7 +168,7 @@
                     </TextBlock>
 
                     <!-- KI-Hinweis: nur sichtbar, solange die Auswahl offene KI-Vorschlaege hat -->
-                    <Border Grid.Row="6" Background="{DynamicResource KiSubtleBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10,8" Margin="0,8,0,0"
+                    <Border Grid.Row="4" Background="{DynamicResource KiSubtleBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10,8" Margin="0,8,0,0"
                             Visibility="{Binding OffeneKiBefunde, ElementName=Root, Converter={StaticResource ZahlSichtbar}}">
                         <StackPanel>
                             <TextBlock Text="KI-Vorschläge warten auf fachliche Bestätigung" TextWrapping="Wrap"
@@ -178,8 +177,11 @@
                             <Button Content="Im Player prüfen" Click="ImPlayer_Click" Style="{StaticResource ToolbarButtonAccent}" HorizontalAlignment="Left" Margin="0,6,0,0" ToolTip="Video dieser Haltung im Player öffnen"/>
                         </StackPanel>
                     </Border>
+                            </Grid>
+                        </ScrollViewer>
+                    </Expander>
                 </Grid>
-            </ScrollViewer>
+            </Grid>
 
             <TextBlock x:Name="Leerzustand" Text="Keine Haltung gewählt. Links eine Zeile wählen."
                        Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"

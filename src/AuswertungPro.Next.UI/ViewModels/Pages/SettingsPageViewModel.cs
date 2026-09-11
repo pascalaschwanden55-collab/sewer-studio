@@ -177,7 +177,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             aiSettings: sp.AiSettings,
             sidecarScripts: sp.SidecarScripts,
             sidecarTokens: sp.SidecarTokens,
-            programSnapshot: sp.ProgramSnapshot)
+            programSnapshot: sp.ProgramSnapshot,
+            backupAdditionalFolders: sp.BackupAdditionalFolders)
     {
     }
 
@@ -268,11 +269,14 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         IAiPlatformSettingsResolver? aiSettings = null,
         ISidecarScriptLocator? sidecarScripts = null,
         ISidecarTokenResolver? sidecarTokens = null,
-        IProgramSnapshotService? programSnapshot = null)
+        IProgramSnapshotService? programSnapshot = null,
+        IBackupAdditionalFolders? backupAdditionalFolders = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _backupAdditionalFolders = backupAdditionalFolders;
+        _additionalBackupFoldersText = string.Join(Environment.NewLine, backupAdditionalFolders?.Load() ?? []);
         _fullBackup = fullBackup ?? throw new ArgumentNullException(nameof(fullBackup));
         _toasts = toasts ?? throw new ArgumentNullException(nameof(toasts));
         _fullBackupOperation = fullBackupOperation ?? throw new ArgumentNullException(nameof(fullBackupOperation));
@@ -380,6 +384,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
 
     partial void OnIncludeProjectVideosInFullBackupChanged(bool value)
     {
+        _settings.FullBackupSafetyVersion = 1;
         _settings.FullBackupIncludeProjectVideos = value;
         _settings.SaveImmediate();
     }

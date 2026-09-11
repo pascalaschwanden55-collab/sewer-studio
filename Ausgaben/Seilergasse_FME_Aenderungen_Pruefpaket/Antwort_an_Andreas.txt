@@ -1,0 +1,33 @@
+Sali Andreas
+
+Bitte richtet den Import so ein, dass nur die ausdrücklich genannten Felder geändert werden. Niemals alle Felder eines Objekts überschreiben.
+
+SewerStudio liefert zu jedem bearbeiteten Feld die Objektkennung, den Feldnamen und den Bearbeitungszeitpunkt. Der neue Wert steht ebenfalls in der XTF. Weitere Objekte können zur Erklärung der Verbindungen mitkommen. Ohne Änderungsauftrag dürfen diese nicht geändert werden.
+
+Für den Abgleich gelten diese Regeln:
+
+- Die Kennung muss genau zur internen SIA405_ID in GEONIS passen.
+- Nur eindeutig gefundene bestehende Objekte aktualisieren.
+- Keine Zuordnung über Schachtnummer oder Bezeichnung als Ersatz.
+- Bei unbekannten oder mehrfach gefundenen Kennungen nichts schreiben und den Fall melden.
+- Keine neuen Objekte anlegen und nichts löschen.
+- Fehlt ein Feld oder ist es leer, bleibt der bisherige GEONIS-Wert bestehen.
+
+Ein Beispiel: Steht in GEONIS 500 und geliefert wird 600, soll nur dieses Feld geändert werden. Wird ebenfalls 500 geliefert, bleibt der Wert unverändert. Im Bericht steht dann «bereits identisch».
+
+SewerStudio erkennt bisher, dass ein Feld bearbeitet wurde. Wird 500 gelöscht und wieder 500 eingegeben, kann es deshalb mitgeliefert werden. Der Vergleich mit einem gespeicherten Ausgangswert fehlt noch. Bitte prüft in FME deshalb die genannten Felder auf tatsächliche Unterschiede.
+
+Die Schachtform können wir als Zusatzangabe liefern. Wird «Oval» ausdrücklich beauftragt, soll der passende GEONIS-Wert übernommen werden. Ohne Auftrag bleibt die bisherige Form erhalten. Bearbeitete Schachtbemerkungen können wir ebenfalls liefern.
+
+Wir unterstützen Normschacht, Spezialbauwerk, Versickerungsanlage und Einleitstelle. Die Felder müssen zur jeweiligen Bauwerksart passen. Einen Wechsel der Bauwerksart bitte zuerst als Prüffall melden.
+
+Alle Daten stehen zusammen in einer XTF. Die beiliegende Datei «SewerStudio_Zusatz_2026.ili» erklärt FME den Aufbau der Zusatzangaben und Änderungsaufträge.
+
+Die Anleitung «FME_Importvorgabe.md» beschreibt den Ablauf und die Feldzuordnung. Die passenden GEONIS-Felder und Auswahlcodes müsst ihr noch festlegen. Bitte zuerst einen Probelauf machen. Der Bericht soll je Feld den bisherigen Wert, den neuen Wert und das Ergebnis zeigen.
+
+Die Seilergasse-Prüfdatei trägt noch die alten Kennnummern. Vor einem echten Import brauchen wir die bestätigten aktuellen Kennungen. Bei der Haltung reicht es nicht, nur die ersten Zeichen auszutauschen. Künftig möchten wir die unveränderten SIA405_IDs direkt von LISAG über QGIS beziehen.
+
+Eine automatische Bestätigung der erfolgreichen GEONIS-Übernahme fehlt bei uns noch. Frühere Änderungen können deshalb erneut geliefert werden. Bereits identische Werte bitte unverändert lassen. Ältere Lieferungen dürfen keine später übernommenen Änderungen zurücksetzen.
+
+Gruss
+Pascal

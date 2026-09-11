@@ -17,9 +17,14 @@ public static class RestoreAnleitungText
         sb.AppendLine("SEWERSTUDIO — WIEDERHERSTELLUNG NACH PC-AUSFALL");
         sb.AppendLine("================================================");
         sb.AppendLine();
-        sb.AppendLine("Diese Sicherung enthaelt alles Unersetzliche: Programm (Quellcode inkl.");
+        sb.AppendLine("Diese Sicherung enthaelt die gewaehlten Quellen: Programm (Quellcode inkl.");
         sb.AppendLine("Git-Verlauf), Projekte, KI-Gehirn, Einstellungen und Logdateien.");
         sb.AppendLine($"Projektvideos enthalten: {(sources.IncludeProjectVideos ? "ja" : "nein")}.");
+        sb.AppendLine("Bei abgewählten Videos bleiben ältere Sicherungskopien erhalten, werden aber nicht aktualisiert.");
+        sb.AppendLine("Vor Wiederherstellung manifest.json prüfen. Ein offener Ordner");
+        sb.AppendLine("_Versionen/.unterbrochener-lauf sperrt die Verwendung des gemischten Standes.");
+        sb.AppendLine("Am ursprünglichen Sicherungspfad zuerst FullBackupSmoke --recover-backup <Sicherungsordner> ausführen.");
+        sb.AppendLine("Danach FullBackupSmoke --verify-restore <Sicherungsordner> ausführen.");
         sb.AppendLine("NICHT enthalten: Ollama-Modelle");
         sb.AppendLine("(neu ladbar, Liste in umgebung.txt), Werkzeuge wie ffmpeg/Playwright/");
         sb.AppendLine("Tesseract (neu installierbar), TensorRT-Engines (werden neu gebaut).");
@@ -53,6 +58,11 @@ public static class RestoreAnleitungText
                 sb.AppendLine($"  \"{projectSource.TargetRelativeRoot}\" nach {projectSource.SourceRoot} kopieren.");
         }
         sb.AppendLine();
+        foreach (var folder in sources.AdditionalRoots ?? [])
+            sb.AppendLine($"  Zusatzordner Weitere_Ordner/{BackupExternalPathKey.ForPath(folder)} nach {folder} kopieren.");
+        foreach (var file in sources.ReferencedFiles ?? [])
+            sb.AppendLine($"  Externe Datei {file.TargetRelativePath} nach {file.SourcePath} kopieren.");
+        sb.AppendLine();
         sb.AppendLine("SCHRITT 4 — Einstellungen zuruecklegen");
         sb.AppendLine($"  \"Einstellungen\\Local_SewerStudio\"    nach {sources.LocalSewerStudioDir}");
         sb.AppendLine($"  \"Einstellungen\\Roaming_SewerStudio\"  nach {sources.RoamingSewerStudioDir}");
@@ -70,7 +80,7 @@ public static class RestoreAnleitungText
         sb.AppendLine("  d) Projekt bauen: dotnet build AuswertungPro.sln");
         sb.AppendLine();
         sb.AppendLine("HINWEIS QGIS: Eigene QGIS-Plugins (awu_schadensimport, awu_wincan_export)");
-        sb.AppendLine("liegen im QGIS-Profil und sind NICHT Teil dieser Sicherung — separat sichern.");
+        sb.AppendLine("liegen im QGIS-Profil. Sie sind nur enthalten, wenn ihr Ordner als Zusatzquelle gewählt wurde (siehe Liste oben).");
         sb.AppendLine();
         sb.AppendLine("Urspruengliche Umgebungsvariablen dieses PCs:");
         if (sources.EnvironmentVariables.Count == 0)

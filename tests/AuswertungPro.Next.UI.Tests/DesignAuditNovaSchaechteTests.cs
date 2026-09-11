@@ -13,7 +13,7 @@ public sealed class DesignAuditNovaSchaechteTests
     {
         var xaml = Xaml();
         Assert.Contains("x:Name=\"WeitereAktionenDropdown\"", xaml);
-        foreach (var header in new[] { "PDF-Daten", "Aktualisieren", "Leere Felder aus QGIS", "Katasterkennungen", "Feldnamen aufräumen", "Strassen", "Hoch", "Runter", "Ansicht anpassen", "Alte Schachtansicht" })
+        foreach (var header in new[] { "PDF-Daten", "Aktualisieren", "Leere Felder aus QGIS", "GeoShop-Abgleich (XTF)", "Feldnamen aufräumen", "Strassen", "Hoch", "Runter", "Ansicht anpassen", "Alte Schachtansicht" })
             Assert.Contains($"Header=\"{header}\"", xaml);
         Assert.DoesNotContain("<ToggleButton x:Name=\"SchachtansichtToggle\"", xaml);
         Assert.Contains("x:Name=\"ColumnViewChips\"", xaml);
@@ -244,7 +244,13 @@ public sealed class DesignAuditNovaSchaechteTests
     {
         var controllerCode = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile(
             "src", "AuswertungPro.Next.UI", "DataPage", "SchaechteAufklappListeController.cs"));
-        Assert.Contains("HaltungThemenGruppierung.Bilde(", controllerCode);
+        Assert.Contains("AufklappDetailLayout.Themen(", controllerCode);
+        var haltungController = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile(
+            "src", "AuswertungPro.Next.UI", "DataPage", "DataPageAufklappListeController.cs"));
+        Assert.Contains("AufklappDetailLayout.Themen(", haltungController);
+        var layoutCode = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile(
+            "src", "AuswertungPro.Next.UI", "DataPage", "AufklappDetailLayout.cs"));
+        Assert.Contains("HaltungThemenGruppierung.Bilde(", layoutCode);
         Assert.Contains("new DataPageDetailLiveSync(", controllerCode);
 
         var controlCode = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile(

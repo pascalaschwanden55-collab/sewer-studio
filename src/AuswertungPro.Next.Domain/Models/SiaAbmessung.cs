@@ -42,7 +42,16 @@ public static class SiaAbmessung
     /// Millimeter als ganze Zahl, oder <c>null</c>, wenn der Wert keine brauchbare
     /// Angabe enthaelt. Dann wird nichts geschrieben statt geraten.
     /// </summary>
-    public static int? NachMillimeter(string? wert)
+    public static int? NachMillimeter(string? wert) => Umrechnen(wert, false);
+
+    /// <summary>Neue, ausdruecklich mit mm beschriftete Felder brauchen keine Altwert-Heuristik.</summary>
+    public static int? AusMillimeterfeld(string? wert) => Umrechnen(wert, true);
+
+    public static string? SchachtmassFehler(string? wert)
+        => string.IsNullOrWhiteSpace(wert) || AusMillimeterfeld(wert) is > 0 and <= 4000
+            ? null : "Innenmass in mm eingeben; fuer SIA405 hoechstens 4000 mm. Der Wert wird nicht als Schachtmass exportiert.";
+
+    private static int? Umrechnen(string? wert, bool millimeterfeld)
     {
         var text = (wert ?? "").Trim();
         if (text.Length == 0)
@@ -65,7 +74,11 @@ public static class SiaAbmessung
         if (zahl <= 0)
             return null;
 
-        var mm = zahl > MillimeterAb ? zahl : zahl * 1000d;
+        var hatMm = Regex.IsMatch(text, @"(?<![A-Za-z])mm\b", RegexOptions.IgnoreCase);
+        var hatMeter = Regex.IsMatch(text, @"(?<![A-Za-z])m\b", RegexOptions.IgnoreCase);
+        var mm = hatMm ? zahl : hatMeter ? zahl * 1000d
+            : millimeterfeld || zahl > MillimeterAb ? zahl : zahl * 1000d;
+        if (!double.IsFinite(mm) || mm > int.MaxValue) return null;
         var gerundet = (int)Math.Round(mm, MidpointRounding.AwayFromZero);
         return gerundet > 0 ? gerundet : null;
     }
@@ -91,7 +104,12 @@ public static class SiaAbmessung
 
         var teile = text.Split(Paartrenner, StringSplitOptions.RemoveEmptyEntries);
         if (teile.Length >= 2)
-            return (NachMillimeter(teile[0]), NachMillimeter(teile[1]));
+        {
+            var einheit = Regex.Match(text, @"(?<![A-Za-z])(?:mm|m)\s*$", RegexOptions.IgnoreCase).Value;
+            string MitEinheit(string teil) => Regex.IsMatch(teil, @"(?<![A-Za-z])(?:mm|m)\s*$", RegexOptions.IgnoreCase)
+                ? teil : teil + " " + einheit;
+            return (NachMillimeter(MitEinheit(teile[0])), NachMillimeter(MitEinheit(teile[1])));
+        }
 
         var einzeln = NachMillimeter(text);
         return (einzeln, einzeln);

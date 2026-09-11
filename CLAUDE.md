@@ -1,5 +1,103 @@
 # SewerStudio — AI Sewer Inspection System
 
+## QGIS-Bruecke: eine leere Ebene geht nie ohne Spalten hinaus (11.09.2026)
+
+Eine GeoJSON-Datei traegt keine eigene Spaltenliste — QGIS liest die Spalten aus den
+Objekten. Bei `"features":[]` hat der Layer deshalb KEINE Spalten, und jede gespeicherte
+Abfrage darauf scheitert (`geometrie_quelle not recognised as an available field`).
+QGIS kann die Quelle dann nicht mehr oeffnen und meldet den Layer als „unsicher verortet".
+Real aufgetreten am 11.09. an `SewerStudio_damages.geojson`: Ohne offenes Projekt schrieb
+die Bruecke 115 Byte, und alle gefilterten Schaden-Ebenen wurden rot.
+
+- `QgisLeerschema` (UI/QgisBridge) haelt je Live-Ebene die Spaltennamen und baut daraus
+  eine einzelne Schemazeile: alle Spalten, alle Werte `null`, **keine Geometrie**.
+  `QgisBridgeEndpointRouter.MitSpalten` setzt sie an genau einer Stelle ein — jede
+  `GeoJsonFeatureCollection` mit null Objekten geht als Schemazeile hinaus. Eine
+  unbekannte Ebene liefert weiterhin die leere Sammlung statt erfundener Spalten.
+- `GeoJsonFeature.Geometry` ist dafuer `object?`. Eine Zeile ohne Geometrie wird nie
+  gezeichnet; mit dem Geometrietyp-Filter des Layers (`|geometrytype=Point`) zaehlt sie
+  auch nicht als Objekt. Nur ein Layer ganz ohne diesen Filter zeigt sie als leere Zeile
+  in der Attributtabelle.
+- Am echten QGIS 4.2 gemessen (nicht abgeleitet): leere Datei -> Layer ungueltig;
+  Schemazeile -> `isValid=True`, `featureCount=0`, alle 19 Spalten vorhanden.
+- Die Feldlisten in `QgisLeerschema` sind eine zweite Aufschreibung der Felder aus
+  `QgisBridgeSnapshotBuilder`. `QgisLeerschemaTests` haelt sie je Ebene gegen ein echtes
+  Objekt derselben Ebene — ein neues Builder-Feld ohne Schema-Eintrag macht den Waechter
+  rot (Sabotageprobe bestanden). Nie eine dritte Feldliste anlegen.
+
+## Sicherung und Ausfallschutz (09.09.2026)
+
+- `SchaechtePageViewModel.AutoSave` bindet Schachtfelder und Listenänderungen an
+  `DataPageTimerController`. Ein Timer ist an die konkrete Projektinstanz gebunden;
+  nach Projektwechsel speichert er kein anderes Projekt.
+- `DirectoryMirror` vergleicht auch bei gleicher Grösse und exakt gleicher Zeit den
+  Dateiinhalt. Die neue Prüfsumme kann eine so beschädigte Kopie nicht mehr als
+  unveränderten Bestand übernehmen. Die vollständige Inhaltsprüfung benötigt zusätzliche Lesezeit.
+- `BackupRunJournal` hält vor Zieländerungen dauerhafte Vorherkopien und deren Hashes
+  unter `_Versionen/.unterbrochener-lauf`. Eine exklusive Dateisperre verhindert
+  gleichzeitige neue Sicherungsläufe. Ein abgebrochener Lauf wird zurückgesetzt;
+  nach Prozessausfall erledigt dies der nächste Sicherungslauf oder
+  `FullBackupSmoke --recover-backup <Sicherungsordner>` am ursprünglichen Sicherungspfad.
+  Fremde Pfade, Verknüpfungen und beschädigte Vorherkopien sperren das Zurücksetzen.
+  `BackupManifestIntegrity` verweigert die Freigabe bei offenem Rücksetzprotokoll.
+- Erst nach dauerhaftem Abschluss werden Vorherkopien als datierter Stand verfügbar
+  und die ältesten Stände ausgedünnt. Läufe ohne geänderte Nutzdaten verdrängen keine
+  alte Dateiversion. Das bleibt eine Dateihistorie mit drei Ständen, kein Windows-Abbild.
+- `BackupExternalReferences` liest Verweise aus `projekt.json` und ergänzt einzeln
+  referenzierte Dateien ausserhalb der Projektwurzeln. `FullBackupSources` erweitert
+  den Sicherungsplan additiv um `AdditionalRoots` und `ReferencedFiles`.
+  Rückwege stehen in der Wiederherstellungsanleitung. Fehlende verknüpfte Dateien
+  erzeugen sichtbare Hinweise; eine unvollständige Sicherung erhält keinen grünen Erfolgs-Toast.
+- `IBackupAdditionalFolders` / `BackupAdditionalFoldersStore` speichern weitere Quellen
+  separat in `AppData/Local/SewerStudio/backup-additional-folders.json`.
+  `ServiceProvider.FullBackup` verbindet diesen Dienst mit Quellensuche und Einstellungen;
+  das Interface ist in `ServiceProviderRegistrationMap` registriert.
+- Projektvideos sind standardmässig aktiv. Bestehende Einstellungen erhalten diese
+  sichere Vorgabe einmal über `FullBackupSafetyVersion`; spätere bewusste Abwahl bleibt
+  erhalten. `BackupExcludedVideos` schützt bereits gesicherte Videos auch bei Abwahl
+  vor automatischem Entfernen. Diese alten Kopien werden dann nicht aktualisiert.
+- Projektdateiformat und Kundenoriginale bleiben unverändert. Ein Ersatz-PC benötigt
+  weiterhin .NET/Python und gegebenenfalls Ollama/QGIS. Eine Hardwareprüfung oder ein
+  vollständiger Windows-Wiederherstellungsversuch ist damit nicht ersetzt.
+
+
+Details: `docs/reviews/2026-09-09-sicherung-behebung.md`.
+
+## GeoShop-Abgleich aus Original-XTF (09.09.2026, Testfassung)
+
+Der Menuepunkt `GeoShop-Abgleich (XTF)` ersetzt auf beiden Datenseiten die alten
+Katasterkennungen. Die bestehenden Befehlsnamen bleiben kompatibel. `ServiceProvider.GeoShop`
+registriert `IGeoShopLeser` / `GeoShopXtfLeser`. Der Leser arbeitet nur lesend mit
+INTERLIS-2.3-Dateien der Modellfamilien DSS_2020_1_LV95 und SIA405_ABWASSER_2020[_1]_LV95.
+Mehrere Durchlaeufe sammeln nur angefragte Namen/Gegenrichtungen und deren Objektverbund;
+DTD und externe XML-Aufloesung sind gesperrt. Doppelte TIDs und defekte Kernverweise sperren die Uebernahme.
+
+`GeoShopXtfZuordnung` nutzt vorhandene Fachvokabulare fuer Leerfelder. `GeoShopZiel`,
+`GeoShopAbgleichPlanBuilder`, `GeoShopAbgleichAnwender` und `GeoShopAbgleichBericht`
+in Application/UseCases trennen Planung, Bestandsschutz und Schreiben. Namen muessen
+eindeutig sein; Gegenrichtungen tauschen die Haltungspunkte. Endschacht- oder Bauwerksart-
+Widersprueche bleiben zur Pruefung offen. Gefuellte Fachwerte werden nie ersetzt.
+Die bestaetigte Uebernahme ersetzt den Kennungsverbund im vorhandenen Geonis-Objekt
+und zieht GEONIS_Kennung/Objekt_ID als Haupt-TID nach. Abweichende handgeschuetzte
+Kennungsfelder sperren den Datensatz. Kein neues gespeichertes Format.
+
+`GeoShopAbgleichDialog` und `GeoShopAbgleichWindow` bieten Dateiauswahl und eine
+abbrechbare Vorschau. Vor dem Schreiben werden Projektbestand und Datensatzstand erneut
+geprueft. Kein Kundenprojekt wurde zum Test veraendert. `Letzte_Aenderung` der XTF
+ist kein GN_LAST_EDITED_DATE; GeonisGeaendert wird daher nicht erfunden. Der produktive
+FME-Rueckweg bleibt unbestaetigt. Anleitung, Feldumfang und Grenzen: `docs/GEOSHOP-ABGLEICH-TEST.md`.
+
+## Aufklapplisten: Reihenfolge (09.09.2026)
+
+`ListenReihenfolgeController` verbindet beide Aufklapplisten mit dem vorhandenen
+`MoveToPosition`-Weg ihrer ViewModels. Ziehgriff ist ausschliesslich die Nr.-Zelle;
+`ListenEinfuegelinie` zeigt davor/danach, der Rand scrollt automatisch.
+`ListenReihenfolgeLeiste` bietet auch Zielposition, Anfang und Ende an.
+Filter, Suche, Sortierung und ein seit Ziehbeginn geaenderter Bestand sperren
+den neuen Verschiebeweg. Ein Abbruch schreibt nichts; eigene Listeninstanz und
+Datensatzreferenzen binden den Ziehvorgang. Keine neue Registrierung und kein
+neues Speicherformat. Bedienung und Pruefgrenzen: `docs/reviews/2026-09-06-nova/aufklapp-liste/REIHENFOLGE.md`.
+
 ## Ein-Knopf-Import: Fortschritt (09.09.2026)
 
 `ImportOneClickProjectController` reicht einen echten UI-Fortschrittskanal weiter.
@@ -11,6 +109,38 @@ ausschliesslich fuer den laufenden Schritt. Medien zaehlen Haltungen. Der vorber
 `ShaftDistributionService` meldet Quellenversuche ueber alle PDFs statt wiederholt
 1 von 1; seine Verarbeitungs- und Fehlerregeln bleiben gleich. Unzaehlbare Arbeit
 erscheint unbestimmt. Details und Nachweise: `docs/IMPORT-FORTSCHRITT.md`.
+
+## Redesign-Feldkorrekturen (08.09.2026)
+
+- `DataPageRecordDetailsBuilder` erzeugt Schacht oben/unten auch bei neuen Haltungen.
+  Die feste CSV-/Excel-Spaltenfolge bleibt erhalten. SIA405-Felder sind ihren
+  Fachgruppen zugeordnet; Eigentümer steht zusätzlich in der kompakten Tabelle.
+- `SchaechteColumnPolicy` verbindet Funktion, Material, Status und Sanierungsbedarf
+  mit festen Auswahllisten. `SchachtNormoptionen` filtert die Funktion in Tabelle
+  und Formular nach Bauwerksart. `SiaBegriffAnzeige` ändert nur die Darstellung,
+  niemals den ausgewählten Normwert. Altwerte ausserhalb der Liste bleiben
+  gespeichert und werden mit einem Hinweis sichtbar gemacht.
+- `SiaAbmessung.AusMillimeterfeld` verwendet für die getrennten Schachtfelder
+  Millimeter ohne Altwert-Heuristik. Ausdrückliche Einheiten haben Vorrang.
+  `SchachtmassFehler` prüft dieselbe Obergrenze (4000 mm) für Eingabe und Export.
+  Ungültige getrennte Masse fallen nicht auf einen alten Ersatzwert zurück;
+  beide Masse fehlen dann mit Hinweis im Export. Reale grössere Bauwerke müssen
+  fachlich passend erfasst werden, nicht durch gekürzte Masse.
+- `SchachtFunktionVokabular` schreibt Fettabscheider jetzt zeichengenau. Die
+  frühere Verallgemeinerung zu andere ist mit diesem Korrekturauftrag aufgehoben.
+- Der neue Schreiber deklariert `SIA405_ABWASSER_2020_LV95`, Version 29.11.2025,
+  mit `SIA405_Base_Abwasser_LV95`, Version 03.11.2020. Die Modellfamilie bleibt
+  2020; sie darf nicht mit 2020_1 und deren neuerem Basismodell verwechselt werden.
+- `ExportPageViewModel.XtfVollstaendig` ist standardmässig false: der FME-Abgleich
+  liefert weiterhin Handänderungen samt Feldaufträgen. Der bewusste Erstexport
+  liefert reine SIA405-Angaben ohne Zusatzmodell, auch ohne Importvorlage.
+  `XtfNeuExportRequest.MitZusatzangaben` ist additiv, Standard true für bestehende
+  Aufrufer. Bei Änderungsaufträgen bleibt das Zusatzmodell immer erforderlich.
+- ilivalidator 1.15.0: synthetischer Erstexport, Zusatzexport und Änderungsabgleich
+  bestehen gegen die festgehaltenen offiziellen Modelle. Ohne auflösbares
+  Zusatzmodell scheitert die Zusatzdatei erwartungsgemäss. Das ersetzt keine
+  Empfängerabnahme eines konkreten GEONIS-/FME-Abgleichs.
+- Nachweise und Prüfumfang: `docs/reviews/2026-09-08-redesign-sia405/BEHEBUNG.md`.
 
 ## Projekt-Kontext
 - **App:** WPF / .NET 10, MVVM, Windows 11
@@ -1139,6 +1269,20 @@ Stand und ehrliche Abnahmegrenzen: `docs/reviews/2026-09-06-nova/aufklapp-liste/
 - `HaltungsgrafikAnsichtBuilder` liest das aktuelle Protokoll ausschliesslich.
   Niemals `ResolveEntriesForExport` in einer Ansicht verwenden: Dieser Exportweg
   repariert Eintraege. `HaltungsgrafikSvgBuilder` liefert mit `nurRohr` nur die Rohrsaeule.
+- Die Uebersicht nutzt `BaueUebersicht` und `HaltungsgrafikKlartextZeichner`: volle
+  Haltungslaenge auf der verfuegbaren Hoehe, Meterteilung und kollisionsfreie Klartexte
+  mit Bezugslinien. Viele Texte vergroessern die scrollbare Grafik statt die Schrift
+  zu verkleinern. Eckdaten und Schadenliste liegen im Expander darunter.
+  `Application/Reports/NutzungsartReportColors` ist die gemeinsame Farbregel fuer
+  Bildschirm und PDF. `SvgFarbZuordnung` erhaelt diese Nutzungsfarben in beiden Themen.
+  `HaltungsgrafikMarke.FotoPaths` bleibt nach Gegenfahrt und Sortierung am Ereignis.
+  Seit 10.09.2026 verbindet `HaltungsgrafikFotoAktion` Symbol/Klartext mit
+  `PhotoHoverPreviewBehavior`: nach 350 ms erscheint die bestehende Fotokarte,
+  das Mausrad blaettert. Klick und Enter/Leertaste zeigen ebenfalls nur die Karte;
+  Escape, Verlassen oder Entladen schliessen sie. Der Projektroot-Provider wird vom
+  Workspace-Controller an die Grafik vererbt und liest das aktuelle ViewModel.
+  Die bisherigen FotoOeffnen-Eigenschaften bleiben kompatibel, werden in dieser
+  Grafik aber nicht mehr ausgefuehrt. Keine neue Registrierung oder Datenformate.
 - `SchachtgrafikAnsichtBuilder` liest Schachtfelder ueber `SchachtFeldnamen` und
   angeschlossene Haltungen aus der vom ViewModel gereichten Liste. Keine
   Zustandsberechnung am Schacht. `SchachtSchadenKategorieRegel` verwendet Text nur bei
@@ -1152,6 +1296,31 @@ Stand und ehrliche Abnahmegrenzen: `docs/reviews/2026-09-06-nova/aufklapp-liste/
   `SchaechteNovaLayoutIsolatedSmokeTests` sowie die vorhandenen Listen-, Grafik- und
   Gestaltungswaechter. Der isolierte Pruefhost kennt `haltungenliste` und `schaechteliste`
   und prueft den Menuewechsel auf echten Seiten mit eigenem Profil.
+
+### Projektwechsel-Fixwelle (08.09.2026, R1/R2/R4 aus dem Gesamtaudit)
+
+Bericht `docs/reviews/2026-09-08-redesign-gesamtaudit/PRUEFBERICHT.md`. Drei Befunde mit
+derselben Wurzel: Ein Teil der Oberflaeche merkte sich das Projekt EINMAL und erfuhr vom
+Wechsel nie.
+
+- **Ein KI-Vorabdurchlauf gehoert zu genau einem Projekt.** `ICodingSuggestionRegistry`
+  schluesselt nach Projekt-Id UND Haltung (`Merke(Guid, string, Set)`, `Heute(Guid)`); ein
+  reiner Namensschluessel vermischte gleichnamige Haltungen zweier Projekte. `Guid.Empty`
+  wird wie eine leere Haltung ignoriert — ein Lauf ohne Projektbezug waere sonst in jedem
+  Projekt sichtbar. Der Player bindet die Id VOR dem Durchlauf; ein spaet zurueckkommendes
+  Ergebnis landet dadurch beim richtigen Projekt und nicht in der Uebersicht des neuen.
+- **Die globale Suche verwirft ihre Treffer beim Projektwechsel.** Ein Treffer traegt einen
+  direkten Objektverweis; nach dem Wechsel gehoert er zum alten Bestand.
+  `GlobaleSucheViewModel` hoert dafuer auf `ShellViewModel.PropertyChanged` (`Project`,
+  `IsProjectReady`) und prueft in `Waehle` zusaetzlich, ob Haltung oder Schacht wirklich im
+  offenen Projekt liegen. Die Strasse ist nur ein Filtertext und bleibt erlaubt. Das ViewModel
+  ist dadurch `IDisposable`; `ShellViewModel.Dispose` meldet es ab.
+- **Die Projektuebersicht haengt ihr Listen-Abo um.** `ProjektUebersichtPageViewModel` band
+  `_shell.Project.Data` einmalig im Konstruktor. Beim Wechsel wird das Abo jetzt abgemeldet,
+  auf die neue Liste gesetzt und neu gerechnet. Nur `Aktualisiere()` zu rufen reicht NICHT:
+  Die Seite bliebe fuer spaetere Aenderungen des neuen Projekts taub.
+- Waechter: `CodingSuggestionRegistryTests` (6) und `NovaProjektwechselTests` (6, Wechsel A→B
+  und B→C mit echten `ReplaceProject`-Aufrufen).
 
 ## Build & Test
 ```bash
@@ -1495,6 +1664,65 @@ trotzdem „0 Fehler"):
   (`Haltungsprotokolle nicht verteilt: <n>`); frueher uebersprang ein blosses `continue` sie
   still. Genau dieses Muster hatte schon in Hellgasse 38 Protokolle verschluckt.
 
+### Begleitprotokolle der Sanierung und Videodopplung (Bürglen, 09.09.2026)
+
+Anlass: In `Sanierungsabnahme_Zone_5.01_GKS_Bürglen` lagen alle zehn Dichtheitsprüfungen
+und alle neun Aushärteprotokolle im **Schachtordner** statt bei ihrer Haltung — eines
+unter der Nummer `1009336029`, der **Chargen-Nr. des Liners**. Gleichzeitig lag in jedem
+der 19 Haltungsordner dasselbe Video zweimal (3397 von 6803 MB reine Dopplung).
+
+- **OCR entscheidet über den Typ eines reinen Scans.** Die Quelldateien (Toshiba-Kopierer)
+  haben keine Textebene. `PdfDokumenttext.LiesKopf` liest zuerst die Textebene und nur bei
+  einem reinen Scan die ersten zwei Seiten per OCR; Ergebnisse werden je Programmlauf
+  gemerkt (Schlüssel: Pfad, Grösse, Änderungszeit), weil Verteiler und Vorfilter dieselben
+  Seiten lesen. Ohne das dauert der Ein-Knopf-Import doppelt so lange.
+- **`ShaftPdfRelevance` beurteilt einen reinen Scan als EIN Dokument, nicht Seite für
+  Seite.** Seite 2 eines Druckprüf- oder Aushärteprotokolls ist ein Diagramm ohne Aussage;
+  die Regel „jede geprüfte Seite muss fremd sein" liess am 09.09. alle 19 Protokolle wieder
+  durch, obwohl Seite 1 sie klar benannte. Gemischte Dokumente (Textseiten + Bildseite)
+  bleiben unverändert im Schachtweg — eine Bildseite kann ein eingescannter Schachtteil sein.
+- **`PdfDokumentTyp.Aushaerteprotokoll` ist ein eigener Typ.** Erkannt über den
+  umlauttoleranten Titel `Aush.{0,2}rt(e|ungs)?protokoll` — dasselbe Blatt las das OCR als
+  `Aushärteprotokoll`, `Aushirteprotokoll` und `Aushfarteprotokoll` — oder über das
+  umlautfreie Begriffspaar `Linertyp` + `Lampenleistung`. Ein einzelnes der beiden Wörter
+  genügt nicht.
+- **Das Kürzel `DP` im Dateinamen zählt nur beim Scan ohne Textebene.** Ist Text lesbar,
+  entscheidet weiterhin allein der Inhalt (bewusste Regel aus R1-R3, Waechter
+  `ErkenneText_DpDateinameAlleinReichtNicht`).
+- **Zugeordnet wird über die Haltungsbezeichnung des Dokuments**
+  (`SanierungsprotokollZuordnung`, WPF-frei in `Application/UseCases/Import/Quellen`).
+  Diese Protokolle nennen ihre Haltung nur als WinCan-Laufnummer (`H66`), und eine
+  Dichtheitsprüfung deckt oft eine ganze Prüfstrecke ab: `DP H12_H13.pdf` misst von Schacht
+  59435 bis 60191 über ZWEI Haltungen. Das Schachtpaar ergibt dort keine Haltung des
+  Projekts, sondern einen erfundenen Ordner. **Dateiname UND Dokumenttext müssen dieselbe
+  Bezeichnung nennen** — der Name allein ist eine Vermutung, dieselbe Falle wie früher bei
+  der Gegenbefahrung. Mehrdeutig oder unbekannt heisst: nichts, mit Meldung.
+- **`HaltungRecord.ImportBezeichnung`** trägt dafür den `OBJ_Key` der WinCan-Quelle. Additiv
+  wie `XtfHerkunft`/`Geonis`, **kein Feld**: keine Tabellenspalte, kein Export, keine XTF —
+  die Nummer ist nur innerhalb eines Quellprojekts eindeutig.
+- **Eine Sammelprüfung landet in JEDEM betroffenen Haltungsordner** (Entscheid Pascal
+  09.09.), benannt `<JJJJMMTT>_<Haltung>_DP.pdf` bzw. `_AH.pdf`. Der bestehende Weg über das
+  Schachtpaar bleibt unverändert der Rückfall für Dichtheitsprüfungen; ein Aushärteprotokoll
+  geht dort nie hinein, weil es keinen Schacht nennt.
+- **Ein Name, der ein Begleitprotokoll verspricht, dessen Inhalt es aber nicht bestätigt,
+  wird gemeldet.** Genau dort verschwanden drei Aushärteprotokolle still, weil das OCR die
+  Titelzeile verlas.
+- **Videodopplung:** `KanalImportDistributionService` suchte eine bereits vorhandene Kopie
+  nur unter dem einen Wunschnamen. Dieselbe Aufnahme kommt aber über zwei Wege mit zwei
+  Namen an (`20260902_<H>.mp4` vom Haltungs-Verteiler, `00000000_<H>-aufnahme-<Hash>.mp4`
+  aus `ImportVideoPaths`); die Sperre `verteiltePfade` greift nie, weil sie den bereits
+  relativierten `Link` als Schlüssel merkt, während `ImportVideoPaths` noch den absoluten
+  Quellpfad trägt. Gesucht wird jetzt im GANZEN Zielordner nach einer **inhaltsgleichen**
+  Datei (byteweise, staging-bewusst über `EnumerateReadableFiles`). Ein abweichender Bestand
+  bekommt weiterhin einen freien Namen.
+- Abnahme am echten Kundenbestand (`SanierungsprotokollEchteQuelleTests`, maschinengebunden,
+  rein lesend): 30 Ablagen aus 19 Dokumenten, 0 der 19 laufen noch in den Schachtweg. Nicht
+  zugeordnet bleibt genau `Aushärtungsprotokoll H73_H74.pdf` — das OCR liest sein
+  Haltungsfeld als `HH`, die Ziffern fehlen. Es wird gemeldet, nicht geraten.
+- Weitere Wächter: `SanierungsprotokollZuordnungTests` (10), `SanierungsprotokollVerteilungTests` (6),
+  `VideoDoppelkopieTests` (3), erweiterte `PdfDokumentTypErkennungTests` und
+  `ShaftPdfRelevanceTests`.
+
 Geldrelevante Kosten-, Mengen- und Laengentexte in Kostenrechner, Matrix und Export
 laufen zentral ueber `FachzahlParser` und nie ueber `CurrentCulture`: Punkt oder Komma
 als Dezimaltrenner sowie korrekt gruppierte Schweizer Apostroph-/Leerzeichenwerte
@@ -1540,7 +1768,7 @@ wird.
 Die Haltungs- und Schachtberichte verwenden die datenfreien Vorlagen
 `Export_Vorlage/Haltungen.xlsx` und `Export_Vorlage/Schächte.xlsx`. Ihre lesbare,
 reproduzierbare Quelle liegt unter `tools/ExcelVorlagenBauer/`; die dort gepinnten
-Werkzeuge erzeugen Logo, sechs Diagramme, Kennzahlenformeln, Bedeutungsfarben,
+Werkzeuge erzeugen Logo, sieben Diagramme, Kennzahlenformeln, Bedeutungsfarben,
 Druckeinrichtung und genau eine gestaltete Musterzeile. Titel, Kopfzeile und Daten
 beginnen verbindlich in den Zeilen 25, 26 und 27. Formeln und bedingte Formatierung
 reichen bis Zeile 5000, deshalb lehnt der Export mehr als 4'974 Datensaetze klar ab.
@@ -1571,6 +1799,23 @@ Kostenarbeit. Eine fehlende Vorlage oder unlesbare Kostendaten erscheinen bewuss
 nur einmal als blockierender Dialog; Status und Ergebnistext werden weiterhin gesetzt.
 `ExcelExportVorlagentreueTests` schuetzen Datenfreiheit, Formeln, Diagramme, Farben,
 Logo, Fixierung, Druck und Neuberechnung fuer beide Blaetter.
+
+Auf ausdruecklichen Nutzerwunsch bleibt seit der Korrektur vom 08.09.2026
+alles auf genau einem Tabellenblatt je Export. Diagramme und Projektkennzahlen
+stehen oben, die vollstaendige Liste darunter. Keine weiteren Blaetter und keine
+zusaetzliche Lesefassung. Die 27 Haltungs-/17 Schachtspalten bleiben erhalten.
+`arbeitsliste.py` ergaenzt SUBTOTAL(103/109) in Zeile 24 fuer sichtbare Anzahl,
+Haltungslaenge und Kosten. Gesamtsummen in Zeile 23 bleiben unabhaengig vom Filter.
+Titel/Kopf/Daten behalten die Vertragszeilen 25/26/27. Kennungen bleiben beim
+Scrollen fixiert. Lange Texte bleiben vollstaendig in ihren Originalzellen;
+der volle Inhalt ist in Excels Bearbeitungsleiste zugaenglich.
+Alle Spalten werden gemeinsam auf einer A3-Seitenbreite gedruckt; die Hoehe
+folgt der Zeilenzahl. `ExcelArbeitsansicht` begrenzt nur den Druckbereich und
+setzt den Projektdruckkopf. `ExcelDrucktitel` normalisiert die Wiederholungs-
+bereiche vor der erneuten Dateipruefung weiterhin auf absolute Bezüge.
+Keine neue Registrierung und keine Aenderung von Projektformaten/Schnittstellen.
+`ExcelArbeitsansichtTests` prueft genau ein Blatt, Spaltenbestand, Textinhalt,
+Filter-/Gesamtsummen, Leerprojekte und Druckeinstellungen.
 
 Die drei Stammdaten-Stores lehnen `null`-Strukturen, doppelte normalisierte
 Kosten-/Vorlagen-Identitaeten und negative Mengen ab. Vor jedem Save wird auch eine
@@ -1685,7 +1930,8 @@ Fuenf Regeln dieses Wegs nie zurueckdrehen:
   zeigt. Ein von mehreren Haltungen geteiltes Profil wird nicht geaendert.
 
 Die Exportseite spricht seit 2026-09-03 Klartext: **„Bestehende Katasterdaten aktualisieren"**
-(technisch Revision) und **„Neue eigenstaendige XTF erstellen"** (technisch Erstexport).
+(technisch Revision) und **„XTF erstellen"**. Dort ist der Änderungsabgleich Standard;
+„Vollständiger Erstexport (reine SIA405-Datei)" muss bewusst gewählt werden.
 `XtfExportAuswahl` (`Application/UseCases/Xtf`, reine Rechnung) entscheidet aus den
 Importkopien des Projekts (`IXtfRevisionExportService.FindeProjektkopien`, dieselbe Suche wie
 beim Schreiben), welcher Weg das Abzeichen „empfohlen" traegt: mit Kopie Aktualisieren
@@ -1712,8 +1958,8 @@ Befunde bleiben leer und heissen „Befund <Code> bei <m> m"). Das Fenster
 ViewModel enthaelt keinen eigenen Ablauf mehr — es leiht dem UseCase Dateiwahl und
 beide Fenster.
 
-`IXtfNeuExportService`/`XtfNeuExportService` erzeugt eine eigenstaendige XTF aus dem
-ganzen Projektstand. Der Revisionsweg aktualisiert dagegen eine Originaldatei an ihren
+`IXtfNeuExportService`/`XtfNeuExportService` kann eine eigenständige XTF aus den
+SIA405-Angaben des ganzen Projektstands oder eine Lieferung der Handänderungen erzeugen. Der Revisionsweg aktualisiert dagegen eine Originaldatei an ihren
 echten XTF-TIDs. Eine einzelne `Objekt_ID` reicht nicht fuer die Kennungen von Kanal,
 Haltung, Punkten, Knoten und Profil; sie verhindert den vollstaendigen Neu-Export deshalb
 nicht. `XtfNeuPlanBuilder` (reine
@@ -1754,6 +2000,52 @@ Sechs Regeln dieses Wegs nie zurueckdrehen:
   WKB, LineString und MultiLineString, EPSG:2056). Ein mehrdeutiger Name liefert nichts.
   `Verlauf` ist im Modell nicht Pflicht: Ohne Treffer geht das Objekt ohne Geometrie
   hinaus, und der Bericht sagt es.
+
+### XTF-Aenderungslieferung und Bauwerksarten (2026-09-07)
+
+Im FME-Exportbereich ist `XtfNurAenderungen` fest true und nicht abschaltbar.
+Die UI reicht fuer Vorschau und Schreiben `XtfNeuExportRequest.NurAenderungen=true`
+weiter. Es gibt dort keine Vollexport-Auswahl. Der optionale API-Parameter bleibt
+fuer bestehende interne Aufrufer standardmaessig false. Der separate Revisionsweg
+mit Kundenoriginalen ist unveraendert und ist keine FME-Aenderungslieferung.
+
+`XtfBauwerkFelder` schreibt die gemeinsamen und klassenspezifischen Standardfelder.
+`AbwasserbauwerkVokabular` trennt Bauwerksart von Funktion: Normschacht,
+Spezialbauwerk, Versickerungsanlage, Einleitstelle. Unbekannte explizite Arten werden
+gemeldet statt als Normschacht geraten. Ohne Typfeld werden Sickerschacht,
+Spezialbauwerk und Einleitstelle anhand eindeutiger Funktionsbegriffe erkannt;
+sonst bleibt Normschacht der Rueckfall. Die Schachtmaske bietet Bauwerksart und
+Versickerungsart an. Standort, Bruttokosten und parsebares Untersuchungsjahr haben
+Standardfelder. Keine Normschacht-Material-/Dimensionsfelder an falschen Klassen.
+
+`XtfZusatzangaben` liefert freigegebene Sachwerte ohne verwendetes Standardfeld,
+darunter Schachtform, Tiefe, Massnahmen, Schadenstext und volles Inspektionsdatum.
+Pfade und interne IDs werden nicht als Sachwerte ausgegeben. Haltungsprofil und
+Breite koennen zusaetzlich als direkte Werte geliefert werden. Die XML-Klassen
+`SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe` und `.Aenderung` liegen in derselben
+XTF. Das eingebettete Zusatzmodell wird als `.ili` daneben geschrieben; ein bereits
+vorhandenes anderes Modell wird nicht ersetzt. FME muss dieses eigene Modell kennen.
+
+`XtfAenderungsPlanBuilder` plant nur handmarkierte, nichtleere und lieferbare Felder
+(`FieldMetadata.UserEdited`, `LastUpdatedUtc`). Jeder Auftrag enthaelt `ObjektTid`,
+`Feld` und `GeaendertAm` in UTC; Zusatzfelder heissen im Auftrag `Zusatz:<Feld>`.
+Uebrige Standardattribute werden bis auf Pflichtnamen entfernt. Benoetigte
+Referenzobjekte bleiben Kontext, ohne Schreibberechtigung. Doppelte Objekt-TIDs
+sperren die Aenderungslieferung. Das ist ein eigener feldweiser Liefervertrag,
+kein INTERLIS-Inkrementaltransfer mit `xtf_operation`.
+
+Ein Export setzt keine Handmarkierung zurueck. Es gibt noch keinen bestaetigten
+GEONIS-Vergleichsstand, keine Erfolgsquittierung und keinen Loeschauftrag. Daher
+koennen bereits frueher exportierte Handaenderungen erneut vorkommen. FME darf
+genau die beauftragten Felder an eindeutig gefundenen bestehenden `SIA405_ID`s
+aktualisieren; identische Werte bleiben unveraendert. Der Exporttag in
+`Letzte_Aenderung` ist nicht der GEONIS-Quellstand `GN_LAST_EDITED_DATE`.
+
+`LegacyXtfImportService` liest alle vier Bauwerksarten. `XtfZusatzReader` nimmt nur
+bekannte Zusatzfelder mit eindeutigem Dateiziel an; Standardfelder haben Vorrang,
+Handwerte bleiben geschuetzt. Form, Typ, Material und Masse sind durch Rundreise-
+und Negativtests abgesichert. Nachweise und FME-Vertrag liegen unter
+`Ausgaben/XTF_FME_Aenderungen_2026-09-07/`; Produktiv-GEONIS und FME sind nicht getestet.
 
 Der automatische Rundreisetest schreibt eine echte neue SIA405-XTF mit Haltung,
 Schaechten, Profil, Organisationsverweisen und Geometrie und importiert sie wieder.
@@ -3331,9 +3623,115 @@ Die Behandlung mehrdeutiger Video-Treffer liegt vollstaendig in `HoldingDistribu
 
 ## Nova-Nachpruefung abgeschlossen (2026-09-06)
 
+Ergaenzung 08.09.2026: Die aufgeklappten Haltungs- und Schachtlisten bieten
+`Ansicht anpassen` ueber `AufklappLayoutWindow`. Die Vorschau benutzt losgeloeste,
+schreibgeschuetzte Karten aus `AufklappDetailLayout`, ohne Datensatz-Callbacks.
+Erst Speichern uebernimmt Reihenfolge und Ausblendung in die vorhandenen,
+getrennten `DataPageLayout.DetailLayout` / `SchaechtePageLayout.DetailLayout`.
+Die Listencontroller wenden diese beim Aufbau an; der Live-Abgleich bleibt an
+den originalen Feldobjekten. Dokumentgruppen werden in diesen Listen als normale
+Feldgruppen dargestellt, damit verschobene Felder sichtbar bleiben.
+Bedienung und Nachweise: `docs/reviews/2026-09-06-nova/aufklapp-liste/ANSICHT-ANPASSEN.md`.
+
 - Mindest-Bildschirmaufloesung laut Nutzer: Full HD (1920 x 1080). 1366 x 768 ist lediglich eine zusaetzliche Fensterprobe. Windows-Skalierung 125 und 150 Prozent wurde auf Full HD nach einem Neustart des isolierten Pruefhosts gemessen. 150 Prozent ergibt weniger Arbeitsflaeche; F11 schafft mehr Tabellenplatz.
 - `DataPageHydraulikReportCalculator` verwendet fuer Einzel-PDF und Dossier das Projektgefaelle in Promille. DN und Gefaelle muessen positiv und endlich sein; keine stillen Ersatzwerte 300 mm / 5 Promille. Die Berichtskonvention bleibt Halbfuellung (DN / 2); Materialzustand und Temperatur kommen weiterhin aus den Panel-Einstellungen. Der Bericht ist keine Kopie der frei veraenderten Panel-Berechnung.
 - `FieldCatalog.Definitions` benennt den vorhandenen Schluessel `SlopePromille` als Gefaelle in Promille. `DataPageRecordDetailsBuilder` bietet ihn immer als Stammdaten-Eingabe an, auch ohne bisherigen Projektwert. Die feste `ColumnOrder` fuer Tabellenexporte bleibt erhalten; das gespeicherte Dictionary-Format aendert sich nicht.
 - `DataPageProjectBindingController` aktualisiert bei Aenderungen der Haltungsliste auch die Auswahlbefehle. Nach oben/unten reagiert damit ohne erneute Auswahl. Keine zusaetzliche Kartenrueckmeldung.
 - Auswahlfarben und die Zellentext-Vererbung sind in beiden Themes vereinheitlicht. Kontextmenues besitzen einen ScrollViewer, damit auf Full HD bei 150 Prozent auch die letzten Eintraege erreichbar sind. Keine neuen Abhaengigkeiten oder Registrierungen.
 - Nachweise, Pruefgrenzen und verstaendliche HTML-Uebersicht: `docs/reviews/2026-09-06-nova/wpf-etappe-1/abschluss/`. Die isolierte Bedienprobe startet weder produktiven App-Startup noch Spiegel oder QGIS-Bruecke und belegt keine vollstaendige Programmabnahme.
+
+
+## Objektakten aus dem WebGIS-Plan (11.09.2026)
+
+- Domain: `FieldCatalog.Objektfelder` lädt `Objektakten.Katalog.json` als eingebettete Ressource.
+  200 Quellfelddefinitionen, 204 Anzeigen, 91 Dropdownstellen, 78 Kataloge/1158 Einträge;
+  Zusatzfelder ergänzen den Bestand, ohne FieldKeys oder die Tabellenexportfolge umzubenennen.
+- `Project.Objektakten` enthält eigene `ObjektAkte`-Datensätze mit lokalen GUIDs, Bezuegen,
+  Hauptdeckelwahl, Feldwerten, Quellbelegen und offenen Unterlisten. Originalcodes und lokale
+  Auswahlindizes sind getrennt. JsonExtensionData schützt unbekannte Akten-/Wert-/Quellangaben.
+- `ObjektaktenBearbeitung`, `ObjektaktenBestandsfelder`, `ObjektaktenSuche`, `ObjektaktenListen`,
+  `GeoShopObjektaktenImport`, `GeoShopEigentuemerErgaenzung`, `ObjektaktenPaketImport` und
+  `ObjektaktenExportBegleitung` liegen in Application/UseCases/Objektakten. Bestehende
+  Fields/FieldMeta bleiben für bereits vorhandene Felder die fachliche Wahrheit.
+- `GeoShopXtfLeser` liest Originalwerte und rückwärts gerichtete Deckel-/Punkt-/Ereignisbeziehungen
+  in begrenzten Streaming-Durchläufen. Assoziationen ohne TID erhalten ausdrücklich lokale
+  Belegkennungen. Organisationen aus beiden SIA405-Basismodellen und die ausdrückliche
+  Ereignis-Firmenbeziehung werden gelesen; Hersteller und Operateur bleiben getrennt.
+  Nur explizit gewählte Eigentümer-JSON wird über Originalreferenzen verwendet.
+- `IObjektaktenPaketService` / `ObjektaktenPaketService` schreiben neue JSON-Dateien und prüfen
+  sie durch Wiedereinlesen. Der Service ist über ServiceProvider.Objektakten registriert.
+  Eigene Zusatzdateien ergänzen nur dasselbe Projekt; der GEONIS-Importvertrag bleibt offen.
+- `ObjektakteViewModel`/`ObjektFeldViewModel` und `ObjektakteWindow` verwenden Nova-Ressourcen.
+  Die gemeinsame Anbindung `ObjektaktenDialog.Befehl` hält beide Seiten-ViewModels dünn.
+  Persönliche Sichtbarkeit/Favoriten/Gruppen stehen in AppSettings, nicht in den Fachdaten.
+- `JsonProjectRepository` unterstützt Format 3. Format 1 wird weiterhin auf 2 gehoben;
+  Format 2 bleibt ohne Objektakten unverändert. Neue Akten erfordern Format 3 zum Schutz
+  gegen ältere Programmversionen. Projektkopie, Signatur und Backup erfassen die Akten mit.
+- Die XTF-Vorschau nennt offene Zusatzangaben; neue Aktenobjekte werden nicht ungeprüft in
+  ein Normmodell geschrieben. Bestätigte Altwege bleiben erhalten, Zusatzdaten gehen in JSON.
+  Keine neue NuGet-Abhängigkeit. Anleitung und Abnahmestand: docs/OBJEKTAKTEN.md.
+
+
+## DSS-Neuexport aus GeoShop-Objektakten (11.09.2026)
+
+- `DssExportPlanBuilder` in Application/Xtf/Dss ergänzt den vollständigen Neu-Weg von
+  `XtfNeuExportService`. Bei Objektakten mit DSS-Belegen/Zusatzwerten wird DSS statt des
+  kleineren SIA405-Modells verwendet. Reine Änderungsaufträge bleiben auf dem bisherigen Weg.
+- Der reproduzierbar erzeugte `Dss.ExportSchema.json` enthält 248 Attribute für 14 Klassen
+  aus den eingebetteten offiziellen ILI-Modellen (DSS/Base 18.10.2023). `DssExportSchema`
+  prüft Normtexte, Datum, Präzision, Bereiche und Längen; keine lokalen Dropdown-Indizes als Codes.
+- Kleine Plan-/Bearbeitungshelfer trennen Quellverbund, Feldzuordnung, Profile, Koordinaten
+  und Richtungsumkehr. Original-TIDs und optionale Rohangaben bleiben erhalten; aktuelle
+  Fields/FieldMeta und Aktenwerte gewinnen. Pflichtlücken, Konflikte und fehlende interne
+  Bezugsobjekte sperren die ganze DSS-Lieferung. Externe Organisations-TIDs werden ausgewiesen.
+- Gemeinsame Originalprofile werden bei Änderungen nicht überschrieben. Firmenverweise
+  werden am Unterhalt eingebettet, Bauwerks-Ereignis-Beziehungen ohne künstliche TID geschrieben.
+- `ObjektQuellbeleg.Strukturen` speichert ab diesem Stand vollständige XML-Geometrien additiv
+  in Format 3. GeoShopXtfLeser, Kopie/Vergleich und Paketprüfung berücksichtigen sie. Ältere
+  Projekte benötigen einen erneuten Abgleich, um damals nicht gespeicherte Geometrien zu ergänzen.
+- `XtfDssWriter` schreibt modellgerechte Reihenfolge und passende ILI-Dateien. Der XTF-Kopf
+  enthält den Hinweisbericht. Vorhandene Dateien werden nicht überschrieben. UI-Texte benennen
+  den vollständigen Normexport; Nova-Ressourcen und Bestands-Änderungsmodus bleiben erhalten.
+- Keine neuen Pakete oder ServiceProvider-Registrierungen. Anleitung: docs/DSS-XTF-EXPORT.md.
+  Normprüfung mit ilivalidator ist kein Nachweis eines echten GEONIS-/FME-Rückimports.
+
+
+## Vollständige Objektakte in der Aufklappliste (11.09.2026)
+
+- `ObjektakteView` ist die gemeinsame Nova-Maske für das optionale `ObjektakteWindow`
+  und die offene Haltungs-/Schachtzeile. `Alle Angaben` ist dort vorausgewählt;
+  `Kurzansicht` erhält die alten RecordDetails-Gruppen und deren persönliche Anordnung.
+- Beide Aufklappcontroller verbinden über `ObjektaktenDialog.Fabrik` dieselbe Bearbeitung
+  und dieselben Speicher-/Projektguards wie die Objektakte. Zusätzliche Aktenänderungen
+  rufen auch die vorhandene automatische Speicherung der jeweiligen Seite auf.
+- `ObjektaktenInlineBindung` hält nur das Modell der offenen Zeile. Ein Nachziehen derselben
+  Zeile erhält Suche und Objektauswahl. Zuklappen, Löschen, Projektwechsel und Dispose geben
+  das Modell frei. Die letzte TextBox-Eingabe wird vor dem Wechsel zurückgeschrieben.
+- Die volle Maske entsteht nur im aufgeklappten ContentTemplate. Bei Registerwechsel wird
+  über die bestehende Bearbeitung neu gelesen; Fields/FieldMeta bleiben die Wahrheit.
+  Der bisherige Live-Abgleich der Kurzansicht bleibt erhalten. Keine neue Fachlogik im View.
+- Die Objektliste wird vor der Auswahl eines neuen Deckels/einer Sanierung aktualisiert.
+  Eine vorübergehend leere WPF-Themenauswahl beim Listenwechsel verwirft nicht das aktive Thema.
+- Nachweis: `ObjektakteAufklappTests` nutzt echte Seiten-ViewModels und beide Controller in
+  einem isolierten WPF-Prozess. Er prüft Inline-Start, letzte Eingabe, neue Deckel,
+  Registerwechsel, schmale Darstellung sowie Sperren nach Löschen/Projektwechsel.
+
+
+## Nova-Anordnung analog WebGIS (11.09.2026)
+
+- `ObjektaktenWebGisBereiche.json` enthält die ursprünglichen Quellbereiche aller 200
+  Planfelder (`sourceOccurrences[0].section` aus dem Feldkatalog vom 10.09.2026).
+  `ObjektaktenWebGisLayout` ordnet Kopfangaben, Daten I/II, Bauwerksteile, Haltungspunkte,
+  Stammkarte, Administrativ, Unterhalt, Hydraulik und Metadaten für die Ansicht zu.
+  Alle 200 sichtbaren Feldbezeichnungen wurden mit der Planquelle verglichen: identisch.
+- `ObjektakteView` zeigt Kopf und Bereichszeilen untereinander, ohne Themen-Seitenleiste
+  und ohne Einzelkarten. Die Flächen/Schrift/Schaltflächen bleiben Nova. Pro Feld gibt es
+  genau eine sichtbare Eingabe; editierbare ComboBoxen erhalten Auswahlcodes und Freitext.
+- `ObjektWebGisAbschnitt` hält den Aufklappzustand unter neuen `webgis.<Art>.<Bereich>`-
+  Schlüsseln in bestehenden AppSettings. Standard zu, Suche öffnet Treffer. Aktualisierte
+  verknüpfte Listen ersetzen nicht die Feldeditoren oder deren Fokus.
+- Seltene Aktionen und persönliche Anzeigeoptionen liegen unter Mehr. Die bestehenden
+  fachlichen Gruppen-APIs bleiben erhalten; Speicher-/Import-/Exportzuordnungen unverändert.
+- `ObjektaktenWebGisLayoutTests` prüft vollständige, duplikatfreie Feldabdeckung aller vier
+  Objektarten sowie Bereichsfolge, Kopf und Aufklappzustand. Der WPF-Test ergänzt echte
+  Dropdownauswahl mit Originalcode, freie Sonderwerte und nur einen sichtbaren Editor.

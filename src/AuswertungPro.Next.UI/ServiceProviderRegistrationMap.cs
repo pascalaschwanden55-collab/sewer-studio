@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
@@ -65,6 +65,7 @@ using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
 using AuswertungPro.Next.Application.UseCases.BendSuggestions;
 using AuswertungPro.Next.Application.UseCases.PipeEndSuggestions;
 using AuswertungPro.Next.Application.UseCases.CodingSuggestions;
+using AuswertungPro.Next.Application.UseCases.Objektakten;
 
 namespace AuswertungPro.Next.UI;
 
@@ -82,6 +83,8 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IFullBackupService)] = services.FullBackup,
             [typeof(IKnowledgeRealtimeMirrorService)] = services.KnowledgeRealtimeMirror,
             [typeof(IFullBackupSourcesProvider)] = services.BackupSources,
+            [typeof(IBackupAdditionalFolders)] = services.BackupAdditionalFolders,
+            [typeof(IObjektaktenListenErgaenzungen)] = services.ObjektaktenListenErgaenzungen,
             [typeof(IBackupTargetMarkerGuard)] = services.BackupTargetMarkers,
             [typeof(ISqliteSnapshotCopier)] = services.SqliteSnapshots,
             [typeof(IBackupManifestIntegrityService)] = services.BackupManifestIntegrity,
@@ -238,6 +241,8 @@ internal static class ServiceProviderRegistrationMap
             [typeof(ICodeUsageTracker)] = services.CodeUsage,
             [typeof(AuswertungPro.Next.Application.Lookup.IQgisBestandLeser)] = services.QgisBestand,
             [typeof(AuswertungPro.Next.Application.Lookup.IKatasterKennungLeser)] = services.KatasterKennungen,
+            [typeof(AuswertungPro.Next.Application.Projects.IObjektaktenPaketService)] = services.ObjektaktenPakete,
+            [typeof(AuswertungPro.Next.Application.Lookup.IGeoShopLeser)] = services.GeoShop,
         };
     }
 }

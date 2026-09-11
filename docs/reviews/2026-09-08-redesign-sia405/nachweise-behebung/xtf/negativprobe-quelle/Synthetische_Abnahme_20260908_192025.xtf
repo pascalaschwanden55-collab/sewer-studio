@@ -1,0 +1,244 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="SewerStudio" VERSION="2.3">
+    <MODELS>
+      <MODEL NAME="SIA405_ABWASSER_2020_LV95" URI="http://www.sia.ch/405" VERSION="29.11.2025" />
+      <MODEL NAME="SIA405_Base_Abwasser_LV95" URI="http://www.vsa.ch/models" VERSION="03.11.2020" />
+      <MODEL NAME="SewerStudio_Zusatz_2026" URI="mailto:Pascal.Aschwanden@abwasser-uri.ch" VERSION="2026-09-07" />
+    </MODELS>
+    <ALIAS>
+      <ENTRIES FOR="SIA405_ABWASSER_2020_LV95" />
+    </ALIAS>
+    <COMMENT>Vollstaendiger Neu-Export aus SewerStudio: 1 Haltungen, 5 Schaechte.</COMMENT>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="chB0000000000001">
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="chSST959BEA0A79D">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <BaulicherZustand>Z2</BaulicherZustand>
+        <Bemerkung>Synthetischer Test</Bemerkung>
+        <Bezeichnung>TEST0</Bezeichnung>
+        <Status>in_Betrieb</Status>
+        <Dimension1>1200</Dimension1>
+        <Dimension2>1000</Dimension2>
+        <Funktion>Fettabscheider</Funktion>
+        <Material>Beton</Material>
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+        <EigentuemerRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="chSSTD85C8EB72A7">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>TEST0</Bezeichnung>
+        <AbwasserbauwerkRef REF="chSST959BEA0A79D" />
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="chSST8BCC230C22E">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <BaulicherZustand>Z2</BaulicherZustand>
+        <Bemerkung>Synthetischer Test</Bemerkung>
+        <Bezeichnung>TEST1</Bezeichnung>
+        <Status>in_Betrieb</Status>
+        <Dimension1>1200</Dimension1>
+        <Dimension2>1000</Dimension2>
+        <Funktion>Kontroll_Einsteigschacht</Funktion>
+        <Material>Beton</Material>
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+        <EigentuemerRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="chSST4068F8B3DEA">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>TEST1</Bezeichnung>
+        <AbwasserbauwerkRef REF="chSST8BCC230C22E" />
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Spezialbauwerk TID="chSST29D7E55628E">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <BaulicherZustand>Z2</BaulicherZustand>
+        <Bemerkung>Synthetischer Test</Bemerkung>
+        <Bezeichnung>TEST2</Bezeichnung>
+        <Status>in_Betrieb</Status>
+        <Funktion>Kombischacht</Funktion>
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+        <EigentuemerRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Spezialbauwerk>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="chSST572B90FE915">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>TEST2</Bezeichnung>
+        <AbwasserbauwerkRef REF="chSST29D7E55628E" />
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Versickerungsanlage TID="chSST404A921DD81">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <BaulicherZustand>Z2</BaulicherZustand>
+        <Bemerkung>Synthetischer Test</Bemerkung>
+        <Bezeichnung>TEST3</Bezeichnung>
+        <Status>in_Betrieb</Status>
+        <Art>Versickerungsschacht</Art>
+        <Dimension1>1200</Dimension1>
+        <Dimension2>1000</Dimension2>
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+        <EigentuemerRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Versickerungsanlage>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="chSST5396067CB96">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>TEST3</Bezeichnung>
+        <AbwasserbauwerkRef REF="chSST404A921DD81" />
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Einleitstelle TID="chSST07AF2186B1B">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <BaulicherZustand>Z2</BaulicherZustand>
+        <Bemerkung>Synthetischer Test</Bemerkung>
+        <Bezeichnung>TEST4</Bezeichnung>
+        <Status>in_Betrieb</Status>
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+        <EigentuemerRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Einleitstelle>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="chSST0ED50195147">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>TEST4</Bezeichnung>
+        <AbwasserbauwerkRef REF="chSST07AF2186B1B" />
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil TID="chSST1286EE41987">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>Kreisprofil</Bezeichnung>
+        <HoehenBreitenverhaeltnis>1</HoehenBreitenverhaeltnis>
+        <Profiltyp>Kreisprofil</Profiltyp>
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt TID="chSST8E5CDA3D569">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>TEST0-TEST1_von</Bezeichnung>
+        <AbwassernetzelementRef REF="chSSTD85C8EB72A7" />
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt TID="chSSTE8D655425F4">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>TEST0-TEST1_nach</Bezeichnung>
+        <AbwassernetzelementRef REF="chSST4068F8B3DEA" />
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="chSSTFD5EE75FAD3">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bemerkung>Nur synthetische Daten</Bemerkung>
+        <Bezeichnung>TEST0-TEST1</Bezeichnung>
+        <Nutzungsart_Ist>Niederschlagsabwasser</Nutzungsart_Ist>
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+        <EigentuemerRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="chSST260EEBA26AC">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>TEST0-TEST1</Bezeichnung>
+        <LaengeEffektiv>16.85</LaengeEffektiv>
+        <Lichte_Hoehe>150</Lichte_Hoehe>
+        <Material>Kunststoff_Polyethylen</Material>
+        <RohrprofilRef REF="chSST1286EE41987" />
+        <vonHaltungspunktRef REF="chSST8E5CDA3D569" />
+        <nachHaltungspunktRef REF="chSSTE8D655425F4" />
+        <AbwasserbauwerkRef REF="chSSTFD5EE75FAD3" />
+        <DatenherrRef REF="chSST2633A1B3F72" />
+        <DatenlieferantRef REF="chSST2633A1B3F72" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+    <SIA405_Base_Abwasser_LV95.Administration BID="chB0000000000002">
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="chSST2633A1B3F72">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>Privat</Bezeichnung>
+        <Organisationstyp>Privat</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+    </SIA405_Base_Abwasser_LV95.Administration>
+    <SewerStudio_Zusatz_2026.Zusatzdaten BID="chB0000000000003">
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSST5DC9E26AB9E">
+        <ObjektTid>chSST959BEA0A79D</ObjektTid>
+        <Feld>Schachtform</Feld>
+        <Wert>Oval</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSST6995F0F2D88">
+        <ObjektTid>chSST8BCC230C22E</ObjektTid>
+        <Feld>Schachtform</Feld>
+        <Wert>Oval</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSSTF3511CF183E">
+        <ObjektTid>chSST29D7E55628E</ObjektTid>
+        <Feld>Schachtform</Feld>
+        <Wert>Oval</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSSTD9A9D51C0F9">
+        <ObjektTid>chSST29D7E55628E</ObjektTid>
+        <Feld>Material</Feld>
+        <Wert>Beton</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSSTAA4EC30BD3B">
+        <ObjektTid>chSST29D7E55628E</ObjektTid>
+        <Feld>Dimension 1 mm</Feld>
+        <Wert>1200</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSSTB859334626A">
+        <ObjektTid>chSST29D7E55628E</ObjektTid>
+        <Feld>Dimension 2 mm</Feld>
+        <Wert>1000</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSSTBD76893C015">
+        <ObjektTid>chSST404A921DD81</ObjektTid>
+        <Feld>Schachtform</Feld>
+        <Wert>Oval</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSST60AC544A437">
+        <ObjektTid>chSST404A921DD81</ObjektTid>
+        <Feld>Material</Feld>
+        <Wert>Beton</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSSTEF4752AEA55">
+        <ObjektTid>chSST404A921DD81</ObjektTid>
+        <Feld>Funktion</Feld>
+        <Wert>Sickerschacht</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSSTF39463ED1B4">
+        <ObjektTid>chSST07AF2186B1B</ObjektTid>
+        <Feld>Schachtform</Feld>
+        <Wert>Oval</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSST093DF4C2B2A">
+        <ObjektTid>chSST07AF2186B1B</ObjektTid>
+        <Feld>Material</Feld>
+        <Wert>Beton</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSST1814339DD0E">
+        <ObjektTid>chSST07AF2186B1B</ObjektTid>
+        <Feld>Dimension 1 mm</Feld>
+        <Wert>1200</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSST76C7CC45181">
+        <ObjektTid>chSST07AF2186B1B</ObjektTid>
+        <Feld>Dimension 2 mm</Feld>
+        <Wert>1000</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSST0AEE6FA1D44">
+        <ObjektTid>chSST260EEBA26AC</ObjektTid>
+        <Feld>Profiltyp</Feld>
+        <Wert>Kreisprofil</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSST14749D12732">
+        <ObjektTid>chSST260EEBA26AC</ObjektTid>
+        <Feld>FunktionHierarchisch</Feld>
+        <Wert>Sammelkanal</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+    </SewerStudio_Zusatz_2026.Zusatzdaten>
+  </DATASECTION>
+</TRANSFER>

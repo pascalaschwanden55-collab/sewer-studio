@@ -74,6 +74,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
     public ObservableCollection<string> SchachtformOptions { get; }
     public ObservableCollection<string> BelastungsklasseOptions { get; }
     public ObservableCollection<string> SchachtFunktionOptions { get; }
+    public IReadOnlyList<string> BauwerksartOptions => AbwasserbauwerkVokabular.Auswahl;
+    public IReadOnlyList<string> VersickerungsartOptions => AbwasserbauwerkVokabular.Versickerungsarten;
     public ObservableCollection<string> SchachtMaterialOptions { get; }
 
     [ObservableProperty] private SchachtRecord? _selected;
@@ -142,6 +144,13 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         FeldNachschlag = services.FeldNachschlag;
         QgisBestand = services.QgisBestand;
         KatasterKennungen = services.KatasterKennungen;
+        _geoShop = services.GeoShop;
+        ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("schacht", () => _shell.Project, Settings,
+            () => CanMutateShaftData, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
+            services.ObjektaktenListenErgaenzungen);
+        ObjektakteCommand = Services.ObjektaktenDialog.Befehl("schacht", () => _shell.Project, () => Selected?.Id,
+            Settings, () => CanMutateShaftData, () => _shell.MarkProjectDirty(), Save, services.ObjektaktenPakete, _dialogs,
+            services.ObjektaktenListenErgaenzungen);
         CodeCatalog = services.CodeCatalog;
     }
 
@@ -446,6 +455,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         // Form sowie groesstes und kleinstes Innenmass muessen immer editierbar sein,
         // auch wenn eine aeltere Excel-Vorlage diese drei GEONIS-Felder noch nicht hat.
         SchaechteColumnPolicy.ErgaenzeFormUndMasse(Columns);
+        foreach (var feld in new[] { FieldKeys.ShaftStructureType, FieldKeys.InfiltrationType, "Funktion", "Material", FieldKeys.OperatingStatus, FieldKeys.RehabilitationNeed })
+            if (!Columns.Any(c => SchaechteColumnPolicy.ResolveOptionField(c) == feld)) Columns.Add(feld);
         SchaechteColumnPolicy.ErgaenzeKatasterKennung(Columns);
 
         // Aeltere Schacht-Vorlagen kannten kein "Ausgefuehrt durch". Fuer diese

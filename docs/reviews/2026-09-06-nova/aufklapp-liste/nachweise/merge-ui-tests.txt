@@ -1,0 +1,22 @@
+Testlauf für "C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\bin\Debug\net10.0-windows10.0.19041\AuswertungPro.Next.UI.Tests.dll" (.NETCoreApp,Version=v10.0)
+VSTest-Version 18.0.2 (x64)
+
+Die Testausführung wird gestartet, bitte warten...
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+[xUnit.net 00:00:02.67]     AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Haltungsseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [SKIP]
+[xUnit.net 00:00:02.68]     AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_Rohrring_und_KI_Hinweis_folgen_derselben_Entries_Instanz [SKIP]
+[xUnit.net 00:00:02.68]     AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Haltungsseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_Rohrring_und_KI_Hinweis_folgen_derselben_Entries_Instanz [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [1 ms]
+[xUnit.net 00:00:06.49]     AuswertungPro.Next.UI.Tests.SchaechteAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_den_aufgeklappten_Schacht [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_den_aufgeklappten_Schacht [1 ms]
+[xUnit.net 00:00:08.31]     AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [SKIP]
+[xUnit.net 00:00:08.31]     AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_Schachtuebersicht_folgt_Datensatzaenderungen_ohne_neue_Bindung [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_Schachtuebersicht_folgt_Datensatzaenderungen_ohne_neue_Bindung [1 ms]
+[xUnit.net 00:00:09.59]     AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Schaechteseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Schaechteseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [1 ms]
+Ergebnisdatei: C:\Sewer-Studio_KI_4.5\.tmp\nova-merge-20260908-154344\tests\ui-merge.trx
+
+Bestanden!   : Fehler:     0, erfolgreich:   295, übersprungen:     7, gesamt:   302, Dauer: 43 s - AuswertungPro.Next.UI.Tests.dll (net10.0)

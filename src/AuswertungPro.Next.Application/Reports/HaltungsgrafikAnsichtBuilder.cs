@@ -11,7 +11,10 @@ namespace AuswertungPro.Next.Application.Reports;
 /// Ein anklickbarer Bereich ueber der Haltungsgrafik: die Stelle einer Beobachtung auf dem
 /// Rohr samt fertigem Hinweistext. Die Koordinaten sind SVG-Koordinaten der Grafik.
 /// </summary>
-public sealed record HaltungsgrafikMarke(double X, double Y, double Breite, double Hoehe, string Tooltip);
+public sealed record HaltungsgrafikMarke(double X, double Y, double Breite, double Hoehe, string Tooltip)
+{
+    public IReadOnlyList<string> FotoPaths { get; init; } = Array.Empty<string>();
+}
 
 /// <summary>Fertige Haltungsgrafik: SVG-Text, seine Masse und die Hinweisflaechen.</summary>
 public sealed record HaltungsgrafikAnsicht(
@@ -71,6 +74,17 @@ public static class HaltungsgrafikAnsichtBuilder
         int? hoehe = null,
         bool? flowDownVorgabe = null,
         bool nurRohr = false)
+        => BaueKern(record, catalog, hoehe, flowDownVorgabe, nurRohr, Markenfarbe, HoeheMaximum);
+
+    /// <summary>Beschriftete Bildschirmgrafik: volle Laenge, bei vielen Klartexten scrollbar.</summary>
+    public static HaltungsgrafikAnsicht? BaueUebersicht(HaltungRecord? record,
+        ICodeCatalogProvider? catalog, int hoehe, bool? flowDown = null)
+        => BaueKern(record, catalog, hoehe, flowDown, true,
+            NutzungsartReportColors.Resolve(record?.GetFieldValue(FieldKeys.UsageType)).Accent, 160000);
+
+    private static HaltungsgrafikAnsicht? BaueKern(HaltungRecord? record,
+        ICodeCatalogProvider? catalog, int? hoehe, bool? flowDownVorgabe, bool nurRohr,
+        string markenfarbe, int maximaleHoehe)
     {
         if (record is null)
             return null;
@@ -83,7 +97,7 @@ public static class HaltungsgrafikAnsichtBuilder
             .Where(e => !e.IsDeleted)
             .ToList();
         var laenge = ProtocolPdfEntryResolver.ResolveHoldingLength(record, aufgeloest);
-        if (laenge is not > 0)
+        if (laenge is not > 0 || !double.IsFinite(laenge.Value))
             return null;
 
         var eintraege = CounterInspectionStationingNormalizer.NormalizeForExport(aufgeloest, laenge)
@@ -92,7 +106,7 @@ public static class HaltungsgrafikAnsichtBuilder
         var effektiveHoehe = Math.Clamp(
             hoehe ?? HaltungsgrafikExportSizing.ChooseSvgHeight(eintraege.Count),
             HoeheMinimum,
-            HoeheMaximum);
+            maximaleHoehe);
         var luecken = InspectionGapDetector.DetectUnknownGaps(eintraege, laenge);
         var (start, ende) = Knoten(record);
         var flowDown = flowDownVorgabe
@@ -105,7 +119,7 @@ public static class HaltungsgrafikAnsichtBuilder
             start,
             ende,
             flowDown,
-            Markenfarbe,
+            markenfarbe,
             effektiveHoehe,
             luecken,
             catalog,
@@ -151,13 +165,19 @@ public static class HaltungsgrafikAnsichtBuilder
         var labels = HaltungsgrafikLabelLayout.BuildHaltungsgrafikLabels(
             eintraege, laenge, top, bottom, photoNumbers: null, Markenfarbe, catalog);
 
+        // Gleiche Reihenfolge und Positionsauswahl wie im Label-Builder. Nicht anhand von
+        // Meter oder Code zuordnen: mehrere Beobachtungen koennen dieselbe Stelle haben.
+        var mitPosition = eintraege.Where(e => e.MeterStart is not null || e.MeterEnd is not null).ToArray();
         return labels
-            .Select(label => new HaltungsgrafikMarke(
+            .Select((label, index) => new HaltungsgrafikMarke(
                 HaltungsgrafikSvgBuilder.LineX + versatz - MarkeGroesse / 2d,
                 label.TargetY - MarkeGroesse / 2d,
                 MarkeGroesse,
                 MarkeGroesse,
-                Hinweistext(label)))
+                Hinweistext(label))
+            {
+                FotoPaths = mitPosition[index].FotoPaths.Where(p => !string.IsNullOrWhiteSpace(p)).ToArray()
+            })
             .ToList();
     }
 

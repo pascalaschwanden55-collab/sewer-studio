@@ -89,6 +89,8 @@ public static class FieldKeys
 
     /// <summary>Form des Schachts nach der Urner GEONIS-Auswahl.</summary>
     public const string ShaftShape = "Schachtform";
+    public const string ShaftStructureType = "Bauwerksart";
+    public const string InfiltrationType = "Versickerungsart";
 
     /// <summary>
     /// Bruttokosten des Bauwerks aus dem Kataster (<c>Abwasserbauwerk.Bruttokosten</c>).
@@ -104,13 +106,12 @@ public static class FieldKeys
     public const string CadastreObjectId = "Objekt_ID";
 
     /// <summary>
-    /// Die Kennung, unter der GEONIS das Bauteil fuehrt (<c>SIA405_ID</c>, 16 Zeichen,
-    /// Praefix <c>ch23h1a4</c>). Reines Anzeigefeld: Die Wahrheit liegt im typisierten
+    /// SIA405-Hauptkennung aus dem Kataster oder der Original-GeoShop-XTF (16 Zeichen).
+    /// Reines Anzeigefeld: Die Wahrheit liegt im typisierten
     /// <c>Geonis</c>-Objekt des Datensatzes, das auch die Kennungen der Verbundobjekte
-    /// traegt; dieses Feld spiegelt nur die Hauptkennung, damit sie im Formular und in
-    /// der Tabelle sichtbar ist. Getrennt von <see cref="CadastreObjectId"/>: Dort steht
-    /// die Nummer aus dem WFS-Dienst der Lisag (geo.ur.ch), die bei jeder
-    /// Veroeffentlichung neu vergeben wird.
+    /// traegt; dieses Feld spiegelt nur die Hauptkennung. <see cref="CadastreObjectId"/>
+    /// kann aus alten QGIS-Importen eine lokale Lisag-Nummer enthalten. Der bestaetigte
+    /// GeoShop-Abgleich zieht auch dort die Original-TID nach; kein Praefixersatz.
     /// </summary>
     public const string GeonisId = "GEONIS_Kennung";
 

@@ -5,7 +5,7 @@ namespace AuswertungPro.Next.Domain.Models;
 /// <summary>
 /// 1:1 Port der Felddefinitionen aus Models.ps1 (AuswertungPro v2.1.0).
 /// </summary>
-public static class FieldCatalog
+public static partial class FieldCatalog
 {
     public const string AppVersion = "0.1.0";
 
@@ -168,6 +168,8 @@ public static class FieldCatalog
             [FieldKeys.UsageType] = new(FieldKeys.UsageType, "Nutzungsart", FieldType.Combo, ComboItems[FieldKeys.UsageType]),
             [FieldKeys.HoldingLengthMeters] = new(FieldKeys.HoldingLengthMeters, "Haltungslänge m", FieldType.Decimal),
             [FieldKeys.SlopePromille] = new(FieldKeys.SlopePromille, "Gefälle ‰", FieldType.Decimal),
+            ["Schacht_oben"] = new("Schacht_oben", "Schacht oben", FieldType.Text),
+            ["Schacht_unten"] = new("Schacht_unten", "Schacht unten", FieldType.Text),
             ["Inspektionsrichtung"] = new("Inspektionsrichtung", "Inspektionsrichtung", FieldType.Combo, ComboItems["Inspektionsrichtung"]),
             ["Primaere_Schaeden"] = new("Primaere_Schaeden", "Primäre Schäden", FieldType.Multiline),
             [FieldKeys.ConditionClass] = new(FieldKeys.ConditionClass, "Zustandsklasse", FieldType.Combo, ComboItems[FieldKeys.ConditionClass]),
@@ -206,8 +208,8 @@ public static class FieldCatalog
             [FieldKeys.PositionAccuracy] = new(FieldKeys.PositionAccuracy, "Lagebestimmung", FieldType.Combo, ComboItems[FieldKeys.PositionAccuracy]),
             [FieldKeys.ConstructionYear] = new(FieldKeys.ConstructionYear, "Baujahr", FieldType.Int),
             [FieldKeys.GrossCost] = new(FieldKeys.GrossCost, "Bruttokosten (Kataster)", FieldType.Decimal),
-            [FieldKeys.CadastreObjectId] = new(FieldKeys.CadastreObjectId, "Objekt-ID (Lisag)", FieldType.Text),
-            [FieldKeys.GeonisId] = new(FieldKeys.GeonisId, "GEONIS-Kennung", FieldType.Text),
+            [FieldKeys.CadastreObjectId] = new(FieldKeys.CadastreObjectId, "Objekt-ID (Quelle)", FieldType.Text),
+            [FieldKeys.GeonisId] = new(FieldKeys.GeonisId, "SIA405-TID", FieldType.Text),
             [FieldKeys.DataOwner] = new(FieldKeys.DataOwner, "Datenherr", FieldType.Text),
             [FieldKeys.DataSupplier] = new(FieldKeys.DataSupplier, "Datenlieferant", FieldType.Text),
             [FieldKeys.CadastreOrganisation] = new(FieldKeys.CadastreOrganisation, "Organisation", FieldType.Text),

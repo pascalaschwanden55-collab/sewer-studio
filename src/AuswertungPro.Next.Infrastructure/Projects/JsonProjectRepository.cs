@@ -9,7 +9,7 @@ namespace AuswertungPro.Next.Infrastructure.Projects;
 
 public sealed class JsonProjectRepository : IProjectRepository
 {
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 
     // Oeffentlich, damit die Content-Signatur (JsonProjectContentSignature) exakt dieselbe
     // Serialisierung nutzt wie der echte Save/Load.
@@ -56,13 +56,16 @@ public sealed class JsonProjectRepository : IProjectRepository
                     "Bitte oeffne es mit der neueren SewerStudio-Version. Die Datei wurde nicht veraendert.");
             }
 
-            if (project.Version < CurrentVersion)
+            if (project.Version < 2)
             {
                 MigrateToCurrentVersion(project);
                 project.Dirty = true;
             }
 
             project.EnsureMetadataDefaults();
+            ObjektaktenStruktur.Pruefe(project);
+            if (project.Objektakten.Count > 0 && project.Version < 3)
+            { project.Version = 3; project.Dirty = true; }
             _photoReferenceNormalizer.Normalize(project, path);
             ProjectVideoReferenceNormalizer.Normalize(project, path);
 
@@ -92,7 +95,7 @@ public sealed class JsonProjectRepository : IProjectRepository
     {
         // Version 1 -> 2 braucht keine Feldumbenennung. EnsureMetadataDefaults fuellt
         // die hinzugekommenen Standardfelder nach dem Laden kontrolliert auf.
-        project.Version = CurrentVersion;
+        project.Version = 2;
     }
 
     public Project DeepCopy(Project source)
@@ -121,6 +124,9 @@ public sealed class JsonProjectRepository : IProjectRepository
         {
             if (string.IsNullOrWhiteSpace(path))
                 return Result.Fail("APP-SAVE", "Speicherpfad ist leer.");
+
+            ObjektaktenStruktur.Pruefe(project);
+            if (project.Objektakten.Count > 0) project.Version = Math.Max(project.Version, 3);
 
             _photoReferenceNormalizer.Normalize(project, path);
             ProjectVideoReferenceNormalizer.Normalize(project, path);

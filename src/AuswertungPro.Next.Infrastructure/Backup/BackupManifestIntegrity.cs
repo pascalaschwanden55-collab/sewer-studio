@@ -82,6 +82,12 @@ public sealed class BackupManifestIntegrityService : IBackupManifestIntegritySer
         ArgumentException.ThrowIfNullOrWhiteSpace(backupRoot);
         var root = Path.GetFullPath(backupRoot);
         var issues = new List<BackupIntegrityIssue>();
+        if (BackupRunJournal.IsPending(root))
+        {
+            issues.Add(new BackupIntegrityIssue("manifest.json",
+                "Sicherung läuft oder wurde unterbrochen. Vor Verwendung den letzten Stand wiederherstellen."));
+            return new BackupIntegrityReport(0, issues);
+        }
         var manifestPath = Path.Combine(root, "manifest.json");
         if (!File.Exists(manifestPath))
         {

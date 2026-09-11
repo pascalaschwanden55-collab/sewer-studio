@@ -1,3 +1,5 @@
+﻿using System.Collections.Generic;
+using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
@@ -27,5 +29,5 @@ public static class DichtheitImportDistributor
         => DefaultService.FindeUnsichereKandidaten(sourceFolder);
 
     internal static IReadOnlyList<string> FindeKandidaten(string sourceFolder)
-        => DefaultService.FindeKandidaten(sourceFolder);
+        => DefaultService.FindeKandidaten(sourceFolder).Select(p => p.Pfad).ToList();
 }

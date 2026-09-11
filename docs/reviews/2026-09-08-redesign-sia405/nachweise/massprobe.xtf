@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="SewerStudio" VERSION="2.3">
+    <MODELS>
+      <MODEL NAME="SIA405_ABWASSER_2020_LV95" URI="http://www.sia.ch/405" VERSION="26.06.2021" />
+      <MODEL NAME="SIA405_Base_Abwasser_LV95" URI="http://www.vsa.ch/models" VERSION="03.11.2020" />
+    </MODELS>
+    <ALIAS>
+      <ENTRIES FOR="SIA405_ABWASSER_2020_LV95" />
+    </ALIAS>
+    <COMMENT>Vollstaendiger Neu-Export aus SewerStudio: 0 Haltungen, 1 Schaechte.</COMMENT>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="chB0000000000001">
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="chSSTB0EBEC0F011">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>AUDIT-1</Bezeichnung>
+        <Dimension1>4500</Dimension1>
+        <Dimension2>4500</Dimension2>
+        <Funktion>andere</Funktion>
+        <DatenherrRef REF="chSST3CB4093CC35" />
+        <DatenlieferantRef REF="chSST3CB4093CC35" />
+        <EigentuemerRef REF="chSST3CB4093CC35" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="chSSTD3E30676583">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>AUDIT-1</Bezeichnung>
+        <AbwasserbauwerkRef REF="chSSTB0EBEC0F011" />
+        <DatenherrRef REF="chSST3CB4093CC35" />
+        <DatenlieferantRef REF="chSST3CB4093CC35" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten>
+    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+    <SIA405_Base_Abwasser_LV95.Administration BID="chB0000000000002">
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="chSST3CB4093CC35">
+        <Letzte_Aenderung>20260908</Letzte_Aenderung>
+        <Bezeichnung>Privat</Bezeichnung>
+        <Organisationstyp>Privat</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+    </SIA405_Base_Abwasser_LV95.Administration>
+  </DATASECTION>
+</TRANSFER>

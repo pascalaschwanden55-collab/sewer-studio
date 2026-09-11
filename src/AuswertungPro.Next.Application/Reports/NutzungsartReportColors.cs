@@ -5,13 +5,13 @@ using AuswertungPro.Next.Domain.Models;
 namespace AuswertungPro.Next.Application.Reports;
 
 /// <summary>Zusammengehoerige Akzent- und Hintergrundfarbe einer Nutzungsart.</summary>
-internal readonly record struct NutzungsartReportColorPair(string Accent, string Light);
+public readonly record struct NutzungsartReportColorPair(string Accent, string Light);
 
 /// <summary>
-/// Eine gemeinsame Farbregel fuer alle PDF-Berichte. Normbegriffe und ihre alten
-/// Schreibweisen erhalten dadurch in jedem Bericht dieselbe Kennzeichnung.
+/// Gemeinsame Farbregel fuer PDF-Berichte und Bildschirmgrafik. Normbegriffe und ihre
+/// alten Schreibweisen erhalten dadurch ueberall dieselbe Kennzeichnung.
 /// </summary>
-internal static class NutzungsartReportColors
+public static class NutzungsartReportColors
 {
     private const string SchmutzAccent = "#7A6242";
     private const string SchmutzLight = "#F5F0E8";

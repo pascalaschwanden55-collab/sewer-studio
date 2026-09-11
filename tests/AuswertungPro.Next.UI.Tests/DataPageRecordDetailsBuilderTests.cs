@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Views.Windows;
 using Xunit;
@@ -117,9 +117,9 @@ public sealed class DataPageRecordDetailsBuilderTests
     [InlineData(FieldKeys.Link, "Kosten und Bemerkungen")]
     [InlineData(FieldKeys.Remarks, "Kosten und Bemerkungen")]
     // Bekannte Felder ausserhalb der vier Themenlisten und ein unbekanntes Feld
-    [InlineData("Primaere_Schaeden", "Weitere Angaben")]
+    [InlineData("Primaere_Schaeden", "Bewertung")]
     [InlineData("NR", "Weitere Angaben")]
-    [InlineData(FieldKeys.HierarchicalFunction, "Weitere Angaben")]
+    [InlineData(FieldKeys.HierarchicalFunction, "Stammdaten")]
     [InlineData("Feld_Das_Nicht_Im_Katalog_Ist", "Weitere Angaben")]
     public void ResolveGroup_routes_known_fields(string fieldName, string expectedGroup)
     {
@@ -185,7 +185,9 @@ public sealed class DataPageRecordDetailsBuilderTests
             FieldKeys.ProfileType, FieldKeys.ClearWidthMm, FieldKeys.UsageType, FieldKeys.HoldingLengthMeters,
             FieldKeys.SlopePromille,
             "Inspektionsrichtung", FieldKeys.InspectionYear, FieldKeys.ConstructionYear, FieldKeys.Owner,
-            FieldKeys.GeonisId, FieldKeys.CadastreObjectId
+            FieldKeys.GeonisId, FieldKeys.CadastreObjectId,
+            FieldKeys.HierarchicalFunction, FieldKeys.HydraulicFunction, FieldKeys.ConnectionType,
+            FieldKeys.BeddingEncasement, FieldKeys.OperatingStatus, FieldKeys.PositionAccuracy
         }, stammdaten.Items.Select(i => i.Label));
     }
 
@@ -200,7 +202,7 @@ public sealed class DataPageRecordDetailsBuilderTests
         Assert.Equal(new[]
         {
             FieldKeys.ConditionClass, "VSA_Zustandsnote_D", "VSA_Zustandsnote_S", "VSA_Zustandsnote_B",
-            "VSA_Geschaetzt", "Pruefungsresultat", "Referenzpruefung", "Gewaesserschutz", "Grundwasserspiegel"
+            "VSA_Geschaetzt", "Pruefungsresultat", "Referenzpruefung", "Gewaesserschutz", "Grundwasserspiegel", FieldKeys.RehabilitationNeed, FieldKeys.PrimaryDamages
         }, bewertung.Items.Select(i => i.Label));
     }
 
@@ -231,7 +233,7 @@ public sealed class DataPageRecordDetailsBuilderTests
         var kosten = groups.Single(g => g.Title == "Kosten und Bemerkungen");
         Assert.Equal(new[]
         {
-            FieldKeys.Cost, FieldKeys.Link, FieldKeys.Remarks
+            FieldKeys.Cost, FieldKeys.GrossCost, FieldKeys.Link, FieldKeys.Remarks
         }, kosten.Items.Select(i => i.Label));
     }
 

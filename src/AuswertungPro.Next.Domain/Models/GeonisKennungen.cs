@@ -1,8 +1,9 @@
 namespace AuswertungPro.Next.Domain.Models;
 
 /// <summary>
-/// Die Objektkennungen, unter denen GEONIS ein Bauteil fuehrt (<c>SIA405_ID</c>,
-/// 16 Zeichen, Praefix <c>ch23h1a4</c>).
+/// SIA405-Objektkennungen eines Bauteils und seines Verbunds. Der gespeicherte Name
+/// Geonis bleibt kompatibel; der GeoShop-Abgleich uebernimmt hier Original-XTF-TIDs.
+/// Praefixe werden niemals umgeschrieben. Quelle nennt den Herkunftsweg.
 ///
 /// Warum das ein eigenes Objekt ist und kein Feld: Eine Haltung ist in SIA405 kein
 /// einzelnes Objekt, sondern ein Verbund aus Kanal, Haltung, zwei Haltungspunkten
@@ -10,12 +11,13 @@ namespace AuswertungPro.Next.Domain.Models;
 /// Abwasserknoten. Erst mit ALLEN Kennungen kann der Neu-Export eine Datei
 /// schreiben, deren Objekte GEONIS wiedererkennt, statt Duplikate anzulegen.
 ///
-/// Rein zusaetzliche Angabe. Altprojekte laden mit <c>null</c>; das sichtbare Feld
-/// <c>Objekt_ID</c> bleibt davon unberuehrt (dort steht bei aus QGIS gefuellten
-/// Haltungen die Lisag-Nummer aus dem WFS-Dienst geo.ur.ch, die bei jeder
-/// Veroeffentlichung neu vergeben wird und in GEONIS nicht existiert — gemessen 2026-09-04: 866789 wurde zu 867034).
+/// Altprojekte laden mit <c>null</c>. Der alte Katasterweg liess <c>Objekt_ID</c>
+/// unberuehrt; der bestaetigte GeoShop-Abgleich zieht dort die Haupt-TID nach.
+/// Bei aus QGIS gefuellten Haltungen steht dort vorher gegebenenfalls die
+/// Lisag-Nummer aus dem WFS-Dienst geo.ur.ch, die bei jeder
+/// Veroeffentlichung neu vergeben wird und in GEONIS nicht existiert.
 ///
-/// Fachwerte werden ueber diesen Weg nie uebernommen, nur Kennungen.
+/// Fachwerte liegen weiterhin getrennt in Fields.
 /// </summary>
 public sealed class GeonisKennungen
 {

@@ -4,6 +4,7 @@
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Xtf\Dss\ExportSchema.json" LogicalName="Dss.ExportSchema.json" />
     <ProjectReference Include="..\AuswertungPro.Next.Domain\AuswertungPro.Next.Domain.csproj" />
   </ItemGroup>
 </Project>

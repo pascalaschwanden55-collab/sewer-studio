@@ -16,8 +16,9 @@ namespace AuswertungPro.Next.Infrastructure.Export.Excel;
 ///
 /// Das Aussehen liegt vollstaendig in der Vorlage: Logo, Diagramme,
 /// Kennzahlenbloecke mit Formeln, bedingte Formatierung, Titelband, Kopfzeile,
-/// Druckeinrichtung und eine gestaltete Musterzeile. Dieser Dienst schreibt nur
-/// Werte, kopiert den Stil der Musterzeile nach unten und setzt die Zeilenhoehe.
+/// Druckeinrichtung und eine gestaltete Musterzeile. Dieser Dienst schreibt
+/// Werte, kopiert den Musterstil und setzt die Zeilenhoehe. Die Arbeitsansicht
+/// ergaenzt den datenabhaengigen Druckbereich auf demselben Blatt.
 ///
 /// Insbesondere faerbt er NICHTS ein. Die Ampelfarben kommen aus der bedingten
 /// Formatierung der Vorlage - nur so folgt die Farbe auch dann noch dem Wert,
@@ -161,6 +162,7 @@ public sealed class ExcelTemplateExportService : IExcelExportService
 
             cancellationToken.ThrowIfCancellationRequested();
             SchliesseBlattAb(ws, project, "Haltungen", headerRow, startRow, row - 1, spaltenzahl);
+            ExcelArbeitsansicht.Abschliessen(ws, headerRow, startRow, row - 1, spaltenzahl, cancellationToken);
             SpeichereGeprueftUndVeroeffentliche(wb, outputPath, ws.Name, cancellationToken);
             return Result.Success();
         }
@@ -283,6 +285,7 @@ public sealed class ExcelTemplateExportService : IExcelExportService
 
             cancellationToken.ThrowIfCancellationRequested();
             SchliesseBlattAb(ws, project, "Schächte", headerRow, startRow, row - 1, spaltenzahl);
+            ExcelArbeitsansicht.Abschliessen(ws, headerRow, startRow, row - 1, spaltenzahl, cancellationToken);
             SpeichereGeprueftUndVeroeffentliche(wb, outputPath, ws.Name, cancellationToken);
             return Result.Success();
         }
@@ -341,6 +344,8 @@ public sealed class ExcelTemplateExportService : IExcelExportService
 
             cancellationToken.ThrowIfCancellationRequested();
             _saveWorkbook(workbook, temporaer);
+            cancellationToken.ThrowIfCancellationRequested();
+            ExcelDrucktitel.Normalisieren(temporaer);
             cancellationToken.ThrowIfCancellationRequested();
             PruefeGespeicherteArbeitsmappe(temporaer, erwartetesBlatt);
             cancellationToken.ThrowIfCancellationRequested();
@@ -521,7 +526,8 @@ public sealed class ExcelTemplateExportService : IExcelExportService
     {
         var kontext = ExcelReportContextFactory.AusProjekt(project, schaechte: blatt == "Schächte");
         ws.Cell(ExcelVorlagenLayout.TitelZeile, 1).Value = kontext.TitelFuer(blatt);
-        StelleLogoGroesseWiederHer(ws);
+        foreach (var blattMitBild in ws.Workbook.Worksheets)
+            StelleLogoGroesseWiederHer(blattMitBild);
 
         if (letzteDatenzeile >= startRow)
             ws.Range(headerRow, 1, letzteDatenzeile, spaltenzahl).SetAutoFilter();

@@ -775,14 +775,16 @@ internal sealed class GeoJsonFeatureCollection
 
 internal sealed record GeoJsonFeature
 {
-    public GeoJsonFeature(object geometry, IDictionary<string, object?> properties)
+    public GeoJsonFeature(object? geometry, IDictionary<string, object?> properties)
     {
         Geometry = geometry;
         Properties = properties;
     }
 
     public string Type => "Feature";
-    public object Geometry { get; }
+
+    // Nullable, damit eine Schemazeile ohne Geometrie moeglich ist (siehe QgisLeerschema).
+    public object? Geometry { get; }
     public IDictionary<string, object?> Properties { get; }
 }
 

@@ -19,6 +19,10 @@
 
 
   <ItemGroup>
+    <EmbeddedResource Include="DataPage/ObjektaktenWebGisBereiche.json" LogicalName="ObjektaktenWebGisBereiche.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\AuswertungPro.Next.Domain\AuswertungPro.Next.Domain.csproj" />
     <ProjectReference Include="..\AuswertungPro.Next.Application\AuswertungPro.Next.Application.csproj" />
     <ProjectReference Include="..\AuswertungPro.Next.Infrastructure\AuswertungPro.Next.Infrastructure.csproj" />

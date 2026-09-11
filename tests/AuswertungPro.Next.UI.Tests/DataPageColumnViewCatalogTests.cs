@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -11,14 +11,14 @@ public sealed class DataPageColumnViewCatalogTests
     /// vier virtuellen Statusspalten in dieser Reihenfolge.
     /// </summary>
     [Fact]
-    public void Kompakt_zeigt_die_zehn_Spalten_des_Prototyps()
+    public void Kompakt_zeigt_Prototypspalten_und_den_exportwichtigen_Eigentuemer()
     {
         var v = DataPageColumnViewCatalog.Resolve("kompakt");
         Assert.Equal(
             new[]
             {
                 FieldKeys.HoldingName, FieldKeys.Street, FieldKeys.PipeMaterial,
-                FieldKeys.NominalDiameterMm, FieldKeys.HoldingLengthMeters, FieldKeys.ConditionClass,
+                FieldKeys.NominalDiameterMm, FieldKeys.HoldingLengthMeters, FieldKeys.ConditionClass, FieldKeys.Owner,
                 NovaStatusSpalten.Ki, NovaStatusSpalten.Pruefung, NovaStatusSpalten.Video, NovaStatusSpalten.Protokoll
             },
             v.Felder);
@@ -52,7 +52,7 @@ public sealed class DataPageColumnViewCatalogTests
     {
         var altKompakt = DataPageColumnViewCatalog.Resolve("kompakt", nova: false);
         Assert.True(altKompakt.Enthaelt(FieldKeys.Link));
-        Assert.Equal(7, altKompakt.Felder!.Count);
+        Assert.Equal(8, altKompakt.Felder!.Count);
 
         foreach (var view in DataPageColumnViewCatalog.AltansichtViews)
             foreach (var feld in view.Felder ?? Array.Empty<string>())
@@ -116,7 +116,7 @@ public sealed class DataPageColumnViewCatalogTests
     [Fact]
     public void Jede_Ansicht_nennt_ihre_Spaltenzahl()
     {
-        Assert.Equal(10, DataPageColumnViewCatalog.Resolve("kompakt").Anzahl(40));
+        Assert.Equal(11, DataPageColumnViewCatalog.Resolve("kompakt").Anzahl(40));
         Assert.Equal(40, DataPageColumnViewCatalog.Resolve("alle").Anzahl(40));
     }
 

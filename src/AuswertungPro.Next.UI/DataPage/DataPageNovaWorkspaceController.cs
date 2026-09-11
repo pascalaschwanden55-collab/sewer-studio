@@ -67,6 +67,7 @@ public sealed class DataPageNovaWorkspaceController
     public void Verdrahte()
     {
         _e.Uebersicht.BeobachtungenRequested = _beobachtungen;
+        PhotoHoverPreviewBehavior.SetProjectRootProvider(_e.Uebersicht, () => _vm()?.GrafikFotoProjektRoot);
         _e.Uebersicht.PlayerRequested = r =>
         {
             if (_vm() is { } vm && vm.PlayVideoCommand.CanExecute(r))

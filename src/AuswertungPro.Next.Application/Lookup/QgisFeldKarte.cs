@@ -45,6 +45,7 @@ public static class QgisFeldKarte
         new("bw_baulicherzustand", FieldKeys.ConditionClass, Zustandsziffer),
         new("bw_baujahr", FieldKeys.ConstructionYear, GanzeZahl),
         new("bw_bruttokosten", FieldKeys.GrossCost, Dezimalzahl),
+        new("bw_bemerkung", FieldKeys.Remarks, Text),
         new("bw_standortname", FieldKeys.Street, Text),
         new("org_eigentuemer", FieldKeys.Owner, w => Leer(EigentumVokabular.Normalisieren(w))),
         new("obj_id", FieldKeys.CadastreObjectId, Text),

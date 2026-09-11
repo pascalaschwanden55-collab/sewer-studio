@@ -25,6 +25,7 @@
     <UserControl.Resources>
         <!-- Spaltenbreiten: EINMAL hier, wie bei der Haltungsliste. -->
         <GridLength x:Key="SpaltePfeil">28</GridLength>
+        <GridLength x:Key="SpalteNr">56</GridLength>
         <GridLength x:Key="SpalteNummer">110</GridLength>
         <GridLength x:Key="SpalteStrasse">140</GridLength>
         <GridLength x:Key="SpalteFunktion">130</GridLength>
@@ -35,6 +36,7 @@
         <GridLength x:Key="SpalteProtokoll">56</GridLength>
         <GridLength x:Key="SpalteRest">*</GridLength>
 
+        <local:SchachtLaufnummerConverter x:Key="Laufnummer"/>
         <BooleanToVisibilityConverter x:Key="BoolSichtbar"/>
         <uc:GrossbuchstabenConverter x:Key="Grossbuchstaben"/>
         <haltung:HaltungAufgeklapptConverter x:Key="IstAufgeklappt"/>
@@ -145,7 +147,7 @@
         </Style>
 
         <!-- Das Formular des EINEN aufgeklappten Schachts. -->
-        <DataTemplate x:Key="FormularVorlage">
+        <DataTemplate x:Key="KurzformularVorlage">
             <Border x:Name="FormularWurzel" Margin="8,2,8,10" Padding="10,8"
                     Background="{DynamicResource CardBrush}"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -156,6 +158,9 @@
                                    Text="{Binding Aufgeklappt.Fields[Schachtnummer], RelativeSource={RelativeSource AncestorType=local:SchachtAufklappListe}}"
                                    FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextBrush}"/>
+                        <Button DockPanel.Dock="Right" Content="Ansicht anpassen" Click="AnsichtAnpassen_Click"
+                                Style="{DynamicResource ToolbarButton}" Margin="6,0,0,0"
+                                ToolTip="Felder verschieben, ausblenden und wieder einblenden"/>
                         <Button DockPanel.Dock="Right" Content="Alle zu" Click="AlleZu_Click"
                                 Style="{DynamicResource ToolbarButton}" Margin="6,0,0,0"
                                 ToolTip="Alle Themen zuklappen" AutomationProperties.Name="Alle Themen zuklappen"/>
@@ -189,6 +194,31 @@
 
         <!-- Vorlage UND Inhalt werden NUR im Trigger gesetzt (Befund aus Task 1: ein
              ContentPresenter rendert seine ContentTemplate auch bei Content=null). -->
+        <DataTemplate x:Key="ObjektformularVorlage">
+            <TabControl Margin="8,2,8,10" HorizontalContentAlignment="Stretch">
+                <TabItem Header="Alle Angaben" IsSelected="True">
+                    <controls:ObjektakteView Height="620"
+                        DataContext="{Binding Objektakte, RelativeSource={RelativeSource AncestorType=local:SchachtAufklappListe}}"/>
+                </TabItem>
+                <TabItem Header="Kurzansicht">
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource KurzformularVorlage}"/>
+                </TabItem>
+            </TabControl>
+        </DataTemplate>
+        <DataTemplate x:Key="FormularVorlage">
+            <ContentControl Content="{Binding}">
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Setter Property="ContentTemplate" Value="{StaticResource ObjektformularVorlage}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Objektakte, RelativeSource={RelativeSource AncestorType=local:SchachtAufklappListe}}" Value="{x:Null}">
+                                <Setter Property="ContentTemplate" Value="{StaticResource KurzformularVorlage}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
+        </DataTemplate>
         <Style x:Key="FormularTraeger" TargetType="ContentControl">
             <Style.Triggers>
                 <DataTrigger Value="True">
@@ -208,10 +238,12 @@
     <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
         <DockPanel>
+            <controls:ListenReihenfolgeLeiste x:Name="ReihenfolgeLeiste" DockPanel.Dock="Top"/>
             <!-- Beschriftungszeile in Grossbuchstaben, wie der Tabellenkopf. -->
             <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
                 <Grid>
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="{StaticResource SpalteNr}"/>
                         <ColumnDefinition Width="{StaticResource SpaltePfeil}"/>
                         <ColumnDefinition Width="{StaticResource SpalteNummer}"/>
                         <ColumnDefinition Width="{StaticResource SpalteStrasse}"/>
@@ -224,17 +256,18 @@
                         <ColumnDefinition Width="{StaticResource SpalteProtokoll}"/>
                         <ColumnDefinition Width="{StaticResource SpalteRest}"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="1" Style="{StaticResource KopfText}" Text="{Binding Source=Schacht, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="2" Style="{StaticResource KopfText}" Text="{Binding Source=Strasse, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="3" Style="{StaticResource KopfText}" Text="{Binding Source=Funktion, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="4" Style="{StaticResource KopfText}" Text="{Binding Source=Material, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="0" Style="{StaticResource KopfTextRechts}" Text="Nr." ToolTip="Laufende Nummer im Projekt"/>
+                    <TextBlock Grid.Column="2" Style="{StaticResource KopfText}" Text="{Binding Source=Schacht, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="3" Style="{StaticResource KopfText}" Text="{Binding Source=Strasse, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="4" Style="{StaticResource KopfText}" Text="{Binding Source=Funktion, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="5" Style="{StaticResource KopfText}" Text="{Binding Source=Material, Converter={StaticResource Grossbuchstaben}}"/>
                     <!-- Zwei Woerter: keine Binding-Source-Markuperweiterung (Leerzeichen im Wert),
                          deshalb hier bereits gross geschrieben statt ueber den Konverter. -->
-                    <TextBlock Grid.Column="5" Style="{StaticResource KopfTextRechts}" Text="INNEN 1" ToolTip="Innenmass 1 in mm"/>
-                    <TextBlock Grid.Column="6" Style="{StaticResource KopfTextRechts}" Text="INNEN 2" ToolTip="Innenmass 2 in mm"/>
-                    <TextBlock Grid.Column="7" Style="{StaticResource KopfText}" Text="{Binding Source=Form, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="8" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=Zustand, Converter={StaticResource Grossbuchstaben}}"/>
-                    <TextBlock Grid.Column="9" Style="{StaticResource KopfText}" TextAlignment="Center" Text="PDF" ToolTip="Protokoll"/>
+                    <TextBlock Grid.Column="6" Style="{StaticResource KopfTextRechts}" Text="INNEN 1" ToolTip="Innenmass 1 in mm"/>
+                    <TextBlock Grid.Column="7" Style="{StaticResource KopfTextRechts}" Text="INNEN 2" ToolTip="Innenmass 2 in mm"/>
+                    <TextBlock Grid.Column="8" Style="{StaticResource KopfText}" Text="{Binding Source=Form, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="9" Style="{StaticResource KopfText}" TextAlignment="Center" Text="{Binding Source=Zustand, Converter={StaticResource Grossbuchstaben}}"/>
+                    <TextBlock Grid.Column="10" Style="{StaticResource KopfText}" TextAlignment="Center" Text="PDF" ToolTip="Protokoll"/>
                 </Grid>
             </Border>
 
@@ -268,6 +301,7 @@
                                     </MultiBinding>
                                 </Grid.Tag>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{StaticResource SpalteNr}"/>
                                     <ColumnDefinition Width="{StaticResource SpaltePfeil}"/>
                                     <ColumnDefinition Width="{StaticResource SpalteNummer}"/>
                                     <ColumnDefinition Width="{StaticResource SpalteStrasse}"/>
@@ -281,38 +315,50 @@
                                     <ColumnDefinition Width="{StaticResource SpalteRest}"/>
                                 </Grid.ColumnDefinitions>
 
-                                <Button Grid.Column="0" Click="Pfeil_Click" Style="{DynamicResource IconButton}"
+                                <Border Grid.Column="0" Tag="ReihenfolgeGriff" Background="Transparent" Cursor="SizeAll"
+                                        ToolTip="An der Nr. ziehen, um die Zeile zu verschieben">
+                                    <TextBlock Style="{StaticResource ZellenTextMonoRechts}" ToolTip="Laufende Nummer im Projekt">
+                                        <TextBlock.Text>
+                                            <MultiBinding Converter="{StaticResource Laufnummer}">
+                                                <Binding/>
+                                                <Binding Path="Fields"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                </Border>
+
+                                <Button Grid.Column="1" Click="Pfeil_Click" Style="{DynamicResource IconButton}"
                                         Width="24" Height="24" MinHeight="24"
                                         ToolTip="{Binding Tag, RelativeSource={RelativeSource AncestorType=Grid}, Converter={StaticResource PfeilBeschriftung}, ConverterParameter=Schacht}"
                                         AutomationProperties.Name="{Binding Tag, RelativeSource={RelativeSource AncestorType=Grid}, Converter={StaticResource PfeilBeschriftung}, ConverterParameter=Schacht}">
                                     <ui:FluentIcon Glyph="&#xE76C;" Style="{StaticResource ChevronStil}"/>
                                 </Button>
 
-                                <TextBlock Grid.Column="1" Style="{StaticResource ZellenText}" FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold"
+                                <TextBlock Grid.Column="2" Style="{StaticResource ZellenText}" FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold"
                                            Text="{Binding Fields[Schachtnummer], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Schachtnummer], Converter={StaticResource FaktWert}}"/>
-                                <TextBlock Grid.Column="2" Style="{StaticResource ZellenText}"
+                                <TextBlock Grid.Column="3" Style="{StaticResource ZellenText}"
                                            Text="{Binding Fields[Strasse], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Strasse], Converter={StaticResource FaktWert}}"/>
-                                <TextBlock Grid.Column="3" Style="{StaticResource ZellenText}"
+                                <TextBlock Grid.Column="4" Style="{StaticResource ZellenText}"
                                            Text="{Binding Fields[Funktion], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Funktion], Converter={StaticResource FaktWert}}"/>
-                                <TextBlock Grid.Column="4" Style="{StaticResource ZellenText}"
+                                <TextBlock Grid.Column="5" Style="{StaticResource ZellenText}"
                                            Text="{Binding Fields[Material], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Material], Converter={StaticResource FaktWert}}"/>
-                                <TextBlock Grid.Column="5" Style="{StaticResource ZellenTextMonoRechts}"
+                                <TextBlock Grid.Column="6" Style="{StaticResource ZellenTextMonoRechts}"
                                            Text="{Binding Fields[Dimension 1 mm], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Dimension 1 mm], Converter={StaticResource FaktWert}}"/>
-                                <TextBlock Grid.Column="6" Style="{StaticResource ZellenTextMonoRechts}"
+                                <TextBlock Grid.Column="7" Style="{StaticResource ZellenTextMonoRechts}"
                                            Text="{Binding Fields[Dimension 2 mm], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Dimension 2 mm], Converter={StaticResource FaktWert}}"/>
-                                <TextBlock Grid.Column="7" Style="{StaticResource ZellenText}"
+                                <TextBlock Grid.Column="8" Style="{StaticResource ZellenText}"
                                            Text="{Binding Fields[Schachtform], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Schachtform], Converter={StaticResource FaktWert}}"/>
 
                                 <!-- Zustandsklasse als Marke, dieselben Konverter wie bei den Haltungen und
                                      in der Schachttabelle. Ein Strich ist "nicht berechnet", nie eine Z4. -->
-                                <Grid Grid.Column="8">
+                                <Grid Grid.Column="9">
                                     <Border Width="{DynamicResource ZustandsklasseChipBreite}" Height="{DynamicResource ZustandsklasseChipHoehe}"
                                             CornerRadius="{DynamicResource RadiusS}" HorizontalAlignment="Center" VerticalAlignment="Center"
                                             Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkChipGrund}}"
@@ -333,7 +379,7 @@
                                 </Grid>
 
                                 <!-- Protokoll: derselbe Knopf-Weg wie in der Tabelle (SchachtProtokollQuelle). -->
-                                <Grid Grid.Column="9">
+                                <Grid Grid.Column="10">
                                     <Button Style="{DynamicResource IconButton}" Width="36" Height="24" MinHeight="24"
                                             Command="{Binding ProtokollCommand, RelativeSource={RelativeSource AncestorType=local:SchachtAufklappListe}}"
                                             CommandParameter="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBoxItem}}">

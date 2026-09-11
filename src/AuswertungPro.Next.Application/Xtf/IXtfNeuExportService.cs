@@ -18,7 +18,9 @@ public interface IXtfVerlaufQuelle
 public sealed record XtfNeuExportRequest(
     Project Projekt,
     string ZielOrdner,
-    bool NurPruefen = false);
+    bool NurPruefen = false,
+    bool NurAenderungen = false,
+    bool MitZusatzangaben = true);
 
 public sealed record XtfNeuExportResult(
     bool Ok,

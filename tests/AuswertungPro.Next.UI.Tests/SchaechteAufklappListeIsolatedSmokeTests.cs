@@ -58,6 +58,8 @@ public sealed class SchaechteAufklappListeIsolatedSmokeTests
             app.InitializeComponent();
 
             var datensaetze = new ObservableCollection<SchachtRecord>(Enumerable.Range(1, 20).Select(Datensatz));
+            var nummerierung = new SchaechteRecordCollectionController(() => datensaetze, () => ["NR."], new object());
+            nummerierung.Renumber();
             var builder = new SchaechteRecordDetailsBuilder(
                 _ => Array.Empty<string>(),
                 _ => null,
@@ -85,6 +87,24 @@ public sealed class SchaechteAufklappListeIsolatedSmokeTests
             var zeilenAmAnfang = Alle<ListBoxItem>(liste).Count;
             Assert.InRange(zeilenAmAnfang, 1, datensaetze.Count - 1);
 
+            // Die Nummer bleibt beim Filtern die Projektposition und folgt einer Neunummerierung.
+            Assert.Contains(Alle<TextBlock>(liste), t => t.Text == "Nr.");
+            var nummerText = Alle<TextBlock>(Zeile(liste, datensaetze[1]))
+                .Single(t => Equals(t.ToolTip, "Laufende Nummer im Projekt"));
+            Assert.Equal("2", nummerText.Text);
+            var ansicht = System.Windows.Data.CollectionViewSource.GetDefaultView(datensaetze);
+            ansicht.Filter = item => ReferenceEquals(item, datensaetze[1]);
+            Layout(liste);
+            nummerText = Alle<TextBlock>(Zeile(liste, datensaetze[1]))
+                .Single(t => Equals(t.ToolTip, "Laufende Nummer im Projekt"));
+            Assert.Equal("2", nummerText.Text);
+            datensaetze[1].SetFieldValue("NR.", "7", FieldSource.Manual, userEdited: true);
+            Layout(liste);
+            Assert.Equal("7", nummerText.Text);
+            datensaetze[1].SetFieldValue("NR.", "2", FieldSource.Manual, userEdited: true);
+            ansicht.Filter = null;
+            Layout(liste);
+
             // Aufklappen: fuenf Themen mit Zaehlern.
             liste.KlappeAuf(datensaetze[0]);
             Layout(liste);
@@ -95,7 +115,8 @@ public sealed class SchaechteAufklappListeIsolatedSmokeTests
             Assert.Equal(
                 ["Stammdaten", "Zustand und Inspektion", "Sanierung und Kosten", "Dokumente und Medien", "Weitere Angaben"],
                 themen.Select(t => t.Title));
-            Assert.Equal([7, 6, 3, 3], themen.Take(4).Select(t => t.Anzahl));
+            // Die vorbereitete Laufnummer ist ebenfalls ein vorhandenes Stammdatenfeld.
+            Assert.Equal([8, 6, 3, 4], themen.Take(4).Select(t => t.Anzahl));
             Assert.True(themen[4].Anzahl > 0, "Weitere Angaben darf nicht leer sein");
             Assert.Equal(4, Alle<RecordDetailsView>(liste).Count);
             Assert.Contains(Alle<AuswertungPro.Next.UI.FluentIcon>(liste),
@@ -248,6 +269,7 @@ public sealed class SchaechteAufklappListeIsolatedSmokeTests
         record.SetFieldValue(FieldKeys.Link, "", FieldSource.Pdf, false);
 
         record.SetFieldValue("Fotos", "", FieldSource.Pdf, false);
+        record.SetFieldValue("Freies Zusatzfeld", "Test", FieldSource.Pdf, false);
         return record;
     }
 

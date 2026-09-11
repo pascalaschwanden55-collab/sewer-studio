@@ -174,6 +174,9 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public double PlayerOverlayOpacity { get; set; } = 1d;
     public DataPageLayoutSettings DataPageLayout { get; set; } = new();
     public DataPageLayoutSettings SchaechtePageLayout { get; set; } = new();
+    public Dictionary<string, bool> ObjektakteSichtbarkeit { get; set; } = new();
+    public Dictionary<string, bool> ObjektakteFavoriten { get; set; } = new();
+    public Dictionary<string, bool> ObjektakteGruppen { get; set; } = new();
 
     // Haltungsansicht: per GridSplitter einstellbare Hoehe des "Primaere Schaeden"-Panels (in px).
     public double HaltungsansichtSchadenHeight { get; set; } = 240d;
@@ -418,7 +421,8 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public DateTime? LastFullBackupUtc { get; set; }
     public string? LastFullBackupPath { get; set; }
     public long? LastFullBackupSizeBytes { get; set; }
-    public bool FullBackupIncludeProjectVideos { get; set; }
+    public bool FullBackupIncludeProjectVideos { get; set; } = true;
+    public int FullBackupSafetyVersion { get; set; }
 
     public static string AppDataDir
         => AppDataPathResolver.Resolve(AppIdentity.ProductName);
@@ -598,6 +602,11 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
     private static AppSettings NormalizeAfterLoad(AppSettings settings)
     {
+        if (settings.FullBackupSafetyVersion < 1)
+        {
+            settings.FullBackupIncludeProjectVideos = true;
+            settings.FullBackupSafetyVersion = 1;
+        }
         settings.MigrateLegacyKnowledgeRootPath();
         settings.HaltungDistribution ??= new DistributionTargetConfig { DateiPattern = "{Datum}_{Haltung}" };
         settings.SchachtDistribution ??= new DistributionTargetConfig { DateiPattern = "{Datum}_{Schachtnummer}" };

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -33,7 +34,7 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
     private readonly ShellViewModel _shell;
     private readonly ServiceProvider _sp;
     private readonly ICodingSuggestionRegistry _register;
-    private readonly ObservableCollection<HaltungRecord> _beobachteteListe;
+    private ObservableCollection<HaltungRecord> _beobachteteListe;
 
     [ObservableProperty] private string _heroTitel = string.Empty;
     [ObservableProperty] private string _heroText = string.Empty;
@@ -53,12 +54,29 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
         _sp = sp;
         _register = sp.CodingSuggestionRegistry;
         _register.Geaendert += OnRegisterGeaendert;
+        _shell.PropertyChanged += OnShellGeaendert;
         _beobachteteListe = _shell.Project.Data;
         _beobachteteListe.CollectionChanged += OnHaltungenGeaendert;
         Aktualisiere();
     }
 
     private void OnHaltungenGeaendert(object? sender, NotifyCollectionChangedEventArgs e) => Aktualisiere();
+
+    /// <summary>
+    /// R2 (Gesamtaudit 08.09.2026): Beim Projektwechsel zeigt die Shell auf eine NEUE
+    /// Haltungsliste. Ohne Umhaengen beobachtet die Seite weiter die alte Liste und zeigt
+    /// Titel und Kennzahlen des vorherigen Projekts.
+    /// </summary>
+    private void OnShellGeaendert(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not nameof(ShellViewModel.Project))
+            return;
+
+        _beobachteteListe.CollectionChanged -= OnHaltungenGeaendert;
+        _beobachteteListe = _shell.Project.Data;
+        _beobachteteListe.CollectionChanged += OnHaltungenGeaendert;
+        Aktualisiere();
+    }
 
     /// <summary>
     /// Marshallt <see cref="ICodingSuggestionRegistry.Geaendert"/> auf den WPF-UI-Thread. Das
@@ -98,7 +116,7 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
             Schaeden.Add(new SchadenZeile(b.Key, b.Label, b.Count, (double)b.Count / max));
 
         KiLaeufe.Clear();
-        foreach (var lauf in _register.Heute())
+        foreach (var lauf in _register.Heute(p.Id))
             KiLaeufe.Add(BaueKiLaufZeile(
                 lauf.Haltung,
                 lauf.Set.Suggestions
@@ -241,6 +259,7 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
     public void Dispose()
     {
         _register.Geaendert -= OnRegisterGeaendert;
+        _shell.PropertyChanged -= OnShellGeaendert;
         _beobachteteListe.CollectionChanged -= OnHaltungenGeaendert;
     }
 }

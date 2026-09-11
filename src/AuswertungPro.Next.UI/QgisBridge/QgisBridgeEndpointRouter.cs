@@ -122,11 +122,24 @@ internal sealed class QgisBridgeEndpointRouter
                 return hit.Response;
         }
 
-        var response = GeoJson(build());
+        var response = GeoJson(MitSpalten(cacheKey, build()));
         lock (_cacheGate)
             _payloadCache[cacheKey] = (fingerprint, response);
         return response;
     }
+
+    /// <summary>
+    /// Eine Ebene ohne Objekte geht nie als nacktes <c>"features":[]</c> hinaus.
+    /// QGIS liest die Spalten einer GeoJSON aus ihren Objekten; ohne Objekte hat der
+    /// Layer keine Spalten, und jede gespeicherte Abfrage darauf scheitert — der Layer
+    /// laesst sich nicht mehr oeffnen ("unsicher verortet"). Stattdessen geht die
+    /// Schemazeile aus <see cref="QgisLeerschema"/> hinaus: alle Spalten, keine Werte,
+    /// keine Geometrie.
+    /// </summary>
+    private static object MitSpalten(string ebene, object payload)
+        => payload is GeoJsonFeatureCollection { Features.Count: 0 }
+            ? QgisLeerschema.Baue(ebene)
+            : payload;
 
     /// <summary>
     /// Der einzige schreibende Weg der Bruecke. Bewusst getrennt von <see cref="Route"/>:

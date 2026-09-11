@@ -33,6 +33,7 @@ public partial class HaltungsgrafikControl : UserControl
     public HaltungsgrafikControl()
     {
         InitializeComponent();
+        SizeChanged += KlartextGroesseGeaendert;
         Loaded += (_, _) =>
         {
             // Dieselbe Instanz kann nach Unloaded wieder in die Seite eingesetzt werden.
@@ -260,6 +261,9 @@ public partial class HaltungsgrafikControl : UserControl
     private void Zeichne()
     {
         Buehne.Child = null;
+        KlartextBildlauf.Content = null;
+        Buehne.Visibility = MitKlartext ? Visibility.Collapsed : Visibility.Visible;
+        KlartextBildlauf.Visibility = MitKlartext ? Visibility.Visible : Visibility.Collapsed;
         SetValue(SymbolAnzahlPropertyKey, 0);
 
         if (Record is null)
@@ -270,6 +274,11 @@ public partial class HaltungsgrafikControl : UserControl
 
         try
         {
+            if (MitKlartext)
+            {
+                ZeichneKlartext();
+                return;
+            }
             var ansicht = HaltungsgrafikAnsichtBuilder.Baue(Record, Catalog, SvgHoehe, FlowDown, NurRohr);
             if (ansicht is null)
             {

@@ -1,0 +1,29 @@
+﻿{
+    "stand":  "cfccda46452607d2adfcffcf9f26a36caff07838",
+    "ende":  "2026-09-08T06:54:24.3605906+02:00",
+    "produktcodeGeaendert":  false,
+    "abnahme":  "nicht_abnahmebereit",
+    "bekannteBefundeErneutBestaetigt":  6,
+    "neueVorgabenabweichungen":  2,
+    "dotnet":  {
+                   "uebersprungen":  20,
+                   "fehlgeschlagen":  1,
+                   "bestanden":  15685
+               },
+    "sidecar":  {
+                    "ausgeschlossen":  2,
+                    "bestanden":  572
+                },
+    "qgis":  {
+                 "bestanden":  10
+             },
+    "uiFehlerBeiEinzelwiederholung":  true,
+    "buildDev":  "bestanden",
+    "buildGesamt":  "dateisperre_mcp",
+    "buildMcpIsoliert":  "bestanden",
+    "dpi":  96,
+    "echteDpi125Und150":  "offen",
+    "nummerierteVorgaben":  82,
+    "inventarAbschnitte":  73,
+    "bildanzahl":  40
+}

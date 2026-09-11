@@ -70,6 +70,7 @@ internal sealed class SchaechteRecordDetailsBuilder
         }
 
         WireRenovationVisibility(renovationSwitch, renovationDependents);
+        SchachtNormoptionen.Verbinde(buckets.Values.SelectMany(items => items), record);
         AddGroup(groups, buckets, "Stammdaten", "Identifikation und Lage des Schachts.", RecordDetailGroupKind.MasterData);
         AddGroup(groups, buckets, "Zustand und Inspektion", "Bewertung, Schäden und Prüfresultate.", RecordDetailGroupKind.Condition);
         AddGroup(groups, buckets, "Sanierung und Kosten", "Massnahmen, Kosten und Mengenangaben.", RecordDetailGroupKind.RenovationCosts);
@@ -170,7 +171,11 @@ internal sealed class SchaechteRecordDetailsBuilder
             highlightKind: highlightKind,
             nachschlagenCommand: nachschlagen,
             strasseUebernehmenCommand: strasse)
-        { FieldName = field.AnzeigeName };
+        {
+            FieldName = field.AnzeigeName,
+            PruefeWert = SchachtFeldnamen.Falte(field.AnzeigeName) is "dimension1mm" or "dimension2mm"
+                ? SiaAbmessung.SchachtmassFehler : null
+        };
     }
 
     private static void AddGroup(

@@ -20,7 +20,12 @@ public sealed record XtfNormschachtElement(
     string? Baujahr = null,
     string? Datenherr = null,
     string? Datenlieferant = null,
-    string? Tid = null);
+    string? Tid = null,
+    string? Bauwerksart = null,
+    string? Standortname = null,
+    string? Bruttokosten = null,
+    string? Versickerungsart = null,
+    string? ZustandserhebungJahr = null);
 
 /// <summary>
 /// Bildet einen Normschacht der SIA405-XTF auf die Schachtfelder von SewerStudio ab.
@@ -101,6 +106,11 @@ public static class XtfNormschachtStammdaten
         // erlaubt eine spaetere Revision am richtigen Normschacht. Der eigenstaendige
         // Neu-Export vergibt dagegen bewusst einen vollstaendigen eigenen TID-Verbund.
         Ergaenze(FieldKeys.CadastreObjectId, element.Tid);
+        Ergaenze(FieldKeys.ShaftStructureType, element.Bauwerksart);
+        Ergaenze(FieldKeys.Street, element.Standortname);
+        Ergaenze(FieldKeys.GrossCost, element.Bruttokosten);
+        Ergaenze(FieldKeys.InfiltrationType, element.Versickerungsart);
+        Ergaenze(FieldKeys.InspectionYear, element.ZustandserhebungJahr);
 
         Ergaenze("Funktion", SchachtFunktionVokabular.Normalisieren(element.Funktion));
         Ergaenze("Material", SchachtMaterialVokabular.Normalisieren(element.Material));

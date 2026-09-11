@@ -1,4 +1,4 @@
-namespace AuswertungPro.Next.Domain.Models;
+﻿namespace AuswertungPro.Next.Domain.Models;
 
 /// <summary>
 /// Die Funktion eines Schachts — mit den Begriffen der Norm, an einer Stelle.
@@ -59,12 +59,9 @@ public static class SchachtFunktionVokabular
         // Entscheid Pascal 2026-08-29: alle drei gehen in der Datei auf "andere".
         // Im Programm bleibt der genaue Begriff stehen.
         //
-        // Fettabscheider ist eine bewusste Ausnahme: das Modell kennt ihn, der
-        // AWU-Bestand benutzt ihn in 64420 Schaechten aber kein einziges Mal.
-        // Folge: ein aus einer XTF gelesener "Fettabscheider" kaeme beim Schreiben
-        // als "andere" zurueck. Praktisch folgenlos - der Export schreibt nur
-        // handgeaenderte Felder, und der Wert kommt im Bestand nicht vor.
-        new(["fettabscheider"], "Fettabscheider", "andere"),
+        // Redesign-Nachpruefung: Fettabscheider besitzt einen eigenen Normwert.
+        // Die fruehere Verallgemeinerung wird fuer einen verlustfreien Export aufgehoben.
+        new(["fettabscheider"], "Fettabscheider", "Fettabscheider"),
         // Versickerung ist in SIA405 eine eigene Objektklasse, keine Schachtfunktion.
         new(["sickerschacht"], "Sickerschacht", "andere"),
         new(["spezialbauwerk"], "Spezialbauwerk", "andere")

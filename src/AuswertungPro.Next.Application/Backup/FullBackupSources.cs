@@ -28,4 +28,6 @@ public sealed record FullBackupSources(
     IReadOnlyDictionary<string, string> EnvironmentVariables,
     IReadOnlyList<string>? ProjectRoots = null,
     bool IncludeProjectVideos = false,
-    IReadOnlyList<string>? OptionalProjectRoots = null);
+    IReadOnlyList<string>? OptionalProjectRoots = null,
+    IReadOnlyList<string>? AdditionalRoots = null,
+    IReadOnlyList<BackupSingleFile>? ReferencedFiles = null);

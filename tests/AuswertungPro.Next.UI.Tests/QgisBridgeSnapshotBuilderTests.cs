@@ -599,7 +599,8 @@ public sealed class QgisBridgeSnapshotBuilderTests
         return project;
     }
 
-    private sealed class QgisBridgeFixture : IDisposable
+    // internal statt private: auch QgisLeerschemaTests baut damit echte Ebenen.
+    internal sealed class QgisBridgeFixture : IDisposable
     {
         private QgisBridgeFixture(string directory, string xtfPath, string cachePath)
         {

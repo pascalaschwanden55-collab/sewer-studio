@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using AuswertungPro.Next.Application.UseCases.Objektakten;
 using AuswertungPro.Next.Application.UseCases.Xtf;
 using AuswertungPro.Next.UI.Services;
 using CommunityToolkit.Mvvm.Input;
@@ -15,6 +16,15 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 /// </summary>
 public sealed partial class ExportPageViewModel
 {
+    private readonly AuswertungPro.Next.Application.Projects.IObjektaktenPaketService _objektaktenPakete;
+    private bool _xtfVollstaendig;
+    /// <summary>Der Abgleich bleibt Standard; Erstexport muss bewusst ausgewaehlt werden.</summary>
+    public bool XtfVollstaendig
+    {
+        get => _xtfVollstaendig;
+        set { if (SetProperty(ref _xtfVollstaendig, value)) OnPropertyChanged(nameof(XtfNurAenderungen)); }
+    }
+    public bool XtfNurAenderungen => !XtfVollstaendig;
     /// <summary>Oeffnet den Ausgabeordner der zuletzt geschriebenen XTF im Explorer.</summary>
     public IRelayCommand OeffneXtfOrdnerCommand { get; }
 
@@ -63,7 +73,8 @@ public sealed partial class ExportPageViewModel
 
         var ergebnis = XtfNeuErstellenUseCase.Execute(
             _xtfNeuExport,
-            new AuswertungPro.Next.Application.Xtf.XtfNeuExportRequest(_shell.Project, ziel),
+            new AuswertungPro.Next.Application.Xtf.XtfNeuExportRequest(_shell.Project, ziel,
+                NurAenderungen: XtfNurAenderungen, MitZusatzangaben: XtfNurAenderungen),
             XtfAktionen());
         Uebernimm(ergebnis);
     }
@@ -71,7 +82,7 @@ public sealed partial class ExportPageViewModel
     /// <summary>Was der Ablauf von der Oberflaeche braucht: Dateiwahl, Vorschaufenster, Fehlerfenster.</summary>
     private XtfExportActions XtfAktionen() => new(
         () => _dialogs.OpenFiles("Original-XTF für die Aktualisierung wählen", "XTF-Dateien (*.xtf)|*.xtf"),
-        _xtfVorschau.Bestaetige,
+        v => _xtfVorschau.Bestaetige(ObjektaktenExportBegleitung.Vorschau(_shell.Project, v)),
         _xtfVorschau.ZeigeFehler);
 
     private string? Zielordner(string frage)
@@ -89,7 +100,19 @@ public sealed partial class ExportPageViewModel
             return;
 
         LetzterXtfOrdner = ergebnis.Ordner;
-        _toasts.Success(ergebnis.Meldung, "Ordner öffnen", OeffneXtfOrdner);
+        try
+        {
+            var zusatz = ObjektaktenExportBegleitung.Schreibe(_objektaktenPakete, _shell.Project, ergebnis.Ordner);
+            LastResult = ergebnis.Meldung + zusatz;
+        }
+        catch (Exception ex)
+        {
+            LastResult = ergebnis.Meldung + "\nDie Objektakten-Zusatzdatei fehlt: "
+                + AuswertungPro.Next.Application.Common.UserError.DescribeAndReport(ex, "Objektakten exportieren");
+            _dialogs.Error(LastResult, "XTF-Ausgabe unvollständig");
+            return;
+        }
+        _toasts.Success(LastResult, "Ordner öffnen", OeffneXtfOrdner);
     }
 
     /// <summary>

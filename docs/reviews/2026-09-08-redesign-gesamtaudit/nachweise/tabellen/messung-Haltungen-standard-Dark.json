@@ -1,0 +1,145 @@
+{
+  "utc": "2026-09-08T04:38:25.6138371Z",
+  "theme": "Dark",
+  "seite": "Haltungen",
+  "variante": "standard",
+  "aktiveSpaltenansicht": "kompakt",
+  "spaltenSichtbar": 10,
+  "spalten": [
+    "HALTUNGSNAME (ID)",
+    "STRASSE",
+    "ROHRMATERIAL",
+    "LICHTE H\u00D6HE / DN MM",
+    "HALTUNGSL\u00C4NGE M",
+    "ZUSTANDSKLASSE",
+    "KI",
+    "PR\u00DCFUNG",
+    "VIDEO",
+    "PROTOKOLL"
+  ],
+  "zeilenhoehe": 34,
+  "datensaetze": 40,
+  "zellprobe": [
+    {
+      "spalte": "HALTUNGSNAME (ID)",
+      "zellBreite": 150,
+      "zellHoehe": 34,
+      "textBreite": 79,
+      "textHoehe": 19,
+      "ausrichtung": "Left",
+      "waagrecht": "Left",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    },
+    {
+      "spalte": "STRASSE",
+      "zellBreite": 120,
+      "zellHoehe": 34,
+      "textBreite": 98,
+      "textHoehe": 19,
+      "ausrichtung": "Left",
+      "waagrecht": "Left",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    },
+    {
+      "spalte": "ROHRMATERIAL",
+      "zellBreite": 100,
+      "zellHoehe": 34,
+      "textBreite": 97,
+      "textHoehe": 19,
+      "ausrichtung": "Left",
+      "waagrecht": "Stretch",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    },
+    {
+      "spalte": "LICHTE H\u00D6HE / DN MM",
+      "zellBreite": 72,
+      "zellHoehe": 34,
+      "textBreite": 24,
+      "textHoehe": 16,
+      "ausrichtung": "Right",
+      "waagrecht": "Right",
+      "schrift": "Cascadia Mono, Consolas, Courier New"
+    },
+    {
+      "spalte": "HALTUNGSL\u00C4NGE M",
+      "zellBreite": 72,
+      "zellHoehe": 34,
+      "textBreite": 32,
+      "textHoehe": 16,
+      "ausrichtung": "Right",
+      "waagrecht": "Right",
+      "schrift": "Cascadia Mono, Consolas, Courier New"
+    },
+    {
+      "spalte": "ZUSTANDSKLASSE",
+      "zellBreite": 72,
+      "zellHoehe": 34,
+      "textBreite": 14,
+      "textHoehe": 14,
+      "ausrichtung": "Left",
+      "waagrecht": "Center",
+      "schrift": "Cascadia Mono, Consolas, Courier New"
+    },
+    {
+      "spalte": "KI",
+      "zellBreite": 96,
+      "zellHoehe": 34,
+      "textBreite": 39,
+      "textHoehe": 16,
+      "ausrichtung": "Left",
+      "waagrecht": "Stretch",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    },
+    {
+      "spalte": "PR\u00DCFUNG",
+      "zellBreite": 150,
+      "zellHoehe": 34,
+      "textBreite": 81,
+      "textHoehe": 15,
+      "ausrichtung": "Left",
+      "waagrecht": "Stretch",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    },
+    {
+      "spalte": "VIDEO",
+      "zellBreite": 64,
+      "zellHoehe": 34,
+      "textBreite": 13,
+      "textHoehe": 13,
+      "ausrichtung": "Left",
+      "waagrecht": "Center",
+      "schrift": "Segoe Fluent Icons, Segoe MDL2 Assets"
+    },
+    {
+      "spalte": "PROTOKOLL",
+      "zellBreite": 89,
+      "zellHoehe": 34,
+      "textBreite": 19,
+      "textHoehe": 15,
+      "ausrichtung": "Left",
+      "waagrecht": "Stretch",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    }
+  ],
+  "width": 1920,
+  "height": 1080,
+  "zielFenster": "MainWindow",
+  "zielBreite": 1920,
+  "zielHoehe": 1080,
+  "primaryWidth": 1920,
+  "primaryHeight": 1080,
+  "dpiX": 96,
+  "dpiY": 96,
+  "fullRows": 15,
+  "viewportHoehe": 512,
+  "zeilenHoehen": [
+    36,
+    34,
+    34,
+    34,
+    34,
+    34
+  ],
+  "windowCount": 1,
+  "selected": "AuswertungPro.Next.Domain.Models.HaltungRecord"
+}

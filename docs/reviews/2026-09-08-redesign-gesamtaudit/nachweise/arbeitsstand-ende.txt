@@ -1,0 +1,30 @@
+﻿ M CLAUDE.md
+ M src/AuswertungPro.Next.Application/Xtf/IXtfNeuExportService.cs
+ M src/AuswertungPro.Next.Application/Xtf/XtfNeuObjekt.cs
+ M src/AuswertungPro.Next.Application/Xtf/XtfNeuPlanBuilder.cs
+ M src/AuswertungPro.Next.Application/Xtf/XtfNormschachtStammdaten.cs
+ M src/AuswertungPro.Next.Domain/Models/FieldKeys.cs
+ M src/AuswertungPro.Next.Infrastructure/AuswertungPro.Next.Infrastructure.csproj
+ M src/AuswertungPro.Next.Infrastructure/Import/Xtf/LegacyXtfImportService.Schaechte.cs
+ M src/AuswertungPro.Next.Infrastructure/Import/Xtf/LegacyXtfImportService.cs
+ M src/AuswertungPro.Next.Infrastructure/Import/Xtf/XtfNeuExportService.cs
+ M src/AuswertungPro.Next.Infrastructure/Import/Xtf/XtfNeuWriter.cs
+ M src/AuswertungPro.Next.UI/DataPage/GridDropdownFieldPolicy.cs
+ M src/AuswertungPro.Next.UI/DataPage/SchaechteColumnPolicy.cs
+ M src/AuswertungPro.Next.UI/ViewModels/Pages/ExportPageViewModel.Xtf.cs
+ M src/AuswertungPro.Next.UI/ViewModels/Pages/SchaechtePageViewModel.cs
+ M src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml
+ M src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml.cs
+ M tests/AuswertungPro.Next.UI.Tests/ExportPageXtfAuswahlTests.cs
+?? Ausgaben/
+?? docs/reviews/2026-09-07-redesign-pruefung/
+?? docs/reviews/2026-09-08-redesign-gesamtaudit/
+?? src/AuswertungPro.Next.Application/Xtf/XtfAenderungsPlanBuilder.cs
+?? src/AuswertungPro.Next.Application/Xtf/XtfBauwerkFelder.cs
+?? src/AuswertungPro.Next.Application/Xtf/XtfZusatzangaben.cs
+?? src/AuswertungPro.Next.Domain/Models/AbwasserbauwerkVokabular.cs
+?? src/AuswertungPro.Next.Infrastructure/Import/Xtf/Models/
+?? src/AuswertungPro.Next.Infrastructure/Import/Xtf/XtfZusatzReader.cs
+?? src/AuswertungPro.Next.Infrastructure/Import/Xtf/XtfZusatzWriter.cs
+?? tests/AuswertungPro.Next.Infrastructure.Tests/XtfAenderungsExportTests.cs
+?? tests/AuswertungPro.Next.Infrastructure.Tests/XtfBauwerksartenExportTests.cs

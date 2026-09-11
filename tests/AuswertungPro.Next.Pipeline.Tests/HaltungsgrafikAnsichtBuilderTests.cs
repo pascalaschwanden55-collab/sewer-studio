@@ -12,6 +12,25 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 public sealed class HaltungsgrafikAnsichtBuilderTests
 {
     [Fact]
+    public void Gegenfahrt_behaelt_Fotos_beim_Spiegeln_und_Sortieren_am_Ereignis()
+    {
+        var record = Haltung();
+        record.SetFieldValue(FieldKeys.HoldingLengthMeters, "30", FieldSource.Manual, false);
+        var entries = record.Protocol!.Current.Entries;
+        entries.Clear();
+        entries.Add(new ProtocolEntry { Code = "BAB", MeterStart = 2, FotoPaths = ["hin.jpg"] });
+        entries.Add(new ProtocolEntry { Code = "BDC", MeterStart = 10 });
+        entries.Add(new ProtocolEntry { Code = "BCD", MeterStart = 0, FotoPaths = ["gegen-start.jpg"] });
+        entries.Add(new ProtocolEntry { Code = "BAB", MeterStart = 5, FotoPaths = ["gegen-riss.jpg"] });
+        var grafik = HaltungsgrafikAnsichtBuilder.BaueUebersicht(record, null, 700)!;
+        var mitFoto = grafik.Marken.Where(m => m.FotoPaths.Count > 0).ToArray();
+        Assert.Equal(new[] { "hin.jpg", "gegen-riss.jpg", "gegen-start.jpg" }, mitFoto.Select(m => m.FotoPaths.Single()));
+        Assert.True(mitFoto[0].Y < mitFoto[1].Y && mitFoto[1].Y < mitFoto[2].Y);
+        Assert.Equal(5, entries[3].MeterStart);
+        Assert.Equal("gegen-riss.jpg", entries[3].FotoPaths.Single());
+    }
+
+    [Fact]
     public void Ohne_Datensatz_gibt_es_keine_Grafik()
     {
         Assert.Null(HaltungsgrafikAnsichtBuilder.Baue(null, catalog: null, hoehe: 700));

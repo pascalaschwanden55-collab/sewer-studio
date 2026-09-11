@@ -1,0 +1,176 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="SewerStudio" VERSION="2.3">
+    <MODELS>
+      <MODEL NAME="SIA405_ABWASSER_2020_LV95" URI="http://www.sia.ch/405" VERSION="26.06.2021" />
+      <MODEL NAME="SIA405_Base_Abwasser_LV95" URI="http://www.vsa.ch/models" VERSION="03.11.2020" />
+      <MODEL NAME="SewerStudio_Zusatz_2026" URI="mailto:Pascal.Aschwanden@abwasser-uri.ch" VERSION="2026-09-07" />
+    </MODELS>
+    <ALIAS>
+      <ENTRIES FOR="SIA405_ABWASSER_2020_LV95" />
+    </ALIAS>
+    <COMMENT>Aenderungslieferung aus SewerStudio; nur Aenderung-Eintraege erlauben Updates: 1 Haltungen, 1 Schaechte.</COMMENT>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="chB0000000000001">
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="ch23h1a4Umcgr2UF">
+        <Letzte_Aenderung>20260907</Letzte_Aenderung>
+        <BaulicherZustand>Z4</BaulicherZustand>
+        <Bezeichnung>78998</Bezeichnung>
+        <Dimension1>1100</Dimension1>
+        <Dimension2>900</Dimension2>
+        <Funktion>Kontroll_Einsteigschacht</Funktion>
+        <Material>Beton</Material>
+        <DatenherrRef REF="chSSTC780E01CA45" />
+        <DatenlieferantRef REF="chSSTC780E01CA45" />
+        <EigentuemerRef REF="chSSTFE622B1DA05" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="ch23h1a4ftlGdbHU">
+        <Letzte_Aenderung>20260907</Letzte_Aenderung>
+        <Bezeichnung>78998</Bezeichnung>
+        <AbwasserbauwerkRef REF="ch23h1a4Umcgr2UF" />
+        <DatenherrRef REF="chSSTC780E01CA45" />
+        <DatenlieferantRef REF="chSSTC780E01CA45" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil TID="chSST85A7B5DBDB1">
+        <Letzte_Aenderung>20260907</Letzte_Aenderung>
+        <Bezeichnung>Kreisprofil</Bezeichnung>
+        <HoehenBreitenverhaeltnis>1</HoehenBreitenverhaeltnis>
+        <Profiltyp>Kreisprofil</Profiltyp>
+        <DatenherrRef REF="chSSTC780E01CA45" />
+        <DatenlieferantRef REF="chSSTC780E01CA45" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt TID="ch23h1a4CNjzeqBU">
+        <Letzte_Aenderung>20260907</Letzte_Aenderung>
+        <Bezeichnung>A75394</Bezeichnung>
+        <AbwassernetzelementRef REF="ch23h1a4ftlGdbHU" />
+        <DatenherrRef REF="chSSTC780E01CA45" />
+        <DatenlieferantRef REF="chSSTC780E01CA45" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt TID="ch23h1a44Op5RVY5">
+        <Letzte_Aenderung>20260907</Letzte_Aenderung>
+        <Bezeichnung>E75394</Bezeichnung>
+        <DatenherrRef REF="chSSTC780E01CA45" />
+        <DatenlieferantRef REF="chSSTC780E01CA45" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="ch23h1a46oVbkGmT">
+        <Letzte_Aenderung>20260907</Letzte_Aenderung>
+        <BaulicherZustand>Z0</BaulicherZustand>
+        <Bemerkung>Das ist ein Test</Bemerkung>
+        <Bezeichnung>78998-79002</Bezeichnung>
+        <DatenherrRef REF="chSSTC780E01CA45" />
+        <DatenlieferantRef REF="chSSTC780E01CA45" />
+        <EigentuemerRef REF="chSSTFE622B1DA05" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="ch23h1a4uL3A2Sjp">
+        <Letzte_Aenderung>20260907</Letzte_Aenderung>
+        <Bezeichnung>78998-79002</Bezeichnung>
+        <LaengeEffektiv>8.66</LaengeEffektiv>
+        <Lichte_Hoehe>100</Lichte_Hoehe>
+        <Material>Zement</Material>
+        <RohrprofilRef REF="chSST85A7B5DBDB1" />
+        <vonHaltungspunktRef REF="ch23h1a4CNjzeqBU" />
+        <nachHaltungspunktRef REF="ch23h1a44Op5RVY5" />
+        <AbwasserbauwerkRef REF="ch23h1a46oVbkGmT" />
+        <DatenherrRef REF="chSSTC780E01CA45" />
+        <DatenlieferantRef REF="chSSTC780E01CA45" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+    <SIA405_Base_Abwasser_LV95.Administration BID="chB0000000000002">
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="chSSTFE622B1DA05">
+        <Letzte_Aenderung>20260907</Letzte_Aenderung>
+        <Bezeichnung>Privat</Bezeichnung>
+        <Organisationstyp>Privat</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="chSSTC780E01CA45">
+        <Letzte_Aenderung>20260907</Letzte_Aenderung>
+        <Bezeichnung>Abwasser Uri</Bezeichnung>
+        <Organisationstyp>Abwasserverband</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+    </SIA405_Base_Abwasser_LV95.Administration>
+    <SewerStudio_Zusatz_2026.Zusatzdaten BID="chB0000000000003">
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSSTDF8599DEBE0">
+        <ObjektTid>ch23h1a46oVbkGmT</ObjektTid>
+        <Feld>BaulicherZustand</Feld>
+        <GeaendertAm>2026-09-03T08:30:00.2398526Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSST626C1505B60">
+        <ObjektTid>ch23h1a46oVbkGmT</ObjektTid>
+        <Feld>Bemerkung</Feld>
+        <GeaendertAm>2026-09-03T08:49:43.5203487Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSST6B425008988">
+        <ObjektTid>ch23h1a4Umcgr2UF</ObjektTid>
+        <Feld>BaulicherZustand</Feld>
+        <GeaendertAm>2026-09-03T10:38:28.3723677Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSST2347376C22B">
+        <ObjektTid>ch23h1a4Umcgr2UF</ObjektTid>
+        <Feld>Dimension1</Feld>
+        <GeaendertAm>2026-09-03T09:47:36.3864567Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSST99C674EF673">
+        <ObjektTid>ch23h1a4Umcgr2UF</ObjektTid>
+        <Feld>Dimension2</Feld>
+        <GeaendertAm>2026-09-03T09:47:36.3864567Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSST45D99FE14C5">
+        <ObjektTid>ch23h1a4Umcgr2UF</ObjektTid>
+        <Feld>Funktion</Feld>
+        <GeaendertAm>2026-09-03T09:20:38.2339101Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSST65B726AA7E0">
+        <ObjektTid>ch23h1a4Umcgr2UF</ObjektTid>
+        <Feld>Material</Feld>
+        <GeaendertAm>2026-09-03T14:21:59.7461354Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSSTC79A256B493">
+        <ObjektTid>ch23h1a4Umcgr2UF</ObjektTid>
+        <Feld>Schachtform</Feld>
+        <Wert>Oval</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSST6CD6F9D00F6">
+        <ObjektTid>ch23h1a4Umcgr2UF</ObjektTid>
+        <Feld>Zusatz:Schachtform</Feld>
+        <GeaendertAm>2026-09-03T13:15:53.2171864Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSST14FD6F162B9">
+        <ObjektTid>ch23h1a4uL3A2Sjp</ObjektTid>
+        <Feld>LaengeEffektiv</Feld>
+        <GeaendertAm>2026-09-03T08:48:57.3114331Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSST8A03DB0B11F">
+        <ObjektTid>ch23h1a4uL3A2Sjp</ObjektTid>
+        <Feld>Lichte_Hoehe</Feld>
+        <GeaendertAm>2026-09-03T08:30:18.3280663Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSSTF8F5964C99B">
+        <ObjektTid>ch23h1a4uL3A2Sjp</ObjektTid>
+        <Feld>Material</Feld>
+        <GeaendertAm>2026-09-03T08:30:14.1684138Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSSTE5CC470429E">
+        <ObjektTid>ch23h1a4uL3A2Sjp</ObjektTid>
+        <Feld>Lichte_Breite_mm</Feld>
+        <Wert>100</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSSTF8CCBFD9B7C">
+        <ObjektTid>ch23h1a4uL3A2Sjp</ObjektTid>
+        <Feld>Zusatz:Lichte_Breite_mm</Feld>
+        <GeaendertAm>2026-09-03T14:20:08.8758556Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="chSST38D668DC787">
+        <ObjektTid>ch23h1a4uL3A2Sjp</ObjektTid>
+        <Feld>Profiltyp</Feld>
+        <Wert>Kreisprofil</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung TID="chSST4AA69A07F3B">
+        <ObjektTid>ch23h1a4uL3A2Sjp</ObjektTid>
+        <Feld>Zusatz:Profiltyp</Feld>
+        <GeaendertAm>2026-09-03T14:21:25.1865726Z</GeaendertAm>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Aenderung>
+    </SewerStudio_Zusatz_2026.Zusatzdaten>
+  </DATASECTION>
+</TRANSFER>

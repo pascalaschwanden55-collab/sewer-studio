@@ -4,6 +4,10 @@
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Import\Xtf\Models\SewerStudio_Zusatz_2026.ili" />
+    <EmbeddedResource Include="Import\Xtf\Models\Dss\*.ili" LogicalName="Dss.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\AuswertungPro.Next.Domain\AuswertungPro.Next.Domain.csproj" />
     <ProjectReference Include="..\AuswertungPro.Next.Application\AuswertungPro.Next.Application.csproj" />
   </ItemGroup>

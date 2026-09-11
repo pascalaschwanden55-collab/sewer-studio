@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 using Xunit;
 
@@ -7,12 +7,12 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class SchaechteColumnViewCatalogTests
 {
     [Fact]
-    public void Fuenf_Ansichten_mit_der_Schachtnummer_in_jeder()
+    public void Sechs_Ansichten_einschliesslich_Stammdaten_mit_der_Schachtnummer_in_jeder()
     {
-        Assert.Equal(new[] { "kompakt", "zustand", "sanierung", "medien", "alle" }, SchaechteColumnViewCatalog.Views.Select(v => v.Key).ToArray());
+        Assert.Equal(new[] { "kompakt", "stammdaten", "zustand", "sanierung", "medien", "alle" }, SchaechteColumnViewCatalog.Views.Select(v => v.Key).ToArray());
         foreach (var v in SchaechteColumnViewCatalog.Views.Where(v => v.Felder is not null))
             Assert.Contains("Schachtnummer", v.Felder!);
-        Assert.Equal(9, SchaechteColumnViewCatalog.Resolve("kompakt").Felder!.Count);
+        Assert.Equal(10, SchaechteColumnViewCatalog.Resolve("kompakt").Felder!.Count);
     }
 
     [Fact]

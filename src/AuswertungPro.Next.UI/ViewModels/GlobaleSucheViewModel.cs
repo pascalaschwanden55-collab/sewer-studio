@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using AuswertungPro.Next.Application.UseCases.Suche;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
@@ -8,9 +9,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace AuswertungPro.Next.UI.ViewModels;
 
 /// <summary>Suchfeld der Kopfzeile (Strg+K). Sucht live; ein gewaehlter Treffer springt zur Seite.</summary>
-public sealed partial class GlobaleSucheViewModel : ObservableObject
+public sealed partial class GlobaleSucheViewModel : ObservableObject, IDisposable
 {
     private readonly ShellViewModel _shell;
+    private bool _disposed;
     [ObservableProperty] private string _text = string.Empty;
     [ObservableProperty] private bool _listeOffen;
     /// <summary>Ueber Pfeiltasten markierter Index (Inventar 3.5); -1 = keine Markierung.</summary>
@@ -18,7 +20,40 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject
     public ObservableCollection<GlobaleSucheTreffer> Treffer { get; } = new();
     public string LeerText => Text.Trim().Length == 0 ? "Name, Nummer oder Strasse eingeben." : Treffer.Count == 0 ? "Kein Treffer" : string.Empty;
 
-    public GlobaleSucheViewModel(ShellViewModel shell) => _shell = shell;
+    public GlobaleSucheViewModel(ShellViewModel shell)
+    {
+        _shell = shell;
+        _shell.PropertyChanged += OnShellGeaendert;
+    }
+
+    /// <summary>
+    /// R1 (Gesamtaudit 08.09.2026): Ein Treffer zeigt direkt auf einen Datensatz. Wechselt das
+    /// Projekt, gehoert er zum alten Bestand und wuerde beim Anklicken ein Objekt oeffnen, das
+    /// im offenen Projekt gar nicht existiert. Die Liste wird deshalb verworfen.
+    /// </summary>
+    private void OnShellGeaendert(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not (nameof(ShellViewModel.Project) or nameof(ShellViewModel.IsProjectReady)))
+            return;
+
+        Verwerfe();
+    }
+
+    private void Verwerfe()
+    {
+        // Ein nicht leeres Feld sucht ueber OnTextChanged sofort im neuen Bestand weiter;
+        // hier wird es geleert, damit kein alter Treffer sichtbar bleibt.
+        if (Text.Length != 0)
+        {
+            Text = string.Empty;
+            return;
+        }
+
+        Treffer.Clear();
+        ListeOffen = false;
+        MarkiertIndex = -1;
+        OnPropertyChanged(nameof(LeerText));
+    }
 
     partial void OnTextChanged(string value)
     {
@@ -35,6 +70,15 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject
     public void Waehle(GlobaleSucheTreffer? treffer)
     {
         if (treffer is null) return;
+
+        // Zweite Sicherung zu OnShellGeaendert: Zwischen Anzeige und Klick kann das Projekt
+        // gewechselt haben. Ein fremder Datensatz wird nie geoeffnet.
+        if (!GehoertZumOffenenProjekt(treffer))
+        {
+            Verwerfe();
+            return;
+        }
+
         switch (treffer.Art)
         {
             case GlobaleSucheArt.Haltung: _shell.NavigateToHolding(treffer.Ziel as HaltungRecord); break;
@@ -43,6 +87,24 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject
         }
         ListeOffen = false;
         Text = string.Empty;
+    }
+
+    /// <summary>
+    /// Haltung und Schacht sind Objektverweise und muessen im offenen Projekt liegen. Die
+    /// Strasse ist nur ein Filtertext; sie fuehrt hoechstens zu einer leeren Liste.
+    /// </summary>
+    private bool GehoertZumOffenenProjekt(GlobaleSucheTreffer treffer)
+    {
+        if (!_shell.IsProjectReady)
+            return false;
+
+        return treffer.Ziel switch
+        {
+            HaltungRecord haltung => _shell.Project.Data.Contains(haltung),
+            SchachtRecord schacht => _shell.Project.SchaechteData.Contains(schacht),
+            string => true,
+            _ => false
+        };
     }
 
     /// <summary>Pfeiltaste unten: naechsten Treffer markieren (Inventar 3.5).</summary>
@@ -65,5 +127,13 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject
         if (Treffer.Count == 0) return;
         var index = MarkiertIndex >= 0 && MarkiertIndex < Treffer.Count ? MarkiertIndex : 0;
         Waehle(Treffer[index]);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+        _shell.PropertyChanged -= OnShellGeaendert;
     }
 }

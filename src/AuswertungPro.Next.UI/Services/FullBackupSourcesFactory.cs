@@ -22,6 +22,7 @@ public sealed class FullBackupSourcesProvider : IFullBackupSourcesProvider
     private readonly Func<IDictionary> _getEnvironmentVariables;
     private readonly string _baseDirectory;
     private readonly string _appVersion;
+    private readonly Func<IReadOnlyList<string>> _getAdditionalRoots;
 
     public FullBackupSourcesProvider(
         IRepositoryRootLocator repositoryRootLocator,
@@ -30,7 +31,8 @@ public sealed class FullBackupSourcesProvider : IFullBackupSourcesProvider
         Func<Environment.SpecialFolder, string>? getFolderPath = null,
         Func<IDictionary>? getEnvironmentVariables = null,
         string? baseDirectory = null,
-        string? appVersion = null)
+        string? appVersion = null,
+        Func<IReadOnlyList<string>>? getAdditionalRoots = null)
     {
         _repositoryRootLocator = repositoryRootLocator
             ?? throw new ArgumentNullException(nameof(repositoryRootLocator));
@@ -40,6 +42,7 @@ public sealed class FullBackupSourcesProvider : IFullBackupSourcesProvider
         _getEnvironmentVariables = getEnvironmentVariables ?? Environment.GetEnvironmentVariables;
         _baseDirectory = baseDirectory ?? AppContext.BaseDirectory;
         _appVersion = appVersion ?? AppIdentity.Version;
+        _getAdditionalRoots = getAdditionalRoots ?? (() => []);
     }
 
     public FullBackupSources Resolve(AppSettings? settings = null)
@@ -59,8 +62,9 @@ public sealed class FullBackupSourcesProvider : IFullBackupSourcesProvider
             AppVersion: _appVersion,
             EnvironmentVariables: BuildEnvironmentSnapshot(),
             ProjectRoots: projectRoots.Required,
-            IncludeProjectVideos: settings?.FullBackupIncludeProjectVideos ?? false,
-            OptionalProjectRoots: projectRoots.Optional);
+            IncludeProjectVideos: settings?.FullBackupIncludeProjectVideos ?? true,
+            OptionalProjectRoots: projectRoots.Optional,
+            AdditionalRoots: _getAdditionalRoots());
     }
 
     private static ProjectRootSelection BuildProjectRoots(AppSettings? settings)

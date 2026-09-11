@@ -1,0 +1,15 @@
+﻿{
+    "commit":  "8054e9ebdda19b6d31710e15752173e115e29ffa",
+    "ui":  {
+               "gesamt":  "6532",
+               "fehlgeschlagen":  "0",
+               "bestanden":  "6522",
+               "uebersprungen":  10
+           },
+    "regeln":  {
+                   "gesamt":  "61",
+                   "fehlgeschlagen":  "0",
+                   "bestanden":  "61"
+               },
+    "bilder":  36
+}

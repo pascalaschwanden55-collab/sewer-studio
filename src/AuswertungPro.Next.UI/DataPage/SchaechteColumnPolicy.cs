@@ -68,6 +68,12 @@ internal static class SchaechteColumnPolicy
     public static string? ResolveOptionField(string columnName)
     {
         var normalized = Normalize(columnName);
+        if (normalized is "funktion" or "schachtfunktion") return "Funktion";
+        if (normalized is "material" or "schachtmaterial") return "Material";
+        if (normalized == "status") return FieldKeys.OperatingStatus;
+        if (normalized == "sanierungsbedarf") return FieldKeys.RehabilitationNeed;
+        if (normalized == "bauwerksart") return FieldKeys.ShaftStructureType;
+        if (normalized == "versickerungsart") return FieldKeys.InfiltrationType;
 
         if (normalized.Contains("schachtform", StringComparison.Ordinal)
             || string.Equals(normalized, "form", StringComparison.Ordinal))
@@ -127,7 +133,7 @@ internal static class SchaechteColumnPolicy
 
         var gefaltet = SchachtFeldnamen.Falte(columnName);
         if (string.Equals(gefaltet, SchachtFeldnamen.Falte(FieldKeys.GeonisId), StringComparison.Ordinal))
-            return "GEONIS-Kennung";
+            return "SIA405-TID";
 
         if (string.Equals(
                 gefaltet,
@@ -182,6 +188,7 @@ internal static class SchaechteColumnPolicy
 
     public static string ResolveSchachtDetailGroup(string columnName)
     {
+        if (SchachtDetailGruppen.Fuer(columnName) is { } gruppe) return gruppe;
         var normalized = Normalize(columnName);
 
         if (ContainsAny(normalized, "kosten", "sanier", "renovierung", "reparatur", "erneuerung", "anschluss"))

@@ -1,0 +1,18 @@
+{
+  "utc": "2026-09-08T04:39:52.4040012Z",
+  "theme": "Dark",
+  "seite": "Import",
+  "width": 1280,
+  "height": 720,
+  "zielFenster": "MainWindow",
+  "zielBreite": 1280,
+  "zielHoehe": 720,
+  "primaryWidth": 1920,
+  "primaryHeight": 1080,
+  "dpiX": 96,
+  "dpiY": 96,
+  "fullRows": 0,
+  "windowCount": 1,
+  "selected": null,
+  "severityButtons": []
+}

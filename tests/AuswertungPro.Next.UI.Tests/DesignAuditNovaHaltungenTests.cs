@@ -208,7 +208,7 @@ public sealed class DesignAuditNovaHaltungenTests
         Assert.Contains("Keine Haltung gewählt. Links eine Zeile wählen.", xaml);
 
         // Der ganze Inhalt haengt an einem einzigen Sichtbarkeitsschalter: Record == null.
-        var inhalt = Regex.Match(xaml, @"<ScrollViewer x:Name=""Inhalt""[\s\S]*?</ScrollViewer.Style>");
+        var inhalt = Regex.Match(xaml, @"<Grid x:Name=""Inhalt""[\s\S]*?</Grid.Style>");
         Assert.True(inhalt.Success, "Inhalt der Uebersicht braucht einen eigenen Sichtbarkeitsschalter");
         Assert.Contains("<DataTrigger Binding=\"{Binding Record, ElementName=Root}\" Value=\"{x:Null}\">", inhalt.Value);
         Assert.Contains("<Setter Property=\"Visibility\" Value=\"Collapsed\"/>", inhalt.Value);

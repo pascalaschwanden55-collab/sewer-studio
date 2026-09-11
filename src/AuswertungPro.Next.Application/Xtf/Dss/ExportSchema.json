@@ -1,0 +1,2069 @@
+{
+  "Sources": {
+    "Base_d-20181005.ili": "f92558708c6a2ce3a2747918f84d781dbbcf1ef6965d001b4a4cfe6e9cac650d",
+    "Base_2020_1.ili": "d368a421e126dd7aba8d4cac27761089469590a4d0fcaed4d47f55241f0a63c6",
+    "DSS_2020_1_LV95.ili": "88d7114844a16e46b0633be4dbe714466ff078069e7bf0823ed38cd20c40609f"
+  },
+  "Classes": {
+    "Kanal": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Akten": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 255
+      },
+      "Baujahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "BaulicherZustand": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "unbekannt",
+          "Z0",
+          "Z1",
+          "Z2",
+          "Z3",
+          "Z4"
+        ]
+      },
+      "Baulos": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 41
+      },
+      "Bruttokosten": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Detailgeometrie": {
+        "Required": false,
+        "Kind": "Structure"
+      },
+      "Dringlichkeitszahl": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "400",
+        "Decimals": 0
+      },
+      "Ersatzjahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "Finanzierung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "oeffentlich",
+          "privat",
+          "unbekannt"
+        ]
+      },
+      "Inspektionsintervall": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "20.00",
+        "Decimals": 2
+      },
+      "Sanierungsbedarf": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "dringend",
+          "keiner",
+          "kurzfristig",
+          "langfristig",
+          "mittelfristig",
+          "unbekannt"
+        ]
+      },
+      "Standortname": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Status": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ausser_Betrieb",
+          "in_Betrieb",
+          "tot",
+          "unbekannt",
+          "weitere",
+          "in_Betrieb.provisorisch",
+          "in_Betrieb.wird_aufgehoben",
+          "tot.aufgehoben_nicht_verfuellt",
+          "tot.aufgehoben_unbekannt",
+          "tot.verfuellt",
+          "weitere.Berechnungsvariante",
+          "weitere.geplant",
+          "weitere.Projekt"
+        ]
+      },
+      "Subventionen": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "WBW_Basisjahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "WBW_Bauart": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Feld",
+          "Sanierungsleitung_Bagger",
+          "Sanierungsleitung_Grabenfraese",
+          "Strasse",
+          "unbekannt"
+        ]
+      },
+      "Wiederbeschaffungswert": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Zugaenglichkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ueberdeckt",
+          "unbekannt",
+          "unzugaenglich",
+          "zugaenglich"
+        ]
+      },
+      "Zustandserhebung_Jahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "Zustandsnote": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "4.00",
+        "Decimals": 2
+      },
+      "Bettung_Umhuellung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "erdverlegt",
+          "in_Kanal_aufgehaengt",
+          "in_Kanal_einbetoniert",
+          "in_Leitungsgang",
+          "in_Vortriebsrohr_Beton",
+          "in_Vortriebsrohr_Stahl",
+          "Sand",
+          "SIA_Typ1",
+          "SIA_Typ2",
+          "SIA_Typ3",
+          "SIA_Typ4",
+          "Sohlbrett",
+          "unbekannt"
+        ]
+      },
+      "FunktionHierarchisch": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "PAA.andere",
+          "PAA.Gewaesser",
+          "PAA.Hauptsammelkanal",
+          "PAA.Hauptsammelkanal_regional",
+          "PAA.Liegenschaftsentwaesserung",
+          "PAA.Sammelkanal",
+          "PAA.Sanierungsleitung",
+          "PAA.Strassenentwaesserung",
+          "PAA.unbekannt",
+          "SAA.andere",
+          "SAA.Liegenschaftsentwaesserung",
+          "SAA.Sanierungsleitung",
+          "SAA.Strassenentwaesserung",
+          "SAA.unbekannt"
+        ]
+      },
+      "FunktionHydraulisch": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Drainagetransportleitung",
+          "Drosselleitung",
+          "Duekerleitung",
+          "Freispiegelleitung",
+          "Pumpendruckleitung",
+          "Sickerleitung",
+          "Speicherleitung",
+          "Spuelleitung",
+          "unbekannt",
+          "Vakuumleitung",
+          "Versickerungsleitung"
+        ]
+      },
+      "FunktionMelioration": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "Hauptkanal",
+          "Sammelkanal",
+          "Sauger",
+          "unbekannt"
+        ]
+      },
+      "Nutzungsart_geplant": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Bachwasser",
+          "entlastetes_Mischabwasser",
+          "Industrieabwasser",
+          "Mischabwasser",
+          "Niederschlagsabwasser",
+          "Reinabwasser",
+          "Schmutzabwasser",
+          "unbekannt"
+        ]
+      },
+      "Nutzungsart_Ist": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Bachwasser",
+          "entlastetes_Mischabwasser",
+          "Industrieabwasser",
+          "Mischabwasser",
+          "Niederschlagsabwasser",
+          "Reinabwasser",
+          "Schmutzabwasser",
+          "unbekannt"
+        ]
+      },
+      "Rohrlaenge": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "30000.00",
+        "Decimals": 2
+      },
+      "Sickerung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Holzschnitzel",
+          "Sickerkies",
+          "unbekannt"
+        ]
+      },
+      "Spuelintervall": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "20.00",
+        "Decimals": 2
+      },
+      "Verbindungsart": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Elektroschweissmuffen",
+          "Flachmuffen",
+          "Flansch",
+          "Glockenmuffen",
+          "Kupplung",
+          "Schraubmuffen",
+          "spiegelgeschweisst",
+          "Spitzmuffen",
+          "Steckmuffen",
+          "Ueberschiebmuffen",
+          "unbekannt",
+          "Vortriebsrohrkupplung"
+        ]
+      }
+    },
+    "Normschacht": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Akten": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 255
+      },
+      "Baujahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "BaulicherZustand": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "unbekannt",
+          "Z0",
+          "Z1",
+          "Z2",
+          "Z3",
+          "Z4"
+        ]
+      },
+      "Baulos": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Bruttokosten": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Detailgeometrie": {
+        "Required": false,
+        "Kind": "Structure"
+      },
+      "Dringlichkeitszahl": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "400",
+        "Decimals": 0
+      },
+      "Ersatzjahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "Finanzierung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "oeffentlich",
+          "privat",
+          "unbekannt"
+        ]
+      },
+      "Inspektionsintervall": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "20.00",
+        "Decimals": 2
+      },
+      "Sanierungsbedarf": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "dringend",
+          "keiner",
+          "kurzfristig",
+          "langfristig",
+          "mittelfristig",
+          "unbekannt"
+        ]
+      },
+      "Standortname": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Status": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ausser_Betrieb",
+          "in_Betrieb",
+          "tot",
+          "unbekannt",
+          "weitere",
+          "in_Betrieb.provisorisch",
+          "in_Betrieb.wird_aufgehoben",
+          "tot.aufgehoben_nicht_verfuellt",
+          "tot.aufgehoben_unbekannt",
+          "tot.verfuellt",
+          "weitere.Berechnungsvariante",
+          "weitere.geplant",
+          "weitere.Projekt"
+        ]
+      },
+      "Subventionen": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "WBW_Basisjahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "WBW_Bauart": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Feld",
+          "Sanierungsleitung_Bagger",
+          "Sanierungsleitung_Grabenfraese",
+          "Strasse",
+          "unbekannt"
+        ]
+      },
+      "Wiederbeschaffungswert": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Zugaenglichkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ueberdeckt",
+          "unbekannt",
+          "unzugaenglich",
+          "zugaenglich"
+        ]
+      },
+      "Zustandserhebung_Jahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "Zustandsnote": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "4.00",
+        "Decimals": 2
+      },
+      "Amphibienausstieg": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ja",
+          "nein",
+          "unbekannt"
+        ]
+      },
+      "Dimension1": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "4000",
+        "Decimals": 0
+      },
+      "Dimension2": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "4000",
+        "Decimals": 0
+      },
+      "Funktion": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "Absturzbauwerk",
+          "andere",
+          "Be_Entlueftung",
+          "Behandlungsanlage",
+          "Bodenablauf",
+          "Dachwasserschacht",
+          "Einlaufschacht",
+          "Entwaesserungsrinne",
+          "Entwaesserungsrinne_mit_Schlammsack",
+          "Fettabscheider",
+          "Geleiseschacht",
+          "Kombischacht",
+          "Kontroll_Einsteigschacht",
+          "Oelabscheider",
+          "Pumpwerk",
+          "Regenueberlauf",
+          "Schlammsammler",
+          "Schwimmstoffabscheider",
+          "Spuelschacht",
+          "Trennbauwerk",
+          "unbekannt",
+          "Vorbehandlungsanlage"
+        ]
+      },
+      "Interventionsmoeglichkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ja",
+          "nein",
+          "unbekannt"
+        ]
+      },
+      "Material": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Beton",
+          "Kunststoff",
+          "unbekannt"
+        ]
+      },
+      "Oberflaechenzulauf": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "keiner",
+          "Rost",
+          "unbekannt",
+          "Zulauf_seitlich"
+        ]
+      }
+    },
+    "Spezialbauwerk": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Akten": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 255
+      },
+      "Baujahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "BaulicherZustand": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "unbekannt",
+          "Z0",
+          "Z1",
+          "Z2",
+          "Z3",
+          "Z4"
+        ]
+      },
+      "Baulos": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Bruttokosten": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Detailgeometrie": {
+        "Required": false,
+        "Kind": "Structure"
+      },
+      "Dringlichkeitszahl": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "400",
+        "Decimals": 0
+      },
+      "Ersatzjahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "Finanzierung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "oeffentlich",
+          "privat",
+          "unbekannt"
+        ]
+      },
+      "Inspektionsintervall": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "20.00",
+        "Decimals": 2
+      },
+      "Sanierungsbedarf": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "dringend",
+          "keiner",
+          "kurzfristig",
+          "langfristig",
+          "mittelfristig",
+          "unbekannt"
+        ]
+      },
+      "Standortname": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Status": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ausser_Betrieb",
+          "in_Betrieb",
+          "tot",
+          "unbekannt",
+          "weitere",
+          "in_Betrieb.provisorisch",
+          "in_Betrieb.wird_aufgehoben",
+          "tot.aufgehoben_nicht_verfuellt",
+          "tot.aufgehoben_unbekannt",
+          "tot.verfuellt",
+          "weitere.Berechnungsvariante",
+          "weitere.geplant",
+          "weitere.Projekt"
+        ]
+      },
+      "Subventionen": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "WBW_Basisjahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "WBW_Bauart": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Feld",
+          "Sanierungsleitung_Bagger",
+          "Sanierungsleitung_Grabenfraese",
+          "Strasse",
+          "unbekannt"
+        ]
+      },
+      "Wiederbeschaffungswert": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Zugaenglichkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ueberdeckt",
+          "unbekannt",
+          "unzugaenglich",
+          "zugaenglich"
+        ]
+      },
+      "Zustandserhebung_Jahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "Zustandsnote": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "4.00",
+        "Decimals": 2
+      },
+      "Amphibienausstieg": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ja",
+          "nein",
+          "unbekannt"
+        ]
+      },
+      "Bypass": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "nicht_vorhanden",
+          "unbekannt",
+          "vorhanden"
+        ]
+      },
+      "Funktion": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "abflussloseGrube",
+          "Absturzbauwerk",
+          "Abwasserfaulraum",
+          "andere",
+          "Be_Entlueftung",
+          "Behandlungsanlage",
+          "Duekerkammer",
+          "Duekeroberhaupt",
+          "Faulgrube",
+          "Fettabscheider",
+          "Gelaendemulde",
+          "Geschiebefang",
+          "Guellegrube",
+          "Havariebecken",
+          "Klaergrube",
+          "Kombischacht",
+          "Kontroll_Einsteigschacht",
+          "Oelabscheider",
+          "Pumpwerk",
+          "Regenbecken_Durchlaufbecken",
+          "Regenbecken_Fangbecken",
+          "Regenbecken_Fangkanal",
+          "Regenbecken_Regenklaerbecken",
+          "Regenbecken_Regenrueckhaltebecken",
+          "Regenbecken_Regenrueckhaltekanal",
+          "Regenbecken_Stauraumkanal",
+          "Regenbecken_Verbundbecken",
+          "Regenueberlauf",
+          "Schwimmstoffabscheider",
+          "seitlicherZugang",
+          "Spuelschacht",
+          "Trennbauwerk",
+          "unbekannt",
+          "Vorbehandlungsanlage",
+          "Wirbelfallschacht"
+        ]
+      },
+      "Interventionsmoeglichkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ja",
+          "nein",
+          "unbekannt"
+        ]
+      },
+      "Notueberlauf": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "in_Gewaesser",
+          "in_Mischabwasserkanalisation",
+          "in_Regenabwasserkanalisation",
+          "in_Schmutzabwasserkanalisation",
+          "keiner",
+          "oberflaechlich_ausmuendend",
+          "unbekannt"
+        ]
+      },
+      "Regenbecken_Anordnung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "Hauptschluss",
+          "Nebenschluss",
+          "unbekannt"
+        ]
+      }
+    },
+    "Versickerungsanlage": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Akten": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 255
+      },
+      "Baujahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "BaulicherZustand": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "unbekannt",
+          "Z0",
+          "Z1",
+          "Z2",
+          "Z3",
+          "Z4"
+        ]
+      },
+      "Baulos": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Bruttokosten": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Detailgeometrie": {
+        "Required": false,
+        "Kind": "Structure"
+      },
+      "Dringlichkeitszahl": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "400",
+        "Decimals": 0
+      },
+      "Ersatzjahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "Finanzierung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "oeffentlich",
+          "privat",
+          "unbekannt"
+        ]
+      },
+      "Inspektionsintervall": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "20.00",
+        "Decimals": 2
+      },
+      "Sanierungsbedarf": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "dringend",
+          "keiner",
+          "kurzfristig",
+          "langfristig",
+          "mittelfristig",
+          "unbekannt"
+        ]
+      },
+      "Standortname": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Status": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ausser_Betrieb",
+          "in_Betrieb",
+          "tot",
+          "unbekannt",
+          "weitere",
+          "in_Betrieb.provisorisch",
+          "in_Betrieb.wird_aufgehoben",
+          "tot.aufgehoben_nicht_verfuellt",
+          "tot.aufgehoben_unbekannt",
+          "tot.verfuellt",
+          "weitere.Berechnungsvariante",
+          "weitere.geplant",
+          "weitere.Projekt"
+        ]
+      },
+      "Subventionen": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "WBW_Basisjahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "WBW_Bauart": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Feld",
+          "Sanierungsleitung_Bagger",
+          "Sanierungsleitung_Grabenfraese",
+          "Strasse",
+          "unbekannt"
+        ]
+      },
+      "Wiederbeschaffungswert": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Zugaenglichkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ueberdeckt",
+          "unbekannt",
+          "unzugaenglich",
+          "zugaenglich"
+        ]
+      },
+      "Zustandserhebung_Jahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "Zustandsnote": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "4.00",
+        "Decimals": 2
+      },
+      "Art": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere_mit_Bodenpassage",
+          "andere_ohne_Bodenpassage",
+          "Flaechenfoermige_Versickerung",
+          "Kieskoerper",
+          "Kombination_Schacht_Strang",
+          "MuldenRigolenversickerung",
+          "unbekannt",
+          "Versickerung_ueber_die_Schulter",
+          "Versickerungsbecken",
+          "Versickerungsschacht",
+          "Versickerungsstrang_Galerie"
+        ]
+      },
+      "Beschriftung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "beschriftet",
+          "nichtbeschriftet",
+          "unbekannt"
+        ]
+      },
+      "Dimension1": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "4000",
+        "Decimals": 0
+      },
+      "Dimension2": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "4000",
+        "Decimals": 0
+      },
+      "Fuellmaterial": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Holzschnitzel",
+          "Sickerkies",
+          "unbekannt"
+        ]
+      },
+      "GWDistanz": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "30000.00",
+        "Decimals": 2
+      },
+      "Maengel": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "keine",
+          "unwesentliche",
+          "wesentliche"
+        ]
+      },
+      "Notueberlauf": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "in_Gewaesser",
+          "in_Mischabwasserkanalisation",
+          "in_Regenabwasserkanalisation",
+          "in_Schmutzabwasserkanalisation",
+          "keiner",
+          "oberflaechlich_ausmuendend",
+          "unbekannt"
+        ]
+      },
+      "Saugwagen": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "unbekannt",
+          "unzugaenglich",
+          "zugaenglich"
+        ]
+      },
+      "Schluckvermoegen": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.000",
+        "Maximum": "100000.000",
+        "Decimals": 3
+      },
+      "Versickerungswasser": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "Niederschlagsabwasser",
+          "Reinabwasser",
+          "unbekannt"
+        ]
+      },
+      "Wasserdichtheit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "nichtwasserdicht",
+          "unbekannt",
+          "wasserdicht"
+        ]
+      },
+      "Wirksameflaeche": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "100000.00",
+        "Decimals": 2
+      }
+    },
+    "Einleitstelle": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Akten": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 255
+      },
+      "Baujahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "BaulicherZustand": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "unbekannt",
+          "Z0",
+          "Z1",
+          "Z2",
+          "Z3",
+          "Z4"
+        ]
+      },
+      "Baulos": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Bruttokosten": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Detailgeometrie": {
+        "Required": false,
+        "Kind": "Structure"
+      },
+      "Dringlichkeitszahl": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "400",
+        "Decimals": 0
+      },
+      "Ersatzjahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "Finanzierung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "oeffentlich",
+          "privat",
+          "unbekannt"
+        ]
+      },
+      "Inspektionsintervall": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "20.00",
+        "Decimals": 2
+      },
+      "Sanierungsbedarf": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "dringend",
+          "keiner",
+          "kurzfristig",
+          "langfristig",
+          "mittelfristig",
+          "unbekannt"
+        ]
+      },
+      "Standortname": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Status": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ausser_Betrieb",
+          "in_Betrieb",
+          "tot",
+          "unbekannt",
+          "weitere",
+          "in_Betrieb.provisorisch",
+          "in_Betrieb.wird_aufgehoben",
+          "tot.aufgehoben_nicht_verfuellt",
+          "tot.aufgehoben_unbekannt",
+          "tot.verfuellt",
+          "weitere.Berechnungsvariante",
+          "weitere.geplant",
+          "weitere.Projekt"
+        ]
+      },
+      "Subventionen": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "WBW_Basisjahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "WBW_Bauart": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Feld",
+          "Sanierungsleitung_Bagger",
+          "Sanierungsleitung_Grabenfraese",
+          "Strasse",
+          "unbekannt"
+        ]
+      },
+      "Wiederbeschaffungswert": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Zugaenglichkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ueberdeckt",
+          "unbekannt",
+          "unzugaenglich",
+          "zugaenglich"
+        ]
+      },
+      "Zustandserhebung_Jahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "Zustandsnote": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "4.00",
+        "Decimals": 2
+      },
+      "Gewaesserabschnitt_Kanton": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 36
+      },
+      "Gewaesserlaufnummer": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 25
+      },
+      "Hochwasserkote": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "-200.000",
+        "Maximum": "5000.000",
+        "Decimals": 3
+      },
+      "Relevanz": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "gewaesserrelevant",
+          "nicht_gewaesserrelevant"
+        ]
+      },
+      "Terrainkote": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "-200.000",
+        "Maximum": "5000.000",
+        "Decimals": 3
+      },
+      "Wasserspiegel_Hydraulik": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "-200.000",
+        "Maximum": "5000.000",
+        "Decimals": 3
+      }
+    },
+    "Haltung": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 41
+      },
+      "Fliesszeit_Trockenwetter": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "1000000",
+        "Decimals": 0
+      },
+      "Hydr_Belastung_Ist": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "1000",
+        "Decimals": 0
+      },
+      "Innenschutz": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Anstrich_Beschichtung",
+          "Kanalklinkerauskleidung",
+          "Steinzeugauskleidung",
+          "unbekannt",
+          "Zementmoertelauskleidung"
+        ]
+      },
+      "LaengeEffektiv": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "30000.00",
+        "Decimals": 2
+      },
+      "Lagebestimmung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "genau",
+          "unbekannt",
+          "ungenau"
+        ]
+      },
+      "Leckschutz": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "nicht_vorhanden",
+          "unbekannt",
+          "vorhanden"
+        ]
+      },
+      "Lichte_Hoehe": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "99999",
+        "Decimals": 0
+      },
+      "Material": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Asbestzement",
+          "Beton_Normalbeton",
+          "Beton_Ortsbeton",
+          "Beton_Pressrohrbeton",
+          "Beton_Spezialbeton",
+          "Beton_unbekannt",
+          "Faserzement",
+          "Gebrannte_Steine",
+          "Guss_duktil",
+          "Guss_Grauguss",
+          "Kunststoff_Epoxydharz",
+          "Kunststoff_Hartpolyethylen",
+          "Kunststoff_Polyester_GUP",
+          "Kunststoff_Polyethylen",
+          "Kunststoff_Polypropylen",
+          "Kunststoff_Polyvinilchlorid",
+          "Kunststoff_unbekannt",
+          "Stahl",
+          "Stahl_rostfrei",
+          "Steinzeug",
+          "Ton",
+          "unbekannt",
+          "Zement"
+        ]
+      },
+      "Plangefaelle": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "-10000",
+        "Maximum": "10000",
+        "Decimals": 0
+      },
+      "Reibungsbeiwert": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "999",
+        "Decimals": 0
+      },
+      "Reliner_Art": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ganze_Haltung",
+          "partiell",
+          "unbekannt"
+        ]
+      },
+      "Reliner_Bautechnik": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Close_Fit_Relining",
+          "Kurzrohrrelining",
+          "Noppenschlauchrelining",
+          "Partieller_Liner",
+          "Rohrstrangrelining",
+          "Schlauchrelining",
+          "unbekannt",
+          "Wickelrohrrelining"
+        ]
+      },
+      "Reliner_Material": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Epoxidharz_Glasfaserlaminat",
+          "Epoxidharz_Kunststofffilz",
+          "GUP_Rohr",
+          "HDPE",
+          "Isocyanatharze_Glasfaserlaminat",
+          "Isocyanatharze_Kunststofffilz",
+          "Polyesterharz_Glasfaserlaminat",
+          "Polyesterharz_Kunststofffilz",
+          "Polypropylen",
+          "Polyvinilchlorid",
+          "Sohle_mit_Schale_aus_Polyesterbeton",
+          "unbekannt",
+          "UP_Harz_LED_Synthesefaserliner",
+          "Vinylesterharz_Glasfaserlaminat",
+          "Vinylesterharz_Kunststofffilz"
+        ]
+      },
+      "Reliner_Nennweite": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "99999",
+        "Decimals": 0
+      },
+      "Ringsteifigkeit": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "16",
+        "Decimals": 0
+      },
+      "Verlauf": {
+        "Required": false,
+        "Kind": "Structure"
+      },
+      "Wandrauhigkeit": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "100.00",
+        "Decimals": 2
+      }
+    },
+    "Haltungspunkt": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Auslaufform": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "abgerundet",
+          "blendenfoermig",
+          "keine_Querschnittsaenderung",
+          "scharfkantig",
+          "unbekannt"
+        ]
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Hoehengenauigkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "groesser_6cm",
+          "plusminus_1cm",
+          "plusminus_3cm",
+          "plusminus_6cm",
+          "unbekannt"
+        ]
+      },
+      "Kote": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "-200.000",
+        "Maximum": "5000.000",
+        "Decimals": 3
+      },
+      "Lage": {
+        "Required": false,
+        "Kind": "Structure"
+      },
+      "Lage_Anschluss": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "12",
+        "Decimals": 0
+      },
+      "Rohrverschluss_Kappe": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ja",
+          "nein",
+          "unbekannt"
+        ]
+      }
+    },
+    "Abwasserknoten": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "ARA_Nr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1",
+        "Maximum": "999999",
+        "Decimals": 0
+      },
+      "Funktion_Knoten_Melioration": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "Gefaellsbruch",
+          "Gefaellsbruch_Kaliberwechsel",
+          "Kaliberwechsel",
+          "Normschacht",
+          "Normschacht_Gefaellsbruch",
+          "Normschacht_Gefaellsbruch_Kaliberwechsel",
+          "Normschacht_Kaliberwechsel",
+          "unbekannt"
+        ]
+      },
+      "Hoehengenauigkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "groesser_6cm",
+          "plusminus_1cm",
+          "plusminus_3cm",
+          "plusminus_6cm",
+          "unbekannt"
+        ]
+      },
+      "Lage": {
+        "Required": false,
+        "Kind": "Structure"
+      },
+      "Rueckstaukote_Ist": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "-200.000",
+        "Maximum": "5000.000",
+        "Decimals": 3
+      },
+      "Sohlenkote": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "-200.000",
+        "Maximum": "5000.000",
+        "Decimals": 3
+      }
+    },
+    "Rohrprofil": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "HoehenBreitenverhaeltnis": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.01",
+        "Maximum": "100.00",
+        "Decimals": 2
+      },
+      "Profiltyp": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "Eiprofil",
+          "Kreisprofil",
+          "Maulprofil",
+          "offenes_Profil",
+          "Rechteckprofil",
+          "Spezialprofil",
+          "unbekannt"
+        ]
+      }
+    },
+    "Deckel": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Instandstellung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "nicht_notwendig",
+          "notwendig",
+          "unbekannt"
+        ]
+      },
+      "Deckelform": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "eckig",
+          "rund",
+          "unbekannt"
+        ]
+      },
+      "Durchmesser": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "4000",
+        "Decimals": 0
+      },
+      "Entlueftung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "entlueftet",
+          "nicht_entlueftet",
+          "unbekannt"
+        ]
+      },
+      "Fabrikat": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Kote": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "-200.000",
+        "Maximum": "5000.000",
+        "Decimals": 3
+      },
+      "Lage": {
+        "Required": false,
+        "Kind": "Structure"
+      },
+      "Lagegenauigkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "groesser_50cm",
+          "plusminus_10cm",
+          "plusminus_3cm",
+          "plusminus_50cm",
+          "unbekannt"
+        ]
+      },
+      "Material": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Beton",
+          "Guss",
+          "Guss_mit_Belagsfuellung",
+          "Guss_mit_Betonfuellung",
+          "unbekannt"
+        ]
+      },
+      "Schlammeimer": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "nicht_vorhanden",
+          "unbekannt",
+          "vorhanden"
+        ]
+      },
+      "Verschluss": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "nicht_verschraubt",
+          "unbekannt",
+          "verschraubt"
+        ]
+      }
+    },
+    "Einstiegshilfe": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Instandstellung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "nicht_notwendig",
+          "notwendig",
+          "unbekannt"
+        ]
+      },
+      "Art": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Drucktuere",
+          "keine",
+          "Leiter",
+          "Steigeisen",
+          "Treppe",
+          "Trittnischen",
+          "Tuere",
+          "unbekannt"
+        ]
+      }
+    },
+    "Unterhalt": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Ausfuehrender": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 41
+      },
+      "Datengrundlage": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Dauer": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "10000",
+        "Decimals": 0
+      },
+      "Detaildaten": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Ergebnis": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 255
+      },
+      "Grund": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Kosten": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Status": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ausgefuehrt",
+          "geplant",
+          "nicht_moeglich",
+          "unbekannt"
+        ]
+      },
+      "Zeitpunkt": {
+        "Required": false,
+        "Kind": "Date"
+      },
+      "Art": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Reinigung",
+          "Sanierung_Erneuerung",
+          "Sanierung_Renovierung",
+          "Sanierung_Reparatur",
+          "Sanierung_unbekannt",
+          "unbekannt",
+          "Untersuchung"
+        ]
+      }
+    },
+    "Organisation": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 255
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 255
+      },
+      "Gemeindenummer": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1",
+        "Maximum": "9999",
+        "Decimals": 0
+      },
+      "Kurzbezeichnung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 12
+      },
+      "Organisationstyp": {
+        "Required": true,
+        "Kind": "Enum",
+        "Values": [
+          "Abwasserverband",
+          "Bund",
+          "Gemeinde",
+          "Gemeindeabteilung",
+          "Genossenschaft_Korporation",
+          "Kanton",
+          "Privat"
+        ]
+      },
+      "Status": {
+        "Required": true,
+        "Kind": "Enum",
+        "Values": [
+          "aktiv",
+          "untergegangen"
+        ]
+      },
+      "UID": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 12
+      }
+    },
+    "Hydr_Geometrie": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Nutzinhalt": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "10000000.00",
+        "Decimals": 2
+      },
+      "Nutzinhalt_Fangteil": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "10000000.00",
+        "Decimals": 2
+      },
+      "Nutzinhalt_Klaerteil": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "10000000.00",
+        "Decimals": 2
+      },
+      "Stauraum": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "10000000.00",
+        "Decimals": 2
+      },
+      "Volumen_Pumpensumpf": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "10000000.00",
+        "Decimals": 2
+      }
+    }
+  }
+}

@@ -2,12 +2,12 @@
 
 **Ergebnis: technische Nachpr?fung mit Korrekturen; keine uneingeschr?nkte Gesamtfreigabe des Redesigns.**
 Die beiden Listen, ihre Grafiken und der Wechsel zur Tabelle funktionieren in den gepr?ften Abl?ufen.
-Die unten ausdr?cklich aufgef?hrten Abweichungen bleiben offen. Merge und Push sind noch nicht erfolgt.
+Die unten ausdr?cklich aufgef?hrten Abweichungen bleiben offen. Die Zusammenf?hrung in den Hauptordner ist inzwischen erfolgt; siehe [?bernahmeprotokoll](UEBERNAHME.md).
 
 Gepr?ft im getrennten Arbeitsordner `C:\Sewer-Studio_KI_4.5-nova`, Branch
 `feature/nova-haltungsliste`, Ausgangsstand `1cb7cb7c361cffce332971bccc8473878acf1c8e`.
 Der Hauptordner steht auf `feature/eval-pruefsatz-review` und enth?lt zus?tzlich ungesicherte
-XTF- und Projektwechsel-Arbeit. Diese Pr?fung hat dort keine Dateien ver?ndert.
+XTF- und Projektwechsel-Arbeit. W?hrend der isolierten Branchpr?fung blieb der Hauptordner unver?ndert; die sp?tere ?bernahme steht im Nachtrag unten.
 
 ## Anlass und Umfang
 
@@ -32,7 +32,7 @@ im ungesicherten Hauptordner.
 | 4: Haltungsgrafik | Bestanden mit dokumentierten Grenzen | Rohrs?ule, Skala, Knoten und drei Befundsymbole; [dunkel offen](bilder/haltungen-liste-auf-dunkel.png); Aktualisierung nach Wiederladen zus?tzlich repariert und getestet |
 | 5: Schachtgrafik | Bestanden mit Darstellungsgrenzen | Konus/Wand/Sohle, Tiefe, Innenmasse und Symbole; [hell](bilder/schaechte-liste-zu-hell.png), [dunkel](bilder/schaechte-liste-zu-dunkel.png); Anschlussname am Rand gek?rzt, grosser Fliesspfeil bleiben |
 | 6: Schachtliste | Funktion bestanden, Themenzuordnung abweichend | Standard Liste, Umschalten, genau ein Formular nach Fix `ed3268616` best?tigt; [hell offen](bilder/schaechte-liste-auf-hell.png), [dunkel offen](bilder/schaechte-liste-auf-dunkel.png); die versprochenen Themenzahlen 10/9/7/4 sind im echten Pr?fprojekt nicht erreicht |
-| 7: Schlusspr?fung und Grafiken-Nachtrag | Pr?fung und Doku vorhanden | Endg?ltige Testzahlen unten; ?bernahme in Hauptordner und Push bleiben ausstehend |
+| 7: Schlusspr?fung und Grafiken-Nachtrag | Pr?fung und Doku vorhanden | Endg?ltige Testzahlen unten; ?bernahme in den Hauptordner erfolgt; Nachtrag im ?bernahmeprotokoll |
 
 Weitere Bilder: [Haltungen geschlossen hell](bilder/haltungen-liste-zu-hell.png),
 [Haltungen geschlossen dunkel](bilder/haltungen-liste-zu-dunkel.png).
@@ -138,8 +138,10 @@ Schachttest stammen aus dieser Pr?fung. Kein neues NuGet-Paket, keine Datenforma
 keine Erweiterung der fast ausgesch?pften Seitenklassen. Dies ist keine Garantie, dass jede
 m?gliche Kombination aller Funktionen fehlerfrei ist.
 
-**?bernahme ausstehend:** Die ?bergabe verlangt vor dem Merge ein geschlossenes SewerStudio;
-AGENTS.md verbietet automatisches Beenden. Bei der Pr?fung lief SewerStudio aus dem Hauptordner
-(PID 46284). Deshalb bisher kein Stash, kein Merge und kein Push. Vor einer sp?teren ?bernahme
-muss der aktuelle ungesicherte Hauptstand erneut vollst?ndig inventarisiert und gesichert werden;
-er umfasst inzwischen auch die Projektwechsel-Korrekturen und die Auditberichte, nicht nur XTF.
+**Nachtrag zur ?bernahme:** Nach Pascals Meldung ?zu" wurde best?tigt, dass SewerStudio
+beendet war. Die Zusammenf?hrung erfolgte mit Commit `0d3ea8d89` auf
+`feature/eval-pruefsatz-review`. Alle 176 vorher ungesicherten Dateien sind gesichert und
+wiederhergestellt; die XTF- und Projektwechsel-Arbeit bleibt uncommittet.
+Der vollst?ndige Debug-Build und 323 gezielte Pr?fungen nach dem Merge sind erfolgreich.
+Der anschliessende vollst?ndige Vor-Push-Lauf bestand alle 15 894 Tests bei 26 ?berspr?ngen und 0 Fehlern; der Programmstand ist auf GitHub best?tigt.
+Dieser Dokumentationsnachtrag ist vorerst nur lokal gespeichert. Einzelheiten und Ver?ffentlichungsstand: [UEBERNAHME.md](UEBERNAHME.md).

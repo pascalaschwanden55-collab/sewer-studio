@@ -1,0 +1,54 @@
+﻿Feld;Beschriftung;Katalogtyp;Direkte Revisionszuordnung;Dropdownbegriffe
+NR;NR.;Int;;
+Haltungsname;Haltungsname (ID);Text;;
+Strasse;Strasse;Text;;
+Rohrmaterial;Rohrmaterial;Combo;Material;andere | Asbestzement | Beton | Epoxydharz | Faserzement | Gebrannte Steine | GFK | Grauguss | Guss | Guss duktil | Hartpolyethylen | Kunststoff unbekannt | Normalbeton | Ortsbeton | Polyester GUP | Polyethylen | Polypropylen | Polyvinylchlorid | Pressrohrbeton | Spezialbeton | Stahl | Stahl rostfrei | Steinzeug | Ton | unbekannt | Zement
+DN_mm;Lichte Höhe / DN mm;Int;Lichte_Hoehe;
+Profiltyp;Profilform;Combo;Profiltyp;Unbekannt | Kreisprofil | Eiprofil | Maulprofil | Offenes Profil | Rechteckprofil | Spezialprofil
+Lichte_Breite_mm;Lichte Breite mm;Int;;
+Nutzungsart;Nutzungsart;Combo;Nutzungsart_Ist;andere | Bachwasser | entlastetes Mischabwasser | Industrieabwasser | Mischabwasser | Niederschlagsabwasser | Reinabwasser | Schmutzabwasser | unbekannt
+Haltungslaenge_m;Haltungslänge m;Decimal;LaengeEffektiv;
+Inspektionsrichtung;Inspektionsrichtung;Combo;;In Fliessrichtung | Gegen Fliessrichtung
+Primaere_Schaeden;Primäre Schäden;Multiline;;
+Zustandsklasse;Zustandsklasse;Combo;BaulicherZustand;0 | 1 | 2 | 3 | 4
+VSA_Zustandsnote_D;VSA-Zustandsnote D;Decimal;;
+Pruefungsresultat;Prüfungsresultat;Text;;
+Referenzpruefung;Referenzpruefung;Combo;;Ja | Nein
+Sanieren_JaNein;Sanieren Ja/Nein;Combo;;Ja | Nein
+Empfohlene_Sanierungsmassnahmen;Empfohlene Sanierungsmassnahmen;Multiline;;
+Kosten;Kosten;Decimal;;
+Eigentuemer;Eigentümer;Text;;
+Ausgefuehrt_durch;Ausgefuehrt durch;Combo;;Kanalsanierer | Baumeister | Gartenbauer
+Bemerkungen;Bemerkungen;Multiline;Bemerkung;
+Link;Link;Text;;
+Renovierung_Inliner_Stk;Renovierung Inliner Stk.;Int;;
+Renovierung_Inliner_m;Renovierung Inliner m;Decimal;;
+Anschluesse_verpressen;Anschlüsse verpressen;Int;;
+Reparatur_Manschette;Reparatur Manschette;Int;;
+Linerendmanschette_LEM;Linerendmanschette LEM;Int;;
+Reparatur_Kurzliner;Reparatur Kurzliner;Int;;
+Erneuerung_Neubau_m;Erneuerung Neubau m;Decimal;;
+Offen_abgeschlossen;offen/abgeschlossen;Combo;;offen | abgeschlossen
+Datum_Jahr;Datum/Jahr;Text;;
+VSA_Zustandsnote_S;VSA-Zustandsnote S;Decimal;;
+VSA_Zustandsnote_B;VSA-Zustandsnote B;Decimal;;
+VSA_Geschaetzt;Note geschätzt;Text;;
+Gewaesserschutz;Gewässerschutz;Combo;;S | Au | Zu | Ao
+Grundwasserspiegel;Grundwasserspiegel;Combo;;unterhalb | oberhalb | unbekannt
+FunktionHierarchisch;Funktionale Hierarchie;Combo;FunktionHierarchisch;PAA.andere | PAA.Gewaesser | PAA.Hauptsammelkanal | PAA.Hauptsammelkanal_regional | PAA.Liegenschaftsentwaesserung | PAA.Sammelkanal | PAA.Sanierungsleitung | PAA.Strassenentwaesserung | PAA.unbekannt | SAA.andere | SAA.Liegenschaftsentwaesserung | SAA.Sanierungsleitung | SAA.Strassenentwaesserung | SAA.unbekannt
+Verbindungsart;Verbindungsart;Combo;Verbindungsart;andere | Elektroschweissmuffen | Flachmuffen | Flansch | Glockenmuffen | Kupplung | Schraubmuffen | spiegelgeschweisst | Spitzmuffen | Steckmuffen | Ueberschiebmuffen | unbekannt | Vortriebsrohrkupplung
+Bettung_Umhuellung;Bettung/Umhüllung;Combo;Bettung_Umhuellung;andere | erdverlegt | in_Kanal_aufgehaengt | in_Kanal_einbetoniert | in_Leitungsgang | in_Vortriebsrohr_Beton | in_Vortriebsrohr_Stahl | Sand | SIA_Typ1 | SIA_Typ2 | SIA_Typ3 | SIA_Typ4 | Sohlbrett | unbekannt
+Status;Status;Combo;Status;ausser_Betrieb | in_Betrieb | tot | unbekannt | weitere
+Sanierungsbedarf;Sanierungsbedarf;Combo;Sanierungsbedarf;dringend | keiner | kurzfristig | langfristig | mittelfristig | unbekannt
+FunktionHydraulisch;Funktion hydraulisch;Combo;FunktionHydraulisch;andere | Drainagetransportleitung | Drosselleitung | Duekerleitung | Freispiegelleitung | Pumpendruckleitung | Sickerleitung | Speicherleitung | Spuelleitung | unbekannt | Vakuumleitung | Versickerungsleitung
+Lagebestimmung;Lagebestimmung;Combo;Lagebestimmung;genau | unbekannt | ungenau
+Baujahr;Baujahr;Int;Baujahr;
+Bruttokosten;Bruttokosten (Kataster);Decimal;Bruttokosten;
+Objekt_ID;Objekt-ID (Lisag);Text;;
+GEONIS_Kennung;GEONIS-Kennung;Text;;
+Datenherr;Datenherr;Text;;
+Datenlieferant;Datenlieferant;Text;;
+Organisation;Organisation;Text;;
+Letzte_Aenderung;Letzte Änderung;Text;;
+Aktualisierungsdatum;Aktualisierungsdatum;Text;;
+Gefaelle_Promille;Gefälle ‰;Decimal;;

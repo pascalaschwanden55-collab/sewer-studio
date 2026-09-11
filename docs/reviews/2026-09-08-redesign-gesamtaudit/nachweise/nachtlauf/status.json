@@ -1,0 +1,8 @@
+{
+  "state": "lauf-fehlgeschlagen",
+  "scheduledUtc": "2026-09-08T00:52:00.000Z",
+  "startedUtc": "2026-09-08T00:52:01.198Z",
+  "updatedUtc": "2026-09-08T00:52:05.469Z",
+  "exitCode": 1,
+  "signal": null
+}

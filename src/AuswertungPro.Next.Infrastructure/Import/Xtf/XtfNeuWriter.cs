@@ -38,7 +38,7 @@ public static class XtfNeuWriter
         ["Kanal"] =
         [
             "Letzte_Aenderung", "Baujahr", "BaulicherZustand", "Bemerkung", "Bezeichnung",
-            "Bruttokosten", "Sanierungsbedarf", "Status",
+            "Bruttokosten", "Sanierungsbedarf", "Standortname", "Status", "Zustandserhebung_Jahr",
             "Bettung_Umhuellung", "FunktionHierarchisch", "FunktionHydraulisch",
             "Nutzungsart_Ist", "Verbindungsart"
         ],
@@ -52,8 +52,23 @@ public static class XtfNeuWriter
         ["Normschacht"] =
         [
             "Letzte_Aenderung", "Baujahr", "BaulicherZustand", "Bemerkung", "Bezeichnung",
-            "Sanierungsbedarf", "Status",
+            "Bruttokosten", "Sanierungsbedarf", "Standortname", "Status", "Zustandserhebung_Jahr",
             "Dimension1", "Dimension2", "Funktion", "Material"
+        ],
+        ["Spezialbauwerk"] =
+        [
+            "Letzte_Aenderung", "Baujahr", "BaulicherZustand", "Bemerkung", "Bezeichnung",
+            "Bruttokosten", "Sanierungsbedarf", "Standortname", "Status", "Zustandserhebung_Jahr", "Funktion"
+        ],
+        ["Versickerungsanlage"] =
+        [
+            "Letzte_Aenderung", "Baujahr", "BaulicherZustand", "Bemerkung", "Bezeichnung",
+            "Bruttokosten", "Sanierungsbedarf", "Standortname", "Status", "Zustandserhebung_Jahr", "Art", "Dimension1", "Dimension2"
+        ],
+        ["Einleitstelle"] =
+        [
+            "Letzte_Aenderung", "Baujahr", "BaulicherZustand", "Bemerkung", "Bezeichnung",
+            "Bruttokosten", "Sanierungsbedarf", "Standortname", "Status", "Zustandserhebung_Jahr"
         ],
         ["Rohrprofil"] = ["Letzte_Aenderung", "Bemerkung", "Bezeichnung", "HoehenBreitenverhaeltnis", "Profiltyp"],
         ["Organisation"] =
@@ -78,16 +93,24 @@ public static class XtfNeuWriter
 
         try
         {
-            var doc = BaueDokument(plan, stand ?? DateOnly.FromDateTime(DateTime.Now));
+            var doc = plan.Dss ? XtfDssWriter.BaueDokument(plan) : BaueDokument(plan, stand ?? DateOnly.FromDateTime(DateTime.Now));
+            XtfZusatzWriter.ErgaenzeDokument(doc, plan);
             var ordner = Path.GetDirectoryName(ziel);
             if (!string.IsNullOrEmpty(ordner))
                 Directory.CreateDirectory(ordner);
+            if (plan.Objekte.Any(o => o.ImTopicZusatz))
+                XtfZusatzWriter.SchreibeModell(string.IsNullOrEmpty(ordner) ? "." : ordner);
+            if (plan.Dss) XtfDssWriter.SchreibeModelle(string.IsNullOrEmpty(ordner) ? "." : ordner);
 
             // Ueber eine Nebendatei veroeffentlichen: Ein abgebrochener Lauf hinterlaesst
             // keine halbe XTF, die jemand fuer vollstaendig halten koennte.
-            var temp = ziel + ".tmp";
-            doc.Save(temp);
-            File.Move(temp, ziel);
+            var temp = ziel + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None)) doc.Save(stream);
+                File.Move(temp, ziel);
+            }
+            finally { if (File.Exists(temp)) File.Delete(temp); }
 
             return new XtfNeuErgebnis(true, null, ziel);
         }
@@ -106,7 +129,7 @@ public static class XtfNeuWriter
         var fachdaten = new XElement(ns + Fach, new XAttribute("BID", "chB0000000000001"));
         var verwaltung = new XElement(ns + Verwaltung, new XAttribute("BID", "chB0000000000002"));
 
-        foreach (var objekt in plan.Objekte)
+        foreach (var objekt in plan.Objekte.Where(o => !o.ImTopicZusatz))
         {
             var ziel = objekt.ImTopicAdministration ? verwaltung : fachdaten;
             var praefix = objekt.ImTopicAdministration ? Verwaltung : Fach;
@@ -127,7 +150,7 @@ public static class XtfNeuWriter
                         new XElement(ns + "MODEL",
                             new XAttribute("NAME", "SIA405_ABWASSER_2020_LV95"),
                             new XAttribute("URI", "http://www.sia.ch/405"),
-                            new XAttribute("VERSION", "26.06.2021")),
+                            new XAttribute("VERSION", "29.11.2025")),
                         new XElement(ns + "MODEL",
                             new XAttribute("NAME", "SIA405_Base_Abwasser_LV95"),
                             new XAttribute("URI", "http://www.vsa.ch/models"),
@@ -136,7 +159,7 @@ public static class XtfNeuWriter
                         new XElement(ns + "ENTRIES",
                             new XAttribute("FOR", "SIA405_ABWASSER_2020_LV95"))),
                     new XElement(ns + "COMMENT",
-                        $"Vollstaendiger Neu-Export aus SewerStudio: {plan.Haltungen} Haltungen, " +
+                        (plan.NurAenderungen ? "Aenderungslieferung aus SewerStudio; nur Aenderung-Eintraege erlauben Updates: " : "Vollstaendiger Neu-Export aus SewerStudio: ") + $"{plan.Haltungen} Haltungen, " +
                         $"{plan.Schaechte} Schaechte.")),
                 datensektion));
     }

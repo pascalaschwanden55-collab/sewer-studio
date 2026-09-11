@@ -1,4 +1,4 @@
-<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.DataPage"
+﻿<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.DataPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
@@ -197,6 +197,7 @@
                     </Border>
                 </StackPanel>
                     <StackPanel Orientation="Horizontal">
+                        <Button Content="Objektakte" Command="{Binding ObjektakteCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,8,0" ToolTip="Vollständige Angaben, Deckel und Sanierungen"/>
                         <Button Command="{Binding SaveCommand}"
                                 Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,2,0">
                             <StackPanel Orientation="Horizontal">
@@ -254,8 +255,8 @@
                                               ToolTip="Leere Felder aus dem QGIS-Bestand ergänzen. Gefüllte Felder bleiben unberührt; vorher erscheint ein Bericht.">
                                         <MenuItem.Icon><ui:FluentIcon Glyph="&#xE896;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
                                     </MenuItem>
-                                    <MenuItem Header="Katasterkennungen" Command="{Binding KatasterKennungenErgaenzenCommand}" IsEnabled="{Binding IsProjectReady}"
-                                              ToolTip="GEONIS-Kennungen aus der Kennungstabelle übernehmen. Nur Kennungen, keine Fachwerte; vorher erscheint ein Bericht.">
+                                    <MenuItem Header="GeoShop-Abgleich (XTF)" Command="{Binding KatasterKennungenErgaenzenCommand}" IsEnabled="{Binding IsProjectReady}"
+                                              ToolTip="TIDs und Verknüpfungen aus GeoShop übernehmen und leere Felder ergänzen. XTF auswählen und Änderungen vorher prüfen.">
                                         <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
                                     </MenuItem>
                                     <MenuItem Header="Strassen" Click="StrassenStapel_Click"

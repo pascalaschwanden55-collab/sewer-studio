@@ -33,7 +33,7 @@ public sealed class DesignAuditNovaAufklappListeTests
     public void Das_Formular_steht_nur_im_aufgeklappten_Zweig()
     {
         var xaml = Xaml();
-        var formular = Regex.Match(xaml, "<DataTemplate x:Key=\"FormularVorlage\">[\\s\\S]*?</DataTemplate>\\s*\\r?\\n\\s*<!-- ENDE FormularVorlage -->");
+        var formular = Regex.Match(xaml, "<DataTemplate x:Key=\"KurzformularVorlage\">[\\s\\S]*?</DataTemplate>\\s*\\r?\\n\\s*<!-- ENDE FormularVorlage -->");
         Assert.True(formular.Success, "FormularVorlage samt Endmarke nicht gefunden");
         Assert.Contains("controls:RecordDetailsView", formular.Value, StringComparison.Ordinal);
 
@@ -53,7 +53,9 @@ public sealed class DesignAuditNovaAufklappListeTests
         Assert.Contains("&#xE76C;", xaml, StringComparison.Ordinal);
         Assert.Contains("<RotateTransform Angle=\"90\"/>", xaml, StringComparison.Ordinal);
 
-        var knopf = Regex.Match(xaml, "<Button Grid.Column=\"0\" Click=\"Pfeil_Click\"[\\s\\S]*?>");
+        // Die Nr.-Spalte steht vor dem Pfeil. Seine Funktion bestimmt den Knopf,
+        // nicht die zufaellige Spaltenposition.
+        var knopf = Regex.Match(xaml, "<Button\\b[^>]*\\bClick=\"Pfeil_Click\"[^>]*>");
         Assert.True(knopf.Success, "Pfeilknopf nicht gefunden");
         Assert.Contains("ToolTip=", knopf.Value, StringComparison.Ordinal);
         Assert.Contains("AutomationProperties.Name=", knopf.Value, StringComparison.Ordinal);
@@ -98,7 +100,7 @@ public sealed class DesignAuditNovaAufklappListeTests
         var xaml = Xaml();
         foreach (var (schluessel, wert) in new[]
                  {
-                     ("SpalteName", "170"), ("SpalteStrasse", "140"), ("SpalteMaterial", "110"),
+                     ("SpalteNr", "56"), ("SpalteName", "170"), ("SpalteStrasse", "140"), ("SpalteMaterial", "110"),
                      ("SpalteDn", "70"), ("SpalteLaenge", "80"), ("SpalteZustand", "60"),
                      ("SpalteKi", "130"), ("SpaltePruefung", "190"), ("SpalteVideo", "48"),
                      ("SpalteProtokoll", "56")

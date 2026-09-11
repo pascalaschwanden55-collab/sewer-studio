@@ -605,7 +605,7 @@ namespace AuswertungPro.Next.UI
             KnowledgeWalCheckpoint = new KnowledgeWalCheckpointService(KnowledgeDbPath);
             KnowledgeBaseHealth = knowledgeBaseHealth ?? new KnowledgeBaseHealthInspectionService();
             GitCommit = new GitCommitFileResolver();
-            BackupSources = new FullBackupSourcesProvider(RepositoryRootLocator);
+            (BackupAdditionalFolders, BackupSources) = CreateBackupSources(RepositoryRootLocator);
             _fullBackupComposition = FullBackupComposition.Create(
                 () => BackupSources.Resolve(settings),
                 KnowledgeWalCheckpoint,

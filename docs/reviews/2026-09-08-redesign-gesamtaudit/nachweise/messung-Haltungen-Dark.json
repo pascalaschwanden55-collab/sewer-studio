@@ -1,0 +1,18 @@
+{
+  "utc": "2026-09-08T04:39:50.4545448Z",
+  "theme": "Dark",
+  "seite": "Haltungen",
+  "width": 1280,
+  "height": 720,
+  "zielFenster": "MainWindow",
+  "zielBreite": 1280,
+  "zielHoehe": 720,
+  "primaryWidth": 1920,
+  "primaryHeight": 1080,
+  "dpiX": 96,
+  "dpiY": 96,
+  "fullRows": 8,
+  "windowCount": 1,
+  "selected": "AuswertungPro.Next.Domain.Models.HaltungRecord",
+  "severityButtons": []
+}

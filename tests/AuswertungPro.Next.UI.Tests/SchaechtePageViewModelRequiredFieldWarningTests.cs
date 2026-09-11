@@ -185,9 +185,41 @@ public sealed class SchaechtePageViewModelRequiredFieldWarningTests : IDisposabl
         Assert.Equal(1, moveDownChanges);
     }
 
-    private (ShellViewModel Shell, SchaechtePageViewModel Vm) CreateVm(DialogFake dialogs)
+    [Fact]
+    public void Schacht_Autosave_schreibt_Feldwerte_und_Reihenfolge_in_die_Projektdatei()
     {
-        var settings = new AppSettings();
+        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "shaft-autosave-" + Guid.NewGuid());
+        var path = System.IO.Path.Combine(root, "Projektdateien", "projekt.json");
+        var settings = new AppSettings { LastProjectPath = path, EnableRestorePoints = false,
+            DataAutoSaveMode = AutoSaveMode.OnEachChange };
+        var (shell, vm) = CreateVm(new DialogFake(), settings);
+        using (shell)
+        {
+            try
+            {
+                shell.MarkProjectReady();
+                shell.HasPersistedProject = true;
+                vm.Records.Add(Record("S-1"));
+                vm.Records.Add(Record("S-2"));
+                vm.Selected = vm.Records[1];
+                vm.MoveUpCommand.Execute(null);
+                vm.Records[0].SetFieldValue("Strasse", "Teststrasse");
+                vm.ScheduleAutoSave();
+                typeof(SchaechtePageViewModel).GetMethod("SavePendingShaftChanges",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(vm, null);
+                var loaded = new AuswertungPro.Next.Infrastructure.Projects.JsonProjectRepository().Load(path);
+                Assert.True(loaded.Ok, loaded.ErrorMessage);
+                Assert.Equal("S-2", loaded.Value!.SchaechteData[0].GetFieldValue("Schachtnummer"));
+                Assert.Equal("Teststrasse", loaded.Value.SchaechteData[0].GetFieldValue("Strasse"));
+                Assert.False(shell.Project.Dirty);
+            }
+            finally { if (System.IO.Directory.Exists(root)) System.IO.Directory.Delete(root, recursive: true); }
+        }
+    }
+
+    private (ShellViewModel Shell, SchaechtePageViewModel Vm) CreateVm(DialogFake dialogs, AppSettings? configured = null)
+    {
+        var settings = configured ?? new AppSettings();
         var services = new ServiceProvider(
             settings,
             new DiagnosticsOptions(),

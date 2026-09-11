@@ -29,6 +29,18 @@ public sealed class BeobachtungenPhotoOpenController
         _shellOpen = shellOpen ?? throw new ArgumentNullException(nameof(shellOpen));
     }
 
+    public BeobachtungenPhotoOpenResult OpenFirst(IEnumerable<string> paths, string? projectPath)
+    {
+        var result = new BeobachtungenPhotoOpenResult(BeobachtungenPhotoOpenStatus.Ignored);
+        foreach (var path in paths.Where(p => !string.IsNullOrWhiteSpace(p)))
+        {
+            result = Open(path, projectPath);
+            if (result.Status is BeobachtungenPhotoOpenStatus.Opened or BeobachtungenPhotoOpenStatus.OpenFailed)
+                return result;
+        }
+        return result;
+    }
+
     public BeobachtungenPhotoOpenResult Open(string? rawPath, string? projectPath)
     {
         if (string.IsNullOrWhiteSpace(rawPath))

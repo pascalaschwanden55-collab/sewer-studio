@@ -8,6 +8,37 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class BeobachtungenPhotoOpenControllerTests
 {
     [Fact]
+    public void Erstes_vorhandenes_Foto_oeffnen_fehlende_ueberspringen_und_dann_stoppen()
+    {
+        var locator = new RecordingFileLocator("aufgeloest.jpg") { MissingRaw = "fehlt.jpg" };
+        var shell = new RecordingShellOpen(true);
+        var result = new BeobachtungenPhotoOpenController(locator, shell)
+            .OpenFirst([" ", "fehlt.jpg", "vorhanden.jpg", "weiteres.jpg"], "projekt.json");
+        Assert.Equal(BeobachtungenPhotoOpenStatus.Opened, result.Status);
+        Assert.Equal(new[] { "aufgeloest.jpg" }, shell.Paths);
+        Assert.Equal(new (string?, string?)[] { ("fehlt.jpg", "projekt.json"), ("vorhanden.jpg", "projekt.json") }, locator.ResolveCalls);
+    }
+
+    [Fact]
+    public void Alle_Fotos_fehlen_oder_keine_hinterlegt()
+    {
+        var controller = new BeobachtungenPhotoOpenController(new RecordingFileLocator(null), new RecordingShellOpen(true));
+        Assert.Equal(BeobachtungenPhotoOpenStatus.Ignored, controller.OpenFirst([], null).Status);
+        Assert.Equal(BeobachtungenPhotoOpenStatus.NotFound, controller.OpenFirst(["a.jpg", "b.jpg"], null).Status);
+    }
+
+    [Fact]
+    public void Oeffnungsfehler_startet_nicht_weitere_Fotos()
+    {
+        var shell = new RecordingShellOpen(false, "Fehler");
+        var controller = new BeobachtungenPhotoOpenController(new RecordingFileLocator("a.jpg"), shell);
+        var result = controller.OpenFirst(["a.jpg", "b.jpg"], "projekt.json");
+        Assert.Equal(BeobachtungenPhotoOpenStatus.OpenFailed, result.Status);
+        Assert.Equal("Fehler", result.Error);
+        Assert.Single(shell.Paths);
+    }
+
+    [Fact]
     public void Leerer_Pfad_wird_ignoriert()
     {
         var locator = new RecordingFileLocator("C:\\Projekt\\foto.jpg");
@@ -73,11 +104,12 @@ public sealed class BeobachtungenPhotoOpenControllerTests
         : IInspectionProtocolFileLocator
     {
         public List<(string? Raw, string? ProjectPath)> ResolveCalls { get; } = [];
+        public string? MissingRaw { get; init; }
 
         public string? ResolveExistingPath(string? raw, string? projectPath)
         {
             ResolveCalls.Add((raw, projectPath));
-            return resolvedPath;
+            return raw == MissingRaw ? null : resolvedPath;
         }
 
         public string? FindProtocolPath(

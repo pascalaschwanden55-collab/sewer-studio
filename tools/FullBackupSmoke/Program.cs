@@ -4,6 +4,13 @@ using AuswertungPro.Next.Infrastructure.Backup;
 using AuswertungPro.Next.Infrastructure.Projects;
 using Microsoft.Data.Sqlite;
 
+if (args.Length == 2 && string.Equals(args[0], "--recover-backup", StringComparison.OrdinalIgnoreCase))
+{
+    BackupRunJournal.Recover(Path.GetFullPath(args[1]));
+    Console.WriteLine("Unterbrochener Sicherungslauf zurückgesetzt oder fertig abgeschlossen. Jetzt die Inhaltsprüfung ausführen.");
+    return 0;
+}
+
 if (args.Length == 2 && string.Equals(args[0], "--verify-restore", StringComparison.OrdinalIgnoreCase))
     return await VerifyRestoreAsync(Path.GetFullPath(args[1]));
 

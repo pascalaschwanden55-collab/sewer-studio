@@ -41,6 +41,19 @@ public sealed class HaltungsgrafikScaleCalculatorTests
     public void ChooseTickStep_default_eins_bei_nicht_positiver_laenge()
         => Assert.Equal(1d, HaltungsgrafikScaleCalculator.ChooseTickStep(0));
 
+    [Theory]
+    [InlineData(16.85)]
+    [InlineData(18.4)]
+    [InlineData(168.5)]
+    public void Zwischenmarken_bleiben_auch_zwischen_den_Schrittbereichen_erhalten(double laenge)
+    {
+        var ticks = HaltungsgrafikScaleCalculator.BuildTicks(laenge,
+            HaltungsgrafikScaleCalculator.ChooseTickStep(laenge));
+        Assert.InRange(ticks.Count, 4, 10);
+        Assert.Equal(0, ticks[0]);
+        Assert.Equal(laenge, ticks[^1]);
+    }
+
     [Fact]
     public void ComputeScaleRatio_null_bei_nicht_positiver_laenge_oder_hoehe()
     {

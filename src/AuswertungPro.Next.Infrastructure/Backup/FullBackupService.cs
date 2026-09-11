@@ -103,7 +103,7 @@ public sealed class FullBackupService : IFullBackupService
 
     public Task<FullBackupSizeReport> AnalyzeAsync(IProgress<string>? progress = null, CancellationToken ct = default)
     {
-        var sources = _sourcesFactory();
+        var sources = BackupExternalReferences.Resolve(_sourcesFactory(), ct);
         return Task.FromResult(Analyze(sources, progress, ct));
     }
 
@@ -117,7 +117,7 @@ public sealed class FullBackupService : IFullBackupService
 
         try
         {
-            var sources = _sourcesFactory();
+            var sources = BackupExternalReferences.Resolve(_sourcesFactory(), ct);
             var plan = BackupPlanBuilder.Build(sources);
             var conflict = BackupTargetGuard.CheckSourceTargetConflict(backupRoot, CollectSourceRoots(plan));
             if (conflict is not null)
@@ -128,14 +128,17 @@ public sealed class FullBackupService : IFullBackupService
                 return Failure(markerError, backupRoot, started.Elapsed);
             BackupTargetPathGuard.EnsureTreeIsSafe(backupRoot);
 
+            using var journal = new BackupRunJournal(backupRoot);
+
             _walCheckpoint?.Invoke();
 
             // Pro Lauf ein datierter Versions-Stand: ersetzte/entfallene Dateien
             // wandern dorthin statt endgueltig zu verschwinden.
             var mirror = new DirectoryMirror(
-                BackupVersionRetention.BuildStandName(DateTime.Now),
+                versionsStandName: null,
                 afterTemporaryFileWritten: null,
-                sqliteSnapshots: _sqliteSnapshots);
+                sqliteSnapshots: _sqliteSnapshots,
+                preserveTarget: journal.Preserve);
 
             var sizeReport = Analyze(sources, progress: null, ct);
             var bytesToWrite = await EstimateRequiredCopyBytesAsync(plan, backupRoot, ct)
@@ -196,17 +199,21 @@ public sealed class FullBackupService : IFullBackupService
                 "Der bisherige Spiegelstand wurde nicht bereinigt.");
 
             progressState.Report(progress, "Extras", "umgebung.txt", force: true);
-            await WriteGeneratedExtrasAsync(backupRoot, sources, ct).ConfigureAwait(false);
+            await WriteGeneratedExtrasAsync(backupRoot, sources, (path, text) => journal.WriteText(path, text), ct).ConfigureAwait(false);
 
             ct.ThrowIfCancellationRequested();
             EnsureTargetStillTrusted(backupRoot);
+            if (!sources.IncludeProjectVideos)
+                BackupExcludedVideos.Preserve(backupRoot, expectedTargets);
             mirror.RemoveOrphans(backupRoot, expectedTargets, stats);
             ThrowIfMirrorErrors(
                 stats,
                 "Die Vollsicherung konnte den Zielstand nicht vollstaendig bereinigen.");
 
             EnsureTargetStillTrusted(backupRoot);
-            var versionStaende = RotateVersionStaende(backupRoot, stats);
+            var versionStaende = Math.Min(BackupVersionRetention.MaxStaende,
+                Directory.EnumerateDirectories(Path.Combine(backupRoot, "_Versionen"))
+                    .Count(p => BackupVersionRetention.IsStandName(Path.GetFileName(p))) + (journal.HasHistory ? 1 : 0));
             ThrowIfMirrorErrors(
                 stats,
                 "Die Vollsicherung konnte die Versionsstaende nicht sicher bereinigen.");
@@ -250,10 +257,14 @@ public sealed class FullBackupService : IFullBackupService
             var manifestPath = BackupTargetPathGuard.ResolveRelativePath(
                 backupRoot,
                 "manifest.json");
-            await AtomicTextFileWriter.WriteAllTextAsync(
-                manifestPath,
-                manifestJson,
-                ct).ConfigureAwait(false);
+            journal.Preserve(manifestPath);
+            journal.Preserve(manifestPath + ".bak");
+            ct.ThrowIfCancellationRequested();
+            EnsureTargetStillTrusted(backupRoot);
+            journal.WriteText(manifestPath, manifestJson, saveBackup: true);
+            journal.Commit();
+            // Erst ein vollständig abgeschlossener Lauf darf alte Stände ausdünnen.
+            RotateVersionStaende(backupRoot, stats);
 
             progressState.Report(progress, "Fertig", "manifest.json", force: true);
 
@@ -265,7 +276,7 @@ public sealed class FullBackupService : IFullBackupService
                 FilesCopied: stats.Copied,
                 FilesUnchanged: stats.Unchanged,
                 FilesDeleted: stats.Deleted,
-                SkippedFiles: skipped,
+                SkippedFiles: stats.Warnings.Take(200).ToArray(),
                 Duration: started.Elapsed,
                 SkippedFileTotal: stats.Warnings.Count,
                 FilesVerified: stats.Verified,
@@ -445,7 +456,8 @@ public sealed class FullBackupService : IFullBackupService
         }
     }
 
-    private async Task WriteGeneratedExtrasAsync(string backupRoot, FullBackupSources sources, CancellationToken ct)
+    private async Task WriteGeneratedExtrasAsync(string backupRoot, FullBackupSources sources,
+        Action<string, string> write, CancellationToken ct)
     {
         var extrasDir = BackupTargetPathGuard.ResolveRelativePath(backupRoot, "Extras");
         Directory.CreateDirectory(extrasDir);
@@ -455,22 +467,16 @@ public sealed class FullBackupService : IFullBackupService
             backupRoot,
             Path.Combine("Extras", "RESTORE-ANLEITUNG.txt"));
         BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, restorePath);
-        await File.WriteAllTextAsync(
-            restorePath,
-            RestoreAnleitungText.Build(sources),
-            Encoding.UTF8,
-            ct).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+        write(restorePath, RestoreAnleitungText.Build(sources));
 
         var environmentText = await BuildUmgebungTextAsync(sources, ct).ConfigureAwait(false);
         var environmentPath = BackupTargetPathGuard.ResolveRelativePath(
             backupRoot,
             Path.Combine("Extras", "umgebung.txt"));
         BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, environmentPath);
-        await File.WriteAllTextAsync(
-            environmentPath,
-            environmentText,
-            Encoding.UTF8,
-            ct).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+        write(environmentPath, environmentText);
     }
 
     private async Task<long> EstimateRequiredCopyBytesAsync(
@@ -526,7 +532,7 @@ public sealed class FullBackupService : IFullBackupService
         var targetInfo = new FileInfo(targetFile);
         return await DirectoryMirror.IsUnchangedAsync(sourceInfo, targetInfo, ct).ConfigureAwait(false)
             ? 0
-            : sourceInfo.Length;
+            : checked(sourceInfo.Length + (targetInfo.Exists ? targetInfo.Length : 0));
     }
 
     private async Task<string> BuildUmgebungTextAsync(FullBackupSources sources, CancellationToken ct)

@@ -1,0 +1,18 @@
+Projekt: Synthetische_Abnahme
+Lieferart: vollstaendiger Projektstand.
+
+Im Projekt: 1 Haltungen, 5 Schaechte.
+In die Datei: 1 Haltungen, 5 Schaechte (16 Objekte insgesamt).
+Keine QGIS-Quelle eingerichtet — die Objekte gehen ohne Verlauf hinaus.
+
+Hinweise:
+  1 Haltungen ohne Verlauf in der QGIS-Kopie.
+  Reiner SIA405-Erstexport: Programmeigene Zusatzangaben verbleiben im Projekt und sind nicht in dieser Datei enthalten.
+
+Die Objektkennungen bleiben bei jedem Export dieselben. Ein zweiter Lauf
+kann damit bestehende Objekte treffen, sofern die Kennungen im Ziel bestaetigt sind. Bauteile mit
+GEONIS-Kennung ("Katasterkennungen ergaenzen") tragen die Kennung des Katasters.
+Datenherr und Datenlieferant kommen aus ihren Projektfeldern. Ist ein Feld
+leer, gilt der Eigentuemer. Ein gesetzter unbekannter Wert sperrt das Objekt.
+
+Geschrieben: C:\Sewer-Studio_KI_4.5\.tmp\redesign-xtf-validation\ausgabe-20260908-195021\standard\Synthetische_Abnahme_20260908_195021.xtf

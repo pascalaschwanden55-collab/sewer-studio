@@ -162,8 +162,9 @@
 
     <SolidColorBrush x:Key="GlassBrush" Color="Transparent"/>
 
-    <!-- Nav sidebar: Nova-Glasleiste (Inventar 1.7) -->
-    <SolidColorBrush x:Key="NavPanelBrush" Color="#B8101B30"/>
+    <!-- Deckende Seitenleiste: gleiche Farben auch ohne Windows-Mica-Hintergrund. -->
+    <SolidColorBrush x:Key="NavPanelBrush" Color="#FF101B30"/>
+    <SolidColorBrush x:Key="NavSelectedTextBrush" Color="#FFFFFFFF"/>
 
     <!-- ═══════════════════════════════════════════════════════════
          WINDOW

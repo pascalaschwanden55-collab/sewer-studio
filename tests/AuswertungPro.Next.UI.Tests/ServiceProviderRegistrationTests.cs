@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Import;
@@ -122,11 +122,15 @@ public sealed class ServiceProviderRegistrationTests
         // kennt nur diesen Vertrag, keine Modellwahl.
         // 158 -> 159: ICodingSuggestionRegistry merkt den letzten Vorabdurchlauf je Haltung
         // (Sitzungsgedaechtnis fuer die Karte "KI-Vorabdurchlauf" in der Uebersicht, Nova-Etappe 2).
+        // 159 -> 160: IGeoShopLeser liefert Original-XTF-TIDs und Leerfelder fuer die neue Vorschau.
+        // 160 -> 161: IBackupAdditionalFolders speichert zusätzliche Sicherungsquellen getrennt.
         Assert.True(
-            registrations.Count == 159,
-            $"Erwartet 159 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 163,
+            $"Erwartet 163 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
+        Assert.Same(services.BackupAdditionalFolders,
+            registrations[typeof(AuswertungPro.Next.Application.Backup.IBackupAdditionalFolders)]);
         Assert.Same(
             services.DossierPlanPublications,
             registrations[typeof(AuswertungPro.Next.Application.Dossiers.IDossierPlanPublicationService)]);

@@ -1,0 +1,496 @@
+[
+  {
+    "id": "O01",
+    "path": "D:\\Fachwissen\\Offerten\\Anwendung_135D16.pdf",
+    "pages": 4,
+    "characters": 11103,
+    "empty_pages": [],
+    "sha256": "a0b62c5f834e86dbc557e55e8db8543e52ca1e28b824c8c77405b49519b5deb8"
+  },
+  {
+    "id": "O02",
+    "path": "D:\\Fachwissen\\Offerten\\Ausmass - Sanierung Kanalisation Erstfeld.pdf",
+    "pages": 9,
+    "characters": 12437,
+    "empty_pages": [],
+    "sha256": "02fe641268c9a90b95559c7d65fbd2684032866d89f635eb0cd35ad5a7487ffa"
+  },
+  {
+    "id": "O03",
+    "path": "D:\\Fachwissen\\Offerten\\Faktura 25100696, 1, 39275.pdf",
+    "pages": 5,
+    "characters": 9535,
+    "empty_pages": [],
+    "sha256": "d5aacfb8679741bb73936d491a4d3460b30c6e63a5a4da221788c32b944eadfa"
+  },
+  {
+    "id": "O04",
+    "path": "D:\\Fachwissen\\Offerten\\Faktura 25100800, 1, 39132.pdf",
+    "pages": 6,
+    "characters": 11986,
+    "empty_pages": [],
+    "sha256": "20a5ec1984ee287c4af7af2d97552e20ed26df548576348ec5383b9c6693e59a"
+  },
+  {
+    "id": "O05",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Angebot_23D272HL_Zone_6.18_Leitungen_27.04.23_BB.pdf",
+    "pages": 19,
+    "characters": 52910,
+    "empty_pages": [],
+    "sha256": "f626377202327f4fa3c34c146f9ae9eb11410a812122eff52ce929866cac709e"
+  },
+  {
+    "id": "O06",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Angebot_23D282HL_Zone_6.19_Leitungen_01.05.23_BB.pdf",
+    "pages": 13,
+    "characters": 35023,
+    "empty_pages": [],
+    "sha256": "ab53bf45567ff492ec79b975ce877c1e7c89ddfac8e1a76d38ca0ae3ff0d1602"
+  },
+  {
+    "id": "O07",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Angebot_23E011HL_Zone_6.22_Leitungen_02.05.23_BB.pdf",
+    "pages": 9,
+    "characters": 21028,
+    "empty_pages": [],
+    "sha256": "f54ce45909e36c1f82c6424716cbde501474f6850dcf7623b01336c7f662a5c0"
+  },
+  {
+    "id": "O08",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Ausmass - Sanierung Kanalisation Erstfeld - Zusatz.pdf",
+    "pages": 1,
+    "characters": 1637,
+    "empty_pages": [],
+    "sha256": "c5af9c6ada9b96d142e87fa2f2fef49ce92356e0ae85af1a419ae3a896ea00af"
+  },
+  {
+    "id": "O09",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Gep_Massnahmen_Hospental.pdf",
+    "pages": 7,
+    "characters": 18797,
+    "empty_pages": [],
+    "sha256": "1856e4359f28af207dafcd8e45280d38c10451bd8383d977f837f3215266186d"
+  },
+  {
+    "id": "O10",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Offert-Nr. 28397 Zone 2.03; Bahnhofstrasse  6490 Andermatt.pdf",
+    "pages": 6,
+    "characters": 15638,
+    "empty_pages": [],
+    "sha256": "4088262fe7bbdc4aef2c3fd1f715381fd91743e3690a823bb5a3f230ca68bd21"
+  },
+  {
+    "id": "O11",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Offert-Nr. 28405 Zone 2.08; Bodenstrasse - Bäzweg 6490 Andermatt.pdf",
+    "pages": 8,
+    "characters": 24690,
+    "empty_pages": [],
+    "sha256": "3da1f7ac3c97842a8a0570e1a514f790b86c05c5f2f29417d1725282d7b8619d"
+  },
+  {
+    "id": "O12",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Offert-Nr. 28409 Zone 2.09; Bodenstrasse-Gemsstockstrasse 6490 Andermatt.pdf",
+    "pages": 8,
+    "characters": 22552,
+    "empty_pages": [],
+    "sha256": "ba0a57423372ae56aaeef4bbc5c004e6912ddc2a90fffc4bff7bc855882812e8"
+  },
+  {
+    "id": "O13",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Offert-Nr. 28416 Zone 2.10; Bahnhofstrasse 6490 Andermatt.pdf",
+    "pages": 6,
+    "characters": 14959,
+    "empty_pages": [],
+    "sha256": "09b0098200a0ebebef9ea3f03d5301a2528a8b63e3ed112b3d544774546d20ce"
+  },
+  {
+    "id": "O14",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Offert-Nr. 28418 Zone 2.11; Missionsweg - Kirchgasse 6490 Andermatt.pdf",
+    "pages": 7,
+    "characters": 19855,
+    "empty_pages": [],
+    "sha256": "d1d00d09b43b66641f233a8582804cbad70d8897238fb2a7a27a10fe8fea1f16"
+  },
+  {
+    "id": "O15",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Offerte_25100798-1-0_Zone 2.02, GEP Andermatt Sanierungsmassnahmen 2026, Diverse Strassen, Andermatt.pdf",
+    "pages": 7,
+    "characters": 14228,
+    "empty_pages": [],
+    "sha256": "64569a2451c2dc64dd9bd3d2ee0b8b34bc359061627cecaae20b73a6630989ea"
+  },
+  {
+    "id": "O16",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Offerte_26100038-1-0_Sanierung, Seilergasse 17, Altdorf UR.pdf",
+    "pages": 7,
+    "characters": 12803,
+    "empty_pages": [],
+    "sha256": "d2ce4c9a1715a025d974fc86ecbebb06490cf4a89e5a9c8cd37321ecebc62784"
+  },
+  {
+    "id": "O17",
+    "path": "D:\\Fachwissen\\Offerten\\Leitungen\\Schlussrechnung_Liner-Teil_2025.pdf",
+    "pages": 4,
+    "characters": 9935,
+    "empty_pages": [],
+    "sha256": "416f4cbf2eba6da6b44683c8d0ecbbfdd58a31c9cfbb9e6ae437047e82e5342d"
+  },
+  {
+    "id": "O18",
+    "path": "D:\\Fachwissen\\Offerten\\Markierung für Sanierung.pdf",
+    "pages": 1,
+    "characters": 487,
+    "empty_pages": [],
+    "sha256": "b1ccfd3e9e6e317bbb8f9cd0c179bf05046e7e7f0ae75d0f763a1b0f38278295"
+  },
+  {
+    "id": "O19",
+    "path": "D:\\Fachwissen\\Offerten\\Offert-Nr. 29300 Allmendstrasse; Zuleitung APW Maihof 6460 Altdorf UR.pdf",
+    "pages": 7,
+    "characters": 21796,
+    "empty_pages": [],
+    "sha256": "e88f53ca794a552311791b5ac90680d47370cf7b59103e7df07ba861b3faed00"
+  },
+  {
+    "id": "O20",
+    "path": "D:\\Fachwissen\\Offerten\\Offerte_26100245-1-0_Sanierung, Flueelerstrasse, Altdorf UR.pdf",
+    "pages": 8,
+    "characters": 15558,
+    "empty_pages": [],
+    "sha256": "a697cc0bd54282408040b8d8c48e3ed4d7326b7c41e9b6fcba8e0d7f4d8fd231"
+  },
+  {
+    "id": "O21",
+    "path": "D:\\Fachwissen\\Offerten\\Offerte_ITS_Zone_6.00.pdf",
+    "pages": 9,
+    "characters": 11856,
+    "empty_pages": [],
+    "sha256": "40e66b74b6b62e61ee4db65f6394cad02b007caee3e670317c01ff5d510eb7f3"
+  },
+  {
+    "id": "O22",
+    "path": "D:\\Fachwissen\\Offerten\\Offerte_ITS_Zone_6.16.pdf",
+    "pages": 1,
+    "characters": 1379,
+    "empty_pages": [],
+    "sha256": "7a6d46dc31c9a6e6d0c952a506c08083bb26443f8d9ba5ab5a2d0ea899410167"
+  },
+  {
+    "id": "O23",
+    "path": "D:\\Fachwissen\\Offerten\\Offerte_ITS_Zone_6.17.pdf",
+    "pages": 1,
+    "characters": 1678,
+    "empty_pages": [],
+    "sha256": "fd4f4229397c5a795d6e82d47af0bcbc74a89a05b10e41fda8f86d9b20fd323e"
+  },
+  {
+    "id": "O24",
+    "path": "D:\\Fachwissen\\Offerten\\RE 3089558_Erstfeld, Gebiet West_SRG.pdf",
+    "pages": 3,
+    "characters": 4115,
+    "empty_pages": [],
+    "sha256": "6b7e6103fc9ab5e3ab62b858e1ba33235654fba2ef2d1fa6df58d3d0d06065cb"
+  },
+  {
+    "id": "O25",
+    "path": "D:\\Fachwissen\\Offerten\\RG Muster Jagdmatt Erstfeld .pdf",
+    "pages": 26,
+    "characters": 34523,
+    "empty_pages": [],
+    "sha256": "6b67956078d8b4359c5ad4a87d9d69d4f5dc0ab50739df3f7573b3b21e70f9bc"
+  },
+  {
+    "id": "O26",
+    "path": "D:\\Fachwissen\\Offerten\\Schlussrechnung_ITS.pdf",
+    "pages": 14,
+    "characters": 281,
+    "empty_pages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      13,
+      14
+    ],
+    "sha256": "7aaf1142d987f08fc0bc6312595438c8ae292ed77719ef062e17c51a459118d3"
+  },
+  {
+    "id": "O27",
+    "path": "D:\\Fachwissen\\Offerten\\Schlussrechnungen_ITS_Zusatzschächte.pdf",
+    "pages": 6,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "sha256": "fa6fb213c40095d0abe8fac886a449e8752861052f61c1511127a213a973e698"
+  },
+  {
+    "id": "O28",
+    "path": "D:\\Fachwissen\\Offerten\\an-00747 abwasser uri,.pdf",
+    "pages": 9,
+    "characters": 12663,
+    "empty_pages": [],
+    "sha256": "639b6c33deeb14bac389dcad4428a87f1e105a4bf18c78f4d7e8e1ec6597ef04"
+  },
+  {
+    "id": "O29",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Gep Bürglen\\Offerten\\Zone_5.01_Farb-Grossgrund\\Fretz\\Kanalsanierung_Bürglen_Zone_5.01.pdf",
+    "pages": 7,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "sha256": "23ce0f4e6aebe76b6b1a07dd833ffed856fa858fd6675208a2b43e86c2f60336"
+  },
+  {
+    "id": "O30",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Gep Bürglen\\Offerten\\Zone_5.01_Farb-Grossgrund\\Fretz\\Kanalsanierung_Bürglen_Zone_5.01_OCR.pdf",
+    "pages": 7,
+    "characters": 69521,
+    "empty_pages": [],
+    "sha256": "2ffa0df9360382aa7791dea1187a114104decc9fc119cdcd3c8e4166096cf750"
+  },
+  {
+    "id": "O31",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Gep Bürglen\\Offerten\\Zone_5.01_Farb-Grossgrund\\GKS\\Sanierungsmassnahmen_Kanalisation_Bürglen_5.01.pdf",
+    "pages": 23,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "sha256": "14a74124edac41dc3b1dd4d06a9fa2a26624b7bb425e075b3e77bbb2e1998b9c"
+  },
+  {
+    "id": "O32",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Gep Bürglen\\Offerten\\Zone_5.01_Farb-Grossgrund\\GKS\\Sanierungsmassnahmen_Kanalisation_Bürglen_5.01_OCR.pdf",
+    "pages": 23,
+    "characters": 378840,
+    "empty_pages": [
+      7,
+      22
+    ],
+    "sha256": "ae49f9cb084db74cce27b72ad59edee84f2f01060f0aa3ee17c89ac8df916c4b"
+  },
+  {
+    "id": "O33",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Gep Bürglen\\Offerten\\Zone_5.01_Farb-Grossgrund\\ITS\\Sanierungsmassnahmen_Kanalisation_5.01.pdf",
+    "pages": 8,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "sha256": "ebb1dee9bb681a7bfdc5bfc53378ee983c112cba1357145b37abacc9daba9829"
+  },
+  {
+    "id": "O34",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Gep Bürglen\\Offerten\\Zone_5.01_Farb-Grossgrund\\ITS\\Sanierungsmassnahmen_Kanalisation_5.01_OCR.pdf",
+    "pages": 8,
+    "characters": 77825,
+    "empty_pages": [],
+    "sha256": "26e186696b46af2192eaa64fb6959bf2dbb2ca15d0619b60aa5a0f6504bb7fa9"
+  },
+  {
+    "id": "O35",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Gep Bürglen\\Offerten\\Zone_5.13_Grossgrund_Galgenwäldli\\Fretz\\Kanalsanierung_Bürglen_Zone_5.13.pdf",
+    "pages": 6,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "sha256": "91646ca8a8a65f3ff9be0666f8396e3813e50da3a210e45a71d3084e291aeb32"
+  },
+  {
+    "id": "O36",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Gep Bürglen\\Offerten\\Zone_5.13_Grossgrund_Galgenwäldli\\GKS\\Sanierungsmassnahmen_Kanalisation_Bürglen_5.13.pdf",
+    "pages": 15,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "sha256": "059670630f8db37675c6b42150a02db47db4691648a9d654eff9e9331a77ece5"
+  },
+  {
+    "id": "O37",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Gep Bürglen\\Offerten\\Zone_5.13_Grossgrund_Galgenwäldli\\ITS\\Sanierungsmassnahmen_Kanalisation_5.13.pdf",
+    "pages": 14,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "sha256": "449c09dadfed5ed447a6f2c403f19286c16e9945de2ef2efd03c79c048ae1c2d"
+  },
+  {
+    "id": "O38",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Gep Bürglen\\Offerten\\Zone_5.14_Grund_Löwenmatt\\Fretz\\Kanalsanierung_Bürglen_Zone_5.14.pdf",
+    "pages": 5,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "sha256": "6f258d2b3f5546ba00ded798d089408cc87db1fc25068c69387c3405d3c73ab0"
+  },
+  {
+    "id": "O39",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Gep Bürglen\\Offerten\\Zone_5.14_Grund_Löwenmatt\\GKS\\Sanierungsmassnahmen_Kanalisation_Bürglen_5.14.pdf",
+    "pages": 14,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "sha256": "d0cbdf9a66eecb95c208541652a58432e274d293aed6ccc0aa851a1437a1fe74"
+  },
+  {
+    "id": "O40",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Gep Bürglen\\Offerten\\Zone_5.14_Grund_Löwenmatt\\ITS\\Sanierungsmassnahmen_Kanalisation_5.14.pdf",
+    "pages": 16,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "sha256": "cf0fee7f9940627ba30cf48b987d487f1eb5830d7ee328dc54905148d18868e1"
+  },
+  {
+    "id": "O41",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Präzisierung\\Präzisierung_Pos_2.1_Zone_5.01.pdf",
+    "pages": 2,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2
+    ],
+    "sha256": "4b9cab3f73442ea248480a3f89b0fa0a3da9ff2f145dcac39fd56d3e451ed8f4"
+  },
+  {
+    "id": "O42",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Präzisierung\\Präzisierung_Pos_2.1_Zone_5.13.pdf",
+    "pages": 2,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2
+    ],
+    "sha256": "e010c78ffbfe13ef55467de22a4818da3573044004bd3d5676c0340edf7b33e5"
+  },
+  {
+    "id": "O43",
+    "path": "D:\\Fachwissen\\Offertenvergleich\\Präzisierung\\Präzisierung_Pos_2.1_Zone_5.14.pdf",
+    "pages": 2,
+    "characters": 0,
+    "empty_pages": [
+      1,
+      2
+    ],
+    "sha256": "e2b5f48c113c27168582b49aab2531cdc1562670554e9f280808c4120b697a45"
+  }
+]

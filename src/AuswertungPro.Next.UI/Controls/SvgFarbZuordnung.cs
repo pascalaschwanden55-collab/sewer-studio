@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
 using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.Application.Reports;
+using System.Linq;
 
 namespace AuswertungPro.Next.UI.Controls;
 
@@ -25,6 +27,17 @@ public static class SvgFarbZuordnung
 {
     /// <summary>Token, wenn eine Farbe nicht bekannt ist: sichtbar, aber ohne falsche Aussage.</summary>
     public const string RueckfallToken = "TextBrush";
+
+    // Fachfarben wie in den Berichten; keine Umfaerbung aller Nutzungsarten zum App-Akzent.
+    private static readonly IReadOnlyDictionary<string, Brush> Nutzungsfarben =
+        new[] { "Schmutzabwasser", "Niederschlagsabwasser", "Mischabwasser", "unbekannt" }
+            .Select(n => NutzungsartReportColors.Resolve(n).Accent)
+            .Distinct().ToDictionary(c => c, c =>
+            {
+                var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(c));
+                brush.Freeze();
+                return (Brush)brush;
+            });
 
     private static readonly IReadOnlyDictionary<string, string> Token = new Dictionary<string, string>(StringComparer.Ordinal)
     {
@@ -73,6 +86,7 @@ public static class SvgFarbZuordnung
         {
             var alle = new List<string>(Token.Keys);
             alle.AddRange(Zustandsklassen.Keys);
+            alle.AddRange(Nutzungsfarben.Keys);
             return alle;
         }
     }
@@ -85,14 +99,14 @@ public static class SvgFarbZuordnung
     public static bool IstBekannt(string? farbe)
     {
         var key = Normalisiere(farbe);
-        return Token.ContainsKey(key) || Zustandsklassen.ContainsKey(key);
+        return Token.ContainsKey(key) || Zustandsklassen.ContainsKey(key) || Nutzungsfarben.ContainsKey(key);
     }
 
     /// <summary>Theme-Token einer Farbe; <c>null</c> bei den festen Zustandsklassen.</summary>
     public static string? TokenFuer(string? farbe)
     {
         var key = Normalisiere(farbe);
-        if (Zustandsklassen.ContainsKey(key))
+        if (Zustandsklassen.ContainsKey(key) || Nutzungsfarben.ContainsKey(key))
             return null;
         return Token.TryGetValue(key, out var token) ? token : RueckfallToken;
     }
@@ -107,6 +121,11 @@ public static class SvgFarbZuordnung
         ArgumentNullException.ThrowIfNull(eigenschaft);
 
         var key = Normalisiere(farbe);
+        if (Nutzungsfarben.TryGetValue(key, out var nutzungsfarbe))
+        {
+            ziel.SetValue(eigenschaft, nutzungsfarbe);
+            return;
+        }
         if (Zustandsklassen.TryGetValue(key, out var klasse)
             && ZustandsklasseColorPalette.HaltungenPalette.TryGetValue(klasse, out var fest))
         {
@@ -126,6 +145,8 @@ public static class SvgFarbZuordnung
         ArgumentNullException.ThrowIfNull(quelle);
 
         var key = Normalisiere(farbe);
+        if (Nutzungsfarben.TryGetValue(key, out var nutzungsfarbe))
+            return nutzungsfarbe;
         if (Zustandsklassen.TryGetValue(key, out var klasse)
             && ZustandsklasseColorPalette.HaltungenPalette.TryGetValue(klasse, out var fest))
         {

@@ -1,0 +1,1093 @@
+{
+  "sourcePath": "docs/reviews/2026-09-06-nova/optimiert/v2/PRUEFTABELLE.md",
+  "inventoryPath": "docs/reviews/2026-09-06-nova/wpf-etappe-2/PROTOTYP-INVENTAR.md",
+  "rows": [
+    {
+      "id": "A1",
+      "requirement": "Dokument: DOCTYPE, UTF-8, lang=de, viewport",
+      "sourceLine": 12,
+      "status": "Nur Prototyp",
+      "evidence": "HTML-Dokumentmerkmale; für die WPF-App nicht direkt anwendbar."
+    },
+    {
+      "id": "A2",
+      "requirement": "Keine externen Schriften oder Skripte",
+      "sourceLine": 13,
+      "status": "Teilweise",
+      "evidence": "Systemschriften im Programm und in den Tabellenbildern; kein vollständiger Netzwerkmitschnitt."
+    },
+    {
+      "id": "A3",
+      "requirement": "Umlaute im lokalen Aufruf lesbar",
+      "sourceLine": 14,
+      "status": "Teilweise",
+      "evidence": "Umlaute in aktuellen Bildern und DesignAudit-Laufzeittexttests; keine Prüfung jedes Texts."
+    },
+    {
+      "id": "A4",
+      "requirement": "Alle 15 Seiten über die Navigation erreichbar",
+      "sourceLine": 15,
+      "status": "Teilweise",
+      "evidence": "28/30 Aufbauten in seitenprobe.json; Medienkonflikte zusätzlich mit echtem App-BAML erfolgreich."
+    },
+    {
+      "id": "A5",
+      "requirement": "Drei Fenster öffnen: Player, Training Studio, VSA-Codierung",
+      "sourceLine": 16,
+      "status": "Offen",
+      "evidence": "Training Studio aufgebaut; heutiger Gesamt-Klickweg durch alle drei Fenster nicht nachgewiesen."
+    },
+    {
+      "id": "A6",
+      "requirement": "Keine Skriptfehler beim Durchklicken",
+      "sourceLine": 17,
+      "status": "Teilweise",
+      "evidence": "Seitenprobe und echte Ressourcenprobe; gesonderter WPF-Testfehler bleibt offen."
+    },
+    {
+      "id": "B1",
+      "requirement": "Wechsel auf 07.6588-6587: Formular, Übersicht und Medien folgen",
+      "sourceLine": 23,
+      "status": "Teilweise",
+      "evidence": "Speicher-/Auswahlregeln durch vorhandene .NET-Tests mitgeprüft; keine vollständige aktuelle Bedienfolge aller Varianten. R1/R2 sperren Projektwechsel-Abnahme."
+    },
+    {
+      "id": "B2",
+      "requirement": "Zurück auf 78998-79002: Beton, 300, 42.30",
+      "sourceLine": 24,
+      "status": "Teilweise",
+      "evidence": "Speicher-/Auswahlregeln durch vorhandene .NET-Tests mitgeprüft; keine vollständige aktuelle Bedienfolge aller Varianten. R1/R2 sperren Projektwechsel-Abnahme."
+    },
+    {
+      "id": "B3",
+      "requirement": "Ungespeicherte Änderung sichtbar (Badge, Zeilenmarke, Speichern aktiv)",
+      "sourceLine": 25,
+      "status": "Teilweise",
+      "evidence": "Speicher-/Auswahlregeln durch vorhandene .NET-Tests mitgeprüft; keine vollständige aktuelle Bedienfolge aller Varianten. R1/R2 sperren Projektwechsel-Abnahme."
+    },
+    {
+      "id": "B4",
+      "requirement": "Wechsel bei Änderungen fragt nach; Abbrechen bleibt auf der Haltung",
+      "sourceLine": 26,
+      "status": "Teilweise",
+      "evidence": "Speicher-/Auswahlregeln durch vorhandene .NET-Tests mitgeprüft; keine vollständige aktuelle Bedienfolge aller Varianten. R1/R2 sperren Projektwechsel-Abnahme."
+    },
+    {
+      "id": "B5",
+      "requirement": "Verwerfen und wechseln: Ziel gewählt, Ursprung unverändert",
+      "sourceLine": 27,
+      "status": "Teilweise",
+      "evidence": "Speicher-/Auswahlregeln durch vorhandene .NET-Tests mitgeprüft; keine vollständige aktuelle Bedienfolge aller Varianten. R1/R2 sperren Projektwechsel-Abnahme."
+    },
+    {
+      "id": "B6",
+      "requirement": "Speichern und wechseln: Wert im Bestand, Ziel gewählt",
+      "sourceLine": 28,
+      "status": "Teilweise",
+      "evidence": "Speicher-/Auswahlregeln durch vorhandene .NET-Tests mitgeprüft; keine vollständige aktuelle Bedienfolge aller Varianten. R1/R2 sperren Projektwechsel-Abnahme."
+    },
+    {
+      "id": "B7",
+      "requirement": "Gespeicherter Wert überlebt Neuladen (Browserspeicher, kein Projektschreiben)",
+      "sourceLine": 29,
+      "status": "Teilweise",
+      "evidence": "Speicher-/Auswahlregeln durch vorhandene .NET-Tests mitgeprüft; keine vollständige aktuelle Bedienfolge aller Varianten. R1/R2 sperren Projektwechsel-Abnahme."
+    },
+    {
+      "id": "B8",
+      "requirement": "Verwerfen ohne Wechsel setzt Feld zurück",
+      "sourceLine": 30,
+      "status": "Teilweise",
+      "evidence": "Speicher-/Auswahlregeln durch vorhandene .NET-Tests mitgeprüft; keine vollständige aktuelle Bedienfolge aller Varianten. R1/R2 sperren Projektwechsel-Abnahme."
+    },
+    {
+      "id": "C1",
+      "requirement": "Feldsuche „Baujahr\" bei Haltungen lässt Schachtfelder unberührt",
+      "sourceLine": 36,
+      "status": "Teilweise",
+      "evidence": "Getrennte Ansichten und Feldbereiche vorhanden, aktuelle Tests und Tabellenbilder. Die fünf vollständigen Bedienfolgen nicht einzeln protokolliert."
+    },
+    {
+      "id": "C2",
+      "requirement": "Ansichtswechsel bei Haltungen ändert Schachtansicht und Schachtauswahl nicht",
+      "sourceLine": 37,
+      "status": "Teilweise",
+      "evidence": "Getrennte Ansichten und Feldbereiche vorhanden, aktuelle Tests und Tabellenbilder. Die fünf vollständigen Bedienfolgen nicht einzeln protokolliert."
+    },
+    {
+      "id": "C3",
+      "requirement": "„Alle zu\" wirkt nur auf die eigene Seite",
+      "sourceLine": 38,
+      "status": "Teilweise",
+      "evidence": "Getrennte Ansichten und Feldbereiche vorhanden, aktuelle Tests und Tabellenbilder. Die fünf vollständigen Bedienfolgen nicht einzeln protokolliert."
+    },
+    {
+      "id": "C4",
+      "requirement": "Schachtsuche arbeitet eigenständig",
+      "sourceLine": 39,
+      "status": "Teilweise",
+      "evidence": "Getrennte Ansichten und Feldbereiche vorhanden, aktuelle Tests und Tabellenbilder. Die fünf vollständigen Bedienfolgen nicht einzeln protokolliert."
+    },
+    {
+      "id": "C5",
+      "requirement": "Feldsuche bei Schächten lässt Haltungsfelder unberührt",
+      "sourceLine": 40,
+      "status": "Teilweise",
+      "evidence": "Getrennte Ansichten und Feldbereiche vorhanden, aktuelle Tests und Tabellenbilder. Die fünf vollständigen Bedienfolgen nicht einzeln protokolliert."
+    },
+    {
+      "id": "D1",
+      "requirement": "Dringend = Z0 + Z1",
+      "sourceLine": 46,
+      "status": "Teilweise",
+      "evidence": "Kennzahlenregeln in aktuellen Infrastructure-/UI-Tests; R2 zeigt veraltete Kennzahlen nach Projektwechsel."
+    },
+    {
+      "id": "D2",
+      "requirement": "Legende summiert auf die Gesamtzahl",
+      "sourceLine": 47,
+      "status": "Teilweise",
+      "evidence": "Kennzahlenregeln in aktuellen Infrastructure-/UI-Tests; R2 zeigt veraltete Kennzahlen nach Projektwechsel."
+    },
+    {
+      "id": "D3",
+      "requirement": "Prozent mit Zähler und Nenner, korrekt gerundet",
+      "sourceLine": 48,
+      "status": "Teilweise",
+      "evidence": "Kennzahlenregeln in aktuellen Infrastructure-/UI-Tests; R2 zeigt veraltete Kennzahlen nach Projektwechsel."
+    },
+    {
+      "id": "D4",
+      "requirement": "Kosten-KPI = Summe Haltungen + Schächte",
+      "sourceLine": 49,
+      "status": "Teilweise",
+      "evidence": "Kennzahlenregeln in aktuellen Infrastructure-/UI-Tests; R2 zeigt veraltete Kennzahlen nach Projektwechsel."
+    },
+    {
+      "id": "D5",
+      "requirement": "Text unterscheidet fachlich geprüft, KI analysiert und ohne Analyse",
+      "sourceLine": 50,
+      "status": "Teilweise",
+      "evidence": "Kennzahlenregeln in aktuellen Infrastructure-/UI-Tests; R2 zeigt veraltete Kennzahlen nach Projektwechsel."
+    },
+    {
+      "id": "E1",
+      "requirement": "„Nächste Haltung prüfen\" wählt eine offene Haltung und öffnet den Player",
+      "sourceLine": 56,
+      "status": "Teilweise",
+      "evidence": "Player-/Codier-/Aufgabenregeln in aktuellen Tests; vollständiger Fenster- und Medienablauf heute offen."
+    },
+    {
+      "id": "E2",
+      "requirement": "Player: Dialogrolle, aria-modal, Name, Fokus im Dialog",
+      "sourceLine": 57,
+      "status": "Teilweise",
+      "evidence": "Player-/Codier-/Aufgabenregeln in aktuellen Tests; vollständiger Fenster- und Medienablauf heute offen."
+    },
+    {
+      "id": "E3",
+      "requirement": "Ereignis erfassen → Abbrechen: kehrt zum Player zurück, nichts übernommen, Position gleich",
+      "sourceLine": 58,
+      "status": "Teilweise",
+      "evidence": "Player-/Codier-/Aufgabenregeln in aktuellen Tests; vollständiger Fenster- und Medienablauf heute offen."
+    },
+    {
+      "id": "E4",
+      "requirement": "Ereignis erfassen → Übernehmen: Befund im Player-Entwurf, Bestand noch unverändert, Player offen, Haltung und Position erhalten",
+      "sourceLine": 59,
+      "status": "Teilweise",
+      "evidence": "Player-/Codier-/Aufgabenregeln in aktuellen Tests; vollständiger Fenster- und Medienablauf heute offen."
+    },
+    {
+      "id": "E5",
+      "requirement": "Esc bei Entwurf fragt nach; Verwerfen schliesst den Player; Fokus kehrt zum Auslöser oder zur gewählten Zeile",
+      "sourceLine": 60,
+      "status": "Teilweise",
+      "evidence": "Player-/Codier-/Aufgabenregeln in aktuellen Tests; vollständiger Fenster- und Medienablauf heute offen."
+    },
+    {
+      "id": "E6",
+      "requirement": "Training Studio → Katalog → Übernehmen: Code im Studio, Studio bleibt offen",
+      "sourceLine": 61,
+      "status": "Teilweise",
+      "evidence": "Player-/Codier-/Aufgabenregeln in aktuellen Tests; vollständiger Fenster- und Medienablauf heute offen."
+    },
+    {
+      "id": "E7",
+      "requirement": "Studio: Vorschlag, Bestätigung und Trainingsfreigabe sind getrennte Schritte",
+      "sourceLine": 62,
+      "status": "Genehmigt angepasst / teilweise",
+      "evidence": "Freigabe über das Export-Register; Akzeptieren und Exportregeln durch Bestandstests, keine neue gesamte Freigabefolge."
+    },
+    {
+      "id": "F1",
+      "requirement": "„Ruhig\" stoppt die Hintergrund-Engine (Canvas unverändert, Schleife aus)",
+      "sourceLine": 68,
+      "status": "Offen",
+      "evidence": "Bewegungsregeln und Einstellungen im Bestand; sofortiger Stopp bereits laufender Animationen bleibt laut Abnahme eine Grenze."
+    },
+    {
+      "id": "F2",
+      "requirement": "Wahl „ruhig\" bleibt nach Neuladen erhalten",
+      "sourceLine": 69,
+      "status": "Offen",
+      "evidence": "Bewegungsregeln und Einstellungen im Bestand; sofortiger Stopp bereits laufender Animationen bleibt laut Abnahme eine Grenze."
+    },
+    {
+      "id": "F3",
+      "requirement": "Engine pausiert, solange ein Fenster die Ansicht verdeckt",
+      "sourceLine": 70,
+      "status": "Offen",
+      "evidence": "Bewegungsregeln und Einstellungen im Bestand; sofortiger Stopp bereits laufender Animationen bleibt laut Abnahme eine Grenze."
+    },
+    {
+      "id": "F4",
+      "requirement": "Systemeinstellung „Bewegung reduzieren\" stoppt Engine und Pulsanimation auch bei „bewegt\"",
+      "sourceLine": 71,
+      "status": "Offen",
+      "evidence": "Bewegungsregeln und Einstellungen im Bestand; sofortiger Stopp bereits laufender Animationen bleibt laut Abnahme eine Grenze."
+    },
+    {
+      "id": "G1",
+      "requirement": "Enter auf Navigationseintrag Export öffnet die Exportseite",
+      "sourceLine": 77,
+      "status": "Teilweise",
+      "evidence": "Aktuelle Tastatur-/Bindungstests und sichtbare Bedienelemente; keine vollständige manuelle Fokus- und Screenreader-Prüfung."
+    },
+    {
+      "id": "G2",
+      "requirement": "Ctrl+K, Suchtext, Enter: springt zur gefundenen Haltung",
+      "sourceLine": 78,
+      "status": "Fehler",
+      "evidence": "R1: Suche wählt nach Projektwechsel ein projektfremdes Objekt; R5: Trefferarten werden verdrängt."
+    },
+    {
+      "id": "G3",
+      "requirement": "F3 fokussiert die Haltungssuche",
+      "sourceLine": 79,
+      "status": "Teilweise",
+      "evidence": "Aktuelle Tastatur-/Bindungstests und sichtbare Bedienelemente; keine vollständige manuelle Fokus- und Screenreader-Prüfung."
+    },
+    {
+      "id": "G4",
+      "requirement": "Pfeiltasten und Enter wählen Zeilen in der Liste",
+      "sourceLine": 80,
+      "status": "Teilweise",
+      "evidence": "Aktuelle Tastatur-/Bindungstests und sichtbare Bedienelemente; keine vollständige manuelle Fokus- und Screenreader-Prüfung."
+    },
+    {
+      "id": "G5",
+      "requirement": "F1 öffnet Tastenkürzel, Fokus bleibt im Dialog, Esc schliesst",
+      "sourceLine": 81,
+      "status": "Teilweise",
+      "evidence": "Aktuelle Tastatur-/Bindungstests und sichtbare Bedienelemente; keine vollständige manuelle Fokus- und Screenreader-Prüfung."
+    },
+    {
+      "id": "G6",
+      "requirement": "Jede Schaltfläche hat Text, aria-label oder Titel",
+      "sourceLine": 82,
+      "status": "Teilweise",
+      "evidence": "Aktuelle Tastatur-/Bindungstests und sichtbare Bedienelemente; keine vollständige manuelle Fokus- und Screenreader-Prüfung."
+    },
+    {
+      "id": "G7",
+      "requirement": "Sichtbarer Tastaturfokus definiert",
+      "sourceLine": 83,
+      "status": "Teilweise",
+      "evidence": "Aktuelle Tastatur-/Bindungstests und sichtbare Bedienelemente; keine vollständige manuelle Fokus- und Screenreader-Prüfung."
+    },
+    {
+      "id": "H-1366",
+      "requirement": "1366×768: mindestens sechs Haltungen sichtbar, Eingabefelder und Übersicht im Bild",
+      "sourceLine": 89,
+      "status": "Zusatzprüfung offen",
+      "evidence": "Verbindliche Mindestauflösung ist Full HD. Kleinere Fensterprobe 1280×720 ist kein Nachweis für diese Grösse oder echte DPI-Skalierung."
+    },
+    {
+      "id": "HP-1366",
+      "requirement": "1366×768: Player zeigt Wiedergabe, Zeit, Übernehmen und Seitenspalte ohne Scrollen",
+      "sourceLine": 90,
+      "status": "Offen",
+      "evidence": "Aktueller Player nicht für diese gesamte Kombination von Grösse und Bedienzuständen vermessen."
+    },
+    {
+      "id": "HS-1366",
+      "requirement": "1366×768: Training Studio: Codier- und Freigabespalte vollständig erreichbar",
+      "sourceLine": 91,
+      "status": "Offen",
+      "evidence": "Diese Zusatzgrösse nicht erneut gemessen; bereits bei Full HD besteht R3."
+    },
+    {
+      "id": "H-1440",
+      "requirement": "1440×900: mindestens sechs Haltungen sichtbar, Eingabefelder und Übersicht im Bild",
+      "sourceLine": 92,
+      "status": "Zusatzprüfung offen",
+      "evidence": "Verbindliche Mindestauflösung ist Full HD. Kleinere Fensterprobe 1280×720 ist kein Nachweis für diese Grösse oder echte DPI-Skalierung."
+    },
+    {
+      "id": "HP-1440",
+      "requirement": "1440×900: Player zeigt Wiedergabe, Zeit, Übernehmen und Seitenspalte ohne Scrollen",
+      "sourceLine": 93,
+      "status": "Offen",
+      "evidence": "Aktueller Player nicht für diese gesamte Kombination von Grösse und Bedienzuständen vermessen."
+    },
+    {
+      "id": "HS-1440",
+      "requirement": "1440×900: Training Studio: Codier- und Freigabespalte vollständig erreichbar",
+      "sourceLine": 94,
+      "status": "Offen",
+      "evidence": "Diese Zusatzgrösse nicht erneut gemessen; bereits bei Full HD besteht R3."
+    },
+    {
+      "id": "H-1920",
+      "requirement": "1920×1080: mindestens sechs Haltungen sichtbar, Eingabefelder und Übersicht im Bild",
+      "sourceLine": 95,
+      "status": "Bestanden",
+      "evidence": "Neue Tabellenmessung: Full HD, DPI 96, offene Feldschublade, zwölf ganze Haltungszeilen (hell)."
+    },
+    {
+      "id": "HP-1920",
+      "requirement": "1920×1080: Player zeigt Wiedergabe, Zeit, Übernehmen und Seitenspalte ohne Scrollen",
+      "sourceLine": 96,
+      "status": "Offen",
+      "evidence": "Aktueller Player nicht für diese gesamte Kombination von Grösse und Bedienzuständen vermessen."
+    },
+    {
+      "id": "HS-1920",
+      "requirement": "1920×1080: Training Studio: Codier- und Freigabespalte vollständig erreichbar",
+      "sourceLine": 97,
+      "status": "Fehler",
+      "evidence": "R3: Stufen 4/5 im Training Studio bei Full HD nicht vollständig sichtbar."
+    },
+    {
+      "id": "I1-hell",
+      "requirement": "Schriftgrösse hell: kleinster sichtbarer Text ≥ 11 px auf 15 Seiten und 3 Fenstern",
+      "sourceLine": 103,
+      "status": "Teilweise",
+      "evidence": "DesignAudit-Prüfungen und ausgewählte aktuelle Bilder; kein lückenloser Messlauf über alle sichtbaren WPF-Texte und Zustände."
+    },
+    {
+      "id": "I2-hell",
+      "requirement": "Kontrast hell: normaler Text ≥ 4,5:1 auf 15 Seiten, 3 Fenstern, Eingaben und Platzhaltern (deckende Hintergründe)",
+      "sourceLine": 104,
+      "status": "Teilweise",
+      "evidence": "DesignAudit-Prüfungen und ausgewählte aktuelle Bilder; kein lückenloser Messlauf über alle sichtbaren WPF-Texte und Zustände."
+    },
+    {
+      "id": "I3-hell",
+      "requirement": "Kontrast hell: Projektziel 4,5:1 auch für grossen Text (WCAG erlaubt dort 3:1)",
+      "sourceLine": 105,
+      "status": "Teilweise",
+      "evidence": "DesignAudit-Prüfungen und ausgewählte aktuelle Bilder; kein lückenloser Messlauf über alle sichtbaren WPF-Texte und Zustände."
+    },
+    {
+      "id": "I4-hell",
+      "requirement": "Kontrast hell: Texte auf Verläufen gesondert gelistet (nicht als Verstoss gewertet)",
+      "sourceLine": 106,
+      "status": "Offen",
+      "evidence": "WPF-Bilder ersetzen transparente Mica-Flächen für die Aufnahme; kein kompletter Kontrastnachweis des Windows-Compositors."
+    },
+    {
+      "id": "I1-dunkel",
+      "requirement": "Schriftgrösse dunkel: kleinster sichtbarer Text ≥ 11 px auf 15 Seiten und 3 Fenstern",
+      "sourceLine": 107,
+      "status": "Teilweise",
+      "evidence": "DesignAudit-Prüfungen und ausgewählte aktuelle Bilder; kein lückenloser Messlauf über alle sichtbaren WPF-Texte und Zustände."
+    },
+    {
+      "id": "I2-dunkel",
+      "requirement": "Kontrast dunkel: normaler Text ≥ 4,5:1 auf 15 Seiten, 3 Fenstern, Eingaben und Platzhaltern (deckende Hintergründe)",
+      "sourceLine": 108,
+      "status": "Teilweise",
+      "evidence": "DesignAudit-Prüfungen und ausgewählte aktuelle Bilder; kein lückenloser Messlauf über alle sichtbaren WPF-Texte und Zustände."
+    },
+    {
+      "id": "I3-dunkel",
+      "requirement": "Kontrast dunkel: Projektziel 4,5:1 auch für grossen Text (WCAG erlaubt dort 3:1)",
+      "sourceLine": 109,
+      "status": "Teilweise",
+      "evidence": "DesignAudit-Prüfungen und ausgewählte aktuelle Bilder; kein lückenloser Messlauf über alle sichtbaren WPF-Texte und Zustände."
+    },
+    {
+      "id": "I4-dunkel",
+      "requirement": "Kontrast dunkel: Texte auf Verläufen gesondert gelistet (nicht als Verstoss gewertet)",
+      "sourceLine": 110,
+      "status": "Offen",
+      "evidence": "WPF-Bilder ersetzen transparente Mica-Flächen für die Aufnahme; kein kompletter Kontrastnachweis des Windows-Compositors."
+    },
+    {
+      "id": "J1",
+      "requirement": "Export nennt Ziel und Ergebnis und sagt, dass keine Datei geschrieben wurde",
+      "sourceLine": 116,
+      "status": "Prototyp-Regel anpassen",
+      "evidence": "Demo-Kennzeichnung, keine Datei schreiben und JS-Fehlerfreiheit beschreiben die Vorschau. Echte App-Aktionen brauchen eigene Erfolgs-/Fehlernachweise."
+    },
+    {
+      "id": "J2",
+      "requirement": "Revidierte XTF wird vom GEONIS-Rückabgleich unterschieden",
+      "sourceLine": 117,
+      "status": "Teilweise",
+      "evidence": "XTF-Auswahl/Export durch aktuelle Tests; laufender XTF-Arbeitsstand, keine externe GEONIS-Gesamtprüfung."
+    },
+    {
+      "id": "J3",
+      "requirement": "Nicht umgesetzte Aktionen sind gekennzeichnet und erklären sich",
+      "sourceLine": 118,
+      "status": "Prototyp-Regel anpassen",
+      "evidence": "Demo-Kennzeichnung, keine Datei schreiben und JS-Fehlerfreiheit beschreiben die Vorschau. Echte App-Aktionen brauchen eigene Erfolgs-/Fehlernachweise."
+    },
+    {
+      "id": "J4",
+      "requirement": "Leerzustand erscheint, wenn ein Filter keine Fälle hat",
+      "sourceLine": 119,
+      "status": "Teilweise",
+      "evidence": "Seiten/Leerzustände und vorhandene Regeln geprüft; vollständiger jeweiliger Bedienlauf nicht protokolliert."
+    },
+    {
+      "id": "J5",
+      "requirement": "Lade- und Erfolgszustand (Schattenlauf) sichtbar und als Simulation benannt",
+      "sourceLine": 120,
+      "status": "Teilweise",
+      "evidence": "Seiten/Leerzustände und vorhandene Regeln geprüft; vollständiger jeweiliger Bedienlauf nicht protokolliert."
+    },
+    {
+      "id": "J6",
+      "requirement": "KI-Prozentwerte werden als Modellsicherheit erklärt; Bestätigung getrennt",
+      "sourceLine": 121,
+      "status": "Teilweise",
+      "evidence": "Erklärungen im aktuellen Training-Studio-Bild sichtbar; keine neue fachliche Modellabnahme."
+    },
+    {
+      "id": "J7",
+      "requirement": "Skriptfehler im gesamten Lauf",
+      "sourceLine": 122,
+      "status": "Prototyp-Regel anpassen",
+      "evidence": "Demo-Kennzeichnung, keine Datei schreiben und JS-Fehlerfreiheit beschreiben die Vorschau. Echte App-Aktionen brauchen eigene Erfolgs-/Fehlernachweise."
+    },
+    {
+      "id": "K1",
+      "requirement": "R01 Abbrechen: Rückfrage ohne Player, Auswahl und Entwurf bleiben auf 07.6588-6587",
+      "sourceLine": 128,
+      "status": "Teilweise",
+      "evidence": "Speichern, Codierung und Dialogregeln durch aktuelle Bestandstests; diese konkrete zusammenhängende Bedienfolge nicht vollständig nachgewiesen."
+    },
+    {
+      "id": "K2",
+      "requirement": "R01 Verwerfen und wechseln: Auswahl, Formular und Player gemeinsam auf 78998-79002, Ursprung unverändert",
+      "sourceLine": 129,
+      "status": "Teilweise",
+      "evidence": "Speichern, Codierung und Dialogregeln durch aktuelle Bestandstests; diese konkrete zusammenhängende Bedienfolge nicht vollständig nachgewiesen."
+    },
+    {
+      "id": "K3",
+      "requirement": "R01 KI-Aufgabenliste: Rückfrage vor dem Player; Speichern und wechseln übernimmt Wert und öffnet den richtigen Player",
+      "sourceLine": 130,
+      "status": "Teilweise",
+      "evidence": "Speichern, Codierung und Dialogregeln durch aktuelle Bestandstests; diese konkrete zusammenhängende Bedienfolge nicht vollständig nachgewiesen."
+    },
+    {
+      "id": "K4",
+      "requirement": "R06 Beenden ohne Übernahme verwirft neuen, bestätigten, gelöschten Befund und Prüfstatus; Bestand unverändert; beim Wiederöffnen weg",
+      "sourceLine": 131,
+      "status": "Teilweise",
+      "evidence": "Speichern, Codierung und Dialogregeln durch aktuelle Bestandstests; diese konkrete zusammenhängende Bedienfolge nicht vollständig nachgewiesen."
+    },
+    {
+      "id": "K5",
+      "requirement": "R06 Codierung übernehmen schreibt den Entwurf in den Bestand und die Übersicht",
+      "sourceLine": 132,
+      "status": "Teilweise",
+      "evidence": "Speichern, Codierung und Dialogregeln durch aktuelle Bestandstests; diese konkrete zusammenhängende Bedienfolge nicht vollständig nachgewiesen."
+    },
+    {
+      "id": "K6",
+      "requirement": "R06 Esc oder Schliessen bei Entwurf fragt nach; Zurück zum Player behält Entwurf und Fenster",
+      "sourceLine": 133,
+      "status": "Teilweise",
+      "evidence": "Speichern, Codierung und Dialogregeln durch aktuelle Bestandstests; diese konkrete zusammenhängende Bedienfolge nicht vollständig nachgewiesen."
+    },
+    {
+      "id": "K7",
+      "requirement": "R02 Akzeptieren, dann Felder leeren: Freigabe gesperrt; erzwungener Klick wird abgelehnt",
+      "sourceLine": 134,
+      "status": "Genehmigt angepasst / teilweise",
+      "evidence": "WPF nutzt das bestehende Export-Register. Änderungs-/Freigaberegeln in Bestandstests, komplette neue Bedienprobe offen."
+    },
+    {
+      "id": "K8",
+      "requirement": "R02 Jede Änderung (Stufe, Bildauswahl) hebt die Bestätigung auf; nach erneutem Akzeptieren ist die Freigabe möglich und wird danach wieder gesperrt",
+      "sourceLine": 135,
+      "status": "Genehmigt angepasst / teilweise",
+      "evidence": "WPF nutzt das bestehende Export-Register. Änderungs-/Freigaberegeln in Bestandstests, komplette neue Bedienprobe offen."
+    },
+    {
+      "id": "K9",
+      "requirement": "R03 Speicherfehler: Fehlermeldung statt Erfolg, Entwurf und Marke bleiben, Bestand unverändert",
+      "sourceLine": 136,
+      "status": "Teilweise",
+      "evidence": "Speichern, Codierung und Dialogregeln durch aktuelle Bestandstests; diese konkrete zusammenhängende Bedienfolge nicht vollständig nachgewiesen."
+    },
+    {
+      "id": "K10",
+      "requirement": "R03 „Speichern und wechseln\" wechselt bei Speicherfehler nicht; Hinweis im Dialog",
+      "sourceLine": 137,
+      "status": "Teilweise",
+      "evidence": "Speichern, Codierung und Dialogregeln durch aktuelle Bestandstests; diese konkrete zusammenhängende Bedienfolge nicht vollständig nachgewiesen."
+    },
+    {
+      "id": "K11",
+      "requirement": "R03 Wiederholung nach Fehler speichert erfolgreich und überlebt das Neuladen",
+      "sourceLine": 138,
+      "status": "Teilweise",
+      "evidence": "Speichern, Codierung und Dialogregeln durch aktuelle Bestandstests; diese konkrete zusammenhängende Bedienfolge nicht vollständig nachgewiesen."
+    },
+    {
+      "id": "K12",
+      "requirement": "R04 Ctrl+K und F3 verlassen weder Player noch Codierfenster; Shift+Tab und Tab bleiben im obersten Dialog",
+      "sourceLine": 139,
+      "status": "Teilweise",
+      "evidence": "Speichern, Codierung und Dialogregeln durch aktuelle Bestandstests; diese konkrete zusammenhängende Bedienfolge nicht vollständig nachgewiesen."
+    },
+    {
+      "id": "K13",
+      "requirement": "R04 Drei Dialogebenen: Esc schliesst je die oberste, Fokus kehrt Ebene für Ebene zurück",
+      "sourceLine": 140,
+      "status": "Teilweise",
+      "evidence": "Speichern, Codierung und Dialogregeln durch aktuelle Bestandstests; diese konkrete zusammenhängende Bedienfolge nicht vollständig nachgewiesen."
+    },
+    {
+      "id": "K14-1366",
+      "requirement": "1366×768: weiterhin 7 vollständige Zeilen sichtbar",
+      "sourceLine": 141,
+      "status": "Zusatzprüfung offen",
+      "evidence": "Verbindliche Mindestauflösung ist Full HD. Kleinere Fensterprobe 1280×720 ist kein Nachweis für diese Grösse oder echte DPI-Skalierung."
+    },
+    {
+      "id": "K14-1440",
+      "requirement": "1440×900: weiterhin 9 vollständige Zeilen sichtbar",
+      "sourceLine": 142,
+      "status": "Zusatzprüfung offen",
+      "evidence": "Verbindliche Mindestauflösung ist Full HD. Kleinere Fensterprobe 1280×720 ist kein Nachweis für diese Grösse oder echte DPI-Skalierung."
+    },
+    {
+      "id": "K14-1920",
+      "requirement": "1920×1080: weiterhin 12 vollständige Zeilen sichtbar",
+      "sourceLine": 143,
+      "status": "Bestanden",
+      "evidence": "Neue Tabellenmessung: Full HD, DPI 96, offene Feldschublade, zwölf ganze Haltungszeilen (hell)."
+    }
+  ],
+  "inventory": [
+    {
+      "id": "1",
+      "title": "Design-Tokens",
+      "sourceLine": 10,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "1.1",
+      "title": "Farbtokens je Stimmung",
+      "sourceLine": 12,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "1.2",
+      "title": "Feste Farbwerte ausserhalb der Tokens (in beiden Stimmungen gleich)",
+      "sourceLine": 66,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "1.3",
+      "title": "Schriftgrössen (px), die nicht über die Skala laufen",
+      "sourceLine": 75,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "1.4",
+      "title": "Rundungen",
+      "sourceLine": 82,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "1.5",
+      "title": "Rahmen, Schatten, Glas",
+      "sourceLine": 89,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "1.6",
+      "title": "Abstände (Auswahl der massgebenden Werte)",
+      "sourceLine": 97,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "1.7",
+      "title": "Was Glas konkret von Cockpit unterscheidet",
+      "sourceLine": 110,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "2",
+      "title": "Bewegung („bewegt\" / „ruhig\")",
+      "sourceLine": 121,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "3",
+      "title": "Rahmen (Shell)",
+      "sourceLine": 139,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "3.1",
+      "title": "Vorschau-Leiste (nur Prototyp, Z. 363–384)",
+      "sourceLine": 141,
+      "status": "Nur Prototyp / Referenz",
+      "evidence": "Vorschau-Steuerung, Beispieldaten oder Referenzdateien sind keine nachzubauenden Produktdaten."
+    },
+    {
+      "id": "3.2",
+      "title": "Linke Leiste `.rail` (Z. 387–419), 220px, Glas",
+      "sourceLine": 144,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "3.3",
+      "title": "Menüleiste (Z. 422–426)",
+      "sourceLine": 155,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "3.4",
+      "title": "Kopfzeile `.topbar` (Z. 427–438)",
+      "sourceLine": 158,
+      "status": "Teilweise / Fehler",
+      "evidence": "R1: falsche Auswahl nach Projektwechsel. R5: Suchbegrenzung aus dem Prototyp verdrängt Trefferarten."
+    },
+    {
+      "id": "3.5",
+      "title": "Tastenkürzel (Handler Z. 1339–1357, Hilfsfenster Z. 1043–1052)",
+      "sourceLine": 164,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "3.6",
+      "title": "Fenster (Dialoge)",
+      "sourceLine": 188,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4",
+      "title": "Seiten",
+      "sourceLine": 199,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4.1",
+      "title": "page-overview „Übersicht\" (Z. 443–487, JS Z. 1407–1438)",
+      "sourceLine": 203,
+      "status": "Fehler",
+      "evidence": "R2/R4: Projektübersicht und KI-Läufe nicht zuverlässig auf das aktive Projekt begrenzt."
+    },
+    {
+      "id": "4.2",
+      "title": "page-projekt „Projekt\" (Z. 490–523)",
+      "sourceLine": 221,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4.3",
+      "title": "page-haltungen „Haltungen\" (Z. 526–578, `.fill`)",
+      "sourceLine": 227,
+      "status": "Teilweise / Fehler R8",
+      "evidence": "Kompakt und Zeilenhöhe nachgewiesen; Inspektionsrichtung fehlt in der Stammdaten-Spaltenansicht."
+    },
+    {
+      "id": "4.4",
+      "title": "page-schaechte „Schächte\" (Z. 581–634, `.fill`)",
+      "sourceLine": 255,
+      "status": "Fehler",
+      "evidence": "R7: mindestens acht Vorgabefelder falsch gruppiert; neun Kompaktspalten im aktuellen Schachtbild vorhanden."
+    },
+    {
+      "id": "4.5",
+      "title": "page-import „Import\" (Z. 637–685)",
+      "sourceLine": 262,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4.6",
+      "title": "page-export „Export\" (Z. 688–719, JS Z. 1880–1886)",
+      "sourceLine": 270,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4.7",
+      "title": "page-medien „Medienkonflikte\" (Z. 722–732, JS Z. 1783–1798)",
+      "sourceLine": 284,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4.8",
+      "title": "page-druck „Druckcenter\" (Z. 735–769, JS Z. 1801–1811)",
+      "sourceLine": 290,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4.9",
+      "title": "page-dossiers „Dossiers\" (Z. 772–780, JS Z. 1814–1828)",
+      "sourceLine": 295,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4.10",
+      "title": "page-matrix „Sanierungs-Matrix\" (Z. 783–790, JS Z. 1831–1846)",
+      "sourceLine": 300,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4.11",
+      "title": "page-smatrix „Schacht-Matrix\" (Z. 793–796, JS Z. 1847–1851)",
+      "sourceLine": 305,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4.12",
+      "title": "page-schatten „Schattenauswertung\" (Z. 799–807, JS Z. 1854–1868)",
+      "sourceLine": 309,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4.13",
+      "title": "page-vsa „VSA\" (Z. 810–821, JS Z. 1871–1877)",
+      "sourceLine": 315,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4.14",
+      "title": "page-diagnose „Diagnose\" (Z. 824–841)",
+      "sourceLine": 321,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "4.15",
+      "title": "page-einstellungen „Einstellungen\" (Z. 844–896, JS Z. 1889–1893)",
+      "sourceLine": 326,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "5",
+      "title": "Übersicht-Panel Haltung (`renderSide('h')`, Z. 1522–1531)",
+      "sourceLine": 341,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "5.1",
+      "title": "Rohrring mit Uhrlage (Z. 1526–1527)",
+      "sourceLine": 345,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "5.2",
+      "title": "Fakten (`.facts`, Raster 2 Spalten, Z. 1528)",
+      "sourceLine": 351,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "5.3",
+      "title": "Schadenliste (`.findings`, Z. 1529)",
+      "sourceLine": 354,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "5.4",
+      "title": "KI-Hinweis (Z. 1530), nur wenn offene Befunde",
+      "sourceLine": 362,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "5.5",
+      "title": "Aktualisierung",
+      "sourceLine": 365,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "5.6",
+      "title": "Schachtansicht (`renderSide('s')`, Z. 1533–1537)",
+      "sourceLine": 368,
+      "status": "Vorgabeschwäche",
+      "evidence": "R6: Rechteckig wird bereits im Prototyp als Oval beschrieben und so umgesetzt."
+    },
+    {
+      "id": "6",
+      "title": "Fenster „Player\" (`#winPlayer`, Z. 903–948; JS Z. 1627–1703)",
+      "sourceLine": 373,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "6.1",
+      "title": "Titelzeile (Z. 904–905)",
+      "sourceLine": 375,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "6.2",
+      "title": "Aufbau (Z. 308–309)",
+      "sourceLine": 378,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "6.3",
+      "title": "Video (Z. 908–913)",
+      "sourceLine": 381,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "6.4",
+      "title": "Regler/Zeitleiste (Z. 915, 1659–1660)",
+      "sourceLine": 384,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "6.5",
+      "title": "Bedienleiste (Z. 916–932)",
+      "sourceLine": 387,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "6.6",
+      "title": "Eingabemarker (Z. 934–937)",
+      "sourceLine": 391,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "6.7",
+      "title": "KI-Zeile und Abschluss (Z. 938–944)",
+      "sourceLine": 394,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "6.8",
+      "title": "Seitenpanel `#plSide` (340px, Z. 946, 1665–1669)",
+      "sourceLine": 397,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "6.9",
+      "title": "Entwurf / Übernehmen / Beenden (Z. 1627–1649, 1677)",
+      "sourceLine": 405,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "6.10",
+      "title": "Tastenkürzel im Player (Z. 1696–1703)",
+      "sourceLine": 413,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "6.11",
+      "title": "Codierfenster „VSA-Codierung\" (`#winVsa`, Z. 951–980; JS Z. 1706–1761)",
+      "sourceLine": 416,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "7",
+      "title": "Fenster „Training Studio\" (`#winStudio`, Z. 983–1027; JS Z. 1764–1780)",
+      "sourceLine": 428,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "7.1",
+      "title": "Titel und Aufbau",
+      "sourceLine": 430,
+      "status": "Fehler",
+      "evidence": "R3: Schadensstufen passen nicht in die rechte Spalte."
+    },
+    {
+      "id": "7.2",
+      "title": "Linke Spalte (Z. 986–999)",
+      "sourceLine": 433,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "7.3",
+      "title": "Prüfplatz, Mitte (Z. 1000–1008)",
+      "sourceLine": 436,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "7.4",
+      "title": "Rechte Spalte, drei Schritte (Z. 1010–1024)",
+      "sourceLine": 444,
+      "status": "Fehler",
+      "evidence": "R3: Schadensstufen passen nicht in die rechte Spalte."
+    },
+    {
+      "id": "7.5",
+      "title": "Sperrregel Akzeptieren → Freigabe (Z. 1768–1780)",
+      "sourceLine": 450,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "8",
+      "title": "JS-Regeln, die Verhalten beschreiben",
+      "sourceLine": 458,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "8.1",
+      "title": "„Nächste Haltung prüfen\" (Z. 1439–1444, 1650)",
+      "sourceLine": 460,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "8.2",
+      "title": "Auswahlwechsel mit Rückfrage (Z. 1454–1466, 1331–1338)",
+      "sourceLine": 465,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "8.3",
+      "title": "Speichern / Verwerfen / Speicherfehler (Z. 1467–1483, 1281–1286)",
+      "sourceLine": 470,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "8.4",
+      "title": "Spaltenansichten und Feldlisten",
+      "sourceLine": 477,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "8.5",
+      "title": "Filter und Suche",
+      "sourceLine": 480,
+      "status": "Teilweise / Fehler",
+      "evidence": "R1: falsche Auswahl nach Projektwechsel. R5: Suchbegrenzung aus dem Prototyp verdrängt Trefferarten."
+    },
+    {
+      "id": "8.6",
+      "title": "Schublade und Splitter (Z. 1575–1601)",
+      "sourceLine": 489,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "8.7",
+      "title": "Tabellenzustandsregeln",
+      "sourceLine": 495,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "8.8",
+      "title": "Dialog-Stapel und Fokus",
+      "sourceLine": 500,
+      "status": "Teilweise / offen",
+      "evidence": "Vorhandene Regeln und aktuelle Tests; vollständige aktuelle Bedien-/Fokus-/Bewegungsprüfung offen."
+    },
+    {
+      "id": "8.9",
+      "title": "Browserspeicher-Schlüssel (`nova.opt.` + …)",
+      "sourceLine": 503,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "8.10",
+      "title": "Simulationen",
+      "sourceLine": 506,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "9",
+      "title": "Beispieldaten-Felder je Thema der Eingabefelder",
+      "sourceLine": 512,
+      "status": "Teilweise",
+      "evidence": "Dem Bereich über Code, aktuelle Tests und/oder Seitenaufbau zugeordnet. Details und offene Gesamtprüfungen im Bericht. Keine pauschale Abnahme."
+    },
+    {
+      "id": "9.1",
+      "title": "Haltung (`FIELDS_H`, Z. 1230–1235) — 36 Felder",
+      "sourceLine": 516,
+      "status": "Teilweise",
+      "evidence": "Haltungsfelder 17/9/11/3 gemäss genehmigter Erweiterung in aktuellem Bild und Builder; keine vollständige manuelle Editierfolge jedes Felds."
+    },
+    {
+      "id": "9.2",
+      "title": "Schacht (`FIELDS_S`, Z. 1236–1241) — 30 Felder",
+      "sourceLine": 572,
+      "status": "Fehler",
+      "evidence": "R7: mindestens acht Vorgabefelder falsch gruppiert; neun Kompaktspalten im aktuellen Schachtbild vorhanden."
+    },
+    {
+      "id": "9.3",
+      "title": "Beispielhaltungen (Z. 1100–1170), Kurzliste",
+      "sourceLine": 582,
+      "status": "Nur Prototyp / Referenz",
+      "evidence": "Vorschau-Steuerung, Beispieldaten oder Referenzdateien sind keine nachzubauenden Produktdaten."
+    },
+    {
+      "id": "10",
+      "title": "Begleitdateien (Kurzfassung)",
+      "sourceLine": 604,
+      "status": "Nur Prototyp / Referenz",
+      "evidence": "Vorschau-Steuerung, Beispieldaten oder Referenzdateien sind keine nachzubauenden Produktdaten."
+    }
+  ]
+}

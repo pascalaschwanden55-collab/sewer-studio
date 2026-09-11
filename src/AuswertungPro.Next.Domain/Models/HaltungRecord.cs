@@ -31,6 +31,19 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
     /// </summary>
     public GeonisKennungen? Geonis { get; set; }
 
+    /// <summary>
+    /// Die Laufnummer, unter der die Importquelle diese Haltung fuehrt — bei WinCan der
+    /// <c>OBJ_Key</c> (<c>H66</c>). Der Haltungsname bleibt das Schachtpaar
+    /// (<c>60248-60247</c>); diese Nummer ist nur ein Herkunftsbeleg.
+    ///
+    /// Gebraucht wird sie fuer Begleitprotokolle der Sanierung: Dichtheitspruefung und
+    /// Aushaerteprotokoll nennen ihre Haltung ausschliesslich so. Sie ist bewusst KEIN
+    /// Feld — sie gehoert in keine Tabelle, keinen Export und keine XTF; sie ist nur
+    /// innerhalb eines Quellprojekts eindeutig.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ImportBezeichnung { get; set; }
+
     // Optionaler Protokolleintrag fuer Code-Picker/Parametrisierung.
     public AuswertungPro.Next.Domain.Protocol.ProtocolEntry? ProtocolEntry { get; set; }
 

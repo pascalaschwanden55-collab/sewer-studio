@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
@@ -15,8 +15,9 @@ public static class SchaechteColumnViewCatalog
         // Nova-Etappe 2b: In "Kompakt" steht das Protokoll als Knopf (virtuelle Spalte), nicht
         // als roher Dateipfad. Bearbeitet wird der Pfad in "Dokumente und Medien", in
         // "Alle Spalten" und in den Eingabefeldern.
-        new("kompakt", "Kompakt", [Nummer, "Strasse", "Funktion", "Material", FieldKeys.ShaftDimension1Mm, FieldKeys.ShaftDimension2Mm, FieldKeys.ShaftShape, FieldKeys.ConditionClass, NovaStatusSpalten.Protokoll]),
-        new("zustand", "Zustand und Inspektion", [Nummer, FieldKeys.ConditionClass, "Pruefungsresultat", "Dichtheit", "Referenzpruefung", "Gewaesserschutz", "Grundwasserspiegel", FieldKeys.LoadClass, "Inspektionsdatum"]),
+        new("kompakt", "Kompakt", [Nummer, "Strasse", "Funktion", "Material", FieldKeys.ShaftDimension1Mm, FieldKeys.ShaftDimension2Mm, FieldKeys.ShaftShape, FieldKeys.ConditionClass, "Eigentümer", NovaStatusSpalten.Protokoll]),
+        new("stammdaten", "Stammdaten", [Nummer, "Strasse", "Baujahr", FieldKeys.ShaftStructureType, "Funktion", "Material", FieldKeys.InfiltrationType, FieldKeys.OperatingStatus, "Eigentümer"]),
+        new("zustand", "Zustand und Inspektion", [Nummer, FieldKeys.ConditionClass, "Pruefungsresultat", "Dichtheit", "Referenzpruefung", "Gewaesserschutz", "Grundwasserspiegel", FieldKeys.LoadClass, "Inspektionsdatum", FieldKeys.RehabilitationNeed]),
         new("sanierung", "Sanierung und Kosten", [Nummer, FieldKeys.RenovationDecision, FieldKeys.RecommendedRehabilitationMeasures, FieldKeys.RehabilitationExecutor, FieldKeys.WorkflowStatus, FieldKeys.Cost, "Eigentümer"]),
         // Nova-Fixwelle 2b (F5, Ruling): In "Dokumente und Medien" geht es um genau diese
         // Dateien. Der Knopf oeffnet das Protokoll, der Pfad daneben bleibt bearbeitbar —

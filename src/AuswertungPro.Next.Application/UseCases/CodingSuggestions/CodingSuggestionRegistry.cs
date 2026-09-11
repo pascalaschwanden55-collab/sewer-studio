@@ -7,23 +7,29 @@ namespace AuswertungPro.Next.Application.UseCases.CodingSuggestions;
 /// <summary>
 /// Threadsichere In-Memory-Implementierung von <see cref="ICodingSuggestionRegistry"/>.
 /// Lebt als Singleton fuer die Dauer des Programmlaufs; ein Neustart setzt sie zurueck.
+/// Die Laeufe liegen je Projekt getrennt (R4): Zwei Projekte mit gleichnamigen Haltungen
+/// duerfen sich weder ueberschreiben noch gegenseitig sehen.
 /// </summary>
 public sealed class CodingSuggestionRegistry : ICodingSuggestionRegistry
 {
     private readonly object _gate = new();
-    private readonly Dictionary<string, CodingSuggestionRun> _runs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<Guid, Dictionary<string, CodingSuggestionRun>> _runs = new();
 
     public event Action? Geaendert;
 
-    public void Merke(string haltung, CodingSuggestionSet set)
+    public void Merke(Guid projekt, string haltung, CodingSuggestionSet set)
     {
         ArgumentNullException.ThrowIfNull(set);
         var key = (haltung ?? string.Empty).Trim();
-        if (key.Length == 0)
+        if (key.Length == 0 || projekt == Guid.Empty)
             return;
 
         lock (_gate)
-            _runs[key] = new CodingSuggestionRun(key, DateTimeOffset.Now, set);
+        {
+            if (!_runs.TryGetValue(projekt, out var jeHaltung))
+                _runs[projekt] = jeHaltung = new Dictionary<string, CodingSuggestionRun>(StringComparer.OrdinalIgnoreCase);
+            jeHaltung[key] = new CodingSuggestionRun(projekt, key, DateTimeOffset.Now, set);
+        }
 
         // Jeden Abonnenten einzeln und gekapselt aufrufen: Ein fehlerhafter Abonnent
         // darf den Vorabdurchlauf nicht als gescheitert erscheinen lassen. Ausserdem
@@ -46,9 +52,11 @@ public sealed class CodingSuggestionRegistry : ICodingSuggestionRegistry
         }
     }
 
-    public IReadOnlyList<CodingSuggestionRun> Heute()
+    public IReadOnlyList<CodingSuggestionRun> Heute(Guid projekt)
     {
         lock (_gate)
-            return _runs.Values.OrderByDescending(r => r.Zeitpunkt).ToList();
+            return _runs.TryGetValue(projekt, out var jeHaltung)
+                ? jeHaltung.Values.OrderByDescending(r => r.Zeitpunkt).ToList()
+                : Array.Empty<CodingSuggestionRun>();
     }
 }

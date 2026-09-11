@@ -35,8 +35,8 @@ public sealed partial class LegacyXtfImportService
         foreach (var node in doc.Descendants())
         {
             var lokal = node.Name.LocalName;
-            if (!lokal.Equals("Normschacht", StringComparison.OrdinalIgnoreCase)
-                && !lokal.EndsWith(".Normschacht", StringComparison.OrdinalIgnoreCase))
+            var klasse = lokal.Split('.').Last();
+            if (!AbwasserbauwerkVokabular.Auswahl.Contains(klasse) || klasse.Length == 0)
             {
                 continue;
             }
@@ -71,7 +71,8 @@ public sealed partial class LegacyXtfImportService
                 Kind("Baujahr"),
                 WertOderVerweis("Datenherr", "DatenherrRef"),
                 WertOderVerweis("Datenlieferant", "DatenlieferantRef"),
-                (string?)node.Attribute("TID")));
+                (string?)node.Attribute("TID"), klasse, Kind("Standortname"), Kind("Bruttokosten"),
+                Kind("Art"), Kind("Zustandserhebung_Jahr")));
         }
 
         return elemente;

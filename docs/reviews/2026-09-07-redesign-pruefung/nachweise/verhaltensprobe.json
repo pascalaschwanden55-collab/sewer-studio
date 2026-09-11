@@ -1,0 +1,42 @@
+{
+  "suche_13_haltungen_6_schaechte": {
+    "count": 12,
+    "arten": [
+      "Haltung",
+      "Haltung",
+      "Haltung",
+      "Haltung",
+      "Haltung",
+      "Haltung",
+      "Haltung",
+      "Haltung",
+      "Haltung",
+      "Haltung",
+      "Haltung",
+      "Haltung"
+    ]
+  },
+  "suchtreffer_nach_projektwechsel": {
+    "projekt": "Projekt B",
+    "altTrefferNochVerwendet": true,
+    "auswahlIstImAktivenProjekt": false
+  },
+  "projektfremder_ki_lauf": {
+    "projekt": "Projekt B",
+    "zeilen": [
+      "nur-in-Projekt-A"
+    ]
+  },
+  "uebersicht_nach_projektwechsel": {
+    "projekt": "Projekt C",
+    "angezeigterTitel": "Projekt B",
+    "angezeigteHaltungen": 1,
+    "echteHaltungen": 0,
+    "selbeSeite": true
+  },
+  "rechteckiger_schacht": {
+    "kreis": "Collapsed",
+    "oval": "Visible",
+    "rechteck": "Collapsed"
+  }
+}

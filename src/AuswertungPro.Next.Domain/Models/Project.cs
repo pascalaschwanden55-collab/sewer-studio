@@ -29,6 +29,9 @@ public sealed class Project
     public System.Collections.ObjectModel.ObservableCollection<HaltungRecord> Data { get; set; } = new();
     public System.Collections.ObjectModel.ObservableCollection<SchachtRecord> SchaechteData { get; set; } = new();
 
+    /// <summary>Ergaenzende Objektakten und wiederholte Bauteile; alte Felder bleiben an ihren Datensaetzen.</summary>
+    public List<ObjektAkte> Objektakten { get; set; } = new();
+
     /// <summary>
     /// Beliebige Import-Historie (wird 1:1 aus JSON übernommen).
     /// </summary>

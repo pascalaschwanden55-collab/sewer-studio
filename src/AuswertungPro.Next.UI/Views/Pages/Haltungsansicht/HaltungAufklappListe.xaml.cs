@@ -31,7 +31,13 @@ public partial class HaltungAufklappListe : UserControl
     /// <summary>Name des Rahmens um das Formular; die Knoepfe "Alle auf/zu" finden ihn darueber.</summary>
     private const string FormularWurzelName = "FormularWurzel";
 
-    public HaltungAufklappListe() => InitializeComponent();
+    internal ListenReihenfolgeController Reihenfolge { get; }
+
+    public HaltungAufklappListe()
+    {
+        InitializeComponent();
+        Reihenfolge = new ListenReihenfolgeController(Liste, ReihenfolgeLeiste, KlappeZu);
+    }
 
     public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(
         nameof(ItemsSource), typeof(IEnumerable), typeof(HaltungAufklappListe), new PropertyMetadata(null));
@@ -72,11 +78,24 @@ public partial class HaltungAufklappListe : UserControl
     /// <summary>Wird bei jedem Wechsel von <see cref="Aufgeklappt"/> ausgeloest.</summary>
     public event EventHandler? AufgeklapptChanged;
 
+    public event EventHandler? AnsichtAnpassenRequested;
+    private void AnsichtAnpassen_Click(object sender, RoutedEventArgs e)
+        => AnsichtAnpassenRequested?.Invoke(this, EventArgs.Empty);
+
     /// <summary>
     /// Baut die Themen einer Haltung. Die Seite reicht denselben Builder herein wie fuer die
     /// Eingabefelder-Schublade; der Controller ruft ihn.
     /// </summary>
     public Func<HaltungRecord, IReadOnlyList<RecordDetailGroup>>? DetailBuilder { get; set; }
+
+    public static readonly DependencyProperty ObjektakteProperty = DependencyProperty.Register(
+        nameof(Objektakte), typeof(ViewModels.ObjektakteViewModel), typeof(HaltungAufklappListe), new PropertyMetadata(null));
+
+    public ViewModels.ObjektakteViewModel? Objektakte
+    {
+        get => (ViewModels.ObjektakteViewModel?)GetValue(ObjektakteProperty);
+        internal set => SetValue(ObjektakteProperty, value);
+    }
 
     public static readonly DependencyProperty ThemenProperty = DependencyProperty.Register(
         nameof(Themen), typeof(IReadOnlyList<ThemaAnzeige>), typeof(HaltungAufklappListe),

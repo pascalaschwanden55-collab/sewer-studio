@@ -1,4 +1,4 @@
-# SIA405 Abwasser 2020 LV95 — verbindliche Wertelisten
+﻿# SIA405 Abwasser 2020 LV95 — verbindliche Wertelisten
 
 **Quelle:** Modelldatei `SIA405_Abwasser_2020_1_2_d_LV95-20251129.ili` aus der
 VSA-Modellablage (`https://vsa.ch/models/?dir=2020_1`), Modell
@@ -6,12 +6,14 @@ VSA-Modellablage (`https://vsa.ch/models/?dir=2020_1`), Modell
 `SIA405_Base_Abwasser_1_2_d_LV95-20231018.ili`, Modell `SIA405_Base_Abwasser_1_LV95`,
 VERSION 18.10.2023.
 
-**Achtung, zwei Generationen:** Der Kantonsexport von Abwasser Uri deklariert im
-Dateikopf `SIA405_ABWASSER_2020_LV95` / 26.06.2021 und `SIA405_Base_Abwasser_LV95` /
-03.11.2020 — die VORIGE Generation. Die aktuelle traegt eine `_1` im Modellnamen. Ein
-Pruefer loest ueber den Modellnamen auf und findet die alte Fassung in der Ablage
-`2020_1` nicht mehr. Die Wertelisten selbst sind zwischen den beiden Generationen fuer
-alle hier gefuehrten Felder identisch — geprueft an 15 Domaenen.
+**Zielmodell des neuen Exports seit der Korrektur am 08.09.2026:**
+`SIA405_ABWASSER_2020_LV95`, Version **29.11.2025**, und
+`SIA405_Base_Abwasser_LV95`, Version **03.11.2020**. Quelle:
+[offizielles Modell 2020](https://www.vsa.ch/models/2020/SIA405_Abwasser_2020_2_d_LV95-20251129.ili).
+Die Familien 2020 und 2020_1 sind getrennt. Gegenüber der 2021-Fassung enthält
+Spezialbauwerk.Funktion zusätzlich Kombischacht. Das Basismodell 2020 hat sechs
+Organisationstypen; 2020_1 hat zusätzlich Gemeindeabteilung. Revisionen behalten
+die Modellfamilie ihrer Originaldatei.
 
 **Warum dieses Dokument:** Eine Exportdatei zeigt, was *vorkommt* — nicht, was *erlaubt*
 ist. Die Auszählung des Kantons Uri (1544 Objekte in Göschenen, 109'871 Haltungen
@@ -462,9 +464,11 @@ in_Vortriebsrohr_Beton · in_Vortriebsrohr_Stahl · Sand · SIA_Typ1 · SIA_Typ2
 SIA_Typ3 · SIA_Typ4 · Sohlbrett · unbekannt
 ```
 
-## Organisation.Organisationstyp — 7 Werte
+## Organisation.Organisationstyp — 6 Werte (2020), 7 Werte (2020_1)
 
-Aus dem Basismodell `SIA405_Base_Abwasser_1_LV95`. Pflichtfeld, ebenso `Status`
+Die folgende Liste gehört zum Basismodell `SIA405_Base_Abwasser_1_LV95` (18.10.2023).
+Beim neuen Export in der Familie 2020 entfällt `Gemeindeabteilung`; es darf dort
+nicht angeboten oder geschrieben werden. Pflichtfeld, ebenso `Status`
 (`aktiv` · `untergegangen`).
 
 ```text

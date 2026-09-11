@@ -83,9 +83,9 @@ public sealed class DataPageToolbarLayoutTests
         Assert.Contains("<Setter Property=\"ItemContainerStyle\" Value=\"{StaticResource CompactDetailFieldContainerStyle}\"/>", detailsXaml, StringComparison.Ordinal);
         Assert.Contains("<Setter Property=\"Width\" Value=\"Auto\"/>", detailsXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("<Setter Property=\"Width\" Value=\"200\"/>", detailsXaml, StringComparison.Ordinal);
-        Assert.Contains("<Setter Property=\"Margin\" Value=\"0,0,0,6\"/>", detailsXaml, StringComparison.Ordinal);
-        Assert.Contains("<Setter Property=\"Padding\" Value=\"8\"/>", detailsXaml, StringComparison.Ordinal);
-        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"72\"/>", detailsXaml, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"Margin\" Value=\"0,0,0,4\"/>", detailsXaml, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"Padding\" Value=\"4\"/>", detailsXaml, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"60\"/>", detailsXaml, StringComparison.Ordinal);
     }
 
     /// <summary>

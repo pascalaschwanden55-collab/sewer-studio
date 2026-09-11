@@ -107,7 +107,10 @@ public static class SettingsFullBackupWorkflow
                 $"Fertig: {result.FilesCopied} kopiert, {result.FilesVerified} vollstaendig geprueft" +
                 $"{databaseInfo}, {result.FilesUnchanged} unveraendert, " +
                 $"{result.FilesDeleted} nach {BackupVersionRetention.VersionsFolderName} verschoben.");
-            request.Toasts.Success("Datensicherung abgeschlossen.");
+            if (result.SkippedFileTotal > 0 || result.SkippedFiles.Count > 0)
+                request.Toasts.Warning("Datensicherung mit Lücken abgeschlossen – Hinweise prüfen.");
+            else
+                request.Toasts.Success("Datensicherung abgeschlossen.");
 
             request.Settings.LastFullBackupUtc = request.UtcNow();
             request.Settings.LastFullBackupPath = targetFolder;
@@ -131,7 +134,7 @@ public static class SettingsFullBackupWorkflow
                 request.Dialogs.Warn(
                     $"Einige Dateien konnten nicht gesichert werden ({anzahl}).\n\n" +
                     $"{sample}\n\n" +
-                    "Der bisherige Stand dieser Dateien bleibt in der Sicherung erhalten. " +
+                    "Vorhandene ältere Kopien bleiben erhalten. Ohne ältere Kopie fehlt die Datei in der Sicherung. " +
                     "Die vollstaendige Liste steht im Programmlog.",
                     "Datensicherung");
             }
@@ -141,7 +144,7 @@ public static class SettingsFullBackupWorkflow
             request.Operation.UpdateProgress(
                 request.Operation.Percent,
                 string.Empty,
-                "Abgebrochen - bereits Kopiertes bleibt erhalten.");
+                "Abgebrochen - vorheriger Sicherungsstand wiederhergestellt.");
             request.Toasts.Info("Datensicherung abgebrochen.");
         }
         catch (Exception ex)

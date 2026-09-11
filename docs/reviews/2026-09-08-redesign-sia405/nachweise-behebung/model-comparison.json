@@ -1,0 +1,1161 @@
+{
+  "SIA405_2020.ili": {
+    "Checks": [
+      {
+        "Field": "Rohrmaterial",
+        "Target": "Haltung.Material",
+        "Count": 24,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [
+          "GFK",
+          "Guss"
+        ],
+        "ModelSpec": "(     \n      andere,\n      Asbestzement,\n      Beton_Normalbeton,\n      Beton_Ortsbeton,\n      Beton_Pressrohrbeton,\n      Beton_Spezialbeton,\n      Beton_unbekannt,\n      Faserzement,\n      Gebrannte_Steine,\n      Guss_duktil,\n      Guss_Grauguss,\n      Kunststoff_Epoxydharz,\n      Kunststoff_Hartpolyethylen,\n      \n      Kunststoff_Polyester_GUP,\n      Kunststoff_Polyethylen,\n      Kunststoff_Polypropylen,\n      \n      Kunststoff_Polyvinilchlorid,\n      \n      Kunststoff_unbekannt,\n      Stahl,\n      Stahl_rostfrei,\n      Steinzeug,\n      Ton,\n      unbekannt,\n      Zement\n    )"
+      },
+      {
+        "Field": "Profiltyp",
+        "Target": "Rohrprofil.Profiltyp",
+        "Count": 7,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      \n      Eiprofil,\n      \n      Kreisprofil,\n      \n      Maulprofil,\n      \n      offenes_Profil,\n      \n      Rechteckprofil,\n      \n      Spezialprofil,\n      unbekannt\n    )"
+      },
+      {
+        "Field": "Nutzungsart",
+        "Target": "Kanal.Nutzungsart_Ist",
+        "Count": 9,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      \n      andere,\n      \n      Bachwasser,\n      \n      entlastetes_Mischabwasser,\n      \n      Industrieabwasser,\n      \n      Mischabwasser,\n      \n      Niederschlagsabwasser,\n      \n      Reinabwasser,\n      \n      Schmutzabwasser,\n      unbekannt\n    )"
+      },
+      {
+        "Field": "Zustandsklasse",
+        "Target": "Kanal.BaulicherZustand",
+        "Count": 6,
+        "Missing": [
+          "unbekannt"
+        ],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      unbekannt,\n      \n      Z0,\n      \n      Z1,\n      \n      Z2,\n      \n      Z3,\n      \n      Z4\n    )"
+      },
+      {
+        "Field": "FunktionHierarchisch",
+        "Target": "Kanal.FunktionHierarchisch",
+        "Count": 14,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      PAA (\n      \n        andere,\n          \n        Gewaesser,\n          \n        Hauptsammelkanal,\n          \n        Hauptsammelkanal_regional,\n          \n        Liegenschaftsentwaesserung,\n          \n        Sammelkanal,\n          \n        Sanierungsleitung,\n          \n        Strassenentwaesserung,\n        unbekannt\n      ),\n      SAA (\n           \n         andere,\n          \n        Liegenschaftsentwaesserung,\n          \n        Sanierungsleitung,\n          \n        Strassenentwaesserung,\n        unbekannt  \n      )\n    )"
+      },
+      {
+        "Field": "Verbindungsart",
+        "Target": "Kanal.Verbindungsart",
+        "Count": 13,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      andere,\n      Elektroschweissmuffen,\n      Flachmuffen,\n      Flansch,\n      Glockenmuffen,\n      Kupplung,\n      Schraubmuffen,\n      spiegelgeschweisst,\n      Spitzmuffen,\n      Steckmuffen,\n      Ueberschiebmuffen,\n      unbekannt,\n      Vortriebsrohrkupplung\n    )"
+      },
+      {
+        "Field": "Bettung_Umhuellung",
+        "Target": "Kanal.Bettung_Umhuellung",
+        "Count": 14,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      andere,\n      \n      erdverlegt,\n      in_Kanal_aufgehaengt,\n      in_Kanal_einbetoniert,\n      \n      in_Leitungsgang,\n      in_Vortriebsrohr_Beton,\n      in_Vortriebsrohr_Stahl,\n      Sand,\n      \n      SIA_Typ1,\n      \n      SIA_Typ2,\n      \n      SIA_Typ3,\n      \n      SIA_Typ4,\n      \n      Sohlbrett,\n      unbekannt\n    )"
+      },
+      {
+        "Field": "Status",
+        "Target": "Kanal.Status",
+        "Count": 5,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(   \n             ausser_Betrieb,  \n             in_Betrieb,\n             tot,  \n             unbekannt, \n             weitere \n            )"
+      },
+      {
+        "Field": "Sanierungsbedarf",
+        "Target": "Kanal.Sanierungsbedarf",
+        "Count": 6,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      \n      dringend,\n      \n      keiner,\n      \n      kurzfristig,\n      \n      langfristig,\n      \n      mittelfristig,\n      unbekannt\n    )"
+      },
+      {
+        "Field": "FunktionHydraulisch",
+        "Target": "Kanal.FunktionHydraulisch",
+        "Count": 12,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      andere,\n      \n      Drainagetransportleitung,\n      \n      Drosselleitung,\n      \n      Duekerleitung,\n      \n      Freispiegelleitung,\n      \n      Pumpendruckleitung,\n      \n      Sickerleitung,\n      \n      Speicherleitung,\n      \n      Spuelleitung,\n      unbekannt,\n      Vakuumleitung,\n      \n      Versickerungsleitung\n    )"
+      },
+      {
+        "Field": "Lagebestimmung",
+        "Target": "Haltung.Lagebestimmung",
+        "Count": 3,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      \n      genau,\n      unbekannt,\n      \n      ungenau\n    )"
+      },
+      {
+        "Field": "Schacht.Funktion",
+        "Target": "Normschacht.Funktion",
+        "Count": 22,
+        "Missing": [
+          "unbekannt"
+        ],
+        "Invalid": [],
+        "Unmapped": [
+          "unbekannt"
+        ]
+      },
+      {
+        "Field": "Schacht.Material",
+        "Target": "Normschacht.Material",
+        "Count": 4,
+        "Missing": [
+          "unbekannt"
+        ],
+        "Invalid": [],
+        "Unmapped": [
+          "unbekannt"
+        ]
+      },
+      {
+        "Field": "Spezialbauwerk.Funktion",
+        "Target": "Spezialbauwerk.Funktion",
+        "Count": 35,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": []
+      },
+      {
+        "Field": "Versickerungsanlage.Art",
+        "Target": "Versickerungsanlage.Art",
+        "Count": 11,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": []
+      }
+    ],
+    "Classes": {
+      "VSA_BaseClass": {
+        "parent": "SIA405_BaseClass",
+        "attrs": {}
+      },
+      "Abwasserbauwerk": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Akten": "MTEXT*255",
+          "Baujahr": "SIA405_Base_Abwasser_LV95.Jahr",
+          "BaulicherZustand": "(     \n      unbekannt,\n      \n      Z0,\n      \n      Z1,\n      \n      Z2,\n      \n      Z3,\n      \n      Z4\n    )",
+          "Baulos": "TEXT*50",
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*41",
+          "Bruttokosten": "0.00 .. 99999999.99 [Units.CHF]",
+          "Detailgeometrie": "Base_LV95.Surface",
+          "Ersatzjahr": "SIA405_Base_Abwasser_LV95.Jahr",
+          "Finanzierung": "(     \n      \n      oeffentlich,\n      \n      privat,\n      unbekannt\n    )",
+          "Inspektionsintervall": "Intervall",
+          "Sanierungsbedarf": "(     \n      \n      dringend,\n      \n      keiner,\n      \n      kurzfristig,\n      \n      langfristig,\n      \n      mittelfristig,\n      unbekannt\n    )",
+          "Standortname": "TEXT*50",
+          "Status": "Status",
+          "Subventionen": "0.00 .. 99999999.99 [Units.CHF]",
+          "WBW_Basisjahr": "SIA405_Base_Abwasser_LV95.Jahr",
+          "WBW_Bauart": "(     \n      andere,\n      \n      Feld,\n      \n      Sanierungsleitung_Bagger,\n      \n      Sanierungsleitung_Grabenfraese,\n      \n      Strasse,\n      unbekannt\n    )",
+          "Wiederbeschaffungswert": "0.00 .. 99999999.99 [Units.CHF]",
+          "Zugaenglichkeit": "(     \n      \n      ueberdeckt,\n      unbekannt,\n      \n      unzugaenglich,\n      \n      zugaenglich\n    )",
+          "Zustandserhebung_Jahr": "SIA405_Base_Abwasser_LV95.Jahr"
+        }
+      },
+      "Abwasserbauwerk_Text": {
+        "parent": "SIA405_TextPos",
+        "attrs": {}
+      },
+      "Abwasserbauwerk_Symbol": {
+        "parent": "SIA405_SymbolPos",
+        "attrs": {}
+      },
+      "Kanal": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bettung_Umhuellung": "(     \n      andere,\n      \n      erdverlegt,\n      in_Kanal_aufgehaengt,\n      in_Kanal_einbetoniert,\n      \n      in_Leitungsgang,\n      in_Vortriebsrohr_Beton,\n      in_Vortriebsrohr_Stahl,\n      Sand,\n      \n      SIA_Typ1,\n      \n      SIA_Typ2,\n      \n      SIA_Typ3,\n      \n      SIA_Typ4,\n      \n      Sohlbrett,\n      unbekannt\n    )",
+          "FunktionHierarchisch": "(     \n      PAA (\n      \n        andere,\n          \n        Gewaesser,\n          \n        Hauptsammelkanal,\n          \n        Hauptsammelkanal_regional,\n          \n        Liegenschaftsentwaesserung,\n          \n        Sammelkanal,\n          \n        Sanierungsleitung,\n          \n        Strassenentwaesserung,\n        unbekannt\n      ),\n      SAA (\n           \n         andere,\n          \n        Liegenschaftsentwaesserung,\n          \n        Sanierungsleitung,\n          \n        Strassenentwaesserung,\n        unbekannt  \n      )\n    )",
+          "FunktionHydraulisch": "(     \n      andere,\n      \n      Drainagetransportleitung,\n      \n      Drosselleitung,\n      \n      Duekerleitung,\n      \n      Freispiegelleitung,\n      \n      Pumpendruckleitung,\n      \n      Sickerleitung,\n      \n      Speicherleitung,\n      \n      Spuelleitung,\n      unbekannt,\n      Vakuumleitung,\n      \n      Versickerungsleitung\n    )",
+          "FunktionMelioration": "(     \n      \n      Hauptkanal,\n      \n      Sammelkanal,\n      \n      Sauger,\n      unbekannt\n    )",
+          "Nutzungsart_geplant": "(     \n      \n      andere,\n      \n      Bachwasser,\n      \n      entlastetes_Mischabwasser,\n      \n      Industrieabwasser,\n      \n      Mischabwasser,\n      \n      Niederschlagsabwasser,\n      \n      Reinabwasser,\n      \n      Schmutzabwasser,\n      unbekannt\n    )",
+          "Nutzungsart_Ist": "(     \n      \n      andere,\n      \n      Bachwasser,\n      \n      entlastetes_Mischabwasser,\n      \n      Industrieabwasser,\n      \n      Mischabwasser,\n      \n      Niederschlagsabwasser,\n      \n      Reinabwasser,\n      \n      Schmutzabwasser,\n      unbekannt\n    )",
+          "Rohrlaenge": "0.00 .. 30000.00 [m]",
+          "Sickerung": "(     \n      andere,\n      Holzschnitzel,\n      Sickerkies,\n      unbekannt\n    )",
+          "Spuelintervall": "Intervall",
+          "Verbindungsart": "(     \n      andere,\n      Elektroschweissmuffen,\n      Flachmuffen,\n      Flansch,\n      Glockenmuffen,\n      Kupplung,\n      Schraubmuffen,\n      spiegelgeschweisst,\n      Spitzmuffen,\n      Steckmuffen,\n      Ueberschiebmuffen,\n      unbekannt,\n      Vortriebsrohrkupplung\n    )"
+        }
+      },
+      "Normschacht": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Amphibienausstieg": "(     \n      ja,\n      nein,\n      unbekannt\n    )",
+          "Dimension1": "SIA405_Base_Abwasser_LV95.Abmessung",
+          "Dimension2": "SIA405_Base_Abwasser_LV95.Abmessung",
+          "Funktion": "(     \n      \n      Absturzbauwerk,\n      andere,\n      \n      Be_Entlueftung,\n      \n      Behandlungsanlage,\n      \n      Bodenablauf,\n      \n      Dachwasserschacht,\n      \n      Einlaufschacht,\n      \n      Entwaesserungsrinne,\n      \n      Entwaesserungsrinne_mit_Schlammsack,\n      \n      Fettabscheider,\n      \n      Geleiseschacht,\n      \n      Kombischacht,\n      \n      Kontroll_Einsteigschacht,\n      \n      Oelabscheider,\n      \n      Pumpwerk,\n      \n      Regenueberlauf,\n      \n      Schlammsammler,\n      \n      Schwimmstoffabscheider,\n      \n      Spuelschacht,\n      \n      Trennbauwerk,\n      unbekannt,\n      \n      Vorbehandlungsanlage\n    )",
+          "Interventionsmoeglichkeit": "(     \n      ja,\n      nein,\n      unbekannt\n    )",
+          "Material": "(     \n      andere,\n      Beton,\n      Kunststoff,\n      unbekannt\n    )",
+          "Oberflaechenzulauf": "(     \n      andere,\n      keiner,\n      Rost,\n      unbekannt,\n      Zulauf_seitlich\n    )"
+        }
+      },
+      "Einleitstelle": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Gewaesserabschnitt_Kanton": "GewaesserabschnittsID",
+          "Gewaesserlaufnummer": "GWLNR",
+          "Hochwasserkote": "Base_LV95.Hoehe",
+          "Relevanz": "(     \n      \n      gewaesserrelevant,\n      \n      nicht_gewaesserrelevant\n    )",
+          "Terrainkote": "Base_LV95.Hoehe",
+          "Wasserspiegel_Hydraulik": "Base_LV95.Hoehe"
+        }
+      },
+      "Spezialbauwerk": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Amphibienausstieg": "(     \n      ja,\n      nein,\n      unbekannt\n    )",
+          "Bypass": "(     \n      nicht_vorhanden,\n      unbekannt,\n      vorhanden\n    )",
+          "Funktion": "(     \n      \n      abflussloseGrube,\n      \n      Absturzbauwerk,\n      \n      Abwasserfaulraum,\n      \n      andere,\n      \n      Be_Entlueftung,\n      \n      Behandlungsanlage,\n      \n      Duekerkammer,\n      \n      Duekeroberhaupt,\n      \n      Faulgrube,\n      \n      Fettabscheider,\n      \n      Gelaendemulde,\n      \n      Geschiebefang,\n      \n      Guellegrube,\n      \n      Havariebecken,\n      \n      Klaergrube,\n      \n      Kombischacht,\n      \n      Kontroll_Einsteigschacht,\n      \n      Oelabscheider,\n      \n      Pumpwerk,\n      \n      Regenbecken_Durchlaufbecken,\n      \n      Regenbecken_Fangbecken,\n      \n      Regenbecken_Fangkanal,\n      \n      Regenbecken_Regenklaerbecken,\n      \n      Regenbecken_Regenrueckhaltebecken,\n      \n      Regenbecken_Regenrueckhaltekanal,\n      \n      Regenbecken_Stauraumkanal,\n      \n      Regenbecken_Verbundbecken,\n      \n      Regenueberlauf,\n      \n      Schwimmstoffabscheider,\n      \n      seitlicherZugang,\n      \n      Spuelschacht,\n      \n      Trennbauwerk,\n      unbekannt,\n      \n      Vorbehandlungsanlage,\n      \n      Wirbelfallschacht\n    )",
+          "Interventionsmoeglichkeit": "(     \n      ja,\n      nein,\n      unbekannt\n    )",
+          "Notueberlauf": "(     \n      andere,\n      \n      in_Gewaesser,\n      \n      in_Mischabwasserkanalisation,\n      \n      in_Regenabwasserkanalisation,\n      \n      in_Schmutzabwasserkanalisation,\n      keiner,\n      \n      oberflaechlich_ausmuendend,\n      unbekannt\n    )",
+          "Regenbecken_Anordnung": "(     \n      \n      Hauptschluss,\n      \n      Nebenschluss,\n      unbekannt\n    )"
+        }
+      },
+      "Versickerungsanlage": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Art": "(     \n      andere_mit_Bodenpassage,\n      andere_ohne_Bodenpassage,\n      \n      Flaechenfoermige_Versickerung,\n      Kieskoerper,\n      Kombination_Schacht_Strang,\n      MuldenRigolenversickerung,\n      unbekannt,\n      Versickerung_ueber_die_Schulter,\n      Versickerungsbecken,\n      Versickerungsschacht,\n      Versickerungsstrang_Galerie\n    )",
+          "Beschriftung": "(     \n      beschriftet,\n      nichtbeschriftet,\n      unbekannt\n    )",
+          "Dimension1": "SIA405_Base_Abwasser_LV95.Abmessung",
+          "Dimension2": "SIA405_Base_Abwasser_LV95.Abmessung",
+          "Fuellmaterial": "(     \n      andere,\n      Holzschnitzel,\n      Sickerkies,\n      unbekannt\n    )",
+          "GWDistanz": "0.00 .. 30000.00 [m]",
+          "Maengel": "(     \n      keine,\n      \n      unwesentliche,\n      \n      wesentliche\n    )",
+          "Notueberlauf": "(     \n      andere,\n      \n      in_Gewaesser,\n      \n      in_Mischabwasserkanalisation,\n      \n      in_Regenabwasserkanalisation,\n      \n      in_Schmutzabwasserkanalisation,\n      keiner,\n      \n      oberflaechlich_ausmuendend,\n      unbekannt\n    )",
+          "Saugwagen": "(     \n      unbekannt,\n      unzugaenglich,\n      zugaenglich\n    )",
+          "Schluckvermoegen": "0.000 .. 100000.000 [SIA405_Base_Abwasser_LV95.ls]",
+          "Versickerungswasser": "(     \n      \n      Niederschlagsabwasser,\n      Reinabwasser,\n      unbekannt\n    )",
+          "Wasserdichtheit": "(     \n      nichtwasserdicht,\n      unbekannt,\n      wasserdicht\n    )",
+          "Wirksameflaeche": "0.00 .. 100000.00 [Units.m2]"
+        }
+      },
+      "Rohrprofil": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "HoehenBreitenverhaeltnis": "Verhaeltnis_H_B",
+          "Profiltyp": "(     \n      \n      Eiprofil,\n      \n      Kreisprofil,\n      \n      Maulprofil,\n      \n      offenes_Profil,\n      \n      Rechteckprofil,\n      \n      Spezialprofil,\n      unbekannt\n    )"
+        }
+      },
+      "Abwassernetzelement": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*41"
+        }
+      },
+      "Haltungspunkt": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Auslaufform": "(     \n      abgerundet,\n      blendenfoermig,\n      keine_Querschnittsaenderung,\n      scharfkantig,\n      unbekannt\n    )",
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Hoehengenauigkeit": "(     \n      \n      groesser_6cm,\n      \n      plusminus_1cm,\n      \n      plusminus_3cm,\n      \n      plusminus_6cm,\n      unbekannt\n    )",
+          "Kote": "Base_LV95.Hoehe",
+          "Lage": "Base_LV95.LKoord",
+          "Lage_Anschluss": "Ziffernblatt",
+          "Rohrverschluss_Kappe": "(     \n      ja,\n      nein,\n      unbekannt\n    )"
+        }
+      },
+      "Abwasserknoten": {
+        "parent": "Abwassernetzelement",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "ARA_Nr": "ARANr",
+          "Funktion_Knoten_Melioration": "(     \n      Gefaellsbruch,\n      Gefaellsbruch_Kaliberwechsel,\n      Kaliberwechsel,\n      Normschacht,\n      Normschacht_Gefaellsbruch,\n      Normschacht_Gefaellsbruch_Kaliberwechsel,\n      Normschacht_Kaliberwechsel,\n      unbekannt\n    )",
+          "Hoehengenauigkeit": "(     \n      groesser_6cm,\n      plusminus_1cm,\n      plusminus_3cm,\n      plusminus_6cm,\n      unbekannt\n    )",
+          "Lage": "Base_LV95.LKoord",
+          "Rueckstaukote_Ist": "Base_LV95.Hoehe",
+          "Sohlenkote": "Base_LV95.Hoehe"
+        }
+      },
+      "Haltung": {
+        "parent": "Abwassernetzelement",
+        "attrs": {
+          "Fliesszeit_Trockenwetter": "0 .. 1000000 [s]",
+          "Hydr_Belastung_Ist": "Prozent1000",
+          "Innenschutz": "(     \n      andere,\n      Anstrich_Beschichtung,\n      Kanalklinkerauskleidung,\n      Steinzeugauskleidung,\n      unbekannt,\n      Zementmoertelauskleidung\n    )",
+          "LaengeEffektiv": "0.00 .. 30000.00 [m]",
+          "Lagebestimmung": "(     \n      \n      genau,\n      unbekannt,\n      \n      ungenau\n    )",
+          "Leckschutz": "(     \n      nicht_vorhanden,\n      unbekannt,\n      vorhanden\n    )",
+          "Lichte_Hoehe": "Lichte_Hoehe",
+          "Material": "(     \n      andere,\n      Asbestzement,\n      Beton_Normalbeton,\n      Beton_Ortsbeton,\n      Beton_Pressrohrbeton,\n      Beton_Spezialbeton,\n      Beton_unbekannt,\n      Faserzement,\n      Gebrannte_Steine,\n      Guss_duktil,\n      Guss_Grauguss,\n      Kunststoff_Epoxydharz,\n      Kunststoff_Hartpolyethylen,\n      \n      Kunststoff_Polyester_GUP,\n      Kunststoff_Polyethylen,\n      Kunststoff_Polypropylen,\n      \n      Kunststoff_Polyvinilchlorid,\n      \n      Kunststoff_unbekannt,\n      Stahl,\n      Stahl_rostfrei,\n      Steinzeug,\n      Ton,\n      unbekannt,\n      Zement\n    )",
+          "Plangefaelle": "Gefaelle_Promille",
+          "Reibungsbeiwert": "Strickler",
+          "Reliner_Art": "(     \n      ganze_Haltung,\n      partiell,\n      unbekannt\n    )",
+          "Reliner_Bautechnik": "(     \n      andere,\n      Close_Fit_Relining,\n      Kurzrohrrelining,\n      Noppenschlauchrelining,\n      Partieller_Liner,\n      Rohrstrangrelining,\n      Schlauchrelining,\n      unbekannt,\n      Wickelrohrrelining\n    )",
+          "Reliner_Material": "(     \n      andere,\n      \n      Epoxidharz_Glasfaserlaminat,\n      \n      Epoxidharz_Kunststofffilz,\n      \n      GUP_Rohr,\n      HDPE,\n      \n      Isocyanatharze_Glasfaserlaminat,\n      \n      Isocyanatharze_Kunststofffilz,\n      \n      Polyesterharz_Glasfaserlaminat,\n      \n      Polyesterharz_Kunststofffilz,\n      Polypropylen,\n      Polyvinilchlorid,\n      \n      Sohle_mit_Schale_aus_Polyesterbeton,\n      unbekannt,\n      \n      UP_Harz_LED_Synthesefaserliner,\n      \n      Vinylesterharz_Glasfaserlaminat,\n      \n      Vinylesterharz_Kunststofffilz\n    )",
+          "Reliner_Nennweite": "Lichte_Hoehe",
+          "Ringsteifigkeit": "0 .. 16",
+          "Verlauf": "Base_LV95.Polyline",
+          "Wandrauhigkeit": "Prandtl"
+        }
+      },
+      "Haltung_Text": {
+        "parent": "SIA405_TextPos",
+        "attrs": {}
+      },
+      "Haltung_Alternativverlauf": {
+        "parent": "BaseClass",
+        "attrs": {
+          "Verlauf": "Base_LV95.Polyline",
+          "Plantyp": "SIA405_Base_Abwasser_LV95.Plantyp"
+        }
+      },
+      "BauwerksTeil": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Instandstellung": "(     \n      nicht_notwendig,\n      notwendig,\n      unbekannt\n    )"
+        }
+      },
+      "Trockenwetterfallrohr": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Durchmesser": "SIA405_Base_Abwasser_LV95.Abmessung"
+        }
+      },
+      "Einstiegshilfe": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Art": "(     \n      andere,\n      Drucktuere,\n      keine,\n      Leiter,\n      Steigeisen,\n      Treppe,\n      Trittnischen,\n      Tuere,\n      unbekannt\n    )"
+        }
+      },
+      "Trockenwetterrinne": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Material": "(     \n      andere,\n      kombiniert,\n      Kunststoff,\n      Steinzeug,\n      unbekannt,\n      Zementmoertel\n    )"
+        }
+      },
+      "Deckel": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Deckelform": "(     \n      andere,\n      eckig,\n      rund,\n      unbekannt\n    )",
+          "Durchmesser": "SIA405_Base_Abwasser_LV95.Abmessung",
+          "Entlueftung": "(     \n      entlueftet,\n      nicht_entlueftet,\n      unbekannt\n    )",
+          "Fabrikat": "TEXT*50",
+          "Kote": "Base_LV95.Hoehe",
+          "Lage": "Base_LV95.LKoord",
+          "Lagegenauigkeit": "(     \n      groesser_50cm,\n      plusminus_10cm,\n      plusminus_3cm,\n      plusminus_50cm,\n      unbekannt\n    )",
+          "Material": "(     \n      andere,\n      Beton,\n      Guss,\n      Guss_mit_Belagsfuellung,\n      Guss_mit_Betonfuellung,\n      unbekannt\n    )",
+          "Schlammeimer": "(     \n      nicht_vorhanden,\n      unbekannt,\n      vorhanden\n    )",
+          "Verschluss": "(     \n      nicht_verschraubt,\n      unbekannt,\n      verschraubt\n    )"
+        }
+      },
+      "Bankett": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Art": "(     \n      andere,\n      beidseitig,\n      einseitig,\n      kein,\n      unbekannt\n    )"
+        }
+      },
+      "Spuelstutzen": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Lage": "Base_LV95.LKoord"
+        }
+      }
+    }
+  },
+  "SIA405_2020_1.ili": {
+    "Checks": [
+      {
+        "Field": "Rohrmaterial",
+        "Target": "Haltung.Material",
+        "Count": 24,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [
+          "GFK",
+          "Guss"
+        ],
+        "ModelSpec": "(     \n      andere,\n      Asbestzement,\n      Beton_Normalbeton,\n      Beton_Ortsbeton,\n      Beton_Pressrohrbeton,\n      Beton_Spezialbeton,\n      Beton_unbekannt,\n      Faserzement,\n      Gebrannte_Steine,\n      Guss_duktil,\n      Guss_Grauguss,\n      Kunststoff_Epoxydharz,\n      Kunststoff_Hartpolyethylen,\n      \n      Kunststoff_Polyester_GUP,\n      Kunststoff_Polyethylen,\n      Kunststoff_Polypropylen,\n      \n      Kunststoff_Polyvinilchlorid,\n      \n      Kunststoff_unbekannt,\n      Stahl,\n      Stahl_rostfrei,\n      Steinzeug,\n      Ton,\n      unbekannt,\n      Zement\n    )"
+      },
+      {
+        "Field": "Profiltyp",
+        "Target": "Rohrprofil.Profiltyp",
+        "Count": 7,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      \n      Eiprofil,\n      \n      Kreisprofil,\n      \n      Maulprofil,\n      \n      offenes_Profil,\n      \n      Rechteckprofil,\n      \n      Spezialprofil,\n      unbekannt\n    )"
+      },
+      {
+        "Field": "Nutzungsart",
+        "Target": "Kanal.Nutzungsart_Ist",
+        "Count": 9,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      \n      andere,\n      \n      Bachwasser,\n      \n      entlastetes_Mischabwasser,\n      \n      Industrieabwasser,\n      \n      Mischabwasser,\n      \n      Niederschlagsabwasser,\n      \n      Reinabwasser,\n      \n      Schmutzabwasser,\n      unbekannt\n    )"
+      },
+      {
+        "Field": "Zustandsklasse",
+        "Target": "Kanal.BaulicherZustand",
+        "Count": 6,
+        "Missing": [
+          "unbekannt"
+        ],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      unbekannt,\n      \n      Z0,\n      \n      Z1,\n      \n      Z2,\n      \n      Z3,\n      \n      Z4\n    )"
+      },
+      {
+        "Field": "FunktionHierarchisch",
+        "Target": "Kanal.FunktionHierarchisch",
+        "Count": 14,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      PAA (\n      \n        andere,\n          \n        Gewaesser,\n          \n        Hauptsammelkanal,\n          \n        Hauptsammelkanal_regional,\n          \n        Liegenschaftsentwaesserung,\n          \n        Sammelkanal,\n          \n        Sanierungsleitung,\n          \n        Strassenentwaesserung,\n        unbekannt\n      ),\n      SAA (\n           \n         andere,\n          \n        Liegenschaftsentwaesserung,\n          \n        Sanierungsleitung,\n          \n        Strassenentwaesserung,\n        unbekannt  \n      )\n    )"
+      },
+      {
+        "Field": "Verbindungsart",
+        "Target": "Kanal.Verbindungsart",
+        "Count": 13,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      andere,\n      Elektroschweissmuffen,\n      Flachmuffen,\n      Flansch,\n      Glockenmuffen,\n      Kupplung,\n      Schraubmuffen,\n      spiegelgeschweisst,\n      Spitzmuffen,\n      Steckmuffen,\n      Ueberschiebmuffen,\n      unbekannt,\n      Vortriebsrohrkupplung\n    )"
+      },
+      {
+        "Field": "Bettung_Umhuellung",
+        "Target": "Kanal.Bettung_Umhuellung",
+        "Count": 14,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      andere,\n      \n      erdverlegt,\n      in_Kanal_aufgehaengt,\n      in_Kanal_einbetoniert,\n      \n      in_Leitungsgang,\n      in_Vortriebsrohr_Beton,\n      in_Vortriebsrohr_Stahl,\n      Sand,\n      \n      SIA_Typ1,\n      \n      SIA_Typ2,\n      \n      SIA_Typ3,\n      \n      SIA_Typ4,\n      \n      Sohlbrett,\n      unbekannt\n    )"
+      },
+      {
+        "Field": "Status",
+        "Target": "Kanal.Status",
+        "Count": 5,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(   \n             ausser_Betrieb,  \n             in_Betrieb,\n             tot,  \n             unbekannt, \n             weitere \n            )"
+      },
+      {
+        "Field": "Sanierungsbedarf",
+        "Target": "Kanal.Sanierungsbedarf",
+        "Count": 6,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      \n      dringend,\n      \n      keiner,\n      \n      kurzfristig,\n      \n      langfristig,\n      \n      mittelfristig,\n      unbekannt\n    )"
+      },
+      {
+        "Field": "FunktionHydraulisch",
+        "Target": "Kanal.FunktionHydraulisch",
+        "Count": 12,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      andere,\n      \n      Drainagetransportleitung,\n      \n      Drosselleitung,\n      \n      Duekerleitung,\n      \n      Freispiegelleitung,\n      \n      Pumpendruckleitung,\n      \n      Sickerleitung,\n      \n      Speicherleitung,\n      \n      Spuelleitung,\n      unbekannt,\n      Vakuumleitung,\n      \n      Versickerungsleitung\n    )"
+      },
+      {
+        "Field": "Lagebestimmung",
+        "Target": "Haltung.Lagebestimmung",
+        "Count": 3,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      \n      genau,\n      unbekannt,\n      \n      ungenau\n    )"
+      },
+      {
+        "Field": "Schacht.Funktion",
+        "Target": "Normschacht.Funktion",
+        "Count": 22,
+        "Missing": [
+          "unbekannt"
+        ],
+        "Invalid": [],
+        "Unmapped": [
+          "unbekannt"
+        ]
+      },
+      {
+        "Field": "Schacht.Material",
+        "Target": "Normschacht.Material",
+        "Count": 4,
+        "Missing": [
+          "unbekannt"
+        ],
+        "Invalid": [],
+        "Unmapped": [
+          "unbekannt"
+        ]
+      },
+      {
+        "Field": "Spezialbauwerk.Funktion",
+        "Target": "Spezialbauwerk.Funktion",
+        "Count": 35,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": []
+      },
+      {
+        "Field": "Versickerungsanlage.Art",
+        "Target": "Versickerungsanlage.Art",
+        "Count": 11,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": []
+      }
+    ],
+    "Classes": {
+      "VSA_BaseClass": {
+        "parent": "SIA405_BaseClass",
+        "attrs": {}
+      },
+      "Abwasserbauwerk": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Akten": "MTEXT*255",
+          "Baujahr": "SIA405_Base_Abwasser_1_LV95.Jahr",
+          "BaulicherZustand": "(     \n      unbekannt,\n      \n      Z0,\n      \n      Z1,\n      \n      Z2,\n      \n      Z3,\n      \n      Z4\n    )",
+          "Baulos": "TEXT*50",
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*41",
+          "Bruttokosten": "0.00 .. 99999999.99 [Units.CHF]",
+          "Detailgeometrie": "Base_LV95.Surface",
+          "Dringlichkeitszahl": "Dringlichkeitszahl",
+          "Ersatzjahr": "SIA405_Base_Abwasser_1_LV95.Jahr",
+          "Finanzierung": "(     \n      \n      oeffentlich,\n      \n      privat,\n      unbekannt\n    )",
+          "Inspektionsintervall": "Intervall",
+          "Sanierungsbedarf": "(     \n      \n      dringend,\n      \n      keiner,\n      \n      kurzfristig,\n      \n      langfristig,\n      \n      mittelfristig,\n      unbekannt\n    )",
+          "Standortname": "TEXT*50",
+          "Status": "Status",
+          "Subventionen": "0.00 .. 99999999.99 [Units.CHF]",
+          "WBW_Basisjahr": "SIA405_Base_Abwasser_1_LV95.Jahr",
+          "WBW_Bauart": "(     \n      andere,\n      \n      Feld,\n      \n      Sanierungsleitung_Bagger,\n      \n      Sanierungsleitung_Grabenfraese,\n      \n      Strasse,\n      unbekannt\n    )",
+          "Wiederbeschaffungswert": "0.00 .. 99999999.99 [Units.CHF]",
+          "Zugaenglichkeit": "(     \n      \n      ueberdeckt,\n      unbekannt,\n      \n      unzugaenglich,\n      \n      zugaenglich\n    )",
+          "Zustandserhebung_Jahr": "SIA405_Base_Abwasser_1_LV95.Jahr",
+          "Zustandsnote": "Zustandsnote"
+        }
+      },
+      "Abwasserbauwerk_Text": {
+        "parent": "SIA405_TextPos",
+        "attrs": {}
+      },
+      "Abwasserbauwerk_Symbol": {
+        "parent": "SIA405_SymbolPos",
+        "attrs": {}
+      },
+      "Kanal": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bettung_Umhuellung": "(     \n      andere,\n      \n      erdverlegt,\n      in_Kanal_aufgehaengt,\n      in_Kanal_einbetoniert,\n      \n      in_Leitungsgang,\n      in_Vortriebsrohr_Beton,\n      in_Vortriebsrohr_Stahl,\n      Sand,\n      \n      SIA_Typ1,\n      \n      SIA_Typ2,\n      \n      SIA_Typ3,\n      \n      SIA_Typ4,\n      \n      Sohlbrett,\n      unbekannt\n    )",
+          "FunktionHierarchisch": "(     \n      PAA (\n      \n        andere,\n          \n        Gewaesser,\n          \n        Hauptsammelkanal,\n          \n        Hauptsammelkanal_regional,\n          \n        Liegenschaftsentwaesserung,\n          \n        Sammelkanal,\n          \n        Sanierungsleitung,\n          \n        Strassenentwaesserung,\n        unbekannt\n      ),\n      SAA (\n           \n         andere,\n          \n        Liegenschaftsentwaesserung,\n          \n        Sanierungsleitung,\n          \n        Strassenentwaesserung,\n        unbekannt  \n      )\n    )",
+          "FunktionHydraulisch": "(     \n      andere,\n      \n      Drainagetransportleitung,\n      \n      Drosselleitung,\n      \n      Duekerleitung,\n      \n      Freispiegelleitung,\n      \n      Pumpendruckleitung,\n      \n      Sickerleitung,\n      \n      Speicherleitung,\n      \n      Spuelleitung,\n      unbekannt,\n      Vakuumleitung,\n      \n      Versickerungsleitung\n    )",
+          "FunktionMelioration": "(     \n      \n      Hauptkanal,\n      \n      Sammelkanal,\n      \n      Sauger,\n      unbekannt\n    )",
+          "Nutzungsart_geplant": "(     \n      \n      andere,\n      \n      Bachwasser,\n      \n      entlastetes_Mischabwasser,\n      \n      Industrieabwasser,\n      \n      Mischabwasser,\n      \n      Niederschlagsabwasser,\n      \n      Reinabwasser,\n      \n      Schmutzabwasser,\n      unbekannt\n    )",
+          "Nutzungsart_Ist": "(     \n      \n      andere,\n      \n      Bachwasser,\n      \n      entlastetes_Mischabwasser,\n      \n      Industrieabwasser,\n      \n      Mischabwasser,\n      \n      Niederschlagsabwasser,\n      \n      Reinabwasser,\n      \n      Schmutzabwasser,\n      unbekannt\n    )",
+          "Rohrlaenge": "0.00 .. 30000.00 [m]",
+          "Sickerung": "(     \n      andere,\n      Holzschnitzel,\n      Sickerkies,\n      unbekannt\n    )",
+          "Spuelintervall": "Intervall",
+          "Verbindungsart": "(     \n      andere,\n      Elektroschweissmuffen,\n      Flachmuffen,\n      Flansch,\n      Glockenmuffen,\n      Kupplung,\n      Schraubmuffen,\n      spiegelgeschweisst,\n      Spitzmuffen,\n      Steckmuffen,\n      Ueberschiebmuffen,\n      unbekannt,\n      Vortriebsrohrkupplung\n    )"
+        }
+      },
+      "Normschacht": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Amphibienausstieg": "(     \n      ja,\n      nein,\n      unbekannt\n    )",
+          "Dimension1": "SIA405_Base_Abwasser_1_LV95.Abmessung",
+          "Dimension2": "SIA405_Base_Abwasser_1_LV95.Abmessung",
+          "Funktion": "(     \n      \n      Absturzbauwerk,\n      andere,\n      \n      Be_Entlueftung,\n      \n      Behandlungsanlage,\n      \n      Bodenablauf,\n      \n      Dachwasserschacht,\n      \n      Einlaufschacht,\n      \n      Entwaesserungsrinne,\n      \n      Entwaesserungsrinne_mit_Schlammsack,\n      \n      Fettabscheider,\n      \n      Geleiseschacht,\n      \n      Kombischacht,\n      \n      Kontroll_Einsteigschacht,\n      \n      Oelabscheider,\n      \n      Pumpwerk,\n      \n      Regenueberlauf,\n      \n      Schlammsammler,\n      \n      Schwimmstoffabscheider,\n      \n      Spuelschacht,\n      \n      Trennbauwerk,\n      unbekannt,\n      \n      Vorbehandlungsanlage\n    )",
+          "Interventionsmoeglichkeit": "(     \n      ja,\n      nein,\n      unbekannt\n    )",
+          "Material": "(     \n      andere,\n      Beton,\n      Kunststoff,\n      unbekannt\n    )",
+          "Oberflaechenzulauf": "(     \n      andere,\n      keiner,\n      Rost,\n      unbekannt,\n      Zulauf_seitlich\n    )"
+        }
+      },
+      "Einleitstelle": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Gewaesserabschnitt_Kanton": "GewaesserabschnittsID",
+          "Gewaesserlaufnummer": "GWLNR",
+          "Hochwasserkote": "Base_LV95.Hoehe",
+          "Relevanz": "(     \n      \n      gewaesserrelevant,\n      \n      nicht_gewaesserrelevant\n    )",
+          "Terrainkote": "Base_LV95.Hoehe",
+          "Wasserspiegel_Hydraulik": "Base_LV95.Hoehe"
+        }
+      },
+      "Spezialbauwerk": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Amphibienausstieg": "(     \n      ja,\n      nein,\n      unbekannt\n    )",
+          "Bypass": "(     \n      nicht_vorhanden,\n      unbekannt,\n      vorhanden\n    )",
+          "Funktion": "(     \n      \n      abflussloseGrube,\n      \n      Absturzbauwerk,\n      \n      Abwasserfaulraum,\n      \n      andere,\n      \n      Be_Entlueftung,\n      \n      Behandlungsanlage,\n      \n      Duekerkammer,\n      \n      Duekeroberhaupt,\n      \n      Faulgrube,\n      \n      Fettabscheider,\n      \n      Gelaendemulde,\n      \n      Geschiebefang,\n      \n      Guellegrube,\n      \n      Havariebecken,\n      \n      Klaergrube,\n      \n      Kombischacht,\n      \n      Kontroll_Einsteigschacht,\n      \n      Oelabscheider,\n      \n      Pumpwerk,\n      \n      Regenbecken_Durchlaufbecken,\n      \n      Regenbecken_Fangbecken,\n      \n      Regenbecken_Fangkanal,\n      \n      Regenbecken_Regenklaerbecken,\n      \n      Regenbecken_Regenrueckhaltebecken,\n      \n      Regenbecken_Regenrueckhaltekanal,\n      \n      Regenbecken_Stauraumkanal,\n      \n      Regenbecken_Verbundbecken,\n      \n      Regenueberlauf,\n      \n      Schwimmstoffabscheider,\n      \n      seitlicherZugang,\n      \n      Spuelschacht,\n      \n      Trennbauwerk,\n      unbekannt,\n      \n      Vorbehandlungsanlage,\n      \n      Wirbelfallschacht\n    )",
+          "Interventionsmoeglichkeit": "(     \n      ja,\n      nein,\n      unbekannt\n    )",
+          "Notueberlauf": "(     \n      andere,\n      \n      in_Gewaesser,\n      \n      in_Mischabwasserkanalisation,\n      \n      in_Regenabwasserkanalisation,\n      \n      in_Schmutzabwasserkanalisation,\n      keiner,\n      \n      oberflaechlich_ausmuendend,\n      unbekannt\n    )",
+          "Regenbecken_Anordnung": "(     \n      \n      Hauptschluss,\n      \n      Nebenschluss,\n      unbekannt\n    )"
+        }
+      },
+      "Versickerungsanlage": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Art": "(     \n      andere_mit_Bodenpassage,\n      andere_ohne_Bodenpassage,\n      \n      Flaechenfoermige_Versickerung,\n      Kieskoerper,\n      Kombination_Schacht_Strang,\n      MuldenRigolenversickerung,\n      unbekannt,\n      Versickerung_ueber_die_Schulter,\n      Versickerungsbecken,\n      Versickerungsschacht,\n      Versickerungsstrang_Galerie\n    )",
+          "Beschriftung": "(     \n      beschriftet,\n      nichtbeschriftet,\n      unbekannt\n    )",
+          "Dimension1": "SIA405_Base_Abwasser_1_LV95.Abmessung",
+          "Dimension2": "SIA405_Base_Abwasser_1_LV95.Abmessung",
+          "Fuellmaterial": "(     \n      andere,\n      Holzschnitzel,\n      Sickerkies,\n      unbekannt\n    )",
+          "GWDistanz": "0.00 .. 30000.00 [m]",
+          "Maengel": "(     \n      keine,\n      \n      unwesentliche,\n      \n      wesentliche\n    )",
+          "Notueberlauf": "(     \n      andere,\n      \n      in_Gewaesser,\n      \n      in_Mischabwasserkanalisation,\n      \n      in_Regenabwasserkanalisation,\n      \n      in_Schmutzabwasserkanalisation,\n      keiner,\n      \n      oberflaechlich_ausmuendend,\n      unbekannt\n    )",
+          "Saugwagen": "(     \n      unbekannt,\n      unzugaenglich,\n      zugaenglich\n    )",
+          "Schluckvermoegen": "0.000 .. 100000.000 [SIA405_Base_Abwasser_1_LV95.ls]",
+          "Versickerungswasser": "(     \n      \n      Niederschlagsabwasser,\n      Reinabwasser,\n      unbekannt\n    )",
+          "Wasserdichtheit": "(     \n      nichtwasserdicht,\n      unbekannt,\n      wasserdicht\n    )",
+          "Wirksameflaeche": "0.00 .. 100000.00 [Units.m2]"
+        }
+      },
+      "Rohrprofil": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "HoehenBreitenverhaeltnis": "Verhaeltnis_H_B",
+          "Profiltyp": "(     \n      \n      Eiprofil,\n      \n      Kreisprofil,\n      \n      Maulprofil,\n      \n      offenes_Profil,\n      \n      Rechteckprofil,\n      \n      Spezialprofil,\n      unbekannt\n    )"
+        }
+      },
+      "Abwassernetzelement": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*41"
+        }
+      },
+      "Haltungspunkt": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Auslaufform": "(     \n      abgerundet,\n      blendenfoermig,\n      keine_Querschnittsaenderung,\n      scharfkantig,\n      unbekannt\n    )",
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Hoehengenauigkeit": "(     \n      \n      groesser_6cm,\n      \n      plusminus_1cm,\n      \n      plusminus_3cm,\n      \n      plusminus_6cm,\n      unbekannt\n    )",
+          "Kote": "Base_LV95.Hoehe",
+          "Lage": "Base_LV95.LKoord",
+          "Lage_Anschluss": "Ziffernblatt",
+          "Rohrverschluss_Kappe": "(     \n      ja,\n      nein,\n      unbekannt\n    )"
+        }
+      },
+      "Abwasserknoten": {
+        "parent": "Abwassernetzelement",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "ARA_Nr": "ARANr",
+          "Funktion_Knoten_Melioration": "(     \n      Gefaellsbruch,\n      Gefaellsbruch_Kaliberwechsel,\n      Kaliberwechsel,\n      Normschacht,\n      Normschacht_Gefaellsbruch,\n      Normschacht_Gefaellsbruch_Kaliberwechsel,\n      Normschacht_Kaliberwechsel,\n      unbekannt\n    )",
+          "Hoehengenauigkeit": "(     \n      groesser_6cm,\n      plusminus_1cm,\n      plusminus_3cm,\n      plusminus_6cm,\n      unbekannt\n    )",
+          "Lage": "Base_LV95.LKoord",
+          "Rueckstaukote_Ist": "Base_LV95.Hoehe",
+          "Sohlenkote": "Base_LV95.Hoehe"
+        }
+      },
+      "Haltung": {
+        "parent": "Abwassernetzelement",
+        "attrs": {
+          "Fliesszeit_Trockenwetter": "0 .. 1000000 [s]",
+          "Hydr_Belastung_Ist": "Prozent1000",
+          "Innenschutz": "(     \n      andere,\n      Anstrich_Beschichtung,\n      Kanalklinkerauskleidung,\n      Steinzeugauskleidung,\n      unbekannt,\n      Zementmoertelauskleidung\n    )",
+          "LaengeEffektiv": "0.00 .. 30000.00 [m]",
+          "Lagebestimmung": "(     \n      \n      genau,\n      unbekannt,\n      \n      ungenau\n    )",
+          "Leckschutz": "(     \n      nicht_vorhanden,\n      unbekannt,\n      vorhanden\n    )",
+          "Lichte_Hoehe": "Lichte_Hoehe",
+          "Material": "(     \n      andere,\n      Asbestzement,\n      Beton_Normalbeton,\n      Beton_Ortsbeton,\n      Beton_Pressrohrbeton,\n      Beton_Spezialbeton,\n      Beton_unbekannt,\n      Faserzement,\n      Gebrannte_Steine,\n      Guss_duktil,\n      Guss_Grauguss,\n      Kunststoff_Epoxydharz,\n      Kunststoff_Hartpolyethylen,\n      \n      Kunststoff_Polyester_GUP,\n      Kunststoff_Polyethylen,\n      Kunststoff_Polypropylen,\n      \n      Kunststoff_Polyvinilchlorid,\n      \n      Kunststoff_unbekannt,\n      Stahl,\n      Stahl_rostfrei,\n      Steinzeug,\n      Ton,\n      unbekannt,\n      Zement\n    )",
+          "Plangefaelle": "Gefaelle_Promille",
+          "Reibungsbeiwert": "Strickler",
+          "Reliner_Art": "(     \n      ganze_Haltung,\n      partiell,\n      unbekannt\n    )",
+          "Reliner_Bautechnik": "(     \n      andere,\n      Close_Fit_Relining,\n      Kurzrohrrelining,\n      Noppenschlauchrelining,\n      Partieller_Liner,\n      Rohrstrangrelining,\n      Schlauchrelining,\n      unbekannt,\n      Wickelrohrrelining\n    )",
+          "Reliner_Material": "(     \n      andere,\n      \n      Epoxidharz_Glasfaserlaminat,\n      \n      Epoxidharz_Kunststofffilz,\n      \n      GUP_Rohr,\n      HDPE,\n      \n      Isocyanatharze_Glasfaserlaminat,\n      \n      Isocyanatharze_Kunststofffilz,\n      \n      Polyesterharz_Glasfaserlaminat,\n      \n      Polyesterharz_Kunststofffilz,\n      Polypropylen,\n      Polyvinilchlorid,\n      \n      Sohle_mit_Schale_aus_Polyesterbeton,\n      unbekannt,\n      \n      UP_Harz_LED_Synthesefaserliner,\n      \n      Vinylesterharz_Glasfaserlaminat,\n      \n      Vinylesterharz_Kunststofffilz\n    )",
+          "Reliner_Nennweite": "Lichte_Hoehe",
+          "Ringsteifigkeit": "0 .. 16",
+          "Verlauf": "Base_LV95.Polyline",
+          "Wandrauhigkeit": "Prandtl"
+        }
+      },
+      "Haltung_Text": {
+        "parent": "SIA405_TextPos",
+        "attrs": {}
+      },
+      "Haltung_Alternativverlauf": {
+        "parent": "BaseClass",
+        "attrs": {
+          "Verlauf": "Base_LV95.Polyline",
+          "Plantyp": "SIA405_Base_Abwasser_1_LV95.Plantyp"
+        }
+      },
+      "BauwerksTeil": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Instandstellung": "(     \n      nicht_notwendig,\n      notwendig,\n      unbekannt\n    )"
+        }
+      },
+      "Trockenwetterfallrohr": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Durchmesser": "SIA405_Base_Abwasser_1_LV95.Abmessung"
+        }
+      },
+      "Einstiegshilfe": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Art": "(     \n      andere,\n      Drucktuere,\n      keine,\n      Leiter,\n      Steigeisen,\n      Treppe,\n      Trittnischen,\n      Tuere,\n      unbekannt\n    )"
+        }
+      },
+      "Trockenwetterrinne": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Material": "(     \n      andere,\n      kombiniert,\n      Kunststoff,\n      Steinzeug,\n      unbekannt,\n      Zementmoertel\n    )"
+        }
+      },
+      "Deckel": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Deckelform": "(     \n      andere,\n      eckig,\n      rund,\n      unbekannt\n    )",
+          "Durchmesser": "SIA405_Base_Abwasser_1_LV95.Abmessung",
+          "Entlueftung": "(     \n      entlueftet,\n      nicht_entlueftet,\n      unbekannt\n    )",
+          "Fabrikat": "TEXT*50",
+          "Kote": "Base_LV95.Hoehe",
+          "Lage": "Base_LV95.LKoord",
+          "Lagegenauigkeit": "(     \n      groesser_50cm,\n      plusminus_10cm,\n      plusminus_3cm,\n      plusminus_50cm,\n      unbekannt\n    )",
+          "Material": "(     \n      andere,\n      Beton,\n      Guss,\n      Guss_mit_Belagsfuellung,\n      Guss_mit_Betonfuellung,\n      unbekannt\n    )",
+          "Schlammeimer": "(     \n      nicht_vorhanden,\n      unbekannt,\n      vorhanden\n    )",
+          "Verschluss": "(     \n      nicht_verschraubt,\n      unbekannt,\n      verschraubt\n    )"
+        }
+      },
+      "Bankett": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Art": "(     \n      andere,\n      beidseitig,\n      einseitig,\n      kein,\n      unbekannt\n    )"
+        }
+      },
+      "Spuelstutzen": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Lage": "Base_LV95.LKoord"
+        }
+      }
+    }
+  },
+  "SIA405_2021.ili": {
+    "Checks": [
+      {
+        "Field": "Rohrmaterial",
+        "Target": "Haltung.Material",
+        "Count": 24,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [
+          "GFK",
+          "Guss"
+        ],
+        "ModelSpec": "(     \n      andere,\n      Asbestzement,\n      Beton_Normalbeton,\n      Beton_Ortsbeton,\n      Beton_Pressrohrbeton,\n      Beton_Spezialbeton,\n      Beton_unbekannt,\n      Faserzement,\n      Gebrannte_Steine,\n      Guss_duktil,\n      Guss_Grauguss,\n      Kunststoff_Epoxydharz,\n      Kunststoff_Hartpolyethylen,\n      \n      Kunststoff_Polyester_GUP,\n      Kunststoff_Polyethylen,\n      Kunststoff_Polypropylen,\n      \n      Kunststoff_Polyvinilchlorid,\n      \n      Kunststoff_unbekannt,\n      Stahl,\n      Stahl_rostfrei,\n      Steinzeug,\n      Ton,\n      unbekannt,\n      Zement\n    )"
+      },
+      {
+        "Field": "Profiltyp",
+        "Target": "Rohrprofil.Profiltyp",
+        "Count": 7,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      \n      Eiprofil,\n      \n      Kreisprofil,\n      \n      Maulprofil,\n      \n      offenes_Profil,\n      \n      Rechteckprofil,\n      \n      Spezialprofil,\n      unbekannt\n    )"
+      },
+      {
+        "Field": "Nutzungsart",
+        "Target": "Kanal.Nutzungsart_Ist",
+        "Count": 9,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      \n      andere,\n      \n      Bachwasser,\n      \n      entlastetes_Mischabwasser,\n      \n      Industrieabwasser,\n      \n      Mischabwasser,\n      \n      Niederschlagsabwasser,\n      \n      Reinabwasser,\n      \n      Schmutzabwasser,\n      unbekannt\n    )"
+      },
+      {
+        "Field": "Zustandsklasse",
+        "Target": "Kanal.BaulicherZustand",
+        "Count": 6,
+        "Missing": [
+          "unbekannt"
+        ],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      unbekannt,\n      \n      Z0,\n      \n      Z1,\n      \n      Z2,\n      \n      Z3,\n      \n      Z4\n    )"
+      },
+      {
+        "Field": "FunktionHierarchisch",
+        "Target": "Kanal.FunktionHierarchisch",
+        "Count": 14,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      PAA (\n      \n        andere,\n          \n        Gewaesser,\n          \n        Hauptsammelkanal,\n          \n        Hauptsammelkanal_regional,\n          \n        Liegenschaftsentwaesserung,\n          \n        Sammelkanal,\n          \n        Sanierungsleitung,\n          \n        Strassenentwaesserung,\n        unbekannt\n      ),\n      SAA (\n           \n         andere,\n          \n        Liegenschaftsentwaesserung,\n          \n        Sanierungsleitung,\n          \n        Strassenentwaesserung,\n        unbekannt  \n      )\n    )"
+      },
+      {
+        "Field": "Verbindungsart",
+        "Target": "Kanal.Verbindungsart",
+        "Count": 13,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      andere,\n      Elektroschweissmuffen,\n      Flachmuffen,\n      Flansch,\n      Glockenmuffen,\n      Kupplung,\n      Schraubmuffen,\n      spiegelgeschweisst,\n      Spitzmuffen,\n      Steckmuffen,\n      Ueberschiebmuffen,\n      unbekannt,\n      Vortriebsrohrkupplung\n    )"
+      },
+      {
+        "Field": "Bettung_Umhuellung",
+        "Target": "Kanal.Bettung_Umhuellung",
+        "Count": 14,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      andere,\n      \n      erdverlegt,\n      in_Kanal_aufgehaengt,\n      in_Kanal_einbetoniert,\n      \n      in_Leitungsgang,\n      in_Vortriebsrohr_Beton,\n      in_Vortriebsrohr_Stahl,\n      Sand,\n      \n      SIA_Typ1,\n      \n      SIA_Typ2,\n      \n      SIA_Typ3,\n      \n      SIA_Typ4,\n      \n      Sohlbrett,\n      unbekannt\n    )"
+      },
+      {
+        "Field": "Status",
+        "Target": "Kanal.Status",
+        "Count": 5,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(   \n             ausser_Betrieb,  \n             in_Betrieb,\n             tot,  \n             unbekannt, \n             weitere \n            )"
+      },
+      {
+        "Field": "Sanierungsbedarf",
+        "Target": "Kanal.Sanierungsbedarf",
+        "Count": 6,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      \n      dringend,\n      \n      keiner,\n      \n      kurzfristig,\n      \n      langfristig,\n      \n      mittelfristig,\n      unbekannt\n    )"
+      },
+      {
+        "Field": "FunktionHydraulisch",
+        "Target": "Kanal.FunktionHydraulisch",
+        "Count": 12,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      andere,\n      \n      Drainagetransportleitung,\n      \n      Drosselleitung,\n      \n      Duekerleitung,\n      \n      Freispiegelleitung,\n      \n      Pumpendruckleitung,\n      \n      Sickerleitung,\n      \n      Speicherleitung,\n      \n      Spuelleitung,\n      unbekannt,\n      Vakuumleitung,\n      \n      Versickerungsleitung\n    )"
+      },
+      {
+        "Field": "Lagebestimmung",
+        "Target": "Haltung.Lagebestimmung",
+        "Count": 3,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": [],
+        "ModelSpec": "(     \n      \n      genau,\n      unbekannt,\n      \n      ungenau\n    )"
+      },
+      {
+        "Field": "Schacht.Funktion",
+        "Target": "Normschacht.Funktion",
+        "Count": 22,
+        "Missing": [
+          "unbekannt"
+        ],
+        "Invalid": [],
+        "Unmapped": [
+          "unbekannt"
+        ]
+      },
+      {
+        "Field": "Schacht.Material",
+        "Target": "Normschacht.Material",
+        "Count": 4,
+        "Missing": [
+          "unbekannt"
+        ],
+        "Invalid": [],
+        "Unmapped": [
+          "unbekannt"
+        ]
+      },
+      {
+        "Field": "Spezialbauwerk.Funktion",
+        "Target": "Spezialbauwerk.Funktion",
+        "Count": 34,
+        "Missing": [],
+        "Invalid": [
+          "Kombischacht"
+        ],
+        "Unmapped": []
+      },
+      {
+        "Field": "Versickerungsanlage.Art",
+        "Target": "Versickerungsanlage.Art",
+        "Count": 11,
+        "Missing": [],
+        "Invalid": [],
+        "Unmapped": []
+      }
+    ],
+    "Classes": {
+      "VSA_BaseClass": {
+        "parent": "SIA405_BaseClass",
+        "attrs": {}
+      },
+      "Abwasserbauwerk": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Akten": "MTEXT*255",
+          "Baujahr": "SIA405_Base_Abwasser_LV95.Jahr",
+          "BaulicherZustand": "(     \n      unbekannt,\n      \n      Z0,\n      \n      Z1,\n      \n      Z2,\n      \n      Z3,\n      \n      Z4\n    )",
+          "Baulos": "TEXT*50",
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*41",
+          "Bruttokosten": "0.00 .. 99999999.99 [Units.CHF]",
+          "Detailgeometrie": "Base_LV95.Surface",
+          "Ersatzjahr": "SIA405_Base_Abwasser_LV95.Jahr",
+          "Finanzierung": "(     \n      \n      oeffentlich,\n      \n      privat,\n      unbekannt\n    )",
+          "Inspektionsintervall": "Intervall",
+          "Sanierungsbedarf": "(     \n      \n      dringend,\n      \n      keiner,\n      \n      kurzfristig,\n      \n      langfristig,\n      \n      mittelfristig,\n      unbekannt\n    )",
+          "Standortname": "TEXT*50",
+          "Status": "Status",
+          "Subventionen": "0.00 .. 99999999.99 [Units.CHF]",
+          "WBW_Basisjahr": "SIA405_Base_Abwasser_LV95.Jahr",
+          "WBW_Bauart": "(     \n      andere,\n      \n      Feld,\n      \n      Sanierungsleitung_Bagger,\n      \n      Sanierungsleitung_Grabenfraese,\n      \n      Strasse,\n      unbekannt\n    )",
+          "Wiederbeschaffungswert": "0.00 .. 99999999.99 [Units.CHF]",
+          "Zugaenglichkeit": "(     \n      \n      ueberdeckt,\n      unbekannt,\n      unzugaenglich,\n      \n      zugaenglich\n    )",
+          "Zustandserhebung_Jahr": "SIA405_Base_Abwasser_LV95.Jahr"
+        }
+      },
+      "Abwasserbauwerk_Text": {
+        "parent": "SIA405_TextPos",
+        "attrs": {}
+      },
+      "Abwasserbauwerk_Symbol": {
+        "parent": "SIA405_SymbolPos",
+        "attrs": {}
+      },
+      "Kanal": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bettung_Umhuellung": "(     \n      andere,\n      \n      erdverlegt,\n      in_Kanal_aufgehaengt,\n      in_Kanal_einbetoniert,\n      \n      in_Leitungsgang,\n      in_Vortriebsrohr_Beton,\n      in_Vortriebsrohr_Stahl,\n      Sand,\n      \n      SIA_Typ1,\n      \n      SIA_Typ2,\n      \n      SIA_Typ3,\n      \n      SIA_Typ4,\n      \n      Sohlbrett,\n      unbekannt\n    )",
+          "FunktionHierarchisch": "(     \n      PAA (\n      \n        andere,\n          \n        Gewaesser,\n          \n        Hauptsammelkanal,\n          \n        Hauptsammelkanal_regional,\n          \n        Liegenschaftsentwaesserung,\n          \n        Sammelkanal,\n          \n        Sanierungsleitung,\n          \n        Strassenentwaesserung,\n        unbekannt\n      ),\n      SAA (\n           \n         andere,\n          \n        Liegenschaftsentwaesserung,\n          \n        Sanierungsleitung,\n          \n        Strassenentwaesserung,\n        unbekannt  \n      )\n    )",
+          "FunktionHydraulisch": "(     \n      andere,\n      \n      Drainagetransportleitung,\n      \n      Drosselleitung,\n      \n      Duekerleitung,\n      \n      Freispiegelleitung,\n      \n      Pumpendruckleitung,\n      \n      Sickerleitung,\n      \n      Speicherleitung,\n      \n      Spuelleitung,\n      unbekannt,\n      Vakuumleitung,\n      \n      Versickerungsleitung\n    )",
+          "FunktionMelioration": "(     \n      \n      Hauptkanal,\n      \n      Sammelkanal,\n      \n      Sauger,\n      unbekannt\n    )",
+          "Nutzungsart_geplant": "(     \n      \n      andere,\n      \n      Bachwasser,\n      \n      entlastetes_Mischabwasser,\n      \n      Industrieabwasser,\n      \n      Mischabwasser,\n      \n      Niederschlagsabwasser,\n      \n      Reinabwasser,\n      \n      Schmutzabwasser,\n      unbekannt\n    )",
+          "Nutzungsart_Ist": "(     \n      \n      andere,\n      \n      Bachwasser,\n      \n      entlastetes_Mischabwasser,\n      \n      Industrieabwasser,\n      \n      Mischabwasser,\n      \n      Niederschlagsabwasser,\n      \n      Reinabwasser,\n      \n      Schmutzabwasser,\n      unbekannt\n    )",
+          "Rohrlaenge": "0.00 .. 30000.00 [m]",
+          "Sickerung": "(     \n      andere,\n      Holzschnitzel,\n      Sickerkies,\n      unbekannt\n    )",
+          "Spuelintervall": "Intervall",
+          "Verbindungsart": "(     \n      andere,\n      Elektroschweissmuffen,\n      Flachmuffen,\n      Flansch,\n      Glockenmuffen,\n      Kupplung,\n      Schraubmuffen,\n      spiegelgeschweisst,\n      Spitzmuffen,\n      Steckmuffen,\n      Ueberschiebmuffen,\n      unbekannt,\n      Vortriebsrohrkupplung\n    )"
+        }
+      },
+      "Normschacht": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Amphibienausstieg": "(     \n      ja,\n      nein,\n      unbekannt\n    )",
+          "Dimension1": "SIA405_Base_Abwasser_LV95.Abmessung",
+          "Dimension2": "SIA405_Base_Abwasser_LV95.Abmessung",
+          "Funktion": "(     \n      \n      Absturzbauwerk,\n      andere,\n      \n      Be_Entlueftung,\n      \n      Behandlungsanlage,\n      \n      Bodenablauf,\n      \n      Dachwasserschacht,\n      \n      Einlaufschacht,\n      \n      Entwaesserungsrinne,\n      \n      Entwaesserungsrinne_mit_Schlammsack,\n      \n      Fettabscheider,\n      \n      Geleiseschacht,\n      \n      Kombischacht,\n      \n      Kontroll_Einsteigschacht,\n      \n      Oelabscheider,\n      \n      Pumpwerk,\n      \n      Regenueberlauf,\n      \n      Schlammsammler,\n      \n      Schwimmstoffabscheider,\n      \n      Spuelschacht,\n      \n      Trennbauwerk,\n      unbekannt,\n      \n      Vorbehandlungsanlage\n    )",
+          "Interventionsmoeglichkeit": "(     \n      ja,\n      nein,\n      unbekannt\n    )",
+          "Material": "(     \n      andere,\n      Beton,\n      Kunststoff,\n      unbekannt\n    )",
+          "Oberflaechenzulauf": "(     \n      andere,\n      keiner,\n      Rost,\n      unbekannt,\n      Zulauf_seitlich\n    )"
+        }
+      },
+      "Einleitstelle": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Gewaesserabschnitt_Kanton": "GewaesserabschnittsID",
+          "Gewaesserlaufnummer": "GWLNR",
+          "Hochwasserkote": "Base_LV95.Hoehe",
+          "Relevanz": "(     \n      \n      gewaesserrelevant,\n      \n      nicht_gewaesserrelevant\n    )",
+          "Terrainkote": "Base_LV95.Hoehe",
+          "Wasserspiegel_Hydraulik": "Base_LV95.Hoehe"
+        }
+      },
+      "Spezialbauwerk": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Amphibienausstieg": "(     \n      ja,\n      nein,\n      unbekannt\n    )",
+          "Bypass": "(     \n      nicht_vorhanden,\n      unbekannt,\n      vorhanden\n    )",
+          "Funktion": "(     \n      \n      abflussloseGrube,\n      \n      Absturzbauwerk,\n      \n      Abwasserfaulraum,\n      \n      andere,\n      \n      Be_Entlueftung,\n      \n      Behandlungsanlage,\n      \n      Duekerkammer,\n      \n      Duekeroberhaupt,\n      \n      Faulgrube,\n      \n      Fettabscheider,\n      \n      Gelaendemulde,\n      \n      Geschiebefang,\n      \n      Guellegrube,\n      \n      Havariebecken,\n      \n      Klaergrube,\n      \n      Kontroll_Einsteigschacht,\n      \n      Oelabscheider,\n      \n      Pumpwerk,\n      \n      Regenbecken_Durchlaufbecken,\n      \n      Regenbecken_Fangbecken,\n      \n      Regenbecken_Fangkanal,\n      \n      Regenbecken_Regenklaerbecken,\n      \n      Regenbecken_Regenrueckhaltebecken,\n      \n      Regenbecken_Regenrueckhaltekanal,\n      \n      Regenbecken_Stauraumkanal,\n      \n      Regenbecken_Verbundbecken,\n      \n      Regenueberlauf,\n      \n      Schwimmstoffabscheider,\n      \n      seitlicherZugang,\n      \n      Spuelschacht,\n      \n      Trennbauwerk,\n      unbekannt,\n      \n      Vorbehandlungsanlage,\n      \n      Wirbelfallschacht\n    )",
+          "Interventionsmoeglichkeit": "(     \n      ja,\n      nein,\n      unbekannt\n    )",
+          "Notueberlauf": "(     \n      andere,\n      \n      in_Gewaesser,\n      \n      in_Mischabwasserkanalisation,\n      \n      in_Regenabwasserkanalisation,\n      \n      in_Schmutzabwasserkanalisation,\n      keiner,\n      \n      oberflaechlich_ausmuendend,\n      unbekannt\n    )",
+          "Regenbecken_Anordnung": "(     \n      \n      Hauptschluss,\n      \n      Nebenschluss,\n      unbekannt\n    )"
+        }
+      },
+      "Versickerungsanlage": {
+        "parent": "Abwasserbauwerk",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Art": "(     \n      andere_mit_Bodenpassage,\n      andere_ohne_Bodenpassage,\n      \n      Flaechenfoermige_Versickerung,\n      Kieskoerper,\n      Kombination_Schacht_Strang,\n      MuldenRigolenversickerung,\n      unbekannt,\n      Versickerung_ueber_die_Schulter,\n      Versickerungsbecken,\n      Versickerungsschacht,\n      Versickerungsstrang_Galerie\n    )",
+          "Beschriftung": "(     \n      beschriftet,\n      nichtbeschriftet,\n      unbekannt\n    )",
+          "Dimension1": "SIA405_Base_Abwasser_LV95.Abmessung",
+          "Dimension2": "SIA405_Base_Abwasser_LV95.Abmessung",
+          "Fuellmaterial": "(     \n      andere,\n      Holzschnitzel,\n      Sickerkies,\n      unbekannt\n    )",
+          "GWDistanz": "0.00 .. 30000.00 [m]",
+          "Maengel": "(     \n      keine,\n      \n      unwesentliche,\n      \n      wesentliche\n    )",
+          "Notueberlauf": "(     \n      andere,\n      \n      in_Gewaesser,\n      \n      in_Mischabwasserkanalisation,\n      \n      in_Regenabwasserkanalisation,\n      \n      in_Schmutzabwasserkanalisation,\n      keiner,\n      \n      oberflaechlich_ausmuendend,\n      unbekannt\n    )",
+          "Saugwagen": "(     \n      unbekannt,\n      unzugaenglich,\n      zugaenglich\n    )",
+          "Schluckvermoegen": "0.000 .. 100000.000 [SIA405_Base_Abwasser_LV95.ls]",
+          "Versickerungswasser": "(     \n      \n      Niederschlagsabwasser,\n      Reinabwasser,\n      unbekannt\n    )",
+          "Wasserdichtheit": "(     \n      nichtwasserdicht,\n      unbekannt,\n      wasserdicht\n    )",
+          "Wirksameflaeche": "0.00 .. 100000.00 [Units.m2]"
+        }
+      },
+      "Rohrprofil": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "HoehenBreitenverhaeltnis": "Verhaeltnis_H_B",
+          "Profiltyp": "(     \n      \n      Eiprofil,\n      \n      Kreisprofil,\n      \n      Maulprofil,\n      \n      offenes_Profil,\n      \n      Rechteckprofil,\n      \n      Spezialprofil,\n      unbekannt\n    )"
+        }
+      },
+      "Abwassernetzelement": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*41"
+        }
+      },
+      "Haltungspunkt": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Auslaufform": "(     \n      abgerundet,\n      blendenfoermig,\n      keine_Querschnittsaenderung,\n      scharfkantig,\n      unbekannt\n    )",
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Hoehengenauigkeit": "(     \n      \n      groesser_6cm,\n      \n      plusminus_1cm,\n      \n      plusminus_3cm,\n      \n      plusminus_6cm,\n      unbekannt\n    )",
+          "Kote": "Base_LV95.Hoehe",
+          "Lage": "Base_LV95.LKoord",
+          "Lage_Anschluss": "Ziffernblatt",
+          "Rohrverschluss_Kappe": "(     \n      ja,\n      nein,\n      unbekannt\n    )"
+        }
+      },
+      "Abwasserknoten": {
+        "parent": "Abwassernetzelement",
+        "attrs": {
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "ARA_Nr": "ARANr",
+          "Funktion_Knoten_Melioration": "(     \n      Gefaellsbruch,\n      Gefaellsbruch_Kaliberwechsel,\n      Kaliberwechsel,\n      Normschacht,\n      Normschacht_Gefaellsbruch,\n      Normschacht_Gefaellsbruch_Kaliberwechsel,\n      Normschacht_Kaliberwechsel,\n      unbekannt\n    )",
+          "Hoehengenauigkeit": "(     \n      groesser_6cm,\n      plusminus_1cm,\n      plusminus_3cm,\n      plusminus_6cm,\n      unbekannt\n    )",
+          "Lage": "Base_LV95.LKoord",
+          "Rueckstaukote_Ist": "Base_LV95.Hoehe",
+          "Sohlenkote": "Base_LV95.Hoehe"
+        }
+      },
+      "Haltung": {
+        "parent": "Abwassernetzelement",
+        "attrs": {
+          "Fliesszeit_Trockenwetter": "0 .. 1000000 [s]",
+          "Hydr_Belastung_Ist": "Prozent1000",
+          "Innenschutz": "(     \n      andere,\n      Anstrich_Beschichtung,\n      Kanalklinkerauskleidung,\n      Steinzeugauskleidung,\n      unbekannt,\n      Zementmoertelauskleidung\n    )",
+          "LaengeEffektiv": "0.00 .. 30000.00 [m]",
+          "Lagebestimmung": "(     \n      \n      genau,\n      unbekannt,\n      \n      ungenau\n    )",
+          "Leckschutz": "(     \n      nicht_vorhanden,\n      unbekannt,\n      vorhanden\n    )",
+          "Lichte_Hoehe": "Lichte_Hoehe",
+          "Material": "(     \n      andere,\n      Asbestzement,\n      Beton_Normalbeton,\n      Beton_Ortsbeton,\n      Beton_Pressrohrbeton,\n      Beton_Spezialbeton,\n      Beton_unbekannt,\n      Faserzement,\n      Gebrannte_Steine,\n      Guss_duktil,\n      Guss_Grauguss,\n      Kunststoff_Epoxydharz,\n      Kunststoff_Hartpolyethylen,\n      \n      Kunststoff_Polyester_GUP,\n      Kunststoff_Polyethylen,\n      Kunststoff_Polypropylen,\n      \n      Kunststoff_Polyvinilchlorid,\n      \n      Kunststoff_unbekannt,\n      Stahl,\n      Stahl_rostfrei,\n      Steinzeug,\n      Ton,\n      unbekannt,\n      Zement\n    )",
+          "Plangefaelle": "Gefaelle_Promille",
+          "Reibungsbeiwert": "Strickler",
+          "Reliner_Art": "(     \n      ganze_Haltung,\n      partiell,\n      unbekannt\n    )",
+          "Reliner_Bautechnik": "(     \n      andere,\n      Close_Fit_Relining,\n      Kurzrohrrelining,\n      Noppenschlauchrelining,\n      Partieller_Liner,\n      Rohrstrangrelining,\n      Schlauchrelining,\n      unbekannt,\n      Wickelrohrrelining\n    )",
+          "Reliner_Material": "(     \n      andere,\n      \n      Epoxidharz_Glasfaserlaminat,\n      \n      Epoxidharz_Kunststofffilz,\n      \n      GUP_Rohr,\n      HDPE,\n      \n      Isocyanatharze_Glasfaserlaminat,\n      \n      Isocyanatharze_Kunststofffilz,\n      \n      Polyesterharz_Glasfaserlaminat,\n      \n      Polyesterharz_Kunststofffilz,\n      Polypropylen,\n      Polyvinilchlorid,\n      \n      Sohle_mit_Schale_aus_Polyesterbeton,\n      unbekannt,\n      \n      UP_Harz_LED_Synthesefaserliner,\n      \n      Vinylesterharz_Glasfaserlaminat,\n      \n      Vinylesterharz_Kunststofffilz\n    )",
+          "Reliner_Nennweite": "Lichte_Hoehe",
+          "Ringsteifigkeit": "0 .. 16",
+          "Verlauf": "Base_LV95.Polyline",
+          "Wandrauhigkeit": "Prandtl"
+        }
+      },
+      "Haltung_Text": {
+        "parent": "SIA405_TextPos",
+        "attrs": {}
+      },
+      "Haltung_Alternativverlauf": {
+        "parent": "BaseClass",
+        "attrs": {
+          "Verlauf": "Base_LV95.Polyline",
+          "Plantyp": "SIA405_Base_Abwasser_LV95.Plantyp"
+        }
+      },
+      "BauwerksTeil": {
+        "parent": "VSA_BaseClass",
+        "attrs": {
+          "Bemerkung": "TEXT*80",
+          "Bezeichnung": "MANDATORY TEXT*20",
+          "Instandstellung": "(     \n      nicht_notwendig,\n      notwendig,\n      unbekannt\n    )"
+        }
+      },
+      "Trockenwetterfallrohr": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Durchmesser": "SIA405_Base_Abwasser_LV95.Abmessung"
+        }
+      },
+      "Einstiegshilfe": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Art": "(     \n      andere,\n      Drucktuere,\n      keine,\n      Leiter,\n      Steigeisen,\n      Treppe,\n      Trittnischen,\n      Tuere,\n      unbekannt\n    )"
+        }
+      },
+      "Trockenwetterrinne": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Material": "(     \n      andere,\n      kombiniert,\n      Kunststoff,\n      Steinzeug,\n      unbekannt,\n      Zementmoertel\n    )"
+        }
+      },
+      "Deckel": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Deckelform": "(     \n      andere,\n      eckig,\n      rund,\n      unbekannt\n    )",
+          "Durchmesser": "SIA405_Base_Abwasser_LV95.Abmessung",
+          "Entlueftung": "(     \n      entlueftet,\n      nicht_entlueftet,\n      unbekannt\n    )",
+          "Fabrikat": "TEXT*50",
+          "Kote": "Base_LV95.Hoehe",
+          "Lage": "Base_LV95.LKoord",
+          "Lagegenauigkeit": "(     \n      groesser_50cm,\n      plusminus_10cm,\n      plusminus_3cm,\n      plusminus_50cm,\n      unbekannt\n    )",
+          "Material": "(     \n      andere,\n      Beton,\n      Guss,\n      Guss_mit_Belagsfuellung,\n      Guss_mit_Betonfuellung,\n      unbekannt\n    )",
+          "Schlammeimer": "(     \n      nicht_vorhanden,\n      unbekannt,\n      vorhanden\n    )",
+          "Verschluss": "(     \n      nicht_verschraubt,\n      unbekannt,\n      verschraubt\n    )"
+        }
+      },
+      "Bankett": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Art": "(     \n      andere,\n      beidseitig,\n      einseitig,\n      kein,\n      unbekannt\n    )"
+        }
+      },
+      "Spuelstutzen": {
+        "parent": "BauwerksTeil",
+        "attrs": {
+          "Lage": "Base_LV95.LKoord"
+        }
+      }
+    }
+  }
+}

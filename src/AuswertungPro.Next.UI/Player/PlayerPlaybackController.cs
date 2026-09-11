@@ -44,6 +44,25 @@ public sealed class PlayerPlaybackController
             () => _timelineHost.TimeMilliseconds ?? 0,
             out time);
 
+    /// <summary>
+    /// Zeit, Gesamtlaenge und Laufzustand in einem Zug — fuer die Live-Videoposition
+    /// der QGIS-Bruecke. Rein lesend; die Wiedergabe wird nicht beeinflusst.
+    /// </summary>
+    public bool TryGetPlaybackState(out TimeSpan time, out TimeSpan? duration, out bool isPlaying)
+    {
+        duration = null;
+        isPlaying = false;
+        if (!TryGetCurrentTime(out time))
+            return false;
+
+        var lengthMs = _timelineHost.LengthMilliseconds ?? 0;
+        if (lengthMs > 0)
+            duration = TimeSpan.FromMilliseconds(lengthMs);
+
+        isPlaying = _playbackHost.IsPlaying;
+        return true;
+    }
+
     public bool TrySeekTo(TimeSpan time)
         => PlayerPlaybackGateway.TrySeekTo(
             time,

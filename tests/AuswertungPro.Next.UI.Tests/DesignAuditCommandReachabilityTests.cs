@@ -34,7 +34,7 @@ public sealed class DesignAuditCommandReachabilityTests
     [InlineData("Löschen")]
     [InlineData("Video prüfen")]
     [InlineData("Leere Felder aus QGIS")]
-    [InlineData("Katasterkennungen")]
+    [InlineData("GeoShop-Abgleich (XTF)")]
     [InlineData("Sanierungsmaßnahme bearbeiten")]
     [InlineData("Direkt zur KI-Optimierung")]
     [InlineData("Vorschlag für diese Haltung erstellen")]

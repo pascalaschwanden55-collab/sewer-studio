@@ -18,10 +18,9 @@
         <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewProjectCommand}"/>
         <KeyBinding Key="K" Modifiers="Control" Command="{Binding GlobaleSucheFokusCommand}"/>
     </Window.InputBindings>
-    <Grid>
-    <!-- Nova-Etappe 2: leises Leitungsnetz hinter der ganzen Oberflaeche (reine Optik,
-         IsHitTestVisible="False"); das DockPanel bekommt deshalb einen durchsichtigen
-         Hintergrund, das Fenster selbst behaelt seine BgBrush. -->
+    <Grid Background="{DynamicResource BgBrush}">
+    <!-- Eigene deckende Grundflaeche: Mica setzt Window.Background auf Transparent.
+         Das Leitungsnetz bleibt darueber sichtbar, die Fensterraender bleiben lesbar. -->
     <ctrl:NetzHintergrund IsEngineEnabled="{Binding HintergrundEngine}"/>
     <DockPanel Background="Transparent">
         <!-- Kopfzeile: Menue + Knopf "Projekt wechseln"; nur im Workspace sichtbar -->
@@ -122,11 +121,20 @@
                     </Border>
                 </Popup>
             </Grid>
-            <Menu DockPanel.Dock="Left">
+            <!-- Gemeinsame Kante mit der Seitenleiste, ohne versetzte Querlinie. -->
+            <Menu x:Name="ShellMenu" DockPanel.Dock="Left"
+                  Width="{Binding ActualWidth, ElementName=SidebarPanel}"
+                  Background="{DynamicResource NavPanelBrush}"
+                  BorderThickness="0,0,1,0" BorderBrush="{DynamicResource BorderBrush}">
                 <Menu.Style>
                     <Style TargetType="Menu" BasedOn="{StaticResource {x:Type Menu}}"/>
                 </Menu.Style>
-                <MenuItem Header="_Datei">
+                <Menu.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </Menu.ItemsPanel>
+                <MenuItem Header="_Datei" Padding="8,6">
                     <MenuItem Header="Neues Projekt" Command="{Binding NewProjectCommand}" InputGestureText="Strg+N"
                               ToolTip="Neues Projekt anlegen.">
                         <MenuItem.Icon>
@@ -159,7 +167,7 @@
                         </MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>
-                <MenuItem Header="_Werkzeuge">
+                <MenuItem Header="_Werkzeuge" Padding="8,6">
                     <MenuItem Header="Code-Katalog..." Click="OpenCodeCatalog_Click"
                               ToolTip="VSA-Code-Katalog durchsuchen und prüfen.">
                         <MenuItem.Icon>
@@ -198,7 +206,7 @@
                         </MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>
-                <MenuItem Header="_Ansicht">
+                <MenuItem Header="_Ansicht" Padding="8,6">
                     <MenuItem Header="Fokusmodus" InputGestureText="F11" IsCheckable="True" IsChecked="{Binding IsFocusMode, Mode=TwoWay}"
                               ToolTip="Sidebar und Menü ausblenden, um mehr Arbeitsfläche zu erhalten."/>
                     <MenuItem x:Name="KlassischeUebersichtToggle" Header="Klassische Übersicht" IsCheckable="True"
@@ -462,7 +470,7 @@
              Sichtbarkeit ergibt sich allein aus der Spaltenbreite — ein zusaetzlicher
              Visibility-Trigger wuerde die Animation sofort verdecken. ClipToBounds am
              umgebenden Grid schneidet den Ueberstand waehrend der Animation ab. -->
-        <Border Grid.Column="0" Width="220" HorizontalAlignment="Left"
+        <Border x:Name="SidebarPanel" Grid.Column="0" Width="220" HorizontalAlignment="Left"
                 Background="{DynamicResource NavPanelBrush}" BorderThickness="0,0,1,0"
                 BorderBrush="{DynamicResource BorderBrush}">
             <DockPanel>
@@ -482,17 +490,11 @@
                                    Foreground="{DynamicResource TextBrush}"
                                    FontFamily="{DynamicResource FontMono}"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding Subtitle}" Margin="14,3,0,0"
-                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}"/>
-                    <Border Height="2" Margin="0,12,0,0" CornerRadius="{DynamicResource RadiusS}">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="{DynamicResource ColorAccent}" Offset="0"/>
-                                <GradientStop Color="{DynamicResource ColorAccentLight}" Offset="0.4"/>
-                                <GradientStop Color="Transparent" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                    </Border>
+                    <TextBlock Text="{Binding SpeicherstandText}" Margin="14,6,0,0"
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextS}"
+                               TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="48"
+                               ToolTip="{Binding SpeicherstandText}"/>
+                    <Border Height="1" Margin="0,16,0,0" Background="{DynamicResource BorderBrush}"/>
                 </StackPanel>
 
                 <!-- Systemmonitor: Nova-Etappe 1 als Aufklapper, Kopf seit Etappe 2 Task 7 die KI-Bereitschaft
@@ -538,19 +540,15 @@
                     </StackPanel>
                 </Expander>
 
-                <!-- Nova-Etappe 2: Speicherstand der Fusszeile (Inventar 3.2) -->
-                <TextBlock DockPanel.Dock="Bottom" Margin="16,0,16,10" Text="{Binding SpeicherstandText}"
-                           FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource FaintBrush}"
-                           TextTrimming="CharacterEllipsis" ToolTip="Projekt und Zeit der letzten Speicherung"/>
-
                 <ListBox x:Name="SidebarNavList"
                          ItemsSource="{Binding Source={StaticResource GroupedNavItems}}" SelectedItem="{Binding SelectedNavItem}"
-                         BorderThickness="0" Background="Transparent" Margin="8,4,8,8">
+                         BorderThickness="0" Background="Transparent" Margin="10,4,10,8"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.GroupStyle>
                         <GroupStyle>
                             <GroupStyle.HeaderTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding Name}" Margin="10,10,10,2"
+                                    <TextBlock Text="{Binding Name}" Margin="10,14,10,6"
                                                FontSize="{DynamicResource TextXS}" FontWeight="Bold"
                                                Foreground="{DynamicResource MutedBrush}"
                                                Typography.Capitals="AllSmallCaps"/>
@@ -560,7 +558,7 @@
                     </ListBox.GroupStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,4">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,6">
                                 <StackPanel.ToolTip>
                                     <ToolTip>
                                         <ui:RichToolTipContent Icon="{Binding Icon}"
@@ -639,7 +637,8 @@
                                     </Canvas>
                                 </Grid>
                                 <TextBlock Text="{Binding DisplayTitle}" Margin="10,0,0,0" FontSize="{DynamicResource TextM}"
-                                           FontWeight="SemiBold"/>
+                                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                           FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                             </StackPanel>
                             <DataTemplate.Triggers>
                                 <DataTrigger Binding="{Binding Title}" Value="Haltungen">
@@ -686,9 +685,10 @@
                     </ListBox.ItemTemplate>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
-                            <Setter Property="Margin" Value="0,1"/>
+                            <Setter Property="Margin" Value="0,2"/>
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                            <Setter Property="FontWeight" Value="Normal"/>
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="IsEnabled" Value="True"/>
                             <Setter Property="IsHitTestVisible" Value="True"/>
@@ -706,7 +706,7 @@
                                                  Eigener Transform je Eintrag (im Template erzeugt), damit
                                                  nicht alle Eintraege denselben teilen. -->
                                             <Border x:Name="AccentStrip" Grid.Column="0"
-                                                    Background="{DynamicResource AccentBarBrush}"
+                                                    Background="{DynamicResource AccentBrush}"
                                                     CornerRadius="{DynamicResource RadiusS}" Margin="0,6" Opacity="0"
                                                     RenderTransformOrigin="0.5,0.5">
                                                 <Border.RenderTransform>
@@ -727,9 +727,10 @@
                                         </Grid>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
                                                 <Setter TargetName="AccentStrip" Property="Opacity" Value="1"/>
-                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource NavSelectedTextBrush}"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
                                                 <Trigger.EnterActions>
                                                     <BeginStoryboard>
                                                         <Storyboard>

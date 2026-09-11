@@ -17,6 +17,7 @@ public static class GridDropdownFieldPolicy
     {
         spec = optionField switch
         {
+            "Nutzungsart" => new GridDropdownFieldSpec(optionField, "NutzungsartOptions", AllowFreeText: false, Managed: false),
             "Sanieren_JaNein" => new GridDropdownFieldSpec(
                 optionField,
                 "SanierenOptions",
@@ -82,6 +83,8 @@ public static class GridDropdownFieldPolicy
                 "AusgefuehrtDurchOptions",
                 AllowFreeText: true,
                 Managed: false),
+            "Bauwerksart" => new GridDropdownFieldSpec(optionField, "BauwerksartOptions", AllowFreeText: false, Managed: false),
+            "Versickerungsart" => new GridDropdownFieldSpec(optionField, "VersickerungsartOptions", AllowFreeText: false, Managed: false),
             "Schachtform" => new GridDropdownFieldSpec(
                 optionField,
                 "SchachtformOptions",

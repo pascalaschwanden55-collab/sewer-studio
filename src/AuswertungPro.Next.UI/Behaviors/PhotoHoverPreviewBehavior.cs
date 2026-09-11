@@ -11,8 +11,8 @@ using System.Windows.Threading;
 namespace AuswertungPro.Next.UI.Behaviors;
 
 /// <summary>
-/// Attached Behavior fuer die Hover-Foto-Vorschau in Beobachtungslisten (ListBox/DataGrid mit
-/// <see cref="ProtocolEntry"/>-Items). Verweilt die Maus ~350 ms auf einem Eintrag MIT hinterlegtem
+/// Hover-Foto-Vorschau fuer Beobachtungslisten und einzelne Grafikmarken mit Foto-Selektor.
+/// Verweilt die Maus ~350 ms auf einem Eintrag MIT hinterlegtem
 /// Foto, blendet ein wiederverwendbares Vorschau-Popup weich ein. Mausrad blaettert bei mehreren
 /// Fotos. Bestehende Klick-/Doppelklick-Handler bleiben unberuehrt.
 /// </summary>
@@ -41,7 +41,7 @@ public static class PhotoHoverPreviewBehavior
             "ProjectRootProvider",
             typeof(Func<string?>),
             typeof(PhotoHoverPreviewBehavior),
-            new PropertyMetadata(null));
+            new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.Inherits));
 
     public static void SetProjectRootProvider(DependencyObject element, Func<string?>? value)
         => element.SetValue(ProjectRootProviderProperty, value);
@@ -75,7 +75,7 @@ public static class PhotoHoverPreviewBehavior
 
     private static void OnIsEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is not ItemsControl control)
+        if (d is not FrameworkElement control)
             return;
 
         if (e.NewValue is true)
@@ -84,7 +84,7 @@ public static class PhotoHoverPreviewBehavior
             Detach(control);
     }
 
-    private static void Attach(ItemsControl control)
+    private static void Attach(FrameworkElement control)
     {
         if (control.GetValue(StateProperty) is HoverState)
             return; // schon verdrahtet
@@ -92,7 +92,7 @@ public static class PhotoHoverPreviewBehavior
         control.SetValue(StateProperty, new HoverState(control));
     }
 
-    private static void Detach(ItemsControl control)
+    private static void Detach(FrameworkElement control)
     {
         if (control.GetValue(StateProperty) is not HoverState state)
             return;
@@ -105,7 +105,7 @@ public static class PhotoHoverPreviewBehavior
     /// Arbeitsflaeche des Monitors, auf dem das Host-Fenster liegt, in DIP. Faellt bei Fehler auf
     /// <see cref="SystemParameters.WorkArea"/> zurueck (bereits DIP).
     /// </summary>
-    private static (double Width, double Height) WorkAreaDip(ItemsControl owner)
+    private static (double Width, double Height) WorkAreaDip(FrameworkElement owner)
     {
         var window = Window.GetWindow(owner);
         try
@@ -168,14 +168,14 @@ public static class PhotoHoverPreviewBehavior
     /// <summary>Kapselt den kompletten Zustand pro Listen-Control und verdrahtet dessen Maus-Events.</summary>
     private sealed class HoverState
     {
-        private readonly ItemsControl _owner;
+        private readonly FrameworkElement _owner;
         private readonly DispatcherTimer _timer;
         private PhotoHoverPreviewPopup? _popup;
         private object? _hoverItem;
         private IReadOnlyList<string> _photos = Array.Empty<string>();
         private int _index;
 
-        public HoverState(ItemsControl owner)
+        public HoverState(FrameworkElement owner)
         {
             _owner = owner;
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(HoverDelayMs) };
@@ -185,6 +185,13 @@ public static class PhotoHoverPreviewBehavior
             _owner.MouseLeave += OnMouseLeave;
             _owner.PreviewMouseWheel += OnPreviewMouseWheel;
             _owner.Unloaded += OnUnloaded;
+            _owner.IsVisibleChanged += OnVisibilityChanged;
+            if (_owner is not ItemsControl)
+            {
+                _owner.MouseLeftButtonUp += OnClick;
+                _owner.KeyDown += OnKeyDown;
+                _owner.LostKeyboardFocus += OnLostFocus;
+            }
         }
 
         public void Detach()
@@ -195,6 +202,10 @@ public static class PhotoHoverPreviewBehavior
             _owner.MouseLeave -= OnMouseLeave;
             _owner.PreviewMouseWheel -= OnPreviewMouseWheel;
             _owner.Unloaded -= OnUnloaded;
+            _owner.IsVisibleChanged -= OnVisibilityChanged;
+            _owner.MouseLeftButtonUp -= OnClick;
+            _owner.KeyDown -= OnKeyDown;
+            _owner.LostKeyboardFocus -= OnLostFocus;
             DisposePopup();
         }
 
@@ -206,6 +217,11 @@ public static class PhotoHoverPreviewBehavior
             _hoverItem = null;
             _photos = Array.Empty<string>();
             DisposePopup();
+        }
+
+        private void OnVisibilityChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (e.NewValue is false) OnUnloaded(sender, new RoutedEventArgs());
         }
 
         private void OnMouseMove(object sender, MouseEventArgs e)
@@ -243,13 +259,59 @@ public static class PhotoHoverPreviewBehavior
             var rawPaths = PhotoHoverPreviewSelectors.ExtractPhotoPaths(item, GetPhotoPathsSelector(_owner));
             _photos = PhotoHoverPreviewLogic.ResolveExistingPhotos(rawPaths, root, File.Exists);
             if (_photos.Count == 0)
-                return; // Eintrag ohne (existierendes) Foto -> nichts anzeigen
+            {
+                _popup?.CloseImmediate();
+                if (_owner is not ItemsControl)
+                    _owner.ToolTip = "Das hinterlegte Foto wurde nicht gefunden.";
+                return;
+            }
 
             _index = 0;
             var (maxWidth, maxHeight) = MaxBoxForOwner();
 
             EnsurePopup();
-            _popup!.ShowPhoto(_photos[_index], _index, _photos.Count, maxWidth, maxHeight);
+            ZeigeFoto(maxWidth, maxHeight);
+        }
+
+        private void ZeigeFoto(double maxWidth, double maxHeight)
+        {
+            if (_popup!.ShowPhoto(_photos[_index], _index, _photos.Count, maxWidth, maxHeight))
+            {
+                if (_owner is not ItemsControl) _owner.ToolTip = null;
+                return;
+            }
+            _popup.CloseImmediate();
+            if (_owner is not ItemsControl)
+                _owner.ToolTip = "Das Foto konnte nicht geladen werden.";
+        }
+
+        private void OnClick(object sender, MouseButtonEventArgs e)
+        {
+            _hoverItem = _owner.DataContext;
+            OnTick(sender, EventArgs.Empty);
+            e.Handled = true;
+        }
+
+        private void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                OnLostFocus(sender, e);
+                e.Handled = true;
+            }
+            else if (e.Key is Key.Enter or Key.Space)
+            {
+                _hoverItem = _owner.DataContext;
+                OnTick(sender, EventArgs.Empty);
+                e.Handled = true;
+            }
+        }
+
+        private void OnLostFocus(object sender, RoutedEventArgs e)
+        {
+            _timer.Stop();
+            _popup?.CloseImmediate();
+            _hoverItem = null;
         }
 
         private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -260,7 +322,7 @@ public static class PhotoHoverPreviewBehavior
 
             _index = PhotoHoverPreviewLogic.NextIndex(_index, _photos.Count, e.Delta < 0 ? +1 : -1);
             var (maxWidth, maxHeight) = MaxBoxForOwner();
-            _popup.ShowPhoto(_photos[_index], _index, _photos.Count, maxWidth, maxHeight);
+            ZeigeFoto(maxWidth, maxHeight);
             e.Handled = true;
         }
 
@@ -271,7 +333,9 @@ public static class PhotoHoverPreviewBehavior
 
             // Beliebiger Listeneintrag (nicht mehr auf ProtocolEntry beschraenkt); die
             // konkrete Foto-Zuordnung uebernimmt der Selektor bzw. der Fallback in OnTick.
-            var container = _owner.ContainerFromElement(source);
+            if (_owner is not ItemsControl items)
+                return _owner.DataContext;
+            var container = items.ContainerFromElement(source);
             return container is FrameworkElement element ? element.DataContext : null;
         }
 

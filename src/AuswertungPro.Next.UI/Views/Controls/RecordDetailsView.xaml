@@ -4,10 +4,12 @@
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:windows="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
+             xmlns:dataPage="clr-namespace:AuswertungPro.Next.UI.DataPage"
              x:Name="Root">
     <UserControl.Resources>
         <local:NullToCollapsedConverter x:Key="NullToCollapsed"/>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <dataPage:SiaBegriffAnzeige x:Key="SiaBegriffAnzeige"/>
         <ItemsPanelTemplate x:Key="DefaultDetailGroupPanel"><StackPanel/></ItemsPanelTemplate>
         <!-- Eine Zeile, gleich breite Spalten: die Spaltenzahl folgt der Zahl der
              Gruppen, und die Position in der Liste ist unmittelbar die Spalte. -->
@@ -179,6 +181,10 @@
                BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="ContextMenu" Value="{StaticResource ManagedOptionsContextMenu}"/>
             <Style.Triggers>
+                <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}" Value="True">
+                    <Setter Property="MinHeight" Value="30"/>
+                    <Setter Property="Padding" Value="6,4"/>
+                </DataTrigger>
                 <!-- Auswahlliste aus dem Feldkatalog, ohne Optionsverwaltung:
                      trotzdem nachschlagbar. Hier stand frueher ein pauschales
                      null - damit verloren FunktionHierarchisch und Nutzungsart
@@ -204,7 +210,8 @@
         </Style>
 
         <DataTemplate x:Key="TextEditorTemplate" DataType="{x:Type windows:RecordDetailItem}">
-            <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+            <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=LostFocus, ValidatesOnDataErrors=True}"
+                     ToolTip="{Binding Error}"
                      IsReadOnly="{Binding IsReadOnly}"
                      PreviewTextInput="NumericTextBox_PreviewTextInput"
                      DataObject.Pasting="NumericTextBox_Pasting">
@@ -218,6 +225,10 @@
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding BrauchtEigenesMenue}" Value="True">
                                 <Setter Property="ContextMenu" Value="{StaticResource NachschlagContextMenu}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}" Value="True">
+                                <Setter Property="MinHeight" Value="30"/>
+                                <Setter Property="Padding" Value="6,4"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -236,7 +247,8 @@
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
                                          Value="True">
-                                <Setter Property="MinHeight" Value="72"/>
+                                <Setter Property="MinHeight" Value="60"/>
+                                <Setter Property="Padding" Value="6,4"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -260,7 +272,11 @@
                       SelectedItem="{Binding SelectedOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                       IsEnabled="{Binding CanEdit}"
                       LostKeyboardFocus="EditorComboBox_LostKeyboardFocus"
-                      SelectionChanged="EditorComboBox_SelectionChanged"/>
+                      SelectionChanged="EditorComboBox_SelectionChanged">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate><TextBlock Text="{Binding Converter={StaticResource SiaBegriffAnzeige}}"/></DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
         </DataTemplate>
 
         <windows:RecordDetailEditorTemplateSelector x:Key="EditorTemplateSelector"
@@ -395,7 +411,7 @@
                                         <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
                                                      Value="True">
                                             <Setter Property="Margin" Value="0,0,6,6"/>
-                                            <Setter Property="Padding" Value="8"/>
+                                            <Setter Property="Padding" Value="4"/>
                                             <Setter Property="CornerRadius" Value="8"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -480,17 +496,19 @@
                                                                 Value="True">
                                                                 <Setter Property="Width" Value="Auto"/>
                                                                 <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                                                                <Setter Property="Margin" Value="0,0,0,6"/>
-                                                                <Setter Property="Padding" Value="8"/>
-                                                                <Setter Property="CornerRadius" Value="8"/>
+                                                                <Setter Property="Margin" Value="0,0,0,4"/>
+                                                                <Setter Property="Padding" Value="4"/>
+                                                                <Setter Property="CornerRadius" Value="4"/>
+                                                                <Setter Property="BorderThickness" Value="0"/>
+                                                                <Setter Property="Background" Value="Transparent"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding HighlightKind}" Value="{x:Static windows:RecordDetailHighlightKind.Sanieren}">
-                                                                <Setter Property="Background" Value="#EAF6E3"/>
-                                                                <Setter Property="BorderBrush" Value="#6AA84F"/>
+                                                                <Setter Property="Background" Value="{DynamicResource SuccessSubtleBrush}"/>
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding HighlightKind}" Value="{x:Static windows:RecordDetailHighlightKind.AusgefuehrtDurch}">
-                                                                <Setter Property="Background" Value="#E4F3FA"/>
-                                                                <Setter Property="BorderBrush" Value="#00A2D6"/>
+                                                                <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -539,12 +557,25 @@
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}}"
                                                                                  Value="True">
-                                                                        <Setter Property="Margin" Value="0,5,0,0"/>
+                                                                        <Setter Property="Margin" Value="0,2,0,0"/>
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </ContentControl.Style>
                                                     </ContentControl>
+                                                    <TextBlock Text="{Binding AuswahlHinweis}" TextWrapping="Wrap"
+                                                               Foreground="{DynamicResource WarningTextBrush}" FontSize="{DynamicResource TextXS}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Margin" Value="0,4,0,0"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding AuswahlHinweis}" Value="">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
                                                 </StackPanel>
                                             </Border>
                                         </DataTemplate>

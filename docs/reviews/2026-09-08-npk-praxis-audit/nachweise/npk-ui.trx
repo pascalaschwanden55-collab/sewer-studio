@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="109ed96f-ba17-43af-b896-1cc348d0bf0e" name="Besitzer@PCW11X01 2026-09-08 20:23:37" runUser="PCW11X01\Besitzer" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-08T20:23:37.2362691+02:00" queuing="2026-09-08T20:23:37.2362694+02:00" start="2026-09-08T20:23:35.5378347+02:00" finish="2026-09-08T20:23:37.2414731+02:00" />
+  <TestSettings name="default" id="dc13f6c9-fc34-4a91-aad2-5a3cd560aef7">
+    <Deployment runDeploymentRoot="Besitzer_PCW11X01_2026-09-08_20_23_37" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="f0fe069b-6fce-4f10-8343-69e0fa8b26d7" testId="b34206c5-1edc-cb27-1cbe-ed466f683eb1" testName="AuswertungPro.Next.UI.Tests.BuilderPageLvPreparationServiceTests.Build_nimmt_Pauschale_nur_auf_wenn_ausdruecklich_gewuenscht" computerName="PCW11X01" duration="00:00:00.0007634" startTime="2026-09-08T20:23:36.4422363+02:00" endTime="2026-09-08T20:23:36.4422364+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f0fe069b-6fce-4f10-8343-69e0fa8b26d7" />
+    <UnitTestResult executionId="6ce765c8-ceb9-4325-9e51-15d8a2fe48ee" testId="de51f7e8-f5a3-3693-de5e-b70e519b2a80" testName="AuswertungPro.Next.UI.Tests.NpkExcelExportServiceDependencyTests.ServiceProvider_verdrahtet_NPK_Export_direkt_und_Fassade_bleibt_unveraenderlich" computerName="PCW11X01" duration="00:00:00.6996014" startTime="2026-09-08T20:23:37.1531611+02:00" endTime="2026-09-08T20:23:37.1531614+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6ce765c8-ceb9-4325-9e51-15d8a2fe48ee" />
+    <UnitTestResult executionId="bc2f45ae-b1ac-4da2-a107-6f6f72cbf3e4" testId="d23c7158-97ad-22fd-4c16-6e3d109bb506" testName="AuswertungPro.Next.UI.Tests.BuilderPageLvPreparationServiceTests.Build_buendelt_Awu_Haltungen_und_Awu_Schaechte_und_weist_Pauschalen_separat_aus" computerName="PCW11X01" duration="00:00:00.0104962" startTime="2026-09-08T20:23:36.4414477+02:00" endTime="2026-09-08T20:23:36.4414479+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bc2f45ae-b1ac-4da2-a107-6f6f72cbf3e4" />
+    <UnitTestResult executionId="440ceb7a-b17c-4ddb-97b2-f2df4b5e5d63" testId="f683ac77-e558-28dd-6207-608365347d78" testName="AuswertungPro.Next.UI.Tests.SanierungsMatrixPrintLvConsistencyTests.Matrix_Druckcenter_und_Lv_weisen_Pauschalen_konsistent_aus" computerName="PCW11X01" duration="00:00:00.0098771" startTime="2026-09-08T20:23:36.4533511+02:00" endTime="2026-09-08T20:23:36.4533513+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="440ceb7a-b17c-4ddb-97b2-f2df4b5e5d63" />
+    <UnitTestResult executionId="0d4a0e1e-c44e-4e94-bdc8-e7df34810fbd" testId="a06a0b80-bd96-aa39-14da-fa1e6331c335" testName="AuswertungPro.Next.UI.Tests.BuilderPageLvPreparationServiceTests.SelectAwuHoldings_schliesst_Private_aus_und_erkennt_Pauschalen" computerName="PCW11X01" duration="00:00:00.0162973" startTime="2026-09-08T20:23:36.4312703+02:00" endTime="2026-09-08T20:23:36.4312850+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0d4a0e1e-c44e-4e94-bdc8-e7df34810fbd" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.BuilderPageLvPreparationServiceTests.Build_nimmt_Pauschale_nur_auf_wenn_ausdruecklich_gewuenscht" storage="c:\sewer-studio_ki_4.5\tests\auswertungpro.next.ui.tests\bin\release\net10.0-windows10.0.19041\auswertungpro.next.ui.tests.dll" id="b34206c5-1edc-cb27-1cbe-ed466f683eb1">
+      <Execution id="f0fe069b-6fce-4f10-8343-69e0fa8b26d7" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\bin\Release\net10.0-windows10.0.19041\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.BuilderPageLvPreparationServiceTests" name="Build_nimmt_Pauschale_nur_auf_wenn_ausdruecklich_gewuenscht" />
+    </UnitTest>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.BuilderPageLvPreparationServiceTests.Build_buendelt_Awu_Haltungen_und_Awu_Schaechte_und_weist_Pauschalen_separat_aus" storage="c:\sewer-studio_ki_4.5\tests\auswertungpro.next.ui.tests\bin\release\net10.0-windows10.0.19041\auswertungpro.next.ui.tests.dll" id="d23c7158-97ad-22fd-4c16-6e3d109bb506">
+      <Execution id="bc2f45ae-b1ac-4da2-a107-6f6f72cbf3e4" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\bin\Release\net10.0-windows10.0.19041\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.BuilderPageLvPreparationServiceTests" name="Build_buendelt_Awu_Haltungen_und_Awu_Schaechte_und_weist_Pauschalen_separat_aus" />
+    </UnitTest>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.SanierungsMatrixPrintLvConsistencyTests.Matrix_Druckcenter_und_Lv_weisen_Pauschalen_konsistent_aus" storage="c:\sewer-studio_ki_4.5\tests\auswertungpro.next.ui.tests\bin\release\net10.0-windows10.0.19041\auswertungpro.next.ui.tests.dll" id="f683ac77-e558-28dd-6207-608365347d78">
+      <Execution id="440ceb7a-b17c-4ddb-97b2-f2df4b5e5d63" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\bin\Release\net10.0-windows10.0.19041\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.SanierungsMatrixPrintLvConsistencyTests" name="Matrix_Druckcenter_und_Lv_weisen_Pauschalen_konsistent_aus" />
+    </UnitTest>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.BuilderPageLvPreparationServiceTests.SelectAwuHoldings_schliesst_Private_aus_und_erkennt_Pauschalen" storage="c:\sewer-studio_ki_4.5\tests\auswertungpro.next.ui.tests\bin\release\net10.0-windows10.0.19041\auswertungpro.next.ui.tests.dll" id="a06a0b80-bd96-aa39-14da-fa1e6331c335">
+      <Execution id="0d4a0e1e-c44e-4e94-bdc8-e7df34810fbd" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\bin\Release\net10.0-windows10.0.19041\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.BuilderPageLvPreparationServiceTests" name="SelectAwuHoldings_schliesst_Private_aus_und_erkennt_Pauschalen" />
+    </UnitTest>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.NpkExcelExportServiceDependencyTests.ServiceProvider_verdrahtet_NPK_Export_direkt_und_Fassade_bleibt_unveraenderlich" storage="c:\sewer-studio_ki_4.5\tests\auswertungpro.next.ui.tests\bin\release\net10.0-windows10.0.19041\auswertungpro.next.ui.tests.dll" id="de51f7e8-f5a3-3693-de5e-b70e519b2a80">
+      <Execution id="6ce765c8-ceb9-4325-9e51-15d8a2fe48ee" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\bin\Release\net10.0-windows10.0.19041\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.NpkExcelExportServiceDependencyTests" name="ServiceProvider_verdrahtet_NPK_Export_direkt_und_Fassade_bleibt_unveraenderlich" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="b34206c5-1edc-cb27-1cbe-ed466f683eb1" executionId="f0fe069b-6fce-4f10-8343-69e0fa8b26d7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="de51f7e8-f5a3-3693-de5e-b70e519b2a80" executionId="6ce765c8-ceb9-4325-9e51-15d8a2fe48ee" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d23c7158-97ad-22fd-4c16-6e3d109bb506" executionId="bc2f45ae-b1ac-4da2-a107-6f6f72cbf3e4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f683ac77-e558-28dd-6207-608365347d78" executionId="440ceb7a-b17c-4ddb-97b2-f2df4b5e5d63" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a06a0b80-bd96-aa39-14da-fa1e6331c335" executionId="0d4a0e1e-c44e-4e94-bdc8-e7df34810fbd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Ergebnisse nicht in einer Liste" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Alle geladenen Ergebnisse" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="5" executed="5" passed="5" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.26]   Discovering: AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:00:00.57]   Discovered:  AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:00:00.59]   Starting:    AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:00:01.36]   Finished:    AuswertungPro.Next.UI.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

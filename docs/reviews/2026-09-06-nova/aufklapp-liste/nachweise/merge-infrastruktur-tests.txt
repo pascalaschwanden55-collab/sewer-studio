@@ -1,0 +1,8 @@
+Testlauf für "C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.Infrastructure.Tests\bin\Debug\net10.0\AuswertungPro.Next.Infrastructure.Tests.dll" (.NETCoreApp,Version=v10.0)
+VSTest-Version 18.0.2 (x64)
+
+Die Testausführung wird gestartet, bitte warten...
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+Ergebnisdatei: C:\Sewer-Studio_KI_4.5\.tmp\nova-merge-20260908-154344\tests\infrastruktur-merge.trx
+
+Bestanden!   : Fehler:     0, erfolgreich:    28, übersprungen:     0, gesamt:    28, Dauer: 262 ms - AuswertungPro.Next.Infrastructure.Tests.dll (net10.0)

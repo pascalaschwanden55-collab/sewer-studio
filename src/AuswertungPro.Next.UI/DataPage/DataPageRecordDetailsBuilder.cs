@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.DataPage;
@@ -29,14 +29,16 @@ public static class DataPageRecordDetailsBuilder
         FieldKeys.ProfileType, FieldKeys.ClearWidthMm, FieldKeys.UsageType, FieldKeys.HoldingLengthMeters,
         FieldKeys.SlopePromille,
         "Inspektionsrichtung", FieldKeys.InspectionYear, FieldKeys.ConstructionYear, FieldKeys.Owner,
-        FieldKeys.GeonisId, FieldKeys.CadastreObjectId
+        FieldKeys.GeonisId, FieldKeys.CadastreObjectId,
+        FieldKeys.HierarchicalFunction, FieldKeys.HydraulicFunction, FieldKeys.ConnectionType,
+        FieldKeys.BeddingEncasement, FieldKeys.OperatingStatus, FieldKeys.PositionAccuracy
     };
 
     // Inventar 9.1 "Bewertung (9)".
     private static readonly string[] BewertungReihenfolge =
     {
         FieldKeys.ConditionClass, "VSA_Zustandsnote_D", "VSA_Zustandsnote_S", "VSA_Zustandsnote_B",
-        "VSA_Geschaetzt", "Pruefungsresultat", "Referenzpruefung", "Gewaesserschutz", "Grundwasserspiegel"
+        "VSA_Geschaetzt", "Pruefungsresultat", "Referenzpruefung", "Gewaesserschutz", "Grundwasserspiegel", FieldKeys.RehabilitationNeed, FieldKeys.PrimaryDamages
     };
 
     // Inventar 9.1 "Sanierung (10)", ergaenzt um Renovierung_Inliner_Stk direkt nach
@@ -52,7 +54,7 @@ public static class DataPageRecordDetailsBuilder
     // Inventar 9.1 "Kosten und Bemerkungen (3)".
     private static readonly string[] KostenUndBemerkungenReihenfolge =
     {
-        FieldKeys.Cost, FieldKeys.Link, FieldKeys.Remarks
+        FieldKeys.Cost, FieldKeys.GrossCost, FieldKeys.Link, FieldKeys.Remarks
     };
 
     public static List<RecordDetailGroup> Build(
@@ -71,7 +73,7 @@ public static class DataPageRecordDetailsBuilder
 
         // Das Projektgefaelle ist auch bei alten Projekten ohne gespeicherten Wert
         // editierbar. Die feste Spaltenfolge fuer CSV/Excel bleibt dabei erhalten.
-        foreach (var column in FieldCatalog.ColumnOrder.Append(FieldKeys.SlopePromille).Where(x => added.Add(x)))
+        foreach (var column in FieldCatalog.ColumnOrder.Concat([FieldKeys.SlopePromille, "Schacht_oben", "Schacht_unten"]).Where(x => added.Add(x)))
         {
             if (IsExcluded(column)) continue;
             var item = createItem(column);

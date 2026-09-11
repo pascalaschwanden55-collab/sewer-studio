@@ -49,7 +49,7 @@ public sealed class SettingsFullBackupWorkflowTests
             "Fertig: 2 kopiert, 2 vollstaendig geprueft, 1 Datenbank-Schnappschuss, 3 unveraendert, 1 nach _Versionen verschoben.",
             state.StatusText);
         Assert.Contains(@"E:\Backup", state.LastBackupInfo);
-        Assert.Equal(["success:Datensicherung abgeschlossen."], toasts.Messages);
+        Assert.Equal(["warning:Datensicherung mit Lücken abgeschlossen – Hinweise prüfen."], toasts.Messages);
         Assert.Single(dialogs.Warnings);
         Assert.Contains("locked.txt", dialogs.Warnings[0]);
         Assert.False(state.IsRunning);

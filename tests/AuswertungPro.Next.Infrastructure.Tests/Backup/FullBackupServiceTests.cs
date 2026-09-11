@@ -520,6 +520,27 @@ public sealed class FullBackupServiceTests : IDisposable
         Assert.Equal(2, guard.Calls);
     }
 
+    [Fact]
+    public async Task Erneute_Sicherung_repariert_Beschaedigung_bei_gleicher_Groesse_und_Zeit()
+    {
+        var sources = CreateSourceTree();
+        var parent = Path.Combine(_root, "repair-corruption");
+        var service = new FullBackupService(() => sources);
+        Assert.True((await service.RunAsync(parent)).Success);
+        var root = Path.Combine(parent, BackupPlanBuilder.TargetFolderName);
+        var file = Path.Combine(root, "Programm", "src", "app.cs");
+        var stamp = File.GetLastWriteTimeUtc(file);
+        File.WriteAllText(file, "evil");
+        File.SetLastWriteTimeUtc(file, stamp);
+        Assert.False((await BackupManifestIntegrity.VerifyAsync(root)).IsValid);
+
+        var repaired = await service.RunAsync(parent);
+
+        Assert.True(repaired.Success, repaired.Error);
+        Assert.Equal("code", File.ReadAllText(file));
+        Assert.True((await BackupManifestIntegrity.VerifyAsync(root)).IsValid);
+    }
+
     private FullBackupSources CreateSourceTree()
     {
         var repo = Path.Combine(_root, "repo");

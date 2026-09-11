@@ -26,6 +26,7 @@ public sealed class SchaechteAufklappListeController : IDisposable
     private readonly Func<SchaechtePageViewModel?> _vm;
     private readonly Func<SchachtRecord, IReadOnlyList<RecordDetailGroup>> _detailBuilder;
 
+    private readonly ObjektaktenInlineBindung _objektakte = new();
     private DataPageDetailLiveSync? _sync;
     private bool _verdrahtet;
 
@@ -46,7 +47,17 @@ public sealed class SchaechteAufklappListeController : IDisposable
             return;
 
         _liste.DetailBuilder = _detailBuilder;
+        _liste.Reihenfolge.Datensaetze = () => _vm()?.Records;
+        _liste.Reihenfolge.DarfVerschieben = () => _vm() is { } vm && vm.CanMutateShaftData;
+        _liste.Reihenfolge.Verschiebe = (eintrag, position) =>
+        {
+            if (_vm() is not { } vm || eintrag is not SchachtRecord record
+                || !(vm.CanMutateShaftData) || !vm.Records.Contains(record)) return false;
+            vm.Selected = record;
+            return vm.MoveToPosition(position);
+        };
         _liste.AufgeklapptChanged += OnAufgeklapptChanged;
+        _liste.AnsichtAnpassenRequested += OnAnsichtAnpassen;
         _verdrahtet = true;
         // Ein nach Unloaded noch offenes Formular braucht wieder seinen Live-Abgleich.
         AktualisiereFormular();
@@ -58,12 +69,15 @@ public sealed class SchaechteAufklappListeController : IDisposable
     /// </summary>
     public void AktualisiereFormular()
     {
+        Views.Controls.ObjektakteView.UebernehmeEingabe(_liste);
         _sync?.Dispose();
         _sync = null;
 
         var record = _liste.Aufgeklappt;
         if (record is null || _liste.DetailBuilder is null)
         {
+            _objektakte.Leere(_liste);
+            _liste.Objektakte = null;
             _liste.ZeigeThemen(null);
             return;
         }
@@ -73,13 +87,16 @@ public sealed class SchaechteAufklappListeController : IDisposable
             // Geloescht oder Projektwechsel: nicht nur die Themen leeren, sondern wirklich
             // zuklappen. Sonst bliebe der Pfeil gedreht und die Liste behauptete, da sei noch
             // etwas offen.
+            _objektakte.Leere(_liste);
+            _liste.Objektakte = null;
             _liste.ZeigeThemen(null);
             _liste.KlappeZu();
             return;
         }
 
+        _liste.Objektakte = _objektakte.Aktualisiere(_liste, record, _vm(), () => _vm()?.ObjektakteErstellen?.Invoke(record.Id));
         var gruppen = _liste.DetailBuilder(record);
-        _liste.ZeigeThemen(HaltungThemenGruppierung.Bilde(gruppen));
+        _liste.ZeigeThemen(AufklappDetailLayout.Themen(gruppen, _vm()?.Settings.SchaechtePageLayout.DetailLayout));
         // Allgemeine Ueberladung: SchachtRecord meldet Feldaenderungen genau wie HaltungRecord
         // (Fields[Name]/Fields), siehe Doku dort.
         _sync = new DataPageDetailLiveSync(record, record.GetFieldValue, gruppen);
@@ -110,11 +127,30 @@ public sealed class SchaechteAufklappListeController : IDisposable
 
     private void OnAufgeklapptChanged(object? sender, EventArgs e) => AktualisiereFormular();
 
+    private void OnAnsichtAnpassen(object? sender, EventArgs e)
+    {
+        if (_liste.Aufgeklappt is not { } record || _vm()?.Settings is not { } settings)
+            return;
+        var layout = AufklappLayoutWindow.Bearbeite(_liste, _detailBuilder(record), settings.SchaechtePageLayout.DetailLayout);
+        if (layout is null)
+            return;
+        settings.SchaechtePageLayout.DetailLayout = RecordDetailLayoutSettingsMapper.ToSettings(layout);
+        settings.Save();
+        AktualisiereFormular();
+    }
+
     public void Dispose()
     {
+        _objektakte.Leere(_liste);
+        _liste.Objektakte = null;
+        _liste.Reihenfolge.Beende();
+        _liste.Reihenfolge.Datensaetze = null;
+        _liste.Reihenfolge.DarfVerschieben = null;
+        _liste.Reihenfolge.Verschiebe = null;
         if (_verdrahtet)
         {
             _liste.AufgeklapptChanged -= OnAufgeklapptChanged;
+            _liste.AnsichtAnpassenRequested -= OnAnsichtAnpassen;
             _verdrahtet = false;
         }
 

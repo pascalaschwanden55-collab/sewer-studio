@@ -43,6 +43,10 @@ public partial class PlayerWindow
         var provider = _protocolContext.LegacyServiceProvider;
         var videoPath = _codingSessionHost.VideoPath;
         var haltung = _codingSessionHost.HaltungName ?? _protocolContext.HaltungId ?? string.Empty;
+        // R4: Der Lauf gehoert zu dem Projekt, das JETZT offen ist. Die Id wird hier einmal
+        // gebunden; wechselt das Projekt waehrend des Durchlaufs, bleibt das Ergebnis beim
+        // richtigen Projekt und erscheint nicht in der Uebersicht des neuen.
+        var projektId = PlayerShellProjectServiceFactory.Create().GetCurrentProject()?.Id ?? Guid.Empty;
 
         if (provider is null || string.IsNullOrWhiteSpace(videoPath))
         {
@@ -57,6 +61,7 @@ public partial class PlayerWindow
                 provider.CodingSuggestionScan,
                 provider.CodingSuggestionRegistry,
                 new CodingSuggestionScanRequest(videoPath, haltung, settings?.CodingSuggestionsEnabled ?? true),
+                projektId,
                 cts)
             .SafeFireAndForget("CodingSuggestionScan");
     }
@@ -65,6 +70,7 @@ public partial class PlayerWindow
         ICodingSuggestionScanService service,
         ICodingSuggestionRegistry registry,
         CodingSuggestionScanRequest request,
+        Guid projektId,
         CancellationTokenSource cts)
     {
         try
@@ -87,7 +93,7 @@ public partial class PlayerWindow
             // mindestens ein Teil wirklich gelaufen ist. Ein abgeschalteter oder komplett
             // nicht verfuegbarer Lauf taeuchte in der Uebersicht sonst Arbeit vor.
             if (CodingSuggestionMerkRegel.SollMerken(set))
-                registry.Merke(request.Haltung, set);
+                registry.Merke(projektId, request.Haltung, set);
 
             _codingSuggestions.Apply(set);
             SuggestionMarkers.Build(_codingSuggestions.Rows);

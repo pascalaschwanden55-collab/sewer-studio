@@ -1,0 +1,50 @@
+{
+  "schachtfeldzuordnung_vorgabe_9_2": [
+    {
+      "feld": "Baujahr",
+      "soll": "Stammdaten",
+      "ist": "Weitere Angaben"
+    },
+    {
+      "feld": "Belastungsklasse",
+      "soll": "Zustand und Inspektion",
+      "ist": "Weitere Angaben"
+    },
+    {
+      "feld": "Inspektionsdatum",
+      "soll": "Zustand und Inspektion",
+      "ist": "Weitere Angaben"
+    },
+    {
+      "feld": "Prim\u00E4re Sch\u00E4den",
+      "soll": "Zustand und Inspektion",
+      "ist": "Weitere Angaben"
+    },
+    {
+      "feld": "Fotos",
+      "soll": "Dokumente und Medien",
+      "ist": "Weitere Angaben"
+    },
+    {
+      "feld": "Bemerkungen",
+      "soll": "Sanierung und Kosten",
+      "ist": "Weitere Angaben"
+    },
+    {
+      "feld": "Ausgefuehrt_durch",
+      "soll": "Sanierung und Kosten",
+      "ist": "Weitere Angaben"
+    },
+    {
+      "feld": "Eigent\u00FCmer",
+      "soll": "Sanierung und Kosten",
+      "ist": "Stammdaten"
+    }
+  ],
+  "haltung_stammdaten_vorgabe_4_3": {
+    "anzahl": 13,
+    "inspektionsrichtungVorhanden": false,
+    "sollAnzahl": 14
+  },
+  "medienkonflikte_mit_echtem_app_baml": "erfolgreich"
+}

@@ -11,7 +11,13 @@ public enum PdfDokumentTyp
     Dichtheitspruefung,
     PlanSituation,
     Deckblatt,
-    Schachtprotokoll
+    Schachtprotokoll,
+
+    /// <summary>
+    /// Aushaerteprotokoll eines Inliners (Lampenzug, Temperaturen, Chargen-Nr.).
+    /// Gehoert wie die Dichtheitspruefung zur Haltung, nicht zum Schacht.
+    /// </summary>
+    Aushaerteprotokoll
 }
 
 /// <summary>
@@ -39,6 +45,12 @@ public static class PdfDokumentTypErkennung
     public static PdfDokumentTyp ErkenneText(string? text, string? fileName = null)
     {
         var hasText = !string.IsNullOrWhiteSpace(text);
+
+        // Aushaerteprotokoll zuerst: Es traegt dieselben Kopfdaten wie die
+        // Dichtheitspruefung (Rohrdurchmesser, Druckdiagramm) und wuerde sonst je nach
+        // Schreibweise dort hineinrutschen.
+        if (LooksLikeAushaerteprotokoll(text, fileName))
+            return PdfDokumentTyp.Aushaerteprotokoll;
 
         // Dichtheitspruefung gewinnt vor normalem TV-Protokoll:
         // KINS/DP-PDFs enthalten oft Haltungspaare, aber keine TV-Tabelle.
@@ -70,18 +82,70 @@ public static class PdfDokumentTypErkennung
         => ContainsAny(text, "Schachtprotokoll", "Schachtinspektion", "Schachtbericht", "SCHACHTPRO",
             "Schacht Nr", "SchachtNr", "Schacht-Nr", "Schachtnummer");
 
+    /// <summary>
+    /// Titel des Aushaerteprotokolls, tolerant gegen die Stelle des Umlauts.
+    ///
+    /// Belegt am Buerglen-Bestand: Dieselbe Titelzeile las das OCR als
+    /// <c>Aush\u00e4rteprotokoll</c>, <c>Aushirteprotokoll</c> und <c>Aushfarteprotokoll</c> \u2014
+    /// der Umlaut in der grossen Schrift ist unzuverlaessig. Ohne diese Toleranz fielen
+    /// drei von neun Protokollen still aus der Verteilung.
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex AushaerteTitelRegex = new(
+        @"Aush.{0,2}rt(e|ungs)?protokoll",
+        System.Text.RegularExpressions.RegexOptions.Compiled
+        | System.Text.RegularExpressions.RegexOptions.IgnoreCase
+        | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Aushaerteprotokoll des Inliners. Erkannt wird der Titel (umlauttolerant) oder das
+    /// umlautfreie Begriffspaar Linertyp + Lampenleistung, das es nur in diesem Protokoll
+    /// gibt. Ein einzelnes der beiden Woerter genuegt bewusst nicht.
+    /// </summary>
+    private static bool LooksLikeAushaerteprotokoll(string? text, string? fileName)
+    {
+        if (ContainsAny(fileName, "aushaert", "aush\u00e4rt"))
+            return true;
+
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        return AushaerteTitelRegex.IsMatch(text)
+               || (ContainsAny(text, "Linertyp") && ContainsAny(text, "Lampenleistung"));
+    }
+
+    /// <summary>
+    /// "DP" als eigenes Wort im Dateinamen \u2014 dieselbe Konvention, nach der der
+    /// Dichtheits-Verteiler schon seine Ordner erkennt (<c>048473_DP_Gross</c>). Ein
+    /// blosses "dp" mitten im Wort (Adapterplan, DPS) zaehlt ausdruecklich nicht.
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex DpKuerzelRegex = new(
+        @"(^|[_\-\s])DP($|[_\-\s])",
+        System.Text.RegularExpressions.RegexOptions.Compiled
+        | System.Text.RegularExpressions.RegexOptions.IgnoreCase
+        | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
     private static bool LooksLikeDichtheitspruefung(string? text, string? fileName)
     {
         if (ContainsAny(fileName, "dicht"))
             return true;
 
         if (string.IsNullOrWhiteSpace(text))
-            return false;
+        {
+            // Reiner Scan ohne Textebene: Dann ist das Kuerzel der einzige Beleg, den es
+            // gibt. Ist Text lesbar, entscheidet weiterhin ausschliesslich der Inhalt —
+            // "DP" im Namen allein bleibt zu wenig (bewusste Regel, R1-R3).
+            return !string.IsNullOrWhiteSpace(fileName)
+                   && DpKuerzelRegex.IsMatch(Path.GetFileNameWithoutExtension(fileName));
+        }
 
         return ContainsAny(
                    text,
                    "Dichtheitspruefung",
                    "Dichtheitspr\u00fcfung",
+                   // Titel der realen GKS-Pruefberichte; sie nennen das Wort
+                   // "Dichtheit" nirgends.
+                   "Druckpruefprotokoll",
+                   "Druckpr\u00fcfprotokoll",
                    "SIA190",
                    "SIA 190",
                    // Reale Schreibweisen aus KIT-Bauinspekt-Pruefberichten. Ohne sie
@@ -92,7 +156,8 @@ public static class PdfDokumentTypErkennung
                    "SIANorm 190",
                    "SIANorm190",
                    "VSA RL Dicht")
-               || (ContainsAny(text, "von Schacht:", "nach Schacht:")
+               || (ContainsAny(text, "von Schacht:", "nach Schacht:", "bis Schacht:",
+                       "vonSchacht:", "nachSchacht:", "bisSchacht:")
                    && ContainsAny(text, "Pruefdruck", "Pr\u00fcfdruck", "Pruefstrecke", "Pr\u00fcfstrecke"));
     }
 

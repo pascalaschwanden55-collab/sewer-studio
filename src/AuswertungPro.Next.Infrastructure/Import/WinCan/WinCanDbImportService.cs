@@ -211,6 +211,11 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                         messages.Add($"Haltung neu angelegt: {datensatzName}");
                     }
 
+                    // Herkunftsbeleg fuer die Begleitprotokolle der Sanierung: Dichtheits-
+                    // pruefung und Aushaerteprotokoll nennen ihre Haltung nur so ("H66").
+                    // Kein Feld, keine Tabellenspalte, kein Export.
+                    record.ImportBezeichnung = section.Key.Trim();
+
                     found++;
 
                     var kandidaten = inspections

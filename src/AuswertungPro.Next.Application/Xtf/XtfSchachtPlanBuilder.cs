@@ -131,7 +131,8 @@ public static class XtfSchachtPlanBuilder
         if (teile.Length > 2)
             return null;
 
-        var erstes = SiaAbmessung.NachMillimeter(teile[0]);
+        var paar = SiaAbmessung.NachMillimeterPaar(text);
+        var erstes = paar.Erstes;
         if (erstes is not > 0)
             return null;
 
@@ -141,7 +142,7 @@ public static class XtfSchachtPlanBuilder
             return (rund, rund);
         }
 
-        var zweites = SiaAbmessung.NachMillimeter(teile[1]);
+        var zweites = paar.Zweites;
         if (zweites is not > 0)
             return null;
 
@@ -168,11 +169,27 @@ public static class XtfSchachtPlanBuilder
     {
         ArgumentNullException.ThrowIfNull(record);
 
+        var roh1 = Wert(record, FieldKeys.ShaftDimension1Mm);
+        var roh2 = Wert(record, FieldKeys.ShaftDimension2Mm);
+        var hatGetrennt = !string.IsNullOrWhiteSpace(roh1) || !string.IsNullOrWhiteSpace(roh2);
+        bool Ungueltig(string? roh) => SiaAbmessung.SchachtmassFehler(roh) is not null;
+        if (hatGetrennt && (Ungueltig(roh1) || Ungueltig(roh2)))
+        {
+            hinweise?.Add($"{wofuer}: Innenmasse sind ungueltig. SIA405 erlaubt hoechstens 4000 mm; beide Masse werden nicht geschrieben. Bitte die Eingabe pruefen.");
+            return null;
+        }
         var getrennt = AusGetrenntenFeldern(record);
         var zusammen = Abmessungen(Wert(record, Dimensionsfeld));
 
         if (getrennt is null)
+        {
+            if (zusammen is { } alt && (int.Parse(alt.Dimension1) > 4000 || int.Parse(alt.Dimension2) > 4000))
+            {
+                hinweise?.Add($"{wofuer}: Innenmasse ueberschreiten 4000 mm; beide Masse werden nicht geschrieben.");
+                return null;
+            }
             return zusammen;
+        }
 
         if (zusammen is not null && zusammen != getrennt)
         {
@@ -188,8 +205,8 @@ public static class XtfSchachtPlanBuilder
 
     private static (string Dimension1, string Dimension2)? AusGetrenntenFeldern(SchachtRecord record)
     {
-        var eins = SiaAbmessung.NachMillimeter(Wert(record, FieldKeys.ShaftDimension1Mm));
-        var zwei = SiaAbmessung.NachMillimeter(Wert(record, FieldKeys.ShaftDimension2Mm));
+        var eins = SiaAbmessung.AusMillimeterfeld(Wert(record, FieldKeys.ShaftDimension1Mm));
+        var zwei = SiaAbmessung.AusMillimeterfeld(Wert(record, FieldKeys.ShaftDimension2Mm));
 
         if (eins is not > 0 && zwei is not > 0)
             return null;

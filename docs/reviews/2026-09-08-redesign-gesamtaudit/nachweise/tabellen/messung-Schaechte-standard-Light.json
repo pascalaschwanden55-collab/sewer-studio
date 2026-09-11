@@ -1,0 +1,134 @@
+{
+  "utc": "2026-09-08T04:38:36.143377Z",
+  "theme": "Light",
+  "seite": "Schaechte",
+  "variante": "standard",
+  "aktiveSpaltenansicht": "kompakt",
+  "spaltenSichtbar": 9,
+  "spalten": [
+    "SCHACHTNUMMER",
+    "FUNKTION",
+    "STRASSE",
+    "ZUSTANDSKLASSE",
+    "SCHACHTFORM",
+    "GR\u00D6SSTES INNENMASS MM",
+    "KLEINSTES INNENMASS MM",
+    "MATERIAL",
+    "PROTOKOLL"
+  ],
+  "zeilenhoehe": 36,
+  "datensaetze": 8,
+  "zellprobe": [
+    {
+      "spalte": "SCHACHTNUMMER",
+      "zellBreite": 150,
+      "zellHoehe": 38,
+      "textBreite": 34,
+      "textHoehe": 19,
+      "ausrichtung": "Left",
+      "waagrecht": "Left",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    },
+    {
+      "spalte": "FUNKTION",
+      "zellBreite": 90,
+      "zellHoehe": 38,
+      "textBreite": 83,
+      "textHoehe": 19,
+      "ausrichtung": "Left",
+      "waagrecht": "Left",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    },
+    {
+      "spalte": "STRASSE",
+      "zellBreite": 120,
+      "zellHoehe": 38,
+      "textBreite": 98,
+      "textHoehe": 19,
+      "ausrichtung": "Left",
+      "waagrecht": "Left",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    },
+    {
+      "spalte": "ZUSTANDSKLASSE",
+      "zellBreite": 132,
+      "zellHoehe": 38,
+      "textBreite": 14,
+      "textHoehe": 14,
+      "ausrichtung": "Left",
+      "waagrecht": "Center",
+      "schrift": "Cascadia Mono, Consolas, Courier New"
+    },
+    {
+      "spalte": "SCHACHTFORM",
+      "zellBreite": 101,
+      "zellHoehe": 38,
+      "textBreite": 98,
+      "textHoehe": 19,
+      "ausrichtung": "Left",
+      "waagrecht": "Stretch",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    },
+    {
+      "spalte": "GR\u00D6SSTES INNENMASS MM",
+      "zellBreite": 161,
+      "zellHoehe": 38,
+      "textBreite": 26,
+      "textHoehe": 19,
+      "ausrichtung": "Right",
+      "waagrecht": "Right",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    },
+    {
+      "spalte": "KLEINSTES INNENMASS MM",
+      "zellBreite": 161,
+      "zellHoehe": 38,
+      "textBreite": 24,
+      "textHoehe": 19,
+      "ausrichtung": "Right",
+      "waagrecht": "Right",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    },
+    {
+      "spalte": "MATERIAL",
+      "zellBreite": 100,
+      "zellHoehe": 38,
+      "textBreite": 36,
+      "textHoehe": 19,
+      "ausrichtung": "Left",
+      "waagrecht": "Left",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    },
+    {
+      "spalte": "PROTOKOLL",
+      "zellBreite": 89,
+      "zellHoehe": 38,
+      "textBreite": 19,
+      "textHoehe": 15,
+      "ausrichtung": "Left",
+      "waagrecht": "Stretch",
+      "schrift": "Segoe UI Variable Display, Segoe UI, Aptos, Arial"
+    }
+  ],
+  "width": 1920,
+  "height": 1080,
+  "zielFenster": "MainWindow",
+  "zielBreite": 1920,
+  "zielHoehe": 1080,
+  "primaryWidth": 1920,
+  "primaryHeight": 1080,
+  "dpiX": 96,
+  "dpiY": 96,
+  "fullRows": 8,
+  "viewportHoehe": 464,
+  "zeilenHoehen": [
+    40,
+    38,
+    38,
+    38,
+    38,
+    38
+  ],
+  "windowCount": 1,
+  "selected": "AuswertungPro.Next.Domain.Models.SchachtRecord"
+}

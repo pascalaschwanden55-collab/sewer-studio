@@ -208,6 +208,9 @@ public sealed partial class LegacyXtfImportService
             }
         }
 
+        if (isSia405)
+            XtfZusatzReader.Uebernehme(doc, project, stats);
+
         // VSA_KEK verarbeiten, wenn NICHT bereits erfolgreich als SIA405 importiert
         if (!sia405Imported && isVsa)
         {

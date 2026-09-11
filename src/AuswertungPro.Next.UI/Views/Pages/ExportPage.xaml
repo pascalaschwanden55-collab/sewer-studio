@@ -223,7 +223,7 @@
                             BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Neue eigenständige XTF erstellen" FontWeight="SemiBold"
+                                <TextBlock Text="XTF erstellen" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                                 <Border Background="{DynamicResource SuccessSubtleBrush}" CornerRadius="{DynamicResource RadiusChip}"
                                         Padding="8,1" Margin="8,0,0,0" VerticalAlignment="Center"
@@ -232,16 +232,25 @@
                                                Foreground="{DynamicResource SuccessTextBrush}"/>
                                 </Border>
                             </StackPanel>
-                            <TextBlock Text="{Binding XtfNeuHinweis}"
+                            <TextBlock Text="Vorhandene Kennungen werden beibehalten. FME übernimmt nur die ausdrücklich bezeichneten Änderungen."
+                                       Visibility="{Binding XtfNurAenderungen, Converter={StaticResource BoolToVis}}"
                                        FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource WarningTextBrush}"
                                        TextWrapping="Wrap" Margin="0,2,0,8"/>
+                            <TextBlock Text="Standard: nur bearbeitete Felder für den Abgleich. Die mitgelieferte .ili-Datei gehört dazu."
+                                       TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <CheckBox Content="Vollständige neue XTF mit allen belegten Normfeldern"
+                                      IsChecked="{Binding XtfVollstaendig}" Margin="0,0,0,8"
+                                      ToolTip="GeoShop-Objektakten werden im umfassenderen DSS-Modell geliefert, sonst SIA405. Vorhandene Kennungen bleiben erhalten. Die Vorschau nennt fehlende Angaben. Nicht als Änderungsauftrag verwenden."/>
+                            <TextBlock Text="Mit GeoShop-Objektakten: auch Deckel, Koten, Liner und Sanierungsereignisse als DSS-Normobjekte. Offene Zuordnungen stehen im Bericht. Diese Datei ist kein Änderungsauftrag."
+                                       Visibility="{Binding XtfVollstaendig, Converter={StaticResource BoolToVis}}"
+                                       TextWrapping="Wrap" Margin="0,0,0,8"/>
                             <Button Command="{Binding ErzeugeXtfNeuCommand}"
                                     HorizontalAlignment="Left" Padding="14,6"
-                                    ToolTip="Schreibt alle Haltungen und Schächte des Projekts als eigene SIA405-Datei mit neuen Kennungen. Zeigt zuerst, was hineinkommt und was fehlt (technisch: Erstexport).">
+                                    ToolTip="Zeigt zuerst den Bericht zur gewählten Lieferart. Erst nach der Prüfung wird die neue Datei geschrieben.">
                                 <StackPanel Orientation="Horizontal">
                                     <ui:FluentIcon Glyph="&#xE8A5;" Margin="0,0,8,0"
                                                    Foreground="{DynamicResource AccentBrush}"/>
-                                    <TextBlock Text="Neue XTF erstellen" VerticalAlignment="Center"/>
+                                    <TextBlock Text="XTF erstellen" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>

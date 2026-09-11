@@ -18,7 +18,7 @@ public sealed record BackupSource(
     bool WarnIfMissing = false);
 
 /// <summary>Eine einzelne Datei: Quellpfad → Ziel-Relativpfad (z. B. Desktop-Skripte).</summary>
-public sealed record BackupSingleFile(string SourcePath, string TargetRelativePath);
+public sealed record BackupSingleFile(string SourcePath, string TargetRelativePath, bool WarnIfMissing = false);
 
 /// <summary>Eine Backup-Komponente (Programm, KI-Gehirn, Projekte, Einstellungen, Logs, Extras).</summary>
 public sealed record BackupComponent(
@@ -107,6 +107,13 @@ public static class BackupPlanBuilder
                 BuildDesktopScriptFiles(sources.DesktopDir)),
         };
 
+        if (sources.AdditionalRoots is { Count: > 0 })
+            components.Add(new BackupComponent("Weitere Ordner", "Zusätzlich gewählte Sicherungsquellen",
+                sources.AdditionalRoots.Select(path => new BackupSource(path,
+                    Path.Combine("Weitere_Ordner", BackupExternalPathKey.ForPath(path)))).ToArray()));
+        if (sources.ReferencedFiles is { Count: > 0 })
+            components.Add(new BackupComponent("Externe Dateien", "Verknüpfte Projektdateien ausserhalb der Projektordner",
+                Array.Empty<BackupSource>(), sources.ReferencedFiles));
         return components;
     }
 
