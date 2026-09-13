@@ -1,0 +1,531 @@
+{
+  "quelle": "C:\\Users\\Besitzer\\Downloads\\order\\34UR_Abwasser_DSS_2020_1.xtf",
+  "bytes": 456586997,
+  "sha256": "ed6bfdc290f66e8bdefd5fcc6cff59013337adcd763df754d1eadec41da34830",
+  "modelle": [
+    {
+      "NAME": "DSS_2020_1_LV95",
+      "URI": "http://www.infogrips.ch",
+      "VERSION": ""
+    }
+  ],
+  "objekte": 630246,
+  "eindeutige_tids": 628793,
+  "doppelte_tids": 5,
+  "klassen": [
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.ARABauwerk",
+      "anzahl": 20,
+      "ohne_tid": 0,
+      "felder": {
+        "Art": 20,
+        "Baujahr": 7,
+        "BaulicherZustand": 15,
+        "Bemerkung": 10,
+        "BetreiberRef": 18,
+        "Bezeichnung": 20,
+        "Bruttokosten": 1,
+        "DatenherrRef": 20,
+        "DatenlieferantRef": 20,
+        "EigentuemerRef": 18,
+        "Letzte_Aenderung": 20,
+        "Sanierungsbedarf": 15,
+        "Status": 17,
+        "Zugaenglichkeit": 13
+      },
+      "referenzen": {
+        "BetreiberRef": 18,
+        "DatenherrRef": 20,
+        "DatenlieferantRef": 20,
+        "EigentuemerRef": 18
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Absperr_Drosselorgan",
+      "anzahl": 37,
+      "ohne_tid": 0,
+      "felder": {
+        "AbwasserknotenRef": 37,
+        "Art": 37,
+        "Bemerkung": 8,
+        "Bezeichnung": 37,
+        "DatenherrRef": 37,
+        "DatenlieferantRef": 37,
+        "Letzte_Aenderung": 37
+      },
+      "referenzen": {
+        "AbwasserknotenRef": 37,
+        "DatenherrRef": 37,
+        "DatenlieferantRef": 37
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserbauwerk_Text",
+      "anzahl": 42570,
+      "ohne_tid": 0,
+      "felder": {
+        "AbwasserbauwerkRef": 40565,
+        "Bemerkung": 5473,
+        "Plantyp": 42570,
+        "TextHAli": 42570,
+        "TextOri": 42570,
+        "TextPos": 42570,
+        "TextVAli": 42570,
+        "Textinhalt": 42570
+      },
+      "referenzen": {
+        "AbwasserbauwerkRef": 40565
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten",
+      "anzahl": 101388,
+      "ohne_tid": 0,
+      "felder": {
+        "AbwasserbauwerkRef": 54825,
+        "Bemerkung": 12761,
+        "Bezeichnung": 100881,
+        "DatenherrRef": 101388,
+        "DatenlieferantRef": 101388,
+        "Hoehengenauigkeit": 36792,
+        "Lage": 101388,
+        "Letzte_Aenderung": 101388,
+        "Rueckstaukote_Ist": 10495,
+        "Sohlenkote": 14675
+      },
+      "referenzen": {
+        "AbwasserbauwerkRef": 54825,
+        "DatenherrRef": 101388,
+        "DatenlieferantRef": 101388
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Deckel",
+      "anzahl": 51394,
+      "ohne_tid": 0,
+      "felder": {
+        "AbwasserbauwerkRef": 51346,
+        "Bemerkung": 1080,
+        "Bezeichnung": 238,
+        "DatenherrRef": 51394,
+        "DatenlieferantRef": 51394,
+        "Deckelform": 51393,
+        "Durchmesser": 13299,
+        "Entlueftung": 9722,
+        "Fabrikat": 6,
+        "Kote": 22725,
+        "Lage": 51394,
+        "Lagegenauigkeit": 12776,
+        "Letzte_Aenderung": 51394,
+        "Material": 13148,
+        "Schlammeimer": 103,
+        "Verschluss": 10037
+      },
+      "referenzen": {
+        "AbwasserbauwerkRef": 51346,
+        "DatenherrRef": 51394,
+        "DatenlieferantRef": 51394
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Einleitstelle",
+      "anzahl": 569,
+      "ohne_tid": 0,
+      "felder": {
+        "Baujahr": 149,
+        "BaulicherZustand": 428,
+        "Bemerkung": 24,
+        "BetreiberRef": 533,
+        "Bezeichnung": 567,
+        "Bruttokosten": 14,
+        "DatenherrRef": 569,
+        "DatenlieferantRef": 569,
+        "EigentuemerRef": 553,
+        "Letzte_Aenderung": 569,
+        "Relevanz": 569,
+        "Sanierungsbedarf": 371,
+        "Status": 567,
+        "Zugaenglichkeit": 419
+      },
+      "referenzen": {
+        "BetreiberRef": 533,
+        "DatenherrRef": 569,
+        "DatenlieferantRef": 569,
+        "EigentuemerRef": 553
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Einstiegshilfe",
+      "anzahl": 18045,
+      "ohne_tid": 0,
+      "felder": {
+        "AbwasserbauwerkRef": 18045,
+        "Art": 18045,
+        "Bemerkung": 1,
+        "Bezeichnung": 18001,
+        "DatenherrRef": 18045,
+        "DatenlieferantRef": 18045,
+        "Letzte_Aenderung": 18045
+      },
+      "referenzen": {
+        "AbwasserbauwerkRef": 18045,
+        "DatenherrRef": 18045,
+        "DatenlieferantRef": 18045
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Erhaltungsereignis_AbwasserbauwerkAssoc",
+      "anzahl": 1448,
+      "ohne_tid": 1448,
+      "felder": {
+        "AbwasserbauwerkRef": 1448,
+        "Erhaltungsereignis_AbwasserbauwerkAssocRef": 1448
+      },
+      "referenzen": {
+        "AbwasserbauwerkRef": 1448,
+        "Erhaltungsereignis_AbwasserbauwerkAssocRef": 1448
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.FoerderAggregat",
+      "anzahl": 44,
+      "ohne_tid": 0,
+      "felder": {
+        "AbwasserknotenRef": 44,
+        "Antrieb": 2,
+        "AufstellungAntrieb": 2,
+        "AufstellungFoerderaggregat": 2,
+        "DatenherrRef": 44,
+        "DatenlieferantRef": 44,
+        "Funktion": 34,
+        "Letzte_Aenderung": 44
+      },
+      "referenzen": {
+        "AbwasserknotenRef": 44,
+        "DatenherrRef": 44,
+        "DatenlieferantRef": 44
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Haltung",
+      "anzahl": 84204,
+      "ohne_tid": 0,
+      "felder": {
+        "AbwasserbauwerkRef": 84204,
+        "Bemerkung": 6929,
+        "Bezeichnung": 83971,
+        "DatenherrRef": 84204,
+        "DatenlieferantRef": 84204,
+        "Innenschutz": 124,
+        "LaengeEffektiv": 84204,
+        "Lagebestimmung": 83923,
+        "Letzte_Aenderung": 84204,
+        "Lichte_Hoehe": 73170,
+        "Material": 83666,
+        "Reliner_Art": 338,
+        "Reliner_Bautechnik": 337,
+        "Reliner_Material": 328,
+        "Reliner_Nennweite": 3,
+        "RohrprofilRef": 83369,
+        "Verlauf": 84204,
+        "nachHaltungspunktRef": 84153,
+        "vonHaltungspunktRef": 84188
+      },
+      "referenzen": {
+        "AbwasserbauwerkRef": 84204,
+        "DatenherrRef": 84204,
+        "DatenlieferantRef": 84204,
+        "RohrprofilRef": 83369,
+        "nachHaltungspunktRef": 84153,
+        "vonHaltungspunktRef": 84188
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Haltung_Text",
+      "anzahl": 24309,
+      "ohne_tid": 0,
+      "felder": {
+        "HaltungRef": 24309,
+        "Plantyp": 24309,
+        "TextHAli": 24309,
+        "TextOri": 24309,
+        "TextPos": 24309,
+        "TextVAli": 24309,
+        "Textinhalt": 20056
+      },
+      "referenzen": {
+        "HaltungRef": 24309
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt",
+      "anzahl": 167169,
+      "ohne_tid": 0,
+      "felder": {
+        "AbwassernetzelementRef": 143215,
+        "Auslaufform": 8,
+        "Bemerkung": 12613,
+        "Bezeichnung": 167146,
+        "DatenherrRef": 167169,
+        "DatenlieferantRef": 167169,
+        "Hoehengenauigkeit": 41533,
+        "Kote": 29792,
+        "Lage": 167169,
+        "Letzte_Aenderung": 167169
+      },
+      "referenzen": {
+        "AbwassernetzelementRef": 143215,
+        "DatenherrRef": 167169,
+        "DatenlieferantRef": 167169
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Kanal",
+      "anzahl": 84054,
+      "ohne_tid": 0,
+      "felder": {
+        "Baujahr": 35316,
+        "BaulicherZustand": 66507,
+        "Bemerkung": 6920,
+        "BetreiberRef": 83075,
+        "Bettung_Umhuellung": 51942,
+        "Bezeichnung": 83824,
+        "Bruttokosten": 18361,
+        "DatenherrRef": 84054,
+        "DatenlieferantRef": 84054,
+        "EigentuemerRef": 83654,
+        "Ersatzjahr": 1,
+        "FunktionHierarchisch": 84054,
+        "FunktionHydraulisch": 83758,
+        "Inspektionsintervall": 136,
+        "Letzte_Aenderung": 84054,
+        "Nutzungsart_Ist": 83871,
+        "Nutzungsart_geplant": 123,
+        "Rohrlaenge": 2,
+        "Sanierungsbedarf": 58808,
+        "Spuelintervall": 697,
+        "Status": 83806,
+        "Verbindungsart": 51973,
+        "Zugaenglichkeit": 4
+      },
+      "referenzen": {
+        "BetreiberRef": 83075,
+        "DatenherrRef": 84054,
+        "DatenlieferantRef": 84054,
+        "EigentuemerRef": 83654
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Leapingwehr",
+      "anzahl": 4,
+      "ohne_tid": 0,
+      "felder": {
+        "AbwasserknotenRef": 4,
+        "Bezeichnung": 4,
+        "DatenherrRef": 4,
+        "DatenlieferantRef": 4,
+        "Funktion": 4,
+        "Letzte_Aenderung": 4,
+        "Oeffnungsform": 2
+      },
+      "referenzen": {
+        "AbwasserknotenRef": 4,
+        "DatenherrRef": 4,
+        "DatenlieferantRef": 4
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Messstelle",
+      "anzahl": 2,
+      "ohne_tid": 0,
+      "felder": {
+        "AbwasserbauwerkRef": 1,
+        "Bezeichnung": 1,
+        "DatenherrRef": 2,
+        "DatenlieferantRef": 2,
+        "Lage": 2,
+        "Letzte_Aenderung": 2
+      },
+      "referenzen": {
+        "AbwasserbauwerkRef": 1,
+        "DatenherrRef": 2,
+        "DatenlieferantRef": 2
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Normschacht",
+      "anzahl": 49484,
+      "ohne_tid": 0,
+      "felder": {
+        "Akten": 2,
+        "Baujahr": 18159,
+        "BaulicherZustand": 37597,
+        "Baulos": 1,
+        "Bemerkung": 7086,
+        "BetreiberRef": 48049,
+        "Bezeichnung": 49332,
+        "Bruttokosten": 13113,
+        "DatenherrRef": 49484,
+        "DatenlieferantRef": 49484,
+        "Dimension1": 41623,
+        "Dimension2": 41622,
+        "EigentuemerRef": 48277,
+        "Finanzierung": 3,
+        "Funktion": 49276,
+        "Letzte_Aenderung": 49484,
+        "Material": 47122,
+        "Sanierungsbedarf": 34397,
+        "Status": 49122,
+        "WBW_Bauart": 1,
+        "Zugaenglichkeit": 47745
+      },
+      "referenzen": {
+        "BetreiberRef": 48049,
+        "DatenherrRef": 49484,
+        "DatenlieferantRef": 49484,
+        "EigentuemerRef": 48277
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Rohrprofil",
+      "anzahl": 42,
+      "ohne_tid": 0,
+      "felder": {
+        "Bezeichnung": 42,
+        "DatenherrRef": 42,
+        "DatenlieferantRef": 42,
+        "HoehenBreitenverhaeltnis": 37,
+        "Letzte_Aenderung": 42,
+        "Profiltyp": 42
+      },
+      "referenzen": {
+        "DatenherrRef": 42,
+        "DatenlieferantRef": 42
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Spezialbauwerk",
+      "anzahl": 792,
+      "ohne_tid": 0,
+      "felder": {
+        "Baujahr": 151,
+        "BaulicherZustand": 313,
+        "Bemerkung": 151,
+        "BetreiberRef": 738,
+        "Bezeichnung": 791,
+        "Bruttokosten": 6,
+        "DatenherrRef": 792,
+        "DatenlieferantRef": 792,
+        "Detailgeometrie": 791,
+        "EigentuemerRef": 745,
+        "Funktion": 792,
+        "Letzte_Aenderung": 792,
+        "Notueberlauf": 1,
+        "Sanierungsbedarf": 253,
+        "Status": 474,
+        "Zugaenglichkeit": 267
+      },
+      "referenzen": {
+        "BetreiberRef": 738,
+        "DatenherrRef": 792,
+        "DatenlieferantRef": 792,
+        "EigentuemerRef": 745
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Streichwehr",
+      "anzahl": 4,
+      "ohne_tid": 0,
+      "felder": {
+        "AbwasserknotenRef": 4,
+        "Bemerkung": 1,
+        "Bezeichnung": 3,
+        "DatenherrRef": 4,
+        "DatenlieferantRef": 4,
+        "Funktion": 4,
+        "Letzte_Aenderung": 4,
+        "Ueberfallkante": 1
+      },
+      "referenzen": {
+        "AbwasserknotenRef": 4,
+        "DatenherrRef": 4,
+        "DatenlieferantRef": 4
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Trockenwetterfallrohr",
+      "anzahl": 7,
+      "ohne_tid": 0,
+      "felder": {
+        "AbwasserbauwerkRef": 7,
+        "Bemerkung": 3,
+        "Bezeichnung": 3,
+        "DatenherrRef": 7,
+        "DatenlieferantRef": 7,
+        "Durchmesser": 6,
+        "Letzte_Aenderung": 7
+      },
+      "referenzen": {
+        "AbwasserbauwerkRef": 7,
+        "DatenherrRef": 7,
+        "DatenlieferantRef": 7
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Unterhalt",
+      "anzahl": 1448,
+      "ohne_tid": 0,
+      "felder": {
+        "Art": 1446,
+        "Ausfuehrender": 21,
+        "Bemerkung": 37,
+        "Bezeichnung": 124,
+        "DatenherrRef": 1448,
+        "DatenlieferantRef": 1448,
+        "Dauer": 30,
+        "Ergebnis": 1,
+        "Grund": 2,
+        "Kosten": 30,
+        "Letzte_Aenderung": 1448,
+        "Status": 1304,
+        "Zeitpunkt": 315
+      },
+      "referenzen": {
+        "DatenherrRef": 1448,
+        "DatenlieferantRef": 1448
+      }
+    },
+    {
+      "klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Versickerungsanlage",
+      "anzahl": 3212,
+      "ohne_tid": 0,
+      "felder": {
+        "Art": 3212,
+        "Baujahr": 1561,
+        "BaulicherZustand": 2587,
+        "Bemerkung": 1886,
+        "BetreiberRef": 3135,
+        "Bezeichnung": 3206,
+        "Bruttokosten": 400,
+        "DatenherrRef": 3212,
+        "DatenlieferantRef": 3212,
+        "Detailgeometrie": 2374,
+        "Dimension1": 1988,
+        "Dimension2": 1984,
+        "EigentuemerRef": 3173,
+        "Letzte_Aenderung": 3212,
+        "Maengel": 1,
+        "Sanierungsbedarf": 2474,
+        "Schluckvermoegen": 2172,
+        "Status": 3127,
+        "Zugaenglichkeit": 2199
+      },
+      "referenzen": {
+        "BetreiberRef": 3135,
+        "DatenherrRef": 3212,
+        "DatenlieferantRef": 3212,
+        "EigentuemerRef": 3173
+      }
+    }
+  ]
+}

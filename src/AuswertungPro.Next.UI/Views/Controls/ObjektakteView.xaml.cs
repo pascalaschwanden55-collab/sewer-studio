@@ -12,10 +12,20 @@ public partial class ObjektakteView : UserControl
         nameof(Spalten), typeof(int), typeof(ObjektakteView), new PropertyMetadata(2));
     public int Spalten { get => (int)GetValue(SpaltenProperty); set => SetValue(SpaltenProperty, value); }
 
+    /// <summary>Feldspalten nach Breite (11.09.2026, «alles kompakter»): eine Spalte braucht rund 400 px
+    /// (130 Beschriftung + Eingabe); auf Full HD sind das vier. Die eine Regel fuer Aufklappliste und Fenster.</summary>
+    public static int SpaltenFuerBreite(double breite) => breite switch
+    {
+        < 700 => 1,
+        < 1100 => 2,
+        < 1500 => 3,
+        _ => 4,
+    };
+
     public ObjektakteView()
     {
         InitializeComponent();
-        SizeChanged += (_, _) => Spalten = ActualWidth < 880 ? 1 : 2;
+        SizeChanged += (_, _) => Spalten = SpaltenFuerBreite(ActualWidth);
         Loaded += (_, _) => (DataContext as ObjektakteViewModel)?.AktualisiereFelder();
         Unloaded += (_, _) =>
         {

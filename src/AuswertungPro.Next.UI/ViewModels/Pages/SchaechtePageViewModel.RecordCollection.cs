@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 using CommunityToolkit.Mvvm.Input;
 
@@ -20,7 +20,7 @@ public sealed partial class SchaechtePageViewModel
             return;
 
         var record = RecordCollectionController.Add();
-        SetSelectedWithoutRequiredFieldWarning(record);
+        Selected = record;
         UpdateSearchResultInfo(Records.Count);
         MarkRecordCollectionChanged();
     }
@@ -33,7 +33,7 @@ public sealed partial class SchaechtePageViewModel
         if (!RecordCollectionController.TryRemove(Selected, out var nextSelection))
             return;
 
-        SetSelectedWithoutRequiredFieldWarning(nextSelection);
+        Selected = nextSelection;
         UpdateNr();
         UpdateSearchResultInfo(Records.Count);
         MarkRecordCollectionChanged();
@@ -100,16 +100,4 @@ public sealed partial class SchaechtePageViewModel
         ScheduleAutoSave();
     }
 
-    private void SetSelectedWithoutRequiredFieldWarning(SchachtRecord? record)
-    {
-        _suppressRequiredFieldWarning = true;
-        try
-        {
-            Selected = record;
-        }
-        finally
-        {
-            _suppressRequiredFieldWarning = false;
-        }
-    }
 }

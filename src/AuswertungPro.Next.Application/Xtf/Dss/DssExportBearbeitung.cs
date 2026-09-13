@@ -18,7 +18,26 @@ internal sealed class DssExportBearbeitung(Project projekt, Dictionary<string, D
             BestandsErgaenzungen(id, root);
             Felder(akte, root, id);
         }
-        foreach (var akte in projekt.Objektakten.Where(a => a.Art is "deckel" or "sanierung"))
+        // Haltungspunkte existieren bereits im importierten Netz. Weder einen neuen Punkt
+        // erfinden noch Verbindungen ändern, nur dessen aktuelle eigene Felder übernehmen.
+        foreach (var akte in projekt.Objektakten.Where(a => a.Art == "haltungspunkt"))
+        {
+            var tids = akte.Quellen.Where(q => q.Klasse == "Haltungspunkt" && !q.IstLokaleKennung)
+                .Select(q => q.Kennung).Distinct().ToArray();
+            if (tids.Length != 1 || !objekte.TryGetValue(tids[0], out var punkt) || punkt.Klasse != "Haltungspunkt")
+                throw new InvalidOperationException($"DSS: {akte}: zugehöriger Original-Haltungspunkt fehlt oder ist mehrdeutig.");
+            Felder(akte, punkt, null);
+        }
+        foreach (var akte in projekt.Objektakten.Where(a => DssEinbautenZuordnung.IstAkte(a.Art)))
+        {
+            var tids = akte.Quellen.Where(q => DssEinbautenZuordnung.Art(q.Klasse) == akte.Art && !q.IstLokaleKennung)
+                .Select(q => q.Kennung).Distinct().ToArray();
+            if (tids.Length != 1 || !objekte.TryGetValue(tids[0], out var einbau))
+                throw new InvalidOperationException($"DSS: {akte}: zugehöriger Original-Einbau fehlt oder ist mehrdeutig. Keine neue Kennung oder Zuordnung erfunden.");
+            DssEinbautenZuordnung.PruefeKlasse(akte, einbau.Klasse);
+            Felder(akte, einbau, null);
+        }
+        foreach (var akte in projekt.Objektakten.Where(a => a.Art is "deckel" or "sanierung" or "unterhalt"))
         {
             var eltern = akte.Bezuege.Where(roots.ContainsKey).Select(id => roots[id]).ToArray();
             if (eltern.Length == 0) continue;
@@ -54,6 +73,9 @@ internal sealed class DssExportBearbeitung(Project projekt, Dictionary<string, D
     }
     private void Felder(ObjektAkte akte, DssExportObjekt root, Guid? id)
     {
+        var bekannteFelder = FieldCatalog.Objektfelder.Felder.Where(f => f.Art == akte.Art).Select(f => f.Id).ToHashSet(StringComparer.Ordinal);
+        foreach (var (key, wert) in akte.Werte.Where(w => !bekannteFelder.Contains(w.Key) && (w.Value.Text.Length > 0 || w.Value.VonHand)))
+            hinweise.Add($"{DssObjektarten.Bezeichnung(akte)}: {key} = „{wert.Text}“ fehlt in der XTF; Feldzuordnung ist unbekannt. Bleibt im Projekt erhalten.");
         foreach (var f in FieldCatalog.Objektfelder.Felder.Where(f => f.Art == akte.Art && !f.NurLesen))
         {
             akte.Werte.TryGetValue(f.Id, out var eingabe);
@@ -84,9 +106,10 @@ internal sealed class DssExportBearbeitung(Project projekt, Dictionary<string, D
                 }
                 continue;
             }
-            if (DssFeldZuordnung.Ziel(f) is not { } ziel)
+            if (DssEinbautenZuordnung.Klassenanzeige(root.Klasse) is not null && f.Id is "bauwerksteil.art" or "ueberlauf.bauwerksart") continue;
+            if (DssFeldZuordnung.Ziel(f, root.Klasse) is not { } ziel)
             {
-                if (text.Length > 0) hinweise.Add($"{akte.Art}: {f.Label} hat kein belegtes DSS-Zielfeld; bleibt in Projekt/Objektakten-JSON.");
+                if (text.Length > 0) hinweise.Add($"{DssObjektarten.Bezeichnung(akte)}: {f.Label} = „{text}“ fehlt in der XTF, weil kein belegtes DSS-Zielfeld besteht; bleibt in Projekt/Objektakten-JSON.");
                 continue;
             }
             var objekt = Ziel(root, ziel.Klasse);

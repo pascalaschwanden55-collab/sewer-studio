@@ -63,7 +63,7 @@ Er dient derselben Projektidentität, nicht einem Abgleich allein nach Namen.
 
 Auch die vorhandenen XTF-Ausgabewege schreiben bei vorhandenen Akten eine solche Zusatzdatei
 in den Ausgabeordner. Die Vorschau weist darauf hin. Scheitert die Zusatzdatei, erscheint die
-Ausgabe als unvollständig. Unter **Vollständige neue XTF mit allen belegten Normfeldern**
+Ausgabe als unvollständig. Unter **Neue XTF aus dem Projektstand – Exportumfang prüfen**
 gehen GeoShop-Angaben jetzt im DSS-Modell hinaus, einschliesslich Deckeln, Koten,
 Inliner-Angaben und Sanierungsereignissen. Hinweise stehen in der Vorschau und im XTF-Kopf.
 Der reine Änderungsweg bleibt getrennt. Details: [DSS-XTF-Ausgabe](DSS-XTF-EXPORT.md).
@@ -75,10 +75,35 @@ Projekte ohne neue Akten bleiben im bisherigen Format 2. Sobald Aktenwerte gespe
 werden, gilt Format 3. Ältere SewerStudio-Versionen lehnen dieses Format ab, statt die neuen
 Angaben zu verlieren. Projektkopien und Sicherungen enthalten die Akten in der Projektdatei.
 
-Offen bleiben die im Plan dokumentierten O01–O24: insbesondere weitere Material-Unterlisten,
-nicht gelesene Unterobjektmasken, Schachtsanierungsbeispiele, zusätzliche Bauwerksarten,
-Originalcodes für Deckel/Sanierung und der genaue GEONIS-Übernahmevertrag. Die neuen
+Der [Dropdown-Abgleich vom 12.09.2026](reviews/2026-09-12-webgis/DROPDOWN-ABGLEICH.md)
+ergänzt alle 37 Sanierungsverfahren nach Art, die Originalcodes für Deckel/Sanierung,
+fünf Haltungspunkt-Auswahlen und neun Witterungswerte. Gleiche Anzeigetexte mit
+verschiedenen Codes bleiben getrennt; alte gespeicherte Auswahlen bleiben sichtbar.
+Die 269 dokumentierten Wertelisten sind im Katalog enthalten. Nicht ausgezählte
+Quelllisten sind im Nachweis ausdrücklich aufgeführt.
+
+Haltungspunkte sind nach erneutem Katasterabgleich über die Objektauswahl erreichbar.
+Geänderte belegte Punktattribute werden mit ihrer Originalkennung exportiert.
+Das gilt jetzt auch für vorhandene Pumpen, Absperr-/Drosselorgane, Streichwehre,
+Leapingwehre, Einstiegshilfen und Trockenwetterfallrohre. Gemeinsam verwendete
+Einbauten besitzen nur eine Akte mit mehreren Bezügen. Handeingaben und bewusstes
+Leeren bleiben beim erneuten Abgleich erhalten. Eine eigene Bauwerksteilakte
+unterdrückt die entsprechende rohe Doppelzeile in der Liste.
+Geerbte Schachtfelder bleiben schreibgeschützt und zeigen den aktuellen zugehörigen
+Schacht. Gleichnamige Originalattribute eines Pumpenobjekts werden dadurch nicht
+umgedeutet. Noch nicht zugeordnete Sachfelder und neue Einbauten ohne Originalbezug sind im [Einbauten-Nachweis](reviews/2026-09-12-webgis/EINBAUTEN-ABNAHME.md) abgegrenzt.
+Weiter offen sind vollständige Unterobjektfunktionen, Schachtsanierungsbeispiele,
+zusätzliche Bauwerksarten und der genaue GEONIS-Übernahmevertrag. Die neuen
 Zusatzangaben ohne belegtes Normziel werden deshalb verlustfrei lokal gehalten.
 Bestätigte DSS-Zuordnungen stehen im neuen Exportvertrag. Es gab keine Änderung im WebGIS.
 
 Technische Nachweise: [Prüfbericht](reviews/2026-09-11-objektakten/ABNAHME.md).
+
+## Freie Bearbeitung der gesamten Lieferung
+
+Unter **Export → SIA405-Lieferung bearbeiten …** öffnet der neue Lieferungs-Editor
+alle Objekte der Original-XTF in einer getrennten `.ssxtf`-Arbeitsdatei. Er braucht
+keine Projektzeile und keinen Schacht-Bauwerksbezug. Sachfelder, vollständige Normlisten,
+Beziehungskennungen und Punktkoordinaten sind dort bearbeitbar; Linien und Flächen
+bleiben erhalten. Die Projekt-Objektakten werden dadurch nicht automatisch verändert.
+[Bedienung, Originalprüfung und verbleibende Aufgaben](LIEFERUNGS-EDITOR.md).

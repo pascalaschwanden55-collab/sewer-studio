@@ -34,9 +34,14 @@ public static class ObjektaktenListen
         if (a.Unterlisten.TryGetValue(liste.Id, out var gespeichert))
             foreach (var zeile in gespeichert) yield return zeile;
         if (liste.Label == "Unterhaltsmassnahmen")
-            foreach (var q in AktuelleQuellen(a).Where(q => q.Klasse == "Unterhalt")) yield return q.Werte;
+            foreach (var q in AktuelleQuellen(a).Where(q => q.Klasse == "Unterhalt"
+                && !b.Verbund.Any(s => s.Art is "unterhalt" or "sanierung"
+                    && s.Quellen.Any(beleg => beleg.Modell == q.Modell && beleg.Klasse == q.Klasse && beleg.Kennung == q.Kennung))))
+                yield return q.Werte;
         if (liste.Label == "Bauwerksteile")
-            foreach (var q in AktuelleQuellen(a).Where(q => q.Klasse == "Einstiegshilfe")) yield return q.Werte;
+            foreach (var q in AktuelleQuellen(a).Where(q => q.Klasse is "Einstiegshilfe" or "Trockenwetterfallrohr"
+                && !b.Verbund.Any(s => s.Art == "bauwerksteil" && s.Quellen.Any(beleg => beleg.Modell == q.Modell
+                    && beleg.Klasse == q.Klasse && beleg.Kennung == q.Kennung)))) yield return q.Werte;
         if (a.Art == "schacht" && liste.Label is "Einläufe" or "Ausläufe")
         {
             var knoten = b.Projekt.SchaechteData.Single(s => s.Id == a.Id).Geonis?.Knoten;

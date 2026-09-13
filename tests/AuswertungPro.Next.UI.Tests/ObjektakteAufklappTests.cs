@@ -117,9 +117,15 @@ public sealed class ObjektakteAufklappTests
             Assert.Empty(Alle<ObjektakteView>(schaechte));
             tabs.Single(t => Equals(t.Header, "Alle Angaben")).IsSelected = true; Pump(window);
             Assert.Equal("450.94", sm.Gruppen.SelectMany(g => g.Felder).Single(f => f.Feld.Id == "deckel.hoehe").Text);
+            // Kompakt (11.09.2026): 1280 px Fenster -> 3 Spalten, 800 -> 2, erst unter 700 eine.
+            Assert.Equal(3, Assert.Single(Alle<ObjektakteView>(schaechte)).Spalten);
+            Assert.True(Assert.Single(Alle<ObjektakteView>(schaechte)).ActualHeight >= 360,
+                "Die Objektakte in der Zeile braucht mindestens 360 px");
             window.Width = 800; Pump(window);
-            Assert.Equal(1, Assert.Single(Alle<ObjektakteView>(schaechte)).Spalten);
+            Assert.Equal(2, Assert.Single(Alle<ObjektakteView>(schaechte)).Spalten);
             Bild(window, "schacht-deckel-schmal");
+            window.Width = 640; Pump(window);
+            Assert.Equal(1, Assert.Single(Alle<ObjektakteView>(schaechte)).Spalten);
             shell.ReplaceProject(new Project()); sc.AktualisiereFormular(); Pump(window);
             Assert.Null(schaechte.Objektakte); Assert.Empty(Alle<ObjektakteView>(schaechte));
             window.Close();

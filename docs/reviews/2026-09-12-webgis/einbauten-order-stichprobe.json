@@ -1,0 +1,60 @@
+{
+  "Quelle": "C:\\Users\\Besitzer\\Downloads\\order\\34UR_Abwasser_DSS_2020_1.xtf",
+  "Klassen": [
+    {
+      "Klasse": "Einstiegshilfe",
+      "QuelleEnthaelt": 18045,
+      "StichprobeImVerbund": true
+    },
+    {
+      "Klasse": "Absperr_Drosselorgan",
+      "QuelleEnthaelt": 37,
+      "StichprobeImVerbund": true
+    },
+    {
+      "Klasse": "Streichwehr",
+      "QuelleEnthaelt": 4,
+      "StichprobeImVerbund": true
+    },
+    {
+      "Klasse": "Leapingwehr",
+      "QuelleEnthaelt": 4,
+      "StichprobeImVerbund": true
+    },
+    {
+      "Klasse": "FoerderAggregat",
+      "QuelleEnthaelt": 44,
+      "StichprobeImVerbund": true
+    }
+  ],
+  "AngefragteSchachtnamen": 5,
+  "GefundeneSchaechte": 5,
+  "Fehler": 4,
+  "Fehlermeldungen": [
+    {
+      "Name": "8.73881",
+      "Fehler": "Verkn\u00FCpfung fehlt oder passt nicht: AbwasserbauwerkRef ()"
+    },
+    {
+      "Name": "09.134220",
+      "Fehler": "Verkn\u00FCpfung fehlt oder passt nicht: AbwasserbauwerkRef ()"
+    },
+    {
+      "Name": "12.45673",
+      "Fehler": "Verkn\u00FCpfung fehlt oder passt nicht: AbwasserbauwerkRef ()"
+    },
+    {
+      "Name": "09.199124",
+      "Fehler": "Verkn\u00FCpfung fehlt oder passt nicht: AbwasserbauwerkRef ()"
+    }
+  ],
+  "VollstaendigeEinbautenAnzahl": {
+    "Trockenwetterfallrohr": 7,
+    "Einstiegshilfe": 18045,
+    "Absperr_Drosselorgan": 37,
+    "Streichwehr": 4,
+    "Leapingwehr": 4,
+    "FoerderAggregat": 44
+  },
+  "NurGelesen": true
+}

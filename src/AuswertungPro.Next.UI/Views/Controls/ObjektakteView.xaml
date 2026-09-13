@@ -11,58 +11,121 @@
                 <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger>
             </Style.Triggers>
         </Style>
+        <!-- Dichte Eingaben (11.09.2026): 28 px statt der 36 px der Themevorgabe. Eine Feldzeile ist damit
+             rund 30 px hoch statt rund 50 - bei 29 Feldern in «Daten I» ist das der halbe Bildschirm. -->
+        <!-- Rechtsklick auf Beschriftung oder Eingabe: Feld markieren («will ich ausfuellen», programmweit)
+             und - bei Auswahlfeldern mit angeschlossenem Speicher - die Liste bearbeiten. -->
+        <ContextMenu x:Key="FeldMenue" DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+            <MenuItem Header="Feld markieren" ToolTip="Farbe für Felder, die du ausfüllen willst — gilt in allen Projekten">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE790;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                <MenuItem Header="Gelb" Command="{Binding FarbeCommand}" CommandParameter="Gelb">
+                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE790;" Foreground="{DynamicResource MarkierungGelbBrush}"/></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Orange" Command="{Binding FarbeCommand}" CommandParameter="Orange">
+                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE790;" Foreground="{DynamicResource MarkierungOrangeBrush}"/></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Rot" Command="{Binding FarbeCommand}" CommandParameter="Rot">
+                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE790;" Foreground="{DynamicResource MarkierungRotBrush}"/></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Grün" Command="{Binding FarbeCommand}" CommandParameter="Grün">
+                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE790;" Foreground="{DynamicResource MarkierungGruenBrush}"/></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Blau" Command="{Binding FarbeCommand}" CommandParameter="Blau">
+                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE790;" Foreground="{DynamicResource MarkierungBlauBrush}"/></MenuItem.Icon>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="Markierung entfernen" Command="{Binding FarbeCommand}" CommandParameter="">
+                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE711;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="Liste bearbeiten…" Command="{Binding ListeBearbeitenCommand}"
+                      Visibility="{Binding KannListeBearbeiten, Converter={StaticResource Sichtbarkeit}}"
+                      ToolTip="Eigene Einträge ergänzen, Einträge umbenennen oder ausblenden — für alle Projekte">
+                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+        <Style x:Key="KompaktText" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="MaxHeight" Value="84"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="ContextMenu" Value="{StaticResource FeldMenue}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HatBearbeitbareAuswahl}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                <DataTrigger Binding="{Binding Farbe}" Value="Gelb"><Setter Property="Background" Value="{DynamicResource MarkierungGelbBrush}"/></DataTrigger>
+                <DataTrigger Binding="{Binding Farbe}" Value="Orange"><Setter Property="Background" Value="{DynamicResource MarkierungOrangeBrush}"/></DataTrigger>
+                <DataTrigger Binding="{Binding Farbe}" Value="Rot"><Setter Property="Background" Value="{DynamicResource MarkierungRotBrush}"/></DataTrigger>
+                <DataTrigger Binding="{Binding Farbe}" Value="Grün"><Setter Property="Background" Value="{DynamicResource MarkierungGruenBrush}"/></DataTrigger>
+                <DataTrigger Binding="{Binding Farbe}" Value="Blau"><Setter Property="Background" Value="{DynamicResource MarkierungBlauBrush}"/></DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="KompaktAuswahl" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Setter Property="ContextMenu" Value="{StaticResource FeldMenue}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HatBearbeitbareAuswahl}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                <DataTrigger Binding="{Binding Farbe}" Value="Gelb"><Setter Property="Background" Value="{DynamicResource MarkierungGelbBrush}"/></DataTrigger>
+                <DataTrigger Binding="{Binding Farbe}" Value="Orange"><Setter Property="Background" Value="{DynamicResource MarkierungOrangeBrush}"/></DataTrigger>
+                <DataTrigger Binding="{Binding Farbe}" Value="Rot"><Setter Property="Background" Value="{DynamicResource MarkierungRotBrush}"/></DataTrigger>
+                <DataTrigger Binding="{Binding Farbe}" Value="Grün"><Setter Property="Background" Value="{DynamicResource MarkierungGruenBrush}"/></DataTrigger>
+                <DataTrigger Binding="{Binding Farbe}" Value="Blau"><Setter Property="Background" Value="{DynamicResource MarkierungBlauBrush}"/></DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ListenZeileKnopf" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
+            <Setter Property="MinHeight" Value="24"/>
+            <Setter Property="Padding" Value="8,1"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        </Style>
         <ItemsPanelTemplate x:Key="FeldSpalten">
             <UniformGrid Columns="{Binding Spalten, RelativeSource={RelativeSource AncestorType=controls:ObjektakteView}}"/>
         </ItemsPanelTemplate>
         <DataTemplate x:Key="FeldZeile">
-            <Grid Margin="0,3,16,3">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="145"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,10,0"
-                           FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}" ToolTip="{Binding Herkunft}"/>
+            <Grid Margin="0,1,12,1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="130"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding PflichtLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"
+                           FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}"
+                           ContextMenu="{StaticResource FeldMenue}">
+                    <TextBlock.ToolTip><TextBlock><Run Text="{Binding Label, Mode=OneWay}"/><LineBreak/><Run Text="{Binding Herkunft, Mode=OneWay}"/></TextBlock></TextBlock.ToolTip>
+                </TextBlock>
                 <StackPanel Grid.Column="1">
                     <WrapPanel Visibility="{Binding DataContext.Anpassen, RelativeSource={RelativeSource AncestorType=controls:ObjektakteView}, Converter={StaticResource Sichtbarkeit}}">
-                        <CheckBox Content="Sichtbar" IsChecked="{Binding Sichtbar}" Margin="0,2,12,2"/>
+                        <CheckBox Content="Sichtbar" IsChecked="{Binding Sichtbar}" Margin="0,1,12,1"/>
                         <CheckBox Content="Meine Übersicht" IsChecked="{Binding Favorit}"/>
                     </WrapPanel>
                     <TextBox Text="{Binding Text, UpdateSourceTrigger=LostFocus}" IsReadOnly="{Binding Feld.NurLesen}"
-                             MinHeight="30" MaxHeight="110" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
-                             AutomationProperties.Name="{Binding Label}">
-                        <TextBox.Style><Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                            <Style.Triggers><DataTrigger Binding="{Binding HatBearbeitbareAuswahl}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger></Style.Triggers>
-                        </Style></TextBox.Style>
-                    </TextBox>
+                             Style="{StaticResource KompaktText}" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                             AutomationProperties.Name="{Binding Label}"/>
                     <ComboBox ItemsSource="{Binding Optionen}" SelectedItem="{Binding Auswahl}" Text="{Binding Text, UpdateSourceTrigger=LostFocus}"
+                              Style="{StaticResource KompaktAuswahl}"
                               IsEditable="True" IsTextSearchEnabled="True" TextSearch.TextPath="Label" DisplayMemberPath="Anzeige"
-                              MaxDropDownHeight="280" MinHeight="30" AutomationProperties.Name="{Binding Label}"
-                              ToolTip="Auswählen oder einen vorhandenen Sonderwert eingeben. Rechtsklick: Liste bearbeiten">
-                        <ComboBox.ContextMenu>
-                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                <MenuItem Header="Liste bearbeiten…" Command="{Binding ListeBearbeitenCommand}"
-                                          ToolTip="Eigene Einträge ergänzen, Einträge umbenennen oder ausblenden — für alle Projekte">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                                </MenuItem>
-                            </ContextMenu>
-                        </ComboBox.ContextMenu>
-                        <ComboBox.Style><Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers><DataTrigger Binding="{Binding HatBearbeitbareAuswahl}" Value="True">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger></Style.Triggers>
-                        </Style></ComboBox.Style>
-                    </ComboBox>
-                    <TextBlock Text="{Binding Hinweis}" Style="{StaticResource NurMitText}" TextWrapping="Wrap" Foreground="{DynamicResource FaintBrush}" FontSize="{DynamicResource TextXS}"/>
+                              MaxDropDownHeight="280" AutomationProperties.Name="{Binding Label}"
+                              ToolTip="Auswählen oder einen vorhandenen Sonderwert eingeben. Rechtsklick: Feld markieren, Liste bearbeiten"/>
                 </StackPanel>
+                <!-- Der Hinweis («Zuerst Materialgruppe waehlen», «Originalcode: 133») ist ein Symbol neben dem Feld
+                     mit dem Text als Tooltip: Er kostet weder eine Zeile noch Breite des Eingabefelds. -->
+                <ui:FluentIcon Grid.Column="2" Glyph="&#xE946;" VerticalAlignment="Center" Margin="4,0,0,0"
+                               Foreground="{DynamicResource MutedBrush}" ToolTip="{Binding Hinweis}"
+                               AutomationProperties.Name="{Binding Hinweis}">
+                    <ui:FluentIcon.Style><Style TargetType="ui:FluentIcon">
+                        <Style.Triggers><DataTrigger Binding="{Binding Hinweis}" Value="">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger></Style.Triggers>
+                    </Style></ui:FluentIcon.Style>
+                </ui:FluentIcon>
             </Grid>
         </DataTemplate>
         <DataTemplate x:Key="ListenZeile">
-            <Expander Header="{Binding Titel}" Margin="0,6,0,2">
-                <StackPanel Margin="12,4">
-                    <DockPanel Margin="0,0,0,4">
+            <Expander Header="{Binding Titel}" Margin="0,2,0,0" Padding="6,2">
+                <StackPanel Margin="8,2">
+                    <DockPanel Margin="0,0,0,2">
                         <Button DockPanel.Dock="Right" Command="{Binding NeuCommand}"
                                 Visibility="{Binding DarfAnlegen, Converter={StaticResource Sichtbarkeit}}"
-                                Style="{StaticResource ToolbarButton}"
+                                Style="{StaticResource ListenZeileKnopf}" HorizontalAlignment="Right"
                                 ToolTip="Einen neuen Eintrag in dieser Liste anlegen und öffnen"
                                 AutomationProperties.Name="Neuer Eintrag in dieser Liste">
                             <StackPanel Orientation="Horizontal">
@@ -70,104 +133,115 @@
                                 <TextBlock Text="Neu" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <TextBlock Text="{Binding Spalten}" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Spalten}" VerticalAlignment="Center" FontSize="{DynamicResource TextS}"
+                                   Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Spalten}"/>
                     </DockPanel>
                     <TextBlock Text="{Binding Hinweis}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"
-                               Style="{StaticResource NurMitText}"/>
-                    <ItemsControl ItemsSource="{Binding Zeilen}">
+                               FontSize="{DynamicResource TextS}" Style="{StaticResource NurMitText}"/>
+                    <ItemsControl ItemsSource="{Binding SichtbareZeilen}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Content="{Binding Anzeige}" HorizontalContentAlignment="Left"
+                                <Button Content="{Binding Anzeige}" Style="{StaticResource ListenZeileKnopf}"
                                         Command="{Binding DataContext.OeffnenCommand,
                                                   RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                         CommandParameter="{Binding}"
-                                        Style="{StaticResource ToolbarButton}" Margin="0,1"
                                         ToolTip="Diesen Eintrag in der Maske öffnen"/>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0"
+                                Visibility="{Binding HatMehrereSeiten, Converter={StaticResource Sichtbarkeit}}">
+                        <Button Content="Zurück" Command="{Binding VorigeSeiteCommand}" Style="{StaticResource ListenZeileKnopf}"/>
+                        <TextBlock Text="{Binding Seitenstand}" Margin="8,0" VerticalAlignment="Center"/>
+                        <Button Content="Weiter" Command="{Binding NaechsteSeiteCommand}" Style="{StaticResource ListenZeileKnopf}"/>
+                    </StackPanel>
                 </StackPanel>
             </Expander>
         </DataTemplate>
     </UserControl.Resources>
-    <DockPanel Margin="12">
-        <StackPanel DockPanel.Dock="Top">
-            <DockPanel Margin="0,0,0,8">
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button Content="Speichern" Command="{Binding SpeichernCommand}" Style="{StaticResource ToolbarButton}" Margin="8,0,0,0"/>
-                    <Button Content="Alle auf" Command="{Binding AlleAufCommand}" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0"/>
-                    <Button Content="Alle zu" Command="{Binding AlleZuCommand}" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0"/>
-                    <Button Click="Mehr_Click" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0"
-                            ToolTip="Weitere Aktionen: Bauteile, Ansicht, Zusatzdatei"
-                            AutomationProperties.Name="Weitere Aktionen">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:FluentIcon Glyph="&#xE712;" Margin="0,0,6,0"/>
-                            <TextBlock Text="Mehr" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <Button.ContextMenu><ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                            <MenuItem Header="Deckel hinzufügen" Command="{Binding NeuerDeckelCommand}">
-                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="Sanierung hinzufügen" Command="{Binding NeueSanierungCommand}">
-                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="Als Hauptdeckel setzen" Command="{Binding HauptdeckelCommand}">
-                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE735;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                            </MenuItem>
-                            <Separator/>
-                            <MenuItem Header="Ansicht anpassen" IsCheckable="True" IsChecked="{Binding Anpassen}"/>
-                            <MenuItem Header="Nur Meine Übersicht" IsCheckable="True" IsChecked="{Binding NurFavoriten}"/>
-                            <Separator/>
-                            <MenuItem Header="Zusatzdatei exportieren" Command="{Binding ExportierenCommand}">
-                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE898;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="Zusatzdatei einlesen" Command="{Binding ImportierenCommand}">
-                                <MenuItem.Icon><ui:FluentIcon Glyph="&#xE896;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                            </MenuItem>
-                        </ContextMenu></Button.ContextMenu>
-                    </Button>
-                </StackPanel>
-                <ComboBox ItemsSource="{Binding Objekte}" DisplayMemberPath="Titel" SelectedValuePath="Akte" SelectedValue="{Binding Auswahl}"
-                          MinWidth="150" MaxWidth="330" HorizontalAlignment="Left" AutomationProperties.Name="Objekt in der Akte wählen"/>
-            </DockPanel>
-            <DockPanel Margin="0,0,0,8">
-                <TextBlock DockPanel.Dock="Left" Text="Suchen" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="{DynamicResource MutedBrush}"/>
-                <TextBox Text="{Binding Suche, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Felder und Werte suchen"
-                         ToolTip="Felder und Werte suchen, auch ausgeblendete"/>
-            </DockPanel>
-        </StackPanel>
+    <DockPanel Margin="8">
+        <!-- Kopf einzeilig: Objektwahl, Suche und Knoepfe teilen sich eine Zeile. -->
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="Speichern" Command="{Binding SpeichernCommand}" Style="{StaticResource ToolbarButton}" Margin="8,0,0,0"/>
+                <Button Content="Alle auf" Command="{Binding AlleAufCommand}" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0"/>
+                <Button Content="Alle zu" Command="{Binding AlleZuCommand}" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0"/>
+                <Button Click="Mehr_Click" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0"
+                        ToolTip="Weitere Aktionen: Bauteile, Ansicht, Zusatzdatei"
+                        AutomationProperties.Name="Weitere Aktionen">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:FluentIcon Glyph="&#xE712;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Mehr" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button.ContextMenu><ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="Deckel hinzufügen" Command="{Binding NeuerDeckelCommand}">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Sanierung hinzufügen" Command="{Binding NeueSanierungCommand}">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Als Hauptdeckel setzen" Command="{Binding HauptdeckelCommand}">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE735;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <Separator/>
+                        <MenuItem Header="Fehlende Felder aus GeoShop-XTF" Command="{Binding GeoShopErgaenzenCommand}"
+                                  ToolTip="Liest nur dieses Bauteil aus der gemerkten GeoShop-XTF: leere Felder, Kennungen und Objektakte ergänzen. Die Haltungslänge kommt immer aus der XTF.">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE895;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="GeoShop-XTF wählen…" Command="{Binding GeoShopDateiCommand}"
+                                  ToolTip="Die Datei wird programmweit gemerkt">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8E5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <Separator/>
+                        <MenuItem Header="Ansicht anpassen" IsCheckable="True" IsChecked="{Binding Anpassen}"/>
+                        <MenuItem Header="Nur Meine Übersicht" IsCheckable="True" IsChecked="{Binding NurFavoriten}"/>
+                        <Separator/>
+                        <MenuItem Header="Zusatzdatei exportieren" Command="{Binding ExportierenCommand}">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE898;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Zusatzdatei einlesen" Command="{Binding ImportierenCommand}">
+                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE896;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                        </MenuItem>
+                    </ContextMenu></Button.ContextMenu>
+                </Button>
+            </StackPanel>
+            <ComboBox DockPanel.Dock="Left" ItemsSource="{Binding Objekte}" DisplayMemberPath="Titel" SelectedValuePath="Akte" SelectedValue="{Binding Auswahl}"
+                      MinWidth="150" MaxWidth="300" AutomationProperties.Name="Objekt in der Akte wählen"/>
+            <TextBlock DockPanel.Dock="Left" Text="Suchen" VerticalAlignment="Center" Margin="12,0,8,0" Foreground="{DynamicResource MutedBrush}"/>
+            <TextBox Text="{Binding Suche, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Felder und Werte suchen"
+                     VerticalAlignment="Center" ToolTip="Felder und Werte suchen, auch ausgeblendete"/>
+        </DockPanel>
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding Meldung}" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"
-                   TextWrapping="Wrap" Margin="0,8,0,0"/>
+                   TextWrapping="Wrap" Margin="0,4,0,0"/>
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
-                <ItemsControl ItemsSource="{Binding KopfFelder}" ItemsPanel="{StaticResource FeldSpalten}" ItemTemplate="{StaticResource FeldZeile}" Margin="4,0,0,10"/>
-                <TextBlock Text="{Binding Tiefe}" Style="{StaticResource NurMitText}" Margin="4,0,0,8"/>
-                <ItemsControl ItemsSource="{Binding Suchtreffer}" Visibility="{Binding Sucht, Converter={StaticResource Sichtbarkeit}}" Margin="0,0,0,8">
+                <ItemsControl ItemsSource="{Binding KopfFelder}" ItemsPanel="{StaticResource FeldSpalten}" ItemTemplate="{StaticResource FeldZeile}" Margin="2,0,0,4"/>
+                <TextBlock Text="{Binding Tiefe}" Style="{StaticResource NurMitText}" FontSize="{DynamicResource TextS}" Margin="2,0,0,4"/>
+                <ItemsControl ItemsSource="{Binding Suchtreffer}" Visibility="{Binding Sucht, Converter={StaticResource Sichtbarkeit}}" Margin="0,0,0,4">
                     <ItemsControl.ItemTemplate><DataTemplate>
                         <Button Command="{Binding DataContext.TrefferOeffnenCommand, RelativeSource={RelativeSource AncestorType=controls:ObjektakteView}}"
-                                CommandParameter="{Binding}" HorizontalContentAlignment="Left" Margin="0,0,0,3">
+                                CommandParameter="{Binding}" Style="{StaticResource ListenZeileKnopf}" Margin="0,0,0,1">
                             <TextBlock Text="{Binding Titel}" TextWrapping="Wrap"/>
                         </Button>
                     </DataTemplate></ItemsControl.ItemTemplate>
                 </ItemsControl>
                 <ItemsControl ItemsSource="{Binding Abschnitte}">
                     <ItemsControl.ItemTemplate><DataTemplate>
-                        <Border Background="{DynamicResource SurfaceSubtleBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,0,5">
-                            <Expander IsExpanded="{Binding Offen, Mode=TwoWay}" Background="{DynamicResource SurfaceSubtleBrush}" Padding="8,5">
+                        <Border Background="{DynamicResource SurfaceSubtleBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,0,3">
+                            <Expander IsExpanded="{Binding Offen, Mode=TwoWay}" Background="{DynamicResource SurfaceSubtleBrush}" Padding="6,2">
                                 <Expander.Header><StackPanel Orientation="Horizontal">
                                     <TextBlock Text="{Binding Titel}" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding Umfang}" Margin="12,0,0,0" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Umfang}" Margin="10,0,0,0" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}" VerticalAlignment="Center"/>
                                 </StackPanel></Expander.Header>
-                                <StackPanel Background="{DynamicResource CardBrush}" Margin="0,6,0,0">
-                                    <ItemsControl ItemsSource="{Binding Felder}" ItemsPanel="{StaticResource FeldSpalten}" ItemTemplate="{StaticResource FeldZeile}" Margin="8,4,0,4"/>
-                                    <ItemsControl ItemsSource="{Binding Listen}" ItemTemplate="{StaticResource ListenZeile}" Margin="8,0"/>
+                                <StackPanel Background="{DynamicResource CardBrush}" Margin="0,3,0,0">
+                                    <ItemsControl ItemsSource="{Binding Felder}" ItemsPanel="{StaticResource FeldSpalten}" ItemTemplate="{StaticResource FeldZeile}" Margin="6,2,0,2"/>
+                                    <ItemsControl ItemsSource="{Binding Listen}" ItemTemplate="{StaticResource ListenZeile}" Margin="6,0,6,2"/>
                                 </StackPanel>
                             </Expander>
                         </Border>
                     </DataTemplate></ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <Expander Header="Originalwerte und Herkunft" Margin="8,5">
+                <Expander Header="Originalwerte und Herkunft" Margin="6,3" Padding="6,2">
                     <TextBox Text="{Binding Quellen, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"/>
                 </Expander>
             </StackPanel>

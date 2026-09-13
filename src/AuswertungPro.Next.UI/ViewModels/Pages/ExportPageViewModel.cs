@@ -81,6 +81,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
     /// <summary>Erzeugt aus dem aktuellen Projektstand revidierte XTF-Dateien.</summary>
     public IRelayCommand ErzeugeXtfRevisionCommand { get; }
     public IRelayCommand ErzeugeXtfNeuCommand { get; }
+    public IRelayCommand LieferungBearbeitenCommand { get; private set; } = new RelayCommand(() => { }, () => false);
 
     /// <summary>Verzeichnisbaum-Karten fuer Haltungen, Schaechte und Dichtheitspruefungen.</summary>
     public IReadOnlyList<DistributionTargetConfigViewModel> DistributionTargets { get; }
@@ -105,6 +106,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             explorerReveal: sp.ExplorerReveal,
             xtfVorschau: sp.XtfExportVorschau)
     {
+        LieferungBearbeitenCommand = new RelayCommand(() => XtfLieferungDialog.Zeige(sp.XtfLieferungen, sp.Dialogs));
     }
 
     [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen den Kosten-Speicher injizieren.")]

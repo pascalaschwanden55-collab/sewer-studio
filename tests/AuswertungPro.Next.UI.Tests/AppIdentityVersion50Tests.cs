@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Xml.Linq;
 using AuswertungPro.Next.UI;
@@ -6,17 +6,17 @@ using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
-public sealed class AppIdentityVersion45Tests
+public sealed class AppIdentityVersion50Tests
 {
     [Fact]
-    public void AppIdentity_verwendet_version_45_als_zentrale_versionsquelle()
+    public void AppIdentity_verwendet_version_50_als_zentrale_versionsquelle()
     {
-        Assert.Equal("4.5", AppIdentity.Version);
-        Assert.Equal("v4.5", AppIdentity.DisplayVersion);
+        Assert.Equal("5.0", AppIdentity.Version);
+        Assert.Equal("v5.0", AppIdentity.DisplayVersion);
     }
 
     [Fact]
-    public void UiProjekt_setzt_assembly_und_fileversion_auf_45()
+    public void UiProjekt_setzt_assembly_und_fileversion_auf_50()
     {
         var project = XDocument.Load(RepoFile(
             "src",
@@ -28,13 +28,13 @@ public sealed class AppIdentityVersion45Tests
             .Elements()
             .ToDictionary(element => element.Name.LocalName, element => element.Value, StringComparer.Ordinal);
 
-        Assert.Equal("4.5.0", propertyValues["Version"]);
-        Assert.Equal("4.5.0.0", propertyValues["FileVersion"]);
-        Assert.Equal("4.5.0.0", propertyValues["AssemblyVersion"]);
+        Assert.Equal("5.0.0", propertyValues["Version"]);
+        Assert.Equal("5.0.0.0", propertyValues["FileVersion"]);
+        Assert.Equal("5.0.0.0", propertyValues["AssemblyVersion"]);
     }
 
     [Fact]
-    public void StartupSplash_zeigt_keine_versionsangabe_und_bleibt_bei_vsa_kek_2020()
+    public void StartupSplash_zeigt_die_version_aus_AppIdentity_und_bleibt_bei_vsa_kek_2020()
     {
         var xaml = File.ReadAllText(RepoFile(
             "src",
@@ -49,13 +49,14 @@ public sealed class AppIdentityVersion45Tests
             "Windows",
             "StartupSplashWindow.xaml.cs"));
 
-        // Entscheid 2026-09-03: Der Startbildschirm traegt keine Versionsnummer mehr.
-        // Die Version bleibt in AppIdentity und den Einstellungen; der Splash liest sie nicht.
-        Assert.DoesNotContain("AppIdentity", xaml, StringComparison.Ordinal);
+        // Entscheid Pascal 13.09.2026 (hebt den Entscheid vom 03.09. auf): Der Startbildschirm zeigt
+        // die Version wieder - aber nur aus AppIdentity, nie als zweite, hart geschriebene Zahl.
+        Assert.Contains("AppIdentity.DisplayVersion", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("AppIdentity", codeBehind, StringComparison.Ordinal);
-        Assert.DoesNotContain("VersionText", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("v4.", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("v5.", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("v4.", codeBehind, StringComparison.Ordinal);
+        Assert.DoesNotContain("v5.", codeBehind, StringComparison.Ordinal);
         Assert.DoesNotContain("VSA-KEK 2023", codeBehind, StringComparison.Ordinal);
         Assert.Contains("VSA-KEK 2020", xaml, StringComparison.Ordinal);
         Assert.Contains("VSA-KEK 2020", codeBehind, StringComparison.Ordinal);

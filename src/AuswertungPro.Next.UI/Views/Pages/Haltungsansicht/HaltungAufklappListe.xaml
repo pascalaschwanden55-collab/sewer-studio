@@ -33,6 +33,7 @@
         <uc:GrossbuchstabenConverter x:Key="Grossbuchstaben"/>
         <local:HaltungAufgeklapptConverter x:Key="IstAufgeklappt"/>
         <local:SchmaleBreiteConverter x:Key="IstSchmal"/>
+        <local:FormularHoeheConverter x:Key="FormularHoehe"/>
         <local:PfeilBeschriftungConverter x:Key="PfeilBeschriftung"/>
         <!-- Leerer Wert wird zum Gedankenstrich, nie zu einer nackten Einheit. -->
         <local:FaktWertConverter x:Key="FaktWert"/>
@@ -285,7 +286,8 @@
         <DataTemplate x:Key="ObjektformularVorlage">
             <TabControl Margin="8,2,8,10" HorizontalContentAlignment="Stretch">
                 <TabItem Header="Alle Angaben" IsSelected="True">
-                    <controls:ObjektakteView Height="620"
+                    <controls:ObjektakteView
+                        Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=local:HaltungAufklappListe}, Converter={StaticResource FormularHoehe}}"
                         DataContext="{Binding Objektakte, RelativeSource={RelativeSource AncestorType=local:HaltungAufklappListe}}"/>
                 </TabItem>
                 <TabItem Header="Kurzansicht">

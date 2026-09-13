@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Application.UseCases.Objektakten;
@@ -21,6 +21,8 @@ public sealed class ObjektFeldViewModel : ObservableObject
     private string _hinweis = "";
     public ObjektFeldDefinition Feld { get; }
     public string Label => Feld.Label;
+    public bool Pflicht => Feld.WebgisPflicht;
+    public string PflichtLabel => Feld.Label + (Pflicht ? " *" : "");
     public bool Bearbeitbar => !Feld.NurLesen;
     public bool HatAuswahl => Feld.KatalogId is not null;
     public bool HatBearbeitbareAuswahl => HatAuswahl && Bearbeitbar;
@@ -76,8 +78,16 @@ public sealed class ObjektFeldViewModel : ObservableObject
             if (_akte.Werte.TryGetValue(Feld.Id, out var w) && w.KatalogId is not null
                 && (w.KatalogId == Feld.KatalogId || w.KatalogId == Feld.KatalogIdJeEltern)
                 && (w.Bestandswert is null || w.Bestandswert == _erwartet))
-                return ErlaubteOptionen().FirstOrDefault(e => e.Index == w.LokalerEintrag && e.OriginalCode == w.Originalcode)
-                    ?? ErlaubteOptionen().FirstOrDefault(e => e.OriginalCode == w.Originalcode && e.Label == w.Text);
+            {
+                var optionen = ErlaubteOptionen().ToArray();
+                // Die ersten Erhebungen hatten noch keine Originalcodes. Nach deren Ergänzung
+                // bleibt die alte Position zusammen mit dem Text eindeutig, auch bei doppelten
+                // Anzeigetexten. Nur beim Lesen zuordnen; gespeicherte Werte nicht umschreiben.
+                if (w.Originalcode is null)
+                    return optionen.SingleOrDefault(e => e.Index == w.LokalerEintrag && e.Label == w.Text);
+                return optionen.FirstOrDefault(e => e.Index == w.LokalerEintrag && e.OriginalCode == w.Originalcode)
+                    ?? optionen.SingleOrDefault(e => e.OriginalCode == w.Originalcode && e.Label == w.Text);
+            }
             var treffer = ErlaubteOptionen().Where(e => e.Label == Text).Take(2).ToArray();
             return treffer.Length == 1 ? treffer[0] : null;
         }
@@ -94,6 +104,23 @@ public sealed class ObjektFeldViewModel : ObservableObject
         get => _settings.ObjektakteFavoriten.GetValueOrDefault(Feld.Id);
         set { _settings.ObjektakteFavoriten[Feld.Id] = value; OnPropertyChanged(); }
     }
+
+    /// <summary>Feldmarkierung «will ich ausfuellen» (11.09.2026): Rechtsklick, eine der fuenf Farben,
+    /// programmweit je Feld gespeichert - in jedem Projekt dieselben markierten Felder. Leer heisst keine.</summary>
+    public static readonly IReadOnlyList<string> Farben = ["Gelb", "Orange", "Rot", "Grün", "Blau"];
+    public string Farbe
+    {
+        get => _settings.ObjektakteFarben.GetValueOrDefault(Feld.Id, "");
+        set
+        {
+            var farbe = value ?? "";
+            if (farbe.Length > 0 && !Farben.Contains(farbe)) throw new ArgumentException($"Unbekannte Markierungsfarbe «{farbe}».", nameof(value));
+            if (farbe.Length == 0) _settings.ObjektakteFarben.Remove(Feld.Id);
+            else _settings.ObjektakteFarben[Feld.Id] = farbe;
+            OnPropertyChanged();
+        }
+    }
+    public CommunityToolkit.Mvvm.Input.IRelayCommand<string> FarbeCommand => new CommunityToolkit.Mvvm.Input.RelayCommand<string>(f => Farbe = f ?? "");
 
     // Welche Eintraege gerade gelten (Katalog, Elterngruppe, eigene Ergaenzungen), entscheidet
     // die Bearbeitung - dieselbe Regel, gegen die auch das Schreiben prueft.
@@ -113,6 +140,7 @@ public sealed class ObjektFeldViewModel : ObservableObject
 
     public void AktualisiereAuswahl()
     {
+        LiesWertNeu();
         var elternHinweis = ElternHinweis();
         Hinweis = elternHinweis.Length > 0 ? elternHinweis
             : HatAuswahl && Text.Length > 0 && !ErlaubteOptionen().Any(e => e.Label == Text)
@@ -120,7 +148,22 @@ public sealed class ObjektFeldViewModel : ObservableObject
                 : "";
         if (_akte.Werte.TryGetValue(Feld.Id, out var roh) && roh.Originalcode is { Length: > 0 } code)
             Hinweis = (Hinweis + " Originalcode: " + code).Trim();
+        if (AuswertungPro.Next.Application.Xtf.Dss.DssMaterialZuordnung.Fuer(Feld.Id, Text) is { } material)
+            Hinweis = (Hinweis + " " + (material.Normwert is null ? material.Hinweis : $"DSS-Material: {material.Normwert}. {material.Hinweis}")).Trim();
         OnPropertyChanged(nameof(Optionen)); OnPropertyChanged(nameof(Auswahl));
+    }
+
+    /// <summary>Holt den angezeigten Wert aus dem Modell zurueck. Noetig, weil ein abhaengiges Feld
+    /// nicht nur von Hand, sondern auch durch einen Wechsel seines Elternwerts gesetzt wird
+    /// (Materialgruppe -> Materialdetail). Schreibt nie - der Text-Setter bleibt aussen vor.</summary>
+    private void LiesWertNeu()
+    {
+        _akte = _bearbeitung.Projekt.Objektakten.SingleOrDefault(a => a.Id == _akte.Id) ?? _akte;
+        _erwartet = _bearbeitung.Lies(_akte, Feld);
+        var text = _erwartet;
+        if (_akte.Werte.TryGetValue(Feld.Id, out var wert) && wert.Bestandswert == _erwartet)
+            text = wert.Text;
+        SetProperty(ref _text, text, nameof(Text));
     }
 
     private void Schreibe(string text, ObjektAuswahl? auswahl)

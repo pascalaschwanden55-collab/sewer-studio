@@ -35,6 +35,30 @@ public sealed class HaltungAufgeklapptConverter : IMultiValueConverter
 }
 
 /// <summary>
+/// Nova, Aufklapp-Liste: Hoehe der vollen Objektakte in der offenen Zeile (11.09.2026).
+///
+/// Vorher war der Kasten fest 620 px hoch — man scrollte innen im Kasten UND aussen in der Liste.
+/// Jetzt nimmt er die Hoehe der Liste minus Kopfzeile, Zeile und Register (<see cref="Abzug"/>);
+/// unter <see cref="Mindesthoehe"/> faellt er nie, damit auch ein kleines Fenster eine brauchbare
+/// Maske zeigt. Ohne gemessene Hoehe (0, unset) gilt der alte feste Wert.
+/// </summary>
+public sealed class FormularHoeheConverter : IValueConverter
+{
+    public const double Mindesthoehe = 360;
+    public const double Abzug = 150;
+    public const double Rueckfall = 620;
+
+    public static double Berechne(double listenhoehe)
+        => listenhoehe > 0 && !double.IsNaN(listenhoehe) ? Math.Max(Mindesthoehe, listenhoehe - Abzug) : Rueckfall;
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => Berechne(value is double hoehe ? hoehe : 0);
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
+
+/// <summary>
 /// Nova, Aufklapp-Liste: Ist die Liste zu schmal fuer fuenf Themen nebeneinander?
 ///
 /// Unter <see cref="Schwelle"/> Pixeln stehen die Themen des aufgeklappten Bereichs in zwei

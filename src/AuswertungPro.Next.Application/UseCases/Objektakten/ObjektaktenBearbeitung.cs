@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Domain.Models;
 
@@ -55,6 +55,7 @@ public sealed class ObjektaktenBearbeitung(Project projekt, Guid wurzelId, strin
 
     public string Lies(ObjektAkte akte, ObjektFeldDefinition feld)
     {
+        if (ObjektaktenSchachtVererbung.Lies(this, akte, feld, out var geerbt)) return geerbt;
         if (feld.Id == "schacht.deckelhoehe")
         {
             var deckel = projekt.Objektakten.SingleOrDefault(a => a.Id == Wurzel.HauptdeckelId && a.Art == "deckel");
@@ -116,6 +117,7 @@ public sealed class ObjektaktenBearbeitung(Project projekt, Guid wurzelId, strin
         var aktuell = Lies(akte, feld);
         if (aktuell != erwartet && aktuell != text)
             throw new InvalidOperationException("Der Wert wurde inzwischen geändert. Bitte die Akte neu öffnen; deine Eingabe wurde nicht übernommen.");
+        ObjektFeldPruefung.Pruefe(feld, text);
         // Der Eintrag darf aus dem Katalog des Feldes oder aus dessen Katalog je Elternwert
         // stammen; gemerkt wird, aus welchem - so bleibt ein gespeicherter Wert spaeter der
         // richtigen Liste zuzuordnen.
@@ -143,6 +145,30 @@ public sealed class ObjektaktenBearbeitung(Project projekt, Guid wurzelId, strin
             Bestandswert = bestandswert, VonHand = true, GeaendertUtc = DateTime.UtcNow
         };
         Geaendert();
+        ZieheAbhaengigeFelderNach(akte, feld);
+    }
+
+    /// <summary>WebGIS-Verhalten (Entscheid Pascal 12.09.2026): Wechselt der Elternwert, gehoert ein
+    /// bisheriges Detail meist nicht mehr zur neuen Gruppe - dann springt es auf den ersten Eintrag
+    /// der neuen Liste, statt sichtbar falsch stehen zu bleiben. Drei Faelle bleiben unangetastet:
+    /// ein leeres Feld (ein Gruppenwechsel darf keinen Wert erfinden), ein Wert, der auch zur neuen
+    /// Gruppe gehoert, und eine leere Kindliste (dort gibt es nichts zu setzen).</summary>
+    private void ZieheAbhaengigeFelderNach(ObjektAkte akte, ObjektFeldDefinition eltern)
+    {
+        foreach (var kind in FieldCatalog.Objektfelder.Felder
+                     .Where(f => f.Elternfeld == eltern.Id && f.Art == eltern.Art && !f.NurLesen))
+        {
+            var aktuell = Lies(akte, kind);
+            if (aktuell.Length == 0) continue;
+            var erlaubt = ErlaubteEintraege(akte, kind);
+            if (erlaubt.Count == 0) continue;
+            // Ein Speicherfeld liefert den normalisierten Bestandswert zurueck, nicht den Listentext -
+            // darum zaehlt zuerst der gemerkte Originalcode.
+            var wert = akte.Werte.GetValueOrDefault(kind.Id);
+            if (erlaubt.Any(e => wert?.Originalcode is { Length: > 0 } code && e.OriginalCode == code
+                    || e.Label == aktuell || wert is not null && e.Label == wert.Text)) continue;
+            Schreibe(akte, kind, aktuell, erlaubt[0].Label, erlaubt[0]);
+        }
     }
 
     /// <summary>Kennung des Katalogs, aus dem ein gewaehlter Eintrag stammt - der Katalog des

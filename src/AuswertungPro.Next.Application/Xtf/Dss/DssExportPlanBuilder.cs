@@ -10,12 +10,13 @@ public static class DssExportPlanBuilder
     {
         ObjektaktenStruktur.Pruefe(p);
         return p.Objektakten.Any(a => a.Quellen.Any(q => q.Modell == DssExportSchema.Modell)
-            || a.Art is "deckel" or "sanierung" || a.Werte.Any(v => v.Value.Text.Length > 0 || v.Value.VonHand));
+            || a.Art is not ("haltung" or "schacht") || a.Werte.Any(v => v.Value.Text.Length > 0 || v.Value.VonHand));
     }
 
     public static XtfNeuPlan Build(Project projekt, IReadOnlyDictionary<string, XtfNeuGeometrie>? geometrien = null)
     {
         ObjektaktenStruktur.Pruefe(projekt);
+        DssObjektaktenAbdeckung.Pruefe(projekt);
         var hinweise = new List<string> { "DSS_2020_1_LV95: belegte GeoShop-Felder, Deckel und Ereignisse als Normobjekte. Aktuelle Eingaben haben Vorrang." };
         var quellen = Quellen(projekt);
         var objekte = new Dictionary<string, DssExportObjekt>(StringComparer.Ordinal);
@@ -54,6 +55,8 @@ public static class DssExportPlanBuilder
         foreach (var q in quellen.Values.Where(q => q.Klasse == "Haltungspunkt" && knoten.Contains(q.Referenzen.GetValueOrDefault("AbwassernetzelementRef", "")))) Hole(q.Kennung);
         foreach (var q in quellen.Values.Where(q => q.Klasse is "Deckel" or "Einstiegshilfe" or "Erhaltungsereignis_AbwasserbauwerkAssoc"))
             if (bauwerke.Contains(q.Referenzen.GetValueOrDefault("AbwasserbauwerkRef", ""))) Hole(q.Kennung);
+        foreach (var q in quellen.Values.Where(q => DssEinbautenZuordnung.Elternrolle(q.Klasse) is not null))
+            if (objekte.ContainsKey(q.Referenzen.GetValueOrDefault(DssEinbautenZuordnung.Elternrolle(q.Klasse)!, ""))) Hole(q.Kennung);
         var ereignisse = objekte.Values.Where(o => o.Klasse == "Unterhalt").Select(o => o.Tid).ToHashSet();
         foreach (var q in quellen.Values.Where(q => q.Klasse == "Erhaltungsereignis_Ausfuehrende_FirmaAssoc"))
             if (ereignisse.Contains(q.Referenzen.GetValueOrDefault("Erhaltungsereignis_Ausfuehrende_FirmaAssocRef", ""))) Hole(q.Kennung);
@@ -73,6 +76,9 @@ public static class DssExportPlanBuilder
             objekte.Remove(assoc.Tid);
         }
         DssExportPruefung.Pruefe(objekte, hinweise);
+        foreach (var q in quellen.Values.Where(q => !objekte.ContainsKey(q.Kennung)
+            && q.Klasse != "Erhaltungsereignis_Ausfuehrende_FirmaAssoc"))
+            hinweise.Add($"Quellobjekt {q.Klasse} «{q.Werte.GetValueOrDefault("Bezeichnung", q.Kennung)}» ({q.Kennung}) fehlt in der XTF: gehört nicht zum exportierten Objektverbund.");
         hinweise.Add($"{objekte.Values.Sum(o => o.Werte.Count)} DSS-Feldwerte; {objekte.Values.Count(o => o.Klasse == "Deckel")} Deckel; {objekte.Values.Count(o => o.Klasse == "Unterhalt")} Unterhalts-/Sanierungsereignisse.");
         return new(objekte.Values.Select(o => o.Fertig()).ToArray(), hinweise, neu.Haltungen + importierteH.Count, neu.Schaechte + importierteS.Count, Dss: true);
 

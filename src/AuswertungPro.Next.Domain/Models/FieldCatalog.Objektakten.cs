@@ -66,6 +66,15 @@ public sealed record ObjektFeldDefinition
     public string Belegstatus { get; init; } = "offen";
     public bool NurLesen { get; init; }
     public int Quellanzeigen { get; init; }
+    public string? WebgisKennung { get; init; }
+    public int? WebgisReihenfolge { get; init; }
+    public string? WebgisTabelle { get; init; }
+    public string? ErbtVon { get; init; }
+    public bool WebgisPflicht { get; init; }
+    public string? WebgisFeldart { get; init; }
+    public string? WebgisEinheit { get; init; }
+    public int? WebgisMaxLaenge { get; init; }
+    public IReadOnlyList<string> NurBeiArt { get; init; } = [];
     public string? Elternfeld { get; init; }
     public string? BelegterElterntext { get; init; }
 
@@ -102,6 +111,8 @@ public sealed record ObjektAuswahl(int Index, string? OriginalCode, string Label
 /// sie haengt; <see cref="ZeigtAufObjektart"/> das Objekt, das ihre Zeilen fuehren.</summary>
 public sealed record ObjektUnterliste(string Art, string Id, string Label, IReadOnlyList<string> Spalten)
 {
+    public string? WebgisAbschnitt { get; init; }
+    public string? WebgisRelation { get; init; }
     /// <summary>Objektart der Zeilen. Leer bei einer Liste, die im Katalog kein Ziel nennt.</summary>
     public string ZeigtAufObjektart { get; init; } = "";
 

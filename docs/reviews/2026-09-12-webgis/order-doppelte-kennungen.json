@@ -1,0 +1,62 @@
+[
+  {
+    "tid": "ch24gwkdr3uE6xDU",
+    "klasse": "Haltung",
+    "bezeichnung": "07.1050143-07.1061526",
+    "sha256": "ab292a0999c58b5bcb5ae3d19cbb13d4cad05fb2e6116a6404224bee72c9cad3"
+  },
+  {
+    "tid": "ch24gwkdr3uE6xDU",
+    "klasse": "Haltung",
+    "bezeichnung": "07.1050143-07.1061526",
+    "sha256": "14eb46613dec5bb1592f1a3979fd8998c181cef8b18fd30493f24b0c1a062f00"
+  },
+  {
+    "tid": "ch24gwkdhlzs3Ci0",
+    "klasse": "Haltung",
+    "bezeichnung": "07.1061526-22187",
+    "sha256": "f15670b4aa0deb4b960fd2c3c1a9027ed2981479aebb0691a7d24bb8f7ab72e1"
+  },
+  {
+    "tid": "ch24gwkdhlzs3Ci0",
+    "klasse": "Haltung",
+    "bezeichnung": "07.1061526-22187",
+    "sha256": "6bb59a25d44f97625b2e02fdc55dbd95601f509b22708fb1011da5486252441c"
+  },
+  {
+    "tid": "ch24gwkdd0hwFeXP",
+    "klasse": "Haltung",
+    "bezeichnung": "07.1068824-10.44583",
+    "sha256": "96c31b35fa62714e2ef2b08fc67b412e0663f9b6dc1e72599b35bbb2dad3fd04"
+  },
+  {
+    "tid": "ch24gwkdd0hwFeXP",
+    "klasse": "Haltung",
+    "bezeichnung": "07.1068824-10.44583",
+    "sha256": "52f270a023e850095c172f61059f3aac8c2f766e26fc19edb53b362f26674cbd"
+  },
+  {
+    "tid": "ch24gwkdG1JCIz5W",
+    "klasse": "Haltung",
+    "bezeichnung": null,
+    "sha256": "ee4aa98b3e389899fec819f6102dad554ada52765cf03cbcd99dceaa10fe4879"
+  },
+  {
+    "tid": "ch24gwkdG1JCIz5W",
+    "klasse": "Haltung",
+    "bezeichnung": null,
+    "sha256": "eb0962cfde7094217944a0e78a352122a6f31ec84564aa7597908fa3e0d80524"
+  },
+  {
+    "tid": "ch24gwkdoo0hXB5G",
+    "klasse": "Haltung",
+    "bezeichnung": "...........-07.1068824",
+    "sha256": "8afc96ec8ead9b980e403e8b9f4a696776de47c0f967065997c414e13db4b5fd"
+  },
+  {
+    "tid": "ch24gwkdoo0hXB5G",
+    "klasse": "Haltung",
+    "bezeichnung": "...........-07.1068824",
+    "sha256": "ce8fafe8029e18aed3275c7c8e99833dd689d6b7a4819e5fb6531d1c36976ef5"
+  }
+]

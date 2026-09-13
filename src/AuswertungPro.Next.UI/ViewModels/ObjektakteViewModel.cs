@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Application.UseCases.Objektakten;
 using AuswertungPro.Next.Domain.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -22,12 +23,14 @@ public sealed class ObjektakteViewModel : ObservableObject
     private string _meldung = "Änderungen gehören zum Projekt. Bitte anschliessend speichern.";
     private IReadOnlyList<ObjektFeldViewModel> _felder = [];
     private IReadOnlyList<ObjektWebGisAbschnitt>? _abschnitte;
+    private bool _alleOeffnen;
 
     private readonly Action<ObjektFeldViewModel>? _listeBearbeiten;
 
     public ObjektakteViewModel(ObjektaktenBearbeitung bearbeitung, AppSettings settings, Action geaendert,
         Func<bool> darfSchreiben, Action speichern, Action? exportieren = null, Func<bool>? importieren = null,
-        Action<ObjektFeldViewModel>? listeBearbeiten = null)
+        Action<ObjektFeldViewModel>? listeBearbeiten = null,
+        Func<Task<bool>>? geoShopErgaenzen = null, Action? geoShopDatei = null)
     {
         _bearbeitung = bearbeitung; _settings = settings; _geaendert = geaendert; _darfSchreiben = darfSchreiben;
         _listeBearbeiten = listeBearbeiten;
@@ -50,6 +53,16 @@ public sealed class ObjektakteViewModel : ObservableObject
             _auswahl = bearbeitung.Verbund.First(a => a.Id == _auswahl.Id);
             LadeFelder(); OnPropertyChanged(nameof(Objekte)); OnPropertyChanged(nameof(Auswahl)); _geaendert();
         }, () => importieren is not null && darfSchreiben());
+        // «Fehlende Felder aus GeoShop-XTF» (11.09.2026): liest nur dieses Bauteil; Datei, Dialoge und
+        // Uebernahme liegen beim Aufrufer, die Maske liest danach nur ihre Felder neu.
+        GeoShopErgaenzenCommand = new AsyncRelayCommand(async () =>
+        {
+            if (geoShopErgaenzen is null || !darfSchreiben()) return;
+            if (!await geoShopErgaenzen()) return;
+            LadeFelder(); OnPropertyChanged(nameof(Objekte)); _geaendert();
+            Meldung = "Aus der GeoShop-XTF übernommen. Bitte das Projekt speichern.";
+        }, () => geoShopErgaenzen is not null && darfSchreiben());
+        GeoShopDateiCommand = new RelayCommand(() => geoShopDatei?.Invoke(), () => geoShopDatei is not null);
         LadeFelder();
         PropertyChanged += (_, e) =>
         {
@@ -68,9 +81,26 @@ public sealed class ObjektakteViewModel : ObservableObject
     public string Tiefe => _bearbeitung.BerechneteTiefe();
     public IReadOnlyList<ObjektFeldViewModel> KopfFelder => _felder.Where(Passt)
         .Where(f => ObjektaktenWebGisLayout.Bereich(f.Feld) == "Kopf").ToArray();
-    public IReadOnlyList<ObjektWebGisAbschnitt> Abschnitte => _abschnitte ??=
-        ObjektaktenWebGisLayout.Erstelle(Auswahl.Art, _felder.Where(Passt), Listen, _settings, Sucht);
-    public IRelayCommand AlleAufCommand => new RelayCommand(() => { foreach (var a in Abschnitte) a.Offen = true; });
+    public IReadOnlyList<ObjektWebGisAbschnitt> Abschnitte
+    {
+        get
+        {
+            if (_abschnitte is not null) return _abschnitte;
+            var abschnitte = ObjektaktenWebGisLayout.Erstelle(Auswahl.Art, _felder.Where(Passt), Listen, _settings, Sucht);
+            foreach (var a in abschnitte) a.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName != nameof(a.Offen) || !a.Offen || _alleOeffnen || Sucht) return;
+                foreach (var andere in abschnitte.Where(x => x != a && x.Offen)) andere.Offen = false;
+            };
+            return _abschnitte = abschnitte;
+        }
+    }
+    public IRelayCommand AlleAufCommand => new RelayCommand(() =>
+    {
+        _alleOeffnen = true;
+        try { foreach (var a in Abschnitte) a.Offen = true; }
+        finally { _alleOeffnen = false; }
+    });
     public IRelayCommand AlleZuCommand => new RelayCommand(() => { foreach (var a in Abschnitte) a.Offen = false; });
     public bool NurFavoriten { get => Thema == "Meine Übersicht"; set { Thema = value ? "Meine Übersicht" : "Alle Felder"; OnPropertyChanged(); } }
     public IRelayCommand NeuerDeckelCommand { get; }
@@ -82,6 +112,8 @@ public sealed class ObjektakteViewModel : ObservableObject
     public bool Sucht => !string.IsNullOrWhiteSpace(Suche);
     public IRelayCommand ExportierenCommand { get; }
     public IRelayCommand ImportierenCommand { get; }
+    public IAsyncRelayCommand GeoShopErgaenzenCommand { get; }
+    public IRelayCommand GeoShopDateiCommand { get; }
     public IReadOnlyList<ObjektWahl> Objekte => _bearbeitung.Verbund.Select(a => new ObjektWahl(a,
         a.Id == _bearbeitung.WurzelId ? _bearbeitung.Bezugsname(a.Id) : a.ToString())).ToArray();
     public ObjektAkte Auswahl

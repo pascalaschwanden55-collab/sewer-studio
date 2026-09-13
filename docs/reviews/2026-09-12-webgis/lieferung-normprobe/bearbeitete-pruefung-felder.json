@@ -1,0 +1,485 @@
+[
+  {
+    "Klasse": "Absperr_Drosselorgan",
+    "Anzahl": 1,
+    "Felder": 20,
+    "Bearbeitbar": 19,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Antrieb",
+        "Werte": 10
+      },
+      {
+        "Schluessel": "Art",
+        "Werte": 16
+      },
+      {
+        "Schluessel": "Signaluebermittlung",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Steuerung",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Verstellbarkeit",
+        "Werte": 4
+      }
+    ]
+  },
+  {
+    "Klasse": "Abwasserbauwerk_Text",
+    "Anzahl": 5,
+    "Felder": 9,
+    "Bearbeitbar": 9,
+    "Auswahllisten": [
+      {
+        "Schluessel": "TextHAli",
+        "Werte": 3
+      },
+      {
+        "Schluessel": "TextVAli",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Plantyp",
+        "Werte": 5
+      }
+    ]
+  },
+  {
+    "Klasse": "Abwasserknoten",
+    "Anzahl": 1,
+    "Felder": 14,
+    "Bearbeitbar": 13,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Funktion_Knoten_Melioration",
+        "Werte": 9
+      },
+      {
+        "Schluessel": "Hoehengenauigkeit",
+        "Werte": 6
+      }
+    ]
+  },
+  {
+    "Klasse": "Deckel",
+    "Anzahl": 1,
+    "Felder": 18,
+    "Bearbeitbar": 17,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Instandstellung",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Deckelform",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Entlueftung",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Lagegenauigkeit",
+        "Werte": 6
+      },
+      {
+        "Schluessel": "Material",
+        "Werte": 7
+      },
+      {
+        "Schluessel": "Schlammeimer",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Verschluss",
+        "Werte": 4
+      }
+    ]
+  },
+  {
+    "Klasse": "Einstiegshilfe",
+    "Anzahl": 1,
+    "Felder": 8,
+    "Bearbeitbar": 7,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Instandstellung",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Art",
+        "Werte": 10
+      }
+    ]
+  },
+  {
+    "Klasse": "Erhaltungsereignis_AbwasserbauwerkAssoc",
+    "Anzahl": 2,
+    "Felder": 2,
+    "Bearbeitbar": 2,
+    "Auswahllisten": []
+  },
+  {
+    "Klasse": "FoerderAggregat",
+    "Anzahl": 1,
+    "Felder": 27,
+    "Bearbeitbar": 26,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Antrieb",
+        "Werte": 10
+      },
+      {
+        "Schluessel": "Funktion",
+        "Werte": 7
+      },
+      {
+        "Schluessel": "Signaluebermittlung",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Steuerung",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Verstellbarkeit",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "AufstellungAntrieb",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "AufstellungFoerderaggregat",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Bauart",
+        "Werte": 8
+      }
+    ]
+  },
+  {
+    "Klasse": "Haltung",
+    "Anzahl": 1,
+    "Felder": 26,
+    "Bearbeitbar": 24,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Innenschutz",
+        "Werte": 7
+      },
+      {
+        "Schluessel": "Lagebestimmung",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Leckschutz",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Material",
+        "Werte": 25
+      },
+      {
+        "Schluessel": "Reliner_Art",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Reliner_Bautechnik",
+        "Werte": 10
+      },
+      {
+        "Schluessel": "Reliner_Material",
+        "Werte": 17
+      }
+    ]
+  },
+  {
+    "Klasse": "Haltung_Text",
+    "Anzahl": 5,
+    "Felder": 9,
+    "Bearbeitbar": 9,
+    "Auswahllisten": [
+      {
+        "Schluessel": "TextHAli",
+        "Werte": 3
+      },
+      {
+        "Schluessel": "TextVAli",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Plantyp",
+        "Werte": 5
+      }
+    ]
+  },
+  {
+    "Klasse": "Haltungspunkt",
+    "Anzahl": 2,
+    "Felder": 13,
+    "Bearbeitbar": 12,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Auslaufform",
+        "Werte": 6
+      },
+      {
+        "Schluessel": "Hoehengenauigkeit",
+        "Werte": 6
+      },
+      {
+        "Schluessel": "Rohrverschluss_Kappe",
+        "Werte": 4
+      }
+    ]
+  },
+  {
+    "Klasse": "Kanal",
+    "Anzahl": 1,
+    "Felder": 37,
+    "Bearbeitbar": 35,
+    "Auswahllisten": [
+      {
+        "Schluessel": "BaulicherZustand",
+        "Werte": 7
+      },
+      {
+        "Schluessel": "Finanzierung",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Sanierungsbedarf",
+        "Werte": 7
+      },
+      {
+        "Schluessel": "Status",
+        "Werte": 14
+      },
+      {
+        "Schluessel": "WBW_Bauart",
+        "Werte": 7
+      },
+      {
+        "Schluessel": "Zugaenglichkeit",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Bettung_Umhuellung",
+        "Werte": 15
+      },
+      {
+        "Schluessel": "FunktionHierarchisch",
+        "Werte": 15
+      },
+      {
+        "Schluessel": "FunktionHydraulisch",
+        "Werte": 13
+      },
+      {
+        "Schluessel": "FunktionMelioration",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Nutzungsart_geplant",
+        "Werte": 10
+      },
+      {
+        "Schluessel": "Nutzungsart_Ist",
+        "Werte": 10
+      },
+      {
+        "Schluessel": "Sickerung",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Verbindungsart",
+        "Werte": 14
+      }
+    ]
+  },
+  {
+    "Klasse": "Leapingwehr",
+    "Anzahl": 1,
+    "Felder": 22,
+    "Bearbeitbar": 21,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Antrieb",
+        "Werte": 10
+      },
+      {
+        "Schluessel": "Funktion",
+        "Werte": 7
+      },
+      {
+        "Schluessel": "Signaluebermittlung",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Steuerung",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Verstellbarkeit",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Oeffnungsform",
+        "Werte": 6
+      }
+    ]
+  },
+  {
+    "Klasse": "Messstelle",
+    "Anzahl": 1,
+    "Felder": 13,
+    "Bearbeitbar": 12,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Staukoerper",
+        "Werte": 6
+      },
+      {
+        "Schluessel": "Zweck",
+        "Werte": 5
+      }
+    ]
+  },
+  {
+    "Klasse": "Normschacht",
+    "Anzahl": 1,
+    "Felder": 34,
+    "Bearbeitbar": 32,
+    "Auswahllisten": [
+      {
+        "Schluessel": "BaulicherZustand",
+        "Werte": 7
+      },
+      {
+        "Schluessel": "Finanzierung",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Sanierungsbedarf",
+        "Werte": 7
+      },
+      {
+        "Schluessel": "Status",
+        "Werte": 14
+      },
+      {
+        "Schluessel": "WBW_Bauart",
+        "Werte": 7
+      },
+      {
+        "Schluessel": "Zugaenglichkeit",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Amphibienausstieg",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Funktion",
+        "Werte": 23
+      },
+      {
+        "Schluessel": "Interventionsmoeglichkeit",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Material",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Oberflaechenzulauf",
+        "Werte": 6
+      }
+    ]
+  },
+  {
+    "Klasse": "Organisation",
+    "Anzahl": 1,
+    "Felder": 8,
+    "Bearbeitbar": 7,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Organisationstyp",
+        "Werte": 7
+      },
+      {
+        "Schluessel": "Status",
+        "Werte": 2
+      }
+    ]
+  },
+  {
+    "Klasse": "Streichwehr",
+    "Anzahl": 1,
+    "Felder": 24,
+    "Bearbeitbar": 23,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Antrieb",
+        "Werte": 10
+      },
+      {
+        "Schluessel": "Funktion",
+        "Werte": 7
+      },
+      {
+        "Schluessel": "Signaluebermittlung",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Steuerung",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Verstellbarkeit",
+        "Werte": 4
+      },
+      {
+        "Schluessel": "Ueberfallkante",
+        "Werte": 6
+      },
+      {
+        "Schluessel": "Wehr_Art",
+        "Werte": 3
+      }
+    ]
+  },
+  {
+    "Klasse": "Trockenwetterfallrohr",
+    "Anzahl": 1,
+    "Felder": 8,
+    "Bearbeitbar": 7,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Instandstellung",
+        "Werte": 4
+      }
+    ]
+  },
+  {
+    "Klasse": "Unterhalt",
+    "Anzahl": 2,
+    "Felder": 16,
+    "Bearbeitbar": 15,
+    "Auswahllisten": [
+      {
+        "Schluessel": "Status",
+        "Werte": 5
+      },
+      {
+        "Schluessel": "Art",
+        "Werte": 9
+      }
+    ]
+  }
+]

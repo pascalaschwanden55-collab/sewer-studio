@@ -13,14 +13,18 @@ internal static class DssExportPruefung
         ["Erhaltungsereignis_AbwasserbauwerkAssoc"] = ["AbwasserbauwerkRef", "Erhaltungsereignis_AbwasserbauwerkAssocRef"],
         ["Erhaltungsereignis_Ausfuehrende_FirmaAssoc"] = ["Ausfuehrende_FirmaRef", "Erhaltungsereignis_Ausfuehrende_FirmaAssocRef"]
     };
-    internal static readonly string[] Bauwerke = ["Kanal", "Normschacht", "Spezialbauwerk", "Versickerungsanlage", "Einleitstelle"];
-    private static readonly Dictionary<string, string[]> Ziele = new()
+    internal static readonly string[] Bauwerke = ["Kanal", "Normschacht", "Spezialbauwerk", "Versickerungsanlage", "Einleitstelle", "ARABauwerk"];
+    internal static readonly Dictionary<string, string[]> Ziele = new()
     {
         ["DatenherrRef"] = ["Organisation"], ["DatenlieferantRef"] = ["Organisation"],
         ["EigentuemerRef"] = ["Organisation"], ["BetreiberRef"] = ["Organisation"], ["Ausfuehrende_FirmaRef"] = ["Organisation"],
         ["AbwasserbauwerkRef"] = Bauwerke, ["vonHaltungspunktRef"] = ["Haltungspunkt"], ["nachHaltungspunktRef"] = ["Haltungspunkt"],
         ["RohrprofilRef"] = ["Rohrprofil"], ["AbwassernetzelementRef"] = ["Haltung", "Abwasserknoten"],
         ["Hydr_GeometrieRef"] = ["Hydr_Geometrie"],
+        ["AbwasserknotenRef"] = ["Abwasserknoten"], ["UeberlaufNachRef"] = ["Abwasserknoten"],
+        ["SteuerungszentraleRef"] = ["Steuerungszentrale"], ["UeberlaufcharakteristikRef"] = ["Ueberlaufcharakteristik"],
+        ["UeberlaufRef"] = ["FoerderAggregat", "Leapingwehr", "Streichwehr"],
+        ["HaltungRef"] = ["Haltung"], ["AbwasserreinigungsanlageRef"] = ["Abwasserreinigungsanlage"],
         ["Erhaltungsereignis_AbwasserbauwerkAssocRef"] = ["Unterhalt"], ["Erhaltungsereignis_Ausfuehrende_FirmaAssocRef"] = ["Unterhalt"]
     };
     public static void Pruefe(Dictionary<string, DssExportObjekt> objekte, List<string> hinweise)
@@ -67,42 +71,51 @@ internal static class DssExportPruefung
                 else if (Ziele[rolle].SequenceEqual(new[] { "Organisation" })) externe.Add(tid);
                 else Fehler(o, $"Bezugsobjekt {rolle} ({tid}) fehlt. GeoShop-Verbund erneut ergänzen");
             }
-            if (!assoc)
+            if (!assoc && o.Klasse is not ("Abwasserbauwerk_Text" or "Haltung_Text"))
             {
-                var gruppe = Bauwerke.Contains(o.Klasse) ? "Abwasserbauwerk" : o.Klasse is "Haltung" or "Abwasserknoten" ? "Abwassernetzelement" : o.Klasse is "Deckel" or "Einstiegshilfe" ? "BauwerksTeil" : o.Klasse;
+                var gruppe = Bauwerke.Contains(o.Klasse) ? "Abwasserbauwerk" : o.Klasse is "Haltung" or "Abwasserknoten" ? "Abwassernetzelement"
+                    : o.Klasse is "Deckel" or "Einstiegshilfe" or "Trockenwetterfallrohr" ? "BauwerksTeil"
+                    : o.Klasse is "FoerderAggregat" or "Leapingwehr" or "Streichwehr" ? "Ueberlauf" : o.Klasse;
                 var key = gruppe + "|" + o.Werte.GetValueOrDefault("Bezeichnung") + "|" + (o.Klasse == "Unterhalt" ? o.Werte.GetValueOrDefault("Zeitpunkt") : o.Refs.GetValueOrDefault("DatenherrRef"));
                 if (o.Klasse != "Organisation" && !unique.Add(key)) Fehler(o, "Bezeichnung ist beim gleichen Datenherrn nicht eindeutig");
             }
         }
         if (externe.Count > 0) hinweise.Add($"{externe.Count} externe Organisationsverweise bleiben mit Original-TID erhalten: {string.Join(", ", externe.Order())}. Die Organisationsstammdaten fehlen in GeoShop und müssen im Zielkataster vorhanden sein; Namen und Rollen werden nicht erfunden.");
     }
-    private static IEnumerable<string> PflichtRefs(string klasse)
+    internal static IEnumerable<string> PflichtRefs(string klasse)
     {
         if (Associationen.TryGetValue(klasse, out var rollen)) return rollen;
         if (klasse == "Organisation") return [];
+        if (klasse == "Abwasserbauwerk_Text") return ["AbwasserbauwerkRef"];
+        if (klasse == "Haltung_Text") return ["HaltungRef"];
         return new[] { "DatenherrRef", "DatenlieferantRef" }.Concat(klasse switch
         {
             "Haltung" => ["vonHaltungspunktRef", "nachHaltungspunktRef"],
-            "Deckel" or "Einstiegshilfe" => ["AbwasserbauwerkRef"],
+            "Deckel" or "Einstiegshilfe" or "Trockenwetterfallrohr" => ["AbwasserbauwerkRef"],
+            "FoerderAggregat" or "Leapingwehr" or "Streichwehr" or "Absperr_Drosselorgan" => ["AbwasserknotenRef"],
+            "ARABauwerk" => ["EigentuemerRef", "AbwasserreinigungsanlageRef"],
             _ when Bauwerke.Contains(klasse) => ["EigentuemerRef"],
             _ => Array.Empty<string>()
         });
     }
-    private static IEnumerable<string> ErlaubteRefs(string klasse) => PflichtRefs(klasse).Concat(klasse switch
+    internal static IEnumerable<string> ErlaubteRefs(string klasse) => PflichtRefs(klasse).Concat(klasse switch
     {
         "Haltung" => ["AbwasserbauwerkRef", "RohrprofilRef"], "Abwasserknoten" => ["AbwasserbauwerkRef", "Hydr_GeometrieRef"],
         "Haltungspunkt" => ["AbwassernetzelementRef"],
         "Unterhalt" => ["Ausfuehrende_FirmaRef"],
+        "FoerderAggregat" or "Leapingwehr" or "Streichwehr" => ["UeberlaufNachRef", "SteuerungszentraleRef", "UeberlaufcharakteristikRef"],
+        "Absperr_Drosselorgan" => ["SteuerungszentraleRef", "UeberlaufRef"],
+        "Messstelle" => ["AbwasserbauwerkRef", "AbwasserreinigungsanlageRef", "BetreiberRef"],
         _ when Bauwerke.Contains(klasse) => ["BetreiberRef"], _ => Array.Empty<string>()
     });
-    private static void PruefeStruktur(DssExportObjekt o, string feld, string xml)
+    internal static void PruefeStruktur(DssExportObjekt o, string feld, string xml)
     {
         using var reader = XmlReader.Create(new StringReader(xml), new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 4_000_000 });
         var e = XElement.Load(reader);
         if (e.Name.LocalName != feld || e.Name.NamespaceName != "http://www.interlis.ch/INTERLIS2.3"
             || e.DescendantsAndSelf().Any(x => x.Name.Namespace != e.Name.Namespace || x.Attributes().Any(a => a.Name.LocalName is "REF" or "TID"))) Fehler(o, $"ungültige Geometriestruktur {feld}");
         var child = e.Elements().ToArray();
-        var erwartet = feld == "Lage" ? "COORD" : feld == "Verlauf" ? "POLYLINE" : "SURFACE";
+        var erwartet = feld is "Lage" or "TextPos" ? "COORD" : feld == "Verlauf" ? "POLYLINE" : "SURFACE";
         if (child.Length != 1 || child[0].Name.LocalName != erwartet) Fehler(o, $"falscher Geometrietyp für {feld}");
         foreach (var punkt in e.Descendants().Where(x => x.Name.LocalName is "COORD" or "ARC"))
         {

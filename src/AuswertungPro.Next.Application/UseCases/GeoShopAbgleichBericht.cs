@@ -10,8 +10,9 @@ public static class GeoShopAbgleichBericht
         var text = new StringBuilder();
         text.AppendLine($"Quelle: {plan.Quelle}");
         text.AppendLine($"{plan.Positionen.Count} Bauteile ändern; " +
-            $"{plan.Positionen.Sum(p => p.Felder.Count(f => !f.IstKennung))} leere Fachfelder ergänzen.");
-        text.AppendLine("Gefüllte Fachfelder bleiben erhalten. Es werden keine neuen Haltungen oder Schächte angelegt.");
+            $"{plan.Positionen.Sum(p => p.Felder.Count(f => !f.IstKennung && !f.Ersetzen))} leere Fachfelder ergänzen; " +
+            $"{plan.Positionen.Sum(p => p.Felder.Count(f => f.Ersetzen))} Haltungslängen aus der XTF ersetzen.");
+        text.AppendLine("Gefüllte Fachfelder bleiben erhalten; nur die Haltungslänge kommt immer aus der XTF. Es werden keine neuen Haltungen oder Schächte angelegt.");
         text.AppendLine("Kennungen werden für den XTF-Export übernommen. Das ist noch keine Freigabe für den GEONIS-Rückimport.");
         text.AppendLine("Die XTF liefert kein bestätigtes GN_LAST_EDITED_DATE. Der Konfliktabgleich mit Trigonet bleibt offen.");
         foreach (var p in plan.Positionen)
@@ -24,7 +25,8 @@ public static class GeoShopAbgleichBericht
                 text.AppendLine("Verknüpfungen aus GeoShop:"); text.AppendLine(p.NeueKennungen);
             }
             foreach (var f in p.Felder)
-                text.AppendLine($"{f.Feld}: {(string.IsNullOrWhiteSpace(f.Vorher) ? "(leer)" : f.Vorher)} → {f.Nachher}");
+                text.AppendLine($"{f.Feld}: {(string.IsNullOrWhiteSpace(f.Vorher) ? "(leer)" : f.Vorher)} → {f.Nachher}"
+                    + (f.Ersetzen ? " (ersetzt – kommt immer aus der XTF)" : ""));
             if (p.NeueAktenwerte)
             {
                 text.AppendLine("Objektakte: Originalwerte und verknüpfte Deckel/Ereignisse ergänzen (vorhandene Handwerte bleiben).");

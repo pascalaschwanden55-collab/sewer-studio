@@ -1,0 +1,89 @@
+{
+  "info": {
+    "Datei": "C:\\Sewer-Studio_KI_4.5\\.tmp\\lieferung-normprobe.ssxtf",
+    "Quelle": "C:\\Sewer-Studio_KI_4.5\\docs\\reviews\\2026-09-12-webgis\\lieferung-normprobe\\Quelle.xtf",
+    "Sha256": "570619c6b459807599f88e1a3abd0d29d4a5e9aa3c56e70025891b6275c9820a",
+    "Anzahl": 29,
+    "Geaendert": 2,
+    "Gruppen": [
+      {
+        "Klasse": "Absperr_Drosselorgan",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Abwasserbauwerk_Text",
+        "Anzahl": 5
+      },
+      {
+        "Klasse": "Abwasserknoten",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Deckel",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Einstiegshilfe",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Erhaltungsereignis_AbwasserbauwerkAssoc",
+        "Anzahl": 2
+      },
+      {
+        "Klasse": "FoerderAggregat",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Haltung",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Haltung_Text",
+        "Anzahl": 5
+      },
+      {
+        "Klasse": "Haltungspunkt",
+        "Anzahl": 2
+      },
+      {
+        "Klasse": "Kanal",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Leapingwehr",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Messstelle",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Normschacht",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Organisation",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Streichwehr",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Trockenwetterfallrohr",
+        "Anzahl": 1
+      },
+      {
+        "Klasse": "Unterhalt",
+        "Anzahl": 2
+      }
+    ]
+  },
+  "Objekte": 29,
+  "FehlerhafteObjekte": 0,
+  "ExterneOrganisationen": 0,
+  "importSekunden": 0.0772007,
+  "pruefSekunden": 0.0199156,
+  "PeakWorkingSet": 47751168
+}

@@ -11,7 +11,7 @@ public partial class ObjektakteWindow : Window
     public ObjektakteWindow(ObjektakteViewModel model)
     {
         InitializeComponent(); DataContext = model;
-        SizeChanged += (_, _) => Spalten = ActualWidth < 920 ? 1 : 2;
+        SizeChanged += (_, _) => Spalten = Controls.ObjektakteView.SpaltenFuerBreite(ActualWidth);
         Closing += (_, _) =>
         {
             if (System.Windows.Input.Keyboard.FocusedElement is System.Windows.Controls.TextBox text)

@@ -13,7 +13,8 @@ public static class GeoShopObjektaktenImport
     public static bool HatNeueQuellen(Project projekt, Guid id, GeoShopBauteil quelle)
     {
         var akte = projekt.Objektakten.SingleOrDefault(a => a.Id == id);
-        return quelle.Quellen?.Any(q => akte is null || !akte.Quellen.Any(a => Gleich(a, q))) == true;
+        return quelle.Quellen is { } quellen && (quellen.Any(q => akte is null || !akte.Quellen.Any(a => Gleich(a, q)))
+            || GeoShopHaltungspunktImport.Fehlen(projekt, id, quellen) || GeoShopEinbautenImport.Fehlen(projekt, id, quellen));
     }
 
     public static string Stand(Project projekt, Guid id) => JsonSerializer.Serialize(projekt.Objektakten
@@ -28,6 +29,8 @@ public static class GeoShopObjektaktenImport
         {
             if (!root.Quellen.Any(a => Gleich(a, q))) root.Quellen.Add(Kopie(q));
         }
+        GeoShopHaltungspunktImport.Uebernehme(projekt, id, quellen);
+        GeoShopEinbautenImport.Uebernehme(projekt, id, quellen);
         var k = quelle.Kennungen;
         var primaer = quellen.SingleOrDefault(q => q.Kennung == (art == "haltung" ? k.Haltung : k.Knoten));
         var bauwerk = quellen.SingleOrDefault(q => q.Kennung == (art == "haltung" ? k.Kanal : k.Bauwerk));
@@ -51,21 +54,25 @@ public static class GeoShopObjektaktenImport
         // Die Hauptdeckelwahl wird nicht aus einer blossen Einzelmenge erfunden.
         foreach (var q in quellen.Where(q => q.Klasse is "Deckel" or "Unterhalt"))
         {
-            if (q.Klasse == "Unterhalt" && !q.Werte.GetValueOrDefault("Art", "").StartsWith("Sanierung_", StringComparison.Ordinal)) continue;
             if (q.Klasse == "Deckel" && (art != "schacht" || q.Referenzen.GetValueOrDefault("AbwasserbauwerkRef") != k.Bauwerk)) continue;
-            var subart = q.Klasse == "Deckel" ? "deckel" : "sanierung";
-            var sub = projekt.Objektakten.FirstOrDefault(a => a.Art == subart && a.Quellen.Any(s => s.Modell == q.Modell && s.Kennung == q.Kennung));
+            var subart = q.Klasse == "Deckel" ? "deckel"
+                : q.Werte.GetValueOrDefault("Art", "").StartsWith("Sanierung_", StringComparison.Ordinal) ? "sanierung" : "unterhalt";
+            // Eine vor Ort geänderte Ereignisart erzeugt beim erneuten Abgleich keine zweite Akte.
+            var sub = projekt.Objektakten.SingleOrDefault(a => (q.Klasse == "Deckel" ? a.Art == "deckel" : a.Art is "sanierung" or "unterhalt")
+                && a.Quellen.Any(s => s.Modell == q.Modell && s.Klasse == q.Klasse && s.Kennung == q.Kennung));
             if (sub is null)
             {
                 var hash = SHA256.HashData(Encoding.UTF8.GetBytes(q.Modell + ":" + q.Klasse + ":" + q.Kennung));
                 sub = new ObjektAkte { Id = new Guid(hash.AsSpan(0, 16)), Art = subart };
                 projekt.Objektakten.Add(sub);
             }
+            subart = sub.Art;
             if (!sub.Bezuege.Contains(id)) sub.Bezuege.Add(id);
             if (!sub.Quellen.Any(a => Gleich(a, q))) sub.Quellen.Add(Kopie(q));
             foreach (var feld in FieldCatalog.Objektfelder.Felder.Where(f => f.Art == subart))
-                Fuellen(sub, feld.Id, AusAttribut(feld.Exportziel, [q]) ?? DssWert(feld, q, null, null, null));
-            if (subart == "sanierung")
+                Fuellen(sub, feld.Id, DssFeldZuordnung.UnterhaltAnzeige(feld,
+                    AusAttribut(feld.Exportziel, [q]) ?? DssWert(feld, q, null, null, null)));
+            if (q.Klasse == "Unterhalt")
             {
                 var firmenbelege = quellen.Where(s => s.Klasse == "Erhaltungsereignis_Ausfuehrende_FirmaAssoc"
                     && s.Referenzen.GetValueOrDefault("Erhaltungsereignis_Ausfuehrende_FirmaAssocRef") == q.Kennung).ToArray();
@@ -76,12 +83,12 @@ public static class GeoShopObjektaktenImport
                     && s.System == q.System).ToArray();
                 foreach (var beleg in firmenbelege.Concat(firmen))
                     if (!sub.Quellen.Any(s => Gleich(s, beleg))) sub.Quellen.Add(Kopie(beleg));
-                if (firmenIds.Length == 1 && firmen.Length == 1)
+                if (subart == "sanierung" && firmenIds.Length == 1 && firmen.Length == 1)
                     Fuellen(sub, "sanierung.firma", Wert(firmen[0], "Bezeichnung"));
                 foreach (var (feld, attribut) in new[] { ("bemerkung", "Bemerkung"), ("ausfuehrender", "Ausfuehrender"),
                     ("datengrundlage", "Datengrundlage"), ("dauer", "Dauer"), ("detaildaten", "Detaildaten"),
                     ("ergebnis", "Ergebnis"), ("grund", "Grund"), ("kosten", "Kosten") })
-                    Fuellen(sub, "sanierung." + feld, Wert(q, attribut));
+                    if (subart == "sanierung") Fuellen(sub, "sanierung." + feld, Wert(q, attribut));
             }
         }
         projekt.Version = Math.Max(3, projekt.Version); projekt.Dirty = true; projekt.ModifiedAtUtc = DateTime.UtcNow;
@@ -114,11 +121,11 @@ public static class GeoShopObjektaktenImport
         var q = quellen.FirstOrDefault(q => q?.Klasse == m.Groups[1].Value);
         return Wert(q, m.Groups[2].Value);
     }
-    private static bool Gleich(ObjektQuellbeleg a, ObjektQuellbeleg b) => a.Modell == b.Modell && a.Klasse == b.Klasse && a.Kennung == b.Kennung
+    internal static bool Gleich(ObjektQuellbeleg a, ObjektQuellbeleg b) => a.Modell == b.Modell && a.Klasse == b.Klasse && a.Kennung == b.Kennung
         && a.Werte.Count == b.Werte.Count && a.Werte.All(p => b.Werte.TryGetValue(p.Key, out var v) && v == p.Value)
         && a.Referenzen.Count == b.Referenzen.Count && a.Referenzen.All(p => b.Referenzen.TryGetValue(p.Key, out var v) && v == p.Value)
         && a.Strukturen.Count == b.Strukturen.Count && a.Strukturen.All(p => b.Strukturen.TryGetValue(p.Key, out var v) && v == p.Value);
-    private static ObjektQuellbeleg Kopie(ObjektQuellbeleg q) => new()
+    internal static ObjektQuellbeleg Kopie(ObjektQuellbeleg q) => new()
     {
         System = q.System, Datei = q.Datei, Modell = q.Modell, Klasse = q.Klasse, Kennung = q.Kennung,
         IstLokaleKennung = q.IstLokaleKennung, ImportiertUtc = DateTime.UtcNow, Werte = new(q.Werte), Referenzen = new(q.Referenzen), Strukturen = new(q.Strukturen)

@@ -6,12 +6,13 @@ using System.Threading;
 using System.Xml;
 using System.Xml.Linq;
 using AuswertungPro.Next.Application.Lookup;
+using AuswertungPro.Next.Application.Xtf.Dss;
 
 namespace AuswertungPro.Next.Infrastructure.Lookup;
 
 /// <summary>
 /// Liest grosse INTERLIS-2.3-Lieferungen in begrenzten Durchlaeufen. Im Speicher
-/// bleiben nur die angefragten Bauteile und ihre Verknuepfungen, keine Geometrien.
+/// bleiben nur die angefragten Bauteile und ihr Objektverbund samt Originalgeometrien.
 /// Derselbe lesend geoeffnete Dateistrom bleibt bis zum Ende gesperrt gegen Schreiben.
 /// </summary>
 public sealed class GeoShopXtfLeser : IGeoShopLeser
@@ -66,9 +67,14 @@ public sealed class GeoShopXtfLeser : IGeoShopLeser
         // Einstiegshilfe und Ereignis-Assoziation zeigen AUF das Bauwerk.
         var bauwerke = primaer.Select(o => o.Ref("AbwasserbauwerkRef")).ToHashSet(StringComparer.Ordinal);
         var knoten = art == BauteilArt.Schacht ? primaer.Select(o => o.Tid).ToHashSet(StringComparer.Ordinal) : new HashSet<string>();
-        LiesDurchlauf(stream, (_, k) => k is "Deckel" or "Einstiegshilfe" or "Haltungspunkt" or "Erhaltungsereignis_AbwasserbauwerkAssoc", o =>
+        var einbauEltern = objekte.Values.Where(o => o.Klasse == "Abwasserknoten").Select(o => o.Tid)
+            .Concat(objekte.Values.Where(o => o.Klasse is "Abwasserknoten" or "Haltung").Select(o => o.Ref("AbwasserbauwerkRef")))
+            .Where(id => id.Length > 0).ToHashSet(StringComparer.Ordinal);
+        LiesDurchlauf(stream, (_, k) => DssEinbautenZuordnung.Art(k) is not null
+            || k is "Deckel" or "Haltungspunkt" or "Erhaltungsereignis_AbwasserbauwerkAssoc", o =>
         {
-            if (bauwerke.Contains(o.Ref("AbwasserbauwerkRef")) || knoten.Contains(o.Ref("AbwassernetzelementRef")))
+            if (DssEinbautenZuordnung.Elternrolle(o.Klasse) is { } rolle ? einbauEltern.Contains(o.Ref(rolle))
+                : bauwerke.Contains(o.Ref("AbwasserbauwerkRef")) || knoten.Contains(o.Ref("AbwassernetzelementRef")))
                 objekte.TryAdd(o.Tid, o);
         }, cancellationToken);
         // Ereignisse und danach deren Firmenassoziationen/Organisationsverweise.
@@ -97,7 +103,8 @@ public sealed class GeoShopXtfLeser : IGeoShopLeser
                 var kinder = tid == o.Ref("AbwasserbauwerkRef") || art == BauteilArt.Schacht && tid == o.Tid
                     || current.Klasse is "Unterhalt" or "Erhaltungsereignis"
                     || current.Klasse == "Haltungspunkt" && knoten.Contains(current.Ref("AbwassernetzelementRef"))
-                    ? inverse[tid].Select(x => x.Tid) : Enumerable.Empty<string>();
+                    ? inverse[tid].Select(x => x.Tid)
+                    : inverse[tid].Where(x => DssEinbautenZuordnung.Elternrolle(x.Klasse) is { } rolle && x.Ref(rolle) == tid).Select(x => x.Tid);
                 foreach (var id in current.Refs.Values.Concat(kinder)) if (ids.Add(id)) queue.Enqueue(id);
             }
             var quellen = ids.Where(id => objekte.ContainsKey(id) && !mehrfach.Contains(id)).OrderBy(id => id, StringComparer.Ordinal)

@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Application.Diagnostics;
+﻿using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
@@ -13,8 +13,10 @@ public sealed class SchaechtePageViewModelRequiredFieldWarningTests : IDisposabl
 {
     private readonly ILoggerFactory _loggerFactory = LoggerFactory.Create(_ => { });
 
+    // Das Fenster «Schacht-Felder fehlen» beim Zeilenwechsel ist entfernt (Entscheid Pascal
+    // 13.09.2026): Es unterbrach jede Auswahl. Bei den Haltungen gab es nie ein solches Fenster.
     [Fact]
-    public void Selected_wechsel_warnt_wenn_vorheriger_schacht_pflichtfelder_nicht_hat()
+    public void Selected_wechsel_zeigt_kein_Fenster_auch_wenn_pflichtfelder_fehlen()
     {
         var dialogs = new DialogFake();
         var (_, vm) = CreateVm(dialogs);
@@ -26,10 +28,7 @@ public sealed class SchaechtePageViewModelRequiredFieldWarningTests : IDisposabl
         vm.Selected = first;
         vm.Selected = second;
 
-        Assert.Equal(1, dialogs.WarnCalls);
-        Assert.Contains("S-1", dialogs.LastWarnMessage);
-        Assert.Contains("Sanieren Ja/Nein", dialogs.LastWarnMessage);
-        Assert.Contains("Ausgefuehrt durch", dialogs.LastWarnMessage);
+        Assert.Equal(0, dialogs.WarnCalls);
     }
 
     [Fact]

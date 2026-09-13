@@ -13,7 +13,7 @@ using AuswertungPro.Next.UI.Views.Windows;
 namespace AuswertungPro.Next.UI.Services;
 
 /// <summary>Dateiauswahl und abbrechbare Vorschau. Fachliche Entscheidungen liegen im Application-Planer.</summary>
-public sealed class GeoShopAbgleichDialog(IGeoShopLeser leser, IDialogService dialogs)
+public sealed class GeoShopAbgleichDialog(IGeoShopLeser leser, IDialogService dialogs, Action<string>? merkeDatei = null)
 {
     public int Zeige(BauteilArt art, Func<IReadOnlyList<GeoShopZiel>> ziele, Func<bool> darfSchreiben)
     {
@@ -25,6 +25,7 @@ public sealed class GeoShopAbgleichDialog(IGeoShopLeser leser, IDialogService di
         if (xtf.Length != 1 || json.Length > 1 || xtf.Length + json.Length != dateien.Length)
         { dialogs.Error("Bitte genau eine XTF und höchstens eine Eigentümer-JSON auswählen."); return 0; }
         var datei = xtf[0];
+        merkeDatei?.Invoke(datei);
         var original = ziele();
         var namen = original.Select(z => z.Name).ToArray();
         using var abbruch = new CancellationTokenSource();

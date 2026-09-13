@@ -19,7 +19,7 @@ public sealed partial class DataPageViewModel
         if (!_shell.IsProjectReady || _geoShop is null)
             return;
 
-        var anzahl = new GeoShopAbgleichDialog(_geoShop, _dialogs).Zeige(BauteilArt.Haltung,
+        var anzahl = new GeoShopAbgleichDialog(_geoShop, _dialogs, datei => { Settings.GeoShopXtfPath = datei; Settings.Save(); }).Zeige(BauteilArt.Haltung,
             () => Records.Select(r => GeoShopZiel.Fuer(r, _shell.Project)).ToArray(), () => _shell.IsProjectReady);
         SaveStatus = anzahl > 0 ? $"GeoShop: {anzahl} Haltungen abgeglichen. Bitte speichern." : "GeoShop: Keine Änderungen übernommen.";
         IsSaveStatusVisible = true;

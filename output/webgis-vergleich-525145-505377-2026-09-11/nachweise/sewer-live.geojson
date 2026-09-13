@@ -1,0 +1,43 @@
+﻿{
+    "type":  "FeatureCollection",
+    "crs":  {
+                "type":  "name",
+                "properties":  {
+                                   "name":  "urn:ogc:def:crs:EPSG::2056"
+                               }
+            },
+    "features":  [
+                     {
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "coordinates":  [
+                                                              [
+                                                                  2692817.512,
+                                                                  1192427.212
+                                                              ],
+                                                              [
+                                                                  2692814.378,
+                                                                  1192418.302
+                                                              ],
+                                                              [
+                                                                  2692813.716,
+                                                                  1192416.42
+                                                              ]
+                                                          ],
+                                          "type":  "LineString"
+                                      },
+                         "properties":  {
+                                            "haltung":  "525145-505377",
+                                            "haltung_kataster":  "525145-505377",
+                                            "richtung":  "gegen_fliessrichtung",
+                                            "geometrie_quelle":  "kataster",
+                                            "current":  true,
+                                            "zustandsklasse":  4,
+                                            "zustand_farbe":  "gut",
+                                            "nutzungsart":  "Mischabwasser",
+                                            "schaden_count":  8,
+                                            "source":  "sewerstudio_selection"
+                                        }
+                     }
+                 ]
+}

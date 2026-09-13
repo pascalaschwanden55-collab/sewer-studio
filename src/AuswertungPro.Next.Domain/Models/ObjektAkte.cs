@@ -15,7 +15,8 @@ public sealed class ObjektAkte
     public Dictionary<string, List<Dictionary<string, string>>> Unterlisten { get; set; } = new();
     public override string ToString()
     {
-        var name = Werte.GetValueOrDefault(Art == "sanierung" ? "sanierung.s_name" : "deckel.bezeichnung")?.Text;
+        var name = Werte.GetValueOrDefault(Art == "sanierung" ? "sanierung.s_name" : Art + ".bezeichnung")?.Text;
+        if (string.IsNullOrWhiteSpace(name)) name = Quellen.Select(q => q.Werte.GetValueOrDefault("Bezeichnung")).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
         var art = Art.Length == 0 ? "Objekt" : char.ToUpperInvariant(Art[0]) + Art[1..];
         return string.IsNullOrWhiteSpace(name) ? $"{art} · {Id.ToString("N")[..6]}" : $"{art} · {name}";
     }

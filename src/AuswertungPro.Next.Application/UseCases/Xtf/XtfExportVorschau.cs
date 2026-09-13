@@ -82,7 +82,9 @@ public sealed record XtfExportVorschau(
         var zusammenfassung = zeilen.FirstOrDefault(z => z.StartsWith("In die Datei:", StringComparison.Ordinal))
             ?? zeilen.FirstOrDefault(z => !string.IsNullOrWhiteSpace(z))
             ?? "";
-        return new XtfExportVorschau(titel, zusammenfassung, [], [], bericht ?? "", IstFehler: false);
+        var luecken = zeilen.Where(z => z.Contains("fehlt in der XTF", StringComparison.Ordinal)).ToArray();
+        if (luecken.Length > 0) zusammenfassung += $"\nAchtung: {luecken.Length} erfasste Angaben oder Quellobjekte fehlen in dieser XTF. Einzelheiten stehen im Bericht.";
+        return new XtfExportVorschau(titel, zusammenfassung, [], luecken, bericht ?? "", IstFehler: false);
     }
 
     /// <summary>Gescheiterte Pruefung oder gescheitertes Schreiben: kurz oben, der Rest in den Details.</summary>

@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Application.UseCases.Objektakten;
+﻿using AuswertungPro.Next.Application.UseCases.Objektakten;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.ViewModels;
 
@@ -76,13 +76,14 @@ public sealed class ObjektaktenUnterlistenTests
         var erneut = new ObjektakteViewModel(b, new(), () => { }, () => true, () => { });
         Assert.Equal(polyethylen, Feld(erneut, "haltung.material").Auswahl);
         // Kein Warnhinweis mehr - nur der gespeicherte Originalcode, den die Maske immer zeigt.
-        Assert.Equal("Originalcode: 133", Feld(erneut, "haltung.material").Hinweis);
+        Assert.StartsWith("Originalcode: 133", Feld(erneut, "haltung.material").Hinweis);
+        Assert.Contains("DSS-Material: Kunststoff_Polyethylen", Feld(erneut, "haltung.material").Hinweis);
     }
 
     [Fact]
-    public void Wechsel_der_Elterngruppe_behaelt_den_alten_Wert_und_zeigt_die_neue_Liste()
+    public void Wechsel_der_Elterngruppe_zieht_den_Wert_auf_den_ersten_Eintrag_der_neuen_Liste()
     {
-        var (b, ansicht, _) = Haltung();
+        var (b, ansicht, haltung) = Haltung();
         Feld(ansicht, "haltung.pipegroup").Text = "Kunststoff";
         Feld(ansicht, "haltung.material").Auswahl = Feld(ansicht, "haltung.material").Optionen.Single(e => e.Label == "Polyethylen (PE)");
 
@@ -91,9 +92,14 @@ public sealed class ObjektaktenUnterlistenTests
         var material = Feld(ansicht, "haltung.material");
         Assert.Equal(4, material.Optionen.Count());
         Assert.Contains(material.Optionen, e => e.Label == "Grauguss (GG)");
-        // Der gespeicherte Wert wird nicht geloescht - er steht nur ausserhalb der neuen Liste.
-        Assert.Equal("Polyethylen (PE)", material.Text);
-        Assert.Contains("bleibt erhalten", material.Hinweis);
+        // Wie im WebGIS (Entscheid Pascal 12.09.2026): ein Detail aus der alten Gruppe bleibt nicht
+        // sichtbar falsch stehen, sondern springt auf den ersten Eintrag der neuen Liste - im
+        // Bestandsfeld der Haltung ebenso wie in der Akte.
+        Assert.Equal("Guss, unbekannt (GU)", material.Text);
+        Assert.Equal("Guss, unbekannt (GU)", material.Auswahl?.Label);
+        Assert.Equal("113", b.Wurzel.Werte["haltung.material"].Originalcode);
+        Assert.Equal(MaterialVokabular.Normalisieren("Guss, unbekannt (GU)"), haltung.GetFieldValue(FieldKeys.PipeMaterial));
+        Assert.DoesNotContain("bleibt erhalten", material.Hinweis);
     }
 
     [Fact]

@@ -13,7 +13,9 @@ MODEL = ROOT / 'src/AuswertungPro.Next.Infrastructure/Import/Xtf/Models/Dss'
 OUT = ROOT / 'src/AuswertungPro.Next.Application/Xtf/Dss/ExportSchema.json'
 names = ['Kanal', 'Normschacht', 'Spezialbauwerk', 'Versickerungsanlage', 'Einleitstelle',
          'Haltung', 'Haltungspunkt', 'Abwasserknoten', 'Rohrprofil', 'Deckel', 'Einstiegshilfe',
-         'Unterhalt', 'Organisation', 'Hydr_Geometrie']
+         'Unterhalt', 'Organisation', 'Hydr_Geometrie', 'FoerderAggregat', 'Absperr_Drosselorgan',
+         'Leapingwehr', 'Streichwehr', 'Trockenwetterfallrohr', 'ARABauwerk',
+         'Abwasserbauwerk_Text', 'Haltung_Text', 'Messstelle']
 classes, domains = {}, {}
 sources = {}
 for file in [MODEL/'Base_d-20181005.ili', MODEL/'Base_2020_1.ili', MODEL/'DSS_2020_1_LV95.ili']:
@@ -54,6 +56,12 @@ def resolve(spec, trail=()):
     spec = re.sub(r'^MANDATORY\s+', '', spec).strip()
     result = {'Required': required}
     if spec.startswith('('): result.update(Kind='Enum', Values=enums(spec))
+    # INTERLIS-2.3-Referenzhandbuch, Anhang A (eingebaute, geordnete Typen):
+    # https://www.interlis.ch/modelle/internes-datenmodell
+    elif spec in ('HALIGNMENT', 'INTERLIS.HALIGNMENT'):
+        result.update(Kind='Enum', Values=['Left', 'Center', 'Right'])
+    elif spec in ('VALIGNMENT', 'INTERLIS.VALIGNMENT'):
+        result.update(Kind='Enum', Values=['Top', 'Cap', 'Half', 'Base', 'Bottom'])
     elif spec.startswith('ALL OF '):
         v=domains[spec[7:].split('.')[-1]]
         result.update(Kind='Enum',Values=list(dict.fromkeys(enums(v[1], True)+enums(v[0],True))))

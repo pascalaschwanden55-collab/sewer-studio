@@ -1,0 +1,488 @@
+{
+  "Projekt": "Sanierungsabnahme_Zone_5.01_GKS_Bürglen",
+  "ProjektVersion": 2,
+  "ModifiedAtUtc": "2026-09-10T17:12:20.2687951Z",
+  "ObjektaktenAnzahl": 0,
+  "Haltung": {
+    "Id": "3ed56dd0-5bc7-4891-af95-1624a49ea20d",
+    "Fields": {
+      "NR": "1",
+      "Haltungsname": "525145-505377",
+      "Strasse": "Neumühleweg",
+      "Rohrmaterial": "Normalbeton",
+      "DN_mm": "250",
+      "Profiltyp": "",
+      "Lichte_Breite_mm": "",
+      "Nutzungsart": "Mischabwasser",
+      "Haltungslaenge_m": "10.55",
+      "Inspektionsrichtung": "Gegen Fliessrichtung",
+      "Primaere_Schaeden": "0.00m BCD Rohranfang\n0.00m BCBZ Andersartige Reparatur mit grabenlosem Verfahren von 12 Uhr bis 12 Uhr\n1.15m BDB Beginn TV-Inspektion (Vorgabe)\n3.89m BCAFA Spezialanschluss, offen bei 11 Uhr\n4.37m BDA Allgemeinzustand, Fotobeispiel von 12 Uhr bis 12 Uhr\n10.04m BCBZ Andersartige Reparatur mit grabenlosem Verfahren von 12 Uhr bis 12 Uhr, Start\n10.34m BCBZ Andersartige Reparatur mit grabenlosem Verfahren von 12 Uhr bis 12 Uhr, Ende\n10.55m BCE Rohrende",
+      "Zustandsklasse": "4",
+      "VSA_Zustandsnote_D": "4.00",
+      "Pruefungsresultat": "i.O.",
+      "Referenzpruefung": "",
+      "Sanieren_JaNein": "",
+      "Empfohlene_Sanierungsmassnahmen": "",
+      "Kosten": "",
+      "Eigentuemer": "Abwasser Uri",
+      "Ausgefuehrt_durch": "",
+      "Bemerkungen": "",
+      "Link": "Haltungen_Verteilt/525145-505377/20260901_525145-505377.mp4",
+      "Renovierung_Inliner_Stk": "",
+      "Renovierung_Inliner_m": "",
+      "Anschluesse_verpressen": "",
+      "Reparatur_Manschette": "",
+      "Linerendmanschette_LEM": "",
+      "Reparatur_Kurzliner": "",
+      "Erneuerung_Neubau_m": "",
+      "Offen_abgeschlossen": "",
+      "Datum_Jahr": "01.09.2026",
+      "VSA_Zustandsnote_S": "4.00",
+      "VSA_Zustandsnote_B": "4.00",
+      "VSA_Geschaetzt": "",
+      "Gewaesserschutz": "",
+      "Grundwasserspiegel": "",
+      "FunktionHierarchisch": "PAA.Sammelkanal",
+      "Verbindungsart": "",
+      "Bettung_Umhuellung": "",
+      "Status": "in_Betrieb",
+      "Sanierungsbedarf": "mittelfristig",
+      "FunktionHydraulisch": "Freispiegelleitung",
+      "Lagebestimmung": "genau",
+      "Baujahr": "",
+      "Bruttokosten": "",
+      "Objekt_ID": "ch24gwkdVy2uiPfJ",
+      "GEONIS_Kennung": "ch24gwkdVy2uiPfJ",
+      "Datenherr": "Abwasser Uri",
+      "Datenlieferant": "Abwasser Uri",
+      "Organisation": "",
+      "Letzte_Aenderung": "21.11.2024",
+      "Aktualisierungsdatum": "08.06.2026",
+      "Schacht_oben": "525145",
+      "Schacht_unten": "505377",
+      "Link_G": "",
+      "PDF_Path": "D:\\Videoprojekte\\Bürglen\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Projects\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Misc\\Docu\\Aushärtungsprotokoll H73_H74.pdf",
+      "PDF_All": "D:\\Videoprojekte\\Bürglen\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Projects\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Misc\\Docu\\Aushärtungsprotokoll H73_H74.pdf;D:\\Videoprojekte\\Bürglen\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Projects\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Misc\\Docu\\DP H73.pdf;D:\\Videoprojekte\\Bürglen\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Projects\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Misc\\Docu\\Plan H73-H79_Schächte_69-76.pdf"
+    },
+    "FieldMeta": {
+      "NR": {
+        "FieldName": "NR",
+        "Source": 10,
+        "UserEdited": true,
+        "LastUpdatedUtc": "2026-09-09T14:16:47.9998413Z",
+        "Conflict": null
+      },
+      "Haltungsname": {
+        "FieldName": "Haltungsname",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601687Z",
+        "Conflict": null
+      },
+      "Strasse": {
+        "FieldName": "Strasse",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601858Z",
+        "Conflict": null
+      },
+      "Rohrmaterial": {
+        "FieldName": "Rohrmaterial",
+        "Source": 10,
+        "UserEdited": true,
+        "LastUpdatedUtc": "2026-09-10T05:53:18.535195Z",
+        "Conflict": null
+      },
+      "DN_mm": {
+        "FieldName": "DN_mm",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601864Z",
+        "Conflict": null
+      },
+      "Profiltyp": {
+        "FieldName": "Profiltyp",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601634Z",
+        "Conflict": null
+      },
+      "Lichte_Breite_mm": {
+        "FieldName": "Lichte_Breite_mm",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601634Z",
+        "Conflict": null
+      },
+      "Nutzungsart": {
+        "FieldName": "Nutzungsart",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:12.3340336Z",
+        "Conflict": null
+      },
+      "Haltungslaenge_m": {
+        "FieldName": "Haltungslaenge_m",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601867Z",
+        "Conflict": null
+      },
+      "Inspektionsrichtung": {
+        "FieldName": "Inspektionsrichtung",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601929Z",
+        "Conflict": null
+      },
+      "Primaere_Schaeden": {
+        "FieldName": "Primaere_Schaeden",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1604046Z",
+        "Conflict": null
+      },
+      "Zustandsklasse": {
+        "FieldName": "Zustandsklasse",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-10T05:51:51.6057132Z",
+        "Conflict": null
+      },
+      "VSA_Zustandsnote_D": {
+        "FieldName": "VSA_Zustandsnote_D",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-10T05:51:51.6041325Z",
+        "Conflict": null
+      },
+      "Pruefungsresultat": {
+        "FieldName": "Pruefungsresultat",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-10T05:51:51.605756Z",
+        "Conflict": null
+      },
+      "Referenzpruefung": {
+        "FieldName": "Referenzpruefung",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.160164Z",
+        "Conflict": null
+      },
+      "Sanieren_JaNein": {
+        "FieldName": "Sanieren_JaNein",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601641Z",
+        "Conflict": null
+      },
+      "Empfohlene_Sanierungsmassnahmen": {
+        "FieldName": "Empfohlene_Sanierungsmassnahmen",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601642Z",
+        "Conflict": null
+      },
+      "Kosten": {
+        "FieldName": "Kosten",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601643Z",
+        "Conflict": null
+      },
+      "Eigentuemer": {
+        "FieldName": "Eigentuemer",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:41.0629954Z",
+        "Conflict": null
+      },
+      "Ausgefuehrt_durch": {
+        "FieldName": "Ausgefuehrt_durch",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601645Z",
+        "Conflict": null
+      },
+      "Bemerkungen": {
+        "FieldName": "Bemerkungen",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601646Z",
+        "Conflict": null
+      },
+      "Link": {
+        "FieldName": "Link",
+        "Source": 0,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-10T05:53:23.3259957Z",
+        "Conflict": null
+      },
+      "Renovierung_Inliner_Stk": {
+        "FieldName": "Renovierung_Inliner_Stk",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601647Z",
+        "Conflict": null
+      },
+      "Renovierung_Inliner_m": {
+        "FieldName": "Renovierung_Inliner_m",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601648Z",
+        "Conflict": null
+      },
+      "Anschluesse_verpressen": {
+        "FieldName": "Anschluesse_verpressen",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601648Z",
+        "Conflict": null
+      },
+      "Reparatur_Manschette": {
+        "FieldName": "Reparatur_Manschette",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601649Z",
+        "Conflict": null
+      },
+      "Linerendmanschette_LEM": {
+        "FieldName": "Linerendmanschette_LEM",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601649Z",
+        "Conflict": null
+      },
+      "Reparatur_Kurzliner": {
+        "FieldName": "Reparatur_Kurzliner",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.160165Z",
+        "Conflict": null
+      },
+      "Erneuerung_Neubau_m": {
+        "FieldName": "Erneuerung_Neubau_m",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601651Z",
+        "Conflict": null
+      },
+      "Offen_abgeschlossen": {
+        "FieldName": "Offen_abgeschlossen",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601651Z",
+        "Conflict": null
+      },
+      "Datum_Jahr": {
+        "FieldName": "Datum_Jahr",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601938Z",
+        "Conflict": null
+      },
+      "VSA_Zustandsnote_S": {
+        "FieldName": "VSA_Zustandsnote_S",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-10T05:51:51.6041338Z",
+        "Conflict": null
+      },
+      "VSA_Zustandsnote_B": {
+        "FieldName": "VSA_Zustandsnote_B",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-10T05:51:51.6041341Z",
+        "Conflict": null
+      },
+      "VSA_Geschaetzt": {
+        "FieldName": "VSA_Geschaetzt",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-10T05:51:51.6057563Z",
+        "Conflict": null
+      },
+      "Gewaesserschutz": {
+        "FieldName": "Gewaesserschutz",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601654Z",
+        "Conflict": null
+      },
+      "Grundwasserspiegel": {
+        "FieldName": "Grundwasserspiegel",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601655Z",
+        "Conflict": null
+      },
+      "FunktionHierarchisch": {
+        "FieldName": "FunktionHierarchisch",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:12.33466Z",
+        "Conflict": null
+      },
+      "Verbindungsart": {
+        "FieldName": "Verbindungsart",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601662Z",
+        "Conflict": null
+      },
+      "Bettung_Umhuellung": {
+        "FieldName": "Bettung_Umhuellung",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601663Z",
+        "Conflict": null
+      },
+      "Status": {
+        "FieldName": "Status",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:12.335087Z",
+        "Conflict": null
+      },
+      "Sanierungsbedarf": {
+        "FieldName": "Sanierungsbedarf",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:12.3351663Z",
+        "Conflict": null
+      },
+      "FunktionHydraulisch": {
+        "FieldName": "FunktionHydraulisch",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:12.3349722Z",
+        "Conflict": null
+      },
+      "Lagebestimmung": {
+        "FieldName": "Lagebestimmung",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:12.333637Z",
+        "Conflict": null
+      },
+      "Baujahr": {
+        "FieldName": "Baujahr",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601667Z",
+        "Conflict": null
+      },
+      "Bruttokosten": {
+        "FieldName": "Bruttokosten",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1601667Z",
+        "Conflict": null
+      },
+      "Objekt_ID": {
+        "FieldName": "Objekt_ID",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:12.3362291Z",
+        "Conflict": null
+      },
+      "GEONIS_Kennung": {
+        "FieldName": "GEONIS_Kennung",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:12.3359801Z",
+        "Conflict": null
+      },
+      "Datenherr": {
+        "FieldName": "Datenherr",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:41.0636409Z",
+        "Conflict": null
+      },
+      "Datenlieferant": {
+        "FieldName": "Datenlieferant",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:41.0637593Z",
+        "Conflict": null
+      },
+      "Organisation": {
+        "FieldName": "Organisation",
+        "Source": 10,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.160167Z",
+        "Conflict": null
+      },
+      "Letzte_Aenderung": {
+        "FieldName": "Letzte_Aenderung",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:12.3358949Z",
+        "Conflict": null
+      },
+      "Aktualisierungsdatum": {
+        "FieldName": "Aktualisierungsdatum",
+        "Source": 11,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T18:22:41.0638466Z",
+        "Conflict": null
+      },
+      "Schacht_oben": {
+        "FieldName": "Schacht_oben",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1602077Z",
+        "Conflict": null
+      },
+      "Schacht_unten": {
+        "FieldName": "Schacht_unten",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1602085Z",
+        "Conflict": null
+      },
+      "Link_G": {
+        "FieldName": "Link_G",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1602997Z",
+        "Conflict": null
+      },
+      "PDF_Path": {
+        "FieldName": "PDF_Path",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1603613Z",
+        "Conflict": null
+      },
+      "PDF_All": {
+        "FieldName": "PDF_All",
+        "Source": 1,
+        "UserEdited": false,
+        "LastUpdatedUtc": "2026-09-09T11:24:29.1603617Z",
+        "Conflict": null
+      }
+    },
+    "Geonis": {
+      "Haltung": "ch24gwkdVy2uiPfJ",
+      "Kanal": "ch24gwkd2FabRvaW",
+      "VonPunkt": "ch24gwkdcFPcB0IM",
+      "VonPunktBezeichnung": "A454675",
+      "NachPunkt": "ch24gwkdsMxuOqnt",
+      "NachPunktBezeichnung": "E454675",
+      "Rohrprofil": "ch24gwkd3obhLa8B",
+      "RohrprofilTyp": "unbekannt",
+      "Knoten": null,
+      "Bauwerk": null,
+      "RichtungGedreht": false,
+      "Quelle": "GeoShop-XTF: D:\\QGIS_V4.2\\GeoShop\\2026-09\\34UR_Abwasser_DSS_2020_1.xtf",
+      "GeonisGeaendert": null,
+      "UebernommenUtc": "2026-09-09T18:22:12.3329558Z"
+    },
+    "XtfHerkunft": null,
+    "ImportBezeichnung": "H73"
+  },
+  "Akten": []
+}

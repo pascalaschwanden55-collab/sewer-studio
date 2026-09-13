@@ -1,0 +1,788 @@
+[
+  {
+    "Id": "haltung.aatype",
+    "Label": "Typ AA",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.usage",
+    "Label": "Nutzung Ist",
+    "Speicherfeld": "Nutzungsart",
+    "Wert": "Mischabwasser"
+  },
+  {
+    "Id": "haltung.hierarchy",
+    "Label": "Funktion hierarchisch",
+    "Speicherfeld": "FunktionHierarchisch",
+    "Wert": "PAA.Sammelkanal"
+  },
+  {
+    "Id": "haltung.hydrofunction",
+    "Label": "Funktion hydraulisch",
+    "Speicherfeld": "FunktionHydraulisch",
+    "Wert": "Freispiegelleitung"
+  },
+  {
+    "Id": "haltung.status",
+    "Label": "Betriebsstatus",
+    "Speicherfeld": "Status",
+    "Wert": "in_Betrieb"
+  },
+  {
+    "Id": "haltung.pipegroup",
+    "Label": "Materialgruppe",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.material",
+    "Label": "Materialdetail",
+    "Speicherfeld": "Rohrmaterial",
+    "Wert": "Normalbeton"
+  },
+  {
+    "Id": "haltung.profile",
+    "Label": "Profiltyp",
+    "Speicherfeld": "Profiltyp",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.width",
+    "Label": "Lichte Breite",
+    "Speicherfeld": "Lichte_Breite_mm",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.dn",
+    "Label": "Lichte H\u00F6he",
+    "Speicherfeld": "DN_mm",
+    "Wert": "250"
+  },
+  {
+    "Id": "haltung.profileref",
+    "Label": "Rohrprofilreferenz",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.fromoutlet",
+    "Label": "Auslaufform VP",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.tooutlet",
+    "Label": "Auslaufform NP",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.fromheightaccuracy",
+    "Label": "H\u00F6hengenauigkeit VP",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.toheightaccuracy",
+    "Label": "H\u00F6hengenauigkeit NP",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.level",
+    "Label": "Ebene",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.positiondetermination",
+    "Label": "Lagebestimmung",
+    "Speicherfeld": "Lagebestimmung",
+    "Wert": "genau"
+  },
+  {
+    "Id": "haltung.positionaccuracy",
+    "Label": "Lagegenauigkeit",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.heightdetermination",
+    "Label": "H\u00F6henbestimmung",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.heightaccuracy",
+    "Label": "H\u00F6hengenauigkeit",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.innerprotection",
+    "Label": "Innenschutz",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bedding",
+    "Label": "Umh\u00FCllung/Bettung",
+    "Speicherfeld": "Bettung_Umhuellung",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.connection",
+    "Label": "Verbindungsart",
+    "Speicherfeld": "Verbindungsart",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.plannedusage",
+    "Label": "Geplante Nutzung",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.stiffnessclass",
+    "Label": "Ringsteifigkeitsklasse",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.pipeclass",
+    "Label": "Rohrserie",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.owner",
+    "Label": "Eigent\u00FCmer",
+    "Speicherfeld": "Eigentuemer",
+    "Wert": "Abwasser Uri"
+  },
+  {
+    "Id": "haltung.operator",
+    "Label": "Betreiber",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.site",
+    "Label": "Ort",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.access",
+    "Label": "Zug\u00E4nglichkeit",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.financing",
+    "Label": "Finanzierung",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.replacementtype",
+    "Label": "Wiederbeschaffungswert Bauart",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.condition",
+    "Label": "Zustand",
+    "Speicherfeld": "Zustandsklasse",
+    "Wert": "4"
+  },
+  {
+    "Id": "haltung.need",
+    "Label": "Sanierungsbedarf",
+    "Speicherfeld": "Sanierungsbedarf",
+    "Wert": "mittelfristig"
+  },
+  {
+    "Id": "haltung.hydroprofileref",
+    "Label": "Rohrprofil (Hydraulik)",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.melioration",
+    "Label": "Meliorationsfunktion",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.infiltration",
+    "Label": "Sickerung",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.leakprotection",
+    "Label": "Leckschutz",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.name",
+    "Label": "Bezeichnung",
+    "Speicherfeld": "Haltungsname",
+    "Wert": "525145-505377"
+  },
+  {
+    "Id": "haltung.objectid",
+    "Label": "OBJECTID",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.altname",
+    "Label": "Bezeichnung alternativ",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.historic",
+    "Label": "Bezeichnung historisch",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.fromnode",
+    "Label": "Knoten (von)",
+    "Speicherfeld": "Schacht_oben",
+    "Wert": "525145"
+  },
+  {
+    "Id": "haltung.tonode",
+    "Label": "Knoten (bis)",
+    "Speicherfeld": "Schacht_unten",
+    "Wert": "505377"
+  },
+  {
+    "Id": "haltung.year",
+    "Label": "Baujahr",
+    "Speicherfeld": "Baujahr",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.stiffness",
+    "Label": "Ringsteifigkeit [kN/m\u00B2]",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.fromlevel",
+    "Label": "Anfangsh\u00F6he",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.tolevel",
+    "Label": "Endh\u00F6he",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.extranumber1",
+    "Label": "-nr.",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.extranumber2",
+    "Label": "/ null",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.geolength",
+    "Label": "L\u00E4nge geometrisch [m]",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.length",
+    "Label": "L\u00E4nge effektiv [m]",
+    "Speicherfeld": "Haltungslaenge_m",
+    "Wert": "10.55"
+  },
+  {
+    "Id": "haltung.slope",
+    "Label": "Gef\u00E4lle [\u2030]",
+    "Speicherfeld": "Gefaelle_Promille",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.planslope",
+    "Label": "Plangef\u00E4lle [\u2030]",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.fromclock",
+    "Label": "Lageanschluss (Zifferblatt) VP",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.toclock",
+    "Label": "Lageanschluss (Zifferblatt) NP",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.remarks",
+    "Label": "Bemerkung",
+    "Speicherfeld": "Bemerkungen",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.webchannelref",
+    "Label": "Kanal-Referenz",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.webfromref",
+    "Label": "VP-REF",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.webtoref",
+    "Label": "NP-REF",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.friction",
+    "Label": "Reibungsbeiwert [m^(1/3)/s]",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.roughness",
+    "Label": "Wandrauhigkeit [mm]",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.pipelength",
+    "Label": "Rohrl\u00E4nge [m]",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.frompoint",
+    "Label": "Haltungspunkt (von)",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.topoint",
+    "Label": "Haltungspunkt (bis)",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.strang",
+    "Label": "Strang-ID/Bezeichnung",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.street",
+    "Label": "Standort",
+    "Speicherfeld": "Strasse",
+    "Wert": "Neum\u00FChleweg"
+  },
+  {
+    "Id": "haltung.lot",
+    "Label": "Baulos",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.grosscost",
+    "Label": "Bruttokosten",
+    "Speicherfeld": "Bruttokosten",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.subsidy",
+    "Label": "Subventionen",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.replacement",
+    "Label": "Ersatzjahr",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.replacementvalue",
+    "Label": "Wiederbeschaffungswert",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.priceyear",
+    "Label": "Wiederbeschaffungswert Basisjahr",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.akten",
+    "Label": "Akten",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.conditionyear",
+    "Label": "Erhebungsjahr [Zustand]",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.inspectioninterval",
+    "Label": "Inspektionsintervall [Jahr]",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.flushinterval",
+    "Label": "Sp\u00FClintervall [Jahr]",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.hydroload",
+    "Label": "Hydraulische Belastung Ist",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.flowtime",
+    "Label": "Fliesszeit Trockenwetter",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.qmax",
+    "Label": "Qmax.",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.qfull",
+    "Label": "Qvoll.",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.vmax",
+    "Label": "Vmax.",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.capacity",
+    "Label": "Auslastungsgrad",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.hmax",
+    "Label": "Hmax. oben",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.hfreeup",
+    "Label": "Hfrei oben",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.hmaxdown",
+    "Label": "Hmax. unten",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.hfreedown",
+    "Label": "Hfrei unten",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.createdat",
+    "Label": "Erstellt am (UTC)",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.createdby",
+    "Label": "Erstellt von",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.changed",
+    "Label": "Ge\u00E4ndert am (UTC)",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.author",
+    "Label": "Ge\u00E4ndert von",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.haltungsbemerkung",
+    "Label": "Bemerkung der Haltung",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.reliner_art",
+    "Label": "Reliner-Art",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.reliner_bautechnik",
+    "Label": "Reliner-Bautechnik",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.reliner_material",
+    "Label": "Reliner-Material",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.reliner_nennweite",
+    "Label": "Lichte H\u00F6he nach Linereinbau [mm]",
+    "Speicherfeld": null,
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.NR",
+    "Label": "NR.",
+    "Speicherfeld": "NR",
+    "Wert": "1"
+  },
+  {
+    "Id": "haltung.bestand.Inspektionsrichtung",
+    "Label": "Inspektionsrichtung",
+    "Speicherfeld": "Inspektionsrichtung",
+    "Wert": "Gegen Fliessrichtung"
+  },
+  {
+    "Id": "haltung.bestand.Primaere_Schaeden",
+    "Label": "Prim\u00E4re Sch\u00E4den",
+    "Speicherfeld": "Primaere_Schaeden",
+    "Wert": "0.00m BCD Rohranfang\n0.00m BCBZ Andersartige Reparatur mit grabenlosem Verfahren von 12 Uhr bis 12 Uhr\n1.15m BDB Beginn TV-Inspektion (Vorgabe)\n3.89m BCAFA Spezialanschluss, offen bei 11 Uhr\n4.37m BDA Allgemeinzustand, Fotobeispiel von 12 Uhr bis 12 Uhr\n10.04m BCBZ Andersartige Reparatur mit grabenlosem Verfahren von 12 Uhr bis 12 Uhr, Start\n10.34m BCBZ Andersartige Reparatur mit grabenlosem Verfahren von 12 Uhr bis 12 Uhr, Ende\n10.55m BCE Rohrende"
+  },
+  {
+    "Id": "haltung.bestand.VSA_Zustandsnote_D",
+    "Label": "VSA-Zustandsnote D",
+    "Speicherfeld": "VSA_Zustandsnote_D",
+    "Wert": "4.00"
+  },
+  {
+    "Id": "haltung.bestand.Pruefungsresultat",
+    "Label": "Pr\u00FCfungsresultat",
+    "Speicherfeld": "Pruefungsresultat",
+    "Wert": "i.O."
+  },
+  {
+    "Id": "haltung.bestand.Referenzpruefung",
+    "Label": "Referenzpruefung",
+    "Speicherfeld": "Referenzpruefung",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Sanieren_JaNein",
+    "Label": "Sanieren Ja/Nein",
+    "Speicherfeld": "Sanieren_JaNein",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Empfohlene_Sanierungsmassnahmen",
+    "Label": "Empfohlene Sanierungsmassnahmen",
+    "Speicherfeld": "Empfohlene_Sanierungsmassnahmen",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Kosten",
+    "Label": "Kosten",
+    "Speicherfeld": "Kosten",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Ausgefuehrt_durch",
+    "Label": "Ausgefuehrt durch",
+    "Speicherfeld": "Ausgefuehrt_durch",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Link",
+    "Label": "Link",
+    "Speicherfeld": "Link",
+    "Wert": "Haltungen_Verteilt/525145-505377/20260901_525145-505377.mp4"
+  },
+  {
+    "Id": "haltung.bestand.Renovierung_Inliner_Stk",
+    "Label": "Renovierung Inliner Stk.",
+    "Speicherfeld": "Renovierung_Inliner_Stk",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Renovierung_Inliner_m",
+    "Label": "Renovierung Inliner m",
+    "Speicherfeld": "Renovierung_Inliner_m",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Anschluesse_verpressen",
+    "Label": "Anschl\u00FCsse verpressen",
+    "Speicherfeld": "Anschluesse_verpressen",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Reparatur_Manschette",
+    "Label": "Reparatur Manschette",
+    "Speicherfeld": "Reparatur_Manschette",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Linerendmanschette_LEM",
+    "Label": "Linerendmanschette LEM",
+    "Speicherfeld": "Linerendmanschette_LEM",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Reparatur_Kurzliner",
+    "Label": "Reparatur Kurzliner",
+    "Speicherfeld": "Reparatur_Kurzliner",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Erneuerung_Neubau_m",
+    "Label": "Erneuerung Neubau m",
+    "Speicherfeld": "Erneuerung_Neubau_m",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Offen_abgeschlossen",
+    "Label": "offen/abgeschlossen",
+    "Speicherfeld": "Offen_abgeschlossen",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Datum_Jahr",
+    "Label": "Datum/Jahr",
+    "Speicherfeld": "Datum_Jahr",
+    "Wert": "01.09.2026"
+  },
+  {
+    "Id": "haltung.bestand.VSA_Zustandsnote_S",
+    "Label": "VSA-Zustandsnote S",
+    "Speicherfeld": "VSA_Zustandsnote_S",
+    "Wert": "4.00"
+  },
+  {
+    "Id": "haltung.bestand.VSA_Zustandsnote_B",
+    "Label": "VSA-Zustandsnote B",
+    "Speicherfeld": "VSA_Zustandsnote_B",
+    "Wert": "4.00"
+  },
+  {
+    "Id": "haltung.bestand.VSA_Geschaetzt",
+    "Label": "Note gesch\u00E4tzt",
+    "Speicherfeld": "VSA_Geschaetzt",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Gewaesserschutz",
+    "Label": "Gew\u00E4sserschutz",
+    "Speicherfeld": "Gewaesserschutz",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Grundwasserspiegel",
+    "Label": "Grundwasserspiegel",
+    "Speicherfeld": "Grundwasserspiegel",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Objekt_ID",
+    "Label": "Objekt-ID (Quelle)",
+    "Speicherfeld": "Objekt_ID",
+    "Wert": "ch24gwkdVy2uiPfJ"
+  },
+  {
+    "Id": "haltung.bestand.GEONIS_Kennung",
+    "Label": "SIA405-TID",
+    "Speicherfeld": "GEONIS_Kennung",
+    "Wert": "ch24gwkdVy2uiPfJ"
+  },
+  {
+    "Id": "haltung.bestand.Datenherr",
+    "Label": "Datenherr",
+    "Speicherfeld": "Datenherr",
+    "Wert": "Abwasser Uri"
+  },
+  {
+    "Id": "haltung.bestand.Datenlieferant",
+    "Label": "Datenlieferant",
+    "Speicherfeld": "Datenlieferant",
+    "Wert": "Abwasser Uri"
+  },
+  {
+    "Id": "haltung.bestand.Organisation",
+    "Label": "Organisation",
+    "Speicherfeld": "Organisation",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.Letzte_Aenderung",
+    "Label": "Letzte \u00C4nderung",
+    "Speicherfeld": "Letzte_Aenderung",
+    "Wert": "21.11.2024"
+  },
+  {
+    "Id": "haltung.bestand.Aktualisierungsdatum",
+    "Label": "Aktualisierungsdatum",
+    "Speicherfeld": "Aktualisierungsdatum",
+    "Wert": "08.06.2026"
+  },
+  {
+    "Id": "haltung.bestand.Link_G",
+    "Label": "Link_G",
+    "Speicherfeld": "Link_G",
+    "Wert": ""
+  },
+  {
+    "Id": "haltung.bestand.PDF_Path",
+    "Label": "PDF_Path",
+    "Speicherfeld": "PDF_Path",
+    "Wert": "D:\\Videoprojekte\\B\u00FCrglen\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Projects\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Misc\\Docu\\Aush\u00E4rtungsprotokoll H73_H74.pdf"
+  },
+  {
+    "Id": "haltung.bestand.PDF_All",
+    "Label": "PDF_All",
+    "Speicherfeld": "PDF_All",
+    "Wert": "D:\\Videoprojekte\\B\u00FCrglen\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Projects\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Misc\\Docu\\Aush\u00E4rtungsprotokoll H73_H74.pdf;D:\\Videoprojekte\\B\u00FCrglen\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Projects\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Misc\\Docu\\DP H73.pdf;D:\\Videoprojekte\\B\u00FCrglen\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Projects\\2.26.208 Buerglen UR Sanierungsmassnahmen\\Misc\\Docu\\Plan H73-H79_Sch\u00E4chte_69-76.pdf"
+  }
+]

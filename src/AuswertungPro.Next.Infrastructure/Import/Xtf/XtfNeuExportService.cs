@@ -114,7 +114,7 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
     {
         var text = new StringBuilder();
         text.AppendLine($"Projekt: {projekt.Name}");
-        text.AppendLine(plan.NurAenderungen ? "Lieferart: nur Handaenderungen mit Feldauftraegen." : "Lieferart: vollstaendiger Projektstand.");
+        text.AppendLine(plan.NurAenderungen ? "Lieferart: nur Handaenderungen mit Feldauftraegen." : "Lieferart: Projektstand gemäss Exportumfang und Hinweisen.");
         text.AppendLine();
         text.AppendLine($"Im Projekt: {projekt.Data.Count} Haltungen, {projekt.SchaechteData.Count} Schaechte.");
         text.AppendLine($"In die Datei: {plan.Haltungen} Haltungen, {plan.Schaechte} Schaechte " +

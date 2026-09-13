@@ -99,6 +99,12 @@
     <SolidColorBrush x:Key="SuccessSubtleBrush" Color="#FFDCFCE7"/>
     <SolidColorBrush x:Key="DangerSubtleBrush" Color="#FFFEE2E2"/>
     <SolidColorBrush x:Key="WarningSubtleBrush" Color="#FFFFF3CD"/>
+    <!-- Feldmarkierung in der Objektakte (11.09.2026): Hintergrund «will ich ausfuellen», Tinte bleibt normal. -->
+    <SolidColorBrush x:Key="MarkierungGelbBrush" Color="#FFFFF0A6"/>
+    <SolidColorBrush x:Key="MarkierungOrangeBrush" Color="#FFFFD9B0"/>
+    <SolidColorBrush x:Key="MarkierungRotBrush" Color="#FFFFC7C7"/>
+    <SolidColorBrush x:Key="MarkierungGruenBrush" Color="#FFC6F0CC"/>
+    <SolidColorBrush x:Key="MarkierungBlauBrush" Color="#FFCCE2FF"/>
 
     <!-- ── DESIGNSTUDIE: Zweit-Akzent (Teal), Severity-Skala, Akzent-Verlauf ── -->
     <Color x:Key="ColorSecondaryAccent">#FF0891B2</Color>

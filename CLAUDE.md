@@ -64,7 +64,12 @@ die Bruecke 115 Byte, und alle gefilterten Schaden-Ebenen wurden rot.
   und die ältesten Stände ausgedünnt. Läufe ohne geänderte Nutzdaten verdrängen keine
   alte Dateiversion. Das bleibt eine Dateihistorie mit drei Ständen, kein Windows-Abbild.
 - `BackupExternalReferences` liest Verweise aus `projekt.json` und ergänzt einzeln
-  referenzierte Dateien ausserhalb der Projektwurzeln. `FullBackupSources` erweitert
+  referenzierte Dateien ausserhalb der Projektwurzeln. Seit 12.09.2026 wird `PDF_All`
+  mit `StoredFileListParser` als Semikolon- oder gespeicherte JSON-Liste aufgelöst;
+  echte JSON-Arrays werden ebenfalls einzeln gelesen. Relative PDF-Verweise gelten
+  ab Projektwurzel. Einzelpfade behalten Semikolons im Dateinamen unverändert.
+  `BackupExternalReferencesTests` prüft Kopien, Dubletten und Inhaltsnachweise.
+  `FullBackupSources` erweitert
   den Sicherungsplan additiv um `AdditionalRoots` und `ReferencedFiles`.
   Rückwege stehen in der Wiederherstellungsanleitung. Fehlende verknüpfte Dateien
   erzeugen sichtbare Hinweise; eine unvollständige Sicherung erhält keinen grünen Erfolgs-Toast.
@@ -106,6 +111,14 @@ abbrechbare Vorschau. Vor dem Schreiben werden Projektbestand und Datensatzstand
 geprueft. Kein Kundenprojekt wurde zum Test veraendert. `Letzte_Aenderung` der XTF
 ist kein GN_LAST_EDITED_DATE; GeonisGeaendert wird daher nicht erfunden. Der produktive
 FME-Rueckweg bleibt unbestaetigt. Anleitung, Feldumfang und Grenzen: `docs/GEOSHOP-ABGLEICH-TEST.md`.
+
+Seit 11.09.2026 gibt es denselben Abgleich auch je Bauteil: In der Objektakte unter Mehr
+«Fehlende Felder aus GeoShop-XTF» (`GeoShopEinzelErgaenzung` ruft Planer und Anwender mit EINEM
+Ziel; `GeoShopEinzelErgaenzungDialog` haelt Datei, Ja/Nein und Hintergrundlesen; die XTF wird
+in `AppSettings.GeoShopXtfPath` gemerkt). **Die Haltungslaenge kommt immer aus der XTF**
+(`GeoShopAbgleichPlanBuilder.ImmerAusXtf`, Entscheid Pascal): auch ein Handwert wird ersetzt und
+als Katasterwert markiert; alle anderen Felder nur, wenn leer. Nie einen zweiten Planer fuer
+den Einzelweg bauen.
 
 ## Aufklapplisten: Reihenfolge (09.09.2026)
 
@@ -161,6 +174,41 @@ erscheint unbestimmt. Details und Nachweise: `docs/IMPORT-FORTSCHRITT.md`.
   Zusatzmodell scheitert die Zusatzdatei erwartungsgemäss. Das ersetzt keine
   Empfängerabnahme eines konkreten GEONIS-/FME-Abgleichs.
 - Nachweise und Prüfumfang: `docs/reviews/2026-09-08-redesign-sia405/BEHEBUNG.md`.
+
+## Befundfotos gehoeren nie in den Temp-Ordner (12.09.2026)
+
+Anlass: Die Datensicherung meldete 125 fehlende verknuepfte Dateien, darunter 16 aus
+`%TEMP%`. `D:\Projekte\Im_Dorf_2_6466_Bauen` trug 34 Fotoverweise dorthin. Pascal hatte den
+Temp-Ordner geleert; diese Befundfotos sind verloren.
+
+- **Ursache:** Der VSA-Code-Explorer schrieb sein Foto nach `%TEMP%\vsa_foto<N>_<guid>.png`
+  beziehungsweise uebernahm den Live-Snapshot `%TEMP%\coding_live_<guid>.png` unveraendert.
+  Genau dieser Pfad ging in `FotoPaths` UND `OriginalFotoPaths` und wurde mit dem Projekt
+  gespeichert. Einen Kopierschritt ins Projekt gab es nicht:
+  `ProjectPhotoReferenceNormalizationService` prueft nur, ob unter
+  `<Projekt>\Fotos\Haltungen\...` schon etwas liegt, und laesst den absoluten Pfad sonst
+  stehen. Nach dem Messen kam ueber `PhotoMeasurementOverlayExporter` noch
+  `<temp>_overlay.png` dazu, also zwei verlorene Dateien je vermessener Beobachtung.
+- `VsaFotoAblagePolicy` (Application/UseCases/VsaFotos, reine Rechnung) bestimmt das Ziel:
+  `<Videoordner>\Fotos\vsa_foto<N>_<yyyyMMdd_HHmmss>.png`, bei Namensgleichheit `_2`, `_3`.
+  Dieselbe Ablage wie `CodingSnapshotTargetPolicy`, die es im Codiermodus immer schon
+  richtig machte. Ohne bekanntes Video bleibt nur der Temp-Ordner; das ist ein ehrlicher
+  Rueckfall und keine dauerhafte Ablage.
+- `VsaFotoAblage.Uebernehme` verschiebt das Bild dorthin. **Scheitert das Verschieben,
+  bleibt die Quelle liegen und der alte Pfad wird zurueckgegeben** - ein Foto im
+  Temp-Ordner ist schlecht, ein geloeschtes Foto ist schlimmer. Nie zu `File.Move` mit
+  `overwrite: true` wechseln.
+- `VsaCodeExplorerPhotoCaptureRequest.PersistPhoto` ist der eine Ort, an dem beide Wege
+  (Live-Snapshot und aus dem Video geschnittener Frame) durchlaufen. Der Parameter ist
+  additiv und optional; `CaptureWithDefaultsAsync` setzt ihn immer. Nie einen zweiten
+  Ablageweg daneben bauen.
+- Das Mess-Overlay braucht keine eigene Regel: Es entsteht neben seinem Quellfoto, und das
+  liegt jetzt im Projekt.
+- `ProgramCleanupService.SewerStudioTempFilePatterns` kennt `coding_live_*` und `vsa_foto*`
+  bewusst NICHT. Diese Muster dort nicht ergaenzen, solange Altprojekte noch Verweise ins
+  Temp tragen - sonst loescht das Programm die letzten vorhandenen Bilder selbst.
+- Waechter: `VsaFotoAblagePolicyTests` (3), `VsaFotoAblageTests` (3, echte Dateien) und die
+  zwei neuen Faelle in `VsaCodeExplorerPhotoCaptureWorkflowTests`.
 
 ## Projekt-Kontext
 - **App:** WPF / .NET 10, MVVM, Windows 11
@@ -3697,7 +3745,7 @@ Bedienung und Nachweise: `docs/reviews/2026-09-06-nova/aufklapp-liste/ANSICHT-AN
 - `DssExportPlanBuilder` in Application/Xtf/Dss ergänzt den vollständigen Neu-Weg von
   `XtfNeuExportService`. Bei Objektakten mit DSS-Belegen/Zusatzwerten wird DSS statt des
   kleineren SIA405-Modells verwendet. Reine Änderungsaufträge bleiben auf dem bisherigen Weg.
-- Der reproduzierbar erzeugte `Dss.ExportSchema.json` enthält 248 Attribute für 14 Klassen
+- Der reproduzierbar erzeugte `Dss.ExportSchema.json` enthält 368 Attribute für 23 Klassen
   aus den eingebetteten offiziellen ILI-Modellen (DSS/Base 18.10.2023). `DssExportSchema`
   prüft Normtexte, Datum, Präzision, Bereiche und Längen; keine lokalen Dropdown-Indizes als Codes.
 - Kleine Plan-/Bearbeitungshelfer trennen Quellverbund, Feldzuordnung, Profile, Koordinaten
@@ -3755,3 +3803,179 @@ Bedienung und Nachweise: `docs/reviews/2026-09-06-nova/aufklapp-liste/ANSICHT-AN
 - `ObjektaktenWebGisLayoutTests` prüft vollständige, duplikatfreie Feldabdeckung aller vier
   Objektarten sowie Bereichsfolge, Kopf und Aufklappzustand. Der WPF-Test ergänzt echte
   Dropdownauswahl mit Originalcode, freie Sonderwerte und nur einen sichtbaren Editor.
+- Kompakt (11.09. abends, Entscheid Pascal «ich scrolle viel zu viel»): Eingaben 28 px,
+  Zeile ~30 px, Hinweis als Info-Symbol mit Tooltip; Spalten nach Breite ueber die EINE Regel
+  `ObjektakteView.SpaltenFuerBreite` (700/1100/1500 -> 1/2/3/4) fuer Liste und Fenster;
+  der Kasten in der Aufklappliste nimmt ueber `FormularHoeheConverter` die Listenhoehe minus
+  150 px (mindestens 360) statt fest 620 — ein Scrollbalken statt zwei. Nie wieder eine
+  zweite Spaltenregel im Fenster-Code-behind.
+- **Abhaengige Auswahllisten ziehen nach (12.09., Entscheid Pascal «das moechte ich so»):**
+  Materialgruppe -> Materialdetail, Bauwerksteil Art -> Subart, Unterhalt Art -> Verfahren.
+  `ObjektaktenBearbeitung.ZieheAbhaengigeFelderNach` laeuft am Ende von `Schreibe` — wechselt die
+  Gruppe, springt das Detail auf den **ersten Eintrag der neuen Liste** wie im WebGIS, statt
+  sichtbar falsch stehen zu bleiben. Drei Ausnahmen: ein **leeres** Feld bleibt leer (ein
+  Gruppenwechsel erfindet keinen Wert — im WebGIS ist das Feld Pflicht, bei uns heisst leer
+  «nicht erfasst»), ein Wert der auch zur neuen Gruppe gehoert bleibt, und eine leere Kindliste
+  laesst den alten Wert stehen. Nachgezogen wird NUR ueber die Maske: Importe schreiben direkt
+  in `ObjektAkte.Werte` und duerfen sich nicht gegenseitig ueberschreiben. Der nachgezogene Wert
+  gilt als Handwert und geht damit in die XTF-Aenderungslieferung. Das UI zieht ueber
+  `ObjektFeldViewModel.LiesWertNeu` mit; nie den `Text`-Setter dafuer verwenden — der schreibt.
+- Feld markieren (11.09. spaet): Rechtsklick -> Farbe (5 Theme-Tokens `Markierung<Farbe>Brush`
+  in Theme.xaml UND ThemeLight.xaml), programmweit je Feld in `AppSettings.ObjektakteFarben`,
+  nie im Projekt. Der Speicherstatus der Haltungsseite ist eine Einblendung UEBER der Liste
+  (Row 2, ZIndex), nicht mehr eine Zeile im Kopf - sonst rutscht beim Speichern die ganze
+  Liste (Entscheid Pascal «das Bild verschiebt sich»). Keine Statuszeile mehr in den Kopfbereich.
+
+## WebGIS-Namensschutz, Exportabdeckung und Unterhalt (12.09.2026)
+
+- `GeoShopZiel.ProjektnameEindeutig` prüft bei projektgebundenen Zielen den gesamten
+  Bestand derselben Objektart. Einzel- und Gesamtabgleich nutzen dieselbe Sperre;
+  `GeoShopAbgleichAnwender` prüft sie vor dem Schreiben erneut, auch nach Umbenennung
+  anderer Projektzeilen. Bestehende Fassaden und Namen anderer Objektarten bleiben erhalten.
+- `DssObjektaktenAbdeckung` und `DssObjektarten` in Application/Xtf/Dss sperren nicht
+  lieferbare oder verwaiste Akten mit vollständiger Namens-/Feldliste. Der Neuexport
+  verarbeitet Haltung, Schacht, Deckel, Sanierung und allgemeinen Unterhalt. Fehlende
+  Einzelangaben und Quellobjekte nennt der Bericht; `XtfExportVorschau.AusBericht`
+  zeigt deren Umfang vor dem Schreiben. Weitere Objektarten sind noch nicht angebunden.
+- `GeoShopObjektaktenImport` übernimmt auch nicht sanierende Unterhaltsereignisse als
+  `unterhalt`. Original-TID, Firmenbelege, Handeingaben und mehrere Bauwerksbezüge
+  bleiben erhalten. Wiederimport legt keine zweite Ereignisakte an; abgeleitete
+  Unterhaltslisten unterdrücken die entsprechende rohe Doppelzeile.
+- `DssFeldZuordnung` verbindet zwölf allgemeine Unterhaltsattribute. Eindeutige
+  Normtexte erscheinen beim Import als WebGIS-Auswahltext. Auftrag/Nummer, nicht
+  modellierte Status- und Ereignisarten erhalten keine erfundene Zuordnung.
+- `DssMaterialZuordnung` erfasst alle 68 Materialdetails: 27 geprüfte Normziele,
+  41 ausdrücklich offene fachliche Entscheidungen. UI-Hinweis und DSS-Export verwenden
+  denselben Vertrag. Offene Werte bleiben im Projekt und sperren den Normexport.
+- `ObjektFeldDefinition` liest die bestehenden WebGIS-Metadaten. `ObjektFeldPruefung`
+  prüft belegte Pflicht-/Längen-/Zahl-/Datumsregeln vor dem Schreiben. Noch kein
+  vollständiger Entwurfs-/Verwerfen-Ablauf und keine vollständige Subtypsteuerung.
+- `ObjektaktenWebGisBereiche.json` ergänzt 260 eindeutige Bereichszuordnungen anhand
+  WEBGIS-LAYOUT-KOMPLETT.md. Listen verwenden ihren belegten `WebgisAbschnitt`,
+  insbesondere Einbauten. `ObjektListenAnzeige` blättert mit sechs Zeilen. Einzelnes
+  Aufklappen schliesst andere Bereiche; Suche und ausdrückliches Alle-auf bleiben möglich.
+- Die Oberfläche enthält 661 Katalogfelder für 16 Aktenarten. Vollständige
+  Feldsichtbarkeit ist getestet; dies ist keine Abnahme aller WebGIS-Funktionen.
+- `tools/PruefeWebGisLieferung.py` zählt Original-XTF nur lesend. Die aktuelle
+  order-Lieferung enthält 630246 Objekte/Beziehungen, 22 Klassen und fünf doppelte
+  Haltungs-TIDs mit unterschiedlichen Inhalten. Kein pauschaler Kennungsersatz.
+- Keine neuen NuGet-Pakete oder ServiceProvider-Registrierungen, Projektformat 3 bleibt
+  kompatibel. Stand, Nachweise und Restumfang: docs/reviews/2026-09-12-webgis/UMSETZUNGSSTAND.md.
+
+## Vollständigkeit der Dropdown-Inhalte und Haltungspunktakten (12.09.2026)
+
+- `Objektakten.Katalog.json` enthält 235 Dropdownfelder und 148 Kataloge mit 1924
+  Einträgen, einschliesslich Wiederholungen nach Elternwert. Alle 269 ausgezählten
+  Dropdown-Vorkommen aus WEBGIS-LAYOUT-KOMPLETT.md sind mit Code, Text, Gruppe und
+  Reihenfolge enthalten. Fünf Quellvorkommen sind nicht ausgezählt und bleiben im
+  Nachweis offen; die aktuelle Ortsliste wurde direkt als leer beobachtet.
+- `sanierung.s_procedure` folgt `sanierung.s_art` über
+  `sanierung.verfahren-je-eltern`: 37 Verfahren plus bisherige Leerwahl. Die Codes
+  von 20 Deckel-/Sanierungskatalogen sind ergänzt, alte Indizes und Texte bleiben.
+  `ObjektFeldViewModel.Auswahl` erkennt gespeicherte Alteinträge ohne Code über
+  Position und Text. Gleichnamige Fabrikate mit Codes 14/15 werden nicht vereinigt.
+- `unterhalt.witterung` enthält neun Werte, die volle Liste gilt für Art 5/8/9/11.
+  Andere Arten haben keine belegte Witterungsliste. Bestehende Gruppenwechselregeln
+  erhalten leere Felder und Werte bei leeren Unterlisten; kein erfundenes Normziel.
+- `GeoShopHaltungspunktImport` ist ein kleiner Application-Service ohne neue
+  Registrierung. Er ergänzt vorhandene Quellpunkte als Akten und erhält TIDs,
+  gemeinsame Bezüge und Handeingaben. `HatNeueQuellen` erkennt auch fehlende Akten
+  in bereits abgeglichenen Projekten. Öffnen bleibt lesend; der Abgleich ergänzt.
+- Die Punktmaske enthält 15 Felder und fünf Dropdowns mit Leerwahl; Zugriff über
+  die bestehende Objektauswahl. Vollständige Dokument-/Geometriefunktionen bleiben
+  offen. `DssObjektarten` und `DssExportBearbeitung` verarbeiten bestehende Punkte;
+  keine neue Punkt-TID oder Netzverbindung wird aus einer solchen Akte erfunden.
+- `DssFeldZuordnung` übersetzt die Höhengenauigkeit des Punkts ausdrücklich und
+  `KatalogAnzeige` zeigt eindeutige importierte Normwerte als Auswahltexte. Nicht
+  vorhandene Normattribute werden wie bisher mit Namen/Wert im Exportbericht genannt.
+- `PruefeWebGisDropdowns.py` ist ein lesender Inhaltsabgleich mit Quellzeilen und
+  Prüfsummen, kein Beweis aller UI-Feldbindungen oder dynamischen Objektlisten.
+  Nachweis: docs/reviews/2026-09-12-webgis/DROPDOWN-ABGLEICH.md. Regressionen:
+  `ObjektaktenDropdownVollstaendigkeitTests` und `XtfHaltungspunktAkteTests`.
+- Keine neuen Pakete, keine Änderungen an Kundenoriginalen/WebGIS-Daten, Format 3
+  bleibt erhalten. Persönliche Listenergänzungen werden weiterhin berücksichtigt.
+
+## WebGIS-Einbauten und geerbte Schachtanzeigen (12.09.2026)
+
+- `DssEinbautenZuordnung` in Application/Xtf/Dss verbindet die sechs Originalklassen
+  FoerderAggregat, Absperr_Drosselorgan, Streichwehr, Leapingwehr, Einstiegshilfe und
+  Trockenwetterfallrohr mit vorhandenen Masken, Sachfeldern und Elternrollen. Der
+  aus lokalen ILI-Dateien erzeugte Schreibvertrag umfasste bei der Einbauten-Erweiterung 19 Klassen / 323
+  Attribute. Einbauten ohne Originalbezug sowie unzulässige Klassenwechsel werden
+  gesperrt; fehlende Zielfelder bleiben mit Namen und Wert im Bericht sichtbar.
+- `GeoShopXtfLeser` verfolgt zusätzliche rückwärts gerichtete Einbaubeziehungen an
+  angefragten Schächten und Anschlussknoten der Haltung. Er nimmt nur den Verbund
+  auf; Originalgeometrien und TIDs bleiben erhalten. Netzknoten ohne Bauwerksref
+  sind über den Haltungsverbund möglich. Der bisherige Schachtabgleich verlangt
+  weiterhin einen Bauwerksbezug; der freie Lieferungs-Editor umgeht diese Grenze.
+- `GeoShopEinbautenImport` liegt unter Application/UseCases/Objektakten. Er ergänzt
+  deterministische Akten, aktuelle Originalbelege und gemeinsame Projektbezüge,
+  schützt Handwerte einschliesslich Leeren und vermeidet doppelte Akten. Fehlende
+  Einbauakten lösen auch bei vorhandenen Quellen einen erneuten Abgleich aus.
+- `DssExportBearbeitung` bearbeitet den Original-Einbau entsprechend seiner echten
+  Klasse. `DssExportPruefung` prüft neue Rollen/Zielklassen und gemeinsame Namensräume
+  von Ueberlauf und BauwerksTeil. Numeric-Codes werden nicht zu Normwerten; die
+  konkrete Schreibweise Senden, empfangen und Wehr-Art wird ausdrücklich übersetzt.
+- `ObjektFeldDefinition.ErbtVon` liest die bereits vorhandene Katalogmetainformation.
+  `ObjektaktenSchachtVererbung` liest schreibgeschützte Einbauanzeigen am eindeutig
+  zugehörigen Schacht oder belegten Quellknoten. Aktuelle Projektwerte und manuelles
+  Leeren gehen vor. Eigene Pumpen-/Wehrbemerkungen werden nicht mit geerbten Anzeigen
+  verwechselt. `ObjektaktenListen` unterdrückt rohe Bauwerksteil-Doppelzeilen.
+- Prüfungen: `XtfEinbautenTests`, `XtfEinbautenDropdownTests` (28 Dropdownfälle mit
+  allen angebotenen Werten), `ObjektaktenEinbautenTests`; synthetische 18-Objekt-XTF
+  mit allen skalaren Einbauattributen besteht ilivalidator --allObjectsAccessible.
+  Echte Lieferstichprobe, bestehende Importgrenzen und Restumfang stehen in
+  docs/reviews/2026-09-12-webgis/EINBAUTEN-ABNAHME.md. Die vier damals noch fehlenden
+  Lieferklassen sind inzwischen im freien Lieferungs-Editor zugänglich. Keine vollständige WebGIS-Abnahme.
+- Keine neue Registrierung oder NuGet-Abhängigkeit. Gespeicherte Projektformate
+  bleiben kompatibel; Kundenoriginale und WebGIS-Daten werden nicht verändert.
+
+## Freier SIA405-Lieferungs-Editor (12.09.2026)
+
+- `IXtfLieferungsAblage` und die Ergebnis-/Felddatensätze liegen unter
+  Application/Xtf/Lieferung. `XtfLieferungsNorm` nutzt den bestehenden DSS-Vertrag
+  für Pflichtfelder, Originalkennungen, Rollen/Zielklassen und gemeinsame Namensräume.
+  Textausrichtung und Plantyp sowie ARABauwerk und Messstelle erweitern den aus lokalen
+  ILI-Dateien erzeugten Vertrag auf 23 Klassen / 368 Attribute.
+- `XtfLieferungsAblage`, `XtfLieferungsImport`, `XtfLieferungsDatenbank`,
+  `XtfLieferungsXml` und `XtfLieferungsAusgabe` liegen unter
+  Infrastructure/Import/Xtf/Lieferung. Die getrennte SQLite-Arbeitsdatei `.ssxtf`
+  hat Formatversion 1 und application_id 1397971028. Sie enthält Original-XML,
+  optionales aktuelles XML, Korb, Original-TID, lokale Zeilen-ID und Änderungsversion.
+  Sie verändert kein Projektformat. Pooling ist aus; Import/Export veröffentlichen
+  erst nach Abschluss ihre selbst erzeugte temporäre Datei ohne Überschreiben.
+- Alle Originalobjekte bleiben erhalten, auch ohne Projektzeile, Namen oder
+  Bauwerksbezug am Netzknoten. TID-Dubletten sind getrennte Zeilen und sperren die
+  Ausgabe. Speicherung prüft die geladene Version. Externe Organisationsverweise
+  werden ausgewiesen; fehlende interne Bezugsobjekte werden nicht erfunden.
+- `XtfLieferungViewModel`/`XtfLieferungWindow` öffnen, suchen (100 Zeilen pro Seite),
+  speichern/verwerfen und prüfen die Lieferung. Die volle Normauswahl stammt aus
+  `DssExportSchema`; unbekannte Altwerte bleiben sichtbar. Punktkoordinaten sind
+  bearbeitbar, Linien-/Flächengeometrien bleiben erhalten. Originalklasse/TID sind
+  fest. Nicht zugeordnete Zusatzfelder sperren einen verlustbehafteten Export.
+- `ServiceProvider.GeoShop` und `ServiceProviderRegistrationMap` registrieren
+  `IXtfLieferungsAblage`. ExportPage öffnet über `XtfLieferungDialog` das eigene Fenster.
+  Prüfberichte liegen vollständig in der Arbeitsdatei; die UI zeigt nur eine Vorschau
+  und kann den vollen Bericht speichern. Änderungen entwerten den alten Prüfbericht.
+- Nachweis: `XtfLieferungsAblageTests`, `XtfLieferungUiTests` mit echtem WPF-Kindtest.
+  Die echte order-Datei: 630246 Objekte/Beziehungen, 22 Klassen, 99795 Objekte mit
+  gemeldeten Erstfehlern, 26 externe Organisations-TIDs. Alle Klassen wurden geöffnet.
+  Eine synthetische 29-Objekt-Datei besteht ilivalidator --allObjectsAccessible.
+  Anleitung/Grenzen: docs/LIEFERUNGS-EDITOR.md; Zahlen: lieferung-order-abnahme.json
+  unter docs/reviews/2026-09-12-webgis. Keine vollständige WebGIS-/GEONIS-Abnahme.
+- Keine neuen Pakete, keine Original-/WebGIS-Änderungen. Neuobjekte, Klassenwechsel,
+  Dublettenbereinigung, grafische Geometriearbeit und weitere WebGIS-Funktionen fehlen
+  im freien Editor noch. Der projektbezogene Schachtabgleich bleibt separat.
+
+## WebGIS-Nachbau: bestehendes Nova weiterverwenden (12.09.2026)
+
+- Fachlicher Massstab bleiben die WebGIS-Felder, Funktionen und vollständigen
+  Dropdown-Inhalte. Die Darstellung folgt ausdrücklich dem vorhandenen Nova-Stil.
+  Vorhandene Masken, Kataloge und Abläufe zuerst abgleichen und weiterverwenden.
+- `XtfLieferungWindow` nutzt `NovaPageHeader`, `Card`, `ToolbarButton` und
+  `ToolbarButtonAccent` aus den vorhandenen Ressourcen. Farbangaben, Feldbeschriftungen
+  und der Entwurfsstatus folgen dem Themenwechsel; alle bestehenden Bindungen bleiben.
+  Die Exportseite platziert den Einstieg im Aktionen-Bereich ihres Nova-Seitenkopfs.
+- `XtfLieferungUiTests` prüft den bestehenden Ablauf weiterhin im echten Fenster und
+  zusätzlich den Themenwechsel bei 1240 und 900 Pixel Fensterbreite. Kein neuer
+  Daten-/Exportdienst, keine neuen Kataloge und keine Änderungen an Bestandsmasken.

@@ -20,7 +20,7 @@ public sealed partial class SchaechtePageViewModel
         if (_geoShop is null || !CanMutateShaftData)
             return;
 
-        var anzahl = new GeoShopAbgleichDialog(_geoShop, _dialogs).Zeige(BauteilArt.Schacht,
+        var anzahl = new GeoShopAbgleichDialog(_geoShop, _dialogs, datei => { Settings.GeoShopXtfPath = datei; Settings.Save(); }).Zeige(BauteilArt.Schacht,
             () => Records.Select(r => GeoShopZiel.Fuer(r, _shell.Project)).ToArray(), () => CanMutateShaftData);
         if (anzahl > 0) _dialogs.Info($"GeoShop: {anzahl} Schächte abgeglichen. Bitte das Projekt speichern.", "GeoShop-Abgleich");
     }

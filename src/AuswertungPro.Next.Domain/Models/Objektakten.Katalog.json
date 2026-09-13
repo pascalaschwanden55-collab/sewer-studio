@@ -2450,7 +2450,10 @@
    "exportziel": "Haltung.Reliner_Bautechnik ist Bestand, kein Ereignisfeld",
    "belegstatus": "offen",
    "nurLesen": false,
-   "quellanzeigen": 1
+   "quellanzeigen": 1,
+   "elternfeld": "sanierung.s_art",
+   "belegterElterntext": "Renovierung",
+   "katalogIdJeEltern": "sanierung.verfahren-je-eltern"
   },
   {
    "id": "sanierung.s_extent",
@@ -12355,6 +12358,300 @@
    "webgisFeldart": "text",
    "webgisEinheit": null,
    "webgisMaxLaenge": null
+  },
+  {
+   "id": "haltungspunkt.bezeichnung",
+   "art": "haltungspunkt",
+   "label": "Bezeichnung",
+   "thema": "Haltungspunkt",
+   "gruppe": "Kopf",
+   "speicherfeld": null,
+   "katalogId": null,
+   "exportziel": "Haltungspunkt.Bezeichnung",
+   "belegstatus": "webgis",
+   "nurLesen": false,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 1,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "text",
+   "webgisEinheit": null
+  },
+  {
+   "id": "haltungspunkt.rechtswert",
+   "art": "haltungspunkt",
+   "label": "Rechtswert",
+   "thema": "Haltungspunkt",
+   "gruppe": "Kopf",
+   "speicherfeld": null,
+   "katalogId": null,
+   "exportziel": null,
+   "belegstatus": "webgis",
+   "nurLesen": true,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 2,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "zahl",
+   "webgisEinheit": "Float"
+  },
+  {
+   "id": "haltungspunkt.hochwert",
+   "art": "haltungspunkt",
+   "label": "Hochwert",
+   "thema": "Haltungspunkt",
+   "gruppe": "Kopf",
+   "speicherfeld": null,
+   "katalogId": null,
+   "exportziel": null,
+   "belegstatus": "webgis",
+   "nurLesen": true,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 3,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "zahl",
+   "webgisEinheit": "Float"
+  },
+  {
+   "id": "haltungspunkt.hoehe",
+   "art": "haltungspunkt",
+   "label": "Höhe",
+   "thema": "Haltungspunkt",
+   "gruppe": "Daten",
+   "speicherfeld": null,
+   "katalogId": null,
+   "exportziel": "Haltungspunkt.Kote",
+   "belegstatus": "webgis",
+   "nurLesen": false,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 4,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "zahl",
+   "webgisEinheit": "Float"
+  },
+  {
+   "id": "haltungspunkt.lage",
+   "art": "haltungspunkt",
+   "label": "Lage",
+   "thema": "Haltungspunkt",
+   "gruppe": "Daten",
+   "speicherfeld": null,
+   "katalogId": null,
+   "exportziel": "Haltungspunkt.Lage_Anschluss",
+   "belegstatus": "webgis",
+   "nurLesen": false,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 5,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "text",
+   "webgisEinheit": null
+  },
+  {
+   "id": "haltungspunkt.auslaufform",
+   "art": "haltungspunkt",
+   "label": "Auslaufform",
+   "thema": "Haltungspunkt",
+   "gruppe": "Daten",
+   "speicherfeld": null,
+   "katalogId": "haltungspunkt.auslaufform",
+   "exportziel": "Haltungspunkt.Auslaufform",
+   "belegstatus": "webgis",
+   "nurLesen": false,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 6,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "auswahl",
+   "webgisEinheit": null
+  },
+  {
+   "id": "haltungspunkt.lagebestimmung",
+   "art": "haltungspunkt",
+   "label": "Lagebestimmung",
+   "thema": "Haltungspunkt",
+   "gruppe": "Daten",
+   "speicherfeld": null,
+   "katalogId": "haltungspunkt.bestimmung",
+   "exportziel": null,
+   "belegstatus": "webgis",
+   "nurLesen": false,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 7,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "auswahl",
+   "webgisEinheit": null
+  },
+  {
+   "id": "haltungspunkt.lagegenauigkeit",
+   "art": "haltungspunkt",
+   "label": "Lagegenauigkeit",
+   "thema": "Haltungspunkt",
+   "gruppe": "Daten",
+   "speicherfeld": null,
+   "katalogId": "haltungspunkt.lagegenauigkeit",
+   "exportziel": null,
+   "belegstatus": "webgis",
+   "nurLesen": false,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 8,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "auswahl",
+   "webgisEinheit": null
+  },
+  {
+   "id": "haltungspunkt.hoehenbestimmung",
+   "art": "haltungspunkt",
+   "label": "Höhenbestimmung",
+   "thema": "Haltungspunkt",
+   "gruppe": "Daten",
+   "speicherfeld": null,
+   "katalogId": "haltungspunkt.bestimmung",
+   "exportziel": null,
+   "belegstatus": "webgis",
+   "nurLesen": false,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 9,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "auswahl",
+   "webgisEinheit": null
+  },
+  {
+   "id": "haltungspunkt.hoehengenauigkeit",
+   "art": "haltungspunkt",
+   "label": "Höhengenauigkeit",
+   "thema": "Haltungspunkt",
+   "gruppe": "Daten",
+   "speicherfeld": null,
+   "katalogId": "haltungspunkt.hoehengenauigkeit",
+   "exportziel": "Haltungspunkt.Hoehengenauigkeit",
+   "belegstatus": "webgis",
+   "nurLesen": false,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 10,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "auswahl",
+   "webgisEinheit": null
+  },
+  {
+   "id": "haltungspunkt.bemerkung",
+   "art": "haltungspunkt",
+   "label": "Bemerkung",
+   "thema": "Haltungspunkt",
+   "gruppe": "Daten",
+   "speicherfeld": null,
+   "katalogId": null,
+   "exportziel": "Haltungspunkt.Bemerkung",
+   "belegstatus": "webgis",
+   "nurLesen": false,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 11,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "mehrzeilig",
+   "webgisEinheit": null
+  },
+  {
+   "id": "haltungspunkt.erstellt_am_utc",
+   "art": "haltungspunkt",
+   "label": "Erstellt am (UTC)",
+   "thema": "Haltungspunkt",
+   "gruppe": "Metadaten",
+   "speicherfeld": null,
+   "katalogId": null,
+   "exportziel": null,
+   "belegstatus": "webgis",
+   "nurLesen": true,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 12,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "datum",
+   "webgisEinheit": "Date"
+  },
+  {
+   "id": "haltungspunkt.erstellt_von",
+   "art": "haltungspunkt",
+   "label": "Erstellt von",
+   "thema": "Haltungspunkt",
+   "gruppe": "Metadaten",
+   "speicherfeld": null,
+   "katalogId": null,
+   "exportziel": null,
+   "belegstatus": "webgis",
+   "nurLesen": true,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 13,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "text",
+   "webgisEinheit": null
+  },
+  {
+   "id": "haltungspunkt.geaendert_am_utc",
+   "art": "haltungspunkt",
+   "label": "Geändert am (UTC)",
+   "thema": "Haltungspunkt",
+   "gruppe": "Metadaten",
+   "speicherfeld": null,
+   "katalogId": null,
+   "exportziel": null,
+   "belegstatus": "webgis",
+   "nurLesen": true,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 14,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "datum",
+   "webgisEinheit": "Date"
+  },
+  {
+   "id": "haltungspunkt.geaendert_von",
+   "art": "haltungspunkt",
+   "label": "Geändert von",
+   "thema": "Haltungspunkt",
+   "gruppe": "Metadaten",
+   "speicherfeld": null,
+   "katalogId": null,
+   "exportziel": null,
+   "belegstatus": "webgis",
+   "nurLesen": true,
+   "quellanzeigen": 1,
+   "webgisReihenfolge": 15,
+   "webgisTabelle": "AWK_HALTUNGSPUNKT",
+   "webgisPflicht": false,
+   "webgisFeldart": "text",
+   "webgisEinheit": null
+  },
+  {
+   "id": "unterhalt.witterung",
+   "art": "unterhalt",
+   "label": "Witterung",
+   "thema": "Unterhaltsmassnahme",
+   "gruppe": "Administrativ",
+   "speicherfeld": null,
+   "katalogId": "unterhalt.witterung",
+   "elternfeld": "unterhalt.art",
+   "belegterElterntext": "Untersuchung",
+   "katalogIdJeEltern": "unterhalt.witterung-je-art",
+   "exportziel": null,
+   "belegstatus": "webgis",
+   "nurLesen": false,
+   "quellanzeigen": 4,
+   "webgisTabelle": "AWZ_UNTERHALT",
+   "webgisFeldart": "auswahl",
+   "nurBeiArt": [
+    "5",
+    "8",
+    "9",
+    "11"
+   ]
   }
  ],
  "kataloge": [
@@ -16893,1725 +17190,1725 @@
   },
   {
    "id": "deckel-C00",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "109",
      "label": "Andere"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "110",
      "label": "Beton"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "111",
      "label": "Guss"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "112",
      "label": "Guss mit Belagsfüllung"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "113",
      "label": "Guss mit Betonfüllung"
     }
    ]
   },
   {
    "id": "deckel-C01",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "2",
      "label": "Rund"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "101",
      "label": "Eckig"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "103",
      "label": "Andere"
     }
    ]
   },
   {
    "id": "deckel-C02",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "100",
      "label": "100"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "270",
      "label": "270"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "300",
      "label": "300"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "360",
      "label": "360"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "400",
      "label": "400"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "450",
      "label": "450"
     },
     {
      "index": 6,
-     "originalCode": null,
+     "originalCode": "470",
      "label": "470"
     },
     {
      "index": 7,
-     "originalCode": null,
+     "originalCode": "500",
      "label": "500"
     },
     {
      "index": 8,
-     "originalCode": null,
+     "originalCode": "550",
      "label": "550"
     },
     {
      "index": 9,
-     "originalCode": null,
+     "originalCode": "600",
      "label": "600"
     },
     {
      "index": 10,
-     "originalCode": null,
+     "originalCode": "700",
      "label": "700"
     },
     {
      "index": 11,
-     "originalCode": null,
+     "originalCode": "800",
      "label": "800"
     },
     {
      "index": 12,
-     "originalCode": null,
+     "originalCode": "840",
      "label": "840"
     },
     {
      "index": 13,
-     "originalCode": null,
+     "originalCode": "1000",
      "label": "1000"
     },
     {
      "index": 14,
-     "originalCode": null,
+     "originalCode": "1150",
      "label": "1150"
     },
     {
      "index": 15,
-     "originalCode": null,
+     "originalCode": "1250",
      "label": "1250"
     },
     {
      "index": 16,
-     "originalCode": null,
+     "originalCode": "1500",
      "label": "1500"
     },
     {
      "index": 17,
-     "originalCode": null,
+     "originalCode": "2000",
      "label": "2000"
     },
     {
      "index": 18,
-     "originalCode": null,
+     "originalCode": "2500",
      "label": "2500"
     }
    ]
   },
   {
    "id": "deckel-C03",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "101",
      "label": "Schlüssel"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "102",
      "label": "Vierkant"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "103",
      "label": "Verschraubt"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "104",
      "label": "Keiner"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "105",
      "label": "Nicht verschraubt"
     }
    ]
   },
   {
    "id": "deckel-C04",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "101",
      "label": "Entlüftet"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "102",
      "label": "Nicht entlüftet"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "103",
      "label": "Druckdicht"
     }
    ]
   },
   {
    "id": "deckel-C05",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "101",
      "label": "Ungenau"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "102",
      "label": "Genau"
     }
    ]
   },
   {
    "id": "deckel-C06",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "101",
      "label": "> 50 cm"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "102",
      "label": "+/- 10 cm"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "103",
      "label": "+/- 3 cm"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "104",
      "label": "+/- 50 cm"
     }
    ]
   },
   {
    "id": "deckel-C07",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "101",
      "label": "> 6 cm"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "102",
      "label": "+/- 1 cm"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "103",
      "label": "+/- 3 cm"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "104",
      "label": "+/- 6 cm"
     }
    ]
   },
   {
    "id": "deckel-C08",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "",
      "label": ""
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "101",
      "label": "bis 5 t"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "102",
      "label": "von 5 t bis 10 t"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "103",
      "label": "grösser als 10 t"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "104",
      "label": "Klasse A (15kN)"
     },
     {
      "index": 6,
-     "originalCode": null,
+     "originalCode": "105",
      "label": "Klasse B (125kN)"
     },
     {
      "index": 7,
-     "originalCode": null,
+     "originalCode": "106",
      "label": "Klasse C (250kN)"
     },
     {
      "index": 8,
-     "originalCode": null,
+     "originalCode": "107",
      "label": "Klasse D (400kN)"
     },
     {
      "index": 9,
-     "originalCode": null,
+     "originalCode": "108",
      "label": "Klasse E (600kN)"
     },
     {
      "index": 10,
-     "originalCode": null,
+     "originalCode": "109",
      "label": "Klasse F (900kN)"
     }
    ]
   },
   {
    "id": "deckel-C09",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "",
      "label": ""
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "1",
      "label": "Nicht vorhanden"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "2",
      "label": "Vorhanden"
     }
    ]
   },
   {
    "id": "deckel-C10",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "",
      "label": ""
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "101",
      "label": "Nicht notwendig"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "102",
      "label": "Notwendig"
     }
    ]
   },
   {
    "id": "deckel-C11",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "",
      "label": ""
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "1000",
      "label": "BEGU Beton"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "1001",
      "label": "BGS 115-50"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "1002",
      "label": "BGS 180"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "1003",
      "label": "BGS 640"
     },
     {
      "index": 6,
-     "originalCode": null,
+     "originalCode": "1004",
      "label": "BGS N180"
     },
     {
      "index": 7,
-     "originalCode": null,
+     "originalCode": "1005",
      "label": "BGS N190"
     },
     {
      "index": 8,
-     "originalCode": null,
+     "originalCode": "1006",
      "label": "BGS N640"
     },
     {
      "index": 9,
-     "originalCode": null,
+     "originalCode": "1007",
      "label": "Erz 6205"
     },
     {
      "index": 10,
-     "originalCode": null,
+     "originalCode": "1008",
      "label": "Erz 6216"
     },
     {
      "index": 11,
-     "originalCode": null,
+     "originalCode": "1009",
      "label": "Erz 6501"
     },
     {
      "index": 12,
-     "originalCode": null,
+     "originalCode": "1010",
      "label": "Erz 6502"
     },
     {
      "index": 13,
-     "originalCode": null,
+     "originalCode": "1011",
      "label": "Erz 6503"
     },
     {
      "index": 14,
-     "originalCode": null,
+     "originalCode": "1012",
      "label": "Erz 6503b"
     },
     {
      "index": 15,
-     "originalCode": null,
+     "originalCode": "1013",
      "label": "Erz 6504"
     },
     {
      "index": 16,
-     "originalCode": null,
+     "originalCode": "1014",
      "label": "Erz 6504b"
     },
     {
      "index": 17,
-     "originalCode": null,
+     "originalCode": "1015",
      "label": "Erz 6511"
     },
     {
      "index": 18,
-     "originalCode": null,
+     "originalCode": "1016",
      "label": "Erz 6512"
     },
     {
      "index": 19,
-     "originalCode": null,
+     "originalCode": "1017",
      "label": "Erz 6513"
     },
     {
      "index": 20,
-     "originalCode": null,
+     "originalCode": "1018",
      "label": "Erz 7190/RI"
     },
     {
      "index": 21,
-     "originalCode": null,
+     "originalCode": "1019",
      "label": "Erz 7196/3"
     },
     {
      "index": 22,
-     "originalCode": null,
+     "originalCode": "1020",
      "label": "Erz 7196/4"
     },
     {
      "index": 23,
-     "originalCode": null,
+     "originalCode": "1021",
      "label": "Erz 7196/6"
     },
     {
      "index": 24,
-     "originalCode": null,
+     "originalCode": "1022",
      "label": "Erz 7196/7"
     },
     {
      "index": 25,
-     "originalCode": null,
+     "originalCode": "1023",
      "label": "Erz 7496/8"
     },
     {
      "index": 26,
-     "originalCode": null,
+     "originalCode": "1024",
      "label": "Erz 7421"
     },
     {
      "index": 27,
-     "originalCode": null,
+     "originalCode": "1025",
      "label": "GUBE / Erz 6584"
     },
     {
      "index": 28,
-     "originalCode": null,
+     "originalCode": "1026",
      "label": "Spezial"
     },
     {
      "index": 29,
-     "originalCode": null,
+     "originalCode": "1027",
      "label": "vonRoll 2973"
     },
     {
      "index": 30,
-     "originalCode": null,
+     "originalCode": "1028",
      "label": "GE 6511"
     },
     {
      "index": 31,
-     "originalCode": null,
+     "originalCode": "1029",
      "label": "GE 6512"
     },
     {
      "index": 32,
-     "originalCode": null,
+     "originalCode": "1030",
      "label": "BGS 690"
     },
     {
      "index": 33,
-     "originalCode": null,
+     "originalCode": "1031",
      "label": "BGS N696S60"
     },
     {
      "index": 34,
-     "originalCode": null,
+     "originalCode": "1032",
      "label": "BGS 186-80VS"
     },
     {
      "index": 35,
-     "originalCode": null,
+     "originalCode": "1033",
      "label": "BGS N186"
     },
     {
      "index": 36,
-     "originalCode": null,
+     "originalCode": "1034",
      "label": "BGS 140-60"
     },
     {
      "index": 37,
-     "originalCode": null,
+     "originalCode": "1035",
      "label": "BGS 150-60"
     }
    ]
   },
   {
    "id": "sanierung-C00",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "8",
      "label": "Begehung"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "3",
      "label": "Reinigung"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "10",
      "label": "Dichtheitsprüfung"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "2",
      "label": "Reparatur"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "4",
      "label": "Renovierung"
     },
     {
      "index": 6,
-     "originalCode": null,
+     "originalCode": "5",
      "label": "Untersuchung"
     },
     {
      "index": 7,
-     "originalCode": null,
+     "originalCode": "1",
      "label": "Erneuerung"
     },
     {
      "index": 8,
-     "originalCode": null,
+     "originalCode": "9",
      "label": "Deformationsmessung"
     },
     {
      "index": 9,
-     "originalCode": null,
+     "originalCode": "11",
      "label": "Georadar"
     },
     {
      "index": 10,
-     "originalCode": null,
+     "originalCode": "7",
      "label": "Andere"
     },
     {
      "index": 11,
-     "originalCode": null,
+     "originalCode": "12",
      "label": "Kanalfernsehen"
     }
    ]
   },
   {
    "id": "sanierung-C01",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "1",
      "label": "Ausgeführt"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "2",
      "label": "Geplant"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "3",
      "label": "Nicht möglich"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "4",
      "label": "Beauftragt"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "5",
      "label": "Nicht beauftragt"
     }
    ]
   },
   {
    "id": "sanierung-C02",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "",
      "label": ""
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "1",
      "label": "Anschleuderverfahren"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "2",
      "label": "Auspressverfahren"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "4",
      "label": "Aufspritzverfahren"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "6",
      "label": "Auskleidung mit vorgefertigten Teilen"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "13",
      "label": "Kurzrohrverfahren"
     },
     {
      "index": 6,
-     "originalCode": null,
+     "originalCode": "14",
      "label": "Langrohrverfahren"
     },
     {
      "index": 7,
-     "originalCode": null,
+     "originalCode": "16",
      "label": "Montageverfahren"
     },
     {
      "index": 8,
-     "originalCode": null,
+     "originalCode": "18",
      "label": "Noppenbahnverfahren"
     },
     {
      "index": 9,
-     "originalCode": null,
+     "originalCode": "22",
      "label": "Reduktionsverfahren"
     },
     {
      "index": 10,
-     "originalCode": null,
+     "originalCode": "24",
      "label": "Rohrstrangverfahren"
     },
     {
      "index": 11,
-     "originalCode": null,
+     "originalCode": "25",
      "label": "Rückverformung"
     },
     {
      "index": 12,
-     "originalCode": null,
+     "originalCode": "27",
      "label": "Schlauchverfahren"
     },
     {
      "index": 13,
-     "originalCode": null,
+     "originalCode": "34",
      "label": "Wickelrohrverfahren"
     }
    ]
   },
   {
    "id": "sanierung-C03",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "Unbekannt"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "1",
      "label": "Gesamt"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "2",
      "label": "Partiell"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "3",
      "label": "Punktuell"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "4",
      "label": "Punktuell, Muffe"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "5",
      "label": "Punktuell, Abzweig/Stutzen"
     }
    ]
   },
   {
    "id": "sanierung-C04",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "1",
      "label": "Kreisprofil"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "2",
      "label": "Eiprofil (H/B=3/2)"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "3",
      "label": "Maulprofil (H/B = 1,66/2)"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "4",
      "label": "Rechteckprofil (geschlossen)"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "5",
      "label": "Kreisprofil (doppelwandig)"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "6",
      "label": "Rechteckprofil (offen)"
     },
     {
      "index": 6,
-     "originalCode": null,
+     "originalCode": "7",
      "label": "Eiprofil (H/B ungleich 3/2)"
     },
     {
      "index": 7,
-     "originalCode": null,
+     "originalCode": "8",
      "label": "Maulprofil (H/B ungleich 1,66/2)"
     },
     {
      "index": 8,
-     "originalCode": null,
+     "originalCode": "9",
      "label": "Trapezprofil"
     },
     {
      "index": 9,
-     "originalCode": null,
+     "originalCode": "10",
      "label": "Doppeltrapezprofil"
     },
     {
      "index": 10,
-     "originalCode": null,
+     "originalCode": "11",
      "label": "U-förmig"
     },
     {
      "index": 11,
-     "originalCode": null,
+     "originalCode": "12",
      "label": "Bogenförmig"
     },
     {
      "index": 12,
-     "originalCode": null,
+     "originalCode": "13",
      "label": "Oval"
     },
     {
      "index": 13,
-     "originalCode": null,
+     "originalCode": "14",
      "label": "Rund"
     },
     {
      "index": 14,
-     "originalCode": null,
+     "originalCode": "15",
      "label": "Andere"
     },
     {
      "index": 15,
-     "originalCode": null,
+     "originalCode": "16",
      "label": "Eckig"
     }
    ]
   },
   {
    "id": "sanierung-C05",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "",
      "label": ""
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "1",
      "label": "Asbestzement"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "2",
      "label": "Beton"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "3",
      "label": "Betonsegmente"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "4",
      "label": "Edelstahl"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "5",
      "label": "Eisen und Stahl, nicht identifiziert"
     },
     {
      "index": 6,
-     "originalCode": null,
+     "originalCode": "6",
      "label": "Faserzement"
     },
     {
      "index": 7,
-     "originalCode": null,
+     "originalCode": "7",
      "label": "Kunststoff, glasfaserverstärkt"
     },
     {
      "index": 8,
-     "originalCode": null,
+     "originalCode": "8",
      "label": "Grauguss"
     },
     {
      "index": 9,
-     "originalCode": null,
+     "originalCode": "9",
      "label": "Guss, duktil"
     },
     {
      "index": 10,
-     "originalCode": null,
+     "originalCode": "10",
      "label": "Kunststoff, nicht identifiziert"
     },
     {
      "index": 11,
-     "originalCode": null,
+     "originalCode": "11",
      "label": "Mauerwerk"
     },
     {
      "index": 12,
-     "originalCode": null,
+     "originalCode": "12",
      "label": "Ortsbeton"
     },
     {
      "index": 13,
-     "originalCode": null,
+     "originalCode": "13",
      "label": "Porosit"
     },
     {
      "index": 14,
-     "originalCode": null,
+     "originalCode": "14",
      "label": "Polymerbeton"
     },
     {
      "index": 15,
-     "originalCode": null,
+     "originalCode": "15",
      "label": "Zementbeton, polymermodifiziert"
     },
     {
      "index": 16,
-     "originalCode": null,
+     "originalCode": "16",
      "label": "Polyethylen"
     },
     {
      "index": 17,
-     "originalCode": null,
+     "originalCode": "17",
      "label": "Polyethylen hoher Dichte"
     },
     {
      "index": 18,
-     "originalCode": null,
+     "originalCode": "18",
      "label": "Polyesterharz"
     },
     {
      "index": 19,
-     "originalCode": null,
+     "originalCode": "19",
      "label": "Polyesterharzbeton"
     },
     {
      "index": 20,
-     "originalCode": null,
+     "originalCode": "20",
      "label": "Polypropylen"
     },
     {
      "index": 21,
-     "originalCode": null,
+     "originalCode": "21",
      "label": "Polyvinylchlorid"
     },
     {
      "index": 22,
-     "originalCode": null,
+     "originalCode": "22",
      "label": "Polyvinylchlorid, hart"
     },
     {
      "index": 23,
-     "originalCode": null,
+     "originalCode": "23",
      "label": "Stahlfaserbeton"
     },
     {
      "index": 24,
-     "originalCode": null,
+     "originalCode": "24",
      "label": "Spannbeton"
     },
     {
      "index": 25,
-     "originalCode": null,
+     "originalCode": "25",
      "label": "Stahlbeton"
     },
     {
      "index": 26,
-     "originalCode": null,
+     "originalCode": "26",
      "label": "Stahl"
     },
     {
      "index": 27,
-     "originalCode": null,
+     "originalCode": "27",
      "label": "Steinzeug"
     },
     {
      "index": 28,
-     "originalCode": null,
+     "originalCode": "28",
      "label": "Spritzbeton"
     },
     {
      "index": 29,
-     "originalCode": null,
+     "originalCode": "29",
      "label": "Werkstoff, nicht identifiziert"
     },
     {
      "index": 30,
-     "originalCode": null,
+     "originalCode": "30",
      "label": "Ziegelwerk"
     },
     {
      "index": 31,
-     "originalCode": null,
+     "originalCode": "31",
      "label": "Verschiedene"
     },
     {
      "index": 32,
-     "originalCode": null,
+     "originalCode": "32",
      "label": "Unbefestigt"
     },
     {
      "index": 33,
-     "originalCode": null,
+     "originalCode": "33",
      "label": "Rasen"
     },
     {
      "index": 34,
-     "originalCode": null,
+     "originalCode": "34",
      "label": "Pflaster"
     }
    ]
   },
   {
    "id": "sanierung-C06",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "",
      "label": ""
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "unbekannt"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "1",
      "label": "Alphaliner 500"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "2",
      "label": "Alphaliner 1500"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "3",
      "label": "Alphaliner 1500 HP"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "4",
      "label": "BKP Beroliner liner"
     },
     {
      "index": 6,
-     "originalCode": null,
+     "originalCode": "5",
      "label": "Brandenburger Liner BB 2.5"
     },
     {
      "index": 7,
-     "originalCode": null,
+     "originalCode": "6",
      "label": "Kansani warmhärtend"
     },
     {
      "index": 8,
-     "originalCode": null,
+     "originalCode": "7",
      "label": "iMPREG-Liner"
     },
     {
      "index": 9,
-     "originalCode": null,
+     "originalCode": "8",
      "label": "Insituform-Relining"
     },
     {
      "index": 10,
-     "originalCode": null,
+     "originalCode": "9",
      "label": "Saertex-Liner Typ S"
     },
     {
      "index": 11,
-     "originalCode": null,
+     "originalCode": "10",
      "label": "KFS-Liner"
     },
     {
      "index": 12,
-     "originalCode": null,
+     "originalCode": "11",
      "label": "Flexliner II Plus"
     },
     {
      "index": 13,
-     "originalCode": null,
+     "originalCode": "12",
      "label": "Flexliner II Plus/VFG"
     },
     {
      "index": 14,
-     "originalCode": null,
+     "originalCode": "13",
      "label": "Brawoliner XT"
     },
     {
      "index": 15,
-     "originalCode": null,
+     "originalCode": "14",
      "label": "RS Maxliner Flex mit MaxPox 15/40"
     },
     {
      "index": 16,
-     "originalCode": null,
+     "originalCode": "15",
      "label": "RS Maxliner Flex mit MaxPox 15/40"
     },
     {
      "index": 17,
-     "originalCode": null,
+     "originalCode": "16",
      "label": "Roboliner 10"
     },
     {
      "index": 18,
-     "originalCode": null,
+     "originalCode": "17",
      "label": "KFS-Hausliner Epoxy"
     },
     {
      "index": 19,
-     "originalCode": null,
+     "originalCode": "18",
      "label": "UP Hausanschlussliner"
     },
     {
      "index": 20,
-     "originalCode": null,
+     "originalCode": "19",
      "label": "PL Flexliner EP 60"
     },
     {
      "index": 21,
-     "originalCode": null,
+     "originalCode": "20",
      "label": "Brawoliner EP 60"
     },
     {
      "index": 22,
-     "originalCode": null,
+     "originalCode": "21",
      "label": "Flexliner H"
     },
     {
      "index": 23,
-     "originalCode": null,
+     "originalCode": "22",
      "label": "Brawoliner"
     },
     {
      "index": 24,
-     "originalCode": null,
+     "originalCode": "23",
      "label": "Hächler EL 300/600"
     },
     {
      "index": 25,
-     "originalCode": null,
+     "originalCode": "24",
      "label": "EL 300/600"
     },
     {
      "index": 26,
-     "originalCode": null,
+     "originalCode": "25",
      "label": "KA-TE Roboter"
     },
     {
      "index": 27,
-     "originalCode": null,
+     "originalCode": "26",
      "label": "KA-TE / PMO Roboter"
     },
     {
      "index": 28,
-     "originalCode": null,
+     "originalCode": "27",
      "label": "Flexliner"
     },
     {
      "index": 29,
-     "originalCode": null,
+     "originalCode": "28",
      "label": "Flexoren"
     },
     {
      "index": 30,
-     "originalCode": null,
+     "originalCode": "29",
      "label": "PE Kurzrohr-Reliningsystem"
     },
     {
      "index": 31,
-     "originalCode": null,
+     "originalCode": "30",
      "label": "City-Liner"
     },
     {
      "index": 32,
-     "originalCode": null,
+     "originalCode": "31",
      "label": "IN-TEC Flex-Liner FAP 600"
     },
     {
      "index": 33,
-     "originalCode": null,
+     "originalCode": "32",
      "label": "Kibag Inlinersystem"
     },
     {
      "index": 34,
-     "originalCode": null,
+     "originalCode": "33",
      "label": "EP Epoxydharz"
     },
     {
      "index": 35,
-     "originalCode": null,
+     "originalCode": "34",
      "label": "Brawoliner 3D"
     },
     {
      "index": 36,
-     "originalCode": null,
+     "originalCode": "35",
      "label": "IMPREG-Liner Härtung mit UV-Licht"
     },
     {
      "index": 37,
-     "originalCode": null,
+     "originalCode": "36",
      "label": "LinTEC ProFlex"
     },
     {
      "index": 38,
-     "originalCode": null,
+     "originalCode": "41",
      "label": "Alphaliner 1800H"
     },
     {
      "index": 39,
-     "originalCode": null,
+     "originalCode": "42",
      "label": "Biresin lineTEC ProFlex S EP 70"
     },
     {
      "index": 40,
-     "originalCode": null,
+     "originalCode": "43",
      "label": "Bluelight PAA-F Liner"
     },
     {
      "index": 41,
-     "originalCode": null,
+     "originalCode": "44",
      "label": "Brawoliner EP 50"
     },
     {
      "index": 42,
-     "originalCode": null,
+     "originalCode": "45",
      "label": "Brawoliner EP 60"
     },
     {
      "index": 43,
-     "originalCode": null,
+     "originalCode": "46",
      "label": "Brawoliner XT EP 60"
     },
     {
      "index": 44,
-     "originalCode": null,
+     "originalCode": "47",
      "label": "Epoxidharz"
     },
     {
      "index": 45,
-     "originalCode": null,
+     "originalCode": "48",
      "label": "Flexi SF Tube mit EP 50"
     },
     {
      "index": 46,
-     "originalCode": null,
+     "originalCode": "49",
      "label": "Flexi tt 38s mit EP 50"
     },
     {
      "index": 47,
-     "originalCode": null,
+     "originalCode": "50",
      "label": "Flexiliner H mit EP 70"
     },
     {
      "index": 48,
-     "originalCode": null,
+     "originalCode": "51",
      "label": "IMPREG Liner GL16"
     },
     {
      "index": 49,
-     "originalCode": null,
+     "originalCode": "52",
      "label": "Insituform-Liner 2.0"
     },
     {
      "index": 50,
-     "originalCode": null,
+     "originalCode": "53",
      "label": "IPANEX Stopfmörtel"
     },
     {
      "index": 51,
-     "originalCode": null,
+     "originalCode": "54",
      "label": "Kerakoll Geolite 10"
     },
     {
      "index": 52,
-     "originalCode": null,
+     "originalCode": "55",
      "label": "Manschette"
     },
     {
      "index": 53,
-     "originalCode": null,
+     "originalCode": "56",
      "label": "MC Fastpack Injekt"
     },
     {
      "index": 54,
-     "originalCode": null,
+     "originalCode": "57",
      "label": "PCI Polyfix plus"
     },
     {
      "index": 55,
-     "originalCode": null,
+     "originalCode": "58",
      "label": "PL Flex 3D mit EP 60"
     },
     {
      "index": 56,
-     "originalCode": null,
+     "originalCode": "59",
      "label": "PL Flexliner mit Combi-Tec EP 60"
     },
     {
      "index": 57,
-     "originalCode": null,
+     "originalCode": "60",
      "label": "Quick-Lock"
     }
    ]
   },
   {
    "id": "sanierung-C07",
-   "codesBestaetigt": false,
+   "codesBestaetigt": true,
    "eintraege": [
     {
      "index": 0,
-     "originalCode": null,
+     "originalCode": "0",
      "label": "unbekannt"
     },
     {
      "index": 1,
-     "originalCode": null,
+     "originalCode": "1",
      "label": "arpe AG"
     },
     {
      "index": 2,
-     "originalCode": null,
+     "originalCode": "2",
      "label": "AITV SA"
     },
     {
      "index": 3,
-     "originalCode": null,
+     "originalCode": "3",
      "label": "ISS Kanal Services AG"
     },
     {
      "index": 4,
-     "originalCode": null,
+     "originalCode": "4",
      "label": "Jenni Kanalsanierungens AG"
     },
     {
      "index": 5,
-     "originalCode": null,
+     "originalCode": "5",
      "label": "Kanaltec AG"
     },
     {
      "index": 6,
-     "originalCode": null,
+     "originalCode": "6",
      "label": "Kansani AG"
     },
     {
      "index": 7,
-     "originalCode": null,
+     "originalCode": "7",
      "label": "KA-TE Insituform AG"
     },
     {
      "index": 8,
-     "originalCode": null,
+     "originalCode": "8",
      "label": "KFS Kanal-Service AG"
     },
     {
      "index": 9,
-     "originalCode": null,
+     "originalCode": "9",
      "label": "KIBAG Kanaltechnik AG"
     },
     {
      "index": 10,
-     "originalCode": null,
+     "originalCode": "10",
      "label": "AB Marti AG"
     },
     {
      "index": 11,
-     "originalCode": null,
+     "originalCode": "11",
      "label": "ABT Elseneri GmbH"
     },
     {
      "index": 12,
-     "originalCode": null,
+     "originalCode": "12",
      "label": "F& H Ablauf und Kanalsanierungen AG"
     },
     {
      "index": 13,
-     "originalCode": null,
+     "originalCode": "13",
      "label": "G.Landolt AG"
     },
     {
      "index": 14,
-     "originalCode": null,
+     "originalCode": "14",
      "label": "Hans Hächler Holding AG"
     },
     {
      "index": 15,
-     "originalCode": null,
+     "originalCode": "15",
      "label": "InnoService AG"
     },
     {
      "index": 16,
-     "originalCode": null,
+     "originalCode": "16",
      "label": "MÖKAH Kanalsanierungen AG"
     },
     {
      "index": 17,
-     "originalCode": null,
+     "originalCode": "17",
      "label": "RS-Technik"
     },
     {
      "index": 18,
-     "originalCode": null,
+     "originalCode": "18",
      "label": "KRT Kanal-Service AG"
     },
     {
      "index": 19,
-     "originalCode": null,
+     "originalCode": "19",
      "label": "AKS Kanalsanierung AG"
     },
     {
      "index": 20,
-     "originalCode": null,
+     "originalCode": "20",
      "label": "Schneider Kanalreinigung AG"
     },
     {
      "index": 21,
-     "originalCode": null,
+     "originalCode": "21",
      "label": "ITS Kanal Services AG"
     },
     {
      "index": 22,
-     "originalCode": null,
+     "originalCode": "22",
      "label": "Fretz Kanal-Service AG"
     },
     {
      "index": 23,
-     "originalCode": null,
+     "originalCode": "23",
      "label": "A. Arnold Tiefbau GmbH"
     },
     {
      "index": 24,
-     "originalCode": null,
+     "originalCode": "24",
      "label": "Akasan AG"
     },
     {
      "index": 25,
-     "originalCode": null,
+     "originalCode": "25",
      "label": "Arnold AG Heizung-Sanitär"
     },
     {
      "index": 26,
-     "originalCode": null,
+     "originalCode": "26",
      "label": "Arnold Bau-Allround"
     },
     {
      "index": 27,
-     "originalCode": null,
+     "originalCode": "27",
      "label": "Baugruppe Bristen GmbH"
     },
     {
      "index": 28,
-     "originalCode": null,
+     "originalCode": "28",
      "label": "Baumann Epp Bau AG"
     },
     {
      "index": 29,
-     "originalCode": null,
+     "originalCode": "29",
      "label": "Caviezel Canalizzazioni SA"
     },
     {
      "index": 30,
-     "originalCode": null,
+     "originalCode": "30",
      "label": "Cellere Bau AG"
     },
     {
      "index": 31,
-     "originalCode": null,
+     "originalCode": "31",
      "label": "Dubacher Schnellservice GmbH"
     },
     {
      "index": 32,
-     "originalCode": null,
+     "originalCode": "32",
      "label": "Elias Arnold Baugeschäft GmbH"
     },
     {
      "index": 33,
-     "originalCode": null,
+     "originalCode": "33",
      "label": "Epp / Jauch GmbH"
     },
     {
      "index": 34,
-     "originalCode": null,
+     "originalCode": "34",
      "label": "GAMMA AG Bau"
     },
     {
      "index": 35,
-     "originalCode": null,
+     "originalCode": "35",
      "label": "Gamma Gartenraum GmbH"
     },
     {
      "index": 36,
-     "originalCode": null,
+     "originalCode": "36",
      "label": "GEBR. BRUN AG"
     },
     {
      "index": 37,
-     "originalCode": null,
+     "originalCode": "37",
      "label": "Gislerbau GmbH"
     },
     {
      "index": 38,
-     "originalCode": null,
+     "originalCode": "38",
      "label": "GKS Cahenzli AG"
     },
     {
      "index": 39,
-     "originalCode": null,
+     "originalCode": "39",
      "label": "GLB Uri"
     },
     {
      "index": 40,
-     "originalCode": null,
+     "originalCode": "40",
      "label": "Hess Galabau AG"
     },
     {
      "index": 41,
-     "originalCode": null,
+     "originalCode": "41",
      "label": "Implenia Schweiz AG"
     },
     {
      "index": 42,
-     "originalCode": null,
+     "originalCode": "42",
      "label": "J. Tresch Sanitär-Heizung GmbH"
     },
     {
      "index": 43,
-     "originalCode": null,
+     "originalCode": "43",
      "label": "Josef Lussmann AG"
     },
     {
      "index": 44,
-     "originalCode": null,
+     "originalCode": "44",
      "label": "Kalbermatter AG"
     },
     {
      "index": 45,
-     "originalCode": null,
+     "originalCode": "45",
      "label": "Kanal total"
     },
     {
      "index": 46,
-     "originalCode": null,
+     "originalCode": "46",
      "label": "Käppeli, Strassen- und Tiefbau AG"
     },
     {
      "index": 47,
-     "originalCode": null,
+     "originalCode": "47",
      "label": "Koni Wyrsch Sanitär & Heizung"
     },
     {
      "index": 48,
-     "originalCode": null,
+     "originalCode": "48",
      "label": "M hoch3 AG"
     },
     {
      "index": 49,
-     "originalCode": null,
+     "originalCode": "49",
      "label": "Markus Enz AG"
     },
     {
      "index": 50,
-     "originalCode": null,
+     "originalCode": "50",
      "label": "Marti AG Bürglen"
     },
     {
      "index": 51,
-     "originalCode": null,
+     "originalCode": "51",
      "label": "Marty AG"
     },
     {
      "index": 52,
-     "originalCode": null,
+     "originalCode": "52",
      "label": "Otto Rohrunterhalt GmbH"
     },
     {
      "index": 53,
-     "originalCode": null,
+     "originalCode": "53",
      "label": "PK Bau AG Erstfeld"
     },
     {
      "index": 54,
-     "originalCode": null,
+     "originalCode": "54",
      "label": "PORR Suisse AG"
     },
     {
      "index": 55,
-     "originalCode": null,
+     "originalCode": "55",
      "label": "Püntener Heizung - Sanitär"
     },
     {
      "index": 56,
-     "originalCode": null,
+     "originalCode": "56",
      "label": "Schelbert AG"
     },
     {
      "index": 57,
-     "originalCode": null,
+     "originalCode": "57",
      "label": "SPAG Schnyder, Plüss AG"
     },
     {
      "index": 58,
-     "originalCode": null,
+     "originalCode": "58",
      "label": "STRABAG AG"
     },
     {
      "index": 59,
-     "originalCode": null,
+     "originalCode": "59",
      "label": "Swissinliner GmbH"
     },
     {
      "index": 60,
-     "originalCode": null,
+     "originalCode": "60",
      "label": "Truttmann Transporte & Bauunternehmung AG"
     },
     {
      "index": 61,
-     "originalCode": null,
+     "originalCode": "61",
      "label": "Walo Bertschinger AG"
     },
     {
      "index": 62,
-     "originalCode": null,
+     "originalCode": "62",
      "label": "Walter Kempf, Heizungen und San. Anlagen"
     },
     {
      "index": 63,
-     "originalCode": null,
+     "originalCode": "63",
      "label": "Walter Marty AG"
     },
     {
      "index": 64,
-     "originalCode": null,
+     "originalCode": "64",
      "label": "Zurfluh Tiefbau GmbH"
     }
    ]
@@ -22440,6 +22737,647 @@
      "originalCode": "114",
      "label": "Asbestzement",
      "eltern": "5"
+    }
+   ]
+  },
+  {
+   "id": "sanierung.verfahren-je-eltern",
+   "codesBestaetigt": true,
+   "eintraege": [
+    {
+     "index": 14,
+     "originalCode": "0",
+     "label": "Unbekannt",
+     "eltern": "0"
+    },
+    {
+     "index": 15,
+     "originalCode": "35",
+     "label": "Neues Verfahren",
+     "eltern": "0"
+    },
+    {
+     "index": 16,
+     "originalCode": "3",
+     "label": "Austausch von Bauteilen",
+     "eltern": "1"
+    },
+    {
+     "index": 17,
+     "originalCode": "7",
+     "label": "Berstverfahren",
+     "eltern": "1"
+    },
+    {
+     "index": 18,
+     "originalCode": "17",
+     "label": "Vollständige Erneuerung",
+     "eltern": "1"
+    },
+    {
+     "index": 19,
+     "originalCode": "21",
+     "label": "Rohraustausch",
+     "eltern": "1"
+    },
+    {
+     "index": 20,
+     "originalCode": "26",
+     "label": "Rohrziehverfahren",
+     "eltern": "1"
+    },
+    {
+     "index": 21,
+     "originalCode": "29",
+     "label": "Teilerneuerung",
+     "eltern": "1"
+    },
+    {
+     "index": 22,
+     "originalCode": "30",
+     "label": "Überfahren",
+     "eltern": "1"
+    },
+    {
+     "index": 23,
+     "originalCode": "5",
+     "label": "Aussenmanschetten",
+     "eltern": "2"
+    },
+    {
+     "index": 24,
+     "originalCode": "8",
+     "label": "Einbau von Abdichtungsstoffen",
+     "eltern": "2"
+    },
+    {
+     "index": 25,
+     "originalCode": "9",
+     "label": "Flutungsverfahren",
+     "eltern": "2"
+    },
+    {
+     "index": 26,
+     "originalCode": "10",
+     "label": "Injektionen der Leitungszone",
+     "eltern": "2"
+    },
+    {
+     "index": 27,
+     "originalCode": "11",
+     "label": "Innenmanschetten",
+     "eltern": "2"
+    },
+    {
+     "index": 28,
+     "originalCode": "12",
+     "label": "Injektion von Undichtigkeiten",
+     "eltern": "2"
+    },
+    {
+     "index": 29,
+     "originalCode": "15",
+     "label": "Lageregulierung Schachtabdeckung",
+     "eltern": "2"
+    },
+    {
+     "index": 30,
+     "originalCode": "19",
+     "label": "Oberflächenbehandlung",
+     "eltern": "2"
+    },
+    {
+     "index": 31,
+     "originalCode": "20",
+     "label": "Ortslaminate",
+     "eltern": "2"
+    },
+    {
+     "index": 32,
+     "originalCode": "23",
+     "label": "Roboterverfahren",
+     "eltern": "2"
+    },
+    {
+     "index": 33,
+     "originalCode": "28",
+     "label": "Schrumpfschläuche",
+     "eltern": "2"
+    },
+    {
+     "index": 34,
+     "originalCode": "31",
+     "label": "Verdrängungsverfahren",
+     "eltern": "2"
+    },
+    {
+     "index": 35,
+     "originalCode": "32",
+     "label": "Verfugung",
+     "eltern": "2"
+    },
+    {
+     "index": 36,
+     "originalCode": "33",
+     "label": "Vermörtelung",
+     "eltern": "2"
+    },
+    {
+     "index": 37,
+     "originalCode": "1000",
+     "label": "Partieller Liner",
+     "eltern": "2"
+    },
+    {
+     "index": 0,
+     "originalCode": "",
+     "label": "",
+     "eltern": "4"
+    },
+    {
+     "index": 1,
+     "originalCode": "1",
+     "label": "Anschleuderverfahren",
+     "eltern": "4"
+    },
+    {
+     "index": 2,
+     "originalCode": "2",
+     "label": "Auspressverfahren",
+     "eltern": "4"
+    },
+    {
+     "index": 3,
+     "originalCode": "4",
+     "label": "Aufspritzverfahren",
+     "eltern": "4"
+    },
+    {
+     "index": 4,
+     "originalCode": "6",
+     "label": "Auskleidung mit vorgefertigten Teilen",
+     "eltern": "4"
+    },
+    {
+     "index": 5,
+     "originalCode": "13",
+     "label": "Kurzrohrverfahren",
+     "eltern": "4"
+    },
+    {
+     "index": 6,
+     "originalCode": "14",
+     "label": "Langrohrverfahren",
+     "eltern": "4"
+    },
+    {
+     "index": 7,
+     "originalCode": "16",
+     "label": "Montageverfahren",
+     "eltern": "4"
+    },
+    {
+     "index": 8,
+     "originalCode": "18",
+     "label": "Noppenbahnverfahren",
+     "eltern": "4"
+    },
+    {
+     "index": 9,
+     "originalCode": "22",
+     "label": "Reduktionsverfahren",
+     "eltern": "4"
+    },
+    {
+     "index": 10,
+     "originalCode": "24",
+     "label": "Rohrstrangverfahren",
+     "eltern": "4"
+    },
+    {
+     "index": 11,
+     "originalCode": "25",
+     "label": "Rückverformung",
+     "eltern": "4"
+    },
+    {
+     "index": 12,
+     "originalCode": "27",
+     "label": "Schlauchverfahren",
+     "eltern": "4"
+    },
+    {
+     "index": 13,
+     "originalCode": "34",
+     "label": "Wickelrohrverfahren",
+     "eltern": "4"
+    }
+   ]
+  },
+  {
+   "id": "haltungspunkt.auslaufform",
+   "codesBestaetigt": true,
+   "eintraege": [
+    {
+     "index": 0,
+     "originalCode": "",
+     "label": ""
+    },
+    {
+     "index": 1,
+     "originalCode": "0",
+     "label": "Unbekannt"
+    },
+    {
+     "index": 2,
+     "originalCode": "101",
+     "label": "Abgerundet"
+    },
+    {
+     "index": 3,
+     "originalCode": "102",
+     "label": "Blendenförmig"
+    },
+    {
+     "index": 4,
+     "originalCode": "103",
+     "label": "Keine Querschnittsänderung"
+    },
+    {
+     "index": 5,
+     "originalCode": "104",
+     "label": "Scharfkantig"
+    }
+   ]
+  },
+  {
+   "id": "haltungspunkt.bestimmung",
+   "codesBestaetigt": true,
+   "eintraege": [
+    {
+     "index": 0,
+     "originalCode": "",
+     "label": ""
+    },
+    {
+     "index": 1,
+     "originalCode": "0",
+     "label": "Unbekannt"
+    },
+    {
+     "index": 2,
+     "originalCode": "101",
+     "label": "Ungenau"
+    },
+    {
+     "index": 3,
+     "originalCode": "102",
+     "label": "Genau"
+    }
+   ]
+  },
+  {
+   "id": "haltungspunkt.lagegenauigkeit",
+   "codesBestaetigt": true,
+   "eintraege": [
+    {
+     "index": 0,
+     "originalCode": "",
+     "label": ""
+    },
+    {
+     "index": 1,
+     "originalCode": "0",
+     "label": "Unbekannt"
+    },
+    {
+     "index": 2,
+     "originalCode": "101",
+     "label": "> 50 cm"
+    },
+    {
+     "index": 3,
+     "originalCode": "102",
+     "label": "+/- 10 cm"
+    },
+    {
+     "index": 4,
+     "originalCode": "103",
+     "label": "+/- 3 cm"
+    },
+    {
+     "index": 5,
+     "originalCode": "104",
+     "label": "+/- 50 cm"
+    }
+   ]
+  },
+  {
+   "id": "haltungspunkt.hoehengenauigkeit",
+   "codesBestaetigt": true,
+   "eintraege": [
+    {
+     "index": 0,
+     "originalCode": "",
+     "label": ""
+    },
+    {
+     "index": 1,
+     "originalCode": "0",
+     "label": "Unbekannt"
+    },
+    {
+     "index": 2,
+     "originalCode": "101",
+     "label": "> 6 cm"
+    },
+    {
+     "index": 3,
+     "originalCode": "102",
+     "label": "+/- 1 cm"
+    },
+    {
+     "index": 4,
+     "originalCode": "103",
+     "label": "+/- 3 cm"
+    },
+    {
+     "index": 5,
+     "originalCode": "104",
+     "label": "+/- 6 cm"
+    }
+   ]
+  },
+  {
+   "id": "unterhalt.witterung",
+   "codesBestaetigt": true,
+   "eintraege": [
+    {
+     "index": 0,
+     "originalCode": "0",
+     "label": "Unbekannt"
+    },
+    {
+     "index": 1,
+     "originalCode": "1",
+     "label": "Kein Niederschlag"
+    },
+    {
+     "index": 2,
+     "originalCode": "2",
+     "label": "Regen"
+    },
+    {
+     "index": 3,
+     "originalCode": "3",
+     "label": "Schmelzwasser"
+    },
+    {
+     "index": 4,
+     "originalCode": "4",
+     "label": "Bedeckt, regnerisch"
+    },
+    {
+     "index": 5,
+     "originalCode": "5",
+     "label": "Nieselregen"
+    },
+    {
+     "index": 6,
+     "originalCode": "6",
+     "label": "Schneefall"
+    },
+    {
+     "index": 7,
+     "originalCode": "7",
+     "label": "Schön, trocken"
+    },
+    {
+     "index": 8,
+     "originalCode": "8",
+     "label": "Frost"
+    }
+   ]
+  },
+  {
+   "id": "unterhalt.witterung-je-art",
+   "codesBestaetigt": true,
+   "eintraege": [
+    {
+     "index": 0,
+     "originalCode": "0",
+     "label": "Unbekannt",
+     "eltern": "5"
+    },
+    {
+     "index": 1,
+     "originalCode": "1",
+     "label": "Kein Niederschlag",
+     "eltern": "5"
+    },
+    {
+     "index": 2,
+     "originalCode": "2",
+     "label": "Regen",
+     "eltern": "5"
+    },
+    {
+     "index": 3,
+     "originalCode": "3",
+     "label": "Schmelzwasser",
+     "eltern": "5"
+    },
+    {
+     "index": 4,
+     "originalCode": "4",
+     "label": "Bedeckt, regnerisch",
+     "eltern": "5"
+    },
+    {
+     "index": 5,
+     "originalCode": "5",
+     "label": "Nieselregen",
+     "eltern": "5"
+    },
+    {
+     "index": 6,
+     "originalCode": "6",
+     "label": "Schneefall",
+     "eltern": "5"
+    },
+    {
+     "index": 7,
+     "originalCode": "7",
+     "label": "Schön, trocken",
+     "eltern": "5"
+    },
+    {
+     "index": 8,
+     "originalCode": "8",
+     "label": "Frost",
+     "eltern": "5"
+    },
+    {
+     "index": 9,
+     "originalCode": "0",
+     "label": "Unbekannt",
+     "eltern": "8"
+    },
+    {
+     "index": 10,
+     "originalCode": "1",
+     "label": "Kein Niederschlag",
+     "eltern": "8"
+    },
+    {
+     "index": 11,
+     "originalCode": "2",
+     "label": "Regen",
+     "eltern": "8"
+    },
+    {
+     "index": 12,
+     "originalCode": "3",
+     "label": "Schmelzwasser",
+     "eltern": "8"
+    },
+    {
+     "index": 13,
+     "originalCode": "4",
+     "label": "Bedeckt, regnerisch",
+     "eltern": "8"
+    },
+    {
+     "index": 14,
+     "originalCode": "5",
+     "label": "Nieselregen",
+     "eltern": "8"
+    },
+    {
+     "index": 15,
+     "originalCode": "6",
+     "label": "Schneefall",
+     "eltern": "8"
+    },
+    {
+     "index": 16,
+     "originalCode": "7",
+     "label": "Schön, trocken",
+     "eltern": "8"
+    },
+    {
+     "index": 17,
+     "originalCode": "8",
+     "label": "Frost",
+     "eltern": "8"
+    },
+    {
+     "index": 18,
+     "originalCode": "0",
+     "label": "Unbekannt",
+     "eltern": "9"
+    },
+    {
+     "index": 19,
+     "originalCode": "1",
+     "label": "Kein Niederschlag",
+     "eltern": "9"
+    },
+    {
+     "index": 20,
+     "originalCode": "2",
+     "label": "Regen",
+     "eltern": "9"
+    },
+    {
+     "index": 21,
+     "originalCode": "3",
+     "label": "Schmelzwasser",
+     "eltern": "9"
+    },
+    {
+     "index": 22,
+     "originalCode": "4",
+     "label": "Bedeckt, regnerisch",
+     "eltern": "9"
+    },
+    {
+     "index": 23,
+     "originalCode": "5",
+     "label": "Nieselregen",
+     "eltern": "9"
+    },
+    {
+     "index": 24,
+     "originalCode": "6",
+     "label": "Schneefall",
+     "eltern": "9"
+    },
+    {
+     "index": 25,
+     "originalCode": "7",
+     "label": "Schön, trocken",
+     "eltern": "9"
+    },
+    {
+     "index": 26,
+     "originalCode": "8",
+     "label": "Frost",
+     "eltern": "9"
+    },
+    {
+     "index": 27,
+     "originalCode": "0",
+     "label": "Unbekannt",
+     "eltern": "11"
+    },
+    {
+     "index": 28,
+     "originalCode": "1",
+     "label": "Kein Niederschlag",
+     "eltern": "11"
+    },
+    {
+     "index": 29,
+     "originalCode": "2",
+     "label": "Regen",
+     "eltern": "11"
+    },
+    {
+     "index": 30,
+     "originalCode": "3",
+     "label": "Schmelzwasser",
+     "eltern": "11"
+    },
+    {
+     "index": 31,
+     "originalCode": "4",
+     "label": "Bedeckt, regnerisch",
+     "eltern": "11"
+    },
+    {
+     "index": 32,
+     "originalCode": "5",
+     "label": "Nieselregen",
+     "eltern": "11"
+    },
+    {
+     "index": 33,
+     "originalCode": "6",
+     "label": "Schneefall",
+     "eltern": "11"
+    },
+    {
+     "index": 34,
+     "originalCode": "7",
+     "label": "Schön, trocken",
+     "eltern": "11"
+    },
+    {
+     "index": 35,
+     "originalCode": "8",
+     "label": "Frost",
+     "eltern": "11"
     }
    ]
   }

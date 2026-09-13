@@ -1,0 +1,17 @@
+﻿Projekt: DSS-Probe
+Lieferart: Projektstand gemäss Exportumfang und Hinweisen.
+
+Im Projekt: 1 Haltungen, 1 Schaechte.
+In die Datei: 1 Haltungen, 1 Schaechte (15 Objekte insgesamt).
+0 Objekte mit gespeicherter GeoShop-/QGIS-Geometrie.
+
+Hinweise:
+  DSS_2020_1_LV95: belegte GeoShop-Felder, Deckel und Ereignisse als Normobjekte. Aktuelle Eingaben haben Vorrang.
+  53 DSS-Feldwerte; 1 Deckel; 3 Unterhalts-/Sanierungsereignisse.
+
+Die Objektkennungen bleiben bei jedem Export dieselben. Ein zweiter Lauf
+kann damit bestehende Objekte treffen, sofern die Kennungen im Ziel bestaetigt sind. Bauteile mit
+GEONIS-Kennung ("Katasterkennungen ergaenzen") tragen die Kennung des Katasters.
+Importierte Rollen und Verknüpfungen behalten ihre Original-TIDs. Fehlende externe Organisationen nennt der Bericht. Ein tatsächlicher GEONIS-Import ist damit noch nicht geprüft.
+
+Geschrieben: C:\Sewer-Studio_KI_4.5\docs\reviews\2026-09-12-webgis\normprobe\DSS-Probe_20260912_194716.xtf

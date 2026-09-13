@@ -32,6 +32,30 @@ Diese erste Testfassung ergänzt keine Geometrien, Deckelobjekte, Medien oder In
 Externe Organisationsverweise ohne mitgeliefertes Objekt liefern keinen Eigentümernamen. Dazu erscheint ein Hinweis.
 Die zusätzliche Eigentümer-JSON-Datei im Downloadordner wird nicht stillschweigend als zweite Datenquelle verwendet.
 
+## Je Haltung / je Schacht: «Fehlende Felder aus GeoShop-XTF» (11.09.2026)
+
+In der aufgeklappten Haltung oder dem aufgeklappten Schacht (und im Objektakten-Fenster) unter **Mehr**:
+
+- **Fehlende Felder aus GeoShop-XTF** liest nur dieses eine Bauteil aus der gemerkten XTF (Sekunden statt
+  ganzes Projekt), zeigt einen kurzen Text «Haltung «A-B»: 4 leere Felder ergänzen, 1 ersetzen, Kennungen
+  übernehmen» mit Ja/Nein und schreibt danach genau wie der grosse Abgleich: leere Felder, Kennungen,
+  Objektakte (Originalwerte, Deckel, Ereignisse). Ist nichts zu übernehmen, sagt er warum
+  (nicht gefunden, mehrdeutig, bereits abgeglichen).
+- **GeoShop-XTF wählen…** — die Datei wird programmweit gemerkt (`AppSettings.GeoShopXtfPath`); beim ersten
+  Mal wird gefragt, danach nicht mehr. Der grosse Abgleich merkt sich seine Datei ebenfalls.
+- Dieselben Regeln, kein zweiter Weg: `GeoShopEinzelErgaenzung` ruft `GeoShopAbgleichPlanBuilder` und
+  `GeoShopAbgleichAnwender` mit genau einem Ziel auf; der Datensatz-Stand wird vor dem Schreiben erneut geprüft.
+
+**Die Haltungslänge kommt immer aus der XTF** (Entscheid Pascal 11.09.2026): Ein vorhandener Wert — auch ein
+von Hand gesetzter — wird ersetzt und als Katasterwert markiert (gilt danach nicht mehr als Handänderung).
+Gleiche Werte in anderer Schreibweise («12.5» / «12.50») sind keine Änderung. Die Vorschau zeigt
+«alt → neu (ersetzt)». Alle anderen Felder werden weiterhin nur gefüllt, wenn sie leer sind. Liste:
+`GeoShopAbgleichPlanBuilder.ImmerAusXtf`. Gilt für beide Wege.
+
+Wächter: `GeoShopAbgleichTests.Haltungslaenge_kommt_immer_aus_der_XTF_auch_wenn_von_Hand_gesetzt`,
+`Einzelergaenzung_liest_nur_dieses_Bauteil_und_schreibt_erst_beim_Anwenden`,
+`ObjektakteUiTests.GeoShop_Befehle_gibt_es_nur_mit_Anbindung_und_die_Maske_liest_danach_neu`.
+
 ## Zuordnung und Schutz
 
 Ein Name muss im Projekt und in der XTF eindeutig sein. Direkter Name und Gegenrichtung werden zusammen geprüft.

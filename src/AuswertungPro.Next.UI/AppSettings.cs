@@ -177,6 +177,8 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public Dictionary<string, bool> ObjektakteSichtbarkeit { get; set; } = new();
     public Dictionary<string, bool> ObjektakteFavoriten { get; set; } = new();
     public Dictionary<string, bool> ObjektakteGruppen { get; set; } = new();
+    // Feldmarkierung «will ich ausfuellen» (11.09.2026): Feld-Id -> Farbname aus ObjektFeldViewModel.Farben.
+    public Dictionary<string, string> ObjektakteFarben { get; set; } = new();
 
     // Haltungsansicht: per GridSplitter einstellbare Hoehe des "Primaere Schaeden"-Panels (in px).
     public double HaltungsansichtSchadenHeight { get; set; } = 240d;
@@ -377,6 +379,10 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     // Quelle fuer "Katasterkennungen ergaenzen". Fehlt die Datei, meldet der
     // Knopf das und aendert nichts.
     public string KatasterKennungenGpkgPath { get; set; } = DefaultKatasterKennungenGpkgPath;
+
+    // Zuletzt gewaehlte GeoShop-XTF (11.09.2026): fuer «Fehlende Felder aus GeoShop-XTF» an der
+    // einzelnen Haltung/dem Schacht und den Abgleich der ganzen Seite. Leer heisst: beim naechsten Mal fragen.
+    public string GeoShopXtfPath { get; set; } = "";
 
     // VSA Zustandklassifizierung v2: Shadow-Vergleich gegen Legacy-Engine.
     // Null bedeutet Default an.

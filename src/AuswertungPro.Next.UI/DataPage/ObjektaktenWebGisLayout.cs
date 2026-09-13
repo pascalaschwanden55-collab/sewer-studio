@@ -9,8 +9,9 @@ namespace AuswertungPro.Next.UI.DataPage;
 public static class ObjektaktenWebGisLayout
 {
     private static readonly IReadOnlyDictionary<string, string> Bereiche = LadeBereiche();
-    private static readonly string[] Reihenfolge = ["Daten I", "Daten II", "Bauwerksteile", "Haltungspunkte",
-        "Stammkarte", "Administrativ", "Unterhalt", "Hydraulik", "Sanierungsdetail", "Metadaten", "SewerStudio"];
+    private static readonly string[] Reihenfolge = ["Daten", "Daten I", "Daten II", "Bauwerksteile", "Haltungspunkte",
+        "Stammkarte", "Bewertung", "Attribute", "Objekte referenzieren", "Darstellung", "Administrativ", "Einbauten",
+        "Unterhalt", "Hydraulik", "Anschluss", "Video", "Sanierungsdetail", "Metadaten", "SewerStudio"];
 
     public static string Bereich(ObjektFeldDefinition feld)
     {
@@ -18,6 +19,7 @@ public static class ObjektaktenWebGisLayout
         if (feld.Id.StartsWith("haltung.reliner_", StringComparison.Ordinal)) return "Bauwerksteile";
         if (feld.Id is "haltung.haltungsbemerkung" or "schacht.knotenbemerkung") return "Daten I";
         if (feld.Art == "sanierung") return "Sanierungsdetail";
+        if (feld.WebgisKennung is not null && Reihenfolge.Contains(feld.Gruppe)) return feld.Gruppe;
         return "SewerStudio";
     }
 
@@ -25,7 +27,7 @@ public static class ObjektaktenWebGisLayout
         IEnumerable<ObjektListenAnzeige> listen, AppSettings settings, bool suche)
     {
         var feldgruppen = felder.Where(f => Bereich(f.Feld) != "Kopf").ToLookup(f => Bereich(f.Feld));
-        var listengruppen = listen.ToLookup(l => ListenBereich(l.Titel));
+        var listengruppen = listen.ToLookup(ListenBereich);
         return Reihenfolge.Where(b => feldgruppen.Contains(b) || listengruppen.Contains(b))
             .Select(b => new ObjektWebGisAbschnitt(b, feldgruppen[b].ToArray(), listengruppen[b].ToArray(),
                 settings, "webgis." + art + "." + b, suche)).ToArray();
@@ -38,9 +40,12 @@ public static class ObjektaktenWebGisLayout
         _ => "Bauwerksteile"
     };
 
+    private static string ListenBereich(ObjektListenAnzeige liste) => liste.WebgisAbschnitt is { } abschnitt
+        && Reihenfolge.Contains(abschnitt) ? abschnitt : ListenBereich(liste.Titel);
+
     public static void AktualisiereListen(IEnumerable<ObjektWebGisAbschnitt> abschnitte, IEnumerable<ObjektListenAnzeige> listen)
     {
-        var gruppen = listen.ToLookup(l => ListenBereich(l.Titel));
+        var gruppen = listen.ToLookup(ListenBereich);
         foreach (var abschnitt in abschnitte) abschnitt.SetzeListen(gruppen[abschnitt.Titel].ToArray());
     }
 

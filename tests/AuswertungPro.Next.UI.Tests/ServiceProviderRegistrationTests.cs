@@ -125,10 +125,12 @@ public sealed class ServiceProviderRegistrationTests
         // 159 -> 160: IGeoShopLeser liefert Original-XTF-TIDs und Leerfelder fuer die neue Vorschau.
         // 160 -> 161: IBackupAdditionalFolders speichert zusätzliche Sicherungsquellen getrennt.
         Assert.True(
-            registrations.Count == 163,
-            $"Erwartet 163 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 164, // + IXtfLieferungsAblage: eigenständige Bearbeitung der gesamten Lieferung.
+            $"Erwartet 164 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
+        Assert.Same(services.XtfLieferungen,
+            registrations[typeof(AuswertungPro.Next.Application.Xtf.Lieferung.IXtfLieferungsAblage)]);
         Assert.Same(services.BackupAdditionalFolders,
             registrations[typeof(AuswertungPro.Next.Application.Backup.IBackupAdditionalFolders)]);
         Assert.Same(

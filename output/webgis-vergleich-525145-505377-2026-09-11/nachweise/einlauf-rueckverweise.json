@@ -1,0 +1,3 @@
+[
+  "<ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt xmlns:ns0=\"http://www.interlis.ch/INTERLIS2.3\" TID=\"ch24gwkdSHRmhNha\">\n        <ns0:Letzte_Aenderung>20260829</ns0:Letzte_Aenderung>\n        <ns0:DatenherrRef REF=\"ch20p3q400002009\" />\n        <ns0:DatenlieferantRef REF=\"ch20p3q400002009\" />\n        <ns0:Bezeichnung>E70183</ns0:Bezeichnung>\n        <ns0:Hoehengenauigkeit>plusminus_6cm</ns0:Hoehengenauigkeit>\n        <ns0:Lage>\n          <ns0:COORD><ns0:C1>2692815.402</ns0:C1><ns0:C2>1192421.215</ns0:C2></ns0:COORD>\n        </ns0:Lage>\n        <ns0:AbwassernetzelementRef REF=\"ch24gwkdVy2uiPfJ\" />\n      </ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt>\n      "
+]

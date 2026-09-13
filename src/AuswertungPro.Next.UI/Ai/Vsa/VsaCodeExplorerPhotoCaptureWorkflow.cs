@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO;
+using AuswertungPro.Next.Application.UseCases.VsaFotos;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 
@@ -25,7 +26,8 @@ public sealed record VsaCodeExplorerPhotoCaptureRequest(
     Func<int, string> CreateTempPhotoPath,
     Func<string, byte[], CancellationToken, Task> WriteAllBytesAsync,
     CancellationToken CancellationToken,
-    IList<string>? OriginalPhotoPaths = null);
+    IList<string>? OriginalPhotoPaths = null,
+    Func<string, int, string>? PersistPhoto = null);
 
 public sealed record VsaCodeExplorerPhotoCaptureResult(
     VsaCodeExplorerPhotoCaptureOutcome Outcome,
@@ -76,7 +78,9 @@ public static class VsaCodeExplorerPhotoCaptureWorkflow
                 CreateTempPhotoPath: CreateTempPhotoPath,
                 WriteAllBytesAsync: File.WriteAllBytesAsync,
                 CancellationToken: cancellationToken,
-                OriginalPhotoPaths: originalPhotoPaths));
+                OriginalPhotoPaths: originalPhotoPaths,
+                PersistPhoto: (quelle, index) =>
+                    VsaFotoAblage.Uebernehme(quelle, videoPath, index)));
 
     public static async Task<VsaCodeExplorerPhotoCaptureResult> CaptureAsync(
         VsaCodeExplorerPhotoCaptureRequest request)
@@ -95,7 +99,7 @@ public static class VsaCodeExplorerPhotoCaptureWorkflow
                 request.PhotoPaths,
                 request.OriginalPhotoPaths ?? request.PhotoPaths,
                 request.PhotoIndex,
-                liveSnapshotPath);
+                Uebernehme(request, liveSnapshotPath));
 
         if (string.IsNullOrWhiteSpace(request.VideoPath) || !request.FileExists(request.VideoPath))
             return MissingVideo();
@@ -121,8 +125,20 @@ public static class VsaCodeExplorerPhotoCaptureWorkflow
             request.PhotoPaths,
             request.OriginalPhotoPaths ?? request.PhotoPaths,
             request.PhotoIndex,
-            tempPhotoPath);
+            Uebernehme(request, tempPhotoPath));
     }
+
+    /// <summary>
+    /// Bringt das gerade aufgenommene Bild an seinen dauerhaften Ort. Ohne
+    /// gesetzten Weg bleibt der Pfad unveraendert; die Aufrufer der
+    /// Standardfassung legen ihn immer neben das Video.
+    /// </summary>
+    private static string Uebernehme(
+        VsaCodeExplorerPhotoCaptureRequest request,
+        string quelle)
+        => request.PersistPhoto is null
+            ? quelle
+            : request.PersistPhoto(quelle, request.PhotoIndex);
 
     private static TimeSpan ResolveCaptureTime(TimeSpan? currentVideoTime, string? timeText)
     {

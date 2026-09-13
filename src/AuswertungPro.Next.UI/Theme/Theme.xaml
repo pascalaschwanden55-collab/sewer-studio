@@ -99,6 +99,12 @@
     <SolidColorBrush x:Key="SuccessSubtleBrush" Color="#FF14432A"/>
     <SolidColorBrush x:Key="DangerSubtleBrush" Color="#FF4A1A1A"/>
     <SolidColorBrush x:Key="WarningSubtleBrush" Color="#FF493719"/>
+    <!-- Feldmarkierung in der Objektakte (11.09.2026): dunkle Tints, damit weisse Tinte lesbar bleibt. -->
+    <SolidColorBrush x:Key="MarkierungGelbBrush" Color="#FF4D4318"/>
+    <SolidColorBrush x:Key="MarkierungOrangeBrush" Color="#FF4D3118"/>
+    <SolidColorBrush x:Key="MarkierungRotBrush" Color="#FF4D1F1F"/>
+    <SolidColorBrush x:Key="MarkierungGruenBrush" Color="#FF1A4224"/>
+    <SolidColorBrush x:Key="MarkierungBlauBrush" Color="#FF1A324D"/>
 
     <!-- ── DESIGNSTUDIE: Zweit-Akzent (Teal), Severity-Skala, Akzent-Verlauf — dunkel abgestimmt ── -->
     <Color x:Key="ColorSecondaryAccent">#FF22D3EE</Color>

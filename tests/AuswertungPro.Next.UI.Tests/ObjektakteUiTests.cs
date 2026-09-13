@@ -13,6 +13,72 @@ namespace AuswertungPro.Next.UI.Tests;
 [Collection("IsolatedWpf")]
 public sealed class ObjektakteUiTests
 {
+    [Theory]
+    [InlineData(400, 1)] [InlineData(699, 1)] [InlineData(700, 2)] [InlineData(1099, 2)]
+    [InlineData(1100, 3)] [InlineData(1499, 3)] [InlineData(1500, 4)] [InlineData(1900, 4)]
+    public void Feldspalten_folgen_der_Breite(double breite, int erwartet)
+        => Assert.Equal(erwartet, Views.Controls.ObjektakteView.SpaltenFuerBreite(breite));
+
+    [Theory]
+    [InlineData(0, 620)] [InlineData(double.NaN, 620)] [InlineData(400, 360)] [InlineData(510, 360)]
+    [InlineData(900, 750)] [InlineData(1000, 850)]
+    public void Objektakte_in_der_Zeile_nimmt_die_Listenhoehe_minus_Kopf(double listenhoehe, double erwartet)
+        => Assert.Equal(erwartet, Views.Pages.Haltungsansicht.FormularHoeheConverter.Berechne(listenhoehe));
+
+    [Fact]
+    public async Task GeoShop_Befehle_gibt_es_nur_mit_Anbindung_und_die_Maske_liest_danach_neu()
+    {
+        var p = new Project(); var h = new HaltungRecord(); p.Data.Add(h);
+        var ohne = new ObjektakteViewModel(new(p, h.Id, "haltung"), new(), () => { }, () => true, () => { });
+        Assert.False(ohne.GeoShopErgaenzenCommand.CanExecute(null));
+        Assert.False(ohne.GeoShopDateiCommand.CanExecute(null));
+
+        var geaendert = 0; var gewaehlt = 0;
+        var vm = new ObjektakteViewModel(new(p, h.Id, "haltung"), new(), () => geaendert++, () => true, () => { },
+            geoShopErgaenzen: () =>
+            {
+                h.SetFieldValue(FieldKeys.NominalDiameterMm, "300", FieldSource.Kataster, false);
+                return Task.FromResult(true);
+            },
+            geoShopDatei: () => gewaehlt++);
+        Assert.True(vm.GeoShopErgaenzenCommand.CanExecute(null));
+        await vm.GeoShopErgaenzenCommand.ExecuteAsync(null);
+        Assert.Equal(1, geaendert);
+        Assert.Contains("GeoShop", vm.Meldung);
+        Assert.Equal("300", vm.Gruppen.SelectMany(g => g.Felder).Single(f => f.Feld.Id == "haltung.dn").Text);
+        vm.GeoShopDateiCommand.Execute(null);
+        Assert.Equal(1, gewaehlt);
+
+        // Nichts uebernommen: kein Umbau, keine Aenderungsmeldung.
+        var nein = new ObjektakteViewModel(new(p, h.Id, "haltung"), new(), () => geaendert++, () => true, () => { },
+            geoShopErgaenzen: () => Task.FromResult(false));
+        await nein.GeoShopErgaenzenCommand.ExecuteAsync(null);
+        Assert.Equal(1, geaendert);
+    }
+
+    [Fact]
+    public void Feldmarkierung_liegt_programmweit_in_den_Einstellungen_und_nicht_im_Projekt()
+    {
+        var p = new Project(); var h = new HaltungRecord(); p.Data.Add(h);
+        var settings = new AppSettings();
+        var vm = new ObjektakteViewModel(new(p, h.Id, "haltung"), settings, () => { }, () => true, () => { });
+        var feld = vm.Gruppen.SelectMany(g => g.Felder).Single(f => f.Feld.Id == "haltung.dn");
+        Assert.Equal("", feld.Farbe);
+        feld.FarbeCommand.Execute("Gelb");
+        Assert.Equal("Gelb", feld.Farbe);
+        Assert.Equal("Gelb", settings.ObjektakteFarben["haltung.dn"]);
+        // Ein zweites Projekt sieht dieselbe Markierung - sie haengt am Feld, nicht am Datensatz.
+        var p2 = new Project(); var h2 = new HaltungRecord(); p2.Data.Add(h2);
+        var vm2 = new ObjektakteViewModel(new(p2, h2.Id, "haltung"), settings, () => { }, () => true, () => { });
+        Assert.Equal("Gelb", vm2.Gruppen.SelectMany(g => g.Felder).Single(f => f.Feld.Id == "haltung.dn").Farbe);
+        feld.FarbeCommand.Execute("");
+        Assert.Equal("", feld.Farbe);
+        Assert.False(settings.ObjektakteFarben.ContainsKey("haltung.dn"));
+        Assert.Throws<ArgumentException>(() => feld.Farbe = "Lila");
+        Assert.Equal(5, ObjektFeldViewModel.Farben.Count);
+        Assert.False(p.Dirty); Assert.Empty(p.Objektakten);
+    }
+
     [Fact]
     public void Suche_springt_zu_einem_anderen_Deckel_ohne_Daten_zu_aendern()
     {
@@ -87,12 +153,13 @@ public sealed class ObjektakteUiTests
             WindowFx.SetEntrance(window, false);
             window.Show();
             var host = (FrameworkElement)window.Content;
-            foreach (var width in new[] { 1140, 680 })
+            // Kompakt (11.09.2026): 4 Spalten auf Full HD, 3 im Standardfenster, 1 schmal.
+            foreach (var (width, spalten) in new[] { (1800, 4), (1140, 3), (680, 1) })
             {
                 window.Width = width;
                 window.UpdateLayout();
                 window.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-                Assert.Equal(width < 920 ? 1 : 2, window.Spalten);
+                Assert.Equal(spalten, window.Spalten);
                 var grids = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.FindDescendants<System.Windows.Controls.Primitives.UniformGrid>(host).ToArray();
                 Assert.NotEmpty(grids); Assert.All(grids, g => Assert.Equal(window.Spalten, g.Columns));
                 Assert.All(AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.FindDescendants<CheckBox>(host)
@@ -127,6 +194,19 @@ public sealed class ObjektakteUiTests
                     == FieldCatalog.Objektfelder.Feld("schacht.sohlenhoehe").Label);
             System.Windows.Input.Keyboard.Focus(eingabe);
             Assert.True(eingabe.IsKeyboardFocused);
+            // Feldmarkierung: der Hintergrund traegt die Theme-Farbe, die Beschriftung das Rechtsklick-Menue.
+            var sohle = vm.Gruppen.SelectMany(g => g.Felder).Single(f => f.Feld.Id == "schacht.sohlenhoehe");
+            sohle.FarbeCommand.Execute("Gelb");
+            window.UpdateLayout();
+            var gelb = (SolidColorBrush)app.FindResource("MarkierungGelbBrush");
+            Assert.Equal(gelb.Color, Assert.IsType<SolidColorBrush>(eingabe.Background).Color);
+            Assert.NotNull(eingabe.ContextMenu);
+            var beschriftung = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.FindDescendants<TextBlock>(host)
+                .Single(t => t.Text == sohle.Label && t.ContextMenu is not null);
+            Assert.Same(eingabe.ContextMenu, beschriftung.ContextMenu);
+            sohle.FarbeCommand.Execute("");
+            window.UpdateLayout();
+            Assert.NotEqual(gelb.Color, (eingabe.Background as SolidColorBrush)?.Color);
             eingabe.SetCurrentValue(TextBox.TextProperty, "448.35");
             window.Close();
             Assert.Equal("448.35", b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("schacht.sohlenhoehe")));
@@ -152,5 +232,24 @@ public sealed class ObjektakteUiTests
         Directory.CreateDirectory(TestRepoPaths.RepoFile(".tmp"));
         using var output = File.Create(TestRepoPaths.RepoFile(".tmp", name + ".png"));
         png.Save(output);
+    }
+
+    [Fact]
+    public void Gruppenwechsel_zeigt_das_nachgezogene_Materialdetail_sofort_in_der_Maske()
+    {
+        var p = new Project(); var h = new HaltungRecord(); p.Data.Add(h);
+        var vm = new ObjektakteViewModel(new(p, h.Id, "haltung"), new(), () => { }, () => true, () => { });
+        var gruppe = vm.Gruppen.SelectMany(g => g.Felder).Single(f => f.Feld.Id == "haltung.pipegroup");
+        var material = vm.Gruppen.SelectMany(g => g.Felder).Single(f => f.Feld.Id == "haltung.material");
+
+        gruppe.Auswahl = gruppe.Optionen.Single(e => e.Label == "Beton");
+        material.Auswahl = material.Optionen.Single(e => e.Label == "Beton, armiert (BA)");
+        Assert.Equal("Beton, armiert (BA)", material.Text);
+
+        gruppe.Auswahl = gruppe.Optionen.Single(e => e.Label == "Andere");
+
+        Assert.Equal("Verschiedene (V)", material.Text);
+        Assert.Equal("Verschiedene (V)", material.Auswahl?.Label);
+        Assert.Contains(material.Optionen, e => e.Label == "Zement (Z)");
     }
 }

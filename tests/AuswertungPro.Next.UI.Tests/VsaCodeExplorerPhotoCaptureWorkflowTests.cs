@@ -170,4 +170,68 @@ public sealed class VsaCodeExplorerPhotoCaptureWorkflowTests
         Assert.Equal("Foto", result.Title);
         Assert.Equal(["first.png"], photoPaths);
     }
+
+    [Fact]
+    public async Task CaptureAsync_legt_den_live_snapshot_dauerhaft_ab_statt_ihn_im_temp_zu_lassen()
+    {
+        var photoPaths = new List<string>();
+        var originalPhotoPaths = new List<string>();
+        var uebernommen = new List<(string Quelle, int Index)>();
+
+        var result = await VsaCodeExplorerPhotoCaptureWorkflow.CaptureAsync(
+            new VsaCodeExplorerPhotoCaptureRequest(
+                PhotoIndex: 0,
+                PhotoPaths: photoPaths,
+                LiveSnapshotProvider: () => TempSnapshot,
+                VideoPath: VideoPfad,
+                CurrentVideoTime: null,
+                TimeText: null,
+                FileExists: path => path == TempSnapshot || path == VideoPfad,
+                ResolveFfmpeg: () => throw new InvalidOperationException(),
+                ExtractFramePngAsync: (_, _, _, _) => throw new InvalidOperationException(),
+                CreateTempPhotoPath: _ => throw new InvalidOperationException(),
+                WriteAllBytesAsync: (_, _, _) => throw new InvalidOperationException(),
+                CancellationToken: CancellationToken.None,
+                OriginalPhotoPaths: originalPhotoPaths,
+                PersistPhoto: (quelle, index) =>
+                {
+                    uebernommen.Add((quelle, index));
+                    return DauerhaftesFoto;
+                }));
+
+        Assert.Equal(VsaCodeExplorerPhotoCaptureOutcome.Captured, result.Outcome);
+        Assert.Equal(DauerhaftesFoto, result.PhotoPath);
+        Assert.Equal([DauerhaftesFoto], photoPaths);
+        Assert.Equal([DauerhaftesFoto], originalPhotoPaths);
+        Assert.Equal([(TempSnapshot, 0)], uebernommen);
+    }
+
+    [Fact]
+    public async Task CaptureAsync_uebernimmt_auch_das_aus_dem_video_geschnittene_bild()
+    {
+        var photoPaths = new List<string>();
+
+        var result = await VsaCodeExplorerPhotoCaptureWorkflow.CaptureAsync(
+            new VsaCodeExplorerPhotoCaptureRequest(
+                PhotoIndex: 0,
+                PhotoPaths: photoPaths,
+                LiveSnapshotProvider: () => null,
+                VideoPath: VideoPfad,
+                CurrentVideoTime: TimeSpan.FromSeconds(3),
+                TimeText: null,
+                FileExists: path => path == VideoPfad,
+                ResolveFfmpeg: () => "ffmpeg.exe",
+                ExtractFramePngAsync: (_, _, _, _) => Task.FromResult<byte[]?>([1, 2, 3]),
+                CreateTempPhotoPath: _ => TempSnapshot,
+                WriteAllBytesAsync: (_, _, _) => Task.CompletedTask,
+                CancellationToken: CancellationToken.None,
+                PersistPhoto: (_, _) => DauerhaftesFoto));
+
+        Assert.Equal(VsaCodeExplorerPhotoCaptureOutcome.Captured, result.Outcome);
+        Assert.Equal([DauerhaftesFoto], photoPaths);
+    }
+
+    private const string VideoPfad = @"D:\Projekte\Bauen\Haltung\video.mp4";
+    private const string TempSnapshot = @"C:\Temp\coding_live_abc.png";
+    private const string DauerhaftesFoto = @"D:\Projekte\Bauen\Haltung\Fotos\vsa_foto1.png";
 }

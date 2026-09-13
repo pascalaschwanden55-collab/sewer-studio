@@ -281,7 +281,55 @@ bleibt unverändert.
 
 Wächter: `ObjektaktenListenTests` (6) und `ObjektaktenTests.Jede_Aufklappliste_nennt_ihr_Ziel_und_ihre_Rechte`.
 
+## Kompakt: weniger scrollen (11.09.2026, abends)
+
+Pascals erste Sichtprobe im Programm: «alles kompakter, ich scrolle viel zu viel». Gemessen
+am Bildschirmfoto frass die Höhe viermal dasselbe — jede Feldzeile 42 bis 56 px (Eingabe
+36 px nach Themevorgabe plus Abstände), höchstens zwei Spalten auch auf Full HD, ein fester
+620-px-Kasten in der Aufklappliste (innen und aussen scrollen) und Listenzeilen als 32-px-Pillen.
+«Daten I» der Haltung mit 29 Feldern brauchte allein über 800 px.
+
+Umgesetzt in `ObjektakteView.xaml`, ohne Änderung an Inhalt, Reihenfolge oder Bedienung:
+
+- **Dichte Zeilen:** Eingaben 28 px (`KompaktText`, `KompaktAuswahl`), Zeilenabstand 1 px —
+  eine Zeile rund 30 px. Der Hinweis («Zuerst Materialgruppe wählen», «Originalcode: 133»)
+  ist ein Info-Symbol neben dem Feld mit dem Text als Tooltip; als Text daneben hätte er
+  das Eingabefeld auf 70 px zusammengedrückt.
+- **Spalten nach Breite** (`ObjektakteView.SpaltenFuerBreite`, eine Regel für Liste und
+  Fenster): unter 700 px eine, bis 1100 zwei, bis 1500 drei, darüber vier. Beschriftung 130 px.
+  «Daten I» steht damit bei 1264 px in 10 Zeilen (~320 px), auf Full HD in 8.
+- **Kopf einzeilig:** Objektwahl, Suche und Knöpfe in einer Zeile.
+- **Kasten in der Zeile:** `FormularHoeheConverter` nimmt die Höhe der Aufklappliste minus
+  150 px (Kopf, Zeile, Register), mindestens 360 px; ohne Mass gilt 620. Ein Scrollbalken.
+- **Listen:** Zeilen 24 px (`ListenZeileKnopf`), Abschnitts-Polster 6/2 statt 8/5.
+
+Wächter: `ObjektakteUiTests.Feldspalten_folgen_der_Breite` (8 Grenzwerte),
+`Objektakte_in_der_Zeile_nimmt_die_Listenhoehe_minus_Kopf` (6), der Zeichentest bei 1800/1140/680 px
+(4/3/1 Spalten, Bild `.tmp/objektakte-1800.png`) und `ObjektakteAufklappTests` (1280 → 3, 800 → 2,
+640 → 1 Spalten, Kasten ≥ 360 px).
+
+## Feld markieren und ruhiges Speichern (11.09.2026, spät)
+
+**Feld markieren:** Rechtsklick auf Beschriftung oder Eingabe → «Feld markieren» → Gelb, Orange, Rot,
+Grün, Blau oder «Markierung entfernen». Das Eingabefeld trägt die Farbe als Hintergrund (Theme-Tokens
+`Markierung<Farbe>Brush`, hell und dunkel, Tinte bleibt normal). Gespeichert wird **programmweit je
+Feld** in `AppSettings.ObjektakteFarben` (wie «Sichtbar» und «Meine Übersicht») — man markiert einmal,
+was man ausfüllen will, und sieht es in jedem Projekt; das Projekt bleibt unberührt. Ein gemeinsames
+Kontextmenü `FeldMenue` trägt auch «Liste bearbeiten…» (nur sichtbar, wo es geht).
+Wächter: `ObjektakteUiTests.Feldmarkierung_liegt_programmweit_in_den_Einstellungen_und_nicht_im_Projekt`,
+Zeichentest (Hintergrund = Theme-Farbe, Beschriftung und Eingabe teilen das Menü).
+
+**Speichern verschiebt das Bild nicht mehr:** Die Zeile «Gespeichert …» stand im Kopf der Haltungsseite,
+erschien beim Speichern und verschwand nach dem Timer — die ganze Liste rutschte rund 40 px hinunter
+und zurück. Sie ist jetzt eine Einblendung rechts oben ÜBER der Liste (`Grid.Row=2`, `Panel.ZIndex`),
+nimmt keinen Platz im Layout ein.
+
 ## Offen
+
+**Zwei Bestandsfelder mit unlesbarer Beschriftung:** `haltung.extranumber1` («-nr.») und
+`haltung.extranumber2` («/ null»), Gruppe «Zusatzangaben – Bedeutung noch offen» aus dem
+Plan vom 10.09. Sie stehen in «Daten I» der Haltung; in keiner der 27 Maskendateien kommt
+`extranumber` vor. Zu klären, ob sie im WebGIS existieren — sonst ausblenden.
 
 **Vokabular — gemessen am 11.09.2026:** Von den 43 Haltungs-Materialeinträgen des
 WebGIS findet `MaterialVokabular.NachNorm` **3** (Polyethylen, Polyvinylchlorid,

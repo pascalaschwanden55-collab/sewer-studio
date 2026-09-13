@@ -2064,6 +2064,953 @@
         "Maximum": "10000000.00",
         "Decimals": 2
       }
+    },
+    "FoerderAggregat": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Antrieb": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Benzinmotor",
+          "Dieselmotor",
+          "Elektromotor",
+          "hydraulisch",
+          "keiner",
+          "manuell",
+          "pneumatisch",
+          "unbekannt"
+        ]
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Bruttokosten": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Einleitstelle": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Fabrikat": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Funktion": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "intern",
+          "Notentlastung",
+          "Regenueberlauf",
+          "Trennueberlauf",
+          "unbekannt"
+        ]
+      },
+      "Qan_dim": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.000",
+        "Maximum": "100000.000",
+        "Decimals": 3
+      },
+      "Signaluebermittlung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "empfangen",
+          "senden",
+          "senden_empfangen",
+          "unbekannt"
+        ]
+      },
+      "Steuerung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "geregelt",
+          "gesteuert",
+          "keine",
+          "unbekannt"
+        ]
+      },
+      "Subventionen": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Verstellbarkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "fest",
+          "unbekannt",
+          "verstellbar"
+        ]
+      },
+      "Arbeitspunkt": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.000",
+        "Maximum": "10000.000",
+        "Decimals": 3
+      },
+      "AufstellungAntrieb": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "nass",
+          "trocken",
+          "unbekannt"
+        ]
+      },
+      "AufstellungFoerderaggregat": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "horizontal",
+          "unbekannt",
+          "vertikal"
+        ]
+      },
+      "Bauart": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Druckluftanlage",
+          "Kolbenpumpe",
+          "Kreiselpumpe",
+          "Schneckenpumpe",
+          "unbekannt",
+          "Vakuumanlage"
+        ]
+      },
+      "FoerderstromMax_einzel": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.000",
+        "Maximum": "100000.000",
+        "Decimals": 3
+      },
+      "FoerderstromMin_einzel": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.000",
+        "Maximum": "100000.000",
+        "Decimals": 3
+      },
+      "KoteStart": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "-200.000",
+        "Maximum": "5000.000",
+        "Decimals": 3
+      },
+      "KoteStop": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "-200.000",
+        "Maximum": "5000.000",
+        "Decimals": 3
+      }
+    },
+    "Absperr_Drosselorgan": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Antrieb": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Benzinmotor",
+          "Dieselmotor",
+          "Elektromotor",
+          "hydraulisch",
+          "keiner",
+          "manuell",
+          "pneumatisch",
+          "unbekannt"
+        ]
+      },
+      "Art": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Blende",
+          "Dammbalken",
+          "Drosselklappe",
+          "Drosselschieber",
+          "Drosselstrecke",
+          "Leapingwehr",
+          "Pumpe",
+          "Rueckstauklappe",
+          "Schieber",
+          "Schlauchdrossel",
+          "Schuetze",
+          "Stauschild",
+          "unbekannt",
+          "Wirbeldrossel"
+        ]
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Bruttokosten": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Drosselorgan_Oeffnung_Ist": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "99999",
+        "Decimals": 0
+      },
+      "Drosselorgan_Oeffnung_Ist_optimiert": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "99999",
+        "Decimals": 0
+      },
+      "Fabrikat": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Querschnitt": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "100000.00",
+        "Decimals": 2
+      },
+      "Signaluebermittlung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "empfangen",
+          "senden",
+          "senden_empfangen",
+          "unbekannt"
+        ]
+      },
+      "Steuerung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "geregelt",
+          "gesteuert",
+          "keine",
+          "unbekannt"
+        ]
+      },
+      "Subventionen": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Verstellbarkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "fest",
+          "unbekannt",
+          "verstellbar"
+        ]
+      },
+      "Wirksamer_QS": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "100000.00",
+        "Decimals": 2
+      }
+    },
+    "Leapingwehr": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Antrieb": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Benzinmotor",
+          "Dieselmotor",
+          "Elektromotor",
+          "hydraulisch",
+          "keiner",
+          "manuell",
+          "pneumatisch",
+          "unbekannt"
+        ]
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Bruttokosten": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Einleitstelle": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Fabrikat": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Funktion": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "intern",
+          "Notentlastung",
+          "Regenueberlauf",
+          "Trennueberlauf",
+          "unbekannt"
+        ]
+      },
+      "Qan_dim": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.000",
+        "Maximum": "100000.000",
+        "Decimals": 3
+      },
+      "Signaluebermittlung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "empfangen",
+          "senden",
+          "senden_empfangen",
+          "unbekannt"
+        ]
+      },
+      "Steuerung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "geregelt",
+          "gesteuert",
+          "keine",
+          "unbekannt"
+        ]
+      },
+      "Subventionen": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Verstellbarkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "fest",
+          "unbekannt",
+          "verstellbar"
+        ]
+      },
+      "Breite": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "30000.00",
+        "Decimals": 2
+      },
+      "Laenge": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "30000.00",
+        "Decimals": 2
+      },
+      "Oeffnungsform": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Kreis",
+          "Parabel",
+          "Rechteck",
+          "unbekannt"
+        ]
+      }
+    },
+    "Streichwehr": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Antrieb": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Benzinmotor",
+          "Dieselmotor",
+          "Elektromotor",
+          "hydraulisch",
+          "keiner",
+          "manuell",
+          "pneumatisch",
+          "unbekannt"
+        ]
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Bruttokosten": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Einleitstelle": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Fabrikat": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Funktion": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "intern",
+          "Notentlastung",
+          "Regenueberlauf",
+          "Trennueberlauf",
+          "unbekannt"
+        ]
+      },
+      "Qan_dim": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.000",
+        "Maximum": "100000.000",
+        "Decimals": 3
+      },
+      "Signaluebermittlung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "empfangen",
+          "senden",
+          "senden_empfangen",
+          "unbekannt"
+        ]
+      },
+      "Steuerung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "geregelt",
+          "gesteuert",
+          "keine",
+          "unbekannt"
+        ]
+      },
+      "Subventionen": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Verstellbarkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "fest",
+          "unbekannt",
+          "verstellbar"
+        ]
+      },
+      "HydrUeberfalllaenge": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "30000.00",
+        "Decimals": 2
+      },
+      "KoteMax": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "-200.000",
+        "Maximum": "5000.000",
+        "Decimals": 3
+      },
+      "KoteMin": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "-200.000",
+        "Maximum": "5000.000",
+        "Decimals": 3
+      },
+      "Ueberfallkante": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "rechteckig",
+          "rund",
+          "scharfkantig",
+          "unbekannt"
+        ]
+      },
+      "Wehr_Art": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "hochgezogen",
+          "niedrig"
+        ]
+      }
+    },
+    "Trockenwetterfallrohr": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Instandstellung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "nicht_notwendig",
+          "notwendig",
+          "unbekannt"
+        ]
+      },
+      "Durchmesser": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "4000",
+        "Decimals": 0
+      }
+    },
+    "ARABauwerk": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Akten": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 255
+      },
+      "Baujahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "BaulicherZustand": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "unbekannt",
+          "Z0",
+          "Z1",
+          "Z2",
+          "Z3",
+          "Z4"
+        ]
+      },
+      "Baulos": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Bruttokosten": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Detailgeometrie": {
+        "Required": false,
+        "Kind": "Structure"
+      },
+      "Dringlichkeitszahl": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0",
+        "Maximum": "400",
+        "Decimals": 0
+      },
+      "Ersatzjahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "Finanzierung": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "oeffentlich",
+          "privat",
+          "unbekannt"
+        ]
+      },
+      "Inspektionsintervall": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "20.00",
+        "Decimals": 2
+      },
+      "Sanierungsbedarf": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "dringend",
+          "keiner",
+          "kurzfristig",
+          "langfristig",
+          "mittelfristig",
+          "unbekannt"
+        ]
+      },
+      "Standortname": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Status": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ausser_Betrieb",
+          "in_Betrieb",
+          "tot",
+          "unbekannt",
+          "weitere",
+          "in_Betrieb.provisorisch",
+          "in_Betrieb.wird_aufgehoben",
+          "tot.aufgehoben_nicht_verfuellt",
+          "tot.aufgehoben_unbekannt",
+          "tot.verfuellt",
+          "weitere.Berechnungsvariante",
+          "weitere.geplant",
+          "weitere.Projekt"
+        ]
+      },
+      "Subventionen": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "WBW_Basisjahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "WBW_Bauart": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "Feld",
+          "Sanierungsleitung_Bagger",
+          "Sanierungsleitung_Grabenfraese",
+          "Strasse",
+          "unbekannt"
+        ]
+      },
+      "Wiederbeschaffungswert": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "99999999.99",
+        "Decimals": 2
+      },
+      "Zugaenglichkeit": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "ueberdeckt",
+          "unbekannt",
+          "unzugaenglich",
+          "zugaenglich"
+        ]
+      },
+      "Zustandserhebung_Jahr": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "1800",
+        "Maximum": "2100",
+        "Decimals": 0
+      },
+      "Zustandsnote": {
+        "Required": false,
+        "Kind": "Number",
+        "Minimum": "0.00",
+        "Maximum": "4.00",
+        "Decimals": 2
+      },
+      "Art": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "Absetzbecken",
+          "andere",
+          "Belebtschlammbecken",
+          "Festbettreaktor",
+          "Tauchtropfkoerper",
+          "Tropfkoerper",
+          "unbekannt",
+          "Vorklaerbecken"
+        ]
+      }
+    },
+    "Abwasserbauwerk_Text": {
+      "TextPos": {
+        "Required": true,
+        "Kind": "Structure"
+      },
+      "TextOri": {
+        "Required": true,
+        "Kind": "Number",
+        "Minimum": "0.0",
+        "Maximum": "359.9",
+        "Decimals": 1
+      },
+      "TextHAli": {
+        "Required": true,
+        "Kind": "Enum",
+        "Values": [
+          "Left",
+          "Center",
+          "Right"
+        ]
+      },
+      "TextVAli": {
+        "Required": true,
+        "Kind": "Enum",
+        "Values": [
+          "Top",
+          "Cap",
+          "Half",
+          "Base",
+          "Bottom"
+        ]
+      },
+      "Plantyp": {
+        "Required": true,
+        "Kind": "Enum",
+        "Values": [
+          "Leitungskataster",
+          "Werkplan",
+          "Uebersichtsplan.UeP10",
+          "Uebersichtsplan.UeP2",
+          "Uebersichtsplan.UeP5"
+        ]
+      },
+      "Textinhalt": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 0
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      }
+    },
+    "Haltung_Text": {
+      "TextPos": {
+        "Required": true,
+        "Kind": "Structure"
+      },
+      "TextOri": {
+        "Required": true,
+        "Kind": "Number",
+        "Minimum": "0.0",
+        "Maximum": "359.9",
+        "Decimals": 1
+      },
+      "TextHAli": {
+        "Required": true,
+        "Kind": "Enum",
+        "Values": [
+          "Left",
+          "Center",
+          "Right"
+        ]
+      },
+      "TextVAli": {
+        "Required": true,
+        "Kind": "Enum",
+        "Values": [
+          "Top",
+          "Cap",
+          "Half",
+          "Base",
+          "Bottom"
+        ]
+      },
+      "Plantyp": {
+        "Required": true,
+        "Kind": "Enum",
+        "Values": [
+          "Leitungskataster",
+          "Werkplan",
+          "Uebersichtsplan.UeP10",
+          "Uebersichtsplan.UeP2",
+          "Uebersichtsplan.UeP5"
+        ]
+      },
+      "Textinhalt": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 0
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      }
+    },
+    "Messstelle": {
+      "Letzte_Aenderung": {
+        "Required": true,
+        "Kind": "Date"
+      },
+      "Art": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 50
+      },
+      "Bemerkung": {
+        "Required": false,
+        "Kind": "Text",
+        "MaxLength": 80
+      },
+      "Bezeichnung": {
+        "Required": true,
+        "Kind": "Text",
+        "MaxLength": 20
+      },
+      "Lage": {
+        "Required": false,
+        "Kind": "Structure"
+      },
+      "Staukoerper": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "andere",
+          "keiner",
+          "Ueberfallwehr",
+          "unbekannt",
+          "Venturieinschnuerung"
+        ]
+      },
+      "Zweck": {
+        "Required": false,
+        "Kind": "Enum",
+        "Values": [
+          "beides",
+          "Kostenverteilung",
+          "technischer_Zweck",
+          "unbekannt"
+        ]
+      }
     }
   }
 }

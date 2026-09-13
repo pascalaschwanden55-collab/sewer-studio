@@ -1,0 +1,1013 @@
+{
+  "Import": {
+    "info": {
+      "Datei": "C:\\Users\\Besitzer\\Documents\\SewerStudio\\Lieferungen\\order-20260912.ssxtf",
+      "Quelle": "C:\\Users\\Besitzer\\Downloads\\order\\34UR_Abwasser_DSS_2020_1.xtf",
+      "Sha256": "ed6bfdc290f66e8bdefd5fcc6cff59013337adcd763df754d1eadec41da34830",
+      "Anzahl": 630246,
+      "Geaendert": 0,
+      "Gruppen": [
+        {
+          "Klasse": "ARABauwerk",
+          "Anzahl": 20
+        },
+        {
+          "Klasse": "Absperr_Drosselorgan",
+          "Anzahl": 37
+        },
+        {
+          "Klasse": "Abwasserbauwerk_Text",
+          "Anzahl": 42570
+        },
+        {
+          "Klasse": "Abwasserknoten",
+          "Anzahl": 101388
+        },
+        {
+          "Klasse": "Deckel",
+          "Anzahl": 51394
+        },
+        {
+          "Klasse": "Einleitstelle",
+          "Anzahl": 569
+        },
+        {
+          "Klasse": "Einstiegshilfe",
+          "Anzahl": 18045
+        },
+        {
+          "Klasse": "Erhaltungsereignis_AbwasserbauwerkAssoc",
+          "Anzahl": 1448
+        },
+        {
+          "Klasse": "FoerderAggregat",
+          "Anzahl": 44
+        },
+        {
+          "Klasse": "Haltung",
+          "Anzahl": 84204
+        },
+        {
+          "Klasse": "Haltung_Text",
+          "Anzahl": 24309
+        },
+        {
+          "Klasse": "Haltungspunkt",
+          "Anzahl": 167169
+        },
+        {
+          "Klasse": "Kanal",
+          "Anzahl": 84054
+        },
+        {
+          "Klasse": "Leapingwehr",
+          "Anzahl": 4
+        },
+        {
+          "Klasse": "Messstelle",
+          "Anzahl": 2
+        },
+        {
+          "Klasse": "Normschacht",
+          "Anzahl": 49484
+        },
+        {
+          "Klasse": "Rohrprofil",
+          "Anzahl": 42
+        },
+        {
+          "Klasse": "Spezialbauwerk",
+          "Anzahl": 792
+        },
+        {
+          "Klasse": "Streichwehr",
+          "Anzahl": 4
+        },
+        {
+          "Klasse": "Trockenwetterfallrohr",
+          "Anzahl": 7
+        },
+        {
+          "Klasse": "Unterhalt",
+          "Anzahl": 1448
+        },
+        {
+          "Klasse": "Versickerungsanlage",
+          "Anzahl": 3212
+        }
+      ]
+    },
+    "Objekte": 630246,
+    "FehlerhafteObjekte": 99795,
+    "ExterneOrganisationen": 26,
+    "importSekunden": 11.2957428,
+    "pruefSekunden": 15.4935087,
+    "PeakWorkingSet": 265523200
+  },
+  "Feldstichproben": [
+    {
+      "Klasse": "ARABauwerk",
+      "Anzahl": 20,
+      "Felder": 29,
+      "Bearbeitbar": 27,
+      "Auswahllisten": [
+        {
+          "Schluessel": "BaulicherZustand",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Finanzierung",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Sanierungsbedarf",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Status",
+          "Werte": 14
+        },
+        {
+          "Schluessel": "WBW_Bauart",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Zugaenglichkeit",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Art",
+          "Werte": 9
+        }
+      ]
+    },
+    {
+      "Klasse": "Absperr_Drosselorgan",
+      "Anzahl": 37,
+      "Felder": 20,
+      "Bearbeitbar": 19,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Antrieb",
+          "Werte": 10
+        },
+        {
+          "Schluessel": "Art",
+          "Werte": 16
+        },
+        {
+          "Schluessel": "Signaluebermittlung",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Steuerung",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Verstellbarkeit",
+          "Werte": 4
+        }
+      ]
+    },
+    {
+      "Klasse": "Abwasserbauwerk_Text",
+      "Anzahl": 42570,
+      "Felder": 9,
+      "Bearbeitbar": 9,
+      "Auswahllisten": [
+        {
+          "Schluessel": "TextHAli",
+          "Werte": 3
+        },
+        {
+          "Schluessel": "TextVAli",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Plantyp",
+          "Werte": 5
+        }
+      ]
+    },
+    {
+      "Klasse": "Abwasserknoten",
+      "Anzahl": 101388,
+      "Felder": 14,
+      "Bearbeitbar": 13,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Funktion_Knoten_Melioration",
+          "Werte": 9
+        },
+        {
+          "Schluessel": "Hoehengenauigkeit",
+          "Werte": 6
+        }
+      ]
+    },
+    {
+      "Klasse": "Deckel",
+      "Anzahl": 51394,
+      "Felder": 18,
+      "Bearbeitbar": 17,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Instandstellung",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Deckelform",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Entlueftung",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Lagegenauigkeit",
+          "Werte": 6
+        },
+        {
+          "Schluessel": "Material",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Schlammeimer",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Verschluss",
+          "Werte": 4
+        }
+      ]
+    },
+    {
+      "Klasse": "Einleitstelle",
+      "Anzahl": 569,
+      "Felder": 33,
+      "Bearbeitbar": 31,
+      "Auswahllisten": [
+        {
+          "Schluessel": "BaulicherZustand",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Finanzierung",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Sanierungsbedarf",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Status",
+          "Werte": 14
+        },
+        {
+          "Schluessel": "WBW_Bauart",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Zugaenglichkeit",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Relevanz",
+          "Werte": 3
+        }
+      ]
+    },
+    {
+      "Klasse": "Einstiegshilfe",
+      "Anzahl": 18045,
+      "Felder": 8,
+      "Bearbeitbar": 7,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Instandstellung",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Art",
+          "Werte": 10
+        }
+      ]
+    },
+    {
+      "Klasse": "Erhaltungsereignis_AbwasserbauwerkAssoc",
+      "Anzahl": 1448,
+      "Felder": 2,
+      "Bearbeitbar": 2,
+      "Auswahllisten": []
+    },
+    {
+      "Klasse": "FoerderAggregat",
+      "Anzahl": 44,
+      "Felder": 27,
+      "Bearbeitbar": 26,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Antrieb",
+          "Werte": 10
+        },
+        {
+          "Schluessel": "Funktion",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Signaluebermittlung",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Steuerung",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Verstellbarkeit",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "AufstellungAntrieb",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "AufstellungFoerderaggregat",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Bauart",
+          "Werte": 8
+        }
+      ]
+    },
+    {
+      "Klasse": "Haltung",
+      "Anzahl": 84204,
+      "Felder": 26,
+      "Bearbeitbar": 24,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Innenschutz",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Lagebestimmung",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Leckschutz",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Material",
+          "Werte": 25
+        },
+        {
+          "Schluessel": "Reliner_Art",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Reliner_Bautechnik",
+          "Werte": 10
+        },
+        {
+          "Schluessel": "Reliner_Material",
+          "Werte": 17
+        }
+      ]
+    },
+    {
+      "Klasse": "Haltung_Text",
+      "Anzahl": 24309,
+      "Felder": 9,
+      "Bearbeitbar": 9,
+      "Auswahllisten": [
+        {
+          "Schluessel": "TextHAli",
+          "Werte": 3
+        },
+        {
+          "Schluessel": "TextVAli",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Plantyp",
+          "Werte": 5
+        }
+      ]
+    },
+    {
+      "Klasse": "Haltungspunkt",
+      "Anzahl": 167169,
+      "Felder": 13,
+      "Bearbeitbar": 12,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Auslaufform",
+          "Werte": 6
+        },
+        {
+          "Schluessel": "Hoehengenauigkeit",
+          "Werte": 6
+        },
+        {
+          "Schluessel": "Rohrverschluss_Kappe",
+          "Werte": 4
+        }
+      ]
+    },
+    {
+      "Klasse": "Kanal",
+      "Anzahl": 84054,
+      "Felder": 37,
+      "Bearbeitbar": 35,
+      "Auswahllisten": [
+        {
+          "Schluessel": "BaulicherZustand",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Finanzierung",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Sanierungsbedarf",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Status",
+          "Werte": 14
+        },
+        {
+          "Schluessel": "WBW_Bauart",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Zugaenglichkeit",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Bettung_Umhuellung",
+          "Werte": 15
+        },
+        {
+          "Schluessel": "FunktionHierarchisch",
+          "Werte": 15
+        },
+        {
+          "Schluessel": "FunktionHydraulisch",
+          "Werte": 13
+        },
+        {
+          "Schluessel": "FunktionMelioration",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Nutzungsart_geplant",
+          "Werte": 10
+        },
+        {
+          "Schluessel": "Nutzungsart_Ist",
+          "Werte": 10
+        },
+        {
+          "Schluessel": "Sickerung",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Verbindungsart",
+          "Werte": 14
+        }
+      ]
+    },
+    {
+      "Klasse": "Leapingwehr",
+      "Anzahl": 4,
+      "Felder": 22,
+      "Bearbeitbar": 21,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Antrieb",
+          "Werte": 10
+        },
+        {
+          "Schluessel": "Funktion",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Signaluebermittlung",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Steuerung",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Verstellbarkeit",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Oeffnungsform",
+          "Werte": 6
+        }
+      ]
+    },
+    {
+      "Klasse": "Messstelle",
+      "Anzahl": 2,
+      "Felder": 13,
+      "Bearbeitbar": 12,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Staukoerper",
+          "Werte": 6
+        },
+        {
+          "Schluessel": "Zweck",
+          "Werte": 5
+        }
+      ]
+    },
+    {
+      "Klasse": "Normschacht",
+      "Anzahl": 49484,
+      "Felder": 34,
+      "Bearbeitbar": 32,
+      "Auswahllisten": [
+        {
+          "Schluessel": "BaulicherZustand",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Finanzierung",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Sanierungsbedarf",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Status",
+          "Werte": 14
+        },
+        {
+          "Schluessel": "WBW_Bauart",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Zugaenglichkeit",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Amphibienausstieg",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Funktion",
+          "Werte": 23
+        },
+        {
+          "Schluessel": "Interventionsmoeglichkeit",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Material",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Oberflaechenzulauf",
+          "Werte": 6
+        }
+      ]
+    },
+    {
+      "Klasse": "Rohrprofil",
+      "Anzahl": 42,
+      "Felder": 7,
+      "Bearbeitbar": 6,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Profiltyp",
+          "Werte": 8
+        }
+      ]
+    },
+    {
+      "Klasse": "Spezialbauwerk",
+      "Anzahl": 792,
+      "Felder": 33,
+      "Bearbeitbar": 31,
+      "Auswahllisten": [
+        {
+          "Schluessel": "BaulicherZustand",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Finanzierung",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Sanierungsbedarf",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Status",
+          "Werte": 14
+        },
+        {
+          "Schluessel": "WBW_Bauart",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Zugaenglichkeit",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Amphibienausstieg",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Bypass",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Funktion",
+          "Werte": 36
+        },
+        {
+          "Schluessel": "Interventionsmoeglichkeit",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Notueberlauf",
+          "Werte": 9
+        },
+        {
+          "Schluessel": "Regenbecken_Anordnung",
+          "Werte": 4
+        }
+      ]
+    },
+    {
+      "Klasse": "Streichwehr",
+      "Anzahl": 4,
+      "Felder": 24,
+      "Bearbeitbar": 23,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Antrieb",
+          "Werte": 10
+        },
+        {
+          "Schluessel": "Funktion",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Signaluebermittlung",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Steuerung",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Verstellbarkeit",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Ueberfallkante",
+          "Werte": 6
+        },
+        {
+          "Schluessel": "Wehr_Art",
+          "Werte": 3
+        }
+      ]
+    },
+    {
+      "Klasse": "Trockenwetterfallrohr",
+      "Anzahl": 7,
+      "Felder": 8,
+      "Bearbeitbar": 7,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Instandstellung",
+          "Werte": 4
+        }
+      ]
+    },
+    {
+      "Klasse": "Unterhalt",
+      "Anzahl": 1448,
+      "Felder": 16,
+      "Bearbeitbar": 15,
+      "Auswahllisten": [
+        {
+          "Schluessel": "Status",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Art",
+          "Werte": 9
+        }
+      ]
+    },
+    {
+      "Klasse": "Versickerungsanlage",
+      "Anzahl": 3212,
+      "Felder": 40,
+      "Bearbeitbar": 38,
+      "Auswahllisten": [
+        {
+          "Schluessel": "BaulicherZustand",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Finanzierung",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Sanierungsbedarf",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Status",
+          "Werte": 14
+        },
+        {
+          "Schluessel": "WBW_Bauart",
+          "Werte": 7
+        },
+        {
+          "Schluessel": "Zugaenglichkeit",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Art",
+          "Werte": 12
+        },
+        {
+          "Schluessel": "Beschriftung",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Fuellmaterial",
+          "Werte": 5
+        },
+        {
+          "Schluessel": "Maengel",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Notueberlauf",
+          "Werte": 9
+        },
+        {
+          "Schluessel": "Saugwagen",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Versickerungswasser",
+          "Werte": 4
+        },
+        {
+          "Schluessel": "Wasserdichtheit",
+          "Werte": 4
+        }
+      ]
+    }
+  ],
+  "ProblemeNachKlasse": [
+    {
+      "Klasse": "ARABauwerk",
+      "Anzahl": 20
+    },
+    {
+      "Klasse": "Abwasserbauwerk_Text",
+      "Anzahl": 2005
+    },
+    {
+      "Klasse": "Abwasserknoten",
+      "Anzahl": 2728
+    },
+    {
+      "Klasse": "Deckel",
+      "Anzahl": 51219
+    },
+    {
+      "Klasse": "Einleitstelle",
+      "Anzahl": 19
+    },
+    {
+      "Klasse": "Einstiegshilfe",
+      "Anzahl": 17022
+    },
+    {
+      "Klasse": "Erhaltungsereignis_AbwasserbauwerkAssoc",
+      "Anzahl": 11
+    },
+    {
+      "Klasse": "FoerderAggregat",
+      "Anzahl": 44
+    },
+    {
+      "Klasse": "Haltung",
+      "Anzahl": 8804
+    },
+    {
+      "Klasse": "Haltung_Text",
+      "Anzahl": 4254
+    },
+    {
+      "Klasse": "Haltungspunkt",
+      "Anzahl": 48
+    },
+    {
+      "Klasse": "Kanal",
+      "Anzahl": 8967
+    },
+    {
+      "Klasse": "Messstelle",
+      "Anzahl": 1
+    },
+    {
+      "Klasse": "Normschacht",
+      "Anzahl": 1414
+    },
+    {
+      "Klasse": "Spezialbauwerk",
+      "Anzahl": 148
+    },
+    {
+      "Klasse": "Streichwehr",
+      "Anzahl": 1
+    },
+    {
+      "Klasse": "Trockenwetterfallrohr",
+      "Anzahl": 4
+    },
+    {
+      "Klasse": "Unterhalt",
+      "Anzahl": 1415
+    },
+    {
+      "Klasse": "Versickerungsanlage",
+      "Anzahl": 1671
+    }
+  ],
+  "HaeufigeErstfehler": [
+    {
+      "Klasse": "Deckel",
+      "Problem": "Pflichtfeld Bezeichnung fehlt.",
+      "Anzahl": 51154
+    },
+    {
+      "Klasse": "Einstiegshilfe",
+      "Problem": "DSS: Einstiegshilfe.Art: ungültiger Wert „1“. Bitte in der Objektakte korrigieren.",
+      "Anzahl": 9668
+    },
+    {
+      "Klasse": "Kanal",
+      "Problem": "Bezeichnung ist im gemeinsamen Namensraum nicht eindeutig.",
+      "Anzahl": 8469
+    },
+    {
+      "Klasse": "Haltung",
+      "Problem": "Bezeichnung ist im gemeinsamen Namensraum nicht eindeutig.",
+      "Anzahl": 8465
+    },
+    {
+      "Klasse": "Einstiegshilfe",
+      "Problem": "Bezeichnung ist im gemeinsamen Namensraum nicht eindeutig.",
+      "Anzahl": 7310
+    },
+    {
+      "Klasse": "Haltung_Text",
+      "Problem": "Pflichtfeld Textinhalt fehlt.",
+      "Anzahl": 4253
+    },
+    {
+      "Klasse": "Abwasserbauwerk_Text",
+      "Problem": "Pflichtverweis AbwasserbauwerkRef fehlt.",
+      "Anzahl": 2005
+    },
+    {
+      "Klasse": "Abwasserknoten",
+      "Problem": "Bezeichnung ist im gemeinsamen Namensraum nicht eindeutig.",
+      "Anzahl": 1478
+    },
+    {
+      "Klasse": "Unterhalt",
+      "Problem": "Pflichtfeld Bezeichnung fehlt.",
+      "Anzahl": 981
+    },
+    {
+      "Klasse": "Normschacht",
+      "Problem": "Pflichtverweis EigentuemerRef fehlt.",
+      "Anzahl": 840
+    },
+    {
+      "Klasse": "Abwasserknoten",
+      "Problem": "Pflichtfeld Bezeichnung fehlt.",
+      "Anzahl": 507
+    },
+    {
+      "Klasse": "Abwasserknoten",
+      "Problem": "Ungültige Kennung in AbwasserbauwerkRef.",
+      "Anzahl": 479
+    },
+    {
+      "Klasse": "Normschacht",
+      "Problem": "Bezeichnung ist im gemeinsamen Namensraum nicht eindeutig.",
+      "Anzahl": 396
+    },
+    {
+      "Klasse": "Haltung",
+      "Problem": "Pflichtfeld Bezeichnung fehlt.",
+      "Anzahl": 231
+    },
+    {
+      "Klasse": "Kanal",
+      "Problem": "Pflichtfeld Bezeichnung fehlt.",
+      "Anzahl": 230
+    },
+    {
+      "Klasse": "Unterhalt",
+      "Problem": "DSS: Unterhalt.Art: ungültiger Wert „Kanalfernsehen“. Bitte in der Objektakte korrigieren.",
+      "Anzahl": 191
+    },
+    {
+      "Klasse": "Normschacht",
+      "Problem": "Pflichtfeld Bezeichnung fehlt.",
+      "Anzahl": 152
+    },
+    {
+      "Klasse": "Kanal",
+      "Problem": "Pflichtverweis EigentuemerRef fehlt.",
+      "Anzahl": 151
+    },
+    {
+      "Klasse": "Unterhalt",
+      "Problem": "DSS: Unterhalt.Art: ungültiger Wert „Dichtheitspruefung“. Bitte in der Objektakte korrigieren.",
+      "Anzahl": 125
+    },
+    {
+      "Klasse": "Kanal",
+      "Problem": "DSS: Kanal.FunktionHierarchisch: ungültiger Wert „SAA.Sammelkanal“. Bitte in der Objektakte korrigieren.",
+      "Anzahl": 101
+    },
+    {
+      "Klasse": "Spezialbauwerk",
+      "Problem": "Bezeichnung ist im gemeinsamen Namensraum nicht eindeutig.",
+      "Anzahl": 88
+    },
+    {
+      "Klasse": "Unterhalt",
+      "Problem": "Bezeichnung ist im gemeinsamen Namensraum nicht eindeutig.",
+      "Anzahl": 65
+    },
+    {
+      "Klasse": "Unterhalt",
+      "Problem": "DSS: Unterhalt.Art: ungültiger Wert „Erneuerung“. Bitte in der Objektakte korrigieren.",
+      "Anzahl": 52
+    },
+    {
+      "Klasse": "Deckel",
+      "Problem": "Bezeichnung ist im gemeinsamen Namensraum nicht eindeutig.",
+      "Anzahl": 45
+    },
+    {
+      "Klasse": "Einstiegshilfe",
+      "Problem": "Pflichtfeld Bezeichnung fehlt.",
+      "Anzahl": 44
+    },
+    {
+      "Klasse": "FoerderAggregat",
+      "Problem": "Pflichtfeld Bezeichnung fehlt.",
+      "Anzahl": 44
+    },
+    {
+      "Klasse": "Haltung",
+      "Problem": "Pflichtverweis nachHaltungspunktRef fehlt.",
+      "Anzahl": 44
+    },
+    {
+      "Klasse": "Spezialbauwerk",
+      "Problem": "Pflichtverweis EigentuemerRef fehlt.",
+      "Anzahl": 44
+    },
+    {
+      "Klasse": "Haltungspunkt",
+      "Problem": "Pflichtfeld Bezeichnung fehlt.",
+      "Anzahl": 23
+    },
+    {
+      "Klasse": "Versickerungsanlage",
+      "Problem": "Pflichtverweis EigentuemerRef fehlt.",
+      "Anzahl": 23
+    }
+  ],
+  "GeaenderteObjekte": 0,
+  "DoppelteTidGruppen": 5,
+  "OriginalSha256NachPruefung": "ed6bfdc290f66e8bdefd5fcc6cff59013337adcd763df754d1eadec41da34830"
+}

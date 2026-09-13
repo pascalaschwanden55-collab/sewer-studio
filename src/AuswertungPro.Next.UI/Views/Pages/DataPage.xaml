@@ -102,21 +102,6 @@
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSaveStatusVisible}" Value="True">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <TextBlock Text="{Binding SaveStatus}" Foreground="{DynamicResource TextBrush}" />
-            </Border>
-
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Padding="8" Margin="0,0,0,8" CornerRadius="{DynamicResource RadiusM}">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
                             <DataTrigger Binding="{Binding IsProjectReady}" Value="False">
                                 <Setter Property="Visibility" Value="Visible"/>
                             </DataTrigger>
@@ -551,6 +536,25 @@
         </ItemsControl>
 
         <!-- GridHost: Container fuer DataGrid oder Platzhalter wenn abgedockt -->
+        <!-- Speicherstatus als Einblendung UEBER der Liste (11.09.2026, Entscheid Pascal «beim Speichern
+             verschiebt sich das Bild»): Vorher stand die Zeile im Kopfbereich, erschien beim Speichern und
+             verschwand nach dem Timer wieder - die ganze Liste rutschte dabei rund 40 px nach unten und
+             zurueck. Als Overlay im Listenbereich nimmt sie keinen Platz im Layout ein. -->
+        <Border Grid.Row="2" Panel.ZIndex="10" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,6,18,0"
+                IsHitTestVisible="False" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1" Padding="10,4" CornerRadius="{DynamicResource RadiusPill}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsSaveStatusVisible}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Text="{Binding SaveStatus}" Foreground="{DynamicResource TextBrush}" FontSize="{DynamicResource TextS}"/>
+        </Border>
         <Grid x:Name="GridHost" Grid.Row="2" behaviors:ViewPersonalization.ViewKey="DataPage">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>

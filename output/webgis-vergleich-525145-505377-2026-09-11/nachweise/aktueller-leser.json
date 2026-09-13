@@ -1,0 +1,269 @@
+{
+  "Art": 1,
+  "Quelle": "D:\\QGIS_V4.2\\GeoShop\\2026-09\\34UR_Abwasser_DSS_2020_1.xtf",
+  "Bauteile": [
+    {
+      "Name": "525145-505377",
+      "Kennungen": {
+        "Name": "525145-505377",
+        "Gemeinde": null,
+        "Haltung": "ch24gwkdVy2uiPfJ",
+        "Kanal": "ch24gwkd2FabRvaW",
+        "VonPunkt": "ch24gwkdcFPcB0IM",
+        "VonPunktBezeichnung": "A454675",
+        "NachPunkt": "ch24gwkdsMxuOqnt",
+        "NachPunktBezeichnung": "E454675",
+        "Rohrprofil": "ch24gwkd3obhLa8B",
+        "RohrprofilTyp": "unbekannt",
+        "Knoten": null,
+        "Bauwerk": null,
+        "GeonisGeaendert": null,
+        "Hauptkennung": "ch24gwkdVy2uiPfJ"
+      },
+      "Felder": {
+        "Rohrmaterial": "Normalbeton",
+        "DN_mm": "250",
+        "Haltungslaenge_m": "11.44",
+        "Lagebestimmung": "genau",
+        "Nutzungsart": "Mischabwasser",
+        "FunktionHierarchisch": "PAA.Sammelkanal",
+        "FunktionHydraulisch": "Freispiegelleitung",
+        "Status": "in_Betrieb",
+        "Sanierungsbedarf": "mittelfristig",
+        "Zustandsklasse": "2",
+        "Letzte_Aenderung": "21.11.2024",
+        "Schacht_oben": "525145",
+        "Schacht_unten": "505377"
+      },
+      "VonSchacht": "525145",
+      "NachSchacht": "505377",
+      "Fehler": null,
+      "Hinweis": "Eigent\u00FCmer ist nur als Verweis vorhanden; ohne Organisationsobjekt wird kein Eigent\u00FCmer erg\u00E4nzt.",
+      "Quellen": [
+        {
+          "System": "GeoShop-XTF",
+          "Datei": "D:\\QGIS_V4.2\\GeoShop\\2026-09\\34UR_Abwasser_DSS_2020_1.xtf",
+          "Modell": "DSS_2020_1_LV95",
+          "Klasse": "Normschacht",
+          "Kennung": "ch24gwkd1TE9LaBp",
+          "IstLokaleKennung": false,
+          "ImportiertUtc": "0001-01-01T00:00:00",
+          "Werte": {
+            "Letzte_Aenderung": "20241202",
+            "Baujahr": "2018",
+            "BaulicherZustand": "Z3",
+            "Bemerkung": "Tiefe 1.82m",
+            "Bezeichnung": "505377",
+            "Sanierungsbedarf": "langfristig",
+            "Status": "in_Betrieb",
+            "Zugaenglichkeit": "zugaenglich",
+            "Dimension1": "800",
+            "Dimension2": "800",
+            "Funktion": "Kontroll_Einsteigschacht",
+            "Material": "Beton"
+          },
+          "Referenzen": {
+            "DatenherrRef": "ch20p3q400002009",
+            "DatenlieferantRef": "ch20p3q400002009",
+            "BetreiberRef": "ch20p3q400002009",
+            "EigentuemerRef": "ch20p3q400002009"
+          },
+          "Strukturen": {}
+        },
+        {
+          "System": "GeoShop-XTF",
+          "Datei": "D:\\QGIS_V4.2\\GeoShop\\2026-09\\34UR_Abwasser_DSS_2020_1.xtf",
+          "Modell": "DSS_2020_1_LV95",
+          "Klasse": "Kanal",
+          "Kennung": "ch24gwkd2FabRvaW",
+          "IstLokaleKennung": false,
+          "ImportiertUtc": "0001-01-01T00:00:00",
+          "Werte": {
+            "Letzte_Aenderung": "20241121",
+            "BaulicherZustand": "Z2",
+            "Bezeichnung": "525145-505377",
+            "Bruttokosten": "0.00",
+            "Sanierungsbedarf": "mittelfristig",
+            "Status": "in_Betrieb",
+            "Bettung_Umhuellung": "unbekannt",
+            "FunktionHierarchisch": "PAA.Sammelkanal",
+            "FunktionHydraulisch": "Freispiegelleitung",
+            "Nutzungsart_Ist": "Mischabwasser",
+            "Verbindungsart": "unbekannt"
+          },
+          "Referenzen": {
+            "DatenherrRef": "ch20p3q400002009",
+            "DatenlieferantRef": "ch20p3q400002009",
+            "BetreiberRef": "ch20p3q400002009",
+            "EigentuemerRef": "ch20p3q400002009"
+          },
+          "Strukturen": {}
+        },
+        {
+          "System": "GeoShop-XTF",
+          "Datei": "D:\\QGIS_V4.2\\GeoShop\\2026-09\\34UR_Abwasser_DSS_2020_1.xtf",
+          "Modell": "DSS_2020_1_LV95",
+          "Klasse": "Abwasserknoten",
+          "Kennung": "ch24gwkd3XcJCyYp",
+          "IstLokaleKennung": false,
+          "ImportiertUtc": "0001-01-01T00:00:00",
+          "Werte": {
+            "Letzte_Aenderung": "20241202",
+            "Bemerkung": "Tiefe 1.80m",
+            "Bezeichnung": "525145",
+            "Hoehengenauigkeit": "plusminus_3cm"
+          },
+          "Referenzen": {
+            "DatenherrRef": "ch20p3q400002009",
+            "DatenlieferantRef": "ch20p3q400002009",
+            "AbwasserbauwerkRef": "ch24gwkdOaO8mZtW"
+          },
+          "Strukturen": {
+            "Lage": "\u003CLage xmlns=\u0022http://www.interlis.ch/INTERLIS2.3\u0022\u003E\u003CCOORD\u003E\u003CC1\u003E2692817.512\u003C/C1\u003E\u003CC2\u003E1192427.212\u003C/C2\u003E\u003C/COORD\u003E\u003C/Lage\u003E"
+          }
+        },
+        {
+          "System": "GeoShop-XTF",
+          "Datei": "D:\\QGIS_V4.2\\GeoShop\\2026-09\\34UR_Abwasser_DSS_2020_1.xtf",
+          "Modell": "DSS_2020_1_LV95",
+          "Klasse": "Rohrprofil",
+          "Kennung": "ch24gwkd3obhLa8B",
+          "IstLokaleKennung": false,
+          "ImportiertUtc": "0001-01-01T00:00:00",
+          "Werte": {
+            "Letzte_Aenderung": "20210228",
+            "Bezeichnung": "unbekannt",
+            "Profiltyp": "unbekannt"
+          },
+          "Referenzen": {
+            "DatenherrRef": "ch20p3q400002009",
+            "DatenlieferantRef": "ch20p3q400002009"
+          },
+          "Strukturen": {}
+        },
+        {
+          "System": "GeoShop-XTF",
+          "Datei": "D:\\QGIS_V4.2\\GeoShop\\2026-09\\34UR_Abwasser_DSS_2020_1.xtf",
+          "Modell": "DSS_2020_1_LV95",
+          "Klasse": "Abwasserknoten",
+          "Kennung": "ch24gwkd5tTVGGvo",
+          "IstLokaleKennung": false,
+          "ImportiertUtc": "0001-01-01T00:00:00",
+          "Werte": {
+            "Letzte_Aenderung": "20241202",
+            "Bemerkung": "Tiefe 1.82m",
+            "Bezeichnung": "505377",
+            "Hoehengenauigkeit": "plusminus_6cm",
+            "Sohlenkote": "505.900"
+          },
+          "Referenzen": {
+            "DatenherrRef": "ch20p3q400002009",
+            "DatenlieferantRef": "ch20p3q400002009",
+            "AbwasserbauwerkRef": "ch24gwkd1TE9LaBp"
+          },
+          "Strukturen": {
+            "Lage": "\u003CLage xmlns=\u0022http://www.interlis.ch/INTERLIS2.3\u0022\u003E\u003CCOORD\u003E\u003CC1\u003E2692813.716\u003C/C1\u003E\u003CC2\u003E1192416.420\u003C/C2\u003E\u003C/COORD\u003E\u003C/Lage\u003E"
+          }
+        },
+        {
+          "System": "GeoShop-XTF",
+          "Datei": "D:\\QGIS_V4.2\\GeoShop\\2026-09\\34UR_Abwasser_DSS_2020_1.xtf",
+          "Modell": "DSS_2020_1_LV95",
+          "Klasse": "Normschacht",
+          "Kennung": "ch24gwkdOaO8mZtW",
+          "IstLokaleKennung": false,
+          "ImportiertUtc": "0001-01-01T00:00:00",
+          "Werte": {
+            "Letzte_Aenderung": "20241202",
+            "BaulicherZustand": "Z3",
+            "Bemerkung": "Tiefe 1.80m",
+            "Bezeichnung": "525145",
+            "Sanierungsbedarf": "mittelfristig",
+            "Status": "in_Betrieb",
+            "Zugaenglichkeit": "zugaenglich",
+            "Funktion": "Kontroll_Einsteigschacht",
+            "Material": "unbekannt"
+          },
+          "Referenzen": {
+            "DatenherrRef": "ch20p3q400002009",
+            "DatenlieferantRef": "ch20p3q400002009",
+            "BetreiberRef": "ch20p3q400002009",
+            "EigentuemerRef": "ch20p3q400002009"
+          },
+          "Strukturen": {}
+        },
+        {
+          "System": "GeoShop-XTF",
+          "Datei": "D:\\QGIS_V4.2\\GeoShop\\2026-09\\34UR_Abwasser_DSS_2020_1.xtf",
+          "Modell": "DSS_2020_1_LV95",
+          "Klasse": "Haltung",
+          "Kennung": "ch24gwkdVy2uiPfJ",
+          "IstLokaleKennung": false,
+          "ImportiertUtc": "0001-01-01T00:00:00",
+          "Werte": {
+            "Letzte_Aenderung": "20241121",
+            "Bezeichnung": "525145-505377",
+            "LaengeEffektiv": "11.44",
+            "Lagebestimmung": "genau",
+            "Lichte_Hoehe": "250",
+            "Material": "Beton_Normalbeton"
+          },
+          "Referenzen": {
+            "DatenherrRef": "ch20p3q400002009",
+            "DatenlieferantRef": "ch20p3q400002009",
+            "AbwasserbauwerkRef": "ch24gwkd2FabRvaW",
+            "RohrprofilRef": "ch24gwkd3obhLa8B",
+            "nachHaltungspunktRef": "ch24gwkdsMxuOqnt",
+            "vonHaltungspunktRef": "ch24gwkdcFPcB0IM"
+          },
+          "Strukturen": {
+            "Verlauf": "\u003CVerlauf xmlns=\u0022http://www.interlis.ch/INTERLIS2.3\u0022\u003E\u003CPOLYLINE\u003E\u003CCOORD\u003E\u003CC1\u003E2692817.512\u003C/C1\u003E\u003CC2\u003E1192427.212\u003C/C2\u003E\u003C/COORD\u003E\u003CCOORD\u003E\u003CC1\u003E2692814.378\u003C/C1\u003E\u003CC2\u003E1192418.302\u003C/C2\u003E\u003C/COORD\u003E\u003CCOORD\u003E\u003CC1\u003E2692813.716\u003C/C1\u003E\u003CC2\u003E1192416.420\u003C/C2\u003E\u003C/COORD\u003E\u003C/POLYLINE\u003E\u003C/Verlauf\u003E"
+          }
+        },
+        {
+          "System": "GeoShop-XTF",
+          "Datei": "D:\\QGIS_V4.2\\GeoShop\\2026-09\\34UR_Abwasser_DSS_2020_1.xtf",
+          "Modell": "DSS_2020_1_LV95",
+          "Klasse": "Haltungspunkt",
+          "Kennung": "ch24gwkdcFPcB0IM",
+          "IstLokaleKennung": false,
+          "ImportiertUtc": "0001-01-01T00:00:00",
+          "Werte": {
+            "Letzte_Aenderung": "20260829",
+            "Bezeichnung": "A454675"
+          },
+          "Referenzen": {
+            "DatenherrRef": "ch20p3q400002009",
+            "DatenlieferantRef": "ch20p3q400002009",
+            "AbwassernetzelementRef": "ch24gwkd3XcJCyYp"
+          },
+          "Strukturen": {
+            "Lage": "\u003CLage xmlns=\u0022http://www.interlis.ch/INTERLIS2.3\u0022\u003E\u003CCOORD\u003E\u003CC1\u003E2692817.512\u003C/C1\u003E\u003CC2\u003E1192427.212\u003C/C2\u003E\u003C/COORD\u003E\u003C/Lage\u003E"
+          }
+        },
+        {
+          "System": "GeoShop-XTF",
+          "Datei": "D:\\QGIS_V4.2\\GeoShop\\2026-09\\34UR_Abwasser_DSS_2020_1.xtf",
+          "Modell": "DSS_2020_1_LV95",
+          "Klasse": "Haltungspunkt",
+          "Kennung": "ch24gwkdsMxuOqnt",
+          "IstLokaleKennung": false,
+          "ImportiertUtc": "0001-01-01T00:00:00",
+          "Werte": {
+            "Letzte_Aenderung": "20260829",
+            "Bezeichnung": "E454675",
+            "Kote": "505.910"
+          },
+          "Referenzen": {
+            "DatenherrRef": "ch20p3q400002009",
+            "DatenlieferantRef": "ch20p3q400002009",
+            "AbwassernetzelementRef": "ch24gwkd5tTVGGvo"
+          },
+          "Strukturen": {
+            "Lage": "\u003CLage xmlns=\u0022http://www.interlis.ch/INTERLIS2.3\u0022\u003E\u003CCOORD\u003E\u003CC1\u003E2692813.716\u003C/C1\u003E\u003CC2\u003E1192416.420\u003C/C2\u003E\u003C/COORD\u003E\u003C/Lage\u003E"
+          }
+        }
+      ]
+    }
+  ]
+}

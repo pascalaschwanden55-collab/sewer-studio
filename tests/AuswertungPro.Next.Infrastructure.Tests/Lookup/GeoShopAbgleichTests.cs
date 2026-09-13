@@ -243,7 +243,8 @@ public sealed class GeoShopAbgleichTests : IDisposable
         b.SetzeHauptdeckel(p.Objektakten.Single(a => a.Art == "deckel" && a.Werte["deckel.hoehe"].Text == "450.94"));
         Assert.Equal("450.94", b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("schacht.deckelhoehe")));
         Assert.Empty(GeoShopAbgleichPlanBuilder.Baue([z], bestand).Positionen);
-        Assert.Equal(4, p.Objektakten.Count);
+        Assert.Equal(2, p.Objektakten.Count(a => a.Art == "haltungspunkt"));
+        Assert.Equal(6, p.Objektakten.Count);
     }
 
     [Fact]
@@ -255,6 +256,74 @@ public sealed class GeoShopAbgleichTests : IDisposable
         b.Schreibe(b.Wurzel, FieldCatalog.Objektfelder.Feld("haltung.haltungsbemerkung"), "", "Nach Vorschau geändert");
         Assert.Throws<InvalidOperationException>(() => GeoShopAbgleichAnwender.WendeAn(plan, [z]));
         Assert.Null(h.Geonis);
+    }
+
+    [Fact]
+    public void Haltungslaenge_kommt_immer_aus_der_XTF_auch_wenn_von_Hand_gesetzt()
+    {
+        Schreibe();
+        var h = Haltung();
+        h.SetFieldValue(FieldKeys.HoldingLengthMeters, "11.9", FieldSource.Manual, true);
+        h.SetFieldValue(FieldKeys.PipeMaterial, "Steinzeug", FieldSource.Manual, true);
+        var ziel = GeoShopZiel.Fuer(h);
+        var plan = GeoShopAbgleichPlanBuilder.Baue([ziel], Lies(BauteilArt.Haltung, "A-B"));
+        var laenge = Assert.Single(plan.Positionen).Felder.Single(f => f.Feld == FieldKeys.HoldingLengthMeters);
+        Assert.True(laenge.Ersetzen); Assert.Equal("11.9", laenge.Vorher); Assert.Equal("12.5", laenge.Nachher);
+        Assert.Contains("1 Haltungslängen aus der XTF ersetzen", GeoShopAbgleichBericht.Schreibe(plan));
+        Assert.Contains("11.9 → 12.5 (ersetzt", GeoShopAbgleichBericht.Schreibe(plan));
+        GeoShopAbgleichAnwender.WendeAn(plan, [ziel]);
+        Assert.Equal("12.5", h.GetFieldValue(FieldKeys.HoldingLengthMeters));
+        Assert.False(h.FieldMeta[FieldKeys.HoldingLengthMeters].UserEdited);
+        Assert.Equal(FieldSource.Kataster, h.FieldMeta[FieldKeys.HoldingLengthMeters].Source);
+        Assert.Equal("Steinzeug", h.GetFieldValue(FieldKeys.PipeMaterial)); // alle anderen Felder: nur wenn leer
+
+        // Derselbe Wert in anderer Schreibweise ist keine Aenderung.
+        h.SetFieldValue(FieldKeys.HoldingLengthMeters, "12.50", FieldSource.Manual, true);
+        var erneut = GeoShopAbgleichPlanBuilder.Baue([GeoShopZiel.Fuer(h)], Lies(BauteilArt.Haltung, "A-B"));
+        Assert.DoesNotContain(erneut.Positionen.SelectMany(p => p.Felder), f => f.Ersetzen);
+        Assert.Equal("12.50", h.GetFieldValue(FieldKeys.HoldingLengthMeters));
+    }
+
+    [Fact]
+    public void Einzelergaenzung_liest_nur_dieses_Bauteil_und_schreibt_erst_beim_Anwenden()
+    {
+        Schreibe(); var p = new Project(); var h = Haltung(); p.Data.Add(h);
+        h.SetFieldValue(FieldKeys.HoldingLengthMeters, "11.9", FieldSource.Manual, true);
+        var leser = new ZaehlenderLeser(_datei);
+        var ergebnis = GeoShopEinzelErgaenzung.Plane(GeoShopZiel.Fuer(h, p), leser, _datei);
+        Assert.Equal(["A-B"], leser.Angefragt);
+        Assert.True(ergebnis.HatAenderungen);
+        Assert.Contains("Haltung «A-B»", ergebnis.Text);
+        Assert.Contains("(leer) → 300", ergebnis.Text);
+        Assert.Contains("11.9 → 12.5  (kommt immer aus der XTF)", ergebnis.Text);
+        Assert.Contains("Kennungen übernehmen", ergebnis.Text);
+        Assert.True(string.IsNullOrEmpty(h.GetFieldValue(FieldKeys.NominalDiameterMm))); // Planen schreibt nichts
+        Assert.Equal(1, GeoShopEinzelErgaenzung.WendeAn(ergebnis, GeoShopZiel.Fuer(h, p)));
+        Assert.Equal("300", h.GetFieldValue(FieldKeys.NominalDiameterMm));
+        Assert.Equal("12.5", h.GetFieldValue(FieldKeys.HoldingLengthMeters));
+        Assert.Equal(H, h.Geonis!.Haltung);
+        Assert.NotEmpty(p.Objektakten);
+
+        var fremd = Haltung("X-Y"); p.Data.Add(fremd);
+        var nichts = GeoShopEinzelErgaenzung.Plane(GeoShopZiel.Fuer(fremd, p), leser, _datei);
+        Assert.False(nichts.HatAenderungen);
+        Assert.Contains("nichts zu übernehmen", nichts.Text);
+        Assert.Contains("Nicht in der XTF gefunden", nichts.Text);
+
+        // Nach dem Planen geaendert: der Anwender schreibt nicht.
+        p.Data.Remove(h);
+        var h2 = Haltung(); p.Data.Add(h2);
+        var plan2 = GeoShopEinzelErgaenzung.Plane(GeoShopZiel.Fuer(h2, p), leser, _datei);
+        h2.SetFieldValue(FieldKeys.PipeMaterial, "Steinzeug", FieldSource.Manual, true);
+        Assert.Throws<InvalidOperationException>(() => GeoShopEinzelErgaenzung.WendeAn(plan2, GeoShopZiel.Fuer(h2, p)));
+        Assert.Null(h2.Geonis);
+    }
+
+    private sealed class ZaehlenderLeser(string datei) : IGeoShopLeser
+    {
+        public List<string> Angefragt { get; } = new();
+        public GeoShopBestand Lies(string d, BauteilArt art, IReadOnlyCollection<string> namen, CancellationToken ct = default)
+        { Angefragt.AddRange(namen); return new GeoShopXtfLeser().Lies(datei, art, namen, ct); }
     }
 
     private GeoShopBestand Lies(BauteilArt art, string name) => new GeoShopXtfLeser().Lies(_datei, art, [name]);

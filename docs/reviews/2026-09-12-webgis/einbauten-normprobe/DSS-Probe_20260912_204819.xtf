@@ -1,0 +1,219 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION VERSION="2.3" SENDER="SewerStudio">
+    <MODELS>
+      <MODEL NAME="DSS_2020_1_LV95" VERSION="18.10.2023" URI="http://www.vsa.ch/models" />
+      <MODEL NAME="SIA405_Base_Abwasser_1_LV95" VERSION="18.10.2023" URI="http://www.vsa.ch/models" />
+    </MODELS>
+    <COMMENT>DSS-Neuexport aus gespeichertem Projektstand.
+DSS_2020_1_LV95: belegte GeoShop-Felder, Deckel und Ereignisse als Normobjekte. Aktuelle Eingaben haben Vorrang.
+116 DSS-Feldwerte; 1 Deckel; 2 Unterhalts-/Sanierungsereignisse.</COMMENT>
+  </HEADERSECTION>
+  <DATASECTION>
+    <DSS_2020_1_LV95.Siedlungsentwaesserung BID="chB0000000000001">
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Haltung TID="chTEST0000000001">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bemerkung>Leitungstext</Bemerkung>
+        <Bezeichnung>A-B</Bezeichnung>
+        <LaengeEffektiv>40.00</LaengeEffektiv>
+        <Reliner_Material>Polyesterharz_Glasfaserlaminat</Reliner_Material>
+        <AbwasserbauwerkRef REF="chTEST0000000002" />
+        <vonHaltungspunktRef REF="chTEST0000000003" />
+        <nachHaltungspunktRef REF="chTEST0000000004" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Haltung>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Kanal TID="chTEST0000000002">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bemerkung>Bauwerkstext</Bemerkung>
+        <Bezeichnung>A-B</Bezeichnung>
+        <Spuelintervall>10.00</Spuelintervall>
+        <EigentuemerRef REF="chTEST0000000005" />
+        <BetreiberRef REF="chTEST0000000005" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Kanal>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt TID="chTEST0000000003">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>A-B_von</Bezeichnung>
+        <Kote>448.910</Kote>
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt TID="chTEST0000000004">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>A-B_nach</Bezeichnung>
+        <Kote>448.360</Kote>
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten TID="chTEST0000000010">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>B</Bezeichnung>
+        <Sohlenkote>448.360</Sohlenkote>
+        <AbwasserbauwerkRef REF="chTEST0000000011" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Normschacht TID="chTEST0000000011">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>B</Bezeichnung>
+        <EigentuemerRef REF="chTEST0000000005" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Normschacht>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Deckel TID="chTEST0000000012">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>Deckel B</Bezeichnung>
+        <Kote>451.125</Kote>
+        <Material>Guss_mit_Betonfuellung</Material>
+        <AbwasserbauwerkRef REF="chTEST0000000011" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Deckel>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Einstiegshilfe TID="chTEST0000000014">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bemerkung>Normprobe</Bemerkung>
+        <Bezeichnung>Einstieg B</Bezeichnung>
+        <Instandstellung>nicht_notwendig</Instandstellung>
+        <Art>Steigeisen</Art>
+        <AbwasserbauwerkRef REF="chTEST0000000011" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Einstiegshilfe>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Erhaltungsereignis_AbwasserbauwerkAssoc>
+        <AbwasserbauwerkRef REF="chTEST0000000011" />
+        <Erhaltungsereignis_AbwasserbauwerkAssocRef REF="chTEST0000000013" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Erhaltungsereignis_AbwasserbauwerkAssoc>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Unterhalt TID="chTEST0000000013">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>Liner 2025</Bezeichnung>
+        <Zeitpunkt>20250917</Zeitpunkt>
+        <Art>Sanierung_Renovierung</Art>
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+        <Ausfuehrende_FirmaRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Unterhalt>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.FoerderAggregat TID="chTEST0000000030">
+        <Letzte_Aenderung>20260912</Letzte_Aenderung>
+        <Antrieb>andere</Antrieb>
+        <Bemerkung>Normprobe</Bemerkung>
+        <Bezeichnung>Pumpe B</Bezeichnung>
+        <Bruttokosten>0.00</Bruttokosten>
+        <Einleitstelle>Normprobe</Einleitstelle>
+        <Fabrikat>Bearbeitete Pumpe</Fabrikat>
+        <Funktion>andere</Funktion>
+        <Qan_dim>0.000</Qan_dim>
+        <Signaluebermittlung>empfangen</Signaluebermittlung>
+        <Steuerung>geregelt</Steuerung>
+        <Subventionen>0.00</Subventionen>
+        <Verstellbarkeit>fest</Verstellbarkeit>
+        <Arbeitspunkt>0.000</Arbeitspunkt>
+        <AufstellungAntrieb>nass</AufstellungAntrieb>
+        <AufstellungFoerderaggregat>horizontal</AufstellungFoerderaggregat>
+        <Bauart>Kreiselpumpe</Bauart>
+        <FoerderstromMax_einzel>10.000</FoerderstromMax_einzel>
+        <FoerderstromMin_einzel>0.000</FoerderstromMin_einzel>
+        <KoteStart>-200.000</KoteStart>
+        <KoteStop>-200.000</KoteStop>
+        <AbwasserknotenRef REF="chTEST0000000010" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.FoerderAggregat>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Absperr_Drosselorgan TID="chTEST0000000031">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Antrieb>andere</Antrieb>
+        <Art>Rueckstauklappe</Art>
+        <Bemerkung>Normprobe</Bemerkung>
+        <Bezeichnung>Drossel B</Bezeichnung>
+        <Bruttokosten>0.00</Bruttokosten>
+        <Drosselorgan_Oeffnung_Ist>0</Drosselorgan_Oeffnung_Ist>
+        <Drosselorgan_Oeffnung_Ist_optimiert>0</Drosselorgan_Oeffnung_Ist_optimiert>
+        <Fabrikat>Normprobe</Fabrikat>
+        <Querschnitt>0.00</Querschnitt>
+        <Signaluebermittlung>empfangen</Signaluebermittlung>
+        <Steuerung>geregelt</Steuerung>
+        <Subventionen>0.00</Subventionen>
+        <Verstellbarkeit>fest</Verstellbarkeit>
+        <Wirksamer_QS>0.00</Wirksamer_QS>
+        <AbwasserknotenRef REF="chTEST0000000010" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Absperr_Drosselorgan>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Leapingwehr TID="chTEST0000000032">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Antrieb>andere</Antrieb>
+        <Bemerkung>Normprobe</Bemerkung>
+        <Bezeichnung>Leaping B</Bezeichnung>
+        <Bruttokosten>0.00</Bruttokosten>
+        <Einleitstelle>Normprobe</Einleitstelle>
+        <Fabrikat>Normprobe</Fabrikat>
+        <Funktion>andere</Funktion>
+        <Qan_dim>0.000</Qan_dim>
+        <Signaluebermittlung>empfangen</Signaluebermittlung>
+        <Steuerung>geregelt</Steuerung>
+        <Subventionen>0.00</Subventionen>
+        <Verstellbarkeit>fest</Verstellbarkeit>
+        <Breite>0.00</Breite>
+        <Laenge>0.00</Laenge>
+        <Oeffnungsform>Kreis</Oeffnungsform>
+        <AbwasserknotenRef REF="chTEST0000000010" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Leapingwehr>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Streichwehr TID="chTEST0000000033">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Antrieb>andere</Antrieb>
+        <Bemerkung>Normprobe</Bemerkung>
+        <Bezeichnung>Streich B</Bezeichnung>
+        <Bruttokosten>0.00</Bruttokosten>
+        <Einleitstelle>Normprobe</Einleitstelle>
+        <Fabrikat>Normprobe</Fabrikat>
+        <Funktion>andere</Funktion>
+        <Qan_dim>0.000</Qan_dim>
+        <Signaluebermittlung>empfangen</Signaluebermittlung>
+        <Steuerung>geregelt</Steuerung>
+        <Subventionen>0.00</Subventionen>
+        <Verstellbarkeit>fest</Verstellbarkeit>
+        <HydrUeberfalllaenge>0.00</HydrUeberfalllaenge>
+        <KoteMax>-200.000</KoteMax>
+        <KoteMin>-200.000</KoteMin>
+        <Ueberfallkante>andere</Ueberfallkante>
+        <Wehr_Art>hochgezogen</Wehr_Art>
+        <AbwasserknotenRef REF="chTEST0000000010" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Streichwehr>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Trockenwetterfallrohr TID="chTEST0000000034">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bemerkung>Normprobe</Bemerkung>
+        <Bezeichnung>Fallrohr B</Bezeichnung>
+        <Instandstellung>nicht_notwendig</Instandstellung>
+        <Durchmesser>150</Durchmesser>
+        <AbwasserbauwerkRef REF="chTEST0000000011" />
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Trockenwetterfallrohr>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Unterhalt TID="chSSTBF45CF62E97">
+        <Letzte_Aenderung>20260912</Letzte_Aenderung>
+        <Bezeichnung>Reparatur 2026</Bezeichnung>
+        <Zeitpunkt>20260911</Zeitpunkt>
+        <Art>Sanierung_Reparatur</Art>
+        <DatenherrRef REF="chTEST0000000005" />
+        <DatenlieferantRef REF="chTEST0000000005" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Unterhalt>
+      <DSS_2020_1_LV95.Siedlungsentwaesserung.Erhaltungsereignis_AbwasserbauwerkAssoc>
+        <AbwasserbauwerkRef REF="chTEST0000000011" />
+        <Erhaltungsereignis_AbwasserbauwerkAssocRef REF="chSSTBF45CF62E97" />
+      </DSS_2020_1_LV95.Siedlungsentwaesserung.Erhaltungsereignis_AbwasserbauwerkAssoc>
+    </DSS_2020_1_LV95.Siedlungsentwaesserung>
+    <SIA405_Base_Abwasser_1_LV95.Administration BID="chB0000000000002">
+      <SIA405_Base_Abwasser_1_LV95.Administration.Organisation TID="chTEST0000000005">
+        <Letzte_Aenderung>20260101</Letzte_Aenderung>
+        <Bezeichnung>Privat</Bezeichnung>
+        <Organisationstyp>Privat</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_1_LV95.Administration.Organisation>
+    </SIA405_Base_Abwasser_1_LV95.Administration>
+  </DATASECTION>
+</TRANSFER>

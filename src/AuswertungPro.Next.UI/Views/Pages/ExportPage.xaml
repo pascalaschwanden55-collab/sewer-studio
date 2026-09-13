@@ -37,7 +37,10 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <ctrl:NovaPageHeader Grid.Row="0" Title="Export" Subtitle="Excel, Verteilung, Kataster"/>
+        <ctrl:NovaPageHeader Grid.Row="0" Title="Export" Subtitle="Excel, Verteilung, Kataster">
+            <Button Content="SIA405-Lieferung bearbeiten …" Command="{Binding LieferungBearbeitenCommand}"
+                    Style="{DynamicResource ToolbarButton}"/>
+        </ctrl:NovaPageHeader>
 
         <!-- Export Toolbar Card -->
         <Border Grid.Row="1" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -238,10 +241,10 @@
                                        TextWrapping="Wrap" Margin="0,2,0,8"/>
                             <TextBlock Text="Standard: nur bearbeitete Felder für den Abgleich. Die mitgelieferte .ili-Datei gehört dazu."
                                        TextWrapping="Wrap" Margin="0,0,0,8"/>
-                            <CheckBox Content="Vollständige neue XTF mit allen belegten Normfeldern"
+                            <CheckBox Content="Neue XTF aus dem Projektstand – Exportumfang prüfen"
                                       IsChecked="{Binding XtfVollstaendig}" Margin="0,0,0,8"
                                       ToolTip="GeoShop-Objektakten werden im umfassenderen DSS-Modell geliefert, sonst SIA405. Vorhandene Kennungen bleiben erhalten. Die Vorschau nennt fehlende Angaben. Nicht als Änderungsauftrag verwenden."/>
-                            <TextBlock Text="Mit GeoShop-Objektakten: auch Deckel, Koten, Liner und Sanierungsereignisse als DSS-Normobjekte. Offene Zuordnungen stehen im Bericht. Diese Datei ist kein Änderungsauftrag."
+                            <TextBlock Text="Enthält angebundene Normobjekte einschliesslich Deckel und Unterhalt. Fehlende Objektarten sperren den Export; nicht übertragbare Angaben werden namentlich angezeigt. Bitte den Exportumfang prüfen. Diese Datei ist kein Änderungsauftrag."
                                        Visibility="{Binding XtfVollstaendig, Converter={StaticResource BoolToVis}}"
                                        TextWrapping="Wrap" Margin="0,0,0,8"/>
                             <Button Command="{Binding ErzeugeXtfNeuCommand}"

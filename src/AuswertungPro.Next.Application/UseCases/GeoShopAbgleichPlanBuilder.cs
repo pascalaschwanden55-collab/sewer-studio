@@ -6,7 +6,7 @@ using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.UseCases;
 
-public sealed record GeoShopFeldAenderung(string Feld, string Vorher, string Nachher, bool IstKennung = false);
+public sealed record GeoShopFeldAenderung(string Feld, string Vorher, string Nachher, bool IstKennung = false, bool Ersetzen = false);
 public sealed record GeoShopPosition(GeoShopZiel Ziel, string Vorher, GeoShopBauteil Quelle,
     bool Gedreht, bool KennungenAendern, IReadOnlyList<GeoShopFeldAenderung> Felder,
     string AlteKennungen, string NeueKennungen, string Aktenstand = "", bool NeueAktenwerte = false);
@@ -16,6 +16,12 @@ public sealed record GeoShopPlan(string Quelle, IReadOnlyList<GeoShopPosition> P
 /// <summary>Plant Kennungsersatz und Leerfelder gemeinsam. Namen allein reichen nur bei einem eindeutigen Treffer.</summary>
 public static class GeoShopAbgleichPlanBuilder
 {
+    /// <summary>Felder, die IMMER aus der GeoShop-XTF kommen (Entscheid Pascal 11.09.2026): Die Haltungslaenge
+    /// ist ein Katastermass; ein vorhandener Wert - auch ein von Hand gesetzter - wird ersetzt und als
+    /// Katasterwert markiert. Alle anderen Felder werden weiterhin nur gefuellt, wenn sie leer sind.</summary>
+    public static readonly IReadOnlySet<string> ImmerAusXtf =
+        new HashSet<string>(StringComparer.Ordinal) { FieldKeys.HoldingLengthMeters };
+
     public static GeoShopPlan Baue(IReadOnlyList<GeoShopZiel> ziele, GeoShopBestand bestand)
     {
         var positionen = new List<GeoShopPosition>();
@@ -27,7 +33,7 @@ public static class GeoShopAbgleichPlanBuilder
         {
             void Hinweis(string text) => hinweise.Add($"{ziel.Name}: {text}");
             if (ziel.Art != bestand.Art) throw new ArgumentException("Bauteilarten passen nicht zusammen.");
-            if (ziel.Name.Length == 0 || doppelt.Contains(ziel.Name))
+            if (ziel.Name.Length == 0 || doppelt.Contains(ziel.Name) || !ziel.ProjektnameEindeutig)
             { Hinweis("Name fehlt oder kommt im Projekt mehrfach vor – ausgelassen."); continue; }
             var teile = ziel.Name.Split('-');
             var gegenname = ziel.Art == BauteilArt.Haltung && teile.Length == 2
@@ -70,6 +76,14 @@ public static class GeoShopAbgleichPlanBuilder
             var felder = werte.Where(p => !string.IsNullOrWhiteSpace(p.Value)
                 && string.IsNullOrWhiteSpace(ziel.Wert(p.Key)))
                 .Select(p => new GeoShopFeldAenderung(p.Key, ziel.Wert(p.Key), p.Value)).ToList();
+            if (ziel.Art == BauteilArt.Haltung)
+                foreach (var feld in ImmerAusXtf)
+                {
+                    if (!werte.TryGetValue(feld, out var wert) || string.IsNullOrWhiteSpace(wert)) continue;
+                    var vorher = ziel.Wert(feld);
+                    if (string.IsNullOrWhiteSpace(vorher) || GleicherWert(vorher, wert)) continue;
+                    felder.Add(new GeoShopFeldAenderung(feld, vorher, wert, Ersetzen: true));
+                }
             var id = quelle.Kennungen.Hauptkennung!;
             var kennungsfelder = new[] { FieldKeys.GeonisId, FieldKeys.CadastreObjectId };
             if (kennungsfelder.Any(f => ziel.Handgesetzt(f) && !string.IsNullOrWhiteSpace(ziel.Wert(f)) && ziel.Wert(f) != id))
@@ -83,6 +97,13 @@ public static class GeoShopAbgleichPlanBuilder
         }
         return new GeoShopPlan(bestand.Quelle, positionen, hinweise, ziele.Select(z => z.Datensatz).ToArray());
     }
+
+    /// <summary>«12.5» und «12.50» sind derselbe Wert; nur eine echte Abweichung ist eine Aenderung.</summary>
+    private static bool GleicherWert(string a, string b)
+        => string.Equals(a.Trim(), b.Trim(), StringComparison.Ordinal)
+        || double.TryParse(a.Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x)
+        && double.TryParse(b.Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var y)
+        && Math.Abs(x - y) < 0.0005;
 
     internal static GeonisKennungen Kennungen(KatasterKennung k, bool gedreht) => new()
     {
@@ -116,7 +137,7 @@ public static class GeoShopAbgleichAnwender
         if (plan.Projektbestand.Count != aktuelleZiele.Count
             || !plan.Projektbestand.Zip(aktuelleZiele).All(p => ReferenceEquals(p.First, p.Second.Datensatz))
             || plan.Positionen.Any(p => !aktuelleZiele.Any(z => ReferenceEquals(z.Datensatz, p.Ziel.Datensatz))
-            || p.Ziel.Stand() != p.Vorher || p.Ziel.Aktenstand != p.Aktenstand))
+            || !p.Ziel.ProjektnameEindeutig || p.Ziel.Stand() != p.Vorher || p.Ziel.Aktenstand != p.Aktenstand))
             throw new InvalidOperationException("Das Projekt wurde während der Vorschau geändert. Bitte den GeoShop-Abgleich erneut starten.");
         foreach (var position in plan.Positionen) position.Ziel.Uebernehme(position, plan.Quelle);
         return plan.Positionen.Count;

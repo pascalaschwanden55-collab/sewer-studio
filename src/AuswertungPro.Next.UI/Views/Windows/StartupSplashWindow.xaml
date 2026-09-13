@@ -1,6 +1,7 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.StartupSplashWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.StartupSplashWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:app="clr-namespace:AuswertungPro.Next.UI"
         Title="SewerStudio"
         WindowStyle="None"
         ResizeMode="NoResize"
@@ -129,7 +130,7 @@
                            MaxWidth="640"
                            Opacity="0"/>
 
-                <!-- Fachliche Kennzeichen als ruhige Chips, keine Versionsangabe. -->
+                <!-- Fachliche Kennzeichen als ruhige Chips; die Version kommt aus AppIdentity (Entscheid Pascal 13.09.2026). -->
                 <StackPanel x:Name="TagRow" Orientation="Horizontal" Margin="0,26,0,0" Opacity="0">
                     <Border Background="#FFFCFDFF" BorderBrush="#FFCDD6E4" BorderThickness="1"
                             CornerRadius="4" Padding="12,5" Margin="0,0,10,0">
@@ -142,8 +143,13 @@
                                    Foreground="#FF1C2536"/>
                     </Border>
                     <Border Background="#FFFCFDFF" BorderBrush="#FFCDD6E4" BorderThickness="1"
-                            CornerRadius="4" Padding="12,5">
+                            CornerRadius="4" Padding="12,5" Margin="0,0,10,0">
                         <TextBlock Text="Lokale KI" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="#FF1C2536"/>
+                    </Border>
+                    <Border Background="#FFFCFDFF" BorderBrush="#FFCDD6E4" BorderThickness="1"
+                            CornerRadius="4" Padding="12,5">
+                        <TextBlock Text="{x:Static app:AppIdentity.DisplayVersion}" FontSize="13" FontWeight="SemiBold"
                                    Foreground="#FF1C2536"/>
                     </Border>
                 </StackPanel>

@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Application.UseCases.Objektakten;
+﻿using AuswertungPro.Next.Application.UseCases.Objektakten;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Projects;
 using AuswertungPro.Next.Application.Lookup;
@@ -210,5 +210,50 @@ public sealed class ObjektaktenTests
         Assert.Throws<InvalidOperationException>(() => b.Schreibe(b.Wurzel, f, "Alt", "Meine Eingabe"));
         Assert.Equal("Saniert 2018", h.GetFieldValue(FieldKeys.Remarks));
         Assert.Empty(p.Objektakten);
+    }
+
+    [Fact]
+    public void Gruppenwechsel_zieht_das_abhaengige_Materialdetail_auf_den_ersten_Eintrag_nach()
+    {
+        var p = new Project(); var h = new HaltungRecord(); p.Data.Add(h);
+        var b = new ObjektaktenBearbeitung(p, h.Id, "haltung");
+        var gruppe = FieldCatalog.Objektfelder.Feld("haltung.pipegroup");
+        var material = FieldCatalog.Objektfelder.Feld("haltung.material");
+
+        var beton = b.ErlaubteEintraege(b.Wurzel, gruppe).Single(e => e.Label == "Beton");
+        b.Schreibe(b.Wurzel, gruppe, "", beton.Label, beton);
+        var armiert = b.ErlaubteEintraege(b.Wurzel, material).Single(e => e.Label == "Beton, armiert (BA)");
+        b.Schreibe(b.Wurzel, material, b.Lies(b.Wurzel, material), armiert.Label, armiert);
+        Assert.Equal("102", b.Wurzel.Werte["haltung.material"].Originalcode);
+
+        // Wechsel der Gruppe: das Detail passt nicht mehr und springt auf den ersten Eintrag
+        // der neuen Liste - wie im WebGIS (Entscheid Pascal 12.09.2026).
+        var andere = b.ErlaubteEintraege(b.Wurzel, gruppe).Single(e => e.Label == "Andere");
+        b.Schreibe(b.Wurzel, gruppe, beton.Label, andere.Label, andere);
+
+        Assert.Equal("Verschiedene (V)", b.Wurzel.Werte["haltung.material"].Text);
+        Assert.Equal("131", b.Wurzel.Werte["haltung.material"].Originalcode);
+        Assert.Contains(b.ErlaubteEintraege(b.Wurzel, material), e => e.Label == "Zement (Z)");
+    }
+
+    [Fact]
+    public void Gruppenwechsel_erfindet_kein_Material_und_laesst_einen_weiterhin_gueltigen_Wert_stehen()
+    {
+        var p = new Project(); var h = new HaltungRecord(); p.Data.Add(h);
+        var b = new ObjektaktenBearbeitung(p, h.Id, "haltung");
+        var gruppe = FieldCatalog.Objektfelder.Feld("haltung.pipegroup");
+        var material = FieldCatalog.Objektfelder.Feld("haltung.material");
+
+        // Noch kein Material erfasst: der Gruppenwechsel darf keines hinschreiben.
+        var beton = b.ErlaubteEintraege(b.Wurzel, gruppe).Single(e => e.Label == "Beton");
+        b.Schreibe(b.Wurzel, gruppe, "", beton.Label, beton);
+        Assert.Equal("", b.Lies(b.Wurzel, material));
+        Assert.False(b.Wurzel.Werte.ContainsKey("haltung.material"));
+
+        // Ein eigener Eintrag in derselben Gruppe bleibt beim erneuten Setzen derselben Gruppe stehen.
+        var bu = b.ErlaubteEintraege(b.Wurzel, material).Single(e => e.Label == "Beton, unbekannt (BU)");
+        b.Schreibe(b.Wurzel, material, b.Lies(b.Wurzel, material), bu.Label, bu);
+        b.Schreibe(b.Wurzel, gruppe, beton.Label, beton.Label, beton);
+        Assert.Equal("101", b.Wurzel.Werte["haltung.material"].Originalcode);
     }
 }

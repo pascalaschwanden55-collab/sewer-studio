@@ -17,6 +17,8 @@ namespace AuswertungPro.Next.UI.ViewModels;
 public sealed class ObjektListenAnzeige : ObservableObject
 {
     private readonly ObjektUnterliste _liste;
+    private int _seite;
+    public const int Seitengroesse = 6;
 
     public ObjektListenAnzeige(ObjektaktenBearbeitung bearbeitung, ObjektAkte wurzel, ObjektUnterliste liste,
         Action<ObjektAkte> oeffnen, Func<bool> darfSchreiben, Action<string> anlegen)
@@ -40,9 +42,28 @@ public sealed class ObjektListenAnzeige : ObservableObject
         OeffnenCommand = new RelayCommand<ObjektListenZeile>(
             z => { if (z?.Akte is { } akte) oeffnen(akte); },
             z => z?.Akte is not null);
+        VorigeSeiteCommand = new RelayCommand(() => Seite--, () => Seite > 0);
+        NaechsteSeiteCommand = new RelayCommand(() => Seite++, () => Seite + 1 < Seitenzahl);
     }
 
     public string Titel => _liste.Label;
+    public string? WebgisAbschnitt => _liste.WebgisAbschnitt;
+    public int Seitenzahl => Math.Max(1, (Zeilen.Count + Seitengroesse - 1) / Seitengroesse);
+    public bool HatMehrereSeiten => Seitenzahl > 1;
+    public string Seitenstand => $"Seite {Seite + 1} von {Seitenzahl} · {Zeilen.Count} Einträge";
+    public IReadOnlyList<ObjektListenZeile> SichtbareZeilen => Zeilen.Skip(Seite * Seitengroesse).Take(Seitengroesse).ToArray();
+    public int Seite
+    {
+        get => _seite;
+        set
+        {
+            if (!SetProperty(ref _seite, Math.Clamp(value, 0, Seitenzahl - 1))) return;
+            OnPropertyChanged(nameof(SichtbareZeilen)); OnPropertyChanged(nameof(Seitenstand));
+            VorigeSeiteCommand.NotifyCanExecuteChanged(); NaechsteSeiteCommand.NotifyCanExecuteChanged();
+        }
+    }
+    public IRelayCommand VorigeSeiteCommand { get; }
+    public IRelayCommand NaechsteSeiteCommand { get; }
     public IReadOnlyList<string> Spaltentitel { get; }
     public IReadOnlyList<ObjektListenZeile> Zeilen { get; }
     public bool DarfAnlegen { get; }

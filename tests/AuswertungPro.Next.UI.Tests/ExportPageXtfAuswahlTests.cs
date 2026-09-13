@@ -69,7 +69,7 @@ public sealed class ExportPageXtfAuswahlTests
         var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "ExportPage.xaml"));
 
         Assert.Contains("Bestehende Katasterdaten aktualisieren", xaml, StringComparison.Ordinal);
-        Assert.Contains("Vollständige neue XTF mit allen belegten Normfeldern", xaml, StringComparison.Ordinal);
+        Assert.Contains("Neue XTF aus dem Projektstand – Exportumfang prüfen", xaml, StringComparison.Ordinal);
         Assert.Contains("{Binding XtfOriginalZeile}", xaml, StringComparison.Ordinal);
         Assert.Contains("{Binding XtfVollstaendig}", xaml, StringComparison.Ordinal);
         Assert.Contains("{Binding XtfAktualisierenEmpfohlen, Converter={StaticResource BoolToVis}}", xaml, StringComparison.Ordinal);

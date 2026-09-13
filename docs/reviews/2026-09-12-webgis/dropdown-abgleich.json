@@ -1,0 +1,6067 @@
+{
+  "pruefumfang": "Code, Text, Gruppe, Häufigkeit und Reihenfolge der dokumentierten Kataloginhalte. Keine Vollabnahme der Feldbindungen, dynamischen Datenlisten oder Maskenfunktionen.",
+  "vorlage": "docs\\reviews\\2026-09-11-objektakten\\WEBGIS-LAYOUT-KOMPLETT.md",
+  "vorlage_sha256": "4a30ab85b8d1db3a272e10e4bceeb56cbde95e115922bde4bc154f0096f3bcb2",
+  "katalog_sha256": "6c0d4482f5ef7b7b0c83513a17b8ea97a6d9138fb0f5987f845eb53dc874877d",
+  "kataloge": 148,
+  "katalogeintraege": 1924,
+  "dropdownfelder": 235,
+  "status": {
+    "vollstaendig": 222,
+    "vollstaendig_mit_leerwahl": 47,
+    "ohne_ausgezaehlte_werte": 5
+  },
+  "belege": [
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Typ AA/Nutzungsart",
+      "zeile": 66,
+      "kataloge": [
+        "haltung-C00"
+      ],
+      "felder_im_katalog": [
+        "haltung.aatype"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Typ AA/Nutzungsart – Nutzungsart *(abgeleitet; im WebGIS „“)*",
+      "zeile": 67,
+      "kataloge": [
+        "haltung-C01"
+      ],
+      "felder_im_katalog": [
+        "haltung.usage"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 11,
+      "anzahl_katalog": 11,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Funktion hier./Funktion hydr.",
+      "zeile": 68,
+      "kataloge": [
+        "haltung-C02"
+      ],
+      "felder_im_katalog": [
+        "haltung.hierarchy"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 10,
+      "anzahl_katalog": 10,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Funktion hier./Funktion hydr. – Funktion hydr. *(abgeleitet; im WebGIS „“)*",
+      "zeile": 69,
+      "kataloge": [
+        "haltung-C03"
+      ],
+      "felder_im_katalog": [
+        "haltung.hydrofunction"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 16,
+      "anzahl_katalog": 16,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Status",
+      "zeile": 70,
+      "kataloge": [
+        "haltung-C04"
+      ],
+      "felder_im_katalog": [
+        "haltung.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Material",
+      "zeile": 72,
+      "kataloge": [
+        "haltung-C05"
+      ],
+      "felder_im_katalog": [
+        "haltung.pipegroup"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Material – 2. Feld *(abgeleitet; im WebGIS „“)*",
+      "zeile": 73,
+      "kataloge": [
+        "haltung.material-je-eltern"
+      ],
+      "felder_im_katalog": [
+        "haltung.material"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 43,
+      "anzahl_katalog": 43,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Profiltyp/Breite/Höhe",
+      "zeile": 74,
+      "kataloge": [
+        "haltung-C07"
+      ],
+      "felder_im_katalog": [
+        "haltung.profile"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 8,
+      "anzahl_katalog": 8,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "[mm]",
+      "zeile": 75,
+      "kataloge": [
+        "haltung-C08"
+      ],
+      "felder_im_katalog": [
+        "haltung.width",
+        "haltung.dn"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 187,
+      "anzahl_katalog": 187,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "[mm] – 2. Feld *(abgeleitet; im WebGIS „“)*",
+      "zeile": 76,
+      "kataloge": [
+        "haltung-C08"
+      ],
+      "felder_im_katalog": [
+        "haltung.width",
+        "haltung.dn"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 187,
+      "anzahl_katalog": 187,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Rohrprofil",
+      "zeile": 77,
+      "kataloge": [
+        "haltung-C09"
+      ],
+      "felder_im_katalog": [
+        "haltung.profileref"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 56,
+      "anzahl_katalog": 56,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Auslaufform VP/NP",
+      "zeile": 87,
+      "kataloge": [
+        "haltung-C10"
+      ],
+      "felder_im_katalog": [
+        "haltung.fromoutlet",
+        "haltung.tooutlet"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Auslaufform VP/NP – NP *(abgeleitet; im WebGIS „“)*",
+      "zeile": 88,
+      "kataloge": [
+        "haltung-C10"
+      ],
+      "felder_im_katalog": [
+        "haltung.fromoutlet",
+        "haltung.tooutlet"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Höhengenauigkeit VP/NP",
+      "zeile": 89,
+      "kataloge": [
+        "haltung-C15"
+      ],
+      "felder_im_katalog": [
+        "haltung.heightaccuracy"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Höhengenauigkeit VP/NP – NP *(abgeleitet; im WebGIS „“)*",
+      "zeile": 90,
+      "kataloge": [
+        "haltung-C15"
+      ],
+      "felder_im_katalog": [
+        "haltung.heightaccuracy"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten I",
+      "feld": "Ebene",
+      "zeile": 93,
+      "kataloge": [
+        "haltung-C12"
+      ],
+      "felder_im_katalog": [
+        "haltung.level"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 21,
+      "anzahl_katalog": 22,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten II",
+      "feld": "Lagebest./-genauigkeit",
+      "zeile": 100,
+      "kataloge": [
+        "haltung-C13"
+      ],
+      "felder_im_katalog": [
+        "haltung.positiondetermination",
+        "haltung.heightdetermination"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten II",
+      "feld": "Lagebest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 101,
+      "kataloge": [
+        "haltung-C14"
+      ],
+      "felder_im_katalog": [
+        "haltung.positionaccuracy"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten II",
+      "feld": "Höhenbest./-genauigkeit",
+      "zeile": 102,
+      "kataloge": [
+        "haltung-C13"
+      ],
+      "felder_im_katalog": [
+        "haltung.positiondetermination",
+        "haltung.heightdetermination"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten II",
+      "feld": "Höhenbest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 103,
+      "kataloge": [
+        "haltung-C15"
+      ],
+      "felder_im_katalog": [
+        "haltung.heightaccuracy"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten II",
+      "feld": "Innenschutz/Umhüllung",
+      "zeile": 109,
+      "kataloge": [
+        "haltung-C16"
+      ],
+      "felder_im_katalog": [
+        "haltung.innerprotection"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten II",
+      "feld": "Innenschutz/Umhüllung – Umhüllung *(abgeleitet; im WebGIS „“)*",
+      "zeile": 110,
+      "kataloge": [
+        "haltung-C17"
+      ],
+      "felder_im_katalog": [
+        "haltung.bedding"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 17,
+      "anzahl_katalog": 18,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten II",
+      "feld": "Verbindungsart",
+      "zeile": 111,
+      "kataloge": [
+        "haltung-C18"
+      ],
+      "felder_im_katalog": [
+        "haltung.connection"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 18,
+      "anzahl_katalog": 19,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten II",
+      "feld": "Geplante Nutzungsart",
+      "zeile": 112,
+      "kataloge": [
+        "haltung-C01"
+      ],
+      "felder_im_katalog": [
+        "haltung.usage"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 11,
+      "anzahl_katalog": 11,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten II",
+      "feld": "Ringsteifigkeit",
+      "zeile": 115,
+      "kataloge": [
+        "haltung-C20"
+      ],
+      "felder_im_katalog": [
+        "haltung.stiffnessclass"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 17,
+      "anzahl_katalog": 18,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Daten II",
+      "feld": "Rohrserie",
+      "zeile": 116,
+      "kataloge": [
+        "haltung-C21"
+      ],
+      "felder_im_katalog": [
+        "haltung.pipeclass"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Administrativ",
+      "feld": "Eigentümer",
+      "zeile": 135,
+      "kataloge": [
+        "haltung-C22"
+      ],
+      "felder_im_katalog": [
+        "haltung.owner",
+        "haltung.operator"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 30,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Administrativ",
+      "feld": "Betreiber",
+      "zeile": 136,
+      "kataloge": [
+        "haltung-C22"
+      ],
+      "felder_im_katalog": [
+        "haltung.owner",
+        "haltung.operator"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 30,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "feld": "Ort/Zugänglichkeit",
+      "zeile": 139,
+      "status": "ohne_ausgezaehlte_werte",
+      "quelle": ""
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Administrativ",
+      "feld": "Ort/Zugänglichkeit – Zugänglichkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 140,
+      "kataloge": [
+        "haltung-C24"
+      ],
+      "felder_im_katalog": [
+        "haltung.access"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Administrativ",
+      "feld": "Finanzierung",
+      "zeile": 146,
+      "kataloge": [
+        "haltung-C25"
+      ],
+      "felder_im_katalog": [
+        "haltung.financing"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Administrativ",
+      "feld": "Wiederbeschaffungswert Bauart",
+      "zeile": 149,
+      "kataloge": [
+        "haltung-C26"
+      ],
+      "felder_im_katalog": [
+        "haltung.replacementtype"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Unterhalt",
+      "feld": "Zustand/Sanierungsbedarf",
+      "zeile": 156,
+      "kataloge": [
+        "haltung-C27"
+      ],
+      "felder_im_katalog": [
+        "haltung.condition"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 8,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Unterhalt",
+      "feld": "Zustand/Sanierungsbedarf – Sanierungsbedarf *(abgeleitet; im WebGIS „“)*",
+      "zeile": 157,
+      "kataloge": [
+        "haltung-C28"
+      ],
+      "felder_im_katalog": [
+        "haltung.need"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 8,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Hydraulik",
+      "feld": "Rohrprofil",
+      "zeile": 176,
+      "kataloge": [
+        "haltung-C09"
+      ],
+      "felder_im_katalog": [
+        "haltung.profileref"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 56,
+      "anzahl_katalog": 56,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Hydraulik",
+      "feld": "Funktion Melioration",
+      "zeile": 178,
+      "kataloge": [
+        "haltung-C30"
+      ],
+      "felder_im_katalog": [
+        "haltung.melioration"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Hydraulik",
+      "feld": "Sickerung / Leckschutz",
+      "zeile": 179,
+      "kataloge": [
+        "haltung-C31"
+      ],
+      "felder_im_katalog": [
+        "haltung.infiltration",
+        "haltung.leakprotection"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltung",
+      "art": "haltung",
+      "abschnitt": "Hydraulik",
+      "feld": "Sickerung / Leckschutz – Leckschutz *(abgeleitet; im WebGIS „“)*",
+      "zeile": 180,
+      "kataloge": [
+        "haltung-C31"
+      ],
+      "felder_im_katalog": [
+        "haltung.infiltration",
+        "haltung.leakprotection"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten I",
+      "feld": "Bauwerksart Normschacht *(abgeleitet; im WebGIS „“)*",
+      "zeile": 226,
+      "kataloge": [
+        "schacht-C00"
+      ],
+      "felder_im_katalog": [
+        "schacht.funktion"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 21,
+      "anzahl_katalog": 21,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten I",
+      "feld": "Typ AA/Nutzungsart",
+      "zeile": 227,
+      "kataloge": [
+        "schacht-C01"
+      ],
+      "felder_im_katalog": [
+        "schacht.typ_aa"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten I",
+      "feld": "Typ AA/Nutzungsart – Nutzungsart *(abgeleitet; im WebGIS „“)*",
+      "zeile": 228,
+      "kataloge": [
+        "schacht-C02"
+      ],
+      "felder_im_katalog": [
+        "schacht.nutzungsart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 11,
+      "anzahl_katalog": 11,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten I",
+      "feld": "Funktion hier./hydr.",
+      "zeile": 229,
+      "kataloge": [
+        "schacht-C03"
+      ],
+      "felder_im_katalog": [
+        "schacht.funktion_hierarchisch"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 10,
+      "anzahl_katalog": 10,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten I",
+      "feld": "Funktion hier./hydr. – hydr. *(abgeleitet; im WebGIS „“)*",
+      "zeile": 230,
+      "kataloge": [
+        "schacht-C04"
+      ],
+      "felder_im_katalog": [
+        "schacht.funktion_hydraulisch"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 16,
+      "anzahl_katalog": 16,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten I",
+      "feld": "Status",
+      "zeile": 231,
+      "kataloge": [
+        "schacht-C05"
+      ],
+      "felder_im_katalog": [
+        "schacht.betriebsstatus"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten I",
+      "feld": "Material",
+      "zeile": 233,
+      "kataloge": [
+        "schacht-C06"
+      ],
+      "felder_im_katalog": [
+        "schacht.materialgruppe"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten I",
+      "feld": "Material – 2. Feld *(abgeleitet; im WebGIS „“)*",
+      "zeile": 234,
+      "kataloge": [
+        "schacht.materialdetail-je-eltern"
+      ],
+      "felder_im_katalog": [
+        "schacht.materialdetail"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 25,
+      "anzahl_katalog": 25,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten I",
+      "feld": "Form",
+      "zeile": 235,
+      "kataloge": [
+        "schacht-C08"
+      ],
+      "felder_im_katalog": [
+        "schacht.form"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten I",
+      "feld": "Breite/Länge [mm]",
+      "zeile": 236,
+      "kataloge": [
+        "schacht-C09"
+      ],
+      "felder_im_katalog": [
+        "schacht.breite",
+        "schacht.laenge"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 31,
+      "anzahl_katalog": 31,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten I",
+      "feld": "Breite/Länge [mm] – Länge [mm] *(abgeleitet; im WebGIS „“)*",
+      "zeile": 237,
+      "kataloge": [
+        "schacht-C09"
+      ],
+      "felder_im_katalog": [
+        "schacht.breite",
+        "schacht.laenge"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 31,
+      "anzahl_katalog": 31,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten I",
+      "feld": "Ebene",
+      "zeile": 243,
+      "kataloge": [
+        "schacht-C10"
+      ],
+      "felder_im_katalog": [
+        "schacht.ebene"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 21,
+      "anzahl_katalog": 22,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten II",
+      "feld": "Lagebest./-genauigkeit",
+      "zeile": 250,
+      "kataloge": [
+        "schacht-C11"
+      ],
+      "felder_im_katalog": [
+        "schacht.lagebestimmung",
+        "schacht.hoehenbestimmung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten II",
+      "feld": "Lagebest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 251,
+      "kataloge": [
+        "schacht-C12"
+      ],
+      "felder_im_katalog": [
+        "schacht.lagegenauigkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten II",
+      "feld": "Höhenbest./-genauigkeit",
+      "zeile": 252,
+      "kataloge": [
+        "schacht-C11"
+      ],
+      "felder_im_katalog": [
+        "schacht.lagebestimmung",
+        "schacht.hoehenbestimmung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten II",
+      "feld": "Höhenbest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 253,
+      "kataloge": [
+        "schacht-C13"
+      ],
+      "felder_im_katalog": [
+        "schacht.hoehengenauigkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten II",
+      "feld": "Zugänglichkeit",
+      "zeile": 254,
+      "kataloge": [
+        "schacht-C14"
+      ],
+      "felder_im_katalog": [
+        "schacht.zugaenglichkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten II",
+      "feld": "Interventionsmöglichkeit",
+      "zeile": 256,
+      "kataloge": [
+        "schacht-C15"
+      ],
+      "felder_im_katalog": [
+        "schacht.intervention",
+        "schacht.amphibienausstieg"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Daten II",
+      "feld": "Amphibienausstieg",
+      "zeile": 257,
+      "kataloge": [
+        "schacht-C15"
+      ],
+      "felder_im_katalog": [
+        "schacht.intervention",
+        "schacht.amphibienausstieg"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Stammkarte",
+      "feld": "Informationsquelle",
+      "zeile": 278,
+      "kataloge": [
+        "schacht-C16"
+      ],
+      "felder_im_katalog": [
+        "schacht.informationsquelle"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Stammkarte",
+      "feld": "Steuerung/Fernwirkung",
+      "zeile": 279,
+      "kataloge": [
+        "schacht-C17"
+      ],
+      "felder_im_katalog": [
+        "schacht.steuerung"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 8,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Stammkarte",
+      "feld": "Büro",
+      "zeile": 281,
+      "kataloge": [
+        "schacht-C18"
+      ],
+      "felder_im_katalog": [
+        "schacht.buero",
+        "schacht.standortgemeinde"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 31,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Stammkarte",
+      "feld": "Standortgemeinde",
+      "zeile": 282,
+      "kataloge": [
+        "schacht-C18"
+      ],
+      "felder_im_katalog": [
+        "schacht.buero",
+        "schacht.standortgemeinde"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 31,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Administrativ",
+      "feld": "Eigentümer",
+      "zeile": 288,
+      "kataloge": [
+        "schacht-C19"
+      ],
+      "felder_im_katalog": [
+        "schacht.eigentuemer",
+        "schacht.betreiber"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 30,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Administrativ",
+      "feld": "Betreiber",
+      "zeile": 289,
+      "kataloge": [
+        "schacht-C19"
+      ],
+      "felder_im_katalog": [
+        "schacht.eigentuemer",
+        "schacht.betreiber"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 30,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Administrativ",
+      "feld": "Finanzierung",
+      "zeile": 290,
+      "kataloge": [
+        "schacht-C20"
+      ],
+      "felder_im_katalog": [
+        "schacht.finanzierung"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Administrativ",
+      "feld": "Wiederbeschaffungswert Bauart",
+      "zeile": 293,
+      "kataloge": [
+        "schacht-C21"
+      ],
+      "felder_im_katalog": [
+        "schacht.wiederbeschaffungswert_bauart"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Unterhalt",
+      "feld": "Zustand/Sanierungsbedarf",
+      "zeile": 310,
+      "kataloge": [
+        "schacht-C22"
+      ],
+      "felder_im_katalog": [
+        "schacht.zustand"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 8,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Unterhalt",
+      "feld": "Zustand/Sanierungsbedarf – Sanierungsbedarf *(abgeleitet; im WebGIS „“)*",
+      "zeile": 311,
+      "kataloge": [
+        "schacht-C23"
+      ],
+      "felder_im_katalog": [
+        "schacht.sanierungsbedarf"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 8,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Unterhalt",
+      "feld": "Zustandsklasse automatisch",
+      "zeile": 315,
+      "kataloge": [
+        "schacht-C24"
+      ],
+      "felder_im_katalog": [
+        "schacht.zustandsklasse_automatisch"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Schacht (Normschacht)",
+      "art": "schacht",
+      "abschnitt": "Unterhalt",
+      "feld": "Systemgrenze",
+      "zeile": 316,
+      "kataloge": [
+        "schacht-C25"
+      ],
+      "felder_im_katalog": [
+        "schacht.systemgrenze"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Bauwerksteil",
+      "art": "bauwerksteil",
+      "abschnitt": "Daten",
+      "feld": "Art/Subart",
+      "zeile": 375,
+      "kataloge": [
+        "bauwerksteil-K00"
+      ],
+      "felder_im_katalog": [
+        "bauwerksteil.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 11,
+      "anzahl_katalog": 11,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Bauwerksteil",
+      "art": "bauwerksteil",
+      "abschnitt": "Daten",
+      "feld": "Art/Subart – Subart *(abgeleitet; im WebGIS „“)*",
+      "zeile": 376,
+      "kataloge": [
+        "bauwerksteil.subart-je-eltern"
+      ],
+      "felder_im_katalog": [
+        "bauwerksteil.subart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 54,
+      "anzahl_katalog": 54,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Bauwerksteil",
+      "art": "bauwerksteil",
+      "abschnitt": "Daten",
+      "feld": "Material",
+      "zeile": 377,
+      "kataloge": [
+        "bauwerksteil-K02"
+      ],
+      "felder_im_katalog": [
+        "bauwerksteil.material"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 8,
+      "anzahl_katalog": 8,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Bauwerksteil",
+      "art": "bauwerksteil",
+      "abschnitt": "Daten II",
+      "feld": "Instandstellung",
+      "zeile": 385,
+      "kataloge": [
+        "bauwerksteil-K03"
+      ],
+      "felder_im_katalog": [
+        "bauwerksteil.instandstellung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltungspunkt",
+      "art": "haltungspunkt",
+      "abschnitt": "Daten",
+      "feld": "Höhe/Lage/Auslaufform – Auslaufform *(abgeleitet; im WebGIS „“)*",
+      "zeile": 429,
+      "kataloge": [
+        "haltungspunkt.auslaufform"
+      ],
+      "felder_im_katalog": [
+        "haltungspunkt.auslaufform"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltungspunkt",
+      "art": "haltungspunkt",
+      "abschnitt": "Daten",
+      "feld": "Lagebest./-genauigkeit",
+      "zeile": 430,
+      "kataloge": [
+        "haltungspunkt.bestimmung"
+      ],
+      "felder_im_katalog": [
+        "haltungspunkt.lagebestimmung",
+        "haltungspunkt.hoehenbestimmung"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltungspunkt",
+      "art": "haltungspunkt",
+      "abschnitt": "Daten",
+      "feld": "Lagebest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 431,
+      "kataloge": [
+        "haltungspunkt.lagegenauigkeit"
+      ],
+      "felder_im_katalog": [
+        "haltungspunkt.lagegenauigkeit"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltungspunkt",
+      "art": "haltungspunkt",
+      "abschnitt": "Daten",
+      "feld": "Höhenbest./-genauigkeit",
+      "zeile": 432,
+      "kataloge": [
+        "haltungspunkt.bestimmung"
+      ],
+      "felder_im_katalog": [
+        "haltungspunkt.lagebestimmung",
+        "haltungspunkt.hoehenbestimmung"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Haltungspunkt",
+      "art": "haltungspunkt",
+      "abschnitt": "Daten",
+      "feld": "Höhenbest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 433,
+      "kataloge": [
+        "haltungspunkt.hoehengenauigkeit"
+      ],
+      "felder_im_katalog": [
+        "haltungspunkt.hoehengenauigkeit"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten I",
+      "feld": "Material",
+      "zeile": 517,
+      "kataloge": [
+        "deckel-C00"
+      ],
+      "felder_im_katalog": [
+        "deckel.material"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten I",
+      "feld": "Form",
+      "zeile": 519,
+      "kataloge": [
+        "deckel-C01"
+      ],
+      "felder_im_katalog": [
+        "deckel.form"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten I",
+      "feld": "Breite/Länge [mm]",
+      "zeile": 520,
+      "kataloge": [
+        "deckel-C02"
+      ],
+      "felder_im_katalog": [
+        "deckel.breite",
+        "deckel.laenge"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 19,
+      "anzahl_katalog": 19,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten I",
+      "feld": "Breite/Länge [mm] – Länge [mm] *(abgeleitet; im WebGIS „“)*",
+      "zeile": 521,
+      "kataloge": [
+        "deckel-C02"
+      ],
+      "felder_im_katalog": [
+        "deckel.breite",
+        "deckel.laenge"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 19,
+      "anzahl_katalog": 19,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten I",
+      "feld": "Verschluss/Entlüftung",
+      "zeile": 523,
+      "kataloge": [
+        "deckel-C03"
+      ],
+      "felder_im_katalog": [
+        "deckel.verschluss"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten I",
+      "feld": "Verschluss/Entlüftung – Entlüftung *(abgeleitet; im WebGIS „“)*",
+      "zeile": 524,
+      "kataloge": [
+        "deckel-C04"
+      ],
+      "felder_im_katalog": [
+        "deckel.entlueftung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten II",
+      "feld": "Lagebest./-genauigkeit",
+      "zeile": 532,
+      "kataloge": [
+        "deckel-C05"
+      ],
+      "felder_im_katalog": [
+        "deckel.lagebestimmung",
+        "deckel.hoehenbestimmung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten II",
+      "feld": "Lagebest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 533,
+      "kataloge": [
+        "deckel-C06"
+      ],
+      "felder_im_katalog": [
+        "deckel.lagegenauigkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten II",
+      "feld": "Höhenbest./-genauigkeit",
+      "zeile": 534,
+      "kataloge": [
+        "deckel-C05"
+      ],
+      "felder_im_katalog": [
+        "deckel.lagebestimmung",
+        "deckel.hoehenbestimmung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten II",
+      "feld": "Höhenbest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 535,
+      "kataloge": [
+        "deckel-C07"
+      ],
+      "felder_im_katalog": [
+        "deckel.hoehengenauigkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten II",
+      "feld": "Last/Schlammeimer",
+      "zeile": 536,
+      "kataloge": [
+        "deckel-C08"
+      ],
+      "felder_im_katalog": [
+        "deckel.last"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 10,
+      "anzahl_katalog": 11,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten II",
+      "feld": "Last/Schlammeimer – Schlammeimer *(abgeleitet; im WebGIS „“)*",
+      "zeile": 537,
+      "kataloge": [
+        "deckel-C09"
+      ],
+      "felder_im_katalog": [
+        "deckel.schlammeimer"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten II",
+      "feld": "Instandstellung/Fabrikat",
+      "zeile": 538,
+      "kataloge": [
+        "deckel-C10"
+      ],
+      "felder_im_katalog": [
+        "deckel.instandstellung"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Deckel",
+      "art": "deckel",
+      "abschnitt": "Daten II",
+      "feld": "Instandstellung/Fabrikat – Fabrikat *(abgeleitet; im WebGIS „“)*",
+      "zeile": 539,
+      "kataloge": [
+        "deckel-C11"
+      ],
+      "felder_im_katalog": [
+        "deckel.fabrikat"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 37,
+      "anzahl_katalog": 38,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Unbekannt",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 564,
+      "kataloge": [
+        "unterhalt-K00"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Unbekannt",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 565,
+      "kataloge": [
+        "unterhalt-K01"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Erneuerung",
+      "art": "sanierung",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 603,
+      "kataloge": [
+        "sanierung-C00"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Erneuerung",
+      "art": "sanierung",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 604,
+      "kataloge": [
+        "sanierung-C01"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Erneuerung",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Verfahren",
+      "zeile": 611,
+      "kataloge": [
+        "sanierung.verfahren-je-eltern"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_procedure"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 37,
+      "anzahl_katalog": 38,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          "4",
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Erneuerung",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Umfang",
+      "zeile": 612,
+      "kataloge": [
+        "sanierung-C03"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_extent"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Erneuerung",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Profiltyp",
+      "zeile": 614,
+      "kataloge": [
+        "sanierung-C04"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_profile"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 16,
+      "anzahl_katalog": 16,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Erneuerung",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Material",
+      "zeile": 617,
+      "kataloge": [
+        "sanierung-C05"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_material"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 34,
+      "anzahl_katalog": 35,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Erneuerung",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Fabrikat",
+      "zeile": 618,
+      "kataloge": [
+        "sanierung-C06"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_product"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 57,
+      "anzahl_katalog": 58,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Erneuerung",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Hersteller",
+      "zeile": 619,
+      "kataloge": [
+        "sanierung-C07"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_manufacturer"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 65,
+      "anzahl_katalog": 65,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Reparatur",
+      "art": "sanierung",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 644,
+      "kataloge": [
+        "sanierung-C00"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Reparatur",
+      "art": "sanierung",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 645,
+      "kataloge": [
+        "sanierung-C01"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Reparatur",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Verfahren",
+      "zeile": 652,
+      "kataloge": [
+        "sanierung.verfahren-je-eltern"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_procedure"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 37,
+      "anzahl_katalog": 38,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          "4",
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Reparatur",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Umfang",
+      "zeile": 653,
+      "kataloge": [
+        "sanierung-C03"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_extent"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Reparatur",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Profiltyp",
+      "zeile": 655,
+      "kataloge": [
+        "sanierung-C04"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_profile"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 16,
+      "anzahl_katalog": 16,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Reparatur",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Material",
+      "zeile": 658,
+      "kataloge": [
+        "sanierung-C05"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_material"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 34,
+      "anzahl_katalog": 35,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Reparatur",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Fabrikat",
+      "zeile": 659,
+      "kataloge": [
+        "sanierung-C06"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_product"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 57,
+      "anzahl_katalog": 58,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Reparatur",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Hersteller",
+      "zeile": 660,
+      "kataloge": [
+        "sanierung-C07"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_manufacturer"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 65,
+      "anzahl_katalog": 65,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Renovierung",
+      "art": "sanierung",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 685,
+      "kataloge": [
+        "sanierung-C00"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Renovierung",
+      "art": "sanierung",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 686,
+      "kataloge": [
+        "sanierung-C01"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Renovierung",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Verfahren",
+      "zeile": 693,
+      "kataloge": [
+        "sanierung.verfahren-je-eltern"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_procedure"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 37,
+      "anzahl_katalog": 38,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          "4",
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Renovierung",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Umfang",
+      "zeile": 694,
+      "kataloge": [
+        "sanierung-C03"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_extent"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Renovierung",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Profiltyp",
+      "zeile": 696,
+      "kataloge": [
+        "sanierung-C04"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_profile"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 16,
+      "anzahl_katalog": 16,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Renovierung",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Material",
+      "zeile": 699,
+      "kataloge": [
+        "sanierung-C05"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_material"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 34,
+      "anzahl_katalog": 35,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Renovierung",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Fabrikat",
+      "zeile": 700,
+      "kataloge": [
+        "sanierung-C06"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_product"
+      ],
+      "status": "vollstaendig_mit_leerwahl",
+      "anzahl_quelle": 57,
+      "anzahl_katalog": 58,
+      "fehlend": [],
+      "zusaetzlich": [
+        [
+          null,
+          "",
+          ""
+        ]
+      ],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": false,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Sanierungsmassnahme: Renovierung",
+      "art": "sanierung",
+      "abschnitt": "Daten I",
+      "feld": "Hersteller",
+      "zeile": 701,
+      "kataloge": [
+        "sanierung-C07"
+      ],
+      "felder_im_katalog": [
+        "sanierung.s_manufacturer"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 65,
+      "anzahl_katalog": 65,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Dichtheitsprüfung: Dichtheitsprüfung",
+      "art": "dichtheitspruefung",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 726,
+      "kataloge": [
+        "unterhalt-K00"
+      ],
+      "felder_im_katalog": [
+        "dichtheitspruefung.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Dichtheitsprüfung: Dichtheitsprüfung",
+      "art": "dichtheitspruefung",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 727,
+      "kataloge": [
+        "unterhalt-K01"
+      ],
+      "felder_im_katalog": [
+        "dichtheitspruefung.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Dichtheitsprüfung: Dichtheitsprüfung",
+      "art": "dichtheitspruefung",
+      "abschnitt": "Daten",
+      "feld": "Prüfgrund",
+      "zeile": 735,
+      "kataloge": [
+        "dichtheitspruefung-K00"
+      ],
+      "felder_im_katalog": [
+        "dichtheitspruefung.pruefgrund"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Dichtheitsprüfung: Dichtheitsprüfung",
+      "art": "dichtheitspruefung",
+      "abschnitt": "Daten",
+      "feld": "Prüfvorschrift",
+      "zeile": 736,
+      "kataloge": [
+        "dichtheitspruefung-K01"
+      ],
+      "felder_im_katalog": [
+        "dichtheitspruefung.pruefvorschrift"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Dichtheitsprüfung: Dichtheitsprüfung",
+      "art": "dichtheitspruefung",
+      "abschnitt": "Daten",
+      "feld": "Verfahren/Umfang",
+      "zeile": 737,
+      "kataloge": [
+        "dichtheitspruefung-K02"
+      ],
+      "felder_im_katalog": [
+        "dichtheitspruefung.verfahren"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Dichtheitsprüfung: Dichtheitsprüfung",
+      "art": "dichtheitspruefung",
+      "abschnitt": "Daten",
+      "feld": "Verfahren/Umfang – Umfang *(abgeleitet; im WebGIS „“)*",
+      "zeile": 738,
+      "kataloge": [
+        "dichtheitspruefung-K03"
+      ],
+      "felder_im_katalog": [
+        "dichtheitspruefung.umfang"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Dichtheitsprüfung: Dichtheitsprüfung",
+      "art": "dichtheitspruefung",
+      "abschnitt": "Daten",
+      "feld": "Bestanden – Kosten *(abgeleitet; im WebGIS „“)*",
+      "zeile": 744,
+      "kataloge": [
+        "dichtheitspruefung-K04"
+      ],
+      "felder_im_katalog": [
+        "dichtheitspruefung.bestanden"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Reinigung",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 795,
+      "kataloge": [
+        "unterhalt-K00"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Reinigung",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 796,
+      "kataloge": [
+        "unterhalt-K01"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Sanierung",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 854,
+      "kataloge": [
+        "unterhalt-K00"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Sanierung",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 855,
+      "kataloge": [
+        "unterhalt-K01"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Andere",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 913,
+      "kataloge": [
+        "unterhalt-K00"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Andere",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 914,
+      "kataloge": [
+        "unterhalt-K01"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Reinigung",
+      "art": "unterhalt",
+      "feld": "Art",
+      "zeile": 972,
+      "status": "ohne_ausgezaehlte_werte",
+      "quelle": "_(Werte nicht abrufbar)_"
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Reinigung",
+      "art": "unterhalt",
+      "feld": "Status",
+      "zeile": 973,
+      "status": "ohne_ausgezaehlte_werte",
+      "quelle": "_(Werte nicht abrufbar)_"
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Andere",
+      "art": "unterhalt",
+      "feld": "Art",
+      "zeile": 1022,
+      "status": "ohne_ausgezaehlte_werte",
+      "quelle": "_(Werte nicht abrufbar)_"
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Andere",
+      "art": "unterhalt",
+      "feld": "Status",
+      "zeile": 1023,
+      "status": "ohne_ausgezaehlte_werte",
+      "quelle": "_(Werte nicht abrufbar)_"
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Kanalfernsehen",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 1072,
+      "kataloge": [
+        "unterhalt-K00"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Erhaltungsereignis: Kanalfernsehen",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 1073,
+      "kataloge": [
+        "unterhalt-K01"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Untersuchung: Untersuchung",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 1122,
+      "kataloge": [
+        "unterhalt-K00"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Untersuchung: Untersuchung",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 1123,
+      "kataloge": [
+        "unterhalt-K01"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Untersuchung: Untersuchung",
+      "art": "unterhalt",
+      "abschnitt": "Administrativ",
+      "feld": "Witterung",
+      "zeile": 1153,
+      "kataloge": [
+        "unterhalt.witterung"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.witterung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 9,
+      "anzahl_katalog": 9,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Begehung: Begehung",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 1185,
+      "kataloge": [
+        "unterhalt-K00"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Begehung: Begehung",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 1186,
+      "kataloge": [
+        "unterhalt-K01"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Begehung: Begehung",
+      "art": "unterhalt",
+      "abschnitt": "Administrativ",
+      "feld": "Witterung",
+      "zeile": 1216,
+      "kataloge": [
+        "unterhalt.witterung"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.witterung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 9,
+      "anzahl_katalog": 9,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Untersuchung: Deformationsmessung",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 1245,
+      "kataloge": [
+        "unterhalt-K00"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Untersuchung: Deformationsmessung",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 1246,
+      "kataloge": [
+        "unterhalt-K01"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Untersuchung: Deformationsmessung",
+      "art": "unterhalt",
+      "abschnitt": "Administrativ",
+      "feld": "Witterung",
+      "zeile": 1276,
+      "kataloge": [
+        "unterhalt.witterung"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.witterung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 9,
+      "anzahl_katalog": 9,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Untersuchung: Georadar",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Art",
+      "zeile": 1308,
+      "kataloge": [
+        "unterhalt-K00"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 12,
+      "anzahl_katalog": 12,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Untersuchung: Georadar",
+      "art": "unterhalt",
+      "abschnitt": "Kopf",
+      "feld": "Status",
+      "zeile": 1309,
+      "kataloge": [
+        "unterhalt-K01"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Unterhalt – Untersuchung: Georadar",
+      "art": "unterhalt",
+      "abschnitt": "Administrativ",
+      "feld": "Witterung",
+      "zeile": 1339,
+      "kataloge": [
+        "unterhalt.witterung"
+      ],
+      "felder_im_katalog": [
+        "unterhalt.witterung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 9,
+      "anzahl_katalog": 9,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten I",
+      "feld": "Verfahren/Richtung",
+      "zeile": 1382,
+      "kataloge": [
+        "inspektion_haltung-K00"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.verfahren"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 8,
+      "anzahl_katalog": 8,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten I",
+      "feld": "Verfahren/Richtung – Richtung *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1383,
+      "kataloge": [
+        "inspektion_haltung-K01"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.richtung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten I",
+      "feld": "Länge/Bezugspunkt – Bezugspunkt *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1385,
+      "kataloge": [
+        "inspektion_haltung-K02"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.bezugspunkt"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten I",
+      "feld": "Wasserhaltung",
+      "zeile": 1387,
+      "kataloge": [
+        "inspektion_haltung-K03"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.wasserhaltung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten I",
+      "feld": "Vorreinigung *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1388,
+      "kataloge": [
+        "dichtheitspruefung-K04"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.vorreinigung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten II",
+      "feld": "Profiltyp/Breite/Höhe",
+      "zeile": 1395,
+      "kataloge": [
+        "inspektion_haltung-K04"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.profiltyp"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 16,
+      "anzahl_katalog": 16,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten II",
+      "feld": "[mm]",
+      "zeile": 1396,
+      "kataloge": [
+        "haltung-C08"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.breite_mm",
+        "inspektion_haltung.hoehe_mm"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 187,
+      "anzahl_katalog": 187,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten II",
+      "feld": "[mm] – 2. Feld *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1397,
+      "kataloge": [
+        "haltung-C08"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.breite_mm",
+        "inspektion_haltung.hoehe_mm"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 187,
+      "anzahl_katalog": 187,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten II",
+      "feld": "Herkunft Profilmasse",
+      "zeile": 1398,
+      "kataloge": [
+        "inspektion_haltung-K05"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.herkunft_profilmasse"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten II",
+      "feld": "Funktion hydr.",
+      "zeile": 1399,
+      "kataloge": [
+        "haltung-C03"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.funktion_hydr"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 16,
+      "anzahl_katalog": 16,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten II",
+      "feld": "Nutzungsart",
+      "zeile": 1400,
+      "kataloge": [
+        "haltung-C01"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.nutzungsart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 11,
+      "anzahl_katalog": 11,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten II",
+      "feld": "Material/Herkunft",
+      "zeile": 1401,
+      "kataloge": [
+        "inspektion_haltung-K06"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.material"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 34,
+      "anzahl_katalog": 34,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten II",
+      "feld": "Material/Herkunft – Herkunft *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1402,
+      "kataloge": [
+        "inspektion_haltung-K07"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.herkunft"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten II",
+      "feld": "Innenschutz",
+      "zeile": 1403,
+      "kataloge": [
+        "inspektion_haltung-K08"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.innenschutz"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 15,
+      "anzahl_katalog": 15,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten II",
+      "feld": "Auskleidung",
+      "zeile": 1404,
+      "kataloge": [
+        "inspektion_haltung-K09"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.auskleidung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 10,
+      "anzahl_katalog": 10,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Daten II",
+      "feld": "Rohrleitungstyp",
+      "zeile": 1406,
+      "kataloge": [
+        "inspektion_haltung-K10"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.rohrleitungstyp"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Bewertung",
+      "feld": "Verfahren",
+      "zeile": 1413,
+      "kataloge": [
+        "inspektion_haltung-K11"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.verfahren_2"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Administrativ",
+      "feld": "Wetter",
+      "zeile": 1430,
+      "kataloge": [
+        "inspektion_haltung-K12"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.wetter"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 9,
+      "anzahl_katalog": 9,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Anschluss",
+      "feld": "Bezeichnung/Funktion hier. – Funktion hier. *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1442,
+      "kataloge": [
+        "haltung-C02"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.funktion_hier"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 10,
+      "anzahl_katalog": 10,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Anschluss",
+      "feld": "Anschlussart *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1445,
+      "kataloge": [
+        "inspektion_haltung-K13"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.anschlussart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 2,
+      "anzahl_katalog": 2,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Video",
+      "feld": "Kameratechnik/Referenzart",
+      "zeile": 1452,
+      "kataloge": [
+        "inspektion_haltung-K14"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.kameratechnik"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Video",
+      "feld": "Kameratechnik/Referenzart – Referenzart *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1453,
+      "kataloge": [
+        "inspektion_haltung-K15"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.referenzart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Haltung",
+      "art": "inspektion_haltung",
+      "abschnitt": "Video",
+      "feld": "Speichermedium",
+      "zeile": 1454,
+      "kataloge": [
+        "inspektion_haltung-K16"
+      ],
+      "felder_im_katalog": [
+        "inspektion_haltung.speichermedium"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Daten I",
+      "feld": "Verfahren/Richtung",
+      "zeile": 1493,
+      "kataloge": [
+        "inspektion_haltung-K00"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.verfahren"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 8,
+      "anzahl_katalog": 8,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Daten I",
+      "feld": "Bezugspunkt horizontal",
+      "zeile": 1494,
+      "kataloge": [
+        "inspektion_schacht-K00"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.bezugspunkt_horizontal"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Daten I",
+      "feld": "Bezugspunkt vertikal",
+      "zeile": 1495,
+      "kataloge": [
+        "inspektion_schacht-K01"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.bezugspunkt_vertikal"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Daten I",
+      "feld": "Wasserhaltung",
+      "zeile": 1497,
+      "kataloge": [
+        "inspektion_haltung-K03"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.wasserhaltung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Daten I",
+      "feld": "Vorreinigung *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1498,
+      "kataloge": [
+        "dichtheitspruefung-K04"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.vorreinigung",
+        "inspektion_schacht.konus_richtig",
+        "inspektion_schacht.betriebssicher"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Daten II",
+      "feld": "Innenschutz",
+      "zeile": 1505,
+      "kataloge": [
+        "inspektion_haltung-K08"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.innenschutz"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 15,
+      "anzahl_katalog": 15,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Daten II",
+      "feld": "Auskleidung",
+      "zeile": 1506,
+      "kataloge": [
+        "inspektion_haltung-K09"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.auskleidung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 10,
+      "anzahl_katalog": 10,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Daten II",
+      "feld": "Rohrleitungstyp",
+      "zeile": 1507,
+      "kataloge": [
+        "inspektion_haltung-K10"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.rohrleitungstyp"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Daten II",
+      "feld": "Konus richtig",
+      "zeile": 1509,
+      "kataloge": [
+        "dichtheitspruefung-K04"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.vorreinigung",
+        "inspektion_schacht.konus_richtig",
+        "inspektion_schacht.betriebssicher"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Daten II",
+      "feld": "Betriebssicher",
+      "zeile": 1510,
+      "kataloge": [
+        "dichtheitspruefung-K04"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.vorreinigung",
+        "inspektion_schacht.konus_richtig",
+        "inspektion_schacht.betriebssicher"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Bewertung",
+      "feld": "Verfahren",
+      "zeile": 1516,
+      "kataloge": [
+        "inspektion_haltung-K11"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.verfahren_2"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Administrativ",
+      "feld": "Wetter",
+      "zeile": 1533,
+      "kataloge": [
+        "inspektion_haltung-K12"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.wetter"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 9,
+      "anzahl_katalog": 9,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Video",
+      "feld": "Referenzart",
+      "zeile": 1544,
+      "kataloge": [
+        "inspektion_haltung-K15"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.referenzart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Inspektion Schacht",
+      "art": "inspektion_schacht",
+      "abschnitt": "Video",
+      "feld": "Speichermedium",
+      "zeile": 1545,
+      "kataloge": [
+        "inspektion_haltung-K16"
+      ],
+      "felder_im_katalog": [
+        "inspektion_schacht.speichermedium"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "GEP-Massnahme",
+      "art": "massnahme",
+      "abschnitt": "Attribute",
+      "feld": "Kategorie",
+      "zeile": 1595,
+      "kataloge": [
+        "massnahme-K00"
+      ],
+      "felder_im_katalog": [
+        "massnahme.kategorie"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 29,
+      "anzahl_katalog": 29,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "GEP-Massnahme",
+      "art": "massnahme",
+      "abschnitt": "Attribute",
+      "feld": "Priorität",
+      "zeile": 1596,
+      "kataloge": [
+        "massnahme-K01"
+      ],
+      "felder_im_katalog": [
+        "massnahme.prioritaet"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "GEP-Massnahme",
+      "art": "massnahme",
+      "abschnitt": "Attribute",
+      "feld": "Status",
+      "zeile": 1597,
+      "kataloge": [
+        "massnahme-K02"
+      ],
+      "felder_im_katalog": [
+        "massnahme.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "GEP-Massnahme",
+      "art": "massnahme",
+      "abschnitt": "Attribute",
+      "feld": "Trägerschaft",
+      "zeile": 1598,
+      "kataloge": [
+        "haltung-C22"
+      ],
+      "felder_im_katalog": [
+        "massnahme.traegerschaft",
+        "massnahme.verantwortlich_fuer_ausloesung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 30,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "GEP-Massnahme",
+      "art": "massnahme",
+      "abschnitt": "Attribute",
+      "feld": "Verantwortlich für Auslösung",
+      "zeile": 1599,
+      "kataloge": [
+        "haltung-C22"
+      ],
+      "felder_im_katalog": [
+        "massnahme.traegerschaft",
+        "massnahme.verantwortlich_fuer_ausloesung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 30,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Daten",
+      "feld": "Entwässerungssystem",
+      "zeile": 1671,
+      "kataloge": [
+        "einzugsgebiet-K00"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.entwaesserungssystem",
+        "einzugsgebiet.geplant"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Daten",
+      "feld": "Geplant",
+      "zeile": 1672,
+      "kataloge": [
+        "einzugsgebiet-K00"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.entwaesserungssystem",
+        "einzugsgebiet.geplant"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Daten",
+      "feld": "Versickerung",
+      "zeile": 1673,
+      "kataloge": [
+        "einzugsgebiet.versickerung-je-eltern"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.versickerung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 22,
+      "anzahl_katalog": 22,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Daten",
+      "feld": "Status/Art",
+      "zeile": 1674,
+      "kataloge": [
+        "einzugsgebiet-K02"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Daten",
+      "feld": "Art *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1675,
+      "kataloge": [
+        "einzugsgebiet-K03"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Daten",
+      "feld": "Entwässerungsart",
+      "zeile": 1679,
+      "kataloge": [
+        "einzugsgebiet-K04"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.entwaesserungsart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Administrativ",
+      "feld": "Bauzone",
+      "zeile": 1704,
+      "kataloge": [
+        "einzugsgebiet-K05"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.bauzone"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 39,
+      "anzahl_katalog": 39,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Administrativ",
+      "feld": "Direkteinleitung",
+      "zeile": 1705,
+      "kataloge": [
+        "dichtheitspruefung-K04"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.direkteinleitung",
+        "einzugsgebiet.geplant_3",
+        "einzugsgebiet.retention",
+        "einzugsgebiet.geplant_4",
+        "einzugsgebiet.versickerung_2",
+        "einzugsgebiet.geplant_5"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Administrativ",
+      "feld": "Geplant",
+      "zeile": 1706,
+      "kataloge": [
+        "dichtheitspruefung-K04"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.direkteinleitung",
+        "einzugsgebiet.geplant_3",
+        "einzugsgebiet.retention",
+        "einzugsgebiet.geplant_4",
+        "einzugsgebiet.versickerung_2",
+        "einzugsgebiet.geplant_5"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Administrativ",
+      "feld": "Retention",
+      "zeile": 1707,
+      "kataloge": [
+        "dichtheitspruefung-K04"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.direkteinleitung",
+        "einzugsgebiet.geplant_3",
+        "einzugsgebiet.retention",
+        "einzugsgebiet.geplant_4",
+        "einzugsgebiet.versickerung_2",
+        "einzugsgebiet.geplant_5"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Administrativ",
+      "feld": "Geplant",
+      "zeile": 1708,
+      "kataloge": [
+        "dichtheitspruefung-K04"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.direkteinleitung",
+        "einzugsgebiet.geplant_3",
+        "einzugsgebiet.retention",
+        "einzugsgebiet.geplant_4",
+        "einzugsgebiet.versickerung_2",
+        "einzugsgebiet.geplant_5"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Administrativ",
+      "feld": "Versickerung",
+      "zeile": 1709,
+      "kataloge": [
+        "dichtheitspruefung-K04"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.direkteinleitung",
+        "einzugsgebiet.geplant_3",
+        "einzugsgebiet.retention",
+        "einzugsgebiet.geplant_4",
+        "einzugsgebiet.versickerung_2",
+        "einzugsgebiet.geplant_5"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Administrativ",
+      "feld": "Geplant",
+      "zeile": 1710,
+      "kataloge": [
+        "dichtheitspruefung-K04"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.direkteinleitung",
+        "einzugsgebiet.geplant_3",
+        "einzugsgebiet.retention",
+        "einzugsgebiet.geplant_4",
+        "einzugsgebiet.versickerung_2",
+        "einzugsgebiet.geplant_5"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Einzugsgebiet",
+      "art": "einzugsgebiet",
+      "abschnitt": "Hydraulik",
+      "feld": "Befestigungsgrad",
+      "zeile": 1722,
+      "kataloge": [
+        "einzugsgebiet-K06"
+      ],
+      "felder_im_katalog": [
+        "einzugsgebiet.befestigungsgrad"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Mechanische Vorreinigung",
+      "art": "mech_vorreinigung",
+      "abschnitt": "Daten",
+      "feld": "Art",
+      "zeile": 1811,
+      "kataloge": [
+        "mech_vorreinigung-K00"
+      ],
+      "felder_im_katalog": [
+        "mech_vorreinigung.art"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten I",
+      "feld": "Bauwerksart Förderaggregat *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1848,
+      "kataloge": [
+        "pumpe-K00"
+      ],
+      "felder_im_katalog": [
+        "pumpe.bauwerksart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten I",
+      "feld": "Funktion",
+      "zeile": 1849,
+      "kataloge": [
+        "pumpe-K01"
+      ],
+      "felder_im_katalog": [
+        "pumpe.funktion"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten I",
+      "feld": "Nutzungsart",
+      "zeile": 1850,
+      "kataloge": [
+        "haltung-C01"
+      ],
+      "felder_im_katalog": [
+        "pumpe.nutzungsart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 11,
+      "anzahl_katalog": 11,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten I",
+      "feld": "Typ AA",
+      "zeile": 1853,
+      "kataloge": [
+        "haltung-C00"
+      ],
+      "felder_im_katalog": [
+        "pumpe.typ_aa"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten I",
+      "feld": "Funktion hier./hydr.",
+      "zeile": 1854,
+      "kataloge": [
+        "haltung-C02"
+      ],
+      "felder_im_katalog": [
+        "pumpe.funktion_hier"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 10,
+      "anzahl_katalog": 10,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten I",
+      "feld": "Funktion hier./hydr. – hydr. *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1855,
+      "kataloge": [
+        "haltung-C03"
+      ],
+      "felder_im_katalog": [
+        "pumpe.funktion_hydr"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 16,
+      "anzahl_katalog": 16,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten I",
+      "feld": "Status",
+      "zeile": 1856,
+      "kataloge": [
+        "haltung-C04"
+      ],
+      "felder_im_katalog": [
+        "pumpe.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten I",
+      "feld": "Ebene",
+      "zeile": 1860,
+      "kataloge": [
+        "absperr_drossel-K01"
+      ],
+      "felder_im_katalog": [
+        "pumpe.ebene"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 21,
+      "anzahl_katalog": 21,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten II",
+      "feld": "Lagebest./-genauigkeit",
+      "zeile": 1867,
+      "kataloge": [
+        "haltung-C13"
+      ],
+      "felder_im_katalog": [
+        "pumpe.lagebest",
+        "pumpe.hoehenbest"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten II",
+      "feld": "Lagebest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1868,
+      "kataloge": [
+        "haltung-C14"
+      ],
+      "felder_im_katalog": [
+        "pumpe.lagebest_genauigkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten II",
+      "feld": "Höhenbest./-genauigkeit",
+      "zeile": 1869,
+      "kataloge": [
+        "haltung-C13"
+      ],
+      "felder_im_katalog": [
+        "pumpe.lagebest",
+        "pumpe.hoehenbest"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten II",
+      "feld": "Höhenbest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1870,
+      "kataloge": [
+        "haltung-C15"
+      ],
+      "felder_im_katalog": [
+        "pumpe.hoehenbest_genauigkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten II",
+      "feld": "Steuerung/Verstellbarkeit",
+      "zeile": 1873,
+      "kataloge": [
+        "absperr_drossel-K02"
+      ],
+      "felder_im_katalog": [
+        "pumpe.steuerung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten II",
+      "feld": "Steuerung/Verstellbarkeit – Verstellbarkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1874,
+      "kataloge": [
+        "absperr_drossel-K03"
+      ],
+      "felder_im_katalog": [
+        "pumpe.verstellbarkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten II",
+      "feld": "Signalübermittlung",
+      "zeile": 1875,
+      "kataloge": [
+        "absperr_drossel-K04"
+      ],
+      "felder_im_katalog": [
+        "pumpe.signaluebermittlung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten II",
+      "feld": "Antrieb/Aufstellung",
+      "zeile": 1876,
+      "kataloge": [
+        "absperr_drossel-K06"
+      ],
+      "felder_im_katalog": [
+        "pumpe.antrieb"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 9,
+      "anzahl_katalog": 9,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten II",
+      "feld": "Antrieb/Aufstellung – Aufstellung *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1877,
+      "kataloge": [
+        "pumpe-K02"
+      ],
+      "felder_im_katalog": [
+        "pumpe.aufstellung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Daten II",
+      "feld": "Aufstellung Förderaggregat",
+      "zeile": 1878,
+      "kataloge": [
+        "pumpe-K03"
+      ],
+      "felder_im_katalog": [
+        "pumpe.aufstellung_foerderaggregat"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Administrativ",
+      "feld": "Eigentümer",
+      "zeile": 1894,
+      "kataloge": [
+        "schacht-C19"
+      ],
+      "felder_im_katalog": [
+        "pumpe.eigentuemer",
+        "pumpe.betreiber"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 30,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Administrativ",
+      "feld": "Betreiber",
+      "zeile": 1895,
+      "kataloge": [
+        "schacht-C19"
+      ],
+      "felder_im_katalog": [
+        "pumpe.eigentuemer",
+        "pumpe.betreiber"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 30,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Unterhalt",
+      "feld": "Zustand/Sanierungsbedarf",
+      "zeile": 1903,
+      "kataloge": [
+        "absperr_drossel-K07"
+      ],
+      "felder_im_katalog": [
+        "pumpe.zustand"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Unterhalt",
+      "feld": "Zustand/Sanierungsbedarf – Sanierungsbedarf *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1904,
+      "kataloge": [
+        "absperr_drossel-K08"
+      ],
+      "felder_im_katalog": [
+        "pumpe.sanierungsbedarf"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Förderaggregat (Pumpe)",
+      "art": "pumpe",
+      "abschnitt": "Unterhalt",
+      "feld": "Systemgrenze",
+      "zeile": 1907,
+      "kataloge": [
+        "absperr_drossel-K09"
+      ],
+      "felder_im_katalog": [
+        "pumpe.systemgrenze"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten I",
+      "feld": "Bauwerksart Überlauf *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1960,
+      "kataloge": [
+        "ueberlauf-K00"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.bauwerksart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten I",
+      "feld": "Funktion",
+      "zeile": 1961,
+      "kataloge": [
+        "pumpe-K01"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.funktion"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 6,
+      "anzahl_katalog": 6,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten I",
+      "feld": "Nutzungsart",
+      "zeile": 1962,
+      "kataloge": [
+        "haltung-C01"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.nutzungsart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 11,
+      "anzahl_katalog": 11,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten I",
+      "feld": "Typ AA",
+      "zeile": 1965,
+      "kataloge": [
+        "haltung-C00"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.typ_aa"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten I",
+      "feld": "Funktion hier./hydr.",
+      "zeile": 1966,
+      "kataloge": [
+        "haltung-C02"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.funktion_hier"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 10,
+      "anzahl_katalog": 10,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten I",
+      "feld": "Funktion hier./hydr. – hydr. *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1967,
+      "kataloge": [
+        "haltung-C03"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.funktion_hydr"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 16,
+      "anzahl_katalog": 16,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten I",
+      "feld": "Status",
+      "zeile": 1968,
+      "kataloge": [
+        "haltung-C04"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten I",
+      "feld": "Öffnungsform",
+      "zeile": 1970,
+      "kataloge": [
+        "ueberlauf-K01"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.oeffnungsform"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten I",
+      "feld": "Ebene",
+      "zeile": 1975,
+      "kataloge": [
+        "absperr_drossel-K01"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.ebene"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 21,
+      "anzahl_katalog": 21,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten II",
+      "feld": "Lagebest./-genauigkeit",
+      "zeile": 1982,
+      "kataloge": [
+        "haltung-C13"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.lagebest",
+        "ueberlauf.hoehenbest"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten II",
+      "feld": "Lagebest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1983,
+      "kataloge": [
+        "haltung-C14"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.lagebest_genauigkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten II",
+      "feld": "Höhenbest./-genauigkeit",
+      "zeile": 1984,
+      "kataloge": [
+        "haltung-C13"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.lagebest",
+        "ueberlauf.hoehenbest"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten II",
+      "feld": "Höhenbest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1985,
+      "kataloge": [
+        "haltung-C15"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.hoehenbest_genauigkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten II",
+      "feld": "Überfallkante",
+      "zeile": 1986,
+      "kataloge": [
+        "ueberlauf-K02"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.ueberfallkante"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten II",
+      "feld": "Steuerung/Verstellbarkeit",
+      "zeile": 1991,
+      "kataloge": [
+        "absperr_drossel-K02"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.steuerung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten II",
+      "feld": "Steuerung/Verstellbarkeit – Verstellbarkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 1992,
+      "kataloge": [
+        "absperr_drossel-K03"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.verstellbarkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten II",
+      "feld": "Signalübermittlung",
+      "zeile": 1993,
+      "kataloge": [
+        "absperr_drossel-K04"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.signaluebermittlung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten II",
+      "feld": "Antrieb",
+      "zeile": 1994,
+      "kataloge": [
+        "absperr_drossel-K06"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.antrieb"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 9,
+      "anzahl_katalog": 9,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Daten II",
+      "feld": "Wehrschwellenzahl",
+      "zeile": 1995,
+      "kataloge": [
+        "ueberlauf-K03"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.wehrschwellenzahl"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Administrativ",
+      "feld": "Eigentümer",
+      "zeile": 2006,
+      "kataloge": [
+        "schacht-C19"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.eigentuemer",
+        "ueberlauf.betreiber"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 30,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Administrativ",
+      "feld": "Betreiber",
+      "zeile": 2007,
+      "kataloge": [
+        "schacht-C19"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.eigentuemer",
+        "ueberlauf.betreiber"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 30,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Unterhalt",
+      "feld": "Zustand/Sanierungsbedarf",
+      "zeile": 2015,
+      "kataloge": [
+        "absperr_drossel-K07"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.zustand"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Unterhalt",
+      "feld": "Zustand/Sanierungsbedarf – Sanierungsbedarf *(abgeleitet; im WebGIS „“)*",
+      "zeile": 2016,
+      "kataloge": [
+        "absperr_drossel-K08"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.sanierungsbedarf"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Überlauf",
+      "art": "ueberlauf",
+      "abschnitt": "Unterhalt",
+      "feld": "Systemgrenze",
+      "zeile": 2019,
+      "kataloge": [
+        "absperr_drossel-K09"
+      ],
+      "felder_im_katalog": [
+        "ueberlauf.systemgrenze"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten",
+      "feld": "Bauwerksart Absperr-/Drosselorgan *(abgeleitet; im WebGIS „“)*",
+      "zeile": 2068,
+      "kataloge": [
+        "absperr_drossel-K00"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.bauwerksart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 15,
+      "anzahl_katalog": 15,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten",
+      "feld": "Nutzungsart",
+      "zeile": 2069,
+      "kataloge": [
+        "haltung-C01"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.nutzungsart"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 11,
+      "anzahl_katalog": 11,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten",
+      "feld": "Typ AA",
+      "zeile": 2071,
+      "kataloge": [
+        "haltung-C00"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.typ_aa"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten",
+      "feld": "Funktion hier./hydr.",
+      "zeile": 2072,
+      "kataloge": [
+        "haltung-C02"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.funktion_hier"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 10,
+      "anzahl_katalog": 10,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten",
+      "feld": "Funktion hier./hydr. – hydr. *(abgeleitet; im WebGIS „“)*",
+      "zeile": 2073,
+      "kataloge": [
+        "haltung-C03"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.funktion_hydr"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 16,
+      "anzahl_katalog": 16,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten",
+      "feld": "Status",
+      "zeile": 2074,
+      "kataloge": [
+        "haltung-C04"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.status"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten",
+      "feld": "Ebene",
+      "zeile": 2076,
+      "kataloge": [
+        "absperr_drossel-K01"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.ebene"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 21,
+      "anzahl_katalog": 21,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten II",
+      "feld": "Lagebest./-genauigkeit",
+      "zeile": 2083,
+      "kataloge": [
+        "haltung-C13"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.lagebest",
+        "absperr_drossel.hoehenbest"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten II",
+      "feld": "Lagebest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 2084,
+      "kataloge": [
+        "haltung-C14"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.lagebest_genauigkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten II",
+      "feld": "Höhenbest./-genauigkeit",
+      "zeile": 2085,
+      "kataloge": [
+        "haltung-C13"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.lagebest",
+        "absperr_drossel.hoehenbest"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten II",
+      "feld": "Höhenbest./-genauigkeit – -genauigkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 2086,
+      "kataloge": [
+        "haltung-C15"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.hoehenbest_genauigkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 5,
+      "anzahl_katalog": 5,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten II",
+      "feld": "Steuerung/Verstellbarkeit",
+      "zeile": 2093,
+      "kataloge": [
+        "absperr_drossel-K02"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.steuerung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten II",
+      "feld": "Steuerung/Verstellbarkeit – Verstellbarkeit *(abgeleitet; im WebGIS „“)*",
+      "zeile": 2094,
+      "kataloge": [
+        "absperr_drossel-K03"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.verstellbarkeit"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten II",
+      "feld": "Signalübermittlung/Stellung",
+      "zeile": 2095,
+      "kataloge": [
+        "absperr_drossel-K04"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.signaluebermittlung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten II",
+      "feld": "Signalübermittlung/Stellung – Stellung *(abgeleitet; im WebGIS „“)*",
+      "zeile": 2096,
+      "kataloge": [
+        "absperr_drossel-K05"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.stellung"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 3,
+      "anzahl_katalog": 3,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Daten II",
+      "feld": "Antrieb",
+      "zeile": 2097,
+      "kataloge": [
+        "absperr_drossel-K06"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.antrieb"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 9,
+      "anzahl_katalog": 9,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Administrativ",
+      "feld": "Eigentümer",
+      "zeile": 2110,
+      "kataloge": [
+        "schacht-C19"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.eigentuemer",
+        "absperr_drossel.betreiber"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 30,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Administrativ",
+      "feld": "Betreiber",
+      "zeile": 2111,
+      "kataloge": [
+        "schacht-C19"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.eigentuemer",
+        "absperr_drossel.betreiber"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 30,
+      "anzahl_katalog": 30,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Unterhalt",
+      "feld": "Zustand/Sanierungsbedarf",
+      "zeile": 2118,
+      "kataloge": [
+        "absperr_drossel-K07"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.zustand"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Unterhalt",
+      "feld": "Zustand/Sanierungsbedarf – Sanierungsbedarf *(abgeleitet; im WebGIS „“)*",
+      "zeile": 2119,
+      "kataloge": [
+        "absperr_drossel-K08"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.sanierungsbedarf"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 7,
+      "anzahl_katalog": 7,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    },
+    {
+      "maske": "Absperr-/Drosselorgan",
+      "art": "absperr_drossel",
+      "abschnitt": "Unterhalt",
+      "feld": "Systemgrenze",
+      "zeile": 2122,
+      "kataloge": [
+        "absperr_drossel-K09"
+      ],
+      "felder_im_katalog": [
+        "absperr_drossel.systemgrenze"
+      ],
+      "status": "vollstaendig",
+      "anzahl_quelle": 4,
+      "anzahl_katalog": 4,
+      "fehlend": [],
+      "zusaetzlich": [],
+      "fehlende_texte": [],
+      "reihenfolge_gleich": true,
+      "reihenfolge_ohne_leerwahl_gleich": true
+    }
+  ]
+}

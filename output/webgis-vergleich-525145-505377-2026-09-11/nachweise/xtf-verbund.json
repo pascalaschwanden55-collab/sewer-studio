@@ -1,0 +1,192 @@
+{
+  "Quelle": "D:\\QGIS_V4.2\\GeoShop\\2026-09\\34UR_Abwasser_DSS_2020_1.xtf",
+  "Bytes": 456586997,
+  "SHA256": "ed6bfdc290f66e8bdefd5fcc6cff59013337adcd763df754d1eadec41da34830",
+  "Objekte": [
+    {
+      "Klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Rohrprofil",
+      "TID": "ch24gwkd3obhLa8B",
+      "Werte": {
+        "Letzte_Aenderung": "20210228",
+        "Bezeichnung": "unbekannt",
+        "Profiltyp": "unbekannt"
+      },
+      "Referenzen": {
+        "DatenherrRef": "ch20p3q400002009",
+        "DatenlieferantRef": "ch20p3q400002009"
+      },
+      "XML": "<ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Rohrprofil xmlns:ns0=\"http://www.interlis.ch/INTERLIS2.3\" TID=\"ch24gwkd3obhLa8B\">\n        <ns0:Letzte_Aenderung>20210228</ns0:Letzte_Aenderung>\n        <ns0:DatenherrRef REF=\"ch20p3q400002009\" />\n        <ns0:DatenlieferantRef REF=\"ch20p3q400002009\" />\n        <ns0:Bezeichnung>unbekannt</ns0:Bezeichnung>\n        <ns0:Profiltyp>unbekannt</ns0:Profiltyp>\n      </ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Rohrprofil>\n      "
+    },
+    {
+      "Klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten",
+      "TID": "ch24gwkd3XcJCyYp",
+      "Werte": {
+        "Letzte_Aenderung": "20241202",
+        "Bemerkung": "Tiefe 1.80m",
+        "Bezeichnung": "525145",
+        "Hoehengenauigkeit": "plusminus_3cm"
+      },
+      "Referenzen": {
+        "DatenherrRef": "ch20p3q400002009",
+        "DatenlieferantRef": "ch20p3q400002009",
+        "AbwasserbauwerkRef": "ch24gwkdOaO8mZtW"
+      },
+      "XML": "<ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten xmlns:ns0=\"http://www.interlis.ch/INTERLIS2.3\" TID=\"ch24gwkd3XcJCyYp\">\n        <ns0:Letzte_Aenderung>20241202</ns0:Letzte_Aenderung>\n        <ns0:DatenherrRef REF=\"ch20p3q400002009\" />\n        <ns0:DatenlieferantRef REF=\"ch20p3q400002009\" />\n        <ns0:Bemerkung>Tiefe 1.80m</ns0:Bemerkung>\n        <ns0:Bezeichnung>525145</ns0:Bezeichnung>\n        <ns0:AbwasserbauwerkRef REF=\"ch24gwkdOaO8mZtW\" />\n        <ns0:Hoehengenauigkeit>plusminus_3cm</ns0:Hoehengenauigkeit>\n        <ns0:Lage>\n          <ns0:COORD><ns0:C1>2692817.512</ns0:C1><ns0:C2>1192427.212</ns0:C2></ns0:COORD>\n        </ns0:Lage>\n      </ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten>\n      "
+    },
+    {
+      "Klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Normschacht",
+      "TID": "ch24gwkdOaO8mZtW",
+      "Werte": {
+        "Letzte_Aenderung": "20241202",
+        "BaulicherZustand": "Z3",
+        "Bemerkung": "Tiefe 1.80m",
+        "Bezeichnung": "525145",
+        "Sanierungsbedarf": "mittelfristig",
+        "Status": "in_Betrieb",
+        "Zugaenglichkeit": "zugaenglich",
+        "Funktion": "Kontroll_Einsteigschacht",
+        "Material": "unbekannt"
+      },
+      "Referenzen": {
+        "DatenherrRef": "ch20p3q400002009",
+        "DatenlieferantRef": "ch20p3q400002009",
+        "BetreiberRef": "ch20p3q400002009",
+        "EigentuemerRef": "ch20p3q400002009"
+      },
+      "XML": "<ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Normschacht xmlns:ns0=\"http://www.interlis.ch/INTERLIS2.3\" TID=\"ch24gwkdOaO8mZtW\">\n        <ns0:Letzte_Aenderung>20241202</ns0:Letzte_Aenderung>\n        <ns0:DatenherrRef REF=\"ch20p3q400002009\" />\n        <ns0:DatenlieferantRef REF=\"ch20p3q400002009\" />\n        <ns0:BaulicherZustand>Z3</ns0:BaulicherZustand>\n        <ns0:Bemerkung>Tiefe 1.80m</ns0:Bemerkung>\n        <ns0:Bezeichnung>525145</ns0:Bezeichnung>\n        <ns0:Sanierungsbedarf>mittelfristig</ns0:Sanierungsbedarf>\n        <ns0:Status>in_Betrieb</ns0:Status>\n        <ns0:Zugaenglichkeit>zugaenglich</ns0:Zugaenglichkeit>\n        <ns0:BetreiberRef REF=\"ch20p3q400002009\" />\n        <ns0:EigentuemerRef REF=\"ch20p3q400002009\" />\n        <ns0:Funktion>Kontroll_Einsteigschacht</ns0:Funktion>\n        <ns0:Material>unbekannt</ns0:Material>\n      </ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Normschacht>\n      "
+    },
+    {
+      "Klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten",
+      "TID": "ch24gwkd5tTVGGvo",
+      "Werte": {
+        "Letzte_Aenderung": "20241202",
+        "Bemerkung": "Tiefe 1.82m",
+        "Bezeichnung": "505377",
+        "Hoehengenauigkeit": "plusminus_6cm",
+        "Sohlenkote": "505.900"
+      },
+      "Referenzen": {
+        "DatenherrRef": "ch20p3q400002009",
+        "DatenlieferantRef": "ch20p3q400002009",
+        "AbwasserbauwerkRef": "ch24gwkd1TE9LaBp"
+      },
+      "XML": "<ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten xmlns:ns0=\"http://www.interlis.ch/INTERLIS2.3\" TID=\"ch24gwkd5tTVGGvo\">\n        <ns0:Letzte_Aenderung>20241202</ns0:Letzte_Aenderung>\n        <ns0:DatenherrRef REF=\"ch20p3q400002009\" />\n        <ns0:DatenlieferantRef REF=\"ch20p3q400002009\" />\n        <ns0:Bemerkung>Tiefe 1.82m</ns0:Bemerkung>\n        <ns0:Bezeichnung>505377</ns0:Bezeichnung>\n        <ns0:AbwasserbauwerkRef REF=\"ch24gwkd1TE9LaBp\" />\n        <ns0:Hoehengenauigkeit>plusminus_6cm</ns0:Hoehengenauigkeit>\n        <ns0:Lage>\n          <ns0:COORD><ns0:C1>2692813.716</ns0:C1><ns0:C2>1192416.420</ns0:C2></ns0:COORD>\n        </ns0:Lage>\n        <ns0:Sohlenkote>505.900</ns0:Sohlenkote>\n      </ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten>\n      "
+    },
+    {
+      "Klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Normschacht",
+      "TID": "ch24gwkd1TE9LaBp",
+      "Werte": {
+        "Letzte_Aenderung": "20241202",
+        "Baujahr": "2018",
+        "BaulicherZustand": "Z3",
+        "Bemerkung": "Tiefe 1.82m",
+        "Bezeichnung": "505377",
+        "Sanierungsbedarf": "langfristig",
+        "Status": "in_Betrieb",
+        "Zugaenglichkeit": "zugaenglich",
+        "Dimension1": "800",
+        "Dimension2": "800",
+        "Funktion": "Kontroll_Einsteigschacht",
+        "Material": "Beton"
+      },
+      "Referenzen": {
+        "DatenherrRef": "ch20p3q400002009",
+        "DatenlieferantRef": "ch20p3q400002009",
+        "BetreiberRef": "ch20p3q400002009",
+        "EigentuemerRef": "ch20p3q400002009"
+      },
+      "XML": "<ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Normschacht xmlns:ns0=\"http://www.interlis.ch/INTERLIS2.3\" TID=\"ch24gwkd1TE9LaBp\">\n        <ns0:Letzte_Aenderung>20241202</ns0:Letzte_Aenderung>\n        <ns0:DatenherrRef REF=\"ch20p3q400002009\" />\n        <ns0:DatenlieferantRef REF=\"ch20p3q400002009\" />\n        <ns0:Baujahr>2018</ns0:Baujahr>\n        <ns0:BaulicherZustand>Z3</ns0:BaulicherZustand>\n        <ns0:Bemerkung>Tiefe 1.82m</ns0:Bemerkung>\n        <ns0:Bezeichnung>505377</ns0:Bezeichnung>\n        <ns0:Sanierungsbedarf>langfristig</ns0:Sanierungsbedarf>\n        <ns0:Status>in_Betrieb</ns0:Status>\n        <ns0:Zugaenglichkeit>zugaenglich</ns0:Zugaenglichkeit>\n        <ns0:BetreiberRef REF=\"ch20p3q400002009\" />\n        <ns0:EigentuemerRef REF=\"ch20p3q400002009\" />\n        <ns0:Dimension1>800</ns0:Dimension1>\n        <ns0:Dimension2>800</ns0:Dimension2>\n        <ns0:Funktion>Kontroll_Einsteigschacht</ns0:Funktion>\n        <ns0:Material>Beton</ns0:Material>\n      </ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Normschacht>\n      "
+    },
+    {
+      "Klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten",
+      "TID": "ch24gwkdj1WwE1Wh",
+      "Werte": {
+        "Letzte_Aenderung": "20250307",
+        "Bezeichnung": "10.527526",
+        "Hoehengenauigkeit": "unbekannt"
+      },
+      "Referenzen": {
+        "DatenherrRef": "ch20p3q400002009",
+        "DatenlieferantRef": "ch20p3q400002009"
+      },
+      "XML": "<ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten xmlns:ns0=\"http://www.interlis.ch/INTERLIS2.3\" TID=\"ch24gwkdj1WwE1Wh\">\n        <ns0:Letzte_Aenderung>20250307</ns0:Letzte_Aenderung>\n        <ns0:DatenherrRef REF=\"ch20p3q400002009\" />\n        <ns0:DatenlieferantRef REF=\"ch20p3q400002009\" />\n        <ns0:Bezeichnung>10.527526</ns0:Bezeichnung>\n        <ns0:Hoehengenauigkeit>unbekannt</ns0:Hoehengenauigkeit>\n        <ns0:Lage>\n          <ns0:COORD><ns0:C1>2692815.402</ns0:C1><ns0:C2>1192421.215</ns0:C2></ns0:COORD>\n        </ns0:Lage>\n      </ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Abwasserknoten>\n      "
+    },
+    {
+      "Klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt",
+      "TID": "ch24gwkdcFPcB0IM",
+      "Werte": {
+        "Letzte_Aenderung": "20260829",
+        "Bezeichnung": "A454675"
+      },
+      "Referenzen": {
+        "DatenherrRef": "ch20p3q400002009",
+        "DatenlieferantRef": "ch20p3q400002009",
+        "AbwassernetzelementRef": "ch24gwkd3XcJCyYp"
+      },
+      "XML": "<ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt xmlns:ns0=\"http://www.interlis.ch/INTERLIS2.3\" TID=\"ch24gwkdcFPcB0IM\">\n        <ns0:Letzte_Aenderung>20260829</ns0:Letzte_Aenderung>\n        <ns0:DatenherrRef REF=\"ch20p3q400002009\" />\n        <ns0:DatenlieferantRef REF=\"ch20p3q400002009\" />\n        <ns0:Bezeichnung>A454675</ns0:Bezeichnung>\n        <ns0:Lage>\n          <ns0:COORD><ns0:C1>2692817.512</ns0:C1><ns0:C2>1192427.212</ns0:C2></ns0:COORD>\n        </ns0:Lage>\n        <ns0:AbwassernetzelementRef REF=\"ch24gwkd3XcJCyYp\" />\n      </ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt>\n      "
+    },
+    {
+      "Klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Haltung",
+      "TID": "ch24gwkdVy2uiPfJ",
+      "Werte": {
+        "Letzte_Aenderung": "20241121",
+        "Bezeichnung": "525145-505377",
+        "LaengeEffektiv": "11.44",
+        "Lagebestimmung": "genau",
+        "Lichte_Hoehe": "250",
+        "Material": "Beton_Normalbeton"
+      },
+      "Referenzen": {
+        "DatenherrRef": "ch20p3q400002009",
+        "DatenlieferantRef": "ch20p3q400002009",
+        "AbwasserbauwerkRef": "ch24gwkd2FabRvaW",
+        "RohrprofilRef": "ch24gwkd3obhLa8B",
+        "nachHaltungspunktRef": "ch24gwkdsMxuOqnt",
+        "vonHaltungspunktRef": "ch24gwkdcFPcB0IM"
+      },
+      "XML": "<ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Haltung xmlns:ns0=\"http://www.interlis.ch/INTERLIS2.3\" TID=\"ch24gwkdVy2uiPfJ\">\n        <ns0:Letzte_Aenderung>20241121</ns0:Letzte_Aenderung>\n        <ns0:DatenherrRef REF=\"ch20p3q400002009\" />\n        <ns0:DatenlieferantRef REF=\"ch20p3q400002009\" />\n        <ns0:Bezeichnung>525145-505377</ns0:Bezeichnung>\n        <ns0:AbwasserbauwerkRef REF=\"ch24gwkd2FabRvaW\" />\n        <ns0:LaengeEffektiv>11.44</ns0:LaengeEffektiv>\n        <ns0:Lagebestimmung>genau</ns0:Lagebestimmung>\n        <ns0:Lichte_Hoehe>250</ns0:Lichte_Hoehe>\n        <ns0:Material>Beton_Normalbeton</ns0:Material>\n        <ns0:Verlauf>\n          <ns0:POLYLINE>\n            <ns0:COORD><ns0:C1>2692817.512</ns0:C1><ns0:C2>1192427.212</ns0:C2></ns0:COORD>\n            <ns0:COORD><ns0:C1>2692814.378</ns0:C1><ns0:C2>1192418.302</ns0:C2></ns0:COORD>\n            <ns0:COORD><ns0:C1>2692813.716</ns0:C1><ns0:C2>1192416.420</ns0:C2></ns0:COORD>\n          </ns0:POLYLINE>\n        </ns0:Verlauf>\n        <ns0:RohrprofilRef REF=\"ch24gwkd3obhLa8B\" />\n        <ns0:nachHaltungspunktRef REF=\"ch24gwkdsMxuOqnt\" />\n        <ns0:vonHaltungspunktRef REF=\"ch24gwkdcFPcB0IM\" />\n      </ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Haltung>\n      "
+    },
+    {
+      "Klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Kanal",
+      "TID": "ch24gwkd2FabRvaW",
+      "Werte": {
+        "Letzte_Aenderung": "20241121",
+        "BaulicherZustand": "Z2",
+        "Bezeichnung": "525145-505377",
+        "Bruttokosten": "0.00",
+        "Sanierungsbedarf": "mittelfristig",
+        "Status": "in_Betrieb",
+        "Bettung_Umhuellung": "unbekannt",
+        "FunktionHierarchisch": "PAA.Sammelkanal",
+        "FunktionHydraulisch": "Freispiegelleitung",
+        "Nutzungsart_Ist": "Mischabwasser",
+        "Verbindungsart": "unbekannt"
+      },
+      "Referenzen": {
+        "DatenherrRef": "ch20p3q400002009",
+        "DatenlieferantRef": "ch20p3q400002009",
+        "BetreiberRef": "ch20p3q400002009",
+        "EigentuemerRef": "ch20p3q400002009"
+      },
+      "XML": "<ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Kanal xmlns:ns0=\"http://www.interlis.ch/INTERLIS2.3\" TID=\"ch24gwkd2FabRvaW\">\n        <ns0:Letzte_Aenderung>20241121</ns0:Letzte_Aenderung>\n        <ns0:DatenherrRef REF=\"ch20p3q400002009\" />\n        <ns0:DatenlieferantRef REF=\"ch20p3q400002009\" />\n        <ns0:BaulicherZustand>Z2</ns0:BaulicherZustand>\n        <ns0:Bezeichnung>525145-505377</ns0:Bezeichnung>\n        <ns0:Bruttokosten>0.00</ns0:Bruttokosten>\n        <ns0:Sanierungsbedarf>mittelfristig</ns0:Sanierungsbedarf>\n        <ns0:Status>in_Betrieb</ns0:Status>\n        <ns0:BetreiberRef REF=\"ch20p3q400002009\" />\n        <ns0:EigentuemerRef REF=\"ch20p3q400002009\" />\n        <ns0:Bettung_Umhuellung>unbekannt</ns0:Bettung_Umhuellung>\n        <ns0:FunktionHierarchisch>PAA.Sammelkanal</ns0:FunktionHierarchisch>\n        <ns0:FunktionHydraulisch>Freispiegelleitung</ns0:FunktionHydraulisch>\n        <ns0:Nutzungsart_Ist>Mischabwasser</ns0:Nutzungsart_Ist>\n        <ns0:Verbindungsart>unbekannt</ns0:Verbindungsart>\n      </ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Kanal>\n      "
+    },
+    {
+      "Klasse": "DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt",
+      "TID": "ch24gwkdsMxuOqnt",
+      "Werte": {
+        "Letzte_Aenderung": "20260829",
+        "Bezeichnung": "E454675",
+        "Kote": "505.910"
+      },
+      "Referenzen": {
+        "DatenherrRef": "ch20p3q400002009",
+        "DatenlieferantRef": "ch20p3q400002009",
+        "AbwassernetzelementRef": "ch24gwkd5tTVGGvo"
+      },
+      "XML": "<ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt xmlns:ns0=\"http://www.interlis.ch/INTERLIS2.3\" TID=\"ch24gwkdsMxuOqnt\">\n        <ns0:Letzte_Aenderung>20260829</ns0:Letzte_Aenderung>\n        <ns0:DatenherrRef REF=\"ch20p3q400002009\" />\n        <ns0:DatenlieferantRef REF=\"ch20p3q400002009\" />\n        <ns0:Bezeichnung>E454675</ns0:Bezeichnung>\n        <ns0:Kote>505.910</ns0:Kote>\n        <ns0:Lage>\n          <ns0:COORD><ns0:C1>2692813.716</ns0:C1><ns0:C2>1192416.420</ns0:C2></ns0:COORD>\n        </ns0:Lage>\n        <ns0:AbwassernetzelementRef REF=\"ch24gwkd5tTVGGvo\" />\n      </ns0:DSS_2020_1_LV95.Siedlungsentwaesserung.Haltungspunkt>\n      "
+    }
+  ],
+  "NichtAufgeloesteReferenzen": [
+    "ch20p3q400002009"
+  ]
+}

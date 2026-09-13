@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -42,7 +42,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
     private readonly ISchachtProtocolFileLocator _protocolFileLocator;
     private readonly ShellViewModel _shell;
     private readonly SchaechteDropdownCommands _dropdownCommands;
-    private bool _suppressRequiredFieldWarning;
 
     internal AppSettings Settings => _settings;
     internal IDialogService Dialogs => _dialogs;
@@ -147,10 +146,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         _geoShop = services.GeoShop;
         ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("schacht", () => _shell.Project, Settings,
             () => CanMutateShaftData, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop);
         ObjektakteCommand = Services.ObjektaktenDialog.Befehl("schacht", () => _shell.Project, () => Selected?.Id,
             Settings, () => CanMutateShaftData, () => _shell.MarkProjectDirty(), Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop);
         CodeCatalog = services.CodeCatalog;
     }
 
@@ -366,23 +365,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         (RefreshProtocolCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
     }
 
-    partial void OnSelectedChanging(SchachtRecord? oldValue, SchachtRecord? newValue)
-    {
-        if (_suppressRequiredFieldWarning)
-            return;
-        if (oldValue is null || newValue is null)
-            return;
-        if (ReferenceEquals(oldValue, newValue) || oldValue.Id == newValue.Id)
-            return;
-
-        var missing = SchachtSanierungPflichtfeldValidator.MissingFields(oldValue);
-        if (missing.Count == 0)
-            return;
-
-        _dialogs.Warn(
-            $"Beim Schacht {ResolveSchachtNummer(oldValue)} fehlen:\n- {string.Join("\n- ", missing)}",
-            "Schacht-Felder fehlen");
-    }
 
     partial void OnGridMinRowHeightChanged(double value)
     {
