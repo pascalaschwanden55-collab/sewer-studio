@@ -39,12 +39,14 @@ public sealed partial class DataPageViewModel
     {
         OnPropertyChanged(nameof(IsProjectReady));
         OnPropertyChanged(nameof(IsDataGridReadOnly));
+        BearbeitungUmschaltenCommand.NotifyCanExecuteChanged();
     }
 
     private void NotifyProjectChanged()
     {
         OnPropertyChanged(nameof(Project));
         OnPropertyChanged(nameof(Records));
+        BearbeitungUmschaltenCommand.NotifyCanExecuteChanged();
         UpdateSearchResultInfo(Records.Count);
     }
 

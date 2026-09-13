@@ -423,9 +423,12 @@
                                     <ui:FluentIcon Glyph="&#xE76C;" Style="{StaticResource ChevronStil}"/>
                                 </Button>
 
-                                <TextBlock Grid.Column="2" Style="{StaticResource ZellenTextMono}" FontWeight="SemiBold"
+                                <DockPanel Grid.Column="2">
+                                    <ui:FluentIcon Style="{DynamicResource BearbeitungErledigtMarke}" Margin="0,0,6,0"/>
+                                    <TextBlock Style="{StaticResource ZellenTextMono}" FontWeight="SemiBold"
                                            Text="{Binding Fields[Haltungsname], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Haltungsname], Converter={StaticResource FaktWert}}"/>
+                                </DockPanel>
                                 <TextBlock Grid.Column="3" Style="{StaticResource ZellenText}"
                                            Text="{Binding Fields[Strasse], Converter={StaticResource FaktWert}}"
                                            ToolTip="{Binding Fields[Strasse], Converter={StaticResource FaktWert}}"/>

@@ -295,6 +295,7 @@ public sealed partial class SchaechtePageViewModel
         MoveUpCommand?.NotifyCanExecuteChanged();
         MoveDownCommand?.NotifyCanExecuteChanged();
         SaveCommand?.NotifyCanExecuteChanged();
+        BearbeitungUmschaltenCommand.NotifyCanExecuteChanged();
         ImportProtocolCommand?.NotifyCanExecuteChanged();
         RefreshProtocolCommand?.NotifyCanExecuteChanged();
         ErgaenzeStammdatenAusPdfsCommand?.NotifyCanExecuteChanged();

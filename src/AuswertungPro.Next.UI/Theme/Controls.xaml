@@ -1781,4 +1781,35 @@
         </Setter>
     </Style>
 
+    <!-- Persoenlicher Bearbeitungsstand; hat keinen Bezug zum Sanierungsstatus. -->
+    <Style x:Key="BearbeitungErledigtKnopf" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
+        <Setter Property="ToolTip" Value="Bearbeitung als erledigt markieren"/>
+        <Setter Property="AutomationProperties.Name" Value="Bearbeitung als erledigt markieren"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Selected.BearbeitungErledigt}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource SuccessSubtleBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                <Setter Property="ToolTip" Value="Bearbeitung erledigt – erneut klicken, um die Markierung aufzuheben"/>
+                <Setter Property="AutomationProperties.Name" Value="Erledigt-Markierung aufheben"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="BearbeitungErledigtMarke" TargetType="ui:FluentIcon">
+        <Setter Property="Glyph" Value="&#xE73E;"/>
+        <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="ToolTip" Value="Bearbeitung erledigt"/>
+        <Setter Property="AutomationProperties.Name" Value="Bearbeitung erledigt"/>
+        <Setter Property="Visibility" Value="Collapsed"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding BearbeitungErledigt}" Value="True">
+                <Setter Property="Visibility" Value="Visible"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <DataTemplate x:Key="BearbeitungErledigtZeilenkopf">
+        <ui:FluentIcon Style="{StaticResource BearbeitungErledigtMarke}"
+                       DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGridRow}}"/>
+    </DataTemplate>
 </ResourceDictionary>

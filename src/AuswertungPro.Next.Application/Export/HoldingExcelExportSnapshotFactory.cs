@@ -39,6 +39,7 @@ public static class HoldingExcelExportSnapshotFactory
         {
             Id = source.Id,
             Fields = new Dictionary<string, string>(source.Fields, StringComparer.Ordinal),
+            BearbeitungErledigt = source.BearbeitungErledigt,
             FieldMeta = source.FieldMeta.ToDictionary(
                 static pair => pair.Key,
                 static pair => CloneFieldMetadata(pair.Value),

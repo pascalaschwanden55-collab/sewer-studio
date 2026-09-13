@@ -1,5 +1,25 @@
 # SewerStudio — AI Sewer Inspection System
 
+## Persoenliche Erledigt-Markierung (13.09.2026)
+
+- `HaltungRecord.BearbeitungErledigt` und `SchachtRecord.BearbeitungErledigt` sind
+  eigene boolesche Arbeitsmarkierungen mit PropertyChanged. Standard false;
+  nur true wird additiv im Projekt-JSON gespeichert. Projektkopie und Inhaltssignatur
+  erfassen sie. Sie sind keine Fields und gehen nicht in Fach-/Normexporte.
+- **`Offen_abgeschlossen` beschreibt die Sanierung, nicht den Bearbeitungsstand.**
+  Die neue Markierung veraendert weder dieses Feld noch KI-/Pruefstatus.
+- Beide `*PageViewModel.Erledigt`-Anbindungen schalten nur einen Datensatz des
+  aktuellen, bereiten Projekts um, markieren es geaendert und nutzen die bestehende
+  automatische Speicherung. Die Schacht-Importsperre gilt auch hier.
+- Der Knopf `Erledigt` markiert die Auswahl; erneutes Klicken hebt die Marke auf.
+  Aufklapplisten zeigen ein gruenes Haekchen am Namen, Tabellen im Zeilenkopf.
+  Gemeinsame Styles liegen in `Theme/Controls.xaml`.
+- `SplitterPersistenceBehavior` stellt fuer explizit ausgeblendete Splitter keine
+  gespeicherte Groesse wieder her. Sonst reservierte ein Loaded-Ereignis erneut
+  270 px fuer die unsichtbare Eingabeschublade unter der Aufklappliste.
+- Nachweise: `BearbeitungErledigtSpeicherungTests`, `BearbeitungErledigtUiTests`.
+  Anleitung: `docs/BEARBEITUNG-ERLEDIGT.md`.
+
 ## QGIS-Bruecke: eine leere Ebene geht nie ohne Spalten hinaus (11.09.2026)
 
 Eine GeoJSON-Datei traegt keine eigene Spaltenliste — QGIS liest die Spalten aus den

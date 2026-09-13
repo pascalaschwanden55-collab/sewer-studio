@@ -3,6 +3,21 @@
 public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    private bool _bearbeitungErledigt;
+
+    /// <summary>Persoenliche Arbeitsmarkierung, unabhaengig vom Sanierungsstatus und von KI-Pruefungen.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool BearbeitungErledigt
+    {
+        get => _bearbeitungErledigt;
+        set
+        {
+            if (_bearbeitungErledigt == value) return;
+            _bearbeitungErledigt = value;
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(BearbeitungErledigt)));
+        }
+    }
     public Dictionary<string, string> Fields { get; set; } = new(StringComparer.Ordinal);
 
     /// <summary>

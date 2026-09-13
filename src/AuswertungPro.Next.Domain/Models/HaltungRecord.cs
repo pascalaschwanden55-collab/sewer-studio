@@ -7,6 +7,21 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    private bool _bearbeitungErledigt;
+
+    /// <summary>Persoenliche Arbeitsmarkierung, unabhaengig vom Sanierungsstatus und von KI-Pruefungen.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool BearbeitungErledigt
+    {
+        get => _bearbeitungErledigt;
+        set
+        {
+            if (_bearbeitungErledigt == value) return;
+            _bearbeitungErledigt = value;
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(BearbeitungErledigt)));
+        }
+    }
+
     /// <summary>
     /// Feldwerte (als Strings wie in der PS-Version).
     /// </summary>

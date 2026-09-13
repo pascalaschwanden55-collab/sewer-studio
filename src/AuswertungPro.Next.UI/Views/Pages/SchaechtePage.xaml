@@ -50,6 +50,13 @@
                             <TextBlock Text="Speichern" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+                    <Button Command="{Binding BearbeitungUmschaltenCommand}" CommandParameter="{Binding Selected}"
+                            Style="{StaticResource BearbeitungErledigtKnopf}" Margin="0,0,2,0">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:FluentIcon Glyph="&#xE73E;" Margin="0,0,6,0"/>
+                            <TextBlock Text="Erledigt" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                     <Button Command="{Binding ImportProtocolCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Einzelne PDF oder ganzen Ordner einschliesslich Unterordner importieren">
                         <StackPanel Orientation="Horizontal">
@@ -376,6 +383,7 @@
                   HorizontalGridLinesBrush="{DynamicResource BorderBrush}"
                   FrozenColumnCount="2"
                   RowHeaderWidth="24"
+                  RowHeaderTemplate="{StaticResource BearbeitungErledigtZeilenkopf}"
                   MinRowHeight="{Binding GridMinRowHeight}"
                   EnableRowVirtualization="True"
                   EnableColumnVirtualization="True"
