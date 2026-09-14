@@ -20,13 +20,15 @@ public sealed record XtfNeuExportRequest(
     string ZielOrdner,
     bool NurPruefen = false,
     bool NurAenderungen = false,
-    bool MitZusatzangaben = true);
+    bool MitZusatzangaben = true,
+    IReadOnlyList<string>? Quelldateien = null);
 
 public sealed record XtfNeuExportResult(
     bool Ok,
     string Bericht,
     string? Fehler,
-    string? Datei);
+    string? Datei,
+    bool QuelleFehlt = false);
 
 /// <summary>
 /// Erzeugt aus dem ganzen Projektstand eine eigenstaendige, NEUE SIA405-XTF.

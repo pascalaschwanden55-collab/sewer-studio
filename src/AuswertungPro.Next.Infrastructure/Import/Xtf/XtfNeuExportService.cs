@@ -34,25 +34,32 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
         XtfNeuPlan plan;
         try
         {
-        plan = !request.NurAenderungen && DssExportPlanBuilder.Benoetigt(request.Projekt)
-            ? DssExportPlanBuilder.Build(request.Projekt, verlaeufe)
+        var projekt = XtfQuellverbundErgaenzung.Vorbereite(request.Projekt, request.Quelldateien);
+        plan = DssExportPlanBuilder.Benoetigt(projekt)
+            ? DssExportPlanBuilder.Build(projekt, verlaeufe, request.MitZusatzangaben || request.NurAenderungen)
             : XtfNeuPlanBuilder.Build(
             request.Projekt.Data,
             request.Projekt.SchaechteData,
             request.Projekt.Id.ToString("N"),
             verlaeufe);
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or System.Xml.XmlException)
-        {
-            return new(false, "DSS-Prüfung nicht bestanden; keine XTF geschrieben.", ex.Message, null);
-        }
-        if (request.MitZusatzangaben || request.NurAenderungen)
+        if (plan.Haltungen != request.Projekt.Data.Count || plan.Schaechte != request.Projekt.SchaechteData.Count)
+            throw new InvalidOperationException("Nicht alle Projektobjekte erfüllen die Pflichtangaben. Keine unvollständige XTF geschrieben.\n" + string.Join("\n", plan.Hinweise));
+        if ((request.MitZusatzangaben || request.NurAenderungen) && !plan.Dss)
             plan = XtfZusatzangaben.Ergaenze(plan, request.Projekt);
         if (request.NurAenderungen)
-            plan = XtfAenderungsPlanBuilder.Build(plan, request.Projekt);
+            plan = plan.Dss ? DssAenderungsPlanBuilder.Build(plan, projekt) : XtfAenderungsPlanBuilder.Build(plan, projekt);
         else if (!request.MitZusatzangaben && !plan.Dss)
             plan = plan with { Hinweise = plan.Hinweise.Select(HinweisOhneZusatz)
                 .Append("Reiner SIA405-Erstexport: Programmeigene Zusatzangaben verbleiben im Projekt und sind nicht in dieser Datei enthalten.").ToArray() };
+        }
+        catch (XtfQuelleFehltException ex)
+        {
+            return new(false, "Original-Bezugsobjekte fehlen; keine XTF geschrieben.", ex.Message, null, QuelleFehlt: true);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.Xml.XmlException or IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            return new(false, "XTF-Prüfung nicht bestanden; keine XTF geschrieben.", ex.Message, null);
+        }
 
         var bericht = BaueBericht(plan, request.Projekt, quellHinweis);
 

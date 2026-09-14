@@ -282,9 +282,12 @@ Der Import erhält diese Kennung korrekt, wenn kein belegter Name vorhanden ist.
 `XtfNeuPlanBuilder.Organisationsbuch` erwartet beim SIA405-Änderungsexport bisher
 jedoch Organisationsnamen. Eine gelieferte TID scheitert an dieser Namensprüfung;
 das betroffene Bauwerk wird vollständig ausgelassen, obwohl Handeingaben vorliegen.
-Das ist eine offene Exportlücke, kein Beleg für fehlende Schachtkorrekturen im Projekt.
+Das war eine Exportlücke, kein Beleg für fehlende Schachtkorrekturen im Projekt.
 Die Prüfung des Exportumfangs muss diese Grenze berücksichtigen. Die Kennungen im
-Projekt dürfen nicht durch einen geratenen Namen ersetzt werden.
+Projekt dürfen nicht durch einen geratenen Namen ersetzt werden. Der Fehler ist
+inzwischen behoben; der DSS-Weg wird auch für Änderungen verwendet und nimmt
+Objektakten mit. Neue Quellkonflikte sperren die Ausgabe ausdrücklich.
+Aktueller Stand: [Export kontrollieren](XTF-EXPORT-KONTROLLE.md).
 
 ### Vollständige Release-Prüfung vor Push (14.09.2026)
 

@@ -30,7 +30,8 @@ internal static class DssExportPruefung
     public static void Pruefe(Dictionary<string, DssExportObjekt> objekte, List<string> hinweise)
     {
         var externe = new HashSet<string>();
-        var unique = new HashSet<string>(StringComparer.Ordinal);
+        var unique = new Dictionary<string, string>(StringComparer.Ordinal);
+        var namenskonflikte = new List<string>();
         foreach (var o in objekte.Values)
         {
             if (!o.OhneTid && !SiaObjektkennung.IstGueltig(o.Tid)) Fehler(o, "ungültige Originalkennung");
@@ -77,9 +78,11 @@ internal static class DssExportPruefung
                     : o.Klasse is "Deckel" or "Einstiegshilfe" or "Trockenwetterfallrohr" ? "BauwerksTeil"
                     : o.Klasse is "FoerderAggregat" or "Leapingwehr" or "Streichwehr" ? "Ueberlauf" : o.Klasse;
                 var key = gruppe + "|" + o.Werte.GetValueOrDefault("Bezeichnung") + "|" + (o.Klasse == "Unterhalt" ? o.Werte.GetValueOrDefault("Zeitpunkt") : o.Refs.GetValueOrDefault("DatenherrRef"));
-                if (o.Klasse != "Organisation" && !unique.Add(key)) Fehler(o, "Bezeichnung ist beim gleichen Datenherrn nicht eindeutig");
+                if (o.Klasse != "Organisation" && !unique.TryAdd(key, o.Tid))
+                    namenskonflikte.Add($"{o.Klasse} «{o.Werte.GetValueOrDefault("Bezeichnung") }»: Bezeichnung ist beim gleichen Datenherrn nicht eindeutig. Originalkennungen {unique[key]} und {o.Tid}.");
             }
         }
+        if (namenskonflikte.Count > 0) throw new InvalidOperationException("DSS: Keine XTF erstellt; Originalbezeichnungen zuerst klären.\n" + string.Join("\n", namenskonflikte));
         if (externe.Count > 0) hinweise.Add($"{externe.Count} externe Organisationsverweise bleiben mit Original-TID erhalten: {string.Join(", ", externe.Order())}. Die Organisationsstammdaten fehlen in GeoShop und müssen im Zielkataster vorhanden sein; Namen und Rollen werden nicht erfunden.");
     }
     internal static IEnumerable<string> PflichtRefs(string klasse)

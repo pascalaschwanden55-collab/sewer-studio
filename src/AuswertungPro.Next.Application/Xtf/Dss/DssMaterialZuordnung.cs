@@ -22,7 +22,9 @@ public static class DssMaterialZuordnung
     };
     private static readonly IReadOnlyDictionary<string, string?> Schacht = new Dictionary<string, string?>
     {
-        ["0"] = "unbekannt", ["101"] = "Beton", ["102"] = null, ["103"] = null, ["104"] = null,
+        // WebGIS-Code 104 = Beton, Fertigteil. Normschacht.Material kennt Beton,
+        // aber keine Herstellungsart. Das Detail bleibt in Erfasste_Angaben erhalten.
+        ["0"] = "unbekannt", ["101"] = "Beton", ["102"] = null, ["103"] = null, ["104"] = "Beton",
         ["105"] = null, ["106"] = "Beton", ["107"] = null, ["108"] = null, ["109"] = null, ["110"] = null,
         ["122"] = null, ["123"] = null, ["124"] = null, ["119"] = "Kunststoff", ["120"] = null,
         ["121"] = null, ["115"] = null, ["116"] = null, ["117"] = null, ["118"] = null,

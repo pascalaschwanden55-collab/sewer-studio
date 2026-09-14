@@ -119,7 +119,7 @@ public sealed class GeoShopXtfLeser : IGeoShopLeser
         }).ToArray()));
     }
 
-    private static void LiesDurchlauf(Stream stream, Func<string, string, bool> benoetigt,
+    internal static void LiesDurchlauf(Stream stream, Func<string, string, bool> benoetigt,
         Action<GeoShopXtfObjekt> nimm, CancellationToken cancellationToken, HashSet<string>? doppelteTids = null)
     {
         stream.Position = 0;

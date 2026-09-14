@@ -107,6 +107,13 @@ public static class XtfNeuErstellenUseCase
         ArgumentNullException.ThrowIfNull(actions);
 
         var pruefung = dienst.Erzeuge(request with { NurPruefen = true });
+        if (pruefung.QuelleFehlt)
+        {
+            var quellen = actions.WaehleQuelldateien();
+            if (quellen.Count == 0) return new(false, "Abgebrochen — keine Original-XTF zum Ergänzen gewählt.", null);
+            request = request with { Quelldateien = quellen };
+            pruefung = dienst.Erzeuge(request with { NurPruefen = true });
+        }
         if (!pruefung.Ok)
         {
             actions.ZeigeFehler(XtfExportVorschau.Fehler(

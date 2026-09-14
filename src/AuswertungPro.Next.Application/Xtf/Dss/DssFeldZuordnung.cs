@@ -43,6 +43,9 @@ internal static class DssFeldZuordnung
     }
     public static string Normwert(string klasse, string attribut, string text)
     {
+        if (attribut == "BaulicherZustand")
+            text = text switch { "Nicht mehr funktionstüchtig (Z0)" => "Z0", "Starke Mängel (Z1)" => "Z1",
+                "Mittlere Mängel (Z2)" => "Z2", "Leichte Mängel (Z3)" => "Z3", "Keine Mängel (Z4)" => "Z4", _ => text };
         if (attribut == "Signaluebermittlung" && text == "Senden, empfangen") text = "senden_empfangen";
         if (klasse == "Streichwehr" && attribut == "Wehr_Art")
             text = text switch { "Streichwehr, hochgezogen" => "hochgezogen", "Streichwehr, niedrig" => "niedrig", "Unbekannt" => "", _ => text };

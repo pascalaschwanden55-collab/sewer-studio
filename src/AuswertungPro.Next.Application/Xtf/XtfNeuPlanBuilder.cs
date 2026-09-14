@@ -503,6 +503,9 @@ public static class XtfNeuPlanBuilder
                 return null;
             }
 
+            // Originale Organisations-TIDs sind bereits eindeutige Referenzen.
+            // Ohne Stammobjekt bleiben sie extern; niemals als Namen neu anlegen.
+            if (SiaObjektkennung.IstGueltig(roh)) return roh;
             var name = EigentumVokabular.Normalisieren(roh);
             if (EigentumVokabular.NachOrganisationstyp(name) is null)
             {
@@ -530,6 +533,7 @@ public static class XtfNeuPlanBuilder
 
         private string Erzeuge(string name)
         {
+            if (SiaObjektkennung.IstGueltig(name)) return name;
             if (_jeName.TryGetValue(name, out var bekannt))
                 return bekannt;
 

@@ -1,5 +1,35 @@
 # SewerStudio — AI Sewer Inspection System
 
+## Robuster GeoShop-XTF-Export (14.09.2026)
+
+- `XtfNeuExportService` verwendet den vorhandenen DSS-Planer jetzt auch für
+  Änderungslieferungen aus Objektakten. Der alte SIA405-Planer akzeptiert gültige
+  Organisations-TIDs direkt. Eine unvollständige Anzahl Projektobjekte sperrt die Ausgabe.
+- `DssAenderungsPlanBuilder` vergleicht Normwerte/Verweise mit den Originalbelegen nach
+  TID. Vollständiger Normkontext bleibt erhalten; nur `Aenderung`-Einträge sind Aufträge.
+  Optionale Leerungen und die Bauwerksbeziehungen neuer Ereignisse werden ausgewiesen.
+- `DssProjektAngaben` erhält aktuelle Felder, Objektfelder, Originalcodes, Hand-Leerungen
+  und Listen im bestehenden Zusatzmodell als versioniertes `Erfasste_Angaben`-Paket.
+  `DssQuellabweichungen` trennt ungültige optionale Quell-Auswahlcodes ab. Keine Änderung
+  der ILI-Modelle, keine erfundenen DSS-Attribute. Saniert/Jahr ohne Datum bleiben separat.
+- Materialdetail Schacht-Code 104 wird zu Normmaterial Beton; Detail bleibt zusätzlich.
+  Zustandstexte mit Z0–Z4 werden ausdrücklich auf die korrekten Normwerte abgebildet.
+- `XtfQuellverbundErgaenzung` (Infrastructure/Import/Xtf) liest fehlende interne
+  Bezugsobjekte aus vorhandenen/ausgewählten Quellen nur in eine Ausgabekopie nach.
+  Sie verwendet den bestehenden XML-Leser, hält den Dateistrom lesend gesperrt und
+  verwirft mehrdeutige TIDs. Request ergänzt optionale Quelldateien, Result QuelleFehlt.
+  `XtfNeuErstellenUseCase` verbindet die bestehende Dateiwahl mit erneuter Prüfung.
+- Die Exportseite liefert auch beim Vollmodus die Zusatzangaben mit. Bauwerkskennungen
+  müssen dem Originalverweis entsprechen. Namenskonflikte nennen beide Original-TIDs;
+  Namen werden nicht automatisch umbenannt. Keine neue Dienstregistrierung oder Pakete.
+- Synthetische Voll-/Änderungslieferung: ilivalidator mit allObjectsAccessible bestanden.
+  Reales Projekt Bürglen bleibt wegen doppeltem Haltungspunktnamen A76157 gesperrt;
+  Pascal kennt keine korrigierte Bezeichnung. Originale unangetastet, kein GEONIS-Rückimport.
+- Prüfanleitung und genaue Empfängerregeln: `docs/XTF-EXPORT-KONTROLLE.md`.
+  Tests: `XtfDssAenderungsExportTests`, `XtfQuellverbundErgaenzungTests` und XTF-Bestand.
+- Begleitende Push-Reparatur: `StartupSplashWindow.Impulse` enthält FirePulse und
+  SpawnFlare unverändert ausgelagert; die Animationsdatei bleibt unter 1000 Zeilen.
+
 ## Startanimation 5.0: Kugel, deutlich neu (14.09.2026)
 
 - Entscheid Pascal nach einer Browser-Vorschau mit vier Varianten
@@ -44,12 +74,13 @@
 
 ## GeoShop-Feldvergleich und Importsicherung (14.09.2026)
 
-- Offene Exportgrenze, am 14.09.2026 anhand des gespeicherten Projektstands erkannt:
+- Frühere Exportgrenze, am 14.09.2026 anhand des gespeicherten Projektstands erkannt:
   `XtfNeuPlanBuilder.Organisationsbuch` behandelt originale Organisations-TIDs in
   Datenherr/Datenlieferant noch als Namen. Dadurch werden betroffene Schächte im
   SIA405-Änderungsexport trotz Handkorrekturen ausgelassen. Importierte Kennungen
-  bleiben korrekt erhalten; der Export muss diese gesondert auflösen. Noch nicht
-  behoben, keine vollständige Abnahme dieses Rückwegs. Siehe `docs/GEOSHOP-ABGLEICH-TEST.md`.
+  bleiben korrekt erhalten. Behoben durch den oben beschriebenen DSS-Änderungsweg
+  und direkte TID-Erkennung; neue Quellkonflikte werden ausdrücklich gesperrt.
+  Siehe `docs/XTF-EXPORT-KONTROLLE.md`.
 
 - Nachtrag Abgleich «Alle Angaben»/«Kurz»: `RecordDetailItem.AnzeigeOptionen` nimmt
   den tatsächlich gespeicherten Wert nur für die Anzeige dieses Feldes auf, wenn er

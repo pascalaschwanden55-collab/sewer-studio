@@ -36,7 +36,7 @@ internal static class XtfDssWriter
         return new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(Ns + "TRANSFER",
             new XElement(Ns + "HEADERSECTION", new XAttribute("VERSION", "2.3"), new XAttribute("SENDER", "SewerStudio"),
                 new XElement(Ns + "MODELS", Modell(DssExportSchema.Modell), Modell(DssExportSchema.Basis)),
-                new XElement(Ns + "COMMENT", "DSS-Neuexport aus gespeichertem Projektstand.\n" + string.Join("\n", plan.Hinweise))),
+                new XElement(Ns + "COMMENT", (plan.NurAenderungen ? "DSS-Änderungslieferung mit vollständigem Bezugskontext. Nur Aenderung-Einträge sind Schreibaufträge.\n" : "DSS-Neuexport aus gespeichertem Projektstand.\n") + string.Join("\n", plan.Hinweise))),
             new XElement(Ns + "DATASECTION", fach, admin.HasElements ? admin : null)));
     }
     private static XElement Modell(string name) => new(Ns + "MODEL", new XAttribute("NAME", name), new XAttribute("VERSION", "18.10.2023"), new XAttribute("URI", "http://www.vsa.ch/models"));

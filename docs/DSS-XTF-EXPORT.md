@@ -132,3 +132,9 @@ Ein tatsächlicher GEONIS-/FME-Rückimport ist noch nicht durchgeführt.
 Vertrag reproduzierbar und hält Modellprüfsummen fest. Keine neue NuGet-Abhängigkeit.
 
 Nachweise: [Prüfbericht](reviews/2026-09-11-objektakten/DSS-EXPORT.md).
+
+Nachtrag 14.09.2026: Auch der projektbezogene Änderungsmodus benutzt jetzt den
+DSS-Verbund. Aktuelle Objektfelder, Listen und Angaben ohne Normziel werden im
+separaten Eingabepaket mitgeliefert. Die bisherigen Aussagen «bleibt nur im Projekt»
+gelten bei eingeschalteten Zusatzangaben nicht mehr. Die Modelle selbst bleiben
+unverändert. [Aktuelle Funktion, Grenzen und Kontrollübersicht](XTF-EXPORT-KONTROLLE.md).

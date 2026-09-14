@@ -98,7 +98,7 @@ public sealed class ExportPageXtfAuswahlTests
         welt.Vm.XtfVollstaendig = true;
         welt.Vm.ErzeugeXtfNeuCommand.Execute(null);
         Assert.Equal(2, welt.NeuExport.Requests.Count);
-        Assert.All(welt.NeuExport.Requests, r => { Assert.False(r.NurAenderungen); Assert.False(r.MitZusatzangaben); });
+        Assert.All(welt.NeuExport.Requests, r => { Assert.False(r.NurAenderungen); Assert.True(r.MitZusatzangaben); });
         welt.Vm.XtfVollstaendig = false;
         Assert.True(welt.Vm.XtfNurAenderungen);
     }

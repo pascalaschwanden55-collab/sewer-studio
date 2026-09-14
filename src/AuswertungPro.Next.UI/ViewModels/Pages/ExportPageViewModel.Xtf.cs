@@ -74,7 +74,7 @@ public sealed partial class ExportPageViewModel
         var ergebnis = XtfNeuErstellenUseCase.Execute(
             _xtfNeuExport,
             new AuswertungPro.Next.Application.Xtf.XtfNeuExportRequest(_shell.Project, ziel,
-                NurAenderungen: XtfNurAenderungen, MitZusatzangaben: XtfNurAenderungen),
+                NurAenderungen: XtfNurAenderungen, MitZusatzangaben: true),
             XtfAktionen());
         Uebernimm(ergebnis);
     }

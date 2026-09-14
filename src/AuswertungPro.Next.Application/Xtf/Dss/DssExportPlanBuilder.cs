@@ -13,7 +13,8 @@ public static class DssExportPlanBuilder
             || a.Art is not ("haltung" or "schacht") || a.Werte.Any(v => v.Value.Text.Length > 0 || v.Value.VonHand));
     }
 
-    public static XtfNeuPlan Build(Project projekt, IReadOnlyDictionary<string, XtfNeuGeometrie>? geometrien = null)
+    public static XtfNeuPlan Build(Project projekt, IReadOnlyDictionary<string, XtfNeuGeometrie>? geometrien = null,
+        bool mitZusatzangaben = false)
     {
         ObjektaktenStruktur.Pruefe(projekt);
         DssObjektaktenAbdeckung.Pruefe(projekt);
@@ -25,6 +26,7 @@ public static class DssExportPlanBuilder
         foreach (var h in projekt.Data)
             if (Hole(h.Geonis?.Haltung, "Haltung") is { } o)
             {
+                PruefeBauwerkskennung(h.Geonis?.Kanal, o);
                 roots[h.Id] = o; importierteH.Add(h.Id);
                 if (h.Geonis?.RichtungGedreht == true)
                 {
@@ -35,7 +37,8 @@ public static class DssExportPlanBuilder
                 }
             }
         foreach (var s in projekt.SchaechteData)
-            if (Hole(s.Geonis?.Knoten, "Abwasserknoten") is { } o) { roots[s.Id] = o; importierteS.Add(s.Id); }
+            if (Hole(s.Geonis?.Knoten, "Abwasserknoten") is { } o)
+            { PruefeBauwerkskennung(s.Geonis?.Bauwerk, o); roots[s.Id] = o; importierteS.Add(s.Id); }
         if (roots.Values.Select(o => o.Tid).Distinct(StringComparer.Ordinal).Count() != roots.Count)
             throw new InvalidOperationException("DSS: Mehrere Projektzeilen beanspruchen dieselbe Originalkennung. Bitte die Zuordnung zuerst bereinigen.");
 
@@ -50,6 +53,13 @@ public static class DssExportPlanBuilder
         if (roots.Count != projekt.Data.Count + projekt.SchaechteData.Count)
             throw new InvalidOperationException("DSS: Nicht alle Projektobjekte erfüllen die Pflichtangaben. Keine unvollständige Lieferung erstellt. " + string.Join(" ", neu.Hinweise));
 
+        // Eine eigene verknüpfte Akte kann ausserhalb der vorwärts erreichbaren
+        // Hauptkette liegen (z.B. weiterer Zulaufpunkt am Schacht). Ihr Originalobjekt
+        // mitnehmen, bevor die aktuellen Angaben darauf angewendet werden.
+        foreach (var akte in projekt.Objektakten.Where(a => !roots.ContainsKey(a.Id)))
+            foreach (var q in akte.Quellen.Where(q => !q.IstLokaleKennung
+                && (q.Klasse == DssObjektarten.Klasse(akte.Art) || DssEinbautenZuordnung.Art(q.Klasse) == akte.Art)))
+                Hole(q.Kennung);
         var bauwerke = roots.Values.Select(o => o.Refs.GetValueOrDefault("AbwasserbauwerkRef", "")).ToHashSet(StringComparer.Ordinal);
         var knoten = roots.Values.Where(o => o.Klasse == "Abwasserknoten").Select(o => o.Tid).ToHashSet(StringComparer.Ordinal);
         foreach (var q in quellen.Values.Where(q => q.Klasse == "Haltungspunkt" && knoten.Contains(q.Referenzen.GetValueOrDefault("AbwassernetzelementRef", "")))) Hole(q.Kennung);
@@ -61,7 +71,7 @@ public static class DssExportPlanBuilder
         foreach (var q in quellen.Values.Where(q => q.Klasse == "Erhaltungsereignis_Ausfuehrende_FirmaAssoc"))
             if (ereignisse.Contains(q.Referenzen.GetValueOrDefault("Erhaltungsereignis_Ausfuehrende_FirmaAssocRef", ""))) Hole(q.Kennung);
 
-        var kontext = new DssExportBearbeitung(projekt, objekte, roots, quellen, hinweise);
+        var kontext = new DssExportBearbeitung(projekt, objekte, roots, quellen, hinweise, mitZusatzangaben);
         kontext.Uebernehme();
         // 0..1 Firma ist in INTERLIS 2.3 am Ereignis eingebettet. Ältere Belege
         // mit separatem Link werden beim Neu-Schreiben in die Normschreibweise überführt.
@@ -80,7 +90,9 @@ public static class DssExportPlanBuilder
             && q.Klasse != "Erhaltungsereignis_Ausfuehrende_FirmaAssoc"))
             hinweise.Add($"Quellobjekt {q.Klasse} «{q.Werte.GetValueOrDefault("Bezeichnung", q.Kennung)}» ({q.Kennung}) fehlt in der XTF: gehört nicht zum exportierten Objektverbund.");
         hinweise.Add($"{objekte.Values.Sum(o => o.Werte.Count)} DSS-Feldwerte; {objekte.Values.Count(o => o.Klasse == "Deckel")} Deckel; {objekte.Values.Count(o => o.Klasse == "Unterhalt")} Unterhalts-/Sanierungsereignisse.");
-        return new(objekte.Values.Select(o => o.Fertig()).ToArray(), hinweise, neu.Haltungen + importierteH.Count, neu.Schaechte + importierteS.Count, Dss: true);
+        var plan = new XtfNeuPlan(objekte.Values.Select(o => o.Fertig()).ToArray(), hinweise,
+            neu.Haltungen + importierteH.Count, neu.Schaechte + importierteS.Count, Dss: true);
+        return mitZusatzangaben ? DssProjektAngaben.Ergaenze(plan, projekt, roots.ToDictionary(p => p.Key, p => p.Value.Tid)) : plan;
 
         DssExportObjekt? Hole(string? id, string? erwartet = null)
         {
@@ -89,7 +101,9 @@ public static class DssExportPlanBuilder
             if (objekte.TryGetValue(id, out var alt)) return alt;
             if (DssExportSchema.Felder(q.Klasse) is null && !DssExportPruefung.Associationen.ContainsKey(q.Klasse))
                 throw new InvalidOperationException($"DSS: Die referenzierte Klasse {q.Klasse} ist noch nicht im Exportvertrag enthalten ({id}).");
-            var o = DssExportObjekt.Aus(q); objekte.Add(id, o);
+            var o = DssExportObjekt.Aus(q);
+            if (mitZusatzangaben) DssQuellabweichungen.Trenne(o, hinweise);
+            objekte.Add(id, o);
             // Ausschliesslich fehlende Quellnamen ergänzen, bevor aktuelle Eingaben angewendet werden.
             if (DssExportSchema.Felder(q.Klasse)?.GetValueOrDefault("Bezeichnung")?.Required == true && string.IsNullOrEmpty(o.Werte.GetValueOrDefault("Bezeichnung")))
             {
@@ -101,7 +115,13 @@ public static class DssExportPlanBuilder
         }
     }
 
-    private static Dictionary<string, ObjektQuellbeleg> Quellen(Project projekt)
+    private static void PruefeBauwerkskennung(string? gespeichert, DssExportObjekt o)
+    {
+        if (!string.IsNullOrWhiteSpace(gespeichert) && o.Refs.GetValueOrDefault("AbwasserbauwerkRef") != gespeichert)
+            throw new InvalidOperationException($"DSS: {o.Klasse} {o.Tid}: Bauwerkskennung {gespeichert} widerspricht dem Originalverweis {o.Refs.GetValueOrDefault("AbwasserbauwerkRef", "(leer)")}. Bitte GeoShop-Zuordnung klären; keine Ersatzkennung erzeugt.");
+    }
+
+    internal static Dictionary<string, ObjektQuellbeleg> Quellen(Project projekt)
     {
         var result = new Dictionary<string, ObjektQuellbeleg>(StringComparer.Ordinal);
         foreach (var gruppe in projekt.Objektakten.SelectMany(a => a.Quellen).Where(q => q.System == "GeoShop-XTF"

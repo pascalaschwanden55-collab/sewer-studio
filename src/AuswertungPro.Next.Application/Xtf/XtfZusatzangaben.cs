@@ -43,7 +43,7 @@ public static class XtfZusatzangaben
         [FieldKeys.PositionAccuracy] = "Lagebestimmung"
     };
 
-    public static bool IstErlaubt(string feld) => Felder.Contains(feld, StringComparer.Ordinal);
+    public static bool IstErlaubt(string feld) => feld == Dss.DssProjektAngaben.Feld || Felder.Contains(feld, StringComparer.Ordinal);
     public static string? Standardfeld(string feld) => Standardfelder.GetValueOrDefault(feld);
 
     public static string Schachtfeld(SchachtRecord record, string feld)
