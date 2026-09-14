@@ -26,6 +26,8 @@ internal sealed class DssExportBearbeitung(Project projekt, Dictionary<string, D
         {
             var tids = akte.Quellen.Where(q => q.Klasse == "Haltungspunkt" && !q.IstLokaleKennung)
                 .Select(q => q.Kennung).Distinct().ToArray();
+            // Punkt einer fremden Leitung ohne eigene Eingaben: bewusst nicht geliefert.
+            if (tids.Length == 1 && !objekte.ContainsKey(tids[0]) && !DssObjektarten.HatEigeneEingaben(projekt, akte)) continue;
             if (tids.Length != 1 || !objekte.TryGetValue(tids[0], out var punkt) || punkt.Klasse != "Haltungspunkt")
                 throw new InvalidOperationException($"DSS: {akte}: zugehöriger Original-Haltungspunkt fehlt oder ist mehrdeutig.");
             Felder(akte, punkt, null);

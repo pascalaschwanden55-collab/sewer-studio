@@ -23,8 +23,19 @@
   müssen dem Originalverweis entsprechen. Namenskonflikte nennen beide Original-TIDs;
   Namen werden nicht automatisch umbenannt. Keine neue Dienstregistrierung oder Pakete.
 - Synthetische Voll-/Änderungslieferung: ilivalidator mit allObjectsAccessible bestanden.
-  Reales Projekt Bürglen bleibt wegen doppeltem Haltungspunktnamen A76157 gesperrt;
-  Pascal kennt keine korrigierte Bezeichnung. Originale unangetastet, kein GEONIS-Rückimport.
+  Reales Projekt Bürglen (14.09. abends): beide Lieferungen ilivalidator null Fehler. Mit
+  allObjectsAccessible fehlt nur der Datenherr `ch20p3q400002009`: GeoShop liefert keine
+  Organisationsobjekte, der Verweis ist echt extern. Originale unangetastet, kein GEONIS-Rückimport.
+- **Ein Haltungspunkt gehört zu genau einer Haltung.** Punkte fremder Leitungen an
+  Projektknoten (Bürglen: 129 von 167 Punktakten) werden nur mit eigenen Eingaben geliefert
+  (`DssObjektarten.HatEigeneEingaben`: Handwert, Unterliste oder bewusst behaltener
+  Vergleichswert). Ohne Eingabe bleiben sie in GeoShop, und ein Quellkonflikt dort sperrt
+  nichts mehr. So war der doppelte Quellname A76157 (Projekthaltung gegen Hausanschluss
+  ausserhalb des Projekts) keine Sperre mehr. Nie wieder alle Punkte am Knoten holen.
+- **Gleiches Profil = Originalverweis.** `DssProfilBearbeitung` legt ein eigenes Rohrprofil
+  nur an, wenn Profiltyp, Verhältnis oder Datenherr/-lieferant vom Original abweichen. Eine DN
+  aus dem alten Import (`FieldSource.Legacy`) gilt sonst als Änderung und erzeugte in Bürglen
+  19 identische Kreisprofile. Tests: `XtfDssFremdeHaltungspunkteTests`, `XtfDssRohrprofilTests`.
 - Prüfanleitung und genaue Empfängerregeln: `docs/XTF-EXPORT-KONTROLLE.md`.
   Tests: `XtfDssAenderungsExportTests`, `XtfQuellverbundErgaenzungTests` und XTF-Bestand.
 - Begleitende Push-Reparatur: `StartupSplashWindow.Impulse` enthält FirePulse und

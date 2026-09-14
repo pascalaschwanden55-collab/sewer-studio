@@ -60,6 +60,9 @@ internal static class DssProjektAngaben
                 var original = akte.Quellen.Where(q => !q.IstLokaleKennung && (q.Klasse == klasse || DssEinbautenZuordnung.Art(q.Klasse) == art)).Select(q => q.Kennung).Distinct().ToArray();
                 tid = original.Length == 1 ? original[0] : original.Length == 0 && klasse is "Deckel" or "Unterhalt" ? ids.Fuer(klasse, id.ToString("N")) : null;
             }
+            // Ein nicht gelieferter Punkt einer fremden Leitung trägt nur GeoShop-Anzeigen; kein Paket dafür.
+            if (art == "haltungspunkt" && akte is not null && !DssObjektarten.HatEigeneEingaben(p, akte)
+                && (tid is null || !plan.Objekte.Any(o => o.Tid == tid))) return;
             if (tid is null || !plan.Objekte.Any(o => o.Tid == tid && !o.OhneTid))
                 throw new InvalidOperationException($"DSS: Erfasste Angaben an {art} {id} haben kein eindeutiges Exportobjekt. Keine unvollständige XTF geschrieben.");
             if (!eintraege.TryGetValue(tid, out var liste)) eintraege[tid] = liste = [];

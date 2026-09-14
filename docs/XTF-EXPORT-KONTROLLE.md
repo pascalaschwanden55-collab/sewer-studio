@@ -79,19 +79,49 @@ Der gelesene Stand enthält **19 Haltungen, 33 Schächte**, 33 Deckel, 35 Sanier
 keinen Schacht. Ursache war die falsche Behandlung von Organisations-TIDs im alten
 Änderungsplaner. Dieser Fehler ist im Code behoben.
 
-Die vollständige Prüfung findet einen zusätzlichen Konflikt in der GeoShop-Quelle:
+Gegenprüfung der Bezeichnungen (14.09.2026, abends): Alle 19 Haltungen und 33 Schächte
+tragen die GeoShop-Bezeichnung ihrer Originalkennung; null Abweichungen.
 
-| Klasse | Bezeichnung | Original-TID |
-|---|---|---|
-| Haltungspunkt | A76157 | `ch24gwkdlWuXnSL4` |
-| Haltungspunkt | A76157 | `ch24gwkd86TKIHK8` |
+Die Vollprüfung vom Nachmittag meldete einen Namenskonflikt in der GeoShop-Quelle:
 
-Beide Punkte gehören zum gleichen Datenherrn. `DSS_2020_1_LV95` verlangt in dieser
-Klasse eine eindeutige Kombination aus Bezeichnung und Datenherr. Die richtige
-abweichende Bezeichnung ist nicht bekannt. **Beide Originalnamen und Kennungen bleiben
-erhalten. Für diesen Stand wird daher keine neue XTF als normgerecht freigegeben.**
-Andreas muss diesen Quellkonflikt klären. Die bisherige Datei ist dadurch nicht nachträglich
-korrigiert. Es wurde keine Mail versendet.
+| Klasse | Bezeichnung | Original-TID | gehört zu |
+|---|---|---|---|
+| Haltungspunkt | A76157 | `ch24gwkdlWuXnSL4` | Projekthaltung 80475-80462 (Anfangspunkt) |
+| Haltungspunkt | A76157 | `ch24gwkd86TKIHK8` | Hausanschluss 07.1036564-80475, **nicht im Projekt** |
+
+Beide Punkte liegen am Knoten 80475 beim gleichen Datenherrn; `DSS_2020_1_LV95` verlangt
+dort eine eindeutige Bezeichnung. Der Konflikt steckt in der GeoShop-Quelle, nicht in
+SewerStudio. **Er sperrt die Lieferung nicht mehr:** Ein Haltungspunkt gehört zu genau einer
+Haltung. Von den 167 Punktakten gehören 38 zu den 19 Projekthaltungen; die übrigen 129 sind
+Punkte fremder Leitungen an den Projektknoten. Sie werden nur geliefert, wenn sie eigene
+Eingaben tragen (Handwert, Unterliste oder ein im GeoShop-Vergleich bewusst behaltener,
+abweichender Wert). In Bürglen trägt keiner davon eine Eingabe; sie bleiben unverändert in
+GeoShop, und der Bericht nennt sie mit Bezeichnung und Kennung. Trägt ein fremder Punkt
+eine eigene Eingabe, wird er geliefert, und ein dortiger Namenskonflikt sperrt weiterhin.
+
+Zweiter Befund derselben Prüfung: Alle 19 Haltungen erhielten ein **neues eigenes
+Rohrprofil**, obwohl es dem gemeinsamen Originalprofil «Kreisprofil 1.00» glich. Auslöser
+war die DN aus dem alten Import (Quelle `Legacy`), die als Änderung galt. Ergibt sich dasselbe
+Profil wie das Original (Profiltyp, Verhältnis, Datenherr, Datenlieferant), bleibt jetzt der
+Originalverweis. In Bürglen bleiben zwei echte neue Profile: Ihr Original sagt «unbekannt»,
+Pascal hat von Hand «Kreisprofil» gesetzt.
+
+Ergebnis nach beiden Korrekturen (Export aus dem gespeicherten Projektstand, rein lesend):
+
+| Lieferung | Objekte | davon Haltungspunkte | Rohrprofile | Aufträge |
+|---|---|---|---|---|
+| vollständig | 19 Haltungen, 19 Kanäle, 33 Knoten, 33 Normschächte, 33 Deckel, 25 Einstiegshilfen, 35 Unterhalt, 183 Zusatzangaben | 38 | 4 (2 Original, 2 neu) | – |
+| Änderungen | dieselben Normobjekte als Kontext | 38 | 4 | 534 |
+
+Die 534 Aufträge unterscheiden sich alle vom Originalwert; keiner ist ein Scheinauftrag.
+Grosse Gruppen: 35 neue Sanierungsereignisse (Unterhalt mit Bezeichnung, Art, Status,
+Datenherr, Bauwerksbezug), Standortname aus der Strasse (33 Schächte, 19 Kanäle),
+Zustand Z4 nach Sanierung, «Saniert» als Leeren des Normbedarfs, Bemerkungen.
+Die 35 Sanierungen tragen technische Bezeichnungen `Unterhalt_<Kennung>`, weil das
+Feld «Bezeichnung» der Sanierungsakten in Bürglen leer ist.
+
+Der Mailentwurf für Andreas vom Nachmittag beschreibt A76157 noch als Sperre; das ist
+überholt. Der Quellkonflikt in GeoShop bleibt als Hinweis erwähnenswert, blockiert aber nichts.
 
 ## Nachweise
 
@@ -100,6 +130,14 @@ korrigiert. Es wurde keine Mail versendet.
   Dubletten und unveränderte Originaldateien/Projekte.
 - Synthetischer vollständiger Export und synthetische Änderungslieferung bestehen
   `ilivalidator 1.15.0 --allObjectsAccessible` gegen die mitgelieferten Originalmodelle.
+- Echte Bürglen-Lieferungen (vollständig und Änderungen, 14.09.2026 abends): `ilivalidator 1.15.0`
+  null Fehler, null Warnungen. Mit `--allObjectsAccessible` bleibt genau eine Fehlerart:
+  `No object found with OID ch20p3q400002009` (Datenherr/Datenlieferant Abwasser Uri). Die
+  GeoShop-Quelle enthält **kein einziges** Organisationsobjekt; der Verweis ist echt extern und
+  muss im Zielkataster vorhanden sein. Die Vollständigkeitsforderung ist deshalb für eine
+  GeoShop-basierte Lieferung nicht erfüllbar. Prüfdateien liegen unter
+  `Downloads\XTF_Buerglen_20260914_2043`.
+- `XtfDssFremdeHaltungspunkteTests` (3) und `XtfDssRohrprofilTests` (2) halten beide Regeln fest.
 - Das ist ein Nachweis für das Dateiformat, **kein durchgeführter GEONIS-/FME-Rückimport**.
   Insbesondere die Zusatzpakete und Änderungsaufträge müssen dort passend verarbeitet werden.
 - Vollständiger Release-Build: erfolgreich, 0 Fehler, 2 bestehende Nullable-Warnungen.

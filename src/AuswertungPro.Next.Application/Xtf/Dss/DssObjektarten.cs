@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.UseCases;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Xtf.Dss;
@@ -12,6 +13,17 @@ internal static class DssObjektarten
         "pumpe" => "FoerderAggregat", "absperr_drossel" => "Absperr_Drosselorgan",
         "ueberlauf" => "Ueberlauf", "bauwerksteil" => "BauwerksTeil", _ => null
     };
+
+    /// <summary>
+    /// Eigene Eingaben an einer Akte: Handwerte oder Unterlisten. Aus GeoShop uebernommene
+    /// Anzeigen ohne Handmarke zaehlen nicht. Ein Haltungspunkt einer fremden Leitung am
+    /// Projektknoten wird nur mit eigenen Eingaben geliefert (Buerglen 14.09.2026: zwei
+    /// Quellpunkte «A76157», der fremde sperrte die ganze Lieferung). Ein im GeoShop-Vergleich
+    /// bewusst behaltener Wert, der von der aktuellen Quelle abweicht, ist ebenfalls eine eigene Eingabe.
+    /// </summary>
+    internal static bool HatEigeneEingaben(Project projekt, ObjektAkte akte)
+        => akte.Unterlisten.Count > 0 || akte.Werte.Any(w => w.Value.VonHand
+            || GeoShopImportVergleich.BehaeltAktenwert(projekt, akte, w.Key, w.Value.Text));
 
     internal static string Bezeichnung(ObjektAkte akte)
     {

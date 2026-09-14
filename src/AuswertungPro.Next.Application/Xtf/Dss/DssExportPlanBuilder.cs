@@ -56,13 +56,16 @@ public static class DssExportPlanBuilder
         // Eine eigene verknüpfte Akte kann ausserhalb der vorwärts erreichbaren
         // Hauptkette liegen (z.B. weiterer Zulaufpunkt am Schacht). Ihr Originalobjekt
         // mitnehmen, bevor die aktuellen Angaben darauf angewendet werden.
-        foreach (var akte in projekt.Objektakten.Where(a => !roots.ContainsKey(a.Id)))
+        // Ein Haltungspunkt gehört zu genau einer Haltung; die Punkte der gelieferten
+        // Haltungen kommen über deren Verweise mit. Punkte fremder Leitungen am
+        // Projektknoten bleiben ohne eigene Eingaben unverändert in GeoShop. Sie sind
+        // kein Teil des Verbunds, und ein Quellkonflikt dort darf die Lieferung nicht sperren.
+        foreach (var akte in projekt.Objektakten.Where(a => !roots.ContainsKey(a.Id)
+                     && (a.Art != "haltungspunkt" || DssObjektarten.HatEigeneEingaben(projekt, a))))
             foreach (var q in akte.Quellen.Where(q => !q.IstLokaleKennung
                 && (q.Klasse == DssObjektarten.Klasse(akte.Art) || DssEinbautenZuordnung.Art(q.Klasse) == akte.Art)))
                 Hole(q.Kennung);
         var bauwerke = roots.Values.Select(o => o.Refs.GetValueOrDefault("AbwasserbauwerkRef", "")).ToHashSet(StringComparer.Ordinal);
-        var knoten = roots.Values.Where(o => o.Klasse == "Abwasserknoten").Select(o => o.Tid).ToHashSet(StringComparer.Ordinal);
-        foreach (var q in quellen.Values.Where(q => q.Klasse == "Haltungspunkt" && knoten.Contains(q.Referenzen.GetValueOrDefault("AbwassernetzelementRef", "")))) Hole(q.Kennung);
         foreach (var q in quellen.Values.Where(q => q.Klasse is "Deckel" or "Einstiegshilfe" or "Erhaltungsereignis_AbwasserbauwerkAssoc"))
             if (bauwerke.Contains(q.Referenzen.GetValueOrDefault("AbwasserbauwerkRef", ""))) Hole(q.Kennung);
         foreach (var q in quellen.Values.Where(q => DssEinbautenZuordnung.Elternrolle(q.Klasse) is not null))
@@ -86,8 +89,13 @@ public static class DssExportPlanBuilder
             objekte.Remove(assoc.Tid);
         }
         DssExportPruefung.Pruefe(objekte, hinweise);
+        var fremdePunkte = quellen.Values.Where(q => q.Klasse == "Haltungspunkt" && !objekte.ContainsKey(q.Kennung))
+            .OrderBy(q => q.Werte.GetValueOrDefault("Bezeichnung", q.Kennung), StringComparer.Ordinal).ToArray();
+        if (fremdePunkte.Length > 0)
+            hinweise.Add($"{fremdePunkte.Length} Haltungspunkte fremder Leitungen an Projektknoten bleiben unverändert in GeoShop und werden nicht geliefert: "
+                + string.Join(", ", fremdePunkte.Select(q => $"{q.Werte.GetValueOrDefault("Bezeichnung", q.Kennung)} ({q.Kennung})")) + ".");
         foreach (var q in quellen.Values.Where(q => !objekte.ContainsKey(q.Kennung)
-            && q.Klasse != "Erhaltungsereignis_Ausfuehrende_FirmaAssoc"))
+            && q.Klasse is not ("Erhaltungsereignis_Ausfuehrende_FirmaAssoc" or "Haltungspunkt")))
             hinweise.Add($"Quellobjekt {q.Klasse} «{q.Werte.GetValueOrDefault("Bezeichnung", q.Kennung)}» ({q.Kennung}) fehlt in der XTF: gehört nicht zum exportierten Objektverbund.");
         hinweise.Add($"{objekte.Values.Sum(o => o.Werte.Count)} DSS-Feldwerte; {objekte.Values.Count(o => o.Klasse == "Deckel")} Deckel; {objekte.Values.Count(o => o.Klasse == "Unterhalt")} Unterhalts-/Sanierungsereignisse.");
         var plan = new XtfNeuPlan(objekte.Values.Select(o => o.Fertig()).ToArray(), hinweise,

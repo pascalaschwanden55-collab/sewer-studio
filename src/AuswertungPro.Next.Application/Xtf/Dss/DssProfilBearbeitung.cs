@@ -34,6 +34,13 @@ internal static class DssProfilBearbeitung
             if (ratio is not null && ratio != "1" && ratio != "1.00") throw new InvalidOperationException("DSS: Kreisprofil mit unterschiedlicher Höhe und Breite.");
             ratio = "1.00";
         }
+        // Ergibt sich dasselbe Profil wie das Original, bleibt der Originalverweis. Sonst
+        // entstünde je Haltung eine identische Kopie unter neuer Kennung (Bürglen 14.09.2026:
+        // 19 gleiche Kreisprofile, ausgelöst durch eine DN aus dem alten Import).
+        if (alt is not null && alt.Werte.GetValueOrDefault("Profiltyp") == typ
+            && GleichesVerhaeltnis(alt.Werte.GetValueOrDefault("HoehenBreitenverhaeltnis"), ratio)
+            && alt.Refs.GetValueOrDefault("DatenherrRef") == haltung.Refs.GetValueOrDefault("DatenherrRef")
+            && alt.Refs.GetValueOrDefault("DatenlieferantRef") == haltung.Refs.GetValueOrDefault("DatenlieferantRef")) return;
         // Gemeinsames Katasterprofil niemals unter seiner Original-TID verändern.
         var tid = ids.Fuer("Rohrprofil", h.Id.ToString("N") + "|" + typ + "|" + ratio
             + "|" + haltung.Refs["DatenherrRef"] + "|" + haltung.Refs["DatenlieferantRef"]);
@@ -44,5 +51,14 @@ internal static class DssProfilBearbeitung
         profil.Setze("HoehenBreitenverhaeltnis", ratio ?? "");
         objekte.TryAdd(tid, profil); haltung.Refs["RohrprofilRef"] = tid;
         haltung.Werte["Letzte_Aenderung"] = DateTime.Today.ToString("yyyyMMdd");
+    }
+
+    /// <summary>«1», «1.00» und «1.000» sind dasselbe Verhältnis; leer ist nur leer gleich.</summary>
+    private static bool GleichesVerhaeltnis(string? original, string? neu)
+    {
+        if (string.IsNullOrWhiteSpace(original) || string.IsNullOrWhiteSpace(neu)) return string.IsNullOrWhiteSpace(original) && string.IsNullOrWhiteSpace(neu);
+        return decimal.TryParse(original, System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out var a)
+            && decimal.TryParse(neu, System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out var b)
+            ? a == b : original == neu;
     }
 }
