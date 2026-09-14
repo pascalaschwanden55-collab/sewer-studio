@@ -1,24 +1,30 @@
 # SewerStudio — AI Sewer Inspection System
 
-## Startanimation 5.0: Kugel, straffer (14.09.2026)
+## Startanimation 5.0: Kugel, deutlich neu (14.09.2026)
 
-- Entscheid Pascal nach einer Browser-Vorschau mit drei Varianten
-  (`docs/reviews/2026-09-14-startanimation/`, Kamerafahrt / Leitungsnetz / Kugel): Die
-  KI-Kugel bleibt, ihre Zeitplanung ist fest. `StartupSplashChoreografie` (Views/Windows,
-  reine Rechnung neben `StartupSplashAnimationPolicy`) liefert je Bild: Knoten 0,15-1,5 s in
-  Spiralreihenfolge, Verbindungen ab 0,7 s, Impulse erst ab 1,5 s, Wellen fest bei 3,0 und
-  5,4 s (danach alle 2,7 s, solange das Programm laedt), Ringe ab 0/150/300 ms, gruener
-  Bereit-Anteil 0,56 s.
-- **Knoten und Verbindungen haben kein Storyboard mehr.** `RenderFrame` setzt ihre Deckkraft
-  je Bild aus der Choreografie; ein haltendes WPF-Storyboard auf `Opacity` wuerde den
-  Tiefennebel ueberstimmen. Nie wieder `FadeIn(...)` auf Knoten oder Linien legen.
-- Der Bereit-Moment kommt fruehestens nach 8 s (`MinimumDisplayTime`), `_bereitSeit` setzt
-  ihn in `TriggerReadyBurst`. Rechte Haelfte, Chips, Versions-Chip und Ueberspringen sind
-  unveraendert; kein Gold, kein Dunkel.
-- Nachweise: `StartupSplashChoreografieTests` (25) und die `StartupSplash*`-Tests; die
-  Sichtprobe im Programm macht Pascal. Ein laufendes SewerStudio sperrt `bin\Debug`,
-  deshalb das Testprojekt mit `-o .tmp/testout-splash` bauen und die DLL direkt testen.
-
+- Entscheid Pascal nach einer Browser-Vorschau mit vier Varianten
+  (`docs/reviews/2026-09-14-startanimation/`, Kamerafahrt / Leitungsnetz / Kugel straffer /
+  Kugel deutlich neu): Die zurueckhaltende Fassung C war «deutlich zu wenig neu», umgesetzt
+  ist D. `StartupSplashChoreografie` (Views/Windows, reine Rechnung neben
+  `StartupSplashAnimationPolicy`) liefert je Bild: Einflug der Knoten von 2,0-3,3
+  Kugelradien aussen (0,05-1,85 s, Spiralreihenfolge, je 0,8 s), Kugelwachstum 72->100 %
+  in 2 s, Ringe ab 0,3/0,5/0,7 s als wachsender Bogen, Verbindungen erst nach Ankunft
+  beider Enden mit Aufblitzen, Impulse ab 1,9 s, Scanwelle bei 3,0 s und Ringwelle aus dem
+  Kern bei 5,0 s (beide alle 5,4 s weiter, solange geladen wird), gruene Bereit-Welle 0,9 s.
+- **Kein Storyboard mehr auf Kern, Ringen, Knoten oder Linien.** `RenderFrame` und
+  `UpdateBackdrop` setzen Deckkraft und Farbe je Bild aus der Choreografie; ein haltendes
+  WPF-Storyboard auf `Opacity` ueberstimmt jeden spaeteren direkten Wert. Nie wieder
+  `FadeIn(...)` auf Elemente legen, die je Bild gesetzt werden.
+- Ringe zeichnen sich ueber `StrokeDashArray` (ein langer Strich, riesige Luecke) als
+  Bogen; waehrend des Bogens ist ihr Bitmap-Cache aus. Je Knoten gibt es eine `Line` als
+  Leuchtspur, fuer Ringwelle und Bereit-Welle je einen Kreis (`BuildWellenkreise`).
+- Die Ueberzeile «KI-GESTUETZTE KANALINSPEKTION» ist entfernt (Entscheid Pascal). Rechte
+  Haelfte, Chips, Versions-Chip und Ueberspringen sind sonst unveraendert; kein Gold, kein
+  Dunkel. Der Bereit-Moment kommt fruehestens nach 8 s (`MinimumDisplayTime`).
+- Nachweise: `StartupSplashChoreografieTests` (33) und die `StartupSplash*`-Tests; die
+  Sichtprobe im Programm macht Pascal. Ein laufendes SewerStudio sperrt `bin\Debug`:
+  Testprojekt mit `-o .tmp/testout-splash` bauen, die DLL direkt testen und `bin\Debug`
+  erst nach dem Schliessen neu bauen, sonst zeigt der Neustart die alte Fassung.
 ## Ausdrücklich ausgewählte Schacht-PDF (14.09.2026)
 
 - `SchaechtePageViewModel.ProtocolImport` übergibt den ausgewählten Schacht an den

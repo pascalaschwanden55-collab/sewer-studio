@@ -52,6 +52,12 @@ public partial class StartupSplashWindow
         _screenX = new double[_nodes.Count];
         _screenY = new double[_nodes.Count];
         _screenDepth = new double[_nodes.Count];
+        _nodeGruen = new double[_nodes.Count];
+        _prevX = new double[_nodes.Count];
+        _prevY = new double[_nodes.Count];
+        Array.Fill(_prevX, double.NaN);
+        Array.Fill(_prevY, double.NaN);
+        _ringBogenFertig = new bool[3];
     }
 
     /// <summary>Entwurfsmass (bei Faktor 1) auf die aktuelle Kugelgroesse umrechnen.</summary>
@@ -139,6 +145,49 @@ public partial class StartupSplashWindow
 
         BuildAccentArc();
         BuildDustField();
+        BuildWellenkreise();
+    }
+
+    /// <summary>
+    /// Zwei Kreise fuer die Ringwelle aus dem Kern (Cyan) und die gruene Bereit-Welle.
+    /// Radius und Deckkraft setzt RenderFrame je Bild aus der Choreografie.
+    /// </summary>
+    private void BuildWellenkreise()
+    {
+        _ringwelle = CreateWellenkreis(AccentCyan, 3.0, 4);
+        _bereitwelle = CreateWellenkreis(ReadyAccent, 4.0, 5);
+    }
+
+    private Ellipse CreateWellenkreis(Color color, double thickness, int zIndex)
+    {
+        var kreis = new Ellipse
+        {
+            Width = 1,
+            Height = 1,
+            Opacity = 0,
+            Fill = Brushes.Transparent,
+            Stroke = new SolidColorBrush(color),
+            StrokeThickness = thickness * Math.Sqrt(_sphereScale),
+            IsHitTestVisible = false
+        };
+        Panel.SetZIndex(kreis, zIndex);
+        NeuralCanvas.Children.Add(kreis);
+        return kreis;
+    }
+
+    private static void SetzeWellenkreis(Ellipse kreis, double centerX, double centerY, double radius, double opacity)
+    {
+        if (radius <= 0 || opacity <= 0)
+        {
+            kreis.Opacity = 0;
+            return;
+        }
+
+        kreis.Width = radius * 2;
+        kreis.Height = radius * 2;
+        Canvas.SetLeft(kreis, centerX - radius);
+        Canvas.SetTop(kreis, centerY - radius);
+        kreis.Opacity = opacity;
     }
 
     /// <summary>
@@ -292,6 +341,20 @@ public partial class StartupSplashWindow
             Panel.SetZIndex(visual, 30);
             NeuralCanvas.Children.Add(visual);
             _nodes.Add(new NeuralNode(x, y, z, visual, fillBrush, strokeBrush));
+
+            // Leuchtspur waehrend des Einflugs: liegt hinter den Knoten, vor den Ringen.
+            var spur = new Line
+            {
+                Stroke = new SolidColorBrush(AccentCyan),
+                StrokeThickness = 1.8 * Math.Sqrt(_sphereScale),
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                Opacity = 0,
+                IsHitTestVisible = false
+            };
+            Panel.SetZIndex(spur, 25);
+            NeuralCanvas.Children.Add(spur);
+            _trails.Add(spur);
         }
     }
 
@@ -364,25 +427,6 @@ public partial class StartupSplashWindow
         Panel.SetZIndex(line, 10);
         NeuralCanvas.Children.Add(line);
         _connections.Add(new NeuralConnection(a, b, line, strokeBrush));
-    }
-
-    /// <summary>
-    /// Kern und Ringe blenden ab Start gestaffelt ein. Knoten und Verbindungen bekommen
-    /// bewusst kein Storyboard: Ihre Deckkraft setzt RenderFrame je Bild aus
-    /// <see cref="StartupSplashChoreografie"/>, sonst wuerde ein haltendes Storyboard den
-    /// Tiefennebel ueberstimmen.
-    /// </summary>
-    private void AnimateNetworkFadeIn()
-    {
-        var dauer = StartupSplashChoreografie.RingDauerMillisekunden;
-        if (_coreGlow is not null)
-            FadeIn(_coreGlow, StartupSplashChoreografie.RingStartMillisekunden(0), dauer);
-        if (_ringOuter is not null)
-            FadeIn(_ringOuter, StartupSplashChoreografie.RingStartMillisekunden(0), dauer);
-        if (_ringMiddle is not null)
-            FadeIn(_ringMiddle, StartupSplashChoreografie.RingStartMillisekunden(1), dauer);
-        if (_ringInner is not null)
-            FadeIn(_ringInner, StartupSplashChoreografie.RingStartMillisekunden(2), dauer);
     }
 
     private void OnRendering(object? sender, EventArgs e)
@@ -471,6 +515,7 @@ public partial class StartupSplashWindow
         // Inferenz-Welle: feste Zeiten aus der Choreografie (3,0 s und 5,4 s, danach im
         // alten Takt, solange das Programm laedt). Nach dem Bereit-Moment keine Welle mehr.
         _waveT = _emitPulses ? StartupSplashChoreografie.Wellenfortschritt(elapsed) : -1;
+        _ringwelleT = _emitPulses ? StartupSplashChoreografie.Ringwellenfortschritt(elapsed) : -1;
 
         foreach (var satellite in _satellites)
             satellite.Angle += satellite.Speed * dt;
@@ -534,16 +579,35 @@ public partial class StartupSplashWindow
         var waveStrength = waveActive ? Math.Sin(Math.PI * _waveT) : 0;
         var nodeScale = Math.Sqrt(_sphereScale);
         var elapsed = _animationClock.Elapsed.TotalSeconds;
-        var gruen = _bereitSeit is { } bereitSeit
-            ? StartupSplashChoreografie.Bereitanteil(elapsed - bereitSeit)
-            : 0;
+        var anzahl = _nodes.Count;
 
-        for (int i = 0; i < _nodes.Count; i++)
+        // Die Kugel waechst waehrend des Einflugs; der Grundradius bleibt die Bezugsgroesse
+        // fuer Startpunkte und Wellen.
+        var basisRadius = 170 * _sphereScale;
+        _projectionScale = basisRadius * StartupSplashChoreografie.KugelMassstab(elapsed);
+        var kugelRadius = _projectionScale;
+
+        var ringwelleAktiv = _ringwelleT >= 0;
+        var ringwelleRadius = ringwelleAktiv ? _ringwelleT * 1.35 * kugelRadius : 0;
+        var ringwelleBand = 0.16 * kugelRadius;
+        var bereit = _bereitSeit is { } bereitSeit ? StartupSplashChoreografie.Bereitwelle(elapsed - bereitSeit) : 0;
+        var bereitRadius = bereit * 1.7 * kugelRadius;
+
+        for (int i = 0; i < anzahl; i++)
         {
             var node = _nodes[i];
             Project(node.X, node.Y, node.Z,
                 cosY, sinY, cosX, sinX, cosZ, sinZ,
-                out var px, out var py, out var depth, out var perspective);
+                out var zielX, out var zielY, out var depth, out var perspective);
+
+            // Einflug: vom Startpunkt weit aussen weich zum Platz auf der Kugel.
+            var u = StartupSplashChoreografie.EinflugFortschritt(i, anzahl, elapsed);
+            var richtung = StartupSplashChoreografie.EinflugRichtung(i);
+            var abstand = StartupSplashChoreografie.EinflugAbstand(i) * basisRadius;
+            var startX = _centerX + Math.Cos(richtung) * abstand;
+            var startY = _centerY + Math.Sin(richtung) * abstand;
+            var px = startX + (zielX - startX) * u;
+            var py = startY + (zielY - startY) * u;
 
             _screenX[i] = px;
             _screenY[i] = py;
@@ -560,6 +624,26 @@ public partial class StartupSplashWindow
                 }
             }
 
+            var abstandKern = Math.Sqrt((px - _centerX) * (px - _centerX) + (py - _centerY) * (py - _centerY));
+            if (ringwelleAktiv)
+            {
+                var ringDist = Math.Abs(abstandKern - ringwelleRadius);
+                if (ringDist < ringwelleBand)
+                {
+                    var boost = (1.0 - ringDist / ringwelleBand) * 0.9;
+                    if (boost > node.Activation)
+                        node.Activation = boost;
+                }
+            }
+
+            // Gruene Bereit-Welle: Was sie passiert hat, bleibt gruen; am Rand leuchtet es staerker.
+            var gruen = bereit > 0 && abstandKern < bereitRadius
+                ? 0.7 + 0.3 * Clamp01(1.0 - (bereitRadius - abstandKern) / (0.25 * kugelRadius))
+                : 0;
+            _nodeGruen[i] = gruen;
+
+            UpdateLeuchtspur(i, px, py, u, nodeScale);
+
             var depth01 = Clamp01((depth + 1.0) / 2.0);
             // Tiefennebel: die ferne Hemisphaere wird kleiner und blasser,
             // die nahe bleibt unveraendert — dadurch wirkt die Kugel plastisch.
@@ -569,11 +653,15 @@ public partial class StartupSplashWindow
                 * (0.72 + fog * 0.28)
                 * nodeScale;
             var alpha = (byte)Math.Clamp((90 + depth01 * 150 + node.Activation * 40) * fog, 0, 255);
+            // Im Einflug noch cyan, am Platz die normale Kugelfarbe; nach der Bereit-Welle gruen.
             var color = Blend(
-                Blend(AccentBlue, NodeCore, 0.22 + depth01 * 0.55 + node.Activation * 0.30),
+                Blend(
+                    Blend(AccentBlue, NodeCore, 0.22 + depth01 * 0.55 + node.Activation * 0.30),
+                    AccentCyan,
+                    Math.Max(node.Activation, 1.0 - u)),
                 ReadyAccent,
                 gruen * 0.8);
-            var sichtbar = StartupSplashChoreografie.KnotenSichtbarkeit(i, _nodes.Count, elapsed);
+            var sichtbar = u <= 0 ? 0 : 0.6 + 0.4 * u;
 
             node.Visual.Width = size;
             node.Visual.Height = size;
@@ -602,32 +690,98 @@ public partial class StartupSplashWindow
                 }
             }
 
+            if (ringwelleAktiv)
+            {
+                var midX = (_screenX[a] + _screenX[b]) / 2.0;
+                var midY = (_screenY[a] + _screenY[b]) / 2.0;
+                var ringDist = Math.Abs(Math.Sqrt((midX - _centerX) * (midX - _centerX) + (midY - _centerY) * (midY - _centerY)) - ringwelleRadius);
+                if (ringDist < ringwelleBand)
+                {
+                    var boost = (1.0 - ringDist / ringwelleBand) * 0.45;
+                    if (boost > connection.Activation)
+                        connection.Activation = boost;
+                }
+            }
+
             var depth01 = Clamp01((_screenDepth[a] + _screenDepth[b] + 2.0) / 4.0);
             var fog = StartupSplashAnimationPolicy.DepthFog((_screenDepth[a] + _screenDepth[b]) / 2.0);
-            var alpha = (byte)Math.Clamp((30 + depth01 * 90 + connection.Activation * 140) * fog, 0, 235);
+            // Aufblitzen, sobald beide Enden angekommen sind; danach die normale Linie.
+            var blitz = StartupSplashChoreografie.VerbindungBlitz(a, b, anzahl, elapsed);
+            var gruen = Math.Max(_nodeGruen[a], _nodeGruen[b]);
+            var alpha = (byte)Math.Clamp((30 + depth01 * 90 + connection.Activation * 140 + blitz * 120) * fog, 0, 235);
             var color = Blend(
-                Blend(LineAccent, AccentCyan, connection.Activation * 0.85 + depth01 * 0.20),
+                Blend(LineAccent, AccentCyan, Math.Max(connection.Activation * 0.85 + depth01 * 0.20, blitz)),
                 ReadyAccent,
                 gruen * 0.7);
 
-            connection.Visual.Opacity = StartupSplashChoreografie.VerbindungSichtbarkeit(a, b, _nodes.Count, elapsed);
+            connection.Visual.Opacity = StartupSplashChoreografie.VerbindungSichtbarkeit(a, b, anzahl, elapsed);
             connection.Visual.X1 = _screenX[a];
             connection.Visual.Y1 = _screenY[a];
             connection.Visual.X2 = _screenX[b];
             connection.Visual.Y2 = _screenY[b];
             connection.Visual.StrokeThickness =
-                (0.5 + depth01 * 0.7 + connection.Activation * 1.7) * (0.75 + fog * 0.25) * nodeScale;
+                (0.5 + depth01 * 0.7 + connection.Activation * 1.7 + blitz * 1.2) * (0.75 + fog * 0.25) * nodeScale;
             connection.StrokeBrush.Color = Color.FromArgb(alpha, color.R, color.G, color.B);
             Panel.SetZIndex(connection.Visual, 8 + (int)(depth01 * 12));
         }
 
+        if (_ringwelle is not null)
+            SetzeWellenkreis(_ringwelle, _centerX, _centerY, ringwelleRadius, ringwelleAktiv ? 0.55 * (1.0 - _ringwelleT) : 0);
+        if (_bereitwelle is not null)
+            SetzeWellenkreis(_bereitwelle, _centerX, _centerY, bereitRadius, bereit > 0 && bereit < 1 ? 0.8 * (1.0 - bereit) : 0);
+
         UpdateActivePulseVisuals();
         UpdateFlareVisuals();
-        UpdateBackdrop();
+        UpdateBackdrop(elapsed, bereit);
         UpdateScanLine(waveActive, waveX, waveStrength);
         UpdateSatellites();
         UpdateDust();
         UpdateProgressSheen();
+    }
+
+    /// <summary>
+    /// Kurze Leuchtspur entgegen der Flugrichtung, nur waehrend des Einflugs. Die Richtung
+    /// kommt aus der Position des letzten Bilds; am Startpunkt gibt es noch keine.
+    /// </summary>
+    private void UpdateLeuchtspur(int index, double px, double py, double u, double nodeScale)
+    {
+        if (index >= _trails.Count)
+            return;
+
+        var spur = _trails[index];
+        if (u <= 0 || u >= 1)
+        {
+            spur.Opacity = 0;
+            _prevX[index] = u <= 0 ? double.NaN : px;
+            _prevY[index] = u <= 0 ? double.NaN : py;
+            return;
+        }
+
+        var prevX = _prevX[index];
+        var prevY = _prevY[index];
+        _prevX[index] = px;
+        _prevY[index] = py;
+        if (double.IsNaN(prevX))
+        {
+            spur.Opacity = 0;
+            return;
+        }
+
+        var vx = px - prevX;
+        var vy = py - prevY;
+        var laenge = Math.Sqrt(vx * vx + vy * vy);
+        if (laenge < 0.5)
+        {
+            spur.Opacity = 0;
+            return;
+        }
+
+        var spurLaenge = 26 * nodeScale * (1.0 - u) + 2;
+        spur.X1 = px;
+        spur.Y1 = py;
+        spur.X2 = px - vx / laenge * spurLaenge;
+        spur.Y2 = py - vy / laenge * spurLaenge;
+        spur.Opacity = 0.55 * (1.0 - u);
     }
 
     private void UpdateDust()
@@ -768,13 +922,13 @@ public partial class StartupSplashWindow
         }
     }
 
-    private void UpdateBackdrop()
+    private void UpdateBackdrop(double elapsed, double bereit)
     {
         var breath = 0.5 + 0.5 * Math.Sin(_breathPhase);
 
         if (_coreGlow is not null)
         {
-            _coreGlow.Opacity = 0.55 + breath * 0.30;
+            _coreGlow.Opacity = (0.55 + breath * 0.30) * StartupSplashChoreografie.KernGluehen(elapsed);
             var scale = 0.92 + breath * 0.10;
             if (_coreGlowScale is not null)
             {
@@ -783,17 +937,48 @@ public partial class StartupSplashWindow
             }
         }
 
-        if (_ringOuter is not null)
-            _ringOuter.Opacity = 0.30 + breath * 0.18;
-        if (_ringMiddle is not null)
-            _ringMiddle.Opacity = 0.42 + breath * 0.20;
-        if (_ringInner is not null)
-            _ringInner.Opacity = 0.55 + breath * 0.22;
+        UpdateRing(_ringOuter, 0, 0.30 + breath * 0.18, AccentDeep, elapsed, bereit);
+        UpdateRing(_ringMiddle, 1, 0.42 + breath * 0.20, AccentBlue, elapsed, bereit);
+        UpdateRing(_ringInner, 2, 0.55 + breath * 0.22, AccentCyan, elapsed, bereit);
 
         if (_accentArc is not null)
         {
             var fadeIn = Clamp01((_animationClock.Elapsed.TotalSeconds - 0.7) / 1.4);
             _accentArc.Opacity = (0.45 + breath * 0.30) * fadeIn;
+        }
+    }
+
+    /// <summary>
+    /// Ein Ring zeichnet sich zuerst als wachsender Bogen (ein langer Strich, riesige Luecke,
+    /// Masse in Strichstaerke 1 = Pixel) und traegt erst danach sein gepunktetes Muster.
+    /// Waehrend des Bogens ist der Bitmap-Cache aus, sonst wuerde jedes Bild neu gerastert.
+    /// </summary>
+    private void UpdateRing(Ellipse? ring, int index, double grundDeckkraft, Color grundfarbe, double elapsed, double bereit)
+    {
+        if (ring is null || index >= _ringBogenFertig.Length)
+            return;
+
+        ring.Opacity = grundDeckkraft * StartupSplashChoreografie.RingSichtbarkeit(index, elapsed);
+
+        var bogen = StartupSplashChoreografie.RingBogen(index, elapsed);
+        if (bogen < 1.0)
+        {
+            ring.CacheMode = null;
+            var umfang = Math.PI * ring.Width;
+            ring.StrokeDashArray = new DoubleCollection { Math.Max(0.01, umfang * bogen), 100000 };
+            _ringBogenFertig[index] = false;
+        }
+        else if (!_ringBogenFertig[index])
+        {
+            ring.StrokeDashArray = new DoubleCollection { 2, 6, 1, 9 };
+            ring.CacheMode = new BitmapCache();
+            _ringBogenFertig[index] = true;
+        }
+
+        if (ring.Stroke is SolidColorBrush pinsel)
+        {
+            var farbe = Blend(grundfarbe, ReadyAccent, bereit * 0.6);
+            pinsel.Color = Color.FromArgb(pinsel.Color.A, farbe.R, farbe.G, farbe.B);
         }
     }
 

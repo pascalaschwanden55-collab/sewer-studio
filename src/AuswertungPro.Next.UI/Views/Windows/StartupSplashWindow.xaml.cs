@@ -42,6 +42,7 @@ public partial class StartupSplashWindow : Window
     private readonly List<NodeFlare> _flares = new();
     private readonly List<RingSatellite> _satellites = new();
     private readonly List<BackgroundDust> _dust = new();
+    private readonly List<Line> _trails = new();
     private List<int>[] _adjacency = Array.Empty<List<int>>();
 
     // Wird gesetzt, sobald der Fortschrittsbalken durchgelaufen ist (oder das Fenster schliesst).
@@ -54,6 +55,10 @@ public partial class StartupSplashWindow : Window
     private double[] _screenX = Array.Empty<double>();
     private double[] _screenY = Array.Empty<double>();
     private double[] _screenDepth = Array.Empty<double>();
+    private double[] _nodeGruen = Array.Empty<double>();
+    private double[] _prevX = Array.Empty<double>();
+    private double[] _prevY = Array.Empty<double>();
+    private bool[] _ringBogenFertig = Array.Empty<bool>();
 
     // Geometrie der Kugel: wird beim Laden aus der echten Canvas-Groesse abgeleitet,
     // damit das Netz auf jedem Bildschirm dieselbe Proportion behaelt.
@@ -79,6 +84,8 @@ public partial class StartupSplashWindow : Window
     private RotateTransform? _ringOuterRotate;
     private ScaleTransform? _coreGlowScale;
     private Rectangle? _scanLine;
+    private Ellipse? _ringwelle;
+    private Ellipse? _bereitwelle;
     private Path? _accentArc;
     private RotateTransform? _accentArcRotate;
 
@@ -93,6 +100,8 @@ public partial class StartupSplashWindow : Window
     private double _flareAccumulator;
     // Inferenz-Welle: -1 = inaktiv, 0..1 = Fortschritt des Sweeps durch das Netz.
     private double _waveT = -1;
+    // Ringwelle aus dem Kern: -1 = inaktiv, 0..1 = Radiusanteil.
+    private double _ringwelleT = -1;
     // Animationszeit des Bereit-Moments; steuert das kurze gruene Aufleuchten des Netzes.
     private double? _bereitSeit;
     private bool _renderLoopActive;
@@ -285,8 +294,6 @@ public partial class StartupSplashWindow : Window
         MeasureLayout();
         BuildNeuralNetwork();
         RenderFrame();
-        AnimateNetworkFadeIn();
-        FadeIn(OverlineRow, 2200, 800);
         RevealTitle(2600);
         FadeIn(SubText, 3400, 900);
         FadeIn(TagRow, 3900, 700);

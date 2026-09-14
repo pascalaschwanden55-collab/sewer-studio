@@ -1,4 +1,4 @@
-﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.StartupSplashWindow"
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.StartupSplashWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:app="clr-namespace:AuswertungPro.Next.UI"
@@ -89,22 +89,11 @@
             <Canvas x:Name="NeuralCanvas" Grid.Row="0" Grid.Column="0"
                     ClipToBounds="True" Margin="48,48,0,24"/>
 
-            <!-- Rechte Haelfte: Wortmarke und Fachkennzeichen. -->
+            <!-- Rechte Haelfte: Wortmarke und Fachkennzeichen (ohne Ueberzeile, Entscheid Pascal 14.09.2026). -->
             <StackPanel Grid.Row="0" Grid.Column="1"
                         VerticalAlignment="Center"
                         HorizontalAlignment="Left"
                         Margin="32,0,96,0">
-
-                <StackPanel Orientation="Horizontal" x:Name="OverlineRow" Opacity="0">
-                    <Border Width="34" Height="3" Background="#FF2563EB" CornerRadius="1.5"
-                            VerticalAlignment="Center" Margin="0,0,12,0"/>
-                    <TextBlock Text="KI-GESTUETZTE KANALINSPEKTION"
-                               FontFamily="Segoe UI Variable Text, Segoe UI"
-                               FontSize="13"
-                               FontWeight="SemiBold"
-                               Foreground="#FF3D4D63"
-                               VerticalAlignment="Center"/>
-                </StackPanel>
 
                 <TextBlock x:Name="TitleText"
                            Text="SewerStudio"

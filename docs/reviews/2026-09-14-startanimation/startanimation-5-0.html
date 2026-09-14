@@ -115,7 +115,7 @@
   <header>
     <div class="eyebrow">SewerStudio · Vorschau, nichts davon ist im Programm</div>
     <h1>Startanimation 5.0</h1>
-    <p class="lead">Drei rohe Fassungen, jede genau acht Sekunden. Rechts bleibt alles wie heute: Wortmarke, Untertitel, Chips mit v5.0, Statuszeile und der Balken, der bei 90 % wartet, bis das Programm bereit ist. Links wechselt das Motiv. Ein Klick auf die Fläche überspringt wie im Programm.</p>
+    <p class="lead">Vier rohe Fassungen, jede genau acht Sekunden. Nach dem Entscheid «Kugel» ist D die deutlich neue Kugel; C ist die umgesetzte, zurückhaltende Fassung zum Vergleich. Rechts bleibt alles wie heute: Wortmarke, Untertitel, Chips mit v5.0, Statuszeile und der Balken, der bei 90 % wartet, bis das Programm bereit ist. Links wechselt das Motiv. Ein Klick auf die Fläche überspringt wie im Programm.</p>
   </header>
 
   <div class="bar-row">
@@ -123,6 +123,7 @@
       <button class="tab" role="tab" id="tabA" data-v="A" aria-selected="true"><span class="k">A</span>Kamerafahrt durchs Rohr</button>
       <button class="tab" role="tab" id="tabB" data-v="B" aria-selected="false"><span class="k">B</span>Leitungsnetz aus dem Plan</button>
       <button class="tab" role="tab" id="tabC" data-v="C" aria-selected="false"><span class="k">C</span>KI-Kugel, straffer</button>
+      <button class="tab" role="tab" id="tabD" data-v="D" aria-selected="false"><span class="k">D</span>KI-Kugel, deutlich neu</button>
     </div>
     <div class="controls">
       <label class="chk"><input type="checkbox" id="slow"> Zeitlupe (halbes Tempo)</label>
@@ -446,8 +447,89 @@ const VC = {
   }
 };
 
+
+/* =====================================================================
+   Variante D: KI-Kugel, deutlich neu (Einflug, Bogenringe, Ringwellen)
+   ===================================================================== */
+const VD = {
+  title:'D · KI-Kugel, deutlich neu',
+  phases:[[0,'Knoten fliegen von aussen ein'],[0.3,'Ringe zeichnen sich als Bogen'],[1.9,'Netz steht, Impulse laufen'],[3.0,'Welle von links nach rechts'],[5.0,'Ringwelle aus dem Kern'],[7.4,'Bereit: grüne Ringwelle']],
+  notes:{
+    ablauf:[[0,'Die Knoten kommen von weit aussen mit Leuchtspur angeflogen und setzen sich in Spiralreihenfolge zur Kugel zusammen; die Kugel wächst dabei von 70 auf 100 Prozent.'],[0.3,'Die drei Ringe zeichnen sich als wachsende Bögen, der Kern leuchtet auf.'],[1.9,'Sobald beide Enden da sind, blitzt jede Verbindung kurz auf; danach laufen die Impulse wie gewohnt.'],[3.0,'Welle von links nach rechts mit Scanline.'],[5.0,'Eine Ringwelle läuft vom Kern nach aussen durch das Netz; jeder Knoten leuchtet auf, wenn sie ihn passiert.'],[7.4,'Bereit: eine grüne Ringwelle läuft nach aussen, das Netz bleibt grünlich, Statuszeile grün, Balken auf 100 %.']],
+    passt:'Dieselbe Kugel, dieselben Farben, aber ein erzählter Aufbau: sammeln, verbinden, denken, bereit. Das ist auf den ersten Blick neu und bleibt ruhig genug für einen Startbildschirm.',
+    roh:'Wie bei C: 96 Knoten, keine Satelliten, kein Staub. Im Programm kämen Satelliten, Staub und der Akzentbogen der heutigen Kugel dazu; die Leuchtspuren würden mit den vorhandenen Impuls-Zeichnern gebaut.'
+  },
+  nodes:[], edges:[], pulses:[], act:null, rng:null, acc:0, last:0, burst:false, flug:[], prev:[], kante:[],
+  reset(){
+    const N = 96, ga = 2.39996322972865332; this.nodes = []; this.edges = []; this.pulses = []; this.act = new Float32Array(N); this.rng = lcg(11); this.acc = 0; this.last = 0; this.burst = false; this.flug = []; this.prev = []; this.kante = [];
+    for (let i = 0; i < N; i++){ const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), th = ga * i; this.nodes.push({ x: Math.cos(th) * r, y, z: Math.sin(th) * r }); }
+    const seen = new Set();
+    this.nodes.forEach((n, i) => {
+      const near = this.nodes.map((m, j) => ({ j, d: Math.hypot(n.x - m.x, n.y - m.y, n.z - m.z) })).filter(o => o.j !== i).sort((a, b) => a.d - b.d).slice(0, 3);
+      near.forEach(o => { const key = i < o.j ? i + '-' + o.j : o.j + '-' + i; if (!seen.has(key)){ seen.add(key); this.edges.push({ a: i, b: o.j }); } });
+    });
+    for (let i = 0; i < N; i++){ const a = this.rng() * Math.PI * 2; this.flug.push({ ux: Math.cos(a), uy: Math.sin(a), k: 2.0 + this.rng() * 1.3, t0: 0.05 + 1.0 * i / N }); this.prev.push(null); }
+    this.edges.forEach(e => this.kante.push(Math.max(this.flug[e.a].t0, this.flug[e.b].t0) + 0.8));
+  },
+  draw(c, t, W, H){
+    const dt = Math.max(0, Math.min(0.05, t - this.last)); this.last = t;
+    const N = this.nodes.length, cx = W * 0.5, cy = H * 0.5, R0 = Math.min(W, H) * 0.34, R = R0 * (0.72 + 0.28 * eoc(t / 2.0));
+    const rotY = 0.28 * (t < 2 ? t * t / 4 : t - 1), cosY = Math.cos(rotY), sinY = Math.sin(rotY), cosX = Math.cos(0.22), sinX = Math.sin(0.22);
+    const P = this.nodes.map(n => { const x1 = n.x * cosY + n.z * sinY, z1 = -n.x * sinY + n.z * cosY, y1 = n.y * cosX - z1 * sinX, z2 = n.y * sinX + z1 * cosX, pr = 4.6 / (4.6 - z2); return { x: cx + x1 * R * pr, y: cy + y1 * R * pr, d: z2, pr, fog: 0.35 + 0.65 * clamp01((z2 + 1) / 2) }; });
+    // Einflug: aktuelle Position je Knoten
+    const Q = P.map((p, i) => { const f = this.flug[i], u = clamp01((t - f.t0) / 0.8), e = eio(u); const sx = cx + f.ux * f.k * R0, sy = cy + f.uy * f.k * R0; return { x: lerp(sx, p.x, e), y: lerp(sy, p.y, e), u }; });
+    const gReady = clamp01((t - 7.4) / 0.9), ringReady = gReady * 1.7 * R;
+    // Kernglühen
+    const kern = eoc((t - 0.4) / 1.2) * (1 + 0.04 * Math.sin(t * 1.6));
+    if (kern > 0){ const g = c.createRadialGradient(cx, cy, 0, cx, cy, R * 1.15 * kern); g.addColorStop(0, hexA(gReady > 0 ? C.ok : C.accent2, .17)); g.addColorStop(0.45, hexA(C.cyan, .07)); g.addColorStop(1, hexA(C.ring, 0)); c.fillStyle = g; c.fillRect(0, 0, W, H); }
+    // Ringe als wachsende Bögen
+    [[1.25, 0.32, 0.25, C.ring, 0.7, 0.3], [1.02, 0.30, -0.35, C.accent2, 0.5, 0.5], [0.80, 0.34, 0.5, C.cyan, 0.6, 0.7]].forEach(([rx, ry, sp, col, base, t0]) => {
+      const sweep = Math.PI * 2 * eoc((t - t0) / 1.4); if (sweep <= 0) return;
+      c.save(); c.translate(cx, cy); c.rotate(base + t * sp); c.beginPath(); c.ellipse(0, 0, R * rx, R * rx * ry, 0, -Math.PI / 2, -Math.PI / 2 + sweep);
+      c.strokeStyle = mix(col, C.ok, gReady * 0.6); c.globalAlpha = 0.4; c.lineWidth = (sweep < Math.PI * 2 ? 2.0 : 1.2) * U; c.stroke(); c.globalAlpha = 1; c.restore();
+    });
+    // Impulse
+    const PAL = [C.accent2, C.cyan, '#0D9488', C.accent2, '#4F46E5', '#38BDF8', C.accent2, '#D97706'];
+    this.acc += dt;
+    while (this.acc >= 0.09){ this.acc -= 0.09; if (t > 1.9 && t < 7.3 && this.pulses.length < 28){ const e = Math.floor(this.rng() * this.edges.length); this.pulses.push({ e, rev: this.rng() < .5, p: 0, v: 1.2 + this.rng(), col: PAL[this.pulses.length % PAL.length] }); } }
+    if (t >= 7.4 && !this.burst){ this.burst = true; for (let i = 0; i < 10; i++) this.pulses.push({ e: Math.floor(this.rng() * this.edges.length), rev: this.rng() < .5, p: 0, v: 2.2, col: C.ok }); }
+    for (let i = 0; i < N; i++) this.act[i] *= Math.exp(-dt * 2.4);
+    this.pulses = this.pulses.filter(p => { p.p += p.v * dt; if (p.p >= 1){ const e = this.edges[p.e]; this.act[p.rev ? e.a : e.b] = 1; return false; } return true; });
+    // Welle 1: Scanline links nach rechts; Welle 2: Ringwelle aus dem Kern
+    const w1 = clamp01((t - 3.0) / 1.5); let bandX = null;
+    if (w1 > 0 && w1 < 1){ bandX = lerp(cx - R * 1.25, cx + R * 1.25, w1); const bg = c.createLinearGradient(bandX - R * .18, 0, bandX + R * .18, 0); bg.addColorStop(0, hexA(C.cyan, 0)); bg.addColorStop(.5, hexA(C.cyan, .14)); bg.addColorStop(1, hexA(C.cyan, 0)); c.fillStyle = bg; c.fillRect(bandX - R * .18, cy - R * 1.05, R * .36, R * 2.1); }
+    const w2 = clamp01((t - 5.0) / 1.2), ring2 = w2 * 1.35 * R;
+    if (w2 > 0 && w2 < 1){ c.beginPath(); c.arc(cx, cy, ring2, 0, Math.PI * 2); c.strokeStyle = hexA(C.cyan, 0.55 * (1 - w2)); c.lineWidth = 3 * U; c.stroke(); }
+    if (gReady > 0 && gReady < 1){ c.beginPath(); c.arc(cx, cy, ringReady, 0, Math.PI * 2); c.strokeStyle = hexA(C.ok, 0.8 * (1 - gReady)); c.lineWidth = 4 * U; c.stroke(); }
+    const actOf = i => { let a = this.act[i]; if (bandX !== null) a = Math.max(a, clamp01(1 - Math.abs(Q[i].x - bandX) / (R * 0.32)));
+      if (w2 > 0 && w2 < 1){ const d = Math.hypot(Q[i].x - cx, Q[i].y - cy); a = Math.max(a, clamp01(1 - Math.abs(d - ring2) / (R * 0.16))); } return a; };
+    const gruenOf = i => { if (gReady <= 0) return 0; const d = Math.hypot(Q[i].x - cx, Q[i].y - cy); return d < ringReady ? 0.7 + 0.3 * clamp01(1 - (ringReady - d) / (R * 0.25)) : 0; };
+    // Verbindungen: erst wenn beide Enden da sind, mit kurzem Aufblitzen
+    this.edges.forEach((e, k) => {
+      const since = t - this.kante[k]; if (since <= 0) return;
+      const A = Q[e.a], B = Q[e.b], PA = P[e.a], PB = P[e.b], fog = (PA.fog + PB.fog) / 2, a = Math.max(actOf(e.a), actOf(e.b)), blitz = Math.exp(-since * 5), vis = Math.min(1, since / 0.25), gr = Math.max(gruenOf(e.a), gruenOf(e.b));
+      c.beginPath(); c.moveTo(A.x, A.y); c.lineTo(B.x, B.y);
+      c.strokeStyle = mix(mix(C.edge, C.cyan, Math.max(a * .8, blitz)), C.ok, gr * .7); c.globalAlpha = (0.12 + 0.36 * fog + 0.3 * a + 0.5 * blitz) * vis; c.lineWidth = (0.8 + 0.8 * fog + 1.2 * blitz) * U; c.stroke(); c.globalAlpha = 1;
+    });
+    // Impulse zeichnen
+    this.pulses.forEach(p => { const e = this.edges[p.e], A = Q[p.rev ? e.b : e.a], B = Q[p.rev ? e.a : e.b], x = lerp(A.x, B.x, p.p), y = lerp(A.y, B.y, p.p), pr = lerp(P[e.a].pr, P[e.b].pr, p.p), r = (2.2 + 1.8 * pr) * U;
+      const pg = c.createRadialGradient(x, y, 0, x, y, r * 3); pg.addColorStop(0, hexA(p.col, .35)); pg.addColorStop(1, hexA(p.col, 0)); c.fillStyle = pg; c.fillRect(x - r * 3, y - r * 3, r * 6, r * 6);
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = p.col; c.fill(); });
+    // Knoten mit Leuchtspur im Einflug, hinten zuerst
+    P.map((p, i) => ({ p, i })).sort((u, v) => u.p.d - v.p.d).forEach(({ p, i }) => {
+      const q = Q[i]; if (q.u <= 0){ this.prev[i] = null; return; }
+      const a = actOf(i), gr = gruenOf(i), r = (2.2 + 1.7 * p.pr) * U * (1 + 0.9 * a);
+      if (q.u < 1 && this.prev[i]){ const pv = this.prev[i], vx = q.x - pv.x, vy = q.y - pv.y, L = Math.hypot(vx, vy); if (L > 0.5){ const len = (26 * U) * (1 - q.u) + 2 * U; c.beginPath(); c.moveTo(q.x, q.y); c.lineTo(q.x - vx / L * len, q.y - vy / L * len); c.strokeStyle = hexA(C.cyan, 0.55 * (1 - q.u)); c.lineWidth = 1.8 * U; c.lineCap = 'round'; c.stroke(); } }
+      this.prev[i] = { x: q.x, y: q.y };
+      c.beginPath(); c.arc(q.x, q.y, r, 0, Math.PI * 2);
+      c.fillStyle = mix(mix('#2F6FE0', C.cyan, Math.max(a, 1 - q.u)), C.ok, gr * .8); c.globalAlpha = (0.35 + 0.65 * p.fog) * (0.6 + 0.4 * q.u); c.fill(); c.globalAlpha = 1;
+      if (a > 0.15 || (gr > 0.9)){ c.beginPath(); c.arc(q.x, q.y, r * 2.2, 0, Math.PI * 2); c.strokeStyle = hexA(gr > 0.9 ? C.ok : C.cyan, .45 * Math.max(a, gr > 0.9 ? 0.6 : 0)); c.lineWidth = 1 * U; c.stroke(); }
+    });
+  }
+};
+
 /* ---------- Ablaufsteuerung ---------- */
-const VARIANTS = { A: VA, B: VB, C: VC };
+const VARIANTS = { A: VA, B: VB, C: VC, D: VD };
 let cur = VA, t = 0, playing = false, lastNow = 0, raf = 0;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -473,7 +555,7 @@ function frame(now){
   raf = requestAnimationFrame(frame);
 }
 function play(from){
-  cancelAnimationFrame(raf); t = from ?? 0; cur.reset(W, H); if (cur === VC) VC.last = t;
+  cancelAnimationFrame(raf); t = from ?? 0; cur.reset(W, H); if ('last' in cur) cur.last = t;
   playing = true; lastNow = performance.now(); render(); raf = requestAnimationFrame(frame);
 }
 function select(key){
@@ -487,16 +569,16 @@ function select(key){
     <div class="card"><h2>So läuft es ab</h2><ol>${n.ablauf.map(([pt, s]) => `<li><span class="t">${pt.toFixed(1).replace('.', ',')} s</span>${s}</li>`).join('')}</ol></div>
     <div class="card"><h2>Warum es passt</h2><p style="margin:0">${n.passt}</p></div>
     <div class="card"><h2>Was in der Rohfassung nur angedeutet ist</h2><p style="margin:0">${n.roh}</p></div>`;
-  if (reduced){ cancelAnimationFrame(raf); playing = false; t = 8; cur.reset(W, H); if (cur === VC) VC.last = 0; render(); } else play(0);
+  if (reduced){ cancelAnimationFrame(raf); playing = false; t = 8; cur.reset(W, H); if ('last' in cur){ cur.last = 0; for (let q = 0; q <= t; q += 1 / 60){ cur.draw(ctx, q, W, H); } } render(); } else play(0);
 }
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => select(b.dataset.v)));
 $('replay').addEventListener('click', () => play(0));
-const skip = () => { if (playing && t < 7.4){ t = 7.4; if (cur === VC) VC.last = t; render(); } else if (!playing) play(0); };
+const skip = () => { if (playing && t < 7.4){ t = 7.4; if ('last' in cur) cur.last = t; render(); } else if (!playing) play(0); };
 stage.addEventListener('click', skip);
 stage.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); skip(); } });
 new ResizeObserver(resize).observe(stage);
 resize();
 const hp = new URLSearchParams(location.hash.slice(1)); const hv = (hp.get('v') || 'A').toUpperCase(), ht = parseFloat(hp.get('t'));
 select(VARIANTS[hv] ? hv : 'A');
-if (!Number.isNaN(ht)){ cancelAnimationFrame(raf); playing = false; t = Math.max(0, Math.min(8, ht)); if (cur === VC){ VC.last = 0; for (let q = 0; q <= t; q += 1 / 60){ VC.draw(ctx, q, W, H); } } render(); }
+if (!Number.isNaN(ht)){ cancelAnimationFrame(raf); playing = false; t = Math.max(0, Math.min(8, ht)); if ('last' in cur){ cur.last = 0; for (let q = 0; q <= t; q += 1 / 60){ cur.draw(ctx, q, W, H); } } render(); }
 </script>
