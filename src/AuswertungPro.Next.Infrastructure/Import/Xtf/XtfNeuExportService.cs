@@ -72,7 +72,7 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
         }
 
         if (request.NurPruefen)
-            return new XtfNeuExportResult(true, bericht, null, null);
+            return new XtfNeuExportResult(true, bericht, null, null, Aenderungen: plan.Auftraege);
 
         var stempel = DateTime.Now.ToString("yyyyMMdd_HHmmss");
         var name = Dateiname(request.Projekt.Name);
@@ -81,7 +81,7 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
 
         var ergebnis = XtfNeuWriter.Schreibe(plan, ziel);
         return ergebnis.Ok
-            ? new XtfNeuExportResult(true, bericht + $"\n\nGeschrieben: {ergebnis.Datei}", null, ergebnis.Datei)
+            ? new XtfNeuExportResult(true, bericht + $"\n\nGeschrieben: {ergebnis.Datei}", null, ergebnis.Datei, Aenderungen: plan.Auftraege)
             : new XtfNeuExportResult(false, bericht, ergebnis.Fehler, null);
     }
 

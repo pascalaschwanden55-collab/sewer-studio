@@ -110,7 +110,7 @@ public static class DssExportPlanBuilder
             if (DssExportSchema.Felder(q.Klasse) is null && !DssExportPruefung.Associationen.ContainsKey(q.Klasse))
                 throw new InvalidOperationException($"DSS: Die referenzierte Klasse {q.Klasse} ist noch nicht im Exportvertrag enthalten ({id}).");
             var o = DssExportObjekt.Aus(q);
-            if (mitZusatzangaben) DssQuellabweichungen.Trenne(o, hinweise);
+            DssQuellabweichungen.Trenne(o, hinweise, mitZusatzangaben);
             objekte.Add(id, o);
             // Ausschliesslich fehlende Quellnamen ergänzen, bevor aktuelle Eingaben angewendet werden.
             if (DssExportSchema.Felder(q.Klasse)?.GetValueOrDefault("Bezeichnung")?.Required == true && string.IsNullOrEmpty(o.Werte.GetValueOrDefault("Bezeichnung")))

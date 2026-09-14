@@ -13,6 +13,9 @@ public static class DssAenderungsPlanBuilder
         if (!voll.Dss) throw new InvalidOperationException("DSS-Änderungen benötigen einen geprüften DSS-Plan.");
         var quellen = DssExportPlanBuilder.Quellen(projekt);
         var auftraege = new Dictionary<(string Tid, string Feld), DateTime>();
+        // Was der Mensch vor dem Schreiben sehen soll. Reine Anzeige: Geschrieben wird
+        // allein aus den Planobjekten, nie aus dieser Liste.
+        var zeilen = new Dictionary<(string Tid, string Feld), (string Alt, string Neu)>();
         var zeit = DateTime.UtcNow;
         var ids = new XtfNeuKennungen(projekt.Id.ToString("N"));
         foreach (var o in voll.Objekte.Where(o => !o.ImTopicZusatz && !o.OhneTid))
@@ -32,7 +35,10 @@ public static class DssAenderungsPlanBuilder
             foreach (var feld in alt.Keys.Union(neu.Keys, StringComparer.Ordinal).Where(f => f != "Letzte_Aenderung"))
                 if (alt.GetValueOrDefault(feld) != neu.GetValueOrDefault(feld)
                     && !(q is not null && feld == "Bezeichnung" && !alt.ContainsKey(feld) && neu.GetValueOrDefault(feld) == o.Tid))
+                {
                     auftraege[(o.Tid, feld)] = zeit;
+                    zeilen[(o.Tid, feld)] = (Anzeige(feld, alt.GetValueOrDefault(feld)), Anzeige(feld, neu.GetValueOrDefault(feld)));
+                }
         }
         const string beziehung = "Erhaltungsereignis_AbwasserbauwerkAssoc";
         var neuBezuege = voll.Objekte.Where(o => o.Klasse == beziehung)
@@ -42,7 +48,11 @@ public static class DssAenderungsPlanBuilder
         {
             var alt = quellen.Values.Where(q => q.Klasse == beziehung && q.Referenzen.GetValueOrDefault(beziehung + "Ref") == tid)
                 .Select(q => q.Referenzen["AbwasserbauwerkRef"]).ToHashSet(StringComparer.Ordinal);
-            if (!alt.SetEquals(neu)) auftraege[(tid, "Beziehung:" + beziehung)] = zeit;
+            if (!alt.SetEquals(neu))
+            {
+                auftraege[(tid, "Beziehung:" + beziehung)] = zeit;
+                zeilen[(tid, "Beziehung:" + beziehung)] = (Bauwerke(alt), Bauwerke(neu));
+            }
         }
         var objekte = voll.Objekte.Where(o => !o.ImTopicZusatz).ToList();
         foreach (var zusatz in voll.Objekte.Where(o => o.ImTopicZusatz && o.Klasse == "Zusatzangabe"))
@@ -63,8 +73,30 @@ public static class DssAenderungsPlanBuilder
         foreach (var ((tid, feld), datum) in auftraege.OrderBy(p => p.Key.Tid, StringComparer.Ordinal).ThenBy(p => p.Key.Feld, StringComparer.Ordinal))
             objekte.Add(new("Aenderung", ids.Fuer("Aenderung", tid + "|" + feld),
                 [new("ObjektTid", tid), new("Feld", feld), new("GeaendertAm", datum.ToString("O", CultureInfo.InvariantCulture))], [], ImTopicZusatz: true));
+        var anzeige = auftraege.Keys.Where(k => zeilen.ContainsKey(k))
+            .OrderBy(k => Name(k.Tid), StringComparer.Ordinal).ThenBy(k => k.Feld, StringComparer.Ordinal)
+            .Select(k => new XtfAenderungsZeile(Name(k.Tid), k.Feld, zeilen[k].Alt, zeilen[k].Neu)).ToArray();
         var hinweise = voll.Hinweise.Append($"Änderungslieferung: {auftraege.Count} Feldaufträge an Original-TIDs. Nur Aenderung-Einträge sind Schreibaufträge; fehlender optionaler Wert bei vorhandenem Auftrag bedeutet Leeren (gegebenenfalls mit genauerem Wert im Zusatz). Beziehung:{beziehung} bezeichnet den vollständigen Bauwerksbezug des genannten Ereignisses über die gleichnamigen Normassoziationen. Alle übrigen Normobjekte dienen als vollständiger Bezugskontext. Zusatz:Erfasste_Angaben enthält separat zuzuordnende Eingaben, keine erfundenen DSS-Attribute. GeaendertAm ist der Zeitpunkt der Auftragserzeugung; die gespeicherten Bearbeitungszeiten stehen unverändert im Eingabepaket.").ToArray();
-        return voll with { Objekte = objekte, Hinweise = hinweise, NurAenderungen = true };
+        return voll with { Objekte = objekte, Hinweise = hinweise, NurAenderungen = true, Auftraege = anzeige };
+
+        string Name(string tid)
+        {
+            var o = voll.Objekte.FirstOrDefault(x => x.Tid == tid && !x.ImTopicZusatz);
+            if (o is null) return tid;
+            var bezeichnung = o.Felder.FirstOrDefault(f => f.Key == "Bezeichnung").Value;
+            return string.IsNullOrWhiteSpace(bezeichnung) ? $"{o.Klasse} {tid}" : $"{o.Klasse} {bezeichnung}";
+        }
+
+        string Bauwerke(IEnumerable<string> tids)
+            => string.Join(", ", tids.Select(Name).OrderBy(n => n, StringComparer.Ordinal));
+    }
+
+    /// <summary>Geometrien und lange Strukturen gehoeren nicht als Rohtext in eine Vorschauzeile.</summary>
+    private static string Anzeige(string feld, string? wert)
+    {
+        if (string.IsNullOrEmpty(wert)) return "";
+        if (feld is "Lage" or "Verlauf") return "(Geometrie)";
+        return wert.Length <= 80 ? wert : wert[..79] + "…";
     }
 
     private static Dictionary<string, string> Werte(ObjektQuellbeleg q) =>

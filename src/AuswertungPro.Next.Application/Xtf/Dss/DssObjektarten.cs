@@ -29,7 +29,12 @@ internal static class DssObjektarten
     {
         var feld = akte.Art == "sanierung" ? "sanierung.s_name" : akte.Art + ".bezeichnung";
         var name = akte.Werte.GetValueOrDefault(feld)?.Text;
-        if (string.IsNullOrWhiteSpace(name)) name = akte.Quellen.Select(q => q.Werte.GetValueOrDefault("Bezeichnung")).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
+        // Eine Akte traegt den ganzen GeoShop-Verbund als Quellen. Nur die Quelle der
+        // eigenen Klasse traegt den eigenen Namen; sonst hiess ein Buerglen-Schacht nach
+        // der ersten Haltung im Verbund und der Hinweis fuehrte in die Irre.
+        if (string.IsNullOrWhiteSpace(name))
+            name = akte.Quellen.Where(q => q.Klasse == Klasse(akte.Art) || DssEinbautenZuordnung.Art(q.Klasse) == akte.Art)
+                .Select(q => q.Werte.GetValueOrDefault("Bezeichnung")).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
         return $"{akte.Art} «{(string.IsNullOrWhiteSpace(name) ? akte.Id.ToString() : name)}»";
     }
 }

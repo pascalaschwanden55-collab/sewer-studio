@@ -123,6 +123,42 @@ Feld «Bezeichnung» der Sanierungsakten in Bürglen leer ist.
 Der Mailentwurf für Andreas vom Nachmittag beschreibt A76157 noch als Sperre; das ist
 überholt. Der Quellkonflikt in GeoShop bleibt als Hinweis erwähnenswert, blockiert aber nichts.
 
+## Kann der Empfänger die Datei einlesen?
+
+Gemessen am 14.09.2026 mit `ilivalidator 1.15.0`, das denselben INTERLIS-Leser verwendet
+wie die üblichen Importwerkzeuge:
+
+| Datei | eigenes Zusatzmodell vorhanden | ohne dieses Modell |
+|---|---|---|
+| Änderungslieferung | 0 Fehler | **`SewerStudio_Zusatz_2026: model(s) not found` — nichts lesbar** |
+| vollständige Lieferung mit Zusatzangaben | 0 Fehler | **ebenfalls nichts lesbar** |
+| **reine Normlieferung** (`MitZusatzangaben: false`) | – | **0 Fehler** |
+
+Ein fremdes Modell im selben Transfer wird nicht übersprungen, es bricht den ganzen
+Lesevorgang ab. Wer eine Datei mit Zusatzmodell erhält, muss die mitgelieferte
+`SewerStudio_Zusatz_2026.ili` in sein Modellverzeichnis legen. Das ist der Preis dafür,
+dass Feldaufträge und nicht normierbare Eingaben verlustfrei mitgehen.
+
+Die **reine Normlieferung** ist der Weg ohne diese Bedingung: ausschliesslich
+`DSS_2020_1_LV95` und `SIA405_Base_Abwasser_1_LV95`, mit den Originalkennungen und den
+in den Normfeldern eingearbeiteten Handänderungen. Sie war bis zum 14.09.2026 an drei
+Stellen an das Zusatzmodell gekoppelt und liess sich aus einem echten Projekt gar nicht
+erzeugen; jede dieser Regeln gilt jetzt unabhängig vom Zusatzmodell:
+
+- Sanierungsbedarf «Saniert» entfernt den überholten Normwert (kein DSS-Wert dafür).
+- Ein blosses Sanierungsjahr erzeugt keinen erfundenen Zeitpunkt.
+- Ein ungültiger optionaler Quellcode aus dem Kataster wird abgetrennt statt geschrieben.
+  In Bürglen tragen 25 Einstiegshilfen die Art «1»; dieser Fehler stammt aus der Quelle.
+- Eine Akteneingabe, die nur einen solchen ungültigen Quellcode spiegelt, wird nicht
+  als Normwert geschrieben.
+
+Zwei Punkte muss der Empfänger bei der **vollständigen** Lieferung kennen, weil sie
+keine Auftragsliste hat und deshalb nicht selbst zwischen Kontext und Änderung trennt:
+
+- 33 Deckel haben in GeoShop keine Bezeichnung. INTERLIS verlangt sie, deshalb steht dort
+  die Originalkennung als technische Bezeichnung. Diese Werte gehören nicht nach GEONIS.
+- Die erfassten Sanierungen sind neue Unterhalt-Objekte, in GEONIS noch nicht vorhanden.
+
 ## Nachweise
 
 - Verhaltenstests prüfen Originalkennungen, «Alle Angaben», Deckelhöhen, Leeren,
@@ -138,6 +174,10 @@ Der Mailentwurf für Andreas vom Nachmittag beschreibt A76157 noch als Sperre; d
   GeoShop-basierte Lieferung nicht erfüllbar. Prüfdateien liegen unter
   `Downloads\XTF_Buerglen_20260914_2043`.
 - `XtfDssFremdeHaltungspunkteTests` (3) und `XtfDssRohrprofilTests` (2) halten beide Regeln fest.
+- `XtfDssReinerNormexportTests` (2) hält fest, dass die reine Normlieferung ohne Zusatzmodell
+  entsteht und `XtfDssVorschauTests` (5), dass die Vorschau die Feldaufträge zeigt.
+- Prüfpaket für den Empfänger: `Downloads\XTF_Buerglen_fuer_Andreas_20260914` mit beiden
+  Spielarten, Berichten, Prüfprotokollen und einer Liesmich-Datei.
 - Das ist ein Nachweis für das Dateiformat, **kein durchgeführter GEONIS-/FME-Rückimport**.
   Insbesondere die Zusatzpakete und Änderungsaufträge müssen dort passend verarbeitet werden.
 - Vollständiger Release-Build: erfolgreich, 0 Fehler, 2 bestehende Nullable-Warnungen.

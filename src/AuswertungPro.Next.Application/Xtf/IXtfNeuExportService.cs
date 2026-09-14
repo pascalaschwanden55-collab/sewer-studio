@@ -28,7 +28,12 @@ public sealed record XtfNeuExportResult(
     string Bericht,
     string? Fehler,
     string? Datei,
-    bool QuelleFehlt = false);
+    bool QuelleFehlt = false,
+    IReadOnlyList<XtfAenderungsZeile>? Aenderungen = null)
+{
+    /// <summary>Die Feldauftraege einer Aenderungslieferung fuer die Vorschau; sonst leer.</summary>
+    public IReadOnlyList<XtfAenderungsZeile> Aenderungen { get; init; } = Aenderungen ?? [];
+}
 
 /// <summary>
 /// Erzeugt aus dem ganzen Projektstand eine eigenstaendige, NEUE SIA405-XTF.

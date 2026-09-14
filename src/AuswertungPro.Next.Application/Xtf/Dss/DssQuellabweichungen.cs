@@ -12,13 +12,20 @@ internal static class DssQuellabweichungen
         catch (InvalidOperationException) { return true; }
     }
 
-    internal static void Trenne(DssExportObjekt o, List<string> hinweise)
+    /// <summary>
+    /// Ein ungueltiger optionaler Quellcode darf nie in die Ausgabe und darf sie auch nie
+    /// sperren: Im Bestand des Kantons tragen zum Beispiel Einstiegshilfen die Art «1».
+    /// Mit Zusatzmodell geht der Originalwert dort unveraendert mit, ohne bleibt er im Projekt.
+    /// </summary>
+    internal static void Trenne(DssExportObjekt o, List<string> hinweise, bool mitZusatzangaben = true)
     {
         foreach (var (key, text) in o.Werte.ToArray())
             if (IstAbweichung(o.Klasse, key, text))
             {
                 o.Werte.Remove(key);
-                hinweise.Add($"{o.Klasse} {o.Tid}: Quellwert {key} = «{text}» ist kein gültiger DSS-Auswahlcode. Unverändert als Quellabweichung in Erfasste_Angaben mitgeliefert; kein Normwert geraten.");
+                hinweise.Add($"{o.Klasse} {o.Tid}: Quellwert {key} = «{text}» ist kein gültiger DSS-Auswahlcode. " + (mitZusatzangaben
+                    ? "Unverändert als Quellabweichung in Erfasste_Angaben mitgeliefert; kein Normwert geraten."
+                    : "Nicht in die Datei übernommen; der Originalwert bleibt in der Quelle. Kein Normwert geraten."));
             }
     }
 }

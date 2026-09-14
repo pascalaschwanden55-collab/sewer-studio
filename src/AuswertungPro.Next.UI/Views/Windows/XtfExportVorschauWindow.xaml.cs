@@ -55,6 +55,6 @@ public partial class XtfExportVorschauWindow : Window
 
         public string OhneTabelleHinweis => IstFehler
             ? "Es wurde nichts geschrieben. Die Einzelheiten stehen unter Details."
-            : "Diese Datei erhält neue Kennungen; es gibt keine Original-Werte zum Vergleichen. Was hineinkommt, steht unter Details.";
+            : "Für diese Ausgabe gibt es keine Feldtabelle. Was hineinkommt, steht unter Details.";
     }
 }

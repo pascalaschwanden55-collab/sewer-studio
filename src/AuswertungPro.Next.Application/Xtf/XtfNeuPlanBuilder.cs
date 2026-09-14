@@ -4,15 +4,26 @@ using AuswertungPro.Next.Domain.Models;
 namespace AuswertungPro.Next.Application.Xtf;
 
 /// <summary>Was eine neu erzeugte XTF enthalten wuerde.</summary>
+/// <summary>
+/// Ein einzelner Feldauftrag der Aenderungslieferung, wie ihn der Mensch vor dem Schreiben
+/// sehen soll: an welchem Objekt, welches Feld, was steht heute im Kataster, was kommt.
+/// Reine Anzeige — geschrieben wird allein aus den Planobjekten.
+/// </summary>
+public sealed record XtfAenderungsZeile(string Objekt, string Feld, string Alt, string Neu);
+
 public sealed record XtfNeuPlan(
     IReadOnlyList<XtfNeuObjekt> Objekte,
     IReadOnlyList<string> Hinweise,
     int Haltungen,
     int Schaechte,
     bool NurAenderungen = false,
-    bool Dss = false)
+    bool Dss = false,
+    IReadOnlyList<XtfAenderungsZeile>? Auftraege = null)
 {
     public bool Leer => Haltungen == 0 && Schaechte == 0;
+
+    /// <summary>Die Feldauftraege dieser Lieferung; bei einer vollstaendigen Lieferung leer.</summary>
+    public IReadOnlyList<XtfAenderungsZeile> Auftraege { get; init; } = Auftraege ?? [];
 }
 
 /// <summary>

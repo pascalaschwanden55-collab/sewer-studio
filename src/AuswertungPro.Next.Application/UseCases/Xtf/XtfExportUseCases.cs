@@ -123,7 +123,7 @@ public static class XtfNeuErstellenUseCase
             return new XtfExportErgebnis(false, "Prüfung nicht bestanden — nichts geschrieben.", null);
         }
 
-        if (!actions.BestaetigeVorschau(XtfExportVorschau.AusBericht(Titel, pruefung.Bericht)))
+        if (!actions.BestaetigeVorschau(XtfExportVorschau.AusBericht(Titel, pruefung.Bericht, pruefung.Aenderungen)))
             return new XtfExportErgebnis(false, "Abgebrochen — nichts geschrieben.", null);
 
         var ergebnis = dienst.Erzeuge(request with { NurPruefen = false });

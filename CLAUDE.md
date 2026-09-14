@@ -36,6 +36,21 @@
   nur an, wenn Profiltyp, Verhältnis oder Datenherr/-lieferant vom Original abweichen. Eine DN
   aus dem alten Import (`FieldSource.Legacy`) gilt sonst als Änderung und erzeugte in Bürglen
   19 identische Kreisprofile. Tests: `XtfDssFremdeHaltungspunkteTests`, `XtfDssRohrprofilTests`.
+- **Ein fremdes Modell im Transfer macht die ganze Datei unlesbar, nicht nur seinen Teil.**
+  Gemessen 14.09.2026: Ohne `SewerStudio_Zusatz_2026.ili` bricht der INTERLIS-Leser mit
+  `model(s) not found` ab. Wer Zusatzangaben oder Feldaufträge liefert, muss die `.ili`
+  mitliefern UND der Empfänger muss sie in sein Modellverzeichnis legen.
+- **Die reine Normlieferung (`MitZusatzangaben: false`) ist der Weg ohne diese Bedingung**
+  und war bis 14.09.2026 kaputt: Drei fachlich immer gültige Regeln hingen an
+  `mitZusatzangaben` (Sanierungsbedarf «Saniert», blosses Sanierungsjahr, gespiegelter
+  ungültiger Quellcode), dazu `DssQuellabweichungen.Trenne`. Aus einem echten Projekt
+  entstand deshalb gar keine reine Normdatei. Diese Regeln nie wieder an das Zusatzmodell
+  koppeln — sie sagen «kein Normwert vorhanden», nicht «woanders untergebracht».
+- Die Vorschau der Änderungslieferung zeigt die Feldaufträge als Tabelle Objekt/Feld/Alt/Neu
+  (`XtfNeuPlan.Auftraege` → `XtfNeuExportResult.Aenderungen` → `XtfExportVorschau.AusBericht`).
+  Gleichartige Feldlücken werden in `KurzeWarnungen` gebündelt; die volle Liste bleibt in
+  `Warnungen` und in den Details. Die Aussage «Diese Datei erhält neue Kennungen» ist weg —
+  eine DSS-Lieferung behält die Originalkennungen.
 - Prüfanleitung und genaue Empfängerregeln: `docs/XTF-EXPORT-KONTROLLE.md`.
   Tests: `XtfDssAenderungsExportTests`, `XtfQuellverbundErgaenzungTests` und XTF-Bestand.
 - Begleitende Push-Reparatur: `StartupSplashWindow.Impulse` enthält FirePulse und

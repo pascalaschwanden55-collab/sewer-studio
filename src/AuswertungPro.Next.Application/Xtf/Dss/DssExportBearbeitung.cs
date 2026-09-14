@@ -97,12 +97,15 @@ internal sealed class DssExportBearbeitung(Project projekt, Dictionary<string, D
             }
             else if (eingabe is not null) text = eingabe.Text;
             if (text is null) continue;
-            if (mitZusatzangaben && f.Id == "sanierung.s_year" && text.Length == 4 && text.All(char.IsAsciiDigit))
+            if (f.Id == "sanierung.s_year" && text.Length == 4 && text.All(char.IsAsciiDigit))
             {
-                // Ein Jahr ist kein vollständiges INTERLIS-Datum. Keinen 1. Januar erfinden.
+                // Ein Jahr ist kein vollständiges INTERLIS-Datum. Keinen 1. Januar erfinden —
+                // auch nicht ohne Zusatzmodell, sonst sperrt ein blosses Jahr die Lieferung.
                 if (!akte.Werte.TryGetValue("sanierung.beginn", out var beginn) || beginn.Text.Length == 0)
                     Setze(root, "Zeitpunkt", "", eingabe?.VonHand == true);
-                hinweise.Add($"Unterhalt {root.Tid}: Sanierungsjahr {text} in Erfasste_Angaben; ohne genauen Tag kein Zeitpunkt erfunden.");
+                hinweise.Add($"Unterhalt {root.Tid}: Sanierungsjahr {text} " + (mitZusatzangaben
+                    ? "in Erfasste_Angaben; ohne genauen Tag kein Zeitpunkt erfunden."
+                    : "bleibt im Projekt; ohne genauen Tag kein Zeitpunkt erfunden."));
                 continue;
             }
             if (f.Id is "sanierung.firma" or "haltung.profile" or "haltung.width" or "schacht.rechtswert" or "schacht.hochwert" or "deckel.rechtswert" or "deckel.hochwert") continue;
@@ -127,19 +130,25 @@ internal sealed class DssExportBearbeitung(Project projekt, Dictionary<string, D
             }
             var objekt = Ziel(root, ziel.Klasse);
             if (objekt is null) throw new InvalidOperationException($"DSS: {f.Label}: zugehöriges Objekt {ziel.Klasse} fehlt.");
-            if (mitZusatzangaben && eingabe is { VonHand: false } && f.Speicherfeld is null
+            // Eine Anzeige, die nur den ungueltigen Quellcode spiegelt, ist keine Eingabe und
+            // darf nie als Normwert geschrieben werden — auch nicht ohne Zusatzmodell, sonst
+            // sperrt ein Fehler in den Katasterdaten die ganze reine Normlieferung.
+            if (eingabe is { VonHand: false } && f.Speicherfeld is null
                 && quellen.GetValueOrDefault(objekt.Tid)?.Werte.GetValueOrDefault(ziel.Attribut) == text
                 && DssQuellabweichungen.IstAbweichung(objekt.Klasse, ziel.Attribut, text)) continue;
             if (ziel.Attribut.EndsWith("Ref", StringComparison.Ordinal))
             {
                 Verweise(objekt, ziel.Attribut, text.Length > 0 && ziel.Attribut is "EigentuemerRef" or "BetreiberRef" ? Organisation(text) : text, eingabe?.VonHand == true || f.Speicherfeld is not null);
             }
-            else if (mitZusatzangaben && ziel.Attribut == "Sanierungsbedarf" && text.Equals("Saniert", StringComparison.OrdinalIgnoreCase))
+            else if (ziel.Attribut == "Sanierungsbedarf" && text.Equals("Saniert", StringComparison.OrdinalIgnoreCase))
             {
                 // Saniert ist eine erlaubte Eingabe in SewerStudio, aber KEIN DSS-Normwert.
-                // Den überholten Bedarf entfernen und die Eingabe ausdrücklich separat liefern.
+                // Den überholten Bedarf entfernen; das gilt auch ohne Zusatzmodell, sonst
+                // liesse sich aus einem sanierten Projekt gar keine reine Normdatei erzeugen.
                 Setze(objekt, ziel.Attribut, "", eingabe?.VonHand == true || f.Speicherfeld is not null);
-                hinweise.Add($"{objekt.Klasse} {objekt.Tid}: Sanierungsbedarf «{text}» im Zusatzmodell Erfasste_Angaben; DSS kennt diesen Auswahlwert nicht. Kein Ersatzcode geraten.");
+                hinweise.Add($"{objekt.Klasse} {objekt.Tid}: Sanierungsbedarf «{text}» " + (mitZusatzangaben
+                    ? "im Zusatzmodell Erfasste_Angaben; DSS kennt diesen Auswahlwert nicht. Kein Ersatzcode geraten."
+                    : "entfernt; DSS kennt diesen Auswahlwert nicht. Die Eingabe bleibt im Projekt. Kein Ersatzcode geraten."));
             }
             else Setze(objekt, ziel.Attribut, DssFeldZuordnung.Normwert(objekt.Klasse, ziel.Attribut, text), eingabe?.VonHand == true || f.Speicherfeld is not null);
             if (f.Id is "haltung.name" or "schacht.bezeichnung") Ziel(root, "Kanal")?.Setze("Bezeichnung", text);
