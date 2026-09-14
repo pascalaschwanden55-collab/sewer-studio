@@ -61,7 +61,7 @@ internal static class GeoShopXtfZuordnung
             && org.Klasse == "Organisation" && !mehrfach.Contains(org.Tid))
             Feld(org, "Bezeichnung", "org_eigentuemer");
         else if (!string.IsNullOrWhiteSpace(bw?.Ref("EigentuemerRef")))
-            hinweis = "Eigentümer ist nur als Verweis vorhanden; ohne Organisationsobjekt wird kein Eigentümer ergänzt.";
+            hinweis = "Eigentümer ist nur als Verweis vorhanden; ohne Organisationsobjekt wird die gelieferte Kennung übernommen.";
         Feld(o, "Letzte_Aenderung", haltung ? "ha_letzte_aenderung" : "letzte_aenderung");
         if (haltung)
         {

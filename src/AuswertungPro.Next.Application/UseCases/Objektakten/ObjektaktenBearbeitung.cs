@@ -56,13 +56,20 @@ public sealed class ObjektaktenBearbeitung(Project projekt, Guid wurzelId, strin
     public string Lies(ObjektAkte akte, ObjektFeldDefinition feld)
     {
         if (ObjektaktenSchachtVererbung.Lies(this, akte, feld, out var geerbt)) return geerbt;
-        if (feld.Id == "schacht.deckelhoehe")
-        {
-            var deckel = projekt.Objektakten.SingleOrDefault(a => a.Id == Wurzel.HauptdeckelId && a.Art == "deckel");
-            return deckel is null ? "" : Lies(deckel, FieldCatalog.Objektfelder.Feld("deckel.hoehe"));
-        }
+        if (art == "schacht" && akte.Id == wurzelId && SchachtHoehenRechnung.IstHoehenfeld(feld.Id))
+            return SchachtHoehenRechnung.Fuer(this).Lies(feld.Id);
+        if (art == "schacht" && akte.Id == wurzelId && feld.Id == "schacht.objectid")
+            return SchachtObjektId.Anzeige(this, akte).Wert;
         if (feld.Id == "deckel.hauptdeckel") return Wurzel.HauptdeckelId == akte.Id ? "Ja" : "Nein";
         if (feld.Id == "deckel.knoten") return string.Join(", ", akte.Bezuege.Select(Bezugsname));
+        if (feld.Id == "schacht.materialgruppe" && !akte.Werte.ContainsKey(feld.Id))
+        {
+            // Nur eine eindeutige Gruppe des tatsächlich gewählten Materials anzeigen; kein Detail erfinden.
+            var material = Lies(akte, FieldCatalog.Objektfelder.Feld("schacht.materialdetail"));
+            return FieldCatalog.Objektfelder.Auswahl(feld.KatalogId!)?.Eintraege.SingleOrDefault(e =>
+                material.Equals(e.Label, StringComparison.OrdinalIgnoreCase)
+                || material.StartsWith(e.Label + ",", StringComparison.OrdinalIgnoreCase))?.Label ?? "";
+        }
         if (feld.Speicherfeld is { } key && akte.Id == wurzelId)
         {
             if (art == "haltung") return projekt.Data.Single(r => r.Id == wurzelId).GetFieldValue(key);
@@ -202,7 +209,7 @@ public sealed class ObjektaktenBearbeitung(Project projekt, Guid wurzelId, strin
         return treffer.Length == 1 ? treffer[0].OriginalCode : null;
     }
 
-    private static string Normalisiere(ObjektFeldDefinition feld, string text)
+    internal static string Normalisiere(ObjektFeldDefinition feld, string text)
     {
         if (feld.Speicherfeld == FieldKeys.ConditionClass)
         {

@@ -107,6 +107,8 @@ public sealed class DataPageAufklappListeController : IDisposable
         _sync = new DataPageDetailLiveSync(record, gruppen);
     }
 
+    public void AktualisiereImportwerte() => _liste.Objektakte?.AktualisiereFelder();
+
     /// <summary>
     /// Nachpruefung W01: Der Datensatz hat sich seit der Anzeige geaendert. Die neuere Korrektur
     /// bleibt; die verworfene Eingabe steht als Hinweis in der Kopfzeile des Formulars. Der

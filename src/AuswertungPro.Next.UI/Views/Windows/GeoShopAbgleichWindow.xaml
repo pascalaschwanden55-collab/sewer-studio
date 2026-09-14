@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
-        Title="SewerStudio — GeoShop-Abgleich" Width="980" Height="720" MinWidth="600" MinHeight="420"
+        Title="SewerStudio — GeoShop-Abgleich" Width="1200" Height="720" MinWidth="600" MinHeight="420"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BgLightBrush}">
     <DockPanel Margin="20">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
@@ -18,8 +18,38 @@
                     Click="Uebernehmen_Click" Padding="16,8" Margin="0,0,10,0"/>
             <Button Content="Abbrechen" IsCancel="True" Padding="16,8"/>
         </StackPanel>
-        <TextBox x:Name="Bericht" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+        <Grid>
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+            <DataGrid x:Name="Feldvergleich" Visibility="Collapsed" MaxHeight="340" Margin="0,0,0,12"
+                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                      EnableRowVirtualization="True" HeadersVisibility="Column" RowHeight="NaN" MinRowHeight="40"
+                      AutomationProperties.Name="GeoShop-Feldvergleich">
+                <DataGrid.Resources>
+                    <Style x:Key="Vergleichstext" TargetType="TextBlock">
+                        <Setter Property="TextWrapping" Value="Wrap"/>
+                        <Setter Property="Margin" Value="4,6"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                    </Style>
+                </DataGrid.Resources>
+                <DataGrid.Columns>
+                    <DataGridTemplateColumn Header="GeoShop wählen" Width="115">
+                        <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                            <CheckBox IsChecked="{Binding Uebernehmen, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      IsEnabled="{Binding DarfUebernehmen}" ToolTip="{Binding Hinweis}"
+                                      HorizontalAlignment="Center" AutomationProperties.Name="GeoShop-Wert übernehmen"/>
+                        </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Objekt" Binding="{Binding Objekt}" IsReadOnly="True" Width="100" ElementStyle="{StaticResource Vergleichstext}"/>
+                    <DataGridTextColumn Header="Feld" Binding="{Binding Bezeichnung}" IsReadOnly="True" Width="140" ElementStyle="{StaticResource Vergleichstext}"/>
+                    <DataGridTextColumn Header="Bisher" Binding="{Binding Vorher}" IsReadOnly="True" Width="150" ElementStyle="{StaticResource Vergleichstext}"/>
+                    <DataGridTextColumn Header="Herkunft" Binding="{Binding Herkunft}" IsReadOnly="True" Width="110" ElementStyle="{StaticResource Vergleichstext}"/>
+                    <DataGridTextColumn Header="GeoShop" Binding="{Binding Nachher}" IsReadOnly="True" Width="150" ElementStyle="{StaticResource Vergleichstext}"/>
+                    <DataGridTextColumn Header="Hinweis" Binding="{Binding Hinweis}" IsReadOnly="True" Width="*" MinWidth="230" ElementStyle="{StaticResource Vergleichstext}"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        <TextBox Grid.Row="1" x:Name="Bericht" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
                  VerticalScrollBarVisibility="Auto" Padding="12" FontSize="{DynamicResource TextM}"
                  AutomationProperties.Name="Vorschau der GeoShop-Änderungen"/>
+        </Grid>
     </DockPanel>
 </Window>

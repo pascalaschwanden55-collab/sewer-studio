@@ -606,7 +606,7 @@ public sealed class SchaechtePageArchitectureGuardTests
             "privateTaskImportSingleProtocolAsync(" +
             "ProjectOperationContextprojectContext,stringprojektOrdner,stringpdfPfad)" +
             "=>_schachtProtocolSingleImportController.ExecuteAsync(" +
-            "projectContext,projektOrdner,pdfPfad);",
+            "projectContext,projektOrdner,pdfPfad,Selected);",
             compactPartial);
         Assert.Contains("_protocolImport.FindSchacht(", controller);
         Assert.Contains("_protocolImport.DistributePdf(", controller);

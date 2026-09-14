@@ -30,6 +30,18 @@ internal static class GeoShopHaltungspunktImport
                 projekt.Objektakten.Add(akte);
             }
             if (!akte.Bezuege.Contains(bezug)) akte.Bezuege.Add(bezug);
+            if (!akte.Quellen.Any(s => GeoShopObjektaktenImport.Gleich(s, q)))
+                akte.Quellen.Add(GeoShopObjektaktenImport.Kopie(q));
+            if (GeoShopKoordinaten.Lies(q) is { } lage)
+            {
+                Fuellen("haltungspunkt.rechtswert", lage.Rechts);
+                Fuellen("haltungspunkt.hochwert", lage.Hoch);
+            }
+            void Fuellen(string feld, string text)
+            {
+                if (!akte.Werte.TryGetValue(feld, out var alt) || !alt.VonHand && alt.Text.Length == 0)
+                    akte.Werte[feld] = new() { Text = text, GeaendertUtc = DateTime.UtcNow };
+            }
             foreach (var f in FieldCatalog.Objektfelder.Felder.Where(f => f.Art == "haltungspunkt"))
             {
                 if (f.Exportziel is not { } ziel || !ziel.StartsWith("Haltungspunkt.", StringComparison.Ordinal)) continue;

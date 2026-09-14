@@ -13,7 +13,8 @@ using AuswertungPro.Next.UI.Views.Windows;
 namespace AuswertungPro.Next.UI.Services;
 
 /// <summary>Dateiauswahl und abbrechbare Vorschau. Fachliche Entscheidungen liegen im Application-Planer.</summary>
-public sealed class GeoShopAbgleichDialog(IGeoShopLeser leser, IDialogService dialogs, Action<string>? merkeDatei = null)
+public sealed class GeoShopAbgleichDialog(IGeoShopLeser leser, IDialogService dialogs, Action<string>? merkeDatei = null,
+    IGeoShopSicherung? sicherung = null)
 {
     public int Zeige(BauteilArt art, Func<IReadOnlyList<GeoShopZiel>> ziele, Func<bool> darfSchreiben)
     {
@@ -26,7 +27,16 @@ public sealed class GeoShopAbgleichDialog(IGeoShopLeser leser, IDialogService di
         { dialogs.Error("Bitte genau eine XTF und höchstens eine Eigentümer-JSON auswählen."); return 0; }
         var datei = xtf[0];
         merkeDatei?.Invoke(datei);
+        return ZeigeDatei(art, ziele, darfSchreiben, datei, json.SingleOrDefault());
+    }
+
+    public int ZeigeDatei(BauteilArt art, Func<IReadOnlyList<GeoShopZiel>> ziele, Func<bool> darfSchreiben,
+        string datei, string? eigentuemerdatei = null)
+    {
+        if (!darfSchreiben()) return 0;
         var original = ziele();
+        // Ein vorhandener Datensatz oder eine Handkorrektur kann sich auch waehrend des Lesens aendern.
+        var vorLesen = original.Select(z => (Ziel: z, Stand: z.Stand(), Akten: z.Aktenstand)).ToArray();
         var namen = original.Select(z => z.Name).ToArray();
         using var abbruch = new CancellationTokenSource();
         GeoShopPlan? plan = null;
@@ -39,11 +49,13 @@ public sealed class GeoShopAbgleichDialog(IGeoShopLeser leser, IDialogService di
             try
             {
                 var bestand = await Task.Run(() => leser.Lies(datei, art, namen, abbruch.Token), abbruch.Token);
-                if (json.Length == 1)
-                    bestand = GeoShopEigentuemerErgaenzung.Ergaenze(bestand, leser.LiesEigentuemer(json[0]), json[0]);
+                if (eigentuemerdatei is not null)
+                    bestand = GeoShopEigentuemerErgaenzung.Ergaenze(bestand, leser.LiesEigentuemer(eigentuemerdatei), eigentuemerdatei);
                 if (abbruch.IsCancellationRequested) return;
-                plan = GeoShopAbgleichPlanBuilder.Baue(original, bestand);
-                fenster.Zeige(GeoShopAbgleichBericht.Schreibe(plan), plan.Positionen.Count > 0);
+                if (!darfSchreiben() || vorLesen.Any(z => z.Ziel.Stand() != z.Stand || z.Ziel.Aktenstand != z.Akten))
+                    throw new InvalidOperationException("Das Projekt wurde während des Lesens geändert. Bitte erneut abgleichen.");
+                plan = GeoShopAbgleichPlanBuilder.Baue(original, bestand, mitVergleich: true);
+                fenster.Zeige(plan);
             }
             catch (OperationCanceledException) when (abbruch.IsCancellationRequested) { return; }
             catch (Exception ex)
@@ -53,7 +65,11 @@ public sealed class GeoShopAbgleichDialog(IGeoShopLeser leser, IDialogService di
             }
         };
         if (fenster.ShowDialog() != true || plan is null || !darfSchreiben()) return 0;
-        try { return GeoShopAbgleichAnwender.WendeAn(plan, ziele()); }
+        try
+        {
+            if (sicherung is null) throw new InvalidOperationException("Die Projektsicherung ist nicht angebunden. Es wird nichts übernommen.");
+            return GeoShopGesicherteUebernahme.WendeAn(plan, ziele(), sicherung);
+        }
         catch (Exception ex) { dialogs.Error(ex.Message, "GeoShop-Abgleich"); return 0; }
     }
 }

@@ -33,6 +33,12 @@ namespace AuswertungPro.Next.UI.Tests;
 [Collection("IsolatedWpf")]
 public sealed class NachschlagKontextmenueTests
 {
+    private sealed class ProbeApp : System.Windows.Application
+    {
+        // Layout-/Listenwechsel pumpen den Dispatcher; dabei keinen produktiven Programmstart ausloesen.
+        protected override void OnStartup(StartupEventArgs e) { }
+    }
+
     private static readonly string ChildTestName =
         typeof(NachschlagKontextmenueTests).FullName
         + "."
@@ -64,8 +70,10 @@ public sealed class NachschlagKontextmenueTests
     {
         StaTestRunner.Run(() =>
         {
-            var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-            app.InitializeComponent();
+            var app = new ProbeApp { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            foreach (var pfad in new[] { "Theme/ThemeLight.xaml", "Theme/Controls.xaml", "Controls/NovaPageHeader.xaml" })
+                app.Resources.MergedDictionaries.Add(new ResourceDictionary
+                    { Source = new Uri("/SewerStudio;component/" + pfad, UriKind.Relative) });
 
             var befunde = new List<string>();
 
@@ -154,6 +162,7 @@ public sealed class NachschlagKontextmenueTests
             //     trotzdem sichtbar bleiben und die erste Bedienung darf ihn
             //     nicht durch den ersten Listeneintrag ersetzen.
             befunde.AddRange(PruefeFremdenEigentuemer());
+            PruefeGespeicherteKurzansicht();
 
             // 8. Das Stapelfenster muss sich ueberhaupt laden lassen. Ein
             //    erfundener Ressourcenname faellt in WPF sonst still aus -
@@ -314,6 +323,28 @@ public sealed class NachschlagKontextmenueTests
                 $"Eigentuemer: Nach der ersten Bedienung steht '{item.Value}' im Feld "
                 + "statt des nachgeschlagenen Werts.";
         }
+    }
+
+    private static void PruefeGespeicherteKurzansicht()
+    {
+        var commits = new List<string>();
+        var item = new RecordDetailItem("Form", "Kreisprofil", commits.Add, isCombo: true, options: ["", "Rund", "Oval"])
+            { FieldName = "Schachtform" };
+        var quelle = new RecordDetailsView();
+        var halter = new ContentControl { ContentTemplate = (DataTemplate)quelle.Resources["FixedComboEditorTemplate"], Content = item };
+        Zeige(halter, quelle); Warte();
+        var combo = SucheCombo(halter)!;
+        Assert.Equal("Kreisprofil", combo.SelectedItem);
+        Assert.Empty(item.AuswahlHinweis);
+        item.ErsetzeOptionen(["", "Oval"]); Warte();
+        Assert.Equal("Kreisprofil", combo.SelectedItem);
+        item.UebernehmeAusDatensatz("Eigene Form"); Warte();
+        Assert.Equal("Eigene Form", combo.SelectedItem);
+        Assert.Equal("Eigene Form", item.Value);
+        Assert.Empty(commits);
+        combo.SelectedItem = ""; Warte();
+        Assert.Equal("", item.Value);
+        Assert.Equal(new[] { "" }, commits);
     }
 
     private static ContextMenu? ComboMenue(RecordDetailItem item) => ComboBoxFuer(item).ContextMenu;

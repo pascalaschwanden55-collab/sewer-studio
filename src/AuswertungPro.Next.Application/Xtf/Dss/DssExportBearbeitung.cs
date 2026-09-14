@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Lookup;
+using AuswertungPro.Next.Application.UseCases;
 
 namespace AuswertungPro.Next.Application.Xtf.Dss;
 
@@ -87,7 +88,8 @@ internal sealed class DssExportBearbeitung(Project projekt, Dictionary<string, D
                 var feld = s is null ? key : SchachtFeldnamen.Feld(s, key);
                 var meta = h?.FieldMeta.GetValueOrDefault(feld) ?? s?.FieldMeta.GetValueOrDefault(feld);
                 var wert = h?.GetFieldValue(feld) ?? s?.GetFieldValue(feld) ?? "";
-                if (meta is { UserEdited: true } || wert.Length > 0 && (meta is null || meta.Source != FieldSource.Kataster))
+                if (meta is { UserEdited: true } || GeoShopImportVergleich.BehaeltBestandswert(projekt, recordId, key, wert)
+                    || wert.Length > 0 && (meta is null || meta.Source != FieldSource.Kataster))
                     text = eingabe is not null && eingabe.Bestandswert == wert ? eingabe.Text : wert;
             }
             else if (eingabe is not null) text = eingabe.Text;
@@ -121,8 +123,8 @@ internal sealed class DssExportBearbeitung(Project projekt, Dictionary<string, D
             else Setze(objekt, ziel.Attribut, DssFeldZuordnung.Normwert(objekt.Klasse, ziel.Attribut, text), eingabe?.VonHand == true || f.Speicherfeld is not null);
             if (f.Id is "haltung.name" or "schacht.bezeichnung") Ziel(root, "Kanal")?.Setze("Bezeichnung", text);
         }
-        if (id is { } rid && root.Klasse == "Haltung") DssProfilBearbeitung.Uebernehme(projekt.Data.Single(h => h.Id == rid), root, objekte, _ids);
-        DssKoordinatenBearbeitung.Uebernehme(akte, root);
+        if (id is { } rid && root.Klasse == "Haltung") DssProfilBearbeitung.Uebernehme(projekt, projekt.Data.Single(h => h.Id == rid), root, objekte, _ids);
+        DssKoordinatenBearbeitung.Uebernehme(projekt, akte, root);
     }
     private DssExportObjekt? Ziel(DssExportObjekt root, string klasse)
     {
@@ -147,10 +149,12 @@ internal sealed class DssExportBearbeitung(Project projekt, Dictionary<string, D
         var s = projekt.SchaechteData.SingleOrDefault(r => r.Id == id);
         string? Aktuell(string key)
         {
+            var vergleichsfeld = key;
             key = s is null ? key : SchachtFeldnamen.Feld(s, key);
             var meta = h?.FieldMeta.GetValueOrDefault(key) ?? s?.FieldMeta.GetValueOrDefault(key);
             var text = h?.GetFieldValue(key) ?? s?.GetFieldValue(key) ?? "";
-            return meta?.UserEdited == true || text.Length > 0 && meta?.Source != FieldSource.Kataster ? text : null;
+            return meta?.UserEdited == true || GeoShopImportVergleich.BehaeltBestandswert(projekt, id, vergleichsfeld, text)
+                || text.Length > 0 && meta?.Source != FieldSource.Kataster ? text : null;
         }
         var bw = Ziel(root, "Kanal");
         foreach (var (key, rolle) in new[] { (FieldKeys.DataOwner, "DatenherrRef"), (FieldKeys.DataSupplier, "DatenlieferantRef") })

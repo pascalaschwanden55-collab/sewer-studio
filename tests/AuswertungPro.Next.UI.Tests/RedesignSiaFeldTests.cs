@@ -6,6 +6,22 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class RedesignSiaFeldTests
 {
+    [Theory]
+    [InlineData("Saniert", "Saniert")]
+    [InlineData("Kurzfristig", "kurzfristig")]
+    [InlineData("keiner", "keiner")]
+    public void Sanierungsbedarf_aus_Alle_Angaben_bleibt_in_der_Kurzansicht_ausgewaehlt(string gespeichert, string auswahl)
+    {
+        var commits = new List<string>();
+        var item = new RecordDetailItem("Sanierungsbedarf", gespeichert, commits.Add, isCombo: true,
+            options: SanierungsbedarfOptionen.Alle);
+        Assert.Equal(auswahl, item.SelectedOption);
+        Assert.Contains(item.SelectedOption, item.Options);
+        Assert.Empty(item.AuswahlHinweis);
+        Assert.Equal(gespeichert, item.Value);
+        Assert.Empty(commits);
+        Assert.DoesNotContain("Saniert", SiaKanalVokabular.Sanierungsbedarf.Auswahl);
+    }
     [Fact]
     public void Bauwerkswechsel_filtert_die_Funktion_ohne_den_bestehenden_Wert_zu_loeschen()
     {

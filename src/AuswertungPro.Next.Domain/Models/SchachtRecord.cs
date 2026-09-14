@@ -100,6 +100,9 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
         if (IsUserEdited(fieldName))
             return FeldSchreibErgebnis.HandwertGeschuetzt;
 
+        if (KatasterFeldschutz.Pruefe(FieldMeta.GetValueOrDefault(fieldName), GetFieldValue(fieldName), value, FieldSource.Manual, false))
+            return FeldSchreibErgebnis.KatasterwertGeschuetzt;
+
         return WriteField(fieldName, value, FieldSource.Manual, userEdited: null);
     }
 
@@ -123,6 +126,9 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     {
         if (!userEdited && IsUserEdited(fieldName))
             return FeldSchreibErgebnis.HandwertGeschuetzt;
+
+        if (KatasterFeldschutz.Pruefe(FieldMeta.GetValueOrDefault(fieldName), GetFieldValue(fieldName), value, source, userEdited))
+            return FeldSchreibErgebnis.KatasterwertGeschuetzt;
 
         return WriteField(fieldName, value, source, userEdited);
     }

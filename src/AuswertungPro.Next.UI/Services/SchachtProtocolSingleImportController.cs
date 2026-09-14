@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.UseCases;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Services;
@@ -39,9 +40,11 @@ internal sealed class SchachtProtocolSingleImportController
     internal async Task ExecuteAsync(
         ProjectOperationContext projectContext,
         string projectFolder,
-        string pdfPath)
+        string pdfPath,
+        SchachtRecord? ausgewaehlterSchacht = null)
     {
         var project = projectContext.Project;
+        var ausgewaehlterName = ausgewaehlterSchacht is null ? "" : SchachtPdfVerknuepfung.Name(ausgewaehlterSchacht);
         var result = await _actions.ReadProtocolAsync(pdfPath, DialogTitle);
         if (result is null
             || !_actions.ProjectIsStillOpen(
@@ -50,7 +53,17 @@ internal sealed class SchachtProtocolSingleImportController
                 ProjectOperationImpact.None))
             return;
 
-        if (!result.IstSchachtprotokoll)
+        var nurVerknuepfen = (!result.IstSchachtprotokoll || string.IsNullOrWhiteSpace(result.Schachtnummer))
+            && ausgewaehlterSchacht is not null && ausgewaehlterName.Length > 0;
+        if (nurVerknuepfen && (!project.SchaechteData.Contains(ausgewaehlterSchacht!)
+            || SchachtPdfVerknuepfung.Name(ausgewaehlterSchacht!) != ausgewaehlterName))
+        {
+            _dialogs.Warn("Der ausgewählte Schacht wurde inzwischen entfernt oder umbenannt. Bitte die Datei erneut auswählen.", DialogTitle);
+            return;
+        }
+        if (nurVerknuepfen) result = result with { Schachtnummer = ausgewaehlterName };
+
+        if (!result.IstSchachtprotokoll && !nurVerknuepfen)
         {
             var warning = string.IsNullOrWhiteSpace(result.Lesehinweis)
                 ? "Das gewaehlte PDF ist kein Schachtprotokoll."
@@ -67,7 +80,8 @@ internal sealed class SchachtProtocolSingleImportController
             return;
         }
 
-        var targetResolution = ResolveTarget(project, result);
+        var targetResolution = nurVerknuepfen
+            ? new TargetResolution(ausgewaehlterSchacht!, RequiresProjectMembership: true) : ResolveTarget(project, result);
         if (targetResolution is null)
             return;
         var target = targetResolution.Target;
@@ -106,13 +120,15 @@ internal sealed class SchachtProtocolSingleImportController
         lock (_actions.CollectionLock)
         {
             if (targetResolution.RequiresProjectMembership
-                && !project.SchaechteData.Contains(target))
+                && (!project.SchaechteData.Contains(target)
+                    || nurVerknuepfen && SchachtPdfVerknuepfung.Name(target) != ausgewaehlterName))
             {
                 targetRemoved = true;
             }
             else
             {
-                _protocolImport.Apply(target, result, distribution.RelativePath);
+                if (nurVerknuepfen) SchachtPdfVerknuepfung.Verknuepfe(target, distribution.RelativePath);
+                else _protocolImport.Apply(target, result, distribution.RelativePath);
                 if (!targetResolution.RequiresProjectMembership
                     && !project.SchaechteData.Contains(target))
                 {
@@ -160,8 +176,9 @@ internal sealed class SchachtProtocolSingleImportController
         if (!saved)
         {
             var notSaved =
-                $"Protokoll uebernommen, aber nicht gespeichert: Schacht {result.Schachtnummer} " +
-                $"({result.Schaeden.Count} Beobachtungen).";
+                nurVerknuepfen ? $"PDF verknüpft, aber nicht gespeichert: Schacht {result.Schachtnummer}."
+                : $"Protokoll uebernommen, aber nicht gespeichert: Schacht {result.Schachtnummer} " +
+                  $"({result.Schaeden.Count} Beobachtungen).";
             _actions.SetLastResult(notSaved);
             _dialogs.Warn(
                 notSaved + "\n\nBitte das Projekt erneut speichern."
@@ -171,7 +188,8 @@ internal sealed class SchachtProtocolSingleImportController
         }
 
         _actions.SetLastResult(
-            $"Protokoll importiert: Schacht {result.Schachtnummer} " +
+            nurVerknuepfen ? $"PDF verknüpft: Schacht {result.Schachtnummer}. Keine Protokolldaten automatisch erkannt; bestehende Angaben bleiben erhalten."
+            : $"Protokoll importiert: Schacht {result.Schachtnummer} " +
             $"({result.Schaeden.Count} Beobachtungen).");
     }
 

@@ -21,6 +21,26 @@ public sealed class GeoShopZiel
     private readonly Action<string, string> _ersetze;
     private Project? _projekt;
     private Guid _id;
+    public Project? Projekt => _projekt;
+    public Guid Id => _id;
+    public string Herkunft(string feld)
+    {
+        var meta = Datensatz is SchachtRecord s ? s.FieldMeta.GetValueOrDefault(SchachtFeldnamen.Feld(s, feld))
+            : ((HaltungRecord)Datensatz).FieldMeta.GetValueOrDefault(feld);
+        return meta?.UserEdited == true ? "Handeingabe" : meta?.Source switch
+        {
+            FieldSource.Legacy => "Alter Import", FieldSource.Kataster => "Kataster",
+            FieldSource.Xtf or FieldSource.Xtf405 => "XTF", FieldSource.Pdf => "PDF",
+            FieldSource.Spro => "SchachtPro", FieldSource.Protocol => "Protokoll",
+            _ => string.IsNullOrWhiteSpace(Wert(feld)) ? "Leer" : "Herkunft nicht eindeutig"
+        };
+    }
+    internal void SchreibeVergleich(string feld, string wert)
+    {
+        if (Handgesetzt(feld)) throw new InvalidOperationException("Eine Handeingabe darf nicht automatisch ersetzt werden.");
+        _setze(feld, wert);
+        if (Wert(feld) != wert) throw new InvalidOperationException($"{Name}: {feld} konnte nicht übernommen werden.");
+    }
     /// <summary>Auch der Einzelweg prueft die Namen im ganzen gebundenen Projekt.
     /// Beim Anwenden erneut lesen: Eine inzwischen umbenannte Nachbarzeile kann den Namen doppeln.</summary>
     internal bool ProjektnameEindeutig
@@ -94,7 +114,8 @@ public sealed class GeoShopZiel
             else if (feld.Ersetzen) _ersetze(feld.Feld, feld.Nachher);
             else _fuelle(feld.Feld, feld.Nachher);
         }
-        if (_projekt is not null)
+        if (position.Vergleich is not null) position.Vergleich.Uebernehme(this);
+        else if (_projekt is not null)
             Objektakten.GeoShopObjektaktenImport.Uebernehme(_projekt, _id, Art == BauteilArt.Haltung ? "haltung" : "schacht", position.Quelle, position.Gedreht);
     }
 }

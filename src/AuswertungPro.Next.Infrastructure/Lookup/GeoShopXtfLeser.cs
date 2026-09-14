@@ -92,7 +92,7 @@ public sealed class GeoShopXtfLeser : IGeoShopLeser
             }, cancellationToken);
         }
         var inverse = objekte.Values.SelectMany(o => o.Refs.Values.Select(r => (Ref: r, Objekt: o))).ToLookup(x => x.Ref, x => x.Objekt);
-        return new GeoShopBestand(art, Path.GetFullPath(datei), primaer.Select(o =>
+        return GeoShopEigentuemerDatei.ErgaenzeBegleitdatei(new GeoShopBestand(art, Path.GetFullPath(datei), primaer.Select(o =>
         {
             var bauteil = GeoShopXtfZuordnung.Baue(o, art, objekte, mehrfach);
             var ids = new HashSet<string> { o.Tid };
@@ -113,9 +113,10 @@ public sealed class GeoShopXtfLeser : IGeoShopLeser
                     System = "GeoShop-XTF", Datei = Path.GetFullPath(datei), Modell = x.Modell, Klasse = x.Klasse,
                     Kennung = x.Tid, IstLokaleKennung = x.Tid.StartsWith("lokal:", StringComparison.Ordinal), Werte = new(x.Werte), Referenzen = new(x.Refs), Strukturen = new(x.Strukturen)
                 }).ToArray();
-            return bauteil with { Quellen = quellen, Hinweis = ids.Any(mehrfach.Contains)
-                ? (bauteil.Hinweis + " Doppelte Quellkennungen im Verbund werden nicht in die Akte übernommen.").Trim() : bauteil.Hinweis };
-        }).ToArray());
+            return AuswertungPro.Next.Application.UseCases.Objektakten.GeoShopAttributZuordnung.ErgaenzeBestandsfelder(
+                bauteil with { Quellen = quellen, Hinweis = ids.Any(mehrfach.Contains)
+                    ? (bauteil.Hinweis + " Doppelte Quellkennungen im Verbund werden nicht in die Akte übernommen.").Trim() : bauteil.Hinweis }, art);
+        }).ToArray()));
     }
 
     private static void LiesDurchlauf(Stream stream, Func<string, string, bool> benoetigt,

@@ -268,7 +268,7 @@
 
         <DataTemplate x:Key="FixedComboEditorTemplate" DataType="{x:Type windows:RecordDetailItem}">
             <ComboBox Style="{StaticResource DetailComboStyle}"
-                      ItemsSource="{Binding Options}" IsEditable="False"
+                      ItemsSource="{Binding AnzeigeOptionen}" IsEditable="False"
                       SelectedItem="{Binding SelectedOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                       IsEnabled="{Binding CanEdit}"
                       LostKeyboardFocus="EditorComboBox_LostKeyboardFocus"

@@ -1,12 +1,14 @@
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.UseCases;
 
 namespace AuswertungPro.Next.Application.Xtf.Dss;
 
 internal static class DssProfilBearbeitung
 {
-    public static void Uebernehme(HaltungRecord h, DssExportObjekt haltung, Dictionary<string, DssExportObjekt> objekte, XtfNeuKennungen ids)
+    public static void Uebernehme(Project projekt, HaltungRecord h, DssExportObjekt haltung, Dictionary<string, DssExportObjekt> objekte, XtfNeuKennungen ids)
     {
-        bool Geaendert(string key) => h.FieldMeta.TryGetValue(key, out var m) && (m.UserEdited || m.Source != FieldSource.Kataster && h.GetFieldValue(key).Length > 0);
+        bool Geaendert(string key) => GeoShopImportVergleich.BehaeltBestandswert(projekt, h.Id, key, h.GetFieldValue(key))
+            || h.FieldMeta.TryGetValue(key, out var m) && (m.UserEdited || m.Source != FieldSource.Kataster && h.GetFieldValue(key).Length > 0);
         var typGeaendert = Geaendert(FieldKeys.ProfileType);
         var breiteGeaendert = Geaendert(FieldKeys.ClearWidthMm);
         if (!typGeaendert && !breiteGeaendert && !Geaendert(FieldKeys.NominalDiameterMm) && !Geaendert(FieldKeys.DataOwner) && !Geaendert(FieldKeys.DataSupplier)) return;

@@ -28,6 +28,7 @@ public static class SchachtformVokabular
             ["rund"] = "Rund",
             ["round"] = "Rund",
             ["circular"] = "Rund",
+            ["kreisprofil"] = "Rund",
             ["kreisfoermig"] = "Rund",
             ["kreisförmig"] = "Rund",
             ["oval"] = "Oval",

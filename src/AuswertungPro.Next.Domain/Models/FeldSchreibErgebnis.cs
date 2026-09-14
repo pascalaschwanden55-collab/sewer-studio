@@ -17,5 +17,8 @@ public enum FeldSchreibErgebnis
     Unveraendert,
 
     /// <summary>Abgelehnt: das Feld traegt eine Handaenderung, die nicht ueberschrieben wird.</summary>
-    HandwertGeschuetzt
+    HandwertGeschuetzt,
+
+    /// <summary>Abgelehnt: der bestaetigte Katasterwert bleibt erhalten; Abweichung steht in FieldMeta.Conflict.</summary>
+    KatasterwertGeschuetzt
 }

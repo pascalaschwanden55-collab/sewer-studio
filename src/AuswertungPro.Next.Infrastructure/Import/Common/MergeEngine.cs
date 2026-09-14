@@ -20,7 +20,7 @@ public sealed class MergeResult
 /// - user-edited Werte werden niemals überschrieben
 /// - leere Zielwerte werden immer gesetzt
 /// - nicht user-edited "Manual" darf von Importen überschrieben werden
-/// - Import-Priorität: Xtf/Xtf405 > Ili > Pdf > Legacy > Protocol > Unknown
+/// - Import-Priorität: Kataster > Xtf/Xtf405 > Ili > Pdf > Legacy > Protocol > Unknown
 /// </summary>
 public static class MergeEngine
 {
@@ -159,6 +159,7 @@ public static class MergeEngine
 
     private static int GetPriority(FieldSource source) => source switch
     {
+        FieldSource.Kataster => 90,
         FieldSource.Xtf => 80,
         FieldSource.Xtf405 => 80,
         FieldSource.Ili => 70,

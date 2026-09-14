@@ -9,20 +9,24 @@ namespace AuswertungPro.Next.Application.UseCases;
 public sealed record GeoShopFeldAenderung(string Feld, string Vorher, string Nachher, bool IstKennung = false, bool Ersetzen = false);
 public sealed record GeoShopPosition(GeoShopZiel Ziel, string Vorher, GeoShopBauteil Quelle,
     bool Gedreht, bool KennungenAendern, IReadOnlyList<GeoShopFeldAenderung> Felder,
-    string AlteKennungen, string NeueKennungen, string Aktenstand = "", bool NeueAktenwerte = false);
+    string AlteKennungen, string NeueKennungen, string Aktenstand = "", bool NeueAktenwerte = false,
+    GeoShopImportVergleich? Vergleich = null);
 public sealed record GeoShopPlan(string Quelle, IReadOnlyList<GeoShopPosition> Positionen, IReadOnlyList<string> Hinweise,
-    IReadOnlyList<object> Projektbestand);
+    IReadOnlyList<object> Projektbestand)
+{
+    internal IReadOnlyDictionary<Project, string> Projektstaende { get; init; } = new Dictionary<Project, string>();
+}
 
 /// <summary>Plant Kennungsersatz und Leerfelder gemeinsam. Namen allein reichen nur bei einem eindeutigen Treffer.</summary>
 public static class GeoShopAbgleichPlanBuilder
 {
     /// <summary>Felder, die IMMER aus der GeoShop-XTF kommen (Entscheid Pascal 11.09.2026): Die Haltungslaenge
     /// ist ein Katastermass; ein vorhandener Wert - auch ein von Hand gesetzter - wird ersetzt und als
-    /// Katasterwert markiert. Alle anderen Felder werden weiterhin nur gefuellt, wenn sie leer sind.</summary>
+    /// Katasterwert markiert. Andere Abweichungen sind nur im ausdruecklichen Feldvergleich waehlbar.</summary>
     public static readonly IReadOnlySet<string> ImmerAusXtf =
         new HashSet<string>(StringComparer.Ordinal) { FieldKeys.HoldingLengthMeters };
 
-    public static GeoShopPlan Baue(IReadOnlyList<GeoShopZiel> ziele, GeoShopBestand bestand)
+    public static GeoShopPlan Baue(IReadOnlyList<GeoShopZiel> ziele, GeoShopBestand bestand, bool mitVergleich = false)
     {
         var positionen = new List<GeoShopPosition>();
         var hinweise = new List<string>();
@@ -86,16 +90,29 @@ public static class GeoShopAbgleichPlanBuilder
                 }
             var id = quelle.Kennungen.Hauptkennung!;
             var kennungsfelder = new[] { FieldKeys.GeonisId, FieldKeys.CadastreObjectId };
-            if (kennungsfelder.Any(f => ziel.Handgesetzt(f) && !string.IsNullOrWhiteSpace(ziel.Wert(f)) && ziel.Wert(f) != id))
+            if (kennungsfelder.Any(f => ziel.Handgesetzt(f) && (mitVergleich || !string.IsNullOrWhiteSpace(ziel.Wert(f))) && ziel.Wert(f) != id))
             { Hinweis("Eine abweichende Kennung ist von Hand geschützt – ausgelassen."); continue; }
             foreach (var feld in kennungsfelder)
                 if (ziel.Wert(feld) != id) felder.Add(new GeoShopFeldAenderung(feld, ziel.Wert(feld), id, true));
             var neueAktenwerte = ziel.HatNeueAktenwerte(quelle);
-            if (aendern || felder.Count > 0 || neueAktenwerte)
-                positionen.Add(new GeoShopPosition(ziel, ziel.Stand(), quelle, gedreht, aendern, felder, altText, neuText, ziel.Aktenstand, neueAktenwerte));
+            GeoShopImportVergleich? vergleich = null;
+            if (mitVergleich && ziel.Projekt is not null)
+            {
+                try { vergleich = GeoShopImportVergleich.Baue(ziel, quelle, werte, gedreht); }
+                catch (Exception ex) when (ex is InvalidOperationException or System.Text.Json.JsonException)
+                { Hinweis($"{ex.Message} – ausgelassen."); continue; }
+                felder.RemoveAll(f => !f.IstKennung && !(ziel.Art == BauteilArt.Haltung && ImmerAusXtf.Contains(f.Feld)));
+                neueAktenwerte = vergleich.HatNeueAkten;
+            }
+            if (aendern || felder.Count > 0 || neueAktenwerte || vergleich?.Felder.Count > 0)
+                positionen.Add(new GeoShopPosition(ziel, ziel.Stand(), quelle, gedreht, aendern, felder, altText, neuText, ziel.Aktenstand, neueAktenwerte, vergleich));
             else Hinweis("Bereits abgeglichen; keine leeren Felder zu ergänzen.");
         }
-        return new GeoShopPlan(bestand.Quelle, positionen, hinweise, ziele.Select(z => z.Datensatz).ToArray());
+        return new GeoShopPlan(bestand.Quelle, positionen, hinweise, ziele.Select(z => z.Datensatz).ToArray())
+        {
+            Projektstaende = mitVergleich ? ziele.Select(z => z.Projekt).OfType<Project>().Distinct()
+                .ToDictionary(p => p, p => System.Text.Json.JsonSerializer.Serialize(p)) : new Dictionary<Project, string>()
+        };
     }
 
     /// <summary>«12.5» und «12.50» sind derselbe Wert; nur eine echte Abweichung ist eine Aenderung.</summary>
@@ -136,10 +153,23 @@ public static class GeoShopAbgleichAnwender
     {
         if (plan.Projektbestand.Count != aktuelleZiele.Count
             || !plan.Projektbestand.Zip(aktuelleZiele).All(p => ReferenceEquals(p.First, p.Second.Datensatz))
+            || plan.Projektstaende.Any(p => System.Text.Json.JsonSerializer.Serialize(p.Key) != p.Value)
             || plan.Positionen.Any(p => !aktuelleZiele.Any(z => ReferenceEquals(z.Datensatz, p.Ziel.Datensatz))
             || !p.Ziel.ProjektnameEindeutig || p.Ziel.Stand() != p.Vorher || p.Ziel.Aktenstand != p.Aktenstand))
             throw new InvalidOperationException("Das Projekt wurde während der Vorschau geändert. Bitte den GeoShop-Abgleich erneut starten.");
-        foreach (var position in plan.Positionen) position.Ziel.Uebernehme(position, plan.Quelle);
+        var wahlen = plan.Positionen.SelectMany(p => p.Vergleich?.Felder ?? []);
+        if (wahlen.GroupBy(w => w.Schluessel).Any(g => g.Select(w => (w.Nachher, w.Uebernehmen)).Distinct().Count() > 1))
+            throw new InvalidOperationException("Ein gemeinsames Objekt hat widersprüchliche Auswahlen. Bitte die gleichen Felder einheitlich wählen.");
+        var rueckweg = new GeoShopRuecknahme(plan);
+        try
+        {
+            foreach (var position in plan.Positionen) position.Ziel.Uebernehme(position, plan.Quelle);
+        }
+        catch
+        {
+            rueckweg.StelleWiederHer();
+            throw;
+        }
         return plan.Positionen.Count;
     }
 }

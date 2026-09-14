@@ -90,7 +90,13 @@ public partial class DataPage
             return;
 
         vm.HaltungAnzeigen -= ZeigeHaltungInListe;
+        vm.FelderExternErgaenzt -= AktualisiereImportwerte;
         if (an)
+        {
             vm.HaltungAnzeigen += ZeigeHaltungInListe;
+            vm.FelderExternErgaenzt += AktualisiereImportwerte;
+        }
     }
+
+    private void AktualisiereImportwerte() => _aufklappListe?.AktualisiereImportwerte();
 }

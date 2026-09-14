@@ -40,6 +40,9 @@ public static class GeoShopObjektaktenImport
         {
             string? wert = feld.Id switch
             {
+                "schacht.objectid" => SchachtObjektId.AusQuelle(bauwerk) ?? SchachtObjektId.AusQuelle(primaer),
+                "schacht.rechtswert" => GeoShopKoordinaten.Lies(primaer)?.Rechts,
+                "schacht.hochwert" => GeoShopKoordinaten.Lies(primaer)?.Hoch,
                 "haltung.fromlevel" => Wert(von, "Kote"),
                 "haltung.tolevel" => Wert(nach, "Kote"),
                 "haltung.fromheightaccuracy" => Wert(von, "Hoehengenauigkeit"),
@@ -47,7 +50,7 @@ public static class GeoShopObjektaktenImport
                 "haltung.frompoint" => von?.Kennung,
                 "haltung.topoint" => nach?.Kennung,
                 "haltung.profileref" => k.Rohrprofil,
-                _ => AusAttribut(feld.Exportziel, [primaer, bauwerk]) ?? DssWert(feld, primaer, bauwerk, von, nach)
+                _ => GeoShopAttributZuordnung.Lies(feld, primaer, bauwerk, von, nach)
             };
             Fuellen(root, feld.Id, wert);
         }
@@ -72,6 +75,11 @@ public static class GeoShopObjektaktenImport
             foreach (var feld in FieldCatalog.Objektfelder.Felder.Where(f => f.Art == subart))
                 Fuellen(sub, feld.Id, DssFeldZuordnung.UnterhaltAnzeige(feld,
                     AusAttribut(feld.Exportziel, [q]) ?? DssWert(feld, q, null, null, null)));
+            if (subart == "deckel" && GeoShopKoordinaten.Lies(q) is { } lage)
+            {
+                Fuellen(sub, "deckel.rechtswert", lage.Rechts);
+                Fuellen(sub, "deckel.hochwert", lage.Hoch);
+            }
             if (q.Klasse == "Unterhalt")
             {
                 var firmenbelege = quellen.Where(s => s.Klasse == "Erhaltungsereignis_Ausfuehrende_FirmaAssoc"

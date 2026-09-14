@@ -8,6 +8,23 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 
 public sealed class ObjektaktenTests
 {
+    [Theory]
+    [InlineData("chTEST00O0000001", "Firma")]
+    [InlineData("Anderer Name", "Anderer Name")]
+    public void Eigentuemerverweis_ist_kein_widersprechender_Name(string vorher, string erwartet)
+    {
+        var bw = new ObjektQuellbeleg { Klasse = "Normschacht", Kennung = "chTEST00B0000001",
+            Referenzen = new() { ["EigentuemerRef"] = "chTEST00O0000001" } };
+        var quelle = new GeoShopBauteil("A", KatasterKennung.FuerSchacht("A", null, "chTEST00K0000001", bw.Kennung),
+            new Dictionary<string, string> { [FieldKeys.Owner] = vorher }, Quellen: [bw]);
+        var bestand = new GeoShopBestand(BauteilArt.Schacht, "quelle.xtf", [quelle]);
+        var namen = new Dictionary<string, string> { ["chTEST00O0000001"] = "Firma" };
+        var neu = GeoShopEigentuemerErgaenzung.Ergaenze(bestand, namen, "eigentuemer_zuordnung.json");
+        Assert.Equal(erwartet, neu.Bauteile[0].Felder[FieldKeys.Owner]);
+        Assert.Equal(vorher, quelle.Felder[FieldKeys.Owner]);
+        var wiederholt = GeoShopEigentuemerErgaenzung.Ergaenze(neu, namen, "eigentuemer_zuordnung.json");
+        Assert.Equal(neu.Bauteile[0].Quellen!.Count, wiederholt.Bauteile[0].Quellen!.Count);
+    }
     [Fact]
     public void Ausfuehrende_Firma_folgt_nur_der_belegten_Ereignisbeziehung()
     {

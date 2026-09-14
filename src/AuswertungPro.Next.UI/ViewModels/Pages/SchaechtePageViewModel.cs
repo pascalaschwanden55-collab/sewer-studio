@@ -144,12 +144,13 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         QgisBestand = services.QgisBestand;
         KatasterKennungen = services.KatasterKennungen;
         _geoShop = services.GeoShop;
+        _geoShopSicherung = services.GeoShopSicherung;
         ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("schacht", () => _shell.Project, Settings,
             () => CanMutateShaftData, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen, services.GeoShop);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);
         ObjektakteCommand = Services.ObjektaktenDialog.Befehl("schacht", () => _shell.Project, () => Selected?.Id,
             Settings, () => CanMutateShaftData, () => _shell.MarkProjectDirty(), Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen, services.GeoShop);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);
         CodeCatalog = services.CodeCatalog;
     }
 

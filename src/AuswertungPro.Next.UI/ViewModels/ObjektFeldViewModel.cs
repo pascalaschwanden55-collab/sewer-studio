@@ -150,6 +150,10 @@ public sealed class ObjektFeldViewModel : ObservableObject
             Hinweis = (Hinweis + " Originalcode: " + code).Trim();
         if (AuswertungPro.Next.Application.Xtf.Dss.DssMaterialZuordnung.Fuer(Feld.Id, Text) is { } material)
             Hinweis = (Hinweis + " " + (material.Normwert is null ? material.Hinweis : $"DSS-Material: {material.Normwert}. {material.Hinweis}")).Trim();
+        if (_bearbeitung.Art == "schacht" && _akte.Id == _bearbeitung.WurzelId && SchachtHoehenRechnung.IstHoehenfeld(Feld.Id))
+            Hinweis = (Hinweis + " " + SchachtHoehenRechnung.Fuer(_bearbeitung).Hinweis(Feld.Id)).Trim();
+        if (Feld.Id == "schacht.objectid" && SchachtObjektId.Anzeige(_bearbeitung, _akte).AusBezeichnung)
+            Hinweis = "Aus der Schachtbezeichnung angezeigt; keine separat gelieferte OBJECTID. Die XTF-Kennung bleibt unverändert.";
         OnPropertyChanged(nameof(Optionen)); OnPropertyChanged(nameof(Auswahl));
     }
 

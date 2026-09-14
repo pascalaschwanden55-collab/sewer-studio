@@ -13,12 +13,15 @@ public static class GeoShopEigentuemerErgaenzung
             if (referenz is null || !namen.TryGetValue(referenz, out var name) || string.IsNullOrWhiteSpace(name)) return b;
             // Diese Datei belegt nur Eigentümer. Keine Betreiber- oder Firmenrolle daraus ableiten.
             var felder = new Dictionary<string, string>(b.Felder);
-            if (felder.TryGetValue(FieldKeys.Owner, out var alt) && alt.Length > 0 && alt != name)
+            if (felder.TryGetValue(FieldKeys.Owner, out var alt) && alt.Length > 0 && alt != referenz && alt != name)
                 return b with { Hinweis = (b.Hinweis + " Eigentümerdatei widerspricht dem XTF-Namen; XTF bleibt bestehen.").Trim() };
             felder[FieldKeys.Owner] = name;
             var beleg = new ObjektQuellbeleg { System = "Eigentümer-Zuordnung", Datei = datei,
                 Klasse = "Organisation", Kennung = referenz, Werte = new() { ["Bezeichnung"] = name } };
-            return b with { Felder = felder, Quellen = (b.Quellen ?? []).Append(beleg).ToArray(),
-                Hinweis = $"Eigentümername aus der ausdrücklich ausgewählten Zusatzdatei: {datei}" };
+            var quellen = b.Quellen ?? [];
+            return b with { Felder = felder, Quellen = quellen.Any(q => q.System == beleg.System
+                    && q.Kennung == referenz && q.Werte.GetValueOrDefault("Bezeichnung") == name)
+                    ? quellen : quellen.Append(beleg).ToArray(),
+                Hinweis = $"Eigentümername aus der Zuordnungsdatei: {datei}" };
         }).ToArray() };
 }

@@ -5,6 +5,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Lookup;
+using AuswertungPro.Next.Application.UseCases;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Lookup;
 using AuswertungPro.Next.UI.Behaviors;
 using AuswertungPro.Next.UI.Views.Windows;
@@ -23,6 +25,8 @@ public sealed class GeoShopAbgleichUiTests
             new DiagnosticsOptions(), logging.CreateLogger("test"), logging);
         Assert.Same(services.GeoShop, services.GetService(typeof(IGeoShopLeser)));
         Assert.IsType<GeoShopXtfLeser>(services.GeoShop);
+        Assert.Same(services.GeoShopSicherung, services.GetService(typeof(IGeoShopSicherung)));
+        Assert.IsType<GeoShopSicherungsdatei>(services.GeoShopSicherung);
     }
 
     [Fact]
@@ -58,12 +62,34 @@ public sealed class GeoShopAbgleichUiTests
             var bericht = VisualTreeSafe.FindDescendants<TextBox>(inhalt).Single();
             Assert.True(bericht.IsReadOnly);
             Assert.Contains("chTEST00H0000001", bericht.Text);
+            var projekt = new Project(); var schacht = new SchachtRecord(); projekt.SchaechteData.Add(schacht);
+            schacht.SetFieldValue("Schachtnummer", "60248", FieldSource.Legacy, false);
+            schacht.SetFieldValue("Funktion", "NOD", FieldSource.Legacy, false);
+            schacht.SetFieldValue("Material", "GFK-Liner", FieldSource.Legacy, false);
+            schacht.SetFieldValue("Baujahr", "", FieldSource.Manual, true);
+            var vorher = System.Text.Json.JsonSerializer.Serialize(projekt);
+            var quelle = new GeoShopBauteil("60248", KatasterKennung.FuerSchacht("60248", null, "chTEST00A0000001", "chTEST00C0000001"),
+                new Dictionary<string, string> { ["Funktion"] = "Kontrollschacht", ["Material"] = "Beton", ["Baujahr"] = "1974" });
+            var plan = GeoShopAbgleichPlanBuilder.Baue([GeoShopZiel.Fuer(schacht, projekt)],
+                new(BauteilArt.Schacht, "Beispiel.xtf", [quelle]), mitVergleich: true);
+            fenster.Zeige(plan);
             fenster.Content = null;
             var host = new Border { Background = fenster.Background, Child = inhalt };
-            host.Measure(new Size(940, 640)); host.Arrange(new Rect(0, 0, 940, 640)); host.UpdateLayout();
+            host.Measure(new Size(1160, 640)); host.Arrange(new Rect(0, 0, 1160, 640)); host.UpdateLayout();
+            var tabelle = VisualTreeSafe.FindDescendants<DataGrid>(host).Single();
+            Assert.Equal(Visibility.Visible, tabelle.Visibility);
+            var boxen = VisualTreeSafe.FindDescendants<CheckBox>(tabelle).Where(c => c.DataContext is GeoShopFeldWahl).ToArray();
+            Assert.Equal(3, boxen.Length);
+            var funktionswahl = boxen.Single(c => ((GeoShopFeldWahl)c.DataContext).Feld == "Funktion");
+            Assert.False(funktionswahl.IsChecked);
+            funktionswahl.SetCurrentValue(CheckBox.IsCheckedProperty, true);
+            Assert.True(((GeoShopFeldWahl)funktionswahl.DataContext).Uebernehmen);
+            Assert.False(boxen.Single(c => ((GeoShopFeldWahl)c.DataContext).Feld == "Baujahr").IsEnabled);
+            Assert.Equal(vorher, System.Text.Json.JsonSerializer.Serialize(projekt));
+            host.UpdateLayout();
             if (Environment.GetEnvironmentVariable("SEWER_GEOSHOP_BILD") == "1")
             {
-                var bild = new RenderTargetBitmap(940, 640, 96, 96, PixelFormats.Pbgra32);
+                var bild = new RenderTargetBitmap(1160, 640, 96, 96, PixelFormats.Pbgra32);
                 bild.Render(host);
                 var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bild));
                 using var output = File.Create(TestRepoPaths.RepoFile(".tmp", "geoshop-vorschau.png"));

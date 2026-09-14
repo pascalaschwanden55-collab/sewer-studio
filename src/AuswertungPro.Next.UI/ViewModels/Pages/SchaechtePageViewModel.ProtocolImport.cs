@@ -111,7 +111,8 @@ public sealed partial class SchaechtePageViewModel
         => _schachtProtocolSingleImportController.ExecuteAsync(
             projectContext,
             projektOrdner,
-            pdfPfad);
+            pdfPfad,
+            Selected);
 
     private async Task<SchachtProtocolParseResult?> ReadProtocolAsync(string pdfPath, string dialogTitle)
     {

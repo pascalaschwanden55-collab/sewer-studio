@@ -95,6 +95,9 @@ public sealed class RecordDetailItem : INotifyPropertyChanged, IDataErrorInfo
     public string Error => PruefeWert?.Invoke(Value) ?? string.Empty;
     public string this[string propertyName] => propertyName == nameof(Value) ? Error : string.Empty;
     public IEnumerable<string> Options { get; private set; }
+    /// <summary>Nur fuer dieses Feld den gespeicherten Wert anzeigen, auch wenn die Kurzliste ihn nicht kennt.</summary>
+    public IEnumerable<string> AnzeigeOptionen => IsEmpty || Options.Contains(Value, StringComparer.OrdinalIgnoreCase)
+        ? Options : Options.Append(Value);
     private bool _wechseltOptionen;
 
     /// <summary>Ein Listenwechsel darf einen bestehenden Wert niemals als Nebenwirkung loeschen.</summary>
@@ -105,6 +108,7 @@ public sealed class RecordDetailItem : INotifyPropertyChanged, IDataErrorInfo
         {
             Options = options.ToArray();
             OnPropertyChanged(nameof(Options));
+            OnPropertyChanged(nameof(AnzeigeOptionen));
             OnPropertyChanged(nameof(SelectedOption));
             OnPropertyChanged(nameof(AuswahlHinweis));
         }
@@ -241,27 +245,36 @@ public sealed class RecordDetailItem : INotifyPropertyChanged, IDataErrorInfo
 
     private void MeldeWertGeaendert()
     {
-        OnPropertyChanged(nameof(Value));
-        OnPropertyChanged(nameof(AuswahlHinweis));
-        OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(SelectedOption));
-        // Sonst bliebe der Nachschlag-Menuepunkt sichtbar, obwohl das
-        // Feld gerade gefuellt wurde.
-        OnPropertyChanged(nameof(KannNachschlagen));
-        OnPropertyChanged(nameof(KannStrasseUebernehmen));
-        OnPropertyChanged(nameof(BrauchtEigenesMenue));
+        var vorher = _wechseltOptionen;
+        _wechseltOptionen = true;
+        try
+        {
+            OnPropertyChanged(nameof(Value));
+            OnPropertyChanged(nameof(AnzeigeOptionen));
+            OnPropertyChanged(nameof(AuswahlHinweis));
+            OnPropertyChanged(nameof(IsEmpty));
+            OnPropertyChanged(nameof(SelectedOption));
+            // Sonst bliebe der Nachschlag-Menuepunkt sichtbar, obwohl das Feld gefuellt wurde.
+            OnPropertyChanged(nameof(KannNachschlagen));
+            OnPropertyChanged(nameof(KannStrasseUebernehmen));
+            OnPropertyChanged(nameof(BrauchtEigenesMenue));
+        }
+        finally { _wechseltOptionen = vorher; }
     }
 
     public string SelectedOption
     {
-        get => _value;
-        set => Value = value ?? string.Empty;
+        get => Options.FirstOrDefault(o => string.Equals(o, _value, StringComparison.Ordinal))
+            ?? Options.FirstOrDefault(o => string.Equals(o, _value, StringComparison.OrdinalIgnoreCase)) ?? _value;
+        // WPF hebt bei einem Listenwechsel kurz die Auswahl auf. Das ist kein bewusstes Leeren.
+        set { if (value is not null) Value = value; }
     }
 
     public bool IsEmpty => string.IsNullOrWhiteSpace(_value);
 
     /// <summary>Altwerte ausserhalb einer festen Liste bleiben sichtbar, ohne ungueltige neue Optionen anzubieten.</summary>
-    public string AuswahlHinweis => IsCombo && !AllowFreeText && !IsEmpty && !Options.Contains(Value)
+    public string AuswahlHinweis => IsCombo && !AllowFreeText && !IsEmpty && !Options.Contains(Value, StringComparer.OrdinalIgnoreCase)
+        && !DataPage.KurzansichtAuswahl.AusObjektmaske(FieldName, BauteilArt, Value)
         ? $"Gespeichert: {Value}. Bitte Auswahl prüfen." : string.Empty;
 
     private bool _isHiddenByUser;

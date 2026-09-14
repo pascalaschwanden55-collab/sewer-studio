@@ -164,7 +164,9 @@ public sealed class ObjektakteViewModel : ObservableObject
     private void FeldGeaendert()
     {
         _geaendert(); OnPropertyChanged(nameof(Tiefe)); OnPropertyChanged(nameof(Listen));
-        foreach (var feld in _felder.Where(f => f.Feld.Elternfeld is not null)) feld.AktualisiereAuswahl();
+        foreach (var feld in _felder.Where(f => f.Feld.Elternfeld is not null || SchachtHoehenRechnung.IstHoehenfeld(f.Feld.Id)
+            || f.Feld.Id == "schacht.objectid"))
+            feld.AktualisiereAuswahl();
         Meldung = "Änderung übernommen. Bitte das Projekt speichern.";
     }
     public void SpeichereAnsicht() => _settings.Save();

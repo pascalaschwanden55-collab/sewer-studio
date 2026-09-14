@@ -4,18 +4,10 @@ using AuswertungPro.Next.Domain.Models;
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
 /// <summary>
-/// Der Schutz eines nachgeschlagenen Werts haengt AUSSCHLIESSLICH an
-/// userEdited: true.
-///
-/// Die naheliegende Gegenannahme ist falsch: Eine niedrige Merge-Prioritaet
-/// schuetzt NICHT. MergeEngine entscheidet mit
-/// "GetPriority(import) > GetPriority(bestehend)" zugunsten der HOEHEREN
-/// Zahl, und neue Herkuenfte bekommen ueber den Fall-through die 0 — sie
-/// verlieren damit gegen jeden Import. Was wirklich schuetzt, ist die
-/// Handwert-Regel, die vor jeder Prioritaetsrechnung greift.
-///
-/// Die beiden letzten Tests zusammen belegen das. Ohne den Gegentest saehe
-/// die Absicherung staerker aus, als sie ist.
+/// Handkorrekturen bleiben unabhängig von der Herkunft geschützt.
+/// Seit dem GeoShop-Feldvergleich vom 14.09.2026 sind auch bestätigte Katasterwerte
+/// ohne Handmarkierung vor späteren Importen geschützt. Andere Nachschlagquellen
+/// benötigen weiterhin die ausdrückliche Handmarkierung.
 /// </summary>
 public sealed class NachgeschlagenerWertMergeSchutzTests
 {
@@ -40,15 +32,38 @@ public sealed class NachgeschlagenerWertMergeSchutzTests
     }
 
     [Fact]
-    public void Ohne_userEdited_ist_derselbe_Wert_ungeschuetzt()
+    public void Bestaetigter_Katasterwert_ist_auch_ohne_Handmarkierung_geschuetzt()
     {
         var schacht = new SchachtRecord();
         schacht.SetFieldValue("Funktion", "Schlammsammler", FieldSource.Kataster, userEdited: false);
 
-        schacht.SetFieldValue("Funktion", "Etwas anderes", FieldSource.Xtf, userEdited: false);
+        var ergebnis = schacht.SetFieldValue("Funktion", "Etwas anderes", FieldSource.Xtf, userEdited: false);
 
-        // Genau deshalb ist userEdited: true beim Uebernehmen Pflicht.
-        Assert.Equal("Etwas anderes", schacht.GetFieldValue("Funktion"));
+        Assert.Equal(FeldSchreibErgebnis.KatasterwertGeschuetzt, ergebnis);
+        Assert.Equal("Schlammsammler", schacht.GetFieldValue("Funktion"));
+        Assert.False(schacht.IsUserEdited("Funktion"));
+        Assert.NotNull(schacht.FieldMeta["Funktion"].Conflict);
+    }
+
+    [Fact]
+    public void Andere_Nachschlagquelle_bleibt_ohne_Handmarkierung_ungeschuetzt()
+    {
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Eigentuemer", "Muster, Hans", FieldSource.Grundbuch, userEdited: false);
+        schacht.SetFieldValue("Eigentuemer", "Fremd, Egon", FieldSource.Pdf, userEdited: false);
+        Assert.Equal("Fremd, Egon", schacht.GetFieldValue("Eigentuemer"));
+    }
+
+    [Fact]
+    public void Haltungsmerge_meldet_Katasterabweichung_als_Konflikt_und_keine_Aenderung()
+    {
+        var ziel = new HaltungRecord(); var quelle = new HaltungRecord();
+        ziel.SetFieldValue(FieldKeys.PipeMaterial, "Beton", FieldSource.Kataster, false);
+        quelle.SetFieldValue(FieldKeys.PipeMaterial, "Kunststoff", FieldSource.Pdf, false);
+        var ergebnis = AuswertungPro.Next.Infrastructure.Import.Common.MergeEngine.MergeRecord(ziel, quelle, FieldSource.Pdf);
+        Assert.Equal("Beton", ziel.GetFieldValue(FieldKeys.PipeMaterial));
+        Assert.Equal(0, ergebnis.Updated);
+        Assert.Equal(1, ergebnis.Conflicts);
     }
 
     [Fact]

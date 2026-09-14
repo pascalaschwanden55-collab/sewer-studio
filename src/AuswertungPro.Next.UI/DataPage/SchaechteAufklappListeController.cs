@@ -102,6 +102,8 @@ public sealed class SchaechteAufklappListeController : IDisposable
         _sync = new DataPageDetailLiveSync(record, record.GetFieldValue, gruppen);
     }
 
+    public void AktualisiereImportwerte() => _liste.Objektakte?.AktualisiereFelder();
+
     /// <summary>
     /// Gehoert der aufgeklappte Schacht noch zum Bestand? Gefragt werden beide Quellen, die es
     /// wissen koennen: das ViewModel, sobald die Seite eines gesetzt hat, und die Liste selbst.

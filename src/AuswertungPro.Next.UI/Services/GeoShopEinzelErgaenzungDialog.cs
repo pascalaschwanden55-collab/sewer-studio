@@ -9,9 +9,9 @@ using AuswertungPro.Next.Domain.Models;
 namespace AuswertungPro.Next.UI.Services;
 
 /// <summary>«Fehlende Felder aus GeoShop-XTF» an der offenen Haltung oder dem offenen Schacht (11.09.2026):
-/// gemerkte Datei, ein kurzer Vorschautext mit Ja/Nein, dann dieselbe Uebernahme wie der grosse Abgleich.
-/// Die fachlichen Regeln liegen in <see cref="GeoShopEinzelErgaenzung"/>; hier nur Datei, Dialoge und Thread.</summary>
-public sealed class GeoShopEinzelErgaenzungDialog(IGeoShopLeser leser, IDialogService dialogs, AppSettings settings)
+/// gemerkte Datei, derselbe Feldvergleich samt Sicherung wie der grosse Abgleich.
+/// Die fachlichen Regeln liegen im gemeinsamen Application-Planer; hier nur Datei und Dialoganbindung.</summary>
+public sealed class GeoShopEinzelErgaenzungDialog(IGeoShopLeser leser, IDialogService dialogs, AppSettings settings, IGeoShopSicherung? sicherung = null)
 {
     public const string Filter = "GeoShop-XTF (*.xtf)|*.xtf";
 
@@ -35,28 +35,15 @@ public sealed class GeoShopEinzelErgaenzungDialog(IGeoShopLeser leser, IDialogSe
     }
 
     /// <summary>Liest im Hintergrund, fragt, schreibt. True, wenn etwas uebernommen wurde.</summary>
-    public async Task<bool> ErgaenzeAsync(Project projekt, Guid id, string art, Func<bool> darfSchreiben)
+    public Task<bool> ErgaenzeAsync(Project projekt, Guid id, string art, Func<bool> darfSchreiben)
     {
-        if (!darfSchreiben()) return false;
+        if (!darfSchreiben()) return Task.FromResult(false);
         var datei = Datei();
-        if (datei is null) return false;
-        var ziel = Ziel(projekt, id, art);
-        if (ziel is null) return false;
-        GeoShopEinzelErgaenzung.Ergebnis ergebnis;
-        try { ergebnis = await Task.Run(() => GeoShopEinzelErgaenzung.Plane(ziel, leser, datei)); }
-        catch (Exception ex)
-        {
-            dialogs.Error($"Die GeoShop-XTF konnte nicht gelesen werden.\n\n{ex.Message}", "GeoShop-XTF");
-            return false;
-        }
-        if (!ergebnis.HatAenderungen) { dialogs.Info(ergebnis.Text, "GeoShop-XTF"); return false; }
-        if (!dialogs.Confirm(ergebnis.Text, "Fehlende Felder aus GeoShop-XTF übernehmen?")) return false;
-        if (!darfSchreiben()) return false;
-        // Der Datensatz wird frisch aufgeloest; der Anwender prueft Instanz und Stand gegen den Plan.
-        var aktuell = Ziel(projekt, id, art);
-        if (aktuell is null) return false;
-        try { return GeoShopEinzelErgaenzung.WendeAn(ergebnis, aktuell) > 0; }
-        catch (InvalidOperationException ex) { dialogs.Error(ex.Message, "GeoShop-XTF"); return false; }
+        if (datei is null || Ziel(projekt, id, art) is null) return Task.FromResult(false);
+        var dialog = new GeoShopAbgleichDialog(leser, dialogs, Merke, sicherung);
+        var anzahl = dialog.ZeigeDatei(art == "haltung" ? BauteilArt.Haltung : BauteilArt.Schacht,
+            () => Ziel(projekt, id, art) is { } ziel ? [ziel] : [], darfSchreiben, datei);
+        return Task.FromResult(anzahl > 0);
     }
 
     private static GeoShopZiel? Ziel(Project projekt, Guid id, string art) => art == "haltung"

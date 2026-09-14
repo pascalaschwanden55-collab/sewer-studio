@@ -137,7 +137,7 @@ public sealed class GeoShopAbgleichTests : IDisposable
     }
 
     [Fact]
-    public void Fehlende_Organisation_und_unbekannter_Zustand_werden_nicht_erfunden()
+    public void Gelieferter_Organisationsverweis_und_explizit_unbekannter_Zustand_bleiben_erhalten()
     {
         Schreibe(doc =>
         {
@@ -149,8 +149,8 @@ public sealed class GeoShopAbgleichTests : IDisposable
         var plan = GeoShopAbgleichPlanBuilder.Baue([z], Lies(BauteilArt.Schacht, "A"));
         Assert.Contains(plan.Hinweise, h => h.Contains("Organisationsobjekt"));
         GeoShopAbgleichAnwender.WendeAn(plan, [z]);
-        Assert.Equal("", s.GetFieldValue(FieldKeys.Owner));
-        Assert.Equal("", s.GetFieldValue(FieldKeys.ConditionClass));
+        Assert.Equal("chTEST00O0000001", s.GetFieldValue(FieldKeys.Owner));
+        Assert.Equal("unbekannt", s.GetFieldValue(FieldKeys.ConditionClass));
         Assert.Equal(BA, s.Geonis!.Bauwerk);
     }
 
@@ -337,6 +337,100 @@ public sealed class GeoShopAbgleichTests : IDisposable
         var bestand = Lies(BauteilArt.Schacht, "A");
         Assert.Equal("Privat", Assert.Single(bestand.Bauteile).Felder[FieldKeys.Owner]);
         Assert.Contains(bestand.Bauteile[0].Quellen!, q => q.Klasse == "Organisation" && q.Modell == modell);
+    }
+
+    [Fact]
+    public void Schacht_uebernimmt_Nullkosten_Organisationsdaten_Datum_und_bekannte_Quellfelder_bis_in_die_Maske()
+    {
+        Schreibe(doc =>
+        {
+            var bw = doc.Descendants().Single(e => (string?)e.Attribute("TID") == BA);
+            bw.Add(new XElement(Ns + "Bruttokosten", "0.00"), new XElement(Ns + "Letzte_Aenderung", "20241122"),
+                new XElement(Ns + "Zugaenglichkeit", "zugaenglich"), new XElement(Ns + "Bemerkung", "Originalbemerkung"),
+                new XElement(Ns + "DatenherrRef", new XAttribute("REF", "chTEST00O0000001")),
+                new XElement(Ns + "DatenlieferantRef", new XAttribute("REF", "chTEST00O0000001")));
+        });
+        var s = Schacht(); var p = new Project(); p.SchaechteData.Add(s);
+        var ziel = GeoShopZiel.Fuer(s, p); var bestand = Lies(BauteilArt.Schacht, "A");
+        var original = File.ReadAllBytes(_datei);
+        var plan = GeoShopAbgleichPlanBuilder.Baue([ziel], bestand, mitVergleich: true);
+        Assert.Empty(p.Objektakten);
+        GeoShopAbgleichAnwender.WendeAn(plan, [ziel]);
+        var b = new ObjektaktenBearbeitung(p, s.Id, "schacht");
+        Assert.Equal("0.00", s.GetFieldValue(FieldKeys.GrossCost));
+        Assert.Equal("Privat", s.GetFieldValue(FieldKeys.DataOwner));
+        Assert.Equal("Privat", s.GetFieldValue(FieldKeys.DataSupplier));
+        Assert.Equal("2024-11-22", b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("schacht.geaendert_am")));
+        Assert.Equal("zugaenglich", b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("schacht.zugaenglichkeit")));
+        Assert.Equal("Originalbemerkung", b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("schacht.bemerkung")));
+        Assert.Equal("A", b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("schacht.objectid")));
+        Assert.Empty(GeoShopAbgleichPlanBuilder.Baue([ziel], bestand, mitVergleich: true).Positionen);
+        Assert.Equal(original, File.ReadAllBytes(_datei));
+    }
+
+    [Fact]
+    public void Haltung_uebernimmt_Standort_TypAA_Anschlusslage_und_ausdruecklich_unbekannte_Angaben()
+    {
+        Schreibe(doc =>
+        {
+            var kanal = doc.Descendants().Single(e => (string?)e.Attribute("TID") == K);
+            kanal.Add(new XElement(Ns + "Standortname", "Grundgasse"), new XElement(Ns + "Bruttokosten", "0.00"),
+                new XElement(Ns + "FunktionHierarchisch", "PAA.Sammelkanal"),
+                new XElement(Ns + "Bettung_Umhuellung", "unbekannt"));
+            var punkt = doc.Descendants().Single(e => (string?)e.Attribute("TID") == V);
+            punkt.Add(new XElement(Ns + "Lage", new XElement(Ns + "COORD",
+                new XElement(Ns + "C1", "2692748.532"), new XElement(Ns + "C2", "1192136.855"))),
+                new XElement(Ns + "Kote", "503.680"));
+        });
+        var h = Haltung(); var p = new Project(); p.Data.Add(h);
+        var ziel = GeoShopZiel.Fuer(h, p); var bestand = Lies(BauteilArt.Haltung, "A-B");
+        GeoShopAbgleichAnwender.WendeAn(GeoShopAbgleichPlanBuilder.Baue([ziel], bestand, mitVergleich: true), [ziel]);
+        var b = new ObjektaktenBearbeitung(p, h.Id, "haltung");
+        Assert.Equal("Grundgasse", b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("haltung.street")));
+        Assert.Equal("PAA", b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("haltung.aatype")));
+        Assert.Equal("unbekannt", h.GetFieldValue(FieldKeys.BeddingEncasement));
+        Assert.Equal("0.00", h.GetFieldValue(FieldKeys.GrossCost));
+        Assert.Equal("2026-08-29", b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("haltung.changed")));
+        var punkt = p.Objektakten.Single(a => a.Art == "haltungspunkt" && a.Quellen.Any(q => q.Kennung == V));
+        Assert.Equal("2692748.532", b.Lies(punkt, FieldCatalog.Objektfelder.Feld("haltungspunkt.rechtswert")));
+        Assert.Equal("1192136.855", b.Lies(punkt, FieldCatalog.Objektfelder.Feld("haltungspunkt.hochwert")));
+        Assert.Equal("503.680", b.Lies(punkt, FieldCatalog.Objektfelder.Feld("haltungspunkt.hoehe")));
+        Assert.Empty(GeoShopAbgleichPlanBuilder.Baue([ziel], bestand, mitVergleich: true).Positionen);
+    }
+
+    [Theory]
+    [InlineData("12.345", "12.345")]
+    [InlineData("0.000", "0.000")]
+    public void Xtf_Masse_behalten_ihre_gelieferte_Genauigkeit(string geliefert, string erwartet)
+    {
+        Schreibe(doc => doc.Descendants().Single(e => (string?)e.Attribute("TID") == H)
+            .Element(Ns + "LaengeEffektiv")!.Value = geliefert);
+        Assert.Equal(erwartet, Lies(BauteilArt.Haltung, "A-B").Bauteile.Single().Felder[FieldKeys.HoldingLengthMeters]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Eigentuemernamen_aus_Begleitdatei_werden_gefunden_oder_lesbar_als_Fehler_gemeldet(bool defekt)
+    {
+        Schreibe(doc => doc.Descendants().Single(e => (string?)e.Attribute("TID") == "chTEST00O0000001").Remove());
+        var ordner = Path.Combine(Path.GetTempPath(), "geoshop-begleitdatei-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(ordner);
+        var xtf = Path.Combine(ordner, "lieferung.xtf");
+        var json = Path.Combine(ordner, "eigentuemer_zuordnung.json");
+        try
+        {
+            File.Copy(_datei, xtf);
+            File.WriteAllText(json, defekt ? "keine JSON" : "{\"chTEST00O0000001\":\"Abwasser Uri\"}");
+            var original = File.ReadAllBytes(json);
+            var bestand = new GeoShopXtfLeser().Lies(xtf, BauteilArt.Schacht, ["A"]);
+            var teil = Assert.Single(bestand.Bauteile);
+            Assert.Equal(defekt ? "chTEST00O0000001" : "Abwasser Uri", teil.Felder[FieldKeys.Owner]);
+            if (defekt) Assert.Contains("konnte nicht gelesen werden", teil.Hinweis);
+            else Assert.Contains(teil.Quellen!, q => q.Datei == json && q.Werte.GetValueOrDefault("Bezeichnung") == "Abwasser Uri");
+            Assert.Equal(original, File.ReadAllBytes(json));
+        }
+        finally { File.Delete(xtf); File.Delete(json); Directory.Delete(ordner); }
     }
 
     private static HaltungRecord Haltung(string name = "A-B")

@@ -9,6 +9,61 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class SchachtProtocolSingleImportControllerTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Ausdruecklich_gewaehlte_Pdf_wird_ohne_Erkennung_am_ausgewaehlten_Schacht_verknuepft(bool erkanntOhneNummer)
+    {
+        var harness = new Harness { ReadResult = CreateParseResult(isProtocol: erkanntOhneNummer, shaftNumber: null) };
+        var s = new SchachtRecord { Protocol = new() };
+        s.SetFieldValue("Schachtnummer", "60128", FieldSource.Kataster, false);
+        s.SetFieldValue("Material", "Beton", FieldSource.Kataster, false);
+        s.SetFieldValue("Sanierungsbedarf", "Saniert", FieldSource.Manual, true);
+        s.SetFieldValue(FieldKeys.PdfPath, "bisher.pdf", FieldSource.Manual, true);
+        var protokoll = s.Protocol;
+        harness.Project.SchaechteData.Add(s);
+        await harness.Controller.ExecuteAsync(harness.ProjectContext, "C:\\Projekt", "Manuelle Arbeiten Schacht 60128.pdf", s);
+        Assert.Equal("60128", harness.Service.LastDistributedShaftNumber);
+        Assert.Equal(harness.Service.DistributedPath, s.GetFieldValue(FieldKeys.PdfPath));
+        Assert.Equal("Beton", s.GetFieldValue("Material"));
+        Assert.Equal("Saniert", s.GetFieldValue("Sanierungsbedarf"));
+        Assert.Same(protokoll, s.Protocol);
+        Assert.Null(harness.Service.AppliedTarget);
+        Assert.Single(harness.Project.SchaechteData);
+        Assert.Empty(harness.ConfirmCancelCalls);
+        Assert.Empty(harness.Warnings);
+        Assert.Contains("PDF verknüpft", harness.LastResult);
+        Assert.Contains(harness.Calls, c => c.StartsWith("save|", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Unbekannte_Pdf_wird_nicht_an_einen_entfernten_Schacht_angehaengt()
+    {
+        var harness = new Harness { ReadResult = CreateParseResult(isProtocol: false) };
+        var s = new SchachtRecord(); s.SetFieldValue("Schachtnummer", "60128");
+        await harness.Controller.ExecuteAsync(harness.ProjectContext, "C:\\Projekt", "anhang.pdf", s);
+        Assert.Null(harness.Service.LastDistributedSource);
+        Assert.Equal("", s.GetFieldValue(FieldKeys.PdfPath));
+        Assert.False(harness.Project.Dirty);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Anhang_veraendert_keine_Verknuepfung_bei_Kopierfehler_oder_Projektwechsel(bool kopierfehler)
+    {
+        var harness = new Harness { ReadResult = CreateParseResult(isProtocol: false),
+            ProjectChecks = kopierfehler ? [true] : [true, false] };
+        if (kopierfehler) harness.Service.DistributeException = new IOException("Kopieren fehlgeschlagen");
+        var s = new SchachtRecord(); s.SetFieldValue("Schachtnummer", "60128");
+        s.SetFieldValue(FieldKeys.PdfPath, "vorher.pdf", FieldSource.Manual, true);
+        harness.Project.SchaechteData.Add(s);
+        await harness.Controller.ExecuteAsync(harness.ProjectContext, "C:\\Projekt", "anhang.pdf", s);
+        Assert.Equal("vorher.pdf", s.GetFieldValue(FieldKeys.PdfPath));
+        Assert.False(harness.Project.Dirty);
+        Assert.Null(harness.Service.AppliedTarget);
+        Assert.DoesNotContain(harness.Calls, c => c.StartsWith("save|", StringComparison.Ordinal));
+    }
     [Fact]
     public async Task ExecuteAsync_read_null_stops_before_project_check()
     {

@@ -228,12 +228,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _qgisBestand = services.QgisBestand;
         _katasterKennungen = services.KatasterKennungen;
         _geoShop = services.GeoShop;
+        _geoShopSicherung = services.GeoShopSicherung;
         ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("haltung", () => _shell.Project, Settings,
             () => _shell.IsProjectReady, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen, services.GeoShop);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);
         ObjektakteCommand = Services.ObjektaktenDialog.Befehl("haltung", () => _shell.Project, () => Selected?.Id,
             Settings, () => _shell.IsProjectReady, () => _shell.MarkProjectDirty(), Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen, services.GeoShop);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);
         _timers = new DataPageTimerController(
             value => SaveStatus = value,
             value => IsSaveStatusVisible = value,
@@ -303,7 +304,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         StatusOptions = new ObservableCollection<string>(
             FieldCatalog.GetComboItems(FieldKeys.OperatingStatus));
         SanierungsbedarfOptions = new ObservableCollection<string>(
-            FieldCatalog.GetComboItems(FieldKeys.RehabilitationNeed));
+            SanierungsbedarfOptionen.Alle);
         LagebestimmungOptions = new ObservableCollection<string>(
             FieldCatalog.GetComboItems(FieldKeys.PositionAccuracy));
         _measureSuggestionController = new DataPageMeasureSuggestionController(

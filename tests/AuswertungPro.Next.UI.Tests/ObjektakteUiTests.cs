@@ -13,6 +13,103 @@ namespace AuswertungPro.Next.UI.Tests;
 [Collection("IsolatedWpf")]
 public sealed class ObjektakteUiTests
 {
+    [Fact]
+    public void Objectid_zeigt_auf_Wunsch_die_Bezeichnung_ohne_TID_oder_Originaldaten_zu_aendern()
+    {
+        var p = new Project(); var s = new SchachtRecord { Geonis = new() { Knoten = "chTEST00A0000001" } };
+        p.SchaechteData.Add(s);
+        s.SetFieldValue("Schachtnummer", "60106", FieldSource.Kataster, false);
+        var vorher = System.Text.Json.JsonSerializer.Serialize(p);
+        var vm = new ObjektakteViewModel(new(p, s.Id, "schacht"), new(), () => { }, () => true, () => { });
+        var felder = vm.Gruppen.SelectMany(g => g.Felder).ToArray();
+        var id = felder.Single(f => f.Feld.Id == "schacht.objectid");
+        Assert.Equal("60106", id.Text);
+        Assert.Contains("Schachtbezeichnung", id.Hinweis);
+        Assert.Equal(vorher, System.Text.Json.JsonSerializer.Serialize(p));
+        Assert.False(felder.Single(f => f.Feld.Id == "schacht.bezeichnung").Bearbeitbar);
+        s.SetFieldValue("Schachtnummer", "59363", FieldSource.Manual, true);
+        vm.AktualisiereFelder();
+        Assert.Equal("59363", vm.Gruppen.SelectMany(g => g.Felder).Single(f => f.Feld.Id == "schacht.objectid").Text);
+        Assert.Equal("chTEST00A0000001", s.Geonis.Knoten);
+    }
+
+    [Theory]
+    [InlineData("009123", false)]
+    [InlineData("", true)]
+    public void Eigene_Objectid_und_bewusst_leere_Handkennung_bleiben_erhalten(string objektid, bool hand)
+    {
+        var p = new Project(); var s = new SchachtRecord(); p.SchaechteData.Add(s);
+        s.SetFieldValue("Schachtnummer", "60106", FieldSource.Kataster, false);
+        p.Objektakten.Add(new() { Id = s.Id, Art = "schacht", Werte = new()
+            { ["schacht.objectid"] = new() { Text = objektid, VonHand = hand } } });
+        var b = new ObjektaktenBearbeitung(p, s.Id, "schacht");
+        Assert.Equal(objektid, b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("schacht.objectid")));
+        Assert.False(SchachtObjektId.Anzeige(b, b.Wurzel).AusBezeichnung);
+    }
+
+    [Fact]
+    public void Eingabe_der_Tiefe_aktualisiert_die_berechnete_Sohlenhoehe_im_offenen_Formular()
+    {
+        var p = new Project(); var s = new SchachtRecord(); p.SchaechteData.Add(s);
+        s.SetFieldValue("Tiefe", "2.890", FieldSource.Manual, true);
+        p.Objektakten.Add(new() { Art = "deckel", Bezuege = [s.Id], Werte = new()
+            { ["deckel.hoehe"] = new() { Text = "520.600" } } });
+        var vm = new ObjektakteViewModel(new(p, s.Id, "schacht"), new(), () => { }, () => true, () => { });
+        var felder = vm.Gruppen.SelectMany(g => g.Felder).ToArray();
+        var sohle = felder.Single(f => f.Feld.Id == "schacht.sohlenhoehe");
+        Assert.Equal("517.710", sohle.Text);
+        felder.Single(f => f.Feld.Id == "schacht.tiefe").Text = "2.500";
+        Assert.Equal("518.100", sohle.Text);
+        Assert.Contains("Deckelhöhe − Tiefe", sohle.Hinweis);
+    }
+
+    [Fact]
+    public void Leeres_Tiefenfeld_zeigt_Differenz_und_folgt_Sohlenkorrektur_bis_zur_Handeingabe()
+    {
+        var p = new Project(); var s = new SchachtRecord(); p.SchaechteData.Add(s);
+        p.Objektakten.Add(new() { Id = s.Id, Art = "schacht", Werte = new()
+            { ["schacht.sohlenhoehe"] = new() { Text = "517.710" } } });
+        p.Objektakten.Add(new() { Art = "deckel", Bezuege = [s.Id], Werte = new()
+            { ["deckel.hoehe"] = new() { Text = "520.600" } } });
+        var vorher = System.Text.Json.JsonSerializer.Serialize(p);
+        var vm = new ObjektakteViewModel(new(p, s.Id, "schacht"), new(), () => { }, () => true, () => { });
+        ObjektFeldViewModel Feld(string id) => vm.Gruppen.SelectMany(g => g.Felder).Single(f => f.Feld.Id == id);
+        var tiefe = Feld("schacht.tiefe");
+        Assert.Equal("2.890", tiefe.Text);
+        Assert.Contains("Berechnet", tiefe.Hinweis);
+        Assert.Equal(vorher, System.Text.Json.JsonSerializer.Serialize(p));
+        Feld("schacht.sohlenhoehe").Text = "518.100";
+        Assert.Equal("2.500", tiefe.Text);
+        tiefe.Text = "2.450";
+        Feld("schacht.sohlenhoehe").Text = "518.000";
+        Assert.Equal("2.450", tiefe.Text);
+        tiefe.Text = "";
+        Feld("schacht.sohlenhoehe").Text = "517.710";
+        Assert.Equal("", tiefe.Text); // Auch bewusstes Leeren bleibt geschützt.
+    }
+
+    [Theory]
+    [InlineData("520,600", "517,710", "", false, "2.890")]
+    [InlineData("520.600", "520.600", "", false, "0.000")]
+    [InlineData("520.600", "521.000", "", false, "")]
+    [InlineData("", "517.710", "", false, "")]
+    [InlineData("520.600", "ungültig", "", false, "")]
+    [InlineData("520.600", "517.710", "2.800", false, "2.800")]
+    [InlineData("520.600", "517.710", "", true, "")]
+    public void Tiefenanzeige_beachtet_Zahlen_und_vorhandene_Werte(string deckel, string sohle, string bestand, bool hand, string erwartet)
+    {
+        var p = new Project(); var s = new SchachtRecord(); p.SchaechteData.Add(s);
+        s.SetFieldValue("Tiefe", bestand, FieldSource.Manual, hand);
+        p.Objektakten.Add(new() { Id = s.Id, Art = "schacht", Werte = new()
+            { ["schacht.sohlenhoehe"] = new() { Text = sohle } } });
+        p.Objektakten.Add(new() { Art = "deckel", Bezuege = [s.Id], Werte = new()
+            { ["deckel.hoehe"] = new() { Text = deckel } } });
+        var b = new ObjektaktenBearbeitung(p, s.Id, "schacht");
+        Assert.Equal(erwartet, b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("schacht.tiefe")));
+        p.Objektakten.Add(new() { Art = "deckel", Bezuege = [s.Id] });
+        Assert.Equal(bestand, b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("schacht.tiefe")));
+    }
+
     [Theory]
     [InlineData(400, 1)] [InlineData(699, 1)] [InlineData(700, 2)] [InlineData(1099, 2)]
     [InlineData(1100, 3)] [InlineData(1499, 3)] [InlineData(1500, 4)] [InlineData(1900, 4)]

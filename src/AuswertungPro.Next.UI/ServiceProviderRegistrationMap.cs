@@ -243,6 +243,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(AuswertungPro.Next.Application.Lookup.IKatasterKennungLeser)] = services.KatasterKennungen,
             [typeof(AuswertungPro.Next.Application.Projects.IObjektaktenPaketService)] = services.ObjektaktenPakete,
             [typeof(AuswertungPro.Next.Application.Lookup.IGeoShopLeser)] = services.GeoShop,
+            [typeof(AuswertungPro.Next.Application.Lookup.IGeoShopSicherung)] = services.GeoShopSicherung,
             [typeof(AuswertungPro.Next.Application.Xtf.Lieferung.IXtfLieferungsAblage)] = services.XtfLieferungen,
         };
     }

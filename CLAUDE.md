@@ -19,6 +19,110 @@
   Sichtprobe im Programm macht Pascal. Ein laufendes SewerStudio sperrt `bin\Debug`,
   deshalb das Testprojekt mit `-o .tmp/testout-splash` bauen und die DLL direkt testen.
 
+## Ausdrücklich ausgewählte Schacht-PDF (14.09.2026)
+
+- `SchaechtePageViewModel.ProtocolImport` übergibt den ausgewählten Schacht an den
+  bestehenden `SchachtProtocolSingleImportController.ExecuteAsync` (optionaler Parameter;
+  alte Aufrufer bleiben kompatibel). Der Controller hält die Auswahl vor dem Lesen fest.
+- Ohne Protokollerkennung oder ohne erkannte Schachtnummer kann eine einzelne PDF
+  am ausdrücklich ausgewählten, noch vorhandenen Schacht abgelegt werden. Dafür bleibt
+  der bestehende geschützte Kopierweg mit eindeutigen Dateinamen zuständig.
+  `SchachtPdfVerknuepfung` in Application/UseCases setzt nur `PDF_Path` als bewusste
+  Dateiauswahl. Stammdaten, Katasterwerte, Beobachtungen, Handwerte und `Link` bleiben erhalten.
+- Vor und nach dem Kopieren gelten die bisherigen Projektprüfungen. Entfernte oder
+  umbenannte Ziele werden nicht wiederhergestellt; Kopierfehler verhindern die Verknüpfung.
+  Ohne ausgewählten Schacht bleibt ein nicht zuordenbares Dokument abgewiesen.
+  Erkanntes Protokoll und Ordnerimport behalten ihre bisherigen Zuordnungsregeln.
+- Tests: `SchachtProtocolSingleImportControllerTests`, `SchaechtePageArchitectureGuardTests`
+  und bestehende Import-/Kopiertests. Anleitung: `docs/SCHACHT-PDF-ANHANG.md`.
+
+## GeoShop-Feldvergleich und Importsicherung (14.09.2026)
+
+- Offene Exportgrenze, am 14.09.2026 anhand des gespeicherten Projektstands erkannt:
+  `XtfNeuPlanBuilder.Organisationsbuch` behandelt originale Organisations-TIDs in
+  Datenherr/Datenlieferant noch als Namen. Dadurch werden betroffene Schächte im
+  SIA405-Änderungsexport trotz Handkorrekturen ausgelassen. Importierte Kennungen
+  bleiben korrekt erhalten; der Export muss diese gesondert auflösen. Noch nicht
+  behoben, keine vollständige Abnahme dieses Rückwegs. Siehe `docs/GEOSHOP-ABGLEICH-TEST.md`.
+
+- Nachtrag Abgleich «Alle Angaben»/«Kurz»: `RecordDetailItem.AnzeigeOptionen` nimmt
+  den tatsächlich gespeicherten Wert nur für die Anzeige dieses Feldes auf, wenn er
+  in der kürzeren Liste fehlt. Die festen Optionslisten bleiben unverändert.
+  `KurzansichtAuswahl` erkennt Begriffe des gemeinsamen Objektkatalogs, einschliesslich
+  Materialdetails und Form-Aliasen. Die bauwerksabhängige Funktionsprüfung bleibt bestehen.
+  `SchachtformVokabular` erkennt «Kreisprofil» als «Rund»; vorhandene Datensätze werden
+  beim Anzeigen nicht umgeschrieben. Listenwechsel und kurzzeitige WPF-Abwahl löschen
+  keine Angaben; bewusstes Wählen des leeren Eintrags bleibt möglich.
+  Nachweise: `KurzansichtAbgleichTests` (alle 13 gemeinsam bearbeitbaren Schachtfelder,
+  176 Katalog-/Eingabefälle), echter Formularablauf in `NachschlagKontextmenueTests`.
+- Nachtrag Eigentümer/Kurzansicht: `GeoShopEigentuemerDatei.ErgaenzeBegleitdatei`
+  verwendet die genau benannte `eigentuemer_zuordnung.json` neben der XTF automatisch.
+  Fehler erscheinen im Importhinweis; die XTF bleibt lesbar. Eine TID im Eigentümerfeld
+  ist kein widersprechender Name. Echte Namenskonflikte und Handwerte bleiben geschützt;
+  wiederholte Zuordnung erzeugt keine doppelten Belege.
+  `SanierungsbedarfOptionen` vereint für beide Projektseiten Normwerte und Angaben der
+  Objektmaske, einschliesslich «Saniert». `RecordDetailItem.SelectedOption` erkennt
+  unterschiedliche Gross-/Kleinschreibung ohne Rückschreiben. DSS-Wertelisten bleiben unverändert.
+- Beide produktiven GeoShop-Wege (Projektseite und einzelne Objektakte) nutzen
+  `GeoShopAbgleichDialog`, den bestehenden Planer mit `mitVergleich: true` und
+  `GeoShopGesicherteUebernahme`. Die alten Application-Aufrufe bleiben kompatibel.
+- `GeoShopImportVergleich` erstellt über `GeoShopObjektaktenImport` einen leeren
+  Entwurf; `GeoShopFeldWahl` vergleicht Bestandsfelder und verknüpfte Objektakten.
+  Leerfelder sind vorausgewählt, Abweichungen abgewählt. Handwerte, auch bewusst
+  leere, sind geschützt. Die bestehende Ausnahme «Haltungslänge immer aus XTF» gilt weiter.
+  Abweichende Koordinatenpaare/Schachtmasse werden gemeinsam gewählt.
+- Entscheidungen stehen additiv in `Project.Metadata["GeoShop.Vergleich.<Root-ID>"]`.
+  Gleiche Lieferung und gleicher Bestand wiederholen keine erledigten Fragen.
+  Neue Quellwerte oder geänderte Bestandswerte erscheinen erneut. Originalbelege
+  derselben Quellidentität werden aktualisiert, auch bei gemeinsam referenzierten
+  Objekten. DSS-Export berücksichtigt bewusst beibehaltene Werte und Koordinaten.
+- `GeoShopAttributZuordnung` in Application/UseCases/Objektakten ergaenzt die
+  Bestandsfelder anhand der belegten DSS-Ziele des Feldkatalogs. Der GeoShop-Leser
+  verwendet sie nach dem Aufbau des Quellverbunds; QGIS behaelt seinen eigenen Filter.
+  Ausdruecklich gelieferte Werte `unbekannt` und 0 bleiben erhalten. XTF-Masse werden
+  nicht auf die zwei Nachkommastellen der QGIS-Anzeige gerundet. Ergaenzt sind Standort,
+  Bruttokosten, Datenherr/Datenlieferant und Aenderungsdatum. Organisationsobjekte liefern
+  den Namen; bei externen Verweisen bleibt die tatsaechlich gelieferte TID sichtbar.
+  Die Zusatzfelder `schacht.geaendert_am`/`haltung.changed` erhalten das Quell-Datum;
+  `haltung.aatype` erhaelt PAA/SAA aus `Kanal.FunktionHierarchisch`. Kein Typ-AA-Raten am Schacht.
+- `GeoShopHaltungspunktImport` fuellt auch die vorhandenen Rechts-/Hochwertfelder aus
+  `Haltungspunkt.Lage`. Vergleich und DSS-Koordinatenexport schuetzen gemeinsam behaltene
+  Punktkoordinaten auch nach einem erneuten Import.
+- `SchachtObjektId` uebernimmt eine ausdruecklich gelieferte OBJID/OBJECTID unter Erhalt
+  fuehrender Nullen. Widerspruechliche Aliaswerte sperren das betroffene Objekt. Ohne
+  eigene OBJECTID zeigt die Maske die Schachtbezeichnung mit erklaerendem Hinweis;
+  vorhandene Kennungen und bewusst leere Handwerte bleiben erhalten. Diese Anzeige
+  erzeugt keine neue Normkennung und veraendert keine XTF-TID.
+- `GeoShopKoordinaten` liest vollständige LV95-Paare ohne Rundung aus `Lage`.
+  `SchachtDeckelAnzeige` zeigt den ausdrücklich gewählten oder einzigen verknüpften
+  Deckel; eine Hauptdeckelmarkierung wird dadurch nicht gesetzt. `SchachtHoehenRechnung`
+  zeigt aus zwei vorhandenen Angaben die dritte direkt im leeren Feld: Tiefe = Deckel − Sohle,
+  Deckel = Sohle + Tiefe, Sohle = Deckel − Tiefe. Berechnete Anzeigen werden nicht
+  als Handwerte zurückgeschrieben; Originaldaten und bewusst geleerte Handfelder bleiben erhalten.
+  Unklare Deckelwahl, ungültige Zahlen, negative Tiefe und Widersprüche über 1 mm
+  werden gemeldet. Die Objektakte aktualisiert alle drei Felder nach Eingaben.
+  Tests: `SchachtHoehenRechnungTests` und die Höhen-/Tiefenfälle in `ObjektakteUiTests`.
+  Eine eindeutige Materialgruppe
+  wird nur aus dem tatsächlich gewählten Material angezeigt; kein Fertigteil geraten.
+- `IGeoShopSicherung` (Application) / `GeoShopSicherungsdatei` (Infrastructure),
+  registriert in `ServiceProvider.GeoShop`/`ServiceProviderRegistrationMap`, speichern
+  vor jeder Übernahme den vollständigen aktuellen Projektstand einschließlich
+  ungespeicherter Angaben als neue geprüfte JSON unter
+  `AppSettings.AppDataDir/GeoShop-Sicherungen`. Medien werden nicht kopiert.
+  Sicherungsfehler verhindern die Übernahme; geänderter Projektstand sperrt den
+  Plan. `GeoShopRuecknahme` setzt einen fehlgeschlagenen Schreiblauf vollständig zurück.
+- `KatasterFeldschutz` in beiden Datensätzen und die Katasterpriorität im
+  `MergeEngine` verhindern das spätere Zurücksetzen durch Protokollimporte.
+  Manuelle Korrekturen bleiben möglich. Beide Projektseiten aktualisieren nach
+  erfolgreicher Übernahme die offene Objektakte und planen die vorhandene automatische Speicherung ein.
+- Nicht alle WebGIS-Felder sind im DSS-XTF enthalten. Die Vergleichshinweise benennen
+  nicht gelieferte/nicht belegbar zugeordnete Angaben. Die TID wird nicht als
+  numerische WebGIS-OBJECTID ausgegeben. Quellen und Kundenprojekte werden bei Tests nicht verändert.
+- Tests: `GeoShopRobusterImportTests`, bestehende GeoShop-/DSS-Tests und
+  `GeoShopAbgleichUiTests` (isolierter WPF-Feldvergleich). Bedienung, Grenzen und
+  Wiederherstellung: `docs/GEOSHOP-ABGLEICH-TEST.md`. Diese Regeln ersetzen die
+  ältere reine Leerfeldbeschreibung der produktiven GeoShop-Dialoge.
+
 ## Persoenliche Erledigt-Markierung (13.09.2026)
 
 - `HaltungRecord.BearbeitungErledigt` und `SchachtRecord.BearbeitungErledigt` sind

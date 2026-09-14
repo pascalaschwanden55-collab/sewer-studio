@@ -5,6 +5,23 @@ namespace AuswertungPro.Next.Infrastructure.Lookup;
 
 public static class GeoShopEigentuemerDatei
 {
+    /// <summary>Die benannte Begleitdatei derselben Lieferung verwenden; fremde JSON-Dateien nicht durchsuchen.</summary>
+    public static GeoShopBestand ErgaenzeBegleitdatei(GeoShopBestand bestand)
+    {
+        var datei = Path.Combine(Path.GetDirectoryName(bestand.Quelle)!, "eigentuemer_zuordnung.json");
+        if (!File.Exists(datei)) return bestand;
+        try
+        {
+            return AuswertungPro.Next.Application.UseCases.Objektakten.GeoShopEigentuemerErgaenzung
+                .Ergaenze(bestand, Lies(datei), datei);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return bestand with { Bauteile = bestand.Bauteile.Select(b => b with
+            { Hinweis = (b.Hinweis + $" Eigentümerdatei konnte nicht gelesen werden ({datei}): {ex.Message}").Trim() }).ToArray() };
+        }
+    }
+
     public static IReadOnlyDictionary<string, string> Lies(string datei)
     {
         using var stream = new FileStream(datei, FileMode.Open, FileAccess.Read, FileShare.Read);

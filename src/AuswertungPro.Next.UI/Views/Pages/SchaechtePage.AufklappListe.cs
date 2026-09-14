@@ -77,11 +77,23 @@ public partial class SchaechtePage
     private void VerdrahteAufklappAbo(SchaechtePageViewModel? vm)
     {
         if (_vmMitAufklappAbo is not null)
+        {
             _vmMitAufklappAbo.PropertyChanged -= AufklappViewModel_PropertyChanged;
+            _vmMitAufklappAbo.FelderExternErgaenzt -= AktualisiereImportwerte;
+        }
 
         _vmMitAufklappAbo = vm;
         if (vm is not null)
+        {
             vm.PropertyChanged += AufklappViewModel_PropertyChanged;
+            vm.FelderExternErgaenzt += AktualisiereImportwerte;
+        }
+    }
+
+    private void AktualisiereImportwerte()
+    {
+        _aufklappListe?.AktualisiereImportwerte();
+        AktualisiereFelderDrawer();
     }
 
     private void AufklappViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
