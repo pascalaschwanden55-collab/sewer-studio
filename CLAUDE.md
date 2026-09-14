@@ -51,6 +51,16 @@
   Gleichartige Feldlücken werden in `KurzeWarnungen` gebündelt; die volle Liste bleibt in
   `Warnungen` und in den Details. Die Aussage «Diese Datei erhält neue Kennungen» ist weg —
   eine DSS-Lieferung behält die Originalkennungen.
+- **«Paket für GEONIS erstellen»** (`XtfKatasterPaketUseCase`) erzeugt beide Fassungen in
+  einem Durchgang, legt Berichte und eine erzeugte `LIESMICH.txt` dazu und packt alles als
+  ZIP. Eine Vorschau für beide; scheitert eine Fassung, entfernt `IXtfPaketAblage.Verwirf`
+  das angefangene Paket — ein halbes Paket könnte versehentlich verschickt werden. `Verwirf`
+  löscht nur, was derselbe Lauf angelegt hat; nichts wird überschrieben. Die Liesmich-Datei
+  (`KatasterPaketLiesmich`, reine Textregel) ist für den Empfänger geschrieben und nennt nur
+  Zahlen, die in den Berichten stehen.
+- Die Vorschau zählt Quellobjekte, die nicht zum Projekt gehören, nicht mehr als fehlende
+  Angaben (Bürglen: 239 von 483). Bis zu drei bleiben namentlich, darüber werden sie zu
+  einer Zeile. Ein gewöhnlicher Export sah sonst wie ein Datenverlust aus.
 - Prüfanleitung und genaue Empfängerregeln: `docs/XTF-EXPORT-KONTROLLE.md`.
   Tests: `XtfDssAenderungsExportTests`, `XtfQuellverbundErgaenzungTests` und XTF-Bestand.
 - Begleitende Push-Reparatur: `StartupSplashWindow.Impulse` enthält FirePulse und

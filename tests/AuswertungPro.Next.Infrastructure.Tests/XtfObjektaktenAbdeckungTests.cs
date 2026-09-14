@@ -65,7 +65,7 @@ public sealed class XtfObjektaktenAbdeckungTests
         Assert.Contains("Auftrag 123", r.Bericht);
         Assert.DoesNotContain("vollstaendiger Projektstand", r.Bericht);
         var v = AuswertungPro.Next.Application.UseCases.Xtf.XtfExportVorschau.AusBericht("Probe", r.Bericht);
-        Assert.Contains("fehlen in dieser XTF", v.Zusammenfassung);
+        Assert.Contains("kein Normfeld in dieser XTF", v.Zusammenfassung);
         Assert.Contains(v.Warnungen, w => w.Contains("Messstelle Nord"));
         Assert.Contains(v.Warnungen, w => w.Contains("Auftrag 123"));
     }

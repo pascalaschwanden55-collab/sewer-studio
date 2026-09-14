@@ -59,6 +59,10 @@ public sealed record XtfExportVorschau(
         return ergebnis;
     }
 
+    /// <summary>Ein Objekt der Quelle, das gar nicht zum Projekt gehoert — keine fehlende Eingabe.</summary>
+    private static bool IstNachbarobjekt(string zeile)
+        => zeile.TrimStart().StartsWith("Quellobjekt ", StringComparison.Ordinal);
+
     /// <summary>Der Feldname aus «objekt «name»: Feld = „wert“ fehlt in der XTF …»; sonst null.</summary>
     private static string? Lueckenfeld(string warnung)
     {
@@ -122,14 +126,24 @@ public sealed record XtfExportVorschau(
             ?? "";
         if (auftraege is { Count: > 0 })
             zusammenfassung += $"\n{auftraege.Count} {(auftraege.Count == 1 ? "Feldauftrag" : "Feldaufträge")} an bestehenden Katasterobjekten; die Originalkennungen bleiben erhalten.";
-        var luecken = zeilen.Where(z => z.Contains("fehlt in der XTF", StringComparison.Ordinal)).ToArray();
-        if (luecken.Length > 0)
+        // Nachbarobjekte der Quelle, die nicht zum Projekt gehoeren, sind keine fehlende
+        // Eingabe, sondern der Normalfall. Sie dominierten die Liste (Buerglen: 239 von 483)
+        // und liessen eine gewoehnliche Lieferung wie einen Datenverlust aussehen.
+        var alle = zeilen.Where(z => z.Contains("fehlt in der XTF", StringComparison.Ordinal)).ToArray();
+        var nachbarn = alle.Where(IstNachbarobjekt).ToArray();
+        var luecken = alle.Where(z => !IstNachbarobjekt(z)).ToList();
+        if (luecken.Count > 0)
         {
-            zusammenfassung += $"\nAchtung: {luecken.Length} erfasste Angaben oder Quellobjekte fehlen in dieser XTF als Normfeld.";
+            zusammenfassung += $"\nAchtung: {luecken.Count} erfasste Angaben haben kein Normfeld in dieser XTF.";
             zusammenfassung += bericht?.Contains("Erfasste_Angaben mitgeliefert", StringComparison.Ordinal) == true
                 ? " Sie gehen unverändert im Zusatzmodell mit; Einzelheiten stehen im Bericht."
                 : " Einzelheiten stehen im Bericht.";
         }
+
+        // Wenige bleiben namentlich — die Buendelung dient der Uebersicht, nicht dem Verstecken.
+        if (nachbarn.Length > SichtbareWarnungen)
+            luecken.Add($"{nachbarn.Length} Objekte der Quelle gehören nicht zum Projekt und sind deshalb nicht in der Datei (siehe Details).");
+        else luecken.AddRange(nachbarn);
 
         return new XtfExportVorschau(titel, zusammenfassung, Auftragszeilen(auftraege), luecken, bericht ?? "", IstFehler: false);
     }

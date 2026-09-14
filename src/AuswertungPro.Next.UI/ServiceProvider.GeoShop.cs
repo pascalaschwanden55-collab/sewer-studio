@@ -10,6 +10,10 @@ public sealed partial class ServiceProvider
     private IGeoShopSicherung? _geoShopSicherung;
     public IGeoShopSicherung GeoShopSicherung => _geoShopSicherung ??= new GeoShopSicherungsdatei(
         System.IO.Path.Combine(AppSettings.AppDataDir, "GeoShop-Sicherungen"));
+    private Application.UseCases.Xtf.IXtfPaketAblage? _xtfPaketAblage;
+    /// <summary>Legt das Katasterpaket an und packt es; siehe XtfKatasterPaketUseCase.</summary>
+    public Application.UseCases.Xtf.IXtfPaketAblage XtfPaketAblage => _xtfPaketAblage ??=
+        new Infrastructure.Import.Xtf.XtfPaketAblage();
     private Application.Xtf.Lieferung.IXtfLieferungsAblage? _xtfLieferungen;
     public Application.Xtf.Lieferung.IXtfLieferungsAblage XtfLieferungen => _xtfLieferungen ??=
         new Infrastructure.Import.Xtf.Lieferung.XtfLieferungsAblage();

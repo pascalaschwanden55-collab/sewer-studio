@@ -79,6 +79,24 @@ public sealed partial class ExportPageViewModel
         Uebernimm(ergebnis);
     }
 
+    /// <summary>
+    /// Alles fuer den Kataster-Empfaenger in einem Paket: die Aenderungslieferung mit den
+    /// Feldauftraegen und eine reine Normdatei, die er ohne unser Zusatzmodell lesen kann.
+    /// </summary>
+    private void ErzeugeXtfPaket()
+    {
+        var ziel = Zielordner("Zielordner für das Paket wählen");
+        if (ziel is null)
+            return;
+
+        var ergebnis = XtfKatasterPaketUseCase.Execute(
+            _xtfNeuExport,
+            _xtfPaketAblage,
+            new AuswertungPro.Next.Application.Xtf.XtfNeuExportRequest(_shell.Project, ziel),
+            XtfAktionen());
+        Uebernimm(ergebnis);
+    }
+
     /// <summary>Was der Ablauf von der Oberflaeche braucht: Dateiwahl, Vorschaufenster, Fehlerfenster.</summary>
     private XtfExportActions XtfAktionen() => new(
         () => _dialogs.OpenFiles("Original-XTF für die Aktualisierung wählen", "XTF-Dateien (*.xtf)|*.xtf"),

@@ -32,6 +32,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
     private readonly IDialogService _dialogs;
     private readonly AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService _xtfRevisionExport;
     private readonly AuswertungPro.Next.Application.Xtf.IXtfNeuExportService _xtfNeuExport;
+    private readonly AuswertungPro.Next.Application.UseCases.Xtf.IXtfPaketAblage _xtfPaketAblage;
     private readonly IExplorerRevealService _explorerReveal;
     private readonly IXtfExportVorschauDialog _xtfVorschau;
     private XtfExportAuswahl _xtfAuswahl = XtfExportAuswahl.Aus([]);
@@ -81,6 +82,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
     /// <summary>Erzeugt aus dem aktuellen Projektstand revidierte XTF-Dateien.</summary>
     public IRelayCommand ErzeugeXtfRevisionCommand { get; }
     public IRelayCommand ErzeugeXtfNeuCommand { get; }
+    /// <summary>Erzeugt beide Fassungen als fertiges Paket fuer den Kataster-Empfaenger.</summary>
+    public IRelayCommand ErzeugeXtfPaketCommand { get; }
     public IRelayCommand LieferungBearbeitenCommand { get; private set; } = new RelayCommand(() => { }, () => false);
 
     /// <summary>Verzeichnisbaum-Karten fuer Haltungen, Schaechte und Dichtheitspruefungen.</summary>
@@ -104,7 +107,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             importFileStaging: sp.ImportFileStaging,
             importTransactionJournal: sp.ImportTransactionJournal,
             explorerReveal: sp.ExplorerReveal,
-            xtfVorschau: sp.XtfExportVorschau)
+            xtfVorschau: sp.XtfExportVorschau,
+            xtfPaketAblage: sp.XtfPaketAblage)
     {
         LieferungBearbeitenCommand = new RelayCommand(() => XtfLieferungDialog.Zeige(sp.XtfLieferungen, sp.Dialogs));
     }
@@ -185,7 +189,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         IImportTransactionJournal? importTransactionJournal = null,
         IExplorerRevealService? explorerReveal = null,
         IXtfExportVorschauDialog? xtfVorschau = null,
-        AuswertungPro.Next.Application.Projects.IObjektaktenPaketService? objektaktenPakete = null)
+        AuswertungPro.Next.Application.Projects.IObjektaktenPaketService? objektaktenPakete = null,
+        AuswertungPro.Next.Application.UseCases.Xtf.IXtfPaketAblage? xtfPaketAblage = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -215,6 +220,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
                     () => settings?.QgisHaltungenGpkgPath));
         ErzeugeXtfRevisionCommand = new RelayCommand(RunXtfRevisionWithProjectOperation, CanRunProjectExportCommands);
         ErzeugeXtfNeuCommand = new RelayCommand(RunXtfNeuWithProjectOperation, CanRunProjectExportCommands);
+        ErzeugeXtfPaketCommand = new RelayCommand(RunXtfPaketWithProjectOperation, CanRunProjectExportCommands);
+        _xtfPaketAblage = xtfPaketAblage ?? new AuswertungPro.Next.Infrastructure.Import.Xtf.XtfPaketAblage();
         _explorerReveal = explorerReveal ?? new Infrastructure.Common.ExplorerRevealLauncher();
         _xtfVorschau = xtfVorschau ?? new XtfExportVorschauDialogService();
         _objektaktenPakete = objektaktenPakete ?? new Infrastructure.Projects.ObjektaktenPaketService();
@@ -403,6 +410,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         DistributeDichtheitCommand.NotifyCanExecuteChanged();
         ErzeugeXtfRevisionCommand.NotifyCanExecuteChanged();
         ErzeugeXtfNeuCommand.NotifyCanExecuteChanged();
+        ErzeugeXtfPaketCommand.NotifyCanExecuteChanged();
         OeffneXtfOrdnerCommand.NotifyCanExecuteChanged();
         AktualisiereXtfAuswahl();
     }

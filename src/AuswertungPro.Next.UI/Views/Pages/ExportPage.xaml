@@ -256,6 +256,18 @@
                                     <TextBlock Text="XTF erstellen" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
+                            <Separator Margin="0,12,0,10"/>
+                            <TextBlock Text="Alles für den Empfänger in einem Paket: die Änderungslieferung mit den Feldaufträgen und zusätzlich eine reine Normdatei, die er ohne unser Zusatzmodell öffnen kann. Dazu die Modelldateien, die Berichte und eine Liesmich-Datei. Das Paket wird als ZIP zum Versenden gepackt."
+                                       TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <Button Command="{Binding ErzeugeXtfPaketCommand}"
+                                    HorizontalAlignment="Left" Padding="14,6"
+                                    ToolTip="Prüft zuerst beide Fassungen und zeigt die Änderungen. Erst nach der Bestätigung wird das Paket geschrieben. Scheitert eine Fassung, entsteht gar nichts.">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE7B8;" Margin="0,0,8,0"
+                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Paket für GEONIS erstellen" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Border>
 

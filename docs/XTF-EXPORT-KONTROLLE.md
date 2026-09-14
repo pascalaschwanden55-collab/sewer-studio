@@ -159,6 +159,36 @@ keine Auftragsliste hat und deshalb nicht selbst zwischen Kontext und Änderung 
   die Originalkennung als technische Bezeichnung. Diese Werte gehören nicht nach GEONIS.
 - Die erfassten Sanierungen sind neue Unterhalt-Objekte, in GEONIS noch nicht vorhanden.
 
+## Paket für GEONIS erstellen
+
+Der Knopf unter «XTF erstellen» erzeugt in einem Durchgang alles, was der Empfänger
+braucht, und packt es als ZIP zum Versenden:
+
+```
+GEONIS-Paket_<Projekt>_<Datum_Zeit>.zip
+  LIESMICH.txt            Erklärung mit den Zahlen genau dieses Laufs
+  1 Aenderungen\          Änderungslieferung, Bericht, alle Modelle inkl. SewerStudio_Zusatz_2026.ili
+  2 Vollstaendig\         reine Normdatei, Bericht, nur die offiziellen Modelle
+```
+
+Der Ablauf prüft beide Fassungen, zeigt **eine** Vorschau mit der Tabelle der Feldaufträge
+und schreibt erst nach der Bestätigung. Scheitert eine der beiden Fassungen, wird das
+angefangene Paket wieder entfernt: Ein halbes Paket könnte versehentlich verschickt werden.
+Bestehende Ordner und ZIP-Dateien werden nie überschrieben; bei Namensgleichheit entsteht
+ein freier Name. `Verwirf` löscht ausschliesslich einen Ordner, den derselbe Lauf angelegt hat.
+
+Die Liesmich-Datei nennt nur, was in den Berichten wirklich steht. Findet sie eine Angabe
+nicht, lässt sie die Zeile weg statt eine Zahl zu erfinden. Beide Fassungen melden dieselben
+Deckel ohne Bezeichnung; sie werden gezählt, nicht addiert.
+
+Beteiligte Teile: `XtfKatasterPaketUseCase` (Ablauf), `KatasterPaketLiesmich` (reine
+Textregel), `IXtfPaketAblage`/`XtfPaketAblage` (Ordner, Berichte, ZIP; im ServiceProvider
+registriert). Die Exportseite leiht nur Dateiwahl und Vorschaufenster.
+
+Abnahme am Projekt Bürglen (14.09.2026, rein lesend): Paket erzeugt, beide Fassungen mit
+`ilivalidator 1.15.0` gegen die beigelegten Modelle geprüft, je 0 Fehler. Die
+Änderungslieferung trägt 447 Feldaufträge, die reine Normdatei 274 Objekte.
+
 ## Nachweise
 
 - Verhaltenstests prüfen Originalkennungen, «Alle Angaben», Deckelhöhen, Leeren,
@@ -178,6 +208,8 @@ keine Auftragsliste hat und deshalb nicht selbst zwischen Kontext und Änderung 
   entsteht und `XtfDssVorschauTests` (5), dass die Vorschau die Feldaufträge zeigt.
 - Prüfpaket für den Empfänger: `Downloads\XTF_Buerglen_fuer_Andreas_20260914` mit beiden
   Spielarten, Berichten, Prüfprotokollen und einer Liesmich-Datei.
+- `XtfKatasterPaketUseCaseTests` (5), `KatasterPaketLiesmichTests` (6) und
+  `XtfPaketAblageTests` (3) halten den Paketweg fest.
 - Das ist ein Nachweis für das Dateiformat, **kein durchgeführter GEONIS-/FME-Rückimport**.
   Insbesondere die Zusatzpakete und Änderungsaufträge müssen dort passend verarbeitet werden.
 - Vollständiger Release-Build: erfolgreich, 0 Fehler, 2 bestehende Nullable-Warnungen.

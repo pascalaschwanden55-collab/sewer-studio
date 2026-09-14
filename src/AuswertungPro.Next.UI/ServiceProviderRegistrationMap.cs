@@ -245,6 +245,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(AuswertungPro.Next.Application.Lookup.IGeoShopLeser)] = services.GeoShop,
             [typeof(AuswertungPro.Next.Application.Lookup.IGeoShopSicherung)] = services.GeoShopSicherung,
             [typeof(AuswertungPro.Next.Application.Xtf.Lieferung.IXtfLieferungsAblage)] = services.XtfLieferungen,
+            [typeof(AuswertungPro.Next.Application.UseCases.Xtf.IXtfPaketAblage)] = services.XtfPaketAblage,
         };
     }
 }

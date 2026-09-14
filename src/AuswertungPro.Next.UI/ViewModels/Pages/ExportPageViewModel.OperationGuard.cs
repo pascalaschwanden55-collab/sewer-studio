@@ -55,6 +55,21 @@ public sealed partial class ExportPageViewModel
         }
     }
 
+    private void RunXtfPaketWithProjectOperation()
+    {
+        if (!TryBeginProjectOperation(allowsInternalProjectSave: false))
+            return;
+
+        try
+        {
+            ErzeugeXtfPaket();
+        }
+        finally
+        {
+            EndProjectOperation();
+        }
+    }
+
     private bool TryBeginProjectOperation(bool allowsInternalProjectSave)
     {
         if (_disposed || !_shell.TryAcquireProjectOperation(_shellOperationGuard))
