@@ -52,6 +52,18 @@ public sealed class KatasterPaketLiesmichTests
     }
 
     [Fact]
+    public void Sagt_wo_der_neue_Wert_steht_und_verleitet_zu_keiner_Loeschung()
+    {
+        var text = KatasterPaketLiesmich.Baue(Kennzahlen(), DateTime.Now);
+        // Ein Auftrag traegt NIE einen Wert; er steht am genannten Objekt. Die fruehere
+        // Formulierung «fehlt bei einem Auftrag der Wert, Feld leeren» haette zum Leeren
+        // aller beauftragten Felder verleitet — auch des Materials «Zement».
+        Assert.DoesNotContain("Fehlt bei einem Auftrag der Wert", text, StringComparison.Ordinal);
+        Assert.Contains("Der neue Wert steht", text, StringComparison.Ordinal);
+        Assert.Contains("nicht im Auftrag", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Nennt_die_Deckel_ohne_Bezeichnung_mit_ihrer_echten_Anzahl()
     {
         var text = KatasterPaketLiesmich.Baue(Kennzahlen(), DateTime.Now);

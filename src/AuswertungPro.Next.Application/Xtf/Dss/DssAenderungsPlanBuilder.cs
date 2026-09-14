@@ -68,6 +68,9 @@ public static class DssAenderungsPlanBuilder
             }
             else continue; // Doppelte Kurzwerte werden durch das vollständige Eingabepaket abgedeckt.
             auftraege[(tid, "Zusatz:" + feld)] = zeit;
+            // Auch das Eingabepaket ist ein Auftrag und muss in der Vorschau stehen, sonst
+            // nennen Vorschau und Bericht verschiedene Zahlen.
+            zeilen[(tid, "Zusatz:" + feld)] = ("", "(Eingabepaket)");
         }
         if (auftraege.Count == 0) return new([], voll.Hinweise, 0, 0, true, true);
         foreach (var ((tid, feld), datum) in auftraege.OrderBy(p => p.Key.Tid, StringComparer.Ordinal).ThenBy(p => p.Key.Feld, StringComparer.Ordinal))
@@ -76,7 +79,7 @@ public static class DssAenderungsPlanBuilder
         var anzeige = auftraege.Keys.Where(k => zeilen.ContainsKey(k))
             .OrderBy(k => Name(k.Tid), StringComparer.Ordinal).ThenBy(k => k.Feld, StringComparer.Ordinal)
             .Select(k => new XtfAenderungsZeile(Name(k.Tid), k.Feld, zeilen[k].Alt, zeilen[k].Neu)).ToArray();
-        var hinweise = voll.Hinweise.Append($"Änderungslieferung: {auftraege.Count} Feldaufträge an Original-TIDs. Nur Aenderung-Einträge sind Schreibaufträge; fehlender optionaler Wert bei vorhandenem Auftrag bedeutet Leeren (gegebenenfalls mit genauerem Wert im Zusatz). Beziehung:{beziehung} bezeichnet den vollständigen Bauwerksbezug des genannten Ereignisses über die gleichnamigen Normassoziationen. Alle übrigen Normobjekte dienen als vollständiger Bezugskontext. Zusatz:Erfasste_Angaben enthält separat zuzuordnende Eingaben, keine erfundenen DSS-Attribute. GeaendertAm ist der Zeitpunkt der Auftragserzeugung; die gespeicherten Bearbeitungszeiten stehen unverändert im Eingabepaket.").ToArray();
+        var hinweise = voll.Hinweise.Append($"Änderungslieferung: {auftraege.Count} Feldaufträge an Original-TIDs. Nur Aenderung-Einträge sind Schreibaufträge. Der neue Wert steht am Objekt mit der genannten ObjektTid, NICHT im Auftrag; ein Auftrag trägt selbst nie einen Wert. Nur wenn das genannte Attribut am Objekt fehlt, ist das Feld zu leeren. Beziehung:{beziehung} bezeichnet den vollständigen Bauwerksbezug des genannten Ereignisses über die gleichnamigen Normassoziationen. Alle übrigen Normobjekte dienen als vollständiger Bezugskontext. Zusatz:Erfasste_Angaben enthält separat zuzuordnende Eingaben, keine erfundenen DSS-Attribute. GeaendertAm ist der Zeitpunkt der Auftragserzeugung; die gespeicherten Bearbeitungszeiten stehen unverändert im Eingabepaket.").ToArray();
         return voll with { Objekte = objekte, Hinweise = hinweise, NurAenderungen = true, Auftraege = anzeige };
 
         string Name(string tid)

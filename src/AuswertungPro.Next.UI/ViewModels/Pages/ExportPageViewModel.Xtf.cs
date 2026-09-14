@@ -89,19 +89,22 @@ public sealed partial class ExportPageViewModel
         if (ziel is null)
             return;
 
+        // Die Objektakten-Zusatzdatei muss VOR dem Packen im Ordner liegen, sonst enthaelt
+        // die ZIP weniger als der Ordner und der Mailanhang ist unvollstaendig.
         var ergebnis = XtfKatasterPaketUseCase.Execute(
             _xtfNeuExport,
             _xtfPaketAblage,
             new AuswertungPro.Next.Application.Xtf.XtfNeuExportRequest(_shell.Project, ziel),
-            XtfAktionen());
-        Uebernimm(ergebnis);
+            XtfAktionen(ordner => ObjektaktenExportBegleitung.Schreibe(_objektaktenPakete, _shell.Project, ordner)));
+        Uebernimm(ergebnis, mitBegleitdateien: false);
     }
 
     /// <summary>Was der Ablauf von der Oberflaeche braucht: Dateiwahl, Vorschaufenster, Fehlerfenster.</summary>
-    private XtfExportActions XtfAktionen() => new(
+    private XtfExportActions XtfAktionen(Func<string, string>? begleitdateien = null) => new(
         () => _dialogs.OpenFiles("Original-XTF für die Aktualisierung wählen", "XTF-Dateien (*.xtf)|*.xtf"),
         v => _xtfVorschau.Bestaetige(ObjektaktenExportBegleitung.Vorschau(_shell.Project, v)),
-        _xtfVorschau.ZeigeFehler);
+        _xtfVorschau.ZeigeFehler,
+        begleitdateien);
 
     private string? Zielordner(string frage)
     {
@@ -111,13 +114,20 @@ public sealed partial class ExportPageViewModel
         return string.IsNullOrWhiteSpace(ziel) ? null : ziel;
     }
 
-    private void Uebernimm(XtfExportErgebnis ergebnis)
+    private void Uebernimm(XtfExportErgebnis ergebnis, bool mitBegleitdateien = true)
     {
         LastResult = ergebnis.Meldung;
         if (!ergebnis.Geschrieben)
             return;
 
         LetzterXtfOrdner = ergebnis.Ordner;
+        if (!mitBegleitdateien)
+        {
+            // Der Ablauf hat sie bereits vor dem Packen geschrieben.
+            _toasts.Success(LastResult, "Ordner öffnen", OeffneXtfOrdner);
+            return;
+        }
+
         try
         {
             var zusatz = ObjektaktenExportBegleitung.Schreibe(_objektaktenPakete, _shell.Project, ergebnis.Ordner);

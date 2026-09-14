@@ -14,7 +14,13 @@ public sealed record XtfAktualisierenRequest(Project Projekt, string ProjektPfad
 public sealed record XtfExportActions(
     Func<IReadOnlyList<string>> WaehleQuelldateien,
     Func<XtfExportVorschau, bool> BestaetigeVorschau,
-    Action<XtfExportVorschau> ZeigeFehler);
+    Action<XtfExportVorschau> ZeigeFehler,
+    /// <summary>
+    /// Schreibt weitere Dateien in den fertigen Ausgabeordner und liefert einen Zusatz fuer
+    /// die Meldung. Beim Paketweg laeuft das VOR dem Packen, sonst fehlen diese Dateien in
+    /// der ZIP und der Mailanhang enthaelt weniger als der Ordner.
+    /// </summary>
+    Func<string, string>? SchreibeBegleitdateien = null);
 
 /// <summary>Ergebnis fuer die Statuszeile: ob geschrieben wurde, ein kurzer Satz, der Ausgabeordner.</summary>
 public sealed record XtfExportErgebnis(bool Geschrieben, string Meldung, string? Ordner);

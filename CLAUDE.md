@@ -58,6 +58,13 @@
   löscht nur, was derselbe Lauf angelegt hat; nichts wird überschrieben. Die Liesmich-Datei
   (`KatasterPaketLiesmich`, reine Textregel) ist für den Empfänger geschrieben und nennt nur
   Zahlen, die in den Berichten stehen.
+- **Ein `Aenderung`-Eintrag trägt nie einen Wert.** Der neue Wert steht am Objekt mit der
+  genannten `ObjektTid`; nur ein dort fehlendes Attribut bedeutet Leeren. Die Anleitung sagte
+  bis 14.09.2026 abends das Gegenteil und hätte jedes beauftragte Feld geleert. Feldnamen mit
+  Doppelpunkt (`Beziehung:`, `Zusatz:`) sind keine DSS-Attribute und folgen einer eigenen Regel.
+- Die Auftragszahl der Vorschau muss der des Berichts entsprechen; die `Zusatz:`-Aufträge
+  gehören dazu (Bürglen: 534, nicht 447). `DssAenderungsPlanBuilder` legt für jeden Auftrag
+  eine Anzeigezeile an.
 - Die Vorschau zählt Quellobjekte, die nicht zum Projekt gehören, nicht mehr als fehlende
   Angaben (Bürglen: 239 von 483). Bis zu drei bleiben namentlich, darüber werden sie zu
   einer Zeile. Ein gewöhnlicher Export sah sonst wie ein Datenverlust aus.

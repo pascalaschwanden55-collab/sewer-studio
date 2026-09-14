@@ -55,9 +55,11 @@ Die DSS-Datei enthält vollständige Normobjekte als Bezugskontext. **Nur die Ei
 darf nicht sämtliche Kontextwerte als Änderungen in seinen Bestand schreiben.
 
 - `ObjektTid` bezeichnet das konkrete Normobjekt.
-- `Feld` nennt das geänderte Attribut bzw. den Verweis. Fehlt bei vorhandenem Auftrag
-  der optionale Wert, soll dieser entfernt werden. Der genauere aktuelle Wert kann
-  zusätzlich im Eingabepaket stehen, etwa bei «Saniert».
+- `Feld` nennt das geänderte Attribut bzw. den Verweis. **Der neue Wert steht am Objekt
+  mit der genannten `ObjektTid`, nicht im Auftrag.** Ein Auftrag trägt selbst nie einen
+  Wert. Nur wenn das genannte Attribut am Objekt fehlt, ist das Feld zu leeren. Ein Feld
+  zu leeren, weil der Auftrag keinen Wert enthält, wäre Datenverlust an jedem beauftragten
+  Feld. Der genauere aktuelle Wert kann zusätzlich im Eingabepaket stehen, etwa bei «Saniert».
 - `Zusatz:Erfasste_Angaben` bezeichnet das zugehörige Eingabepaket, Version 1. Es ist
   JSON innerhalb des bestehenden Zusatzmodells, kein zusätzliches DSS-Attribut.
   Angaben darin brauchen eine ausdrücklich passende Zuordnung beim Empfänger.
@@ -180,6 +182,23 @@ ein freier Name. `Verwirf` löscht ausschliesslich einen Ordner, den derselbe La
 Die Liesmich-Datei nennt nur, was in den Berichten wirklich steht. Findet sie eine Angabe
 nicht, lässt sie die Zeile weg statt eine Zahl zu erfinden. Beide Fassungen melden dieselben
 Deckel ohne Bezeichnung; sie werden gezählt, nicht addiert.
+
+Vier Punkte einer Gegenprüfung vom 14.09.2026 abends sind eingearbeitet:
+
+- Die Übernahmeanleitung sagte «Fehlt bei einem Auftrag der Wert, Feld leeren». Ein Auftrag
+  trägt aber **nie** einen Wert; er steht am Objekt mit der genannten `ObjektTid`. Wörtlich
+  befolgt hätte die Anleitung jedes beauftragte Feld geleert, etwa das Material «Zement» an
+  der Haltung 59604-59723. Die Anleitung nennt jetzt die drei Schritte und schliesst
+  Feldnamen mit Doppelpunkt ausdrücklich aus.
+- Die Objektakten-JSON entstand erst nach dem Packen. Ordner und Mailanhang hatten dadurch
+  verschiedene Inhalte. `XtfExportActions.SchreibeBegleitdateien` läuft jetzt vor dem Packen;
+  scheitert sie, wird das Paket verworfen.
+- Ein Fehler beim Packen liess eine unbrauchbare halbe ZIP liegen. Sie wird jetzt entfernt,
+  das Paket verworfen und der Fehler gemeldet. Bleibt dabei etwas liegen, nennt die Meldung
+  den Ordner und dass er unvollständig ist.
+- Die Liesmich nannte 447 Aufträge, die Datei enthielt 534. Die 87 Aufträge auf
+  `Zusatz:Erfasste_Angaben` fehlten in Zählung und Vorschautabelle. Sie stehen jetzt beide
+  Male mit.
 
 Beteiligte Teile: `XtfKatasterPaketUseCase` (Ablauf), `KatasterPaketLiesmich` (reine
 Textregel), `IXtfPaketAblage`/`XtfPaketAblage` (Ordner, Berichte, ZIP; im ServiceProvider

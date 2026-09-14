@@ -152,7 +152,9 @@ public sealed record XtfExportVorschau(
     private static IReadOnlyList<XtfVorschauZeile> Auftragszeilen(IReadOnlyList<XtfAenderungsZeile>? auftraege)
         => auftraege is null ? [] : auftraege.Select(a => new XtfVorschauZeile(
             a.Objekt,
-            a.Feld.StartsWith("Beziehung:", StringComparison.Ordinal) ? "Bauwerksbezug" : Feldname(a.Feld),
+            a.Feld.StartsWith("Beziehung:", StringComparison.Ordinal) ? "Bauwerksbezug"
+                : a.Feld.StartsWith("Zusatz:", StringComparison.Ordinal) ? "Erfasste Angaben"
+                : Feldname(a.Feld),
             Wert(a.Alt),
             a.Neu.Length == 0 && a.Alt.Length > 0 ? "(entfernt)" : Wert(a.Neu))).ToArray();
 

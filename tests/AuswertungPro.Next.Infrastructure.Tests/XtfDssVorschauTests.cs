@@ -33,6 +33,27 @@ public sealed class XtfDssVorschauTests
     }
 
     [Fact]
+    public void Vorschau_und_Bericht_nennen_dieselbe_Auftragszahl()
+    {
+        var p = XtfDssVerbundTests.Verbund();
+        p.SchaechteData[0].SetFieldValue(FieldKeys.ConditionClass, "Keine Mängel (Z4)", FieldSource.Manual, true);
+
+        var r = new XtfNeuExportService().Erzeuge(new(p, "", NurPruefen: true, NurAenderungen: true));
+        Assert.True(r.Ok, r.Fehler);
+
+        // Der Bericht nennt die Gesamtzahl; die Vorschau muss auf dieselbe kommen, sonst
+        // steht in der Liesmich-Datei eine andere Zahl als in der Datei.
+        var zeile = Assert.Single(r.Bericht.Split('\n').Where(z => z.Contains("Feldaufträge an Original-TIDs", StringComparison.Ordinal)));
+        var zahl = int.Parse(new string(zeile.SkipWhile(c => !char.IsAsciiDigit(c)).TakeWhile(char.IsAsciiDigit).ToArray()),
+            System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal(zahl, r.Aenderungen.Count);
+        // Die Eingabepakete sind Auftraege und stehen mit in der Tabelle.
+        Assert.Contains(r.Aenderungen, a => a.Feld.StartsWith("Zusatz:", StringComparison.Ordinal));
+        Assert.Contains(XtfExportVorschau.AusBericht("Probe", r.Bericht, r.Aenderungen).Zeilen,
+            z => z.Feld == "Erfasste Angaben");
+    }
+
+    [Fact]
     public void Geleertes_Feld_erscheint_in_der_Vorschau_als_entfernt()
     {
         var p = XtfDssVerbundTests.Verbund();

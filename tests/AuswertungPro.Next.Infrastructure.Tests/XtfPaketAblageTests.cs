@@ -50,8 +50,38 @@ public sealed class XtfPaketAblageTests : IDisposable
         // Ein fremder Ordner wird nie angefasst, auch wenn er genauso heisst.
         var fremd = Path.Combine(_ziel, "fremd");
         Directory.CreateDirectory(fremd);
-        new XtfPaketAblage().Verwirf(new(fremd, fremd, fremd));
+        Assert.True(new XtfPaketAblage().Verwirf(new(fremd, fremd, fremd)));
         Assert.True(Directory.Exists(fremd));
+    }
+
+    [Fact]
+    public void Gescheitertes_Packen_laesst_keine_halbe_Zip_liegen()
+    {
+        var ablage = new XtfPaketAblage();
+        var ort = ablage.Beginne(_ziel, "P");
+        var datei = Path.Combine(ort.AenderungenOrdner, "gesperrt.xtf");
+        File.WriteAllText(datei, "A");
+        // Eine gesperrte Datei laesst das Packen scheitern, nachdem die ZIP schon begonnen hat.
+        using (var sperre = new FileStream(datei, FileMode.Open, FileAccess.Read, FileShare.None))
+            Assert.ThrowsAny<IOException>(() => ablage.Schliesse(ort, new("x", "a", "b")));
+
+        Assert.Empty(Directory.GetFiles(_ziel, "*.zip"));
+        // Der Ordner bleibt zur Fehlersuche; das Verwerfen bleibt Sache des Aufrufers.
+        Assert.True(Directory.Exists(ort.Paketordner));
+        Assert.True(ablage.Verwirf(ort));
+        Assert.False(Directory.Exists(ort.Paketordner));
+    }
+
+    [Fact]
+    public void Verwirf_meldet_wenn_etwas_liegen_bleibt()
+    {
+        var ablage = new XtfPaketAblage();
+        var ort = ablage.Beginne(_ziel, "P");
+        var datei = Path.Combine(ort.AenderungenOrdner, "gesperrt.xtf");
+        File.WriteAllText(datei, "A");
+        using var sperre = new FileStream(datei, FileMode.Open, FileAccess.Read, FileShare.None);
+        Assert.False(ablage.Verwirf(ort));
+        Assert.True(Directory.Exists(ort.Paketordner));
     }
 
     [Fact]

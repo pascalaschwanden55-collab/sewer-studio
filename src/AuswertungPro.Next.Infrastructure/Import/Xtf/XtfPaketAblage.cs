@@ -42,20 +42,41 @@ public sealed class XtfPaketAblage : IXtfPaketAblage
         File.WriteAllText(Path.Combine(ort.VollstaendigOrdner, Berichtname), inhalte.VollstaendigerBericht ?? "", new UTF8Encoding(false));
         // Die ZIP liegt neben dem Paketordner, damit sie sich nicht selbst einpackt.
         var zip = FreierPfad(ort.Paketordner + ".zip");
-        ZipFile.CreateFromDirectory(ort.Paketordner, zip, CompressionLevel.Optimal, includeBaseDirectory: true);
+        try
+        {
+            ZipFile.CreateFromDirectory(ort.Paketordner, zip, CompressionLevel.Optimal, includeBaseDirectory: true);
+        }
+        catch
+        {
+            // Eine angefangene ZIP ist unbrauchbar und darf nicht als Anhang liegen bleiben.
+            try { if (File.Exists(zip)) File.Delete(zip); }
+            catch (Exception weg) when (weg is IOException or UnauthorizedAccessException)
+            {
+                // Der eigentliche Packfehler ist der wichtigere; er wird gleich weitergereicht.
+            }
+
+            throw;
+        }
+
         _selbstAngelegt.Remove(ort.Paketordner);
         return zip;
     }
 
-    public void Verwirf(XtfPaketOrt ort)
+    /// <summary>True, wenn nichts liegen geblieben ist. Der Aufrufer sagt es dem Benutzer.</summary>
+    public bool Verwirf(XtfPaketOrt ort)
     {
         ArgumentNullException.ThrowIfNull(ort);
-        if (!_selbstAngelegt.Remove(ort.Paketordner)) return;
-        try { if (Directory.Exists(ort.Paketordner)) Directory.Delete(ort.Paketordner, recursive: true); }
+        if (!_selbstAngelegt.Remove(ort.Paketordner)) return true;
+        try
+        {
+            if (Directory.Exists(ort.Paketordner)) Directory.Delete(ort.Paketordner, recursive: true);
+            return true;
+        }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // Ein gesperrter Rest darf den eigentlichen Exportfehler nicht verdecken; der
-            // Aufrufer meldet ihn. Der Ordner bleibt dann sichtbar liegen.
+            // Ein gesperrter Rest darf den eigentlichen Exportfehler nicht verdecken. Der
+            // Ordner bleibt sichtbar liegen; die Rueckgabe sagt es dem Aufrufer.
+            return false;
         }
     }
 

@@ -20,8 +20,11 @@ public interface IXtfPaketAblage
     /// <summary>Schreibt Erklaerung und Berichte und packt das Paket; liefert den Pfad der ZIP.</summary>
     string Schliesse(XtfPaketOrt ort, XtfPaketInhalte inhalte);
 
-    /// <summary>Entfernt ein angefangenes Paket wieder. Nur der eigene, in diesem Lauf angelegte Ordner.</summary>
-    void Verwirf(XtfPaketOrt ort);
+    /// <summary>
+    /// Entfernt ein angefangenes Paket wieder. Nur der eigene, in diesem Lauf angelegte
+    /// Ordner. False heisst: Es ist etwas liegen geblieben.
+    /// </summary>
+    bool Verwirf(XtfPaketOrt ort);
 }
 
 /// <summary>
@@ -97,9 +100,31 @@ public static class XtfKatasterPaketUseCase
             geschriebeneAenderung.Bericht,
             geschriebeneVolle.Bericht), DateTime.Now);
 
-        var zip = ablage.Schliesse(ort, new XtfPaketInhalte(
-            liesmich, geschriebeneAenderung.Bericht, geschriebeneVolle.Bericht));
-        return new XtfExportErgebnis(true, $"Paket für GEONIS erstellt: {Path.GetFileName(zip)}", ort.Paketordner);
+        // Erst alle Dateien in den Ordner, dann packen — sonst enthaelt die ZIP weniger.
+        var zusatz = "";
+        if (actions.SchreibeBegleitdateien is { } schreibe)
+        {
+            try { zusatz = schreibe(ort.Paketordner) ?? ""; }
+            catch (Exception ex)
+            {
+                return Abbrechen(actions, ablage, ort,
+                    "Die Begleitdateien konnten nicht geschrieben werden: " + Application.Common.UserError.Describe(ex));
+            }
+        }
+
+        string zip;
+        try
+        {
+            zip = ablage.Schliesse(ort, new XtfPaketInhalte(
+                liesmich, geschriebeneAenderung.Bericht, geschriebeneVolle.Bericht));
+        }
+        catch (Exception ex)
+        {
+            return Abbrechen(actions, ablage, ort,
+                "Das Paket konnte nicht gepackt werden: " + Application.Common.UserError.Describe(ex));
+        }
+
+        return new XtfExportErgebnis(true, $"Paket für GEONIS erstellt: {Path.GetFileName(zip)}{zusatz}", ort.Paketordner);
     }
 
     private static XtfNeuExportRequest Aenderungen(XtfNeuExportRequest r)
@@ -115,6 +140,16 @@ public static class XtfKatasterPaketUseCase
             ? null
             : XtfExportVorschau.Fehler(Titel,
                 string.IsNullOrWhiteSpace(ergebnis.Fehler) ? ersatztext : ergebnis.Fehler, ergebnis.Bericht);
+
+    /// <summary>Angefangenes Paket entfernen und den Grund zeigen; Reste werden benannt.</summary>
+    private static XtfExportErgebnis Abbrechen(XtfExportActions actions, IXtfPaketAblage ablage, XtfPaketOrt ort, string grund)
+    {
+        if (!ablage.Verwirf(ort))
+            grund += $"\n\nDas angefangene Paket konnte nicht vollständig entfernt werden. "
+                + $"Bitte «{ort.Paketordner}» von Hand löschen; es ist unvollständig.";
+        actions.ZeigeFehler(XtfExportVorschau.Fehler(Titel, grund, ""));
+        return new XtfExportErgebnis(false, "Paket nicht erstellt.", null);
+    }
 
     private static XtfExportErgebnis Melde(XtfExportActions actions, XtfExportVorschau fehler, string meldung = "Prüfung nicht bestanden — nichts geschrieben.")
     {

@@ -29,12 +29,18 @@ public sealed class XtfKatasterPaketUseCaseTests
     {
         public XtfPaketOrt? Begonnen { get; private set; }
         public bool Verworfen { get; private set; }
+        public bool AllesEntfernt { get; set; } = true;
         public string? Liesmich { get; private set; }
         public XtfPaketOrt Beginne(string zielordner, string projektname)
             => Begonnen = new(Path.Combine(zielordner, "Paket"), Path.Combine(zielordner, "Paket", "1"), Path.Combine(zielordner, "Paket", "2"));
         public XtfPaketInhalte? Inhalte { get; private set; }
-        public string Schliesse(XtfPaketOrt ort, XtfPaketInhalte inhalte) { Inhalte = inhalte; Liesmich = inhalte.Liesmich; return ort.Paketordner + ".zip"; }
-        public void Verwirf(XtfPaketOrt ort) => Verworfen = true;
+        public string Schliesse(XtfPaketOrt ort, XtfPaketInhalte inhalte)
+        {
+            if (SchliesseWirft is not null) throw new IOException(SchliesseWirft());
+            Inhalte = inhalte; Liesmich = inhalte.Liesmich; return ort.Paketordner + ".zip";
+        }
+        public Func<string>? SchliesseWirft { get; set; }
+        public bool Verwirf(XtfPaketOrt ort) { Verworfen = true; return AllesEntfernt; }
     }
 
     private static XtfExportActions Aktionen(Func<XtfExportVorschau, bool> bestaetige, List<XtfExportVorschau>? fehler = null)
@@ -119,6 +125,63 @@ public sealed class XtfKatasterPaketUseCaseTests
         Assert.True(ablage.Verworfen);
         Assert.Null(ablage.Liesmich);
         Assert.Contains("Platte voll", Assert.Single(fehler).Zusammenfassung, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Begleitdateien_entstehen_vor_dem_Packen_und_liegen_damit_in_der_Zip()
+    {
+        var dienst = new FakeDienst(); var ablage = new FakeAblage();
+        string? ordnerBeimSchreiben = null;
+        var gepacktAls = false;
+        var aktionen = new XtfExportActions(() => [], _ => true, _ => { },
+            ordner => { ordnerBeimSchreiben = ordner; gepacktAls = ablage.Inhalte is not null; return "\nObjektakten: x.json"; });
+
+        var r = XtfKatasterPaketUseCase.Execute(dienst, ablage, Anfrage(), aktionen);
+
+        Assert.True(r.Geschrieben);
+        Assert.Equal(ablage.Begonnen!.Paketordner, ordnerBeimSchreiben);
+        Assert.False(gepacktAls); // vor dem Packen
+        Assert.Contains("Objektakten: x.json", r.Meldung, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Gescheiterte_Begleitdatei_verwirft_das_Paket()
+    {
+        var dienst = new FakeDienst(); var ablage = new FakeAblage(); var fehler = new List<XtfExportVorschau>();
+        var aktionen = new XtfExportActions(() => [], _ => true, fehler.Add,
+            _ => throw new IOException("Zusatzdatei nicht schreibbar"));
+
+        var r = XtfKatasterPaketUseCase.Execute(dienst, ablage, Anfrage(), aktionen);
+
+        Assert.False(r.Geschrieben);
+        Assert.True(ablage.Verworfen);
+        Assert.Contains("Begleitdateien konnten nicht geschrieben werden", Assert.Single(fehler).Zusammenfassung, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Gescheitertes_Packen_verwirft_das_Paket_und_meldet_es()
+    {
+        var dienst = new FakeDienst(); var fehler = new List<XtfExportVorschau>();
+        var ablage = new FakeAblage { SchliesseWirft = () => "Zip nicht schreibbar" };
+
+        var r = XtfKatasterPaketUseCase.Execute(dienst, ablage, Anfrage(), Aktionen(_ => true, fehler));
+
+        Assert.False(r.Geschrieben);
+        Assert.True(ablage.Verworfen);
+        Assert.Contains("Paket konnte nicht gepackt werden", Assert.Single(fehler).Zusammenfassung, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Ein_Rest_der_nicht_entfernt_werden_konnte_wird_benannt()
+    {
+        var dienst = new FakeDienst(); var fehler = new List<XtfExportVorschau>();
+        var ablage = new FakeAblage { SchliesseWirft = () => "Zip nicht schreibbar", AllesEntfernt = false };
+
+        XtfKatasterPaketUseCase.Execute(dienst, ablage, Anfrage(), Aktionen(_ => true, fehler));
+
+        var gezeigt = Assert.Single(fehler).Zusammenfassung;
+        Assert.Contains("von Hand löschen", gezeigt, StringComparison.Ordinal);
+        Assert.Contains("unvollständig", gezeigt, StringComparison.Ordinal);
     }
 
     [Fact]
