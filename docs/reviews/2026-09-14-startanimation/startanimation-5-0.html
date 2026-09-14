@@ -1,0 +1,502 @@
+<title>Startanimation 5.0</title>
+<style>
+  /* Nova-Palette hell, wie ThemeLight.xaml und der Nova-Prototyp v2. Der Splash ist
+     per Entscheid hell; die Seite drumherum bleibt deshalb ebenfalls hell. */
+  :root{
+    --bg:#DCE3ED; --bg2:#E4EAF2;
+    --stage-a:#F4F6FA; --stage-b:#EAEFF6; --stage-c:#E3E9F3;
+    --surface:#FFFFFF; --surface2:#F6F8FB;
+    --text:#14213A; --muted:#4F5F78; --faint:#6B7A90;
+    --line:#D3DAE5; --line2:#E4E9F0; --grid:#D5DCE8;
+    --accent:#1B5FD1; --accent2:#2563EB; --accent-text:#154FB0; --accent-soft:rgba(27,95,209,.11);
+    --cyan:#0EA5E9; --ki:#0A7F8E; --ki-text:#0A6E7C;
+    --ok:#15803D;
+    --z0:#D7263D; --z1:#E06A0B; --z2:#E5B800; --z3:#8E9A2B; --z4:#2E9C4A;
+    --shadow:0 10px 30px rgba(16,28,51,.12);
+    --font:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+    --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,Arial,sans-serif;
+    --font-data:"Cascadia Mono","Consolas","Courier New",monospace;
+    --u:1;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%); color:var(--text);
+    font-family:var(--font); font-size:14px; line-height:1.5;
+    padding-inline:20px; padding-block:24px 48px; min-height:100vh;
+  }
+  .wrap{max-width:1360px; margin:0 auto; display:grid; gap:18px}
+
+  header{display:grid; gap:6px}
+  .eyebrow{font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--accent-text)}
+  h1{margin:0; font-family:var(--font-display); font-size:28px; font-weight:600; line-height:1.15; text-wrap:balance}
+  .lead{margin:0; max-width:70ch; color:var(--muted)}
+
+  .bar-row{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between}
+  .tabs{display:flex; flex-wrap:wrap; gap:8px}
+  .tab{
+    appearance:none; border:1px solid var(--line); background:var(--surface); color:var(--text);
+    border-radius:15px; min-height:30px; padding:5px 14px 5px 10px; font:inherit; font-weight:600; cursor:pointer;
+    display:inline-flex; align-items:center; gap:9px;
+  }
+  .tab .k{display:inline-grid; place-items:center; width:22px; height:22px; border-radius:11px; background:var(--accent-soft); color:var(--accent-text); font-size:12px}
+  .tab[aria-selected="true"]{background:var(--accent); border-color:var(--accent); color:#fff}
+  .tab[aria-selected="true"] .k{background:rgba(255,255,255,.22); color:#fff}
+  .tab:focus-visible,.btn:focus-visible,.stage:focus-visible,input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+  .btn{
+    appearance:none; border:1px solid var(--line); background:var(--surface); color:var(--text);
+    border-radius:15px; min-height:30px; padding:5px 14px; font:inherit; font-weight:600; cursor:pointer;
+  }
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+  label.chk{display:inline-flex; gap:6px; align-items:center; color:var(--muted); cursor:pointer}
+
+  /* ---------- Die Bühne = der Bildschirm beim Start ---------- */
+  .stage{
+    position:relative; width:100%; max-width:100%; aspect-ratio:16/9; overflow:hidden; border-radius:10px;
+    background:linear-gradient(135deg,var(--stage-a) 0%,var(--stage-b) 55%,var(--stage-c) 100%);
+    box-shadow:var(--shadow); cursor:pointer; user-select:none;
+  }
+  .stage .gridlines{
+    position:absolute; inset:0; opacity:.55; pointer-events:none;
+    background-image:linear-gradient(var(--grid) .8px, transparent .8px), linear-gradient(90deg, var(--grid) .8px, transparent .8px);
+    background-size:calc(48px*var(--u)) calc(48px*var(--u));
+  }
+  .stage .halo{position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(ellipse 42% 62% at 28% 50%, #fff 0%, rgba(255,255,255,.63) 45%, rgba(255,255,255,0) 100%)}
+  .stage .accentline{position:absolute; left:0; right:0; top:0; height:calc(4px*var(--u));
+    background:linear-gradient(90deg,#1D4ED8 0%,#3B82F6 60%,#0EA5E9 100%)}
+  .scene{position:absolute; left:2.5%; top:5%; width:44.5%; height:79%; display:block}
+
+  .brand{position:absolute; left:49%; top:50%; width:46%; transform:translateY(-50%); display:grid}
+  .overline{display:flex; align-items:center; gap:calc(12px*var(--u)); font-size:calc(13px*var(--u)); font-weight:600; color:#3D4D63; letter-spacing:.02em; opacity:0}
+  .overline .dash{width:calc(34px*var(--u)); height:calc(3px*var(--u)); border-radius:2px; background:var(--accent2)}
+  .title{font-family:var(--font-display); font-size:calc(76px*var(--u)); font-weight:600; line-height:1.05; color:#0A0F1A; margin:calc(10px*var(--u)) 0 0 calc(-3px*var(--u)); opacity:0; will-change:transform,opacity}
+  .sub{font-size:calc(21px*var(--u)); color:#3D4D63; margin-top:calc(6px*var(--u)); max-width:calc(640px*var(--u)); line-height:1.3; opacity:0}
+  .chips{display:flex; flex-wrap:wrap; gap:calc(10px*var(--u)); margin-top:calc(26px*var(--u)); opacity:0}
+  .chip{background:#FCFDFF; border:1px solid #CDD6E4; border-radius:calc(4px*var(--u)); padding:calc(5px*var(--u)) calc(12px*var(--u)); font-size:calc(13px*var(--u)); font-weight:600; color:#1C2536}
+  .status{display:flex; align-items:center; gap:calc(10px*var(--u)); margin-top:calc(40px*var(--u)); font-size:calc(15px*var(--u)); color:#1C2536; opacity:0}
+  .status .dot{width:calc(9px*var(--u)); height:calc(9px*var(--u)); border-radius:50%; background:var(--accent2)}
+  .status.ready{color:var(--ok)}
+
+  .foot{position:absolute; left:3.3%; right:3.3%; bottom:4%; display:grid; gap:calc(10px*var(--u))}
+  .skip{justify-self:end; font-size:calc(12px*var(--u)); color:#6B7A90; opacity:0}
+  .track{height:calc(3px*var(--u)); border-radius:2px; background:#D5DCE8; overflow:hidden}
+  .bar{height:100%; width:0; border-radius:2px; background:linear-gradient(90deg,#1D4ED8 0%,#2563EB 60%,#0EA5E9 100%)}
+  .clock{position:absolute; right:1.4%; top:2.2%; font-family:var(--font-data); font-size:calc(13px*var(--u)); color:var(--faint); font-variant-numeric:tabular-nums}
+
+  /* ---------- Zeitleiste unter der Bühne ---------- */
+  .timeline{display:grid; gap:8px}
+  .tl-bar{position:relative; height:34px; border-radius:7px; background:var(--surface); border:1px solid var(--line)}
+  .tl-bar .tick{position:absolute; top:0; bottom:0; width:1px; background:var(--line)}
+  .tl-bar .tick::after{content:attr(data-t); position:absolute; top:4px; left:5px; font-family:var(--font-data); font-size:11px; color:var(--faint); white-space:nowrap}
+  .tl-bar .head{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--accent); border-radius:1px}
+  .tl-meta{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; color:var(--muted)}
+  .tl-meta strong{color:var(--text)}
+
+  /* ---------- Beschreibung ---------- */
+  .notes{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px 18px}
+  .card h2{margin:0 0 8px; font-size:15px; font-weight:600}
+  .card ol,.card ul{margin:0; padding-left:20px; display:grid; gap:4px}
+  .card li span.t{font-family:var(--font-data); color:var(--accent-text); font-size:12px; margin-right:6px; font-variant-numeric:tabular-nums}
+  .note{color:var(--muted); font-size:13px; max-width:90ch}
+  .zl{display:inline-block; width:10px; height:10px; border-radius:3px; vertical-align:-1px; margin-right:4px}
+
+  @media (max-width:700px){
+    .brand{left:47%}
+    .sub{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .title{transition:none}
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">SewerStudio · Vorschau, nichts davon ist im Programm</div>
+    <h1>Startanimation 5.0</h1>
+    <p class="lead">Drei rohe Fassungen, jede genau acht Sekunden. Rechts bleibt alles wie heute: Wortmarke, Untertitel, Chips mit v5.0, Statuszeile und der Balken, der bei 90 % wartet, bis das Programm bereit ist. Links wechselt das Motiv. Ein Klick auf die Fläche überspringt wie im Programm.</p>
+  </header>
+
+  <div class="bar-row">
+    <div class="tabs" role="tablist" aria-label="Variante">
+      <button class="tab" role="tab" id="tabA" data-v="A" aria-selected="true"><span class="k">A</span>Kamerafahrt durchs Rohr</button>
+      <button class="tab" role="tab" id="tabB" data-v="B" aria-selected="false"><span class="k">B</span>Leitungsnetz aus dem Plan</button>
+      <button class="tab" role="tab" id="tabC" data-v="C" aria-selected="false"><span class="k">C</span>KI-Kugel, straffer</button>
+    </div>
+    <div class="controls">
+      <label class="chk"><input type="checkbox" id="slow"> Zeitlupe (halbes Tempo)</label>
+      <button class="btn primary" id="replay" type="button">Nochmals abspielen</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage" tabindex="0" role="group" aria-label="Vorschau der Startanimation, acht Sekunden. Klick oder Leertaste überspringt.">
+    <div class="gridlines"></div>
+    <div class="halo"></div>
+    <div class="accentline"></div>
+    <canvas class="scene" id="scene"></canvas>
+    <div class="brand">
+      <div class="overline" id="elOverline"><span class="dash"></span>KI-GESTÜTZTE KANALINSPEKTION</div>
+      <div class="title" id="elTitle">SewerStudio</div>
+      <div class="sub" id="elSub">Zustandserfassung, Codierung und Auswertung von Kanalnetzen</div>
+      <div class="chips" id="elChips">
+        <span class="chip">VSA-KEK 2020</span><span class="chip">EN 13508-2</span><span class="chip">Lokale KI</span><span class="chip">v5.0</span>
+      </div>
+      <div class="status" id="elStatus"><span class="dot" id="elDot"></span><span id="elStatusText">Anwendung wird gestartet…</span></div>
+    </div>
+    <div class="foot">
+      <div class="skip" id="elSkip">Klicken oder Taste drücken zum Überspringen</div>
+      <div class="track"><div class="bar" id="elBar"></div></div>
+    </div>
+    <div class="clock" id="elClock">0,0 s</div>
+  </div>
+
+  <div class="timeline">
+    <div class="tl-bar" id="tlBar"><div class="head" id="playhead"></div></div>
+    <div class="tl-meta"><span>Gerade: <strong id="phaseLabel">–</strong></span><span id="varTitle"></span></div>
+  </div>
+
+  <div class="notes" id="notes"></div>
+
+  <p class="note">Rechte Hälfte, Zeiten der Einblendungen (2,2 s Überzeile, 2,6 s Wortmarke, 3,4 s Untertitel, 3,9 s Chips, 4,6 s Hinweis) und die Statusmeldungen sind eins zu eins aus dem heutigen Splash übernommen. Die Bühne rechnet mit der Programmschrift Segoe UI Variable; im Programm sähe es genau so aus. Am Ende bleibt das letzte Bild stehen, im Programm blendet das Fenster dann in einer halben Sekunde aus.</p>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const stage = $('stage'), canvas = $('scene'), ctx = canvas.getContext('2d');
+const el = {
+  overline:$('elOverline'), title:$('elTitle'), sub:$('elSub'), chips:$('elChips'), status:$('elStatus'),
+  dot:$('elDot'), statusText:$('elStatusText'), skip:$('elSkip'), bar:$('elBar'), clock:$('elClock'),
+  phase:$('phaseLabel'), head:$('playhead'), tl:$('tlBar'), notes:$('notes'), varTitle:$('varTitle')
+};
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const eoc = t => { t = clamp01(t); return 1 - Math.pow(1 - t, 3); };
+const eio = t => { t = clamp01(t); return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+const ss  = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const lerp = (a, b, t) => a + (b - a) * t;
+function lcg(seed){ let s = seed; return () => { s = (s * 16807) % 2147483647; return s / 2147483647; }; }
+const C = { text:'#14213A', muted:'#4F5F78', line:'#D3DAE5', accent:'#1B5FD1', accent2:'#2563EB', cyan:'#0EA5E9',
+  ki:'#0A7F8E', kiText:'#0A6E7C', ok:'#15803D', ring:'#9EAEC4', edge:'#647A9A',
+  z:['#D7263D','#E06A0B','#E5B800','#8E9A2B','#2E9C4A'] };
+const rgb = col => { if (col[0] !== '#'){ const m = col.match(/\d+/g); return [+m[0], +m[1], +m[2]]; } const n = parseInt(col.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const hexA = (hex, a) => { const [r, g, b] = rgb(hex); return `rgba(${r},${g},${b},${a})`; };
+const mix = (h1, h2, t) => { const a = rgb(h1), b = rgb(h2); t = clamp01(t); return `rgb(${Math.round(lerp(a[0],b[0],t))},${Math.round(lerp(a[1],b[1],t))},${Math.round(lerp(a[2],b[2],t))})`; };
+function rr(c, x, y, w, h, r){ r = Math.min(r, w / 2, h / 2); c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+const FONT = w => `${w} FONTSIZEpx "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif`;
+const fnt = (w, px) => FONT(w).replace('FONTSIZE', px);
+const mono = px => `600 ${px}px "Cascadia Mono","Consolas","Courier New",monospace`;
+/* Kleiner Chip auf der Bühne (OSD-Zeile, KI-Beschriftung, Legende). Liefert die Breite. */
+function chip(c, x, y, text, o){
+  o = o || {}; const pad = (o.pad ?? 8) * U, h = (o.h ?? 24) * U;
+  c.save(); c.font = o.font || fnt(600, 13 * U); const w = c.measureText(text).width + pad * 2;
+  c.globalAlpha = o.alpha ?? 1;
+  rr(c, x, y, w, h, 4 * U); c.fillStyle = o.bg || '#FCFDFF'; c.fill();
+  c.lineWidth = 1 * U; c.strokeStyle = o.border || '#CDD6E4'; c.stroke();
+  c.fillStyle = o.color || '#1C2536'; c.textBaseline = 'middle'; c.textAlign = 'left';
+  c.fillText(text, x + pad, y + h / 2 + 0.5 * U);
+  c.restore(); return w;
+}
+
+let W = 0, H = 0, U = 1, dpr = 1;
+const STATUS = ['Anwendung wird gestartet…','Einstellungen werden geladen…','Projektdienste werden vorbereitet…',
+  'Lokale KI-Module werden vorbereitet…','VSA-KEK 2020 Katalog wird verbunden…','Wissensbasis wird verbunden…'];
+
+/* ---------- Rechte Hälfte: identische Choreografie wie heute ---------- */
+function brand(t){
+  const fade = (e, s, d) => { e.style.opacity = eoc((t - s) / d); };
+  fade(el.overline, 2.2, .8);
+  const tt = eoc((t - 2.6) / 1.0); el.title.style.opacity = tt; el.title.style.transform = `translateX(${(1 - tt) * 24 * U}px)`;
+  fade(el.sub, 3.4, .9); fade(el.chips, 3.9, .7); fade(el.status, 1.1, .65); fade(el.skip, 4.6, .9);
+  const ready = t >= 7.4;
+  el.bar.style.width = (ready ? 90 + 10 * eoc((t - 7.4) / .3) : 90 * eoc(t / 7.4)) + '%';
+  if (ready){ el.statusText.textContent = 'SewerStudio ist bereit'; el.status.classList.add('ready'); el.dot.style.background = C.ok; }
+  else { el.status.classList.remove('ready'); const i = Math.min(5, Math.floor(t / 1.25)); el.statusText.textContent = STATUS[i]; el.dot.style.background = i >= 3 ? C.cyan : C.accent2; }
+  el.clock.textContent = t.toFixed(1).replace('.', ',') + ' s';
+}
+
+/* =====================================================================
+   Variante A: Kamerafahrt durchs Rohr (Ich-Perspektive wie im Kanal-TV)
+   ===================================================================== */
+const PIPE_END = 24.1;             // Rohrende in Metern
+function distA(t){                 // Meterstand: anfahren, 3,8 m/s, abbremsen, ab 7,0 s stehen
+  if (t < 1) return 1.9 * t * t;
+  if (t < 6.2) return 1.9 + 3.8 * (t - 1);
+  const u = Math.min(t, 7) - 6.2; return 21.66 + 3.8 * u - 2.375 * u * u;   // endet bei 23,18 m
+}
+const VA = {
+  title:'A · Kamerafahrt durchs Rohr',
+  phases:[[0,'Einfahrt, Meterstand läuft'],[1.3,'KI markiert Anschluss (BCA)'],[3.4,'KI markiert Riss (BAB)'],[5.9,'Rohrende (BCE) in Sicht'],[7.0,'Kamera steht'],[7.4,'Bereit']],
+  notes:{
+    ablauf:[[0,'Kamera fährt an, Meterstand unten links zählt wie ein echtes OSD, oben links Haltung, DN und Datum.'],[1.3,'Ein Anschluss bei 2 Uhr kommt näher; die KI legt einen Rahmen darum und schreibt BCA · Anschluss · 2 Uhr.'],[3.4,'Ein Längsriss bei 11 Uhr, Rahmen und BAB · Riss längs · 11 Uhr.'],[5.9,'Das helle Rohrende wächst, BCE · Rohrende.'],[7.0,'Die Kamera steht bei 23,18 m, der Meterstand friert ein.'],[7.4,'Statuszeile grün, Balken auf 100 %.']],
+    passt:'Das Bild zeigt genau die Arbeit des Programms: fahren, sehen, codieren. Der leichte Bogen nach rechts ist ein BCC ohne Beschriftung.',
+    roh:'Rohrwand und Schäden sind Strichzeichnungen, kein Video. Wasserlinie und Ablagerung fehlen. Im Programm könnten Rohrringe, Wandtextur und die KI-Rahmen mit dem echten Rohrring-Zeichner (RohrringGeometrie) gezeichnet werden.'
+  },
+  reset(){},
+  draw(c, t, W, H){
+    c.save(); rr(c, 0, 0, W, H, 10 * U); c.clip();
+    const d = distA(t), f = H * 1.6, Rw = 0.15, cx = W * 0.5, cy = H * 0.5;
+    const xw = z => z > 7 ? 0.0045 * (z - 7) * (z - 7) : 0;              // leichter Bogen ab 7 m
+    const P = z => { const zr = z - d; const r = Rw * f / zr; return { zr, r, x: cx + (xw(z) - xw(d)) * f / zr, y: cy }; };
+    const vp = P(d + 18);
+    // Tunnel: hinten gedeckt, vorn hell
+    const g = c.createRadialGradient(vp.x, cy, 0, vp.x, cy, H * 0.95);
+    g.addColorStop(0, '#AEBBCC'); g.addColorStop(0.28, '#D8E0EA'); g.addColorStop(1, '#F5F7FA');
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    // Sohle mit etwas Wasser: zwei Fluchtlinien bei 5 und 7 Uhr
+    const near = P(d + 0.34);
+    c.beginPath(); c.moveTo(vp.x, vp.y);
+    c.lineTo(near.x + near.r * 0.5, cy + near.r * 0.866); c.lineTo(near.x - near.r * 0.5, cy + near.r * 0.866); c.closePath();
+    c.fillStyle = hexA(C.accent, .07); c.fill();
+    c.strokeStyle = hexA(C.edge, .25); c.lineWidth = 1 * U; c.stroke();
+    // Rohrende: helle Scheibe, wächst beim Näherkommen
+    const e = P(PIPE_END);
+    if (e.zr > 0.2){
+      const k = ss(14, 2.5, e.zr);
+      const eg = c.createRadialGradient(e.x, e.y, 0, e.x, e.y, Math.max(1, e.r * 1.15));
+      eg.addColorStop(0, '#FFFFFF'); eg.addColorStop(0.75, '#F2F5F9'); eg.addColorStop(1, hexA('#F2F5F9', 0));
+      c.beginPath(); c.arc(e.x, e.y, e.r, 0, Math.PI * 2); c.fillStyle = eg; c.globalAlpha = 0.35 + 0.65 * k; c.fill(); c.globalAlpha = 1;
+      c.lineWidth = (1.5 + 2 * k) * U; c.strokeStyle = hexA(C.accent2, 0.25 + 0.55 * k); c.stroke();
+      if (t >= 7.4){ const rp = ss(7.4, 7.9, t); c.beginPath(); c.arc(e.x, e.y, e.r * (1 + 0.35 * rp), 0, Math.PI * 2); c.strokeStyle = hexA(C.ok, 0.8 * (1 - rp)); c.lineWidth = 3 * U; c.stroke(); }
+    }
+    // Rohrringe alle 1 m, von hinten nach vorn
+    for (let z = Math.min(PIPE_END - 0.001, Math.floor(d + 30)); z >= Math.ceil(d + 0.3); z--){
+      if (z > PIPE_END) continue;
+      const p = P(z); if (p.zr < 0.3) continue;
+      const a = (0.12 + 0.88 * clamp01(1 - p.zr / 30)) * ss(0.28, 0.7, p.zr);
+      c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      c.strokeStyle = hexA('#7E8FA6', a * 0.75); c.lineWidth = Math.min(7, 0.7 + 5 / p.zr) * U; c.stroke();
+    }
+    // Befunde an der Rohrwand
+    const wall = (z, clock) => { const p = P(z); const a = clock / 12 * Math.PI * 2; return { ...p, px: p.x + p.r * Math.sin(a), py: p.y - p.r * Math.cos(a), a, s: p.r * 0.2 }; };
+    const kiBox = (o, text) => {
+      const vis = ss(6.8, 5.6, o.zr) * ss(0.85, 1.35, o.zr); if (vis <= 0) return;
+      const b = Math.max(28 * U, o.s * 3.2), x0 = o.px - b / 2, y0 = o.py - b / 2, L = b * 0.28;
+      c.save(); c.globalAlpha = vis; c.strokeStyle = C.ki; c.lineWidth = 2 * U; c.lineCap = 'round';
+      [[x0,y0,1,1],[x0+b,y0,-1,1],[x0,y0+b,1,-1],[x0+b,y0+b,-1,-1]].forEach(([x,y,sx,sy]) => { c.beginPath(); c.moveTo(x + sx * L, y); c.lineTo(x, y); c.lineTo(x, y + sy * L); c.stroke(); });
+      c.strokeStyle = hexA(C.ki, .5); c.lineWidth = 1 * U; c.beginPath(); c.moveTo(x0 + b, y0); c.lineTo(x0 + b + 14 * U, y0 - 10 * U); c.stroke();
+      chip(c, x0 + b + 14 * U, y0 - 22 * U, text, { color: C.kiText, border: C.ki, bg: '#F1F8F9' });
+      c.restore();
+    };
+    const an = wall(9.0, 2);
+    if (an.zr > 0.45){
+      c.save(); c.translate(an.px, an.py); c.rotate(an.a);
+      c.beginPath(); c.ellipse(0, 0, an.s, an.s * 0.72, 0, 0, Math.PI * 2);
+      c.fillStyle = '#8B9AB0'; c.fill(); c.strokeStyle = '#5F7190'; c.lineWidth = 1.2 * U; c.stroke();
+      c.beginPath(); c.ellipse(0, 0, an.s * 0.55, an.s * 0.38, 0, 0, Math.PI * 2); c.fillStyle = '#6A7A92'; c.fill();
+      c.restore();
+      kiBox(an, 'BCA · Anschluss · 2 Uhr');
+    }
+    const rs = wall(17.0, 11);
+    if (rs.zr > 0.45){
+      const dx = (cx - rs.px), dy = (cy - rs.py), len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
+      const jag = [0, 3, -2, 2, -3, 1, 0], L = rs.s * 1.7;
+      c.save(); c.strokeStyle = '#3E4E66'; c.lineWidth = 1.6 * U; c.lineJoin = 'round'; c.beginPath();
+      jag.forEach((j, i) => { const k = i / (jag.length - 1); const x = rs.px + ux * L * k + nx * j * rs.s * 0.12, y = rs.py + uy * L * k + ny * j * rs.s * 0.12; i ? c.lineTo(x, y) : c.moveTo(x, y); });
+      c.stroke(); c.restore();
+      kiBox(rs, 'BAB A · Riss längs · 11 Uhr');
+    }
+    if (e.zr < 3.5){ const k = ss(3.5, 2.6, e.zr); c.save(); c.globalAlpha = k; chip(c, e.x - 62 * U, e.y + e.r + 12 * U, 'BCE · Rohrende', { color: t >= 7.4 ? C.ok : C.kiText, border: t >= 7.4 ? C.ok : C.ki, bg: '#F1F8F9' }); c.restore(); }
+    // OSD wie im Video: oben Haltung, unten Meterstand
+    chip(c, 14 * U, 14 * U, '78998–79002 · DN 300 · 14.09.2026', { font: mono(13 * U), color: '#1C2536' });
+    const m = Math.min(d, 23.18); const meter = 'LZ1: +' + String(Math.floor(m)).padStart(4, '0') + '.' + String(Math.round((m % 1) * 100)).padStart(2, '0') + ' m';
+    chip(c, 14 * U, H - 14 * U - 34 * U, meter, { font: mono(20 * U), h: 34, pad: 12, color: t >= 7.0 ? C.ok : '#1C2536' });
+    c.restore();
+  }
+};
+
+/* =====================================================================
+   Variante B: Leitungsnetz aus dem Plan (Schächte, Haltungen, Zustandsklassen)
+   ===================================================================== */
+const VB = {
+  title:'B · Leitungsnetz aus dem Plan',
+  phases:[[0,'Schächte und Haltungen zeichnen sich'],[3.3,'Zustandsklassen färben ein'],[5.4,'Zoom auf eine Haltung'],[6.3,'Kamera fährt die Haltung ab'],[7.4,'Bereit']],
+  notes:{
+    ablauf:[[0,'Ein Katasterausschnitt entsteht von links nach rechts: Schächte als Punkte, Haltungen als Linien in Programmblau.'],[3.3,'Haltung für Haltung nimmt ihre Zustandsklasse an, Z0 bis Z4 in den Programmfarben; die Legende erscheint unten links.'],[5.4,'Der Blick zoomt auf eine Haltung, Beschriftung mit Name, DN, Länge und Klasse.'],[6.3,'Ein Kamerapunkt fährt die Haltung von Schacht zu Schacht ab.'],[7.4,'Statuszeile grün, Balken auf 100 %.']],
+    passt:'Ruhig und sachlich, sieht aus wie QGIS und die Projektübersicht. Die Zustandsfarben sind dieselben wie in den Listen.',
+    roh:'Das Netz ist erfunden (35 Schächte, gleichmässig gesät), keine echte Gemeinde. Im Programm könnte ein fester, schöner Ausschnitt gezeichnet werden; echte Projektdaten gibt es beim Start noch nicht.'
+  },
+  nodes:[], edges:[], chosen:-1,
+  reset(){
+    const r = lcg(7), cols = 7, rows = 5, mx = 0.07, my = 0.10, cw = (1 - 2 * mx) / (cols - 1), ch = (1 - 2 * my) / (rows - 1);
+    this.nodes = []; this.edges = [];
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++)
+      this.nodes.push({ x: mx + i * cw + (r() - .5) * cw * .34, y: my + j * ch + (r() - .5) * ch * .34, id: 78990 + j * cols + i, t: 99 });
+    const idx = (i, j) => j * cols + i;
+    const add = (a, b, force) => {
+      if (!force && r() < 0.17) return;
+      const q = r(); const z = force ? 2 : q < .05 ? 0 : q < .15 ? 1 : q < .32 ? 2 : q < .58 ? 3 : 4;
+      const A = this.nodes[a], B = this.nodes[b], midx = ((A.x + B.x) / 2 - mx) / (1 - 2 * mx);
+      this.edges.push({ a, b, z, s: 0.15 + 2.7 * midx + (r() - .5) * .3, ct: 3.3 + 1.7 * midx + (r() - .5) * .25 });
+      if (force) this.chosen = this.edges.length - 1;
+    };
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++){
+      if (i < cols - 1) add(idx(i, j), idx(i + 1, j), i === 3 && j === 2);
+      if (j < rows - 1) add(idx(i, j), idx(i, j + 1), false);
+      if (i < cols - 1 && j < rows - 1 && r() < 0.06) add(idx(i, j), idx(i + 1, j + 1), false);
+    }
+    this.edges.forEach(e => { this.nodes[e.a].t = Math.min(this.nodes[e.a].t, e.s); this.nodes[e.b].t = Math.min(this.nodes[e.b].t, e.s + 0.5); });
+    const ce = this.edges[this.chosen]; this.nodes[ce.a].id = 78998; this.nodes[ce.b].id = 79002;
+  },
+  draw(c, t, W, H){
+    const N = this.nodes.map(n => ({ ...n, x: n.x * W, y: n.y * H }));
+    const ce = this.edges[this.chosen], tx = (N[ce.a].x + N[ce.b].x) / 2, ty = (N[ce.a].y + N[ce.b].y) / 2;
+    const k = eio((t - 5.4) / 1.2), s = 1 + 1.35 * k, camx = lerp(W / 2, tx, k), camy = lerp(H / 2, ty, k);
+    c.save(); c.translate(W / 2, H / 2); c.scale(s, s); c.translate(-camx, -camy);
+    this.edges.forEach(e => {
+      const p = eoc((t - e.s) / 0.55); if (p <= 0) return;
+      const A = N[e.a], B = N[e.b], cp = ss(e.ct, e.ct + 0.4, t);
+      c.beginPath(); c.moveTo(A.x, A.y); c.lineTo(lerp(A.x, B.x, p), lerp(A.y, B.y, p));
+      c.strokeStyle = mix(C.accent, C.z[e.z], cp); c.globalAlpha = cp > 0 ? 0.95 : 0.7;
+      c.lineWidth = (3.2 + 3 * Math.sin(Math.PI * cp)) * U / s; c.lineCap = 'round'; c.stroke(); c.globalAlpha = 1;
+    });
+    N.forEach(n => {
+      const q = eoc((t - n.t) / 0.3); if (q <= 0) return;
+      c.beginPath(); c.arc(n.x, n.y, 6 * U * q / s, 0, Math.PI * 2); c.fillStyle = '#FFFFFF'; c.fill();
+      c.strokeStyle = C.accent; c.lineWidth = 1.6 * U / s; c.stroke();
+    });
+    if (s > 1.4){
+      c.save(); c.globalAlpha = ss(1.4, 2.2, s); c.font = fnt(600, 12 * U / s); c.fillStyle = C.text; c.textAlign = 'center'; c.textBaseline = 'top';
+      [N[ce.a], N[ce.b]].forEach(n => c.fillText(String(n.id), n.x, n.y + 9 * U / s)); c.restore();
+    }
+    if (t >= 6.3){
+      const q = clamp01((t - 6.3) / 1.0), A = N[ce.a], B = N[ce.b], x = lerp(A.x, B.x, q), y = lerp(A.y, B.y, q);
+      c.beginPath(); c.moveTo(A.x, A.y); c.lineTo(x, y); c.strokeStyle = hexA(C.cyan, .55); c.lineWidth = 7 * U / s; c.lineCap = 'round'; c.stroke();
+      c.beginPath(); c.arc(x, y, 5.5 * U / s, 0, Math.PI * 2); c.fillStyle = t >= 7.4 ? C.ok : C.accent2; c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 1.5 * U / s; c.stroke();
+    }
+    c.restore();
+    if (t >= 6.2){
+      const sx = W / 2 + (tx - camx) * s, sy = H / 2 + (ty - camy) * s;
+      c.save(); c.globalAlpha = eoc((t - 6.2) / 0.4);
+      chip(c, sx - 150 * U, sy - 46 * U, 'Haltung 78998–79002 · DN 300 · 42,6 m · Z2', { color: C.text, border: C.z[2] }); c.restore();
+    }
+    if (t >= 3.4){
+      c.save(); c.globalAlpha = eoc((t - 3.4) / 0.6); let x = 14 * U; const y = H - 14 * U - 24 * U;
+      C.z.forEach((col, i) => { x += chip(c, x, y, 'Z' + i, { color: i === 2 ? '#0B1220' : '#fff', bg: col, border: col, pad: 9 }) + 6 * U; });
+      c.font = fnt(600, 12 * U); c.fillStyle = C.muted; c.textBaseline = 'middle'; c.fillText('Zustandsklasse je Haltung', x + 4 * U, y + 12 * U); c.restore();
+    }
+  }
+};
+
+/* =====================================================================
+   Variante C: KI-Kugel, straffere Choreografie
+   ===================================================================== */
+const VC = {
+  title:'C · KI-Kugel, straffer',
+  phases:[[0,'Netz baut sich spiralig auf'],[1.5,'Impulse laufen'],[3.0,'Inferenz-Welle'],[5.4,'zweite Welle'],[7.4,'Bereit: grüner Puls']],
+  notes:{
+    ablauf:[[0,'Die Knoten erscheinen in einer Spirale, dann die Verbindungen; drei Ringe kreisen darum.'],[1.5,'Impulse laufen auf den Verbindungen, ankommende Impulse lassen Knoten aufleuchten.'],[3.0,'Eine Welle zieht von links nach rechts durchs Netz, wie heute.'],[5.4,'Zweite Welle.'],[7.4,'Grüner Puls durchs Netz, Kern pulsiert einmal, Statuszeile grün.']],
+    passt:'Bleibt bei der bekannten KI-Kugel. Der Unterschied zu heute ist die Straffung: Aufbau in 1,5 statt 2,5 Sekunden, feste Wellenzeiten statt Zufall.',
+    roh:'96 Knoten statt 112, keine Satelliten, kein Staub. Im Programm wäre es die heutige Kugel mit neuer Zeitplanung.'
+  },
+  nodes:[], edges:[], pulses:[], act:null, rng:null, acc:0, last:0, burst:false,
+  reset(){
+    const N = 96, ga = 2.39996322972865332; this.nodes = []; this.edges = []; this.pulses = []; this.act = new Float32Array(N); this.rng = lcg(7); this.acc = 0; this.last = 0; this.burst = false;
+    for (let i = 0; i < N; i++){ const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), th = ga * i; this.nodes.push({ x: Math.cos(th) * r, y, z: Math.sin(th) * r }); }
+    const seen = new Set();
+    this.nodes.forEach((n, i) => {
+      const near = this.nodes.map((m, j) => ({ j, d: Math.hypot(n.x - m.x, n.y - m.y, n.z - m.z) })).filter(o => o.j !== i).sort((a, b) => a.d - b.d).slice(0, 3);
+      near.forEach(o => { const key = i < o.j ? i + '-' + o.j : o.j + '-' + i; if (!seen.has(key)){ seen.add(key); this.edges.push({ a: i, b: o.j }); } });
+    });
+  },
+  draw(c, t, W, H){
+    const dt = Math.max(0, Math.min(0.05, t - this.last)); this.last = t;
+    const N = this.nodes.length, cx = W * 0.5, cy = H * 0.5, R = Math.min(W, H) * 0.34, rotY = 0.28 * t, cosY = Math.cos(rotY), sinY = Math.sin(rotY), cosX = Math.cos(0.22), sinX = Math.sin(0.22);
+    const P = this.nodes.map(n => { const x1 = n.x * cosY + n.z * sinY, z1 = -n.x * sinY + n.z * cosY, y1 = n.y * cosX - z1 * sinX, z2 = n.y * sinX + z1 * cosX, pr = 4.6 / (4.6 - z2); return { x: cx + x1 * R * pr, y: cy + y1 * R * pr, d: z2, pr, fog: 0.35 + 0.65 * clamp01((z2 + 1) / 2) }; });
+    // Kernglühen und Ringe
+    const breath = 1 + 0.04 * Math.sin(t * 1.6) + (t >= 7.4 ? 0.16 * Math.sin(Math.PI * clamp01((t - 7.4) / 0.56)) : 0);
+    const g = c.createRadialGradient(cx, cy, 0, cx, cy, R * 1.15 * breath);
+    g.addColorStop(0, hexA(C.accent2, .17)); g.addColorStop(0.45, hexA(C.cyan, .07)); g.addColorStop(1, hexA(C.ring, 0));
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    [[1.25, 0.32, 0.25, C.ring, 0.7], [1.02, 0.30, -0.35, C.accent2, 0.5], [0.80, 0.34, 0.5, C.cyan, 0.6]].forEach(([rx, ry, sp, col, base]) => {
+      c.save(); c.translate(cx, cy); c.rotate(base + t * sp); c.beginPath(); c.ellipse(0, 0, R * rx, R * rx * ry, 0, 0, Math.PI * 2);
+      c.strokeStyle = hexA(col, .35 * eoc(t / 1.2)); c.lineWidth = 1.2 * U; c.stroke(); c.restore();
+    });
+    // Impulse erzeugen und bewegen
+    const PAL = [C.accent2, C.cyan, '#0D9488', C.accent2, '#4F46E5', '#38BDF8', C.accent2, '#D97706'];
+    this.acc += dt;
+    while (this.acc >= 0.09){ this.acc -= 0.09; if (t > 1.5 && t < 7.3 && this.pulses.length < 28){ const e = Math.floor(this.rng() * this.edges.length); this.pulses.push({ e, rev: this.rng() < .5, p: 0, v: 1.2 + this.rng(), col: PAL[this.pulses.length % PAL.length] }); } }
+    if (t >= 7.4 && !this.burst){ this.burst = true; for (let i = 0; i < 10; i++) this.pulses.push({ e: Math.floor(this.rng() * this.edges.length), rev: this.rng() < .5, p: 0, v: 2.2, col: C.ok }); }
+    for (let i = 0; i < N; i++) this.act[i] *= Math.exp(-dt * 2.4);
+    this.pulses = this.pulses.filter(p => { p.p += p.v * dt; if (p.p >= 1){ const e = this.edges[p.e]; this.act[p.rev ? e.a : e.b] = 1; return false; } return true; });
+    // Wellen: 3,0 s und 5,4 s, je 1,5 s, plus Scanline in Kugelhöhe
+    const wave = [3.0, 5.4].map(s0 => clamp01((t - s0) / 1.5)).find(w => w > 0 && w < 1);
+    let bandX = null; if (wave !== undefined){ bandX = lerp(cx - R * 1.25, cx + R * 1.25, wave); const bg = c.createLinearGradient(bandX - R * .18, 0, bandX + R * .18, 0); bg.addColorStop(0, hexA(C.cyan, 0)); bg.addColorStop(.5, hexA(C.cyan, .12)); bg.addColorStop(1, hexA(C.cyan, 0)); c.fillStyle = bg; c.fillRect(bandX - R * .18, cy - R * 1.05, R * .36, R * 2.1); }
+    const actOf = i => { let a = this.act[i]; if (bandX !== null) a = Math.max(a, clamp01(1 - Math.abs(P[i].x - bandX) / (R * 0.32))); return a; };
+    const green = t >= 7.4 ? Math.sin(Math.PI * clamp01((t - 7.4) / 0.56)) : 0;
+    // Verbindungen
+    this.edges.forEach((e, k) => {
+      const vis = eoc((t - 0.7 - 1.2 * ((e.a + e.b) / 2 / N)) / 0.35); if (vis <= 0) return;
+      const A = P[e.a], B = P[e.b], fog = (A.fog + B.fog) / 2, a = Math.max(actOf(e.a), actOf(e.b));
+      c.beginPath(); c.moveTo(A.x, A.y); c.lineTo(B.x, B.y);
+      c.strokeStyle = mix(mix(C.edge, C.cyan, a * .8), C.ok, green * .7); c.globalAlpha = (0.12 + 0.36 * fog + 0.3 * a) * vis; c.lineWidth = (0.8 + 0.8 * fog) * U; c.stroke(); c.globalAlpha = 1;
+    });
+    // Impulse zeichnen
+    this.pulses.forEach(p => { const e = this.edges[p.e], A = P[p.rev ? e.b : e.a], B = P[p.rev ? e.a : e.b], x = lerp(A.x, B.x, p.p), y = lerp(A.y, B.y, p.p), pr = lerp(A.pr, B.pr, p.p), r = (2.2 + 1.8 * pr) * U;
+      const pg = c.createRadialGradient(x, y, 0, x, y, r * 3); pg.addColorStop(0, hexA(p.col, .35)); pg.addColorStop(1, hexA(p.col, 0)); c.fillStyle = pg; c.fillRect(x - r * 3, y - r * 3, r * 6, r * 6);
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = p.col; c.fill(); });
+    // Knoten, hinten zuerst
+    P.map((p, i) => ({ p, i })).sort((u, v) => u.p.d - v.p.d).forEach(({ p, i }) => {
+      const vis = eoc((t - 0.15 - 1.2 * i / N) / 0.35); if (vis <= 0) return;
+      const a = actOf(i), r = (2.2 + 1.7 * p.pr) * U * (1 + 0.9 * a) * vis;
+      c.beginPath(); c.arc(p.x, p.y, r, 0, Math.PI * 2);
+      c.fillStyle = mix(mix('#2F6FE0', C.cyan, a), C.ok, green * .8); c.globalAlpha = (0.35 + 0.65 * p.fog) * vis; c.fill(); c.globalAlpha = 1;
+      if (a > 0.15){ c.beginPath(); c.arc(p.x, p.y, r * 2.2, 0, Math.PI * 2); c.strokeStyle = hexA(C.cyan, .45 * a); c.lineWidth = 1 * U; c.stroke(); }
+    });
+  }
+};
+
+/* ---------- Ablaufsteuerung ---------- */
+const VARIANTS = { A: VA, B: VB, C: VC };
+let cur = VA, t = 0, playing = false, lastNow = 0, raf = 0;
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function resize(){
+  const r = stage.getBoundingClientRect(); if (r.width < 10) return;
+  U = r.width / 1920; stage.style.setProperty('--u', U);
+  const sr = canvas.getBoundingClientRect(); dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(sr.width * dpr); canvas.height = Math.round(sr.height * dpr); W = sr.width; H = sr.height;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  render();
+}
+function render(){
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  cur.draw(ctx, t, W, H); brand(t);
+  el.head.style.left = (t / 8 * 100) + '%';
+  let label = cur.phases[0][1]; cur.phases.forEach(([pt, l]) => { if (t >= pt) label = l; }); el.phase.textContent = label + (t >= 8 ? ' · Ende, im Programm blendet das Fenster jetzt aus' : '');
+}
+function frame(now){
+  if (!playing) return;
+  const dt = Math.min(0.1, (now - lastNow) / 1000) * ($('slow').checked ? 0.5 : 1); lastNow = now;
+  t = Math.min(8, t + dt); render();
+  if (t >= 8){ playing = false; return; }
+  raf = requestAnimationFrame(frame);
+}
+function play(from){
+  cancelAnimationFrame(raf); t = from ?? 0; cur.reset(W, H); if (cur === VC) VC.last = t;
+  playing = true; lastNow = performance.now(); render(); raf = requestAnimationFrame(frame);
+}
+function select(key){
+  cur = VARIANTS[key];
+  document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.v === key)));
+  el.varTitle.textContent = cur.title;
+  el.tl.querySelectorAll('.tick').forEach(n => n.remove());
+  cur.phases.forEach(([pt, l]) => { const d = document.createElement('div'); d.className = 'tick'; d.style.left = (pt / 8 * 100) + '%'; d.dataset.t = pt.toFixed(1).replace('.', ',') + ' s'; d.title = l; el.tl.appendChild(d); });
+  const n = cur.notes;
+  el.notes.innerHTML = `
+    <div class="card"><h2>So läuft es ab</h2><ol>${n.ablauf.map(([pt, s]) => `<li><span class="t">${pt.toFixed(1).replace('.', ',')} s</span>${s}</li>`).join('')}</ol></div>
+    <div class="card"><h2>Warum es passt</h2><p style="margin:0">${n.passt}</p></div>
+    <div class="card"><h2>Was in der Rohfassung nur angedeutet ist</h2><p style="margin:0">${n.roh}</p></div>`;
+  if (reduced){ cancelAnimationFrame(raf); playing = false; t = 8; cur.reset(W, H); if (cur === VC) VC.last = 0; render(); } else play(0);
+}
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => select(b.dataset.v)));
+$('replay').addEventListener('click', () => play(0));
+const skip = () => { if (playing && t < 7.4){ t = 7.4; if (cur === VC) VC.last = t; render(); } else if (!playing) play(0); };
+stage.addEventListener('click', skip);
+stage.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); skip(); } });
+new ResizeObserver(resize).observe(stage);
+resize();
+const hp = new URLSearchParams(location.hash.slice(1)); const hv = (hp.get('v') || 'A').toUpperCase(), ht = parseFloat(hp.get('t'));
+select(VARIANTS[hv] ? hv : 'A');
+if (!Number.isNaN(ht)){ cancelAnimationFrame(raf); playing = false; t = Math.max(0, Math.min(8, ht)); if (cur === VC){ VC.last = 0; for (let q = 0; q <= t; q += 1 / 60){ VC.draw(ctx, q, W, H); } } render(); }
+</script>

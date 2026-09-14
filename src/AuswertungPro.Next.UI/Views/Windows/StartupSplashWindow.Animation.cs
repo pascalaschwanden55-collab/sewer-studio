@@ -366,22 +366,23 @@ public partial class StartupSplashWindow
         _connections.Add(new NeuralConnection(a, b, line, strokeBrush));
     }
 
+    /// <summary>
+    /// Kern und Ringe blenden ab Start gestaffelt ein. Knoten und Verbindungen bekommen
+    /// bewusst kein Storyboard: Ihre Deckkraft setzt RenderFrame je Bild aus
+    /// <see cref="StartupSplashChoreografie"/>, sonst wuerde ein haltendes Storyboard den
+    /// Tiefennebel ueberstimmen.
+    /// </summary>
     private void AnimateNetworkFadeIn()
     {
+        var dauer = StartupSplashChoreografie.RingDauerMillisekunden;
         if (_coreGlow is not null)
-            FadeIn(_coreGlow, 400, 1200);
+            FadeIn(_coreGlow, StartupSplashChoreografie.RingStartMillisekunden(0), dauer);
         if (_ringOuter is not null)
-            FadeIn(_ringOuter, 600, 1200);
+            FadeIn(_ringOuter, StartupSplashChoreografie.RingStartMillisekunden(0), dauer);
         if (_ringMiddle is not null)
-            FadeIn(_ringMiddle, 720, 1200);
+            FadeIn(_ringMiddle, StartupSplashChoreografie.RingStartMillisekunden(1), dauer);
         if (_ringInner is not null)
-            FadeIn(_ringInner, 840, 1200);
-
-        for (int i = 0; i < _connections.Count; i++)
-            FadeIn(_connections[i].Visual, 900 + (i % 40) * 14, 800);
-
-        for (int i = 0; i < _nodes.Count; i++)
-            FadeIn(_nodes[i].Visual, 1100 + (i % 28) * 26, 700);
+            FadeIn(_ringInner, StartupSplashChoreografie.RingStartMillisekunden(2), dauer);
     }
 
     private void OnRendering(object? sender, EventArgs e)
@@ -422,7 +423,9 @@ public partial class StartupSplashWindow
         foreach (var connection in _connections)
             connection.Activation = Math.Max(0, connection.Activation - 1.5 * dt);
 
-        if (_emitPulses && _connections.Count > 0)
+        var elapsed = _animationClock.Elapsed.TotalSeconds;
+        var impulseErlaubt = _emitPulses && StartupSplashChoreografie.ImpulseErlaubt(elapsed);
+        if (impulseErlaubt && _connections.Count > 0)
         {
             _pulseAccumulator += dt;
             while (_pulseAccumulator >= PulseIntervalSeconds && _activePulses.Count < MaxActivePulses)
@@ -459,30 +462,15 @@ public partial class StartupSplashWindow
         }
 
         _flareAccumulator += dt;
-        if (_emitPulses && _flareAccumulator >= FlareIntervalSeconds && _nodes.Count > 0 && _flares.Count < MaxActiveFlares)
+        if (impulseErlaubt && _flareAccumulator >= FlareIntervalSeconds && _nodes.Count > 0 && _flares.Count < MaxActiveFlares)
         {
             _flareAccumulator -= FlareIntervalSeconds;
             SpawnFlare(_rng.Next(_nodes.Count));
         }
 
-        // Inferenz-Welle: periodischer Sweep, der wie ein Forward-Pass durchs Netz laeuft.
-        if (_waveT >= 0)
-        {
-            _waveT += dt / WaveDurationSeconds;
-            if (_waveT >= 1.0)
-            {
-                _waveT = -1;
-                _waveCooldown = WaveIntervalSeconds;
-                if (_scanLine is not null)
-                    _scanLine.Opacity = 0;
-            }
-        }
-        else if (_emitPulses)
-        {
-            _waveCooldown -= dt;
-            if (_waveCooldown <= 0)
-                _waveT = 0;
-        }
+        // Inferenz-Welle: feste Zeiten aus der Choreografie (3,0 s und 5,4 s, danach im
+        // alten Takt, solange das Programm laedt). Nach dem Bereit-Moment keine Welle mehr.
+        _waveT = _emitPulses ? StartupSplashChoreografie.Wellenfortschritt(elapsed) : -1;
 
         foreach (var satellite in _satellites)
             satellite.Angle += satellite.Speed * dt;
@@ -545,6 +533,10 @@ public partial class StartupSplashWindow
         var waveX = _centerX - _waveHalfSpan + _waveT * _waveHalfSpan * 2;
         var waveStrength = waveActive ? Math.Sin(Math.PI * _waveT) : 0;
         var nodeScale = Math.Sqrt(_sphereScale);
+        var elapsed = _animationClock.Elapsed.TotalSeconds;
+        var gruen = _bereitSeit is { } bereitSeit
+            ? StartupSplashChoreografie.Bereitanteil(elapsed - bereitSeit)
+            : 0;
 
         for (int i = 0; i < _nodes.Count; i++)
         {
@@ -577,11 +569,15 @@ public partial class StartupSplashWindow
                 * (0.72 + fog * 0.28)
                 * nodeScale;
             var alpha = (byte)Math.Clamp((90 + depth01 * 150 + node.Activation * 40) * fog, 0, 255);
-            var color = Blend(AccentBlue, NodeCore, 0.22 + depth01 * 0.55 + node.Activation * 0.30);
+            var color = Blend(
+                Blend(AccentBlue, NodeCore, 0.22 + depth01 * 0.55 + node.Activation * 0.30),
+                ReadyAccent,
+                gruen * 0.8);
+            var sichtbar = StartupSplashChoreografie.KnotenSichtbarkeit(i, _nodes.Count, elapsed);
 
             node.Visual.Width = size;
             node.Visual.Height = size;
-            node.Visual.Opacity = 0.40 + depth01 * 0.50 + node.Activation * 0.15;
+            node.Visual.Opacity = (0.40 + depth01 * 0.50 + node.Activation * 0.15) * sichtbar;
             node.FillBrush.Color = Color.FromArgb(alpha, color.R, color.G, color.B);
             node.StrokeBrush.Color = Color.FromArgb(alpha, color.R, color.G, color.B);
             Canvas.SetLeft(node.Visual, px - size / 2);
@@ -609,8 +605,12 @@ public partial class StartupSplashWindow
             var depth01 = Clamp01((_screenDepth[a] + _screenDepth[b] + 2.0) / 4.0);
             var fog = StartupSplashAnimationPolicy.DepthFog((_screenDepth[a] + _screenDepth[b]) / 2.0);
             var alpha = (byte)Math.Clamp((30 + depth01 * 90 + connection.Activation * 140) * fog, 0, 235);
-            var color = Blend(LineAccent, AccentCyan, connection.Activation * 0.85 + depth01 * 0.20);
+            var color = Blend(
+                Blend(LineAccent, AccentCyan, connection.Activation * 0.85 + depth01 * 0.20),
+                ReadyAccent,
+                gruen * 0.7);
 
+            connection.Visual.Opacity = StartupSplashChoreografie.VerbindungSichtbarkeit(a, b, _nodes.Count, elapsed);
             connection.Visual.X1 = _screenX[a];
             connection.Visual.Y1 = _screenY[a];
             connection.Visual.X2 = _screenX[b];

@@ -22,8 +22,6 @@ public partial class StartupSplashWindow : Window
     private const int MaxCascadeGeneration = 4;
     private const double PulseIntervalSeconds = 0.09;
     private const double FlareIntervalSeconds = 0.5;
-    private const double WaveIntervalSeconds = 2.7;
-    private const double WaveDurationSeconds = 1.5;
     private const double GoldenAngle = 2.39996322972865332;
     private const double CameraDistance = 4.6;
     private const int DustCount = 70;
@@ -95,7 +93,8 @@ public partial class StartupSplashWindow : Window
     private double _flareAccumulator;
     // Inferenz-Welle: -1 = inaktiv, 0..1 = Fortschritt des Sweeps durch das Netz.
     private double _waveT = -1;
-    private double _waveCooldown = 1.6;
+    // Animationszeit des Bereit-Moments; steuert das kurze gruene Aufleuchten des Netzes.
+    private double? _bereitSeit;
     private bool _renderLoopActive;
     private bool _emitPulses;
     private bool _skipRequested;
@@ -441,6 +440,8 @@ public partial class StartupSplashWindow : Window
 
     private void TriggerReadyBurst()
     {
+        _bereitSeit = _animationClock.Elapsed.TotalSeconds;
+
         if (_connections.Count > 0)
         {
             for (var i = 0; i < 8; i++)

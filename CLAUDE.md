@@ -1,5 +1,24 @@
 # SewerStudio — AI Sewer Inspection System
 
+## Startanimation 5.0: Kugel, straffer (14.09.2026)
+
+- Entscheid Pascal nach einer Browser-Vorschau mit drei Varianten
+  (`docs/reviews/2026-09-14-startanimation/`, Kamerafahrt / Leitungsnetz / Kugel): Die
+  KI-Kugel bleibt, ihre Zeitplanung ist fest. `StartupSplashChoreografie` (Views/Windows,
+  reine Rechnung neben `StartupSplashAnimationPolicy`) liefert je Bild: Knoten 0,15-1,5 s in
+  Spiralreihenfolge, Verbindungen ab 0,7 s, Impulse erst ab 1,5 s, Wellen fest bei 3,0 und
+  5,4 s (danach alle 2,7 s, solange das Programm laedt), Ringe ab 0/150/300 ms, gruener
+  Bereit-Anteil 0,56 s.
+- **Knoten und Verbindungen haben kein Storyboard mehr.** `RenderFrame` setzt ihre Deckkraft
+  je Bild aus der Choreografie; ein haltendes WPF-Storyboard auf `Opacity` wuerde den
+  Tiefennebel ueberstimmen. Nie wieder `FadeIn(...)` auf Knoten oder Linien legen.
+- Der Bereit-Moment kommt fruehestens nach 8 s (`MinimumDisplayTime`), `_bereitSeit` setzt
+  ihn in `TriggerReadyBurst`. Rechte Haelfte, Chips, Versions-Chip und Ueberspringen sind
+  unveraendert; kein Gold, kein Dunkel.
+- Nachweise: `StartupSplashChoreografieTests` (25) und die `StartupSplash*`-Tests; die
+  Sichtprobe im Programm macht Pascal. Ein laufendes SewerStudio sperrt `bin\Debug`,
+  deshalb das Testprojekt mit `-o .tmp/testout-splash` bauen und die DLL direkt testen.
+
 ## Persoenliche Erledigt-Markierung (13.09.2026)
 
 - `HaltungRecord.BearbeitungErledigt` und `SchachtRecord.BearbeitungErledigt` sind
