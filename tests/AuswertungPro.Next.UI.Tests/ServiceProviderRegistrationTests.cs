@@ -25,6 +25,7 @@ public sealed class ServiceProviderRegistrationTests
         var services = CreateServices(loggerFactory);
 
         Assert.Same(services.Projects, services.GetService(typeof(IProjectRepository)));
+        Assert.Same(services.ProjektPruefung, services.GetService(typeof(AuswertungPro.Next.Application.UseCases.ProjektPruefung.IProjektPruefung)));
         Assert.Same(
             services.ProtocolPdfLayoutSettings,
             services.GetService(typeof(IProtocolPdfLayoutSettings)));
@@ -125,8 +126,8 @@ public sealed class ServiceProviderRegistrationTests
         // 159 -> 160: IGeoShopLeser liefert Original-XTF-TIDs und Leerfelder fuer die neue Vorschau.
         // 160 -> 161: IBackupAdditionalFolders speichert zusätzliche Sicherungsquellen getrennt.
         Assert.True(
-            registrations.Count == 166, // + IXtfPaketAblage: Katasterpaket anlegen und packen.
-            $"Erwartet 166 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 167, // + IProjektPruefung: lesende Projektpruefung.
+            $"Erwartet 167 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(services.XtfLieferungen,

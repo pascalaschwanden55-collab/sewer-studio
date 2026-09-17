@@ -53,6 +53,8 @@ internal sealed class DataPageWindowLauncher : IDataPageWindowLauncher
         {
             Owner = System.Windows.Application.Current?.MainWindow
         };
+        if (request.EintragId is { } id)
+            Services.ProjektPruefpunktNavigation.MarkiereEintrag(window, id);
         window.ShowDialog();
     }
 

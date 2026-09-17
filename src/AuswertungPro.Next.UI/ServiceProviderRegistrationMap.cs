@@ -120,6 +120,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IGitCommitResolver)] = services.GitCommit,
             [typeof(IProgramSnapshotService)] = services.ProgramSnapshot,
             [typeof(IProjectRepository)] = services.Projects,
+            [typeof(AuswertungPro.Next.Application.UseCases.ProjektPruefung.IProjektPruefung)] = services.ProjektPruefung,
             [typeof(AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService)] = services.XtfRevisionExport,
             [typeof(AuswertungPro.Next.Application.Xtf.IXtfNeuExportService)] = services.XtfNeuExport,
             [typeof(ICostStoreFactory)] = services.CostStores,

@@ -1,0 +1,86 @@
+using System.Globalization;
+using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.Export;
+using AuswertungPro.Next.Application.UseCases.Objektakten;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
+
+namespace AuswertungPro.Next.Application.UseCases.ProjektPruefung;
+
+/// <summary>Fuenf lesende Pruefungen. Vorhandene Eingabe- und Hoehenregeln bleiben die einzige Quelle.</summary>
+public static class ProjektPruefregeln
+{
+    public static ProjektPruefergebnis Pruefe(Project projekt, Func<string, string?> dateifehler,
+        CancellationToken ct = default)
+    {
+        var punkte = new List<ProjektPruefpunkt>();
+        foreach (var h in projekt.Data)
+        {
+            ct.ThrowIfCancellationRequested();
+            var name = h.GetFieldValue(FieldKeys.HoldingName);
+            var b = new ObjektaktenBearbeitung(projekt, h.Id, "haltung");
+            PruefeObjekt(b, name, h.GetFieldValue, h.Protocol?.Current);
+            var laengeText = h.GetFieldValue(FieldKeys.HoldingLengthMeters);
+            var hatLaenge = FachzahlParser.TryParseMeasurement(laengeText, out var laenge) && laenge > 0;
+            if (!hatLaenge && (laengeText.Length > 0 || h.Protocol?.Current?.Entries.Any(e => !e.IsDeleted && e.MeterStart.HasValue) == true))
+                Add(b, name, ProjektPruefbereich.Meterangaben, "Eine gültige positive Haltungslänge fehlt.", feld: "haltung.length");
+            foreach (var e in h.Protocol?.Current?.Entries ?? [])
+            {
+                if (e.IsDeleted) continue;
+                ct.ThrowIfCancellationRequested();
+                if (e.MeterStart is { } von && (!double.IsFinite(von) || von < 0)
+                    || e.MeterEnd is { } bis && (!double.IsFinite(bis) || bis < 0)
+                    || e.MeterEnd.HasValue && (!e.MeterStart.HasValue || e.MeterEnd < e.MeterStart))
+                    Add(b, name, ProjektPruefbereich.Meterangaben, $"{e.Code}: Meterbereich ist ungültig.", e.EntryId);
+                else if (hatLaenge && Math.Max(e.MeterStart ?? 0, e.MeterEnd ?? 0) > (double)laenge + ImportPlausibilityValidator.MeterTolerance)
+                    Add(b, name, ProjektPruefbereich.Meterangaben,
+                        $"{e.Code} bei {Math.Max(e.MeterStart ?? 0, e.MeterEnd ?? 0).ToString("0.##", CultureInfo.GetCultureInfo("de-CH"))} m liegt hinter der Haltungslänge {laengeText} m (Toleranz 1 m).", e.EntryId);
+            }
+        }
+        foreach (var s in projekt.SchaechteData)
+        {
+            ct.ThrowIfCancellationRequested();
+            string Wert(string key) => s.GetFieldValue(SchachtFeldnamen.Feld(s, key));
+            var name = Wert("Schachtnummer");
+            var b = new ObjektaktenBearbeitung(projekt, s.Id, "schacht");
+            PruefeObjekt(b, name, Wert, s.Protocol?.Current);
+            var hoehen = SchachtHoehenRechnung.Fuer(b);
+            if (hoehen.Warnung.Length > 0)
+                Add(b, name, ProjektPruefbereich.Schachthoehen, hoehen.Warnung, feld: SchachtHoehenRechnung.Tiefenfeld);
+        }
+        return new(punkte, projekt.Data.Count, projekt.SchaechteData.Count);
+
+        void Add(ObjektaktenBearbeitung b, string name, ProjektPruefbereich bereich, string text,
+            Guid? eintrag = null, Guid? akte = null, string? feld = null, string? speicher = null)
+            => punkte.Add(new(bereich, b.Art, b.WurzelId, name, text, eintrag, akte, feld, speicher));
+
+        void PruefeObjekt(ObjektaktenBearbeitung b, string name, Func<string, string> wert, ProtocolRevision? revision)
+        {
+            var gesehen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var key in new[] { FieldKeys.Link, FieldKeys.PdfPath, FieldKeys.PdfEigen, FieldKeys.PdfAll })
+            {
+                var raw = wert(key);
+                IEnumerable<string> pfade = key == FieldKeys.PdfAll ? StoredFileListParser.Parse(raw) : new[] { raw };
+                foreach (var pfad in pfade)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (string.IsNullOrWhiteSpace(pfad) || !gesehen.Add(pfad.Trim())) continue;
+                    var fehler = dateifehler(pfad);
+                    if (fehler is not null) Add(b, name, ProjektPruefbereich.Dateien, $"{pfad}: {fehler}", speicher: key);
+                }
+            }
+            foreach (var e in revision?.Entries ?? [])
+                if (b.Art == "haltung" && !e.IsDeleted && e.Ai is { Accepted: false })
+                    Add(b, name, ProjektPruefbereich.KiBefunde, $"{e.Code}: KI-Vorschlag noch nicht bestätigt.", e.EntryId);
+            foreach (var a in b.Verbund)
+            foreach (var f in ObjektaktenBestandsfelder.Fuer(b, a).Where(f => !f.NurLesen))
+            {
+                ct.ThrowIfCancellationRequested();
+                try { ObjektFeldPruefung.Pruefe(f, b.Lies(a, f)); }
+                catch (InvalidOperationException ex)
+                { Add(b, name, ProjektPruefbereich.Eingabefelder, $"{a.Art}: {ex.Message}", akte: a.Id, feld: f.Id); }
+            }
+        }
+    }
+}

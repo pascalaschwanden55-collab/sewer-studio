@@ -16,6 +16,6 @@ public static class NaechsteAufgabeRegel
 
     public static string ChipText(HaltungRecord? naechste)
         => naechste is null
-            ? "Keine offene Prüfung"
+            ? "Keine nächste Videoaufgabe"
             : $"Nächste Aufgabe: {naechste.GetFieldValue(FieldKeys.HoldingName)} prüfen";
 }

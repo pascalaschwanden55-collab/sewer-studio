@@ -35,6 +35,8 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
     private readonly ServiceProvider _sp;
     private readonly ICodingSuggestionRegistry _register;
     private ObservableCollection<HaltungRecord> _beobachteteListe;
+    private ProjektDatensatzBeobachter _pruefBeobachter;
+    public ProjektPruefungViewModel ProjektPruefung { get; }
 
     [ObservableProperty] private string _heroTitel = string.Empty;
     [ObservableProperty] private string _heroText = string.Empty;
@@ -52,9 +54,15 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
     {
         _shell = shell;
         _sp = sp;
+        ProjektPruefung = new(sp.ProjektPruefung, () => (_shell.Project, sp.Settings.LastProjectPath),
+            sp.Projects.DeepCopy, sp.ProjectContentSignature.Compute,
+            () => _shell.IsProjectReady && _shell.SaveCommand.CanExecute(null),
+            punkt => ProjektPruefpunktNavigation.Oeffne(_shell, sp, punkt));
+        _pruefBeobachter = new(_shell.Project, PruefstandGeaendert);
         _register = sp.CodingSuggestionRegistry;
         _register.Geaendert += OnRegisterGeaendert;
         _shell.PropertyChanged += OnShellGeaendert;
+        _shell.SaveCommand.CanExecuteChanged += OnBereitschaftGeaendert;
         _beobachteteListe = _shell.Project.Data;
         _beobachteteListe.CollectionChanged += OnHaltungenGeaendert;
         Aktualisiere();
@@ -69,13 +77,31 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
     /// </summary>
     private void OnShellGeaendert(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
+            OnBereitschaftGeaendert(sender, EventArgs.Empty);
+        if (e.PropertyName == nameof(ShellViewModel.IsDirty))
+            PruefstandGeaendert();
         if (e.PropertyName is not nameof(ShellViewModel.Project))
             return;
 
         _beobachteteListe.CollectionChanged -= OnHaltungenGeaendert;
         _beobachteteListe = _shell.Project.Data;
         _beobachteteListe.CollectionChanged += OnHaltungenGeaendert;
+        _pruefBeobachter.Dispose();
+        _pruefBeobachter = new(_shell.Project, PruefstandGeaendert);
+        ProjektPruefung.Verwerfe();
         Aktualisiere();
+    }
+
+    private void OnBereitschaftGeaendert(object? sender, EventArgs e)
+        => ProjektPruefung.PruefenCommand.NotifyCanExecuteChanged();
+
+    private void PruefstandGeaendert()
+    {
+        ProjektPruefung.Verwerfe();
+        Kennzahlen = ProjektUebersichtRechner.Berechne(_shell.Project);
+        HeroText = ProjektUebersichtRechner.HeroText(Kennzahlen);
+        OnPropertyChanged(nameof(NaechsteAufgabeText));
     }
 
     /// <summary>
@@ -258,8 +284,11 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
 
     public void Dispose()
     {
+        ProjektPruefung.Dispose();
+        _pruefBeobachter.Dispose();
         _register.Geaendert -= OnRegisterGeaendert;
         _shell.PropertyChanged -= OnShellGeaendert;
+        _shell.SaveCommand.CanExecuteChanged -= OnBereitschaftGeaendert;
         _beobachteteListe.CollectionChanged -= OnHaltungenGeaendert;
     }
 }

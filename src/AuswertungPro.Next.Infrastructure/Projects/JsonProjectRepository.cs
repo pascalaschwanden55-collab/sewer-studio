@@ -42,16 +42,16 @@ public sealed class JsonProjectRepository : IProjectRepository
         try
         {
             if (!File.Exists(path))
-                return Result<Project>.Fail("APP-NOTFOUND", $"Datei nicht gefunden: {path}");
+                return Result<Project>.Fail(ProjektLadefehler.NichtGefunden, $"Datei nicht gefunden: {path}");
 
             var json = File.ReadAllText(path);
             var project = JsonSerializer.Deserialize<Project>(json, SerializerOptions);
             if (project is null)
-                return Result<Project>.Fail("APP-LOAD", "Die Datei enthält kein gültiges Projekt (JSON-null).");
+                return Result<Project>.Fail(ProjektLadefehler.Inhalt, "Die Datei enthält kein gültiges Projekt (JSON-null).");
             if (project.Version > CurrentVersion)
             {
                 return Result<Project>.Fail(
-                    "APP-VERSION",
+                    ProjektLadefehler.Version,
                     $"Das Projekt stammt aus einer neueren Programmversion (Projektformat {project.Version}, unterstuetzt bis {CurrentVersion}). " +
                     "Bitte oeffne es mit der neueren SewerStudio-Version. Die Datei wurde nicht veraendert.");
             }
@@ -85,9 +85,26 @@ public sealed class JsonProjectRepository : IProjectRepository
 
             return Result<Project>.Success(project);
         }
+        catch (JsonException ex)
+        {
+            // Belegt unbrauchbarer Inhalt - hier darf die Wiederherstellung greifen.
+            return Result<Project>.Fail(ProjektLadefehler.Inhalt, ex.Message);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return Result<Project>.Fail(ProjektLadefehler.NichtGefunden, ex.Message);
+        }
         catch (Exception ex)
         {
-            return Result<Project>.Fail("APP-LOAD", ex.Message);
+            // Gesperrt, kein Zugriff, Netzlaufwerk weg: Die Datei ist in Ordnung, nur
+            // gerade nicht lesbar. Frueher landete das im selben APP-LOAD wie eine kaputte
+            // Datei - die Wiederherstellung hat daraufhin eine alte Sicherung ueber den
+            // aktuellen Arbeitsstand geschrieben (F1, gemessen 17.09.2026).
+            return Result<Project>.Fail(
+                ProjektLadefehler.Zugriff,
+                $"Die Projektdatei konnte nicht gelesen werden: {ex.Message} "
+                + "Sie wurde nicht veraendert. Bitte schliesse Programme, die sie offen halten, "
+                + "und versuche es erneut.");
         }
     }
 

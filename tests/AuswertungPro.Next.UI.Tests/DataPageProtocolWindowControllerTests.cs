@@ -6,6 +6,16 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class DataPageProtocolWindowControllerTests
 {
     [Fact]
+    public void Open_uebergibt_das_genaue_Sprungziel_an_das_Protokollfenster()
+    {
+        var id = Guid.NewGuid();
+        DataPageProtocolWindowRequest? request = null;
+        var controller = CreateController(showProtocolWindow: r => request = r);
+        controller.Open(new HaltungRecord(), id);
+        Assert.Equal(id, request!.EintragId);
+    }
+
+    [Fact]
     public void Open_ignoriert_null_record()
     {
         var shown = new List<DataPageProtocolWindowRequest>();

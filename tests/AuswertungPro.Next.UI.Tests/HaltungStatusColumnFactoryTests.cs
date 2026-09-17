@@ -20,6 +20,28 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class HaltungStatusColumnFactoryTests
 {
     [Fact]
+    public void Statuszelle_folgt_Erledigt_Medienpfaden_und_neuem_Protokoll_sofort()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var h = new HaltungRecord();
+            var zelle = Assert.IsType<ContentControl>(HaltungStatusColumnFactory.Pruefung("PRÜFUNG").CellTemplate.LoadContent());
+            zelle.DataContext = h; WpfBindungsPumpe.Leeren();
+            HaltungZeilenStatusErgebnis Stand() => Assert.IsType<HaltungZeilenStatusErgebnis>(zelle.Content);
+            Assert.Equal(HaltungPruefstand.Offen, Stand().Pruefstand);
+            h.BearbeitungErledigt = true; WpfBindungsPumpe.Leeren();
+            Assert.Equal(HaltungPruefstand.Abgeschlossen, Stand().Pruefstand);
+            h.SetFieldValue(FieldKeys.Link, "video.mp4", FieldSource.Manual, true);
+            h.SetFieldValue(FieldKeys.PdfPath, "protokoll.pdf", FieldSource.Manual, true);
+            WpfBindungsPumpe.Leeren();
+            Assert.True(Stand().HatVideo); Assert.True(Stand().HatProtokoll);
+            h.Protocol = new() { Current = new() { Entries = [new() { Ai = new() }] } };
+            WpfBindungsPumpe.Leeren();
+            Assert.Equal(HaltungPruefstand.KiAnalysiert, Stand().Pruefstand);
+        });
+    }
+
+    [Fact]
     public void Die_vier_Spalten_tragen_ihren_Kopf_und_sind_nur_lesend()
     {
         StaTestRunner.Run(() =>
@@ -84,7 +106,7 @@ public sealed class HaltungStatusColumnFactoryTests
             var traeger = Assert.IsType<ContentControl>(HaltungStatusColumnFactory.Pruefung("PRÜFUNG").CellTemplate.LoadContent());
             var huelle = Assert.IsType<Grid>(traeger.ContentTemplate.LoadContent());
 
-            var record = new HaltungRecord();
+            var record = new HaltungRecord { BearbeitungErledigt = true };
             record.SetFieldValue(FieldKeys.WorkflowStatus, "abgeschlossen", FieldSource.Manual, userEdited: true);
             huelle.DataContext = HaltungZeilenStatus.Bestimme(record);
             WpfBindungsPumpe.Leeren();
@@ -92,7 +114,7 @@ public sealed class HaltungStatusColumnFactoryTests
             var kapseln = huelle.Children.OfType<Border>().ToList();
             Assert.Equal(3, kapseln.Count);
             var sichtbar = Assert.Single(kapseln.Where(k => k.Visibility == Visibility.Visible));
-            Assert.Equal("fachlich geprüft", Assert.IsType<TextBlock>(sichtbar.Child).Text);
+            Assert.Equal("Bearbeitung erledigt", Assert.IsType<TextBlock>(sichtbar.Child).Text);
         });
     }
 

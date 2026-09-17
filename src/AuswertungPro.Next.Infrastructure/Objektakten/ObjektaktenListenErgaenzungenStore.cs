@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.UseCases.Objektakten;
@@ -34,15 +34,16 @@ public sealed class ObjektaktenListenErgaenzungenStore(string settingsFolder) : 
         if (dokument is null || dokument.Version != 1 || dokument.Eintraege is null
             || dokument.Eintraege.Any(e => e is null))
             throw new InvalidDataException($"Die Listenergänzungen in '{_datei}' sind ungültig.");
-        foreach (var eintrag in dokument.Eintraege) eintrag!.Pruefe();
-        return dokument.Eintraege!;
+        var eintraege = dokument.Eintraege.Select(e => e!).ToList();
+        foreach (var eintrag in eintraege) eintrag.Pruefe();
+        return eintraege;
     }
 
     public void Speichere(IEnumerable<ListenErgaenzung> ergaenzungen)
     {
         var liste = ergaenzungen.ToList();
         foreach (var eintrag in liste) eintrag.Pruefe();
-        var text = JsonSerializer.Serialize(new Dokument { Version = 1, Eintraege = liste }, Optionen);
+        var text = JsonSerializer.Serialize(new Dokument { Version = 1, Eintraege = [.. liste] }, Optionen);
         AtomicTextFileWriter.WriteAllText(_datei, text, durable: true);
     }
 

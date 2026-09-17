@@ -72,8 +72,8 @@ public static class ProjektUebersichtRechner
     public static string HeroText(ProjektUebersichtKennzahlen k)
     {
         var prozent = k.Haltungen == 0 ? 0 : 100.0 * k.Geprueft / k.Haltungen;
-        return $"{k.Geprueft} von {k.Haltungen} Haltungen fachlich geprüft ({prozent.ToString("0.0", DeCh)} %). " +
-               $"{k.KiAnalysiert} von der KI analysiert und noch nicht geprüft, {k.Offen} ohne Analyse. " +
+        return $"{k.Geprueft} von {k.Haltungen} Haltungen als erledigt markiert, ohne offene KI-Befunde ({prozent.ToString("0.0", DeCh)} %). " +
+               $"{k.KiAnalysiert} mit offenen KI-Befunden, {k.Offen} in Bearbeitung. " +
                $"{k.DringendHaltungen} Haltungen dringend (Z0 oder Z1). " +
                $"Bestand mit {k.Haltungen} Haltungen und {k.Schaechte} Schächten.";
     }

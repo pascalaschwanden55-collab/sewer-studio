@@ -11,6 +11,7 @@ namespace AuswertungPro.Next.UI.ViewModels;
 public partial class ShellViewModel
 {
     private DateTime? _letzteSpeicherungLokal;
+    private ProjektDatensatzBeobachter? _novaStatusBeobachter;
 
     public string Brotkrume => ShellNovaKopfzeile.Brotkrume(IsProjectReady ? Project.Name : null, SelectedNavItem?.Title);
     public HaltungRecord? NaechsteAufgabe { get; private set; }
@@ -104,5 +105,8 @@ public partial class ShellViewModel
     }
 
     private void BeobachteHaltungsliste(Project p)
-        => p.Data.CollectionChanged += (_, _) => AktualisiereNovaKopfzeile();
+    {
+        _novaStatusBeobachter?.Dispose();
+        _novaStatusBeobachter = new(p, AktualisiereNovaKopfzeile);
+    }
 }

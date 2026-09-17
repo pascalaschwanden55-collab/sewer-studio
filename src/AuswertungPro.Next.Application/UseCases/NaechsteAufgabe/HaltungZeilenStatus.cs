@@ -27,18 +27,8 @@ public sealed record HaltungZeilenStatusErgebnis(
 /// darauf auf). Reine Rechnung ohne Datenaenderung; nutzt <see cref="HaltungPruefstatus"/>
 /// wieder, statt dessen Logik zu kopieren.
 ///
-/// Ampelregel (Nova-Fixwelle 2b, F2): Die KI-Spalte spricht ueber die KI, nicht ueber den
-/// Arbeitsablauf. Massgeblich ist deshalb, ob im Protokoll ueberhaupt KI-Eintraege stehen.
-/// Keine KI-Eintraege heisst <see cref="KiAmpel.KeineAnalyse"/> — auch an einer fachlich
-/// abgeschlossenen Haltung, denn dort hat schlicht nie eine KI gerechnet. Gibt es KI-Eintraege
-/// und mindestens einen noch nicht bestaetigten, gilt <see cref="KiAmpel.Offen"/> mit der
-/// Anzahl im Text. Ist keiner mehr offen, aber die Haltung noch nicht abgeschlossen, gilt
-/// <see cref="KiAmpel.Bestaetigt"/> ("bestätigt") — vorher stand dort faelschlich
-/// "keine Analyse". Erst mit abgeschlossener Haltung heisst es "geprüft"; die Zustandsklasse
-/// 0 oder 1 faerbt das als <see cref="KiAmpel.Kritisch"/> ein.
-///
-/// <see cref="HaltungPruefstatus"/> bleibt unveraendert: Aufgaben-Chip und Uebersicht lesen
-/// weiter dieselbe fachliche Regel.
+/// Offene KI-Befunde bleiben offen, angenommene heissen bestaetigt. Weder der
+/// Sanierungsstatus noch die persoenliche Erledigt-Markierung erteilen eine KI-Freigabe.
 /// </summary>
 public static class HaltungZeilenStatus
 {
@@ -54,11 +44,7 @@ public static class HaltungZeilenStatus
             ? (KiAmpel.KeineAnalyse, "keine Analyse")
             : offeneBefunde > 0
                 ? (KiAmpel.Offen, $"{offeneBefunde} offen")
-                : pruefstand != HaltungPruefstand.Abgeschlossen
-                    ? (KiAmpel.Bestaetigt, "bestätigt")
-                    : IstKritischeZustandsklasse(record)
-                        ? (KiAmpel.Kritisch, "geprüft")
-                        : (KiAmpel.Geprueft, "geprüft");
+                : (KiAmpel.Bestaetigt, "bestätigt");
 
         return new HaltungZeilenStatusErgebnis(
             ampel,
@@ -93,9 +79,6 @@ public static class HaltungZeilenStatus
     /// Dateizugriff je Zeile.
     /// </summary>
     private static bool HatProtokoll(HaltungRecord record) => HaltungProtokollQuelle.Vorhanden(record);
-
-    private static bool IstKritischeZustandsklasse(HaltungRecord record)
-        => TryParseZustandsklasse(record, out var klasse) && klasse <= 1;
 
     private static string ZustandsklasseChip(HaltungRecord record)
         => TryParseZustandsklasse(record, out var klasse) ? $"Z{klasse}" : "–";

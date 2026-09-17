@@ -8,7 +8,8 @@ public sealed record DataPageProtocolWindowRequest(
     Project Project,
     string? ResolvedVideoPath,
     string? ProjectFolder,
-    Action MarkDirty);
+    Action MarkDirty,
+    Guid? EintragId = null);
 
 public sealed class DataPageProtocolWindowController
 {
@@ -38,7 +39,9 @@ public sealed class DataPageProtocolWindowController
         _refreshSelectedProtocolEntriesIfSelected = refreshSelectedProtocolEntriesIfSelected ?? throw new ArgumentNullException(nameof(refreshSelectedProtocolEntriesIfSelected));
     }
 
-    public void Open(HaltungRecord? record)
+    public void Open(HaltungRecord? record) => Open(record, null);
+
+    public void Open(HaltungRecord? record, Guid? eintragId)
     {
         if (record is null)
             return;
@@ -55,7 +58,8 @@ public sealed class DataPageProtocolWindowController
             _getProject(),
             resolvedVideoPath,
             projectFolder,
-            _markDirty));
+            _markDirty,
+            eintragId));
 
         _syncObservationsToHoldingFields(record);
         _refreshSelectedProtocolEntriesIfSelected(record);

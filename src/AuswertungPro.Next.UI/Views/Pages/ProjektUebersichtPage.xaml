@@ -30,7 +30,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <!-- Hero -->
             <Grid Grid.Row="0" Margin="0,0,0,12">
@@ -103,12 +103,13 @@
                     </DockPanel>
                 </Border>
             </Grid>
+            <ctrl:ProjektPruefungView Grid.Row="1" DataContext="{Binding ProjektPruefung}" Margin="0,0,0,12"/>
             <!-- KPIs -->
-            <UniformGrid Grid.Row="1" Columns="4" Margin="-6,0,-6,6">
+            <UniformGrid Grid.Row="2" Columns="4" Margin="-6,0,-6,6">
                 <Border Style="{StaticResource Card}" Margin="6"><StackPanel>
                     <TextBlock Text="Haltungen" Style="{StaticResource KpiLabel}"/>
-                    <StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Kennzahlen.Haltungen}" Style="{StaticResource KpiWert}"/><TextBlock Text="{Binding Kennzahlen.Geprueft, StringFormat=geprüft {0}}" Margin="8,0,0,6" VerticalAlignment="Bottom" Foreground="{DynamicResource MutedBrush}"/></StackPanel>
-                    <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"><Run Text="Gesamtlänge "/><Run Text="{Binding Kennzahlen.GesamtlaengeM, StringFormat={}{0:0} m, Mode=OneWay}"/><Run Text=" · KI analysiert "/><Run Text="{Binding Kennzahlen.KiAnalysiert, Mode=OneWay}"/><Run Text=" · offen "/><Run Text="{Binding Kennzahlen.Offen, Mode=OneWay}"/></TextBlock>
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Kennzahlen.Haltungen}" Style="{StaticResource KpiWert}"/><TextBlock Text="{Binding Kennzahlen.Geprueft, StringFormat=erledigt {0}}" ToolTip="Als erledigt markiert und ohne offene KI-Befunde" Margin="8,0,0,6" VerticalAlignment="Bottom" Foreground="{DynamicResource MutedBrush}"/></StackPanel>
+                    <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"><Run Text="Gesamtlänge "/><Run Text="{Binding Kennzahlen.GesamtlaengeM, StringFormat={}{0:0} m, Mode=OneWay}"/><Run Text=" · KI offen "/><Run Text="{Binding Kennzahlen.KiAnalysiert, Mode=OneWay}"/><Run Text=" · offen "/><Run Text="{Binding Kennzahlen.Offen, Mode=OneWay}"/></TextBlock>
                 </StackPanel></Border>
                 <Border Style="{StaticResource Card}" Margin="6"><StackPanel>
                     <TextBlock Text="Schächte" Style="{StaticResource KpiLabel}"/>
@@ -127,7 +128,7 @@
                 </StackPanel></Border>
             </UniformGrid>
             <!-- Zustand + Schaeden -->
-            <Grid Grid.Row="2" Margin="0,0,0,12">
+            <Grid Grid.Row="3" Margin="0,0,0,12">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                 <Border Grid.Column="0" Style="{StaticResource Card}">
                     <DockPanel>
@@ -189,7 +190,7 @@
                 </Border>
             </Grid>
             <!-- Projekte / Verfahren / Stammdaten -->
-            <UniformGrid Grid.Row="3" Columns="3" Margin="-6,0,-6,0">
+            <UniformGrid Grid.Row="4" Columns="3" Margin="-6,0,-6,0">
                 <Border Style="{StaticResource Card}" Margin="6"><DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Projekte" Style="{StaticResource KarteTitel}" Margin="0,0,0,8"/>
                     <ItemsControl ItemsSource="{Binding LetzteProjekte}"><ItemsControl.ItemTemplate><DataTemplate>

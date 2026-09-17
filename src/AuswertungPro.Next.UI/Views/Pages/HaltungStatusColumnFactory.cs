@@ -73,7 +73,7 @@ public static class HaltungStatusColumnFactory
     /// <summary>
     /// Traeger fuer KI und Pruefung: Der Zeilenstatus wird EINMAL je Zelle gerechnet und als
     /// Inhalt weitergereicht; die Vorlage bindet danach nur noch seine Felder. Die MultiBinding
-    /// haengt am Datensatz, am Feld "offen/abgeschlossen" und am Protokoll, damit die Zelle
+    /// haengt am Datensatz, an der Erledigt-Markierung, den Feldern und dem Protokoll, damit die Zelle
     /// jede fachliche Aenderung mitbekommt.
     /// </summary>
     private static FrameworkElementFactory StatusInhalt(FrameworkElementFactory vorlage)

@@ -285,6 +285,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         AiRuntimeStatusTracker.Changed -= ApplyAiRuntimeStatus;
         MotionSettings.EngineChanged -= OnHintergrundEngineGeaendert;
         GlobaleSuche?.Dispose();
+        _novaStatusBeobachter?.Dispose();
         UnregisterShellOperationGuards();
         Monitor.Dispose();
         SetCurrentPage(null);
@@ -666,9 +667,14 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         ImportRecoveryResult? importRecovery) LoadOrRecover(string path)
     {
         var res = _sp.Projects.Load(path);
+        // Nur eine belegt beschaedigte oder fehlende Datei darf eine Sicherung einspielen.
+        // Eine gesperrte oder zu neue Datei ist in Ordnung; frueher wurde sie in Quarantaene
+        // verschoben und der alte Sicherungsstand darueber gespeichert (F1, 17.09.2026).
         var recovery = res.Ok && res.Value is not null
             ? null
-            : _sp.ProjectRecovery.TryRecover(path, _sp.Projects);
+            : ProjektLadefehler.DarfSicherungEinspielen(res.ErrorCode)
+                ? _sp.ProjectRecovery.TryRecover(path, _sp.Projects)
+                : null;
 
         var loaded = res.Ok && res.Value is not null
             ? res.Value
@@ -726,6 +732,19 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         {
             loaded = recovery.Project;
             loaded.Dirty = true; // erzwingt Neuspeicherung der guten Version an den Originalpfad
+        }
+        else if (!ProjektLadefehler.DarfSicherungEinspielen(res.ErrorCode))
+        {
+            // Nicht beschaedigt, sondern zu neu oder gerade nicht lesbar: kein Ruecksetzen,
+            // keine Quarantaene, keine irrefuehrende Beschaedigungsmeldung.
+            _sp.Dialogs.Error(
+                "Das Projekt wurde nicht geoeffnet.\n\n" +
+                $"Datei: {path}\n\n" +
+                $"{res.ErrorMessage}\n\n" +
+                "Die Datei wurde NICHT veraendert, und es wurde keine Sicherung eingespielt.",
+                "Projekt nicht geoeffnet");
+            SetStatus($"Nicht geoeffnet: {res.ErrorMessage}");
+            return false;
         }
         else
         {

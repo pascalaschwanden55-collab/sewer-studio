@@ -23,6 +23,7 @@ public sealed class ProjektUebersichtKennzahlenTests
             p.AddRecord(r);
         }
         H("1-2", "abgeschlossen", "0", "10", "Beton", "a.mp4");
+        p.Data[0].BearbeitungErledigt = true;
         H("2-3", "", "1", "20.5", "", "b.mp4");
         H("3-4", "", "4", "", "Beton", "");
         var s = new SchachtRecord(); s.Fields["Schachtnummer"] = "1"; s.Fields["Zustandsklasse"] = "1"; s.Fields["PDF_Path"] = "x.pdf";
@@ -61,7 +62,7 @@ public sealed class ProjektUebersichtKennzahlenTests
     public void Hero_Text_nennt_alle_Zahlen()
     {
         var k = ProjektUebersichtRechner.Berechne(Projekt());
-        Assert.Equal("1 von 3 Haltungen fachlich geprüft (33.3 %). 0 von der KI analysiert und noch nicht geprüft, 2 ohne Analyse. 2 Haltungen dringend (Z0 oder Z1). Bestand mit 3 Haltungen und 2 Schächten.",
+        Assert.Equal("1 von 3 Haltungen als erledigt markiert, ohne offene KI-Befunde (33.3 %). 0 mit offenen KI-Befunden, 2 in Bearbeitung. 2 Haltungen dringend (Z0 oder Z1). Bestand mit 3 Haltungen und 2 Schächten.",
             ProjektUebersichtRechner.HeroText(k));
     }
 }

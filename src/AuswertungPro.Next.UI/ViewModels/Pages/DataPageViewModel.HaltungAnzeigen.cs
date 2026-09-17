@@ -10,6 +10,12 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 /// </summary>
 public sealed partial class DataPageViewModel
 {
+    internal void ZeigeProtokolleintrag(HaltungRecord record, Guid eintragId)
+    {
+        if (!_disposed && _shell.IsProjectReady && _shell.Project.Data.Contains(record))
+            _protocolWindowController.Open(record, eintragId);
+    }
+
     /// <summary>Eine Haltung soll ausdruecklich gezeigt werden; die Seite entscheidet, wie.</summary>
     public event Action<HaltungRecord>? HaltungAnzeigen;
 

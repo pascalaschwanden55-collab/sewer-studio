@@ -69,38 +69,38 @@ public sealed class HaltungZeilenStatusTests
     {
         var ergebnis = HaltungZeilenStatus.Bestimme(Haltung(status: "abgeschlossen", zustandsklasse: "4", offeneKiBefunde: 3));
 
-        Assert.Equal(HaltungPruefstand.Abgeschlossen, ergebnis.Pruefstand);
+        Assert.Equal(HaltungPruefstand.KiAnalysiert, ergebnis.Pruefstand);
         Assert.Equal(KiAmpel.Offen, ergebnis.Ampel);
         Assert.Equal("3 offen", ergebnis.AmpelText);
     }
 
     [Fact]
-    public void Abgeschlossen_und_Z1_ist_kritisch()
+    public void Sanierung_abgeschlossen_und_Z1_ist_nur_KI_bestaetigt()
     {
         var ergebnis = HaltungZeilenStatus.Bestimme(
             Haltung(status: "abgeschlossen", zustandsklasse: "1", bestaetigteKiBefunde: 1));
 
-        Assert.Equal(KiAmpel.Kritisch, ergebnis.Ampel);
-        Assert.Equal("geprüft", ergebnis.AmpelText);
+        Assert.Equal(KiAmpel.Bestaetigt, ergebnis.Ampel);
+        Assert.Equal("bestätigt", ergebnis.AmpelText);
         Assert.Equal(0, ergebnis.OffeneBefunde);
         Assert.Equal("Z1", ergebnis.ZustandsklasseChip);
     }
 
     [Fact]
-    public void Abgeschlossen_und_Z4_ist_geprueft_nicht_kritisch()
+    public void Sanierung_abgeschlossen_und_Z4_ist_nur_KI_bestaetigt()
     {
         var ergebnis = HaltungZeilenStatus.Bestimme(
             Haltung(status: "abgeschlossen", zustandsklasse: "4", bestaetigteKiBefunde: 1));
 
-        Assert.Equal(KiAmpel.Geprueft, ergebnis.Ampel);
-        Assert.Equal("geprüft", ergebnis.AmpelText);
+        Assert.Equal(KiAmpel.Bestaetigt, ergebnis.Ampel);
+        Assert.Equal("bestätigt", ergebnis.AmpelText);
         Assert.Equal("Z4", ergebnis.ZustandsklasseChip);
     }
 
     [Fact]
-    public void Zustandsklasse_0_ist_ebenfalls_kritisch()
+    public void Zustandsklasse_0_erteilt_keine_Freigabe()
         => Assert.Equal(
-            KiAmpel.Kritisch,
+            KiAmpel.Bestaetigt,
             HaltungZeilenStatus.Bestimme(Haltung(status: "abgeschlossen", zustandsklasse: "0", bestaetigteKiBefunde: 1)).Ampel);
 
     /// <summary>
@@ -119,8 +119,8 @@ public sealed class HaltungZeilenStatusTests
     }
 
     /// <summary>
-    /// Eine fachlich abgeschlossene Haltung OHNE jeden KI-Eintrag ist fuer die KI-Spalte
-    /// weiterhin "keine Analyse" — die Pruefungsspalte sagt getrennt "fachlich geprüft".
+    /// Ein abgeschlossener Sanierungsstand ohne KI-Eintrag bleibt fuer die KI-Spalte
+    /// "keine Analyse" und erteilt keine Bearbeitungsfreigabe.
     /// </summary>
     [Fact]
     public void Abgeschlossen_ohne_KI_Eintraege_bleibt_keine_Analyse()
@@ -129,7 +129,7 @@ public sealed class HaltungZeilenStatusTests
 
         Assert.Equal(KiAmpel.KeineAnalyse, ergebnis.Ampel);
         Assert.Equal("keine Analyse", ergebnis.AmpelText);
-        Assert.Equal(HaltungPruefstand.Abgeschlossen, ergebnis.Pruefstand);
+        Assert.Equal(HaltungPruefstand.Offen, ergebnis.Pruefstand);
     }
 
     /// <summary>Ein offener Befund schlaegt bestaetigte Nachbarn — die Zahl bleibt sichtbar.</summary>
@@ -157,7 +157,7 @@ public sealed class HaltungZeilenStatusTests
     public void PruefungText_stammt_aus_HaltungPruefstatus()
     {
         var ergebnis = HaltungZeilenStatus.Bestimme(Haltung(status: "abgeschlossen"));
-        Assert.Equal(HaltungPruefstatus.Text(HaltungPruefstand.Abgeschlossen), ergebnis.PruefungText);
+        Assert.Equal(HaltungPruefstatus.Text(HaltungPruefstand.Offen), ergebnis.PruefungText);
     }
 
     [Theory]

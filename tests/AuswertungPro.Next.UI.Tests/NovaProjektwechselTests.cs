@@ -137,6 +137,22 @@ public sealed class NovaProjektwechselTests : IDisposable
         Assert.Equal(1, vm.Kennzahlen!.Haltungen);
     }
 
+    [Fact]
+    public async Task Erledigt_und_offene_KI_aktualisieren_Uebersicht_Aufgabe_und_Pruefergebnis()
+    {
+        var p = Projekt("Pruefung", "1-2"); var h = p.Data[0];
+        _shell.ReplaceProject(p); _shell.MarkProjectReady();
+        _shell.EnterWorkspaceOn("Uebersicht");
+        using var vm = new ProjektUebersichtPageViewModel(_shell, _services);
+        await vm.ProjektPruefung.PruefenCommand.ExecuteAsync(null);
+        Assert.True(vm.ProjektPruefung.IstAktuell, vm.ProjektPruefung.Meldung);
+        h.BearbeitungErledigt = true;
+        Assert.Equal(1, vm.Kennzahlen!.Geprueft); Assert.False(vm.ProjektPruefung.IstAktuell);
+        h.Protocol = new() { Current = new() { Entries = [new() { Ai = new() }] } };
+        Assert.Equal(0, vm.Kennzahlen.Geprueft); Assert.Equal(1, vm.Kennzahlen.KiAnalysiert);
+        Assert.Same(h, _shell.NaechsteAufgabe);
+    }
+
     /// <summary>R4: Ein Durchlauf aus Projekt A darf in der Uebersicht von B nicht erscheinen.</summary>
     [Fact]
     public void Projektuebersicht_zeigt_keinen_KI_Lauf_eines_anderen_Projekts()

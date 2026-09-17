@@ -10,8 +10,8 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// <summary>
 /// Nova-Etappe 2b (Inventar 4.3): Liefert den Zeilenstatus einer Haltung an die Statusspalten.
 ///
-/// Die Bindung ist bewusst eine <see cref="MultiBinding"/> auf den Datensatz selbst, auf das
-/// Feld "offen/abgeschlossen" und auf das Protokoll: Nur so meldet sich die Zelle bei einer
+/// Die Bindung ist bewusst eine <see cref="MultiBinding"/> auf den Datensatz selbst, auf die
+/// Erledigt-Markierung, die Felder und das Protokoll: Nur so meldet sich die Zelle bei einer
 /// Feldaenderung UND bei einem In-Place-Ersatz des Protokolls neu. Gerechnet wird nichts hier —
 /// die Regel liegt WPF-frei in <see cref="HaltungZeilenStatus"/>.
 /// </summary>
@@ -22,7 +22,7 @@ public sealed class HaltungZeilenStatusConverter : IMultiValueConverter
     /// <summary>
     /// Die Bindungsquellen in fester Reihenfolge; die Tabelle baut daraus ihre MultiBinding.
     ///
-    /// Die Aufklapp-Liste (<c>HaltungAufklappListe.xaml</c>) deklariert dieselben drei Quellen
+    /// Die Aufklapp-Liste (<c>HaltungAufklappListe.xaml</c>) deklariert dieselben vier Quellen
     /// direkt im XAML, weil ihre Zellen dort stehen und nicht im Code entstehen. Wer hier eine
     /// Quelle ergaenzt, muss sie auch dort ergaenzen — sonst meldet sich die eine Ansicht bei
     /// einer Aenderung neu und die andere nicht.
@@ -32,7 +32,8 @@ public sealed class HaltungZeilenStatusConverter : IMultiValueConverter
         ArgumentNullException.ThrowIfNull(converter);
         var bindung = new MultiBinding { Converter = converter, ConverterParameter = parameter, Mode = BindingMode.OneWay };
         bindung.Bindings.Add(new Binding("."));
-        bindung.Bindings.Add(new Binding($"Fields[{FieldKeys.WorkflowStatus}]"));
+        bindung.Bindings.Add(new Binding(nameof(HaltungRecord.BearbeitungErledigt)));
+        bindung.Bindings.Add(new Binding(nameof(HaltungRecord.Fields)));
         bindung.Bindings.Add(new Binding(nameof(HaltungRecord.Protocol)));
         return bindung;
     }

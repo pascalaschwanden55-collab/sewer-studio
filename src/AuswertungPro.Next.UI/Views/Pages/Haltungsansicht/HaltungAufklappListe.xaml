@@ -473,7 +473,8 @@
                                     <ContentControl.Content>
                                         <MultiBinding Converter="{StaticResource ZeilenStatus}">
                                             <Binding Path="."/>
-                                            <Binding Path="Fields[Offen_abgeschlossen]"/>
+                                            <Binding Path="BearbeitungErledigt"/>
+                                            <Binding Path="Fields"/>
                                             <Binding Path="Protocol"/>
                                         </MultiBinding>
                                     </ContentControl.Content>

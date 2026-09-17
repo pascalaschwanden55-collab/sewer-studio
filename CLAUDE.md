@@ -1,5 +1,41 @@
 # SewerStudio — AI Sewer Inspection System
 
+## Statuskorrektur und erste Projektprüfung (16.09.2026)
+
+- `HaltungPruefstatus` verwendet die vorhandene persönliche Markierung
+  `BearbeitungErledigt`, niemals `WorkflowStatus` (Sanierung). Offene aktuelle,
+  nicht gelöschte KI-Befunde haben Vorrang. Texte: „Bearbeitung offen“,
+  „Bearbeitung erledigt“, „KI-Befunde zu prüfen“. Die KI-Ampel sagt nur
+  „keine Analyse“, „N offen“ oder „bestätigt“, keine fachliche Gesamtfreigabe.
+  Übersicht und nächste Aufgabe verwenden dieselbe Regel. Alte Enum-/Propertynamen
+  bleiben kompatibel; `Geprueft` zählt erledigte Haltungen ohne offene KI-Befunde.
+- `Application/UseCases/ProjektPruefung` enthält `IProjektPruefung`, Ergebnis/Ziel
+  und `ProjektPruefregeln`: Dateiverweise, offene KI-Befunde der Haltungen,
+  Meterangaben (bestehende Toleranz 1 m), Schachthöhen und vorhandene
+  `ObjektFeldPruefung`-Regeln für bearbeitbare Wurzel-/Unteraktenfelder.
+  Höhenregeln werden aus `SchachtHoehenRechnung` wiederverwendet.
+- `Infrastructure/Projects/ProjektPruefungService` löst Pfade gegen den echten
+  Projektroot auf und prüft vorhandene lokale Dateien lesend. `ImportSourcePathGuard`
+  sperrt Netzwerk-/Verknüpfungspfade; nicht prüfbare, fehlende oder leere Dateien
+  bleiben als Hinweise sichtbar. Kein rekursives Suchen, kein Schreiben.
+  Neue Registrierung `IProjektPruefung` im vorhandenen ServiceProvider: 167 Dienste.
+- `ProjektPruefungViewModel` prüft eine `Projects.DeepCopy` im Hintergrund, mit
+  Abbruch und `ProjectContentSignature`-Vergleich nach dem Lauf und vor Navigation.
+  Alte Ergebnisse werden bei Projektwechsel/Änderungen verworfen. Der neue
+  `ProjektPruefungView` steht in der Nova-Projektübersicht.
+- `ProjektPruefpunktNavigation` öffnet die richtige Objektakte mit Feldsuche oder
+  das Protokoll mit markierter `EntryId`. Der bestehende Controller erhält dafür
+  einen zusätzlichen `Open`-Overload; der bisherige Aufruf bleibt erhalten.
+  `ProjektDatensatzBeobachter` meldet Listen-/Datensatzänderungen und löst seine
+  Abonnements bei Wechsel/Dispose. Shell-Aufgabe und Übersicht reagieren dadurch
+  sofort auf Erledigt-Markierungen. Viele Importmeldungen werden je UI-Runde
+  gebündelt. Statusbindungen beobachten weiterhin die Felder für Medienänderungen.
+- Keine neuen Pakete oder Änderungen am Projektformat. Die erste Prüfung ist kein
+  Freigabeprotokoll und ersetzt keine vollständige XTF-Normprüfung beim Export.
+  Umfang/Bedienung: `docs/PROJEKTPRUEFUNG.md`. Tests: `ProjektPruefungTests`,
+  `ProjektPruefstatusTests`, `ProjektPruefungViewModelTests`, `ProjektPruefungUiTests`
+  sowie die vorhandenen Status-, Kennzahlen- und Protokollcontroller-Tests.
+
 ## Robuster GeoShop-XTF-Export (14.09.2026)
 
 - `XtfNeuExportService` verwendet den vorhandenen DSS-Planer jetzt auch für
