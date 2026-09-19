@@ -354,6 +354,9 @@ public sealed class SchachtProImportService : ISchachtProImportService
                 + string.Join(", ", geschuetzt) + ".");
         }
 
+        if (mapped.Anschluesse.Count > 0)
+            record.SetzeAnschluesse(mapped.Anschluesse.ToList());
+
         if (mapped.Entries.Count > 0)
             ApplyProtocol(record, schachtNr, mapped.Entries, sproPath);
 

@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Schacht;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -121,6 +122,54 @@ internal static class SchachtProtocolApplier
         if (!string.IsNullOrWhiteSpace(parsed.Bemerkungen)) imported.Add("Bemerkungen");
         if (damageEntries.Count > 0) imported.Add($"Protokoll ({damageEntries.Count} Beobachtungen)");
         return imported;
+    }
+
+    /// <summary>
+    /// Schreibt die Zusatzangaben des Protokolls (<see cref="SchachtProtocolZusatzParser"/>):
+    /// Medium, Material von Schacht und Deckel, Deckeldurchmesser, Steighilfe, Tauchbogen und
+    /// die Anschlussliste. Nur genannte Werte werden geschrieben; beim Neuaufbau wird hier
+    /// bewusst NICHTS geleert — «Material» kann auch aus XTF oder SchachtPro stammen, und ein
+    /// PDF ohne diese Angabe ist kein Beleg dafuer, dass sie falsch waere. Handwerte bleiben
+    /// ueber den normalen Schreibweg geschuetzt.
+    /// </summary>
+    public static void ApplyZusatz(
+        SchachtRecord target,
+        SchachtProtocolZusatz zusatz,
+        bool rebuildFromProtocol,
+        bool onlyMissing)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(zusatz);
+
+        var nurLeere = onlyMissing && !rebuildFromProtocol;
+        Schreibe("Medium", zusatz.Medium);
+        Schreibe("Material", zusatz.MaterialSchacht);
+        Schreibe("Deckelmaterial", zusatz.MaterialDeckel);
+        Schreibe("Deckeldurchmesser", zusatz.DeckelDurchmesserMm);
+        Schreibe("Steighilfe", zusatz.Steighilfe);
+        Schreibe("Tauchbogen", zusatz.Tauchbogen);
+
+        if (zusatz.Anschluesse.Count > 0 && !(nurLeere && target.Anschluesse is { Count: > 0 }))
+        {
+            target.SetzeAnschluesse(zusatz.Anschluesse.Select(a => new SchachtAnschluss
+            {
+                Nr = a.Nr,
+                Art = a.Art,
+                DnMm = a.DnMm,
+                TiefeM = a.TiefeM,
+                Material = a.Material,
+                Uhr = a.Uhr,
+                Richtung = a.Richtung,
+                Haltungsname = a.Haltungsname,
+                Quelle = a.Quelle
+            }).ToList());
+        }
+
+        void Schreibe(string feld, string? wert)
+        {
+            if (!string.IsNullOrWhiteSpace(wert))
+                SetSchachtField(target, feld, wert, nurLeere);
+        }
     }
 
     /// <summary>

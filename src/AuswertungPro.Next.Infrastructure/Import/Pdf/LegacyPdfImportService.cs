@@ -518,7 +518,13 @@ public sealed class LegacyPdfImportService
             parsed,
             damageEntries,
             pdfPath,
-            fillMissingOnly: fillMissingOnly);
+            fillMissingOnly: fillMissingOnly).ToList();
+
+        // Anschlusstabelle, Medium, Materialien, Deckel, Steighilfe: dieselbe Textebene, bisher liegen gelassen.
+        var zusatz = SchachtProtocolZusatzParser.Parse(fullText);
+        SchachtProtocolApplier.ApplyZusatz(target, zusatz, rebuildFromProtocol: false, onlyMissing: fillMissingOnly);
+        if (zusatz.Anschluesse.Count > 0)
+            imported.Add($"Anschluesse ({zusatz.Anschluesse.Count})");
 
         project.ModifiedAtUtc = DateTime.UtcNow;
         project.Dirty = true;

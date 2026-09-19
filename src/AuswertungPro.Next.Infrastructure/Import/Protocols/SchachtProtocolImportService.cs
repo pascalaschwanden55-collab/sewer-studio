@@ -105,7 +105,10 @@ public sealed class SchachtProtocolImportService :
         return new SchachtProtocolParseResult(
             true, pf.SchachtNummer, pf.Datum, pf.Funktion,
             pf.Schachtform, pf.Dimension, pf.Schachttiefe, pf.PrimaereSchaeden,
-            pf.Bemerkungen, pf.Status, pf.Link, damages);
+            pf.Bemerkungen, pf.Status, pf.Link, damages)
+        {
+            Zusatz = SchachtProtocolZusatzParser.Parse(fullText)
+        };
     }
 
     private static bool IsEmptyOrNearlyEmpty(string? text)
@@ -158,6 +161,8 @@ public sealed class SchachtProtocolImportService :
             ergebnis.Schaeden,
             pdfPfadFuerFeld,
             rebuildFromProtocol);
+        if (ergebnis.Zusatz is { IstLeer: false } zusatz)
+            SchachtProtocolApplier.ApplyZusatz(ziel, zusatz, rebuildFromProtocol, onlyMissing: false);
     }
 
     public string DistributePdf(

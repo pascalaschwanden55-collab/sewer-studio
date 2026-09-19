@@ -17,7 +17,8 @@ internal static class SchachtProProtocolMapper
     internal sealed record MappedProtocol(
         IReadOnlyList<(string Field, string Value)> Fields,
         List<ProtocolEntry> Entries,
-        IReadOnlyList<string> UnknownLabels);
+        IReadOnlyList<string> UnknownLabels,
+        IReadOnlyList<SchachtAnschluss> Anschluesse);
 
     /// <summary>Sektion -> Zustands-Map des DTO (Namen wie in der App / SchachtComponentOrder).</summary>
     private static IReadOnlyList<(string Section, Func<ProtocolDto, Dictionary<string, bool>?> Map)> SectionAccessors
@@ -60,7 +61,7 @@ internal static class SchachtProProtocolMapper
             Add(SchachtProFieldNames.DatumJahr, dto.Datum);
             Add(SchachtProFieldNames.Bemerkungen, dto.Bemerkungen);
             AddGps(fields, dto);
-            return new MappedProtocol(fields, entries, unknown);
+            return new MappedProtocol(fields, entries, unknown, []);
         }
 
         // --- Stammdaten (geteilte kanonische Namen) ---
@@ -211,7 +212,7 @@ internal static class SchachtProProtocolMapper
             .OrderBy(e => SchachtProtocolParser.GetComponentOrderIndex(e.Code))
             .ToList();
 
-        return new MappedProtocol(fields, entries, unknown);
+        return new MappedProtocol(fields, entries, unknown, MapAnschluesse(dto.Anschluesse));
 
         static string ShortLabel(ProtocolEntry entry)
         {
@@ -337,6 +338,48 @@ internal static class SchachtProProtocolMapper
             fields.Add((SchachtProFieldNames.KoordinateNorth,
                 dto.Lv95North.Value.ToString("0.###", CultureInfo.InvariantCulture)));
         }
+    }
+
+    /// <summary>
+    /// Die Anschluesse als Struktur fuer die Schachtgrafik (zusaetzlich zum Textfeld
+    /// «Anschluesse»). SchachtPro kennt Uhr und Richtung; DN und Tiefe werden nur als Zahl
+    /// uebernommen, wenn sie eine sind.
+    /// </summary>
+    private static IReadOnlyList<SchachtAnschluss> MapAnschluesse(IReadOnlyList<AnschlussDto>? anschluesse)
+    {
+        if (anschluesse is not { Count: > 0 })
+            return [];
+
+        var liste = new List<SchachtAnschluss>();
+        foreach (var a in anschluesse)
+        {
+            var typ = (a.Typ ?? "").Trim();
+            var art = typ.StartsWith("Aus", StringComparison.OrdinalIgnoreCase) || typ.StartsWith("Abl", StringComparison.OrdinalIgnoreCase)
+                ? "Auslauf"
+                : typ.StartsWith("Ein", StringComparison.OrdinalIgnoreCase) || typ.StartsWith("Zul", StringComparison.OrdinalIgnoreCase)
+                    ? "Einlauf"
+                    : typ;
+
+            var dnText = System.Text.RegularExpressions.Regex.Match(a.Dn ?? "", @"\d{2,4}").Value;
+            liste.Add(new SchachtAnschluss
+            {
+                Nr = a.Nr,
+                Art = art,
+                DnMm = dnText.Length > 0 ? int.Parse(dnText, CultureInfo.InvariantCulture) : null,
+                TiefeM = AuswertungPro.Next.Application.Common.FachzahlParser.TryParseMeasurement(
+                    (a.Tiefe ?? "").Replace("m", "", StringComparison.OrdinalIgnoreCase).Trim(), out var tiefe)
+                    ? tiefe
+                    : null,
+                Material = Leer(a.Material),
+                Uhr = Leer(a.Uhr),
+                Richtung = Leer(a.Richtung),
+                Quelle = "SchachtPro"
+            });
+        }
+
+        return liste;
+
+        static string? Leer(string? wert) => string.IsNullOrWhiteSpace(wert) ? null : wert.Trim();
     }
 
     private static string FormatAnschluesse(IReadOnlyList<AnschlussDto> anschluesse)

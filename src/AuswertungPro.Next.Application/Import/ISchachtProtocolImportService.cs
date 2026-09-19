@@ -19,7 +19,11 @@ public sealed record SchachtProtocolParseResult(
     string? Status,
     string? Link,
     IReadOnlyList<(string Bauteil, string Schaden)> Schaeden,
-    string? Lesehinweis = null);
+    string? Lesehinweis = null)
+{
+    /// <summary>Anschlusstabelle, Medium, Materialien, Deckel, Steighilfe — additiv, null bei altem Aufrufer.</summary>
+    public SchachtProtocolZusatz? Zusatz { get; init; }
+}
 
 /// <summary>
 /// Liest ein einzelnes Schacht-Protokoll-PDF und wendet es auf einen Schacht an

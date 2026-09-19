@@ -61,6 +61,30 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     /// </summary>
     public GeonisKennungen? Geonis { get; set; }
 
+    private List<SchachtAnschluss>? _anschluesse;
+
+    /// <summary>
+    /// Die Anschluesse des Schachts (Anschlusstabelle des Protokolls, SchachtPro). Additiv:
+    /// Altprojekte ohne diesen Abschnitt laden mit <c>null</c>. Ersetzen nur ueber
+    /// <see cref="SetzeAnschluesse"/>, damit die Aenderung gemeldet wird. Kein Feld, keine
+    /// Tabellenspalte, kein Export — nur die Schachtgrafik und die Anzeige lesen sie.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public List<SchachtAnschluss>? Anschluesse
+    {
+        get => _anschluesse;
+        set => _anschluesse = value;
+    }
+
+    /// <summary>Ersetzt die Anschlussliste und meldet die Aenderung wie einen Feldwert. Leer heisst null.</summary>
+    public void SetzeAnschluesse(List<SchachtAnschluss>? anschluesse)
+    {
+        _anschluesse = anschluesse is { Count: > 0 } ? anschluesse : null;
+        ModifiedAtUtc = DateTime.UtcNow;
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Anschluesse)));
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ModifiedAtUtc)));
+    }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime ModifiedAtUtc { get; set; } = DateTime.UtcNow;
 
