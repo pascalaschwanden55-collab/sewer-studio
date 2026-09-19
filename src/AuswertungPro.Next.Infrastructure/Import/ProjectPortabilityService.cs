@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -55,19 +56,21 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
 
             var san = ProjectPathResolver.SanitizePathSegment(haltung);
             var holdingFolder = ResolveHoldingFolder(projectFolder, san);
+            // Die Kandidaten stammen aus dem Haltungsordner, also gilt die Eindeutigkeit je Haltung.
+            var assignments = new PortableTargetAssignments();
 
             // Video + PDF: auf die Projekt-Kopie im Haltungsordner umbiegen (nicht neu kopieren).
-            RelinkField(record, FieldKeys.Link, holdingFolder, projectFolder, IsVideo, copyExternalFotos: false, dryRun, Tally, messages);
-            RelinkField(record, FieldKeys.PdfPath, holdingFolder, projectFolder, IsPdf, copyExternalFotos: false, dryRun, Tally, messages);
-            RelinkFieldList(record, FieldKeys.PdfAll, holdingFolder, projectFolder, IsPdf, dryRun, Tally, messages);
+            RelinkField(record, FieldKeys.Link, holdingFolder, projectFolder, IsVideo, copyExternalFotos: false, dryRun, Tally, messages, assignments);
+            RelinkField(record, FieldKeys.PdfPath, holdingFolder, projectFolder, IsPdf, copyExternalFotos: false, dryRun, Tally, messages, assignments);
+            RelinkFieldList(record, FieldKeys.PdfAll, holdingFolder, projectFolder, IsPdf, dryRun, Tally, messages, assignments);
 
             // Fotos: Pro-Befund-Bindung bleibt, nur Pfad relativ (Quell-Foto ggf. ins Projekt kopieren).
             if (record.Protocol != null)
             {
-                RelinkRevisionFotos(record.Protocol.Original, holdingFolder, projectFolder, dryRun, Tally, messages);
-                RelinkRevisionFotos(record.Protocol.Current, holdingFolder, projectFolder, dryRun, Tally, messages);
+                RelinkRevisionFotos(record.Protocol.Original, holdingFolder, projectFolder, dryRun, Tally, messages, assignments);
+                RelinkRevisionFotos(record.Protocol.Current, holdingFolder, projectFolder, dryRun, Tally, messages, assignments);
                 foreach (var rev in record.Protocol.History)
-                    RelinkRevisionFotos(rev, holdingFolder, projectFolder, dryRun, Tally, messages);
+                    RelinkRevisionFotos(rev, holdingFolder, projectFolder, dryRun, Tally, messages, assignments);
             }
 
             if (record.VsaFindings != null)
@@ -76,7 +79,7 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
                 {
                     if (string.IsNullOrWhiteSpace(finding.FotoPath))
                         continue;
-                    var (val, act) = ResolvePortable(finding.FotoPath, holdingFolder, projectFolder, IsImage, copyExternalInto: "Fotos", dryRun);
+                    var (val, act) = ResolvePortable(finding.FotoPath, holdingFolder, projectFolder, IsImage, copyExternalInto: "Fotos", dryRun, assignments);
                     if (!dryRun && act is Act.Relinked or Act.Copied)
                         finding.FotoPath = val;
                     if (act == Act.Unresolved)
@@ -126,14 +129,14 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
     private void RelinkField(
         HaltungRecord record, string field, string? holdingFolder, string projectFolder,
         Func<string, bool> typeMatch, bool copyExternalFotos, bool dryRun,
-        Action<Act> tally, List<string> messages)
+        Action<Act> tally, List<string> messages, PortableTargetAssignments assignments)
     {
         var raw = record.GetFieldValue(field)?.Trim();
         if (string.IsNullOrWhiteSpace(raw))
             return;
 
         var (val, act) = ResolvePortable(raw, holdingFolder, projectFolder, typeMatch,
-            copyExternalInto: copyExternalFotos ? "Fotos" : null, dryRun);
+            copyExternalInto: copyExternalFotos ? "Fotos" : null, dryRun, assignments);
         if (!dryRun && act is Act.Relinked or Act.Copied)
             record.SetFieldValue(field, val, FieldSource.Legacy, userEdited: false);
         if (act == Act.Unresolved)
@@ -143,37 +146,47 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
 
     private void RelinkFieldList(
         HaltungRecord record, string field, string? holdingFolder, string projectFolder,
-        Func<string, bool> typeMatch, bool dryRun, Action<Act> tally, List<string> messages)
+        Func<string, bool> typeMatch, bool dryRun, Action<Act> tally, List<string> messages,
+        PortableTargetAssignments assignments)
     {
         var raw = record.GetFieldValue(field)?.Trim();
         if (string.IsNullOrWhiteSpace(raw))
             return;
 
-        var parts = raw.Split(';', StringSplitOptions.RemoveEmptyEntries);
-        var newParts = new List<string>(parts.Length);
+        // PDF_All liegt als Semikolonliste ODER als gespeicherte JSON-Liste vor; der
+        // reine Semikolon-Split liess JSON-Listen ungeloest (Auditbefund 04, Nebenbefund).
+        var istJsonListe = raw!.StartsWith("[", StringComparison.Ordinal);
+        var parts = StoredFileListParser.Parse(raw);
+        var newParts = new List<string>(parts.Count);
         var changed = false;
 
         foreach (var p in parts)
         {
-            var (val, act) = ResolvePortable(p.Trim(), holdingFolder, projectFolder, typeMatch, copyExternalInto: null, dryRun);
+            var (val, act) = ResolvePortable(p, holdingFolder, projectFolder, typeMatch, copyExternalInto: null, dryRun, assignments);
             newParts.Add(val);
             if (act is Act.Relinked or Act.Copied) changed = true;
-            if (act == Act.Unresolved) messages.Add($"{field}: nicht aufgeloest ({p.Trim()})");
+            if (act == Act.Unresolved) messages.Add($"{field}: nicht aufgeloest ({p})");
             tally(act);
         }
 
         if (changed && !dryRun)
-            record.SetFieldValue(field, string.Join(";", newParts), FieldSource.Legacy, userEdited: false);
+        {
+            // Das gespeicherte Format bleibt erhalten: Ein Dateiname darf ein Semikolon tragen.
+            var gespeichert = istJsonListe
+                ? System.Text.Json.JsonSerializer.Serialize(newParts)
+                : string.Join(";", newParts);
+            record.SetFieldValue(field, gespeichert, FieldSource.Legacy, userEdited: false);
+        }
     }
 
     private void RelinkRevisionFotos(
         ProtocolRevision revision, string? holdingFolder, string projectFolder,
-        bool dryRun, Action<Act> tally, List<string> messages)
+        bool dryRun, Action<Act> tally, List<string> messages, PortableTargetAssignments assignments)
     {
         foreach (var entry in revision.Entries)
         {
-            RelinkPhotoPaths(entry.FotoPaths, "Foto", holdingFolder, projectFolder, dryRun, tally, messages);
-            RelinkPhotoPaths(entry.OriginalFotoPaths, "Originalfoto", holdingFolder, projectFolder, dryRun, tally, messages);
+            RelinkPhotoPaths(entry.FotoPaths, "Foto", holdingFolder, projectFolder, dryRun, tally, messages, assignments);
+            RelinkPhotoPaths(entry.OriginalFotoPaths, "Originalfoto", holdingFolder, projectFolder, dryRun, tally, messages, assignments);
         }
     }
 
@@ -184,7 +197,8 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
         string projectFolder,
         bool dryRun,
         Action<Act> tally,
-        List<string> messages)
+        List<string> messages,
+        PortableTargetAssignments assignments)
     {
         if (paths is null)
             return;
@@ -201,7 +215,8 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
                 projectFolder,
                 IsImage,
                 copyExternalInto: "Fotos",
-                dryRun);
+                dryRun,
+                assignments);
             if (!dryRun && act is Act.Relinked or Act.Copied)
                 paths[i] = val;
             if (act == Act.Unresolved)
@@ -215,7 +230,8 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
     /// </summary>
     private (string Value, Act Act) ResolvePortable(
         string raw, string? holdingFolder, string projectFolder,
-        Func<string, bool> typeMatch, string? copyExternalInto, bool dryRun)
+        Func<string, bool> typeMatch, string? copyExternalInto, bool dryRun,
+        PortableTargetAssignments assignments)
     {
         raw = raw.Trim();
         if (raw.Length == 0)
@@ -286,15 +302,19 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
                 writePathGuard);
             if (match != null)
             {
-                var externalPhotoDiffersFromProjectMatch =
-                    copyExternalInto != null
-                    && Path.IsPathRooted(raw)
+                // Der Inhaltsvergleich galt bis 18.09.2026 nur fuer Fotos. Video, PDF_Path
+                // und PDF_All riefen mit copyExternalInto == null auf und bogen deshalb
+                // ungeprueft um (Auditbefund 04).
+                var quelleWeichtVomKandidatenAb =
+                    Path.IsPathRooted(raw)
                     && sourceExists
                     && !SameFileContent(safeSourcePath, match);
 
-                // Gleichnamiges Projektfoto ist nicht dieselbe Datei: nicht falsch relinken,
-                // sondern unten kollisionssicher ins Projekt kopieren.
-                if (!externalPhotoDiffersFromProjectMatch)
+                // Gleichnamige Projektdatei ist nicht dieselbe Datei: nicht falsch relinken,
+                // sondern unten kollisionssicher ins Projekt kopieren bzw. melden.
+                // Fehlt die Quelle, ist der Inhalt nicht pruefbar; dann schuetzt nur noch
+                // die Eindeutigkeit: dieselbe Kandidatin nie an zwei verschiedene Verweise.
+                if (!quelleWeichtVomKandidatenAb && assignments.TryClaim(match, raw))
                     return (ProjectPathResolver.MakeRelative(match, projectFolder), Act.Relinked);
             }
         }
