@@ -45,14 +45,15 @@ public sealed class SchachtgrafikSvgBuilderStammkarteTests
     {
         var z = Zeichnung();
 
-        var e3 = z.Marken.First(m => m.Tooltip.StartsWith("E3 ", StringComparison.Ordinal));
-        var e2 = z.Marken.First(m => m.Tooltip.StartsWith("E2 ", StringComparison.Ordinal));
+        // Kennungen je Typ: Tabellenzeile 3 (0.60 m) ist E2, Tabellenzeile 2 (3.38 m) ist E1.
+        var hoch = z.Marken.First(m => m.Tooltip.StartsWith("E2 ", StringComparison.Ordinal));
+        var tief = z.Marken.First(m => m.Tooltip.StartsWith("E1 ", StringComparison.Ordinal));
         var a1 = z.Marken.First(m => m.Tooltip.StartsWith("A1 ", StringComparison.Ordinal));
         var skala = Math.Clamp(SchachtgrafikSvgBuilder.SkalaZiel / 3.45, SchachtgrafikSvgBuilder.SkalaMin, SchachtgrafikSvgBuilder.SkalaMax);
 
-        Assert.True(e3.Y < e2.Y, "E3 (0.60 m) muss oberhalb von E2 (3.38 m) liegen");
-        Assert.InRange(e2.Y - e3.Y, (3.38 - 0.60) * skala - 25, (3.38 - 0.60) * skala + 25);
-        Assert.True(a1.X > e2.X, "Der Auslauf steht rechts, der gegenueberliegende Einlauf links");
+        Assert.True(hoch.Y < tief.Y, "E2 (0.60 m) muss oberhalb von E1 (3.38 m) liegen");
+        Assert.InRange(tief.Y - hoch.Y, (3.38 - 0.60) * skala - 25, (3.38 - 0.60) * skala + 25);
+        Assert.True(a1.X > tief.X, "Der Auslauf steht rechts, der gegenueberliegende Einlauf links");
     }
 
     [Fact]
@@ -65,10 +66,10 @@ public sealed class SchachtgrafikSvgBuilderStammkarteTests
         foreach (var schaden in modell.Schaeden)
             Assert.Single(z.Marken, m => m.Tooltip == schaden.Tooltip);
 
-        // Marken: 5 Schaeden + 4 Kennungen im Schnitt + 3 Kennungen im Grundriss (E4 hat keine
-        // Richtung und wird dort nicht gezeichnet — kein erfundener Winkel).
+        // Marken: 5 Schaeden + 4 Kennungen im Schnitt + 3 Kennungen im Grundriss (E3, die vierte
+        // Tabellenzeile, hat keine Richtung und wird dort nicht gezeichnet — kein erfundener Winkel).
         Assert.Equal(5 + 4 + 3, z.Marken.Count);
-        Assert.Equal(1, z.Marken.Count(m => m.Tooltip.StartsWith("E4 ", StringComparison.Ordinal)));
+        Assert.Equal(1, z.Marken.Count(m => m.Tooltip.StartsWith("E3 ", StringComparison.Ordinal)));
     }
 
     [Fact]
@@ -103,7 +104,7 @@ public sealed class SchachtgrafikSvgBuilderStammkarteTests
         var rohre = Regex.Matches(mit.Svg, @"<g transform='rotate\(").Count;
         Assert.True(rohre >= 4 + 1, $"4 Rohre, Auslaufpfeil und Nordpfeil erwartet, {rohre} Drehungen gefunden");
         Assert.Contains(">N</text>", mit.Svg, StringComparison.Ordinal);
-        Assert.Contains("ohne Richtung: E4", mit.Svg, StringComparison.Ordinal);
+        Assert.Contains("ohne Richtung: E3", mit.Svg, StringComparison.Ordinal);
         // Bei 6 Uhr liegt kein Rohr (E2 bei 114 Grad, E3 bei 231 Grad): Die Stundenmarke steht.
         Assert.Contains(">6</text>", mit.Svg, StringComparison.Ordinal);
 
@@ -123,7 +124,7 @@ public sealed class SchachtgrafikSvgBuilderStammkarteTests
         var z = Zeichnung();
 
         Assert.Contains(z.Legende, l => l.Marke == "A1" && l.Text.Contains("80409-80538", StringComparison.Ordinal) && l.Text.Contains("3.45 m", StringComparison.Ordinal));
-        Assert.Contains(z.Legende, l => l.Marke == "E4" && l.Text.Contains("nicht im Projekt", StringComparison.Ordinal));
+        Assert.Contains(z.Legende, l => l.Marke == "E3" && l.Text.Contains("nicht im Projekt", StringComparison.Ordinal));
         Assert.Contains(z.Legende, l => l.Marke == "2" && l.Text.Contains("Bemerkung", StringComparison.Ordinal));
         Assert.Contains(z.Legende, l => l.Marke == "m" && l.Text.Contains("Deckel 498.62", StringComparison.Ordinal) && l.Text.Contains("A1 495.14", StringComparison.Ordinal));
         Assert.Contains(z.Legende, l => l.Marke == "·" && l.Text.Contains("Konus schematisch", StringComparison.Ordinal));
@@ -164,6 +165,6 @@ public sealed class SchachtgrafikSvgBuilderStammkarteTests
         var z = Zeichnung(mitTabelle: false);
 
         Assert.Contains(z.Marken, m => m.Tooltip.StartsWith("A1 Auslauf · 80409-80538", StringComparison.Ordinal));
-        Assert.Contains(z.Marken, m => m.Tooltip.StartsWith("E3 Einlauf · 80547-80409", StringComparison.Ordinal));
+        Assert.Contains(z.Marken, m => m.Tooltip.StartsWith("E2 Einlauf · 80547-80409", StringComparison.Ordinal));
     }
 }

@@ -77,6 +77,19 @@ public sealed class SchachtAnschlussRichtungTests
         Assert.Equal(0d, SchachtAnschlussRichtung.Relativ(275, 275), 3);
     }
 
+    [Fact]
+    public void Endet_im_Schacht_sagt_ob_die_Leitung_hinein_oder_hinaus_fuehrt()
+    {
+        var hinein = new[] { new XtfPunkt(2692653.023, 1192412.999), Schacht };
+        var hinaus = new[] { Schacht, new XtfPunkt(2692593.472, 1192373.417) };
+        var fremd = new[] { new XtfPunkt(2692632.0, 1192372.0), new XtfPunkt(2692700.0, 1192400.0) };
+
+        Assert.True(SchachtAnschlussRichtung.EndetImSchacht(Schacht, hinein));
+        Assert.False(SchachtAnschlussRichtung.EndetImSchacht(Schacht, hinaus));
+        Assert.Null(SchachtAnschlussRichtung.EndetImSchacht(Schacht, fremd));
+        Assert.Null(SchachtAnschlussRichtung.EndetImSchacht(Schacht, [Schacht]));
+    }
+
     [Theory]
     [InlineData(0, 12)]
     [InlineData(14, 12)]

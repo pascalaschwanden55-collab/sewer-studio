@@ -41,6 +41,9 @@ public sealed record SchachtgrafikZusatz(SchachtLage? Lage, SchachtKoten? Koten,
 /// <param name="AzimutGrad">Richtung vom Schacht weg, 0 = Nord; <c>null</c> = nicht erfasst.</param>
 /// <param name="KoteM">Rohrsohle in m ue. M. aus dem Kataster.</param>
 /// <param name="ImProjekt">True, wenn eine Haltung des Projekts dazugehoert.</param>
+/// <param name="TypNr">Laufende Nummer je Typ (Auslaeufe und Einlaeufe getrennt); 0 = nicht vergeben.</param>
+/// <param name="UhrGrad">Uhrlage aus dem Protokoll als Winkel ab dem Auslauf (12 Uhr = 0); <c>null</c> = nicht erfasst.</param>
+/// <param name="NurImKataster">True fuer eine Katasterleitung ohne Tabellenzeile und ohne Projekthaltung.</param>
 public sealed record SchachtgrafikAnschluss(
     int Nr,
     bool IstAuslauf,
@@ -51,10 +54,17 @@ public sealed record SchachtgrafikAnschluss(
     string? Haltungsname,
     double? AzimutGrad,
     decimal? KoteM,
-    bool ImProjekt)
+    bool ImProjekt,
+    int TypNr = 0,
+    double? UhrGrad = null,
+    bool NurImKataster = false)
 {
-    /// <summary>«A1» fuer Auslauf 1, «E3» fuer Einlauf 3 — die Nummer der Anschlusstabelle.</summary>
-    public string Kennung => (IstAuslauf ? "A" : "E") + Nr.ToString(CultureInfo.InvariantCulture);
+    /// <summary>
+    /// «A1» fuer den ersten Auslauf, «E3» fuer den dritten Einlauf — gezaehlt je Typ in
+    /// Tabellenreihenfolge, wie in der Skizze des Inspekteurs (74 von 74 Uri-Protokollen) und bei
+    /// SchachtPro. Die Tabellennummer bleibt <see cref="Nr"/>; ohne vergebene Typnummer zaehlt sie.
+    /// </summary>
+    public string Kennung => (IstAuslauf ? "A" : "E") + (TypNr > 0 ? TypNr : Nr).ToString(CultureInfo.InvariantCulture);
 
     /// <summary>Die volle Beschriftung fuer Legende und Hinweisflaeche.</summary>
     public string Beschreibung
@@ -71,7 +81,11 @@ public sealed record SchachtgrafikAnschluss(
                 : "Tiefe nicht erfasst");
             if (!string.IsNullOrWhiteSpace(Material))
                 teile.Add(Material.Trim());
-            if (!ImProjekt)
+            if (UhrGrad is { } uhr)
+                teile.Add(SchachtAnschlussRichtung.Uhr(uhr).ToString(CultureInfo.InvariantCulture) + " Uhr");
+            if (NurImKataster)
+                teile.Add("nur im Kataster");
+            else if (!ImProjekt)
                 teile.Add("nicht im Projekt");
             return string.Join(" · ", teile);
         }
@@ -114,7 +128,8 @@ public sealed record SchachtgrafikModell(
         .ThenBy(a => a.Nr)
         .FirstOrDefault();
 
-    public bool HatRichtungen => Anschluesse.Any(a => a.AzimutGrad is not null);
+    /// <summary>Mindestens ein Anschluss hat eine Richtung — vermessen (Azimut) oder aus der Uhrlage des Protokolls.</summary>
+    public bool HatRichtungen => Anschluesse.Any(a => a.AzimutGrad is not null || a.UhrGrad is not null);
 
     public bool HatMasse => Dimension1Mm is > 0 && Dimension2Mm is > 0;
 }

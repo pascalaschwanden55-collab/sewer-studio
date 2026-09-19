@@ -55,19 +55,44 @@ einer Spalte, keine Anschluesse. Vorschlag mit Zeichnungen:
   Seitenverhaeltnis, der Bildlauf des Panels traegt den Rest.
 - Tests: `SchachtProtocolKaestchenformularTests` (echter Text von 80409, 27 -> 4),
   `SchachtAnschlussRichtungTests`, `GpkgGeometriePunktTests`, `SchachtKotenQuelleTests`,
-  `QgisGpkgSchachtLageLeserTests`, `SchachtgrafikModellBuilderTests`,
+  `SchachtUhrlageTests`, `QgisGpkgSchachtLageLeserTests` (mit Raumindex),
+  `SchachtgrafikModellBuilderTests` (Typzaehlung, Tiefe gegen gleichen DN, Katasterleitung,
+  Uhrlage, Bemerkung «Anschluss N»),
   `SchachtgrafikSvgBuilderStammkarteTests`, `SchachtgrafikAnsichtBuilderStammkarteTests`;
   angepasst `SchachtgrafikSvgBuilderTeilmengeTests`, `SchachtgrafikControlIsolatedSmokeTests`,
   `ServiceProviderRegistrationTests` (168). Nicht erfasst bleiben Ovalausrichtung, Konushoehe,
   Steigeisenseite und Deckellage; die Sichtprobe im Programm macht Pascal.
-- **Offen nach Pascals Frage zu 80792 (19.09. abends, gemessen, nicht gebaut):** Der Inspekteur
-  zaehlt in der Skizze Einlaeufe E1..En fortlaufend (74 von 74 Uri-PDFs), die Grafik zaehlt
-  nach Tabellenzeile E2..E4 — die Bemerkung «Einlauf 3» meint deshalb die Skizzen-E3, also
-  die VIERTE Tabellenzeile. Die Skizze ist eine Vektorzeichnung (Linien plus Kennungen als
-  Text) und parsebar, aber nur ungefaehr: 80409 weicht bis 48 Grad von der Vermessung ab,
-  80792 bis 24 Grad. Die QGIS-Kopie ist die bessere Quelle und fuehrt Hausanschluesse als
-  `u-<Schacht>` (16'112 Stueck), die keine Projekthaltung sind; der Lage-Leser fragt bisher
-  nur Projekthaltungen.
+- **Kennungen zaehlen je Typ (A1, E1, E2 …), wie die Skizze des Inspekteurs (74 von 74
+  Uri-PDFs) und wie SchachtPro.** Die Tabellennummer bleibt `SchachtgrafikAnschluss.Nr`
+  (Marken, Zuordnung); `TypNr` traegt die Zaehlung je Typ. Eine Bemerkung «Einlauf 3» meint
+  den DRITTEN Einlauf (Skizzen-E3, bei 80409 die vierte Tabellenzeile), «Anschluss 3» die
+  Tabellennummer 3. Vorher zaehlte die Grafik E2..E4 und haengte «Einlauf 3» an die dritte Zeile.
+- **Tabellenzeile und Leitung finden sich ueber Seite, Durchmesser und Tiefe.** Seite
+  (Aus/Ein), Durchmesser mit 5 % Spiel (`DnSpiel`: 148 mm in der Kopie, DN 150 im Protokoll),
+  Tiefe mit 30 cm Spiel (`TiefenSpielM`: Deckelkote minus Punktkote aus den Objektakten gegen
+  die Tabellentiefe). Jeder Schritt engt nur ein; bleibt mehr als eine Haltung, wird nichts
+  zugeordnet — zwei DN 150 ohne Koten bleiben getrennt stehen statt geraten.
+- **Katasterleitungen am Schachtpunkt.** `QgisGpkgSchachtLageLeser` liest ueber den R-Tree der
+  Kopie (`rtree_<Tabelle>_geom`; ohne ihn keine Suche) alle Leitungen, die innerhalb 1 m am
+  Schachtpunkt beginnen oder enden und nicht unter den Projektnamen sind
+  (`SchachtLage.WeitereLeitungen`; `SchachtAnschlussRichtung.EndetImSchacht`: Ende im Schacht =
+  Einlauf). DN und Material laufen durch `QgisFeldKarte`. Eine Tabellenzeile ohne
+  Projekthaltung bekommt so ihre Richtung (80792: `u-80792` DN 115, Azimut 107°); eine
+  Katasterleitung ohne Zeile erscheint als eigener Anschluss «nur im Kataster» (heller Rand).
+  Eine Projekthaltung, deren Name der Kopie fehlt, bekommt die Richtung einer Katasterleitung
+  gleicher Seite und gleichen Durchmessers — mit Hinweis.
+- **Die Uhrlage ist die dritte Richtungsquelle.** `SchachtUhrlage.Grad` liest «12», «4»,
+  «4:30», «4.5», «7 Uhr» als Winkel ab dem Auslauf; SchachtPro schreibt sie je Anschluss
+  (Goeschenen 8705: A1 12, E1 4, E2 6, E3 7). Vermessen (Azimut) schlaegt Uhrlage, Uhrlage
+  schlaegt Schematik; der Nordpfeil bleibt an Koordinaten gebunden, und die Hinweise sagen
+  «Richtungen teilweise aus der Uhrlage des Protokolls (nicht vermessen)». Ohne jede Richtung
+  liegt der Durchlauf (gleicher Durchmesser und gleiche Tiefe wie der Auslauf) bei 6 Uhr.
+- Die Handskizze des Uri-Formulars (Pascals kuenftiger Standard) ist eine Vektorzeichnung
+  (Linien plus Kennungen als Text, 74 von 74 PDFs) und parsebar, aber nur ungefaehr: 80409
+  weicht bis 48 Grad von der Vermessung ab, 80792 bis 24 Grad. Ein Skizzenparser bleibt der
+  Rueckfall fuer Anschluesse ohne Katasterleitung. Die Uhr-Spalte des SchachtPro-PDFs ist
+  noch nicht importiert (Goeschenen 2026: 447 Schaechte aus PDFs, 0 mit Anschluessen); der
+  Archivweg (`SchachtProProtocolMapper.MapAnschluesse`) schreibt sie bereits.
 
 ## Auditkorrekturen: Restbefunde 11 bis 18 (19.09.2026)
 

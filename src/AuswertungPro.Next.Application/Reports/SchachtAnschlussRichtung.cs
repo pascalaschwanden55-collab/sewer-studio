@@ -56,6 +56,25 @@ public static class SchachtAnschlussRichtung
         return grad < 0 ? grad + 360d : grad;
     }
 
+    /// <summary>
+    /// True, wenn das ENDE des Linienzugs am Schacht liegt (die Leitung fuehrt hinein), false,
+    /// wenn der Anfang dort liegt; <c>null</c>, wenn keines der beiden Enden innerhalb der
+    /// Toleranz liegt. Fuer Katasterleitungen ohne Projektnamen ist das die einzige Auskunft
+    /// ueber Einlauf oder Auslauf.
+    /// </summary>
+    public static bool? EndetImSchacht(XtfPunkt schacht, IReadOnlyList<XtfPunkt>? verlauf, double toleranzM = StandardToleranzM)
+    {
+        ArgumentNullException.ThrowIfNull(schacht);
+        if (verlauf is null || verlauf.Count < 2)
+            return null;
+
+        var abstandAnfang = Abstand(schacht, verlauf[0]);
+        var abstandEnde = Abstand(schacht, verlauf[^1]);
+        if (abstandAnfang <= abstandEnde)
+            return abstandAnfang <= toleranzM ? false : null;
+        return abstandEnde <= toleranzM ? true : null;
+    }
+
     /// <summary>Winkel im Uhrzeigersinn ab <paramref name="bezugAzimut"/> (z.B. Auslauf = 12 Uhr), 0 bis 360.</summary>
     public static double Relativ(double azimut, double bezugAzimut)
     {

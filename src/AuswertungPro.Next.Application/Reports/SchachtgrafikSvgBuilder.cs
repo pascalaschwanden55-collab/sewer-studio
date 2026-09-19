@@ -136,6 +136,36 @@ public static class SchachtgrafikSvgBuilder
         marken.Add(new SchachtgrafikMarke(x - MarkeR, y - MarkeR, MarkeR * 2, MarkeR * 2, schaden.Tooltip));
     }
 
+    /// <summary>Hat der Anschluss eine Richtung — vermessen (Azimut) oder aus der Uhrlage des Protokolls?</summary>
+    private static bool HatRichtung(SchachtgrafikAnschluss a) => a.AzimutGrad is not null || a.UhrGrad is not null;
+
+    /// <summary>
+    /// Der Winkel eines Anschlusses im Grundriss mit Auslauf oben: aus dem Azimut, wenn auch der
+    /// Auslauf einen hat (vermessen); sonst aus der Uhrlage des Protokolls (12 Uhr = Auslauf nach
+    /// VSA); sonst keiner. Vermessen schlaegt Uhrlage — die Handskizze weicht bis 48 Grad ab.
+    /// </summary>
+    private static double? RelativerWinkel(SchachtgrafikAnschluss a, double? bezugAzimut)
+    {
+        if (a.AzimutGrad is { } az && bezugAzimut is { } b)
+            return SchachtAnschlussRichtung.Relativ(az, b);
+        return a.UhrGrad;
+    }
+
+    /// <summary>
+    /// Der Einlauf, der als Durchlauf dem Auslauf gegenueberliegt: gleicher Durchmesser und, wenn
+    /// beide Tiefen bekannt sind, gleiche Tiefe. Ohne Richtungen bekommt er im Grundriss 6 Uhr
+    /// und im Schnitt die linke Seite — die Hauptleitung laeuft durch, Hausanschluesse kommen
+    /// von der Seite.
+    /// </summary>
+    private static bool IstDurchlauf(SchachtgrafikAnschluss einlauf, SchachtgrafikAnschluss? auslauf)
+    {
+        if (einlauf.IstAuslauf || auslauf?.DnMm is not { } dn || !SchachtgrafikModellBuilder.PasstDn(einlauf.DnMm, dn))
+            return false;
+        if (auslauf.TiefeM is { } ta && einlauf.TiefeM is { } te && Math.Abs(ta - te) > SchachtgrafikModellBuilder.TiefenSpielM)
+            return false;
+        return true;
+    }
+
     private static void Schrift(StringBuilder sb, double x, double y, string text, string anker, int groesse = SchriftKlein, string farbe = Gedaempft, bool fett = false)
     {
         var gewicht = fett ? " font-weight='600'" : string.Empty;
@@ -288,7 +318,7 @@ public static class SchachtgrafikSvgBuilder
         {
             var haupt = _m.Hauptauslauf;
             var bezug = haupt?.AzimutGrad;
-            double? Rel(SchachtgrafikAnschluss a) => a.AzimutGrad is { } az && bezug is { } b ? SchachtAnschlussRichtung.Relativ(az, b) : null;
+            double? Rel(SchachtgrafikAnschluss a) => RelativerWinkel(a, bezug);
 
             // Der Einlauf, der dem Auslauf gegenueberliegt, kommt links als Rohr; ohne Richtungen der groesste.
             var einlaeufe = _m.Anschluesse.Where(a => !a.IstAuslauf).ToList();
@@ -297,7 +327,7 @@ public static class SchachtgrafikSvgBuilder
                 .OrderByDescending(a => a.DnMm ?? 0).ThenBy(a => a.Nr)
                 .FirstOrDefault();
             if (links is null && !_m.HatRichtungen)
-                links = einlaeufe.OrderByDescending(a => a.DnMm ?? 0).ThenBy(a => a.Nr).FirstOrDefault();
+                links = einlaeufe.OrderBy(a => IstDurchlauf(a, haupt) ? 0 : 1).ThenByDescending(a => a.DnMm ?? 0).ThenBy(a => a.Nr).FirstOrDefault();
 
             var kreise = 0;
             foreach (var a in _m.Anschluesse.OrderBy(a => a.Nr))
@@ -553,7 +583,7 @@ public static class SchachtgrafikSvgBuilder
 
             Schrift(sb, _cx, _top + GrundrissHoehe - 10, Masse(_m), "middle", SchriftKlein, TextLeise);
             var ohneRichtung = _m.HatRichtungen
-                ? _m.Anschluesse.Where(a => a.AzimutGrad is null).Select(a => a.Kennung).ToList()
+                ? _m.Anschluesse.Where(a => !HatRichtung(a)).Select(a => a.Kennung).ToList()
                 : [];
             if (ohneRichtung.Count > 0)
                 Schrift(sb, 12, _top + GrundrissHoehe - 24, "ohne Richtung: " + string.Join(", ", ohneRichtung), "start");
@@ -570,16 +600,20 @@ public static class SchachtgrafikSvgBuilder
             var schematischeEinlaeufe = new[] { 180d, 120d, 240d, 150d, 210d, 90d, 270d, 60d, 300d };
             var einlauf = 0;
             var auslauf = 0;
+            // Ohne Richtungen: der Durchlauf (gleicher Durchmesser und gleiche Tiefe wie der
+            // Auslauf) liegt bei 6 Uhr, die uebrigen nach Groesse an den Seiten.
             var einlaeufeNachGroesse = _m.Anschluesse
                 .Where(a => !a.IstAuslauf)
-                .OrderByDescending(a => a.DnMm ?? 0).ThenBy(a => a.Nr)
+                .OrderBy(a => IstDurchlauf(a, haupt) ? 0 : 1)
+                .ThenByDescending(a => a.DnMm ?? 0).ThenBy(a => a.Nr)
                 .ToList();
 
             foreach (var a in _m.Anschluesse.OrderBy(a => a.Nr))
             {
-                if (a.AzimutGrad is { } az && bezug is { } b)
+                // Vermessen (Azimut relativ zum Auslauf) vor Uhrlage des Protokolls; beides ist echt.
+                if (RelativerWinkel(a, bezug) is { } rel)
                 {
-                    ergebnis.Add((a, SchachtAnschlussRichtung.Relativ(az, b), true));
+                    ergebnis.Add((a, rel, true));
                     continue;
                 }
 

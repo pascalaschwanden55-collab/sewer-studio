@@ -1,4 +1,6 @@
+using AuswertungPro.Next.Application.Lookup;
 using AuswertungPro.Next.Application.Reports;
+using AuswertungPro.Next.Application.Xtf;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -29,6 +31,7 @@ public sealed class SchachtgrafikModellBuilderTests
         Assert.True(a1.ImProjekt);
 
         var e2 = modell.Anschluesse.Single(a => a.Nr == 2);
+        Assert.Equal("E1", e2.Kennung); // Tabellenzeile 2 ist der erste Einlauf
         Assert.Equal("80547-80409", e2.Haltungsname);
         Assert.Equal(28.4, e2.AzimutGrad!.Value, 1);
         Assert.Equal(495.160m, e2.KoteM);
@@ -43,8 +46,9 @@ public sealed class SchachtgrafikModellBuilderTests
         Assert.Null(e4.Haltungsname);
         Assert.False(e4.ImProjekt);
         Assert.Null(e4.AzimutGrad);
-        Assert.Contains(modell.Hinweise, h => h.Contains("E4", StringComparison.Ordinal) && h.Contains("nicht im Projekt", StringComparison.Ordinal));
-        Assert.Contains("Richtung nicht erfasst: E4", modell.Hinweise);
+        Assert.Equal("E3", e4.Kennung); // Tabellenzeile 4 ist der dritte Einlauf — wie in der Skizze
+        Assert.Contains(modell.Hinweise, h => h.Contains("E3", StringComparison.Ordinal) && h.Contains("nicht im Projekt", StringComparison.Ordinal));
+        Assert.Contains("Richtung nicht erfasst: E3", modell.Hinweise);
 
         Assert.Same(a1, modell.Hauptauslauf);
         Assert.True(modell.HatRichtungen);
@@ -64,8 +68,11 @@ public sealed class SchachtgrafikModellBuilderTests
             modell.Schaeden.Select(s => s.Bauteil).ToArray());
         Assert.Equal(new[] { 1, 2, 3, 4, 5 }, modell.Schaeden.Select(s => s.Nr).ToArray());
 
+        // «Einlauf 3 Ausgebrochen» meint den dritten Einlauf (Skizze E3) = Tabellenzeile 4,
+        // nicht die Tabellennummer 3.
         var bemerkung = modell.Schaeden.Single(s => s.Bauteil == SchachtBauteil.Anschluss);
-        Assert.Equal(3, bemerkung.AnschlussNr);
+        Assert.Equal(4, bemerkung.AnschlussNr);
+        Assert.StartsWith("E3:", bemerkung.Tooltip, StringComparison.Ordinal);
         Assert.Equal("break", bemerkung.Kategorie);
         Assert.Contains("Bemerkung", bemerkung.Tooltip, StringComparison.Ordinal);
 
@@ -91,7 +98,7 @@ public sealed class SchachtgrafikModellBuilderTests
         var modell = SchachtgrafikBeispiel.Modell80409(mitTabelle: false);
 
         Assert.Equal(3, modell.Anschluesse.Count);
-        Assert.Equal(new[] { "A1", "E2", "E3" }, modell.Anschluesse.Select(a => a.Kennung).ToArray());
+        Assert.Equal(new[] { "A1", "E1", "E2" }, modell.Anschluesse.Select(a => a.Kennung).ToArray());
         Assert.Equal("80409-80538", modell.Anschluesse[0].Haltungsname);
         Assert.Equal("80467-80409", modell.Anschluesse[1].Haltungsname);
         Assert.Equal("80547-80409", modell.Anschluesse[2].Haltungsname);
@@ -125,6 +132,172 @@ public sealed class SchachtgrafikModellBuilderTests
         Assert.Equal(3.45m, modell.TiefeM);
         Assert.Equal("Protokoll", modell.TiefeQuelle);
         Assert.Contains(modell.Hinweise, h => h.StartsWith("Kataster: Tiefe 3.55 m", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Die_Kennungen_zaehlen_je_Typ_wie_die_Skizze_des_Inspekteurs()
+    {
+        var modell = SchachtgrafikBeispiel.Modell80409();
+
+        // Tabelle: 1 Auslauf, 2 Einlauf, 3 Einlauf, 4 Einlauf -> A1, E1, E2, E3 (Skizze: 74 von 74 Uri-PDFs).
+        Assert.Equal(new[] { "A1", "E1", "E2", "E3" }, modell.Anschluesse.Select(a => a.Kennung).ToArray());
+        Assert.Equal(new[] { 1, 2, 3, 4 }, modell.Anschluesse.Select(a => a.Nr).ToArray());
+    }
+
+    [Fact]
+    public void Bei_gleichem_Durchmesser_trennt_die_Tiefe_aus_dem_Kataster_die_Haltungen()
+    {
+        // Zwei Einlaeufe DN 150: einer bei 0.60 m (Hausanschluss), einer bei 3.38 m (Hauptleitung).
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "500", FieldSource.Manual, false);
+        schacht.SetzeAnschluesse(
+        [
+            new SchachtAnschluss { Nr = 1, Art = "Auslauf", DnMm = 250, TiefeM = 3.45m },
+            new SchachtAnschluss { Nr = 2, Art = "Einlauf", DnMm = 150, TiefeM = 0.60m },
+            new SchachtAnschluss { Nr = 3, Art = "Einlauf", DnMm = 150, TiefeM = 3.38m },
+        ]);
+        var haltungen = new List<HaltungRecord> { Haltung("400-500", "150"), Haltung("450-500", "150"), Haltung("500-600", "250") };
+        var koten = new SchachtKoten(500.00m, 496.55m, new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["400-500"] = 496.60m, // 3.40 m unter dem Deckel
+            ["450-500"] = 499.40m, // 0.60 m unter dem Deckel
+        });
+
+        var modell = SchachtgrafikModellBuilder.Baue(schacht, haltungen, null, new SchachtgrafikZusatz(null, koten), "#006E9C");
+
+        Assert.Equal("450-500", modell.Anschluesse.Single(a => a.Nr == 2).Haltungsname);
+        Assert.Equal("400-500", modell.Anschluesse.Single(a => a.Nr == 3).Haltungsname);
+        Assert.True(modell.Anschluesse.All(a => a.ImProjekt));
+    }
+
+    [Fact]
+    public void Ohne_Tiefe_bleiben_zwei_gleiche_Durchmesser_unzugeordnet_statt_geraten()
+    {
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "500", FieldSource.Manual, false);
+        schacht.SetzeAnschluesse(
+        [
+            new SchachtAnschluss { Nr = 1, Art = "Einlauf", DnMm = 150, TiefeM = 0.60m },
+            new SchachtAnschluss { Nr = 2, Art = "Einlauf", DnMm = 150, TiefeM = 3.38m },
+        ]);
+        var haltungen = new List<HaltungRecord> { Haltung("400-500", "150"), Haltung("450-500", "150") };
+
+        var modell = SchachtgrafikModellBuilder.Baue(schacht, haltungen, null, null, "#006E9C");
+
+        // Zwei Zeilen ohne Haltung und zwei Haltungen ohne Zeile — keine davon wird geraten.
+        Assert.Equal(4, modell.Anschluesse.Count);
+        Assert.Equal(2, modell.Anschluesse.Count(a => !a.ImProjekt));
+    }
+
+    [Fact]
+    public void Eine_Tabellenzeile_ohne_Projekthaltung_bekommt_die_Richtung_der_Katasterleitung()
+    {
+        // 80792: Die vierte Zeile (DN 115 PE) ist keine Projekthaltung; die Kopie fuehrt sie als u-80792.
+        var (schacht, haltungen, lage) = Schacht80792();
+
+        var modell = SchachtgrafikModellBuilder.Baue(schacht, haltungen, null, new SchachtgrafikZusatz(lage, null), "#006E9C");
+
+        Assert.Equal(new[] { "A1", "E1", "E2", "E3" }, modell.Anschluesse.Select(a => a.Kennung).ToArray());
+        var e3 = modell.Anschluesse.Single(a => a.Nr == 4);
+        Assert.Equal("u-80792", e3.Haltungsname);
+        Assert.False(e3.ImProjekt);
+        Assert.False(e3.NurImKataster);
+        Assert.Equal(107.0, e3.AzimutGrad!.Value, 1);
+        Assert.Equal(2.18m, e3.TiefeM);
+        Assert.Contains(modell.Hinweise, h => h.StartsWith("E3 steht im Protokoll, aber nicht im Projekt (Kataster: u-80792)", StringComparison.Ordinal));
+        Assert.DoesNotContain(modell.Hinweise, h => h.StartsWith("Richtung nicht erfasst", StringComparison.Ordinal));
+        Assert.True(modell.Anschluesse.All(a => a.AzimutGrad is not null));
+    }
+
+    [Fact]
+    public void Ohne_Tabelle_erscheint_eine_Katasterleitung_als_eigener_Anschluss()
+    {
+        var (schacht, haltungen, lage) = Schacht80792(mitTabelle: false);
+
+        var modell = SchachtgrafikModellBuilder.Baue(schacht, haltungen, null, new SchachtgrafikZusatz(lage, null), "#006E9C");
+
+        Assert.Equal(4, modell.Anschluesse.Count);
+        var kataster = modell.Anschluesse.Single(a => a.NurImKataster);
+        Assert.Equal("E3", kataster.Kennung);
+        Assert.Equal("u-80792", kataster.Haltungsname);
+        Assert.Equal(115, kataster.DnMm);
+        Assert.False(kataster.IstAuslauf);
+        Assert.Null(kataster.TiefeM);
+        Assert.Contains("nur im Kataster", kataster.Beschreibung, StringComparison.Ordinal);
+        Assert.Contains(modell.Hinweise, h => h.StartsWith("E3 nur im Kataster (u-80792)", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Eine_Uhrlage_der_Tabelle_gibt_die_Richtung_wenn_die_Kopie_fehlt()
+    {
+        // SchachtPro (Goeschenen 8705): A1 12 Uhr, E1 4 Uhr, E2 6 Uhr, E3 7 Uhr.
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "8705", FieldSource.Manual, false);
+        schacht.SetzeAnschluesse(
+        [
+            new SchachtAnschluss { Nr = 1, Art = "Auslauf", DnMm = 150, TiefeM = 1.28m, Uhr = "12", Quelle = "SchachtPro" },
+            new SchachtAnschluss { Nr = 2, Art = "Einlauf", DnMm = 100, TiefeM = 0.67m, Uhr = "4", Quelle = "SchachtPro" },
+            new SchachtAnschluss { Nr = 3, Art = "Einlauf", DnMm = 120, TiefeM = 1.20m, Uhr = "6", Quelle = "SchachtPro" },
+            new SchachtAnschluss { Nr = 4, Art = "Einlauf", DnMm = 150, TiefeM = 1.22m, Uhr = "7", Quelle = "SchachtPro" },
+        ]);
+
+        var modell = SchachtgrafikModellBuilder.Baue(schacht, null, null, null, "#006E9C");
+
+        Assert.Equal(new[] { 0d, 120d, 180d, 210d }, modell.Anschluesse.Select(a => a.UhrGrad!.Value).ToArray());
+        Assert.True(modell.HatRichtungen);
+        Assert.Contains("Richtungen teilweise aus der Uhrlage des Protokolls (nicht vermessen)", modell.Hinweise);
+        Assert.DoesNotContain("Richtungen nicht erfasst: Grundriss schematisch", modell.Hinweise);
+        Assert.Contains("7 Uhr", modell.Anschluesse[3].Beschreibung, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Eine_Bemerkung_Anschluss_N_meint_die_Tabellennummer()
+    {
+        var schacht = SchachtgrafikBeispiel.Schacht80409();
+        schacht.SetFieldValue("Bemerkungen", "Anschluss 3 gerissen", FieldSource.Manual, true);
+
+        var modell = SchachtgrafikModellBuilder.Baue(schacht, SchachtgrafikBeispiel.Haltungen80409(), null, null, "#006E9C");
+
+        var schaden = modell.Schaeden.Single(s => s.Bauteil == SchachtBauteil.Anschluss);
+        Assert.Equal(3, schaden.AnschlussNr);
+        Assert.StartsWith("E2:", schaden.Tooltip, StringComparison.Ordinal);
+    }
+
+    private static (SchachtRecord Schacht, List<HaltungRecord> Haltungen, SchachtLage Lage) Schacht80792(bool mitTabelle = true)
+    {
+        var s = new SchachtRecord();
+        s.SetFieldValue("Schachtnummer", "80792", FieldSource.Pdf, false);
+        s.SetFieldValue("Schachttiefe", "2.35", FieldSource.Pdf, false);
+        if (mitTabelle)
+        {
+            s.SetzeAnschluesse(
+            [
+                new SchachtAnschluss { Nr = 1, Art = "Auslauf", DnMm = 300, TiefeM = 2.35m, Material = "Zement", Quelle = "PDF" },
+                new SchachtAnschluss { Nr = 2, Art = "Einlauf", DnMm = 300, TiefeM = 2.33m, Material = "Zement", Quelle = "PDF" },
+                new SchachtAnschluss { Nr = 3, Art = "Einlauf", DnMm = 150, TiefeM = 2.20m, Material = "Polyethylen", Quelle = "PDF" },
+                new SchachtAnschluss { Nr = 4, Art = "Einlauf", DnMm = 115, TiefeM = 2.18m, Material = "Polyethylen", Quelle = "PDF" },
+            ]);
+        }
+
+        var haltungen = new List<HaltungRecord> { Haltung("80808-80792", "300"), Haltung("80792-80722", "300"), Haltung("80789-80792", "150") };
+        var lage = new SchachtLage(
+            new XtfPunkt(2692445.021, 1192495.376),
+            new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["80792-80722"] = 220.1,
+                ["80808-80792"] = 40.2,
+                ["80789-80792"] = 100.6,
+            },
+            [new SchachtLageLeitung("u-80792", 107.0, EndetImSchacht: true, 115, "Kunststoff")]);
+        return (s, haltungen, lage);
+    }
+
+    private static HaltungRecord Haltung(string name, string dn)
+    {
+        var h = new HaltungRecord();
+        h.SetFieldValue(FieldKeys.HoldingName, name, FieldSource.Manual, false);
+        h.SetFieldValue(FieldKeys.NominalDiameterMm, dn, FieldSource.Manual, false);
+        return h;
     }
 
     [Fact]

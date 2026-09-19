@@ -90,6 +90,96 @@ public sealed class QgisGpkgSchachtLageLeserTests : IDisposable
         Assert.Null(new QgisGpkgSchachtLageLeser(() => muell, () => _leitungen).Lies("80409", []));
     }
 
+    [Fact]
+    public void Weitere_Leitungen_am_Schachtpunkt_kommen_ueber_den_Raumindex()
+    {
+        var pfad = Path.Combine(_ordner, "leitungen-raumindex.gpkg");
+        SchreibeLeitungenMitRaumindex(pfad,
+        [
+            ("80409-80538", 250.0, "Beton_Normalbeton", [(2692630.471, 1192370.448), (2692593.472, 1192373.417)]),
+            ("u-80409", 115.0, "Kunststoff_Hartpolyethylen", [(2692640.0, 1192380.0), (2692630.471, 1192370.448)]), // endet im Schacht
+            ("07.999-1", 125.0, "Kunststoff", [(2692630.471, 1192370.448), (2692620.0, 1192360.0)]),              // beginnt im Schacht
+            ("FERN", 200.0, "Beton", [(2692634.0, 1192370.448), (2692700.0, 1192370.448)]),                        // 3.5 m daneben
+        ]);
+        var leser = new QgisGpkgSchachtLageLeser(() => _schaechte, () => pfad);
+
+        var lage = leser.Lies("80409", ["80409-80538"]);
+
+        Assert.NotNull(lage);
+        Assert.Single(lage!.AzimutJeHaltung);
+        Assert.Equal(2, lage.WeitereLeitungen.Count);
+
+        var hausanschluss = Assert.Single(lage.WeitereLeitungen, l => l.Name == "u-80409");
+        Assert.True(hausanschluss.EndetImSchacht);
+        Assert.Equal(115, hausanschluss.DnMm);
+        Assert.False(string.IsNullOrWhiteSpace(hausanschluss.Material));
+        Assert.InRange(hausanschluss.AzimutGrad, 40, 50);
+
+        var abgang = Assert.Single(lage.WeitereLeitungen, l => l.Name == "07.999-1");
+        Assert.False(abgang.EndetImSchacht);
+        Assert.InRange(abgang.AzimutGrad, 220, 230);
+
+        Assert.DoesNotContain(lage.WeitereLeitungen, l => l.Name is "FERN" or "80409-80538");
+    }
+
+    [Fact]
+    public void Ohne_Raumindex_bleibt_die_Liste_der_weiteren_Leitungen_leer()
+    {
+        var leser = new QgisGpkgSchachtLageLeser(() => _schaechte, () => _leitungen);
+
+        var lage = leser.Lies("80409", ["80409-80538"]);
+
+        Assert.NotNull(lage);
+        Assert.Empty(lage!.WeitereLeitungen);
+    }
+
+    /// <summary>
+    /// Leitungen mit Sachspalten und Raumindex. Der echte Index ist eine R-Tree-Tabelle; fuer den
+    /// Leser zaehlt nur ihr Inhalt (id = rowid, minx/maxx/miny/maxy), deshalb genuegt hier eine
+    /// gewoehnliche Tabelle desselben Namens.
+    /// </summary>
+    private static void SchreibeLeitungenMitRaumindex(string pfad, (string Name, double Dn, string Material, (double X, double Y)[] Punkte)[] zeilen)
+    {
+        using var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = pfad }.ToString());
+        db.Open();
+        using (var befehl = db.CreateCommand())
+        {
+            befehl.CommandText =
+                "CREATE TABLE gpkg_contents (table_name TEXT NOT NULL, data_type TEXT NOT NULL);" +
+                "INSERT INTO gpkg_contents VALUES ('leitungen', 'features');" +
+                "CREATE TABLE \"leitungen\" (fid INTEGER PRIMARY KEY, ne_bezeichnung TEXT, geom BLOB, ha_lichte_hoehe REAL, ha_material TEXT);" +
+                "CREATE TABLE \"rtree_leitungen_geom\" (id INTEGER PRIMARY KEY, minx REAL, maxx REAL, miny REAL, maxy REAL);";
+            befehl.ExecuteNonQuery();
+        }
+
+        var fid = 0;
+        foreach (var (name, dn, material, punkte) in zeilen)
+        {
+            fid++;
+            using (var befehl = db.CreateCommand())
+            {
+                befehl.CommandText = "INSERT INTO \"leitungen\" (fid, ne_bezeichnung, geom, ha_lichte_hoehe, ha_material) VALUES (@f, @n, @g, @d, @m)";
+                befehl.Parameters.AddWithValue("@f", fid);
+                befehl.Parameters.AddWithValue("@n", name);
+                befehl.Parameters.AddWithValue("@g", Blob(Linie(punkte)));
+                befehl.Parameters.AddWithValue("@d", dn);
+                befehl.Parameters.AddWithValue("@m", material);
+                befehl.ExecuteNonQuery();
+            }
+
+            using (var befehl = db.CreateCommand())
+            {
+                befehl.CommandText = "INSERT INTO \"rtree_leitungen_geom\" (id, minx, maxx, miny, maxy) VALUES (@f, @x0, @x1, @y0, @y1)";
+                befehl.Parameters.AddWithValue("@f", fid);
+                befehl.Parameters.AddWithValue("@x0", punkte.Min(p => p.X));
+                befehl.Parameters.AddWithValue("@x1", punkte.Max(p => p.X));
+                befehl.Parameters.AddWithValue("@y0", punkte.Min(p => p.Y));
+                befehl.Parameters.AddWithValue("@y1", punkte.Max(p => p.Y));
+                befehl.ExecuteNonQuery();
+            }
+        }
+    }
+
     private static void SchreibeGpkg(string pfad, string tabelle, string namensspalte, (string Name, byte[] Geom)[] zeilen)
     {
         using var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = pfad }.ToString());
