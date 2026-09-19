@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Reports;
@@ -55,6 +57,107 @@ public static class SchachtSchadenOrtRegel
         }
 
         return AusText(entry.Code) ?? AusText(entry.Beschreibung) ?? SchachtZone.Schachtwand;
+    }
+
+    /// <summary>
+    /// Das Bauteil eines Eintrags fuer die Stammkarte (feiner als die Zone): Deckel, Rahmen,
+    /// Schachthals, Konus, Schachtrohr, Steigeisen, Anschluss, Bankett, Durchlaufrinne, Sohle,
+    /// Tauchbogen. Quellen in dieser Reihenfolge: die Ortsparameter, der Code (Bauteilname des
+    /// PDF-/SchachtPro-Imports; VSA-Codes DAN = Steigeisen, DAP = Tauchbogen), die Beschreibung.
+    /// Unbekannt bleibt <see cref="SchachtBauteil.Unbekannt"/> — keine erfundene Lage.
+    /// </summary>
+    public static SchachtBauteil BestimmeBauteil(ProtocolEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        var parameter = entry.CodeMeta?.Parameters;
+        if (parameter is { Count: > 0 })
+        {
+            foreach (var schluessel in new[] { "Ort", "Schachtbereich", "vsa.schachtbereich" })
+            {
+                if (parameter.TryGetValue(schluessel, out var wert) && BauteilAusText(wert) is { } ausParameter)
+                    return ausParameter;
+            }
+        }
+
+        return BauteilAusText(entry.Code)
+               ?? BauteilAusCode(entry.Code)
+               ?? BauteilAusText(entry.Beschreibung)
+               ?? SchachtBauteil.Unbekannt;
+    }
+
+    /// <summary>
+    /// Die Nummer des Anschlusses, wenn der Eintrag eine nennt: Parameter «AnschlussNr»/«Anschluss»,
+    /// die SchachtPro-Vorsilbe «Nr. 3:» in der Beschreibung oder ein Code «Anschluss 3».
+    /// </summary>
+    public static int? AnschlussNr(ProtocolEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        var parameter = entry.CodeMeta?.Parameters;
+        if (parameter is { Count: > 0 })
+        {
+            foreach (var schluessel in new[] { "AnschlussNr", "Anschluss" })
+            {
+                if (parameter.TryGetValue(schluessel, out var wert)
+                    && int.TryParse((wert ?? "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var nr)
+                    && nr > 0)
+                {
+                    return nr;
+                }
+            }
+        }
+
+        var beschreibung = Regex.Match(entry.Beschreibung ?? "", @"^\s*Nr\.?\s*(?<nr>\d{1,2})\s*:", RegexOptions.IgnoreCase);
+        if (beschreibung.Success)
+            return int.Parse(beschreibung.Groups["nr"].Value, CultureInfo.InvariantCulture);
+
+        var code = Regex.Match(entry.Code ?? "", @"^\s*Anschluss\s*(?<nr>\d{1,2})\b", RegexOptions.IgnoreCase);
+        return code.Success ? int.Parse(code.Groups["nr"].Value, CultureInfo.InvariantCulture) : null;
+    }
+
+    private static SchachtBauteil? BauteilAusText(string? text)
+    {
+        var wert = (text ?? string.Empty).Trim();
+        if (wert.Length == 0)
+            return null;
+
+        // Reihenfolge zaehlt: «Deckelrahmen» enthaelt «Deckel», «Schachtdeckel» enthaelt «Schacht».
+        if (Enthaelt(wert, "rahmen"))
+            return SchachtBauteil.Rahmen;
+        if (Enthaelt(wert, "deckel"))
+            return SchachtBauteil.Deckel;
+        if (Enthaelt(wert, "schachthals"))
+            return SchachtBauteil.Schachthals;
+        if (Enthaelt(wert, "konus"))
+            return SchachtBauteil.Konus;
+        if (Enthaelt(wert, "schachtrohr") || Enthaelt(wert, "schachtwand") || Enthaelt(wert, "schachtring"))
+            return SchachtBauteil.Schachtrohr;
+        if (Enthaelt(wert, "steigeisen") || Enthaelt(wert, "leiter"))
+            return SchachtBauteil.Steigeisen;
+        if (Enthaelt(wert, "tauchbogen"))
+            return SchachtBauteil.Tauchbogen;
+        if (Enthaelt(wert, "bankett"))
+            return SchachtBauteil.Bankett;
+        if (Enthaelt(wert, "durchlaufrinne") || Enthaelt(wert, "gerinne"))
+            return SchachtBauteil.Durchlaufrinne;
+        if (Enthaelt(wert, "sohle"))
+            return SchachtBauteil.Sohle;
+        if (Enthaelt(wert, "anschluss") || Enthaelt(wert, "zulauf") || Enthaelt(wert, "einlauf") || Enthaelt(wert, "auslauf"))
+            return SchachtBauteil.Anschluss;
+
+        return null;
+    }
+
+    /// <summary>VSA-Schachtcodes mit festem Bauteil: DAN Steigeisen/Leiter, DAP Tauchbogen (SchachtPro-Zuordnung).</summary>
+    private static SchachtBauteil? BauteilAusCode(string? code)
+    {
+        var wert = (code ?? string.Empty).Trim();
+        if (wert.StartsWith("DAN", StringComparison.OrdinalIgnoreCase))
+            return SchachtBauteil.Steigeisen;
+        if (wert.StartsWith("DAP", StringComparison.OrdinalIgnoreCase))
+            return SchachtBauteil.Tauchbogen;
+        return null;
     }
 
     private static SchachtZone? AusText(string? text)

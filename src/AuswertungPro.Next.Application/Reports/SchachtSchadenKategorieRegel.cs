@@ -56,6 +56,12 @@ public static class SchachtSchadenKategorieRegel
     }
 
     /// <summary>
+    /// Dieselbe Textregel fuer Aufrufer ohne Bauteil-Code — etwa die Bemerkung «Einlauf 3
+    /// Ausgebrochen», die die Schachtgrafik an den Anschluss haengt. <c>null</c> heisst generisch.
+    /// </summary>
+    public static string? KategorieAusText(string? text) => AusBeschreibung(text);
+
+    /// <summary>
     /// Kategorie aus dem freien Schadenstext des PDF-Schachtprotokollimports. Nur die dort
     /// bekannten, eindeutig zuordenbaren Formulierungen werden gedeutet — mit Wortgrenze und
     /// Negationswaechter; alles andere bleibt <c>null</c> (generisch) — siehe Klassendokumentation.
@@ -70,7 +76,7 @@ public static class SchachtSchadenKategorieRegel
             return "crack";
         if (Enthaelt(wert, "ausgebrochen"))
             return "break";
-        if (Enthaelt(wert, "infiltration"))
+        if (Enthaelt(wert, "infiltration") || Enthaelt(wert, "fremdwasser"))
             return "infiltration";
         if (Enthaelt(wert, "verkalkung"))
             return "incrustation";

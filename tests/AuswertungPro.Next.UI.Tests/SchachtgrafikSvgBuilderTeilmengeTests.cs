@@ -149,27 +149,48 @@ public sealed class SchachtgrafikSvgBuilderTeilmengeTests
     /// </summary>
     private static string BeispielSvg(bool mitTiefe)
     {
-        var schaeden = new List<SchachtgrafikSchadenEintrag>
+        var schaeden = new List<SchachtgrafikSchaden>
         {
-            new(SchachtZone.Konus, "crack", "#D64541", "K1"),
-            new(SchachtZone.Schachtwand, "roots", "#27AE60", "W1"),
-            new(SchachtZone.Anschluss, "obstacle", "#6B7280", "A1"),
-            new(SchachtZone.Sohle, "deposit", "#8B6914", "S1"),
+            new(1, SchachtBauteil.Deckel, null, "break", "#D64541", "D1"),
+            new(2, SchachtBauteil.Rahmen, null, "offset", "#E67E22", "R1"),
+            new(3, SchachtBauteil.Konus, null, "crack", "#D64541", "K1"),
+            new(4, SchachtBauteil.Schachtrohr, null, "roots", "#27AE60", "W1"),
+            new(5, SchachtBauteil.Steigeisen, null, "surface", "#E67E22", "S1"),
+            new(6, SchachtBauteil.Anschluss, 3, "obstacle", "#6B7280", "A3"),
+            new(7, SchachtBauteil.Unbekannt, null, "default", "#006E9C", "U1"),
+            new(8, SchachtBauteil.Bankett, null, "deposit", "#8B6914", "B1"),
+            new(9, SchachtBauteil.Durchlaufrinne, null, "infiltration", "#2196F3", "G1"),
+            new(10, SchachtBauteil.Sohle, null, "deposit", "#8B6914", "S2"),
+            new(11, SchachtBauteil.Tauchbogen, null, "break", "#D64541", "T1"),
         };
 
-        var zulaeufe = Enumerable.Range(1, 5)
-            .Select(i => new SchachtgrafikStummel($"H{i}", "DN200"))
-            .ToList();
-        var ablaeufe = new List<SchachtgrafikStummel> { new("H9", "DN300") };
+        // Ein Auslauf, ein Einlauf gegenueber (Rohr links), zwei weitere Einlaeufe als Kreise auf
+        // der Rueckwand, einer davon ohne Richtung und ohne Haltung.
+        var anschluesse = new List<SchachtgrafikAnschluss>
+        {
+            new(1, true, 250, mitTiefe ? 2.40m : null, mitTiefe ? "Protokoll" : null, "Beton", "H9", 275, 495.14m, true),
+            new(2, false, 250, mitTiefe ? 2.35m : null, mitTiefe ? "Protokoll" : null, "Beton", "H1", 95, null, true),
+            new(3, false, 100, mitTiefe ? 0.60m : null, mitTiefe ? "Protokoll" : null, "PVC", "H2", 145, null, true),
+            new(4, false, 200, mitTiefe ? 2.25m : null, mitTiefe ? "Protokoll" : null, "PVC", null, null, null, false),
+            new(5, false, 150, null, null, null, "H5", 30, null, true),
+        };
 
-        var (svg, _) = SchachtgrafikSvgBuilder.Baue(
+        var modell = new SchachtgrafikModell(
             "12345",
-            mitTiefe ? 2.4 : null,
-            "1100",
-            "900",
-            zulaeufe,
-            ablaeufe,
-            schaeden);
-        return svg;
+            mitTiefe ? 2.4m : null,
+            mitTiefe ? "Protokoll" : null,
+            1100,
+            900,
+            "Oval",
+            600,
+            "Guss",
+            "Mischabwasser",
+            true,
+            new SchachtKoten(498.62m, 495.15m, new Dictionary<string, decimal> { ["H9"] = 495.14m }),
+            anschluesse,
+            schaeden,
+            ["Konus schematisch"]);
+
+        return SchachtgrafikSvgBuilder.Baue(modell).Svg;
     }
 }
