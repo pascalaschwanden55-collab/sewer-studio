@@ -3,6 +3,9 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
+using AuswertungPro.Next.Application.Lookup;
+using AuswertungPro.Next.Application.Xtf;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Services;
@@ -228,6 +231,136 @@ public sealed class SchaechteNovaLayoutIsolatedSmokeTests
 
             WpfIsolatedTestProcess.MarkChildScenarioCompleted();
         });
+    }
+
+    private static readonly string LageChildTestName =
+        typeof(SchaechteNovaLayoutIsolatedSmokeTests).FullName
+        + "."
+        + nameof(Kindprozess_Schachtansicht_laedt_Lage_auch_in_der_Aufklapp_Liste);
+
+    [Fact]
+    public async Task Schachtansicht_laedt_Lage_in_der_Liste_in_eigenem_Wpf_Prozess()
+    {
+        Assert.Null(System.Windows.Application.Current);
+        var result = await WpfIsolatedTestProcess.RunAsync(LageChildTestName, TimeSpan.FromSeconds(90));
+
+        Assert.Null(System.Windows.Application.Current);
+        Assert.False(result.TimedOut, result.DescribeFailure());
+        Assert.True(result.ExitCode == 0, result.DescribeFailure());
+        Assert.True(result.ChildScenarioCompleted, result.DescribeFailure());
+    }
+
+    /// <summary>
+    /// 19.09.2026, Schacht 80792: Die QGIS-Kopie hatte Schachtpunkt und alle Leitungen, der
+    /// Grundriss blieb trotzdem «schematisch». Koten und Lage wurden nur ueber die Zellenauswahl
+    /// der TABELLE geladen; in der Aufklapp-Liste (Standardansicht) zog ein Auswahlwechsel nur
+    /// das Formular nach. Hier: echte Seite, Liste sichtbar, Auswahl ueber das ViewModel
+    /// wechseln — die Schachtansicht muss die Lage des NEUEN Schachts bekommen und keine Reste
+    /// des alten behalten.
+    /// </summary>
+    [IsolatedWpfFact]
+    public void Kindprozess_Schachtansicht_laedt_Lage_auch_in_der_Aufklapp_Liste()
+    {
+        StaTestRunner.Run(() =>
+        {
+            Assert.Null(System.Windows.Application.Current);
+            var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            app.InitializeComponent();
+            // Wie im Programm: Die Fortsetzung nach dem Hintergrundlesen landet auf dem UI-Thread.
+            SynchronizationContext.SetSynchronizationContext(
+                new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
+
+            using var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(_ => { });
+            var services = new AuswertungPro.Next.UI.ServiceProvider(
+                new AppSettings { EnableRestorePoints = false },
+                new AuswertungPro.Next.Application.Diagnostics.DiagnosticsOptions(),
+                loggerFactory.CreateLogger("test"),
+                loggerFactory);
+            using var shell = new AuswertungPro.Next.UI.ViewModels.ShellViewModel(
+                services, new SystemMonitorService(enableHardwareSensorInit: false));
+
+            var schachtA = Schacht("80409");
+            var schachtB = Schacht("80792");
+            shell.Project.SchaechteData.Add(schachtA);
+            shell.Project.SchaechteData.Add(schachtB);
+            shell.Project.Data.Add(Haltung("80409-80538"));
+            shell.Project.Data.Add(Haltung("80808-80792"));
+            shell.NavigateToShaft(schachtA);
+            var vm = Assert.IsType<AuswertungPro.Next.UI.ViewModels.Pages.SchaechtePageViewModel>(shell.CurrentPage);
+            Assert.Same(schachtA, vm.Selected);
+            var quelle = new LageFake();
+            vm.SchachtLage = quelle;
+
+            var page = new Views.Pages.SchaechtePage { DataContext = vm };
+            Layout(page);
+            var liste = Assert.IsType<SchachtAufklappListe>(page.FindName("AufklappListe"));
+            Assert.Equal(Visibility.Visible, liste.Visibility);
+            var uebersicht = Assert.IsType<SchachtUebersichtPanel>(page.FindName("Uebersicht"));
+
+            // Erstauswahl beim Oeffnen der Seite: die Lage von A.
+            PumpeBis(() => uebersicht.Zusatz?.Lage is not null, "Lage des ersten Schachts");
+            Assert.Contains("80409-80538", uebersicht.Zusatz!.Lage!.AzimutJeHaltung.Keys);
+
+            // Auswahlwechsel in der LISTE: Die Schachtansicht muss die Lage von B bekommen.
+            vm.Selected = schachtB;
+            PumpeBis(() => uebersicht.Zusatz?.Lage?.AzimutJeHaltung.ContainsKey("80808-80792") == true,
+                "Lage nach dem Auswahlwechsel in der Aufklapp-Liste");
+            Assert.DoesNotContain("80409-80538", uebersicht.Zusatz!.Lage!.AzimutJeHaltung.Keys);
+            Assert.Equal("80792", quelle.Gefragt.Last());
+
+            WpfIsolatedTestProcess.MarkChildScenarioCompleted();
+        });
+    }
+
+    private static SchachtRecord Schacht(string nummer)
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", nummer, FieldSource.Manual, userEdited: true);
+        return record;
+    }
+
+    private static HaltungRecord Haltung(string name)
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue(FieldKeys.HoldingName, name, FieldSource.Manual, userEdited: false);
+        return record;
+    }
+
+    /// <summary>
+    /// Pumpt den Dispatcher in kurzen Schritten, bis die Bedingung gilt (hoechstens 20 s). Der Timer
+    /// laeuft mit Prioritaet Normal: Die Render-Schleife der Seite (Animationen) liegt ueber
+    /// Background, ein Background-Timer verhungerte im breiten Testlauf bis zum STA-Zeitlimit.
+    /// </summary>
+    private static void PumpeBis(Func<bool> bedingung, string was)
+    {
+        var ende = DateTime.UtcNow + TimeSpan.FromSeconds(20);
+        while (!bedingung())
+        {
+            Assert.True(DateTime.UtcNow < ende, $"Nicht rechtzeitig eingetroffen: {was}");
+            var frame = new DispatcherFrame();
+            var timer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(25) };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                frame.Continue = false;
+            };
+            timer.Start();
+            Dispatcher.PushFrame(frame);
+        }
+    }
+
+    /// <summary>Ersatz fuer die QGIS-Kopie: liefert jeder gefragten Haltung einen Azimut und merkt sich die Schachtnummern.</summary>
+    private sealed class LageFake : ISchachtLageQuelle
+    {
+        public List<string> Gefragt { get; } = new();
+
+        public SchachtLage? Lies(string schachtnummer, IReadOnlyCollection<string> haltungsnamen)
+        {
+            lock (Gefragt)
+                Gefragt.Add(schachtnummer);
+            var azimute = haltungsnamen.ToDictionary(n => n, _ => 90d, StringComparer.OrdinalIgnoreCase);
+            return new SchachtLage(new XtfPunkt(2692445.021, 1192495.376), azimute);
+        }
     }
 
     private static readonly string PanelChildTestName =

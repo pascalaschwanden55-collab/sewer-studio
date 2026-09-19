@@ -42,6 +42,11 @@ einer Spalte, keine Anschluesse. Vorschlag mit Zeichnungen:
   und Anschlusskoten aus den GeoShop-Objektakten. `SchaechteNovaWorkspaceController.
   LadeSchachtansichtZusatz` setzt die Koten sofort und die Lage aus dem Hintergrund mit
   Generationszaehler; ein Lesefehler wird als Hinweis in der Grafik sichtbar, nie verschluckt.
+  **Der Lade-Aufruf haengt an `Selected` (beide Ansichten) UND an der Zellenauswahl der
+  Tabelle.** In der Aufklapp-Liste zog ein Auswahlwechsel bis 19.09.2026 abends nur das
+  Formular nach: Der Grundriss blieb schematisch, obwohl die Kopie alles hatte (80792: drei
+  Leitungen und der Hausanschluss `u-80792` enden exakt auf dem Schachtpunkt). Waechter:
+  `SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_Schachtansicht_laedt_Lage_auch_in_der_Aufklapp_Liste`.
   `SchachtHaltungsseite` ist die EINE Regel «Schacht oben oder unten»: Felder zuerst, sonst
   der Haltungsname (in Zone 1.15 sind die Schachtfelder aller 96 Haltungen leer).
 - **Der SVG-Vertrag bleibt.** Gestrichelte Kreise sind Pfade (`KreisPfad`), Gruppen tragen
@@ -55,6 +60,14 @@ einer Spalte, keine Anschluesse. Vorschlag mit Zeichnungen:
   angepasst `SchachtgrafikSvgBuilderTeilmengeTests`, `SchachtgrafikControlIsolatedSmokeTests`,
   `ServiceProviderRegistrationTests` (168). Nicht erfasst bleiben Ovalausrichtung, Konushoehe,
   Steigeisenseite und Deckellage; die Sichtprobe im Programm macht Pascal.
+- **Offen nach Pascals Frage zu 80792 (19.09. abends, gemessen, nicht gebaut):** Der Inspekteur
+  zaehlt in der Skizze Einlaeufe E1..En fortlaufend (74 von 74 Uri-PDFs), die Grafik zaehlt
+  nach Tabellenzeile E2..E4 — die Bemerkung «Einlauf 3» meint deshalb die Skizzen-E3, also
+  die VIERTE Tabellenzeile. Die Skizze ist eine Vektorzeichnung (Linien plus Kennungen als
+  Text) und parsebar, aber nur ungefaehr: 80409 weicht bis 48 Grad von der Vermessung ab,
+  80792 bis 24 Grad. Die QGIS-Kopie ist die bessere Quelle und fuehrt Hausanschluesse als
+  `u-<Schacht>` (16'112 Stueck), die keine Projekthaltung sind; der Lage-Leser fragt bisher
+  nur Projekthaltungen.
 
 ## Auditkorrekturen: Restbefunde 11 bis 18 (19.09.2026)
 

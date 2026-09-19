@@ -167,7 +167,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
     internal AuswertungPro.Next.Application.Lookup.IQgisBestandLeser? QgisBestand { get; }
 
     /// <summary>Schachtpunkt und Leitungsrichtungen (QGIS-Kopien) fuer den Grundriss der Schachtgrafik; null bei den Uebergangskonstruktoren, dann schematisch.</summary>
-    internal AuswertungPro.Next.Application.Lookup.ISchachtLageQuelle? SchachtLage { get; }
+    internal AuswertungPro.Next.Application.Lookup.ISchachtLageQuelle? SchachtLage { get; set; }
 
     /// <summary>Die Kennungstabelle fuer "Katasterkennungen ergaenzen". Null, wenn das ViewModel ueber einen Uebergangskonstruktor ohne Dienste entstand.</summary>
     internal AuswertungPro.Next.Application.Lookup.IKatasterKennungLeser? KatasterKennungen { get; }

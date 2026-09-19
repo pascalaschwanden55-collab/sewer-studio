@@ -98,7 +98,14 @@ public partial class SchaechtePage
 
     private void AufklappViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(SchaechtePageViewModel.Selected))
-            AktualisiereAufklappListe();
+        if (e.PropertyName != nameof(SchaechtePageViewModel.Selected))
+            return;
+
+        // Koten und Lage der Schachtansicht (Stammkarte) gehoeren zum gewaehlten Schacht — in
+        // BEIDEN Ansichten. In der Tabelle kommt der Aufruf auch ueber die Zellenauswahl; in der
+        // Aufklapp-Liste gab es ihn bis 19.09.2026 nicht: Der Grundriss blieb dort immer
+        // «schematisch», obwohl die QGIS-Kopie Schachtpunkt und Leitungen hatte (80792).
+        _novaWorkspace?.LadeSchachtansichtZusatz();
+        AktualisiereAufklappListe();
     }
 }
