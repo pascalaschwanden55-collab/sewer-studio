@@ -35,7 +35,8 @@ public sealed class XtfSchachtSchluesselfelderTests
     {
         var xtf = LegacyXtfImportService.SchachtSchluesselfelder;
         var winCan = Lies(typeof(WinCanDbImportService), "SchachtKeyFields");
-        var schachtPro = Lies(typeof(SchachtProImportService), "SchachtKeyFields");
+        var schachtPro = Lies(typeof(SchachtProImportService).Assembly.GetType(
+            "AuswertungPro.Next.Infrastructure.Import.SchachtPro.SchachtProProtocolImport", throwOnError: true)!, "SchachtKeyFields");
 
         // Jedes Feld der beiden bestehenden Wege muss der XTF-Weg auch kennen. Sonst
         // findet er einen bereits importierten Schacht nicht wieder und legt ihn neu an.

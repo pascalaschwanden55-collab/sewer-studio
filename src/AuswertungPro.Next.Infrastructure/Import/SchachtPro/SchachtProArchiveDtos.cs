@@ -5,8 +5,8 @@ namespace AuswertungPro.Next.Infrastructure.Import.SchachtPro;
 
 /// <summary>
 /// DTOs fuer das .spro-Austauschformat der Android-App "SchachtPro" (ZIP mit JSON).
-/// Spiegelt 1:1 die Kotlin-Modelle aus ProjectArchive.kt (formatVersion=1,
-/// dbSchemaVersion=21). JSON-Namen sind exakt die Gson-Feldnamen der DTOs.
+/// Liest die fachlich verwendeten Felder aus ProjectArchive.kt (Format 1 bis 3,
+/// DB-Schema bis 23). JSON-Namen entsprechen den Gson-Feldnamen der DTOs.
 /// </summary>
 internal static class SchachtProArchiveJson
 {
@@ -73,8 +73,14 @@ internal sealed class AnschlussDto
     [JsonPropertyName("zustand")] public Dictionary<string, bool>? Zustand { get; set; }
 }
 
+internal sealed class ConnectionPhotoDto
+{
+    [JsonPropertyName("photoPath")] public string? PhotoPath { get; set; }
+}
+
 internal sealed class ProtocolDto
 {
+    [JsonPropertyName("connectionPhoto")] public ConnectionPhotoDto? ConnectionPhoto { get; set; }
     [JsonPropertyName("schachtNr")] public string? SchachtNr { get; set; }
     [JsonPropertyName("datum")] public string? Datum { get; set; }
     [JsonPropertyName("wetter")] public string? Wetter { get; set; }

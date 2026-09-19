@@ -1,5 +1,65 @@
 # SewerStudio — AI Sewer Inspection System
 
+## SchachtPro-QR aus Bildern (19.09.2026)
+
+- Nachtrag Verteilung: `SchachtProQrAblage` nutzt `ProjectStructure.SchachtVerteiltDir`,
+  `ImportDateStampResolver` und `StageCopyAs`: `<Datum>_<Schacht>_QR.<png/jpg>`.
+  Relative Bildzuordnung unter `SchachtPro.QR.Bild.<sourceKey>`. Originalbild bleibt
+  Bild; bestehendes PDF_Path bleibt unveraendert. Datei vor der Datenuebernahme
+  vorbereiten, Source-Readlock schuetzt Lesen/Kopieren derselben Version. Gleiche
+  Dateien werden wiederverwendet, Kollisionen erhalten freie Namen, Rollback ueber
+  die bestehende Importsitzung. Ohne Staging expliziter Hinweis statt falscher Ablagemeldung.
+  Verhaltenstests: `SchachtProQrImportTests.Ablage`.
+
+- `ISchachtProQrImportService` / `SchachtProQrImportService` importieren genau einen
+  eindeutigen SPQR1-Inhalt je PNG/JPG. `IQrImageReader` wird durch den Windows-Adapter
+  `UI/Services/QrImageReader` umgesetzt. ZXing.Net 0.16.11 ist vom Nutzer freigegeben,
+  im UI-Projekt samt Lockdateien festgelegt. Kein Java, Python oder Online-Dienst zur Laufzeit.
+- `SchachtProQrPayload` prueft CRC32 der komprimierten Bytes, Zlib/Adler32, UTF-8,
+  Schema/Version/Quelle, doppelte JSON-Felder und Pflichtkennungen vor Datenuebernahme.
+  Grenzen: 8192 Textzeichen, 64 KiB entpackt, JSON-Tiefe 24, 100 Anschluesse;
+  Bilder maximal 32 MiB / 24 Megapixel. Quellpfadschutz und Abbruch gelten ebenfalls.
+- `SchachtProQrMapping` bildet den separaten SPQR1-Vertrag aus
+  `C:/SchachtPro_5/pdf/src/main/java/com/pascal/schachtpro/pdf/ProtocolQrPayload.kt`
+  auf den bestehenden Archivvertrag ab. LV95 wird explizit geprueft; leere
+  Anschluss-Standardzeilen entfallen. Vollstaendige Original-JSON unter
+  `Project.Metadata[SchachtPro.QR.<sourceKey>]` erhaelt auch nicht angezeigte Angaben.
+- `SchachtProProtocolImport` enthaelt die aus dem Archivdienst ausgelagerte gemeinsame
+  Datenuebernahme samt Handwert-/Protokoll-Reimportschutz. Archivfoto-Staging bleibt
+  im Archivdienst. Quelle bleibt kompatibel `FieldSource.Spro`; kein neues Projektformat.
+  Mehrdeutige Schachtnummern im Ziel sperren den QR-Import.
+- Neuer Menuepunkt auf der Importseite: «SchachtPro-QR aus Bild (PNG/JPG)».
+  Bestehender Importlauf mit Projektkopie, Vorschau, Speichern, Quellablage und
+  gemeinsamer Importsperre. Fehler pro Bild; ausschliesslich defekte Bilder fuehren
+  zu keiner Projektuebernahme. Neue ServiceProvider-Registrierung, insgesamt 169.
+- Tests: `SchachtProQrImportTests`, `SchachtProQrImageTests`,
+  `ImportManualWorkflowControllerTests.Qr`; Archivtests schuetzen die Auslagerung.
+  Anleitung und Grenzen: `docs/SCHACHTPRO-QR-IMPORT.md`.
+
+## SchachtPro-Archive bis Format 3 / Schema 23 (19.09.2026)
+
+- `SchachtProArchiveReader` akzeptiert jetzt die aktuellen `.spro`-ZIPs der App
+  in `C:\SchachtPro_5` sowie alte Formate 1 und 2. Neuere Versionen bleiben gesperrt.
+  Der Vertrag wurde an `ProjectArchive.kt`, `ProjectExporter.kt`, `ProjectImporter.kt`
+  und `AppDatabase.kt` abgeglichen; nicht nur die Versionsgrenze wurde angehoben.
+- `SchachtProArchiveIntegrity` prueft ab Format 2 verpflichtend `integrity.json`:
+  SHA-256 jedes Dateieintrags einschliesslich Manifest und Fotos, genaue Dateiliste,
+  eindeutige normalisierte Pfade, hoechstens 5 MB Nachweis. Ein vorhandener Nachweis
+  wird auch bei Format 1 geprueft. Fehlende oder falsche Pruefsummen sperren das ganze
+  Archiv VOR jeder Projekt-/Fotouebernahme. Doppelte ZIP-Pfade werden abgelehnt.
+  Datei-Hashes werden blockweise mit Abbruchpruefung gelesen; keine neue Paketabhaengigkeit.
+- `SchachtProImportService` uebernimmt auch `connectionPhoto.photoPath` als eigenes
+  Originalfoto ueber die vorhandene Staging-Sitzung (`<Protokollindex>_connection.jpg`).
+  Ausrichtung und Schachtgrafik-Ueberlagerung werden nicht nachgebaut; ein Importhinweis
+  nennt diese Grenze. Normale Fotos und Handwertschutz bleiben beim bestehenden Weg.
+- Keine neue Dienstregistrierung oder Aenderung am SewerStudio-Projektformat.
+  QR-Lesen (SPQR1), PDF-Textextraktion und verschluesselte `.spro`-Archive sind nicht
+  Teil dieser Korrektur. Die SchachtPro-App wurde nicht veraendert.
+- Verhaltenstests: `SchachtProImportServiceTests.CurrentArchives.cs` ergaenzt den
+  Bestand um aktuelle/alte Archive, Daten/Fotos, Anschlussfoto allein und kombiniert,
+  fehlerhafte Pruefsummen, mehrdeutige Pfade, Groessenlimit und Abbruch.
+  Nachweis und Bedienung: `docs/SCHACHTPRO-ARCHIVIMPORT.md`.
+
 ## Schachtgrafik Stammkarte (19.09.2026)
 
 Anlass: Pascals Bild der Schachtansicht 80409 (Zone 1.15) — drei feste Zonen, 27 Symbole in
@@ -102,7 +162,7 @@ einer Spalte, keine Anschluesse. Vorschlag mit Zeichnungen:
   eingelesen, die PDFs sind bloss verteilt. Der Anschluss-Zustand («Mangelhaft eingebunden»)
   bleibt offen. Der PDF-Weg ist ein Notnagel: Pascal bekommt spaeter einen direkten
   SchachtPro-Export; `SchachtProArchiveReader` liest das JSON-Archiv (uhr, richtung, zustand je
-  Anschluss) bereits, und ein neuer Exporter der Android-App wird daran abgeglichen.
+  Anschluss) und ist an Format 3 / Schema 23 des aktuellen Android-Exporters abgeglichen.
   Fixture: `tests/Fixtures/Schachtprotokolle/8705_schachtpro_seite1_layout.txt`, Tests
   `SchachtProtocolZusatzParserSchachtProTests`.
 

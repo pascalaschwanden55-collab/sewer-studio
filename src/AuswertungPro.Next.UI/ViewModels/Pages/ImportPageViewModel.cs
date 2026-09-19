@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
@@ -55,6 +55,7 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
     public IAsyncRelayCommand ImportIbakCommand { get; }
     public IAsyncRelayCommand ImportKinsCommand { get; }
     public IAsyncRelayCommand ImportSchachtProCommand { get; }
+    public IAsyncRelayCommand ImportSchachtProQrCommand { get; }
     public IRelayCommand ExportImportSummaryCommand { get; }
     public IRelayCommand ReloadCatalogCommand { get; }
     public IRelayCommand CancelImportCommand { get; }
@@ -95,7 +96,8 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
             sp.StoredImportFiles,
             sp.ImportFileStaging,
             sp.ImportMediaDistribution,
-            sp.Diagnostics.ExplicitPdfToTextPath);
+            sp.Diagnostics.ExplicitPdfToTextPath,
+            sp.SchachtProQrImport);
         _projectPortabilityController = new Services.ImportProjectPortabilityController(
             dialogs,
             sp.ProjectPortability);
@@ -142,6 +144,7 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
         ImportWinCanCommand = new AsyncRelayCommand(ImportWinCanAsync, CanStartImport);
         ImportIbakCommand = new AsyncRelayCommand(ImportIbakAsync, CanStartImport);
         ImportKinsCommand = new AsyncRelayCommand(ImportKinsAsync, CanStartImport);
+        ImportSchachtProQrCommand = new AsyncRelayCommand(() => RunManualImportAsync(_manualWorkflowController.ImportSchachtProQrAsync), CanStartImport);
         ImportSchachtProCommand = new AsyncRelayCommand(ImportSchachtProAsync, CanStartImport);
         ExportImportSummaryCommand = new RelayCommand(ExportImportSummary);
         ReloadCatalogCommand = new RelayCommand(ReloadCatalog);
@@ -178,6 +181,7 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
         ImportIbakCommand.NotifyCanExecuteChanged();
         ImportKinsCommand.NotifyCanExecuteChanged();
         ImportSchachtProCommand.NotifyCanExecuteChanged();
+        ImportSchachtProQrCommand.NotifyCanExecuteChanged();
         MakeProjectPortableCommand.NotifyCanExecuteChanged();
         AssignPhotosFromFolderCommand.NotifyCanExecuteChanged();
         ImportKanalProjektCommand.NotifyCanExecuteChanged();

@@ -6,7 +6,7 @@ using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Tests;
 
-public sealed class ImportManualWorkflowControllerTests
+public sealed partial class ImportManualWorkflowControllerTests
 {
     [Fact]
     public async Task Empty_selections_do_not_start_an_import_run()
@@ -29,6 +29,7 @@ public sealed class ImportManualWorkflowControllerTests
         await controller.ImportWinCanAsync(context);
         await controller.ImportIbakAsync(context);
         await controller.ImportKinsAsync(context);
+        await controller.ImportSchachtProQrAsync(context);
 
         Assert.Empty(pdf.Calls);
         Assert.Empty(xtf.Calls);
@@ -230,7 +231,8 @@ public sealed class ImportManualWorkflowControllerTests
         IXtfImportService xtfImport,
         FolderImportFake folderImports,
         IStoredImportFileService storedImportFiles,
-        string? pdfToTextPath = null)
+        string? pdfToTextPath = null,
+        ISchachtProQrImportService? qr = null)
         => new(
             dialogs,
             pdfImport,
@@ -242,7 +244,7 @@ public sealed class ImportManualWorkflowControllerTests
             storedImportFiles,
             new FileStagingServiceFake(),
             new MediaDistributionServiceFake(),
-            pdfToTextPath);
+            pdfToTextPath, qr);
 
     private static ImportManualWorkflowContext CreateContext(
         WorkflowState state,

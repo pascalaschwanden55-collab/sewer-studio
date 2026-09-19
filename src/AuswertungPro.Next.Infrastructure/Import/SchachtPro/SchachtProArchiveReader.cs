@@ -7,14 +7,14 @@ namespace AuswertungPro.Next.Infrastructure.Import.SchachtPro;
 /// Liest ein .spro-Archiv (ZIP) schreibgeschuetzt ein. Uebernimmt die Schutz-Limits
 /// und Pfadregeln des Kotlin-Importers (ProjectImporter.kt):
 /// max. 10'000 Eintraege, 200 MB pro Eintrag, 2 GB gesamt, 5 MB Manifest,
-/// 20 MB Projekt-JSON; nur 'manifest.json' sowie 'projects/', 'photos/', 'logos/';
+/// 20 MB Projekt-JSON; nur 'manifest.json', 'integrity.json' sowie 'projects/', 'photos/', 'logos/';
 /// keine absoluten Pfade und keine '..'-/'.'-Segmente (Zip-Slip).
 /// Es wird NICHTS auf die Platte extrahiert — Eintraege werden nur als Stream gelesen.
 /// </summary>
 internal sealed class SchachtProArchiveReader : IDisposable
 {
-    internal const int SupportedFormatVersion = 1;
-    internal const int SupportedDbSchemaVersion = 21;
+    internal const int SupportedFormatVersion = 3;
+    internal const int SupportedDbSchemaVersion = 23;
 
     private const int MaxEntryCount = 10_000;
     private const long MaxEntrySize = 200L * 1024 * 1024;
@@ -64,13 +64,17 @@ internal sealed class SchachtProArchiveReader : IDisposable
             long total = 0;
             foreach (var entry in archive.Entries)
             {
-                var name = entry.FullName.Replace('\\', '/');
-                if (!IsAllowedArchivePath(name))
+                if (!IsAllowedArchivePath(entry.FullName))
                 {
                     throw new SchachtProArchiveException(
                         "UNSAFE_ENTRY",
                         $"Unerlaubter Pfad im Archiv: {entry.FullName}");
                 }
+                var name = NormalizeArchivePath(entry.FullName);
+
+                if (name.EndsWith('/') && entry.Length != 0)
+                    throw new SchachtProArchiveException("INVALID_ARCHIVE",
+                        $"Ein Ordner-Eintrag enthaelt unerwartete Dateidaten: {name}");
 
                 if (entry.Length > MaxEntrySize)
                 {
@@ -87,8 +91,9 @@ internal sealed class SchachtProArchiveReader : IDisposable
                         $"Archivinhalt ueberschreitet das Gesamtlimit von {MaxTotalUncompressedSize} Bytes (Zip-Bomb-Schutz).");
                 }
 
-                // Duplikate: der erste Eintrag gewinnt (deterministisch, kein Fehler).
-                entries.TryAdd(name, entry);
+                if (!entries.TryAdd(name, entry))
+                    throw new SchachtProArchiveException("DUPLICATE_ENTRY",
+                        $"Archiv enthaelt einen mehrfachen Dateipfad: {name}");
             }
 
             return new SchachtProArchiveReader(archive, entries);
@@ -101,8 +106,9 @@ internal sealed class SchachtProArchiveReader : IDisposable
     }
 
     /// <summary>Liest und validiert manifest.json inkl. Versions-Guard.</summary>
-    public ArchiveManifestDto ReadManifest()
+    public ArchiveManifestDto ReadManifest(CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         if (!_entries.TryGetValue("manifest.json", out var entry))
         {
             throw new SchachtProArchiveException(
@@ -151,6 +157,9 @@ internal sealed class SchachtProArchiveReader : IDisposable
                 $"Archiv-DB-Schema {manifest.DbSchemaVersion} ist neuer als unterstuetzt ({SupportedDbSchemaVersion}). Bitte SewerStudio aktualisieren.");
         }
 
+        if (manifest.FormatVersion < 1 || manifest.DbSchemaVersion < 1)
+            throw new SchachtProArchiveException("MANIFEST_INVALID", "Ungueltige Archiv- oder Datenbankversion.");
+
         if (manifest.ProjectCount != manifest.Projects.Count)
         {
             throw new SchachtProArchiveException(
@@ -176,6 +185,8 @@ internal sealed class SchachtProArchiveReader : IDisposable
             }
         }
 
+        // Vollstaendig pruefen, bevor der Aufrufer irgendein Projekt oder Foto uebernimmt.
+        SchachtProArchiveIntegrity.Validate(_entries, required: manifest.FormatVersion >= 2, ct);
         return manifest;
     }
 
@@ -207,13 +218,13 @@ internal sealed class SchachtProArchiveReader : IDisposable
         if (string.IsNullOrWhiteSpace(rawPath))
             return null;
 
-        var normalized = rawPath.Replace('\\', '/').TrimStart('/');
-        if (!IsAllowedArchivePath(normalized))
+        if (!IsAllowedArchivePath(rawPath))
         {
             throw new SchachtProArchiveException(
                 "UNSAFE_ENTRY",
                 $"Unerlaubte Dateireferenz im Archiv: {rawPath}");
         }
+        var normalized = NormalizeArchivePath(rawPath);
 
         if (!normalized.StartsWith(requiredDir + "/", StringComparison.Ordinal))
         {
@@ -226,7 +237,7 @@ internal sealed class SchachtProArchiveReader : IDisposable
     }
 
     /// <summary>
-    /// Pfadregeln wie ProjectImporter.isAllowedArchivePath: nur manifest.json im Root
+    /// Pfadregeln wie ProjectImporter.isAllowedArchivePath: manifest.json und integrity.json im Root
     /// sowie Pfade unter projects/, photos/, logos/; absolute Pfade und '..'-/'.'-Segmente
     /// werden immer abgelehnt.
     /// </summary>
@@ -248,7 +259,7 @@ internal sealed class SchachtProArchiveReader : IDisposable
                 return false;
         }
 
-        if (string.Equals(normalized, "manifest.json", StringComparison.Ordinal))
+        if (normalized is "manifest.json" or "integrity.json")
             return true;
 
         foreach (var prefix in AllowedPathPrefixes)
@@ -258,6 +269,15 @@ internal sealed class SchachtProArchiveReader : IDisposable
         }
 
         return false;
+    }
+
+    // Gleiche Trennzeichen-Normalisierung wie ProjectImporter.normalizedArchivePath.
+    // Ordner bleiben als solche erkennbar; Pruefsummen beziehen sich nur auf Dateien.
+    internal static string NormalizeArchivePath(string rawName)
+    {
+        var unified = rawName.Replace('\\', '/');
+        var normalized = string.Join('/', unified.Split('/', StringSplitOptions.RemoveEmptyEntries));
+        return unified.EndsWith('/') ? normalized + "/" : normalized;
     }
 
     internal static bool IsValidExportId(string value)

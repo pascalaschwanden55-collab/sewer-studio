@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Application.Import;
@@ -121,6 +121,7 @@ public sealed class ServiceProviderRegistrationTests
         // 157 -> 158: ICodingSuggestionScanService fuehrt im Codiermodus den Vorabdurchlauf
         // (Bogen, dann Rohranfang/Rohrende) und setzt das Sitzungsgedaechtnis — der Player
         // kennt nur diesen Vertrag, keine Modellwahl.
+        // 168 -> 169: ISchachtProQrImportService liest SPQR1 aus Bildern.
         // 158 -> 159: ICodingSuggestionRegistry merkt den letzten Vorabdurchlauf je Haltung
         // (Sitzungsgedaechtnis fuer die Karte "KI-Vorabdurchlauf" in der Uebersicht, Nova-Etappe 2).
         // 159 -> 160: IGeoShopLeser liefert Original-XTF-TIDs und Leerfelder fuer die neue Vorschau.
@@ -128,8 +129,8 @@ public sealed class ServiceProviderRegistrationTests
         // 167 -> 168: ISchachtLageQuelle liefert Schachtpunkt und Leitungsrichtungen aus den
         // QGIS-Kopien fuer den Grundriss der Schachtgrafik (Stammkarte, 19.09.2026).
         Assert.True(
-            registrations.Count == 168,
-            $"Erwartet 168 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 169,
+            $"Erwartet 169 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(services.XtfLieferungen,

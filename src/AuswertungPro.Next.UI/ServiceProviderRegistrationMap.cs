@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
@@ -165,6 +165,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IIbakImportService)] = services.IbakImport,
             [typeof(IKinsImportService)] = services.KinsImport,
             [typeof(ISchachtProImportService)] = services.SchachtProImport,
+            [typeof(ISchachtProQrImportService)] = services.SchachtProQrImport,
             [typeof(IKinsDvdTextEnricher)] = services.KinsDvdTextEnrichment,
             [typeof(IKinsDbfWhitelistEnricher)] = services.KinsDbfWhitelistEnrichment,
             [typeof(IKinsGesamtprotokollLocator)] = services.KinsGesamtprotokolle,

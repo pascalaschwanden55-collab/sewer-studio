@@ -166,7 +166,7 @@ public static class ImportRunWorkflowController
 
             var stats = result.Value;
             actions.SetSummaryText($"{request.Label} Import{(request.DryRun ? " (Vorschau)" : "")}:\n" +
-                                   $"  Haltungen: {stats.Found} gefunden, {stats.Created} neu, {stats.Updated} aktualisiert\n" +
+                                   $"  {(request.Label.StartsWith("SchachtPro", StringComparison.Ordinal) ? "Schächte" : "Haltungen")}: {stats.Found} gefunden, {stats.Created} neu, {stats.Updated} aktualisiert\n" +
                                    $"  Fehler: {stats.Errors}, Unklar: {stats.Uncertain}");
             actions.SetDetailsText(string.Join("\n", stats.Messages.Take(80)));
 

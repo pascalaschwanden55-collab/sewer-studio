@@ -25,6 +25,7 @@ internal sealed class ImportManualWorkflowController
     private readonly IIbakImportService _ibakImport;
     private readonly IKinsImportService _kinsImport;
     private readonly ISchachtProImportService _schachtProImport;
+    private readonly ISchachtProQrImportService? _schachtProQrImport;
     private readonly IStoredImportFileService _storedImportFiles;
     private readonly IImportFileStagingService _fileStaging;
     private readonly IImportMediaDistributionService _mediaDistribution;
@@ -41,7 +42,8 @@ internal sealed class ImportManualWorkflowController
         IStoredImportFileService storedImportFiles,
         IImportFileStagingService fileStaging,
         IImportMediaDistributionService mediaDistribution,
-        string? pdfToTextPath)
+        string? pdfToTextPath,
+        ISchachtProQrImportService? schachtProQrImport = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _pdfImport = pdfImport ?? throw new ArgumentNullException(nameof(pdfImport));
@@ -54,6 +56,7 @@ internal sealed class ImportManualWorkflowController
         _fileStaging = fileStaging ?? throw new ArgumentNullException(nameof(fileStaging));
         _mediaDistribution = mediaDistribution ?? throw new ArgumentNullException(nameof(mediaDistribution));
         _pdfToTextPath = pdfToTextPath;
+        _schachtProQrImport = schachtProQrImport;
     }
 
     internal Task ImportPdfAsync(ImportManualWorkflowContext context)
@@ -146,10 +149,21 @@ internal sealed class ImportManualWorkflowController
             context);
     }
 
+    internal Task ImportSchachtProQrAsync(ImportManualWorkflowContext context)
+    {
+        var paths = _dialogs.OpenFiles("SchachtPro-QR aus Bild importieren", "QR-Bilder (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg");
+        if (paths.Length == 0) return Task.CompletedTask;
+        if (_schachtProQrImport is null) throw new InvalidOperationException("QR-Importdienst fehlt.");
+        return RunAsync("SchachtPro-QR", paths,
+            (source, project, runContext) => ImportSchachtProBatch(source, project, runContext, qr: true),
+            (source, project, runContext) => PostImportFilesAsync(source, project, runContext,
+                context, "SchachtPro-QR", "QR-Bilder"), context);
+    }
+
     private Result<ImportStats> ImportSchachtProBatch(
         string[] paths,
         Project project,
-        ImportRunContext runContext)
+        ImportRunContext runContext, bool qr = false)
     {
         var totalFound = 0;
         var totalCreated = 0;
@@ -163,13 +177,15 @@ internal sealed class ImportManualWorkflowController
             runContext.CancellationToken.ThrowIfCancellationRequested();
             var path = paths[index];
             runContext.Progress?.Report(new ImportProgress(
-                "SchachtPro-Archiv lesen",
+                qr ? "SchachtPro-QR lesen" : "SchachtPro-Archiv lesen",
                 index + 1,
                 paths.Length,
-                $"Archiv {index + 1}/{paths.Length}: {Path.GetFileName(path)}",
+                $"Datei {index + 1}/{paths.Length}: {Path.GetFileName(path)}",
                 Path.GetFileName(path)));
 
-            var result = _schachtProImport.ImportSchachtProArchive(path, project, runContext);
+            var result = qr
+                ? _schachtProQrImport!.ImportImage(path, project, runContext)
+                : _schachtProImport.ImportSchachtProArchive(path, project, runContext);
             if (!result.Ok || result.Value is null)
             {
                 totalErrors++;
@@ -185,6 +201,9 @@ internal sealed class ImportManualWorkflowController
             foreach (var message in result.Value.Messages)
                 messages.Add($"{Path.GetFileName(path)}: {message}");
         }
+
+        if (qr && totalFound == 0)
+            return Result<ImportStats>.Fail("SPQR_NO_IMPORT", string.Join(Environment.NewLine, messages));
 
         return Result<ImportStats>.Success(new ImportStats(
             totalFound,

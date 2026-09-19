@@ -235,8 +235,8 @@ public sealed partial class SchachtProImportServiceTests
     // ---------------------------------------------------------------
 
     [Theory]
-    [InlineData(2, 21)]
-    [InlineData(1, 22)]
+    [InlineData(4, 23)]
+    [InlineData(1, 24)]
     public void Zu_Neue_Archivversion_Wird_Als_Unsupported_Abgewiesen(int formatVersion, int dbSchemaVersion)
     {
         using var temp = new TempDir();
