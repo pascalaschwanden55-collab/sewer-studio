@@ -1,5 +1,215 @@
 # SewerStudio — AI Sewer Inspection System
 
+## Auditkorrekturen: Restbefunde 11 bis 18 (19.09.2026)
+
+Damit sind alle 18 Befunde des Audits vom 18.09.2026 bearbeitet.
+Abnahme: `docs/audits/2026-09-18-restbefunde/BEHEBUNG.md`.
+
+- **Ein Retrieval entsteht nur ueber `GuardedRetrievalFactory`.** Drei Stellen bauten eine
+  eigene Suche, aber nur der `ServiceProvider` reichte die Sperrliste der reservierten
+  Pruefhaltungen weiter; Vollprotokoll-Erstellung und Selbsttraining nicht. Ein
+  Transportweg ueber die Einstellungen haette dieselbe Falle: Vergisst ein Aufrufer ihn,
+  fehlt der Schutz wieder still. Deshalb setzt die Anwendung den Pruefdaten-Root EINMAL
+  beim Start (`ConfigureDefaultEvalSetRoot`), und ein Waechter verbietet
+  `new RetrievalService(` sonst ueberall im Produktivcode. Nie einen vierten Einstieg
+  daneben bauen.
+- **Ein verspaetetes Ladeergebnis ersetzt keinen begonnenen Entwurf.**
+  `ShellViewModel.ProjectGeneration` zaehlt jeden Projektwechsel; die Uebernahme prueft
+  den Stand vom Ladebeginn. Zusaetzlich sperrt `ProjektLadeGuard` waehrend des Ladens
+  Neu, Oeffnen und Projektwechsel ueber denselben `IShellOperationGuard`-Weg wie Import
+  und Export. Der Dirty-Guard laeuft VOR dem Laden und gilt danach nicht mehr — genau das
+  war die Luecke.
+- **Beim Umbenennen wandern ALLE Medienverweise mit.** Bisher nur `FotoPaths`; jetzt auch
+  `OriginalFotoPaths` und `ProtocolRevision.ImportVideoPaths`. **`OriginalFotoPaths` wird
+  dabei nicht dedupliziert** — die Liste gehoert Index fuer Index zu `FotoPaths`, und ein
+  Entfernen wuerde Anzeigebild und Originalquelle gegeneinander verschieben.
+- **Einstellungen werden in ihrer Reihenfolge geschrieben.** `SettingsWriteOrder` vergibt
+  je Auftrag eine Nummer und schreibt im selben kritischen Abschnitt, in dem sie
+  entscheidet. Eine blosse Vorabfrage genuegt NICHT: Zwischen Freigabe und Schreiben
+  koennen sich zwei Auftraege erneut ueberholen — genau der Fehler, um den es geht.
+  Vorher entnahmen `SaveImmediate` und `FlushPendingSave` ihren Auftrag unter Sperre,
+  schrieben ihn aber ausserhalb; der langsamere aeltere gewann.
+- **Ein verschluckter KB-Loeschfehler ist kein Erfolg.** `TryDeindex` liefert ein
+  Ergebnis statt eines leeren `catch`. Die persoenliche Entscheidung bleibt gespeichert —
+  sie soll nicht an einer gesperrten KB scheitern —, aber das Training Center meldet
+  sichtbar, dass der Eintrag weiter als Vergleichsfall dienen kann.
+- **Das Retrieval verwendet nur Vektoren des AKTUELLEN Embedding-Modells**, und der
+  Zwischenspeicher ist an das Modell gebunden. Alte und neue Vektoren sind gleich lang,
+  stammen aber aus verschiedenen Bedeutungsraeumen: Im Nachweis kam ein fremder Vektor
+  mit Score 1,0 als perfekter Treffer zurueck. Lieber kein Vergleichswissen als falsches.
+  Der Filter ist fail-closed — nach einem Modellwechsel braucht es einen KB-Neuaufbau.
+- **`Content-Length` zaehlt Bytes, `ReadAsync` liefert Zeichen.** LiveControl hatte eine
+  eigene Rumpfschleife gegen die Bytezahl und wartete bei Umlauten auf Zeichen, die es
+  nie gab. Der gemeinsame `BoundedHttpRequestReader.ReadBodyAsync` rechnet richtig; das
+  Duplikat ist geloescht. Nie wieder eine zweite Rumpfschleife daneben bauen.
+- `ServiceProvider.cs` lag exakt an der 1000-Zeilen-Grenze. Der Aufbau der
+  Wissensdatenbank liegt deshalb jetzt unveraendert in `ServiceProvider.KnowledgeBase.cs`
+  (13. Teildatei); die Hauptdatei ist bei 927 Zeilen.
+
+## Auditkorrektur: Portabilitaet ordnet keine fremden PDFs zusammen (18.09.2026)
+
+- **Der Inhaltsvergleich gilt fuer alle Medientypen, nicht nur fuer Fotos.** Die Bedingung
+  in `ProjectPortabilityService.ResolvePortable` hing an `copyExternalInto != null`.
+  Video (`Link`), `PDF_Path` und `PDF_All` rufen aber mit `null` auf — bei ihnen entfiel
+  der Vergleich ganz, und eine gleichnamige fremde Projektdatei wurde ungeprueft
+  uebernommen. Weicht der Inhalt ab, wird jetzt nicht umgebogen: Fotos werden wie bisher
+  ins Projekt kopiert, die uebrigen Verweise bleiben stehen und heissen `nicht aufgeloest`.
+- **Eine Projektdatei gehoert je Haltung genau einem Quellverweis.**
+  `PortableTargetAssignments` (Infrastructure/Import) haelt das fest. Ohne diese Sperre
+  landeten zwei verschiedene externe PDFs auf derselben lokalen Datei, weil
+  `PickPreferred` ohne Namenstreffer auf die Datei mit dem KUERZESTEN Namen zurueckfaellt.
+  Derselbe Verweis darf dieselbe Datei mehrfach beanspruchen — `PDF_Path` und ein Eintrag
+  in `PDF_All` nennen oft dasselbe Hauptprotokoll.
+- **Der Namensrueckfall bleibt trotzdem erlaubt, wenn er eindeutig ist.** Ein einzelner
+  Verweis auf eine verschwundene Quelle muss weiterhin auf die umbenannte Projektkopie
+  zeigen: Die Verteilung schreibt `H_22149-3.01.mpg` als `20260616_22149-3.01.mpg`. Eine
+  Regel «nur bei Namensgleichheit» haette genau diesen Weg zerstoert. Waechter ist der
+  bestehende `MakePortable_AbsoluteExternalVideoLink_RelinksToHoldingCopyRelative`.
+  Fehlen zwei Quellen bei nur einer Kandidatin, erhaelt sie der in der gespeicherten
+  Reihenfolge erste Verweis; der zweite bleibt extern und wird gemeldet.
+- **`PDF_All` wird ueber `StoredFileListParser` gelesen**, nicht mehr nur mit Semikolon
+  zerlegt — eine gespeicherte JSON-Liste blieb sonst als ein einziger unbrauchbarer
+  «Pfad» stehen. Das gespeicherte Format bleibt erhalten: Was als JSON kam, geht als JSON
+  zurueck, damit ein Semikolon im Dateinamen nichts zerreisst.
+- Tests: `ProjectPortabilityPdfIdentityTests` (4) neben dem bestehenden
+  `ProjectPortabilityServiceTests`. Sabotageprobe 18.09.2026: Inhaltsvergleich wieder an
+  `copyExternalInto` gebunden und `TryClaim` entfernt -> beide Zuordnungstests rot.
+  Abnahme und Grenzen: `docs/audits/2026-09-18-portabilitaet/BEHEBUNG.md`.
+
+## Auditkorrekturen: Videoauswertung meldet ihre Luecken (18.09.2026)
+
+Sieben Befunde mit derselben Wurzel: Ein Teillauf sah aus wie ein vollstaendiger.
+
+- **Ein unvollstaendiger Lauf muss bis ins Gesamtergebnis sichtbar bleiben.**
+  `MultiModelRunCompleteness` (Infrastructure/Ai/Pipeline) sammelt die verlorenen Schritte
+  eines einzelnen Laufs: vorzeitiges Frame-Ende, technische SAM-Verluste und Qwen-Fehler.
+  `CanCompleteJournal` gibt den Checkpoint nur bei wirklich vollstaendiger Extraktion und
+  null Fehlerframes frei — ein abgeschnittener Lauf darf nie als abgeschlossenes
+  Wiederaufnahme-Journal enden, sonst setzt der naechste Lauf hinter dem Abbruch auf.
+  `Incomplete` heisst seither nicht mehr nur «>10 % Fehlerframes», sondern «nicht
+  vollstaendig ausgewertet»; der Grund steht in `Warnings` beziehungsweise `DegradedReason`.
+- **Ein als Wert zurueckgegebener Modellfehler ist kein Erfolg.** Qwen/Ollama liefert bei
+  HTTP-Fehler oder kaputtem JSON ein Fehlerergebnis statt einer Ausnahme. Der Aufrufer
+  wertet jetzt `Error`/`Outcome` VOR der Erfolgsmeldung aus. Ein gueltiges leeres Ergebnis
+  bleibt ein Erfolg, und ein Nutzerabbruch wird weitergereicht statt als Modellfehler
+  journalisiert.
+- **Eine bewusst verworfene SAM-Maske ist kein technischer Fehler.**
+  `MultiModelRunCompleteness.RecordSam` trennt beides: Nur was ueber die vom Modell
+  gemeldeten `LowScoreBoxes` hinaus fehlt, einen `Error` traegt oder `Degraded` ohne
+  fehlende Maske meldet, zaehlt als Fehlerframe. Ohne diese Trennung wuerde jede
+  absichtliche Score-Verwerfung einen Frame zum Wiederholungsfall machen.
+- **Die Darstellung darf die fachliche Auswahl nicht begrenzen.** `PipelineResultPresenter`
+  hatte `Take(250)`; Befund 251 war nicht auswaehlbar und wurde beim Uebernehmen aus
+  `Current` UND `Original` entfernt — ein stiller Datenverlust. Die Kappung ist weg.
+  Nie wieder eine Anzeigegrenze vor die Uebernahmeliste setzen.
+- **Der Rohrdurchmesser gehoert zum Auftrag.** `PipelinePipeDiameterPolicy`
+  (Application/Ai) liest den Haltungs-DN, gibt ihm Vorrang vor der globalen Vorgabe und
+  benennt die Grenzen: fehlender DN heisst keine Millimeterwerte, eine abweichende globale
+  Vorgabe wird genannt statt still verwendet, und die 70-%-Bildbreitenannahme wird als
+  Schaetzung ausgewiesen. `PipelineRequest.PipeDiameterMm` und `PipelineConfig.PipeDiameterMm`
+  sind additiv. Vorher rechnete die Stapelanalyse jede Haltung mit DN 300 — aus 94 mm
+  wurden 47 mm und aus Stufe 3 die Stufe 2.
+- **Zwischen zwei Bildern wird raeumlich zugeordnet, nie nach Listenplatz.**
+  `TemporalFindingDeduplicator` merkt je aktivem Befund die letzte brauchbare Box
+  (`LastBox`) und ordnet gleichcodierte Treffer ueber dieselbe IoU-Schwelle zu, die schon
+  innerhalb eines Bildes trennt. Ohne Geometrie wird nur der eindeutige Einzelfall
+  fortgesetzt — mehrere aktive Schaeden duerfen NICHT nach Reihenfolge verteilt werden.
+  Vorher uebernahm bei vertauschter Modellreihenfolge ein Befund Ausdehnung und Stufe des
+  anderen (20 %/Stufe 1 wurde zu 80 %/Stufe 4), ohne dass sich am Bild etwas geaendert hatte.
+- **Eine spaete Fortschrittsmeldung darf den Abschluss nicht ueberschreiben.**
+  `PipelineProgressMapper` bricht bei `IsDone` ab; `PipelineResultPresenter.ApplyCompletion`
+  setzt Warnungen, Phase («Unvollstaendig» / «Fertig mit Hinweisen» / «Fertig») und
+  Statustext gemeinsam. Ein neuer, gesunder Lauf raeumt alte Warnungen weg.
+- Tests: `MultiModelCompletionFailureTests` (9, mit echtem ffmpeg und echtem Ollama-Client
+  hinter kuenstlichem HTTP-Handler), `TemporalFindingDeduplicatorContinuityTests` (7),
+  `VideoAnalysisPipeDiameterTests` (3), `PipelineCompletionSafetyTests` (4) und
+  `PipelineCompletionWindowTests` (2, echtes WPF-Fenster im Kindprozess).
+  Sabotageprobe 18.09.2026: `Take(250)` zurueckgebaut -> 4 Tests rot; Frame-Zuordnung
+  abgeschaltet -> 8 Tests rot.
+- Grenzen: Die Erkennungsqualitaet der Modelle ist unveraendert und weiterhin nicht
+  freigegeben. Der Rohrdurchmesser macht die Maskenmasse nachvollziehbar, nicht kalibriert.
+  Abnahme: `docs/audits/2026-09-18-videoauswertung/BEHEBUNG.md`.
+
+## Auditkorrekturen: Originalschutz und stabile Sicherungen (18.09.2026)
+
+- `HoldingRenamePathGuard` verwendet die vorhandene Schreibgrenze aus
+  `ProjectPathResolver`/`ProjectMutationPathPolicy`. Haltungs- und Fotobaum werden
+  gemeinsam vor der ersten Umbenennung geprueft; Projektwurzel, Vorfahren sowie
+  Datei-/Ordnerverknuepfungen sind eingeschlossen. Eine unsichere Stelle sperrt
+  den ganzen Rename. `HoldingFolderRenameTransaction` prueft zudem jeden Vorwaerts-
+  und Rueckwaertsschritt unmittelbar vor dem Move. Auch die nachgelagerte PDF-
+  Korrektur im `DataPageHoldingRenameController` prueft die Schreibgrenze erneut.
+- `BackupProjectTargetMapping` liest vorhandene Quell-Ziel-Zuordnungen aus dem
+  bisherigen Manifest erst nach Journal-Recovery und unter der Laufsperre.
+  `BackupPlanBuilder.Build` behaelt seinen bisherigen Aufruf und ergaenzt einen
+  Overload mit diesen Zuordnungen. Der normalisierte Quellpfad bindet das Ziel;
+  neue Quellen reservieren freie Namen statt alte Kopien zu verdraengen.
+  Weiterhin konfigurierte bekannte Kindquellen behalten ihre eigene Kopie auch
+  nach Aufnahme einer Elternquelle. Unklare Altzuordnungen sperren die Sicherung.
+  `ForManifest` erhaelt die Herkunft bekannter Restkopien entfernter Quellen,
+  etwa geschuetzter Altvideos, ohne diese Quellen erneut zu kopieren. Sicher
+  dateileere Ordner aus einem abgebrochenen Erstlauf erlauben einen neuen Versuch.
+- `DirectoryMirror` haelt normale Quelldateien mit `FileShare.Read` waehrend der
+  Kopie und Inhaltspruefung offen. Laenge/Zeit stammen vom selben Handle; Bytes
+  werden beim Kopieren gezaehlt. Vorhandene Schreiber fuehren zur Dateiwarnung
+  und erhalten die alte Kopie. Der Unveraendert-Vergleich verwendet denselben
+  Schutz; ein unlesbarer Vergleich zaehlt in der Platzschaetzung konservativ als
+  kopierbeduerftig. SQLite bleibt beim bestehenden Online-Schnappschuss.
+- Keine neuen Pakete, Dienstregistrierungen oder Projekt-/Manifestfelder.
+  Neue Verhaltenstests: `HoldingRenamePathSafetyTests`,
+  `BackupProjectIdentityTests`, `DirectoryMirrorStableSourceTests` sowie die
+  PDF-Linkfaelle in `DataPageHoldingRenameControllerTests`.
+  Der Verknuepfungswaechter zaehlt 92 statt 85 Tests.
+- Grenzen: Die managed Pfadpruefung verhindert keinen atomaren Austausch durch
+  einen zweiten Prozess zwischen Pruefung und Move. Ein fehlgeschlagener Rollback
+  bleibt sichtbar; es gibt weiterhin kein dauerhaftes Rename-Journal.
+  Eine normale Quelldatei bleibt fuer die Dauer von Kopie und Inhaltspruefung
+  gegen Schreibzugriffe gesperrt. Die Sicherung ist kein gemeinsamer Zeitpunkt
+  aller Projektdateien.
+  Andere Auditbefunde, insbesondere alte Originalfoto-/Revisionsvideopfade und
+  die Videoanalyse, sind nicht Teil dieses ersten Reparaturpakets.
+  Abnahme: `docs/audits/2026-09-18-dateischutz/BEHEBUNG.md`.
+
+## Dichtheitsverteilung: Zielordner, Seitenfehler, Behaelter (18.09.2026)
+
+Anlass: Acht KIT-PDFs, null Erfolge. Drei Ursachen, die nichts miteinander zu tun hatten.
+
+- **Die Verteilwurzel wird vor dem Lauf geprueft.** `VerteilzielPruefung`
+  (`Application/UseCases/Verteilung`, reine Regel) prueft den Laufwerks- beziehungsweise
+  Freigabestamm, NICHT den ganzen Pfad — ein fehlender Unterordner ist normal und wird
+  angelegt. Eine leere Wurzel heisst "nicht konfiguriert" und ist kein Fehler. Alle drei
+  Verteilwege (Haltung, Schacht, Dichtheit) rufen `VerteilzielErreichbar` vor dem Start.
+  Anlass: In den Einstellungen stand `I:\`, ein Laufwerk das es nicht mehr gab; jede Datei
+  meldete nur `Could not find a part of the path 'I:\...'`. `SchachtDistribution` stand
+  gleichzeitig auf dem ebenfalls fehlenden `F:\verteilt`.
+- **Ein Fehler auf EINER Seite beendet nicht mehr die ganze Datei.** Der Seitenrumpf liegt
+  jetzt in `HoldingFolderDistributor.VerteileDichtheitSeite`, der Aufrufer faengt je Seite.
+  Vorher lag der `catch` nur um das ganze PDF: Der erste nicht anlegbare Ordner verschluckte
+  alle weiteren Haltungen desselben Sammelberichts — bei drei KIT-Sammelberichten waren das
+  21 echte Haltungen hinter genau einem gemeldeten Fehler. Dasselbe Muster wie in Goeschenen,
+  nur eine Ebene hoeher.
+- **Eine Pegel-Dichtheitspruefung an einem Behaelter ist kein Haltungsprotokoll.**
+  `BehaelterPruefungParser` erkennt sie nur, wenn BEIDE Merkmale vorkommen: die Kopfzeile
+  `Pegel-Dichtheitspruefung` UND der Pruefgegenstand `Behaelter`. Die echten Haltungs-
+  Pruefberichte derselben Firma (`Kanal-Ueberdruck Luft`) tragen keines von beiden — an den
+  fuenf realen PDFs gemessen. Abgelegt wird das ganze Dokument in einem eigenen
+  Bauwerksordner nach Pruefobjekt (`RB2`) mit dem Kuerzel `BP` statt `DP`; die Referenzmessung
+  landet im selben Ordner, weil sie dasselbe Bauwerk nennt. Erkannt werden nur die bekannten
+  Kuerzel `RB`, `RUEB`/`RUB`, `RKB`, `SKB`, `PW` samt Nummer. **Ohne lesbare Bauwerkskennung
+  wird NICHTS abgelegt** und der Bericht sagt warum — lieber kein Ordner als ein geratener.
+- **Zwei Rauschquellen erfanden Haltungen.** Die Hersteller-Fusszeile
+  `© 2005-2025 MesSen Nord GmbH` sah aus wie das Schachtpaar `2005-2025`, und die Masstabelle
+  der Anlage (`Hohe oberer Schachtring [m] 0.000` / `0.100`) ergab `000-100`. Beide landeten
+  dank Katasterabgleich in `keine_Zuordnung` — der Schutz griff, der Ordnername blieb erfunden.
+  `ShaftCandidateScanner.IsNoiseLine` kennt jetzt Copyright-/Herstellermarken und
+  **Masseinheiten in eckigen Klammern**: Eine Schachtnummer traegt nie `[m]`. Wichtig war die
+  zweite Haelfte — `TryExtractFromShafts` hat seine Zeilenschleife bis dahin GAR NICHT durch
+  `IsNoiseLine` geschickt, auch nicht beim Blick auf die Folgezeile. Die Zeile
+  `Hohe oberer Schachtring [m]` traegt "oberer" und "Schacht" und galt deshalb als Schachtzeile.
+- Tests: `DichtheitBehaelterpruefungTests` (10, Textausschnitte woertlich aus dem PdfPig-Lauf
+  der echten Dateien), `DichtheitVerteilungRobustheitTests` (3, echte PDFs und echte Ordner),
+  `VerteilzielPruefungTests` (5) und der neue Fall in `ExportPageDistributionProjectGuardTests`.
+
 ## Statuskorrektur und erste Projektprüfung (16.09.2026)
 
 - `HaltungPruefstatus` verwendet die vorhandene persönliche Markierung
@@ -478,7 +688,7 @@ Temp-Ordner geleert; diese Befundfotos sind verloren.
   ueberspringt die bestehende Wiederherstellung ungueltige Sicherungen und sucht
   die naechste gueltige. `{}` und alte Version-1-Projekte bleiben lesbar.
 - Feste Nachweise: `ShaftRenameSafetyTests`, `ProjectNullRecoveryTests`,
-  `SchaechteRecordDetailsBuilderTests`. Der Junction-Bestandswaechter erwartet jetzt
+  `SchaechteRecordDetailsBuilderTests`. Der Junction-Bestandswaechter erwartete am 06.09.2026
   85 statt 84 echte Tests, weil ein neuer Schutzfall dazugekommen ist.
 - Grenzen: Kein dauerhaftes Transaktionsjournal gegen Stromausfall. Eine
   rueckgaengige Dateioperation kann selbst scheitern; dann wird der Fehler gemeldet.

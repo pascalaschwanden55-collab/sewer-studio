@@ -386,8 +386,16 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
     public void SetStatus(string text) => Subtitle = text;
 
+    /// <summary>
+    /// Zaehlt jeden Projektwechsel. Ein Ladevorgang merkt sich den Stand beim Start und
+    /// uebernimmt sein Ergebnis nur, wenn inzwischen kein anderes Projekt begonnen wurde
+    /// (Auditbefund 12).
+    /// </summary>
+    public long ProjectGeneration { get; private set; }
+
     public void ReplaceProject(Project p)
     {
+        ProjectGeneration++;
         _project = p;
         EnableCollectionSync(p);
         OnPropertyChanged(nameof(Project));
@@ -613,8 +621,18 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         if (!TryBeginOpen(path))
             return false;
 
-        var (res, recovery, importRecovery) = LoadOrRecover(path);
-        return ApplyLoadOutcome(path, res, recovery, importRecovery);
+        var startGeneration = ProjectGeneration;
+
+        // Die Sperre umfasst NUR das Laden. Die Uebernahme danach speichert unter Umstaenden
+        // automatisch (z.B. reparierte Fotoverweise) — das darf sie nicht blockieren.
+        (Result<Project> res, ProjectRecoveryResult? recovery, ImportRecoveryResult? importRecovery) outcome;
+        using (BeginProjectLoadOperation())
+        {
+            outcome = LoadOrRecover(path);
+        }
+
+        return ApplyLoadOutcome(
+            path, outcome.res, outcome.recovery, outcome.importRecovery, startGeneration);
     }
 
     /// <summary>
@@ -631,6 +649,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             Result<Project> res,
             ProjectRecoveryResult? recovery,
             ImportRecoveryResult? importRecovery) outcome;
+        var startGeneration = ProjectGeneration;
+        // Auditbefund 12: Waehrend des Ladens duerfen Neu/Oeffnen/Wechsel nicht laufen —
+        // sonst entsteht ein Entwurf, den dieses Ergebnis anschliessend ersetzen wuerde.
+        using (BeginProjectLoadOperation())
         using (Busy.Enter("Projekt wird geladen …"))
         {
             outcome = await Task.Run(() => LoadOrRecover(path));
@@ -640,7 +662,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             path,
             outcome.res,
             outcome.recovery,
-            outcome.importRecovery);
+            outcome.importRecovery,
+            startGeneration);
     }
 
     /// <summary>Vorab-Pruefungen + Dirty-Guard (schnell, UI-Thread). false = abbrechen.</summary>
@@ -717,12 +740,22 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         };
 
     /// <summary>Uebernahme des Ladeergebnisses (UI-Thread): Dialoge, Merkliste, ReplaceProject.</summary>
-    private bool ApplyLoadOutcome(
+    internal bool ApplyLoadOutcome(
         string path,
         Result<Project> res,
         ProjectRecoveryResult? recovery,
-        ImportRecoveryResult? importRecovery)
+        ImportRecoveryResult? importRecovery,
+        long startGeneration)
     {
+        // Waehrend eines langsamen Ladens kann der Benutzer ein neues Projekt begonnen
+        // haben. Dieses verspaetete Ergebnis darf den frischen Entwurf nicht ersetzen
+        // (Auditbefund 12) — der Dirty-Guard lief vor dem Laden und gilt nicht mehr.
+        if (startGeneration != ProjectGeneration)
+        {
+            SetStatus("Laden verworfen: Es wurde inzwischen ein anderes Projekt geöffnet.");
+            return false;
+        }
+
         Project loaded;
         if (res.Ok && res.Value is not null)
         {

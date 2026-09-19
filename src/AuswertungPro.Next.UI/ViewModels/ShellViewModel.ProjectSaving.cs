@@ -7,6 +7,41 @@ public sealed partial class ShellViewModel
     private readonly object _shellOperationGuardGate = new();
     private readonly HashSet<IShellOperationGuard> _shellOperationGuards = [];
     private IShellOperationGuard? _activeProjectOperationGuard;
+    // Auditbefund 12: Waehrend ein Projekt geladen wird, sind Neu/Oeffnen/Wechsel gesperrt.
+    private readonly ProjektLadeGuard _projektLadeGuard = new();
+
+    /// <summary>
+    /// Sperrt die Projektbefehle fuer die Dauer eines Ladevorgangs. Das Freigeben laeuft
+    /// ueber Dispose, damit auch ein Fehler die Sperre zuverlaessig loest.
+    /// </summary>
+    internal IDisposable BeginProjectLoadOperation()
+    {
+        RegisterShellOperationGuard(_projektLadeGuard);
+        _projektLadeGuard.Setze(true);
+        NotifyShellOperationCommands();
+        return new ProjektLadeSperre(this);
+    }
+
+    private void EndProjectLoadOperation()
+    {
+        _projektLadeGuard.Setze(false);
+        if (!_disposed)
+            NotifyShellOperationCommands();
+    }
+
+    private sealed class ProjektLadeSperre(ShellViewModel shell) : IDisposable
+    {
+        private bool _freigegeben;
+
+        public void Dispose()
+        {
+            if (_freigegeben)
+                return;
+
+            _freigegeben = true;
+            shell.EndProjectLoadOperation();
+        }
+    }
 
     internal void RegisterShellOperationGuard(IShellOperationGuard guard)
     {

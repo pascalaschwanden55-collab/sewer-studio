@@ -237,21 +237,15 @@ public sealed class LiveControlServer : IDisposable
             return null;
         }
 
-        var body = "";
-        if (contentLength > 0)
+        // Content-Length zaehlt BYTES, ReadAsync liefert ZEICHEN. Eine eigene Schleife
+        // gegen die Bytezahl wartete bei Umlauten auf Zeichen, die es nie gab
+        // (Auditbefund 18). Der gemeinsame Rumpfleser rechnet richtig.
+        var body = await begrenzt.ReadBodyAsync(contentLength, MaxBodyBytes, cancellationToken)
+            .ConfigureAwait(false);
+        if (body is null)
         {
-            var buffer = new char[contentLength];
-            var read = 0;
-            while (read < contentLength)
-            {
-                var count = await reader.ReadAsync(buffer.AsMemory(read, contentLength - read), cancellationToken)
-                    .ConfigureAwait(false);
-                if (count == 0)
-                    break;
-                read += count;
-            }
-
-            body = new string(buffer, 0, read);
+            _logger.LogWarning("Live-Control Request abgelehnt: Body zu gross ({Len} Bytes).", contentLength);
+            return null;
         }
 
         return new LiveHttpRequest(parts[0].ToUpperInvariant(), parts[1], body, token, qgisToken);

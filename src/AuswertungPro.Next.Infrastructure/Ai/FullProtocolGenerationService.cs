@@ -72,7 +72,9 @@ public sealed class FullProtocolGenerationService : IDisposable
                     cfg.OllamaNumCtx);
                 _ownedKbContext = new KnowledgeBaseContext();
                 var embedder = new EmbeddingService(httpClient, ollamaConfig);
-                _retrieval = new RetrievalService(_ownedKbContext, embedder);
+                // Immer ueber die geschuetzte Fabrik: Ohne Sperrliste koennten reservierte
+                // Pruefhaltungen als Vergleichswissen einfliessen (Auditbefund 11).
+                _retrieval = GuardedRetrievalFactory.Create(_ownedKbContext, embedder);
             }
             catch (Exception ex)
             {

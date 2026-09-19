@@ -510,14 +510,23 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     /// <summary>
     /// Entfernt ein Sample aus der Wissensdatenbank (Deindex), ohne Ollama zu benoetigen.
-    /// Fehler werden still geschluckt — die Status-Aenderung bleibt persistiert.
+    /// Die Status-Aenderung bleibt auch bei einem Fehler gespeichert — der Fehler wird
+    /// aber sichtbar gemeldet. Ein nicht entfernter Eintrag kann sonst weiter als
+    /// Vergleichswissen dienen, waehrend die Oberflaeche Vollzug meldet (Auditbefund 16).
     /// </summary>
     private void TryDeindexSample(string sampleId)
     {
-        TrainingKnowledgeBaseSampleDeindexer.TryDeindexWithDefaults(
+        var ergebnis = TrainingKnowledgeBaseSampleDeindexer.TryDeindexWithDefaults(
             sampleId,
             () => _kbHttpClient,
             value => _kbHttpClient = value);
+
+        if (!ergebnis.Removed)
+        {
+            StatusText = "Entscheidung gespeichert, aber der Eintrag konnte NICHT aus der "
+                + $"Wissensdatenbank entfernt werden ({ergebnis.Error}). Er kann weiterhin "
+                + "als Vergleichsfall dienen — bitte später erneut entfernen.";
+        }
     }
 
     [RelayCommand]

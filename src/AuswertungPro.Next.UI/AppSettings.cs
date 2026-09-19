@@ -37,6 +37,9 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         PropertyNameCaseInsensitive = true
     };
     private static readonly object SaveSync = new();
+    // Auditbefund 15: Verzoegerte und sofortige Speicherung duerfen sich nicht
+    // ueberholen. Die Regel entscheidet und schreibt im selben Abschnitt.
+    private static readonly SettingsWriteOrder WriteOrder = new();
     private static Timer? SaveDebounceTimer;
     private static PendingSettingsWrite? PendingWrite;
     private ISettingsFileStore _settingsFileStore = SettingsStore.CreateDefault();
@@ -533,6 +536,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         lock (SaveSync)
         {
             PendingWrite = new PendingSettingsWrite(
+                WriteOrder.Next(),
                 json,
                 EnableRestorePoints,
                 _settingsFileStore);
@@ -560,6 +564,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         LastVideoFolder = LastVideoSourceFolder;
         MigrateLegacyExcelExportRoot();
         var json = JsonSerializer.Serialize(this, JsonOptions);
+        var sequence = WriteOrder.Next();
 
         lock (SaveSync)
         {
@@ -568,7 +573,11 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
             SaveDebounceTimer = null;
         }
 
-        PersistSerializedState(json, EnableRestorePoints, _settingsFileStore);
+        // Ein bereits laufender, aelterer Schreibvorgang darf diesen Stand nicht
+        // ueberholen — und umgekehrt (Auditbefund 15).
+        var store = _settingsFileStore;
+        var restorePoints = EnableRestorePoints;
+        WriteOrder.Write(sequence, () => PersistSerializedState(json, restorePoints, store));
     }
 
     public static void FlushPendingSave()
@@ -585,10 +594,12 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         if (pending is null)
             return;
 
-        PersistSerializedState(
-            pending.Json,
-            pending.EnableRestorePoints,
-            pending.SettingsFileStore);
+        WriteOrder.Write(
+            pending.Sequence,
+            () => PersistSerializedState(
+                pending.Json,
+                pending.EnableRestorePoints,
+                pending.SettingsFileStore));
     }
 
     private static void MigrateLegacySettingsIfNeeded(
@@ -704,6 +715,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     }
 
     private sealed record PendingSettingsWrite(
+        long Sequence,
         string Json,
         bool EnableRestorePoints,
         ISettingsFileStore SettingsFileStore);
