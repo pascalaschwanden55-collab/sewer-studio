@@ -65,8 +65,10 @@ public sealed class SchachtgrafikSvgBuilderStammkarteTests
         foreach (var schaden in modell.Schaeden)
             Assert.Single(z.Marken, m => m.Tooltip == schaden.Tooltip);
 
-        // Marken: 5 Schaeden + 4 Kennungen im Schnitt + 4 Kennungen im Grundriss.
-        Assert.Equal(5 + 4 + 4, z.Marken.Count);
+        // Marken: 5 Schaeden + 4 Kennungen im Schnitt + 3 Kennungen im Grundriss (E4 hat keine
+        // Richtung und wird dort nicht gezeichnet — kein erfundener Winkel).
+        Assert.Equal(5 + 4 + 3, z.Marken.Count);
+        Assert.Equal(1, z.Marken.Count(m => m.Tooltip.StartsWith("E4 ", StringComparison.Ordinal)));
     }
 
     [Fact]
@@ -102,10 +104,17 @@ public sealed class SchachtgrafikSvgBuilderStammkarteTests
         Assert.True(rohre >= 4 + 1, $"4 Rohre, Auslaufpfeil und Nordpfeil erwartet, {rohre} Drehungen gefunden");
         Assert.Contains(">N</text>", mit.Svg, StringComparison.Ordinal);
         Assert.Contains("ohne Richtung: E4", mit.Svg, StringComparison.Ordinal);
+        // Bei 6 Uhr liegt kein Rohr (E2 bei 114 Grad, E3 bei 231 Grad): Die Stundenmarke steht.
+        Assert.Contains(">6</text>", mit.Svg, StringComparison.Ordinal);
 
         var ohne = Zeichnung(mitLage: false);
         Assert.DoesNotContain(">N</text>", ohne.Svg, StringComparison.Ordinal);
         Assert.Contains("Richtungen nicht erfasst: schematisch", ohne.Svg, StringComparison.Ordinal);
+        // Schematisch liegt der groesste Einlauf E2 bei 6 Uhr; die Stundenmarke weicht seiner
+        // Kennung (vorher las sich das als «Ë2»). 3 und 9 bleiben frei.
+        Assert.DoesNotContain(">6</text>", ohne.Svg, StringComparison.Ordinal);
+        Assert.Contains(">3</text>", ohne.Svg, StringComparison.Ordinal);
+        Assert.Contains(">9</text>", ohne.Svg, StringComparison.Ordinal);
     }
 
     [Fact]

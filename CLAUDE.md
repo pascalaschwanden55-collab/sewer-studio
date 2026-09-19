@@ -27,9 +27,12 @@ einer Spalte, keine Anschluesse. Vorschlag mit Zeichnungen:
   massstaeblich (110 bis 130 Einheiten je Meter), Anschluesse auf ihrer Tiefe (Hauptauslauf
   rechts, gegenueberliegender Einlauf links, uebrige als Kreise auf der Rueckwand nach Richtung),
   Deckel, Konus und Steigeisen SCHEMATISCH und so beschriftet; Grundriss mit Auslauf oben
-  (12 Uhr nach VSA), Rohre nach Azimut, Nordpfeil nur aus Koordinaten. Beschriftet wird mit
-  Kennungen (A1, E3) und Nummern, der Text steht in der Legende (`SchachtgrafikLegende`) und in
-  den Hinweisflaechen. Nichts wird erfunden: fehlende Tiefe = kein Massstab plus Hinweis,
+  (12 Uhr nach VSA), Rohre nach Azimut, Nordpfeil nur aus Koordinaten. Sind Richtungen
+  bekannt, bekommt ein Anschluss ohne Richtung KEINEN erfundenen Winkel: Er fehlt im Grundriss
+  und steht unten als «ohne Richtung». Die Stundenmarken 3/6/9 weichen einem Rohr an derselben
+  Stelle (dort steht schon dessen Kennung; «12» bleibt rechts neben dem Auslauf). Beschriftet
+  wird mit Kennungen (A1, E3) und Nummern, der Text steht in der Legende
+  (`SchachtgrafikLegende`) und in den Hinweisflaechen. Nichts wird erfunden: fehlende Tiefe = kein Massstab plus Hinweis,
   fehlende Richtung = «Richtung nicht erfasst», Anschluss ohne Haltung = «nicht im Projekt»,
   Bemerkung «Einlauf 3 ausgebrochen» = Schaden am Anschluss 3 (nur wenn es ihn gibt).
 - **Lage und Koten kommen von der Seite, nicht aus dem Control.** `ISchachtLageQuelle` /

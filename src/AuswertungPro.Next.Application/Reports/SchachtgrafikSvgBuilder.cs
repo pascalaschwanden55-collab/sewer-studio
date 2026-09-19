@@ -335,8 +335,7 @@ public static class SchachtgrafikSvgBuilder
                 kreise++;
                 var (innenLinks, innenRechts) = Innenbreite(cy);
                 cx = Math.Clamp(cx, innenLinks + r + 3, Math.Max(innenLinks + r + 3, innenRechts - r - 3));
-                var vorne = rel is > 30 and < 150;
-                sb.Append($"<circle cx='{Svg(cx)}' cy='{Svg(cy)}' r='{Svg(r)}' fill='{Papier}' stroke='{(vorne ? Hilfslinie : randfarbe)}' stroke-width='1.5'/>");
+                sb.Append($"<circle cx='{Svg(cx)}' cy='{Svg(cy)}' r='{Svg(r)}' fill='{Papier}' stroke='{randfarbe}' stroke-width='1.5'/>");
 
                 var rechts = cx + r + 22 <= _xR - 2;
                 Kennung(sb, marken, a, rechts ? cx + r + 3 : cx - r - 3, cy + 4, rechts ? "start" : "end", ohneTiefe);
@@ -411,14 +410,23 @@ public static class SchachtgrafikSvgBuilder
                 case SchachtBauteil.Rahmen:
                     return ("rahmen", Math.Max(12, _xL - 18), _y0 + 5);
                 case SchachtBauteil.Schachthals:
-                    return ("hals", _hatKonus ? CenterX : CenterX - 12, _hatKonus ? _y0 + 10 + _konusH * 0.35 : _yKonus + 14);
+                {
+                    // An der schraegen Seite entlang, damit ein hoher Anschluss (Kreis links im
+                    // Konus) und seine Kennung frei bleiben.
+                    var y = _hatKonus ? _y0 + 10 + _konusH * 0.3 : _yKonus + 14;
+                    return ("hals", Innenbreite(y).Rechts - 14, y);
+                }
                 case SchachtBauteil.Konus:
-                    return ("konus", _hatKonus ? CenterX - 12 : CenterX + 12, _hatKonus ? _y0 + 10 + _konusH * 0.75 : _yKonus + 14);
+                {
+                    var y = _hatKonus ? _y0 + 10 + _konusH * 0.72 : _yKonus + 14;
+                    return ("konus", Innenbreite(y).Rechts - 14, y);
+                }
                 case SchachtBauteil.Steigeisen:
                     return ("steig", _xL + 24, _yKonus + (_bankettY - _yKonus) * 0.62);
                 case SchachtBauteil.Anschluss:
+                    // Ueber der Kennung, nicht auf ihr: Die Marke sitzt eine Zeile hoeher.
                     if (s.AnschlussNr is { } nr && _kennungen.TryGetValue(nr, out var pos))
-                        return ("a" + nr, pos.X + 12, pos.Y - 12);
+                        return ("a" + nr, pos.X + 4, pos.Y - 20);
                     return ("anschluss", CenterX + _halb * 0.45, wandMitte - 10);
                 case SchachtBauteil.Bankett:
                     return rL - _xL < 20
@@ -477,13 +485,18 @@ public static class SchachtgrafikSvgBuilder
         {
             Schrift(sb, 12, _top + 14, "Grundriss · Auslauf oben (12 Uhr)", "start");
 
-            sb.Append($"<path d='{KreisPfad(_cx, _cy, _ring)}' fill='none' stroke='{Hilfslinie}' stroke-dasharray='4,4'/>");
-            Schrift(sb, _cx + 26, _cy - _ring + 12, "12", "start", SchriftKlein, TextLeise);
-            Schrift(sb, _cx + _ring + 5, _cy + 4, "3", "start", SchriftKlein, TextLeise);
-            Schrift(sb, _cx, _cy + _ring + 13, "6", "middle", SchriftKlein, TextLeise);
-            Schrift(sb, _cx - _ring - 5, _cy + 4, "9", "end", SchriftKlein, TextLeise);
-
             var winkel = Winkel();
+
+            sb.Append($"<path d='{KreisPfad(_cx, _cy, _ring)}' fill='none' stroke='{Hilfslinie}' stroke-dasharray='4,4'/>");
+            // «12» steht rechts neben dem Auslauf, der dort immer liegt. Die anderen Stundenmarken
+            // weichen einem Rohr an derselben Stelle: Dort steht schon dessen Kennung.
+            Schrift(sb, _cx + 26, _cy - _ring + 12, "12", "start", SchriftKlein, TextLeise);
+            if (StundeFrei(90d, winkel))
+                Schrift(sb, _cx + _ring + 5, _cy + 4, "3", "start", SchriftKlein, TextLeise);
+            if (StundeFrei(180d, winkel))
+                Schrift(sb, _cx, _cy + _ring + 13, "6", "middle", SchriftKlein, TextLeise);
+            if (StundeFrei(270d, winkel))
+                Schrift(sb, _cx - _ring - 5, _cy + 4, "9", "end", SchriftKlein, TextLeise);
 
             // Rohre zuerst, damit der Schachtkoerper ihre Enden ueberdeckt.
             foreach (var (a, theta, echt) in winkel)
@@ -570,6 +583,11 @@ public static class SchachtgrafikSvgBuilder
                     continue;
                 }
 
+                // Sind Richtungen bekannt, bekommt ein Anschluss ohne Richtung KEINEN erfundenen
+                // Winkel: Er fehlt im Grundriss und steht unten als «ohne Richtung».
+                if (_m.HatRichtungen)
+                    continue;
+
                 if (ReferenceEquals(a, haupt))
                 {
                     ergebnis.Add((a, 0d, false));
@@ -591,6 +609,10 @@ public static class SchachtgrafikSvgBuilder
 
             return ergebnis;
         }
+
+        /// <summary>Wahr, wenn kein gezeichnetes Rohr naeher als 20 Grad an dieser Stundenmarke liegt.</summary>
+        private static bool StundeFrei(double stunde, List<(SchachtgrafikAnschluss Anschluss, double Theta, bool Echt)> winkel)
+            => winkel.All(w => Math.Abs(((w.Theta - stunde) % 360d + 540d) % 360d - 180d) > 20d);
 
         private double Radius(double theta)
         {
