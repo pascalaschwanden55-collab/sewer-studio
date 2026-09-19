@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Threading;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Diagnostics;
@@ -15,6 +16,33 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class ExportPageDistributionProjectGuardTests
 {
+    [Fact]
+    public async Task Fehlendes_ziellaufwerk_startet_die_verteilung_gar_nicht()
+    {
+        // 18.09.2026: Der gespeicherte Verteilordner zeigte auf "I:\\", ein Laufwerk das es
+        // nicht mehr gab. Der Lauf startete trotzdem und meldete je Datei nur einen Pfadfehler.
+        var gestartet = false;
+        using var harness = new Harness(new ShaftDistributionFake
+        {
+            Run = _ =>
+            {
+                gestartet = true;
+                return EmptyResult();
+            }
+        });
+
+        var freierBuchstabe = "ZYXWVU"
+            .Select(c => c + ":\\")
+            .First(wurzel => !Directory.Exists(wurzel));
+        harness.Settings.SchachtDistribution.Root = freierBuchstabe;
+
+        await harness.ViewModel.DistributeShaftsNormalCommand.ExecuteAsync(null);
+
+        Assert.False(gestartet, "Die Verteilung darf ohne erreichbares Ziel nicht starten.");
+        Assert.Contains("nicht erreichbar", harness.ViewModel.LastResult, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(freierBuchstabe, harness.ViewModel.LastResult);
+    }
+
     [Fact]
     public async Task Laufende_verteilung_sperrt_seiten_und_projektwechsel()
     {

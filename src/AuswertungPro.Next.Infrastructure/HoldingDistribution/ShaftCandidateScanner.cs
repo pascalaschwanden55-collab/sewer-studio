@@ -107,8 +107,21 @@ internal static class ShaftCandidateScanner
             || low.Contains("software") || low.Contains("sensortemp") || low.Contains('°')
             || low.Contains("strasse") || low.Contains("+41") || low.Contains("(0)41")
             || low.Contains("prufdruck") || low.Contains("prüfdruck")
-            || low.Contains("prufzeit") || low.Contains("prüfzeit") || low.Contains("beruhigung");
+            || low.Contains("prufzeit") || low.Contains("prüfzeit") || low.Contains("beruhigung")
+            // Hersteller-/Copyright-Fusszeile: "© 2005-2025 MesSen Nord GmbH" sah wie das
+            // Schachtpaar "2005-2025" aus (KIT-Pruefbericht Beckenmessung, 18.09.2026).
+            || low.Contains('©') || low.Contains("(c)") || low.Contains("copyright")
+            || low.Contains("messen nord")
+            // Masszeile einer Bauteiltabelle: "Hohe oberer Schachtring [m] 0.000" ergab
+            // frueher die erfundene Haltung "000-100". Eine Schachtnummer traegt nie
+            // eine Masseinheit in eckigen Klammern.
+            || MasseinheitRegex.IsMatch(line);
     }
+
+    /// <summary>Masseinheit in eckigen Klammern, wie sie nur in Bauteil-/Messtabellen steht.</summary>
+    private static readonly Regex MasseinheitRegex = new(
+        @"\[\s*(?:mm|cm|dm|km|m|m2|m3|m²|m³|l|kg|h|min|s)\s*\]",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>
     /// Extrahiert die Haltungsnummer aus "Haltungsinspektion"- oder "Haltungsbilder"-Kopfzeilen.
@@ -197,6 +210,12 @@ internal static class ShaftCandidateScanner
         for (var i = 0; i < lines.Length; i++)
         {
             var line = lines[i];
+
+            // Rauschzeilen sind keine Schachtzeilen. "Hohe oberer Schachtring [m] 0.000"
+            // traegt zwar "oberer" und "Schacht", meint aber ein Bauteilmass (18.09.2026).
+            if (IsNoiseLine(line))
+                continue;
+
             bool isObererPunkt = line.Contains("Oberer", StringComparison.OrdinalIgnoreCase) &&
                 line.Contains("Punkt", StringComparison.OrdinalIgnoreCase);
             bool isUntererPunkt = line.Contains("Unterer", StringComparison.OrdinalIgnoreCase) &&
@@ -236,7 +255,7 @@ internal static class ShaftCandidateScanner
                 var m = pointRx.Match(line);
                 if (m.Success)
                     oben = m.Groups[1].Value;
-                else if (i + 1 < lines.Length)
+                else if (i + 1 < lines.Length && !IsNoiseLine(lines[i + 1]))
                 {
                     var nextM = pointRx.Match(lines[i + 1]);
                     if (nextM.Success)
@@ -249,7 +268,7 @@ internal static class ShaftCandidateScanner
                 var m = pointRx.Match(line);
                 if (m.Success)
                     unten = m.Groups[1].Value;
-                else if (i + 1 < lines.Length)
+                else if (i + 1 < lines.Length && !IsNoiseLine(lines[i + 1]))
                 {
                     var nextM = pointRx.Match(lines[i + 1]);
                     if (nextM.Success)

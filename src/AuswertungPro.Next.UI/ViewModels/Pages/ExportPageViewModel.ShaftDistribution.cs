@@ -44,6 +44,8 @@ public sealed partial class ExportPageViewModel
             ?? ResolveDistributionSubfolder(ProjectStructure.SchaechteVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder))
             return;
+        if (!VerteilzielErreichbar(destFolder))
+            return;
 
         var directoryConfig = SnapshotDistributionTree(_settings.SchachtDistribution);
         var projectContext = new ProjectOperationContext(

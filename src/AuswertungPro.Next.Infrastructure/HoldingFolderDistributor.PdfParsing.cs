@@ -382,7 +382,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static ParsedPdf ParsePdfWithOcrFallback(IReadOnlyList<DistributionPdfPage> pages)
+    internal static ParsedPdf ParsePdfWithOcrFallback(IReadOnlyList<DistributionPdfPage> pages)
     {
         var pdfText = string.Join("\n\n", pages.Select(p => p.Text));
         var parsed = ParsePdf(pdfText);
@@ -760,7 +760,7 @@ public static partial class HoldingFolderDistributor
         => HoldingDistribution.ShaftCandidateScanner.FindNextToken(lines, startIndex, pattern);
 
 
-    private static void WritePdfPages(string sourcePdfPath, IReadOnlyList<int> pages, string destPdfPath)
+    internal static void WritePdfPages(string sourcePdfPath, IReadOnlyList<int> pages, string destPdfPath)
     {
         PdfImportSafetyPolicy.ThrowIfFileTooLarge(sourcePdfPath);
         using var doc = PdfDocument.Open(sourcePdfPath);

@@ -12,6 +12,7 @@ using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Map;
 using AuswertungPro.Next.Application.UseCases.Import;
+using AuswertungPro.Next.Application.UseCases.Verteilung;
 using AuswertungPro.Next.Application.UseCases.Xtf;
 using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
@@ -512,6 +513,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         var destFolder = ResolveConfiguredDistributionRoot(_settings.HaltungDistribution)
             ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
+        if (!VerteilzielErreichbar(destFolder)) return;
         var directoryConfig = SnapshotDistributionTree(_settings.HaltungDistribution);
         var projectContext = new ProjectOperationContext(
             _shell.Project,
@@ -653,6 +655,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         var destFolder = ResolveConfiguredDistributionRoot(_settings.DichtheitDistribution)
             ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
+        if (!VerteilzielErreichbar(destFolder)) return;
         var directoryConfig = SnapshotDistributionTree(_settings.DichtheitDistribution);
         var projectContext = new ProjectOperationContext(
             _shell.Project,
@@ -806,6 +809,23 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
     /// </summary>
     private static string? ResolveConfiguredDistributionRoot(DistributionTargetConfig cfg)
         => string.IsNullOrWhiteSpace(cfg.Root) ? null : cfg.Root;
+
+    /// <summary>
+    /// Prueft die Verteilwurzel, BEVOR der Lauf startet. Fehlt das Laufwerk, meldete frueher
+    /// jede einzelne Datei nur "Could not find a part of the path" (18.09.2026, acht PDFs).
+    /// true = weitermachen.
+    /// </summary>
+    private bool VerteilzielErreichbar(string? wurzel)
+    {
+        var pruefung = VerteilzielPruefung.Pruefe(wurzel, Directory.Exists);
+        if (pruefung.Erreichbar)
+            return true;
+
+        LastResult = pruefung.Meldung!;
+        _shell.SetStatus("Verteilordner nicht erreichbar");
+        _dialogs.Warn(pruefung.Meldung!, "Verteilordner nicht erreichbar");
+        return false;
+    }
 
     /// <summary>
     /// Excel-Zielpfad aus dem gemeinsamen Zielordner und dem festen Dateinamen; legt den Zielordner an.
