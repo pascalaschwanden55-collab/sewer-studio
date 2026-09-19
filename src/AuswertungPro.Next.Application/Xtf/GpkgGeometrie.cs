@@ -23,17 +23,54 @@ namespace AuswertungPro.Next.Application.Xtf;
 /// </summary>
 public static class GpkgGeometrie
 {
+    private const int WkbPoint = 1;
     private const int WkbLineString = 2;
     private const int WkbMultiLineString = 5;
 
     /// <summary>Die Punkte des Linienzugs, oder <c>null</c>, wenn der Blob nicht passt.</summary>
     public static IReadOnlyList<XtfPunkt>? Linie(byte[]? blob)
     {
+        if (DatenStart(blob) is not { } stelle)
+            return null;
+
+        var punkte = new List<XtfPunkt>();
+        return LiesWkb(blob!, ref stelle, punkte, tiefe: 0) ? punkte : null;
+    }
+
+    /// <summary>
+    /// Der Punkt eines <c>Point</c>-Blobs (auch mit Z/M-Anteil), oder <c>null</c>, wenn der Blob
+    /// keine Punktgeometrie ist. Gebraucht fuer die Schachtpunkte der QGIS-Kopie.
+    /// </summary>
+    public static XtfPunkt? Punkt(byte[]? blob)
+    {
+        if (DatenStart(blob) is not { } stelle)
+            return null;
+
+        var b = blob!;
+        if (stelle + 5 > b.Length)
+            return null;
+
+        var little = b[stelle] == 1;
+        stelle++;
+        var typ = LiesUInt32(b, ref stelle, little);
+        if (typ is null || typ.Value % 1000 != WkbPoint || stelle + 16 > b.Length)
+            return null;
+
+        var ost = LiesDouble(b, ref stelle, little);
+        var nord = LiesDouble(b, ref stelle, little);
+        return new XtfPunkt(ost, nord);
+    }
+
+    /// <summary>
+    /// Die Stelle, an der hinter dem GeoPackage-Kopf das WKB beginnt — oder <c>null</c>, wenn
+    /// Magic oder Envelope-Kennzeichen nicht passen.
+    /// </summary>
+    private static int? DatenStart(byte[]? blob)
+    {
         if (blob is null || blob.Length < 8 || blob[0] != (byte)'G' || blob[1] != (byte)'P')
             return null;
 
         var flags = blob[3];
-        var kopfIstLittle = (flags & 0x01) != 0;
         var envelopeArt = (flags >> 1) & 0x07;
 
         var envelopeBytes = envelopeArt switch
@@ -48,12 +85,9 @@ public static class GpkgGeometrie
         if (envelopeBytes < 0)
             return null;
 
-        // Kopf: 2 Magic + 1 Version + 1 Flags + 4 srs_id
-        var stelle = 8 + envelopeBytes;
-        _ = kopfIstLittle;
-
-        var punkte = new List<XtfPunkt>();
-        return LiesWkb(blob, ref stelle, punkte, tiefe: 0) ? punkte : null;
+        // Kopf: 2 Magic + 1 Version + 1 Flags + 4 srs_id. Die Byte-Reihenfolge des Kopfs
+        // (Flag-Bit 0) betrifft nur srs_id und Envelope, die hier nicht gelesen werden.
+        return 8 + envelopeBytes;
     }
 
     private static bool LiesWkb(byte[] b, ref int stelle, List<XtfPunkt> punkte, int tiefe)
