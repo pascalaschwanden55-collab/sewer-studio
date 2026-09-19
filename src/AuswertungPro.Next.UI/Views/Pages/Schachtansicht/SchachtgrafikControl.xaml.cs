@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -73,6 +74,23 @@ public partial class SchachtgrafikControl : UserControl
         get => (IReadOnlyList<HaltungRecord>?)GetValue(HaltungenProperty);
         set => SetValue(HaltungenProperty, value);
     }
+
+    public static readonly DependencyProperty ZusatzProperty = DependencyProperty.Register(
+        nameof(Zusatz), typeof(SchachtgrafikZusatz), typeof(SchachtgrafikControl),
+        new PropertyMetadata(null, OnNeuZeichnen));
+
+    /// <summary>
+    /// Koten (Objektakten) und Lage (QGIS-Kopie) des Schachts, von der Seite gereicht. Null
+    /// heisst schematisch — die Grafik sagt es in ihren Hinweisen.
+    /// </summary>
+    public SchachtgrafikZusatz? Zusatz
+    {
+        get => (SchachtgrafikZusatz?)GetValue(ZusatzProperty);
+        set => SetValue(ZusatzProperty, value);
+    }
+
+    /// <summary>Eine Zeile der Legende mit ihrem Theme-Pinsel (aus der SVG-Farbzuordnung).</summary>
+    public sealed record LegendeZeile(string Marke, Brush Pinsel, string Text);
 
     public static readonly DependencyProperty CatalogProperty = DependencyProperty.Register(
         nameof(Catalog), typeof(ICodeCatalogProvider), typeof(SchachtgrafikControl),
@@ -175,6 +193,7 @@ public partial class SchachtgrafikControl : UserControl
     private void Zeichne()
     {
         Buehne.Child = null;
+        LegendeListe.ItemsSource = null;
         SetValue(SymbolAnzahlPropertyKey, 0);
 
         if (Record is null)
@@ -185,7 +204,7 @@ public partial class SchachtgrafikControl : UserControl
 
         try
         {
-            var ansicht = SchachtgrafikAnsichtBuilder.Baue(Record, Haltungen, Catalog);
+            var ansicht = SchachtgrafikAnsichtBuilder.Baue(Record, Haltungen, Catalog, Zusatz);
             if (ansicht is null)
             {
                 ZeigeHinweis(null);
@@ -195,6 +214,9 @@ public partial class SchachtgrafikControl : UserControl
             var flaeche = SvgTeilmengeZeichner.Zeichne(ansicht.Svg, this);
             ErgaenzeHinweisflaechen(flaeche, ansicht);
             Buehne.Child = flaeche;
+            LegendeListe.ItemsSource = ansicht.Legende
+                .Select(z => new LegendeZeile(z.Marke, SvgFarbZuordnung.Pinsel(this, z.Farbe), z.Text))
+                .ToList();
             SetValue(SymbolAnzahlPropertyKey, ansicht.Marken.Count);
             ZeigeHinweis(null);
         }

@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using AuswertungPro.Next.Application.Lookup;
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Behaviors;
 using AuswertungPro.Next.UI.ViewModels.Pages;
@@ -53,6 +57,7 @@ public sealed class SchaechteNovaWorkspaceController
     private bool _drawerAutomatischZugeklappt;
     private bool _drawerVomBenutzerGeoeffnet;
     private DataPageDetailLiveSync? _felderSync;
+    private int _zusatzGeneration;
 
     public SchaechteNovaWorkspaceController(
         Elemente elemente,
@@ -130,6 +135,62 @@ public sealed class SchaechteNovaWorkspaceController
         _e.FelderDrawer.Titel = record.GetFieldValue("Schachtnummer");
         _e.FelderDrawer.Groups = gruppen;
         _felderSync = new DataPageDetailLiveSync(record, record.GetFieldValue, gruppen);
+    }
+
+    /// <summary>
+    /// Reicht der Schachtansicht Koten und Lage des gewaehlten Schachts (Stammkarte). Die Koten
+    /// kommen aus den Objektakten des Projekts und werden sofort auf dem UI-Thread gelesen; die
+    /// Lage liest die QGIS-Kopie im Hintergrund. Ein Generationszaehler verwirft ein spaetes
+    /// Ergebnis nach einem Auswahlwechsel — sonst bekaeme Schacht B die Richtungen von A.
+    /// Ein Lesefehler wird als Hinweis in der Grafik sichtbar, nicht verschluckt.
+    /// </summary>
+    public void LadeSchachtansichtZusatz()
+    {
+        var generation = ++_zusatzGeneration;
+        if (_vm() is not { } vm || vm.Selected is not { } record || vm.Project is not { } projekt)
+        {
+            _e.Uebersicht.Zusatz = null;
+            return;
+        }
+
+        var haltungen = projekt.Data.ToList();
+        var koten = SchachtKotenQuelle.Lies(projekt, record, haltungen);
+        _e.Uebersicht.Zusatz = new SchachtgrafikZusatz(null, koten);
+
+        if (vm.SchachtLage is not { } quelle)
+            return;
+
+        var nummer = record.GetFieldValue(SchachtFeldnamen.Feld(record, "Schachtnummer")).Trim();
+        if (nummer.Length == 0)
+            return;
+
+        var namen = haltungen
+            .Where(h => SchachtHaltungsseite.Bestimme(h, nummer) != Haltungsseite.Keine)
+            .Select(h => (h.GetFieldValue(FieldKeys.HoldingName) ?? "").Trim())
+            .Where(n => n.Length > 0)
+            .ToList();
+        _ = LadeLageAsync(quelle, nummer, namen, koten, generation);
+    }
+
+    private async Task LadeLageAsync(ISchachtLageQuelle quelle, string nummer, List<string> namen, SchachtKoten? koten, int generation)
+    {
+        SchachtLage? lage = null;
+        string? hinweis = null;
+        try
+        {
+            lage = await Task.Run(() => quelle.Lies(nummer, namen)).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            // Anzeige-Hilfe: Die Seite darf an einer kaputten QGIS-Kopie nicht scheitern, aber
+            // der Grund gehoert sichtbar in die Grafik.
+            hinweis = "Lage aus der QGIS-Kopie nicht lesbar: " + ex.Message;
+        }
+
+        if (generation != _zusatzGeneration)
+            return;
+
+        _e.Uebersicht.Zusatz = new SchachtgrafikZusatz(lage, koten, hinweis);
     }
 
     /// <summary>

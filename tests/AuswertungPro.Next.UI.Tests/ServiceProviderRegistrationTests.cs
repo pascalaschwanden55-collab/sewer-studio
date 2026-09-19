@@ -125,9 +125,11 @@ public sealed class ServiceProviderRegistrationTests
         // (Sitzungsgedaechtnis fuer die Karte "KI-Vorabdurchlauf" in der Uebersicht, Nova-Etappe 2).
         // 159 -> 160: IGeoShopLeser liefert Original-XTF-TIDs und Leerfelder fuer die neue Vorschau.
         // 160 -> 161: IBackupAdditionalFolders speichert zusätzliche Sicherungsquellen getrennt.
+        // 167 -> 168: ISchachtLageQuelle liefert Schachtpunkt und Leitungsrichtungen aus den
+        // QGIS-Kopien fuer den Grundriss der Schachtgrafik (Stammkarte, 19.09.2026).
         Assert.True(
-            registrations.Count == 167, // + IProjektPruefung: lesende Projektpruefung.
-            $"Erwartet 167 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 168,
+            $"Erwartet 168 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(services.XtfLieferungen,

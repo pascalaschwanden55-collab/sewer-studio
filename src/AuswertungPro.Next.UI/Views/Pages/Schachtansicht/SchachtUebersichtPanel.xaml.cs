@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -69,6 +70,19 @@ public partial class SchachtUebersichtPanel : UserControl
     {
         get => (IReadOnlyList<HaltungRecord>?)GetValue(HaltungenProperty);
         set => SetValue(HaltungenProperty, value);
+    }
+
+    public static readonly DependencyProperty ZusatzProperty = DependencyProperty.Register(
+        nameof(Zusatz), typeof(SchachtgrafikZusatz), typeof(SchachtUebersichtPanel), new PropertyMetadata(null));
+
+    /// <summary>
+    /// Koten (Objektakten) und Lage (QGIS-Kopie) des gewaehlten Schachts fuer die Stammkarte,
+    /// vom Workspace-Controller gesetzt. Null heisst: schematisch, mit Hinweis in der Grafik.
+    /// </summary>
+    public SchachtgrafikZusatz? Zusatz
+    {
+        get => (SchachtgrafikZusatz?)GetValue(ZusatzProperty);
+        set => SetValue(ZusatzProperty, value);
     }
 
     public static readonly DependencyProperty CatalogProperty = DependencyProperty.Register(

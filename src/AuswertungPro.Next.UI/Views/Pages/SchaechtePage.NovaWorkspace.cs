@@ -47,6 +47,9 @@ public partial class SchaechtePage
     /// </summary>
     private void AktualisiereFelderDrawer()
     {
+        // Die Schachtansicht rechts folgt der Auswahl in beiden Ansichten; Koten und Lage
+        // (Stammkarte) gehoeren zum gewaehlten Schacht, nicht zur Schublade.
+        _novaWorkspace?.LadeSchachtansichtZusatz();
         if (_ansichtSchacht?.ListeSichtbar == true)
             _novaWorkspace?.LeereFelderDrawer();
         else

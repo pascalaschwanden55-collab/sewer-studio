@@ -1,5 +1,58 @@
 # SewerStudio — AI Sewer Inspection System
 
+## Schachtgrafik Stammkarte (19.09.2026)
+
+Anlass: Pascals Bild der Schachtansicht 80409 (Zone 1.15) — drei feste Zonen, 27 Symbole in
+einer Spalte, keine Anschluesse. Vorschlag mit Zeichnungen:
+`https://claude.ai/artifact/RxGFLtq6ZWHgUDebu1QVsa`, Plan
+`docs/superpowers/plans/2026-09-19-schachtgrafik-stammkarte.md`.
+
+- **Der PDF-Import zaehlt im Kaestchenformular nur Marken.** `SchachtProtocolKaestchenformular`
+  erkennt das Uri-Schachtprotokoll (Kopfzeile «Zustand der Bauteile» mit «Maengelfrei» oder die
+  Tabelle «Aus/Ein … Tiefe m»). Dort bindet eine Marke (●/✔) an das FOLGENDE Wort; Text vor der
+  ersten Marke zaehlt nie. Vorher nahm der Freitextweg jedes bekannte Wort der Zeile, und die
+  Zeile «Anschluss» beendete den Abschnitt (`^ANSCHL`): 80409 stand mit 27 statt 4 Schaeden im
+  Projekt, und Verkalkung, Fremdwasser, Steigeisen, Tauchbogen fehlten in jedem Uri-Protokoll.
+  Abschnittsende ist jetzt die Tabelle «Anschluesse» (Plural). SchachtPro-PDFs (Punkte als
+  Trennzeichen, nur vorhandene Schaeden je Zeile) bleiben auf dem Freitextweg. Bestehende
+  Schaechte holen sich den Stand ueber «Protokoll neu einlesen».
+- **Die Anschlusstabelle ist Daten, kein Text.** `SchachtRecord.Anschluesse`
+  (`SchachtAnschluss`: Nr, Art, DN, Tiefe ab Deckel-OK, Material, Uhr, Richtung, Haltungsname,
+  Quelle) ist additiv, kein Feld, kein Export. `SchachtProtocolZusatzParser` liest sie samt
+  Medium, Material Schacht/Deckel, «Deckel DN m» (als mm) und den Kaestchen Steighilfe/Tauchbogen;
+  `SchachtProtocolApplier.ApplyZusatz` schreibt nur Genanntes und leert beim Neuaufbau nichts
+  («Material» kann aus XTF stammen). SchachtPro fuellt dieselbe Struktur (mit Uhr und Richtung).
+- **Schnitt und Grundriss statt Zonen.** `SchachtgrafikModellBuilder` (Application/Reports)
+  baut das WPF-freie `SchachtgrafikModell`, `SchachtgrafikSvgBuilder` zeichnet es: Tiefe
+  massstaeblich (110 bis 130 Einheiten je Meter), Anschluesse auf ihrer Tiefe (Hauptauslauf
+  rechts, gegenueberliegender Einlauf links, uebrige als Kreise auf der Rueckwand nach Richtung),
+  Deckel, Konus und Steigeisen SCHEMATISCH und so beschriftet; Grundriss mit Auslauf oben
+  (12 Uhr nach VSA), Rohre nach Azimut, Nordpfeil nur aus Koordinaten. Beschriftet wird mit
+  Kennungen (A1, E3) und Nummern, der Text steht in der Legende (`SchachtgrafikLegende`) und in
+  den Hinweisflaechen. Nichts wird erfunden: fehlende Tiefe = kein Massstab plus Hinweis,
+  fehlende Richtung = «Richtung nicht erfasst», Anschluss ohne Haltung = «nicht im Projekt»,
+  Bemerkung «Einlauf 3 ausgebrochen» = Schaden am Anschluss 3 (nur wenn es ihn gibt).
+- **Lage und Koten kommen von der Seite, nicht aus dem Control.** `ISchachtLageQuelle` /
+  `QgisGpkgSchachtLageLeser` (168. Registrierung) liest Schachtpunkt und Leitungslinien gezielt
+  je Name aus den QGIS-Kopien (mehrdeutig = nichts); `SchachtAnschlussRichtung` rechnet den
+  Azimut am schachtseitigen Ende (Toleranz 1 m). `SchachtKotenQuelle` liest Deckel-, Sohlen-
+  und Anschlusskoten aus den GeoShop-Objektakten. `SchaechteNovaWorkspaceController.
+  LadeSchachtansichtZusatz` setzt die Koten sofort und die Lage aus dem Hintergrund mit
+  Generationszaehler; ein Lesefehler wird als Hinweis in der Grafik sichtbar, nie verschluckt.
+  `SchachtHaltungsseite` ist die EINE Regel «Schacht oben oder unten»: Felder zuerst, sonst
+  der Haltungsname (in Zone 1.15 sind die Schachtfelder aller 96 Haltungen leer).
+- **Der SVG-Vertrag bleibt.** Gestrichelte Kreise sind Pfade (`KreisPfad`), Gruppen tragen
+  nur `transform`, Striche in Muted-/Akzentfarbe sind Pfade oder mindestens 4 breit, Schrift
+  mindestens 10. Die Schachtgrafik hat keine feste Hoehe mehr: Die Viewbox folgt dem
+  Seitenverhaeltnis, der Bildlauf des Panels traegt den Rest.
+- Tests: `SchachtProtocolKaestchenformularTests` (echter Text von 80409, 27 -> 4),
+  `SchachtAnschlussRichtungTests`, `GpkgGeometriePunktTests`, `SchachtKotenQuelleTests`,
+  `QgisGpkgSchachtLageLeserTests`, `SchachtgrafikModellBuilderTests`,
+  `SchachtgrafikSvgBuilderStammkarteTests`, `SchachtgrafikAnsichtBuilderStammkarteTests`;
+  angepasst `SchachtgrafikSvgBuilderTeilmengeTests`, `SchachtgrafikControlIsolatedSmokeTests`,
+  `ServiceProviderRegistrationTests` (168). Nicht erfasst bleiben Ovalausrichtung, Konushoehe,
+  Steigeisenseite und Deckellage; die Sichtprobe im Programm macht Pascal.
+
 ## Auditkorrekturen: Restbefunde 11 bis 18 (19.09.2026)
 
 Damit sind alle 18 Befunde des Audits vom 18.09.2026 bearbeitet.

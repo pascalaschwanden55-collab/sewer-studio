@@ -61,6 +61,8 @@ public static class SchachtgrafikModellBuilder
         var anschluesse = Anschluesse(record, haltungen, schachtnummer, lage, koten, hinweise);
         var schaeden = Schaeden(record, catalog, anschluesse, markenfarbe);
 
+        if (!string.IsNullOrWhiteSpace(zusatz?.LageHinweis))
+            hinweise.Add(zusatz.LageHinweis.Trim());
         if (tiefe is null)
             hinweise.Add("Tiefe nicht erfasst: Schnitt ohne Massstab");
         if (dimension1 is null || dimension2 is null)

@@ -3,11 +3,38 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Name="Root"
              AutomationProperties.Name="Schachtgrafik"
-             ToolTip="Schachtgrafik: senkrechter Schnitt mit Konus, Schachtwand, Sohle, Zu-/Ablauf und Schadenssymbolen">
+             ToolTip="Schachtgrafik (Stammkarte): Schnitt mit Tiefenmassstab und Grundriss mit Auslauf oben">
     <Grid ClipToBounds="True">
-        <!-- Die Grafik behaelt ihr Seitenverhaeltnis; die Viewbox passt sie in die Spalte ein. -->
-        <Viewbox x:Name="Buehne" Stretch="Uniform" StretchDirection="Both"/>
-        <TextBlock x:Name="Hinweis" Visibility="Collapsed" TextWrapping="Wrap"
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <!-- Die Zeichnung behaelt ihr Seitenverhaeltnis; die Viewbox passt sie in die Spaltenbreite
+             ein, die Hoehe folgt (Stammkarte: Schnitt und Grundriss untereinander). -->
+        <Viewbox x:Name="Buehne" Grid.Row="0" Stretch="Uniform" StretchDirection="Both"/>
+        <!-- Legende: Anschluesse (A1, E2 ...), Schaeden (1, 2 ...), Koten und Hinweise. Die
+             Zeichnung traegt nur Kennungen und Nummern; der Text steht hier. -->
+        <ItemsControl x:Name="LegendeListe" Grid.Row="1" Margin="0,6,0,0" IsTabStop="False" Focusable="False">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="0,1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Width="22" Height="18" CornerRadius="{DynamicResource RadiusS}" Background="{Binding Pinsel}"
+                                VerticalAlignment="Top" Margin="0,1,8,0">
+                            <TextBlock Text="{Binding Marke}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource CardBrush}"/>
+                        </Border>
+                        <TextBlock Grid.Column="1" Text="{Binding Text}" TextWrapping="Wrap"
+                                   FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock x:Name="Hinweis" Grid.RowSpan="2" Visibility="Collapsed" TextWrapping="Wrap"
                    VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center"
                    FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}"/>
     </Grid>

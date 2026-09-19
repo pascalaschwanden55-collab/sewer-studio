@@ -137,11 +137,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
             schachtFileTargets: services.SchachtFileTargets,
             protocolFileLocator: services.SchachtProtocolFiles)
     {
-        // Nachschlagen leerer Felder beim Kanton. Optional: Die aelteren
-        // Uebergangskonstruktoren kennen den Dienst nicht, dort bleibt der
-        // Menuepunkt einfach aus.
+        // Nachschlagen leerer Felder beim Kanton. Optional: Die aelteren Uebergangskonstruktoren kennen den Dienst nicht, dort bleibt der Menuepunkt aus.
         FeldNachschlag = services.FeldNachschlag;
         QgisBestand = services.QgisBestand;
+        SchachtLage = services.SchachtLage;
         KatasterKennungen = services.KatasterKennungen;
         _geoShop = services.GeoShop;
         _geoShopSicherung = services.GeoShopSicherung;
@@ -162,16 +161,15 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
     internal AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? CodeCatalog { get; }
 
     /// <summary>
-    /// Der QGIS-Bestand fuer "Leere Felder aus QGIS ergaenzen". Null, wenn das
-    /// ViewModel ueber einen Uebergangskonstruktor ohne Dienste entstand — dann
-    /// bleibt der Knopf einfach aus.
+    /// Der QGIS-Bestand fuer "Leere Felder aus QGIS ergaenzen". Null, wenn das ViewModel ueber
+    /// einen Uebergangskonstruktor ohne Dienste entstand — dann bleibt der Knopf einfach aus.
     /// </summary>
     internal AuswertungPro.Next.Application.Lookup.IQgisBestandLeser? QgisBestand { get; }
 
-    /// <summary>
-    /// Die Kennungstabelle fuer "Katasterkennungen ergaenzen". Null, wenn das
-    /// ViewModel ueber einen Uebergangskonstruktor ohne Dienste entstand.
-    /// </summary>
+    /// <summary>Schachtpunkt und Leitungsrichtungen (QGIS-Kopien) fuer den Grundriss der Schachtgrafik; null bei den Uebergangskonstruktoren, dann schematisch.</summary>
+    internal AuswertungPro.Next.Application.Lookup.ISchachtLageQuelle? SchachtLage { get; }
+
+    /// <summary>Die Kennungstabelle fuer "Katasterkennungen ergaenzen". Null, wenn das ViewModel ueber einen Uebergangskonstruktor ohne Dienste entstand.</summary>
     internal AuswertungPro.Next.Application.Lookup.IKatasterKennungLeser? KatasterKennungen { get; }
 
     /// <summary>

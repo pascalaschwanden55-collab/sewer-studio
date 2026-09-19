@@ -29,7 +29,7 @@ public enum SchachtBauteil
 /// QGIS-Kopie (Schachtpunkt, Azimut je Haltung) und die Koten aus den Objektakten. Beides ist
 /// optional; ohne Zusatz bleibt die Grafik schematisch und sagt das.
 /// </summary>
-public sealed record SchachtgrafikZusatz(SchachtLage? Lage, SchachtKoten? Koten)
+public sealed record SchachtgrafikZusatz(SchachtLage? Lage, SchachtKoten? Koten, string? LageHinweis = null)
 {
     public static SchachtgrafikZusatz Leer { get; } = new(null, null);
 }

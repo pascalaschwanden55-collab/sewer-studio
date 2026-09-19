@@ -6,6 +6,17 @@ namespace AuswertungPro.Next.UI
     public sealed partial class ServiceProvider
     {
         private IQgisBestandLeser? _qgisBestand;
+        private ISchachtLageQuelle? _schachtLage;
+
+        /// <summary>
+        /// Schachtpunkt und Leitungsrichtungen fuer den Grundriss der Schachtgrafik, aus
+        /// denselben QGIS-Kopien wie <see cref="QgisBestand"/>. Pfade bei jedem Lauf frisch aus
+        /// den Einstellungen; nur lesend, nur fuer die Anzeige.
+        /// </summary>
+        public ISchachtLageQuelle SchachtLage =>
+            _schachtLage ??= new QgisGpkgSchachtLageLeser(
+                () => Settings.QgisSchaechteGpkgPath,
+                () => Settings.QgisHaltungenGpkgPath);
 
         /// <summary>
         /// Liest die lokalen QGIS-Kopien des Abwassernetzes fuer

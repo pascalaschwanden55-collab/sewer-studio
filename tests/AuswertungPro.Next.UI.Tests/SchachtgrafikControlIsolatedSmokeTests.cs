@@ -55,21 +55,23 @@ public sealed class SchachtgrafikControlIsolatedSmokeTests
     /// <summary>
     /// Breite wie die Uebersicht in der Standardbreite der Spalte (Muster
     /// <c>HaltungsgrafikControlIsolatedSmokeTests.DieRohrsaeuleBleibtLesbar</c>, dort 300 px).
-    /// Die Grafikhoehe (490) ist bewusst so gewaehlt, dass der Massstab BREITENGEBUNDEN ist —
-    /// die Zeichnung soll die Spalte ausfuellen, nicht mittig mit Rand auf beiden Seiten stehen.
+    /// Stammkarte (19.09.2026): Die Hoehe ist nicht mehr fest — sie folgt dem Seitenverhaeltnis
+    /// der Zeichnung (Schnitt und Grundriss untereinander), der Massstab ist BREITENGEBUNDEN und
+    /// die Zeichnung fuellt die Spalte aus.
     /// </summary>
     private static void DieGrafikNutztDieVollePanelbreiteUndBleibtLesbar(App app)
     {
         var grafik = new SchachtgrafikControl
         {
             Record = Schacht(),
-            Haltungen = Haltungen(),
-            Height = 500
+            Haltungen = Haltungen()
         };
-        grafik.Measure(new Size(300, 500));
-        grafik.Arrange(new Rect(0, 0, 300, 500));
+        grafik.Measure(new Size(300, double.PositiveInfinity));
+        grafik.Arrange(new Rect(0, 0, 300, grafik.DesiredSize.Height));
         grafik.UpdateLayout();
         grafik.ZeichneJetzt();
+        grafik.Measure(new Size(300, double.PositiveInfinity));
+        grafik.Arrange(new Rect(0, 0, 300, grafik.DesiredSize.Height));
         grafik.UpdateLayout();
 
         var buehne = Assert.IsType<Viewbox>(grafik.FindName("Buehne"));
@@ -94,17 +96,15 @@ public sealed class SchachtgrafikControlIsolatedSmokeTests
                 $"Beschriftung \"{text.Text}\" nur {text.FontSize * skala:0.0} px gross");
         }
 
-        // Die STRUKTURELLEN Verbindungslinien (Zu-/Ablauf-Stummel: MutedBrush; Tiefen-Masslinie
-        // samt Ticks: AccentBrush). Schadenssymbole (DamageSymbolRenderer, geteilt mit der
-        // Haltungsgrafik) zeichnen ihre eigenen, bewusst duennen dekorativen Linien (z.B.
-        // "deposit" mit 1.2-1.8 SVG-Einheiten) — die zaehlen hier nicht als Strich und werden
-        // dafuer auch bei der Haltungsgrafik nicht geprueft.
+        // Stammkarte (19.09.2026): Anschluesse sind Rechtecke, Gerinne und Wasser sind Pfade,
+        // der Tiefenmassstab steht in Textfarbe. Linien in MutedBrush/AccentBrush gibt es kaum
+        // noch; wo der Bauer eine schreibt, muss sie nach der Skalierung 3 px behalten
+        // (Controller-Ruling Fix-Runde 1). Schadensmarken sind Kreise, keine duennen Linien.
         var mutedColor = ((SolidColorBrush)app.FindResource("MutedBrush")).Color;
         var accentColor = ((SolidColorBrush)app.FindResource("AccentBrush")).Color;
         var linien = formen.OfType<Line>()
             .Where(l => l.Stroke is SolidColorBrush stroke && (stroke.Color == mutedColor || stroke.Color == accentColor))
             .ToList();
-        Assert.NotEmpty(linien);
         foreach (var linie in linien)
         {
             Assert.True(

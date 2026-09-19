@@ -57,11 +57,16 @@
                     <!-- Schachtgrafik des Protokolls: senkrechter Schnitt (WinCan-Art) statt des
                          frueheren Grundriss-Kreises. Der Masstext steht in der Grafik unter der
                          Sohle; er wird hier nicht mehr separat gefuehrt. -->
-                    <local:SchachtgrafikControl x:Name="Grafik" Grid.Row="1" Height="500" Margin="0,0,0,8"
+                    <!-- Stammkarte (19.09.2026): Schnitt und Grundriss untereinander; die Hoehe folgt
+                         dem Seitenverhaeltnis der Zeichnung (Tiefe massstaeblich), der Bildlauf
+                         aussen traegt den Rest. Keine feste Hoehe mehr — die machte den Schnitt
+                         bei tiefen Schaechten hoehengebunden und winzig. -->
+                    <local:SchachtgrafikControl x:Name="Grafik" Grid.Row="1" Margin="0,0,0,8"
                                                  HorizontalAlignment="Stretch"
                                                  Record="{Binding Record, ElementName=Root}"
                                                  Haltungen="{Binding Haltungen, ElementName=Root}"
-                                                 Catalog="{Binding Catalog, ElementName=Root}"/>
+                                                 Catalog="{Binding Catalog, ElementName=Root}"
+                                                 Zusatz="{Binding Zusatz, ElementName=Root}"/>
 
                     <UniformGrid Grid.Row="2" Columns="2" Margin="0,0,0,8">
                         <StackPanel Margin="0,0,8,6"><TextBlock Text="Funktion" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Funktion], Converter={StaticResource FaktWertConv}}" Style="{StaticResource FaktWert}"/></StackPanel>

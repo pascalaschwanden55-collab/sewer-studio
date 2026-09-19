@@ -241,6 +241,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IStatusColorService)] = services.StatusColors,
             [typeof(ICodeUsageTracker)] = services.CodeUsage,
             [typeof(AuswertungPro.Next.Application.Lookup.IQgisBestandLeser)] = services.QgisBestand,
+            [typeof(AuswertungPro.Next.Application.Lookup.ISchachtLageQuelle)] = services.SchachtLage,
             [typeof(AuswertungPro.Next.Application.Lookup.IKatasterKennungLeser)] = services.KatasterKennungen,
             [typeof(AuswertungPro.Next.Application.Projects.IObjektaktenPaketService)] = services.ObjektaktenPakete,
             [typeof(AuswertungPro.Next.Application.Lookup.IGeoShopLeser)] = services.GeoShop,
