@@ -44,7 +44,18 @@ public static class BackupPlanBuilder
         new[] { "SewerStudio.bat", "Start_SewerStudio.bat", "Backup_KI_BRAIN.bat" };
 
     public static IReadOnlyList<BackupComponent> Build(FullBackupSources sources)
+        => Build(sources, new Dictionary<string, string>());
+
+    /// <summary>Bestehende Projektziele bleiben an ihren normalisierten Quellpfad gebunden.</summary>
+    public static IReadOnlyList<BackupComponent> Build(
+        FullBackupSources sources,
+        IReadOnlyDictionary<string, string> previousProjectTargets)
     {
+        ArgumentNullException.ThrowIfNull(previousProjectTargets);
+        var projectTargets = previousProjectTargets.ToDictionary(
+            item => Path.TrimEndingDirectorySeparator(Path.GetFullPath(item.Key)),
+            item => item.Value,
+            StringComparer.OrdinalIgnoreCase);
         var components = new List<BackupComponent>
         {
             new(
@@ -67,7 +78,8 @@ public static class BackupPlanBuilder
                 BuildProjectSources(
                     sources.ProjectRoots,
                     sources.OptionalProjectRoots,
-                    sources.IncludeProjectVideos)),
+                    sources.IncludeProjectVideos,
+                    projectTargets)),
 
             new(
                 "Einstellungen",
@@ -120,7 +132,8 @@ public static class BackupPlanBuilder
     private static IReadOnlyList<BackupSource> BuildProjectSources(
         IReadOnlyList<string>? requiredRoots,
         IReadOnlyList<string>? optionalRoots,
-        bool includeVideos)
+        bool includeVideos,
+        IReadOnlyDictionary<string, string> previousTargets)
     {
         if ((requiredRoots is null || requiredRoots.Count == 0)
             && (optionalRoots is null || optionalRoots.Count == 0))
@@ -138,7 +151,9 @@ public static class BackupPlanBuilder
         {
             var parentIndex = selected.FindIndex(parent =>
                 IsSameOrChildPath(parent.Path, candidate.Path));
-            if (parentIndex < 0)
+            // Eine neue Elternquelle darf den eigenen Spiegel einer weiterhin
+            // konfigurierten Altquelle nicht aus dem Sicherungsplan verdraengen.
+            if (parentIndex < 0 || previousTargets.ContainsKey(candidate.Path))
             {
                 selected.Add(candidate);
                 continue;
@@ -151,13 +166,21 @@ public static class BackupPlanBuilder
         }
 
         var result = new List<BackupSource>();
+        var occupiedTargets = new HashSet<string>(previousTargets.Values, StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < selected.Count; index++)
         {
             var candidate = selected[index];
-            var leaf = SanitizeTargetSegment(Path.GetFileName(candidate.Path));
-            if (string.IsNullOrWhiteSpace(leaf))
-                leaf = "Projektwurzel";
-            var target = Path.Combine("Projekte", $"{index + 1:00}_{leaf}");
+            if (!previousTargets.TryGetValue(candidate.Path, out var target))
+            {
+                var leaf = SanitizeTargetSegment(Path.GetFileName(candidate.Path));
+                if (string.IsNullOrWhiteSpace(leaf))
+                    leaf = "Projektwurzel";
+                var number = index + 1;
+                do
+                {
+                    target = Path.Combine("Projekte", $"{number++:00}_{leaf}");
+                } while (!occupiedTargets.Add(target));
+            }
             result.Add(new BackupSource(
                 candidate.Path,
                 target,
@@ -185,8 +208,7 @@ public static class BackupPlanBuilder
 
             try
             {
-                var full = Path.GetFullPath(root)
-                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
                 var existingIndex = result.FindIndex(item =>
                     string.Equals(item.Path, full, StringComparison.OrdinalIgnoreCase));
                 if (existingIndex < 0)
@@ -209,7 +231,7 @@ public static class BackupPlanBuilder
     {
         if (string.Equals(parent, candidate, StringComparison.OrdinalIgnoreCase))
             return true;
-        var prefix = parent + Path.DirectorySeparatorChar;
+        var prefix = Path.EndsInDirectorySeparator(parent) ? parent : parent + Path.DirectorySeparatorChar;
         return candidate.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
     }
 

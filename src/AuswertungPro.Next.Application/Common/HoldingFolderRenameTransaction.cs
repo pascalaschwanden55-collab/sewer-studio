@@ -20,14 +20,17 @@ internal sealed class HoldingFolderRenameTransaction
     };
 
     private readonly List<RenameMove> _appliedMoves;
+    private readonly HoldingRenamePathGuard _pathGuard;
 
     private HoldingFolderRenameTransaction(
         bool success,
         string? errorMessage,
+        HoldingRenamePathGuard pathGuard,
         List<RenameMove>? appliedMoves = null)
     {
         Success = success;
         ErrorMessage = errorMessage;
+        _pathGuard = pathGuard;
         _appliedMoves = appliedMoves ?? [];
     }
 
@@ -39,18 +42,23 @@ internal sealed class HoldingFolderRenameTransaction
         string sourceFolder,
         string targetFolder,
         IReadOnlyCollection<string> oldAliases,
-        string newHolding)
+        string newHolding,
+        HoldingRenamePathGuard pathGuard)
     {
         try
         {
+            pathGuard.EnsureSafeTree(sourceFolder);
+            pathGuard.EnsureSafePath(targetFolder);
             var plans = BuildPlans(sourceFolder, targetFolder, oldAliases, newHolding);
-            ValidatePlans(plans);
+            ValidatePlans(plans, pathGuard);
 
             var applied = new List<RenameMove>(plans.Count);
             try
             {
                 foreach (var plan in plans)
                 {
+                    pathGuard.EnsureSafePath(plan.Source);
+                    pathGuard.EnsureSafePath(plan.Destination);
                     if (plan.IsDirectory)
                         Directory.Move(plan.Source, plan.Destination);
                     else
@@ -59,27 +67,27 @@ internal sealed class HoldingFolderRenameTransaction
                     applied.Add(plan);
                 }
 
-                return new HoldingFolderRenameTransaction(true, null, applied);
+                return new HoldingFolderRenameTransaction(true, null, pathGuard, applied);
             }
             catch (Exception ex)
             {
-                var rollbackError = RollbackMoves(applied);
+                var rollbackError = RollbackMoves(applied, pathGuard);
                 var message = rollbackError is null
                     ? ex.Message
                     : $"{ex.Message} Rollback fehlgeschlagen: {rollbackError}";
-                return new HoldingFolderRenameTransaction(false, message);
+                return new HoldingFolderRenameTransaction(false, message, pathGuard);
             }
         }
         catch (Exception ex)
         {
-            return new HoldingFolderRenameTransaction(false, ex.Message);
+            return new HoldingFolderRenameTransaction(false, ex.Message, pathGuard);
         }
     }
 
     /// <summary>Rollt eine bereits erfolgreich abgeschlossene Ordnerumbenennung zurueck.</summary>
     internal string? Rollback()
     {
-        var error = RollbackMoves(_appliedMoves);
+        var error = RollbackMoves(_appliedMoves, _pathGuard);
         if (error is null)
             _appliedMoves.Clear();
         return error;
@@ -90,13 +98,16 @@ internal sealed class HoldingFolderRenameTransaction
     /// JJJJMMTT_HALTUNG, JJJJMMTT-HALTUNG sowie den Suffixen _E, _G und -g.
     /// So koennen auch alte, bereits abweichende Dateinamen korrigiert werden.
     /// </summary>
-    internal static IReadOnlyCollection<string> CollectDatePrefixedHoldingAliases(string folder)
+    internal static IReadOnlyCollection<string> CollectDatePrefixedHoldingAliases(
+        string folder, HoldingRenamePathGuard pathGuard)
     {
+        pathGuard.EnsureSafePath(folder);
         if (!Directory.Exists(folder))
             return [];
 
         return Directory
             .EnumerateFiles(folder, "*", RecursiveEnumeration)
+            .Select(pathGuard.EnsureSafePath)
             .Select(path => TryExtractDatePrefixedHolding(Path.GetFileNameWithoutExtension(path)))
             .Where(alias => !string.IsNullOrWhiteSpace(alias))
             .Select(alias => alias!)
@@ -144,11 +155,13 @@ internal sealed class HoldingFolderRenameTransaction
         return plans;
     }
 
-    private static void ValidatePlans(IReadOnlyCollection<RenameMove> plans)
+    private static void ValidatePlans(IReadOnlyCollection<RenameMove> plans, HoldingRenamePathGuard pathGuard)
     {
         var targets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var plan in plans)
         {
+            pathGuard.EnsureSafePath(plan.Source);
+            pathGuard.EnsureSafePath(plan.Destination);
             if (!targets.Add(Path.GetFullPath(plan.Destination)))
                 throw new IOException($"Mehrere Dateien oder Ordner haben denselben Zielnamen: {plan.Destination}");
 
@@ -157,7 +170,7 @@ internal sealed class HoldingFolderRenameTransaction
         }
     }
 
-    private static string? RollbackMoves(IReadOnlyList<RenameMove> moves)
+    private static string? RollbackMoves(IReadOnlyList<RenameMove> moves, HoldingRenamePathGuard pathGuard)
     {
         List<string>? errors = null;
         for (var i = moves.Count - 1; i >= 0; i--)
@@ -165,6 +178,8 @@ internal sealed class HoldingFolderRenameTransaction
             var move = moves[i];
             try
             {
+                pathGuard.EnsureSafePath(move.Destination);
+                pathGuard.EnsureSafePath(move.Source);
                 if (move.IsDirectory)
                 {
                     if (Directory.Exists(move.Destination) && !Directory.Exists(move.Source))

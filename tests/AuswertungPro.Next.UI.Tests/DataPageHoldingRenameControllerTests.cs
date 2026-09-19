@@ -230,6 +230,58 @@ public sealed class DataPageHoldingRenameControllerTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NachRenameVerknuepftesPdf_WirdNichtAnDenSchreibdienstUebergeben(bool fileLink)
+    {
+        var root = Directory.CreateTempSubdirectory("holding-rename-pdf-safety-");
+        var projectRoot = Path.Combine(root.FullName, "Projekt");
+        var externalRoot = Path.Combine(root.FullName, "Kundenquelle");
+        Directory.CreateDirectory(externalRoot);
+        var externalPdf = Path.Combine(externalRoot, "original.pdf");
+        File.WriteAllText(externalPdf, "Kundenoriginal");
+        var holdingFolder = Path.Combine(projectRoot, "Haltungen_Verteilt", "B-2");
+        Directory.CreateDirectory(Path.GetDirectoryName(holdingFolder)!);
+        var linkedPdf = Path.Combine(holdingFolder, "original.pdf");
+        var record = Record("A-1");
+        record.SetFieldValue(FieldKeys.PdfPath, linkedPdf, FieldSource.Manual, userEdited: false);
+        var rename = new RecordingHoldingRenameService
+        {
+            OnRename = _ =>
+            {
+                if (fileLink)
+                {
+                    Directory.CreateDirectory(holdingFolder);
+                    File.CreateSymbolicLink(linkedPdf, externalPdf);
+                }
+                else
+                {
+                    Directory.CreateSymbolicLink(holdingFolder, externalRoot);
+                }
+            }
+        };
+        var rewriter = new RecordingPdfTextLayerRewriter();
+        var warnings = new List<string>();
+
+        try
+        {
+            var success = DataPageHoldingRenameController.Apply(
+                rename, rewriter, record, "A-1", "B-2", Path.Combine(projectRoot, "projekt.json"),
+                ProjectWith(record), (message, _) => warnings.Add(message),
+                (_, _) => throw new InvalidOperationException("Kein Rename-Fehler erwartet."));
+
+            Assert.True(success);
+            Assert.Equal(0, rewriter.BatchCalls);
+            Assert.Contains("Verkn", Assert.Single(warnings), StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("Kundenoriginal", File.ReadAllText(externalPdf));
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
+    }
+
     private static HaltungRecord Record(string name)
     {
         var record = new HaltungRecord();

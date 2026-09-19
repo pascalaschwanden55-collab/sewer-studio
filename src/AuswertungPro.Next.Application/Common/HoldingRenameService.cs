@@ -61,26 +61,39 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
         // ── Phase 1: Haltungsordner lokalisieren ──────────────────────────
         var searchAliases = BuildAliases(oldSan, BuildReversedNumericHoldingAlias(oldSan));
         var folder = LocateHoldingFolder(record, searchAliases, projectFilePath);
-        var oldAliases = BuildAliases(
+        var pathGuard = new HoldingRenamePathGuard(projectFilePath);
+        string[] oldAliases;
+        try
+        {
+            // Beide Arbeitsbaeume pruefen, bevor der erste Dateiname geaendert wird.
+            if (!string.IsNullOrWhiteSpace(folder))
+            {
+                pathGuard.EnsureSafeTree(folder);
+                pathGuard.EnsureSafePath(Path.Combine(Path.GetDirectoryName(folder)!, newSan));
+            }
+
+            var fotosCollision = FindSiblingHoldingFolderCollision(
+                projectFilePath, Path.Combine("Fotos", "Haltungen"), searchAliases, newSan, pathGuard);
+            if (!string.IsNullOrWhiteSpace(fotosCollision))
+                return HoldingRenameResult.Fail($"Fotos-Zielordner existiert bereits: {fotosCollision}");
+
+            oldAliases = BuildAliases(
                 oldSan,
                 BuildReversedNumericHoldingAlias(oldSan),
                 Path.GetFileName(folder ?? string.Empty))
             .Concat(!string.IsNullOrWhiteSpace(folder)
-                ? HoldingFolderRenameTransaction.CollectDatePrefixedHoldingAliases(folder)
+                ? HoldingFolderRenameTransaction.CollectDatePrefixedHoldingAliases(folder, pathGuard)
                 : [])
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        }
+        catch (Exception ex)
+        {
+            return HoldingRenameResult.Fail(ex.Message);
+        }
         string? targetFolder = null;
         var folderRenamed = false;
         HoldingFolderRenameTransaction? holdingFolderRename = null;
-
-        var fotosCollision = FindSiblingHoldingFolderCollision(
-            projectFilePath,
-            Path.Combine("Fotos", "Haltungen"),
-            searchAliases,
-            newSan);
-        if (!string.IsNullOrWhiteSpace(fotosCollision))
-            return HoldingRenameResult.Fail($"Fotos-Zielordner existiert bereits: {fotosCollision}");
 
         // ── Phase 2: Dateisystem-Rename (mit Rollback) ───────────────────
         if (!string.IsNullOrWhiteSpace(folder) && Directory.Exists(folder))
@@ -94,7 +107,7 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
             if (Directory.Exists(targetFolder))
                 return HoldingRenameResult.Fail($"Zielordner existiert bereits: {targetFolder}");
 
-            holdingFolderRename = HoldingFolderRenameTransaction.Execute(folder, targetFolder, oldAliases, newSan);
+            holdingFolderRename = HoldingFolderRenameTransaction.Execute(folder, targetFolder, oldAliases, newSan, pathGuard);
             if (!holdingFolderRename.Success)
                 return HoldingRenameResult.Fail(holdingFolderRename.ErrorMessage!);
 
@@ -110,7 +123,8 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
             Path.Combine("Fotos", "Haltungen"),
             searchAliases,
             newSan,
-            folder);
+            folder,
+            pathGuard);
         if (!photoRenameResult.Success)
         {
             var rollbackMessage = string.Empty;
@@ -138,7 +152,8 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
         string? projectFilePath,
         string relativeParent,
         IReadOnlyCollection<string> oldAliases,
-        string newSan)
+        string newSan,
+        HoldingRenamePathGuard pathGuard)
     {
         if (string.IsNullOrWhiteSpace(projectFilePath))
             return null;
@@ -155,6 +170,8 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
             return null;
 
         var dest = Path.Combine(root, relativeParent, newSan);
+        pathGuard.EnsureSafeTree(src!);
+        pathGuard.EnsureSafePath(dest);
         return Directory.Exists(dest) ? dest : null;
     }
 
@@ -167,7 +184,8 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
         string relativeParent,
         IReadOnlyCollection<string> oldAliases,
         string newSan,
-        string? alreadyRenamedFolder)
+        string? alreadyRenamedFolder,
+        HoldingRenamePathGuard pathGuard)
     {
         if (string.IsNullOrWhiteSpace(projectFilePath))
             return new SiblingRenameResult(true, null, false);
@@ -192,7 +210,7 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
         if (Directory.Exists(dest))
             return new SiblingRenameResult(false, $"Fotos-Zielordner existiert bereits: {dest}", false);
 
-        var result = HoldingFolderRenameTransaction.Execute(src, dest, oldAliases, newSan);
+        var result = HoldingFolderRenameTransaction.Execute(src, dest, oldAliases, newSan, pathGuard);
         return new SiblingRenameResult(result.Success, result.ErrorMessage, result.FolderRenamed);
     }
 
@@ -437,7 +455,42 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
                 }
             }
             count += DeduplicatePhotoPaths(entry.FotoPaths);
+
+            // Die unveraenderte Quelle je Fotoslot muss mitwandern, sonst zeigen die
+            // historischen Belege nach dem Umbenennen ins Leere (Auditbefund 13).
+            // Bewusst OHNE Deduplizierung: Die Liste ist slotgebunden zu FotoPaths.
+            for (var i = 0; i < entry.OriginalFotoPaths.Count; i++)
+            {
+                var path = entry.OriginalFotoPaths[i];
+                if (string.IsNullOrWhiteSpace(path)) continue;
+
+                var newPath = ReplaceHoldingPhotoPath(path, oldAliases, newSan, projectRoot);
+                if (!string.Equals(path, newPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    entry.OriginalFotoPaths[i] = newPath;
+                    count++;
+                }
+            }
         }
+
+        // Videoverweise weiterer Untersuchungen derselben Revision. Sie sind keine
+        // Fotos, deshalb gilt hier die allgemeine Regel fuer verwaltete Haltungspfade.
+        if (revision.ImportVideoPaths is { Count: > 0 } videos)
+        {
+            for (var i = 0; i < videos.Count; i++)
+            {
+                var path = videos[i];
+                if (string.IsNullOrWhiteSpace(path)) continue;
+
+                var newPath = ReplaceManagedHoldingPath(path, oldAliases, newSan, projectRoot);
+                if (!string.Equals(path, newPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    videos[i] = newPath;
+                    count++;
+                }
+            }
+        }
+
         return count;
     }
 

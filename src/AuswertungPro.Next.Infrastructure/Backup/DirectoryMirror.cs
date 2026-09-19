@@ -356,6 +356,7 @@ public sealed class DirectoryMirror
                 var copiedInfo = await CopyNormalFileVerifiedAsync(
                         sourceFile, backupRoot, tempFile, ct)
                     .ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
                 BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, targetFile);
                 TryMoveOldVersionAside(backupRoot, targetRel, targetFile, stats);
                 BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
@@ -406,13 +407,23 @@ public sealed class DirectoryMirror
         // aber echten Unterschied darf gleiche Dateigroesse allein nicht genuegen.
         if (sameLength && timestampDifference <= TimestampToleranz)
         {
-            unchanged = await FilesHaveSameContentAsync(
-                    sourceInfo.FullName,
-                    targetInfo.FullName,
-                    sourceInfo.Length,
-                    sourceInfo.LastWriteTimeUtc,
-                    ct)
-                .ConfigureAwait(false);
+            try
+            {
+                unchanged = await FilesHaveSameContentAsync(
+                        sourceInfo.FullName,
+                        targetInfo.FullName,
+                        sourceInfo.Length,
+                        sourceInfo.LastWriteTimeUtc,
+                        ct)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Ohne lesbaren Inhalt ist Gleichheit nicht bewiesen. Die Platz-
+                // schaetzung bleibt konservativ; der Kopierweg meldet die Datei
+                // sichtbar und erhaelt ihren Altstand, falls sie gesperrt bleibt.
+                return false;
+            }
         }
 
         return unchanged;
@@ -490,14 +501,19 @@ public sealed class DirectoryMirror
         for (var attempt = 1; attempt <= MaxStableCopyAttempts; attempt++)
         {
             ct.ThrowIfCancellationRequested();
-            var before = new FileInfo(sourceFile);
+            BackupSourcePathGuard.EnsureFileIsSafe(sourceFile);
+            // Derselbe offene Dateistrom bindet Inhalt und Metadaten. Weder ein
+            // vorhandener Schreiber noch ein Austausch darf eine Mischkopie erzeugen.
+            using var src = new FileStream(
+                sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read,
+                bufferSize: 128 * 1024, useAsync: true);
+            var sourceLength = src.Length;
+            var sourceWriteTimeUtc = File.GetLastWriteTimeUtc(src.SafeFileHandle);
+            long bytesCopied = 0;
             byte[] sourceHash;
 
             BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
             using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
-            using (var src = new FileStream(
-                       sourceFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
-                       bufferSize: 128 * 1024, useAsync: true))
             using (var dst = new FileStream(
                        tempFile, FileMode.Create, FileAccess.Write, FileShare.None,
                        bufferSize: 128 * 1024, useAsync: true))
@@ -508,6 +524,7 @@ public sealed class DirectoryMirror
                 {
                     hash.AppendData(buffer, 0, read);
                     await dst.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                    bytesCopied += read;
                 }
 
                 await dst.FlushAsync(ct).ConfigureAwait(false);
@@ -516,17 +533,20 @@ public sealed class DirectoryMirror
             }
 
             _afterTemporaryFileWritten?.Invoke(tempFile);
+            ct.ThrowIfCancellationRequested();
             BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
             var tempHash = await HashFileAsync(tempFile, FileShare.Read, ct).ConfigureAwait(false);
-            if (!sourceHash.AsSpan().SequenceEqual(tempHash))
+            if (new FileInfo(tempFile).Length != bytesCopied
+                || !sourceHash.AsSpan().SequenceEqual(tempHash))
                 throw new IOException("Vollstaendige Inhaltspruefung nach dem Kopieren fehlgeschlagen.");
 
-            var after = new FileInfo(sourceFile);
-            if (before.Length == after.Length && before.LastWriteTimeUtc == after.LastWriteTimeUtc)
+            if (bytesCopied == sourceLength
+                && src.Length == sourceLength
+                && File.GetLastWriteTimeUtc(src.SafeFileHandle) == sourceWriteTimeUtc)
             {
                 BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, tempFile);
-                File.SetLastWriteTimeUtc(tempFile, after.LastWriteTimeUtc);
-                return new VerifiedCopyInfo(after.Length);
+                File.SetLastWriteTimeUtc(tempFile, sourceWriteTimeUtc);
+                return new VerifiedCopyInfo(bytesCopied);
             }
 
             TryDeleteTemp(backupRoot, tempFile);
@@ -567,25 +587,17 @@ public sealed class DirectoryMirror
         DateTime expectedSourceWriteTimeUtc,
         CancellationToken ct)
     {
-        byte[] sourceHash;
-        await using (var source = new FileStream(
-                         sourceFile,
-                         FileMode.Open,
-                         FileAccess.Read,
-                         FileShare.ReadWrite,
-                         bufferSize: 128 * 1024,
-                         useAsync: true))
-        {
-            sourceHash = await SHA256.HashDataAsync(source, ct).ConfigureAwait(false);
-        }
+        await using var source = new FileStream(
+            sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read,
+            bufferSize: 128 * 1024, useAsync: true);
 
-        // Wurde die Quelle waehrend der Pruefung veraendert, gilt sie bewusst als
-        // geaendert. Der anschliessende Kopierweg versucht dann den aktuellen Stand.
-        var sourceAfterHash = new FileInfo(sourceFile);
-        if (sourceAfterHash.Length != expectedSourceLength
-            || sourceAfterHash.LastWriteTimeUtc != expectedSourceWriteTimeUtc)
+        // Ein inzwischen ersetzter Stand geht durch den normalen Kopierweg.
+        // Waehrend beider Hashpruefungen bleibt die geoeffnete Quelle geschuetzt.
+        if (source.Length != expectedSourceLength
+            || File.GetLastWriteTimeUtc(source.SafeFileHandle) != expectedSourceWriteTimeUtc)
             return false;
 
+        var sourceHash = await SHA256.HashDataAsync(source, ct).ConfigureAwait(false);
         byte[] targetHash;
         await using (var target = new FileStream(
                          targetFile,
@@ -598,7 +610,9 @@ public sealed class DirectoryMirror
             targetHash = await SHA256.HashDataAsync(target, ct).ConfigureAwait(false);
         }
 
-        return sourceHash.AsSpan().SequenceEqual(targetHash);
+        return source.Length == expectedSourceLength
+               && File.GetLastWriteTimeUtc(source.SafeFileHandle) == expectedSourceWriteTimeUtc
+               && sourceHash.AsSpan().SequenceEqual(targetHash);
     }
 
     /// <summary>

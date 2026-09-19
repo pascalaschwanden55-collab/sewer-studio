@@ -11,7 +11,7 @@ public sealed class JunctionCapabilityGateTests
     [Fact]
     public void Alle_Verknuepfungsschutztests_sind_registriert_und_ausfuehrbar()
     {
-        const int expectedJunctionFacts = 85; // Einschliesslich Schachtumbenennung mit verknuepftem Unterordner.
+        const int expectedJunctionFacts = 92; // Zusaetzlich sieben Schutzfaelle der Haltungsumbenennung.
 
         var actualJunctionFacts = typeof(JunctionCapabilityGateTests).Assembly
             .GetTypes()

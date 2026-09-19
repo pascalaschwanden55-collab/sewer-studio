@@ -104,7 +104,7 @@ public sealed class FullBackupService : IFullBackupService
     public Task<FullBackupSizeReport> AnalyzeAsync(IProgress<string>? progress = null, CancellationToken ct = default)
     {
         var sources = BackupExternalReferences.Resolve(_sourcesFactory(), ct);
-        return Task.FromResult(Analyze(sources, progress, ct));
+        return Task.FromResult(Analyze(BackupPlanBuilder.Build(sources), progress, ct));
     }
 
     public async Task<FullBackupResult> RunAsync(
@@ -129,6 +129,10 @@ public sealed class FullBackupService : IFullBackupService
             BackupTargetPathGuard.EnsureTreeIsSafe(backupRoot);
 
             using var journal = new BackupRunJournal(backupRoot);
+            // Erst nach Recovery und unter der Laufsperre die bestehende Zuordnung
+            // lesen: fehlende Altquellen muessen ihren bisherigen Zielordner behalten.
+            var previousProjectTargets = BackupProjectTargetMapping.Read(backupRoot);
+            plan = BackupPlanBuilder.Build(sources, previousProjectTargets);
 
             _walCheckpoint?.Invoke();
 
@@ -140,7 +144,7 @@ public sealed class FullBackupService : IFullBackupService
                 sqliteSnapshots: _sqliteSnapshots,
                 preserveTarget: journal.Preserve);
 
-            var sizeReport = Analyze(sources, progress: null, ct);
+            var sizeReport = Analyze(plan, progress: null, ct);
             var bytesToWrite = await EstimateRequiredCopyBytesAsync(plan, backupRoot, ct)
                 .ConfigureAwait(false);
             var requiredFreeBytes = checked(bytesToWrite + BackupDiskSpaceGuard.MinimumReserveBytes);
@@ -250,8 +254,9 @@ public sealed class FullBackupService : IFullBackupService
                     ct)
                 .ConfigureAwait(false);
             checkProgress.Report(progress, "Pruefe Sicherung", "SHA-256 abgeschlossen", force: true);
+            var manifestPlan = BackupProjectTargetMapping.ForManifest(plan, previousProjectTargets, backupRoot);
             var manifest = BuildManifest(
-                sources, plan, sizeReport, stats, skipped, versionStaende,
+                sources, manifestPlan, sizeReport, stats, skipped, versionStaende,
                 requiredFreeBytes, confirmedAvailableBytes, manifestFiles);
             var manifestJson = JsonSerializer.Serialize(manifest, ManifestJsonOptions);
             var manifestPath = BackupTargetPathGuard.ResolveRelativePath(
@@ -327,13 +332,11 @@ public sealed class FullBackupService : IFullBackupService
     }
 
     private FullBackupSizeReport Analyze(
-        FullBackupSources sources,
+        IReadOnlyList<BackupComponent> plan,
         IProgress<string>? progress,
         CancellationToken ct)
     {
         var components = new List<ComponentSize>();
-        var plan = BackupPlanBuilder.Build(sources);
-
         foreach (var component in plan)
         {
             ct.ThrowIfCancellationRequested();
