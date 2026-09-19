@@ -14,6 +14,12 @@ namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 /// Die Tabelle steht als Text im PDF (mit pdftotext geprueft, 120 von 581 Schacht-PDFs).
 /// Eine Zeile zaehlt nur mit Nummer, Art, DN und Tiefe; leere Zeilen («5 -  -») und die
 /// Skizzenbeschriftungen rechts daneben (A1, E1 …) werden nicht zu Anschluessen.
+///
+/// Der SchachtPro-Export (GKS Cahenzli, Goeschenen 2026) hat eine eigene Tabelle: Kennung
+/// (A1, E1 …), Uhrzeit, Tiefe, Durchmesser, Typ, Medium, Material, Zustand. pdftotext schiebt
+/// dort die Zellen «150 mm Auslauf» um eine Zeile nach unten; die Durchmesser kommen deshalb
+/// aus der Skizzenlegende («A1 DN150») und erst ersatzweise aus der verschobenen Spalte in
+/// Tabellenreihenfolge. Die Uhrzeit ist die Uhrlage am Umfang (12 = Auslauf).
 /// </summary>
 internal static class SchachtProtocolZusatzParser
 {
@@ -39,6 +45,21 @@ internal static class SchachtProtocolZusatzParser
     private static readonly string[] SteighilfeWoerter = ["vorhanden", "fehlt", "zu kurz", "verrostet", "defekt"];
     private static readonly string[] TauchbogenWoerter = ["vorhanden", "fehlt", "defekt", "nicht notwendig"];
 
+    // SchachtPro-Export: Kopfzeile «SCHACHTPRO» oder die Tabelle «Ansc… Uhrzeit Tiefe …».
+    private static readonly Regex SchachtProErkennungRegex = new(@"^\s*(?:SCHACHTPRO\b|Ansc\S*\s+Uhrzeit\s+Tiefe\b)", Zeilenweise);
+    private static readonly Regex SchachtProKopfRegex = new(@"^\s*Ansc\S*\s+Uhrzeit\s+Tiefe\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex SchachtProEndeRegex = new(@"^\s*(?:[A-ZÄÖÜ][A-ZÄÖÜ &/\-]{4,}\s*$|.*\bSeite\s+\d+\s+von\s+\d+)", RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex SchachtProZeileRegex = new(
+        @"^\s*(?<k>[AE])(?<n>\d{1,2})\s+(?<uhr>\d{1,2}(?:[.:,]\d{1,2})?)\s+(?<tiefe>\d{1,3}(?:[.,]\d{1,3})?)\b(?<rest>.*)$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex SchachtProDnTypRegex = new(@"(?<dn>\d{2,4})\s*mm\s+(?:Auslauf|Einlauf|Ablauf|Zulauf)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex SchachtProLegendeRegex = new(@"\b(?<k>[AE]\d{1,2})\s+DN\s*(?<dn>\d{2,4})\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex SchachtProMaterialRegex = new(@"^[ \t]*Material[ \t]{2,}(?<v>\S+(?: \S+)*)", Zeilenweise);
+    private static readonly Regex SchachtProDeckelmaterialRegex = new(@"\bDeckelmaterial[ \t]+(?<v>\S+(?: \S+)*)", Zeilenweise);
+    private static readonly Regex SchachtProDeckelDurchmesserRegex = new(@"\bDeckeldurchmesser[ \t]*\([ \t]*m[ \t]*\)[ \t:]*(?<v>\d+(?:[.,]\d+)?)", Zeilenweise);
+    private static readonly Regex SchachtProSteighilfeRegex = new(@"^[ \t]*(?:Leiter/Steigeisen|Leiter|Steigeisen)[ \t]{2,}(?<v>vorhanden|fehlt|zu kurz|verrostet|defekt)\b", Zeilenweise);
+    private static readonly Regex SchachtProTauchbogenRegex = new(@"^[ \t]*Tauchbogen[ \t]{2,}(?<v>vorhanden|fehlt|defekt|nicht notwendig)\b", Zeilenweise);
+
     internal static SchachtProtocolZusatz Parse(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -47,14 +68,120 @@ internal static class SchachtProtocolZusatzParser
         var normalized = SchachtProtocolParser.NormalizeCheckboxGlyphs(SchachtProtocolParser.NormalizePdfText(text));
         var zeilen = normalized.Split('\n');
 
+        if (IstSchachtPro(normalized))
+        {
+            return new SchachtProtocolZusatz(
+                AnschluesseSchachtPro(normalized, zeilen),
+                Wert(MediumRegex, normalized),
+                Wert(SchachtProMaterialRegex, normalized),
+                Wert(SchachtProDeckelmaterialRegex, normalized),
+                DeckelDurchmesserMm(SchachtProDeckelDurchmesserRegex, normalized),
+                SchachtProWahl(SchachtProSteighilfeRegex, normalized),
+                SchachtProWahl(SchachtProTauchbogenRegex, normalized));
+        }
+
         return new SchachtProtocolZusatz(
             Anschluesse(zeilen),
             Wert(MediumRegex, normalized),
             Wert(MaterialSchachtRegex, normalized),
             Wert(MaterialDeckelRegex, normalized),
-            DeckelDurchmesserMm(normalized),
+            DeckelDurchmesserMm(DeckelDnRegex, normalized),
             Kaestchenwahl(zeilen, @"Leiter/Steigeisen|Leiter|Steigeisen", SteighilfeWoerter),
             Kaestchenwahl(zeilen, @"Tauchbogen", TauchbogenWoerter));
+    }
+
+    /// <summary>SchachtPro-Export: Kopfzeile «SCHACHTPRO» oder die Tabelle «Ansc… Uhrzeit Tiefe».</summary>
+    internal static bool IstSchachtPro(string normalized) => SchachtProErkennungRegex.IsMatch(normalized ?? string.Empty);
+
+    /// <summary>
+    /// Die SchachtPro-Tabelle: je Zeile Kennung, Uhrzeit und Tiefe; Durchmesser aus der
+    /// Skizzenlegende («A1 DN150»), sonst aus der um eine Zeile verschobenen Spalte, wenn sie
+    /// genau so viele Werte hat wie Zeilen; Art aus dem Buchstaben der Kennung; Material aus der
+    /// Spalte nach dem Medium. Die laufende Nummer ist die Tabellenreihenfolge.
+    /// </summary>
+    private static List<SchachtAnschluss> AnschluesseSchachtPro(string normalized, string[] zeilen)
+    {
+        var legende = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match m in SchachtProLegendeRegex.Matches(normalized))
+            legende.TryAdd(m.Groups["k"].Value.ToUpperInvariant(), int.Parse(m.Groups["dn"].Value, CultureInfo.InvariantCulture));
+
+        var block = new List<string>();
+        var inTabelle = false;
+        foreach (var zeile in zeilen)
+        {
+            if (!inTabelle)
+            {
+                inTabelle = SchachtProKopfRegex.IsMatch(zeile);
+                continue;
+            }
+
+            if (SchachtProEndeRegex.IsMatch(zeile))
+                break;
+            block.Add(zeile);
+        }
+
+        var reihen = new List<(string Kennung, string Uhr, decimal Tiefe, string Zeilenrest)>();
+        foreach (var zeile in block)
+        {
+            var m = SchachtProZeileRegex.Match(zeile);
+            if (!m.Success)
+                continue;
+            if (!decimal.TryParse(m.Groups["tiefe"].Value.Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out var tiefe))
+                continue;
+            reihen.Add((m.Groups["k"].Value.ToUpperInvariant() + m.Groups["n"].Value, m.Groups["uhr"].Value, tiefe, m.Groups["rest"].Value));
+        }
+
+        var verschobeneDn = SchachtProDnTypRegex.Matches(string.Join("\n", block))
+            .Select(m => int.Parse(m.Groups["dn"].Value, CultureInfo.InvariantCulture))
+            .ToList();
+
+        var liste = new List<SchachtAnschluss>();
+        for (var i = 0; i < reihen.Count; i++)
+        {
+            var (kennung, uhr, tiefe, rest) = reihen[i];
+            int? dn = legende.TryGetValue(kennung, out var ausLegende)
+                ? ausLegende
+                : verschobeneDn.Count == reihen.Count ? verschobeneDn[i] : null;
+            liste.Add(new SchachtAnschluss
+            {
+                Nr = i + 1,
+                Art = kennung[0] == 'A' ? "Auslauf" : "Einlauf",
+                DnMm = dn,
+                TiefeM = tiefe,
+                Material = MaterialAusSchachtProZeile(rest),
+                Uhr = uhr,
+                Quelle = "SchachtPro"
+            });
+        }
+
+        return liste;
+    }
+
+    /// <summary>
+    /// Der Rest einer SchachtPro-Zeile in Spalten (zwei oder mehr Leerzeichen): allenfalls
+    /// «150 mm» und «Auslauf», dann Medium, Material, Zustand. Das Material ist die Spalte nach
+    /// dem Medium; ohne erkennbares Medium die vorletzte Spalte.
+    /// </summary>
+    private static string? MaterialAusSchachtProZeile(string rest)
+    {
+        var spalten = Regex.Split(rest.Trim(), @"\s{2,}")
+            .Select(s => Regex.Replace(s, @"^\d{2,4}\s*mm(?:\s+(?:Auslauf|Einlauf|Ablauf|Zulauf))?\s*|^(?:Auslauf|Einlauf|Ablauf|Zulauf)\s*$", "", RegexOptions.IgnoreCase).Trim())
+            .Where(s => s.Length > 0)
+            .ToList();
+        var medium = spalten.FindIndex(s => s.EndsWith("wasser", StringComparison.OrdinalIgnoreCase));
+        var material = medium >= 0 && medium + 1 < spalten.Count
+            ? spalten[medium + 1]
+            : spalten.Count >= 2 ? spalten[^2] : null;
+        return string.IsNullOrWhiteSpace(material) || material == "-" ? null : material.Trim();
+    }
+
+    /// <summary>SchachtPro schreibt das Wort aus: «vorhanden», «fehlt», «nicht notwendig»; ein Schaden (defekt, zu kurz, verrostet) heisst vorhanden.</summary>
+    private static string? SchachtProWahl(Regex regex, string text)
+    {
+        var wert = Wert(regex, text)?.ToLowerInvariant();
+        if (wert is null)
+            return null;
+        return wert is "fehlt" or "nicht notwendig" ? wert : "vorhanden";
     }
 
     private static string? Wert(Regex regex, string text)
@@ -67,10 +194,10 @@ internal static class SchachtProtocolZusatzParser
         return wert.Length == 0 || wert == "-" ? null : wert;
     }
 
-    /// <summary>«Deckel DN m 0.66» → 660 (Millimeter). Ein Wert ab 100 gilt bereits als Millimeter.</summary>
-    private static string? DeckelDurchmesserMm(string text)
+    /// <summary>«Deckel DN m 0.66» oder «Deckeldurchmesser (m) 0.50» → Millimeter. Ein Wert ab 100 gilt bereits als Millimeter.</summary>
+    private static string? DeckelDurchmesserMm(Regex regex, string text)
     {
-        var m = DeckelDnRegex.Match(text);
+        var m = regex.Match(text);
         if (!m.Success)
             return null;
 

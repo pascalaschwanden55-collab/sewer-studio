@@ -90,9 +90,21 @@ einer Spalte, keine Anschluesse. Vorschlag mit Zeichnungen:
 - Die Handskizze des Uri-Formulars (Pascals kuenftiger Standard) ist eine Vektorzeichnung
   (Linien plus Kennungen als Text, 74 von 74 PDFs) und parsebar, aber nur ungefaehr: 80409
   weicht bis 48 Grad von der Vermessung ab, 80792 bis 24 Grad. Ein Skizzenparser bleibt der
-  Rueckfall fuer Anschluesse ohne Katasterleitung. Die Uhr-Spalte des SchachtPro-PDFs ist
-  noch nicht importiert (Goeschenen 2026: 447 Schaechte aus PDFs, 0 mit Anschluessen); der
-  Archivweg (`SchachtProProtocolMapper.MapAnschluesse`) schreibt sie bereits.
+  Rueckfall fuer Anschluesse ohne Katasterleitung.
+- **Der SchachtPro-Export (PDF) hat seine eigene Tabelle.** `SchachtProtocolZusatzParser`
+  erkennt ihn an der Kopfzeile «SCHACHTPRO» oder der Tabelle «Ansc… Uhrzeit Tiefe» und liest je
+  Zeile Kennung (A1, E1 …), Uhrzeit, Tiefe und Material; den Durchmesser aus der
+  Skizzenlegende («A1 DN150»), ersatzweise aus der Spalte «150 mm Auslauf», die pdftotext um
+  eine Zeile nach unten schiebt (nur, wenn sie so viele Werte hat wie Zeilen). Dazu Material,
+  Deckelmaterial, «Deckeldurchmesser (m)» und der ausgeschriebene Tauchbogen. Stammdaten
+  («Tiefe (m)», «Durchmesser (m)», «Form») und die Schaeden («Schachthals Ausgebrochen • Riss»)
+  las der bestehende Parser schon richtig — Goeschenen 2026 (447 Schaechte) wurde nur nie
+  eingelesen, die PDFs sind bloss verteilt. Der Anschluss-Zustand («Mangelhaft eingebunden»)
+  bleibt offen. Der PDF-Weg ist ein Notnagel: Pascal bekommt spaeter einen direkten
+  SchachtPro-Export; `SchachtProArchiveReader` liest das JSON-Archiv (uhr, richtung, zustand je
+  Anschluss) bereits, und ein neuer Exporter der Android-App wird daran abgeglichen.
+  Fixture: `tests/Fixtures/Schachtprotokolle/8705_schachtpro_seite1_layout.txt`, Tests
+  `SchachtProtocolZusatzParserSchachtProTests`.
 
 ## Auditkorrekturen: Restbefunde 11 bis 18 (19.09.2026)
 
