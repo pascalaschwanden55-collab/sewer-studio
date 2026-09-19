@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using AuswertungPro.Next.Application.Lookup;
 
 namespace AuswertungPro.Next.Application.Reports;
@@ -44,6 +44,8 @@ public sealed record SchachtgrafikZusatz(SchachtLage? Lage, SchachtKoten? Koten,
 /// <param name="TypNr">Laufende Nummer je Typ (Auslaeufe und Einlaeufe getrennt); 0 = nicht vergeben.</param>
 /// <param name="UhrGrad">Uhrlage aus dem Protokoll als Winkel ab dem Auslauf (12 Uhr = 0); <c>null</c> = nicht erfasst.</param>
 /// <param name="NurImKataster">True fuer eine Katasterleitung ohne Tabellenzeile und ohne Projekthaltung.</param>
+/// <param name="Zustand">Zustand laut Protokoll, mehrere mit « • »; <c>null</c> = nicht erfasst.</param>
+/// <param name="ZustandUnvollstaendig">True, wenn die Quelle den Zustandstext gekuerzt hat.</param>
 public sealed record SchachtgrafikAnschluss(
     int Nr,
     bool IstAuslauf,
@@ -57,7 +59,9 @@ public sealed record SchachtgrafikAnschluss(
     bool ImProjekt,
     int TypNr = 0,
     double? UhrGrad = null,
-    bool NurImKataster = false)
+    bool NurImKataster = false,
+    string? Zustand = null,
+    bool ZustandUnvollstaendig = false)
 {
     /// <summary>
     /// «A1» fuer den ersten Auslauf, «E3» fuer den dritten Einlauf — gezaehlt je Typ in
@@ -83,6 +87,12 @@ public sealed record SchachtgrafikAnschluss(
                 teile.Add(Material.Trim());
             if (UhrGrad is { } uhr)
                 teile.Add(SchachtAnschlussRichtung.Uhr(uhr).ToString(CultureInfo.InvariantCulture) + " Uhr");
+            if (!string.IsNullOrWhiteSpace(Zustand))
+            {
+                // Ein gekuerzter Text bleibt sichtbar gekuerzt: Die weiteren Befunde stehen
+                // im Protokoll nirgends, und eine halbe Angabe darf nicht vollstaendig wirken.
+                teile.Add(Zustand.Trim() + (ZustandUnvollstaendig ? " … (im Protokoll gekuerzt)" : ""));
+            }
             if (NurImKataster)
                 teile.Add("nur im Kataster");
             else if (!ImProjekt)

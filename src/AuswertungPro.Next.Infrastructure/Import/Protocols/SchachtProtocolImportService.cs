@@ -38,9 +38,25 @@ public sealed class SchachtProtocolImportService :
     public SchachtProtocolParseResult Parse(string pdfPfad)
     {
         var extraction = _pdfTextExtractor.ExtractPages(pdfPfad);
-        return ParseWithOcrFallback(
+        var ergebnis = ParseWithOcrFallback(
             extraction.FullText,
             () => _ocrReader.TryRead(pdfPfad));
+
+        // Welcher Leser gelesen hat, gehoert in den Bericht: Ein stiller Wechsel auf den
+        // eingebauten Leser waere sonst nicht erkennbar, und genau daran haengt die
+        // Vollstaendigkeit der Anschlusstabelle.
+        if (extraction.Leser == PdfLeserArt.Eingebaut && !string.IsNullOrWhiteSpace(extraction.LeserHinweis))
+        {
+            var hinweis = "Gelesen mit dem eingebauten Leser. " + extraction.LeserHinweis.Trim();
+            ergebnis = ergebnis with
+            {
+                Lesehinweis = string.IsNullOrWhiteSpace(ergebnis.Lesehinweis)
+                    ? hinweis
+                    : ergebnis.Lesehinweis.TrimEnd() + " " + hinweis
+            };
+        }
+
+        return ergebnis;
     }
 
     internal static SchachtProtocolParseResult ParseWithOcrFallback(

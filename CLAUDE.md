@@ -1,5 +1,53 @@
 # SewerStudio — AI Sewer Inspection System
 
+## Der PDF-Textleser wird geprueft gewaehlt (19.09.2026)
+
+Anlass: Messung an allen 264 SchachtPro-Protokollen aus Goeschenen, rein lesend, drei
+unabhaengige Zaehlungen je PDF (Kennungsspalte, Datenzeilen, Skizzenlegende).
+
+- **Welches `pdftotext` ein Rechner findet, entschied bisher der Zufall** — `tools\`,
+  daneben, PATH, WinGet, in dieser Reihenfolge, ohne Pruefung. Mit Poppler 25.07 werden
+  alle 704 Anschluesse gelesen, mit Xpdf 4.00 nur 627, und die gelesenen tragen teils
+  FREMDE Werte: In Schacht 10039 bekommt Einlauf 1 Tiefe und Durchmesser von Einlauf 2,
+  weil diese Fassung die Tabellenspalten zeilenweise verschiebt. Ein falscher Messwert
+  ist schlimmer als ein fehlender — er sieht im Programm richtig aus.
+- `PdfLeserEignung.Beurteile` (Application/Import, reine Regel) liest die Ausgabe von
+  `pdftotext -v`: Poppler ab Hauptversion 21 ist geeignet, Xpdf nie, unbekannt nie.
+  **Poppler nennt in seinem Copyright ebenfalls «Glyph & Cog»** (es stammt von Xpdf ab);
+  nur das FEHLEN von «Poppler» macht eine Ausgabe zu Xpdf. Die Regel ist fail-closed.
+- `PdfTextExtractionService` fragt die Version je Programmpfad genau einmal
+  (`ConcurrentDictionary`, ein Import liest hunderte PDFs) und verwendet ein ungeeignetes
+  Programm gar nicht erst. Der Rueckfall ist der mitgelieferte eingebaute Leser (PdfPig),
+  der in derselben Messung gleich gut ist (704 von 704). `PdfTextExtractionResult` traegt
+  dafuer additiv `Leser` und `LeserHinweis`. Auf Pascals PC aendert sich nichts: Der
+  Windows-PATH liefert Poppler 25.07. Im Programmordner liegt weiterhin keine eigene
+  `pdftotext.exe`, nur `PLACE_PDFTOTEXT_HERE.txt`.
+- **Die LV95-Koordinaten des Protokolls werden uebernommen** (212 von 212 im Bestand):
+  `SchachtProtocolZusatzParser.Koordinaten` liest «Koordinaten (LV95): E … / N …» mit
+  Punkt UND Komma als Dezimaltrenner (beides kommt vor) und nur innerhalb der amtlichen
+  LV95-Ausdehnung. Ein halbes Paar, eine vertauschte Reihenfolge oder eine Zahl ausserhalb
+  ergibt nichts — eine falsche Koordinate setzt den Schacht an den falschen Ort. Ziel sind
+  dieselben Felder wie beim Archivweg (`Koordinate_East`/`Koordinate_North`); Hand- und
+  Katasterwerte schuetzt `SchachtRecord.SetFieldValue` selbst (`IsUserEdited`,
+  `KatasterFeldschutz`), deshalb genuegt der normale Schreibweg.
+- **Der Anschlusszustand gehoert an seinen Anschluss.** `SchachtAnschluss.Zustand` traegt
+  «in Ordnung», «Mangelhaft eingebunden», «Einragend» …, mehrere mit « • ». Im Bestand
+  tragen alle 705 Anschluesse einen Zustand. **Das PDF kuerzt eine zu lange Zelle**, mit
+  «…» oder mit «+3» fuer drei weitere Befunde; dann steht der Rest nirgends im Dokument.
+  `ZustandUnvollstaendig` haelt das fest (24 Faelle), und die Grafik schreibt
+  «… (im Protokoll gekuerzt)». Nie eine gekuerzte Angabe als vollstaendig speichern.
+  Der Archiv- und QR-Weg liefert dieselben Zustaende als Liste und damit vollstaendig;
+  `SchachtProProtocolMapper` fuellt seither dasselbe Feld.
+- Das Trennzeichen kommt als «●» an, weil `NormalizeCheckboxGlyphs` runde Punkte des
+  Uri-Formulars zu Ankreuzmarken vereinheitlicht. Im Zustandstext wird es zurueckgesetzt.
+- Tests: `PdfLeserEignungTests` (8, echte Versionsausgaben beider Programme),
+  `PdfLeserWahlTests` (4, vorgetaeuschtes pdftotext mit Markierungsdatei: ein ungeeignetes
+  Programm wird nachweislich nicht einmal aufgerufen), `SchachtProtocolVollstaendigkeitTests`
+  (15, Vorlagen `10039_…` und `10091_…` mit echtem Seitentext). Nicht gemessen ist, ob der
+  eingebaute Leser auch fuer Haltungsprotokolle und Dichtheitsberichte gleichwertig ist;
+  dort greift der Rueckfall nur, wenn ohnehin kein geeignetes Programm vorhanden waere.
+  Abnahme und Grenzen fuer die Bedienung: `docs/SCHACHTPROTOKOLL-PDF-IMPORT.md`.
+
 ## SchachtPro-QR aus Bildern (19.09.2026)
 
 - Nachtrag Verteilung: `SchachtProQrAblage` nutzt `ProjectStructure.SchachtVerteiltDir`,

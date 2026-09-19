@@ -371,6 +371,9 @@ internal static class SchachtProProtocolMapper
                     ? tiefe
                     : null,
                 Material = Leer(a.Material),
+                // Archiv und QR liefern die Zustaende als Liste und damit vollstaendig.
+                // Im PDF steht dieselbe Angabe als Text und wird dort bei Ueberlaenge gekuerzt.
+                Zustand = Zustandstext(a.Zustand),
                 Uhr = Leer(a.Uhr),
                 Richtung = Leer(a.Richtung),
                 Quelle = "SchachtPro"
@@ -380,6 +383,20 @@ internal static class SchachtProProtocolMapper
         return liste;
 
         static string? Leer(string? wert) => string.IsNullOrWhiteSpace(wert) ? null : wert.Trim();
+
+        static string? Zustandstext(Dictionary<string, bool>? zustand)
+        {
+            if (zustand is not { Count: > 0 })
+                return null;
+
+            var gewaehlt = zustand
+                .Where(eintrag => eintrag.Value && !string.IsNullOrWhiteSpace(eintrag.Key))
+                .Select(eintrag => eintrag.Key.Trim())
+                .OrderBy(text => text, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+
+            return gewaehlt.Count == 0 ? null : string.Join(" • ", gewaehlt);
+        }
     }
 
     private static string FormatAnschluesse(IReadOnlyList<AnschlussDto> anschluesse)

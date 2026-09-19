@@ -34,6 +34,20 @@ public sealed class SchachtAnschluss
     /// <summary>Haltungsname, wenn die Quelle ihn nennt; sonst ordnet die Anzeige spaeter zu.</summary>
     public string? Haltungsname { get; set; }
 
+    /// <summary>
+    /// Zustand des Anschlusses, wie ihn die Quelle nennt: «in Ordnung»,
+    /// «Mangelhaft eingebunden», «Einragend», mehrere mit « • » getrennt.
+    /// <c>null</c> heisst «nicht erfasst» und ist NICHT dasselbe wie «in Ordnung».
+    /// </summary>
+    public string? Zustand { get; set; }
+
+    /// <summary>
+    /// true, wenn die Quelle den Zustandstext sichtbar gekuerzt hat. SchachtPro schneidet
+    /// eine zu lange Zelle im PDF mit «…» ab; die weiteren Befunde stehen dann nirgends im
+    /// Dokument. Der gelesene Anfang bleibt erhalten, gilt aber als unvollstaendig.
+    /// </summary>
+    public bool ZustandUnvollstaendig { get; set; }
+
     /// <summary>Herkunft: "PDF" oder "SchachtPro".</summary>
     public string? Quelle { get; set; }
 

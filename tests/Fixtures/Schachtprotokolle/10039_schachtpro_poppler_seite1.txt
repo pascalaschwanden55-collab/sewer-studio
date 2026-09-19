@@ -1,0 +1,67 @@
+SCHACHTPRO
+Projekt: 27.08.2026 Göschenen Datum: 27.08.2026
+Koordinaten (LV95): E 2687939.868408 / N 1169144.662031
+
+Schachtprotokoll Schacht Nr. 10039
+
+
+STAMMDATEN & SKIZZE
+
+SCHACHT                                                      DECKEL                                  SKIZZE
+
+
+Medium                        Schmutzabwasser                Deckelform                Rund                                   A1 DN200
+
+
+
+Schachtfunktion               Kontrollschacht                Deckeltyp                 Pickelloch                                        12
+
+
+                              1.06                                                     -
+                                                                                                                                                            E1 DN150
+Tiefe (m)                                                    Belastungsklasse
+Durchmesser (m)               0.80                           Deckeldurchmesser (m)     0.80                           9                                 3
+
+Form                          Rund                           Deckelmaterial            Vollguss
+Material                      Fertigbetonelement
+                                                                                                                                         6
+Ausgeführt von                Muster                                                                                E3 DN200
+                                                                                                                                             E2 DN120
+
+Wetter                        schoen_trocken
+
+
+SCHACHTAUFBAU
+
+Bauteil                          Form                                    Dimension                             Höhe (m)
+
+Deckel/Rahmen                    Rund                                    0.80                                  -
+Unterteil                        Rund                                    0.80                                  -
+
+
+
+ZUSTAND DER SCHACHTBAUTEILE
+
+Schachtrohr                   Riss
+
+Bankett                       Mangelhaft ausgebildet
+
+Durchlaufrinne                Mangelhaft ausgebildet
+
+
+
+
+ANSCHLÜSSE
+
+Anschluss   Uhrzeit   Tiefe     Durchmesser        Typ              Medium            Material                     Zustand
+
+A1          12        1.06      200 mm             Auslauf          Schmutzabwasser   Polyvinylchlorid (PVC)       Mangelhaft eingebunden
+E1          2         0.39      150 mm             Einlauf          Schmutzabwasser   Polyethylen (PE)             Mangelhaft eingebunden
+E2          6         0.52      120 mm             Einlauf          Schmutzabwasser   Normalbeton (NB)             in Ordnung
+E3          7         0.97      200 mm             Einlauf          Schmutzabwasser   Polyvinylchlorid (PVC)       Mangelhaft eingebunden
+
+
+
+
+GKS Cahenzli AG                                                                                                                                Seite 1 von 4
+

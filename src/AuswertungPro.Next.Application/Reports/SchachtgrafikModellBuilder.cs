@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Lookup;
@@ -175,7 +175,9 @@ public static class SchachtgrafikModellBuilder
                 koten,
                 uhrGrad: SchachtUhrlage.Grad(zeile.Uhr),
                 azimutDirekt: kataster?.AzimutGrad,
-                nurImKataster: false));
+                nurImKataster: false,
+                zustand: Leer(zeile.Zustand),
+                zustandUnvollstaendig: zeile.ZustandUnvollstaendig));
         }
 
         var naechsteNr = tabelle.Count > 0 ? tabelle.Max(a => a.Nr) + 1 : 1;
@@ -346,7 +348,9 @@ public static class SchachtgrafikModellBuilder
         SchachtKoten? koten,
         double? uhrGrad,
         double? azimutDirekt,
-        bool nurImKataster)
+        bool nurImKataster,
+        string? zustand = null,
+        bool zustandUnvollstaendig = false)
     {
         var azimut = azimutDirekt;
         decimal? kote = null;
@@ -364,7 +368,7 @@ public static class SchachtgrafikModellBuilder
             tiefeQuelle = "Kataster";
         }
 
-        return new SchachtgrafikAnschluss(nr, istAuslauf, dn, tiefe, tiefeQuelle, material, haltungsname, azimut, kote, imProjekt, 0, uhrGrad, nurImKataster);
+        return new SchachtgrafikAnschluss(nr, istAuslauf, dn, tiefe, tiefeQuelle, material, haltungsname, azimut, kote, imProjekt, 0, uhrGrad, nurImKataster, zustand, zustandUnvollstaendig);
     }
 
     private static List<SchachtgrafikSchaden> Schaeden(

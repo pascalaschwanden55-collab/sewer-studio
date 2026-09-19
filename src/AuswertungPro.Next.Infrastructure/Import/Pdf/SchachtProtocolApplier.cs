@@ -149,6 +149,15 @@ internal static class SchachtProtocolApplier
         Schreibe("Steighilfe", zusatz.Steighilfe);
         Schreibe("Tauchbogen", zusatz.Tauchbogen);
 
+        // Beide Koordinaten gehoeren zusammen: Ein halbes Paar ist keine Lage.
+        // Hand- und Katasterwerte schuetzt SchachtRecord.SetFieldValue selbst
+        // (IsUserEdited und KatasterFeldschutz), deshalb genuegt der normale Schreibweg.
+        if (!string.IsNullOrWhiteSpace(zusatz.KoordinateOst) && !string.IsNullOrWhiteSpace(zusatz.KoordinateNord))
+        {
+            Schreibe("Koordinate_East", zusatz.KoordinateOst);
+            Schreibe("Koordinate_North", zusatz.KoordinateNord);
+        }
+
         if (zusatz.Anschluesse.Count > 0 && !(nurLeere && target.Anschluesse is { Count: > 0 }))
         {
             target.SetzeAnschluesse(zusatz.Anschluesse.Select(a => new SchachtAnschluss
@@ -158,6 +167,8 @@ internal static class SchachtProtocolApplier
                 DnMm = a.DnMm,
                 TiefeM = a.TiefeM,
                 Material = a.Material,
+                Zustand = a.Zustand,
+                ZustandUnvollstaendig = a.ZustandUnvollstaendig,
                 Uhr = a.Uhr,
                 Richtung = a.Richtung,
                 Haltungsname = a.Haltungsname,
