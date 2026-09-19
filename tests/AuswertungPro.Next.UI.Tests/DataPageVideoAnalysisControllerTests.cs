@@ -10,6 +10,33 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageVideoAnalysisControllerTests
 {
+    [Theory]
+    [InlineData("300", 300)]
+    [InlineData("600", 600)]
+    [InlineData("600,0", 600)]
+    [InlineData("1'000", 1000)]
+    [InlineData("", null)]
+    [InlineData("unbekannt", null)]
+    [InlineData("0", null)]
+    [InlineData("-300", null)]
+    [InlineData("NaN", null)]
+    [InlineData("Infinity", null)]
+    [InlineData("300,5", null)]
+    [InlineData("2147483648", null)]
+    public void Open_UebergibtGeprueftenHaltungsdurchmesser(string rawDiameter, int? expected)
+    {
+        var record = Record("H-01", length: "12");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, rawDiameter, FieldSource.Manual, userEdited: false);
+        PipelineRequest? captured = null;
+        using var controller = CreateController(new CapturingDialogService(),
+            showPipelineWindow: (request, _) => { captured = request; return null; });
+
+        controller.Open(record);
+
+        Assert.NotNull(captured);
+        Assert.Equal(expected, captured.PipeDiameterMm);
+    }
+
     [Fact]
     public void Open_ignoriert_null_record_ohne_pfad_oder_dialog()
     {

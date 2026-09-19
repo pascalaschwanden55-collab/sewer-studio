@@ -38,8 +38,10 @@ public sealed class VideoAnalysisPipelineWindowResultArchitectureTests
         var presenter = resultBlock.IndexOf("PipelineResultPresenter.ApplySuccessful", StringComparison.Ordinal);
         Assert.True(guard >= 0 && setError > guard && guardReturn > setError && presenter > guardReturn);
         Assert.Equal(1, CountOccurrences(resultBlock, "ReplaceVisibleDetections("));
-        Assert.Contains("Vm.StatusText = \"Fertig. Du kannst jetzt übertragen.\"", resultBlock);
-        Assert.Contains("Vm.PhaseLabel = \"Fertig\"", resultBlock);
+        // Der Presenter entscheidet anhand von Warnungen und Vollstaendigkeit.
+        // Das Fenster darf diesen Abschluss nicht wieder pauschal ueberschreiben.
+        Assert.DoesNotContain("Vm.StatusText =", resultBlock);
+        Assert.DoesNotContain("Vm.PhaseLabel =", resultBlock);
     }
 
     [Fact]
@@ -59,8 +61,6 @@ public sealed class VideoAnalysisPipelineWindowResultArchitectureTests
         Assert.DoesNotContain("viewModel.Detections", presenter);
         Assert.DoesNotContain("IsDone", presenter);
         Assert.DoesNotContain("HasError", presenter);
-        Assert.DoesNotContain("StatusText", presenter);
-        Assert.DoesNotContain("PhaseLabel", presenter);
         Assert.DoesNotContain("Dialog", presenter);
         Assert.DoesNotContain("Document", presenter);
     }

@@ -43,11 +43,13 @@ public sealed partial class MultiModelAnalysisService
         string videoPath,
         double stepSeconds,
         double duration,
+        MultiModelRunCompleteness completeness,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
     {
         await using var stream = VideoFrameStream.Open(ffmpegPath, videoPath, stepSeconds, duration, ct);
         await foreach (var frame in stream.ReadFramesAsync(ct).ConfigureAwait(false))
             yield return frame;
+        completeness.Extraction = stream.Completion;
     }
 
     private async Task<double> GetVideoDurationAsync(string videoPath, CancellationToken ct)
@@ -200,6 +202,31 @@ public sealed partial class MultiModelAnalysisService
     private Task AppendCheckpointAsync(AnalysisCheckpointFrame frame, CancellationToken ct)
         => _checkpointJournal?.AppendFrameAsync(frame, ct) ?? Task.CompletedTask;
 
+    private bool RecordSamCompletion(MultiModelRunCompleteness completeness, SamResponse response,
+        int requestedBoxes, int frameIndex, int totalFrames, PipelineFrameTrace trace,
+        IProgress<VideoAnalysisProgress>? progress)
+    {
+        var failed = completeness.RecordSam(response, requestedBoxes);
+        if (response.Degraded || failed)
+        {
+            _logger.LogWarning("Frame {Frame}: SAM – {Skipped}/{Requested} Boxen nicht segmentiert (Review).",
+                frameIndex, response.SkippedBoxes, requestedBoxes);
+            progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                $"Frame {frameIndex} – SAM: {response.SkippedBoxes} Box(en) nicht segmentiert – Review nötig"));
+            MarkTraceDegraded(trace, $"sam_skipped_{response.SkippedBoxes}_of_{requestedBoxes}");
+        }
+        return failed;
+    }
+
+    private static void ReportCompletion(IProgress<VideoAnalysisProgress>? progress, int totalFrames,
+        int skippedFrames, VideoAnalysisResult result)
+    {
+        var status = result.Incomplete ? "Multi-Model Analyse unvollstaendig" : result.Degraded
+            ? "Multi-Model abgeschlossen mit Einschraenkungen" : "Multi-Model fertig";
+        progress?.Report(new VideoAnalysisProgress(result.Incomplete ? result.FramesAnalyzed : totalFrames, totalFrames,
+            $"{status} – {result.Detections.Count} Schäden, {skippedFrames} Frames übersprungen. " + result.DegradedReason));
+    }
+
     /// <summary>
     /// Baut das Abschluss-Ergebnis: Degraded-Gruende (Sidecar-Ausfall, Qwen-Serie,
     /// Detektor-Qualifikation, VRAM-Kapazitaetsmangel) und die Unvollstaendigkeits-
@@ -219,9 +246,14 @@ public sealed partial class MultiModelAnalysisService
         string? detectorQualificationReason,
         SidecarOutageGuard outageGuard,
         QwenOutageTracker qwenOutage,
-        string? vramInsufficientMessage)
+        string? vramInsufficientMessage,
+        MultiModelRunCompleteness completeness)
     {
         var degradedReasons = new List<string>();
+        if (completeness.ExtractionWarning is { } extractionWarning)
+            degradedReasons.Add(extractionWarning);
+        if (completeness.SamFailureFrames > 0)
+            degradedReasons.Add($"SAM: {completeness.SamFailureFrames} Frames technisch nicht vollstaendig segmentiert – manuelle Pruefung erforderlich.");
         if (sidecarOutage)
             degradedReasons.Add($"Sidecar antwortete ab Frame {frameIndex} nicht mehr – Analyse unvollstaendig.");
         // Paket 2/A4: VRAM-Mangel ist kein Ausfall, aber ehrlich sichtbar (mit VRAM-Zahlen).
@@ -239,6 +271,8 @@ public sealed partial class MultiModelAnalysisService
             degradedReasons.Add(
                 $"Qwen/Ollama antwortete bei {qwenOutage.NotedErrorCount} Folgeframes nicht – VSA-Code-Anreicherung unvollstaendig.");
         }
+        else if (completeness.QwenFailureFrames > 0)
+            degradedReasons.Add($"Qwen/Ollama fehlgeschlagen bei {completeness.QwenFailureFrames} Frames – VSA-Code-Anreicherung unvollstaendig.");
         if (!detectorQualified)
         {
             degradedReasons.Add(
@@ -252,8 +286,8 @@ public sealed partial class MultiModelAnalysisService
         // Skip-Quote: Quote der fehlerbedingt uebersprungenen Frames an den in DIESEM
         // Lauf analysierten Frames (Resume-Frames zaehlen nicht mit). Kein Abbruch.
         var analyzedFrames = frameIndex - resumedFrames;
-        var incomplete = analyzedFrames > 0
-            && (double)outageGuard.ErrorSkipCount / analyzedFrames > 0.10;
+        var incomplete = completeness.Extraction is { IsComplete: false }
+            || (analyzedFrames > 0 && (double)outageGuard.ErrorSkipCount / analyzedFrames > 0.10);
 
         return new VideoAnalysisResult(videoPath, duration, frameIndex,
             detections.OrderBy(d => d.MeterStart).ToList(), null, summary,
@@ -278,6 +312,7 @@ public sealed partial class MultiModelAnalysisService
         public double Meter { get; set; }
         public double LastMeter { get; set; }
         public bool MeterAccepted { get; set; }
+        public bool RequiresRetry { get; set; }
     }
 
     /// <summary>
@@ -342,6 +377,15 @@ public sealed partial class MultiModelAnalysisService
 
             trace.QwenImageQuality = qwenResult.ImageQuality;
             trace.QwenRawFindingCount = qwenResult.Findings.Count;
+            if (qwenResult.Outcome is not (AnalysisOutcome.Ok or AnalysisOutcome.NoFinding)
+                || !string.IsNullOrWhiteSpace(qwenResult.Error))
+            {
+                var reason = qwenResult.Outcome == AnalysisOutcome.Timeout ? "qwen_timeout" : "qwen_error";
+                RecordQwenFailure(context, trace, qwenOutage, reason);
+                _logger.LogWarning("Frame {Frame}: Qwen VSA-Code-Mapping fehlgeschlagen ({Outcome}): {Error}",
+                    frameIndex, qwenResult.Outcome, qwenResult.Error);
+                return phaseSw.ElapsedMilliseconds;
+            }
             qwenOutage.RegisterSuccess();
 
             var badQuality = string.Equals(qwenResult.ImageQuality, "schlecht", StringComparison.OrdinalIgnoreCase);
@@ -417,15 +461,13 @@ public sealed partial class MultiModelAnalysisService
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            trace.DropReason = "qwen_timeout";
-            qwenOutage.RegisterFailure();
+            RecordQwenFailure(context, trace, qwenOutage, "qwen_timeout");
             _logger.LogWarning("Frame {Frame}: Qwen VSA-Code-Mapping timeout ({Timeout}s)",
                 frameIndex, QwenFrameTimeout.TotalSeconds);
         }
         catch (Exception ex)
         {
-            trace.DropReason = "qwen_error";
-            qwenOutage.RegisterFailure();
+            RecordQwenFailure(context, trace, qwenOutage, "qwen_error");
             _logger.LogWarning(ex, "Frame {Frame}: Qwen VSA-Code-Mapping fehlgeschlagen", frameIndex);
         }
         qwenMs = phaseSw.ElapsedMilliseconds;
@@ -433,5 +475,14 @@ public sealed partial class MultiModelAnalysisService
         context.LastMeter = lastMeter;
         context.MeterAccepted = qwenMeterAccepted;
         return qwenMs;
+    }
+
+    private static void RecordQwenFailure(QwenFrameContext context, PipelineFrameTrace trace,
+        QwenOutageTracker outage, string reason)
+    {
+        context.RequiresRetry = true;
+        trace.DropReason = reason;
+        MarkTraceDegraded(trace, reason);
+        outage.RegisterFailure();
     }
 }

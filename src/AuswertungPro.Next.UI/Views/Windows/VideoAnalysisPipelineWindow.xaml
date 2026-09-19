@@ -684,13 +684,28 @@
                     </Grid>
                 </Border>
 
+                <StackPanel Grid.Row="5">
+                <!-- Abschlusswarnungen bleiben bis zur bewussten Uebernahme sichtbar. -->
+                <Border x:Name="ResultWarningsPanel" CornerRadius="{DynamicResource RadiusL}"
+                        Padding="12,8" Margin="0,4,0,0"
+                        Background="{DynamicResource WarningSubtleBrush}"
+                        BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1"
+                        Visibility="{Binding HasResultWarnings, Converter={StaticResource BoolToVis}}">
+                    <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <TextBlock x:Name="ResultWarningsText" Foreground="{DynamicResource TextBrush}"
+                                   FontSize="{DynamicResource TextS}" TextWrapping="Wrap"
+                                   Text="{Binding ResultWarningText}"/>
+                    </ScrollViewer>
+                </Border>
                 <!-- Fehlermeldung -->
-                <Border Grid.Row="5" CornerRadius="{DynamicResource RadiusL}" Padding="12,8" Margin="0,4,0,0"
+                <Border CornerRadius="{DynamicResource RadiusL}" Padding="12,8" Margin="0,4,0,0"
                         Background="{DynamicResource DangerSubtleBrush}" BorderBrush="{DynamicResource DangerBrush}" BorderThickness="1"
                         Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
                     <TextBlock Foreground="{DynamicResource DangerBrush}" FontSize="{DynamicResource TextS}"
                                Text="{Binding ErrorText}" TextWrapping="Wrap"/>
                 </Border>
+                </StackPanel>
             </Grid>
 
             <!-- Rechte Spalte: Live-Feed -->
@@ -762,6 +777,9 @@
                              Background="Transparent"
                              BorderThickness="0"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.CanContentScroll="True"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling"
                              VirtualizingPanel.ScrollUnit="Pixel">
                         <ListBox.ItemTemplate>
                             <DataTemplate>

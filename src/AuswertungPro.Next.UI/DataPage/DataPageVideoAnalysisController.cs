@@ -176,6 +176,9 @@ public sealed class DataPageVideoAnalysisController : IDisposable
     {
         var haltungId = record.GetFieldValue("Haltungsname") ?? record.Id.ToString();
         var reachLengthM = PipelineReachLengthParser.TryParse(record.GetFieldValue("Haltungslaenge_m"));
-        return new PipelineRequest(haltungId, videoPath, allowedCodes, ReachLengthM: reachLengthM);
+        return new PipelineRequest(haltungId, videoPath, allowedCodes, ReachLengthM: reachLengthM)
+        {
+            PipeDiameterMm = PipelinePipeDiameterPolicy.Parse(record.GetFieldValue(FieldKeys.NominalDiameterMm))
+        };
     }
 }

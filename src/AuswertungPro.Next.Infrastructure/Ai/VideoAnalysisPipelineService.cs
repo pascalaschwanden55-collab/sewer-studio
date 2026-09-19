@@ -130,6 +130,15 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
         // â”€â”€ Decide: Multi-Model or Ollama-Only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var (useMultiModel, pipelineCfg, fallbackReason) = await ShouldUseMultiModelAsync(ct).ConfigureAwait(false);
+        pipelineCfg = pipelineCfg with { PipeDiameterMm = request.PipeDiameterMm };
+        var measurementWarnings = useMultiModel
+            ? PipelinePipeDiameterPolicy.Warnings(pipelineCfg)
+            : Array.Empty<string>();
+        foreach (var warning in measurementWarnings)
+        {
+            _logger.LogWarning("Videoanalyse-Messung: {Warning}", warning);
+            progress?.Report(new PipelineProgress(PipelinePhase.MultiModelDetection, 0, "WARNUNG: " + warning));
+        }
 
         // Unerwarteten Fallback klar sichtbar machen (sonst sieht Ollama-Only wie Normalbetrieb aus).
         if (fallbackReason is not null)
@@ -257,13 +266,12 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 FramesDone: videoResult.FramesAnalyzed, FramesTotal: videoResult.FramesAnalyzed));
         }
 
-        // Unvollstaendigkeits-Hinweis (Skip-Quote > 10 %): ueber denselben WARNUNG-Pfad
-        // wie der Degraded-Hinweis ausspielen — Ergebnis ist nutzbar, aber lueckenhaft.
+        // Auch ein vorzeitig beendeter Lauf kann ohne erhoehte Skip-Quote unvollstaendig sein.
         if (videoResult.Incomplete)
         {
-            _logger.LogWarning("Videoanalyse unvollstaendig: mehr als 10 % der Frames fehlerbedingt uebersprungen.");
+            _logger.LogWarning("Videoanalyse unvollständig: Das Video wurde nicht vollständig ausgewertet.");
             progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
-                "WARNUNG: Mehr als 10 % der Frames wurden fehlerbedingt uebersprungen – Ergebnis unvollstaendig.",
+                "WARNUNG: Das Video wurde nicht vollständig ausgewertet. Ergebnis unvollständig.",
                 FramesDone: videoResult.FramesAnalyzed, FramesTotal: videoResult.FramesAnalyzed));
         }
 
@@ -301,6 +309,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             return PipelineResult.Failed($"Code-Mapping fehlgeschlagen: {genResult.Error}");
 
         var resultWarnings = genResult.Warnings.ToList();
+        resultWarnings.AddRange(measurementWarnings);
         if (videoResult.Degraded)
         {
             resultWarnings.Add(
@@ -310,8 +319,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         if (videoResult.Incomplete)
         {
             resultWarnings.Add(
-                "Ergebnis unvollstaendig: mehr als 10 % der Frames wurden fehlerbedingt "
-                + "uebersprungen (Sidecar-/Modellfehler). Manuelle Pruefung empfohlen.");
+                "Ergebnis unvollständig: Das Video wurde nicht vollständig ausgewertet. Manuelle Prüfung erforderlich.");
         }
 
         progress?.Report(new PipelineProgress(PipelinePhase.CodeMapping, 100,
@@ -325,7 +333,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             videoResult.Degraded
                 ? "Fertig – Ergebnis ist eingeschraenkt und muss manuell geprueft werden."
                 : videoResult.Incomplete
-                    ? "Fertig – Ergebnis ist unvollstaendig (>10 % der Frames uebersprungen); manuelle Pruefung empfohlen."
+                    ? "Fertig – Ergebnis ist unvollständig; manuelle Prüfung erforderlich."
                     : "Fertig."));
 
         return new PipelineResult(

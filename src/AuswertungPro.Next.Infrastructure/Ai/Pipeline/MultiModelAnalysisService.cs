@@ -178,14 +178,15 @@ public sealed partial class MultiModelAnalysisService
         const int sidecarOutageLimit = 8;
         var outageGuard = new SidecarOutageGuard(sidecarOutageLimit);
         var qwenOutage = new QwenOutageTracker(sidecarOutageLimit);
+        var completeness = new MultiModelRunCompleteness();
         bool sidecarOutage = false;
         string? vramInsufficientMessage = null;   // Paket 2/A4: erste VRAM-Mangel-Meldung des Laufs (Degraded-Grund)
         _sidecarRestartAttemptedThisRun = false;   // Neustart-Budget: einmalig pro Lauf (Paket 3/A2)
-        // Pipe diameter: from config override or default 300mm
-        int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
+        // Haltungs-DN vor globaler Vorgabe; unbekannt liefert keine erfundenen Masse.
+        int pipeDiameterMm = PipelinePipeDiameterPolicy.Resolve(_config) ?? 0;
 
         progress?.Report(new VideoAnalysisProgress(0, totalFrames,
-            $"Multi-Model Pipeline: {totalFrames} Frames, DN{pipeDiameterMm}"));
+            $"Multi-Model Pipeline: {totalFrames} Frames, " + (pipeDiameterMm > 0 ? $"DN{pipeDiameterMm}" : "DN unbekannt")));
 
         var telemetry = new PipelineTelemetry();
 
@@ -232,7 +233,7 @@ public sealed partial class MultiModelAnalysisService
         // frameSource-Seam: im Test injizierbar; sonst echter VideoFrameStream.
         var frames = _frameSource is not null
             ? _frameSource(_ffmpegPath, videoPath, FrameStepSeconds, duration, ct)
-            : DefaultFrameSource(_ffmpegPath, videoPath, FrameStepSeconds, duration, ct);
+            : DefaultFrameSource(_ffmpegPath, videoPath, FrameStepSeconds, duration, completeness, ct);
 
         await foreach (var frame in frames.ConfigureAwait(false))
         {
@@ -718,7 +719,7 @@ public sealed partial class MultiModelAnalysisService
             try
             {
                 samResult = await _client.SegmentSamAsync(
-                    new SamRequest(frameBase64, samBoxes, pipeDiameterMm), ct).ConfigureAwait(false);
+                    new SamRequest(frameBase64, samBoxes, pipeDiameterMm > 0 ? pipeDiameterMm : null), ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -761,17 +762,9 @@ public sealed partial class MultiModelAnalysisService
             var samMs = phaseSw.ElapsedMilliseconds;
             trace.SamMaskCount = samResult.Masks.Count;
 
-            // SAM-Teilverlust sichtbar machen: degraded=true heisst, Boxen gingen verloren
-            // (Predict-Fehler / ausserhalb Bild). Frame wird weiterverarbeitet (Masken existieren),
-            // aber als Review markiert, statt den Teilverlust still zu schlucken.
-            if (samResult.Degraded)
-            {
-                _logger.LogWarning("Frame {Frame}: SAM degraded – {Skipped}/{Requested} Boxen verloren (Review).",
-                    frameIndex, samResult.SkippedBoxes, samResult.RequestedBoxes);
-                progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                    $"Frame {frameIndex} – SAM degraded ({samResult.SkippedBoxes} Box(en) verloren) – Review nötig"));
-                MarkTraceDegraded(trace, $"sam_skipped_{samResult.SkippedBoxes}_of_{samResult.RequestedBoxes}");
-            }
+            var frameNeedsRetry = RecordSamCompletion(completeness, samResult, samBoxes.Count,
+                frameIndex, totalFrames, trace, progress);
+            if (frameNeedsRetry) outageGuard.RegisterFailureSkip();
 
             // ── Step 4: Quantification ──
             var quantified = MaskQuantificationService.QuantifyAll(samResult, pipeDiameterMm);
@@ -899,6 +892,12 @@ public sealed partial class MultiModelAnalysisService
                 meter = qwenContext.Meter;
                 lastMeter = qwenContext.LastMeter;
                 qwenMeterAccepted = qwenContext.MeterAccepted;
+                if (qwenContext.RequiresRetry)
+                {
+                    completeness.RecordQwenFailure();
+                    if (!frameNeedsRetry) outageGuard.RegisterFailureSkip();
+                    frameNeedsRetry = true;
+                }
             }
 
             telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, samMs, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
@@ -940,7 +939,8 @@ public sealed partial class MultiModelAnalysisService
                     trace.DropReason = "all_findings_missing_code";
             }
             await WriteTraceAsync(trace).ConfigureAwait(false);
-            await AppendCheckpointAsync(new(CheckpointFrameKind.Update, frameIndex, t, meter, meterSource, isMeterEstimated, frameEvidence, findings), ct).ConfigureAwait(false);
+            await AppendCheckpointAsync(new(frameNeedsRetry ? CheckpointFrameKind.RetryRequired : CheckpointFrameKind.Update,
+                frameIndex, t, meter, meterSource, isMeterEstimated, frameEvidence, findings), ct).ConfigureAwait(false);
 
             progress?.Report(new VideoAnalysisProgress(
                 frameIndex, totalFrames,
@@ -950,14 +950,13 @@ public sealed partial class MultiModelAnalysisService
         }
 
         detections.AddRange(deduplicator.Flush());
-        if (!sidecarOutage && _checkpointJournal is not null) await _checkpointJournal.CompleteAsync(ct).ConfigureAwait(false);
+        completeness.FinishExtraction(frameIndex, totalFrames, sidecarOutage);
+        if (completeness.CanCompleteJournal(sidecarOutage, outageGuard.ErrorSkipCount) && _checkpointJournal is not null)
+            await _checkpointJournal.CompleteAsync(ct).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Multi-Model Pipeline complete: {Detections} detections, {Skipped}/{Total} frames skipped, {Duration:F1}s video",
             detections.Count, skippedFrames, frameIndex, duration);
-
-        progress?.Report(new VideoAnalysisProgress(totalFrames, totalFrames,
-            $"Multi-Model fertig – {detections.Count} Schäden, {skippedFrames} Frames übersprungen."));
 
         var summary = telemetry.GetSummary();
         _logger.LogInformation(
@@ -969,9 +968,11 @@ public sealed partial class MultiModelAnalysisService
             .WriteSummaryAsync(_pipelineTraceWriter, runId, summary)
             .ConfigureAwait(false);
 
-        return BuildResult(videoPath, duration, frameIndex, resume.LastFrameIndex, detections, summary,
+        var result = BuildResult(videoPath, duration, frameIndex, resume.LastFrameIndex, detections, summary,
             sidecarOutage, detectorQualified, effectiveDetectorQualified, detectorQualificationReason,
-            outageGuard, qwenOutage, vramInsufficientMessage);
+            outageGuard, qwenOutage, vramInsufficientMessage, completeness);
+        ReportCompletion(progress, totalFrames, skippedFrames, result);
+        return result;
     }
 
     // ── Conversion helper ──────────────────────────────────────────────

@@ -110,8 +110,6 @@ public partial class VideoAnalysisPipelineWindow : Window
             var visibleDetections = presentation.VisibleDetections;
             ReplaceVisibleDetections(visibleDetections);
 
-            Vm.StatusText = "Fertig. Du kannst jetzt übertragen.";
-            Vm.PhaseLabel = "Fertig";
         }
         catch (OperationCanceledException)
         {

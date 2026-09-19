@@ -43,6 +43,10 @@ public sealed partial class VideoAnalysisPipelineViewModel : ObservableObject
     [ObservableProperty] private bool _isDone;
     [ObservableProperty] private bool _hasError;
     [ObservableProperty] private string _errorText = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResultWarnings))]
+    private string _resultWarningText = "";
+    public bool HasResultWarnings => !string.IsNullOrWhiteSpace(ResultWarningText);
 
     // Multi-Model Pipeline
     [ObservableProperty] private bool _isMultiModelActive;
@@ -79,6 +83,7 @@ public sealed partial class VideoAnalysisPipelineViewModel : ObservableObject
         IsDone = false;
         HasError = false;
         ErrorText = "";
+        ResultWarningText = "";
         IsMultiModelActive = false;
         YoloSkippedFrames = 0;
         TelemetryText = "";
