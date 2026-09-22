@@ -113,7 +113,7 @@ public sealed class WebGisExportUseCase
         }
 
         foreach (var akte in akten)
-            plan.Sanierungen.Add(WebGisSanierungPlanBuilder.Baue(akte, e.Objektart, e.Bezeichnung, stand, katalog));
+            plan.Sanierungen.Add(WebGisSanierungPlanBuilder.Baue(akte, e.Objektart, e.Bezeichnung, stand, katalog, e.RecordId));
     }
 
     /// <summary>

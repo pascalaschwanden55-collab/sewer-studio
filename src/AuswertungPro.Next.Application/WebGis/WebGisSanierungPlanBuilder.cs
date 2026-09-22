@@ -21,7 +21,7 @@ public static class WebGisSanierungPlanBuilder
 {
     public static WebGisSanierungPosition Baue(
         ObjektAkte akte, WebGisObjektart art, string elternBezeichnung,
-        WebGisLesestand? stand, WebGisSanierungKatalog? katalog)
+        WebGisLesestand? stand, WebGisSanierungKatalog? katalog, Guid elternRecordId = default)
     {
         ArgumentNullException.ThrowIfNull(akte);
 
@@ -30,6 +30,7 @@ public static class WebGisSanierungPlanBuilder
             Objektart = art,
             ElternBezeichnung = elternBezeichnung,
             ElternGlobalId = stand?.GlobalId,
+            ElternRecordId = elternRecordId,
             AkteId = akte.Id,
         };
 

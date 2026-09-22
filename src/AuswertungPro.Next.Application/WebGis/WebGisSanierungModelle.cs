@@ -19,6 +19,8 @@ public sealed class WebGisSanierungPosition
     /// <summary>Bezeichnung des Elternobjekts (Haltung/Schacht).</summary>
     public required string ElternBezeichnung { get; init; }
     public string? ElternGlobalId { get; init; }
+    /// <summary>Datensatz-Id des Elternobjekts im Projekt — damit die Uebersicht es oeffnen kann.</summary>
+    public Guid ElternRecordId { get; init; }
     public Guid AkteId { get; init; }
     /// <summary>refId -> Wert wie er ans WebGIS geht (Combo-Schluessel als Text, Datum ISO).</summary>
     public Dictionary<string, string> Felder { get; } = new(StringComparer.Ordinal);

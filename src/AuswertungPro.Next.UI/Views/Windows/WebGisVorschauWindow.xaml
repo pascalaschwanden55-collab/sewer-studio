@@ -97,6 +97,14 @@
                             <TextBlock Text="{Binding Kurz}" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
                         </Border>
+                        <!-- Korrigieren ohne das Fenster zu schliessen: oeffnet Haltung/Schacht,
+                             danach «Neu pruefen». Nur wo der Datensatz bekannt ist. -->
+                        <Button Content="Bearbeiten" Style="{StaticResource ToolbarButton}" Margin="10,0,0,0"
+                                Padding="10,2" VerticalAlignment="Center"
+                                Click="OnObjektBearbeiten" Tag="{Binding}"
+                                ToolTip="Öffnet dieses Objekt in Haltungen bzw. Schächte. Das Fenster bleibt offen — danach «Neu prüfen»."
+                                AutomationProperties.Name="Objekt bearbeiten"
+                                Visibility="{Binding KannOeffnen, Converter={StaticResource BoolToVis}}"/>
                     </StackPanel>
                     <ItemsControl ItemsSource="{Binding Zeilen}" ItemTemplate="{StaticResource ZeileTemplate}"/>
                 </StackPanel>

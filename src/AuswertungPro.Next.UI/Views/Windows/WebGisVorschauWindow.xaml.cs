@@ -17,14 +17,32 @@ public partial class WebGisVorschauWindow : Window
 {
     private readonly Func<Task<WebGisUebersicht?>> _pruefen;
     private readonly Func<Task<WebGisUebersicht?>> _schreiben;
+    private readonly Action<WebGisObjektart, Guid>? _oeffnen;
     private readonly Anzeige _anzeige = new();
 
-    public WebGisVorschauWindow(Func<Task<WebGisUebersicht?>> pruefen, Func<Task<WebGisUebersicht?>> schreiben)
+    public WebGisVorschauWindow(
+        Func<Task<WebGisUebersicht?>> pruefen, Func<Task<WebGisUebersicht?>> schreiben,
+        Action<WebGisObjektart, Guid>? oeffnen = null)
     {
         _pruefen = pruefen ?? throw new ArgumentNullException(nameof(pruefen));
         _schreiben = schreiben ?? throw new ArgumentNullException(nameof(schreiben));
+        _oeffnen = oeffnen;
         InitializeComponent();
         DataContext = _anzeige;
+    }
+
+    /// <summary>
+    /// «Bearbeiten» an einer Objektkarte: oeffnet Haltung oder Schacht zum Korrigieren.
+    /// Das Fenster bleibt offen (es ist nicht-modal); danach holt «Neu pruefen» den
+    /// korrigierten Stand (Wunsch Pascal 22.09.2026). Waehrend Lesen oder Schreiben laeuft,
+    /// wird nicht gesprungen — sonst aendert sich die Auswahl mitten im Lauf.
+    /// </summary>
+    private void OnObjektBearbeiten(object sender, RoutedEventArgs e)
+    {
+        if (!_anzeige.Bereit || _oeffnen is null) return;
+        if (sender is not FrameworkElement { Tag: WebGisUebersichtObjekt objekt } || !objekt.KannOeffnen) return;
+        _oeffnen(objekt.Objektart, objekt.RecordId);
+        _anzeige.Status = $"{objekt.Objekt} geöffnet — nach der Korrektur «Neu prüfen».";
     }
 
     /// <summary>Erstes Pruefen nach dem Oeffnen.</summary>

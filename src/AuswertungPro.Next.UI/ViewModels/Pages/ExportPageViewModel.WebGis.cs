@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.WebGis;
 using AuswertungPro.Next.Infrastructure.WebGis;
@@ -126,13 +127,28 @@ public sealed partial class ExportPageViewModel
             return;
         }
 
-        var fenster = new Views.Windows.WebGisVorschauWindow(WebGisPruefenAsync, WebGisSchreibenAsync);
+        var fenster = new Views.Windows.WebGisVorschauWindow(WebGisPruefenAsync, WebGisSchreibenAsync, WebGisOeffne);
         var besitzer = System.Windows.Application.Current?.MainWindow;
         if (besitzer is not null && besitzer.IsLoaded) fenster.Owner = besitzer;
         fenster.Closed += (_, _) => { _webGisFenster = null; WebGisAktualisiere(); };
         _webGisFenster = fenster;
         fenster.Show();
         await fenster.PruefeAsync();
+    }
+
+    /// <summary>
+    /// Springt aus dem Prueffenster in die Bearbeitung des Objekts — denselben Weg, den auch
+    /// Dossier und Karte nehmen. Der Datensatz wird im AKTUELLEN Projekt gesucht: Nach einem
+    /// Projektwechsel gehoert die Id nicht mehr hierher, dann geschieht nichts.
+    /// </summary>
+    private void WebGisOeffne(WebGisObjektart art, Guid recordId)
+    {
+        var projekt = _shell.Project;
+        if (projekt is null || recordId == Guid.Empty) return;
+        if (art == WebGisObjektart.Haltung)
+            _shell.NavigateToHolding(projekt.Data.FirstOrDefault(h => h.Id == recordId));
+        else
+            _shell.NavigateToShaft(projekt.SchaechteData.FirstOrDefault(s => s.Id == recordId));
     }
 
     /// <summary>Plan aus dem aktuellen Projektstand + frischem WebGIS-Stand; schreibt nichts.</summary>

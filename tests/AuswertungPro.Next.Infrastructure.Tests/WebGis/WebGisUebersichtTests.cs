@@ -44,6 +44,58 @@ public sealed class WebGisUebersichtTests
     }
 
     [Fact]
+    public void Jede_karte_nennt_das_objekt_zum_oeffnen()
+    {
+        // Das Fenster ist nicht-modal: Aus der Karte heraus soll die Haltung oder der Schacht
+        // zum Korrigieren aufgehen. Dafuer traegt die Karte Objektart und Datensatz-Id
+        // (Wunsch Pascal 22.09.2026).
+        var plan = new WebGisExportPlan();
+        var haltungId = Guid.NewGuid();
+        var h = new WebGisExportPosition
+        {
+            Objektart = WebGisObjektart.Haltung, Bezeichnung = "80462-80461", GlobalId = "G1", RecordId = haltungId,
+        };
+        h.Aenderungen.Add(new WebGisFeldAenderung { RefId = "r", Feld = "Zustand", Alt = "102", Neu = "104" });
+        plan.Positionen.Add(h);
+
+        // Ein Objekt, das nur wegen einer Sanierungsmassnahme eine Karte bekommt.
+        var schachtId = Guid.NewGuid();
+        var s = new WebGisSanierungPosition
+        {
+            Objektart = WebGisObjektart.Schacht, ElternBezeichnung = "60122", ElternGlobalId = "G2",
+            ElternRecordId = schachtId, AkteId = Guid.NewGuid(),
+        };
+        s.Sperren.Add("Art fehlt in der Sanierungs-Akte.");
+        plan.Sanierungen.Add(s);
+
+        var u = WebGisUebersicht.Aus(plan);
+
+        var karteH = u.Objekte.Find(o => o.Objekt.Contains("80462-80461"));
+        Assert.NotNull(karteH);
+        Assert.Equal(WebGisObjektart.Haltung, karteH!.Objektart);
+        Assert.Equal(haltungId, karteH.RecordId);
+
+        var karteS = u.Objekte.Find(o => o.Objekt.Contains("60122"));
+        Assert.NotNull(karteS);
+        Assert.Equal(WebGisObjektart.Schacht, karteS!.Objektart);
+        Assert.Equal(schachtId, karteS.RecordId);
+    }
+
+    [Fact]
+    public void Ohne_datensatz_id_ist_die_karte_nicht_zu_oeffnen()
+    {
+        var plan = new WebGisExportPlan();
+        var p = new WebGisExportPosition { Objektart = WebGisObjektart.Haltung, Bezeichnung = "H" };
+        p.Sperren.Add("Im WebGIS nicht eindeutig gefunden.");
+        plan.Positionen.Add(p);
+
+        var karte = Assert.Single(WebGisUebersicht.Aus(plan).Objekte);
+
+        Assert.Equal(Guid.Empty, karte.RecordId);
+        Assert.False(karte.KannOeffnen);
+    }
+
+    [Fact]
     public void Gruppiert_je_objekt_und_zeigt_unveraenderte_nicht()
     {
         var u = WebGisUebersicht.Aus(Plan());

@@ -34,6 +34,12 @@ public sealed record WebGisUebersichtZeile(WebGisZeilenart Art, string Feld, str
 public sealed class WebGisUebersichtObjekt
 {
     public required string Objekt { get; init; }
+    /// <summary>Haltung oder Schacht — fuer den Sprung in die Bearbeitung.</summary>
+    public WebGisObjektart Objektart { get; init; }
+    /// <summary>Datensatz-Id im Projekt; <see cref="Guid.Empty"/>, wenn nicht bekannt.</summary>
+    public Guid RecordId { get; init; }
+    /// <summary>True, wenn die Karte einen Datensatz zum Oeffnen kennt.</summary>
+    public bool KannOeffnen => RecordId != Guid.Empty;
     public List<WebGisUebersichtZeile> Zeilen { get; } = new();
 
     public int Aenderungen => Zeilen.Count(z => z.IstAenderung);
@@ -83,12 +89,12 @@ public sealed class WebGisUebersicht
         };
 
         var nachObjekt = new Dictionary<string, WebGisUebersichtObjekt>(StringComparer.Ordinal);
-        WebGisUebersichtObjekt Hole(WebGisObjektart art, string bezeichnung)
+        WebGisUebersichtObjekt Hole(WebGisObjektart art, string bezeichnung, Guid recordId = default)
         {
             var name = (art == WebGisObjektart.Haltung ? "Haltung " : "Schacht ") + bezeichnung;
             if (!nachObjekt.TryGetValue(name, out var o))
             {
-                o = new WebGisUebersichtObjekt { Objekt = name };
+                o = new WebGisUebersichtObjekt { Objekt = name, Objektart = art, RecordId = recordId };
                 nachObjekt[name] = o;
                 u.Objekte.Add(o);
             }
@@ -100,7 +106,7 @@ public sealed class WebGisUebersicht
             if (p.Aenderungen.Count == 0 && p.Sperren.Count == 0 && p.Hinweise.Count == 0 && p.SchreibFehler is null)
                 continue; // unveraendert und ohne Meldung -> gar nicht zeigen
 
-            var o = Hole(p.Objektart, p.Bezeichnung);
+            var o = Hole(p.Objektart, p.Bezeichnung, p.RecordId);
             var art = ergebnis && p.Geschrieben ? WebGisZeilenart.Erledigt : WebGisZeilenart.Aenderung;
             foreach (var a in p.Aenderungen)
                 o.Zeilen.Add(new WebGisUebersichtZeile(art, a.Feld, a.AltText ?? a.Alt, a.NeuText ?? a.Neu));
@@ -123,7 +129,7 @@ public sealed class WebGisUebersicht
             }
             if (!s.Schreibbar && s.Sperren.Count == 0 && s.Hinweise.Count == 0 && s.SchreibFehler is null) continue;
 
-            var o = Hole(s.Objektart, s.ElternBezeichnung);
+            var o = Hole(s.Objektart, s.ElternBezeichnung, s.ElternRecordId);
             if (s.Schreibbar || s.Geschrieben)
             {
                 var art = ergebnis && s.Geschrieben ? WebGisZeilenart.Erledigt : WebGisZeilenart.NeueMassnahme;
