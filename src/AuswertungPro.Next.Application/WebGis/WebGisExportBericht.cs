@@ -1,0 +1,194 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using AuswertungPro.Next.Application.UseCases.Xtf;
+
+namespace AuswertungPro.Next.Application.WebGis;
+
+/// <summary>
+/// Macht aus dem WebGIS-Exportplan die Vorschau fuer das bestehende Vorschaufenster
+/// (Alt/Neu-Tabelle, Warnungen, Details) und nach dem Schreiben den Ergebnisbericht.
+/// Reine Darstellung, kein Netz.
+/// </summary>
+public static class WebGisExportBericht
+{
+    public static XtfExportVorschau Vorschau(WebGisExportPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var zeilen = new List<XtfVorschauZeile>();
+        var warnungen = new List<string>();
+
+        foreach (var p in plan.Positionen)
+        {
+            var objekt = Objekt(p.Objektart, p.Bezeichnung);
+            foreach (var a in p.Aenderungen)
+                zeilen.Add(new XtfVorschauZeile(objekt, a.Feld, Leer(a.AltText ?? a.Alt), a.NeuText ?? a.Neu));
+            foreach (var s in p.Sperren) warnungen.Add($"{objekt}: GESPERRT — {s}");
+            foreach (var h in p.Hinweise) warnungen.Add($"{objekt}: {h}");
+            if (p.SchreibFehler is not null) warnungen.Add($"{objekt}: FEHLER — {p.SchreibFehler}");
+        }
+        foreach (var s in plan.Sanierungen)
+        {
+            var objekt = Objekt(s.Objektart, s.ElternBezeichnung);
+            if (s.Schreibbar)
+                zeilen.Add(new XtfVorschauZeile(objekt, "Sanierungsmassnahme (neu)", XtfExportVorschau.Leer, string.Join(" · ", s.Anzeige)));
+            foreach (var sp in s.Sperren) warnungen.Add($"{objekt}, Sanierungsmassnahme: GESPERRT — {sp}");
+            foreach (var h in s.Hinweise) warnungen.Add($"{objekt}, Sanierungsmassnahme: {h}");
+            if (s.SchreibFehler is not null) warnungen.Add($"{objekt}, Sanierungsmassnahme: FEHLER — {s.SchreibFehler}");
+        }
+
+        var zusammenfassung =
+            $"{plan.Schreibbare} Objekte mit Änderungen, {plan.Gesperrte} gesperrt · "
+            + $"{plan.SanierungenSchreibbar} Sanierungsmassnahmen anzulegen, {plan.SanierungenGesperrt} gesperrt. "
+            + "Längen werden nie geschrieben. Gesperrte Objekte werden übersprungen.";
+
+        return new XtfExportVorschau(
+            "WebGIS-Übertragung prüfen",
+            zusammenfassung,
+            zeilen,
+            warnungen,
+            Details(plan, mitErgebnis: false),
+            IstFehler: plan.Schreibbare == 0 && plan.SanierungenSchreibbar == 0);
+    }
+
+    /// <summary>Kurzer Ergebnistext nach <c>FuehreAusAsync</c> fuer Status/Toast.</summary>
+    public static string Ergebnis(WebGisExportPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var objOk = plan.Positionen.Count(p => p.Geschrieben);
+        var objFehler = plan.Positionen.Count(p => p.SchreibFehler is not null);
+        var sanOk = plan.Sanierungen.Count(s => s.Geschrieben);
+        var sanFehler = plan.Sanierungen.Count(s => s.SchreibFehler is not null);
+        return $"WebGIS: {objOk} Objekte geschrieben, {sanOk} Sanierungsmassnahmen angelegt"
+             + (objFehler + sanFehler > 0 ? $", {objFehler + sanFehler} fehlgeschlagen (siehe Bericht)." : ".");
+    }
+
+    /// <summary>Vollstaendiger Bericht (Vorschau oder Ergebnis) als Text fuer die Projektablage.</summary>
+    public static string Details(WebGisExportPlan plan, bool mitErgebnis)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var sb = new StringBuilder();
+        sb.AppendLine(mitErgebnis ? "WEBGIS-ÜBERTRAGUNG — ERGEBNIS" : "WEBGIS-ÜBERTRAGUNG — VORSCHAU (nichts geschrieben)");
+        sb.AppendLine(DateTime.Now.ToString("dd.MM.yyyy HH:mm"));
+        foreach (var h in plan.Hinweise) sb.AppendLine(h);
+        sb.AppendLine();
+
+        foreach (var p in plan.Positionen)
+        {
+            var status = p.Sperren.Count > 0 ? "GESPERRT"
+                : mitErgebnis ? (p.Geschrieben ? "GESCHRIEBEN" : p.SchreibFehler is not null ? "FEHLER" : p.Aenderungen.Count == 0 ? "UNVERÄNDERT" : "OFFEN")
+                : p.Aenderungen.Count == 0 ? "UNVERÄNDERT" : "ÄNDERN";
+            sb.AppendLine($"[{status}] {Objekt(p.Objektart, p.Bezeichnung)}" + (p.GlobalId is null ? "" : $"  (GlobalID {p.GlobalId})"));
+            foreach (var a in p.Aenderungen) sb.AppendLine($"    {a.Feld}: {Leer(a.AltText ?? a.Alt)} → {a.NeuText ?? a.Neu}");
+            foreach (var s in p.Sperren) sb.AppendLine($"    !! {s}");
+            foreach (var h in p.Hinweise) sb.AppendLine($"    ({h})");
+            if (p.SchreibFehler is not null) sb.AppendLine($"    !! {p.SchreibFehler}");
+        }
+
+        if (plan.Sanierungen.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("SANIERUNGSMASSNAHMEN");
+            foreach (var s in plan.Sanierungen)
+            {
+                var status = s.Sperren.Count > 0 ? "GESPERRT"
+                    : mitErgebnis ? (s.Geschrieben ? $"ANGELEGT (ID {s.NeueId ?? "?"})" : s.SchreibFehler is not null ? "FEHLER" : "OFFEN")
+                    : "ANLEGEN";
+                sb.AppendLine($"[{status}] {Objekt(s.Objektart, s.ElternBezeichnung)}  (Akte {s.AkteId.ToString("N")[..8]})");
+                foreach (var z in s.Anzeige) sb.AppendLine("    " + z);
+                foreach (var sp in s.Sperren) sb.AppendLine($"    !! {sp}");
+                foreach (var h in s.Hinweise) sb.AppendLine($"    ({h})");
+                if (s.SchreibFehler is not null) sb.AppendLine($"    !! {s.SchreibFehler}");
+            }
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Aenderungslog nach dem Schreiben: eine Zeile je geschriebenem Feld bzw. je angelegter
+    /// Massnahme mit Zeit, Objekt, Feld, alt -&gt; neu und Ergebnis. Zum Anhaengen an ein
+    /// fortlaufendes Logfile in der Projektablage.
+    /// </summary>
+    public static string Log(WebGisExportPlan plan, DateTime zeitpunkt, string benutzer)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var sb = new StringBuilder();
+        sb.AppendLine($"===== {Z(zeitpunkt)} | WebGIS-Übertragung | {benutzer} | {Ergebnis(plan)}");
+        foreach (var p in plan.Positionen)
+        {
+            var zeile = LogZeile(p, zeitpunkt);
+            if (zeile.Length > 0) sb.AppendLine(zeile);
+        }
+        foreach (var s in plan.Sanierungen)
+        {
+            var zeile = LogZeile(s, zeitpunkt);
+            if (zeile.Length > 0) sb.AppendLine(zeile);
+        }
+        return sb.ToString();
+    }
+
+    // ---- Log je Schritt: Der Ablauf ruft diese Bausteine SOFORT nach jedem Schreibversuch. ----
+    // Nach einem Abbruch (Sitzung, Netz, Absturz) steht so im Log, welche Objekte schon
+    // geschrieben sind; vorher entstand das Log erst am Ende und bei einem Abbruch gar nicht.
+
+    /// <summary>Kopfzeile VOR dem ersten Schreiben.</summary>
+    public static string LogStart(DateTime zeit, string benutzer, WebGisExportPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        return $"===== {Z(zeit)} | WebGIS-Übertragung | {benutzer} | gestartet: {plan.Schreibbare} Objekte, {plan.SanierungenSchreibbar} Sanierungsmassnahmen";
+    }
+
+    /// <summary>Logzeile(n) eines Objekts nach seinem Schreibversuch; leer, wenn nichts zu melden ist.</summary>
+    public static string LogZeile(WebGisExportPosition p, DateTime zeit)
+    {
+        ArgumentNullException.ThrowIfNull(p);
+        var z = Z(zeit);
+        var objekt = Objekt(p.Objektart, p.Bezeichnung);
+        if (p.Geschrieben)
+            return string.Join(Environment.NewLine,
+                p.Aenderungen.ConvertAll(a => $"{z} | {objekt} | {a.Feld} | {AltLog(a)} → {NeuLog(a)} | OK"));
+        if (p.SchreibFehler is not null)
+            return $"{z} | {objekt} | {string.Join(", ", p.Aenderungen.ConvertAll(a => a.Feld))} | nicht geschrieben | FEHLER: {p.SchreibFehler}";
+        if (p.Sperren.Count > 0)
+            return $"{z} | {objekt} | – | übersprungen | GESPERRT: {string.Join("; ", p.Sperren)}";
+        return string.Empty;
+    }
+
+    /// <summary>Logzeile einer Sanierungsmassnahme nach ihrem Anlegeversuch; leer, wenn nichts zu melden ist.</summary>
+    public static string LogZeile(WebGisSanierungPosition s, DateTime zeit)
+    {
+        ArgumentNullException.ThrowIfNull(s);
+        var z = Z(zeit);
+        var objekt = Objekt(s.Objektart, s.ElternBezeichnung);
+        var werte = string.Join(", ", s.Anzeige.ConvertAll(a => a.Split(" (")[0]));
+        if (s.Geschrieben)
+            return $"{z} | {objekt} | Sanierungsmassnahme angelegt (ID {s.NeueId ?? "?"}) | – → {werte} | OK";
+        if (s.SchreibFehler is not null)
+            return $"{z} | {objekt} | Sanierungsmassnahme | nicht angelegt ({werte}) | FEHLER: {s.SchreibFehler}";
+        if (s.Sperren.Count > 0)
+            return $"{z} | {objekt} | Sanierungsmassnahme | übersprungen | GESPERRT: {string.Join("; ", s.Sperren)}";
+        return string.Empty;
+    }
+
+    /// <summary>Schlusszeile nach vollstaendigem Lauf.</summary>
+    public static string LogAbschluss(DateTime zeit, WebGisExportPlan plan)
+        => $"===== {Z(zeit)} | abgeschlossen | {Ergebnis(plan)}";
+
+    /// <summary>Schlusszeile nach Abbruch — mit dem Stand bis dahin.</summary>
+    public static string LogAbbruch(DateTime zeit, string grund, WebGisExportPlan plan)
+        => $"===== {Z(zeit)} | ABGEBROCHEN | {grund} | bis dahin: {Ergebnis(plan)}";
+
+    private static string Z(DateTime zeit) => zeit.ToString("dd.MM.yyyy HH:mm:ss");
+
+    private static string AltLog(WebGisFeldAenderung a)
+        => Leer(a.Alt) + (a.AltText is not null && a.AltText != a.Alt ? " (" + a.AltText + ")" : "");
+
+    private static string NeuLog(WebGisFeldAenderung a)
+        => a.Neu + (a.NeuText is not null && a.NeuText != a.Neu ? " (" + a.NeuText + ")" : "");
+
+    private static string Objekt(WebGisObjektart art, string bezeichnung)
+        => (art == WebGisObjektart.Haltung ? "Haltung " : "Schacht ") + bezeichnung;
+
+    private static string Leer(string? s) => string.IsNullOrWhiteSpace(s) ? XtfExportVorschau.Leer : s;
+}

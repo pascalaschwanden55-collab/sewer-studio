@@ -1,0 +1,260 @@
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using AuswertungPro.Next.Application.WebGis;
+using AuswertungPro.Next.Infrastructure.WebGis;
+using Xunit;
+
+namespace AuswertungPro.Next.Infrastructure.Tests.WebGis;
+
+public sealed class GeonisWebGisClientTests
+{
+    private static WebGisZugang Zugang() => new()
+    {
+        BasisUrl = "https://example.test",
+        Projekt = "awu_abw_edit",
+        Datenquelle = "awu_abw",
+        JSessionId = "SESS",
+        SynSessionId = "SYN",
+        SynLogin = "pascal.aschwanden",
+        SynGroups = "G_awu_rw",
+    };
+
+    private sealed class FakeHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, string, string> _antwort;
+        public string? LetzterSaveBody { get; private set; }
+        public FakeHandler(Func<HttpRequestMessage, string, string> antwort) => _antwort = antwort;
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("saveData")) LetzterSaveBody = body;
+            var json = _antwort(request, body);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+        }
+    }
+
+    private const string ZustandRef = WebGisFeldkarte.HaltungZustandRef;
+    private const string BemRef = WebGisFeldkarte.HaltungBemerkungRef;
+
+    private static string LayoutJson() =>
+        "[{\"components\":[]}," +
+        "{\"objectKeyValue\":\"g1\",\"components\":[" +
+        "{\"refId\":\"" + ZustandRef + "\",\"keySelected\":102,\"keys\":[102,104],\"values\":[\"Z2\",\"Z4\"]}," +
+        "{\"refId\":\"" + BemRef + "\",\"value\":\"\"}" +
+        "]}]";
+
+    private static string SuggestionJson(string name) =>
+        "{\"RES\":[{\"RESULTS\":{\"data\":{\"anies\":[{\"record\":[{\"record\":[" +
+        "{\"jsxtext\":\"" + name + ", Sammelkanal\",\"jsxid\":\"FID1\"}" +
+        "]}]}]}}}]}";
+
+    private static string ResultsJson(string gid) =>
+        "{\"RES\":[{\"RESULTS\":{\"data\":{\"anies\":[{" +
+        "\"extapp0_target\":\"https://x/AttributeEditor/indexWebOffice.aspx?table=awk_haltung&id=%7b" + gid + "%7d\"" +
+        "}]}}}]}";
+
+    private static GeonisWebGisClient Client(FakeHandler h)
+        => new(new HttpClient(h), () => Zugang());
+
+    [Fact]
+    public async Task LeseAsync_loest_globalid_und_liest_felder()
+    {
+        var h = new FakeHandler((req, body) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("synserver"))
+                return body.Contains("GET_RESULTS")
+                    ? ResultsJson("81D76B9E-2E83-40B2-B1F7-608BABE4E89A")
+                    : SuggestionJson("525145-505377");
+            if (url.Contains("getLayoutDataCombined")) return LayoutJson();
+            return "{}";
+        });
+
+        var stand = await Client(h).LeseAsync(WebGisObjektart.Haltung, "525145-505377");
+
+        Assert.NotNull(stand);
+        Assert.Equal("81D76B9E-2E83-40B2-B1F7-608BABE4E89A", stand!.GlobalId);
+        Assert.Equal("102", stand.Feld(ZustandRef));
+        Assert.Equal("", stand.Feld(BemRef));
+    }
+
+    [Fact]
+    public async Task LeseAsync_mehrdeutig_gibt_null()
+    {
+        var h = new FakeHandler((req, body) =>
+            "{\"RES\":[{\"RESULTS\":{\"data\":{\"anies\":[{\"record\":[{\"record\":[" +
+            "{\"jsxtext\":\"H, a\",\"jsxid\":\"F1\"},{\"jsxtext\":\"H, b\",\"jsxid\":\"F2\"}" +
+            "]}]}]}}}]}");
+        var stand = await Client(h).LeseAsync(WebGisObjektart.Haltung, "H");
+        Assert.Null(stand);
+    }
+
+    [Fact]
+    public async Task SchreibeAsync_setzt_nur_geaenderte_komponente_als_keySelected()
+    {
+        var h = new FakeHandler((req, body) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getLayoutDataCombined")) return LayoutJson();
+            // Die echte Antwort des Servers (mitgeschnitten 21.09.2026); eine erfundene Form gilt nicht als Erfolg.
+            if (url.Contains("saveData")) return "{\"newId\":null,\"file\":null,\"message\":\"Das Objekt wurde gespeichert.\",\"isFailure\":false}";
+            return "{}";
+        });
+
+        var res = await Client(h).SchreibeAsync(
+            WebGisObjektart.Haltung, "g1",
+            new Dictionary<string, string> { [ZustandRef] = "104" });
+
+        Assert.True(res.Erfolg);
+        Assert.NotNull(h.LetzterSaveBody);
+        var payload = Uri.UnescapeDataString(h.LetzterSaveBody!);
+        // Combo-Schluessel geht als Text in "value" (keySelected ignoriert der Server; value:null leert das Feld).
+        Assert.Contains("\"value\":\"104\",\"refId\":\"" + ZustandRef + "\"", payload);
+        Assert.DoesNotContain("\"value\":null", payload);
+        Assert.DoesNotContain("\"keys\"", payload);
+        // nur EINE Komponente (die Bemerkung nicht mitgeschrieben)
+        Assert.DoesNotContain(BemRef, payload);
+        // keine Geometrie im Payload
+        Assert.DoesNotContain("geometry", payload);
+    }
+
+    // ---------------- Stufe 2: Sanierungsmassnahmen ----------------
+
+    private const string ListeRef = "406ab302-0d93-eb1f-6824-e7ff7ff47fe5";
+
+    private static string LayoutMitSanierungJson() =>
+        "[{\"components\":[]}," +
+        "{\"objectKeyValue\":\"g1\",\"components\":[" +
+        "{\"refId\":\"" + ZustandRef + "\",\"keySelected\":102,\"keys\":[102,104],\"values\":[\"Z2\",\"Z4\"]}," +
+        "{\"refId\":\"" + ListeRef + "\",\"values\":[[null,\"Renovierung\",\"Ausgeführt\",\"Schlauchverfahren\",\"3855a0d1-da52-4b6a-b416-2502672c947d\"]],\"value\":null}" +
+        "]}]";
+
+    private static string LeeresSanierungsobjektJson() =>
+        "{\"objectKeyValue\":null,\"objectKeyField\":\"objectid\",\"subtype\":[{\"name\":\"art\",\"value\":\"4\"}]," +
+        "\"dataReadonly\":false,\"geometry\":null,\"relation\":null,\"relationKeyField\":null,\"relationId\":null," +
+        "\"components\":[" +
+        "{\"value\":null,\"refId\":\"" + WebGisSanierungFeldkarte.BezeichnungRef + "\",\"missingValue\":false}," +
+        "{\"values\":[\"Reparatur\",\"Renovierung\"],\"keys\":[2,4],\"keySelected\":4,\"value\":null,\"refId\":\"" + WebGisSanierungFeldkarte.ArtRef + "\",\"missingValue\":false}," +
+        "{\"values\":[\"Unbekannt\",\"Ausgeführt\"],\"keys\":[0,1],\"keySelected\":null,\"value\":null,\"refId\":\"" + WebGisSanierungFeldkarte.StatusRef + "\",\"missingValue\":false}," +
+        "{\"values\":[\"Kurzrohrverfahren\",\"Schlauchverfahren\"],\"keys\":[13,27],\"keySelected\":null,\"value\":null,\"refId\":\"" + WebGisSanierungFeldkarte.VerfahrenRef + "\",\"missingValue\":false}," +
+        "{\"value\":null,\"refId\":\"" + WebGisSanierungFeldkarte.SanierungsjahrRef + "\",\"missingValue\":false}" +
+        "]}";
+
+    [Fact]
+    public async Task LeseAsync_liest_vorhandene_sanierungsmassnahmen_aus_der_liste()
+    {
+        var h = new FakeHandler((req, body) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("synserver"))
+                return body.Contains("GET_RESULTS") ? ResultsJson("67BA283D-24AE-4218-86E9-E82442A91D97") : SuggestionJson("80480-80478");
+            if (url.Contains("getLayoutDataCombined")) return LayoutMitSanierungJson();
+            return "{}";
+        });
+
+        var stand = await Client(h).LeseAsync(WebGisObjektart.Haltung, "80480-80478");
+
+        Assert.NotNull(stand);
+        var z = Assert.Single(stand!.Sanierungen);
+        Assert.Equal("Renovierung", z.Art);
+        Assert.Equal("Ausgeführt", z.Status);
+        Assert.Equal("Schlauchverfahren", z.Verfahren);
+        Assert.Equal("3855a0d1-da52-4b6a-b416-2502672c947d", z.GlobalId);
+        Assert.False(stand.Felder.ContainsKey(ListeRef));
+    }
+
+    [Fact]
+    public async Task LeseSanierungKatalogAsync_baut_katalog_aus_getEmptyData()
+    {
+        string? gefragteUrl = null;
+        var h = new FakeHandler((req, body) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getEmptyData")) { gefragteUrl = url; return LeeresSanierungsobjektJson(); }
+            if (url.Contains("getControlValues"))
+                return url.Contains("filter=2")
+                    ? "{\"components\":[{\"values\":[\"Roboterverfahren\",\"Vermörtelung\"],\"keys\":[23,33],\"keySelected\":null,\"value\":null,\"refId\":\"" + WebGisSanierungFeldkarte.VerfahrenRef + "\",\"missingValue\":false}]}"
+                    : "{\"components\":[{\"values\":[\"Kurzrohrverfahren\",\"Schlauchverfahren\"],\"keys\":[13,27],\"keySelected\":null,\"value\":null,\"refId\":\"" + WebGisSanierungFeldkarte.VerfahrenRef + "\",\"missingValue\":false}]}";
+            return "{}";
+        });
+
+        var k = await Client(h).LeseSanierungKatalogAsync(WebGisObjektart.Haltung, "67BA283D");
+
+        Assert.NotNull(k);
+        Assert.Equal("27", k!.Schluessel(WebGisSanierungFeldkarte.VerfahrenRef, "Schlauchverfahren"));
+        Assert.Equal("4", k.Schluessel(WebGisSanierungFeldkarte.ArtRef, "Renovierung"));
+        // abhaengige Verfahrensliste je Art (getControlValues filter=2 -> Vermoertelung)
+        Assert.Equal("33", k.Schluessel(WebGisSanierungFeldkarte.VerfahrenRef, "Vermörtelung", "2"));
+        Assert.Null(k.Schluessel(WebGisSanierungFeldkarte.VerfahrenRef, "Vermörtelung", "4"));
+        Assert.Contains("table=AWZ_UNTERHALT", gefragteUrl);
+        Assert.Contains("subtype=art:4", gefragteUrl);
+        Assert.Contains("senderTable=awk_haltung", gefragteUrl);
+        Assert.Contains("senderRelation=sew_awk_haltung_awz_unterhalt", gefragteUrl);
+        Assert.Contains("senderId=67BA283D", gefragteUrl);
+    }
+
+    [Fact]
+    public async Task ErstelleSanierungAsync_sendet_relation_zum_elternobjekt_und_liefert_neue_id()
+    {
+        string? saveUrl = null;
+        var h = new FakeHandler((req, body) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getEmptyData")) return LeeresSanierungsobjektJson();
+            if (url.Contains("saveData")) { saveUrl = url; return "{\"newId\":\"66921\",\"file\":null,\"message\":\"Das Objekt wurde gespeichert.\",\"isFailure\":false}"; }
+            return "{}";
+        });
+
+        var res = await Client(h).ErstelleSanierungAsync(
+            WebGisObjektart.Haltung, "67BA283D-24AE-4218-86E9-E82442A91D97",
+            new Dictionary<string, string>
+            {
+                [WebGisSanierungFeldkarte.StatusRef] = "1",
+                [WebGisSanierungFeldkarte.VerfahrenRef] = "27",
+                [WebGisSanierungFeldkarte.SanierungsjahrRef] = "2026-01-01T00:00:00.000Z",
+            });
+
+        Assert.True(res.Erfolg);
+        Assert.Equal("66921", res.NeueId);
+        Assert.Contains("table=AWZ_UNTERHALT", saveUrl);
+        var payload = Uri.UnescapeDataString(h.LetzterSaveBody!);
+        Assert.Contains("\"relation\":\"sew_awk_haltung_awz_unterhalt\"", payload);
+        Assert.Contains("\"relationKeyField\":\"globalid\"", payload);
+        Assert.Contains("\"relationId\":\"67BA283D-24AE-4218-86E9-E82442A91D97\"", payload);
+        Assert.Contains("\"subtype\":[{\"name\":\"art\",\"value\":\"4\"}]", payload); // konstant wie im Browser
+        Assert.Contains("\"value\":\"27\",\"refId\":\"" + WebGisSanierungFeldkarte.VerfahrenRef + "\"", payload);
+        Assert.Contains("\"value\":\"2026-01-01T00:00:00.000Z\"", payload);
+        // Vorgabe Art=4 der Maske bleibt erhalten, keine Kataloge im Payload
+        Assert.Contains("\"value\":\"4\",\"refId\":\"" + WebGisSanierungFeldkarte.ArtRef + "\"", payload);
+        Assert.DoesNotContain("\"keys\"", payload);
+        Assert.DoesNotContain("geometry", payload);
+    }
+
+    [Fact]
+    public async Task ErstelleSanierungAsync_meldet_isFailure_als_fehler()
+    {
+        var h = new FakeHandler((req, body) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getEmptyData")) return LeeresSanierungsobjektJson();
+            if (url.Contains("saveData")) return "{\"newId\":null,\"message\":\"Regelverletzung\",\"isFailure\":true}";
+            return "{}";
+        });
+
+        var res = await Client(h).ErstelleSanierungAsync(
+            WebGisObjektart.Schacht, "G", new Dictionary<string, string> { [WebGisSanierungFeldkarte.StatusRef] = "1" });
+
+        Assert.False(res.Erfolg);
+        Assert.Contains("Regelverletzung", res.Fehler);
+    }
+}

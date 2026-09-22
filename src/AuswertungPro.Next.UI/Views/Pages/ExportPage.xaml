@@ -285,6 +285,40 @@
                                    Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="10,0,0,0"/>
                     </StackPanel>
 
+                    <!-- Weg 3: direkt ins WebGIS (GEONIS-Attributeditor), ohne XTF/FME. -->
+                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="Direkt ins WebGIS übertragen" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"/>
+                            <TextBlock Text="Schreibt Zustand, Sanierungsbedarf «Saniert» (nur mit ausgeführter Sanierungs-Akte), Bemerkung und Baujahr (nur wenn dort leer) an Haltungen und Schächten und legt je ausgeführter Sanierungs-Akte eine Sanierungsmassnahme an. Längen werden nie geschrieben. Jedes Objekt wird vorher frisch gelesen; die Vorschau zeigt Alt/Neu, geschrieben wird erst nach deiner Bestätigung."
+                                       FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
+                                       TextWrapping="Wrap" Margin="0,2,0,8"/>
+                            <TextBlock Text="{Binding WebGisStatus}" FontSize="{DynamicResource TextXS}"
+                                       Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Command="{Binding WebGisAnmeldenCommand}" Padding="14,6" Margin="0,0,8,0"
+                                        ToolTip="Öffnet das WebGIS in einem eigenen Browserfenster. Du meldest dich dort an; SewerStudio sieht kein Passwort und übernimmt nur die Sitzung.">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:FluentIcon Glyph="&#xE77B;" Margin="0,0,8,0" Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock Text="Am WebGIS anmelden" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding WebGisUebertragenCommand}" Padding="14,6" Margin="0,0,8,0"
+                                        ToolTip="Liest jedes Objekt frisch aus dem WebGIS, zeigt die Änderungen und schreibt erst nach deiner Bestätigung. Bericht landet unter __WebGIS_Export im Projektordner.">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:FluentIcon Glyph="&#xE898;" Margin="0,0,8,0" Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock Text="Prüfen und ins WebGIS schreiben" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding WebGisAbmeldenCommand}" Padding="12,5"
+                                        ToolTip="Schliesst das Browserfenster und verwirft die Sitzung.">
+                                    <TextBlock Text="Abmelden" VerticalAlignment="Center"/>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="Verzeichnisbaum für die Verteilung"
                                FontWeight="SemiBold" FontSize="{DynamicResource TextS}"
                                Foreground="{DynamicResource TextBrush}" Margin="2,2,0,6"/>

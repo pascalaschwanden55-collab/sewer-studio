@@ -1,5 +1,261 @@
 # SewerStudio — AI Sewer Inspection System
 
+## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
+
+Neuer Weg SewerStudio -> WebGIS (GEONIS Attribute Editor, WebOffice) fuer die
+Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
+
+- `Application/WebGis`: reine Verträge und Regeln, WPF-frei.
+  - `WebGisFeldkarte` — refIds und Code-Tabellen, maschinell aus den echten Masken
+    awk_haltung / awk_abwasserknoten erhoben (Beleg im Kundenprojekt unter
+    `__WebGIS_Export/Feldzuordnung_SewerStudio_WebGIS_v2.md`). Zustand Z0..Z4 = 100..104,
+    Sanierungsbedarf „Saniert" = 106. Sanierungsbedarf-refIds sind die 2. Combo des
+    Paars (Haltung `2b200c69-4a70-…`, Schacht `ae898ff7-8b6d-…`).
+  - `WebGisSaniertKriterium` — „saniert" gilt NUR bei einer ausgefuehrten
+    Sanierungs-Objektakte (Art `sanierung`, `sanierung.s_status`=„Ausgeführt"), NIE
+    aus dem Bemerkungstext. (Bürglen: 10 Haltungen, 25 Schaechte mit Akte; 9 Haltungen
+    tragen „Saniert…"-Bemerkung OHNE Akte — die bekommen keinen Sanierungsbedarf, nur Hinweis.)
+  - `WebGisBemerkung` — führt WebGIS- und SewerStudio-Bemerkung zusammen, nie überschreiben.
+  - `WebGisExportPlanBuilder` — reine Regel je Objekt: Zustand aus Zustandsklasse,
+    Sanierungsbedarf=Saniert nur bei Akte, Bemerkung-Merge, Baujahr nur wenn WebGIS leer,
+    **kein Laengenfeld je**. Ohne WebGIS-Treffer -> gesperrt.
+  - `WebGisExportUseCase` — liest je Objekt frisch, baut den Plan; `FuehreAusAsync`
+    schreibt nur bei `probelauf:false` und prueft vor jedem Schreiben den Ausgangswert
+    (Konfliktschutz), sonst Sperre.
+- `Infrastructure/WebGis`: `GeonisWebGisClient` (IGeonisWebGisClient) spricht die
+  interne WebOffice-Schnittstelle an — Suche (synserver GET_QUERY_FULL_TEXT ->
+  GET_RESULTS für die GlobalID), `getLayoutDataCombined` (lesen), `saveData` (nur die
+  geänderten Komponenten; Combo als `keySelected`, EditBox als `value`; Geometrie raus).
+  HttpClient injiziert. `WebGisZugang`/`IWebGisZugangQuelle`: die angemeldete Sitzung
+  (JSESSIONID + X-syn-Kontext + synserver session_id) kommt aus einem eingebetteten
+  WebView2 — bewusst KEIN nachgebauter HTTP-/ADFS-Login. Ohne Sitzung liefert der
+  Client nichts (alle Positionen gesperrt).
+- DI: `ServiceProvider.WebGis.cs`, Registrierung 169 -> 170 (`ServiceProviderRegistrationMap`,
+  `ServiceProviderRegistrationTests`).
+- Tests: `tests/AuswertungPro.Next.Infrastructure.Tests/WebGis/` — Feldkarte/Bemerkung/
+  Kriterium/PlanBuilder (reine Regeln), `WebGisSanierungRegelnTests` (Katalog je Art,
+  Jahr->Datum, Sperren, Doppel) und `GeonisWebGisClientTests` (Suche-Parsing, Lesen inkl.
+  Sanierungsliste, saveData-Payload fuer Objekt und Massnahme gegen Fake-HttpMessageHandler).
+- Stufe 2 (21.09.2026): Sanierungsmassnahmen anlegen. `WebGisSanierungFeldkarte`
+  (Tabelle `AWZ_UNTERHALT`, Subtyp `art:4` konstant wie im Browser, refIds der Maske
+  „Sanierungsmassnahme", Relation je Objektart `sew_awk_haltung_awz_unterhalt` /
+  `sew_awk_abwasserknoten_awz_unterhalt`, Listen-refIds in den Elternmasken),
+  `WebGisSanierungKatalog` (Combo-Listen live aus `getEmptyData`; Verfahren ist von der
+  Art abhaengig und kommt je Art aus `getControlValues?refid=<Verfahren>&filter=<Art>` —
+  Reparatur: Vermoertelung=33, Renovierung: Schlauchverfahren=27), `WebGisSanierungPlanBuilder`
+  (Klartext -> Schluessel NUR ueber den Katalog, LokalerEintrag ist ein anderer
+  Nummernkreis; fehlender Katalogwert oder fehlende Art = gesperrt; Jahr -> 01.01.JJJJ;
+  gleiche Art/Status/Verfahren schon in der Liste = nicht doppelt). `WebGisLesestand.Sanierungen`
+  traegt die vorhandenen Massnahmen aus der GListBox (`values`: Beginn, Art, Status,
+  Verfahren, GlobalId). `GeonisWebGisClient.Sanierung.cs` (partial): `LeseSanierungKatalogAsync`,
+  `ErstelleSanierungAsync` (Payload wie mitgeschnitten: alle Komponenten `{value,refId,
+  missingValue}`, Combo-Wert als Schluessel-Text, Datum ISO-UTC, Kopf mit relation/
+  relationKeyField=globalid/relationId=Eltern-GlobalID; Antwort `{newId,isFailure,message}`).
+  `WebGisExportUseCase` plant je ausgefuehrter Akte eine Massnahme (Katalog einmal je
+  Objektart) und legt sie nach den Objektschreibungen an (frisch lesen, Doppel-Check).
+  Live belegt: 80480-80478 -> 66921 (Renovierung), Schacht 80478 -> 66922 (Reparatur).
+  Vorschau Bürglen: `__WebGIS_Export/Probelauf-Vorschau_Sanierungen_20260921.txt`
+  (32 anzulegen, 3 gesperrt: 2 schon vorhanden, Haltung 80462-80461 ohne Art).
+- Stufe 3 (21.09.2026): Anmeldung + Oberflaeche. `Infrastructure/WebGis/PlaywrightWebGisAnmeldung`
+  (IWebGisZugangQuelle): sichtbares Browserfenster ueber Playwright, der Benutzer meldet sich
+  selbst an — SewerStudio sieht kein Passwort. Browserwahl in dieser Reihenfolge: **msedge**
+  (auf jedem Windows da, kein Download), **chrome**, sonst Playwright-Chromium (das laedt
+  einmalig ~150 MB nach %LOCALAPPDATA%\ms-playwright, wie beim PDF-Export; wird bei Bedarf
+  automatisch ueber playwright.ps1 nachinstalliert). `LaunchPersistentContextAsync` mit eigenem
+  Profil unter %LOCALAPPDATA%\SewerStudio\WebGisBrowser — nicht das Alltagsprofil des
+  Benutzers, aber Cookies bleiben ueber Programmstarts erhalten. Gelesen werden `scriptAPI.Env()` (jsessionid, sessionid, isumnameduser),
+  die Cookies (in den HttpClient-CookieContainer) und aus dem ersten Attributeditor-Aufruf
+  der X-syn-Kontext (`KontextAusUrl`); der Kontext wird in AppSettings gemerkt
+  (`WebGisSynLogin/Roles/Groups`), danach genuegt die Anmeldung. Rollenwert woertlich
+  "WebOffice+-+Editing" (Plus gehoert zum Wert, geht als %2B). `WebGisExportBericht`
+  (Application) fuellt das bestehende XTF-Vorschaufenster (Alt/Neu, Warnungen, Details)
+  und den Ergebnistext. Export-Seite: Karte „Direkt ins WebGIS übertragen" mit
+  Anmelden / Pruefen und schreiben / Abmelden (`ExportPageViewModel.WebGis.cs`, nur im
+  ServiceProvider-Konstruktor aktiv); Berichte unter `<Projekt>\__WebGIS_Export\WebGIS_*.txt`.
+  Registrierung 170 -> 171 (IWebGisZugangQuelle).
+  `WebGisUebersicht` (Application) ist die Anzeige-Sicht: NACH OBJEKT gruppiert (eine Karte je
+  Haltung/Schacht mit ihren Feldzeilen alt -> neu, Hinweisen und Sperren), unveraenderte Objekte
+  fallen weg, und Gleichartiges wird zu einer Sammelzeile gebuendelt ("43 Massnahmen bereits
+  vorhanden", "n Objekte ohne Sanierungs-Akte") — vorher standen 48 Einzelwarnungen untereinander.
+  Kopf: vier Zahlen (geaendert / neue Massnahmen / gesperrt / nur Hinweis).
+  Pruef-/Schreibfenster `WebGisVorschauWindow` ist NICHT modal (Wunsch Pascal): bleibt offen,
+  waehrend in Haltungen/Schaechten korrigiert wird; "Neu pruefen" baut den Plan aus dem
+  aktuellen Projektstand, "Jetzt schreiben" prueft immer erst frisch und schreibt dann
+  denselben Plan; Ergebnis erscheint im selben Fenster. Waehrend Lesen/Schreiben nicht schliessbar.
+- Stufe 4 (21.09.2026): HANDWERTE. Alles, was in SewerStudio von Hand gesetzt ist
+  (`FieldMeta.UserEdited`), geht mit, sofern `WebGisHandwertKarte` das Feld kennt. ALLE 26
+  refIds dort sind live an den Masken gegen den sichtbaren Wert geprueft (Schacht 80461,
+  Haltung 80480-80478) — drei erschlossene refIds waren dabei FALSCH (824e25e3, 14998fd3,
+  d06f8d1f), also nie eine refId aus der Paar-Heuristik uebernehmen, immer am Objekt pruefen.
+  Schacht: Funktion, Nutzungsart, Material(+Detail), Form, Breite/Laenge, 2. Mass, Status,
+  Funktion hier., Tiefe, Sohlen-/Gelaendehoehe, Rotation, Ebene, Lagebestimmung.
+  Haltung: Material(+Detail), Profiltyp, Breite, Hoehe, Nutzungsart, Funktion hier./hydr.,
+  Status, Verbindungsart, Lagebestimmung.
+  Combo-Werte NUR ueber den Klartext gegen `WebGisLesestand.Kataloge` (keys/values der
+  gelesenen Komponenten), gefaltet ueber Gross/Klein, Unterstrich, ae/oe/ue und Kuerzel in
+  Klammern; zusaetzlich zaehlt der Teil nach dem Punkt ("PAA.Sammelkanal" -> Sammelkanal).
+  Kein Treffer ⇒ Feld nicht geschrieben + Hinweis (Objekt bleibt offen), z.B. Rohrmaterial
+  "Zement" fehlt im Katalog. Zwei SewerStudio-Felder auf dieselbe refId (DN/lichte Breite):
+  erster Treffer zaehlt. Leerer Handwert loescht nie.
+  NICHT ueber die Handwerte: Zustand/Sanierungsbedarf/Bemerkung/Laenge (eigene Regeln),
+  BAUJAHR (nie ueberschreiben, nur fuellen wenn leer) und EIGENTUEMER/BETREIBER (fuehrt das
+  WebGIS) — beide nur melden. Projektinterne Felder (NR., Link, PDF_Path, Strasse, VSA-Noten,
+  Kennungen, Kosten) werden still uebergangen, damit der Bericht lesbar bleibt.
+- LEHRE 21.09.2026: saveData uebernimmt bei Combos NUR "value" (Schluessel als Text);
+  "keySelected" wird ignoriert, value:null LEERT das Feld. Erster Lauf hat so bei 44 Objekten
+  Zustand/Sanierungsbedarf geleert; `SchreibeAsync` sendet seither {value, refId, missingValue}
+  wie der Browser. Zweiter Lauf stellt die Sollwerte wieder her.
+- PRUEFUNG UND HAERTUNG 22.09.2026 (`docs/audits/2026-09-22-webgis/BEHEBUNG.md`). Build 0 Fehler,
+  103 WebGIS-Tests gruen. Zwei Befunde standen schon im Buerglen-Log, sechs weitere im Code:
+  - **`WebGisFeldAenderung.Alt` ist der SCHLUESSEL, `AltText` der Klartext.** Der Konfliktschutz
+    (`SchreibeEineAsync`) vergleicht Schluessel gegen Schluessel. Vorher stand bei Combos der
+    Klartext in `Alt`: Lauf 15:57 sperrte 8 Objekte mit «seit dem Plan geaendert (jetzt '144')»,
+    obwohl im WebGIS nichts passiert war — und mit dem Objekt auch Zustand, Tiefe, Form.
+  - **Abhaengige Detail-Listen sind gruppenabhaengig** (Material-Detail wie Verfahren/Art): Die
+    Maske liefert nur die Liste der GERADE gesetzten Gruppe. «Beton, Fertigteil» = 104 wurde an
+    80461 (Gruppe Beton) gefunden, an 525145/59723 nicht. `ErgaenzeGruppenKatalogeAsync` laedt die
+    Liste der Zielgruppe ueber `getControlValues?refid=…&filter=<Gruppe>` nach
+    (`WebGisLesestand.KatalogeNachGruppe`); ohne Liste bleibt der Hinweis, nie ein geratener Wert.
+    **Die Objektmasken haben einen Subtyp** (Schacht: Bauwerksart): Ohne `subtype=<name>:<wert>`
+    antwortet der Server «Could not load form's default form.» (22.09. im Programm). Der Subtyp
+    kommt aus `data.subtype` der gelesenen Maske (`WebGisLesestand.Subtyp`) und geht beim
+    Nachladen mit; ob der Server damit liefert, ist noch nicht belegt — sonst Aufruf mitschneiden.
+  - **Nicht jeder faultstring ist die Sitzung.** `IstSitzungsfehler` (Token/abgelaufen/
+    Authentifizierung/Session/Login) beendet den Lauf; jeder andere faultstring ist eine
+    `WebGisAntwortException` fuer genau diesen Aufruf — «Lesefehler» am Objekt, Hinweis am Feld,
+    der Lauf geht weiter. Vorher brach die ganze Pruefung ohne Bericht ab.
+  - **Erfolg nur mit Erfolgsnachweis des Servers** (`AntwortAuswerten`: `isFailure`, `newId` oder
+    `message`). Kein JSON, kein Objekt, `{}` oder erfundene Formen heissen «nicht als geschrieben
+    gewertet» — vorher endete alles davon in `Ok()`, mit OK-Zeile im Log.
+  - **Jede Antwort geht durch `LiesJsonOderSitzungsfehler`**: faultstring ODER kein JSON (ADFS-
+    Anmeldeseite) ist eine `WebGisSitzungException` — auch bei Suche und `getControlValues`, die
+    vorher gar nicht prueften (52x «Lesefehler» statt «neu anmelden»).
+  - **Ein geplantes Feld ohne Komponente in der Maske sperrt das Objekt** statt still wegzufallen.
+  - **Mit Filter zaehlt nur die gefilterte Liste** (`WebGisSanierungKatalog.Schluessel`); ein halb
+    geladener Sanierungskatalog ist keiner (alle Massnahmen gesperrt, nie ein Verfahren geraten).
+  - **Log je Schritt, nicht am Ende.** `FuehreAusAsync` schuetzt jedes Objekt (`GeschuetztAsync`),
+    meldet es sofort (`nachObjekt`/`nachMassnahme`), und das ViewModel haengt `LogZeile` sofort
+    an; Sitzung/Abbruch schreiben `LogAbbruch` und den Bericht `Ergebnis-abgebrochen`. Ordner und
+    Benutzer werden VOR dem Lauf gebunden.
+  - **«Jetzt schreiben» schreibt nur den bestaetigten Plan.** `WebGisPlanVergleich.Gleich`
+    vergleicht den frischen Plan mit dem zuletzt gezeigten; weicht er ab (Korrektur im nicht-
+    modalen Fenster), erscheint die neue Vorschau statt eines Schreibvorgangs.
+  - Ergebniskopf und Kacheln zaehlen `Geschrieben`, nicht «Objekte mit Aenderung» (15:57 stand
+    «13 geschrieben», es waren 5); bei Fehlschlaegen ein Warn-Toast, kein gruener.
+  - Der rote Test `Felder_mit_eigener_regel…` war ein Testfehler (Stand schon auf Z3).
+  - OFFEN: Breite/Hoehe der Haltung (`Lichte_Hoehe_mm` existiert nicht, `DN_mm` geht auf Breite;
+    Inventur v2 nennt d06f8d1f einmal Breite, einmal Hoehe — an einem Eiprofil klaeren), kein
+    `IShellOperationGuard`, Abmelden beendet keine Sitzung (Profil behaelt ADFS-Cookies),
+    Kontext ohne Host-Pruefung, zweiter Handwert auf dieselbe refId faellt still weg.
+- OFFEN / NICHT ERLEDIGT: Abstimmung mit Trigonet (interne Schnittstelle, ein Schreibweg).
+  Der reale Schreibweg ist bisher nur manuell im Browser und im Lauf vom 21.09. belegt
+  (Haltung 525145-505377: Z4 + Sanierungsbedarf Saniert + Bemerkung; zwei Sanierungsmassnahmen
+  s.o.). Naechster Schritt: Probelauf an Bürglen ueber die Export-Seite — erwartet 0 Klartext-
+  Konfliktsperren und «Beton, Fertigteil» als Aenderung statt Hinweis.
+- Datenlage Bürglen vor Voll-Export bereinigen (siehe
+  `__WebGIS_Export/Probelauf-Vorschau_20260921.txt`): 9 Haltungen ohne Sanierungs-Akte,
+  Schacht 525145/60122, 7 Akten ohne Verfahren, 6 Laengen (WebGIS gewinnt).
+
+
+## Gebundene Bild-/Zeit-/Meterbelege im Player (20.09.2026)
+
+- `CodingMultiModelInferenceWorkflow.ExecuteAnalyzedFrameAsync` bildet vor der
+  Inferenz einen `CodingAnalyzedFrameEvidence` aus PNG, Aufnahmezeit und einmalig
+  aufgeloestem Meter. Structural, BCE und TrackerCreateOpen verwenden diesen
+  Beleg mit synchroner Fotoablage statt spaeteren globalen Quellen.
+- `CodingMeterResolution.Source` unterscheidet SameFrameOsd/RecentOsd/
+  VideoEstimate/SessionFallback. RecentOsd bleibt OSD; Folgebelegersetzung
+  erfordert separat SameFrameMeterEvidence. Kein erneutes Lesen nach Inferenz.
+- BCD behaelt seine Referenzposition und kennzeichnet Fotozeit, Bild-SHA und
+  Herkunft getrennt in CodeMeta. Boundary-/Structural-Appender bewahren
+  menschliche EventAdded-Aenderungen. Alte API-Einstiege bleiben kompatibel.
+- Details und Verhaltenstests:
+  `docs/quality/CODIERMODUS-AUFNAHMEBINDUNG-AUDIT-2026-09-20.md`.
+
+## Konservativer Folgebeleg-Abgleich (20.09.2026)
+
+- `Application/UseCases/CodingPointFollowUp` prueft eindeutige Geometrie, festen
+  Ursprung (<1 m / <=15 s), gleiche Modell-/Bildquelle und staerkere YOLO-Belege
+  bei erhaltener SAM-Qualitaet. Nur neue sitzungsregistrierte unveraenderte
+  KI-Punkte duerfen ersetzt werden. Altbestand und menschliche Eingriffe sperren.
+- Domain-Kontext additiv: `HumanTouchedAtUtc`, `ObservationHasTechnicalFailure`,
+  flache `PreviousEvidence` aus `CodingProposalEvidenceSnapshot`. EventId/EntryId
+  bleiben; Meter/Zeit/Bild/Masken/Herkunft wechseln gemeinsam mit altem Belegarchiv.
+- Bestehende UI-Entscheidungs-/Edit-/Foto-/Delete-/Transferpfade markieren
+  Beruehrung. MultiModel bindet Aufnahmezeit und `start.FrameBytes` an synchrone
+  `AttachExactAnalyzedFramePhoto`, ohne spaeteren Screenshot-Ersatz. Replay
+  speichert bytegleiche Framefotos und aktuelle/vorherige Ereignisbelege.
+- Keine OSD-Maske, Modellaktivierung oder neuer Tracker. Kandidaten bleiben
+  unqualifiziert. Regeln/Tests: `docs/quality/CODIERMODUS-FOLGEBELEGE-2026-09-20.md`.
+- `CodingMultiModelFindingEventCommandWorkflow.ExecuteAnalyzedFrame` buendelt
+  die Aufnahmebindung; alter Execute-Vertrag bleibt. Neue Trackerzeilen werden
+  auch im selben Tick nicht nach menschlicher Bearbeitung ergaenzt. Offene
+  Sonderpfad-Befunde: `docs/quality/CODIERMODUS-AUFNAHMEBINDUNG-AUDIT-2026-09-20.md`.
+
+## Qualifizierte Detektorboxen im Codiermodus (20.09.2026)
+
+- `Application/Ai/CodingLocalizedDetection` traegt Herkunft, Pixelbox, getrennte
+  YOLO-/DINO-Werte, Hauptcode und Artefakthash. `SingleFrameResult.LocalizedDetections`
+  und `SegmentedFinding.Origin` sind optionale additive Felder.
+- `Infrastructure/Ai/Pipeline/CodingLocalizedDetectionPlan` bindet ausschliesslich
+  qualifizierte, hashgleiche YOLO-Antworten an SAM. Gleiche Stelle/Hauptgruppe wird
+  einmal segmentiert; fremde Gruppen bleiben getrennt. Ungueltige Quellen/Boxen,
+  SONST und generisches BBD liefern keinen geratenen Code. Bildmasse aus bestehendem
+  `ImageSizeReader`, kein neues Paket. Sidecar-Health erfasst Artefakt-SHA additiv.
+- `SingleFrameMultiModelService` nutzt den Plan fuer „Jetzt analysieren“ und
+  Live-Takt. Ohne passende Qualifikation/Identitaet bleibt DINO/SAM der Rueckfall;
+  ungebundene YOLO-Antworten sind auch kein Negativfilter. Keine Modellaktivierung.
+- `CodingAnalysisContext` gibt Herkunft an den bestehenden Segmentbuilder weiter.
+  Player-Mapper, Ereignisfactory und QualityGate werten echte Befundquellen aus;
+  YOLO wird nicht DINO genannt, Katalogtitel nicht als Modellstimme gezaehlt.
+  Nur exakt auswaehlbare Hauptcodes; kein importbasiertes Verfeinern neuer
+  YOLO-Vorschlaege. Modellfehler begrenzen deren Gruen auf Gelb.
+- Neue offene Strecken erhalten denselben Erstbeleg, begrenzt auf im Tick neu
+  erzeugte EventIds. Vorhandene Zusatzwerte bleiben erhalten. Die bestehenden
+  `SuggestedByModelSha256`- und CodeMeta-Felder tragen Modellherkunft.
+- Keine DI-/Paket-/Speicherformatumstellung, keine neue UI/Ai-Datei. Der separate
+  `MultiModelAnalysisService`-Batchweg bleibt unveraendert. Verhaltenstests:
+  `SingleFrameLocalizedDetectionTests`, `CodingLocalizedDetectionPlanTests`,
+  `CodingDetectorEventIntegrationTests`; Anleitung/Grenzen:
+  `docs/quality/CODIERMODUS-DETEKTOREREIGNISSE-2026-09-20.md`.
+- Expliziter Messhost-Einstieg `AnalyzeCandidateFrameAsync` mit
+  `CodingDetectorCandidateFrame`: Bild-SHA und erwartete/tatsaechliche Gewicht-SHA
+  werden vor Health/Modellaufrufen gebunden. `BuildCandidate` verwendet dieselben
+  Regeln ohne vorgetaeuschte Qualifikation. Result bleibt unqualifiziert/degraded,
+  Quellen DevelopmentCandidate/RequiresReview, Ereignisampel maximal gelb.
+  Kein Kandidatenparameter im normalen Playeraufruf; kein negativer Bildfilter
+  durch leere Kandidatenantwort. Technische Antwortfehler muss der Messhost separat
+  halten. Bestehende Klassifikator-Abkuerzungen sind kein Detektorkandidatenbeleg.
+- `tools/CodingReplay run-video` haelt eine Sitzung ueber die feste Videobildfolge.
+  `run-video-candidate` prueft separat erfasste Kandidatenboxen mit Bild-/Gewichts-SHA
+  und nutzt den expliziten Einstieg. Lauf/Frames tragen
+  `development_candidate_unqualified`; Ereignissnapshots behalten Quelle, Hash
+  und Zweck. Keine Aktivierung und keine gemessene Live-Timer-Leistung.
+- DINO-Warmup verwendet seit dem belegten `topk`-Fehler im Videolauf ein neutrales
+  640x640-Bild: 64x64 bietet zu wenige Positionen fuer Swin-Bs 900 Queries.
+  YOLO/Klassifikator behalten den bisherigen Dummy; echte Bildvorverarbeitung
+  bleibt gleich. Vier CPU-Warmup-Tests schuetzen Erfolg, Fehler und Qualifikation.
+
+## Bildklassifikator-Hinweis im Codiermodus (20.09.2026)
+
+- `Application/UseCases/CodingClassifierHint/CodingClassifierImageHint` erhält ein
+  bereits aufgelöstes BAB-/BAF-/BAI-/BAJ-/BBA-/BBB-Bildsignal als ungeprüften Hinweis.
+  Klartext kommt vom aktiven Katalog; fehlender Text zeigt nur die Schadensgruppe.
+  Kein Ereignisentwurf, keine Maskenzuordnung, kein Untercode oder Ortsnachweis.
+- `CodingMultiModelAnalysisResultWorkflow` ergänzt den Hinweis am endgültigen
+  Status, damit die folgende DINO-/SAM-Anzeige ihn nicht wieder überschreibt.
+  Ohne lokalisierte Detektion bleibt das Ergebnis `ReviewRequired` statt grünem
+  `NoDamage`. Modellfehler bleiben vorrangig. Segment-, Nähe-, Ereignis- und
+  Detektorqualifikationsregeln bleiben erhalten; der Hinweis ist gelb.
+- Bestehende öffentliche Workflow-Verträge und gespeicherte Daten bleiben gleich.
+  Keine neue Registrierung, Pakete, Gewichte oder KI-Aufrufe. Keine neue UI/Ai-Datei.
+  Nachweis: `CodingClassifierImageHintTests` und
+  `CodingMultiModelAnalysisResultWorkflowTests.Classifier.cs`.
+- Anlass: historischer Einzelbildvergleich mit fünf passenden Hauptgruppen bei
+  sieben auswertbaren Bildern, aber keinem passenden Ereigniscode. Dies belegt
+  Informationsverlust in diesem Weg, keine unabhängige Erkennungsquote.
+  Bericht und Grenzen: `docs/quality/CODIERMODUS-BILDHINWEIS-2026-09-20.md`.
+
 ## Der PDF-Textleser wird geprueft gewaehlt (19.09.2026)
 
 Anlass: Messung an allen 264 SchachtPro-Protokollen aus Goeschenen, rein lesend, drei
@@ -2060,7 +2316,7 @@ dotnet test AuswertungPro.sln
 ```
 
 `AuswertungPro.sln` enthaelt die vier produktiven Projekte, die vier Testprojekte
-und alle 44 `tools/**/*.csproj`. Neue Werkzeugprojekte sofort aufnehmen, damit
+und alle 45 `tools/**/*.csproj`. Neue Werkzeugprojekte sofort aufnehmen, damit
 verschobene Klassen oder Projektverweise im normalen Release-Build sichtbar brechen.
 
 ## Wichtige Klassen
@@ -4177,6 +4433,34 @@ Wiederherstellung erfolgt nur, wenn SewerStudio auch waehrend und nach dem Lauf
 nicht beobachtet wurde und der letzte Harness-Stand weiterhin denselben SHA-256
 besitzt. Bei einer parallelen Aenderung bleibt der aktuelle Store unangetastet und
 die eindeutige Harness-Sicherung fuer die manuelle Pruefung erhalten.
+
+## Codiermodus-Bildvergleich (20.09.2026, erste Messstufe)
+
+- `Application/UseCases/CodingReplay/CodingReplayUseCase` führt Bilder seriell mit
+  Hashprüfung, Pflichtkontext, Zeitlimit, Abbruch und Einzelfehlerbelegen aus.
+  Sollcodes gelangen nur in `CodingReplayComparer`, nie in `ICodingReplayAnalyzer`.
+  Ein Schreibfehler stoppt den Lauf; Modellfehler sind keine Negativbefunde.
+- `tools/CodingReplay` ist ein eigener Windows-CLI-Host in der vollständigen Lösung.
+  `prepare` bindet eingefrorenes Eval-Set, vorhandene menschliche Review und
+  eindeutig zugeordnete Projekt-Stammdaten an ein neues Paket. Originale bleiben
+  unverändert. `run` nutzt bestehende öffentliche Player-Workflows und
+  `SingleFrameMultiModelService`; keine App-Instanz und kein Projekt-Save.
+- Meter kommen aus `CodingOsdMeterService` mit unverändertem 8-Sekunden-Limit.
+  Pro Bild beginnen Sitzung/Tracker leer, ohne Importbefunde, Kalibrierung oder
+  Verlaufswerte. DINO/SAM, Codezuordnung, räumliche Filter, QualityGate sowie
+  Grenz-/Strukturereignisregeln bleiben bestehen. `ReplayClosedTrainingStore`
+  sperrt Training. Sidecar-Qualifikation wird respektiert, keine automatische
+  Modellaktivierung. Der Host liest Einstellungen ohne `AppSettings.Load`.
+- HTML/JSON zeigen tatsächliche `session.Events`, nicht nur den Workflowausgang
+  `EventsAdded` (der auch bei null Vorschlägen auftreten kann). Pro Bild getrennt:
+  genauer Code, gleiche Hauptgruppe, fehlender Referenzvorschlag, Schadensvorschlag
+  bei negativer Referenz, manuelle Prüfung oder technisch nicht gemessen.
+- Historische Bilddiagnose, keine Video-/Release-Messung: Vorabdurchlauf, Qwen-only,
+  Bildauswahl, Live-Takt, Oberfläche, Verlauf und zeitliche Zusammenführung fehlen.
+  Gewichtsbindung des Sidecars, Jobwarteschlange und Wiederanlauf sind noch offen.
+  Keine neue DI-Registrierung, NuGet-Abhängigkeit oder Änderung am Produktionsweg.
+- Anleitung: `tools/CodingReplay/README.md`. Tests: `CodingReplayUseCaseTests`,
+  `CodingReplayComparisonTests`, `CodingReplayAnalyzerTests`.
 
 ## Ereignisbasierte Eval-Messung (AP 0.4a, technische Grundlage)
 

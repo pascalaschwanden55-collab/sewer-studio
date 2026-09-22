@@ -1,0 +1,254 @@
+using System;
+using System.Collections.Generic;
+
+namespace AuswertungPro.Next.Application.WebGis;
+
+/// <summary>Eingabe fuer den Planbau — bewusst von HaltungRecord/SchachtRecord entkoppelt.</summary>
+public sealed class WebGisObjektEingabe
+{
+    public required WebGisObjektart Objektart { get; init; }
+    public required string Bezeichnung { get; init; }
+    public Guid RecordId { get; init; }
+    public string? Zustandsklasse { get; init; }
+    public string? Bemerkung { get; init; }
+    /// <summary>Nur Haltung: Baujahr, wird nur gesetzt wenn im WebGIS leer.</summary>
+    public string? Baujahr { get; init; }
+    /// <summary>Saniert laut Sanierungs-Akte (nicht laut Bemerkungstext).</summary>
+    public bool Saniert { get; init; }
+    /// <summary>Von Hand geaenderte Felder (FieldMeta.UserEdited): SewerStudio-Feldname -> Text.</summary>
+    public Dictionary<string, string> Handwerte { get; init; } = new(StringComparer.Ordinal);
+}
+
+/// <summary>
+/// Baut den Exportplan je Objekt aus SewerStudio-Eingabe und frisch gelesenem
+/// WebGIS-Stand. Reine Regel: kein Netz, kein Schreiben.
+///
+/// Feste Regeln (Entscheid Pascal 21.09.2026):
+/// - Kein Laengenfeld wird je geschrieben.
+/// - Sanierungsbedarf = "Saniert" nur bei vorhandener ausgefuehrter Sanierungs-Akte.
+/// - Bemerkung wird zusammengefuehrt, nie ueberschrieben.
+/// - Vor dem Schreiben ist der WebGIS-Stand frisch zu lesen (macht der Ablauf).
+/// </summary>
+public static class WebGisExportPlanBuilder
+{
+    public static WebGisExportPosition Baue(WebGisObjektEingabe e, WebGisLesestand? stand)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+
+        var pos = new WebGisExportPosition
+        {
+            Objektart = e.Objektart,
+            Bezeichnung = e.Bezeichnung,
+            GlobalId = stand?.GlobalId,
+            RecordId = e.RecordId,
+        };
+
+        if (stand is null)
+        {
+            pos.Sperren.Add("Im WebGIS nicht eindeutig gefunden (kein oder mehrdeutiger Treffer).");
+            return pos;
+        }
+
+        var art = e.Objektart;
+
+        // 1) Zustand
+        var zCode = WebGisFeldkarte.ZustandCode(e.Zustandsklasse);
+        if (zCode is int zc)
+        {
+            var altZ = stand.Feld(WebGisFeldkarte.ZustandRef(art));
+            if (!GleichCode(altZ, zc))
+            {
+                pos.Aenderungen.Add(new WebGisFeldAenderung
+                {
+                    RefId = WebGisFeldkarte.ZustandRef(art),
+                    Feld = "Zustand",
+                    Alt = altZ,
+                    AltText = stand.FeldText(WebGisFeldkarte.ZustandRef(art)),
+                    Neu = zc.ToString(),
+                    NeuText = WebGisFeldkarte.ZustandText(zc),
+                });
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(e.Zustandsklasse))
+        {
+            pos.Hinweise.Add($"Zustandsklasse '{e.Zustandsklasse}' ist kein bekannter Wert (0..4) — Zustand nicht gesetzt.");
+        }
+
+        // 2) Sanierungsbedarf
+        if (e.Saniert)
+        {
+            var altS = stand.Feld(WebGisFeldkarte.SanierungsbedarfRef(art));
+            if (!GleichCode(altS, WebGisFeldkarte.SanierungsbedarfSaniert))
+            {
+                pos.Aenderungen.Add(new WebGisFeldAenderung
+                {
+                    RefId = WebGisFeldkarte.SanierungsbedarfRef(art),
+                    Feld = "Sanierungsbedarf",
+                    Alt = altS,
+                    AltText = stand.FeldText(WebGisFeldkarte.SanierungsbedarfRef(art)),
+                    Neu = WebGisFeldkarte.SanierungsbedarfSaniert.ToString(),
+                    NeuText = "Saniert",
+                });
+            }
+            if (zCode is int z && z != 104)
+                pos.Hinweise.Add($"Saniert, aber Zustandsklasse ist nicht 4 (Z4) — geliefert wird {WebGisFeldkarte.ZustandText(z)}.");
+        }
+        else if (NenntSaniert(e.Bemerkung))
+        {
+            pos.Hinweise.Add("Bemerkung nennt 'saniert', aber es gibt keine ausgefuehrte Sanierungs-Akte — Sanierungsbedarf NICHT gesetzt.");
+        }
+
+        // 3) Bemerkung (zusammenfuehren)
+        var altBem = stand.Feld(WebGisFeldkarte.BemerkungRef(art));
+        var neuBem = WebGisBemerkung.Zusammenfuehren(altBem, e.Bemerkung);
+        if (neuBem is not null && !string.Equals(neuBem, altBem ?? string.Empty, StringComparison.Ordinal))
+        {
+            pos.Aenderungen.Add(new WebGisFeldAenderung
+            {
+                RefId = WebGisFeldkarte.BemerkungRef(art),
+                Feld = "Bemerkung",
+                Alt = altBem,
+                Neu = neuBem,
+                NeuText = neuBem,
+            });
+        }
+
+        // 4) Baujahr: NIE ueberschreiben (Entscheid Pascal), nur fuellen wenn im WebGIS leer.
+        if (art == WebGisObjektart.Haltung && !string.IsNullOrWhiteSpace(e.Baujahr))
+        {
+            var altJ = stand.Feld(WebGisFeldkarte.HaltungBaujahrRef);
+            if (string.IsNullOrWhiteSpace(altJ))
+            {
+                pos.Aenderungen.Add(new WebGisFeldAenderung
+                {
+                    RefId = WebGisFeldkarte.HaltungBaujahrRef,
+                    Feld = "Baujahr",
+                    Alt = altJ,
+                    Neu = e.Baujahr!.Trim(),
+                    NeuText = e.Baujahr!.Trim(),
+                });
+            }
+        }
+
+        // 5) Handwerte: was der Bearbeiter in SewerStudio von Hand gesetzt hat, geht 1:1 ins WebGIS —
+        //    Combo ueber den Katalog der Maske, fehlender Klartext sperrt das Objekt nicht, nur das Feld
+        //    (Hinweis). Felder ohne WebGIS-Zuordnung werden genannt, damit nichts stumm verloren geht.
+        Handwerte(e, stand, pos);
+
+        return pos;
+    }
+
+    private static void Handwerte(WebGisObjektEingabe e, WebGisLesestand stand, WebGisExportPosition pos)
+    {
+        foreach (var (feldName, text) in e.Handwerte)
+        {
+            if (WebGisHandwertKarte.IstEigeneRegel(feldName)) continue;
+            if (WebGisHandwertKarte.NichtFuerKataster(feldName)) continue;
+            var wert = (text ?? string.Empty).Trim();
+            if (wert.Length == 0) continue; // Leeren wird nicht uebertragen (nichts loeschen)
+
+            if (WebGisHandwertKarte.WebGisFuehrt(feldName))
+            {
+                pos.Hinweise.Add($"{feldName}: im WebGIS führend — «{wert}» wird nicht übertragen.");
+                continue;
+            }
+
+            var karte = WebGisHandwertKarte.Finde(e.Objektart, feldName);
+            if (karte is null)
+            {
+                pos.Hinweise.Add($"Handwert «{feldName} = {wert}» hat kein WebGIS-Feld — nicht übertragen.");
+                continue;
+            }
+
+            if (karte.Typ == WebGisHandwertTyp.Text)
+            {
+                var alt = stand.Feld(karte.RefId);
+                if (pos.Aenderungen.Exists(a => string.Equals(a.RefId, karte.RefId, StringComparison.Ordinal))) continue;
+                if (!GleicherText(alt, wert))
+                    pos.Aenderungen.Add(new WebGisFeldAenderung { RefId = karte.RefId, Feld = karte.Anzeige, Alt = alt, Neu = wert, NeuText = wert });
+                continue;
+            }
+
+            stand.Kataloge.TryGetValue(karte.RefId, out var katalog);
+
+            // Paarfeld (Material-Detail + Material): Die Gruppe kommt aus dem Hauptteil des
+            // Texts ("Beton, Fertigteil" -> "Beton"). Zeigt die Maske gerade eine andere Gruppe,
+            // fuehrt ihre Detail-Liste den Wert nicht; dann zaehlt die vom Ablauf nachgeladene
+            // Liste der Zielgruppe (KatalogeNachGruppe).
+            string? hauptKey = null;
+            var haupt = WebGisHandwertKarte.Hauptteil(wert);
+            if (karte.HauptRefId is not null)
+            {
+                stand.Kataloge.TryGetValue(karte.HauptRefId, out var hauptKatalog);
+                hauptKey = WebGisHandwertKarte.Schluessel(hauptKatalog, haupt);
+                if (hauptKey is not null
+                    && stand.KatalogeNachGruppe.TryGetValue(WebGisLesestand.GruppenSchluessel(karte.RefId, hauptKey), out var gruppenListe))
+                    katalog = gruppenListe;
+            }
+
+            var key = WebGisHandwertKarte.Schluessel(katalog, wert);
+            if (key is null && karte.HauptRefId is not null && hauptKey is not null && haupt == wert)
+            {
+                // Nur die Hauptkategorie bekannt ("Beton"): ins Hauptfeld, Detail bleibt.
+                FuegeComboAn(pos, stand, karte.HauptRefId, karte.Anzeige, hauptKey, wert);
+                continue;
+            }
+            if (key is null)
+            {
+                pos.Hinweise.Add($"{karte.Anzeige} «{wert}» ist im WebGIS-Katalog nicht vorhanden — Feld nicht übertragen (Wert in SewerStudio oder Katalog bei Trigonet angleichen).");
+                continue;
+            }
+
+            FuegeComboAn(pos, stand, karte.RefId, karte.Anzeige, key, wert);
+
+            // Detail gesetzt -> Hauptkategorie mitziehen ("Beton, Fertigteil" -> Material "Beton").
+            if (karte.HauptRefId is not null && hauptKey is not null)
+                FuegeComboAn(pos, stand, karte.HauptRefId, karte.Anzeige + " (Hauptkategorie)", hauptKey, haupt);
+        }
+    }
+
+    private static void FuegeComboAn(WebGisExportPosition pos, WebGisLesestand stand, string refId, string anzeige, string key, string text)
+    {
+        var alt = stand.Feld(refId);
+        if (GleichCode(alt, key)) return;
+        // Zwei SewerStudio-Felder koennen auf dasselbe WebGIS-Feld zeigen (DN und lichte Breite);
+        // dann zaehlt der erste Treffer, sonst stuenden zwei Aenderungen fuer eine Zelle im Plan.
+        if (pos.Aenderungen.Exists(a => string.Equals(a.RefId, refId, StringComparison.Ordinal))) return;
+        // Alt = Schluessel (fuer den Konfliktschutz), AltText = Klartext (fuer den Bericht).
+        pos.Aenderungen.Add(new WebGisFeldAenderung
+        {
+            RefId = refId, Feld = anzeige, Alt = alt, AltText = stand.FeldText(refId), Neu = key, NeuText = text,
+        });
+    }
+
+    /// <summary>
+    /// Textfeld-Vergleich. Sind BEIDE Seiten Zahlen, zaehlt der Zahlenwert: Das WebGIS speichert
+    /// «1.80» als «1.8» und liefert es so zurueck — zeichengenau verglichen entstuende bei jedem
+    /// Lauf dieselbe Scheinaenderung und ein unnoetiger Schreibvorgang (Buerglen, Tiefe 525145,
+    /// 22.09.2026). Ist eine Seite keine Zahl, bleibt es beim zeichengenauen Vergleich.
+    /// </summary>
+    private static bool GleicherText(string? vorhanden, string neu)
+    {
+        var alt = (vorhanden ?? string.Empty).Trim();
+        var wert = neu.Trim();
+        if (string.Equals(alt, wert, StringComparison.Ordinal)) return true;
+        return AlsZahl(alt) is { } a && AlsZahl(wert) is { } b && a == b;
+    }
+
+    /// <summary>Zahl mit Punkt oder Komma als Dezimaltrenner; null, wenn der Text keine Zahl ist.</summary>
+    private static decimal? AlsZahl(string text)
+        => decimal.TryParse(text.Replace(',', '.'), System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : null;
+
+    private static bool GleichCode(string? vorhanden, string code)
+        => string.Equals((vorhanden ?? string.Empty).Trim(), code.Trim(), StringComparison.Ordinal);
+
+    private static bool GleichCode(string? vorhanden, int code)
+    {
+        var v = (vorhanden ?? string.Empty).Trim();
+        return v == code.ToString();
+    }
+
+    private static bool NenntSaniert(string? bemerkung)
+        => (bemerkung ?? string.Empty).TrimStart().StartsWith("saniert", StringComparison.OrdinalIgnoreCase);
+}

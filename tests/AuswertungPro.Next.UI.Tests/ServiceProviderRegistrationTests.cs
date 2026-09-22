@@ -122,6 +122,11 @@ public sealed class ServiceProviderRegistrationTests
         // (Bogen, dann Rohranfang/Rohrende) und setzt das Sitzungsgedaechtnis — der Player
         // kennt nur diesen Vertrag, keine Modellwahl.
         // 168 -> 169: ISchachtProQrImportService liest SPQR1 aus Bildern.
+        // 169 -> 170: IGeonisWebGisClient schreibt Zustand/Sanierungsbedarf/Bemerkung
+        // in den GEONIS-Attributeditor (WebGIS-Export). Laengen werden nie geschrieben;
+        // saniert gilt nur bei ausgefuehrter Sanierungs-Akte.
+        // 170 -> 171: IWebGisZugangQuelle liefert die im sichtbaren Browser angemeldete
+        // WebOffice-Sitzung (Playwright-Chromium, kein Passwort in SewerStudio).
         // 158 -> 159: ICodingSuggestionRegistry merkt den letzten Vorabdurchlauf je Haltung
         // (Sitzungsgedaechtnis fuer die Karte "KI-Vorabdurchlauf" in der Uebersicht, Nova-Etappe 2).
         // 159 -> 160: IGeoShopLeser liefert Original-XTF-TIDs und Leerfelder fuer die neue Vorschau.
@@ -129,8 +134,8 @@ public sealed class ServiceProviderRegistrationTests
         // 167 -> 168: ISchachtLageQuelle liefert Schachtpunkt und Leitungsrichtungen aus den
         // QGIS-Kopien fuer den Grundriss der Schachtgrafik (Stammkarte, 19.09.2026).
         Assert.True(
-            registrations.Count == 169,
-            $"Erwartet 169 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 171,
+            $"Erwartet 171 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(services.XtfLieferungen,

@@ -387,6 +387,16 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     // einzelnen Haltung/dem Schacht und den Abgleich der ganzen Seite. Leer heisst: beim naechsten Mal fragen.
     public string GeoShopXtfPath { get; set; } = "";
 
+    // WebGIS-Uebertragung (21.09.2026): WebOffice-Projekt und GEONIS-Datenquelle der AWU;
+    // der X-syn-Kontext wird nach der ersten Anmeldung gemerkt, damit spaeter die Anmeldung
+    // allein genuegt. Kein Passwort — die Anmeldung laeuft im sichtbaren Browser.
+    public string WebGisBasisUrl { get; set; } = "https://www.geohost.ch";
+    public string WebGisProjekt { get; set; } = "awu_abw_edit";
+    public string WebGisDatenquelle { get; set; } = "awu_abw";
+    public string WebGisSynLogin { get; set; } = "";
+    public string WebGisSynRoles { get; set; } = "";
+    public string WebGisSynGroups { get; set; } = "";
+
     // VSA Zustandklassifizierung v2: Shadow-Vergleich gegen Legacy-Engine.
     // Null bedeutet Default an.
     public bool? VsaClassificationShadowEnabled { get; set; }
