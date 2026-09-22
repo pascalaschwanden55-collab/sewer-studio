@@ -33,13 +33,36 @@ public sealed class WebGisExportUseCaseTests
         public int KatalogListenAufrufe { get; private set; }
         public string? LetzterSubtyp { get; private set; }
 
+        /// <summary>
+        /// Wie ein echter Server: Geschriebene Felder stehen beim naechsten Lesen drin.
+        /// Auf false gesetzt bildet der Fake einen Server nach, der ein Feld annimmt und
+        /// still verwirft (Buerglen: Tiefe ohne Koten).
+        /// </summary>
+        public bool SchreibenWirkt { get; set; } = true;
+
+        private readonly Dictionary<string, Dictionary<string, string>> _gespeichert = new(StringComparer.Ordinal);
+
         public Task<WebGisLesestand?> LeseAsync(WebGisObjektart art, string bezeichnung, CancellationToken ct = default)
-            => Task.FromResult(Lese(art, bezeichnung));
+        {
+            var stand = Lese(art, bezeichnung);
+            if (stand is not null && _gespeichert.TryGetValue(stand.GlobalId, out var felder))
+                foreach (var (refId, wert) in felder) stand.Felder[refId] = wert;
+            return Task.FromResult(stand);
+        }
 
         public Task<WebGisSchreibErgebnis> SchreibeAsync(WebGisObjektart art, string globalId, IReadOnlyDictionary<string, string> felder, CancellationToken ct = default)
         {
             var res = Schreibe(globalId, felder);
-            if (res.Erfolg) Geschrieben.Add((globalId, felder));
+            if (res.Erfolg)
+            {
+                Geschrieben.Add((globalId, felder));
+                if (SchreibenWirkt)
+                {
+                    if (!_gespeichert.TryGetValue(globalId, out var gespeichert))
+                        _gespeichert[globalId] = gespeichert = new Dictionary<string, string>(StringComparer.Ordinal);
+                    foreach (var (refId, wert) in felder) gespeichert[refId] = wert;
+                }
+            }
             return Task.FromResult(res);
         }
 
@@ -143,6 +166,87 @@ public sealed class WebGisExportUseCaseTests
         Assert.Contains("Form: Unbekannt → Rund", WebGisExportBericht.Details(plan, mitErgebnis: false));
         var objekt = Assert.Single(WebGisUebersicht.Aus(plan).Objekte);
         Assert.Equal("Unbekannt", objekt.Zeilen[0].Alt);
+    }
+
+    // ---------------- Nachkontrolle: kam der Wert wirklich an? ----------------
+    // Buerglen 21./22.09.: Schacht 60284, 60105, 60106 — «Tiefe [m] – → 3.22 | OK», dreimal
+    // hintereinander, und das Feld blieb jedes Mal leer. Die Tiefe wird im WebGIS aus Sohlen-
+    // und Deckelkote gerechnet; fehlen sie, nimmt der Server den Wert an, speichert ihn aber
+    // nicht. Ein «OK» im Log fuer etwas, das nicht passiert ist, darf es nicht geben.
+
+    /// <summary>Stand mit frei setzbaren Textfeldern (Tiefe).</summary>
+    private static WebGisLesestand SchachtStandMitTiefe(string? tiefe, string gid = "G1")
+    {
+        var stand = SchachtStand(gid: gid);
+        stand.Felder["db8b7f6e-234c-536f-7fbd-3b6d841d8ccd"] = tiefe;
+        return stand;
+    }
+
+    [Fact]
+    public async Task Ein_feld_das_der_server_still_verwirft_wird_gemeldet_statt_als_ok()
+    {
+        var pos = WebGisExportPlanBuilder.Baue(Schacht(("Tiefe", "3.22")), SchachtStandMitTiefe(null));
+        Assert.Single(pos.Aenderungen);
+        var plan = new WebGisExportPlan();
+        plan.Positionen.Add(pos);
+        // Der Server nimmt an und meldet Erfolg, das Feld bleibt aber leer.
+        var client = new FakeClient { Lese = (_, _) => SchachtStandMitTiefe(null), SchreibenWirkt = false };
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
+
+        Assert.False(pos.Geschrieben);
+        Assert.Contains("Tiefe [m]", pos.SchreibFehler);
+        Assert.Contains("nicht übernommen", pos.SchreibFehler);
+    }
+
+    [Fact]
+    public async Task Angekommener_wert_bleibt_ein_erfolg()
+    {
+        var pos = WebGisExportPlanBuilder.Baue(Schacht(("Tiefe", "3.22")), SchachtStandMitTiefe(null));
+        var plan = new WebGisExportPlan();
+        plan.Positionen.Add(pos);
+        var client = new FakeClient { Lese = (_, _) => SchachtStandMitTiefe(null) };
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
+
+        Assert.True(pos.Geschrieben);
+        Assert.Null(pos.SchreibFehler);
+    }
+
+    [Fact]
+    public async Task Nachkontrolle_akzeptiert_dieselbe_zahl_in_anderer_schreibweise()
+    {
+        // Geschrieben 1.80, der Server speichert 1.8 — das ist angekommen.
+        var pos = WebGisExportPlanBuilder.Baue(Schacht(("Tiefe", "1.80")), SchachtStandMitTiefe(null));
+        var plan = new WebGisExportPlan();
+        plan.Positionen.Add(pos);
+        var gelesen = 0;
+        var client = new FakeClient
+        {
+            Lese = (_, _) => SchachtStandMitTiefe(gelesen++ == 0 ? null : "1.8"), SchreibenWirkt = false,
+        };
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
+
+        Assert.True(pos.Geschrieben);
+    }
+
+    [Fact]
+    public async Task Nachkontrolle_die_selbst_scheitert_macht_aus_einem_erfolg_keinen_fehler()
+    {
+        var pos = WebGisExportPlanBuilder.Baue(Schacht(("Tiefe", "3.22")), SchachtStandMitTiefe(null));
+        var plan = new WebGisExportPlan();
+        plan.Positionen.Add(pos);
+        var gelesen = 0;
+        var client = new FakeClient
+        {
+            Lese = (_, _) => gelesen++ == 0 ? SchachtStandMitTiefe(null) : null, SchreibenWirkt = false,
+        };
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
+
+        Assert.True(pos.Geschrieben);
+        Assert.Contains(pos.Hinweise, h => h.Contains("nicht nachgeprüft"));
     }
 
     // ---------------- C1: ein Fehler stoppt die uebrigen nicht, jeder Schritt wird gemeldet ----------------

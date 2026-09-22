@@ -237,8 +237,54 @@ public sealed class WebGisExportUseCase
         }
 
         var res = await _client.SchreibeAsync(pos.Objektart, pos.GlobalId!, felder, ct).ConfigureAwait(false);
-        pos.Geschrieben = res.Erfolg;
-        if (!res.Erfolg) pos.SchreibFehler = res.Fehler;
+        if (!res.Erfolg) { pos.SchreibFehler = res.Fehler; return; }
+        await PruefeNachAsync(pos, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Nachkontrolle: Steht der geschriebene Wert danach wirklich im WebGIS?
+    ///
+    /// Der Server meldet auch dann «gespeichert», wenn er ein Feld gar nicht setzen KANN —
+    /// die Schachttiefe etwa rechnet er aus Sohlen- und Deckelkote; fehlen sie, nimmt er den
+    /// Wert an und verwirft ihn. In Buerglen stand dreimal «Tiefe [m] – → 3.22 | OK» im Log,
+    /// und das Feld war jedes Mal weiterhin leer (Befund 22.09.2026). Ein OK fuer etwas, das
+    /// nicht passiert ist, ist schlimmer als ein sichtbarer Fehlschlag.
+    ///
+    /// Scheitert die Nachkontrolle selbst, bleibt es beim Erfolg mit Hinweis: Der
+    /// Schreibvorgang war ja bestaetigt, nur die Gegenprobe fehlt.
+    /// </summary>
+    private async Task PruefeNachAsync(WebGisExportPosition pos, CancellationToken ct)
+    {
+        WebGisLesestand? nachher;
+        try
+        {
+            nachher = await _client.LeseAsync(pos.Objektart, pos.Bezeichnung, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (WebGisSitzungException) { throw; }
+        catch (Exception ex)
+        {
+            pos.Geschrieben = true;
+            pos.Hinweise.Add("Geschrieben, aber nicht nachgeprüft (Lesefehler: " + ex.Message + ").");
+            return;
+        }
+        if (nachher is null)
+        {
+            pos.Geschrieben = true;
+            pos.Hinweise.Add("Geschrieben, aber nicht nachgeprüft — beim erneuten Lesen kein eindeutiger Treffer.");
+            return;
+        }
+
+        var verworfen = new List<string>();
+        foreach (var a in pos.Aenderungen)
+            if (!WebGisExportPlanBuilder.GleicherWert(nachher.Feld(a.RefId), a.Neu))
+                verworfen.Add(a.Feld);
+
+        if (verworfen.Count == 0) { pos.Geschrieben = true; return; }
+
+        pos.SchreibFehler =
+            string.Join(", ", verworfen) + ": vom WebGIS nicht übernommen — das Feld steht danach unverändert da. "
+            + "Bei der Tiefe rechnet das WebGIS aus Sohlen- und Deckelkote; fehlen sie, lässt sie sich nicht setzen.";
     }
 
     /// <summary>

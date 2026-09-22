@@ -227,6 +227,8 @@ public static class WebGisExportPlanBuilder
     /// Lauf dieselbe Scheinaenderung und ein unnoetiger Schreibvorgang (Buerglen, Tiefe 525145,
     /// 22.09.2026). Ist eine Seite keine Zahl, bleibt es beim zeichengenauen Vergleich.
     /// </summary>
+    public static bool GleicherWert(string? vorhanden, string neu) => GleicherText(vorhanden, neu);
+
     private static bool GleicherText(string? vorhanden, string neu)
     {
         var alt = (vorhanden ?? string.Empty).Trim();
