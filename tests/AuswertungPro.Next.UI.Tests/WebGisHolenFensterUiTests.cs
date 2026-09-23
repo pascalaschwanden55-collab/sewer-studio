@@ -48,7 +48,7 @@ public sealed class WebGisHolenFensterUiTests
 
     private static (WebGisHolenWindow Fenster, Border Host) Zeige(WebGisImportPlan plan)
     {
-        var fenster = new WebGisHolenWindow(() => Task.FromResult<WebGisImportPlan?>(plan), _ => "", (_, _) => { });
+        var fenster = new WebGisHolenWindow(() => Task.FromResult<WebGisImportPlan?>(plan), _ => Task.FromResult(""), (_, _) => { });
         fenster.PruefeAsync().GetAwaiter().GetResult(); // der Plan liegt schon vor: laeuft synchron durch
         var inhalt = (FrameworkElement)fenster.Content;
         fenster.Content = null;

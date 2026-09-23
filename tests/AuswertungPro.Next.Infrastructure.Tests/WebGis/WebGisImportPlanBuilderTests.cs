@@ -167,21 +167,102 @@ public sealed class WebGisImportPlanBuilderTests
         Assert.Null(Aenderung(pos, "haltung.pipegroup"));
     }
 
-    // Entscheid Pascal 23.09.2026 (ersetzt «Laenge immer aus dem WebGIS» vom 21.09.): In SewerStudio gilt
-    // die Laenge des Operateurs; sie wird weder geholt noch gesendet. Eigentum aendert das Programm nie.
+    // Laenge und Eigentum gehen nie ins WebGIS: Sie stehen nicht in der Handwertkarte (die Schreibsperre
+    // WebGisGeschuetzteFelder haelt das zusaetzlich fest).
     [Fact]
-    public void Laenge_und_eigentum_werden_nie_geholt()
+    public void Laenge_und_eigentum_stehen_nie_in_der_handwertkarte()
+        => Assert.DoesNotContain(WebGisHandwertKarte.Felder, k => k.SewerStudioFeld.Contains("igent", System.StringComparison.OrdinalIgnoreCase)
+                                                                 || k.SewerStudioFeld.Contains("laenge", System.StringComparison.OrdinalIgnoreCase)
+                                                                 || k.SewerStudioFeld.Contains("etreiber", System.StringComparison.OrdinalIgnoreCase));
+
+    // ---- Entscheid Pascal 23.09.2026 abends: Haltungslaenge, Eigentuemer und Betreiber werden GEHOLT, rein
+    // informativ der Vollstaendigkeit halber — nur in leere Felder, nie ersetzt, nie zurueckgeschrieben. ----
+
+    private const string BundKey = "df1f763b-7f01-4d4d-a22c-14476c7a3a9b";
+    private const string KantonKey = "58d1c876-3d16-47da-8b38-b509bbc0cbca";
+
+    private static WebGisLesestand StandMitOrganisation(string refId, bool plausibel = true)
+    {
+        var s = new WebGisLesestand { GlobalId = "G1", Bezeichnung = "H1" };
+        s.Felder[refId] = KantonKey;
+        s.Kataloge[refId] = plausibel
+            ? new List<(string, string)> { (BundKey, "Bund (Bund)"), (KantonKey, "Kanton Uri (Kanton)") }
+            : new List<(string, string)> { ("1", "Rund"), (KantonKey, "Kanton Uri (Kanton)") };
+        return s;
+    }
+
+    [Fact]
+    public void Leere_haltungslaenge_wird_informativ_geholt()
+    {
+        var s = Stand();
+        s.Felder[WebGisFeldkarte.HaltungLaengeGeomRef] = "94.78123";
+        var pos = WebGisImportPlanBuilder.Baue(Haltung((WebGisImportPlanBuilder.FeldLaenge, "", false)), s);
+
+        Assert.Equal("94.78", Aenderung(pos, WebGisImportPlanBuilder.FeldLaenge)?.Neu);
+    }
+
+    [Theory]
+    [InlineData(false)] // Laenge der Kanalfirma
+    [InlineData(true)]  // auch ein Katasterwert wird nicht ersetzt: rein informativ
+    public void Vorhandene_haltungslaenge_wird_nie_ersetzt(bool ersetzbar)
     {
         var s = Stand();
         s.Felder[WebGisFeldkarte.HaltungLaengeGeomRef] = "94.78";
-        var e = new WebGisImportEingabe { Objektart = WebGisObjektart.Haltung, Bezeichnung = "H1", Laenge = "94.79" };
-        e.Felder["Eigentuemer"] = new WebGisImportFeld("", Ersetzbar: true);
+        var pos = WebGisImportPlanBuilder.Baue(Haltung((WebGisImportPlanBuilder.FeldLaenge, "94.10", ersetzbar)), s);
 
-        var pos = WebGisImportPlanBuilder.Baue(e, s);
-
-        Assert.DoesNotContain(pos.Aenderungen, a => a.Feld.Contains("laenge", System.StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(pos.Aenderungen, a => a.Feld.Contains("igent", System.StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(WebGisHandwertKarte.Felder, k => k.SewerStudioFeld.Contains("igent", System.StringComparison.OrdinalIgnoreCase)
-                                                              || k.SewerStudioFeld.Contains("laenge", System.StringComparison.OrdinalIgnoreCase));
+        Assert.Null(Aenderung(pos, WebGisImportPlanBuilder.FeldLaenge));
     }
+
+    [Fact]
+    public void Leerer_eigentuemer_wird_informativ_geholt()
+    {
+        var pos = WebGisImportPlanBuilder.Baue(Haltung((FieldKeysOwner, "", false)),
+            StandMitOrganisation(WebGisFeldkarte.EigentuemerRef(WebGisObjektart.Haltung)));
+
+        Assert.Equal("Kanton Uri (Kanton)", Aenderung(pos, FieldKeysOwner)?.Neu);
+    }
+
+    [Fact]
+    public void Vorhandener_eigentuemer_aus_geoshop_bleibt()
+    {
+        var pos = WebGisImportPlanBuilder.Baue(Haltung((FieldKeysOwner, "Kanton Uri", true)),
+            StandMitOrganisation(WebGisFeldkarte.EigentuemerRef(WebGisObjektart.Haltung)));
+
+        Assert.Null(Aenderung(pos, FieldKeysOwner));
+    }
+
+    [Fact]
+    public void Eigentuemerfeld_ohne_organisationsliste_wird_nicht_geholt()
+    {
+        // Die refId stammt aus der Inventur, nicht aus einer Live-Pruefung: Nur wenn die Liste der Maske
+        // wirklich Organisationen fuehrt, ist es das Eigentuemerfeld — sonst nichts uebernehmen.
+        var pos = WebGisImportPlanBuilder.Baue(Haltung((FieldKeysOwner, "", false)),
+            StandMitOrganisation(WebGisFeldkarte.EigentuemerRef(WebGisObjektart.Haltung), plausibel: false));
+
+        Assert.Null(Aenderung(pos, FieldKeysOwner));
+        Assert.Contains(pos.Hinweise, h => h.Contains("Eigentümer"));
+    }
+
+    [Fact]
+    public void Leerer_betreiber_kommt_in_die_akte()
+    {
+        var feld = WebGisImportPlanBuilder.BetreiberFeld(WebGisObjektart.Haltung);
+        var pos = WebGisImportPlanBuilder.Baue(Haltung((feld, "", false)),
+            StandMitOrganisation(WebGisFeldkarte.BetreiberRef(WebGisObjektart.Haltung)));
+
+        Assert.Equal("Kanton Uri (Kanton)", Aenderung(pos, feld)?.Neu);
+    }
+
+    [Fact]
+    public void Bewusst_leerer_eigentuemer_bleibt_leer()
+    {
+        var e = Haltung();
+        e.Felder[FieldKeysOwner] = new WebGisImportFeld("", Ersetzbar: false, Handwert: true);
+
+        var pos = WebGisImportPlanBuilder.Baue(e, StandMitOrganisation(WebGisFeldkarte.EigentuemerRef(WebGisObjektart.Haltung)));
+
+        Assert.Null(Aenderung(pos, FieldKeysOwner));
+    }
+
+    private const string FieldKeysOwner = AuswertungPro.Next.Domain.Models.FieldKeys.Owner;
 }

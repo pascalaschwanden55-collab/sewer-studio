@@ -54,9 +54,11 @@ public sealed class WebGisGeschuetzteFelderTests
         Assert.Contains("1963", verstoss);
     }
 
-    [Fact]
-    public void Leeres_baujahr_der_haltung_darf_gefuellt_werden()
-        => Assert.Empty(Pruefe(WebGisObjektart.Haltung, WebGisFeldkarte.HaltungBaujahrRef, "1970", aktuell: " "));
+    [Theory]
+    [InlineData(WebGisObjektart.Haltung)]
+    [InlineData(WebGisObjektart.Schacht)] // «alles gilt auch bei den Schaechten» (Pascal 23.09.2026)
+    public void Leeres_baujahr_darf_gefuellt_werden(WebGisObjektart art)
+        => Assert.Empty(Pruefe(art, WebGisFeldkarte.BaujahrRef(art), "1970", aktuell: " "));
 
     [Fact]
     public void Unbekanntes_feld_wird_nie_gesendet()

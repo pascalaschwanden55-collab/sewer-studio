@@ -12,7 +12,7 @@ public sealed class WebGisObjektEingabe
     public string? GespeicherteGlobalId { get; init; }
     public string? Zustandsklasse { get; init; }
     public string? Bemerkung { get; init; }
-    /// <summary>Nur Haltung: Baujahr, wird nur gesetzt wenn im WebGIS leer.</summary>
+    /// <summary>Baujahr (Haltung und Schacht), wird nur gesetzt wenn im WebGIS leer.</summary>
     public string? Baujahr { get; init; }
     /// <summary>Saniert laut Sanierungs-Akte (nicht laut Bemerkungstext).</summary>
     public bool Saniert { get; init; }
@@ -128,15 +128,16 @@ public static class WebGisExportPlanBuilder
             });
         }
 
-        // 4) Baujahr: NIE ueberschreiben (Entscheid Pascal), nur fuellen wenn im WebGIS leer.
-        if (art == WebGisObjektart.Haltung && !string.IsNullOrWhiteSpace(e.Baujahr))
+        // 4) Baujahr: NIE ueberschreiben (Entscheid Pascal), nur fuellen wenn im WebGIS leer —
+        //    bei Haltung UND Schacht («alles gilt auch bei den Schaechten», 23.09.2026).
+        if (!string.IsNullOrWhiteSpace(e.Baujahr))
         {
-            var altJ = stand.Feld(WebGisFeldkarte.HaltungBaujahrRef);
+            var altJ = stand.Feld(WebGisFeldkarte.BaujahrRef(art));
             if (string.IsNullOrWhiteSpace(altJ))
             {
                 pos.Aenderungen.Add(new WebGisFeldAenderung
                 {
-                    RefId = WebGisFeldkarte.HaltungBaujahrRef,
+                    RefId = WebGisFeldkarte.BaujahrRef(art),
                     Feld = "Baujahr",
                     Alt = altJ,
                     Neu = e.Baujahr!.Trim(),

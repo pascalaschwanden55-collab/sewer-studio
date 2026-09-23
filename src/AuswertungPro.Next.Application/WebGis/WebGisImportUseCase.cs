@@ -7,6 +7,9 @@ using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.WebGis;
 
+/// <summary>Ergebnis von «Übernehmen»: uebernommene Objekte/Akten und gestoppte (im WebGIS seit der Vorschau geaendert).</summary>
+public sealed record WebGisHolenErgebnis(int Uebernommen, int Gestoppt);
+
 /// <summary>
 /// WebGIS -> SewerStudio: liest je Objekt den WebGIS-Stand, plant Baujahr (nur wenn leer), die Kartenfelder (leer fuellen, Katasterwerte ersetzen: WebGIS vor GeoShop) und die
 /// noch fehlenden Sanierungsmassnahmen, und uebernimmt nach Bestaetigung. Schreibt nie ins WebGIS.
@@ -39,6 +42,11 @@ public sealed class WebGisImportUseCase
             e.Felder[WebGisImportPlanBuilder.TypAaFeld] = AkteFeld(projekt, h.Id, "haltung", WebGisImportPlanBuilder.TypAaFeld);
             e.Felder[WebGisImportPlanBuilder.MaterialgruppeFeld(WebGisObjektart.Haltung)] = AkteFeld(projekt, h.Id, "haltung",
                 WebGisImportPlanBuilder.MaterialgruppeFeld(WebGisObjektart.Haltung));
+            e.Felder[WebGisImportPlanBuilder.BetreiberFeld(WebGisObjektart.Haltung)] = AkteFeld(projekt, h.Id, "haltung",
+                WebGisImportPlanBuilder.BetreiberFeld(WebGisObjektart.Haltung));
+            foreach (var feld in new[] { WebGisImportPlanBuilder.FeldLaenge, FieldKeys.Owner })
+                e.Felder[feld] = new WebGisImportFeld(h.GetFieldValue(feld), IstErsetzbar(h.FieldMeta.GetValueOrDefault(feld)),
+                    h.FieldMeta.GetValueOrDefault(feld)?.UserEdited == true);
             foreach (var karte in WebGisHandwertKarte.Felder)
                 if (karte.Objektart == WebGisObjektart.Haltung)
                     e.Felder[karte.SewerStudioFeld] = new WebGisImportFeld(
@@ -62,6 +70,11 @@ public sealed class WebGisImportUseCase
             };
             e.Felder[WebGisImportPlanBuilder.MaterialgruppeFeld(WebGisObjektart.Schacht)] = AkteFeld(projekt, s.Id, "schacht",
                 WebGisImportPlanBuilder.MaterialgruppeFeld(WebGisObjektart.Schacht));
+            e.Felder[WebGisImportPlanBuilder.BetreiberFeld(WebGisObjektart.Schacht)] = AkteFeld(projekt, s.Id, "schacht",
+                WebGisImportPlanBuilder.BetreiberFeld(WebGisObjektart.Schacht));
+            var eigentuemer = SchachtFeldnamen.Feld(s, FieldKeys.Owner);
+            e.Felder[FieldKeys.Owner] = new WebGisImportFeld(s.GetFieldValue(eigentuemer),
+                IstErsetzbar(s.FieldMeta.GetValueOrDefault(eigentuemer)), s.FieldMeta.GetValueOrDefault(eigentuemer)?.UserEdited == true);
             foreach (var karte in WebGisHandwertKarte.Felder)
             {
                 if (karte.Objektart != WebGisObjektart.Schacht) continue;
@@ -132,6 +145,71 @@ public sealed class WebGisImportUseCase
         }
     }
 
+    /// <summary>
+    /// «Übernehmen» (Entscheid Pascal 23.09.2026 abends): Vorher wird jedes Objekt mit etwas zu uebernehmen
+    /// und jede anzulegende Massnahme im WebGIS nochmals gelesen. Weicht der Stand samt Aenderungsdatum von
+    /// der Vorschau ab, wird genau dieses Objekt bzw. diese Massnahme nicht uebernommen (Sperre mit Grund);
+    /// alle anderen schon. Erst wird alles geprueft, dann geschrieben — eine abgelaufene Sitzung mitten im
+    /// Pruefen laesst deshalb nichts halb uebernommen zurueck.
+    /// </summary>
+    public async Task<WebGisHolenErgebnis> UebernimmGeprueftAsync(WebGisImportPlan plan, Project projekt, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(projekt);
+        const string Grund = "Im WebGIS seit der Vorschau geändert — nicht übernommen, bitte neu prüfen.";
+        var gestoppt = 0;
+
+        var elternMitMassnahme = plan.Sanierungen.Where(s => s.Uebernehmbar).Select(s => (s.Objektart, s.ElternRecordId)).ToHashSet();
+        foreach (var pos in plan.Positionen)
+        {
+            if (pos.Sperren.Count > 0 || string.IsNullOrWhiteSpace(pos.GlobalId)) continue;
+            if (!pos.Uebernehmbar && !elternMitMassnahme.Contains((pos.Objektart, pos.RecordId))) continue;
+            string? abweichung;
+            try
+            {
+                var jetzt = await WebGisObjektLesen.LiesAsync(_client, pos.Objektart, pos.Bezeichnung, pos.GespeicherteGlobalId, ct).ConfigureAwait(false);
+                abweichung = jetzt is null || !string.Equals(jetzt.GlobalId, pos.GlobalId, StringComparison.OrdinalIgnoreCase)
+                    ? "nicht mehr eindeutig lesbar"
+                    : Abweichung(pos.Objektart, pos.GelesenerStand, jetzt.Felder);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (WebGisSitzungException) { throw; }
+            catch (Exception ex) { abweichung = "nicht erneut lesbar: " + ex.Message; }
+            if (abweichung is null) continue;
+            pos.Sperren.Add($"{Grund} ({abweichung})");
+            gestoppt++;
+        }
+
+        foreach (var imp in plan.Sanierungen)
+        {
+            if (!imp.Uebernehmbar) continue;
+            string? abweichung;
+            try
+            {
+                var jetzt = await _client.LeseMassnahmeAsync(imp.WebGisGlobalId, ct).ConfigureAwait(false);
+                abweichung = jetzt is null ? "nicht mehr lesbar" : Abweichung(imp.Objektart, imp.GelesenerStand, jetzt.Felder);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (WebGisSitzungException) { throw; }
+            catch (Exception ex) { abweichung = "nicht erneut lesbar: " + ex.Message; }
+            if (abweichung is null) continue;
+            imp.Sperren.Add($"Sanierungsmassnahme: {Grund} ({abweichung})");
+            gestoppt++;
+        }
+
+        return new WebGisHolenErgebnis(Uebernimm(plan, projekt), gestoppt);
+    }
+
+    /// <summary>Kurzbeschreibung der abweichenden Felder; null, wenn der Stand gleich ist.</summary>
+    private static string? Abweichung(WebGisObjektart art, IReadOnlyDictionary<string, string?>? vorher, IReadOnlyDictionary<string, string?> jetzt)
+    {
+        if (vorher is null) return "Stand der Vorschau fehlt";
+        var felder = WebGisStandVergleich.Abweichungen(vorher, jetzt);
+        if (felder.Count == 0) return null;
+        return string.Join(", ", felder.Take(5).Select(r => WebGisStandVergleich.Anzeigename(art, r)))
+               + (felder.Count > 5 ? $" und {felder.Count - 5} weitere" : string.Empty);
+    }
+
     /// <summary>Uebernimmt die geplanten Werte in die Records des Projekts und legt die Sanierungsakten an.
     /// Liefert die Zahl geaenderter Objekte plus angelegter Akten.</summary>
     public static int Uebernimm(WebGisImportPlan plan, Project projekt)
@@ -189,15 +267,16 @@ public sealed class WebGisImportUseCase
                     }
                     continue;
                 }
-                if (a.Feld == WebGisImportPlanBuilder.MaterialgruppeFeld(pos.Objektart))
+                if (a.Feld == WebGisImportPlanBuilder.MaterialgruppeFeld(pos.Objektart)
+                    || a.Feld == WebGisImportPlanBuilder.BetreiberFeld(pos.Objektart))
                 {
                     if (SchreibeAkteGruppe(projekt, pos, a)) geaendert = true;
                     continue;
                 }
                 if (pos.Objektart == WebGisObjektart.Haltung && haltungen.TryGetValue(pos.RecordId, out var h))
                 {
-                    if (a.Feld == WebGisImportPlanBuilder.FeldLaenge)
-                        continue; // Laenge nie aus dem WebGIS (23.09.2026) — auch nicht aus einem alten Plan
+                    // Haltungslaenge seit 23.09.2026 abends rein informativ: nur in ein leeres Feld (unten
+                    // FuelleLeeresFeld); ein vorhandener Wert der Kanalfirma ist nie ersetzbar (IstErsetzbar).
                     if (!SeitVorschauUnveraendert(h.GetFieldValue(a.Feld), h.FieldMeta.GetValueOrDefault(a.Feld), a))
                         continue;
                     if (h.FuelleLeeresFeld(a.Feld, a.Neu, FieldSource.Kataster))
@@ -240,11 +319,11 @@ public sealed class WebGisImportUseCase
     private static WebGisImportFeld AkteFeld(Project projekt, Guid id, string art, string feldId)
     {
         var wert = projekt.Objektakten.FirstOrDefault(a => a.Id == id && a.Art == art)?.Werte.GetValueOrDefault(feldId);
-        return new WebGisImportFeld(wert?.Text ?? string.Empty, wert is null || !wert.VonHand);
+        return new WebGisImportFeld(wert?.Text ?? string.Empty, wert is null || !wert.VonHand, wert?.VonHand == true);
     }
 
     /// <summary>
-    /// Materialgruppe in die Wurzelakte (legt sie bei Bedarf an), wie ein Import ohne Handmarke.
+    /// Materialgruppe oder Betreiber in die Wurzelakte (legt sie bei Bedarf an), wie ein Import ohne Handmarke.
     /// Nur wenn der Wert seit der Vorschau gleich und nicht von Hand gesetzt ist.
     /// </summary>
     private static bool SchreibeAkteGruppe(Project projekt, WebGisImportPosition pos, WebGisImportAenderung a)
@@ -275,12 +354,13 @@ public sealed class WebGisImportUseCase
     }
 
     /// <summary>
-    /// Das WebGIS darf einen vorhandenen Wert nur ersetzen, wenn er aus einem Kataster stammt
-    /// (GeoShop, QGIS, XTF) und nicht von Hand gesetzt ist — WebGIS vor GeoShop (23.09.2026).
+    /// Das WebGIS darf einen vorhandenen Wert nur ersetzen, wenn er aus GeoShop oder QGIS stammt
+    /// (<see cref="FieldSource.Kataster"/>) und nicht von Hand gesetzt ist — WebGIS vor GeoShop.
+    /// Xtf/Xtf405/Ili vergeben auch die Kanalfirmen-Importe (VSA-KEK, M150, SIA405); deren Werte sind
+    /// der Ist-Zustand und werden nie ueberschrieben (Entscheid Pascal 23.09.2026 abends).
     /// </summary>
     public static bool IstErsetzbar(FieldMetadata? meta)
-        => meta is { UserEdited: false }
-           && meta.Source is FieldSource.Kataster or FieldSource.Xtf or FieldSource.Xtf405 or FieldSource.Ili;
+        => meta is { UserEdited: false, Source: FieldSource.Kataster };
 
     /// <summary>
     /// Vor jedem Feld nochmals (Pruefung 23.09.2026): keine Handeingabe — auch nicht bewusst leer

@@ -23,6 +23,9 @@ public sealed class WebGisImportUseCaseTests
         public int NamensSuchen { get; private set; }
         public int IdLesungen { get; private set; }
 
+        /// <summary>Steht fuer «Geändert am (UTC)» der Maske: aendert sich, wenn jemand im WebGIS bearbeitet.</summary>
+        public string AenderungsDatum { get; set; } = "2026-09-20T08:00:00Z";
+
         public Task<WebGisLesestand?> LeseAsync(WebGisObjektart art, string bezeichnung, CancellationToken ct = default)
         {
             NamensSuchen++;
@@ -37,9 +40,10 @@ public sealed class WebGisImportUseCaseTests
                 globalId.StartsWith("G-", StringComparison.Ordinal) ? Stand(globalId, globalId[2..]) : null);
         }
 
-        private static WebGisLesestand Stand(string globalId, string name)
+        private WebGisLesestand Stand(string globalId, string name)
         {
             var s = new WebGisLesestand { GlobalId = globalId, Bezeichnung = name };
+            s.Felder[GeaendertAmRef] = AenderungsDatum;
             s.Felder[StatusRef] = "1";
             s.Kataloge[StatusRef] = new List<(string, string)> { ("1", "In Betrieb") };
             s.Sanierungen.Add(new WebGisSanierungZeile { GlobalId = "M1", Art = "Renovierung", Status = "Ausgeführt", Verfahren = "Schlauchverfahren" });
@@ -169,4 +173,63 @@ public sealed class WebGisImportUseCaseTests
         Assert.Empty(p.Objektakten);
     }
 
+    // ---- Entscheid Pascal 23.09.2026 abends: Hat sich ein Objekt im WebGIS zwischen Vorschau und
+    // «Übernehmen» geaendert (Aenderungsdatum), wird es NICHT uebernommen, sondern neu geprueft. ----
+
+    private const string GeaendertAmRef = "ffffffff-0000-0000-0000-00000000aa01";
+
+    [Fact]
+    public async Task Unveraendertes_objekt_wird_nach_erneutem_lesen_uebernommen()
+    {
+        var (p, h) = Projekt();
+        var useCase = new WebGisImportUseCase(new FakeClient());
+        var plan = await useCase.BauePlanAsync(p);
+
+        var ergebnis = await useCase.UebernimmGeprueftAsync(plan, p);
+
+        Assert.Equal(0, ergebnis.Gestoppt);
+        Assert.True(ergebnis.Uebernommen > 0);
+        Assert.Equal("In Betrieb", h.GetFieldValue(FieldKeys.OperatingStatus));
+    }
+
+    [Fact]
+    public async Task Im_webgis_seit_der_vorschau_geaendertes_objekt_wird_nicht_uebernommen()
+    {
+        var (p, h) = Projekt();
+        var client = new FakeClient();
+        var useCase = new WebGisImportUseCase(client);
+        var plan = await useCase.BauePlanAsync(p);
+
+        client.AenderungsDatum = "2026-09-23T17:45:00Z"; // jemand hat im WebGIS bearbeitet
+        var ergebnis = await useCase.UebernimmGeprueftAsync(plan, p);
+
+        Assert.Equal(1, ergebnis.Gestoppt);
+        Assert.Equal(0, ergebnis.Uebernommen);
+        Assert.Equal("", h.GetFieldValue(FieldKeys.OperatingStatus));
+        Assert.Null(h.WebGisGlobalId);
+        Assert.Contains(plan.Positionen.Single().Sperren, s => s.Contains("seit der Vorschau geändert"));
+    }
+
+    [Fact]
+    public async Task Im_webgis_geaenderte_massnahme_wird_nicht_angelegt()
+    {
+        static WebGisLesestand RenovierungVom(string datum)
+        {
+            var m = Renovierung();
+            m.Felder[GeaendertAmRef] = datum;
+            return m;
+        }
+        var (p, _) = Projekt();
+        var datum = "2026-09-20T08:00:00Z";
+        var client = new FakeClient { Massnahme = gid => gid == "M1" ? RenovierungVom(datum) : null };
+        var useCase = new WebGisImportUseCase(client);
+        var plan = await useCase.BauePlanAsync(p);
+        Assert.Single(plan.Sanierungen);
+
+        datum = "2026-09-23T17:45:00Z";
+        var ergebnis = await useCase.UebernimmGeprueftAsync(plan, p);
+
+        Assert.Empty(p.Objektakten);
+        Assert.True(ergebnis.Gestoppt >= 1);
+    }
 }

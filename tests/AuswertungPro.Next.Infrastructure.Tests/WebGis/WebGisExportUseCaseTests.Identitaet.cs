@@ -156,6 +156,32 @@ public sealed partial class WebGisExportUseCaseTests
     }
 
     [Fact]
+    public async Task Baujahr_des_schachts_geht_nur_in_ein_leeres_webgis_feld()
+    {
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "525145", FieldSource.Manual, false);
+        schacht.SetFieldValue("Baujahr", "1963", FieldSource.Manual, true);
+        var projekt = new Project();
+        projekt.SchaechteData.Add(schacht);
+        string? imWebGis = "";
+        var client = new FakeClient
+        {
+            Lese = (_, name) => new WebGisLesestand
+            {
+                GlobalId = "G1", Bezeichnung = name,
+                Felder = new Dictionary<string, string?>(StringComparer.Ordinal) { [WebGisFeldkarte.SchachtBaujahrRef] = imWebGis },
+            },
+        };
+
+        var leer = await new WebGisExportUseCase(client).BauePlanAsync(projekt);
+        imWebGis = "1970";
+        var gefuellt = await new WebGisExportUseCase(client).BauePlanAsync(projekt);
+
+        Assert.Contains(leer.Positionen.Single().Aenderungen, a => a.RefId == WebGisFeldkarte.SchachtBaujahrRef && a.Neu == "1963");
+        Assert.DoesNotContain(gefuellt.Positionen.Single().Aenderungen, a => a.RefId == WebGisFeldkarte.SchachtBaujahrRef);
+    }
+
+    [Fact]
     public async Task Geschuetztes_feld_im_plan_wird_nicht_gesendet()
     {
         // Fiele je ein Eigentuemerfeld in den Plan (Fehler in einer Feldkarte), sperrt die letzte

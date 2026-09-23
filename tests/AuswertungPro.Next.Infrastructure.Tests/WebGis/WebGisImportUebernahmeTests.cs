@@ -85,14 +85,65 @@ public sealed class WebGisImportUebernahmeTests
         Assert.Equal("Steinzeug", h.GetFieldValue(FieldKeys.PipeMaterial));
     }
 
+    // Entscheid Pascal 23.09.2026 abends: Daten der Kanalfirmen werden nie ueberschrieben. Xtf/Xtf405/Ili
+    // vergeben auch die Kanalfirmen-Importe (VSA-KEK, M150, SIA405) — ersetzbar ist nur, was aus GeoShop
+    // oder QGIS stammt (FieldSource.Kataster).
     [Fact]
     public void Ersetzbar_nur_bei_katasterherkunft_ohne_handmarke()
     {
         Assert.True(WebGisImportUseCase.IstErsetzbar(new FieldMetadata { Source = FieldSource.Kataster }));
-        Assert.True(WebGisImportUseCase.IstErsetzbar(new FieldMetadata { Source = FieldSource.Xtf405 }));
+        Assert.False(WebGisImportUseCase.IstErsetzbar(new FieldMetadata { Source = FieldSource.Xtf405 }));
+        Assert.False(WebGisImportUseCase.IstErsetzbar(new FieldMetadata { Source = FieldSource.Xtf }));
+        Assert.False(WebGisImportUseCase.IstErsetzbar(new FieldMetadata { Source = FieldSource.Ili }));
+        Assert.False(WebGisImportUseCase.IstErsetzbar(new FieldMetadata { Source = FieldSource.Legacy }));
         Assert.False(WebGisImportUseCase.IstErsetzbar(new FieldMetadata { Source = FieldSource.Kataster, UserEdited = true }));
         Assert.False(WebGisImportUseCase.IstErsetzbar(new FieldMetadata { Source = FieldSource.Protocol }));
         Assert.False(WebGisImportUseCase.IstErsetzbar(null));
+    }
+
+    [Theory]
+    [InlineData(FieldSource.Xtf405)]
+    [InlineData(FieldSource.Xtf)]
+    public void Wert_aus_kanalfirmen_xtf_wird_nie_ersetzt(FieldSource quelle)
+    {
+        var (p, h) = ProjektMit(FieldKeys.OperatingStatus, "Ausser Betrieb", quelle, false);
+
+        Assert.Equal(0, WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.OperatingStatus, "Ausser Betrieb", "In Betrieb"), p));
+
+        Assert.Equal("Ausser Betrieb", h.GetFieldValue(FieldKeys.OperatingStatus));
+    }
+
+    [Fact]
+    public void Leere_haltungslaenge_wird_aus_dem_webgis_gefuellt()
+    {
+        var (p, h) = ProjektMit(FieldKeys.HoldingLengthMeters, null, FieldSource.Manual, false);
+
+        Assert.Equal(1, WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.HoldingLengthMeters, null, "94.78"), p));
+
+        Assert.Equal("94.78", h.GetFieldValue(FieldKeys.HoldingLengthMeters));
+        Assert.False(h.FieldMeta[FieldKeys.HoldingLengthMeters].UserEdited);
+    }
+
+    [Fact]
+    public void Haltungslaenge_der_kanalfirma_bleibt()
+    {
+        var (p, h) = ProjektMit(FieldKeys.HoldingLengthMeters, "94.10", FieldSource.Xtf, false);
+
+        WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.HoldingLengthMeters, "94.10", "94.78"), p);
+
+        Assert.Equal("94.10", h.GetFieldValue(FieldKeys.HoldingLengthMeters));
+    }
+
+    [Fact]
+    public void Betreiber_wird_in_die_akte_der_haltung_geschrieben()
+    {
+        var (p, h) = ProjektMit(FieldKeys.PipeMaterial, null, FieldSource.Manual, false);
+
+        Assert.Equal(1, WebGisImportUseCase.Uebernimm(Plan(h, "haltung.operator", null, "Kanton Uri (Kanton)"), p));
+
+        var wert = Assert.Single(p.Objektakten, a => a.Id == h.Id && a.Art == "haltung").Werte["haltung.operator"];
+        Assert.Equal("Kanton Uri (Kanton)", wert.Text);
+        Assert.False(wert.VonHand);
     }
 
     [Fact]

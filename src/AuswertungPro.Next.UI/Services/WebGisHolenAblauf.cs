@@ -66,17 +66,25 @@ public sealed class WebGisHolenAblauf
                 gelesenFuer = projekt;
                 return plan;
             },
-            uebernehmen: plan =>
+            uebernehmen: async plan =>
             {
                 if (gelesenFuer is null || !ReferenceEquals(gelesenFuer, shell.Project))
                     return "Projekt gewechselt — nichts übernommen.";
-                var n = WebGisImportUseCase.Uebernimm(plan, gelesenFuer);
-                if (n > 0)
+                var projekt = gelesenFuer;
+                // Vorher im WebGIS nachlesen: Was sich seit der Vorschau geaendert hat, wird nicht uebernommen
+                // (Entscheid Pascal 23.09.2026 abends).
+                var ergebnis = await _useCase().UebernimmGeprueftAsync(plan, projekt);
+                if (!ReferenceEquals(projekt, shell.Project))
+                    return "Projekt gewechselt — nichts übernommen.";
+                if (ergebnis.Uebernommen > 0)
                 {
                     shell.MarkProjectDirty();
                     _geaendert?.Invoke();
                 }
-                return $"{n} Änderungen übernommen. Bitte das Projekt speichern.";
+                var text = $"{ergebnis.Uebernommen} Änderungen übernommen.";
+                if (ergebnis.Gestoppt > 0)
+                    text += $" {ergebnis.Gestoppt} im WebGIS seit der Vorschau geändert — nicht übernommen, bitte in der neuen Prüfung ansehen.";
+                return text + " Bitte das Projekt speichern.";
             },
             oeffnen: (art, id) =>
             {

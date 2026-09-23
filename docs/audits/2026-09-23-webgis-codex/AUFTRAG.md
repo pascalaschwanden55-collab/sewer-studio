@@ -25,10 +25,12 @@ Prüfe für jede Regel, ob der Code sie überall einhält. Jede Verletzung ist e
 
 1. **Kanalfirmen-Daten werden nie überschrieben** (Entscheid Pascal 23.09.2026). Pascal
    bekommt Inspektionsdaten von Kanalfirmen (WinCan, IBAK, KINS, M150, PDF-Protokolle,
-   VSA-KEK- oder SIA405-XTF). Diese Werte bleiben in SewerStudio. **Weder das Holen aus dem
-   WebGIS noch der GeoShop-Abgleich noch „Leere Felder aus QGIS" überschreiben sie.** Alle
-   drei **ergänzen nur leere Felder**. Das gilt ausdrücklich auch für die Haltungslänge.
-2. **Katasterwerte darf das WebGIS ersetzen.** Werte, die selbst aus einem GeoShop- oder
+   VSA-KEK- oder SIA405-XTF). Sie sind der **Ist-Zustand**, enthalten aber nicht alles, was
+   das WebGIS führt. Es geht um **Ergänzen und Korrigieren**. Diese Werte bleiben in
+   SewerStudio. **Weder das Holen aus dem WebGIS noch der GeoShop-Abgleich noch „Leere Felder
+   aus QGIS" überschreiben sie.** Alle drei **ergänzen nur leere Felder**. Das gilt
+   ausdrücklich auch für die Haltungslänge.
+2. **Katasterwerte darf das WebGIS ersetzen** (bestätigt). Werte, die selbst aus einem GeoShop- oder
    QGIS-Abgleich stammen und nicht von Hand gesetzt sind, dürfen durch den WebGIS-Wert
    ersetzt werden („WebGIS vor GeoShop"). Kanalfirmen-Werte fallen nie darunter.
 3. **Handeingaben nie ersetzen**, auch nicht ein bewusst von Hand geleertes Feld.
@@ -43,11 +45,14 @@ Prüfe für jede Regel, ob der Code sie überall einhält. Jede Verletzung ist e
    **dieselbe Auswahlliste mit zeichengenau denselben Einträgen** haben. In SewerStudio
    darf kein Begriff gespeichert oder auswählbar sein, den es im WebGIS nicht gibt
    (Groß-/Kleinschreibung, Umlaute, Kürzel in Klammern wie „Kreisprofil (K)" zählen mit).
-6. **Haltungslänge:** Die Länge der Kanalfirma (des Operateurs) bleibt in SewerStudio.
-   Sie wird **weder** aus dem WebGIS geholt **noch** ins WebGIS geschrieben.
-7. **Eigentum und Betreiber** ändert das Programm **nie**, in keine Richtung.
-8. **Baujahr** nur füllen, wenn es leer ist (in beide Richtungen). Ein im WebGIS
-   eingetragenes Baujahr wird nie überschrieben.
+6. **Haltungslänge:** Die Länge der Kanalfirma (des Operateurs) bleibt in SewerStudio und
+   wird **nie** ins WebGIS geschrieben.
+7. **Haltungslänge, Eigentum und Betreiber** ändert das Programm im WebGIS **nie**. Geholt
+   werden sie **rein informativ**: nur in leere Felder, nie über einen vorhandenen Wert.
+8. **Baujahr** nur füllen, wenn es leer ist (in beide Richtungen, bei Haltung **und** Schacht).
+   Ein im WebGIS eingetragenes Baujahr wird nie überschrieben.
+8d. **Übernehmen beim Holen:** Hat sich ein Objekt oder eine Massnahme im WebGIS zwischen
+    Vorschau und „Übernehmen" geändert (Änderungsdatum), wird es nicht übernommen.
 8a. **Im WebGIS nie überschrieben** (Entscheid Pascal 23.09.2026): Eigentum, Betreiber,
     Haltungslänge (alle Längenfelder), Baujahr, GlobalID, Objekt-ID (OBJECTID) und die
     Bezeichnung, an der das Objekt erkannt wird.
@@ -156,19 +161,21 @@ Erstelle eine Tabelle: je Feld und je Herkunft (Kanalfirma über WinCan / IBAK /
 VSA-KEK-XTF / SIA405-XTF, GeoShop, QGIS, Handeingabe, bewusst leer, WebGIS) — was passiert
 beim Holen, was beim Senden?
 
-**Zwei bekannte Verstösse gegen Regel 1, gezielt prüfen und vollständig beschreiben:**
+**Zwei Verstösse gegen Regel 1 sind am 23.09.2026 abends behoben — prüfe, ob vollständig:**
 
-1. `WebGisImportUseCase.IstErsetzbar` lässt Werte der Herkunft `Kataster`, `Xtf`, `Xtf405`
-   und `Ili` durch den WebGIS-Wert ersetzen. `Xtf` vergeben aber Kanalfirmen-Importe
-   (`LegacyXtfImportService.VsaKek.cs`, `M150MdbImportHelper`), und `Xtf405` vergibt der
-   SIA405-XTF-Import (`LegacyXtfImportService.cs`), egal ob die Datei von einer Kanalfirma
-   oder vom Kanton kommt. Kläre für jede `FieldSource`, welche Import-Wege sie vergeben, ob
-   man heute Kanalfirma und Kataster überhaupt unterscheiden kann, welche Werte fälschlich
-   ersetzt würden, und schlage eine sichere Unterscheidung vor.
-2. `GeoShopAbgleichPlanBuilder.ImmerAusXtf` ersetzt beim GeoShop-Abgleich die
-   Haltungslänge **immer** durch den GeoShop-Wert, auch einen von Hand gesetzten
-   (älterer Entscheid vom 11.09.2026, durch Regel 1 und 6 überholt). Prüfe alle Wege dahin
-   (Gesamtabgleich, Einzelabgleich in der Objektakte, Feldvergleich `GeoShopImportVergleich`).
+1. `WebGisImportUseCase.IstErsetzbar` ersetzte auch `Xtf`, `Xtf405` und `Ili`, die auch die
+   Kanalfirmen-Importe vergeben. Jetzt ist nur `FieldSource.Kataster` (GeoShop/QGIS) ohne
+   Handmarke ersetzbar. Prüfe: Schreiben GeoShop und QGIS wirklich immer `Kataster`? Vergibt
+   irgendein Kanalfirmen-Weg `Kataster`? Gibt es ausser `IstErsetzbar` weitere Stellen, die
+   Kanalfirmen-Werte ersetzen (Objektakte, Materialgruppe, `DarfErsetzen`)?
+2. `GeoShopAbgleichPlanBuilder.ImmerAusXtf` ist entfernt. Prüfe alle Wege (Gesamtabgleich,
+   Einzelabgleich in der Objektakte, Feldvergleich `GeoShopImportVergleich`), ob irgendwo die
+   Länge noch ersetzt wird.
+3. **Offener Widerspruch zur Prüfung:** `KatasterFeldschutz` schützt Werte mit Herkunft
+   `Kataster` gegen **spätere** Protokollimporte. Füllt WebGIS/GeoShop ein leeres Feld, kann eine
+   spätere Kanalfirmen-Lieferung diesen Wert nicht mehr setzen (nur Konfliktvermerk). Das
+   widerspricht Regel 1, sobald die Kanalfirma **nach** dem Holen liefert. Beschreibe die
+   Folgen je Feld und schlage eine Regel vor (Entscheid bei Pascal).
 
 Prüfe ausserdem: Im GeoShop-Feldvergleich sind abweichende Werte zwar abgewählt, lassen
 sich aber von Hand anwählen. Darf man so einen Kanalfirmen-Wert überschreiben? Melde es als

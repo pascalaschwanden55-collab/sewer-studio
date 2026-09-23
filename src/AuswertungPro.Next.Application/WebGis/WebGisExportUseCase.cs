@@ -60,6 +60,8 @@ public sealed class WebGisExportUseCase
                     s.GetFieldValue(SchachtFeldnamen.Feld(s, "Zustandsklasse"))),
                 Bemerkung = OhneKatasterWert(s.FieldMeta, SchachtFeldnamen.Feld(s, "Bemerkungen"),
                     s.GetFieldValue(SchachtFeldnamen.Feld(s, "Bemerkungen"))),
+                Baujahr = OhneKatasterWert(s.FieldMeta, SchachtFeldnamen.Feld(s, "Baujahr"),
+                    s.GetFieldValue(SchachtFeldnamen.Feld(s, "Baujahr"))),
                 Saniert = WebGisSaniertKriterium.IstSaniert(projekt.Objektakten, s.Id),
                 Handwerte = Handwerte(s.FieldMeta, s.GetFieldValue),
             };

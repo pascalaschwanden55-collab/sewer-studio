@@ -17,6 +17,8 @@ public sealed class WebGisSanierungImport
     public Guid ElternRecordId { get; init; }
     public required string ElternBezeichnung { get; init; }
     public required string WebGisGlobalId { get; init; }
+    /// <summary>Alle Maskenfelder der Massnahme beim Planen; weicht der Stand vor dem Uebernehmen ab, keine Akte.</summary>
+    public IReadOnlyDictionary<string, string?>? GelesenerStand { get; init; }
     public List<WebGisAkteWert> Werte { get; } = new();
     public List<string> Hinweise { get; } = new();
     /// <summary>Sperrgruende — bei mindestens einem wird keine Akte angelegt.</summary>
@@ -50,6 +52,7 @@ public static class WebGisSanierungImportRegel
         var imp = new WebGisSanierungImport
         {
             Objektart = art, ElternRecordId = elternRecordId, ElternBezeichnung = elternBezeichnung, WebGisGlobalId = globalId,
+            GelesenerStand = new Dictionary<string, string?>(massnahme.Felder, StringComparer.Ordinal),
         };
         var katalog = FieldCatalog.Objektfelder;
 

@@ -16,12 +16,13 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class WebGisHolenWindow : Window
 {
     private readonly Func<Task<WebGisImportPlan?>> _pruefen;
-    private readonly Func<WebGisImportPlan, string> _uebernehmen;
+    private readonly Func<WebGisImportPlan, Task<string>> _uebernehmen;
     private readonly Action<WebGisObjektart, Guid> _oeffnen;
     private readonly Anzeige _anzeige = new();
     private WebGisImportPlan? _plan;
 
-    public WebGisHolenWindow(Func<Task<WebGisImportPlan?>> pruefen, Func<WebGisImportPlan, string> uebernehmen,
+    /// <param name="uebernehmen">Liest vor dem Uebernehmen im WebGIS nach (Aenderungsdatum) und liefert die Meldung.</param>
+    public WebGisHolenWindow(Func<Task<WebGisImportPlan?>> pruefen, Func<WebGisImportPlan, Task<string>> uebernehmen,
         Action<WebGisObjektart, Guid> oeffnen)
     {
         _pruefen = pruefen ?? throw new ArgumentNullException(nameof(pruefen));
@@ -64,7 +65,26 @@ public partial class WebGisHolenWindow : Window
     private async void OnUebernehmen(object sender, RoutedEventArgs e)
     {
         if (_plan is null || !_anzeige.Bereit) return;
-        var meldung = _uebernehmen(_plan);
+        var plan = _plan;
+        _anzeige.Bereit = false;
+        _anzeige.Status = "Prüfe im WebGIS, ob sich seit der Vorschau etwas geändert hat …";
+        string meldung;
+        try
+        {
+            meldung = await _uebernehmen(plan);
+        }
+        catch (WebGisSitzungException ex)
+        {
+            meldung = "WebGIS-Sitzung abgelaufen — nichts übernommen. (" + ex.Message + ")";
+        }
+        catch (Exception ex)
+        {
+            meldung = "Fehler beim Übernehmen: " + ex.Message;
+        }
+        finally
+        {
+            _anzeige.Bereit = true;
+        }
         _plan = null;
         _anzeige.LeereZeilen();
         await PruefeAsync();

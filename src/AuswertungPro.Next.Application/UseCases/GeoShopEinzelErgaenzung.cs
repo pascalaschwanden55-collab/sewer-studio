@@ -43,12 +43,11 @@ public static class GeoShopEinzelErgaenzung
         }
         var fach = position.Felder.Where(f => !f.IstKennung).ToArray();
         text.AppendLine($"{art} «{ziel.Name}»{(position.Gedreht ? " (Gegenrichtung)" : "")}: "
-            + $"{fach.Count(f => !f.Ersetzen)} leere Felder ergänzen, {fach.Count(f => f.Ersetzen)} ersetzen"
+            + $"{fach.Length} leere Felder ergänzen"
             + (position.KennungenAendern ? ", Kennungen übernehmen" : "")
             + (position.NeueAktenwerte ? ", Objektakte ergänzen" : "") + ".");
         foreach (var f in fach)
-            text.AppendLine($"  {FieldCatalog.Get(f.Feld).Label}: {(string.IsNullOrWhiteSpace(f.Vorher) ? "(leer)" : f.Vorher)} → {f.Nachher}"
-                + (f.Ersetzen ? "  (kommt immer aus der XTF)" : ""));
+            text.AppendLine($"  {FieldCatalog.Get(f.Feld).Label}: {(string.IsNullOrWhiteSpace(f.Vorher) ? "(leer)" : f.Vorher)} → {f.Nachher}");
         foreach (var hinweis in plan.Hinweise) text.AppendLine(hinweis);
         text.AppendLine($"Quelle: {plan.Quelle}");
         text.Append("Gefüllte Felder bleiben erhalten. Danach das Projekt speichern.");

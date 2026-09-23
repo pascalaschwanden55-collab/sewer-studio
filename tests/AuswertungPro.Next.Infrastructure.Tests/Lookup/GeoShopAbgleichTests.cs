@@ -258,30 +258,39 @@ public sealed class GeoShopAbgleichTests : IDisposable
         Assert.Null(h.Geonis);
     }
 
-    [Fact]
-    public void Haltungslaenge_kommt_immer_aus_der_XTF_auch_wenn_von_Hand_gesetzt()
+    // Entscheid Pascal 23.09.2026 abends (ersetzt «Haltungslaenge immer aus der XTF» vom 11.09.): Die Laenge
+    // der Kanalfirma ist der Ist-Zustand und wird vom GeoShop-Abgleich nie ueberschrieben — auch nicht eine
+    // aus einem Import. GeoShop ergaenzt nur leere Felder.
+    [Theory]
+    [InlineData(FieldSource.Manual, true)]  // von Hand
+    [InlineData(FieldSource.Xtf, false)]    // Kanalfirmen-Import
+    [InlineData(FieldSource.Legacy, false)] // WinCan/IBAK/KINS
+    public void Vorhandene_haltungslaenge_wird_vom_geoshop_nie_ersetzt(FieldSource quelle, bool hand)
     {
         Schreibe();
         var h = Haltung();
-        h.SetFieldValue(FieldKeys.HoldingLengthMeters, "11.9", FieldSource.Manual, true);
-        h.SetFieldValue(FieldKeys.PipeMaterial, "Steinzeug", FieldSource.Manual, true);
+        h.SetFieldValue(FieldKeys.HoldingLengthMeters, "11.9", quelle, hand);
         var ziel = GeoShopZiel.Fuer(h);
         var plan = GeoShopAbgleichPlanBuilder.Baue([ziel], Lies(BauteilArt.Haltung, "A-B"));
-        var laenge = Assert.Single(plan.Positionen).Felder.Single(f => f.Feld == FieldKeys.HoldingLengthMeters);
-        Assert.True(laenge.Ersetzen); Assert.Equal("11.9", laenge.Vorher); Assert.Equal("12.5", laenge.Nachher);
-        Assert.Contains("1 Haltungslängen aus der XTF ersetzen", GeoShopAbgleichBericht.Schreibe(plan));
-        Assert.Contains("11.9 → 12.5 (ersetzt", GeoShopAbgleichBericht.Schreibe(plan));
-        GeoShopAbgleichAnwender.WendeAn(plan, [ziel]);
-        Assert.Equal("12.5", h.GetFieldValue(FieldKeys.HoldingLengthMeters));
-        Assert.False(h.FieldMeta[FieldKeys.HoldingLengthMeters].UserEdited);
-        Assert.Equal(FieldSource.Kataster, h.FieldMeta[FieldKeys.HoldingLengthMeters].Source);
-        Assert.Equal("Steinzeug", h.GetFieldValue(FieldKeys.PipeMaterial)); // alle anderen Felder: nur wenn leer
 
-        // Derselbe Wert in anderer Schreibweise ist keine Aenderung.
-        h.SetFieldValue(FieldKeys.HoldingLengthMeters, "12.50", FieldSource.Manual, true);
-        var erneut = GeoShopAbgleichPlanBuilder.Baue([GeoShopZiel.Fuer(h)], Lies(BauteilArt.Haltung, "A-B"));
-        Assert.DoesNotContain(erneut.Positionen.SelectMany(p => p.Felder), f => f.Ersetzen);
-        Assert.Equal("12.50", h.GetFieldValue(FieldKeys.HoldingLengthMeters));
+        Assert.DoesNotContain(plan.Positionen.SelectMany(p => p.Felder), f => f.Feld == FieldKeys.HoldingLengthMeters);
+        Assert.DoesNotContain("Haltungslängen aus der XTF ersetzen", GeoShopAbgleichBericht.Schreibe(plan));
+        GeoShopAbgleichAnwender.WendeAn(plan, [ziel]);
+        Assert.Equal("11.9", h.GetFieldValue(FieldKeys.HoldingLengthMeters));
+    }
+
+    [Fact]
+    public void Leere_haltungslaenge_wird_vom_geoshop_ergaenzt()
+    {
+        Schreibe();
+        var h = Haltung();
+        var ziel = GeoShopZiel.Fuer(h);
+        var plan = GeoShopAbgleichPlanBuilder.Baue([ziel], Lies(BauteilArt.Haltung, "A-B"));
+
+        GeoShopAbgleichAnwender.WendeAn(plan, [ziel]);
+
+        Assert.Equal("12.5", h.GetFieldValue(FieldKeys.HoldingLengthMeters));
+        Assert.Equal(FieldSource.Kataster, h.FieldMeta[FieldKeys.HoldingLengthMeters].Source);
     }
 
     [Fact]
@@ -295,12 +304,12 @@ public sealed class GeoShopAbgleichTests : IDisposable
         Assert.True(ergebnis.HatAenderungen);
         Assert.Contains("Haltung «A-B»", ergebnis.Text);
         Assert.Contains("(leer) → 300", ergebnis.Text);
-        Assert.Contains("11.9 → 12.5  (kommt immer aus der XTF)", ergebnis.Text);
+        Assert.DoesNotContain("11.9 → 12.5", ergebnis.Text); // Laenge der Kanalfirma bleibt (23.09.2026)
         Assert.Contains("Kennungen übernehmen", ergebnis.Text);
         Assert.True(string.IsNullOrEmpty(h.GetFieldValue(FieldKeys.NominalDiameterMm))); // Planen schreibt nichts
         Assert.Equal(1, GeoShopEinzelErgaenzung.WendeAn(ergebnis, GeoShopZiel.Fuer(h, p)));
         Assert.Equal("300", h.GetFieldValue(FieldKeys.NominalDiameterMm));
-        Assert.Equal("12.5", h.GetFieldValue(FieldKeys.HoldingLengthMeters));
+        Assert.Equal("11.9", h.GetFieldValue(FieldKeys.HoldingLengthMeters));
         Assert.Equal(H, h.Geonis!.Haltung);
         Assert.NotEmpty(p.Objektakten);
 

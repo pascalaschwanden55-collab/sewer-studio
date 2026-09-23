@@ -40,7 +40,6 @@ public sealed class GeoShopImportVergleich
         }
         foreach (var (feld, wert) in werte)
         {
-            if (ziel.Art == BauteilArt.Haltung && GeoShopAbgleichPlanBuilder.ImmerAusXtf.Contains(feld)) continue;
             var definition = FieldCatalog.Objektfelder.Felder.FirstOrDefault(f => f.Art == art && f.Speicherfeld == feld);
             felder.Add(new(ziel.Id, feld, true, ziel.Name, definition?.Label ?? FieldCatalog.Get(feld).Label,
                 ziel.Wert(feld), wert, ziel.Herkunft(feld), ziel.Handgesetzt(feld)));

@@ -31,9 +31,9 @@ public sealed class WebGisImportEingabe
 }
 
 /// <summary>
-/// Ein Feld in SewerStudio. <paramref name="Ersetzbar"/>: Der Wert stammt aus einem Kataster
-/// (GeoShop, QGIS, XTF) und ist nicht von Hand gesetzt — das WebGIS darf ihn ersetzen
-/// (Entscheid Pascal 23.09.2026: WebGIS vor GeoShop). Handwerte und Protokollwerte nie.
+/// Ein Feld in SewerStudio. <paramref name="Ersetzbar"/>: Der Wert stammt aus GeoShop oder QGIS
+/// und ist nicht von Hand gesetzt — das WebGIS darf ihn ersetzen (Entscheid Pascal 23.09.2026:
+/// WebGIS vor GeoShop). Handwerte und Werte der Kanalfirmen nie.
 /// </summary>
 /// <paramref name="Handwert"/>: von Hand gesetzt, auch bewusst leer — beim Holen nie gefuellt oder ersetzt
 /// (Entscheid Pascal 23.09.2026, gleich wie beim GeoShop-Abgleich).
@@ -54,6 +54,13 @@ public sealed class WebGisImportPosition
     public required string Bezeichnung { get; init; }
     public Guid RecordId { get; init; }
     public string? GlobalId { get; init; }
+    /// <summary>Gespeicherte GlobalID beim Planen: bestimmt, wie vor dem Uebernehmen erneut gelesen wird.</summary>
+    public string? GespeicherteGlobalId { get; init; }
+    /// <summary>
+    /// Alle Maskenfelder beim Planen (samt «Geändert am»). Weicht der Stand vor dem Uebernehmen ab, wird
+    /// das Objekt nicht uebernommen (Entscheid Pascal 23.09.2026 abends).
+    /// </summary>
+    public IReadOnlyDictionary<string, string?>? GelesenerStand { get; init; }
     public List<WebGisImportAenderung> Aenderungen { get; } = new();
     public List<string> Sperren { get; } = new();
     public List<string> Hinweise { get; } = new();
@@ -75,9 +82,9 @@ public sealed class WebGisImportPlan
 /// <summary>
 /// Gegenrichtung: WebGIS -> SewerStudio. Reine Regel, kein Netz, kein Schreiben.
 ///
-/// Regeln (Entscheid Pascal 21.09., Laenge korrigiert 23.09.2026):
-/// - Die Haltungslaenge wird NIE geholt: In SewerStudio gilt die Laenge des Operateurs.
-/// - Eigentum/Betreiber aendert das Programm nie (nur von Hand im WebGIS).
+/// Regeln (Entscheid Pascal 21.09., zuletzt 23.09.2026 abends):
+/// - Daten der Kanalfirmen sind der Ist-Zustand und werden nie ueberschrieben; das WebGIS ergaenzt.
+/// - Haltungslaenge, Eigentuemer und Betreiber: rein informativ, nur in leere Felder, nie zurueck ins WebGIS.
 /// - Baujahr nur, wenn in SewerStudio leer.
 /// - Zustand, Bemerkung, Sanierung werden NICHT importiert: dort ist SewerStudio die Quelle.
 /// - Die Felder der <see cref="WebGisHandwertKarte"/> (refIds live geprueft) fuellen leere Felder
@@ -96,6 +103,8 @@ public static class WebGisImportPlanBuilder
         var pos = new WebGisImportPosition
         {
             Objektart = e.Objektart, Bezeichnung = e.Bezeichnung, RecordId = e.RecordId, GlobalId = stand?.GlobalId,
+            GespeicherteGlobalId = e.GespeicherteGlobalId,
+            GelesenerStand = stand is null ? null : new Dictionary<string, string?>(stand.Felder, StringComparer.Ordinal),
         };
         if (stand is null)
         {
@@ -121,8 +130,9 @@ public static class WebGisImportPlanBuilder
                 Grund = "Eindeutiger WebGIS-Treffer mit exakt gleichem Namen.",
             });
 
-        // 1) Laenge: NIE (Entscheid Pascal 23.09.2026, ersetzt «immer aus dem WebGIS» vom 21.09.).
-        //    In SewerStudio gilt die Laenge des Operateurs; sie geht weder ins WebGIS noch kommt sie daraus.
+        // 1) Haltungslaenge, Eigentuemer, Betreiber: rein informativ, nur in LEERE Felder (Entscheid Pascal
+        //    23.09.2026 abends). Nie ersetzt — auch keinen GeoShop-Wert — und nie ins WebGIS zurueck.
+        Informativ(e, stand, pos);
 
         // 2) Baujahr nur wenn in SewerStudio leer.
         // Bewusst leer (Handeingabe) = geschuetzt (Entscheid Pascal 23.09.2026).
@@ -147,6 +157,75 @@ public static class WebGisImportPlanBuilder
 
     private const string BreiteRef = "902695a4-5f44-e910-b2da-471c17085822";
     private const string HoeheRef = "d06f8d1f-8a09-1b22-4380-088a7ee42507";
+
+    private const string GrundInformativ = "Rein informativ: in SewerStudio leer, im WebGIS vorhanden — geht nie ins WebGIS zurück.";
+
+    /// <summary>
+    /// Haltungslaenge (geometrisch, auf zwei Stellen), Eigentuemer und Betreiber (Entscheid Pascal 23.09.2026
+    /// abends): Sie werden geholt, aber rein informativ, der Vollstaendigkeit halber — nur in ein leeres Feld,
+    /// nie ueber einen vorhandenen Wert (Kanalfirma, GeoShop oder Hand), und nie zurueckgeschrieben.
+    /// </summary>
+    private static void Informativ(WebGisImportEingabe e, WebGisLesestand stand, WebGisImportPosition pos)
+    {
+        if (e.Objektart == WebGisObjektart.Haltung)
+            FuelleInformativ(e, pos, FeldLaenge, "Haltungslänge", LaengeNormiert(stand.Feld(WebGisFeldkarte.HaltungLaengeGeomRef)));
+
+        FuelleInformativ(e, pos, FieldKeys.Owner, "Eigentümer",
+            Organisation(stand, WebGisFeldkarte.EigentuemerRef(e.Objektart), "Eigentümer", pos)?.Text);
+
+        if (Organisation(stand, WebGisFeldkarte.BetreiberRef(e.Objektart), "Betreiber", pos) is { } betreiber)
+        {
+            var feldId = BetreiberFeld(e.Objektart);
+            var eintrag = AkteEintrag(feldId, betreiber.Key, betreiber.Text);
+            if (eintrag is null)
+                pos.Hinweise.Add($"Betreiber «{betreiber.Text}» steht nicht in der Liste der Objektakte — nicht übernommen.");
+            else
+                FuelleInformativ(e, pos, feldId, "Betreiber", eintrag.Label);
+        }
+    }
+
+    private static void FuelleInformativ(WebGisImportEingabe e, WebGisImportPosition pos, string feld, string anzeige, string? neu)
+    {
+        if (string.IsNullOrWhiteSpace(neu)) return;
+        e.Felder.TryGetValue(feld, out var vorhanden);
+        if ((vorhanden?.Wert ?? string.Empty).Trim().Length > 0) return; // vorhanden: nie ersetzen
+        if (vorhanden?.Handwert == true)
+        {
+            pos.Hinweise.Add($"{anzeige}: in SewerStudio bewusst leer (Handeingabe) — WebGIS-Wert «{neu}» nicht übernommen.");
+            return;
+        }
+        pos.Aenderungen.Add(new WebGisImportAenderung { Feld = feld, Alt = null, Neu = neu.Trim(), Grund = GrundInformativ });
+    }
+
+    /// <summary>
+    /// Organisation (Schluessel + Klartext) eines Eigentuemer-/Betreiberfelds. Die refIds stammen aus der
+    /// Inventur, nicht aus einer Live-Pruefung: Nur wenn die Liste der Komponente wirklich Organisationen
+    /// fuehrt (Schluessel «Bund»), ist es das richtige Feld — sonst nichts, mit Hinweis. «unbekannt» fuellt nichts.
+    /// </summary>
+    private static (string Key, string Text)? Organisation(WebGisLesestand stand, string refId, string anzeige, WebGisImportPosition pos)
+    {
+        var key = (stand.Feld(refId) ?? string.Empty).Trim();
+        if (key.Length == 0) return null;
+        if (!stand.Kataloge.TryGetValue(refId, out var liste)
+            || !liste.Exists(k => string.Equals(k.Key, WebGisFeldkarte.OrganisationBundKey, StringComparison.OrdinalIgnoreCase)))
+        {
+            pos.Hinweise.Add($"{anzeige}: Feld im WebGIS nicht sicher erkannt (keine Organisationsliste) — nicht übernommen.");
+            return null;
+        }
+        var text = liste.FirstOrDefault(k => string.Equals(k.Key, key, StringComparison.OrdinalIgnoreCase)).Text;
+        if (string.IsNullOrWhiteSpace(text) || WebGisHandwertKarte.Falte(text).StartsWith("unbekannt", StringComparison.Ordinal))
+            return null;
+        return (key, text.Trim());
+    }
+
+    /// <summary>Eintrag der Aktenliste: zuerst ueber den WebGIS-Schluessel (Originalcode), sonst ueber den Klartext.</summary>
+    private static ObjektAuswahl? AkteEintrag(string feldId, string key, string text)
+    {
+        var eintraege = FieldCatalog.Objektfelder.Auswahl(FieldCatalog.Objektfelder.Feld(feldId).KatalogId)?.Eintraege ?? [];
+        var nachKey = eintraege.Where(x => string.Equals(x.OriginalCode, key, StringComparison.OrdinalIgnoreCase)).Take(2).ToList();
+        if (nachKey.Count == 1) return nachKey[0];
+        return GruppenEintrag(feldId, text);
+    }
 
     private static void Kartenfelder(WebGisImportEingabe e, WebGisLesestand stand, WebGisImportPosition pos)
     {
@@ -203,6 +282,10 @@ public static class WebGisImportPlanBuilder
             return fh.Wert[..i];
         return null;
     }
+
+    /// <summary>Feld der Objektakte fuer den Betreiber (kein Tabellenfeld; Liste der Organisationen).</summary>
+    public static string BetreiberFeld(WebGisObjektart art)
+        => art == WebGisObjektart.Haltung ? "haltung.operator" : "schacht.betreiber";
 
     /// <summary>Feld der Objektakte fuer die Materialgruppe je Objektart (Unbekannt/Beton/Stahl/Kunststoff/Guss/Andere).</summary>
     public static string MaterialgruppeFeld(WebGisObjektart art)

@@ -10,7 +10,7 @@ namespace AuswertungPro.Next.Application.WebGis;
 ///
 /// Zwei Stufen: Die ausdruecklich geschuetzten Felder sind mit Namen genannt (klare Meldung), und
 /// freigegeben ist ueberhaupt nur, was der Export planen kann — Zustand, Sanierungsbedarf,
-/// Bemerkung, das leere Baujahr der Haltung und die Felder der <see cref="WebGisHandwertKarte"/>.
+/// Bemerkung, das leere Baujahr (Haltung und Schacht) und die Felder der <see cref="WebGisHandwertKarte"/>.
 /// Alles andere, auch eine Kennung, die niemand als geschuetzt kennt, geht nie hinaus.
 ///
 /// refIds aus der Masken-Inventur v2 (Buerglen, 21.09.2026). Die GlobalID ist keine Komponente der
@@ -21,20 +21,20 @@ public static class WebGisGeschuetzteFelder
     private static readonly IReadOnlyDictionary<string, string> HaltungNie = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         [WebGisFeldkarte.HaltungBezeichnungRef] = "Bezeichnung",
-        ["8410243c-beab-5ecb-b4e7-bc7907b9ee31"] = "OBJECTID",
+        [WebGisFeldkarte.HaltungObjectIdRef] = "OBJECTID",
         [WebGisFeldkarte.HaltungLaengeGeomRef] = "Länge geom./eff.",
         [WebGisFeldkarte.HaltungLaengeRohrRef] = "Rohr-/Haltungslänge",
-        ["fadff6f2-c674-9327-36d8-b2ac79b704cd"] = "Eigentümer",
-        ["bd6d1330-f106-9eb3-c079-22a2accd845c"] = "Betreiber",
+        [WebGisFeldkarte.HaltungEigentuemerRef] = "Eigentümer",
+        [WebGisFeldkarte.HaltungBetreiberRef] = "Betreiber",
         ["e2fddd0d-b1f0-bc99-bc54-95bc6d2d5b1a"] = "Baujahr/Ersatzjahr",
     };
 
     private static readonly IReadOnlyDictionary<string, string> SchachtNie = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         [WebGisFeldkarte.SchachtBezeichnungRef] = "Bezeichnung",
-        ["9bc2e78d-3a34-e836-5db6-357202362d20"] = "OBJECTID",
-        ["e2987817-9bdd-2cef-4617-729126d465a1"] = "Eigentümer",
-        ["1187d930-1cdb-d29b-2065-499d273dbeba"] = "Betreiber",
+        [WebGisFeldkarte.SchachtObjectIdRef] = "OBJECTID",
+        [WebGisFeldkarte.SchachtEigentuemerRef] = "Eigentümer",
+        [WebGisFeldkarte.SchachtBetreiberRef] = "Betreiber",
     };
 
     private static readonly IReadOnlyDictionary<string, string> HaltungLeer = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -61,7 +61,7 @@ public static class WebGisGeschuetzteFelder
         if (NieSchreiben(art).ContainsKey(refId)) return false;
         if (refId == WebGisFeldkarte.ZustandRef(art) || refId == WebGisFeldkarte.SanierungsbedarfRef(art)
             || refId == WebGisFeldkarte.BemerkungRef(art)) return true;
-        if (art == WebGisObjektart.Haltung && refId == WebGisFeldkarte.HaltungBaujahrRef) return true;
+        if (refId == WebGisFeldkarte.BaujahrRef(art)) return true; // nur in ein leeres Feld (NurWennLeer)
         foreach (var f in WebGisHandwertKarte.Felder)
             if (f.Objektart == art && (f.RefId == refId || f.HauptRefId == refId)) return true;
         return false;
@@ -90,8 +90,6 @@ public static class WebGisGeschuetzteFelder
                 var jetzt = (aktuellerWert(refId) ?? string.Empty).Trim();
                 if (jetzt.Length > 0)
                     verstoesse.Add($"{leerName} steht im WebGIS schon («{jetzt}») und wird nie überschrieben — Objekt nicht geschrieben.");
-                else if (!IstFreigegeben(art, refId))
-                    verstoesse.Add($"{leerName} wird bei dieser Objektart nicht geschrieben — Objekt nicht geschrieben.");
                 continue;
             }
             if (!IstFreigegeben(art, refId))

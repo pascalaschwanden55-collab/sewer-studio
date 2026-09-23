@@ -14,7 +14,7 @@ public sealed class WebGisExportPlanBuilderTests
             [WebGisFeldkarte.SanierungsbedarfRef(art)] = sanbedarf,
             [WebGisFeldkarte.BemerkungRef(art)] = bem,
         };
-        if (art == WebGisObjektart.Haltung) f[WebGisFeldkarte.HaltungBaujahrRef] = baujahr;
+        f[WebGisFeldkarte.BaujahrRef(art)] = baujahr;
         return new WebGisLesestand { GlobalId = "G1", Bezeichnung = name, Felder = f };
     }
 
@@ -89,6 +89,22 @@ public sealed class WebGisExportPlanBuilderTests
         Assert.Contains(leer.Aenderungen, a => a.Feld == "Baujahr" && a.Neu == "1963");
 
         var gefuellt = WebGisExportPlanBuilder.Baue(e, Stand(WebGisObjektart.Haltung, e.Bezeichnung, "102", "103", "", baujahr: "1970"));
+        Assert.DoesNotContain(gefuellt.Aenderungen, a => a.Feld == "Baujahr");
+    }
+
+    // Entscheid Pascal 23.09.2026 abends: «alles gilt auch bei den Schaechten».
+    [Fact]
+    public void Baujahr_des_schachts_nur_wenn_webgis_leer()
+    {
+        var e = new WebGisObjektEingabe
+        {
+            Objektart = WebGisObjektart.Schacht, Bezeichnung = "S", RecordId = Guid.NewGuid(),
+            Zustandsklasse = "2", Baujahr = "1963", Saniert = false,
+        };
+        var leer = WebGisExportPlanBuilder.Baue(e, Stand(WebGisObjektart.Schacht, e.Bezeichnung, "102", "103", "", baujahr: ""));
+        Assert.Contains(leer.Aenderungen, a => a.Feld == "Baujahr" && a.RefId == WebGisFeldkarte.SchachtBaujahrRef && a.Neu == "1963");
+
+        var gefuellt = WebGisExportPlanBuilder.Baue(e, Stand(WebGisObjektart.Schacht, e.Bezeichnung, "102", "103", "", baujahr: "1970"));
         Assert.DoesNotContain(gefuellt.Aenderungen, a => a.Feld == "Baujahr");
     }
 

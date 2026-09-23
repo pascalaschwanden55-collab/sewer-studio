@@ -153,21 +153,32 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     setzt Gruppe + Detail nur, wenn GENAU eine Gruppe den Wert fuehrt (mehrere -> Hinweis).
     Wie im Browser: erst Gruppe, dann Detail. Live noch nicht belegt, dass saveData beides in
     einem Aufruf annimmt — das Zuruecklesen nach dem Schreiben meldet es sonst.
-  - ENTSCHEID PASCAL 23.09.2026 (ersetzt «Laenge immer aus dem WebGIS» vom 21.09.): Die HALTUNGSLAENGE
-    in SewerStudio ist die des Operateurs — sie wird WEDER aus dem WebGIS geholt NOCH ins WebGIS
-    geschrieben. EIGENTUM/BETREIBER aendert das Programm NIE, in keine Richtung (nur von Hand im WebGIS).
-    Waechter: `WebGisImportPlanBuilderTests.Laenge_und_eigentum_werden_nie_geholt`.
+  - ENTSCHEID PASCAL 23.09.2026 (ersetzt «Laenge immer aus dem WebGIS» vom 21.09.; praezisiert abends): Die
+    HALTUNGSLAENGE in SewerStudio ist die des Operateurs und geht NIE ins WebGIS. EIGENTUM/BETREIBER aendert
+    das Programm im WebGIS NIE. Alle drei werden seit 23.09. abends GEHOLT, «rein informativ, der
+    Vollstaendigkeit halber»: nur in LEERE Felder, nie ueber einen vorhandenen Wert (Kanalfirma, GeoShop, Hand)
+    — Laenge geometrisch (`HaltungLaengeGeomRef`, zwei Stellen) nach `Haltungslaenge_m`, Eigentuemer als
+    WebGIS-Klartext nach `Eigentuemer`, Betreiber in die Wurzelakte (`haltung.operator`/`schacht.betreiber`,
+    Listeneintrag ueber den WebGIS-Schluessel = Originalcode, sonst Klartext). Die Eigentuemer-/Betreiber-
+    refIds sind nur aus der Inventur: Das Feld zaehlt nur, wenn seine Liste den Organisationsschluessel «Bund»
+    fuehrt (`WebGisFeldkarte.OrganisationBundKey`), sonst Hinweis. Tests `WebGisImportPlanBuilderTests`
+    (Informativ-Faelle), `WebGisImportUebernahmeTests`.
   - Holen (`WebGisImportUseCase`, schreibt NIE ins WebGIS): Baujahr wenn leer, dazu alle Felder der
     `WebGisHandwertKarte`
     (refIds live geprueft). Entscheid Pascal: WEBGIS VOR GEOSHOP — leere Felder fuellen UND Werte
     mit Herkunft Kataster/Xtf/Xtf405/Ili ohne Handmarke ersetzen (`IstErsetzbar`); Handwerte und
     Protokollwerte nie. Vor dem Ersetzen wird nochmals geprueft, ob der Wert seit der Vorschau
-    gleich ist. **ENTSCHEID PASCAL 23.09.2026 abends: Daten aus Kanalfirmen-Importen werden weder
-    vom WebGIS-Holen noch vom GeoShop-Abgleich ueberschrieben — nur leere Felder werden ergaenzt.**
-    Der Code verletzt das noch an zwei Stellen (NICHT behoben, Codex-Pruefauftrag
-    `docs/audits/2026-09-23-webgis-codex/AUFTRAG.md`): `IstErsetzbar` ersetzt auch Xtf/Xtf405/Ili,
-    die Kanalfirmen-XTF (VSA-KEK, M150, SIA405) vergeben; `GeoShopAbgleichPlanBuilder.ImmerAusXtf`
-    ersetzt die Haltungslaenge. `WebGisImportWert` bringt den Klartext auf den SewerStudio-Begriff («Sammelkanal»
+    gleich ist. **ENTSCHEID PASCAL 23.09.2026 abends: Die Daten der Kanalfirmen sind der Ist-Zustand
+    (aber nicht vollstaendig) und werden weder vom WebGIS-Holen noch vom GeoShop-Abgleich
+    ueberschrieben — nur leere Felder werden ergaenzt; WebGIS darf GeoShop-/QGIS-Werte ersetzen.**
+    Umgesetzt: `IstErsetzbar` = nur `FieldSource.Kataster` ohne Handmarke (Xtf/Xtf405/Ili/Legacy vergeben
+    auch die Kanalfirmen-Importe); `GeoShopAbgleichPlanBuilder.ImmerAusXtf` ist entfernt (die Laenge wird
+    wie jedes Fachfeld nur ergaenzt; im Feldvergleich bleiben Abweichungen abgewaehlt). «Übernehmen» im
+    Holen-Fenster laeuft ueber `WebGisImportUseCase.UebernimmGeprueftAsync`: jedes Objekt mit etwas zu
+    uebernehmen und jede Massnahme wird vorher nochmals gelesen; weicht der Stand samt Aenderungsdatum von
+    der Vorschau ab (`WebGisImportPosition.GelesenerStand`, `WebGisSanierungImport.GelesenerStand`), wird
+    genau dieses Objekt nicht uebernommen (Sperre mit Grund), erst pruefen, dann schreiben.
+    `WebGisImportWert` bringt den Klartext auf den SewerStudio-Begriff («Sammelkanal»
     -> PAA.Sammelkanal nur wenn das Blatt eindeutig ist, «In Betrieb» -> in_Betrieb); kein Treffer
     = Hinweis, «unbekannt» fuellt nichts. DN nur wenn WebGIS-Breite = Hoehe; Lichte_Breite/Hoehe
     nicht (Breite/Hoehe weiter OFFEN). Haltung kennt kein blosses «Kunststoff» -> Hinweis.
@@ -255,8 +266,8 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     ebenfalls den WebGIS-Begriff.
   - SCHREIBSCHUTZ, EINDEUTIGKEIT, AENDERUNGSDATUM (Entscheid Pascal 23.09.2026 abends): Eigentum,
     Betreiber, Haltungslaenge (alle Laengenfelder), Baujahr, GlobalID, Objekt-ID (OBJECTID) und die
-    Bezeichnung werden im WebGIS nie ueberschrieben; das Baujahr der Haltung darf nur ein LEERES Feld
-    fuellen. `WebGisGeschuetzteFelder` (refIds aus Inventur v2) ist die zweite Sperre neben der Feldliste:
+    Bezeichnung werden im WebGIS nie ueberschrieben; das Baujahr darf nur ein LEERES Feld fuellen — bei
+    Haltung UND Schacht («alles gilt auch bei den Schaechten», Schacht-Baujahr `e35e99dc…`). `WebGisGeschuetzteFelder` (refIds aus Inventur v2) ist die zweite Sperre neben der Feldliste:
     genannte Schutzfelder UND alles, was der Export nicht planen kann (Freigabeliste = Zustand,
     Sanierungsbedarf, Bemerkung, leeres Haltungs-Baujahr, `WebGisHandwertKarte`), sperren das ganze
     Objekt — geprueft in `WebGisExportUseCase.SchreibeEineAsync` UND in `GeonisWebGisClient.SchreibeAsync`
@@ -992,7 +1003,8 @@ Anlass: Acht KIT-PDFs, null Erfolge. Drei Ursachen, die nichts miteinander zu tu
 - `GeoShopImportVergleich` erstellt über `GeoShopObjektaktenImport` einen leeren
   Entwurf; `GeoShopFeldWahl` vergleicht Bestandsfelder und verknüpfte Objektakten.
   Leerfelder sind vorausgewählt, Abweichungen abgewählt. Handwerte, auch bewusst
-  leere, sind geschützt. Die bestehende Ausnahme «Haltungslänge immer aus XTF» gilt weiter.
+  leere, sind geschützt. Die frühere Ausnahme «Haltungslänge immer aus XTF» ist seit 23.09.2026
+  aufgehoben: Die Länge der Kanalfirma bleibt, GeoShop ergänzt nur eine leere Länge.
   Abweichende Koordinatenpaare/Schachtmasse werden gemeinsam gewählt.
 - Entscheidungen stehen additiv in `Project.Metadata["GeoShop.Vergleich.<Root-ID>"]`.
   Gleiche Lieferung und gleicher Bestand wiederholen keine erledigten Fragen.
@@ -1165,7 +1177,7 @@ in `AppSettings.GeoShopXtfPath` gemerkt). **Die Haltungslaenge kommt immer aus d
 (`GeoShopAbgleichPlanBuilder.ImmerAusXtf`, Entscheid Pascal): auch ein Handwert wird ersetzt und
 als Katasterwert markiert; alle anderen Felder nur, wenn leer. Nie einen zweiten Planer fuer
 den Einzelweg bauen. **UEBERHOLT am 23.09.2026** (Entscheid Pascal: Haltungslaenge der
-Kanalfirma bleibt, GeoShop ergaenzt nur leere Felder) — der Code ist noch nicht angepasst.
+Kanalfirma bleibt, GeoShop ergaenzt nur leere Felder) — umgesetzt, `ImmerAusXtf` ist entfernt.
 
 ## Aufklapplisten: Reihenfolge (09.09.2026)
 

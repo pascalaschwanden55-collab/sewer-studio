@@ -20,11 +20,9 @@ public sealed record GeoShopPlan(string Quelle, IReadOnlyList<GeoShopPosition> P
 /// <summary>Plant Kennungsersatz und Leerfelder gemeinsam. Namen allein reichen nur bei einem eindeutigen Treffer.</summary>
 public static class GeoShopAbgleichPlanBuilder
 {
-    /// <summary>Felder, die IMMER aus der GeoShop-XTF kommen (Entscheid Pascal 11.09.2026): Die Haltungslaenge
-    /// ist ein Katastermass; ein vorhandener Wert - auch ein von Hand gesetzter - wird ersetzt und als
-    /// Katasterwert markiert. Andere Abweichungen sind nur im ausdruecklichen Feldvergleich waehlbar.</summary>
-    public static readonly IReadOnlySet<string> ImmerAusXtf =
-        new HashSet<string>(StringComparer.Ordinal) { FieldKeys.HoldingLengthMeters };
+    // Die fruehere Sonderregel «Haltungslaenge immer aus der XTF» (11.09.2026) ist aufgehoben (Entscheid Pascal
+    // 23.09.2026 abends): Die Daten der Kanalfirmen sind der Ist-Zustand und werden vom GeoShop-Abgleich nie
+    // ueberschrieben; wie jedes Fachfeld wird auch die Laenge nur ergaenzt, wenn sie leer ist.
 
     public static GeoShopPlan Baue(IReadOnlyList<GeoShopZiel> ziele, GeoShopBestand bestand, bool mitVergleich = false)
     {
@@ -80,14 +78,6 @@ public static class GeoShopAbgleichPlanBuilder
             var felder = werte.Where(p => !string.IsNullOrWhiteSpace(p.Value)
                 && string.IsNullOrWhiteSpace(ziel.Wert(p.Key)))
                 .Select(p => new GeoShopFeldAenderung(p.Key, ziel.Wert(p.Key), p.Value)).ToList();
-            if (ziel.Art == BauteilArt.Haltung)
-                foreach (var feld in ImmerAusXtf)
-                {
-                    if (!werte.TryGetValue(feld, out var wert) || string.IsNullOrWhiteSpace(wert)) continue;
-                    var vorher = ziel.Wert(feld);
-                    if (string.IsNullOrWhiteSpace(vorher) || GleicherWert(vorher, wert)) continue;
-                    felder.Add(new GeoShopFeldAenderung(feld, vorher, wert, Ersetzen: true));
-                }
             var id = quelle.Kennungen.Hauptkennung!;
             var kennungsfelder = new[] { FieldKeys.GeonisId, FieldKeys.CadastreObjectId };
             if (kennungsfelder.Any(f => ziel.Handgesetzt(f) && (mitVergleich || !string.IsNullOrWhiteSpace(ziel.Wert(f))) && ziel.Wert(f) != id))
@@ -101,7 +91,7 @@ public static class GeoShopAbgleichPlanBuilder
                 try { vergleich = GeoShopImportVergleich.Baue(ziel, quelle, werte, gedreht); }
                 catch (Exception ex) when (ex is InvalidOperationException or System.Text.Json.JsonException)
                 { Hinweis($"{ex.Message} – ausgelassen."); continue; }
-                felder.RemoveAll(f => !f.IstKennung && !(ziel.Art == BauteilArt.Haltung && ImmerAusXtf.Contains(f.Feld)));
+                felder.RemoveAll(f => !f.IstKennung);
                 neueAktenwerte = vergleich.HatNeueAkten;
             }
             if (aendern || felder.Count > 0 || neueAktenwerte || vergleich?.Felder.Count > 0)

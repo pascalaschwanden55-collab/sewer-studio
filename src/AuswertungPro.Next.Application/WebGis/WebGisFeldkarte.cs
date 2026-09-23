@@ -46,6 +46,29 @@ public static class WebGisFeldkarte
     public static string BezeichnungRef(WebGisObjektart art) =>
         art == WebGisObjektart.Haltung ? HaltungBezeichnungRef : SchachtBezeichnungRef;
 
+    // --- Eigentuemer / Betreiber / OBJECTID (ComboBox bzw. EditBox, aus der Inventur v2, LIVE NICHT GEPRUEFT) ---
+    // Nur lesen: Das Holen uebernimmt sie rein informativ in LEERE Felder (Entscheid Pascal 23.09.2026) und
+    // prueft dabei, dass die Liste der Komponente wirklich Organisationen fuehrt. Geschrieben werden sie nie
+    // (WebGisGeschuetzteFelder).
+    public const string HaltungEigentuemerRef = "fadff6f2-c674-9327-36d8-b2ac79b704cd";
+    public const string HaltungBetreiberRef = "bd6d1330-f106-9eb3-c079-22a2accd845c";
+    public const string HaltungObjectIdRef = "8410243c-beab-5ecb-b4e7-bc7907b9ee31";
+    public const string SchachtEigentuemerRef = "e2987817-9bdd-2cef-4617-729126d465a1";
+    public const string SchachtBetreiberRef = "1187d930-1cdb-d29b-2065-499d273dbeba";
+    public const string SchachtObjectIdRef = "9bc2e78d-3a34-e836-5db6-357202362d20";
+
+    public static string EigentuemerRef(WebGisObjektart art) =>
+        art == WebGisObjektart.Haltung ? HaltungEigentuemerRef : SchachtEigentuemerRef;
+
+    public static string BetreiberRef(WebGisObjektart art) =>
+        art == WebGisObjektart.Haltung ? HaltungBetreiberRef : SchachtBetreiberRef;
+
+    /// <summary>
+    /// Ein Schluessel, den jede Organisationsliste der Masken fuehrt («Bund», in Haltung und Schacht belegt).
+    /// Fehlt er in der Liste einer Komponente, ist es nicht das Eigentuemer-/Betreiberfeld (refId falsch).
+    /// </summary>
+    public const string OrganisationBundKey = "df1f763b-7f01-4d4d-a22c-14476c7a3a9b";
+
     /// <summary>WebGIS-Tabellenname je Objektart.</summary>
     public static string Tabelle(WebGisObjektart art) => art switch
     {
