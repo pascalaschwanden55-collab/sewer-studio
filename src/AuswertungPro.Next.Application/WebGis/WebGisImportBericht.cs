@@ -9,6 +9,9 @@ namespace AuswertungPro.Next.Application.WebGis;
 /// <summary>Eine Zeile der Holen-Vorschau mit Bezug zum Objekt (Doppelklick oeffnet es).</summary>
 public sealed record WebGisHolenZeile(string Objekt, string Feld, string Alt, string Neu, WebGisObjektart Objektart, Guid RecordId);
 
+/// <summary>Kopf des Holen-Fensters: Warnung (orange) oder alles zugeordnet (gruen), dazu die Zahlen.</summary>
+public sealed record WebGisHolenKopf(bool Warnung, string Warntext, string Zusammenfassung);
+
 /// <summary>
 /// Darstellung des Holens (WebGIS -> SewerStudio): Tabellenzeilen mit Objektbezug, Hinweise,
 /// Zusammenfassung und der ganze Bericht. Reine Darstellung.
@@ -31,22 +34,49 @@ public static class WebGisImportBericht
         return zeilen;
     }
 
-    /// <summary>Alle Hinweise und Sperren als Zeilen (fuer die volle Liste im Fenster).</summary>
-    public static IReadOnlyList<WebGisHolenZeile> Hinweise(WebGisImportPlan plan)
+    public const string ArtObjektGesperrt = "Objekt gesperrt";
+    public const string ArtMassnahmeGesperrt = "Massnahme gesperrt";
+    public const string ArtWertNichtUebernommen = "Wert nicht übernommen";
+
+    /// <summary>
+    /// Alles, was nicht zugeordnet werden konnte und deshalb nicht uebernommen wird (Wunsch Pascal
+    /// 23.09.2026: klar gekennzeichnet, nicht in einer zugeklappten Hinweisliste). Zuerst ganze
+    /// Objekte und Massnahmen, danach einzelne Werte. Jeder Hinweis des Holens heisst «nicht uebernommen».
+    /// </summary>
+    public static IReadOnlyList<WebGisHolenZeile> NichtZugeordnet(WebGisImportPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        var zeilen = new List<WebGisHolenZeile>();
+        var gesperrt = new List<WebGisHolenZeile>();
+        var werte = new List<WebGisHolenZeile>();
         foreach (var p in plan.Positionen)
         {
-            foreach (var s in p.Sperren) zeilen.Add(new WebGisHolenZeile(Objekt(p.Objektart, p.Bezeichnung), "nicht gelesen", "", s, p.Objektart, p.RecordId));
-            foreach (var h in p.Hinweise) zeilen.Add(new WebGisHolenZeile(Objekt(p.Objektart, p.Bezeichnung), "Hinweis", "", h, p.Objektart, p.RecordId));
+            var objekt = Objekt(p.Objektart, p.Bezeichnung);
+            foreach (var s in p.Sperren) gesperrt.Add(new WebGisHolenZeile(objekt, ArtObjektGesperrt, "", s, p.Objektart, p.RecordId));
+            foreach (var h in p.Hinweise) werte.Add(new WebGisHolenZeile(objekt, ArtWertNichtUebernommen, "", h, p.Objektart, p.RecordId));
         }
         foreach (var s in plan.Sanierungen)
         {
-            foreach (var sp in s.Sperren) zeilen.Add(new WebGisHolenZeile(Objekt(s.Objektart, s.ElternBezeichnung), "Sanierungsmassnahme", "", sp, s.Objektart, s.ElternRecordId));
-            foreach (var h in s.Hinweise) zeilen.Add(new WebGisHolenZeile(Objekt(s.Objektart, s.ElternBezeichnung), "Sanierungsmassnahme", "", h, s.Objektart, s.ElternRecordId));
+            var objekt = Objekt(s.Objektart, s.ElternBezeichnung);
+            foreach (var sp in s.Sperren) gesperrt.Add(new WebGisHolenZeile(objekt, ArtMassnahmeGesperrt, "", sp, s.Objektart, s.ElternRecordId));
+            foreach (var h in s.Hinweise) werte.Add(new WebGisHolenZeile(objekt, ArtWertNichtUebernommen, "", "Sanierungsmassnahme: " + h, s.Objektart, s.ElternRecordId));
         }
-        return zeilen;
+        gesperrt.AddRange(werte);
+        return gesperrt;
+    }
+
+    /// <summary>Kopf des Fensters: Warnung, sobald etwas gesperrt oder nicht zugeordnet ist.</summary>
+    public static WebGisHolenKopf Kopf(WebGisImportPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var objekte = plan.Gesperrte;
+        var massnahmen = plan.Sanierungen.Count(s => s.Sperren.Count > 0);
+        var werte = plan.Positionen.Sum(p => p.Hinweise.Count) + plan.Sanierungen.Sum(s => s.Hinweise.Count);
+        var teile = new List<string>();
+        if (objekte > 0) teile.Add(objekte == 1 ? "1 Objekt gesperrt" : $"{objekte} Objekte gesperrt");
+        if (massnahmen > 0) teile.Add(massnahmen == 1 ? "1 Massnahme gesperrt" : $"{massnahmen} Massnahmen gesperrt");
+        if (werte > 0) teile.Add(werte == 1 ? "1 Wert nicht zugeordnet" : $"{werte} Werte nicht zugeordnet");
+        var warntext = teile.Count == 0 ? "" : string.Join(" · ", teile) + " — wird nicht übernommen (rote Liste darunter).";
+        return new WebGisHolenKopf(teile.Count > 0, warntext, Vorschau(plan).Zusammenfassung);
     }
 
     /// <summary>Lesbarer Name fuer interne Feldschluessel (Akte).</summary>

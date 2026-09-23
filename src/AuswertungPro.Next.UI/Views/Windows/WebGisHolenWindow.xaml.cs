@@ -83,11 +83,12 @@ public partial class WebGisHolenWindow : Window
     public sealed partial class Anzeige : ObservableObject
     {
         [ObservableProperty] private string _zusammenfassung = "Noch nicht gelesen.";
+        [ObservableProperty] [NotifyPropertyChangedFor(nameof(AllesZugeordnet))] private bool _warnung;
+        [ObservableProperty] private string _warntext = "";
         [ObservableProperty] private IReadOnlyList<WebGisHolenZeile> _zeilen = Array.Empty<WebGisHolenZeile>();
-        [ObservableProperty] private IReadOnlyList<WebGisHolenZeile> _hinweise = Array.Empty<WebGisHolenZeile>();
-        [ObservableProperty] private string _hinweiseTitel = "";
-        [ObservableProperty] private bool _hatHinweise;
-        [ObservableProperty] private bool _hinweiseOffen;
+        [ObservableProperty] private IReadOnlyList<WebGisHolenZeile> _nichtZugeordnet = Array.Empty<WebGisHolenZeile>();
+        [ObservableProperty] private string _nichtZugeordnetTitel = "";
+        [ObservableProperty] private bool _hatNichtZugeordnet;
         [ObservableProperty] private string _bericht = "";
         [ObservableProperty] private string _status = "";
         [ObservableProperty] [NotifyPropertyChangedFor(nameof(KannUebernehmen))] private bool _bereit = true;
@@ -95,15 +96,20 @@ public partial class WebGisHolenWindow : Window
 
         public bool KannUebernehmen => Bereit && HatZeilen;
 
+        /// <summary>Gruenes Band nur, wenn nichts gesperrt und nichts ohne Zuordnung ist.</summary>
+        public bool AllesZugeordnet => !Warnung;
+
         public void Zeige(WebGisImportPlan plan)
         {
-            var vorschau = WebGisImportBericht.Vorschau(plan);
-            Zusammenfassung = vorschau.Zusammenfassung;
+            var kopf = WebGisImportBericht.Kopf(plan);
+            Warnung = kopf.Warnung;
+            Warntext = kopf.Warntext;
+            Zusammenfassung = kopf.Zusammenfassung;
             Zeilen = WebGisImportBericht.Zeilen(plan);
             HatZeilen = Zeilen.Count > 0;
-            Hinweise = WebGisImportBericht.Hinweise(plan);
-            HatHinweise = Hinweise.Count > 0;
-            HinweiseTitel = $"Hinweise und nicht gelesene Objekte ({Hinweise.Count})";
+            NichtZugeordnet = WebGisImportBericht.NichtZugeordnet(plan);
+            HatNichtZugeordnet = NichtZugeordnet.Count > 0;
+            NichtZugeordnetTitel = $"Nicht zugeordnet — wird nicht übernommen ({NichtZugeordnet.Count})";
             Bericht = WebGisImportBericht.Details(plan);
             Status = HatZeilen ? "Doppelklick auf eine Zeile öffnet das Objekt." : "Nichts zu übernehmen — SewerStudio ist auf dem Stand des WebGIS.";
         }
@@ -112,6 +118,8 @@ public partial class WebGisHolenWindow : Window
         {
             Zeilen = Array.Empty<WebGisHolenZeile>();
             HatZeilen = false;
+            NichtZugeordnet = Array.Empty<WebGisHolenZeile>();
+            HatNichtZugeordnet = false;
         }
     }
 }

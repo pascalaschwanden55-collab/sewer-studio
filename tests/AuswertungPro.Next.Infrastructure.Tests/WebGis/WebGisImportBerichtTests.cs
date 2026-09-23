@@ -54,7 +54,97 @@ public sealed class WebGisImportBerichtTests
         Assert.Equal(WebGisObjektart.Schacht, z.Objektart);
         Assert.Equal(id, z.RecordId);
         Assert.Equal("Materialgruppe", z.Feld);
-        var h = Assert.Single(WebGisImportBericht.Hinweise(plan));
+        var h = Assert.Single(WebGisImportBericht.NichtZugeordnet(plan));
         Assert.Equal(id, h.RecordId);
+    }
+
+    // Wunsch Pascal 23.09.2026: Gesperrtes und nicht Zugeordnetes muss klar gekennzeichnet sein —
+    // nicht in einer zugeklappten Hinweisliste unter einem gruenen Band.
+
+    private static WebGisImportPlan PlanMitSperreUndHinweis()
+    {
+        var plan = new WebGisImportPlan();
+        var gefunden = new WebGisImportPosition { Objektart = WebGisObjektart.Haltung, Bezeichnung = "80638-80631", RecordId = Guid.NewGuid() };
+        gefunden.Aenderungen.Add(new WebGisImportAenderung { Feld = WebGisImportPlanBuilder.FeldWebGisGlobalId, Neu = "G1", Grund = "x" });
+        gefunden.Hinweise.Add("Rohrmaterial: «Schleuderbeton (SBR)» passt zu keinem SewerStudio-Wert — nicht übernommen.");
+        plan.Positionen.Add(gefunden);
+        var gesperrt = new WebGisImportPosition { Objektart = WebGisObjektart.Haltung, Bezeichnung = "81156-81157", RecordId = Guid.NewGuid() };
+        gesperrt.Sperren.Add("Im WebGIS nicht eindeutig gefunden (kein oder mehrdeutiger Treffer).");
+        plan.Positionen.Add(gesperrt);
+        return plan;
+    }
+
+    [Fact]
+    public void Nicht_zugeordnet_nennt_gesperrte_objekte_zuerst_mit_grund()
+    {
+        var liste = WebGisImportBericht.NichtZugeordnet(PlanMitSperreUndHinweis());
+
+        Assert.Equal(2, liste.Count);
+        Assert.Equal("Haltung 81156-81157", liste[0].Objekt);
+        Assert.Equal(WebGisImportBericht.ArtObjektGesperrt, liste[0].Feld);
+        Assert.Contains("nicht eindeutig gefunden", liste[0].Neu);
+        Assert.Equal("Haltung 80638-80631", liste[1].Objekt);
+        Assert.Equal(WebGisImportBericht.ArtWertNichtUebernommen, liste[1].Feld);
+        Assert.Contains("Schleuderbeton", liste[1].Neu);
+    }
+
+    [Fact]
+    public void Gesperrte_sanierungsmassnahme_steht_bei_den_gesperrten()
+    {
+        var plan = PlanMitSperreUndHinweis();
+        var imp = new WebGisSanierungImport
+        {
+            Objektart = WebGisObjektart.Schacht, ElternBezeichnung = "80409", WebGisGlobalId = "M1", ElternRecordId = Guid.NewGuid(),
+        };
+        imp.Sperren.Add("Art der Massnahme fehlt im WebGIS — Massnahme nicht übernommen.");
+        plan.Sanierungen.Add(imp);
+
+        var liste = WebGisImportBericht.NichtZugeordnet(plan);
+
+        Assert.Equal(WebGisImportBericht.ArtMassnahmeGesperrt, liste[1].Feld);
+        Assert.Equal("Schacht 80409", liste[1].Objekt);
+        Assert.Equal(WebGisImportBericht.ArtWertNichtUebernommen, liste[2].Feld);
+    }
+
+    [Fact]
+    public void Kopf_warnt_bei_gesperrten_objekten_und_nicht_zugeordneten_werten()
+    {
+        var kopf = WebGisImportBericht.Kopf(PlanMitSperreUndHinweis());
+
+        Assert.True(kopf.Warnung);
+        Assert.Contains("1 Objekt gesperrt", kopf.Warntext);
+        Assert.Contains("1 Wert nicht zugeordnet", kopf.Warntext);
+        Assert.Contains("nicht übernommen", kopf.Warntext);
+    }
+
+    [Fact]
+    public void Kopf_zaehlt_in_der_mehrzahl()
+    {
+        var plan = PlanMitSperreUndHinweis();
+        plan.Positionen[0].Hinweise.Add("DN: Breite 300 und Höhe 450 im WebGIS verschieden — DN nicht übernommen.");
+        var zweite = new WebGisImportPosition { Objektart = WebGisObjektart.Schacht, Bezeichnung = "81157" };
+        zweite.Sperren.Add("Im WebGIS nicht eindeutig gefunden (kein oder mehrdeutiger Treffer).");
+        plan.Positionen.Add(zweite);
+
+        var kopf = WebGisImportBericht.Kopf(plan);
+
+        Assert.Contains("2 Objekte gesperrt", kopf.Warntext);
+        Assert.Contains("2 Werte nicht zugeordnet", kopf.Warntext);
+    }
+
+    [Fact]
+    public void Kopf_ohne_sperren_und_hinweise_ist_keine_warnung()
+    {
+        var plan = new WebGisImportPlan();
+        var pos = new WebGisImportPosition { Objektart = WebGisObjektart.Haltung, Bezeichnung = "H1" };
+        pos.Aenderungen.Add(new WebGisImportAenderung { Feld = "Status", Neu = "In Betrieb", Grund = "x" });
+        plan.Positionen.Add(pos);
+
+        var kopf = WebGisImportBericht.Kopf(plan);
+
+        Assert.False(kopf.Warnung);
+        Assert.Equal("", kopf.Warntext);
+        Assert.Equal(WebGisImportBericht.Vorschau(plan).Zusammenfassung, kopf.Zusammenfassung);
+        Assert.Empty(WebGisImportBericht.NichtZugeordnet(plan));
     }
 }
