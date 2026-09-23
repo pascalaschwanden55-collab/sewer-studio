@@ -93,6 +93,11 @@ public sealed class WebGisExportPosition
     /// </summary>
     public IReadOnlyDictionary<string, string?>? GelesenerStand { get; init; }
     public List<WebGisFeldAenderung> Aenderungen { get; } = new();
+    /// <summary>
+    /// Werte der Kanalfirma, die vom WebGIS abweichen — nur zur Auswahl, nie automatisch geschrieben
+    /// (<see cref="WebGisVorschlagAuswahl"/>).
+    /// </summary>
+    public List<WebGisVorschlag> Vorschlaege { get; } = new();
     /// <summary>Sperrgruende — bei mindestens einem wird NICHT geschrieben.</summary>
     public List<string> Sperren { get; } = new();
     /// <summary>Nicht sperrende Hinweise fuer den Bericht.</summary>
@@ -116,6 +121,10 @@ public sealed class WebGisExportPlan
 
     public int Schreibbare => Positionen.FindAll(p => p.Schreibbar).Count;
     public int Gesperrte => Positionen.FindAll(p => p.Sperren.Count > 0).Count;
+
+    /// <summary>Nichts zu schreiben: keine Aenderung, keine Massnahme und kein angehakter Vorschlag der Kanalfirma.</summary>
+    public bool NichtsZuSchreiben => Schreibbare == 0 && SanierungenSchreibbar == 0
+        && !Positionen.Exists(p => p.Sperren.Count == 0 && p.GlobalId is not null && p.Vorschlaege.Exists(v => v.Gewaehlt));
     public int SanierungenSchreibbar => Sanierungen.FindAll(p => p.Schreibbar).Count;
     public int SanierungenGesperrt => Sanierungen.FindAll(p => p.Sperren.Count > 0).Count;
 }

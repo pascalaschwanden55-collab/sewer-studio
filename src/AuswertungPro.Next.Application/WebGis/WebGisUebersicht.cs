@@ -64,6 +64,9 @@ public sealed class WebGisUebersicht
     public List<WebGisUebersichtObjekt> Objekte { get; } = new();
     /// <summary>Gleichartiges gebuendelt, z.B. "43 Sanierungsmassnahmen sind bereits vorhanden".</summary>
     public List<string> Sammelmeldungen { get; } = new();
+    /// <summary>«Kanalfirma weicht vom WebGIS ab» — zum Anhaken; nur in der Vorschau, nie im Ergebnis.</summary>
+    public List<WebGisUebersichtVorschlag> Vorschlaege { get; } = new();
+    public bool HatVorschlaege => Vorschlaege.Count > 0;
     public required string Bericht { get; init; }
 
     public int ObjekteMitAenderung { get; private set; }
@@ -73,7 +76,7 @@ public sealed class WebGisUebersicht
     public int NeueMassnahmen { get; private set; }
     public int Gesperrt { get; private set; }
     public int MitHinweis { get; private set; }
-    public bool NichtsZuTun => ObjekteMitAenderung == 0 && NeueMassnahmen == 0;
+    public bool NichtsZuTun => ObjekteMitAenderung == 0 && NeueMassnahmen == 0 && Vorschlaege.Count == 0;
     public bool HatSammelmeldungen => Sammelmeldungen.Count > 0;
 
     /// <summary>Baut die Uebersicht aus dem Plan. <paramref name="ergebnis"/>: nach dem Schreiben.</summary>
@@ -117,6 +120,17 @@ public sealed class WebGisUebersicht
             if (p.SchreibFehler is not null)
                 o.Zeilen.Add(new WebGisUebersichtZeile(WebGisZeilenart.Fehler, "Fehler", null, p.SchreibFehler));
         }
+
+        // «Kanalfirma weicht vom WebGIS ab»: nur in der Vorschau und nur an Objekten, die geschrieben
+        // werden koennen — ein Haken an einem gesperrten Objekt taeuschte eine Wirkung vor.
+        if (!ergebnis)
+            foreach (var p in plan.Positionen)
+            {
+                if (p.Sperren.Count > 0 || p.GlobalId is null) continue;
+                var name = (p.Objektart == WebGisObjektart.Haltung ? "Haltung " : "Schacht ") + p.Bezeichnung;
+                foreach (var v in p.Vorschlaege)
+                    u.Vorschlaege.Add(new WebGisUebersichtVorschlag(name, p.Objektart, p.RecordId, v));
+            }
 
         var schonVorhanden = 0;
         foreach (var s in plan.Sanierungen)
@@ -184,6 +198,8 @@ public sealed class WebGisUebersicht
             teile.Add(u.NeueMassnahmen == 1 ? "1 Massnahme wird angelegt" : $"{u.NeueMassnahmen} Massnahmen werden angelegt");
             if (u.Gesperrt > 0) teile.Add($"{u.Gesperrt} gesperrt");
             if (u.MitHinweis > 0) teile.Add($"{u.MitHinweis} nur mit Hinweis");
+            if (u.Vorschlaege.Count > 0)
+                teile.Add(u.Vorschlaege.Count == 1 ? "1 Abweichung der Kanalfirma zur Auswahl" : $"{u.Vorschlaege.Count} Abweichungen der Kanalfirma zur Auswahl");
         }
         return string.Join(" · ", teile);
     }
@@ -194,6 +210,7 @@ public sealed class WebGisUebersicht
         var neu = new WebGisUebersicht { Titel = Titel, Kopfzeile = kopfzeile, Bericht = Bericht };
         neu.Objekte.AddRange(Objekte);
         neu.Sammelmeldungen.AddRange(Sammelmeldungen);
+        neu.Vorschlaege.AddRange(Vorschlaege);
         neu.ObjekteMitAenderung = ObjekteMitAenderung;
         neu.Geschrieben = Geschrieben;
         neu.IstErgebnis = IstErgebnis;

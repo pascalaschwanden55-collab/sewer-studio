@@ -204,8 +204,8 @@ public sealed partial class ExportPageViewModel
         {
             WebGisStatus = "Prüfe nochmals frisch …";
             var useCase = _webGisSp.WebGisExport;
-            var plan = await useCase.BauePlanAsync(_shell.Project);
-            if (plan.Schreibbare == 0 && plan.SanierungenSchreibbar == 0)
+            var plan = await useCase.BaueFrischenPlanAsync(_shell.Project, _webGisBestaetigterPlan);
+            if (plan.NichtsZuSchreiben)
             {
                 WebGisStatus = "Nichts zu übertragen.";
                 _webGisBestaetigterPlan = plan;

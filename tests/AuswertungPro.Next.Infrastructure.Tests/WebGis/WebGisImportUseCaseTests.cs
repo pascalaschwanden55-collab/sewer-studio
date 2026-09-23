@@ -173,6 +173,47 @@ public sealed class WebGisImportUseCaseTests
         Assert.Empty(p.Objektakten);
     }
 
+    // ---- Eindeutig heisst auch beim Holen: ein WebGIS-Objekt gehoert zu genau EINEM Datensatz. ----
+
+    [Fact]
+    public async Task Zwei_datensaetze_auf_dasselbe_webgis_objekt_bekommen_beim_holen_nichts()
+    {
+        var (projekt, erste) = Projekt();
+        var zweite = new HaltungRecord();
+        zweite.SetFieldValue(FieldKeys.HoldingName, "80480-80478", FieldSource.Manual, false); // doppelt im Projekt
+        projekt.Data.Add(zweite);
+        var client = new FakeClient { Massnahme = gid => gid == "M1" ? Renovierung() : null };
+
+        var plan = await new WebGisImportUseCase(client).BauePlanAsync(projekt);
+        WebGisImportUseCase.Uebernimm(plan, projekt);
+
+        Assert.All(plan.Positionen, p => Assert.Contains(p.Sperren, s => s.Contains("dasselbe WebGIS-Objekt")));
+        Assert.Empty(plan.Sanierungen);
+        Assert.Null(erste.WebGisGlobalId);
+        Assert.Null(zweite.WebGisGlobalId);
+        Assert.Equal("", erste.GetFieldValue(FieldKeys.OperatingStatus));
+    }
+
+    [Fact]
+    public void Eine_globalid_wird_nie_an_einen_zweiten_datensatz_vergeben()
+    {
+        var (projekt, neu) = Projekt();
+        var vorhanden = new HaltungRecord { WebGisGlobalId = "G-80480-80478" };
+        vorhanden.SetFieldValue(FieldKeys.HoldingName, "Andere", FieldSource.Manual, false);
+        projekt.Data.Add(vorhanden);
+        var pos = new WebGisImportPosition
+        {
+            Objektart = WebGisObjektart.Haltung, Bezeichnung = "80480-80478", RecordId = neu.Id, GlobalId = "G-80480-80478",
+        };
+        pos.Aenderungen.Add(new WebGisImportAenderung { Feld = WebGisImportPlanBuilder.FeldWebGisGlobalId, Neu = "G-80480-80478", Grund = "Test" });
+        var plan = new WebGisImportPlan();
+        plan.Positionen.Add(pos);
+
+        WebGisImportUseCase.Uebernimm(plan, projekt);
+
+        Assert.Null(neu.WebGisGlobalId);
+    }
+
     // ---- Entscheid Pascal 23.09.2026 abends: Hat sich ein Objekt im WebGIS zwischen Vorschau und
     // «Übernehmen» geaendert (Aenderungsdatum), wird es NICHT uebernommen, sondern neu geprueft. ----
 

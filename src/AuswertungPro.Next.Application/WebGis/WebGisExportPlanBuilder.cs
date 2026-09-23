@@ -18,6 +18,11 @@ public sealed class WebGisObjektEingabe
     public bool Saniert { get; init; }
     /// <summary>Von Hand geaenderte Felder (FieldMeta.UserEdited): SewerStudio-Feldname -> Text.</summary>
     public Dictionary<string, string> Handwerte { get; init; } = new(StringComparer.Ordinal);
+    /// <summary>
+    /// Werte der Kanalfirma (Ist-Zustand, nicht von Hand): SewerStudio-Feldname -> Text. Sie werden nur als
+    /// Vorschlag gezeigt, nie automatisch geschrieben (Entscheid Pascal 23.09.2026 abends).
+    /// </summary>
+    public Dictionary<string, string> Kanalfirmenwerte { get; init; } = new(StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -151,6 +156,10 @@ public static class WebGisExportPlanBuilder
         //    (Hinweis). Felder ohne WebGIS-Zuordnung werden genannt, damit nichts stumm verloren geht.
         Handwerte(e, stand, pos);
 
+        // 6) Werte der Kanalfirma (Ist-Zustand), die vom WebGIS abweichen: nur als Vorschlag zum Anhaken,
+        //    nie automatisch (Entscheid Pascal 23.09.2026 abends).
+        Kanalfirmenwerte(e, stand, pos);
+
         return pos;
     }
 
@@ -176,94 +185,138 @@ public static class WebGisExportPlanBuilder
                 continue;
             }
 
-            if (karte.Typ == WebGisHandwertTyp.Text)
-            {
-                var alt = stand.Feld(karte.RefId);
-                if (pos.Aenderungen.Exists(a => string.Equals(a.RefId, karte.RefId, StringComparison.Ordinal))) continue;
-                if (!GleicherText(alt, wert))
-                    pos.Aenderungen.Add(new WebGisFeldAenderung { RefId = karte.RefId, Feld = karte.Anzeige, Alt = alt, Neu = wert, NeuText = wert });
-                continue;
-            }
-
-            stand.Kataloge.TryGetValue(karte.RefId, out var katalog);
-
-            // WebGIS-Begriffe (Schritt A, 23.09.2026): nur ein zeichengenauer WebGIS-Begriff geht hinaus —
-            // keine Faltung, keine Punkt-Regel. Was die Projektpruefung als «kein WebGIS-Begriff» meldet,
-            // wird so auch nie gesendet; ein doppelter Eintrag in der Maskenliste sperrt das Feld.
-            if (karte.HauptRefId is null
-                && AuswertungPro.Next.Domain.Models.WebGisBegriffe.Fuer(e.Objektart == WebGisObjektart.Schacht, feldName) is { } webgisListe)
-            {
-                if (!webgisListe.Kennt(wert))
-                {
-                    pos.Hinweise.Add($"{karte.Anzeige} «{wert}» ist kein WebGIS-Begriff — nicht übertragen (siehe Projektprüfung).");
-                    continue;
-                }
-                var treffer = (katalog ?? new List<(string Key, string Text)>())
-                    .Where(k => string.Equals(k.Text, wert, StringComparison.Ordinal)).Select(k => k.Key).Distinct().ToList();
-                if (treffer.Count != 1)
-                {
-                    pos.Hinweise.Add(treffer.Count == 0
-                        ? $"{karte.Anzeige} «{wert}» steht nicht in der Liste der WebGIS-Maske — nicht übertragen."
-                        : $"{karte.Anzeige} «{wert}» steht mehrfach in der WebGIS-Liste — nicht übertragen (bei Trigonet klären).");
-                    continue;
-                }
-                FuegeComboAn(pos, stand, karte.RefId, karte.Anzeige, treffer[0], wert);
-                continue;
-            }
-
-            // Paarfeld (Material-Detail + Material): Die Gruppe kommt aus dem Hauptteil des
-            // Texts ("Beton, Fertigteil" -> "Beton"). Zeigt die Maske gerade eine andere Gruppe,
-            // fuehrt ihre Detail-Liste den Wert nicht; dann zaehlt die vom Ablauf nachgeladene
-            // Liste der Zielgruppe (KatalogeNachGruppe).
-            string? hauptKey = null;
-            var haupt = WebGisHandwertKarte.Hauptteil(wert);
-            if (karte.HauptRefId is not null)
-            {
-                stand.Kataloge.TryGetValue(karte.HauptRefId, out var hauptKatalog);
-                hauptKey = WebGisHandwertKarte.Schluessel(hauptKatalog, haupt);
-                if (hauptKey is not null
-                    && stand.KatalogeNachGruppe.TryGetValue(WebGisLesestand.GruppenSchluessel(karte.RefId, hauptKey), out var gruppenListe))
-                    katalog = gruppenListe;
-            }
-
-            var key = WebGisHandwertKarte.Schluessel(katalog, wert);
-
-            // Kein Gruppenname im Text und nicht in der aktuellen Liste: die Gruppe, deren nachgeladene
-            // Liste den Wert fuehrt — nur wenn es genau EINE ist (wie im Browser: erst Gruppe, dann Detail).
-            if (key is null && karte.HauptRefId is not null && hauptKey is null)
-            {
-                var treffer = GruppenMitWert(stand, karte.RefId, wert);
-                if (treffer.Count > 1)
-                {
-                    pos.Hinweise.Add($"{karte.Anzeige} «{wert}» steht im WebGIS in mehreren Gruppen — Feld nicht übertragen (Gruppe in SewerStudio angeben, z.B. «Gruppe, {wert}»).");
-                    continue;
-                }
-                if (treffer.Count == 1)
-                {
-                    (hauptKey, key) = treffer[0];
-                    stand.Kataloge.TryGetValue(karte.HauptRefId, out var hk);
-                    haupt = TextZu(hk, hauptKey) ?? hauptKey;
-                }
-            }
-
-            if (key is null && karte.HauptRefId is not null && hauptKey is not null && haupt == wert)
-            {
-                // Nur die Hauptkategorie bekannt ("Beton"): ins Hauptfeld, Detail bleibt.
-                FuegeComboAn(pos, stand, karte.HauptRefId, karte.Anzeige, hauptKey, wert);
-                continue;
-            }
-            if (key is null)
-            {
-                pos.Hinweise.Add($"{karte.Anzeige} «{wert}» ist im WebGIS-Katalog nicht vorhanden — Feld nicht übertragen (Wert in SewerStudio oder Katalog bei Trigonet angleichen).");
-                continue;
-            }
-
-            FuegeComboAn(pos, stand, karte.RefId, karte.Anzeige, key, wert);
-
-            // Detail gesetzt -> Hauptkategorie mitziehen ("Beton, Fertigteil" -> Material "Beton").
-            if (karte.HauptRefId is not null && hauptKey is not null)
-                FuegeComboAn(pos, stand, karte.HauptRefId, karte.Anzeige + " (Hauptkategorie)", hauptKey, haupt);
+            PlaneWert(e, stand, karte, feldName, wert, pos.Aenderungen, pos.Hinweise,
+                refId => pos.Aenderungen.Exists(a => string.Equals(a.RefId, refId, StringComparison.Ordinal)));
         }
+    }
+
+    /// <summary>
+    /// Werte der Kanalfirma, die vom WebGIS abweichen, als Vorschlag — mit derselben Umrechnung wie die
+    /// Handwerte, aber ohne Hinweise (was nicht passt, meldet die Projektpruefung) und nur fuer Felder,
+    /// die kein Handwert schon belegt. Ein Handwert geht immer vor.
+    /// </summary>
+    private static void Kanalfirmenwerte(WebGisObjektEingabe e, WebGisLesestand stand, WebGisExportPosition pos)
+    {
+        foreach (var (feldName, text) in e.Kanalfirmenwerte)
+        {
+            if (e.Handwerte.ContainsKey(feldName)) continue;
+            if (WebGisHandwertKarte.IstEigeneRegel(feldName) || WebGisHandwertKarte.NichtFuerKataster(feldName)
+                || WebGisHandwertKarte.WebGisFuehrt(feldName)) continue;
+            var wert = (text ?? string.Empty).Trim();
+            if (wert.Length == 0) continue;
+            var karte = WebGisHandwertKarte.Finde(e.Objektart, feldName);
+            if (karte is null) continue;
+
+            var aenderungen = new List<WebGisFeldAenderung>();
+            PlaneWert(e, stand, karte, feldName, wert, aenderungen, hinweise: null,
+                refId => pos.Aenderungen.Exists(a => string.Equals(a.RefId, refId, StringComparison.Ordinal))
+                         || pos.Vorschlaege.Exists(v => v.Aenderungen.Exists(a => string.Equals(a.RefId, refId, StringComparison.Ordinal))));
+            if (aenderungen.Count == 0) continue;
+
+            pos.Vorschlaege.Add(new WebGisVorschlag
+            {
+                Feld = feldName, Anzeige = karte.Anzeige, AltText = aenderungen[0].AltText ?? aenderungen[0].Alt,
+                NeuText = wert, Aenderungen = aenderungen,
+            });
+        }
+    }
+
+    /// <summary>
+    /// Ein SewerStudio-Wert -> die WebGIS-Aenderungen dafuer (in <paramref name="ziel"/>). Hinweise nur, wenn
+    /// <paramref name="hinweise"/> gesetzt ist. <paramref name="belegt"/>: refIds, die schon eine Aenderung haben.
+    /// </summary>
+    private static void PlaneWert(WebGisObjektEingabe e, WebGisLesestand stand, WebGisHandwertFeld karte, string feldName, string wert,
+        List<WebGisFeldAenderung> ziel, List<string>? hinweise, Func<string, bool> belegt)
+    {
+        bool Belegt(string refId) => belegt(refId) || ziel.Exists(a => string.Equals(a.RefId, refId, StringComparison.Ordinal));
+
+        if (karte.Typ == WebGisHandwertTyp.Text)
+        {
+            var alt = stand.Feld(karte.RefId);
+            if (Belegt(karte.RefId)) return;
+            if (!GleicherText(alt, wert))
+                ziel.Add(new WebGisFeldAenderung { RefId = karte.RefId, Feld = karte.Anzeige, Alt = alt, Neu = wert, NeuText = wert });
+            return;
+        }
+
+        stand.Kataloge.TryGetValue(karte.RefId, out var katalog);
+
+        // WebGIS-Begriffe (Schritt A, 23.09.2026): nur ein zeichengenauer WebGIS-Begriff geht hinaus —
+        // keine Faltung, keine Punkt-Regel. Was die Projektpruefung als «kein WebGIS-Begriff» meldet,
+        // wird so auch nie gesendet; ein doppelter Eintrag in der Maskenliste sperrt das Feld.
+        if (karte.HauptRefId is null
+            && AuswertungPro.Next.Domain.Models.WebGisBegriffe.Fuer(e.Objektart == WebGisObjektart.Schacht, feldName) is { } webgisListe)
+        {
+            if (!webgisListe.Kennt(wert))
+            {
+                hinweise?.Add($"{karte.Anzeige} «{wert}» ist kein WebGIS-Begriff — nicht übertragen (siehe Projektprüfung).");
+                return;
+            }
+            var treffer = (katalog ?? new List<(string Key, string Text)>())
+                .Where(k => string.Equals(k.Text, wert, StringComparison.Ordinal)).Select(k => k.Key).Distinct().ToList();
+            if (treffer.Count != 1)
+            {
+                hinweise?.Add(treffer.Count == 0
+                    ? $"{karte.Anzeige} «{wert}» steht nicht in der Liste der WebGIS-Maske — nicht übertragen."
+                    : $"{karte.Anzeige} «{wert}» steht mehrfach in der WebGIS-Liste — nicht übertragen (bei Trigonet klären).");
+                return;
+            }
+            FuegeComboAn(ziel, Belegt, stand, karte.RefId, karte.Anzeige, treffer[0], wert);
+            return;
+        }
+
+        // Paarfeld (Material-Detail + Material): Die Gruppe kommt aus dem Hauptteil des
+        // Texts ("Beton, Fertigteil" -> "Beton"). Zeigt die Maske gerade eine andere Gruppe,
+        // fuehrt ihre Detail-Liste den Wert nicht; dann zaehlt die vom Ablauf nachgeladene
+        // Liste der Zielgruppe (KatalogeNachGruppe).
+        string? hauptKey = null;
+        var haupt = WebGisHandwertKarte.Hauptteil(wert);
+        if (karte.HauptRefId is not null)
+        {
+            stand.Kataloge.TryGetValue(karte.HauptRefId, out var hauptKatalog);
+            hauptKey = WebGisHandwertKarte.Schluessel(hauptKatalog, haupt);
+            if (hauptKey is not null
+                && stand.KatalogeNachGruppe.TryGetValue(WebGisLesestand.GruppenSchluessel(karte.RefId, hauptKey), out var gruppenListe))
+                katalog = gruppenListe;
+        }
+
+        var key = WebGisHandwertKarte.Schluessel(katalog, wert);
+
+        // Kein Gruppenname im Text und nicht in der aktuellen Liste: die Gruppe, deren nachgeladene
+        // Liste den Wert fuehrt — nur wenn es genau EINE ist (wie im Browser: erst Gruppe, dann Detail).
+        if (key is null && karte.HauptRefId is not null && hauptKey is null)
+        {
+            var treffer = GruppenMitWert(stand, karte.RefId, wert);
+            if (treffer.Count > 1)
+            {
+                hinweise?.Add($"{karte.Anzeige} «{wert}» steht im WebGIS in mehreren Gruppen — Feld nicht übertragen (Gruppe in SewerStudio angeben, z.B. «Gruppe, {wert}»).");
+                return;
+            }
+            if (treffer.Count == 1)
+            {
+                (hauptKey, key) = treffer[0];
+                stand.Kataloge.TryGetValue(karte.HauptRefId, out var hk);
+                haupt = TextZu(hk, hauptKey) ?? hauptKey;
+            }
+        }
+
+        if (key is null && karte.HauptRefId is not null && hauptKey is not null && haupt == wert)
+        {
+            // Nur die Hauptkategorie bekannt ("Beton"): ins Hauptfeld, Detail bleibt.
+            FuegeComboAn(ziel, Belegt, stand, karte.HauptRefId, karte.Anzeige, hauptKey, wert);
+            return;
+        }
+        if (key is null)
+        {
+            hinweise?.Add($"{karte.Anzeige} «{wert}» ist im WebGIS-Katalog nicht vorhanden — Feld nicht übertragen (Wert in SewerStudio oder Katalog bei Trigonet angleichen).");
+            return;
+        }
+
+        FuegeComboAn(ziel, Belegt, stand, karte.RefId, karte.Anzeige, key, wert);
+
+        // Detail gesetzt -> Hauptkategorie mitziehen ("Beton, Fertigteil" -> Material "Beton").
+        if (karte.HauptRefId is not null && hauptKey is not null)
+            FuegeComboAn(ziel, Belegt, stand, karte.HauptRefId, karte.Anzeige + " (Hauptkategorie)", hauptKey, haupt);
     }
 
     /// <summary>Alle nachgeladenen Gruppenlisten dieses Detailfelds, die den Klartext fuehren: (Gruppe, Detail-Schluessel).</summary>
@@ -287,15 +340,16 @@ public static class WebGisExportPlanBuilder
         return null;
     }
 
-    private static void FuegeComboAn(WebGisExportPosition pos, WebGisLesestand stand, string refId, string anzeige, string key, string text)
+    private static void FuegeComboAn(List<WebGisFeldAenderung> ziel, Func<string, bool> belegt, WebGisLesestand stand,
+        string refId, string anzeige, string key, string text)
     {
         var alt = stand.Feld(refId);
         if (GleichCode(alt, key)) return;
         // Zwei SewerStudio-Felder koennen auf dasselbe WebGIS-Feld zeigen (DN und lichte Breite);
         // dann zaehlt der erste Treffer, sonst stuenden zwei Aenderungen fuer eine Zelle im Plan.
-        if (pos.Aenderungen.Exists(a => string.Equals(a.RefId, refId, StringComparison.Ordinal))) return;
+        if (belegt(refId)) return;
         // Alt = Schluessel (fuer den Konfliktschutz), AltText = Klartext (fuer den Bericht).
-        pos.Aenderungen.Add(new WebGisFeldAenderung
+        ziel.Add(new WebGisFeldAenderung
         {
             RefId = refId, Feld = anzeige, Alt = alt, AltText = stand.FeldText(refId), Neu = key, NeuText = text,
         });

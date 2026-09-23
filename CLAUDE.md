@@ -232,6 +232,33 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     fehlt er, ebenfalls Sperre. Anlass Zone 1.15: ab 14:32 fand die Namenssuche nichts mehr (182/182
     gesperrt). GeoShop-TID (`ch24gwkd…`) und OBJECTID sind KEINE GlobalID. Tests:
     `WebGisExportUseCaseTests` (Gespeicherte_globalid_…), `WebGisImportUseCaseTests`, `GeonisWebGisClientTests`.
+  - KANALFIRMA = IST-ZUSTAND (Entscheid Pascal 23.09.2026 spaet, «ergaenzen und korrigieren»):
+    (1) SENDEN: Ein Wert der Kanalfirma (Herkunft `FieldSourceRegeln.IstKanalfirma`: Legacy, Protocol, Xtf,
+    Xtf405, Ili, Pdf, Spro; ohne Handmarke), der vom WebGIS abweicht, wird NIE automatisch geschrieben. Er
+    steht als `WebGisVorschlag` an der Position (`Vorschlaege`) — nur Felder der `WebGisHandwertKarte`, nie
+    eigene Regeln, Laenge, Eigentum, Betreiber, Baujahr, nie Kataster-Herkunft, nie wenn ein Handwert dasselbe
+    Feld belegt. Fenster: gelber Bereich «Kanalfirma weicht vom WebGIS ab — n von m angehakt», je Zeile ein
+    Haekchen, nichts vorangehakt, «Alle anhaken»/«Keine». `WebGisPlanVergleich` zaehlt angehakte Vorschlaege mit
+    (`WebGisVorschlagAuswahl.Wirksam`: ein Haken mehr oder weniger ist ein anderer Plan). «Jetzt schreiben»
+    baut ueber `WebGisExportUseCase.BaueFrischenPlanAsync(projekt, bestaetigt)` und uebertraegt dabei die Haken
+    (`UebertrageAuf`, Schluessel Objekt+Feld+Wert — ein geaenderter Wert ist ein neuer, NICHT angehakter
+    Vorschlag); erst `FuehreAusAsync` macht sie zu Aenderungen (`UebernimmGewaehlte`), also nach dem Vergleich.
+    `WebGisExportPlan.NichtsZuSchreiben`, `WebGisUebersicht.NichtsZuTun` kennen sie. Das ExportPageViewModel
+    steht ueber der 2000-Zeilen-Grenze (vorbestehend 2105) — neue WebGIS-Logik gehoert in den UseCase.
+    Bericht: `[x| ] Kanalfirma weicht ab`. (2) IMPORT: Eine Kanalfirma-Lieferung ersetzt Kataster-Werte
+    (GeoShop/QGIS/WebGIS) ohne Handmarke. `KatasterFeldschutz` sperrt nur noch einen Schreibversuch
+    UNBEKANNTER Herkunft (Konfliktmarke bleibt); `MergeEngine`: Kataster = Prioritaet 10 (unterste).
+    Handwerte bleiben immer. Folge: Ein im GeoShop-Feldvergleich behaltener GeoShop-Wert wird von einer
+    spaeteren Kanalfirma-Lieferung ersetzt, wenn er nicht von Hand gesetzt ist. AUSNAHME LAGE:
+    `Koordinate_East`/`Koordinate_North` aus dem Kataster ersetzt kein Import (vermessen gegen Handy-GPS;
+    `KatasterFeldschutz.Pruefe(feld, …)`), nur ein neuerer Katasterstand oder die Hand; eine leere Lage
+    fuellt das Protokoll. Waechter `SchachtProtocolVollstaendigkeitTests.Koordinaten_ueberschreiben_…`,
+    `NachgeschlagenerWertMergeSchutzTests.Eine_vermessene_katasterlage_…`. (3) DOPPELTE GLOBALID:
+    `WebGisEindeutigkeit.SperreDoppelte` im Export UND im Holen — zeigen zwei Datensaetze auf dasselbe
+    WebGIS-Objekt, bekommt keines etwas (Holen: weder Werte noch GlobalID); `Uebernimm` vergibt eine GlobalID
+    nie an einen zweiten Datensatz derselben Art. Tests `WebGisExportUseCaseTests.Kanalfirma`,
+    `WebGisVorschauFensterUiTests`, `NachgeschlagenerWertMergeSchutzTests`, `GeoShopRobusterImportTests`,
+    `WebGisImportUseCaseTests` (Zwei_datensaetze_…, Eine_globalid_…).
   - WEBGIS-BEGRIFFE, SCHRITT A (Entscheid Pascal 23.09.2026; Entwurf
     `docs/superpowers/specs/2026-09-23-webgis-begriffe-design.md`, Plan `docs/superpowers/plans/2026-09-23-webgis-begriffe-schritt-a.md`):
     Was ins WebGIS (Trigonet) geht, steht in SewerStudio als WebGIS-Beschriftung, zeichengenau («In Betrieb»,
@@ -423,7 +450,9 @@ unabhaengige Zaehlungen je PDF (Kennungsspalte, Datenzeilen, Skizzenlegende).
   ergibt nichts — eine falsche Koordinate setzt den Schacht an den falschen Ort. Ziel sind
   dieselben Felder wie beim Archivweg (`Koordinate_East`/`Koordinate_North`); Hand- und
   Katasterwerte schuetzt `SchachtRecord.SetFieldValue` selbst (`IsUserEdited`,
-  `KatasterFeldschutz`), deshalb genuegt der normale Schreibweg.
+  `KatasterFeldschutz`), deshalb genuegt der normale Schreibweg. Die Lage ist die AUSNAHME zur
+  Regel «Kanalfirma ersetzt Kataster» vom 23.09.2026: Die Katasterkoordinate ist vermessen,
+  die des Protokolls meist Handy-GPS — ein Protokoll fuellt nur eine leere Lage.
 - **Der Anschlusszustand gehoert an seinen Anschluss.** `SchachtAnschluss.Zustand` traegt
   «in Ordnung», «Mangelhaft eingebunden», «Einragend» …, mehrere mit « • ». Im Bestand
   tragen alle 705 Anschluesse einen Zustand. **Das PDF kuerzt eine zu lange Zelle**, mit
@@ -1047,7 +1076,11 @@ Anlass: Acht KIT-PDFs, null Erfolge. Drei Ursachen, die nichts miteinander zu tu
   Sicherungsfehler verhindern die Übernahme; geänderter Projektstand sperrt den
   Plan. `GeoShopRuecknahme` setzt einen fehlgeschlagenen Schreiblauf vollständig zurück.
 - `KatasterFeldschutz` in beiden Datensätzen und die Katasterpriorität im
-  `MergeEngine` verhindern das spätere Zurücksetzen durch Protokollimporte.
+  `MergeEngine` verhinderten bis 23.09.2026 das spätere Zurücksetzen durch Protokollimporte.
+  ÜBERHOLT (Entscheid Pascal 23.09.2026 spät): Die Kanalfirma ist der Ist-Zustand und ersetzt
+  Katasterwerte ohne Handmarke; gesperrt wird nur noch ein Schreibversuch unbekannter Herkunft,
+  Kataster hat im `MergeEngine` die unterste Priorität. Handwerte bleiben geschützt. Ausnahme:
+  vermessene Katasterkoordinaten ersetzt kein Import.
   Manuelle Korrekturen bleiben möglich. Beide Projektseiten aktualisieren nach
   erfolgreicher Übernahme die offene Objektakte und planen die vorhandene automatische Speicherung ein.
 - Nicht alle WebGIS-Felder sind im DSS-XTF enthalten. Die Vergleichshinweise benennen

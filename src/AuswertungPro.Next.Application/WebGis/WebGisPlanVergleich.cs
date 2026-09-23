@@ -28,12 +28,16 @@ public static class WebGisPlanVergleich
         var elternMitMassnahme = plan.Sanierungen.Where(s => s.Schreibbar).Select(s => s.ElternRecordId).ToHashSet();
         foreach (var p in plan.Positionen)
         {
-            if (!p.Schreibbar && !elternMitMassnahme.Contains(p.RecordId)) continue;
+            // Was geschrieben wird: Aenderungen UND angehakte Vorschlaege der Kanalfirma (23.09.2026 abends) —
+            // ein Haken mehr oder weniger ist ein anderer Plan.
+            var wirksam = WebGisVorschlagAuswahl.Wirksam(p);
+            var schreibbar = p.Sperren.Count == 0 && p.GlobalId is not null && wirksam.Count > 0;
+            if (!schreibbar && !elternMitMassnahme.Contains(p.RecordId)) continue;
             // Auch der ALTE Wert zaehlt (Pruefung 23.09.2026): Hat jemand im WebGIS seit der Vorschau
             // etwas geaendert, ist der Plan ein anderer — sonst ueberschriebe «Jetzt schreiben» fremde Arbeit.
             // Dazu der ganze gelesene Stand samt Aenderungsdatum (Pascal 23.09.2026): auch eine Aenderung an
             // einem Feld, das der Plan gar nicht anfasst, heisst neu pruefen.
-            var felder = p.Aenderungen.Select(a => a.RefId + "=" + a.Alt + ">" + a.Neu).OrderBy(x => x, StringComparer.Ordinal);
+            var felder = wirksam.Select(a => a.RefId + "=" + a.Alt + ">" + a.Neu).OrderBy(x => x, StringComparer.Ordinal);
             teile.Add($"O|{p.Objektart}|{p.Bezeichnung}|{p.GlobalId}|{string.Join(",", felder)}|{WebGisStandVergleich.Fingerabdruck(p.GelesenerStand)}");
         }
         foreach (var s in plan.Sanierungen)

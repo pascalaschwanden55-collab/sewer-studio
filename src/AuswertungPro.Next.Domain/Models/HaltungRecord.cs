@@ -192,7 +192,7 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
         if (FieldMeta.TryGetValue(fieldName, out var existingMeta) && existingMeta.UserEdited && !userEdited)
             return;
 
-        if (KatasterFeldschutz.Pruefe(existingMeta, GetFieldValue(fieldName), value, source, userEdited)) return;
+        if (KatasterFeldschutz.Pruefe(fieldName, existingMeta, GetFieldValue(fieldName), value, source, userEdited)) return;
 
         Fields[fieldName] = value;
 

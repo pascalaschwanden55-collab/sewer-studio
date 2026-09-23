@@ -5,9 +5,9 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 
 /// <summary>
 /// Handkorrekturen bleiben unabhängig von der Herkunft geschützt.
-/// Seit dem GeoShop-Feldvergleich vom 14.09.2026 sind auch bestätigte Katasterwerte
-/// ohne Handmarkierung vor späteren Importen geschützt. Andere Nachschlagquellen
-/// benötigen weiterhin die ausdrückliche Handmarkierung.
+/// Entscheid Pascal 23.09.2026 abends (ersetzt die Regel vom 14.09.2026): Die Daten der Kanalfirma
+/// sind der Ist-Zustand — ein Import der Kanalfirma ersetzt Werte aus GeoShop, QGIS oder WebGIS
+/// (Herkunft Kataster), eine Handkorrektur nie. Nur eine unbekannte Herkunft ersetzt keinen Katasterwert.
 /// </summary>
 public sealed class NachgeschlagenerWertMergeSchutzTests
 {
@@ -31,18 +31,84 @@ public sealed class NachgeschlagenerWertMergeSchutzTests
         Assert.Equal("Schlammsammler", schacht.GetFieldValue("Funktion"));
     }
 
-    [Fact]
-    public void Bestaetigter_Katasterwert_ist_auch_ohne_Handmarkierung_geschuetzt()
+    [Theory]
+    [InlineData(FieldSource.Xtf)]
+    [InlineData(FieldSource.Xtf405)]
+    [InlineData(FieldSource.Legacy)]
+    [InlineData(FieldSource.Pdf)]
+    [InlineData(FieldSource.Spro)]
+    public void Import_der_kanalfirma_ersetzt_einen_katasterwert(FieldSource quelle)
     {
         var schacht = new SchachtRecord();
         schacht.SetFieldValue("Funktion", "Schlammsammler", FieldSource.Kataster, userEdited: false);
 
-        var ergebnis = schacht.SetFieldValue("Funktion", "Etwas anderes", FieldSource.Xtf, userEdited: false);
+        var ergebnis = schacht.SetFieldValue("Funktion", "Etwas anderes", quelle, userEdited: false);
+
+        Assert.Equal(FeldSchreibErgebnis.Geschrieben, ergebnis);
+        Assert.Equal("Etwas anderes", schacht.GetFieldValue("Funktion"));
+        Assert.Equal(quelle, schacht.FieldMeta["Funktion"].Source);
+    }
+
+    [Fact]
+    public void Kanalfirma_ueber_den_einfachen_schreibweg_ersetzt_einen_katasterwert()
+    {
+        // KINS-Anreicherung und andere Importe schreiben am Schacht ohne Herkunftsangabe.
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Funktion", "Schlammsammler", FieldSource.Kataster, userEdited: false);
+
+        Assert.Equal(FeldSchreibErgebnis.Geschrieben, schacht.SetFieldValue("Funktion", "Etwas anderes"));
+        Assert.Equal("Etwas anderes", schacht.GetFieldValue("Funktion"));
+    }
+
+    [Fact]
+    public void Import_der_kanalfirma_ersetzt_einen_katasterwert_der_haltung()
+    {
+        var haltung = new HaltungRecord();
+        haltung.SetFieldValue(FieldKeys.PipeMaterial, "Beton", FieldSource.Kataster, false);
+
+        haltung.SetFieldValue(FieldKeys.PipeMaterial, "Steinzeug", FieldSource.Legacy, false);
+
+        Assert.Equal("Steinzeug", haltung.GetFieldValue(FieldKeys.PipeMaterial));
+    }
+
+    [Theory]
+    [InlineData("Koordinate_East")]
+    [InlineData("Koordinate_North")]
+    public void Eine_vermessene_katasterlage_ersetzt_kein_import(string feld)
+    {
+        // Ausnahme zur Kanalfirma-Regel: Die Katasterkoordinate ist vermessen, die des Protokolls meist
+        // Handy-GPS. Ein Import fuellt eine leere Lage, ersetzt aber keine vermessene (Regel seit 19.09.2026).
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue(feld, "2687939.868", FieldSource.Kataster, userEdited: false);
+
+        Assert.Equal(FeldSchreibErgebnis.KatasterwertGeschuetzt, schacht.SetFieldValue(feld, "2687941.2", FieldSource.Pdf, userEdited: false));
+        Assert.Equal(FeldSchreibErgebnis.KatasterwertGeschuetzt, schacht.SetFieldValue(feld, "2687941.2"));
+        Assert.Equal("2687939.868", schacht.GetFieldValue(feld));
+
+        // Ein neuerer Katasterstand und eine Handkorrektur ersetzen sie weiterhin.
+        Assert.Equal(FeldSchreibErgebnis.Geschrieben, schacht.SetFieldValue(feld, "2687940.0", FieldSource.Kataster, userEdited: false));
+        Assert.Equal(FeldSchreibErgebnis.Geschrieben, schacht.SetFieldValue(feld, "2687940.5", FieldSource.Manual, userEdited: true));
+        Assert.Equal("2687940.5", schacht.GetFieldValue(feld));
+    }
+
+    [Fact]
+    public void Eine_leere_lage_fuellt_das_protokoll()
+    {
+        var schacht = new SchachtRecord();
+
+        Assert.Equal(FeldSchreibErgebnis.Geschrieben, schacht.SetFieldValue("Koordinate_East", "2687941.2", FieldSource.Pdf, userEdited: false));
+    }
+
+    [Fact]
+    public void Unbekannte_herkunft_ersetzt_keinen_katasterwert()
+    {
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Funktion", "Schlammsammler", FieldSource.Kataster, userEdited: false);
+
+        var ergebnis = schacht.SetFieldValue("Funktion", "Etwas anderes", FieldSource.Unknown, userEdited: false);
 
         Assert.Equal(FeldSchreibErgebnis.KatasterwertGeschuetzt, ergebnis);
         Assert.Equal("Schlammsammler", schacht.GetFieldValue("Funktion"));
-        Assert.False(schacht.IsUserEdited("Funktion"));
-        Assert.NotNull(schacht.FieldMeta["Funktion"].Conflict);
     }
 
     [Fact]
@@ -55,15 +121,25 @@ public sealed class NachgeschlagenerWertMergeSchutzTests
     }
 
     [Fact]
-    public void Haltungsmerge_meldet_Katasterabweichung_als_Konflikt_und_keine_Aenderung()
+    public void Haltungsmerge_ersetzt_einen_katasterwert_durch_die_kanalfirma()
     {
         var ziel = new HaltungRecord(); var quelle = new HaltungRecord();
         ziel.SetFieldValue(FieldKeys.PipeMaterial, "Beton", FieldSource.Kataster, false);
         quelle.SetFieldValue(FieldKeys.PipeMaterial, "Kunststoff", FieldSource.Pdf, false);
         var ergebnis = AuswertungPro.Next.Infrastructure.Import.Common.MergeEngine.MergeRecord(ziel, quelle, FieldSource.Pdf);
+        Assert.Equal("Kunststoff", ziel.GetFieldValue(FieldKeys.PipeMaterial));
+        Assert.Equal(1, ergebnis.Updated);
+        Assert.Equal(0, ergebnis.Conflicts);
+    }
+
+    [Fact]
+    public void Haltungsmerge_laesst_eine_handkorrektur_stehen()
+    {
+        var ziel = new HaltungRecord(); var quelle = new HaltungRecord();
+        ziel.SetFieldValue(FieldKeys.PipeMaterial, "Beton", FieldSource.Manual, true);
+        quelle.SetFieldValue(FieldKeys.PipeMaterial, "Kunststoff", FieldSource.Pdf, false);
+        AuswertungPro.Next.Infrastructure.Import.Common.MergeEngine.MergeRecord(ziel, quelle, FieldSource.Pdf);
         Assert.Equal("Beton", ziel.GetFieldValue(FieldKeys.PipeMaterial));
-        Assert.Equal(0, ergebnis.Updated);
-        Assert.Equal(1, ergebnis.Conflicts);
     }
 
     [Fact]

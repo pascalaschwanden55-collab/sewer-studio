@@ -55,6 +55,11 @@ public partial class WebGisVorschauWindow : Window
 
     private void OnSchliessen(object sender, RoutedEventArgs e) => Close();
 
+    /// <summary>Alle Abweichungen der Kanalfirma anhaken — geschrieben wird erst mit «Jetzt schreiben».</summary>
+    private void OnAlleVorschlaege(object sender, RoutedEventArgs e) => _anzeige.HakeAlle(true);
+
+    private void OnKeineVorschlaege(object sender, RoutedEventArgs e) => _anzeige.HakeAlle(false);
+
     private async Task LaufAsync(Func<Task<WebGisUebersicht?>> ablauf, string status)
     {
         if (!_anzeige.Bereit) return;
@@ -96,6 +101,10 @@ public partial class WebGisVorschauWindow : Window
         [ObservableProperty] private IReadOnlyList<Kachel> _kacheln = Array.Empty<Kachel>();
         [ObservableProperty] private IReadOnlyList<WebGisUebersichtObjekt> _objekte = Array.Empty<WebGisUebersichtObjekt>();
         [ObservableProperty] private IReadOnlyList<string> _sammelmeldungen = Array.Empty<string>();
+        /// <summary>«Kanalfirma weicht vom WebGIS ab» — die Haekchen schreiben direkt in den Plan.</summary>
+        [ObservableProperty] private IReadOnlyList<WebGisUebersichtVorschlag> _vorschlaege = Array.Empty<WebGisUebersichtVorschlag>();
+        [ObservableProperty] private bool _hatVorschlaege;
+        [ObservableProperty] private string _vorschlaegeTitel = "";
         [ObservableProperty] private bool _hatSammelmeldungen;
         [ObservableProperty] private bool _leer;
         [ObservableProperty] private string _bericht = "";
@@ -122,11 +131,32 @@ public partial class WebGisVorschauWindow : Window
                     new Kachel(u.MitHinweis.ToString(), "nur Hinweis"),
                 };
             Objekte = u.Objekte;
+            foreach (var v in Vorschlaege) v.PropertyChanged -= OnVorschlagGeaendert;
+            Vorschlaege = u.Vorschlaege;
+            foreach (var v in Vorschlaege) v.PropertyChanged += OnVorschlagGeaendert;
+            HatVorschlaege = u.HatVorschlaege;
+            AktualisiereVorschlaegeTitel();
             Sammelmeldungen = u.Sammelmeldungen;
             HatSammelmeldungen = u.HatSammelmeldungen;
-            Leer = u.Objekte.Count == 0;
+            Leer = u.Objekte.Count == 0 && !u.HatVorschlaege;
             Bericht = u.Bericht;
             Status = u.NichtsZuTun ? "Nichts zu übertragen." : u.Kopfzeile;
+        }
+
+        public void HakeAlle(bool gewaehlt)
+        {
+            if (!Bereit) return;
+            foreach (var v in Vorschlaege) v.Gewaehlt = gewaehlt;
+        }
+
+        private void OnVorschlagGeaendert(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+            => AktualisiereVorschlaegeTitel();
+
+        private void AktualisiereVorschlaegeTitel()
+        {
+            var angehakt = 0;
+            foreach (var v in Vorschlaege) if (v.Gewaehlt) angehakt++;
+            VorschlaegeTitel = $"Kanalfirma weicht vom WebGIS ab — {angehakt} von {Vorschlaege.Count} angehakt";
         }
     }
 }

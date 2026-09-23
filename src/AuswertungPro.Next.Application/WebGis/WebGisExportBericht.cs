@@ -81,6 +81,9 @@ public static class WebGisExportBericht
                 : p.Aenderungen.Count == 0 ? "UNVERÄNDERT" : "ÄNDERN";
             sb.AppendLine($"[{status}] {Objekt(p.Objektart, p.Bezeichnung)}" + (p.GlobalId is null ? "" : $"  (GlobalID {p.GlobalId})"));
             foreach (var a in p.Aenderungen) sb.AppendLine($"    {a.Feld}: {Leer(a.AltText ?? a.Alt)} → {a.NeuText ?? a.Neu}");
+            // Nur angehakte Vorschlaege werden geschrieben (sie stehen dann auch oben als Aenderung).
+            foreach (var v in p.Vorschlaege)
+                sb.AppendLine($"    [{(v.Gewaehlt ? "x" : " ")}] Kanalfirma weicht ab — {v.Anzeige}: {Leer(v.AltText)} → {v.NeuText}");
             foreach (var s in p.Sperren) sb.AppendLine($"    !! {s}");
             foreach (var h in p.Hinweise) sb.AppendLine($"    ({h})");
             if (p.SchreibFehler is not null) sb.AppendLine($"    !! {p.SchreibFehler}");

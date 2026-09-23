@@ -30,6 +30,12 @@ Prüfe für jede Regel, ob der Code sie überall einhält. Jede Verletzung ist e
    SewerStudio. **Weder das Holen aus dem WebGIS noch der GeoShop-Abgleich noch „Leere Felder
    aus QGIS" überschreiben sie.** Alle drei **ergänzen nur leere Felder**. Das gilt
    ausdrücklich auch für die Haltungslänge.
+   **1a. Umgekehrt (Entscheid 23.09.2026 spät):** Liefert die Kanalfirma nach einem Abgleich,
+   ersetzt ihr Wert einen Katasterwert (GeoShop/QGIS/WebGIS), solange er nicht von Hand
+   gesetzt ist. Weicht ein Kanalfirmen-Wert vom WebGIS ab, geht er **nie automatisch** ins
+   WebGIS, sondern erscheint in der Sende-Vorschau als Zeile zum Anhaken; nur Angehaktes wird
+   geschrieben. **Ausnahme Lage:** Eine vermessene Katasterkoordinate (`Koordinate_East/North`)
+   ersetzt kein Import; das Protokoll füllt nur eine leere Lage.
 2. **Katasterwerte darf das WebGIS ersetzen** (bestätigt). Werte, die selbst aus einem GeoShop- oder
    QGIS-Abgleich stammen und nicht von Hand gesetzt sind, dürfen durch den WebGIS-Wert
    ersetzt werden („WebGIS vor GeoShop"). Kanalfirmen-Werte fallen nie darunter.
@@ -171,11 +177,12 @@ beim Holen, was beim Senden?
 2. `GeoShopAbgleichPlanBuilder.ImmerAusXtf` ist entfernt. Prüfe alle Wege (Gesamtabgleich,
    Einzelabgleich in der Objektakte, Feldvergleich `GeoShopImportVergleich`), ob irgendwo die
    Länge noch ersetzt wird.
-3. **Offener Widerspruch zur Prüfung:** `KatasterFeldschutz` schützt Werte mit Herkunft
-   `Kataster` gegen **spätere** Protokollimporte. Füllt WebGIS/GeoShop ein leeres Feld, kann eine
-   spätere Kanalfirmen-Lieferung diesen Wert nicht mehr setzen (nur Konfliktvermerk). Das
-   widerspricht Regel 1, sobald die Kanalfirma **nach** dem Holen liefert. Beschreibe die
-   Folgen je Feld und schlage eine Regel vor (Entscheid bei Pascal).
+3. **Entschieden und umgesetzt (Regel 1a):** `KatasterFeldschutz` sperrt nur noch einen
+   Schreibversuch **unbekannter** Herkunft auf einen Katasterwert; eine Kanalfirmen-Lieferung
+   (`FieldSourceRegeln.IstKanalfirma`) ersetzt ihn, Handwerte bleiben. `MergeEngine` gibt
+   `Kataster` die unterste Priorität. Prüfe: Gibt es Importwege, die `FieldSource.Unknown`
+   vergeben und dadurch weiter gesperrt werden? Gibt es Wege, die an `SetFieldValue` vorbei
+   schreiben und den Schutz umgehen oder ihn fälschlich behalten?
 
 Prüfe ausserdem: Im GeoShop-Feldvergleich sind abweichende Werte zwar abgewählt, lassen
 sich aber von Hand anwählen. Darf man so einen Kanalfirmen-Wert überschreiben? Melde es als
@@ -214,9 +221,14 @@ auch Protokoll- oder Kanalfirmenwerte?), und passt das zu den Regeln?
   Freigabeliste steht. Prüfe: Stimmen die refIds (aus der Inventur v2, nicht live geprüft)? Fehlt ein
   Schutzfeld (z.B. «Länge effektiv» `6cd4e6f1…`, «Erstellt/Geändert am/von»)? Kann ein Weg daran
   vorbei (Sanierungsmassnahmen über `ErstelleSanierungAsync`, Kopfdaten im `saveData`-Payload)?
-- Eindeutigkeit (Regel 8b): `SperreDoppelteZuordnungen` sperrt doppelte GlobalIDs im Export. Das
-  Holen speichert die GlobalID aber noch ohne diese Prüfung — kann es dieselbe GlobalID an zwei
-  Datensätze schreiben?
+- Eindeutigkeit (Regel 8b): `WebGisEindeutigkeit.SperreDoppelte` sperrt doppelte GlobalIDs im Export
+  UND im Holen (keines der Objekte bekommt Werte oder die GlobalID); `Uebernimm` vergibt eine GlobalID
+  nie an einen zweiten Datensatz derselben Art. Prüfe: Gibt es einen weiteren Weg, der eine GlobalID
+  setzt (Kopieren, Laden, Umbenennen, Zusammenführen)?
+- Vorschläge der Kanalfirma (Regel 1a): `WebGisVorschlag` an der Position, im Fenster zum Anhaken.
+  Prüfe: Kann ein nicht angehakter Vorschlag geschrieben werden? Bleibt ein Haken an einem Wert hängen,
+  der sich seit der Vorschau geändert hat (Schlüssel Objekt+Feld+Wert)? Vergleicht
+  `WebGisPlanVergleich` die Haken mit? Kann ein Vorschlag ein geschütztes Feld (Regel 8a) treffen?
 - Änderungsdatum (Regel 8c): `WebGisExportPosition.GelesenerStand` vergleicht ALLE Maskenfelder.
   Gibt es Felder, die sich ohne Bearbeitung zwischen zwei Lesungen ändern (dann sperrte alles)?
   Deckt der Vergleich auch Änderungen ab, die nicht in den Komponenten stehen (Geometrie)?

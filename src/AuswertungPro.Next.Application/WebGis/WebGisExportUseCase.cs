@@ -19,6 +19,19 @@ public sealed class WebGisExportUseCase
         => _client = client ?? throw new ArgumentNullException(nameof(client));
 
     /// <summary>
+    /// «Jetzt schreiben»: baut den Plan frisch und uebertraegt die Haken der bestaetigten Vorschau
+    /// («Kanalfirma weicht ab») — nur fuer denselben Wert am selben Objekt (<see cref="WebGisVorschlagAuswahl"/>).
+    /// Ohne Vorschau ist nichts angehakt.
+    /// </summary>
+    public async Task<WebGisExportPlan> BaueFrischenPlanAsync(
+        Project projekt, WebGisExportPlan? bestaetigt, CancellationToken ct = default)
+    {
+        var plan = await BauePlanAsync(projekt, ct).ConfigureAwait(false);
+        WebGisVorschlagAuswahl.UebertrageAuf(bestaetigt, plan);
+        return plan;
+    }
+
+    /// <summary>
     /// Liest je Objekt den frischen WebGIS-Stand und baut den Plan. Schreibt nichts.
     /// </summary>
     public async Task<WebGisExportPlan> BauePlanAsync(Project projekt, CancellationToken ct = default)
@@ -41,6 +54,7 @@ public sealed class WebGisExportUseCase
                 Baujahr = OhneKatasterWert(h.FieldMeta, "Baujahr", h.GetFieldValue("Baujahr")),
                 Saniert = WebGisSaniertKriterium.IstSaniert(projekt.Objektakten, h.Id),
                 Handwerte = Handwerte(h.FieldMeta, h.GetFieldValue),
+                Kanalfirmenwerte = Kanalfirmenwerte(h.FieldMeta, h.GetFieldValue),
             };
             var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
             plan.Positionen.Add(pos);
@@ -64,6 +78,7 @@ public sealed class WebGisExportUseCase
                     s.GetFieldValue(SchachtFeldnamen.Feld(s, "Baujahr"))),
                 Saniert = WebGisSaniertKriterium.IstSaniert(projekt.Objektakten, s.Id),
                 Handwerte = Handwerte(s.FieldMeta, s.GetFieldValue),
+                Kanalfirmenwerte = Kanalfirmenwerte(s.FieldMeta, s.GetFieldValue),
             };
             var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
             plan.Positionen.Add(pos);
@@ -91,20 +106,8 @@ public sealed class WebGisExportUseCase
     /// ein Katasterobjekt. Gezaehlt wird die gefundene GlobalID, ersatzweise die gespeicherte.
     /// </summary>
     private static void SperreDoppelteZuordnungen(IReadOnlyList<WebGisExportPosition> positionen)
-    {
-        var gruppen = positionen
-            .Select(p => (Position: p, Id: (p.GlobalId ?? p.GespeicherteGlobalId ?? string.Empty).Trim()))
-            .Where(x => x.Id.Length > 0)
-            .GroupBy(x => (x.Position.Objektart, Id: x.Id.ToUpperInvariant()))
-            .Where(g => g.Count() > 1);
-        foreach (var g in gruppen)
-        {
-            var namen = string.Join(", ", g.Select(x => "«" + x.Position.Bezeichnung + "»").Distinct());
-            foreach (var (p, _) in g)
-                p.Sperren.Add($"Mehrere SewerStudio-Objekte ({namen}) zeigen auf dasselbe WebGIS-Objekt (GlobalID {g.Key.Id}) — "
-                              + "keines wird geschrieben. Doppelten Datensatz im Projekt bereinigen.");
-        }
-    }
+        => WebGisEindeutigkeit.SperreDoppelte(positionen, p => p.Objektart, p => p.GlobalId ?? p.GespeicherteGlobalId,
+            p => p.Bezeichnung, (p, grund) => p.Sperren.Add(grund), "keines wird geschrieben.");
 
     /// <summary>Von Hand geaenderte Felder (UserEdited) mit ihrem aktuellen Text.</summary>
     private static Dictionary<string, string> Handwerte(
@@ -114,6 +117,23 @@ public sealed class WebGisExportUseCase
         foreach (var (feld, m) in meta)
         {
             if (!m.UserEdited || m.Source == FieldSource.Kataster) continue;
+            var v = wert(feld);
+            if (!string.IsNullOrWhiteSpace(v)) d[feld] = v;
+        }
+        return d;
+    }
+
+    /// <summary>
+    /// Werte der Kanalfirma (Ist-Zustand, nicht von Hand) mit ihrem Text — sie werden nur vorgeschlagen,
+    /// wenn sie vom WebGIS abweichen, nie automatisch geschrieben (Entscheid Pascal 23.09.2026 abends).
+    /// </summary>
+    private static Dictionary<string, string> Kanalfirmenwerte(
+        IReadOnlyDictionary<string, FieldMetadata> meta, Func<string, string> wert)
+    {
+        var d = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (feld, m) in meta)
+        {
+            if (m.UserEdited || !FieldSourceRegeln.IstKanalfirma(m.Source)) continue;
             var v = wert(feld);
             if (!string.IsNullOrWhiteSpace(v)) d[feld] = v;
         }
@@ -245,13 +265,15 @@ public sealed class WebGisExportUseCase
     /// Fuehrt einen bereits gebauten Plan aus. <paramref name="probelauf"/> true
     /// (Standard) schreibt nichts. Vor jedem Schreiben wird der WebGIS-Stand frisch
     /// gelesen und die Aenderung nur uebernommen, wenn der Ausgangswert noch passt
-    /// (Konfliktschutz).
+    /// (Konfliktschutz). Angehakte Vorschlaege der Kanalfirma gehoeren zum Plan und werden hier zu
+    /// Aenderungen; nicht Angehaktes geht nie hinaus.
     /// </summary>
     public async Task FuehreAusAsync(
         WebGisExportPlan plan, bool probelauf = true, CancellationToken ct = default,
         Action<WebGisExportPosition>? nachObjekt = null, Action<WebGisSanierungPosition>? nachMassnahme = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        WebGisVorschlagAuswahl.UebernimmGewaehlte(plan);
 
         foreach (var pos in plan.Positionen)
         {

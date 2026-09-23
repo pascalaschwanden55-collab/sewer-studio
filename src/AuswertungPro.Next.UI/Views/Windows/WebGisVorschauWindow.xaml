@@ -151,6 +151,61 @@
         <!-- Je Objekt eine Karte -->
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
             <StackPanel>
+                <!-- Entscheid Pascal 23.09.2026 abends: Werte der Kanalfirma, die im WebGIS anders stehen,
+                     nur zur Auswahl. Nichts ist vorangehakt; nur Angehaktes geht ins WebGIS. -->
+                <Border Background="{DynamicResource WarningSubtleBrush}" BorderBrush="{DynamicResource WarningBrush}"
+                        BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="14,10" Margin="0,0,0,10"
+                        Visibility="{Binding HatVorschlaege, Converter={StaticResource BoolToVis}}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,4">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Button Content="Alle anhaken" Style="{StaticResource ToolbarButton}" Padding="10,2"
+                                        Click="OnAlleVorschlaege" IsEnabled="{Binding Bereit}"
+                                        ToolTip="Hakt alle Abweichungen an. Geschrieben wird erst mit «Jetzt schreiben»."
+                                        AutomationProperties.Name="Alle Abweichungen anhaken"/>
+                                <Button Content="Keine" Style="{StaticResource ToolbarButton}" Padding="10,2" Margin="8,0,0,0"
+                                        Click="OnKeineVorschlaege" IsEnabled="{Binding Bereit}"
+                                        ToolTip="Entfernt alle Haken. Dann wird keine dieser Abweichungen geschrieben."
+                                        AutomationProperties.Name="Keine Abweichung anhaken"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <ui:FluentIcon Glyph="&#xE7BA;" Foreground="{DynamicResource WarningTextBrush}" Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding VorschlaegeTitel}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource WarningTextBrush}"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <TextBlock Text="Werte aus Kanalfirmen-Importen, die im WebGIS anders stehen. Nur was angehakt ist, wird geschrieben — nie automatisch."
+                                   TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
+                        <ItemsControl ItemsSource="{Binding Vorschlaege}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="28"/>
+                                            <ColumnDefinition Width="200"/>
+                                            <ColumnDefinition Width="165"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0" VerticalAlignment="Center"
+                                                  IsChecked="{Binding Gewaehlt, Mode=TwoWay}"
+                                                  IsEnabled="{Binding DataContext.Bereit, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                  ToolTip="Anhaken: dieser Wert der Kanalfirma wird ins WebGIS geschrieben."
+                                                  AutomationProperties.Name="Abweichung anhaken"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Objekt}" TextWrapping="Wrap"
+                                                   VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Feld}" TextWrapping="Wrap"
+                                                   VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Alt}" Foreground="{DynamicResource MutedBrush}"/>
+                                            <TextBlock Text="  →  " Foreground="{DynamicResource MutedBrush}"/>
+                                            <TextBlock Text="{Binding Neu}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
                 <ItemsControl ItemsSource="{Binding Objekte}" ItemTemplate="{StaticResource ObjektTemplate}"/>
                 <TextBlock Text="Keine Unterschiede zum WebGIS — es gibt nichts zu übertragen."
                            Foreground="{DynamicResource MutedBrush}" Margin="4,8,0,0"

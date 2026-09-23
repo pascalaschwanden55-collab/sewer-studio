@@ -152,14 +152,16 @@ public sealed class GeoShopRobusterImportTests
     [InlineData(FieldSource.Pdf)]
     [InlineData(FieldSource.Legacy)]
     [InlineData(FieldSource.Spro)]
-    public void Spaeterer_Protokollimport_setzt_bestaetigte_Katasterwerte_nicht_zurueck(FieldSource quelle)
+    // Entscheid Pascal 23.09.2026 abends (ersetzt die Regel vom 14.09.2026): Die Kanalfirma ist der
+    // Ist-Zustand — ein spaeterer Protokollimport ersetzt einen GeoShop-Wert, eine Handkorrektur nie.
+    public void Spaeterer_Protokollimport_ersetzt_katasterwerte_aber_nie_die_handkorrektur(FieldSource quelle)
     {
         var (p, s, b) = Beispiel(); var plan = Plane(p, s, b);
         plan.Positionen[0].Vergleich!.Felder.Single(w => w.Feld == "Funktion").Uebernehmen = true;
         Anwenden(plan, p, s); s.SetFieldValue("Funktion", "NOD", quelle, false);
-        Assert.Equal("Kontrollschacht", s.GetFieldValue("Funktion"));
-        Assert.NotNull(s.FieldMeta["Funktion"].Conflict);
+        Assert.Equal("NOD", s.GetFieldValue("Funktion"));
         s.SetFieldValue("Funktion", "Meine Korrektur", FieldSource.Manual, true);
+        s.SetFieldValue("Funktion", "Wieder NOD", quelle, false);
         Assert.Equal("Meine Korrektur", s.GetFieldValue("Funktion"));
     }
     [Fact]

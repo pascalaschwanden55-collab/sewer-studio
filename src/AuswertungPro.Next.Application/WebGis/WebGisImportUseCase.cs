@@ -26,6 +26,7 @@ public sealed class WebGisImportUseCase
     {
         ArgumentNullException.ThrowIfNull(projekt);
         var plan = new WebGisImportPlan();
+        var gelesen = new List<(WebGisImportEingabe Eingabe, WebGisImportPosition Position, WebGisLesestand? Stand)>();
 
         foreach (var h in projekt.Data)
         {
@@ -52,7 +53,9 @@ public sealed class WebGisImportUseCase
                     e.Felder[karte.SewerStudioFeld] = new WebGisImportFeld(
                         h.GetFieldValue(karte.SewerStudioFeld), IstErsetzbar(h.FieldMeta.GetValueOrDefault(karte.SewerStudioFeld)),
                         h.FieldMeta.GetValueOrDefault(karte.SewerStudioFeld)?.UserEdited == true);
-            plan.Positionen.Add(await BaueEineAsync(projekt, plan, e, ct).ConfigureAwait(false));
+            var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
+            plan.Positionen.Add(pos);
+            gelesen.Add((e, pos, stand));
         }
         foreach (var s in projekt.SchaechteData)
         {
@@ -83,8 +86,18 @@ public sealed class WebGisImportUseCase
                     s.GetFieldValue(name), IstErsetzbar(s.FieldMeta.GetValueOrDefault(name)),
                     s.FieldMeta.GetValueOrDefault(name)?.UserEdited == true);
             }
-            plan.Positionen.Add(await BaueEineAsync(projekt, plan, e, ct).ConfigureAwait(false));
+            var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
+            plan.Positionen.Add(pos);
+            gelesen.Add((e, pos, stand));
         }
+
+        // Eindeutig heisst auch beim Holen: ein WebGIS-Objekt gehoert zu genau EINEM Datensatz — sonst
+        // bekaemen zwei Datensaetze dieselbe GlobalID. Massnahmen erst danach, nur fuer eindeutige Objekte.
+        WebGisEindeutigkeit.SperreDoppelte(plan.Positionen, p => p.Objektart, p => p.GlobalId ?? p.GespeicherteGlobalId,
+            p => p.Bezeichnung, (p, grund) => p.Sperren.Add(grund), "keines bekommt Werte oder die GlobalID.");
+        foreach (var (e, pos, stand) in gelesen)
+            if (stand is not null && pos.Sperren.Count == 0)
+                await PlaneSanierungenAsync(projekt, plan, e, stand, pos, ct).ConfigureAwait(false);
 
         plan.Hinweise.Add($"{plan.Positionen.Count} Objekte gelesen: {plan.Uebernehmbare} mit Uebernahme, {plan.Gesperrte} gesperrt.");
         if (plan.Positionen.Count > 1 && plan.Positionen.TrueForAll(p => p.Sperren.Exists(s => s.StartsWith("Im WebGIS nicht eindeutig gefunden", StringComparison.Ordinal))))
@@ -92,7 +105,7 @@ public sealed class WebGisImportUseCase
         return plan;
     }
 
-    private async Task<WebGisImportPosition> BaueEineAsync(Project projekt, WebGisImportPlan plan, WebGisImportEingabe e, CancellationToken ct)
+    private async Task<(WebGisImportPosition Position, WebGisLesestand? Stand)> BaueEineAsync(WebGisImportEingabe e, CancellationToken ct)
     {
         WebGisLesestand? stand;
         try
@@ -103,14 +116,14 @@ public sealed class WebGisImportUseCase
         catch (WebGisSitzungException) { throw; }
         catch (Exception ex)
         {
-            var p = new WebGisImportPosition { Objektart = e.Objektart, Bezeichnung = e.Bezeichnung, RecordId = e.RecordId };
+            var p = new WebGisImportPosition
+            {
+                Objektart = e.Objektart, Bezeichnung = e.Bezeichnung, RecordId = e.RecordId, GespeicherteGlobalId = e.GespeicherteGlobalId,
+            };
             p.Sperren.Add("Lesefehler: " + ex.Message);
-            return p;
+            return (p, null);
         }
-        var pos = WebGisImportPlanBuilder.Baue(e, stand);
-        if (stand is not null && pos.Sperren.Count == 0)
-            await PlaneSanierungenAsync(projekt, plan, e, stand, pos, ct).ConfigureAwait(false);
-        return pos;
+        return (WebGisImportPlanBuilder.Baue(e, stand), stand);
     }
 
     /// <summary>
@@ -251,6 +264,9 @@ public sealed class WebGisImportUseCase
                 if (a.Feld == WebGisImportPlanBuilder.FeldWebGisGlobalId)
                 {
                     if (!string.Equals(a.Neu, pos.GlobalId, StringComparison.OrdinalIgnoreCase)) continue;
+                    // Nie an einen zweiten Datensatz derselben Art (Entscheid Pascal 23.09.2026): Traegt schon ein
+                    // anderer diese GlobalID, bleibt dieser ohne — die Vorschau hat das bereits gesperrt.
+                    if (GlobalIdSchonVergeben(projekt, pos.Objektart, pos.RecordId, a.Neu)) continue;
                     if (pos.Objektart == WebGisObjektart.Haltung && haltungen.TryGetValue(pos.RecordId, out var haltung)
                         && string.IsNullOrWhiteSpace(haltung.WebGisGlobalId)
                         && string.Equals(haltung.GetFieldValue(FieldKeys.HoldingName), pos.Bezeichnung, StringComparison.Ordinal))
@@ -314,6 +330,11 @@ public sealed class WebGisImportUseCase
                 && WebGisSanierungImportRegel.LegeAn(projekt, imp)) n++;
         return n;
     }
+
+    private static bool GlobalIdSchonVergeben(Project projekt, WebGisObjektart art, Guid eigene, string globalId)
+        => art == WebGisObjektart.Haltung
+            ? projekt.Data.Any(x => x.Id != eigene && string.Equals(x.WebGisGlobalId, globalId, StringComparison.OrdinalIgnoreCase))
+            : projekt.SchaechteData.Any(x => x.Id != eigene && string.Equals(x.WebGisGlobalId, globalId, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Wert eines Felds der Wurzelakte; ersetzbar, wenn nicht von Hand gesetzt.</summary>
     private static WebGisImportFeld AkteFeld(Project projekt, Guid id, string art, string feldId)

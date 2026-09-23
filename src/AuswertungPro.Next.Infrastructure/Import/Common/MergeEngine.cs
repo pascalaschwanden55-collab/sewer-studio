@@ -157,9 +157,11 @@ public static class MergeEngine
             target.SetFieldValue(field, value, source, userEdited: false);
     }
 
+    // Kataster (GeoShop, QGIS, WebGIS) steht UNTER jedem Import der Kanalfirma: deren Daten sind der
+    // Ist-Zustand (Entscheid Pascal 23.09.2026 abends, ersetzt «Katasterprioritaet» vom 14.09.2026).
     private static int GetPriority(FieldSource source) => source switch
     {
-        FieldSource.Kataster => 90,
+        FieldSource.Kataster => 10,
         FieldSource.Xtf => 80,
         FieldSource.Xtf405 => 80,
         FieldSource.Ili => 70,

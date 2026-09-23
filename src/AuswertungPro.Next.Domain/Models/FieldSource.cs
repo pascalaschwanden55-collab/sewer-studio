@@ -25,19 +25,30 @@ public enum FieldSource
     Manual = 10,
 
     /// <summary>
-    /// Aus dem amtlichen Abwasserkataster nachgeschlagen und vom Bearbeiter
-    /// bestaetigt. Der Schutz vor dem naechsten Import kommt NICHT von dieser
-    /// Herkunft, sondern allein davon, dass beim Uebernehmen
-    /// userEdited: true gesetzt wird — MergeEngine.GetPriority kennt diesen
-    /// Wert nicht und gibt ihm ueber den Fall-through die 0.
+    /// Aus einem Kataster uebernommen: GeoShop, QGIS oder WebGIS. Ergaenzt, was die Kanalfirma
+    /// nicht liefert; ein spaeterer Import der Kanalfirma ersetzt ihn (Entscheid Pascal
+    /// 23.09.2026 abends, <see cref="KatasterFeldschutz"/>). Nur eine Handmarkierung schuetzt.
     /// </summary>
     Kataster = 11,
 
     /// <summary>
     /// Aus der Grundbuchauskunft nachgeschlagen und vom Bearbeiter bestaetigt.
-    /// Fuer den Schutz gilt dasselbe wie bei <see cref="Kataster"/>.
+    /// Geschuetzt ist der Wert nur ueber die Handmarkierung (userEdited).
     /// </summary>
     Grundbuch = 12
+}
+
+/// <summary>Regeln ueber die Herkunft eines Feldwerts.</summary>
+public static class FieldSourceRegeln
+{
+    /// <summary>
+    /// Stammt der Wert aus einem Import der Kanalfirma (Inspektionsdaten, Protokoll)? Diese Werte sind
+    /// der Ist-Zustand (Entscheid Pascal 23.09.2026 abends): Holen und GeoShop ueberschreiben sie nie,
+    /// und weichen sie vom WebGIS ab, werden sie beim Senden zum Anhaken vorgeschlagen.
+    /// </summary>
+    public static bool IstKanalfirma(FieldSource quelle)
+        => quelle is FieldSource.Legacy or FieldSource.Protocol or FieldSource.Xtf or FieldSource.Xtf405
+            or FieldSource.Ili or FieldSource.Pdf or FieldSource.Spro;
 }
 
 
