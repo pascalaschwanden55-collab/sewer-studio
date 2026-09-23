@@ -127,7 +127,10 @@ public sealed class KinsDbfWhitelistEnrichmentService : IKinsDbfWhitelistEnriche
             return;
         if (!string.IsNullOrWhiteSpace(record.GetFieldValue(feld)))
             return;
-        record.SetFieldValue(feld, wert.Trim());
+        // Herkunft Kanalfirma wie im Haltungsweg (Audit A16, 23.09.2026): Mit dem einfachen Setter hiess der
+        // Wert «Manual» ohne Handmarke und fiel beim Senden ins WebGIS aus der Vorschlagsliste. Die DBF bleibt
+        // die schwaechste Quelle und fuellt weiterhin nur leere Felder (Entscheid 23.09.2026 spaet).
+        record.SetFieldValue(feld, wert.Trim(), FieldSource.Legacy, userEdited: false);
     }
 
     // ------------------------------------------------------------------

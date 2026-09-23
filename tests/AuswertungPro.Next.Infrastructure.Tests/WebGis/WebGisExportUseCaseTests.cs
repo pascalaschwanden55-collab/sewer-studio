@@ -262,8 +262,13 @@ public sealed partial class WebGisExportUseCaseTests
             return stand;
         }
 
-        public Task<WebGisSchreibErgebnis> SchreibeAsync(WebGisObjektart art, string globalId, IReadOnlyDictionary<string, string> felder, CancellationToken ct = default)
+        /// <summary>Der zuletzt beim Schreiben uebergebene erwartete Ausgangsstand (Audit A04).</summary>
+        public IReadOnlyDictionary<string, string?>? LetzterErwarteterStand { get; private set; }
+        public int MassnahmenAngelegt { get; private set; }
+
+        public Task<WebGisSchreibErgebnis> SchreibeAsync(WebGisObjektart art, string globalId, IReadOnlyDictionary<string, string> felder, CancellationToken ct = default, IReadOnlyDictionary<string, string?>? erwarteterStand = null)
         {
+            LetzterErwarteterStand = erwarteterStand;
             var res = Schreibe(globalId, felder);
             if (res.Erfolg)
             {
@@ -282,7 +287,10 @@ public sealed partial class WebGisExportUseCaseTests
             => Task.FromResult<WebGisSanierungKatalog?>(null);
 
         public Task<WebGisSchreibErgebnis> ErstelleSanierungAsync(WebGisObjektart art, string elternGlobalId, IReadOnlyDictionary<string, string> felder, CancellationToken ct = default)
-            => Task.FromResult(WebGisSchreibErgebnis.Ok("1"));
+        {
+            MassnahmenAngelegt++;
+            return Task.FromResult(WebGisSchreibErgebnis.Ok("1"));
+        }
 
         public Task<IReadOnlyList<(string Key, string Text)>?> LeseKatalogListeAsync(WebGisObjektart art, string refId, string filter, string? subtyp = null, CancellationToken ct = default)
         {

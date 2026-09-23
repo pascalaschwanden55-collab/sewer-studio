@@ -77,6 +77,39 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
     }
 
     [JunctionFact]
+    public async Task Ordner_der_zur_verknuepfung_wird_behaelt_seine_bisherige_sicherung()
+    {
+        // Audit A01 (23.09.2026): Wird ein gesicherter Ordner in der Quelle durch eine Verknuepfung ersetzt
+        // (etwa beim Auslagern), ueberspringt die Sicherung ihn richtig — sie darf aber seine alte Kopie nicht
+        // loeschen. Mit nur einem behaltenen Stand waere die Kopie sonst endgueltig weg.
+        var source = Path.Combine(_root, "quelle");
+        var backupRoot = Path.Combine(_root, "backup");
+        var foreign = Path.Combine(_root, "ausgelagert");
+        Directory.CreateDirectory(Path.Combine(source, "unter"));
+        File.WriteAllText(Path.Combine(source, "eigen.txt"), "eigen");
+        File.WriteAllText(Path.Combine(source, "unter", "alt.txt"), "alt");
+        var mirror = new DirectoryMirror(null);
+
+        await mirror.MirrorSourceAsync(new BackupSource(source, "Programm"), backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase), new DirectoryMirror.MirrorStats());
+        Assert.True(File.Exists(Path.Combine(backupRoot, "Programm", "unter", "alt.txt")));
+
+        Directory.Move(Path.Combine(source, "unter"), foreign);
+        File.WriteAllText(Path.Combine(foreign, "neu.txt"), "neu");
+        CreateDirectoryLinkOrSkip(Path.Combine(source, "unter"), foreign);
+
+        var erwartet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var stats = new DirectoryMirror.MirrorStats();
+        await mirror.MirrorSourceAsync(new BackupSource(source, "Programm"), backupRoot, erwartet, stats);
+        mirror.RemoveOrphans(backupRoot, erwartet, stats);
+
+        Assert.True(File.Exists(Path.Combine(backupRoot, "Programm", "unter", "alt.txt")));  // alte Kopie bleibt
+        Assert.False(File.Exists(Path.Combine(backupRoot, "Programm", "unter", "neu.txt"))); // Verknuepfung nicht gelesen
+        Assert.Contains(stats.Warnings, w => w.Contains("unter", StringComparison.OrdinalIgnoreCase));
+        Assert.Empty(stats.Errors);
+    }
+
+    [JunctionFact]
     public void RemoveOrphans_Junction_im_spiegel_loescht_keine_fremden_dateien()
     {
         var backupRoot = Path.Combine(_root, "backup");

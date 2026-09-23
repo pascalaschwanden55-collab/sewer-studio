@@ -46,10 +46,13 @@ public interface IGeonisWebGisClient
     /// <summary>
     /// Schreibt die genannten Felder (refId -&gt; Wert; Combo als Ganzzahl-Schluessel
     /// als Text) am Objekt mit der GlobalID. GEONIS prueft die Norm-Regeln.
+    /// <paramref name="erwarteterStand"/>: der bestaetigte Ausgangsstand (alle Maskenfelder). Weicht
+    /// der Stand beim letzten Lesen vor dem Senden davon ab, wird nichts gesendet (Audit A04, 23.09.2026).
     /// </summary>
     Task<WebGisSchreibErgebnis> SchreibeAsync(
         WebGisObjektart art, string globalId,
-        IReadOnlyDictionary<string, string> felder, CancellationToken ct = default);
+        IReadOnlyDictionary<string, string> felder, CancellationToken ct = default,
+        IReadOnlyDictionary<string, string?>? erwarteterStand = null);
 
     /// <summary>
     /// Liest die Combo-Kataloge der Maske "Sanierungsmassnahme" (leeres Objekt am

@@ -245,7 +245,8 @@ public static class WebGisExportPlanBuilder
         // keine Faltung, keine Punkt-Regel. Was die Projektpruefung als «kein WebGIS-Begriff» meldet,
         // wird so auch nie gesendet; ein doppelter Eintrag in der Maskenliste sperrt das Feld.
         if (karte.HauptRefId is null
-            && AuswertungPro.Next.Domain.Models.WebGisBegriffe.Fuer(e.Objektart == WebGisObjektart.Schacht, feldName) is { } webgisListe)
+            // Der Katalogname der Karte, nicht die Vorlagenschreibweise («STATUS») — sonst fiele das Feld aus der Regel (Audit A14).
+            && AuswertungPro.Next.Domain.Models.WebGisBegriffe.Fuer(e.Objektart == WebGisObjektart.Schacht, karte.SewerStudioFeld) is { } webgisListe)
         {
             if (!webgisListe.Kennt(wert))
             {

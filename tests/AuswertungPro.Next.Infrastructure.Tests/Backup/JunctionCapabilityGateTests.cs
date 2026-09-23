@@ -11,7 +11,8 @@ public sealed class JunctionCapabilityGateTests
     [Fact]
     public void Alle_Verknuepfungsschutztests_sind_registriert_und_ausfuehrbar()
     {
-        const int expectedJunctionFacts = 92; // Zusaetzlich sieben Schutzfaelle der Haltungsumbenennung.
+        const int expectedJunctionFacts = 94; // Zusaetzlich sieben Schutzfaelle der Haltungsumbenennung;
+                                              // zwei fuer «Ordner wird zur Verknuepfung» (Audit A01, 23.09.2026).
 
         var actualJunctionFacts = typeof(JunctionCapabilityGateTests).Assembly
             .GetTypes()

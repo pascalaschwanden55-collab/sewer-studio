@@ -209,12 +209,31 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     /// </summary>
     private string? AlsWebGisBegriff(string fieldName, string? value)
     {
-        if (!string.Equals(fieldName, WebGisBegriffe.SchachtFunktion, StringComparison.Ordinal))
-            return WebGisBegriffe.Fuer(true, fieldName) is { } liste ? liste.Normalisieren(value) : value;
+        // Audit A14: Schachtfelder heissen nach der Vorlagen-Kopfzeile («STATUS», «Status »). Erst den
+        // Katalognamen finden, sonst bliebe «in_Betrieb» stehen und ginge an der Senderegel vorbei.
+        var feld = WebGisFeldname(fieldName);
+        if (feld is null)
+            return value;
+        if (!string.Equals(feld, WebGisBegriffe.SchachtFunktion, StringComparison.Ordinal))
+            return WebGisBegriffe.Fuer(true, feld) is { } liste ? liste.Normalisieren(value) : value;
         var art = GetFieldValue(SchachtFeldnamen.Feld(this, FieldKeys.ShaftStructureType));
         return AbwasserbauwerkVokabular.Klasse(art, value) == "Normschacht"
-            ? WebGisBegriffe.Normalisieren(true, fieldName, value)
+            ? WebGisBegriffe.Normalisieren(true, feld, value)
             : value;
+    }
+
+    /// <summary>Der Katalogname des WebGIS-Felds zu einer Vorlagenschreibweise, oder null.</summary>
+    private static string? WebGisFeldname(string fieldName)
+    {
+        var gefaltet = SchachtFeldnamen.Falte(fieldName);
+        if (gefaltet.Length == 0)
+            return null;
+        if (string.Equals(gefaltet, SchachtFeldnamen.Falte(WebGisBegriffe.SchachtFunktion), StringComparison.Ordinal))
+            return WebGisBegriffe.SchachtFunktion;
+        foreach (var feld in WebGisBegriffe.SchachtFelder)
+            if (string.Equals(gefaltet, SchachtFeldnamen.Falte(feld), StringComparison.Ordinal))
+                return feld;
+        return null;
     }
 
     private FeldSchreibErgebnis WriteField(string fieldName, string? value, FieldSource source, bool? userEdited)

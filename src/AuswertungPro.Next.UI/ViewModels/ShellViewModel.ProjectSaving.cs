@@ -1,4 +1,5 @@
 using System.IO;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.ViewModels;
 
@@ -336,6 +337,15 @@ public sealed partial class ShellViewModel
         }
 
         path = NormalizeProjectPath(path);
+
+        // Nur im selben Projektordner (Audit A08/A02, Entscheid 23.09.2026): Medien, Kosten und Dossiers liegen
+        // dort; in einem anderen Ordner faende das Projekt keines davon mehr.
+        if (SpeichernUnterRegel.Sperrgrund(HasPersistedProject ? _sp.Settings.LastProjectPath : null, path) is { } sperrgrund)
+        {
+            _sp.Dialogs.Warn(sperrgrund, "Speichern unter");
+            SetStatus("Speichern unter abgebrochen");
+            return false;
+        }
 
         // Transaktionale Reihenfolge (Audit P0-5b): ZUERST tatsaechlich speichern. Merkliste,
         // LastProjectPath und "bereit"-Status erst NACH erfolgreichem Schreiben setzen — sonst

@@ -49,7 +49,8 @@ public static class DataPageHydraulikReportCalculator
             return null;
 
         var dn = availability.DnMm!.Value;
-        var material = HydraulikMaterialCatalog.Resolve(
+        // Ein Rohrmaterial ohne Rauheitswert rechnet mit der Einstellung — und der Bericht sagt das (Audit A13).
+        var (material, materialHinweis) = HydraulikMaterialCatalog.ResolveMitHinweis(
             record.GetFieldValue(FieldKeys.PipeMaterial),
             panel.MaterialKey);
         var kb = panel.IsNeuzustand ? material.KbNeu : material.KbAlt;
@@ -70,6 +71,7 @@ public static class DataPageHydraulikReportCalculator
         panel.MaterialKey = material.Key;
         saveSettings?.Invoke();
 
-        return HydraulikCalcResultMapper.ToReportResult(input, result, material.Label);
+        var materialText = materialHinweis is null ? material.Label : $"{material.Label} ({materialHinweis})";
+        return HydraulikCalcResultMapper.ToReportResult(input, result, materialText);
     }
 }

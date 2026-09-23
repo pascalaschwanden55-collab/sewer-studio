@@ -285,7 +285,7 @@ public sealed class PlaywrightWebGisAnmeldung : IWebGisZugangQuelle, IAsyncDispo
 
     public async Task SchliessenAsync()
     {
-        try { if (_context is not null) await _context.CloseAsync().ConfigureAwait(false); } catch (PlaywrightException) { }
+        try { if (_context is not null) await _context.CloseAsync().ConfigureAwait(false); } catch (PlaywrightException) { /* Browser schon zu: nichts mehr zu schliessen. */ }
         _playwright?.Dispose();
         _page = null; _context = null; _playwright = null;
         AktuellerZugang = null;

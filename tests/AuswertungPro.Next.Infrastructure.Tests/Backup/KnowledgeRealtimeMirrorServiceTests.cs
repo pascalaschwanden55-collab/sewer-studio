@@ -182,6 +182,26 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
     }
 
     [JunctionFact]
+    public async Task SynchronizeNowAsync_ordner_der_zur_verknuepfung_wird_behaelt_seine_spiegelkopie()
+    {
+        // Audit A01 (23.09.2026): Im KI-Spiegel geschah dasselbe wie in der Vollsicherung, nur ohne Warnung.
+        var source = Path.Combine(_root, "source");
+        var target = Path.Combine(_root, "target");
+        var foreign = Path.Combine(_root, "ausgelagert");
+        Directory.CreateDirectory(Path.Combine(source, "gold_frames"));
+        await File.WriteAllTextAsync(Path.Combine(source, "gold_frames", "gold_1.jpg"), "gold");
+
+        using var service = CreateService(source, target);
+        await service.SynchronizeNowAsync();
+        Directory.Move(Path.Combine(source, "gold_frames"), foreign);
+        CreateDirectoryLinkOrSkip(Path.Combine(source, "gold_frames"), foreign);
+
+        await service.SynchronizeNowAsync();
+
+        Assert.True(File.Exists(Path.Combine(target, "gold_frames", "gold_1.jpg")));
+    }
+
+    [JunctionFact]
     public async Task SynchronizeNowAsync_Zielroot_als_Junction_schreibt_nichts_nach_aussen()
     {
         var source = Path.Combine(_root, "source");

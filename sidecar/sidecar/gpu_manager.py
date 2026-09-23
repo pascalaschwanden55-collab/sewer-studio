@@ -248,6 +248,10 @@ class GpuModelManager:
         # Gerade LADENDE Slots mit ihrer geschaetzten GB-Reservierung (Paket 2/B4):
         # zwei Modelle duerfen nicht gleichzeitig denselben freien VRAM zugelassen bekommen.
         self._inflight_loads: dict[ModelSlot, float] = {}
+        # Zaehlt jede beendete Ladung (Audit A11, 23.09.2026): Die VRAM-Messung laeuft ausserhalb
+        # der Sperre. Endet dazwischen eine fremde Ladung, ist ihr Speicher belegt, ihre
+        # Reservierung aber schon weg — die alte Messung ist dann zu hoch und wird wiederholt.
+        self._ladungen_beendet = 0
         self._watchdog: InferenceWatchdog | None = None
 
     # ── Public API ──────────────────────────────────────────────────────
@@ -314,6 +318,7 @@ class GpuModelManager:
             finally:
                 with self._global_lock:
                     self._inflight_loads.pop(slot, None)
+                    self._ladungen_beendet += 1
 
             state = SlotState(
                 model=model,
@@ -615,8 +620,13 @@ class GpuModelManager:
         required = estimate + VRAM_RESERVE_GB
         warned = False
         while True:
+            with self._global_lock:
+                stand = self._ladungen_beendet
             free = self._device_free_vram_gb()
             with self._global_lock:
+                if self._ladungen_beendet != stand:
+                    # Eine fremde Ladung endete waehrend der Messung: neu messen (Audit A11).
+                    continue
                 inflight = sum(self._inflight_loads.values())
                 effective = None if free is None else free - inflight
                 if effective is None or effective >= required:

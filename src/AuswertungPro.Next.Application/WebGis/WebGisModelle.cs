@@ -107,6 +107,11 @@ public sealed class WebGisExportPosition
 
     /// <summary>Wird vom Ablauf gesetzt: true nach erfolgreichem Schreiben.</summary>
     public bool Geschrieben { get; set; }
+    /// <summary>
+    /// Der Server hat das Schreiben bestaetigt — unabhaengig davon, ob die Nachkontrolle danach ein
+    /// verworfenes Feld findet oder selbst scheitert (Audit A05/A06, 23.09.2026).
+    /// </summary>
+    public bool VomServerBestaetigt { get; set; }
     /// <summary>Wird vom Ablauf gesetzt: Fehlertext bei fehlgeschlagenem Schreiben.</summary>
     public string? SchreibFehler { get; set; }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
@@ -261,6 +262,45 @@ public static class EvalContaminationGuard
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Strenge Fassung fuer die Wissenssuche (Audit A10, 23.09.2026). Ein konfigurierter, aber fehlender
+    /// Ordner ergab bei <see cref="LoadEvalHaltungKeys"/> eine leere Liste — die Suche lieferte reservierte
+    /// Pruefhaltungen danach als Vergleichswissen. Hier gilt: nur ein bewusst leerer Eintrag schaltet den
+    /// Schutz ab; fehlender Ordner, unlesbare Kandidatendatei oder keine einzige Haltungskennung sind Fehler.
+    /// </summary>
+    public static IReadOnlySet<string> LoadEvalHaltungKeysStrict(string? evalSetRoot)
+    {
+        if (string.IsNullOrWhiteSpace(evalSetRoot))
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var fullRoot = Path.GetFullPath(evalSetRoot);
+        if (!Directory.Exists(fullRoot))
+            throw new DirectoryNotFoundException($"Der konfigurierte Prüfdaten-Ordner fehlt: {fullRoot}");
+
+        foreach (var setRoot in EnumerateEvalSetRoots(fullRoot))
+        {
+            var candidatesPath = Path.Combine(setRoot, "_candidates.json");
+            if (!File.Exists(candidatesPath))
+                continue;
+            JsonNode? node;
+            try
+            {
+                node = JsonNode.Parse(File.ReadAllText(candidatesPath));
+            }
+            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+            {
+                throw new InvalidDataException($"Prüfdaten-Datei nicht lesbar: {candidatesPath} ({ex.Message})", ex);
+            }
+            if (node is not JsonArray && !(node is JsonObject o && o["candidates"] is JsonArray))
+                throw new InvalidDataException($"Prüfdaten-Datei ohne Kandidatenliste: {candidatesPath}");
+        }
+
+        var keys = LoadEvalHaltungKeys(fullRoot);
+        if (keys.Count == 0)
+            throw new InvalidDataException($"Der Prüfdaten-Ordner enthält keine Haltungskennungen: {fullRoot}");
+        return keys;
     }
 
     private static IReadOnlyList<string> EnumerateEvalSetRoots(string evalSetRoot)

@@ -90,3 +90,39 @@ def test_echte_sperrdatei_enthaelt_die_erwarteten_unpruefbaren_pins():
     assert len(pruefbar) > 50
     namen = " ".join(uebersprungen).lower()
     assert "torch" in namen and "sam-2" in namen
+
+
+# Audit A18 (23.09.2026): pip-audit nannte dieselbe Luecke einmal unter der GHSA- und einmal unter der
+# PYSEC-Kennung. Verglichen wurde nur die Hauptkennung — die Luecke galt als NEU und die Ausnahme
+# gleichzeitig als VERALTET, die CI war bei jedem Lauf rot.
+
+def test_bekannte_luecke_unter_anderer_offizieller_kennung_bleibt_bekannt():
+    funde = [{"paket": "transformers", "version": "4.57.6", "id": "PYSEC-2026-3929",
+              "aliases": ["GHSA-xrqw-3rrv-vx5w", "CVE-2026-9856"], "fix": []}]
+    ausnahmen = [{"paket": "transformers", "id": "GHSA-xrqw-3rrv-vx5w"}]
+
+    unerlaubt, veraltet = audit_lock.bewerte(funde, ausnahmen)
+
+    assert (unerlaubt, veraltet) == ([], [])
+
+
+def test_alias_eines_anderen_pakets_zaehlt_nicht():
+    funde = [{"paket": "requests", "version": "2.34.2", "id": "PYSEC-2026-3929",
+              "aliases": ["GHSA-xrqw-3rrv-vx5w"], "fix": []}]
+    ausnahmen = [{"paket": "transformers", "id": "GHSA-xrqw-3rrv-vx5w"}]
+
+    unerlaubt, veraltet = audit_lock.bewerte(funde, ausnahmen)
+
+    assert unerlaubt == funde
+    assert veraltet == ausnahmen
+
+
+def test_echt_neue_luecke_bleibt_trotz_aliasen_gesperrt():
+    funde = [{"paket": "transformers", "version": "4.57.6", "id": "PYSEC-2026-9999",
+              "aliases": ["GHSA-neu0-0000-0000"], "fix": []}]
+    ausnahmen = [{"paket": "transformers", "id": "GHSA-xrqw-3rrv-vx5w"}]
+
+    unerlaubt, veraltet = audit_lock.bewerte(funde, ausnahmen)
+
+    assert unerlaubt == funde
+    assert veraltet == ausnahmen

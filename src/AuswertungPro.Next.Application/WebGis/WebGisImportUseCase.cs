@@ -172,6 +172,17 @@ public sealed class WebGisImportUseCase
         const string Grund = "Im WebGIS seit der Vorschau geändert — nicht übernommen, bitte neu prüfen.";
         var gestoppt = 0;
 
+        // Audit A07 (23.09.2026): Zeigt inzwischen ein ANDERER Datensatz auf dasselbe WebGIS-Objekt, wird die
+        // ganze Position gestoppt — Kennung, Fachwerte und Akten —, nicht nur die Kennungszeile.
+        foreach (var pos in plan.Positionen)
+        {
+            if (pos.Sperren.Count > 0 || string.IsNullOrWhiteSpace(pos.GlobalId)) continue;
+            if (!GlobalIdSchonVergeben(projekt, pos.Objektart, pos.RecordId, pos.GlobalId!)) continue;
+            pos.Sperren.Add($"Ein anderer Datensatz im Projekt zeigt inzwischen auf {WebGisEindeutigkeit.Kennwort} "
+                            + $"(GlobalID {pos.GlobalId}) — nicht übernommen. Doppelten Datensatz im Projekt bereinigen.");
+            gestoppt++;
+        }
+
         var elternMitMassnahme = plan.Sanierungen.Where(s => s.Uebernehmbar).Select(s => (s.Objektart, s.ElternRecordId)).ToHashSet();
         foreach (var pos in plan.Positionen)
         {
@@ -256,6 +267,8 @@ public sealed class WebGisImportUseCase
                 || !string.IsNullOrWhiteSpace(gespeicherteId)
                    && !string.Equals(gespeicherteId, pos.GlobalId, StringComparison.OrdinalIgnoreCase))
                 continue;
+            // Zeigt ein anderer Datensatz auf dasselbe WebGIS-Objekt, bekommt diese Position gar nichts (A07).
+            if (GlobalIdSchonVergeben(projekt, pos.Objektart, pos.RecordId, pos.GlobalId!)) continue;
             gueltigeEltern.Add((pos.Objektart, pos.RecordId));
             if (!pos.Uebernehmbar) continue;
             var geaendert = false;

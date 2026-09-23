@@ -30,15 +30,22 @@ public static class GuardedRetrievalFactory
 
     /// <summary>
     /// Erzeugt die Suche mit der Sperrliste. Ohne eigenen Root gilt der zentral
-    /// gesetzte Standard. Ein fehlender Root liefert eine leere Liste — dasselbe
-    /// Verhalten wie bisher, denn dann sind auch keine Pruefdaten reserviert.
+    /// gesetzte Standard. Ein leerer Root schaltet den Schutz bewusst ab; ein fehlender
+    /// oder unlesbarer Ordner wirft (<see cref="Sperrliste"/>).
     /// </summary>
     public static RetrievalService Create(
         KnowledgeBaseContext db,
         EmbeddingService embedder,
         string? evalSetRoot = null)
-        => new(db, embedder,
-            EvalContaminationGuard.LoadEvalHaltungKeys(evalSetRoot ?? _defaultEvalSetRoot));
+        => new(db, embedder, Sperrliste(evalSetRoot ?? _defaultEvalSetRoot));
+
+    /// <summary>
+    /// Die Sperrliste der reservierten Pruefhaltungen (Audit A10, 23.09.2026). Leer nur bei bewusst leerem
+    /// Eintrag; ein fehlender Ordner, eine unlesbare Datei oder keine Kennung wirft — dann entsteht keine
+    /// Suche, und die KI arbeitet ohne Vergleichswissen statt mit reservierten Pruefhaltungen.
+    /// </summary>
+    public static IReadOnlySet<string> Sperrliste(string? evalSetRoot)
+        => EvalContaminationGuard.LoadEvalHaltungKeysStrict(evalSetRoot);
 
     /// <summary>Fuer Aufrufer, welche die Sperrliste bereits geladen haben.</summary>
     public static RetrievalService Create(

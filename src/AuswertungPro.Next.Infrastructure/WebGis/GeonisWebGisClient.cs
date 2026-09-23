@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -43,7 +44,8 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
 
     public async Task<WebGisSchreibErgebnis> SchreibeAsync(
         WebGisObjektart art, string globalId,
-        IReadOnlyDictionary<string, string> felder, CancellationToken ct = default)
+        IReadOnlyDictionary<string, string> felder, CancellationToken ct = default,
+        IReadOnlyDictionary<string, string?>? erwarteterStand = null)
     {
         if (felder.Count == 0) return WebGisSchreibErgebnis.Ok();
         var z = _zugang();
@@ -62,7 +64,23 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
         // Letzte Tuer (Entscheid Pascal 23.09.2026): Eigentum, Betreiber, Laenge, Baujahr, GlobalID und
         // Objekt-ID werden nie ueberschrieben — geprueft gegen den eben gelesenen Stand, damit auch ein
         // inzwischen im WebGIS eingetragenes Baujahr nicht ueberschrieben wird.
-        var jetzt = StandAus(data, globalId, string.Empty, listeRef: null);
+        // Derselbe Ausschnitt wie beim Lesen (Massnahmenliste nicht als Feld), sonst gaebe es Scheinkonflikte.
+        var jetzt = StandAus(data, globalId, string.Empty, WebGisSanierungFeldkarte.ListeRef(art));
+
+        // Auch dieses letzte Lesen prueft gegen den bestaetigten Stand (Audit A04, 23.09.2026): Aendert jemand
+        // das Objekt genau zwischen der Pruefung im Ablauf und hier, wird nicht gesendet. Ein Restfenster bis
+        // zum Senden bleibt — ohne Versionspruefung des Servers laesst es sich nicht schliessen.
+        if (erwarteterStand is not null)
+        {
+            var abweichend = WebGisStandVergleich.Abweichungen(erwarteterStand, jetzt.Felder);
+            if (abweichend.Count > 0)
+            {
+                var namen = string.Join(", ", abweichend.Take(5).Select(r => WebGisStandVergleich.Anzeigename(art, r)));
+                return WebGisSchreibErgebnis.Fehlgeschlagen(
+                    $"Objekt wurde im WebGIS seit der Prüfung geändert ({namen}) — nicht geschrieben, bitte neu prüfen.");
+            }
+        }
+
         var verstoesse = WebGisGeschuetzteFelder.Verstoesse(art, felder, jetzt.Feld);
         if (verstoesse.Count > 0)
             return WebGisSchreibErgebnis.Fehlgeschlagen(string.Join(" ", verstoesse));
@@ -418,7 +436,7 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
                 && doc.RootElement.TryGetProperty("faultstring", out var f) && f.ValueKind == JsonValueKind.String)
                 return f.GetString() ?? "WebGIS-Sitzung ungueltig.";
         }
-        catch (JsonException) { }
+        catch (JsonException) { /* Kein JSON (etwa die ADFS-Anmeldeseite): allgemeine Meldung unten. */ }
         return "WebGIS-Sitzung ungueltig.";
     }
 }

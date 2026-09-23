@@ -31,22 +31,39 @@ public sealed partial class ServiceProvider
             var knowledgeSampleCountRead = false;
 
             RetrievalService? retrieval = null;
+            string? evalSchutzFehler = null;
             try
             {
+                // Auditbefund 11: Der Pruefdaten-Root gilt fuer JEDE spaeter erzeugte Suche — auch fuer
+                // die Vollprotokoll-Erstellung, die ihre eigene aufbaut. Audit A10: VOR der Pruefung setzen,
+                // damit auch deren Suche an einem fehlenden Ordner scheitert statt ohne Sperrliste zu laufen.
+                GuardedRetrievalFactory.ConfigureDefaultEvalSetRoot(settings.EvalSetRoot);
+
                 if (!knowledgeHealth.IsHealthy)
                     throw new InvalidDataException(knowledgeHealth.Error ?? "SQLite quick_check fehlgeschlagen.");
+
+                // Audit Fix #6a: Eval-Haltungs-Sperrliste auch leseseitig anwenden (Defense-in-Depth,
+                // gleiche Quelle wie der Schreib-Guard) -> kontaminierte Samples kommen nie als Few-Shot.
+                // Audit A10 (23.09.2026): streng — ein fehlender oder unlesbarer Pruefdaten-Ordner ist
+                // ein Fehler. Dann keine Suche (ohne Vergleichswissen) und eine sichtbare Meldung.
+                IReadOnlySet<string> evalHaltungKeys;
+                try
+                {
+                    evalHaltungKeys = GuardedRetrievalFactory.Sperrliste(settings.EvalSetRoot);
+                }
+                catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+                {
+                    evalSchutzFehler =
+                        "Die Sperrliste der reservierten Prüfhaltungen fehlt. Die KI arbeitet vorerst ohne Vergleichswissen.\n" +
+                        $"{ex.Message}\n" +
+                        "Prüfdaten-Ordner in den Einstellungen prüfen (leer lassen schaltet den Schutz bewusst ab).";
+                    throw;
+                }
 
                 var ollamaConfig = aiPlatform.ToOllamaConfig();
                 var kbHttp = new HttpClient { Timeout = ollamaConfig.RequestTimeout };
                 var kbCtx = new KnowledgeBaseContext(KnowledgeDbPath);
                 var embedder = new EmbeddingService(kbHttp, ollamaConfig);
-                // Audit Fix #6a: Eval-Haltungs-Sperrliste auch leseseitig anwenden (Defense-in-Depth,
-                // gleiche Quelle wie der Schreib-Guard) -> kontaminierte Samples kommen nie als Few-Shot.
-                var evalHaltungKeys = AuswertungPro.Next.Application.Ai.Training.EvalContaminationGuard
-                    .LoadEvalHaltungKeys(settings.EvalSetRoot);
-                // Auditbefund 11: Der Pruefdaten-Root gilt ab hier fuer JEDE spaeter erzeugte
-                // Suche — auch fuer die Vollprotokoll-Erstellung, die ihre eigene aufbaut.
-                GuardedRetrievalFactory.ConfigureDefaultEvalSetRoot(settings.EvalSetRoot);
                 retrieval = GuardedRetrievalFactory.Create(kbCtx, embedder, evalHaltungKeys);
                 retrieval.CheckModelConsistency();
                 if (retrieval.HasModelMismatch)
@@ -93,6 +110,13 @@ public sealed partial class ServiceProvider
             {
                 KnowledgeRootStartupWarning = knowledgeConfigurationWarning;
                 Logger.LogWarning("Wissensdatenbank-Pfadabweichung: {Meldung}", knowledgeConfigurationWarning);
+            }
+            if (evalSchutzFehler is not null)
+            {
+                KnowledgeRootStartupWarning = KnowledgeRootStartupWarning is null
+                    ? evalSchutzFehler
+                    : KnowledgeRootStartupWarning + "\n\n" + evalSchutzFehler;
+                Logger.LogWarning("Pruefdaten-Sperrliste nicht geladen: {Meldung}", evalSchutzFehler);
             }
             settings.RecordKnowledgeRootStart(
                 KnowledgeRoot,

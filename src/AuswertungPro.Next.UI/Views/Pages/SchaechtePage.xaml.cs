@@ -218,7 +218,11 @@ public partial class SchaechtePage : UserControl
                                 spec.AddCommand)
                             : null,
                         useSelectedItemWhenNotFreeText: spec.Managed,
-                        itemsBinding: SchachtNormoptionen.FuerSpalte(col));
+                        // Ohne eigene Liste: Altwert der Zeile hinten anhaengen, sonst erscheint er leer (A15).
+                        itemsBinding: SchachtNormoptionen.FuerSpalte(col)
+                                      ?? (!spec.Managed && !spec.AllowFreeText
+                                          ? SchachtTabellenAuswahl.FuerSpalte(col, spec.ItemsSourcePath)
+                                          : null));
                 }
                 else
                 {
@@ -536,6 +540,8 @@ public partial class SchaechtePage : UserControl
         var value = DataGridEditedTextValueResolver.ResolveComboBoxValue(combo);
         if (string.IsNullOrWhiteSpace(value))
             return;
+        // Nur echte Aenderungen: Blosses Verlassen stempelte sonst eine Handmarke (Audit A15).
+        if (!SchachtTabellenAuswahl.IstAenderung(record.GetFieldValue(tag.RecordField), value)) return;
 
         record.SetFieldValue(tag.RecordField, value, FieldSource.Manual, userEdited: true);
         vm.EnsureOptionForField(tag.OptionField, value);

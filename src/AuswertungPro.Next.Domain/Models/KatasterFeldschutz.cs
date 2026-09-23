@@ -7,7 +7,8 @@ namespace AuswertungPro.Next.Domain.Models;
 ///
 /// Entscheid Pascal 23.09.2026 abends (ersetzt die Regel vom 14.09.2026): Die Daten der Kanalfirma sind
 /// der Ist-Zustand. Ein Import ersetzt deshalb einen Katasterwert — gleich ueber welchen Weg er schreibt
-/// (auch der einfache Schreibweg am Schacht, den z.B. die KINS-Anreicherung nimmt). Eine Handkorrektur
+/// (auch der einfache Schreibweg am Schacht). Ausgenommen ist nur, was ein Importweg selbst bewusst nur
+/// ergaenzt: Die KINS-DBF-Anreicherung ist die schwaechste Quelle und fuellt nur leere Felder. Eine Handkorrektur
 /// schuetzt der Datensatz selbst (UserEdited) und bleibt immer stehen. Nur ein Wert unbekannter Herkunft
 /// ersetzt keinen Katasterwert; das wird als Konflikt vermerkt.
 ///

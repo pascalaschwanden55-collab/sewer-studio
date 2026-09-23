@@ -149,12 +149,24 @@ public static class DataGridComboColumnFactory
         {
             RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
         });
-        if (allowFreeText || !useSelectedItemWhenNotFreeText)
+        if (allowFreeText)
         {
             comboFactory.SetBinding(ComboBox.TextProperty, new Binding($"Fields[{fieldName}]")
             {
                 Mode = BindingMode.TwoWay,
                 UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+            });
+        }
+        else if (!useSelectedItemWhenNotFreeText)
+        {
+            // Feste Liste ohne Freitext (Schachttabelle, Audit A15 23.09.2026): Nur mit Textsuche waehlt die
+            // ComboBox den gespeicherten Wert aus — ohne blieb die Anzeige leer. Die Bindung geht nur ins
+            // Steuerelement: Geschrieben wird allein ueber den Commit-Handler, der Handmarke und Umwandlung
+            // setzt. Vorher leerte die Wahl des leeren Eintrags das Feld still am Datensatz vorbei.
+            comboFactory.SetValue(ComboBox.IsTextSearchEnabledProperty, true);
+            comboFactory.SetBinding(ComboBox.TextProperty, new Binding($"Fields[{fieldName}]")
+            {
+                Mode = BindingMode.OneWay,
             });
         }
         else

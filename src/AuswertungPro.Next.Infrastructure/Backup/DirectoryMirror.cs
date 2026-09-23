@@ -147,7 +147,14 @@ public sealed class DirectoryMirror
                      source.IsDirExcluded,
                      stats,
                      linksAreErrors: false,
-                     onSkippedFile: skipped => PreserveSkippedSourceFile(source, skipped, expectedTargets)))
+                     onSkippedFile: skipped => PreserveSkippedSourceFile(source, skipped, expectedTargets),
+                     // Ein Ordner, der zur Verknuepfung wurde, wird nicht gelesen — seine bisherige Kopie
+                     // bleibt aber erhalten (Audit A01, 23.09.2026). Sonst loescht RemoveOrphans sie, und mit
+                     // nur einem behaltenen Stand ist sie endgueltig weg.
+                     onSkippedDirectory: skipped => PreserveExistingMirror(
+                         backupRoot,
+                         Path.Combine(source.TargetRelativeRoot, Path.GetRelativePath(source.SourceRoot, skipped)),
+                         expectedTargets)))
         {
             ct.ThrowIfCancellationRequested();
 
@@ -665,7 +672,8 @@ public sealed class DirectoryMirror
         Func<string, bool>? isDirExcluded,
         MirrorStats stats,
         bool linksAreErrors,
-        Action<string>? onSkippedFile = null)
+        Action<string>? onSkippedFile = null,
+        Action<string>? onSkippedDirectory = null)
     {
         var stack = new Stack<string>();
         stack.Push(root);
@@ -732,7 +740,9 @@ public sealed class DirectoryMirror
                 // der weder gespiegelt noch als verwaist geloescht werden darf.
                 if (ReparsePointGuard.IsReparsePoint(children[i]))
                 {
-                    Report(stats, linksAreErrors, $"{children[i]}: Verknuepfung/Junction uebersprungen");
+                    Report(stats, linksAreErrors,
+                        $"{children[i]}: Verknuepfung/Junction uebersprungen - bisherige Sicherungskopie bleibt erhalten");
+                    onSkippedDirectory?.Invoke(children[i]);
                     continue;
                 }
 

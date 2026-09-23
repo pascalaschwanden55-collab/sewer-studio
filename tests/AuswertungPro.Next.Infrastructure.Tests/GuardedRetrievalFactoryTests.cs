@@ -112,6 +112,85 @@ public sealed class GuardedRetrievalFactoryTests : IDisposable
         }
     }
 
+    // Audit A10 (23.09.2026): Ein konfigurierter, aber fehlender Pruefdaten-Ordner lieferte eine leere
+    // Sperrliste — die Suche gab reservierte Pruefhaltungen danach als Vergleichswissen zurueck. Fehlende
+    // oder unlesbare Schutzdaten sind ein Fehler: dann ohne Vergleichswissen, mit Grund. Nur ein bewusst
+    // leerer Eintrag schaltet den Schutz ab.
+
+    private static string NeuerOrdner()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "kb-guard-a10", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        return root;
+    }
+
+    [Fact]
+    public void Gueltige_schutzdaten_ergeben_die_sperrliste()
+    {
+        var root = NeuerOrdner();
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "_candidates.json"), """[{"haltung_key":"287425-81162"}]""");
+            Assert.Contains("287425-81162", GuardedRetrievalFactory.Sperrliste(root));
+        }
+        finally { try { Directory.Delete(root, recursive: true); } catch { } }
+    }
+
+    [Fact]
+    public void Fehlender_konfigurierter_ordner_ist_ein_fehler_und_kein_leerer_schutz()
+    {
+        var fehlt = Path.Combine(Path.GetTempPath(), "kb-guard-a10", Guid.NewGuid().ToString("N"), "eval_set");
+        var ex = Assert.Throws<DirectoryNotFoundException>(() => GuardedRetrievalFactory.Sperrliste(fehlt));
+        Assert.Contains(fehlt, ex.Message);
+    }
+
+    [Fact]
+    public void Unlesbare_kandidatendatei_ist_ein_fehler()
+    {
+        var root = NeuerOrdner();
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "_candidates.json"), "{ kaputt");
+            Assert.Throws<InvalidDataException>(() => GuardedRetrievalFactory.Sperrliste(root));
+        }
+        finally { try { Directory.Delete(root, recursive: true); } catch { } }
+    }
+
+    [Fact]
+    public void Ordner_ohne_schutzdaten_ist_ein_fehler()
+    {
+        var root = NeuerOrdner();
+        try
+        {
+            Assert.Throws<InvalidDataException>(() => GuardedRetrievalFactory.Sperrliste(root));
+        }
+        finally { try { Directory.Delete(root, recursive: true); } catch { } }
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Bewusst_leer_schaltet_den_schutz_ab(string root)
+        => Assert.Empty(GuardedRetrievalFactory.Sperrliste(root));
+
+    [Fact]
+    public void Suche_mit_fehlendem_ordner_entsteht_gar_nicht()
+    {
+        var root = NeuerOrdner();
+        var dbPath = Path.Combine(root, "kb.db");
+        try
+        {
+            using var db = new KnowledgeBaseContext(dbPath);
+            Assert.Throws<DirectoryNotFoundException>(
+                () => GuardedRetrievalFactory.Create(db, Embedder(), Path.Combine(root, "eval_set_fehlt")));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
     [Fact]
     public void Kein_Produktivcode_erzeugt_ein_Retrieval_am_Schutz_vorbei()
     {

@@ -14,6 +14,8 @@ namespace AuswertungPro.Next.Application.WebGis;
 public sealed class WebGisExportUseCase
 {
     private readonly IGeonisWebGisClient _client;
+    /// <summary>Nachgeladene Gruppenlisten je Objektart, Subtyp und Feld/Gruppe — gilt fuer einen Planlauf.</summary>
+    private readonly Dictionary<string, List<(string Key, string Text)>?> _gruppenListen = new(StringComparer.Ordinal);
 
     public WebGisExportUseCase(IGeonisWebGisClient client)
         => _client = client ?? throw new ArgumentNullException(nameof(client));
@@ -37,6 +39,7 @@ public sealed class WebGisExportUseCase
     public async Task<WebGisExportPlan> BauePlanAsync(Project projekt, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(projekt);
+        _gruppenListen.Clear(); // jeder Plan liest die Listen einmal frisch
         var plan = new WebGisExportPlan();
         var kataloge = new Dictionary<WebGisObjektart, WebGisSanierungKatalog?>();
         var gelesen = new List<(WebGisObjektEingabe Eingabe, WebGisExportPosition Position, WebGisLesestand? Stand)>();
@@ -190,7 +193,12 @@ public sealed class WebGisExportUseCase
         ArgumentNullException.ThrowIfNull(e);
         ArgumentNullException.ThrowIfNull(stand);
         var hinweise = new List<string>();
-        foreach (var (feldName, text) in e.Handwerte)
+        // Auch die Werte der Kanalfirma (Audit A09, 23.09.2026): Sonst fehlt eine abweichende Materialangabe in
+        // einer anderen WebGIS-Gruppe still in der Haekchenliste. Ein Handwert auf demselben Feld geht vor.
+        var werte = new List<KeyValuePair<string, string>>(e.Handwerte);
+        foreach (var kv in e.Kanalfirmenwerte)
+            if (!e.Handwerte.ContainsKey(kv.Key)) werte.Add(kv);
+        foreach (var (feldName, text) in werte)
         {
             if (WebGisHandwertKarte.IstEigeneRegel(feldName) || WebGisHandwertKarte.NichtFuerKataster(feldName)
                 || WebGisHandwertKarte.WebGisFuehrt(feldName)) continue;
@@ -217,9 +225,18 @@ public sealed class WebGisExportUseCase
             {
                 var schluessel = WebGisLesestand.GruppenSchluessel(karte.RefId, gruppe);
                 if (stand.KatalogeNachGruppe.ContainsKey(schluessel)) continue;
+                // Die Liste einer Gruppe ist fuer alle Objekte gleicher Art und gleichen Subtyps dieselbe: im
+                // Lauf nur einmal holen (Material der Kanalfirma steht an fast jedem Objekt).
+                var cacheSchluessel = $"{e.Objektart}|{stand.Subtyp}|{schluessel}";
+                if (_gruppenListen.TryGetValue(cacheSchluessel, out var gemerkt))
+                {
+                    if (gemerkt is not null) stand.KatalogeNachGruppe[schluessel] = new List<(string Key, string Text)>(gemerkt);
+                    continue;
+                }
                 try
                 {
                     var liste = await _client.LeseKatalogListeAsync(e.Objektart, karte.RefId, gruppe, stand.Subtyp, ct).ConfigureAwait(false);
+                    _gruppenListen[cacheSchluessel] = liste is null ? null : new List<(string Key, string Text)>(liste);
                     if (liste is not null) stand.KatalogeNachGruppe[schluessel] = new List<(string Key, string Text)>(liste);
                 }
                 catch (WebGisAntwortException ex)
@@ -279,7 +296,9 @@ public sealed class WebGisExportUseCase
         {
             if (!pos.Schreibbar) continue;
             if (probelauf) { pos.Hinweise.Add("Probelauf — nicht geschrieben."); continue; }
-            await GeschuetztAsync(pos, p => SchreibeEineAsync(p, ct), (p, f) => p.SchreibFehler = f, nachObjekt).ConfigureAwait(false);
+            // Ein vom Server bestaetigtes Schreiben bleibt bestaetigt, auch wenn danach etwas scheitert (A06).
+            await GeschuetztAsync(pos, p => SchreibeEineAsync(p, ct), (p, f) => { if (!p.Geschrieben) p.SchreibFehler = f; },
+                nachObjekt, ct).ConfigureAwait(false);
         }
 
         await LegeSanierungenAnAsync(plan, probelauf, ct, nachMassnahme).ConfigureAwait(false);
@@ -340,8 +359,10 @@ public sealed class WebGisExportUseCase
             return;
         }
 
-        var res = await _client.SchreibeAsync(pos.Objektart, pos.GlobalId!, felder, ct).ConfigureAwait(false);
+        // Der eben gepruefte Stand geht bis zum letzten Lesen im Client mit (Audit A04, 23.09.2026).
+        var res = await _client.SchreibeAsync(pos.Objektart, pos.GlobalId!, felder, ct, stand.Felder).ConfigureAwait(false);
         if (!res.Erfolg) { pos.SchreibFehler = res.Fehler; return; }
+        pos.VomServerBestaetigt = true;
         await PruefeNachAsync(pos, ct).ConfigureAwait(false);
     }
 
@@ -364,8 +385,19 @@ public sealed class WebGisExportUseCase
         {
             nachher = await WebGisObjektLesen.LiesAsync(_client, pos.Objektart, pos.Bezeichnung, pos.GespeicherteGlobalId, ct).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
-        catch (WebGisSitzungException) { throw; }
+        catch (OperationCanceledException)
+        {
+            // Bestaetigt ist bestaetigt: Bericht und Zaehlung duerfen das Schreiben nicht verschweigen (A06).
+            pos.Geschrieben = true;
+            pos.Hinweise.Add("Geschrieben (vom Server bestätigt), aber nicht nachgeprüft — Lauf abgebrochen.");
+            throw;
+        }
+        catch (WebGisSitzungException)
+        {
+            pos.Geschrieben = true;
+            pos.Hinweise.Add("Geschrieben (vom Server bestätigt), aber nicht nachgeprüft — WebGIS-Sitzung abgelaufen.");
+            throw;
+        }
         catch (Exception ex)
         {
             pos.Geschrieben = true;
@@ -399,11 +431,19 @@ public sealed class WebGisExportUseCase
     /// nach einem Abbruch weder Bericht noch Log ueber die bereits geschriebenen Objekte).
     /// </summary>
     private static async Task GeschuetztAsync<T>(
-        T pos, Func<T, Task> schritt, Action<T, string> fehler, Action<T>? melde)
+        T pos, Func<T, Task> schritt, Action<T, string> fehler, Action<T>? melde, CancellationToken ct)
     {
         try
         {
             await schritt(pos).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // Kein Abbruch des Benutzers, sondern die Zeitueberschreitung des HttpClient: Der Ausgang dieses
+            // Schritts ist offen. Melden, damit er im Log steht, dann den Lauf beenden — der Server antwortet nicht.
+            fehler(pos, "Zeitüberschreitung beim WebGIS — Ausgang offen, bitte neu prüfen.");
+            melde?.Invoke(pos);
+            throw;
         }
         catch (OperationCanceledException) { throw; }
         catch (WebGisSitzungException ex)
@@ -427,17 +467,35 @@ public sealed class WebGisExportUseCase
     private async Task LegeSanierungenAnAsync(
         WebGisExportPlan plan, bool probelauf, CancellationToken ct, Action<WebGisSanierungPosition>? nachMassnahme)
     {
+        // Elternobjekte, deren Stand in diesem Lauf schon geprueft wurde: Eine eigene Massnahme kann das
+        // Aenderungsdatum des Elternobjekts setzen und darf die naechste Massnahme nicht sperren.
+        var geprueft = new HashSet<Guid>();
         foreach (var san in plan.Sanierungen)
         {
             if (!san.Schreibbar) continue;
             if (probelauf) { san.Hinweise.Add("Probelauf — nicht angelegt."); continue; }
-            var gespeichert = plan.Positionen.Find(p => p.RecordId == san.ElternRecordId && p.Objektart == san.Objektart)
-                ?.GespeicherteGlobalId;
-            await GeschuetztAsync(san, s => LegeEineAnAsync(s, gespeichert, ct), (s, f) => s.SchreibFehler = f, nachMassnahme).ConfigureAwait(false);
+            var eltern = plan.Positionen.Find(p => p.RecordId == san.ElternRecordId && p.Objektart == san.Objektart);
+
+            // Audit A05 (23.09.2026): Sollte das Elternobjekt geschrieben werden und hat der Server das nicht
+            // bestaetigt (Fremdaenderung, Schutzfeld, Namensfehler, Serverfehler), bekommt es auch keine Massnahme.
+            if (eltern is { Schreibbar: true, VomServerBestaetigt: false })
+            {
+                san.SchreibFehler = "Elternobjekt nicht geschrieben (" + (eltern.SchreibFehler ?? "kein Ergebnis")
+                                    + ") — Massnahme nicht angelegt, bitte neu prüfen.";
+                nachMassnahme?.Invoke(san);
+                continue;
+            }
+            // Wurde das Elternobjekt eben bestaetigt geschrieben, ist sein Stand soeben geprueft worden.
+            var vergleich = eltern is { Schreibbar: false } && !geprueft.Contains(san.ElternRecordId) ? eltern.GelesenerStand : null;
+            await GeschuetztAsync(san, s => LegeEineAnAsync(s, eltern?.GespeicherteGlobalId, vergleich, ct),
+                (s, f) => { if (!s.Geschrieben) s.SchreibFehler = f; }, nachMassnahme, ct).ConfigureAwait(false);
+            if (san.Geschrieben) geprueft.Add(san.ElternRecordId);
         }
     }
 
-    private async Task LegeEineAnAsync(WebGisSanierungPosition san, string? gespeicherteElternGlobalId, CancellationToken ct)
+    private async Task LegeEineAnAsync(
+        WebGisSanierungPosition san, string? gespeicherteElternGlobalId,
+        IReadOnlyDictionary<string, string?>? vergleichsStand, CancellationToken ct)
     {
         var stand = await WebGisObjektLesen.LiesAsync(_client, san.Objektart, san.ElternBezeichnung, gespeicherteElternGlobalId, ct).ConfigureAwait(false);
         if (stand is null || !string.Equals(stand.GlobalId, san.ElternGlobalId, StringComparison.OrdinalIgnoreCase))
@@ -449,6 +507,17 @@ public sealed class WebGisExportUseCase
         {
             san.SchreibFehler = namensSperre + " Massnahme nicht angelegt.";
             return;
+        }
+        // Elternobjekt ohne eigene Feldaenderung: Auch hier gilt «geaendert heisst neu pruefen» (A05).
+        if (vergleichsStand is not null)
+        {
+            var abweichend = WebGisStandVergleich.Abweichungen(vergleichsStand, stand.Felder);
+            if (abweichend.Count > 0)
+            {
+                var namen = string.Join(", ", abweichend.Take(5).Select(r => WebGisStandVergleich.Anzeigename(san.Objektart, r)));
+                san.SchreibFehler = $"Elternobjekt wurde im WebGIS seit der Prüfung geändert ({namen}) — Massnahme nicht angelegt, bitte neu prüfen.";
+                return;
+            }
         }
         if (stand.Sanierungen.Count > 0)
         {

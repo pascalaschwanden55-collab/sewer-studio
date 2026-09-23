@@ -464,4 +464,45 @@ public sealed class GeonisWebGisClientTests
         Assert.True(res.Erfolg, res.Fehler);
         Assert.Contains("\"value\":\"1970\"", Uri.UnescapeDataString(h.LetzterSaveBody!));
     }
+
+    [Fact]
+    public async Task SchreibeAsync_sendet_nichts_wenn_der_letzte_stand_vom_erwarteten_abweicht()
+    {
+        // Audit A04 (23.09.2026): Die Fremdaenderung kommt genau zwischen der Pruefung im Ablauf und dem
+        // letzten Lesen im Client. Auch dieses letzte Lesen muss gegen den bestaetigten Stand pruefen.
+        var h = new FakeHandler((req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getLayoutDataCombined")) return LayoutJson(); // Zustand jetzt 102
+            if (url.Contains("saveData")) return "{\"newId\":null,\"message\":\"Das Objekt wurde gespeichert.\",\"isFailure\":false}";
+            return "{}";
+        });
+        var erwartet = new Dictionary<string, string?>(StringComparer.Ordinal) { [ZustandRef] = "101", [BemRef] = "" };
+
+        var res = await Client(h).SchreibeAsync(
+            WebGisObjektart.Haltung, "g1", new Dictionary<string, string> { [ZustandRef] = "104" }, erwarteterStand: erwartet);
+
+        Assert.False(res.Erfolg);
+        Assert.Contains("seit der Prüfung geändert", res.Fehler);
+        Assert.Null(h.LetzterSaveBody);
+    }
+
+    [Fact]
+    public async Task SchreibeAsync_schreibt_wenn_der_letzte_stand_dem_erwarteten_entspricht()
+    {
+        var h = new FakeHandler((req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getLayoutDataCombined")) return LayoutJson();
+            if (url.Contains("saveData")) return "{\"newId\":null,\"message\":\"Das Objekt wurde gespeichert.\",\"isFailure\":false}";
+            return "{}";
+        });
+        var erwartet = new Dictionary<string, string?>(StringComparer.Ordinal) { [ZustandRef] = "102", [BemRef] = "" };
+
+        var res = await Client(h).SchreibeAsync(
+            WebGisObjektart.Haltung, "g1", new Dictionary<string, string> { [ZustandRef] = "104" }, erwarteterStand: erwartet);
+
+        Assert.True(res.Erfolg, res.Fehler);
+        Assert.NotNull(h.LetzterSaveBody);
+    }
 }

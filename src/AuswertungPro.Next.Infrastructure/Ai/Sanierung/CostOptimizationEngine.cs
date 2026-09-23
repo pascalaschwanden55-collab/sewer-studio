@@ -17,6 +17,8 @@ public sealed class CostOptimizationEngine
             ["GFK-Liner"]               = (220m, true),
             ["UV-Liner"]                = (200m, true),
             ["Kurzliner"]               = (950m, false),
+            ["Partliner"]               = (950m, false),
+            ["Pointliner"]              = (950m, false),
             // Punktuelle Reparaturen (pro Stück)
             ["Reparatur"]               = (650m, false),
             ["Roboter"]                 = (500m, false),
@@ -115,8 +117,10 @@ public sealed class CostOptimizationEngine
                 return kv.Value;
         }
 
-        // Teilstring-Match
-        foreach (var kv in BaseCosts)
+        // Teilstring-Match: laengste Begriffe zuerst — sonst gewinnt «Liner» (pro Meter) gegen «Kurzliner»
+        // (pro Stueck) und aus einem Stueckpreis wird ein Meterpreis (Audit A12, 23.09.2026). Bei gleicher
+        // Laenge bleibt die Reihenfolge der Tabelle (stabile Sortierung).
+        foreach (var kv in BaseCosts.OrderByDescending(k => k.Key.Length))
         {
             if (m.Contains(kv.Key, StringComparison.OrdinalIgnoreCase))
                 return kv.Value;

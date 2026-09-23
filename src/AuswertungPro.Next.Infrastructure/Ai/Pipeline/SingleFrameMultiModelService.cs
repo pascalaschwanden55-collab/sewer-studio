@@ -90,10 +90,15 @@ public sealed class SingleFrameMultiModelService
         {
             VsaCodeResolver.ResolvedCode? classifierDecision = null;
             IReadOnlyList<YoloClassifyPrediction> classifierPredictions = Array.Empty<YoloClassifyPrediction>();
+            // Qualitaetsgrund des Bilds (zu dunkel, zu hell …): muss bis zur Anzeige mit, sonst erscheint ein
+            // unbrauchbares Bild gruen als «Kein Schaden erkannt» (Audit A03, 23.09.2026).
+            string? bildQualitaet = null;
             try
             {
                 var clsResp = await _client.ClassifyYoloAsync(new YoloClassifyRequest(b64, 5), ct);
                 classifierMs = clsResp.InferenceTimeMs;
+                if (!clsResp.Usable)
+                    bildQualitaet = QualitaetsGrund(clsResp.QualityReason) ?? clsResp.QualityReason;
 
                 if (clsResp.Usable
                     && clsResp.ClassifierLoaded
@@ -176,6 +181,8 @@ public sealed class SingleFrameMultiModelService
 
                     if (!yoloResp.IsRelevant && !IsClassifierOnlyStructuralCode(classifierDecision?.Code))
                     {
+                        var unbrauchbar = QualitaetsGrund(yoloResp.FrameClass) ?? bildQualitaet;
+                        var unbrauchbarGrund = unbrauchbar is null ? null : $"Bild nicht beurteilbar: {unbrauchbar} — manuell prüfen";
                         return new SingleFrameResult(
                             IsRelevant: false,
                             DinoDetections: Array.Empty<DinoDetectionDto>(),
@@ -187,6 +194,8 @@ public sealed class SingleFrameMultiModelService
                             ClassifierConfidence: classifierDecision?.Confidence,
                             ClassifierSource: classifierDecision?.Source,
                             ClassifierTimeMs: classifierMs,
+                            Degraded: unbrauchbarGrund is not null,
+                            DegradedReason: unbrauchbarGrund,
                             DetectorQualified: effectiveDetectorQualified,
                             DetectorQualificationReason: detectorQualificationReason);
                     }
@@ -205,8 +214,9 @@ public sealed class SingleFrameMultiModelService
                 var dinoDegradedReason = dinoResp.Degraded
                     ? $"DINO nicht verfuegbar: {dinoResp.Error}"
                     : null;
-                var emptyDinoDegradedReason =
-                    CombineReasons(detectorReviewReason, dinoDegradedReason);
+                var emptyDinoDegradedReason = CombineReasons(
+                    bildQualitaet is null ? null : $"Bild nicht beurteilbar: {bildQualitaet}",
+                    detectorReviewReason, dinoDegradedReason);
                 return new SingleFrameResult(
                     IsRelevant: true,
                     DinoDetections: Array.Empty<DinoDetectionDto>(),
@@ -286,6 +296,16 @@ public sealed class SingleFrameMultiModelService
             return null;
         }
     }
+
+    /// <summary>Klartext eines Qualitaetsgrunds des Sidecars; null, wenn das Bild brauchbar ist.</summary>
+    private static string? QualitaetsGrund(string? code) => code switch
+    {
+        "too_dark" => "zu dunkel",
+        "too_bright" => "zu hell",
+        "too_uniform" => "ohne Struktur",
+        "too_blurry" => "unscharf",
+        _ => null,
+    };
 
     private static string? CombineReasons(params string?[] reasons)
     {

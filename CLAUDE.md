@@ -321,6 +321,47 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
   `__WebGIS_Export/Probelauf-Vorschau_20260921.txt`): 9 Haltungen ohne Sanierungs-Akte,
   Schacht 525145/60122, 7 Akten ohne Verfahren, 6 Laengen (WebGIS gewinnt).
 
+## Gesamtaudit 23.09.2026: Behebung A01 bis A18
+
+Bericht `.tmp/audit-gesamt-2026-09-23/GESAMTAUDIT.md` (Codex, extern). Alle 18 Befunde nachgeprueft,
+keiner widerlegt; umgesetzt mit Test und Sabotageprobe. Regeln, die nicht zurueckfallen duerfen:
+
+- **WebGIS senden prueft unmittelbar vor dem Schreiben.** `IGeonisWebGisClient.SchreibeAsync(…, erwarteterStand)`
+  vergleicht den letzten Lesestand im Client (`WebGisStandVergleich`, ohne Massnahmenliste) und sendet bei
+  Abweichung nichts. `WebGisExportPosition.VomServerBestaetigt` haelt fest, ob das Zuruecklesen den Wert belegt.
+  Massnahmen werden nur angelegt, wenn das Elternobjekt seit der Pruefung unveraendert ist (A04/A05).
+  Ein Zeitlimit je Objekt ist ein Fehler dieses Objekts, ein Benutzerabbruch beendet den Lauf (A06).
+- **Holen: eine nach der Vorschau entstandene Dublette sperrt die ganze Position**, nicht nur die GlobalID (A07).
+- **Materialgruppe auch fuer Kanalfirmenwerte** (`ErgaenzeGruppenKatalogeAsync`, Gruppenlisten je Lauf einmal) (A09).
+- **Wissenssuche: fehlende Pruefdaten = keine Suche.** `GuardedRetrievalFactory.Sperrliste` /
+  `EvalContaminationGuard.LoadEvalHaltungKeysStrict`: nur ein bewusst LEERER Pruefdaten-Ordner schaltet den
+  Schutz ab; fehlender Ordner, unlesbare `_candidates.json` oder keine Kennung werfen. Der Start setzt den
+  Standard-Root VOR der Pruefung (sonst liefe die Vollprotokoll-Suche ohne Sperrliste) und meldet den Grund
+  als Startwarnung; die KI arbeitet dann ohne Vergleichswissen (A10).
+- **GPU-Zulassung misst neu, wenn waehrend der Messung eine fremde Ladung endete** (`_ladungen_beendet`,
+  `gpu_manager._admit_vram_or_raise`); Zwei-Thread-Test `test_messung_vor_dem_ende_einer_fremden_ladung…` (A11).
+- **Kosten: spezifische Begriffe vor allgemeinen** (`CostOptimizationEngine`, laengster Schluessel zuerst;
+  «Kurzliner DN 300» bleibt Stueckmassnahme) (A12).
+- **Hydraulik ueber das Materialvokabular** (`HydraulikMaterialCatalog.ResolveMitHinweis`): Normalbeton ->
+  Beton, GUP -> GFK; ohne Rauheit (z. B. Epoxydharz) gilt die Einstellung, der Bericht nennt es sichtbar.
+  Die gemerkte Materialwahl je Haltung bleibt (A13).
+- **Schachtfelder: Vorlagenschreibweise vor der WebGIS-Umwandlung aufloesen** («STATUS», «Status »):
+  `SchachtRecord.AlsWebGisBegriff` faltet den Namen; der Sendeweg sucht die Liste ueber
+  `karte.SewerStudioFeld` (A14).
+- **Schachttabelle, Auswahlspalten ohne eigene Liste**: `SchachtTabellenAuswahl` haengt einen Altwert
+  hinten an und schreibt nur bei echter Aenderung — blosses Verlassen stempelt keine Handmarke (A15).
+- **KINS-DBF fuellt Schachtfelder nur, wenn leer** (Entscheid), jetzt mit Herkunft `Legacy` = Kanalfirma (A16).
+- **Sicherung: ein Ordner, der zur Verknuepfung wurde, behaelt seine bisherige Sicherungskopie**, auch im
+  Echtzeit-Spiegel, mit Warnung (A01). A17 (jede Warnung steht im `SewerStudio_Sicherung_Protokoll.txt`, nur
+  die Anzeige ist begrenzt) baut auf dem Laufprotokoll der parallelen Sicherungsarbeit auf und wird mit ihr
+  eingecheckt.
+- **«Speichern unter» nur im selben Projektordner** (`SpeichernUnterRegel`, Entscheid): Videos, Fotos, PDFs,
+  Kosten und Dossiers liegen relativ zum Ordner; ein anderer Ordner fand sie nicht mehr. Kopie im Explorer
+  anlegen (A02/A08).
+- **Einzelbild: unbrauchbares Bild ist nie gruen** — «Bild nicht beurteilbar: zu dunkel/zu hell/ohne Struktur/
+  unscharf — manuell prüfen» (A03).
+- **Python-Sicherheitspruefung erkennt Alias-Kennungen** (PYSEC/GHSA derselben CVE) (A18).
+
 
 ## Gebundene Bild-/Zeit-/Meterbelege im Player (20.09.2026)
 

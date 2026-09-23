@@ -103,6 +103,9 @@ def pip_audit_aufrufen(pins: list[str]) -> list[dict]:
                     "paket": eintrag.get("name", "?"),
                     "version": eintrag.get("version", "?"),
                     "id": luecke.get("id", "?"),
+                    # Dieselbe Luecke hat mehrere offizielle Kennungen (PYSEC, GHSA, CVE); pip-audit nennt
+                    # mal die eine, mal die andere als Hauptkennung (Audit A18, 23.09.2026).
+                    "aliases": list(luecke.get("aliases") or []),
                     "fix": luecke.get("fix_versions") or [],
                 }
             )
@@ -128,10 +131,17 @@ def bewerte(funde: list[dict], ausnahmen: list[dict]) -> tuple[list[dict], list[
     Der Schluessel ist Paketname + Luecken-ID; die Version wird bewusst nicht
     mitverglichen, damit ein Patch-Update die Ausnahme nicht stillschweigend entwertet.
     """
-    erlaubt = {(a["paket"].lower(), a["id"]) for a in ausnahmen}
-    gefunden = {(f["paket"].lower(), f["id"]) for f in funde}
+    def kennungen(fund: dict) -> set[tuple[str, str]]:
+        # Hauptkennung und offizielle Aliase gelten als dieselbe Luecke — aber nur im selben Paket.
+        paket = fund["paket"].lower()
+        return {(paket, k) for k in [fund["id"], *(fund.get("aliases") or [])]}
 
-    unerlaubt = [f for f in funde if (f["paket"].lower(), f["id"]) not in erlaubt]
+    erlaubt = {(a["paket"].lower(), a["id"]) for a in ausnahmen}
+    gefunden: set[tuple[str, str]] = set()
+    for fund in funde:
+        gefunden |= kennungen(fund)
+
+    unerlaubt = [f for f in funde if not (kennungen(f) & erlaubt)]
     veraltet = [a for a in ausnahmen if (a["paket"].lower(), a["id"]) not in gefunden]
     return unerlaubt, veraltet
 

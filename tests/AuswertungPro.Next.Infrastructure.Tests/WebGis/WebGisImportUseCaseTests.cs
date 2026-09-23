@@ -56,7 +56,7 @@ public sealed class WebGisImportUseCaseTests
             return Task.FromResult(Massnahme(globalId));
         }
 
-        public Task<WebGisSchreibErgebnis> SchreibeAsync(WebGisObjektart art, string globalId, IReadOnlyDictionary<string, string> felder, CancellationToken ct = default)
+        public Task<WebGisSchreibErgebnis> SchreibeAsync(WebGisObjektart art, string globalId, IReadOnlyDictionary<string, string> felder, CancellationToken ct = default, IReadOnlyDictionary<string, string?>? erwarteterStand = null)
             => throw new InvalidOperationException("Holen darf nie ins WebGIS schreiben.");
         public Task<WebGisSanierungKatalog?> LeseSanierungKatalogAsync(WebGisObjektart art, string elternGlobalId, CancellationToken ct = default)
             => Task.FromResult<WebGisSanierungKatalog?>(null);
@@ -212,6 +212,27 @@ public sealed class WebGisImportUseCaseTests
         WebGisImportUseCase.Uebernimm(plan, projekt);
 
         Assert.Null(neu.WebGisGlobalId);
+    }
+
+    [Fact]
+    public async Task Eine_nach_der_vorschau_entstandene_dublette_stoppt_die_ganze_position()
+    {
+        // Audit A07 (23.09.2026): Nicht nur die Kennung, auch Fachwerte und Akten bleiben aus.
+        var (p, h) = Projekt();
+        var useCase = new WebGisImportUseCase(new FakeClient());
+        var plan = await useCase.BauePlanAsync(p);
+        var gid = plan.Positionen.Find(x => x.RecordId == h.Id)!.GlobalId;
+        Assert.NotNull(gid);
+        var zweiter = new HaltungRecord { WebGisGlobalId = gid };
+        zweiter.SetFieldValue(FieldKeys.HoldingName, "Andere", FieldSource.Manual, false);
+        p.Data.Add(zweiter);
+
+        var ergebnis = await useCase.UebernimmGeprueftAsync(plan, p);
+
+        Assert.Equal(1, ergebnis.Gestoppt);
+        Assert.Null(h.WebGisGlobalId);
+        Assert.NotEqual("In Betrieb", h.GetFieldValue(FieldKeys.OperatingStatus));
+        Assert.Contains(plan.Positionen.Find(x => x.RecordId == h.Id)!.Sperren, s => s.Contains(WebGisEindeutigkeit.Kennwort));
     }
 
     // ---- Entscheid Pascal 23.09.2026 abends: Hat sich ein Objekt im WebGIS zwischen Vorschau und
