@@ -43,6 +43,7 @@ public static class WebGisExportPlanBuilder
             GlobalId = stand?.GlobalId,
             GespeicherteGlobalId = e.GespeicherteGlobalId,
             RecordId = e.RecordId,
+            GelesenerStand = stand is null ? null : new Dictionary<string, string?>(stand.Felder, StringComparer.Ordinal),
         };
 
         if (stand is null)

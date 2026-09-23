@@ -16,7 +16,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests.WebGis;
 /// geaendert (jetzt '144')», obwohl sich dort nichts geaendert hatte: Der Plan trug den
 /// Klartext als Ausgangswert, der Konfliktschutz verglich ihn mit dem Schluessel.
 /// </summary>
-public sealed class WebGisExportUseCaseTests
+public sealed partial class WebGisExportUseCaseTests
 {
     [Fact]
     public void Abweichende_gespeicherte_globalid_sperrt_export()

@@ -26,6 +26,7 @@ public sealed class WebGisExportUseCase
         ArgumentNullException.ThrowIfNull(projekt);
         var plan = new WebGisExportPlan();
         var kataloge = new Dictionary<WebGisObjektart, WebGisSanierungKatalog?>();
+        var gelesen = new List<(WebGisObjektEingabe Eingabe, WebGisExportPosition Position, WebGisLesestand? Stand)>();
 
         foreach (var h in projekt.Data)
         {
@@ -43,8 +44,7 @@ public sealed class WebGisExportUseCase
             };
             var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
             plan.Positionen.Add(pos);
-            if (pos.Sperren.Count == 0)
-                await BaueSanierungenAsync(plan, projekt, e, stand, kataloge, ct).ConfigureAwait(false);
+            gelesen.Add((e, pos, stand));
         }
 
         foreach (var s in projekt.SchaechteData)
@@ -65,15 +65,43 @@ public sealed class WebGisExportUseCase
             };
             var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
             plan.Positionen.Add(pos);
+            gelesen.Add((e, pos, stand));
+        }
+
+        // Erst wenn alle Objekte gelesen sind, laesst sich sehen, ob zwei auf dasselbe WebGIS-Objekt
+        // zeigen — Massnahmen deshalb erst danach und nur fuer eindeutig zugeordnete Objekte.
+        SperreDoppelteZuordnungen(plan.Positionen);
+        foreach (var (e, pos, stand) in gelesen)
             if (pos.Sperren.Count == 0)
                 await BaueSanierungenAsync(plan, projekt, e, stand, kataloge, ct).ConfigureAwait(false);
-        }
 
         plan.Hinweise.Add($"{plan.Positionen.Count} Objekte geprueft: {plan.Schreibbare} mit Aenderung, {plan.Gesperrte} gesperrt.");
         if (plan.Positionen.Count > 1 && plan.Positionen.TrueForAll(p => p.Sperren.Exists(s => s.StartsWith("Im WebGIS nicht eindeutig gefunden", StringComparison.Ordinal))))
             plan.Hinweise.Add("Kein einziger Name wurde im WebGIS eindeutig gefunden. Bitte WebGIS-Anmeldung und Suche prüfen; die genaue Ursache ist damit noch nicht belegt.");
         plan.Hinweise.Add($"{plan.Sanierungen.Count} Sanierungsmassnahmen geplant: {plan.SanierungenSchreibbar} anzulegen, {plan.SanierungenGesperrt} gesperrt.");
         return plan;
+    }
+
+    /// <summary>
+    /// Eindeutig heisst auch: Ein WebGIS-Objekt gehoert zu genau EINEM SewerStudio-Objekt (Entscheid
+    /// Pascal 23.09.2026). Zeigen zwei darauf — dieselbe Haltung doppelt im Projekt, oder dieselbe
+    /// GlobalID an zwei Datensaetzen —, wird keines geschrieben; sonst mischten sich zwei Staende in
+    /// ein Katasterobjekt. Gezaehlt wird die gefundene GlobalID, ersatzweise die gespeicherte.
+    /// </summary>
+    private static void SperreDoppelteZuordnungen(IReadOnlyList<WebGisExportPosition> positionen)
+    {
+        var gruppen = positionen
+            .Select(p => (Position: p, Id: (p.GlobalId ?? p.GespeicherteGlobalId ?? string.Empty).Trim()))
+            .Where(x => x.Id.Length > 0)
+            .GroupBy(x => (x.Position.Objektart, Id: x.Id.ToUpperInvariant()))
+            .Where(g => g.Count() > 1);
+        foreach (var g in gruppen)
+        {
+            var namen = string.Join(", ", g.Select(x => "«" + x.Position.Bezeichnung + "»").Distinct());
+            foreach (var (p, _) in g)
+                p.Sperren.Add($"Mehrere SewerStudio-Objekte ({namen}) zeigen auf dasselbe WebGIS-Objekt (GlobalID {g.Key.Id}) — "
+                              + "keines wird geschrieben. Doppelten Datensatz im Projekt bereinigen.");
+        }
     }
 
     /// <summary>Von Hand geaenderte Felder (UserEdited) mit ihrem aktuellen Text.</summary>
@@ -264,6 +292,28 @@ public sealed class WebGisExportUseCase
                 return;
             }
             felder[a.RefId] = a.Neu;
+        }
+
+        // Ganzer Stand samt Aenderungsdatum (Pascal 23.09.2026): Hat jemand das Objekt seit der Pruefung
+        // bearbeitet — auch an einem Feld, das der Plan nicht anfasst —, wird nicht geschrieben.
+        if (pos.GelesenerStand is not null)
+        {
+            var abweichend = WebGisStandVergleich.Abweichungen(pos.GelesenerStand, stand.Felder);
+            if (abweichend.Count > 0)
+            {
+                var namen = string.Join(", ", abweichend.Take(5).Select(r => WebGisStandVergleich.Anzeigename(pos.Objektart, r)))
+                            + (abweichend.Count > 5 ? $" und {abweichend.Count - 5} weitere" : string.Empty);
+                pos.SchreibFehler = $"Objekt wurde im WebGIS seit der Prüfung geändert ({namen}) — nicht geschrieben, bitte neu prüfen.";
+                return;
+            }
+        }
+
+        // Eigentum, Betreiber, Laenge, Baujahr, GlobalID, Objekt-ID: nie ueberschreiben (Pascal 23.09.2026).
+        var verstoesse = WebGisGeschuetzteFelder.Verstoesse(pos.Objektart, felder, stand.Feld);
+        if (verstoesse.Count > 0)
+        {
+            pos.SchreibFehler = string.Join(" ", verstoesse);
+            return;
         }
 
         var res = await _client.SchreibeAsync(pos.Objektart, pos.GlobalId!, felder, ct).ConfigureAwait(false);

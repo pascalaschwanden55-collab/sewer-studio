@@ -86,6 +86,12 @@ public sealed class WebGisExportPosition
     /// </summary>
     public string? GespeicherteGlobalId { get; init; }
     public Guid RecordId { get; init; }
+    /// <summary>
+    /// Alle Felder des Objekts, wie sie beim Planen im WebGIS standen (samt Aenderungsdatum).
+    /// Vor dem Schreiben muss der frische Stand gleich sein, sonst wird neu geprueft.
+    /// Null nur bei einer Position ohne gelesenen Stand (gesperrt).
+    /// </summary>
+    public IReadOnlyDictionary<string, string?>? GelesenerStand { get; init; }
     public List<WebGisFeldAenderung> Aenderungen { get; } = new();
     /// <summary>Sperrgruende — bei mindestens einem wird NICHT geschrieben.</summary>
     public List<string> Sperren { get; } = new();

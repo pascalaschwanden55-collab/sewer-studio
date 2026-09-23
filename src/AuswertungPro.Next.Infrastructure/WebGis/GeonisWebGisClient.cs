@@ -59,6 +59,14 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
             || comps.ValueKind != JsonValueKind.Array)
             return WebGisSchreibErgebnis.Fehlgeschlagen("Datenstand ohne components.");
 
+        // Letzte Tuer (Entscheid Pascal 23.09.2026): Eigentum, Betreiber, Laenge, Baujahr, GlobalID und
+        // Objekt-ID werden nie ueberschrieben — geprueft gegen den eben gelesenen Stand, damit auch ein
+        // inzwischen im WebGIS eingetragenes Baujahr nicht ueberschrieben wird.
+        var jetzt = StandAus(data, globalId, string.Empty, listeRef: null);
+        var verstoesse = WebGisGeschuetzteFelder.Verstoesse(art, felder, jetzt.Feld);
+        if (verstoesse.Count > 0)
+            return WebGisSchreibErgebnis.Fehlgeschlagen(string.Join(" ", verstoesse));
+
         // 2) Nur die geaenderten Komponenten uebernehmen, neuen Wert setzen.
         var modified = new List<Dictionary<string, object?>>();
         foreach (var comp in comps.EnumerateArray())

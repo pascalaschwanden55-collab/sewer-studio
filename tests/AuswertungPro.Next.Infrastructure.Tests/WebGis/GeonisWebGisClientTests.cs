@@ -415,4 +415,53 @@ public sealed class GeonisWebGisClientTests
         Assert.Equal("4", m!.Feld(WebGisSanierungFeldkarte.ArtRef));
         Assert.Contains(("4", "Renovierung"), m.Kataloge[WebGisSanierungFeldkarte.ArtRef]);
     }
+
+    // Entscheid Pascal 23.09.2026: Eigentum, Betreiber, Laenge, Baujahr, GlobalID und Objekt-ID werden
+    // im WebGIS nie ueberschrieben. Der Sendeteil ist die letzte Tuer — auch er sendet sie nie.
+    private const string EigentuemerRef = "fadff6f2-c674-9327-36d8-b2ac79b704cd";
+
+    private static string LayoutMitSchutzfeldernJson(string baujahr) =>
+        "[{\"components\":[]},{\"components\":[" +
+        "{\"refId\":\"" + ZustandRef + "\",\"keySelected\":102,\"keys\":[102,104],\"values\":[\"Z2\",\"Z4\"]}," +
+        "{\"refId\":\"" + EigentuemerRef + "\",\"keySelected\":\"58d1c876\",\"keys\":[\"58d1c876\"],\"values\":[\"Kanton Uri\"]}," +
+        "{\"refId\":\"" + WebGisFeldkarte.HaltungBaujahrRef + "\",\"value\":" + baujahr + "}" +
+        "]}]";
+
+    [Theory]
+    [InlineData(EigentuemerRef, "x", "null")]
+    [InlineData(WebGisFeldkarte.HaltungBaujahrRef, "1970", "\"1963\"")]
+    public async Task SchreibeAsync_sendet_ein_geschuetztes_feld_nie(string refId, string neu, string baujahrImWebGis)
+    {
+        var h = new FakeHandler((req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getLayoutDataCombined")) return LayoutMitSchutzfeldernJson(baujahrImWebGis);
+            if (url.Contains("saveData")) return "{\"newId\":null,\"message\":\"Das Objekt wurde gespeichert.\",\"isFailure\":false}";
+            return "{}";
+        });
+
+        var res = await Client(h).SchreibeAsync(
+            WebGisObjektart.Haltung, "g1", new Dictionary<string, string> { [ZustandRef] = "104", [refId] = neu });
+
+        Assert.False(res.Erfolg);
+        Assert.Null(h.LetzterSaveBody); // gar nichts gesendet, auch nicht der Zustand
+    }
+
+    [Fact]
+    public async Task SchreibeAsync_fuellt_ein_leeres_baujahr()
+    {
+        var h = new FakeHandler((req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getLayoutDataCombined")) return LayoutMitSchutzfeldernJson("null");
+            if (url.Contains("saveData")) return "{\"newId\":null,\"message\":\"Das Objekt wurde gespeichert.\",\"isFailure\":false}";
+            return "{}";
+        });
+
+        var res = await Client(h).SchreibeAsync(
+            WebGisObjektart.Haltung, "g1", new Dictionary<string, string> { [WebGisFeldkarte.HaltungBaujahrRef] = "1970" });
+
+        Assert.True(res.Erfolg, res.Fehler);
+        Assert.Contains("\"value\":\"1970\"", Uri.UnescapeDataString(h.LetzterSaveBody!));
+    }
 }

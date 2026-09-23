@@ -25,13 +25,16 @@ public static class WebGisPlanVergleich
     internal static string Signatur(WebGisExportPlan plan)
     {
         var teile = new List<string>();
+        var elternMitMassnahme = plan.Sanierungen.Where(s => s.Schreibbar).Select(s => s.ElternRecordId).ToHashSet();
         foreach (var p in plan.Positionen)
         {
-            if (!p.Schreibbar) continue;
+            if (!p.Schreibbar && !elternMitMassnahme.Contains(p.RecordId)) continue;
             // Auch der ALTE Wert zaehlt (Pruefung 23.09.2026): Hat jemand im WebGIS seit der Vorschau
             // etwas geaendert, ist der Plan ein anderer — sonst ueberschriebe «Jetzt schreiben» fremde Arbeit.
+            // Dazu der ganze gelesene Stand samt Aenderungsdatum (Pascal 23.09.2026): auch eine Aenderung an
+            // einem Feld, das der Plan gar nicht anfasst, heisst neu pruefen.
             var felder = p.Aenderungen.Select(a => a.RefId + "=" + a.Alt + ">" + a.Neu).OrderBy(x => x, StringComparer.Ordinal);
-            teile.Add($"O|{p.Objektart}|{p.Bezeichnung}|{p.GlobalId}|{string.Join(",", felder)}");
+            teile.Add($"O|{p.Objektart}|{p.Bezeichnung}|{p.GlobalId}|{string.Join(",", felder)}|{WebGisStandVergleich.Fingerabdruck(p.GelesenerStand)}");
         }
         foreach (var s in plan.Sanierungen)
         {

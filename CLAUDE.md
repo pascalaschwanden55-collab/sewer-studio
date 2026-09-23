@@ -147,6 +147,133 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     Inventur v2 nennt d06f8d1f einmal Breite, einmal Hoehe — an einem Eiprofil klaeren), kein
     `IShellOperationGuard`, Abmelden beendet keine Sitzung (Profil behaelt ADFS-Cookies),
     Kontext ohne Host-Pruefung, zweiter Handwert auf dieselbe refId faellt still weg.
+- Stufe 5 (23.09.2026): MATERIALGRUPPE BEIM SENDEN und HOLEN WEBGIS -> SEWERSTUDIO.
+  - Materialgruppe: Nennt der Materialtext keine Gruppe («Polypropylen»), laedt
+    `ErgaenzeGruppenKatalogeAsync` die Detail-Listen ALLER Gruppen; `WebGisExportPlanBuilder`
+    setzt Gruppe + Detail nur, wenn GENAU eine Gruppe den Wert fuehrt (mehrere -> Hinweis).
+    Wie im Browser: erst Gruppe, dann Detail. Live noch nicht belegt, dass saveData beides in
+    einem Aufruf annimmt — das Zuruecklesen nach dem Schreiben meldet es sonst.
+  - ENTSCHEID PASCAL 23.09.2026 (ersetzt «Laenge immer aus dem WebGIS» vom 21.09.): Die HALTUNGSLAENGE
+    in SewerStudio ist die des Operateurs — sie wird WEDER aus dem WebGIS geholt NOCH ins WebGIS
+    geschrieben. EIGENTUM/BETREIBER aendert das Programm NIE, in keine Richtung (nur von Hand im WebGIS).
+    Waechter: `WebGisImportPlanBuilderTests.Laenge_und_eigentum_werden_nie_geholt`.
+  - Holen (`WebGisImportUseCase`, schreibt NIE ins WebGIS): Baujahr wenn leer, dazu alle Felder der
+    `WebGisHandwertKarte`
+    (refIds live geprueft). Entscheid Pascal: WEBGIS VOR GEOSHOP — leere Felder fuellen UND Werte
+    mit Herkunft Kataster/Xtf/Xtf405/Ili ohne Handmarke ersetzen (`IstErsetzbar`); Handwerte und
+    Protokollwerte nie. Vor dem Ersetzen wird nochmals geprueft, ob der Wert seit der Vorschau
+    gleich ist. **ENTSCHEID PASCAL 23.09.2026 abends: Daten aus Kanalfirmen-Importen werden weder
+    vom WebGIS-Holen noch vom GeoShop-Abgleich ueberschrieben — nur leere Felder werden ergaenzt.**
+    Der Code verletzt das noch an zwei Stellen (NICHT behoben, Codex-Pruefauftrag
+    `docs/audits/2026-09-23-webgis-codex/AUFTRAG.md`): `IstErsetzbar` ersetzt auch Xtf/Xtf405/Ili,
+    die Kanalfirmen-XTF (VSA-KEK, M150, SIA405) vergeben; `GeoShopAbgleichPlanBuilder.ImmerAusXtf`
+    ersetzt die Haltungslaenge. `WebGisImportWert` bringt den Klartext auf den SewerStudio-Begriff («Sammelkanal»
+    -> PAA.Sammelkanal nur wenn das Blatt eindeutig ist, «In Betrieb» -> in_Betrieb); kein Treffer
+    = Hinweis, «unbekannt» fuellt nichts. DN nur wenn WebGIS-Breite = Hoehe; Lichte_Breite/Hoehe
+    nicht (Breite/Hoehe weiter OFFEN). Haltung kennt kein blosses «Kunststoff» -> Hinweis.
+  - Sanierungsmassnahmen: je Zeile der WebGIS-Liste ohne Akte in SewerStudio liest
+    `LeseMassnahmeAsync` (getLayoutDataCombined, table AWZ_UNTERHALT, id=GlobalId — live NOCH
+    NICHT belegt) die Massnahme; `WebGisSanierungImportRegel` bildet sie auf die Sanierungsakte ab
+    (Klartext gegen den Katalog der Akte, Verfahren gegen die Liste der Art, ohne Art keine Akte),
+    schreibt wie ein Import (VonHand=false) mit Beleg System «WebGIS» + GlobalId. Doppel: gleiche
+    Kennung ODER gleiche Art/Status/Verfahren. Folge: eine geholte ausgefuehrte Massnahme macht
+    das Objekt fuer den Export «saniert».
+  - Materialgruppe der Objektakte (`haltung.pipegroup` / `schacht.materialgruppe`, KEIN Tabellenfeld):
+    das Holen schreibt die WebGIS-Gruppe in die Wurzelakte, wenn leer oder nicht von Hand gesetzt
+    (VonHand=false, Format 3). Vorher blieb sie leer, obwohl das Detail gesetzt war.
+  - Die WebGIS-GlobalID kommt ausschliesslich aus dem Link eines eindeutigen Suchtreffers mit
+    exakt gleichem Namen. Beim bestaetigten Holen wird sie getrennt von `Objekt_ID` in Haltung
+    oder Schacht gespeichert. Ein abweichender gespeicherter Wert sperrt den Import und Export.
+    Die OBJECTID der Maske und GeoShop-/SIA405-Kennungen dienen nicht als GlobalID.
+    Im Holen-Fenster erscheint die Kennung als "GlobalID (WebGIS)" in der Vorschau.
+    `WebGisExportUseCase` uebergibt Feldwerte mit Kataster-Herkunft nicht an das WebGIS;
+    bestaetigte eigene Werte und Protokollwerte bleiben fuer den Export vorgesehen.
+  - WebGIS-Suche: `PlaywrightWebGisAnmeldung` gibt einen Zugang erst mit JSESSIONID UND
+    synserver-Session-ID frei. `GeonisWebGisClient` meldet eine fehlende Suchsession,
+    HTTP-401/403 und ungueltige Suchantworten als Zugangsfehler statt 182 scheinbar nicht
+    gefundene Objekte. Der echte 14:33-Lauf vom 23.09. (182/182 gesperrt, zuvor 10/182)
+    belegt einen systemischen Suchausfall, nicht dessen genaue HTTP-Ursache. Neu anmelden
+    und erneut pruefen bleibt die Live-Abnahme.
+    Wenn alle Namen ohne eindeutigen Treffer bleiben, zeigen Holen und Export einen
+    gemeinsamen Suchhinweis im Bericht statt nur einzelne gesperrte Zeilen.
+  - Einstieg: «Vom WebGIS holen» im Menue «Weitere Aktionen» von Haltungen UND Schaechten (vor
+    GeoShop-Abgleich) sowie auf der Export-Seite; alle ueber EINEN `WebGisHolenAblauf`
+    (UI/Services, eine Instanz im ServiceProvider). Anmeldung nur auf der Export-Seite.
+  - Fenster `WebGisHolenWindow` NICHT modal (Wunsch Pascal): Doppelklick auf eine Zeile oeffnet Haltung/
+    Schacht, «Neu pruefen», «Uebernehmen» (danach frisch geprueft); Spalten «Bisher» / «Aus dem WebGIS».
+    Materialdetails in WebGIS-Schreibweise «Gruppe, Detail (Kuerzel)» werden erkannt (Beton, unbekannt
+    -> Beton; Beton, Fertigteil -> Fertigbetonelement); PAA/SAA-Blatt entscheidet Typ AA der Haltung.
+    Ohne SewerStudio-Begriff (Schleuderbeton, Beton vorgespannt, GUP/GFK Fertigteil) bleibt ein Hinweis.
+    Gesperrtes klar gekennzeichnet (Wunsch Pascal 23.09.): Band orange, sobald etwas gesperrt oder nicht
+    zugeordnet ist (`WebGisImportBericht.Kopf`), darunter eine immer offene ROTE Liste
+    (`WebGisImportBericht.NichtZugeordnet`: erst gesperrte Objekte/Massnahmen, dann Werte ohne Zuordnung, je mit
+    Grund). Keine zugeklappte Hinweisliste mehr. Tests `WebGisImportBerichtTests`, `WebGisHolenFensterUiTests`.
+  - Bericht
+    `__WebGIS_Export/WebGIS_Holen-Vorschau_*.txt`. Tests: `WebGisImportWertTests`,
+    `WebGisImportPlanBuilderTests`, `WebGisImportUebernahmeTests`, `WebGisSanierungImportTests`,
+    `WebGisImportUseCaseTests`, `WebGisImportBerichtTests`, Gruppenfaelle in `WebGisExportUseCaseTests`.
+  - GLOBALID (Entscheid Pascal 23.09.2026): `HaltungRecord/SchachtRecord.WebGisGlobalId` wird nur
+    bei genau einem Suchtreffer mit exakt gleichem Namen gespeichert (Holen). Ist sie gespeichert,
+    liest JEDER Schritt (Plan, frisch vor dem Schreiben, Nachkontrolle, Massnahmen, Holen) nur ueber
+    sie (`WebGisObjektLesen.LiesAsync` -> `LeseUeberGlobalIdAsync`), nie ueber den Namen — auch nicht
+    als Rueckfall. Der Name kommt dann aus der Maske (`WebGisFeldkarte.BezeichnungRef`, refIds aus der
+    Inventur v2, LIVE NOCH NICHT GEPRUEFT) und muss exakt dem Projektnamen entsprechen, sonst Sperre;
+    fehlt er, ebenfalls Sperre. Anlass Zone 1.15: ab 14:32 fand die Namenssuche nichts mehr (182/182
+    gesperrt). GeoShop-TID (`ch24gwkd…`) und OBJECTID sind KEINE GlobalID. Tests:
+    `WebGisExportUseCaseTests` (Gespeicherte_globalid_…), `WebGisImportUseCaseTests`, `GeonisWebGisClientTests`.
+  - WEBGIS-BEGRIFFE, SCHRITT A (Entscheid Pascal 23.09.2026; Entwurf
+    `docs/superpowers/specs/2026-09-23-webgis-begriffe-design.md`, Plan `docs/superpowers/plans/2026-09-23-webgis-begriffe-schritt-a.md`):
+    Was ins WebGIS (Trigonet) geht, steht in SewerStudio als WebGIS-Beschriftung, zeichengenau («In Betrieb»,
+    «Kreisprofil (K)», «Tot/Aufgehoben, verfüllt», «Regenabwasser»). Felder: Status, Lagebestimmung, Funktion
+    hydraulisch, Verbindungsart, Bettung, Sanierungsbedarf, Nutzungsart, Profiltyp (Haltung) sowie Status,
+    Lagebestimmung, Sanierungsbedarf, Nutzungsart und NUR beim Normschacht die Funktion. EINE Quelle:
+    `WebGisBegriffe`/`WebGisWerteliste` (Domain) aus `Objektakten.Katalog.json`; Alt-/Importschreibweisen ueber
+    Faltung, belegte Aliase (tot, Niederschlagsabwasser->Regenabwasser, Bachwasser->Bachabwasser,
+    Pumpwerk->Pumpenschacht, Anderes (A)->Andere (A)) und das Vokabular als Vorstufe. Kein Treffer = Wert bleibt
+    stehen, Projektpruefung meldet ihn, er geht nie ins WebGIS. Umgewandelt wird ZENTRAL beim Schreiben
+    (`HaltungRecord.SetFieldValue`, `SchachtRecord.SetFieldValue`/`FuelleLeeresFeld`, Funktion nur Normschacht) —
+    sonst verglichen Import und Katasterschutz Norm- gegen WebGIS-Begriff (Scheinkonflikte, Schlusspruefung
+    23.09.). Dazu `ProjectVocabularyNormalizer` fuer alte Projektdateien (Laden/Speichern, FieldMeta unberuehrt),
+    Holen woertlich (`WebGisImportWert`, Funktion nur beim Normschacht), Objektakte ohne Uebersetzung,
+    QGIS/GeoShop ueber `QgisFeldKarte` und `GeoShopAttributZuordnung`; `GeoShopZiel.SchreibeVergleich` akzeptiert
+    den gleichbedeutenden WebGIS-Begriff. Auswahllisten ueber `FieldCatalog.GetComboItems`
+    (FieldDefinition.ComboItems dieser 8 Felder = null, niemand liest sie); ein Altwert wird zeichengenau
+    HINTEN an die Liste gehaengt, sonst zeigt die Tabelle ihn leer und der erste Klick loescht ihn. Normseite:
+    `SiaWerteliste.NachNorm` kennt Umlaute/Kuerzel/Aliase; 18 reine WebGIS-Werte ohne Norm stehen namentlich in
+    `WebGisBegriffeNormTests`/`DropdownExportierbarkeitTests`; DSS bleibt fail-closed. Zustandsklasse bleibt
+    Ziffer. «Unbekannt» ist gueltig, das Holen fuellt damit nichts. Masse (Entscheid A): Zahl bleibt, nur
+    Zahlen der WebGIS-Liste sind sendbar, Projektpruefung meldet den Rest. Faltung schreibt ZUERST klein
+    (sonst «Ueberschiebmuffen» nicht erkannt). Offen: Schritt B (Material), C (FunktionHierarchisch/Typ AA,
+    vor Beginn neu klaeren), Funktionslisten fuer Spezialbauwerk/Versickerungsanlage nicht erhoben.
+  - SCHUTZREGELN (Pruefung 23.09.2026, `WebGisSchreibschutzTests`): (1) `WebGisPlanVergleich` vergleicht
+    ALT und NEU — eine fremde Aenderung im WebGIS seit der Vorschau erzwingt eine neue Vorschau statt stillem
+    Ueberschreiben. (2) Senden: Felder mit WebGIS-Liste nur mit zeichengenauem WebGIS-Begriff, keine Faltung,
+    keine Punkt-Regel; doppelter Maskeneintrag sperrt das Feld. (3) Holen: BEWUSST LEER = GESCHUETZT (Entscheid
+    Pascal, wie GeoShop; `WebGisImportFeld.Handwert`, `BaujahrHandwert`); `Uebernimm` prueft je Feld nochmals
+    Handmarke, Wert seit der Vorschau und bei der Schachtfunktion die AKTUELLE Bauwerksart. «Leere Felder aus
+    QGIS» behaelt seine eigene Regel (die Leere entscheidet). (4) `HaltungRecord.FuelleLeeresFeld` speichert
+    ebenfalls den WebGIS-Begriff.
+  - SCHREIBSCHUTZ, EINDEUTIGKEIT, AENDERUNGSDATUM (Entscheid Pascal 23.09.2026 abends): Eigentum,
+    Betreiber, Haltungslaenge (alle Laengenfelder), Baujahr, GlobalID, Objekt-ID (OBJECTID) und die
+    Bezeichnung werden im WebGIS nie ueberschrieben; das Baujahr der Haltung darf nur ein LEERES Feld
+    fuellen. `WebGisGeschuetzteFelder` (refIds aus Inventur v2) ist die zweite Sperre neben der Feldliste:
+    genannte Schutzfelder UND alles, was der Export nicht planen kann (Freigabeliste = Zustand,
+    Sanierungsbedarf, Bemerkung, leeres Haltungs-Baujahr, `WebGisHandwertKarte`), sperren das ganze
+    Objekt — geprueft in `WebGisExportUseCase.SchreibeEineAsync` UND in `GeonisWebGisClient.SchreibeAsync`
+    gegen den eben gelesenen Stand. Zeigen zwei SewerStudio-Objekte auf dieselbe GlobalID (gefunden oder
+    gespeichert), werden beide gesperrt und bekommen keine Massnahme (`SperreDoppelteZuordnungen`, erst nach
+    dem Lesen ALLER Objekte). `WebGisExportPosition.GelesenerStand` haelt ALLE Maskenfelder beim Planen
+    (samt «Geändert am (UTC)», dessen refId nicht erhoben ist); weicht der frische Stand vor dem Schreiben in
+    irgendeinem Feld ab, wird nicht geschrieben («seit der Prüfung geändert»), und `WebGisPlanVergleich`
+    nimmt den Fingerabdruck mit (neue Vorschau statt Schreiben). Live noch nicht belegt, dass zwei Lesungen
+    ohne Bearbeitung identisch sind — sperrt der erste Probelauf ALLE Objekte mit derselben Feldkennung,
+    ist das ein fluechtiges Feld, nicht eine fremde Aenderung. Tests `WebGisGeschuetzteFelderTests`,
+    `WebGisExportUseCaseTests.Identitaet`, `GeonisWebGisClientTests.SchreibeAsync_*`.
+  - Geplant (Entscheid Pascal 23.09.): statt zehn Abgleichknoepfen «Vom Kataster holen» (WebGIS,
+    sonst GeoShop, sonst QGIS; Kennungen dabei) und «An den Kataster senden» (WebGIS, XTF unter
+    Weitere). Weitere Maskenfelder erst nach Beschriftungs-Inventur und Pruefung am echten Objekt.
+  - Vorbestehend rot: `ExportPageViewModelDependencyTests.ViewModel_speichert_keinen_ServiceProvider_als_Feld`
+    (`_webGisSp` seit Stufe 3).
 - OFFEN / NICHT ERLEDIGT: Abstimmung mit Trigonet (interne Schnittstelle, ein Schreibweg).
   Der reale Schreibweg ist bisher nur manuell im Browser und im Lauf vom 21.09. belegt
   (Haltung 525145-505377: Z4 + Sanierungsbedarf Saniert + Bemerkung; zwei Sanierungsmassnahmen
@@ -1037,7 +1164,8 @@ Ziel; `GeoShopEinzelErgaenzungDialog` haelt Datei, Ja/Nein und Hintergrundlesen;
 in `AppSettings.GeoShopXtfPath` gemerkt). **Die Haltungslaenge kommt immer aus der XTF**
 (`GeoShopAbgleichPlanBuilder.ImmerAusXtf`, Entscheid Pascal): auch ein Handwert wird ersetzt und
 als Katasterwert markiert; alle anderen Felder nur, wenn leer. Nie einen zweiten Planer fuer
-den Einzelweg bauen.
+den Einzelweg bauen. **UEBERHOLT am 23.09.2026** (Entscheid Pascal: Haltungslaenge der
+Kanalfirma bleibt, GeoShop ergaenzt nur leere Felder) — der Code ist noch nicht angepasst.
 
 ## Aufklapplisten: Reihenfolge (09.09.2026)
 
