@@ -68,7 +68,7 @@ public sealed class ExcelTemplateDataTransferTests
         AssertText(worksheet, row, columns, "Strasse", "Bahnhofstrasse");
         AssertText(worksheet, row, columns, "Rohrmaterial", "Polypropylen");
         AssertNumber(worksheet, row, columns, "DN mm", 300d);
-        AssertText(worksheet, row, columns, "Nutzungsart", "Schmutzwasser");
+        AssertText(worksheet, row, columns, "Nutzungsart", "Schmutzabwasser"); // WebGIS-Begriff (Schritt A, 23.09.2026)
         AssertNumber(worksheet, row, columns, "Haltungslänge m", 12.5d);
         AssertText(worksheet, row, columns, "Inspektionsrichtung", "In Fliessrichtung");
         AssertText(worksheet, row, columns, "Primäre Schäden", "BAB Riss");

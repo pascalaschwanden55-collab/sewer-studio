@@ -17,6 +17,11 @@ public sealed class WebGisImportEingabe
     public string? Laenge { get; init; }
     public string? Baujahr { get; init; }
     /// <summary>
+    /// Nur Schacht: ist das Bauwerk ein Normschacht? Nur dort gilt die WebGIS-Funktionsliste
+    /// (Schritt A, 23.09.2026); ein Spezialbauwerk bekommt keine Funktion aus dem WebGIS.
+    /// </summary>
+    public bool Normschacht { get; init; } = true;
+    /// <summary>
     /// Aktueller SewerStudio-Stand der Kartenfelder (SewerStudio-Feldname -> Wert). Fehlt ein Feld,
     /// gilt es als leer.
     /// </summary>
@@ -148,6 +153,14 @@ public static class WebGisImportPlanBuilder
 
             var webgis = WebGisText(karte, stand, pos);
             if (webgis is null) continue;
+
+            // Die WebGIS-Funktionsliste gilt nur fuer den Normschacht (Schritt A, 23.09.2026); sonst
+            // pendelte der Wert zwischen Holen und Speichern (Pumpenschacht <-> Pumpwerk).
+            if (e.Objektart == WebGisObjektart.Schacht && karte.SewerStudioFeld == WebGisBegriffe.SchachtFunktion && !e.Normschacht)
+            {
+                pos.Hinweise.Add($"Funktion: «{webgis}» nicht übernommen — kein Normschacht (Funktionsliste dieser Bauwerksart nicht erhoben).");
+                continue;
+            }
 
             var neu = WebGisImportWert.Zuordne(e.Objektart, karte.SewerStudioFeld, webgis, out var hinweis, TypAa(e));
             if (hinweis is not null) pos.Hinweise.Add(hinweis);

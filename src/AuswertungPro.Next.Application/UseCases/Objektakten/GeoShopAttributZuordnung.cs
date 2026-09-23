@@ -31,8 +31,15 @@ public static class GeoShopAttributZuordnung
             if (felder.ContainsKey(f.Speicherfeld!)) continue;
             if (f.Id is "haltung.owner" or "schacht.eigentuemer") wert = Organisation(quellen, wert);
             if (!string.IsNullOrWhiteSpace(wert))
-                felder[f.Speicherfeld!] = ObjektaktenBearbeitung.Normalisiere(f, wert);
+                felder[f.Speicherfeld!] = AlsWebGisBegriff(f.Speicherfeld!, ObjektaktenBearbeitung.Normalisiere(f, wert));
         }
+        // Seit 23.09.2026 (Schritt A): im Projekt steht der WebGIS-Begriff; sonst verglich der
+        // GeoShop-Abgleich Normbegriff gegen WebGIS-Begriff. Die Funktion nur beim Normschacht.
+        string AlsWebGisBegriff(string feld, string text)
+            => !haltung && feld == WebGisBegriffe.SchachtFunktion
+               && AbwasserbauwerkVokabular.Klasse(felder.GetValueOrDefault(FieldKeys.ShaftStructureType), text) != "Normschacht"
+                ? text
+                : WebGisBegriffe.Normalisieren(!haltung, feld, text);
         void Ergaenze(string feld, string? wert)
         {
             if (!string.IsNullOrWhiteSpace(wert)) felder.TryAdd(feld, wert);

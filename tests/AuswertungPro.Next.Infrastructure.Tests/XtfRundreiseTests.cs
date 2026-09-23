@@ -279,7 +279,7 @@ public sealed class XtfRundreiseTests
 
         Assert.Equal("1000", record.GetFieldValue(FieldKeys.NominalDiameterMm));
         Assert.Equal("600", record.GetFieldValue(FieldKeys.ClearWidthMm));
-        Assert.Equal("Rechteckprofil", record.GetFieldValue(FieldKeys.ProfileType));
+        Assert.Equal("Rechteckprofil (R)", record.GetFieldValue(FieldKeys.ProfileType)); // WebGIS-Begriff (Schritt A, 23.09.2026)
         Assert.Equal(FieldSource.Xtf405, record.FieldMeta[FieldKeys.ClearWidthMm].Source);
     }
 
@@ -305,7 +305,7 @@ public sealed class XtfRundreiseTests
         var record = Lies(xml);
 
         Assert.Equal("300", record.GetFieldValue(FieldKeys.ClearWidthMm));
-        Assert.Equal("Kreisprofil", record.GetFieldValue(FieldKeys.ProfileType));
+        Assert.Equal("Kreisprofil (K)", record.GetFieldValue(FieldKeys.ProfileType)); // WebGIS-Begriff (Schritt A, 23.09.2026)
     }
 
     [Fact]
@@ -329,7 +329,7 @@ public sealed class XtfRundreiseTests
 
         var record = Lies(xml);
 
-        Assert.Equal("Unbekannt", record.GetFieldValue(FieldKeys.ProfileType));
+        Assert.Equal("Unbekannt (U)", record.GetFieldValue(FieldKeys.ProfileType)); // WebGIS-Begriff (Schritt A, 23.09.2026)
     }
 
     // Punkt 4 der Fremdanalyse vom 2026-09-03: Status, Sanierungsbedarf, beide Funktionen
@@ -356,11 +356,11 @@ public sealed class XtfRundreiseTests
 
         var record = Lies(xml);
 
-        Assert.Equal("in_Betrieb", record.GetFieldValue(FieldKeys.OperatingStatus));
-        Assert.Equal("kurzfristig", record.GetFieldValue(FieldKeys.RehabilitationNeed));
+        Assert.Equal("In Betrieb", record.GetFieldValue(FieldKeys.OperatingStatus)); // WebGIS-Begriff (Schritt A, 23.09.2026)
+        Assert.Equal("Kurzfristig", record.GetFieldValue(FieldKeys.RehabilitationNeed));
         Assert.Equal("SAA.Liegenschaftsentwaesserung", record.GetFieldValue(FieldKeys.HierarchicalFunction));
         Assert.Equal("Freispiegelleitung", record.GetFieldValue(FieldKeys.HydraulicFunction));
-        Assert.Equal("genau", record.GetFieldValue(FieldKeys.PositionAccuracy));
+        Assert.Equal("Genau", record.GetFieldValue(FieldKeys.PositionAccuracy));
         Assert.Equal("03.09.2026", record.GetFieldValue(FieldKeys.CadastreLastChange));
         Assert.True(string.IsNullOrEmpty(record.GetFieldValue("Datum_Jahr")), "Letzte_Aenderung ist kein Inspektionsdatum");
     }
@@ -426,17 +426,17 @@ public sealed class XtfRundreiseTests
             Assert.Equal("0", zurueck.GetFieldValue(FieldKeys.ConditionClass));
             Assert.Equal("SAA.Liegenschaftsentwaesserung", zurueck.GetFieldValue(FieldKeys.HierarchicalFunction));
             Assert.Equal("Freispiegelleitung", zurueck.GetFieldValue(FieldKeys.HydraulicFunction));
-            Assert.Equal("in_Betrieb", zurueck.GetFieldValue(FieldKeys.OperatingStatus));
-            Assert.Equal("kurzfristig", zurueck.GetFieldValue(FieldKeys.RehabilitationNeed));
+            Assert.Equal("In Betrieb", zurueck.GetFieldValue(FieldKeys.OperatingStatus)); // WebGIS-Begriff (Schritt A, 23.09.2026)
+            Assert.Equal("Kurzfristig", zurueck.GetFieldValue(FieldKeys.RehabilitationNeed));
             Assert.Equal("1999", zurueck.GetFieldValue(FieldKeys.ConstructionYear));
             Assert.Equal("1250.50", zurueck.GetFieldValue(FieldKeys.GrossCost));
             Assert.Equal("Rundweg", zurueck.GetFieldValue(FieldKeys.Remarks));
             Assert.Equal("Zement", zurueck.GetFieldValue(FieldKeys.PipeMaterial));
             Assert.Equal("1000", zurueck.GetFieldValue(FieldKeys.NominalDiameterMm));
             Assert.Equal("600", zurueck.GetFieldValue(FieldKeys.ClearWidthMm));
-            Assert.Equal("Rechteckprofil", zurueck.GetFieldValue(FieldKeys.ProfileType));
+            Assert.Equal("Rechteckprofil (R)", zurueck.GetFieldValue(FieldKeys.ProfileType)); // WebGIS-Begriff (Schritt A, 23.09.2026)
             Assert.Equal("12.50", zurueck.GetFieldValue(FieldKeys.HoldingLengthMeters));
-            Assert.Equal("genau", zurueck.GetFieldValue(FieldKeys.PositionAccuracy));
+            Assert.Equal("Genau", zurueck.GetFieldValue(FieldKeys.PositionAccuracy));
             Assert.False(string.IsNullOrWhiteSpace(zurueck.GetFieldValue(FieldKeys.CadastreObjectId)));
 
             var schacht1 = Assert.Single(rueckweg.SchaechteData, s => s.GetFieldValue("Schachtnummer") == "S1");

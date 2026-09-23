@@ -789,6 +789,8 @@ public partial class SchaechtePage : UserControl
             "SchachtMaterialOptions" => _vm.SchachtMaterialOptions,
             "StatusOptions" => _vm.StatusOptions,
             "SanierungsbedarfOptions" => _vm.SanierungsbedarfOptions,
+            "NutzungsartOptions" => _vm.NutzungsartOptions, // WebGIS-Listen (23.09.2026)
+            "LagebestimmungOptions" => _vm.LagebestimmungOptions,
             _ => Array.Empty<string>()
         };
     }

@@ -39,7 +39,11 @@ public sealed class GeoShopZiel
     {
         if (Handgesetzt(feld)) throw new InvalidOperationException("Eine Handeingabe darf nicht automatisch ersetzt werden.");
         _setze(feld, wert);
-        if (Wert(feld) != wert) throw new InvalidOperationException($"{Name}: {feld} konnte nicht übernommen werden.");
+        // Der Datensatz speichert seit 23.09.2026 den WebGIS-Begriff («unbekannt» -> «Unbekannt»); das
+        // ist derselbe Wert und kein Fehlschlag.
+        var geschrieben = Wert(feld);
+        if (geschrieben != wert && geschrieben != WebGisBegriffe.Normalisieren(Datensatz is SchachtRecord, feld, wert))
+            throw new InvalidOperationException($"{Name}: {feld} konnte nicht übernommen werden.");
     }
     /// <summary>Auch der Einzelweg prueft die Namen im ganzen gebundenen Projekt.
     /// Beim Anwenden erneut lesen: Eine inzwischen umbenannte Nachbarzeile kann den Namen doppeln.</summary>

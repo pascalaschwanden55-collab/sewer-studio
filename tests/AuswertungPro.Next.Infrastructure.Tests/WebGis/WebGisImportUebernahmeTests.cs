@@ -44,23 +44,24 @@ public sealed class WebGisImportUebernahmeTests
     [Fact]
     public void Katasterwert_wird_ersetzt()
     {
-        var (p, h) = ProjektMit(FieldKeys.OperatingStatus, "ausser_Betrieb", FieldSource.Kataster, false);
+        // Seit 23.09.2026 stehen Datensatz und Plan in WebGIS-Begriffen (Schritt A).
+        var (p, h) = ProjektMit(FieldKeys.OperatingStatus, "Ausser Betrieb", FieldSource.Kataster, false);
 
-        WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.OperatingStatus, "ausser_Betrieb", "in_Betrieb"), p);
+        WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.OperatingStatus, "Ausser Betrieb", "In Betrieb"), p);
 
-        Assert.Equal("in_Betrieb", h.GetFieldValue(FieldKeys.OperatingStatus));
+        Assert.Equal("In Betrieb", h.GetFieldValue(FieldKeys.OperatingStatus));
     }
 
     [Fact]
     public void Seit_der_vorschau_von_hand_geaendert_bleibt_stehen()
     {
-        var (p, h) = ProjektMit(FieldKeys.OperatingStatus, "ausser_Betrieb", FieldSource.Kataster, false);
-        var plan = Plan(h, FieldKeys.OperatingStatus, "ausser_Betrieb", "in_Betrieb");
-        h.SetFieldValue(FieldKeys.OperatingStatus, "tot", FieldSource.Manual, true);
+        var (p, h) = ProjektMit(FieldKeys.OperatingStatus, "Ausser Betrieb", FieldSource.Kataster, false);
+        var plan = Plan(h, FieldKeys.OperatingStatus, "Ausser Betrieb", "In Betrieb");
+        h.SetFieldValue(FieldKeys.OperatingStatus, "Tot/Aufgehoben, verfüllt", FieldSource.Manual, true);
 
         Assert.Equal(0, WebGisImportUseCase.Uebernimm(plan, p));
 
-        Assert.Equal("tot", h.GetFieldValue(FieldKeys.OperatingStatus));
+        Assert.Equal("Tot/Aufgehoben, verfüllt", h.GetFieldValue(FieldKeys.OperatingStatus));
     }
 
     [Fact]

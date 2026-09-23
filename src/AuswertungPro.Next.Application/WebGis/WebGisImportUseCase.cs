@@ -53,6 +53,9 @@ public sealed class WebGisImportUseCase
                 RecordId = s.Id,
                 GespeicherteGlobalId = s.WebGisGlobalId,
                 Baujahr = s.GetFieldValue(SchachtFeldnamen.Feld(s, WebGisImportPlanBuilder.FeldBaujahr)),
+                Normschacht = AbwasserbauwerkVokabular.Klasse(
+                    s.GetFieldValue(SchachtFeldnamen.Feld(s, FieldKeys.ShaftStructureType)),
+                    s.GetFieldValue(SchachtFeldnamen.Feld(s, WebGisBegriffe.SchachtFunktion))) == "Normschacht",
             };
             e.Felder[WebGisImportPlanBuilder.MaterialgruppeFeld(WebGisObjektart.Schacht)] = AkteFeld(projekt, s.Id, "schacht",
                 WebGisImportPlanBuilder.MaterialgruppeFeld(WebGisObjektart.Schacht));

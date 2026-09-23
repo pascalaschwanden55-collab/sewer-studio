@@ -130,6 +130,7 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     /// </summary>
     public FeldSchreibErgebnis SetFieldValue(string fieldName, string? value)
     {
+        value = AlsWebGisBegriff(fieldName, value);
         // Schutz wie bei HaltungRecord: ein von Hand gesetzter Wert wird nie
         // ueberschrieben - auch nicht durch einen versehentlich wiederholten Import.
         // Wer bewusst eine Handeingabe setzt oder ersetzt (Umbenennen, Massnahme
@@ -161,6 +162,7 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     /// </summary>
     public FeldSchreibErgebnis SetFieldValue(string fieldName, string? value, FieldSource source, bool userEdited)
     {
+        value = AlsWebGisBegriff(fieldName, value);
         if (!userEdited && IsUserEdited(fieldName))
             return FeldSchreibErgebnis.HandwertGeschuetzt;
 
@@ -196,8 +198,23 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
         if (string.IsNullOrWhiteSpace(value))
             return false;
 
-        WriteField(fieldName, value, source, userEdited: false);
+        WriteField(fieldName, AlsWebGisBegriff(fieldName, value), source, userEdited: false);
         return true;
+    }
+
+    /// <summary>
+    /// Seit 23.09.2026 (Schritt A): Felder, die ins WebGIS gehen, speichern den WebGIS-Begriff — schon
+    /// beim Schreiben, damit Import und Katasterschutz nie Normbegriff gegen WebGIS-Begriff vergleichen.
+    /// Die Funktion nur beim Normschacht; ein Spezialbauwerk behaelt seine Normfunktion.
+    /// </summary>
+    private string? AlsWebGisBegriff(string fieldName, string? value)
+    {
+        if (!string.Equals(fieldName, WebGisBegriffe.SchachtFunktion, StringComparison.Ordinal))
+            return WebGisBegriffe.Fuer(true, fieldName) is { } liste ? liste.Normalisieren(value) : value;
+        var art = GetFieldValue(SchachtFeldnamen.Feld(this, FieldKeys.ShaftStructureType));
+        return AbwasserbauwerkVokabular.Klasse(art, value) == "Normschacht"
+            ? WebGisBegriffe.Normalisieren(true, fieldName, value)
+            : value;
     }
 
     private FeldSchreibErgebnis WriteField(string fieldName, string? value, FieldSource source, bool? userEdited)

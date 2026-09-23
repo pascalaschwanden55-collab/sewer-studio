@@ -665,7 +665,7 @@ public sealed class XtfStammdatenPlanBuilderTests
             modell: "IRGENDEIN_MODELL");
 
         Assert.Empty(plan.Positionen);
-        Assert.Contains("Regenwasser", Assert.Single(plan.Hinweise));
+        Assert.Contains("Regenabwasser", Assert.Single(plan.Hinweise)); // WebGIS-Begriff (Schritt A, 23.09.2026)
     }
 
     [Fact]

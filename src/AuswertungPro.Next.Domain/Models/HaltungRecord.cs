@@ -181,7 +181,10 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
         // nie in Fields landen (siehe VirtuelleSpalte).
         VirtuelleSpalte.WeiseAb(fieldName, nameof(fieldName));
 
-        value ??= "";
+        // Seit 23.09.2026 (Schritt A): Felder, die ins WebGIS gehen, speichern den WebGIS-Begriff —
+        // schon beim Schreiben, damit Import, Nachschlagen und Vergleiche nie mit dem Normbegriff
+        // arbeiten. Ohne eindeutigen Begriff bleibt der Text, wie er kommt.
+        value = WebGisBegriffe.Normalisieren(schacht: false, fieldName, value);
 
         // Record-Level Setter: keep this as a simple assignment.
         // Import/UI priority decisions are handled by MergeEngine; we only protect user-edited values here.

@@ -388,7 +388,7 @@ public sealed class GeoShopAbgleichTests : IDisposable
         var b = new ObjektaktenBearbeitung(p, h.Id, "haltung");
         Assert.Equal("Grundgasse", b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("haltung.street")));
         Assert.Equal("PAA", b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("haltung.aatype")));
-        Assert.Equal("unbekannt", h.GetFieldValue(FieldKeys.BeddingEncasement));
+        Assert.Equal("Unbekannt", h.GetFieldValue(FieldKeys.BeddingEncasement)); // WebGIS-Begriff (Schritt A, 23.09.2026)
         Assert.Equal("0.00", h.GetFieldValue(FieldKeys.GrossCost));
         Assert.Equal("2026-08-29", b.Lies(b.Wurzel, FieldCatalog.Objektfelder.Feld("haltung.changed")));
         var punkt = p.Objektakten.Single(a => a.Art == "haltungspunkt" && a.Quellen.Any(q => q.Kennung == V));

@@ -69,7 +69,10 @@ public sealed class NutzungsartVokabularTests
     public void Der_Speicherlauf_stellt_alte_Schreibweisen_um()
     {
         var record = new HaltungRecord();
-        record.SetFieldValue(FieldKeys.UsageType, "Schmutzwasser", FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue(FieldKeys.UsageType, "Schmutzabwasser", FieldSource.Xtf, userEdited: false);
+        // Ein altes Projekt aus der Datei: der Wert steht dort noch in der alten Schreibweise
+        // (SetFieldValue hebt seit 23.09.2026 schon beim Schreiben an).
+        record.Fields[FieldKeys.UsageType] = "Schmutzwasser";
         var vorher = record.FieldMeta[FieldKeys.UsageType];
         var projekt = new Project { Data = { record } };
 

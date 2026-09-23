@@ -88,7 +88,7 @@ public sealed class ExcelExportTests
         Assert.Equal("Testweg", outWs.Cell(startRow, strCol).GetString());
         Assert.Equal("Beton", outWs.Cell(startRow, matCol).GetString());
         Assert.Equal(300d, outWs.Cell(startRow, dnCol).GetDouble(), 3);
-        Assert.Equal("Schmutzwasser", outWs.Cell(startRow, nuCol).GetString());
+        Assert.Equal("Schmutzabwasser", outWs.Cell(startRow, nuCol).GetString()); // WebGIS-Begriff (Schritt A, 23.09.2026)
         Assert.Equal(12.5d, outWs.Cell(startRow, lenCol).GetDouble(), 3);
         Assert.Equal("In Fliessrichtung", outWs.Cell(startRow, flCol).GetString());
     }

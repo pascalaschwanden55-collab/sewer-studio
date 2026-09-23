@@ -193,7 +193,7 @@ public sealed class XtfNormschachtImportTests : IDisposable
         // hinausschreibt, kam nicht zurueck. "unbekannt" bleibt weiterhin keine Angabe.
         var p = Importiere();
         var s = Schacht(p, "82099");
-        Assert.Equal("in_Betrieb", s.GetFieldValue(FieldKeys.OperatingStatus));
+        Assert.Equal("In Betrieb", s.GetFieldValue(FieldKeys.OperatingStatus)); // WebGIS-Begriff (Schritt A, 23.09.2026)
         Assert.Equal("1975", s.GetFieldValue(FieldKeys.ConstructionYear));
         Assert.True(string.IsNullOrEmpty(s.GetFieldValue(FieldKeys.RehabilitationNeed)), "unbekannt ist keine Angabe");
         Assert.Equal("Tauchbogen fehlt", Schacht(p, "82265").GetFieldValue(FieldKeys.Remarks));
