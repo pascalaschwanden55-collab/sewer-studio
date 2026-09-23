@@ -118,6 +118,9 @@ public static class QgisFeldKarte
                 continue;
 
             var wert = zuordnung.Umsetzung(text);
+            // Seit 23.09.2026: im Projekt steht der WebGIS-Begriff (Schritt A). Die Sperren gegen
+            // «unbekannt» darunter greifen auch fuer «Unbekannt».
+            wert = WebGisBegriffe.Normalisieren(art == BauteilArt.Schacht, zuordnung.Feld, wert);
             if (!string.IsNullOrWhiteSpace(wert)
                 && !string.Equals(wert, KeineAngabe, StringComparison.OrdinalIgnoreCase))
             {

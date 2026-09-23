@@ -85,7 +85,9 @@ internal static class GeoShopXtfZuordnung
         if (haltung)
         {
             var typ = SiaKanalVokabular.Profiltyp.NachNorm(profil?.Wert("Profiltyp") ?? "");
-            if (!string.IsNullOrEmpty(typ) && typ != "unbekannt") felder[FieldKeys.ProfileType] = typ;
+            // Im Projekt steht der WebGIS-Begriff («Kreisprofil (K)», Schritt A 23.09.2026).
+            if (!string.IsNullOrEmpty(typ) && typ != "unbekannt")
+                felder[FieldKeys.ProfileType] = WebGisBegriffe.Normalisieren(false, FieldKeys.ProfileType, typ);
             if (decimal.TryParse(o.Wert("Lichte_Hoehe"), NumberStyles.Float, CultureInfo.InvariantCulture, out var hoehe)
                 && decimal.TryParse(profil?.Wert("HoehenBreitenverhaeltnis"), NumberStyles.Float,
                     CultureInfo.InvariantCulture, out var verhaeltnis) && hoehe > 0 && verhaeltnis > 0)
