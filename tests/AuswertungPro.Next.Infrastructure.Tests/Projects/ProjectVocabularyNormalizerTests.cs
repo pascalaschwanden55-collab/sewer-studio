@@ -52,7 +52,8 @@ public sealed class ProjectVocabularyNormalizerTests
 
         var geaendert = ProjectVocabularyNormalizer.Normalize(project);
 
-        Assert.Equal("Offenes Profil", haltung.GetFieldValue(FieldKeys.ProfileType));
+        // Seit 23.09.2026 die WebGIS-Beschriftung mit Kuerzel (Entscheid Pascal, Schritt A).
+        Assert.Equal("Offenes Profil (OP)", haltung.GetFieldValue(FieldKeys.ProfileType));
         Assert.Equal("Vieleckig", schacht.GetFieldValue(FieldKeys.ShaftShape));
         Assert.Equal(2, geaendert);
     }
@@ -118,4 +119,58 @@ public sealed class ProjectVocabularyNormalizerTests
         Assert.Equal(0, ProjectVocabularyNormalizer.Normalize(project));
     }
 
+
+    [Fact]
+    public void Haltungsfelder_werden_auf_webgis_begriffe_gehoben_ohne_herkunft_zu_aendern()
+    {
+        var project = new Project();
+        var h = new HaltungRecord();
+        h.SetFieldValue(FieldKeys.OperatingStatus, "in_Betrieb", FieldSource.Xtf, false);
+        h.Fields[FieldKeys.UsageType] = "Niederschlagsabwasser";
+        h.Fields[FieldKeys.ProfileType] = "Kreisprofil";
+        h.Fields[FieldKeys.PositionAccuracy] = "genau";
+        project.Data.Add(h);
+        var metaVorher = h.FieldMeta[FieldKeys.OperatingStatus];
+
+        ProjectVocabularyNormalizer.Normalize(project);
+
+        Assert.Equal("In Betrieb", h.GetFieldValue(FieldKeys.OperatingStatus));
+        Assert.Equal("Regenabwasser", h.GetFieldValue(FieldKeys.UsageType));
+        Assert.Equal("Kreisprofil (K)", h.GetFieldValue(FieldKeys.ProfileType));
+        Assert.Equal("Genau", h.GetFieldValue(FieldKeys.PositionAccuracy));
+        Assert.Same(metaVorher, h.FieldMeta[FieldKeys.OperatingStatus]);
+        Assert.False(h.FieldMeta[FieldKeys.OperatingStatus].UserEdited);
+    }
+
+    [Fact]
+    public void Wert_ohne_webgis_begriff_bleibt_stehen()
+    {
+        var project = new Project();
+        var h = new HaltungRecord();
+        h.Fields[FieldKeys.OperatingStatus] = "weitere";
+        project.Data.Add(h);
+
+        Assert.Equal(0, ProjectVocabularyNormalizer.Normalize(project));
+        Assert.Equal("weitere", h.GetFieldValue(FieldKeys.OperatingStatus));
+    }
+
+    [Fact]
+    public void Normschacht_funktion_wird_webgis_begriff_spezialbauwerk_nicht()
+    {
+        var project = new Project();
+        var norm = new SchachtRecord();
+        norm.Fields["Funktion"] = "Pumpwerk";
+        norm.Fields["Status"] = "in_Betrieb";
+        var spezial = new SchachtRecord();
+        spezial.Fields[FieldKeys.ShaftStructureType] = "Spezialbauwerk";
+        spezial.Fields["Funktion"] = "Pumpwerk";
+        project.SchaechteData.Add(norm);
+        project.SchaechteData.Add(spezial);
+
+        ProjectVocabularyNormalizer.Normalize(project);
+
+        Assert.Equal("Pumpenschacht", norm.GetFieldValue("Funktion"));
+        Assert.Equal("In Betrieb", norm.GetFieldValue("Status"));
+        Assert.Equal("Pumpwerk", spezial.GetFieldValue("Funktion"));
+    }
 }

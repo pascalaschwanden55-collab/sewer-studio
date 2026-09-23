@@ -15,6 +15,8 @@ namespace AuswertungPro.Next.Infrastructure.Projects;
 /// betraf das 19 Haltungen und 10 Schaechte mit "Beton Normalbeton".
 /// Seit 2026-09-03 werden auch Profil- und Schachtformen auf die lesbare Uri-Auswahl
 /// gebracht.
+/// Seit 2026-09-23 (Entscheid Pascal, Schritt A) hebt er die Felder aus WebGisBegriffe auf die
+/// WebGIS-Beschriftung, zeichengenau; ein Wert ohne WebGIS-Gegenstueck bleibt stehen.
 ///
 /// Zwei Grenzen gelten dabei fest:
 /// <list type="bullet">
@@ -37,16 +39,31 @@ internal static class ProjectVocabularyNormalizer
 
         foreach (var record in project.Data ?? [])
         {
-            geaendert += Hebe(record?.Fields, FieldKeys.UsageType, NutzungsartVokabular.Normalisieren);
-            geaendert += Hebe(record?.Fields, FieldKeys.PipeMaterial, MaterialVokabular.Normalisieren);
-            geaendert += Hebe(record?.Fields, FieldKeys.ProfileType, ProfiltypVokabular.Normalisieren);
+            if (record is null) continue;
+            // Material folgt in Schritt B; bis dahin die bisherige Normschreibweise.
+            geaendert += Hebe(record.Fields, FieldKeys.PipeMaterial, MaterialVokabular.Normalisieren);
+            // Seit 23.09.2026 (Entscheid Pascal): die WebGIS-Beschriftung, zeichengenau.
+            foreach (var feld in WebGisBegriffe.HaltungFelder)
+                geaendert += Hebe(record.Fields, feld, w => WebGisBegriffe.Normalisieren(false, feld, w));
         }
 
         foreach (var record in project.SchaechteData ?? [])
         {
-            geaendert += Hebe(record?.Fields, "Funktion", SchachtFunktionVokabular.Normalisieren);
-            geaendert += Hebe(record?.Fields, "Material", SchachtMaterialVokabular.Normalisieren);
-            geaendert += Hebe(record?.Fields, FieldKeys.ShaftShape, SchachtformVokabular.Normalisieren);
+            if (record is null) continue;
+            geaendert += Hebe(record.Fields, "Material", SchachtMaterialVokabular.Normalisieren);
+            geaendert += Hebe(record.Fields, FieldKeys.ShaftShape, SchachtformVokabular.Normalisieren);
+            foreach (var feld in WebGisBegriffe.SchachtFelder)
+                geaendert += Hebe(record.Fields, SchachtFeldnamen.Feld(record, feld),
+                    w => WebGisBegriffe.Normalisieren(true, feld, w));
+
+            // Nur der Normschacht hat die WebGIS-Funktionsliste; Spezialbauwerk und
+            // Versickerungsanlage behalten ihre Normfunktion, bis deren Listen erhoben sind.
+            var funktionsfeld = SchachtFeldnamen.Feld(record, WebGisBegriffe.SchachtFunktion);
+            var art = record.GetFieldValue(SchachtFeldnamen.Feld(record, FieldKeys.ShaftStructureType));
+            var normschacht = AbwasserbauwerkVokabular.Klasse(art, record.GetFieldValue(funktionsfeld)) == "Normschacht";
+            geaendert += normschacht
+                ? Hebe(record.Fields, funktionsfeld, w => WebGisBegriffe.Normalisieren(true, WebGisBegriffe.SchachtFunktion, w))
+                : Hebe(record.Fields, funktionsfeld, SchachtFunktionVokabular.Normalisieren);
         }
 
         return geaendert;
