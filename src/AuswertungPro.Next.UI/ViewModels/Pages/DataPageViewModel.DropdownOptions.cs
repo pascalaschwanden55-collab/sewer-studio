@@ -207,7 +207,20 @@ public sealed partial class DataPageViewModel
                 PruefungsresultatOptions,
                 ReferenzpruefungOptions,
                 EmpfohleneSanierungsmassnahmenOptions,
-                RohrmaterialOptions));
+                RohrmaterialOptions)
+            {
+                // WebGIS-Felder (23.09.2026): Altwerte bleiben in der Auswahl sichtbar.
+                WebGisListen = new Dictionary<string, ObservableCollection<string>>
+                {
+                    [FieldKeys.OperatingStatus] = StatusOptions,
+                    [FieldKeys.PositionAccuracy] = LagebestimmungOptions,
+                    [FieldKeys.HydraulicFunction] = FunktionHydraulischOptions,
+                    [FieldKeys.ConnectionType] = VerbindungsartOptions,
+                    [FieldKeys.BeddingEncasement] = BettungUmhuellungOptions,
+                    [FieldKeys.ProfileType] = ProfiltypOptions,
+                    [FieldKeys.RehabilitationNeed] = SanierungsbedarfOptions,
+                },
+            });
 
     private void EnforceEigentuemerOptionsExact()
     {

@@ -9,13 +9,20 @@ namespace AuswertungPro.Next.UI.DataPage;
 internal sealed class SchachtNormoptionen : IMultiValueConverter
 {
     internal static IReadOnlyList<string> Funktion(string? art, string? funktion)
-        => AbwasserbauwerkVokabular.Klasse(art, funktion) switch
+    {
+        IReadOnlyList<string> liste = AbwasserbauwerkVokabular.Klasse(art, funktion) switch
         {
-            "Normschacht" => SchachtFunktionVokabular.Auswahl
-                .Where(s => s is not ("Sickerschacht" or "Spezialbauwerk")).ToArray(),
+            // Seit 23.09.2026 die WebGIS-Liste des Normschachts (Entscheid Pascal, Schritt A).
+            "Normschacht" => WebGisBegriffe.Fuer(true, WebGisBegriffe.SchachtFunktion)!.Auswahl,
             "Spezialbauwerk" => new[] { "" }.Concat(AbwasserbauwerkVokabular.Spezialfunktionen).ToArray(),
             _ => [""]
         };
+        // Ein Altwert ausserhalb der Liste bleibt sichtbar: sonst zeigt das Feld leer an und der
+        // erste Klick ersetzt ihn. Die Projektpruefung meldet ihn zum Korrigieren.
+        var aktuell = (funktion ?? "").Trim();
+        return aktuell.Length == 0 || liste.Contains(aktuell, StringComparer.Ordinal)
+            ? liste : liste.Append(aktuell).ToArray();
+    }
 
     internal static BindingBase? FuerSpalte(string feld)
     {

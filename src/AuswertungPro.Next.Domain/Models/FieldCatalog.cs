@@ -87,9 +87,8 @@ public static partial class FieldCatalog
             // Ergaenzt 2026-07-17: Epoxydharz, Faserzement, Ton — kommen in echten IKAS-Exporten vor.
             [FieldKeys.PipeMaterial] = new ReadOnlyCollection<string>(
                 MaterialVokabular.Auswahl.ToList()),
-            // Die Begriffe der Norm, gefuehrt in NutzungsartVokabular — keine zweite Liste.
-            [FieldKeys.UsageType] = new ReadOnlyCollection<string>(
-                NutzungsartVokabular.Auswahl.ToList()),
+            // Nutzungsart, Status, Lagebestimmung, Funktion hydraulisch, Verbindungsart, Bettung,
+            // Profiltyp und Sanierungsbedarf kommen seit 23.09.2026 aus WebGisBegriffe (GetComboItems).
             ["Inspektionsrichtung"] = new ReadOnlyCollection<string>(new List<string>
             {
                 "", "In Fliessrichtung", "Gegen Fliessrichtung"
@@ -138,22 +137,10 @@ public static partial class FieldCatalog
             // Kataster sie fuehrt. Kein bisheriger Wert faellt weg.
             [FieldKeys.HierarchicalFunction] = new ReadOnlyCollection<string>(
                 SiaKanalVokabular.FunktionHierarchisch.Auswahl.ToList()),
-            [FieldKeys.ConnectionType] = new ReadOnlyCollection<string>(
-                SiaKanalVokabular.Verbindungsart.Auswahl.ToList()),
-            [FieldKeys.BeddingEncasement] = new ReadOnlyCollection<string>(
-                SiaKanalVokabular.BettungUmhuellung.Auswahl.ToList()),
-            [FieldKeys.ProfileType] = new ReadOnlyCollection<string>(
-                ProfiltypVokabular.Auswahl.ToList()),
-            [FieldKeys.HydraulicFunction] = new ReadOnlyCollection<string>(
-                SiaKanalVokabular.FunktionHydraulisch.Auswahl.ToList()),
-            [FieldKeys.OperatingStatus] = new ReadOnlyCollection<string>(
-                SiaKanalVokabular.Status.Auswahl.ToList()),
-            [FieldKeys.RehabilitationNeed] = new ReadOnlyCollection<string>(
-                SiaKanalVokabular.Sanierungsbedarf.Auswahl.ToList()),
-            [FieldKeys.PositionAccuracy] = new ReadOnlyCollection<string>(
-                SiaKanalVokabular.Lagebestimmung.Auswahl.ToList())
         });
 
+    // Die acht WebGIS-Felder (Schritt A, 23.09.2026) tragen hier keine Liste: sie kommt aus
+    // WebGisBegriffe ueber GetComboItems. FieldDefinition.ComboItems liest niemand.
     public static readonly IReadOnlyDictionary<string, FieldDefinition> Definitions =
         new ReadOnlyDictionary<string, FieldDefinition>(new Dictionary<string, FieldDefinition>
         {
@@ -165,7 +152,7 @@ public static partial class FieldCatalog
             // Excel-Export ordnet diesen genaueren UI-Namen weiter dem bestehenden
             // Vorlagenkopf "DN mm" zu.
             [FieldKeys.NominalDiameterMm] = new(FieldKeys.NominalDiameterMm, "Lichte Höhe / DN mm", FieldType.Int),
-            [FieldKeys.UsageType] = new(FieldKeys.UsageType, "Nutzungsart", FieldType.Combo, ComboItems[FieldKeys.UsageType]),
+            [FieldKeys.UsageType] = new(FieldKeys.UsageType, "Nutzungsart", FieldType.Combo),
             [FieldKeys.HoldingLengthMeters] = new(FieldKeys.HoldingLengthMeters, "Haltungslänge m", FieldType.Decimal),
             [FieldKeys.SlopePromille] = new(FieldKeys.SlopePromille, "Gefälle ‰", FieldType.Decimal),
             ["Schacht_oben"] = new("Schacht_oben", "Schacht oben", FieldType.Text),
@@ -198,14 +185,14 @@ public static partial class FieldCatalog
             ["Gewaesserschutz"] = new("Gewaesserschutz", "Gewässerschutz", FieldType.Combo, ComboItems["Gewaesserschutz"]),
             ["Grundwasserspiegel"] = new("Grundwasserspiegel", "Grundwasserspiegel", FieldType.Combo, ComboItems["Grundwasserspiegel"]),
             [FieldKeys.HierarchicalFunction] = new(FieldKeys.HierarchicalFunction, "Funktionale Hierarchie", FieldType.Combo, ComboItems[FieldKeys.HierarchicalFunction]),
-            [FieldKeys.ConnectionType] = new(FieldKeys.ConnectionType, "Verbindungsart", FieldType.Combo, ComboItems[FieldKeys.ConnectionType]),
-            [FieldKeys.BeddingEncasement] = new(FieldKeys.BeddingEncasement, "Bettung/Umhüllung", FieldType.Combo, ComboItems[FieldKeys.BeddingEncasement]),
-            [FieldKeys.ProfileType] = new(FieldKeys.ProfileType, "Profilform", FieldType.Combo, ComboItems[FieldKeys.ProfileType]),
+            [FieldKeys.ConnectionType] = new(FieldKeys.ConnectionType, "Verbindungsart", FieldType.Combo),
+            [FieldKeys.BeddingEncasement] = new(FieldKeys.BeddingEncasement, "Bettung/Umhüllung", FieldType.Combo),
+            [FieldKeys.ProfileType] = new(FieldKeys.ProfileType, "Profilform", FieldType.Combo),
             [FieldKeys.ClearWidthMm] = new(FieldKeys.ClearWidthMm, "Lichte Breite mm", FieldType.Int),
-            [FieldKeys.OperatingStatus] = new(FieldKeys.OperatingStatus, "Status", FieldType.Combo, ComboItems[FieldKeys.OperatingStatus]),
-            [FieldKeys.RehabilitationNeed] = new(FieldKeys.RehabilitationNeed, "Sanierungsbedarf", FieldType.Combo, ComboItems[FieldKeys.RehabilitationNeed]),
-            [FieldKeys.HydraulicFunction] = new(FieldKeys.HydraulicFunction, "Funktion hydraulisch", FieldType.Combo, ComboItems[FieldKeys.HydraulicFunction]),
-            [FieldKeys.PositionAccuracy] = new(FieldKeys.PositionAccuracy, "Lagebestimmung", FieldType.Combo, ComboItems[FieldKeys.PositionAccuracy]),
+            [FieldKeys.OperatingStatus] = new(FieldKeys.OperatingStatus, "Status", FieldType.Combo),
+            [FieldKeys.RehabilitationNeed] = new(FieldKeys.RehabilitationNeed, "Sanierungsbedarf", FieldType.Combo),
+            [FieldKeys.HydraulicFunction] = new(FieldKeys.HydraulicFunction, "Funktion hydraulisch", FieldType.Combo),
+            [FieldKeys.PositionAccuracy] = new(FieldKeys.PositionAccuracy, "Lagebestimmung", FieldType.Combo),
             [FieldKeys.ConstructionYear] = new(FieldKeys.ConstructionYear, "Baujahr", FieldType.Int),
             [FieldKeys.GrossCost] = new(FieldKeys.GrossCost, "Bruttokosten (Kataster)", FieldType.Decimal),
             [FieldKeys.CadastreObjectId] = new(FieldKeys.CadastreObjectId, "Objekt-ID (Quelle)", FieldType.Text),
@@ -229,6 +216,10 @@ public static partial class FieldCatalog
             ? def
             : new FieldDefinition(fieldName, fieldName, FieldType.Text);
 
+    // Seit 23.09.2026 (Entscheid Pascal): Felder aus WebGisBegriffe bieten die WebGIS-Liste an.
+    // Bewusst hier und nicht in ComboItems: WebGisBegriffe liest den Objektaktenkatalog, und der
+    // statische Aufbau von FieldCatalog darf ihn nicht vorzeitig anfassen.
     public static IReadOnlyList<string> GetComboItems(string fieldName)
-        => ComboItems.TryGetValue(fieldName, out var items) ? items : Array.Empty<string>();
+        => WebGisBegriffe.Fuer(false, fieldName)?.Auswahl
+           ?? (ComboItems.TryGetValue(fieldName, out var items) ? items : Array.Empty<string>());
 }

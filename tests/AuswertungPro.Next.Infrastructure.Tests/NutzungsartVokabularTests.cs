@@ -41,7 +41,9 @@ public sealed class NutzungsartVokabularTests
 
     [Fact]
     public void Die_Auswahl_des_Feldkatalogs_ist_dieselbe()
-        => Assert.Equal(NutzungsartVokabular.Auswahl, FieldCatalog.GetComboItems(FieldKeys.UsageType));
+        // Seit 23.09.2026 bietet das Feld die WebGIS-Liste an (Entscheid Pascal); das Vokabular
+        // bleibt die Normseite fuer den Export.
+        => Assert.Equal(WebGisBegriffe.Fuer(false, FieldKeys.UsageType)!.Auswahl, FieldCatalog.GetComboItems(FieldKeys.UsageType));
 
     // Die beiden Fassungen kennen den Wert der jeweils anderen nicht.
     [Theory]

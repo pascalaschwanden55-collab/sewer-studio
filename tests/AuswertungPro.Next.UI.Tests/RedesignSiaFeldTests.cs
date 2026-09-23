@@ -7,9 +7,11 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class RedesignSiaFeldTests
 {
     [Theory]
+    // Seit 23.09.2026 ist die Auswahl die WebGIS-Liste («Kurzfristig», «Keiner»); ein alter
+    // Normwert in Kleinschrift wird weiterhin erkannt, ohne zurueckzuschreiben.
     [InlineData("Saniert", "Saniert")]
-    [InlineData("Kurzfristig", "kurzfristig")]
-    [InlineData("keiner", "keiner")]
+    [InlineData("Kurzfristig", "Kurzfristig")]
+    [InlineData("keiner", "Keiner")]
     public void Sanierungsbedarf_aus_Alle_Angaben_bleibt_in_der_Kurzansicht_ausgewaehlt(string gespeichert, string auswahl)
     {
         var commits = new List<string>();

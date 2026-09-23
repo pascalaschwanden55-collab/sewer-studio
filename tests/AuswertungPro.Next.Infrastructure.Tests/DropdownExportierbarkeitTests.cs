@@ -50,8 +50,18 @@ public sealed class DropdownExportierbarkeitTests
     /// Ein neuer Eintrag braucht denselben Beleg: Der Kataster fuehrt den Begriff UND
     /// die Norm kennt ihn wirklich nicht.
     /// </summary>
-    private static readonly HashSet<string> BewussteAusnahmen =
-        new(StringComparer.Ordinal) { "GFK", "Guss" };
+    private static readonly HashSet<string> BewussteAusnahmen = new(StringComparer.Ordinal)
+    {
+        "GFK", "Guss",
+        // Reine WebGIS-Werte (Uri) ohne SIA405-Gegenstueck. Seit 23.09.2026 fuehrt SewerStudio
+        // die WebGIS-Listen (Entscheid Pascal); der Export laesst sie weg und nennt sie im Bericht.
+        "Belagsrinne Wasserschale", "Entwaesserungsgraben befestigt", "Entwaesserungsgraben unbefestigt",
+        "Schlitzrinne", "Wasserrinne mit Rost",
+        "Stumpfschweissmuffe", "Führungsbolzen", "Manschette einbetoniert", "Schweissmuffen", "Stahlmuffen",
+        "Kies", "In Kulisse", "Pressvortrieb", "Saniert", "Bergwasser", "Strassenabwasser",
+        // Normschacht-Funktionen der WebGIS-Liste ohne Normschacht-Gegenstueck.
+        "Absturzschacht", "Trennschacht",
+    };
 
     [Theory]
     [MemberData(nameof(Felder))]
@@ -77,7 +87,7 @@ public sealed class DropdownExportierbarkeitTests
     /// <summary>Die Auswahllisten am Schacht mit ihrem Ziel im Normschacht.</summary>
     public static TheoryData<IReadOnlyList<string>, string, string> Schachtfelder() => new()
     {
-        { SchachtFunktionVokabular.Auswahl, "Funktion", "Schachtfunktion" },
+        { WebGisBegriffe.Fuer(true, WebGisBegriffe.SchachtFunktion)!.Auswahl, "Funktion", "Schachtfunktion" },
         { SchachtMaterialVokabular.Auswahl, "Material", "Schachtmaterial" }
     };
 
@@ -91,6 +101,7 @@ public sealed class DropdownExportierbarkeitTests
         var ohneZiel = werte
             .Where(w => !string.IsNullOrWhiteSpace(w))
             .Where(w => !string.Equals(w, "unbekannt", StringComparison.OrdinalIgnoreCase))
+            .Where(w => !BewussteAusnahmen.Contains(w))
             .Where(w => string.IsNullOrEmpty(XtfSchachtPlanBuilder.NachXtfWert(xtfName, w)))
             .ToList();
 
@@ -110,9 +121,10 @@ public sealed class DropdownExportierbarkeitTests
     public void Die_Urner_Profilformen_stehen_in_der_Haltungs_Auswahl()
     {
         Assert.Equal(
+            // Seit 23.09.2026 die WebGIS-Liste, zeichengenau (Maulprofil fuehrt dort das Kuerzel E).
             [
-                "", "Unbekannt", "Kreisprofil", "Eiprofil", "Maulprofil",
-                "Offenes Profil", "Rechteckprofil", "Spezialprofil"
+                "", "Unbekannt (U)", "Kreisprofil (K)", "Eiprofil (E)", "Maulprofil (E)",
+                "Offenes Profil (OP)", "Rechteckprofil (R)", "Spezialprofil (S)", "Andere (A)"
             ],
             FieldCatalog.GetComboItems(FieldKeys.ProfileType));
 
@@ -160,7 +172,8 @@ public sealed class DropdownExportierbarkeitTests
     public void Die_Ausnahmeliste_bleibt_klein_und_begruendet()
     {
         // Ein Waechter ueber dem Waechter: Waechst diese Liste unbemerkt, ist die
-        // eigentliche Regel ausgehoehlt.
-        Assert.Equal(2, BewussteAusnahmen.Count);
+        // eigentliche Regel ausgehoehlt. Seit 23.09.2026: 2 Materialbegriffe (GFK, Guss) plus die
+        // 18 reinen WebGIS-Werte ohne Norm, die WebGisBegriffeNormTests je Feld namentlich belegt.
+        Assert.Equal(20, BewussteAusnahmen.Count);
     }
 }

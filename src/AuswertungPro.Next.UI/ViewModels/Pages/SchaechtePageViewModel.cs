@@ -313,7 +313,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
             FieldCatalog.GetComboItems(FieldKeys.LoadClass));
         // Keine zweite Liste: die Begriffe fuehren die Vokabulare, damit Anzeige und
         // XTF-Wert nicht auseinanderlaufen koennen.
-        SchachtFunktionOptions = new ObservableCollection<string>(SchachtFunktionVokabular.Auswahl);
+        SchachtFunktionOptions = new ObservableCollection<string>(
+            WebGisBegriffe.Fuer(true, WebGisBegriffe.SchachtFunktion)!.Auswahl); // WebGIS-Liste (23.09.2026)
         SchachtMaterialOptions = new ObservableCollection<string>(SchachtMaterialVokabular.Auswahl);
         EnforceEigentuemerOptionsExact();
 

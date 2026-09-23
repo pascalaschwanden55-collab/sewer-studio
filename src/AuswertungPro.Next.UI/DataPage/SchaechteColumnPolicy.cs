@@ -71,6 +71,9 @@ internal static class SchaechteColumnPolicy
         if (normalized is "funktion" or "schachtfunktion") return "Funktion";
         if (normalized is "material" or "schachtmaterial") return "Material";
         if (normalized == "status") return FieldKeys.OperatingStatus;
+        // Seit 23.09.2026 Auswahlfelder mit der WebGIS-Liste (vorher Freitext).
+        if (normalized == "nutzungsart") return FieldKeys.UsageType;
+        if (normalized == "lagebestimmung") return FieldKeys.PositionAccuracy;
         if (normalized == "sanierungsbedarf") return FieldKeys.RehabilitationNeed;
         if (normalized == "bauwerksart") return FieldKeys.ShaftStructureType;
         if (normalized == "versickerungsart") return FieldKeys.InfiltrationType;
