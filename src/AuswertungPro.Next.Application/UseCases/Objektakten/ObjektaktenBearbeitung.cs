@@ -216,13 +216,12 @@ public sealed class ObjektaktenBearbeitung(Project projekt, Guid wurzelId, strin
             var m = Regex.Match(text, @"\bZ([0-4])\b");
             if (m.Success) return m.Groups[1].Value;
         }
+        // Seit 23.09.2026 ist die WebGIS-Beschriftung der gespeicherte Wert (Schritt A): Nutzungsart,
+        // Profil und Schachtfunktion bleiben, wie die Akte sie zeigt. Material folgt in Schritt B.
         return feld.Id switch
         {
-            "haltung.usage" => NutzungsartVokabular.Normalisieren(text),
             "haltung.material" => MaterialVokabular.Normalisieren(text),
-            "haltung.profile" => ProfiltypVokabular.Normalisieren(text),
             "schacht.materialdetail" => SchachtMaterialVokabular.Normalisieren(text),
-            "schacht.funktion" => SchachtFunktionVokabular.Normalisieren(text),
             "schacht.form" => SchachtformVokabular.Normalisieren(text),
             _ => text
         };
