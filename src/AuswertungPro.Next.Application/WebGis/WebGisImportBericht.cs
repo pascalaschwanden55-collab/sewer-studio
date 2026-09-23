@@ -133,6 +133,17 @@ public static class WebGisImportBericht
         ArgumentNullException.ThrowIfNull(plan);
         var sb = new StringBuilder();
         foreach (var h in plan.Hinweise) sb.AppendLine(h);
+
+        // Zuoberst, nicht zwischen 172 anderen Objekten (Wunsch Pascal 23.09.2026, Lauf 19:26).
+        var nichtZugeordnet = NichtZugeordnet(plan);
+        if (nichtZugeordnet.Count > 0)
+        {
+            var kopf = $"=== NICHT ZUGEORDNET — WIRD NICHT ÜBERNOMMEN ({nichtZugeordnet.Count}) ===";
+            sb.AppendLine().AppendLine(kopf);
+            foreach (var z in nichtZugeordnet) sb.AppendLine($"{Kennung(z.Feld)}{z.Objekt} — {z.Neu}");
+            sb.AppendLine(new string('=', kopf.Length));
+        }
+
         foreach (var p in plan.Positionen)
         {
             if (p.Aenderungen.Count == 0 && p.Sperren.Count == 0 && p.Hinweise.Count == 0) continue;
@@ -150,6 +161,14 @@ public static class WebGisImportBericht
         }
         return sb.ToString();
     }
+
+    /// <summary>Gleich breite Kennung am Zeilenanfang des roten Blocks im Textbericht.</summary>
+    private static string Kennung(string art) => (art switch
+    {
+        ArtObjektGesperrt => "GESPERRT",
+        ArtMassnahmeGesperrt => "MASSNAHME",
+        _ => "WERT",
+    }).PadRight(11);
 
     private static string Objekt(WebGisObjektart art, string name)
         => (art == WebGisObjektart.Haltung ? "Haltung " : "Schacht ") + name;

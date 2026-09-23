@@ -133,6 +133,28 @@ public sealed class WebGisImportBerichtTests
     }
 
     [Fact]
+    public void Bericht_nennt_gesperrtes_und_nicht_zugeordnetes_zuoberst()
+    {
+        // Lauf 19:26 in Zone 1.15: die 10 gesperrten Haltungen standen mitten zwischen 172 anderen.
+        var plan = PlanMitSperreUndHinweis();
+        plan.Hinweise.Add("2 Objekte gelesen: 1 mit Uebernahme, 1 gesperrt.");
+
+        var text = WebGisImportBericht.Details(plan);
+
+        var block = text.IndexOf("NICHT ZUGEORDNET", StringComparison.Ordinal);
+        var gesperrt = text.IndexOf("GESPERRT   Haltung 81156-81157", StringComparison.Ordinal);
+        var wert = text.IndexOf("WERT       Haltung 80638-80631", StringComparison.Ordinal);
+        var ersteObjektzeile = text.IndexOf("\nHaltung 80638-80631", StringComparison.Ordinal);
+        Assert.True(block >= 0, text);
+        Assert.True(block < gesperrt && gesperrt < wert && wert < ersteObjektzeile, text);
+        Assert.Contains("(2)", text[block..gesperrt]);
+    }
+
+    [Fact]
+    public void Bericht_ohne_sperren_hat_keinen_roten_block()
+        => Assert.DoesNotContain("NICHT ZUGEORDNET", WebGisImportBericht.Details(new WebGisImportPlan()));
+
+    [Fact]
     public void Kopf_ohne_sperren_und_hinweise_ist_keine_warnung()
     {
         var plan = new WebGisImportPlan();
