@@ -37,10 +37,6 @@ public sealed record WebGisHandwertFeld(
 /// </summary>
 public static class WebGisHandwertKarte
 {
-    // Vor den Listen, weil deren Initialisierung ueber Falte() darauf zugreift
-    // (statische Felder werden in Quelltext-Reihenfolge initialisiert).
-    private static readonly Regex KuerzelAmEnde = new(@"\s*\([A-Za-z]{1,3}\)\s*$", RegexOptions.Compiled);
-
     public static readonly IReadOnlyList<WebGisHandwertFeld> Felder = new[]
     {
         // --- Haltung (awk_haltung) ---
@@ -157,13 +153,6 @@ public static class WebGisHandwertKarte
         return i > 0 ? t[..i].Trim() : t;
     }
 
-    public static string Falte(string? s)
-    {
-        var t = (s ?? string.Empty).Trim();
-        t = KuerzelAmEnde.Replace(t, "");
-        t = t.Replace('_', ' ');
-        t = t.Replace("ae", "ä").Replace("oe", "ö").Replace("ue", "ü");
-        t = Regex.Replace(t, @"\s+", " ");
-        return t.ToLowerInvariant();
-    }
+    /// <summary>Dieselbe Faltung wie beim Speichern der WebGIS-Begriffe (eine Regel, 23.09.2026).</summary>
+    public static string Falte(string? s) => AuswertungPro.Next.Domain.Models.WebGisBegriffe.Falte(s);
 }
