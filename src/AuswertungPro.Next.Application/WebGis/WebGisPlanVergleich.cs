@@ -28,7 +28,9 @@ public static class WebGisPlanVergleich
         foreach (var p in plan.Positionen)
         {
             if (!p.Schreibbar) continue;
-            var felder = p.Aenderungen.Select(a => a.RefId + "=" + a.Neu).OrderBy(x => x, StringComparer.Ordinal);
+            // Auch der ALTE Wert zaehlt (Pruefung 23.09.2026): Hat jemand im WebGIS seit der Vorschau
+            // etwas geaendert, ist der Plan ein anderer — sonst ueberschriebe «Jetzt schreiben» fremde Arbeit.
+            var felder = p.Aenderungen.Select(a => a.RefId + "=" + a.Alt + ">" + a.Neu).OrderBy(x => x, StringComparer.Ordinal);
             teile.Add($"O|{p.Objektart}|{p.Bezeichnung}|{p.GlobalId}|{string.Join(",", felder)}");
         }
         foreach (var s in plan.Sanierungen)

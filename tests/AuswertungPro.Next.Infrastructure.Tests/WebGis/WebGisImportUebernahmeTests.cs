@@ -36,7 +36,7 @@ public sealed class WebGisImportUebernahmeTests
 
         Assert.Equal(1, WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.OperatingStatus, null, "in_Betrieb"), p));
 
-        Assert.Equal("in_Betrieb", h.GetFieldValue(FieldKeys.OperatingStatus));
+        Assert.Equal("In Betrieb", h.GetFieldValue(FieldKeys.OperatingStatus)); // WebGIS-Begriff auch beim Nachfuellen (23.09.2026)
         Assert.Equal(FieldSource.Kataster, h.FieldMeta[FieldKeys.OperatingStatus].Source);
         Assert.False(h.FieldMeta[FieldKeys.OperatingStatus].UserEdited);
     }

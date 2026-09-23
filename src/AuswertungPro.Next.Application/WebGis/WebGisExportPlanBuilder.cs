@@ -185,6 +185,30 @@ public static class WebGisExportPlanBuilder
 
             stand.Kataloge.TryGetValue(karte.RefId, out var katalog);
 
+            // WebGIS-Begriffe (Schritt A, 23.09.2026): nur ein zeichengenauer WebGIS-Begriff geht hinaus —
+            // keine Faltung, keine Punkt-Regel. Was die Projektpruefung als «kein WebGIS-Begriff» meldet,
+            // wird so auch nie gesendet; ein doppelter Eintrag in der Maskenliste sperrt das Feld.
+            if (karte.HauptRefId is null
+                && AuswertungPro.Next.Domain.Models.WebGisBegriffe.Fuer(e.Objektart == WebGisObjektart.Schacht, feldName) is { } webgisListe)
+            {
+                if (!webgisListe.Kennt(wert))
+                {
+                    pos.Hinweise.Add($"{karte.Anzeige} «{wert}» ist kein WebGIS-Begriff — nicht übertragen (siehe Projektprüfung).");
+                    continue;
+                }
+                var treffer = (katalog ?? new List<(string Key, string Text)>())
+                    .Where(k => string.Equals(k.Text, wert, StringComparison.Ordinal)).Select(k => k.Key).Distinct().ToList();
+                if (treffer.Count != 1)
+                {
+                    pos.Hinweise.Add(treffer.Count == 0
+                        ? $"{karte.Anzeige} «{wert}» steht nicht in der Liste der WebGIS-Maske — nicht übertragen."
+                        : $"{karte.Anzeige} «{wert}» steht mehrfach in der WebGIS-Liste — nicht übertragen (bei Trigonet klären).");
+                    continue;
+                }
+                FuegeComboAn(pos, stand, karte.RefId, karte.Anzeige, treffer[0], wert);
+                continue;
+            }
+
             // Paarfeld (Material-Detail + Material): Die Gruppe kommt aus dem Hauptteil des
             // Texts ("Beton, Fertigteil" -> "Beton"). Zeigt die Maske gerade eine andere Gruppe,
             // fuehrt ihre Detail-Liste den Wert nicht; dann zaehlt die vom Ablauf nachgeladene

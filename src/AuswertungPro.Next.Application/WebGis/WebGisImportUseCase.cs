@@ -34,6 +34,7 @@ public sealed class WebGisImportUseCase
                 GespeicherteGlobalId = h.WebGisGlobalId,
                 Laenge = h.GetFieldValue(FieldKeys.HoldingLengthMeters),
                 Baujahr = h.GetFieldValue(WebGisImportPlanBuilder.FeldBaujahr),
+                BaujahrHandwert = h.FieldMeta.GetValueOrDefault(WebGisImportPlanBuilder.FeldBaujahr)?.UserEdited == true,
             };
             e.Felder[WebGisImportPlanBuilder.TypAaFeld] = AkteFeld(projekt, h.Id, "haltung", WebGisImportPlanBuilder.TypAaFeld);
             e.Felder[WebGisImportPlanBuilder.MaterialgruppeFeld(WebGisObjektart.Haltung)] = AkteFeld(projekt, h.Id, "haltung",
@@ -41,7 +42,8 @@ public sealed class WebGisImportUseCase
             foreach (var karte in WebGisHandwertKarte.Felder)
                 if (karte.Objektart == WebGisObjektart.Haltung)
                     e.Felder[karte.SewerStudioFeld] = new WebGisImportFeld(
-                        h.GetFieldValue(karte.SewerStudioFeld), IstErsetzbar(h.FieldMeta.GetValueOrDefault(karte.SewerStudioFeld)));
+                        h.GetFieldValue(karte.SewerStudioFeld), IstErsetzbar(h.FieldMeta.GetValueOrDefault(karte.SewerStudioFeld)),
+                        h.FieldMeta.GetValueOrDefault(karte.SewerStudioFeld)?.UserEdited == true);
             plan.Positionen.Add(await BaueEineAsync(projekt, plan, e, ct).ConfigureAwait(false));
         }
         foreach (var s in projekt.SchaechteData)
@@ -53,6 +55,7 @@ public sealed class WebGisImportUseCase
                 RecordId = s.Id,
                 GespeicherteGlobalId = s.WebGisGlobalId,
                 Baujahr = s.GetFieldValue(SchachtFeldnamen.Feld(s, WebGisImportPlanBuilder.FeldBaujahr)),
+                BaujahrHandwert = s.FieldMeta.GetValueOrDefault(SchachtFeldnamen.Feld(s, WebGisImportPlanBuilder.FeldBaujahr))?.UserEdited == true,
                 Normschacht = AbwasserbauwerkVokabular.Klasse(
                     s.GetFieldValue(SchachtFeldnamen.Feld(s, FieldKeys.ShaftStructureType)),
                     s.GetFieldValue(SchachtFeldnamen.Feld(s, WebGisBegriffe.SchachtFunktion))) == "Normschacht",
@@ -64,7 +67,8 @@ public sealed class WebGisImportUseCase
                 if (karte.Objektart != WebGisObjektart.Schacht) continue;
                 var name = SchachtFeldnamen.Feld(s, karte.SewerStudioFeld);
                 e.Felder[karte.SewerStudioFeld] = new WebGisImportFeld(
-                    s.GetFieldValue(name), IstErsetzbar(s.FieldMeta.GetValueOrDefault(name)));
+                    s.GetFieldValue(name), IstErsetzbar(s.FieldMeta.GetValueOrDefault(name)),
+                    s.FieldMeta.GetValueOrDefault(name)?.UserEdited == true);
             }
             plan.Positionen.Add(await BaueEineAsync(projekt, plan, e, ct).ConfigureAwait(false));
         }
@@ -194,7 +198,9 @@ public sealed class WebGisImportUseCase
                 {
                     if (a.Feld == WebGisImportPlanBuilder.FeldLaenge)
                         continue; // Laenge nie aus dem WebGIS (23.09.2026) — auch nicht aus einem alten Plan
-                    else if (h.FuelleLeeresFeld(a.Feld, a.Neu, FieldSource.Kataster))
+                    if (!SeitVorschauUnveraendert(h.GetFieldValue(a.Feld), h.FieldMeta.GetValueOrDefault(a.Feld), a))
+                        continue;
+                    if (h.FuelleLeeresFeld(a.Feld, a.Neu, FieldSource.Kataster))
                         geaendert = true;
                     else if (DarfErsetzen(h.GetFieldValue(a.Feld), h.FieldMeta.GetValueOrDefault(a.Feld), a))
                     {
@@ -205,6 +211,14 @@ public sealed class WebGisImportUseCase
                 else if (pos.Objektart == WebGisObjektart.Schacht && schaechte.TryGetValue(pos.RecordId, out var s))
                 {
                     var name = SchachtFeldnamen.Feld(s, a.Feld);
+                    if (!SeitVorschauUnveraendert(s.GetFieldValue(name), s.FieldMeta.GetValueOrDefault(name), a))
+                        continue;
+                    // Die WebGIS-Funktionsliste gilt nur fuer den Normschacht — auch wenn die Bauwerksart
+                    // erst nach der Vorschau geaendert wurde (Pruefung 23.09.2026).
+                    if (a.Feld == WebGisBegriffe.SchachtFunktion
+                        && AbwasserbauwerkVokabular.Klasse(s.GetFieldValue(SchachtFeldnamen.Feld(s, FieldKeys.ShaftStructureType)),
+                            s.GetFieldValue(name)) != "Normschacht")
+                        continue;
                     if (s.FuelleLeeresFeld(name, a.Neu, FieldSource.Kataster))
                         geaendert = true;
                     else if (DarfErsetzen(s.GetFieldValue(name), s.FieldMeta.GetValueOrDefault(name), a)
@@ -267,6 +281,14 @@ public sealed class WebGisImportUseCase
     public static bool IstErsetzbar(FieldMetadata? meta)
         => meta is { UserEdited: false }
            && meta.Source is FieldSource.Kataster or FieldSource.Xtf or FieldSource.Xtf405 or FieldSource.Ili;
+
+    /// <summary>
+    /// Vor jedem Feld nochmals (Pruefung 23.09.2026): keine Handeingabe — auch nicht bewusst leer
+    /// (Entscheid Pascal) — und derselbe Wert wie in der Vorschau. Sonst bleibt das Feld, wie es ist.
+    /// </summary>
+    private static bool SeitVorschauUnveraendert(string aktuell, FieldMetadata? meta, WebGisImportAenderung a)
+        => meta?.UserEdited != true
+           && string.Equals(aktuell.Trim(), (a.Alt ?? string.Empty).Trim(), StringComparison.Ordinal);
 
     /// <summary>Konfliktschutz: seit der Vorschau unveraendert UND weiterhin ersetzbar.</summary>
     private static bool DarfErsetzen(string aktuell, FieldMetadata? meta, WebGisImportAenderung a)

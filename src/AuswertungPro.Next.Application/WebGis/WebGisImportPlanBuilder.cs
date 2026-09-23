@@ -16,6 +16,8 @@ public sealed class WebGisImportEingabe
     /// <summary>Nur Haltung: aktuelle Haltungslaenge in SewerStudio (Text, Punkt als Dezimalzeichen).</summary>
     public string? Laenge { get; init; }
     public string? Baujahr { get; init; }
+    /// <summary>Baujahr ist eine Handeingabe (auch bewusst leer): dann wird es nie aus dem WebGIS gefuellt.</summary>
+    public bool BaujahrHandwert { get; init; }
     /// <summary>
     /// Nur Schacht: ist das Bauwerk ein Normschacht? Nur dort gilt die WebGIS-Funktionsliste
     /// (Schritt A, 23.09.2026); ein Spezialbauwerk bekommt keine Funktion aus dem WebGIS.
@@ -33,7 +35,9 @@ public sealed class WebGisImportEingabe
 /// (GeoShop, QGIS, XTF) und ist nicht von Hand gesetzt — das WebGIS darf ihn ersetzen
 /// (Entscheid Pascal 23.09.2026: WebGIS vor GeoShop). Handwerte und Protokollwerte nie.
 /// </summary>
-public sealed record WebGisImportFeld(string Wert, bool Ersetzbar);
+/// <paramref name="Handwert"/>: von Hand gesetzt, auch bewusst leer — beim Holen nie gefuellt oder ersetzt
+/// (Entscheid Pascal 23.09.2026, gleich wie beim GeoShop-Abgleich).
+public sealed record WebGisImportFeld(string Wert, bool Ersetzbar, bool Handwert = false);
 
 /// <summary>Eine geplante Uebernahme WebGIS -> SewerStudio.</summary>
 public sealed class WebGisImportAenderung
@@ -121,7 +125,8 @@ public static class WebGisImportPlanBuilder
         //    In SewerStudio gilt die Laenge des Operateurs; sie geht weder ins WebGIS noch kommt sie daraus.
 
         // 2) Baujahr nur wenn in SewerStudio leer.
-        if (string.IsNullOrWhiteSpace(e.Baujahr))
+        // Bewusst leer (Handeingabe) = geschuetzt (Entscheid Pascal 23.09.2026).
+        if (string.IsNullOrWhiteSpace(e.Baujahr) && !e.BaujahrHandwert)
         {
             var jahr = (stand.Feld(WebGisFeldkarte.BaujahrRef(e.Objektart)) ?? string.Empty).Trim();
             if (jahr.Length == 4 && int.TryParse(jahr, out _))
@@ -168,6 +173,13 @@ public static class WebGisImportPlanBuilder
 
             e.Felder.TryGetValue(karte.SewerStudioFeld, out var feld);
             var alt = (feld?.Wert ?? string.Empty).Trim();
+            // Handwert, auch bewusst leer: nie fuellen, nie ersetzen (Entscheid Pascal 23.09.2026).
+            if (feld?.Handwert == true)
+            {
+                if (alt.Length == 0)
+                    pos.Hinweise.Add($"{karte.Anzeige}: in SewerStudio bewusst leer (Handeingabe) — WebGIS-Wert «{neu}» nicht übernommen.");
+                continue;
+            }
             if (alt.Length > 0 && !(feld?.Ersetzbar ?? false)) continue;
             if (alt.Length > 0 && (WebGisHandwertKarte.Falte(alt) == WebGisHandwertKarte.Falte(neu)
                                    || WebGisExportPlanBuilder.GleicherWert(alt, neu))) continue;

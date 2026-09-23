@@ -156,7 +156,8 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
         if (string.IsNullOrWhiteSpace(value))
             return false;
 
-        Fields[fieldName] = value!;
+        // Wie SetFieldValue: Felder, die ins WebGIS gehen, speichern den WebGIS-Begriff (23.09.2026).
+        Fields[fieldName] = WebGisBegriffe.Normalisieren(schacht: false, fieldName, value);
 
         if (!FieldMeta.TryGetValue(fieldName, out var meta))
         {
