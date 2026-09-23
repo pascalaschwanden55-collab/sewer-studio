@@ -52,7 +52,10 @@ public static class ProfiltypVokabular
             ["andere"] = ("Spezialprofil", "Spezialprofil"),
             ["Anderes"] = ("Spezialprofil", "Spezialprofil"),
             ["A"] = ("Spezialprofil", "Spezialprofil"),
-            ["Anderes (A)"] = ("Spezialprofil", "Spezialprofil")
+            ["Anderes (A)"] = ("Spezialprofil", "Spezialprofil"),
+            // So stehen die beiden im WebGIS (Maulprofil mit Kuerzel E), 23.09.2026.
+            ["Maulprofil (E)"] = ("Maulprofil", "Maulprofil"),
+            ["Andere (A)"] = ("Spezialprofil", "Spezialprofil")
         };
 
     /// <summary>Lesbare Schreibweise fuer Anzeige und Projektspeicherung.</summary>

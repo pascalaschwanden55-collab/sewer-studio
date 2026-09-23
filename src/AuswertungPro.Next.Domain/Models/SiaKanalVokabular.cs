@@ -43,15 +43,41 @@ public sealed class SiaWerteliste
         var text = (wert ?? "").Trim();
         if (text.Length == 0)
             return null;
+        if (Aliase.TryGetValue(text, out var alias))
+            return Werte.FirstOrDefault(w => string.Equals(w, alias, StringComparison.Ordinal));
 
+        // Seit 23.09.2026 speichert SewerStudio die WebGIS-Beschriftung («Dükerleitung»,
+        // «Kreisprofil (K)»). Fuer die Norm Kuerzel weg und Umlaute ausschreiben.
+        var ohneKuerzel = KuerzelAmEnde.Replace(text, "").Trim();
+        foreach (var kandidat in new[] { text, ohneKuerzel, OhneUmlaute(ohneKuerzel) })
+            if (Treffer(kandidat) is { } norm)
+                return norm;
+        return null;
+    }
+
+    /// <summary>
+    /// Belegte Beschriftungen des WebGIS, die ohne Regel keinem Normwert entsprechen
+    /// (Status «Tot/Aufgehoben, verfüllt» -> tot). Schluessel ohne Gross/Klein.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Aliase { get; init; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly System.Text.RegularExpressions.Regex KuerzelAmEnde =
+        new(@"\s*\([A-Za-z]{1,4}\)\s*$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private string? Treffer(string text)
+    {
         var mitUnterstrich = text.Replace(' ', '_');
         var mitPunkt = text.Replace(' ', '.');
-
         return Werte.FirstOrDefault(w =>
             string.Equals(w, text, StringComparison.OrdinalIgnoreCase)
             || string.Equals(w, mitUnterstrich, StringComparison.OrdinalIgnoreCase)
             || string.Equals(w, mitPunkt, StringComparison.OrdinalIgnoreCase));
     }
+
+    private static string OhneUmlaute(string s) => s
+        .Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue")
+        .Replace("Ä", "Ae").Replace("Ö", "Oe").Replace("Ü", "Ue");
 }
 
 /// <summary>
@@ -99,7 +125,14 @@ public static class SiaKanalVokabular
     /// <c>SIA405_Base_Abwasser_1_LV95</c>. Im Kataster zu 97,8 % gefuellt.
     /// </summary>
     public static readonly SiaWerteliste Status = new(
-        "ausser_Betrieb", "in_Betrieb", "tot", "unbekannt", "weitere");
+        "ausser_Betrieb", "in_Betrieb", "tot", "unbekannt", "weitere")
+    {
+        // WebGIS (Uri) fuehrt nur diese eine Form von «tot» (23.09.2026).
+        Aliase = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Tot/Aufgehoben, verfüllt"] = "tot",
+        },
+    };
 
     /// <summary><c>Abwasserbauwerk.Sanierungsbedarf</c> — 6 Werte.</summary>
     public static readonly SiaWerteliste Sanierungsbedarf = new(

@@ -42,7 +42,8 @@ public static class NutzungsartVokabular
             "entlastetes Mischabwasser", "entlastetes_Mischabwasser", "entlastetes_Mischabwasser"),
         new(["reinabwasser", "reinwasser"],
             "Reinabwasser", "Reinabwasser", "Reinabwasser"),
-        new(["bachwasser"], "Bachwasser", "Bachwasser", "Bachwasser"),
+        // «Bachabwasser» ist die Schreibweise des WebGIS (23.09.2026).
+        new(["bachwasser", "bachabwasser"], "Bachwasser", "Bachwasser", "Bachwasser"),
         new(["industrieabwasser", "industriewasser"],
             "Industrieabwasser", "Industrieabwasser", "Industrieabwasser"),
         new(["andere"], "andere", "andere", "andere"),
