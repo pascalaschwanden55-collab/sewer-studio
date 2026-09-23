@@ -75,7 +75,7 @@ public sealed class WebGisImportPlanBuilderTests
         var pos = WebGisImportPlanBuilder.Baue(Haltung(("Status", "ausser_Betrieb", true)), Stand((StatusRef, "1", "In Betrieb")));
 
         var a = Aenderung(pos, "Status");
-        Assert.Equal("in_Betrieb", a?.Neu);
+        Assert.Equal("In Betrieb", a?.Neu); // WebGIS-Text woertlich (Schritt A, 23.09.2026)
         Assert.Equal("ausser_Betrieb", a?.Alt);
     }
 

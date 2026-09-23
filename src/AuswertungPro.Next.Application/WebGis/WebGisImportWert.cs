@@ -55,6 +55,14 @@ public static class WebGisImportWert
             return null;
         }
 
+        // Schritt A (23.09.2026): Felder mit WebGIS-Liste speichern den WebGIS-Text woertlich.
+        if (AuswertungPro.Next.Domain.Models.WebGisBegriffe.Fuer(art == WebGisObjektart.Schacht, feld) is { } liste)
+        {
+            if (liste.Kennt(text)) return text;
+            hinweis = $"{feld}: «{text}» steht nicht in der bekannten WebGIS-Liste — nicht übernommen (Katalog prüfen).";
+            return null;
+        }
+
         var optionen = Optionen(art, feld);
         if (optionen.Count == 0) return text; // Freitextfeld (z.B. Ebene)
 

@@ -95,7 +95,7 @@ public sealed class WebGisImportUseCaseTests
         var plan = await useCase.BauePlanAsync(p);
         WebGisImportUseCase.Uebernimm(plan, p);
 
-        Assert.Equal("in_Betrieb", h.GetFieldValue(FieldKeys.OperatingStatus));
+        Assert.Equal("In Betrieb", h.GetFieldValue(FieldKeys.OperatingStatus)); // WebGIS-Text woertlich (Schritt A, 23.09.2026)
         Assert.Equal("G-80480-80478", h.WebGisGlobalId);
         var akte = Assert.Single(p.Objektakten);
         Assert.Equal("Renovierung", akte.Werte[WebGisSanierungFeldkarte.AkteArt].Text);

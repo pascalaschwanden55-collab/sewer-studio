@@ -12,10 +12,11 @@ public sealed class WebGisImportWertTests
 {
     [Theory]
     [InlineData("FunktionHierarchisch", "Sammelkanal", "PAA.Sammelkanal")]
-    [InlineData("Status", "In Betrieb", "in_Betrieb")]
-    [InlineData("Profiltyp", "Kreisprofil (K)", "Kreisprofil")]
+    // Seit 23.09.2026 (Schritt A) bleibt der WebGIS-Text woertlich; FunktionHierarchisch folgt in Schritt C.
+    [InlineData("Status", "In Betrieb", "In Betrieb")]
+    [InlineData("Profiltyp", "Kreisprofil (K)", "Kreisprofil (K)")]
     [InlineData("Nutzungsart", "Mischabwasser", "Mischabwasser")]
-    [InlineData("Lagebestimmung", "genau", "genau")]
+    [InlineData("Lagebestimmung", "Genau", "Genau")]
     public void Haltung_auswahlwerte_werden_auf_den_sewerstudio_begriff_gebracht(string feld, string webgis, string erwartet)
     {
         Assert.Equal(erwartet, WebGisImportWert.Zuordne(WebGisObjektart.Haltung, feld, webgis, out var hinweis));
@@ -89,4 +90,31 @@ public sealed class WebGisImportWertTests
     public void Typ_aa_entscheidet_zwischen_paa_und_saa(string typAa, string erwartet)
         => Assert.Equal(erwartet, WebGisImportWert.Zuordne(WebGisObjektart.Haltung, "FunktionHierarchisch",
             "Liegenschaftsentwässerung", out _, typAa));
+
+    [Theory]
+    [InlineData(WebGisObjektart.Haltung, "Status", "In Betrieb")]
+    [InlineData(WebGisObjektart.Haltung, "Profiltyp", "Kreisprofil (K)")]
+    [InlineData(WebGisObjektart.Haltung, "Nutzungsart", "Regenabwasser")]
+    [InlineData(WebGisObjektart.Haltung, "FunktionHydraulisch", "Dükerleitung")]
+    [InlineData(WebGisObjektart.Schacht, "Status", "Tot/Aufgehoben, verfüllt")]
+    [InlineData(WebGisObjektart.Schacht, "Funktion", "Absturzschacht")]
+    public void Webgis_begriff_wird_woertlich_uebernommen(WebGisObjektart art, string feld, string text)
+    {
+        Assert.Equal(text, WebGisImportWert.Zuordne(art, feld, text, out var hinweis));
+        Assert.Null(hinweis);
+    }
+
+    [Fact]
+    public void Text_ausserhalb_der_bekannten_webgis_liste_wird_gemeldet_nicht_eingetragen()
+    {
+        Assert.Null(WebGisImportWert.Zuordne(WebGisObjektart.Haltung, "Status", "Im Bau", out var hinweis));
+        Assert.Contains("nicht in der bekannten WebGIS-Liste", hinweis);
+    }
+
+    [Fact]
+    public void Unbekannt_fuellt_weiterhin_nichts()
+    {
+        Assert.Null(WebGisImportWert.Zuordne(WebGisObjektart.Haltung, "Status", "Unbekannt", out var hinweis));
+        Assert.Null(hinweis);
+    }
 }
