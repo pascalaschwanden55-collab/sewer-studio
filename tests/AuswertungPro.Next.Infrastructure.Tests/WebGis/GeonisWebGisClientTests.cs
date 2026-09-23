@@ -28,6 +28,7 @@ public sealed class GeonisWebGisClientTests
     {
         private readonly Func<HttpRequestMessage, string, string> _antwort;
         public string? LetzterSaveBody { get; private set; }
+        public HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
         public FakeHandler(Func<HttpRequestMessage, string, string> antwort) => _antwort = antwort;
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -36,7 +37,7 @@ public sealed class GeonisWebGisClientTests
             var url = request.RequestUri!.ToString();
             if (url.Contains("saveData")) LetzterSaveBody = body;
             var json = _antwort(request, body);
-            return new HttpResponseMessage(HttpStatusCode.OK)
+            return new HttpResponseMessage(StatusCode)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
@@ -48,7 +49,7 @@ public sealed class GeonisWebGisClientTests
 
     private static string LayoutJson() =>
         "[{\"components\":[]}," +
-        "{\"objectKeyValue\":\"g1\",\"components\":[" +
+        "{\"components\":[" +
         "{\"refId\":\"" + ZustandRef + "\",\"keySelected\":102,\"keys\":[102,104],\"values\":[\"Z2\",\"Z4\"]}," +
         "{\"refId\":\"" + BemRef + "\",\"value\":\"\"}" +
         "]}]";
@@ -88,6 +89,108 @@ public sealed class GeonisWebGisClientTests
         Assert.Equal("", stand.Feld(BemRef));
     }
 
+    // Entscheid Pascal 23.09.2026: Ist die GlobalID einmal gespeichert, liest das Programm direkt
+    // ueber sie — keine Namenssuche mehr. Der Name kommt dann aus der Maske selbst, damit der
+    // Ablauf pruefen kann, ob das WebGIS-Objekt noch denselben Namen traegt.
+    [Fact]
+    public async Task LeseUeberGlobalIdAsync_liest_die_maske_ohne_suche_und_nimmt_den_namen_aus_der_maske()
+    {
+        var urls = new List<string>();
+        var h = new FakeHandler((req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            urls.Add(url);
+            if (url.Contains("getLayoutDataCombined"))
+                return "[{\"components\":[]},{\"components\":["
+                    + "{\"refId\":\"" + WebGisFeldkarte.HaltungBezeichnungRef + "\",\"value\":\"80638-80631 \"},"
+                    + "{\"refId\":\"" + ZustandRef + "\",\"keySelected\":102,\"keys\":[102,104],\"values\":[\"Z2\",\"Z4\"]}"
+                    + "]}]";
+            throw new InvalidOperationException("Keine Suche erwartet: " + url);
+        });
+
+        var stand = await Client(h).LeseUeberGlobalIdAsync(WebGisObjektart.Haltung, "31946755-E44D-4714-8DA6-91F56A6AC8FA");
+
+        Assert.NotNull(stand);
+        Assert.Equal("31946755-E44D-4714-8DA6-91F56A6AC8FA", stand!.GlobalId);
+        Assert.Equal("80638-80631", stand.Bezeichnung);
+        Assert.Equal("102", stand.Feld(ZustandRef));
+        var aufruf = Assert.Single(urls);
+        Assert.Contains("table=awk_haltung", aufruf);
+        Assert.Contains("id=31946755-E44D-4714-8DA6-91F56A6AC8FA", aufruf);
+    }
+
+    [Fact]
+    public async Task LeseUeberGlobalIdAsync_ohne_namensfeld_liefert_leeren_namen()
+    {
+        var h = new FakeHandler((_, _) => LayoutJson());
+
+        var stand = await Client(h).LeseUeberGlobalIdAsync(WebGisObjektart.Schacht, "G1");
+
+        Assert.NotNull(stand);
+        Assert.Equal("", stand!.Bezeichnung); // fehlt der Name, sperrt der Planbau — nie geraten
+    }
+
+    [Fact]
+    public async Task LeseUeberGlobalIdAsync_ohne_anmeldung_meldet_sitzungsfehler()
+    {
+        var h = new FakeHandler((_, _) => throw new InvalidOperationException("Keine Anfrage erwartet."));
+
+        await Assert.ThrowsAsync<WebGisSitzungException>(() =>
+            new GeonisWebGisClient(new HttpClient(h), () => null)
+                .LeseUeberGlobalIdAsync(WebGisObjektart.Haltung, "G1"));
+    }
+
+    [Fact]
+    public async Task LeseAsync_ohne_suchsession_meldet_sitzungsfehler_statt_kein_treffer()
+    {
+        var h = new FakeHandler((_, _) => throw new InvalidOperationException("Keine Anfrage erwartet."));
+        var zugang = Zugang();
+        var ohneSuchsession = new WebGisZugang
+        {
+            BasisUrl = zugang.BasisUrl, Projekt = zugang.Projekt, Datenquelle = zugang.Datenquelle,
+            JSessionId = zugang.JSessionId, SynSessionId = null, SynLogin = zugang.SynLogin,
+            SynGroups = zugang.SynGroups,
+        };
+
+        var ex = await Assert.ThrowsAsync<WebGisSitzungException>(() =>
+            new GeonisWebGisClient(new HttpClient(h), () => ohneSuchsession)
+                .LeseAsync(WebGisObjektart.Haltung, "525145-505377"));
+
+        Assert.Contains("Such", ex.Message);
+    }
+
+    [Fact]
+    public async Task LeseAsync_ohne_anmeldung_meldet_sitzungsfehler_statt_kein_treffer()
+    {
+        var h = new FakeHandler((_, _) => throw new InvalidOperationException("Keine Anfrage erwartet."));
+
+        await Assert.ThrowsAsync<WebGisSitzungException>(() =>
+            new GeonisWebGisClient(new HttpClient(h), () => null)
+                .LeseAsync(WebGisObjektart.Haltung, "525145-505377"));
+    }
+
+    [Fact]
+    public async Task LeseAsync_ungueltige_suchantwort_meldet_fehler_statt_kein_treffer()
+    {
+        var h = new FakeHandler((_, _) => "{}");
+
+        var ex = await Assert.ThrowsAsync<WebGisSitzungException>(() =>
+            Client(h).LeseAsync(WebGisObjektart.Haltung, "525145-505377"));
+
+        Assert.Contains("Such", ex.Message);
+    }
+
+    [Fact]
+    public async Task LeseAsync_unberechtigte_suche_meldet_sitzungsfehler()
+    {
+        var h = new FakeHandler((_, _) => "") { StatusCode = HttpStatusCode.Unauthorized };
+
+        var ex = await Assert.ThrowsAsync<WebGisSitzungException>(() =>
+            Client(h).LeseAsync(WebGisObjektart.Haltung, "525145-505377"));
+
+        Assert.Contains("Such", ex.Message);
+    }
+
     [Fact]
     public async Task LeseAsync_mehrdeutig_gibt_null()
     {
@@ -96,6 +199,40 @@ public sealed class GeonisWebGisClientTests
             "{\"jsxtext\":\"H, a\",\"jsxid\":\"F1\"},{\"jsxtext\":\"H, b\",\"jsxid\":\"F2\"}" +
             "]}]}]}}}]}");
         var stand = await Client(h).LeseAsync(WebGisObjektart.Haltung, "H");
+        Assert.Null(stand);
+    }
+
+    [Fact]
+    public void Mehrere_ergebnis_links_liefern_keine_globalid()
+    {
+        using var dokument = System.Text.Json.JsonDocument.Parse(
+            "{\"RES\":[{\"RESULTS\":{\"data\":{\"anies\":[" +
+            "{\"extapp0_target\":\"https://x/?id=%7b81D76B9E-2E83-40B2-B1F7-608BABE4E89A%7d\"}," +
+            "{\"extapp0_target\":\"https://x/?id=%7b31946755-E44D-4714-8DA6-91F56A6AC8FA%7d\"}" +
+            "]}}}]}");
+
+        Assert.Null(GeonisWebGisClient.GlobalIdAusResults(dokument.RootElement));
+    }
+
+    [Fact]
+    public void Globalid_aus_editor_link_mit_sichtbaren_klammern()
+    {
+        using var dokument = System.Text.Json.JsonDocument.Parse(
+            "{\"RES\":[{\"RESULTS\":{\"data\":{\"anies\":[" +
+            "{\"extapp0_target\":\"https://x/AttributeEditor/?id={31946755-E44D-4714-8DA6-91F56A6AC8FA}\"}" +
+            "]}}}]}");
+
+        Assert.Equal("31946755-E44D-4714-8DA6-91F56A6AC8FA",
+            GeonisWebGisClient.GlobalIdAusResults(dokument.RootElement));
+    }
+
+    [Fact]
+    public async Task LeseAsync_gueltige_leere_suchliste_gibt_null()
+    {
+        var h = new FakeHandler((_, _) => "{\"RES\":[{\"RESULTS\":{\"data\":{\"anies\":[]}}}]}");
+
+        var stand = await Client(h).LeseAsync(WebGisObjektart.Haltung, "nicht-vorhanden");
+
         Assert.Null(stand);
     }
 
@@ -256,5 +393,26 @@ public sealed class GeonisWebGisClientTests
 
         Assert.False(res.Erfolg);
         Assert.Contains("Regelverletzung", res.Fehler);
+    }
+
+    [Fact]
+    public async Task LeseMassnahmeAsync_liest_die_sanierungsmaske_ueber_ihre_globalid()
+    {
+        string? gelesen = null;
+        var h = new FakeHandler((req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (!url.Contains("getLayoutDataCombined")) return "{}";
+            gelesen = url;
+            return "[{\"components\":[]}," + LeeresSanierungsobjektJson() + "]";
+        });
+
+        var m = await Client(h).LeseMassnahmeAsync("3855a0d1-da52-4b6a-b416-2502672c947d");
+
+        Assert.NotNull(m);
+        Assert.Contains("table=" + WebGisSanierungFeldkarte.Tabelle, gelesen);
+        Assert.Contains("id=3855a0d1-da52-4b6a-b416-2502672c947d", gelesen);
+        Assert.Equal("4", m!.Feld(WebGisSanierungFeldkarte.ArtRef));
+        Assert.Contains(("4", "Renovierung"), m.Kataloge[WebGisSanierungFeldkarte.ArtRef]);
     }
 }

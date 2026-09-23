@@ -35,6 +35,15 @@ public interface IGeonisWebGisClient
         WebGisObjektart art, string bezeichnung, CancellationToken ct = default);
 
     /// <summary>
+    /// Liest das Objekt direkt ueber seine GlobalID, OHNE Namenssuche (Pascal 23.09.2026).
+    /// <see cref="WebGisLesestand.Bezeichnung"/> ist dann der Name aus der Maske (leer, wenn die
+    /// Maske ihn nicht liefert) — der Aufrufer prueft ihn gegen den Projektnamen. Null, wenn das
+    /// Objekt nicht lesbar ist.
+    /// </summary>
+    Task<WebGisLesestand?> LeseUeberGlobalIdAsync(
+        WebGisObjektart art, string globalId, CancellationToken ct = default);
+
+    /// <summary>
     /// Schreibt die genannten Felder (refId -&gt; Wert; Combo als Ganzzahl-Schluessel
     /// als Text) am Objekt mit der GlobalID. GEONIS prueft die Norm-Regeln.
     /// </summary>
@@ -65,4 +74,12 @@ public interface IGeonisWebGisClient
     /// </summary>
     Task<IReadOnlyList<(string Key, string Text)>?> LeseKatalogListeAsync(
         WebGisObjektart art, string refId, string filter, string? subtyp = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// Liest eine Sanierungsmassnahme (AWZ_UNTERHALT) ueber ihre GlobalId — fuer das Holen der
+    /// Massnahmen nach SewerStudio (23.09.2026). Felder und Auswahllisten wie <see cref="LeseAsync"/>.
+    /// Null, wenn nicht lesbar.
+    /// </summary>
+    Task<WebGisLesestand?> LeseMassnahmeAsync(string globalId, CancellationToken ct = default)
+        => Task.FromResult<WebGisLesestand?>(null);
 }

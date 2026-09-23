@@ -34,6 +34,18 @@ public static class WebGisFeldkarte
     public static string BaujahrRef(WebGisObjektart art) =>
         art == WebGisObjektart.Haltung ? HaltungBaujahrRef : SchachtBaujahrRef;
 
+    // --- Bezeichnung (EditBox «Bezeichnung», nur lesen) ---
+    // Aus der maschinellen Masken-Inventur vom 21.09.2026 (Feldzuordnung v2, Haltung/Schacht je
+    // «Bezeichnung | EditBox»). Gebraucht beim Lesen ueber die gespeicherte GlobalID: Nur so sieht
+    // der Ablauf, ob das WebGIS-Objekt noch denselben Namen traegt. Live noch nicht gegen den
+    // sichtbaren Wert geprueft — deshalb fail-closed: fehlt der Wert oder weicht er ab, wird das
+    // Objekt gesperrt, nie geschrieben (Pascal 23.09.2026).
+    public const string HaltungBezeichnungRef = "e2bf0b38-f8fe-0a23-3f19-3cd2395b8d92";
+    public const string SchachtBezeichnungRef = "302da059-fda3-b684-3f61-3ce293bea795";
+
+    public static string BezeichnungRef(WebGisObjektart art) =>
+        art == WebGisObjektart.Haltung ? HaltungBezeichnungRef : SchachtBezeichnungRef;
+
     /// <summary>WebGIS-Tabellenname je Objektart.</summary>
     public static string Tabelle(WebGisObjektart art) => art switch
     {

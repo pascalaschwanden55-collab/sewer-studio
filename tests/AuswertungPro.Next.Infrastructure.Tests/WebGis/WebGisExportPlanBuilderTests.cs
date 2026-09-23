@@ -6,7 +6,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests.WebGis;
 
 public sealed class WebGisExportPlanBuilderTests
 {
-    private static WebGisLesestand Stand(WebGisObjektart art, string? zustand, string? sanbedarf, string? bem, string? baujahr = null)
+    private static WebGisLesestand Stand(WebGisObjektart art, string name, string? zustand, string? sanbedarf, string? bem, string? baujahr = null)
     {
         var f = new System.Collections.Generic.Dictionary<string, string?>(StringComparer.Ordinal)
         {
@@ -15,7 +15,7 @@ public sealed class WebGisExportPlanBuilderTests
             [WebGisFeldkarte.BemerkungRef(art)] = bem,
         };
         if (art == WebGisObjektart.Haltung) f[WebGisFeldkarte.HaltungBaujahrRef] = baujahr;
-        return new WebGisLesestand { GlobalId = "G1", Bezeichnung = "X", Felder = f };
+        return new WebGisLesestand { GlobalId = "G1", Bezeichnung = name, Felder = f };
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public sealed class WebGisExportPlanBuilderTests
             Objektart = WebGisObjektart.Haltung, Bezeichnung = "525145-505377", RecordId = Guid.NewGuid(),
             Zustandsklasse = "4", Bemerkung = "Saniert mit Liner 2026", Saniert = true,
         };
-        var stand = Stand(WebGisObjektart.Haltung, "102", "103", "");
+        var stand = Stand(WebGisObjektart.Haltung, e.Bezeichnung, "102", "103", "");
         var pos = WebGisExportPlanBuilder.Baue(e, stand);
 
         Assert.True(pos.Schreibbar);
@@ -52,7 +52,7 @@ public sealed class WebGisExportPlanBuilderTests
             Objektart = WebGisObjektart.Schacht, Bezeichnung = "525145", RecordId = Guid.NewGuid(),
             Zustandsklasse = "3", Bemerkung = "Saniert 2026", Saniert = false,
         };
-        var stand = Stand(WebGisObjektart.Schacht, "103", "103", "Tiefe 1.80m");
+        var stand = Stand(WebGisObjektart.Schacht, e.Bezeichnung, "103", "103", "Tiefe 1.80m");
         var pos = WebGisExportPlanBuilder.Baue(e, stand);
 
         var bem = pos.Aenderungen.Find(a => a.Feld == "Bemerkung");
@@ -71,7 +71,7 @@ public sealed class WebGisExportPlanBuilderTests
             Objektart = WebGisObjektart.Haltung, Bezeichnung = "H", RecordId = Guid.NewGuid(),
             Zustandsklasse = "4", Bemerkung = "Saniert mit Liner 2026", Saniert = true,
         };
-        var stand = Stand(WebGisObjektart.Haltung, "104", "106", "Saniert mit Liner 2026");
+        var stand = Stand(WebGisObjektart.Haltung, e.Bezeichnung, "104", "106", "Saniert mit Liner 2026");
         var pos = WebGisExportPlanBuilder.Baue(e, stand);
         Assert.Empty(pos.Aenderungen);
         Assert.False(pos.Schreibbar);
@@ -85,10 +85,10 @@ public sealed class WebGisExportPlanBuilderTests
             Objektart = WebGisObjektart.Haltung, Bezeichnung = "H", RecordId = Guid.NewGuid(),
             Zustandsklasse = "2", Baujahr = "1963", Saniert = false,
         };
-        var leer = WebGisExportPlanBuilder.Baue(e, Stand(WebGisObjektart.Haltung, "102", "103", "", baujahr: ""));
+        var leer = WebGisExportPlanBuilder.Baue(e, Stand(WebGisObjektart.Haltung, e.Bezeichnung, "102", "103", "", baujahr: ""));
         Assert.Contains(leer.Aenderungen, a => a.Feld == "Baujahr" && a.Neu == "1963");
 
-        var gefuellt = WebGisExportPlanBuilder.Baue(e, Stand(WebGisObjektart.Haltung, "102", "103", "", baujahr: "1970"));
+        var gefuellt = WebGisExportPlanBuilder.Baue(e, Stand(WebGisObjektart.Haltung, e.Bezeichnung, "102", "103", "", baujahr: "1970"));
         Assert.DoesNotContain(gefuellt.Aenderungen, a => a.Feld == "Baujahr");
     }
 
@@ -100,7 +100,7 @@ public sealed class WebGisExportPlanBuilderTests
             Objektart = WebGisObjektart.Haltung, Bezeichnung = "H", RecordId = Guid.NewGuid(),
             Zustandsklasse = "4", Saniert = true, Bemerkung = "Saniert mit Liner 2026",
         };
-        var pos = WebGisExportPlanBuilder.Baue(e, Stand(WebGisObjektart.Haltung, "102", "103", ""));
+        var pos = WebGisExportPlanBuilder.Baue(e, Stand(WebGisObjektart.Haltung, e.Bezeichnung, "102", "103", ""));
         Assert.DoesNotContain(pos.Aenderungen, a =>
             a.RefId == WebGisFeldkarte.HaltungLaengeRohrRef || a.RefId == WebGisFeldkarte.HaltungLaengeGeomRef);
     }

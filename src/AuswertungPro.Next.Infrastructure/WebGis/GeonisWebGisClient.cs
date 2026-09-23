@@ -34,7 +34,8 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
         WebGisObjektart art, string bezeichnung, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(bezeichnung)) return null;
-        if (_zugang() is null) return null;
+        if (_zugang() is null)
+            throw new WebGisSitzungException("Keine WebGIS-Anmeldung vorhanden — bitte anmelden.");
         var globalId = await LoeseGlobalIdAsync(art, bezeichnung.Trim(), ct).ConfigureAwait(false);
         if (globalId is null) return null;
         return await LiesFelderAsync(art, bezeichnung.Trim(), globalId, ct).ConfigureAwait(false);
@@ -114,12 +115,15 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
     {
         var z = _zugang();
         if (z is null) return null;
+        if (string.IsNullOrWhiteSpace(z.SynSessionId))
+            throw new WebGisSitzungException("Die WebGIS-Suchsession fehlt — bitte abmelden und neu anmelden.");
         var idx = WebGisFeldkarte.Suchindex(art);
         var sugg = await SynPostAsync(
             $"request_id={Ts()}|serveraction=GET_QUERY_FULL_TEXT|subaction=get_results_suggestion|"
             + $"session_id={z.SynSessionId}|is_fts=true|subindex_id={idx}|value={bezeichnung}", ct)
             .ConfigureAwait(false);
         if (sugg is null) return null;
+        PruefeSuchantwort(sugg.Value);
 
         var fids = new List<string>();
         foreach (var r in SuggestionsFinden(sugg.Value))
@@ -137,6 +141,7 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
             + $"session_id={z.SynSessionId}|is_fts=true|selection_type=new|fidset={fids[0]}", ct)
             .ConfigureAwait(false);
         if (res is null) return null;
+        PruefeSuchantwort(res.Value);
         return GlobalIdAusResults(res.Value);
     }
 
@@ -146,11 +151,44 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
     {
         var layout = await LiesLayoutAsync(WebGisFeldkarte.Tabelle(art), globalId, ct).ConfigureAwait(false);
         if (layout is null) return null;
-        var data = layout[1];
+        return StandAus(layout[1], globalId, bezeichnung, WebGisSanierungFeldkarte.ListeRef(art));
+    }
+
+    /// <inheritdoc />
+    public async Task<WebGisLesestand?> LeseUeberGlobalIdAsync(
+        WebGisObjektart art, string globalId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(globalId)) return null;
+        if (_zugang() is null)
+            throw new WebGisSitzungException("Keine WebGIS-Anmeldung vorhanden — bitte anmelden.");
+        var id = globalId.Trim();
+        var layout = await LiesLayoutAsync(WebGisFeldkarte.Tabelle(art), id, ct).ConfigureAwait(false);
+        if (layout is null) return null;
+        // Der Name kommt aus der Maske, nicht vom Aufrufer: Nur so faellt auf, wenn hinter der
+        // gespeicherten GlobalID inzwischen ein anderer Name steht. Fehlt er, bleibt er leer.
+        var ohneName = StandAus(layout[1], id, string.Empty, WebGisSanierungFeldkarte.ListeRef(art));
+        var name = (ohneName.Feld(WebGisFeldkarte.BezeichnungRef(art)) ?? string.Empty).Trim();
+        return new WebGisLesestand
+        {
+            GlobalId = ohneName.GlobalId, Bezeichnung = name, Felder = ohneName.Felder,
+            Sanierungen = ohneName.Sanierungen, Kataloge = ohneName.Kataloge, Subtyp = ohneName.Subtyp,
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<WebGisLesestand?> LeseMassnahmeAsync(string globalId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(globalId)) return null;
+        var layout = await LiesLayoutAsync(WebGisSanierungFeldkarte.Tabelle, globalId.Trim(), ct).ConfigureAwait(false);
+        return layout is null ? null : StandAus(layout[1], globalId.Trim(), string.Empty, listeRef: null);
+    }
+
+    /// <summary>Felder, Auswahllisten und (bei Elternmasken) die Massnahmenliste aus dem Datenobjekt der Maske.</summary>
+    private static WebGisLesestand StandAus(JsonElement data, string globalId, string bezeichnung, string? listeRef)
+    {
         var felder = new Dictionary<string, string?>(StringComparer.Ordinal);
         var kataloge = new Dictionary<string, List<(string Key, string Text)>>(StringComparer.Ordinal);
         var sanierungen = new List<WebGisSanierungZeile>();
-        var listeRef = WebGisSanierungFeldkarte.ListeRef(art);
         if (data.TryGetProperty("components", out var comps) && comps.ValueKind == JsonValueKind.Array)
         {
             foreach (var comp in comps.EnumerateArray())
@@ -180,6 +218,19 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
         };
     }
 
+    private static void PruefeSuchantwort(JsonElement root)
+    {
+        if (root.ValueKind == JsonValueKind.Object
+            && root.TryGetProperty("RES", out var res) && res.ValueKind == JsonValueKind.Array
+            && res.GetArrayLength() > 0 && res[0].ValueKind == JsonValueKind.Object
+            && res[0].TryGetProperty("RESULTS", out var ergebnisse) && ergebnisse.ValueKind == JsonValueKind.Object
+            && ergebnisse.TryGetProperty("data", out var daten) && daten.ValueKind == JsonValueKind.Object
+            && daten.TryGetProperty("anies", out var eintraege) && eintraege.ValueKind == JsonValueKind.Array)
+            return;
+        throw new WebGisSitzungException(
+            "Die WebGIS-Suchantwort ist ungültig — bitte abmelden und neu anmelden.");
+    }
+
     private async Task<JsonElement[]?> LiesLayoutAsync(string tabelle, string globalId, CancellationToken ct)
     {
         var z = _zugang();
@@ -202,7 +253,12 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
         var body = "client=corejs&query=" + Uri.EscapeDataString(query);
         using var content = new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded");
         using var resp = await _http.PostAsync(z.SynServerUrl, content, ct).ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode) return null;
+        if (resp.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
+            throw new WebGisSitzungException("Die WebGIS-Suche hat die Sitzung abgewiesen (HTTP "
+                + (int)resp.StatusCode + ") — bitte abmelden und neu anmelden.");
+        if (!resp.IsSuccessStatusCode)
+            throw new WebGisAntwortException("Die WebGIS-Suche antwortet mit HTTP "
+                + (int)resp.StatusCode + " — bitte Verbindung und Server prüfen.");
         var text = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
         using var doc = LiesJsonOderSitzungsfehler(text);
         return doc.RootElement.Clone();
@@ -231,13 +287,15 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
         if (!res[0].TryGetProperty("RESULTS", out var r) || !r.TryGetProperty("data", out var data)
             || !data.TryGetProperty("anies", out var anies) || anies.ValueKind != JsonValueKind.Array
             || anies.GetArrayLength() == 0) return null;
+        if (anies.GetArrayLength() != 1) return null;
         var rec = anies[0];
         if (!rec.TryGetProperty("extapp0_target", out var tgt)) return null;
         var url = tgt.GetString() ?? "";
-        // %7b/%7d sind die kodierten Klammern; ob der Server sie klein oder gross schreibt, ist nicht garantiert.
+        // Der Editor-Link kann die Klammern kodiert (%7B) oder sichtbar ({) enthalten.
         var m = System.Text.RegularExpressions.Regex.Match(
-            url, "id=%7b([0-9A-Fa-f-]+)%7d", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        return m.Success ? m.Groups[1].Value : null;
+            url, @"[?&]id=(?:%7B|\{)([0-9A-Fa-f-]{36})(?:%7D|\})",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return m.Success && Guid.TryParse(m.Groups[1].Value, out var id) ? id.ToString("D").ToUpperInvariant() : null;
     }
 
     /// <summary>keys/values einer Combo-Komponente als Liste (Schluessel als Text, Klartext).</summary>

@@ -78,7 +78,7 @@ public sealed class PlaywrightWebGisAnmeldung : IWebGisZugangQuelle, IAsyncDispo
             if (_page.IsClosed) return null;
 
             var env = await LiesEnvAsync().ConfigureAwait(false);
-            if (env is { Angemeldet: true, JSessionId: { Length: > 0 } })
+            if (env is { Angemeldet: true, JSessionId: { Length: > 0 }, SessionId: { Length: > 0 } })
             {
                 if (_erfasst is null)
                 {

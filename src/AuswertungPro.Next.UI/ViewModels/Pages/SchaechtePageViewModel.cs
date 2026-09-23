@@ -144,6 +144,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         KatasterKennungen = services.KatasterKennungen;
         _geoShop = services.GeoShop;
         _geoShopSicherung = services.GeoShopSicherung;
+        _webGisHolen = services.WebGisHolen;
         ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("schacht", () => _shell.Project, Settings,
             () => CanMutateShaftData, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
             services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);

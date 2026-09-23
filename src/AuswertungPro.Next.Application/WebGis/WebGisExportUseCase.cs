@@ -34,15 +34,17 @@ public sealed class WebGisExportUseCase
                 Objektart = WebGisObjektart.Haltung,
                 Bezeichnung = h.GetFieldValue(FieldKeys.HoldingName),
                 RecordId = h.Id,
-                Zustandsklasse = h.GetFieldValue(FieldKeys.ConditionClass),
-                Bemerkung = h.GetFieldValue(FieldKeys.Remarks),
-                Baujahr = h.GetFieldValue("Baujahr"),
+                GespeicherteGlobalId = h.WebGisGlobalId,
+                Zustandsklasse = OhneKatasterWert(h.FieldMeta, FieldKeys.ConditionClass, h.GetFieldValue(FieldKeys.ConditionClass)),
+                Bemerkung = OhneKatasterWert(h.FieldMeta, FieldKeys.Remarks, h.GetFieldValue(FieldKeys.Remarks)),
+                Baujahr = OhneKatasterWert(h.FieldMeta, "Baujahr", h.GetFieldValue("Baujahr")),
                 Saniert = WebGisSaniertKriterium.IstSaniert(projekt.Objektakten, h.Id),
                 Handwerte = Handwerte(h.FieldMeta, h.GetFieldValue),
             };
             var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
             plan.Positionen.Add(pos);
-            await BaueSanierungenAsync(plan, projekt, e, stand, kataloge, ct).ConfigureAwait(false);
+            if (pos.Sperren.Count == 0)
+                await BaueSanierungenAsync(plan, projekt, e, stand, kataloge, ct).ConfigureAwait(false);
         }
 
         foreach (var s in projekt.SchaechteData)
@@ -53,17 +55,23 @@ public sealed class WebGisExportUseCase
                 Objektart = WebGisObjektart.Schacht,
                 Bezeichnung = s.GetFieldValue(nameFeld),
                 RecordId = s.Id,
-                Zustandsklasse = s.GetFieldValue(SchachtFeldnamen.Feld(s, "Zustandsklasse")),
-                Bemerkung = s.GetFieldValue(SchachtFeldnamen.Feld(s, "Bemerkungen")),
+                GespeicherteGlobalId = s.WebGisGlobalId,
+                Zustandsklasse = OhneKatasterWert(s.FieldMeta, SchachtFeldnamen.Feld(s, "Zustandsklasse"),
+                    s.GetFieldValue(SchachtFeldnamen.Feld(s, "Zustandsklasse"))),
+                Bemerkung = OhneKatasterWert(s.FieldMeta, SchachtFeldnamen.Feld(s, "Bemerkungen"),
+                    s.GetFieldValue(SchachtFeldnamen.Feld(s, "Bemerkungen"))),
                 Saniert = WebGisSaniertKriterium.IstSaniert(projekt.Objektakten, s.Id),
                 Handwerte = Handwerte(s.FieldMeta, s.GetFieldValue),
             };
             var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
             plan.Positionen.Add(pos);
-            await BaueSanierungenAsync(plan, projekt, e, stand, kataloge, ct).ConfigureAwait(false);
+            if (pos.Sperren.Count == 0)
+                await BaueSanierungenAsync(plan, projekt, e, stand, kataloge, ct).ConfigureAwait(false);
         }
 
         plan.Hinweise.Add($"{plan.Positionen.Count} Objekte geprueft: {plan.Schreibbare} mit Aenderung, {plan.Gesperrte} gesperrt.");
+        if (plan.Positionen.Count > 1 && plan.Positionen.TrueForAll(p => p.Sperren.Exists(s => s.StartsWith("Im WebGIS nicht eindeutig gefunden", StringComparison.Ordinal))))
+            plan.Hinweise.Add("Kein einziger Name wurde im WebGIS eindeutig gefunden. Bitte WebGIS-Anmeldung und Suche prüfen; die genaue Ursache ist damit noch nicht belegt.");
         plan.Hinweise.Add($"{plan.Sanierungen.Count} Sanierungsmassnahmen geplant: {plan.SanierungenSchreibbar} anzulegen, {plan.SanierungenGesperrt} gesperrt.");
         return plan;
     }
@@ -75,12 +83,16 @@ public sealed class WebGisExportUseCase
         var d = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (feld, m) in meta)
         {
-            if (!m.UserEdited) continue;
+            if (!m.UserEdited || m.Source == FieldSource.Kataster) continue;
             var v = wert(feld);
             if (!string.IsNullOrWhiteSpace(v)) d[feld] = v;
         }
         return d;
     }
+
+    /// <summary>Katasterwerte (auch aus GeoShop) sind keine Quelle fuer das Schreiben ins WebGIS.</summary>
+    private static string? OhneKatasterWert(IReadOnlyDictionary<string, FieldMetadata> meta, string feld, string wert)
+        => meta.TryGetValue(feld, out var herkunft) && herkunft.Source == FieldSource.Kataster ? null : wert;
 
     /// <summary>
     /// Je ausgefuehrter Sanierungs-Akte des Objekts eine Sanierungsmassnahme planen.
@@ -142,20 +154,31 @@ public sealed class WebGisExportUseCase
 
             stand.Kataloge.TryGetValue(karte.HauptRefId, out var haupt);
             var hauptKey = WebGisHandwertKarte.Schluessel(haupt, WebGisHandwertKarte.Hauptteil(wert));
-            if (hauptKey is null) continue;
 
-            var schluessel = WebGisLesestand.GruppenSchluessel(karte.RefId, hauptKey);
-            if (stand.KatalogeNachGruppe.ContainsKey(schluessel)) continue;
-            try
+            // Nennt der Text keine Gruppe («Polypropylen»), werden die Listen ALLER Gruppen geladen;
+            // der Planbau nimmt die Gruppe nur, wenn genau eine den Wert fuehrt (23.09.2026).
+            var gruppen = new List<string>();
+            if (hauptKey is not null) gruppen.Add(hauptKey);
+            else if (haupt is not null)
+                foreach (var (k, _) in haupt)
+                    if (k.Length > 0 && k != stand.Feld(karte.HauptRefId)) gruppen.Add(k);
+
+            foreach (var gruppe in gruppen)
             {
-                var liste = await _client.LeseKatalogListeAsync(e.Objektart, karte.RefId, hauptKey, stand.Subtyp, ct).ConfigureAwait(false);
-                if (liste is not null) stand.KatalogeNachGruppe[schluessel] = new List<(string Key, string Text)>(liste);
-            }
-            catch (WebGisAntwortException ex)
-            {
-                // Ein Serverfehler beim optionalen Nachladen betrifft nur dieses Feld: Es bleibt beim
-                // Hinweis «nicht im Katalog» — der Lauf und die uebrigen Felder gehen weiter.
-                hinweise.Add($"{karte.Anzeige} «{wert}»: Liste der Gruppe konnte nicht nachgeladen werden — {ex.Message}");
+                var schluessel = WebGisLesestand.GruppenSchluessel(karte.RefId, gruppe);
+                if (stand.KatalogeNachGruppe.ContainsKey(schluessel)) continue;
+                try
+                {
+                    var liste = await _client.LeseKatalogListeAsync(e.Objektart, karte.RefId, gruppe, stand.Subtyp, ct).ConfigureAwait(false);
+                    if (liste is not null) stand.KatalogeNachGruppe[schluessel] = new List<(string Key, string Text)>(liste);
+                }
+                catch (WebGisAntwortException ex)
+                {
+                    // Ein Serverfehler beim optionalen Nachladen betrifft nur dieses Feld: Es bleibt beim
+                    // Hinweis «nicht im Katalog» — der Lauf und die uebrigen Felder gehen weiter.
+                    hinweise.Add($"{karte.Anzeige} «{wert}»: Liste der Gruppe konnte nicht nachgeladen werden — {ex.Message}");
+                    break;
+                }
             }
         }
         return hinweise;
@@ -168,7 +191,7 @@ public sealed class WebGisExportUseCase
         IReadOnlyList<string> nachladeHinweise = Array.Empty<string>();
         try
         {
-            stand = await _client.LeseAsync(e.Objektart, e.Bezeichnung, ct).ConfigureAwait(false);
+            stand = await WebGisObjektLesen.LiesAsync(_client, e.Objektart, e.Bezeichnung, e.GespeicherteGlobalId, ct).ConfigureAwait(false);
             if (stand is not null) nachladeHinweise = await ErgaenzeGruppenKatalogeAsync(e, stand, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
@@ -178,6 +201,7 @@ public sealed class WebGisExportUseCase
             var p = new WebGisExportPosition
             {
                 Objektart = e.Objektart, Bezeichnung = e.Bezeichnung, RecordId = e.RecordId,
+                GespeicherteGlobalId = e.GespeicherteGlobalId,
             };
             p.Sperren.Add("Lesefehler: " + ex.Message);
             return (p, null);
@@ -216,10 +240,16 @@ public sealed class WebGisExportUseCase
     /// </summary>
     private async Task SchreibeEineAsync(WebGisExportPosition pos, CancellationToken ct)
     {
-        var stand = await _client.LeseAsync(pos.Objektart, pos.Bezeichnung, ct).ConfigureAwait(false);
+        var stand = await WebGisObjektLesen.LiesAsync(_client, pos.Objektart, pos.Bezeichnung, pos.GespeicherteGlobalId, ct).ConfigureAwait(false);
         if (stand is null || !string.Equals(stand.GlobalId, pos.GlobalId, StringComparison.OrdinalIgnoreCase))
         {
             pos.SchreibFehler = "Objekt beim erneuten Lesen nicht mehr eindeutig — uebersprungen.";
+            return;
+        }
+        // Zwischen Plan und Schreiben kann das Objekt im WebGIS umbenannt worden sein.
+        if (WebGisObjektLesen.NamensAbweichung(pos.Bezeichnung, stand) is { } namensSperre)
+        {
+            pos.SchreibFehler = namensSperre + " Nicht geschrieben.";
             return;
         }
 
@@ -258,7 +288,7 @@ public sealed class WebGisExportUseCase
         WebGisLesestand? nachher;
         try
         {
-            nachher = await _client.LeseAsync(pos.Objektart, pos.Bezeichnung, ct).ConfigureAwait(false);
+            nachher = await WebGisObjektLesen.LiesAsync(_client, pos.Objektart, pos.Bezeichnung, pos.GespeicherteGlobalId, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (WebGisSitzungException) { throw; }
@@ -327,16 +357,23 @@ public sealed class WebGisExportUseCase
         {
             if (!san.Schreibbar) continue;
             if (probelauf) { san.Hinweise.Add("Probelauf — nicht angelegt."); continue; }
-            await GeschuetztAsync(san, s => LegeEineAnAsync(s, ct), (s, f) => s.SchreibFehler = f, nachMassnahme).ConfigureAwait(false);
+            var gespeichert = plan.Positionen.Find(p => p.RecordId == san.ElternRecordId && p.Objektart == san.Objektart)
+                ?.GespeicherteGlobalId;
+            await GeschuetztAsync(san, s => LegeEineAnAsync(s, gespeichert, ct), (s, f) => s.SchreibFehler = f, nachMassnahme).ConfigureAwait(false);
         }
     }
 
-    private async Task LegeEineAnAsync(WebGisSanierungPosition san, CancellationToken ct)
+    private async Task LegeEineAnAsync(WebGisSanierungPosition san, string? gespeicherteElternGlobalId, CancellationToken ct)
     {
-        var stand = await _client.LeseAsync(san.Objektart, san.ElternBezeichnung, ct).ConfigureAwait(false);
+        var stand = await WebGisObjektLesen.LiesAsync(_client, san.Objektart, san.ElternBezeichnung, gespeicherteElternGlobalId, ct).ConfigureAwait(false);
         if (stand is null || !string.Equals(stand.GlobalId, san.ElternGlobalId, StringComparison.OrdinalIgnoreCase))
         {
             san.SchreibFehler = "Elternobjekt beim erneuten Lesen nicht mehr eindeutig — uebersprungen.";
+            return;
+        }
+        if (WebGisObjektLesen.NamensAbweichung(san.ElternBezeichnung, stand) is { } namensSperre)
+        {
+            san.SchreibFehler = namensSperre + " Massnahme nicht angelegt.";
             return;
         }
         if (stand.Sanierungen.Count > 0)

@@ -66,6 +66,15 @@ namespace AuswertungPro.Next.UI
         /// <summary>Der Export-Ablauf (Plan bauen, Vorschau, schreiben) ueber den Client.</summary>
         public WebGisExportUseCase WebGisExport => new(WebGisClient);
 
+        /// <summary>Das Holen WebGIS -> SewerStudio (Felder, Laenge, Baujahr, Sanierungsmassnahmen); schreibt nie ins WebGIS.</summary>
+        public WebGisImportUseCase WebGisImport => new(WebGisClient);
+
+        private Services.WebGisHolenAblauf? _webGisHolen;
+
+        /// <summary>«Vom WebGIS holen» fuer Haltungen, Schaechte und Export-Seite — eine Instanz, ein laufender Vorgang.</summary>
+        public Services.WebGisHolenAblauf WebGisHolen => _webGisHolen ??= new Services.WebGisHolenAblauf(
+            () => WebGisZugang is not null, () => WebGisImport, Dialogs);
+
         /// <summary>Browser-Cookies der Anmeldung in den HttpClient uebernehmen (JSESSIONID, ADFS …).</summary>
         private void UebernimmWebGisCookies(WebGisZugang? zugang)
         {

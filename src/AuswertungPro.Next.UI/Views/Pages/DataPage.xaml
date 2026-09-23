@@ -247,6 +247,10 @@
                                               ToolTip="Leere Felder aus dem QGIS-Bestand ergänzen. Gefüllte Felder bleiben unberührt; vorher erscheint ein Bericht.">
                                         <MenuItem.Icon><ui:FluentIcon Glyph="&#xE896;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
                                     </MenuItem>
+                                    <MenuItem Header="Vom WebGIS holen" Command="{Binding WebGisHolenCommand}" IsEnabled="{Binding IsProjectReady}"
+                                              ToolTip="Holt aus dem WebGIS: GlobalID, Baujahr (wenn leer) und passende Stammdaten. WebGIS-Werte ersetzen Katasterwerte; Handwerte bleiben. Die Haltungslänge bleibt beim Wert des Operateurs. Vorschau zuerst; ins WebGIS wird nichts geschrieben. Anmeldung auf der Seite Export.">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE753;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
                                     <MenuItem Header="GeoShop-Abgleich (XTF)" Command="{Binding KatasterKennungenErgaenzenCommand}" IsEnabled="{Binding IsProjectReady}"
                                               ToolTip="TIDs und Verknüpfungen aus GeoShop übernehmen und leere Felder ergänzen. XTF auswählen und Änderungen vorher prüfen.">
                                         <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>

@@ -9,6 +9,7 @@ public sealed class WebGisObjektEingabe
     public required WebGisObjektart Objektart { get; init; }
     public required string Bezeichnung { get; init; }
     public Guid RecordId { get; init; }
+    public string? GespeicherteGlobalId { get; init; }
     public string? Zustandsklasse { get; init; }
     public string? Bemerkung { get; init; }
     /// <summary>Nur Haltung: Baujahr, wird nur gesetzt wenn im WebGIS leer.</summary>
@@ -40,12 +41,25 @@ public static class WebGisExportPlanBuilder
             Objektart = e.Objektart,
             Bezeichnung = e.Bezeichnung,
             GlobalId = stand?.GlobalId,
+            GespeicherteGlobalId = e.GespeicherteGlobalId,
             RecordId = e.RecordId,
         };
 
         if (stand is null)
         {
-            pos.Sperren.Add("Im WebGIS nicht eindeutig gefunden (kein oder mehrdeutiger Treffer).");
+            pos.Sperren.Add(WebGisObjektLesen.NichtGefunden(e.GespeicherteGlobalId));
+            return pos;
+        }
+        if (WebGisObjektLesen.NamensAbweichung(e.Bezeichnung, stand) is { } namensSperre)
+        {
+            pos.Sperren.Add(namensSperre);
+            return pos;
+        }
+
+        if (!string.IsNullOrWhiteSpace(e.GespeicherteGlobalId)
+            && !string.Equals(e.GespeicherteGlobalId, stand.GlobalId, StringComparison.OrdinalIgnoreCase))
+        {
+            pos.Sperren.Add("Gespeicherte WebGIS-GlobalID weicht vom Suchtreffer ab — Objekt nicht schreiben.");
             return pos;
         }
 
@@ -187,6 +201,25 @@ public static class WebGisExportPlanBuilder
             }
 
             var key = WebGisHandwertKarte.Schluessel(katalog, wert);
+
+            // Kein Gruppenname im Text und nicht in der aktuellen Liste: die Gruppe, deren nachgeladene
+            // Liste den Wert fuehrt — nur wenn es genau EINE ist (wie im Browser: erst Gruppe, dann Detail).
+            if (key is null && karte.HauptRefId is not null && hauptKey is null)
+            {
+                var treffer = GruppenMitWert(stand, karte.RefId, wert);
+                if (treffer.Count > 1)
+                {
+                    pos.Hinweise.Add($"{karte.Anzeige} «{wert}» steht im WebGIS in mehreren Gruppen — Feld nicht übertragen (Gruppe in SewerStudio angeben, z.B. «Gruppe, {wert}»).");
+                    continue;
+                }
+                if (treffer.Count == 1)
+                {
+                    (hauptKey, key) = treffer[0];
+                    stand.Kataloge.TryGetValue(karte.HauptRefId, out var hk);
+                    haupt = TextZu(hk, hauptKey) ?? hauptKey;
+                }
+            }
+
             if (key is null && karte.HauptRefId is not null && hauptKey is not null && haupt == wert)
             {
                 // Nur die Hauptkategorie bekannt ("Beton"): ins Hauptfeld, Detail bleibt.
@@ -205,6 +238,27 @@ public static class WebGisExportPlanBuilder
             if (karte.HauptRefId is not null && hauptKey is not null)
                 FuegeComboAn(pos, stand, karte.HauptRefId, karte.Anzeige + " (Hauptkategorie)", hauptKey, haupt);
         }
+    }
+
+    /// <summary>Alle nachgeladenen Gruppenlisten dieses Detailfelds, die den Klartext fuehren: (Gruppe, Detail-Schluessel).</summary>
+    private static List<(string Gruppe, string Key)> GruppenMitWert(WebGisLesestand stand, string detailRefId, string wert)
+    {
+        var praefix = WebGisLesestand.GruppenSchluessel(detailRefId, string.Empty);
+        var treffer = new List<(string, string)>();
+        foreach (var (schluessel, liste) in stand.KatalogeNachGruppe)
+        {
+            if (!schluessel.StartsWith(praefix, StringComparison.Ordinal)) continue;
+            if (WebGisHandwertKarte.Schluessel(liste, wert) is { } key)
+                treffer.Add((schluessel[praefix.Length..], key));
+        }
+        return treffer;
+    }
+
+    private static string? TextZu(IReadOnlyList<(string Key, string Text)>? katalog, string key)
+    {
+        if (katalog is null) return null;
+        foreach (var (k, t) in katalog) if (k == key) return t;
+        return null;
     }
 
     private static void FuegeComboAn(WebGisExportPosition pos, WebGisLesestand stand, string refId, string anzeige, string key, string text)

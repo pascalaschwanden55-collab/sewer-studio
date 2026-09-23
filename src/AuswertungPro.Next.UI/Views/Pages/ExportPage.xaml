@@ -311,6 +311,13 @@
                                         <TextBlock Text="Prüfen und ins WebGIS schreiben" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
+                                <Button Command="{Binding WebGisHolenCommand}" Padding="14,6" Margin="0,0,8,0"
+                                        ToolTip="Holt aus dem WebGIS in SewerStudio: GlobalID, Baujahr (wenn leer) und passende Stammdaten. WebGIS-Werte ersetzen Katasterwerte; Handwerte bleiben. Die Haltungslänge bleibt beim Wert des Operateurs. Vorschau zuerst; ins WebGIS wird nichts geschrieben.">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:FluentIcon Glyph="&#xE896;" Margin="0,0,8,0" Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock Text="Vom WebGIS holen" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                                 <Button Command="{Binding WebGisAbmeldenCommand}" Padding="12,5"
                                         ToolTip="Schliesst das Browserfenster und verwirft die Sitzung.">
                                     <TextBlock Text="Abmelden" VerticalAlignment="Center"/>

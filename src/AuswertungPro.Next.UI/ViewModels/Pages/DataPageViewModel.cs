@@ -229,6 +229,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _katasterKennungen = services.KatasterKennungen;
         _geoShop = services.GeoShop;
         _geoShopSicherung = services.GeoShopSicherung;
+        _webGisHolen = services.WebGisHolen;
         ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("haltung", () => _shell.Project, Settings,
             () => _shell.IsProjectReady, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
             services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);

@@ -46,6 +46,19 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
     /// </summary>
     public GeonisKennungen? Geonis { get; set; }
 
+    /// <summary>GlobalID aus einem eindeutig passenden WebGIS-Suchtreffer; keine OBJECTID oder XTF-Kennung.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? WebGisGlobalId { get; set; }
+
+    public void SetzeWebGisGlobalId(string globalId)
+    {
+        if (WebGisGlobalId == globalId) return;
+        WebGisGlobalId = globalId;
+        ModifiedAtUtc = DateTime.UtcNow;
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(WebGisGlobalId)));
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ModifiedAtUtc)));
+    }
+
     /// <summary>
     /// Die Laufnummer, unter der die Importquelle diese Haltung fuehrt — bei WinCan der
     /// <c>OBJ_Key</c> (<c>H66</c>). Der Haltungsname bleibt das Schachtpaar

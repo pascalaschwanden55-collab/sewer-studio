@@ -80,6 +80,11 @@ public sealed class WebGisExportPosition
     public required WebGisObjektart Objektart { get; init; }
     public required string Bezeichnung { get; init; }
     public string? GlobalId { get; init; }
+    /// <summary>
+    /// Im Projekt gespeicherte GlobalID. Gesetzt heisst: jedes erneute Lesen (vor dem Schreiben,
+    /// Nachkontrolle, Massnahmen) laeuft direkt ueber sie, nie ueber den Namen.
+    /// </summary>
+    public string? GespeicherteGlobalId { get; init; }
     public Guid RecordId { get; init; }
     public List<WebGisFeldAenderung> Aenderungen { get; } = new();
     /// <summary>Sperrgruende — bei mindestens einem wird NICHT geschrieben.</summary>

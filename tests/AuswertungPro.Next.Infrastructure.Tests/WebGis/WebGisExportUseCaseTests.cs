@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.WebGis;
+using AuswertungPro.Next.Domain.Models;
 using Xunit;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.WebGis;
@@ -16,6 +18,201 @@ namespace AuswertungPro.Next.Infrastructure.Tests.WebGis;
 /// </summary>
 public sealed class WebGisExportUseCaseTests
 {
+    [Fact]
+    public void Abweichende_gespeicherte_globalid_sperrt_export()
+    {
+        var eingabe = new WebGisObjektEingabe
+        {
+            Objektart = WebGisObjektart.Schacht, Bezeichnung = "525145", GespeicherteGlobalId = "andere-id",
+        };
+
+        var position = WebGisExportPlanBuilder.Baue(eingabe, SchachtStand());
+
+        Assert.NotEmpty(position.Sperren);
+        Assert.False(position.Schreibbar);
+    }
+
+    [Fact]
+    public void Anderer_webgis_name_sperrt_export()
+    {
+        var eingabe = new WebGisObjektEingabe { Objektart = WebGisObjektart.Schacht, Bezeichnung = "525145" };
+        var stand = new WebGisLesestand { GlobalId = "G1", Bezeichnung = "anderer Name" };
+
+        var position = WebGisExportPlanBuilder.Baue(eingabe, stand);
+
+        Assert.NotEmpty(position.Sperren);
+        Assert.False(position.Schreibbar);
+    }
+
+    [Fact]
+    public async Task Katasterwerte_werden_nicht_ins_webgis_zurueckgeschrieben()
+    {
+        var haltung = new HaltungRecord();
+        haltung.SetFieldValue(FieldKeys.HoldingName, "H1", FieldSource.Manual, false);
+        haltung.SetFieldValue(FieldKeys.ConditionClass, "4", FieldSource.Kataster, false);
+        haltung.SetFieldValue(FieldKeys.Remarks, "GeoShop-Text", FieldSource.Kataster, false);
+        haltung.SetFieldValue("Baujahr", "1963", FieldSource.Kataster, false);
+        var projekt = new Project();
+        projekt.Data.Add(haltung);
+        var client = new FakeClient
+        {
+            Lese = (_, name) => new WebGisLesestand { GlobalId = "G1", Bezeichnung = name },
+        };
+
+        var plan = await new WebGisExportUseCase(client).BauePlanAsync(projekt);
+
+        Assert.Empty(plan.Positionen.Single().Aenderungen);
+    }
+
+    [Fact]
+    public async Task Wenn_alle_suchtreffer_fehlen_wird_ein_gemeinsames_suchproblem_gemeldet()
+    {
+        var projekt = new Project();
+        foreach (var name in new[] { "H1", "H2" })
+        {
+            var haltung = new HaltungRecord();
+            haltung.SetFieldValue(FieldKeys.HoldingName, name, FieldSource.Manual, false);
+            projekt.Data.Add(haltung);
+        }
+
+        var plan = await new WebGisExportUseCase(new FakeClient()).BauePlanAsync(projekt);
+
+        Assert.Equal(2, plan.Gesperrte);
+        Assert.Contains(plan.Hinweise, hinweis => hinweis.Contains("Kein einziger Name"));
+    }
+    // ---------------- Gespeicherte GlobalID: direkt lesen, nie ueber den Namen (Pascal 23.09.2026) ----------------
+    // Anlass Zone 1.15: Ab 14:32 fand die Namenssuche nichts mehr, alle 182 Objekte waren gesperrt,
+    // obwohl ihre GlobalID laengst bekannt war. Mit gespeicherter GlobalID haengt nichts mehr an der Suche.
+
+    private static Project ProjektMitHaltung(string name, string? globalId, string zustand = "4")
+    {
+        var haltung = new HaltungRecord { WebGisGlobalId = globalId };
+        haltung.SetFieldValue(FieldKeys.HoldingName, name, FieldSource.Manual, false);
+        haltung.SetFieldValue(FieldKeys.ConditionClass, zustand, FieldSource.Manual, true);
+        var projekt = new Project();
+        projekt.Data.Add(haltung);
+        return projekt;
+    }
+
+    private static WebGisLesestand HaltungStand(string gid, string name)
+        => new()
+        {
+            GlobalId = gid, Bezeichnung = name,
+            Felder = new Dictionary<string, string?>(StringComparer.Ordinal) { [WebGisFeldkarte.HaltungZustandRef] = "102" },
+        };
+
+    [Fact]
+    public async Task Gespeicherte_globalid_liest_und_schreibt_ohne_namenssuche()
+    {
+        var client = new FakeClient
+        {
+            Lese = (_, _) => throw new InvalidOperationException("Keine Namenssuche erwartet."),
+            LeseUeberId = (_, id) => HaltungStand(id, "80638-80631"),
+        };
+        var useCase = new WebGisExportUseCase(client);
+
+        var plan = await useCase.BauePlanAsync(ProjektMitHaltung("80638-80631", "31946755-E44D-4714-8DA6-91F56A6AC8FA"));
+        var pos = plan.Positionen.Single();
+        Assert.True(pos.Schreibbar, string.Join(" | ", pos.Sperren));
+        Assert.Equal("31946755-E44D-4714-8DA6-91F56A6AC8FA", pos.GlobalId);
+
+        await useCase.FuehreAusAsync(plan, probelauf: false);
+
+        Assert.True(pos.Geschrieben, pos.SchreibFehler);
+        Assert.Equal("31946755-E44D-4714-8DA6-91F56A6AC8FA", Assert.Single(client.Geschrieben).GlobalId);
+        Assert.Equal(0, client.NamensSuchen);
+        Assert.Equal(3, client.IdLesungen); // Plan, frisch vor dem Schreiben, Nachkontrolle
+    }
+
+    [Fact]
+    public async Task Ohne_gespeicherte_globalid_bleibt_es_bei_der_namenssuche()
+    {
+        var client = new FakeClient { Lese = (_, name) => HaltungStand("G1", name) };
+
+        var plan = await new WebGisExportUseCase(client).BauePlanAsync(ProjektMitHaltung("H1", globalId: null));
+
+        Assert.True(plan.Positionen.Single().Schreibbar);
+        Assert.Equal(1, client.NamensSuchen);
+        Assert.Equal(0, client.IdLesungen);
+    }
+
+    [Fact]
+    public async Task Anderer_name_hinter_der_gespeicherten_globalid_sperrt_und_nennt_beide_namen()
+    {
+        var client = new FakeClient { LeseUeberId = (_, id) => HaltungStand(id, "80640-80638") };
+
+        var plan = await new WebGisExportUseCase(client).BauePlanAsync(ProjektMitHaltung("80638-80631", "G1"));
+
+        var pos = plan.Positionen.Single();
+        Assert.False(pos.Schreibbar);
+        var sperre = Assert.Single(pos.Sperren);
+        Assert.Contains("80640-80638", sperre);
+        Assert.Contains("80638-80631", sperre);
+        Assert.Equal(0, client.NamensSuchen);
+    }
+
+    [Fact]
+    public async Task Nicht_lesbare_gespeicherte_globalid_sperrt_ohne_auf_den_namen_auszuweichen()
+    {
+        var client = new FakeClient
+        {
+            Lese = (_, name) => HaltungStand("ANDERE", name), // die Suche faende ein anderes Objekt
+            LeseUeberId = (_, _) => null,
+        };
+
+        var plan = await new WebGisExportUseCase(client).BauePlanAsync(ProjektMitHaltung("80638-80631", "G1"));
+
+        var pos = plan.Positionen.Single();
+        Assert.False(pos.Schreibbar);
+        Assert.Contains("gespeicherten GlobalID", Assert.Single(pos.Sperren));
+        Assert.Equal(0, client.NamensSuchen);
+    }
+
+    [Fact]
+    public async Task Umbenennung_im_webgis_zwischen_plan_und_schreiben_sperrt_das_schreiben()
+    {
+        var name = "80638-80631";
+        var client = new FakeClient { LeseUeberId = (_, id) => HaltungStand(id, name) };
+        var useCase = new WebGisExportUseCase(client);
+        var plan = await useCase.BauePlanAsync(ProjektMitHaltung("80638-80631", "G1"));
+
+        name = "80638-99999"; // im WebGIS umbenannt, bevor geschrieben wird
+        await useCase.FuehreAusAsync(plan, probelauf: false);
+
+        var pos = plan.Positionen.Single();
+        Assert.False(pos.Geschrieben);
+        Assert.Contains("80638-99999", pos.SchreibFehler);
+        Assert.Empty(client.Geschrieben);
+    }
+
+    [Fact]
+    public async Task Massnahme_liest_ihr_elternobjekt_ueber_die_gespeicherte_globalid()
+    {
+        var client = new FakeClient
+        {
+            Lese = (_, _) => throw new InvalidOperationException("Keine Namenssuche erwartet."),
+            LeseUeberId = (_, id) => HaltungStand(id, "80638-80631"),
+        };
+        var plan = new WebGisExportPlan();
+        var elternId = Guid.NewGuid();
+        plan.Positionen.Add(new WebGisExportPosition
+        {
+            Objektart = WebGisObjektart.Haltung, Bezeichnung = "80638-80631", GlobalId = "G1",
+            GespeicherteGlobalId = "G1", RecordId = elternId,
+        });
+        var san = new WebGisSanierungPosition
+        {
+            Objektart = WebGisObjektart.Haltung, ElternBezeichnung = "80638-80631", ElternGlobalId = "G1", ElternRecordId = elternId,
+        };
+        san.Felder["x"] = "1";
+        plan.Sanierungen.Add(san);
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
+
+        Assert.True(san.Geschrieben, san.SchreibFehler);
+        Assert.Equal(0, client.NamensSuchen);
+    }
+
     private const string FormRef = "20888829-e165-1c4f-e997-0991e22e9be0";
     private const string MaterialHauptRef = "57efe6f1-4e76-3844-d13b-4c6dc0e1301f";
     private const string MaterialDetailRef = "5eeb92cf-a23f-ed9c-9ed2-cd96fdcd7728";
@@ -42,12 +239,27 @@ public sealed class WebGisExportUseCaseTests
 
         private readonly Dictionary<string, Dictionary<string, string>> _gespeichert = new(StringComparer.Ordinal);
 
+        public Func<WebGisObjektart, string, WebGisLesestand?> LeseUeberId { get; set; } = (_, _) => null;
+        public int NamensSuchen { get; private set; }
+        public int IdLesungen { get; private set; }
+
         public Task<WebGisLesestand?> LeseAsync(WebGisObjektart art, string bezeichnung, CancellationToken ct = default)
         {
-            var stand = Lese(art, bezeichnung);
+            NamensSuchen++;
+            return Task.FromResult(MitGespeichertem(Lese(art, bezeichnung)));
+        }
+
+        public Task<WebGisLesestand?> LeseUeberGlobalIdAsync(WebGisObjektart art, string globalId, CancellationToken ct = default)
+        {
+            IdLesungen++;
+            return Task.FromResult(MitGespeichertem(LeseUeberId(art, globalId)));
+        }
+
+        private WebGisLesestand? MitGespeichertem(WebGisLesestand? stand)
+        {
             if (stand is not null && _gespeichert.TryGetValue(stand.GlobalId, out var felder))
                 foreach (var (refId, wert) in felder) stand.Felder[refId] = wert;
-            return Task.FromResult(stand);
+            return stand;
         }
 
         public Task<WebGisSchreibErgebnis> SchreibeAsync(WebGisObjektart art, string globalId, IReadOnlyDictionary<string, string> felder, CancellationToken ct = default)
@@ -260,7 +472,7 @@ public sealed class WebGisExportUseCaseTests
         plan.Positionen.Add(p1); plan.Positionen.Add(p2);
         var client = new FakeClient
         {
-            Lese = (_, b) => HaltungStand(b == "H1" ? "G1" : "G2"),
+            Lese = (_, b) => HaltungStand(b == "H1" ? "G1" : "G2", b), // die Suche liefert den gesuchten Namen
             Schreibe = (gid, _) => gid == "G1" ? throw new HttpRequestException("Verbindung unterbrochen") : WebGisSchreibErgebnis.Ok(),
         };
 
@@ -280,7 +492,7 @@ public sealed class WebGisExportUseCaseTests
         plan.Positionen.Add(p1); plan.Positionen.Add(p2);
         var client = new FakeClient
         {
-            Lese = (_, b) => HaltungStand(b == "H1" ? "G1" : "G2"),
+            Lese = (_, b) => HaltungStand(b == "H1" ? "G1" : "G2", b), // die Suche liefert den gesuchten Namen
             Schreibe = (gid, _) => gid == "G1" ? WebGisSchreibErgebnis.Fehlgeschlagen("Regelverletzung") : WebGisSchreibErgebnis.Ok(),
         };
         var gesehen = new List<(string Objekt, bool Ok, string? Fehler)>();
@@ -302,7 +514,7 @@ public sealed class WebGisExportUseCaseTests
         plan.Positionen.Add(p1); plan.Positionen.Add(p2);
         var client = new FakeClient
         {
-            Lese = (_, b) => HaltungStand(b == "H1" ? "G1" : "G2"),
+            Lese = (_, b) => HaltungStand(b == "H1" ? "G1" : "G2", b), // die Suche liefert den gesuchten Namen
             Schreibe = (gid, _) => gid == "G2" ? throw new WebGisSitzungException("Token abgelaufen") : WebGisSchreibErgebnis.Ok(),
         };
         var gesehen = new List<string>();
@@ -409,5 +621,69 @@ public sealed class WebGisExportUseCaseTests
         Assert.DoesNotContain(pos.Aenderungen, a => a.RefId == MaterialDetailRef);
         Assert.DoesNotContain(pos.Aenderungen, a => a.RefId == MaterialHauptRef); // kein halbes Paar
         Assert.Contains(pos.Hinweise, h => h.Contains("Beton, Fertigteil") && h.Contains("nicht vorhanden"));
+    }
+
+    // ---------------- Material ohne Gruppe im Text: Gruppe aus den Listen des WebGIS ableiten ----------------
+    // Anlass 23.09.2026 (Haltung 386227-80538): SewerStudio fuehrt nur «Polypropylen», das WebGIS steht auf
+    // Beton. Im Browser muss man zuerst die Gruppe wechseln; SewerStudio tat gar nichts (nur Hinweis).
+
+    private static FakeClient ClientMitGruppenlisten() => new()
+    {
+        KatalogListe = (_, refId, filter) => refId != MaterialDetailRef ? null : filter switch
+        {
+            "1" => new List<(string, string)> { ("101", "Beton, unbekannt"), ("104", "Beton, Fertigteil") },
+            "3" => new List<(string, string)> { ("301", "Kunststoff, PVC"), ("305", "Polypropylen") },
+            _ => new List<(string, string)>(),
+        },
+    };
+
+    [Fact]
+    public async Task Detail_ohne_gruppe_im_text_setzt_die_einzige_passende_gruppe_mit()
+    {
+        var e = Schacht(("Material", "Polypropylen"));
+        var stand = SchachtStandMitMaterial(("101", "Beton, unbekannt"), ("104", "Beton, Fertigteil"));
+        stand.Felder[MaterialHauptRef] = "1"; // im WebGIS steht Beton
+        stand.Felder[MaterialDetailRef] = "104";
+
+        await new WebGisExportUseCase(ClientMitGruppenlisten()).ErgaenzeGruppenKatalogeAsync(e, stand);
+        var pos = WebGisExportPlanBuilder.Baue(e, stand);
+
+        Assert.Contains(pos.Aenderungen, a => a.RefId == MaterialDetailRef && a.Neu == "305");
+        Assert.Contains(pos.Aenderungen, a => a.RefId == MaterialHauptRef && a.Neu == "3");
+        Assert.DoesNotContain(pos.Hinweise, h => h.Contains("nicht vorhanden"));
+    }
+
+    [Fact]
+    public async Task Detail_in_mehreren_gruppen_wird_nicht_geraten()
+    {
+        var e = Schacht(("Material", "Polypropylen"));
+        var stand = SchachtStandMitMaterial(("101", "Beton, unbekannt"));
+        stand.Felder[MaterialHauptRef] = "1";
+        var client = new FakeClient
+        {
+            KatalogListe = (_, refId, filter) => refId == MaterialDetailRef && filter is "0" or "3"
+                ? new List<(string, string)> { ("305", "Polypropylen") }
+                : new List<(string, string)>(),
+        };
+
+        await new WebGisExportUseCase(client).ErgaenzeGruppenKatalogeAsync(e, stand);
+        var pos = WebGisExportPlanBuilder.Baue(e, stand);
+
+        Assert.DoesNotContain(pos.Aenderungen, a => a.RefId == MaterialDetailRef || a.RefId == MaterialHauptRef);
+        Assert.Contains(pos.Hinweise, h => h.Contains("Polypropylen") && h.Contains("mehreren"));
+    }
+
+    [Fact]
+    public async Task Detail_in_keiner_gruppe_bleibt_beim_hinweis()
+    {
+        var e = Schacht(("Material", "Zement"));
+        var stand = SchachtStandMitMaterial(("101", "Beton, unbekannt"));
+        stand.Felder[MaterialHauptRef] = "1";
+
+        await new WebGisExportUseCase(ClientMitGruppenlisten()).ErgaenzeGruppenKatalogeAsync(e, stand);
+        var pos = WebGisExportPlanBuilder.Baue(e, stand);
+
+        Assert.DoesNotContain(pos.Aenderungen, a => a.RefId == MaterialDetailRef || a.RefId == MaterialHauptRef);
+        Assert.Contains(pos.Hinweise, h => h.Contains("Zement") && h.Contains("nicht vorhanden"));
     }
 }

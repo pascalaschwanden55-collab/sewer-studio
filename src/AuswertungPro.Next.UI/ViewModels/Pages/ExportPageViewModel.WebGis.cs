@@ -23,6 +23,7 @@ public sealed partial class ExportPageViewModel
     public IAsyncRelayCommand WebGisAnmeldenCommand { get; private set; } = new AsyncRelayCommand(() => Task.CompletedTask, () => false);
     public IAsyncRelayCommand WebGisUebertragenCommand { get; private set; } = new AsyncRelayCommand(() => Task.CompletedTask, () => false);
     public IAsyncRelayCommand WebGisAbmeldenCommand { get; private set; } = new AsyncRelayCommand(() => Task.CompletedTask, () => false);
+    public IAsyncRelayCommand WebGisHolenCommand { get; private set; } = new AsyncRelayCommand(() => Task.CompletedTask, () => false);
 
     /// <summary>Angemeldet als …, Fortschritt oder letztes Ergebnis.</summary>
     public string WebGisStatus
@@ -41,6 +42,9 @@ public sealed partial class ExportPageViewModel
             WebGisUebertragenAsync,
             () => !_webGisLaeuft && WebGisAngemeldet && _shell.Project is not null);
         WebGisAbmeldenCommand = new AsyncRelayCommand(WebGisAbmeldenAsync, () => !_webGisLaeuft && WebGisAngemeldet);
+        WebGisHolenCommand = new AsyncRelayCommand(
+            WebGisHolenAsync,
+            () => !_webGisLaeuft && WebGisAngemeldet && _shell.Project is not null);
         var kontext = sp.Settings.WebGisSynLogin;
         WebGisStatus = string.IsNullOrWhiteSpace(kontext)
             ? "Nicht angemeldet. Beim ersten Mal nach der Anmeldung einmal eine Attributmaske öffnen."
@@ -53,6 +57,18 @@ public sealed partial class ExportPageViewModel
         WebGisAnmeldenCommand.NotifyCanExecuteChanged();
         WebGisUebertragenCommand.NotifyCanExecuteChanged();
         WebGisAbmeldenCommand.NotifyCanExecuteChanged();
+        WebGisHolenCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// Vom WebGIS holen: Plan bauen (liest nur), Vorschau im bestehenden Fenster, erst nach
+    /// «Uebernehmen» in die Datensaetze. Das Projekt wird beim Start gebunden — nach einem
+    /// Projektwechsel waehrend des Lesens wird nichts uebernommen.
+    /// </summary>
+    private async Task WebGisHolenAsync()
+    {
+        if (_webGisSp is null || _shell.Project is null || !WebGisAngemeldet) return;
+        await _webGisSp.WebGisHolen.OeffneAsync(_shell, () => _settings.LastProjectPath, () => { });
     }
 
     private async Task WebGisAnmeldenAsync()

@@ -61,6 +61,19 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     /// </summary>
     public GeonisKennungen? Geonis { get; set; }
 
+    /// <summary>GlobalID aus einem eindeutig passenden WebGIS-Suchtreffer; keine OBJECTID oder XTF-Kennung.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? WebGisGlobalId { get; set; }
+
+    public void SetzeWebGisGlobalId(string globalId)
+    {
+        if (WebGisGlobalId == globalId) return;
+        WebGisGlobalId = globalId;
+        ModifiedAtUtc = DateTime.UtcNow;
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(WebGisGlobalId)));
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ModifiedAtUtc)));
+    }
+
     private List<SchachtAnschluss>? _anschluesse;
 
     /// <summary>

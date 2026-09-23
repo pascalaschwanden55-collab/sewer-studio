@@ -112,6 +112,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             xtfPaketAblage: sp.XtfPaketAblage)
     {
         LieferungBearbeitenCommand = new RelayCommand(() => XtfLieferungDialog.Zeige(sp.XtfLieferungen, sp.Dialogs));
+        InitialisiereWebGis(sp);
     }
 
     [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen den Kosten-Speicher injizieren.")]
