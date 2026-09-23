@@ -130,4 +130,25 @@ public sealed class ProjektPruefungTests
         var r = new ProjektPruefungService().Pruefe(p, "projekt.json", default);
         Assert.Contains("Ohne gültigen Projektordner", Assert.Single(r.Punkte).Meldung);
     }
+
+    [Fact]
+    public void Werte_ohne_webgis_begriff_und_nicht_sendbare_masse_werden_gemeldet()
+    {
+        var projekt = new Project();
+        var h = new HaltungRecord();
+        h.SetFieldValue(FieldKeys.HoldingName, "H1", FieldSource.Manual, false);
+        h.Fields[FieldKeys.OperatingStatus] = "weitere";
+        h.Fields[FieldKeys.NominalDiameterMm] = "147"; // 148 und 150 fuehrt das WebGIS, 147 nicht
+        projekt.Data.Add(h);
+        var s = new SchachtRecord();
+        s.Fields["Schachtnummer"] = "80409";
+        s.Fields["Funktion"] = "Absturzbauwerk";
+        projekt.SchaechteData.Add(s);
+
+        var punkte = ProjektPruefregeln.Pruefe(projekt, _ => null).Punkte;
+
+        Assert.Contains(punkte, p => p.Objektname == "H1" && p.Meldung.Contains("«weitere»") && p.Meldung.Contains("kein WebGIS-Begriff"));
+        Assert.Contains(punkte, p => p.Objektname == "H1" && p.Meldung.Contains("«147»") && p.Meldung.Contains("nicht in der WebGIS-Liste"));
+        Assert.Contains(punkte, p => p.Objektname == "80409" && p.Meldung.Contains("«Absturzbauwerk»"));
+    }
 }

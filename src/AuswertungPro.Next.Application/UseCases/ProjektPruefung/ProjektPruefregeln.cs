@@ -21,6 +21,7 @@ public static class ProjektPruefregeln
             var name = h.GetFieldValue(FieldKeys.HoldingName);
             var b = new ObjektaktenBearbeitung(projekt, h.Id, "haltung");
             PruefeObjekt(b, name, h.GetFieldValue, h.Protocol?.Current);
+            PruefeWebGis(b, name, false, h.GetFieldValue, "Normschacht");
             var laengeText = h.GetFieldValue(FieldKeys.HoldingLengthMeters);
             var hatLaenge = FachzahlParser.TryParseMeasurement(laengeText, out var laenge) && laenge > 0;
             if (!hatLaenge && (laengeText.Length > 0 || h.Protocol?.Current?.Entries.Any(e => !e.IsDeleted && e.MeterStart.HasValue) == true))
@@ -45,6 +46,7 @@ public static class ProjektPruefregeln
             var name = Wert("Schachtnummer");
             var b = new ObjektaktenBearbeitung(projekt, s.Id, "schacht");
             PruefeObjekt(b, name, Wert, s.Protocol?.Current);
+            PruefeWebGis(b, name, true, Wert, AbwasserbauwerkVokabular.Klasse(Wert(FieldKeys.ShaftStructureType), Wert("Funktion")));
             var hoehen = SchachtHoehenRechnung.Fuer(b);
             if (hoehen.Warnung.Length > 0)
                 Add(b, name, ProjektPruefbereich.Schachthoehen, hoehen.Warnung, feld: SchachtHoehenRechnung.Tiefenfeld);
@@ -54,6 +56,35 @@ public static class ProjektPruefregeln
         void Add(ObjektaktenBearbeitung b, string name, ProjektPruefbereich bereich, string text,
             Guid? eintrag = null, Guid? akte = null, string? feld = null, string? speicher = null)
             => punkte.Add(new(bereich, b.Art, b.WurzelId, name, text, eintrag, akte, feld, speicher));
+
+        // Seit 23.09.2026: Was ins WebGIS geht, muss ein WebGIS-Begriff sein (Schritt A). Altwerte
+        // bleiben stehen; hier werden sie zum Korrigieren gezeigt.
+        void PruefeWebGis(ObjektaktenBearbeitung b, string name, bool schacht, Func<string, string> wert, string? klasse)
+        {
+            IEnumerable<string> felder = schacht
+                ? WebGisBegriffe.SchachtFelder.Concat(klasse == "Normschacht"
+                    ? new[] { WebGisBegriffe.SchachtFunktion } : Array.Empty<string>())
+                : WebGisBegriffe.HaltungFelder;
+            foreach (var feld in felder)
+            {
+                var text = wert(feld).Trim();
+                if (text.Length > 0 && !WebGisBegriffe.Fuer(schacht, feld)!.Kennt(text))
+                    Add(b, name, ProjektPruefbereich.Eingabefelder,
+                        $"{feld}: «{text}» ist kein WebGIS-Begriff und wird nicht ins WebGIS übertragen.", speicher: feld);
+            }
+            // Entscheid A (23.09.2026): Masse bleiben wie gemessen; nur Zahlen der WebGIS-Liste sind sendbar.
+            var masse = schacht
+                ? new[] { (Feld: FieldKeys.ShaftDimension1Mm, Katalog: "schacht-C09"), (FieldKeys.ShaftDimension2Mm, "schacht-C09") }
+                : new[] { (Feld: FieldKeys.NominalDiameterMm, Katalog: "haltung-C08"), (FieldKeys.ClearWidthMm, "haltung-C08") };
+            foreach (var (feld, katalog) in masse)
+            {
+                var text = wert(feld).Trim();
+                var liste = FieldCatalog.Objektfelder.Auswahl(katalog)?.Eintraege.Select(e => e.Label).ToHashSet(StringComparer.Ordinal);
+                if (text.Length > 0 && liste is not null && !liste.Contains(text))
+                    Add(b, name, ProjektPruefbereich.Eingabefelder,
+                        $"{feld}: «{text}» steht nicht in der WebGIS-Liste und kann nicht übertragen werden.", speicher: feld);
+            }
+        }
 
         void PruefeObjekt(ObjektaktenBearbeitung b, string name, Func<string, string> wert, ProtocolRevision? revision)
         {
