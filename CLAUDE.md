@@ -163,6 +163,13 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     refIds sind nur aus der Inventur: Das Feld zaehlt nur, wenn seine Liste den Organisationsschluessel «Bund»
     fuehrt (`WebGisFeldkarte.OrganisationBundKey`), sonst Hinweis. Tests `WebGisImportPlanBuilderTests`
     (Informativ-Faelle), `WebGisImportUebernahmeTests`.
+    **ENTSCHEID PASCAL 24.09.2026 fuer EIGENTUEMER/BETREIBER** («muss perfekt von WebGIS übernommen werden, diese
+    Werte ändern sich sehr selten»): Das WebGIS FUEHRT beide. Der WebGIS-Wert ersetzt beim Holen jeden vorhandenen
+    Wert zeichengenau — GeoShop wie Kanalfirma (`WebGisImportPlanBuilder.FuehrtWebGis`; bei der Uebernahme
+    `DarfErsetzen`: fuer `Eigentuemer` genuegt «keine Handeingabe»). Nur eine Handeingabe (auch bewusst leer) bleibt,
+    der Hinweis nennt beide Werte. Die Haltungslaenge bleibt rein informativ. Ins WebGIS geschrieben werden alle
+    drei weiterhin nie. XTF-Folge: `EigentumVokabular` kennt «AWU_von_privat»/«AWU_von_oeffentlich» u. a. nicht —
+    ohne Organisationstyp sperrt der SIA405-Neu-Export das Bauteil (Zuordnung fachlich offen).
   - Holen (`WebGisImportUseCase`, schreibt NIE ins WebGIS): Baujahr wenn leer, dazu alle Felder der
     `WebGisHandwertKarte`
     (refIds live geprueft). Entscheid Pascal: WEBGIS VOR GEOSHOP — leere Felder fuellen UND Werte

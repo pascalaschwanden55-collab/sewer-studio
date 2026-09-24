@@ -84,7 +84,8 @@ public sealed class WebGisImportPlan
 ///
 /// Regeln (Entscheid Pascal 21.09., zuletzt 23.09.2026 abends):
 /// - Daten der Kanalfirmen sind der Ist-Zustand und werden nie ueberschrieben; das WebGIS ergaenzt.
-/// - Haltungslaenge, Eigentuemer und Betreiber: rein informativ, nur in leere Felder, nie zurueck ins WebGIS.
+/// - Haltungslaenge: rein informativ, nur in leere Felder. Eigentuemer und Betreiber fuehrt das WebGIS (24.09.2026):
+///   sein Wert ersetzt alles ausser einer Handeingabe. Keines der drei geht je ins WebGIS zurueck.
 /// - Baujahr nur, wenn in SewerStudio leer.
 /// - Zustand, Bemerkung, Sanierung werden NICHT importiert: dort ist SewerStudio die Quelle.
 /// - Die Felder der <see cref="WebGisHandwertKarte"/> (refIds live geprueft) fuellen leere Felder
@@ -130,8 +131,8 @@ public static class WebGisImportPlanBuilder
                 Grund = "Eindeutiger WebGIS-Treffer mit exakt gleichem Namen.",
             });
 
-        // 1) Haltungslaenge, Eigentuemer, Betreiber: rein informativ, nur in LEERE Felder (Entscheid Pascal
-        //    23.09.2026 abends). Nie ersetzt — auch keinen GeoShop-Wert — und nie ins WebGIS zurueck.
+        // 1) Haltungslaenge rein informativ, nur in LEERE Felder (Entscheid Pascal 23.09.2026 abends); Eigentuemer
+        //    und Betreiber fuehrt das WebGIS (24.09.2026). Keines geht je ins WebGIS zurueck.
         Informativ(e, stand, pos);
 
         // 2) Baujahr nur wenn in SewerStudio leer.
@@ -166,16 +167,15 @@ public static class WebGisImportPlanBuilder
     private const string GrundInformativ = "Rein informativ: in SewerStudio leer, im WebGIS vorhanden — geht nie ins WebGIS zurück.";
 
     /// <summary>
-    /// Haltungslaenge (geometrisch, auf zwei Stellen), Eigentuemer und Betreiber (Entscheid Pascal 23.09.2026
-    /// abends): Sie werden geholt, aber rein informativ, der Vollstaendigkeit halber — nur in ein leeres Feld,
-    /// nie ueber einen vorhandenen Wert (Kanalfirma, GeoShop oder Hand), und nie zurueckgeschrieben.
+    /// Haltungslaenge (geometrisch, auf zwei Stellen; Entscheid Pascal 23.09.2026 abends): rein informativ, nur in
+    /// ein leeres Feld, nie ueber einen vorhandenen Wert. Eigentuemer und Betreiber: siehe <see cref="FuehrtWebGis"/>.
     /// </summary>
     private static void Informativ(WebGisImportEingabe e, WebGisLesestand stand, WebGisImportPosition pos)
     {
         if (e.Objektart == WebGisObjektart.Haltung)
             FuelleInformativ(e, pos, FeldLaenge, "Haltungslänge", LaengeNormiert(stand.Feld(WebGisFeldkarte.HaltungLaengeGeomRef)));
 
-        FuelleInformativ(e, pos, FieldKeys.Owner, "Eigentümer",
+        FuehrtWebGis(e, pos, FieldKeys.Owner, "Eigentümer",
             Organisation(stand, WebGisFeldkarte.EigentuemerRef(e.Objektart), "Eigentümer", pos)?.Text);
 
         if (Organisation(stand, WebGisFeldkarte.BetreiberRef(e.Objektart), "Betreiber", pos) is { } betreiber)
@@ -185,8 +185,33 @@ public static class WebGisImportPlanBuilder
             if (eintrag is null)
                 pos.Hinweise.Add($"Betreiber «{betreiber.Text}» steht nicht in der Liste der Objektakte — nicht übernommen.");
             else
-                FuelleInformativ(e, pos, feldId, "Betreiber", eintrag.Label);
+                FuehrtWebGis(e, pos, feldId, "Betreiber", eintrag.Label);
         }
+    }
+
+    private const string GrundOrganisation =
+        "Eigentümer und Betreiber führt das WebGIS (Entscheid Pascal 24.09.2026) — geht nie ins WebGIS zurück.";
+
+    /// <summary>
+    /// Eigentuemer und Betreiber (Entscheid Pascal 24.09.2026, ersetzt «nur in leere Felder» vom 23.09.): «muessen
+    /// perfekt vom WebGIS uebernommen werden, diese Werte aendern sich sehr selten». Der WebGIS-Wert ersetzt jeden
+    /// vorhandenen — GeoShop wie Kanalfirma —, zeichengenau. Nur eine Handeingabe (auch bewusst leer) bleibt, mit Hinweis.
+    /// </summary>
+    private static void FuehrtWebGis(WebGisImportEingabe e, WebGisImportPosition pos, string feld, string anzeige, string? neu)
+    {
+        if (string.IsNullOrWhiteSpace(neu)) return;
+        neu = neu.Trim();
+        e.Felder.TryGetValue(feld, out var vorhanden);
+        var alt = (vorhanden?.Wert ?? string.Empty).Trim();
+        if (string.Equals(alt, neu, StringComparison.Ordinal)) return;
+        if (vorhanden?.Handwert == true)
+        {
+            pos.Hinweise.Add(alt.Length == 0
+                ? $"{anzeige}: in SewerStudio bewusst leer (Handeingabe) — WebGIS-Wert «{neu}» nicht übernommen."
+                : $"{anzeige}: in SewerStudio von Hand «{alt}», im WebGIS «{neu}» — nicht übernommen (Handeingabe).");
+            return;
+        }
+        pos.Aenderungen.Add(new WebGisImportAenderung { Feld = feld, Alt = alt.Length > 0 ? alt : null, Neu = neu, Grund = GrundOrganisation });
     }
 
     private static void FuelleInformativ(WebGisImportEingabe e, WebGisImportPosition pos, string feld, string anzeige, string? neu)

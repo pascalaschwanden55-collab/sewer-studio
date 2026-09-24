@@ -175,8 +175,9 @@ public sealed class WebGisImportPlanBuilderTests
                                                                  || k.SewerStudioFeld.Contains("laenge", System.StringComparison.OrdinalIgnoreCase)
                                                                  || k.SewerStudioFeld.Contains("etreiber", System.StringComparison.OrdinalIgnoreCase));
 
-    // ---- Entscheid Pascal 23.09.2026 abends: Haltungslaenge, Eigentuemer und Betreiber werden GEHOLT, rein
-    // informativ der Vollstaendigkeit halber — nur in leere Felder, nie ersetzt, nie zurueckgeschrieben. ----
+    // ---- Entscheid Pascal 23.09.2026 abends: Haltungslaenge wird GEHOLT, rein informativ der Vollstaendigkeit
+    // halber — nur in leere Felder, nie ersetzt, nie zurueckgeschrieben. Eigentuemer und Betreiber seit 24.09.2026:
+    // das WebGIS fuehrt sie (siehe unten); ins WebGIS zurueck gehen auch sie nie. ----
 
     private const string BundKey = "df1f763b-7f01-4d4d-a22c-14476c7a3a9b";
     private const string KantonKey = "58d1c876-3d16-47da-8b38-b509bbc0cbca";
@@ -222,13 +223,55 @@ public sealed class WebGisImportPlanBuilderTests
         Assert.Equal("Kanton Uri (Kanton)", Aenderung(pos, FieldKeysOwner)?.Neu);
     }
 
-    [Fact]
-    public void Vorhandener_eigentuemer_aus_geoshop_bleibt()
+    // Entscheid Pascal 24.09.2026 (ersetzt «nur in leere Felder» vom 23.09.): Eigentuemer und Betreiber «muessen
+    // perfekt vom WebGIS uebernommen werden — diese Werte aendern sich sehr selten». Das WebGIS fuehrt sie: sein Wert
+    // ersetzt jeden vorhandenen (GeoShop, Kanalfirma); nur eine Handeingabe bleibt, mit Hinweis.
+    [Theory]
+    [InlineData(true)]  // GeoShop/QGIS
+    [InlineData(false)] // Kanalfirma
+    public void Vorhandener_eigentuemer_wird_durch_den_webgis_wert_ersetzt(bool ersetzbar)
     {
-        var pos = WebGisImportPlanBuilder.Baue(Haltung((FieldKeysOwner, "Kanton Uri", true)),
+        var pos = WebGisImportPlanBuilder.Baue(Haltung((FieldKeysOwner, "AWU", ersetzbar)),
+            StandMitOrganisation(WebGisFeldkarte.EigentuemerRef(WebGisObjektart.Haltung)));
+
+        var a = Aenderung(pos, FieldKeysOwner);
+        Assert.Equal("Kanton Uri (Kanton)", a?.Neu);
+        Assert.Equal("AWU", a?.Alt);
+    }
+
+    [Fact]
+    public void Gleicher_eigentuemer_ist_keine_aenderung()
+    {
+        var pos = WebGisImportPlanBuilder.Baue(Haltung((FieldKeysOwner, "Kanton Uri (Kanton)", false)),
             StandMitOrganisation(WebGisFeldkarte.EigentuemerRef(WebGisObjektart.Haltung)));
 
         Assert.Null(Aenderung(pos, FieldKeysOwner));
+    }
+
+    [Fact]
+    public void Eigentuemer_von_hand_bleibt_und_der_webgis_wert_wird_genannt()
+    {
+        var e = Haltung();
+        e.Felder[FieldKeysOwner] = new WebGisImportFeld("Privat", Ersetzbar: false, Handwert: true);
+
+        var pos = WebGisImportPlanBuilder.Baue(e, StandMitOrganisation(WebGisFeldkarte.EigentuemerRef(WebGisObjektart.Haltung)));
+
+        Assert.Null(Aenderung(pos, FieldKeysOwner));
+        Assert.Contains(pos.Hinweise, h => h.Contains("Eigentümer") && h.Contains("Privat") && h.Contains("Kanton Uri (Kanton)"));
+    }
+
+    [Fact]
+    public void Vorhandener_betreiber_wird_durch_den_webgis_wert_ersetzt()
+    {
+        var feld = WebGisImportPlanBuilder.BetreiberFeld(WebGisObjektart.Schacht);
+        var e = new WebGisImportEingabe { Objektart = WebGisObjektart.Schacht, Bezeichnung = "H1", GespeicherteGlobalId = "G1" };
+        e.Felder[feld] = new WebGisImportFeld("Privat", Ersetzbar: true);
+
+        var pos = WebGisImportPlanBuilder.Baue(e, StandMitOrganisation(WebGisFeldkarte.BetreiberRef(WebGisObjektart.Schacht)));
+
+        var a = Aenderung(pos, feld);
+        Assert.Equal("Kanton Uri", a?.Neu); // Label der Aktenliste (Schluessel = WebGIS-Originalcode)
+        Assert.Equal("Privat", a?.Alt);
     }
 
     [Fact]

@@ -147,6 +147,40 @@ public sealed class WebGisImportUebernahmeTests
     }
 
     [Fact]
+    public void Eigentuemer_der_kanalfirma_wird_durch_das_webgis_ersetzt()
+    {
+        // Entscheid Pascal 24.09.2026: Eigentuemer fuehrt das WebGIS — auch ein Wert der Kanalfirma weicht.
+        var (p, h) = ProjektMit(FieldKeys.Owner, "AWU", FieldSource.Xtf405, false);
+
+        Assert.Equal(1, WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.Owner, "AWU", "AWU_von_privat"), p));
+
+        Assert.Equal("AWU_von_privat", h.GetFieldValue(FieldKeys.Owner));
+        Assert.Equal(FieldSource.Kataster, h.FieldMeta[FieldKeys.Owner].Source);
+        Assert.False(h.FieldMeta[FieldKeys.Owner].UserEdited);
+    }
+
+    [Fact]
+    public void Eigentuemer_von_hand_wird_bei_der_uebernahme_nicht_ersetzt()
+    {
+        var (p, h) = ProjektMit(FieldKeys.Owner, "Privat", FieldSource.Manual, true);
+
+        Assert.Equal(0, WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.Owner, "Privat", "AWU_von_privat"), p));
+
+        Assert.Equal("Privat", h.GetFieldValue(FieldKeys.Owner));
+    }
+
+    [Fact]
+    public void Kanalfirmenwert_eines_anderen_felds_bleibt_weiterhin()
+    {
+        // Gegenprobe: Die neue Eigentuemer-Regel gilt nur fuer Eigentuemer, nicht fuer Fachfelder der Kanalfirma.
+        var (p, h) = ProjektMit(FieldKeys.OperatingStatus, "Ausser Betrieb", FieldSource.Xtf405, false);
+
+        Assert.Equal(0, WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.OperatingStatus, "Ausser Betrieb", "In Betrieb"), p));
+
+        Assert.Equal("Ausser Betrieb", h.GetFieldValue(FieldKeys.OperatingStatus));
+    }
+
+    [Fact]
     public void Materialgruppe_wird_in_die_akte_der_haltung_geschrieben()
     {
         var (p, h) = ProjektMit(FieldKeys.PipeMaterial, null, FieldSource.Manual, false);

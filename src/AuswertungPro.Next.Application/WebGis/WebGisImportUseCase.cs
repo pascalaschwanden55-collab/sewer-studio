@@ -411,9 +411,12 @@ public sealed class WebGisImportUseCase
         => meta?.UserEdited != true
            && string.Equals(aktuell.Trim(), (a.Alt ?? string.Empty).Trim(), StringComparison.Ordinal);
 
-    /// <summary>Konfliktschutz: seit der Vorschau unveraendert UND weiterhin ersetzbar.</summary>
+    /// <summary>
+    /// Konfliktschutz: seit der Vorschau unveraendert UND weiterhin ersetzbar. Den Eigentuemer fuehrt das WebGIS
+    /// (Entscheid Pascal 24.09.2026): Dort genuegt «keine Handeingabe» — auch ein Wert der Kanalfirma weicht.
+    /// </summary>
     private static bool DarfErsetzen(string aktuell, FieldMetadata? meta, WebGisImportAenderung a)
         => a.Alt is not null
            && string.Equals(aktuell.Trim(), a.Alt.Trim(), StringComparison.Ordinal)
-           && IstErsetzbar(meta);
+           && (IstErsetzbar(meta) || a.Feld == FieldKeys.Owner && meta?.UserEdited != true);
 }
