@@ -75,6 +75,8 @@ public sealed class WebGisImportUseCase
                 WebGisImportPlanBuilder.MaterialgruppeFeld(WebGisObjektart.Schacht));
             e.Felder[WebGisImportPlanBuilder.BetreiberFeld(WebGisObjektart.Schacht)] = AkteFeld(projekt, s.Id, "schacht",
                 WebGisImportPlanBuilder.BetreiberFeld(WebGisObjektart.Schacht));
+            foreach (var feldId in WebGisImportAktenfelder.Felder(WebGisObjektart.Schacht))
+                e.Felder[feldId] = AkteFeld(projekt, s.Id, "schacht", feldId);
             var eigentuemer = SchachtFeldnamen.Feld(s, FieldKeys.Owner);
             e.Felder[FieldKeys.Owner] = new WebGisImportFeld(s.GetFieldValue(eigentuemer),
                 IstErsetzbar(s.FieldMeta.GetValueOrDefault(eigentuemer)), s.FieldMeta.GetValueOrDefault(eigentuemer)?.UserEdited == true);
@@ -297,7 +299,8 @@ public sealed class WebGisImportUseCase
                     continue;
                 }
                 if (a.Feld == WebGisImportPlanBuilder.MaterialgruppeFeld(pos.Objektart)
-                    || a.Feld == WebGisImportPlanBuilder.BetreiberFeld(pos.Objektart))
+                    || a.Feld == WebGisImportPlanBuilder.BetreiberFeld(pos.Objektart)
+                    || WebGisImportAktenfelder.IstAktenfeld(pos.Objektart, a.Feld))
                 {
                     if (SchreibeAkteGruppe(projekt, pos, a)) geaendert = true;
                     continue;
@@ -357,8 +360,9 @@ public sealed class WebGisImportUseCase
     }
 
     /// <summary>
-    /// Materialgruppe oder Betreiber in die Wurzelakte (legt sie bei Bedarf an), wie ein Import ohne Handmarke.
-    /// Nur wenn der Wert seit der Vorschau gleich und nicht von Hand gesetzt ist.
+    /// Ein Feld der Wurzelakte (Materialgruppe, Betreiber, Typ AA, die Schachtmaske …; legt die Akte bei Bedarf an),
+    /// wie ein Import ohne Handmarke. Nur wenn der Wert seit der Vorschau gleich und nicht von Hand gesetzt ist.
+    /// Auswahlfelder ueber ihren Listeneintrag, Zahl- und Textfelder woertlich.
     /// </summary>
     private static bool SchreibeAkteGruppe(Project projekt, WebGisImportPosition pos, WebGisImportAenderung a)
     {
@@ -366,8 +370,9 @@ public sealed class WebGisImportUseCase
         var gibtEs = pos.Objektart == WebGisObjektart.Haltung
             ? projekt.Data.Any(r => r.Id == pos.RecordId)
             : projekt.SchaechteData.Any(r => r.Id == pos.RecordId);
-        var eintrag = WebGisImportPlanBuilder.GruppenEintrag(a.Feld, a.Neu);
-        if (!gibtEs || eintrag is null) return false;
+        var katalogId = FieldCatalog.Objektfelder.Feld(a.Feld).KatalogId;
+        var eintrag = katalogId is null ? null : WebGisImportPlanBuilder.GruppenEintrag(a.Feld, a.Neu);
+        if (!gibtEs || (katalogId is not null && eintrag is null)) return false;
 
         var akte = projekt.Objektakten.FirstOrDefault(x => x.Id == pos.RecordId && x.Art == art);
         var bisher = akte?.Werte.GetValueOrDefault(a.Feld);
@@ -378,11 +383,13 @@ public sealed class WebGisImportUseCase
             akte = new ObjektAkte { Id = pos.RecordId, Art = art };
             projekt.Objektakten.Add(akte);
         }
-        akte.Werte[a.Feld] = new ObjektFeldWert
-        {
-            Text = eintrag.Label, KatalogId = FieldCatalog.Objektfelder.Feld(a.Feld).KatalogId,
-            Originalcode = eintrag.OriginalCode, LokalerEintrag = eintrag.Index, VonHand = false, GeaendertUtc = DateTime.UtcNow,
-        };
+        akte.Werte[a.Feld] = eintrag is null
+            ? new ObjektFeldWert { Text = a.Neu.Trim(), VonHand = false, GeaendertUtc = DateTime.UtcNow }
+            : new ObjektFeldWert
+            {
+                Text = eintrag.Label, KatalogId = katalogId,
+                Originalcode = eintrag.OriginalCode, LokalerEintrag = eintrag.Index, VonHand = false, GeaendertUtc = DateTime.UtcNow,
+            };
         projekt.Version = Math.Max(projekt.Version, 3); // Objektakten verlangen Format 3
         return true;
     }

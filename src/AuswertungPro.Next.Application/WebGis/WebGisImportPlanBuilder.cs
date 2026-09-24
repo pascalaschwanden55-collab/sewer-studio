@@ -146,11 +146,16 @@ public static class WebGisImportPlanBuilder
                 });
         }
 
-        // 3) Felder der Karte (WebGIS vor GeoShop, Handwerte bleiben).
-        Kartenfelder(e, stand, pos);
+        // 3) Felder der Karte (WebGIS vor GeoShop, Handwerte bleiben). Typ AA (PAA/SAA) kommt aus dem WebGIS
+        //    selbst (24.09.2026): Es entscheidet Werte wie «Liegenschaftsentwässerung», die es unter beiden gibt.
+        var webgisTypAa = WebGisImportAktenfelder.WebGisTypAa(e, stand, pos);
+        Kartenfelder(e, stand, pos, webgisTypAa);
 
         // 4) Materialgruppe der Objektakte (steht in keinem Tabellenfeld).
         Materialgruppe(e, stand, pos);
+
+        // 5) Weitere Felder der Objektakte: Typ AA, am Schacht Funktion hierarchisch und hydraulisch.
+        WebGisImportAktenfelder.Plane(e, stand, pos, webgisTypAa);
 
         return pos;
     }
@@ -219,7 +224,7 @@ public static class WebGisImportPlanBuilder
     }
 
     /// <summary>Eintrag der Aktenliste: zuerst ueber den WebGIS-Schluessel (Originalcode), sonst ueber den Klartext.</summary>
-    private static ObjektAuswahl? AkteEintrag(string feldId, string key, string text)
+    internal static ObjektAuswahl? AkteEintrag(string feldId, string key, string text)
     {
         var eintraege = FieldCatalog.Objektfelder.Auswahl(FieldCatalog.Objektfelder.Feld(feldId).KatalogId)?.Eintraege ?? [];
         var nachKey = eintraege.Where(x => string.Equals(x.OriginalCode, key, StringComparison.OrdinalIgnoreCase)).Take(2).ToList();
@@ -227,13 +232,15 @@ public static class WebGisImportPlanBuilder
         return GruppenEintrag(feldId, text);
     }
 
-    private static void Kartenfelder(WebGisImportEingabe e, WebGisLesestand stand, WebGisImportPosition pos)
+    private static void Kartenfelder(WebGisImportEingabe e, WebGisLesestand stand, WebGisImportPosition pos, string? webgisTypAa)
     {
         foreach (var karte in WebGisHandwertKarte.Felder)
         {
             if (karte.Objektart != e.Objektart) continue;
             // Breite/Hoehe der Haltung sind noch nicht geklaert (CLAUDE.md OFFEN): nur DN bei runder Haltung.
             if (karte.SewerStudioFeld is "Lichte_Breite_mm" or "Lichte_Hoehe_mm") continue;
+            // Am Schacht stehen diese Felder nur in der Akte (24.09.2026): dorthin, nicht in ein Tabellenfeld.
+            if (e.Objektart == WebGisObjektart.Schacht && WebGisImportAktenfelder.SchachtNurUeberAkte(karte.SewerStudioFeld)) continue;
 
             var webgis = WebGisText(karte, stand, pos);
             if (webgis is null) continue;
@@ -246,7 +253,7 @@ public static class WebGisImportPlanBuilder
                 continue;
             }
 
-            var neu = WebGisImportWert.Zuordne(e.Objektart, karte.SewerStudioFeld, webgis, out var hinweis, TypAa(e));
+            var neu = WebGisImportWert.Zuordne(e.Objektart, karte.SewerStudioFeld, webgis, out var hinweis, webgisTypAa ?? TypAa(e));
             if (hinweis is not null) pos.Hinweise.Add(hinweis);
             if (neu is null) continue;
 
@@ -274,7 +281,7 @@ public static class WebGisImportPlanBuilder
     /// <summary>Feld der Objektakte «Typ AA» (PAA/SAA) der Haltung.</summary>
     public const string TypAaFeld = "haltung.aatype";
 
-    /// <summary>PAA/SAA aus Typ AA, sonst aus dem Praefix der vorhandenen Funktion hierarchisch.</summary>
+    /// <summary>Rueckfall ohne WebGIS-Typ-AA: PAA/SAA aus Typ AA der Akte, sonst aus dem Praefix der vorhandenen Funktion.</summary>
     private static string? TypAa(WebGisImportEingabe e)
     {
         if (e.Felder.TryGetValue(TypAaFeld, out var typ) && typ.Wert.Trim() is { Length: > 0 } t) return t;

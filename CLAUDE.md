@@ -312,6 +312,25 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     Weitere). Weitere Maskenfelder erst nach Beschriftungs-Inventur und Pruefung am echten Objekt.
   - Vorbestehend rot: `ExportPageViewModelDependencyTests.ViewModel_speichert_keinen_ServiceProvider_als_Feld`
     (`_webGisSp` seit Stufe 3).
+  - HOLEN: TYP AA UND DIE GANZE SCHACHTMASKE (Wunsch Pascal 24.09.2026 «importiere das was im WebGIS ist», «auch
+    bei den Schächten alle fehlenden Felder ergänzen»). `WebGisImportAktenfelder`: (1) Typ AA (PAA/SAA) kommt aus dem
+    WebGIS selbst (`WebGisFeldkarte.TypAaRef`, Haltung `65e83cb4…`, Schacht `8d17a0bc…`, Inventur v2) und entscheidet
+    «Liegenschaftsentwässerung» u. a., die es unter PAA und SAA gibt — vorher 22 Schächte in Zone 1.15 «passt zu
+    mehreren»; sonst Rueckfall auf Typ AA/Praefix in SewerStudio. Typ AA geht in `haltung.aatype`/`schacht.typ_aa`,
+    aber nie gegen die Funktion der Haltung (Kanalfirma «PAA.…» bleibt -> Hinweis). (2) Am Schacht fuellt das Holen
+    rund 30 Felder der SCHACHTAKTE nach der WebGIS-Maske (Funktion hier./hydr., Lage-/Hoehenbestimmung und -genauigkeit,
+    Ebene, Zugaenglichkeit, Rotation, Gelaende-/Sohlen-/Deckelhoehe, Rueckstaukote, Intervention, Amphibienausstieg,
+    Informationsquelle, Steuerung, Buero, Standortgemeinde, Finanzierung, Wiederbeschaffungswert/-Basisjahr/-Bauart,
+    Erhebungsjahr, Intervalle, Systemgrenze, Hfrei, Sachbearbeiter, Akten). Auswahl ueber den WebGIS-Schluessel =
+    Originalcode der Aktenliste; eine refId aus der Inventur zaehlt nur, wenn die gelesene Liste zur Aktenliste passt
+    (>= 2 Eintraege gleicher Schluessel UND Text, kein Widerspruch; Organisationslisten: Schluessel «Bund»); ohne refId
+    (Funktion hydr., Lage-/Hoehengenauigkeit) wird die EINE passende Liste der Maske gesucht. Zahlen «0.###», Jahre
+    1800-2200, sonst Hinweis. Leer fuellen, Wert ohne Handmarke (GeoShop) ersetzen, Handwert (auch bewusst leer) nie.
+    (3) Funktion hier., Sohlen-/Gelaendehoehe, Rotation, Ebene, Lagebestimmung des Schachts schrieb das Holen bisher in
+    Tabellenfelder, die die Schachttabelle nicht fuehrt (nur «Bisherige Angaben» der Akte) — die Hoehenrechnung liest
+    aber `schacht.sohlenhoehe` usw. Seither nur noch in die Akte (`SchachtNurUeberAkte`). Nicht geholt: Zustand,
+    Sanierungsbedarf, Bemerkung (SewerStudio ist Quelle), berechnete/Systemfelder, OBJECTID, die Paare «Bezeichnung
+    alter./hist.» und «Rechtswert/Hochwert» (je nur eine refId bekannt). Tests `WebGisImportTypAaTests`.
 - OFFEN / NICHT ERLEDIGT: Abstimmung mit Trigonet (interne Schnittstelle, ein Schreibweg).
   Der reale Schreibweg ist bisher nur manuell im Browser und im Lauf vom 21.09. belegt
   (Haltung 525145-505377: Z4 + Sanierungsbedarf Saniert + Bemerkung; zwei Sanierungsmassnahmen

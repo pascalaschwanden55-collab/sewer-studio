@@ -84,8 +84,9 @@ public static class WebGisImportBericht
     {
         WebGisImportPlanBuilder.FeldWebGisGlobalId => "GlobalID (WebGIS)",
         "haltung.pipegroup" or "schacht.materialgruppe" => "Materialgruppe",
+        "haltung.operator" or "schacht.betreiber" => "Betreiber",
         "Haltungslaenge_m" => "Haltungslänge [m]",
-        _ => feld,
+        _ => WebGisImportAktenfelder.Anzeige(feld) ?? feld,
     };
 
     public static XtfExportVorschau Vorschau(WebGisImportPlan plan)

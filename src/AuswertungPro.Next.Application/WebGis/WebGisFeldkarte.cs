@@ -63,6 +63,18 @@ public static class WebGisFeldkarte
     public static string BetreiberRef(WebGisObjektart art) =>
         art == WebGisObjektart.Haltung ? HaltungBetreiberRef : SchachtBetreiberRef;
 
+    // --- Typ AA (PAA/SAA) und hydraulische Funktion des Schachts (Inventur v2, LIVE NICHT GEPRUEFT) ---
+    // Nur lesen (Holen, 24.09.2026). Ob eine Komponente wirklich Typ AA ist, prueft das Holen an ihrer Liste:
+    // PAA und SAA muessen darin stehen. Die hydraulische Funktion des Schachts nennt die Inventur nur mit den
+    // ersten acht Zeichen; gesucht wird die EINE Komponente mit diesem Praefix, deren Liste die hydraulischen
+    // Funktionen fuehrt (Freispiegelleitung). Sonst nichts, mit Hinweis.
+    public const string HaltungTypAaRef = "65e83cb4-0e0f-ee6c-47c6-6efad172c3b1";
+    public const string SchachtTypAaRef = "8d17a0bc-4472-d776-82f7-58ba57adf676";
+    public const string SchachtFunktionHydraulischPraefix = "0e5eab11-";
+
+    public static string TypAaRef(WebGisObjektart art) =>
+        art == WebGisObjektart.Haltung ? HaltungTypAaRef : SchachtTypAaRef;
+
     /// <summary>
     /// Ein Schluessel, den jede Organisationsliste der Masken fuehrt («Bund», in Haltung und Schacht belegt).
     /// Fehlt er in der Liste einer Komponente, ist es nicht das Eigentuemer-/Betreiberfeld (refId falsch).
