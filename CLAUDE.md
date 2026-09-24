@@ -310,8 +310,8 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     baut ueber `WebGisExportUseCase.BaueFrischenPlanAsync(projekt, bestaetigt)` und uebertraegt dabei die Haken
     (`UebertrageAuf`, Schluessel Objekt+Feld+Wert — ein geaenderter Wert ist ein neuer, NICHT angehakter
     Vorschlag); erst `FuehreAusAsync` macht sie zu Aenderungen (`UebernimmGewaehlte`), also nach dem Vergleich.
-    `WebGisExportPlan.NichtsZuSchreiben`, `WebGisUebersicht.NichtsZuTun` kennen sie. Das ExportPageViewModel
-    steht ueber der 2000-Zeilen-Grenze (vorbestehend 2105) — neue WebGIS-Logik gehoert in den UseCase.
+    `WebGisExportPlan.NichtsZuSchreiben`, `WebGisUebersicht.NichtsZuTun` kennen sie. Neue WebGIS-Logik gehoert
+    in den UseCase, nicht in die Export-Seite.
     Bericht: `[x| ] Kanalfirma weicht ab`. (2) IMPORT: Eine Kanalfirma-Lieferung ersetzt Kataster-Werte
     (GeoShop/QGIS/WebGIS) ohne Handmarke. `KatasterFeldschutz` sperrt nur noch einen Schreibversuch
     UNBEKANNTER Herkunft (Konfliktmarke bleibt); `MergeEngine`: Kataster = Prioritaet 10 (unterste).
@@ -377,8 +377,15 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
   - Geplant (Entscheid Pascal 23.09.): statt zehn Abgleichknoepfen «Vom Kataster holen» (WebGIS,
     sonst GeoShop, sonst QGIS; Kennungen dabei) und «An den Kataster senden» (WebGIS, XTF unter
     Weitere). Weitere Maskenfelder erst nach Beschriftungs-Inventur und Pruefung am echten Objekt.
-  - Vorbestehend rot: `ExportPageViewModelDependencyTests.ViewModel_speichert_keinen_ServiceProvider_als_Feld`
-    (`_webGisSp` seit Stufe 3).
+  - WEBGIS-TEIL DER EXPORT-SEITE (24.09.2026): `ExportWebGisBereich` (ViewModels/Pages) traegt Anmelden, Pruefen/
+    Schreiben und Holen; die Export-Seite haelt ihn als `WebGis` und reicht nur die genutzten Dienste herein
+    (`ExportWebGisBereich.Dienste`), nie den ServiceProvider. Die Oberflaeche bindet `WebGis.Status` und
+    `WebGis.*Command`; `ExportWebGisBereichTests` prueft jeden Pfad (WPF meldet einen falschen Pfad nicht). Damit sind
+    `ExportPageViewModelDependencyTests`, `ArchitectureDriftRatchet` und der Groessenwaechter wieder gruen. Die
+    Schachtseite blieb unter 2000 Zeilen, weil ihr Importschutz (`SharedProtocolImportOperationState`,
+    `ProtocolImportShellOperationGuard`) unveraendert in `SchaechteProtokollImportSperre.cs` liegt.
+    Vorbestehend rot und NICHT daher: `SchaechteNovaLayoutIsolatedSmokeTests.Schachtansicht_laedt_Lage_in_der_Liste…`
+    haengt ueber 60 s, auch auf dem Stand vor dem Umbau (916fd626c, 24.09. gemessen, SewerStudio lief).
   - HOLEN: TYP AA UND DIE GANZE SCHACHTMASKE (Wunsch Pascal 24.09.2026 «importiere das was im WebGIS ist», «auch
     bei den Schächten alle fehlenden Felder ergänzen»). `WebGisImportAktenfelder`: (1) Typ AA (PAA/SAA) kommt aus dem
     WebGIS selbst (`WebGisFeldkarte.TypAaRef`, Haltung `65e83cb4…`, Schacht `8d17a0bc…`, Inventur v2) und entscheidet

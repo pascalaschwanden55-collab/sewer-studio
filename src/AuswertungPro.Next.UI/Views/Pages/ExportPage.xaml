@@ -294,31 +294,31 @@
                             <TextBlock Text="Schreibt Zustand, Sanierungsbedarf «Saniert» (nur mit ausgeführter Sanierungs-Akte), Bemerkung und Baujahr (nur wenn dort leer) an Haltungen und Schächten und legt je ausgeführter Sanierungs-Akte eine Sanierungsmassnahme an. Längen werden nie geschrieben. Jedes Objekt wird vorher frisch gelesen; die Vorschau zeigt Alt/Neu, geschrieben wird erst nach deiner Bestätigung."
                                        FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
                                        TextWrapping="Wrap" Margin="0,2,0,8"/>
-                            <TextBlock Text="{Binding WebGisStatus}" FontSize="{DynamicResource TextXS}"
+                            <TextBlock Text="{Binding WebGis.Status}" FontSize="{DynamicResource TextXS}"
                                        Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
                             <StackPanel Orientation="Horizontal">
-                                <Button Command="{Binding WebGisAnmeldenCommand}" Padding="14,6" Margin="0,0,8,0"
+                                <Button Command="{Binding WebGis.AnmeldenCommand}" Padding="14,6" Margin="0,0,8,0"
                                         ToolTip="Öffnet das WebGIS in einem eigenen Browserfenster. Du meldest dich dort an; SewerStudio sieht kein Passwort und übernimmt nur die Sitzung.">
                                     <StackPanel Orientation="Horizontal">
                                         <ui:FluentIcon Glyph="&#xE77B;" Margin="0,0,8,0" Foreground="{DynamicResource AccentBrush}"/>
                                         <TextBlock Text="Am WebGIS anmelden" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                                <Button Command="{Binding WebGisUebertragenCommand}" Padding="14,6" Margin="0,0,8,0"
+                                <Button Command="{Binding WebGis.UebertragenCommand}" Padding="14,6" Margin="0,0,8,0"
                                         ToolTip="Liest jedes Objekt frisch aus dem WebGIS, zeigt die Änderungen und schreibt erst nach deiner Bestätigung. Bericht landet unter __WebGIS_Export im Projektordner.">
                                     <StackPanel Orientation="Horizontal">
                                         <ui:FluentIcon Glyph="&#xE898;" Margin="0,0,8,0" Foreground="{DynamicResource AccentBrush}"/>
                                         <TextBlock Text="Prüfen und ins WebGIS schreiben" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                                <Button Command="{Binding WebGisHolenCommand}" Padding="14,6" Margin="0,0,8,0"
+                                <Button Command="{Binding WebGis.HolenCommand}" Padding="14,6" Margin="0,0,8,0"
                                         ToolTip="Holt aus dem WebGIS in SewerStudio: GlobalID, Baujahr (wenn leer) und passende Stammdaten. WebGIS-Werte ersetzen Katasterwerte; Handwerte bleiben. Die Haltungslänge bleibt beim Wert des Operateurs. Vorschau zuerst; ins WebGIS wird nichts geschrieben.">
                                     <StackPanel Orientation="Horizontal">
                                         <ui:FluentIcon Glyph="&#xE896;" Margin="0,0,8,0" Foreground="{DynamicResource AccentBrush}"/>
                                         <TextBlock Text="Vom WebGIS holen" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                                <Button Command="{Binding WebGisAbmeldenCommand}" Padding="12,5"
+                                <Button Command="{Binding WebGis.AbmeldenCommand}" Padding="12,5"
                                         ToolTip="Schliesst das Browserfenster und verwirft die Sitzung.">
                                     <TextBlock Text="Abmelden" VerticalAlignment="Center"/>
                                 </Button>

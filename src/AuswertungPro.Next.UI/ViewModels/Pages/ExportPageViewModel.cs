@@ -87,6 +87,9 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
     public IRelayCommand ErzeugeXtfPaketCommand { get; }
     public IRelayCommand LieferungBearbeitenCommand { get; private set; } = new RelayCommand(() => { }, () => false);
 
+    /// <summary>Direkt ins WebGIS (Anmelden, Pruefen und Schreiben, Holen); ohne ServiceProvider inaktiv.</summary>
+    public ExportWebGisBereich WebGis { get; private set; } = ExportWebGisBereich.Inaktiv();
+
     /// <summary>Verzeichnisbaum-Karten fuer Haltungen, Schaechte und Dichtheitspruefungen.</summary>
     public IReadOnlyList<DistributionTargetConfigViewModel> DistributionTargets { get; }
 
@@ -112,7 +115,12 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             xtfPaketAblage: sp.XtfPaketAblage)
     {
         LieferungBearbeitenCommand = new RelayCommand(() => XtfLieferungDialog.Zeige(sp.XtfLieferungen, sp.Dialogs));
-        InitialisiereWebGis(sp);
+        WebGis = new ExportWebGisBereich(new ExportWebGisBereich.Dienste(
+            shell, sp.Settings, sp.Dialogs, sp.Toasts, sp.WebGisAnmeldung,
+            () => sp.WebGisZugang, zugang => sp.WebGisZugang = zugang,
+            () => sp.WebGisExport, sp.WebGisHolen,
+            () => TryBeginProjectOperation(allowsInternalProjectSave: false), EndProjectOperation,
+            ergebnis => LastResult = ergebnis));
     }
 
     [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen den Kosten-Speicher injizieren.")]

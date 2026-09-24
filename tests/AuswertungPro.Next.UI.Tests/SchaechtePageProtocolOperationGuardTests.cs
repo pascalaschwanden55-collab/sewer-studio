@@ -28,6 +28,10 @@ public sealed class SchaechtePageProtocolOperationGuardTests
         var operationGuard = File.ReadAllText(TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.UI", "ViewModels", "Pages",
             "SchaechtePageViewModel.ProtocolOperationGuard.cs"));
+        // Der Guard selbst liegt seit 24.09.2026 in einer eigenen Datei (Groessengrenze der Seite).
+        var guardKlasse = File.ReadAllText(TestRepoPaths.RepoFile(
+            "src", "AuswertungPro.Next.UI", "ViewModels", "Pages",
+            "SchaechteProtokollImportSperre.cs"));
         var protocol = File.ReadAllText(TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.UI", "ViewModels", "Pages",
             "SchaechtePageViewModel.ProtocolImport.cs"));
@@ -51,7 +55,7 @@ public sealed class SchaechtePageProtocolOperationGuardTests
         Assert.Contains("_shell.ReleaseProjectOperation", operationGuard, StringComparison.Ordinal);
         Assert.Contains("_sharedProtocolImportState.TryAcquire(", operationGuard, StringComparison.Ordinal);
         Assert.Contains("_protocolImportShellGuard", operationGuard, StringComparison.Ordinal);
-        Assert.Contains("AllowsInternalProjectSave => _state.IsOwnedBy(this)", operationGuard, StringComparison.Ordinal);
+        Assert.Contains("AllowsInternalProjectSave => _state.IsOwnedBy(this)", guardKlasse, StringComparison.Ordinal);
         Assert.Contains("TryBeginProtocolPdfOperation", protocol, StringComparison.Ordinal);
         Assert.Contains("finally", protocol, StringComparison.Ordinal);
         Assert.Contains("TryBeginProtocolPdfOperation", stammdaten, StringComparison.Ordinal);
