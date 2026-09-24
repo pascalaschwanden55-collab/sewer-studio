@@ -227,6 +227,7 @@ internal sealed class DssExportBearbeitung(Project projekt, Dictionary<string, D
     private string Organisation(string text)
     {
         if (SiaObjektkennung.IstGueltig(text)) return text;
+        text = WebGisOrganisationen.Finde(text)?.Name ?? text; // «AWU_von_privat (Abwasserverband)» = «AWU_von_privat»
         var treffer = projekt.Objektakten.SelectMany(a => a.Quellen).Where(q => q.Klasse == "Organisation" && q.Werte.GetValueOrDefault("Bezeichnung") == text)
             .Select(q => q.Kennung).Concat(objekte.Values.Where(o => o.Klasse == "Organisation" && o.Werte.GetValueOrDefault("Bezeichnung") == text).Select(o => o.Tid)).Distinct().ToArray();
         if (treffer.Length == 1)

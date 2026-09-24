@@ -168,8 +168,18 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     Wert zeichengenau — GeoShop wie Kanalfirma (`WebGisImportPlanBuilder.FuehrtWebGis`; bei der Uebernahme
     `DarfErsetzen`: fuer `Eigentuemer` genuegt «keine Handeingabe»). Nur eine Handeingabe (auch bewusst leer) bleibt,
     der Hinweis nennt beide Werte. Die Haltungslaenge bleibt rein informativ. Ins WebGIS geschrieben werden alle
-    drei weiterhin nie. XTF-Folge: `EigentumVokabular` kennt «AWU_von_privat»/«AWU_von_oeffentlich» u. a. nicht —
-    ohne Organisationstyp sperrt der SIA405-Neu-Export das Bauteil (Zuordnung fachlich offen).
+    drei weiterhin nie. ORGANISATIONSTYP «SO WIE ES IM WEBGIS IST» (Entscheid Pascal 24.09.2026): `WebGisOrganisationen`
+    (Domain) liest die WebGIS-Organisationsliste aus dem Objektaktenkatalog (`haltung.owner`, Labels «Name (Typ)»;
+    live liefert die Haltungsmaske genau so «AWU_von_oeffentlich (Abwasserverband)», die Schachtmaske nur
+    «AWU_von_privat»). `EigentumVokabular.NachOrganisationstyp` fragt ZUERST diese Liste (AWU_von_* = Abwasserverband,
+    Genossenschaft/Kooperation = Genossenschaft_Korporation, «Unbekannt» faellt auf die bisherige Regel), und
+    `Normalisieren`/DSS `Organisation` nehmen den WebGIS-Namen ohne Typzusatz — Haltung und Schacht ergeben EINE
+    Organisation «AWU_von_privat». Der Tabellenwert selbst bleibt zeichengenau der WebGIS-Text.
+    `OwnershipAwuFilter.IsAwu` (NPK-135-Leistungsverzeichnis) erkennt «AWU_von_…» als AWU — sonst fielen geholte
+    AWU-Leitungen still aus dem LV. OFFEN: Die Excel-Vorlagen faerben/zaehlen nur «Abwasser Uri», «AWU», «Kanton Uri»,
+    «Kanton», «Bund», «Gemeinde», «Privat» exakt; WebGIS-Namen bleiben dort ungefaerbt und ungezaehlt.
+    Tests `EigentumVokabularTests` (ganze WebGIS-Liste), `OwnershipAwuFilterTests`, `XtfNeuPlanBuilderTests`,
+    `XtfDssExportTests` (Webgis_…).
     **SANIERUNGSBEDARF NUR WENN LEER (Entscheid Pascal 24.09.2026):** Das Holen liest den Sanierungsbedarf
     (`WebGisFeldkarte.SanierungsbedarfRef`) fuer Haltung UND Schacht und fuellt ihn ausschliesslich in ein LEERES
     Feld (`WebGisImportPlanBuilder.Sanierungsbedarf`, WebGIS-Begriff zeichengenau ueber `WebGisImportWert`). Jeder

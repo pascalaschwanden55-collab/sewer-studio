@@ -573,6 +573,26 @@ public sealed class XtfNeuPlanBuilderTests
                                             && h.Contains("Firma Muster GmbH", StringComparison.Ordinal));
     }
 
+    // Entscheid Pascal 24.09.2026: Eigentuemer genau wie im WebGIS, der Typ «so wie es im WebGIS ist».
+    // Das WebGIS liefert fuer die Haltung «AWU_von_privat (Abwasserverband)», fuer den Schacht
+    // «AWU_von_privat» — das ist EINE Organisation, und ihr Typ steht in der WebGIS-Liste.
+    [Fact]
+    public void Webgis_organisation_wird_eine_organisation_mit_dem_typ_aus_dem_webgis()
+    {
+        var haltung = Haltung();
+        haltung.SetFieldValue(FieldKeys.Owner, "AWU_von_privat (Abwasserverband)", FieldSource.Manual, true);
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(FieldKeys.Owner, "AWU_von_privat", FieldSource.Manual, true);
+
+        var plan = XtfNeuPlanBuilder.Build([haltung], [schacht]);
+
+        Assert.Equal(1, plan.Haltungen);
+        Assert.Equal(1, plan.Schaechte);
+        var organisation = Assert.Single(plan.Objekte, o => o.Klasse == "Organisation");
+        Assert.Equal("AWU_von_privat", organisation.Felder.Single(f => f.Key == "Bezeichnung").Value);
+        Assert.Equal("Abwasserverband", organisation.Felder.Single(f => f.Key == "Organisationstyp").Value);
+    }
+
     private static HaltungRecord Haltung()
     {
         var record = new HaltungRecord();

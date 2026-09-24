@@ -23,7 +23,10 @@ public static class OwnershipAwuFilter
             return false;
 
         var normalized = owner.Trim().ToLowerInvariant();
-        return normalized == "awu" || normalized.Contains("abwasser uri", StringComparison.Ordinal);
+        // Seit das Holen den Eigentuemer wie im WebGIS setzt (24.09.2026): «AWU_von_privat» und
+        // «AWU_von_oeffentlich», an der Haltung mit angehaengtem «(Abwasserverband)», sind AWU.
+        return normalized == "awu" || normalized.StartsWith("awu_von_", StringComparison.Ordinal)
+            || normalized.Contains("abwasser uri", StringComparison.Ordinal);
     }
 
     /// <summary>

@@ -112,6 +112,57 @@ public sealed class EigentumVokabularTests
     public void Ein_unbekannter_Eigentuemer_bekommt_keinen_Typ(string eigentuemer)
         => Assert.Null(EigentumVokabular.NachOrganisationstyp(eigentuemer));
 
+    // Entscheid Pascal 24.09.2026: «so wie es im WebGIS ist». Das WebGIS fuehrt den Typ in seiner
+    // Organisationsliste selbst — die Haltungsmaske zeigt «Name (Typ)», die Schachtmaske den Namen.
+    [Theory]
+    [InlineData("AWU_von_privat", "Abwasserverband")]
+    [InlineData("AWU_von_privat (Abwasserverband)", "Abwasserverband")]
+    [InlineData("AWU_von_oeffentlich", "Abwasserverband")]
+    [InlineData("AWU_von_oeffentlich (Abwasserverband)", "Abwasserverband")]
+    [InlineData("oeff_Rechtl_Koerperschaften", "Genossenschaft_Korporation")]
+    [InlineData("Meliorationsgen. Seedorf (Genossenschaft/Kooperation)", "Genossenschaft_Korporation")]
+    [InlineData("RUAG", "Privat")]
+    [InlineData("Bund Astra (Bund)", "Bund")]
+    [InlineData("Kanton Uri (Kanton)", "Kanton")]
+    [InlineData("Bürglen (Gemeinde)", "Gemeinde")]
+    public void Eine_webgis_organisation_traegt_den_typ_aus_dem_webgis(string eigentuemer, string typ)
+        => Assert.Equal(typ, EigentumVokabular.NachOrganisationstyp(eigentuemer));
+
+    // Jeder Eintrag der WebGIS-Liste, gelesen aus dem Objektaktenkatalog (Haltungsmaske «Name (Typ)»).
+    [Fact]
+    public void Jede_organisation_der_webgis_liste_bekommt_ihren_typ()
+    {
+        var feld = FieldCatalog.Objektfelder.Feld("haltung.owner");
+        var eintraege = FieldCatalog.Objektfelder.Auswahl(feld.KatalogId)!.Eintraege
+            .Where(e => !string.IsNullOrWhiteSpace(e.Label)).ToList();
+        Assert.True(eintraege.Count >= 30);
+        var sia = new Dictionary<string, string>
+        {
+            ["Abwasserverband"] = "Abwasserverband", ["Bund"] = "Bund", ["Kanton"] = "Kanton",
+            ["Gemeinde"] = "Gemeinde", ["Privat"] = "Privat",
+            ["Genossenschaft/Kooperation"] = "Genossenschaft_Korporation",
+            ["Unbekannt"] = "Privat", // SIA405 kennt kein «unbekannt» — dieselbe erzwungene Wahl wie bisher
+        };
+        foreach (var e in eintraege)
+        {
+            var klammer = e.Label.LastIndexOf(" (", StringComparison.Ordinal);
+            var name = e.Label[..klammer];
+            var webgisTyp = e.Label[(klammer + 2)..^1];
+            Assert.Equal(sia[webgisTyp], EigentumVokabular.NachOrganisationstyp(e.Label));
+            Assert.Equal(sia[webgisTyp], EigentumVokabular.NachOrganisationstyp(name));
+        }
+    }
+
+    // In der XTF heisst die Organisation wie im WebGIS, ohne den angehaengten Typ: Haltung und Schacht
+    // meinen mit «AWU_von_privat (Abwasserverband)» und «AWU_von_privat» dieselbe Organisation.
+    [Theory]
+    [InlineData("AWU_von_privat (Abwasserverband)", "AWU_von_privat")]
+    [InlineData("AWU_von_privat", "AWU_von_privat")]
+    [InlineData("Kanton Uri (Kanton)", "Kanton Uri")]
+    [InlineData("Bürglen (Gemeinde)", "Bürglen")]
+    public void Eine_webgis_organisation_heisst_wie_im_webgis(string eigentuemer, string name)
+        => Assert.Equal(name, EigentumVokabular.Normalisieren(eigentuemer));
+
     // Die Faltung dient nur dem Vergleich. Der Name selbst darf sie nie zu sehen bekommen.
     [Theory]
     [InlineData("Bürglen (UR)")]

@@ -114,6 +114,14 @@ public static class EigentumVokabular
         if (text.Length == 0)
             return null;
 
+        // Zuerst das WebGIS: Es fuehrt den Typ jeder Organisation selbst («so wie es im WebGIS ist»,
+        // Entscheid Pascal 24.09.2026). «unbekannt» hat dort keinen SIA405-Typ und faellt durch.
+        var webgis = WebGisOrganisationen.Finde(text);
+        if (webgis?.Organisationstyp is { } webgisTyp)
+            return webgisTyp;
+        if (webgis is not null)
+            text = webgis.Name; // «unbekannt (Unbekannt)» gilt wie «unbekannt»
+
         var klein = text.ToLowerInvariant();
         var konzept = Konzepte.FirstOrDefault(k =>
             k.Gelesen.Contains(klein)
@@ -180,6 +188,11 @@ public static class EigentumVokabular
         var text = (wert ?? "").Trim();
         if (text.Length == 0)
             return "";
+
+        // Eine WebGIS-Organisation heisst wie im WebGIS, ohne den Typ, den die Haltungsmaske anhaengt:
+        // «AWU_von_privat (Abwasserverband)» an der Haltung und «AWU_von_privat» am Schacht sind EINE.
+        if (WebGisOrganisationen.Finde(text) is { } organisation)
+            return organisation.Name;
 
         var klein = text.ToLowerInvariant();
         var treffer = Konzepte.FirstOrDefault(k =>

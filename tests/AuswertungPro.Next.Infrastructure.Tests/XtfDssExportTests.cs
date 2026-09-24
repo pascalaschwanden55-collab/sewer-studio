@@ -40,6 +40,21 @@ public sealed class XtfDssExportTests
         Assert.Equal("Polyesterharz_Glasfaserlaminat", p.Objektakten[0].Quellen.Single(q => q.Klasse == "Haltung").Werte["Reliner_Material"]);
     }
 
+    // Entscheid Pascal 24.09.2026: Eigentuemer wie im WebGIS; der Typ steht in der WebGIS-Liste.
+    [Fact]
+    public void Webgis_eigentuemer_wird_organisation_mit_webgis_name_und_typ()
+    {
+        var p = Projekt();
+        p.Data[0].SetFieldValue(FieldKeys.Owner, "AWU_von_privat (Abwasserverband)", FieldSource.Manual, true);
+        WithExport(p, doc =>
+        {
+            var ref_ = Objekt(doc, "Kanal").Elements().Single(e => e.Name.LocalName == "EigentuemerRef").Attribute("REF")!.Value;
+            var org = Objekt(doc, "Organisation", ref_);
+            Assert.Equal("AWU_von_privat", org.Elements().Single(e => e.Name.LocalName == "Bezeichnung").Value);
+            Assert.Equal("Abwasserverband", org.Elements().Single(e => e.Name.LocalName == "Organisationstyp").Value);
+        });
+    }
+
     [Theory]
     [InlineData("haltung.reliner_material", "nicht_im_Modell")]
     [InlineData("haltung.fromlevel", "99999")]
