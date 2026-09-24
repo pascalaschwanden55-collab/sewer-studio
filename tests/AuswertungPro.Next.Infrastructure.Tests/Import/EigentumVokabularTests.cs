@@ -48,9 +48,13 @@ public sealed class EigentumVokabularTests
 
         // Und die Gegenrichtung: Jede Farbe der Vorlage muss erreichbar bleiben.
         // Die Kurzformen stehen nicht mehr zur Auswahl, sind aber weiterhin
-        // lesbar — ihr normalisierter Begriff traegt dieselbe Farbe.
+        // lesbar — ihr normalisierter Begriff traegt dieselbe Farbe. Seit
+        // 24.09.2026 faerbt die Vorlage auch die WebGIS-Namen, die das Holen setzt.
         foreach (var wert in gefaerbt)
-            Assert.Contains(EigentumVokabular.Normalisieren(wert), EigentumVokabular.Auswahl);
+            Assert.True(
+                EigentumVokabular.Auswahl.Contains(EigentumVokabular.Normalisieren(wert))
+                || WebGisOrganisationen.Finde(wert) is not null,
+                $"\"{wert}\" ist weder Auswahl noch WebGIS-Organisation.");
     }
 
     [Fact]

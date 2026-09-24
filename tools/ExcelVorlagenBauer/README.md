@@ -39,6 +39,19 @@ python -m venv .venv
 .venv\Scripts\python vorlage.py
 ```
 
+## Eigentuemer aus dem WebGIS
+
+Seit 24.09.2026 setzt das Holen den Eigentuemer genau wie im WebGIS
+(«AWU_von_privat», an der Haltung «Altdorf (Gemeinde)»). `vorlage.py` liest
+deshalb die WebGIS-Organisationsliste aus
+`src/AuswertungPro.Next.Domain/Models/Objektakten.Katalog.json` (Feld
+`haltung.owner`) und zaehlt und faerbt jeden Namen nach seinem WebGIS-Typ:
+Abwasserverband wie «Abwasser Uri», Kanton, Bund, Gemeinde, Privat.
+Genossenschaften und «Unbekannt» haben keine Kategorie und bleiben ungefaerbt.
+Der Laufzeitvertrag `ExcelReportStyle.Eigentuemer` liest dieselbe Liste; die
+Vorlagentreuetests vergleichen beide Seiten. Aendert sich die WebGIS-Liste im
+Katalog, muessen die Vorlagen neu gebaut werden — die Tests melden es.
+
 ## Was die Vorlage traegt
 
 Logo, sieben Diagramme, die Farblegende oben links, alle Kennzahlenbloecke mit

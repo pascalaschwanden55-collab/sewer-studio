@@ -180,8 +180,13 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     `Normalisieren`/DSS `Organisation` nehmen den WebGIS-Namen ohne Typzusatz — Haltung und Schacht ergeben EINE
     Organisation «AWU_von_privat». Der Tabellenwert selbst bleibt zeichengenau der WebGIS-Text.
     `OwnershipAwuFilter.IsAwu` (NPK-135-Leistungsverzeichnis) erkennt «AWU_von_…» als AWU — sonst fielen geholte
-    AWU-Leitungen still aus dem LV. OFFEN: Die Excel-Vorlagen faerben/zaehlen nur «Abwasser Uri», «AWU», «Kanton Uri»,
-    «Kanton», «Bund», «Gemeinde», «Privat» exakt; WebGIS-Namen bleiben dort ungefaerbt und ungezaehlt.
+    AWU-Leitungen still aus dem LV. EXCEL (Entscheid Pascal 24.09.2026): Beide Excel-Vorlagen zaehlen, summieren und
+    faerben jeden WebGIS-Namen (bloss und «Name (Typ)») nach seinem WebGIS-Typ in der bestehenden Kategorie
+    (Abwasserverband -> Abwasser Uri, Kanton, Bund, Gemeinde, Privat); Genossenschaften/«Unbekannt» bleiben ungefaerbt.
+    `ExcelReportStyle.Eigentuemer` und `tools/ExcelVorlagenBauer/vorlage.py` lesen dieselbe Katalogliste; keine
+    Schreibweise doppelt (Excel vergleicht ohne Gross/Klein). Neu bauen mit openpyxl 3.1.5/Pillow 11.3.0 (Nachbau
+    bis auf docProps/core.xml identisch). Tests `ExcelExportVorlagentreueTests` (Eigentuemerblock beider Vorlagen,
+    Export mit Formelauswertung), `ExcelReportStyleTests`.
     Tests `EigentumVokabularTests` (ganze WebGIS-Liste), `OwnershipAwuFilterTests`, `XtfNeuPlanBuilderTests`,
     `XtfDssExportTests` (Webgis_…).
     **SANIERUNGSBEDARF NUR WENN LEER (Entscheid Pascal 24.09.2026):** Das Holen liest den Sanierungsbedarf

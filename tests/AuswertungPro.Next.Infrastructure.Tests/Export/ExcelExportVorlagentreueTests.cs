@@ -400,6 +400,63 @@ public sealed class ExcelExportVorlagentreueTests
         }
     }
 
+    // Seit das Holen den Eigentuemer wie im WebGIS setzt (24.09.2026): Beide Vorlagen zaehlen und faerben jeden
+    // Eigentuemer des Laufzeitvertrags, die WebGIS-Namen eingeschlossen — auch die Schachtvorlage.
+    [Theory]
+    [InlineData("Haltungen.xlsx", "Haltungen", "O")]
+    [InlineData("Schächte.xlsx", "Schaechte", "J")]
+    public void Eigentuemerblock_zaehlt_und_faerbt_jeden_aufgefuehrten_Eigentuemer(string datei, string blattname, string spalte)
+    {
+        using var zip = ZipFile.OpenRead(Path.Combine(TestPaths.FindSolutionRoot(), "Export_Vorlage", datei));
+        var blatt = Bestand.LiesXml(zip, "xl/worksheets/sheet1.xml");
+        var formeln = blatt.Descendants().Where(e => e.Name.LocalName == "f").Select(e => e.Value).ToArray();
+        var farbformeln = blatt.Descendants().Where(e => e.Name.LocalName == "formula").Select(e => e.Value).ToArray();
+
+        foreach (var eigentuemer in ExcelReportStyle.Eigentuemer)
+        {
+            var zaehlt = $"COUNTIF('{blattname}'!${spalte}$27:${spalte}$5000,\"{eigentuemer.Wert}\")";
+            Assert.True(formeln.Any(f => f.Contains(zaehlt, StringComparison.Ordinal)),
+                $"{datei}: \"{eigentuemer.Wert}\" wird im Eigentuemerblock nicht gezaehlt.");
+            Assert.True(farbformeln.Any(f => f.Contains($"${spalte}27=\"{eigentuemer.Wert}\"", StringComparison.Ordinal)),
+                $"{datei}: \"{eigentuemer.Wert}\" wird nicht gefaerbt.");
+        }
+    }
+
+    // Die Formel zu kennen reicht nicht: Im echten Export muss Excel die WebGIS-Namen der richtigen Kategorie zaehlen.
+    [Fact]
+    public void Webgis_eigentuemer_werden_im_export_nach_ihrem_typ_gezaehlt()
+    {
+        var projekt = BaueProjekt(("H-1", ""), ("H-2", ""), ("H-3", ""), ("H-4", ""));
+        var eigentuemer = new[]
+        {
+            "AWU_von_privat (Abwasserverband)", "AWU", "Altdorf (Gemeinde)",
+            "oeff_Rechtl_Koerperschaften (Genossenschaft/Kooperation)",
+        };
+        for (var i = 0; i < eigentuemer.Length; i++)
+            projekt.Data[i].SetFieldValue(FieldKeys.Owner, eigentuemer[i], FieldSource.Manual, userEdited: true);
+        var ziel = Exportiere(projekt);
+        try
+        {
+            using var wb = new XLWorkbook(ziel);
+            wb.RecalculateAllFormulas();
+            var ws = wb.Worksheet(1);
+            double Anzahl(string kategorie)
+            {
+                var zelle = ws.Range(1, 4, ExcelVorlagenLayout.KopfZeile - 1, 4).CellsUsed()
+                    .First(c => c.GetString() == kategorie);
+                return ws.Cell(zelle.Address.RowNumber, 5).GetDouble();
+            }
+
+            Assert.Equal(2, Anzahl("Abwasser Uri"));
+            Assert.Equal(1, Anzahl("Gemeinde"));
+            Assert.Equal(0, Anzahl("Privat"));
+        }
+        finally
+        {
+            File.Delete(ziel);
+        }
+    }
+
     [Fact]
     public void Bedeutungsfarben_der_Haltungsvorlage_stimmen_mit_dem_Laufzeitvertrag_ueberein()
     {

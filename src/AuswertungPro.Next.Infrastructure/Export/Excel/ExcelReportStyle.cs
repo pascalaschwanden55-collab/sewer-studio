@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Export.Excel;
 
@@ -31,8 +32,11 @@ public static class ExcelReportStyle
         new ExcelFarbregel("4", "FF92D050")
     };
 
-    /// <summary>Eigentuemer, damit die Zustaendigkeit auf einen Blick sichtbar ist.</summary>
-    public static IReadOnlyList<ExcelFarbregel> Eigentuemer { get; } = new[]
+    /// <summary>
+    /// Eigentuemer, damit die Zustaendigkeit auf einen Blick sichtbar ist. Zuerst die Begriffe des Programms,
+    /// danach die WebGIS-Namen (siehe <see cref="MitWebGisNamen"/>).
+    /// </summary>
+    public static IReadOnlyList<ExcelFarbregel> Eigentuemer { get; } = MitWebGisNamen(new[]
     {
         // Amtlicher Begriff des Kantons und die Kurzform aus Altprojekten
         // tragen dieselbe Farbe. Ein nachgeschlagener Wert soll gefaerbt sein,
@@ -45,7 +49,36 @@ public static class ExcelReportStyle
         new ExcelFarbregel("Bund", "FFFF8000"),
         new ExcelFarbregel("Gemeinde", "FF00B0F0"),
         new ExcelFarbregel("Privat", "FFFF0000")
-    };
+    });
+
+    /// <summary>
+    /// Seit das Holen den Eigentuemer wie im WebGIS setzt (Entscheid Pascal 24.09.2026), stehen dort WebGIS-Namen:
+    /// «AWU_von_privat», «Altdorf», an der Haltung mit Typ «Altdorf (Gemeinde)». Jeder zaehlt und faerbt nach seinem
+    /// WebGIS-Typ (<see cref="WebGisOrganisationen"/>) wie die Kategorie der Vorlage. Genossenschaften und
+    /// «Unbekannt» haben dort keine Kategorie und bleiben wie bisher ungefaerbt. Keine Schreibweise doppelt,
+    /// auch nicht in anderer Gross-/Kleinschreibung — Excel vergleicht ohne, die Zeile zaehlte sonst zweimal.
+    /// Der Vorlagenbauer (<c>tools/ExcelVorlagenBauer/vorlage.py</c>) liest dieselbe Liste aus dem Katalog.
+    /// </summary>
+    private static IReadOnlyList<ExcelFarbregel> MitWebGisNamen(ExcelFarbregel[] begriffe)
+    {
+        var farbeJeTyp = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Abwasserverband"] = "FF548235", // wie Abwasser Uri
+            ["Kanton"] = "FFFFFF00",
+            ["Bund"] = "FFFF8000",
+            ["Gemeinde"] = "FF00B0F0",
+            ["Privat"] = "FFFF0000",
+        };
+        var liste = new List<ExcelFarbregel>(begriffe);
+        foreach (var organisation in WebGisOrganisationen.Alle)
+        {
+            if (!farbeJeTyp.TryGetValue(organisation.WebGisTyp, out var farbe)) continue;
+            foreach (var wert in new[] { organisation.Name, $"{organisation.Name} ({organisation.WebGisTyp})" })
+                if (liste.TrueForAll(r => !string.Equals(r.Wert, wert, StringComparison.OrdinalIgnoreCase)))
+                    liste.Add(new ExcelFarbregel(wert, farbe));
+        }
+        return liste;
+    }
 
     /// <summary>
     /// Ergebnis der Haltungspruefung. SewerStudio kennt eine rechnerische

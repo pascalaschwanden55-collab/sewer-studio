@@ -56,6 +56,31 @@ public sealed class ExcelReportStyleTests
         Assert.Equal(erwartet, regel.Farbe);
     }
 
+    // Entscheid Pascal 24.09.2026: Seit das Holen den Eigentuemer wie im WebGIS setzt, stehen dort WebGIS-Namen.
+    // Jeder zaehlt und faerbt nach seinem WebGIS-Typ: Abwasserverband wie Abwasser Uri, Gemeinde wie «Gemeinde» …
+    [Theory]
+    [InlineData("AWU_von_privat", "FF548235")]
+    [InlineData("AWU_von_oeffentlich (Abwasserverband)", "FF548235")]
+    [InlineData("Altdorf", "FF00B0F0")]
+    [InlineData("Bürglen (Gemeinde)", "FF00B0F0")]
+    [InlineData("Kanton Uri (Kanton)", "FFFFFF00")]
+    [InlineData("Bund Astra", "FFFF8000")]
+    [InlineData("RUAG (Privat)", "FFFF0000")]
+    public void Webgis_eigentuemer_tragen_die_farbe_ihres_typs(string eigentuemer, string erwartet)
+        => Assert.Equal(erwartet, ExcelReportStyle.Eigentuemer.Single(r => r.Wert == eigentuemer).Farbe);
+
+    // Genossenschaften und «unbekannt» haben in der Vorlage keine eigene Farbe — wie bisher bleiben sie ungefaerbt.
+    // Excel vergleicht ohne Gross/Klein: eine Schreibweise doppelt zu fuehren, zaehlte die Zeile doppelt.
+    [Fact]
+    public void Webgis_eigentuemer_ohne_kategorie_bleiben_ungefaerbt_und_keiner_zaehlt_doppelt()
+    {
+        Assert.DoesNotContain(ExcelReportStyle.Eigentuemer, r => r.Wert.StartsWith("oeff_Rechtl", StringComparison.Ordinal));
+        Assert.DoesNotContain(ExcelReportStyle.Eigentuemer, r => r.Wert.StartsWith("Meliorationsgen", StringComparison.Ordinal));
+        Assert.DoesNotContain(ExcelReportStyle.Eigentuemer, r => r.Wert.StartsWith("unbekannt", StringComparison.OrdinalIgnoreCase));
+        var werte = ExcelReportStyle.Eigentuemer.Select(r => r.Wert).ToList();
+        Assert.Equal(werte.Count, werte.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
     [Fact]
     public void Gruentoene_mit_verschiedener_bedeutung_bleiben_getrennt()
     {

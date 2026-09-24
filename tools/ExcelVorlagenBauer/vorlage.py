@@ -15,6 +15,7 @@ kopiert den Stil der Musterzeile nach unten.
 Aufruf:  python vorlage.py [--uebernehmen]
 Ohne --uebernehmen landen die Dateien nur im Unterordner "ausgabe".
 """
+import json
 import os
 import shutil
 import sys
@@ -41,13 +42,68 @@ GRAU = "FFD6DCE4"
 # amtliche Begriff des Kantons; die Kurzform steht daneben, weil sie in
 # gewachsenen Projekten vorkommt. Gezaehlt und summiert wird ueber beide, damit
 # weder ein nachgeschlagener noch ein alter Wert aus der Auswertung faellt.
-EIGNER = [
+EIGNER_BEGRIFFE = [
     ("Abwasser Uri", ["Abwasser Uri", "AWU"]),
     ("Kanton Uri", ["Kanton Uri", "Kanton"]),
     ("Bund", ["Bund"]),
     ("Gemeinde", ["Gemeinde"]),
     ("Privat", ["Privat"]),
 ]
+
+# Seit das Holen den Eigentuemer wie im WebGIS setzt (Entscheid Pascal 24.09.2026),
+# stehen dort WebGIS-Namen: "AWU_von_privat", "Altdorf", an der Haltung mit Typ
+# "Altdorf (Gemeinde)". Jeder zaehlt nach seinem WebGIS-Typ zu einer Kategorie.
+# Genossenschaften und "Unbekannt" haben keine und bleiben wie bisher ungefaerbt.
+# Dieselbe Liste und dieselbe Regel liest der Laufzeitvertrag
+# (ExcelReportStyle.Eigentuemer, WebGisOrganisationen); die Vorlagentreuetests
+# vergleichen beide Seiten.
+KATALOG = os.path.abspath(os.path.join(
+    HIER, "..", "..", "src", "AuswertungPro.Next.Domain", "Models", "Objektakten.Katalog.json"))
+KATEGORIE_JE_WEBGIS_TYP = {
+    "abwasserverband": "Abwasser Uri",
+    "kanton": "Kanton Uri",
+    "bund": "Bund",
+    "gemeinde": "Gemeinde",
+    "privat": "Privat",
+}
+
+
+def _webgis_organisationen():
+    """(Name, Typ) der WebGIS-Organisationsliste; Haltungsmaske "Name (Typ)"."""
+    with open(KATALOG, encoding="utf-8-sig") as datei:
+        katalog = json.load(datei)
+    feld = next(f for f in katalog["felder"] if f["id"] == "haltung.owner")
+    liste = next(k for k in katalog["kataloge"] if k["id"] == feld["katalogId"])
+    for eintrag in liste["eintraege"]:
+        label = (eintrag.get("label") or "").strip()
+        klammer = label.rfind(" (")
+        if klammer <= 0 or not label.endswith(")"):
+            continue
+        yield label[:klammer].strip(), label[klammer + 2:-1].strip()
+
+
+def _mit_webgis_namen(begriffe):
+    """Haengt Name und "Name (Typ)" an die Kategorie des WebGIS-Typs an.
+
+    Keine Schreibweise doppelt, auch nicht in anderer Gross-/Kleinschreibung:
+    Excel vergleicht ohne, die Zeile wuerde sonst zweimal gezaehlt.
+    """
+    eigner = [(name, list(schreibweisen)) for name, schreibweisen in begriffe]
+    for name, typ in _webgis_organisationen():
+        kategorie = KATEGORIE_JE_WEBGIS_TYP.get(typ.lower())
+        if kategorie is None:
+            continue
+        ziel = next(s for n, s in eigner if n == kategorie)
+        for wert in (name, "%s (%s)" % (name, typ)):
+            if all(wert.lower() != v.lower() for _, s in eigner for v in s):
+                ziel.append(wert)
+    return eigner
+
+
+EIGNER = _mit_webgis_namen(EIGNER_BEGRIFFE)
+# Farbe je Schreibweise fuer die bedingte Formatierung: die Farbe der Kategorie.
+EIGENTUEMER_REGELN = {wert: S.EIGENTUEMER.get(wert, S.EIGENTUEMER[name])
+                      for name, schreibweisen in EIGNER for wert in schreibweisen}
 AUSFUEHRENDE = ["Abwasser Uri", "Kanalsanierer", "Baumeister", "Gartenbauer"]
 BEDEUTUNG = {"0": "sofort", "1": "kurzfristig", "2": "mittelfristig",
              "3": "langfristig", "4": "kein Bedarf"}
@@ -308,7 +364,7 @@ def baue_haltungen(pfad):
         (ZK, ZK, S.ZUSTANDSKLASSE_REGEL, True),
         (PRUEF, PRUEF, S.PRUEFUNG, False),
         (SAN, SAN, S.SANIEREN, False),
-        (EIG, EIG, S.EIGENTUEMER, False),
+        (EIG, EIG, EIGENTUEMER_REGELN, False),
         (STATUS, STATUS, S.STATUS, False),
     ], erste)
     # Zebra zuletzt registrieren: die Bedeutungsfarben (stopIfTrue) gewinnen.
@@ -428,7 +484,7 @@ def baue_schaechte(pfad):
         (AD, AD, S.AUSFUEHRUNG, False),
         (ZK, ZK, S.ZUSTANDSKLASSE_REGEL, True),
         (SAN, SAN, S.SANIEREN, False),
-        (EIG, EIG, S.EIGENTUEMER, False),
+        (EIG, EIG, EIGENTUEMER_REGELN, False),
         (STATUS, STATUS, S.STATUS, False),
     ], erste)
     W.zebra_regel(ws, "A%d:%s%d" % (erste, SP(17), LETZTE_ZEILE))
