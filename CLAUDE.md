@@ -145,8 +145,13 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
   - Der rote Test `Felder_mit_eigener_regel…` war ein Testfehler (Stand schon auf Z3).
   - OFFEN: Breite/Hoehe der Haltung (`Lichte_Hoehe_mm` existiert nicht, `DN_mm` geht auf Breite;
     Inventur v2 nennt d06f8d1f einmal Breite, einmal Hoehe — an einem Eiprofil klaeren), Abmelden beendet keine
-    Sitzung (Profil behaelt ADFS-Cookies), Kontext ohne Host-Pruefung, zweiter Handwert auf dieselbe refId faellt
-    still weg.
+    Sitzung (Profil behaelt ADFS-Cookies), zweiter Handwert auf dieselbe refId faellt still weg.
+  - D2/D3 ERLEDIGT (24.09.2026): Der X-syn-Kontext zaehlt nur aus einer HTTPS-Anfrage an genau den Host der
+    WebGIS-Adresse (`KontextAusUrl(url, basisUrl)`; der Browser fragt auch fremde Server an), und nur plausibel
+    (`WebGisSynKontext.IstPlausibel`: Login/Gruppen gefuellt, keine Steuerzeichen — die Werte gehen als Kopfzeilen
+    hinaus). Der gemerkte Kontext kommt ueber `WebGisSynKontext.AusEinstellungen` und wird genauso geprueft. Die
+    Chromium-Nachinstallation laeuft ueber `ExternalProcessRunner` (beide Ausgaben, 10 Minuten Zeitlimit) statt
+    einer eigenen Kopie, die nur die Fehlerausgabe las und bei vollem Puffer ewig wartete.
   - C3 ERLEDIGT (24.09.2026): **Beide Planer bauen ihr Abbild VOR dem ersten Netzaufruf** (Eingaben aller
     Haltungen/Schaechte, `WebGisAktenAbbild.Sanierungen`); danach laufen sie auf einem Netzthread weiter, waehrend
     im nicht-modalen Fenster Datensaetze entstehen oder verschwinden — vorher «Collection was modified». **Das Holen

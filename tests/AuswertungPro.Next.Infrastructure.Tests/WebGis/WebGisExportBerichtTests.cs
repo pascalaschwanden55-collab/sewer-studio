@@ -79,13 +79,43 @@ public sealed class WebGisExportBerichtTests
     public void Syn_kontext_wird_aus_editor_url_gelesen()
     {
         var url = "https://www.geohost.ch/svc/rest/services/tn_system/gnsvc2023/MapServer/exts/GEONISserver2023/attributeeditor/getLayouts?project=awu_abw&table=AWZ_UNTERHALT&synergis_jsessionid=EA2A&X-syn-login=pascal.aschwanden&X-syn-application-roles=WebOffice%2B-%2BEditing&X-syn-groups=G_awu_rw%2CG_awu_ro%2CG_awu_rw";
-        var k = PlaywrightWebGisAnmeldung.KontextAusUrl(url);
+        var k = PlaywrightWebGisAnmeldung.KontextAusUrl(url, WebGisServer);
 
         Assert.NotNull(k);
         Assert.Equal("pascal.aschwanden", k!.Login);
         Assert.Equal("WebOffice+-+Editing", k.Roles);
         Assert.Equal("G_awu_rw,G_awu_ro,G_awu_rw", k.Groups);
-        Assert.Null(PlaywrightWebGisAnmeldung.KontextAusUrl("https://www.geohost.ch/divum/synserver?project=awu_abw_edit"));
+        Assert.Null(PlaywrightWebGisAnmeldung.KontextAusUrl("https://www.geohost.ch/divum/synserver?project=awu_abw_edit", WebGisServer));
+    }
+
+    private const string WebGisServer = "https://www.geohost.ch";
+
+    // Pruefung 22.09.2026, D2: Der Browser stellt auch Anfragen an fremde Server (Karten, Skripte). Der Kontext
+    // zaehlt nur aus einer Anfrage an genau den WebGIS-Server und nur ueber HTTPS.
+    [Theory]
+    [InlineData("https://fremd.example/attributeeditor/getLayouts?X-syn-login=jemand&X-syn-groups=G_x")]
+    [InlineData("https://www.geohost.ch.fremd.example/attributeeditor/getLayouts?X-syn-login=jemand&X-syn-groups=G_x")]
+    [InlineData("http://www.geohost.ch/attributeeditor/getLayouts?X-syn-login=jemand&X-syn-groups=G_x")]
+    [InlineData("kein-url?X-syn-login=jemand&X-syn-groups=G_x")]
+    public void Syn_kontext_zaehlt_nur_vom_webgis_server(string url)
+        => Assert.Null(PlaywrightWebGisAnmeldung.KontextAusUrl(url, WebGisServer));
+
+    // Die Werte gehen als Kopfzeilen an jeden WebGIS-Aufruf. Steuerzeichen (Zeilenumbruch) haben dort nichts zu suchen.
+    [Fact]
+    public void Syn_kontext_mit_steuerzeichen_wird_verworfen()
+        => Assert.Null(PlaywrightWebGisAnmeldung.KontextAusUrl(
+            "https://www.geohost.ch/attributeeditor/getLayouts?X-syn-login=jemand%0D%0AX-Evil:1&X-syn-groups=G_x", WebGisServer));
+
+    // Der gemerkte Kontext kommt beim naechsten Start aus den Einstellungen — geprueft wie ein frisch gelesener.
+    [Fact]
+    public void Gemerkter_syn_kontext_wird_geprueft()
+    {
+        var k = WebGisSynKontext.AusEinstellungen("pascal.aschwanden", "", "G_awu_rw");
+        Assert.NotNull(k);
+        Assert.Equal("WebOffice+-+Editing", k!.Roles);
+        Assert.Null(WebGisSynKontext.AusEinstellungen("", "WebOffice+-+Editing", "G_awu_rw"));
+        Assert.Null(WebGisSynKontext.AusEinstellungen("pascal.aschwanden", "WebOffice+-+Editing", " "));
+        Assert.Null(WebGisSynKontext.AusEinstellungen("pascal\r\nX-Evil: 1", "WebOffice+-+Editing", "G_awu_rw"));
     }
 
     [Fact]

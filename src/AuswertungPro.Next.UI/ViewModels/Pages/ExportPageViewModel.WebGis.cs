@@ -76,9 +76,7 @@ public sealed partial class ExportPageViewModel
         if (_webGisSp is null) return;
         var sp = _webGisSp;
         var s = sp.Settings;
-        var bekannt = string.IsNullOrWhiteSpace(s.WebGisSynLogin) || string.IsNullOrWhiteSpace(s.WebGisSynGroups)
-            ? null
-            : new WebGisSynKontext(s.WebGisSynLogin, string.IsNullOrWhiteSpace(s.WebGisSynRoles) ? "WebOffice+-+Editing" : s.WebGisSynRoles, s.WebGisSynGroups);
+        var bekannt = WebGisSynKontext.AusEinstellungen(s.WebGisSynLogin, s.WebGisSynRoles, s.WebGisSynGroups); // geprueft (D2)
 
         _webGisLaeuft = true;
         WebGisAktualisiere();

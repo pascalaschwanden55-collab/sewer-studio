@@ -51,10 +51,10 @@ UI-Wächter (Registrierung, Design, Architektur) grün.
   `%LOCALAPPDATA%\SewerStudio\WebGisBrowser` behält die ADFS-Cookies, der `CookieContainer` wird
   nicht geleert. Entscheid nötig: bewusst so (dokumentieren) oder serverseitig ausloggen und Profil
   leeren.
-- **D2 Benutzerkontext.** Wird aus jeder Browser-Anfrage ohne Host-Prüfung gelesen und beim
-  nächsten Mal ungeprüft aus den Einstellungen übernommen.
-- **D3 Chromium-Nachinstallation** liest nur stderr — kann bei vollem stdout-Puffer hängen (nur
-  ohne Edge/Chrome).
+- ~~**D2 Benutzerkontext.**~~ **Erledigt am 24.09.2026:** nur aus HTTPS-Anfragen an den WebGIS-Host, nur
+  plausibel (keine Steuerzeichen); der gemerkte Kontext wird beim Laden genauso geprüft.
+- ~~**D3 Chromium-Nachinstallation**~~ **Erledigt am 24.09.2026:** läuft über `ExternalProcessRunner` (beide
+  Ausgaben, Zeitlimit) wie der PDF-Export.
 - **E3 Handwerte.** Zwei Handwerte auf eine refId: der zweite fällt ohne Hinweis weg (Reihenfolge aus
   dem `FieldMeta`-Dictionary). Hand-«Sanierungsbedarf» und Schacht-«Baujahr» werden still
   übersprungen. «Saniert» ohne Zustandsklasse setzt den Sanierungsbedarf ohne Hinweis.

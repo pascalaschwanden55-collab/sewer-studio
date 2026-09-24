@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -12,7 +13,29 @@ namespace AuswertungPro.Next.Infrastructure.WebGis;
 /// Er aendert sich je Benutzer praktisch nie und wird nach der ersten Anmeldung gemerkt,
 /// damit spaeter die Anmeldung allein genuegt (ohne eine Attributmaske zu oeffnen).
 /// </summary>
-public sealed record WebGisSynKontext(string Login, string Roles, string Groups);
+public sealed record WebGisSynKontext(string Login, string Roles, string Groups)
+{
+    /// <summary>
+    /// Die Werte gehen als Kopfzeilen an jeden WebGIS-Aufruf (Pruefung 22.09.2026, D2): Login und Gruppen gefuellt,
+    /// keine Steuerzeichen (ein Zeilenumbruch haengte eine fremde Kopfzeile an), hoechstens 2000 Zeichen je Wert.
+    /// </summary>
+    public bool IstPlausibel
+        => !string.IsNullOrWhiteSpace(Login) && !string.IsNullOrWhiteSpace(Groups)
+           && Sauber(Login) && Sauber(Roles) && Sauber(Groups);
+
+    private static bool Sauber(string wert) => wert.Length <= 2000 && !wert.Any(char.IsControl);
+
+    /// <summary>
+    /// Der gemerkte Kontext aus den Einstellungen, geprueft wie ein frisch gelesener. Null ohne Login oder Gruppen
+    /// oder wenn er nicht plausibel ist — dann wird er bei der Anmeldung neu erfasst.
+    /// </summary>
+    public static WebGisSynKontext? AusEinstellungen(string? login, string? roles, string? groups)
+    {
+        if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(groups)) return null;
+        var kontext = new WebGisSynKontext(login, string.IsNullOrWhiteSpace(roles) ? "WebOffice+-+Editing" : roles, groups);
+        return kontext.IstPlausibel ? kontext : null;
+    }
+}
 
 /// <summary>
 /// Sitzungsquelle ueber einen sichtbaren Playwright-Chromium: Der Benutzer meldet sich
@@ -35,6 +58,7 @@ public sealed class PlaywrightWebGisAnmeldung : IWebGisZugangQuelle, IAsyncDispo
     private IBrowserContext? _context;
     private IPage? _page;
     private WebGisSynKontext? _erfasst;
+    private string _basisUrl = "";
 
     public WebGisZugang? AktuellerZugang { get; private set; }
 
@@ -57,6 +81,7 @@ public sealed class PlaywrightWebGisAnmeldung : IWebGisZugangQuelle, IAsyncDispo
         ArgumentException.ThrowIfNullOrWhiteSpace(datenquelle);
 
         await SchliessenAsync().ConfigureAwait(false);
+        _basisUrl = basisUrl;
         _erfasst = bekannterKontext;
         AktuellerZugang = null;
 
@@ -205,12 +230,15 @@ public sealed class PlaywrightWebGisAnmeldung : IWebGisZugangQuelle, IAsyncDispo
                 foreach (var a in new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", skript, "install", "chromium" })
                     psi.ArgumentList.Add(a);
 
-                using var p = System.Diagnostics.Process.Start(psi);
-                if (p is null) continue;
-                var fehler = await p.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
-                await p.WaitForExitAsync(ct).ConfigureAwait(false);
-                if (p.ExitCode == 0) return (true, "");
-                return (false, $"{shell} endete mit Code {p.ExitCode}. {fehler.Trim()}");
+                // Pruefung 22.09.2026, D3: Beide Ausgaben gleichzeitig lesen, mit Zeitlimit — wie beim PDF-Export. Vorher
+                // las die Anmeldung nur die Fehlerausgabe; ein voller Puffer der normalen Ausgabe hielt das Skript an,
+                // und SewerStudio wartete ewig. Der Download ist rund 150 MB, deshalb 10 Minuten.
+                var ergebnis = await AuswertungPro.Next.Application.Common.ExternalProcessRunner
+                    .RunAsync(psi, TimeSpan.FromMinutes(10), ct).ConfigureAwait(false);
+                if (ergebnis.ExitCode == 0 && !ergebnis.TimedOut) return (true, "");
+                return (false, ergebnis.TimedOut
+                    ? $"{shell}: Installation nach 10 Minuten abgebrochen."
+                    : $"{shell}: {ergebnis.Message ?? $"endete mit Code {ergebnis.ExitCode}."}");
             }
             catch (System.ComponentModel.Win32Exception) { /* Shell nicht vorhanden -> naechste */ }
         }
@@ -261,20 +289,30 @@ public sealed class PlaywrightWebGisAnmeldung : IWebGisZugangQuelle, IAsyncDispo
     internal void Erfasse(string url)
     {
         if (_erfasst is not null || string.IsNullOrEmpty(url)) return;
-        var kontext = KontextAusUrl(url);
+        var kontext = KontextAusUrl(url, _basisUrl);
         if (kontext is not null) _erfasst = kontext;
     }
 
-    public static WebGisSynKontext? KontextAusUrl(string url)
+    /// <summary>
+    /// Den Kontext nur aus einer Anfrage an genau den WebGIS-Server und nur ueber HTTPS (Pruefung 22.09.2026, D2):
+    /// Der Browser fragt auch fremde Server an (Karten, Skripte) — deren Adressen bestimmen nie den Benutzer.
+    /// </summary>
+    public static WebGisSynKontext? KontextAusUrl(string url, string basisUrl)
     {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var adresse)
+            || !Uri.TryCreate(basisUrl, UriKind.Absolute, out var basis)
+            || adresse.Scheme != Uri.UriSchemeHttps
+            || !string.Equals(adresse.Host, basis.Host, StringComparison.OrdinalIgnoreCase))
+            return null;
         var login = SynLoginRx.Match(url);
         var groups = SynGroupsRx.Match(url);
         if (!login.Success || !groups.Success) return null;
         var roles = SynRolesRx.Match(url);
-        return new WebGisSynKontext(
+        var kontext = new WebGisSynKontext(
             Dekodiere(login.Groups[1].Value),
             roles.Success ? Dekodiere(roles.Groups[1].Value) : "WebOffice+-+Editing",
             Dekodiere(groups.Groups[1].Value));
+        return kontext.IstPlausibel ? kontext : null;
     }
 
     /// <summary>
