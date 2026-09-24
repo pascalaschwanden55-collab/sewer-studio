@@ -36,7 +36,8 @@ public sealed class WebGisImportEingabe
 /// WebGIS vor GeoShop). Handwerte und Werte der Kanalfirmen nie.
 /// </summary>
 /// <paramref name="Handwert"/>: von Hand gesetzt, auch bewusst leer — beim Holen nie gefuellt oder ersetzt
-/// (Entscheid Pascal 23.09.2026, gleich wie beim GeoShop-Abgleich).
+/// (Entscheid Pascal 23.09.2026, gleich wie beim GeoShop-Abgleich). Ausnahme Eigentuemer und Betreiber: die fuehrt
+/// das WebGIS, auch ueber eine Handeingabe (Entscheid Pascal 24.09.2026 abends).
 public sealed record WebGisImportFeld(string Wert, bool Ersetzbar, bool Handwert = false);
 
 /// <summary>Eine geplante Uebernahme WebGIS -> SewerStudio.</summary>
@@ -85,7 +86,8 @@ public sealed class WebGisImportPlan
 /// Regeln (Entscheid Pascal 21.09., zuletzt 23.09.2026 abends):
 /// - Daten der Kanalfirmen sind der Ist-Zustand und werden nie ueberschrieben; das WebGIS ergaenzt.
 /// - Haltungslaenge: rein informativ, nur in leere Felder. Eigentuemer und Betreiber fuehrt das WebGIS (24.09.2026):
-///   sein Wert ersetzt alles ausser einer Handeingabe. Keines der drei geht je ins WebGIS zurueck.
+///   sein Wert ersetzt jeden vorhandenen, seit 24.09.2026 abends auch eine Handeingabe. Keines der drei geht je
+///   ins WebGIS zurueck.
 /// - Baujahr nur, wenn in SewerStudio leer.
 /// - Zustand und Bemerkung werden NICHT importiert: dort ist SewerStudio die Quelle. Den Sanierungsbedarf
 ///   fuellt das Holen nur in ein LEERES Feld (Entscheid Pascal 24.09.2026).
@@ -179,7 +181,7 @@ public static class WebGisImportPlanBuilder
         if (e.Objektart == WebGisObjektart.Haltung)
             FuelleInformativ(e, pos, FeldLaenge, "Haltungslänge", LaengeNormiert(stand.Feld(WebGisFeldkarte.HaltungLaengeGeomRef)));
 
-        FuehrtWebGis(e, pos, FieldKeys.Owner, "Eigentümer",
+        FuehrtWebGis(e, pos, FieldKeys.Owner,
             Organisation(stand, WebGisFeldkarte.EigentuemerRef(e.Objektart), "Eigentümer", pos)?.Text);
 
         if (Organisation(stand, WebGisFeldkarte.BetreiberRef(e.Objektart), "Betreiber", pos) is { } betreiber)
@@ -189,7 +191,7 @@ public static class WebGisImportPlanBuilder
             if (eintrag is null)
                 pos.Hinweise.Add($"Betreiber «{betreiber.Text}» steht nicht in der Liste der Objektakte — nicht übernommen.");
             else
-                FuehrtWebGis(e, pos, feldId, "Betreiber", eintrag.Label);
+                FuehrtWebGis(e, pos, feldId, eintrag.Label);
         }
     }
 
@@ -224,23 +226,21 @@ public static class WebGisImportPlanBuilder
     /// <summary>
     /// Eigentuemer und Betreiber (Entscheid Pascal 24.09.2026, ersetzt «nur in leere Felder» vom 23.09.): «muessen
     /// perfekt vom WebGIS uebernommen werden, diese Werte aendern sich sehr selten». Der WebGIS-Wert ersetzt jeden
-    /// vorhandenen — GeoShop wie Kanalfirma —, zeichengenau. Nur eine Handeingabe (auch bewusst leer) bleibt, mit Hinweis.
+    /// vorhandenen zeichengenau — GeoShop, Kanalfirma und seit 24.09.2026 abends auch eine Handeingabe (auch bewusst
+    /// leer; Entscheid Pascal «duerfen vom WebGIS ueberschrieben werden»).
     /// </summary>
-    private static void FuehrtWebGis(WebGisImportEingabe e, WebGisImportPosition pos, string feld, string anzeige, string? neu)
+    private static void FuehrtWebGis(WebGisImportEingabe e, WebGisImportPosition pos, string feld, string? neu)
     {
         if (string.IsNullOrWhiteSpace(neu)) return;
         neu = neu.Trim();
         e.Felder.TryGetValue(feld, out var vorhanden);
         var alt = (vorhanden?.Wert ?? string.Empty).Trim();
         if (string.Equals(alt, neu, StringComparison.Ordinal)) return;
-        if (vorhanden?.Handwert == true)
+        pos.Aenderungen.Add(new WebGisImportAenderung
         {
-            pos.Hinweise.Add(alt.Length == 0
-                ? $"{anzeige}: in SewerStudio bewusst leer (Handeingabe) — WebGIS-Wert «{neu}» nicht übernommen."
-                : $"{anzeige}: in SewerStudio von Hand «{alt}», im WebGIS «{neu}» — nicht übernommen (Handeingabe).");
-            return;
-        }
-        pos.Aenderungen.Add(new WebGisImportAenderung { Feld = feld, Alt = alt.Length > 0 ? alt : null, Neu = neu, Grund = GrundOrganisation });
+            Feld = feld, Alt = alt.Length > 0 ? alt : null, Neu = neu,
+            Grund = vorhanden?.Handwert == true ? GrundOrganisation + " Ersetzt die Handeingabe." : GrundOrganisation,
+        });
     }
 
     private static void FuelleInformativ(WebGisImportEingabe e, WebGisImportPosition pos, string feld, string anzeige, string? neu)

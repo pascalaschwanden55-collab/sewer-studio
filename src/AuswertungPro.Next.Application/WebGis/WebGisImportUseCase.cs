@@ -318,8 +318,12 @@ public sealed class WebGisImportUseCase
                         geaendert = true;
                     else if (DarfErsetzen(h.GetFieldValue(a.Feld), h.FieldMeta.GetValueOrDefault(a.Feld), a))
                     {
+                        var meta = h.FieldMeta.GetValueOrDefault(a.Feld);
+                        var warHand = meta?.UserEdited == true;
+                        GibHandmarkeFrei(meta, a.Feld);
                         h.SetFieldValue(a.Feld, a.Neu, FieldSource.Kataster, userEdited: false);
-                        geaendert = true;
+                        if (string.Equals(h.GetFieldValue(a.Feld), a.Neu, StringComparison.Ordinal)) geaendert = true;
+                        else if (warHand && meta is not null) meta.UserEdited = true; // nicht geschrieben: Handwert bleibt
                     }
                 }
                 else if (pos.Objektart == WebGisObjektart.Schacht && schaechte.TryGetValue(pos.RecordId, out var s))
@@ -335,9 +339,15 @@ public sealed class WebGisImportUseCase
                         continue;
                     if (s.FuelleLeeresFeld(name, a.Neu, FieldSource.Kataster))
                         geaendert = true;
-                    else if (DarfErsetzen(s.GetFieldValue(name), s.FieldMeta.GetValueOrDefault(name), a)
-                             && s.SetFieldValue(name, a.Neu, FieldSource.Kataster, userEdited: false) == FeldSchreibErgebnis.Geschrieben)
-                        geaendert = true;
+                    else if (DarfErsetzen(s.GetFieldValue(name), s.FieldMeta.GetValueOrDefault(name), a))
+                    {
+                        var meta = s.FieldMeta.GetValueOrDefault(name);
+                        var warHand = meta?.UserEdited == true;
+                        GibHandmarkeFrei(meta, a.Feld);
+                        if (s.SetFieldValue(name, a.Neu, FieldSource.Kataster, userEdited: false) == FeldSchreibErgebnis.Geschrieben)
+                            geaendert = true;
+                        else if (warHand && meta is not null) meta.UserEdited = true; // nicht geschrieben: Handwert bleibt
+                    }
                 }
             }
             pos.Uebernommen = geaendert;
@@ -379,7 +389,8 @@ public sealed class WebGisImportUseCase
 
         var akte = projekt.Objektakten.FirstOrDefault(x => x.Id == pos.RecordId && x.Art == art);
         var bisher = akte?.Werte.GetValueOrDefault(a.Feld);
-        if (bisher is { VonHand: true }) return false;
+        // Den Betreiber fuehrt das WebGIS, auch ueber eine Handeingabe (Entscheid Pascal 24.09.2026 abends).
+        if (bisher is { VonHand: true } && a.Feld != WebGisImportPlanBuilder.BetreiberFeld(pos.Objektart)) return false;
         if (!string.Equals((bisher?.Text ?? string.Empty).Trim(), (a.Alt ?? string.Empty).Trim(), StringComparison.Ordinal)) return false;
         if (akte is null)
         {
@@ -409,17 +420,30 @@ public sealed class WebGisImportUseCase
     /// <summary>
     /// Vor jedem Feld nochmals (Pruefung 23.09.2026): keine Handeingabe — auch nicht bewusst leer
     /// (Entscheid Pascal) — und derselbe Wert wie in der Vorschau. Sonst bleibt das Feld, wie es ist.
+    /// Ausnahme Eigentuemer: den fuehrt das WebGIS, dort zaehlt nur «seit der Vorschau gleich».
     /// </summary>
     private static bool SeitVorschauUnveraendert(string aktuell, FieldMetadata? meta, WebGisImportAenderung a)
-        => meta?.UserEdited != true
+        => (meta?.UserEdited != true || WebGisFuehrt(a.Feld))
            && string.Equals(aktuell.Trim(), (a.Alt ?? string.Empty).Trim(), StringComparison.Ordinal);
 
     /// <summary>
     /// Konfliktschutz: seit der Vorschau unveraendert UND weiterhin ersetzbar. Den Eigentuemer fuehrt das WebGIS
-    /// (Entscheid Pascal 24.09.2026): Dort genuegt «keine Handeingabe» — auch ein Wert der Kanalfirma weicht.
+    /// (Entscheid Pascal 24.09.2026): Er weicht immer — Wert der Kanalfirma und seit dem Abend auch eine Handeingabe.
     /// </summary>
     private static bool DarfErsetzen(string aktuell, FieldMetadata? meta, WebGisImportAenderung a)
         => a.Alt is not null
            && string.Equals(aktuell.Trim(), a.Alt.Trim(), StringComparison.Ordinal)
-           && (IstErsetzbar(meta) || a.Feld == FieldKeys.Owner && meta?.UserEdited != true);
+           && (IstErsetzbar(meta) || WebGisFuehrt(a.Feld));
+
+    /// <summary>
+    /// Eigentuemer (und in der Akte der Betreiber) «duerfen vom WebGIS ueberschrieben werden» (Entscheid Pascal
+    /// 24.09.2026 abends) — auch eine Handeingabe. Die Handmarke weicht dabei: Der Wert ist danach ein Katasterwert.
+    /// </summary>
+    private static bool WebGisFuehrt(string feld) => feld == FieldKeys.Owner;
+
+    /// <summary>Nimmt die Handmarke weg, damit der Datensatz den WebGIS-Wert annimmt (nur <see cref="WebGisFuehrt"/>).</summary>
+    private static void GibHandmarkeFrei(FieldMetadata? meta, string feld)
+    {
+        if (meta is { UserEdited: true } && WebGisFuehrt(feld)) meta.UserEdited = false;
+    }
 }

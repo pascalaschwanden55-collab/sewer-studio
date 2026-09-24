@@ -248,16 +248,32 @@ public sealed class WebGisImportPlanBuilderTests
         Assert.Null(Aenderung(pos, FieldKeysOwner));
     }
 
+    // Entscheid Pascal 24.09.2026 abends: «Eigentuemer und Betreiber duerfen vom WebGIS ueberschrieben werden» —
+    // auch eine Handeingabe weicht.
     [Fact]
-    public void Eigentuemer_von_hand_bleibt_und_der_webgis_wert_wird_genannt()
+    public void Eigentuemer_von_hand_wird_durch_den_webgis_wert_ersetzt()
     {
         var e = Haltung();
         e.Felder[FieldKeysOwner] = new WebGisImportFeld("Privat", Ersetzbar: false, Handwert: true);
 
         var pos = WebGisImportPlanBuilder.Baue(e, StandMitOrganisation(WebGisFeldkarte.EigentuemerRef(WebGisObjektart.Haltung)));
 
-        Assert.Null(Aenderung(pos, FieldKeysOwner));
-        Assert.Contains(pos.Hinweise, h => h.Contains("Eigentümer") && h.Contains("Privat") && h.Contains("Kanton Uri (Kanton)"));
+        var a = Aenderung(pos, FieldKeysOwner);
+        Assert.Equal("Kanton Uri (Kanton)", a?.Neu);
+        Assert.Equal("Privat", a?.Alt);
+        Assert.DoesNotContain(pos.Hinweise, h => h.Contains("Eigentümer"));
+    }
+
+    [Fact]
+    public void Betreiber_von_hand_wird_durch_den_webgis_wert_ersetzt()
+    {
+        var feld = WebGisImportPlanBuilder.BetreiberFeld(WebGisObjektart.Schacht);
+        var e = new WebGisImportEingabe { Objektart = WebGisObjektart.Schacht, Bezeichnung = "H1", GespeicherteGlobalId = "G1" };
+        e.Felder[feld] = new WebGisImportFeld("Privat", Ersetzbar: false, Handwert: true);
+
+        var pos = WebGisImportPlanBuilder.Baue(e, StandMitOrganisation(WebGisFeldkarte.BetreiberRef(WebGisObjektart.Schacht)));
+
+        Assert.Equal("Kanton Uri", Aenderung(pos, feld)?.Neu);
     }
 
     [Fact]
@@ -297,14 +313,14 @@ public sealed class WebGisImportPlanBuilderTests
     }
 
     [Fact]
-    public void Bewusst_leerer_eigentuemer_bleibt_leer()
+    public void Bewusst_leerer_eigentuemer_wird_aus_dem_webgis_gefuellt()
     {
         var e = Haltung();
         e.Felder[FieldKeysOwner] = new WebGisImportFeld("", Ersetzbar: false, Handwert: true);
 
         var pos = WebGisImportPlanBuilder.Baue(e, StandMitOrganisation(WebGisFeldkarte.EigentuemerRef(WebGisObjektart.Haltung)));
 
-        Assert.Null(Aenderung(pos, FieldKeysOwner));
+        Assert.Equal("Kanton Uri (Kanton)", Aenderung(pos, FieldKeysOwner)?.Neu);
     }
 
     private const string FieldKeysOwner = AuswertungPro.Next.Domain.Models.FieldKeys.Owner;

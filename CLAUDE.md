@@ -166,8 +166,12 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     **ENTSCHEID PASCAL 24.09.2026 fuer EIGENTUEMER/BETREIBER** («muss perfekt von WebGIS übernommen werden, diese
     Werte ändern sich sehr selten»): Das WebGIS FUEHRT beide. Der WebGIS-Wert ersetzt beim Holen jeden vorhandenen
     Wert zeichengenau — GeoShop wie Kanalfirma (`WebGisImportPlanBuilder.FuehrtWebGis`; bei der Uebernahme
-    `DarfErsetzen`: fuer `Eigentuemer` genuegt «keine Handeingabe»). Nur eine Handeingabe (auch bewusst leer) bleibt,
-    der Hinweis nennt beide Werte. Die Haltungslaenge bleibt rein informativ. Ins WebGIS geschrieben werden alle
+    `DarfErsetzen`). SEIT 24.09.2026 ABENDS (Entscheid Pascal «Eigentuemer und Betreiber duerfen vom WebGIS
+    ueberschrieben werden») weicht auch eine Handeingabe, bewusst leer eingeschlossen: `WebGisImportUseCase.WebGisFuehrt`
+    laesst Eigentuemer ueber die Handmarke, `GibHandmarkeFrei` nimmt sie vor dem Schreiben weg (scheitert das Schreiben,
+    kommt sie zurueck), `SchreibeAkteGruppe` ersetzt den Betreiber auch mit `VonHand`. Danach ist der Wert ein Katasterwert
+    ohne Handmarke. Der Konfliktschutz bleibt: Wurde der Wert seit der Vorschau geaendert, bleibt er. Die Haltungslaenge
+    bleibt rein informativ. Ins WebGIS geschrieben werden alle
     drei weiterhin nie. ORGANISATIONSTYP «SO WIE ES IM WEBGIS IST» (Entscheid Pascal 24.09.2026): `WebGisOrganisationen`
     (Domain) liest die WebGIS-Organisationsliste aus dem Objektaktenkatalog (`haltung.owner`, Labels «Name (Typ)»;
     live liefert die Haltungsmaske genau so «AWU_von_oeffentlich (Abwasserverband)», die Schachtmaske nur

@@ -159,14 +159,73 @@ public sealed class WebGisImportUebernahmeTests
         Assert.False(h.FieldMeta[FieldKeys.Owner].UserEdited);
     }
 
+    // Entscheid Pascal 24.09.2026 abends: «Eigentuemer und Betreiber duerfen vom WebGIS ueberschrieben werden».
+    // Der WebGIS-Wert ersetzt auch eine Handeingabe und ist danach ein Katasterwert ohne Handmarke.
     [Fact]
-    public void Eigentuemer_von_hand_wird_bei_der_uebernahme_nicht_ersetzt()
+    public void Eigentuemer_von_hand_wird_bei_der_uebernahme_ersetzt()
     {
         var (p, h) = ProjektMit(FieldKeys.Owner, "Privat", FieldSource.Manual, true);
 
-        Assert.Equal(0, WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.Owner, "Privat", "AWU_von_privat"), p));
+        Assert.Equal(1, WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.Owner, "Privat", "AWU_von_privat (Abwasserverband)"), p));
+
+        Assert.Equal("AWU_von_privat (Abwasserverband)", h.GetFieldValue(FieldKeys.Owner));
+        Assert.Equal(FieldSource.Kataster, h.FieldMeta[FieldKeys.Owner].Source);
+        Assert.False(h.FieldMeta[FieldKeys.Owner].UserEdited);
+    }
+
+    [Fact]
+    public void Bewusst_leerer_eigentuemer_wird_bei_der_uebernahme_gefuellt()
+    {
+        var (p, h) = ProjektMit(FieldKeys.Owner, "", FieldSource.Manual, true);
+
+        Assert.Equal(1, WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.Owner, null, "AWU_von_privat (Abwasserverband)"), p));
+
+        Assert.Equal("AWU_von_privat (Abwasserverband)", h.GetFieldValue(FieldKeys.Owner));
+        Assert.False(h.FieldMeta[FieldKeys.Owner].UserEdited);
+    }
+
+    [Fact]
+    public void Eigentuemer_seit_der_vorschau_geaendert_bleibt()
+    {
+        // Konfliktschutz bleibt: Wer nach der Vorschau einen anderen Eigentuemer eintraegt, wird nicht still ueberschrieben.
+        var (p, h) = ProjektMit(FieldKeys.Owner, "Privat", FieldSource.Manual, true);
+
+        Assert.Equal(0, WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.Owner, "Kanton Uri", "AWU_von_privat (Abwasserverband)"), p));
 
         Assert.Equal("Privat", h.GetFieldValue(FieldKeys.Owner));
+    }
+
+    [Fact]
+    public void Eigentuemer_von_hand_am_schacht_wird_ersetzt()
+    {
+        var s = new SchachtRecord();
+        s.SetFieldValue("Schachtnummer", "S1", FieldSource.Manual, false);
+        s.SetFieldValue("Eigentümer", "Privat", FieldSource.Manual, true);
+        var p = new Project();
+        p.SchaechteData.Add(s);
+        var pos = new WebGisImportPosition { Objektart = WebGisObjektart.Schacht, Bezeichnung = "S1", RecordId = s.Id, GlobalId = "GS1" };
+        pos.Aenderungen.Add(new WebGisImportAenderung { Feld = FieldKeys.Owner, Alt = "Privat", Neu = "AWU_von_privat", Grund = "Test" });
+        var plan = new WebGisImportPlan();
+        plan.Positionen.Add(pos);
+
+        Assert.Equal(1, WebGisImportUseCase.Uebernimm(plan, p));
+
+        Assert.Equal("AWU_von_privat", s.GetFieldValue("Eigentümer"));
+        Assert.False(s.IsUserEdited("Eigentümer"));
+    }
+
+    [Fact]
+    public void Betreiber_von_hand_in_der_akte_wird_ersetzt()
+    {
+        var (p, h) = ProjektMit(FieldKeys.PipeMaterial, null, FieldSource.Manual, false);
+        p.Objektakten.Add(new ObjektAkte { Id = h.Id, Art = "haltung" });
+        p.Objektakten[0].Werte["haltung.operator"] = new ObjektFeldWert { Text = "Privat (Privat)", VonHand = true };
+
+        Assert.Equal(1, WebGisImportUseCase.Uebernimm(Plan(h, "haltung.operator", "Privat (Privat)", "AWU_von_privat (Abwasserverband)"), p));
+
+        var wert = p.Objektakten[0].Werte["haltung.operator"];
+        Assert.Equal("AWU_von_privat (Abwasserverband)", wert.Text);
+        Assert.False(wert.VonHand);
     }
 
     [Fact]
