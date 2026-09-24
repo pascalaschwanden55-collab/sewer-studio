@@ -1,10 +1,10 @@
 using System;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.Application.WebGis;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.WebGis;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.Views.Windows;
 
@@ -60,9 +60,9 @@ public sealed class WebGisHolenAblauf
             {
                 if (!_angemeldet() || !shell.IsProjectReady) return null;
                 var projekt = shell.Project;
-                var ordner = Ablageordner(projektPfad()); // vor dem Lesen binden (Projektwechsel)
+                var ordner = WebGisBerichtAblage.Ordner(projektPfad()); // vor dem Lesen binden (Projektwechsel)
                 var plan = await _useCase().BauePlanAsync(projekt);
-                SchreibeBericht(ordner, WebGisImportBericht.Details(plan));
+                WebGisBerichtAblage.SchreibeBericht(ordner, "Holen-Vorschau", WebGisImportBericht.Details(plan));
                 gelesenFuer = projekt;
                 return plan;
             },
@@ -73,17 +73,20 @@ public sealed class WebGisHolenAblauf
                 var projekt = gelesenFuer;
                 // Vorher im WebGIS nachlesen: Was sich seit der Vorschau geaendert hat, wird nicht uebernommen
                 // (Entscheid Pascal 23.09.2026 abends).
-                var ergebnis = await _useCase().UebernimmGeprueftAsync(plan, projekt);
+                var gestoppt = await _useCase().PruefeVorUebernahmeAsync(plan, projekt);
+                // Geschrieben wird erst jetzt — auf dem Oberflaechen-Thread und nur ins Projekt, das noch offen ist
+                // (Pruefung 22.09.2026, C3; vorher schrieb das Nachlesen auf einem Netzthread und pruefte erst danach).
                 if (!ReferenceEquals(projekt, shell.Project))
                     return "Projekt gewechselt — nichts übernommen.";
-                if (ergebnis.Uebernommen > 0)
+                var uebernommen = WebGisImportUseCase.Uebernimm(plan, projekt);
+                if (uebernommen > 0)
                 {
                     shell.MarkProjectDirty();
                     _geaendert?.Invoke();
                 }
-                var text = $"{ergebnis.Uebernommen} Änderungen übernommen.";
-                if (ergebnis.Gestoppt > 0)
-                    text += $" {ergebnis.Gestoppt} im WebGIS seit der Vorschau geändert — nicht übernommen, bitte in der neuen Prüfung ansehen.";
+                var text = $"{uebernommen} Änderungen übernommen.";
+                if (gestoppt > 0)
+                    text += $" {gestoppt} im WebGIS seit der Vorschau geändert — nicht übernommen, bitte in der neuen Prüfung ansehen.";
                 return text + " Bitte das Projekt speichern.";
             },
             oeffnen: (art, id) =>
@@ -101,38 +104,5 @@ public sealed class WebGisHolenAblauf
         _fenster = fenster;
         fenster.Show();
         await fenster.PruefeAsync();
-    }
-
-    /// <summary>__WebGIS_Export im Projektordner (wie beim Senden); null ohne Projektpfad.</summary>
-    public static string? Ablageordner(string? projektPfad)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(projektPfad)) return null;
-            var wurzel = Directory.Exists(projektPfad) ? projektPfad : Path.GetDirectoryName(projektPfad);
-            if (string.IsNullOrWhiteSpace(wurzel)) return null;
-            if (string.Equals(Path.GetFileName(wurzel), "Projektdateien", StringComparison.OrdinalIgnoreCase))
-                wurzel = Path.GetDirectoryName(wurzel) ?? wurzel;
-            var ordner = Path.Combine(wurzel, "__WebGIS_Export");
-            Directory.CreateDirectory(ordner);
-            return ordner;
-        }
-        catch (Exception)
-        {
-            return null; // Bericht ist Beilage; das Holen haengt nicht daran.
-        }
-    }
-
-    private static void SchreibeBericht(string? ordner, string text)
-    {
-        try
-        {
-            if (ordner is null) return;
-            File.WriteAllText(Path.Combine(ordner, $"WebGIS_Holen-Vorschau_{DateTime.Now:yyyyMMdd_HHmmss}.txt"), text);
-        }
-        catch (Exception)
-        {
-            // Bericht ist Beilage; das Holen haengt nicht daran.
-        }
     }
 }

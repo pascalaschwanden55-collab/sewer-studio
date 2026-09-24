@@ -28,6 +28,10 @@ public sealed class WebGisImportUseCase
         var plan = new WebGisImportPlan();
         var gelesen = new List<(WebGisImportEingabe Eingabe, WebGisImportPosition Position, WebGisLesestand? Stand)>();
 
+        // Pruefung 22.09.2026, C3: Erst das ganze Abbild bauen, dann aufs Netz warten. Nach dem ersten Warten laeuft
+        // der Plan auf einem anderen Thread weiter, waehrend im nicht-modalen Fenster Haltungen/Schaechte entstehen
+        // oder verschwinden — die lebenden Listen und Akten darf er dann nicht mehr anfassen.
+        var eingaben = new List<WebGisImportEingabe>();
         foreach (var h in projekt.Data)
         {
             var e = new WebGisImportEingabe
@@ -53,9 +57,7 @@ public sealed class WebGisImportUseCase
                     e.Felder[karte.SewerStudioFeld] = new WebGisImportFeld(
                         h.GetFieldValue(karte.SewerStudioFeld), IstErsetzbar(h.FieldMeta.GetValueOrDefault(karte.SewerStudioFeld)),
                         h.FieldMeta.GetValueOrDefault(karte.SewerStudioFeld)?.UserEdited == true);
-            var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
-            plan.Positionen.Add(pos);
-            gelesen.Add((e, pos, stand));
+            eingaben.Add(e);
         }
         foreach (var s in projekt.SchaechteData)
         {
@@ -91,6 +93,13 @@ public sealed class WebGisImportUseCase
                     s.GetFieldValue(name), IstErsetzbar(s.FieldMeta.GetValueOrDefault(name)),
                     s.FieldMeta.GetValueOrDefault(name)?.UserEdited == true);
             }
+            eingaben.Add(e);
+        }
+
+        var sanierungsakten = WebGisAktenAbbild.Sanierungen(projekt.Objektakten);
+
+        foreach (var e in eingaben)
+        {
             var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
             plan.Positionen.Add(pos);
             gelesen.Add((e, pos, stand));
@@ -102,7 +111,7 @@ public sealed class WebGisImportUseCase
             p => p.Bezeichnung, (p, grund) => p.Sperren.Add(grund), "keines bekommt Werte oder die GlobalID.");
         foreach (var (e, pos, stand) in gelesen)
             if (stand is not null && pos.Sperren.Count == 0)
-                await PlaneSanierungenAsync(projekt, plan, e, stand, pos, ct).ConfigureAwait(false);
+                await PlaneSanierungenAsync(sanierungsakten, plan, e, stand, pos, ct).ConfigureAwait(false);
 
         plan.Hinweise.Add($"{plan.Positionen.Count} Objekte gelesen: {plan.Uebernehmbare} mit Uebernahme, {plan.Gesperrte} gesperrt.");
         if (plan.Positionen.Count > 1 && plan.Positionen.TrueForAll(p => p.Sperren.Exists(s => s.StartsWith("Im WebGIS nicht eindeutig gefunden", StringComparison.Ordinal))))
@@ -135,13 +144,13 @@ public sealed class WebGisImportUseCase
     /// Je Massnahme der WebGIS-Liste, die in SewerStudio noch keine Akte hat, die Massnahme einzeln
     /// lesen und die Akte planen. Schon vorhandene werden gar nicht erst gelesen.
     /// </summary>
-    private async Task PlaneSanierungenAsync(Project projekt, WebGisImportPlan plan, WebGisImportEingabe e,
+    private async Task PlaneSanierungenAsync(IReadOnlyList<ObjektAkte> sanierungsakten, WebGisImportPlan plan, WebGisImportEingabe e,
         WebGisLesestand stand, WebGisImportPosition pos, CancellationToken ct)
     {
         foreach (var zeile in stand.Sanierungen)
         {
             if (string.IsNullOrWhiteSpace(zeile.GlobalId)) continue;
-            if (WebGisSanierungImportRegel.SchonVorhanden(projekt.Objektakten, e.RecordId, zeile)) continue;
+            if (WebGisSanierungImportRegel.SchonVorhanden(sanierungsakten, e.RecordId, zeile)) continue;
             WebGisLesestand? massnahme;
             try
             {
@@ -171,6 +180,20 @@ public sealed class WebGisImportUseCase
     /// Pruefen laesst deshalb nichts halb uebernommen zurueck.
     /// </summary>
     public async Task<WebGisHolenErgebnis> UebernimmGeprueftAsync(WebGisImportPlan plan, Project projekt, CancellationToken ct = default)
+    {
+        // Pruefung 22.09.2026, C3: Das Nachlesen wartet aufs Netz; geschrieben wird danach wieder auf dem Thread des
+        // Aufrufers (der Oberflaeche). Mit ConfigureAwait(false) schriebe Uebernimm auf einem Netzthread in
+        // Datensaetze, die die Tabelle gerade zeigt und bearbeitet.
+        var gestoppt = await PruefeVorUebernahmeAsync(plan, projekt, ct).ConfigureAwait(true);
+        return new WebGisHolenErgebnis(Uebernimm(plan, projekt), gestoppt);
+    }
+
+    /// <summary>
+    /// Der Pruefteil von «Übernehmen», ohne zu schreiben: sperrt jede Position und Massnahme, die sich im WebGIS
+    /// seit der Vorschau geaendert hat oder deren GlobalID inzwischen ein anderer Datensatz traegt. Liefert die
+    /// Zahl der gestoppten. Danach schreibt der Aufrufer mit <see cref="Uebernimm"/> auf seinem eigenen Thread.
+    /// </summary>
+    public async Task<int> PruefeVorUebernahmeAsync(WebGisImportPlan plan, Project projekt, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(projekt);
@@ -226,7 +249,7 @@ public sealed class WebGisImportUseCase
             gestoppt++;
         }
 
-        return new WebGisHolenErgebnis(Uebernimm(plan, projekt), gestoppt);
+        return gestoppt;
     }
 
     /// <summary>Kurzbeschreibung der abweichenden Felder; null, wenn der Stand gleich ist.</summary>

@@ -144,9 +144,20 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     «13 geschrieben», es waren 5); bei Fehlschlaegen ein Warn-Toast, kein gruener.
   - Der rote Test `Felder_mit_eigener_regel…` war ein Testfehler (Stand schon auf Z3).
   - OFFEN: Breite/Hoehe der Haltung (`Lichte_Hoehe_mm` existiert nicht, `DN_mm` geht auf Breite;
-    Inventur v2 nennt d06f8d1f einmal Breite, einmal Hoehe — an einem Eiprofil klaeren), kein
-    `IShellOperationGuard`, Abmelden beendet keine Sitzung (Profil behaelt ADFS-Cookies),
-    Kontext ohne Host-Pruefung, zweiter Handwert auf dieselbe refId faellt still weg.
+    Inventur v2 nennt d06f8d1f einmal Breite, einmal Hoehe — an einem Eiprofil klaeren), Abmelden beendet keine
+    Sitzung (Profil behaelt ADFS-Cookies), Kontext ohne Host-Pruefung, zweiter Handwert auf dieselbe refId faellt
+    still weg.
+  - C3 ERLEDIGT (24.09.2026): **Beide Planer bauen ihr Abbild VOR dem ersten Netzaufruf** (Eingaben aller
+    Haltungen/Schaechte, `WebGisAktenAbbild.Sanierungen`); danach laufen sie auf einem Netzthread weiter, waehrend
+    im nicht-modalen Fenster Datensaetze entstehen oder verschwinden — vorher «Collection was modified». **Das Holen
+    schreibt nur auf dem Thread des Aufrufers**: `PruefeVorUebernahmeAsync` liest nach, `Uebernimm` schreibt danach
+    (`UebernimmGeprueftAsync` mit `ConfigureAwait(true)`); `WebGisHolenAblauf` prueft «Projekt gewechselt» direkt
+    davor, nicht mehr danach. **Der Schreiblauf ins WebGIS haelt die Projektsperre der Export-Seite**
+    (`TryBeginProjectOperation`: kein Projektwechsel, kein Schliessen), Lesen/Pruefen bewusst nicht (dort wird im
+    offenen Fenster korrigiert). **Berichte und Log gehen durch `WebGisBerichtAblage`** (Infrastructure, eine Stelle
+    fuer Senden und Holen, `ProjectWritePathGuard`); ohne sicheren Berichtsordner schreibt das Senden nichts, weil
+    das Log der Beleg ist. Tests `WebGisImportUseCaseTests` (Eine_neue_haltung_…, Uebernahme_schreibt_auf_dem_thread_…
+    mit Einzel-Thread-Kontext), `WebGisExportUseCaseTests.Eine_neue_haltung_…`, `WebGisBerichtAblageTests` (Junction).
 - Stufe 5 (23.09.2026): MATERIALGRUPPE BEIM SENDEN und HOLEN WEBGIS -> SEWERSTUDIO.
   - Materialgruppe: Nennt der Materialtext keine Gruppe («Polypropylen»), laedt
     `ErgaenzeGruppenKatalogeAsync` die Detail-Listen ALLER Gruppen; `WebGisExportPlanBuilder`

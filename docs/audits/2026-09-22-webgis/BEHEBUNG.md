@@ -42,9 +42,11 @@ UI-Wächter (Registrierung, Design, Architektur) grün.
   wird nie geschrieben; `DN_mm` (fachlich die Höhe) geht in «Breite [mm]». Inventur v2 nennt
   `d06f8d1f` in Abschnitt 1 «Breite», in 2b «Höhe»; an einem runden Profil (300/300) kann die Probe
   das nicht unterscheiden. **An einem Eiprofil live klären, bevor Haltungsmasse geschrieben werden.**
-- **C3 Rest.** Kein `IShellOperationGuard` (Projektwechsel/Schliessen während des Laufs erlaubt);
-  kein `ProjectWritePathGuard` am Log-Ordner; `BauePlanAsync` iteriert die lebende Projektliste
-  über Netz-Awaits hinweg (Neu/Löschen im offenen Fenster → «collection modified»).
+- ~~**C3 Rest.**~~ **Erledigt am 24.09.2026:** Beide `BauePlanAsync` bauen ihr Abbild vor dem ersten
+  Netzaufruf; das Holen schreibt nur noch auf dem Thread des Aufrufers und prüft «Projekt gewechselt»
+  direkt davor; der Schreiblauf ins WebGIS hält die Projektsperre der Export-Seite; Berichte und Log
+  gehen durch `WebGisBerichtAblage` mit `ProjectWritePathGuard`, und ohne sicheren Berichtsordner wird
+  nichts geschrieben. Tests siehe CLAUDE.md (WebGIS, «C3 ERLEDIGT»).
 - **D1 Abmelden.** Beendet keine WebOffice-Sitzung; das persistente Browserprofil unter
   `%LOCALAPPDATA%\SewerStudio\WebGisBrowser` behält die ADFS-Cookies, der `CookieContainer` wird
   nicht geleert. Entscheid nötig: bewusst so (dokumentieren) oder serverseitig ausloggen und Profil

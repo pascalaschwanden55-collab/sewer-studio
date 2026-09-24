@@ -44,6 +44,35 @@ public sealed partial class WebGisExportUseCaseTests
         Assert.False(position.Schreibbar);
     }
 
+    // Pruefung 22.09.2026, C3: Das Pruef-/Schreibfenster ist nicht modal. Eine neue Haltung oder ein neuer Schacht
+    // waehrend des Lesens darf den Lauf nicht mit «Collection was modified» abbrechen — gelesen wird ein Abbild.
+    [Fact]
+    public async Task Eine_neue_haltung_waehrend_der_pruefung_bricht_den_lauf_nicht_ab()
+    {
+        var p = ProjektMitHaltung("80480-80478", null);
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "80461", FieldSource.Manual, false);
+        p.SchaechteData.Add(schacht);
+        var eingefuegt = false;
+        var client = new FakeClient
+        {
+            Lese = (_, _) =>
+            {
+                if (!eingefuegt)
+                {
+                    eingefuegt = true;
+                    p.Data.Add(new HaltungRecord());
+                    p.SchaechteData.Add(new SchachtRecord());
+                }
+                return null;
+            },
+        };
+
+        var plan = await new WebGisExportUseCase(client).BauePlanAsync(p);
+
+        Assert.Equal(2, plan.Positionen.Count);
+    }
+
     [Fact]
     public async Task Katasterwerte_werden_nicht_ins_webgis_zurueckgeschrieben()
     {

@@ -44,9 +44,13 @@ public sealed class WebGisExportUseCase
         var kataloge = new Dictionary<WebGisObjektart, WebGisSanierungKatalog?>();
         var gelesen = new List<(WebGisObjektEingabe Eingabe, WebGisExportPosition Position, WebGisLesestand? Stand)>();
 
+        // Pruefung 22.09.2026, C3: Erst das ganze Abbild bauen, dann aufs Netz warten. Nach dem ersten Warten laeuft
+        // der Plan auf einem anderen Thread weiter, waehrend im nicht-modalen Fenster Haltungen/Schaechte entstehen
+        // oder verschwinden — die lebenden Listen darf er dann nicht mehr anfassen.
+        var eingaben = new List<WebGisObjektEingabe>();
         foreach (var h in projekt.Data)
         {
-            var e = new WebGisObjektEingabe
+            eingaben.Add(new WebGisObjektEingabe
             {
                 Objektart = WebGisObjektart.Haltung,
                 Bezeichnung = h.GetFieldValue(FieldKeys.HoldingName),
@@ -58,16 +62,13 @@ public sealed class WebGisExportUseCase
                 Saniert = WebGisSaniertKriterium.IstSaniert(projekt.Objektakten, h.Id),
                 Handwerte = Handwerte(h.FieldMeta, h.GetFieldValue),
                 Kanalfirmenwerte = Kanalfirmenwerte(h.FieldMeta, h.GetFieldValue),
-            };
-            var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
-            plan.Positionen.Add(pos);
-            gelesen.Add((e, pos, stand));
+            });
         }
 
         foreach (var s in projekt.SchaechteData)
         {
             var nameFeld = SchachtFeldnamen.Feld(s, "Schachtnummer");
-            var e = new WebGisObjektEingabe
+            eingaben.Add(new WebGisObjektEingabe
             {
                 Objektart = WebGisObjektart.Schacht,
                 Bezeichnung = s.GetFieldValue(nameFeld),
@@ -82,7 +83,12 @@ public sealed class WebGisExportUseCase
                 Saniert = WebGisSaniertKriterium.IstSaniert(projekt.Objektakten, s.Id),
                 Handwerte = Handwerte(s.FieldMeta, s.GetFieldValue),
                 Kanalfirmenwerte = Kanalfirmenwerte(s.FieldMeta, s.GetFieldValue),
-            };
+            });
+        }
+        var sanierungsakten = WebGisAktenAbbild.Sanierungen(projekt.Objektakten);
+
+        foreach (var e in eingaben)
+        {
             var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
             plan.Positionen.Add(pos);
             gelesen.Add((e, pos, stand));
@@ -93,7 +99,7 @@ public sealed class WebGisExportUseCase
         SperreDoppelteZuordnungen(plan.Positionen);
         foreach (var (e, pos, stand) in gelesen)
             if (pos.Sperren.Count == 0)
-                await BaueSanierungenAsync(plan, projekt, e, stand, kataloge, ct).ConfigureAwait(false);
+                await BaueSanierungenAsync(plan, sanierungsakten, e, stand, kataloge, ct).ConfigureAwait(false);
 
         plan.Hinweise.Add($"{plan.Positionen.Count} Objekte geprueft: {plan.Schreibbare} mit Aenderung, {plan.Gesperrte} gesperrt.");
         if (plan.Positionen.Count > 1 && plan.Positionen.TrueForAll(p => p.Sperren.Exists(s => s.StartsWith("Im WebGIS nicht eindeutig gefunden", StringComparison.Ordinal))))
@@ -152,10 +158,10 @@ public sealed class WebGisExportUseCase
     /// Der Katalog wird je Objektart einmal gelesen (am ersten gefundenen Objekt).
     /// </summary>
     private async Task BaueSanierungenAsync(
-        WebGisExportPlan plan, Project projekt, WebGisObjektEingabe e, WebGisLesestand? stand,
+        WebGisExportPlan plan, IReadOnlyList<ObjektAkte> sanierungsakten, WebGisObjektEingabe e, WebGisLesestand? stand,
         Dictionary<WebGisObjektart, WebGisSanierungKatalog?> kataloge, CancellationToken ct)
     {
-        var akten = WebGisSaniertKriterium.AusgefuehrteAkten(projekt.Objektakten, e.RecordId);
+        var akten = WebGisSaniertKriterium.AusgefuehrteAkten(sanierungsakten, e.RecordId);
         if (akten.Count == 0) return;
 
         WebGisSanierungKatalog? katalog = null;

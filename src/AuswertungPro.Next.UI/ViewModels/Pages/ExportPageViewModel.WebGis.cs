@@ -227,6 +227,20 @@ public sealed partial class ExportPageViewModel
                 return neu;
             }
 
+            // Ohne Ablage kein Beleg: Ins WebGIS wird nur geschrieben, wenn das Log je Objekt entstehen kann.
+            if (ordner is null)
+            {
+                WebGisStatus = "Kein sicherer Berichtsordner beim Projekt (__WebGIS_Export) — nichts geschrieben. "
+                    + "Projekt speichern und erneut versuchen.";
+                return WebGisUebersicht.Aus(plan);
+            }
+            // Pruefung 22.09.2026, C3: Waehrend ins WebGIS geschrieben wird, sind Projektwechsel und Schliessen gesperrt.
+            if (!TryBeginProjectOperation(allowsInternalProjectSave: false))
+            {
+                WebGisStatus = "Es läuft bereits ein anderer Projektvorgang — nichts geschrieben.";
+                return WebGisUebersicht.Aus(plan);
+            }
+
             var benutzer = _webGisSp.WebGisZugang?.SynLogin ?? "";
             void Log(string zeile) { if (zeile.Length > 0) HaengeAnLog(ordner, zeile); }
 
@@ -245,6 +259,10 @@ public sealed partial class ExportPageViewModel
                 SchreibeBericht(ordner, WebGisExportBericht.Details(plan, mitErgebnis: true), "Ergebnis-abgebrochen");
                 _webGisBestaetigterPlan = null;
                 throw;
+            }
+            finally
+            {
+                EndProjectOperation();
             }
             Log(WebGisExportBericht.LogAbschluss(DateTime.Now, plan));
             _webGisBestaetigterPlan = null; // nach dem Schreiben braucht es einen neuen, gepruefeten Plan
@@ -275,46 +293,9 @@ public sealed partial class ExportPageViewModel
         finally { _webGisLaeuft = false; WebGisAktualisiere(); }
     }
 
-    /// <summary>Fortlaufendes Aenderungslog: &lt;Projektordner&gt;\__WebGIS_Export\WebGIS_Log.txt (wird angehaengt, nie ueberschrieben).</summary>
-    private static void HaengeAnLog(string? ordner, string text)
-    {
-        if (ordner is null) return;
-        try
-        {
-            File.AppendAllText(Path.Combine(ordner, "WebGIS_Log.txt"), text + Environment.NewLine);
-        }
-        catch (Exception)
-        {
-            // Das Log ist Beilage; ein Schreibfehler darf den laufenden Katasterlauf nicht abbrechen.
-        }
-    }
-
-    private string? WebGisAblageordner()
-    {
-        var projektPfad = _settings.LastProjectPath;
-        if (string.IsNullOrWhiteSpace(projektPfad)) return null;
-        var wurzel = Directory.Exists(projektPfad) ? projektPfad : Path.GetDirectoryName(projektPfad);
-        if (string.IsNullOrWhiteSpace(wurzel)) return null;
-        if (string.Equals(Path.GetFileName(wurzel), "Projektdateien", StringComparison.OrdinalIgnoreCase))
-            wurzel = Path.GetDirectoryName(wurzel) ?? wurzel;
-        var ordner = Path.Combine(wurzel, "__WebGIS_Export");
-        Directory.CreateDirectory(ordner);
-        return ordner;
-    }
-
-    /// <summary>Bericht neben das Projekt: &lt;Projektordner&gt;\__WebGIS_Export\WebGIS_&lt;Art&gt;_&lt;Zeit&gt;.txt</summary>
-    private static string? SchreibeBericht(string? ordner, string text, string art)
-    {
-        try
-        {
-            if (ordner is null) return null;
-            var datei = Path.Combine(ordner, $"WebGIS_{art}_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-            File.WriteAllText(datei, text);
-            return datei;
-        }
-        catch (Exception)
-        {
-            return null; // Bericht ist Beilage; die Uebertragung selbst haengt nicht daran.
-        }
-    }
+    // Berichte und Log in <Projektordner>\__WebGIS_Export, hinter der Schreibgrenze des Projekts (Pruefung 22.09.2026,
+    // C3). Eine Stelle fuer Senden und Holen: WebGisBerichtAblage.
+    private static void HaengeAnLog(string? ordner, string text) => WebGisBerichtAblage.HaengeAnLog(ordner, text);
+    private string? WebGisAblageordner() => WebGisBerichtAblage.Ordner(_settings.LastProjectPath);
+    private static string? SchreibeBericht(string? ordner, string text, string art) => WebGisBerichtAblage.SchreibeBericht(ordner, art, text);
 }

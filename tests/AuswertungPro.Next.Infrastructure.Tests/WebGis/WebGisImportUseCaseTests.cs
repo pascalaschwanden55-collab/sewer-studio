@@ -26,17 +26,32 @@ public sealed class WebGisImportUseCaseTests
         /// <summary>Steht fuer «Geändert am (UTC)» der Maske: aendert sich, wenn jemand im WebGIS bearbeitet.</summary>
         public string AenderungsDatum { get; set; } = "2026-09-20T08:00:00Z";
 
+        /// <summary>Laeuft einmal beim naechsten Lesen — so wie eine Eingabe, waehrend das Programm aufs Netz wartet.</summary>
+        public Action? BeimLesen { get; set; }
+
+        /// <summary>Liefert das Ergebnis erst nach einer Netzwartezeit auf einem anderen Thread, wie der echte Client.</summary>
+        public bool Verzoegert { get; set; }
+
+        private async Task<T> Liefere<T>(Func<T> wert)
+        {
+            var eingabe = BeimLesen;
+            BeimLesen = null;
+            eingabe?.Invoke();
+            if (Verzoegert) await Task.Delay(1).ConfigureAwait(false);
+            return wert();
+        }
+
         public Task<WebGisLesestand?> LeseAsync(WebGisObjektart art, string bezeichnung, CancellationToken ct = default)
         {
             NamensSuchen++;
-            return Task.FromResult<WebGisLesestand?>(Stand("G-" + bezeichnung, bezeichnung));
+            return Liefere<WebGisLesestand?>(() => Stand("G-" + bezeichnung, bezeichnung));
         }
 
         /// <summary>Wie der Server: hinter «G-&lt;Name&gt;» steht das Objekt mit diesem Namen.</summary>
         public Task<WebGisLesestand?> LeseUeberGlobalIdAsync(WebGisObjektart art, string globalId, CancellationToken ct = default)
         {
             IdLesungen++;
-            return Task.FromResult<WebGisLesestand?>(
+            return Liefere<WebGisLesestand?>(() =>
                 globalId.StartsWith("G-", StringComparison.Ordinal) ? Stand(globalId, globalId[2..]) : null);
         }
 
@@ -53,7 +68,7 @@ public sealed class WebGisImportUseCaseTests
         public Task<WebGisLesestand?> LeseMassnahmeAsync(string globalId, CancellationToken ct = default)
         {
             MassnahmenGelesen++;
-            return Task.FromResult(Massnahme(globalId));
+            return Liefere(() => Massnahme(globalId));
         }
 
         public Task<WebGisSchreibErgebnis> SchreibeAsync(WebGisObjektart art, string globalId, IReadOnlyDictionary<string, string> felder, CancellationToken ct = default, IReadOnlyDictionary<string, string?>? erwarteterStand = null)
@@ -87,6 +102,79 @@ public sealed class WebGisImportUseCaseTests
         var p = new Project();
         p.Data.Add(h);
         return (p, h);
+    }
+
+    // Pruefung 22.09.2026, C3: Das Holen-Fenster ist nicht modal. Wer waehrend des Lesens eine Haltung oder
+    // einen Schacht anlegt, darf den Lauf nicht mit «Collection was modified» abbrechen. Gelesen wird ein Abbild
+    // vom Start des Laufs.
+    [Fact]
+    public async Task Eine_neue_haltung_waehrend_des_lesens_bricht_das_holen_nicht_ab()
+    {
+        var (p, _) = Projekt();
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "80461", FieldSource.Manual, false);
+        p.SchaechteData.Add(schacht);
+        var client = new FakeClient
+        {
+            BeimLesen = () =>
+            {
+                p.Data.Add(new HaltungRecord());
+                p.SchaechteData.Add(new SchachtRecord());
+            },
+        };
+
+        var plan = await new WebGisImportUseCase(client).BauePlanAsync(p);
+
+        Assert.Equal(2, plan.Positionen.Count);
+    }
+
+    // Die Uebernahme schreibt in die Datensaetze, an denen die Oberflaeche gleichzeitig arbeitet. Nach dem
+    // Nachlesen im WebGIS muss sie deshalb auf den Thread des Aufrufers zurueck, nicht auf einem Netzthread schreiben.
+    [Fact]
+    public async Task Uebernahme_schreibt_auf_dem_thread_des_aufrufers()
+    {
+        var (p, h) = Projekt();
+        var client = new FakeClient();
+        var useCase = new WebGisImportUseCase(client);
+        var plan = await useCase.BauePlanAsync(p);
+        Assert.True(plan.Uebernehmbare > 0);
+        client.Verzoegert = true;
+        int? schreibThread = null;
+        h.PropertyChanged += (_, _) => schreibThread ??= Environment.CurrentManagedThreadId;
+
+        var kontext = new EinThreadKontext();
+        var ergebnis = kontext.Lauf(() => useCase.UebernimmGeprueftAsync(plan, p));
+
+        Assert.True(ergebnis.Uebernommen > 0);
+        Assert.Equal(kontext.ThreadId, schreibThread);
+    }
+
+    /// <summary>Bildet den Oberflaechen-Thread nach: Fortsetzungen laufen nur auf dem Thread, der pumpt.</summary>
+    private sealed class EinThreadKontext : SynchronizationContext
+    {
+        private readonly System.Collections.Concurrent.BlockingCollection<(SendOrPostCallback Arbeit, object? Zustand)> _schlange = new();
+        public int ThreadId { get; private set; }
+
+        public override void Post(SendOrPostCallback d, object? state) => _schlange.Add((d, state));
+        public override void Send(SendOrPostCallback d, object? state) => throw new NotSupportedException();
+
+        public T Lauf<T>(Func<Task<T>> arbeit)
+        {
+            ThreadId = Environment.CurrentManagedThreadId;
+            var vorher = Current;
+            SetSynchronizationContext(this);
+            try
+            {
+                var task = arbeit();
+                task.ContinueWith(_ => _schlange.CompleteAdding(), TaskScheduler.Default);
+                foreach (var (d, zustand) in _schlange.GetConsumingEnumerable()) d(zustand);
+                return task.GetAwaiter().GetResult();
+            }
+            finally
+            {
+                SetSynchronizationContext(vorher);
+            }
+        }
     }
 
     [Fact]
