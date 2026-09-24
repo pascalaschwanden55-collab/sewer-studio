@@ -79,6 +79,11 @@ public static class WebGisImportWert
             if (direkt is not null) return direkt;
         }
 
+        // Materialdetail der Objektakte (Entscheid Pascal 24.09.2026, «die Felder und Bezeichnungen gibt es in
+        // SewerStudio»): Steht der WebGIS-Text in der Detailliste der Akte, gilt, was die Akte bei einer Handauswahl
+        // speichert — sonst blieben Schleuderbeton, Beton vorgespannt oder GUP/GFK Fertigteil liegen.
+        if (AkteMaterialdetail(art, feld, text) is { } akteWert) return akteWert;
+
         // Zweistufige Werte («PAA.Sammelkanal»): das WebGIS zeigt nur das Blatt. Nur ein eindeutiges Blatt zaehlt.
         var gefaltetText = WebGisHandwertKarte.Falte(text);
         var blaetter = optionen.Where(o => o.Contains('.') && WebGisHandwertKarte.Falte(o[(o.LastIndexOf('.') + 1)..]) == gefaltetText).ToList();
@@ -93,6 +98,31 @@ public static class WebGisImportWert
             ? $"{feld}: «{text}» passt zu mehreren SewerStudio-Werten ({string.Join(", ", blaetter)}) — nicht übernommen."
             : $"{feld}: «{text}» passt zu keinem SewerStudio-Wert — nicht übernommen.";
         return null;
+    }
+
+    /// <summary>
+    /// Der Wert, den die Objektakte ins Tabellenfeld schreibt, wenn man diesen Eintrag ihrer Materialdetail-Liste
+    /// von Hand waehlt (<c>ObjektaktenBearbeitung.Normalisiere</c>); null, wenn der Text nicht genau einem Eintrag
+    /// der Liste entspricht.
+    /// </summary>
+    private static string? AkteMaterialdetail(WebGisObjektart art, string feld, string text)
+    {
+        var feldId = (art, feld) switch
+        {
+            (WebGisObjektart.Haltung, FieldKeys.PipeMaterial) => "haltung.material",
+            (WebGisObjektart.Schacht, "Material") => "schacht.materialdetail",
+            _ => null,
+        };
+        if (feldId is null) return null;
+        var definition = FieldCatalog.Objektfelder.Feld(feldId);
+        var gefaltet = WebGisHandwertKarte.Falte(text);
+        var treffer = new[] { definition.KatalogIdJeEltern, definition.KatalogId }
+            .SelectMany(id => FieldCatalog.Objektfelder.Auswahl(id)?.Eintraege ?? [])
+            .Where(x => !string.IsNullOrWhiteSpace(x.Label) && WebGisHandwertKarte.Falte(x.Label) == gefaltet)
+            .Select(x => x.Label.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .Take(2).ToList();
+        return treffer.Count == 1 ? UseCases.Objektakten.ObjektaktenBearbeitung.Normalisiere(definition, treffer[0]) : null;
     }
 
     private static IReadOnlyList<string> Optionen(WebGisObjektart art, string feld)

@@ -214,7 +214,11 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     Schacht, «Neu pruefen», «Uebernehmen» (danach frisch geprueft); Spalten «Bisher» / «Aus dem WebGIS».
     Materialdetails in WebGIS-Schreibweise «Gruppe, Detail (Kuerzel)» werden erkannt (Beton, unbekannt
     -> Beton; Beton, Fertigteil -> Fertigbetonelement); PAA/SAA-Blatt entscheidet Typ AA der Haltung.
-    Ohne SewerStudio-Begriff (Schleuderbeton, Beton vorgespannt, GUP/GFK Fertigteil) bleibt ein Hinweis.
+    Ohne Vokabularbegriff (Schleuderbeton, Beton vorgespannt, GUP/GFK Fertigteil) gilt seit 24.09.2026 (Entscheid
+    Pascal «die Felder und Bezeichnungen gibt es in SewerStudio»): Steht der Text in der Materialdetail-Liste der
+    Objektakte (`haltung.material`/`schacht.materialdetail`, auch je Gruppe), wird er uebernommen wie bei einer
+    Handauswahl in der Akte (`ObjektaktenBearbeitung.Normalisiere`, meist woertlich); nur was auch dort fehlt, bleibt
+    ein Hinweis. Normziel fehlt diesen Details weiter (DSS/XTF: «fachliche Zuordnung offen»).
     Gesperrtes klar gekennzeichnet (Wunsch Pascal 23.09.): Band orange, sobald etwas gesperrt oder nicht
     zugeordnet ist (`WebGisImportBericht.Kopf`), darunter eine immer offene ROTE Liste
     (`WebGisImportBericht.NichtZugeordnet`: erst gesperrte Objekte/Massnahmen, dann Werte ohne Zuordnung, je mit

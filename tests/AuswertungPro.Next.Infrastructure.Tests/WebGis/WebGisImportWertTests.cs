@@ -77,11 +77,24 @@ public sealed class WebGisImportWertTests
     public void Materialdetail_in_webgis_schreibweise_wird_erkannt(WebGisObjektart art, string feld, string webgis, string erwartet)
         => Assert.Equal(erwartet, WebGisImportWert.Zuordne(art, feld, webgis, out _));
 
-    [Fact]
-    public void Material_ohne_sewerstudio_begriff_bleibt_hinweis()
+    // Entscheid Pascal 24.09.2026 («die Felder und Bezeichnungen gibt es in SewerStudio»): Steht der WebGIS-Wert in
+    // der Materialdetail-Liste der Objektakte, wird er uebernommen wie bei einer Handauswahl in der Akte — vorher
+    // blieben Schleuderbeton, Beton vorgespannt und GUP/GFK Fertigteil als «passt zu keinem» liegen.
+    [Theory]
+    [InlineData(WebGisObjektart.Haltung, "Rohrmaterial", "Schleuderbeton (SBR)")]
+    [InlineData(WebGisObjektart.Schacht, "Material", "Beton, vorgespannt")]
+    [InlineData(WebGisObjektart.Schacht, "Material", "GUP/GFK, Fertigteil")]
+    public void Materialdetail_der_objektakte_wird_wie_bei_der_handauswahl_uebernommen(WebGisObjektart art, string feld, string webgis)
     {
-        Assert.Null(WebGisImportWert.Zuordne(WebGisObjektart.Haltung, "Rohrmaterial", "Schleuderbeton (SBR)", out var hinweis));
-        Assert.Contains("Schleuderbeton", hinweis);
+        Assert.Equal(webgis, WebGisImportWert.Zuordne(art, feld, webgis, out var hinweis));
+        Assert.Null(hinweis);
+    }
+
+    [Fact]
+    public void Material_weder_im_vokabular_noch_in_der_aktenliste_bleibt_hinweis()
+    {
+        Assert.Null(WebGisImportWert.Zuordne(WebGisObjektart.Schacht, "Material", "Marmor, poliert", out var hinweis));
+        Assert.Contains("Marmor", hinweis);
     }
 
     [Theory]
