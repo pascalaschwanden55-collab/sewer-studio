@@ -45,7 +45,7 @@ public sealed class WebGisImportUseCase
                 WebGisImportPlanBuilder.MaterialgruppeFeld(WebGisObjektart.Haltung));
             e.Felder[WebGisImportPlanBuilder.BetreiberFeld(WebGisObjektart.Haltung)] = AkteFeld(projekt, h.Id, "haltung",
                 WebGisImportPlanBuilder.BetreiberFeld(WebGisObjektart.Haltung));
-            foreach (var feld in new[] { WebGisImportPlanBuilder.FeldLaenge, FieldKeys.Owner })
+            foreach (var feld in new[] { WebGisImportPlanBuilder.FeldLaenge, FieldKeys.Owner, FieldKeys.RehabilitationNeed })
                 e.Felder[feld] = new WebGisImportFeld(h.GetFieldValue(feld), IstErsetzbar(h.FieldMeta.GetValueOrDefault(feld)),
                     h.FieldMeta.GetValueOrDefault(feld)?.UserEdited == true);
             foreach (var karte in WebGisHandwertKarte.Felder)
@@ -77,9 +77,12 @@ public sealed class WebGisImportUseCase
                 WebGisImportPlanBuilder.BetreiberFeld(WebGisObjektart.Schacht));
             foreach (var feldId in WebGisImportAktenfelder.Felder(WebGisObjektart.Schacht))
                 e.Felder[feldId] = AkteFeld(projekt, s.Id, "schacht", feldId);
-            var eigentuemer = SchachtFeldnamen.Feld(s, FieldKeys.Owner);
-            e.Felder[FieldKeys.Owner] = new WebGisImportFeld(s.GetFieldValue(eigentuemer),
-                IstErsetzbar(s.FieldMeta.GetValueOrDefault(eigentuemer)), s.FieldMeta.GetValueOrDefault(eigentuemer)?.UserEdited == true);
+            foreach (var feld in new[] { FieldKeys.Owner, FieldKeys.RehabilitationNeed })
+            {
+                var name = SchachtFeldnamen.Feld(s, feld);
+                e.Felder[feld] = new WebGisImportFeld(s.GetFieldValue(name),
+                    IstErsetzbar(s.FieldMeta.GetValueOrDefault(name)), s.FieldMeta.GetValueOrDefault(name)?.UserEdited == true);
+            }
             foreach (var karte in WebGisHandwertKarte.Felder)
             {
                 if (karte.Objektart != WebGisObjektart.Schacht) continue;

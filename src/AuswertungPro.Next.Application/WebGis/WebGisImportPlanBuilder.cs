@@ -87,7 +87,8 @@ public sealed class WebGisImportPlan
 /// - Haltungslaenge: rein informativ, nur in leere Felder. Eigentuemer und Betreiber fuehrt das WebGIS (24.09.2026):
 ///   sein Wert ersetzt alles ausser einer Handeingabe. Keines der drei geht je ins WebGIS zurueck.
 /// - Baujahr nur, wenn in SewerStudio leer.
-/// - Zustand, Bemerkung, Sanierung werden NICHT importiert: dort ist SewerStudio die Quelle.
+/// - Zustand und Bemerkung werden NICHT importiert: dort ist SewerStudio die Quelle. Den Sanierungsbedarf
+///   fuellt das Holen nur in ein LEERES Feld (Entscheid Pascal 24.09.2026).
 /// - Die Felder der <see cref="WebGisHandwertKarte"/> (refIds live geprueft) fuellen leere Felder
 ///   und ersetzen Katasterwerte (WebGIS vor GeoShop, 23.09.2026); Handwerte bleiben stehen.
 ///   Der Klartext geht ueber <see cref="WebGisImportWert"/> auf den SewerStudio-Begriff.
@@ -147,6 +148,9 @@ public static class WebGisImportPlanBuilder
                 });
         }
 
+        // 2b) Sanierungsbedarf nur wenn in SewerStudio leer (Entscheid Pascal 24.09.2026).
+        Sanierungsbedarf(e, stand, pos);
+
         // 3) Felder der Karte (WebGIS vor GeoShop, Handwerte bleiben). Typ AA (PAA/SAA) kommt aus dem WebGIS
         //    selbst (24.09.2026): Es entscheidet Werte wie «Liegenschaftsentwässerung», die es unter beiden gibt.
         var webgisTypAa = WebGisImportAktenfelder.WebGisTypAa(e, stand, pos);
@@ -187,6 +191,31 @@ public static class WebGisImportPlanBuilder
             else
                 FuehrtWebGis(e, pos, feldId, "Betreiber", eintrag.Label);
         }
+    }
+
+    /// <summary>
+    /// Sanierungsbedarf (Entscheid Pascal 24.09.2026, «wenn leer ist in SewerStudio auch ergänzen, nur wenn leer»):
+    /// Sonst ist SewerStudio die Quelle — ein vorhandener Wert wird nie ersetzt, auch kein GeoShop-Wert. Bewusst leer
+    /// (Handeingabe) bleibt leer; «Unbekannt» fuellt nichts. Der Wert steht als WebGIS-Begriff im Feld (Schritt A).
+    /// </summary>
+    private static void Sanierungsbedarf(WebGisImportEingabe e, WebGisLesestand stand, WebGisImportPosition pos)
+    {
+        e.Felder.TryGetValue(FieldKeys.RehabilitationNeed, out var feld);
+        if ((feld?.Wert ?? string.Empty).Trim().Length > 0) return; // vorhanden: nie ersetzen, auch kein Hinweis
+        var webgis = Klartext(stand, WebGisFeldkarte.SanierungsbedarfRef(e.Objektart));
+        if (webgis is null) return;
+        var neu = WebGisImportWert.Zuordne(e.Objektart, FieldKeys.RehabilitationNeed, webgis, out var hinweis);
+        if (hinweis is not null) pos.Hinweise.Add(hinweis);
+        if (neu is null) return;
+        if (feld?.Handwert == true)
+        {
+            pos.Hinweise.Add($"Sanierungsbedarf: in SewerStudio bewusst leer (Handeingabe) — WebGIS-Wert «{neu}» nicht übernommen.");
+            return;
+        }
+        pos.Aenderungen.Add(new WebGisImportAenderung
+        {
+            Feld = FieldKeys.RehabilitationNeed, Alt = null, Neu = neu, Grund = "In SewerStudio leer, im WebGIS vorhanden.",
+        });
     }
 
     private const string GrundOrganisation =

@@ -181,6 +181,33 @@ public sealed class WebGisImportUebernahmeTests
     }
 
     [Fact]
+    public void Sanierungsbedarf_fuellt_nur_einen_leeren_schacht()
+    {
+        // Entscheid Pascal 24.09.2026: nur wenn in SewerStudio leer. Zwischen Vorschau und Uebernahme gesetzt = bleibt.
+        var leer = new SchachtRecord();
+        leer.SetFieldValue("Schachtnummer", "S1", FieldSource.Manual, false);
+        var gesetzt = new SchachtRecord();
+        gesetzt.SetFieldValue("Schachtnummer", "S2", FieldSource.Manual, false);
+        var p = new Project();
+        p.SchaechteData.Add(leer);
+        p.SchaechteData.Add(gesetzt);
+        var plan = new WebGisImportPlan();
+        foreach (var (s, name) in new[] { (leer, "S1"), (gesetzt, "S2") })
+        {
+            var pos = new WebGisImportPosition { Objektart = WebGisObjektart.Schacht, Bezeichnung = name, RecordId = s.Id, GlobalId = "G" + name };
+            pos.Aenderungen.Add(new WebGisImportAenderung { Feld = FieldKeys.RehabilitationNeed, Neu = "Mittelfristig", Grund = "Test" });
+            plan.Positionen.Add(pos);
+        }
+        gesetzt.SetFieldValue(FieldKeys.RehabilitationNeed, "Kurzfristig", FieldSource.Xtf405, false); // nach der Vorschau
+
+        Assert.Equal(1, WebGisImportUseCase.Uebernimm(plan, p));
+
+        Assert.Equal("Mittelfristig", leer.GetFieldValue(FieldKeys.RehabilitationNeed));
+        Assert.Equal(FieldSource.Kataster, leer.FieldMeta[FieldKeys.RehabilitationNeed].Source);
+        Assert.Equal("Kurzfristig", gesetzt.GetFieldValue(FieldKeys.RehabilitationNeed));
+    }
+
+    [Fact]
     public void Materialgruppe_wird_in_die_akte_der_haltung_geschrieben()
     {
         var (p, h) = ProjektMit(FieldKeys.PipeMaterial, null, FieldSource.Manual, false);

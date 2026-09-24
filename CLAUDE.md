@@ -170,6 +170,12 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     der Hinweis nennt beide Werte. Die Haltungslaenge bleibt rein informativ. Ins WebGIS geschrieben werden alle
     drei weiterhin nie. XTF-Folge: `EigentumVokabular` kennt «AWU_von_privat»/«AWU_von_oeffentlich» u. a. nicht —
     ohne Organisationstyp sperrt der SIA405-Neu-Export das Bauteil (Zuordnung fachlich offen).
+    **SANIERUNGSBEDARF NUR WENN LEER (Entscheid Pascal 24.09.2026):** Das Holen liest den Sanierungsbedarf
+    (`WebGisFeldkarte.SanierungsbedarfRef`) fuer Haltung UND Schacht und fuellt ihn ausschliesslich in ein LEERES
+    Feld (`WebGisImportPlanBuilder.Sanierungsbedarf`, WebGIS-Begriff zeichengenau ueber `WebGisImportWert`). Jeder
+    vorhandene Wert bleibt — auch GeoShop/Kataster, anders als bei den Kartenfeldern. Bewusst leer (Handeingabe)
+    bleibt leer mit Hinweis; «Unbekannt» fuellt nichts. Bei der Uebernahme sperrt `SeitVorschauUnveraendert` ein
+    inzwischen gesetztes Feld. Zustand und Bemerkung holt das Programm weiterhin nicht.
   - Holen (`WebGisImportUseCase`, schreibt NIE ins WebGIS): Baujahr wenn leer, dazu alle Felder der
     `WebGisHandwertKarte`
     (refIds live geprueft). Entscheid Pascal: WEBGIS VOR GEOSHOP — leere Felder fuellen UND Werte

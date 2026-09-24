@@ -308,4 +308,82 @@ public sealed class WebGisImportPlanBuilderTests
     }
 
     private const string FieldKeysOwner = AuswertungPro.Next.Domain.Models.FieldKeys.Owner;
+
+    // ---- Entscheid Pascal 24.09.2026: Sanierungsbedarf «wenn leer ist in SewerStudio auch ergänzen, nur wenn leer». ----
+
+    private static readonly List<(string, string)> BedarfListe = new()
+    {
+        ("0", "Unbekannt"), ("101", "Dringend"), ("102", "Kurzfristig"), ("103", "Mittelfristig"),
+        ("104", "Langfristig"), ("105", "Keiner"), ("106", "Saniert"),
+    };
+
+    private static WebGisLesestand StandMitBedarf(WebGisObjektart art, string key)
+    {
+        var s = new WebGisLesestand { GlobalId = "G1", Bezeichnung = "H1" };
+        var refId = WebGisFeldkarte.SanierungsbedarfRef(art);
+        s.Felder[refId] = key;
+        s.Kataloge[refId] = new List<(string, string)>(BedarfListe);
+        return s;
+    }
+
+    private static WebGisImportEingabe Objekt(WebGisObjektart art, WebGisImportFeld? bedarf)
+    {
+        var e = new WebGisImportEingabe { Objektart = art, Bezeichnung = "H1", GespeicherteGlobalId = "G1" };
+        if (bedarf is not null) e.Felder["Sanierungsbedarf"] = bedarf;
+        return e;
+    }
+
+    [Theory]
+    [InlineData(WebGisObjektart.Haltung)]
+    [InlineData(WebGisObjektart.Schacht)]
+    public void Leerer_sanierungsbedarf_wird_aus_dem_webgis_ergaenzt(WebGisObjektart art)
+    {
+        var pos = WebGisImportPlanBuilder.Baue(Objekt(art, new WebGisImportFeld("", Ersetzbar: false)), StandMitBedarf(art, "103"));
+
+        var a = Aenderung(pos, "Sanierungsbedarf");
+        Assert.Equal("Mittelfristig", a?.Neu);
+        Assert.Null(a?.Alt);
+    }
+
+    [Theory]
+    [InlineData(true)]  // GeoShop
+    [InlineData(false)] // Kanalfirma / SewerStudio
+    public void Vorhandener_sanierungsbedarf_wird_nie_ersetzt(bool ersetzbar)
+    {
+        var pos = WebGisImportPlanBuilder.Baue(Objekt(WebGisObjektart.Schacht, new WebGisImportFeld("Kurzfristig", ersetzbar)),
+            StandMitBedarf(WebGisObjektart.Schacht, "103"));
+
+        Assert.Null(Aenderung(pos, "Sanierungsbedarf"));
+    }
+
+    [Fact]
+    public void Vorhandener_sanierungsbedarf_meldet_keinen_fremden_webgis_wert()
+    {
+        // Wird ohnehin nichts uebernommen, gehoert auch kein «nicht in der Liste»-Hinweis in die rote Liste.
+        var stand = StandMitBedarf(WebGisObjektart.Schacht, "999");
+        stand.Kataloge[WebGisFeldkarte.SanierungsbedarfRef(WebGisObjektart.Schacht)].Add(("999", "Sofort"));
+
+        var pos = WebGisImportPlanBuilder.Baue(Objekt(WebGisObjektart.Schacht, new WebGisImportFeld("Kurzfristig", false)), stand);
+
+        Assert.Null(Aenderung(pos, "Sanierungsbedarf"));
+        Assert.DoesNotContain(pos.Hinweise, h => h.StartsWith("Sanierungsbedarf", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Bewusst_leerer_sanierungsbedarf_bleibt_leer()
+    {
+        var pos = WebGisImportPlanBuilder.Baue(Objekt(WebGisObjektart.Schacht, new WebGisImportFeld("", Ersetzbar: false, Handwert: true)),
+            StandMitBedarf(WebGisObjektart.Schacht, "103"));
+
+        Assert.Null(Aenderung(pos, "Sanierungsbedarf"));
+        Assert.Contains(pos.Hinweise, h => h.Contains("Sanierungsbedarf") && h.Contains("bewusst leer"));
+    }
+
+    [Fact]
+    public void Unbekannter_sanierungsbedarf_fuellt_nichts()
+    {
+        var pos = WebGisImportPlanBuilder.Baue(Objekt(WebGisObjektart.Schacht, null), StandMitBedarf(WebGisObjektart.Schacht, "0"));
+
+        Assert.Null(Aenderung(pos, "Sanierungsbedarf"));
+    }
 }
