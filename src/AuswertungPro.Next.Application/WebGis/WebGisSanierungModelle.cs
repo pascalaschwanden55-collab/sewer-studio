@@ -7,6 +7,10 @@ namespace AuswertungPro.Next.Application.WebGis;
 public sealed class WebGisSanierungZeile
 {
     public string? GlobalId { get; init; }
+    /// <summary>Erste Spalte der Liste («Beginn»), roh wie geliefert.</summary>
+    public string? Beginn { get; init; }
+    /// <summary>Jahr aus <see cref="Beginn"/>; null, wenn keines lesbar ist.</summary>
+    public string? Jahr => WebGisSanierungFeldkarte.JahrAusDatum(Beginn);
     public string? Art { get; init; }
     public string? Status { get; init; }
     public string? Verfahren { get; init; }

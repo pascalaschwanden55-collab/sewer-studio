@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Text.RegularExpressions;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.WebGis;
@@ -101,7 +99,8 @@ public static class WebGisSanierungImportRegel
 
     /// <summary>
     /// Gibt es am Objekt schon eine Akte fuer diese Massnahme? Gleiche WebGIS-Kennung im Beleg, oder
-    /// gleiche Art + Status + Verfahren (dieselbe Regel wie beim Senden, gegen Doppel in beide Richtungen).
+    /// gleiche Art + Status + Verfahren bei nicht nachweislich anderem Jahr — dieselbe Regel wie beim Senden
+    /// (<see cref="WebGisMassnahmenVergleich"/>), gegen Doppel in beide Richtungen.
     /// </summary>
     public static bool SchonVorhanden(IEnumerable<ObjektAkte> akten, Guid recordId, WebGisSanierungZeile zeile)
     {
@@ -112,9 +111,9 @@ public static class WebGisSanierungImportRegel
                 && a.Quellen.Any(q => q.System == BelegSystem && string.Equals(q.Kennung, gid, StringComparison.OrdinalIgnoreCase)))
                 return true;
             if (zeile.Art is null) continue;
-            if (Gleich(a, WebGisSanierungFeldkarte.AkteArt, zeile.Art)
-                && Gleich(a, WebGisSanierungFeldkarte.AkteStatus, zeile.Status)
-                && Gleich(a, WebGisSanierungFeldkarte.AkteVerfahren, zeile.Verfahren))
+            if (WebGisMassnahmenVergleich.Gleich(zeile,
+                    AkteText(a, WebGisSanierungFeldkarte.AkteArt), AkteText(a, WebGisSanierungFeldkarte.AkteStatus),
+                    AkteText(a, WebGisSanierungFeldkarte.AkteVerfahren), AkteText(a, WebGisSanierungFeldkarte.AkteJahr)))
                 return true;
         }
         return false;
@@ -134,6 +133,7 @@ public static class WebGisSanierungImportRegel
         var zeile = new WebGisSanierungZeile
         {
             GlobalId = imp.WebGisGlobalId,
+            Beginn = Text(imp, WebGisSanierungFeldkarte.AkteJahr),
             Art = Text(imp, WebGisSanierungFeldkarte.AkteArt),
             Status = Text(imp, WebGisSanierungFeldkarte.AkteStatus),
             Verfahren = Text(imp, WebGisSanierungFeldkarte.AkteVerfahren),
@@ -159,8 +159,7 @@ public static class WebGisSanierungImportRegel
 
     private static string? Text(WebGisSanierungImport imp, string feldId) => imp.Werte.FirstOrDefault(w => w.FeldId == feldId)?.Text;
 
-    private static bool Gleich(ObjektAkte a, string feldId, string? text)
-        => WebGisHandwertKarte.Falte(a.Werte.GetValueOrDefault(feldId)?.Text) == WebGisHandwertKarte.Falte(text);
+    private static string? AkteText(ObjektAkte a, string feldId) => a.Werte.GetValueOrDefault(feldId)?.Text;
 
     private static string? Klartext(WebGisLesestand s, string refId)
     {
@@ -173,13 +172,5 @@ public static class WebGisSanierungImportRegel
     }
 
     /// <summary>Jahr aus dem Datum der Maske: «01.01.2026», ISO oder Millisekunden seit 1970.</summary>
-    private static string? Jahr(string? wert)
-    {
-        var t = (wert ?? string.Empty).Trim();
-        if (t.Length == 0) return null;
-        if (t.Length >= 11 && long.TryParse(t, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ms))
-            return DateTimeOffset.FromUnixTimeMilliseconds(ms).UtcDateTime.Year.ToString(CultureInfo.InvariantCulture);
-        var m = Regex.Match(t, @"(?<!\d)(19\d\d|20\d\d|2100)(?!\d)");
-        return m.Success ? m.Value : null;
-    }
+    private static string? Jahr(string? wert) => WebGisSanierungFeldkarte.JahrAusDatum(wert);
 }

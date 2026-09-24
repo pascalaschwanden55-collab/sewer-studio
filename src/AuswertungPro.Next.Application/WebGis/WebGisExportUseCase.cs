@@ -528,8 +528,8 @@ public sealed class WebGisExportUseCase
         if (stand.Sanierungen.Count > 0)
         {
             var artText = Anzeige(san, "Art"); var statusText = Anzeige(san, "Status"); var verfText = Anzeige(san, "Verfahren");
-            if (stand.Sanierungen.Exists(z =>
-                    Gleich(z.Art, artText) && Gleich(z.Status, statusText) && Gleich(z.Verfahren, verfText)))
+            var jahr = san.Felder.GetValueOrDefault(WebGisSanierungFeldkarte.SanierungsjahrRef);
+            if (stand.Sanierungen.Exists(z => WebGisMassnahmenVergleich.Gleich(z, artText, statusText, verfText, jahr)))
             {
                 san.SchreibFehler = "Massnahme wurde inzwischen im WebGIS angelegt — nicht doppelt angelegt.";
                 return;
@@ -549,6 +549,4 @@ public sealed class WebGisExportUseCase
         return z is null ? string.Empty : z[praefix.Length..];
     }
 
-    private static bool Gleich(string? a, string b)
-        => string.Equals((a ?? string.Empty).Trim(), b.Trim(), StringComparison.OrdinalIgnoreCase);
 }

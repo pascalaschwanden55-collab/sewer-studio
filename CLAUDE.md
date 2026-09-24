@@ -45,7 +45,8 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
   Reparatur: Vermoertelung=33, Renovierung: Schlauchverfahren=27), `WebGisSanierungPlanBuilder`
   (Klartext -> Schluessel NUR ueber den Katalog, LokalerEintrag ist ein anderer
   Nummernkreis; fehlender Katalogwert oder fehlende Art = gesperrt; Jahr -> 01.01.JJJJ;
-  gleiche Art/Status/Verfahren schon in der Liste = nicht doppelt). `WebGisLesestand.Sanierungen`
+  gleiche Art/Status/Verfahren schon in der Liste = nicht doppelt, ausser das Jahr ist nachweislich ein
+  anderes, siehe «Massnahmen-Doppel» unten). `WebGisLesestand.Sanierungen`
   traegt die vorhandenen Massnahmen aus der GListBox (`values`: Beginn, Art, Status,
   Verfahren, GlobalId). `GeonisWebGisClient.Sanierung.cs` (partial): `LeseSanierungKatalogAsync`,
   `ErstelleSanierungAsync` (Payload wie mitgeschnitten: alle Komponenten `{value,refId,
@@ -145,7 +146,21 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
   - Der rote Test `Felder_mit_eigener_regel…` war ein Testfehler (Stand schon auf Z3).
   - OFFEN: Breite/Hoehe der Haltung (`Lichte_Hoehe_mm` existiert nicht, `DN_mm` geht auf Breite;
     Inventur v2 nennt d06f8d1f einmal Breite, einmal Hoehe — an einem Eiprofil klaeren), Abmelden beendet keine
-    Sitzung (Profil behaelt ADFS-Cookies), zweiter Handwert auf dieselbe refId faellt still weg.
+    Sitzung (Profil behaelt ADFS-Cookies).
+  - E3 ERLEDIGT (24.09.2026): **Was nicht ins WebGIS geht, sagt ein Hinweis** (`WebGisExportPlanBuilder`): zwei
+    verschiedene Handwerte auf dieselbe refId (DN_mm/Lichte_Breite_mm -> «Breite [mm]», gleich nach Zahlwert ist
+    kein Hinweis), ein Sanierungsbedarf von Hand (geht nie hinaus; mit Akte setzt sie «Saniert»), «Saniert» ohne
+    Zustandsklasse (Zustand im WebGIS bleibt). Das Schacht-Baujahr fuellt seit 23.09. ein leeres Feld. Tests
+    `WebGisHandwertHinweisTests`.
+  - MASSNAHMEN-DOPPEL MIT JAHR (24.09.2026): **`WebGisMassnahmenVergleich` ist die EINE Regel** fuer Senden-Plan,
+    Nachpruefung vor dem Anlegen (`LegeEineAnAsync`) und Holen (`SchonVorhanden`, `LegeAn`): gleiche Art/Status/
+    Verfahren (gefaltet wie beim Holen) UND Jahr nicht nachweislich verschieden. Zwei BEKANNTE, verschiedene Jahre
+    = zwei Massnahmen (Reparatur 2020 und 2026; der Plan nennt die aeltere als Hinweis). Fehlt ein Jahr auf einer
+    Seite, bleibt es «bereits vorhanden». Das Jahr der WebGIS-Liste kommt aus deren erster Spalte «Beginn»
+    (`WebGisSanierungZeile.Beginn/Jahr`, `WebGisSanierungFeldkarte.JahrAusDatum`: «01.01.2026», ISO, ms, «2026»);
+    LIVE NICHT BELEGT, dass «Beginn» das Sanierungsjahr der Maske ist — das Fixture hat dort null. Der Umfang
+    steht nicht in der Liste und zaehlt deshalb nicht. Tests `WebGisMassnahmenJahrTests`,
+    `WebGisExportUseCaseTests.Vor_dem_anlegen_zaehlt_das_jahr…`.
   - D2/D3 ERLEDIGT (24.09.2026): Der X-syn-Kontext zaehlt nur aus einer HTTPS-Anfrage an genau den Host der
     WebGIS-Adresse (`KontextAusUrl(url, basisUrl)`; der Browser fragt auch fremde Server an), und nur plausibel
     (`WebGisSynKontext.IstPlausibel`: Login/Gruppen gefuellt, keine Steuerzeichen — die Werte gehen als Kopfzeilen

@@ -55,11 +55,15 @@ UI-Wächter (Registrierung, Design, Architektur) grün.
   plausibel (keine Steuerzeichen); der gemerkte Kontext wird beim Laden genauso geprüft.
 - ~~**D3 Chromium-Nachinstallation**~~ **Erledigt am 24.09.2026:** läuft über `ExternalProcessRunner` (beide
   Ausgaben, Zeitlimit) wie der PDF-Export.
-- **E3 Handwerte.** Zwei Handwerte auf eine refId: der zweite fällt ohne Hinweis weg (Reihenfolge aus
-  dem `FieldMeta`-Dictionary). Hand-«Sanierungsbedarf» und Schacht-«Baujahr» werden still
-  übersprungen. «Saniert» ohne Zustandsklasse setzt den Sanierungsbedarf ohne Hinweis.
-- Doppelprüfung der Massnahmen ignoriert Jahr und Umfang (zwei Reparaturen 2020/2026 gelten als
-  eine). Zustand/Sanierungsbedarf schreiben feste Codes ohne Blick in den gelesenen Katalog.
+- ~~**E3 Handwerte.**~~ **Erledigt am 24.09.2026:** Zwei verschiedene Handwerte auf eine refId, ein
+  Sanierungsbedarf von Hand und «Saniert» ohne Zustandsklasse stehen jetzt als Hinweis im Bericht
+  (`WebGisHandwertHinweisTests`). Das Schacht-Baujahr füllt seit 23.09. ein leeres WebGIS-Feld.
+- ~~**Doppelprüfung der Massnahmen ohne Jahr.**~~ **Erledigt am 24.09.2026:** Eine gemeinsame Regel
+  (`WebGisMassnahmenVergleich`) für Senden, Nachprüfung vor dem Anlegen und Holen; zwei bekannte,
+  verschiedene Jahre sind zwei Massnahmen, ein fehlendes Jahr bleibt «bereits vorhanden». **Offen:**
+  Ob die Listenspalte «Beginn» das Sanierungsjahr zeigt, ist live nicht belegt (beim nächsten Lauf im
+  Bericht prüfen: Hinweis «aus 20xx»). Der Umfang steht nicht in der Liste und zählt nicht.
+- Zustand/Sanierungsbedarf schreiben feste Codes ohne Blick in den gelesenen Katalog.
 - Trigonet-Abstimmung, Beats Freigabe, Datenlücken Bürglen (siehe Übergabe vom 21.09.).
 
 ## Verworfen (gemeldet, hält nicht stand)

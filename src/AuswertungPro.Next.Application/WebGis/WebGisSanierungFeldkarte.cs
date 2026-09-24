@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace AuswertungPro.Next.Application.WebGis;
 
@@ -85,5 +87,16 @@ public static class WebGisSanierungFeldkarte
         var s = (jahr ?? string.Empty).Trim();
         if (s.Length != 4 || !int.TryParse(s, out var j) || j < 1900 || j > 2100) return null;
         return $"{j:0000}-01-01T00:00:00.000Z";
+    }
+
+    /// <summary>Jahr aus einem Datum des WebGIS: «01.01.2026», ISO, Millisekunden seit 1970 oder nur «2026».</summary>
+    public static string? JahrAusDatum(string? wert)
+    {
+        var t = (wert ?? string.Empty).Trim();
+        if (t.Length == 0) return null;
+        if (t.Length >= 11 && long.TryParse(t, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ms))
+            return DateTimeOffset.FromUnixTimeMilliseconds(ms).UtcDateTime.Year.ToString(CultureInfo.InvariantCulture);
+        var m = Regex.Match(t, @"(?<!\d)(19\d\d|20\d\d|2100)(?!\d)");
+        return m.Success ? m.Value : null;
     }
 }

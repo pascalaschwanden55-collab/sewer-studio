@@ -112,6 +112,9 @@ public static class WebGisExportPlanBuilder
             }
             if (zCode is int z && z != 104)
                 pos.Hinweise.Add($"Saniert, aber Zustandsklasse ist nicht 4 (Z4) — geliefert wird {WebGisFeldkarte.ZustandText(z)}.");
+            else if (string.IsNullOrWhiteSpace(e.Zustandsklasse))
+                pos.Hinweise.Add("Saniert, aber ohne Zustandsklasse — der Zustand im WebGIS bleibt, wie er ist. "
+                    + "Nach der Sanierung die Zustandsklasse erfassen (Pruefung 22.09.2026, E3).");
         }
         else if (NenntSaniert(e.Bemerkung))
         {
@@ -165,9 +168,14 @@ public static class WebGisExportPlanBuilder
 
     private static void Handwerte(WebGisObjektEingabe e, WebGisLesestand stand, WebGisExportPosition pos)
     {
+        MeldeGeteilteFelder(e, pos);
         foreach (var (feldName, text) in e.Handwerte)
         {
-            if (WebGisHandwertKarte.IstEigeneRegel(feldName)) continue;
+            if (WebGisHandwertKarte.IstEigeneRegel(feldName))
+            {
+                MeldeSanierungsbedarfVonHand(e, feldName, text, pos);
+                continue;
+            }
             if (WebGisHandwertKarte.NichtFuerKataster(feldName)) continue;
             var wert = (text ?? string.Empty).Trim();
             if (wert.Length == 0) continue; // Leeren wird nicht uebertragen (nichts loeschen)
@@ -188,6 +196,45 @@ public static class WebGisExportPlanBuilder
             PlaneWert(e, stand, karte, feldName, wert, pos.Aenderungen, pos.Hinweise,
                 refId => pos.Aenderungen.Exists(a => string.Equals(a.RefId, refId, StringComparison.Ordinal)));
         }
+    }
+
+    /// <summary>
+    /// Pruefung 22.09.2026, E3: Zwei Handwerte auf dasselbe WebGIS-Feld (DN und lichte Breite) — uebertragen wird nur
+    /// einer. Weichen sie voneinander ab, sagt es ein Hinweis, statt dass der zweite still wegfaellt.
+    /// </summary>
+    private static void MeldeGeteilteFelder(WebGisObjektEingabe e, WebGisExportPosition pos)
+    {
+        var gruppen = e.Handwerte
+            .Select(kv => (Feld: kv.Key, Wert: (kv.Value ?? string.Empty).Trim(), Karte: WebGisHandwertKarte.Finde(e.Objektart, kv.Key)))
+            .Where(x => x.Karte is not null && x.Wert.Length > 0)
+            .GroupBy(x => x.Karte!.RefId, StringComparer.Ordinal);
+        foreach (var gruppe in gruppen)
+        {
+            var liste = gruppe.ToList();
+            if (liste.Count < 2 || liste.TrueForAll(x => GleicherText(liste[0].Wert, x.Wert))) continue;
+            pos.Hinweise.Add($"{liste[0].Karte!.Anzeige}: von Hand {string.Join(" und ", liste.Select(x => $"«{x.Feld} = {x.Wert}»"))} "
+                + "gehen auf dasselbe WebGIS-Feld — übertragen wird nur einer davon. Bitte angleichen.");
+        }
+    }
+
+    /// <summary>
+    /// Pruefung 22.09.2026, E3: Den Sanierungsbedarf setzt das Senden nur als «Saniert» aus einer ausgefuehrten
+    /// Sanierungsakte. Ein anderer Handwert fiel bisher still weg — jetzt nennt ihn ein Hinweis.
+    /// </summary>
+    private static void MeldeSanierungsbedarfVonHand(WebGisObjektEingabe e, string feldName, string? text, WebGisExportPosition pos)
+    {
+        var wert = (text ?? string.Empty).Trim();
+        if (wert.Length == 0
+            || !string.Equals(WebGisHandwertKarte.Falte(feldName), WebGisHandwertKarte.Falte("Sanierungsbedarf"), StringComparison.Ordinal))
+            return;
+        if (e.Saniert)
+        {
+            if (!string.Equals(wert, "Saniert", StringComparison.OrdinalIgnoreCase))
+                pos.Hinweise.Add($"Sanierungsbedarf von Hand «{wert}» — die ausgeführte Sanierungsakte setzt im WebGIS «Saniert».");
+            return;
+        }
+        pos.Hinweise.Add($"Sanierungsbedarf von Hand «{wert}» geht nicht ins WebGIS — dort setzt SewerStudio nur «Saniert» "
+            + "über eine ausgeführte Sanierungsakte.");
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.WebGis;
@@ -13,7 +14,8 @@ namespace AuswertungPro.Next.Application.WebGis;
 ///   Massnahme GESPERRT (nichts Halbes anlegen) und der fehlende Katalogwert gemeldet.
 /// - Leere Akte-Felder bleiben im WebGIS leer.
 /// - Sanierungsjahr wird als 01.01.&lt;Jahr&gt; geliefert (WebGIS fuehrt ein Datum).
-/// - Bereits vorhandene Massnahme mit gleicher Art/Status/Verfahren -> nicht doppelt anlegen.
+/// - Bereits vorhandene Massnahme mit gleicher Art/Status/Verfahren und nicht nachweislich anderem Jahr ->
+///   nicht doppelt anlegen (<see cref="WebGisMassnahmenVergleich"/>).
 /// - Verfahren wird gegen die von der Art abhaengige Liste aufgeloest (Reparatur:
 ///   Vermoertelung, Roboterverfahren, ...; Renovierung: Schlauchverfahren, ...).
 /// </summary>
@@ -95,18 +97,27 @@ public static class WebGisSanierungPlanBuilder
         if (pos.Felder.Count == 0 && pos.Sperren.Count == 0)
             pos.Sperren.Add("Akte ohne uebertragbare Werte.");
 
-        // Doppelte vermeiden: gleiche Art + Status + Verfahren bereits vorhanden.
+        // Doppelte vermeiden: gleiche Art + Status + Verfahren bereits vorhanden, und das Jahr ist nicht
+        // nachweislich ein anderes (Reparatur 2020 und 2026 sind zwei Massnahmen).
         var artText = klartexte.GetValueOrDefault("Art") ?? string.Empty;
         var statusText = klartexte.GetValueOrDefault("Status") ?? string.Empty;
         var verfText = klartexte.GetValueOrDefault("Verfahren") ?? string.Empty;
+        var andereJahre = new List<string>();
         foreach (var z in stand.Sanierungen)
         {
-            if (Gleich(z.Art, artText) && Gleich(z.Status, statusText) && Gleich(z.Verfahren, verfText))
+            if (!WebGisMassnahmenVergleich.GleicherInhalt(z, artText, statusText, verfText)) continue;
+            if (WebGisMassnahmenVergleich.NachweislichAndereJahre(z.Beginn, jahr))
             {
-                pos.Sperren.Add($"Im WebGIS bereits vorhanden ({artText} / {statusText} / {verfText}) — nicht doppelt angelegt.");
-                break;
+                andereJahre.Add(z.Jahr!);
+                continue;
             }
+            pos.Sperren.Add($"Im WebGIS bereits vorhanden ({artText} / {statusText} / {verfText}) — nicht doppelt angelegt.");
+            andereJahre.Clear();
+            break;
         }
+        if (andereJahre.Count > 0)
+            pos.Hinweise.Add($"Im WebGIS steht schon {artText} / {statusText} / {verfText} aus {string.Join(", ", andereJahre.Distinct())} "
+                + $"— diese Massnahme ist von {jahr} und wird als eigene angelegt.");
 
         return pos;
     }
@@ -114,6 +125,4 @@ public static class WebGisSanierungPlanBuilder
     private static string Wert(ObjektAkte akte, string key)
         => akte.Werte.TryGetValue(key, out var w) && w is not null ? (w.Text ?? string.Empty).Trim() : string.Empty;
 
-    private static bool Gleich(string? a, string b)
-        => string.Equals((a ?? string.Empty).Trim(), b.Trim(), StringComparison.OrdinalIgnoreCase);
 }

@@ -233,7 +233,7 @@ public sealed partial class GeonisWebGisClient
             if (row.ValueKind != JsonValueKind.Array || row.GetArrayLength() < 5) continue;
             yield return new WebGisSanierungZeile
             {
-                Art = Zelle(row[1]), Status = Zelle(row[2]), Verfahren = Zelle(row[3]), GlobalId = Zelle(row[4]),
+                Beginn = Zelle(row[0]), Art = Zelle(row[1]), Status = Zelle(row[2]), Verfahren = Zelle(row[3]), GlobalId = Zelle(row[4]),
             };
         }
     }
