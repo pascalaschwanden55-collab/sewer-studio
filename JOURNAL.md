@@ -152,6 +152,12 @@
 - `TryParseDecimal` und `TryParseMeasurement` nutzen jetzt denselben Ablauf aus Normalisieren und Parsen; ihre unterschiedlichen Regeln für drei Dezimalstellen bleiben erhalten. Die unabhängige Prüfung bestätigte gleiches Verhalten bei Kultur, Zahlenformat, leeren Eingaben, Fallback-Reihenfolge und Rückgabewerten.
 - Laut Claude: 22/22 gezielte Tests grün; Release-Build mit 0 Fehlern und 0 Warnungen. Hier nicht erneut ausgeführt.
 
+## Schacht-Empfehlung: gemeinsame Auswahl (25.09.)
+
+- Ziel: Die doppelte Auswahl markierter Kostenzeilen für Maßnahmentext und Nettosumme an einer Stelle führen. Claude änderte `SchachtEmpfehlungTextFormatter` und ergänzte einen synthetischen Test; Codex prüfte den Diff unabhängig.
+- Ergebnis: Reihenfolge und Null-Verhalten bleiben gleich. Eine markierte Zeile ohne Text fehlt nur im Maßnahmentext und zählt mit `Qty * UnitPrice` weiter zur Summe (Testfall: 350 + 2 × 60 = 470). **5/5 gezielte Tests bestanden**; der von Codex ausgeführte vollständige Release-Build endete mit **0 Fehlern und 0 Warnungen**.
+- Grenze: Geprüft wurden die synthetischen Formatter-Fälle; kein echter Projektlauf und kein vollständiger Testlauf mit möglichen Kundenquellen.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

@@ -45,6 +45,17 @@ public sealed class SchachtEmpfehlungTextFormatterTests
     }
 
     [Fact]
+    public void Selektierte_Massnahme_ohne_Text_erscheint_nicht_im_Text_zaehlt_aber_zur_Summe()
+    {
+        var cost = Cost(
+            ("Rahmen/Deckel ersetzen", 1m, 350m, true),
+            ("", 2m, 60m, true));
+
+        Assert.Equal("Rahmen/Deckel ersetzen", SchachtEmpfehlungTextFormatter.BuildMassnahmenText(cost));
+        Assert.Equal(470m, SchachtEmpfehlungTextFormatter.ResolveTotal(cost));
+    }
+
+    [Fact]
     public void FormatTotal_zwei_nachkommastellen_invariant()
     {
         Assert.Equal("830.00", SchachtEmpfehlungTextFormatter.FormatTotal(830m));
