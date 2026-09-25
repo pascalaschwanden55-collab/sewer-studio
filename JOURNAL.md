@@ -147,6 +147,11 @@
 - `Feld` und `Schreibweisen` nutzen dieselbe Filterlogik für gleich gefaltete Feldnamen. Die unabhängige Prüfung bestätigte unveränderte Reihenfolge, Treffer und Rückgabewerte; die entfernte Doppelregel ist ein kleiner echter Wartungsgewinn.
 - Laut Claude: 41/41 gezielte Tests grün; Release-Build mit 0 Fehlern und 0 Warnungen. Hier nicht erneut ausgeführt.
 
+## FachzahlParser: gemeinsamer Parse-Ablauf (25.09.)
+
+- `TryParseDecimal` und `TryParseMeasurement` nutzen jetzt denselben Ablauf aus Normalisieren und Parsen; ihre unterschiedlichen Regeln für drei Dezimalstellen bleiben erhalten. Die unabhängige Prüfung bestätigte gleiches Verhalten bei Kultur, Zahlenformat, leeren Eingaben, Fallback-Reihenfolge und Rückgabewerten.
+- Laut Claude: 22/22 gezielte Tests grün; Release-Build mit 0 Fehlern und 0 Warnungen. Hier nicht erneut ausgeführt.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.
