@@ -18,3 +18,4 @@
 14. Ersten Code-Lauf gestartet: variablen NPK-Excel-Preis und separate Pauschale mit künstlichen Daten geprüft. Claude sichtete nur den Diff; 8 Tests und Release-Build grün.
 15. Excel-Export ohne Positionen geschützt: 9 gezielte Tests und Release-Build grün, 0 Warnungen. Claude prüfte die Lücke in VS Code; Qwen lief lokal in Cline ohne Werkzeugfreigaben. Keine Kundendaten genutzt.
 16. Auftrag auf Wartbarkeit eingegrenzt. Datumsfehler der Lauf-Sperre behoben und NPK-Excel-Methode gegliedert; 9 Tests und Release-Build grün, 0 Warnungen. Qwen nach lokalem Blick entladen; kein Push.
+17. Excel-Vorlagenexport gegliedert: Haltungs- und Schacht-Feldzuordnung getrennt; 45 passende Tests und Release-Build grün, 0 Warnungen. Claude prüfte den Diff über das vorhandene Abo.

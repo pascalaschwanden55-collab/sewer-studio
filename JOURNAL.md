@@ -120,6 +120,12 @@
 - `NpkLeistungsverzeichnisExcelExporter.cs`: `WriteSheet` erstellt weiter dieselben zwei Blätter, aber Kopfbereich und Drucklayout liegen nun in benannten privaten Methoden. Die Kopfzeile 7 ist als gemeinsame Konstante definiert. Keine öffentliche Schnittstelle und keine fachliche Formel geändert. Neun gezielte Excel-Tests bestanden; vollständiger Release-Build: 0 Fehler, 0 Warnungen.
 - Qwen wurde für einen lokalen Diff-Blick gestartet. Seine ausführliche Ausgabe lieferte vor dem Abbruch keinen belegten Fehler; die Entscheidung beruht auf eigenem Diff-Abgleich und den Tests. Qwen wurde danach entladen. Keine Cloud-Daten, Käufe oder Pushes.
 
+## Excel-Vorlagenexport: Feldzuordnung getrennt (25.09.)
+
+- Die beiden Exportmethoden enthielten die jeweilige Schleife zur Feldzuordnung mitten im Ablauf für Vorlagenladen, Zeilenstil, Verweise und sicheres Speichern. Die Feldzuordnung für Haltungen und Schächte liegt jetzt in je einer benannten privaten Methode; Reihenfolge, Bedingungen und Fehlerbehandlung blieben gleich. Die öffentlichen Verträge und gespeicherten Formate wurden nicht geändert.
+- 45 gezielte synthetische Excel-Tests bestanden, darunter Datenübertragung, Links, Zahlen und Schutz des bestehenden Ziels. Vollständiger Release-Build: 0 Fehler, 0 Warnungen. Claude prüfte ausschliesslich den Code-Diff ohne Werkzeuge mit niedrigem Denkaufwand und meldete keine belegte Verhaltensänderung. Kein API-Schlüssel gesetzt; Nutzung über das vorhandene Abo.
+- Der Nutzer möchte Claude künftig bevorzugt für konkrete Codevorschläge und Prüfungen einsetzen, damit Codex-Kontingent für Auswahl, Integration und Abschlusskontrolle bleibt. Qwen bleibt lokal für kurze mechanische Aufgaben.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

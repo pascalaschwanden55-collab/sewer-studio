@@ -120,32 +120,7 @@ public sealed class ExcelTemplateExportService : IExcelExportService
                 cancellationToken.ThrowIfCancellationRequested();
                 UebernimmMusterStil(ws, startRow, row, spaltenzahl);
 
-                if (fieldToCol.TryGetValue("NR", out var nrCol))
-                {
-                    var nr = (rec.GetFieldValue("NR") ?? "").Trim();
-                    if (string.IsNullOrWhiteSpace(nr))
-                        nr = runningNr.ToString(CultureInfo.InvariantCulture);
-                    SchreibeText(ws.Cell(row, nrCol), nr);
-                }
-
-                foreach (var field in FieldCatalog.ColumnOrder)
-                {
-                    if (string.Equals(field, "NR", StringComparison.Ordinal)
-                        || !fieldToCol.TryGetValue(field, out var col)
-                        || col == linkSpalte)
-                        continue;
-
-                    var def = FieldCatalog.Get(field);
-                    var value = rec.GetFieldValue(field);
-
-                    if (string.Equals(field, FieldKeys.PipeMaterial, StringComparison.Ordinal))
-                        value = ExcelMaterialLangform.Auflösen(value);
-
-                    if (def.Type is FieldType.Decimal or FieldType.Int)
-                        SchreibeZahl(ws, row, col, headerRow, value);
-                    else
-                        SchreibeText(ws.Cell(row, col), value);
-                }
+                SchreibeHaltungsfelder(ws, rec, row, headerRow, runningNr, fieldToCol, linkSpalte);
 
                 if (linkSpalte > 0)
                     SchreibeVerweis(
@@ -246,23 +221,7 @@ public sealed class ExcelTemplateExportService : IExcelExportService
                 cancellationToken.ThrowIfCancellationRequested();
                 UebernimmMusterStil(ws, startRow, row, spaltenzahl);
 
-                foreach (var pair in headerToCol)
-                {
-                    if (ExcelSchachtFeldzuordnung.IstLink(pair.Key))
-                        continue;
-
-                    var value = ExcelSchachtFeldzuordnung.Lese(rec, pair.Key);
-                    if (ExcelSchachtFeldzuordnung.IstLaufendeNummer(pair.Key)
-                        && string.IsNullOrWhiteSpace(value))
-                    {
-                        value = runningNr.ToString(CultureInfo.InvariantCulture);
-                    }
-
-                    if (ExcelSchachtFeldzuordnung.IstZahl(pair.Key))
-                        SchreibeZahl(ws, row, pair.Value, headerRow, value);
-                    else
-                        SchreibeText(ws.Cell(row, pair.Value), value);
-                }
+                SchreibeSchachtfelder(ws, rec, row, headerRow, runningNr, headerToCol);
 
                 if (linkSpalte > 0)
                     SchreibeVerweis(
@@ -300,6 +259,70 @@ public sealed class ExcelTemplateExportService : IExcelExportService
     }
 
     // ── gemeinsame Bausteine ────────────────────────────────────────────────
+
+    private static void SchreibeHaltungsfelder(
+        IXLWorksheet ws,
+        HaltungRecord rec,
+        int row,
+        int headerRow,
+        int runningNr,
+        Dictionary<string, int> fieldToCol,
+        int linkSpalte)
+    {
+        if (fieldToCol.TryGetValue("NR", out var nrCol))
+        {
+            var nr = (rec.GetFieldValue("NR") ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(nr))
+                nr = runningNr.ToString(CultureInfo.InvariantCulture);
+            SchreibeText(ws.Cell(row, nrCol), nr);
+        }
+
+        foreach (var field in FieldCatalog.ColumnOrder)
+        {
+            if (string.Equals(field, "NR", StringComparison.Ordinal)
+                || !fieldToCol.TryGetValue(field, out var col)
+                || col == linkSpalte)
+                continue;
+
+            var def = FieldCatalog.Get(field);
+            var value = rec.GetFieldValue(field);
+
+            if (string.Equals(field, FieldKeys.PipeMaterial, StringComparison.Ordinal))
+                value = ExcelMaterialLangform.Auflösen(value);
+
+            if (def.Type is FieldType.Decimal or FieldType.Int)
+                SchreibeZahl(ws, row, col, headerRow, value);
+            else
+                SchreibeText(ws.Cell(row, col), value);
+        }
+    }
+
+    private static void SchreibeSchachtfelder(
+        IXLWorksheet ws,
+        SchachtRecord rec,
+        int row,
+        int headerRow,
+        int runningNr,
+        Dictionary<string, int> headerToCol)
+    {
+        foreach (var pair in headerToCol)
+        {
+            if (ExcelSchachtFeldzuordnung.IstLink(pair.Key))
+                continue;
+
+            var value = ExcelSchachtFeldzuordnung.Lese(rec, pair.Key);
+            if (ExcelSchachtFeldzuordnung.IstLaufendeNummer(pair.Key)
+                && string.IsNullOrWhiteSpace(value))
+            {
+                value = runningNr.ToString(CultureInfo.InvariantCulture);
+            }
+
+            if (ExcelSchachtFeldzuordnung.IstZahl(pair.Key))
+                SchreibeZahl(ws, row, pair.Value, headerRow, value);
+            else
+                SchreibeText(ws.Cell(row, pair.Value), value);
+        }
+    }
 
     private static void PruefeEingaben(Project project, string templatePath, string outputPath)
     {
