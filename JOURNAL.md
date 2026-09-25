@@ -107,6 +107,12 @@
 - Claude erhielt im VS-Code-Terminal nur den Test-Diff ohne Dateiwerkzeuge. Sein Hinweis auf Menge/Einheit im Firmenblatt wurde umgesetzt. Der interne Gesamtbetrag bei leerem Einheitspreis ist beim variablen Sammelpreis absichtlich ein fester Wert; hier war der Hinweis keine Änderung am Produkt. Acht gezielte Tests und der vollständige Release-Build bestanden, 0 Warnungen.
 - Die eigene Sperre wurde nach dem Lauf freigegeben. Keine geschützte Datei, Kundendatei oder Fernadresse wurde geändert oder hochgeladen.
 
+## Excel-Leistungsverzeichnis ohne Positionen (25.09.)
+
+- Codex in VS Code nahm einen lesenden Prüfauftrag an, konnte die Datei wegen einer zu engen Formulierung ohne Lesebefehle aber nicht öffnen. Claude Code las nur die synthetische Testdatei und bestätigte die Testlücke. Qwen prüfte die Testidee lokal in Cline ohne Werkzeugfreigaben. Sein Vorschlag setzte die Kopfzeile auf Zeile 1; der echte Export setzt sie auf Zeile 7. Die Zeilenannahme wurde nicht übernommen. Danach wurde Qwen aus dem Grafikspeicher entladen.
+- Neuer synthetischer Test prüft in beiden Reitern die neun Kopfzellen in Zeile 7, das Fehlen von Positionszeilen und einen Gesamtbetrag von null. Keine Produktlogik geändert. Alle 9 Tests der Excel-Testklasse und der vollständige Release-Build bestanden; Build mit 0 Warnungen und 0 Fehlern.
+- Der vollständige Infrastruktur-Testlauf blieb aus, weil er auf diesem Rechner echte Kundendaten auf D: liest. Nur die gezielte Klasse wurde ausgeführt. Die 206 geschützten offenen Dateien blieben unangetastet; kein Push und keine Käufe.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

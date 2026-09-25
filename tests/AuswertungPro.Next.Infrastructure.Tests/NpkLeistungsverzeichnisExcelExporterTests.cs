@@ -184,6 +184,31 @@ public sealed class NpkLeistungsverzeichnisExcelExporterTests
     }
 
     [Fact]
+    public void Leeres_LV_behaelt_spaltenkoepfe_ohne_positionszeilen()
+    {
+        var bytes = NpkLeistungsverzeichnisExcelExporter.BuildWorkbook(
+            System.Array.Empty<AggregatedPosition>());
+
+        using var wb = Open(bytes);
+        wb.RecalculateAllFormulas();
+        foreach (var sheetName in new[] { "Zum Ausfüllen", "Kalkulation (intern)" })
+        {
+            var ws = wb.Worksheet(sheetName);
+            var headers = Enumerable.Range(1, 9)
+                .Select(column => ws.Cell(7, column).GetString());
+
+            Assert.Equal(
+                new[] { "NPK", "NPK D/16", "Position", "DN", "Menge", "Einheit", "EP CHF", "Total CHF", "Haltungen" },
+                headers);
+            Assert.DoesNotContain(ws.RowsUsed().Where(row => row.RowNumber() > 7),
+                row => !row.Cell(ColNpk).IsEmpty());
+            var grandTotal = ws.RowsUsed().Single(row =>
+                row.Cell(3).GetString() == "TOTAL (exkl. MwSt.)");
+            Assert.Equal(0d, grandTotal.Cell(ColTotal).GetDouble(), 2);
+        }
+    }
+
+    [Fact]
     public void Variabler_Preis_bleibt_nur_in_der_internen_Kalkulation()
     {
         var variable = Fixed("612.120", 5m, 100m, 789.45m) with

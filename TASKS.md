@@ -31,7 +31,7 @@ Vor jeder Änderung `scripts/ferien-lock.ps1 -Action CheckPath -CandidatePath <r
 4. **Sidecar-Ausfälle (Absturzschutz):** Nichterreichbarkeit, Zeitüberschreitung und Wiederanlauf prüfen. Erfolg: keine stillen Erfolge oder Abstürze; betroffene Tests grün.
 5. **VRAM-Mangel (Absturzschutz):** Bestehende Rückfallregeln und Tests prüfen. Erfolg: Speichermangel wird sichtbar gemeldet und beendet keine Sicherung oder Codiersitzung unkontrolliert.
 6. **QGIS-Live-Position (Bedienung) – Schnittstelle geschützt:** Der Endpunkt existiert bereits. Zwei neue Routertests prüfen mit künstlichen Daten den Meterwert samt Quelle und 404 ohne belastbaren Meterwert. Die 14 Python-Brückentests sind grün. Eine sichtbare Prüfung im echten QGIS-Plugin bleibt offen.
-7. **Excel-Export (Daten) – Beispiel-LV geschützt:** Vorlagen- und Datenübertragungstests waren bereits vorhanden. Ein neuer synthetischer NPK-Excel-Test prüft beide Reiter, Positionen, Preisfelder, Formate, Zwischen- und Gesamtsummen sowie den Ausschluss der separat ausgewiesenen Pauschale. Eine Sichtprüfung in Excel bleibt offen.
+7. **Excel-Export (Daten) – Beispiel-LV geschützt:** Vorlagen- und Datenübertragungstests waren bereits vorhanden. Synthetische NPK-Excel-Tests prüfen beide Reiter, Positionen, Preisfelder, Formate, Zwischen- und Gesamtsummen, den Ausschluss der separat ausgewiesenen Pauschale sowie leere Positionslisten. Eine Sichtprüfung in Excel bleibt offen.
 8. **Wartbarkeit – erste Warnungen bereinigt:** Die Null-Warnung im Fototest und die vier Tupel-Warnungen der Projektprüfung sind durch explizite Prüfung bzw. Namen beseitigt. Weitere Strukturarbeit folgt nur an konkreten, abgesicherten Stellen.
 
 ## Fertig-Regel
