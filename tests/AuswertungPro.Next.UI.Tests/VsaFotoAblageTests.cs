@@ -74,6 +74,7 @@ public sealed class VsaFotoAblageTests : IDisposable
             cancellationToken: CancellationToken.None);
 
         Assert.Equal(VsaCodeExplorerPhotoCaptureOutcome.Captured, result.Outcome);
+        Assert.NotNull(result.PhotoPath);
         Assert.False(File.Exists(snapshot), "Das Foto liegt noch im Temp-Ordner.");
         Assert.Equal(
             Path.Combine(haltungsordner, "Fotos"),

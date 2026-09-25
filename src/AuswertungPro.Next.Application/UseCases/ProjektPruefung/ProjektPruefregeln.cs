@@ -74,8 +74,8 @@ public static class ProjektPruefregeln
             }
             // Entscheid A (23.09.2026): Masse bleiben wie gemessen; nur Zahlen der WebGIS-Liste sind sendbar.
             var masse = schacht
-                ? new[] { (Feld: FieldKeys.ShaftDimension1Mm, Katalog: "schacht-C09"), (FieldKeys.ShaftDimension2Mm, "schacht-C09") }
-                : new[] { (Feld: FieldKeys.NominalDiameterMm, Katalog: "haltung-C08"), (FieldKeys.ClearWidthMm, "haltung-C08") };
+                ? new[] { (Feld: FieldKeys.ShaftDimension1Mm, Katalog: "schacht-C09"), (Feld: FieldKeys.ShaftDimension2Mm, Katalog: "schacht-C09") }
+                : new[] { (Feld: FieldKeys.NominalDiameterMm, Katalog: "haltung-C08"), (Feld: FieldKeys.ClearWidthMm, Katalog: "haltung-C08") };
             foreach (var (feld, katalog) in masse)
             {
                 var text = wert(feld).Trim();
