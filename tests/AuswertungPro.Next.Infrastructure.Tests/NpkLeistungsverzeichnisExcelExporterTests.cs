@@ -183,6 +183,45 @@ public sealed class NpkLeistungsverzeichnisExcelExporterTests
         }
     }
 
+    [Fact]
+    public void Variabler_Preis_bleibt_nur_in_der_internen_Kalkulation()
+    {
+        var variable = Fixed("612.120", 5m, 100m, 789.45m) with
+        {
+            IsVariablePrice = true,
+            UnitPrice = null
+        };
+        var bytes = NpkLeistungsverzeichnisExcelExporter.BuildWorkbook(
+            new[] { variable }, excludedPauschaleTotal: 22.20m);
+
+        using var wb = Open(bytes);
+        var offer = wb.Worksheet("Zum Ausfüllen");
+        var internalSheet = wb.Worksheet("Kalkulation (intern)");
+        var offerPosition = PositionRow(offer, "612.120");
+        var internalPosition = PositionRow(internalSheet, "612.120");
+
+        Assert.Equal(5d, offerPosition.Cell(ColMenge).GetDouble());
+        Assert.Equal("m", offerPosition.Cell(6).GetString());
+        Assert.Equal("Position 612.120", offerPosition.Cell(3).GetString());
+        Assert.True(offerPosition.Cell(ColEp).IsEmpty());
+        Assert.True(offerPosition.Cell(ColTotal).HasFormula);
+        Assert.True(internalPosition.Cell(ColEp).IsEmpty());
+        Assert.False(internalPosition.Cell(ColTotal).HasFormula);
+        Assert.Equal(789.45d, internalPosition.Cell(ColTotal).GetDouble(), 2);
+
+        wb.RecalculateAllFormulas();
+        var offerTotal = offer.RowsUsed().Single(r => r.Cell(3).GetString() == "TOTAL (exkl. MwSt.)");
+        var internalTotal = internalSheet.RowsUsed().Single(r => r.Cell(3).GetString() == "TOTAL (exkl. MwSt.)");
+        Assert.Equal(0d, offerTotal.Cell(ColTotal).GetDouble(), 2);
+        Assert.Equal(789.45d, internalTotal.Cell(ColTotal).GetDouble(), 2);
+        Assert.Contains(offer.RowsUsed(), r =>
+            r.Cell(3).GetString().StartsWith("Nicht enthaltene Pauschalkosten", System.StringComparison.Ordinal)
+            && r.Cell(ColTotal).GetDouble() == 22.20d);
+        Assert.Contains(internalSheet.RowsUsed(), r =>
+            r.Cell(3).GetString().StartsWith("Nicht enthaltene Pauschalkosten", System.StringComparison.Ordinal)
+            && r.Cell(ColTotal).GetDouble() == 22.20d);
+    }
+
     private static IXLRangeRow PositionRow(IXLWorksheet ws, string npk)
     {
         var row = ws.RangeUsed()?.RowsUsed()

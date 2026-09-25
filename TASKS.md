@@ -15,7 +15,7 @@ Während der Ferien eigenständig innerhalb der vereinbarten Grenzen weiterarbei
 
 ## Kleine Code-Aufgaben für die aktiven Ferienläufe
 
-1. NPK-Excel: variable Preise und ausgeschlossene Pauschalen mit künstlichen Beispielen prüfen. Erfolg: Firmenansicht verrät keine internen Preise; Summen bleiben nachvollziehbar.
+1. NPK-Excel – erledigt: variable Preise und ausgeschlossene Pauschalen mit künstlichen Beispielen geprüft. Die Firmenansicht zeigt Menge und Einheit, aber keinen internen Einheitspreis oder Schätzwert im Total; die interne Ansicht zeigt den aggregierten Betrag. Die separat ausgewiesene Pauschale wird nicht zum Gesamtbetrag addiert.
 2. Excel-Vorlagenexport: vorhandene Abbruch- und Dateisicherheitsprüfungen lesen, eine konkrete Lücke mit synthetischem Test schliessen. Erfolg: keine beschädigte Ausgabedatei nach Fehler oder Abbruch.
 3. Projektprüfung: eine ungeschützte Fachregel mit künstlichen Haltungs- und Schachtdaten prüfen. Erfolg: verständliche Meldung ohne Änderung gespeicherter Daten.
 4. QGIS-Brücke: die vorhandenen rein künstlichen Schnittstellentests um einen belegten Fehlerfall ergänzen. Erfolg: ungültige oder veraltete Position wird nicht als gültig ausgegeben.

@@ -15,3 +15,4 @@
 11. Fünf bisherige Compiler-Warnungen gezielt bereinigt; 20 passende Tests und Release-Build grün.
 12. Auf Wunsch des Nutzers zwölf eigene Dateien ins direkte VS-Code-Projekt übertragen, ohne die 206 offenen Dateien zu überschneiden. Build und gezielte Tests dort erfolgreich.
 13. Zwei tägliche Code-Läufe im direkten Projekt aktiviert. 206 offene Pfade lokal geschützt, Überschneidungssperre geprüft, Git-Push lokal gesperrt. Technische Lesesperre für andere Laufwerke bleibt offen; deshalb keine Kundendaten- oder Videoläufe.
+14. Ersten Code-Lauf gestartet: variablen NPK-Excel-Preis und separate Pauschale mit künstlichen Daten geprüft. Claude sichtete nur den Diff; 8 Tests und Release-Build grün.

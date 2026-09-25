@@ -101,6 +101,12 @@
 - Der lokale Startschutz erkennt den Branch, ein befristetes Code-Modus-Merkmal und eine Liste von 206 geschützten offenen Pfaden. `Acquire`/`Release`, zweiter gleichzeitiger Start sowie `CheckPath` für geschützte, erlaubte und ausserhalb liegende Pfade wurden geprüft. Claude prüfte nur den Script-Diff und meldete Pfad- und Verknüpfungsrisiken; diese wurden eingegrenzt.
 - `origin` hat im lokalen Repository eine absichtlich ungültige Push-Adresse; die ursprüngliche Adresse liegt nur lokal zur Rückstellung. Kein Push ausgeführt. Die technische Lesesperre ausserhalb des Projekts ist weiter nicht belegt. Darum sind die automatischen Läufe ausdrücklich auf Code und künstliche Tests begrenzt; Kundendaten, Video-/GPU-Messungen und Laufwerke D:/F:/G: bleiben für sie tabu. Das ist eine Verhaltensgrenze, keine nachgewiesene Betriebssystem-Sperre.
 
+## Erster begrenzter Ferienlauf: variabler Excel-Preis
+
+- Die Lauf-Sperre wurde gesetzt; die neue Testdatei und die drei Protokolldateien waren laut `CheckPath` erlaubt. Ein künstlicher NPK-Fall mit variablem Preis und separat ausgewiesener Pauschale prüft beide Reiter. Die Firmenansicht behält Position, Menge und Einheit und zeigt keinen internen Schätzwert im Total. Der interne Reiter zeigt 789.45 CHF; 22.20 CHF Pauschale bleiben ausserhalb der Summe.
+- Claude erhielt im VS-Code-Terminal nur den Test-Diff ohne Dateiwerkzeuge. Sein Hinweis auf Menge/Einheit im Firmenblatt wurde umgesetzt. Der interne Gesamtbetrag bei leerem Einheitspreis ist beim variablen Sammelpreis absichtlich ein fester Wert; hier war der Hinweis keine Änderung am Produkt. Acht gezielte Tests und der vollständige Release-Build bestanden, 0 Warnungen.
+- Die eigene Sperre wurde nach dem Lauf freigegeben. Keine geschützte Datei, Kundendatei oder Fernadresse wurde geändert oder hochgeladen.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.
