@@ -137,6 +137,11 @@
 - GET und POST verwenden jetzt dieselbe private Methode, die den Abfrageteil ab dem ersten `?` entfernt. Der unabhängige Diff-Abgleich ergab gleiches Verhalten auch für Randfälle; die doppelte Logik entfällt.
 - Laut Claude: 47/47 synthetische QGIS-Tests grün, Release-Build mit 0 Fehlern und 0 Warnungen. Diese Läufe wurden hier nicht erneut ausgeführt.
 
+## QGIS: gemeinsame XTF-Pfadauflösung (25.09.)
+
+- Fingerprint und Netzladen nutzen dieselbe private XTF-Pfadauflösung. Der unabhängige Diff-Abgleich bestätigte gleiches Verhalten für null, leere und reine Whitespace-Pfade sowie die `File.Exists`-Prüfungen; der Kommentar beschreibt nun auch die Prüfung im Resolver korrekt.
+- Laut Claude: 140/140 synthetische QGIS-UI-Tests grün; Release-Build mit 0 Fehlern und 0 Warnungen. Für den reinen Kommentar-Nachtrag wurden die Läufe nicht wiederholt.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

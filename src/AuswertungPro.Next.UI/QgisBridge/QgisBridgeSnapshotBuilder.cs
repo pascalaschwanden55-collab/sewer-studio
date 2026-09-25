@@ -361,20 +361,26 @@ internal sealed class QgisBridgeSnapshotBuilder
     /// </summary>
     public long GetNetworkStampTicks()
     {
-        var xtfPath = _katasterXtfPaths.Resolve(
-            _settings.AbwasserkatasterXtfPath,
-            _settings.KantonUriXtfDirectory);
+        var xtfPath = ResolveConfiguredXtfPath();
         if (string.IsNullOrWhiteSpace(xtfPath) || !File.Exists(xtfPath))
             return 0;
 
         return File.GetLastWriteTimeUtc(xtfPath).Ticks;
     }
 
+    /// <summary>
+    /// Loest den konfigurierten Kataster-XTF-Pfad auf. Der Resolver prueft moegliche
+    /// Dateien bereits mit File.Exists; die Aufrufer pruefen den Rueckgabepfad erneut.
+    /// Gemeinsam fuer den Fingerprint (<see cref="GetNetworkStampTicks"/>) und das
+    /// eigentliche Laden (<see cref="LoadNetwork"/>), damit beide dieselbe Herkunft
+    /// verwenden und die Aufloesung nicht zweimal unterschiedlich implementiert wird.
+    /// </summary>
+    private string ResolveConfiguredXtfPath()
+        => _katasterXtfPaths.Resolve(_settings.AbwasserkatasterXtfPath, _settings.KantonUriXtfDirectory);
+
     private NetworkLoadResult LoadNetwork()
     {
-        var xtfPath = _katasterXtfPaths.Resolve(
-            _settings.AbwasserkatasterXtfPath,
-            _settings.KantonUriXtfDirectory);
+        var xtfPath = ResolveConfiguredXtfPath();
         if (string.IsNullOrWhiteSpace(xtfPath) || !File.Exists(xtfPath))
             return new NetworkLoadResult(xtfPath, XtfFound: false, Array.Empty<HaltungGeometry>(),
                 new Dictionary<string, HaltungGeometry>(StringComparer.OrdinalIgnoreCase),
