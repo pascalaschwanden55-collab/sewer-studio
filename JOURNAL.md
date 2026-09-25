@@ -113,6 +113,13 @@
 - Neuer synthetischer Test prüft in beiden Reitern die neun Kopfzellen in Zeile 7, das Fehlen von Positionszeilen und einen Gesamtbetrag von null. Keine Produktlogik geändert. Alle 9 Tests der Excel-Testklasse und der vollständige Release-Build bestanden; Build mit 0 Warnungen und 0 Fehlern.
 - Der vollständige Infrastruktur-Testlauf blieb aus, weil er auf diesem Rechner echte Kundendaten auf D: liest. Nur die gezielte Klasse wurde ausgeführt. Die 206 geschützten offenen Dateien blieben unangetastet; kein Push und keine Käufe.
 
+## Wartbarkeit als neuer Schwerpunkt (25.09.)
+
+- Nutzerauftrag auf bestehenden Code und Wartbarkeit eingegrenzt. Die bestehende Automation `sewerstudio-ferienarbeit` auf kleine verhaltensgleiche Aufräumarbeiten umgestellt; Zeitplan 09:00/19:00, Kosten- und Datenschutzgrenzen bleiben bestehen.
+- Die Lauf-Sperre las das Freigabedatum `2026-10-05` durch erneutes Parsen eines bereits deserialisierten Datums als 10. Mai und blockierte den Lauf. `scripts/ferien-lock.ps1` übernimmt JSON-Datumswerte jetzt direkt als UTC-Zeitpunkt und behandelt rohe ISO-Werte mit fester, sprachunabhängiger Form. Geprüft: Acquire erfolgreich, Status zeigt die Sperre mit korrektem Datum, falscher Release-Token wird abgewiesen.
+- `NpkLeistungsverzeichnisExcelExporter.cs`: `WriteSheet` erstellt weiter dieselben zwei Blätter, aber Kopfbereich und Drucklayout liegen nun in benannten privaten Methoden. Die Kopfzeile 7 ist als gemeinsame Konstante definiert. Keine öffentliche Schnittstelle und keine fachliche Formel geändert. Neun gezielte Excel-Tests bestanden; vollständiger Release-Build: 0 Fehler, 0 Warnungen.
+- Qwen wurde für einen lokalen Diff-Blick gestartet. Seine ausführliche Ausgabe lieferte vor dem Abbruch keinen belegten Fehler; die Entscheidung beruht auf eigenem Diff-Abgleich und den Tests. Qwen wurde danach entladen. Keine Cloud-Daten, Käufe oder Pushes.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

@@ -34,6 +34,7 @@ public sealed class NpkLeistungsverzeichnisExcelExportService : INpkLeistungsver
     private const int ColEp = 7;
     private const int ColTotal = 8;
     private const int ColHaltungen = 9;
+    private const int HeaderRow = 7;
 
     private const string MoneyFormat = "#,##0.00";
 
@@ -86,83 +87,9 @@ public sealed class NpkLeistungsverzeichnisExcelExportService : INpkLeistungsver
         bool withPrices,
         string? logoPath)
     {
-        // ── Kopfbereich im AWU-Stil: Logo links, Absender rechts, Titel, Trennlinie ──
-        // Zeilen 1-2: Logo (ueber beide Zeilen) + Absenderblock rechts.
-        ws.Row(1).Height = 24;
-        ws.Row(2).Height = 14;
-        if (logoPath is not null)
-        {
-            try
-            {
-                var pic = ws.AddPicture(logoPath);
-                var targetH = 44; // Pixel, passt in Zeile 1-2
-                pic.WithSize(Math.Max(1, (int)(pic.Width * targetH / (double)Math.Max(1, pic.Height))), targetH);
-                pic.MoveTo(ws.Cell(1, ColNpk), 2, 2);
-            }
-            catch { /* Logo optional — Export darf nie am Bild scheitern */ }
-        }
+        WriteHeader(ws, cur, projectName, withPrices, logoPath);
 
-        ws.Cell(1, ColDn).Value = SenderLine1;
-        ws.Range(1, ColDn, 1, ColHaltungen).Merge();
-        ws.Cell(1, ColDn).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-        ws.Cell(1, ColDn).Style.Font.FontSize = 8;
-        ws.Cell(1, ColDn).Style.Font.FontColor = AwuMuted;
-
-        ws.Cell(2, ColDn).Value = SenderLine2;
-        ws.Range(2, ColDn, 2, ColHaltungen).Merge();
-        ws.Cell(2, ColDn).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-        ws.Cell(2, ColDn).Style.Font.FontSize = 8;
-        ws.Cell(2, ColDn).Style.Font.FontColor = AwuMuted;
-
-        // Duenne Trennlinie unter dem Absender (wie im Protokoll-Kopf).
-        ws.Range(2, ColNpk, 2, ColHaltungen).Style.Border.BottomBorder = XLBorderStyleValues.Thin;
-        ws.Range(2, ColNpk, 2, ColHaltungen).Style.Border.BottomBorderColor = AwuBorder;
-
-        // Zeile 3: Titel; Zeile 4: Projekt + Datum.
-        ws.Row(3).Height = 22;
-        ws.Cell(3, ColNpk).Value = "NPK-135-Leistungsverzeichnis";
-        ws.Range(3, ColNpk, 3, ColHaltungen).Merge();
-        ws.Cell(3, ColNpk).Style.Font.Bold = true;
-        ws.Cell(3, ColNpk).Style.Font.FontSize = 15;
-        ws.Cell(3, ColNpk).Style.Font.FontColor = AwuTitle;
-
-        ws.Cell(4, ColNpk).Value = string.IsNullOrWhiteSpace(projectName)
-            ? "Sanierungsmassnahmen Kanalisation"
-            : $"Sanierungsmassnahmen Kanalisation — Projekt: {projectName}";
-        ws.Range(4, ColNpk, 4, ColEinheit).Merge();
-        ws.Cell(4, ColNpk).Style.Font.FontColor = AwuMuted;
-        ws.Cell(4, ColEp).Value = $"Erstellt: {DateTime.Now:dd.MM.yyyy}";
-        ws.Range(4, ColEp, 4, ColHaltungen).Merge();
-        ws.Cell(4, ColEp).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-        ws.Cell(4, ColEp).Style.Font.FontColor = AwuMuted;
-        ws.Cell(4, ColEp).Style.Font.FontSize = 9;
-
-        // Zeile 5: Firma-Zeile (Ausfuellen) bzw. INTERN-Warnung.
-        ws.Cell(5, ColNpk).Value = withPrices
-            ? "Kalkulation — INTERN, nicht an Firmen versenden"
-            : "Firma: _______________________________          Datum: ______________";
-        ws.Range(5, ColNpk, 5, ColHaltungen).Merge();
-        if (withPrices)
-        {
-            ws.Cell(5, ColNpk).Style.Font.FontColor = InternWarn;
-            ws.Cell(5, ColNpk).Style.Font.Bold = true;
-        }
-
-        // ── Spaltenüberschriften (AWU-Akzentbalken) ────────────────
-        const int headerRow = 7;
-        string[] headers = { "NPK", "NPK D/16", "Position", "DN", "Menge", "Einheit", $"EP {cur}", $"Total {cur}", "Haltungen" };
-        for (var c = 0; c < headers.Length; c++)
-        {
-            var cell = ws.Cell(headerRow, c + 1);
-            cell.Value = headers[c];
-            cell.Style.Font.Bold = true;
-            cell.Style.Font.FontColor = XLColor.White;
-            cell.Style.Fill.BackgroundColor = AwuAccent;
-            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-        }
-        ws.Row(headerRow).Height = 18;
-
-        var r = headerRow + 1;
+        var r = HeaderRow + 1;
         var subtotalRows = new List<int>();
 
         foreach (var chapter in positions
@@ -293,6 +220,89 @@ public sealed class NpkLeistungsverzeichnisExcelExportService : INpkLeistungsver
         inclCell.FormulaA1 = $"={Col(ColTotal)}{grandRow}+{Col(ColTotal)}{mwstRow}";
         var lastRow = r;
 
+        ConfigureSheetLayout(ws, lastRow);
+    }
+
+    private static void WriteHeader(IXLWorksheet ws, string cur, string projectName, bool withPrices, string? logoPath)
+    {
+        // ── Kopfbereich im AWU-Stil: Logo links, Absender rechts, Titel, Trennlinie ──
+        // Zeilen 1-2: Logo (ueber beide Zeilen) + Absenderblock rechts.
+        ws.Row(1).Height = 24;
+        ws.Row(2).Height = 14;
+        if (logoPath is not null)
+        {
+            try
+            {
+                var pic = ws.AddPicture(logoPath);
+                var targetH = 44; // Pixel, passt in Zeile 1-2
+                pic.WithSize(Math.Max(1, (int)(pic.Width * targetH / (double)Math.Max(1, pic.Height))), targetH);
+                pic.MoveTo(ws.Cell(1, ColNpk), 2, 2);
+            }
+            catch { /* Logo optional — Export darf nie am Bild scheitern */ }
+        }
+
+        ws.Cell(1, ColDn).Value = SenderLine1;
+        ws.Range(1, ColDn, 1, ColHaltungen).Merge();
+        ws.Cell(1, ColDn).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        ws.Cell(1, ColDn).Style.Font.FontSize = 8;
+        ws.Cell(1, ColDn).Style.Font.FontColor = AwuMuted;
+
+        ws.Cell(2, ColDn).Value = SenderLine2;
+        ws.Range(2, ColDn, 2, ColHaltungen).Merge();
+        ws.Cell(2, ColDn).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        ws.Cell(2, ColDn).Style.Font.FontSize = 8;
+        ws.Cell(2, ColDn).Style.Font.FontColor = AwuMuted;
+
+        // Duenne Trennlinie unter dem Absender (wie im Protokoll-Kopf).
+        ws.Range(2, ColNpk, 2, ColHaltungen).Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+        ws.Range(2, ColNpk, 2, ColHaltungen).Style.Border.BottomBorderColor = AwuBorder;
+
+        // Zeile 3: Titel; Zeile 4: Projekt + Datum.
+        ws.Row(3).Height = 22;
+        ws.Cell(3, ColNpk).Value = "NPK-135-Leistungsverzeichnis";
+        ws.Range(3, ColNpk, 3, ColHaltungen).Merge();
+        ws.Cell(3, ColNpk).Style.Font.Bold = true;
+        ws.Cell(3, ColNpk).Style.Font.FontSize = 15;
+        ws.Cell(3, ColNpk).Style.Font.FontColor = AwuTitle;
+
+        ws.Cell(4, ColNpk).Value = string.IsNullOrWhiteSpace(projectName)
+            ? "Sanierungsmassnahmen Kanalisation"
+            : $"Sanierungsmassnahmen Kanalisation — Projekt: {projectName}";
+        ws.Range(4, ColNpk, 4, ColEinheit).Merge();
+        ws.Cell(4, ColNpk).Style.Font.FontColor = AwuMuted;
+        ws.Cell(4, ColEp).Value = $"Erstellt: {DateTime.Now:dd.MM.yyyy}";
+        ws.Range(4, ColEp, 4, ColHaltungen).Merge();
+        ws.Cell(4, ColEp).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        ws.Cell(4, ColEp).Style.Font.FontColor = AwuMuted;
+        ws.Cell(4, ColEp).Style.Font.FontSize = 9;
+
+        // Zeile 5: Firma-Zeile (Ausfuellen) bzw. INTERN-Warnung.
+        ws.Cell(5, ColNpk).Value = withPrices
+            ? "Kalkulation — INTERN, nicht an Firmen versenden"
+            : "Firma: _______________________________          Datum: ______________";
+        ws.Range(5, ColNpk, 5, ColHaltungen).Merge();
+        if (withPrices)
+        {
+            ws.Cell(5, ColNpk).Style.Font.FontColor = InternWarn;
+            ws.Cell(5, ColNpk).Style.Font.Bold = true;
+        }
+
+        // ── Spaltenüberschriften (AWU-Akzentbalken) ────────────────
+        string[] headers = { "NPK", "NPK D/16", "Position", "DN", "Menge", "Einheit", $"EP {cur}", $"Total {cur}", "Haltungen" };
+        for (var c = 0; c < headers.Length; c++)
+        {
+            var cell = ws.Cell(HeaderRow, c + 1);
+            cell.Value = headers[c];
+            cell.Style.Font.Bold = true;
+            cell.Style.Font.FontColor = XLColor.White;
+            cell.Style.Fill.BackgroundColor = AwuAccent;
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        }
+        ws.Row(HeaderRow).Height = 18;
+    }
+
+    private static void ConfigureSheetLayout(IXLWorksheet ws, int lastRow)
+    {
         // ── Spaltenbreiten + Fixierung ──────────────────────────────
         ws.Column(ColNpk).Width = 11;
         ws.Column(ColNpkD16).Width = 13;
@@ -303,7 +313,7 @@ public sealed class NpkLeistungsverzeichnisExcelExportService : INpkLeistungsver
         ws.Column(ColEp).Width = 12;
         ws.Column(ColTotal).Width = 14;
         ws.Column(ColHaltungen).Width = 9;
-        ws.SheetView.FreezeRows(headerRow);
+        ws.SheetView.FreezeRows(HeaderRow);
 
         // ── A4-Druckformat (hochkant, 1 Seite breit, Kopfzeile wiederholen) ──
         var setup = ws.PageSetup;
@@ -312,7 +322,7 @@ public sealed class NpkLeistungsverzeichnisExcelExportService : INpkLeistungsver
         setup.FitToPages(1, 0); // 1 Seite breit, beliebig hoch
         setup.Margins.SetTop(0.6).SetBottom(0.6).SetLeft(0.5).SetRight(0.5);
         setup.CenterHorizontally = true;
-        setup.SetRowsToRepeatAtTop(headerRow, headerRow);
+        setup.SetRowsToRepeatAtTop(HeaderRow, HeaderRow);
         setup.PrintAreas.Clear();
         setup.PrintAreas.Add(1, ColNpk, lastRow, ColHaltungen);
         setup.Footer.Left.AddText("Abwasser Uri — NPK-135-Leistungsverzeichnis");

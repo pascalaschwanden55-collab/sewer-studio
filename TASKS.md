@@ -1,5 +1,9 @@
 # Ferienarbeit: Aufgaben
 
+## Aktueller Auftrag (25.09.)
+
+Der Nutzer hat den Auftrag auf Wartbarkeit und Codequalität eingegrenzt. Die aktiven Ferienläufe verbessern nur bestehenden Code bei gleichem Verhalten. Neue Funktionen, fachliche Änderungen und Leistungsversprechen sind keine Ferienaufgaben. Kleine Änderungen mit passenden synthetischen Tests gehen vor grossen Umbauten.
+
 Start-Commit: `630a11c61f4e54d5e1e3c594cf0f1cf893f8ebe8` (`baseline-10tage-20260925`).
 Aktueller Arbeitsordner: `C:\Sewer-Studio_KI_5.0`, Branch `feature/webgis-uebertragung` (Wunsch des Nutzers vom 25.09.). Die 206 bereits offenen Dateien bleiben unangetastet; neue Änderungen werden einzeln zugeordnet und geprüft. Die frühere getrennte Arbeitskopie bleibt als Rückfallstand liegen.
 Während der Ferien eigenständig innerhalb der vereinbarten Grenzen weiterarbeiten. Große Umbauten, Käufe und Push bleiben ausgeschlossen. Seit dem 25.09. sind zwei tägliche, auf Quellcode begrenzte Ferienläufe aktiv.
@@ -13,17 +17,19 @@ Während der Ferien eigenständig innerhalb der vereinbarten Grenzen weiterarbei
 - Kein Push, kein Merge nach `main`, keine Käufe, keine Kundendaten an Cloud-Modelle.
 - Qwen während KI-Messungen und Videotests entladen.
 
-## Kleine Code-Aufgaben für die aktiven Ferienläufe
+## Kleine Wartbarkeitsaufgaben für die aktiven Ferienläufe
 
-1. NPK-Excel – erledigt: variable Preise und ausgeschlossene Pauschalen mit künstlichen Beispielen geprüft. Die Firmenansicht zeigt Menge und Einheit, aber keinen internen Einheitspreis oder Schätzwert im Total; die interne Ansicht zeigt den aggregierten Betrag. Die separat ausgewiesene Pauschale wird nicht zum Gesamtbetrag addiert.
-2. Excel-Vorlagenexport: vorhandene Abbruch- und Dateisicherheitsprüfungen lesen, eine konkrete Lücke mit synthetischem Test schliessen. Erfolg: keine beschädigte Ausgabedatei nach Fehler oder Abbruch.
-3. Projektprüfung: eine ungeschützte Fachregel mit künstlichen Haltungs- und Schachtdaten prüfen. Erfolg: verständliche Meldung ohne Änderung gespeicherter Daten.
-4. QGIS-Brücke: die vorhandenen rein künstlichen Schnittstellentests um einen belegten Fehlerfall ergänzen. Erfolg: ungültige oder veraltete Position wird nicht als gültig ausgegeben.
-5. Wartbarkeit: eine kleine doppelte Logik ausserhalb der 206 geschützten Dateien entfernen. Erfolg: gleicher öffentlicher Vertrag, betroffene Tests und Release-Build grün.
+1. **Erledigt:** NPK-Excel-Export: Kopfbereich und Drucklayout aus `WriteSheet` in benannte Methoden getrennt. Die neun bestehenden Verhaltenstests sichern beide Reiter ab; Release-Build grün.
+2. Excel-Vorlagenexport (`src/AuswertungPro.Next.Infrastructure/Export/Excel/ExcelTemplateExportService.cs`): eine konkrete lange Methode oder doppelte Prüfung in einen zusammenhängenden Helfer gliedern. Erfolg: Export- und Dateisicherheitsverhalten laut gezielten synthetischen Tests gleich.
+3. QGIS-Schnappschuss (`src/AuswertungPro.Next.UI/QgisBridge/QgisBridgeSnapshotBuilder.cs`): eine klar abgegrenzte Aufbereitung aus der grossen Klasse lösen, falls der aktuelle Code eine echte Verantwortungsgrenze zeigt. Erfolg: dieselben Schnittstellendaten in bestehenden QGIS-Tests.
+4. QGIS-Endpunkte (`src/AuswertungPro.Next.UI/QgisBridge/QgisBridgeEndpointRouter.cs`): wiederholte Eingabeprüfung oder Antwortbildung nur bei nachgewiesener Gleichheit zusammenfassen. Erfolg: Statuscodes und Antwortinhalte laut gezielten Tests gleich.
+5. NPK-Excel-Export: nach Sichtung der Positionsschleife eine weitere kleine Verantwortungsgrenze prüfen. Erfolg: öffentliche Arbeitsmappe und Formeln unverändert, neun gezielte Tests grün.
+
+Pro Lauf genau eine Aufgabe. Vor dem Umbau die vorhandenen Aufrufer und Tests lesen. Wenn kein klarer Wartbarkeitsgewinn erkennbar ist, die Aufgabe überspringen und den Grund protokollieren.
 
 Vor jeder Änderung `scripts/ferien-lock.ps1 -Action CheckPath -CandidatePath <relativer Pfad>` ausführen. Eine gesperrte Datei oder Aufgabe überspringen und die nächste wählen.
 
-## Reihenfolge
+## Bisherige fachliche Reihenfolge (vor der Eingrenzung auf Wartbarkeit)
 
 1. **Sicherungslücken klären (Daten) – Bericht erstellt:** Die 128 fehlenden Verknüpfungen aus dem Lauf vom 25.09. sind nach Laufwerk und Dateityp in `docs/reviews/2026-09-25-sicherungsluecken.md` geordnet. Erfolg: Wiederherstellungsrisiko dokumentiert, ohne Originale zu ändern. Ältere Kopien bleiben ungeprüft.
 2. **SQLite-Sicherung und Import (Daten) – Schutztests ergänzt:** Der Schnappschuss lässt sich bei offenem Pool sichern und wieder öffnen. Ein eigener synthetischer Importtest belegt: Bei noch offener Verbindung bleibt der alte Datenbankstand samt Inhaltsprüfung erhalten; nach dem Schließen gelingt der Import. Ein offener Import wird derzeit sichtbar abgewiesen, nicht während der Nutzung erzwungen.
@@ -36,4 +42,4 @@ Vor jeder Änderung `scripts/ferien-lock.ps1 -Action CheckPath -CandidatePath <r
 
 ## Fertig-Regel
 
-Betroffener Test und vollständiger Release-Build grün; keine neue Warnung; Referenzvergleich innerhalb der festgelegten Grenzen; Änderung und Messwert im JOURNAL. Bei zwei gescheiterten Versuchen: eigene Änderung zurücknehmen, Grund notieren, nächste Aufgabe. Bereits vorher rote Tests getrennt erfassen. Große oder riskante Entscheidungen kommen auf eine Liste für nach den Ferien.
+Betroffener Test und vollständiger Release-Build grün; keine neue Warnung; sichtbares Verhalten unverändert; Änderung und Ergebnis im JOURNAL. Bei zwei gescheiterten Versuchen: eigene Änderung zurücknehmen, Grund notieren, nächste Aufgabe. Bereits vorher rote Tests getrennt erfassen. Grosse oder riskante Entscheidungen kommen auf eine Liste für nach den Ferien.
