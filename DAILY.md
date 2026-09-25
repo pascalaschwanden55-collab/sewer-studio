@@ -14,3 +14,4 @@
 10. Excel-LV mit künstlichem Beispiel für beide Reiter und nachgerechnete Summen geschützt; 28 gezielte Tests grün, Claude prüfte den Test.
 11. Fünf bisherige Compiler-Warnungen gezielt bereinigt; 20 passende Tests und Release-Build grün.
 12. Auf Wunsch des Nutzers zwölf eigene Dateien ins direkte VS-Code-Projekt übertragen, ohne die 206 offenen Dateien zu überschneiden. Build und gezielte Tests dort erfolgreich.
+13. Zwei tägliche Code-Läufe im direkten Projekt aktiviert. 206 offene Pfade lokal geschützt, Überschneidungssperre geprüft, Git-Push lokal gesperrt. Technische Lesesperre für andere Laufwerke bleibt offen; deshalb keine Kundendaten- oder Videoläufe.

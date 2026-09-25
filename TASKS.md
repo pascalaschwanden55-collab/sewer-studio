@@ -2,15 +2,26 @@
 
 Start-Commit: `630a11c61f4e54d5e1e3c594cf0f1cf893f8ebe8` (`baseline-10tage-20260925`).
 Aktueller Arbeitsordner: `C:\Sewer-Studio_KI_5.0`, Branch `feature/webgis-uebertragung` (Wunsch des Nutzers vom 25.09.). Die 206 bereits offenen Dateien bleiben unangetastet; neue Änderungen werden einzeln zugeordnet und geprüft. Die frühere getrennte Arbeitskopie bleibt als Rückfallstand liegen.
-Während der Ferien eigenständig innerhalb der vereinbarten Grenzen weiterarbeiten. Große Umbauten, Käufe und Push bleiben ausgeschlossen. Die Ferienläufe bleiben pausiert, bis ihre technischen Startbedingungen nachweislich erfüllt sind.
+Während der Ferien eigenständig innerhalb der vereinbarten Grenzen weiterarbeiten. Große Umbauten, Käufe und Push bleiben ausgeschlossen. Seit dem 25.09. sind zwei tägliche, auf Quellcode begrenzte Ferienläufe aktiv.
 
 ## Startbedingungen
 
 - Bildsatz zweimal gemessen. Vier passende Videos aus `D:\Haltungen` sind lokal festgelegt und technisch zweimal geprüft. EN-Codes und QualityGate am Video müssen noch als Ausgangswerte gemessen werden; die Zeitgrenze muss die beobachtete Startschwankung berücksichtigen.
-- Vor unbeaufsichtigten Läufen: Zugriffe technisch begrenzen, Sperre gegen Überlappung einrichten und Fehlerfälle testen.
-- Zwei tägliche Läufe sind in der Codex-App vorbereitet, aber pausiert. `scripts/ferien-lock.ps1` verweigert Starts ohne vollständige lokale `tmp/ferien/READY.json`; diese Freigabedatei existiert noch nicht. Sie darf erst nach nachgewiesener Zugriffstrennung, fachlicher Messung und allen vier Probelauf-Fällen mit Ablaufdatum und Prüfsumme des Referenzsatzes erstellt werden.
+- Die zweimal täglichen Läufe arbeiten bis 05.10. nur an Quellcode und künstlichen Tests. `scripts/ferien-lock.ps1` verhindert Überlappung, falschen Branch und den Start ohne befristete lokale `tmp/ferien/READY.json`. Eine lokale Liste schützt die 206 bereits offenen Pfade vor Änderungen durch die Läufe.
+- Die technische Lesesperre für andere Laufwerke ist auf diesem Windows-PC weiterhin **nicht nachgewiesen**. Deshalb dürfen diese Läufe keine Medien, Kundendaten oder Laufwerke ausserhalb des Projektordners lesen. Fachliche Video- und GPU-Messungen sowie der vollständige unbeaufsichtigte Neustart-Probelauf bleiben gesperrt. Die Freigabedatei bestätigt ausdrücklich nur den begrenzten Code-Modus.
+- Der normale Git-Push über `origin` ist lokal für die Ferien gesperrt; die frühere Push-Adresse liegt nur lokal in `tmp/ferien` zur späteren Wiederherstellung.
 - Kein Push, kein Merge nach `main`, keine Käufe, keine Kundendaten an Cloud-Modelle.
 - Qwen während KI-Messungen und Videotests entladen.
+
+## Kleine Code-Aufgaben für die aktiven Ferienläufe
+
+1. NPK-Excel: variable Preise und ausgeschlossene Pauschalen mit künstlichen Beispielen prüfen. Erfolg: Firmenansicht verrät keine internen Preise; Summen bleiben nachvollziehbar.
+2. Excel-Vorlagenexport: vorhandene Abbruch- und Dateisicherheitsprüfungen lesen, eine konkrete Lücke mit synthetischem Test schliessen. Erfolg: keine beschädigte Ausgabedatei nach Fehler oder Abbruch.
+3. Projektprüfung: eine ungeschützte Fachregel mit künstlichen Haltungs- und Schachtdaten prüfen. Erfolg: verständliche Meldung ohne Änderung gespeicherter Daten.
+4. QGIS-Brücke: die vorhandenen rein künstlichen Schnittstellentests um einen belegten Fehlerfall ergänzen. Erfolg: ungültige oder veraltete Position wird nicht als gültig ausgegeben.
+5. Wartbarkeit: eine kleine doppelte Logik ausserhalb der 206 geschützten Dateien entfernen. Erfolg: gleicher öffentlicher Vertrag, betroffene Tests und Release-Build grün.
+
+Vor jeder Änderung `scripts/ferien-lock.ps1 -Action CheckPath -CandidatePath <relativer Pfad>` ausführen. Eine gesperrte Datei oder Aufgabe überspringen und die nächste wählen.
 
 ## Reihenfolge
 

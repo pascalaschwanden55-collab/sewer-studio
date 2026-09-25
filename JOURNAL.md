@@ -95,6 +95,12 @@
 - Auf ausdrücklichen Wunsch des Nutzers wurden die zwölf geänderten/neuen Dateien aus der getrennten Arbeitskopie in `C:\Sewer-Studio_KI_5.0` übertragen. Vorher wurde geprüft, dass keine dieser Dateien zu den 206 bereits offenen Dateien gehört; der Patch passte ohne Konflikte. Die offenen Arbeiten wurden nicht gestaged oder umgeschrieben.
 - VS Code zeigt das direkte Projekt. Sein Terminal meldete für den vollständigen Release-Build sowie die gezielten Infrastruktur- und UI-Tests jeweils Rückgabecode 0. Der bisherige separate Branch bleibt als Rückfallstand erhalten. Die unbeaufsichtigte Automation ist weiterhin pausiert.
 
+## Ferienläufe im direkten Projekt aktiviert (25.09.)
+
+- Die bestehende Codex-Automation `sewerstudio-ferienarbeit` wurde auf das direkte VS-Code-Projekt umgestellt und für 09:00 und 19:00 aktiviert. Pro Lauf ist nur eine kleine Code-Aufgabe vorgesehen. Claude erhält bei Bedarf ausschliesslich einen bereinigten Diff ohne Dateiwerkzeuge; Qwen bleibt optional und lokal. Codex-Kontingent vor Aktivierung: 23 % des Wochenfensters genutzt; Claude zeigte 39 % Wochenverbrauch. Keine Zusatzguthaben.
+- Der lokale Startschutz erkennt den Branch, ein befristetes Code-Modus-Merkmal und eine Liste von 206 geschützten offenen Pfaden. `Acquire`/`Release`, zweiter gleichzeitiger Start sowie `CheckPath` für geschützte, erlaubte und ausserhalb liegende Pfade wurden geprüft. Claude prüfte nur den Script-Diff und meldete Pfad- und Verknüpfungsrisiken; diese wurden eingegrenzt.
+- `origin` hat im lokalen Repository eine absichtlich ungültige Push-Adresse; die ursprüngliche Adresse liegt nur lokal zur Rückstellung. Kein Push ausgeführt. Die technische Lesesperre ausserhalb des Projekts ist weiter nicht belegt. Darum sind die automatischen Läufe ausdrücklich auf Code und künstliche Tests begrenzt; Kundendaten, Video-/GPU-Messungen und Laufwerke D:/F:/G: bleiben für sie tabu. Das ist eine Verhaltensgrenze, keine nachgewiesene Betriebssystem-Sperre.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.
