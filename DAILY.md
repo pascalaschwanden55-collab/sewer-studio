@@ -19,3 +19,4 @@
 15. Excel-Export ohne Positionen geschützt: 9 gezielte Tests und Release-Build grün, 0 Warnungen. Claude prüfte die Lücke in VS Code; Qwen lief lokal in Cline ohne Werkzeugfreigaben. Keine Kundendaten genutzt.
 16. Auftrag auf Wartbarkeit eingegrenzt. Datumsfehler der Lauf-Sperre behoben und NPK-Excel-Methode gegliedert; 9 Tests und Release-Build grün, 0 Warnungen. Qwen nach lokalem Blick entladen; kein Push.
 17. Excel-Vorlagenexport gegliedert: Haltungs- und Schacht-Feldzuordnung getrennt; 45 passende Tests und Release-Build grün, 0 Warnungen. Claude prüfte den Diff über das vorhandene Abo.
+18. QGIS: normalisierten Schachtindex einmal beim Netzladen aufgebaut statt für Ausgaben erneut. Claude fand die Stelle; 58 Tests und Release-Build grün. Unbeaufsichtigter Zeitplan weiterhin noch nicht nachgewiesen.

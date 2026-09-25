@@ -21,13 +21,13 @@ Während der Ferien eigenständig innerhalb der vereinbarten Grenzen weiterarbei
 
 1. **Erledigt:** NPK-Excel-Export: Kopfbereich und Drucklayout aus `WriteSheet` in benannte Methoden getrennt. Die neun bestehenden Verhaltenstests sichern beide Reiter ab; Release-Build grün.
 2. **Erledigt:** Excel-Vorlagenexport (`src/AuswertungPro.Next.Infrastructure/Export/Excel/ExcelTemplateExportService.cs`): Die Feldzuordnung für Haltungen und Schächte aus den beiden langen Exportmethoden in getrennte private Methoden verschoben. 45 gezielte Tests und Release-Build grün; Claude prüfte den Diff.
-3. QGIS-Schnappschuss (`src/AuswertungPro.Next.UI/QgisBridge/QgisBridgeSnapshotBuilder.cs`): eine klar abgegrenzte Aufbereitung aus der grossen Klasse lösen, falls der aktuelle Code eine echte Verantwortungsgrenze zeigt. Erfolg: dieselben Schnittstellendaten in bestehenden QGIS-Tests.
+3. **Erledigt:** QGIS-Schnappschuss: Schachtnamen nur noch beim Laden des Netzes normalisiert indizieren statt bei jeder Ausgabe erneut. Der alte Rohindex für Haltungs-Fallbacks blieb erhalten. Ein neuer Verhaltenstest und 58 QGIS-Tests bestanden; Release-Build grün.
 4. QGIS-Endpunkte (`src/AuswertungPro.Next.UI/QgisBridge/QgisBridgeEndpointRouter.cs`): wiederholte Eingabeprüfung oder Antwortbildung nur bei nachgewiesener Gleichheit zusammenfassen. Erfolg: Statuscodes und Antwortinhalte laut gezielten Tests gleich.
 5. NPK-Excel-Export: nach Sichtung der Positionsschleife eine weitere kleine Verantwortungsgrenze prüfen. Erfolg: öffentliche Arbeitsmappe und Formeln unverändert, neun gezielte Tests grün.
 
 Pro Lauf genau eine Aufgabe. Vor dem Umbau die vorhandenen Aufrufer und Tests lesen. Wenn kein klarer Wartbarkeitsgewinn erkennbar ist, die Aufgabe überspringen und den Grund protokollieren.
 
-Fortschritt pro Änderung messbar festhalten: welche Methode verständlicher wurde, wie viele Verzweigungen oder Wiederholungen wegfielen, welche Tests bestanden und ob neue Build-Warnungen auftraten. Eine reine Verschiebung ohne klarere Verantwortung zählt nur, wenn der Aufrufer dadurch erkennbar leichter lesbar wird.
+Fortschritt pro Änderung messbar festhalten: welche Verantwortung klarer wurde, welche doppelte Logik oder wiederholte Arbeit entfiel, welche Tests bestanden und ob neue Build-Warnungen auftraten. Eine reine Methodenverschiebung zählt nur, wenn der Aufrufer dadurch erkennbar leichter lesbar wird. Bei gleicher Sicherheit Änderungen mit echtem Strukturgewinn vor kosmetischen Änderungen wählen.
 
 Vor jeder Änderung `scripts/ferien-lock.ps1 -Action CheckPath -CandidatePath <relativer Pfad>` ausführen. Eine gesperrte Datei oder Aufgabe überspringen und die nächste wählen.
 

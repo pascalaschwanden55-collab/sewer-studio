@@ -496,6 +496,22 @@ public sealed class QgisBridgeSnapshotBuilderTests
     }
 
     [Fact]
+    public void SchachtMitLeerzeichen_bleibt_in_Auswahl_und_Sanierungstyp_auffindbar()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+        var project = new Project { Name = "Schacht-Test" };
+        project.SchaechteData.Add(Schacht("S 1", ausgefuehrt: "Baumeister", nr: "1"));
+        var snapshot = QgisProjectSnapshot.Capture(project, null, currentSchacht: "S 1");
+
+        var current = Assert.Single(sut.BuildCurrentSchachtGeoJson(snapshot).Features);
+        Assert.Equal("S1", current.Properties["schacht"]);
+        var sanierung = Assert.Single(sut.BuildSchachtSanierungstypGeoJson(snapshot).Features);
+        Assert.Equal("S 1", sanierung.Properties["schacht"]);
+        Assert.Equal("Baumeister", sanierung.Properties["ausgefuehrt_durch"]);
+    }
+
+    [Fact]
     public void BuildCurrentSchachtGeoJson_ohne_auswahl_ist_leer()
     {
         using var fixture = QgisBridgeFixture.Create();

@@ -126,6 +126,12 @@
 - 45 gezielte synthetische Excel-Tests bestanden, darunter Datenübertragung, Links, Zahlen und Schutz des bestehenden Ziels. Vollständiger Release-Build: 0 Fehler, 0 Warnungen. Claude prüfte ausschliesslich den Code-Diff ohne Werkzeuge mit niedrigem Denkaufwand und meldete keine belegte Verhaltensänderung. Kein API-Schlüssel gesetzt; Nutzung über das vorhandene Abo.
 - Der Nutzer möchte Claude künftig bevorzugt für konkrete Codevorschläge und Prüfungen einsetzen, damit Codex-Kontingent für Auswahl, Integration und Abschlusskontrolle bleibt. Qwen bleibt lokal für kurze mechanische Aufgaben.
 
+## QGIS-Schachtindex und ehrlicher Stand der Selbstständigkeit (25.09.)
+
+- Nutzerhinweis: Die bisherigen Methodenauslagerungen allein belegen noch keine deutliche Verbesserung der Wartbarkeit. Zwei geplante Läufe sind aktiv, aber ein vollständig unbeaufsichtigter Lauf ist noch nicht nachgewiesen; die bisherigen Einträge in `tmp/ferien/run.log` stammen aus manuellen Arbeiten. Das bleibt offen und darf nicht als bestanden gemeldet werden.
+- Claude prüfte den QGIS-Schnappschuss lesend und fand drei Kandidaten. Der Vorschlag, den vorhandenen Rohindex umzubenennen, hätte die Fallback-Geometrie gefährdet. Stattdessen bleibt der Rohindex erhalten und ein normalisierter Schachtindex wird beim Netzladen einmal aufgebaut. Die Auswahl und der Sanierungstyp nutzen denselben Index; zwei wiederholte Aufbereitungen pro Aufruf entfallen. Bei gleichen Normalnamen gewinnt weiterhin der erste Katasterpunkt.
+- Neuer synthetischer Verhaltenstest für einen Schachtnamen mit Leerzeichen bestand vor und nach dem Umbau. Insgesamt 58 gezielte QGIS-Tests bestanden; vollständiger Release-Build: 0 Fehler, 0 Warnungen. Claude prüfte den Diff ohne Werkzeuge; sein Hinweis auf leere Normalnamen wurde gegen den tatsächlichen Code abgeglichen. Die bisherigen Datenformate und Roh-Lookups sind unverändert.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

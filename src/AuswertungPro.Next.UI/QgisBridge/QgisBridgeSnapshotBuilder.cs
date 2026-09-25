@@ -33,6 +33,8 @@ internal sealed class QgisBridgeSnapshotBuilder
     private readonly string? _manholeCacheFilePath;
     private IReadOnlyDictionary<string, ManholeGeometry> _cachedManholes =
         new Dictionary<string, ManholeGeometry>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, ManholeGeometry> _cachedManholesByNormalizedName =
+        new Dictionary<string, ManholeGeometry>(StringComparer.Ordinal);
 
     public QgisBridgeSnapshotBuilder(
         AppSettings settings,
@@ -126,17 +128,7 @@ internal sealed class QgisBridgeSnapshotBuilder
             return GeoJsonFeatureCollection.Empty;
 
         var currentNorm = QgisSchachtNameMatcher.Normalize(snapshot.CurrentSchacht);
-        ManholeGeometry? hit = null;
-        foreach (var manhole in network.Manholes.Values)
-        {
-            if (QgisSchachtNameMatcher.Normalize(manhole.Bezeichnung) == currentNorm)
-            {
-                hit = manhole;
-                break;
-            }
-        }
-
-        if (hit is null)
+        if (!network.ManholesByNormalizedName.TryGetValue(currentNorm, out var hit))
             return GeoJsonFeatureCollection.Empty;
 
         var match = snapshot.SchaechteList.FirstOrDefault(s =>
@@ -337,15 +329,6 @@ internal sealed class QgisBridgeSnapshotBuilder
         if (network.Manholes.Count == 0)
             return GeoJsonFeatureCollection.Empty;
 
-        // Kataster-Schaechte einmal nach normalisiertem Namen indizieren (Punkt-Match).
-        var manholeByNorm = new Dictionary<string, ManholeGeometry>(StringComparer.Ordinal);
-        foreach (var manhole in network.Manholes.Values)
-        {
-            var norm = QgisSchachtNameMatcher.Normalize(manhole.Bezeichnung);
-            if (norm.Length > 0 && !manholeByNorm.ContainsKey(norm))
-                manholeByNorm[norm] = manhole;
-        }
-
         var features = new List<GeoJsonFeature>();
         foreach (var schacht in snapshot.SchaechteList)
         {
@@ -354,7 +337,7 @@ internal sealed class QgisBridgeSnapshotBuilder
                 continue;
 
             var norm = QgisSchachtNameMatcher.Normalize(schacht.Schachtnummer);
-            if (norm.Length == 0 || !manholeByNorm.TryGetValue(norm, out var manhole))
+            if (norm.Length == 0 || !network.ManholesByNormalizedName.TryGetValue(norm, out var manhole))
                 continue;
 
             features.Add(new GeoJsonFeature(
@@ -396,7 +379,8 @@ internal sealed class QgisBridgeSnapshotBuilder
             return new NetworkLoadResult(xtfPath, XtfFound: false, Array.Empty<HaltungGeometry>(),
                 new Dictionary<string, HaltungGeometry>(StringComparer.OrdinalIgnoreCase),
                 new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
-                new Dictionary<string, ManholeGeometry>(StringComparer.OrdinalIgnoreCase));
+                new Dictionary<string, ManholeGeometry>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, ManholeGeometry>(StringComparer.Ordinal));
 
         var ticks = File.GetLastWriteTimeUtc(xtfPath).Ticks;
         lock (_cacheSync)
@@ -406,7 +390,7 @@ internal sealed class QgisBridgeSnapshotBuilder
             {
                 return new NetworkLoadResult(
                     xtfPath, XtfFound: true, _cachedGeometries, _cachedGeometryByHolding,
-                    _cachedReversedNames, _cachedManholes);
+                    _cachedReversedNames, _cachedManholes, _cachedManholesByNormalizedName);
             }
 
             var geometries = new NetworkGeometryCache(_networkCacheFilePath)
@@ -426,11 +410,25 @@ internal sealed class QgisBridgeSnapshotBuilder
                 .Where(m => !string.IsNullOrWhiteSpace(m.Bezeichnung))
                 .GroupBy(m => m.Bezeichnung.Trim(), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            _cachedManholesByNormalizedName = BuildNormalizedManholeIndex(_cachedManholes);
 
             return new NetworkLoadResult(
                 xtfPath, XtfFound: true, _cachedGeometries, _cachedGeometryByHolding,
-                _cachedReversedNames, _cachedManholes);
+                _cachedReversedNames, _cachedManholes, _cachedManholesByNormalizedName);
         }
+    }
+
+    private static IReadOnlyDictionary<string, ManholeGeometry> BuildNormalizedManholeIndex(
+        IReadOnlyDictionary<string, ManholeGeometry> manholes)
+    {
+        var index = new Dictionary<string, ManholeGeometry>(StringComparer.Ordinal);
+        foreach (var manhole in manholes.Values)
+        {
+            var name = QgisSchachtNameMatcher.Normalize(manhole.Bezeichnung);
+            index.TryAdd(name, manhole); // Bei gleichem Normalnamen gewinnt wie bisher der erste Punkt.
+        }
+
+        return index;
     }
 
     /// <summary>
@@ -703,7 +701,8 @@ internal sealed class QgisBridgeSnapshotBuilder
         IReadOnlyList<HaltungGeometry> Geometries,
         IReadOnlyDictionary<string, HaltungGeometry> GeometryByHolding,
         IReadOnlyDictionary<string, string> ReversedNames,
-        IReadOnlyDictionary<string, ManholeGeometry> Manholes);
+        IReadOnlyDictionary<string, ManholeGeometry> Manholes,
+        IReadOnlyDictionary<string, ManholeGeometry> ManholesByNormalizedName);
 
     private readonly record struct DamageStats(int Exportable, int Skipped);
 }
