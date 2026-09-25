@@ -17,20 +17,19 @@ public static class ProtocolFindingRawParser
     public static double? TryParseMeterFromRaw(string raw)
     {
         var match = RawMeterRegex.Match(raw);
-        if (!match.Success)
-            return null;
-
-        var text = match.Groups[1].Value.Replace(',', '.');
-        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : null;
+        return match.Success ? ParseMeterGroup(match.Groups[1]) : null;
     }
 
     public static double? TryParseSecondMeterFromRaw(string raw)
     {
         var matches = RawMeterRegex.Matches(raw);
-        if (matches.Count < 2)
-            return null;
+        return matches.Count >= 2 ? ParseMeterGroup(matches[1].Groups[1]) : null;
+    }
 
-        var text = matches[1].Groups[1].Value.Replace(',', '.');
+    /// <summary>Gemeinsame Komma-Normalisierung und invariant-kulturelles Parsen fuer beide Meterfelder.</summary>
+    private static double? ParseMeterGroup(Group group)
+    {
+        var text = group.Value.Replace(',', '.');
         return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : null;
     }
 

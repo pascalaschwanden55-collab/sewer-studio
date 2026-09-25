@@ -163,6 +163,11 @@
 - Vorher enthielt `WriteSheet` auch die gesamte Positionszeile. Claude lagerte Zellwerte, Formatierung und die drei Preisfälle in `WritePositionRow` aus; `WriteSheet` behält Kapitel, Zeilenfortschritt und Summen. Codex bestätigte im unabhängigen Diff-Review unveränderte Reihenfolge, Formeln und Ausgabe.
 - 9/9 gezielte synthetische Tests bestanden; vollständiger Release-Build: 0 Fehler, 0 Warnungen. Kein Kunden- oder Medienlauf.
 
+## Ferienlauf 21 Uhr: Meterparser zusammengeführt (25.09.)
+
+- Ziel: Die doppelte Komma-Normalisierung und `double.TryParse`-Regel für erstes und zweites Meterfeld an einer Stelle halten. Claude führte dafür den privaten Helper `ParseMeterGroup` ein; Codex prüfte den Diff unabhängig. Trefferwahl, Regex, Suffix-Treffer, `mm`-Ausschluss und Null-Exception blieben gleich.
+- Baseline laut Claude: 6/6 synthetische Tests; danach bei Codex erneut 6/6. Vollständiger Release-Build bei Codex: 0 Fehler, 0 Warnungen. Kein Kunden- oder Medienlauf.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.
