@@ -158,6 +158,11 @@
 - Ergebnis: Reihenfolge und Null-Verhalten bleiben gleich. Eine markierte Zeile ohne Text fehlt nur im Maßnahmentext und zählt mit `Qty * UnitPrice` weiter zur Summe (Testfall: 350 + 2 × 60 = 470). **5/5 gezielte Tests bestanden**; der von Codex ausgeführte vollständige Release-Build endete mit **0 Fehlern und 0 Warnungen**.
 - Grenze: Geprüft wurden die synthetischen Formatter-Fälle; kein echter Projektlauf und kein vollständiger Testlauf mit möglichen Kundenquellen.
 
+## Ferienlauf 17 Uhr: NPK-Positionszeile getrennt (25.09.)
+
+- Vorher enthielt `WriteSheet` auch die gesamte Positionszeile. Claude lagerte Zellwerte, Formatierung und die drei Preisfälle in `WritePositionRow` aus; `WriteSheet` behält Kapitel, Zeilenfortschritt und Summen. Codex bestätigte im unabhängigen Diff-Review unveränderte Reihenfolge, Formeln und Ausgabe.
+- 9/9 gezielte synthetische Tests bestanden; vollständiger Release-Build: 0 Fehler, 0 Warnungen. Kein Kunden- oder Medienlauf.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

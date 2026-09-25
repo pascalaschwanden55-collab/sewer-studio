@@ -23,7 +23,7 @@ Während der Ferien eigenständig innerhalb der vereinbarten Grenzen weiterarbei
 2. **Erledigt:** Excel-Vorlagenexport (`src/AuswertungPro.Next.Infrastructure/Export/Excel/ExcelTemplateExportService.cs`): Die Feldzuordnung für Haltungen und Schächte aus den beiden langen Exportmethoden in getrennte private Methoden verschoben. 45 gezielte Tests und Release-Build grün; Claude prüfte den Diff.
 3. **Erledigt:** QGIS-Schnappschuss: Schachtnamen nur noch beim Laden des Netzes normalisiert indizieren statt bei jeder Ausgabe erneut. Der alte Rohindex für Haltungs-Fallbacks blieb erhalten. Ein neuer Verhaltenstest und 58 QGIS-Tests bestanden; Release-Build grün.
 4. QGIS-Endpunkte (`src/AuswertungPro.Next.UI/QgisBridge/QgisBridgeEndpointRouter.cs`): wiederholte Eingabeprüfung oder Antwortbildung nur bei nachgewiesener Gleichheit zusammenfassen. Erfolg: Statuscodes und Antwortinhalte laut gezielten Tests gleich.
-5. NPK-Excel-Export: nach Sichtung der Positionsschleife eine weitere kleine Verantwortungsgrenze prüfen. Erfolg: öffentliche Arbeitsmappe und Formeln unverändert, neun gezielte Tests grün.
+5. **Erledigt:** NPK-Excel-Export: `WritePositionRow` kapselt Zellwerte, Formatierung und Preisfall einer Positionszeile; `WriteSheet` behält Kapitel, Zeilenfortschritt und Summen. Öffentliche Arbeitsmappe und Formeln laut unabhängigem Diff-Review unverändert; 9 gezielte Tests und Release-Build grün.
 
 Pro Lauf genau eine Aufgabe. Vor dem Umbau die vorhandenen Aufrufer und Tests lesen. Wenn kein klarer Wartbarkeitsgewinn erkennbar ist, die Aufgabe überspringen und den Grund protokollieren.
 

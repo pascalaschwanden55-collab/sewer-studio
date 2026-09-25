@@ -112,49 +112,8 @@ public sealed class NpkLeistungsverzeichnisExcelExportService : INpkLeistungsver
             var zebra = false;
             foreach (var p in chapter)
             {
-                var rowRange = ws.Range(r, ColNpk, r, ColHaltungen);
-                if (zebra)
-                    rowRange.Style.Fill.BackgroundColor = AwuZebra;
-                rowRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
-                rowRange.Style.Border.BottomBorderColor = AwuRowBorder;
-                rowRange.Style.Font.FontColor = AwuText;
+                WritePositionRow(ws, r, p, withPrices, zebra);
                 zebra = !zebra;
-
-                ws.Cell(r, ColNpk).Style.NumberFormat.Format = "@"; // Text, damit "612.113" nicht zur Zahl wird
-                ws.Cell(r, ColNpk).Value = p.NpkCode ?? "";
-                ws.Cell(r, ColNpkD16).Style.NumberFormat.Format = "@";
-                ws.Cell(r, ColNpkD16).Value = p.NpkCodeD16 ?? "";
-                ws.Cell(r, ColPosition).Value = AppendPriceHint(p.Text, p.PriceHint);
-                if (p.Dn is int dn)
-                    ws.Cell(r, ColDn).Value = dn;
-                ws.Cell(r, ColMenge).Value = p.TotalQty;
-                ws.Cell(r, ColMenge).Style.NumberFormat.Format = "#,##0.###";
-                ws.Cell(r, ColEinheit).Value = p.Unit ?? "";
-
-                var epCell = ws.Cell(r, ColEp);
-                var totalCell = ws.Cell(r, ColTotal);
-                epCell.Style.NumberFormat.Format = MoneyFormat;
-                totalCell.Style.NumberFormat.Format = MoneyFormat;
-
-                if (withPrices && !p.IsVariablePrice && p.UnitPrice is decimal ep)
-                {
-                    epCell.Value = ep;
-                    totalCell.FormulaA1 = LineTotalFormula(r);
-                }
-                else if (withPrices)
-                {
-                    // Variabler Preis (mehrere DN/Preise): kein einzelner EP — unser aggregiertes Total als Wert.
-                    totalCell.Value = Round2(p.TotalNet);
-                }
-                else
-                {
-                    // Ausfüll-Reiter: EP leer und gelb, Total als Formel (rechnet, sobald die Firma tippt).
-                    epCell.Style.Fill.BackgroundColor = FillMeColor;
-                    totalCell.FormulaA1 = LineTotalFormula(r);
-                }
-
-                if (p.HoldingCount > 0)
-                    ws.Cell(r, ColHaltungen).Value = p.HoldingCount;
                 r++;
             }
             var lastDataRow = r - 1;
@@ -299,6 +258,58 @@ public sealed class NpkLeistungsverzeichnisExcelExportService : INpkLeistungsver
             cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
         }
         ws.Row(HeaderRow).Height = 18;
+    }
+
+    /// <summary>
+    /// Schreibt genau eine Positionszeile: Zellwerte, Zeilen-/Zebra-Formatierung und die
+    /// Preisentscheidung (Ausfuellen / interne Kalkulation / variabler Preis). Kennt
+    /// dafuer nur die eigene Zeilennummer und die eigene Position — nicht die Zaehler
+    /// (Zwischentotale, Zebra-Umschalten) des Aufrufers.
+    /// </summary>
+    private static void WritePositionRow(IXLWorksheet ws, int row, AggregatedPosition p, bool withPrices, bool zebra)
+    {
+        var rowRange = ws.Range(row, ColNpk, row, ColHaltungen);
+        if (zebra)
+            rowRange.Style.Fill.BackgroundColor = AwuZebra;
+        rowRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+        rowRange.Style.Border.BottomBorderColor = AwuRowBorder;
+        rowRange.Style.Font.FontColor = AwuText;
+
+        ws.Cell(row, ColNpk).Style.NumberFormat.Format = "@"; // Text, damit "612.113" nicht zur Zahl wird
+        ws.Cell(row, ColNpk).Value = p.NpkCode ?? "";
+        ws.Cell(row, ColNpkD16).Style.NumberFormat.Format = "@";
+        ws.Cell(row, ColNpkD16).Value = p.NpkCodeD16 ?? "";
+        ws.Cell(row, ColPosition).Value = AppendPriceHint(p.Text, p.PriceHint);
+        if (p.Dn is int dn)
+            ws.Cell(row, ColDn).Value = dn;
+        ws.Cell(row, ColMenge).Value = p.TotalQty;
+        ws.Cell(row, ColMenge).Style.NumberFormat.Format = "#,##0.###";
+        ws.Cell(row, ColEinheit).Value = p.Unit ?? "";
+
+        var epCell = ws.Cell(row, ColEp);
+        var totalCell = ws.Cell(row, ColTotal);
+        epCell.Style.NumberFormat.Format = MoneyFormat;
+        totalCell.Style.NumberFormat.Format = MoneyFormat;
+
+        if (withPrices && !p.IsVariablePrice && p.UnitPrice is decimal ep)
+        {
+            epCell.Value = ep;
+            totalCell.FormulaA1 = LineTotalFormula(row);
+        }
+        else if (withPrices)
+        {
+            // Variabler Preis (mehrere DN/Preise): kein einzelner EP — unser aggregiertes Total als Wert.
+            totalCell.Value = Round2(p.TotalNet);
+        }
+        else
+        {
+            // Ausfüll-Reiter: EP leer und gelb, Total als Formel (rechnet, sobald die Firma tippt).
+            epCell.Style.Fill.BackgroundColor = FillMeColor;
+            totalCell.FormulaA1 = LineTotalFormula(row);
+        }
+
+        if (p.HoldingCount > 0)
+            ws.Cell(row, ColHaltungen).Value = p.HoldingCount;
     }
 
     private static void ConfigureSheetLayout(IXLWorksheet ws, int lastRow)
