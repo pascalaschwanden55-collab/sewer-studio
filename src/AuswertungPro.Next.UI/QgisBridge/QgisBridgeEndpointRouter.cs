@@ -26,9 +26,7 @@ internal sealed class QgisBridgeEndpointRouter
 
     public QgisBridgeResponse Route(string path, QgisProjectSnapshot snapshot)
     {
-        var queryIndex = path.IndexOf('?');
-        if (queryIndex >= 0)
-            path = path[..queryIndex];
+        path = OhneQuery(path);
 
         switch (path)
         {
@@ -148,9 +146,7 @@ internal sealed class QgisBridgeEndpointRouter
     /// </summary>
     public QgisBridgeResponse RoutePost(string path, string? body)
     {
-        var queryIndex = path.IndexOf('?');
-        if (queryIndex >= 0)
-            path = path[..queryIndex];
+        path = OhneQuery(path);
 
         return path switch
         {
@@ -180,6 +176,12 @@ internal sealed class QgisBridgeEndpointRouter
             VideoSprungGrund.NichtBestimmbar => Error(409, "Zu dieser Stelle ist keine Videozeit bestimmbar."),
             _ => Error(409, "Der Sprung wurde nicht ausgefuehrt.")
         };
+    }
+
+    private static string OhneQuery(string path)
+    {
+        var queryIndex = path.IndexOf('?');
+        return queryIndex >= 0 ? path[..queryIndex] : path;
     }
 
     private static QgisBridgeResponse Json(int statusCode, object payload)

@@ -132,6 +132,11 @@
 - Claude prüfte den QGIS-Schnappschuss lesend und fand drei Kandidaten. Der Vorschlag, den vorhandenen Rohindex umzubenennen, hätte die Fallback-Geometrie gefährdet. Stattdessen bleibt der Rohindex erhalten und ein normalisierter Schachtindex wird beim Netzladen einmal aufgebaut. Die Auswahl und der Sanierungstyp nutzen denselben Index; zwei wiederholte Aufbereitungen pro Aufruf entfallen. Bei gleichen Normalnamen gewinnt weiterhin der erste Katasterpunkt.
 - Neuer synthetischer Verhaltenstest für einen Schachtnamen mit Leerzeichen bestand vor und nach dem Umbau. Insgesamt 58 gezielte QGIS-Tests bestanden; vollständiger Release-Build: 0 Fehler, 0 Warnungen. Claude prüfte den Diff ohne Werkzeuge; sein Hinweis auf leere Normalnamen wurde gegen den tatsächlichen Code abgeglichen. Die bisherigen Datenformate und Roh-Lookups sind unverändert.
 
+## QGIS-Router: gemeinsame Pfadbereinigung (25.09.)
+
+- GET und POST verwenden jetzt dieselbe private Methode, die den Abfrageteil ab dem ersten `?` entfernt. Der unabhängige Diff-Abgleich ergab gleiches Verhalten auch für Randfälle; die doppelte Logik entfällt.
+- Laut Claude: 47/47 synthetische QGIS-Tests grün, Release-Build mit 0 Fehlern und 0 Warnungen. Diese Läufe wurden hier nicht erneut ausgeführt.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

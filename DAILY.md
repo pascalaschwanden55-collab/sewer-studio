@@ -20,3 +20,4 @@
 16. Auftrag auf Wartbarkeit eingegrenzt. Datumsfehler der Lauf-Sperre behoben und NPK-Excel-Methode gegliedert; 9 Tests und Release-Build grün, 0 Warnungen. Qwen nach lokalem Blick entladen; kein Push.
 17. Excel-Vorlagenexport gegliedert: Haltungs- und Schacht-Feldzuordnung getrennt; 45 passende Tests und Release-Build grün, 0 Warnungen. Claude prüfte den Diff über das vorhandene Abo.
 18. QGIS: normalisierten Schachtindex einmal beim Netzladen aufgebaut statt für Ausgaben erneut. Claude fand die Stelle; 58 Tests und Release-Build grün. Unbeaufsichtigter Zeitplan weiterhin noch nicht nachgewiesen.
+19. QGIS-Router: GET/POST bereinigen den Pfad jetzt gemeinsam; unabhängiger Diff-Befund verhaltensgleich. Laut Claude 47/47 synthetische QGIS-Tests grün und Release-Build mit 0 Fehlern/0 Warnungen; hier nicht erneut ausgeführt.
