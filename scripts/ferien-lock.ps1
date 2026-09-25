@@ -107,8 +107,18 @@ switch ($Action) {
             exit 5
         }
 
+        # ConvertFrom-Json liefert unter PowerShell ein DateTime; dessen lokalisierte
+        # String-Darstellung darf nicht erneut als Monat/Tag gelesen werden.
         $expires = [DateTimeOffset]::MinValue
-        if (-not [DateTimeOffset]::TryParse([string]$ready.expires_utc, [ref]$expires)) {
+        if ($ready.expires_utc -is [DateTime]) {
+            $expires = [DateTimeOffset]$ready.expires_utc
+        }
+        elseif (-not [DateTimeOffset]::TryParseExact(
+                [string]$ready.expires_utc,
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                [Globalization.CultureInfo]::InvariantCulture,
+                [Globalization.DateTimeStyles]::AssumeUniversal,
+                [ref]$expires)) {
             Write-RunLog 'BLOCKED: readiness expiry invalid.'
             [Console]::Error.WriteLine('Ferienläufe sind noch nicht freigegeben: Ablaufdatum ungültig.')
             exit 5
@@ -197,7 +207,15 @@ switch ($Action) {
             try {
                 $record = [IO.File]::ReadAllText($lockPath) | ConvertFrom-Json
                 $created = [DateTimeOffset]::MinValue
-                if (-not [DateTimeOffset]::TryParse([string]$record.created_utc, [ref]$created)) {
+                if ($record.created_utc -is [DateTime]) {
+                    $created = [DateTimeOffset]$record.created_utc
+                }
+                elseif (-not [DateTimeOffset]::TryParseExact(
+                        [string]$record.created_utc,
+                        "yyyy-MM-dd'T'HH:mm:ss.fffffff'Z'",
+                        [Globalization.CultureInfo]::InvariantCulture,
+                        [Globalization.DateTimeStyles]::AssumeUniversal,
+                        [ref]$created)) {
                     throw 'Invalid lock timestamp.'
                 }
                 Write-Output "LOCKED since $($created.ToUniversalTime().ToString('o'))"
