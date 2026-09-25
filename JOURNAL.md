@@ -142,6 +142,11 @@
 - Fingerprint und Netzladen nutzen dieselbe private XTF-Pfadauflösung. Der unabhängige Diff-Abgleich bestätigte gleiches Verhalten für null, leere und reine Whitespace-Pfade sowie die `File.Exists`-Prüfungen; der Kommentar beschreibt nun auch die Prüfung im Resolver korrekt.
 - Laut Claude: 140/140 synthetische QGIS-UI-Tests grün; Release-Build mit 0 Fehlern und 0 Warnungen. Für den reinen Kommentar-Nachtrag wurden die Läufe nicht wiederholt.
 
+## SchachtFeldnamen: gemeinsame Filterlogik (25.09.)
+
+- `Feld` und `Schreibweisen` nutzen dieselbe Filterlogik für gleich gefaltete Feldnamen. Die unabhängige Prüfung bestätigte unveränderte Reihenfolge, Treffer und Rückgabewerte; die entfernte Doppelregel ist ein kleiner echter Wartungsgewinn.
+- Laut Claude: 41/41 gezielte Tests grün; Release-Build mit 0 Fehlern und 0 Warnungen. Hier nicht erneut ausgeführt.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

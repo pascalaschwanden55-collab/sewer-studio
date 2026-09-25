@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace AuswertungPro.Next.Domain.Models;
@@ -43,11 +44,8 @@ public static class SchachtFeldnamen
 
         string? ersterTreffer = null;
 
-        foreach (var vorhanden in record.Fields.Keys)
+        foreach (var vorhanden in PassendeSchreibweisen(record, gesucht))
         {
-            if (!string.Equals(Falte(vorhanden), gesucht, StringComparison.Ordinal))
-                continue;
-
             ersterTreffer ??= vorhanden;
 
             if (!string.IsNullOrWhiteSpace(record.Fields[vorhanden]))
@@ -66,17 +64,23 @@ public static class SchachtFeldnamen
         ArgumentNullException.ThrowIfNull(record);
 
         var gesucht = Falte(gemeint);
-        var treffer = new List<string>();
         if (gesucht.Length == 0)
-            return treffer;
+            return new List<string>();
 
+        return PassendeSchreibweisen(record, gesucht).ToList();
+    }
+
+    /// <summary>
+    /// Alle im Datensatz vorhandenen Feldnamen, deren gefaltete Form <paramref name="gesucht"/>
+    /// entspricht. Gemeinsame Suchlogik fuer <see cref="Feld"/> und <see cref="Schreibweisen"/>.
+    /// </summary>
+    private static IEnumerable<string> PassendeSchreibweisen(SchachtRecord record, string gesucht)
+    {
         foreach (var vorhanden in record.Fields.Keys)
         {
             if (string.Equals(Falte(vorhanden), gesucht, StringComparison.Ordinal))
-                treffer.Add(vorhanden);
+                yield return vorhanden;
         }
-
-        return treffer;
     }
 
     /// <summary>
