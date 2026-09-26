@@ -237,6 +237,12 @@
 - `AnnotationWorkbenchServiceTests` ergänzt einen synthetischen Fall für eine Ausnahme beim Lesen der Bildmaße. Wie bisher entsteht ein Entwurf ohne KB-Index oder Teacher. Claude meldete 51/51 gezielte Baseline-Tests. Codex prüfte den Diff unabhängig: Aufrufreihenfolge, Kurzschluss bei fehlender/ungültiger Maske, Flächenzählung und der ungefilterte Fangblock für Bildmaßfehler sind verhaltensgleich. 8/8 passende synthetische Nachtests liefen bei Codex mit projektlokalem `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR` grün; der vollständige Release-Build lief bei Codex mit 0 Fehlern und 0 Warnungen.
 - Grenze: Die übrigen Validierungs-, Goldkopie- und Sample-Speicherphasen bleiben im bisherigen Ablauf. Kein Kunden- oder Medienlauf; die Architekturfolge Goldkopie → Sample → KB → Teacher bleibt unverändert.
 
+## Wartbarkeitsplan, Etappe 4 – TEIL 4: gleiche Abweisungsergebnisse (26.09.)
+
+- Ziel und Gewinn: Claude vereinte 21 exakt gleiche fehlgeschlagene `WorkbenchSaveResult`-Konstruktionen in `AnnotationWorkbenchService.SaveCoreAsync` über `Rejected(message)`. Der Speicherablauf zeigt damit die Ablehnungen ohne fünfmalige Ergebnisparameter; die fünf Ergebniswerte werden an einem Ort gepflegt. Es wurden nur identische Formen ersetzt, keine Meldung und keine Erfolgs- oder Entwurfsform verändert. Diff: 44 Einfügungen, 78 Löschungen, netto 34 Zeilen weniger.
+- Codex prüfte den Diff unabhängig: Alle 21 Aufrufe behalten `Saved=false`, die gleiche Meldung, `SampleId=null`, `KbIndexState="-"` und `TeacherAnnotationId=null`; Auswertungsreihenfolge und Ausnahmegrenzen bleiben gleich. 3/3 gezielte synthetische Ablehnungstests mit Fakes bestanden bei projektlokalem `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR`. Vollständiger Release-Build: 0 Fehler, 0 Warnungen.
+- Grenze: Weitere Validierungs-, Goldkopie- und Sample-Speicherphasen bleiben offen. Kein Kunden- oder Medienlauf; vollständige Infrastrukturtests wurden wegen möglicher echter Kundenpfade nicht gestartet.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

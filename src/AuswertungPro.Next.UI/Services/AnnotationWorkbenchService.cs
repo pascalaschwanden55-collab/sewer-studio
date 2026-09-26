@@ -338,20 +338,16 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         var finalCode = NormalizeCode(decision.VsaCode);
         if (confirmedByUser.Length == 0)
         {
-            return new WorkbenchSaveResult(
-                false,
-                "Persoenliche Bestaetigung fehlt. Ohne Bearbeiter wird kein Goldsample gespeichert.",
-                null, "-", null);
+            return Rejected(
+                "Persoenliche Bestaetigung fehlt. Ohne Bearbeiter wird kein Goldsample gespeichert.");
         }
         if (beschreibung.Length < 10)
-            return new WorkbenchSaveResult(false, "Beschreibung zu kurz (mindestens 10 Zeichen).", null, "-", null);
+            return Rejected("Beschreibung zu kurz (mindestens 10 Zeichen).");
         if (GoldBeschreibungGuard.IsPlaceholder(beschreibung))
-            return new WorkbenchSaveResult(
-                false,
-                "Bitte die Platzhalter-Beschreibung ersetzen (Lage und Ausmass konkret angeben).",
-                null, "-", null);
+            return Rejected(
+                "Bitte die Platzhalter-Beschreibung ersetzen (Lage und Ausmass konkret angeben).");
         if (!_isCodeKnown(finalCode))
-            return new WorkbenchSaveResult(false, $"Unbekannter VSA-Code '{decision.VsaCode}'.", null, "-", null);
+            return Rejected($"Unbekannter VSA-Code '{decision.VsaCode}'.");
 
         var repairsExistingSample = !string.IsNullOrWhiteSpace(item.ExistingSampleId);
         TrainingSample? existingSample = null;
@@ -367,12 +363,10 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                     .ToList();
                 if (matches.Count != 1)
                 {
-                    return new WorkbenchSaveResult(
-                        false,
+                    return Rejected(
                         matches.Count == 0
                             ? "Goldsample wurde nicht gespeichert: Der zu reparierende Bestandseintrag wurde nicht gefunden."
-                            : "Die Sample-ID ist im Bestand nicht eindeutig. Es wurde nichts gespeichert.",
-                        null, "-", null);
+                            : "Die Sample-ID ist im Bestand nicht eindeutig. Es wurde nichts gespeichert.");
                 }
 
                 existingSample = matches[0];
@@ -381,18 +375,14 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                         || ToUtc(existingSample.ConfirmedAtUtc.Value)
                            != item.ExpectedConfirmedAtUtc.Value.ToUniversalTime()))
                 {
-                    return new WorkbenchSaveResult(
-                        false,
-                        "Goldsample wurde inzwischen in einem anderen Arbeitsablauf geaendert. Bitte die Goldpruefung neu laden.",
-                        null, "-", null);
+                    return Rejected(
+                        "Goldsample wurde inzwischen in einem anderen Arbeitsablauf geaendert. Bitte die Goldpruefung neu laden.");
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return new WorkbenchSaveResult(
-                    false,
-                    $"Das zu reparierende Goldsample konnte nicht sicher gelesen werden: {ex.Message}",
-                    null, "-", null);
+                return Rejected(
+                    $"Das zu reparierende Goldsample konnte nicht sicher gelesen werden: {ex.Message}");
             }
         }
 
@@ -420,29 +410,23 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             StringComparison.OrdinalIgnoreCase);
         if (!isPdfPhoto && !isManualCoding)
         {
-            return new WorkbenchSaveResult(
-                false,
-                "Die gespeicherte Herkunft ist nicht als persoenliches Gold zugelassen. Es wurde nichts gespeichert.",
-                null, "-", null);
+            return Rejected(
+                "Die gespeicherte Herkunft ist nicht als persoenliches Gold zugelassen. Es wurde nichts gespeichert.");
         }
         if (isPdfPhoto
             && (!PdfGoldProvenancePolicy.IsValid(sourceNote)
                 || string.IsNullOrWhiteSpace(sourceReferenceCode)
                 || string.IsNullOrWhiteSpace(sourceReferenceDescription)))
         {
-            return new WorkbenchSaveResult(
-                false,
-                "PDF-Goldsample kann nicht gespeichert werden: Die Operateurreferenz oder PDF-Pruefspur ist unvollstaendig oder ungueltig.",
-                null, "-", null);
+            return Rejected(
+                "PDF-Goldsample kann nicht gespeichert werden: Die Operateurreferenz oder PDF-Pruefspur ist unvollstaendig oder ungueltig.");
         }
         if (existingSample is null
             && item.SourceSuggestion is not null
             && !isPdfPhoto)
         {
-            return new WorkbenchSaveResult(
-                false,
-                "Die PDF-Herkunft konnte nicht eindeutig gebunden werden. Es wurde nichts gespeichert.",
-                null, "-", null);
+            return Rejected(
+                "Die PDF-Herkunft konnte nicht eindeutig gebunden werden. Es wurde nichts gespeichert.");
         }
 
         var codeChanged = repairsExistingSample
@@ -488,10 +472,8 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return new WorkbenchSaveResult(
-                    false,
-                    $"Gebundener Bildstand konnte nicht sicher gelesen werden: {ex.Message}",
-                    null, "-", null);
+                return Rejected(
+                    $"Gebundener Bildstand konnte nicht sicher gelesen werden: {ex.Message}");
             }
 
             if (!string.Equals(
@@ -499,10 +481,8 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                     item.ExpectedImageSha256.Trim(),
                     StringComparison.OrdinalIgnoreCase))
             {
-                return new WorkbenchSaveResult(
-                    false,
-                    "Das Bild wurde seit dem Laden der Goldpruefung geaendert. Bitte die Goldpruefung neu laden.",
-                    null, "-", null);
+                return Rejected(
+                    "Das Bild wurde seit dem Laden der Goldpruefung geaendert. Bitte die Goldpruefung neu laden.");
             }
         }
 
@@ -515,10 +495,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return new WorkbenchSaveResult(
-                false,
-                $"Eval-Schutz nicht verfuegbar: {ex.Message}",
-                null, "-", null);
+            return Rejected($"Eval-Schutz nicht verfuegbar: {ex.Message}");
         }
         // Beim Foto-Assistenten ist dies genau eine Arbeitskopie des beim
         // Segmentieren gebundenen Originals. Dieselben Bytes gehen unten an
@@ -537,10 +514,8 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 item.CaseId);
         if (verdict != EvalContaminationGuard.ExportContaminationResult.Clean)
         {
-            return new WorkbenchSaveResult(
-                false,
-                $"Eval-Schutz: Bild gehoert zum eingefrorenen Mess-Set ({verdict}). Nicht speicherbar.",
-                null, "-", null);
+            return Rejected(
+                $"Eval-Schutz: Bild gehoert zum eingefrorenen Mess-Set ({verdict}). Nicht speicherbar.");
         }
 
         // 3) Das angenommene Bild zuerst unveraendert ins KI-Brain uebernehmen.
@@ -571,17 +546,11 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return new WorkbenchSaveResult(
-                false,
-                $"Goldbild konnte nicht sicher gespeichert werden: {ex.Message}",
-                null, "-", null);
+            return Rejected($"Goldbild konnte nicht sicher gespeichert werden: {ex.Message}");
         }
         if (string.IsNullOrWhiteSpace(storedFramePath))
         {
-            return new WorkbenchSaveResult(
-                false,
-                "Goldbild konnte nicht sicher gespeichert werden.",
-                null, "-", null);
+            return Rejected("Goldbild konnte nicht sicher gespeichert werden.");
         }
 
         string storedImageSha256;
@@ -592,10 +561,8 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return new WorkbenchSaveResult(
-                false,
-                $"Goldbild konnte nach dem Speichern nicht bytegenau geprueft werden: {ex.Message}",
-                null, "-", null);
+            return Rejected(
+                $"Goldbild konnte nach dem Speichern nicht bytegenau geprueft werden: {ex.Message}");
         }
 
         // 4) Entwurf oder Gold? Vollstaendig ist ein Fund nur mit gepruefter SAM-Maske.
@@ -685,10 +652,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return new WorkbenchSaveResult(
-                    false,
-                    $"Goldsample konnte nicht gespeichert werden: {ex.Message}",
-                    null, "-", null);
+                return Rejected($"Goldsample konnte nicht gespeichert werden: {ex.Message}");
             }
         }
         else if (repairsExistingSample)
@@ -703,19 +667,14 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                     var added = await _sampleStore.TryAddNewAsync(sample, ct).ConfigureAwait(false);
                     if (!added)
                     {
-                        return new WorkbenchSaveResult(
-                            false,
-                            "Goldsample wurde nicht gespeichert: Die Signatur gehoert bereits zu einem anderen Datensatz.",
-                            null, "-", null);
+                        return Rejected(
+                            "Goldsample wurde nicht gespeichert: Die Signatur gehoert bereits zu einem anderen Datensatz.");
                     }
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return new WorkbenchSaveResult(
-                    false,
-                    $"Goldsample konnte nicht gespeichert werden: {ex.Message}",
-                    null, "-", null);
+                return Rejected($"Goldsample konnte nicht gespeichert werden: {ex.Message}");
             }
 
             // Auch ein Nachlabeln mit gleichem Code ersetzt die fachliche Wahrheit
@@ -736,10 +695,8 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             var added = await _sampleStore.TryAddNewAsync(sample, ct).ConfigureAwait(false);
             if (!added)
             {
-                return new WorkbenchSaveResult(
-                    false,
-                    "Bereits als Goldsample vorhanden (gleiche Haltung, Code, Meter und Box). Zum Aendern den Eintrag ueber 'Unvollstaendige Goldframes' oder das Goldalbum laden.",
-                    null, "-", null);
+                return Rejected(
+                    "Bereits als Goldsample vorhanden (gleiche Haltung, Code, Meter und Box). Zum Aendern den Eintrag ueber 'Unvollstaendige Goldframes' oder das Goldalbum laden.");
             }
         }
 
@@ -837,6 +794,15 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             ? (true, foregroundPixelCount)
             : (false, null);
     }
+
+    /// <summary>
+    /// Einheitliches Abweisungsergebnis fuer SaveCoreAsync: Saved=false, kein SampleId,
+    /// KbIndexState="-", kein TeacherAnnotationId. Fasst die vielfach wiederholte, exakt
+    /// gleiche 5-Argument-Form zusammen; Reihenfolge, Meldungstexte und alle anderen
+    /// Ergebnisformen (Draft/Gold) bleiben unveraendert.
+    /// </summary>
+    private static WorkbenchSaveResult Rejected(string message) =>
+        new(false, message, null, "-", null);
 
     /// <summary>
     /// KB-Index fuer das bereits dauerhaft gespeicherte Sample nachtragen (Schritt 8 aus
