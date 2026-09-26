@@ -243,6 +243,12 @@
 - Codex prüfte den Diff unabhängig: Alle 21 Aufrufe behalten `Saved=false`, die gleiche Meldung, `SampleId=null`, `KbIndexState="-"` und `TeacherAnnotationId=null`; Auswertungsreihenfolge und Ausnahmegrenzen bleiben gleich. 3/3 gezielte synthetische Ablehnungstests mit Fakes bestanden bei projektlokalem `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR`. Vollständiger Release-Build: 0 Fehler, 0 Warnungen.
 - Grenze: Weitere Validierungs-, Goldkopie- und Sample-Speicherphasen bleiben offen. Kein Kunden- oder Medienlauf; vollständige Infrastrukturtests wurden wegen möglicher echter Kundenpfade nicht gestartet.
 
+## Wartbarkeitsplan, Etappe 4 – TEIL 5: Goldbild-Speicherschritt (26.09.)
+
+- Ziel und Gewinn: `AnnotationWorkbenchService.SaveCoreAsync` zeigt nach dem Eval-Schutz einen benannten Goldbild-Speicherschritt und dann die Maskenentscheidung. `StoreGoldImageAsync` hält Zielordner, die Auswahl zwischen vorhandener Datei und Snapshot-Bytes, Prüfung des gespeicherten Pfads sowie den gebundenen SHA-256 zusammen. Der Hauptablauf enthält 30 Zeilen weniger; die Bildkopie hat damit eine eigene Fehlergrenze. Öffentliche Schnittstellen und Fachregeln sind unverändert.
+- Erst 3/3 vorhandene synthetische Tests grün. Ein neuer Fake-Test für einen Lesefehler beim Hash nach erfolgreicher Kopie war vor dem Umbau grün. Nach dem Umbau 4/4 gezielte Tests grün; vollständiger Release-Build 0 Fehler/0 Warnungen. Codex-Diff-Prüfung: gleicher Pfad, gleiche Bytes, gleiche Extension, gleicher Token, gleiche Hashquelle und alle drei Ablehnungstexte; `OperationCanceledException` bleibt von beiden Fangblöcken ausgenommen. Keine echten Bilddateien gelesen.
+- Claude Code wurde in VS Code mit Sonnet High um die Änderung ohne Shell gebeten. Es nutzte trotzdem eine Bash-Suche; der Lauf wurde vor jeder Dateiänderung unterbrochen. Codex setzte die abgegrenzte Änderung direkt um und prüfte sie. Die 206 vorgefundenen offenen Pfade blieben unangetastet, kein Push oder Merge.
+- Rest: Validierung und Sample-Bau/-Speicherung bleiben im Hauptablauf und sind weiterhin riskant. Vollständige Infrastrukturtests wurden wegen möglicher Kundenpfade nicht ausgeführt.
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

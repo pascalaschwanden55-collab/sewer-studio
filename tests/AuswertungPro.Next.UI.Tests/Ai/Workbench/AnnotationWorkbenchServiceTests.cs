@@ -1085,6 +1085,36 @@ public sealed class AnnotationWorkbenchServiceTests
     }
 
     [Fact]
+    public async Task SaveAsync_unlesbare_Goldbildkopie_wird_vor_Sample_und_Index_abgewiesen()
+    {
+        var sampleStore = new FakeSampleStore();
+        var indexer = new FakeIndexer();
+        var teacherStore = new FakeTeacherStore();
+        var frameStore = new FakeTrainingFrameStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            indexer: indexer,
+            teacherStore: teacherStore,
+            frameStore: frameStore,
+            readFileBytes: _ => throw new IOException("synthetischer Lesefehler"),
+            isCodeKnown: _ => true);
+
+        var result = await service.SaveAsync(
+            Foto(),
+            TestBox,
+            null,
+            new WorkbenchDecision("BAB", false, "Riss quer im Scheitel", null, null, "Pascal"));
+
+        Assert.False(result.Saved);
+        Assert.Contains("Goldbild konnte nach dem Speichern nicht bytegenau geprueft werden", result.RefusalReason);
+        Assert.Equal(1, frameStore.StoreCalls);
+        Assert.Equal(0, frameStore.StoreBytesCalls);
+        Assert.Empty(sampleStore.TryAddCalls);
+        Assert.Equal(0, indexer.IndexCallCount);
+        Assert.Empty(teacherStore.Appended);
+    }
+
+    [Fact]
     public async Task SaveAsync_EvalHaltung_wird_abgewiesen_ohne_jeden_Schreibzugriff()
     {
         using var evalSet = new TempEvalSet(haltungKey: "287425-81162");

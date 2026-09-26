@@ -526,44 +526,14 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         var sampleId = repairsExistingSample
             ? item.ExistingSampleId!
             : $"wb_{Guid.NewGuid():N}"[..15];
-        string? storedFramePath;
-        try
-        {
-            var goldFramesRoot = _resolveGoldFramesDir();
-            var codeFolder = PersonalGoldMainCodeCatalog.FormatFolderName(
-                finalCode,
-                _codeLabelLookup);
-            var codeFramesDir = string.IsNullOrWhiteSpace(goldFramesRoot)
-                ? goldFramesRoot
-                : Path.Combine(goldFramesRoot, codeFolder);
-            storedFramePath = snapshotBytes is null
-                ? await _frameStore
-                    .StoreExistingAsync(item.FramePath, codeFramesDir, ct)
-                    .ConfigureAwait(false)
-                : await _frameStore
-                    .StoreBytesAsync(snapshotBytes, imageSnapshot!.Extension, codeFramesDir, ct)
-                    .ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            return Rejected($"Goldbild konnte nicht sicher gespeichert werden: {ex.Message}");
-        }
-        if (string.IsNullOrWhiteSpace(storedFramePath))
-        {
-            return Rejected("Goldbild konnte nicht sicher gespeichert werden.");
-        }
+        var (storedImage, imageRejection) = await StoreGoldImageAsync(
+                item, finalCode, snapshotBytes, imageSnapshot, ct)
+            .ConfigureAwait(false);
+        if (imageRejection is not null)
+            return imageRejection;
 
-        string storedImageSha256;
-        try
-        {
-            storedImageSha256 = imageSnapshot?.Sha256
-                ?? Convert.ToHexStringLower(SHA256.HashData(_readFileBytes(storedFramePath)));
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            return Rejected(
-                $"Goldbild konnte nach dem Speichern nicht bytegenau geprueft werden: {ex.Message}");
-        }
+        var storedFramePath = storedImage!.FramePath;
+        var storedImageSha256 = storedImage.Sha256;
 
         // 4) Entwurf oder Gold? Vollstaendig ist ein Fund nur mit gepruefter SAM-Maske.
         // Ohne gueltige Maske bleibt das Sample ein Entwurf (Schritt 7).
@@ -803,6 +773,61 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
     /// </summary>
     private static WorkbenchSaveResult Rejected(string message) =>
         new(false, message, null, "-", null);
+
+    private sealed record StoredGoldImage(string FramePath, string Sha256);
+
+    /// <summary>
+    /// Speichert die angenommene Bildkopie und bindet ihren Hash an den gespeicherten
+    /// Goldpfad. Die drei Ablehnungen bleiben vor dem Schreiben eines Samples.
+    /// </summary>
+    private async Task<(StoredGoldImage? Image, WorkbenchSaveResult? Rejection)> StoreGoldImageAsync(
+        WorkbenchItem item,
+        string finalCode,
+        byte[]? snapshotBytes,
+        WorkbenchImageSnapshot? imageSnapshot,
+        CancellationToken ct)
+    {
+        string? storedFramePath;
+        try
+        {
+            var goldFramesRoot = _resolveGoldFramesDir();
+            var codeFolder = PersonalGoldMainCodeCatalog.FormatFolderName(
+                finalCode,
+                _codeLabelLookup);
+            var codeFramesDir = string.IsNullOrWhiteSpace(goldFramesRoot)
+                ? goldFramesRoot
+                : Path.Combine(goldFramesRoot, codeFolder);
+            storedFramePath = snapshotBytes is null
+                ? await _frameStore
+                    .StoreExistingAsync(item.FramePath, codeFramesDir, ct)
+                    .ConfigureAwait(false)
+                : await _frameStore
+                    .StoreBytesAsync(snapshotBytes, imageSnapshot!.Extension, codeFramesDir, ct)
+                    .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return (null, Rejected($"Goldbild konnte nicht sicher gespeichert werden: {ex.Message}"));
+        }
+        if (string.IsNullOrWhiteSpace(storedFramePath))
+        {
+            return (null, Rejected("Goldbild konnte nicht sicher gespeichert werden."));
+        }
+
+        string storedImageSha256;
+        try
+        {
+            storedImageSha256 = imageSnapshot?.Sha256
+                ?? Convert.ToHexStringLower(SHA256.HashData(_readFileBytes(storedFramePath)));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return (null, Rejected(
+                $"Goldbild konnte nach dem Speichern nicht bytegenau geprueft werden: {ex.Message}"));
+        }
+
+        return (new StoredGoldImage(storedFramePath, storedImageSha256), null);
+    }
 
     /// <summary>
     /// KB-Index fuer das bereits dauerhaft gespeicherte Sample nachtragen (Schritt 8 aus
