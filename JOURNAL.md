@@ -212,6 +212,12 @@
 - `tests/AuswertungPro.Next.Pipeline.Tests/MultiModelAnalysisServiceVramTests.cs` ergänzt SAM-VRAM und eine geordnete Prüfung der ersten drei Journal-Frame-Einträge. Codex korrigierte nur den Kommentar: `TempJournalPaths` ist erst bei gesetztem projektlokalem `TEMP`/`TMP` projektlokal; der Test injiziert einen Trace-Writer für denselben Ordner.
 - Claude meldete 54/54 gezielte synthetische Tests und den vollständigen Release-Build mit 0 Fehlern/0 Warnungen. Codex führte drei betroffene synthetische Testklassen selbst aus: 45/45 bestanden; ein vollständiger Release-Build und ein projektübergreifender Gesamttest wurden von Codex nicht ausgeführt. Für künftige Testläufe `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR` auf geprüfte Projektordner setzen.
 
+## Wartbarkeitsplan, Etappe 3 – TEIL 2: gemeinsame Fehlerfolge (26.09.)
+
+- Ziel und Gewinn: Claude ersetzte in `MultiModelAnalysisService.cs` die sechs gleichen Dreierfolgen aus Trace schreiben, Deduplikator fortschalten und `RetryRequired`-Checkpoint durch `RecordRetryRequiredFrameAsync`. Vorher standen diese drei Schritte 18-mal inline, danach an sechs Aufrufstellen und einmal im Helfer. Codex prüfte den Diff unabhängig: Die Schritte bleiben in derselben Reihenfolge; Modellzeiten, Trace-Gründe, Meldungen, VRAM-Skip und Transport-Outage bleiben in den bisherigen Zweigen.
+- `MultiModelAnalysisServiceResilienceTests.cs` ergänzt den bisher fehlenden allgemeinen YOLO-Transportfehler sowie einen speicherinternen Test für die geordnete Trace- und Checkpoint-Folge der allgemeinen Fehler von YOLO, DINO und SAM. Mit projektlokalem `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR` bestanden vor der Codeänderung laut Claude 47/47 und danach nochmals 47/47 gezielte Tests; Codex wiederholte danach dieselben 47 Tests erfolgreich. Vollständiger Release-Build laut Claude: 0 Fehler, 0 Warnungen. Kein vollständiger Infrastrukturtestlauf.
+- Grenze: Claude prüfte vor dem ausdrücklichen Nachhinweis zweimal nur die Dateigröße einer bestehenden AppData-Telemetriedatei außerhalb des Projekts. Ein Lesen ihres Inhalts oder eine Änderung ist nicht belegt. Danach wurde die Projektgrenze nochmals ausdrücklich gesetzt. Künftige Läufe dürfen auch solche Metadatenabfragen außerhalb des Projekts nicht ausführen.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

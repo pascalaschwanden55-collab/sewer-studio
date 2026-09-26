@@ -518,9 +518,7 @@ public sealed partial class MultiModelAnalysisService
                     trace.Path = "yolo_error";
                     trace.DropReason = "vram_insufficient";
                     MarkTraceDegraded(trace, "vram_insufficient");
-                    await WriteTraceAsync(trace).ConfigureAwait(false);
-                    detections.AddRange(deduplicator.AdvanceAll());
-                    await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
+                    await RecordRetryRequiredFrameAsync(trace, detections, deduplicator, frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
                     outageGuard.RegisterFailureSkip();
                     vramInsufficientMessage ??= ex.Message;
                     continue;
@@ -533,9 +531,7 @@ public sealed partial class MultiModelAnalysisService
                     telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, phaseSw.ElapsedMilliseconds, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                     trace.Path = "yolo_error";
                     trace.DropReason = "yolo_error";
-                    await WriteTraceAsync(trace).ConfigureAwait(false);
-                    detections.AddRange(deduplicator.AdvanceAll());
-                    await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
+                    await RecordRetryRequiredFrameAsync(trace, detections, deduplicator, frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
                     if (await RegisterSidecarTransportErrorAsync().ConfigureAwait(false)) break;
                     continue;
                 }
@@ -592,9 +588,7 @@ public sealed partial class MultiModelAnalysisService
                 trace.Path = "dino_error";
                 trace.DropReason = "vram_insufficient";
                 MarkTraceDegraded(trace, "vram_insufficient");
-                await WriteTraceAsync(trace).ConfigureAwait(false);
-                detections.AddRange(deduplicator.AdvanceAll());
-                await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
+                await RecordRetryRequiredFrameAsync(trace, detections, deduplicator, frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
                 outageGuard.RegisterFailureSkip();
                 vramInsufficientMessage ??= ex.Message;
                 continue;
@@ -607,9 +601,7 @@ public sealed partial class MultiModelAnalysisService
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, phaseSw.ElapsedMilliseconds, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                 trace.Path = "dino_error";
                 trace.DropReason = "dino_error";
-                await WriteTraceAsync(trace).ConfigureAwait(false);
-                detections.AddRange(deduplicator.AdvanceAll());
-                await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
+                await RecordRetryRequiredFrameAsync(trace, detections, deduplicator, frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
                 if (await RegisterSidecarTransportErrorAsync().ConfigureAwait(false)) break;
                 continue;
             }
@@ -738,9 +730,7 @@ public sealed partial class MultiModelAnalysisService
                 trace.Path = "sam_error";
                 trace.DropReason = "vram_insufficient";
                 MarkTraceDegraded(trace, "vram_insufficient");
-                await WriteTraceAsync(trace).ConfigureAwait(false);
-                detections.AddRange(deduplicator.AdvanceAll());
-                await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
+                await RecordRetryRequiredFrameAsync(trace, detections, deduplicator, frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
                 outageGuard.RegisterFailureSkip();
                 vramInsufficientMessage ??= ex.Message;
                 continue;
@@ -753,9 +743,7 @@ public sealed partial class MultiModelAnalysisService
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, phaseSw.ElapsedMilliseconds, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                 trace.Path = "sam_error";
                 trace.DropReason = "sam_error";
-                await WriteTraceAsync(trace).ConfigureAwait(false);
-                detections.AddRange(deduplicator.AdvanceAll());
-                await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
+                await RecordRetryRequiredFrameAsync(trace, detections, deduplicator, frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
                 if (await RegisterSidecarTransportErrorAsync().ConfigureAwait(false)) break;
                 continue;
             }
@@ -985,6 +973,22 @@ public sealed partial class MultiModelAnalysisService
         => AppendCheckpointAsync(
             new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()),
             ct);
+
+    /// <summary>
+    /// Trace schreiben, Dedup-Fenster altern lassen (AdvanceAll) und den Frame als
+    /// RetryRequired journalieren: identische Dreierfolge, die in allen sechs
+    /// Fehlerzweigen von YOLO, DINO und SAM unveraendert wiederholt wurde. Reihenfolge
+    /// der drei Schritte, Trace-Inhalt und Checkpoint-Argumente bleiben exakt wie zuvor
+    /// inline; nur die Wiederholung entfaellt.
+    /// </summary>
+    private async Task RecordRetryRequiredFrameAsync(
+        PipelineFrameTrace trace, List<RawVideoDetection> detections, TemporalFindingDeduplicator deduplicator,
+        int frameIndex, double t, double estimatedMeter, CancellationToken ct)
+    {
+        await WriteTraceAsync(trace).ConfigureAwait(false);
+        detections.AddRange(deduplicator.AdvanceAll());
+        await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
+    }
 
     // ── Conversion helper ──────────────────────────────────────────────
 

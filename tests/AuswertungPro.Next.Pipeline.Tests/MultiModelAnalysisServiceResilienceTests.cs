@@ -275,6 +275,26 @@ public sealed class MultiModelAnalysisServiceResilienceTests
         }
     }
 
+    /// <summary>Qualifizierter Detektor (YOLO wird also wirklich aufgerufen, kein Bypass):
+    /// YOLO wirft bei jedem Frame einen generischen Transportfehler. Bisher ungeschuetzter
+    /// Fehlerzweig — anders als DINO/SAM hatte YOLOs generischer Catch keinen Test.</summary>
+    private sealed class YoloThrowingClient : ClientBase
+    {
+        public YoloThrowingClient() : base(detectorQualified: true) { }
+
+        public override Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default)
+        {
+            YoloCalls++;
+            throw new System.Net.Http.HttpRequestException("Sidecar nicht erreichbar (Test).");
+        }
+
+        public override Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default)
+        {
+            DinoCalls++;
+            return Task.FromResult(Box());
+        }
+    }
+
     /// <summary>Qualifizierter Detektor: DINO wirft nur an den angegebenen 1-basierten Frames.</summary>
     private sealed class SporadicDinoFailureClient : ClientBase
     {
@@ -478,6 +498,166 @@ public sealed class MultiModelAnalysisServiceResilienceTests
         Assert.True(result.FramesAnalyzed <= 8,
             $"Erwartet Abbruch nach 8 Folgefehlern, tatsaechlich {result.FramesAnalyzed} Frames.");
         Assert.Equal(result.FramesAnalyzed, client.SamCalls);
+    }
+
+    [Fact]
+    public async Task Yolo_transportfehler_loesen_outage_abbruch_aus()
+    {
+        // Symmetrisch zu Dino/Sam_transportfehler_..._outage_abbruch_aus: YOLOs
+        // generischer Fehlerzweig (yolo_error, kein VRAM) hatte bisher KEINEN Test,
+        // obwohl DINO und SAM denselben Ausfallschutz schon lange belegen.
+        var client = new YoloThrowingClient();
+        var svc = CreateService(client, frameCount: 10);
+
+        var result = await svc.AnalyzeAsync("dummy/video.mp4");
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.True(result.Degraded, "Lauf mit totem Sidecar muss degraded sein.");
+        Assert.Contains("Sidecar", result.DegradedReason ?? "");
+        Assert.Equal(0, client.DinoCalls);   // YOLO scheitert VOR DINO — DINO wird nie erreicht
+        Assert.True(result.FramesAnalyzed <= 8,
+            $"Erwartet Abbruch nach 8 Folgefehlern, tatsaechlich {result.FramesAnalyzed} Frames.");
+        Assert.Equal(result.FramesAnalyzed, client.YoloCalls);
+    }
+
+    /// <summary>Qualifizierter Detektor: YOLO/DINO/SAM werfen je an den angegebenen
+    /// 1-basierten Aufrufen einen GENERISCHEN (nicht-VRAM-)Transportfehler, sonst
+    /// gesunde Antworten. Gleiches Zaehlmuster wie VramFailsClient in
+    /// MultiModelAnalysisServiceVramTests, aber fuer die generischen Fehlerzweige.</summary>
+    private sealed class MixedGenericFailureClient : ClientBase
+    {
+        private readonly HashSet<int> _yoloFailCalls;
+        private readonly HashSet<int> _dinoFailCalls;
+        private readonly HashSet<int> _samFailCalls;
+
+        public MixedGenericFailureClient(
+            IEnumerable<int>? yoloFailCalls = null,
+            IEnumerable<int>? dinoFailCalls = null,
+            IEnumerable<int>? samFailCalls = null)
+            : base(detectorQualified: true)
+        {
+            _yoloFailCalls = new HashSet<int>(yoloFailCalls ?? Enumerable.Empty<int>());
+            _dinoFailCalls = new HashSet<int>(dinoFailCalls ?? Enumerable.Empty<int>());
+            _samFailCalls = new HashSet<int>(samFailCalls ?? Enumerable.Empty<int>());
+        }
+
+        public override Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default)
+        {
+            YoloCalls++;
+            if (_yoloFailCalls.Contains(YoloCalls))
+                throw new System.Net.Http.HttpRequestException("Sidecar nicht erreichbar (Test).");
+            return Task.FromResult(new YoloResponse(
+                IsRelevant: true, Detections: Array.Empty<YoloDetectionDto>(),
+                FrameClass: "damage", InferenceTimeMs: 1, DetectorQualified: true));
+        }
+
+        public override Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default)
+        {
+            DinoCalls++;
+            if (_dinoFailCalls.Contains(DinoCalls))
+                throw new System.Net.Http.HttpRequestException("Sidecar nicht erreichbar (Test).");
+            return Task.FromResult(Box());
+        }
+
+        public override Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default)
+        {
+            SamCalls++;
+            if (_samFailCalls.Contains(SamCalls))
+                throw new System.Net.Http.HttpRequestException("Sidecar nicht erreichbar (Test).");
+            return Task.FromResult(new SamResponse([Mask("crack")], 640, 480, 1));
+        }
+    }
+
+    /// <summary>Rein speicherinterner Trace-Aufzeichner: kein Datei-I/O, damit dieser Test
+    /// unabhaengig von TEMP/TMP/SEWERSTUDIO_TELEMETRY_DIR projektlokal bleibt.</summary>
+    private sealed class RecordingTraceWriter : IPipelineTraceWriter
+    {
+        public List<PipelineTraceEntry> Entries { get; } = new();
+        public Task WriteAsync(PipelineTraceEntry entry) { Entries.Add(entry); return Task.CompletedTask; }
+        public Task WriteSummaryAsync(string runId, TelemetrySummary summary) => Task.CompletedTask;
+        public string? ResolvePath(string runId) => null;
+        public string? ResolveSummaryPath(string runId) => null;
+    }
+
+    /// <summary>Rein speicherinternes Checkpoint-Journal: kein Datei-I/O. Haelt die
+    /// journalierten Frames in genau der Reihenfolge, in der AppendFrameAsync sie
+    /// erhaelt — direkter Nachweis der Checkpoint-Reihenfolge ohne JSONL-Umweg.</summary>
+    private sealed class RecordingCheckpointJournal : IAnalysisCheckpointJournal
+    {
+        public List<AnalysisCheckpointFrame> Frames { get; } = new();
+
+        public Task<AnalysisCheckpointState> OpenAsync(string videoPath, double stepSeconds, CancellationToken ct = default)
+            => Task.FromResult(AnalysisCheckpointState.Empty);
+
+        public Task AppendFrameAsync(AnalysisCheckpointFrame frame, CancellationToken ct = default)
+        {
+            Frames.Add(frame);
+            return Task.CompletedTask;
+        }
+
+        public Task CompleteAsync(CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task Generische_fehler_bei_yolo_dino_und_sam_schreiben_trace_und_checkpoint_in_richtiger_reihenfolge()
+    {
+        // Frame 1 scheitert GENERISCH (kein VRAM) bei YOLO, Frame 2 (YOLO ok) bei DINO,
+        // Frame 3 (YOLO+DINO ok) bei SAM. Reiner In-Memory-Nachweis (kein Datei-I/O):
+        // Trace-Inhalt sowie Checkpoint-Art UND -Reihenfolge fuer die drei generischen
+        // Fehlerzweige waren bisher durch keinen Test direkt belegt.
+        var client = new MixedGenericFailureClient(
+            yoloFailCalls: new[] { 1 },
+            dinoFailCalls: new[] { 1 },
+            samFailCalls: new[] { 1 });
+        var traceWriter = new RecordingTraceWriter();
+        var journal = new RecordingCheckpointJournal();
+
+        var svc = new MultiModelAnalysisService(
+            pipelineTraceWriter: traceWriter,
+            client: client,
+            config: MinimalConfig(),
+            ffmpegPath: "ffmpeg",
+            frameSource: (_, _, _, _, ct) => FrameSource(10, ct),
+            durationProbe: (_, _) => Task.FromResult(10.0),
+            checkpointJournal: journal)
+        {
+            FrameStepSeconds = 1.0,
+            UseClsPrefilter = false,
+            ClassifierOnlyStructuralEnabled = false
+        };
+
+        var result = await svc.AnalyzeAsync("dummy/video.mp4");
+        Assert.True(result.IsSuccess, result.Error);
+
+        // Checkpoint: GEORDNETE Folge, nicht nur Vorhandensein (Position 0 = Frame 1 usw.).
+        Assert.True(journal.Frames.Count >= 3,
+            $"Erwartet mindestens 3 journalierte Frames, tatsaechlich {journal.Frames.Count}.");
+        var firstThree = journal.Frames.Take(3)
+            .Select(f => (f.FrameIndex, f.Kind))
+            .ToList();
+        Assert.Equal(
+            new[]
+            {
+                (FrameIndex: 1, Kind: CheckpointFrameKind.RetryRequired),
+                (FrameIndex: 2, Kind: CheckpointFrameKind.RetryRequired),
+                (FrameIndex: 3, Kind: CheckpointFrameKind.RetryRequired)
+            },
+            firstThree);
+
+        // Trace: je Fehlerzweig der GENERISCHE (nicht VRAM-)DropReason.
+        string? PathOf(int frameIndex) => traceWriter.Entries.FirstOrDefault(e => e.FrameIndex == frameIndex)?.Path;
+        string? DropReasonOf(int frameIndex) => traceWriter.Entries.FirstOrDefault(e => e.FrameIndex == frameIndex)?.DropReason;
+
+        Assert.Equal("yolo_error", PathOf(1));
+        Assert.Equal("yolo_error", DropReasonOf(1));
+        Assert.Equal("dino_error", PathOf(2));
+        Assert.Equal("dino_error", DropReasonOf(2));
+        Assert.Equal("sam_error", PathOf(3));
+        Assert.Equal("sam_error", DropReasonOf(3));
+
+        // Der Outage-Zaehler ist GEMEINSAM ueber alle drei Phasen: 3 gemischte Fehler
+        // in Folge duerfen noch NICHT abbrechen (Schwelle liegt bei 8 Folgefehlern).
+        Assert.True(result.FramesAnalyzed >= 9, "Kein verfrueher Abbruch bei nur 3 gemischten Fehlern.");
     }
 
     [Fact]
