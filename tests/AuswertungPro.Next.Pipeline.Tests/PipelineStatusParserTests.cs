@@ -53,6 +53,7 @@ public sealed class PipelineStatusParserTests
     [InlineData("")]
     [InlineData("Keine Erkennungen vorhanden")]
     [InlineData("@ 10m Frame")]
+    [InlineData("99999999999 Befunde")]   // zu grosse Zahl: int.TryParse scheitert
     public void TryExtractFindingCount_UngueltigeEingabe_GibtNull(string? status)
     {
         var result = PipelineStatusParser.TryExtractFindingCount(status);
@@ -75,6 +76,7 @@ public sealed class PipelineStatusParserTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("38 frames (kein 'gesamt')")]
+    [InlineData("99999999999 gesamt")]   // zu grosse Zahl: int.TryParse scheitert
     public void TryExtractYoloTotalFrames_UngueltigeEingabe_GibtNull(string? status)
     {
         var result = PipelineStatusParser.TryExtractYoloTotalFrames(status);

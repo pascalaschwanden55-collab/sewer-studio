@@ -175,6 +175,12 @@
 - Laut Claude: Baseline 59/59, danach 61/61 gezielte synthetische Tests; vollständiger Release-Build 0 Fehler/0 Warnungen. Codex gab den Diff unabhängig frei; Tests und Build wurden hier nicht erneut ausgeführt.
 - Restpunkt: Ein gezielter Overflow-Test fehlt. Das bisherige Ausnahmeverhalten beim Umwandeln zu großer Dezimalwerte bleibt erhalten; die Testlücke blockiert diesen kleinen Umbau nicht.
 
+## Ferienlauf 03 Uhr: gemeinsame Zählregel (26.09.)
+
+- Ziel: Die doppelten Prüf- und Parseabläufe für Befundzahl und YOLO-Framezahl in `PipelineStatusParser` zusammenführen. Claude änderte `src/AuswertungPro.Next.Application/Ai/PipelineStatusParser.cs` und ergänzte zwei synthetische Überlauffälle in `tests/AuswertungPro.Next.Pipeline.Tests/PipelineStatusParserTests.cs`.
+- Wartungsgewinn: Eine private Zählregel statt zwei gleicher Abläufe. Die unterschiedlichen Regex-Muster und Fanggruppen, Trefferwahl, Null/ungültige Werte und Rückgaben blieben laut unabhängigem Codex-Diff-Review gleich.
+- Laut Claude: Baseline 24/24, danach 26/26 gezielte synthetische Tests; vollständiger Release-Build 0 Fehler/0 Warnungen. Codex gab den Diff frei; Tests und Build wurden hier nicht erneut ausgeführt. `TASKS.md`-Punkt 7 ist erledigt.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.
