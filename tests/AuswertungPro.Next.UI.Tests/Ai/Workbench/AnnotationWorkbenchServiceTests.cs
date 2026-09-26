@@ -1191,6 +1191,61 @@ public sealed class AnnotationWorkbenchServiceTests
     }
 
     [Fact]
+    public async Task SaveAsync_KbIndexOperationCanceledException_nach_Sample_wird_als_Warnung_behandelt()
+    {
+        // Ist-Verhalten (Charakterisierung, keine Semantikaenderung): Der KB-Schritt faengt
+        // "catch (Exception ex)" erfasst auch OperationCanceledException. Das Testdouble
+        // wirft diese Ausnahme nach Schritt 6, ohne den Token abzubrechen. Das Ergebnis ist
+        // eine sichtbare Warnung bei Saved=true; der Teacher-Schritt laeuft weiter.
+        var sampleStore = new FakeSampleStore();
+        var indexer = new FakeIndexer { ThrowOnIndex = new OperationCanceledException("Abbruch waehrend KB-Index (Test).") };
+        var service = CreateService(
+            sampleStore: sampleStore, indexer: indexer,
+            exportFactory: () => new FakeExportService(), isCodeKnown: _ => true);
+
+        var item = new WorkbenchItem(@"C:\frames\f.jpg", "case1", 1, 1, null, null, 300);
+        var decision = new WorkbenchDecision("BAB", false, "Riss quer im Scheitel", null, null, "Pascal");
+
+        var result = await service.SaveAsync(item, TestBox, GueltigeMaske, decision);
+
+        Assert.True(result.Saved);                          // Sample bleibt gespeichert, kein Rueckzug
+        Assert.Single(sampleStore.TryAddCalls);
+        Assert.Equal("Error", result.KbIndexState);
+        Assert.NotNull(result.RefusalReason);
+        Assert.Contains("KB-Index", result.RefusalReason);  // Warnung sichtbar, nicht still
+        Assert.NotNull(result.SampleId);
+        Assert.NotNull(result.TeacherAnnotationId);         // Teacher-Schritt unabhaengig, laeuft weiter
+    }
+
+    [Fact]
+    public async Task SaveAsync_TeacherOperationCanceledException_nach_Sample_wird_als_Warnung_behandelt()
+    {
+        // Ist-Verhalten (Charakterisierung, keine Semantikaenderung): Genau wie beim KB-Schritt
+        // faengt der Teacher-Schritt "catch (Exception ex)" auch OperationCanceledException.
+        // Das Testdouble wirft diese Ausnahme ohne abgebrochenen Token. Saved bleibt true,
+        // ein Teacher-Eintrag entsteht nicht und die Warnung bleibt sichtbar.
+        var sampleStore = new FakeSampleStore();
+        var indexer = new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll };
+        var teacherStore = new FakeTeacherStore();
+        var export = new FakeExportService { ThrowOnExport = new OperationCanceledException("Abbruch waehrend Teacher-Export (Test).") };
+        var service = CreateService(
+            sampleStore: sampleStore, indexer: indexer, teacherStore: teacherStore,
+            exportFactory: () => export, isCodeKnown: _ => true);
+
+        var item = new WorkbenchItem(@"C:\frames\f.jpg", "case1", 1, 1, null, null, 300);
+        var decision = new WorkbenchDecision("BAB", false, "Riss quer im Scheitel", null, null, "Pascal");
+
+        var result = await service.SaveAsync(item, TestBox, GueltigeMaske, decision);
+
+        Assert.True(result.Saved);                         // Sample bleibt gespeichert, kein Rueckzug
+        Assert.Single(sampleStore.TryAddCalls);
+        Assert.Null(result.TeacherAnnotationId);
+        Assert.NotNull(result.RefusalReason);
+        Assert.Contains("Teacher", result.RefusalReason);  // Warnung im Result-Text
+        Assert.Empty(teacherStore.Appended);
+    }
+
+    [Fact]
     public async Task SaveAsync_ohne_Maske_speichert_nur_Entwurf_ohne_KB_und_Teacher()
     {
         var sampleStore = new FakeSampleStore();

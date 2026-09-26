@@ -825,8 +825,40 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
 
         // 9) Teacher-Kandidat. Ein Teacher-Fehler darf das gespeicherte Sample NICHT ruecknehmen.
-        string? teacherId = null;
-        string? teacherWarning = null;
+        var (teacherId, teacherWarning) = await RecordTeacherCandidateAsync(
+            item, box, decision, finalCode, beschreibung, sampleId, storedFramePath, ct)
+            .ConfigureAwait(false);
+
+        // KB-, Teacher- und Ersetz-Warnung gemeinsam sichtbar machen; das Sample selbst ist gespeichert.
+        var warning = CombineWarnings(replaceWarning, kbWarning, teacherWarning);
+        return new WorkbenchSaveResult(
+            true,
+            warning,
+            sampleId,
+            kbState,
+            teacherId,
+            GoldApproved: true,
+            StoredImageSha256: storedImageSha256,
+            StoredConfirmedAtUtc: sample.ConfirmedAtUtc is { } goldConfirmedAtUtc
+                ? ToUtc(goldConfirmedAtUtc) : null);
+    }
+
+    /// <summary>
+    /// Teacher-Kandidat fuer das bereits dauerhaft gespeicherte Sample bauen und exportieren
+    /// (Schritt 9 aus SaveCoreAsync, hier von der persistierten Sample-Phase getrennt). Ein
+    /// Fehler hier darf das gespeicherte Sample nicht ruecknehmen. Auch eine
+    /// OperationCanceledException wird wie bisher als sichtbare Warnung behandelt.
+    /// </summary>
+    private async Task<(string? TeacherId, string? TeacherWarning)> RecordTeacherCandidateAsync(
+        WorkbenchItem item,
+        BoundingBox box,
+        WorkbenchDecision decision,
+        string finalCode,
+        string beschreibung,
+        string sampleId,
+        string storedFramePath,
+        CancellationToken ct)
+    {
         try
         {
             var classId = _teacherClassMap.GetOrAddClassId(finalCode);
@@ -862,26 +894,13 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             annotation.CroppedRegionPath = export.CroppedRegionPath;
             annotation.YoloAnnotationPath = export.YoloAnnotationPath;
             await _teacherStore.AppendAsync(annotation).ConfigureAwait(false);
-            teacherId = annotation.AnnotationId;
+            return (annotation.AnnotationId, null);
         }
         catch (Exception ex)
         {
             // Sample bleibt gespeichert; die Warnung wird sichtbar zurueckgegeben (nie still).
-            teacherWarning = $"Teacher-Kandidat nicht gespeichert: {ex.Message}";
+            return (null, $"Teacher-Kandidat nicht gespeichert: {ex.Message}");
         }
-
-        // KB-, Teacher- und Ersetz-Warnung gemeinsam sichtbar machen; das Sample selbst ist gespeichert.
-        var warning = CombineWarnings(replaceWarning, kbWarning, teacherWarning);
-        return new WorkbenchSaveResult(
-            true,
-            warning,
-            sampleId,
-            kbState,
-            teacherId,
-            GoldApproved: true,
-            StoredImageSha256: storedImageSha256,
-            StoredConfirmedAtUtc: sample.ConfirmedAtUtc is { } goldConfirmedAtUtc
-                ? ToUtc(goldConfirmedAtUtc) : null);
     }
 
     /// <summary>
