@@ -224,6 +224,13 @@
 - Zwei neue synthetische Tests halten fest, dass eine vom KB-Indexer bzw. Teacher-Export geworfene `OperationCanceledException` nach dem gespeicherten Sample weiterhin als sichtbare Warnung behandelt wird. Der Test wirft die Ausnahme ohne abgebrochenen Token; der Fall eines tatsächlich abgebrochenen Tokens während dieser Phase ist damit nicht vollständig simuliert. Codex prüfte den Diff unabhängig: Exportparameter, Annotation, Fehlertext und `Saved`-Ergebnis bleiben gleich. Mit nur Fake-Stores und projektlokalem `TEMP`/`TMP`/`SEWERSTUDIO_TELEMETRY_DIR` bestanden 6/6 gezielte Tests nach der Änderung. Vollständiger Release-Build von Codex: 0 Fehler, 0 Warnungen. Kein vollständiger UI- oder Infrastrukturtestlauf; das bereits offene UI-Testprojekt blieb unangetastet.
 - Abgleich mit `sewer-architektur`: Die bestehende Folge Goldkopie → Sample → KB → Teacher und alle Schnittstellen bleiben gleich. Die Architekturkarte braucht für diese interne Methodentrennung keine Änderung.
 
+## Wartbarkeitsplan, Etappe 4 – TEIL 2: KB-Nachtrag nach gespeichertem Sample (26.09.)
+
+- Ziel und Gewinn: Claude trennte in `src/AuswertungPro.Next.UI/Services/AnnotationWorkbenchService.cs` den KB-Nachtrag als `RecordKbIndexAsync` von der dauerhaften Sample-Speicherung. `SaveCoreAsync` zeigt jetzt die beiden nachgelagerten Schritte KB und Teacher nacheinander; Index, Status-Nachtrag und Fehlerwarnung werden gemeinsam gepflegt.
+- `tests/AuswertungPro.Next.UI.Tests/Ai/Workbench/AnnotationWorkbenchServiceTests.cs` ergänzt einen synthetischen Fall: Der Index gelingt, aber `MergeOrUpdateAsync` scheitert. Das bereits gespeicherte Sample bleibt mit `Saved=true` erhalten, die KB-Warnung ist sichtbar und der Teacher-Schritt läuft weiter.
+- Codex prüfte den Diff unabhängig: `sample.SampleId` ist der zuvor gesetzte `sampleId`; Reihenfolge, Statuszuordnung, `catch (Exception)` einschliesslich Abbruch-Ausnahmen und Warntext blieben gleich. 8/8 gezielte synthetische Tests liefen bei Codex mit projektlokalem `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR` grün. Claude meldete vollständigen Release-Build mit 0 Fehlern und 0 Warnungen. Kein Kunden- oder Medienlauf.
+- Rest: Die vorhergehenden Validierungs- und Goldsample-Phasen sind noch nicht getrennt. Diese Etappe war nur der nicht-transaktionale KB-Nachtrag; keine fachliche Änderung.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

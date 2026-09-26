@@ -1218,6 +1218,34 @@ public sealed class AnnotationWorkbenchServiceTests
     }
 
     [Fact]
+    public async Task SaveAsync_MergeOrUpdateFehler_nach_erfolgreichem_KbIndex_laesst_Sample_bestehen_und_meldet_Warnung()
+    {
+        // Ist-Verhalten (Charakterisierung, keine Semantikaenderung): IndexAsync liefert
+        // Erfolg, aber der anschliessende Status-Nachtrag ueber MergeOrUpdateAsync scheitert
+        // (z. B. SQLite-Lock). Beides liegt im selben try/catch von Schritt 8 — ein Fehler
+        // HIER wird genauso behandelt wie ein IndexAsync-Fehler: Saved bleibt true,
+        // KbIndexState="Error", sichtbare Warnung, der Teacher-Schritt laeuft unabhaengig weiter.
+        var sampleStore = new FakeSampleStore { ThrowOnMergeOrUpdate = new IOException("KB-DB gesperrt beim Nachtrag (Test).") };
+        var indexer = new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll };
+        var service = CreateService(
+            sampleStore: sampleStore, indexer: indexer,
+            exportFactory: () => new FakeExportService(), isCodeKnown: _ => true);
+
+        var item = new WorkbenchItem(@"C:\frames\f.jpg", "case1", 1, 1, null, null, 300);
+        var decision = new WorkbenchDecision("BAB", false, "Riss quer im Scheitel", null, null, "Pascal");
+
+        var result = await service.SaveAsync(item, TestBox, GueltigeMaske, decision);
+
+        Assert.True(result.Saved);                          // Sample bleibt gespeichert, kein Rueckzug
+        Assert.Single(sampleStore.TryAddCalls);
+        Assert.Equal("Error", result.KbIndexState);
+        Assert.NotNull(result.RefusalReason);
+        Assert.Contains("KB-Index", result.RefusalReason);  // Warnung sichtbar, nicht still
+        Assert.NotNull(result.SampleId);
+        Assert.NotNull(result.TeacherAnnotationId);         // Teacher-Schritt unabhaengig, laeuft weiter
+    }
+
+    [Fact]
     public async Task SaveAsync_TeacherOperationCanceledException_nach_Sample_wird_als_Warnung_behandelt()
     {
         // Ist-Verhalten (Charakterisierung, keine Semantikaenderung): Genau wie beim KB-Schritt
@@ -1902,6 +1930,7 @@ public sealed class AnnotationWorkbenchServiceTests
         public List<List<TrainingSample>> MergeOrUpdateCalls { get; } = new();
         public List<string> RemovedSampleIds { get; } = new();
         public List<TrainingSample> ReplaceCalls { get; } = new();
+        public Exception? ThrowOnMergeOrUpdate { get; set; }
 
         public Task<List<TrainingSample>> LoadAsync() => Task.FromResult(Store);
         public Task SaveAsync(List<TrainingSample> samples) => Task.CompletedTask;
@@ -1909,6 +1938,7 @@ public sealed class AnnotationWorkbenchServiceTests
         public Task MergeOrUpdateAsync(IEnumerable<TrainingSample> samples)
         {
             MergeOrUpdateCalls.Add(samples.ToList());
+            if (ThrowOnMergeOrUpdate is not null) throw ThrowOnMergeOrUpdate;
             foreach (var sample in samples)
             {
                 Store.RemoveAll(existing => existing.SampleId == sample.SampleId);

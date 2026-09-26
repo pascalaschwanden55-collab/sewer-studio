@@ -807,22 +807,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         // Nachtrags-Fehler (SQLite-Lock, DB-Fehler) darf den Save deshalb NICHT als
         // "Nicht gespeichert" darstellen — sonst legt der Nutzer dasselbe Sample erneut an.
         // Wie beim Teacher-Schritt wird der Fehler als sichtbare Warnung zurueckgegeben.
-        string kbState;
-        string? kbWarning = null;
-        try
-        {
-            var outcome = await _kbIndexer.IndexAsync(new[] { sample }, ct).ConfigureAwait(false);
-            sample.KbIndexState = outcome.IsIndexed(sampleId) ? KbIndexState.Indexed
-                : outcome.IsSkipped(sampleId) ? KbIndexState.Skipped
-                : KbIndexState.Error;
-            await _sampleStore.MergeOrUpdateAsync(new List<TrainingSample> { sample }).ConfigureAwait(false);
-            kbState = sample.KbIndexState.ToString();
-        }
-        catch (Exception ex)
-        {
-            kbState = KbIndexState.Error.ToString();
-            kbWarning = $"KB-Index nicht aktualisiert: {ex.Message}";
-        }
+        var (kbState, kbWarning) = await RecordKbIndexAsync(sample, ct).ConfigureAwait(false);
 
         // 9) Teacher-Kandidat. Ein Teacher-Fehler darf das gespeicherte Sample NICHT ruecknehmen.
         var (teacherId, teacherWarning) = await RecordTeacherCandidateAsync(
@@ -841,6 +826,33 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             StoredImageSha256: storedImageSha256,
             StoredConfirmedAtUtc: sample.ConfirmedAtUtc is { } goldConfirmedAtUtc
                 ? ToUtc(goldConfirmedAtUtc) : null);
+    }
+
+    /// <summary>
+    /// KB-Index fuer das bereits dauerhaft gespeicherte Sample nachtragen (Schritt 8 aus
+    /// SaveCoreAsync, hier von der persistierten Sample-Phase getrennt): indexieren, den
+    /// resultierenden KbIndexState an <paramref name="sample"/> setzen und ueber
+    /// MergeOrUpdateAsync nachtragen. Ein Fehler HIER (Index ODER Nachtrag) darf das
+    /// gespeicherte Sample NICHT ruecknehmen: der bare "catch (Exception ex)" (bewusst OHNE
+    /// Abbruch-Ausnahme auszuschliessen — Ist-Verhalten) ist unveraendert; die Ausnahme wird
+    /// als sichtbare Warnung zurueckgegeben statt weitergeworfen.
+    /// </summary>
+    private async Task<(string KbState, string? KbWarning)> RecordKbIndexAsync(
+        TrainingSample sample, CancellationToken ct)
+    {
+        try
+        {
+            var outcome = await _kbIndexer.IndexAsync(new[] { sample }, ct).ConfigureAwait(false);
+            sample.KbIndexState = outcome.IsIndexed(sample.SampleId) ? KbIndexState.Indexed
+                : outcome.IsSkipped(sample.SampleId) ? KbIndexState.Skipped
+                : KbIndexState.Error;
+            await _sampleStore.MergeOrUpdateAsync(new List<TrainingSample> { sample }).ConfigureAwait(false);
+            return (sample.KbIndexState.ToString(), null);
+        }
+        catch (Exception ex)
+        {
+            return (KbIndexState.Error.ToString(), $"KB-Index nicht aktualisiert: {ex.Message}");
+        }
     }
 
     /// <summary>
