@@ -231,6 +231,12 @@
 - Codex prüfte den Diff unabhängig: `sample.SampleId` ist der zuvor gesetzte `sampleId`; Reihenfolge, Statuszuordnung, `catch (Exception)` einschliesslich Abbruch-Ausnahmen und Warntext blieben gleich. 8/8 gezielte synthetische Tests liefen bei Codex mit projektlokalem `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR` grün. Claude meldete vollständigen Release-Build mit 0 Fehlern und 0 Warnungen. Kein Kunden- oder Medienlauf.
 - Rest: Die vorhergehenden Validierungs- und Goldsample-Phasen sind noch nicht getrennt. Diese Etappe war nur der nicht-transaktionale KB-Nachtrag; keine fachliche Änderung.
 
+## Wartbarkeitsplan, Etappe 4 – TEIL 3: Maskenentscheidung (26.09.)
+
+- Ziel und Gewinn: Claude fasste in `AnnotationWorkbenchService.SaveCoreAsync` die rund 40 Zeilen aus Bildmaßprüfung, SAM-Maskenprüfung und Flächenzählung in `EvaluateGoldMask` zusammen. Im Speicherablauf steht die Entscheidung Gold oder Entwurf jetzt als benannter Schritt; die Maskenregel hat einen eigenen Ort. Es wurde keine Fachregel geändert.
+- `AnnotationWorkbenchServiceTests` ergänzt einen synthetischen Fall für eine Ausnahme beim Lesen der Bildmaße. Wie bisher entsteht ein Entwurf ohne KB-Index oder Teacher. Claude meldete 51/51 gezielte Baseline-Tests. Codex prüfte den Diff unabhängig: Aufrufreihenfolge, Kurzschluss bei fehlender/ungültiger Maske, Flächenzählung und der ungefilterte Fangblock für Bildmaßfehler sind verhaltensgleich. 8/8 passende synthetische Nachtests liefen bei Codex mit projektlokalem `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR` grün; der vollständige Release-Build lief bei Codex mit 0 Fehlern und 0 Warnungen.
+- Grenze: Die übrigen Validierungs-, Goldkopie- und Sample-Speicherphasen bleiben im bisherigen Ablauf. Kein Kunden- oder Medienlauf; die Architekturfolge Goldkopie → Sample → KB → Teacher bleibt unverändert.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

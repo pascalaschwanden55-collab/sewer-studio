@@ -444,6 +444,45 @@ public sealed class AnnotationWorkbenchServiceTests
     }
 
     [Fact]
+    public async Task SaveAsync_readImageDimensions_wirft_speichert_nur_Entwurf_ohne_KB_und_Teacher()
+    {
+        // Bisher ungeschuetzter Pfad: der bare "catch" um _readImageDimensions (Schritt 4)
+        // faengt JEDE Ausnahme (auch OperationCanceledException, keine Filterung) und
+        // behandelt sie wie eine unlesbare Bildgroesse -> maskDimensionsMatch=false ->
+        // kein Gold, genau wie bei falschen Massen. Kein bestehender Test liess
+        // readImageDimensions tatsaechlich werfen.
+        var sampleStore = new FakeSampleStore();
+        var indexer = new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll };
+        var teacherStore = new FakeTeacherStore();
+        var service = CreateService(
+            sampleStore: sampleStore,
+            indexer: indexer,
+            teacherStore: teacherStore,
+            isCodeKnown: _ => true,
+            readImageDimensions: _ => throw new IOException("Bilddatei nicht lesbar (Test)."));
+
+        var result = await service.SaveAsync(
+            Foto(),
+            TestBox,
+            GueltigeMaske,
+            new WorkbenchDecision(
+                "BAB",
+                false,
+                "Riss quer im Scheitel",
+                null,
+                null,
+                "Pascal"));
+
+        Assert.True(result.Saved, result.RefusalReason);
+        Assert.False(result.GoldApproved);
+        var draft = Assert.Single(sampleStore.Store);
+        Assert.Equal(TrainingSampleStatus.Draft, draft.Status);
+        Assert.False(draft.HasSamMask);
+        Assert.Equal(0, indexer.IndexCallCount);
+        Assert.Empty(teacherStore.Appended);
+    }
+
+    [Fact]
     public async Task SaveAsync_PdfVorschlag_speichert_PdfPhoto_Provenienz_und_belaesst_Handcodierung()
     {
         const string documentSha =
