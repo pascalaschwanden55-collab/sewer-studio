@@ -188,6 +188,12 @@
 - Laut Claude: Baseline 30/30, danach 31/31 gezielte synthetische Tests; vollständiger Release-Build 0 Fehler/0 Warnungen. Codex gab den Diff frei; hier keine erneute Ausführung. `TASKS.md`-Punkt 8 ist erledigt.
 - Restpunkt: Kein konkreter Fehler offen; ein Lauf mit echten Projektdaten war nicht Teil dieser synthetischen Prüfung.
 
+## Ferienlauf 07 Uhr: WinCan-Quantifizierung (26.09.)
+
+- Ziel und Wartungsgewinn: Die drei gleichen Blöcke für Regex-Treffer und Komma-Normalisierung in `ExtractQuantValue` nutzen jetzt einen gemeinsamen privaten Helfer. Claude änderte `src/AuswertungPro.Next.Infrastructure/Import/WinCan/WinCanValueNormalizer.cs` und ergänzte Prioritäts- und Ersttrefferfälle in `tests/AuswertungPro.Next.Infrastructure.Tests/WinCanValueNormalizerTests.cs`.
+- Codex prüfte den Diff unabhängig und gab ihn frei: Prozent bleibt vor Grad vor Millimeter; je Muster gewinnt der erste Treffer, ohne Treffer bleibt `null`. Die Methode parst keine Zahl; `InvariantCulture` war hier weder vorher noch nachher beteiligt.
+- Gemeldet: Baseline 70/70, danach 73/73 gezielte synthetische Tests; vollständiger Release-Build 0 Fehler/0 Warnungen. Diese Läufe wurden beim Codex-Review nicht wiederholt. `TASKS.md`-Punkt 9 ist erledigt.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

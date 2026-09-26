@@ -155,20 +155,16 @@ internal static class WinCanValueNormalizer
     /// Sucht nach Prozent (%), Grad (deg) oder Millimeter (mm) Angaben.
     /// </summary>
     public static string? ExtractQuantValue(string beschreibung)
+        // Prioritaet bleibt Prozent vor Grad vor Millimeter; je Muster gewinnt der erste Treffer.
+        => TryExtractQuantMatch(beschreibung, @"(\d+(?:[.,]\d+)?)\s*%")   // Prozent: "5%", "25 %", "10.5%"
+           ?? TryExtractQuantMatch(beschreibung, @"(\d+(?:[.,]\d+)?)°")    // Grad: "15°", "45 °"
+           ?? TryExtractQuantMatch(beschreibung, @"(\d+(?:[.,]\d+)?)\s*mm"); // Millimeter: "2mm", "0.5 mm"
+
+    /// <summary>Gemeinsame Regel: erster Regex-Treffer, Komma als Dezimaltrennzeichen normalisiert.</summary>
+    private static string? TryExtractQuantMatch(string text, string pattern)
     {
-        // Prozent: "5%", "25 %", "10.5%"
-        var m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)\s*%");
-        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
-
-        // Grad: "15°", "45 °"
-        m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)°");
-        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
-
-        // Millimeter: "2mm", "0.5 mm"
-        m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)\s*mm");
-        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
-
-        return null;
+        var m = Regex.Match(text, pattern);
+        return m.Success ? m.Groups[1].Value.Replace(',', '.') : null;
     }
 
     /// <summary>

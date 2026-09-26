@@ -169,6 +169,18 @@ public sealed class WinCanValueNormalizerTests
     public void ExtractQuantValue_KeinWert_GibtNull()
         => Assert.Null(WinCanValueNormalizer.ExtractQuantValue("Keine Angabe"));
 
+    [Fact]
+    public void ExtractQuantValue_MehrereEinheiten_ProzentGewinntVorGradUndMillimeter()
+        => Assert.Equal("25", WinCanValueNormalizer.ExtractQuantValue("Riss 2mm, Knick 45°, Verformung 25%"));
+
+    [Fact]
+    public void ExtractQuantValue_GradUndMillimeter_GradGewinnt()
+        => Assert.Equal("45", WinCanValueNormalizer.ExtractQuantValue("Riss 2mm, Knick 45°"));
+
+    [Fact]
+    public void ExtractQuantValue_MehrereTrefferDesselbenMusters_ErsterTrefferGewinnt()
+        => Assert.Equal("10", WinCanValueNormalizer.ExtractQuantValue("10% und danach 20%"));
+
     // ── ParseTimeSpan ────────────────────────────────────────────────────────
 
     [Fact]
