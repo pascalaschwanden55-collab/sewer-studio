@@ -35,3 +35,4 @@
 - 05-Uhr-Lauf: `GroundTruthFieldParser` nutzt eine Dezimalregel statt zwei; Codex-Review bestanden. Laut Claude 30/30 vor, 31/31 danach und Release-Build 0 Fehler/0 Warnungen. Punkt 8 erledigt.
 - 07-Uhr-Lauf: `WinCanValueNormalizer` vereint drei Treffer-/Komma-Blöcke; Codex-Review bestanden. Gemeldet: 70/70 vor, 73/73 danach, Release-Build 0 Fehler/0 Warnungen. Punkt 9 erledigt.
 - Wartbarkeitsplan Etappe 1: `ProtocolEntryInputNormalizer` nutzt eine gemeinsame Ganzzahl-/Bereichsregel; Codex-Review bestanden, 79/79 gezielte Tests vor und nach der Änderung, vollständiger Release-Build laut Nutzer erfolgreich. Punkt 10 erledigt; kein projektübergreifender Gesamttest.
+- Wartbarkeitsplan Etappe 2: Section/Node-Katalogpfade nutzen eine parametrisierte Suchfolge; Codex-Review bestanden und 11/11 projektlokale synthetische Tests grün. Release-Build laut Claude 0 Fehler/0 Warnungen; Default-Fallback weiter ohne isolierten Test. Punkt 11 erledigt.

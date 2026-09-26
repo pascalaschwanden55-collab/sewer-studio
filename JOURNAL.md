@@ -200,6 +200,12 @@
 - Gezielte synthetische `ProtocolEntryInputNormalizerTests`: 79/79 vor der Änderung gemeldet, 79/79 danach von Codex ausgeführt. Der vollständige Release-Build war laut Nutzer erfolgreich. `TASKS.md`-Punkt 10 ist erledigt; die Testdatei blieb unverändert.
 - Grenze: Kein vollständiger Testlauf über alle Projekte, damit keine Kundenquellen oder Infrastrukturtests geöffnet werden. Der vollständige Release-Build wurde von Codex nicht selbst wiederholt.
 
+## Wartbarkeitsplan, Etappe 2: VSA-Katalogpfade (26.09.)
+
+- Ziel und Gewinn: Claude ersetzte die zwei identischen Section-/Node-Suchfolgen in `src/AuswertungPro.Next.Infrastructure/Protocol/VsaCatalogFilePathResolver.cs` durch `ResolveCatalogPath` mit getrennt übergebenen Pfaden, Dateinamen und Umgebungsvariablen. Codex bestätigte im unabhängigen Diff-Review unveränderte Priorität und Behandlung fehlender Dateien.
+- `tests/AuswertungPro.Next.Infrastructure.Tests/Protocol/VsaCatalogFilePathResolverTests.cs` prüft nun beide Katalogarten und die Vorrangstufen. Claude meldete 11/11 gezielte synthetische Tests und den vollständigen Release-Build mit 0 Fehlern/0 Warnungen; Codex wiederholte nur diese 11 Tests mit projektlokalem `TEMP`/`TMP`: 11/11 bestanden.
+- Die frühe Testfassung erreichte bei fehlenden Treffern den Default-Fallback und führte damit Existenzabfragen in festen Systemkatalogordnern aus; ein Lesen von Dateiinhalten dort ist nicht belegt. Die korrigierten Tests beenden beide Katalogsuchen bei projektlokalen synthetischen Dateien. Grenze: Der unveränderte Default-Fallback des Produktivcodes wird damit weiterhin nicht isoliert getestet. Kein vollständiger Infrastrukturtestlauf.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.
