@@ -181,6 +181,13 @@
 - Wartungsgewinn: Eine private Zählregel statt zwei gleicher Abläufe. Die unterschiedlichen Regex-Muster und Fanggruppen, Trefferwahl, Null/ungültige Werte und Rückgaben blieben laut unabhängigem Codex-Diff-Review gleich.
 - Laut Claude: Baseline 24/24, danach 26/26 gezielte synthetische Tests; vollständiger Release-Build 0 Fehler/0 Warnungen. Codex gab den Diff frei; Tests und Build wurden hier nicht erneut ausgeführt. `TASKS.md`-Punkt 7 ist erledigt.
 
+## Ferienlauf 05 Uhr: gemeinsame Dezimalregel (26.09.)
+
+- Ziel: Den doppelten Komma-Ersatz und `double.TryParse` für Meterwert und Quantifizierung zusammenführen. Claude änderte `src/AuswertungPro.Next.Infrastructure/Ai/Training/Services/GroundTruthFieldParser.cs` und ergänzte den synthetischen Komma-Fall in `tests/AuswertungPro.Next.Infrastructure.Tests/GroundTruthFieldParserTests.cs`.
+- Wartungsgewinn: Eine Dezimalregel statt zwei. Das unabhängige Codex-Diff-Review bestätigte unveränderte Werte, `NumberStyles.Float`, `InvariantCulture`, Null-/Fehlerverhalten, Einheit, Typ und Trefferwahl.
+- Laut Claude: Baseline 30/30, danach 31/31 gezielte synthetische Tests; vollständiger Release-Build 0 Fehler/0 Warnungen. Codex gab den Diff frei; hier keine erneute Ausführung. `TASKS.md`-Punkt 8 ist erledigt.
+- Restpunkt: Kein konkreter Fehler offen; ein Lauf mit echten Projektdaten war nicht Teil dieser synthetischen Prüfung.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

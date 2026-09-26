@@ -32,3 +32,4 @@
 
 - Ferienlauf: Claude vereinte die Dezimalregel in `MeasureRecordParser`; Codex gab den Diff frei. Laut Claude Baseline 59/59, danach 61/61 synthetische Tests und Release-Build 0 Fehler/0 Warnungen. Overflow-Test bleibt offen.
 - 03-Uhr-Lauf: `PipelineStatusParser` nutzt eine Zählregel statt zwei. Claude: 24/24 vor und 26/26 nachher, Release-Build 0 Fehler/0 Warnungen; Codex-Review bestanden. Punkt 7 erledigt.
+- 05-Uhr-Lauf: `GroundTruthFieldParser` nutzt eine Dezimalregel statt zwei; Codex-Review bestanden. Laut Claude 30/30 vor, 31/31 danach und Release-Build 0 Fehler/0 Warnungen. Punkt 8 erledigt.
