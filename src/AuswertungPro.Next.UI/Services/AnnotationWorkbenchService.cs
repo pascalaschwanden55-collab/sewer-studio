@@ -613,62 +613,11 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         // oder ersetzen (geaenderter Code: gleiche SampleId, neuer Code/Ordner — der
         // Merge-Schluessel ist die Signatur, die den Code enthaelt; ein Code-Wechsel ist
         // daher Loeschen + Neuanlage inkl. KB-/Teacher-Bereinigung).
-        string? replaceWarning = null;
-        if (repairsExistingSample && codeChanged)
-        {
-            try
-            {
-                replaceWarning = await ReplaceSampleWithChangedCodeAsync(item, sample).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                return Rejected($"Goldsample konnte nicht gespeichert werden: {ex.Message}");
-            }
-        }
-        else if (repairsExistingSample)
-        {
-            // Gezielt geladenes, unvollstaendiges Goldsample um Box/Segmentierung ergaenzen.
-            // So entsteht beim Nachlabeln kein doppelter Datensatz.
-            try
-            {
-                var replaced = await _sampleStore.ReplaceBySampleIdAsync(sample).ConfigureAwait(false);
-                if (!replaced)
-                {
-                    var added = await _sampleStore.TryAddNewAsync(sample, ct).ConfigureAwait(false);
-                    if (!added)
-                    {
-                        return Rejected(
-                            "Goldsample wurde nicht gespeichert: Die Signatur gehoert bereits zu einem anderen Datensatz.");
-                    }
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                return Rejected($"Goldsample konnte nicht gespeichert werden: {ex.Message}");
-            }
-
-            // Auch ein Nachlabeln mit gleichem Code ersetzt die fachliche Wahrheit
-            // (neue Box/Signatur). Alte KB-/Teacher-Ableitungen derselben SampleId
-            // muessen deshalb vor dem Neuaufbau entfernt werden.
-            replaceWarning = await ReplaceSampleWithChangedCodeAsync(
-                    item,
-                    sample,
-                    sampleAlreadyReplaced: true)
-                .ConfigureAwait(false);
-        }
-        else
-        {
-            // Neuanlage mit eindeutigem Ergebnis: bei Signatur-Dublett NICHT still
-            // weiterlaufen — sonst entstuenden KB-/Teacher-Eintraege ohne JSON-Sample
-            // (Waisen). Die inhaltsadressierte Goldkopie ist bei echten Duplikaten
-            // ohnehin dieselbe Datei (kein Muell).
-            var added = await _sampleStore.TryAddNewAsync(sample, ct).ConfigureAwait(false);
-            if (!added)
-            {
-                return Rejected(
-                    "Bereits als Goldsample vorhanden (gleiche Haltung, Code, Meter und Box). Zum Aendern den Eintrag ueber 'Unvollstaendige Goldframes' oder das Goldalbum laden.");
-            }
-        }
+        var (replaceWarning, sampleRejection) = await PersistSampleAsync(
+                item, sample, repairsExistingSample, codeChanged, ct)
+            .ConfigureAwait(false);
+        if (sampleRejection is not null)
+            return sampleRejection;
 
         // 7) Entwurf ohne gepruefte Maske: gespeichert, aber NICHT Gold (Status=Draft).
         // KB-Index (KbIndexState bleibt Pending) und Teacher-Kandidat werden NICHT geschrieben.
@@ -827,6 +776,78 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
 
         return (new StoredGoldImage(storedFramePath, storedImageSha256), null);
+    }
+
+    /// <summary>
+    /// Speichert ein neues Sample oder ersetzt den geladenen Bestand unter Beibehaltung
+    /// der bisherigen Fehlergrenzen. Die Bereinigung alter KB-/Teacher-Ableitungen
+    /// gehoert nur zu den beiden Reparaturwegen.
+    /// </summary>
+    private async Task<(string? Warning, WorkbenchSaveResult? Rejection)> PersistSampleAsync(
+        WorkbenchItem item,
+        TrainingSample sample,
+        bool repairsExistingSample,
+        bool codeChanged,
+        CancellationToken ct)
+    {
+        string? replaceWarning = null;
+        if (repairsExistingSample && codeChanged)
+        {
+            try
+            {
+                replaceWarning = await ReplaceSampleWithChangedCodeAsync(item, sample).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return (null, Rejected($"Goldsample konnte nicht gespeichert werden: {ex.Message}"));
+            }
+        }
+        else if (repairsExistingSample)
+        {
+            // Gezielt geladenes, unvollstaendiges Goldsample um Box/Segmentierung ergaenzen.
+            // So entsteht beim Nachlabeln kein doppelter Datensatz.
+            try
+            {
+                var replaced = await _sampleStore.ReplaceBySampleIdAsync(sample).ConfigureAwait(false);
+                if (!replaced)
+                {
+                    var added = await _sampleStore.TryAddNewAsync(sample, ct).ConfigureAwait(false);
+                    if (!added)
+                    {
+                        return (null, Rejected(
+                            "Goldsample wurde nicht gespeichert: Die Signatur gehoert bereits zu einem anderen Datensatz."));
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return (null, Rejected($"Goldsample konnte nicht gespeichert werden: {ex.Message}"));
+            }
+
+            // Auch ein Nachlabeln mit gleichem Code ersetzt die fachliche Wahrheit
+            // (neue Box/Signatur). Alte KB-/Teacher-Ableitungen derselben SampleId
+            // muessen deshalb vor dem Neuaufbau entfernt werden.
+            replaceWarning = await ReplaceSampleWithChangedCodeAsync(
+                    item,
+                    sample,
+                    sampleAlreadyReplaced: true)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            // Neuanlage mit eindeutigem Ergebnis: bei Signatur-Dublett NICHT still
+            // weiterlaufen — sonst entstuenden KB-/Teacher-Eintraege ohne JSON-Sample
+            // (Waisen). Die inhaltsadressierte Goldkopie ist bei echten Duplikaten
+            // ohnehin dieselbe Datei (kein Muell).
+            var added = await _sampleStore.TryAddNewAsync(sample, ct).ConfigureAwait(false);
+            if (!added)
+            {
+                return (null, Rejected(
+                    "Bereits als Goldsample vorhanden (gleiche Haltung, Code, Meter und Box). Zum Aendern den Eintrag ueber 'Unvollstaendige Goldframes' oder das Goldalbum laden."));
+            }
+        }
+
+        return (replaceWarning, null);
     }
 
     /// <summary>
