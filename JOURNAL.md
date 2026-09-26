@@ -255,6 +255,15 @@
 - 5/5 ausgewählte synthetische Baseline-Tests mit Fake-Stores grün; nach dem Umbau 6/6 Tests grün (Neuanlage, gleicher Code, Codekorrektur, Ergänzung, zwei Signaturkonflikte). Vollständiger Release-Build: 0 Fehler, 0 Warnungen. Codex verglich die drei Zweige: gleiche Aufrufreihenfolge, gleicher Token nur bei `TryAddNewAsync`, dieselben Catch-Filter und Ablehnungstexte. Die ungeschützte Nachbereinigung im Gleich-Code-Zweig bleibt absichtlich ungeschützt.
 - Claude wurde in diesem Lauf nicht erneut beauftragt, weil es im vorherigen Lauf trotz ausdrücklichem Verbot eine Bash-Suche gestartet hatte; der damalige Lauf wurde vor Änderungen gestoppt. Diese Änderung wurde direkt im Projekt ausgeführt und geprüft. Keine echten Kundendaten, Medien, Pushes oder Merges.
 - Rest: Die Validierung und der Bau des `TrainingSample` bleiben in `SaveCoreAsync`. Weitere Eingriffe an diesen Fachregeln benötigen zusätzliche Verhaltenstests. Der vollständige Infrastrukturtest wurde wegen möglicher Kundenpfade nicht gestartet.
+
+## Wartbarkeitsplan, Etappe 6 – TEIL 1: Hauptquellenwahl im Import (27.09.)
+
+- Priorität: Die übrige Etappe 4 betrifft komplexe Validierungs- und Sample-Fachregeln; ohne weitere Ist-Tests wurde dort nicht eingegriffen. Etappe 5 bleibt wegen des vorgefundenen offenen UI-Testprojekts zurückgestellt. Für Etappe 6 war die Formatwahl der Hauptquelle als begrenzter, synthetisch prüfbarer Schritt frei.
+- Ziel und Gewinn: `ProjectImportOrchestrator.Import` zeigt jetzt im Schritt "Quelldaten" getrennt die Hauptquellenwahl und die Bilanzierung. `ImportMainSource` hält die Entscheidung IKAS, IBAK, KINS oder WinCan samt unveränderten Fallback-Meldungen zusammen. Die 33 Zeilen Formatverzweigung verschwanden aus dem Hauptablauf; Zähler, Fehlererfassung und Ergänzungs-XTF bleiben am bisherigen Ort. Die Gesamtdatei wuchs um 7 Zeilen für die benannte Grenze.
+- Vorher und nachher je 3/3 synthetische, projektlokale Importtests (IKAS, IBAK, KINS) grün; `TEMP`, `TMP` und Telemetrie im erlaubten Projektordner. Vollständiger Release-Build: 0 Fehler, 0 Warnungen. Codex-Diff-Prüfung: gleiche Branch-Reihenfolge, gleiche Aufrufe, Parameter, Resultate und Fallback-Texte; `OperationCanceledException` wird weiterhin an der ursprünglichen Grenze weitergeworfen. WinCan-Zweig wurde nicht eigenständig mit einem ausgewählten Test belegt.
+- Claude-Panel war in VS Code sichtbar, ohne auslesbaren Abo-Status. Claude wurde wegen des im vorigen Lauf trotz ausdrücklichem Verbot genutzten Bash-Werkzeugs nicht erneut beauftragt. Kein Kundenlauf, Push, Merge oder Kauf.
+- Rest: Archivierung, Fehlerbilanz, Medien- und Protokollverteilung liegen weiterhin im langen Importablauf. Vor jeder weiteren Phase passende lokale Erfolg-, Fehler- und Abbruchtests prüfen.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

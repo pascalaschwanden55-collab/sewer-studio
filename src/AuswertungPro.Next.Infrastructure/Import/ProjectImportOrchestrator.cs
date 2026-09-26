@@ -303,40 +303,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         ct.ThrowIfCancellationRequested();
         try
         {
-            Result<ImportStats> parseResult;
-
-            if (det.Format == KanalExportFormat.Ikas)
-            {
-                parseResult = _xtf.ImportXtfFiles(new[] { det.VsaKekXtfPath! }, project, parseContext);
-            }
-            else if (det.Format == KanalExportFormat.Ibak)
-            {
-                parseResult = _ibak is not null
-                    ? _ibak.ImportIbakExport(sourceFolder, project, parseContext)
-                    : Result<ImportStats>.Success(new ImportStats(
-                        Found: 0,
-                        Created: 0,
-                        Updated: 0,
-                        Errors: 0,
-                        Uncertain: 0,
-                        Messages: new[] { "IBAK/KIAS erkannt; IBAK-Daten.txt-Importer nicht konfiguriert, nur PDF-Fallback." }));
-            }
-            else if (det.Format == KanalExportFormat.Kins)
-            {
-                // KINS: massgebliche Quelle ist das VSAKEK-XTF (wie IKAS);
-                // alte DVDs ohne XTF laufen ueber den kiDVDaten.txt-Import.
-                if (det.VsaKekXtfPath is not null)
-                    parseResult = _xtf.ImportXtfFiles(new[] { det.VsaKekXtfPath }, project, parseContext);
-                else if (_kins is not null)
-                    parseResult = _kins.ImportKinsExport(sourceFolder, project, parseContext);
-                else
-                    parseResult = Result<ImportStats>.Fail(
-                        "KINS_SERVICE_MISSING", "KINS ohne XTF erkannt, aber kein KINS-Importservice verfuegbar.");
-            }
-            else // WinCan
-            {
-                parseResult = _winCan.ImportWinCanExport(sourceFolder, project, parseContext);
-            }
+            var parseResult = ImportMainSource(det, sourceFolder, project, parseContext);
 
             if (parseResult.Ok && parseResult.Value is not null)
             {
@@ -721,6 +688,46 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             Fehlerbilanz = fehlerbilanz.Bilanz(),
             Bestand = bestand
         };
+    }
+
+    /// <summary>
+    /// Waehlt den Hauptimporter anhand des erkannten Formats. Die Bilanzierung und
+    /// Fehlergrenze bleiben im aufrufenden Importschritt; ergaenzende XTF-Quellen
+    /// werden erst danach verarbeitet.
+    /// </summary>
+    private Result<ImportStats> ImportMainSource(
+        KanalExportDetection det,
+        string sourceFolder,
+        Project project,
+        ImportRunContext? parseContext)
+    {
+        if (det.Format == KanalExportFormat.Ikas)
+            return _xtf.ImportXtfFiles(new[] { det.VsaKekXtfPath! }, project, parseContext);
+
+        if (det.Format == KanalExportFormat.Ibak)
+            return _ibak is not null
+                ? _ibak.ImportIbakExport(sourceFolder, project, parseContext)
+                : Result<ImportStats>.Success(new ImportStats(
+                    Found: 0,
+                    Created: 0,
+                    Updated: 0,
+                    Errors: 0,
+                    Uncertain: 0,
+                    Messages: new[] { "IBAK/KIAS erkannt; IBAK-Daten.txt-Importer nicht konfiguriert, nur PDF-Fallback." }));
+
+        if (det.Format == KanalExportFormat.Kins)
+        {
+            // KINS: massgebliche Quelle ist das VSAKEK-XTF (wie IKAS);
+            // alte DVDs ohne XTF laufen ueber den kiDVDaten.txt-Import.
+            if (det.VsaKekXtfPath is not null)
+                return _xtf.ImportXtfFiles(new[] { det.VsaKekXtfPath }, project, parseContext);
+            if (_kins is not null)
+                return _kins.ImportKinsExport(sourceFolder, project, parseContext);
+            return Result<ImportStats>.Fail(
+                "KINS_SERVICE_MISSING", "KINS ohne XTF erkannt, aber kein KINS-Importservice verfuegbar.");
+        }
+
+        return _winCan.ImportWinCanExport(sourceFolder, project, parseContext);
     }
 
     /// <summary>

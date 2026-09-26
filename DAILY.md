@@ -44,3 +44,7 @@
 - Wartbarkeitsplan Etappe 4, TEIL 4: 21 identische Abweisungsergebnisse in einer privaten Ergebnisfabrik vereint; Codex-Review verhaltensgleich, 3/3 synthetische Nachtests und Release-Build mit 0 Fehlern/0 Warnungen.
 - Wartbarkeitsplan Etappe 4, TEIL 5: Goldbildkopie, Pfadprüfung und SHA-256 als einen Schritt gekapselt; neuer synthetischer Lesefehler-Test, 4/4 gezielte Nachtests und Release-Build 0 Fehler/0 Warnungen. Claude-Lauf wegen Shell-Nutzung gestoppt, Codex setzte um.
 - Wartbarkeitsplan Etappe 4, TEIL 6: drei Sample-Speicherwege als einen Schritt gekapselt; 5/5 Baseline- und 6/6 synthetische Nachtests, Release-Build 0 Fehler/0 Warnungen. Keine fachliche Änderung, nur lokaler Commit.
+
+## 2026-09-27
+
+- Wartbarkeitsplan Etappe 6, TEIL 1: Hauptquellenwahl im Import von Bilanzierung getrennt; IKAS, IBAK und KINS je vor/nach grün (3/3), Release-Build 0 Fehler/0 Warnungen. WinCan-Zweig nur per Diff geprüft, kein Push.
