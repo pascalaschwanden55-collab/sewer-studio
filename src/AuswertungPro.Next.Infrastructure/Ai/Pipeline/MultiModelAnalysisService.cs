@@ -520,7 +520,7 @@ public sealed partial class MultiModelAnalysisService
                     MarkTraceDegraded(trace, "vram_insufficient");
                     await WriteTraceAsync(trace).ConfigureAwait(false);
                     detections.AddRange(deduplicator.AdvanceAll());
-                    await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                    await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
                     outageGuard.RegisterFailureSkip();
                     vramInsufficientMessage ??= ex.Message;
                     continue;
@@ -535,7 +535,7 @@ public sealed partial class MultiModelAnalysisService
                     trace.DropReason = "yolo_error";
                     await WriteTraceAsync(trace).ConfigureAwait(false);
                     detections.AddRange(deduplicator.AdvanceAll());
-                    await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                    await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
                     if (await RegisterSidecarTransportErrorAsync().ConfigureAwait(false)) break;
                     continue;
                 }
@@ -594,7 +594,7 @@ public sealed partial class MultiModelAnalysisService
                 MarkTraceDegraded(trace, "vram_insufficient");
                 await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
-                await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
                 outageGuard.RegisterFailureSkip();
                 vramInsufficientMessage ??= ex.Message;
                 continue;
@@ -609,7 +609,7 @@ public sealed partial class MultiModelAnalysisService
                 trace.DropReason = "dino_error";
                 await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
-                await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
                 if (await RegisterSidecarTransportErrorAsync().ConfigureAwait(false)) break;
                 continue;
             }
@@ -740,7 +740,7 @@ public sealed partial class MultiModelAnalysisService
                 MarkTraceDegraded(trace, "vram_insufficient");
                 await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
-                await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
                 outageGuard.RegisterFailureSkip();
                 vramInsufficientMessage ??= ex.Message;
                 continue;
@@ -755,7 +755,7 @@ public sealed partial class MultiModelAnalysisService
                 trace.DropReason = "sam_error";
                 await WriteTraceAsync(trace).ConfigureAwait(false);
                 detections.AddRange(deduplicator.AdvanceAll());
-                await AppendCheckpointAsync(new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
+                await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
                 if (await RegisterSidecarTransportErrorAsync().ConfigureAwait(false)) break;
                 continue;
             }
@@ -974,6 +974,17 @@ public sealed partial class MultiModelAnalysisService
         ReportCompletion(progress, totalFrames, skippedFrames, result);
         return result;
     }
+
+    /// <summary>
+    /// Journaliert einen Frame als RetryRequired: identischer Teilschritt, der in den
+    /// Fehlerzweigen von YOLO, DINO und SAM unveraendert wiederholt wurde. Reihenfolge,
+    /// Checkpoint-Art und Argumente bleiben exakt wie zuvor inline.
+    /// </summary>
+    private Task AppendRetryRequiredCheckpointAsync(
+        int frameIndex, double t, double estimatedMeter, CancellationToken ct)
+        => AppendCheckpointAsync(
+            new(CheckpointFrameKind.RetryRequired, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()),
+            ct);
 
     // ── Conversion helper ──────────────────────────────────────────────
 

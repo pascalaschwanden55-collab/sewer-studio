@@ -206,6 +206,12 @@
 - `tests/AuswertungPro.Next.Infrastructure.Tests/Protocol/VsaCatalogFilePathResolverTests.cs` prüft nun beide Katalogarten und die Vorrangstufen. Claude meldete 11/11 gezielte synthetische Tests und den vollständigen Release-Build mit 0 Fehlern/0 Warnungen; Codex wiederholte nur diese 11 Tests mit projektlokalem `TEMP`/`TMP`: 11/11 bestanden.
 - Die frühe Testfassung erreichte bei fehlenden Treffern den Default-Fallback und führte damit Existenzabfragen in festen Systemkatalogordnern aus; ein Lesen von Dateiinhalten dort ist nicht belegt. Die korrigierten Tests beenden beide Katalogsuchen bei projektlokalen synthetischen Dateien. Grenze: Der unveränderte Default-Fallback des Produktivcodes wird damit weiterhin nicht isoliert getestet. Kein vollständiger Infrastrukturtestlauf.
 
+## Wartbarkeitsplan, Etappe 3 – TEIL 1: RetryRequired-Checkpoint (26.09.)
+
+- Ziel und Gewinn: Claude vereinte in `src/AuswertungPro.Next.Infrastructure/Ai/Pipeline/MultiModelAnalysisService.cs` sechs identische `RetryRequired`-Checkpoint-Konstruktionen aus den YOLO-, DINO- und SAM-Fehlerzweigen in `AppendRetryRequiredCheckpointAsync`. Codex verglich den Diff mit HEAD: Checkpoint-Art, Argumente, `await`-Stelle und Reihenfolge zu Trace, Deduplikator und Fehlerzähler bleiben gleich. Die übrige gemeinsame Fehlerregel ist weiterhin offen.
+- `tests/AuswertungPro.Next.Pipeline.Tests/MultiModelAnalysisServiceVramTests.cs` ergänzt SAM-VRAM und eine geordnete Prüfung der ersten drei Journal-Frame-Einträge. Codex korrigierte nur den Kommentar: `TempJournalPaths` ist erst bei gesetztem projektlokalem `TEMP`/`TMP` projektlokal; der Test injiziert einen Trace-Writer für denselben Ordner.
+- Claude meldete 54/54 gezielte synthetische Tests und den vollständigen Release-Build mit 0 Fehlern/0 Warnungen. Codex führte drei betroffene synthetische Testklassen selbst aus: 45/45 bestanden; ein vollständiger Release-Build und ein projektübergreifender Gesamttest wurden von Codex nicht ausgeführt. Für künftige Testläufe `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR` auf geprüfte Projektordner setzen.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

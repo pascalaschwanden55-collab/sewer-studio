@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Startup;
+using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using Xunit;
@@ -107,11 +109,16 @@ public sealed class MultiModelAnalysisServiceVramTests
     {
         private readonly HashSet<int> _yoloFailCalls;
         private readonly HashSet<int> _dinoFailCalls;
+        private readonly HashSet<int> _samFailCalls;
 
-        public VramFailsClient(IEnumerable<int>? yoloFailCalls = null, IEnumerable<int>? dinoFailCalls = null)
+        public VramFailsClient(
+            IEnumerable<int>? yoloFailCalls = null,
+            IEnumerable<int>? dinoFailCalls = null,
+            IEnumerable<int>? samFailCalls = null)
         {
             _yoloFailCalls = new HashSet<int>(yoloFailCalls ?? Enumerable.Empty<int>());
             _dinoFailCalls = new HashSet<int>(dinoFailCalls ?? Enumerable.Empty<int>());
+            _samFailCalls = new HashSet<int>(samFailCalls ?? Enumerable.Empty<int>());
         }
 
         public int YoloCalls { get; private set; }
@@ -156,6 +163,8 @@ public sealed class MultiModelAnalysisServiceVramTests
         public Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default)
         {
             SamCalls++;
+            if (_samFailCalls.Contains(SamCalls))
+                throw VramError("/segment/sam");
             return Task.FromResult(new SamResponse(
                 [
                     new SamMaskResult(
@@ -236,5 +245,124 @@ public sealed class MultiModelAnalysisServiceVramTests
         Assert.Contains("VRAM", result.DegradedReason);
         Assert.DoesNotContain("Sidecar antwortete", result.DegradedReason ?? "");
         Assert.True(result.Incomplete);
+    }
+
+    [Fact]
+    public async Task Vram_mangel_beim_sam_ebenfalls_kein_outage_kein_neustart()
+    {
+        // SAM meldet bei ALLEN 20 Frames VRAM-Mangel: bisher ungeschuetzter Fehlerzweig
+        // (VramFailsClient kannte nur yolo/dino). Erwartung analog YOLO/DINO: kein
+        // Outage-Abbruch nach 8 Folgeframes, kein Neustart, sichtbar als Degraded/Incomplete.
+        var client = new VramFailsClient(samFailCalls: Enumerable.Range(1, 20));
+        var restart = new FakeRestartService(new SidecarRestartResult(true, true, null));
+        var svc = CreateService(client, frameCount: 20, restart);
+
+        var result = await svc.AnalyzeAsync("dummy/video.mp4");
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(0, restart.Attempts);                 // NIE ein Neustart bei VRAM-Mangel
+        Assert.Equal(20, result.FramesAnalyzed);           // kein Outage-Abbruch nach 8 Frames
+        Assert.Equal(20, client.SamCalls);
+        Assert.True(result.Degraded, "VRAM-Mangel muss als Degraded sichtbar sein.");
+        Assert.Contains("VRAM", result.DegradedReason);
+        Assert.DoesNotContain("Sidecar antwortete", result.DegradedReason ?? "");
+        Assert.True(result.Incomplete, "20/20 fehlerbedingte Skips muessen Incomplete liefern.");
+    }
+
+    // ── Checkpoint-Reihenfolge der drei Fehlerzweige ─────────────────────────
+
+    /// <summary>Ablage von Checkpoint-Journal UND Pipeline-Trace in einem temporaeren,
+    /// projektlokalen Ordner (TEMP/TMP wird vom Testlauf vorab umgeleitet). Gleiches
+    /// Muster wie in MultiModelAnalysisServiceResilienceTests.TempTelemetryPaths.</summary>
+    private sealed class TempJournalPaths : ITelemetryPathResolver
+    {
+        public TempJournalPaths()
+            => Dir = Path.Combine(Path.GetTempPath(), "sewerstudio_vram_ckpt_" + Guid.NewGuid().ToString("N"));
+
+        public string Dir { get; }
+
+        public string? ResolveFile(string fileName) => Path.Combine(Dir, fileName);
+
+        public string SingleJournalPath()
+            => Assert.Single(Directory.GetFiles(Dir, AnalysisCheckpointJournal.FilePattern));
+
+        public void Cleanup()
+        {
+            try { Directory.Delete(Dir, recursive: true); } catch { /* Best effort. */ }
+        }
+    }
+
+    [Fact]
+    public async Task Vram_mangel_bei_yolo_dino_und_sam_schreibt_je_RetryRequired_in_richtiger_Reihenfolge()
+    {
+        // Frame 1 scheitert bei YOLO, Frame 2 (YOLO ok) bei DINO, Frame 3 (YOLO+DINO ok) bei SAM.
+        // Jeder der drei Fehlerzweige muss den Frame als CheckpointFrameKind.RetryRequired
+        // journalieren (nicht Advance) — das ist der Unterschied zwischen "erneut inferieren"
+        // und "fuer immer uebersprungen". Bisher pruefte kein VRAM-Test das Journal direkt.
+        var client = new VramFailsClient(
+            yoloFailCalls: new[] { 1 },
+            dinoFailCalls: new[] { 1 },
+            samFailCalls: new[] { 1 });
+        var paths = new TempJournalPaths();
+        try
+        {
+            // Trace-Writer mit dem Test-Tempordner injiziert: OHNE dieses Argument faellt die
+            // vereinfachte Ctor-Ueberladung auf PipelineTraceWriter.Current zurueck, dessen
+            // Standard-TelemetryPathResolver ohne SEWERSTUDIO_TELEMETRY_DIR nach
+            // %LocalAppData%\SewerStudio\Telemetry schreibt — ausserhalb des Projekts.
+            // Derselbe TempJournalPaths-Ordner wird fuer Checkpoint UND Trace verwendet.
+            // Projektlokal ist er nur, wenn TEMP/TMP vor dem Test auf das Projekt zeigen.
+            var svcWithJournal = new MultiModelAnalysisService(
+                pipelineTraceWriter: new PipelineTraceFileWriter(paths),
+                client: client,
+                config: MinimalConfig(),
+                ffmpegPath: "ffmpeg",
+                frameSource: (_, _, _, _, ct) => FrameSource(10, ct),
+                durationProbe: (_, _) => Task.FromResult(10.0),
+                checkpointJournal: new AnalysisCheckpointJournal(paths))
+            {
+                FrameStepSeconds = 1.0,
+                UseClsPrefilter = false,
+                ClassifierOnlyStructuralEnabled = false
+            };
+
+            var result = await svcWithJournal.AnalyzeAsync("dummy/video.mp4");
+            Assert.True(result.IsSuccess, result.Error);
+
+            // Bewusst die ROHEN JSONL-Zeilen lesen statt journal.OpenAsync().Frames: Ein
+            // Resume-Open bricht den zurueckgegebenen Frames-Praefix am ERSTEN retry_required
+            // ab (dokumentiertes Verhalten, kein Fehler) — hier soll aber genau geprueft
+            // werden, WAS fuer jeden der drei Fehlerzweige tatsaechlich geschrieben wurde,
+            // UND in welcher Reihenfolge (Testname verspricht "richtiger Reihenfolge").
+            var rawLines = File.ReadAllLines(paths.SingleJournalPath())
+                .Where(l => l.Contains("\"type\":\"frame\""))
+                .ToList();
+
+            (int FrameIndex, string Kind) ParseLine(string line)
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(line);
+                return (
+                    doc.RootElement.GetProperty("frame_index").GetInt32(),
+                    doc.RootElement.GetProperty("kind").GetString() ?? "");
+            }
+
+            Assert.True(rawLines.Count >= 3,
+                $"Erwartet mindestens 3 journalierte Frame-Zeilen, tatsaechlich {rawLines.Count}.");
+            var firstThree = rawLines.Take(3).Select(ParseLine).ToList();
+
+            // Geordnete Folge, nicht nur Vorhandensein: Position 0 MUSS Frame 1 sein usw.
+            Assert.Equal(
+                new[]
+                {
+                    (FrameIndex: 1, Kind: "retry_required"),
+                    (FrameIndex: 2, Kind: "retry_required"),
+                    (FrameIndex: 3, Kind: "retry_required")
+                },
+                firstThree);
+        }
+        finally
+        {
+            paths.Cleanup();
+        }
     }
 }
