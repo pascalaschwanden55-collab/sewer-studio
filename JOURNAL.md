@@ -168,6 +168,13 @@
 - Ziel: Die doppelte Komma-Normalisierung und `double.TryParse`-Regel für erstes und zweites Meterfeld an einer Stelle halten. Claude führte dafür den privaten Helper `ParseMeterGroup` ein; Codex prüfte den Diff unabhängig. Trefferwahl, Regex, Suffix-Treffer, `mm`-Ausschluss und Null-Exception blieben gleich.
 - Baseline laut Claude: 6/6 synthetische Tests; danach bei Codex erneut 6/6. Vollständiger Release-Build bei Codex: 0 Fehler, 0 Warnungen. Kein Kunden- oder Medienlauf.
 
+## Ferienlauf: gemeinsame Dezimalregel im MeasureRecordParser (26.09.)
+
+- Ziel: Die doppelte Dezimalregel in `TryParseDecimal` und im Fallback von `TryParseInt` zusammenführen. Claude änderte `src/AuswertungPro.Next.Infrastructure/Ai/MeasureRecordParser.cs` und ergänzte zwei Rundungsfälle in `tests/AuswertungPro.Next.Infrastructure.Tests/MeasureRecordParserTests.cs`; `TASKS.md`-Punkt 6 ist erledigt.
+- Wartungsgewinn: Eine statt zwei Regeln für Komma-Normalisierung und dezimales Parsen. Direkte Ganzzahlen bleiben zuerst; Null/leer, Punkt/Komma, ungültige Eingaben und kaufmännische Rundung bleiben laut unabhängigem Codex-Diff-Review gleich.
+- Laut Claude: Baseline 59/59, danach 61/61 gezielte synthetische Tests; vollständiger Release-Build 0 Fehler/0 Warnungen. Codex gab den Diff unabhängig frei; Tests und Build wurden hier nicht erneut ausgeführt.
+- Restpunkt: Ein gezielter Overflow-Test fehlt. Das bisherige Ausnahmeverhalten beim Umwandeln zu großer Dezimalwerte bleibt erhalten; die Testlücke blockiert diesen kleinen Umbau nicht.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

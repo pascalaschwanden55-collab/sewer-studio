@@ -24,6 +24,7 @@ Während der Ferien eigenständig innerhalb der vereinbarten Grenzen weiterarbei
 3. **Erledigt:** QGIS-Schnappschuss: Schachtnamen nur noch beim Laden des Netzes normalisiert indizieren statt bei jeder Ausgabe erneut. Der alte Rohindex für Haltungs-Fallbacks blieb erhalten. Ein neuer Verhaltenstest und 58 QGIS-Tests bestanden; Release-Build grün.
 4. QGIS-Endpunkte (`src/AuswertungPro.Next.UI/QgisBridge/QgisBridgeEndpointRouter.cs`): wiederholte Eingabeprüfung oder Antwortbildung nur bei nachgewiesener Gleichheit zusammenfassen. Erfolg: Statuscodes und Antwortinhalte laut gezielten Tests gleich.
 5. **Erledigt:** NPK-Excel-Export: `WritePositionRow` kapselt Zellwerte, Formatierung und Preisfall einer Positionszeile; `WriteSheet` behält Kapitel, Zeilenfortschritt und Summen. Öffentliche Arbeitsmappe und Formeln laut unabhängigem Diff-Review unverändert; 9 gezielte Tests und Release-Build grün.
+6. **Erledigt:** `MeasureRecordParser.TryParseInt` nutzt für den Dezimal-Fallback die Regel von `TryParseDecimal`; direkte Ganzzahlen, Null/leer, Punkt/Komma, ungültige Eingaben und kaufmännische Rundung bleiben gleich. Laut Claude: Baseline 59/59, danach 61/61 gezielte synthetische Tests und Release-Build 0 Fehler/0 Warnungen; Codex-Review bestanden. Ein Overflow-Test bleibt als nicht blockierende Testlücke offen.
 
 Pro Lauf genau eine Aufgabe. Vor dem Umbau die vorhandenen Aufrufer und Tests lesen. Wenn kein klarer Wartbarkeitsgewinn erkennbar ist, die Aufgabe überspringen und den Grund protokollieren.
 

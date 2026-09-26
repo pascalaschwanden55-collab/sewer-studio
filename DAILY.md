@@ -27,3 +27,7 @@
 23. Schacht-Empfehlung: Claude führte die Auswahl markierter Kostenzeilen zusammen; Codex prüfte Diff und neuen Leertext-Preisfall. 5/5 synthetische Tests und vollständiger Release-Build mit 0 Fehlern/0 Warnungen; echter Projektlauf offen.
 24. Ferienlauf 17 Uhr: Claude trennte die NPK-Positionszeile in `WritePositionRow`; `WriteSheet` behält Kapitel, Zeilenfortschritt und Summen. Codex-Review bestanden, 9/9 synthetische Tests und Release-Build mit 0 Fehlern/0 Warnungen. `TASKS.md`-Punkt 5 erledigt.
 25. Ferienlauf 21 Uhr: Claude vereinte Komma-Normalisierung und `double.TryParse` beider Meterfelder; Codex-Review verhaltensgleich. Baseline 6/6 laut Claude, Nachprüfung 6/6; Release-Build 0 Fehler/0 Warnungen. Kein passender offener `TASKS.md`-Punkt.
+
+## 2026-09-26
+
+- Ferienlauf: Claude vereinte die Dezimalregel in `MeasureRecordParser`; Codex gab den Diff frei. Laut Claude Baseline 59/59, danach 61/61 synthetische Tests und Release-Build 0 Fehler/0 Warnungen. Overflow-Test bleibt offen.

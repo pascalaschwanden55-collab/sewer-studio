@@ -171,11 +171,10 @@ internal static class MeasureRecordParser
         if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
             return intValue;
 
-        text = text.Replace(",", ".");
-        if (decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var decimalValue))
-            return (int)Math.Round(decimalValue, 0, MidpointRounding.AwayFromZero);
-
-        return null;
+        // Gemeinsame Dezimalregel mit TryParseDecimal: Komma als Trennzeichen, invariant-kulturell.
+        return TryParseDecimal(text) is decimal decimalValue
+            ? (int)Math.Round(decimalValue, 0, MidpointRounding.AwayFromZero)
+            : null;
     }
 
     // ── Signaturen ───────────────────────────────────────────────────
