@@ -34,3 +34,4 @@
 - 03-Uhr-Lauf: `PipelineStatusParser` nutzt eine Zählregel statt zwei. Claude: 24/24 vor und 26/26 nachher, Release-Build 0 Fehler/0 Warnungen; Codex-Review bestanden. Punkt 7 erledigt.
 - 05-Uhr-Lauf: `GroundTruthFieldParser` nutzt eine Dezimalregel statt zwei; Codex-Review bestanden. Laut Claude 30/30 vor, 31/31 danach und Release-Build 0 Fehler/0 Warnungen. Punkt 8 erledigt.
 - 07-Uhr-Lauf: `WinCanValueNormalizer` vereint drei Treffer-/Komma-Blöcke; Codex-Review bestanden. Gemeldet: 70/70 vor, 73/73 danach, Release-Build 0 Fehler/0 Warnungen. Punkt 9 erledigt.
+- Wartbarkeitsplan Etappe 1: `ProtocolEntryInputNormalizer` nutzt eine gemeinsame Ganzzahl-/Bereichsregel; Codex-Review bestanden, 79/79 gezielte Tests vor und nach der Änderung, vollständiger Release-Build laut Nutzer erfolgreich. Punkt 10 erledigt; kein projektübergreifender Gesamttest.

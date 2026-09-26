@@ -194,6 +194,12 @@
 - Codex prüfte den Diff unabhängig und gab ihn frei: Prozent bleibt vor Grad vor Millimeter; je Muster gewinnt der erste Treffer, ohne Treffer bleibt `null`. Die Methode parst keine Zahl; `InvariantCulture` war hier weder vorher noch nachher beteiligt.
 - Gemeldet: Baseline 70/70, danach 73/73 gezielte synthetische Tests; vollständiger Release-Build 0 Fehler/0 Warnungen. Diese Läufe wurden beim Codex-Review nicht wiederholt. `TASKS.md`-Punkt 9 ist erledigt.
 
+## Wartbarkeitsplan, Etappe 1: ProtocolEntryInputNormalizer (26.09.)
+
+- Ziel: Die zwei Ganzzahl- und Bereichsregeln für Uhrposition und EZ-Wert in `src/AuswertungPro.Next.Application/Protocol/ProtocolEntryInputNormalizer.cs` zusammenführen. Claude führte `TryParseRangedInt` als privaten Helfer ein; die getrennte Ausgabe (`00` und `EZ{value}`), Leerfälle und `hasValue` blieben laut unabhängigem Codex-Diff-Review gleich.
+- Gezielte synthetische `ProtocolEntryInputNormalizerTests`: 79/79 vor der Änderung gemeldet, 79/79 danach von Codex ausgeführt. Der vollständige Release-Build war laut Nutzer erfolgreich. `TASKS.md`-Punkt 10 ist erledigt; die Testdatei blieb unverändert.
+- Grenze: Kein vollständiger Testlauf über alle Projekte, damit keine Kundenquellen oder Infrastrukturtests geöffnet werden. Der vollständige Release-Build wurde von Codex nicht selbst wiederholt.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

@@ -74,9 +74,7 @@ public static class ProtocolEntryInputNormalizer
             return true;
 
         var text = raw!.Trim();
-        if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-            return false;
-        if (value < 0 || value > 12)
+        if (!TryParseRangedInt(text, 0, 12, out var value))
             return false;
 
         normalized = value.ToString("00", CultureInfo.InvariantCulture);
@@ -125,13 +123,24 @@ public static class ProtocolEntryInputNormalizer
         if (text.StartsWith("EZ", StringComparison.Ordinal))
             text = text.Substring(2);
 
-        if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-            return false;
-        if (value < 0 || value > 4)
+        if (!TryParseRangedInt(text, 0, 4, out var value))
             return false;
 
         normalized = $"EZ{value}";
         return true;
+    }
+
+    /// <summary>
+    /// Gemeinsame Ganzzahl-/Bereichsregel fuer Uhrposition (0-12) und EZ-Wert (0-4):
+    /// invariant-kulturelles <see cref="int.TryParse(string, NumberStyles, IFormatProvider, out int)"/>
+    /// plus Bereichsprüfung [<paramref name="min"/>, <paramref name="max"/>].
+    /// </summary>
+    private static bool TryParseRangedInt(string text, int min, int max, out int value)
+    {
+        if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+            return false;
+
+        return value >= min && value <= max;
     }
 
     /// <summary>
