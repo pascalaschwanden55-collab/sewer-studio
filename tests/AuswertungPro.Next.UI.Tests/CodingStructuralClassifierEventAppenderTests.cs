@@ -34,9 +34,20 @@ public sealed class CodingStructuralClassifierEventAppenderTests
         Assert.Equal(TimeSpan.FromSeconds(11), ev.VideoTimestamp);
     }
 
+    [Fact]
+    public void Apply_preserves_human_photo_action_from_EventAdded()
+    {
+        var service = new RecordingCodingSessionService { OnAdd = ev => CodingEventPhotoApplier.Apply(ev, "manual.png", null) };
+        var draft = CodingStructuralClassifierEventFactory.Create("BCA", "Anschluss", "Anschluss", .9, 10, TimeSpan.FromSeconds(120), true);
+        var ev = CodingStructuralClassifierEventAppender.Apply(draft, 10, TimeSpan.FromSeconds(120), service);
+        Assert.NotNull(ev.AiContext!.HumanTouchedAtUtc);
+        Assert.Equal("manual.png", Assert.Single(ev.Entry.FotoPaths));
+    }
+
     private sealed class RecordingCodingSessionService : ICodingSessionService
     {
         public List<CodingEvent> AddedEvents { get; } = new();
+        public Action<CodingEvent>? OnAdd { get; init; }
 
         public double CurrentMeter => 0;
         public double EndMeter => 0;
@@ -62,6 +73,7 @@ public sealed class CodingStructuralClassifierEventAppenderTests
         {
             var ev = new CodingEvent { Entry = entry, Overlay = overlay };
             AddedEvents.Add(ev);
+            OnAdd?.Invoke(ev);
             return ev;
         }
 

@@ -176,7 +176,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var addBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
 
         Assert.Contains("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", policy);
-        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", addBody);
+        AssertFindingWorkflowReachedThroughCommand(addBody);
         AssertNoForbiddenTokens(addBody, "CodingMultiModelFindingAddDecisionPolicy.Decide");
         Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", workflow);
         Assert.True(
@@ -243,7 +243,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
             qwenAppender.IndexOf("attachAnalyzedFramePhoto(draft.Entry)", StringComparison.Ordinal)
             < qwenAppender.IndexOf("var codingEvent = addEvent(draft.Entry)", StringComparison.Ordinal),
             "Der analysierte Frame muss vor AddEvent am Live-Befund haengen.");
-        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", multiModelBody);
+        AssertFindingWorkflowReachedThroughCommand(multiModelBody);
+        Assert.Contains("actions.AttachExactFramePhoto(entry, frame.ImageBytes)",
+            ReadUiFile("Ai", "Coding", "CodingMultiModelFindingEventCommandWorkflow.cs"));
         AssertAnalyzedFrameAttachedBeforeAddEvent(multiModelWorkflow);
         AssertNoForbiddenTokens(qwenBody, "codingSessionService.AddEvent(draft.Entry)");
         Assert.Contains("CodingMultiModelEventAppender.Apply", multiModelWorkflow);
@@ -260,7 +262,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var boundaryBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Boundary.cs");
         var boundaryCommandWorkflow = ReadUiFile("Ai", "Coding", "CodingBoundaryClassifierCommandWorkflow.cs");
 
-        Assert.Contains("_liveDetectionController.PendingConfirmationFrameBytes", boundaryBody);
+        Assert.Contains("AnalyzedFrameBytes: frame.ImageBytes", boundaryBody);
         Assert.Contains("request.AnalyzedFrameBytes", boundaryCommandWorkflow);
         Assert.Contains("_codingBoundaryContext.EnsureStartAsync", boundaryBody);
         Assert.Contains("_codingBoundaryContext.EnsureEnd", boundaryBody);
@@ -333,8 +335,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.True(meterStart >= 0, "Analyse muss einen Meter fuer den Klassifikator bestimmen.");
         Assert.True(resolveIndex >= 0, "Der Klassifikator muss den gemeinsamen Frame-Meter-Resolver verwenden.");
         Assert.True(inputIndex > resolveIndex, "Der Klassifikator-Input muss nach der Frame-Meter-Aufloesung gebaut werden.");
-        Assert.Contains("CodingMultiModelInferenceWorkflow.ExecuteAsync", multiModelBody);
-        Assert.Contains("ResolveCurrentMeter: ResolveCodingMeterForFrame", multiModelBody);
+        Assert.Contains("CodingMultiModelInferenceWorkflow.ExecuteAnalyzedFrameAsync", multiModelBody);
+        Assert.Contains("ResolveCurrentMeter: ResolveCodingMeterEvidenceForFrame", multiModelBody);
         Assert.Contains("CodingMultiModelClassifierInputPolicy.Build", inferenceWorkflow);
         Assert.True(controllerResolverIndex >= 0, "Video-Positions-Fallback muss ueber den OSD-Meter-Controller laufen.");
         Assert.Contains("CodingMeterResolver.Resolve", osdController);
@@ -358,13 +360,13 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         Assert.Contains("CodingAnalysisPreflightWorkflow.Execute", runBody);
         Assert.Contains("ResolveCodingMeterForFrame(timestamp)", runBody);
-        Assert.Contains("ResolveMeterForFrame: (timestamp, osdMeter)", multiModelBody);
+        Assert.Contains("ResolveMeterForFrame: (_, _) => frame.Meter", multiModelBody);
         Assert.Contains("request.CaptureTimestampSeconds", multiModelCommandWorkflow);
         Assert.Contains("request.FrameOsdMeter", multiModelCommandWorkflow);
         Assert.Contains("ResolveMeterForFrame: (timestamp, osdMeter)", qwenBody);
         Assert.Contains("request.Result.TimestampSeconds", qwenCommandWorkflow);
         Assert.Contains("request.Result.MeterReading", qwenCommandWorkflow);
-        Assert.Contains("ResolveMeterForFrame: (timestamp, osdMeter)", boundaryBody);
+        Assert.Contains("ResolveMeterForFrame: (_, _) => frame.Meter", boundaryBody);
         Assert.Contains("request.CaptureTimestampSeconds", boundaryCommandWorkflow);
         Assert.Contains("request.FrameOsdMeter", boundaryCommandWorkflow);
 
@@ -385,7 +387,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var helperBody = readerBody;
 
         var startIndex = multiModelBody.IndexOf("CodingMultiModelAnalysisStartWorkflow.ExecuteAsync", StringComparison.Ordinal);
-        var inferenceIndex = multiModelBody.IndexOf("CodingMultiModelInferenceWorkflow.ExecuteAsync", StringComparison.Ordinal);
+        var inferenceIndex = multiModelBody.IndexOf("CodingMultiModelInferenceWorkflow.ExecuteAnalyzedFrameAsync", StringComparison.Ordinal);
         var addIndex = multiModelBody.IndexOf("AddMultiModelFindingsAsEvents(", StringComparison.Ordinal);
 
         Assert.True(startIndex >= 0, "Multi-Model muss den OSD-Meter aus exakt dem analysierten Frame lesen.");
@@ -394,7 +396,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("actions.TryReadAnalyzedFrameOsdMeterAsync", startWorkflow);
         Assert.Contains("request.FrameOsdMeter", inferenceWorkflow);
         Assert.Contains("start.FrameOsdMeter", multiModelBody);
-        Assert.Contains("start.FrameOsdMeter", multiModelBody[addIndex..]);
+        // Die Befunde bekommen den Beleg, der aus start.FrameOsdMeter gebaut wurde, keinen neu gelesenen Meter.
+        Assert.Contains("HandleAnalysisResult: (result, frame)", multiModelBody);
+        Assert.Contains("frame)", multiModelBody[addIndex..]);
         Assert.Contains("actions.TryReadAnalyzedFrameOsdMeterAsync", singleModelWorkflow);
         Assert.Contains("result with { MeterReading = frameOsdMeter }", singleModelWorkflow);
         Assert.Contains("TryReadOsdMeterFromFrameBytesAsync", readerBody);
@@ -618,6 +622,14 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
             .OrderBy(path => path, StringComparer.Ordinal);
 
         return string.Join(Environment.NewLine, files.Select(File.ReadAllText));
+    }
+
+    // Das Fenster ruft den Befehl mit dem gebundenen Analysebeleg; der Befehl ruft den Befund-Workflow.
+    private static void AssertFindingWorkflowReachedThroughCommand(string multiModelBody)
+    {
+        Assert.Contains("CodingMultiModelFindingEventCommandWorkflow.ExecuteAnalyzedFrame", multiModelBody);
+        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute(",
+            ReadUiFile("Ai", "Coding", "CodingMultiModelFindingEventCommandWorkflow.cs"));
     }
 
     private static void AssertAnalyzedFrameAttachedBeforeAddEvent(string methodBody)

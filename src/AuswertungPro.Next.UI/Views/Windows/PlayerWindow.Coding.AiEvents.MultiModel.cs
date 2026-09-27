@@ -12,7 +12,7 @@ public partial class PlayerWindow
 {
     private void AddMultiModelFindingsAsEvents(
         IReadOnlyList<SegmentedFinding> segmented, double imageWidth, double imageHeight,
-        double? yoloMaxConfidence, double captureTimestampSec, double? frameOsdMeter)
+        double? yoloMaxConfidence, CodingAnalyzedFrameEvidence frame)
     {
         var codingSessionService = _codingSessionRuntimeOwner.Service;
 
@@ -20,36 +20,32 @@ public partial class PlayerWindow
         // automatischen Tracker. Laeuft bei jedem Tick (auch leer) -> ermoeglicht Auto-Schliessen.
         // Die hier verbrauchten Segmente werden im Punkt-Loop uebersprungen (genau die Streckencodes).
         // BCD wird NICHT mehr automatisch erzeugt - nur durch Eingabemarker oder Qwen-Erkennung.
-        CodingMultiModelFindingEventCommandWorkflow.Execute(
+        CodingMultiModelFindingEventCommandWorkflow.ExecuteAnalyzedFrame(
             new CodingMultiModelFindingEventCommandRequest(
                 HasCodingViewModel: _codingSessionHost.HasViewModel,
                 Segmented: segmented,
                 ImageWidth: imageWidth,
                 ImageHeight: imageHeight,
                 YoloMaxConfidence: yoloMaxConfidence,
-                CaptureTimestampSeconds: captureTimestampSec,
-                FrameOsdMeter: frameOsdMeter,
+                CaptureTimestampSeconds: frame.CaptureTime.TotalSeconds,
+                FrameOsdMeter: frame.HasSameFrameOsd ? frame.Meter : null,
                 CodingSessionService: codingSessionService,
                 ViewEvents: _codingSessionHost.Events,
                 QualityGate: _codingAiRuntimeOwner.Controller.QualityGate,
-                MeterFromOsd: _codingOsdMeterController.LastResolvedMeterIsOsd,
+                MeterFromOsd: false,
                 Calibration: _codingOverlayToolHost.Calibration,
-                CodeSelectionCatalog: CodeSelectionCatalog,
-                CurrentVideoTime: _codingSessionHost.CurrentVideoTime,
-                FallbackVideoTime: _playerTimelineHost.CurrentTimeOrZero),
-            new CodingMultiModelFindingEventCommandActions(
-                ResolveMeterForFrame: (timestamp, osdMeter) =>
-                    ResolveCodingMeterForFrame(timestamp, osdMeter),
-                ApplyStretchTracking: _codingStreckenschadenTrackingController.ApplyTracking,
-                ExecuteFindingWorkflow: request => CodingMultiModelFindingEventWorkflow.Execute(
-                    request,
-                    new CodingMultiModelFindingEventWorkflowActions(
-                        _codingFindingContext.ResolveCode,
-                        _codingFindingContext.LookupLabel,
-                        entry => AttachAnalyzedFramePhoto(entry),
-                        message => PlayerTrace.WriteLine(message),
-                        RefreshCodingEventsList,
-                        UpdateToolBadge))));
+                CodeSelectionCatalog: CodeSelectionCatalog),
+            frame,
+            new CodingMultiModelAnalyzedFrameEventActions(
+                ResolveMeterForFrame: (_, _) => frame.Meter,
+                ApplyStretchTracking: (items, meter, time) => _codingStreckenschadenTrackingController.ApplyTracking(items, meter, time,
+                    entry => frame.AttachPhoto(entry, (e, bytes) => _codingPhotoAttachmentController.AttachExactAnalyzedFramePhoto(e, bytes))),
+                ResolveFindingCode: _codingFindingContext.ResolveCode,
+                LookupVsaLabel: _codingFindingContext.LookupLabel,
+                AttachExactFramePhoto: (entry, _) => frame.AttachPhoto(entry, (e, bytes) => _codingPhotoAttachmentController.AttachExactAnalyzedFramePhoto(e, bytes)),
+                Trace: message => PlayerTrace.WriteLine(message),
+                RefreshEvents: RefreshCodingEventsList,
+                UpdateToolBadge: UpdateToolBadge));
 
         // KEIN PauseAndAskConfirmation im kontinuierlichen Live-Loop: der 5s-Timer
         // (CodingLiveAiTimer_Tick) haelt bei WaitingForUserInput/Pause an - ein Pause-Dialog

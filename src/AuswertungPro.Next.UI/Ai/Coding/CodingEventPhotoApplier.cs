@@ -11,6 +11,7 @@ public static class CodingEventPhotoApplier
         ICodingSessionService? codingSessionService)
     {
         ArgumentNullException.ThrowIfNull(codingEvent);
+        CodingPointFollowUpPolicy.MarkHumanTouched(codingEvent);
 
         var update = CodingPhotoSlotPolicy.Apply(codingEvent.Entry.FotoPaths, photoPath);
         codingSessionService?.UpdateEvent(codingEvent.EventId, codingEvent.Entry, codingEvent.Overlay);

@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai.QualityGate;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Ai.Coding;
@@ -13,6 +14,7 @@ public static class CodingEventDecisionPolicy
         if (codingEvent?.AiContext is null)
             return false;
 
+        CodingPointFollowUpPolicy.MarkHumanTouched(codingEvent);
         codingEvent.AiContext.Decision = decision;
         if (gateResult is not null)
             codingEvent.AiContext.QualityGateLevel = gateResult.TrafficLight.ToString();
@@ -25,6 +27,7 @@ public static class CodingEventDecisionPolicy
         CodingUserDecision decision,
         string createdContextReason)
     {
+        CodingPointFollowUpPolicy.MarkHumanTouched(codingEvent);
         if (codingEvent.AiContext is not null)
         {
             codingEvent.AiContext.Decision = decision;

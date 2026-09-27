@@ -1,8 +1,13 @@
 using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Runtime.ExceptionServices;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Coding;
 
@@ -10,6 +15,37 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class CodingOsdMeterServiceTests
 {
+    [Fact]
+    public async Task ReadRawMeterAsync_sends_fixed_meter_options_and_keeps_client_settings()
+    {
+        var handler = new CaptureOllamaHandler();
+        using var http = new HttpClient(handler);
+        using var client = new OllamaClient(
+            new Uri("http://localhost:11434"),
+            http,
+            keepAlive: "9m",
+            numCtx: 6144);
+
+        var raw = await CodingOsdMeterService.ReadRawMeterAsync(
+            client,
+            "meter-model",
+            [1, 2, 3],
+            CancellationToken.None);
+
+        Assert.Equal("12.34", raw);
+        using var doc = JsonDocument.Parse(handler.RequestJson);
+        var root = doc.RootElement;
+        Assert.Equal("meter-model", root.GetProperty("model").GetString());
+        Assert.Equal("9m", root.GetProperty("keep_alive").GetString());
+        var options = root.GetProperty("options");
+        Assert.Equal(0, options.GetProperty("temperature").GetDouble());
+        Assert.Equal(42, options.GetProperty("seed").GetInt32());
+        Assert.Equal(6144, options.GetProperty("num_ctx").GetInt32());
+        var message = root.GetProperty("messages")[0];
+        Assert.Equal(CodingOsdMeterReader.Prompt, message.GetProperty("content").GetString());
+        Assert.Equal(Convert.ToBase64String([1, 2, 3]), message.GetProperty("images")[0].GetString());
+    }
+
     [Fact]
     public async Task ReadMeterAsync_empty_image_does_not_call_model()
     {
@@ -145,5 +181,24 @@ public sealed class CodingOsdMeterServiceTests
         using var stream = new MemoryStream();
         encoder.Save(stream);
         return stream.ToArray();
+    }
+
+    private sealed class CaptureOllamaHandler : HttpMessageHandler
+    {
+        public string RequestJson { get; private set; } = "";
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestJson = await request.Content!.ReadAsStringAsync(cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    "{\"message\":{\"role\":\"assistant\",\"content\":\"12.34\"}}",
+                    Encoding.UTF8,
+                    "application/json")
+            };
+        }
     }
 }

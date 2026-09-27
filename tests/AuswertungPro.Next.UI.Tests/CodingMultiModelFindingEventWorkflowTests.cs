@@ -1,6 +1,8 @@
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Coding;
@@ -90,6 +92,97 @@ public sealed class CodingMultiModelFindingEventWorkflowTests
         Assert.Equal(1, result.StretchConsumedCount);
     }
 
+    [Fact]
+    public void Dino_only_mit_gleichem_Code_und_nahem_Meter_erzeugt_keine_zweite_Zeile()
+    {
+        var service = new SessionCodingSessionService();
+        var actions = SessionActions("BAI");
+
+        var first = Execute(service, actions, SegmentedWithOrigin(Dino(0, 0, 20, 20)), 5, 10);
+        var second = Execute(service, actions, SegmentedWithOrigin(Dino(80, 80, 100, 100)), 5.2, 15);
+
+        Assert.Equal(1, first.AddedCount);
+        Assert.Equal(0, second.AddedCount);
+        Assert.Equal(1, second.CoveredCount);
+        Assert.Single(service.Events);
+    }
+
+    [Fact]
+    public void Modellgebundenes_Yolo_darf_bei_raumgetrennter_Box_zweite_Zeile_erzeugen()
+    {
+        var previousCatalog = VsaCodeResolver.CurrentCatalog;
+        try
+        {
+            VsaCodeResolver.ConfigureCatalog(new TestCatalog());
+            var service = new SessionCodingSessionService();
+            var actions = SessionActions("BAI");
+
+            var first = Execute(service, actions, SegmentedWithOrigin(Yolo(0, 0, 20, 20)), 5, 10);
+            var second = Execute(service, actions, SegmentedWithOrigin(Yolo(80, 80, 100, 100)), 5.2, 15);
+
+            Assert.Equal(1, first.AddedCount);
+            Assert.Equal(1, second.AddedCount);
+            Assert.Equal(0, second.CoveredCount);
+            Assert.Equal(2, service.Events.Count);
+        }
+        finally
+        {
+            VsaCodeResolver.ConfigureCatalog(previousCatalog);
+        }
+    }
+
+    private static CodingMultiModelFindingEventWorkflowResult Execute(
+        SessionCodingSessionService service,
+        CodingMultiModelFindingEventWorkflowActions actions,
+        SegmentedFinding finding,
+        double meter,
+        double seconds)
+        => CodingMultiModelFindingEventWorkflow.Execute(
+            new CodingMultiModelFindingEventWorkflowRequest(
+                Segmented: [finding],
+                StretchConsumed: [],
+                Meter: meter,
+                VideoTime: TimeSpan.FromSeconds(seconds),
+                ImageWidth: 100,
+                ImageHeight: 100,
+                YoloMaxConfidence: finding.Origin?.YoloConfidence,
+                CodingSessionService: service,
+                ViewEvents: service.Events,
+                QualityGate: null,
+                MeterFromOsd: true,
+                Calibration: null,
+                CodeSelectionCatalog: null),
+            actions);
+
+    private static CodingMultiModelFindingEventWorkflowActions SessionActions(string code)
+        => new(
+            ResolveFindingCodeForCoding: (_, _) => code,
+            LookupVsaLabel: _ => code,
+            AttachAnalyzedFramePhoto: entry => entry.FotoPaths.Add($"frame-{entry.Zeit?.TotalSeconds}.png"),
+            Trace: _ => { },
+            RefreshEvents: () => { },
+            UpdateToolBadge: () => { });
+
+    private static CodingLocalizedDetection Dino(double x1, double y1, double x2, double y2)
+        => new(CodingDetectionSource.Dino, "pipe defect", x1, y1, x2, y2, DinoConfidence: 0.5);
+
+    private static CodingLocalizedDetection Yolo(double x1, double y1, double x2, double y2)
+        => new(CodingDetectionSource.Yolo, "BAI_dichtung", x1, y1, x2, y2,
+            YoloConfidence: 0.5,
+            YoloArtifactSha256: new string('a', 64),
+            VsaMainCode: "BAI",
+            YoloModelName: "test-yolo");
+
+    private static SegmentedFinding SegmentedWithOrigin(CodingLocalizedDetection origin)
+    {
+        var baseFinding = Segmented(origin.Label);
+        return baseFinding with
+        {
+            Mask = baseFinding.Mask with { Bbox = [origin.X1, origin.Y1, origin.X2, origin.Y2] },
+            Origin = origin
+        };
+    }
+
     private static CodingMultiModelFindingEventWorkflowActions NoPostActions()
         => new(
             ResolveFindingCodeForCoding: (_, _) => throw new InvalidOperationException("No code should be resolved."),
@@ -172,5 +265,68 @@ public sealed class CodingMultiModelFindingEventWorkflowTests
             AuswertungPro.Next.Application.Ai.Training.TrainingSample sample,
             CancellationToken ct = default)
             => Task.CompletedTask;
+    }
+
+    private sealed class SessionCodingSessionService : ICodingSessionService
+    {
+        private readonly CodingSession _session = new();
+
+        public double CurrentMeter => 0;
+        public double EndMeter => 20;
+        public double ProgressPercent => 0;
+        public CodingSession ActiveSession => _session;
+        public IReadOnlyList<CodingEvent> Events => _session.Events;
+
+        public event EventHandler<CodingSessionState>? StateChanged { add { } remove { } }
+        public event EventHandler<double>? MeterChanged { add { } remove { } }
+        public event EventHandler<CodingEvent>? EventAdded { add { } remove { } }
+
+        public CodingSession StartSession(HaltungRecord haltung, string? videoPath) => _session;
+        public void PauseSession() { }
+        public void ResumeSession() { }
+        public void SetWaitingForInput() { }
+        public void AbortSession(string reason) { }
+        public ProtocolDocument CompleteSession() => new();
+        public void MoveNext(double stepSizeM = 0.5) { }
+        public void MovePrevious(double stepSizeM = 0.5) { }
+        public void MoveToMeter(double meter) { }
+        public CodingEvent AddEvent(ProtocolEntry entry, OverlayGeometry? overlay = null)
+        {
+            var codingEvent = new CodingEvent
+            {
+                Entry = entry,
+                MeterAtCapture = entry.MeterStart ?? 0,
+                VideoTimestamp = entry.Zeit ?? TimeSpan.Zero,
+                Overlay = overlay
+            };
+            _session.Events.Add(codingEvent);
+            return codingEvent;
+        }
+        public void UpdateEvent(Guid eventId, ProtocolEntry entry, OverlayGeometry? overlay = null) { }
+        public void RemoveEvent(Guid eventId) { }
+        public Task IndexConfirmedSampleAsync(
+            AuswertungPro.Next.Application.Ai.Training.TrainingSample sample,
+            CancellationToken ct = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class TestCatalog : ICodeCatalogProvider
+    {
+        private static readonly CodeDefinition Code = new()
+        {
+            Code = "BAI",
+            Title = "Einragendes Dichtungsmaterial",
+            IsSelectable = true
+        };
+
+        public IReadOnlyList<CodeDefinition> GetAll() => [Code];
+        public bool TryGet(string code, out CodeDefinition definition)
+        {
+            definition = Code;
+            return string.Equals(code, Code.Code, StringComparison.OrdinalIgnoreCase);
+        }
+        public void Save(IReadOnlyList<CodeDefinition> codes) => throw new InvalidOperationException();
+        public IReadOnlyList<string> AllowedCodes() => [Code.Code];
+        public IReadOnlyList<string> Validate(IReadOnlyList<CodeDefinition>? codes = null) => [];
     }
 }

@@ -115,9 +115,16 @@ public sealed class OllamaClient : IDisposable
 
     public sealed record ChatMessage(string Role, string Content, IReadOnlyList<string>? ImagesBase64 = null);
 
-    public async Task<string> ChatAsync(
+    public Task<string> ChatAsync(
         string model,
         IReadOnlyList<ChatMessage> messages,
+        CancellationToken ct) =>
+        ChatWithOptionsAsync(model, messages, options: null, ct);
+
+    public async Task<string> ChatWithOptionsAsync(
+        string model,
+        IReadOnlyList<ChatMessage> messages,
+        IReadOnlyDictionary<string, object>? options,
         CancellationToken ct)
     {
         var msgList = BuildMessageList(messages);
@@ -128,6 +135,9 @@ public sealed class OllamaClient : IDisposable
             ["stream"] = false,
             ["keep_alive"] = _keepAlive
         };
+
+        if (options is { Count: > 0 })
+            payload["options"] = new Dictionary<string, object>(options);
 
         ApplyNumCtx(payload);
 

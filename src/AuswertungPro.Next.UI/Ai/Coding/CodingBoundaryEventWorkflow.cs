@@ -17,7 +17,10 @@ public sealed record CodingBoundaryStartEventWorkflowRequest(
     IReadOnlyList<CodingEvent> ImportEvents,
     ICodingSessionService CodingSessionService,
     double? FirstCleanFrameSeconds,
-    byte[]? AnalyzedFrameBytes);
+    byte[]? AnalyzedFrameBytes)
+{
+    public CodingAnalyzedFrameEvidence? AnalyzedFrame { get; init; }
+}
 
 public sealed record CodingBoundaryEndEventWorkflowRequest(
     IReadOnlyList<CodingEvent> ViewEvents,
@@ -27,7 +30,10 @@ public sealed record CodingBoundaryEndEventWorkflowRequest(
     double FallbackEndMeter,
     double ViewModelEndMeter,
     TimeSpan FallbackVideoTime,
-    byte[]? AnalyzedFrameBytes);
+    byte[]? AnalyzedFrameBytes)
+{
+    public CodingAnalyzedFrameEvidence? AnalyzedFrame { get; init; }
+}
 
 public sealed record CodingBoundaryEventWorkflowActions(
     Func<string, string?> LookupLabel,
@@ -77,9 +83,20 @@ public static class CodingBoundaryEventWorkflow
             startReference.Meter,
             startReference.VideoTime);
 
-        var frameBytes = await actions.TryExtractFrameAtSecondsAsync(request.FirstCleanFrameSeconds)
-                         ?? request.AnalyzedFrameBytes;
+        var cleanFrameBytes = await actions.TryExtractFrameAtSecondsAsync(request.FirstCleanFrameSeconds);
+        if (cleanFrameBytes is { Length: 0 }) cleanFrameBytes = null;
+        var frameBytes = cleanFrameBytes ?? request.AnalyzedFrame?.ImageBytes ?? request.AnalyzedFrameBytes;
+        request.AnalyzedFrame?.WriteAnalysisMetadata(draft.Entry);
+        if (request.AnalyzedFrame is not null)
+            draft.Entry.CodeMeta!.Parameters["ai.event.position.source"] = request.ImportEvents.Any(e =>
+                string.Equals(e.Entry.Code, "BCD", StringComparison.OrdinalIgnoreCase)) ? "import_bcd" : "default_bcd";
         actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, frameBytes);
+        if (request.AnalyzedFrame is { } analyzed && frameBytes is { Length: > 0 } && draft.Entry.FotoPaths.Count > 0)
+        {
+            CodingAnalyzedFrameEvidence.WritePhotoMetadata(draft.Entry, frameBytes,
+                cleanFrameBytes is not null ? request.FirstCleanFrameSeconds : analyzed.CaptureTime.TotalSeconds,
+                cleanFrameBytes is not null ? "first_clean_frame" : "analyzed_frame");
+        }
 
         CodingBoundaryEventAppender.Apply(
             draft,
@@ -104,7 +121,9 @@ public static class CodingBoundaryEventWorkflow
         if (CodingBoundaryPresencePolicy.ExistsInView(request.ViewEvents, "BCE"))
             return Existing();
 
-        var endReference = CodingBoundaryImportReferencePolicy.ResolveEnd(
+        var endReference = request.AnalyzedFrame is { } bound
+            ? new CodingBoundaryReference(bound.Meter, bound.CaptureTime)
+            : CodingBoundaryImportReferencePolicy.ResolveEnd(
             request.ImportEvents,
             request.OsdMeter,
             request.FallbackEndMeter,
@@ -116,7 +135,16 @@ public static class CodingBoundaryEventWorkflow
             label,
             endReference.Meter,
             endReference.VideoTime);
-        actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, request.AnalyzedFrameBytes);
+        if (request.AnalyzedFrame is { } frame)
+        {
+            if (!frame.MeterFromOsd)
+            {
+                draft.Entry.CodeMeta ??= new() { Code = draft.Entry.Code };
+                draft.Entry.CodeMeta.Parameters["vsa.meter.quelle"] = "geschaetzt";
+            }
+            frame.AttachPhoto(draft.Entry, (entry, bytes) => actions.AttachBoundaryAnalyzedFramePhoto(entry, bytes));
+        }
+        else actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, request.AnalyzedFrameBytes);
 
         CodingBoundaryEventAppender.Apply(
             draft,

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AuswertungPro.Next.UI\AuswertungPro.Next.UI.csproj" />
+    <ProjectReference Include="..\..\tools\CodingReplay\CodingReplay.csproj" />
   </ItemGroup>
 
   <ItemGroup>

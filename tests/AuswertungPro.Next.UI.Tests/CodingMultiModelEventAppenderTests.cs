@@ -35,9 +35,26 @@ public sealed class CodingMultiModelEventAppenderTests
         Assert.Same(overlay, ev.Overlay);
     }
 
+    [Fact]
+    public void Apply_erhaelt_Bearbeitung_aus_synchronem_EventAdded_Callback()
+    {
+        var changedContext = new CodingEventAiContext { Decision = CodingUserDecision.AcceptedWithEdit };
+        var changedOverlay = new OverlayGeometry { ToolType = OverlayToolType.Point };
+        var service = new RecordingCodingSessionService { OnAdd = ev =>
+        {
+            ev.AiContext = changedContext;
+            ev.Overlay = changedOverlay;
+        } };
+        var ev = CodingMultiModelEventAppender.Apply(new(new(), new(), null), service);
+        Assert.Same(changedContext, ev.AiContext);
+        Assert.Same(changedOverlay, ev.Overlay);
+        Assert.NotNull(ev.AiContext!.HumanTouchedAtUtc);
+    }
+
     private sealed class RecordingCodingSessionService : ICodingSessionService
     {
         public List<CodingEvent> AddedEvents { get; } = new();
+        public Action<CodingEvent>? OnAdd { get; init; }
 
         public double CurrentMeter => 0;
         public double EndMeter => 0;
@@ -63,6 +80,7 @@ public sealed class CodingMultiModelEventAppenderTests
         {
             var ev = new CodingEvent { Entry = entry, Overlay = overlay };
             AddedEvents.Add(ev);
+            OnAdd?.Invoke(ev);
             return ev;
         }
 

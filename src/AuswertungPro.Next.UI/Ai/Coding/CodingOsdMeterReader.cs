@@ -9,6 +9,9 @@ namespace AuswertungPro.Next.UI.Ai.Coding;
 
 public static class CodingOsdMeterReader
 {
+    public const double OllamaTemperature = 0;
+    public const int OllamaSeed = 42;
+
     public const string Prompt = """
         Das Bild ist ein Suchbild aus typischen OSD-Zonen: oben/unten und links/mitte/rechts.
         Lies NUR den eindeutig sichtbaren Meterstand der Kanalinspektion.
@@ -33,6 +36,13 @@ public static class CodingOsdMeterReader
     private const double BandHeightRatio = 0.26;
     private const double TileScale = 2.0;
     private const int TileGap = 6;
+
+    public static IReadOnlyDictionary<string, object> CreateOllamaOptions() =>
+        new Dictionary<string, object>
+        {
+            ["temperature"] = OllamaTemperature,
+            ["seed"] = OllamaSeed
+        };
 
     public static double? ParseMeterReply(string? raw)
     {

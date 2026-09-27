@@ -94,6 +94,7 @@ public sealed class CodingAnalysisContext
                         proximityCalibration.VanishX,
                         proximityCalibration.VanishY,
                         proximityCalibration.PipeRadiusNorm,
-                        MetrierungProximityThresholds.Default)))
+                        MetrierungProximityThresholds.Default,
+                        result.LocalizedDetections)))
             .Segmented;
 }

@@ -10,6 +10,7 @@ public static class CodingEventEditApplier
         ICodingSessionService? codingSessionService)
     {
         ArgumentNullException.ThrowIfNull(codingEvent);
+        CodingPointFollowUpPolicy.MarkHumanTouched(codingEvent);
 
         var entry = codingEvent.Entry;
         codingEvent.MeterAtCapture = entry.MeterStart ?? entry.MeterEnd ?? codingEvent.MeterAtCapture;

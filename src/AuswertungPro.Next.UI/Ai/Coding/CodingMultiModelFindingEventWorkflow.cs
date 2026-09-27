@@ -20,7 +20,11 @@ public sealed record CodingMultiModelFindingEventWorkflowRequest(
     QualityGateService? QualityGate,
     bool MeterFromOsd,
     PipeCalibration? Calibration,
-    IVsaCodeSelectionCatalog? CodeSelectionCatalog);
+    IVsaCodeSelectionCatalog? CodeSelectionCatalog,
+    IReadOnlySet<Guid>? CreatedStretchEventIds = null)
+{
+    public bool? SameFrameMeterEvidence { get; init; }
+}
 
 public sealed record CodingMultiModelFindingEventWorkflowActions(
     Func<LiveFrameFinding, double, string?> ResolveFindingCodeForCoding,
@@ -53,14 +57,17 @@ public static class CodingMultiModelFindingEventWorkflow
         var skippedCount = 0;
         var coveredCount = 0;
         var stretchConsumedCount = 0;
+        var improvedCount = 0;
 
         foreach (var seg in request.Segmented)
         {
-            if (request.StretchConsumed.Contains(seg))
+            var stretchConsumed = request.StretchConsumed.Contains(seg);
+            if (stretchConsumed)
             {
                 stretchConsumedCount++;
-                continue;
+                if (seg.Origin is null) continue;
             }
+            if (seg.Origin is { HasValidEvidence: false }) { skippedCount++; continue; }
 
             var quant = seg.Quant;
             var dino = seg.Dino;
@@ -69,15 +76,32 @@ public static class CodingMultiModelFindingEventWorkflow
                 request.ImageWidth,
                 request.ImageHeight);
 
-            var code = actions.ResolveFindingCodeForCoding(pseudoFinding, request.Meter);
-            var addDecision = CodingMultiModelFindingAddDecisionPolicy.Decide(
+            var code = seg.Origin?.HasYolo == true
+                ? CodingLocalizedDetectionPlan.ResolveEventCode(seg.Origin)
+                : actions.ResolveFindingCodeForCoding(pseudoFinding, request.Meter);
+            if (code is null && stretchConsumed) continue;
+            var spatialFollowUp = seg.Origin is
+            {
+                HasYolo: true,
+                HasValidEvidence: true,
+                HasTechnicalFailure: false
+            } origin
+                && CodingLocalizedDetection.IsSha256(origin.YoloArtifactSha256)
+                && !string.IsNullOrWhiteSpace(origin.YoloModelName);
+            var coverageCandidates = spatialFollowUp
+                ? CodingPointFollowUpPolicy.CoverageCandidates(request.CodingSessionService.ActiveSession,
+                    request.ViewEvents, code, request.Meter, CodingPointGeometry.FromFinding(pseudoFinding))
+                : request.ViewEvents.ToList();
+            var addDecision = stretchConsumed
+                ? new CodingMultiModelFindingAddDecision(CodingMultiModelFindingAddDecisionKind.Add, code)
+                : CodingMultiModelFindingAddDecisionPolicy.Decide(
                 code,
                 quant.Label,
                 seg.Proximity,
                 pseudoFinding,
                 request.Meter,
                 request.CodingSessionService.ActiveSession?.Events,
-                request.ViewEvents);
+                coverageCandidates);
 
             if (addDecision.TraceMessage != null)
                 actions.Trace(addDecision.TraceMessage);
@@ -85,10 +109,11 @@ public static class CodingMultiModelFindingEventWorkflow
             if (addDecision.Kind == CodingMultiModelFindingAddDecisionKind.CoveredExisting)
             {
                 coveredCount++;
-                continue;
+                if (seg.Origin is null) continue;
             }
 
-            if (addDecision.Kind != CodingMultiModelFindingAddDecisionKind.Add)
+            if (addDecision.Kind is not (CodingMultiModelFindingAddDecisionKind.Add
+                or CodingMultiModelFindingAddDecisionKind.CoveredExisting))
             {
                 skippedCount++;
                 continue;
@@ -97,17 +122,14 @@ public static class CodingMultiModelFindingEventWorkflow
             code = addDecision.Code!;
             var officialLabel = actions.LookupVsaLabel(code);
             var dinoConfidence = dino?.Confidence ?? quant.Confidence;
-            var evidence = CodingMultiModelQualityGatePolicy.BuildEvidence(
-                request.YoloMaxConfidence,
-                dinoConfidence,
-                quant.Confidence,
-                officialLabel) with
+            var evidence = CodingMultiModelQualityGatePolicy.BuildEvidence(seg, request.YoloMaxConfidence, officialLabel) with
             {
                 DamageCategory = code
             };
             var gateResult = CodingMultiModelQualityGatePolicy.Evaluate(
                 request.QualityGate,
-                evidence);
+                evidence,
+                requiresReview: seg.Origin?.RequiresReview == true);
 
             var quantRule = CodingManifestQuantRuleResolver.Resolve(request.CodeSelectionCatalog, code);
             var draft = CodingMultiModelEventFactory.Create(
@@ -132,12 +154,62 @@ public static class CodingMultiModelFindingEventWorkflow
                 StringComparer.Ordinal);
             draft.AiContext.QualityGateExplanation = gateResult.Explanation;
 
+            if (addDecision.CoveringEvent is { } existing)
+            {
+                var sameFrameMeterEvidence = request.SameFrameMeterEvidence ?? request.MeterFromOsd;
+                var block = CodingPointFollowUpPolicy.ImprovementBlockReason(
+                    request.CodingSessionService.ActiveSession, existing, draft.Entry, draft.Overlay,
+                    draft.AiContext, sameFrameMeterEvidence, coverageCandidates);
+                if (block is null)
+                {
+                    actions.AttachAnalyzedFramePhoto(draft.Entry);
+                    if (CodingPointFollowUpPolicy.TryImprove(request.CodingSessionService.ActiveSession,
+                        existing, draft.Entry, draft.Overlay, draft.AiContext, sameFrameMeterEvidence,
+                        coverageCandidates, out var reason)) improvedCount++;
+                    block = reason;
+                }
+                actions.Trace($"[Folgebeleg] {existing.EventId}: {block}");
+                continue;
+            }
+
+            if (stretchConsumed)
+            {
+                // Der Tracker legt die offene Zeile vor diesem Workflow an. Auch
+                // diese Zeile braucht den echten Erstbeleg und dieselbe Ampel.
+                var open = request.CodingSessionService.Events.FirstOrDefault(e =>
+                    request.CreatedStretchEventIds?.Contains(e.EventId) == true
+                    && e.Entry.Source == ProtocolEntrySource.Ai && e.Entry.IsStreckenschaden
+                    && !e.Entry.IsDeleted && e.ReviewContext is null && e.Overlay is null
+                    && e.Entry.MeterEnd is null && e.Entry.MeterStart <= request.Meter
+                    && e.AiContext is { Evidence: null, HumanTouchedAtUtc: null, Decision: CodingUserDecision.Ignored }
+                    && CodingDedupPolicy.CodesMatch(e.Entry.Code, code));
+                if (open is not null)
+                {
+                    open.AiContext = draft.AiContext;
+                    open.Overlay = draft.Overlay;
+                    open.Entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = open.Entry.Code };
+                    if (draft.Entry.CodeMeta is { } meta)
+                    {
+                        foreach (var parameter in meta.Parameters)
+                        {
+                            if (parameter.Key.StartsWith("ai.detector.", StringComparison.Ordinal)
+                                || parameter.Key == "ai.code.detail")
+                                open.Entry.CodeMeta.Parameters[parameter.Key] = parameter.Value;
+                            else open.Entry.CodeMeta.Parameters.TryAdd(parameter.Key, parameter.Value);
+                        }
+                    }
+                    actions.AttachAnalyzedFramePhoto(open.Entry);
+                    actions.RefreshEvents();
+                }
+                continue;
+            }
+
             actions.AttachAnalyzedFramePhoto(draft.Entry);
             CodingMultiModelEventAppender.Apply(draft, request.CodingSessionService);
             addedCount++;
         }
 
-        if (addedCount > 0)
+        if (addedCount > 0 || improvedCount > 0)
         {
             actions.RefreshEvents();
             actions.UpdateToolBadge();

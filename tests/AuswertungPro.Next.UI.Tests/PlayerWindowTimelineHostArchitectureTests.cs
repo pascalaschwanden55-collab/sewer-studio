@@ -49,7 +49,6 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             "PlayerWindow.Coding.Ai.cs",
             "PlayerWindow.Coding.AiEvents.cs",
             "PlayerWindow.Coding.AiEvents.Live.cs",
-            "PlayerWindow.Coding.AiEvents.MultiModel.cs",
             "PlayerWindow.Coding.Events.cs",
             "PlayerWindow.Coding.Events.Actions.cs",
             "PlayerWindow.Coding.FrameReadiness.cs"
@@ -63,6 +62,11 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             var text = File.ReadAllText(path);
             Assert.Contains("_playerTimelineHost", text);
         }
+
+        // Multi-Model-Befunde tragen die Aufnahmezeit ihres analysierten Bildes, nie die spaetere Player-Position.
+        var multiModel = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.MultiModel.cs"));
+        Assert.Contains("frame.CaptureTime", multiModel);
+        Assert.DoesNotContain("_playerTimelineHost", multiModel);
 
         var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
         Assert.Contains("FallbackVideoTime: () => _playerTimelineHost.CurrentTimeOrZero", windowRoot);

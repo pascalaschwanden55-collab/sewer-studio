@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Windows.Media;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Player;
 
@@ -33,8 +34,32 @@ public sealed record CodingMultiModelInferenceWorkflowActions(
 public sealed record CodingMultiModelInferenceWorkflowResult(
     CodingMultiModelInferenceWorkflowOutcome Outcome);
 
+public sealed record CodingMultiModelAnalyzedFrameInferenceActions(
+    Func<double?, double?, CodingMeterResolution> ResolveCurrentMeter,
+    Func<byte[], CodingMultiModelClassifierInput, CancellationToken, Task<SingleFrameResult>> AnalyzeFrameAsync,
+    Action<string, Color, string?, bool> SetCodingAiState,
+    Func<SingleFrameResult, CodingAnalyzedFrameEvidence, Task<bool>> TryHandleBoundaryClassifierResultAsync,
+    Func<SingleFrameResult, CodingAnalyzedFrameEvidence, bool> TryHandleStructuralClassifierResult,
+    Action<SingleFrameResult, CodingAnalyzedFrameEvidence> HandleAnalysisResult);
+
 public static class CodingMultiModelInferenceWorkflow
 {
+    public static Task<CodingMultiModelInferenceWorkflowResult> ExecuteAnalyzedFrameAsync(
+        CodingMultiModelInferenceWorkflowRequest request, CodingMultiModelAnalyzedFrameInferenceActions actions)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(actions);
+        ArgumentNullException.ThrowIfNull(request.FrameBytes);
+        var meter = actions.ResolveCurrentMeter(request.CaptureTimestampSeconds, request.FrameOsdMeter);
+        var frame = CodingAnalyzedFrameEvidence.FromResolution(request.FrameBytes,
+            TimeSpan.FromSeconds(request.CaptureTimestampSeconds), meter);
+        return ExecuteAsync(request, new CodingMultiModelInferenceWorkflowActions(
+            (_, _) => frame.Meter, actions.AnalyzeFrameAsync, actions.SetCodingAiState,
+            (result, _, _) => actions.TryHandleBoundaryClassifierResultAsync(result, frame),
+            (result, _, _) => actions.TryHandleStructuralClassifierResult(result, frame),
+            result => actions.HandleAnalysisResult(result, frame)));
+    }
+
     public static async Task<CodingMultiModelInferenceWorkflowResult> ExecuteAsync(
         CodingMultiModelInferenceWorkflowRequest request,
         CodingMultiModelInferenceWorkflowActions actions)

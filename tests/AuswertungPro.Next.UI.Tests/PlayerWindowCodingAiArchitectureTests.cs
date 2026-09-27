@@ -383,7 +383,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("request.MultiModel is null", multiModelRuntimeGateWorkflow);
         Assert.Contains("request.AnalysisCancellation is null", multiModelRuntimeGateWorkflow);
         Assert.Contains("CodingMultiModelAnalysisStartWorkflow.ExecuteAsync", multiModel);
-        Assert.Contains("CodingMultiModelInferenceWorkflow.ExecuteAsync", multiModel);
+        Assert.Contains("CodingMultiModelInferenceWorkflow.ExecuteAnalyzedFrameAsync", multiModel);
         Assert.Contains("CodingEndMeterResolveWorkflow.Execute", multiModel);
         Assert.Contains("if (!request.HasCodingViewModel)", endMeterResolveWorkflow);
         Assert.Contains("actions.ResolveEndMeter()", endMeterResolveWorkflow);

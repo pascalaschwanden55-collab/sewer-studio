@@ -7,7 +7,7 @@ using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Tests;
 
-public sealed class CodingMultiModelAnalysisResultWorkflowTests
+public sealed partial class CodingMultiModelAnalysisResultWorkflowTests
 {
     [Fact]
     public void Execute_shows_error_without_building_segmented_findings()

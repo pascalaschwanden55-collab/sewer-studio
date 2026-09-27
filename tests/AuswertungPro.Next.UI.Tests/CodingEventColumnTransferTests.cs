@@ -59,6 +59,27 @@ public sealed class CodingEventColumnTransferTests
     }
 
     [Fact]
+    public void Copy_und_Move_markieren_menschliche_Beruehrung_und_erhalten_Beleggeschichte()
+    {
+        var original = Ev("BAI", 10.7);
+        original.AiContext = new() { SuggestedByModelId = "yolo", SuggestedByModelSha256 = new string('a', 64),
+            ObservationHasTechnicalFailure = true,
+            PreviousEvidence = [new(new() { FotoPaths = ["old.png"] }, null, new(), 10.1, TimeSpan.FromSeconds(115))] };
+        var target = new ObservableCollection<CodingEvent>();
+        var copy = CodingEventColumnTransfer.Copy(original, target);
+        Assert.NotNull(original.AiContext.HumanTouchedAtUtc);
+        Assert.Equal(original.AiContext.HumanTouchedAtUtc, copy.AiContext!.HumanTouchedAtUtc);
+        Assert.Equal(original.AiContext.SuggestedByModelSha256, copy.AiContext.SuggestedByModelSha256);
+        Assert.True(copy.AiContext.ObservationHasTechnicalFailure);
+        var old = Assert.Single(copy.AiContext.PreviousEvidence);
+        old.Entry.FotoPaths.Clear();
+        Assert.Equal("old.png", Assert.Single(original.AiContext.PreviousEvidence[0].Entry.FotoPaths));
+        var moved = Ev("BAI", 11); moved.AiContext = new();
+        CodingEventColumnTransfer.Move(moved, new() { moved }, target);
+        Assert.NotNull(moved.AiContext.HumanTouchedAtUtc);
+    }
+
+    [Fact]
     public void CloneWithNewIds_klont_overlay_codemeta_aicontext_unabhaengig()
     {
         var original = new CodingEvent

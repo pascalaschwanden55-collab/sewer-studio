@@ -63,8 +63,8 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
 
         Assert.Contains("_codingSessionHost", aiEvents);
         Assert.Contains("private void AddMultiModelFindingsAsEvents", multiModel);
-        Assert.Contains("CodingMultiModelFindingEventCommandWorkflow.Execute", multiModel);
-        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", multiModel);
+        Assert.Contains("CodingMultiModelFindingEventCommandWorkflow.ExecuteAnalyzedFrame", multiModel);
+        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute(", commandWorkflow);
         Assert.Contains("actions.ResolveMeterForFrame", commandWorkflow);
         Assert.Contains("actions.ApplyStretchTracking", commandWorkflow);
         Assert.Contains("actions.ExecuteFindingWorkflow", commandWorkflow);
@@ -109,7 +109,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
         var workflow = File.ReadAllText(workflowPath);
         var mapper = File.ReadAllText(mapperPath);
 
-        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", events);
+        AssertFindingWorkflowReachedThroughCommand(events);
         Assert.Contains("CodingSegmentedFindingFrameMapper.Build", workflow);
         Assert.Contains("public static LiveFrameFinding Build", mapper);
         Assert.Contains("VsaCodeResolver.NormalizeClock", mapper);
@@ -126,7 +126,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
         var workflow = File.ReadAllText(workflowPath);
         var decision = File.ReadAllText(decisionPath);
 
-        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", events);
+        AssertFindingWorkflowReachedThroughCommand(events);
         Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", workflow);
         Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", decision);
     }
@@ -144,7 +144,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
         var workflow = File.ReadAllText(workflowPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", events);
+        AssertFindingWorkflowReachedThroughCommand(events);
         Assert.Contains("CodingMultiModelQualityGatePolicy.Evaluate", workflow);
         Assert.Contains("public static QualityGateResult Evaluate", policy);
         Assert.Contains("YoloConf: yoloMaxConfidence", policy);
@@ -225,5 +225,14 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
             offenders.Length == 0,
             "PlayerWindow-MultiModel-Rendering soll Masken-Sichtbarkeit, Render-State und SAM-Details ueber Workflows/Controller kapseln:\n"
             + string.Join("\n", offenders));
+    }
+
+    // Das Fenster ruft den Befehl mit dem gebundenen Analysebeleg; der Befehl ruft den Befund-Workflow.
+    private static void AssertFindingWorkflowReachedThroughCommand(string events)
+    {
+        var commandWorkflow = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelFindingEventCommandWorkflow.cs"));
+        Assert.Contains("CodingMultiModelFindingEventCommandWorkflow.ExecuteAnalyzedFrame", events);
+        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute(", commandWorkflow);
     }
 }

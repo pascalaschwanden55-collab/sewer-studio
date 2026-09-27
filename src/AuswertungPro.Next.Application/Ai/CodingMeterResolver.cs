@@ -1,6 +1,11 @@
 namespace AuswertungPro.Next.Application.Ai;
 
-public readonly record struct CodingMeterResolution(double Meter, bool IsOsd);
+public enum CodingMeterSource { Unknown, SameFrameOsd, RecentOsd, VideoEstimate, SessionFallback }
+
+public readonly record struct CodingMeterResolution(double Meter, bool IsOsd)
+{
+    public CodingMeterSource Source { get; init; }
+}
 
 public static class CodingMeterResolver
 {
@@ -19,18 +24,18 @@ public static class CodingMeterResolver
         double currentMeter)
     {
         if (sameFrameOsdMeter is >= 0 and <= MaxPlausibleOsdMeter)
-            return new CodingMeterResolution(Math.Round(sameFrameOsdMeter.GetValueOrDefault(), 2), IsOsd: true);
+            return new CodingMeterResolution(Math.Round(sameFrameOsdMeter.GetValueOrDefault(), 2), IsOsd: true) { Source = CodingMeterSource.SameFrameOsd };
 
         var recentOsdMeter = ResolveRecentOsdMeter(frameTimestampSeconds, cachedOsdMeter, cachedOsdTimestampSeconds);
         if (recentOsdMeter.HasValue)
-            return new CodingMeterResolution(recentOsdMeter.Value, IsOsd: true);
+            return new CodingMeterResolution(recentOsdMeter.Value, IsOsd: true) { Source = CodingMeterSource.RecentOsd };
 
         var videoMeter = EstimateFromVideo(frameTimestampSeconds, videoDurationSeconds, endMeter)
             ?? EstimateFromVideo(currentPlayerTimestampSeconds, videoDurationSeconds, endMeter);
         if (videoMeter.HasValue)
-            return new CodingMeterResolution(videoMeter.Value, IsOsd: false);
+            return new CodingMeterResolution(videoMeter.Value, IsOsd: false) { Source = CodingMeterSource.VideoEstimate };
 
-        return new CodingMeterResolution(Math.Round(Math.Max(0, currentMeter), 2), IsOsd: false);
+        return new CodingMeterResolution(Math.Round(Math.Max(0, currentMeter), 2), IsOsd: false) { Source = CodingMeterSource.SessionFallback };
     }
 
     public static bool ShouldResetRecentMeterForSeek(double? frameTimestampSeconds, double? cachedOsdTimestampSeconds)

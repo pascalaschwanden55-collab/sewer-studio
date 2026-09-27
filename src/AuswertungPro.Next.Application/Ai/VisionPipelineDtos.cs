@@ -278,8 +278,12 @@ public sealed record SamResponse(
 /// <summary>Qualifikationsstand des aktiven Detektors aus der Sidecar-Statusdatei.</summary>
 public sealed record SidecarDetectorQualification(
     [property: JsonPropertyName("qualified")] bool Qualified,
-    [property: JsonPropertyName("reason")] string? Reason
+    [property: JsonPropertyName("reason")] string? Reason,
+    [property: JsonPropertyName("artifact")] SidecarDetectorArtifact? Artifact = null
 );
+
+public sealed record SidecarDetectorArtifact(
+    [property: JsonPropertyName("sha256")] string? Sha256);
 
 // ── Training Export ─────────────────────────────────────────────────────────
 

@@ -1,4 +1,5 @@
 using System.Threading;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
@@ -7,6 +8,26 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class CodingOsdMeterControllerTests
 {
+    [Theory]
+    [InlineData(119, true, CodingMeterSource.RecentOsd, 10.74)]
+    [InlineData(115, false, CodingMeterSource.VideoEstimate, 12)]
+    public void Resolved_meter_preserves_recent_cache_source_without_claiming_same_frame(
+        double cachedSeconds, bool isOsd, CodingMeterSource source, double expectedMeter)
+    {
+        var controller = new CodingOsdMeterController();
+        controller.ApplyState(new CodingOsdMeterState(10.74, cachedSeconds, "OSD"));
+        var resolution = controller.ResolveMeterWithSource(new(120, null, 121, 200, 20, 0));
+        var frame = CodingAnalyzedFrameEvidence.FromResolution([1, 2, 3], TimeSpan.FromSeconds(120), resolution);
+        controller.ApplyState(new CodingOsdMeterState(99, 130, "spaeter"));
+        Assert.Equal(expectedMeter, frame.Meter);
+        Assert.Equal(isOsd, frame.MeterFromOsd);
+        Assert.Equal(source, frame.MeterSource);
+        Assert.False(frame.HasSameFrameOsd);
+        var entry = new AuswertungPro.Next.Domain.Protocol.ProtocolEntry();
+        frame.WriteAnalysisMetadata(entry);
+        Assert.Equal(isOsd ? "recent_osd" : "video_estimate", entry.CodeMeta!.Parameters["ai.frame.meter_source"]);
+    }
+
     [Fact]
     public void ApplyState_and_reset_recent_meter_manage_cached_osd_meter()
     {

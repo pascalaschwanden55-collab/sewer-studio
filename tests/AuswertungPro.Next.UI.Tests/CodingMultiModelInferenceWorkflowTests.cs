@@ -7,6 +7,31 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingMultiModelInferenceWorkflowTests
 {
     [Fact]
+    public async Task AnalyzedFrame_keeps_bytes_time_and_once_resolved_meter_after_delayed_inference()
+    {
+        var request = Request(nominalDiameterMm: 600, endMeter: 20);
+        var completion = new TaskCompletionSource<SingleFrameResult>();
+        var meterReads = 0;
+        var currentMeter = 7.8;
+        AuswertungPro.Next.Application.Ai.CodingAnalyzedFrameEvidence? boundary = null, structural = null, finding = null;
+        var pending = CodingMultiModelInferenceWorkflow.ExecuteAnalyzedFrameAsync(request, new(
+            (_, _) => { meterReads++; return new(currentMeter, true) { Source = AuswertungPro.Next.Application.Ai.CodingMeterSource.SameFrameOsd }; },
+            (bytes, input, _) => { Assert.Same(request.FrameBytes, bytes); Assert.Equal(7.8, input.CurrentMeter); return completion.Task; },
+            (_, _, _, _) => { },
+            (_, frame) => { boundary = frame; return Task.FromResult(false); },
+            (_, frame) => { structural = frame; return false; },
+            (_, frame) => finding = frame));
+        currentMeter = 99;
+        completion.SetResult(SingleFrameResult.Empty());
+        await pending;
+        Assert.Equal(1, meterReads);
+        Assert.Same(boundary, structural); Assert.Same(boundary, finding);
+        Assert.Equal(7.8, finding!.Meter);
+        Assert.Equal(TimeSpan.FromSeconds(12.3), finding.CaptureTime);
+        Assert.Same(request.FrameBytes, finding.ImageBytes);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_resolves_classifier_input_before_analysis_and_result_handling()
     {
         var calls = new List<string>();

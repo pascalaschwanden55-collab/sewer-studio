@@ -10,6 +10,25 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingStructuralClassifierCommandWorkflowTests
 {
     [Fact]
+    public void AnalyzedFrame_ignores_old_host_time_and_does_not_resolve_global_meter_again()
+    {
+        var frame = new CodingAnalyzedFrameEvidence([1, 2, 3], TimeSpan.FromSeconds(120), 10.74, false);
+        CodingStructuralClassifierResultWorkflowRequest? captured = null;
+        var result = CodingStructuralClassifierCommandWorkflow.ExecuteAnalyzedFrame(
+            Request(viewEvents: [], codingSessionService: new RecordingCodingSessionService(),
+                currentVideoTime: TimeSpan.FromSeconds(30)), frame,
+            new((_, _) => throw new InvalidOperationException("Old meter cache"), request =>
+            {
+                captured = request;
+                return new(CodingStructuralClassifierResultWorkflowOutcome.Added);
+            }));
+        Assert.Equal(frame.CaptureTime, result.VideoTime);
+        Assert.Equal(10.74, result.Meter);
+        Assert.Equal(frame.CaptureTime, captured!.VideoTime);
+        Assert.False(captured.MeterFromOsd);
+    }
+
+    [Fact]
     public void Execute_skips_without_view_events()
     {
         var result = CodingStructuralClassifierCommandWorkflow.Execute(

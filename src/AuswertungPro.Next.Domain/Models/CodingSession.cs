@@ -145,6 +145,14 @@ public sealed class CodingEvent
 /// </summary>
 public sealed class CodingEventAiContext
 {
+    /// <summary>Explizite menschliche Beruehrung, auch wenn Decision weiterhin Ignored ist.</summary>
+    public DateTimeOffset? HumanTouchedAtUtc { get; set; }
+    /// <summary>Technischer Fehler beim beobachteten Bild; Kandidatenstatus allein setzt dies nicht.</summary>
+    public bool ObservationHasTechnicalFailure { get; set; }
+
+    /// <summary>Unveraenderte fruehere Bild-/Meter-/Modellbelege einer Vorschlagskorrektur.</summary>
+    public List<CodingProposalEvidenceSnapshot> PreviousEvidence { get; set; } = [];
+
     public string? SuggestedCode { get; set; }
     public double Confidence { get; set; }
 

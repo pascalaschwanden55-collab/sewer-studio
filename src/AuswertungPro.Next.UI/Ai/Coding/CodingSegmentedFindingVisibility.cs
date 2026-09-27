@@ -24,7 +24,7 @@ public static class CodingSegmentedFindingVisibility
             .Select(s => new SamMaskRenderer.MaskRenderCandidate(
                 s.Mask,
                 s.Proximity.IsCodierbar ? s.Quant : null,
-                s.Dino?.Confidence))
+                s.Origin?.Confidence ?? s.Dino?.Confidence))
             .ToList();
 
     public static string BuildOverlaySuppressionText(int suppressedBackgroundCount)
@@ -42,7 +42,7 @@ public static class CodingSegmentedFindingVisibility
         var candidate = new SamMaskRenderer.MaskRenderCandidate(
             segmented.Mask,
             segmented.Quant,
-            segmented.Dino?.Confidence);
+            segmented.Origin?.Confidence ?? segmented.Dino?.Confidence);
         var decision = SamMaskRenderer.DecideVisualMode(candidate, SamMaskRenderer.WinCanStyleOptions);
         return decision.Mode != SamMaskRenderer.MaskVisualMode.Hidden;
     }

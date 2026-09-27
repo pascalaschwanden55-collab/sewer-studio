@@ -316,7 +316,7 @@ public sealed class SingleFrameMultiModelServiceTests
                     "status": "ok",
                     "version": "1.2.0",
                     "gpu": null,
-                    "detector_qualification": { "qualified": true, "reason": null }
+                    "detector_qualification": { "qualified": true, "reason": null, "artifact": { "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" } }
                 }
                 """,
                 "/classify/yolo" => $$"""
@@ -339,7 +339,8 @@ public sealed class SingleFrameMultiModelServiceTests
                     "detections": [],
                     "frame_class": "irrelevant",
                     "inference_time_ms": 4,
-                    "detector_qualified": true
+                    "detector_qualified": true,
+                    "detector_artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                 }
                 """,
                 "/detect/dino" => """
@@ -372,7 +373,7 @@ public sealed class SingleFrameMultiModelServiceTests
                     "status": "ok",
                     "version": "1.2.0",
                     "gpu": null,
-                    "detector_qualification": { "qualified": true, "reason": null }
+                    "detector_qualification": { "qualified": true, "reason": null, "artifact": { "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" } }
                 }
                 """,
                 "/classify/yolo" => classifierJson,
@@ -382,7 +383,8 @@ public sealed class SingleFrameMultiModelServiceTests
                     "detections": [],
                     "frame_class": "irrelevant",
                     "inference_time_ms": 4,
-                    "detector_qualified": true
+                    "detector_qualified": true,
+                    "detector_artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                 }
                 """,
                 "/detect/dino" => """

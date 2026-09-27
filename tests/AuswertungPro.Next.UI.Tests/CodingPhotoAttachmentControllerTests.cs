@@ -175,6 +175,32 @@ public sealed class CodingPhotoAttachmentControllerTests
     }
 
     [Fact]
+    public void Exact_photo_is_finished_before_return_and_never_awaits_a_later_player_frame()
+    {
+        var calls = new List<string>();
+        var laterFrame = new TaskCompletionSource<byte[]?>();
+        var analyzed = new byte[] { 1, 2, 3 };
+        var entry = new ProtocolEntry();
+        var controller = CreateController(calls,
+            getPreferredFrameBytesAsync: () => { calls.Add("wrong-later-frame"); return laterFrame.Task; },
+            getBufferedFrameBytes: () => throw new InvalidOperationException("Wrong buffered frame"),
+            captureSnapshot: _ => throw new InvalidOperationException("Wrong current screenshot"),
+            attachAnalyzedFramePhoto: (actual, bytes) =>
+            {
+                Assert.Same(analyzed, bytes);
+                actual.FotoPaths.Add("exact.png");
+                calls.Add("saved");
+                return "exact.png";
+            });
+        Assert.Equal("exact.png", controller.AttachExactAnalyzedFramePhoto(entry, analyzed));
+        Assert.Equal("exact.png", Assert.Single(entry.FotoPaths));
+        Assert.Equal(["saved"], calls);
+        laterFrame.SetResult([9, 9, 9]);
+        Assert.Equal(["saved"], calls);
+        Assert.Null(controller.AttachExactAnalyzedFramePhoto(new ProtocolEntry(), null));
+    }
+
+    [Fact]
     public void TakePhotoForSelectedEvent_restores_original_time_when_capture_fails()
     {
         var calls = new List<string>();

@@ -17,7 +17,10 @@ public sealed record CodingBoundaryStartCommandRequest(
     IReadOnlyList<CodingEvent> ImportEvents,
     ICodingSessionService? CodingSessionService,
     double? FirstCleanFrameSeconds,
-    byte[]? AnalyzedFrameBytes);
+    byte[]? AnalyzedFrameBytes)
+{
+    public CodingAnalyzedFrameEvidence? AnalyzedFrame { get; init; }
+}
 
 public sealed record CodingBoundaryEndCommandRequest(
     bool HasCodingViewModel,
@@ -28,7 +31,10 @@ public sealed record CodingBoundaryEndCommandRequest(
     double FallbackEndMeter,
     double ViewModelEndMeter,
     TimeSpan FallbackVideoTime,
-    byte[]? AnalyzedFrameBytes);
+    byte[]? AnalyzedFrameBytes)
+{
+    public CodingAnalyzedFrameEvidence? AnalyzedFrame { get; init; }
+}
 
 public sealed record CodingBoundaryStartCommandActions(
     Func<CodingBoundaryStartEventWorkflowRequest, Task<CodingBoundaryEventWorkflowResult>> EnsureStartAsync);
@@ -67,7 +73,7 @@ public static class CodingBoundaryEventCommandWorkflow
                 request.ImportEvents,
                 request.CodingSessionService,
                 request.FirstCleanFrameSeconds,
-                request.AnalyzedFrameBytes));
+                request.AnalyzedFrameBytes) { AnalyzedFrame = request.AnalyzedFrame });
 
         return Result(CodingBoundaryEventCommandOutcome.Executed, workflowResult);
     }
@@ -95,7 +101,7 @@ public static class CodingBoundaryEventCommandWorkflow
                 request.FallbackEndMeter,
                 request.ViewModelEndMeter,
                 request.FallbackVideoTime,
-                request.AnalyzedFrameBytes));
+                request.AnalyzedFrameBytes) { AnalyzedFrame = request.AnalyzedFrame });
 
         return Result(CodingBoundaryEventCommandOutcome.Executed, workflowResult);
     }

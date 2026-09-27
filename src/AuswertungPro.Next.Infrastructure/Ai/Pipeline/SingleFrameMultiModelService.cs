@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Dossiers;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
@@ -55,23 +56,47 @@ public sealed class SingleFrameMultiModelService
     /// <param name="pipeDiameterMm">Rohr-Nenndurchmesser in mm (aus Haltung).</param>
     /// <param name="calibration">Optionale Kalibrierung fuer praezisere Messungen.</param>
     /// <param name="ct">CancellationToken.</param>
-    public async Task<SingleFrameResult> AnalyzeFrameAsync(
+    public Task<SingleFrameResult> AnalyzeFrameAsync(
         byte[] pngBytes,
         int pipeDiameterMm,
         PipeCalibration? calibration = null,
         CancellationToken ct = default,
         double? currentMeterM = null,
         double? reachLengthM = null)
+        => AnalyzeCoreAsync(pngBytes, pipeDiameterMm, calibration, ct, currentMeterM, reachLengthM, null);
+
+    /// <summary>Nur expliziter Messhost-Einstieg. Kein Kandidat wird dadurch qualifiziert.</summary>
+    public async Task<SingleFrameResult> AnalyzeCandidateFrameAsync(
+        byte[] pngBytes, int pipeDiameterMm, CodingDetectorCandidateFrame candidate,
+        PipeCalibration? calibration = null, CancellationToken ct = default,
+        double? currentMeterM = null, double? reachLengthM = null)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        var result = await AnalyzeCoreAsync(pngBytes, pipeDiameterMm, calibration, ct, currentMeterM, reachLengthM, candidate);
+        // Auch technische Fehlerantworten sind keine unbekannte oder produktive Freigabe.
+        return result with { DetectorQualified = false };
+    }
+
+    private async Task<SingleFrameResult> AnalyzeCoreAsync(
+        byte[] pngBytes, int pipeDiameterMm, PipeCalibration? calibration, CancellationToken ct,
+        double? currentMeterM, double? reachLengthM, CodingDetectorCandidateFrame? candidate)
     {
         if (pngBytes == null || pngBytes.Length == 0)
             return SingleFrameResult.Empty("Kein Frame-Bild");
+        if (candidate?.ValidateForImage(pngBytes) is { } candidateError)
+            return SingleFrameResult.Empty(candidateError) with
+            {
+                DetectorQualified = false, Degraded = true, DegradedReason = candidateError
+            };
 
         var b64 = Convert.ToBase64String(pngBytes);
         double yoloMs = 0, dinoMs = 0, samMs = 0, classifierMs = 0;
         var detectorQualification = await ReadDetectorQualificationAsync(ct);
-        bool? effectiveDetectorQualified = detectorQualification?.Qualified;
+        bool? effectiveDetectorQualified = candidate is null ? detectorQualification?.Qualified : false;
         var detectorApproved = effectiveDetectorQualified == true;
-        var detectorQualificationReason = detectorApproved
+        var detectorQualificationReason = candidate is not null
+            ? $"Entwicklungskandidat {candidate.CandidateId}; keine produktive Freigabe"
+            : detectorApproved
             ? null
             : detectorQualification is null
                 ? "Qualifikationsstatus fehlt oder konnte nicht gelesen werden"
@@ -85,6 +110,7 @@ public sealed class SingleFrameMultiModelService
                   : $": {detectorQualificationReason}")
               + ". DINO/SAM liefen ohne YOLO-Filter; Ergebnis manuell pruefen."
             : null;
+        if (candidate is not null) yoloMs = candidate.InferenceTimeMs;
 
         try
         {
@@ -156,17 +182,22 @@ public sealed class SingleFrameMultiModelService
             // 1. YOLO Pre-Screening. Ein ausdruecklich unqualifiziertes Modell wird
             // weder aufgerufen noch als Filter/Confidence-Beweis verwendet.
             double? yoloMax = null;
+            YoloResponse? localizedYolo = null;
             if (detectorApproved)
             {
                 var yoloReq = new YoloRequest(b64, _yoloConfidence);
                 var yoloResp = await _client.DetectYoloAsync(yoloReq, ct);
                 yoloMs = yoloResp.InferenceTimeMs;
-                if (yoloResp.DetectorQualified != true)
+                var qualifiedHash = detectorQualification?.Artifact?.Sha256;
+                var sameArtifact = CodingLocalizedDetection.IsSha256(qualifiedHash)
+                    && string.Equals(qualifiedHash,
+                        yoloResp.DetectorArtifactSha256, StringComparison.OrdinalIgnoreCase);
+                if (yoloResp.DetectorQualified != true || !sameArtifact)
                 {
-                    effectiveDetectorQualified = yoloResp.DetectorQualified;
+                    effectiveDetectorQualified = false;
                     detectorApproved = false;
                     detectorQualificationReason =
-                        yoloResp.DetectorQualificationReason
+                        (!sameArtifact ? "YOLO-Antwort ohne passenden Artefaktnachweis" : yoloResp.DetectorQualificationReason)
                         ?? "YOLO-Antwort ohne positive Detektorqualifikation";
                     detectorReviewReason =
                         $"YOLO-Detektor nicht qualifiziert: {detectorQualificationReason}. "
@@ -174,6 +205,7 @@ public sealed class SingleFrameMultiModelService
                 }
                 else
                 {
+                    localizedYolo = yoloResp;
                     // D2-A: echte YOLO-Confidence (hoechste Box) ans QualityGate weiterreichen.
                     yoloMax = yoloResp.Detections.Count > 0
                         ? yoloResp.Detections.Max(d => d.Confidence)
@@ -207,7 +239,17 @@ public sealed class SingleFrameMultiModelService
             var dinoResp = await _client.DetectDinoAsync(dinoReq, ct);
             dinoMs = dinoResp.InferenceTimeMs;
 
-            if (dinoResp.Detections.Count == 0)
+            ImageSizeReader.TryRead(pngBytes, out var imageWidth, out var imageHeight);
+            var localized = candidate is null
+                ? CodingLocalizedDetectionPlan.Build(dinoResp.Detections, localizedYolo,
+                    detectorQualification?.Artifact?.Sha256, imageWidth, imageHeight)
+                : CodingLocalizedDetectionPlan.BuildCandidate(dinoResp.Detections, candidate,
+                    pngBytes, imageWidth, imageHeight);
+            var localizedReviewReason = localized.RejectedBoxes > 0
+                ? $"{localized.RejectedBoxes} Box(en) ohne eindeutigen Klassen-, Bild- oder Modellnachweis; manuell pruefen."
+                : null;
+
+            if (localized.Detections.Count == 0)
             {
                 // Leere DINO-Detektionen bei degraded=true sind KEIN "kein Schaden", sondern ein
                 // Modellfehler — sonst erscheint ein DINO-Ausfall im Codiermodus als gruenes Rohr.
@@ -216,7 +258,7 @@ public sealed class SingleFrameMultiModelService
                     : null;
                 var emptyDinoDegradedReason = CombineReasons(
                     bildQualitaet is null ? null : $"Bild nicht beurteilbar: {bildQualitaet}",
-                    detectorReviewReason, dinoDegradedReason);
+                    detectorReviewReason, dinoDegradedReason, localizedReviewReason);
                 return new SingleFrameResult(
                     IsRelevant: true,
                     DinoDetections: Array.Empty<DinoDetectionDto>(),
@@ -234,13 +276,17 @@ public sealed class SingleFrameMultiModelService
                     DetectorQualificationReason: detectorQualificationReason);
             }
 
-            // 3. SAM Segmentation (DINO-Boxes als Input)
-            var samBoxes = dinoResp.Detections.Select(d => new SamBoundingBox(
+            // 3. SAM segmentiert verortete Befunde; die Quelle bleibt separat erhalten.
+            var samBoxes = localized.Detections.Select(d => new SamBoundingBox(
                 d.X1, d.Y1, d.X2, d.Y2, d.Label, d.Confidence)).ToList();
 
             var samReq = new SamRequest(b64, samBoxes, pipeDiameterMm > 0 ? pipeDiameterMm : null);
             var samResp = await _client.SegmentSamAsync(samReq, ct);
             samMs = samResp.InferenceTimeMs;
+
+            if (localized.Detections.Any(d => d.HasYolo)
+                && (samResp.ImageWidth != imageWidth || samResp.ImageHeight != imageHeight))
+                return SingleFrameResult.Empty("SAM-Bildmasse passen nicht zum analysierten Detektorbild.");
 
             // 4. Quantifizierung: Pixel-Masken → mm, %, Uhrposition
             var quantified = new List<MaskQuantificationService.QuantifiedMask>();
@@ -255,7 +301,8 @@ public sealed class SingleFrameMultiModelService
             var degradedReason = CombineReasons(
                 detectorReviewReason,
                 dinoResp.Degraded ? $"DINO: {dinoResp.Error}" : null,
-                samResp.Degraded ? $"SAM: {samResp.Error}" : null);
+                samResp.Degraded ? $"SAM: {samResp.Error}" : null,
+                localizedReviewReason);
             return new SingleFrameResult(
                 IsRelevant: true,
                 DinoDetections: dinoResp.Detections,
@@ -270,7 +317,12 @@ public sealed class SingleFrameMultiModelService
                 Degraded: degradedReason is not null,
                 DegradedReason: degradedReason,
                 DetectorQualified: effectiveDetectorQualified,
-                DetectorQualificationReason: detectorQualificationReason);
+                DetectorQualificationReason: detectorQualificationReason,
+                LocalizedDetections: localized.Detections.Select(d => d with
+                {
+                    RequiresReview = degradedReason is not null,
+                    HasTechnicalFailure = dinoResp.Degraded || samResp.Degraded || localized.RejectedBoxes > 0
+                }).ToArray());
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -413,9 +465,10 @@ public sealed record SingleFrameResult(
     bool Degraded = false,
     string? DegradedReason = null,
     bool? DetectorQualified = null,
-    string? DetectorQualificationReason = null)
+    string? DetectorQualificationReason = null,
+    IReadOnlyList<CodingLocalizedDetection>? LocalizedDetections = null)
 {
-    public bool HasDetections => DinoDetections.Count > 0;
+    public bool HasDetections => DinoDetections.Count > 0 || LocalizedDetections?.Count > 0;
     public bool HasMasks => SamResponse?.Masks.Count > 0;
     public double TotalTimeMs => ClassifierTimeMs + YoloTimeMs + DinoTimeMs + SamTimeMs;
 

@@ -13,6 +13,10 @@ public interface ICodingStreckenschadenTrackingController
         double meter,
         TimeSpan videoTime);
 
+    IReadOnlyCollection<SegmentedFinding> ApplyTracking(IReadOnlyList<SegmentedFinding> segmented,
+        double meter, TimeSpan videoTime, Action<ProtocolEntry> attachExactFramePhoto)
+        => throw new NotSupportedException("Bildgebundene Streckenablage wird nicht unterstuetzt.");
+
     void CloseTracked(double endMeter);
 
     void Reset();
@@ -57,7 +61,12 @@ public sealed class CodingStreckenschadenTrackingController : ICodingStreckensch
         IReadOnlyList<SegmentedFinding> segmented,
         double meter,
         TimeSpan videoTime)
+        => ApplyTracking(segmented, meter, videoTime, _bindings.AttachAnalyzedFramePhoto);
+
+    public IReadOnlyCollection<SegmentedFinding> ApplyTracking(IReadOnlyList<SegmentedFinding> segmented,
+        double meter, TimeSpan videoTime, Action<ProtocolEntry> attachExactFramePhoto)
     {
+        ArgumentNullException.ThrowIfNull(attachExactFramePhoto);
         var result = CodingStreckenschadenTrackingCommandWorkflow.ApplyTracking(
             new CodingStreckenschadenTrackingCommandRequest(
                 Segmented: segmented,
@@ -71,7 +80,7 @@ public sealed class CodingStreckenschadenTrackingController : ICodingStreckensch
                     currentMeter,
                     _bindings.ResolveCode),
                 UpdateTracker: _trackerOwner.Update,
-                ApplyActions: TryApplyActions,
+                ApplyActions: (actions, time) => TryApplyActions(actions, time, attachExactFramePhoto),
                 RefreshEvents: _bindings.RefreshEvents));
 
         return result.ConsumedSegments;
@@ -95,6 +104,10 @@ public sealed class CodingStreckenschadenTrackingController : ICodingStreckensch
     private bool TryApplyActions(
         IReadOnlyList<StreckenschadenTracker.SegmentAction> actions,
         TimeSpan videoTime)
+        => TryApplyActions(actions, videoTime, _bindings.AttachAnalyzedFramePhoto);
+
+    private bool TryApplyActions(IReadOnlyList<StreckenschadenTracker.SegmentAction> actions,
+        TimeSpan videoTime, Action<ProtocolEntry> attachPhoto)
     {
         var codingSessionService = _bindings.ResolveCodingSessionService();
         var codingEvents = _sessionHost.EventCollection;
@@ -111,7 +124,7 @@ public sealed class CodingStreckenschadenTrackingController : ICodingStreckensch
                     codingSessionService!,
                     videoTime,
                     _bindings.LookupLabel,
-                    _bindings.AttachAnalyzedFramePhoto)))
+                    attachPhoto)))
             .Changed;
     }
 }

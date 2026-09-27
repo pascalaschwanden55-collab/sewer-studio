@@ -69,6 +69,55 @@ public sealed class OllamaClientTests
     }
 
     [Fact]
+    public async Task ChatWithOptionsAsync_sends_options_with_client_runtime_settings()
+    {
+        var handler = new CaptureOllamaHandler("antwort");
+        using var http = new HttpClient(handler);
+        using var client = new OllamaClient(
+            new Uri("http://localhost:11434"),
+            http,
+            keepAlive: "17m",
+            numCtx: 8192);
+
+        await client.ChatWithOptionsAsync(
+            "qwen-test",
+            [new OllamaClient.ChatMessage("user", "ping")],
+            new Dictionary<string, object>
+            {
+                ["temperature"] = 0,
+                ["seed"] = 42
+            },
+            CancellationToken.None);
+
+        using var doc = JsonDocument.Parse(handler.LastRequestJson);
+        var root = doc.RootElement;
+        var options = root.GetProperty("options");
+        Assert.Equal(0, options.GetProperty("temperature").GetInt32());
+        Assert.Equal(42, options.GetProperty("seed").GetInt32());
+        Assert.Equal(8192, options.GetProperty("num_ctx").GetInt32());
+        Assert.Equal("17m", root.GetProperty("keep_alive").GetString());
+    }
+
+    [Fact]
+    public async Task ChatAsync_keeps_existing_behavior_without_meter_options()
+    {
+        var handler = new CaptureOllamaHandler("antwort");
+        using var http = new HttpClient(handler);
+        using var client = new OllamaClient(new Uri("http://localhost:11434"), http, numCtx: 8192);
+
+        await client.ChatAsync(
+            "qwen-test",
+            [new OllamaClient.ChatMessage("user", "ping")],
+            CancellationToken.None);
+
+        using var doc = JsonDocument.Parse(handler.LastRequestJson);
+        var options = doc.RootElement.GetProperty("options");
+        Assert.Equal(8192, options.GetProperty("num_ctx").GetInt32());
+        Assert.False(options.TryGetProperty("temperature", out _));
+        Assert.False(options.TryGetProperty("seed", out _));
+    }
+
+    [Fact]
     public async Task ChatStructuredWithOptionsAsync_keeps_explicit_num_ctx_over_client_default()
     {
         var handler = new CaptureOllamaHandler("""

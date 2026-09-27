@@ -8,6 +8,23 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingBoundaryContextTests
 {
     [Fact]
+    public void AnalyzedFrame_end_never_reads_old_osd_cache_or_current_player_time()
+    {
+        var frame = new CodingAnalyzedFrameEvidence([1, 2, 3], TimeSpan.FromSeconds(250), 15.9, false);
+        CodingBoundaryEndCommandRequest? captured = null;
+        var context = new CodingBoundaryContext(Sources(
+            osdMeter: () => throw new InvalidOperationException("Stale 14.5m cache"),
+            fallbackVideoTime: () => throw new InvalidOperationException("Later 254s player")), WorkflowActions(),
+            new((_, _) => Task.FromResult(CommandResult(CodingBoundaryEventWorkflowOutcome.Existing)),
+                (request, _) => { captured = request; return CommandResult(CodingBoundaryEventWorkflowOutcome.Added); }));
+        context.EnsureEnd(frame);
+        Assert.Same(frame, captured!.AnalyzedFrame);
+        Assert.Same(frame.ImageBytes, captured.AnalyzedFrameBytes);
+        Assert.Equal(15.9, captured.FallbackEndMeter);
+        Assert.Equal(frame.CaptureTime, captured.FallbackVideoTime);
+    }
+
+    [Fact]
     public async Task EnsureStartAsync_reads_current_sources_and_returns_added_state()
     {
         var firstViewEvents = new List<CodingEvent>();

@@ -61,17 +61,27 @@ public sealed class CodingOsdMeterService : IDisposable
             numCtx: config.OllamaNumCtx);
 
         return new CodingOsdMeterService(
-            async (searchImageBytes, ct) =>
-            {
-                var b64 = Convert.ToBase64String(searchImageBytes);
-                var messages = new[]
-                {
-                    new OllamaClient.ChatMessage("user", CodingOsdMeterReader.Prompt, new[] { b64 })
-                };
-                return await client.ChatAsync(config.VisionModel, messages, ct).ConfigureAwait(false);
-            },
+            (searchImageBytes, ct) => ReadRawMeterAsync(client, config.VisionModel, searchImageBytes, ct),
             DefaultReadTimeout,
             client);
+    }
+
+    internal static Task<string> ReadRawMeterAsync(
+        OllamaClient client,
+        string model,
+        byte[] searchImageBytes,
+        CancellationToken ct)
+    {
+        var b64 = Convert.ToBase64String(searchImageBytes);
+        var messages = new[]
+        {
+            new OllamaClient.ChatMessage("user", CodingOsdMeterReader.Prompt, new[] { b64 })
+        };
+        return client.ChatWithOptionsAsync(
+            model,
+            messages,
+            CodingOsdMeterReader.CreateOllamaOptions(),
+            ct);
     }
 
     public async Task<CodingOsdMeterReadResult> ReadMeterAsync(

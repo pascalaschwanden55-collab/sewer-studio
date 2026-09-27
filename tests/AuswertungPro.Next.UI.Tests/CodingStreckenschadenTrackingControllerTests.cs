@@ -10,6 +10,28 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingStreckenschadenTrackingControllerTests
 {
     [Fact]
+    public void AnalyzedFrame_photo_is_attached_once_before_EventAdded_without_legacy_photo_path()
+    {
+        var calls = new List<string>();
+        var harness = CreateHarness(calls);
+        var frame = new CodingAnalyzedFrameEvidence([1, 2, 3], TimeSpan.FromSeconds(120), 10.74, true);
+        harness.Controller.ApplyTracking([Finding("long crack")], frame.Meter, frame.CaptureTime,
+            entry => frame.AttachPhoto(entry, (actual, bytes) =>
+            {
+                Assert.Same(frame.ImageBytes, bytes);
+                Assert.Empty(harness.Events);
+                actual.FotoPaths.Add("exact.png");
+                calls.Add("exact-photo");
+            }));
+        var ev = Assert.Single(harness.Events);
+        Assert.Equal("exact.png", Assert.Single(ev.Entry.FotoPaths));
+        Assert.DoesNotContain("photo", calls);
+        Assert.Equal(["label", "exact-photo", "add", "refresh"], calls);
+        Assert.Equal("120", ev.Entry.CodeMeta!.Parameters["ai.photo.time_seconds"]);
+        Assert.Equal("frame_osd", ev.Entry.CodeMeta.Parameters["ai.frame.meter_source"]);
+    }
+
+    [Fact]
     public void ApplyTracking_opens_and_an_empty_tick_closes_the_same_event_at_last_seen_meter()
     {
         var calls = new List<string>();

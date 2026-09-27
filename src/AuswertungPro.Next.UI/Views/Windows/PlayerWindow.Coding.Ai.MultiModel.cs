@@ -33,7 +33,7 @@ public partial class PlayerWindow
                     new CodingEndMeterResolveActions(
                         ResolveEndMeter: () => _codingSessionHost.EndMeter))
                     .EndMeter,
-                RunInferenceAsync: (multiModel, start, endMeter, cancellationToken) => CodingMultiModelInferenceWorkflow.ExecuteAsync(
+                RunInferenceAsync: (multiModel, start, endMeter, cancellationToken) => CodingMultiModelInferenceWorkflow.ExecuteAnalyzedFrameAsync(
                     new CodingMultiModelInferenceWorkflowRequest(
                         activityText,
                         start.FrameBytes!,
@@ -42,8 +42,8 @@ public partial class PlayerWindow
                         _codingOverlayToolHost.NominalDiameterMm,
                         endMeter,
                         cancellationToken),
-                    new CodingMultiModelInferenceWorkflowActions(
-                        ResolveCurrentMeter: ResolveCodingMeterForFrame,
+                    new CodingMultiModelAnalyzedFrameInferenceActions(
+                        ResolveCurrentMeter: ResolveCodingMeterEvidenceForFrame,
                         AnalyzeFrameAsync: (frameBytes, classifierInput, inferenceCancellationToken) => multiModel.AnalyzeFrameAsync(
                             frameBytes,
                             classifierInput.NominalDiameterMm,
@@ -54,7 +54,7 @@ public partial class PlayerWindow
                         SetCodingAiState: _liveDetectionStatusController.SetCodingAiState,
                         TryHandleBoundaryClassifierResultAsync: TryHandleBoundaryClassifierResultAsync,
                         TryHandleStructuralClassifierResult: TryHandleStructuralClassifierResult,
-                        HandleAnalysisResult: result => CodingMultiModelAnalysisResultWorkflow.Execute(
+                        HandleAnalysisResult: (result, frame) => CodingMultiModelAnalysisResultWorkflow.Execute(
                             new CodingMultiModelAnalysisResultWorkflowRequest(result, activityText),
                             new CodingMultiModelAnalysisResultWorkflowActions(
                                 _liveDetectionStatusController.SetCodingAiState,
@@ -66,7 +66,6 @@ public partial class PlayerWindow
                                     imageWidth,
                                     imageHeight,
                                     yoloMaxConfidence,
-                                    captureTimestampSec,
-                                    start.FrameOsdMeter)))))));
+                                    frame)))))));
     }
 }

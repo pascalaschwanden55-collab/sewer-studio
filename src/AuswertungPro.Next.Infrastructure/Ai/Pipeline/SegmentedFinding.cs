@@ -12,7 +12,8 @@ public sealed record SegmentedFinding(
     DinoDetectionDto? Dino,
     SamMaskResult Mask,
     MaskQuantificationService.QuantifiedMask Quant,
-    MetrierungProximityResult Proximity);
+    MetrierungProximityResult Proximity,
+    CodingLocalizedDetection? Origin = null);
 
 /// <summary>
 /// Baut SegmentedFindings masken-basiert. Iteriert ueber die SAM-Masken (uebersprungene
@@ -26,7 +27,8 @@ public static class SegmentedFindingBuilder
         IReadOnlyList<DinoDetectionDto> dinoDetections,
         IReadOnlyList<MaskQuantificationService.QuantifiedMask> quantified,
         double vanishX, double vanishY, double pipeRadiusNorm,
-        MetrierungProximityThresholds thresholds)
+        MetrierungProximityThresholds thresholds,
+        IReadOnlyList<CodingLocalizedDetection>? localizedDetections = null)
     {
         var result = new List<SegmentedFinding>(sam.Masks.Count);
         int w = sam.ImageWidth > 0 ? sam.ImageWidth : 1;
@@ -39,6 +41,14 @@ public static class SegmentedFindingBuilder
             var mask = sam.Masks[m];
             var quant = m < quantified.Count ? quantified[m] : null;
             if (quant is null) continue; // QuantifyAll ist 1:1; defensiv
+
+            var origin = localizedDetections is null ? null
+                : CodingLocalizedDetectionPlan.Match(mask, localizedDetections, w, h);
+            // Im neuen Herkunftsweg darf eine unbelegte/ungueltige SAM-Antwort
+            // nicht ueber das Maskenlabel doch noch zum Ereignis werden.
+            if (localizedDetections is not null && origin is null) continue;
+            if (origin is not null && (!double.IsFinite(mask.Confidence) || mask.Confidence is < 0 or > 1
+                || !string.Equals(quant.Label, mask.Label, StringComparison.OrdinalIgnoreCase))) continue;
 
             var dino = MatchDino(mask, dinoDetections);
 
@@ -61,7 +71,7 @@ public static class SegmentedFindingBuilder
                 x1, y1, x2, y2, vanishX, vanishY, aspect, pipeR, IsDirectionalEvent: isBend);
             var prox = MetrierungProximityEvaluator.Evaluate(input, thresholds);
 
-            result.Add(new SegmentedFinding(dino, mask, quant, prox));
+            result.Add(new SegmentedFinding(dino, mask, quant, prox, origin));
         }
         return result;
     }

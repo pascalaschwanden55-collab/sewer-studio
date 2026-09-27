@@ -234,7 +234,7 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         Assert.Contains("AttachAnalyzedFramePhoto: AttachAnalyzedFramePhoto", windowRoot);
         Assert.Contains("ResolveCurrentVideoTime: () => _playerTimelineHost.CurrentTimeOrZero", windowRoot);
         Assert.Contains("RefreshEvents: RefreshCodingEventsList", windowRoot);
-        Assert.Contains("ApplyStretchTracking: _codingStreckenschadenTrackingController.ApplyTracking", multiModel);
+        Assert.Contains("_codingStreckenschadenTrackingController.ApplyTracking(", multiModel);
         Assert.Contains("_codingStreckenschadenTrackingController.CloseTracked", boundary);
         Assert.Contains("ResetStretchTracker: _codingStreckenschadenTrackingController.Reset", import);
         Assert.Contains("dependencies.StreckenschadenTrackingController.CloseTracked", exitFactory);

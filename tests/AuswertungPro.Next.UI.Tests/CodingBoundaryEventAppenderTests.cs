@@ -50,9 +50,25 @@ public sealed class CodingBoundaryEventAppenderTests
         Assert.Equal(TimeSpan.FromSeconds(44), ev.VideoTimestamp);
     }
 
+    [Fact]
+    public void Apply_preserves_human_edit_from_EventAdded()
+    {
+        var service = new RecordingCodingSessionService { OnAdd = ev =>
+        {
+            ev.Entry.MeterStart = 14; ev.Entry.Zeit = TimeSpan.FromSeconds(260);
+            CodingEventEditApplier.Apply(ev, null);
+        } };
+        var ev = CodingBoundaryEventAppender.Apply(CodingBoundaryEventFactory.CreateEnd("Ende", 15.9, TimeSpan.FromSeconds(250)),
+            15.9, TimeSpan.FromSeconds(250), service);
+        Assert.Equal(14, ev.MeterAtCapture);
+        Assert.Equal(TimeSpan.FromSeconds(260), ev.VideoTimestamp);
+        Assert.NotNull(ev.AiContext!.HumanTouchedAtUtc);
+    }
+
     private sealed class RecordingCodingSessionService : ICodingSessionService
     {
         public List<CodingEvent> AddedEvents { get; } = new();
+        public Action<CodingEvent>? OnAdd { get; init; }
 
         public double CurrentMeter => 0;
         public double EndMeter => 0;
@@ -78,6 +94,7 @@ public sealed class CodingBoundaryEventAppenderTests
         {
             var ev = new CodingEvent { Entry = entry, Overlay = overlay };
             AddedEvents.Add(ev);
+            OnAdd?.Invoke(ev);
             return ev;
         }
 
