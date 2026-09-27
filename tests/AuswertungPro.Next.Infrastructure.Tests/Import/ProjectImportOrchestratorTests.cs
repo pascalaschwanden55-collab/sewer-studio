@@ -228,6 +228,105 @@ public sealed class ProjectImportOrchestratorTests
         }
     }
 
+    [Fact]
+    public void Import_PhotoPhase_UsesPhotoOnlyRequestAndCountsErrors()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var media = new RecordingMediaDistributor();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: media,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.NotNull(media.Request);
+            Assert.Equal(projectDir, media.Request.ProjectFolder);
+            Assert.False(media.Request.IncludeVideos);
+            Assert.False(media.Request.IncludePdfs);
+            Assert.False(media.Request.IncludeSchacht);
+            Assert.False(media.Request.DryRun);
+            Assert.NotNull(media.Request.CollectionLock);
+            Assert.Contains("Fotofehler", result.Messages);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Fotoverteilung"
+                && step.Anzahl == 1
+                && step.Gruende.Contains("Fotofehler"));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_PhotoPhase_ContinuesAfterDistributorFailure()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var project = new Project();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { Fail = true },
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, project);
+
+            Assert.True(project.Dirty);
+            Assert.Contains("Medienverteilung fehlgeschlagen: Testmedienfehler", result.Messages);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Medienverteilung"
+                && step.Gruende.Contains("Medienverteilung fehlgeschlagen: Testmedienfehler"));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_PhotoPhase_PropagatesCancellation()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var project = new Project();
+            var orchestrator = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { Cancel = true },
+                exportDetector: new FixedWinCanDetector());
+
+            Assert.Throws<OperationCanceledException>(() =>
+                orchestrator.Import(sourceDir, projectDir, project));
+            Assert.False(project.Dirty);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    private sealed class RecordingMediaDistributor : IImportMediaDistributionService
+    {
+        public bool Fail { get; init; }
+        public bool Cancel { get; init; }
+        public ImportMediaDistributionRequest? Request { get; private set; }
+
+        public ImportMediaDistributionResult Distribute(ImportMediaDistributionRequest request)
+        {
+            Request = request;
+            if (Cancel)
+                throw new OperationCanceledException("Testabbruch");
+            if (Fail)
+                throw new IOException("Testmedienfehler");
+            return new ImportMediaDistributionResult(0, 0, 1, ["Fotofehler"]);
+        }
+    }
+
     private sealed class ThrowingDetector : IKanalExportDetectionService
     {
         public KanalExportDetection Detect(string sourceFolder) =>

@@ -43,6 +43,8 @@ Während der Ferien eigenständig innerhalb der vereinbarten Grenzen weiterarbei
 
 16. **Etappe 6, Fehlerbericht erledigt; weitere Importphasen offen:** Sieben Importschritte nutzen für identische Fehlertexte `MeldeFehler`, das Bilanz und Nachrichtenliste in der bisherigen Reihenfolge füllt. Unterschiedliche XTF-Texte und Teilergebnis-Zählungen bleiben getrennt. Synthetische Tests prüfen jetzt auch die Fehlergründe in der Bilanz für Detektor, Archiv und Hauptquelle. 7/7 Baseline- und 10/10 ausgewählte Nachtests, Release-Build 0 Fehler/0 Warnungen. Medien-/Protokollverteilung bleibt als eigener Schritt offen.
 
+17. **Etappe 6, Foto-Teilphase erledigt; übrige Medienverteilung offen:** `DistributePhotos` hält den nur für Fotos gültigen Auftrag mit CollectionLock, Fortschritt, Staging und Fehlerbilanz zusammen. In `Import` bleibt die Reihenfolge Foto → Video/Protokoll sichtbar. Drei neue synthetische Tests schützen Optionen, Fotofehler, Verteilerausnahme und Abbruch; 3/3 vor, 6/6 ausgewählte Tests nach der Änderung sowie Release-Build grün. Die übrige Medien- und Protokollverteilung bleibt offen.
+
 Pro Lauf genau eine Aufgabe. Vor dem Umbau die vorhandenen Aufrufer und Tests lesen. Wenn kein klarer Wartbarkeitsgewinn erkennbar ist, die Aufgabe überspringen und den Grund protokollieren.
 
 Fortschritt pro Änderung messbar festhalten: welche Verantwortung klarer wurde, welche doppelte Logik oder wiederholte Arbeit entfiel, welche Tests bestanden und ob neue Build-Warnungen auftraten. Eine reine Methodenverschiebung zählt nur, wenn der Aufrufer dadurch erkennbar leichter lesbar wird. Bei gleicher Sicherheit Änderungen mit echtem Strukturgewinn vor kosmetischen Änderungen wählen.

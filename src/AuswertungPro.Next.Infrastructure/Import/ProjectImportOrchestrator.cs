@@ -506,26 +506,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         {
             // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) — KEINE Videos/Original-PDFs und KEINE Schacht-
             //     Kopie (Schächte kommen in 7c als seiten-gruppierte Protokolle; Videos/Protokolle in 7b).
-            var mediaResult = _mediaDistributor.Distribute(new ImportMediaDistributionRequest(
-                projectFolder,
-                project,
-                Progress: new Fortschritt<ImportMediaDistributionProgress>(p => ctx?.Progress?.Report(
-                    new ImportProgress(ImportFortschrittText.Phase(4, "Medien"), p.Processed, p.Total,
-                        "Fotos je Haltung verteilen …", p.CurrentFile))),
-                CancellationToken: ct,
-                DryRun: false,
-                // CollectionLock aus dem Lauf-Kontext: die Verteilung mutiert die
-                // UI-gebundenen Collections und darf nicht mit einem frischen,
-                // wirkungslosen Lock-Objekt laufen.
-                CollectionLock: ctx?.CollectionLock ?? new object(),
-                IncludeVideos: false,
-                IncludePdfs: false,
-                IncludeSchacht: false,
-                FileStaging: ctx?.FileStaging));
-            messages.AddRange(mediaResult.Messages);
-            // Bis 2026-09-05 standen diese Fehler nur im Text und fehlten in der
-            // Gesamtzahl — ein Fotofehler machte den Lauf trotzdem "fehlerfrei".
-            fehlerbilanz.Melde("Fotoverteilung", mediaResult.Errors, mediaResult.Messages);
+            var mediaResult = DistributePhotos(projectFolder, project, ctx, ct, messages, fehlerbilanz);
 
             // 7b) Video + ORIGINAL-Protokoll (NUR das maßgebliche PDF, ein PDF/Haltung) flach+datumsbenannt
             //     verteilen; beide relativ verlinkt (PDF_Path = Original). Das eigene _E-Protokoll wird hier
@@ -699,6 +680,38 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 $"Pläne: {planResult.Copied} neu, {planResult.Reused} wiederverwendet, " +
                 $"{planResult.Errors} Fehler.");
         }
+    }
+
+    /// <summary>
+    /// Hält den Fotoauftrag einschliesslich UI-CollectionLock, Fortschritt und
+    /// Fehlerbilanz getrennt von der Video- und Protokollverteilung.
+    /// </summary>
+    private ImportMediaDistributionResult DistributePhotos(
+        string projectFolder,
+        Project project,
+        ImportRunContext? ctx,
+        System.Threading.CancellationToken ct,
+        List<string> messages,
+        ImportFehlerbilanzSammler fehlerbilanz)
+    {
+        var mediaResult = _mediaDistributor.Distribute(new ImportMediaDistributionRequest(
+            projectFolder,
+            project,
+            Progress: new Fortschritt<ImportMediaDistributionProgress>(p => ctx?.Progress?.Report(
+                new ImportProgress(ImportFortschrittText.Phase(4, "Medien"), p.Processed, p.Total,
+                    "Fotos je Haltung verteilen …", p.CurrentFile))),
+            CancellationToken: ct,
+            DryRun: false,
+            // Die Verteilung mutiert UI-gebundene Collections: vorhandenen Lauf-Lock verwenden.
+            CollectionLock: ctx?.CollectionLock ?? new object(),
+            IncludeVideos: false,
+            IncludePdfs: false,
+            IncludeSchacht: false,
+            FileStaging: ctx?.FileStaging));
+        messages.AddRange(mediaResult.Messages);
+        // Fotofehler gehoeren auch in die Gesamtzahl, nicht nur in den Berichtstext.
+        fehlerbilanz.Melde("Fotoverteilung", mediaResult.Errors, mediaResult.Messages);
+        return mediaResult;
     }
 
     /// <summary>

@@ -283,6 +283,12 @@
 - Vor der Codeänderung bestanden 7/7 ausgewählte synthetische Tests. Ein neuer Detektorfehler-Test und ergänzte Assertions halten den identischen Grund in Bilanz und Nachrichten für Detektor, Archivfehler und WinCan-Importerfehler fest. Nach der Änderung bestanden 10/10 ausgewählte Importtests, darunter IKAS, IBAK und KINS. Vollständiger Release-Build: 0 Fehler, 0 Warnungen; Diff ohne Whitespace-Fehler. Alle Tests liefen mit projektlokalem `TEMP`, `TMP` und Telemetrieordner.
 - Grenze: Nicht jeder bestehende Importzweig erhielt einen neuen Einzeltest; die unveränderten Meldungstexte wurden zusätzlich im Diff geprüft. Kein Kunden- oder Medienlauf, kein Push oder Merge. Architekturabgleich: keine neue Schnittstelle, Registrierung oder Datenform; die Skillkarte braucht keinen inhaltlichen Nachtrag.
 
+## Wartbarkeitsplan, Etappe 6 – TEIL 5: Fotoauftrag getrennt (27.09.)
+
+- Ziel und Gewinn: `ProjectImportOrchestrator.Import` zeigt in Schritt 7a nur noch `DistributePhotos`, bevor die Video- und Protokollverteilung beginnt. Der interne Schritt enthält alle Foto-spezifischen Optionen (`IncludeVideos/Pdfs/Schacht=false`), den UI-CollectionLock, Staging, Fortschritt und die Foto-Fehlerbilanz. Im Hauptablauf entfallen 19 Zeilen Auftragsdetails; der Vertrag der Fotoverteilung ist an einer Stelle sichtbar. Die gemeinsame Fehler- und Abbruchgrenze sowie die abschliessende Verteilungsmeldung bleiben am bisherigen Ort.
+- Drei neue synthetische Tests waren vor der Codeänderung grün: Fotoauftrag mit Fehlerbilanz, Verteilerausnahme mit Abschluss des Imports und Abbruch ohne `Dirty`. Nach der Änderung bestanden 6/6 ausgewählte Tests einschliesslich IKAS, IBAK und KINS. Vollständiger Release-Build: 0 Fehler, 0 Warnungen; Diff ohne Whitespace-Fehler. `TEMP`, `TMP` und Telemetrie lagen in geprüften Projektordnern.
+- Grenze: Der Fake-Verteiler prüft den Orchestrator-Vertrag, keine echten Fotos oder Kundendateien. Die weiteren Medien- und Protokollschritte wurden nicht geändert. Kein Push oder Merge. Architekturabgleich: kein neuer Service, keine DI- oder Datenformatänderung; die Skillkarte bleibt inhaltlich richtig.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.
