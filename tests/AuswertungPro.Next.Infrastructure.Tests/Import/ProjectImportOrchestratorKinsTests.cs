@@ -145,14 +145,16 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
     private static ProjectImportOrchestrator ErzeugeOrchestrator(
         IKinsDvdTextEnricher? kinsDvdTextEnricher = null,
         IKinsDbfWhitelistEnricher? kinsDbfWhitelistEnricher = null,
-        IKinsGesamtprotokollLocator? kinsGesamtprotokollLocator = null)
+        IKinsGesamtprotokollLocator? kinsGesamtprotokollLocator = null,
+        IKanalImportDistributor? kanalDistributor = null)
         => new(
             new XtfImportServiceAdapter(),
             new WinCanDbImportService(),
             new KinsImportService(new WinCanDbImportService(), new FakeIbak()),
             kinsDvdTextEnricher: kinsDvdTextEnricher,
             kinsDbfWhitelistEnricher: kinsDbfWhitelistEnricher,
-            kinsGesamtprotokollLocator: kinsGesamtprotokollLocator);
+            kinsGesamtprotokollLocator: kinsGesamtprotokollLocator,
+            kanalDistributor: kanalDistributor);
 
     private static void WritePdf(string path, params string[] lines)
     {
@@ -221,12 +223,30 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
     {
         public int Calls { get; private set; }
         public string? LastSourceFolder { get; private set; }
+        public string? ResultPath { get; init; }
 
         public string? Finde(string sourceFolder)
         {
             Calls++;
             LastSourceFolder = sourceFolder;
-            return null;
+            return ResultPath;
+        }
+    }
+
+    private sealed class RecordingKanalImportDistributor : IKanalImportDistributor
+    {
+        public int Calls { get; private set; }
+        public bool? SplitPdf { get; private set; }
+        public string? PrimaryProtocolPdf { get; private set; }
+
+        public KanalImportDistributor.Result Distribute(
+            Project project, string projectFolder, string archivedPdfDir, string sourceVideoDir,
+            bool splitPdf = true, string? primaryProtocolPdf = null)
+        {
+            Calls++;
+            SplitPdf = splitPdf;
+            PrimaryProtocolPdf = primaryProtocolPdf;
+            throw new InvalidOperationException("Teststopp nach KINS-Protokollwahl");
         }
     }
 
@@ -315,6 +335,31 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
 
         Assert.Equal(1, locator.Calls);
         Assert.Equal(sourceDir, locator.LastSourceFolder);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Import_Kins_SplitsOnlyAnExplicitGesamtprotokoll(bool hasGesamtprotokoll)
+    {
+        var (sourceDir, projectDir) = ErstelleMiniKinsFixture();
+        var protocolPath = hasGesamtprotokoll
+            ? Path.Combine(sourceDir, "048473_PDF", "048473_Protokoll.pdf")
+            : null;
+        var locator = new RecordingKinsGesamtprotokollLocator { ResultPath = protocolPath };
+        var kanal = new RecordingKanalImportDistributor();
+
+        var result = ErzeugeOrchestrator(
+            kinsGesamtprotokollLocator: locator,
+            kanalDistributor: kanal)
+            .Import(sourceDir, projectDir, new Project());
+
+        Assert.Equal(KanalExportFormat.Kins, result.Format);
+        Assert.Equal(1, locator.Calls);
+        Assert.Equal(1, kanal.Calls);
+        Assert.Equal(hasGesamtprotokoll, kanal.SplitPdf);
+        Assert.Equal(protocolPath, kanal.PrimaryProtocolPdf);
+        Assert.Contains("Medienverteilung fehlgeschlagen: Teststopp nach KINS-Protokollwahl", result.Messages);
     }
 
     [Fact]

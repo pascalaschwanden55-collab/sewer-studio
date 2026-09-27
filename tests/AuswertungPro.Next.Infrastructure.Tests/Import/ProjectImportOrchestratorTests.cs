@@ -313,26 +313,189 @@ public sealed class ProjectImportOrchestratorTests
         }
     }
 
+    [Fact]
+    public void Import_MediaPhase_DistributesPhotosBeforeNamedAndChannelProtocols()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var order = new System.Collections.Generic.List<string>();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { OnDistribute = () => order.Add("Fotos") },
+                protocolDistributor: new RecordingProtocolDistributor(() => order.Add("Namen")),
+                kanalDistributor: new RecordingKanalDistributor
+                {
+                    OnDistribute = () => order.Add("Kanal"),
+                    FailureMessage = "Testfehler Kanalverteilung"
+                },
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Equal(["Fotos", "Namen", "Kanal"], order);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Fotoverteilung" && step.Gruende.Contains("Fotofehler"));
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Medienverteilung"
+                && step.Gruende.Contains("Medienverteilung fehlgeschlagen: Testfehler Kanalverteilung"));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_ReportsNamedProtocolCopyFailuresInMessagesAndLedger()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var kanal = new RecordingKanalDistributor { FailureMessage = "Teststopp Kanalverteilung" };
+            var report = new ProtocolDistributionReport(1, 1, 0, ["unbekannt.pdf"], ["Kopierfehler"]);
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor
+                {
+                    Result = new ImportMediaDistributionResult(0, 0, 0, [])
+                },
+                protocolDistributor: new RecordingProtocolDistributor(() => { }, report),
+                kanalDistributor: kanal,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Equal(1, kanal.CallCount);
+            var messages = result.Messages.ToList();
+            var summary = messages.IndexOf("Protokolle name-basiert verteilt: 1 Haltungen, 1 Schächte, 0 Schächte angelegt.");
+            var unmatched = messages.IndexOf("Protokoll nicht zugeordnet: unbekannt.pdf");
+            var copyFailure = messages.IndexOf("Protokoll nicht kopiert: Kopierfehler");
+            Assert.True(summary >= 0 && summary < unmatched && unmatched < copyFailure);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Name-basierte Protokollverteilung"
+                && step.Anzahl == 1
+                && step.Gruende.Contains("Kopierfehler"));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_RunsDichtheitsverteilungAfterSuccessfulKanalverteilung_AndReportsSummary()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var order = new System.Collections.Generic.List<string>();
+            var dichtheit = new RecordingDichtheitDistributor
+            {
+                OnDistribute = () => order.Add("Dichtheit"),
+                Result = new DichtheitImportDistributor.Result(
+                    2, 1, 1, ["DP-Hinweis A", "DP-Hinweis B"])
+            };
+            var kanal = new RecordingKanalDistributor
+            {
+                OnDistribute = () => order.Add("Kanal"),
+                SuccessResult = new KanalImportDistributor.Result(0, 0, 0, [])
+            };
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { OnDistribute = () => order.Add("Fotos") },
+                protocolDistributor: new RecordingProtocolDistributor(() => order.Add("Namen")),
+                kanalDistributor: kanal,
+                dichtheitDistributor: dichtheit,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Equal(["Fotos", "Namen", "Kanal", "Dichtheit"], order);
+
+            var messages = result.Messages.ToList();
+            var erste = messages.IndexOf("DP-Hinweis A");
+            var zweite = messages.IndexOf("DP-Hinweis B");
+            var zusammenfassung = messages.IndexOf(
+                "Dichtheitspruefung: 2 Protokolle verteilt, 1 nicht zugeordnet, 1 bereits vorhanden.");
+
+            Assert.True(erste >= 0, "Meldungen der Dichtheitsverteilung muessen unveraendert erscheinen.");
+            Assert.Equal(erste + 1, zweite);
+            Assert.Equal(zweite + 1, zusammenfassung);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_CountsAndReportsPdfFallbackHoldingFromKanalDistributor()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var project = new Project();
+            var kanal = new RecordingKanalDistributor
+            {
+                SuccessResult = new KanalImportDistributor.Result(0, 0, 0, []),
+                AddHaltungOnSuccess = true
+            };
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                kanalDistributor: kanal,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, project);
+
+            // CapturingWinCanImporter meldet ohne Fallback Found=2/Created=1 (siehe
+            // Import_WinCan_RoutesToWinCanImporter_AndCarriesStats); der PDF-Fallback des
+            // Kanal-Fakes fuegt genau eine Haltung hinzu und erhoeht deshalb beide um eins.
+            Assert.Single(project.Data);
+            Assert.Equal(3, result.Found);
+            Assert.Equal(2, result.Created);
+            Assert.Contains("PDF-Fallback: 1 Haltungen aus Original-Protokollen angelegt.", result.Messages);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
     private sealed class RecordingMediaDistributor : IImportMediaDistributionService
     {
         public bool Fail { get; init; }
         public bool Cancel { get; init; }
+        public Action? OnDistribute { get; init; }
+        public ImportMediaDistributionResult? Result { get; init; }
         public ImportMediaDistributionRequest? Request { get; private set; }
 
         public ImportMediaDistributionResult Distribute(ImportMediaDistributionRequest request)
         {
             Request = request;
+            OnDistribute?.Invoke();
             if (Cancel)
                 throw new OperationCanceledException("Testabbruch");
             if (Fail)
                 throw new IOException("Testmedienfehler");
-            return new ImportMediaDistributionResult(0, 0, 1, ["Fotofehler"]);
+            return Result ?? new ImportMediaDistributionResult(0, 0, 1, ["Fotofehler"]);
         }
     }
 
     private sealed class RecordingKanalDistributor : IKanalImportDistributor
     {
         public int CallCount { get; private set; }
+        public Action? OnDistribute { get; init; }
+        public string FailureMessage { get; init; } = "Kanalverteilung darf nach Fotofehler nicht laufen.";
+
+        // F26-005: optionaler Erfolgs-Rueckgabewert, damit nachfolgende Phasen (z. B. die
+        // Dichtheitsprotokollverteilung) in einem Test erreicht werden koennen. Ohne gesetzten
+        // Wert wirft dieser Fake weiterhin wie bisher — bestehende Tests bleiben unveraendert.
+        public KanalImportDistributor.Result? SuccessResult { get; init; }
+
+        // F26-006: simuliert den PDF-Fallback (Kanalverteilung legt aus dem Original-Protokoll
+        // eine neue Haltung an), damit die Faellezaehlung des Orchestrators geprueft werden kann.
+        public bool AddHaltungOnSuccess { get; init; }
 
         public KanalImportDistributor.Result Distribute(
             Project project,
@@ -343,7 +506,42 @@ public sealed class ProjectImportOrchestratorTests
             string? primaryProtocolPdf = null)
         {
             CallCount++;
-            throw new InvalidOperationException("Kanalverteilung darf nach Fotofehler nicht laufen.");
+            OnDistribute?.Invoke();
+            if (SuccessResult is not null)
+            {
+                if (AddHaltungOnSuccess)
+                    project.Data.Add(new HaltungRecord());
+                return SuccessResult;
+            }
+            throw new InvalidOperationException(FailureMessage);
+        }
+    }
+
+    private sealed class RecordingDichtheitDistributor : IDichtheitImportDistributor
+    {
+        public Action? OnDistribute { get; init; }
+        public DichtheitImportDistributor.Result Result { get; init; } =
+            new DichtheitImportDistributor.Result(0, 0, 0, []);
+
+        public DichtheitImportDistributor.Result Distribute(
+            Project project,
+            string projectFolder,
+            string sourceFolder,
+            PdfKiSchiedsrichter? ki = null)
+        {
+            OnDistribute?.Invoke();
+            return Result;
+        }
+    }
+
+    private sealed class RecordingProtocolDistributor(
+        Action onDistribute, ProtocolDistributionReport? report = null) : INameBasedProtocolDistributor
+    {
+        public ProtocolDistributionReport Distribute(
+            Project project, string projectFolder, string sourceFolder, object? collectionLock = null)
+        {
+            onDistribute();
+            return report ?? new ProtocolDistributionReport(0, 0, 0, [], []);
         }
     }
 
