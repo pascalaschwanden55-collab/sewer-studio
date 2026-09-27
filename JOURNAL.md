@@ -295,8 +295,13 @@
 - Die drei synthetischen Fotophasen-Tests bestanden vor und nach der Korrektur jeweils 3/3. Vollständiger Release-Build: 0 Fehler, 0 Warnungen. Testdateien und Telemetrie blieben im geprüften Projektordner. Der vollständige Infrastrukturtest wurde wegen bekannter externer Kundenpfade nicht gestartet.
 - Kein Kundenlauf, Push, Merge oder Kauf. Weitere Medien- und Protokollverteilung bleibt offen. Architekturkarte geprüft: keine neue Schnittstelle, Registrierung, Schicht oder Datenform.
 
-## Offene Freigaben und Grenzen
+## Wartbarkeitsplan, Etappe 3 – allgemeine Modellfehler-Folge (27.09.)
 
+- Terra prüfte die drei allgemeinen Fehlerzweige lesend und änderte anschliessend als einziger Schreiber `MultiModelAnalysisService.cs`. Die gleiche Folge aus Trace-Code, Retry-Checkpoint und Ausfallentscheidung steht jetzt in `RecordGeneralModelErrorAsync`; YOLO-, DINO- und SAM-spezifische Telemetrie, Meldungen, VRAM-Zweige und `break`/`continue` bleiben in den Zweigen. Drei gleichartige Wartungsstellen wurden zu einer Regel zusammengeführt. Luna prüfte unabhängig Etappe 7 und riet wegen unterschiedlicher Sicherheitsregeln von einer Änderung ab.
+- Die erste Testausführung nach Terras Änderung scheiterte beim Kompilieren: `RegisterSidecarTransportErrorAsync` ist eine lokale Funktion und war aus dem Klassenhelfer nicht erreichbar. Codex korrigierte dies durch Übergabe der vorhandenen lokalen Funktion. Danach bestanden 34/34 synthetische Resilience-Tests wie schon vor der Änderung. Der vollständige Release-Build lief mit 0 Fehlern und 0 Warnungen. `TEMP`, `TMP` und Telemetrie lagen im geprüften Projektordner; kein Video- oder Kundenlauf.
+- Ein zusätzlicher lokaler Qwen-Review über Ollama kam nicht zustande: Das Laden von `qwen38-128k` brach mit einem CUDA-Initialisierungsfehler ab. `ollama ps` zeigte danach kein geladenes Modell. Keine Qwen-Aussage wurde als Prüfergebnis verwendet. Keine Käufe, kostenpflichtigen APIs, Pushes oder Merges. Die Architektur-Skillkarte wurde geprüft: kein neuer Service, keine Registrierung, Schicht oder Datenform.
+
+## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.
 - Der vollständige Infrastrukturtest liest auf diesem Rechner eine echte Kundenquelle auf D:. Ein solcher Gesamtlauf ist für die Ferienarbeit ungeeignet. Weitere Testauswahl nur nach Datenpfad-Prüfung.

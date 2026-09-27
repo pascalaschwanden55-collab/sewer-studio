@@ -529,10 +529,10 @@ public sealed partial class MultiModelAnalysisService
                     progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                         $"Frame {frameIndex} – YOLO Fehler: {ex.Message}"));
                     telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, phaseSw.ElapsedMilliseconds, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-                    trace.Path = "yolo_error";
-                    trace.DropReason = "yolo_error";
-                    await RecordRetryRequiredFrameAsync(trace, detections, deduplicator, frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
-                    if (await RegisterSidecarTransportErrorAsync().ConfigureAwait(false)) break;
+                    if (await RecordGeneralModelErrorAsync(
+                            trace, "yolo_error", detections, deduplicator, frameIndex, t, estimatedMeter,
+                            RegisterSidecarTransportErrorAsync, ct)
+                        .ConfigureAwait(false)) break;
                     continue;
                 }
                 yoloMs = phaseSw.ElapsedMilliseconds;
@@ -599,10 +599,10 @@ public sealed partial class MultiModelAnalysisService
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex} – DINO Fehler: {ex.Message}"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, phaseSw.ElapsedMilliseconds, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-                trace.Path = "dino_error";
-                trace.DropReason = "dino_error";
-                await RecordRetryRequiredFrameAsync(trace, detections, deduplicator, frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
-                if (await RegisterSidecarTransportErrorAsync().ConfigureAwait(false)) break;
+                if (await RecordGeneralModelErrorAsync(
+                        trace, "dino_error", detections, deduplicator, frameIndex, t, estimatedMeter,
+                        RegisterSidecarTransportErrorAsync, ct)
+                    .ConfigureAwait(false)) break;
                 continue;
             }
             var dinoMs = phaseSw.ElapsedMilliseconds;
@@ -741,10 +741,10 @@ public sealed partial class MultiModelAnalysisService
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex} – SAM Fehler: {ex.Message}"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, phaseSw.ElapsedMilliseconds, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-                trace.Path = "sam_error";
-                trace.DropReason = "sam_error";
-                await RecordRetryRequiredFrameAsync(trace, detections, deduplicator, frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
-                if (await RegisterSidecarTransportErrorAsync().ConfigureAwait(false)) break;
+                if (await RecordGeneralModelErrorAsync(
+                        trace, "sam_error", detections, deduplicator, frameIndex, t, estimatedMeter,
+                        RegisterSidecarTransportErrorAsync, ct)
+                    .ConfigureAwait(false)) break;
                 continue;
             }
             var samMs = phaseSw.ElapsedMilliseconds;
@@ -988,6 +988,24 @@ public sealed partial class MultiModelAnalysisService
         await WriteTraceAsync(trace).ConfigureAwait(false);
         detections.AddRange(deduplicator.AdvanceAll());
         await AppendRetryRequiredCheckpointAsync(frameIndex, t, estimatedMeter, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Hält die gemeinsame Nachfolge eines allgemeinen Modellfehlers zusammen:
+    /// Trace markieren, RetryRequired erfassen und die gemeinsame Sidecar-Ausfallserie
+    /// fortschreiben. Modellbezogenes Logging, Telemetrie und VRAM-Behandlung bleiben
+    /// in den jeweiligen Fehlerzweigen.
+    /// </summary>
+    private async Task<bool> RecordGeneralModelErrorAsync(
+        PipelineFrameTrace trace, string errorCode, List<RawVideoDetection> detections,
+        TemporalFindingDeduplicator deduplicator, int frameIndex, double t, double estimatedMeter,
+        Func<Task<bool>> registerSidecarTransportErrorAsync, CancellationToken ct)
+    {
+        trace.Path = errorCode;
+        trace.DropReason = errorCode;
+        await RecordRetryRequiredFrameAsync(trace, detections, deduplicator, frameIndex, t, estimatedMeter, ct)
+            .ConfigureAwait(false);
+        return await registerSidecarTransportErrorAsync().ConfigureAwait(false);
     }
 
     // ── Conversion helper ──────────────────────────────────────────────

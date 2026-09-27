@@ -53,3 +53,4 @@
 - Etappe 6, TEIL 4: Sieben doppelte Fehlerberichte auf eine gemeinsame Regel reduziert; 7/7 Baseline- und 10/10 ausgewählte Nachtests grün, Release-Build 0 Fehler/0 Warnungen. Keine fachliche Änderung.
 - Etappe 6, TEIL 5: Fotoauftrag von der Video-/Protokollverteilung getrennt; 3/3 neue Baseline- und 6/6 ausgewählte Nachtests grün, Release-Build 0 Fehler/0 Warnungen. Nur synthetische Daten.
 - Etappe 6, Fotophase nach Claude-Review korrigiert: Auftrag und Fehlerbilanz klar getrennt; 3/3 Tests vor und nachher, Release-Build 0 Fehler/0 Warnungen.
+- Terra/Codex: allgemeine YOLO-/DINO-/SAM-Fehlerfolge an einer Stelle; 34/34 synthetische Tests und Release-Build grün. Qwen-Lokalprüfung scheiterte beim CUDA-Laden und wurde nicht gewertet.
