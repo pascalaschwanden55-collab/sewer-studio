@@ -18,8 +18,13 @@ public static class BackupVersionRetention
     /// <summary>Ordnername im Spiegel-Root, unter dem aeltere Dateistaende liegen.</summary>
     public const string VersionsFolderName = "_Versionen";
 
-    /// <summary>Wie viele Staende aufbewahrt werden — aelteste werden beim Lauf entfernt.</summary>
-    public const int MaxStaende = 3;
+    /// <summary>
+    /// Wie viele Staende nach einem erfolgreichen Lauf aufbewahrt werden.
+    /// 0 (Entscheid Pascal 23.09.2026): Die Sicherung enthaelt nur den aktuellen
+    /// Stand. Die Vorherkopien des Laufjournals bleiben bis zum Abschluss bestehen,
+    /// damit ein abgebrochener Lauf weiterhin sauber zurueckgesetzt wird.
+    /// </summary>
+    public const int MaxStaende = 0;
 
     private const string StandNameFormat = "yyyy-MM-dd_HHmmss";
 

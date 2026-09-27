@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -256,15 +256,33 @@ public sealed class DirectoryMirror
     /// NUR aufrufen wenn der Marker verifiziert wurde; zusaetzlich wird jeder
     /// Pfad gegen den Spiegel-Root geprueft (Defense-in-Depth).
     /// </summary>
-    public void RemoveOrphans(string backupRoot, ISet<string> expectedTargets, MirrorStats stats)
+    /// <param name="ct">
+    /// Abbruch. Dieser Durchlauf prueft fuer JEDE Zieldatei jede Pfadstufe auf
+    /// Verknuepfungen; bei 274'334 Dateien (Buerglen 23.09.2026) sind das Millionen
+    /// Abfragen und viele Minuten. Ohne Abbruch wirkte "Abbrechen" hier nicht.
+    /// </param>
+    /// <param name="beiEintrag">
+    /// Meldet die Zahl der bisher geprueften Dateien, damit der Lauf sichtbar bleibt.
+    /// </param>
+    public void RemoveOrphans(
+        string backupRoot,
+        ISet<string> expectedTargets,
+        MirrorStats stats,
+        CancellationToken ct = default,
+        Action<int>? beiEintrag = null)
     {
         BackupTargetPathGuard.EnsureRootIsSafe(backupRoot);
+        var geprueft = 0;
         foreach (var file in EnumerateFiles(
                      backupRoot,
                      BackupVersionRetention.IsVersionsDir,
                      stats,
                      linksAreErrors: true))
         {
+            ct.ThrowIfCancellationRequested();
+            if (++geprueft % MeldeJeEintraege == 0)
+                beiEintrag?.Invoke(geprueft);
+
             var rel = Path.GetRelativePath(backupRoot, file);
             if (expectedTargets.Contains(rel))
                 continue;
@@ -299,8 +317,14 @@ public sealed class DirectoryMirror
             }
         }
 
-        DeleteEmptyDirectories(backupRoot, stats);
+        beiEintrag?.Invoke(geprueft);
+        DeleteEmptyDirectories(backupRoot, stats, ct);
     }
+
+    /// <summary>
+    /// Wie oft das Aufraeumen ein Lebenszeichen gibt (siehe BackupTargetPathGuard).
+    /// </summary>
+    private const int MeldeJeEintraege = 2000;
 
     /// <summary>Verschiebt eine Spiegel-Datei in den Stand-Ordner dieses Laufs.</summary>
     private void MoveToVersions(string backupRoot, string targetRel, string file)
@@ -759,7 +783,8 @@ public sealed class DirectoryMirror
             stats.Warnings.Add(message);
     }
 
-    private static void DeleteEmptyDirectories(string backupRoot, MirrorStats stats)
+    private static void DeleteEmptyDirectories(
+        string backupRoot, MirrorStats stats, CancellationToken ct = default)
     {
         // Tiefste Ordner zuerst, damit Ketten leerer Ordner komplett verschwinden.
         List<string> dirs;
@@ -778,6 +803,7 @@ public sealed class DirectoryMirror
 
         foreach (var dir in dirs)
         {
+            ct.ThrowIfCancellationRequested();
             if (!BackupTargetGuard.IsInsideBackupRoot(backupRoot, dir))
                 continue;
 

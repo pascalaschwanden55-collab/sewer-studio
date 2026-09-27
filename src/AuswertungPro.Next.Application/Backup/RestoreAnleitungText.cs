@@ -29,10 +29,8 @@ public static class RestoreAnleitungText
         sb.AppendLine("(neu ladbar, Liste in umgebung.txt), Werkzeuge wie ffmpeg/Playwright/");
         sb.AppendLine("Tesseract (neu installierbar), TensorRT-Engines (werden neu gebaut).");
         sb.AppendLine();
-        sb.AppendLine($"Ordner \"{BackupVersionRetention.VersionsFolderName}\": aeltere Staende ersetzter oder entfallener");
-        sb.AppendLine("Dateien (Schutz vor versehentlichem Loeschen, die letzten");
-        sb.AppendLine($"{BackupVersionRetention.MaxStaende} Sicherungslaeufe). Fuer die normale Wiederherstellung ignorieren —");
-        sb.AppendLine("nur hineinschauen, wenn eine aeltere Dateiversion gebraucht wird.");
+        sb.AppendLine($"Ordner \"{BackupVersionRetention.VersionsFolderName}\": nur Verwaltungsdateien des Sicherungslaufs.");
+        sb.AppendLine("Die Sicherung enthaelt nur den aktuellen Stand, keine aelteren Dateiversionen.");
         sb.AppendLine();
         sb.AppendLine("SCHRITT 1 — Programm zuruecklegen");
         sb.AppendLine($"  Ordner \"Programm\" nach {sources.RepoRoot ?? $"C:\\Sewer-Studio_KI_{sources.AppVersion}"} kopieren.");

@@ -175,15 +175,17 @@ public sealed class FullBackupServiceTests : IDisposable
         Assert.False(File.Exists(Path.Combine(backupRoot, "verwaist.txt")));
         Assert.True(File.Exists(Path.Combine(backupRoot, "manifest.json.bak")));
 
-        // Verwaistes ist nicht weg, sondern im datierten Versions-Stand gelandet.
+        // Nur der aktuelle Stand: Verwaistes wird nicht als alter Versionsstand aufbewahrt.
         var versionsRoot = Path.Combine(backupRoot, BackupVersionRetention.VersionsFolderName);
-        var versioniert = Directory.EnumerateFiles(versionsRoot, "verwaist.txt", SearchOption.AllDirectories).Single();
-        Assert.Equal("weg", File.ReadAllText(versioniert));
+        Assert.Empty(Directory.EnumerateFiles(versionsRoot, "verwaist.txt", SearchOption.AllDirectories));
+        Assert.DoesNotContain(
+            Directory.EnumerateDirectories(versionsRoot),
+            dir => BackupVersionRetention.IsStandName(Path.GetFileName(dir)));
 
-        // Dritter Lauf: _Versionen bleibt erhalten (wird nicht als verwaist abgeraeumt).
+        // Dritter Lauf bleibt erfolgreich und legt ebenfalls keinen Altstand an.
         var third = await service.RunAsync(targetParent);
         Assert.True(third.Success, third.Error);
-        Assert.True(File.Exists(versioniert));
+        Assert.Empty(Directory.EnumerateFiles(versionsRoot, "verwaist.txt", SearchOption.AllDirectories));
     }
 
     private sealed class RecordingGitCommitResolver(string commit) : IGitCommitResolver
@@ -358,14 +360,8 @@ public sealed class FullBackupServiceTests : IDisposable
             .Where(n => BackupVersionRetention.IsStandName(n!))
             .OrderBy(n => n, StringComparer.Ordinal)
             .ToArray();
-        Assert.Equal(3, staende.Length);
-        // Die aeltesten Staende sind entfernt, die neuesten geblieben.
-        Assert.DoesNotContain("2026-01-01_000000", staende);
-        Assert.Collection(
-            staende,
-            stand => Assert.Equal("2026-01-01_000300", stand),
-            stand => Assert.Equal("2026-01-01_000400", stand),
-            stand => Assert.Equal("2026-01-01_000500", stand));
+        // Nur der aktuelle Stand wird gesichert: kein alter Versionsstand bleibt.
+        Assert.Empty(staende);
         // Fremde Ordner ohne Stand-Muster werden nie geloescht (sichere Richtung).
         Assert.True(File.Exists(Path.Combine(fremd, "fremd.txt")));
     }

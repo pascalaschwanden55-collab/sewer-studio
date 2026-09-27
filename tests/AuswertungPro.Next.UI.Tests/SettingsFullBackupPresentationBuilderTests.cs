@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Application.Backup;
+﻿using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.UI.Settings;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -26,10 +26,33 @@ public sealed class SettingsFullBackupPresentationBuilderTests
         Assert.Contains("Gesamt:", text);
         Assert.Contains("5 Dateien", text);
         Assert.Contains(@"Ziel: D:\Backup\SewerStudio_Datensicherung", text);
-        Assert.Contains("_Versionen", text);
-        Assert.Contains("die letzten 3 Staende bleiben erhalten", text);
+        Assert.Contains("Gesichert wird nur der aktuelle Stand.", text);
         Assert.Contains("Projekte enthalten: ja.", text);
         Assert.Contains("Videos enthalten: nein", text);
+    }
+
+    /// <summary>
+    /// Die Abschlussphasen (Zielordner pruefen, Aufraeumen, Zaehlen) kennen ihre
+    /// Gesamtzahl nicht im Voraus und melden deshalb FilesTotal = 0. Der alte Text
+    /// haette daraus "45000 von 0 Dateien" gemacht — die Zahl, die dem Bearbeiter
+    /// zeigen soll, dass der Lauf arbeitet, haette ihn stattdessen verunsichert.
+    /// </summary>
+    [Fact]
+    public void BuildProgress_zeigt_bei_unbekannter_Gesamtzahl_keine_Null_als_Ziel()
+    {
+        var progress = new FullBackupProgress(
+            Component: "Zielordner prüfen",
+            CurrentFile: "45'000 geprüft",
+            BytesDone: 0,
+            BytesTotal: 0,
+            FilesDone: 45000,
+            FilesTotal: 0);
+
+        var presentation = SettingsFullBackupPresentationBuilder.BuildProgress(progress);
+
+        Assert.DoesNotContain("von 0 Dateien", presentation.StatusText);
+        Assert.Contains("Zielordner prüfen", presentation.StatusText);
+        Assert.Contains("45", presentation.StatusText);
     }
 
     [Fact]
@@ -58,7 +81,9 @@ public sealed class SettingsFullBackupPresentationBuilderTests
 
         Assert.Equal(0, result.Percent);
         Assert.Equal("", result.CurrentFileName);
-        Assert.Equal("Extras: 0 von 0 Dateien", result.StatusText);
+        // Seit 23.09.2026 melden die Abschlussphasen FilesTotal = 0, weil sie ihre
+        // Gesamtzahl nicht im Voraus kennen. "0 von 0 Dateien" waere dort irrefuehrend.
+        Assert.Equal("Extras: 0 Einträge", result.StatusText);
     }
 
     [Fact]

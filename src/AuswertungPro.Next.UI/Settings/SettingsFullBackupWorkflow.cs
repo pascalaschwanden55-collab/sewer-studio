@@ -106,7 +106,7 @@ public static class SettingsFullBackupWorkflow
                 string.Empty,
                 $"Fertig: {result.FilesCopied} kopiert, {result.FilesVerified} vollstaendig geprueft" +
                 $"{databaseInfo}, {result.FilesUnchanged} unveraendert, " +
-                $"{result.FilesDeleted} nach {BackupVersionRetention.VersionsFolderName} verschoben.");
+                $"{result.FilesDeleted} entfernt.");
             if (result.SkippedFileTotal > 0 || result.SkippedFiles.Count > 0)
                 request.Toasts.Warning("Datensicherung mit Lücken abgeschlossen – Hinweise prüfen.");
             else
@@ -135,7 +135,7 @@ public static class SettingsFullBackupWorkflow
                     $"Einige Dateien konnten nicht gesichert werden ({anzahl}).\n\n" +
                     $"{sample}\n\n" +
                     "Vorhandene ältere Kopien bleiben erhalten. Ohne ältere Kopie fehlt die Datei in der Sicherung. " +
-                    "Die vollstaendige Liste steht im Programmlog.",
+                    "Die vollständige Liste steht im Sicherungsprotokoll «SewerStudio_Sicherung_Protokoll.txt» neben dem Sicherungsordner.",
                     "Datensicherung");
             }
         }

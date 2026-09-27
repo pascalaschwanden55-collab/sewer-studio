@@ -5,8 +5,8 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Backup;
 public sealed class BackupVersionRetentionTests
 {
     [Fact]
-    public void Standardlimit_BewahrtDreiStaende()
-        => Assert.Equal(3, BackupVersionRetention.MaxStaende);
+    public void Standardlimit_BewahrtNurDenAktuellenStand()
+        => Assert.Equal(0, BackupVersionRetention.MaxStaende);
 
     [Fact]
     public void BuildStandName_IstSortierbarUndWirdErkannt()
