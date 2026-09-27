@@ -10,6 +10,7 @@ using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Tests.Backup;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Import.WinCan;
+using AuswertungPro.Next.Infrastructure.Projects;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
@@ -101,6 +102,87 @@ public sealed class ProjectImportOrchestratorTests
         }
     }
 
+    [Fact]
+    public void Import_ArchivePhase_ReportsArchiveAndPlanResults()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var archiver = new RecordingSourceArchiver();
+            var plans = new RecordingPlanPdfImporter();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                sourceArchiver: archiver,
+                planPdfImporter: plans,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Equal(sourceDir, archiver.SourceFolder);
+            Assert.Equal(projectDir, archiver.ProjectFolder);
+            Assert.Equal(ProjectStructure.ImportdateienDir(projectDir, ProjectStructure.PdfDir), plans.ArchivedPdfDir);
+            Assert.Equal(projectDir, plans.ProjectFolder);
+            Assert.Contains("Archiviert: 2 neu, 1 wiederverwendet.", result.Messages);
+            Assert.Contains("Pläne: 1 neu, 0 wiederverwendet, 1 Fehler.", result.Messages);
+            Assert.Contains("Planfehler", result.Messages);
+            Assert.True(result.Errors >= 1);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_ArchivePhase_ContinuesParsingAfterArchiveFailure()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var plans = new RecordingPlanPdfImporter();
+            var winCan = new CapturingWinCanImporter();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                winCan,
+                sourceArchiver: new RecordingSourceArchiver { Fail = true },
+                planPdfImporter: plans,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Contains("Archivierung fehlgeschlagen: Testarchivfehler", result.Messages);
+            Assert.Null(plans.ArchivedPdfDir);
+            Assert.Equal(1, winCan.CallCount);
+            Assert.True(result.Errors >= 1);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_ArchivePhase_PropagatesCancellation()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var winCan = new CapturingWinCanImporter();
+            var orchestrator = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                winCan,
+                sourceArchiver: new RecordingSourceArchiver { Cancel = true },
+                exportDetector: new FixedWinCanDetector());
+
+            Assert.Throws<OperationCanceledException>(() =>
+                orchestrator.Import(sourceDir, projectDir, new Project()));
+            Assert.Equal(0, winCan.CallCount);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
     private static (string SourceDir, string ProjectDir) CreateEmptyWinCanFixture()
     {
         var root = Path.Combine(Path.GetTempPath(), $"orch-wincan-{Guid.NewGuid():N}");
@@ -144,6 +226,38 @@ public sealed class ProjectImportOrchestratorTests
                 Errors: 0,
                 Uncertain: 0,
                 Messages: ["WinCan-Testimport"]));
+        }
+    }
+
+    private sealed class RecordingSourceArchiver : IImportSourceArchiver
+    {
+        public bool Fail { get; init; }
+        public bool Cancel { get; init; }
+        public string? SourceFolder { get; private set; }
+        public string? ProjectFolder { get; private set; }
+
+        public ArchiveResult Archive(string sourceFolder, string projectFolder)
+        {
+            SourceFolder = sourceFolder;
+            ProjectFolder = projectFolder;
+            if (Cancel)
+                throw new OperationCanceledException("Testabbruch");
+            if (Fail)
+                throw new IOException("Testarchivfehler");
+            return new ArchiveResult(2, 1, ["Archivhinweis"]);
+        }
+    }
+
+    private sealed class RecordingPlanPdfImporter : IPlanPdfImporter
+    {
+        public string? ArchivedPdfDir { get; private set; }
+        public string? ProjectFolder { get; private set; }
+
+        public PlanPdfImportResult ImportFromArchivedPdfFolder(string archivedPdfDir, string projectFolder)
+        {
+            ArchivedPdfDir = archivedPdfDir;
+            ProjectFolder = projectFolder;
+            return new PlanPdfImportResult(1, 0, 0, 1, ["Planfehler"]);
         }
     }
 

@@ -270,6 +270,13 @@
 - Gewinn: Der WinCan-Zweig hat jetzt einen eigenen, schnellen Verhaltensschutz für Erfolg, Fehler und Abbruch. Das macht spätere Änderungen an der Hauptquellenwahl überprüfbar; Produktionscode und Fachverhalten wurden in diesem Lauf nicht geändert. Vorher 1/1 ausgewählter IKAS-Baseline-Test grün, nachher 4/4 ausgewählte IKAS-/WinCan-Tests grün; vollständiger Release-Build 0 Fehler/0 Warnungen. `git diff --check` ohne Fehler.
 - Grenze: Der Test verwendet einen Fake-Importer und keine echte `.db3`; die reale Datenbankauswertung bleibt ungeprüft. Weitere Importphasen brauchen je einen eigenen Fall für ihren Erfolg, Fehler und Abbruch. Keine Kunden- oder Medienquelle gelesen, kein Push oder Merge.
 
+## Wartbarkeitsplan, Etappe 6 – TEIL 3: Archiv und Pläne als Importphase (27.09.)
+
+- Ziel und Gewinn: `ProjectImportOrchestrator.Import` zeigt in Schritt 4 nur noch den benannten Aufruf `ArchiveSourceAndPlans` innerhalb seiner bisherigen Fehler- und Abbruchgrenze. Der neue private Schritt hält Archivieren, Plan-PDF-Import und deren Ergebnisberichte zusammen. Im Hauptablauf entfallen 20 Zeilen Dateiarbeit; der interne Schritt ist einzeln auffindbar. Keine öffentliche Schnittstelle oder fachliche Reihenfolge geändert.
+- Vor dem Umbau bestanden 3/3 neue synthetische Charakterisierungstests: Archiv- und Planmeldungen samt Planfehler, Archiv-Ausnahme mit Weiterlauf zum WinCan-Fake sowie Abbruch aus dem Archivierer. Danach bestanden 7/7 ausgewählte Importtests einschliesslich WinCan-Routing und IKAS-Archivierung. `TEMP`, `TMP` und Telemetrie zeigten auf geprüfte Projektordner. Vollständiger Release-Build: 0 Fehler, 0 Warnungen. Diff-Prüfung: gleiche Aufrufe, Parameter, Meldungen, Bilanzierung und Catch-Reihenfolge.
+- Grenze: Die Tests enthalten keine echte WinCan-Datenbank und lesen keine Kundenmedien. Weitere Importphasen, insbesondere Medien-/Protokollverteilung, bleiben ohne neue Absicherung unangetastet. Kein Push oder Merge.
+- Architekturabgleich: Die Skillkarte beschreibt den bestehenden siebenstufigen Ein-Knopf-Import mit unveränderter Fehlerbilanz und Transaktion. Dieser interne Schritt verändert weder Schichtgrenzen noch Registrierung oder Datenformat; die Karte benötigt deshalb keinen fachlichen Nachtrag. Die Skilldatei außerhalb des Projektordners wurde nicht bearbeitet.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

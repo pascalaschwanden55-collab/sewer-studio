@@ -267,27 +267,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         ct.ThrowIfCancellationRequested();
         try
         {
-            var archiveResult = _sourceArchiver.Archive(
-                sourceFolder,
-                projectFolder,
-                ctx?.FileStaging);
-            messages.AddRange(archiveResult.Messages);
-            messages.Add(
-                $"Archiviert: {archiveResult.Copied} neu, {archiveResult.Reused} wiederverwendet.");
-
-            var archivePdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
-            var planResult = _planPdfImporter.ImportFromArchivedPdfFolder(
-                archivePdfDir,
-                projectFolder,
-                ctx?.FileStaging);
-            messages.AddRange(planResult.Messages);
-            fehlerbilanz.Melde("Plan-PDF", planResult.Errors, planResult.Messages);
-            if (planResult.Copied > 0 || planResult.Reused > 0 || planResult.Errors > 0)
-            {
-                messages.Add(
-                    $"Pläne: {planResult.Copied} neu, {planResult.Reused} wiederverwendet, " +
-                    $"{planResult.Errors} Fehler.");
-            }
+            ArchiveSourceAndPlans(sourceFolder, projectFolder, ctx, messages, fehlerbilanz);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -688,6 +668,40 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             Fehlerbilanz = fehlerbilanz.Bilanz(),
             Bestand = bestand
         };
+    }
+
+    /// <summary>
+    /// Archiviert die Herstellerquelle und verarbeitet danach die Pläne aus dem Archiv.
+    /// Die Fehler- und Abbruchgrenze bleibt im aufrufenden Importschritt.
+    /// </summary>
+    private void ArchiveSourceAndPlans(
+        string sourceFolder,
+        string projectFolder,
+        ImportRunContext? ctx,
+        List<string> messages,
+        ImportFehlerbilanzSammler fehlerbilanz)
+    {
+        var archiveResult = _sourceArchiver.Archive(
+            sourceFolder,
+            projectFolder,
+            ctx?.FileStaging);
+        messages.AddRange(archiveResult.Messages);
+        messages.Add(
+            $"Archiviert: {archiveResult.Copied} neu, {archiveResult.Reused} wiederverwendet.");
+
+        var archivePdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
+        var planResult = _planPdfImporter.ImportFromArchivedPdfFolder(
+            archivePdfDir,
+            projectFolder,
+            ctx?.FileStaging);
+        messages.AddRange(planResult.Messages);
+        fehlerbilanz.Melde("Plan-PDF", planResult.Errors, planResult.Messages);
+        if (planResult.Copied > 0 || planResult.Reused > 0 || planResult.Errors > 0)
+        {
+            messages.Add(
+                $"Pläne: {planResult.Copied} neu, {planResult.Reused} wiederverwendet, " +
+                $"{planResult.Errors} Fehler.");
+        }
     }
 
     /// <summary>
