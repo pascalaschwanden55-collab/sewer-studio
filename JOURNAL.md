@@ -277,6 +277,12 @@
 - Grenze: Die Tests enthalten keine echte WinCan-Datenbank und lesen keine Kundenmedien. Weitere Importphasen, insbesondere Medien-/Protokollverteilung, bleiben ohne neue Absicherung unangetastet. Kein Push oder Merge.
 - Architekturabgleich: Die Skillkarte beschreibt den bestehenden siebenstufigen Ein-Knopf-Import mit unveränderter Fehlerbilanz und Transaktion. Dieser interne Schritt verändert weder Schichtgrenzen noch Registrierung oder Datenformat; die Karte benötigt deshalb keinen fachlichen Nachtrag. Die Skilldatei außerhalb des Projektordners wurde nicht bearbeitet.
 
+## Wartbarkeitsplan, Etappe 6 – TEIL 4: gleiche Fehlertexte nur einmal bilden (27.09.)
+
+- Ziel und Gewinn: In sieben Importzweigen stand derselbe Fehlertext je zweimal, einmal für die Schrittbilanz und einmal für die Nachrichtenliste. Die lokale Funktion `MeldeFehler` bildet diese feste Folge an einer Stelle ab; jeder Aufrufer gibt seinen bisherigen Schritt und Text nur einmal an. Format, Gesamtzahl, Melde-Reihenfolge und Fehlergrenzen bleiben gleich. Die ergänzende XTF-Quelle verwendet absichtlich verschiedene Texte für Bilanz und Anzeige und wurde deshalb nicht umgestellt.
+- Vor der Codeänderung bestanden 7/7 ausgewählte synthetische Tests. Ein neuer Detektorfehler-Test und ergänzte Assertions halten den identischen Grund in Bilanz und Nachrichten für Detektor, Archivfehler und WinCan-Importerfehler fest. Nach der Änderung bestanden 10/10 ausgewählte Importtests, darunter IKAS, IBAK und KINS. Vollständiger Release-Build: 0 Fehler, 0 Warnungen; Diff ohne Whitespace-Fehler. Alle Tests liefen mit projektlokalem `TEMP`, `TMP` und Telemetrieordner.
+- Grenze: Nicht jeder bestehende Importzweig erhielt einen neuen Einzeltest; die unveränderten Meldungstexte wurden zusätzlich im Diff geprüft. Kein Kunden- oder Medienlauf, kein Push oder Merge. Architekturabgleich: keine neue Schnittstelle, Registrierung oder Datenform; die Skillkarte braucht keinen inhaltlichen Nachtrag.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

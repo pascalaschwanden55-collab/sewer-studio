@@ -184,6 +184,11 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         var ct = ctx?.CancellationToken ?? System.Threading.CancellationToken.None;
         void Melde(int schritt, string name, string text)
             => ctx?.Progress?.Report(new ImportProgress(ImportFortschrittText.Phase(schritt, name), 0, 0, text));
+        void MeldeFehler(string schritt, string text)
+        {
+            fehlerbilanz.Melde(schritt, text);
+            messages.Add(text);
+        }
         var parseContext = ctx is null ? null : new ImportRunContext(ct,
             new Fortschritt<ImportProgress>(p => ctx.Progress?.Report(p with
             {
@@ -206,8 +211,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         }
         catch (Exception ex)
         {
-            fehlerbilanz.Melde("Projektstruktur", $"EnsureCreated fehlgeschlagen: {ex.Message}");
-            messages.Add($"EnsureCreated fehlgeschlagen: {ex.Message}");
+            MeldeFehler("Projektstruktur", $"EnsureCreated fehlgeschlagen: {ex.Message}");
         }
 
         // ------------------------------------------------------------------
@@ -238,8 +242,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         }
         catch (Exception ex)
         {
-            fehlerbilanz.Melde("Formaterkennung", $"Formaterkennung fehlgeschlagen: {ex.Message}");
-            messages.Add($"Formaterkennung fehlgeschlagen: {ex.Message}");
+            MeldeFehler("Formaterkennung", $"Formaterkennung fehlgeschlagen: {ex.Message}");
             return new OneClickImportResult(
                 KanalExportFormat.Unknown, found, created, updated, fehlerbilanz.Gesamt, conflictCount, messages)
             {
@@ -272,8 +275,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            fehlerbilanz.Melde("Archivierung", $"Archivierung fehlgeschlagen: {ex.Message}");
-            messages.Add($"Archivierung fehlgeschlagen: {ex.Message}");
+            MeldeFehler("Archivierung", $"Archivierung fehlgeschlagen: {ex.Message}");
         }
 
         // ------------------------------------------------------------------
@@ -300,17 +302,14 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             }
             else
             {
-                fehlerbilanz.Melde("Quelle einlesen",
-                    $"Parse fehlgeschlagen [{parseResult.ErrorCode}]: {parseResult.ErrorMessage}");
-                messages.Add(
+                MeldeFehler("Quelle einlesen",
                     $"Parse fehlgeschlagen [{parseResult.ErrorCode}]: {parseResult.ErrorMessage}");
             }
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            fehlerbilanz.Melde("Quelle einlesen", $"Parse-Ausnahme: {ex.Message}");
-            messages.Add($"Parse-Ausnahme: {ex.Message}");
+            MeldeFehler("Quelle einlesen", $"Parse-Ausnahme: {ex.Message}");
         }
 
         // ------------------------------------------------------------------
@@ -396,8 +395,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             }
             catch (Exception ex)
             {
-                fehlerbilanz.Melde("KINS-Anreicherung", $"KINS-Anreicherung fehlgeschlagen: {ex.Message}");
-                messages.Add($"KINS-Anreicherung fehlgeschlagen: {ex.Message}");
+                MeldeFehler("KINS-Anreicherung", $"KINS-Anreicherung fehlgeschlagen: {ex.Message}");
             }
         }
 
@@ -633,8 +631,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            fehlerbilanz.Melde("Medienverteilung", $"Medienverteilung fehlgeschlagen: {ex.Message}");
-            messages.Add($"Medienverteilung fehlgeschlagen: {ex.Message}");
+            MeldeFehler("Medienverteilung", $"Medienverteilung fehlgeschlagen: {ex.Message}");
         }
 
         // ------------------------------------------------------------------

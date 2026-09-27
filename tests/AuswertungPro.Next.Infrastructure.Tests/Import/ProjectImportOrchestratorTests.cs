@@ -72,6 +72,9 @@ public sealed class ProjectImportOrchestratorTests
             Assert.True(result.Errors >= 1);
             Assert.Contains(result.Messages, message =>
                 message.Contains("Parse fehlgeschlagen [TEST_FAILURE]: Testfehler", StringComparison.Ordinal));
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Quelle einlesen"
+                && step.Gruende.Contains("Parse fehlgeschlagen [TEST_FAILURE]: Testfehler"));
         }
         finally
         {
@@ -153,6 +156,9 @@ public sealed class ProjectImportOrchestratorTests
             Assert.Null(plans.ArchivedPdfDir);
             Assert.Equal(1, winCan.CallCount);
             Assert.True(result.Errors >= 1);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Archivierung"
+                && step.Gruende.Contains("Archivierung fehlgeschlagen: Testarchivfehler"));
         }
         finally
         {
@@ -191,6 +197,41 @@ public sealed class ProjectImportOrchestratorTests
         Directory.CreateDirectory(sourceDir);
         Directory.CreateDirectory(projectDir);
         return (sourceDir, projectDir);
+    }
+
+    [Fact]
+    public void Import_DetectionFailure_ReportsTheSameReasonInMessagesAndLedger()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var winCan = new CapturingWinCanImporter();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                winCan,
+                exportDetector: new ThrowingDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            const string reason = "Formaterkennung fehlgeschlagen: Testdetektorfehler";
+            Assert.Equal(KanalExportFormat.Unknown, result.Format);
+            Assert.Contains(reason, result.Messages);
+            Assert.Equal(1, result.Errors);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Formaterkennung"
+                && step.Anzahl == 1
+                && step.Gruende.Contains(reason));
+            Assert.Equal(0, winCan.CallCount);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    private sealed class ThrowingDetector : IKanalExportDetectionService
+    {
+        public KanalExportDetection Detect(string sourceFolder) =>
+            throw new IOException("Testdetektorfehler");
     }
 
     private sealed class FixedWinCanDetector : IKanalExportDetectionService
