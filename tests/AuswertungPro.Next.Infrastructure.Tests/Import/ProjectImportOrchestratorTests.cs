@@ -268,14 +268,17 @@ public sealed class ProjectImportOrchestratorTests
         try
         {
             var project = new Project();
+            var kanalDistributor = new RecordingKanalDistributor();
             var result = new ProjectImportOrchestrator(
                 new XtfImportServiceAdapter(),
                 new CapturingWinCanImporter(),
                 mediaDistributor: new RecordingMediaDistributor { Fail = true },
+                kanalDistributor: kanalDistributor,
                 exportDetector: new FixedWinCanDetector())
                 .Import(sourceDir, projectDir, project);
 
             Assert.True(project.Dirty);
+            Assert.Equal(0, kanalDistributor.CallCount);
             Assert.Contains("Medienverteilung fehlgeschlagen: Testmedienfehler", result.Messages);
             Assert.Contains(result.Fehlerbilanz.Schritte, step =>
                 step.Schritt == "Medienverteilung"
@@ -324,6 +327,23 @@ public sealed class ProjectImportOrchestratorTests
             if (Fail)
                 throw new IOException("Testmedienfehler");
             return new ImportMediaDistributionResult(0, 0, 1, ["Fotofehler"]);
+        }
+    }
+
+    private sealed class RecordingKanalDistributor : IKanalImportDistributor
+    {
+        public int CallCount { get; private set; }
+
+        public KanalImportDistributor.Result Distribute(
+            Project project,
+            string projectFolder,
+            string archivedPdfDir,
+            string sourceVideoDir,
+            bool splitPdf = true,
+            string? primaryProtocolPdf = null)
+        {
+            CallCount++;
+            throw new InvalidOperationException("Kanalverteilung darf nach Fotofehler nicht laufen.");
         }
     }
 

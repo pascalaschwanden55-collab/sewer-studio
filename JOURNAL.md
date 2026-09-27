@@ -301,6 +301,12 @@
 - Die erste Testausführung nach Terras Änderung scheiterte beim Kompilieren: `RegisterSidecarTransportErrorAsync` ist eine lokale Funktion und war aus dem Klassenhelfer nicht erreichbar. Codex korrigierte dies durch Übergabe der vorhandenen lokalen Funktion. Danach bestanden 34/34 synthetische Resilience-Tests wie schon vor der Änderung. Der vollständige Release-Build lief mit 0 Fehlern und 0 Warnungen. `TEMP`, `TMP` und Telemetrie lagen im geprüften Projektordner; kein Video- oder Kundenlauf.
 - Ein zusätzlicher lokaler Qwen-Review über Ollama kam nicht zustande: Das Laden von `qwen38-128k` brach mit einem CUDA-Initialisierungsfehler ab. `ollama ps` zeigte danach kein geladenes Modell. Keine Qwen-Aussage wurde als Prüfergebnis verwendet. Keine Käufe, kostenpflichtigen APIs, Pushes oder Merges. Die Architektur-Skillkarte wurde geprüft: kein neuer Service, keine Registrierung, Schicht oder Datenform.
 
+## Ferienlauf 27.09., 13 Uhr: Fehlergrenze der Medienverteilung
+
+- Etappe 6 weiter abgesichert: Im vorhandenen synthetischen Fotofehler-Test zählt ein neuer Kanal-Verteiler-Fake seine Aufrufe. Nach der Foto-Ausnahme bleibt er bei null; der Import meldet den Fehler und markiert das Projekt wie bisher als geändert. Dadurch ist die gemeinsame Fehlergrenze vor einem späteren Umbau ausdrücklich geschützt. Nur die Testdatei wurde geändert; keine Produktfunktion.
+- Gezielter neuer Test 1/1 und alle drei Fotophasen-Tests 3/3 grün. Vollständiger Release-Build: 0 Fehler, 0 Warnungen. `TEMP` und `TMP` lagen im geprüften Projektordner; kein Kunden- oder Videolauf.
+- Terra fand für die übrige Medien-/Protokollverteilung erst nach weiteren Verhaltenstests einen möglichen Strukturgewinn; ein sofortiger Umbau wäre zu gross und könnte die Reihenfolge oder Fehlergrenze ändern. Luna fand im Exportregister nur bewusst wiederholte Sicherheitsprüfungen, keine sichere Doppelregel. Daher in diesem Lauf kein weiterer Produktcode. Qwen läuft inzwischen als lokales `qwen38-cline:latest` in Cline; eine reine Antwortprobe bestand. Kein Push, Merge, Kauf oder bezahlte API.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.

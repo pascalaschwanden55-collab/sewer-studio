@@ -47,6 +47,8 @@ Während der Ferien eigenständig innerhalb der vereinbarten Grenzen weiterarbei
 
 18. **Etappe 3, gemeinsame allgemeine Modellfehler-Folge erledigt:** Der allgemeine Fehlerzweig von YOLO, DINO und SAM nutzt `RecordGeneralModelErrorAsync` für Trace-Code, Retry-Checkpoint und Sidecar-Ausfallentscheidung in gleicher Reihenfolge. Modellbezogene Telemetrie, Meldungen und VRAM-Zweige bleiben an ihrem Ort. 34/34 synthetische Resilience-Tests vor und nach der Korrektur grün; vollständiger Release-Build 0 Fehler/0 Warnungen. Weitere Pipeline-Änderungen nur bei eigener belegter Doppelung.
 
+19. **Etappe 6, weiterer Ist-Zustand geschützt:** Ein synthetischer Fotophasen-Test prüft zusätzlich, dass ein Fotofehler die nachfolgende Kanalverteilung im selben Importschritt auslässt. Das ist die bestehende gemeinsame Fehlergrenze. Drei Fotophasen-Tests und der vollständige Release-Build sind grün. Vor einer Auslagerung der gesamten Medien-/Protokollphase fehlen noch gezielte Tests für Reihenfolge, KINS-Optionen und Bilanz der übrigen Unterwege; bis dahin keinen grossen Umbau beginnen.
+
 Pro Lauf genau eine Aufgabe. Vor dem Umbau die vorhandenen Aufrufer und Tests lesen. Wenn kein klarer Wartbarkeitsgewinn erkennbar ist, die Aufgabe überspringen und den Grund protokollieren.
 
 Fortschritt pro Änderung messbar festhalten: welche Verantwortung klarer wurde, welche doppelte Logik oder wiederholte Arbeit entfiel, welche Tests bestanden und ob neue Build-Warnungen auftraten. Eine reine Methodenverschiebung zählt nur, wenn der Aufrufer dadurch erkennbar leichter lesbar wird. Bei gleicher Sicherheit Änderungen mit echtem Strukturgewinn vor kosmetischen Änderungen wählen.
