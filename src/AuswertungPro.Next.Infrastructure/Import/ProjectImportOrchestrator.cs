@@ -506,7 +506,9 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         {
             // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) — KEINE Videos/Original-PDFs und KEINE Schacht-
             //     Kopie (Schächte kommen in 7c als seiten-gruppierte Protokolle; Videos/Protokolle in 7b).
-            var mediaResult = DistributePhotos(projectFolder, project, ctx, ct, messages, fehlerbilanz);
+            var mediaResult = DistributePhotos(projectFolder, project, ctx, ct);
+            messages.AddRange(mediaResult.Messages);
+            fehlerbilanz.Melde("Fotoverteilung", mediaResult.Errors, mediaResult.Messages);
 
             // 7b) Video + ORIGINAL-Protokoll (NUR das maßgebliche PDF, ein PDF/Haltung) flach+datumsbenannt
             //     verteilen; beide relativ verlinkt (PDF_Path = Original). Das eigene _E-Protokoll wird hier
@@ -683,18 +685,16 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     }
 
     /// <summary>
-    /// Hält den Fotoauftrag einschliesslich UI-CollectionLock, Fortschritt und
-    /// Fehlerbilanz getrennt von der Video- und Protokollverteilung.
+    /// Hält den Fotoauftrag einschliesslich UI-CollectionLock und Fortschritt
+    /// getrennt von der Bilanzierung im aufrufenden Importablauf.
     /// </summary>
     private ImportMediaDistributionResult DistributePhotos(
         string projectFolder,
         Project project,
         ImportRunContext? ctx,
-        System.Threading.CancellationToken ct,
-        List<string> messages,
-        ImportFehlerbilanzSammler fehlerbilanz)
+        System.Threading.CancellationToken ct)
     {
-        var mediaResult = _mediaDistributor.Distribute(new ImportMediaDistributionRequest(
+        return _mediaDistributor.Distribute(new ImportMediaDistributionRequest(
             projectFolder,
             project,
             Progress: new Fortschritt<ImportMediaDistributionProgress>(p => ctx?.Progress?.Report(
@@ -708,10 +708,6 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             IncludePdfs: false,
             IncludeSchacht: false,
             FileStaging: ctx?.FileStaging));
-        messages.AddRange(mediaResult.Messages);
-        // Fotofehler gehoeren auch in die Gesamtzahl, nicht nur in den Berichtstext.
-        fehlerbilanz.Melde("Fotoverteilung", mediaResult.Errors, mediaResult.Messages);
-        return mediaResult;
     }
 
     /// <summary>

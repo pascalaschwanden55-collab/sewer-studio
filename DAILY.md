@@ -52,3 +52,4 @@
 - Etappe 6, TEIL 3: Archivieren und Plan-PDF-Verarbeitung als einen benannten Importschritt gefasst; 3/3 neue Baseline- und 7/7 ausgewählte Nachtests grün, Release-Build 0 Fehler/0 Warnungen. Nur lokale, synthetische Daten.
 - Etappe 6, TEIL 4: Sieben doppelte Fehlerberichte auf eine gemeinsame Regel reduziert; 7/7 Baseline- und 10/10 ausgewählte Nachtests grün, Release-Build 0 Fehler/0 Warnungen. Keine fachliche Änderung.
 - Etappe 6, TEIL 5: Fotoauftrag von der Video-/Protokollverteilung getrennt; 3/3 neue Baseline- und 6/6 ausgewählte Nachtests grün, Release-Build 0 Fehler/0 Warnungen. Nur synthetische Daten.
+- Etappe 6, Fotophase nach Claude-Review korrigiert: Auftrag und Fehlerbilanz klar getrennt; 3/3 Tests vor und nachher, Release-Build 0 Fehler/0 Warnungen.

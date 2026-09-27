@@ -289,7 +289,14 @@
 - Drei neue synthetische Tests waren vor der Codeänderung grün: Fotoauftrag mit Fehlerbilanz, Verteilerausnahme mit Abschluss des Imports und Abbruch ohne `Dirty`. Nach der Änderung bestanden 6/6 ausgewählte Tests einschliesslich IKAS, IBAK und KINS. Vollständiger Release-Build: 0 Fehler, 0 Warnungen; Diff ohne Whitespace-Fehler. `TEMP`, `TMP` und Telemetrie lagen in geprüften Projektordnern.
 - Grenze: Der Fake-Verteiler prüft den Orchestrator-Vertrag, keine echten Fotos oder Kundendateien. Die weiteren Medien- und Protokollschritte wurden nicht geändert. Kein Push oder Merge. Architekturabgleich: kein neuer Service, keine DI- oder Datenformatänderung; die Skillkarte bleibt inhaltlich richtig.
 
+## Wartbarkeitsplan, Etappe 6 – Korrektur der Foto-Teilphase (27.09.)
+
+- Ein unabhängiger Claude-Review im VS Code beanstandete die versteckten Änderungen an Nachrichtenliste und Fehlerbilanz in `DistributePhotos`. Der reine Auftragshelfer übernimmt jetzt nur noch Verteilungsoptionen, Fortschritt, CollectionLock und Staging. Der Hauptablauf sammelt Nachrichten und Fehler ausdrücklich direkt nach dem Aufruf. Zwei überflüssige Methodenparameter entfallen; das Verhalten und die Reihenfolge bleiben gleich.
+- Die drei synthetischen Fotophasen-Tests bestanden vor und nach der Korrektur jeweils 3/3. Vollständiger Release-Build: 0 Fehler, 0 Warnungen. Testdateien und Telemetrie blieben im geprüften Projektordner. Der vollständige Infrastrukturtest wurde wegen bekannter externer Kundenpfade nicht gestartet.
+- Kein Kundenlauf, Push, Merge oder Kauf. Weitere Medien- und Protokollverteilung bleibt offen. Architekturkarte geprüft: keine neue Schnittstelle, Registrierung, Schicht oder Datenform.
+
 ## Offene Freigaben und Grenzen
+
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.
 - Der vollständige Infrastrukturtest liest auf diesem Rechner eine echte Kundenquelle auf D:. Ein solcher Gesamtlauf ist für die Ferienarbeit ungeeignet. Weitere Testauswahl nur nach Datenpfad-Prüfung.
