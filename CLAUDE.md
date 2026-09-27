@@ -414,6 +414,29 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
   `__WebGIS_Export/Probelauf-Vorschau_20260921.txt`): 9 Haltungen ohne Sanierungs-Akte,
   Schacht 525145/60122, 7 Akten ohne Verfahren, 6 Laengen (WebGIS gewinnt).
 
+## Grafik-Audit 23.09.2026: B01, B02, B04 behoben (24.09.2026)
+
+Bericht `docs/audits/2026-09-23-code-grafik-plan/AUDIT-UND-PLAN.md`. Regeln, die nicht zurueckfallen duerfen:
+
+- **KI-Markierungen im Player gehen durch `toPixel`, nie durch `Punkt.X * canvasWidth`.** Die Zeichenflaeche ist
+  die ganze Flaeche, das Video darin formattreu (4:3 in 16:9 = seitlicher Rand). `CodingNormToPixel` kennt das
+  Videorechteck (`CodingOverlayViewportMapper`). Rechteck, Linie und Punkt (`CodingAiRectangleOverlayRenderer`,
+  `CodingAiPrimitiveOverlayRenderer`) rechneten mit der ganzen Flaeche und lagen bei 4:3-Videos daneben (B01);
+  Bogen, Kreis und Massstab taten es schon richtig. `canvasWidth/Height` begrenzt nur noch die Beschriftung.
+- **Passt die Beschriftung einer KI-Box nicht in die Flaeche, entfaellt sie** (vor dem ersten Layout ist der
+  Canvas 1 x 1). Vorher warf `Math.Clamp` eine Ausnahme (B02).
+- **`SamMaskDecoder.Downsample` setzt einen Anzeigepunkt, sobald IRGENDEIN Pixel seines Blocks gesetzt ist.**
+  Die Stichprobe je Block liess 1 Pixel breite Risse ganz verschwinden (B04). Nur Anzeige; Vermessung und
+  gespeicherte Maske bleiben unberuehrt. Die Geometrie rechnet je Achse `maskW/dsW` bzw. `maskH/dsH` zurueck.
+- OFFEN, gefunden und bewusst nicht mitgeaendert: Der Rohrreferenzkreis (`CodingSchemaOverlayRenderer.AddPipeReference`,
+  Fuellstand/Einragung) und der Referenz-DN-Kreis (`ReferenceDnGeometry`) setzen die Mitte noch mit der ganzen
+  Flaeche; die Fuellstandlinie daneben verwendet `toPixel`. Der Kalibrierdurchmesser ist in normierten Koordinaten
+  mehrdeutig (x und y verschieden skaliert, Radius = Norm x min(Breite, Hoehe)) und beruehrt die mm-Messung —
+  eigenes Paket mit fachlicher Klaerung.
+- Tests: `CodingAiOverlayRendererTests` (Pillarbox 1600 x 900 mit 4:3, Flaeche 1 und 20), `SamMaskDuenneStrukturTests`
+  (senkrecht, waagrecht, schraeg, Einzelpunkt, HD, Fuellung), `SamMaskDecoderTests.Downsample_*`. Die neuen Tests
+  waren vor der Korrektur rot (10 von 13).
+
 ## Gesamtaudit 23.09.2026: Behebung A01 bis A18
 
 Bericht `.tmp/audit-gesamt-2026-09-23/GESAMTAUDIT.md` (Codex, extern). Alle 18 Befunde nachgeprueft,
@@ -2727,9 +2750,10 @@ automatisch vollstaendig nachgeholt.
 `BackupSourcePathGuard` und `BackupTargetPathGuard` pruefen Quelle und Ziel vor
 jedem kritischen Dateizugriff erneut. Ein unlesbarer oder verknuepfter Pflichtpfad
 bricht Spiegelung/Vollsicherung ab, bevor veraltete Zieldateien entfernt oder
-Versionen rotiert werden. Unter `_Versionen` bleiben hoechstens die drei neuesten
-Sicherungsstaende; aeltere werden erst nach einem bis dahin fehlerfreien Lauf
-entfernt. Einstellungs-, Log- und Desktop-Skriptquellen duerfen
+Versionen rotiert werden. Seit 23.09.2026 (Entscheid Pascal) behaelt die
+Vollsicherung nur den aktuellen Stand (`BackupVersionRetention.MaxStaende = 0`):
+Vorherkopien schuetzen nur den laufenden Lauf (Ruecksetzen bei Abbruch) und
+werden nach dem erfolgreichen Abschluss entfernt. Einstellungs-, Log- und Desktop-Skriptquellen duerfen
 fehlen; Programm- und Projektkomponenten sind nur dann leer, wenn fuer sie keine
 Wurzel konfiguriert wurde. Bestehende Spiegeldateien bleiben bei optionalen
 Fehlstellen erhalten. `KnowledgeRoot` und jede tatsaechlich konfigurierte
