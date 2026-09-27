@@ -20,11 +20,11 @@ router = APIRouter()
 logger = logging.getLogger("sidecar")
 
 
-def _dummy_image_b64() -> str:
-    """Kleines neutrales Bild (64x64) – reicht, um die Modelle ueber den Normalpfad zu laden."""
+def _dummy_image_b64(side: int = 64) -> str:
+    """Neutrales quadratisches Testbild fuer den jeweiligen Modellpfad."""
     from PIL import Image
 
-    img = Image.new("RGB", (64, 64), (32, 32, 32))
+    img = Image.new("RGB", (side, side), (32, 32, 32))
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return base64.b64encode(buf.getvalue()).decode("ascii")
@@ -93,7 +93,10 @@ def warmup() -> dict:
     # Der Wrapper meldet normale Inferenzfehler als degraded-Antwort, damit ein
     # Analyse-Request nicht abstuerzt. Beim Warmup ist das aber kein Erfolg.
     def _load_dino():
-        response = dino_wrapper.detect(dummy, None, 0.30, 0.25)
+        # Swin-B braucht 900 Encoder-Positionen fuer topk. Der echte Wrapper
+        # skaliert nicht hoch: 64x64 liefert nur 85, 640x640 liefert 8500.
+        # Nur das Warmup-Bild vergroessern; echte Analysebilder bleiben unveraendert.
+        response = dino_wrapper.detect(_dummy_image_b64(640), None, 0.30, 0.25)
         if getattr(response, "degraded", False):
             raise RuntimeError(getattr(response, "error", None) or "DINO ist degradiert")
 

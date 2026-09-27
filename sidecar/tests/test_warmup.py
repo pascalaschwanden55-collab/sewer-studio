@@ -1,4 +1,8 @@
+import base64
+import io
 from types import SimpleNamespace
+
+from PIL import Image
 
 from sidecar.routes import warmup
 
@@ -20,6 +24,17 @@ def _qualification(*, qualified: bool) -> dict:
 
 def test_warmup_loads_all_sidecar_models_including_classifier(monkeypatch):
     calls: list[str] = []
+
+    def dino_with_real_proposal_requirement(image_base64, prompts, box_threshold, text_threshold):
+        image = Image.open(io.BytesIO(base64.b64decode(image_base64)))
+        # Swin-B: vier Feature-Stufen (Stride 8/16/32/64), 900 Queries.
+        # torch.topk kann nur arbeiten, wenn mindestens so viele Positionen bestehen.
+        width, height = image.size
+        positions = sum(((width + stride - 1) // stride) * ((height + stride - 1) // stride)
+                        for stride in (8, 16, 32, 64))
+        if positions < 900:
+            raise RuntimeError("selected index k out of range")
+        calls.append("dino")
 
     monkeypatch.setattr(
         warmup.detector_qualification,
@@ -44,7 +59,7 @@ def test_warmup_loads_all_sidecar_models_including_classifier(monkeypatch):
     monkeypatch.setattr(
         warmup.dino_wrapper,
         "detect",
-        lambda image_base64, prompts, box_threshold, text_threshold: calls.append("dino"),
+        dino_with_real_proposal_requirement,
     )
     monkeypatch.setattr(warmup.sam_wrapper, "_resolve_device", lambda: "cpu")
     monkeypatch.setattr(
@@ -69,6 +84,7 @@ def test_warmup_loads_all_sidecar_models_including_classifier(monkeypatch):
         "reason": None,
     }
     assert result["warmup"]["classifier"] == "ok"
+    assert result["warmup"]["dino"] == "ok"
     assert "classifier" in result["loaded"]
 
 
