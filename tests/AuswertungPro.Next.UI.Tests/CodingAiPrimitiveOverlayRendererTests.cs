@@ -19,7 +19,7 @@ public sealed class CodingAiPrimitiveOverlayRendererTests
             var style = Style();
             var overlay = Geometry(OverlayToolType.Line, (0.1, 0.2), (0.3, 0.4));
 
-            var rendered = CodingAiPrimitiveOverlayRenderer.Render(canvas, overlay, 200, 100, style);
+            var rendered = CodingAiPrimitiveOverlayRenderer.Render(canvas, overlay, Scale(200, 100), style);
 
             Assert.True(rendered);
             var line = Assert.IsType<Line>(Assert.Single(canvas.Children));
@@ -44,7 +44,7 @@ public sealed class CodingAiPrimitiveOverlayRendererTests
             var style = Style();
             var overlay = Geometry(OverlayToolType.Point, (0.5, 0.6));
 
-            var rendered = CodingAiPrimitiveOverlayRenderer.Render(canvas, overlay, 200, 100, style);
+            var rendered = CodingAiPrimitiveOverlayRenderer.Render(canvas, overlay, Scale(200, 100), style);
 
             Assert.True(rendered);
             var dot = Assert.IsType<Ellipse>(Assert.Single(canvas.Children));
@@ -71,14 +71,12 @@ public sealed class CodingAiPrimitiveOverlayRendererTests
             Assert.False(CodingAiPrimitiveOverlayRenderer.Render(
                 canvas,
                 Geometry(OverlayToolType.Line, (0.1, 0.2)),
-                200,
-                100,
+                Scale(200, 100),
                 style));
             Assert.False(CodingAiPrimitiveOverlayRenderer.Render(
                 canvas,
                 Geometry(OverlayToolType.Rectangle, (0.1, 0.2), (0.3, 0.4)),
-                200,
-                100,
+                Scale(200, 100),
                 style));
             Assert.Empty(canvas.Children);
         });
@@ -93,6 +91,9 @@ public sealed class CodingAiPrimitiveOverlayRendererTests
             ToolType = tool,
             Points = points.Select(p => new NormalizedPoint(p.X, p.Y)).ToList()
         };
+
+    private static Func<NormalizedPoint, Point> Scale(double width, double height)
+        => point => new Point(point.X * width, point.Y * height);
 
     private static void RunOnStaThread(Action action)
     {

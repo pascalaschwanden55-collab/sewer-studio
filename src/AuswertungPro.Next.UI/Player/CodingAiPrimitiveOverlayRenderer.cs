@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
@@ -12,21 +13,25 @@ public sealed record CodingAiPrimitiveOverlayRenderStyle(
 
 public static class CodingAiPrimitiveOverlayRenderer
 {
+    /// <summary>
+    /// Zeichnet KI-Linie, -Strecke oder -Punkt. Die Punkte gehen durch <paramref name="toPixel"/>,
+    /// der das tatsaechlich sichtbare Videorechteck kennt (Rand bei 4:3 in 16:9 usw.).
+    /// </summary>
     public static bool Render(
         Canvas canvas,
         OverlayGeometry overlay,
-        double canvasWidth,
-        double canvasHeight,
+        Func<NormalizedPoint, Point> toPixel,
         CodingAiPrimitiveOverlayRenderStyle style)
     {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(overlay);
+        ArgumentNullException.ThrowIfNull(toPixel);
         ArgumentNullException.ThrowIfNull(style);
 
         return overlay.ToolType switch
         {
-            OverlayToolType.Line or OverlayToolType.Stretch => RenderLine(canvas, overlay, canvasWidth, canvasHeight, style),
-            OverlayToolType.Point => RenderPoint(canvas, overlay, canvasWidth, canvasHeight, style),
+            OverlayToolType.Line or OverlayToolType.Stretch => RenderLine(canvas, overlay, toPixel, style),
+            OverlayToolType.Point => RenderPoint(canvas, overlay, toPixel, style),
             _ => false
         };
     }
@@ -34,19 +39,20 @@ public static class CodingAiPrimitiveOverlayRenderer
     private static bool RenderLine(
         Canvas canvas,
         OverlayGeometry overlay,
-        double canvasWidth,
-        double canvasHeight,
+        Func<NormalizedPoint, Point> toPixel,
         CodingAiPrimitiveOverlayRenderStyle style)
     {
         if (overlay.Points.Count < 2)
             return false;
 
+        var p1 = toPixel(overlay.Points[0]);
+        var p2 = toPixel(overlay.Points[1]);
         var line = new System.Windows.Shapes.Line
         {
-            X1 = overlay.Points[0].X * canvasWidth,
-            Y1 = overlay.Points[0].Y * canvasHeight,
-            X2 = overlay.Points[1].X * canvasWidth,
-            Y2 = overlay.Points[1].Y * canvasHeight,
+            X1 = p1.X,
+            Y1 = p1.Y,
+            X2 = p2.X,
+            Y2 = p2.Y,
             Stroke = style.Stroke,
             StrokeThickness = 2.5,
             StrokeDashArray = new DoubleCollection { 5, 3 },
@@ -60,15 +66,15 @@ public static class CodingAiPrimitiveOverlayRenderer
     private static bool RenderPoint(
         Canvas canvas,
         OverlayGeometry overlay,
-        double canvasWidth,
-        double canvasHeight,
+        Func<NormalizedPoint, Point> toPixel,
         CodingAiPrimitiveOverlayRenderStyle style)
     {
         if (overlay.Points.Count < 1)
             return false;
 
-        var px = overlay.Points[0].X * canvasWidth;
-        var py = overlay.Points[0].Y * canvasHeight;
+        var center = toPixel(overlay.Points[0]);
+        var px = center.X;
+        var py = center.Y;
         var dot = new System.Windows.Shapes.Ellipse
         {
             Width = 14,

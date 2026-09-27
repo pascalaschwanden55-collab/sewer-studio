@@ -1,0 +1,57 @@
+{
+  "head": "927c9f1d3fea0d870156343d05331df28a717aaf",
+  "files": 6244,
+  "lines": 824261,
+  "groups": {
+    "src/": {
+      "files": 3314,
+      "lines": 402093
+    },
+    "sidecar/sidecar/": {
+      "files": 32,
+      "lines": 7042
+    },
+    "integrations/qgis/": {
+      "files": 7,
+      "lines": 1968
+    },
+    "tools/": {
+      "files": 223,
+      "lines": 43141
+    },
+    "tests/": {
+      "files": 2603,
+      "lines": 359001
+    },
+    "sidecar/tests/": {
+      "files": 60,
+      "lines": 10618
+    }
+  },
+  "unchanged_from_previous_audit_at_start": true,
+  "parallel_changes": [
+    "src/AuswertungPro.Next.Application/WebGis/WebGisModelle.cs",
+    "src/AuswertungPro.Next.Application/WebGis/WebGisImportUseCase.cs",
+    "src/AuswertungPro.Next.Application/WebGis/WebGisExportUseCase.cs",
+    "src/AuswertungPro.Next.Application/WebGis/IGeonisWebGisClient.cs",
+    "src/AuswertungPro.Next.Domain/Models/KatasterFeldschutz.cs",
+    "tests/AuswertungPro.Next.Infrastructure.Tests/WebGis/WebGisImportUseCaseTests.cs",
+    "tests/AuswertungPro.Next.Infrastructure.Tests/WebGis/WebGisExportUseCaseTests.cs",
+    "tests/AuswertungPro.Next.Infrastructure.Tests/WebGis/GeonisWebGisClientTests.cs",
+    "src/AuswertungPro.Next.UI/Settings/SettingsFullBackupWorkflow.cs",
+    "tests/AuswertungPro.Next.Infrastructure.Tests/KinsDbfWhitelistEnricherTests.cs",
+    "tests/AuswertungPro.Next.Infrastructure.Tests/Backup/KnowledgeRealtimeMirrorServiceTests.cs",
+    "tests/AuswertungPro.Next.Infrastructure.Tests/Backup/JunctionCapabilityGateTests.cs",
+    "tests/AuswertungPro.Next.Infrastructure.Tests/Backup/DirectoryMirrorReparsePointTests.cs",
+    "tests/AuswertungPro.Next.Infrastructure.Tests/Backup/BackupAbschlussFortschrittTests.cs",
+    "src/AuswertungPro.Next.Application/DataPage/DataPageHydraulikReportCalculator.cs",
+    "src/AuswertungPro.Next.Application/Hydraulik/HydraulikMaterialCatalog.cs",
+    "src/AuswertungPro.Next.Infrastructure/WebGis/GeonisWebGisClient.cs",
+    "src/AuswertungPro.Next.Infrastructure/Backup/KnowledgeRealtimeMirrorService.cs",
+    "src/AuswertungPro.Next.Infrastructure/Backup/FullBackupService.cs",
+    "src/AuswertungPro.Next.Infrastructure/Backup/DirectoryMirror.cs",
+    "src/AuswertungPro.Next.Infrastructure/Ai/Sanierung/CostOptimizationEngine.cs",
+    "src/AuswertungPro.Next.Infrastructure/Import/Kins/KinsDbfWhitelistEnrichmentService.cs"
+  ],
+  "scope": "Automatische Bestandsaufnahme und gezielte Vertiefung; keine manuelle Pruefung jeder Zeile."
+}

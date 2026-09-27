@@ -95,6 +95,99 @@ public sealed class CodingAiOverlayRendererTests
         });
     }
 
+    [Fact]
+    public void Render_places_ai_rectangle_line_and_point_inside_pillarboxed_video()
+    {
+        // B01 (Audit 23.09.2026): Ein 4:3-Video in einer 1600 x 900 grossen Flaeche hat links
+        // und rechts je 200 Punkte Rand. Die KI-Markierung muss auf derselben Bildstelle liegen
+        // wie im Video, also im tatsaechlichen Videorechteck und nicht in der ganzen Flaeche.
+        RunOnStaThread(() =>
+        {
+            var canvas = new Canvas();
+            var videoRect = CodingOverlayViewportMapper.GetContentRect(1600, 900, 4.0 / 3.0);
+            Assert.Equal(200, videoRect.X, precision: 6);
+            Assert.Equal(1200, videoRect.Width, precision: 6);
+
+            var rendered = CodingAiOverlayRenderer.Render(
+                canvas,
+                [
+                    AiEvent(
+                        OverlayToolType.Rectangle,
+                        CodingUserDecision.Accepted,
+                        "BAB",
+                        confidence: 0.9,
+                        (0.2, 0.1),
+                        (0.4, 0.1),
+                        (0.4, 0.3),
+                        (0.2, 0.3)),
+                    AiEvent(OverlayToolType.Line, CodingUserDecision.Accepted, "BAB", 0.9, (0.1, 0.2), (0.3, 0.4)),
+                    AiEvent(OverlayToolType.Point, CodingUserDecision.Accepted, "BCA", 0.9, (0.5, 0.5))
+                ],
+                canvasWidth: 1600,
+                canvasHeight: 900,
+                pipeCenter: new NormalizedPoint(0.5, 0.5),
+                toPixel: point => CodingOverlayViewportMapper.NormToPixel(point, videoRect));
+
+            Assert.Equal(3, rendered);
+
+            var rect = canvas.Children.OfType<Rectangle>().Single();
+            Assert.Equal(440, Canvas.GetLeft(rect), precision: 6);
+            Assert.Equal(240, rect.Width, precision: 6);
+            Assert.Equal(90, Canvas.GetTop(rect), precision: 6);
+            Assert.Equal(180, rect.Height, precision: 6);
+
+            var line = canvas.Children.OfType<Line>().Single();
+            Assert.Equal(320, line.X1, precision: 6);
+            Assert.Equal(180, line.Y1, precision: 6);
+            Assert.Equal(560, line.X2, precision: 6);
+            Assert.Equal(360, line.Y2, precision: 6);
+
+            var dot = canvas.Children.OfType<Ellipse>().Single();
+            Assert.Equal(800 - 7, Canvas.GetLeft(dot), precision: 6);
+            Assert.Equal(450 - 7, Canvas.GetTop(dot), precision: 6);
+
+            // Die Beschriftung haengt an der Box, nicht am Rand der ganzen Flaeche.
+            var label = canvas.Children.OfType<Border>().Single();
+            Assert.Equal(440, Canvas.GetLeft(label), precision: 6);
+        });
+    }
+
+    [Fact]
+    public void Render_draws_box_without_label_instead_of_throwing_when_canvas_is_smaller_than_label()
+    {
+        // B02 (Audit 23.09.2026): Vor dem ersten Layout ist die Zeichenflaeche nur wenige
+        // Punkte gross. Die Beschriftung passt dann nicht hinein; das darf nicht werfen.
+        RunOnStaThread(() =>
+        {
+            foreach (var size in new[] { 1.0, 20.0 })
+            {
+                var canvas = new Canvas();
+
+                var rendered = CodingAiOverlayRenderer.Render(
+                    canvas,
+                    [
+                        AiEvent(
+                            OverlayToolType.Rectangle,
+                            CodingUserDecision.Accepted,
+                            "BAB Riss mit langer Beschriftung",
+                            confidence: 0.9,
+                            (0.2, 0.2),
+                            (0.6, 0.2),
+                            (0.6, 0.6),
+                            (0.2, 0.6))
+                    ],
+                    canvasWidth: size,
+                    canvasHeight: size,
+                    pipeCenter: new NormalizedPoint(0.5, 0.5),
+                    toPixel: point => new Point(point.X * size, point.Y * size));
+
+                Assert.Equal(1, rendered);
+                Assert.Single(canvas.Children.OfType<Rectangle>());
+                Assert.Empty(canvas.Children.OfType<Border>());
+            }
+        });
+    }
+
     private static CodingEvent AiEvent(
         OverlayToolType tool,
         CodingUserDecision decision,

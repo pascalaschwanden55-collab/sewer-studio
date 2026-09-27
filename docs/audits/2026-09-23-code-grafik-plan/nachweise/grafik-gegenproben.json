@@ -1,0 +1,67 @@
+[
+  {
+    "name": "KI-Rechteck mit Video-Seitenverhaeltnis",
+    "aspect": 1.3333333333333333,
+    "actualLeft": 320,
+    "expectedLeft": 440,
+    "actualWidth": 320,
+    "expectedWidth": 240,
+    "mappingCalls": 0
+  },
+  {
+    "name": "KI-Rechteck mit Video-Seitenverhaeltnis",
+    "aspect": 1.7777777777777777,
+    "actualLeft": 320,
+    "expectedLeft": 320,
+    "actualWidth": 320,
+    "expectedWidth": 320,
+    "mappingCalls": 0
+  },
+  {
+    "name": "KI-Rechteck auf kleinem Canvas",
+    "width": 20,
+    "failure": "ArgumentException: \u00272\u0027 cannot be greater than -64.36333333333334."
+  },
+  {
+    "name": "KI-Rechteck auf kleinem Canvas",
+    "width": 1600,
+    "failure": null
+  },
+  {
+    "name": "Duenne SAM-Kontur",
+    "sourceX": 1,
+    "maskPixels": 340,
+    "defaultContourEmpty": true,
+    "fullResolutionEmpty": false
+  },
+  {
+    "name": "Duenne SAM-Kontur",
+    "sourceX": 2,
+    "maskPixels": 340,
+    "defaultContourEmpty": false,
+    "fullResolutionEmpty": false
+  },
+  {
+    "name": "XTF-Cache bei geaendertem Inhalt und gleicher Zeit",
+    "first": "alte Geometrie",
+    "second": "alte Geometrie",
+    "actualSource": "neue Geometrie",
+    "Extractions": 1
+  },
+  {
+    "name": "Kontrast gruener Legendentext im dunklen Player",
+    "background": "#FF16223A",
+    "foreground": "#FF15803D",
+    "contrast": 3.162284942693948,
+    "suggestedContrast": 8.230529760147991,
+    "fontSize": 11
+  },
+  {
+    "name": "Fotogalerie mit 1000 synthetischen Eintraegen",
+    "total": 1000,
+    "createdContainers": 1000,
+    "viewportHeight": 242,
+    "availableHeight": 520,
+    "galleryContentHeight": 284
+  }
+]

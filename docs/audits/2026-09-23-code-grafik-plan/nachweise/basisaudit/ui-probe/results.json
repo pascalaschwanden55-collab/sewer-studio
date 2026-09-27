@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Schacht-Status im echten Zelleditor",
+    "value": "In Betrieb",
+    "textSearch": false,
+    "Text": "In Betrieb",
+    "selection": null,
+    "visibleSelection": "",
+    "safetyHolds": false,
+    "stored": "In Betrieb"
+  },
+  {
+    "name": "Schacht-Status im echten Zelleditor",
+    "value": "weitere",
+    "textSearch": false,
+    "Text": "weitere",
+    "selection": null,
+    "visibleSelection": "",
+    "safetyHolds": false,
+    "stored": "weitere"
+  },
+  {
+    "name": "Schacht-Status im echten Zelleditor",
+    "value": "In Betrieb",
+    "textSearch": true,
+    "Text": "In Betrieb",
+    "selection": "In Betrieb",
+    "visibleSelection": "In Betrieb",
+    "safetyHolds": true,
+    "stored": "In Betrieb"
+  },
+  {
+    "name": "Tabelle schreibt direkt ins Feld ohne Umwandlung",
+    "IsEditable": true,
+    "stored": "in_Betrieb",
+    "safetyHolds": false
+  }
+]

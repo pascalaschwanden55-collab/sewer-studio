@@ -1,0 +1,26 @@
+{
+  "cost": {
+    "exactMeasure": "Kurzliner",
+    "exactCHF": 1150,
+    "descriptiveMeasure": "Kurzliner DN 300",
+    "descriptiveCHF": 2178,
+    "descriptiveOneMeterCHF": 218
+  },
+  "hydraulics": {
+    "storedMaterial": "Normalbeton",
+    "previousPlastic": {
+      "Material": "Kunststoff (PVC/PE)",
+      "Kb": 0.0005,
+      "Q_V": 0.07977347686352956
+    },
+    "previousConcrete": {
+      "Material": "Beton",
+      "Kb": 0.0015,
+      "Q_V": 0.06912242502765427
+    }
+  },
+  "shaftAlias": {
+    "field": "STATUS",
+    "storedValue": "in_Betrieb"
+  }
+}
