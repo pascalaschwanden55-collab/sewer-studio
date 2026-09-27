@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Ibak;
@@ -21,6 +22,131 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 /// </summary>
 public sealed class ProjectImportOrchestratorTests
 {
+    [Fact]
+    public void Import_WinCan_RoutesToWinCanImporter_AndCarriesStats()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+
+        try
+        {
+            var winCan = new CapturingWinCanImporter();
+            var project = new Project();
+            var orchestrator = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                winCan,
+                exportDetector: new FixedWinCanDetector());
+
+            var result = orchestrator.Import(sourceDir, projectDir, project);
+
+            Assert.Equal(KanalExportFormat.WinCan, result.Format);
+            Assert.Equal(sourceDir, winCan.SourceFolder);
+            Assert.Same(project, winCan.Project);
+            Assert.Equal(1, winCan.CallCount);
+            Assert.Equal(2, result.Found);
+            Assert.Equal(1, result.Created);
+            Assert.Equal(1, result.Updated);
+            Assert.Contains("WinCan-Testimport", result.Messages);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_WinCan_RecordsImporterFailure()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+
+        try
+        {
+            var winCan = new CapturingWinCanImporter { Fail = true };
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                winCan,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Equal(1, winCan.CallCount);
+            Assert.True(result.Errors >= 1);
+            Assert.Contains(result.Messages, message =>
+                message.Contains("Parse fehlgeschlagen [TEST_FAILURE]: Testfehler", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_WinCan_PropagatesCancellationFromImporter()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+
+        try
+        {
+            var winCan = new CapturingWinCanImporter { Cancel = true };
+            var orchestrator = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                winCan,
+                exportDetector: new FixedWinCanDetector());
+
+            Assert.Throws<OperationCanceledException>(() =>
+                orchestrator.Import(sourceDir, projectDir, new Project()));
+            Assert.Equal(1, winCan.CallCount);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    private static (string SourceDir, string ProjectDir) CreateEmptyWinCanFixture()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"orch-wincan-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "source");
+        var projectDir = Path.Combine(root, "projekt");
+        Directory.CreateDirectory(sourceDir);
+        Directory.CreateDirectory(projectDir);
+        return (sourceDir, projectDir);
+    }
+
+    private sealed class FixedWinCanDetector : IKanalExportDetectionService
+    {
+        public KanalExportDetection Detect(string sourceFolder) =>
+            new(KanalExportFormat.WinCan, null, null, null, "synthetischer WinCan-Test");
+    }
+
+    private sealed class CapturingWinCanImporter : IWinCanDbImportService
+    {
+        public bool Fail { get; init; }
+        public bool Cancel { get; init; }
+        public int CallCount { get; private set; }
+        public string? SourceFolder { get; private set; }
+        public Project? Project { get; private set; }
+
+        public Result<ImportStats> ImportWinCanExport(
+            string exportRoot,
+            Project project,
+            ImportRunContext? ctx = null)
+        {
+            CallCount++;
+            SourceFolder = exportRoot;
+            Project = project;
+            if (Cancel)
+                throw new OperationCanceledException("Testabbruch");
+            if (Fail)
+                return Result<ImportStats>.Fail("TEST_FAILURE", "Testfehler");
+            return Result<ImportStats>.Success(new ImportStats(
+                Found: 2,
+                Created: 1,
+                Updated: 1,
+                Errors: 0,
+                Uncertain: 0,
+                Messages: ["WinCan-Testimport"]));
+        }
+    }
+
     [Fact]
     public void Import_meldet_sieben_Anzeigeschritte_und_Medienzaehler()
     {

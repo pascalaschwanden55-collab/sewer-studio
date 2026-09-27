@@ -48,3 +48,4 @@
 ## 2026-09-27
 
 - Wartbarkeitsplan Etappe 6, TEIL 1: Hauptquellenwahl im Import von Bilanzierung getrennt; IKAS, IBAK und KINS je vor/nach grün (3/3), Release-Build 0 Fehler/0 Warnungen. WinCan-Zweig nur per Diff geprüft, kein Push.
+- Etappe 6, TEIL 2: WinCan-Hauptzweig synthetisch für Erfolg, Importfehler und Abbruch abgesichert; 4/4 ausgewählte Tests und Release-Build grün, 0 Warnungen. Kein Produktionscode oder Kundendatenlauf.

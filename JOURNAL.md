@@ -264,6 +264,12 @@
 - Claude-Panel war in VS Code sichtbar, ohne auslesbaren Abo-Status. Claude wurde wegen des im vorigen Lauf trotz ausdrücklichem Verbot genutzten Bash-Werkzeugs nicht erneut beauftragt. Kein Kundenlauf, Push, Merge oder Kauf.
 - Rest: Archivierung, Fehlerbilanz, Medien- und Protokollverteilung liegen weiterhin im langen Importablauf. Vor jeder weiteren Phase passende lokale Erfolg-, Fehler- und Abbruchtests prüfen.
 
+## Wartbarkeitsplan, Etappe 6 – TEIL 2: WinCan-Verhalten vor weiteren Importphasen (27.09.)
+
+- Ziel: Die nach Teil 1 nur per Diff geprüfte WinCan-Verzweigung synthetisch absichern, bevor weitere Importphasen geändert werden. Drei neue Tests mit einem fest vorgegebenen Detektor und Fake-Importer prüfen Aufruf mit Quellordner und Projekt, Übernahme der Zähler/Meldung, Fehlerbilanz bei Importfehler und Weitergabe von `OperationCanceledException`. Die gemeinsame Test-Fixture erstellt ausschliesslich leere Ordner unter dem geprüften Projekt-`TEMP`.
+- Gewinn: Der WinCan-Zweig hat jetzt einen eigenen, schnellen Verhaltensschutz für Erfolg, Fehler und Abbruch. Das macht spätere Änderungen an der Hauptquellenwahl überprüfbar; Produktionscode und Fachverhalten wurden in diesem Lauf nicht geändert. Vorher 1/1 ausgewählter IKAS-Baseline-Test grün, nachher 4/4 ausgewählte IKAS-/WinCan-Tests grün; vollständiger Release-Build 0 Fehler/0 Warnungen. `git diff --check` ohne Fehler.
+- Grenze: Der Test verwendet einen Fake-Importer und keine echte `.db3`; die reale Datenbankauswertung bleibt ungeprüft. Weitere Importphasen brauchen je einen eigenen Fall für ihren Erfolg, Fehler und Abbruch. Keine Kunden- oder Medienquelle gelesen, kein Push oder Merge.
+
 ## Offene Freigaben und Grenzen
 
 - Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.
