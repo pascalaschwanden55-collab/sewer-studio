@@ -96,6 +96,41 @@ public sealed class DesignAuditContrastTests
         Assert.True(Contrast(ReadColor(light, "ColorWarning"), ReadColor(light, "ColorCard")) >= 4.5);
     }
 
+    /// <summary>
+    /// Aufgabe 4b, Fix-Runde 1: das neue <c>WarningButton</c> (Controls.xaml) traegt
+    /// <c>WarningTextBrush</c> als Vordergrund auf der Kartenflaeche (BasedOn SecondaryButton,
+    /// wie das bestehende <c>DangerButton</c> mit <c>DangerTextBrush</c>). Beide Paarungen waren
+    /// bisher nicht automatisiert geprueft - dieser Test haelt die schon beim Anlegen von
+    /// WarningButton nachgerechneten Werte fest (6,28:1 / 5,02:1 Warning, 6,29:1 / 4,83:1 Danger).
+    /// </summary>
+    [Theory]
+    [InlineData("Theme.xaml")]
+    [InlineData("ThemeLight.xaml")]
+    public void Warning_and_danger_button_text_reach_normal_text_contrast_on_card(string themeFile)
+    {
+        var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+
+        Assert.True(
+            Contrast(WarningTextColor(xaml), ReadColor(xaml, "ColorCard")) >= 4.5,
+            $"{themeFile}: WarningTextBrush erreicht auf CardBrush keine 4,5:1.");
+        Assert.True(
+            Contrast(DangerTextColor(xaml), ReadColor(xaml, "ColorCard")) >= 4.5,
+            $"{themeFile}: DangerTextBrush erreicht auf CardBrush keine 4,5:1.");
+    }
+
+    private static string WarningTextColor(string xaml) => ReadSolidColorBrush(xaml, "WarningTextBrush");
+
+    private static string DangerTextColor(string xaml) => ReadSolidColorBrush(xaml, "DangerTextBrush");
+
+    private static string ReadSolidColorBrush(string xaml, string key)
+    {
+        var match = Regex.Match(
+            xaml,
+            $"<SolidColorBrush\\s+x:Key=\"{Regex.Escape(key)}\"\\s+Color=\"(?<value>#[0-9A-Fa-f]{{8}})\"");
+        Assert.True(match.Success, $"SolidColorBrush {key} fehlt.");
+        return match.Groups["value"].Value;
+    }
+
     [Theory]
     [InlineData("Views/Windows/BeobachtungenWindow.xaml")]
     [InlineData("Views/ProtocolObservationsWindow.xaml")]

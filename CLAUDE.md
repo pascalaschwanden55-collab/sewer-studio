@@ -125,33 +125,63 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   wie `DataPageNovaWorkspaceController`) und zeigt stattdessen den gemeinsamen Fensterkopf.
   `VideoAnalysisPipelineWindow` behaelt seine bewusst gestaltete Sci-Fi-Kopfzeile (NeuralSphere,
   Akzentbalken) unveraendert; seine lokalen `BtnPrimary`/`BtnCancel`-Stile sind entfernt, die
-  Fussleiste nutzt jetzt `PrimaryButton`/`SecondaryButton` samt `IsDefault`/`IsCancel`.
+  Fussleiste nutzt jetzt `PrimaryButton`/`SecondaryButton` samt `IsDefault`/`IsCancel`, und der
+  Abdocken-Knopf im Kopf verwendet seit der Nachbesserung `Style="{StaticResource
+  ToolbarButton}"` statt eines eigenen `Button.Template` mit lokalem `Background=` (genau wie
+  `FloatingGridWindow`s Andocken-Knopf) — die uebrige Arbeitsflaeche bleibt unveraendert.
   `TextPreviewWindow` verwendet fuer `DialogButtonBar`/`SecondaryButton` bewusst
   `DynamicResource` statt `StaticResource` (wie `FloatingGridWindow` in Aufgabe 4a): Der
   bestehende `WindowOpenCloseSmokeTests` instanziiert dieses Fenster ohne laufende
   `Application`, eine `StaticResource` waere dort beim BAML-Laden eine haerte Ausnahme.
+  **Farbige Aktionsknoepfe bekamen programmweite Theme-Stile statt lokalem `Background=`**
+  (Fix-Runde 1, Nachbesserung): `WarningButton` (Controls.xaml, `BasedOn SecondaryButton` wie
+  das bestehende `DangerButton` — Umriss statt Flaeche, `WarningTextBrush`/`WarningBrush`,
+  Kontrast auf `CardBrush` gemessen und in `DesignAuditContrastTests` festgehalten: 6,28:1
+  dunkel / 5,02:1 hell) sowie `Severity1Button` … `Severity5Button` (eigene Stilfamilie fuer die
+  fuenf Schadensstufen-Knoepfe in `TrainingStudioWindow`, kein Primary/Secondary/Danger/Warning
+  — eine 5-stufige Farbskala ist ein Stufen-Auswahlwidget, keine der vier semantischen
+  Aktionsklassen). `TrainingCenterWindow`s Selbsttraining-Knoepfe (Start/Pause/Stop) verwenden
+  jetzt `SuccessButton`/`WarningButton`/`DangerButton` statt `Background="{DynamicResource
+  Success/Warning/DangerBrush}" Foreground="White"` direkt am Knopf und sind dadurch komplett
+  aus der Waechter-Ausnahmeliste entfernt (0 Regelverstoesse). `TrainingStudioWindow` folgt
+  demselben Muster fuer seine bisher primaerklassigen Knoepfe ausserhalb der eigentlichen
+  Codier-Entscheidung: „Durchgang starten“, „Foto mit gewaehltem Modell pruefen“ und
+  „Codieren… (Katalog)“ sind jetzt `ToolbarButtonAccent` (passend zur toolbar-lastigen
+  Arbeitsflaeche daneben), „Weiteres Ereignis auf diesem Bild“ ist `SecondaryButton`, „Bild
+  fertig“ `ToolbarButtonAccent` — nur „Akzeptieren (A)“ (`SuccessButton`) und „Korrektur
+  speichern (K)“ (`PrimaryButton`) bleiben primaerklassig (siehe Waechter-Ausnahme unten).
   **Waechter `DesignAuditKnopfleistenTests`** deckt ALLE Fenster-XAMLs im UI-Projekt ab
   (`Views/*.xaml` nur oberste Ebene, `Dialogs/*.xaml`, `Views/Windows/*.xaml`; nur echte
   `<Window`-Wurzeln, UserControls/ResourceDictionaries im selben Ordner fallen automatisch weg)
-  und prueft vier Regeln je Fenster: (a) hoechstens EIN `PrimaryButton`, (b) traegt ein Fenster
-  ein `IsDefault="True"`, steht der unmittelbar vorangehende `<Button`-Tag (Dokumentreihenfolge,
-  kein anderer Button dazwischen) mit `IsCancel="True"` da, (c) kein lokal definierter
-  `Style x:Key="..." TargetType="Button"` mehr im Fenster, (d) kein `Background=` direkt an
-  einem `<Button`-Tag. Namentliche Ausnahmen mit Grund: die vier Video-Fenster (`PlayerWindow`,
-  `LiveFrameWindow`, `StartupSplashWindow`, `PhotoMeasurementWindow`), die drei geschuetzten
-  WebGIS-Fenster (`WebGisVorschauWindow`, `WebGisSchreibBestaetigungWindow`,
-  `WebGisHolenWindow`), `NovaDialogWindow` (Knoepfe dynamisch im Code gebaut, Aufgabe 1),
-  `ObjektakteWindow` (reiner Host von `ObjektakteView`, Aufgabe 4a), `FloatingGridWindow`
-  (Andocken-Knopf braucht `DynamicResource`, Aufgabe 4a) sowie `TrainingStudioWindow`,
-  `TrainingCenterWindow` und `VideoAnalysisPipelineWindow` (eigene Werkzeugleisten mit mehreren
-  gleichzeitig sichtbaren, farblich bedeutungstragenden Aktionsknoepfen je Schritt/Zustand -
-  Severity-Farbknoepfe, Erfolgs-/Warn-/Gefahrfarbe beim Selbsttraining, Sci-Fi-Kopfzeile; nur
-  Kopf/Fussleiste wurden dort vereinheitlicht, das Innenleben bleibt bewusst unveraendert). Eine
-  Ausnahme nimmt eine Datei komplett aus allen vier Pruefungen - nie stillschweigend, immer mit
-  Grund in der Ausnahmeliste des Tests. Der Waechter faengt jede der vier Regelverletzungen
-  nachweislich ab (Sabotageprobe: zweiter `PrimaryButton`, vertauschte Abbrechen/Speichern-
-  Reihenfolge, lokaler Button-Stil, `Background=` direkt am Button - alle vier Male rot, nach
-  Ruecknahme wieder gruen).
+  und prueft vier Regeln je Fenster: (a) hoechstens EIN primaerklassiger Knopf — `PrimaryButton`
+  UND `SuccessButton` zaehlen zusammen (SuccessButton ist `BasedOn PrimaryButton`, dieselbe
+  gefuellte Sichtgewichtsklasse, nur andere Akzentfarbe); `DangerButton`/`WarningButton`
+  (`BasedOn SecondaryButton`, Umriss) sowie `ToolbarButtonAccent` und die
+  `Severity1..5Button`-Stile zaehlen NICHT mit, (b) traegt ein Fenster ein `IsDefault="True"`,
+  steht der unmittelbar vorangehende `<Button`-Tag (Dokumentreihenfolge, kein anderer Button
+  dazwischen) mit `IsCancel="True"` da, (c) kein lokal definierter `Style x:Key="..."
+  TargetType="Button"` mehr im Fenster, (d) kein `Background=` direkt an einem `<Button`-Tag.
+  **Ausnahmen sind regelgranular, nicht Datei-weit** (Fix-Runde 1: die urspruengliche
+  Datei-weite Liste war zu grob — drei der fuenf zuvor ausgenommenen Fenster
+  (`ObjektakteWindow`, `FloatingGridWindow`, `TrainingCenterWindow`, `VideoAnalysisPipelineWindow`)
+  hatten nach der Nachbesserung schlicht KEINEN Regelverstoss mehr und sind komplett aus der
+  Liste entfernt): eine Ausnahme nennt Datei UND genau die Regel(n) `[Flags] enum Regel`, von
+  denen sie befreit ist — alle anderen Regeln gelten unveraendert weiter. Nur die geschuetzten/
+  aus dem Auftrag ausgeschlossenen Fenster bleiben Datei-weit ausgenommen: die vier Video-Fenster
+  (`PlayerWindow`, `LiveFrameWindow`, `StartupSplashWindow`, `PhotoMeasurementWindow`) und die
+  drei geschuetzten WebGIS-Fenster (`WebGisVorschauWindow`, `WebGisSchreibBestaetigungWindow`,
+  `WebGisHolenWindow`). Zwei echte regelgranulare Ausnahmen bleiben: `NovaDialogWindow` NUR
+  Regel (c) — der lokale Stil `NovaDialogDangerButton` (Aufgabe 1) ist laut CLAUDE.md-Entscheid
+  bewusst NICHT zum programmweiten `DangerButton` verschoben, `IsDefault`/`IsCancel` werden dort
+  vollstaendig im Code-Behind gesetzt (kein XAML-`IsDefault`, Regel (b) hat nichts zu pruefen);
+  `TrainingStudioWindow` NUR Regel (a) — „Akzeptieren (A)“ und „Korrektur speichern (K)“ sind
+  zwei gleichwertige, gemeinsam sichtbare/aktivierte Abschluesse DESSELBEN Codierschritts (KI-
+  Vorschlag war richtig vs. wurde korrigiert), kein Rang zwischen beiden. Der Waechter faengt
+  jede der vier Regelverletzungen nachweislich ab (Sabotageprobe: zweiter Primaerknopf,
+  vertauschte Abbrechen/Speichern-Reihenfolge, lokaler Button-Stil, `Background=` direkt am
+  Button — alle vier Male rot, nach Ruecknahme wieder gruen) UND dass eine regelgranulare
+  Ausnahme nicht auf andere Regeln derselben Datei ausstrahlt (lokaler Stil in
+  `TrainingStudioWindow`, das nur von Regel (a) befreit ist, faengt Regel (c) trotzdem ab).
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

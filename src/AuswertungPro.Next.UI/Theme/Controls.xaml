@@ -1873,4 +1873,45 @@
         <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
     </Style>
+
+    <!-- WarningButton: risikobehaftete, aber nicht destruktive Aktion (z. B. "Pause" waehrend
+         eines laufenden Selbsttrainings) - Umriss/Text in WarningBrush statt Flaechenfuellung,
+         genau nach dem Muster von DangerButton (Aufgabe 4b, Nachbesserung Fix-Runde 1). Beide
+         sind BasedOn SecondaryButton (Umriss, gleiche Sichtgewichtsklasse wie eine neutrale
+         Nebenaktion) und zaehlen deshalb NICHT als "Hauptknopf" im Sinn der Knopfregel/des
+         DesignAuditKnopfleistenTests-Waechters - anders als SuccessButton, das BasedOn
+         PrimaryButton eine gefuellte Flaeche traegt und optisch dieselbe Gewichtsklasse wie
+         PrimaryButton hat. Kontrast WarningTextBrush/CardBrush gemessen (siehe
+         DesignAuditContrastTests): 6,28:1 dunkel, 5,02:1 hell - beide ueber 4,5:1. -->
+    <Style x:Key="WarningButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
+    </Style>
+
+    <!-- SeverityXButton: die fuenf Schadensstufen-Knoepfe der Fachlichen Codierung
+         (TrainingStudioWindow, Aufgabe 4b Fix-Runde 1). Eine eigene Klasse statt Primary/
+         Secondary/Danger/Warning - eine 5-stufige Farbskala ist keine der vier semantischen
+         Aktionsklassen, sondern ein Stufen-Auswahlwidget. Gefuellte Flaeche bleibt (bestehende
+         Optik unveraendert, nur vom lokalen Background= in einen geteilten Theme-Stil
+         verschoben), zaehlt aber NICHT als "Hauptknopf" im Sinn von Knopfregel/
+         DesignAuditKnopfleistenTests (a) - nur PrimaryButton/SuccessButton zaehlen dort. -->
+    <Style x:Key="SeverityButtonBase" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+    <Style x:Key="Severity1Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity1Brush}"/>
+    </Style>
+    <Style x:Key="Severity2Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity2Brush}"/>
+    </Style>
+    <Style x:Key="Severity3Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity3Brush}"/>
+    </Style>
+    <Style x:Key="Severity4Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity4Brush}"/>
+    </Style>
+    <Style x:Key="Severity5Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity5Brush}"/>
+    </Style>
 </ResourceDictionary>

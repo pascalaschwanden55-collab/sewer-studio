@@ -163,7 +163,7 @@
                                 <WrapPanel VerticalAlignment="Center">
                                     <Button Content="Video wählen…" Style="{StaticResource ToolbarButton}"
                                             Click="ChooseBendSuggestionVideo_Click"/>
-                                    <Button Content="Durchgang starten" Style="{StaticResource PrimaryButton}"
+                                    <Button Content="Durchgang starten" Style="{StaticResource ToolbarButtonAccent}"
                                             Command="{Binding StartScanCommand}" Margin="6,0,0,0"/>
                                     <Button Content="Abbrechen" Style="{StaticResource ToolbarButtonDanger}"
                                             Command="{Binding CancelScanCommand}"
@@ -356,7 +356,7 @@
                                 ToolTip="Liest die verfügbaren BCC-Testmodelle erneut ein."/>
                         <Button Content="Foto mit gewähltem Modell prüfen"
                                 Command="{Binding RunPreviewDetectionCommand}"
-                                Style="{StaticResource PrimaryButton}"
+                                Style="{StaticResource ToolbarButtonAccent}"
                                 HorizontalAlignment="Left"
                                 Margin="0,0,0,6"/>
                         <TextBlock Text="{Binding PreviewDetectionSummary}"
@@ -482,7 +482,7 @@
                                              CharacterCasing="Upper"
                                              FontWeight="Bold" VerticalContentAlignment="Center"
                                              ToolTip="Code direkt korrigieren oder über den VSA-Katalog wählen."/>
-                                    <Button Grid.Column="1" Content="Codieren… (Katalog)" Style="{StaticResource PrimaryButton}"
+                                    <Button Grid.Column="1" Content="Codieren… (Katalog)" Style="{StaticResource ToolbarButtonAccent}"
                                             Click="OpenCodeExplorer_Click" Margin="6,0,0,0"/>
                                 </Grid>
                                 <TextBlock Text="{Binding SelectedCodeLabel}" FontSize="{DynamicResource TextXS}"
@@ -495,20 +495,15 @@
 
                                 <TextBlock Text="Schadensstufe (optional)" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
-                                    <Button Content="1" Width="40" MinWidth="40" Margin="0,0,4,0" Background="{DynamicResource Severity1Brush}"
-                                            Foreground="White" FontWeight="Bold"
+                                    <Button Content="1" Width="40" MinWidth="40" Margin="0,0,4,0" Style="{StaticResource Severity1Button}"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="1"/>
-                                    <Button Content="2" Width="40" MinWidth="40" Margin="0,0,4,0" Background="{DynamicResource Severity2Brush}"
-                                            Foreground="White" FontWeight="Bold"
+                                    <Button Content="2" Width="40" MinWidth="40" Margin="0,0,4,0" Style="{StaticResource Severity2Button}"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="2"/>
-                                    <Button Content="3" Width="40" MinWidth="40" Margin="0,0,4,0" Background="{DynamicResource Severity3Brush}"
-                                            Foreground="White" FontWeight="Bold"
+                                    <Button Content="3" Width="40" MinWidth="40" Margin="0,0,4,0" Style="{StaticResource Severity3Button}"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="3"/>
-                                    <Button Content="4" Width="40" MinWidth="40" Margin="0,0,4,0" Background="{DynamicResource Severity4Brush}"
-                                            Foreground="White" FontWeight="Bold"
+                                    <Button Content="4" Width="40" MinWidth="40" Margin="0,0,4,0" Style="{StaticResource Severity4Button}"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="4"/>
-                                    <Button Content="5" Width="40" MinWidth="40" Background="{DynamicResource Severity5Brush}"
-                                            Foreground="White" FontWeight="Bold"
+                                    <Button Content="5" Width="40" MinWidth="40" Style="{StaticResource Severity5Button}"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="5"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding Severity, StringFormat='Gewählt: Stufe {0}', TargetNullValue='Keine Stufe gewählt'}"
@@ -550,11 +545,11 @@
                                                Foreground="{DynamicResource TextSecondaryBrush}"
                                                FontSize="{DynamicResource TextXS}" Margin="0,0,0,8"/>
                                     <Button Content="Weiteres Ereignis auf diesem Bild"
-                                            Style="{StaticResource PrimaryButton}"
+                                            Style="{StaticResource SecondaryButton}"
                                             Command="{Binding AddAnotherEventCommand}"
                                             Margin="0,0,0,6"/>
                                     <Button Content="Bild fertig"
-                                            Style="{StaticResource SuccessButton}"
+                                            Style="{StaticResource ToolbarButtonAccent}"
                                             Command="{Binding FinishImageCommand}"/>
                                 </StackPanel>
                             </Border>

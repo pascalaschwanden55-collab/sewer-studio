@@ -5,11 +5,13 @@ using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 namespace AuswertungPro.Next.UI.Tests;
 
 /// <summary>
-/// Waechter zur Optikanalyse 28.09.2026, Aufgabe 4 («Fensterregel - uebrige Fenster + Waechter»):
-/// prueft die Knopfregel (Plan-Abschnitt «Global Constraints», Punkt 5) in JEDEM Fenster-XAML des
-/// UI-Projekts - Views/*.xaml (nur die oberste Ebene), Dialogs/*.xaml und Views/Windows/*.xaml -
-/// ausser den namentlich begruendeten Ausnahmen unten. Vier Regeln je Fenster:
-/// (a) hoechstens EIN <c>PrimaryButton</c>,
+/// Waechter zur Optikanalyse 28.09.2026, Aufgabe 4 («Fensterregel - uebrige Fenster + Waechter»),
+/// Fix-Runde 1 (regelgranulare Ausnahmen statt Datei-weiter Sperren): prueft die Knopfregel
+/// (Plan-Abschnitt «Global Constraints», Punkt 5) in JEDEM Fenster-XAML des UI-Projekts -
+/// Views/*.xaml (nur die oberste Ebene), Dialogs/*.xaml und Views/Windows/*.xaml - ausser den
+/// namentlich begruendeten Ausnahmen unten. Vier Regeln je Fenster:
+/// (a) hoechstens EIN "primaerklassiger" Knopf - siehe <see cref="PrimaerklassigMuster"/> unten
+///     fuer die genaue Zaehlregel bei <c>SuccessButton</c>,
 /// (b) traegt ein Fenster ein <c>IsDefault="True"</c>, steht unmittelbar davor (gleiche
 ///     Dokumentreihenfolge, kein anderer Button dazwischen) ein Knopf mit <c>IsCancel="True"</c>,
 /// (c) kein lokal definierter <c>Style x:Key="..." TargetType="Button"</c> mehr im Fenster,
@@ -17,55 +19,97 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Dieser Waechter ersetzt NICHT die engeren Aufgabe-3-Waechter (<c>DesignAuditDossierFensterTests</c>)
 /// oder das lookless <c>NovaDialogHeader</c>/<c>DialogButtonBar</c>-Theme selbst - er ist der
 /// umfassende Nachfolger, der ALLE Fenster erfasst.
+///
+/// **Ausnahmen sind regelgranular, nicht Datei-weit** (Fix-Runde 1, Koordinator-Rueckmeldung):
+/// eine Ausnahme nennt Datei UND genau die Regel(n), von denen sie befreit ist - alle anderen
+/// Regeln gelten fuer diese Datei unveraendert weiter. Nur die geschuetzten/aus dem Auftrag
+/// ausgeschlossenen Video- und WebGIS-Fenster bleiben Datei-weit ausgenommen (siehe Begruendung
+/// je Eintrag in <see cref="Ausnahmen"/>).
 /// </summary>
 public sealed class DesignAuditKnopfleistenTests
 {
     private static readonly string UiRoot = RepoFile("src", "AuswertungPro.Next.UI");
 
     /// <summary>
-    /// Namentliche Ausnahmen mit Begruendung. Eine Ausnahme nimmt eine Datei komplett aus allen
-    /// vier Pruefungen heraus - nie stillschweigend, immer mit Grund hier dokumentiert.
+    /// Die vier Regeln als Flags, damit eine Ausnahme genau die betroffene(n) Regel(n) nennen
+    /// kann statt die ganze Datei stillzulegen.
     /// </summary>
-    private static readonly (string Datei, string Grund)[] Ausnahmen =
+    [Flags]
+    private enum Regel
+    {
+        Keine = 0,
+        A_HoechstensEinPrimaerknopf = 1 << 0,
+        B_IsCancelDirektLinksVomIsDefault = 1 << 1,
+        C_KeinLokalerButtonStyle = 1 << 2,
+        D_KeinBackgroundAmButton = 1 << 3,
+        Alle = A_HoechstensEinPrimaerknopf | B_IsCancelDirektLinksVomIsDefault
+             | C_KeinLokalerButtonStyle | D_KeinBackgroundAmButton,
+    }
+
+    /// <summary>
+    /// Namentliche, regelgranulare Ausnahmen mit Begruendung. Eine Ausnahme nimmt eine Datei nur
+    /// von GENAU den genannten Regeln aus - nie stillschweigend, immer mit Grund hier dokumentiert.
+    /// Datei-weite Ausnahmen (<see cref="Regel.Alle"/>) bleiben nur den geschuetzten/aus dem
+    /// Auftrag ausgeschlossenen Fenstern vorbehalten (Video, WebGIS).
+    /// </summary>
+    private static readonly (string Datei, Regel Ausgenommen, string Grund)[] Ausnahmen =
     [
-        ("PlayerWindow.xaml",
+        ("PlayerWindow.xaml", Regel.Alle,
             "Video-Fenster mit eigenem Vollbild-Bedienkonzept (Zeitleiste/Playback); laut Aufgabe 4 ausdruecklich ausgenommen."),
-        ("LiveFrameWindow.xaml",
+        ("LiveFrameWindow.xaml", Regel.Alle,
             "Video-Fenster (Live-Ring-Overlay); wie PlayerWindow ausgenommen."),
-        ("StartupSplashWindow.xaml",
+        ("StartupSplashWindow.xaml", Regel.Alle,
             "Startanimation, kein Dialogfenster; laut Aufgabe 4 ausdruecklich ausgenommen."),
-        ("PhotoMeasurementWindow.xaml",
+        ("PhotoMeasurementWindow.xaml", Regel.Alle,
             "Video-/Messfenster mit eigenem Werkzeugkasten (Foto-Overlay-Messwerkzeuge); laut Aufgabe 4 ausdruecklich ausgenommen."),
-        ("WebGisVorschauWindow.xaml",
+        ("WebGisVorschauWindow.xaml", Regel.Alle,
             "Geschuetzte WebGIS-Datei (Global Constraints Punkt 2) - nicht Teil dieses Auftrags, wird spaeter angepasst."),
-        ("WebGisSchreibBestaetigungWindow.xaml",
+        ("WebGisSchreibBestaetigungWindow.xaml", Regel.Alle,
             "Geschuetzte WebGIS-Datei (Global Constraints Punkt 2) - nicht Teil dieses Auftrags, wird spaeter angepasst."),
-        ("WebGisHolenWindow.xaml",
+        ("WebGisHolenWindow.xaml", Regel.Alle,
             "Geschuetzte WebGIS-Datei (Global Constraints Punkt 2) - nicht Teil dieses Auftrags, wird spaeter angepasst."),
-        ("NovaDialogWindow.xaml",
-            "Knoepfe werden dynamisch im Code gebaut (Aufgabe 1): ConfirmCancel stellt Abbrechen bewusst ganz links, " +
-            "ConfirmWarn(defaultNo) hat bewusst keinen PrimaryButton - beides gehoert zum Design, nicht zur Regelverletzung."),
-        ("ObjektakteWindow.xaml",
-            "Reiner Host von ObjektakteView ohne eigenen Kopf/Fuss (Entscheid Aufgabe 4a) - Umbau liegt ausserhalb des Auftrags."),
-        ("FloatingGridWindow.xaml",
-            "Der Andocken-Knopf braucht DynamicResource statt StaticResource, weil WindowOpenCloseSmokeTests dieses Fenster " +
-            "ohne laufende Application instanziiert (Entscheid Aufgabe 4a) - keine weiteren Knoepfe betroffen."),
-        ("TrainingStudioWindow.xaml",
-            "Eigene mehrspaltige Arbeitsflaeche mit mehreren gleichzeitig sichtbaren, je Schritt hervorgehobenen Aktionen " +
-            "(Severity-Farbknoepfe 1-5, Schritt-Buttons je Spalte); nur Kopf/Schliessen wurden auf NovaDialogHeader " +
-            "umgestellt, das Innenleben bleibt laut Aufgabe 4 bewusst unveraendert."),
-        ("TrainingCenterWindow.xaml",
-            "Eigene Werkzeugleiste mit farbig bedeutungstragenden Aktionsknoepfen (Selbsttraining starten/pausieren/" +
-            "abbrechen in Erfolgs-/Warn-/Gefahrfarbe); nur der Kopf wurde ergaenzt (NovaDialogHeader in derselben Karte, " +
-            "damit keine bestehende Grid.Row-Zuordnung verschoben werden musste), die Arbeitsflaeche bleibt unveraendert."),
-        ("VideoAnalysisPipelineWindow.xaml",
-            "Eigene, bewusst gestaltete Kopfzeile (Sci-Fi-Branding mit NeuralSphere/Akzentbalken) samt Andocken-Knopf " +
-            "im Content-Bereich; die lokalen BtnPrimary/BtnCancel-Stile wurden entfernt und die Fussleiste auf " +
-            "PrimaryButton/SecondaryButton + IsDefault/IsCancel umgestellt, die uebrige Arbeitsflaeche bleibt unveraendert."),
+        ("NovaDialogWindow.xaml", Regel.C_KeinLokalerButtonStyle,
+            "NUR Regel (c): der lokale Style \"NovaDialogDangerButton\" (Aufgabe 1) ist die danger-" +
+            "gestylte Ja-Variante fuer ConfirmWarn(defaultNo) - optisch identisch mit dem programmweiten " +
+            "DangerButton, aber laut CLAUDE.md-Entscheid Aufgabe 1 bewusst NICHT dorthin verschoben " +
+            "(\"Aufgabe 1 bleibt unangetastet\"). IsDefault/IsCancel werden hier vollstaendig im " +
+            "Code-Behind gesetzt (ConfirmCancel/ConfirmWarn), nicht in XAML - Regel (b) hat dadurch " +
+            "nichts zu pruefen und ist real erfuellt. Regeln (a) und (d) sind ebenfalls sauber " +
+            "(genau 1 literales PrimaryButton, kein Background= an einem Button) - keine Ausnahme noetig."),
+        ("TrainingStudioWindow.xaml", Regel.A_HoechstensEinPrimaerknopf,
+            "NUR Regel (a): 2 primaerklassige Knoepfe sind in der \"2 - Fachliche Codierung\"-Spalte " +
+            "echt gleichzeitig noetig - \"Akzeptieren (A)\" (SuccessButton) und \"Korrektur speichern (K)\" " +
+            "(PrimaryButton) sind zwei gleichwertige Abschluesse DESSELBEN Codierschritts (KI-Vorschlag " +
+            "war richtig vs. KI-Vorschlag wurde korrigiert), immer gemeinsam sichtbar/aktiviert " +
+            "(IsEnabled={Binding IsAnnotationEntryEnabled} auf dem gemeinsamen Elternpanel), kein " +
+            "Rang zwischen beiden. Alle anderen frueher primaerklassigen Knoepfe des Fensters " +
+            "(Durchgang starten / Foto mit gewaehltem Modell pruefen / Codieren...(Katalog) / " +
+            "Weiteres Ereignis / Bild fertig) sind auf ToolbarButtonAccent/SecondaryButton " +
+            "zurueckgestuft, die 5 Schadensstufen-Knoepfe tragen jetzt die geteilten Severity1..5Button-" +
+            "Stile statt lokalem Background= - Regeln (b)/(c)/(d) sind dadurch real sauber."),
     ];
 
-    private static readonly HashSet<string> AusgenommeneDateien =
-        new(Ausnahmen.Select(a => a.Datei), StringComparer.OrdinalIgnoreCase);
+    /// <summary>
+    /// Primaerklassige Knopfstile: <c>PrimaryButton</c> UND <c>SuccessButton</c>. SuccessButton ist
+    /// <c>BasedOn="{StaticResource PrimaryButton}"</c> (Theme.xaml) - eine gefuellte Flaeche mit
+    /// derselben optischen Gewichtsklasse wie PrimaryButton, nur in Erfolgsfarbe statt Akzentfarbe.
+    /// Rule (a) zaehlt deshalb BEIDE zusammen: zwei "shoutende" gefuellte Knoepfe im selben Fenster
+    /// sind das Problem, unabhaengig davon, ob der zweite gruen oder blau ist.
+    /// DangerButton und WarningButton zaehlen NICHT mit: beide sind
+    /// <c>BasedOn="{StaticResource SecondaryButton}"</c> (Umriss statt Flaeche, siehe Controls.xaml) -
+    /// dieselbe Sichtgewichtsklasse wie eine neutrale Nebenaktion, nur farblich als riskant/
+    /// destruktiv markiert. Ebenso zaehlen ToolbarButtonAccent und die Severity1..5Button-Stile
+    /// nicht mit: eigene Stilfamilien fuer Werkzeugleisten- bzw. Stufen-Auswahl, keine
+    /// Fenster-Hauptaktion im Sinn der Knopfregel.
+    /// </summary>
+    private static readonly Regex PrimaerklassigMuster =
+        new(@"Style=""\{(?:Static|Dynamic)Resource (?:PrimaryButton|SuccessButton)\}""", RegexOptions.Compiled);
+
+    private static Regel AusnahmeFuer(string dateiname)
+    {
+        var eintrag = Ausnahmen.FirstOrDefault(a => string.Equals(a.Datei, dateiname, StringComparison.OrdinalIgnoreCase));
+        return eintrag.Datei is null ? Regel.Keine : eintrag.Ausgenommen;
+    }
 
     /// <summary>
     /// Alle Fenster-XAMLs im gepruefen Umfang: Views/*.xaml (nur oberste Ebene, keine
@@ -93,8 +137,9 @@ public sealed class DesignAuditKnopfleistenTests
         }
     }
 
-    private static IEnumerable<string> GeprueftePfade()
-        => AlleFensterDateien().Where(p => !AusgenommeneDateien.Contains(Path.GetFileName(p)));
+    /// <summary>Alle gepruefen Pfade, bei denen die uebergebene Regel NICHT ausgenommen ist.</summary>
+    private static IEnumerable<string> GeprueftePfade(Regel regel)
+        => AlleFensterDateien().Where(p => !AusnahmeFuer(Path.GetFileName(p)).HasFlag(regel));
 
     [Fact]
     public void Ausnahmeliste_verweist_nur_auf_tatsaechlich_vorhandene_Fenster()
@@ -113,20 +158,20 @@ public sealed class DesignAuditKnopfleistenTests
     {
         // Schuetzt davor, dass ein Tippfehler im Ordnerpfad den Waechter leerlaufen laesst
         // (ein Test ueber 0 Dateien waere immer gruen und wuerde nichts pruefen).
-        var anzahl = GeprueftePfade().Count();
+        var anzahl = GeprueftePfade(Regel.A_HoechstensEinPrimaerknopf).Count();
         Assert.True(anzahl >= 40, $"Nur {anzahl} Fenster im Pruefumfang - Pfade/Ausnahmeliste pruefen.");
     }
 
     [Fact]
-    public void Hoechstens_ein_PrimaryButton_je_Fenster()
+    public void Hoechstens_ein_Primaerknopf_je_Fenster()
     {
         var verstoesse = new List<string>();
-        foreach (var pfad in GeprueftePfade())
+        foreach (var pfad in GeprueftePfade(Regel.A_HoechstensEinPrimaerknopf))
         {
             var xaml = File.ReadAllText(pfad);
-            var anzahl = Regex.Matches(xaml, @"Style=""\{(?:Static|Dynamic)Resource PrimaryButton\}""").Count;
+            var anzahl = PrimaerklassigMuster.Matches(xaml).Count;
             if (anzahl > 1)
-                verstoesse.Add($"{Path.GetFileName(pfad)}: {anzahl} PrimaryButton-Knoepfe statt hoechstens einem");
+                verstoesse.Add($"{Path.GetFileName(pfad)}: {anzahl} primaerklassige Knoepfe (PrimaryButton/SuccessButton) statt hoechstens einem");
         }
 
         Assert.True(verstoesse.Count == 0, string.Join("\n", verstoesse));
@@ -141,7 +186,7 @@ public sealed class DesignAuditKnopfleistenTests
         // deckt sich in dieser Codebasis mit der visuellen Reihenfolge, weil jede Knopfleiste eine
         // einzelne links-nach-rechts angeordnete StackPanel/Grid-Zeile ist (DialogButtonBar-Muster).
         var verstoesse = new List<string>();
-        foreach (var pfad in GeprueftePfade())
+        foreach (var pfad in GeprueftePfade(Regel.B_IsCancelDirektLinksVomIsDefault))
         {
             var xaml = File.ReadAllText(pfad);
             var tags = Regex.Matches(xaml, @"<Button\b[^>]*>", RegexOptions.Singleline)
@@ -170,7 +215,7 @@ public sealed class DesignAuditKnopfleistenTests
     public void Kein_lokaler_Button_Style_mehr_in_gepruefen_Fenstern()
     {
         var verstoesse = new List<string>();
-        foreach (var pfad in GeprueftePfade())
+        foreach (var pfad in GeprueftePfade(Regel.C_KeinLokalerButtonStyle))
         {
             var xaml = File.ReadAllText(pfad);
             if (Regex.IsMatch(xaml, @"<Style\s+x:Key=""[^""]+""\s+TargetType=""Button"""))
@@ -185,7 +230,7 @@ public sealed class DesignAuditKnopfleistenTests
     public void Kein_Background_direkt_an_einem_Button_Tag()
     {
         var verstoesse = new List<string>();
-        foreach (var pfad in GeprueftePfade())
+        foreach (var pfad in GeprueftePfade(Regel.D_KeinBackgroundAmButton))
         {
             var xaml = File.ReadAllText(pfad);
             foreach (Match tag in Regex.Matches(xaml, @"<Button\b[^>]*>", RegexOptions.Singleline))
