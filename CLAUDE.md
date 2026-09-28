@@ -414,6 +414,15 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
   `Nachgeprueft`; sonst `Ungeklaert` (Grund) — nie «nicht angelegt», nie automatisch wiederholt, weitere Massnahmen
   des Laufs werden nicht mehr angelegt, `WebGisSendenAblauf.Ausgang.Ungeklaert`. Bericht/Log/Liste unterscheiden
   bestätigt / nachgeprüft / ungeklärt. Tests `WebGisExportUseCaseTests.Audit.cs` (WG05-Block).
+- WG06 (28.09.2026): **Holen und Lesefehler.** `GeonisWebGisClient.PruefeStatus`: HTTP 401/403 bei Maske
+  (`getLayoutDataCombined`, auch `LeseMassnahmeAsync`), leerer Sanierungsmaske (`getEmptyData`) und Auswahllisten
+  (`getControlValues`) ist eine `WebGisSitzungException` wie bei der Suche; jeder andere Fehlstatus (5xx …) und eine
+  Maske ohne [Layout, Daten] bzw. kein JSON-Objekt ist eine `WebGisAntwortException` — nie mehr «nicht gefunden».
+  Vor dem Anlegen einer geholten Sanierungsakte prüft `PruefeVorUebernahmeAsync`, dass ihre GlobalID noch in der
+  frisch gelesenen Liste DESSELBEN Elternobjekts steht (umgehängt/gelöscht = Sperre mit Grund). Entscheid Pascal:
+  Unbekannter Status oder unbekanntes Verfahren (kein Treffer in der SewerStudio-Liste, auch ein Schlüssel ohne
+  Eintrag in der WebGIS-Liste) sperrt die GANZE Akte, keine Teilübernahme; übrige Auswahlfelder bleiben Hinweis.
+  Tests `GeonisWebGisClientRobustheitTests` (WG06-Block), `WebGisImportUseCaseTests`, `WebGisSanierungImportTests`.
 - OFFEN / NICHT ERLEDIGT: Abstimmung mit Trigonet (interne Schnittstelle, ein Schreibweg).
   Der reale Schreibweg ist bisher nur manuell im Browser und im Lauf vom 21.09. belegt
   (Haltung 525145-505377: Z4 + Sanierungsbedarf Saniert + Bemerkung; zwei Sanierungsmassnahmen

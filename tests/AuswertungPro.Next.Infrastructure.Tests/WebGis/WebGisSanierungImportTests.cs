@@ -51,12 +51,49 @@ public sealed class WebGisSanierungImportTests
     [Fact]
     public void Verfahren_muss_zur_art_passen()
     {
-        // Schlauchverfahren gehoert zur Renovierung, nicht zur Reparatur.
+        // Schlauchverfahren gehoert zur Renovierung, nicht zur Reparatur. Entscheid Pascal 28.09.2026 (WG06):
+        // Ein unbekanntes Verfahren sperrt die ganze Akte, statt sie ohne Verfahren anzulegen.
         var imp = WebGisSanierungImportRegel.Baue(WebGisObjektart.Haltung, Guid.NewGuid(), "H1", "M1",
             Massnahme(art: "Reparatur", verfahren: "Schlauchverfahren"));
 
         Assert.Null(Wert(imp, WebGisSanierungFeldkarte.AkteVerfahren));
-        Assert.Contains(imp.Hinweise, h => h.Contains("Schlauchverfahren"));
+        Assert.False(imp.Uebernehmbar);
+        Assert.Contains(imp.Sperren, s => s.Contains("Schlauchverfahren") && s.Contains("ganze Massnahme"));
+    }
+
+    [Fact]
+    public void Unbekannter_status_sperrt_die_ganze_akte()
+    {
+        var imp = WebGisSanierungImportRegel.Baue(WebGisObjektart.Haltung, Guid.NewGuid(), "H1", "M1", Massnahme(status: "Erfunden"));
+
+        Assert.False(imp.Uebernehmbar);
+        Assert.Contains(imp.Sperren, s => s.Contains("Status") && s.Contains("Erfunden") && s.Contains("keine Teilübernahme"));
+        var projekt = new Project();
+        Assert.False(WebGisSanierungImportRegel.LegeAn(projekt, imp));
+        Assert.Empty(projekt.Objektakten);
+    }
+
+    [Fact]
+    public void Statusschluessel_ohne_eintrag_in_der_webgis_liste_sperrt_die_ganze_akte()
+    {
+        var m = Massnahme();
+        m.Felder[WebGisSanierungFeldkarte.StatusRef] = "99"; // Liste fuehrt nur «1»
+        var imp = WebGisSanierungImportRegel.Baue(WebGisObjektart.Haltung, Guid.NewGuid(), "H1", "M1", m);
+
+        Assert.False(imp.Uebernehmbar);
+        Assert.Contains(imp.Sperren, s => s.Contains("«99»"));
+    }
+
+    [Fact]
+    public void Unbekannter_umfang_bleibt_ein_hinweis()
+    {
+        // Nur Status und Verfahren sperren (Entscheid 28.09.2026); die uebrigen Auswahlfelder bleiben leer mit Hinweis.
+        var m = Massnahme();
+        m.Kataloge[WebGisSanierungFeldkarte.UmfangRef] = new List<(string, string)> { ("1", "Erfundener Umfang") };
+        var imp = WebGisSanierungImportRegel.Baue(WebGisObjektart.Haltung, Guid.NewGuid(), "H1", "M1", m);
+
+        Assert.True(imp.Uebernehmbar);
+        Assert.Contains(imp.Hinweise, h => h.Contains("Erfundener Umfang"));
     }
 
     [Fact]

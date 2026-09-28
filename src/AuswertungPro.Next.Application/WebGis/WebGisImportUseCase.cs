@@ -217,6 +217,8 @@ public sealed class WebGisImportUseCase
         }
 
         var elternMitMassnahme = plan.Sanierungen.Where(s => s.Uebernehmbar).Select(s => (s.Objektart, s.ElternRecordId)).ToHashSet();
+        // Frisch gelesene Massnahmenliste je Elternobjekt — fuer die Pruefung «haengt die Massnahme noch hier?» (WG06).
+        var listeJetzt = new Dictionary<(WebGisObjektart, Guid), List<WebGisSanierungZeile>>();
         foreach (var pos in plan.Positionen)
         {
             if (pos.Sperren.Count > 0 || string.IsNullOrWhiteSpace(pos.GlobalId)) continue;
@@ -228,6 +230,7 @@ public sealed class WebGisImportUseCase
                 abweichung = jetzt is null || !string.Equals(jetzt.GlobalId, pos.GlobalId, StringComparison.OrdinalIgnoreCase)
                     ? "nicht mehr eindeutig lesbar"
                     : Abweichung(pos.Objektart, pos.GelesenerStand, jetzt.Felder);
+                if (jetzt is not null && abweichung is null) listeJetzt[(pos.Objektart, pos.RecordId)] = jetzt.Sanierungen;
             }
             catch (OperationCanceledException) { throw; }
             catch (WebGisSitzungException) { throw; }
@@ -240,6 +243,17 @@ public sealed class WebGisImportUseCase
         foreach (var imp in plan.Sanierungen)
         {
             if (!imp.Uebernehmbar) continue;
+            // WG06: Die Massnahme muss weiterhin in der Liste DESSELBEN Elternobjekts stehen. Wurde sie seit der
+            // Vorschau umgehaengt (oder geloescht), entsteht am alten Objekt keine Akte. Ohne frisch gelesene Liste
+            // (Elternobjekt gesperrt) legt die Uebernahme ohnehin nichts an.
+            if (listeJetzt.TryGetValue((imp.Objektart, imp.ElternRecordId), out var zeilen)
+                && !zeilen.Exists(z => string.Equals((z.GlobalId ?? string.Empty).Trim(), imp.WebGisGlobalId, StringComparison.OrdinalIgnoreCase)))
+            {
+                imp.Sperren.Add($"Sanierungsmassnahme steht nicht mehr in der Liste von {imp.ElternBezeichnung} (umgehängt oder "
+                                + "gelöscht) — keine Akte am bisherigen Objekt, bitte neu prüfen.");
+                gestoppt++;
+                continue;
+            }
             string? abweichung;
             try
             {

@@ -32,6 +32,9 @@ public sealed class WebGisImportUseCaseTests
         /// <summary>Liefert das Ergebnis erst nach einer Netzwartezeit auf einem anderen Thread, wie der echte Client.</summary>
         public bool Verzoegert { get; set; }
 
+        /// <summary>GlobalID der Massnahme in der Liste des Objekts; null = die Liste ist leer (umgehaengt/geloescht).</summary>
+        public string? ListeMassnahme { get; set; } = "M1";
+
         private async Task<T> Liefere<T>(Func<T> wert)
         {
             var eingabe = BeimLesen;
@@ -61,7 +64,8 @@ public sealed class WebGisImportUseCaseTests
             s.Felder[GeaendertAmRef] = AenderungsDatum;
             s.Felder[StatusRef] = "1";
             s.Kataloge[StatusRef] = new List<(string, string)> { ("1", "In Betrieb") };
-            s.Sanierungen.Add(new WebGisSanierungZeile { GlobalId = "M1", Art = "Renovierung", Status = "Ausgeführt", Verfahren = "Schlauchverfahren" });
+            if (ListeMassnahme is not null)
+                s.Sanierungen.Add(new WebGisSanierungZeile { GlobalId = ListeMassnahme, Art = "Renovierung", Status = "Ausgeführt", Verfahren = "Schlauchverfahren" });
             return s;
         }
 
@@ -381,5 +385,63 @@ public sealed class WebGisImportUseCaseTests
 
         Assert.Empty(p.Objektakten);
         Assert.True(ergebnis.Gestoppt >= 1);
+    }
+
+    // ---- WG06 (28.09.2026) ----
+
+    [Fact]
+    public async Task Umgehaengte_massnahme_bekommt_keine_akte_am_alten_objekt()
+    {
+        var (p, _) = Projekt();
+        var client = new FakeClient { Massnahme = gid => gid == "M1" ? Renovierung() : null };
+        var useCase = new WebGisImportUseCase(client);
+        var plan = await useCase.BauePlanAsync(p);
+        var imp = Assert.Single(plan.Sanierungen);
+
+        client.ListeMassnahme = null; // seit der Vorschau an ein anderes Objekt gehaengt
+        var ergebnis = await useCase.UebernimmGeprueftAsync(plan, p);
+
+        Assert.DoesNotContain(p.Objektakten, a => a.Art == WebGisSaniertKriterium.ArtSanierung);
+        Assert.Contains(imp.Sperren, s => s.Contains("nicht mehr in der Liste"));
+        Assert.True(ergebnis.Gestoppt >= 1);
+        Assert.Contains(WebGisImportBericht.NichtZugeordnet(plan), z => z.Neu.Contains("nicht mehr in der Liste"));
+    }
+
+    [Fact]
+    public async Task Massnahme_die_weiter_am_objekt_haengt_wird_angelegt()
+    {
+        var (p, _) = Projekt();
+        var client = new FakeClient { Massnahme = gid => gid == "M1" ? Renovierung() : null };
+        var useCase = new WebGisImportUseCase(client);
+        var plan = await useCase.BauePlanAsync(p);
+
+        await useCase.UebernimmGeprueftAsync(plan, p);
+
+        Assert.Single(p.Objektakten, a => a.Art == WebGisSaniertKriterium.ArtSanierung);
+    }
+
+    [Fact]
+    public async Task Unbekannter_status_sperrt_die_ganze_akte_mit_grund_im_bericht()
+    {
+        // Entscheid Pascal 28.09.2026: keine Teiluebernahme — die ganze Sanierungsakte bleibt weg.
+        var (p, _) = Projekt();
+        var client = new FakeClient
+        {
+            Massnahme = gid =>
+            {
+                if (gid != "M1") return null;
+                var m = Renovierung();
+                m.Kataloge[WebGisSanierungFeldkarte.StatusRef] = new List<(string, string)> { ("1", "Erfundener Status") };
+                return m;
+            },
+        };
+        var useCase = new WebGisImportUseCase(client);
+        var plan = await useCase.BauePlanAsync(p);
+        await useCase.UebernimmGeprueftAsync(plan, p);
+
+        var imp = Assert.Single(plan.Sanierungen);
+        Assert.False(imp.Uebernehmbar);
+        Assert.DoesNotContain(p.Objektakten, a => a.Art == WebGisSaniertKriterium.ArtSanierung);
+        Assert.Contains(WebGisImportBericht.NichtZugeordnet(plan), z => z.Neu.Contains("Erfundener Status") && z.Neu.Contains("ganze Massnahme"));
     }
 }

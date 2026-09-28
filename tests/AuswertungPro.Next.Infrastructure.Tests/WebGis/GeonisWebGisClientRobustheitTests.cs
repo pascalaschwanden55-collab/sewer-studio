@@ -488,4 +488,98 @@ public sealed class GeonisWebGisClientRobustheitTests
         Assert.NotNull(stand);
         Assert.Equal(Gid, stand!.GlobalId);
     }
+
+    // ---------------- WG06: 401/403 ist die Sitzung, 5xx ein Antwortfehler — nie «nicht gefunden» ----------------
+
+    private sealed class StatusHandler : HttpMessageHandler
+    {
+        private readonly Func<string, (HttpStatusCode Status, string Text)> _antwort;
+        public int SaveAufrufe { get; private set; }
+        public StatusHandler(Func<string, (HttpStatusCode, string)> antwort) => _antwort = antwort;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("saveData")) SaveAufrufe++;
+            var (status, text) = _antwort(url);
+            return Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(text, Encoding.UTF8, "application/json") });
+        }
+    }
+
+    private static GeonisWebGisClient Client(StatusHandler h) => new(new HttpClient(h), () => Zugang());
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    public async Task Layout_mit_401_oder_403_ist_ein_sitzungsfehler(HttpStatusCode status)
+    {
+        var h = new StatusHandler(url => url.Contains("getLayoutDataCombined") ? (status, "") : (HttpStatusCode.OK, "{}"));
+        await Assert.ThrowsAsync<WebGisSitzungException>(() => Client(h).LeseUeberGlobalIdAsync(WebGisObjektart.Haltung, Gid));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    public async Task Massnahme_lesen_mit_401_oder_403_ist_ein_sitzungsfehler(HttpStatusCode status)
+    {
+        var h = new StatusHandler(url => url.Contains("getLayoutDataCombined") ? (status, "") : (HttpStatusCode.OK, "{}"));
+        await Assert.ThrowsAsync<WebGisSitzungException>(() => Client(h).LeseMassnahmeAsync("M1"));
+    }
+
+    [Theory]
+    [InlineData("getEmptyData", HttpStatusCode.Unauthorized)]
+    [InlineData("getEmptyData", HttpStatusCode.Forbidden)]
+    [InlineData("getControlValues", HttpStatusCode.Unauthorized)]
+    [InlineData("getControlValues", HttpStatusCode.Forbidden)]
+    public async Task Katalog_mit_401_oder_403_ist_ein_sitzungsfehler(string endpunkt, HttpStatusCode status)
+    {
+        var h = new StatusHandler(url =>
+            url.Contains(endpunkt) ? (status, "")
+            : url.Contains("getEmptyData") ? (HttpStatusCode.OK, LeeresSanierungsobjektJson())
+            : (HttpStatusCode.OK, "{}"));
+        await Assert.ThrowsAsync<WebGisSitzungException>(() => Client(h).LeseSanierungKatalogAsync(WebGisObjektart.Haltung, Gid));
+    }
+
+    [Fact]
+    public async Task Katalogliste_der_objektmaske_mit_403_ist_ein_sitzungsfehler()
+    {
+        var h = new StatusHandler(url => url.Contains("getControlValues") ? (HttpStatusCode.Forbidden, "") : (HttpStatusCode.OK, "{}"));
+        await Assert.ThrowsAsync<WebGisSitzungException>(
+            () => Client(h).LeseKatalogListeAsync(WebGisObjektart.Schacht, "5eeb92cf-a23f-ed9c-9ed2-cd96fdcd7728", "1"));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.BadGateway)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    public async Task Serverfehler_5xx_ist_ein_antwortfehler_kein_sitzungsfehler(HttpStatusCode status)
+    {
+        var h = new StatusHandler(url => url.Contains("getLayoutDataCombined") || url.Contains("getEmptyData") || url.Contains("getControlValues")
+            ? (status, "Server Error") : (HttpStatusCode.OK, "{}"));
+        var c = Client(h);
+
+        var layout = await Assert.ThrowsAsync<WebGisAntwortException>(() => c.LeseUeberGlobalIdAsync(WebGisObjektart.Haltung, Gid));
+        Assert.Contains(((int)status).ToString(), layout.Message);
+        await Assert.ThrowsAsync<WebGisAntwortException>(() => c.LeseMassnahmeAsync("M1"));
+        await Assert.ThrowsAsync<WebGisAntwortException>(() => c.LeseSanierungKatalogAsync(WebGisObjektart.Haltung, Gid));
+        await Assert.ThrowsAsync<WebGisAntwortException>(
+            () => c.LeseKatalogListeAsync(WebGisObjektart.Schacht, "5eeb92cf-a23f-ed9c-9ed2-cd96fdcd7728", "1"));
+    }
+
+    [Fact]
+    public async Task Ungueltiges_layout_ist_ein_antwortfehler_nicht_nicht_gefunden()
+    {
+        var h = new StatusHandler(url => url.Contains("getLayoutDataCombined") ? (HttpStatusCode.OK, "{\"x\":1}") : (HttpStatusCode.OK, "{}"));
+        await Assert.ThrowsAsync<WebGisAntwortException>(() => Client(h).LeseUeberGlobalIdAsync(WebGisObjektart.Haltung, Gid));
+    }
+
+    [Fact]
+    public async Task Anlegen_mit_403_beim_leeren_objekt_sendet_nichts()
+    {
+        var h = new StatusHandler(url => url.Contains("getEmptyData") ? (HttpStatusCode.Forbidden, "") : (HttpStatusCode.OK, Gespeichert));
+        await Assert.ThrowsAsync<WebGisSitzungException>(
+            () => Client(h).ErstelleSanierungAsync(WebGisObjektart.Haltung, Gid,
+                new Dictionary<string, string> { [WebGisSanierungFeldkarte.ArtRef] = "4" }));
+        Assert.Equal(0, h.SaveAufrufe);
+    }
 }
