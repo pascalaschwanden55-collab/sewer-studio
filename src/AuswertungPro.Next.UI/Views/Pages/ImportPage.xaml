@@ -31,17 +31,17 @@
 
                     <Button Command="{Binding ExportImportSummaryCommand}"
                             Style="{StaticResource ToolbarButton}"
-                            ToolTip="Zusammenfassung des Projektstands als Import-Report speichern">
+                            ToolTip="Zusammenfassung des aktuellen Projektstands als neuen Bericht (CSV) speichern">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE9F9;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Import-Report" VerticalAlignment="Center"/>
+                            <TextBlock Text="Bericht erstellen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
             </ctrl:NovaPageHeader>
 
             <!-- Karte 1: Normalfall, ganzer Kanalfernseh-Export -->
-            <Border Style="{DynamicResource Card}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2"
+            <Border x:Name="AbschnittNormalfall" Style="{DynamicResource Card}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2"
                     CornerRadius="{DynamicResource RadiusXL}" Margin="0,0,0,12">
                 <StackPanel>
                     <TextBlock Text="Projekt importieren" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
@@ -82,7 +82,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Style="{DynamicResource Card}" CornerRadius="{DynamicResource RadiusXL}">
+                <Border x:Name="AbschnittEinzelneQuellen" Grid.Column="0" Style="{DynamicResource Card}" CornerRadius="{DynamicResource RadiusXL}">
                     <StackPanel>
                         <TextBlock Text="Einzelne Quellen" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextBrush}"/>
@@ -148,7 +148,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Column="2" Style="{DynamicResource Card}" CornerRadius="{DynamicResource RadiusXL}">
+                <Border x:Name="AbschnittNacharbeiten" Grid.Column="2" Style="{DynamicResource Card}" CornerRadius="{DynamicResource RadiusXL}">
                     <StackPanel>
                         <TextBlock Text="Nacharbeiten" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextBrush}"/>
@@ -214,7 +214,7 @@
                         Content="Katalog neu laden"
                         Style="{StaticResource ToolbarButton}"
                         ToolTip="Liest den VSA-Codekatalog erneut von der eingestellten Quelle."/>
-                <TextBlock Text="{Binding CatalogStatus}"
+                <TextBlock Text="{Binding CatalogStatusKurz}" ToolTip="{Binding CatalogStatus}"
                            VerticalAlignment="Center" FontSize="{DynamicResource TextS}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap" Margin="0,0,8,0"/>
@@ -266,7 +266,8 @@
                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                          IsReadOnly="True"
                          MinHeight="120" MaxHeight="480"/>
-                <Expander Header="Details" Margin="0,8,0,0">
+                <Expander Header="Technische Details" IsExpanded="False" Margin="0,8,0,0"
+                          ToolTip="Nur bei einem Fehler wichtig: vollständige technische Meldung fürs Nachfragen beim Support.">
                     <TextBox Text="{Binding DetailsText}" AcceptsReturn="True" TextWrapping="Wrap"
                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                              MinHeight="160" MaxHeight="480"/>

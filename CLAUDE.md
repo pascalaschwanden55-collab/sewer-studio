@@ -347,6 +347,69 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   setzen/lesen den richtigen Schalter, sofortiges Speichern, Häkchen sind unabhängig
   voneinander). `HandbuchInhalt` (Übersicht, Haltungen, Schächte, Einstellungen) verweist auf
   den neuen Ort.
+- **Aufgabe 9 — Export- und Import-Seite ordnen.** `ExportPage.xaml` gliedert sich jetzt in
+  genau vier betitelte Abschnitte, in dieser Reihenfolge: «Excel-Listen», «Dateien verteilen»,
+  «Kataster (XTF)», «WebGIS» — der `NovaPageHeader`-Untertitel nennt alle vier wörtlich. Jeder
+  Abschnitt ist ein `Border` mit `x:Name="Abschnitt…"` (Konvention für den neuen Wächter
+  `ExportImportAbschnittsKnopfTests`, siehe unten); alle bisherigen Bindungen/Befehle blieben
+  wörtlich gleich, insbesondere der komplette WebGIS-Teil (`WebGis.*`, geschützt laut Global
+  Constraints, geprüft von `ExportWebGisBereichTests`). Die Überschrift «Zielordner &
+  Verzeichnisbaum» steht seither NUR NOCH direkt über dem echten Verzeichnisbaum
+  (`ItemsControl ItemsSource="{Binding DistributionTargets}"`) im Abschnitt «Dateien
+  verteilen» — vorher stand sie über der ganzen restlichen Seite (Kataster/WebGIS eingeschlossen)
+  und war damit irreführend. Der Gemeinsame-Zielordner-Bereich für Excel ist in den Abschnitt
+  «Excel-Listen» gewandert (vorher stand er, vom Excel-Export-Knopf getrennt, im
+  Verzeichnisbaum-Bereich).
+  **Die zwei XTF-Wege sprechen weiter Klartext**, jetzt zusätzlich mit einem sichtbaren
+  Klartext-Satz, wann man welchen nimmt: «Bestehende Katasterdaten aktualisieren» nennt «Nimm
+  diesen Weg, wenn oben schon eine Importkopie genannt ist…», «XTF erstellen» zeigt den bereits
+  vorhandenen, bisher nirgends gebundenen `ExportPageViewModel.XtfNeuHinweis`
+  (`XtfExportAuswahl.NeuHinweis`, reine Regel — unverändert, nur erstmals in der XAML
+  angeschlossen). Die vier Fachbegriffe FME, `.ili`, DSS und SIA405/Zusatzmodell stehen nicht
+  mehr als eigener Fliesstext, sondern nur noch in einem eingeklappten `Expander
+  Header="Technische Details" IsExpanded="False"` im «XTF erstellen»-Weg. Alle bisher unstilisierten
+  Knöpfe (beide XTF-Wege, «Paket für GEONIS erstellen», «Ordner öffnen», die vier
+  WebGIS-Aktionsknöpfe) tragen jetzt `Style="{StaticResource ToolbarButton}"` statt gar keinen
+  Stil. **Knopfregel je Abschnitt:** «Excel-Listen» behält seinen einen `ToolbarButtonAccent`
+  («Export Haltungen.xlsx»); die übrigen drei Abschnitte haben bewusst KEINEN Akzentknopf (die
+  «empfohlen»-Marke an den XTF-Wegen übernimmt dort die visuelle Führung) — das erfüllt
+  «höchstens ein Akzentknopf je Abschnitt» ohne einen fragilen datengebundenen Stilwechsel
+  zwischen zwei gleichrangigen Alternativwegen zu bauen.
+  `ImportPage.xaml` bekam dieselbe `x:Name="Abschnitt…"`-Konvention auf seinen drei bereits
+  bestehenden Karten (Normalfall, Einzelne Quellen, Nacharbeiten — diese Gliederung selbst
+  stammt aus einer früheren, plan-externen Änderung und war schon vorher weitgehend so
+  aufgeräumt). Die drei Berichtsknöpfe im Seitenkopf heissen jetzt einheitlich «Letzter
+  Bericht», «Alle Berichte», «Bericht erstellen» (vorher «Import-Report» — der Knopf ruft
+  `ExportImportSummaryCommand`/`IImportSummaryExporter` auf und erzeugt einen NEUEN CSV-Bericht
+  über den aktuellen Projektstand; das ist bewusst ein anderer Bericht als «Letzter
+  Bericht»/«Alle Berichte», die den TXT-Laufbericht eines Imports öffnen — nur der Name war
+  uneinheitlich, nicht die Funktion). Die Katalogpfad-Zeile zeigt jetzt
+  `ImportPageViewModel.CatalogStatusKurz` («VSA-Katalog geladen (2019)» bzw. «… nicht
+  gefunden»/«… nicht konfiguriert»/«… Problem beim Laden»); die bisherige vollständige Fassung
+  `CatalogStatus` (mit Pfad) bleibt unverändert als Quelle der Wahrheit erhalten und steht jetzt
+  im `ToolTip` der Zeile. Der bestehende Zusammenfassungs-Bereich trägt den umbenannten,
+  weiterhin standardmässig zugeklappten `Expander Header="Technische Details"` (vorher
+  «Details», ohne erkennbaren Grund, warum er wichtig ist).
+  **Stacktrace-Fix:** `ImportRunWorkflowController`s äusserer `catch (Exception ex)`-Block
+  zeigte bisher `ex.Message` roh in der sichtbaren `SummaryText`-Zusammenfassung. Er ruft jetzt
+  `UserError.DescribeAndReport(ex, "Import <Label>")` (`Application/Common/UserError.cs`,
+  bereits vorhanden): liefert eine verständliche deutsche Meldung für die Anzeige UND loggt die
+  volle Ausnahme zusätzlich über `BestEffort` (denselben Weg, den `App.xaml.cs` schon ans
+  Programmlog anschliesst) — nichts geht verloren, nur die Oberfläche wird lesbar. Der volle
+  `ex.ToString()` bleibt unverändert in `DetailsText` und ist damit nur noch im zugeklappten
+  «Technische Details»-Bereich sichtbar, nie mehr in der Zusammenfassung.
+  **Neuer Wächter `ExportImportAbschnittsKnopfTests`** definiert «Abschnitt» für diese Regel
+  konkret: ein Container-Element mit `x:Name`, das mit dem Präfix `"Abschnitt"` beginnt; darin
+  darf höchstens ein `<Button Style="{...Resource ToolbarButtonAccent}">` stehen, egal wie
+  tief verschachtelt (Unter-Karten wie die zwei XTF-Wege zählen zum selben Abschnitt). Zwei
+  Sabotageproben (zwei bzw. ein Akzentknopf im selben Abschnitt) belegen, dass der Wächter
+  wirklich zählt statt zufällig grün zu sein. Weitere Tests:
+  `ImportRunWorkflowControllerTests.RunAsync_unerwarteter_fehler_zeigt_verstaendliche_meldung_
+  und_loggt_die_ganze_ausnahme` (verständliche Meldung sichtbar, `IOException`/Originaltext nur
+  in `DetailsText`, zusätzlich im Programmlog). `DesignAuditNovaSeitenkoepfeTests` wurde für den
+  neuen ExportPage-Untertitel angepasst (bewusste Änderung, siehe Aufgabenbeschreibung — nennt
+  jetzt alle vier Abschnittsnamen statt der alten Kurzfassung «Excel, Verteilung, Kataster»).
+  `HandbuchInhalt` (Abschnitte «Export»/«Import») beschreibt die neue Gliederung.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

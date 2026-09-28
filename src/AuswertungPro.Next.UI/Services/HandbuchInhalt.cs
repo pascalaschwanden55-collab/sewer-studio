@@ -77,20 +77,27 @@ public static class HandbuchInhalt
             "Allgemein -> Frühere Ansichten."),
 
         new("Import", "Import",
-            "Holt Inspektionsdaten ins Projekt. Oben stehen die normalen Wege: PDF-Protokolle " +
-            "(einzeln oder ganze Ordner), XTF/DSS-Katasterdateien, WinCan-, IBAK- und KINS-Projekte " +
-            "sowie SchachtPro-QR-Codes aus Fotos. Darunter liegen Sonderfälle für einzelne Dateien. " +
-            "Ein Import zeigt vor der Übernahme immer eine Vorschau; «Nur fehlende Felder auffüllen» " +
-            "ergänzt leere Angaben, ohne vorhandene zu überschreiben. Nach jedem Import steht ein " +
-            "Bericht bereit, der zeigt, was übernommen wurde und was nicht zugeordnet werden konnte."),
+            "Holt Inspektionsdaten ins Projekt. Oben steht der Normalfall «Ordner wählen und " +
+            "importieren» für den ganzen Kanalfernseh-Export (WinCan, IKAS, KINS werden automatisch " +
+            "erkannt). Darunter liegen zwei Karten für Sonderfälle: «Einzelne Quellen» (PDF-" +
+            "Protokolle, XTF/M150/MDB, WinCan-, IBAK-, KINS-Projekt, SchachtPro-Archiv oder -QR-Code " +
+            "einzeln einlesen) und «Nacharbeiten» am bestehenden Projekt (Protokolle aus einem Ordner " +
+            "zuordnen, Fotos zuordnen, eigene Protokolle neu erzeugen, Projekt portabel machen). Ein " +
+            "Import zeigt vor der Übernahme immer eine Vorschau; «Nur leere Felder füllen» ergänzt " +
+            "leere Angaben, ohne vorhandene zu überschreiben. Oben rechts: «Letzter Bericht», «Alle " +
+            "Berichte» und «Bericht erstellen» (Projektstand als neuer Bericht). Unten der " +
+            "VSA-Katalogstatus mit «Katalog neu laden» sowie Zusammenfassung und aufklappbare " +
+            "«Technische Details» nach jedem Lauf."),
 
         new("Export", "Export",
-            "Bündelt Excel-Export, Verteilung und den Kataster-/WebGIS-Austausch. Excel exportiert " +
-            "Haltungen und Schächte nach einer festen Vorlage. Die Verteilung sortiert exportierte " +
-            "Protokolle und Medien in Ordner je Haltung, Schacht oder Prüfstatus. Für den Kataster " +
-            "stehen «Bestehende Katasterdaten aktualisieren» (empfohlen, wenn eine Importkopie " +
-            "vorliegt) und «XTF erstellen» als vollständiger Neu-Export zur Wahl, dazu die " +
-            "WebGIS-Übertragung mit Anmelden, Prüfen/Schreiben und Holen."),
+            "Vier Bereiche: «Excel-Listen» exportiert Haltungen und Schächte nach einer festen " +
+            "Vorlage. «Dateien verteilen» sortiert Protokolle, Fotos und Filme in Ordner je Haltung, " +
+            "Schacht oder Prüfstatus - der Verzeichnisbaum darunter zeigt und bearbeitet die " +
+            "Zielordner. «Kataster (XTF)» bietet zwei Wege: «Bestehende Katasterdaten " +
+            "aktualisieren» (empfohlen, wenn oben eine Importkopie genannt ist) und «XTF erstellen» " +
+            "als vollständiger Neu-Export, dazu «Paket für GEONIS erstellen» für beides zusammen als " +
+            "ZIP; technische Einzelheiten stehen eingeklappt unter «Technische Details». «WebGIS» " +
+            "überträgt direkt ins WebOffice mit Anmelden, Prüfen/Schreiben und Holen."),
 
         new("Medienkonflikte", "Medienkonflikte",
             "Zeigt Videos und PDFs, die sich beim Import keiner Haltung eindeutig zuordnen liessen - " +

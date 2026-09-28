@@ -329,10 +329,16 @@ public static class ImportRunWorkflowController
         }
         catch (Exception ex)
         {
+            // Aufgabe 9 (28.09.2026): Sichtbar bleibt eine verstaendliche Meldung
+            // (UserError.DescribeAndReport uebersetzt UND loggt die volle Ausnahme ueber
+            // BestEffort). Der technische Volltext (ex.ToString()) geht weiterhin in
+            // DetailsText - dort steht er nur im zugeklappten "Technische Details"-Bereich
+            // der Importseite, nie in der sichtbaren Zusammenfassung.
+            var verstaendlich = UserError.DescribeAndReport(ex, $"Import {request.Label}");
             actions.SetSummaryText(projectCommitted
                 ? actions.GetSummaryText()
                     + "\n  Hinweis: Import wurde übernommen, aber der Abschluss ist fehlgeschlagen."
-                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht übernommen: {ex.Message}");
+                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht übernommen: {verstaendlich}");
             actions.SetDetailsText(ex.ToString());
             actions.SetStatus(projectCommitted
                 ? $"{request.Label} importiert mit Abschlussfehler"

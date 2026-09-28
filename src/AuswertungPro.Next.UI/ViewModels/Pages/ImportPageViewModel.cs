@@ -43,6 +43,9 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
     [ObservableProperty] private bool _canCancel;
     [ObservableProperty] private bool _showPreviewFirst;
     [ObservableProperty] private string _catalogStatus = "";
+    /// <summary>Kurzer Anzeigetext (28.09.2026, Aufgabe 9); der volle Pfad steht im ToolTip
+    /// (<see cref="CatalogStatus"/> bleibt dafür unverändert die vollständige Fassung).</summary>
+    [ObservableProperty] private string _catalogStatusKurz = "";
     [ObservableProperty] private bool _isCatalogOk;
     [ObservableProperty] private bool _fillMissingOnly;
 
@@ -434,7 +437,24 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
     private void ApplyCatalogStatus(Services.ImportCatalogStatus status)
     {
         CatalogStatus = status.Text;
+        CatalogStatusKurz = KurzerKatalogStatus(status);
         IsCatalogOk = status.IsOk;
+    }
+
+    /// <summary>
+    /// Kurzfassung für die sichtbare Statuszeile (28.09.2026, Aufgabe 9: „Katalogpfad-Zeile
+    /// ersetzen durch kurzen Status"). <see cref="CatalogStatus"/> bleibt die vollständige
+    /// Fassung mit Pfad und steht dafür im ToolTip der Zeile.
+    /// </summary>
+    private static string KurzerKatalogStatus(Services.ImportCatalogStatus status)
+    {
+        if (status.IsOk)
+            return "VSA-Katalog geladen (2019)";
+        if (status.Text.Contains("nicht konfiguriert", StringComparison.Ordinal))
+            return "VSA-Katalog nicht konfiguriert";
+        if (status.Text.Contains("nicht gefunden", StringComparison.Ordinal))
+            return "VSA-Katalog nicht gefunden";
+        return "VSA-Katalog: Problem beim Laden";
     }
 
     private void ReloadCatalog()

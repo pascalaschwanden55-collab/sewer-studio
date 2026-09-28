@@ -248,6 +248,60 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Contains("Projektdaten wurden nicht übernommen", state.Summary);
     }
 
+    /// <summary>
+    /// Aufgabe 9 (28.09.2026, Optikanalyse): Ein unerwarteter Fehler ausserhalb des
+    /// Import-Delegates (hier: <c>DeepCopyProject</c> schlaegt fehl) darf keinen Stacktrace mehr
+    /// in der sichtbaren Zusammenfassung zeigen. Die Uebersetzung kommt aus
+    /// <see cref="UserError"/>; der volle technische Text bleibt in <c>DetailsText</c>
+    /// erhalten (dort steht er nur im zugeklappten "Technische Details"-Bereich der Seite) UND
+    /// wird zusaetzlich ueber <see cref="BestEffort"/> geloggt, damit nichts verloren geht.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_unerwarteter_fehler_zeigt_verstaendliche_meldung_und_loggt_die_ganze_ausnahme()
+    {
+        var geloggt = new List<string>();
+        BestEffort.ConfigureDefaultErrorSink(geloggt.Add);
+        try
+        {
+            var project = new Project { Name = "Live" };
+            var calls = new List<string>();
+            var state = new UiState();
+            var request = new ImportRunWorkflowRequest<string>(
+                "XTF",
+                "source.xtf",
+                (_, _, _) => Result<ImportStats>.Success(
+                    new ImportStats(0, 0, 0, 0, 0, Array.Empty<string>())));
+
+            await ImportRunWorkflowController.RunAsync(
+                request,
+                Actions(project, state, calls,
+                    deepCopyProject: _ => throw new IOException("Testplatte offline")),
+                CancellationToken.None);
+
+            // Sichtbar: verstaendliche deutsche Meldung statt Ausnahmetyp/-text.
+            // (UserError.cs formuliert diesen Satz noch ohne echte Umlaute - das ist eine
+            // vorbestehende Eigenheit dieser gemeinsamen Klasse, nicht Teil dieser Aufgabe.)
+            Assert.Contains(
+                "Eine Datei oder ein Ordner ist momentan nicht verfuegbar",
+                state.Summary,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain("IOException", state.Summary, StringComparison.Ordinal);
+            Assert.DoesNotContain("Testplatte offline", state.Summary, StringComparison.Ordinal);
+
+            // Technisch: der volle Text bleibt fuer "Technische Details" erhalten...
+            Assert.Contains("IOException", state.Details, StringComparison.Ordinal);
+            Assert.Contains("Testplatte offline", state.Details, StringComparison.Ordinal);
+
+            // ...und geht zusaetzlich ins Programmlog, statt nur in der Oberflaeche zu stehen.
+            Assert.Contains(geloggt, m => m.Contains("Testplatte offline", StringComparison.Ordinal)
+                && m.Contains("Import XTF", StringComparison.Ordinal));
+        }
+        finally
+        {
+            BestEffort.ConfigureDefaultErrorSink(null);
+        }
+    }
+
     [Fact]
     public async Task RunAsync_project_switch_during_import_discards_result_before_post_processing()
     {
