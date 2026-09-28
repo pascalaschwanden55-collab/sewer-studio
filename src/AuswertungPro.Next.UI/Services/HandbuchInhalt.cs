@@ -61,9 +61,12 @@ public static class HandbuchInhalt
         new("Schaechte", "Schächte",
             "Tabelle aller Schacht-Inspektionspunkte, gleich aufgebaut wie Haltungen: Spaltenwahl, " +
             "Statusspalten, Suche, Rechtsklick-Kontextmenü (Details, Sanierungsmassnahmen, Protokoll-" +
-            "PDF, Gehe zu Ordner) und «Weitere Aktionen» mit den Untermenüs Daten abgleichen (Vom " +
-            "WebGIS holen, GeoShop, QGIS, Stammdaten aus PDFs ergänzen, Protokoll neu einlesen, " +
-            "Feldnamen aufräumen, Strassennamen ergänzen), Reihenfolge und Ansicht. Neu, Löschen, " +
+            "PDF, Gehe zu Ordner) und «Weitere Aktionen» mit denselben fünf Untermenüs wie bei den " +
+            "Haltungen: Daten abgleichen (Vom WebGIS holen, GeoShop, QGIS, Stammdaten aus PDFs " +
+            "ergänzen, Protokoll neu einlesen, Feldnamen aufräumen, Strassennamen ergänzen), " +
+            "Bearbeiten (Sanierungsmassnahmen), Reihenfolge, Ansicht sowie Ausgabe (Protokoll-PDF, " +
+            "Gehe zu Ordner) - Sanierungsmassnahmen, Protokoll-PDF und Gehe zu Ordner stehen bewusst " +
+            "sowohl im Rechtsklick-Kontextmenü als auch unter «Weitere Aktionen». Neu, Löschen, " +
             "Verschieben und die Detailansicht funktionieren wie bei den Haltungen. Auch hier kann " +
             "statt der Tabelle die aufklappbare Listenansicht gewählt werden."),
 

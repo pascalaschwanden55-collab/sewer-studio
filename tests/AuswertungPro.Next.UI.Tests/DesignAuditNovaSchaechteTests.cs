@@ -25,12 +25,13 @@ public sealed class DesignAuditNovaSchaechteTests
     }
 
     /// <summary>
-    /// Optikanalyse 28.09.2026, Aufgabe 7: "Weitere Aktionen" ist in Untermenues gegliedert
-    /// (Daten abgleichen, Reihenfolge, Ansicht - dieselben Titel wie bei den Haltungen, siehe
-    /// <see cref="WeitereAktionenUntermenueTests"/>). Die frueheren Zeilenmenue-Doppelungen
-    /// "Sanierungsmassnahmen...", "Protokoll (PDF)..." und "Gehe zu Ordner" sind aus "Weitere
-    /// Aktionen" entfernt - sie bleiben ueber das Zeilenmenue (SchachtZeilenMenue, ausserhalb
-    /// dieses Dropdown-Blocks) erreichbar.
+    /// Optikanalyse 28.09.2026, Aufgabe 7 (Fix-Runde 1, Controller-Entscheid "Auffindbarkeit
+    /// schlaegt Entdoppelung"): "Weitere Aktionen" ist in denselben fuenf Untermenues gegliedert
+    /// wie bei den Haltungen (Daten abgleichen, Bearbeiten, Reihenfolge, Ansicht, Ausgabe - siehe
+    /// <see cref="WeitereAktionenUntermenueTests"/>). "Sanierungsmassnahmen...", "Protokoll
+    /// (PDF)..." und "Gehe zu Ordner" stehen bewusst SOWOHL im Zeilenmenue (SchachtZeilenMenue)
+    /// ALS AUCH hier unter "Bearbeiten"/"Ausgabe" - derselbe Handler, zwei Wege zur selben
+    /// Aktion, damit sie auch ohne Rechtsklick auffindbar ist.
     /// </summary>
     [Fact]
     public void Gruppen_im_Menue_trennen_nur_mit_Separator_ohne_deaktivierte_Kopfzeilen()
@@ -41,18 +42,22 @@ public sealed class DesignAuditNovaSchaechteTests
         // nur Leerraum - kein weiterer Menuepunkt dazwischen.
         const string kommentar = "(?:\\s*<!--[\\s\\S]*?-->)?\\s*";
         Assert.Matches(new Regex("<MenuItem Header=\"Daten abgleichen\""), xaml);
+        Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Bearbeiten\""), xaml);
         Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Reihenfolge\""), xaml);
         Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Ansicht\""), xaml);
+        Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Ausgabe\""), xaml);
         Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Ansicht anpassen\""), xaml);
 
+        // Dieselben drei Eintraege stehen bewusst zusaetzlich im Dropdown-Block (Auffindbarkeit) ...
         var dropdownMenu = ExtractWeitereAktionenMenu(xaml);
-        Assert.DoesNotContain("Header=\"Sanierungsmassnahmen...\"", dropdownMenu);
-        Assert.DoesNotContain("Header=\"Protokoll (PDF)...\"", dropdownMenu);
-        Assert.DoesNotContain("Header=\"Gehe zu Ordner\"", dropdownMenu);
-        // Die drei Eintraege bleiben im Zeilenmenue (ausserhalb des Dropdown-Blocks) erhalten.
-        Assert.Contains("Header=\"Sanierungsmassnahmen...\"", xaml);
-        Assert.Contains("Header=\"Protokoll (PDF)...\"", xaml);
-        Assert.Contains("Header=\"Gehe zu Ordner\"", xaml);
+        Assert.Contains("Header=\"Sanierungsmassnahmen...\" Click=\"SanierungsmassnahmenMenu_Click\"", dropdownMenu);
+        Assert.Contains("Header=\"Protokoll (PDF)...\" Click=\"ProtokollMenu_Click\"", dropdownMenu);
+        Assert.Contains("Header=\"Gehe zu Ordner\" Click=\"OpenContainingFolderMenu_Click\"", dropdownMenu);
+        // ... und unveraendert im eigenen Zeilenmenue (SchachtZeilenMenue).
+        var zeilenMenue = ExtractZeilenMenue(xaml);
+        Assert.Contains("Header=\"Sanierungsmassnahmen...\" Click=\"SanierungsmassnahmenMenu_Click\"", zeilenMenue);
+        Assert.Contains("Header=\"Protokoll (PDF)...\" Click=\"ProtokollMenu_Click\"", zeilenMenue);
+        Assert.Contains("Header=\"Gehe zu Ordner\" Click=\"OpenContainingFolderMenu_Click\"", zeilenMenue);
     }
 
     private static string ExtractWeitereAktionenMenu(string xaml)
@@ -63,6 +68,15 @@ public sealed class DesignAuditNovaSchaechteTests
         var contextEnd = xaml.IndexOf("</Button.ContextMenu>", contextStart, System.StringComparison.Ordinal);
         Assert.True(contextStart >= 0 && contextEnd > contextStart, "Button.ContextMenu von WeitereAktionenDropdown nicht gefunden");
         return xaml[contextStart..contextEnd];
+    }
+
+    private static string ExtractZeilenMenue(string xaml)
+    {
+        var start = xaml.IndexOf("<ContextMenu x:Key=\"SchachtZeilenMenue\">", System.StringComparison.Ordinal);
+        Assert.True(start >= 0, "SchachtZeilenMenue nicht gefunden");
+        var end = xaml.IndexOf("</ContextMenu>", start, System.StringComparison.Ordinal);
+        Assert.True(end > start, "Ende von SchachtZeilenMenue nicht gefunden");
+        return xaml[start..end];
     }
 
     [Fact]

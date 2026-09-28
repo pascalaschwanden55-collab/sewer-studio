@@ -190,8 +190,37 @@ public sealed class DesignAuditNovaHaltungenTests
         Assert.Contains("PreviewKeyDown=\"ReihenfolgePopup_PreviewKeyDown\"", xaml);
 
         var code = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.NovaSucheUndReihenfolge.cs"));
-        Assert.Contains("PopupFocusHelper.FokussiereErstesFeld(MoveToPositionBox)", code);
+        Assert.Contains("PopupFocusHelper.FokussiereErstesFeld(_reihenfolgeFokusZiel ?? MoveToPositionBox)", code);
         Assert.Contains("PopupFocusHelper.SchliesseBeiEscape(e.Key, ReihenfolgePopup, WeitereAktionenDropdown)", code);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (28.09.2026, Aufgabe 7, Controller-Auflage "beide Tags"): "Auf Position…" und
+    /// "Gehe zu Zeile…" oeffnen dasselbe Popup, aber mit unterschiedlichem Zielfeld — der Click-
+    /// Handler liest dafuer das Tag des Absenders ("position"/"zeile") und merkt sich das
+    /// passende Textfeld fuer den anschliessenden Popup.Opened-Aufruf. Diese Erweiterung ersetzt
+    /// die vorherige rein statische Pruefung (immer MoveToPositionBox) — beide Tags werden jetzt
+    /// einzeln nachgewiesen, keine Aufweichung.
+    /// </summary>
+    [Fact]
+    public void Reihenfolge_Menuepunkte_tragen_ihr_Zielfeld_als_Tag_und_der_Handler_liest_es()
+    {
+        var xaml = Xaml("Views", "Pages", "DataPage.xaml");
+        Assert.Matches(new Regex(
+            "<MenuItem Header=\"Auf Position…\" Tag=\"position\" Click=\"ReihenfolgeMenu_Click\""),
+            xaml);
+        Assert.Matches(new Regex(
+            "<MenuItem Header=\"Gehe zu Zeile…\" Tag=\"zeile\" Click=\"ReihenfolgeMenu_Click\""),
+            xaml);
+
+        var code = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.NovaSucheUndReihenfolge.cs"));
+        var handler = Regex.Match(code, @"private void ReihenfolgeMenu_Click\([\s\S]*?\n    \}");
+        Assert.True(handler.Success, "ReihenfolgeMenu_Click nicht gefunden");
+        // Beide Zielfelder muessen im Handler vorkommen, gebunden an die Tag-Abfrage "zeile".
+        Assert.Contains("Tag as string == \"zeile\"", handler.Value);
+        Assert.Contains("GoToRowBox", handler.Value);
+        Assert.Contains("MoveToPositionBox", handler.Value);
+        Assert.Contains("_reihenfolgeFokusZiel =", handler.Value);
     }
 
     /// <summary>
