@@ -69,7 +69,7 @@ internal sealed class SchachtProtocolRefreshController
         var projectFolder = _actions.GetProjectFolder();
         if (string.IsNullOrWhiteSpace(projectFolder))
         {
-            _dialogs.Info("Kein Projekt geoeffnet.", DialogTitle);
+            _dialogs.Info("Kein Projekt geöffnet.", DialogTitle);
             return SchachtProtocolRefreshOutcome.MissingProject;
         }
 
@@ -119,7 +119,7 @@ internal sealed class SchachtProtocolRefreshController
             && !_dialogs.ConfirmWarn(
                 $"Die verknuepfte Datei fehlt. Im Ordner dieses Schachts wurde stattdessen "
                 + $"\"{Path.GetFileName(match.PdfPfad)}\" gefunden, sie gehoert laut Protokoll aber "
-                + $"zu Schacht {result.Schachtnummer!.Trim()}. Trotzdem uebernehmen?",
+                + $"zu Schacht {result.Schachtnummer!.Trim()}. Trotzdem übernehmen?",
                 DialogTitle))
         {
             return SchachtProtocolRefreshOutcome.ForeignShaftNumber;
@@ -145,10 +145,10 @@ internal sealed class SchachtProtocolRefreshController
         if (!projectContext.Project.SchaechteData.Contains(selected))
         {
             const string removed =
-                "Aktualisierung abgebrochen: Der ausgewaehlte Schacht wurde inzwischen entfernt.";
+                "Aktualisierung abgebrochen: Der ausgewählte Schacht wurde inzwischen entfernt.";
             _actions.SetLastResult(removed);
             _dialogs.Warn(
-                removed + " Es wurden keine Protokolldaten uebernommen.",
+                removed + " Es wurden keine Protokolldaten übernommen.",
                 DialogTitle);
             return SchachtProtocolRefreshOutcome.TargetRemoved;
         }
@@ -171,7 +171,7 @@ internal sealed class SchachtProtocolRefreshController
                 out var saveError))
         {
             var notSaved =
-                $"Schacht {result.Schachtnummer} uebernommen, aber nicht gespeichert " +
+                $"Schacht {result.Schachtnummer} übernommen, aber nicht gespeichert " +
                 $"({result.Schaeden.Count} Beobachtungen).";
             _actions.SetLastResult(notSaved);
             _dialogs.Warn(

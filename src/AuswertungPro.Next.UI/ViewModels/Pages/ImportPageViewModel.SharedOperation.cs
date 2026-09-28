@@ -23,7 +23,7 @@ public sealed partial class ImportPageViewModel
         if (IsImportInProgress
             || !_shell.TryAcquireProjectOperation(_sharedImportState))
         {
-            _shell.SetStatus("Es laeuft bereits ein Import oder ein anderer Projektvorgang.");
+            _shell.SetStatus("Es läuft bereits ein Import oder ein anderer Projektvorgang.");
             return;
         }
 
@@ -32,7 +32,7 @@ public sealed partial class ImportPageViewModel
         {
             if (!_sharedImportState.TryAcquire())
             {
-                _shell.SetStatus("Es laeuft bereits ein Import.");
+                _shell.SetStatus("Es läuft bereits ein Import.");
                 return;
             }
 
@@ -125,7 +125,7 @@ public sealed partial class ImportPageViewModel
         public bool CanSaveProjectFromShell => !IsActive;
 
         public string ProjectSaveBlockedMessage
-            => "Manuelles Speichern ist waehrend eines Imports gesperrt. " +
+            => "Manuelles Speichern ist während eines Imports gesperrt. " +
                "Bitte den Import zuerst abschliessen oder abbrechen.";
 
         public bool AllowsInternalProjectSave => IsActive;
@@ -133,7 +133,7 @@ public sealed partial class ImportPageViewModel
         public bool CanLeaveShellContext => !IsActive;
 
         public string LeaveBlockedMessage
-            => "Navigation, Projektwechsel und Schliessen sind waehrend eines Imports gesperrt. " +
+            => "Navigation, Projektwechsel und Schliessen sind während eines Imports gesperrt. " +
                "Bitte den Import zuerst abschliessen oder abbrechen.";
 
         public event EventHandler? OperationAvailabilityChanged;

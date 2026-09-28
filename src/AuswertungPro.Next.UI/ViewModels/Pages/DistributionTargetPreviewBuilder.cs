@@ -38,7 +38,7 @@ internal static class DistributionTargetPreviewBuilder
         ArgumentNullException.ThrowIfNull(request.SampleContext);
 
         var wurzel = string.IsNullOrWhiteSpace(request.Root)
-            ? "<Ziel-Wurzel>"
+            ? "<Hauptordner>"
             : request.Root;
 
         if (request.ShowFilePattern)

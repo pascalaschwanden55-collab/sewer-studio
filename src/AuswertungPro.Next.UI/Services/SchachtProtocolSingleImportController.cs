@@ -66,7 +66,7 @@ internal sealed class SchachtProtocolSingleImportController
         if (!result.IstSchachtprotokoll && !nurVerknuepfen)
         {
             var warning = string.IsNullOrWhiteSpace(result.Lesehinweis)
-                ? "Das gewaehlte PDF ist kein Schachtprotokoll."
+                ? "Das gewählte PDF ist kein Schachtprotokoll."
                 : result.Lesehinweis;
             _dialogs.Warn(warning, DialogTitle);
             return;
@@ -140,10 +140,10 @@ internal sealed class SchachtProtocolSingleImportController
         if (targetRemoved)
         {
             var removed =
-                $"Protokoll nicht uebernommen: Schacht {result.Schachtnummer} wurde inzwischen entfernt.";
+                $"Protokoll nicht übernommen: Schacht {result.Schachtnummer} wurde inzwischen entfernt.";
             _actions.SetLastResult(removed);
             _dialogs.Warn(
-                removed + " Der geloeschte Datensatz wurde nicht wieder eingefuegt.",
+                removed + " Der gelöschte Datensatz wurde nicht wieder eingefuegt.",
                 DialogTitle);
             return;
         }
@@ -177,7 +177,7 @@ internal sealed class SchachtProtocolSingleImportController
         {
             var notSaved =
                 nurVerknuepfen ? $"PDF verknüpft, aber nicht gespeichert: Schacht {result.Schachtnummer}."
-                : $"Protokoll uebernommen, aber nicht gespeichert: Schacht {result.Schachtnummer} " +
+                : $"Protokoll übernommen, aber nicht gespeichert: Schacht {result.Schachtnummer} " +
                   $"({result.Schaeden.Count} Beobachtungen).";
             _actions.SetLastResult(notSaved);
             _dialogs.Warn(
@@ -227,7 +227,7 @@ internal sealed class SchachtProtocolSingleImportController
 
         var choice = _dialogs.ConfirmCancel(
             $"Schacht {result.Schachtnummer} ist bereits vorhanden.\n\n" +
-            "Ja = Ueberschreiben\nNein = Als neuen Schacht anlegen\nAbbrechen = Nichts tun",
+            "Ja = Überschreiben\nNein = Als neuen Schacht anlegen\nAbbrechen = Nichts tun",
             DialogTitle);
 
         return choice switch

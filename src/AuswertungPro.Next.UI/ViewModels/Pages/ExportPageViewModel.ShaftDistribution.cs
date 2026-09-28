@@ -20,8 +20,8 @@ public sealed partial class ExportPageViewModel
     private async Task DistributeShaftsAsync(DistributionVariant variant)
     {
         var mode = _dialogs.ConfirmCancel(
-            "PDF-Auswahl:\nJa = einzelne Schacht-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
-            "Schaechte verteilen");
+            "PDF-Auswahl:\nJa = einzelne Schacht-PDFs auswählen\nNein = ganzen PDF-Ordner verwenden",
+            "Schächte verteilen");
         if (mode == DialogConfirm.Cancel)
             return;
 
@@ -29,13 +29,13 @@ public sealed partial class ExportPageViewModel
         string[] selectedPdfFiles = Array.Empty<string>();
         if (mode == DialogConfirm.Yes)
         {
-            selectedPdfFiles = _dialogs.OpenFiles("Schacht-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
+            selectedPdfFiles = _dialogs.OpenFiles("Schacht-PDFs auswählen", "PDF (*.pdf)|*.pdf");
             if (selectedPdfFiles.Length == 0)
                 return;
         }
         else
         {
-            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Schachtprotokollen waehlen");
+            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Schachtprotokollen wählen");
             if (string.IsNullOrWhiteSpace(pdfFolder))
                 return;
         }
@@ -147,7 +147,7 @@ public sealed partial class ExportPageViewModel
                 if (saved)
                     fileTransaction.MarkProjectSaved();
                 else
-                    summary += "Aenderungen uebernommen, aber nicht gespeichert. Bitte erneut speichern."
+                    summary += "Änderungen übernommen, aber nicht gespeichert. Bitte erneut speichern."
                                + Environment.NewLine;
             }
 
@@ -157,6 +157,10 @@ public sealed partial class ExportPageViewModel
             _shell.SetStatus(saved
                 ? "Schachtprotokolle verteilt"
                 : "Schachtprotokolle verteilt, aber nicht gespeichert");
+            MeldeVerteilung(
+                "Schächte",
+                LastResult,
+                results.Count(static r => !r.Success) + (saved ? 0 : 1));
 
             if (selectedPdfFiles.Length > 0)
                 StorePdfFiles(selectedPdfFiles, projectContext);
@@ -165,7 +169,7 @@ public sealed partial class ExportPageViewModel
         {
             var message = UserError.DescribeAndReport(ex, "Schachtprotokolle verteilen");
             LastResult = "Schacht-Verteilung fehlgeschlagen: " + message;
-            _dialogs.Warn(LastResult, "Schaechte verteilen");
+            _dialogs.Warn(LastResult, "Schächte verteilen");
         }
         finally
         {
@@ -175,7 +179,7 @@ public sealed partial class ExportPageViewModel
                 if (cleanup is { StagingCleanupSucceeded: false, StagingCleanupError: { } error })
                 {
                     LastResult += Environment.NewLine
-                                  + "Datei-Arbeitsordner konnte nicht vollstaendig aufgeraeumt werden: "
+                                  + "Datei-Arbeitsordner konnte nicht vollständig aufgeräumt werden: "
                                   + error.Message;
                 }
             }

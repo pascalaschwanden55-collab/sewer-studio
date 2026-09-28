@@ -46,6 +46,9 @@ internal sealed class ImportReportNavigationController
             OpenLastReport);
     }
 
+    /// <summary>Merkt einen Bericht für «Letzter Bericht», ohne Toast (der Aufrufer meldet selbst).</summary>
+    public void MerkeBericht(string? path) => _lastReportPath = path;
+
     public void OpenLastReport()
     {
         if (!string.IsNullOrWhiteSpace(_lastReportPath) && File.Exists(_lastReportPath))
@@ -67,7 +70,7 @@ internal sealed class ImportReportNavigationController
         }
 
         _dialogs.Info(
-            "Bericht-Ordner nicht vorhanden.\nBitte zuerst einen Import durchfuehren.",
+            "Bericht-Ordner nicht vorhanden.\nBitte zuerst einen Import durchführen.",
             "Import-Berichte");
     }
 }

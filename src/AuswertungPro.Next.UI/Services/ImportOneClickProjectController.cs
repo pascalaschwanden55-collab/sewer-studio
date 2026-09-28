@@ -72,7 +72,7 @@ internal sealed class ImportOneClickProjectController
         }
 
         var sourceFolder = _dialogs.SelectFolder(
-            "Quellordner der Kanalfernsehdaten waehlen (WinCan-, IKAS- oder KINS-Projektordner)",
+            "Quellordner der Kanalfernsehdaten wählen (WinCan-, IKAS- oder KINS-Projektordner)",
             null);
         if (string.IsNullOrWhiteSpace(sourceFolder))
             return;
@@ -150,7 +150,7 @@ internal sealed class ImportOneClickProjectController
                 actions.SetProgress(string.Empty);
                 var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
                 _dialogs.Info(
-                    "Import abgebrochen - Projektdaten wurden nicht uebernommen." + rollback,
+                    "Import abgebrochen - Projektdaten wurden nicht übernommen." + rollback,
                     "Import Kanalfernseh-Projekt");
                 return;
             }
@@ -161,7 +161,7 @@ internal sealed class ImportOneClickProjectController
                 var userMessage = UserError.DescribeAndReport(ex, "Kanalfernseh-Projekt importieren");
                 var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
                 _dialogs.Error(
-                    $"Import fehlgeschlagen - Projektdaten wurden nicht uebernommen:\n{userMessage}{rollback}",
+                    $"Import fehlgeschlagen - Projektdaten wurden nicht übernommen:\n{userMessage}{rollback}",
                     "Import Kanalfernseh-Projekt");
                 return;
             }
@@ -171,7 +171,7 @@ internal sealed class ImportOneClickProjectController
                 var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
                 _dialogs.Info(
                     $"Format nicht eindeutig erkannt ({result.Format}).\n{hint}\n\n"
-                    + "Nutze ggf. die manuellen Import-Knoepfe (WinCan/XTF/PDF/IBAK/KINS)."
+                    + "Nutze ggf. die manuellen Import-Knöpfe (WinCan/XTF/PDF/IBAK/KINS)."
                     + rollback,
                     "Import Kanalfernseh-Projekt");
                 return;
@@ -185,7 +185,7 @@ internal sealed class ImportOneClickProjectController
                 var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
                 _dialogs.Error(
                     "Waehrend des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
-                    "Das Importergebnis wurde aus Sicherheitsgruenden nicht uebernommen." + rollback,
+                    "Das Importergebnis wurde aus Sicherheitsgründen nicht übernommen." + rollback,
                     "Import Kanalfernseh-Projekt");
                 return;
             }
@@ -202,9 +202,9 @@ internal sealed class ImportOneClickProjectController
             {
                 var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
                 _dialogs.Error(
-                    "Das Projekt wurde waehrend des Imports bearbeitet. " +
-                    "Das Importergebnis wurde aus Sicherheitsgruenden nicht uebernommen; " +
-                    "die zwischenzeitlichen Aenderungen bleiben erhalten." + rollback,
+                    "Das Projekt wurde während des Imports bearbeitet. " +
+                    "Das Importergebnis wurde aus Sicherheitsgründen nicht übernommen; " +
+                    "die zwischenzeitlichen Änderungen bleiben erhalten." + rollback,
                     "Import Kanalfernseh-Projekt");
                 return;
             }
@@ -220,7 +220,7 @@ internal sealed class ImportOneClickProjectController
             if (actions.CancellationToken.IsCancellationRequested)
             {
                 var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
-                _dialogs.Info("Import abgebrochen - Projektdaten wurden nicht uebernommen." + rollback,
+                _dialogs.Info("Import abgebrochen - Projektdaten wurden nicht übernommen." + rollback,
                     "Import Kanalfernseh-Projekt");
                 return;
             }
@@ -248,7 +248,7 @@ internal sealed class ImportOneClickProjectController
 
             var summary = saved
                 ? $"Import abgeschlossen ({result.Format}):"
-                : $"Import uebernommen, aber Speichern fehlgeschlagen ({result.Format}):";
+                : $"Import übernommen, aber Speichern fehlgeschlagen ({result.Format}):";
             summary += $"\n  {result.Found} Haltungen ({result.Created} neu, {result.Updated} aktualisiert)"
                 + $"\n  {result.Errors} Fehler, {result.Conflicts} Feld-Konflikte"
                 + $"\n  {OneClickImportVollstaendigkeit.Beschreibe(result)}"
@@ -282,9 +282,9 @@ internal sealed class ImportOneClickProjectController
             var userMessage = UserError.DescribeAndReport(ex, "Kanalfernseh-Projekt abschliessen");
             _dialogs.Error(
                 projectCommitted
-                    ? "Der Import wurde uebernommen, aber der Abschluss ist fehlgeschlagen. " +
+                    ? "Der Import wurde übernommen, aber der Abschluss ist fehlgeschlagen. " +
                       "Bitte das Projekt manuell speichern.\n" + userMessage
-                    : "Import fehlgeschlagen - Projektdaten wurden nicht uebernommen.\n" + userMessage,
+                    : "Import fehlgeschlagen - Projektdaten wurden nicht übernommen.\n" + userMessage,
                 "Import Kanalfernseh-Projekt");
         }
         finally
@@ -294,7 +294,7 @@ internal sealed class ImportOneClickProjectController
             if (cleanup is { StagingCleanupSucceeded: false, StagingCleanupError: { } error })
             {
                 actions.AppendDetails(
-                    "\n\nDatei-Arbeitsordner konnte nicht vollstaendig aufgeraeumt werden: " +
+                    "\n\nDatei-Arbeitsordner konnte nicht vollständig aufgeräumt werden: " +
                     error.Message);
             }
             actions.SetPhase?.Invoke(string.Empty);
@@ -361,8 +361,8 @@ internal sealed class ImportOneClickProjectController
 
         var trotzdem = _dialogs.ConfirmWarn(
             urteil.VollerText() + NeueZeile + NeueZeile
-            + "Trotzdem uebernehmen?" + NeueZeile
-            + "(Empfohlen: abbrechen und die Quellen pruefen.)",
+            + "Trotzdem übernehmen?" + NeueZeile
+            + "(Empfohlen: abbrechen und die Quellen prüfen.)",
             "Import Kanalfernseh-Projekt",
             defaultNo: true);
 
@@ -386,25 +386,25 @@ internal sealed class ImportOneClickProjectController
         {
             var result = _fileLedger.RollbackNewFiles(before);
             if (result.RolledBack && result.DeletedFiles == 0 && result.KeptFiles == 0)
-                return "\n\nEs waren keine neuen Dateien im Projektordner zurueckzunehmen.";
+                return "\n\nEs waren keine neuen Dateien im Projektordner zurückzunehmen.";
 
             if (result.RolledBack)
             {
                 var rest = result.KeptFiles > 0
-                    ? $" {result.KeptFiles} Datei(en) blieben liegen und sollten geprueft werden."
+                    ? $" {result.KeptFiles} Datei(en) blieben liegen und sollten geprüft werden."
                     : string.Empty;
-                return "\n\nDie waehrend des Laufs angelegten Dateien wurden zurueckgenommen "
+                return "\n\nDie während des Laufs angelegten Dateien wurden zurückgenommen "
                        + $"({result.DeletedFiles} entfernt).{rest}";
             }
 
-            return "\n\nAchtung: Die angelegten Dateien konnten nicht sicher zurueckgenommen werden "
+            return "\n\nAchtung: Die angelegten Dateien konnten nicht sicher zurückgenommen werden "
                    + "und liegen weiterhin im Projektordner. Grund: "
                    + string.Join(" ", result.Messages.Take(2));
         }
         catch (Exception ex)
         {
             var userMessage = UserError.DescribeAndReport(ex, "Importdateien zuruecknehmen");
-            return $"\n\nAchtung: Die angelegten Dateien konnten nicht zurueckgenommen werden: {userMessage}";
+            return $"\n\nAchtung: Die angelegten Dateien konnten nicht zurückgenommen werden: {userMessage}";
         }
     }
 
@@ -426,10 +426,10 @@ internal sealed class ImportOneClickProjectController
         {
             var userMessage = UserError.DescribeAndReport(
                 ex,
-                "Projektinhalt fuer Kanalfernseh-Import pruefen");
+                "Projektinhalt für Kanalfernseh-Import prüfen");
             _dialogs.Error(
-                "Der aktuelle Projektstand konnte nicht sicher geprueft werden. " +
-                $"Das Importergebnis wurde nicht uebernommen.\n{userMessage}",
+                "Der aktuelle Projektstand konnte nicht sicher geprüft werden. " +
+                $"Das Importergebnis wurde nicht übernommen.\n{userMessage}",
                 "Import Kanalfernseh-Projekt");
             return false;
         }

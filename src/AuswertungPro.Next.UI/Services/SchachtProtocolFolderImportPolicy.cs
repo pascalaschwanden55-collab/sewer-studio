@@ -79,18 +79,18 @@ internal static class SchachtProtocolFolderImportPolicy
         {
             $"Gefundene PDF-Dateien: {sourcePdfCount}",
             $"Eingelesene Schachtprotokolle: {preparedPdfCount}",
-            $"Schaechte neu angelegt: {created}",
-            $"Schaechte aktualisiert: {updated}"
+            $"Schächte neu angelegt: {created}",
+            $"Schächte aktualisiert: {updated}"
         };
 
         if (skippedOlderPdfCandidates > 0)
         {
             lines.Add(
-                $"Aeltere PDF-Kandidaten uebersprungen: {skippedOlderPdfCandidates} " +
+                $"Ältere PDF-Kandidaten übersprungen: {skippedOlderPdfCandidates} " +
                 "(sie bleiben erhalten; Stammdaten stammen aus dem neuesten Protokoll)");
         }
         if (skippedDirectoryCount > 0)
-            lines.Add($"Nicht lesbare Unterordner uebersprungen: {skippedDirectoryCount}");
+            lines.Add($"Nicht lesbare Unterordner übersprungen: {skippedDirectoryCount}");
         if (failures.Count > 0)
         {
             lines.Add($"Fehler: {failures.Count}");

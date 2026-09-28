@@ -108,21 +108,21 @@ internal sealed class ImportManualWorkflowController
     internal Task ImportWinCanAsync(ImportManualWorkflowContext context)
         => ImportFolderAsync(
             "WinCan",
-            "WinCan-Projektordner waehlen",
+            "WinCan-Projektordner wählen",
             _winCanImport.ImportWinCanExport,
             context);
 
     internal Task ImportIbakAsync(ImportManualWorkflowContext context)
         => ImportFolderAsync(
             "IBAK",
-            "IBAK-Projektordner waehlen",
+            "IBAK-Projektordner wählen",
             _ibakImport.ImportIbakExport,
             context);
 
     internal Task ImportKinsAsync(ImportManualWorkflowContext context)
         => ImportFolderAsync(
             "KINS",
-            "KINS-Projektordner waehlen",
+            "KINS-Projektordner wählen",
             _kinsImport.ImportKinsExport,
             context);
 

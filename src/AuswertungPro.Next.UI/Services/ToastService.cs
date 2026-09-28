@@ -21,6 +21,8 @@ public sealed class ToastService : IToastService
         => Post(message, ToastSeverity.Success, aktionText, aktion);
     public void Info(string message) => Post(message, ToastSeverity.Info, null, null);
     public void Warning(string message) => Post(message, ToastSeverity.Warning, null, null);
+    public void Warning(string message, string aktionText, Action aktion)
+        => Post(message, ToastSeverity.Warning, aktionText, aktion);
     public void Error(string message) => Post(message, ToastSeverity.Error, null, null);
 
     private void Post(string message, ToastSeverity severity, string? aktionText, Action? aktion)

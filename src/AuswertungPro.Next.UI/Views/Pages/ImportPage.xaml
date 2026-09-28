@@ -164,7 +164,7 @@
                           IsChecked="{Binding ShowPreviewFirst}"
                           Foreground="{DynamicResource TextBrush}"
                           Margin="16,0,0,0"
-                          ToolTip="Führt einen Dry-Run durch und zeigt die erwarteten Änderungen, bevor der eigentliche Import startet."/>
+                          ToolTip="Macht zuerst einen Probelauf und zeigt die erwarteten Änderungen, bevor der eigentliche Import startet."/>
             </StackPanel>
 
             <DockPanel Margin="0,8,0,0">

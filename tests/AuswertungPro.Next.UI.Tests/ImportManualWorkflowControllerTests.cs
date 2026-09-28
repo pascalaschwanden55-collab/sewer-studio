@@ -110,7 +110,7 @@ public sealed partial class ImportManualWorkflowControllerTests
         await controller.ImportPdfAsync(CreateContext(state, new Project()));
 
         Assert.Single(pdf.Calls);
-        Assert.Contains("PDF Import fehlgeschlagen - Projektdaten wurden nicht uebernommen", state.Summary);
+        Assert.Contains("PDF Import fehlgeschlagen - Projektdaten wurden nicht übernommen", state.Summary);
         Assert.Empty(storedFiles.Calls);
         Assert.Equal(0, state.SaveCount);
         Assert.Null(state.ReplacedProject);
@@ -164,9 +164,9 @@ public sealed partial class ImportManualWorkflowControllerTests
     }
 
     [Theory]
-    [InlineData("WinCan", "WinCan-Projektordner waehlen")]
-    [InlineData("IBAK", "IBAK-Projektordner waehlen")]
-    [InlineData("KINS", "KINS-Projektordner waehlen")]
+    [InlineData("WinCan", "WinCan-Projektordner wählen")]
+    [InlineData("IBAK", "IBAK-Projektordner wählen")]
+    [InlineData("KINS", "KINS-Projektordner wählen")]
     public async Task Folder_imports_share_the_same_post_processing(
         string importKind,
         string expectedDialogTitle)

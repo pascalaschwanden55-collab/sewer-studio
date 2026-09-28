@@ -93,7 +93,7 @@ public sealed partial class ExportPageViewModel
         _shell.SetStatus("Haltungs-Export gesperrt: Kostendaten nicht lesbar");
         _dialogs.Error(
             $"Der Haltungs-Export wurde abgebrochen, weil die Kostendaten nicht lesbar sind:\n{loadError}\n\n" +
-            "Bitte costs.json pruefen und den Export danach erneut starten.",
+            "Bitte costs.json prüfen und den Export danach erneut starten.",
             "Haltungs-Export");
         return false;
     }
@@ -108,7 +108,7 @@ public sealed partial class ExportPageViewModel
                 return;
 
             var outPath = ResolveConfiguredExcelPath("Schaechte")
-                ?? _dialogs.SaveFile("Export (Schaechte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
+                ?? _dialogs.SaveFile("Export (Schächte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
             if (outPath is null)
                 return;
 
@@ -165,7 +165,7 @@ public sealed partial class ExportPageViewModel
         _shell.SetStatus("Export fehlgeschlagen");
         _dialogs.Error(
             $"Der {exportName}-Export wurde abgebrochen, weil die Excel-Vorlage fehlt:\n{templatePath}\n\n" +
-            "Bitte die SewerStudio-Installation pruefen und den Export danach erneut starten.",
+            "Bitte die SewerStudio-Installation prüfen und den Export danach erneut starten.",
             $"{exportName}-Export");
         return false;
     }

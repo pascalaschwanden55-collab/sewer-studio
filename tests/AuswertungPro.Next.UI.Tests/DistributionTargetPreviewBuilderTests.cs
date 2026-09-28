@@ -28,7 +28,7 @@ public sealed class DistributionTargetPreviewBuilderTests
             PreviewVariant: DistributionVariant.Normal,
             SampleContext: HaltungContext));
 
-        Assert.Equal(@"<Ziel-Wurzel>\Haltungen_20260719.xlsx", result.Vorschau);
+        Assert.Equal(@"<Hauptordner>\Haltungen_20260719.xlsx", result.Vorschau);
         Assert.Empty(result.TreeNodes);
     }
 

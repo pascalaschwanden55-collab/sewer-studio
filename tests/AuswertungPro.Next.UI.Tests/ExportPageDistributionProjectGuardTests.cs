@@ -44,6 +44,22 @@ public sealed class ExportPageDistributionProjectGuardTests
     }
 
     [Fact]
+    public async Task Jede_Schachtverteilung_hinterlaesst_einen_Bericht_im_Projekt()
+    {
+        using var harness = new Harness(new ShaftDistributionFake { Run = _ => EmptyResult() });
+
+        await harness.ViewModel.DistributeShaftsNormalCommand.ExecuteAsync(null);
+
+        var bericht = harness.ViewModel.LetzterVerteilbericht;
+        Assert.True(bericht is not null, harness.ViewModel.LastResult);
+        Assert.True(File.Exists(bericht), bericht);
+        Assert.Equal(
+            Path.Combine(harness.ProjectRoot, ProjectStructure.ImportReports),
+            Path.GetDirectoryName(bericht));
+        Assert.Contains(bericht!, harness.ViewModel.LastResult, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Laufende_verteilung_sperrt_seiten_und_projektwechsel()
     {
         using var entered = new ManualResetEventSlim();
@@ -316,7 +332,8 @@ public sealed class ExportPageDistributionProjectGuardTests
                 services.HaltungCadastreIndexes,
                 shaftDistribution: shaftDistribution,
                 importFileStaging: useProjectStaging ? services.ImportFileStaging : null,
-                importTransactionJournal: useProjectStaging ? services.ImportTransactionJournal : null);
+                importTransactionJournal: useProjectStaging ? services.ImportTransactionJournal : null,
+                verteilberichte: services.Verteilberichte);
         }
 
         internal string ProjectRoot { get; }

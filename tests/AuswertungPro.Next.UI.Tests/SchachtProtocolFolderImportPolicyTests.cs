@@ -98,8 +98,8 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
                 Environment.NewLine,
                 "Gefundene PDF-Dateien: 12",
                 "Eingelesene Schachtprotokolle: 9",
-                "Schaechte neu angelegt: 2",
-                "Schaechte aktualisiert: 7"),
+                "Schächte neu angelegt: 2",
+                "Schächte aktualisiert: 7"),
             summary);
     }
 
@@ -124,10 +124,10 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
                 Environment.NewLine,
                 "Gefundene PDF-Dateien: 15",
                 "Eingelesene Schachtprotokolle: 11",
-                "Schaechte neu angelegt: 3",
-                "Schaechte aktualisiert: 8",
-                "Aeltere PDF-Kandidaten uebersprungen: 4 (sie bleiben erhalten; Stammdaten stammen aus dem neuesten Protokoll)",
-                "Nicht lesbare Unterordner uebersprungen: 2",
+                "Schächte neu angelegt: 3",
+                "Schächte aktualisiert: 8",
+                "Ältere PDF-Kandidaten übersprungen: 4 (sie bleiben erhalten; Stammdaten stammen aus dem neuesten Protokoll)",
+                "Nicht lesbare Unterordner übersprungen: 2",
                 "Fehler: 10",
                 "- Fehler 1",
                 "- Fehler 2",
@@ -181,10 +181,10 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
 
         Assert.Equal(
             expectsOlderPdfLine,
-            summary.Contains("Aeltere PDF-Kandidaten uebersprungen:", StringComparison.Ordinal));
+            summary.Contains("Ältere PDF-Kandidaten übersprungen:", StringComparison.Ordinal));
         Assert.Equal(
             expectsSkippedLine,
-            summary.Contains("Nicht lesbare Unterordner uebersprungen:", StringComparison.Ordinal));
+            summary.Contains("Nicht lesbare Unterordner übersprungen:", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -295,7 +295,7 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
             skippedDirectoryCount: 0,
             failures: []);
 
-        Assert.Contains("Aeltere PDF-Kandidaten uebersprungen: 1", summary, StringComparison.Ordinal);
+        Assert.Contains("Ältere PDF-Kandidaten übersprungen: 1", summary, StringComparison.Ordinal);
         Assert.Contains("bleiben erhalten", summary, StringComparison.Ordinal);
         Assert.DoesNotContain("Protokolle archiviert", summary, StringComparison.Ordinal);
     }

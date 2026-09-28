@@ -90,7 +90,7 @@ public static class ImportRunWorkflowController
         actions.SetProgressPercent(0);
         actions.SetPhase(request.DryRun
             ? $"{request.Label}: Vorschau wird berechnet..."
-            : $"{request.Label}: Import laeuft...");
+            : $"{request.Label}: Import läuft...");
         actions.SetProgressText("");
         actions.SetSummaryText($"{request.Label}: gestartet{(request.DryRun ? " (Vorschau)" : "")}");
         actions.SetDetailsText("");
@@ -157,10 +157,10 @@ public static class ImportRunWorkflowController
             if (!result.Ok || result.Value is null)
             {
                 actions.SetSummaryText(
-                    $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht uebernommen: " +
+                    $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht übernommen: " +
                     result.ErrorMessage);
                 actions.SetStatus(
-                    $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht uebernommen");
+                    $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht übernommen");
                 return;
             }
 
@@ -175,7 +175,7 @@ public static class ImportRunWorkflowController
             {
                 actions.SetSummaryText(actions.GetSummaryText() + "\n  " + urteil.Begruendung);
                 actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), urteil.VollerText()));
-                runLog.AddEntry(request.Label, "Plausibilitaet", ImportLogStatus.Error,
+                runLog.AddEntry(request.Label, "Plausibilität", ImportLogStatus.Error,
                     detail: urteil.VollerText());
             }
 
@@ -219,14 +219,14 @@ public static class ImportRunWorkflowController
                 catch (Exception ex)
                 {
                     postImportIncomplete = true;
-                    var detail = $"Nacharbeiten unvollstaendig: {ex.Message}";
+                    var detail = $"Nacharbeiten unvollständig: {ex.Message}";
                     runLog.AddEntry(
                         request.Label,
                         "PostImport",
                         ImportLogStatus.Error,
                         detail: detail);
                     actions.SetSummaryText(actions.GetSummaryText()
-                        + "\n  Hinweis: Nacharbeiten unvollstaendig - Importbericht pruefen.");
+                        + "\n  Hinweis: Nacharbeiten unvollständig - Importbericht prüfen.");
                     actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), detail));
                 }
             }
@@ -252,13 +252,13 @@ public static class ImportRunWorkflowController
             {
                 actions.SetSummaryText(AppendParagraph(
                     actions.GetSummaryText(),
-                    "WARNUNG: Die importierten Primaerschäden konnten nicht vollständig bereinigt werden."));
+                    "WARNUNG: Die importierten Primärschäden konnten nicht vollständig bereinigt werden."));
                 actions.SetDetailsText(AppendParagraph(
                     actions.GetDetailsText(),
                     deduplicationWarning));
                 runLog.AddEntry(
                     request.Label,
-                    "Primaerschäden bereinigen",
+                    "Primärschäden bereinigen",
                     ImportLogStatus.Error,
                     detail: deduplicationWarning);
             }
@@ -272,15 +272,15 @@ public static class ImportRunWorkflowController
             if (plausibilityWarnings.Count > 0)
             {
                 actions.SetSummaryText(actions.GetSummaryText()
-                    + $"\n  Plausibilitaet: {plausibilityWarnings.Count} Warnung(en) - bitte pruefen.");
+                    + $"\n  Plausibilität: {plausibilityWarnings.Count} Warnung(en) - bitte prüfen.");
                 actions.SetDetailsText(actions.GetDetailsText()
-                    + "\n\n--- Plausibilitaets-Warnungen ---\n"
+                    + "\n\n--- Plausibilitäts-Warnungen ---\n"
                     + string.Join("\n", plausibilityWarnings.Take(80)));
                 foreach (var warning in plausibilityWarnings.Take(200))
                 {
                     runLog.AddEntry(
                         request.Label,
-                        "Plausibilitaet",
+                        "Plausibilität",
                         ImportLogStatus.Info,
                         detail: warning);
                 }
@@ -323,20 +323,20 @@ public static class ImportRunWorkflowController
         {
             runLog.WasCancelled = true;
             actions.SetSummaryText(
-                $"{request.Label} Import abgebrochen - Projektdaten wurden nicht uebernommen.");
+                $"{request.Label} Import abgebrochen - Projektdaten wurden nicht übernommen.");
             actions.SetStatus(
-                $"{request.Label} Import abgebrochen - Projektdaten wurden nicht uebernommen");
+                $"{request.Label} Import abgebrochen - Projektdaten wurden nicht übernommen");
         }
         catch (Exception ex)
         {
             actions.SetSummaryText(projectCommitted
                 ? actions.GetSummaryText()
-                    + "\n  Hinweis: Import wurde uebernommen, aber der Abschluss ist fehlgeschlagen."
-                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht uebernommen: {ex.Message}");
+                    + "\n  Hinweis: Import wurde übernommen, aber der Abschluss ist fehlgeschlagen."
+                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht übernommen: {ex.Message}");
             actions.SetDetailsText(ex.ToString());
             actions.SetStatus(projectCommitted
                 ? $"{request.Label} importiert mit Abschlussfehler"
-                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht uebernommen");
+                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht übernommen");
         }
         finally
         {
@@ -345,8 +345,8 @@ public static class ImportRunWorkflowController
             if (!cleanup.StagingCleanupSucceeded && cleanup.StagingCleanupError is { } ex)
             {
                 var detail = projectCommitted
-                    ? $"Datei-Arbeitsordner konnte nicht vollstaendig aufgeraeumt werden: {ex.Message}"
-                    : $"Vorbereitete Importdateien konnten nicht vollstaendig zurueckgenommen werden: {ex.Message}";
+                    ? $"Datei-Arbeitsordner konnte nicht vollständig aufgeräumt werden: {ex.Message}"
+                    : $"Vorbereitete Importdateien konnten nicht vollständig zurückgenommen werden: {ex.Message}";
                 runLog.AddEntry(
                     request.Label,
                     "Datei-Staging",
@@ -393,7 +393,7 @@ public static class ImportRunWorkflowController
                 label,
                 "Speichern",
                 ImportLogStatus.Error,
-                detail: "Import wurde uebernommen, konnte aber nicht gespeichert werden.");
+                detail: "Import wurde übernommen, konnte aber nicht gespeichert werden.");
         }
         catch (Exception ex)
         {
@@ -401,7 +401,7 @@ public static class ImportRunWorkflowController
                 label,
                 "Speichern",
                 ImportLogStatus.Error,
-                detail: $"Import wurde uebernommen, Speichern schlug fehl: {ex.Message}");
+                detail: $"Import wurde übernommen, Speichern schlug fehl: {ex.Message}");
         }
 
         return false;
@@ -412,7 +412,7 @@ public static class ImportRunWorkflowController
         ImportRunWorkflowActions actions)
     {
         actions.SetSummaryText(actions.GetSummaryText()
-            + "\n  Hinweis: Import wurde uebernommen, aber nicht gespeichert.");
+            + "\n  Hinweis: Import wurde übernommen, aber nicht gespeichert.");
         actions.SetStatus($"{label} importiert, aber nicht gespeichert");
         actions.SetProgressPercent(99);
     }
@@ -441,12 +441,12 @@ public static class ImportRunWorkflowController
                 {
                     const string editDetail =
                         "Waehrend des Imports wurde das Projekt bearbeitet. Das Importergebnis wurde " +
-                        "nicht uebernommen, damit die manuellen Aenderungen erhalten bleiben — " +
+                        "nicht übernommen, damit die manuellen Änderungen erhalten bleiben — " +
                         "bitte erneut importieren.";
                     runLog.AddEntry(label, "Projektinhalt", ImportLogStatus.Error, detail: editDetail);
                     actions.SetSummaryText(
-                        $"{label} Import gestoppt: Projekt wurde waehrend des Imports bearbeitet. " +
-                        "Das Importergebnis wurde nicht uebernommen.");
+                        $"{label} Import gestoppt: Projekt wurde während des Imports bearbeitet. " +
+                        "Das Importergebnis wurde nicht übernommen.");
                     actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), editDetail));
                     actions.SetStatus($"{label} Import gestoppt - Projekt wurde bearbeitet");
                     return false;
@@ -457,7 +457,7 @@ public static class ImportRunWorkflowController
 
         const string detail =
             "Waehrend des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
-            "Das Importergebnis wurde aus Sicherheitsgruenden nicht uebernommen.";
+            "Das Importergebnis wurde aus Sicherheitsgründen nicht übernommen.";
         runLog.AddEntry(
             label,
             "Projektidentitaet",
@@ -465,7 +465,7 @@ public static class ImportRunWorkflowController
             detail: detail);
         actions.SetSummaryText(
             $"{label} Import gestoppt: Projekt wurde gewechselt. " +
-            "Das Importergebnis wurde nicht uebernommen.");
+            "Das Importergebnis wurde nicht übernommen.");
         actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), detail));
         actions.SetStatus($"{label} Import gestoppt - Projekt wurde gewechselt");
         return false;
@@ -498,20 +498,20 @@ public static class ImportRunWorkflowController
 
         if (ImportPlausibilitaetsTor.ZustimmungGiltNoch(request.ZugestimmterFingerabdruck, urteil))
         {
-            runLog.AddEntry(request.Label, "Plausibilitaet", ImportLogStatus.Conflict,
-                detail: "Mengenabweichung in der Vorschau bestaetigt — unveraendert uebernommen.");
+            runLog.AddEntry(request.Label, "Plausibilität", ImportLogStatus.Conflict,
+                detail: "Mengenabweichung in der Vorschau bestätigt — unveraendert übernommen.");
             return true;
         }
 
         var bestaetigt = actions.ConfirmImplausible?.Invoke(urteil, request.Label) ?? false;
         if (!bestaetigt)
         {
-            Abbrechen(request.Label, actions, runLog, "Mengenabweichung nicht bestaetigt");
+            Abbrechen(request.Label, actions, runLog, "Mengenabweichung nicht bestätigt");
             return false;
         }
 
-        runLog.AddEntry(request.Label, "Plausibilitaet", ImportLogStatus.Conflict,
-            detail: "Mengenabweichung ausdruecklich bestaetigt — trotzdem uebernommen.");
+        runLog.AddEntry(request.Label, "Plausibilität", ImportLogStatus.Conflict,
+            detail: "Mengenabweichung ausdrücklich bestätigt — trotzdem übernommen.");
         return true;
     }
 
@@ -525,7 +525,7 @@ public static class ImportRunWorkflowController
         // Bericht koennen bereits entstanden sein. Zurueckgenommen wird das Staging durch
         // Dispose, weil Publish nie lief.
         var text = $"{label} abgebrochen ({grund}). {PlausibilitaetsUrteil.AbbruchHinweis}";
-        runLog.AddEntry(label, "Plausibilitaet", ImportLogStatus.Error, detail: text);
+        runLog.AddEntry(label, "Plausibilität", ImportLogStatus.Error, detail: text);
         actions.SetSummaryText(actions.GetSummaryText() + "\n  " + text);
         actions.SetStatus(text);
     }

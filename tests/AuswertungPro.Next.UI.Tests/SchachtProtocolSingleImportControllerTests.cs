@@ -99,9 +99,9 @@ public sealed class SchachtProtocolSingleImportControllerTests
     }
 
     [Theory]
-    [InlineData(null, "Das gewaehlte PDF ist kein Schachtprotokoll.")]
-    [InlineData("", "Das gewaehlte PDF ist kein Schachtprotokoll.")]
-    [InlineData("   ", "Das gewaehlte PDF ist kein Schachtprotokoll.")]
+    [InlineData(null, "Das gewählte PDF ist kein Schachtprotokoll.")]
+    [InlineData("", "Das gewählte PDF ist kein Schachtprotokoll.")]
+    [InlineData("   ", "Das gewählte PDF ist kein Schachtprotokoll.")]
     [InlineData("Parser-Hinweis", "Parser-Hinweis")]
     public async Task ExecuteAsync_invalid_protocol_uses_read_hint_or_fallback(
         string? readHint,
@@ -432,12 +432,12 @@ public sealed class SchachtProtocolSingleImportControllerTests
 
         Assert.Contains("save|dirty=True|modified=True", harness.Calls);
         Assert.Contains(
-            "last-result|Protokoll uebernommen, aber nicht gespeichert: Schacht S-1 (1 Beobachtungen).",
+            "last-result|Protokoll übernommen, aber nicht gespeichert: Schacht S-1 (1 Beobachtungen).",
             harness.Calls);
         Assert.Contains(
             harness.Warnings,
             warning => warning.Message.Contains(
-                "uebernommen, aber nicht gespeichert",
+                "übernommen, aber nicht gespeichert",
                 StringComparison.Ordinal));
     }
 
@@ -454,7 +454,7 @@ public sealed class SchachtProtocolSingleImportControllerTests
         Assert.Contains(
             harness.Warnings,
             warning => warning.Message.Contains(
-                "uebernommen, aber nicht gespeichert",
+                "übernommen, aber nicht gespeichert",
                 StringComparison.Ordinal));
         Assert.Contains("nicht gespeichert", harness.LastResult, StringComparison.Ordinal);
     }
@@ -534,7 +534,7 @@ public sealed class SchachtProtocolSingleImportControllerTests
     {
         var expected =
             "Schacht S-1 ist bereits vorhanden.\n\n" +
-            "Ja = Ueberschreiben\nNein = Als neuen Schacht anlegen\nAbbrechen = Nichts tun";
+            "Ja = Überschreiben\nNein = Als neuen Schacht anlegen\nAbbrechen = Nichts tun";
         Assert.Equal((expected, "Protokoll importieren"), Assert.Single(harness.ConfirmCancelCalls));
     }
 

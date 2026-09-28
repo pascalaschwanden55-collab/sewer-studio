@@ -63,7 +63,7 @@ internal sealed class ImportProjectPortabilityController
             + $"\n  {result.Unresolved} nicht aufloesbar";
         if (!saved)
         {
-            summary += "\n\nAenderungen uebernommen, aber nicht gespeichert. Bitte erneut speichern."
+            summary += "\n\nÄnderungen übernommen, aber nicht gespeichert. Bitte erneut speichern."
                 + ProjectSaveAttempt.ErrorDetails(saveError);
         }
 

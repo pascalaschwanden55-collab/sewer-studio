@@ -93,6 +93,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(ISettingsQuarantineStore)] = services.SettingsQuarantine,
             [typeof(ISettingsMigrationService)] = services.SettingsMigration,
             [typeof(IExplorerRevealService)] = services.ExplorerReveal,
+            [typeof(AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilberichtAblage)] = services.Verteilberichte,
             [typeof(IXtfExportVorschauDialog)] = services.XtfExportVorschau,
             [typeof(ISafeShellOpenService)] = services.ShellOpen,
             [typeof(IFolderOpenService)] = services.FolderOpen,

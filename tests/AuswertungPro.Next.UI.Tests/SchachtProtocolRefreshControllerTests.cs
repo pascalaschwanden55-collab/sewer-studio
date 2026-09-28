@@ -52,7 +52,7 @@ public sealed class SchachtProtocolRefreshControllerTests
             new[]
             {
                 "project-folder",
-                "info|Aktualisieren|Kein Projekt geoeffnet."
+                "info|Aktualisieren|Kein Projekt geöffnet."
             },
             harness.Calls);
     }
@@ -227,7 +227,7 @@ public sealed class SchachtProtocolRefreshControllerTests
         Assert.Equal(
             "confirm|Aktualisieren|defaultNo=True|Die verknuepfte Datei fehlt. Im Ordner dieses "
             + "Schachts wurde stattdessen \"fremd.pdf\" gefunden, sie gehoert laut Protokoll aber "
-            + "zu Schacht S-9. Trotzdem uebernehmen?",
+            + "zu Schacht S-9. Trotzdem übernehmen?",
             harness.Calls[^1]);
         Assert.DoesNotContain(harness.Calls, call => call.StartsWith("apply|", StringComparison.Ordinal));
         Assert.DoesNotContain(harness.Calls, call => call.StartsWith("save|", StringComparison.Ordinal));
@@ -272,11 +272,11 @@ public sealed class SchachtProtocolRefreshControllerTests
         Assert.Equal(SchachtProtocolRefreshOutcome.UpdatedButNotSaved, outcome);
         Assert.Contains("save|dirty=True|modified=True", harness.Calls);
         Assert.Contains(
-            "last-result|Schacht S-1 uebernommen, aber nicht gespeichert (1 Beobachtungen).",
+            "last-result|Schacht S-1 übernommen, aber nicht gespeichert (1 Beobachtungen).",
             harness.Calls);
         Assert.Contains(
             harness.Calls,
-            call => call.Contains("uebernommen, aber nicht gespeichert", StringComparison.Ordinal));
+            call => call.Contains("übernommen, aber nicht gespeichert", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -292,7 +292,7 @@ public sealed class SchachtProtocolRefreshControllerTests
         Assert.Equal(SchachtProtocolRefreshOutcome.UpdatedButNotSaved, outcome);
         Assert.Contains(
             harness.Calls,
-            call => call.Contains("uebernommen, aber nicht gespeichert", StringComparison.Ordinal));
+            call => call.Contains("übernommen, aber nicht gespeichert", StringComparison.Ordinal));
     }
 
     [Fact]

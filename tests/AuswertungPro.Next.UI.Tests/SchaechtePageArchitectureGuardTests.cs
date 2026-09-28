@@ -614,7 +614,7 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("lock (_actions.CollectionLock)", controller);
         Assert.Contains("RequiresProjectMembership", controller);
         Assert.Contains("targetRemoved", controller);
-        Assert.Contains("Der geloeschte Datensatz wurde nicht wieder eingefuegt", controller);
+        Assert.Contains("Der gelöschte Datensatz wurde nicht wieder eingefuegt", controller);
         Assert.Contains(
             "distribution=awaitTask.Run(()=>DistributePdf(" +
             "projectFolder,result.Schachtnummer,pdfPath));",
@@ -634,7 +634,7 @@ public sealed class SchaechtePageArchitectureGuardTests
             "\"ImportiertesSchachtprotokollspeichern\"," +
             "outvarsaveError);",
             compactController);
-        Assert.Contains("uebernommen, aber nicht gespeichert", controller);
+        Assert.Contains("übernommen, aber nicht gespeichert", controller);
         Assert.Contains("ProjectSaveAttempt.ErrorDetails(saveError)", controller);
         Assert.Contains(
             "if(ReferenceEquals(Selected,expectedSelection))Selected=null;",

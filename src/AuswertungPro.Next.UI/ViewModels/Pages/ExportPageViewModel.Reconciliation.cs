@@ -20,7 +20,7 @@ public sealed partial class ExportPageViewModel
         var projektOrdner = _shell.GetProjectFolder();
         if (string.IsNullOrWhiteSpace(projektOrdner))
         {
-            _dialogs.Warn("Es ist kein Projekt geoeffnet.", "Abgleichen");
+            _dialogs.Warn("Es ist kein Projekt geöffnet.", "Abgleichen");
             return;
         }
 
@@ -36,7 +36,7 @@ public sealed partial class ExportPageViewModel
 
         if (plan.ToMove.Count == 0)
         {
-            var sauber = "Abgleich: In den Verteilordnern liegt nichts ohne Gegenstueck im Projekt.";
+            var sauber = "Abgleich: In den Verteilordnern liegt nichts ohne Gegenstück im Projekt.";
             _dialogs.Info(
                 sauber + (plan.Skipped.Count > 0
                     ? Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine, plan.Skipped)
@@ -81,7 +81,7 @@ public sealed partial class ExportPageViewModel
 
         var text = $"Im Projekt gibt es zu {ordner} Ordner(n) und {dateien} Datei(en) in den "
                    + "Verteilordnern keine Haltung und keinen Schacht." + Environment.NewLine
-                   + "Sie werden in den Papierkorb des Projekts verschoben, nicht geloescht."
+                   + "Sie werden in den Papierkorb des Projekts verschoben, nicht gelöscht."
                    + Environment.NewLine + Environment.NewLine
                    + string.Join(
                        Environment.NewLine,

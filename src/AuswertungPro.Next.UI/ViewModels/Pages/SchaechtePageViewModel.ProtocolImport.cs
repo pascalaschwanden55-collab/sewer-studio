@@ -78,12 +78,12 @@ public sealed partial class SchaechtePageViewModel
         var projektOrdner = _shell.GetProjectFolder();
         if (string.IsNullOrWhiteSpace(projektOrdner))
         {
-            _dialogs.Info("Kein Projekt geoeffnet.", "Protokoll importieren");
+            _dialogs.Info("Kein Projekt geöffnet.", "Protokoll importieren");
             return;
         }
 
         var quelle = _dialogs.ConfirmCancel(
-            "Quelle auswaehlen:\n\n" +
+            "Quelle auswählen:\n\n" +
             "Ja = einzelne PDF-Datei\n" +
             "Nein = ganzen Ordner einschliesslich Unterordner\n" +
             "Abbrechen = nichts importieren",
@@ -93,13 +93,13 @@ public sealed partial class SchaechtePageViewModel
 
         if (quelle == DialogConfirm.No)
         {
-            var ordner = _dialogs.SelectFolder("Ordner mit Schachtprotokollen auswaehlen");
+            var ordner = _dialogs.SelectFolder("Ordner mit Schachtprotokollen auswählen");
             if (!string.IsNullOrWhiteSpace(ordner))
                 await ImportProtocolFolderAsync(projectContext, projektOrdner, ordner);
             return;
         }
 
-        var pdfPfad = _dialogs.OpenFile("Schachtprotokoll auswaehlen", "PDF (*.pdf)|*.pdf");
+        var pdfPfad = _dialogs.OpenFile("Schachtprotokoll auswählen", "PDF (*.pdf)|*.pdf");
         if (!string.IsNullOrWhiteSpace(pdfPfad))
             await ImportSingleProtocolAsync(projectContext, projektOrdner, pdfPfad);
     }
@@ -146,13 +146,13 @@ public sealed partial class SchaechtePageViewModel
         if (filesWritten && dataChanged)
         {
             LastResult =
-                "Projekt wurde gewechselt: PDF-Verteilung abgeschlossen; Projektdaten uebernommen, aber nicht gespeichert.";
+                "Projekt wurde gewechselt: PDF-Verteilung abgeschlossen; Projektdaten übernommen, aber nicht gespeichert.";
             _dialogs.Warn(
-                "Das Projekt wurde waehrend der Uebernahme gewechselt. " +
+                "Das Projekt wurde während der Uebernahme gewechselt. " +
                 "Mindestens eine PDF-Datei wurde bereits in das zuvor gestartete Projekt kopiert. " +
-                "Die zugehoerigen Projektdaten wurden uebernommen, aber nicht gespeichert. " +
-                "Bitte pruefen Sie die kopierten Dateien; die ungespeicherten Projektdaten " +
-                "koennen nach dem Wechsel nicht automatisch uebernommen werden.",
+                "Die zugehoerigen Projektdaten wurden übernommen, aber nicht gespeichert. " +
+                "Bitte prüfen Sie die kopierten Dateien; die ungespeicherten Projektdaten " +
+                "können nach dem Wechsel nicht automatisch übernommen werden.",
                 dialogTitle);
             return false;
         }
@@ -160,10 +160,10 @@ public sealed partial class SchaechtePageViewModel
         if (dataChanged)
         {
             LastResult =
-                "Projekt wurde gewechselt: Aenderungen wurden uebernommen, aber nicht gespeichert.";
+                "Projekt wurde gewechselt: Änderungen wurden übernommen, aber nicht gespeichert.";
             _dialogs.Warn(
-                "Das Projekt wurde waehrend der Uebernahme gewechselt. " +
-                "Die Aenderungen im zuvor gestarteten Projekt wurden nicht gespeichert.",
+                "Das Projekt wurde während der Uebernahme gewechselt. " +
+                "Die Änderungen im zuvor gestarteten Projekt wurden nicht gespeichert.",
                 dialogTitle);
             return false;
         }
@@ -171,19 +171,19 @@ public sealed partial class SchaechtePageViewModel
         if (filesWritten)
         {
             LastResult =
-                "Projekt wurde gewechselt: PDF-Verteilung abgeschlossen; Projektdaten wurden nicht uebernommen.";
+                "Projekt wurde gewechselt: PDF-Verteilung abgeschlossen; Projektdaten wurden nicht übernommen.";
             _dialogs.Warn(
-                "Das Projekt wurde waehrend des Imports gewechselt. " +
+                "Das Projekt wurde während des Imports gewechselt. " +
                 "Mindestens eine PDF-Datei wurde bereits in das zuvor gestartete Projekt kopiert, " +
-                "aber nicht in dessen Projektdaten uebernommen. Bitte pruefen Sie die kopierten Dateien.",
+                "aber nicht in dessen Projektdaten übernommen. Bitte prüfen Sie die kopierten Dateien.",
                 dialogTitle);
             return false;
         }
 
         LastResult = "Vorgang abgebrochen: Projekt wurde gewechselt.";
         _dialogs.Warn(
-            "Das Projekt wurde waehrend des Einlesens gewechselt. " +
-            "Es wurden keine Daten uebernommen.",
+            "Das Projekt wurde während des Einlesens gewechselt. " +
+            "Es wurden keine Daten übernommen.",
             dialogTitle);
         return false;
     }

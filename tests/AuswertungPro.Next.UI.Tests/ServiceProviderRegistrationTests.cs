@@ -133,9 +133,10 @@ public sealed class ServiceProviderRegistrationTests
         // 160 -> 161: IBackupAdditionalFolders speichert zusätzliche Sicherungsquellen getrennt.
         // 167 -> 168: ISchachtLageQuelle liefert Schachtpunkt und Leitungsrichtungen aus den
         // QGIS-Kopien fuer den Grundriss der Schachtgrafik (Stammkarte, 19.09.2026).
+        // 171 -> 172: IVerteilberichtAblage legt nach jeder Verteilung einen Bericht ab (28.09.2026).
         Assert.True(
-            registrations.Count == 171,
-            $"Erwartet 171 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 172,
+            $"Erwartet 172 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(services.XtfLieferungen,

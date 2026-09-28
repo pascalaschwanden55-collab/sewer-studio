@@ -28,3 +28,22 @@ lautet jetzt «… bereits vorhanden, n Fehler.».
 - `ShaftDistributionService` filtert Dateien weiterhin still über `ShouldProcess`; die
   Archivsuche meldet übersprungene Ordner nicht; `ProjectPortabilityService` verliert beim
   Kopierfehler den Grund. Diese drei Nebenbefunde sind nicht Teil dieses Pakets.
+
+## Bedienung, erster Teil (Rückmeldung und Klartext)
+
+- **Jede Verteilung hinterlässt einen Bericht.** `IVerteilberichtAblage` / `VerteilberichtAblage`
+  (Registrierung 171 → 172) schreibt nach Haltungs-, Schacht- und Dichtheitsverteilung sowie nach
+  «Protokolle verteilen» `<Projekt>\__IMPORT_REPORTS\verteilung_<Art>_<Zeit>.txt` — neben die
+  Importberichte, damit «Berichte» auf der Importseite alles zeigt. Nie überschrieben. Die
+  Export-Seite zeigt danach einen Toast mit «Bericht öffnen» (grün ohne Fehler, gelb mit Fehlern;
+  `IToastService.Warning(…, aktionText, aktion)` neu). «Protokolle verteilen» schreibt alle
+  nicht zugeordneten Dateien und alle Fehlergründe in den Bericht (vorher nur Tageslog) und merkt
+  ihn für «Letzter Bericht». Tests `VerteilberichtAblageTests`,
+  `Jede_Schachtverteilung_hinterlaesst_einen_Bericht_im_Projekt`,
+  `Protokollverteilung_schreibt_einen_Bericht_und_merkt_ihn`.
+- **Umlaute in sichtbaren Texten** der Import-/Export-/Schachtprotokoll-Abläufe (Dialogtitel wie
+  «…wählen», Meldungen wie «übernommen», «prüfen»). Log-Texte, Ordner- und Dateinamen
+  (`Schaechte.xlsx` im Excel-Ziel, `Schächte_Verteilt`) und Bezeichner bleiben unverändert.
+- **Klartext:** «Ziel-Wurzel» heisst «Hauptordner», der Tooltip sagt jetzt richtig «Leer = der
+  Projektordner»; «Dry-Run» heisst «Probelauf». Ordnernamen wie `__UNMATCHED` und `__IMPORT_REPORTS`
+  bleiben, weil bestehende Projekte sie tragen.

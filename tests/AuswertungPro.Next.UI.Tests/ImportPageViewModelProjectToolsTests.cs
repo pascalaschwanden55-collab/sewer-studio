@@ -444,10 +444,10 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
                 () => thirdViewModel.MakeProjectPortableCommand.ExecuteAsync(null));
             Assert.True(
                 SpinWait.SpinUntil(() => thirdViewModel.IsImportInProgress, TimeSpan.FromSeconds(5)),
-                "Zweite Sperre wurde nach der vollstaendigen Freigabe nicht gesetzt.");
+                "Zweite Sperre wurde nach der vollständigen Freigabe nicht gesetzt.");
             Assert.True(
                 SpinWait.SpinUntil(() => dialogs.InfoCalls >= 2, TimeSpan.FromSeconds(5)),
-                "Zweiter Import wurde nach der vollstaendigen Freigabe nicht ausgefuehrt.");
+                "Zweiter Import wurde nach der vollständigen Freigabe nicht ausgefuehrt.");
 
             Assert.True(firstViewModel.IsImportInProgress);
             Assert.True(secondViewModel.IsImportInProgress);
@@ -806,8 +806,8 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
             AppendSummary: value => summary += value,
             AppendDetails: _ => { }));
 
-        Assert.Contains("uebernommen, aber nicht gespeichert", summary, StringComparison.Ordinal);
-        Assert.Contains("uebernommen, aber nicht gespeichert", dialogs.LastWarnMessage, StringComparison.Ordinal);
+        Assert.Contains("übernommen, aber nicht gespeichert", summary, StringComparison.Ordinal);
+        Assert.Contains("übernommen, aber nicht gespeichert", dialogs.LastWarnMessage, StringComparison.Ordinal);
         Assert.Equal(string.Empty, dialogs.LastInfoMessage);
     }
 
@@ -861,8 +861,8 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
             AppendSummary: value => summary += value,
             AppendDetails: _ => { }));
 
-        Assert.Contains("uebernommen, aber nicht gespeichert", summary, StringComparison.Ordinal);
-        Assert.Contains("uebernommen, aber nicht gespeichert", dialogs.LastWarnMessage, StringComparison.Ordinal);
+        Assert.Contains("übernommen, aber nicht gespeichert", summary, StringComparison.Ordinal);
+        Assert.Contains("übernommen, aber nicht gespeichert", dialogs.LastWarnMessage, StringComparison.Ordinal);
         Assert.Equal(string.Empty, dialogs.LastInfoMessage);
     }
 
@@ -926,9 +926,9 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
             AppendDetails: _ => { },
             SetStatus: value => status = value));
 
-        Assert.Contains("uebernommen, aber nicht gespeichert", summary, StringComparison.Ordinal);
+        Assert.Contains("übernommen, aber nicht gespeichert", summary, StringComparison.Ordinal);
         Assert.Contains("nicht gespeichert", status, StringComparison.Ordinal);
-        Assert.Contains("uebernommen, aber nicht gespeichert", dialogs.LastWarnMessage, StringComparison.Ordinal);
+        Assert.Contains("übernommen, aber nicht gespeichert", dialogs.LastWarnMessage, StringComparison.Ordinal);
         Assert.Equal(string.Empty, dialogs.LastInfoMessage);
     }
 
@@ -967,6 +967,45 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task Protokollverteilung_schreibt_einen_Bericht_und_merkt_ihn()
+    {
+        // Vorher standen einzelne Fehler nur im Tageslog; jetzt liegt jede Zeile im Bericht.
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var berichte = new VerteilberichtFake();
+        var controller = new ImportProtocolDistributionController(
+            dialogs, new ProtocolDistributionFake(), new CapturingLogger(), berichte);
+        string? gemerkt = null;
+
+        await controller.ExecuteAsync(new ImportProtocolDistributionActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => new Project(),
+            CollectionLock: new object(),
+            SaveProject: () => true,
+            MerkeBericht: pfad => gemerkt = pfad));
+
+        Assert.Equal("Protokolle", berichte.Art);
+        Assert.Contains("nicht.pdf", berichte.Text, StringComparison.Ordinal);
+        Assert.Contains("fehler.pdf: Zugriff verweigert", berichte.Text, StringComparison.Ordinal);
+        Assert.Equal(VerteilberichtFake.Pfad, gemerkt);
+        Assert.Contains(VerteilberichtFake.Pfad, dialogs.LastInfoMessage, StringComparison.Ordinal);
+    }
+
+    private sealed class VerteilberichtFake
+        : AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilberichtAblage
+    {
+        public const string Pfad = @"C:\Projekt\__IMPORT_REPORTS\verteilung_Protokolle.txt";
+        public string? Art { get; private set; }
+        public string Text { get; private set; } = string.Empty;
+
+        public string? Schreibe(string projektOrdner, string art, string text)
+        {
+            Art = art;
+            Text = text;
+            return Pfad;
+        }
+    }
+
+    [Fact]
     public async Task Protokollverteilungs_Controller_meldet_wenn_Ergebnis_nicht_gespeichert_wurde()
     {
         var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
@@ -981,7 +1020,7 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
             CollectionLock: new object(),
             SaveProject: () => false));
 
-        Assert.Contains("uebernommen, aber nicht gespeichert", dialogs.LastWarnMessage, StringComparison.Ordinal);
+        Assert.Contains("übernommen, aber nicht gespeichert", dialogs.LastWarnMessage, StringComparison.Ordinal);
         Assert.Equal(string.Empty, dialogs.LastInfoMessage);
     }
 
@@ -1290,7 +1329,7 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
 
         Assert.Equal(0, replaceCalls);
         Assert.Equal(0, saveCalls);
-        Assert.Contains("nicht uebernommen", dialogs.LastErrorMessage);
+        Assert.Contains("nicht übernommen", dialogs.LastErrorMessage);
         // Rohe Exception-Texte gehoeren nicht in den Dialog (UserError-Regelwerk).
         Assert.DoesNotContain("DB korrupt", dialogs.LastErrorMessage);
     }
@@ -1717,7 +1756,7 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
                 importer.Context!.Progress!.Report(new ImportProgress(
                     ImportFortschrittText.Phase(6, "Schachtprotokolle"), 3, 12, "",
                     @"C:\Quelle\Schacht42.pdf"));
-                Assert.True(angezeigt.Wait(TimeSpan.FromSeconds(10)), "Fortschritt kam nicht waehrend des Laufs an.");
+                Assert.True(angezeigt.Wait(TimeSpan.FromSeconds(10)), "Fortschritt kam nicht während des Laufs an.");
             }
         };
         var project = new Project();

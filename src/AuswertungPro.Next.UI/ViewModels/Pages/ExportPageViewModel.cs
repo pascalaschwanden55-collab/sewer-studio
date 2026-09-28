@@ -112,7 +112,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             importTransactionJournal: sp.ImportTransactionJournal,
             explorerReveal: sp.ExplorerReveal,
             xtfVorschau: sp.XtfExportVorschau,
-            xtfPaketAblage: sp.XtfPaketAblage)
+            xtfPaketAblage: sp.XtfPaketAblage,
+            verteilberichte: sp.Verteilberichte)
     {
         LieferungBearbeitenCommand = new RelayCommand(() => XtfLieferungDialog.Zeige(sp.XtfLieferungen, sp.Dialogs));
         WebGis = new ExportWebGisBereich(new ExportWebGisBereich.Dienste(
@@ -200,8 +201,10 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         IExplorerRevealService? explorerReveal = null,
         IXtfExportVorschauDialog? xtfVorschau = null,
         AuswertungPro.Next.Application.Projects.IObjektaktenPaketService? objektaktenPakete = null,
-        AuswertungPro.Next.Application.UseCases.Xtf.IXtfPaketAblage? xtfPaketAblage = null)
+        AuswertungPro.Next.Application.UseCases.Xtf.IXtfPaketAblage? xtfPaketAblage = null,
+        AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilberichtAblage? verteilberichte = null)
     {
+        _verteilberichte = verteilberichte;
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
@@ -339,9 +342,9 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         {
             _settings.Save();
         }
-        string? BrowseRoot() => _dialogs.SelectFolder("Ziel-Wurzel waehlen");
+        string? BrowseRoot() => _dialogs.SelectFolder("Hauptordner für die Verteilung wählen");
 
-        const string haltungHinweis = "Der letzte Haltungsordner und die Dateinamen bleiben fuer die sichere Video-Zuordnung fest.";
+        const string haltungHinweis = "Der letzte Haltungsordner und die Dateinamen bleiben für die sichere Video-Zuordnung fest.";
         const string schachtHinweis = "Der letzte Schachtordner und der Dateiname bleiben fest.";
         const string dichtheitHinweis = "DP wird sicher je Haltung abgelegt; Objektordner und Dateiname bleiben fest.";
         return new[]
@@ -374,7 +377,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
 
     private void BrowseExcelExportRoot()
     {
-        var selected = _dialogs.SelectFolder("Gemeinsamen Excel-Zielordner waehlen");
+        var selected = _dialogs.SelectFolder("Gemeinsamen Excel-Zielordner wählen");
         if (!string.IsNullOrWhiteSpace(selected))
             ExcelExportRoot = selected;
     }
@@ -431,7 +434,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             return true;
 
         _shell.SetStatus(
-            "Seiten- oder Projektwechsel ist waehrend eines Exports oder einer Verteilung gesperrt. " +
+            "Seiten- oder Projektwechsel ist während eines Exports oder einer Verteilung gesperrt. " +
             "Bitte den laufenden Vorgang zuerst abschliessen.");
         return false;
     }
@@ -476,20 +479,20 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         if (!useTxtImport)
         {
             var mode = _dialogs.ConfirmCancel(
-                "PDF-Auswahl:\nJa = einzelne PDF-Protokolle auswaehlen\nNein = ganzen PDF-Ordner verwenden",
+                "PDF-Auswahl:\nJa = einzelne PDF-Protokolle auswählen\nNein = ganzen PDF-Ordner verwenden",
                 "Haltungen verteilen (PDF)");
             if (mode == DialogConfirm.Cancel)
                 return;
 
             if (mode == DialogConfirm.Yes)
             {
-                selectedPdfFiles = _dialogs.OpenFiles("PDF-Protokolle auswaehlen", "PDF (*.pdf)|*.pdf");
+                selectedPdfFiles = _dialogs.OpenFiles("PDF-Protokolle auswählen", "PDF (*.pdf)|*.pdf");
                 if (selectedPdfFiles.Length == 0)
                     return;
             }
             else
             {
-                pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Protokollen waehlen");
+                pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Protokollen wählen");
                 if (string.IsNullOrWhiteSpace(pdfFolder))
                     return;
             }
@@ -497,7 +500,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         else
         {
             var mode = _dialogs.ConfirmCancel(
-                "TXT-Auswahl:\nJa = einzelne TXT-Dateien auswaehlen\nNein = ganzen TXT-Ordner verwenden",
+                "TXT-Auswahl:\nJa = einzelne TXT-Dateien auswählen\nNein = ganzen TXT-Ordner verwenden",
                 "Haltungen verteilen (TXT)");
             if (mode == DialogConfirm.Cancel)
                 return;
@@ -510,13 +513,13 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             }
             else
             {
-                txtFolder = _dialogs.SelectFolder("TXT-Ordner waehlen (z.B. mit kiDVDaten.txt)");
+                txtFolder = _dialogs.SelectFolder("TXT-Ordner wählen (z.B. mit kiDVDaten.txt)");
                 if (string.IsNullOrWhiteSpace(txtFolder))
                     return;
             }
         }
 
-        var videoFolder = _dialogs.SelectFolder("Video-Ordner mit Rohvideos waehlen");
+        var videoFolder = _dialogs.SelectFolder("Video-Ordner mit Rohvideos wählen");
         if (string.IsNullOrWhiteSpace(videoFolder)) return;
 
         var destFolder = ResolveConfiguredDistributionRoot(_settings.HaltungDistribution)
@@ -616,6 +619,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
             LastResult = DistributionSummaryBuilder.BuildHoldingDistributionSummary(results, useTxtImport);
             _shell.SetStatus(useTxtImport ? "Haltungsdaten (TXT) verteilt" : "Haltungsdaten verteilt");
+            MeldeVerteilung("Haltungen", LastResult, results.Count(static r => !r.Success));
 
             if (!useTxtImport && selectedPdfFiles.Length > 0)
                 StorePdfFiles(selectedPdfFiles, projectContext);
@@ -641,7 +645,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
     private async Task DistributeDichtheitAsync()
     {
         var mode = _dialogs.ConfirmCancel(
-            "PDF-Auswahl:\nJa = einzelne DP-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
+            "PDF-Auswahl:\nJa = einzelne DP-PDFs auswählen\nNein = ganzen PDF-Ordner verwenden",
             "Dichtheitsprüfung verteilen");
         if (mode == DialogConfirm.Cancel)
             return;
@@ -650,13 +654,13 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         string[] selectedPdfFiles = Array.Empty<string>();
         if (mode == DialogConfirm.Yes)
         {
-            selectedPdfFiles = _dialogs.OpenFiles("Dichtheitsprüfungs-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
+            selectedPdfFiles = _dialogs.OpenFiles("Dichtheitsprüfungs-PDFs auswählen", "PDF (*.pdf)|*.pdf");
             if (selectedPdfFiles.Length == 0)
                 return;
         }
         else
         {
-            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Dichtheitsprüfungsprotokollen waehlen");
+            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Dichtheitsprüfungsprotokollen wählen");
             if (string.IsNullOrWhiteSpace(pdfFolder))
                 return;
         }
@@ -704,12 +708,12 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
                 var safeCause = UserError.DescribeAndReport(ex, "Dichtheitsverteilung Katasterabgleich");
                 cadastreWarning =
                     "Der amtliche Kataster konnte nicht geladen werden. Die Verteilung lief ohne " +
-                    $"Katasterabgleich weiter; Ergebnis bitte pruefen. Ursache: {safeCause}";
+                    $"Katasterabgleich weiter; Ergebnis bitte prüfen. Ursache: {safeCause}";
             }
 
             if (!ProjectIsStillCurrent(
                     projectContext,
-                    "Dichtheitspruefungs-Verteilung",
+                    "Dichtheitsprüfungs-Verteilung",
                     filesMayRemain: false))
             {
                 return;
@@ -743,7 +747,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
 
             if (!ProjectIsStillCurrent(
                     projectContext,
-                    "Dichtheitspruefungs-Verteilung",
+                    "Dichtheitsprüfungs-Verteilung",
                     filesMayRemain: results.Any(static result => result.Success)))
             {
                 return;
@@ -760,6 +764,11 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             {
                 _shell.SetStatus("Dichtheitsprüfungsprotokolle verteilt");
             }
+
+            MeldeVerteilung(
+                "Dichtheitsprüfungen",
+                LastResult,
+                results.Count(static r => !r.Success) + (cadastreWarning is null ? 0 : 1));
 
             if (selectedPdfFiles.Length > 0)
                 StorePdfFiles(selectedPdfFiles, projectContext);
@@ -781,7 +790,7 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         // im Projekt landen. Ohne gespeichertes Projekt bleibt der Ordnerdialog als Rueckfall.
         return Services.DistributionTargetFolderPolicy.Resolve(
             _shell.GetProjectFolder(),
-            () => _dialogs.SelectFolder("Zielordner (Gemeinde) waehlen"));
+            () => _dialogs.SelectFolder("Zielordner (Gemeinde) wählen"));
     }
 
     // Zielordner + strukturierter Unterordner (Haltungen_Verteilt\ / Schächte_Verteilt\), damit manuelle
@@ -897,10 +906,10 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
 
         LastResult = projectDataChanged
             ? $"{operation}: Das aktive Projekt wurde gewechselt. " +
-              "Dateien und PDF-Pfade wurden im gestarteten Projekt uebernommen, " +
+              "Dateien und PDF-Pfade wurden im gestarteten Projekt übernommen, " +
               "aber nicht gespeichert."
             : filesMayRemain
-            ? $"{operation} beendet, aber nicht in Projektdaten uebernommen: " +
+            ? $"{operation} beendet, aber nicht in Projektdaten übernommen: " +
               "Das aktive Projekt wurde gewechselt. Bereits kopierte Dateien bleiben im Zielordner."
             : $"{operation} abgebrochen: Das aktive Projekt wurde gewechselt.";
         _shell.SetStatus(LastResult);

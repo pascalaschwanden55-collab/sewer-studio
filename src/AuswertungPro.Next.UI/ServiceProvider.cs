@@ -102,6 +102,7 @@ namespace AuswertungPro.Next.UI
         public ISettingsQuarantineStore SettingsQuarantine { get; }
         public ISettingsMigrationService SettingsMigration { get; }
         public IExplorerRevealService ExplorerReveal { get; }
+        public AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilberichtAblage Verteilberichte { get; }
         public IXtfExportVorschauDialog XtfExportVorschau { get; }
         public ISafeShellOpenService ShellOpen { get; }
         public IFolderOpenService FolderOpen { get; }
@@ -373,6 +374,7 @@ namespace AuswertungPro.Next.UI
             SettingsRestorePoints = new SettingsRestorePointStore();
             SettingsFiles = SettingsStore.CreateDefault(SettingsRestorePoints);
             ExplorerReveal = new ExplorerRevealLauncher();
+            Verteilberichte = new AuswertungPro.Next.Infrastructure.Import.VerteilberichtAblage();
             XtfExportVorschau = new XtfExportVorschauDialogService();
             ShellOpen = new SafeShellOpenService();
             FolderOpen = new FolderOpenService(ShellOpen);

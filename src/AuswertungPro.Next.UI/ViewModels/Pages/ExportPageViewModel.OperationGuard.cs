@@ -74,7 +74,7 @@ public sealed partial class ExportPageViewModel
     {
         if (_disposed || !_shell.TryAcquireProjectOperation(_shellOperationGuard))
         {
-            _shell.SetStatus("Es laeuft bereits ein Import, Export oder anderer Projektvorgang.");
+            _shell.SetStatus("Es läuft bereits ein Import, Export oder anderer Projektvorgang.");
             return false;
         }
 
@@ -147,7 +147,7 @@ public sealed partial class ExportPageViewModel
         }
 
         public string ProjectSaveBlockedMessage
-            => "Manuelles Speichern ist waehrend eines Exports oder einer Verteilung gesperrt. " +
+            => "Manuelles Speichern ist während eines Exports oder einer Verteilung gesperrt. " +
                "Bitte den laufenden Vorgang zuerst abschliessen.";
 
         public bool AllowsInternalProjectSave
@@ -169,7 +169,7 @@ public sealed partial class ExportPageViewModel
         }
 
         public string LeaveBlockedMessage
-            => "Navigation, Projektwechsel und Schliessen sind waehrend eines Exports " +
+            => "Navigation, Projektwechsel und Schliessen sind während eines Exports " +
                "oder einer Verteilung gesperrt. Bitte den laufenden Vorgang zuerst abschliessen.";
 
         public event EventHandler? OperationAvailabilityChanged;

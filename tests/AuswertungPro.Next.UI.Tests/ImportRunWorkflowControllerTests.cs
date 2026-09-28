@@ -91,7 +91,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.False(state.CanCancel);
         Assert.Equal("", state.Phase);
         Assert.Contains("PDF Import:", state.Summary);
-        Assert.Contains("Plausibilitaet: 1 Warnung", state.Summary);
+        Assert.Contains("Plausibilität: 1 Warnung", state.Summary);
         Assert.Contains("m1", state.Details);
         Assert.Contains("Warnung 1", state.Details);
         Assert.Equal("PDF importiert", state.Statuses[^1]);
@@ -124,8 +124,8 @@ public sealed class ImportRunWorkflowControllerTests
             CancellationToken.None);
 
         Assert.Equal(["restore:XTF", "report:XTF:False"], calls);
-        Assert.Equal("XTF Import fehlgeschlagen - Projektdaten wurden nicht uebernommen: kaputt", state.Summary);
-        Assert.Equal("XTF Import fehlgeschlagen - Projektdaten wurden nicht uebernommen", state.Statuses[^1]);
+        Assert.Equal("XTF Import fehlgeschlagen - Projektdaten wurden nicht übernommen: kaputt", state.Summary);
+        Assert.Equal("XTF Import fehlgeschlagen - Projektdaten wurden nicht übernommen", state.Statuses[^1]);
         Assert.Null(state.ReplacedProject);
         Assert.False(state.IsImportInProgress);
         Assert.False(state.CanCancel);
@@ -219,7 +219,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Empty(project.Data);
         Assert.Null(state.ReplacedProject);
         Assert.DoesNotContain("replace", calls);
-        Assert.Contains("Projektdaten wurden nicht uebernommen", state.Summary);
+        Assert.Contains("Projektdaten wurden nicht übernommen", state.Summary);
     }
 
     [Fact]
@@ -245,7 +245,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Empty(project.Data);
         Assert.Null(state.ReplacedProject);
         Assert.DoesNotContain("replace", calls);
-        Assert.Contains("Projektdaten wurden nicht uebernommen", state.Summary);
+        Assert.Contains("Projektdaten wurden nicht übernommen", state.Summary);
     }
 
     [Fact]
@@ -291,7 +291,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Null(state.ReplacedProject);
         Assert.Same(openedProject, activeProject);
         Assert.Contains("Projekt wurde gewechselt", state.Summary);
-        Assert.Contains("nicht uebernommen", state.Summary);
+        Assert.Contains("nicht übernommen", state.Summary);
     }
 
     [Fact]
@@ -565,7 +565,7 @@ public sealed class ImportRunWorkflowControllerTests
 
         Assert.Contains("replace", calls);
         Assert.Contains("save", calls);
-        Assert.Contains("Nacharbeiten unvollstaendig", state.Summary);
+        Assert.Contains("Nacharbeiten unvollständig", state.Summary);
         Assert.Contains("Foto konnte nicht kopiert werden", state.Details);
         Assert.Equal("WinCan importiert mit Hinweisen", state.Statuses[^1]);
         Assert.Equal(1, state.LastExportLog?.TotalErrors);
@@ -739,7 +739,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Contains("Bereinigung fehlgeschlagen", state.Details, StringComparison.Ordinal);
         Assert.Contains(
             state.LastExportLog!.Entries,
-            entry => entry.Operation == "Primaerschäden bereinigen"
+            entry => entry.Operation == "Primärschäden bereinigen"
                      && entry.Status == ImportLogStatus.Error);
         Assert.NotNull(state.ReplacedProject);
     }
@@ -800,7 +800,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.NotNull(journal.TryRead(staging.ProjectRoot));
         Assert.Equal(0, journal.ClearCalls);
         Assert.Contains(
-            "nicht vollstaendig aufgeraeumt",
+            "nicht vollständig aufgeräumt",
             state.Details,
             StringComparison.OrdinalIgnoreCase);
     }
@@ -838,7 +838,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.DoesNotContain("replace", calls);
         Assert.DoesNotContain("save", calls);
         Assert.Null(state.ReplacedProject);
-        Assert.Contains("waehrend des Imports bearbeitet", state.Summary);
+        Assert.Contains("während des Imports bearbeitet", state.Summary);
     }
 
     private static ImportRunWorkflowActions Actions(

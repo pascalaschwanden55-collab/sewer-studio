@@ -107,7 +107,8 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
         _protocolDistributionController = new Services.ImportProtocolDistributionController(
             dialogs,
             sp.NameBasedProtocolDistributor,
-            sp.Logger);
+            sp.Logger,
+            sp.Verteilberichte);
         _protocolRegenerationController = new Services.ImportProtocolRegenerationController(
             dialogs,
             sp.ProtocolRegeneration,
@@ -200,7 +201,7 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
             return true;
 
         _shell.SetStatus(
-            "Seiten- oder Projektwechsel ist waehrend eines Imports gesperrt. " +
+            "Seiten- oder Projektwechsel ist während eines Imports gesperrt. " +
             "Bitte den Import zuerst abschliessen oder abbrechen.");
         return false;
     }
@@ -283,8 +284,8 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
         string label)
         => _dialogs.ConfirmWarn(
             urteil.VollerText()
-            + "\n\nTrotzdem uebernehmen?"
-            + "\n(Empfohlen: abbrechen und die Quellen pruefen.)",
+            + "\n\nTrotzdem übernehmen?"
+            + "\n(Empfohlen: abbrechen und die Quellen prüfen.)",
             $"{label} importieren",
             defaultNo: true);
 
@@ -309,7 +310,8 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
                     GetProjectFolder: _shell.GetProjectFolder,
                     GetProject: () => _shell.Project,
                     CollectionLock: _shell.CollectionLock,
-                    SaveProject: _saveProjectForActiveImport)));
+                    SaveProject: _saveProjectForActiveImport,
+                    MerkeBericht: _reportNavigationController.MerkeBericht)));
 
     private Task ImportXtfAsync()
         => RunManualImportAsync(_manualWorkflowController.ImportXtfAsync);
@@ -481,7 +483,7 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
         catch (Exception ex)
         {
             var safeCause = UserError.DescribeAndReport(ex, "Import Primaerschäden bereinigen");
-            return "Die importierten Primaerschäden wurden übernommen, konnten aber nicht " +
+            return "Die importierten Primärschäden wurden übernommen, konnten aber nicht " +
                    $"vollständig von Doppelungen bereinigt werden: {safeCause}";
         }
     }
