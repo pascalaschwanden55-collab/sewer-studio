@@ -101,6 +101,19 @@ public static class WebGisImportPlanBuilder
     public const string FeldBaujahr = "Baujahr";
     public const string FeldWebGisGlobalId = "WebGIS_GlobalID";
 
+    /// <summary>
+    /// Die EINZIGEN Tabellenfelder, die das Holen je schreiben darf (Wunsch Pascal 28.09.2026: eigene Spalten, die mit
+    /// dem WebGIS nichts zu tun haben, bleiben unberuehrt). Alles andere uebergeht <c>Uebernimm</c>, auch wenn es
+    /// durch einen Fehler in einen Plan geriete. Akten, GlobalID und Massnahmen haben eigene Wege.
+    /// </summary>
+    public static bool DarfTabellenfeldSchreiben(string feld)
+        => ErlaubteTabellenfelder.Contains(feld);
+
+    private static readonly HashSet<string> ErlaubteTabellenfelder = new(
+        WebGisHandwertKarte.Felder.Select(f => f.SewerStudioFeld)
+            .Concat(new[] { FeldLaenge, FeldBaujahr, FieldKeys.Owner, FieldKeys.RehabilitationNeed }),
+        StringComparer.OrdinalIgnoreCase);
+
     public static WebGisImportPosition Baue(WebGisImportEingabe e, WebGisLesestand? stand)
     {
         ArgumentNullException.ThrowIfNull(e);

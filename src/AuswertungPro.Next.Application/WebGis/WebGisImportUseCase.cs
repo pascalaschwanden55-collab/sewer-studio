@@ -350,6 +350,8 @@ public sealed class WebGisImportUseCase
                     if (SchreibeAkteGruppe(projekt, pos, a)) geaendert = true;
                     continue;
                 }
+                // Eigene Spalten ohne WebGIS-Bezug werden nie beschrieben (Wunsch Pascal 28.09.2026).
+                if (!WebGisImportPlanBuilder.DarfTabellenfeldSchreiben(a.Feld)) continue;
                 if (pos.Objektart == WebGisObjektart.Haltung && haltungen.TryGetValue(pos.RecordId, out var h))
                 {
                     // Haltungslaenge seit 23.09.2026 abends rein informativ: nur in ein leeres Feld (unten
