@@ -214,12 +214,14 @@
                         </MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>
+                <!-- Optikanalyse 28.09.2026, Aufgabe 8: "Klassische Übersicht" ist aus diesem Menü
+                     entfernt und steht jetzt in Einstellungen -> Allgemein -> Frühere Ansichten
+                     ("Klassische Projektübersicht verwenden"). ShellViewModel.KlassischeUebersicht
+                     bleibt als Testhilfe/kompatible Fassade auf AppSettings.ShowUebersichtNovaLayout
+                     bestehen; hier bindet nichts mehr daran. -->
                 <MenuItem Header="_Ansicht" Padding="8,6">
                     <MenuItem Header="Fokusmodus" InputGestureText="F11" IsCheckable="True" IsChecked="{Binding IsFocusMode, Mode=TwoWay}"
                               ToolTip="Sidebar und Menü ausblenden, um mehr Arbeitsfläche zu erhalten."/>
-                    <MenuItem x:Name="KlassischeUebersichtToggle" Header="Klassische Übersicht" IsCheckable="True"
-                              IsChecked="{Binding KlassischeUebersicht, Mode=TwoWay}"
-                              ToolTip="Zeigt bei offenem Projekt wieder die bisherige Übersicht mit Projektliste, Vorschau und Vorschau-PDF."/>
                     <Separator/>
                     <MenuItem Header="System-Monitor öffnen" Click="OpenSystemMonitor_Click"
                               ToolTip="System-Monitor in einem eigenen Fenster öffnen.">

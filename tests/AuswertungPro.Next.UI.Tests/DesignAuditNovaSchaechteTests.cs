@@ -17,8 +17,11 @@ public sealed class DesignAuditNovaSchaechteTests
         // "Stammdaten aus PDFs ergänzen", "Aktualisieren" -> "Protokoll neu einlesen", "Strassen"
         // -> "Strassennamen ergänzen"); "Hoch"/"Runter" heissen jetzt wie bei den Haltungen
         // "Nach oben"/"Nach unten" (Reihenfolge-Untermenue).
-        foreach (var header in new[] { "Stammdaten aus PDFs ergänzen", "Protokoll neu einlesen", "Leere Felder aus QGIS", "GeoShop-Abgleich (XTF)", "Feldnamen aufräumen", "Strassennamen ergänzen", "Nach oben", "Nach unten", "Ansicht anpassen", "Alte Schachtansicht" })
+        foreach (var header in new[] { "Stammdaten aus PDFs ergänzen", "Protokoll neu einlesen", "Leere Felder aus QGIS", "GeoShop-Abgleich (XTF)", "Feldnamen aufräumen", "Strassennamen ergänzen", "Nach oben", "Nach unten", "Ansicht anpassen" })
             Assert.Contains($"Header=\"{header}\"", xaml);
+        // Aufgabe 8: "Alte Schachtansicht" ist aus dem Menü entfernt (Einstellungen -> Allgemein
+        // -> Frühere Ansichten); das MenuItem bleibt nur unsichtbar als Zustandshalter stehen.
+        Assert.DoesNotContain("Header=\"Alte Schachtansicht\"", xaml);
         Assert.DoesNotContain("<ToggleButton x:Name=\"SchachtansichtToggle\"", xaml);
         Assert.Contains("x:Name=\"ColumnViewChips\"", xaml);
         Assert.Contains("SchaechteColumnViewCatalog.Views", xaml);
@@ -248,19 +251,30 @@ public sealed class DesignAuditNovaSchaechteTests
 
     /// <summary>
     /// Nova, Aufklapp-Liste (2026-09-08, Task 6 des Plans "Haltungen als Aufklapp-Liste"):
-    /// Die drei Ansichten der Schachtseite (Liste, Tabelle, alte Schachtansicht) sind eine
-    /// Gruppe im Menue "Weitere Aktionen", genau wie bei den Haltungen.
+    /// Aufklapp-Liste und Tabelle sind eine Gruppe im Menue "Weitere Aktionen", genau wie bei den
+    /// Haltungen. Optikanalyse 28.09.2026, Aufgabe 8: Die frühere dritte Gruppengenossin "Alte
+    /// Schachtansicht" ist aus diesem Menü entfernt (Einstellungen -> Allgemein -> Frühere
+    /// Ansichten); das MenuItem SchachtansichtToggle bleibt nur unsichtbar ausserhalb dieses
+    /// Menüs als Zustandshalter fuer SchaechteAnsichtUmschalter stehen.
     /// </summary>
     [Fact]
-    public void Ansicht_Liste_und_Tabelle_stehen_als_Gruppe_neben_der_alten_Schachtansicht()
+    public void Ansicht_Liste_und_Tabelle_stehen_als_Gruppe()
     {
         var xaml = Xaml();
         Assert.Contains("x:Name=\"AnsichtListeMenu\" Header=\"Aufklapp-Liste\" IsCheckable=\"True\" Tag=\"liste\"", xaml);
         Assert.Contains("x:Name=\"AnsichtTabelleMenu\" Header=\"Tabelle\" IsCheckable=\"True\" Tag=\"tabelle\"", xaml);
         Assert.Contains("Click=\"AnsichtMenu_Click\"", xaml);
+        Assert.DoesNotContain("Header=\"Alte Schachtansicht\"", xaml);
+
+        // SchachtansichtToggle steht direkt hinter dem geschlossenen WeitereAktionenDropdown-
+        // Button, ausserhalb jedes Button.ContextMenu.
         Assert.Matches(new Regex(
-            "<MenuItem x:Name=\"AnsichtTabelleMenu\"[\\s\\S]*?/>\\s*<MenuItem x:Name=\"SchachtansichtToggle\""),
+            @"</Button\.ContextMenu>\s*</Button>\s*(?:<!--[\s\S]*?-->\s*)*<MenuItem x:Name=""SchachtansichtToggle"""),
             xaml);
+        var toggle = Regex.Match(xaml, "<MenuItem x:Name=\"SchachtansichtToggle\"[\\s\\S]*?/>");
+        Assert.True(toggle.Success, "SchachtansichtToggle muss ein MenuItem sein");
+        Assert.Contains("Visibility=\"Collapsed\"", toggle.Value);
+        Assert.DoesNotContain("Header=", toggle.Value);
 
         var settings = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "AppSettings.cs"));
         Assert.Contains("public string SchaechteAnsicht { get; set; } = \"liste\";", settings);

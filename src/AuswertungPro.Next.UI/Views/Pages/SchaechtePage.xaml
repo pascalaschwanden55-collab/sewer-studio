@@ -95,7 +95,8 @@
                              (PDF)..." und "Gehe zu Ordner" stehen bewusst SOWOHL hier ALS AUCH im
                              Zeilenmenue (SchachtZeilenMenue) - das Zeilenmenue bleibt unveraendert, hier
                              kommt derselbe Handler dazu, damit die Aktion auch ohne Rechtsklick auf eine
-                             Zeile auffindbar ist. "Alte Schachtansicht" bleibt bis Aufgabe 8 hier stehen. -->
+                             Zeile auffindbar ist. Aufgabe 8 hat "Alte Schachtansicht" ebenfalls entfernt
+                             (siehe Einstellungen -> Allgemein -> Frühere Ansichten). -->
                         <Button.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="Daten abgleichen"
@@ -191,9 +192,11 @@
                                     </MenuItem>
                                 </MenuItem>
                                 <Separator/>
-                                <!-- Nova, Aufklapp-Liste (Task 6): Die drei Ansichten der Schachtseite sind
-                                     EINE Gruppe, wie bei den Haltungen. Genau einer der beiden Nova-Punkte
-                                     ist angehakt. -->
+                                <!-- Nova, Aufklapp-Liste (Task 6): Aufklapp-Liste/Tabelle sind eine Gruppe,
+                                     wie bei den Haltungen. Genau einer der beiden Nova-Punkte ist angehakt.
+                                     Optikanalyse 28.09.2026, Aufgabe 8: "Alte Schachtansicht" ist aus
+                                     diesem Menü entfernt und steht jetzt in Einstellungen -> Allgemein ->
+                                     Frühere Ansichten. -->
                                 <MenuItem Header="Ansicht" ToolTip="Ansicht wechseln und anpassen">
                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE713;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                                     <MenuItem x:Name="AnsichtListeMenu" Header="Aufklapp-Liste" IsCheckable="True" Tag="liste"
@@ -202,9 +205,6 @@
                                     <MenuItem x:Name="AnsichtTabelleMenu" Header="Tabelle" IsCheckable="True" Tag="tabelle"
                                               Click="AnsichtMenu_Click"
                                               ToolTip="Schächte als Tabelle mit Spaltenansichten und Eingabefeldern unten"/>
-                                    <MenuItem x:Name="SchachtansichtToggle" Header="Alte Schachtansicht" IsCheckable="True"
-                                              Checked="SchachtansichtToggle_Changed" Unchecked="SchachtansichtToggle_Changed"
-                                              ToolTip="Zwischen Tabelle und Schachtansicht umschalten"/>
                                     <Separator/>
                                     <MenuItem Header="Ansicht anpassen" ToolTip="Spalten, Zeilenhöhe, Zoom und Ausrichtung">
                                         <MenuItem.Icon><ui:FluentIcon Glyph="&#xE713;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
@@ -333,6 +333,17 @@
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
+
+                    <!-- Optikanalyse 28.09.2026, Aufgabe 8: "Alte Schachtansicht" ist aus dem Menü
+                         "Weitere Aktionen -> Ansicht" entfernt und steht jetzt in Einstellungen ->
+                         Allgemein -> Frühere Ansichten. Dieses MenuItem bleibt unsichtbar als reiner
+                         Zustandshalter erhalten - "IsChecked" entscheidet in SchaechteAnsichtUmschalter
+                         weiterhin zwischen Nova-Arbeitsflaeche und alter Ansicht. Es wird nur noch
+                         programmatisch gesetzt (aus AppSettings.ShowSchaechteNovaLayout beim
+                         Seitenaufbau), nie mehr durch einen Klick. Kein Header mehr, damit es in
+                         keiner Menü-/Umlaut-Prüfung als sichtbarer Text auftaucht. -->
+                    <MenuItem x:Name="SchachtansichtToggle" IsCheckable="True" Visibility="Collapsed"
+                              Checked="SchachtansichtToggle_Changed" Unchecked="SchachtansichtToggle_Changed"/>
                 </StackPanel>
 
                 <!-- Nova-Etappe 2b, Task 4: Suche als Pille rechts, gleiches Muster wie die

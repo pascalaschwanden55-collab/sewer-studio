@@ -238,7 +238,8 @@
                                  Liste - dieselben fuenf Titel wie bei den Schaechten (Wächter
                                  WeitereAktionenUntermenueTests). "Sanierungsmaßnahme bearbeiten" (Doppelung
                                  zum Zeilenmenue) und "Fokusmodus (F11)" (Doppelung zum Menue Ansicht) sind
-                                 entfernt; "Alte Haltungsansicht" bleibt bis Aufgabe 8 hier stehen. -->
+                                 entfernt; Aufgabe 8 hat "Alte Haltungsansicht" ebenfalls entfernt (siehe
+                                 Einstellungen -> Allgemein -> Frühere Ansichten). -->
                             <Button.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Header="Daten abgleichen"
@@ -325,9 +326,12 @@
                                         </MenuItem>
                                     </MenuItem>
                                     <Separator/>
-                                    <!-- Nova, Aufklapp-Liste: Die drei Ansichten der Haltungsseite sind EINE
-                                         Gruppe. Genau einer der beiden Nova-Punkte ist angehakt; solange die
-                                         Tabelle abgedockt ist, sperrt der Umschalter alle drei. -->
+                                    <!-- Nova, Aufklapp-Liste: Aufklapp-Liste/Tabelle sind eine Gruppe. Genau
+                                         einer der beiden Nova-Punkte ist angehakt; solange die Tabelle
+                                         abgedockt ist, sperrt der (jetzt unsichtbare) Umschalter der alten
+                                         Ansicht beide. Optikanalyse 28.09.2026, Aufgabe 8: "Alte
+                                         Haltungsansicht" ist aus diesem Menü entfernt und steht jetzt in
+                                         Einstellungen -> Allgemein -> Frühere Ansichten. -->
                                     <MenuItem Header="Ansicht" ToolTip="Ansicht wechseln und anpassen">
                                         <MenuItem.Icon><ui:FluentIcon Glyph="&#xE713;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                                         <MenuItem x:Name="AnsichtListeMenu" Header="Aufklapp-Liste" IsCheckable="True" Tag="liste"
@@ -336,9 +340,6 @@
                                         <MenuItem x:Name="AnsichtTabelleMenu" Header="Tabelle" IsCheckable="True" Tag="tabelle"
                                                   Click="AnsichtMenu_Click"
                                                   ToolTip="Haltungen als Tabelle mit Spaltenansichten und Eingabefeldern unten"/>
-                                        <MenuItem x:Name="HaltungsansichtToggle" Header="Alte Haltungsansicht" IsCheckable="True"
-                                                  Checked="HaltungsansichtToggle_Changed" Unchecked="HaltungsansichtToggle_Changed"
-                                                  ToolTip="Liste links und Formularkarten statt Tabelle, Übersicht und Eingabefeldern"/>
                                         <MenuItem x:Name="UndockButton" Header="Abdocken" Click="UndockGrid_Click"
                                                   ToolTipService.ShowOnDisabled="True"
                                                   ToolTip="Tabelle in separatem Fenster öffnen (Multi-Monitor)">
@@ -477,6 +478,18 @@
                                 </ContextMenu>
                             </Button.ContextMenu>
                         </Button>
+
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 8: "Alte Haltungsansicht" ist aus dem Menü
+                             "Weitere Aktionen -> Ansicht" entfernt und steht jetzt in Einstellungen ->
+                             Allgemein -> Frühere Ansichten. Dieses MenuItem bleibt unsichtbar als reiner
+                             Zustandshalter erhalten - "IsChecked" entscheidet in DataPageAnsichtUmschalter/
+                             DataPageDockingHost weiterhin zwischen Nova-Arbeitsflaeche und alter Ansicht
+                             und sperrt "Aufklapp-Liste"/"Tabelle", solange die Tabelle abgedockt ist. Es
+                             wird nur noch programmatisch gesetzt (aus AppSettings.ShowHaltungenNovaLayout
+                             beim Seitenaufbau), nie mehr durch einen Klick. Kein Header mehr, damit es in
+                             keiner Menü-/Umlaut-Prüfung als sichtbarer Text auftaucht. -->
+                        <MenuItem x:Name="HaltungsansichtToggle" IsCheckable="True" Visibility="Collapsed"
+                                  Checked="HaltungsansichtToggle_Changed" Unchecked="HaltungsansichtToggle_Changed"/>
 
                         <!-- Nova-Etappe 2b, Task 4: Popup fuer "Reihenfolge" (Verschieben auf Position,
                              Gehe zu Zeile) - dieselben Befehle wie bisher, nur nicht mehr staendig

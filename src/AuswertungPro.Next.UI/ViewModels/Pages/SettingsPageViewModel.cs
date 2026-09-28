@@ -76,6 +76,18 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private bool _reduceMotion;
     [ObservableProperty] private bool _hintergrundEngine;
 
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 8: Die drei Umschalter "Alte Haltungsansicht", "Alte
+    /// Schachtansicht" und "Klassische Übersicht" sind aus ihren Menüs entfernt und stehen jetzt
+    /// hier in der Gruppe "Frühere Ansichten". Jeder Schalter setzt denselben AppSettings-Wert wie
+    /// zuvor der Menüpunkt und speichert sofort (Muster wie ReduceMotion oben). Haltungen, Schächte
+    /// und Übersicht sind eigene Seiten, die nicht gleichzeitig mit den Einstellungen sichtbar sein
+    /// können - die Änderung wirkt deshalb beim nächsten Öffnen der jeweiligen Seite.
+    /// </summary>
+    [ObservableProperty] private bool _alteHaltungsansicht;
+    [ObservableProperty] private bool _alteSchachtansicht;
+    [ObservableProperty] private bool _klassischeProjektuebersicht;
+
     /// <summary>Anzahl Fotos je Seite in den selbst erzeugten Haltungsprotokollen.</summary>
     [ObservableProperty] private int _protocolPhotosPerPage;
     [ObservableProperty] private bool _startAiOnProgramStart;
@@ -320,6 +332,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         IsDarkTheme = string.Equals(UiTheme, ThemeManager.Dark, StringComparison.Ordinal);
         ReduceMotion = _settings.ReduceMotion;
         HintergrundEngine = _settings.HintergrundEngine;
+        AlteHaltungsansicht = !_settings.ShowHaltungenNovaLayout;
+        AlteSchachtansicht = !_settings.ShowSchaechteNovaLayout;
+        KlassischeProjektuebersicht = !_settings.ShowUebersichtNovaLayout;
         // Direkt ins Feld: ueber die Eigenschaft wuerde das blosse Oeffnen der Seite
         // die Einstellungen ohne Aenderung neu schreiben.
         _protocolPhotosPerPage = ProtocolPdfPhotoLayout.Normalize(_settings.ProtocolPhotosPerPage);
@@ -405,6 +420,32 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         _settings.HintergrundEngine = value;
         _settings.SaveImmediate();
         MotionSettings.RaiseEngineChanged();
+    }
+
+    partial void OnAlteHaltungsansichtChanged(bool value)
+    {
+        // Sofort speichern (Muster wie ReduceMotion oben). Die Haltungen-Seite liest
+        // AppSettings.ShowHaltungenNovaLayout beim naechsten Aufbau (Projektwechsel, erneutes
+        // Oeffnen der Seite) frisch - waehrend die Einstellungen offen sind, kann die
+        // Haltungen-Seite ohnehin nicht gleichzeitig sichtbar sein.
+        _settings.ShowHaltungenNovaLayout = !value;
+        _settings.SaveImmediate();
+    }
+
+    partial void OnAlteSchachtansichtChanged(bool value)
+    {
+        // Sofort speichern (Muster wie ReduceMotion oben). Die Schaechte-Seite liest
+        // AppSettings.ShowSchaechteNovaLayout beim naechsten Aufbau frisch.
+        _settings.ShowSchaechteNovaLayout = !value;
+        _settings.SaveImmediate();
+    }
+
+    partial void OnKlassischeProjektuebersichtChanged(bool value)
+    {
+        // Sofort speichern (Muster wie ReduceMotion oben). ShellViewModel.NavItems liest
+        // AppSettings.ShowUebersichtNovaLayout bei jeder Navigation zu "Uebersicht" frisch aus.
+        _settings.ShowUebersichtNovaLayout = !value;
+        _settings.SaveImmediate();
     }
 
     partial void OnProtocolPhotosPerPageChanged(int value)

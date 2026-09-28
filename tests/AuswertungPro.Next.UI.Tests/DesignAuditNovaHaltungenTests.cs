@@ -20,7 +20,10 @@ public sealed class DesignAuditNovaHaltungenTests
         Assert.Contains("SplitterKey=\"HaltungenEingabefelder\"", xaml);
         // Die Splitter-Persistenz braucht einen vererbten ViewKey am Container.
         Assert.Contains("ViewPersonalization.ViewKey=\"DataPage\"", xaml);
-        // Die alte Ansicht bleibt erreichbar.
+        // Optikanalyse 28.09.2026, Aufgabe 8: Der Umschalter der alten Ansicht steht seither
+        // unsichtbar im Seitencode und wird nur noch aus Einstellungen -> Allgemein -> Frühere
+        // Ansichten gesetzt (DataPageAnsichtUmschalter/DataPageDockingHost brauchen ihn weiterhin
+        // als Zustandshalter, siehe Der_Umschalter_zur_alten_Haltungsansicht_ist_kein_sichtbares_Menue_mehr).
         Assert.Contains("x:Name=\"HaltungsansichtToggle\"", xaml);
     }
 
@@ -62,15 +65,29 @@ public sealed class DesignAuditNovaHaltungenTests
         Assert.Contains("public bool ShowHaltungenNovaLayout { get; set; } = true;", settings);
     }
 
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 8: "Alte Haltungsansicht" ist aus dem Menü entfernt und
+    /// steht jetzt in Einstellungen -> Allgemein -> Frühere Ansichten. Das MenuItem bleibt als
+    /// unsichtbarer Zustandshalter fuer DataPageAnsichtUmschalter/DataPageDockingHost erhalten
+    /// (kein Header mehr, Visibility="Collapsed", ausserhalb jedes ContextMenu).
+    /// </summary>
     [Fact]
-    public void Der_Umschalter_zur_alten_Haltungsansicht_liegt_im_Menue_und_nicht_in_der_Werkzeugleiste()
+    public void Der_Umschalter_zur_alten_Haltungsansicht_ist_kein_sichtbares_Menue_mehr()
     {
         var xaml = Xaml("Views", "Pages", "DataPage.xaml");
-        var toggle = Regex.Match(xaml, "<MenuItem x:Name=\"HaltungsansichtToggle\"[\\s\\S]*?/>|<MenuItem x:Name=\"HaltungsansichtToggle\"[\\s\\S]*?</MenuItem>");
+        var toggle = Regex.Match(xaml, "<MenuItem x:Name=\"HaltungsansichtToggle\"[\\s\\S]*?/>");
         Assert.True(toggle.Success, "HaltungsansichtToggle muss ein MenuItem sein");
         Assert.Contains("IsCheckable=\"True\"", toggle.Value);
-        Assert.Contains("Header=\"Alte Haltungsansicht\"", toggle.Value);
+        Assert.Contains("Visibility=\"Collapsed\"", toggle.Value);
+        Assert.DoesNotContain("Header=", toggle.Value);
         Assert.DoesNotContain("<ToggleButton x:Name=\"HaltungsansichtToggle\"", xaml);
+        Assert.DoesNotContain("Header=\"Alte Haltungsansicht\"", xaml);
+
+        // Ausserhalb jedes Button.ContextMenu: Der Umschalter steht als Geschwister direkt hinter
+        // dem geschlossenen WeitereAktionenDropdown-Button, nicht mehr in dessen Menü.
+        Assert.Matches(
+            new Regex(@"</Button\.ContextMenu>\s*</Button>\s*(?:<!--[\s\S]*?-->\s*)*<MenuItem x:Name=""HaltungsansichtToggle"""),
+            xaml);
     }
 
     [Fact]
@@ -268,11 +285,14 @@ public sealed class DesignAuditNovaHaltungenTests
     }
 
     /// <summary>
-    /// Die drei Ansichten stehen als Gruppe im Menue "Weitere Aktionen". Genau einer der beiden
-    /// Nova-Punkte ist angehakt; deaktivierte Gruppenkoepfe gibt es nicht (XamlActionWiringGuard).
+    /// Aufklapp-Liste und Tabelle stehen als Gruppe im Menue "Weitere Aktionen". Genau einer der
+    /// beiden Nova-Punkte ist angehakt; deaktivierte Gruppenkoepfe gibt es nicht
+    /// (XamlActionWiringGuard). Optikanalyse 28.09.2026, Aufgabe 8: "Alte Haltungsansicht" gehört
+    /// nicht mehr dazu - sie ist aus diesem Menü entfernt (Einstellungen -> Allgemein -> Frühere
+    /// Ansichten).
     /// </summary>
     [Fact]
-    public void Das_Menue_fuehrt_Aufklapp_Liste_Tabelle_und_die_alte_Ansicht()
+    public void Das_Menue_fuehrt_Aufklapp_Liste_und_Tabelle()
     {
         var xaml = Xaml("Views", "Pages", "DataPage.xaml");
 
@@ -290,7 +310,7 @@ public sealed class DesignAuditNovaHaltungenTests
             Assert.Contains("Click=\"AnsichtMenu_Click\"", punkt.Value);
         }
 
-        Assert.Contains("Header=\"Alte Haltungsansicht\"", xaml);
+        Assert.DoesNotContain("Header=\"Alte Haltungsansicht\"", xaml);
         // Der Hinweis am gesperrten Abdocken muss sichtbar sein duerfen.
         Assert.Contains("ToolTipService.ShowOnDisabled=\"True\"", xaml);
     }

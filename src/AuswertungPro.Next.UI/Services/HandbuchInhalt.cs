@@ -33,9 +33,10 @@ public static class HandbuchInhalt
             "Haltung prüfen», der direkt zur ersten noch offenen Haltung mit Video springt. Ein Klick " +
             "auf eine Schadensgruppe filtert die Haltungsliste danach. «Haltungen öffnen» springt zur " +
             "Datentabelle, «Vorschau-PDF» erzeugt eine kurze Projektübersicht als PDF.\n\n" +
-            "Über Ansicht -> Klassische Übersicht lässt sich stattdessen die ältere Startseite mit " +
-            "Projektliste, Vorschau und Vorschau-PDF einschalten - ohne Projekt ist sie ohnehin der " +
-            "Startbildschirm (neues Projekt anlegen oder ein vorhandenes öffnen)."),
+            "Über Einstellungen -> Allgemein -> Frühere Ansichten -> «Klassische Projektübersicht " +
+            "verwenden» lässt sich stattdessen die ältere Startseite mit Projektliste, Vorschau und " +
+            "Vorschau-PDF einschalten - ohne Projekt ist sie ohnehin der Startbildschirm (neues " +
+            "Projekt anlegen oder ein vorhandenes öffnen)."),
 
         new("Projekt", "Projekt",
             "Stammdaten des offenen Projekts: Name, Beschreibung, Auftraggeber, Gemeinde, " +
@@ -57,7 +58,9 @@ public static class HandbuchInhalt
             "auch hier), Reihenfolge (Zeile verschieben oder an eine Position setzen), Ansicht " +
             "(Ansicht wechseln, anpassen, abdocken) sowie Ausgabe (Hydraulik-PDF, Haltungsdossier " +
             "drucken). Statt der Tabelle lässt sich über Weitere Aktionen -> Ansicht auch die " +
-            "aufklappbare Listenansicht einer Haltung wählen."),
+            "aufklappbare Listenansicht einer Haltung wählen. Die frühere «Alte Haltungsansicht» " +
+            "steht nicht mehr in diesem Menü, sondern in Einstellungen -> Allgemein -> Frühere " +
+            "Ansichten."),
 
         new("Schaechte", "Schächte",
             "Tabelle aller Schacht-Inspektionspunkte, gleich aufgebaut wie Haltungen: Spaltenwahl, " +
@@ -69,7 +72,9 @@ public static class HandbuchInhalt
             "Gehe zu Ordner) - Sanierungsmassnahmen, Protokoll-PDF und Gehe zu Ordner stehen bewusst " +
             "sowohl im Rechtsklick-Kontextmenü als auch unter «Weitere Aktionen». Neu, Löschen, " +
             "Verschieben und die Detailansicht funktionieren wie bei den Haltungen. Auch hier kann " +
-            "statt der Tabelle die aufklappbare Listenansicht gewählt werden."),
+            "statt der Tabelle die aufklappbare Listenansicht gewählt werden. Die frühere «Alte " +
+            "Schachtansicht» steht ebenfalls nicht mehr in diesem Menü, sondern in Einstellungen -> " +
+            "Allgemein -> Frühere Ansichten."),
 
         new("Import", "Import",
             "Holt Inspektionsdaten ins Projekt. Oben stehen die normalen Wege: PDF-Protokolle " +
@@ -135,10 +140,11 @@ public static class HandbuchInhalt
             "Entwickler-Support eine genaue Fehlermeldung mitteilen möchte."),
 
         new("Einstellungen", "Einstellungen",
-            "Alle Programmeinstellungen in Gruppen: Projektpfade und Ordner, Sicherung " +
-            "(automatische Speicherung, Wiederherstellungspunkte, Vollsicherung), Video-Player, " +
-            "KI-Verbindung sowie dieser Hilfe-Bereich. Ein Suchfeld oben findet die passende Gruppe " +
-            "über Stichworte, auch bei Umlauten."),
+            "Alle Programmeinstellungen in Gruppen: Darstellung (Design, frühere Ansichten wie die " +
+            "alte Haltungs-/Schachtansicht oder die klassische Projektübersicht), Projektpfade und " +
+            "Ordner, Sicherung (automatische Speicherung, Wiederherstellungspunkte, Vollsicherung), " +
+            "Video-Player, KI-Verbindung sowie dieser Hilfe-Bereich. Ein Suchfeld oben findet die " +
+            "passende Gruppe über Stichworte, auch bei Umlauten."),
 
         new(FachleuteSchluessel, "Für Fachleute (technisch)",
             "Dieser Abschnitt richtet sich an Entwickler und Techniker, nicht an den täglichen " +

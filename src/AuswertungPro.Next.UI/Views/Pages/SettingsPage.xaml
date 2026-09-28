@@ -393,6 +393,28 @@
                             </Grid>
                         </GroupBox>
 
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 8: Die frueheren Menuepunkte "Alte
+                             Haltungsansicht", "Alte Schachtansicht" (je Seite unter Weitere Aktionen ->
+                             Ansicht) und "Klassische Übersicht" (Menü Ansicht) sind entfernt und stehen
+                             jetzt hier. Jedes Häkchen setzt denselben AppSettings-Schalter wie zuvor der
+                             Menüpunkt und speichert sofort. -->
+                        <GroupBox Header="Frühere Ansichten" Style="{StaticResource SettingsSectionGroupBox}">
+                            <StackPanel>
+                                <CheckBox Content="Alte Haltungsansicht verwenden"
+                                          IsChecked="{Binding AlteHaltungsansicht}"
+                                          Style="{StaticResource SettingsFieldCheckBox}"
+                                          ToolTip="Zeigt auf der Haltungen-Seite wieder die frühere Ansicht mit Liste links und Formularkarten statt der Tabelle mit Übersicht und Eingabefeldern. Wirkt beim nächsten Öffnen der Haltungen-Seite."/>
+                                <CheckBox Content="Alte Schachtansicht verwenden"
+                                          IsChecked="{Binding AlteSchachtansicht}"
+                                          Style="{StaticResource SettingsFieldCheckBox}"
+                                          ToolTip="Zeigt auf der Schächte-Seite wieder die frühere Ansicht statt der Tabelle mit Übersicht und Eingabefeldern. Wirkt beim nächsten Öffnen der Schächte-Seite."/>
+                                <CheckBox Content="Klassische Projektübersicht verwenden"
+                                          IsChecked="{Binding KlassischeProjektuebersicht}"
+                                          Style="{StaticResource SettingsFieldCheckBox}"
+                                          ToolTip="Zeigt bei offenem Projekt wieder die bisherige Übersicht mit Projektliste, Vorschau und Vorschau-PDF. Wirkt beim nächsten Öffnen der Übersicht-Seite."/>
+                            </StackPanel>
+                        </GroupBox>
+
                         <GroupBox Header="Speichern" Style="{StaticResource SettingsSectionGroupBox}">
                             <Grid Style="{StaticResource SettingsFormGrid}">
                                 <Grid.ColumnDefinitions>

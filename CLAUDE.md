@@ -307,6 +307,46 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `DesignAuditCommandReachabilityTests`/`DesignAuditNovaSchaechteTests`/
   `DesignAuditThemeResourceTests`/`SchaechtePageProtocolToolbarTests`/
   `DesignAuditNovaHaltungenTests` (neuer Tag-Nachweis für das Reihenfolge-Popup).
+- **Aufgabe 8 — Alte Ansichten aus den Menüs, neue Einstellungsgruppe «Frühere Ansichten».**
+  «Alte Haltungsansicht» (Haltungen, `DataPage.xaml`, Untermenü «Weitere Aktionen ▸ Ansicht»),
+  «Alte Schachtansicht» (Schächte, `SchaechtePage.xaml`, dasselbe Untermenü) und «Klassische
+  Übersicht» (`MainWindow.xaml`, Menü «_Ansicht») sind aus ihren Menüs entfernt. «Aufklapp-
+  Liste»/«Tabelle» bleiben unverändert im Untermenü «Ansicht» stehen. Die drei Schalter setzen
+  weiterhin genau `AppSettings.ShowHaltungenNovaLayout`/`ShowSchaechteNovaLayout`/
+  `ShowUebersichtNovaLayout` (`false` = alte Ansicht/klassisch) und stehen jetzt als drei
+  Häkchen in einer neuen Gruppe «Frühere Ansichten» in Einstellungen ▸ Allgemein, direkt unter
+  «Darstellung und Diagnose» (`SettingsPageViewModel.AlteHaltungsansicht`/`AlteSchachtansicht`/
+  `KlassischeProjektuebersicht`, jeweils mit `OnXChanged` nach dem Muster von `ReduceMotion`/
+  `HintergrundEngine`: sofort `_settings.Show…NovaLayout = !value` setzen und
+  `SaveImmediate()`). Ein eigenes Live-Ereignis wie `MotionSettings.EngineChanged` ist dafür
+  NICHT nötig: Haltungen, Schächte, Übersicht und Einstellungen sind eigene Seiten im selben
+  Inhaltsbereich und können nicht gleichzeitig sichtbar sein — jede Navigation zu einer der drei
+  Seiten baut sie über `ShellViewModel.NavItems` neu auf und liest die Einstellung dabei frisch
+  (bei Übersicht schon bisher so: `ShowUebersichtNovaLayout` wird bei jedem `CreatePage()`
+  ausgewertet). Die Änderung wirkt also beim nächsten Öffnen der jeweiligen Seite — bei
+  Haltungen/Schächte/Übersicht ist „nächstes Öffnen" das einzig mögliche „sofort", weil man beim
+  Umschalten zwingend auf der Einstellungen-Seite steht. `ShellViewModel.KlassischeUebersicht`
+  bleibt als Kompatibilitäts-/Testeigenschaft bestehen (u. a. `OverviewPreviewPdfCommandTests`),
+  bindet aber nirgends mehr an XAML.
+  **Die beiden Umschalter `HaltungsansichtToggle`/`SchachtansichtToggle` bleiben als
+  UNSICHTBARE `MenuItem`-Zustandshalter im Seitencode erhalten** (`Visibility="Collapsed"`, kein
+  `Header` mehr, ausserhalb jedes `ContextMenu` direkt hinter dem geschlossenen
+  `WeitereAktionenDropdown`-Button): `DataPageAnsichtUmschalter`/`DataPageDockingHost`
+  (Haltungen, inkl. Abdocken-Sperre) und `SchaechteAnsichtUmschalter` (Schächte) lesen ihr
+  `IsChecked`/`IsEnabled` weiterhin genauso wie zuvor — nur `InitNovaWorkspace`/
+  `SchaechtePageViewModel`-Aufbau setzt `IsChecked` jetzt ausschliesslich aus
+  `AppSettings.Show…NovaLayout`, nie mehr ein Klick. Diese vier Klassen wurden bewusst NICHT
+  umgebaut (kein Typwechsel von `MenuItem` auf einen eigenen POCO): Das hätte
+  `DataPageAnsichtUmschalterTests` (deckt `WendeAn()`, Abdocken-Sperre, Konfliktweiche
+  vollständig mit echten WPF-Controls ab) unnötig invasiv gemacht, ohne einen Verhaltensvorteil.
+  Wächter: `DesignAuditNovaHaltungenTests.Der_Umschalter_zur_alten_Haltungsansicht_ist_kein_
+  sichtbares_Menue_mehr`, `.Das_Menue_fuehrt_Aufklapp_Liste_und_Tabelle`,
+  `DesignAuditNovaSchaechteTests.Ansicht_Liste_und_Tabelle_stehen_als_Gruppe`,
+  `.Werkzeugleiste_zeigt_nur_Hauptaktionen_und_ein_Menue_Weitere_Aktionen` (kein
+  `Header="Alte Schachtansicht"` mehr), `SettingsPageViewModelFruehereAnsichtenTests` (Häkchen
+  setzen/lesen den richtigen Schalter, sofortiges Speichern, Häkchen sind unabhängig
+  voneinander). `HandbuchInhalt` (Übersicht, Haltungen, Schächte, Einstellungen) verweist auf
+  den neuen Ort.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 
