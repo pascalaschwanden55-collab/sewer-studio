@@ -147,6 +147,11 @@ public sealed class WebGisImportUseCase
     private async Task PlaneSanierungenAsync(IReadOnlyList<ObjektAkte> sanierungsakten, WebGisImportPlan plan, WebGisImportEingabe e,
         WebGisLesestand stand, WebGisImportPosition pos, CancellationToken ct)
     {
+        // Der Doppel-Vergleich mit vorhandenen Akten braucht das Jahr der Massnahme; es steht nicht in der Liste
+        // (live 28.09.2026). Nur nachlesen, wenn das Objekt ueberhaupt Sanierungsakten hat.
+        await WebGisMassnahmenJahr.ErgaenzeAsync(_client, stand.Sanierungen,
+            z => WebGisSanierungImportRegel.BrauchtJahr(sanierungsakten, e.RecordId, z), ct).ConfigureAwait(false);
+
         foreach (var zeile in stand.Sanierungen)
         {
             if (string.IsNullOrWhiteSpace(zeile.GlobalId)) continue;

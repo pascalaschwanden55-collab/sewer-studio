@@ -7,10 +7,18 @@ namespace AuswertungPro.Next.Application.WebGis;
 public sealed class WebGisSanierungZeile
 {
     public string? GlobalId { get; init; }
-    /// <summary>Erste Spalte der Liste («Beginn»), roh wie geliefert.</summary>
+    /// <summary>
+    /// Erste Spalte der Liste, roh wie geliefert. Live gelesen 28.09.2026: Die Spalte heisst «Zeitpunkt»
+    /// (Feld <c>zeitpunkt</c>) und war bei beiden Bürglen-Massnahmen leer — sie ist NICHT das Sanierungsjahr.
+    /// </summary>
     public string? Beginn { get; init; }
-    /// <summary>Jahr aus <see cref="Beginn"/>; null, wenn keines lesbar ist.</summary>
-    public string? Jahr => WebGisSanierungFeldkarte.JahrAusDatum(Beginn);
+    /// <summary>
+    /// Sanierungsjahr aus der Massnahme selbst (<see cref="WebGisSanierungFeldkarte.SanierungsjahrRef"/>),
+    /// nachgelesen über <see cref="WebGisMassnahmenJahr"/>. Null, solange nicht gelesen.
+    /// </summary>
+    public string? Sanierungsjahr { get; set; }
+    /// <summary>Jahr der Massnahme: zuerst das nachgelesene Sanierungsjahr, sonst die erste Listenspalte.</summary>
+    public string? Jahr => WebGisSanierungFeldkarte.JahrAusDatum(Sanierungsjahr) ?? WebGisSanierungFeldkarte.JahrAusDatum(Beginn);
     public string? Art { get; init; }
     public string? Status { get; init; }
     public string? Verfahren { get; init; }

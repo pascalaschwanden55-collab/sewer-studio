@@ -106,7 +106,7 @@ public static class WebGisSanierungPlanBuilder
         foreach (var z in stand.Sanierungen)
         {
             if (!WebGisMassnahmenVergleich.GleicherInhalt(z, artText, statusText, verfText)) continue;
-            if (WebGisMassnahmenVergleich.NachweislichAndereJahre(z.Beginn, jahr))
+            if (WebGisMassnahmenVergleich.NachweislichAndereJahre(z.Jahr, jahr))
             {
                 andereJahre.Add(z.Jahr!);
                 continue;

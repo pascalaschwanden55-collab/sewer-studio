@@ -117,6 +117,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KostenfallAufbau", "tools\K
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodingReplay", "tools\CodingReplay\CodingReplay.csproj", "{5FECF00B-F226-4954-ADE9-F5C244E93BC8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebGisLesepruefung", "tools\WebGisLesepruefung\WebGisLesepruefung.csproj", "{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -763,6 +765,18 @@ Global
 		{5FECF00B-F226-4954-ADE9-F5C244E93BC8}.Release|x64.Build.0 = Release|Any CPU
 		{5FECF00B-F226-4954-ADE9-F5C244E93BC8}.Release|x86.ActiveCfg = Release|Any CPU
 		{5FECF00B-F226-4954-ADE9-F5C244E93BC8}.Release|x86.Build.0 = Release|Any CPU
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}.Debug|x64.Build.0 = Debug|Any CPU
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}.Debug|x86.Build.0 = Debug|Any CPU
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}.Release|x64.ActiveCfg = Release|Any CPU
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}.Release|x64.Build.0 = Release|Any CPU
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}.Release|x86.ActiveCfg = Release|Any CPU
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -821,6 +835,7 @@ Global
 		{CA7690A6-8C8B-4D82-B5D4-91C7752BE763} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 		{00DFE5B8-D4E1-4D1C-958F-65562C488625} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 		{5FECF00B-F226-4954-ADE9-F5C244E93BC8} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
+		{ADDBFA61-6939-4281-A8AD-E1F4BED8C064} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {54D8845E-5B57-4DBE-95FA-FFF3E6938256}

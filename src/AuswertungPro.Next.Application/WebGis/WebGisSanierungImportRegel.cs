@@ -119,6 +119,28 @@ public static class WebGisSanierungImportRegel
         return false;
     }
 
+    /// <summary>
+    /// Haengt die Frage «schon vorhanden?» fuer diese Zeile am Jahr? Nur dann, wenn keine Akte sie ueber die
+    /// WebGIS-Kennung belegt, aber eine Akte mit gleicher Art/Status/Verfahren am Objekt steht. Nur dann lohnt
+    /// es, die Massnahme zum Jahr nachzulesen.
+    /// </summary>
+    public static bool BrauchtJahr(IEnumerable<ObjektAkte> akten, Guid recordId, WebGisSanierungZeile zeile)
+    {
+        if (zeile.Art is null || string.IsNullOrWhiteSpace(zeile.GlobalId)) return false;
+        var gleicheArt = false;
+        foreach (var a in akten)
+        {
+            if (a.Art != WebGisSaniertKriterium.ArtSanierung || !a.Bezuege.Contains(recordId)) continue;
+            if (a.Quellen.Any(q => q.System == BelegSystem && string.Equals(q.Kennung, zeile.GlobalId, StringComparison.OrdinalIgnoreCase)))
+                return false;
+            if (WebGisMassnahmenVergleich.GleicherInhalt(zeile,
+                    AkteText(a, WebGisSanierungFeldkarte.AkteArt), AkteText(a, WebGisSanierungFeldkarte.AkteStatus),
+                    AkteText(a, WebGisSanierungFeldkarte.AkteVerfahren)))
+                gleicheArt = true;
+        }
+        return gleicheArt;
+    }
+
     /// <summary>Legt die Akte an. False, wenn nicht uebernehmbar, das Objekt fehlt oder sie schon da ist.</summary>
     public static bool LegeAn(Project projekt, WebGisSanierungImport imp)
     {

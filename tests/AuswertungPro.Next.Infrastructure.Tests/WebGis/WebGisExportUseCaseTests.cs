@@ -321,6 +321,16 @@ public sealed partial class WebGisExportUseCaseTests
             return Task.FromResult(WebGisSchreibErgebnis.Ok("1"));
         }
 
+        /// <summary>Einzelne Massnahme nach GlobalId (Jahr steht nur dort, live 28.09.2026).</summary>
+        public Func<string, WebGisLesestand?> LeseMassnahme { get; set; } = _ => null;
+        public int MassnahmenGelesen { get; private set; }
+
+        public Task<WebGisLesestand?> LeseMassnahmeAsync(string globalId, CancellationToken ct = default)
+        {
+            MassnahmenGelesen++;
+            return Task.FromResult(LeseMassnahme(globalId));
+        }
+
         public Task<IReadOnlyList<(string Key, string Text)>?> LeseKatalogListeAsync(WebGisObjektart art, string refId, string filter, string? subtyp = null, CancellationToken ct = default)
         {
             KatalogListenAufrufe++;

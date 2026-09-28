@@ -183,6 +183,10 @@ public sealed class WebGisExportUseCase
             }
         }
 
+        // Das Jahr bestehender Massnahmen steht nicht in der Liste, nur in der Massnahme selbst (live 28.09.2026).
+        if (stand is { Sanierungen.Count: > 0 })
+            await WebGisMassnahmenJahr.ErgaenzeAsync(_client, stand.Sanierungen, ct: ct).ConfigureAwait(false);
+
         foreach (var akte in akten)
             plan.Sanierungen.Add(WebGisSanierungPlanBuilder.Baue(akte, e.Objektart, e.Bezeichnung, stand, katalog, e.RecordId));
     }
@@ -535,6 +539,8 @@ public sealed class WebGisExportUseCase
         {
             var artText = Anzeige(san, "Art"); var statusText = Anzeige(san, "Status"); var verfText = Anzeige(san, "Verfahren");
             var jahr = san.Felder.GetValueOrDefault(WebGisSanierungFeldkarte.SanierungsjahrRef);
+            await WebGisMassnahmenJahr.ErgaenzeAsync(_client, stand.Sanierungen,
+                z => WebGisMassnahmenVergleich.GleicherInhalt(z, artText, statusText, verfText), ct).ConfigureAwait(false);
             if (stand.Sanierungen.Exists(z => WebGisMassnahmenVergleich.Gleich(z, artText, statusText, verfText, jahr)))
             {
                 san.SchreibFehler = "Massnahme wurde inzwischen im WebGIS angelegt — nicht doppelt angelegt.";

@@ -146,6 +146,35 @@ public sealed class WebGisMassnahmenJahrTests
         Assert.Equal(vorhanden, WebGisSanierungImportRegel.SchonVorhanden(p.Objektakten, h.Id, zeile));
     }
 
+    /// <summary>Live 28.09.2026: Erste Listenspalte leer, das Jahr steht nur in der Massnahme selbst.</summary>
+    [Theory]
+    [InlineData("2020-01-01T00:00:00", false)]
+    [InlineData("2026-01-01T00:00:00", true)]
+    public void Holen_vergleicht_das_nachgelesene_jahr_der_massnahme(string sanierungsjahr, bool vorhanden)
+    {
+        var (p, h) = ProjektMitRenovierung("01.01.2026");
+        var zeile = new WebGisSanierungZeile
+        {
+            GlobalId = "M9", Beginn = null, Art = "Renovierung", Status = "Ausgeführt", Verfahren = "Schlauchverfahren",
+            Sanierungsjahr = sanierungsjahr,
+        };
+
+        Assert.Equal(vorhanden, WebGisSanierungImportRegel.SchonVorhanden(p.Objektakten, h.Id, zeile));
+    }
+
+    [Fact]
+    public void Jahr_wird_nur_nachgelesen_wenn_es_fuer_den_vergleich_zaehlt()
+    {
+        var (p, h) = ProjektMitRenovierung("01.01.2026");
+        var gleicheArt = new WebGisSanierungZeile { GlobalId = "M9", Art = "Renovierung", Status = "Ausgeführt", Verfahren = "Schlauchverfahren" };
+        var belegt = new WebGisSanierungZeile { GlobalId = "M1", Art = "Renovierung", Status = "Ausgeführt", Verfahren = "Schlauchverfahren" };
+        var andereArt = new WebGisSanierungZeile { GlobalId = "M8", Art = "Reparatur", Status = "Ausgeführt", Verfahren = "Vermörtelung" };
+
+        Assert.True(WebGisSanierungImportRegel.BrauchtJahr(p.Objektakten, h.Id, gleicheArt));
+        Assert.False(WebGisSanierungImportRegel.BrauchtJahr(p.Objektakten, h.Id, belegt));   // ueber die Kennung zugeordnet
+        Assert.False(WebGisSanierungImportRegel.BrauchtJahr(p.Objektakten, h.Id, andereArt)); // ohnehin eine andere
+    }
+
     [Fact]
     public void Holen_legt_die_renovierung_eines_anderen_jahres_an()
     {

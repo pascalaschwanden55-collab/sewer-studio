@@ -40,4 +40,47 @@ public sealed partial class WebGisExportUseCaseTests
         Assert.Equal(angelegt ? 1 : 0, client.MassnahmenAngelegt);
         if (!angelegt) Assert.Contains("inzwischen", san.SchreibFehler);
     }
+
+    /// <summary>
+    /// Wie am echten WebGIS gelesen (28.09.2026, nur lesend): Die erste Listenspalte («Zeitpunkt») ist leer,
+    /// das Sanierungsjahr steht nur in der Massnahme selbst. Vorher griff der Jahresvergleich deshalb nie.
+    /// </summary>
+    [Theory]
+    [InlineData("2020-01-01T00:00:00", true)]
+    [InlineData("2026-01-01T00:00:00", false)]
+    [InlineData(null, false)]
+    public async Task Jahr_der_vorhandenen_massnahme_kommt_aus_ihrer_eigenen_maske(string? jahrInDerMassnahme, bool angelegt)
+    {
+        var (plan, _, san) = PlanMitMassnahme(mitFeldaenderung: false);
+        san.Anzeige.Add("Art: Reparatur");
+        san.Anzeige.Add("Status: Ausgeführt");
+        san.Anzeige.Add("Verfahren: Vermörtelung");
+        san.Felder[WebGisSanierungFeldkarte.SanierungsjahrRef] = "2026-01-01T00:00:00.000Z";
+        var client = new FakeClient
+        {
+            Lese = (_, _) =>
+            {
+                var s = HaltungMitZustand("102");
+                s.Sanierungen.Add(new WebGisSanierungZeile
+                {
+                    Beginn = null, Art = "Reparatur", Status = "Ausgeführt", Verfahren = "Vermörtelung", GlobalId = "alt",
+                });
+                return s;
+            },
+            LeseMassnahme = gid => gid != "alt" || jahrInDerMassnahme is null ? null : new WebGisLesestand
+            {
+                GlobalId = gid, Bezeichnung = "",
+                Felder = new System.Collections.Generic.Dictionary<string, string?>(System.StringComparer.Ordinal)
+                {
+                    [WebGisSanierungFeldkarte.SanierungsjahrRef] = jahrInDerMassnahme,
+                },
+            },
+        };
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
+
+        Assert.Equal(angelegt, san.Geschrieben);
+        Assert.Equal(angelegt ? 1 : 0, client.MassnahmenAngelegt);
+        Assert.Equal(1, client.MassnahmenGelesen);
+    }
 }
