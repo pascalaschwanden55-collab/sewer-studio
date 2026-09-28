@@ -421,6 +421,20 @@ public static partial class HoldingFolderDistributor
         var sidecarVideoLinksByHolding = BuildSidecarVideoLinkIndex(xtfSourceFolder, pdfFiles);
         var sidecarHoldingsByVideoLink = BuildSidecarHoldingByVideoIndex(sidecarVideoLinksByHolding);
         var cdIndexVideoLinksByPhoto = BuildCdIndexVideoLinkIndex(xtfSourceFolder, pdfFiles);
+        var search = new HoldingDistribution.HoldingVideoSearchContext(
+            videoSourceFolder,
+            recursiveVideoSearch,
+            videoFilesCache,
+            sidecarVideoLinksByHolding,
+            sidecarHoldingsByVideoLink,
+            cdIndexVideoLinksByPhoto);
+        var target = new HoldingDistribution.HoldingDistributionTarget(
+            destGemeindeFolder,
+            moveInsteadOfCopy,
+            overwrite,
+            unmatchedFolderName,
+            directoryConfig,
+            variant);
 
         // Index: Haltung (normalisiert) -> Zielordner-Pfad
         // Wird beim Verteilen gefuellt, damit nicht-parsbare PDFs per Dateiname zugeordnet werden koennen.
@@ -446,7 +460,8 @@ public static partial class HoldingFolderDistributor
                         continue;
                     }
 
-                    var result = ParsedHoldingDistributionController.Distribute(parsed, pdfPath, pdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, null, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto, directoryConfig, variant);
+                    var result = ParsedHoldingDistributionController.Distribute(
+                        parsed, new(pdfPath, pdfPath), search, target, project);
                     results.Add(result);
                     if (result.Success && result.HoldingFolder is not null && parsed.Haltung is not null)
                         distributedHoldings[NormalizeHaltungId(parsed.Haltung)] = result.HoldingFolder;
@@ -455,7 +470,8 @@ public static partial class HoldingFolderDistributor
 
                 if (chunks.Count == 1 && pages.Count == chunks[0].Pages.Count)
                 {
-                    var result = ParsedHoldingDistributionController.Distribute(chunks[0].Parsed, pdfPath, pdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, null, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto, directoryConfig, variant);
+                    var result = ParsedHoldingDistributionController.Distribute(
+                        chunks[0].Parsed, new(pdfPath, pdfPath), search, target, project);
                     results.Add(result);
                     if (result.Success && result.HoldingFolder is not null && chunks[0].Parsed.Haltung is not null)
                         distributedHoldings[NormalizeHaltungId(chunks[0].Parsed.Haltung)] = result.HoldingFolder;
@@ -475,7 +491,13 @@ public static partial class HoldingFolderDistributor
                     try
                     {
                         WritePdfPages(pdfPath, chunk.Pages, tempPdfPath);
-                        var result = ParsedHoldingDistributionController.Distribute(chunk.Parsed, pdfPath, tempPdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy: false, overwrite, recursiveVideoSearch, unmatchedFolderName, pageRange, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto, directoryConfig, variant);
+                        // Der Teil eines Sammelberichts ist eine Temp-Datei: nie das Original verschieben.
+                        var result = ParsedHoldingDistributionController.Distribute(
+                            chunk.Parsed,
+                            new(pdfPath, tempPdfPath, pageRange),
+                            search,
+                            target with { MoveInsteadOfCopy = false },
+                            project);
                         results.Add(result);
                         if (result.Success && result.HoldingFolder is not null && chunk.Parsed.Haltung is not null)
                             distributedHoldings[NormalizeHaltungId(chunk.Parsed.Haltung)] = result.HoldingFolder;

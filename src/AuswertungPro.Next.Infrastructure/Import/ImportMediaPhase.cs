@@ -24,15 +24,34 @@ internal sealed record ImportMediaPhaseSinks(
 /// (<see cref="ProjectImportOrchestrator"/>): Ein Fehler in einem Teilschritt beendet die
 /// ganze Phase, ausser beim Schachtschritt, der seine Fehler selbst meldet.
 /// </summary>
-internal sealed class ImportMediaPhase(
-    IImportMediaDistributionService mediaDistributor,
-    INameBasedProtocolDistributor? protocolDistributor,
-    IKanalImportDistributor kanalDistributor,
-    IDichtheitImportDistributor dichtheitDistributor,
-    IShaftDistributionService shaftDistribution,
-    IKinsGesamtprotokollLocator kinsGesamtprotokollLocator,
-    PdfKiSchiedsrichter? kiSchiedsrichter)
+internal sealed class ImportMediaPhase
 {
+    private readonly IImportMediaDistributionService _mediaDistributor;
+    private readonly INameBasedProtocolDistributor? _protocolDistributor;
+    private readonly IKanalImportDistributor _kanalDistributor;
+    private readonly IDichtheitImportDistributor _dichtheitDistributor;
+    private readonly IShaftDistributionService _shaftDistribution;
+    private readonly IKinsGesamtprotokollLocator _kinsGesamtprotokollLocator;
+    private readonly PdfKiSchiedsrichter? _kiSchiedsrichter;
+
+    public ImportMediaPhase(
+        IImportMediaDistributionService mediaDistributor,
+        INameBasedProtocolDistributor? protocolDistributor,
+        IKanalImportDistributor kanalDistributor,
+        IDichtheitImportDistributor dichtheitDistributor,
+        IShaftDistributionService shaftDistribution,
+        IKinsGesamtprotokollLocator kinsGesamtprotokollLocator,
+        PdfKiSchiedsrichter? kiSchiedsrichter)
+    {
+        _mediaDistributor = mediaDistributor;
+        _protocolDistributor = protocolDistributor;
+        _kanalDistributor = kanalDistributor;
+        _dichtheitDistributor = dichtheitDistributor;
+        _shaftDistribution = shaftDistribution;
+        _kinsGesamtprotokollLocator = kinsGesamtprotokollLocator;
+        _kiSchiedsrichter = kiSchiedsrichter;
+    }
+
     public void Run(
         Project project,
         string projectFolder,
@@ -60,7 +79,7 @@ internal sealed class ImportMediaPhase(
         //     (*_Protokoll.pdf) — die Auto-Wahl "groesste Archiv-PDF" traefe sonst Plaene/fremde PDFs.
         Melde(5, "Haltungsprotokolle", "Videos und Protokolle zuordnen …");
         var kinsGesamtprotokoll = format == KanalExportFormat.Kins
-            ? kinsGesamtprotokollLocator.Finde(sourceFolder)
+            ? _kinsGesamtprotokollLocator.Finde(sourceFolder)
             : null;
         var archivedPdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
         var recordCountBeforeDistribution = project.Data.Count;
@@ -68,7 +87,7 @@ internal sealed class ImportMediaPhase(
         // Name-basierte Protokoll-Verteilung zuerst (narrensicher, Dateiname-basiert).
         // CollectionLock aus dem Lauf-Kontext mitgeben: das Anlegen neuer Schächte läuft ggf. auf
         // einem Hintergrund-Thread und mutiert die UI-gebundene SchaechteData-Collection.
-        var nameBased = protocolDistributor?.Distribute(
+        var nameBased = _protocolDistributor?.Distribute(
             project,
             projectFolder,
             archivedPdfDir,
@@ -99,7 +118,7 @@ internal sealed class ImportMediaPhase(
         // liegt jetzt dort, wo er hingehoert — eine schon versorgte Haltung behaelt in
         // KanalImportDistributionService ihren Verweis aus dem Einzelprotokoll.
         Melde(5, "Haltungsprotokolle", "Sammelprotokolle aufteilen und Videos verteilen …");
-        var distResult = kanalDistributor.Distribute(
+        var distResult = _kanalDistributor.Distribute(
             project, projectFolder, archivedPdfDir, sourceFolder,
             splitPdf: format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null,
             primaryProtocolPdf: kinsGesamtprotokoll,
@@ -119,11 +138,11 @@ internal sealed class ImportMediaPhase(
         //     duerfen auch in neutralen Dokumente-Ordnern liegen; die KI-Zweitmeinung
         //     bleibt auf DP-/Dichtheits-Ordner begrenzt.
         Melde(5, "Haltungsprotokolle", "Dichtheitsprotokolle verteilen …");
-        var dpResult = dichtheitDistributor.Distribute(
+        var dpResult = _dichtheitDistributor.Distribute(
             project,
             projectFolder,
             sourceFolder,
-            kiSchiedsrichter,
+            _kiSchiedsrichter,
             ctx?.FileStaging);
         messages.AddRange(dpResult.Messages);
         if (dpResult.Verteilt > 0 || dpResult.NichtZugeordnet > 0 || dpResult.Uebersprungen > 0)
@@ -164,7 +183,7 @@ internal sealed class ImportMediaPhase(
         ImportRunContext? ctx,
         System.Threading.CancellationToken ct)
     {
-        return mediaDistributor.Distribute(new ImportMediaDistributionRequest(
+        return _mediaDistributor.Distribute(new ImportMediaDistributionRequest(
             projectFolder,
             project,
             Progress: new SynchronerFortschritt<ImportMediaDistributionProgress>(p => ctx?.Progress?.Report(
@@ -200,7 +219,7 @@ internal sealed class ImportMediaPhase(
 
         try
         {
-            var ergebnis = shaftDistribution.Distribute(new ShaftDistributionRequest(
+            var ergebnis = _shaftDistribution.Distribute(new ShaftDistributionRequest(
                 Project: project,
                 DestinationFolder: Path.Combine(projectFolder, ProjectStructure.SchaechteVerteilt),
                 PdfFiles: null,

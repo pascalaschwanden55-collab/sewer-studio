@@ -19,9 +19,14 @@ public sealed class ImportArchitectureGuardTests
 
         Assert.Contains("public IKanalImportDistributor KanalImportDistributor", provider);
         Assert.Contains("KanalImportDistributor = new KanalImportDistributionService()", provider);
-        Assert.Contains("private readonly IKanalImportDistributor _kanalDistributor;", orchestrator);
-        Assert.Contains("_kanalDistributor.Distribute(", orchestrator);
+        // Die Medienphase des Imports verteilt; auch sie nur ueber den injizierten Dienst.
+        var mediaPhase = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "ImportMediaPhase.cs"));
+        Assert.Contains("new ImportMediaPhase(", orchestrator);
+        Assert.Contains("private readonly IKanalImportDistributor _kanalDistributor;", mediaPhase);
+        Assert.Contains("_kanalDistributor.Distribute(", mediaPhase);
         Assert.DoesNotContain("KanalImportDistributor.Distribute(", orchestrator);
+        Assert.DoesNotContain("KanalImportDistributor.Distribute(", mediaPhase);
         Assert.Contains("private static readonly KanalImportDistributionService DefaultService", facade);
         Assert.DoesNotContain("File.Copy", facade);
         Assert.Contains("public sealed class KanalImportDistributionService : IKanalImportDistributor", service);
@@ -42,9 +47,13 @@ public sealed class ImportArchitectureGuardTests
 
         Assert.Contains("public IDichtheitImportDistributor DichtheitImportDistributor", provider);
         Assert.Contains("DichtheitImportDistributor = new DichtheitImportDistributionService()", provider);
-        Assert.Contains("private readonly IDichtheitImportDistributor _dichtheitDistributor;", orchestrator);
-        Assert.Contains("_dichtheitDistributor.Distribute(", orchestrator);
+        var mediaPhase = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "ImportMediaPhase.cs"));
+        Assert.Contains("new ImportMediaPhase(", orchestrator);
+        Assert.Contains("private readonly IDichtheitImportDistributor _dichtheitDistributor;", mediaPhase);
+        Assert.Contains("_dichtheitDistributor.Distribute(", mediaPhase);
         Assert.DoesNotContain("DichtheitImportDistributor.Distribute(", orchestrator);
+        Assert.DoesNotContain("DichtheitImportDistributor.Distribute(", mediaPhase);
         Assert.Contains("private static readonly DichtheitImportDistributionService DefaultService", facade);
         Assert.DoesNotContain("File.Copy", facade);
         Assert.Contains("public sealed class DichtheitImportDistributionService : IDichtheitImportDistributor", service);

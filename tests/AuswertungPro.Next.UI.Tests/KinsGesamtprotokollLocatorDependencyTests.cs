@@ -19,14 +19,21 @@ public sealed class KinsGesamtprotokollLocatorDependencyTests
             loggerFactory.CreateLogger("test"),
             loggerFactory);
         var orchestrator = services.CreateProjectImportOrchestrator();
-        var locatorField = typeof(ProjectImportOrchestrator).GetField(
+        // Die Suche nach dem KINS-Gesamtprotokoll gehoert zur Medienphase des Imports.
+        var phaseField = typeof(ProjectImportOrchestrator).GetField(
+            "_mediaPhase",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(phaseField);
+        var phase = phaseField!.GetValue(orchestrator);
+        Assert.NotNull(phase);
+        var locatorField = phase!.GetType().GetField(
             "_kinsGesamtprotokollLocator",
             BindingFlags.Instance | BindingFlags.NonPublic);
 
         Assert.NotNull(locatorField);
         Assert.Same(
             services.KinsGesamtprotokolle,
-            locatorField!.GetValue(orchestrator));
+            locatorField!.GetValue(phase));
         Assert.Same(
             services.KinsGesamtprotokolle,
             services.GetService(typeof(IKinsGesamtprotokollLocator)));
