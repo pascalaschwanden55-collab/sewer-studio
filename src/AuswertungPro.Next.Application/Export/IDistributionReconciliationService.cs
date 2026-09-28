@@ -58,4 +58,15 @@ public interface IDistributionReconciliationService
         string projectFolder,
         DistributionReconciliationPlan plan,
         DateTime nowLocal);
+
+    /// <summary>
+    /// Wie <see cref="Apply(string, DistributionReconciliationPlan, DateTime)"/>, prueft aber jeden Eintrag
+    /// unmittelbar vor dem Verschieben gegen den AKTUELLEN Projektstand: Was inzwischen eine Haltung oder
+    /// einen Schacht hat, bleibt liegen (Gesamtaudit 28.09.2026, GA02).
+    /// </summary>
+    DistributionReconciliationResult Apply(
+        string projectFolder,
+        DistributionReconciliationPlan plan,
+        DateTime nowLocal,
+        Project aktuellesProjekt);
 }

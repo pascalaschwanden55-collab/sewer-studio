@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Export;
@@ -24,8 +24,10 @@ public sealed partial class ExportPageViewModel
             return;
         }
 
+        // Projekt beim Planen binden (GA02): Die Vorschau gilt nur fuer genau dieses offene Projekt.
+        var projekt = _shell.Project;
         var plan = await Task.Run(
-            () => _distributionReconciliation.Plan(projektOrdner!, _shell.Project));
+            () => _distributionReconciliation.Plan(projektOrdner!, projekt));
 
         if (!string.IsNullOrWhiteSpace(plan.BlockedReason))
         {
@@ -52,8 +54,18 @@ public sealed partial class ExportPageViewModel
             return;
         }
 
+        if (!ReferenceEquals(_shell.Project, projekt)
+            || !string.Equals(_shell.GetProjectFolder(), projektOrdner, StringComparison.OrdinalIgnoreCase))
+        {
+            LastResult = "Abgleich abgebrochen - das Projekt wurde inzwischen gewechselt, es wurde nichts verschoben.";
+            _dialogs.Warn(LastResult, "Abgleichen");
+            return;
+        }
+
+        // Jeder Eintrag wird unmittelbar vor dem Verschieben gegen den aktuellen Projektstand geprueft:
+        // Was seit der Vorschau eine Haltung oder einen Schacht bekommen hat, bleibt liegen.
         var ergebnis = await Task.Run(
-            () => _distributionReconciliation.Apply(projektOrdner!, plan, DateTime.Now));
+            () => _distributionReconciliation.Apply(projektOrdner!, plan, DateTime.Now, projekt));
 
         var bewegt = ergebnis.MovedDirectories + ergebnis.MovedFiles;
         var text = bewegt == 0

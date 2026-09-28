@@ -36,7 +36,7 @@ public sealed class DistributionReconciliationService : IDistributionReconciliat
         ArgumentNullException.ThrowIfNull(project);
 
         var bekannt = SammleBekannteNamen(project);
-        if (bekannt.Count == 0)
+        if (bekannt.Haltungen.Count == 0 && bekannt.Schaechte.Count == 0)
         {
             // Ein versehentlich leeres Projekt wuerde sonst beide Ordner komplett ausraeumen.
             return new DistributionReconciliationPlan(
@@ -55,7 +55,18 @@ public sealed class DistributionReconciliationService : IDistributionReconciliat
             if (!Directory.Exists(wurzel))
                 continue;
 
-            PruefeOrdner(wurzel, wurzelName, bekannt, zuVerschieben, uebersprungen);
+            // Haltungsordner nur gegen Haltungen, Schachtordner nur gegen Schaechte (GA02): Eine Haltung
+            // «A-B» verdeckte sonst einen verwaisten Schachtordner «A-B».
+            var namen = bekannt.Fuer(wurzelName);
+            if (namen.Count == 0)
+            {
+                // Wie beim leeren Projekt: Eine leere Liste darf einen Verteilordner nicht ausraeumen.
+                uebersprungen.Add($"{wurzelName}: Im Projekt sind keine {ObjektWort(wurzelName)} geladen — "
+                    + "dieser Ordner wird nicht abgeglichen.");
+                continue;
+            }
+
+            PruefeOrdner(wurzel, wurzelName, namen, zuVerschieben, uebersprungen);
             PruefeLoseDateien(wurzel, wurzelName, uebersprungen, zuVerschieben);
         }
 
@@ -66,6 +77,23 @@ public sealed class DistributionReconciliationService : IDistributionReconciliat
         string projectFolder,
         DistributionReconciliationPlan plan,
         DateTime nowLocal)
+        => ApplyCore(projectFolder, plan, nowLocal, aktuellesProjekt: null);
+
+    public DistributionReconciliationResult Apply(
+        string projectFolder,
+        DistributionReconciliationPlan plan,
+        DateTime nowLocal,
+        Project aktuellesProjekt)
+    {
+        ArgumentNullException.ThrowIfNull(aktuellesProjekt);
+        return ApplyCore(projectFolder, plan, nowLocal, aktuellesProjekt);
+    }
+
+    private DistributionReconciliationResult ApplyCore(
+        string projectFolder,
+        DistributionReconciliationPlan plan,
+        DateTime nowLocal,
+        Project? aktuellesProjekt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectFolder);
         ArgumentNullException.ThrowIfNull(plan);
@@ -85,6 +113,11 @@ public sealed class DistributionReconciliationService : IDistributionReconciliat
             nowLocal.ToString("yyyy-MM-dd_HHmmss", CultureInfo.InvariantCulture));
         var laufOrdner = Path.Combine(projectFolder, laufName);
 
+        // Der Projektstand beim Bestaetigen, nicht der beim Planen (GA02): Wurde inzwischen eine passende
+        // Haltung oder ein Schacht ergaenzt, bleibt der Ordner liegen.
+        var jetztBekannt = aktuellesProjekt is null ? null : SammleBekannteNamen(aktuellesProjekt);
+        var pfade = new ProjectWritePathGuard(projectFolder);
+
         var ordner = 0;
         var dateien = 0;
         foreach (var eintrag in plan.ToMove)
@@ -92,8 +125,14 @@ public sealed class DistributionReconciliationService : IDistributionReconciliat
             var quelle = Path.Combine(projectFolder, eintrag.RelativePath);
             var ziel = Path.Combine(laufOrdner, eintrag.RelativePath);
 
+            if (jetztBekannt is not null && eintrag.IsDirectory && IstInzwischenBekannt(jetztBekannt, eintrag.RelativePath))
+            {
+                meldungen.Add($"Nicht verschoben (inzwischen im Projekt vorhanden): {eintrag.RelativePath}");
+                continue;
+            }
+
             // Zwischen Plan und Ausfuehrung kann sich etwas geaendert haben; erneut pruefen.
-            if (!IstSicheresZiel(projectFolder, quelle))
+            if (!IstSicheresZiel(projectFolder, quelle) || IstVerknuepfung(quelle))
             {
                 meldungen.Add($"Nicht angefasst (unsicherer Pfad): {eintrag.RelativePath}");
                 continue;
@@ -101,7 +140,13 @@ public sealed class DistributionReconciliationService : IDistributionReconciliat
 
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(ziel)!);
+                // Quelle UND Ziel hinter der Schreibgrenze des Projekts, unmittelbar vor der Bewegung: Ist der
+                // Papierkorb (oder ein Ordner davor) eine Verknuepfung, landete der Inhalt sonst ausserhalb (GA02).
+                pfade.EnsureSafeDirectoryTarget(Path.GetDirectoryName(quelle)!);
+                var zielOrdner = pfade.EnsureSafeDirectoryTarget(Path.GetDirectoryName(ziel)!);
+                Directory.CreateDirectory(zielOrdner);
+                pfade.EnsureSafeDirectoryTarget(zielOrdner);
+                ziel = pfade.EnsureSafeFileTarget(ziel);
                 if (eintrag.IsDirectory)
                 {
                     if (!Directory.Exists(quelle))
@@ -117,7 +162,8 @@ public sealed class DistributionReconciliationService : IDistributionReconciliat
                     dateien++;
                 }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
+                                           or ArgumentException or NotSupportedException)
             {
                 meldungen.Add($"Nicht verschoben: {eintrag.RelativePath} ({ex.Message})");
             }
@@ -139,32 +185,53 @@ public sealed class DistributionReconciliationService : IDistributionReconciliat
     /// Alle Namen, die im Verteilordner erlaubt sind - normalisiert und inklusive der
     /// vertauschten Schachtreihenfolge.
     /// </summary>
-    private static HashSet<string> SammleBekannteNamen(Project project)
+    private static BekannteNamen SammleBekannteNamen(Project project)
     {
-        var bekannt = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var haltungen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var schaechte = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var record in project.Data)
+        foreach (var record in project.Data.ToList())
         {
             var name = record.GetFieldValue(FieldKeys.HoldingName);
             if (string.IsNullOrWhiteSpace(name))
                 continue;
 
-            Aufnehmen(bekannt, name);
+            Aufnehmen(haltungen, name);
 
             var teile = name.Split('-');
             if (teile.Length == 2)
-                Aufnehmen(bekannt, teile[1] + "-" + teile[0]);
+                Aufnehmen(haltungen, teile[1] + "-" + teile[0]);
         }
 
-        foreach (var schacht in project.SchaechteData)
+        foreach (var schacht in project.SchaechteData.ToList())
         {
             var nummer = schacht.GetFieldValue("Schachtnummer");
             if (!string.IsNullOrWhiteSpace(nummer))
-                Aufnehmen(bekannt, nummer);
+                Aufnehmen(schaechte, nummer);
         }
 
-        return bekannt;
+        return new BekannteNamen(haltungen, schaechte);
     }
+
+    /// <summary>Erlaubte Ordnernamen je Verteilordner: Haltungen und Schaechte getrennt (GA02).</summary>
+    private sealed record BekannteNamen(HashSet<string> Haltungen, HashSet<string> Schaechte)
+    {
+        public HashSet<string> Fuer(string wurzelName)
+            => string.Equals(wurzelName, ProjectStructure.SchaechteVerteilt, StringComparison.OrdinalIgnoreCase)
+                ? Schaechte
+                : Haltungen;
+    }
+
+    private static bool IstInzwischenBekannt(BekannteNamen bekannt, string relativerPfad)
+    {
+        var teile = relativerPfad.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return teile.Length >= 2 && bekannt.Fuer(teile[0]).Contains(Schluessel(teile[^1]));
+    }
+
+    private static string ObjektWort(string wurzelName)
+        => string.Equals(wurzelName, ProjectStructure.SchaechteVerteilt, StringComparison.OrdinalIgnoreCase)
+            ? "Schächte"
+            : "Haltungen";
 
     private static void Aufnehmen(HashSet<string> bekannt, string name)
     {

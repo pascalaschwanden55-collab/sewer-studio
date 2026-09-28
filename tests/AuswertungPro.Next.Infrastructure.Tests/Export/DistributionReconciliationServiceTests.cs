@@ -177,6 +177,79 @@ public sealed class DistributionReconciliationServiceTests : IDisposable
         Assert.True(File.Exists(waise));
     }
 
+    // ---- GA02 (Gesamtaudit 28.09.2026) ------------------------------------------
+
+    [Fact]
+    public void Inzwischen_gueltiger_ordner_bleibt_trotz_alter_vorschau()
+    {
+        // Zwischen Vorschau und Bestätigung wird die passende Haltung ergänzt. Vorher verschob
+        // Apply den Ordner trotzdem, weil es nur den alten Plan kannte.
+        var ordner = Verteilt("Haltungen_Verteilt", "99999-88888");
+        var project = ProjektMit(["80707-80713"], []);
+        var dienst = new DistributionReconciliationService();
+        var plan = dienst.Plan(_projekt, project);
+
+        var neu = new HaltungRecord();
+        neu.SetFieldValue("Haltungsname", "99999-88888", FieldSource.Manual, false);
+        project.Data.Add(neu);
+        var ergebnis = dienst.Apply(_projekt, plan, Zeitpunkt, project);
+
+        Assert.True(File.Exists(ordner));
+        Assert.Equal(0, ergebnis.MovedDirectories);
+        Assert.Contains(ergebnis.Messages, m => m.Contains("99999-88888", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Gleicher_haltungsname_verdeckt_keinen_verwaisten_schachtordner()
+    {
+        // Haltung «80707-80713», aber kein Schacht dieses Namens: Der Schachtordner ist verwaist.
+        var waise = Verteilt("Schächte_Verteilt", "80707-80713");
+        var bekannt = Verteilt("Schächte_Verteilt", "80707");
+
+        var ergebnis = Abgleichen(ProjektMit(["80707-80713"], ["80707"]));
+
+        Assert.False(File.Exists(waise));
+        Assert.True(File.Exists(bekannt));
+        Assert.Equal(1, ergebnis.MovedDirectories);
+    }
+
+    [Fact]
+    public void Ohne_schaechte_im_projekt_bleibt_der_schachtordner_unangetastet()
+    {
+        // Wie beim leeren Projekt: Eine leere Liste darf einen Verteilordner nicht ausräumen.
+        var schacht = Verteilt("Schächte_Verteilt", "80374");
+        Verteilt("Haltungen_Verteilt", "80707-80713");
+
+        var ergebnis = Abgleichen(ProjektMit(["80707-80713"], []));
+
+        Assert.True(File.Exists(schacht));
+        Assert.Equal(0, ergebnis.MovedDirectories);
+    }
+
+    [Backup.JunctionFact]
+    public void Papierkorb_als_verknuepfung_fuehrt_nichts_aus_dem_projekt()
+    {
+        var waise = Verteilt("Haltungen_Verteilt", "99999-88888");
+        var fremd = Path.Combine(Path.GetTempPath(), "abgl_fremd_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(fremd);
+        var papierkorb = Path.Combine(_projekt, "Papierkorb");
+        Backup.JunctionTestSupport.CreateDirectoryLink(papierkorb, fremd);
+        try
+        {
+            var ergebnis = Abgleichen(ProjektMit(["80707-80713"], []));
+
+            Assert.True(File.Exists(waise));
+            Assert.Empty(Directory.EnumerateFileSystemEntries(fremd));
+            Assert.Equal(0, ergebnis.MovedDirectories);
+            Assert.Contains(ergebnis.Messages, m => m.Contains("99999-88888", StringComparison.Ordinal));
+        }
+        finally
+        {
+            if (Directory.Exists(papierkorb)) Directory.Delete(papierkorb);
+            try { Directory.Delete(fremd, recursive: true); } catch { }
+        }
+    }
+
     public void Dispose()
     {
         try { Directory.Delete(_projekt, recursive: true); } catch { }
