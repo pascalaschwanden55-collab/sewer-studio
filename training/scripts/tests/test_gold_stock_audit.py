@@ -1243,6 +1243,28 @@ class GoldStockAuditTests(unittest.TestCase):
                     negative_sets=(negative_set,),
                 )
 
+    def test_geaenderter_beleg_bei_unveraenderter_set_id_wird_abgelehnt(self) -> None:
+        # Ordnername und Set-ID bleiben stimmig; nur der semantische Inhalt ist veraendert.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            frames, eval_images, negatives, registry = self._make_root(root)
+            frame = self._image(frames, "a.png")
+            negative_set = create_reviewed_negative_set(root)
+            manifest_path = negative_set / "_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["semantic"]["split_rule"] = "nachtraeglich_geaendert"
+            _write_fixture_json(manifest_path, manifest)
+
+            with self.assertRaisesRegex(ValueError, "passt nicht zum semantischen Beleg"):
+                self._audit(
+                    root,
+                    [self._sample("ok", frame)],
+                    eval_images,
+                    negatives,
+                    registry,
+                    negative_sets=(negative_set,),
+                )
+
     def test_nicht_referenziertes_zusatzbild_wird_abgelehnt(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

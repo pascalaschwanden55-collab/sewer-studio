@@ -175,3 +175,5 @@ training/class_maps/*.vor_freigabe_*
 node_modules/
 outputs/
 /build_sewerstudio_value.mjs
+# Pruefumgebung der Trainingsskript-Tests (AGENTS.md, AP02)
+.venv-training/

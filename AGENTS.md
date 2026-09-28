@@ -65,5 +65,14 @@ cd ..
 python -m unittest discover integrations\qgis\tests -v
 ```
 
+Bei Arbeit an `training/scripts` zusätzlich, in einer **eigenen** Umgebung (nicht der
+Sidecar-venv: SAM 2 installiert dort ein Paket `training`, das den Projektordner verdeckt):
+
+```powershell
+python -m venv .venv-training
+.venv-training\Scripts\python.exe -m pip install -r training\scripts\tests\requirements-test.txt
+.venv-training\Scripts\python.exe -m pytest training\scripts\tests -q -p no:cacheprovider
+```
+
 Neue Funktionen werden mit kurzer, verständlicher Beschreibung, passendem Test und
 aktualisierter Dokumentation geliefert.

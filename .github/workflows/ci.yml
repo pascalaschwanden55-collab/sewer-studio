@@ -86,3 +86,14 @@ jobs:
 
       - name: QGIS-Brueckentests
         run: python -m unittest discover integrations/qgis/tests -v
+
+      # Trainingsskripte (Wartbarkeitsplan AP02): nur CPU, synthetische Daten, keine Modelle.
+      # Eigene frische Umgebung, weil SAM 2 in der Sidecar-Umgebung ein Top-Level-Paket
+      # "training" installiert, das den Projektordner training/ verdeckt. Keine Skip-Regeln:
+      # ein fehlendes Paket ist ein sichtbarer Sammelfehler, kein stilles Ueberspringen.
+      - name: Trainingsskript-Tests (CPU)
+        shell: bash
+        run: |
+          python -m venv .venv-training
+          .venv-training/Scripts/python -m pip install -r training/scripts/tests/requirements-test.txt
+          .venv-training/Scripts/python -m pytest training/scripts/tests -q -p no:cacheprovider

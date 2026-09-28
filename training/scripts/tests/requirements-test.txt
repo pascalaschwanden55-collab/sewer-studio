@@ -1,0 +1,7 @@
+# CPU-Pruefweg der Trainingsskripte (AP02). Versionen wie in sidecar/requirements-lock.txt.
+# Bewusst eine eigene, frische Umgebung: SAM 2 installiert in der Sidecar-Umgebung ein
+# eigenes Top-Level-Paket "training", das den Projektordner training/ verdeckt.
+# Aufruf vom Projektwurzelverzeichnis:  python -m pytest training/scripts/tests -q
+numpy==2.5.2
+pillow==12.3.0
+pytest==9.0.3
