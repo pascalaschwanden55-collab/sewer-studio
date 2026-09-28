@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Lookup;
 using AuswertungPro.Next.Application.UseCases;
@@ -95,6 +96,44 @@ public sealed class ImportRestpunkteTests
                 new ProjectImportOrchestrator(new XtfImportServiceAdapter(), new WinCanDbImportService())
                     .Import(quelle, projektOrdner, new Project(), kontext));
         });
+    }
+
+    [Fact]
+    public void Sia405Anreicherung_GibtAbbruchDesXtfLesersWeiter()
+    {
+        MitQuelle((quelle, projektOrdner) =>
+        {
+            var xtfPfad = Path.Combine(quelle, "test.xtf");
+            var leser = new AbbrechenderZweiterXtfAufruf();
+            var orchestrator = new ProjectImportOrchestrator(
+                leser,
+                new WinCanDbImportService(),
+                exportDetector: new FixedIkasMitSia405Detector(xtfPfad));
+
+            Assert.Throws<OperationCanceledException>(() =>
+                orchestrator.Import(quelle, projektOrdner, new Project()));
+            Assert.Equal(2, leser.Aufrufe);
+        });
+    }
+
+    private sealed class FixedIkasMitSia405Detector(string xtfPfad) : IKanalExportDetectionService
+    {
+        public KanalExportDetection Detect(string sourceFolder)
+            => new(KanalExportFormat.Ikas, null, xtfPfad, xtfPfad, "synthetischer IKAS-Test");
+    }
+
+    private sealed class AbbrechenderZweiterXtfAufruf : IXtfImportService
+    {
+        public int Aufrufe { get; private set; }
+
+        public Result<ImportStats> ImportXtfFiles(
+            IEnumerable<string> xtfPaths, Project project, ImportRunContext? ctx = null)
+        {
+            Aufrufe++;
+            if (Aufrufe == 2)
+                throw new OperationCanceledException("Testabbruch bei SIA405");
+            return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 0, 0, []));
+        }
     }
 
     // ---------------------------------------------------------------------

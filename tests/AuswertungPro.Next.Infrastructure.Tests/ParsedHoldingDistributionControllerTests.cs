@@ -153,6 +153,55 @@ public sealed class ParsedHoldingDistributionControllerTests
     }
 
     [Fact]
+    public void Suche_nutzt_unkorrigierte_ProtokollHaltung_nach_PdfKorrektur()
+    {
+        using var s = Szenario.Neu();
+        var altesVideo = s.Video("1000-2000.mpg");
+        var project = s.ProjektMit("3000-4000");
+        Assert.True(PdfCorrectionMetadata.RegisterHoldingRename(project, "1000-2000", "3000-4000"));
+
+        var result = s.Verteile(parsedVideo: null, project: project);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.Matched, result.VideoStatus);
+        Assert.Equal(altesVideo, result.SourceVideoPath);
+        Assert.Equal("3000-4000", Path.GetFileName(result.HoldingFolder));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Mehrdeutiger_Seitenwagen_ersetzt_nur_nicht_gefunden(bool direkterTrefferMehrdeutig)
+    {
+        using var s = Szenario.Neu();
+        var direkteTreffer = direkterTrefferMehrdeutig
+            ? new[] { s.Video("20260712_1000-2000.mpg"), s.Video("20260712_1000-2000.mp4") }
+            : Array.Empty<string>();
+        var seitenwagenTreffer = new[] { s.Video("M150_A.mpg"), s.Video("M150_B.mpg") };
+        var seitenwagen = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["1000-2000"] = ["M150_A.mpg", "M150_B.mpg"]
+        };
+
+        var suche = HoldingVideoSearch.Find(
+            new HoldingVideoSearchContext(s.VideoOrdner, Recursive: true,
+                SidecarVideoLinksByHolding: seitenwagen),
+            project: null,
+            videoFileFromPdf: null,
+            holdingRaw: "1000-2000",
+            holding: "1000-2000",
+            originalHolding: "1000-2000",
+            dateStamp: "20260712",
+            pdfToStorePath: s.PdfPfad);
+
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.Ambiguous, suche.Video.Status);
+        Assert.Equal(
+            (direkterTrefferMehrdeutig ? direkteTreffer : seitenwagenTreffer)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase),
+            suche.Video.Candidates.OrderBy(path => path, StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Seitenwagen_ordnet_das_gefundene_Video_einer_anderen_Haltung_zu()
     {
         using var s = Szenario.Neu();
@@ -193,6 +242,8 @@ public sealed class ParsedHoldingDistributionControllerTests
         private string SourcePdf => Path.Combine(_temp.Path, "quelle.pdf");
         private string VideoFolder => Path.Combine(_temp.Path, "videos");
         private string Destination => Path.Combine(_temp.Path, "ziel");
+        public string VideoOrdner => VideoFolder;
+        public string PdfPfad => SourcePdf;
 
         public static Szenario Neu(string[]? pdfZeilen = null)
         {

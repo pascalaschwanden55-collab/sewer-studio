@@ -1,5 +1,17 @@
 # SewerStudio — AI Sewer Inspection System
 
+## AP07: Ein-Knopf-Import und Medienverteilung (28.09.2026)
+
+- `ProjectImportOrchestrator` steuert weiter den Import. `ImportMediaPhase` bündelt
+  die Medienfolge mit derselben gemeinsamen Fehlergrenze; `HoldingVideoSearch`
+  entscheidet getrennt von der Dateiablage über Standardvideo und Haltung.
+- KINS- und SIA405-Anreicherung reichen einen Benutzerabbruch weiter. Das
+  Abbruchsignal wird vor und nach längeren Schritten geprüft. Ein Abbruch wird
+  weder als KINS-Fehler gezählt noch als unkritischer SIA405-Fehler übergangen.
+- Verhaltenstests schützen die Suche mit einer korrigierten PDF-Haltungsnummer,
+  die Reihenfolge bei mehrdeutigen Videotreffern und beide Abbruchwege.
+  Restgrenzen und Nachweise: `docs/audits/2026-09-27-wartbarkeit/AP07-PROTOKOLL.md`.
+
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 
 Neuer Weg SewerStudio -> WebGIS (GEONIS Attribute Editor, WebOffice) fuer die
