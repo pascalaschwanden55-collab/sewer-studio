@@ -203,4 +203,107 @@ public sealed class ExportImportAbschnittsKnopfTests
         var style = (string?)button.Attribute("Style");
         return style is not null && style.Contains("ToolbarButtonAccent", System.StringComparison.Ordinal);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Fix-Runde 2 (Koordinator-Rückmeldung, Finding 1): Fachbegriffe duerfen nur
+    // in ToolTips oder im eingeklappten "Technische Details"-Bereich stehen, nie
+    // in immer sichtbarem Text/Content. Dieser Waechter haelt das dauerhaft fest,
+    // damit ein spaeterer Satz nicht wieder ein Fachwort "hineinschmuggelt".
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static readonly string[] FachbegriffJargon =
+        ["FME", ".ili", "DSS", "SIA405", "Zusatzmodell", "Normdatei"];
+
+    /// <summary>
+    /// Genehmigte Ausnahme (Fix-Runde 1, begruendet im Bericht): der Kopfzeilen-Knopf zum
+    /// eigenstaendigen SIA405-Lieferungs-Editor — sein Name IST der etablierte Name dieses
+    /// separaten Features (matcht den Fenstertitel von <c>XtfLieferungWindow</c>), kein
+    /// Fachbegriff in erklaerendem Fliesstext.
+    /// </summary>
+    private const string GenehmigteAusnahmeSia405Knopf = "SIA405-Lieferung bearbeiten …";
+
+    [Fact]
+    public void Export_seite_zeigt_keine_Fachbegriffe_ausserhalb_von_ToolTip_und_Technische_Details()
+    {
+        var treffer = FindeFachbegriffLecks(Lies("ExportPage.xaml"));
+
+        Assert.True(
+            treffer.Count == 0,
+            "Fachbegriff (FME/.ili/DSS/SIA405/Zusatzmodell/Normdatei) ausserhalb ToolTip/"
+            + "\"Technische Details\" gefunden:\n" + string.Join("\n", treffer));
+    }
+
+    /// <summary>
+    /// Beweist, dass der Fachbegriff-Waechter wirklich prueft: ein sichtbarer Satz mit zwei
+    /// Fachbegriffen wird erkannt, waehrend derselbe Begriff im "Technische Details"-Bereich
+    /// oder in einem ToolTip unbeanstandet bleibt (Sabotageprobe).
+    /// </summary>
+    [Fact]
+    public void Sabotage_ein_Fachbegriff_ausserhalb_ToolTip_und_Technische_Details_wird_erkannt()
+    {
+        const string sabotiert = """
+            <UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                <StackPanel>
+                    <TextBlock Text="Das ist eine SIA405-Datei mit Zusatzmodell."/>
+                    <Expander Header="Technische Details">
+                        <TextBlock Text="FME und .ili duerfen hier stehen."/>
+                    </Expander>
+                    <Button Content="X" ToolTip="Auch FME im ToolTip ist erlaubt"/>
+                </StackPanel>
+            </UserControl>
+            """;
+
+        var treffer = FindeFachbegriffLecks(sabotiert);
+
+        Assert.Equal(2, treffer.Count);
+        Assert.Contains(treffer, t => t.Contains("SIA405"));
+        Assert.Contains(treffer, t => t.Contains("Zusatzmodell"));
+        Assert.DoesNotContain(treffer, t => t.Contains("FME"));
+    }
+
+    /// <summary>Gegenprobe: die genehmigte Ausnahme loest keinen Treffer aus.</summary>
+    [Fact]
+    public void Die_genehmigte_Sia405_Knopfbeschriftung_ist_kein_Verstoss()
+    {
+        var treffer = FindeFachbegriffLecks(Lies("ExportPage.xaml"));
+        Assert.DoesNotContain(treffer, t => t.Contains(GenehmigteAusnahmeSia405Knopf));
+    }
+
+    private static List<string> FindeFachbegriffLecks(string xaml)
+    {
+        var doc = XDocument.Parse(xaml);
+        var ns = doc.Root!.Name.Namespace;
+
+        var technischeDetailsElemente = new HashSet<XElement>();
+        var technischeDetails = doc.Descendants(ns + "Expander")
+            .FirstOrDefault(e => (string?)e.Attribute("Header") == "Technische Details");
+        if (technischeDetails is not null)
+        {
+            foreach (var element in technischeDetails.DescendantsAndSelf())
+                technischeDetailsElemente.Add(element);
+        }
+
+        var treffer = new List<string>();
+        foreach (var element in doc.Descendants())
+        {
+            if (technischeDetailsElemente.Contains(element))
+                continue;
+
+            foreach (var attributName in new[] { "Text", "Content" })
+            {
+                var wert = (string?)element.Attribute(attributName);
+                if (wert is null || wert == GenehmigteAusnahmeSia405Knopf)
+                    continue;
+
+                foreach (var begriff in FachbegriffJargon)
+                {
+                    if (wert.Contains(begriff, System.StringComparison.Ordinal))
+                        treffer.Add($"{element.Name.LocalName}@{attributName}=\"{wert}\" enthaelt \"{begriff}\"");
+                }
+            }
+        }
+
+        return treffer;
+    }
 }

@@ -485,7 +485,7 @@
                                 </Expander>
 
                                 <Separator Margin="0,12,0,10"/>
-                                <TextBlock Text="Alles für den Empfänger in einem Paket: die Änderungslieferung mit den Feldaufträgen und zusätzlich eine reine Normdatei, die jedes Kataster-Programm ohne Zusatzdateien öffnen kann. Dazu die Modelldateien, die Berichte und eine Liesmich-Datei. Das Paket wird als ZIP zum Versenden gepackt."
+                                <TextBlock Text="Alles für den Empfänger in einem Paket: die Änderungslieferung mit den Feldaufträgen und zusätzlich eine Datei nur mit den Normangaben, die jedes Kataster-Programm ohne Zusatzdateien öffnen kann. Dazu die Modelldateien, die Berichte und eine Liesmich-Datei. Das Paket wird als ZIP zum Versenden gepackt."
                                            TextWrapping="Wrap" Margin="0,0,0,8"
                                            ToolTip="Fachbegriffe: Die Änderungslieferung braucht weiterhin die mitgelieferte .ili-Zusatzmodelldatei; die reine Normdatei kommt ohne sie aus."/>
                                 <Button Command="{Binding ErzeugeXtfPaketCommand}"
