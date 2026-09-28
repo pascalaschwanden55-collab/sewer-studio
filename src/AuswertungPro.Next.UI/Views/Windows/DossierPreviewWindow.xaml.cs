@@ -519,15 +519,13 @@ public partial class DossierPreviewWindow : Window
     }
 
     private bool DarfVerworfenWerden()
-        => MessageBox.Show(
-            this,
+        => NovaDialog.ZeigeWarnendeBestaetigung(
             "Die in dieser Vorschau gemachten Eingaben gehen verloren."
             + Environment.NewLine + Environment.NewLine
             + "Wirklich verwerfen?",
             "Dossier-Vorschau",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No) == MessageBoxResult.Yes;
+            standardNein: true,
+            owner: this);
 
     protected override void OnClosed(EventArgs e)
     {

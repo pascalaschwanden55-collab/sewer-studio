@@ -1,5 +1,44 @@
 # SewerStudio — AI Sewer Inspection System
 
+## Optik und Bedienung professionell (28.09.2026)
+
+Zweig `feature/optik-professionell` (Optikanalyse 28.09.2026, Auftrag Pascal «Setze alles
+um»). Ziel: einheitliches, professionelles Erscheinungsbild und einheitliche Bedienwege im
+ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
+
+- **Aufgabe 1 — Nova-Dialog statt Windows-MessageBox.** `Views/Windows/NovaDialogWindow`
+  (`NovaDialogArt`: Info/Warnung/Fehler/Frage, `NovaDialogKnopfsatz`: Ok/JaNein/JaNeinAbbrechen)
+  ist der EINE Meldungs-/Rueckfragedialog im Nova-Design: Symbol in Status-Farbe (Info/Frage
+  `AccentBrush`, Warnung `WarningBrush`, Fehler `DangerBrush`), Titel, auswaehlbarer/kopierbarer
+  Text (umbrechend, ab ~60 % Bildschirmhoehe scrollbar), feste Breite 460 px,
+  `WindowFx.Entrance`, Owner = aktives Fenster (sonst Hauptfenster). «Kopieren» erscheint nur
+  bei Fehlern, klein, links in der Fussleiste; ein gesperrtes Clipboard darf den Dialog nicht
+  zum Absturz bringen (try/catch). `Services/DialogService` (`IDialogService`) ruft ihn ueber
+  die statische Fassade `Views/Windows/NovaDialog` (`ZeigeInfo/ZeigeWarnung/ZeigeFehler/
+  ZeigeBestaetigung/ZeigeWarnendeBestaetigung/ZeigeDreiWegeBestaetigung`) auf; Fenster ohne
+  injizierten `IDialogService` (z. B. `DossierPreviewWindow`) rufen dieselbe Fassade direkt.
+  **Marshalling nur an einer Stelle:** `DialogService.AufUiThread` ist der einzige erlaubte Ort
+  fuer `Dispatcher.Invoke` — ein Aufruf vom Nicht-UI-Thread wird dorthin marshallt. Fehlt
+  `Application.Current` oder ist dessen Dispatcher bereits heruntergefahren
+  (Kommandozeilen-/Testumgebung), bleibt bewusst der alte `MessageBox.Show`-Weg als Rueckfall —
+  ein WPF-Fenster braucht einen laufenden Application-Kontext.
+  **Knopfregel bei Ja/Nein-Dialogen:** Die Reihenfolge ist IMMER `[Nein][Ja]`
+  (`ConfirmCancel`: `[Abbrechen][Nein][Ja]`), «Ja»/«OK» bleibt ganz rechts. Der STANDARDKNOPF
+  (Enter + Anfangsfokus) ist normalerweise «Ja»/«OK» (`PrimaryButton`, `IsDefault`). Bei
+  `ConfirmWarn(defaultNo:true)` wird STATTDESSEN «Nein» zum Standardknopf (`IsDefault` +
+  Fokus) — «Ja» bleibt an seinem Platz ganz rechts, verliert aber `PrimaryButton` und wird als
+  `NovaDialogDangerButton` (Fensterressource, `DangerBrush`-Umriss) markiert: eine blau gefuellte
+  Hauptaktion links vom eigentlichen Standardknopf waere ein zweites, widerspruechliches
+  Signal. Esc loest immer denselben Knopf aus wie «Abbrechen» bzw. «Nein» bzw. «OK»
+  (`IsCancel`); Klick auf das Fenster-X hat dieselbe Bedeutung (`Ergebnis` ist schon vor jedem
+  Knopfklick auf diesen Wert vorbelegt). Standardtitel tragen den echten Umlaut
+  («Bestätigung»). Waechter `DesignAuditDialogeTests`: Ausserhalb von `DialogService.cs` und
+  `NovaDialog*` darf im ganzen UI-Projekt kein `MessageBox.Show` mehr stehen (vor der Aufgabe
+  nur zwei Fundstellen im ganzen Projekt — dieselben zwei, die jetzt die Ausnahme bilden).
+  Test `NovaDialogWindowIsolatedSmokeTests` (Kindprozess-Muster) prueft Knopfbeschriftungen,
+  Reihenfolge, Standard-/Abbrechen-Knopf, Rueckgabewerte per programmatischem Klick und die
+  Darstellung im Dunkeltheme (Hintergrund = `CardBrush` des Dunkeltheme).
+
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 
 Neuer Weg SewerStudio -> WebGIS (GEONIS Attribute Editor, WebOffice) fuer die
