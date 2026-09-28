@@ -30,7 +30,7 @@ public static partial class HoldingFolderDistributor
         @"Haltungs(?:\s*inspektion|bilder)\s*[-–—]\s*(\d{2}\.\d{2}\.\d{2,4}|\d{4}-\d{2}-\d{2})\s*[-–—]\s*((?:\d{2,}\.\d{2,}|\d{4,})\s*[-/]\s*(?:\d{2,}\.\d{2,}|\d{4,}))",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    private sealed record PdfPageChunk(IReadOnlyList<int> Pages, ParsedPdf Parsed);
+    internal sealed record PdfPageChunk(IReadOnlyList<int> Pages, ParsedPdf Parsed);
 
     // Temporarily public for diagnostic purposes
 
@@ -41,7 +41,7 @@ public static partial class HoldingFolderDistributor
     public sealed record ParsedShaftPdf(bool Success, string? Message, DateTime? Date, string? ShaftNumber);
 
 
-    private sealed record PdfShaftChunk(IReadOnlyList<int> Pages, ParsedShaftPdf Parsed);
+    internal sealed record PdfShaftChunk(IReadOnlyList<int> Pages, ParsedShaftPdf Parsed);
 
     /// <summary>
     /// Seiten eines Sammel-PDFs, die zu keinem erkannten Schachtprotokoll gehoeren und doch
@@ -49,7 +49,7 @@ public static partial class HoldingFolderDistributor
     /// und Verzeichnisse (weder Nummer noch Datum) zaehlen nicht dazu, ebenso Bildseiten nach
     /// einer Haltungsseite — dort sind es die Fotos des Haltungsberichts.
     /// </summary>
-    private sealed record PdfVerwaisteSeiten(IReadOnlyList<int> Pages, ParsedShaftPdf Parsed);
+    internal sealed record PdfVerwaisteSeiten(IReadOnlyList<int> Pages, ParsedShaftPdf Parsed);
 
     private static bool IstVerlorenesSchachtblatt(ParsedShaftPdf parsed, bool nachHaltungsseite)
         => !string.IsNullOrWhiteSpace(parsed.ShaftNumber)
@@ -318,8 +318,12 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static IReadOnlyList<PdfPageChunk> SplitPdfIntoHoldings(IReadOnlyList<DistributionPdfPage> pages)
+    internal static IReadOnlyList<PdfPageChunk> SplitPdfIntoHoldings(
+        IReadOnlyList<DistributionPdfPage> pages,
+        Func<DistributionPdfPage, ParsedPdf>? parsePage = null)
     {
+        // Die Vorschau reicht eine Lesung ohne Texterkennung herein; das Verteilen nutzt den OCR-Rueckfall.
+        parsePage ??= ParsePdfPageWithOcrFallback;
         var chunks = new List<PdfPageChunk>();
         if (pages.Count == 0) return chunks;
 
@@ -331,7 +335,7 @@ public static partial class HoldingFolderDistributor
 
         foreach (var page in pages)
         {
-            var parsed = ParsePdfPageWithOcrFallback(page);
+            var parsed = parsePage(page);
             if (!parsed.Success)
             {
                 if (IsContentsPage(page.Text))
@@ -493,10 +497,12 @@ public static partial class HoldingFolderDistributor
     private static IReadOnlyList<PdfShaftChunk> SplitPdfIntoShafts(IReadOnlyList<DistributionPdfPage> pages)
         => SplitPdfIntoShafts(pages, out _);
 
-    private static IReadOnlyList<PdfShaftChunk> SplitPdfIntoShafts(
+    internal static IReadOnlyList<PdfShaftChunk> SplitPdfIntoShafts(
         IReadOnlyList<DistributionPdfPage> pages,
-        out IReadOnlyList<PdfVerwaisteSeiten> verwaist)
+        out IReadOnlyList<PdfVerwaisteSeiten> verwaist,
+        Func<DistributionPdfPage, ParsedShaftPdf>? parsePage = null)
     {
+        parsePage ??= ParseSchachtPdfPageWithOcrFallback;
         var chunks = new List<PdfShaftChunk>();
         var ohneAbschnitt = new List<PdfVerwaisteSeiten>();
         verwaist = ohneAbschnitt;
@@ -517,7 +523,7 @@ public static partial class HoldingFolderDistributor
                 currentParsed = null;
                 continue;
             }
-            var parsed = ParseSchachtPdfPageWithOcrFallback(page);
+            var parsed = parsePage(page);
             if (!parsed.Success)
             {
                 if (currentPages is not null && currentParsed is not null)
@@ -615,7 +621,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static ParsedShaftPdf? TryParseSchachtPdfPageFromFormFields(string pdfPath, int pageNumber)
+    internal static ParsedShaftPdf? TryParseSchachtPdfPageFromFormFields(string pdfPath, int pageNumber)
     {
         var entries = PdfFormFieldExtractor.GetPageFieldEntries(pdfPath, pageNumber);
         if (entries.Count == 0)
@@ -643,7 +649,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static ParsedShaftPdf? TryCompleteShaftDateFromSiblingProtocol(string sourcePdfPath, ParsedShaftPdf parsed)
+    internal static ParsedShaftPdf? TryCompleteShaftDateFromSiblingProtocol(string sourcePdfPath, ParsedShaftPdf parsed)
     {
         if (string.IsNullOrWhiteSpace(parsed.ShaftNumber) || parsed.Date is not null)
             return null;
@@ -802,7 +808,11 @@ public static partial class HoldingFolderDistributor
         => HoldingDistribution.ShaftCandidateScanner.FindNextToken(lines, startIndex, pattern);
 
 
-    internal static void WritePdfPages(string sourcePdfPath, IReadOnlyList<int> pages, string destPdfPath)
+    /// <summary>
+    /// Baut den Auszug der genannten Seiten im Speicher. Derselbe Inhalt wie
+    /// <see cref="WritePdfPages"/> schreibt; die Vorschau vergleicht damit «schon vorhanden».
+    /// </summary>
+    internal static byte[] BuildPdfPagesBytes(string sourcePdfPath, IReadOnlyList<int> pages)
     {
         PdfImportSafetyPolicy.ThrowIfFileTooLarge(sourcePdfPath);
         using var doc = PdfDocument.Open(sourcePdfPath);
@@ -812,7 +822,12 @@ public static partial class HoldingFolderDistributor
         foreach (var pageNumber in pages)
             builder.AddPage(doc, pageNumber);
 
-        var bytes = HoldingDistribution.PdfInhaltsKennung.Festlegen(builder.Build());
+        return HoldingDistribution.PdfInhaltsKennung.Festlegen(builder.Build());
+    }
+
+    internal static void WritePdfPages(string sourcePdfPath, IReadOnlyList<int> pages, string destPdfPath)
+    {
+        var bytes = BuildPdfPagesBytes(sourcePdfPath, pages);
 
         // Atomar schreiben: erst in eine Temp-Datei im Zielordner (gleiches Volume -> File.Move ist
         // atomar), dann verschieben. Ein Absturz mitten im direkten Schreiben hinterliess sonst ein

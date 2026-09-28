@@ -326,7 +326,7 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Verzeichnisbaum für die Verteilung"
+                    <TextBlock x:Name="VerzeichnisbaumTitel" Text="Verzeichnisbaum für die Verteilung"
                                FontWeight="SemiBold" FontSize="{DynamicResource TextS}"
                                Foreground="{DynamicResource TextBrush}" Margin="2,2,0,6"/>
 

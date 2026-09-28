@@ -47,3 +47,50 @@ lautet jetzt «… bereits vorhanden, n Fehler.».
 - **Klartext:** «Ziel-Wurzel» heisst «Hauptordner», der Tooltip sagt jetzt richtig «Leer = der
   Projektordner»; «Dry-Run» heisst «Probelauf». Ordnernamen wie `__UNMATCHED` und `__IMPORT_REPORTS`
   bleiben, weil bestehende Projekte sie tragen.
+
+## Bedienung, zweiter Teil (Verteilen-Fenster)
+
+- **Ein Fenster statt Dialogkette.** Die fünf Menüpunkte unter «Verteilen ▾» (Haltungen und
+  Schächte je Normal/Sanierung, Dichtheitsprüfung) öffnen jetzt `VerteilenWindow` mit
+  vorgewählter Art und Ablage; «Abgleichen» bleibt unverändert. Links die Schritte 1 WAS,
+  2 ABLAGE (nicht bei Dichtheit, Hinweis auf den Unterordner «…_Saniert JJJJ»), 3 QUELLE
+  (PDF-Ordner, «Stattdessen einzelne PDFs wählen», bei Haltungen auch der TXT-Import
+  kiDVDaten.txt), 4 FILME (nur Haltungen), 5 ZIEL (wirksamer Hauptordner, Link zu den
+  Ordnerbausteinen der Export-Seite). Rechts die Vorschau: Protokoll | Wird abgelegt in | Film |
+  Zustand | Hinweis mit den Chips «gefunden», «wird abgelegt», «fehlt», «mehrdeutig»,
+  «schon vorhanden», «nicht zugeordnet», «wird geprüft» und der Kopfzeile «n Dateien · m werden
+  abgelegt · k brauchen Aufmerksamkeit». Hauptknopf «Jetzt verteilen (m Dateien)».
+- **Die Vorschau schreibt nichts.** `IVerteilVorschau` (Application/UseCases/Verteilung) /
+  `VerteilVorschauService` mit `VerteilVorschauPlanung` und `DichtheitVorschau`
+  (Infrastructure/HoldingDistribution, bewusst ausserhalb des `HoldingFolderDistributor`, der
+  nicht wachsen darf; dort wurden nur Zugriffsrechte geöffnet) planen mit denselben Bausteinen
+  wie das Verteilen: Seitenlesen, Aufteilen von Sammelberichten (`SplitPdfIntoHoldings` /
+  `SplitPdfIntoShafts` bekommen dafür eine Lesung ohne Texterkennung hereingereicht),
+  `HoldingVideoSearch` samt Gegeninspektion, Verzeichnisbaum mit Sanierungsebene,
+  `FindExistingIdenticalFile` bzw. für Auszüge aus Sammelberichten ein Inhaltsvergleich im
+  Speicher (`BuildPdfPagesBytes`, derselbe Inhalt, den `WritePdfPages` schreibt). Kein Ordner,
+  keine Datei, keine Projektänderung (Test `Vorschau_schreibt_nichts` vergleicht Grösse und
+  Zeitstempel aller Dateien). Läuft im Hintergrund mit Abbruch; jede Änderung von Art, Ablage,
+  Quelle oder Filmen rechnet neu und bricht die vorige Rechnung ab.
+- **Sicher vorhergesagt:** Haltung, Datum und Zielordner aus der Textebene; Film eindeutig /
+  mehrdeutig / fehlt (derselbe Suchweg); «schon vorhanden» für ganze PDFs, Auszüge aus
+  Sammelberichten und Filme; Schachtprotokolle je Schacht inklusive Anhängen an denselben Schacht;
+  Begleit-PDFs per Dateiname; mitkopierte Quelldateien (XTF/M150/MDB/XML); abgelehnte Einzeldateien
+  und fremde PDFs im Schachtweg.
+- **Ehrlich offen («wird beim Verteilen geprüft»):** reine Scans ohne Textebene und Bildseiten in
+  gemischten PDFs (Texterkennung läuft erst beim Verteilen), der Katasterabgleich der
+  Dichtheitsprüfung (Ablage unter «keine_Zuordnung»), «schon vorhanden», wenn der Haltungs- oder
+  Schachtname im PDF korrigiert wird, und alles, solange kein gespeichertes Projekt den Hauptordner
+  festlegt. Die TXT-Verteilung legt die TXT immer neu ab; sie zeigt nie «schon vorhanden».
+- **«Jetzt verteilen» ruft die bisherigen Wege** mit genau der gewählten Quelle
+  (`VerteilAuftrag`): `HoldingFolderDistributor` (PDF/TXT, Ordner/Einzeldateien),
+  `IShaftDistributionService` (inkl. Staging und internem Speichern), Dichtheitsweg mit
+  Katasterabgleich — mit Projekt-Operationssperre, `VerteilzielPruefung`, Bericht und Toast wie
+  bisher. Die Schachtverteilung erhält ihre Speicherfreigabe erst, wenn der Auftrag wirklich ein
+  Schachtauftrag ist.
+- Registrierung 172 → 174 (`IVerteilVorschau`, `IVerteilenDialog`). Tests
+  `VerteilVorschauServiceTests` (11, echte PDFs und Filme), `VerteilenViewModelTests` (9),
+  `VerteilenWindowIsolatedSmokeTests` (echtes WPF), neue Fälle in
+  `ExportPageDistributionProjectGuardTests` (Vorwahl, dieselbe Quelle an den Verteilweg,
+  Abbrechen, Ordnerbausteine). Angepasst: die Harness beider Export-Testklassen liefert statt der
+  Ja/Nein-Dialoge ein Test-Fenster (`IVerteilenDialog`), weil es die Dialogkette nicht mehr gibt.

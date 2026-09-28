@@ -95,6 +95,8 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IExplorerRevealService)] = services.ExplorerReveal,
             [typeof(AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilberichtAblage)] = services.Verteilberichte,
             [typeof(IXtfExportVorschauDialog)] = services.XtfExportVorschau,
+            [typeof(AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilVorschau)] = services.VerteilVorschau,
+            [typeof(IVerteilenDialog)] = services.VerteilenDialog,
             [typeof(ISafeShellOpenService)] = services.ShellOpen,
             [typeof(IFolderOpenService)] = services.FolderOpen,
             [typeof(IProgramRootLocator)] = services.ProgramRootLocator,

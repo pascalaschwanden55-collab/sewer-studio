@@ -185,6 +185,8 @@ public sealed class ShellProjectOperationReservationTests
             Services.Dialogs = SchachtDialogs;
             Schaechte = new SchaechtePageViewModel(Shell, Services);
             Services.Dialogs = ExportDialogs;
+            // Seit dem Fenster «Verteilen» fragt die Verteilung dort statt im Ja/Nein-Dialog.
+            Services.VerteilenDialog = new GateVerteilenDialog(ExportDialogs);
             Export = new ExportPageViewModel(Shell, Services);
         }
 
@@ -274,6 +276,19 @@ public sealed class ShellProjectOperationReservationTests
             }
 
             return DialogConfirm.Cancel;
+        }
+    }
+
+    /// <summary>
+    /// Steht fuer das Fenster «Verteilen» und haelt an derselben Sperre an wie frueher der
+    /// erste Ja/Nein-Dialog der Verteilung; danach wie «Abbrechen».
+    /// </summary>
+    private sealed class GateVerteilenDialog(GateDialog gate) : IVerteilenDialog
+    {
+        public VerteilenErgebnis Zeige(VerteilenVorgabe vorgabe)
+        {
+            gate.ConfirmCancel("Verteilen", "Verteilen");
+            return VerteilenErgebnis.Abgebrochen;
         }
     }
 

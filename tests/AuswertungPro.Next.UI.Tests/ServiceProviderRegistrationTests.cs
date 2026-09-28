@@ -134,9 +134,11 @@ public sealed class ServiceProviderRegistrationTests
         // 167 -> 168: ISchachtLageQuelle liefert Schachtpunkt und Leitungsrichtungen aus den
         // QGIS-Kopien fuer den Grundriss der Schachtgrafik (Stammkarte, 19.09.2026).
         // 171 -> 172: IVerteilberichtAblage legt nach jeder Verteilung einen Bericht ab (28.09.2026).
+        // 172 -> 174: IVerteilVorschau (schreibfreie Vorschau) und IVerteilenDialog (ein Fenster
+        // «Verteilen» statt mehrerer Ja/Nein-Dialoge auf der Export-Seite, 28.09.2026).
         Assert.True(
-            registrations.Count == 172,
-            $"Erwartet 172 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 174,
+            $"Erwartet 174 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(services.XtfLieferungen,

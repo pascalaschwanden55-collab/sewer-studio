@@ -113,7 +113,8 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
             explorerReveal: sp.ExplorerReveal,
             xtfVorschau: sp.XtfExportVorschau,
             xtfPaketAblage: sp.XtfPaketAblage,
-            verteilberichte: sp.Verteilberichte)
+            verteilberichte: sp.Verteilberichte,
+            verteilenDialog: sp.VerteilenDialog)
     {
         LieferungBearbeitenCommand = new RelayCommand(() => XtfLieferungDialog.Zeige(sp.XtfLieferungen, sp.Dialogs));
         WebGis = new ExportWebGisBereich(new ExportWebGisBereich.Dienste(
@@ -202,9 +203,12 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         IXtfExportVorschauDialog? xtfVorschau = null,
         AuswertungPro.Next.Application.Projects.IObjektaktenPaketService? objektaktenPakete = null,
         AuswertungPro.Next.Application.UseCases.Xtf.IXtfPaketAblage? xtfPaketAblage = null,
-        AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilberichtAblage? verteilberichte = null)
+        AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilberichtAblage? verteilberichte = null,
+        IVerteilenDialog? verteilenDialog = null)
     {
         _verteilberichte = verteilberichte;
+        _verteilenDialog = verteilenDialog
+            ?? new VerteilenDialogService(new VerteilVorschauService(), () => dialogs!);
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
@@ -218,11 +222,12 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
         CancelExcelExportCommand = new RelayCommand(
             CancelExcelExport,
             () => _excelExportCancellation is { IsCancellationRequested: false });
-        DistributeHoldingsNormalCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => DistributeHoldingsAsync(DistributionVariant.Normal)), CanRunDistributeCommands);
-        DistributeHoldingsSanierungCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => DistributeHoldingsAsync(DistributionVariant.Sanierung)), CanRunDistributeCommands);
-        DistributeShaftsNormalCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => DistributeShaftsAsync(DistributionVariant.Normal), allowsInternalProjectSave: true), CanRunDistributeCommands);
-        DistributeShaftsSanierungCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => DistributeShaftsAsync(DistributionVariant.Sanierung), allowsInternalProjectSave: true), CanRunDistributeCommands);
-        DistributeDichtheitCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(DistributeDichtheitAsync), CanRunDistributeCommands);
+        // Alle fuenf Menuepunkte oeffnen das Fenster «Verteilen» mit vorgewaehlter Art und Ablage.
+        DistributeHoldingsNormalCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => VerteilenAsync(VerteilArt.Haltungen, DistributionVariant.Normal)), CanRunDistributeCommands);
+        DistributeHoldingsSanierungCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => VerteilenAsync(VerteilArt.Haltungen, DistributionVariant.Sanierung)), CanRunDistributeCommands);
+        DistributeShaftsNormalCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => VerteilenAsync(VerteilArt.Schaechte, DistributionVariant.Normal)), CanRunDistributeCommands);
+        DistributeShaftsSanierungCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => VerteilenAsync(VerteilArt.Schaechte, DistributionVariant.Sanierung)), CanRunDistributeCommands);
+        DistributeDichtheitCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => VerteilenAsync(VerteilArt.Dichtheit, DistributionVariant.Normal)), CanRunDistributeCommands);
         AbgleichenCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(AbgleichenAsync), CanRunDistributeCommands);
         BrowseExcelExportRootCommand = new RelayCommand(BrowseExcelExportRoot);
         _xtfRevisionExport = xtfRevisionExport
@@ -461,65 +466,22 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
 
     // ─── Distribution: Haltungen ───────────────────────────────────────────
 
-    private async Task DistributeHoldingsAsync(DistributionVariant variant)
+    /// <summary>
+    /// Verteilt Haltungen mit genau der Quelle, die im Fenster «Verteilen» bestätigt wurde.
+    /// Ablauf, Schutz und Bericht sind dieselben wie vor dem Fenster.
+    /// </summary>
+    private async Task DistributeHoldingsAsync(VerteilAuftrag auftrag)
     {
-        var sourceMode = _dialogs.ConfirmCancel(
-            "Quelle:\nJa = PDF-Import verteilen\nNein = TXT-Import verteilen (z.B. kiDVDaten.txt)",
-            "Haltungen verteilen");
-        if (sourceMode == DialogConfirm.Cancel)
+        var variant = auftrag.Ablage;
+        var useTxtImport = auftrag.Quelle.IstTxt;
+        var pdfFolder = auftrag.Quelle.Art == VerteilQuellenArt.PdfOrdner ? auftrag.Quelle.Ordner : null;
+        var selectedPdfFiles = auftrag.Quelle.Art == VerteilQuellenArt.PdfDateien ? auftrag.Quelle.Dateien.ToArray() : Array.Empty<string>();
+        var txtFolder = auftrag.Quelle.Art == VerteilQuellenArt.TxtOrdner ? auftrag.Quelle.Ordner : null;
+        var selectedTxtFiles = auftrag.Quelle.Art == VerteilQuellenArt.TxtDateien ? auftrag.Quelle.Dateien.ToArray() : Array.Empty<string>();
+        if (!auftrag.Quelle.IstGewaehlt)
             return;
 
-        var useTxtImport = sourceMode == DialogConfirm.No;
-
-        string? pdfFolder = null;
-        string[] selectedPdfFiles = Array.Empty<string>();
-        string? txtFolder = null;
-        string[] selectedTxtFiles = Array.Empty<string>();
-
-        if (!useTxtImport)
-        {
-            var mode = _dialogs.ConfirmCancel(
-                "PDF-Auswahl:\nJa = einzelne PDF-Protokolle auswählen\nNein = ganzen PDF-Ordner verwenden",
-                "Haltungen verteilen (PDF)");
-            if (mode == DialogConfirm.Cancel)
-                return;
-
-            if (mode == DialogConfirm.Yes)
-            {
-                selectedPdfFiles = _dialogs.OpenFiles("PDF-Protokolle auswählen", "PDF (*.pdf)|*.pdf");
-                if (selectedPdfFiles.Length == 0)
-                    return;
-            }
-            else
-            {
-                pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Protokollen wählen");
-                if (string.IsNullOrWhiteSpace(pdfFolder))
-                    return;
-            }
-        }
-        else
-        {
-            var mode = _dialogs.ConfirmCancel(
-                "TXT-Auswahl:\nJa = einzelne TXT-Dateien auswählen\nNein = ganzen TXT-Ordner verwenden",
-                "Haltungen verteilen (TXT)");
-            if (mode == DialogConfirm.Cancel)
-                return;
-
-            if (mode == DialogConfirm.Yes)
-            {
-                selectedTxtFiles = _dialogs.OpenFiles("TXT-Dateien auswaehlen", "TXT (*.txt)|*.txt");
-                if (selectedTxtFiles.Length == 0)
-                    return;
-            }
-            else
-            {
-                txtFolder = _dialogs.SelectFolder("TXT-Ordner wählen (z.B. mit kiDVDaten.txt)");
-                if (string.IsNullOrWhiteSpace(txtFolder))
-                    return;
-            }
-        }
-
-        var videoFolder = _dialogs.SelectFolder("Video-Ordner mit Rohvideos wählen");
+        var videoFolder = auftrag.FilmOrdner;
         if (string.IsNullOrWhiteSpace(videoFolder)) return;
 
         var destFolder = ResolveConfiguredDistributionRoot(_settings.HaltungDistribution)
@@ -642,28 +604,13 @@ public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeav
 
     // ─── Distribution: Dichtheitspruefung ──────────────────────────────────
 
-    private async Task DistributeDichtheitAsync()
+    private async Task DistributeDichtheitAsync(VerteilAuftrag auftrag)
     {
-        var mode = _dialogs.ConfirmCancel(
-            "PDF-Auswahl:\nJa = einzelne DP-PDFs auswählen\nNein = ganzen PDF-Ordner verwenden",
-            "Dichtheitsprüfung verteilen");
-        if (mode == DialogConfirm.Cancel)
+        if (auftrag.Quelle.IstTxt || !auftrag.Quelle.IstGewaehlt)
             return;
 
-        string? pdfFolder = null;
-        string[] selectedPdfFiles = Array.Empty<string>();
-        if (mode == DialogConfirm.Yes)
-        {
-            selectedPdfFiles = _dialogs.OpenFiles("Dichtheitsprüfungs-PDFs auswählen", "PDF (*.pdf)|*.pdf");
-            if (selectedPdfFiles.Length == 0)
-                return;
-        }
-        else
-        {
-            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Dichtheitsprüfungsprotokollen wählen");
-            if (string.IsNullOrWhiteSpace(pdfFolder))
-                return;
-        }
+        var pdfFolder = auftrag.Quelle.IstEinzeldateien ? null : auftrag.Quelle.Ordner;
+        var selectedPdfFiles = auftrag.Quelle.IstEinzeldateien ? auftrag.Quelle.Dateien.ToArray() : Array.Empty<string>();
 
         var destFolder = ResolveConfiguredDistributionRoot(_settings.DichtheitDistribution)
             ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);

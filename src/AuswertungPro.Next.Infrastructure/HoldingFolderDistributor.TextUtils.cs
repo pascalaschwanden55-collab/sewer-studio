@@ -44,7 +44,7 @@ public static partial class HoldingFolderDistributor
         => HoldingDistribution.HoldingTextParser.NormalizeShaftNumberKey(value);
 
 
-    private static string BuildPageRange(IReadOnlyList<int> pages) => HoldingTextNormalizer.BuildPageRange(pages);
+    internal static string BuildPageRange(IReadOnlyList<int> pages) => HoldingTextNormalizer.BuildPageRange(pages);
 
 
     private static bool IsContentsPage(string text) => HoldingTextNormalizer.IsContentsPage(text);

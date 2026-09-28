@@ -7,6 +7,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.UseCases.Import;
+using AuswertungPro.Next.Application.UseCases.Verteilung;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
@@ -17,28 +18,14 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class ExportPageViewModel
 {
-    private async Task DistributeShaftsAsync(DistributionVariant variant)
+    private async Task DistributeShaftsAsync(VerteilAuftrag auftrag)
     {
-        var mode = _dialogs.ConfirmCancel(
-            "PDF-Auswahl:\nJa = einzelne Schacht-PDFs auswählen\nNein = ganzen PDF-Ordner verwenden",
-            "Schächte verteilen");
-        if (mode == DialogConfirm.Cancel)
+        if (auftrag.Quelle.IstTxt || !auftrag.Quelle.IstGewaehlt)
             return;
 
-        string? pdfFolder = null;
-        string[] selectedPdfFiles = Array.Empty<string>();
-        if (mode == DialogConfirm.Yes)
-        {
-            selectedPdfFiles = _dialogs.OpenFiles("Schacht-PDFs auswählen", "PDF (*.pdf)|*.pdf");
-            if (selectedPdfFiles.Length == 0)
-                return;
-        }
-        else
-        {
-            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Schachtprotokollen wählen");
-            if (string.IsNullOrWhiteSpace(pdfFolder))
-                return;
-        }
+        var variant = auftrag.Ablage;
+        var pdfFolder = auftrag.Quelle.IstEinzeldateien ? null : auftrag.Quelle.Ordner;
+        var selectedPdfFiles = auftrag.Quelle.IstEinzeldateien ? auftrag.Quelle.Dateien.ToArray() : Array.Empty<string>();
 
         var destFolder = ResolveConfiguredDistributionRoot(_settings.SchachtDistribution)
             ?? ResolveDistributionSubfolder(ProjectStructure.SchaechteVerteilt);
