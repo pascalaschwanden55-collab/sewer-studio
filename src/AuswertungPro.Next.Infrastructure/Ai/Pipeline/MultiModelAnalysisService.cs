@@ -297,19 +297,24 @@ public sealed partial class MultiModelAnalysisService
                 clsResult = await _client.ClassifyYoloAsync(
                     new YoloClassifyRequest(frameBase64, 3), ct).ConfigureAwait(false);
 
-                if (!clsResult.Usable)
+                if (ClsPrefilterRule.Decide(clsResult, ClassifierDecisionEnabled) is { } skip)
                 {
-                    // Frame unbrauchbar (schwarz/ueberbelichtet/strukturlos/unscharf)
                     skippedFrames++;
-                    _logger.LogDebug("Frame {Frame}: Quality-Gate '{Reason}' → skip",
-                        frameIndex, clsResult.QualityReason);
+                    if (skip.EmptyPrediction is { } empty)
+                    {
+                        _codeVoting.RegisterAndVote(null, estimatedMeter);   // Fenster altern lassen
+                        trace.ClassifierCode = "LEER";
+                        trace.ClassifierConfidence = empty.Confidence;
+                        trace.ClassifierModel = ClassifierModelTag(clsResult);
+                    }
+                    _logger.LogDebug("Frame {Frame}: cls-Vorfilter {Reason} → skip", frameIndex, skip.ProgressText);
                     progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                        $"Frame {frameIndex}/{totalFrames} – unbrauchbar ({clsResult.QualityReason}) → skip"));
+                        $"Frame {frameIndex}/{totalFrames} – {skip.ProgressText} → skip"));
                     telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0,
                         frameSw.ElapsedMilliseconds, Skipped: true));
-                    trace.Path = "cls_quality_skip";
+                    trace.Path = skip.TracePath;
                     trace.YoloRelevant = false;
-                    trace.DropReason = $"frame_{clsResult.QualityReason}";
+                    trace.DropReason = skip.DropReason;
                     await WriteTraceAsync(trace).ConfigureAwait(false);
                     detections.AddRange(deduplicator.AdvanceAll());
                     await AppendCheckpointAsync(new(CheckpointFrameKind.Advance, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
@@ -317,54 +322,6 @@ public sealed partial class MultiModelAnalysisService
                 }
 
                 var topPred = clsResult.Predictions.Count > 0 ? clsResult.Predictions[0] : null;
-
-                // LEER-Skip nur im Klassifikator-Regime (Paket 2): das promotete
-                // 11-Klassen-Modell kennt kein OTHER/NORMAL, sondern LEER.
-                if (ClassifierDecisionEnabled
-                    && topPred?.ClassName is "LEER" or "leer"
-                    && topPred.Confidence > 0.70)
-                {
-                    skippedFrames++;
-                    _codeVoting.RegisterAndVote(null, estimatedMeter);   // Fenster altern lassen
-                    _logger.LogDebug("Frame {Frame}: Klassifikator LEER ({Conf:F0}%) → skip",
-                        frameIndex, topPred.Confidence * 100);
-                    progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                        $"Frame {frameIndex}/{totalFrames} – Klassifikator: LEER ({topPred.Confidence:P0}) → skip"));
-                    telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0,
-                        frameSw.ElapsedMilliseconds, Skipped: true));
-                    trace.Path = "cls_leer_skip";
-                    trace.YoloRelevant = false;
-                    trace.DropReason = "classifier_leer";
-                    trace.ClassifierCode = "LEER";
-                    trace.ClassifierConfidence = topPred.Confidence;
-                    trace.ClassifierModel = ClassifierModelTag(clsResult);
-                    await WriteTraceAsync(trace).ConfigureAwait(false);
-                    detections.AddRange(deduplicator.AdvanceAll());
-                    await AppendCheckpointAsync(new(CheckpointFrameKind.Advance, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
-                    continue;
-                }
-
-                if (topPred?.ClassName is "OTHER" or "other" or "NORMAL" or "normal"
-                    && topPred.Confidence > 0.70)
-                {
-                    // Frame ist normal → ueberspringen (spart DINO/SAM/Qwen).
-                    // Auch im Sweep korrekt: Grundgeruest-Elemente (BCD/BCE/BCA/...)
-                    // haetten eine eigene cls-Klasse, nicht OTHER/NORMAL.
-                    skippedFrames++;
-                    _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → skip",
-                        frameIndex, topPred.ClassName, topPred.Confidence * 100);
-                    progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                        $"Frame {frameIndex}/{totalFrames} – cls: {topPred.ClassName} ({topPred.Confidence:P0}) → skip"));
-                    telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0,
-                        frameSw.ElapsedMilliseconds, Skipped: true));
-                    trace.Path = "yolo_cls_skip";
-                    trace.YoloRelevant = false;
-                    trace.DropReason = "yolo_cls_normal";
-                    await WriteTraceAsync(trace).ConfigureAwait(false);
-                    detections.AddRange(deduplicator.AdvanceAll());
-                    await AppendCheckpointAsync(new(CheckpointFrameKind.Advance, frameIndex, t, estimatedMeter, null, true, null, Array.Empty<EnhancedFinding>()), ct).ConfigureAwait(false);
-                    continue;
-                }
 
                 if (topPred != null)
                     _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → weiter zur Detektion",
@@ -1007,10 +964,4 @@ public sealed partial class MultiModelAnalysisService
             .ConfigureAwait(false);
         return await registerSidecarTransportErrorAsync().ConfigureAwait(false);
     }
-
-    // ── Conversion helper ──────────────────────────────────────────────
-
-    // ── Private helpers ────────────────────────────────────────────────
-
-    /// <summary>Geschaetzte Haltungslaenge in Metern (wird durch OSD-Korrektur von Qwen ueberschrieben).</summary>
 }

@@ -537,7 +537,8 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
 
         // 4) Entwurf oder Gold? Vollstaendig ist ein Fund nur mit gepruefter SAM-Maske.
         // Ohne gueltige Maske bleibt das Sample ein Entwurf (Schritt 7).
-        var (maskValid, derivedMaskAreaPixels) = EvaluateGoldMask(segmentation, box, storedFramePath);
+        var goldMask = WorkbenchGoldMask.Evaluate(segmentation, box, storedFramePath, _readImageDimensions);
+        var maskValid = goldMask.IsValid;
 
         // 5) TrainingSample als geprueften Fund bauen (Feldfolge wie ReviewApprovalService).
         var sample = new TrainingSample
@@ -582,18 +583,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         PreserveRepairContext(existingSample, sample);
         ApplyDecisionCodeMeta(sample, finalCode, decision);
         box.ApplyTo(sample);
-        // Nur eine gepruefte Maske wird persistiert. Eine abgelehnte Maske (Leermaske, falsche
-        // Box, Degraded) bleibt bewusst weg, damit der Entwurf ueber !HasSamMask in der Queue
-        // 'Unvollstaendige Goldframes' auftaucht und die Maske dort neu segmentiert wird.
-        if (maskValid && segmentation is not null)
-        {
-            sample.SamMaskRle = segmentation.MaskRle;
-            sample.SamMaskImageWidth = segmentation.MaskImageWidth;
-            sample.SamMaskImageHeight = segmentation.MaskImageHeight;
-            sample.SamMaskAreaPixels = derivedMaskAreaPixels;
-            sample.SamMaskConfidence = segmentation.Confidence;
-            sample.SamMaskLabel = segmentation.Label;
-        }
+        goldMask.ApplyTo(sample);
 
         // Letzte zentrale Gold-Schranke: Caller-Flags allein duerfen keinen
         // unvollstaendigen Fund zu KB oder Teacher durchreichen.
@@ -662,56 +652,6 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             StoredImageSha256: storedImageSha256,
             StoredConfirmedAtUtc: sample.ConfirmedAtUtc is { } goldConfirmedAtUtc
                 ? ToUtc(goldConfirmedAtUtc) : null);
-    }
-
-    /// <summary>
-    /// Prueft, ob die gezogene SAM-Maske vollstaendig genug fuer ein Goldsample ist
-    /// (Schritt 4 aus SaveCoreAsync). Die zentrale Pruefung (SamMaskValidator) verlangt
-    /// mehr als HasSamMask: lesbares, dimensionstreues, nicht-leeres RLE, das zur
-    /// gezogenen Box passt, und kein Degraded-Ergebnis. Unlesbare oder widerspruechliche
-    /// Bildmasse (bare "catch" OHNE Filter — bewusst auch bei Abbruch) sowie eine
-    /// fehlende/degradierte Maske fuehren zum Kurzschluss MaskValid=false,
-    /// AreaPixels=null, ohne die Flaechenzaehlung aufzurufen — unveraendert wie bisher
-    /// inline. Nur bei gueltiger Maske UND zaehlbarer Flaeche gilt MaskValid=true.
-    /// </summary>
-    private (bool MaskValid, int? AreaPixels) EvaluateGoldMask(
-        WorkbenchSegmentation? segmentation, BoundingBox box, string storedFramePath)
-    {
-        var maskDimensionsMatch = false;
-        if (segmentation is not null)
-        {
-            try
-            {
-                var actualDimensions = _readImageDimensions(storedFramePath);
-                maskDimensionsMatch = actualDimensions is { } dimensions
-                                      && dimensions.Width == segmentation.MaskImageWidth
-                                      && dimensions.Height == segmentation.MaskImageHeight;
-            }
-            catch
-            {
-                // Unlesbare oder widerspruechliche Bildmasse duerfen nie Gold ergeben.
-                maskDimensionsMatch = false;
-            }
-        }
-
-        var maskValid = maskDimensionsMatch && SamMaskValidator.IsValid(
-            segmentation?.MaskRle,
-            segmentation?.MaskImageWidth,
-            segmentation?.MaskImageHeight,
-            box,
-            segmentation?.Degraded ?? false,
-            out _);
-        if (!maskValid)
-            return (false, null);
-
-        return SamMaskFormatValidator.TryGetForegroundPixelCount(
-            segmentation?.MaskRle,
-            segmentation?.MaskImageWidth,
-            segmentation?.MaskImageHeight,
-            out var foregroundPixelCount,
-            out _)
-            ? (true, foregroundPixelCount)
-            : (false, null);
     }
 
     /// <summary>
