@@ -44,8 +44,29 @@ public sealed class WebGisSanierungPosition
 
     public bool Schreibbar => Sperren.Count == 0 && Felder.Count > 0 && ElternGlobalId is not null;
 
+    /// <summary>
+    /// Der Server hat das Anlegen bestaetigt (<c>isFailure:false</c> und neue Kennung). Das allein belegt noch
+    /// nicht, dass alle geplanten Werte stehen — dafuer <see cref="Nachgeprueft"/> (WG05, 28.09.2026).
+    /// Ein bestaetigtes Anlegen wird nie nachtraeglich zu «nicht angelegt».
+    /// </summary>
     public bool Geschrieben { get; set; }
     public string? SchreibFehler { get; set; }
-    /// <summary>Vom WebGIS vergebene Objekt-ID nach dem Anlegen.</summary>
+    /// <summary>
+    /// Vom WebGIS vergebene Kennung nach dem Anlegen. Live belegt 28.09.2026: das ist die OBJECTID, NICHT die
+    /// GlobalID — die Massnahme laesst sich darueber nicht zuruecklesen.
+    /// </summary>
     public string? NeueId { get; set; }
+    /// <summary>GlobalID der neu angelegten Massnahme, ermittelt aus der Liste am Elternobjekt (vorher/nachher).</summary>
+    public string? NeueGlobalId { get; set; }
+    /// <summary>
+    /// Gegenprobe bestanden: Genau eine neue Zeile steht in der Liste des Elternobjekts, und Art, Status,
+    /// Verfahren, Sanierungsjahr (alle geplanten Felder) stehen so in der Massnahme, wie sie geplant waren.
+    /// </summary>
+    public bool Nachgeprueft { get; set; }
+    /// <summary>
+    /// Vom Server bestaetigt, aber die Gegenprobe ergab keinen sicheren Befund (keine oder mehrere neue Zeilen,
+    /// Lesefehler, abweichender Wert). Der Grund steht hier. Nie automatisch wiederholen und nie als «nicht
+    /// angelegt» ausgeben: Vor einem neuen Versuch im WebGIS nachsehen.
+    /// </summary>
+    public string? Ungeklaert { get; set; }
 }

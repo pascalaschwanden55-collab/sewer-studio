@@ -56,6 +56,11 @@ public static class WebGisSendenAblauf
         LogAusgefallen,
         /// <summary>Das Projekt war nicht mehr offen — der Lauf wurde vor dem nächsten Schreiben gestoppt.</summary>
         ProjektGewechselt,
+        /// <summary>
+        /// Eine Sanierungsmassnahme wurde vom Server bestätigt, die Gegenprobe ergab aber keinen sicheren Befund —
+        /// der Lauf wurde danach gestoppt (WG05). Vor einem neuen Versuch im WebGIS nachsehen.
+        /// </summary>
+        Ungeklaert,
     }
 
     public static async Task<Ausgang> FuehreAusAsync(
@@ -104,6 +109,13 @@ public static class WebGisSendenAblauf
         {
             log.VersucheSchreibe(WebGisExportBericht.LogAbbruch(DateTime.Now, ex.Message, plan));
             throw;
+        }
+
+        if (plan.Sanierungen.Exists(s => s.Ungeklaert is not null))
+        {
+            log.VersucheSchreibe(WebGisExportBericht.LogAbbruch(DateTime.Now,
+                "Ausgang einer Sanierungsmassnahme ungeklärt — Lauf gestoppt, vor einem neuen Versuch im WebGIS nachsehen", plan));
+            return Ausgang.Ungeklaert;
         }
 
         return log.VersucheSchreibe(WebGisExportBericht.LogAbschluss(DateTime.Now, plan))

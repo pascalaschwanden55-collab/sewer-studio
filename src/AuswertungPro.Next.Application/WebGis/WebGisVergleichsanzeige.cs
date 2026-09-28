@@ -58,8 +58,13 @@ public sealed class WebGisVergleichsZeile : INotifyPropertyChanged
         // Nach dem Schreiben: was der Server bestätigt hat, zeigt den neuen Wert.
         if (v.Massnahme is { } san)
         {
+            // WG05: bestätigt / nachgeprüft / ungeklärt getrennt zeigen.
+            if (san.Ungeklaert is not null)
+                return (v.Nachher ?? v.WebGis, "Ausgang ungeklärt", san.Ungeklaert, WebGisAnzeigeTon.Warnung);
+            if (san.Geschrieben && san.Nachgeprueft)
+                return (v.Nachher ?? v.WebGis, "angelegt und nachgeprüft", "zurückgelesen (ID " + (san.NeueId ?? "?") + ")", WebGisAnzeigeTon.Bestaetigt);
             if (san.Geschrieben)
-                return (v.Nachher ?? v.WebGis, "angelegt", "vom Server bestätigt (ID " + (san.NeueId ?? "?") + ")", WebGisAnzeigeTon.Bestaetigt);
+                return (v.Nachher ?? v.WebGis, "angelegt", "vom Server bestätigt (ID " + (san.NeueId ?? "?") + "), nicht nachgeprüft", WebGisAnzeigeTon.Warnung);
             if (san.SchreibFehler is not null)
                 return (v.WebGis, "nicht angelegt", san.SchreibFehler, WebGisAnzeigeTon.Fehler);
         }
@@ -140,6 +145,11 @@ public sealed class WebGisVergleichsObjekt : INotifyPropertyChanged
             Chip = "gesperrt"; ChipTon = WebGisAnzeigeTon.Gesperrt;
             Untertitel = string.Join(" ", _pos.Sperren);
         }
+        else if (Massnahmen.Any(m => m.Ungeklaert is not null))
+        {
+            Chip = "ungeklärt"; ChipTon = WebGisAnzeigeTon.Warnung;
+            Untertitel = Massnahmen.First(m => m.Ungeklaert is not null).Ungeklaert!;
+        }
         else if (_pos.SchreibFehler is not null || Massnahmen.Any(m => m.SchreibFehler is not null))
         {
             Chip = "Fehler"; ChipTon = WebGisAnzeigeTon.Fehler;
@@ -208,7 +218,9 @@ public static class WebGisVergleichsanzeige
     {
         if (v.Massnahme is { } san)
         {
-            if (san.Geschrieben) return ("angelegt (ID " + (san.NeueId ?? "?") + ")", WebGisAnzeigeTon.Bestaetigt);
+            if (san.Ungeklaert is not null) return ("Ausgang ungeklärt: " + san.Ungeklaert, WebGisAnzeigeTon.Warnung);
+            if (san.Geschrieben && san.Nachgeprueft) return ("angelegt und nachgeprüft (ID " + (san.NeueId ?? "?") + ")", WebGisAnzeigeTon.Bestaetigt);
+            if (san.Geschrieben) return ("angelegt, vom Server bestätigt (ID " + (san.NeueId ?? "?") + "), nicht nachgeprüft", WebGisAnzeigeTon.Warnung);
             if (san.SchreibFehler is not null) return ("nicht angelegt: " + san.SchreibFehler, WebGisAnzeigeTon.Fehler);
             return ("nicht versucht", WebGisAnzeigeTon.Warnung);
         }

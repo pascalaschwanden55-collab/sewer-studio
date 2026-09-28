@@ -405,6 +405,15 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     aber `schacht.sohlenhoehe` usw. Seither nur noch in die Akte (`SchachtNurUeberAkte`). Nicht geholt: Zustand,
     Sanierungsbedarf, Bemerkung (SewerStudio ist Quelle), berechnete/Systemfelder, OBJECTID, die Paare «Bezeichnung
     alter./hist.» und «Rechtswert/Hochwert» (je nur eine refId bekannt). Tests `WebGisImportTypAaTests`.
+- WG05 (28.09.2026, Entscheid Pascal): **Massnahmen nur an nachgeprüften Elternobjekten und nach dem Anlegen
+  gegengeprüft.** Hat GEONIS ein geplantes Feld des Elternobjekts nicht übernommen oder liess es sich nicht
+  zurücklesen (`WebGisExportPosition.Nachgeprueft` false), wird keine Massnahme angelegt (ersetzt den Audit-Test
+  «bekommt trotzdem die Massnahme»). `newId` ist die OBJECTID, nicht die GlobalID (live 28.09.): Nach bestätigtem
+  Anlegen liest `PruefeMassnahmeNachAsync` die Liste am Elternobjekt neu, verlangt GENAU EINE neue GlobalID, liest
+  sie per `LeseMassnahmeAsync` und vergleicht jedes geplante Feld (Sanierungsjahr nur als Jahr). Nur dann
+  `Nachgeprueft`; sonst `Ungeklaert` (Grund) — nie «nicht angelegt», nie automatisch wiederholt, weitere Massnahmen
+  des Laufs werden nicht mehr angelegt, `WebGisSendenAblauf.Ausgang.Ungeklaert`. Bericht/Log/Liste unterscheiden
+  bestätigt / nachgeprüft / ungeklärt. Tests `WebGisExportUseCaseTests.Audit.cs` (WG05-Block).
 - OFFEN / NICHT ERLEDIGT: Abstimmung mit Trigonet (interne Schnittstelle, ein Schreibweg).
   Der reale Schreibweg ist bisher nur manuell im Browser und im Lauf vom 21.09. belegt
   (Haltung 525145-505377: Z4 + Sanierungsbedarf Saniert + Bemerkung; zwei Sanierungsmassnahmen
