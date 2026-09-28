@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Settings;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -11,6 +12,7 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject
     private readonly ILogTailReader _logTailReader;
     private readonly IDiagnosticsPackageService? _diagnosticsPackage;
     private readonly IDialogService? _dialogs;
+    private readonly IToastService? _toasts;
     private readonly IFolderOpenService _folderOpen;
 
     [ObservableProperty] private string _logTail = "";
@@ -29,11 +31,13 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject
         ILogTailReader logTailReader,
         IDiagnosticsPackageService? diagnosticsPackage,
         IDialogService? dialogs,
-        IFolderOpenService? folderOpen = null)
+        IFolderOpenService? folderOpen = null,
+        IToastService? toasts = null)
     {
         _logTailReader = logTailReader ?? throw new ArgumentNullException(nameof(logTailReader));
         _diagnosticsPackage = diagnosticsPackage;
         _dialogs = dialogs;
+        _toasts = toasts;
         _folderOpen = folderOpen ?? SettingsPathWorkflow.CompatibilityService;
         RefreshCommand = new RelayCommand(Refresh);
         OpenLogFolderCommand = new RelayCommand(
@@ -78,9 +82,24 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject
                 : result.UserMessage;
 
             if (result.Success)
-                _dialogs.Info(PackageStatus, "Diagnosepaket");
+            {
+                if (_toasts is not null)
+                {
+                    var pfad = result.PackagePath;
+                    _toasts.Success(
+                        "Diagnosepaket wurde erstellt.",
+                        "Datei öffnen",
+                        () => ExplorerRevealService.TryReveal(pfad, out _));
+                }
+                else
+                {
+                    _dialogs.Info(PackageStatus, "Diagnosepaket");
+                }
+            }
             else
+            {
                 _dialogs.Warn(result.UserMessage, "Diagnosepaket");
+            }
         }
         catch (OperationCanceledException)
         {

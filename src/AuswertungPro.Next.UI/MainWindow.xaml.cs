@@ -163,7 +163,7 @@ public partial class MainWindow : Window
         {
             Owner = this
         };
-        window.DataContext = new CodeCatalogEditorViewModel(sp.CodeCatalog, window);
+        window.DataContext = new CodeCatalogEditorViewModel(sp.CodeCatalog, window, toasts: sp.Toasts);
         window.ShowDialog();
     }
 

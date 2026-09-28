@@ -27,7 +27,11 @@ public sealed partial class SchaechtePageViewModel
         if (anzahl > 0)
         {
             _shell.MarkProjectDirty(); ScheduleAutoSave(); FelderExternErgaenzt?.Invoke();
-            _dialogs.Info($"GeoShop: {anzahl} Schächte abgeglichen. Bitte das Projekt speichern.", "GeoShop-Abgleich");
+            var meldung = $"GeoShop: {anzahl} Schächte abgeglichen. Bitte das Projekt speichern.";
+            if (_toasts is not null)
+                _toasts.Success(meldung);
+            else
+                _dialogs.Info(meldung, "GeoShop-Abgleich");
         }
     }
 }

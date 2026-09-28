@@ -18,7 +18,8 @@ internal static class ProjektVorschauPdfWorkflow
     public static async Task<ProjektVorschauPdfErgebnis> AusfuehrenAsync(
         Func<ProjectPreview?> baueVorschau,
         IDialogService dialogs,
-        string leerText)
+        string leerText,
+        IToastService? toasts = null)
     {
         ArgumentNullException.ThrowIfNull(baueVorschau);
         ArgumentNullException.ThrowIfNull(dialogs);
@@ -46,8 +47,14 @@ internal static class ProjektVorschauPdfWorkflow
                 dialogs.Info(leerText, "Projektvorschau");
                 break;
             case ProjektVorschauPdfStatus.Geschrieben:
-                dialogs.Info($"PDF erstellt:\n{Path.GetFullPath(ergebnis.Pfad)}", "Projektvorschau");
+            {
+                var vollpfad = Path.GetFullPath(ergebnis.Pfad);
+                if (toasts is not null)
+                    toasts.Success("Projektvorschau-PDF wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(vollpfad, out _));
+                else
+                    dialogs.Info($"PDF erstellt:\n{vollpfad}", "Projektvorschau");
                 break;
+            }
             case ProjektVorschauPdfStatus.Fehler:
                 dialogs.Error(
                     $"PDF konnte nicht erstellt werden:\n{UserError.DescribeAndReport(ergebnis.Fehler!, "Projektvorschau PDF erstellen")}",

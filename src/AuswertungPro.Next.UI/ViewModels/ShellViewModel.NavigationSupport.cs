@@ -21,7 +21,8 @@ public sealed partial class ShellViewModel
             _sp.Settings.LastProjectPath,
             _sp.CostStores.CreateMeasureTemplateStore(),
             _sp.CostStores.CreateCostCatalogStore(),
-            _sp.Dialogs);
+            _sp.Dialogs,
+            toasts: _sp.Toasts);
         var window = new Views.Windows.MeasureTemplateEditorWindow
         {
             DataContext = vm

@@ -51,6 +51,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     private readonly ShellViewModel _shell;
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
+    private readonly IToastService? _toasts;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly DashboardRefreshNotifier _dashboardRefresh;
     private readonly ICostCatalogStore _catalogStore;
@@ -140,7 +141,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             costStores: services.CostStores.CreateCalculationStores(),
             holding: holding,
             singleHoldingMode: singleHoldingMode,
-            targetRecord: targetRecord)
+            targetRecord: targetRecord,
+            toasts: services.Toasts)
     {
     }
 
@@ -155,11 +157,13 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         IProjectCostStoreRepository costRepo,
         string? holding,
         bool singleHoldingMode,
-        HaltungRecord? targetRecord = null)
+        HaltungRecord? targetRecord = null,
+        IToastService? toasts = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _toasts = toasts;
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         _dashboardRefresh = dashboardRefresh ?? throw new ArgumentNullException(nameof(dashboardRefresh));
         _catalogStore = catalogStore ?? throw new ArgumentNullException(nameof(catalogStore));
@@ -231,7 +235,11 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             return;
         }
 
-        _dialogs.Info($"Vorlage \"{template.Name}\" gespeichert. Gilt fuer neue Projekte.", "Vorlage");
+        var meldung = $"Vorlage \"{template.Name}\" gespeichert. Gilt fuer neue Projekte.";
+        if (_toasts is not null)
+            _toasts.Success(meldung);
+        else
+            _dialogs.Info(meldung, "Vorlage");
     }
 
     [RelayCommand]
@@ -975,8 +983,13 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         _shell.Project.Dirty = true;
         Status = $"Gespeichert: {BelegteHaltungen} Haltungen, Total {GesamtTotal:N2} CHF.";
         _dashboardRefresh.NotifyCostsChanged();
-        _dialogs.Info(
-            $"Sanierungs-Matrix gespeichert.\n{BelegteHaltungen} Haltungen mit Massnahme, Total {GesamtTotal:N2} CHF (exkl. MwSt.).\n\nDas NPK-Leistungsverzeichnis exportierst du im Druckcenter.",
-            "Sanierungs-Matrix");
+        var meldungGespeichert =
+            $"Sanierungs-Matrix gespeichert. {BelegteHaltungen} Haltungen mit Massnahme, Total {GesamtTotal:N2} CHF (exkl. MwSt.).";
+        if (_toasts is not null)
+            _toasts.Success(meldungGespeichert);
+        else
+            _dialogs.Info(
+                meldungGespeichert + "\n\nDas NPK-Leistungsverzeichnis exportierst du im Druckcenter.",
+                "Sanierungs-Matrix");
     }
 }

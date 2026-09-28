@@ -6,6 +6,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -453,6 +454,27 @@ public sealed class DataPagePrintControllerTests
     }
 
     [Fact]
+    public async Task PrintDossierPdfAsync_meldet_erfolg_als_toast_wenn_toastdienst_verfuegbar()
+    {
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\dossier.pdf" };
+        var toasts = new ToastFake();
+        var photoAvailability = new RecordingDossierPhotoAvailability(result: true);
+        var controller = CreateController(
+            dialogs,
+            dossierPhotoAvailability: photoAvailability,
+            selectDossierPrintOptions: _ => EmptyDossierOptions() with { IncludeFotos = true },
+            buildDossierPdfAsync: (_, _, _, _, _, _, _) => Task.FromResult(new byte[] { 1 }),
+            toasts: toasts);
+
+        await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
+
+        // Der Toast ersetzt den blockierenden Dialog; "Dossier" darf nicht mehr als Info erscheinen.
+        Assert.Null(dialogs.LastInfo);
+        Assert.Equal("Dossier wurde erstellt.", toasts.Meldung);
+        Assert.Equal("Datei öffnen", toasts.AktionText);
+    }
+
+    [Fact]
     public async Task PrintDossierPdfAsync_erzeugt_basis_dossier_und_haengt_originale_an()
     {
         var project = new Project { Name = "P" };
@@ -631,7 +653,8 @@ public sealed class DataPagePrintControllerTests
         Func<string, bool>? openPdf = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
-        IProjectCostStoreRepository? projectCosts = null)
+        IProjectCostStoreRepository? projectCosts = null,
+        IToastService? toasts = null)
         => new(
             dialogs,
             getProjectFolder: () => projectFolder,
@@ -659,7 +682,8 @@ public sealed class DataPagePrintControllerTests
             regenerateOne: regenerateOne,
             openPdf: openPdf ?? (_ => true),
             dossierPhotoAvailability: dossierPhotoAvailability,
-            inspectionProtocolFiles: inspectionProtocolFiles);
+            inspectionProtocolFiles: inspectionProtocolFiles,
+            toasts: toasts);
 
     private static HaltungRecord Record(string holding)
     {
@@ -831,5 +855,25 @@ public sealed class DataPagePrintControllerTests
 
         public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
             => throw new NotSupportedException();
+    }
+
+    private sealed class ToastFake : IToastService
+    {
+        public string? Meldung { get; private set; }
+        public string? AktionText { get; private set; }
+        public Action? Aktion { get; private set; }
+
+        public void Success(string message) => Meldung = message;
+
+        public void Success(string message, string aktionText, Action aktion)
+        {
+            Meldung = message;
+            AktionText = aktionText;
+            Aktion = aktion;
+        }
+
+        public void Info(string message) { }
+        public void Warning(string message) { }
+        public void Error(string message) => Assert.Fail(message);
     }
 }

@@ -35,6 +35,33 @@ public sealed class SettingsKnowledgeBackupWorkflowTests
     }
 
     [Fact]
+    public async Task ExportAsync_success_zeigt_toast_statt_dialog_wenn_toastdienst_verfuegbar()
+    {
+        var dialogs = new DialogFake { SavePath = @"D:\Backup\ki.zip" };
+        var toasts = new ToastFake();
+        var state = new UiState();
+        var calls = new List<string>();
+
+        await SettingsKnowledgeBackupWorkflow.ExportAsync(
+            Request(
+                dialogs,
+                state,
+                calls,
+                now: new DateTime(2026, 7, 3),
+                export: (path, _, _) =>
+                {
+                    calls.Add("export:" + path);
+                    return Task.FromResult(new KnowledgeBackupService.BackupResult(true, null, 7, 1024 * 1024));
+                },
+                toasts: toasts),
+            CancellationToken.None);
+
+        Assert.Empty(dialogs.Infos);
+        Assert.Contains("7 Dateien", toasts.Meldung);
+        Assert.Equal("Datei öffnen", toasts.AktionText);
+    }
+
+    [Fact]
     public async Task ExportAsync_cancelled_save_dialog_does_not_call_export()
     {
         var calls = new List<string>();
@@ -153,7 +180,8 @@ public sealed class SettingsKnowledgeBackupWorkflowTests
         List<string> calls,
         DateTime now,
         Func<string, IProgress<string>?, CancellationToken, Task<KnowledgeBackupService.BackupResult>>? export = null,
-        Func<string, IProgress<string>?, CancellationToken, Task<KnowledgeBackupService.BackupResult>>? import = null)
+        Func<string, IProgress<string>?, CancellationToken, Task<KnowledgeBackupService.BackupResult>>? import = null,
+        IToastService? toasts = null)
         => new(
             Dialogs: dialogs,
             SetStatusText: value => state.Status = value,
@@ -167,7 +195,8 @@ public sealed class SettingsKnowledgeBackupWorkflowTests
                 calls.Add("import");
                 return Task.FromResult(new KnowledgeBackupService.BackupResult(true, null, 1, 1));
             }),
-            Now: () => now);
+            Now: () => now,
+            Toasts: toasts);
 
     private sealed class UiState
     {
@@ -204,5 +233,25 @@ public sealed class SettingsKnowledgeBackupWorkflowTests
 
         public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
         public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Cancel;
+    }
+
+    private sealed class ToastFake : IToastService
+    {
+        public string? Meldung { get; private set; }
+        public string? AktionText { get; private set; }
+        public Action? Aktion { get; private set; }
+
+        public void Success(string message) => Meldung = message;
+
+        public void Success(string message, string aktionText, Action aktion)
+        {
+            Meldung = message;
+            AktionText = aktionText;
+            Aktion = aktion;
+        }
+
+        public void Info(string message) { }
+        public void Warning(string message) { }
+        public void Error(string message) => Assert.Fail(message);
     }
 }

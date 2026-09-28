@@ -17,6 +17,7 @@ using System.IO;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.Behaviors;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
@@ -25,6 +26,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private DataPageViewModel Vm => DataContext as DataPageViewModel
         ?? throw new InvalidOperationException("DataPage benoetigt DataPageViewModel als DataContext.");
     private IDialogService Dialogs => Vm.Dialogs;
+    private IToastService Toasts => Vm.Toasts;
     private AppSettings Settings => Vm.Settings;
     private AuswertungPro.Next.Application.Vsa.IVsaEvaluationService Vsa => Vm.Vsa;
     private AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog => Vm.CodeCatalog;

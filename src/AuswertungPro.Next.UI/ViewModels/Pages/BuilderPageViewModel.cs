@@ -35,6 +35,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly ShellViewModel _shell;
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
+    private readonly IToastService? _toasts;
     private readonly IProtocolPdfExporter _protocolPdfExporter;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
@@ -207,6 +208,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         _pdfExport = services.OfferPdfExport;
         _npkPdfExport = services.NpkOfferPdfExport;
         _pdfPrint = services.PdfPrint;
+        _toasts = services.Toasts;
     }
 
     /// <summary>

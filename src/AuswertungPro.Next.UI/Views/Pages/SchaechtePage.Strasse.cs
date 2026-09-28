@@ -133,10 +133,12 @@ public partial class SchaechtePage
             ApplySearchFilter();
         }
 
-        Dialogs.Info(
-            geschrieben == 1
-                ? "1 Schacht hat die Strasse seiner Haltung übernommen."
-                : $"{geschrieben} Schächte haben die Strasse ihrer Haltung übernommen.",
-            StrassenTitel);
+        var meldung = geschrieben == 1
+            ? "1 Schacht hat die Strasse seiner Haltung übernommen."
+            : $"{geschrieben} Schächte haben die Strasse ihrer Haltung übernommen.";
+        if (_vm?.Toasts is { } toasts)
+            toasts.Success(meldung);
+        else
+            Dialogs.Info(meldung, StrassenTitel);
     }
 }

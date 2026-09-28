@@ -42,6 +42,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
+    private readonly IToastService _toasts;
     private readonly AuswertungPro.Next.Application.Lookup.IQgisBestandLeser _qgisBestand;
     private readonly AuswertungPro.Next.Application.Lookup.IKatasterKennungLeser _katasterKennungen;
     private readonly AppSettings _settings;
@@ -85,6 +86,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private bool _disposed;
 
     internal IDialogService Dialogs => _dialogs;
+    internal IToastService Toasts => _toasts;
     internal AppSettings Settings => _settings;
     internal AuswertungPro.Next.Application.Vsa.IVsaEvaluationService Vsa => _vsa;
     internal AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog => _codeCatalog;
@@ -205,6 +207,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     {
         _shell = shell;
         _dialogs = services.Dialogs;
+        _toasts = services.Toasts;
         _settings = services.Settings;
         _vsa = services.Vsa;
         _codeCatalog = services.CodeCatalog;
@@ -261,7 +264,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 record,
                 _settings.HydraulikPanel,
                 dn,
-                saveSettings: _settings.Save));
+                saveSettings: _settings.Save),
+            toasts: _toasts);
         _originalPdfController = new DataPageOriginalPdfController(
             _dialogs,
             EnsureProtocolPath,

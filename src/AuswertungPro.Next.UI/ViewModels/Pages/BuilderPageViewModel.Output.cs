@@ -189,9 +189,12 @@ public sealed partial class BuilderPageViewModel
             LastResult = $"PDF erstellt: {Path.GetFileName(output)}";
             _shell.SetStatus("Druckcenter PDF erstellt");
             PdfExportProgress = "PDF fertig.";
-            _dialogs.Info(
-                $"Druckcenter-PDF wurde erstellt:\n{output}",
-                "Druckcenter");
+            if (_toasts is not null)
+                _toasts.Success("Druckcenter-PDF wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(output, out _));
+            else
+                _dialogs.Info(
+                    $"Druckcenter-PDF wurde erstellt:\n{output}",
+                    "Druckcenter");
         }
         catch (Exception ex)
         {
@@ -230,7 +233,8 @@ public sealed partial class BuilderPageViewModel
                 record,
                 _settings.HydraulikPanel,
                 dn,
-                saveSettings: _settings.Save));
+                saveSettings: _settings.Save),
+            toasts: _toasts);
 
     private SchachtRecord? FindSchachtByNummer(string? nummer)
     {
@@ -586,7 +590,10 @@ public sealed partial class BuilderPageViewModel
             LastResult = $"NPK-Offerte erstellt: {Path.GetFileName(output)}";
             _shell.SetStatus("NPK-Offerte erstellt");
             PdfExportProgress = "NPK-Offerte fertig.";
-            _dialogs.Info($"NPK-Offerte wurde erstellt:\n{output}", "NPK-Offerte");
+            if (_toasts is not null)
+                _toasts.Success("NPK-Offerte wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(output, out _));
+            else
+                _dialogs.Info($"NPK-Offerte wurde erstellt:\n{output}", "NPK-Offerte");
         }
         catch (Exception ex)
         {

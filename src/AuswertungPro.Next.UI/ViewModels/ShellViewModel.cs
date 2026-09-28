@@ -212,7 +212,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 _sp.LogTailReader,
                 _sp.DiagnosticsPackages,
                 _sp.Dialogs,
-                _sp.FolderOpen)),
+                _sp.FolderOpen,
+                toasts: _sp.Toasts)),
             new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(
                 settings: _sp.Settings,
                 diagnostics: _sp.Diagnostics,

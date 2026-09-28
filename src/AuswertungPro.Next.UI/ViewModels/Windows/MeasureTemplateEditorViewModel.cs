@@ -28,6 +28,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
     private readonly IMeasureTemplateStore _templateStore;
     private readonly ICostCatalogStore _catalogStore;
     private readonly IDialogService _dialogs;
+    private readonly IToastService? _toasts;
     private readonly string? _projectPath;
     private readonly string _legacyTemplatePath;
     private readonly string _activeUserTemplatePath;
@@ -77,8 +78,10 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         ICostCatalogStore catalogStore,
         IDialogService? dialogs = null,
         string? legacyTemplatePath = null,
-        string? activeUserTemplatePath = null)
+        string? activeUserTemplatePath = null,
+        IToastService? toasts = null)
     {
+        _toasts = toasts;
         _projectPath = projectPath;
         _dialogs = dialogs ?? new DialogService();
         _templateStore = templateStore ?? throw new ArgumentNullException(nameof(templateStore));
@@ -233,7 +236,10 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         SelectedTemplate = Templates.FirstOrDefault(t =>
             string.Equals(t.Id, template.Id, StringComparison.OrdinalIgnoreCase));
 
-        _dialogs.Info("Template gespeichert. Die Sanierungs-Matrix liest diese Vorlage.", "OK");
+        if (_toasts is not null)
+            _toasts.Success("Template gespeichert. Die Sanierungs-Matrix liest diese Vorlage.");
+        else
+            _dialogs.Info("Template gespeichert. Die Sanierungs-Matrix liest diese Vorlage.", "Vorlagen");
     }
 
     [RelayCommand]
@@ -357,7 +363,10 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
             return;
         }
 
-        _dialogs.Info("Positionen gespeichert. Die Sanierungs-Matrix nutzt denselben Katalog.", "OK");
+        if (_toasts is not null)
+            _toasts.Success("Positionen gespeichert. Die Sanierungs-Matrix nutzt denselben Katalog.");
+        else
+            _dialogs.Info("Positionen gespeichert. Die Sanierungs-Matrix nutzt denselben Katalog.", "Positionen");
     }
 
     private void WarnDuplicateNpkCodes()
@@ -477,7 +486,10 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
                 return;
             }
 
-            _dialogs.Info("Alte Vorlagen wurden in die aktive Vorlagen-Datei uebernommen.", "Vorlagen");
+            if (_toasts is not null)
+                _toasts.Success("Alte Vorlagen wurden in die aktive Vorlagen-Datei uebernommen.");
+            else
+                _dialogs.Info("Alte Vorlagen wurden in die aktive Vorlagen-Datei uebernommen.", "Vorlagen");
         }
         catch (Exception ex)
         {

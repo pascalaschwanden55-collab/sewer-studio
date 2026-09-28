@@ -35,6 +35,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private readonly AppSettings _settings;
         private readonly DashboardRefreshNotifier _dashboardRefresh;
         private readonly IDialogService _dialogs;
+        private readonly IToastService? _toasts;
         private readonly IProjectRepository _projects;
         private readonly IProjectOverviewCatalog _projectOverviewCatalog;
         private readonly IProjectDropPathResolver _projectDropPaths;
@@ -98,6 +99,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 sp.CostStores.CreateProjectCostStore("schacht_empfehlungen.json"),
                 projectDropPaths: sp.ProjectDropPaths)
         {
+            _toasts = sp.Toasts;
         }
 
         [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
@@ -438,7 +440,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 await ProjektVorschauPdfWorkflow.AusfuehrenAsync(
                     BuildPrintablePreview,
                     _dialogs,
-                    "Keine Projektvorschau zum Drucken vorhanden.");
+                    "Keine Projektvorschau zum Drucken vorhanden.",
+                    _toasts);
             }
             finally
             {

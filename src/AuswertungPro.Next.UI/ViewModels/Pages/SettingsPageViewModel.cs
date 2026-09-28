@@ -562,7 +562,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             _knowledgeBackup,
             _dialogs,
             value => BackupStatusText = value,
-            () => DateTime.Now).ConfigureAwait(true);
+            () => DateTime.Now,
+            toasts: _toasts).ConfigureAwait(true);
     }
 
     private async Task ImportBackupAsync()
@@ -589,7 +590,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
                     AppContext.BaseDirectory,
                     Environment.CurrentDirectory),
                 _programSnapshot.CreateAsync,
-                () => DateTime.Now)).ConfigureAwait(true);
+                () => DateTime.Now,
+                Toasts: _toasts)).ConfigureAwait(true);
     }
 
     private async Task CreateFullBackupAsync(CancellationToken ct)

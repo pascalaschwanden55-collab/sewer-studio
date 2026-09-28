@@ -22,6 +22,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
 {
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
+    private readonly IToastService? _toasts;
     private readonly ISchachtProtocolImportService _schachtProtocolImport;
     private readonly SchachtProtocolRefreshController _schachtProtocolRefreshController;
     private readonly SchachtProtocolSingleImportController _schachtProtocolSingleImportController;
@@ -45,6 +46,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
 
     internal AppSettings Settings => _settings;
     internal IDialogService Dialogs => _dialogs;
+    internal IToastService? Toasts => _toasts;
     internal ISchachtMassnahmenKatalogStore SchachtMassnahmenKatalog => _schachtMassnahmenKatalog;
     internal IProjectCostStoreRepository SchachtRecommendationCosts => _schachtRecommendationCosts;
     /// <summary>Quelle des Projekt-MWST-Satzes fuer den Schacht-Massnahmen-Dialog.</summary>
@@ -135,7 +137,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
             explorerReveal: services.ExplorerReveal,
             templateColumnReader: services.SchaechteTemplateColumns,
             schachtFileTargets: services.SchachtFileTargets,
-            protocolFileLocator: services.SchachtProtocolFiles)
+            protocolFileLocator: services.SchachtProtocolFiles,
+            toasts: services.Toasts)
     {
         // Nachschlagen leerer Felder beim Kanton. Optional: Die aelteren Uebergangskonstruktoren kennen den Dienst nicht, dort bleibt der Menuepunkt aus.
         FeldNachschlag = services.FeldNachschlag;
@@ -226,11 +229,13 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         ISchaechteTemplateColumnReader? templateColumnReader = null,
         ISchachtFileTargetResolver? schachtFileTargets = null,
         ISchachtProtocolFileLocator? protocolFileLocator = null,
-        ICostCatalogStore? schachtCostCatalog = null)
+        ICostCatalogStore? schachtCostCatalog = null,
+        IToastService? toasts = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _toasts = toasts;
         _schachtProtocolImport = schachtProtocolImport ?? throw new ArgumentNullException(nameof(schachtProtocolImport));
         _schachtStammdatenErgaenzung = schachtStammdatenErgaenzung ?? throw new ArgumentNullException(nameof(schachtStammdatenErgaenzung));
         _schachtMassnahmenKatalog = schachtMassnahmenKatalog ?? throw new ArgumentNullException(nameof(schachtMassnahmenKatalog));

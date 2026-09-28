@@ -233,7 +233,8 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
         => await ProjektVorschauPdfWorkflow.AusfuehrenAsync(
             BaueDruckbareVorschau,
             _sp.Dialogs,
-            "Keine Projektvorschau zum Drucken vorhanden.");
+            "Keine Projektvorschau zum Drucken vorhanden.",
+            _sp.Toasts);
 
     private ProjectPreview? BaueDruckbareVorschau()
     {

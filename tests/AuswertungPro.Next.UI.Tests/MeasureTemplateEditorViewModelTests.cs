@@ -1,6 +1,7 @@
 using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -38,6 +39,26 @@ public sealed class MeasureTemplateEditorViewModelTests
         Assert.Equal(2.5m, line.DefaultQty);
         Assert.Contains("Template gespeichert", dialogs.LastInfo, StringComparison.Ordinal);
         Assert.Null(dialogs.LastError);
+    }
+
+    [Fact]
+    public void SaveTemplateCommand_meldet_toast_statt_dialog_wenn_toastdienst_verfuegbar()
+    {
+        using var temp = new TempDirectory();
+        var templatePath = Path.Combine(temp.Path, "measure_templates.user.json");
+        var dialogs = new DialogFake();
+        var toasts = new ToastFake();
+        var store = new MeasureTemplateStore(templatePath);
+        var viewModel = CreateViewModel(temp.Path, store, dialogs, toasts);
+
+        viewModel.NewTemplateCommand.Execute(null);
+        viewModel.TemplateId = "test_toast";
+        viewModel.TemplateName = "Toast Test";
+
+        viewModel.SaveTemplateCommand.Execute(null);
+
+        Assert.Null(dialogs.LastInfo);
+        Assert.Contains("Template gespeichert", toasts.Meldung, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -194,7 +215,8 @@ public sealed class MeasureTemplateEditorViewModelTests
     private static MeasureTemplateEditorViewModel CreateViewModel(
         string root,
         MeasureTemplateStore templateStore,
-        IDialogService dialogs)
+        IDialogService dialogs,
+        IToastService? toasts = null)
     {
         var legacyPath = Path.Combine(root, "legacy", "measure_templates.json");
         var activePath = Path.Combine(root, "measure_templates.user.json");
@@ -204,7 +226,8 @@ public sealed class MeasureTemplateEditorViewModelTests
             new CostCatalogStore(Path.Combine(root, "cost_catalog.user.json")),
             dialogs,
             legacyPath,
-            activePath);
+            activePath,
+            toasts);
     }
 
     private sealed class DialogFake : IDialogService
@@ -222,6 +245,17 @@ public sealed class MeasureTemplateEditorViewModelTests
         public bool Confirm(string message, string title = "Bestaetigung") => true;
         public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => true;
         public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Yes;
+    }
+
+    private sealed class ToastFake : IToastService
+    {
+        public string? Meldung { get; private set; }
+
+        public void Success(string message) => Meldung = message;
+        public void Success(string message, string aktionText, Action aktion) => Meldung = message;
+        public void Info(string message) { }
+        public void Warning(string message) { }
+        public void Error(string message) => Assert.Fail(message);
     }
 
     private sealed class TempDirectory : IDisposable

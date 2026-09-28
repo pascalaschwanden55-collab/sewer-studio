@@ -20,7 +20,8 @@ public sealed record SettingsProgramSnapshotWorkflowRequest(
     /// bisher nur einen Dialog und hinterliess keine Spur. null verwendet den
     /// zentralen Logkanal.
     /// </summary>
-    Action<string>? Log = null);
+    Action<string>? Log = null,
+    IToastService? Toasts = null);
 
 /// <summary>
 /// Fuehrt den Benutzer durch die Programm-Momentaufnahme: Ziel waehlen, packen,
@@ -113,14 +114,24 @@ public static class SettingsProgramSnapshotWorkflow
                 return;
             }
 
-            request.Dialogs.Info(
-                "Programm-Momentaufnahme erstellt.\n\n" +
-                $"Dateien: {result.FileCount}\n" +
-                $"Groesse: {sizeMb:F1} MB\n" +
-                $"Pfad: {path}{skippedHint}{checksumHint}\n\n" +
-                "Enthalten sind Quellcode, der vollstaendige Git-Verlauf und die Modellgewichte. " +
-                "Build-Ausgabe, Python-Umgebung und Kartenkacheln fehlen bewusst — sie entstehen neu.",
-                DialogTitle);
+            if (request.Toasts is not null)
+            {
+                request.Toasts.Success(
+                    $"Programm-Momentaufnahme erstellt: {result.FileCount} Dateien, {sizeMb:F1} MB.",
+                    "Datei öffnen",
+                    () => ExplorerRevealService.TryReveal(path, out _));
+            }
+            else
+            {
+                request.Dialogs.Info(
+                    "Programm-Momentaufnahme erstellt.\n\n" +
+                    $"Dateien: {result.FileCount}\n" +
+                    $"Groesse: {sizeMb:F1} MB\n" +
+                    $"Pfad: {path}{skippedHint}{checksumHint}\n\n" +
+                    "Enthalten sind Quellcode, der vollstaendige Git-Verlauf und die Modellgewichte. " +
+                    "Build-Ausgabe, Python-Umgebung und Kartenkacheln fehlen bewusst — sie entstehen neu.",
+                    DialogTitle);
+            }
         }
         catch (OperationCanceledException)
         {

@@ -56,6 +56,7 @@ public sealed class DataPagePrintController
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly IProjectCostStoreRepository _projectCosts;
     private readonly IProtocolPdfLayoutSettings? _protocolPdfLayoutSettings;
+    private readonly IToastService? _toasts;
 
     [Obsolete("Kompatibilitaetskonstruktor. Neue Aufrufer muessen einen sicheren PDF-Oeffner injizieren.")]
     public DataPagePrintController(
@@ -128,7 +129,8 @@ public sealed class DataPagePrintController
         IProtocolSingleRegenerationService? protocolRegeneration = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
-        IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null)
+        IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null,
+        IToastService? toasts = null)
         : this(
             dialogs,
             getProjectFolder,
@@ -145,7 +147,8 @@ public sealed class DataPagePrintController
             openPdf: openPdf,
             dossierPhotoAvailability: dossierPhotoAvailability,
             inspectionProtocolFiles: inspectionProtocolFiles,
-            protocolPdfLayoutSettings: protocolPdfLayoutSettings)
+            protocolPdfLayoutSettings: protocolPdfLayoutSettings,
+            toasts: toasts)
     {
     }
 
@@ -163,7 +166,8 @@ public sealed class DataPagePrintController
         IProtocolSingleRegenerationService? protocolRegeneration = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
-        IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null)
+        IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null,
+        IToastService? toasts = null)
         : this(
             dialogs,
             protocolPdfExporter,
@@ -177,7 +181,8 @@ public sealed class DataPagePrintController
             protocolRegeneration,
             dossierPhotoAvailability,
             inspectionProtocolFiles,
-            protocolPdfLayoutSettings)
+            protocolPdfLayoutSettings,
+            toasts)
     {
         _pdfMerge = pdfMerge ?? throw new ArgumentNullException(nameof(pdfMerge));
     }
@@ -269,7 +274,8 @@ public sealed class DataPagePrintController
         Func<Project, string, HaltungRecord, ProtocolDocument, string?>? regenerateOne = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
-        IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null)
+        IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null,
+        IToastService? toasts = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _getProjectFolder = getProjectFolder ?? throw new ArgumentNullException(nameof(getProjectFolder));
@@ -322,6 +328,7 @@ public sealed class DataPagePrintController
             ?? DataPageProtocolPathResolver.CompatibilityService;
         _projectCosts = projectCosts ?? throw new ArgumentNullException(nameof(projectCosts));
         _protocolPdfLayoutSettings = protocolPdfLayoutSettings;
+        _toasts = toasts;
     }
 
     public async Task PrintDossierPdfAsync(Project project, HaltungRecord? record)
@@ -438,7 +445,10 @@ public sealed class DataPagePrintController
                 pdf = await Task.Run(() => _mergeWithRequiredOriginals(pdf, originalPdfPaths));
 
             await _writeAllBytesAsync(output, pdf);
-            _dialogs.Info($"Dossier wurde erstellt:\n{output}", "Dossier");
+            if (_toasts is not null)
+                _toasts.Success("Dossier wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(output, out _));
+            else
+                _dialogs.Info($"Dossier wurde erstellt:\n{output}", "Dossier");
         }
         catch (Exception ex)
         {
@@ -494,7 +504,10 @@ public sealed class DataPagePrintController
             var pdf = await _buildHydraulikPdfAsync(record, calc, options);
             await _writeAllBytesAsync(output, pdf);
 
-            _dialogs.Info($"PDF wurde erstellt:\n{output}", "Hydraulik PDF");
+            if (_toasts is not null)
+                _toasts.Success("Hydraulik-PDF wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(output, out _));
+            else
+                _dialogs.Info($"PDF wurde erstellt:\n{output}", "Hydraulik PDF");
         }
         catch (Exception ex)
         {
@@ -545,7 +558,12 @@ public sealed class DataPagePrintController
 
             // PDF direkt anzeigen; nur wenn das nicht klappt, den Pfad melden.
             if (!_openPdf(dest!))
-                _dialogs.Info($"AWU-Haltungsprotokoll wurde erstellt:\n{dest}", "Haltungsprotokoll AWU");
+            {
+                if (_toasts is not null)
+                    _toasts.Success("AWU-Haltungsprotokoll wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(dest, out _));
+                else
+                    _dialogs.Info($"AWU-Haltungsprotokoll wurde erstellt:\n{dest}", "Haltungsprotokoll AWU");
+            }
         }
         catch (Exception ex)
         {

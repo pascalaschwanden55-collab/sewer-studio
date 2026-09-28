@@ -371,7 +371,7 @@ public partial class ProtocolObservationsWindow : Window
         }
 
         _sp.ProtocolTraining.AddSample(entry, _record.GetFieldValue("Haltungsname"));
-        _sp.Dialogs.Info("Trainingseintrag gespeichert.", "Training");
+        _sp.Toasts.Success("Trainingseintrag gespeichert.");
     }
 
     private async void ExportPdf()
@@ -411,7 +411,7 @@ public partial class ProtocolObservationsWindow : Window
                 File.WriteAllBytes(output, pdf);
             });
 
-            _sp.Dialogs.Info($"PDF wurde erstellt:\n{output}", "PDF");
+            _sp.Toasts.Success("PDF wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(output, out _));
         }
         catch (Exception ex)
         {
