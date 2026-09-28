@@ -268,6 +268,12 @@
                                     <Separator/>
                                     <MenuItem Header="Bearbeiten" ToolTip="Fachliche Einzelaktionen für die gewählte Haltung">
                                         <MenuItem.Icon><ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                        <!-- Steht auch im Zeilenmenue (HaltungZeilenMenue) - bewusst doppelt
+                                             auffindbar (Controller-Entscheid Fix-Runde 1/2, "Auffindbarkeit
+                                             schlaegt Entdoppelung"), wie bei den Schaechten. -->
+                                        <MenuItem Header="Sanierungsmassnahmen..." Click="CostsMenu_Click">
+                                            <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                        </MenuItem>
                                         <MenuItem Header="Direkt zur KI-Optimierung"
                                                   Command="{Binding PlacementTarget.DataContext.OptimizeSanierungKiCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                   CommandParameter="{Binding PlacementTarget.DataContext.Selected, RelativeSource={RelativeSource AncestorType=ContextMenu}}">

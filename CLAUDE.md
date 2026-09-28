@@ -277,9 +277,13 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   Aktionen» stehen; zwei Wege zum selben Handler sind hier bewusst KEINE zu entfernende
   Doppelung. Schächte «Bearbeiten ▸» (Sanierungsmassnahmen…) und «Ausgabe ▸» (Protokoll
   (PDF)…, Gehe zu Ordner) rufen deshalb dieselben Handler wie das Zeilenmenü auf, das
-  unverändert bleibt. **Ausnahme, die bestehen bleibt:** Haltungen «Sanierungsmaßnahme
-  bearbeiten» ist weiterhin entfernt (identischer Handler `CostsMenu_Click` wie das
-  Zeilenmenü-«Sanierungsmassnahmen…», reiner Namens-Doppelgänger ohne Mehrwert) und
+  unverändert bleibt. Auch Haltungen «Bearbeiten ▸» ruft seit Fix-Runde 2 zusätzlich
+  «Sanierungsmassnahmen…» auf (`Click="CostsMenu_Click"`, exakt derselbe Handler und dieselbe
+  Schreibweise wie im Zeilenmenü) — das ehemalige `HaltungZeilenMenue`-Duplikat wurde also
+  NICHT entfernt, sondern (wie bei den Schächten) zusätzlich unter «Weitere Aktionen»
+  reichbar gemacht. **Ausnahme, die bestehen bleibt:** Haltungen «Sanierungsmaßnahme
+  bearbeiten» (der eigene, abweichend benannte Menüpunkt mit demselben Handler) ist weiterhin
+  entfernt — reiner Namens-Doppelgänger ohne Mehrwert neben «Sanierungsmassnahmen…» — und
   «Fokusmodus (F11)» ebenso (Doppelung zum globalen Menü _Ansicht, dieselbe
   `ShellViewModel.IsFocusMode`) — diese zwei bleiben die einzigen echten Streichungen.
   «Reihenfolge ▸» heisst auf BEIDEN Seiten «Nach oben»/«Nach unten» (nie «Hoch»/«Runter»);

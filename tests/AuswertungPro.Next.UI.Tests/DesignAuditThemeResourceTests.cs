@@ -119,10 +119,11 @@ public sealed class DesignAuditThemeResourceTests
         var dataPage = ReadUiFile("Views", "Pages", "DataPage.xaml");
         var shell = ReadUiFile("ViewModels", "ShellViewModel.cs");
 
-        // Optikanalyse 28.09.2026, Aufgabe 7: "Sanierungsmaßnahme bearbeiten" unter "Weitere
-        // Aktionen" war eine Doppelung des Zeilenmenue-Eintrags (gleicher Click-Handler) und
-        // wurde entfernt; der Einstieg zur Sanierungs-Matrix bleibt ueber das Zeilenmenue
-        // (Header "Sanierungsmassnahmen...", ss statt ß) erhalten.
+        // Optikanalyse 28.09.2026, Aufgabe 7 (Fix-Runde 2, Controller-Entscheid "Auffindbarkeit
+        // schlaegt Entdoppelung"): "Sanierungsmaßnahme bearbeiten" (eigener Namens-Doppelgaenger)
+        // ist weiterhin entfernt, aber der Zeilenmenue-Eintrag "Sanierungsmassnahmen..." (ss statt
+        // ß, Click="CostsMenu_Click") steht jetzt bewusst SOWOHL im Zeilenmenue ALS AUCH unter
+        // "Weitere Aktionen -> Bearbeiten" - derselbe Handler, zwei Wege dorthin.
         Assert.Contains("Header=\"Sanierungsmassnahmen...\"", dataPage);
         Assert.Contains("Click=\"CostsMenu_Click\"", dataPage);
         Assert.Contains("x:Name=\"WeitereAktionenDropdown\"", dataPage);

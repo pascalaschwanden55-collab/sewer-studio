@@ -52,11 +52,12 @@ public static class HandbuchInhalt
             "Abspielen des Videos, druckt das Protokoll, öffnet das Original-PDF oder die " +
             "Sanierungsmassnahmen. Der Knopf «Weitere Aktionen» bündelt seltenere Wege in fünf " +
             "Untermenüs: Daten abgleichen (Medien suchen, WebGIS, GeoShop, QGIS, Strassennamen), " +
-            "Bearbeiten (KI-Optimierung, Sanierungsvorschlag, Hydraulik berechnen), Reihenfolge " +
-            "(Zeile verschieben oder an eine Position setzen), Ansicht (Ansicht wechseln, anpassen, " +
-            "abdocken) sowie Ausgabe (Hydraulik-PDF, Haltungsdossier drucken). Statt der Tabelle " +
-            "lässt sich über Weitere Aktionen -> Ansicht auch die aufklappbare Listenansicht einer " +
-            "Haltung wählen."),
+            "Bearbeiten (Sanierungsmassnahmen, KI-Optimierung, Sanierungsvorschlag, Hydraulik " +
+            "berechnen - Sanierungsmassnahmen steht bewusst sowohl im Rechtsklick-Kontextmenü als " +
+            "auch hier), Reihenfolge (Zeile verschieben oder an eine Position setzen), Ansicht " +
+            "(Ansicht wechseln, anpassen, abdocken) sowie Ausgabe (Hydraulik-PDF, Haltungsdossier " +
+            "drucken). Statt der Tabelle lässt sich über Weitere Aktionen -> Ansicht auch die " +
+            "aufklappbare Listenansicht einer Haltung wählen."),
 
         new("Schaechte", "Schächte",
             "Tabelle aller Schacht-Inspektionspunkte, gleich aufgebaut wie Haltungen: Spaltenwahl, " +
