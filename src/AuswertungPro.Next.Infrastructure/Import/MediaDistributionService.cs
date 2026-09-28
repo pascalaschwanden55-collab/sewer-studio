@@ -916,6 +916,13 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
             if (FileContentComparer.FilesEqual(source, dest))
                 return dest;
 
+            var frueher = Ausweichkopien.FindeGleiche(
+                destDir,
+                fileName,
+                kandidat => FileContentComparer.FilesEqual(source, writePaths.EnsureSafeFileTarget(kandidat)));
+            if (frueher is not null)
+                return frueher;
+
             var name = Path.GetFileNameWithoutExtension(fileName);
             var ext = Path.GetExtension(fileName);
             var stem = $"{name}_{DateTime.Now:yyyyMMdd_HHmmss}";

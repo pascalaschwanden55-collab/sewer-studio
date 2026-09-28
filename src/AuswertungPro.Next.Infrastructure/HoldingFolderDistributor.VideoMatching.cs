@@ -375,10 +375,6 @@ public static partial class HoldingFolderDistributor
     /// </summary>
     internal static string? FindExistingVideo(string holdingFolder, string sourceVideoPath)
         => FindExistingIdenticalFile(holdingFolder, sourceVideoPath, MediaFileTypes.HasVideoExtension);
-
-    internal static bool IsPdf(string path)
-        => string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase);
-
     /// <summary>
     /// Wie <see cref="FindExistingVideo"/>, fuer jede Dateiart: eine bytegleiche Datei im Ordner,
     /// deren Pfad <paramref name="accept"/> zulaesst. Damit legt ein zweiter Lauf keine Kopie

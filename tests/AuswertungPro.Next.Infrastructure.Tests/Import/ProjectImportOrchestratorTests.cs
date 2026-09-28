@@ -417,7 +417,7 @@ public sealed class ProjectImportOrchestratorTests
             var erste = messages.IndexOf("DP-Hinweis A");
             var zweite = messages.IndexOf("DP-Hinweis B");
             var zusammenfassung = messages.IndexOf(
-                "Dichtheitspruefung: 2 Protokolle verteilt, 1 nicht zugeordnet, 1 bereits vorhanden.");
+                "Dichtheitspruefung: 2 Protokolle verteilt, 1 nicht zugeordnet, 1 bereits vorhanden, 0 Fehler.");
 
             Assert.True(erste >= 0, "Meldungen der Dichtheitsverteilung muessen unveraendert erscheinen.");
             Assert.Equal(erste + 1, zweite);
@@ -507,6 +507,72 @@ public sealed class ProjectImportOrchestratorTests
             var summary = messages.IndexOf("Verteilung: 4 Fotos/Dateien, 3 Videos, 2 Original-Protokolle, 2 Fehler.");
             Assert.True(summary > messages.IndexOf("Schachtprotokoll b.pdf nicht verteilt: Zielordner gesperrt"));
             Assert.DoesNotContain(messages, m => m.StartsWith("Medienverteilung fehlgeschlagen", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_ScannedOrDatelessShaftProtocolsDoNotDisappear()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { Result = new ImportMediaDistributionResult(0, 0, 0, []) },
+                kanalDistributor: new RecordingKanalDistributor { SuccessResult = new KanalImportDistributor.Result(0, 0, 0, []) },
+                exportDetector: new FixedWinCanDetector(),
+                shaftDistribution: new RecordingShaftDistributor(() => { }, new ShaftDistributionResult(
+                [
+                    new(false, "Parse failed: PDF enthaelt keine lesbare Textebene", "scan.pdf", null, null, null),
+                    new(false, "Parse failed: Datum nicht gefunden", "ohne_datum.pdf", null, null, null),
+                    new(false, "Parse failed: Schachtnummer und Datum nicht gefunden", "fremd.pdf", null, null, null)
+                ], false)))
+                .Import(sourceDir, projectDir, new Project());
+
+            var messages = result.Messages.ToList();
+            // Scan: Hinweis im Bericht, kein Fehler (kann auch ein gescanntes Haltungsprotokoll sein).
+            Assert.Contains(messages, m => m.Contains("scan.pdf", StringComparison.Ordinal) && m.Contains("prüfen", StringComparison.Ordinal));
+            // Schachtnummer erkannt, Datum fehlt: echter Fehler.
+            Assert.Contains("Schachtprotokoll ohne_datum.pdf nicht verteilt: Parse failed: Datum nicht gefunden", messages);
+            var schacht = Assert.Single(result.Fehlerbilanz.Schritte, step => step.Schritt == "Schachtprotokolle");
+            Assert.Equal(1, schacht.Anzahl);
+            // Weder Nummer noch Datum: kein Schachtprotokoll, bleibt still.
+            Assert.DoesNotContain(messages, m => m.Contains("fremd.pdf", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_DichtheitFehler_stehen_in_der_Fehlerbilanz()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { Result = new ImportMediaDistributionResult(0, 0, 0, []) },
+                kanalDistributor: new RecordingKanalDistributor { SuccessResult = new KanalImportDistributor.Result(0, 0, 0, []) },
+                exportDetector: new FixedWinCanDetector(),
+                dichtheitDistributor: new RecordingDichtheitDistributor
+                {
+                    Result = new DichtheitImportDistributor.Result(
+                        1, 0, 0, [], ["DP H67.pdf nicht lesbar, nicht verteilt: gesperrt"])
+                })
+                .Import(sourceDir, projectDir, new Project());
+
+            var schritt = Assert.Single(result.Fehlerbilanz.Schritte, step => step.Schritt == "Dichtheitsverteilung");
+            Assert.Equal(1, schritt.Anzahl);
+            Assert.Contains(result.Messages, m => m.Contains("1 Fehler", StringComparison.Ordinal)
+                                                  && m.StartsWith("Dichtheitspruefung:", StringComparison.Ordinal));
         }
         finally
         {

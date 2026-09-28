@@ -14,7 +14,7 @@ public sealed class OneClickImportReportWriter : IOneClickImportReportWriter
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public void TryWrite(string projectFolder, OneClickProjectImportResult result)
+    public string? TryWrite(string projectFolder, OneClickProjectImportResult result)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectFolder);
         ArgumentNullException.ThrowIfNull(result);
@@ -59,10 +59,12 @@ public sealed class OneClickImportReportWriter : IOneClickImportReportWriter
                 text.AppendLine(message);
 
             File.WriteAllText(path, text.ToString());
+            return path;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Ein-Knopf-Importbericht konnte nicht geschrieben werden.");
+            return null;
         }
     }
 }

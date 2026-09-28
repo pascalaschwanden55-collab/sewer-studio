@@ -12,11 +12,19 @@ public static class DichtheitImportDistributor
 {
     private static readonly DichtheitImportDistributionService DefaultService = new();
 
+    /// <param name="Fehler">
+    /// Dateien, die nicht verteilt werden konnten (Lesefehler, Ablage gescheitert). Getrennt von
+    /// «nicht zugeordnet», damit der Import sie in seiner Fehlerbilanz zaehlt.
+    /// </param>
     public sealed record Result(
         int Verteilt,
         int NichtZugeordnet,
         int Uebersprungen,
-        IReadOnlyList<string> Messages);
+        IReadOnlyList<string> Messages,
+        IReadOnlyList<string>? Fehler = null)
+    {
+        public IReadOnlyList<string> FehlerListe => Fehler ?? [];
+    }
 
     public static Result Distribute(
         Project project,

@@ -121,14 +121,15 @@ internal static class ParsedShaftDistributionController
             }
             else
             {
-                destinationPdfPath = writePaths.ResolveUniqueFileTarget(
+                // Hinweis: Nur ein einteiliges Protokoll kann bytegleich wiederverwendet werden;
+                // ein schon zusammengefuegtes ist nie gleich seinem ersten Teil.
+                destinationPdfPath = DistributionTargetReuse.Lege(
+                    writePaths,
+                    shaftFolder,
                     Path.Combine(shaftFolder, destinationPdfName),
-                    overwrite);
-                DistributionFileTransfer.MoveOrCopy(
                     pdfSourceToStorePath,
-                    destinationPdfPath,
                     moveInsteadOfCopy,
-                    overwrite);
+                    overwrite).Pfad;
                 shaftOutputPathByKey[shaftKey] = destinationPdfPath;
             }
 

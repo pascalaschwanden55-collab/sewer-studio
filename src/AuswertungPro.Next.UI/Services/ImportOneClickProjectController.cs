@@ -23,7 +23,8 @@ internal sealed record ImportOneClickProjectActions(
     Action<double>? SetProgressPercent = null,
     Action<bool>? SetIndeterminate = null,
     Action<string>? SetCounter = null,
-    Action<string>? SetRemaining = null);
+    Action<string>? SetRemaining = null,
+    Action<string>? SetLastReportPath = null);
 
 /// <summary>Steuert den vollständigen Ein-Knopf-Import eines Kanalfernseh-Projekts.</summary>
 internal sealed class ImportOneClickProjectController
@@ -232,7 +233,7 @@ internal sealed class ImportOneClickProjectController
             actions.ReplaceProject(targetProject);
             projectCommitted = true;
             fileTransaction.MarkProjectCommitted();
-            _reportWriter.TryWrite(projectFolder, result);
+            var reportPath = _reportWriter.TryWrite(projectFolder, result);
 
             var saved = ProjectSaveAttempt.Try(
                 actions.SaveProject,
@@ -240,6 +241,10 @@ internal sealed class ImportOneClickProjectController
                 out var saveError);
             if (saved)
                 fileTransaction.MarkProjectSaved();
+
+            // Derselbe Weg wie beim manuellen Import: «Bericht öffnen» zeigt diesen Lauf.
+            if (!string.IsNullOrWhiteSpace(reportPath))
+                actions.SetLastReportPath?.Invoke(reportPath);
 
             var summary = saved
                 ? $"Import abgeschlossen ({result.Format}):"

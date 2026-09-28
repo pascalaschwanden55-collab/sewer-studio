@@ -24,11 +24,12 @@ public sealed class OneClickImportReportWriterTests : IDisposable
             Conflicts: 4,
             Messages: new[] { "Datei A verarbeitet" });
 
-        writer.TryWrite(_tempRoot, result);
+        var geschrieben = writer.TryWrite(_tempRoot, result);
 
         var report = Assert.Single(Directory.GetFiles(
             Path.Combine(_tempRoot, "__IMPORT_REPORTS"),
             "kanalimport_*.txt"));
+        Assert.Equal(report, geschrieben, ignoreCase: true);
         var text = File.ReadAllText(report);
         Assert.Contains("Format: Ikas", text);
         Assert.Contains("Haltungen: 5 (neu 2, aktualisiert 3)", text);
@@ -58,7 +59,7 @@ public sealed class OneClickImportReportWriterTests : IDisposable
                 Conflicts: 0,
                 Messages: Array.Empty<string>());
 
-            writer.TryWrite(projectRoot, result);
+            Assert.Null(writer.TryWrite(projectRoot, result));
 
             Assert.Empty(Directory.EnumerateFiles(external));
         }

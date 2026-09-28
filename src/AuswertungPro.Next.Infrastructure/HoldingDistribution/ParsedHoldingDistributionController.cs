@@ -107,11 +107,10 @@ internal static class ParsedHoldingDistributionController
             var destinationPdfName = $"{dateStamp}_{holding}.pdf";
             // Eine bytegleiche PDF aus einem frueheren (auch abgebrochenen) Lauf wird
             // wiederverwendet; sonst legte jede Wiederholung eine weitere Kopie mit «_01» an.
-            var existingPdf = Distributor.FindExistingIdenticalFile(holdingFolder, pdfSourceToStorePath, Distributor.IsPdf);
-            var copyPdf = existingPdf is null;
-            var destinationPdfPath = existingPdf is not null
-                ? writePaths.EnsureFileTarget(existingPdf)
-                : writePaths.ResolveUniqueFileTarget(Path.Combine(holdingFolder, destinationPdfName), overwrite);
+            var pdfZiel = DistributionTargetReuse.Bestimme(
+                writePaths, holdingFolder, Path.Combine(holdingFolder, destinationPdfName), pdfSourceToStorePath, overwrite);
+            var copyPdf = !pdfZiel.SchonVorhanden;
+            var destinationPdfPath = pdfZiel.Pfad;
             var counterInspection = HoldingVideoSearch.FindCounterInspection(search, holding, dateStamp);
             string? destinationVideoPath = null;
             string? destinationCounterVideoPath = null;

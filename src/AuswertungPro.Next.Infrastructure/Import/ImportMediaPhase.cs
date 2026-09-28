@@ -146,8 +146,13 @@ internal sealed class ImportMediaPhase
             _kiSchiedsrichter,
             ctx?.FileStaging);
         messages.AddRange(dpResult.Messages);
-        if (dpResult.Verteilt > 0 || dpResult.NichtZugeordnet > 0 || dpResult.Uebersprungen > 0)
-            messages.Add($"Dichtheitspruefung: {dpResult.Verteilt} Protokolle verteilt, {dpResult.NichtZugeordnet} nicht zugeordnet, {dpResult.Uebersprungen} bereits vorhanden.");
+        if (dpResult.FehlerListe.Count > 0)
+            fehlerbilanz.Melde("Dichtheitsverteilung", dpResult.FehlerListe.Count, dpResult.FehlerListe);
+        if (dpResult.Verteilt > 0 || dpResult.NichtZugeordnet > 0 || dpResult.Uebersprungen > 0
+            || dpResult.FehlerListe.Count > 0)
+        {
+            messages.Add($"Dichtheitspruefung: {dpResult.Verteilt} Protokolle verteilt, {dpResult.NichtZugeordnet} nicht zugeordnet, {dpResult.Uebersprungen} bereits vorhanden, {dpResult.FehlerListe.Count} Fehler.");
+        }
 
         // 7d) Schachtprotokolle aus dem Archiv verteilen.
         //
@@ -202,6 +207,35 @@ internal sealed class ImportMediaPhase
             FileStaging: ctx?.FileStaging));
     }
 
+    internal enum SchachtFehlerArt
+    {
+        /// <summary>Weder Schachtnummer noch Datum: gehoert nicht in die Schachtverteilung.</summary>
+        KeinSchachtprotokoll,
+        /// <summary>Ohne Textebene (Scan): kann ein Schacht- oder Haltungsprotokoll sein.</summary>
+        Hinweis,
+        Fehler
+    }
+
+    /// <summary>
+    /// Ordnet ein nicht verteiltes Schachtergebnis ein. Vorher wurde jedes «Parse failed»
+    /// verworfen; ein gescanntes oder datumsloses Schachtprotokoll verschwand dadurch spurlos.
+    /// Eindeutig fremde Textdokumente (Haltungsprotokolle) sortiert die Schachtverteilung schon
+    /// vorher aus (ShaftPdfRelevance).
+    /// </summary>
+    internal static SchachtFehlerArt EinordnenSchachtFehler(string meldung)
+    {
+        if (!meldung.StartsWith("Parse failed", StringComparison.OrdinalIgnoreCase))
+            return SchachtFehlerArt.Fehler;
+        if (meldung.Contains("Textebene", StringComparison.OrdinalIgnoreCase))
+            return SchachtFehlerArt.Hinweis;
+        if (meldung.Contains("Schachtnummer und Datum nicht gefunden", StringComparison.OrdinalIgnoreCase))
+            return SchachtFehlerArt.KeinSchachtprotokoll;
+        // «Datum nicht gefunden» heisst: Schachtnummer erkannt, also ein Schachtprotokoll mit Problem.
+        if (meldung.Contains("Datum nicht gefunden", StringComparison.OrdinalIgnoreCase))
+            return SchachtFehlerArt.Fehler;
+        return SchachtFehlerArt.KeinSchachtprotokoll;
+    }
+
     /// <summary>
     /// Verteilt die Schachtprotokolle des Archivs und verknuepft sie mit den Schaechten.
     ///
@@ -253,8 +287,15 @@ internal sealed class ImportMediaPhase
             // wird nicht als Schachtfehler gemeldet.
             foreach (var fehlgeschlagen in ergebnis.Items.Where(i => !i.Success))
             {
-                if (fehlgeschlagen.Message.StartsWith("Parse failed", StringComparison.OrdinalIgnoreCase))
+                var art = EinordnenSchachtFehler(fehlgeschlagen.Message);
+                if (art == SchachtFehlerArt.KeinSchachtprotokoll)
+                    continue;
+
+                if (art == SchachtFehlerArt.Hinweis)
                 {
+                    meldungen.Add(
+                        $"Hinweis: {Path.GetFileName(fehlgeschlagen.SourcePdfPath)} hat keine lesbare Textebene "
+                        + "und wurde nicht als Schachtprotokoll verteilt – bitte prüfen, ob es eines ist.");
                     continue;
                 }
 

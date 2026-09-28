@@ -43,6 +43,19 @@ public static partial class HoldingFolderDistributor
 
     private sealed record PdfShaftChunk(IReadOnlyList<int> Pages, ParsedShaftPdf Parsed);
 
+    /// <summary>
+    /// Seiten eines Sammel-PDFs, die zu keinem erkannten Schachtprotokoll gehoeren und doch
+    /// nach einem aussehen: Schachtnummer ohne Datum oder Seite ohne Textebene. Deckblaetter
+    /// und Verzeichnisse (weder Nummer noch Datum) zaehlen nicht dazu, ebenso Bildseiten nach
+    /// einer Haltungsseite — dort sind es die Fotos des Haltungsberichts.
+    /// </summary>
+    private sealed record PdfVerwaisteSeiten(IReadOnlyList<int> Pages, ParsedShaftPdf Parsed);
+
+    private static bool IstVerlorenesSchachtblatt(ParsedShaftPdf parsed, bool nachHaltungsseite)
+        => !string.IsNullOrWhiteSpace(parsed.ShaftNumber)
+           || (!nachHaltungsseite
+               && (parsed.Message?.Contains("Textebene", StringComparison.OrdinalIgnoreCase) ?? false));
+
 
     public static ParsedShaftPdf ParseSchachtPdf(string text)
     {
@@ -478,17 +491,26 @@ public static partial class HoldingFolderDistributor
 
 
     private static IReadOnlyList<PdfShaftChunk> SplitPdfIntoShafts(IReadOnlyList<DistributionPdfPage> pages)
+        => SplitPdfIntoShafts(pages, out _);
+
+    private static IReadOnlyList<PdfShaftChunk> SplitPdfIntoShafts(
+        IReadOnlyList<DistributionPdfPage> pages,
+        out IReadOnlyList<PdfVerwaisteSeiten> verwaist)
     {
         var chunks = new List<PdfShaftChunk>();
+        var ohneAbschnitt = new List<PdfVerwaisteSeiten>();
+        verwaist = ohneAbschnitt;
         if (pages.Count == 0) return chunks;
 
         List<int>? currentPages = null;
         ParsedShaftPdf? currentParsed = null;
+        var nachHaltungsseite = false;
 
         foreach (var page in pages)
         {
             if (Import.ShaftPdfRelevance.IsHoldingPage(page.Text))
             {
+                nachHaltungsseite = true;
                 if (currentPages is not null && currentParsed is not null)
                     chunks.Add(new PdfShaftChunk(currentPages, currentParsed));
                 currentPages = null;
@@ -500,6 +522,8 @@ public static partial class HoldingFolderDistributor
             {
                 if (currentPages is not null && currentParsed is not null)
                     currentPages.Add(page.PageNumber);
+                else if (IstVerlorenesSchachtblatt(parsed, nachHaltungsseite))
+                    MerkeVerwaisteSeite(ohneAbschnitt, page.PageNumber, parsed);
                 continue;
             }
 
@@ -523,6 +547,24 @@ public static partial class HoldingFolderDistributor
             chunks.Add(new PdfShaftChunk(currentPages, currentParsed));
 
         return chunks;
+    }
+
+    /// <summary>Aufeinanderfolgende Seiten mit demselben Befund werden zu einer Meldung.</summary>
+    private static void MerkeVerwaisteSeite(List<PdfVerwaisteSeiten> liste, int seite, ParsedShaftPdf parsed)
+    {
+        if (liste.Count > 0)
+        {
+            var letzte = liste[^1];
+            if (letzte.Pages[^1] == seite - 1
+                && string.Equals(letzte.Parsed.Message, parsed.Message, StringComparison.Ordinal)
+                && string.Equals(letzte.Parsed.ShaftNumber, parsed.ShaftNumber, StringComparison.OrdinalIgnoreCase))
+            {
+                liste[^1] = letzte with { Pages = [.. letzte.Pages, seite] };
+                return;
+            }
+        }
+
+        liste.Add(new PdfVerwaisteSeiten([seite], parsed));
     }
 
 
@@ -770,7 +812,7 @@ public static partial class HoldingFolderDistributor
         foreach (var pageNumber in pages)
             builder.AddPage(doc, pageNumber);
 
-        var bytes = builder.Build();
+        var bytes = HoldingDistribution.PdfInhaltsKennung.Festlegen(builder.Build());
 
         // Atomar schreiben: erst in eine Temp-Datei im Zielordner (gleiches Volume -> File.Move ist
         // atomar), dann verschieben. Ein Absturz mitten im direkten Schreiben hinterliess sonst ein

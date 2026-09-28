@@ -534,13 +534,10 @@ public static partial class HoldingFolderDistributor
                 {
                     var writePaths = new DistributionWritePathGuard(destGemeindeFolder);
                     holdingFolder = writePaths.EnsureDirectoryTarget(holdingFolder);
-                    var vorhanden = FindExistingIdenticalFile(holdingFolder, pdfPath, IsPdf);
-                    var destPath = vorhanden is not null
-                        ? writePaths.EnsureFileTarget(vorhanden)
-                        : writePaths.ResolveUniqueFileTarget(Path.Combine(holdingFolder, Path.GetFileName(pdfPath)), overwrite);
-                    if (vorhanden is null)
-                        DistributionFileTransfer.MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy, overwrite);
-                    results.Add(new DistributionResult(true, vorhanden is null ? "OK (Begleit-PDF)" : "OK (Begleit-PDF bereits vorhanden)", pdfPath, null, destPath, null, null, holdingFolder, VideoMatchStatus.NotChecked));
+                    var ziel = HoldingDistribution.DistributionTargetReuse.Lege(
+                        writePaths, holdingFolder, Path.Combine(holdingFolder, Path.GetFileName(pdfPath)),
+                        pdfPath, moveInsteadOfCopy, overwrite);
+                    results.Add(new DistributionResult(true, ziel.SchonVorhanden ? "OK (Begleit-PDF bereits vorhanden)" : "OK (Begleit-PDF)", pdfPath, null, ziel.Pfad, null, null, holdingFolder, VideoMatchStatus.NotChecked));
                 }
                 catch (Exception ex)
                 {
@@ -567,20 +564,11 @@ public static partial class HoldingFolderDistributor
                     try
                     {
                         var writePaths = new DistributionWritePathGuard(destGemeindeFolder);
-                        var endung = Path.GetExtension(sidecarPath);
-                        var vorhanden = FindExistingIdenticalFile(
-                            destGemeindeFolder,
-                            sidecarPath,
-                            path => string.Equals(Path.GetExtension(path), endung, StringComparison.OrdinalIgnoreCase));
-                        var destSidecarPath = vorhanden is not null
-                            ? writePaths.EnsureFileTarget(vorhanden)
-                            : writePaths.ResolveUniqueFileTarget(
-                                Path.Combine(destGemeindeFolder, Path.GetFileName(sidecarPath)),
-                                overwrite);
-                        if (vorhanden is null)
-                            DistributionFileTransfer.MoveOrCopy(sidecarPath, destSidecarPath, moveInsteadOfCopy, overwrite);
-                        var meldung = vorhanden is null ? "Quelldatei kopiert" : "Quelldatei bereits vorhanden";
-                        results.Add(new DistributionResult(true, $"{meldung}: {Path.GetFileName(sidecarPath)}", sidecarPath, null, destSidecarPath, null, null, destGemeindeFolder, VideoMatchStatus.NotChecked));
+                        var ziel = HoldingDistribution.DistributionTargetReuse.Lege(
+                            writePaths, destGemeindeFolder, Path.Combine(destGemeindeFolder, Path.GetFileName(sidecarPath)),
+                            sidecarPath, moveInsteadOfCopy, overwrite);
+                        var meldung = ziel.SchonVorhanden ? "Quelldatei bereits vorhanden" : "Quelldatei kopiert";
+                        results.Add(new DistributionResult(true, $"{meldung}: {Path.GetFileName(sidecarPath)}", sidecarPath, null, ziel.Pfad, null, null, destGemeindeFolder, VideoMatchStatus.NotChecked));
                     }
                     catch (Exception ex)
                     {
@@ -665,7 +653,7 @@ public static partial class HoldingFolderDistributor
             try
             {
                 var pages = HoldingDistribution.DistributionPdfAssignmentController.ReadPages(pdfPath);
-                var chunks = SplitPdfIntoShafts(pages);
+                var chunks = SplitPdfIntoShafts(pages, out var verwaist);
 
                 if (chunks.Count == 0)
                 {
@@ -706,6 +694,20 @@ public static partial class HoldingFolderDistributor
                     {
                         AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (File.Exists(tempPdfPath)) File.Delete(tempPdfPath); }, "PDF-Verteilung: Temp loeschen");
                     }
+                }
+
+                // Schachtseiten ohne eigenen Abschnitt (vor dem ersten Treffer oder nach einer
+                // Haltungsseite) fielen frueher still weg. Sie stehen jetzt im Ergebnis, mit
+                // demselben «Parse failed»-Befund wie ein Einzel-PDF.
+                foreach (var seiten in verwaist)
+                {
+                    var schacht = string.IsNullOrWhiteSpace(seiten.Parsed.ShaftNumber)
+                        ? ""
+                        : $", Schacht {seiten.Parsed.ShaftNumber}";
+                    results.Add(new DistributionResult(
+                        false,
+                        $"Parse failed: {seiten.Parsed.Message} (Seite {BuildPageRange(seiten.Pages)}{schacht} nicht verteilt)",
+                        pdfPath, null, null, null, null, null, VideoMatchStatus.NotChecked));
                 }
             }
             catch (Exception ex)

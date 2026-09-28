@@ -386,6 +386,15 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
         if (CanUseOrReuse(sourcePath, preferred, out var reusable))
             return reusable!;
 
+        var frueher = Ausweichkopien.FindeGleiche(
+            targetDirectory,
+            fileName,
+            kandidat => VerifiedImportFileCopy.ContentsEqual(
+                sourcePath,
+                _paths.EnsureSafeProjectPath(kandidat, nameof(targetDirectory))));
+        if (frueher is not null)
+            return frueher;
+
         var name = Path.GetFileNameWithoutExtension(fileName);
         var extension = Path.GetExtension(fileName);
         var stem = $"{name}_{now():yyyyMMdd_HHmmss}";

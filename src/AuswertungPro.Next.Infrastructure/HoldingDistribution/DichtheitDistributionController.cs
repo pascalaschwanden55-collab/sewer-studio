@@ -181,9 +181,9 @@ internal static class DichtheitDistributionController
                     Directory.CreateDirectory(holdingFolder);
 
                     var destPdfName = $"{dateStamp}_{haltung}_DP.pdf";
-                    var destPath = writePaths.ResolveUniqueFileTarget(
-                        Path.Combine(holdingFolder, destPdfName), overwrite);
-                    DistributionFileTransfer.MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy, overwrite);
+                    var destPath = DistributionTargetReuse.Lege(
+                        writePaths, holdingFolder, Path.Combine(holdingFolder, destPdfName),
+                        pdfPath, moveInsteadOfCopy, overwrite).Pfad;
 
                     results.Add(new Distributor.DistributionResult(true, $"OK -> {haltung}",
                         pdfPath, null, destPath, null, null, holdingFolder, Distributor.VideoMatchStatus.NotChecked));
@@ -244,11 +244,23 @@ internal static class DichtheitDistributionController
 
         var suffix = pr.IsSchacht ? "SP" : "DP";
         var destPdfName = $"{pr.DateStamp}_{haltung}_{suffix}.pdf";
-        var destPath = writePaths.ResolveUniqueFileTarget(
-            Path.Combine(holdingFolder, destPdfName), overwrite);
-
-        // Einzelseite(n) als neues PDF schreiben
-        Distributor.WritePdfPages(pdfPath, pr.PageNumbers, destPath);
+        // Einzelseite(n) zuerst in eine Temp-Datei, damit ein zweiter Lauf die gleiche
+        // Auszugs-PDF erkennt und wiederverwendet statt eine Kopie mit «_01» anzulegen.
+        var tempPdf = Path.Combine(Path.GetTempPath(), $"dp_{Guid.NewGuid():N}.pdf");
+        string destPath;
+        try
+        {
+            Distributor.WritePdfPages(pdfPath, pr.PageNumbers, tempPdf);
+            destPath = DistributionTargetReuse.Lege(
+                writePaths, holdingFolder, Path.Combine(holdingFolder, destPdfName),
+                tempPdf, moveInsteadOfCopy: false, overwrite).Pfad;
+        }
+        finally
+        {
+            AuswertungPro.Next.Application.Common.BestEffort.Try(
+                () => { if (File.Exists(tempPdf)) File.Delete(tempPdf); },
+                "Dichtheitsverteilung: Temp loeschen");
+        }
 
         return new Distributor.DistributionResult(true,
             $"OK -> {haltung} (S{pr.MainPage}, {pr.PageNumbers.Count} Seite(n))",
@@ -291,9 +303,9 @@ internal static class DichtheitDistributionController
         zielOrdner = writePaths.EnsureDirectoryTarget(zielOrdner);
         Directory.CreateDirectory(zielOrdner);
 
-        var destPath = writePaths.ResolveUniqueFileTarget(
-            Path.Combine(zielOrdner, $"{dateStamp}_{objekt}_BP.pdf"), overwrite);
-        DistributionFileTransfer.MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy, overwrite);
+        var destPath = DistributionTargetReuse.Lege(
+            writePaths, zielOrdner, Path.Combine(zielOrdner, $"{dateStamp}_{objekt}_BP.pdf"),
+            pdfPath, moveInsteadOfCopy, overwrite).Pfad;
 
         return new Distributor.DistributionResult(true,
             $"OK -> {objekt} (Behälterprüfung)",

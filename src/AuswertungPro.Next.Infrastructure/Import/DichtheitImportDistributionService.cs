@@ -82,8 +82,13 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         }
 
         var messages = new List<string>();
-        var kandidaten = new List<Sanierungsprotokoll>(FindeKandidaten(sourceFolder, out var namensHinweise));
+        var kandidaten = new List<Sanierungsprotokoll>(
+            FindeKandidaten(sourceFolder, out var namensHinweise, out var lesefehler));
         messages.AddRange(namensHinweise);
+        // Was nicht gelesen oder nicht abgelegt werden konnte, ist ein Fehler — getrennt von
+        // «nicht zugeordnet», damit der Import es in seiner Fehlerbilanz zaehlt.
+        var fehler = new List<string>(lesefehler);
+        messages.AddRange(lesefehler);
 
         // R4: KI-Zweitmeinung fuer DP-Ordner-PDFs, die die deterministische
         // Typ-Erkennung NICHT sicher zuordnen konnte (nur Vorschlag, im Report gekennzeichnet).
@@ -104,7 +109,7 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         }
 
         if (kandidaten.Count == 0)
-            return new DichtheitImportDistributor.Result(0, namensHinweise.Count, 0, messages);
+            return new DichtheitImportDistributor.Result(0, namensHinweise.Count, 0, messages, fehler);
 
         var zielRoot = Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt);
 
@@ -127,6 +132,9 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
                 // Best effort: eine unlesbare Datei darf die restlichen DP-Kandidaten nicht blockieren.
                 AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
                     $"[DichtheitImport] Kandidat uebersprungen, SHA-256 nicht lesbar: {kandidat.Pfad}: {ex.Message}");
+                var meldung = $"{Path.GetFileName(kandidat.Pfad)} nicht lesbar, nicht verteilt: {ex.Message}";
+                fehler.Add(meldung);
+                messages.Add(meldung);
                 continue;
             }
 
@@ -137,18 +145,18 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         }
 
         if (neue.Count == 0)
-            return new DichtheitImportDistributor.Result(0, namensHinweise.Count, uebersprungen, messages);
+            return new DichtheitImportDistributor.Result(0, namensHinweise.Count, uebersprungen, messages, fehler);
 
         // Zuerst der genaue Weg ueber die Haltungsbezeichnung des Dokuments. Er ist der
         // einzige, der eine Sammelpruefung ueber mehrere Haltungen richtig ablegt und
         // der ein Aushaerteprotokoll ueberhaupt zuordnen kann — dort steht kein Schacht.
         var (perBezeichnung, offen, offeneGruende) = VerteileUeberBezeichnung(
-            neue, project, projectFolder, zielRoot, fileStaging, messages);
+            neue, project, projectFolder, zielRoot, fileStaging, messages, fehler);
 
         if (offen.Count == 0)
         {
             return new DichtheitImportDistributor.Result(
-                perBezeichnung, namensHinweise.Count, uebersprungen, messages);
+                perBezeichnung, namensHinweise.Count, uebersprungen, messages, fehler);
         }
 
         // Rueckfall: der bestehende Weg ueber das Schachtpaar im Dokument (KIT-Bauinspekt
@@ -169,7 +177,7 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         if (fuerSchachtpaar.Count == 0)
         {
             return new DichtheitImportDistributor.Result(
-                perBezeichnung, ohneWeg.Count + namensHinweise.Count, uebersprungen, messages);
+                perBezeichnung, ohneWeg.Count + namensHinweise.Count, uebersprungen, messages, fehler);
         }
 
         var results = DistributeCandidates(
@@ -205,7 +213,8 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
             verteilt + perBezeichnung,
             nichtZugeordnet + ohneWeg.Count + namensHinweise.Count,
             uebersprungen,
-            messages);
+            messages,
+            fehler);
     }
 
     /// <summary>
@@ -221,7 +230,8 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         string projectFolder,
         string zielRoot,
         IImportFileStagingSession? fileStaging,
-        List<string> messages)
+        List<string> messages,
+        List<string> fehler)
     {
         var haltungen = project.Data
             .Select(r => new SanierungsprotokollHaltung(
@@ -252,7 +262,7 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
             foreach (var ziel in befund.Ziele)
             {
                 var pfad = LegeInHaltungsordner(
-                    protokoll, ziel.Haltung, stamp, projectFolder, zielRoot, fileStaging, messages);
+                    protokoll, ziel.Haltung, stamp, projectFolder, zielRoot, fileStaging, messages, fehler);
                 if (pfad is null)
                     continue;
 
@@ -311,7 +321,8 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         string projectFolder,
         string zielRoot,
         IImportFileStagingSession? fileStaging,
-        List<string> messages)
+        List<string> messages,
+        List<string> fehler)
     {
         try
         {
@@ -336,10 +347,12 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
             File.Copy(protokoll.Pfad, ziel, overwrite: false);
             return ziel;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            messages.Add(
-                $"{protokoll.Bezeichnung} {Path.GetFileName(protokoll.Pfad)} → {haltung}: {ex.Message}");
+            var meldung =
+                $"{protokoll.Bezeichnung} {Path.GetFileName(protokoll.Pfad)} → {haltung} nicht abgelegt: {ex.Message}";
+            messages.Add(meldung);
+            fehler.Add(meldung);
             return null;
         }
     }
@@ -500,6 +513,21 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
     }
 
     /// <summary>DP-Ordner-PDFs, deren Typ die deterministische Erkennung NICHT bestimmen konnte.</summary>
+    /// <summary>Eine unlesbare Datei faellt nur fuer sich aus der KI-Zweitmeinung.</summary>
+    private static bool IstUnbekannterTyp(string pfad)
+    {
+        try
+        {
+            return PdfDokumentTypErkennung.ErkenneDatei(pfad) == PdfDokumentTyp.Unbekannt;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
+                $"[DichtheitImport] Kandidat uebersprungen, Typ nicht lesbar: {pfad}: {ex.Message}");
+            return false;
+        }
+    }
+
     internal IReadOnlyList<string> FindeUnsichereKandidaten(string sourceFolder)
     {
         if (string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
@@ -509,7 +537,7 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         {
             return SafeFileEnumeration.EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true)
                 .Where(p => LiegtInDpOrdner(p, sourceFolder))
-                .Where(p => PdfDokumentTypErkennung.ErkenneDatei(p) == PdfDokumentTyp.Unbekannt)
+                .Where(IstUnbekannterTyp)
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
@@ -529,33 +557,56 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
     /// </param>
     internal IReadOnlyList<Sanierungsprotokoll> FindeKandidaten(
         string sourceFolder, out IReadOnlyList<string> hinweise)
+        => FindeKandidaten(sourceFolder, out hinweise, out _);
+
+    /// <param name="fehler">
+    /// Dateien, die nicht gelesen werden konnten, und ein gescheitertes Durchsuchen. Frueher
+    /// umschloss ein einziges stilles catch die ganze Schleife: eine unlesbare PDF liess alle
+    /// Begleitprotokolle wegfallen, ohne eine Zeile im Bericht.
+    /// </param>
+    internal IReadOnlyList<Sanierungsprotokoll> FindeKandidaten(
+        string sourceFolder, out IReadOnlyList<string> hinweise, out IReadOnlyList<string> fehler)
     {
         hinweise = Array.Empty<string>();
+        fehler = Array.Empty<string>();
         if (string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
             return Array.Empty<Sanierungsprotokoll>();
 
+        var gefunden = new List<Sanierungsprotokoll>();
+        var gemeldet = new List<string>();
+        var fehlgeschlagen = new List<string>();
         try
         {
-            var gefunden = new List<Sanierungsprotokoll>();
-            var gemeldet = new List<string>();
             foreach (var pfad in SafeFileEnumeration
                          .EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true)
                          .OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
             {
-                var protokoll = Beurteile(pfad, sourceFolder, out var hinweis);
-                if (protokoll is not null)
-                    gefunden.Add(protokoll);
-                else if (hinweis is not null)
-                    gemeldet.Add(hinweis);
-            }
+                try
+                {
+                    // Die Textlesung verschluckt Lesefehler; eine gesperrte Datei muss aber im
+                    // Bericht stehen, statt als «Name passt, Inhalt nicht» zu enden.
+                    using (File.Open(pfad, FileMode.Open, FileAccess.Read, FileShare.Read)) { }
 
-            hinweise = gemeldet;
-            return gefunden;
+                    var protokoll = Beurteile(pfad, sourceFolder, out var hinweis);
+                    if (protokoll is not null)
+                        gefunden.Add(protokoll);
+                    else if (hinweis is not null)
+                        gemeldet.Add(hinweis);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    fehlgeschlagen.Add($"{Path.GetFileName(pfad)} nicht lesbar, nicht geprüft: {ex.Message}");
+                }
+            }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Array.Empty<Sanierungsprotokoll>();
+            fehlgeschlagen.Add($"Begleitprotokolle in {sourceFolder} nicht vollständig durchsucht: {ex.Message}");
         }
+
+        hinweise = gemeldet;
+        fehler = fehlgeschlagen;
+        return gefunden;
     }
 
     private static bool IstDichtheitsKandidat(string pdfPath, string sourceFolder)

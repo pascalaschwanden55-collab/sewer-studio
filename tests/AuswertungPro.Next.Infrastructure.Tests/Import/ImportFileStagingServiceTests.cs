@@ -274,6 +274,37 @@ public sealed class ImportFileStagingServiceTests
     }
 
     [Fact]
+    public void Zweiter_Lauf_verwendet_die_fruehere_Kollisionskopie_wieder()
+    {
+        // Der Zeitstempel im Ausweichnamen aendert sich bei jedem Lauf. Ohne Suche nach
+        // einer frueheren inhaltsgleichen Ausweichkopie legte jeder Import eine weitere an.
+        using var temp = new TempDirectory();
+        var projectPath = temp.CreateProjectFile();
+        var source = temp.CreateFile("quelle/foto.jpg", "NEU1");
+        var existing = temp.CreateFile("Fotos/Haltungen/H1/foto.jpg", "ALT1");
+        var ordner = Path.GetDirectoryName(existing)!;
+
+        string erster;
+        using (var session = Begin(projectPath))
+        {
+            erster = session.StageCopy(source, ordner, () => new DateTime(2026, 7, 17, 12, 30, 0));
+            session.Publish();
+            session.Accept();
+        }
+
+        string zweiter;
+        using (var session = Begin(projectPath))
+        {
+            zweiter = session.StageCopy(source, ordner, () => new DateTime(2026, 7, 18, 8, 0, 0));
+            session.Publish();
+            session.Accept();
+        }
+
+        Assert.Equal(erster, zweiter, ignoreCase: true);
+        Assert.Equal(2, Directory.GetFiles(ordner).Length);
+    }
+
+    [Fact]
     public void Publish_Konflikt_nimmt_bereits_veroeffentlichte_Dateien_zurueck()
     {
         using var temp = new TempDirectory();

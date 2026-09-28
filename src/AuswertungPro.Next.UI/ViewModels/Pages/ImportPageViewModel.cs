@@ -410,7 +410,8 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
                         SetProgressPercent: value => ImportProgressPercent = value,
                         SetIndeterminate: value => ImportIsIndeterminate = value,
                         SetCounter: value => ImportCounter = value,
-                        SetRemaining: value => ImportRemaining = value)));
+                        SetRemaining: value => ImportRemaining = value,
+                        SetLastReportPath: _reportNavigationController.SetLastReportPath)));
         }
         finally
         {

@@ -126,6 +126,46 @@ public sealed class SanierungsprotokollVerteilungTests : IDisposable
         Assert.NotEmpty(AllePdf(projektOrdner));
     }
 
+    [Fact]
+    public void Gescheiterte_Ablage_zaehlt_als_Fehler()
+    {
+        var (quelle, projekt, projektOrdner) = Aufbau();
+        Haltung(projekt, "60248-60247", "H66");
+        SchreibePdf(quelle, "DP H66.pdf",
+            "Druckpruefprotokoll", "Von Schacht: 60248", "Bis Schacht: 60247",
+            "Haltung: H66", "Pruefdatum: 17.08.2026", "Norm: SIA 190");
+        // Eine Datei an der Stelle des Haltungsordners: Ablegen muss scheitern.
+        Directory.CreateDirectory(Path.Combine(projektOrdner, "Haltungen_Verteilt"));
+        File.WriteAllText(Path.Combine(projektOrdner, "Haltungen_Verteilt", "60248-60247"), "blockiert");
+
+        var ergebnis = Verteile(projekt, projektOrdner, quelle);
+
+        Assert.Equal(0, ergebnis.Verteilt);
+        Assert.NotEmpty(ergebnis.FehlerListe);
+        Assert.Contains(ergebnis.FehlerListe, f => f.Contains("DP H66.pdf", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Gesperrte_PDF_reisst_die_anderen_Protokolle_nicht_mit()
+    {
+        var (quelle, projekt, projektOrdner) = Aufbau();
+        Haltung(projekt, "60248-60247", "H66");
+        Haltung(projekt, "60250-60249", "H67");
+        SchreibePdf(quelle, "DP H66.pdf",
+            "Druckpruefprotokoll", "Von Schacht: 60248", "Bis Schacht: 60247",
+            "Haltung: H66", "Pruefdatum: 17.08.2026", "Norm: SIA 190");
+        SchreibePdf(quelle, "DP H67.pdf",
+            "Druckpruefprotokoll", "Von Schacht: 60250", "Bis Schacht: 60249",
+            "Haltung: H67", "Pruefdatum: 17.08.2026", "Norm: SIA 190");
+
+        DichtheitImportDistributor.Result ergebnis;
+        using (new FileStream(Path.Combine(quelle, "DP H67.pdf"), FileMode.Open, FileAccess.Read, FileShare.None))
+            ergebnis = Verteile(projekt, projektOrdner, quelle);
+
+        Assert.Single(Dateien(projektOrdner, "60248-60247"));
+        Assert.Contains(ergebnis.FehlerListe, f => f.Contains("DP H67.pdf", StringComparison.Ordinal));
+    }
+
     // ---------------------------------------------------------------------
 
     private static DichtheitImportDistributor.Result Verteile(

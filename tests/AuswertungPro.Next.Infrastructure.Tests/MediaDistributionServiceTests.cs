@@ -282,6 +282,33 @@ public sealed class MediaDistributionServiceTests
     }
 
     [Fact]
+    public void DistributeImportedMedia_Namenskollision_FruehereAusweichkopie_WirdWiederverwendet()
+    {
+        // Ein erneuter Import zu anderer Uhrzeit legte bisher eine weitere Kopie mit neuem
+        // Zeitstempel an, obwohl die Ausweichkopie des letzten Laufs inhaltsgleich war.
+        using var temp = new TempDir();
+        var projectFolder = temp.CreateSubdir("projekt");
+        var quelle = temp.CreateSubdir("quelle");
+        var videoQuelle = Path.Combine(quelle, "inspektion.mpg");
+        File.WriteAllText(videoQuelle, "neuer-inhalt");
+
+        var zielDir = Path.Combine(projectFolder, "Haltungen_Verteilt", "06.123-456", "Video");
+        Directory.CreateDirectory(zielDir);
+        File.WriteAllText(Path.Combine(zielDir, "inspektion.mpg"), "alt");
+        var frueher = Path.Combine(zielDir, "inspektion_20260101_120000.mpg");
+        File.WriteAllText(frueher, "neuer-inhalt");
+
+        var project = NewProject("06.123-456", "Link", videoQuelle);
+        var result = new MediaDistributionService().DistributeImportedMedia(projectFolder, project);
+
+        Assert.Equal(0, result.Errors);
+        Assert.Equal(2, Directory.GetFiles(zielDir).Length);
+        Assert.Equal(
+            ProjectPathResolver.MakeRelative(frueher, projectFolder),
+            project.Data[0].GetFieldValue("Link"));
+    }
+
+    [Fact]
     public void DistributeImportedMedia_Namenskollision_GleicheGroesse_AndererInhalt_WirdNichtWiederverwendet()
     {
         using var temp = new TempDir();

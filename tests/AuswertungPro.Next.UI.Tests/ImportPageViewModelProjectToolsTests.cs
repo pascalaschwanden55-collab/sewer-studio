@@ -1096,6 +1096,33 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task Ein_Knopf_Import_merkt_seinen_Bericht_fuer_Bericht_oeffnen()
+    {
+        // Der manuelle Import meldete seinen Bericht an «Letzter Bericht», der Ein-Knopf-Import
+        // nicht: «Bericht öffnen» zeigte danach den Bericht eines frueheren Laufs.
+        var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
+        var importer = new OneClickImporterFake(OneClickProjectImportFormat.Kins);
+        var reports = new OneClickReportWriterFake { Path = @"C:\Projekt\__IMPORT_REPORTS\kanalimport_1.txt" };
+        var controller = new ImportOneClickProjectController(dialogs, () => importer, reports);
+        string? gemerkt = null;
+        var project = new Project();
+
+        await controller.ExecuteAsync(new ImportOneClickProjectActions(
+            GetProjectFolder: () => @"C:\Projekt",
+            GetProject: () => project,
+            DeepCopyProject: _ => new Project(),
+            ReplaceProject: _ => { },
+            CollectionLock: new object(),
+            SaveProject: () => true,
+            SetProgress: _ => { },
+            AppendSummary: _ => { },
+            AppendDetails: _ => { },
+            SetLastReportPath: value => gemerkt = value));
+
+        Assert.Equal(reports.Path, gemerkt);
+    }
+
+    [Fact]
     public async Task Ein_Knopf_Import_nutzt_denselben_persistenten_Dateitransaktionsweg_wie_manuell()
     {
         var dialogs = new DialogFake { SelectedFolder = @"C:\Quelle" };
@@ -1750,9 +1777,13 @@ public sealed class ImportPageViewModelProjectToolsTests : IDisposable
     private sealed class OneClickReportWriterFake : IOneClickImportReportWriter
     {
         public int Calls { get; private set; }
+        public string? Path { get; init; }
 
-        public void TryWrite(string projectFolder, OneClickProjectImportResult result)
-            => Calls++;
+        public string? TryWrite(string projectFolder, OneClickProjectImportResult result)
+        {
+            Calls++;
+            return Path;
+        }
     }
 
     private sealed class OneClickStagingServiceFake(IImportFileStagingSession session)
