@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         ui:WindowFx.Entrance="True"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
+        xmlns:nova="clr-namespace:AuswertungPro.Next.UI.Controls"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         Title="SewerStudio — VSA-Codierung (VSA-KEK 2020)"
         Width="1400"
@@ -31,16 +32,11 @@
             </Border.Background>
             <StackPanel>
                 <!-- Titel -->
-                <DockPanel Margin="0,0,0,6">
-                    <TextBlock Text="VSA Schadencodierung - VSA-KEK 2020"
-                               FontSize="{DynamicResource TextL}" FontWeight="Bold"
-                               Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Text="EN 13508-2 - VSA-KEK 2020"
-                               FontSize="{DynamicResource TextXS}" Foreground="{StaticResource MutedBrush}"
-                               VerticalAlignment="Center" Margin="12,0,0,0"/>
-                    <Button x:Name="ResetButton" Content="Reset" HorizontalAlignment="Right"
+                <nova:NovaDialogHeader Title="VSA Schadencodierung - VSA-KEK 2020"
+                                        Subtitle="EN 13508-2 - VSA-KEK 2020" Margin="0,0,0,6">
+                    <Button x:Name="ResetButton" Content="Reset"
                             Style="{StaticResource ToolbarButton}" MinWidth="50" Padding="8,3"/>
-                </DockPanel>
+                </nova:NovaDialogHeader>
 
                 <!-- Breadcrumb -->
                 <ItemsControl x:Name="BreadcrumbPanel" Margin="0,0,0,8">
@@ -576,10 +572,12 @@
                                Foreground="{StaticResource DangerBrush}"
                                VerticalAlignment="Center" Margin="0,0,12,0"
                                MaxWidth="300" TextWrapping="Wrap"/>
+                    <Button x:Name="BtnCancel" Content="Abbrechen" Width="100"
+                            Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" IsCancel="True"/>
                     <Button x:Name="BtnApply" Content="Übernehmen" Width="130"
-                            Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"
+                            Style="{StaticResource PrimaryButton}"
+                            IsDefault="True"
                             IsEnabled="False"/>
-                    <Button x:Name="BtnCancel" Content="Abbrechen" Width="100" IsCancel="True"/>
                 </StackPanel>
             </DockPanel>
         </Border>

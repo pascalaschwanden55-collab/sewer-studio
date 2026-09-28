@@ -5,6 +5,7 @@
         ui:WindowFx.Entrance="True"
         xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
         xmlns:protocol="clr-namespace:AuswertungPro.Next.UI.Views.Protocol"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Beobachtungen / Schäden"
         MinWidth="900"
         MinHeight="600"
@@ -13,19 +14,6 @@
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
         <protocol:CodeGroupBrushConverter x:Key="CodeGroupBrush"/>
-
-        <Style x:Key="ToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-            <Setter Property="MinHeight" Value="30"/>
-            <Setter Property="Padding" Value="12,5"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
-            <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
-        </Style>
-
-        <Style x:Key="FooterButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-            <Setter Property="MinHeight" Value="32"/>
-            <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
-        </Style>
     </Window.Resources>
 
     <Grid Margin="12">
@@ -48,21 +36,13 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Orientation="Vertical">
-                    <TextBlock x:Name="HeaderText"
-                               FontSize="{DynamicResource TextXL}"
-                               FontWeight="SemiBold"
-                               Foreground="{StaticResource TextBrush}"/>
-                    <TextBlock x:Name="RevisionText"
-                               Margin="0,4,0,0"
-                               Foreground="{StaticResource MutedBrush}"/>
-                </StackPanel>
+                <controls:NovaDialogHeader Grid.Row="0" x:Name="Kopf"/>
 
                 <WrapPanel Grid.Row="1" Margin="0,10,0,0">
-                    <Button x:Name="StartNachprotokollButton" Content="Nachprotokoll starten" Style="{StaticResource ToolbarButtonStyle}"/>
-                    <Button x:Name="StartNeuButton" Content="Neu-Protokoll" Style="{StaticResource ToolbarButtonStyle}"/>
-                    <Button x:Name="RestoreOriginalButton" Content="Original wiederherstellen" Style="{StaticResource ToolbarButtonStyle}"/>
-                    <Button x:Name="HistoryButton" Content="Historie..." Style="{StaticResource ToolbarButtonStyle}" Margin="0"/>
+                    <Button x:Name="StartNachprotokollButton" Content="Nachprotokoll starten" Style="{StaticResource ToolbarButton}" Margin="0,0,8,0"/>
+                    <Button x:Name="StartNeuButton" Content="Neu-Protokoll" Style="{StaticResource ToolbarButton}" Margin="0,0,8,0"/>
+                    <Button x:Name="RestoreOriginalButton" Content="Original wiederherstellen" Style="{StaticResource ToolbarButton}" Margin="0,0,8,0"/>
+                    <Button x:Name="HistoryButton" Content="Historie..." Style="{StaticResource ToolbarButton}"/>
                 </WrapPanel>
             </Grid>
         </Border>
@@ -133,21 +113,15 @@
             </DataGrid>
         </Border>
 
-        <Border Grid.Row="2"
-                Margin="0,10,0,0"
-                BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="1"
-                Background="{DynamicResource CardBrush}"
-                CornerRadius="{DynamicResource RadiusL}"
-                Padding="8">
+        <Border Grid.Row="2" Style="{StaticResource DialogButtonBar}" Margin="0,10,0,0">
             <WrapPanel HorizontalAlignment="Right">
-                <Button x:Name="NewButton" Content="Neu" Width="100" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="CopyButton" Content="Kopieren" Width="110" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="DeleteButton" Content="Löschen" Width="100" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="OverlayButton" Content="Im Video einblenden" Width="160" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="TrainButton" Content="Als Training speichern" Width="160" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="ExportPdfButton" Content="Haltungsprotokoll PDF" Width="180" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="CloseButton" Content="Schließen" Width="110" Style="{StaticResource FooterButtonStyle}" Margin="0" IsCancel="True"/>
+                <Button x:Name="NewButton" Content="Neu" Width="100" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <Button x:Name="CopyButton" Content="Kopieren" Width="110" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <Button x:Name="DeleteButton" Content="Löschen" Width="100" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <Button x:Name="OverlayButton" Content="Im Video einblenden" Width="160" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <Button x:Name="TrainButton" Content="Als Training speichern" Width="160" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <Button x:Name="ExportPdfButton" Content="Haltungsprotokoll PDF" Width="180" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <Button x:Name="CloseButton" Content="Schließen" Width="110" Style="{StaticResource SecondaryButton}" IsCancel="True"/>
             </WrapPanel>
         </Border>
     </Grid>

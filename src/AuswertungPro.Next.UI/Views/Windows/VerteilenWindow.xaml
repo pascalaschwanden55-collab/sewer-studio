@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         ui:WindowFx.Entrance="True"
         Title="SewerStudio — Verteilen"
         Width="1180" Height="720"
@@ -34,11 +35,6 @@
             <Setter Property="Padding" Value="12,10"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
-        <Style x:Key="Link" TargetType="Button" BasedOn="{StaticResource LinkButtonStyle}">
-            <Setter Property="HorizontalAlignment" Value="Left"/>
-            <Setter Property="Margin" Value="0,6,0,0"/>
-            <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
-        </Style>
     </Window.Resources>
 
     <Grid Margin="16">
@@ -53,12 +49,9 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,12">
-            <TextBlock Text="Verteilen" FontSize="{DynamicResource TextXL}" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextBrush}"/>
-            <TextBlock Text="Links wählen, rechts prüfen. Die Vorschau schreibt nichts – erst «Jetzt verteilen» legt ab."
-                       FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-        </StackPanel>
+        <controls:NovaDialogHeader Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,12"
+                                    Title="Verteilen"
+                                    Subtitle="Links wählen, rechts prüfen. Die Vorschau schreibt nichts – erst «Jetzt verteilen» legt ab."/>
 
         <!-- Schritte -->
         <ScrollViewer Grid.Row="1" Grid.Column="0" VerticalScrollBarVisibility="Auto">
@@ -132,9 +125,9 @@
                                     ToolTip="Ordner mit den Protokollen wählen"
                                     Command="{Binding QuelleOrdnerWaehlenCommand}"/>
                         </Grid>
-                        <Button Style="{StaticResource Link}" Content="{Binding EinzelnLinkText}"
+                        <Button Style="{StaticResource LinkButtonStyle}" HorizontalAlignment="Left" Margin="0,6,0,0" FontSize="{DynamicResource TextXS}" Content="{Binding EinzelnLinkText}"
                                 Command="{Binding EinzelneDateienWaehlenCommand}"/>
-                        <Button Style="{StaticResource Link}" Content="{Binding TxtLinkText}"
+                        <Button Style="{StaticResource LinkButtonStyle}" HorizontalAlignment="Left" Margin="0,6,0,0" FontSize="{DynamicResource TextXS}" Content="{Binding TxtLinkText}"
                                 Command="{Binding TxtUmschaltenCommand}"
                                 Visibility="{Binding ZeigeTxtUmschalter, Converter={StaticResource BoolToVis}}"/>
                     </StackPanel>
@@ -181,7 +174,7 @@
                         </StackPanel>
                         <TextBlock Text="{Binding ZielAnzeige}" TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextBrush}"/>
-                        <Button Style="{StaticResource Link}" Content="Ordnerbausteine auf der Export-Seite einstellen"
+                        <Button Style="{StaticResource LinkButtonStyle}" HorizontalAlignment="Left" Margin="0,6,0,0" FontSize="{DynamicResource TextXS}" Content="Ordnerbausteine auf der Export-Seite einstellen"
                                 ToolTip="Schliesst dieses Fenster und zeigt die Einstellungen «Verzeichnisbaum für die Verteilung»."
                                 Command="{Binding EinstellungenOeffnenCommand}"/>
                     </StackPanel>
@@ -281,8 +274,10 @@
         </Border>
 
         <!-- Aktionen -->
-        <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+        <Border Grid.Row="2" Grid.ColumnSpan="3" Style="{StaticResource DialogButtonBar}" Margin="0,14,0,0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Abbrechen" Padding="16,6" Margin="0,0,8,0" IsCancel="True"
+                    Style="{StaticResource SecondaryButton}"
                     ToolTip="Schliesst das Fenster. Es wird nichts verteilt."
                     Command="{Binding AbbrechenCommand}"/>
             <Button x:Name="VerteilenButton" Style="{StaticResource PrimaryButton}" Padding="18,6" IsDefault="True"
@@ -294,5 +289,6 @@
                 </StackPanel>
             </Button>
         </StackPanel>
+        </Border>
     </Grid>
 </Window>

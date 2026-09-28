@@ -26,20 +26,11 @@
         </Grid.RowDefinitions>
 
         <!-- ── Titelzeile: Fenstertitel, KI-Bereitschaftschip, Schliessen ──────── -->
-        <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" CornerRadius="{DynamicResource RadiusM}"
-                Padding="12,8" Margin="0,0,0,8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="Training Studio (Prüfplatz)"
-                           FontWeight="Bold" FontSize="{DynamicResource TextL}"
-                           VerticalAlignment="Center"/>
-                <Border Grid.Column="1" Background="{DynamicResource KiSubtleBrush}"
+        <ctrl:NovaDialogHeader Grid.Row="0" Title="Training Studio (Prüfplatz)" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal">
+                <Border Background="{DynamicResource KiSubtleBrush}"
                         CornerRadius="{DynamicResource RadiusChip}" Padding="8,3"
-                        Margin="12,0,0,0" VerticalAlignment="Center">
+                        VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <ctrl:NeuralPulseDot Width="10" Height="10"
                                              IsActive="{Binding IstKiBereit}"
@@ -49,11 +40,11 @@
                                    FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
-                <Button Grid.Column="2" Content="Schliessen" Style="{StaticResource ToolbarButton}"
+                <Button Content="Schliessen" Style="{StaticResource ToolbarButton}"
                         Click="Close_Click" Margin="12,0,0,0" VerticalAlignment="Center"
                         ToolTip="Fenster schliessen" AutomationProperties.Name="Schliessen"/>
-            </Grid>
-        </Border>
+            </StackPanel>
+        </ctrl:NovaDialogHeader>
 
         <!-- ── Arbeitsfläche: 210 | * | 330, jede Spalte scrollt selbst ────────── -->
         <Grid Grid.Row="1">

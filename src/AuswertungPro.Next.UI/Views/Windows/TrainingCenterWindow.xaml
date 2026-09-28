@@ -26,11 +26,15 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Top Bar -->
+        <!-- Top Bar (Kopf + Werkzeugleiste in derselben Karte, damit keine der uebrigen
+             Grid.Row-Zuordnungen in diesem Fenster verschoben werden muss) -->
         <Border Grid.Row="0" Padding="10" CornerRadius="{DynamicResource RadiusM}"
                 Background="{DynamicResource CardBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1" Margin="0,0,0,8">
+            <StackPanel>
+            <ctrl:NovaDialogHeader Title="Training Center" Margin="0,0,0,8"
+                                    Subtitle="KI-Trainingsdaten pruefen, Batch-Import und Wissensdatenbank verwalten."/>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -86,6 +90,7 @@
                 <Button Grid.Column="10" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
             </Grid>
+            </StackPanel>
         </Border>
 
         <!-- Row 1: Trainingsstand -->

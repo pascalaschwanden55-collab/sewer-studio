@@ -18,14 +18,17 @@
         <controls:IntToVisibilityConverter x:Key="IntToVis"/>
     </Window.Resources>
 
-    <Grid>
+    <Grid Margin="0,0,0,0">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <controls:NovaDialogHeader Grid.Row="0" Margin="10,10,10,0" Title="{Binding WindowTitle}"/>
+
         <!-- Main content: Left advisory + Right cost calc -->
-        <Grid Grid.Row="0">
+        <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="320" MinWidth="260"/>
                 <ColumnDefinition Width="Auto"/>
@@ -131,7 +134,7 @@
                                 <Button DockPanel.Dock="Right"
                                         Content="Optimieren"
                                         Command="{Binding OptimizationVm.OptimizeCommand}"
-                                        Style="{StaticResource PrimaryButton}"
+                                        Style="{StaticResource SecondaryButton}"
                                         Width="100" Height="28"
                                         ToolTip="KI-Analyse starten - ermittelt optimale Sanierungsmaßnahme und Kostenschätzung"/>
                             </DockPanel>
@@ -586,7 +589,7 @@
         </Grid>
 
         <!-- ═══ FOOTER ═══ -->
-        <Border Grid.Row="1" Padding="10,8"
+        <Border Grid.Row="2" Padding="10,8"
                 BorderThickness="0,1,0,0" BorderBrush="{StaticResource BorderBrush}"
                 Background="{StaticResource CardBrush}">
             <Grid>
@@ -609,17 +612,21 @@
 
                 <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
                     <Button Content="Kosten &amp; Maßnahmen übernehmen" Width="260" Height="38" Margin="12,0,0,0"
+                            Style="{StaticResource SecondaryButton}"
                             Command="{Binding CostCalcVm.ApplyTotalCommand}"
                             ToolTip="Berechnete Kosten und gewählte Maßnahmen in die Haltungsdaten schreiben"/>
                     <Button Content="PDF" Width="80" Height="38" Margin="8,0,0,0"
+                            Style="{StaticResource SecondaryButton}"
                             Command="{Binding CostCalcVm.ExportPdfCommand}"
                             CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
                             ToolTip="Kostenzusammenstellung als PDF exportieren"/>
-                    <Button Content="Speichern" Width="140" Height="38" Margin="8,0,0,0"
-                            Command="{Binding CostCalcVm.SaveCommand}"
-                            ToolTip="Aktuelle Kalkulation im Projekt speichern"/>
                     <Button Content="Schließen" Width="110" Height="38" Margin="8,0,0,0"
-                            Command="{Binding CloseCommand}"/>
+                            Style="{StaticResource SecondaryButton}"
+                            Command="{Binding CloseCommand}" IsCancel="True"/>
+                    <Button Content="Speichern" Width="140" Height="38" Margin="8,0,0,0"
+                            Style="{StaticResource PrimaryButton}"
+                            Command="{Binding CostCalcVm.SaveCommand}" IsDefault="True"
+                            ToolTip="Aktuelle Kalkulation im Projekt speichern"/>
                 </WrapPanel>
             </Grid>
         </Border>

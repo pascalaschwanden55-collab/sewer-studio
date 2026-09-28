@@ -55,7 +55,7 @@ public partial class ProtocolObservationsWindow : Window
         _markDirty = markDirty;
 
         _doc = EnsureDocument(record);
-        HeaderText.Text = string.IsNullOrWhiteSpace(record.GetFieldValue("Haltungsname"))
+        Kopf.Title = string.IsNullOrWhiteSpace(record.GetFieldValue("Haltungsname"))
             ? "Beobachtungen / Schaeden"
             : $"Beobachtungen / Schaeden - {record.GetFieldValue("Haltungsname")}";
         RefreshRevisionHeader();
@@ -115,7 +115,7 @@ public partial class ProtocolObservationsWindow : Window
     {
         var rev = _doc.Current;
         var who = string.IsNullOrWhiteSpace(rev.CreatedBy) ? "unbekannt" : rev.CreatedBy;
-        RevisionText.Text = $"Revision: {rev.Comment} / {rev.CreatedAt:dd.MM.yyyy HH:mm} / {who}";
+        Kopf.Subtitle = $"Revision: {rev.Comment} / {rev.CreatedAt:dd.MM.yyyy HH:mm} / {who}";
     }
 
     private ProtocolEntry? SelectedEntry => EntriesGrid.SelectedItem as ProtocolEntry;

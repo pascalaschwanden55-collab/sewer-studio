@@ -50,50 +50,6 @@
             <Setter Property="Padding"         Value="14,10"/>
         </Style>
 
-        <!-- Primär-Button -->
-        <Style x:Key="BtnPrimary" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="Foreground"   Value="White"/>
-            <Setter Property="FontWeight"   Value="SemiBold"/>
-            <Setter Property="FontSize"     Value="{DynamicResource TextM}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding"      Value="20,9"/>
-            <Setter Property="Cursor"       Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="{DynamicResource RadiusM}" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Abbrechen-Button -->
-        <Style x:Key="BtnCancel" TargetType="Button">
-            <Setter Property="Background"   Value="{DynamicResource HoverBrush}"/>
-            <Setter Property="Foreground"   Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="FontSize"     Value="{DynamicResource TextM}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush"  Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="Padding"      Value="20,9"/>
-            <Setter Property="Cursor"       Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="{DynamicResource RadiusM}" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <!-- Detection ListBox -->
         <Style x:Key="DetectionItem" TargetType="ListBoxItem">
             <Setter Property="Background"      Value="Transparent"/>
@@ -927,13 +883,14 @@
                 <!-- Buttons rechts -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                             VerticalAlignment="Center" Margin="0,0,0,0">
-                    <Button Style="{StaticResource BtnCancel}"
-                            Content="Abbrechen" Margin="0,0,8,0"
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="Abbrechen" Margin="0,0,8,0" IsCancel="True"
                             Click="Cancel_Click"/>
                     <Button x:Name="AcceptButton"
-                            Style="{StaticResource BtnPrimary}"
+                            Style="{StaticResource PrimaryButton}"
                             Content="Protokoll übernehmen"
                             IsEnabled="{Binding IsDone}"
+                            IsDefault="True"
                             Click="Accept_Click"/>
                 </StackPanel>
             </Grid>

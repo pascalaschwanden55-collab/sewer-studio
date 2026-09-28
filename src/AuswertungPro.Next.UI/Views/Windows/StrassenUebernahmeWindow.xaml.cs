@@ -53,12 +53,13 @@ public partial class StrassenUebernahmeWindow : Window
         InitializeComponent();
 
         Title = titel;
+        Kopf.Title = titel;
         NummerSpalte.Header = spaltenkopf;
         _zeilen = new ObservableCollection<StrassenUebernahmeAuswahl>(
             vorschlaege.Select(v => new StrassenUebernahmeAuswahl(v)));
         Liste.ItemsSource = _zeilen;
 
-        KopfText.Text = _zeilen.Count switch
+        Kopf.Subtitle = _zeilen.Count switch
         {
             0 => "Es gibt nichts zu übernehmen: Entweder sind die Felder bereits gefüllt, "
                  + "oder die Nachbarn führen selbst keine Strasse.",

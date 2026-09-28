@@ -110,6 +110,48 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `SuccessButton` mehr, `CompactButton`-Angleichung) und
   `NovaDialogHeaderIsolatedSmokeTests` (Kindprozess-Muster: Titel/Untertitel-Kollaps,
   Aktionen-DataContext, `DialogButtonBar`-Masse, `DangerButton`-Farben).
+- **Aufgabe 4 — Fensterregel Teil 2 (uebrige Fenster) + umfassender Waechter.** Die Knopfregel
+  aus Aufgabe 3 gilt fuer ALLE Fenster, nicht nur die Dossier-Fenster: 19 weitere Fenster in
+  `Views/Windows`, `Views/*.xaml` und `Dialogs/*.xaml` (u. a. `ObservationCatalogWindow`,
+  `RecordDetailsWindow`, `SanierungsmassnahmenWindow`, `SchachtMassnahmenWindow`/
+  `-KatalogEditorWindow`, `StrassenUebernahmeWindow`, `TextPreviewWindow`, `VerteilenWindow`,
+  `XtfExportVorschauWindow`, `ProtocolCodePickerDialog`, `ProtocolEntryEditorDialog`,
+  `ProtocolHistoryWindow`, `ProtocolObservationsWindow`) wurden auf `NovaDialogHeader` +
+  `DialogButtonBar`/Knopfregel umgestellt. **Fenster mit eigener Werkzeugleiste**
+  (`TrainingCenterWindow`, `TrainingStudioWindow`, `VideoAnalysisPipelineWindow`,
+  `VsaCodeExplorerWindow`, `ProtocolObservationsWindow`) behalten ihre Arbeitsflaeche; nur Kopf
+  und Abschluss-Knopfleiste wurden vereinheitlicht. `RecordDetailsWindow` blendet den
+  eingebauten Kopf von `RecordDetailsView` dafuer aus (`IsHeaderVisible=False`, dasselbe Muster
+  wie `DataPageNovaWorkspaceController`) und zeigt stattdessen den gemeinsamen Fensterkopf.
+  `VideoAnalysisPipelineWindow` behaelt seine bewusst gestaltete Sci-Fi-Kopfzeile (NeuralSphere,
+  Akzentbalken) unveraendert; seine lokalen `BtnPrimary`/`BtnCancel`-Stile sind entfernt, die
+  Fussleiste nutzt jetzt `PrimaryButton`/`SecondaryButton` samt `IsDefault`/`IsCancel`.
+  `TextPreviewWindow` verwendet fuer `DialogButtonBar`/`SecondaryButton` bewusst
+  `DynamicResource` statt `StaticResource` (wie `FloatingGridWindow` in Aufgabe 4a): Der
+  bestehende `WindowOpenCloseSmokeTests` instanziiert dieses Fenster ohne laufende
+  `Application`, eine `StaticResource` waere dort beim BAML-Laden eine haerte Ausnahme.
+  **Waechter `DesignAuditKnopfleistenTests`** deckt ALLE Fenster-XAMLs im UI-Projekt ab
+  (`Views/*.xaml` nur oberste Ebene, `Dialogs/*.xaml`, `Views/Windows/*.xaml`; nur echte
+  `<Window`-Wurzeln, UserControls/ResourceDictionaries im selben Ordner fallen automatisch weg)
+  und prueft vier Regeln je Fenster: (a) hoechstens EIN `PrimaryButton`, (b) traegt ein Fenster
+  ein `IsDefault="True"`, steht der unmittelbar vorangehende `<Button`-Tag (Dokumentreihenfolge,
+  kein anderer Button dazwischen) mit `IsCancel="True"` da, (c) kein lokal definierter
+  `Style x:Key="..." TargetType="Button"` mehr im Fenster, (d) kein `Background=` direkt an
+  einem `<Button`-Tag. Namentliche Ausnahmen mit Grund: die vier Video-Fenster (`PlayerWindow`,
+  `LiveFrameWindow`, `StartupSplashWindow`, `PhotoMeasurementWindow`), die drei geschuetzten
+  WebGIS-Fenster (`WebGisVorschauWindow`, `WebGisSchreibBestaetigungWindow`,
+  `WebGisHolenWindow`), `NovaDialogWindow` (Knoepfe dynamisch im Code gebaut, Aufgabe 1),
+  `ObjektakteWindow` (reiner Host von `ObjektakteView`, Aufgabe 4a), `FloatingGridWindow`
+  (Andocken-Knopf braucht `DynamicResource`, Aufgabe 4a) sowie `TrainingStudioWindow`,
+  `TrainingCenterWindow` und `VideoAnalysisPipelineWindow` (eigene Werkzeugleisten mit mehreren
+  gleichzeitig sichtbaren, farblich bedeutungstragenden Aktionsknoepfen je Schritt/Zustand -
+  Severity-Farbknoepfe, Erfolgs-/Warn-/Gefahrfarbe beim Selbsttraining, Sci-Fi-Kopfzeile; nur
+  Kopf/Fussleiste wurden dort vereinheitlicht, das Innenleben bleibt bewusst unveraendert). Eine
+  Ausnahme nimmt eine Datei komplett aus allen vier Pruefungen - nie stillschweigend, immer mit
+  Grund in der Ausnahmeliste des Tests. Der Waechter faengt jede der vier Regelverletzungen
+  nachweislich ab (Sabotageprobe: zweiter `PrimaryButton`, vertauschte Abbrechen/Speichern-
+  Reihenfolge, lokaler Button-Stil, `Background=` direkt am Button - alle vier Male rot, nach
+  Ruecknahme wieder gruen).
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

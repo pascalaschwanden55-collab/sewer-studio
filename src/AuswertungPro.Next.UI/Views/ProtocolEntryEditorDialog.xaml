@@ -4,6 +4,7 @@
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
+        xmlns:nova="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Protokolleintrag bearbeiten"
         Width="720"
         Height="560"
@@ -37,6 +38,14 @@
         </Window.Resources>
 
         <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <nova:NovaDialogHeader Grid.Row="0" Title="Protokolleintrag bearbeiten"/>
+
+        <Grid Grid.Row="1">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -300,10 +309,13 @@
 
         <StackPanel Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Vertical" Margin="0,10,0,0">
             <TextBlock x:Name="ValidationStatus" Margin="0,0,0,8" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" />
+            <Border Style="{StaticResource DialogButtonBar}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="OkButton" Content="Übernehmen" Width="120" Margin="0,0,8,0" />
-                <Button x:Name="CancelButton" Content="Abbrechen" Width="120" IsCancel="True" />
+                <Button x:Name="CancelButton" Content="Abbrechen" Width="120" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" IsCancel="True" />
+                <Button x:Name="OkButton" Content="Übernehmen" Width="120" Style="{StaticResource PrimaryButton}" IsDefault="True" />
             </StackPanel>
+            </Border>
         </StackPanel>
+        </Grid>
     </Grid>
 </Window>
