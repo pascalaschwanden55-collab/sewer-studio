@@ -86,6 +86,8 @@ internal static class ParsedHoldingDistributionController
         holdingRaw = suche.HoldingRaw;
         holding = suche.Holding;
         var holdingLabelAdjusted = suche.HoldingLabelAdjusted;
+        string? storedPdfPath = null;
+        string? storedHoldingFolder = null;
 
         try
         {
@@ -103,9 +105,13 @@ internal static class ParsedHoldingDistributionController
                 "{Datum}_{Haltung}");
             holdingFolder = writePaths.EnsureDirectoryTarget(holdingFolder);
             var destinationPdfName = $"{dateStamp}_{holding}.pdf";
-            var destinationPdfPath = writePaths.ResolveUniqueFileTarget(
-                Path.Combine(holdingFolder, destinationPdfName),
-                overwrite);
+            // Eine bytegleiche PDF aus einem frueheren (auch abgebrochenen) Lauf wird
+            // wiederverwendet; sonst legte jede Wiederholung eine weitere Kopie mit «_01» an.
+            var existingPdf = Distributor.FindExistingIdenticalFile(holdingFolder, pdfSourceToStorePath, Distributor.IsPdf);
+            var copyPdf = existingPdf is null;
+            var destinationPdfPath = existingPdf is not null
+                ? writePaths.EnsureFileTarget(existingPdf)
+                : writePaths.ResolveUniqueFileTarget(Path.Combine(holdingFolder, destinationPdfName), overwrite);
             var counterInspection = HoldingVideoSearch.FindCounterInspection(search, holding, dateStamp);
             string? destinationVideoPath = null;
             string? destinationCounterVideoPath = null;
@@ -196,13 +202,20 @@ internal static class ParsedHoldingDistributionController
             // Alle Ziele sind geprueft. Erst jetzt duerfen Quellen verschoben oder
             // bereits vorhandene Projektdateien veraendert werden.
             Directory.CreateDirectory(holdingFolder);
-            DistributionFileTransfer.MoveOrCopy(
-                pdfSourceToStorePath,
-                destinationPdfPath,
-                moveInsteadOfCopy,
-                overwrite);
+            if (copyPdf)
+            {
+                DistributionFileTransfer.MoveOrCopy(
+                    pdfSourceToStorePath,
+                    destinationPdfPath,
+                    moveInsteadOfCopy,
+                    overwrite);
+            }
+            storedPdfPath = destinationPdfPath;
+            storedHoldingFolder = holdingFolder;
 
-            if (removeOriginalAfterStore
+            // Eine wiederverwendete PDF laesst die Quelle unberuehrt, auch beim Verschieben.
+            if (copyPdf
+                && removeOriginalAfterStore
                 && File.Exists(pdfToStorePath)
                 && !string.Equals(pdfToStorePath, pdfSourceToStorePath, StringComparison.OrdinalIgnoreCase))
             {
@@ -336,6 +349,24 @@ internal static class ParsedHoldingDistributionController
                 destinationVideoPath,
                 infoPath,
                 holdingFolder,
+                videoFind.Status,
+                correctionResult.Corrected,
+                correctionResult.Message);
+        }
+        catch (Exception ex) when (storedPdfPath is not null && ex is not OperationCanceledException)
+        {
+            // Die PDF liegt schon am Ziel, ein spaeterer Schritt (meist die Videokopie) ist
+            // gescheitert. Das muss im Ergebnis stehen; ein erneuter Lauf verwendet die PDF wieder.
+            return new Distributor.DistributionResult(
+                false,
+                $"{holding}: {ex.Message} [PDF bereits abgelegt: {Path.GetFileName(storedPdfPath)}; "
+                + "ein erneuter Lauf verwendet sie wieder]",
+                sourcePdfPath,
+                videoFind.VideoPath,
+                storedPdfPath,
+                null,
+                null,
+                storedHoldingFolder,
                 videoFind.Status,
                 correctionResult.Corrected,
                 correctionResult.Message);

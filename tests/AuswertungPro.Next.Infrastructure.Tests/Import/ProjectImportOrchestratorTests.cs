@@ -502,8 +502,9 @@ public sealed class ProjectImportOrchestratorTests
             Assert.Contains("Schachtprotokoll b.pdf nicht verteilt: Zielordner gesperrt", messages);
             Assert.DoesNotContain(messages, m => m.Contains("haltung.pdf", StringComparison.Ordinal));
             Assert.Contains(result.Fehlerbilanz.Schritte, step => step.Schritt == "Schachtprotokolle" && step.Anzahl == 1);
-            // Die Abschlusszeile folgt den Schachtmeldungen und zaehlt nur Foto- und Kanalfehler.
-            var summary = messages.IndexOf("Verteilung: 4 Fotos/Dateien, 3 Videos, 2 Original-Protokolle, 1 Fehler.");
+            // Die Abschlusszeile folgt den Schachtmeldungen und zaehlt alle Fehler der Phase
+            // (hier ein Kanal- und ein Schachtfehler), wie die Fehlerbilanz.
+            var summary = messages.IndexOf("Verteilung: 4 Fotos/Dateien, 3 Videos, 2 Original-Protokolle, 2 Fehler.");
             Assert.True(summary > messages.IndexOf("Schachtprotokoll b.pdf nicht verteilt: Zielordner gesperrt"));
             Assert.DoesNotContain(messages, m => m.StartsWith("Medienverteilung fehlgeschlagen", StringComparison.Ordinal));
         }
@@ -533,7 +534,7 @@ public sealed class ProjectImportOrchestratorTests
             var messages = result.Messages.ToList();
             Assert.Contains("Schachtprotokolle nicht verteilt: Archiv gesperrt", messages);
             Assert.Contains(result.Fehlerbilanz.Schritte, step => step.Schritt == "Schachtprotokolle" && step.Anzahl == 1);
-            Assert.Contains("Verteilung: 0 Fotos/Dateien, 0 Videos, 0 Original-Protokolle, 0 Fehler.", messages);
+            Assert.Contains("Verteilung: 0 Fotos/Dateien, 0 Videos, 0 Original-Protokolle, 1 Fehler.", messages);
         }
         finally
         {

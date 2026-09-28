@@ -374,16 +374,27 @@ public static partial class HoldingFolderDistributor
     /// Inhalt liefert die Methode null; der Aufrufer erzeugt dann einen eindeutigen Zielnamen.
     /// </summary>
     internal static string? FindExistingVideo(string holdingFolder, string sourceVideoPath)
+        => FindExistingIdenticalFile(holdingFolder, sourceVideoPath, MediaFileTypes.HasVideoExtension);
+
+    internal static bool IsPdf(string path)
+        => string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Wie <see cref="FindExistingVideo"/>, fuer jede Dateiart: eine bytegleiche Datei im Ordner,
+    /// deren Pfad <paramref name="accept"/> zulaesst. Damit legt ein zweiter Lauf keine Kopie
+    /// mit «_01» neben eine schon abgelegte gleiche Datei.
+    /// </summary>
+    internal static string? FindExistingIdenticalFile(string folder, string sourcePath, Func<string, bool> accept)
     {
         if (!ImportSourcePathGuard.TryInspectDirectory(
-                holdingFolder,
+                folder,
                 out var safeHoldingFolder,
                 out var holdingFolderExists,
                 out _)
             || !holdingFolderExists
             || !ImportSourcePathGuard.TryInspectFile(
-                sourceVideoPath,
-                out var safeSourceVideoPath,
+                sourcePath,
+                out var safeSourcePath,
                 out var sourceExists,
                 out _)
             || !sourceExists)
@@ -405,20 +416,20 @@ public static partial class HoldingFolderDistributor
                     continue;
                 }
 
-                if (!MediaFileTypes.HasVideoExtension(existing))
+                if (!accept(existing))
                     continue;
 
                 try
                 {
-                    if (FileContentComparer.FilesEqual(safeSourceVideoPath, existing))
+                    if (FileContentComparer.FilesEqual(safeSourcePath, existing))
                         return existing;
                 }
                 catch (Exception ex)
                 {
                     // Eine unlesbare Zieldatei ist kein Identitaetsbeweis. Andere
-                    // vorhandene Videos koennen trotzdem noch bytegleich sein.
+                    // vorhandene Dateien koennen trotzdem noch bytegleich sein.
                     BestEffort.ReportWarning(
-                        $"[HoldingDistribution] Vorhandenes Video nicht vergleichbar: {existing}: {ex.Message}");
+                        $"[HoldingDistribution] Vorhandene Datei nicht vergleichbar: {existing}: {ex.Message}");
                 }
             }
         }

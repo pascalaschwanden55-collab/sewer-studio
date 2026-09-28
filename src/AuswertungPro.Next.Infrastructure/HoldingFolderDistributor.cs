@@ -87,36 +87,28 @@ public static partial class HoldingFolderDistributor
         string? xtfSourceFolder = null,
         DistributionVariant variant = DistributionVariant.Normal)
     {
-        var validPdfFiles = pdfFiles
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .Select(p => p.Trim())
-            .Where(File.Exists)
-            .Where(p => string.Equals(Path.GetExtension(p), ".pdf", StringComparison.OrdinalIgnoreCase))
-            .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var auswahl = HoldingDistribution.DistributionPdfSelection.Pruefe(pdfFiles, ohneSplitTeile: true);
+        return HoldingDistribution.DistributionPdfSelection.Ergebnis(auswahl, auswahl.Gueltig, validPdfFiles =>
+        {
+            // Derive XTF source from parent directories of selected PDFs
+            var derivedXtfFolder = xtfSourceFolder;
+            if (string.IsNullOrWhiteSpace(derivedXtfFolder) && validPdfFiles.Count > 0)
+                derivedXtfFolder = Path.GetDirectoryName(validPdfFiles[0]);
 
-        if (validPdfFiles.Count == 0)
-            return new[] { new DistributionResult(false, "No valid PDF files selected.", "", null, null, null, null, null, VideoMatchStatus.NotChecked) };
-
-        // Derive XTF source from parent directories of selected PDFs
-        var derivedXtfFolder = xtfSourceFolder;
-        if (string.IsNullOrWhiteSpace(derivedXtfFolder) && validPdfFiles.Count > 0)
-            derivedXtfFolder = Path.GetDirectoryName(validPdfFiles[0]);
-
-        return DistributeCore(
-            pdfFiles: validPdfFiles,
-            videoSourceFolder: videoSourceFolder,
-            destGemeindeFolder: destGemeindeFolder,
-            moveInsteadOfCopy: moveInsteadOfCopy,
-            overwrite: overwrite,
-            recursiveVideoSearch: recursiveVideoSearch,
-            unmatchedFolderName: unmatchedFolderName,
-            project: project,
-            progress: progress,
-            xtfSourceFolder: derivedXtfFolder,
-            directoryConfig: directoryConfig,
-            variant: variant);
+            return DistributeCore(
+                pdfFiles: validPdfFiles,
+                videoSourceFolder: videoSourceFolder,
+                destGemeindeFolder: destGemeindeFolder,
+                moveInsteadOfCopy: moveInsteadOfCopy,
+                overwrite: overwrite,
+                recursiveVideoSearch: recursiveVideoSearch,
+                unmatchedFolderName: unmatchedFolderName,
+                project: project,
+                progress: progress,
+                xtfSourceFolder: derivedXtfFolder,
+                directoryConfig: directoryConfig,
+                variant: variant);
+        });
     }
 
     public static IReadOnlyList<DistributionResult> DistributeTxt(
@@ -542,10 +534,13 @@ public static partial class HoldingFolderDistributor
                 {
                     var writePaths = new DistributionWritePathGuard(destGemeindeFolder);
                     holdingFolder = writePaths.EnsureDirectoryTarget(holdingFolder);
-                    var destPath = writePaths.ResolveUniqueFileTarget(
-                        Path.Combine(holdingFolder, Path.GetFileName(pdfPath)), overwrite);
-                    DistributionFileTransfer.MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy, overwrite);
-                    results.Add(new DistributionResult(true, "OK (Begleit-PDF)", pdfPath, null, destPath, null, null, holdingFolder, VideoMatchStatus.NotChecked));
+                    var vorhanden = FindExistingIdenticalFile(holdingFolder, pdfPath, IsPdf);
+                    var destPath = vorhanden is not null
+                        ? writePaths.EnsureFileTarget(vorhanden)
+                        : writePaths.ResolveUniqueFileTarget(Path.Combine(holdingFolder, Path.GetFileName(pdfPath)), overwrite);
+                    if (vorhanden is null)
+                        DistributionFileTransfer.MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy, overwrite);
+                    results.Add(new DistributionResult(true, vorhanden is null ? "OK (Begleit-PDF)" : "OK (Begleit-PDF bereits vorhanden)", pdfPath, null, destPath, null, null, holdingFolder, VideoMatchStatus.NotChecked));
                 }
                 catch (Exception ex)
                 {
@@ -563,18 +558,29 @@ public static partial class HoldingFolderDistributor
         {
             try
             {
-                var sidecarFiles = EnumerateSidecarFiles(xtfSourceFolder);
+                var suche = EnumerateSidecarFiles(xtfSourceFolder, null);
+                foreach (var problem in suche.Probleme)
+                    results.Add(new DistributionResult(false, problem, xtfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked));
 
-                foreach (var sidecarPath in sidecarFiles.Distinct(StringComparer.OrdinalIgnoreCase))
+                foreach (var sidecarPath in suche.Dateien.Distinct(StringComparer.OrdinalIgnoreCase))
                 {
                     try
                     {
                         var writePaths = new DistributionWritePathGuard(destGemeindeFolder);
-                        var destSidecarPath = writePaths.ResolveUniqueFileTarget(
-                            Path.Combine(destGemeindeFolder, Path.GetFileName(sidecarPath)),
-                            overwrite);
-                        DistributionFileTransfer.MoveOrCopy(sidecarPath, destSidecarPath, moveInsteadOfCopy, overwrite);
-                        results.Add(new DistributionResult(true, $"Quelldatei kopiert: {Path.GetFileName(sidecarPath)}", sidecarPath, null, destSidecarPath, null, null, destGemeindeFolder, VideoMatchStatus.NotChecked));
+                        var endung = Path.GetExtension(sidecarPath);
+                        var vorhanden = FindExistingIdenticalFile(
+                            destGemeindeFolder,
+                            sidecarPath,
+                            path => string.Equals(Path.GetExtension(path), endung, StringComparison.OrdinalIgnoreCase));
+                        var destSidecarPath = vorhanden is not null
+                            ? writePaths.EnsureFileTarget(vorhanden)
+                            : writePaths.ResolveUniqueFileTarget(
+                                Path.Combine(destGemeindeFolder, Path.GetFileName(sidecarPath)),
+                                overwrite);
+                        if (vorhanden is null)
+                            DistributionFileTransfer.MoveOrCopy(sidecarPath, destSidecarPath, moveInsteadOfCopy, overwrite);
+                        var meldung = vorhanden is null ? "Quelldatei kopiert" : "Quelldatei bereits vorhanden";
+                        results.Add(new DistributionResult(true, $"{meldung}: {Path.GetFileName(sidecarPath)}", sidecarPath, null, destSidecarPath, null, null, destGemeindeFolder, VideoMatchStatus.NotChecked));
                     }
                     catch (Exception ex)
                     {
@@ -582,7 +588,10 @@ public static partial class HoldingFolderDistributor
                     }
                 }
             }
-            catch { /* XTF enumeration failed – non-critical */ }
+            catch (Exception ex)
+            {
+                results.Add(new DistributionResult(false, $"Quelldateien nicht verteilt: {ex.Message}", xtfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked));
+            }
         }
 
         return results;
@@ -631,21 +640,11 @@ public static partial class HoldingFolderDistributor
         IProgress<DistributionProgress>? progress = null,
         DistributionVariant variant = DistributionVariant.Normal)
     {
-        var validPdfFiles = pdfFiles
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .Select(p => p.Trim())
-            .Where(File.Exists)
-            .Where(p => string.Equals(Path.GetExtension(p), ".pdf", StringComparison.OrdinalIgnoreCase))
-            .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        validPdfFiles = ShaftPdfSelectionExpander.Expand(validPdfFiles);
-
-        if (validPdfFiles.Count == 0)
-            return new[] { new DistributionResult(false, "No valid PDF files selected.", "", null, null, null, null, null, VideoMatchStatus.NotChecked) };
-
-        return DistributeShaftCore(validPdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, directoryConfig, variant);
+        var auswahl = HoldingDistribution.DistributionPdfSelection.Pruefe(pdfFiles, ohneSplitTeile: true);
+        return HoldingDistribution.DistributionPdfSelection.Ergebnis(
+            auswahl,
+            ShaftPdfSelectionExpander.Expand(auswahl.Gueltig),
+            validPdfFiles => DistributeShaftCore(validPdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, directoryConfig, variant));
     }
 
     private static IReadOnlyList<DistributionResult> DistributeShaftCore(
@@ -777,18 +776,11 @@ public static partial class HoldingFolderDistributor
         IProgress<DistributionProgress>? progress = null,
         IHaltungCadastreResolver? cadastre = null)
     {
-        var validPdfFiles = pdfFiles
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .Select(p => p.Trim())
-            .Where(File.Exists)
-            .Where(p => string.Equals(Path.GetExtension(p), ".pdf", StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (validPdfFiles.Count == 0)
-            return new[] { new DistributionResult(false, "No valid PDF files selected.", "", null, null, null, null, null, VideoMatchStatus.NotChecked) };
-
-        return DistributeDichtheitCore(validPdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, cadastre, directoryConfig);
+        var auswahl = HoldingDistribution.DistributionPdfSelection.Pruefe(pdfFiles, ohneSplitTeile: false);
+        return HoldingDistribution.DistributionPdfSelection.Ergebnis(
+            auswahl,
+            auswahl.Gueltig,
+            validPdfFiles => DistributeDichtheitCore(validPdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, cadastre, directoryConfig));
     }
 
     private static IReadOnlyList<DistributionResult> DistributeDichtheitCore(

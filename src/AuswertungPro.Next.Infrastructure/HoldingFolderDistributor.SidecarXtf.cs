@@ -142,11 +142,21 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static List<string> EnumerateSidecarFiles(string folder)
+    /// <summary>Gefundene Quelldateien und die Suchmuster, die nicht durchsucht werden konnten.</summary>
+    internal sealed record SidecarFileSearch(List<string> Dateien, List<string> Probleme);
+
+    private static List<string> EnumerateSidecarFiles(string folder) => EnumerateSidecarFiles(folder, null).Dateien;
+
+    internal static SidecarFileSearch EnumerateSidecarFiles(
+        string folder,
+        Func<string, string, IEnumerable<string>>? enumerate)
     {
         var sidecarFiles = new List<string>();
+        var probleme = new List<string>();
         if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
-            return sidecarFiles;
+            return new SidecarFileSearch(sidecarFiles, probleme);
+
+        enumerate ??= (root, pattern) => Common.SafeFileEnumeration.EnumerateFilesSafe(root, pattern, recursive: true);
 
         // Rekursiv suchen: M150/XML liegen in der Praxis oft in Unterordnern.
         // XML nicht mehr über Dateinamen filtern, da viele Exporte generische Namen haben.
@@ -154,11 +164,14 @@ public static partial class HoldingFolderDistributor
         {
             try
             {
-                sidecarFiles.AddRange(Common.SafeFileEnumeration.EnumerateFilesSafe(folder, pattern, recursive: true));
+                sidecarFiles.AddRange(enumerate(folder, pattern));
             }
             catch (Exception ex)
             {
-                // Best effort: defekte/gesperrte Unterordner duerfen den Import nicht abbrechen.
+                // Ein gesperrter Unterordner bricht die Verteilung nicht ab, gehoert aber ins Ergebnis:
+                // sonst fehlen Quelldateien, ohne dass der Bericht es sagt.
+                var problem = $"Quelldateien ({pattern}) in {folder} nicht durchsucht: {ex.Message}";
+                probleme.Add(problem);
                 AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
                     $"[HoldingDistributor] Sidecar-Suche uebersprungen ({pattern}) in {folder}: {ex.Message}");
             }
@@ -169,9 +182,9 @@ public static partial class HoldingFolderDistributor
         AddSidecarFiles("*.mdb");
         AddSidecarFiles("*.xml");
 
-        return sidecarFiles
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        return new SidecarFileSearch(
+            sidecarFiles.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+            probleme);
     }
 
 

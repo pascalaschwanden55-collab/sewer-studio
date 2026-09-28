@@ -62,6 +62,7 @@ internal sealed class ImportMediaPhase
     {
         var messages = sinks.Messages;
         var fehlerbilanz = sinks.Fehlerbilanz;
+        var fehlerVorDerPhase = fehlerbilanz.Gesamt;
         var ct = ctx?.CancellationToken ?? System.Threading.CancellationToken.None;
         void Melde(int schritt, string name, string text)
             => ctx?.Progress?.Report(new ImportProgress(ImportFortschrittText.Phase(schritt, name), 0, 0, text));
@@ -167,10 +168,12 @@ internal sealed class ImportMediaPhase
                     p.Total, "Schachtprotokolle prüfen und verteilen …", p.CurrentFile))));
         messages.AddRange(schachtMeldungen);
 
+        // Die Fehlerzahl kommt aus der Fehlerbilanz dieser Phase, nicht nur aus Foto und Kanal:
+        // sonst stand «0 Fehler» direkt unter einem gemeldeten Schacht- oder Protokollfehler.
         messages.Add(
             $"Verteilung: {mediaResult.FilesCopied} Fotos/Dateien, {distResult.VideosDistributed} Videos, " +
             $"{distResult.OriginalProtocolsDistributed} Original-Protokolle, " +
-            $"{mediaResult.Errors + distResult.Errors} Fehler.");
+            $"{fehlerbilanz.Gesamt - fehlerVorDerPhase} Fehler.");
     }
 
     /// <summary>

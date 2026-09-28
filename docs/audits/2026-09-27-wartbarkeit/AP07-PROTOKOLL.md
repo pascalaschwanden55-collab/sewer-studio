@@ -91,6 +91,29 @@ Seitenwagen-Zuordnung und über den Videonamen einer bekannten Haltung.
 **Gegenproben (danach zurückgesetzt, Hash geprüft):** Seitenwagen vor dem direkten Treffer → rot;
 Haltungskorrektur über den Videonamen weggelassen → rot.
 
+## Schritt 5 – Robustheit (Befunde aus AP07-PRUEFUNG-VERTEILUNG.md)
+
+Diese Punkte bestanden schon vor dem Umbau; sie ändern bewusst das Verhalten. Jeder Test war am
+Code davor rot (`HoldingDistributionRobustnessTests`, 4 von 6 rot; die beiden Abschlusszeilen-Tests
+hielten die alte Zählung fest und wurden auf die richtige Aussage umgestellt).
+
+| Befund | Korrektur | Test |
+|---|---|---|
+| Gescheiterte Videokopie hinterlässt die PDF, Wiederholung legt `_01` an | Eine bytegleiche PDF im Haltungsordner wird wiederverwendet (gleiche Regel wie bisher für Videos, `FindExistingIdenticalFile`). Scheitert nach der abgelegten PDF ein Schritt, kommt ein Fehlerergebnis mit «PDF bereits abgelegt …» und dem Pfad zurück statt einer blossen Ausnahme. Eine wiederverwendete PDF lässt die Quelle unberührt, auch im Verschiebemodus. | `Gesperrtes_Video_meldet_…`, `Zweiter_unveraenderter_Lauf_…` |
+| (gleiche Ursache) Begleit-PDFs und Quelldateien (XTF/M150/MDB/XML) bekamen bei jedem Lauf eine weitere Kopie | Dieselbe Wiederverwendung; Meldung «bereits vorhanden» | `Zweiter_unveraenderter_Lauf_…` (XTF) |
+| Fehlende oder fremde ausgewählte Dateien verschwinden still | `DistributionPdfSelection`: je Datei ein Fehlerergebnis («nicht gefunden» / «keine PDF»), übrige werden verteilt; gilt für Haltungs-, Schacht- und Dichtheitsauswahl. Leere Auswahl meldet wie bisher «No valid PDF files selected.» | `Fehlende_und_fremde_…`, `Nur_fehlende_Auswahl_…`, `Leere_Auswahl_…` |
+| Abschlusszeile «Verteilung: … n Fehler» zählte nur Foto und Kanal | Zahl = Zuwachs der gemeinsamen Fehlerbilanz während der Phase | `Import_MediaPhase_*` (2 und 1 Fehler) |
+| Suche nach Quelldateien schrieb Probleme nur ins Warnprotokoll | Jedes nicht durchsuchbare Muster wird ein Fehlerergebnis; das bisher leere äussere `catch` meldet ebenfalls | `Fehler_bei_der_Quelldateisuche_…` |
+
+**Gegenproben (danach zurückgesetzt):** PDF-Wiederverwendung aus → 2 rot; fehlende Datei still →
+2 rot; Abschlusszahl wie früher → 2 rot; Suchproblem verschluckt → 1 rot.
+
+Grenzen: Eine korrigierte PDF (Textebene umgeschrieben) ist nur wiederverwendbar, wenn die Korrektur
+bytegleich ausfällt; sonst entsteht wie bisher eine zweite Datei. Die Infodateien
+`…_VIDEO_MISSING.txt` / `…_VIDEO_AMBIGUOUS.txt` bekommen bei jedem Lauf weiterhin eine neue Datei.
+Dass `DistributeCore` die Suchprobleme ins Ergebnis übernimmt, ist nur über den Quelltext geprüft
+(ein echter Suchfehler lässt sich im Test nicht zuverlässig erzeugen).
+
 ## Offen in AP07
 
 - Ungetestet bleibt der Suchweg „unkorrigierte Protokoll-Haltung“ (braucht eine
