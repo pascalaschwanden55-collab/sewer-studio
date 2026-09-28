@@ -88,7 +88,14 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   weitere Aktionen links davon. **Hoechstens EIN Hauptknopf je Fenster** — traf ein Fenster
   bereits vorher einen mittigen Knopf mit `IsDefault="True"` (z. B. «Daten holen» in
   `DossierParcelLookupWindow`), verliert DIESER es zugunsten des Fuss-Hauptknopfs, damit
-  Enter nicht auf zwei Knoepfe gleichzeitig zielt.
+  Enter nicht auf zwei Knoepfe gleichzeitig zielt. **Der dadurch verlorene Enter-Weg wird NICHT
+  ersatzlos gestrichen:** `DossierParcelLookupWindow` faengt Enter in genau den betroffenen
+  Eingabefeldern (`MunicipalityBox`/`ParcelBox`, `KeyDown="OnLookupInputKeyDown"`) gezielt ab,
+  ruft denselben Weg wie der frühere Knopf auf und markiert `e.Handled = true`, damit es nicht
+  zusaetzlich beim eingebauten Standardknopf-Mechanismus ankommt. Ausserhalb dieser Felder greift
+  unveraendert der `IsDefault`-Fusshauptknopf. Test `DossierParcelLookupWindowKeyboardIsolatedSmokeTests`
+  (Kindprozess, echtes `KeyEventArgs(Key.Enter)` per `RaiseEvent`, Muster wie
+  `ListenReihenfolgeIsolatedTests`).
   Angewendet auf alle 11 Dossier-Fenster (Area, Batch, Edit, HoldingPicker, PageSelection,
   ParcelLookup, Plan, Preview, PrintDialog, Refresh, ShaftPicker): Kopf mit Titel + bisherigem
   Einleitungssatz als Untertitel (leer bei `DossierEditWindow` — dessen doppelte

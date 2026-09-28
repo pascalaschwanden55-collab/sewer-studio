@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Dossiers.Lookup;
@@ -120,6 +121,26 @@ public partial class DossierParcelLookupWindow : Window
         {
             StatusText.Text = "Die Gemeindeliste konnte nicht geladen werden: " + ex.Message;
         }
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (Aufgabe 3, Knopfregel «hoechstens EIN Hauptknopf je Fenster"):
+    /// „Uebernehmen" ist der einzige `IsDefault`-Knopf des Fensters und bis zu einem
+    /// erfolgreichen Fund gesperrt — „Daten holen" verlor deshalb seinen fruehen
+    /// `IsDefault`. Damit Enter in Gemeinde/Parzelle trotzdem die Abfrage ausloest (wie vor
+    /// der Umstellung), faengt dieser Handler Enter NUR in diesen beiden Eingabefeldern ab,
+    /// ruft denselben Weg wie der Knopf auf und markiert das Ereignis behandelt — es blubbert
+    /// dann nicht weiter zum eingebauten Standardknopf-Mechanismus des Fensters hoch. Ausserhalb
+    /// dieser beiden Felder bleibt Enter unveraendert: dort greift, sobald „Uebernehmen" nach
+    /// einem Fund aktiv ist, weiterhin dessen `IsDefault`.
+    /// </summary>
+    private void OnLookupInputKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || !LookupButton.IsEnabled)
+            return;
+
+        e.Handled = true;
+        OnLookup(sender, e);
     }
 
     private async void OnLookup(object sender, RoutedEventArgs e)
