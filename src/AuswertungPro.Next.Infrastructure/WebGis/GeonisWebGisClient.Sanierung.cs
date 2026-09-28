@@ -105,15 +105,21 @@ public sealed partial class GeonisWebGisClient
         if (!data.TryGetProperty("components", out var comps) || comps.ValueKind != JsonValueKind.Array)
             return WebGisSchreibErgebnis.Fehlgeschlagen("Leeres Sanierungsobjekt ohne components.");
 
+        // Jedes geplante Feld braucht genau EINE Komponente in der Maske. Frueher genuegte ein
+        // einziges gesetztes Feld: Fehlte etwa das Sanierungsjahr in der Maske, ging die Massnahme
+        // ohne Jahr hinaus und galt als angelegt (Pruefung 28.09.2026).
+        var luecke = FehlendeOderDoppelte(comps, felder.Keys);
+        if (luecke is not null)
+            return WebGisSchreibErgebnis.Fehlgeschlagen(luecke + " — Massnahme nicht angelegt.");
+
         // Alle Komponenten wie der Browser: {value, refId, missingValue}; Combo-Wert = Schluessel als Text.
         var komponenten = new List<Dictionary<string, object?>>();
-        var gesetzt = 0;
         foreach (var comp in comps.EnumerateArray())
         {
             if (!comp.TryGetProperty("refId", out var refEl)) continue;
             var refId = refEl.GetString() ?? "";
             object? wert = null;
-            if (felder.TryGetValue(refId, out var neu)) { wert = neu; gesetzt++; }
+            if (felder.TryGetValue(refId, out var neu)) wert = neu;
             else if (comp.TryGetProperty("keySelected", out var ks) && ks.ValueKind != JsonValueKind.Null)
                 wert = ks.ToString(); // Vorgabe der Maske (z.B. Art=4) beibehalten
             komponenten.Add(new Dictionary<string, object?>(StringComparer.Ordinal)
@@ -121,8 +127,6 @@ public sealed partial class GeonisWebGisClient
                 ["value"] = wert, ["refId"] = refId, ["missingValue"] = false,
             });
         }
-        if (gesetzt == 0)
-            return WebGisSchreibErgebnis.Fehlgeschlagen("Keine passende Komponente in der Sanierungsmaske gefunden.");
 
         // Subtyp bleibt wie im Browser konstant art:4 (Layout-Vorgabe); GEONIS uebernimmt den
         // gespeicherten Subtyp aus dem Feld Art (live geprueft 21.09.2026: Art=2 -> subtype art=2).
@@ -148,7 +152,39 @@ public sealed partial class GeonisWebGisClient
         var text = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
             return WebGisSchreibErgebnis.Fehlgeschlagen($"HTTP {(int)resp.StatusCode}: {Kurz(text)}");
-        return AntwortAuswerten(text);
+        return AntwortAuswerten(text, neueIdPflicht: true);
+    }
+
+    /// <summary>
+    /// Prueft, dass jede geplante refId genau einmal als Komponente vorkommt. Liefert die
+    /// Fehlerbeschreibung oder null. Gilt fuer Objekt und Massnahme gleich: Ein fehlendes Feld
+    /// darf nie still wegfallen, und eine doppelte Komponente ersetzt kein fehlendes.
+    /// </summary>
+    internal static string? FehlendeOderDoppelte(JsonElement comps, IEnumerable<string> geplant)
+    {
+        var anzahl = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var comp in comps.EnumerateArray())
+        {
+            if (!comp.TryGetProperty("refId", out var refEl)) continue;
+            var refId = refEl.GetString() ?? "";
+            anzahl[refId] = anzahl.TryGetValue(refId, out var n) ? n + 1 : 1;
+        }
+
+        var fehlend = new List<string>();
+        var doppelt = new List<string>();
+        foreach (var refId in geplant)
+        {
+            if (!anzahl.TryGetValue(refId, out var n)) fehlend.Add(refId);
+            else if (n > 1) doppelt.Add(refId);
+        }
+
+        if (fehlend.Count == 0 && doppelt.Count == 0) return null;
+        var teile = new List<string>();
+        if (fehlend.Count > 0)
+            teile.Add("Geplante Felder ohne Komponente in der WebGIS-Maske: " + string.Join(", ", fehlend));
+        if (doppelt.Count > 0)
+            teile.Add("Felder doppelt in der WebGIS-Maske: " + string.Join(", ", doppelt));
+        return string.Join("; ", teile);
     }
 
     /// <summary>getEmptyData fuer AWZ_UNTERHALT art=4 mit Sender-Kontext (Elternobjekt).</summary>
@@ -175,12 +211,16 @@ public sealed partial class GeonisWebGisClient
 
     /// <summary>
     /// Antwort von saveData: {newId, message, isFailure} — oder ein faultstring (Sitzung abgelaufen).
-    /// Erfolg gibt es NUR mit einem Erfolgsnachweis des Servers (isFailure:false, newId oder
-    /// message). Alles andere — kein JSON, kein Objekt, leeres Objekt — heisst «nicht als
-    /// geschrieben gewertet»: Ein falsches OK im Log ist schlimmer als ein Fehlschlag, den man
-    /// nachpruefen kann (Lehre vom 21.09.2026, hier zu Ende gedacht).
+    /// Erfolg gibt es NUR mit der Bestaetigung, die der Server bei jedem echten Speichern liefert:
+    /// <c>isFailure</c> als JSON-Wahrheitswert <c>false</c> (belegt 21.09.2026:
+    /// <c>{"newId":null,"message":"Das Objekt wurde gespeichert.","isFailure":false}</c>). Eine blosse
+    /// Nachricht («Validation failed») oder ein blosses <c>newId</c> belegen nichts (Pruefung
+    /// 28.09.2026). Beim Anlegen muss zusaetzlich eine neue Kennung vorliegen (belegt: «66921»),
+    /// sonst ist nicht nachgewiesen, dass eine Massnahme entstanden ist. Alles andere heisst «nicht
+    /// als geschrieben gewertet»: Ein falsches OK im Log ist schlimmer als ein Fehlschlag, den man
+    /// nachpruefen kann (Lehre vom 21.09.2026).
     /// </summary>
-    internal static WebGisSchreibErgebnis AntwortAuswerten(string text)
+    internal static WebGisSchreibErgebnis AntwortAuswerten(string text, bool neueIdPflicht = false)
     {
         if (text.Contains("\"faultstring\"", StringComparison.OrdinalIgnoreCase))
         {
@@ -214,12 +254,19 @@ public sealed partial class GeonisWebGisClient
             if ((hatIsFailure && f.ValueKind == JsonValueKind.True) || root.TryGetProperty("error", out _))
                 return WebGisSchreibErgebnis.Fehlgeschlagen("WebGIS meldet Fehler: " + (message ?? Kurz(text)));
 
-            var hatNewId = root.TryGetProperty("newId", out var id);
-            if (!hatIsFailure && !hatNewId && message is null)
+            if (!hatIsFailure || f.ValueKind != JsonValueKind.False)
                 return WebGisSchreibErgebnis.Fehlgeschlagen(
-                    "Antwort ohne Erfolgsnachweis (weder isFailure noch newId noch message) — nicht als geschrieben gewertet: " + Kurz(text.Trim(), 120));
+                    "Antwort ohne Speicherbestätigung (isFailure:false fehlt) — nicht als geschrieben gewertet: " + Kurz(text.Trim(), 120));
 
-            var neueId = hatNewId && id.ValueKind != JsonValueKind.Null ? id.ToString() : null;
+            var neueId = root.TryGetProperty("newId", out var id)
+                         && id.ValueKind is JsonValueKind.String or JsonValueKind.Number
+                ? id.ToString().Trim()
+                : null;
+            if (string.IsNullOrEmpty(neueId)) neueId = null;
+            if (neueIdPflicht && neueId is null)
+                return WebGisSchreibErgebnis.Fehlgeschlagen(
+                    "Antwort ohne neue Kennung — nicht belegt, dass die Massnahme angelegt wurde. Vor einem neuen Versuch im WebGIS nachsehen: "
+                    + Kurz(text.Trim(), 120));
             return WebGisSchreibErgebnis.Ok(neueId);
         }
     }

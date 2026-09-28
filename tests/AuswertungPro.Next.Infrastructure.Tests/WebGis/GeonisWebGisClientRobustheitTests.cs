@@ -146,6 +146,136 @@ public sealed class GeonisWebGisClientRobustheitTests
         Assert.Equal(0, h.SaveAufrufe); // nichts Halbes schreiben
     }
 
+    // ---------------- WG01 (Pruefung 28.09.2026): die vier bestaetigten Randfaelle ----------------
+
+    private const string ElternGid = "67BA283D-24AE-4218-86E9-E82442A91D97";
+
+    /// <summary>Leere Sanierungsmaske OHNE das Sanierungsjahr: Art (Vorgabe 4), Status, Verfahren.</summary>
+    private static string LeereMaskeOhneJahr() =>
+        "{\"objectKeyValue\":null,\"components\":[" +
+        "{\"refId\":\"" + WebGisSanierungFeldkarte.ArtRef + "\",\"keySelected\":4}," +
+        "{\"refId\":\"" + WebGisSanierungFeldkarte.StatusRef + "\",\"keySelected\":null}," +
+        "{\"refId\":\"" + WebGisSanierungFeldkarte.VerfahrenRef + "\",\"keySelected\":null}" +
+        "]}";
+
+    private static string LeereMaskeVollstaendig() =>
+        "{\"objectKeyValue\":null,\"components\":[" +
+        "{\"refId\":\"" + WebGisSanierungFeldkarte.ArtRef + "\",\"keySelected\":4}," +
+        "{\"refId\":\"" + WebGisSanierungFeldkarte.StatusRef + "\",\"keySelected\":null}," +
+        "{\"refId\":\"" + WebGisSanierungFeldkarte.VerfahrenRef + "\",\"keySelected\":null}," +
+        "{\"refId\":\"" + WebGisSanierungFeldkarte.SanierungsjahrRef + "\",\"value\":null}" +
+        "]}";
+
+    private static Dictionary<string, string> MassnahmeFelder() => new()
+    {
+        [WebGisSanierungFeldkarte.StatusRef] = "1",
+        [WebGisSanierungFeldkarte.SanierungsjahrRef] = "2026-01-01T00:00:00.000Z",
+    };
+
+    [Fact]
+    public async Task ErstelleSanierungAsync_sendet_nichts_wenn_ein_geplantes_feld_in_der_maske_fehlt()
+    {
+        // Heute genuegte EIN gesetztes Feld: Das Jahr fiel still weg, die Massnahme ging halb hinaus.
+        var h = new FakeHandler((req, body) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getEmptyData")) return LeereMaskeOhneJahr();
+            if (url.Contains("saveData")) return "{\"newId\":\"66921\",\"message\":\"Das Objekt wurde gespeichert.\",\"isFailure\":false}";
+            return "{}";
+        });
+
+        var res = await Client(h).ErstelleSanierungAsync(WebGisObjektart.Haltung, ElternGid, MassnahmeFelder());
+
+        Assert.False(res.Erfolg);
+        Assert.Contains(WebGisSanierungFeldkarte.SanierungsjahrRef, res.Fehler);
+        Assert.Equal(0, h.SaveAufrufe);
+    }
+
+    [Theory]
+    [InlineData("{\"message\":\"Validation failed\"}")]
+    [InlineData("{\"newId\":null}")]
+    [InlineData("{\"isFailure\":\"false\"}")]
+    public async Task SchreibeAsync_unklare_antwort_ist_kein_erfolg(string antwort)
+    {
+        var h = new FakeHandler((req, body) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getLayoutDataCombined")) return LayoutJson();
+            if (url.Contains("saveData")) return antwort;
+            return "{}";
+        });
+
+        var res = await Client(h).SchreibeAsync(
+            WebGisObjektart.Haltung, "g1", new Dictionary<string, string> { [ZustandRef] = "104" });
+
+        Assert.False(res.Erfolg);
+    }
+
+    [Theory]
+    [InlineData("{\"newId\":null}")]
+    [InlineData("{\"newId\":null,\"message\":\"Das Objekt wurde gespeichert.\",\"isFailure\":false}")]
+    [InlineData("{\"newId\":\"\",\"isFailure\":false}")]
+    [InlineData("{\"message\":\"Validation failed\"}")]
+    public async Task ErstelleSanierungAsync_ohne_neue_id_ist_kein_erfolg(string antwort)
+    {
+        // Ohne neue Kennung ist nicht belegt, dass eine Massnahme entstanden ist.
+        var h = new FakeHandler((req, body) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getEmptyData")) return LeereMaskeVollstaendig();
+            if (url.Contains("saveData")) return antwort;
+            return "{}";
+        });
+
+        var res = await Client(h).ErstelleSanierungAsync(WebGisObjektart.Haltung, ElternGid, MassnahmeFelder());
+
+        Assert.False(res.Erfolg);
+    }
+
+    [Fact]
+    public async Task ErstelleSanierungAsync_bestaetigte_neue_id_ist_erfolg()
+    {
+        var h = new FakeHandler((req, body) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getEmptyData")) return LeereMaskeVollstaendig();
+            if (url.Contains("saveData")) return "{\"newId\":\"66921\",\"file\":null,\"message\":\"Das Objekt wurde gespeichert.\",\"isFailure\":false}";
+            return "{}";
+        });
+
+        var res = await Client(h).ErstelleSanierungAsync(WebGisObjektart.Haltung, ElternGid, MassnahmeFelder());
+
+        Assert.True(res.Erfolg, res.Fehler);
+        Assert.Equal("66921", res.NeueId);
+    }
+
+    [Fact]
+    public async Task SchreibeAsync_doppelte_komponente_ersetzt_kein_fehlendes_feld()
+    {
+        // Die Maske liefert den Zustand zweimal, die Bemerkung gar nicht. Der alte Anzahlvergleich
+        // (2 Komponenten fuer 2 Felder) liess das als vollstaendig durch.
+        var layout =
+            "[{\"components\":[]}," +
+            "{\"objectKeyValue\":\"g1\",\"components\":[" +
+            "{\"refId\":\"" + ZustandRef + "\",\"keySelected\":102}," +
+            "{\"refId\":\"" + ZustandRef + "\",\"keySelected\":102}" +
+            "]}]";
+        var h = new FakeHandler((req, body) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("getLayoutDataCombined")) return layout;
+            if (url.Contains("saveData")) return Gespeichert;
+            return "{}";
+        });
+
+        var res = await Client(h).SchreibeAsync(
+            WebGisObjektart.Haltung, "g1",
+            new Dictionary<string, string> { [ZustandRef] = "104", [BemRef] = "Saniert 2026" });
+
+        Assert.False(res.Erfolg);
+        Assert.Equal(0, h.SaveAufrufe);
+    }
+
     // ---------------- B3: Sitzung auf JEDEM Aufruf pruefen ----------------
 
     [Fact]

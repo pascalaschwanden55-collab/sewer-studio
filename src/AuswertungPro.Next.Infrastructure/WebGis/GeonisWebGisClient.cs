@@ -85,6 +85,14 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
         if (verstoesse.Count > 0)
             return WebGisSchreibErgebnis.Fehlgeschlagen(string.Join(" ", verstoesse));
 
+        // Ein geplantes Feld ohne Komponente heisst: falsche refId oder anderes Maskenlayout. Dann
+        // wird NICHTS geschrieben — sonst gaelte ein halb geschriebenes Objekt als Erfolg (Pruefung
+        // 22.09.2026). Seit 28.09.2026 als Mengenvergleich: Eine doppelte Komponente fuellte beim
+        // alten Anzahlvergleich die Luecke eines fehlenden Feldes.
+        var luecke = FehlendeOderDoppelte(comps, felder.Keys);
+        if (luecke is not null)
+            return WebGisSchreibErgebnis.Fehlgeschlagen(luecke + " — Objekt nicht geschrieben.");
+
         // 2) Nur die geaenderten Komponenten uebernehmen, neuen Wert setzen.
         var modified = new List<Dictionary<string, object?>>();
         foreach (var comp in comps.EnumerateArray())
@@ -101,19 +109,6 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
                 ["value"] = neu, ["refId"] = refId, ["missingValue"] = false,
             });
         }
-        if (modified.Count != felder.Count)
-        {
-            // Ein geplantes Feld ohne Komponente heisst: falsche refId oder anderes Maskenlayout.
-            // Dann wird NICHTS geschrieben — sonst gaelte ein halb geschriebenes Objekt als Erfolg
-            // (Pruefung 22.09.2026).
-            var fehlend = new List<string>();
-            foreach (var refId in felder.Keys)
-                if (!modified.Exists(m => (string?)m["refId"] == refId)) fehlend.Add(refId);
-            return WebGisSchreibErgebnis.Fehlgeschlagen(
-                "Geplante Felder ohne Komponente in der WebGIS-Maske: " + string.Join(", ", fehlend)
-                + " — Objekt nicht geschrieben.");
-        }
-
         // 3) Kopf des Datenobjekts uebernehmen, Geometrie weglassen, components ersetzen.
         var payload = new Dictionary<string, object?>();
         foreach (var p in data.EnumerateObject())
