@@ -30,6 +30,14 @@ public sealed partial class ShellViewModel
         window.ShowDialog();
     }
 
+    /// <summary>Aufgabe 5 (Programmidentitaet): «Über SewerStudio». Der Grafikkartenname kommt vom
+    /// bereits laufenden <see cref="Monitor"/> (synchron, kein neuer Sensor).</summary>
+    private void ShowAbout()
+    {
+        var window = new Views.Windows.AboutWindow(Monitor.GpuName, _sp.Dialogs);
+        window.ShowDialog();
+    }
+
     public sealed partial class NavItem : ObservableObject
     {
         private bool _isAvailable = true;

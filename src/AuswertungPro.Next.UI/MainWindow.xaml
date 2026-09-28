@@ -311,19 +311,11 @@
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"
                                Margin="12,0,4,0"/>
-                    <TextBlock Text="{Binding Project.SchaechteData.Count, StringFormat={}{0} Schaechte}"
+                    <TextBlock Text="{Binding Project.SchaechteData.Count, StringFormat={}{0} Schächte}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                FontSize="{DynamicResource TextXS}"
                                VerticalAlignment="Center"
                                Margin="0,0,4,0"/>
-                    <StackPanel Orientation="Horizontal" Visibility="Collapsed">
-                    <TextBlock Text="{Binding Project.Data.Count, StringFormat='  ·  {0} Haltungen'}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="{DynamicResource TextXS}" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding Project.SchaechteData.Count, StringFormat='  ·  {0} Schächte'}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                    </StackPanel>
                 </StackPanel>
                 <Grid VerticalAlignment="Center" ClipToBounds="True">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -486,14 +478,14 @@
                     <StackPanel Orientation="Horizontal">
                         <Border Width="4" Height="20" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,10,0"
                                 Background="{DynamicResource AccentBrush}"/>
-                        <TextBlock Text="SEWER STUDIO" FontSize="{DynamicResource TextL}" FontWeight="Bold"
+                        <TextBlock Text="SewerStudio" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                                    Foreground="{DynamicResource TextBrush}"
                                    FontFamily="{DynamicResource FontMono}"/>
                     </StackPanel>
                     <TextBlock Text="{Binding SpeicherstandText}" Margin="14,6,0,0"
                                Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextS}"
                                TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="48"
-                               ToolTip="{Binding SpeicherstandText}"/>
+                               ToolTip="{Binding ProjektPfad}"/>
                     <Border Height="1" Margin="0,16,0,0" Background="{DynamicResource BorderBrush}"/>
                 </StackPanel>
 

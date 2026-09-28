@@ -17,6 +17,11 @@ public partial class ShellViewModel
     public HaltungRecord? NaechsteAufgabe { get; private set; }
     public string NaechsteAufgabeText => IsProjectReady ? NaechsteAufgabeRegel.ChipText(NaechsteAufgabe) : string.Empty;
     public string SpeicherstandText => ShellNovaKopfzeile.Speicherstand(IsProjectReady ? Project.Name : null, _letzteSpeicherungLokal, IsProjectReady && Project.Dirty);
+
+    /// <summary>Aufgabe 5 (Programmidentitaet): voller Projektpfad als ToolTip unter der Wortmarke —
+    /// die Kopfzeile zeigt weiterhin den Projektnamen, der Dateipfad steht nur im ToolTip.</summary>
+    public string? ProjektPfad => IsProjectReady ? _sp.Settings.LastProjectPath : null;
+
     public IRelayCommand NaechsteAufgabePruefenCommand { get; private set; } = null!;
 
     /// <summary>KI-Bereitschaft im Leisten-Aufklapper (Task 7, BEWERTUNG N10).</summary>
@@ -83,6 +88,7 @@ public partial class ShellViewModel
         OnPropertyChanged(nameof(NaechsteAufgabe));
         OnPropertyChanged(nameof(NaechsteAufgabeText));
         OnPropertyChanged(nameof(SpeicherstandText));
+        OnPropertyChanged(nameof(ProjektPfad));
         NaechsteAufgabePruefenCommand?.NotifyCanExecuteChanged();
     }
 

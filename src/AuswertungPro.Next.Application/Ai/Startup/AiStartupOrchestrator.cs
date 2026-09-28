@@ -65,7 +65,7 @@ public static class AiStartupOrchestrator
         {
             warnings.Add(
                 "Ollama-Adresse ist nicht lokal. Ollama besitzt keine eingebaute Anmeldung; " +
-                "Sewer Studio startet deshalb keinen eigenen Ollama-Prozess fuer diese Adresse.");
+                "SewerStudio startet deshalb keinen eigenen Ollama-Prozess fuer diese Adresse.");
         }
 
         Report("Pruefe Ollama...");

@@ -422,14 +422,19 @@ namespace AuswertungPro.Next.UI
                 Fluent.GetBackdrop(window) == FluentBackdrop.Mica);
         }
 
-        private static System.Windows.Media.ImageSource? LoadDefaultWindowIcon()
+        // Aufgabe 5 (Programmidentitaet): internal statt private, damit AboutWindow dasselbe
+        // geladene Programmsymbol fuer die grosse Anzeige im Fensterinhalt wiederverwenden kann,
+        // ohne die Ladelogik ein zweites Mal zu schreiben.
+        internal static System.Windows.Media.ImageSource? LoadDefaultWindowIcon()
         {
             if (_appWindowIcon is not null)
             {
                 return _appWindowIcon;
             }
 
-            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+            // Aufgabe 5 (Programmidentitaet): Fenstersymbol ist das Programmsymbol (app.ico, dasselbe
+            // wie ApplicationIcon im csproj); das Kundenlogo bleibt unveraendert in Berichten/Dossiers.
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "app.ico");
             if (!File.Exists(iconPath))
             {
                 return null;

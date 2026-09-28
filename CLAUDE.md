@@ -182,6 +182,56 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   Button — alle vier Male rot, nach Ruecknahme wieder gruen) UND dass eine regelgranulare
   Ausnahme nicht auf andere Regeln derselben Datei ausstrahlt (lokaler Stil in
   `TrainingStudioWindow`, das nur von Regel (a) befreit ist, faengt Regel (c) trotzdem ab).
+- **Aufgabe 5 — Programmidentitaet.** Das Fenstersymbol kommt jetzt aus `Assets/Brand/app.ico`
+  (`App.LoadDefaultWindowIcon`, dieselbe Datei wie `ApplicationIcon` im csproj) statt aus dem
+  Uri-Wappen-PNG; das Kundenlogo bleibt in Berichten/Dossiers/Excel unveraendert das Wappen —
+  nur das Fenstersymbol selbst wechselt. `LoadDefaultWindowIcon` ist `internal` (statt `private`),
+  damit ein zweiter Aufrufer dasselbe geladene Symbol wiederverwenden kann, ohne die Ladelogik zu
+  duplizieren.
+  Neues Fenster **„Über SewerStudio"** (`Views/Windows/AboutWindow`, `NovaDialogHeader` +
+  `DialogButtonBar`, Knopfregel: fuenf `SecondaryButton`, kein Hauptknopf, „Schliessen"
+  `IsCancel="True"`). Die reinen Angaben (Name/Version aus `AppIdentity`, Build-Datum aus dem
+  Schreibzeitpunkt der ausgefuehrten Assembly-Datei — kein neues Assembly-Attribut noetig,
+  Windows/.NET aus `RuntimeInformation`, optional GPU-Name vom Aufrufer, drei Ordner aus
+  `AppSettings.AppDataDir`) liefert der WPF-freie `Services/AboutInfoProvider`
+  (`AboutSystemInfo`), damit sie ohne WPF-Testprozess pruefbar bleiben. **Kein Git-Commit**: Das
+  Projekt hat kein Assembly-Attribut dafuer (kein `AssemblyMetadata`/`InformationalVersion` mit
+  Commit-Hash); das neu einzufuehren waere neue Build-Infrastruktur, nicht „ohne Aufwand
+  verfuegbar" — deshalb bewusst weggelassen statt erfunden. Der Ordner „Einstellungen" zeigt
+  denselben Pfad wie „Daten" (`settings.json` liegt direkt in `AppDataDir`, kein eigener
+  Unterordner) — ehrlich derselbe Ordner statt ein erfundener zweiter Pfad. Die drei
+  „Öffnen"-Knoepfe nutzen den bestehenden `SettingsPathWorkflow.OpenFolder(path, dialogs)` (wie
+  die Einstellungsseite); „Systeminfo kopieren" faengt eine gesperrte Zwischenablage ab wie
+  `NovaDialogWindow.OnKopieren` (Aufgabe 1). Geoeffnet wird ueber `ShellViewModel.
+  ShowAboutCommand` (`Monitor.GpuName` synchron mitgegeben, kein neuer Sensor) — noch OHNE
+  Hilfe-Menuepunkt; Aufgabe 6 verdrahtet ihn.
+  **Schreibweise „SewerStudio"** (kein Leerzeichen) programmweit in sichtbaren Texten: die
+  Seitenleisten-Wortmarke zeigt „SewerStudio" (Grossbuchstaben-Look kam nur vom Literaltext
+  „SEWER STUDIO", nicht von echtem Kapitaelchen-Styling — `FontFamily=FontMono`/`Bold` bleiben),
+  `AiDocumentationPdfBuilder` (PDF-Kopf/Fuss) und die `AiStartupOrchestrator`-Warnung sind
+  korrigiert. Waechter `DesignAuditProgrammidentitaetTests` prueft ALLE sichtbaren XAML-Attribute
+  (`Text`/`Content`/`Title`/`Header`/`ToolTip`) im UI-Projekt auf „Sewer Studio"/„AuswertungPro" —
+  bewusst NUR XAML, nicht C#-Quellcode (dort steht „AuswertungPro" programmweit in jedem
+  Namensraum/`using`, eine Textsuche dort waere kein sinnvoller Waechter fuer Oberflaechentexte).
+  Statuszeile `MainWindow.xaml`: „Schaechte" → „Schächte" und die tote, mit
+  `Visibility="Collapsed"` ausgeblendete Doppelzeile (dieselben zwei Werte nochmals, MIT
+  Umlauten) sind entfernt. Die Zeile unter der Wortmarke (`SpeicherstandText`) zeigte bereits den
+  Projektnamen, nicht den Dateinamen; sie bekommt zusaetzlich den vollen Projektpfad als ToolTip
+  (`ShellViewModel.Nova.cs`, neue Eigenschaft `ProjektPfad` aus `_sp.Settings.LastProjectPath`,
+  keine neue Fachlogik).
+  **Im isolierten WPF-Kindprozess kann `Dispatcher.Invoke(…, DispatcherPriority.ApplicationIdle)`
+  nach `Show()` echt haengen bleiben** — real gemessen an `AboutWindowIsolatedSmokeTests`: der
+  Aufruf blockierte dort 60 s ohne Ausnahme, mit UND ohne `ui:WindowFx.Entrance="True"` am
+  Fenster; die genaue Ursache ist damit NICHT auf die Eintritts-Animation eingegrenzt (die
+  urspruengliche Vermutung anhand des Kommentars in `BeobachtungenWindowIsolatedSmokeTests` hat
+  sich bei der Gegenprobe ohne `WindowFx.Entrance` nicht bestaetigt). Belegt und ab sofort die
+  Regel: nach `Show()` in einem `[IsolatedWpfFact]`-Kindprozess `UpdateLayout()` und
+  `Assert.True(window.IsLoaded)` statt eines `ApplicationIdle`-Invoke verwenden (Muster wie
+  `BeobachtungenWindowIsolatedSmokeTests`); `DispatcherPriority.Send` liess in derselben Probe
+  denselben Aufruf sofort durchlaufen, ist als Test-Ruhepunkt aber bedeutungslos (er wartet auf
+  nichts). Nie ungeprueft annehmen, dass ein bestehender ApplicationIdle-Invoke-Test (z. B.
+  `NovaDialogHeaderIsolatedSmokeTests`) denselben Weg fuer ein neues Fenster sicher macht.
+  Test `AboutWindowIsolatedSmokeTests` (Kindprozess-Muster).
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

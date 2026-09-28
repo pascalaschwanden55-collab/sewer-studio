@@ -64,7 +64,7 @@ public sealed class AiDocumentationPdfBuilder
 
                 page.Header().Column(col =>
                 {
-                    col.Item().Text("Sewer Studio - KI Uebersicht").FontSize(18).Bold();
+                    col.Item().Text("SewerStudio - KI Uebersicht").FontSize(18).Bold();
                     col.Item().Text($"Stand: {createdText}").FontSize(9).FontColor(Colors.Grey.Darken2);
                 });
 
@@ -91,7 +91,7 @@ public sealed class AiDocumentationPdfBuilder
                                    "Training erfolgt beim Speichern; Status ueber \"KI-Status\".").FontSize(9);
                 });
 
-                page.Footer().AlignRight().Text("Sewer Studio – KI").FontSize(8).FontColor(Colors.Grey.Darken1);
+                page.Footer().AlignRight().Text("SewerStudio – KI").FontSize(8).FontColor(Colors.Grey.Darken1);
             });
         }).GeneratePdf();
     }

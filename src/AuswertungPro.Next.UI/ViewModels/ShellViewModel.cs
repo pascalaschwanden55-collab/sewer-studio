@@ -82,6 +82,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     public IRelayCommand SaveAsProjectCommand { get; }
     public IRelayCommand OpenPriceCatalogCommand { get; }
     public IRelayCommand OpenTemplateEditorCommand { get; }
+    /// <summary>Optikanalyse 28.09.2026, Aufgabe 5 («Programmidentitaet»): oeffnet «Über SewerStudio».
+    /// Aufgabe 6 verdrahtet dafuer den Hilfe-Menuepunkt; dieser Befehl ist der eine dafuer vorgesehene
+    /// Weg und wird bis dahin von keiner Oberflaeche aufgerufen.</summary>
+    public IRelayCommand ShowAboutCommand { get; }
     public IRelayCommand ToggleFocusModeCommand { get; }
     public IRelayCommand SwitchProjectCommand { get; }
     [ObservableProperty] private bool _isProjectReady;
@@ -245,6 +249,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         SaveAsProjectCommand = new RelayCommand(SaveProjectAs, CanSaveProjectFromShell);
         OpenPriceCatalogCommand = new RelayCommand(OpenPriceCatalog);
         OpenTemplateEditorCommand = new RelayCommand(OpenTemplateEditor);
+        ShowAboutCommand = new RelayCommand(ShowAbout);
         ToggleFocusModeCommand = new RelayCommand(() => IsFocusMode = !IsFocusMode);
 
         InitNova();
