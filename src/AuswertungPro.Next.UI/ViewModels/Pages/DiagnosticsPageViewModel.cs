@@ -81,20 +81,19 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject
                 ? $"{result.UserMessage}  {result.PackagePath}"
                 : result.UserMessage;
 
-            if (result.Success)
+            // Ein Teilerfolg (einzelne Logdateien nicht lesbar) muss gelesen werden koennen -
+            // nur ein sauberer, vollstaendiger Erfolg wird zum Toast (Aufgabe 2, Fix-Runde 1).
+            if (result.Success && result.SkippedLogFileCount == 0 && _toasts is not null)
             {
-                if (_toasts is not null)
-                {
-                    var pfad = result.PackagePath;
-                    _toasts.Success(
-                        "Diagnosepaket wurde erstellt.",
-                        "Datei öffnen",
-                        () => ExplorerRevealService.TryReveal(pfad, out _));
-                }
-                else
-                {
-                    _dialogs.Info(PackageStatus, "Diagnosepaket");
-                }
+                var pfad = result.PackagePath;
+                _toasts.Success(
+                    result.UserMessage,
+                    "Datei öffnen",
+                    () => ExplorerRevealService.TryReveal(pfad, out _));
+            }
+            else if (result.Success)
+            {
+                _dialogs.Info(PackageStatus, "Diagnosepaket");
             }
             else
             {

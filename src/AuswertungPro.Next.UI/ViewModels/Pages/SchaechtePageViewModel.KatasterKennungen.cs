@@ -27,7 +27,9 @@ public sealed partial class SchaechtePageViewModel
         if (anzahl > 0)
         {
             _shell.MarkProjectDirty(); ScheduleAutoSave(); FelderExternErgaenzt?.Invoke();
-            var meldung = $"GeoShop: {anzahl} Schächte abgeglichen. Bitte das Projekt speichern.";
+            // ScheduleAutoSave() speichert bereits selbst - kein "Bitte speichern" mehr noetig
+            // (gleiche Korrektur wie beim Haltungen-Gegenstueck DataPageViewModel.KatasterKennungen.cs).
+            var meldung = $"GeoShop: {anzahl} Schächte abgeglichen.";
             if (_toasts is not null)
                 _toasts.Success(meldung);
             else

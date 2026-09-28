@@ -86,7 +86,8 @@ public sealed partial class DiagnosticsPackageService : IDiagnosticsPackageServi
                 includedLogCount,
                 skippedLogCount == 0
                     ? $"Diagnosepaket erstellt ({includedLogCount} Logdatei(en))."
-                    : $"Diagnosepaket erstellt ({includedLogCount} Logdatei(en), {skippedLogCount} nicht lesbar).");
+                    : $"Diagnosepaket erstellt ({includedLogCount} Logdatei(en), {skippedLogCount} nicht lesbar).",
+                skippedLogCount);
         }
         catch (OperationCanceledException)
         {

@@ -91,8 +91,38 @@ public sealed class DiagnosticsPageViewModelTests
         await viewModel.CreatePackageCommand.ExecuteAsync(null);
 
         Assert.Null(dialogs.InfoMessage);
-        Assert.Contains("Diagnosepaket wurde erstellt", toasts.Meldung, StringComparison.Ordinal);
+        Assert.Contains("Diagnosepaket erstellt", toasts.Meldung, StringComparison.Ordinal);
         Assert.Equal("Datei öffnen", toasts.AktionText);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: Ein Teilerfolg (einzelne Logdateien nicht lesbar) darf nicht zum Toast werden -
+    /// der Benutzer muss die Anzahl der nicht lesbaren Dateien sehen und wegklicken koennen.
+    /// </summary>
+    [Fact]
+    public async Task Diagnosepaket_mit_nicht_lesbaren_logs_bleibt_dialog_auch_mit_toastdienst()
+    {
+        var destination = Path.Combine(Path.GetTempPath(), "SewerStudio-Diagnose-Test.zip");
+        var dialogs = new FakeDialogs { SavePath = destination };
+        var toasts = new ToastFake();
+        var packages = new FakeDiagnosticsPackageService(
+            new DiagnosticsPackageResult(
+                true,
+                destination,
+                2,
+                "Diagnosepaket erstellt (2 Logdatei(en), 1 nicht lesbar).",
+                SkippedLogFileCount: 1));
+        var viewModel = new DiagnosticsPageViewModel(
+            new FakeLogTailReader(new LogTailReadResult(false, [], null)),
+            packages,
+            dialogs,
+            toasts: toasts);
+
+        await viewModel.CreatePackageCommand.ExecuteAsync(null);
+
+        Assert.Null(toasts.Meldung);
+        Assert.Contains("1 nicht lesbar", dialogs.InfoMessage, StringComparison.Ordinal);
+        Assert.Contains(destination, dialogs.InfoMessage, StringComparison.Ordinal);
     }
 
     [Fact]
