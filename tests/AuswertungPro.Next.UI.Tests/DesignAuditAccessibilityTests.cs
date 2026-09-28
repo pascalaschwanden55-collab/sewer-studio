@@ -19,13 +19,15 @@ public sealed class DesignAuditAccessibilityTests
     }
 
     [Fact]
-    public void Import_toolbar_wraps_instead_of_clipping_actions()
+    public void Import_seite_scrollt_statt_Aktionen_abzuschneiden()
     {
+        // Seit der Neuordnung vom 28.09.2026 stehen die Importwege in Karten untereinander statt
+        // in einer Werkzeugleiste. Damit auf Full HD bei 150 Prozent nichts abgeschnitten wird,
+        // liegt die ganze Seite in einem senkrechten ScrollViewer ohne waagrechten Bildlauf.
         var xaml = File.ReadAllText(
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "ImportPage.xaml"));
 
-        Assert.Contains("<WrapPanel Orientation=\"Horizontal\" HorizontalAlignment=\"Left\">", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("<StackPanel Orientation=\"Horizontal\">\n                    <Button Command=\"{Binding ImportKanalProjektCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("<ScrollViewer VerticalScrollBarVisibility=\"Auto\" HorizontalScrollBarVisibility=\"Disabled\">", xaml, StringComparison.Ordinal);
     }
 
     [Fact]
