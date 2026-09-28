@@ -60,25 +60,14 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     private readonly IKinsImportService? _kins;
     private readonly IIbakImportService? _ibak;
 
-    // R4: optionaler KI-Schiedsrichter (Qwen via Ollama) fuer unklare PDFs.
-    private readonly PdfKiSchiedsrichter? _kiSchiedsrichter;
-
-    // Task 4: optionaler name-basierter Protokoll-Verteiler (narrensicher, Dateiname-basiert).
-    private readonly INameBasedProtocolDistributor? _protocolDistributor;
     private readonly IPlanPdfImporter _planPdfImporter;
     private readonly IProjectRestorePointService _projectRestorePoints;
     private readonly IImportSourceArchiver _sourceArchiver;
-    private readonly IDichtheitImportDistributor _dichtheitDistributor;
-    private readonly IKanalImportDistributor _kanalDistributor;
     private readonly IProjectStructureInitializer _projectStructure;
     private readonly IKanalExportDetectionService _exportDetector;
     private readonly IKinsDvdTextEnricher _kinsDvdTextEnricher;
     private readonly IKinsDbfWhitelistEnricher _kinsDbfWhitelistEnricher;
-    private readonly IKinsGesamtprotokollLocator _kinsGesamtprotokollLocator;
-    private readonly IImportMediaDistributionService _mediaDistributor;
-
-    // Derselbe Dienst wie der manuelle Befehl "Schacht Verteilen" — kein zweiter Splitter.
-    private readonly IShaftDistributionService _shaftDistribution;
+    private readonly ImportMediaPhase _mediaPhase;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
@@ -100,24 +89,28 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         IImportMediaDistributionService? mediaDistributor = null,
         IShaftDistributionService? shaftDistribution = null)
     {
-        _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
         _winCan = winCan ?? throw new ArgumentNullException(nameof(winCan));
         _kins   = kins;
         _ibak   = ibak;
-        _protocolDistributor = protocolDistributor;
         _planPdfImporter = planPdfImporter ?? new PlanPdfImportService();
         _projectRestorePoints = projectRestorePoints ?? new ProjectRestorePointStore();
         _sourceArchiver = sourceArchiver ?? new ImportSourceArchiveService();
-        _dichtheitDistributor = dichtheitDistributor ?? new DichtheitImportDistributionService();
-        _kanalDistributor = kanalDistributor ?? new KanalImportDistributionService();
         _projectStructure = projectStructure ?? new ProjectStructureInitializer();
         _exportDetector = exportDetector ?? new KanalExportDetectionService();
         _kinsDvdTextEnricher = kinsDvdTextEnricher ?? Kins.KinsDvdTextEnricher.Current;
         _kinsDbfWhitelistEnricher = kinsDbfWhitelistEnricher ?? Kins.KinsDbfWhitelistEnricher.Current;
-        _kinsGesamtprotokollLocator = kinsGesamtprotokollLocator ?? Kins.KinsGesamtprotokollLocator.Current;
-        _mediaDistributor = mediaDistributor ?? new MediaDistributionService();
-        _shaftDistribution = shaftDistribution ?? new ShaftDistributionService();
+        _mediaPhase = new ImportMediaPhase(
+            mediaDistributor ?? new MediaDistributionService(),
+            // Optional: name-basierter Protokoll-Verteiler (narrensicher, Dateiname-basiert).
+            protocolDistributor,
+            kanalDistributor ?? new KanalImportDistributionService(),
+            dichtheitDistributor ?? new DichtheitImportDistributionService(),
+            // Derselbe Dienst wie der manuelle Befehl "Schacht Verteilen" — kein zweiter Splitter.
+            shaftDistribution ?? new ShaftDistributionService(),
+            kinsGesamtprotokollLocator ?? Kins.KinsGesamtprotokollLocator.Current,
+            // R4: optionaler KI-Schiedsrichter (Qwen via Ollama) fuer unklare PDFs.
+            kiSchiedsrichter);
     }
 
     /// <summary>
@@ -190,7 +183,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             messages.Add(text);
         }
         var parseContext = ctx is null ? null : new ImportRunContext(ct,
-            new Fortschritt<ImportProgress>(p => ctx.Progress?.Report(p with
+            new SynchronerFortschritt<ImportProgress>(p => ctx.Progress?.Report(p with
             {
                 Phase = ImportFortschrittText.Phase(3, "Quelldaten")
             })), ctx.Log, ctx.DryRun, ctx.CollectionLock, ctx.FileStaging);
@@ -504,112 +497,13 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         ct.ThrowIfCancellationRequested();
         try
         {
-            // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) — KEINE Videos/Original-PDFs und KEINE Schacht-
-            //     Kopie (Schächte kommen in 7c als seiten-gruppierte Protokolle; Videos/Protokolle in 7b).
-            var mediaResult = DistributePhotos(projectFolder, project, ctx, ct);
-            messages.AddRange(mediaResult.Messages);
-            fehlerbilanz.Melde("Fotoverteilung", mediaResult.Errors, mediaResult.Messages);
-
-            // 7b) Video + ORIGINAL-Protokoll (NUR das maßgebliche PDF, ein PDF/Haltung) flach+datumsbenannt
-            //     verteilen; beide relativ verlinkt (PDF_Path = Original). Das eigene _E-Protokoll wird hier
-            //     NICHT erzeugt — das macht der ProtocolRegenerationService („Protokoll neu generieren").
-            //     KINS: Der Seiten-Split laeuft auf dem expliziten Gesamtprotokoll aus der Quelle
-            //     (*_Protokoll.pdf) — die Auto-Wahl "groesste Archiv-PDF" traefe sonst Plaene/fremde PDFs.
-            Melde(5, "Haltungsprotokolle", "Videos und Protokolle zuordnen …");
-            var kinsGesamtprotokoll = det.Format == KanalExportFormat.Kins
-                ? _kinsGesamtprotokollLocator.Finde(sourceFolder)
-                : null;
-            var archivedPdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
-            var recordCountBeforeDistribution = project.Data.Count;
-
-            // Name-basierte Protokoll-Verteilung zuerst (narrensicher, Dateiname-basiert).
-            // CollectionLock aus dem Lauf-Kontext mitgeben: das Anlegen neuer Schächte läuft ggf. auf
-            // einem Hintergrund-Thread und mutiert die UI-gebundene SchaechteData-Collection.
-            var nameBased = _protocolDistributor?.Distribute(
-                project,
-                projectFolder,
-                archivedPdfDir,
-                ctx?.CollectionLock,
-                ctx?.FileStaging);
-            if (nameBased is not null)
-            {
-                messages.Add($"Protokolle name-basiert verteilt: {nameBased.HaltungProtokolle} Haltungen, {nameBased.SchachtProtokolle} Schächte, {nameBased.SchaechteAngelegt} Schächte angelegt.");
-                foreach (var nz in nameBased.NichtZugeordnet)
-                    messages.Add($"Protokoll nicht zugeordnet: {nz}");
-
-                // ProtocolDistributionReport.Meldungen sind die Kopierfehler je Datei.
-                // Sie wurden bis 2026-09-05 gesammelt, aber nie gelesen: Ein Protokoll
-                // konnte still verloren gehen, waehrend der Bericht "0 Fehler" meldete.
-                foreach (var meldung in nameBased.Meldungen)
-                    messages.Add($"Protokoll nicht kopiert: {meldung}");
-                fehlerbilanz.Melde(
-                    "Name-basierte Protokollverteilung",
-                    nameBased.Meldungen.Count,
-                    nameBased.Meldungen);
-            }
-
-            // Der Sammelprotokoll-Split laeuft IMMER, wenn es ueberhaupt ein Protokoll gibt.
-            //
-            // Bis 2026-09-05 schaltete ein einziger name-basierter Treffer ihn global ab:
-            // Ein Ordner mit einem Einzelprotokoll fuer Haltung A und einem Sammelprotokoll
-            // fuer B und C liess B und C leer. Der Schutz gegen doppelte Verknuepfungen
-            // liegt jetzt dort, wo er hingehoert — eine schon versorgte Haltung behaelt in
-            // KanalImportDistributionService ihren Verweis aus dem Einzelprotokoll.
-            Melde(5, "Haltungsprotokolle", "Sammelprotokolle aufteilen und Videos verteilen …");
-            var distResult = _kanalDistributor.Distribute(
-                project, projectFolder, archivedPdfDir, sourceFolder,
-                splitPdf: det.Format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null,
-                primaryProtocolPdf: kinsGesamtprotokoll,
-                fileStaging: ctx?.FileStaging);
-            messages.AddRange(distResult.Messages);
-            fehlerbilanz.Melde("Video- und Protokollverteilung", distResult.Errors, distResult.Messages);
-            var recordsCreatedByDistribution = Math.Max(0, project.Data.Count - recordCountBeforeDistribution);
-            if (recordsCreatedByDistribution > 0)
-            {
-                found += recordsCreatedByDistribution;
-                created += recordsCreatedByDistribution;
-                messages.Add($"PDF-Fallback: {recordsCreatedByDistribution} Haltungen aus Original-Protokollen angelegt.");
-            }
-
-            // 7c) Dichtheitspruefungsprotokolle (DP) aus der Quelle je Haltung verteilen
-            //     (<JJJJMMTT>_<H>_DP.pdf) — Kanalfernseh- UND DP-Protokolle liegen damit
-            //     gemeinsam im Haltungen_Verteilt-Ordner. Sicher erkannte DP-PDFs
-            //     duerfen auch in neutralen Dokumente-Ordnern liegen; die KI-Zweitmeinung
-            //     bleibt auf DP-/Dichtheits-Ordner begrenzt.
-            Melde(5, "Haltungsprotokolle", "Dichtheitsprotokolle verteilen …");
-            var dpResult = _dichtheitDistributor.Distribute(
-                project,
-                projectFolder,
-                sourceFolder,
-                _kiSchiedsrichter,
-                ctx?.FileStaging);
-            messages.AddRange(dpResult.Messages);
-            if (dpResult.Verteilt > 0 || dpResult.NichtZugeordnet > 0 || dpResult.Uebersprungen > 0)
-                messages.Add($"Dichtheitspruefung: {dpResult.Verteilt} Protokolle verteilt, {dpResult.NichtZugeordnet} nicht zugeordnet, {dpResult.Uebersprungen} bereits vorhanden.");
-
-            // 7d) Schachtprotokolle aus dem Archiv verteilen.
-            //
-            // Bis 2026-09-05 blieb dieser Schritt dem manuellen Befehl „Schacht Verteilen"
-            // ueberlassen — ein vollstaendiger Projektimport liess die Schaechte also leer.
-            // Es laeuft derselbe Dienst wie beim manuellen Weg, dieselbe Staging-Sitzung
-            // und dieselbe Verknuepfungsregel; ein zweiter Splitter entsteht nicht.
-            //
-            // Die Sorge dahinter bleibt gueltig und ist jetzt in der Regel abgebildet:
-            // Es wird KEIN Schacht angelegt, und ein vorhandener Verweis wird nicht
-            // ersetzt. Ein Haltungsprotokoll faellt beim Schacht-Parser durch und wird
-            // gemeldet, nicht an beide Endschaechte gehaengt.
-            Melde(6, "Schachtprotokolle", "Schachtprotokolle prüfen und verteilen …");
-            var schachtMeldungen = VerteileSchachtprotokolle(
-                project, projectFolder, archivedPdfDir, ctx?.FileStaging, fehlerbilanz,
-                new Fortschritt<ShaftDistributionProgress>(p => ctx?.Progress?.Report(
-                    new ImportProgress(ImportFortschrittText.Phase(6, "Schachtprotokolle"), p.Processed,
-                        p.Total, "Schachtprotokolle prüfen und verteilen …", p.CurrentFile))));
-            messages.AddRange(schachtMeldungen);
-
-            messages.Add(
-                $"Verteilung: {mediaResult.FilesCopied} Fotos/Dateien, {distResult.VideosDistributed} Videos, " +
-                $"{distResult.OriginalProtocolsDistributed} Original-Protokolle, " +
-                $"{mediaResult.Errors + distResult.Errors} Fehler.");
+            // Eine gemeinsame Fehlergrenze fuer die ganze Phase (Fotos bis Schachtprotokolle).
+            _mediaPhase.Run(project, projectFolder, sourceFolder, det.Format, ctx,
+                new ImportMediaPhaseSinks(messages, fehlerbilanz, angelegt =>
+                {
+                    found += angelegt;
+                    created += angelegt;
+                }));
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -685,32 +579,6 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
     }
 
     /// <summary>
-    /// Hält den Fotoauftrag einschliesslich UI-CollectionLock und Fortschritt
-    /// getrennt von der Bilanzierung im aufrufenden Importablauf.
-    /// </summary>
-    private ImportMediaDistributionResult DistributePhotos(
-        string projectFolder,
-        Project project,
-        ImportRunContext? ctx,
-        System.Threading.CancellationToken ct)
-    {
-        return _mediaDistributor.Distribute(new ImportMediaDistributionRequest(
-            projectFolder,
-            project,
-            Progress: new Fortschritt<ImportMediaDistributionProgress>(p => ctx?.Progress?.Report(
-                new ImportProgress(ImportFortschrittText.Phase(4, "Medien"), p.Processed, p.Total,
-                    "Fotos je Haltung verteilen …", p.CurrentFile))),
-            CancellationToken: ct,
-            DryRun: false,
-            // Die Verteilung mutiert UI-gebundene Collections: vorhandenen Lauf-Lock verwenden.
-            CollectionLock: ctx?.CollectionLock ?? new object(),
-            IncludeVideos: false,
-            IncludePdfs: false,
-            IncludeSchacht: false,
-            FileStaging: ctx?.FileStaging));
-    }
-
-    /// <summary>
     /// Waehlt den Hauptimporter anhand des erkannten Formats. Die Bilanzierung und
     /// Fehlergrenze bleiben im aufrufenden Importschritt; ergaenzende XTF-Quellen
     /// werden erst danach verarbeitet.
@@ -748,78 +616,6 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         }
 
         return _winCan.ImportWinCanExport(sourceFolder, project, parseContext);
-    }
-
-    /// <summary>
-    /// Verteilt die Schachtprotokolle des Archivs und verknuepft sie mit den Schaechten.
-    ///
-    /// Verwendet denselben <see cref="IShaftDistributionService"/> wie der manuelle Weg
-    /// „Schacht Verteilen" und dieselbe Verknuepfungsregel
-    /// (<see cref="SchachtProtokollVerknuepfung"/>). Ein Fehler hier darf den Import
-    /// nicht abbrechen — die Haltungen sind zu diesem Zeitpunkt bereits versorgt.
-    /// </summary>
-    private IReadOnlyList<string> VerteileSchachtprotokolle(
-        Project project,
-        string projectFolder,
-        string archivedPdfDir,
-        IImportFileStagingSession? fileStaging,
-        ImportFehlerbilanzSammler fehlerbilanz,
-        IProgress<ShaftDistributionProgress>? progress)
-    {
-        var meldungen = new List<string>();
-
-        try
-        {
-            var ergebnis = _shaftDistribution.Distribute(new ShaftDistributionRequest(
-                Project: project,
-                DestinationFolder: Path.Combine(projectFolder, ProjectStructure.SchaechteVerteilt),
-                PdfFiles: null,
-                PdfSourceFolder: archivedPdfDir,
-                Progress: progress,
-                FileStaging: fileStaging));
-
-            var erfolgreich = ergebnis.Items.Where(i => i.Success).ToList();
-            if (erfolgreich.Count == 0 && ergebnis.Items.Count == 0)
-                return meldungen;
-
-            var verknuepfung = SchachtProtokollVerknuepfung.Verknuepfe(
-                erfolgreich
-                    .Where(i => !string.IsNullOrWhiteSpace(i.TargetPdfPath)
-                                && !string.IsNullOrWhiteSpace(i.ShaftFolder))
-                    .Select(i => (i.TargetPdfPath!, i.ShaftFolder!, i.SourcePdfPath))
-                    .ToList(),
-                project,
-                projectFolder);
-
-            meldungen.Add(
-                $"Schachtprotokolle: {erfolgreich.Count} verteilt, "
-                + $"{verknuepfung.Verknuepft} mit einem Schacht verknuepft.");
-            meldungen.AddRange(verknuepfung.Meldungen);
-
-            // Ein Protokollteil, der nicht abgelegt werden konnte, MUSS im Bericht stehen.
-            // Ein reines "Parse failed" auf einer Haltungs-PDF ist dagegen erwartet und
-            // wird nicht als Schachtfehler gemeldet.
-            foreach (var fehlgeschlagen in ergebnis.Items.Where(i => !i.Success))
-            {
-                if (fehlgeschlagen.Message.StartsWith("Parse failed", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                meldungen.Add(
-                    $"Schachtprotokoll {Path.GetFileName(fehlgeschlagen.SourcePdfPath)} "
-                    + $"nicht verteilt: {fehlgeschlagen.Message}");
-                fehlerbilanz.Melde("Schachtprotokolle", meldungen[^1]);
-            }
-        }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
-        {
-            meldungen.Add($"Schachtprotokolle nicht verteilt: {ex.Message}");
-            fehlerbilanz.Melde("Schachtprotokolle", meldungen[^1]);
-        }
-
-        return meldungen;
     }
 
     /// <summary>
@@ -935,12 +731,6 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
            || AnyFile(sourceFolder, "Daten.txt")
            || AnyFile(sourceFolder, "*.fdb")
            || AnyFile(sourceFolder, "*.xtf");
-
-    // Synchron weiterreichen: Nur der aeussere UI-Kanal wechselt den Thread.
-    private sealed class Fortschritt<T>(Action<T> melden) : IProgress<T>
-    {
-        public void Report(T value) => melden(value);
-    }
 
     private static bool AnyFile(string root, string pattern)
     {

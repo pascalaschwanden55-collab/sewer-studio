@@ -462,6 +462,133 @@ public sealed class ProjectImportOrchestratorTests
         }
     }
 
+    [Fact]
+    public void Import_MediaPhase_DistributesShaftProtocolsLast_AndReportsOnlyRealFailures()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var order = new System.Collections.Generic.List<string>();
+            var shaft = new RecordingShaftDistributor(
+                () => order.Add("Schacht"),
+                new ShaftDistributionResult(
+                [
+                    new(true, "ok", "a.pdf", Path.Combine(projectDir, "Schaechte_Verteilt", "S1", "a.pdf"), null, "S1"),
+                    new(false, "Parse failed: kein Schachtprotokoll", "haltung.pdf", null, null, null),
+                    new(false, "Zielordner gesperrt", "b.pdf", null, null, null)
+                ], UsesPersistentProjectTransaction: false));
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor
+                {
+                    OnDistribute = () => order.Add("Fotos"),
+                    Result = new ImportMediaDistributionResult(4, 0, 0, [])
+                },
+                protocolDistributor: new RecordingProtocolDistributor(() => order.Add("Namen")),
+                kanalDistributor: new RecordingKanalDistributor
+                {
+                    OnDistribute = () => order.Add("Kanal"),
+                    SuccessResult = new KanalImportDistributor.Result(3, 2, 1, ["Videofehler"])
+                },
+                dichtheitDistributor: new RecordingDichtheitDistributor { OnDistribute = () => order.Add("Dichtheit") },
+                exportDetector: new FixedWinCanDetector(),
+                shaftDistribution: shaft)
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Equal(["Fotos", "Namen", "Kanal", "Dichtheit", "Schacht"], order);
+            var messages = result.Messages.ToList();
+            Assert.Contains(messages, m => m.StartsWith("Schachtprotokolle: 1 verteilt", StringComparison.Ordinal));
+            Assert.Contains("Schachtprotokoll b.pdf nicht verteilt: Zielordner gesperrt", messages);
+            Assert.DoesNotContain(messages, m => m.Contains("haltung.pdf", StringComparison.Ordinal));
+            Assert.Contains(result.Fehlerbilanz.Schritte, step => step.Schritt == "Schachtprotokolle" && step.Anzahl == 1);
+            // Die Abschlusszeile folgt den Schachtmeldungen und zaehlt nur Foto- und Kanalfehler.
+            var summary = messages.IndexOf("Verteilung: 4 Fotos/Dateien, 3 Videos, 2 Original-Protokolle, 1 Fehler.");
+            Assert.True(summary > messages.IndexOf("Schachtprotokoll b.pdf nicht verteilt: Zielordner gesperrt"));
+            Assert.DoesNotContain(messages, m => m.StartsWith("Medienverteilung fehlgeschlagen", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_ShaftFailureIsReported_WithoutStoppingTheSummary()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { Result = new ImportMediaDistributionResult(0, 0, 0, []) },
+                kanalDistributor: new RecordingKanalDistributor { SuccessResult = new KanalImportDistributor.Result(0, 0, 0, []) },
+                exportDetector: new FixedWinCanDetector(),
+                shaftDistribution: new RecordingShaftDistributor(
+                    () => throw new IOException("Archiv gesperrt"),
+                    new ShaftDistributionResult([], false)))
+                .Import(sourceDir, projectDir, new Project());
+
+            var messages = result.Messages.ToList();
+            Assert.Contains("Schachtprotokolle nicht verteilt: Archiv gesperrt", messages);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step => step.Schritt == "Schachtprotokolle" && step.Anzahl == 1);
+            Assert.Contains("Verteilung: 0 Fotos/Dateien, 0 Videos, 0 Original-Protokolle, 0 Fehler.", messages);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_KeepsPdfFallbackCount_WhenALaterStepThrows()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var project = new Project();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { Result = new ImportMediaDistributionResult(0, 0, 0, []) },
+                kanalDistributor: new RecordingKanalDistributor
+                {
+                    SuccessResult = new KanalImportDistributor.Result(0, 0, 0, []),
+                    AddHaltungOnSuccess = true
+                },
+                dichtheitDistributor: new RecordingDichtheitDistributor
+                {
+                    OnDistribute = () => throw new IOException("DP-Ordner gesperrt")
+                },
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, project);
+
+            // Die bereits angelegte Haltung zaehlt, obwohl die Phase danach abbricht.
+            Assert.Equal(3, result.Found);
+            Assert.Equal(2, result.Created);
+            Assert.Contains("PDF-Fallback: 1 Haltungen aus Original-Protokollen angelegt.", result.Messages);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Medienverteilung"
+                && step.Gruende.Contains("Medienverteilung fehlgeschlagen: DP-Ordner gesperrt"));
+            Assert.DoesNotContain(result.Messages, m => m.StartsWith("Verteilung: ", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    private sealed class RecordingShaftDistributor(Action onDistribute, ShaftDistributionResult result)
+        : IShaftDistributionService
+    {
+        public ShaftDistributionResult Distribute(ShaftDistributionRequest request)
+        {
+            onDistribute();
+            return result;
+        }
+    }
+
     private sealed class RecordingMediaDistributor : IImportMediaDistributionService
     {
         public bool Fail { get; init; }
