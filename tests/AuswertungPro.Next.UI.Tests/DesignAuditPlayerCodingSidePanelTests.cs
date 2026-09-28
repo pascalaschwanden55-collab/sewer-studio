@@ -360,7 +360,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         Assert.Contains("CodingAnalysisPreflightWorkflow.Execute", runBody);
         Assert.Contains("ResolveCodingMeterForFrame(timestamp)", runBody);
-        Assert.Contains("ResolveMeterForFrame: (_, _) => frame.Meter", multiModelBody);
+        // Meter und Zeit des Belegs: Verhalten in CodingMultiModelFindingEventCommandWorkflowTests.AnalyzedFrame_*.
+        Assert.Contains("CodingMultiModelFindingEventCommandWorkflow.ExecuteAnalyzedFrame", multiModelBody);
         Assert.Contains("request.CaptureTimestampSeconds", multiModelCommandWorkflow);
         Assert.Contains("request.FrameOsdMeter", multiModelCommandWorkflow);
         Assert.Contains("ResolveMeterForFrame: (timestamp, osdMeter)", qwenBody);

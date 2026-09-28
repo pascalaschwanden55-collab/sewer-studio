@@ -48,6 +48,11 @@ jobs:
       - name: Tests ProjectModernizer
         run: dotnet test tests/ProjectModernizer.Tests/ProjectModernizer.Tests.csproj -c Release --no-build --no-restore --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
 
+      # Nur Produktcode (src/, ohne erzeugten Code, jede Zeile einmal). Vorerst reine Anzeige;
+      # eine Grenze folgt erst nach echten CI-Messungen (Wartbarkeitsplan AP04).
+      - name: Produktabdeckung messen
+        run: powershell -NoProfile -File .github/scripts/measure-product-coverage.ps1 -ResultsDirectory artifacts/coverage
+
       # Mindest-Zeilenabdeckung (Gesamtaudit 2026-08-14, Prio 2). Die Grenze steht in
       # .github/coverage-baseline.json und darf nur steigen.
       - name: Testabdeckung pruefen

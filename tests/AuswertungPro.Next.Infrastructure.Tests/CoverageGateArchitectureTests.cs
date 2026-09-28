@@ -18,4 +18,15 @@ public sealed class CoverageGateArchitectureTests
         Assert.Contains("darf nicht sinken", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("fetch-depth: 0", workflow, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Produktabdeckung_wird_getrennt_von_der_Verlaufsgrenze_gemessen()
+    {
+        var workflow = File.ReadAllText(RepoFile(".github", "workflows", "ci.yml"));
+
+        var messung = workflow.IndexOf("measure-product-coverage.ps1", StringComparison.Ordinal);
+        var grenze = workflow.IndexOf("check-coverage.ps1", StringComparison.Ordinal);
+        Assert.True(messung >= 0, "Die CI misst die Produktabdeckung nicht mehr.");
+        Assert.True(messung < grenze, "Die Produktabdeckung soll auch bei roter Verlaufsgrenze erscheinen.");
+    }
 }
