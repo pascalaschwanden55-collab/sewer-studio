@@ -32,7 +32,7 @@ public static partial class HoldingFolderDistributor
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
 
-    private static IReadOnlyList<string> EnumerateVideoFiles(string root, bool recursive)
+    internal static IReadOnlyList<string> EnumerateVideoFiles(string root, bool recursive)
     {
         if (!ImportSourcePathGuard.TryInspectDirectory(
                 root,

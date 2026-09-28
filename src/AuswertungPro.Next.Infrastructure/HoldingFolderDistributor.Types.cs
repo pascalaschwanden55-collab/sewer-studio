@@ -36,7 +36,7 @@ public static partial class HoldingFolderDistributor
         IReadOnlyList<string> Candidates,
         string? Message);
 
-    private sealed record KinsTxtSection(
+    internal sealed record KinsTxtSection(
         string SourceTxtPath,
         string HoldingRaw,
         string VideoFileName,

@@ -36,7 +36,7 @@ public static partial class HoldingFolderDistributor
         new(StringComparer.OrdinalIgnoreCase);
 
 
-    private static IReadOnlyList<KinsTxtSection> ParseTxtSections(string txtPath)
+    internal static IReadOnlyList<KinsTxtSection> ParseTxtSections(string txtPath)
     {
         var lines = ReadAllTextLinesBestEffort(txtPath);
         var sections = new List<KinsTxtSection>();
@@ -188,7 +188,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildSidecarVideoLinkIndex(
+    internal static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildSidecarVideoLinkIndex(
         string? xtfSourceFolder,
         IReadOnlyList<string> pdfFiles)
     {
@@ -263,7 +263,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildSidecarHoldingByVideoIndex(
+    internal static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildSidecarHoldingByVideoIndex(
         IReadOnlyDictionary<string, IReadOnlyList<string>>? sidecarVideoLinksByHolding)
     {
         var index = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
@@ -314,7 +314,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildCdIndexVideoLinkIndex(
+    internal static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildCdIndexVideoLinkIndex(
         string? xtfSourceFolder,
         IReadOnlyList<string> pdfFiles)
     {

@@ -5,6 +5,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.UseCases.Verteilung;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.UI.Services;
@@ -250,6 +251,94 @@ public sealed class ExportPageDistributionProjectGuardTests
         Assert.DoesNotContain("_shell.TrySaveProject()", shaftSource, StringComparison.Ordinal);
     }
 
+    // ─── Fenster «Verteilen» (28.09.2026) ─────────────────────────────────
+
+    [Fact]
+    public async Task Menuepunkt_oeffnet_das_fenster_mit_vorgewaehlter_art_und_ablage()
+    {
+        using var harness = new Harness(new ShaftDistributionFake());
+
+        await harness.ViewModel.DistributeShaftsSanierungCommand.ExecuteAsync(null);
+
+        var vorgabe = Assert.Single(harness.Verteilen.Vorgaben);
+        Assert.Equal(VerteilArt.Schaechte, vorgabe.Art);
+        Assert.Equal(DistributionVariant.Sanierung, vorgabe.Ablage);
+        Assert.Equal(harness.Settings.SchachtDistribution.Root, vorgabe.Ziel(VerteilArt.Schaechte).Ordner);
+        Assert.Equal(
+            Path.Combine(harness.ProjectRoot, ProjectStructure.HaltungenVerteilt),
+            vorgabe.Ziel(VerteilArt.Haltungen).Ordner);
+    }
+
+    [Fact]
+    public async Task Jetzt_verteilen_uebergibt_genau_die_gewaehlte_quelle_an_den_verteilweg()
+    {
+        ShaftDistributionRequest? erhalten = null;
+        using var harness = new Harness(new ShaftDistributionFake
+        {
+            Run = request =>
+            {
+                erhalten = request;
+                return EmptyResult();
+            }
+        });
+        var quellordner = Directory.CreateDirectory(Path.Combine(harness.ExternalRoot, "Schachtprotokolle")).FullName;
+        // Im Fenster von «Haltungen – Normal» auf «Schächte – Sanierung» umgestellt.
+        harness.Verteilen.Antwort = _ => new VerteilenErgebnis(
+            new VerteilAuftrag(VerteilArt.Schaechte, DistributionVariant.Sanierung, VerteilQuelle.PdfOrdner(quellordner), null),
+            EinstellungenOeffnen: false);
+
+        await harness.ViewModel.DistributeHoldingsNormalCommand.ExecuteAsync(null);
+
+        Assert.NotNull(erhalten);
+        Assert.Equal(quellordner, erhalten!.PdfSourceFolder);
+        Assert.True(erhalten.PdfFiles is null or { Count: 0 });
+        Assert.Equal(DistributionVariant.Sanierung, erhalten.Variant);
+        Assert.Equal(harness.Settings.SchachtDistribution.Root, erhalten.DestinationFolder);
+    }
+
+    [Fact]
+    public async Task Abbrechen_im_fenster_verteilt_nichts()
+    {
+        var gestartet = false;
+        using var harness = new Harness(new ShaftDistributionFake
+        {
+            Run = _ =>
+            {
+                gestartet = true;
+                return EmptyResult();
+            }
+        });
+        harness.Verteilen.Antwort = _ => VerteilenErgebnis.Abgebrochen;
+
+        await harness.ViewModel.DistributeShaftsNormalCommand.ExecuteAsync(null);
+
+        Assert.False(gestartet);
+        Assert.Null(harness.ViewModel.LetzterVerteilbericht);
+        Assert.False(harness.ViewModel.IsPageBusy);
+    }
+
+    [Fact]
+    public async Task Link_zu_den_ordnerbausteinen_meldet_es_der_seite_und_verteilt_nichts()
+    {
+        var gestartet = false;
+        using var harness = new Harness(new ShaftDistributionFake
+        {
+            Run = _ =>
+            {
+                gestartet = true;
+                return EmptyResult();
+            }
+        });
+        harness.Verteilen.Antwort = _ => new VerteilenErgebnis(null, EinstellungenOeffnen: true);
+        var gemeldet = 0;
+        harness.ViewModel.VerteilEinstellungenAngefordert += (_, _) => gemeldet++;
+
+        await harness.ViewModel.DistributeShaftsNormalCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, gemeldet);
+        Assert.False(gestartet);
+    }
+
     private static string MethodSlice(string source, string startToken, string endToken)
     {
         var start = source.IndexOf(startToken, StringComparison.Ordinal);
@@ -300,6 +389,9 @@ public sealed class ExportPageDistributionProjectGuardTests
                 }
             };
             var dialogs = new DialogFake(sourcePdf);
+            Verteilen.Antwort = vorgabe => new VerteilenErgebnis(
+                new VerteilAuftrag(vorgabe.Art, vorgabe.Ablage, VerteilQuelle.PdfDateien([sourcePdf]), null),
+                EinstellungenOeffnen: false);
             _loggerFactory = LoggerFactory.Create(_ => { });
             var services = new ServiceProvider(
                 Settings,
@@ -333,8 +425,15 @@ public sealed class ExportPageDistributionProjectGuardTests
                 shaftDistribution: shaftDistribution,
                 importFileStaging: useProjectStaging ? services.ImportFileStaging : null,
                 importTransactionJournal: useProjectStaging ? services.ImportTransactionJournal : null,
-                verteilberichte: services.Verteilberichte);
+                verteilberichte: services.Verteilberichte,
+                verteilenDialog: Verteilen);
         }
+
+        /// <summary>
+        /// Steht fuer das Fenster «Verteilen»: bestaetigt die vorgewaehlte Art und Ablage mit
+        /// der Test-PDF als Einzeldatei (frueher: Ja/Nein-Dialog + Dateiauswahl).
+        /// </summary>
+        internal VerteilenDialogFake Verteilen { get; } = new();
 
         internal string ProjectRoot { get; }
         internal string ExternalRoot { get; }
@@ -357,6 +456,20 @@ public sealed class ExportPageDistributionProjectGuardTests
             {
                 // Test-Aufraeumen darf das Ergebnis nicht verdecken.
             }
+        }
+    }
+
+    internal sealed class VerteilenDialogFake : IVerteilenDialog
+    {
+        internal Func<VerteilenVorgabe, VerteilenErgebnis> Antwort { get; set; }
+            = _ => VerteilenErgebnis.Abgebrochen;
+
+        internal List<VerteilenVorgabe> Vorgaben { get; } = [];
+
+        public VerteilenErgebnis Zeige(VerteilenVorgabe vorgabe)
+        {
+            Vorgaben.Add(vorgabe);
+            return Antwort(vorgabe);
         }
     }
 
