@@ -483,7 +483,7 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
         RequireLowercaseSha256(negative.CandidatesSha256, "Negativ-Kandidaten-Hash");
         RequireLowercaseSha256(negative.ClassMapSha256, "Negativ-Klassenkarten-Hash");
         RequireLowercaseSha256(negative.VsaManifestHash, "Negativ-VSA-Manifest-Hash");
-        ValidateStrictNegativeClassMapBinding(negative, classMap);
+        TrainingNegativeClassMapBinding.Validate(negative, classMap);
         if (EvalContaminationGuard.IsEvalHaltung(protectedHoldingKeys, holdingKey))
         {
             throw new TrainingExportPlanException(
@@ -491,37 +491,6 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
         }
 
         return new PreparedNegativeBinding(holdingKey, negative.SplitHint.Value);
-    }
-
-    private static void ValidateStrictNegativeClassMapBinding(
-        TrainingExportNegativeImage negative,
-        TrainingYoloClassMapSnapshot classMap)
-    {
-        var activeClassIds = classMap.Classes
-            .OrderBy(item => item.Value)
-            .Select(item => item.Value)
-            .ToArray();
-        if (negative.ClassMapVersion != 3
-            || classMap.Version != 3
-            || classMap.ClassMapSha256 is null
-            || !string.Equals(
-                negative.ClassMapSha256,
-                classMap.ClassMapSha256,
-                StringComparison.Ordinal)
-            || !string.Equals(
-                negative.VsaManifestHash,
-                classMap.VsaManifestHash,
-                StringComparison.Ordinal)
-            || activeClassIds.Length != 15
-            || !activeClassIds.SequenceEqual(Enumerable.Range(0, 15))
-            || !string.Equals(
-                classMap.OrderedClassNames[14],
-                "BCC_bogen",
-                StringComparison.Ordinal))
-        {
-            throw new TrainingExportPlanException(
-                "Das strikte Negativ-Set passt nicht zur aktuell aktiven Detect-Klassenkarte v3.");
-        }
     }
 
     private static void ValidatePhysicalHoldingSplits(

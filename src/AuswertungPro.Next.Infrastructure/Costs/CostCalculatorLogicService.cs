@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Cost;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 
@@ -152,46 +152,16 @@ public static class CostCalculatorLogicService
             .ToList();
     }
 
+    // Die fachliche Preisregel liegt in CatalogPriceResolver; diese Helfer bleiben als
+    // oeffentliche Fassade erhalten. ParseDn bleibt eigenstaendig (andere Kulturbehandlung).
     public static bool QtyMatches(DnPrice price, decimal qty)
-    {
-        var minOk = !price.QtyFrom.HasValue || qty >= price.QtyFrom.Value;
-        var maxOk = !price.QtyTo.HasValue || qty <= price.QtyTo.Value;
-        return minOk && maxOk;
-    }
+        => CatalogPriceResolver.QtyMatches(price, qty);
 
     public static List<DnPrice> FindNearestDnCandidates(IEnumerable<DnPrice> prices, int dn)
-    {
-        var withDistance = prices
-            .Select(p => new
-            {
-                Price = p,
-                Distance = dn < p.DnFrom
-                    ? p.DnFrom - dn
-                    : dn > p.DnTo
-                        ? dn - p.DnTo
-                        : 0
-            })
-            .ToList();
-
-        if (withDistance.Count == 0)
-            return new List<DnPrice>();
-
-        var minDistance = withDistance.Min(x => x.Distance);
-        return withDistance
-            .Where(x => x.Distance == minDistance)
-            .Select(x => x.Price)
-            .OrderBy(x => x.DnFrom)
-            .ThenBy(x => x.DnTo)
-            .ToList();
-    }
+        => CatalogPriceResolver.FindNearestDnCandidates(prices, dn);
 
     public static string BuildNearestDnPriceHint(DnPrice price)
-    {
-        var dn = price.DnFrom == price.DnTo
-            ? price.DnFrom.ToString(CultureInfo.InvariantCulture)
-            : $"{price.DnFrom.ToString(CultureInfo.InvariantCulture)}-{price.DnTo.ToString(CultureInfo.InvariantCulture)}";
-        return $"Preis von DN {dn} uebernommen";
-    }
+        => CatalogPriceResolver.BuildNearestDnPriceHint(price);
 
     public static int? ParseDn(string? raw)
     {

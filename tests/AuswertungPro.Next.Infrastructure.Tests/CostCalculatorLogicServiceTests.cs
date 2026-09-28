@@ -105,6 +105,56 @@ public sealed class CostCalculatorLogicServiceTests
     }
 
     [Fact]
+    public void FindNearestDnCandidates_EmptyListAndExactDn()
+    {
+        Assert.Empty(CostCalculatorLogicService.FindNearestDnCandidates([], 200));
+
+        var prices = new List<DnPrice>
+        {
+            new() { DnFrom = 300, DnTo = 400, Price = 30m },
+            new() { DnFrom = 150, DnTo = 250, Price = 20m },
+            new() { DnFrom = 100, DnTo = 150, Price = 10m }
+        };
+
+        // DN 150 liegt in zwei Bereichen (Abstand 0): beide, stabil nach DnFrom sortiert.
+        var candidates = CostCalculatorLogicService.FindNearestDnCandidates(prices, 150);
+        Assert.Equal(new[] { 100, 150 }, candidates.Select(p => p.DnFrom).ToArray());
+    }
+
+    [Theory]
+    [InlineData(50)]
+    [InlineData(150)]
+    [InlineData(180)]
+    [InlineData(275)]
+    [InlineData(900)]
+    public void Preisregeln_der_Fassade_entsprechen_der_Application_Regel(int dn)
+    {
+        var prices = new List<DnPrice>
+        {
+            new() { DnFrom = 100, DnTo = 150, QtyFrom = 1m, QtyTo = 3m, Price = 10m },
+            new() { DnFrom = 210, DnTo = 260, Price = 20m },
+            new() { DnFrom = 290, DnTo = 290, Price = 25m },
+            new() { DnFrom = 400, DnTo = 500, Price = 30m }
+        };
+
+        var fassade = CostCalculatorLogicService.FindNearestDnCandidates(prices, dn);
+        var regel = AuswertungPro.Next.Application.Cost.CatalogPriceResolver.FindNearestDnCandidates(prices, dn);
+        Assert.Equal(regel, fassade);
+        foreach (var price in prices)
+        {
+            Assert.Equal(
+                AuswertungPro.Next.Application.Cost.CatalogPriceResolver.BuildNearestDnPriceHint(price),
+                CostCalculatorLogicService.BuildNearestDnPriceHint(price));
+            foreach (var qty in new[] { 0m, 1m, 3m, 3.1m })
+            {
+                Assert.Equal(
+                    AuswertungPro.Next.Application.Cost.CatalogPriceResolver.QtyMatches(price, qty),
+                    CostCalculatorLogicService.QtyMatches(price, qty));
+            }
+        }
+    }
+
+    [Fact]
     public void QtyMatches_HonorsOptionalQuantityBounds()
     {
         var price = new DnPrice { DnFrom = 100, DnTo = 200, QtyFrom = 2m, QtyTo = 5m, Price = 10m };
