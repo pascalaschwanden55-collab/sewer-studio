@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         xmlns:vm="clr-namespace:AuswertungPro.Next.UI.ViewModels"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Liste bearbeiten"
         Width="680" Height="560" MinWidth="520" MinHeight="380"
         WindowStartupLocation="CenterOwner"
@@ -20,11 +21,8 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </Window.Resources>
     <DockPanel Margin="16" Background="{DynamicResource CardBrush}">
-        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-            <TextBlock Text="{Binding Titel}" FontSize="{DynamicResource TextXL}" FontWeight="SemiBold"/>
-            <TextBlock Text="{Binding Untertitel}" FontSize="{DynamicResource TextS}" TextWrapping="Wrap"
-                       Foreground="{DynamicResource MutedBrush}" Margin="0,4,0,0"/>
-        </StackPanel>
+        <controls:NovaDialogHeader DockPanel.Dock="Top" Margin="0,0,0,10"
+                   Title="{Binding Titel}" Subtitle="{Binding Untertitel}"/>
 
         <!-- Fusszeile: eigener Eintrag anlegen, Meldung, Speichern/Abbrechen -->
         <StackPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
@@ -52,19 +50,23 @@
             </Border>
             <TextBlock Text="{Binding Fehler}" Style="{StaticResource NurMitText}" Foreground="{DynamicResource DangerBrush}"
                        TextWrapping="Wrap" Margin="0,8,0,0" FontSize="{DynamicResource TextS}"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                <Button Command="{Binding AbbrechenCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,8,0"
-                        ToolTip="Fenster schliessen, nichts speichern" AutomationProperties.Name="Abbrechen">
-                    <TextBlock Text="Abbrechen"/>
-                </Button>
-                <Button Command="{Binding SpeichernCommand}" Style="{StaticResource ToolbarButtonAccent}"
-                        ToolTip="Ergänzungen dieser Liste programmweit speichern" AutomationProperties.Name="Speichern">
-                    <StackPanel Orientation="Horizontal">
-                        <ui:FluentIcon Glyph="&#xE74E;" Margin="0,0,6,0"/>
-                        <TextBlock Text="Speichern" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
+            <Border Style="{StaticResource DialogButtonBar}" Margin="0,10,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Command="{Binding AbbrechenCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"
+                            IsCancel="True"
+                            ToolTip="Fenster schliessen, nichts speichern" AutomationProperties.Name="Abbrechen">
+                        <TextBlock Text="Abbrechen"/>
+                    </Button>
+                    <Button Command="{Binding SpeichernCommand}" Style="{StaticResource PrimaryButton}"
+                            IsDefault="True"
+                            ToolTip="Ergänzungen dieser Liste programmweit speichern" AutomationProperties.Name="Speichern">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:FluentIcon Glyph="&#xE74E;" Margin="0,0,6,0"/>
+                            <TextBlock Text="Speichern" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
         </StackPanel>
 
         <!-- Die Einträge der Liste -->

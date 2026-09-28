@@ -5,10 +5,10 @@
         ui:WindowFx.Entrance="True"
         xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
-        Title="SewerStudio — Medien suchen und verlinken" Height="720" Width="1100"
+        Title="SewerStudio — Medien suchen und verlinken" Height="760" Width="1100"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
-        MinWidth="800" MinHeight="500">
+        MinWidth="800" MinHeight="540">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -43,15 +43,16 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Row 0: Options -->
-        <Border Style="{DynamicResource Card}" Grid.Row="0" Margin="0,0,0,10">
-            <StackPanel>
-                <TextBlock Text="Medien-Suche" FontSize="{DynamicResource TextL}" FontWeight="Bold" Margin="0,0,0,10"/>
+        <controls:NovaDialogHeader Grid.Row="0" Title="Medien suchen und verlinken"/>
 
+        <!-- Row 1: Options -->
+        <Border Style="{DynamicResource Card}" Grid.Row="1" Margin="0,0,0,10">
+            <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                     <TextBlock Text="Suchordner:" Style="{StaticResource LabelText}" Width="90"/>
                     <TextBox x:Name="FolderBox" Width="600" Margin="0,0,8,0"
@@ -73,15 +74,15 @@
 
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                     <Button x:Name="StartButton" Content="Suche starten" Click="Start_Click"
-                            Style="{DynamicResource PrimaryButton}" Margin="90,0,10,0"/>
+                            Style="{DynamicResource SecondaryButton}" Margin="90,0,10,0"/>
                     <Button x:Name="CancelSearchButton" Content="Abbrechen" Click="CancelSearch_Click"
                             Style="{DynamicResource SecondaryButton}" IsEnabled="False"/>
                 </StackPanel>
             </StackPanel>
         </Border>
 
-        <!-- Row 1: Progress -->
-        <Border Style="{DynamicResource Card}" Grid.Row="1" Margin="0,0,0,10"
+        <!-- Row 2: Progress -->
+        <Border Style="{DynamicResource Card}" Grid.Row="2" Margin="0,0,0,10"
                 x:Name="ProgressPanel" Visibility="Collapsed">
             <Grid>
                 <Grid.RowDefinitions>
@@ -95,8 +96,8 @@
             </Grid>
         </Border>
 
-        <!-- Row 2: Results DataGrid -->
-        <Border Style="{DynamicResource Card}" Grid.Row="2" Margin="0,0,0,10" Padding="0">
+        <!-- Row 3: Results DataGrid -->
+        <Border Style="{DynamicResource Card}" Grid.Row="3" Margin="0,0,0,10" Padding="0">
             <Grid>
             <DataGrid x:Name="ResultGrid" AutoGenerateColumns="False" IsReadOnly="False"
                       CanUserSortColumns="True" CanUserResizeColumns="True"
@@ -152,19 +153,19 @@
             </Grid>
         </Border>
 
-        <!-- Row 3: Footer -->
-        <Border Style="{DynamicResource Card}" Grid.Row="3" Padding="14,10">
-            <DockPanel>
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
-                    <Button x:Name="ApplyButton" Content="Anwenden" Click="Apply_Click"
-                            Style="{DynamicResource PrimaryButton}" IsEnabled="False" Margin="0,0,8,0"/>
-                    <Button x:Name="CloseButton" Content="Schließen" Click="Close_Click"
-                            Style="{DynamicResource SecondaryButton}"/>
-                </StackPanel>
+        <!-- Row 4: Footer -->
+        <Border Grid.Row="4" Style="{StaticResource DialogButtonBar}">
+            <Grid>
                 <TextBlock x:Name="SummaryText" Style="{StaticResource LabelText}"
                            Text="Starten Sie die Suche, um Ergebnisse anzuzeigen."
-                           VerticalAlignment="Center"/>
-            </DockPanel>
+                           VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="CloseButton" Content="Schließen" Click="Close_Click"
+                            Style="{StaticResource SecondaryButton}" IsCancel="True" Margin="0,0,8,0"/>
+                    <Button x:Name="ApplyButton" Content="Anwenden" Click="Apply_Click"
+                            Style="{StaticResource PrimaryButton}" IsDefault="True" IsEnabled="False"/>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </Window>

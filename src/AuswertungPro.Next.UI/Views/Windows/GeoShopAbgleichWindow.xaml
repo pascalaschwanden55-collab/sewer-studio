@@ -3,21 +3,24 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — GeoShop-Abgleich" Width="1200" Height="720" MinWidth="600" MinHeight="420"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BgLightBrush}">
     <DockPanel Margin="20">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
-            <TextBlock Text="GeoShop-Abgleich" FontSize="{DynamicResource TextTitle}" FontWeight="SemiBold"/>
-            <TextBlock x:Name="Status" Text="Die XTF wird gelesen. Deine Projektdaten werden noch nicht geändert."
-                       TextWrapping="Wrap" Margin="0,8,0,0"/>
+            <controls:NovaDialogHeader x:Name="Kopf" Title="GeoShop-Abgleich"
+                       Subtitle="Die XTF wird gelesen. Deine Projektdaten werden noch nicht geändert." Margin="0"/>
             <ProgressBar x:Name="Fortschritt" Height="4" IsIndeterminate="True" Margin="0,12,0,0"/>
         </StackPanel>
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
-            <Button x:Name="Uebernehmen" Content="Gezeigte Änderungen übernehmen" IsEnabled="False"
-                    Style="{DynamicResource PrimaryButton}"
-                    Click="Uebernehmen_Click" Padding="16,8" Margin="0,0,10,0"/>
-            <Button Content="Abbrechen" IsCancel="True" Padding="16,8"/>
-        </StackPanel>
+        <Border DockPanel.Dock="Bottom" Style="{StaticResource DialogButtonBar}" Margin="0,14,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Abbrechen" Style="{StaticResource SecondaryButton}"
+                        IsCancel="True" Padding="16,8" Margin="0,0,10,0"/>
+                <Button x:Name="Uebernehmen" Content="Gezeigte Änderungen übernehmen" IsEnabled="False"
+                        Style="{StaticResource PrimaryButton}" IsDefault="True"
+                        Click="Uebernehmen_Click" Padding="16,8"/>
+            </StackPanel>
+        </Border>
         <Grid>
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
             <DataGrid x:Name="Feldvergleich" Visibility="Collapsed" MaxHeight="340" Margin="0,0,0,12"

@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         ui:WindowFx.Entrance="True"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
-        Title="SewerStudio — Positions-Vorlagen verwalten" 
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
+        Title="SewerStudio — Positions-Vorlagen verwalten"
         Width="1000" Height="680" MinWidth="820" MinHeight="560"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize">
@@ -15,12 +16,9 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,12">
-            <TextBlock Text="Baukasten: Positions-Vorlagen" 
-                       FontSize="{DynamicResource TextXL}" FontWeight="SemiBold" />
-            <TextBlock Text="Erstellen Sie Vorlagen für Maßnahmen mit wiederverwendbaren Positionen" 
-                       Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/>
-        </StackPanel>
+        <controls:NovaDialogHeader Grid.Row="0"
+                   Title="Baukasten: Positions-Vorlagen"
+                   Subtitle="Erstellen Sie Vorlagen für Maßnahmen mit wiederverwendbaren Positionen"/>
 
         <!-- Main Content -->
         <Grid Grid.Row="1">
@@ -38,7 +36,7 @@
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                         <TextBlock Text="Maßnahmen-Gruppen" FontWeight="SemiBold" FontSize="{DynamicResource TextL}"/>
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                            <Button Command="{Binding AddGroupCommand}"
+                            <Button Command="{Binding AddGroupCommand}" Style="{StaticResource ToolbarButton}"
                                     Padding="8,4" MinWidth="80" Margin="0,0,4,0">
                                 <StackPanel Orientation="Horizontal">
                                     <ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
@@ -78,7 +76,7 @@
                         </DockPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                            <Button Command="{Binding AddPositionCommand}"
+                            <Button Command="{Binding AddPositionCommand}" Style="{StaticResource ToolbarButton}"
                                     Padding="8,4" MinWidth="100" Margin="0,0,4,0">
                                 <StackPanel Orientation="Horizontal">
                                     <ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
@@ -138,11 +136,10 @@
                                 <DataGridTemplateColumn Header="" Width="40">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Button Foreground="{DynamicResource DangerBrush}" Background="Transparent" BorderThickness="0"
+                                            <Button Style="{StaticResource IconButton}"
+                                                    Foreground="{DynamicResource DangerBrush}"
                                                     ToolTip="Position löschen"
                                                     AutomationProperties.Name="Position löschen"
-                                                    Padding="0"
-                                                    Width="28" Height="28"
                                                     Click="DeletePosition_Click">
                                                 <ui:FluentIcon Glyph="&#xE74D;" FontSize="{DynamicResource TextL}" Foreground="{DynamicResource DangerBrush}"/>
                                             </Button>
@@ -163,7 +160,7 @@
                         <TextBlock Text="Wartebox" FontWeight="SemiBold" FontSize="{DynamicResource TextL}"/>
                         <TextBlock Text="Verwendete Positionen" Foreground="{StaticResource MutedBrush}" FontSize="{DynamicResource TextXS}" Margin="0,2,0,0"/>
                         
-                        <Button Command="{Binding RestoreFromStorageCommand}"
+                        <Button Command="{Binding RestoreFromStorageCommand}" Style="{StaticResource ToolbarButton}"
                                 Padding="8,4" MinWidth="100" Margin="0,8,0,0"
                                 ToolTip="Position aus Wartebox zurück zur Gruppe">
                             <StackPanel Orientation="Horizontal">
@@ -189,18 +186,17 @@
         </Grid>
 
         <!-- Footer Buttons -->
-        <DockPanel Grid.Row="2" Margin="0,12,0,0">
-            <Button Content="Standard wiederherstellen" Command="{Binding ResetToDefaultCommand}" 
-                    DockPanel.Dock="Left"
-                    Padding="12,8" MinWidth="100" Style="{StaticResource SecondaryButton}"/>
+        <Border Grid.Row="2" Style="{StaticResource DialogButtonBar}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Speichern" Command="{Binding SaveCommand}" 
-                        IsDefault="True" Margin="0,0,8,0" Padding="20,8" MinWidth="120"
-                        Style="{StaticResource PrimaryButton}"/>
-                <Button Content="Abbrechen" Command="{Binding CancelCommand}" 
-                        IsCancel="True" Padding="20,8" MinWidth="120"
+                <Button Content="Standard wiederherstellen" Command="{Binding ResetToDefaultCommand}"
+                        Padding="12,8" MinWidth="100" Margin="0,0,8,0" Style="{StaticResource SecondaryButton}"/>
+                <Button Content="Abbrechen" Command="{Binding CancelCommand}"
+                        IsCancel="True" Padding="20,8" MinWidth="120" Margin="0,0,8,0"
                         Style="{StaticResource SecondaryButton}"/>
+                <Button Content="Speichern" Command="{Binding SaveCommand}"
+                        IsDefault="True" Padding="20,8" MinWidth="120"
+                        Style="{StaticResource PrimaryButton}"/>
             </StackPanel>
-        </DockPanel>
+        </Border>
     </Grid>
 </Window>

@@ -5,6 +5,7 @@
         ui:WindowFx.Entrance="True"
         xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
         xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Beobachtungen"
         Width="1120"
         Height="460"
@@ -17,14 +18,6 @@
         <pages:PathToFileNameConverter x:Key="PathToFileName"/>
         <pages:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyVisible"/>
         <pages:AnyValueToVisibilityConverter x:Key="AnyValueVisible"/>
-
-        <Style x:Key="ActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-            <Setter Property="MinHeight" Value="30"/>
-            <Setter Property="Padding" Value="12,5"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
-            <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
-        </Style>
-
     </Window.Resources>
 
     <Grid Margin="10">
@@ -33,30 +26,16 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0"
-                BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="1"
-                Background="{DynamicResource CardBrush}"
-                CornerRadius="{DynamicResource RadiusL}"
-                Padding="10"
-                Margin="0,0,0,8">
-            <DockPanel LastChildFill="False">
-                <TextBlock x:Name="HeaderText"
-                           Text="Beobachtungen"
-                           Foreground="{StaticResource TextBrush}"
-                           VerticalAlignment="Center"
-                           FontWeight="SemiBold"
-                           FontSize="{DynamicResource TextL}"
-                           Margin="0,0,12,0"
-                           DockPanel.Dock="Left"/>
-
-                <WrapPanel DockPanel.Dock="Right">
-                    <Button x:Name="ProtocolButton" Content="Protokoll bearbeiten..." Style="{StaticResource ActionButtonStyle}"/>
-                    <Button x:Name="VsaUpdateButton" Content="VSA Zustand aktualisieren" Style="{StaticResource ActionButtonStyle}"/>
-                    <Button x:Name="SyncHoldingFieldsButton" Content="Haltungen-Feld aktualisieren" Style="{StaticResource ActionButtonStyle}" Margin="0"/>
-                </WrapPanel>
-            </DockPanel>
-        </Border>
+        <controls:NovaDialogHeader x:Name="HeaderText" Grid.Row="0" Title="Beobachtungen">
+            <WrapPanel>
+                <Button x:Name="ProtocolButton" Content="Protokoll bearbeiten..." Style="{StaticResource SecondaryButton}"
+                        MinHeight="30" Padding="12,5" Margin="0,0,8,0" FontSize="{DynamicResource TextS}"/>
+                <Button x:Name="VsaUpdateButton" Content="VSA Zustand aktualisieren" Style="{StaticResource SecondaryButton}"
+                        MinHeight="30" Padding="12,5" Margin="0,0,8,0" FontSize="{DynamicResource TextS}"/>
+                <Button x:Name="SyncHoldingFieldsButton" Content="Haltungen-Feld aktualisieren" Style="{StaticResource SecondaryButton}"
+                        MinHeight="30" Padding="12,5" FontSize="{DynamicResource TextS}"/>
+            </WrapPanel>
+        </controls:NovaDialogHeader>
 
         <Border Grid.Row="1"
                 BorderBrush="{DynamicResource BorderBrush}"

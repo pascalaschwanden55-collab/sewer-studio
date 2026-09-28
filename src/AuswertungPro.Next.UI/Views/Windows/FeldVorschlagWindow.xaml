@@ -3,8 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Beim Kanton nachschlagen"
         Width="520"
+        MinWidth="480" MinHeight="260"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
@@ -20,12 +22,7 @@
         </Grid.RowDefinitions>
 
         <!-- Kopf: worum es geht -->
-        <TextBlock x:Name="KopfText"
-                   Grid.Row="0"
-                   FontSize="{DynamicResource TextL}"
-                   FontWeight="SemiBold"
-                   TextWrapping="Wrap"
-                   Margin="0,0,0,14"/>
+        <controls:NovaDialogHeader x:Name="KopfText" Grid.Row="0"/>
 
         <!-- Ein einzelner Treffer -->
         <Border x:Name="TrefferBereich"
@@ -60,17 +57,21 @@
                    TextWrapping="Wrap"
                    Margin="0,0,0,18"/>
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="UebernehmenKnopf"
-                    Content="Übernehmen"
-                    MinWidth="120"
-                    Margin="0,0,10,0"
-                    IsDefault="True"
-                    Click="Uebernehmen_Click"/>
-            <Button x:Name="AbbrechenKnopf"
-                    Content="Abbrechen"
-                    MinWidth="100"
-                    IsCancel="True"/>
-        </StackPanel>
+        <Border Grid.Row="4" Style="{StaticResource DialogButtonBar}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="AbbrechenKnopf"
+                        Content="Abbrechen"
+                        Style="{StaticResource SecondaryButton}"
+                        MinWidth="100"
+                        Margin="0,0,10,0"
+                        IsCancel="True"/>
+                <Button x:Name="UebernehmenKnopf"
+                        Content="Übernehmen"
+                        Style="{StaticResource PrimaryButton}"
+                        MinWidth="120"
+                        IsDefault="True"
+                        Click="Uebernehmen_Click"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

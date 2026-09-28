@@ -23,7 +23,7 @@ public partial class FeldVorschlagWindow : Window
     {
         InitializeComponent();
 
-        KopfText.Text = $"Schacht {schachtnummer} · Feld \"{feldname}\"";
+        KopfText.Title = $"Schacht {schachtnummer} · Feld \"{feldname}\"";
         Zeige(ergebnis);
     }
 

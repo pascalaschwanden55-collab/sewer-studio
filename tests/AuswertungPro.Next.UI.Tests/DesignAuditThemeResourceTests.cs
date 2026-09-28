@@ -15,8 +15,8 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("Background=\"{DynamicResource BgBrush}\"", xaml);
         Assert.Contains("Style=\"{StaticResource SecondaryButton}\"", xaml);
         // Optikanalyse 28.09.2026, Aufgabe 3: SuccessButton -> PrimaryButton (Knopfregel, hoechstens
-        // EIN Hauptknopf je Fenster, einheitlicher Primaerstil). SuccessButton bleibt in
-        // HydraulikPrintDialog vorerst bestehen (uebriges Fenster, Aufgabe 4).
+        // EIN Hauptknopf je Fenster, einheitlicher Primaerstil). HydraulikPrintDialog folgt in
+        // Aufgabe 4 (siehe Test unten).
         Assert.Contains("Style=\"{StaticResource PrimaryButton}\"", xaml);
         Assert.DoesNotContain("SuccessButton", xaml);
     }
@@ -28,7 +28,10 @@ public sealed class DesignAuditThemeResourceTests
 
         Assert.Contains("Background=\"{DynamicResource BgBrush}\"", xaml);
         Assert.Contains("Style=\"{StaticResource SecondaryButton}\"", xaml);
-        Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
+        // Optikanalyse 28.09.2026, Aufgabe 4: SuccessButton -> PrimaryButton (Knopfregel, hoechstens
+        // EIN Hauptknopf je Fenster, einheitlicher Primaerstil).
+        Assert.Contains("Style=\"{StaticResource PrimaryButton}\"", xaml);
+        Assert.DoesNotContain("SuccessButton", xaml);
     }
 
     [Fact]
@@ -479,7 +482,9 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("Glyph=\"&#xE73E;\"", photoXaml);
         Assert.Contains("Glyph=\"&#xE7A7;\"", photoXaml);
         Assert.Contains("Glyph=\"&#xE74D;\"", photoXaml);
-        Assert.Contains("Glyph=\"&#xEB42;\"", hydraulicsXaml);
+        // Optikanalyse 28.09.2026, Aufgabe 4: der dekorative Icon-Kasten vor dem Titel ist mit der
+        // Vereinheitlichung auf NovaDialogHeader entfallen (kein Icon-Slot im gemeinsamen Kopf,
+        // gleiches Bild wie bei allen anderen umgestellten Fenstern); die Emoji-Sperre bleibt.
         Assert.DoesNotContain("&#x1F4A7;", hydraulicsXaml);
         Assert.DoesNotContain(" | ", rendering);
         Assert.DoesNotContain(" @ ", rendering);

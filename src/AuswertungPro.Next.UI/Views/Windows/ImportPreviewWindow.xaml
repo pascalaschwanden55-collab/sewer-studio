@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Import-Vorschau" Width="900" Height="620"
         MinWidth="630" MinHeight="430"
         WindowStartupLocation="CenterOwner"
@@ -17,15 +18,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="12,8" Margin="0,0,0,12">
-            <StackPanel>
-                <TextBlock x:Name="HeaderText" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextBrush}"/>
-                <TextBlock x:Name="SubHeaderText" FontSize="{DynamicResource TextS}"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
-            </StackPanel>
-        </Border>
+        <controls:NovaDialogHeader x:Name="Kopf" Grid.Row="0"/>
 
         <!-- Changes DataGrid -->
         <DataGrid Grid.Row="1" x:Name="ChangesGrid"
@@ -66,11 +59,13 @@
         </Expander>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="Schließen" Click="CloseButton_Click" Padding="16,6" Margin="0,0,8,0"
-                    Style="{StaticResource ToolbarButton}"/>
-            <Button Content="Import ausführen" Click="ExecuteButton_Click" Padding="16,6"
-                    Style="{StaticResource ToolbarButtonAccent}"/>
-        </StackPanel>
+        <Border Grid.Row="3" Style="{StaticResource DialogButtonBar}" Margin="0,12,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Schließen" Click="CloseButton_Click" Padding="16,6" Margin="0,0,8,0"
+                        Style="{StaticResource SecondaryButton}" IsCancel="True"/>
+                <Button Content="Import ausführen" Click="ExecuteButton_Click" Padding="16,6"
+                        Style="{StaticResource PrimaryButton}" IsDefault="True"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

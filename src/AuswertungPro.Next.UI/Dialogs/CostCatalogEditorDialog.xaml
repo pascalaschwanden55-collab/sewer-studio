@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         ui:WindowFx.Entrance="True"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Positionen bearbeiten"
         Width="1240" Height="720" MinWidth="980" MinHeight="540"
         WindowStartupLocation="CenterOwner"
@@ -14,11 +15,9 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,10">
-            <TextBlock Text="Positionen (Kostentabelle)" FontSize="{DynamicResource TextXL}" FontWeight="SemiBold"/>
-            <TextBlock Text="Hier kannst du Positionen hinzufügen, ändern oder löschen."
-                       Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/>
-        </StackPanel>
+        <controls:NovaDialogHeader Grid.Row="0"
+                   Title="Positionen (Kostentabelle)"
+                   Subtitle="Hier kannst du Positionen hinzufügen, ändern oder löschen."/>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -86,7 +85,7 @@
                         </DataGrid>
 
                         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                            <Button Command="{Binding AddDnCommand}" Padding="12,6" Margin="0,0,6,0">
+                            <Button Command="{Binding AddDnCommand}" Style="{StaticResource ToolbarButton}" Padding="12,6" Margin="0,0,6,0">
                                 <StackPanel Orientation="Horizontal">
                                     <ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                                     <TextBlock Text="DN"/>
@@ -108,27 +107,25 @@
             </Border>
         </Grid>
 
-        <DockPanel Grid.Row="2" Margin="0,12,0,0">
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                <Button Command="{Binding AddCommand}" Padding="12,6" Margin="0,0,6,0">
+        <Border Grid.Row="2" Style="{StaticResource DialogButtonBar}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Command="{Binding AddCommand}" Style="{StaticResource SecondaryButton}" Padding="12,6" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
                         <ui:FluentIcon Glyph="&#xE710;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
                         <TextBlock Text="Position"/>
                     </StackPanel>
                 </Button>
-                <Button Command="{Binding RemoveCommand}" Padding="12,6" Style="{StaticResource SecondaryButton}">
+                <Button Command="{Binding RemoveCommand}" Style="{StaticResource SecondaryButton}" Padding="12,6" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
                         <TextBlock Text="Löschen"/>
                     </StackPanel>
                 </Button>
+                <Button Content="Schließen" Command="{Binding CloseCommand}" Style="{StaticResource SecondaryButton}"
+                        Padding="18,6" Margin="0,0,8,0" IsCancel="True"/>
+                <Button Content="Speichern" Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButton}"
+                        Padding="18,6" IsDefault="True"/>
             </StackPanel>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Speichern" Command="{Binding SaveCommand}" Padding="18,6" Margin="0,0,6,0"
-                        Style="{StaticResource PrimaryButton}"/>
-                <Button Content="Schließen" Command="{Binding CloseCommand}" Padding="18,6"
-                        Style="{StaticResource SecondaryButton}"/>
-            </StackPanel>
-        </DockPanel>
+        </Border>
     </Grid>
 </Window>

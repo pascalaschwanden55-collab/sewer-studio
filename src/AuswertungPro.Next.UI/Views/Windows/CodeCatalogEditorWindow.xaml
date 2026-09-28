@@ -3,13 +3,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Code-Katalog"
         Width="1050"
-        Height="680"
-        MinWidth="740" MinHeight="480"
+        Height="720"
+        MinWidth="740" MinHeight="520"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="12">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -19,7 +21,9 @@
             <ColumnDefinition Width="0.9*" />
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,10">
+        <controls:NovaDialogHeader Grid.Row="0" Grid.ColumnSpan="2" Title="Code-Katalog"/>
+
+        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,10">
             <TextBlock Text="Suche:" VerticalAlignment="Center" Margin="0,0,6,0" />
             <TextBox Width="280"
                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
@@ -29,7 +33,7 @@
                       SelectedItem="{Binding SelectedGroup}" />
         </StackPanel>
 
-        <DataGrid Grid.Row="1"
+        <DataGrid Grid.Row="2"
                   Grid.Column="0"
                   Margin="0,0,10,0"
                   ItemsSource="{Binding CodesView}"
@@ -45,7 +49,7 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <Border Grid.Row="1" Grid.Column="1" Padding="12" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
+        <Border Grid.Row="2" Grid.Column="1" Padding="12" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
             <StackPanel>
                 <TextBlock Text="Detail" FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Margin="0,0,0,10" />
                 <TextBlock Text="Code" />
@@ -73,17 +77,19 @@
             </StackPanel>
         </Border>
 
-        <DockPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="0,12,0,0">
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                <Button Content="Neu" Width="100" Margin="0,0,8,0" Command="{Binding NewCommand}" />
-                <Button Content="Löschen" Width="100" Command="{Binding DeleteCommand}" />
-            </StackPanel>
-
+        <Border Grid.Row="3" Grid.ColumnSpan="2" Style="{StaticResource DialogButtonBar}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Validieren" Width="110" Margin="0,0,8,0" Command="{Binding ValidateCommand}" />
-                <Button Content="Speichern" Width="110" Margin="0,0,8,0" Command="{Binding SaveCommand}" />
-                <Button Content="Abbrechen" Width="110" Command="{Binding CancelCommand}" />
+                <Button Content="Neu" Width="100" Margin="0,0,8,0" Command="{Binding NewCommand}"
+                        Style="{StaticResource SecondaryButton}"/>
+                <Button Content="Löschen" Width="100" Margin="0,0,8,0" Command="{Binding DeleteCommand}"
+                        Style="{StaticResource SecondaryButton}"/>
+                <Button Content="Validieren" Width="110" Margin="0,0,8,0" Command="{Binding ValidateCommand}"
+                        Style="{StaticResource SecondaryButton}"/>
+                <Button Content="Abbrechen" Width="110" Margin="0,0,8,0" Command="{Binding CancelCommand}"
+                        Style="{StaticResource SecondaryButton}" IsCancel="True"/>
+                <Button Content="Speichern" Width="110" Command="{Binding SaveCommand}"
+                        Style="{StaticResource PrimaryButton}" IsDefault="True"/>
             </StackPanel>
-        </DockPanel>
+        </Border>
     </Grid>
 </Window>

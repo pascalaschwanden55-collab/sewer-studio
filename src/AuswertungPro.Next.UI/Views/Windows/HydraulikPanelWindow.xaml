@@ -4,6 +4,7 @@
         ui:WindowFx.Entrance="True"
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Hydraulik-Panel"
         Width="920" Height="780"
         MinWidth="800" MinHeight="650"
@@ -139,22 +140,9 @@
         </Grid.RowDefinitions>
 
         <!-- ═══ HEADER ═══ -->
-        <Border Grid.Row="0" Margin="0,0,0,16" Padding="0,0,0,14"
-                BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderBrush}">
-            <StackPanel Orientation="Horizontal">
-                <Border Width="38" Height="38" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,14,0"
-                        Background="{DynamicResource AccentBrush}">
-                    <ui:FluentIcon Glyph="&#xEB42;" FontSize="{DynamicResource TextXL}" Foreground="White"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="SewerStudio — Hydraulik-Panel"
-                               FontSize="{DynamicResource TextXL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
-                    <TextBlock Text="DWA-A 110 · Kreisquerschnitt · Normalabfluss bei Teilfüllung"
-                               FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}"/>
-                </StackPanel>
-            </StackPanel>
-        </Border>
+        <controls:NovaDialogHeader Grid.Row="0" Margin="0,0,0,16"
+                   Title="Hydraulik-Panel"
+                   Subtitle="DWA-A 110 · Kreisquerschnitt · Normalabfluss bei Teilfüllung"/>
 
         <!-- ═══ MAIN CONTENT ═══ -->
         <Grid Grid.Row="1">
