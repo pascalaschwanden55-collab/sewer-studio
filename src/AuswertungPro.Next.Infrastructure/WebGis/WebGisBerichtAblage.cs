@@ -68,6 +68,9 @@ public static class WebGisBerichtAblage
         }
     }
 
+    /// <summary>Pfad von WebGIS_Log.txt, geprueft gegen die Schreibgrenze; wirft bei einem unsicheren Ziel.</summary>
+    internal static string SichereLogDatei(string ordner) => Sicher(ordner, LogDatei);
+
     /// <summary>Die Datei im Ablageordner, geprueft gegen die Schreibgrenze des Projekts (Ordner eingeschlossen).</summary>
     private static string Sicher(string ordner, string dateiname)
     {

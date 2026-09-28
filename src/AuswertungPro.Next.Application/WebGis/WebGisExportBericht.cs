@@ -174,6 +174,21 @@ public static class WebGisExportBericht
         return string.Empty;
     }
 
+    /// <summary>Zeile VOR dem Schreibversuch eines Objekts: steht sie nicht im Log, wird nicht gesendet.</summary>
+    public static string LogGeplant(WebGisExportPosition p, DateTime zeit)
+    {
+        ArgumentNullException.ThrowIfNull(p);
+        return $"{Z(zeit)} | {Objekt(p.Objektart, p.Bezeichnung)} | {string.Join(", ", p.Aenderungen.ConvertAll(a => a.Feld))} | wird gesendet | GEPLANT";
+    }
+
+    /// <summary>Zeile VOR dem Anlegeversuch einer Massnahme.</summary>
+    public static string LogGeplant(WebGisSanierungPosition s, DateTime zeit)
+    {
+        ArgumentNullException.ThrowIfNull(s);
+        var werte = string.Join(", ", s.Anzeige.ConvertAll(a => a.Split(" (")[0]));
+        return $"{Z(zeit)} | {Objekt(s.Objektart, s.ElternBezeichnung)} | Sanierungsmassnahme | wird angelegt ({werte}) | GEPLANT";
+    }
+
     /// <summary>Schlusszeile nach vollstaendigem Lauf.</summary>
     public static string LogAbschluss(DateTime zeit, WebGisExportPlan plan)
         => $"===== {Z(zeit)} | abgeschlossen | {Ergebnis(plan)}";

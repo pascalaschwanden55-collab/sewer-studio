@@ -43,6 +43,9 @@ public sealed class ExportWebGisBereich : ObservableObject
     /// <summary>Der Plan, den das Prueffenster zuletzt gezeigt hat — nur genau der darf geschrieben werden.</summary>
     private WebGisExportPlan? _bestaetigterPlan;
 
+    /// <summary>Für welches Projekt <see cref="_bestaetigterPlan"/> gilt (WG04).</summary>
+    private WebGisProjektBindung? _bestaetigteBindung;
+
     public IAsyncRelayCommand AnmeldenCommand { get; }
     public IAsyncRelayCommand UebertragenCommand { get; }
     public IAsyncRelayCommand AbmeldenCommand { get; }
@@ -200,17 +203,27 @@ public sealed class ExportWebGisBereich : ObservableObject
             shell.NavigateToShaft(projekt.SchaechteData.FirstOrDefault(s => s.Id == recordId));
     }
 
-    /// <summary>Plan aus dem aktuellen Projektstand + frischem WebGIS-Stand; schreibt nichts.</summary>
+    /// <summary>
+    /// Plan aus dem aktuellen Projektstand + frischem WebGIS-Stand; schreibt nichts. Das Projekt wird VOR dem
+    /// Lesen gebunden: Ist nach der Netzwartezeit ein anderes Projekt offen, wird die Vorschau verworfen (WG04).
+    /// </summary>
     private async Task<WebGisUebersicht?> PruefenAsync()
     {
         if (_d is null || _d.Shell.Project is null || !Angemeldet) return null;
+        var bindung = new WebGisProjektBindung(_d.Shell.Project, _d.Settings.LastProjectPath);
         _laeuft = true; Aktualisiere();
         try
         {
             Status = "Lese den WebGIS-Stand je Objekt …";
-            var plan = await _d.Export().BauePlanAsync(_d.Shell.Project);
-            _bestaetigterPlan = plan;
-            SchreibeBericht(Ablageordner(), WebGisExportBericht.Details(plan, mitErgebnis: false), "Vorschau");
+            var plan = await _d.Export().BauePlanAsync(bindung.Projekt);
+            if (!GiltNoch(bindung))
+            {
+                _bestaetigterPlan = null; _bestaetigteBindung = null;
+                Status = "Das Projekt wurde während der Prüfung gewechselt — Vorschau verworfen.";
+                return null;
+            }
+            _bestaetigterPlan = plan; _bestaetigteBindung = bindung;
+            SchreibeBericht(Ablageordner(bindung), WebGisExportBericht.Details(plan, mitErgebnis: false), "Vorschau");
             var uebersicht = WebGisUebersicht.Aus(plan);
             Status = uebersicht.Kopfzeile;
             return uebersicht;
@@ -226,31 +239,57 @@ public sealed class ExportWebGisBereich : ObservableObject
     /// <summary>
     /// Frisch pruefen und NUR den bestaetigten Plan schreiben: Weicht der frische Plan von dem
     /// ab, den das Fenster zuletzt gezeigt hat (Korrektur in Haltungen/Schaechten, Aenderung im
-    /// WebGIS), wird nichts geschrieben und die neue Vorschau gezeigt. Das Log entsteht je
-    /// Objekt, Bericht und Log auch nach einem Abbruch.
+    /// WebGIS), wird nichts geschrieben und die neue Vorschau gezeigt.
+    /// Seit 28.09.2026 (WG03/WG04): Projekt und Berichtsordner werden VOR der frischen Pruefung gebunden und die
+    /// Projektsperre schon dann erworben; ohne geschriebene Startzeile im Log geht kein Aufruf ans WebGIS, und
+    /// faellt das Log waehrend des Laufs aus, stoppt er vor dem naechsten Schreiben (<see cref="WebGisSendenAblauf"/>).
     /// </summary>
     private async Task<WebGisUebersicht?> SchreibenAsync()
     {
         if (_d is null || _d.Shell.Project is null || !Angemeldet) return null;
+        var bindung = new WebGisProjektBindung(_d.Shell.Project, _d.Settings.LastProjectPath);
+        // Ordner VOR dem Lauf binden: Ein Projektwechsel darf das Log nicht in ein anderes Projekt verlegen.
+        var ordner = Ablageordner(bindung);
+        // Ohne Ablage kein Beleg: Ins WebGIS wird nur geschrieben, wenn das Log entstehen kann.
+        if (ordner is null)
+        {
+            Status = "Kein sicherer Berichtsordner beim Projekt (__WebGIS_Export) — nichts geschrieben. "
+                + "Projekt speichern und erneut versuchen.";
+            return null;
+        }
+        // Pruefung 22.09.2026, C3 / WG04: Die Sperre gilt schon waehrend der frischen Pruefung — sonst koennte das
+        // Projekt zwischen Pruefen und Schreiben gewechselt werden.
+        if (!_d.BeginneProjektvorgang())
+        {
+            Status = "Es läuft bereits ein anderer Projektvorgang — nichts geschrieben.";
+            return null;
+        }
+
         _laeuft = true; Aktualisiere();
         try
         {
             Status = "Prüfe nochmals frisch …";
             var useCase = _d.Export();
-            var plan = await useCase.BaueFrischenPlanAsync(_d.Shell.Project, _bestaetigterPlan);
+            var bestaetigt = _bestaetigteBindung is not null && ReferenceEquals(_bestaetigteBindung.Projekt, bindung.Projekt)
+                ? _bestaetigterPlan
+                : null;
+            var plan = await useCase.BaueFrischenPlanAsync(bindung.Projekt, bestaetigt);
+            if (!GiltNoch(bindung))
+            {
+                _bestaetigterPlan = null; _bestaetigteBindung = null;
+                Status = "Das Projekt wurde gewechselt — nichts geschrieben.";
+                return null;
+            }
             if (plan.NichtsZuSchreiben)
             {
                 Status = "Nichts zu übertragen.";
-                _bestaetigterPlan = plan;
+                _bestaetigterPlan = plan; _bestaetigteBindung = bindung;
                 return WebGisUebersicht.Aus(plan);
             }
 
-            // Ordner und Benutzer VOR dem Lauf binden: Ein Projektwechsel waehrenddessen darf
-            // das Log nicht in ein anderes Projekt verlegen.
-            var ordner = Ablageordner();
-            if (_bestaetigterPlan is null || !WebGisPlanVergleich.Gleich(_bestaetigterPlan, plan))
+            if (bestaetigt is null || !WebGisPlanVergleich.Gleich(bestaetigt, plan))
             {
-                _bestaetigterPlan = plan;
+                _bestaetigterPlan = plan; _bestaetigteBindung = bindung;
                 SchreibeBericht(ordner, WebGisExportBericht.Details(plan, mitErgebnis: false), "Vorschau");
                 var neu = WebGisUebersicht.Aus(plan);
                 neu.Sammelmeldungen.Insert(0,
@@ -260,54 +299,50 @@ public sealed class ExportWebGisBereich : ObservableObject
                 return neu;
             }
 
-            // Ohne Ablage kein Beleg: Ins WebGIS wird nur geschrieben, wenn das Log je Objekt entstehen kann.
-            if (ordner is null)
-            {
-                Status = "Kein sicherer Berichtsordner beim Projekt (__WebGIS_Export) — nichts geschrieben. "
-                    + "Projekt speichern und erneut versuchen.";
-                return WebGisUebersicht.Aus(plan);
-            }
-            // Pruefung 22.09.2026, C3: Waehrend ins WebGIS geschrieben wird, sind Projektwechsel und Schliessen gesperrt.
-            if (!_d.BeginneProjektvorgang())
-            {
-                Status = "Es läuft bereits ein anderer Projektvorgang — nichts geschrieben.";
-                return WebGisUebersicht.Aus(plan);
-            }
-
-            var benutzer = _d.Zugang()?.SynLogin ?? "";
-            void Log(string zeile) { if (zeile.Length > 0) WebGisBerichtAblage.HaengeAnLog(ordner, zeile); }
-
+            var log = new WebGisLaufLog(ordner);
             Status = "Schreibe ins WebGIS …";
-            Log(WebGisExportBericht.LogStart(DateTime.Now, benutzer, plan));
+            WebGisSendenAblauf.Ausgang ausgang;
             try
             {
-                await useCase.FuehreAusAsync(plan, probelauf: false,
-                    nachObjekt: p => Log(WebGisExportBericht.LogZeile(p, DateTime.Now)),
-                    nachMassnahme: s => Log(WebGisExportBericht.LogZeile(s, DateTime.Now)));
+                ausgang = await WebGisSendenAblauf.FuehreAusAsync(
+                    useCase, plan, log, _d.Zugang()?.SynLogin ?? "", () => GiltNoch(bindung));
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Auch nach einem Abbruch: Was bis dahin geschrieben ist, muss belegt sein.
-                Log(WebGisExportBericht.LogAbbruch(DateTime.Now, ex.Message, plan));
                 SchreibeBericht(ordner, WebGisExportBericht.Details(plan, mitErgebnis: true), "Ergebnis-abgebrochen");
-                _bestaetigterPlan = null;
+                _bestaetigterPlan = null; _bestaetigteBindung = null;
                 throw;
             }
-            finally
+            _bestaetigterPlan = null; _bestaetigteBindung = null; // nach dem Schreiben braucht es einen neuen Plan
+
+            var logPfad = Path.Combine(ordner, WebGisBerichtAblage.LogDatei);
+            if (ausgang == WebGisSendenAblauf.Ausgang.KeinStartbeleg)
             {
-                _d.BeendeProjektvorgang();
+                Status = "Das Änderungslog ist nicht schreibbar (" + logPfad + ") — nichts ins WebGIS geschrieben.";
+                _d.Toasts.Warning(Status);
+                return WebGisUebersicht.Aus(plan);
             }
-            Log(WebGisExportBericht.LogAbschluss(DateTime.Now, plan));
-            _bestaetigterPlan = null; // nach dem Schreiben braucht es einen neuen, gepruefeten Plan
 
             var ergebnis = WebGisExportBericht.Ergebnis(plan);
-            var pfad = SchreibeBericht(ordner, WebGisExportBericht.Details(plan, mitErgebnis: true), "Ergebnis");
-            var logPfad = Path.Combine(ordner, WebGisBerichtAblage.LogDatei);
-            _d.MeldeErgebnis(ergebnis + $"\nLog: {logPfad}" + (pfad is null ? "" : $"\nBericht: {pfad}"));
-            Status = ergebnis;
-            var fehlgeschlagen = plan.Positionen.Exists(p => p.SchreibFehler is not null)
+            var zusatz = ausgang switch
+            {
+                WebGisSendenAblauf.Ausgang.LogAusgefallen =>
+                    "\nACHTUNG: Das Änderungslog fiel während des Laufs aus — Lauf gestoppt. Bereits bestätigte "
+                    + "Änderungen stehen im Bericht; vor einem neuen Versuch im WebGIS nachsehen.",
+                WebGisSendenAblauf.Ausgang.ProjektGewechselt =>
+                    "\nACHTUNG: Das Projekt war nicht mehr offen — Lauf vor dem nächsten Schreiben gestoppt.",
+                _ => string.Empty,
+            };
+            var pfad = SchreibeBericht(ordner, WebGisExportBericht.Details(plan, mitErgebnis: true),
+                ausgang == WebGisSendenAblauf.Ausgang.Abgeschlossen ? "Ergebnis" : "Ergebnis-abgebrochen");
+            _d.MeldeErgebnis(ergebnis + zusatz + $"\nLog: {logPfad} (Lauf {log.LaufId})"
+                + (pfad is null ? "" : $"\nBericht: {pfad}"));
+            Status = ergebnis + zusatz;
+            var fehlgeschlagen = ausgang != WebGisSendenAblauf.Ausgang.Abgeschlossen
+                || plan.Positionen.Exists(p => p.SchreibFehler is not null)
                 || plan.Sanierungen.Exists(s => s.SchreibFehler is not null);
-            if (fehlgeschlagen) _d.Toasts.Warning(ergebnis); else _d.Toasts.Success(ergebnis);
+            if (fehlgeschlagen) _d.Toasts.Warning(ergebnis + zusatz); else _d.Toasts.Success(ergebnis);
 
             // Ergebnis im selben Fenster: dieselben Karten, aber als "geschrieben" markiert.
             return WebGisUebersicht.Aus(plan, ergebnis: true);
@@ -323,11 +358,19 @@ public sealed class ExportWebGisBereich : ObservableObject
                 + AuswertungPro.Next.Application.Common.UserError.DescribeAndReport(ex, "WebGIS übertragen");
             throw;
         }
-        finally { _laeuft = false; Aktualisiere(); }
+        finally
+        {
+            _d.BeendeProjektvorgang();
+            _laeuft = false; Aktualisiere();
+        }
     }
+
+    /// <summary>Ist noch genau das gebundene Projekt offen (Instanz und Speicherpfad)?</summary>
+    private bool GiltNoch(WebGisProjektBindung bindung)
+        => _d is not null && bindung.Gilt(_d.Shell.Project, _d.Settings.LastProjectPath);
 
     // Berichte und Log in <Projektordner>\__WebGIS_Export, hinter der Schreibgrenze des Projekts (Pruefung 22.09.2026,
     // C3). Eine Stelle fuer Senden und Holen: WebGisBerichtAblage.
-    private string? Ablageordner() => WebGisBerichtAblage.Ordner(_d?.Settings.LastProjectPath);
+    private static string? Ablageordner(WebGisProjektBindung bindung) => WebGisBerichtAblage.Ordner(bindung.Pfad);
     private static string? SchreibeBericht(string? ordner, string text, string art) => WebGisBerichtAblage.SchreibeBericht(ordner, art, text);
 }

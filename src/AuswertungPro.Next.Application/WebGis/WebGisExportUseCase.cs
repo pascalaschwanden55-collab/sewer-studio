@@ -290,10 +290,13 @@ public sealed class WebGisExportUseCase
     /// gelesen und die Aenderung nur uebernommen, wenn der Ausgangswert noch passt
     /// (Konfliktschutz). Angehakte Vorschlaege der Kanalfirma gehoeren zum Plan und werden hier zu
     /// Aenderungen; nicht Angehaktes geht nie hinaus.
+    /// <paramref name="vorObjekt"/>/<paramref name="vorMassnahme"/> laufen unmittelbar VOR jedem Schreibversuch;
+    /// eine Ausnahme dort stoppt den Lauf, bevor etwas gesendet wird (Log als Voraussetzung, WG03).
     /// </summary>
     public async Task FuehreAusAsync(
         WebGisExportPlan plan, bool probelauf = true, CancellationToken ct = default,
-        Action<WebGisExportPosition>? nachObjekt = null, Action<WebGisSanierungPosition>? nachMassnahme = null)
+        Action<WebGisExportPosition>? nachObjekt = null, Action<WebGisSanierungPosition>? nachMassnahme = null,
+        Action<WebGisExportPosition>? vorObjekt = null, Action<WebGisSanierungPosition>? vorMassnahme = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         WebGisVorschlagAuswahl.UebernimmGewaehlte(plan);
@@ -302,12 +305,13 @@ public sealed class WebGisExportUseCase
         {
             if (!pos.Schreibbar) continue;
             if (probelauf) { pos.Hinweise.Add("Probelauf — nicht geschrieben."); continue; }
+            vorObjekt?.Invoke(pos);
             // Ein vom Server bestaetigtes Schreiben bleibt bestaetigt, auch wenn danach etwas scheitert (A06).
             await GeschuetztAsync(pos, p => SchreibeEineAsync(p, ct), (p, f) => { if (!p.Geschrieben) p.SchreibFehler = f; },
                 nachObjekt, ct).ConfigureAwait(false);
         }
 
-        await LegeSanierungenAnAsync(plan, probelauf, ct, nachMassnahme).ConfigureAwait(false);
+        await LegeSanierungenAnAsync(plan, probelauf, ct, nachMassnahme, vorMassnahme).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -471,7 +475,8 @@ public sealed class WebGisExportUseCase
     /// nicht inzwischen (z.B. von Hand) angelegt worden sein.
     /// </summary>
     private async Task LegeSanierungenAnAsync(
-        WebGisExportPlan plan, bool probelauf, CancellationToken ct, Action<WebGisSanierungPosition>? nachMassnahme)
+        WebGisExportPlan plan, bool probelauf, CancellationToken ct, Action<WebGisSanierungPosition>? nachMassnahme,
+        Action<WebGisSanierungPosition>? vorMassnahme = null)
     {
         // Elternobjekte, deren Stand in diesem Lauf schon geprueft wurde: Eine eigene Massnahme kann das
         // Aenderungsdatum des Elternobjekts setzen und darf die naechste Massnahme nicht sperren.
@@ -493,6 +498,7 @@ public sealed class WebGisExportUseCase
             }
             // Wurde das Elternobjekt eben bestaetigt geschrieben, ist sein Stand soeben geprueft worden.
             var vergleich = eltern is { Schreibbar: false } && !geprueft.Contains(san.ElternRecordId) ? eltern.GelesenerStand : null;
+            vorMassnahme?.Invoke(san);
             await GeschuetztAsync(san, s => LegeEineAnAsync(s, eltern?.GespeicherteGlobalId, vergleich, ct),
                 (s, f) => { if (!s.Geschrieben) s.SchreibFehler = f; }, nachMassnahme, ct).ConfigureAwait(false);
             if (san.Geschrieben) geprueft.Add(san.ElternRecordId);
