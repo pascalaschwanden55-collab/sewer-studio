@@ -166,6 +166,36 @@ public sealed class NovaDialogWindowIsolatedSmokeTests
             var textScroll = Assert.IsType<ScrollViewer>(fehlerFenster.FindName("TextScroll"));
             Assert.True(textScroll.MaxHeight > 0 && textScroll.MaxHeight <= SystemParameters.WorkArea.Height);
 
+            // ── 6) Fix-Runde 1 (Review): AcceptsReturn muss AUS sein, sonst verschluckt ein
+            //      fokussiertes Enter im auswaehlbaren Meldungstext die Enter-Taste, bevor sie
+            //      WPFs eingebaute IsDefault-Logik erreicht ("Enter = Standardknopf" waere dann
+            //      tot, sobald der Benutzer in den Text geklickt hat). Ein echtes Ausloesen ueber
+            //      RaiseEvent(Keyboard.PreviewKeyDownEvent/KeyDownEvent) wurde probiert (Fokus
+            //      wurde nachweislich auf das Textfeld gesetzt - Keyboard.FocusedElement war
+            //      danach das Textfeld), loeste aber weder in der Tunnel- noch in der Bubble-Route
+            //      den Standardknopf aus: WPFs Standardknopf-Erkennung haengt am
+            //      InputManager-/HwndSource-Pfad eines ECHTEN WM_KEYDOWN, nicht an synthetisch per
+            //      RaiseEvent erzeugten RoutedEvents auf einem unsichtbaren Off-Screen-Fenster.
+            //      Ein echter Tastendruck (SendInput auf ein wirklich fokussiertes OS-Fenster)
+            //      waere in diesem Kindprozess-Muster unzuverlaessig und wuerde dem Anspruch
+            //      "kein sichtbares Fenster im Test" widersprechen - deshalb bleibt es hier bei
+            //      der deterministischen Eigenschaftspruefung (siehe Aufgabenreview). ──
+            foreach (var (art, knoepfe, standardNein) in new (NovaDialogArt, NovaDialogKnopfsatz, bool)[]
+                     {
+                         (NovaDialogArt.Fehler, NovaDialogKnopfsatz.Ok, false),
+                         (NovaDialogArt.Frage, NovaDialogKnopfsatz.JaNein, false),
+                         (NovaDialogArt.Warnung, NovaDialogKnopfsatz.JaNein, true),
+                         (NovaDialogArt.Frage, NovaDialogKnopfsatz.JaNeinAbbrechen, false)
+                     })
+            {
+                var pruefFenster = Erzeuge(art, knoepfe, standardNein, "Titel", "Zeile eins.\nZeile zwei.");
+                var pruefText = Assert.IsType<TextBox>(pruefFenster.FindName("TextInhalt"));
+                Assert.False(
+                    pruefText.AcceptsReturn,
+                    "AcceptsReturn wuerde ein fokussiertes Enter im auswaehlbaren Text verschlucken " +
+                    "und den Standardknopf (Enter) unerreichbar machen.");
+            }
+
             WpfIsolatedTestProcess.MarkChildScenarioCompleted();
             app.Shutdown();
         });
@@ -182,6 +212,7 @@ public sealed class NovaDialogWindowIsolatedSmokeTests
         };
         WindowFx.SetEntrance(fenster, false);
         fenster.Show();
+        fenster.Activate();
         fenster.UpdateLayout();
         fenster.Dispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
         return fenster;

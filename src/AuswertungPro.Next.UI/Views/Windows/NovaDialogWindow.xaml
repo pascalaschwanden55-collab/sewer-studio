@@ -38,11 +38,15 @@
                        Foreground="{DynamicResource TextBrush}"/>
         </StackPanel>
 
-        <!-- Text: auswaehlbar/kopierbar, umbrechend, bei langem Text scrollbar -->
+        <!-- Text: auswaehlbar/kopierbar, umbrechend, bei langem Text scrollbar. AcceptsReturn
+             bleibt AUS: Ein eingebetteter Zeilenumbruch im Meldungstext wird trotzdem angezeigt
+             (TextWrapping/embedded '\n' reichen dafuer), aber AcceptsReturn=True wuerde ein
+             fokussiertes Enter im Textfeld selbst verschlucken - dann kaeme "Enter = Standard-
+             knopf" nie beim OK-/Ja-Knopf an, sobald der Benutzer in den Text geklickt hat. -->
         <ScrollViewer x:Name="TextScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,18">
             <TextBox x:Name="TextInhalt"
                      IsReadOnly="True" IsReadOnlyCaretVisible="True"
-                     TextWrapping="Wrap" AcceptsReturn="True"
+                     TextWrapping="Wrap" AcceptsReturn="False"
                      Background="Transparent" BorderThickness="0" Padding="0"
                      Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextM}"
                      Cursor="IBeam"
