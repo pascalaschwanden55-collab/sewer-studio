@@ -232,6 +232,40 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   nichts). Nie ungeprueft annehmen, dass ein bestehender ApplicationIdle-Invoke-Test (z. B.
   `NovaDialogHeaderIsolatedSmokeTests`) denselben Weg fuer ein neues Fenster sicher macht.
   Test `AboutWindowIsolatedSmokeTests` (Kindprozess-Muster).
+- **Aufgabe 6 — Hilfe-Menü, F1, Tastenkürzel, Handbuch.** Neues Menü «_Hilfe» in `MainWindow.xaml`
+  (Handbuch F1, Tastenkürzel Strg+F1, Über SewerStudio) nach `_Ansicht`. **`HandbuchInhalt`**
+  (`Services/HandbuchInhalt.cs`, WPF-frei) ist die EINE Textquelle des Handbuchs: ein
+  `HandbuchAbschnitt` je Seite der Leiste, `Schluessel` ist wortgleich der `NavItem.Title` aus
+  `ShellViewModel.NavItems` (15 Seiten im aktuellen Stand — der Brief nennt „16“, zählt aber nur
+  15 Namen auf; massgeblich ist der Code), dazu genau EIN Abschnitt `FachleuteSchluessel`
+  («Für Fachleute (technisch)», `IstFachlich=true`) mit dem verschobenen Entwicklermaterial
+  (Umgebungsvariablen, Sidecar, Modell-Registry, Merge-Engine) aus dem alten Einstellungen-Reiter
+  „Hilfe“. Jeder Seitentext ist gegen die echte XAML der Seite geprüft (NovaPageHeader-Untertitel,
+  „Weitere Aktionen“-Menüpunkte) statt vom alten, teils veralteten Hilfetext übernommen.
+  **`HandbuchWindow`** (nicht-modal, Einzelstück über `HandbuchWindow.ZeigeAn(seitenSchluessel)`
+  — ein bereits offenes Handbuch wird nur weitergeschaltet und aktiviert statt neu geöffnet,
+  Muster wie `DataPage.ShowOrUpdateBeobachtungenWindow`) zeigt links ein nach
+  `ShellNavigationGroups` gruppiertes Inhaltsverzeichnis, rechts den Text, oben im
+  `NovaDialogHeader`-Aktionsbereich ein Suchfeld (filtert Titel UND Fliesstext). Der
+  Fachleute-Abschnitt steckt beim Anzeigen in einem `Expander` mit `IsExpanded=False`
+  („standardmässig zu“). F1 in `MainWindow` übergibt `SelectedNavItem.Title` als
+  `CommandParameter`; ein unbekannter/leerer Schlüssel fällt über `HandbuchInhalt.Finde` auf
+  „Übersicht“ zurück. Das `PlayerWindow` hat sein eigenes F1-Overlay
+  (`PlayerShortcutOverlayController`) in einem eigenen Fenster und ist von der neuen
+  `MainWindow`-Bindung unberührt.
+  **`TastenkuerzelWindow`** (gleiches Einzelstück-Muster, `ZeigeAn()`) listet zuerst die globalen
+  Kürzel (F11, Strg+N/O/S/K, F1, Strg+F1) und das Seiten-Kürzel F3 (Haltungen), danach je eine
+  Gruppe „Videoplayer – <Kategorie>“ — gelesen aus
+  **`PlayerKeyboardShortcutPolicy.Beschreibungen`** (`PlayerShortcutBeschreibung`: Action/Gruppe/
+  Taste/Text), NIE hier von Hand abgeschrieben. Ein Test bindet jede
+  `PlayerKeyboardAction` an mindestens eine Beschreibung, ein zweiter prüft im echten
+  Kindprozess, dass jede Zeile der Policy wortgleich im Fenster ankommt.
+  Der Einstellungen-Reiter „Hilfe“ ist auf einen kurzen Verweis plus die Knöpfe „Handbuch öffnen“/
+  „Tastenkürzel anzeigen“ geschrumpft (`SettingsPage.xaml.cs`, ruft dieselben `ZeigeAn`-Einstiege).
+  Tests: `HandbuchInhaltAbdeckungTests` (liest die `NavItem`-Titel per Regex direkt aus
+  `ShellViewModel.cs` und prüft Abdeckung — kein ServiceProvider/keine WPF-App nötig),
+  `PlayerKeyboardShortcutPolicyTests` (Beschreibungen-Abdeckung), `HandbuchWindowIsolatedSmokeTests`,
+  `TastenkuerzelWindowIsolatedSmokeTests` (beide Kindprozess-Muster).
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

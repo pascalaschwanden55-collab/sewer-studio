@@ -38,6 +38,16 @@ public sealed partial class ShellViewModel
         window.ShowDialog();
     }
 
+    /// <summary>Aufgabe 6 (Hilfe-Menue, F1, Tastenkuerzel, Handbuch): oeffnet das Handbuch beim
+    /// Abschnitt der aktuell gewaehlten Seite. <see cref="Views.Windows.HandbuchWindow.ZeigeAn"/>
+    /// haelt das Fenster als Einzelstueck - ein bereits offenes Handbuch wird nur weitergeschaltet.</summary>
+    private void OpenHandbuch(string? seitenSchluessel)
+        => Views.Windows.HandbuchWindow.ZeigeAn(seitenSchluessel);
+
+    /// <summary>Aufgabe 6: oeffnet die Tastenkuerzel-Uebersicht (ebenfalls ein Einzelstueck).</summary>
+    private void OpenTastenkuerzel()
+        => Views.Windows.TastenkuerzelWindow.ZeigeAn();
+
     public sealed partial class NavItem : ObservableObject
     {
         private bool _isAvailable = true;

@@ -17,6 +17,12 @@
         <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenProjectCommand}"/>
         <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewProjectCommand}"/>
         <KeyBinding Key="K" Modifiers="Control" Command="{Binding GlobaleSucheFokusCommand}"/>
+        <!-- Aufgabe 6 (Hilfe-Menue, F1, Tastenkuerzel, Handbuch): F1 oeffnet das Handbuch beim
+             Abschnitt der aktuell gewaehlten Seite; Strg+F1 die Tastenkuerzel-Uebersicht. Das
+             PlayerWindow ist ein eigenes Fenster mit eigenem F1-Overlay (PlayerShortcutOverlayController)
+             und dadurch nicht betroffen. -->
+        <KeyBinding Key="F1" Command="{Binding OpenHandbuchCommand}" CommandParameter="{Binding SelectedNavItem.Title}"/>
+        <KeyBinding Key="F1" Modifiers="Control" Command="{Binding OpenTastenkuerzelCommand}"/>
     </Window.InputBindings>
     <Grid Background="{DynamicResource BgBrush}">
     <!-- Eigene deckende Grundflaeche: Mica setzt Window.Background auf Transparent.
@@ -217,6 +223,28 @@
                               ToolTip="System-Monitor in einem eigenen Fenster öffnen.">
                         <MenuItem.Icon>
                             <ui:FluentIcon Glyph="&#xE9D9;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+                <MenuItem Header="_Hilfe" Padding="8,6">
+                    <MenuItem Header="Handbuch" Command="{Binding OpenHandbuchCommand}"
+                              CommandParameter="{Binding SelectedNavItem.Title}" InputGestureText="F1"
+                              ToolTip="Kurze Anleitung zur aktuellen Seite und zum ganzen Programm.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE736;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Tastenkürzel" Command="{Binding OpenTastenkuerzelCommand}" InputGestureText="Strg+F1"
+                              ToolTip="Alle globalen Tastenkürzel und die Kürzel des Videoplayers.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE765;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="Über SewerStudio..." Command="{Binding ShowAboutCommand}"
+                              ToolTip="Programmversion, Systeminfo und Datenordner.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE946;" Foreground="{DynamicResource MutedBrush}"/>
                         </MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>

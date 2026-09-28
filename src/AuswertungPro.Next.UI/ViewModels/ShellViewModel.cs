@@ -83,9 +83,14 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     public IRelayCommand OpenPriceCatalogCommand { get; }
     public IRelayCommand OpenTemplateEditorCommand { get; }
     /// <summary>Optikanalyse 28.09.2026, Aufgabe 5 («Programmidentitaet»): oeffnet «Über SewerStudio».
-    /// Aufgabe 6 verdrahtet dafuer den Hilfe-Menuepunkt; dieser Befehl ist der eine dafuer vorgesehene
-    /// Weg und wird bis dahin von keiner Oberflaeche aufgerufen.</summary>
+    /// Aufgabe 6 verdrahtet dafuer den Hilfe-Menuepunkt.</summary>
     public IRelayCommand ShowAboutCommand { get; }
+    /// <summary>Aufgabe 6: oeffnet das Handbuch. Der Parameter ist der Seitenschluessel
+    /// (<c>NavItem.Title</c> der aktuell gewaehlten Seite, z. B. aus F1); unbekannt/leer -&gt;
+    /// «Übersicht» (<see cref="Services.HandbuchInhalt.Finde"/>).</summary>
+    public IRelayCommand<string?> OpenHandbuchCommand { get; }
+    /// <summary>Aufgabe 6: oeffnet die Tastenkürzel-Übersicht.</summary>
+    public IRelayCommand OpenTastenkuerzelCommand { get; }
     public IRelayCommand ToggleFocusModeCommand { get; }
     public IRelayCommand SwitchProjectCommand { get; }
     [ObservableProperty] private bool _isProjectReady;
@@ -250,6 +255,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         OpenPriceCatalogCommand = new RelayCommand(OpenPriceCatalog);
         OpenTemplateEditorCommand = new RelayCommand(OpenTemplateEditor);
         ShowAboutCommand = new RelayCommand(ShowAbout);
+        OpenHandbuchCommand = new RelayCommand<string?>(OpenHandbuch);
+        OpenTastenkuerzelCommand = new RelayCommand(OpenTastenkuerzel);
         ToggleFocusModeCommand = new RelayCommand(() => IsFocusMode = !IsFocusMode);
 
         InitNova();
