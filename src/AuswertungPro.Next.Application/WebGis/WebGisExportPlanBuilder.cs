@@ -23,6 +23,11 @@ public sealed class WebGisObjektEingabe
     /// Vorschlag gezeigt, nie automatisch geschrieben (Entscheid Pascal 23.09.2026 abends).
     /// </summary>
     public Dictionary<string, string> Kanalfirmenwerte { get; init; } = new(StringComparer.Ordinal);
+    /// <summary>
+    /// Alle Feldwerte des Datensatzes als Momentaufnahme — nur fuer die Vergleichsliste (SewerStudio-Spalte).
+    /// Was geschrieben wird, entscheiden allein die Felder oben.
+    /// </summary>
+    public Dictionary<string, string> Werte { get; init; } = new(StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -162,6 +167,9 @@ public static class WebGisExportPlanBuilder
         // 6) Werte der Kanalfirma (Ist-Zustand), die vom WebGIS abweichen: nur als Vorschlag zum Anhaken,
         //    nie automatisch (Entscheid Pascal 23.09.2026 abends).
         Kanalfirmenwerte(e, stand, pos);
+
+        // 7) Vergleichsliste (Anzeige): jedes Feld SewerStudio | WebGIS | was passiert — aus dem, was oben geplant wurde.
+        WebGisVergleichBuilder.Baue(e, stand, pos);
 
         return pos;
     }

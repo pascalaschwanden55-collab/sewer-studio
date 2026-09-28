@@ -93,6 +93,8 @@ public sealed class WebGisExportPosition
     /// </summary>
     public IReadOnlyDictionary<string, string?>? GelesenerStand { get; init; }
     public List<WebGisFeldAenderung> Aenderungen { get; } = new();
+    /// <summary>Vergleichsliste für die Anzeige: jedes Feld mit SewerStudio- und WebGIS-Wert (28.09.2026).</summary>
+    public List<WebGisFeldVergleich> Vergleich { get; } = new();
     /// <summary>
     /// Werte der Kanalfirma, die vom WebGIS abweichen — nur zur Auswahl, nie automatisch geschrieben
     /// (<see cref="WebGisVorschlagAuswahl"/>).

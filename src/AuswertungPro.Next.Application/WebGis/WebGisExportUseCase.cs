@@ -39,14 +39,87 @@ public sealed class WebGisExportUseCase
     public async Task<WebGisExportPlan> BauePlanAsync(Project projekt, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(projekt);
+        // Pruefung 22.09.2026, C3: Erst das ganze Abbild bauen, dann aufs Netz warten. Nach dem ersten Warten laeuft
+        // der Plan auf einem anderen Thread weiter, waehrend im nicht-modalen Fenster Haltungen/Schaechte entstehen
+        // oder verschwinden — die lebenden Listen darf er dann nicht mehr anfassen.
+        var eingaben = Eingaben(projekt);
+        var sanierungsakten = WebGisAktenAbbild.Sanierungen(projekt.Objektakten);
+        var plan = await BaueAusEingabenAsync(eingaben, sanierungsakten, SperreDoppelteZuordnungen, ct).ConfigureAwait(false);
+
+        plan.Hinweise.Add($"{plan.Positionen.Count} Objekte geprueft: {plan.Schreibbare} mit Aenderung, {plan.Gesperrte} gesperrt.");
+        if (plan.Positionen.Count > 1 && plan.Positionen.TrueForAll(p => p.Sperren.Exists(s => s.StartsWith("Im WebGIS nicht eindeutig gefunden", StringComparison.Ordinal))))
+            plan.Hinweise.Add("Kein einziger Name wurde im WebGIS eindeutig gefunden. Bitte WebGIS-Anmeldung und Suche prüfen; die genaue Ursache ist damit noch nicht belegt.");
+        plan.Hinweise.Add($"{plan.Sanierungen.Count} Sanierungsmassnahmen geplant: {plan.SanierungenSchreibbar} anzulegen, {plan.SanierungenGesperrt} gesperrt.");
+        return plan;
+    }
+
+    /// <summary>
+    /// Nur EIN Objekt frisch pruefen (Wunsch Pascal 28.09.2026: einzeln schreiben, ohne jedes Mal die ganze Liste neu
+    /// zu suchen). Gelesen wird nur dieses Objekt. Die Eindeutigkeit prueft es gegen die gespeicherten GlobalIDs des
+    /// Projekts und gegen die GlobalIDs aus der letzten ganzen Pruefung (<paramref name="bestaetigt"/>): Zeigt ein
+    /// anderer Datensatz auf dasselbe WebGIS-Objekt, wird nichts geschrieben. Haken der Kanalfirma werden uebernommen.
+    /// </summary>
+    public async Task<WebGisExportPlan> BaueEinzelPlanAsync(
+        Project projekt, WebGisObjektart art, Guid recordId, WebGisExportPlan? bestaetigt, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(projekt);
+        var alle = Eingaben(projekt);
+        var eigene = alle.FindAll(e => e.Objektart == art && e.RecordId == recordId);
+        var sanierungsakten = WebGisAktenAbbild.Sanierungen(projekt.Objektakten);
+
+        void SperreDoppelteEinzeln(IReadOnlyList<WebGisExportPosition> positionen)
+        {
+            foreach (var pos in positionen)
+            {
+                var gid = pos.GlobalId ?? pos.GespeicherteGlobalId;
+                if (string.IsNullOrWhiteSpace(gid)) continue;
+                var andereGespeichert = alle.Exists(e => e.Objektart == pos.Objektart && e.RecordId != pos.RecordId
+                    && string.Equals(e.GespeicherteGlobalId, gid, StringComparison.OrdinalIgnoreCase));
+                var andereGefunden = bestaetigt?.Positionen.Exists(p => p.Objektart == pos.Objektart && p.RecordId != pos.RecordId
+                    && string.Equals(p.GlobalId ?? p.GespeicherteGlobalId, gid, StringComparison.OrdinalIgnoreCase)) ?? false;
+                if (andereGespeichert || andereGefunden)
+                    pos.Sperren.Add($"Ein zweiter Datensatz zeigt auf dasselbe WebGIS-Objekt ({gid}) — keines wird geschrieben.");
+            }
+        }
+
+        var plan = await BaueAusEingabenAsync(eigene, sanierungsakten, SperreDoppelteEinzeln, ct).ConfigureAwait(false);
+        WebGisVorschlagAuswahl.UebertrageAuf(bestaetigt, plan);
+        return plan;
+    }
+
+    private async Task<WebGisExportPlan> BaueAusEingabenAsync(
+        IReadOnlyList<WebGisObjektEingabe> eingaben, IReadOnlyList<ObjektAkte> sanierungsakten,
+        Action<IReadOnlyList<WebGisExportPosition>> sperreDoppelte, CancellationToken ct)
+    {
         _gruppenListen.Clear(); // jeder Plan liest die Listen einmal frisch
         var plan = new WebGisExportPlan();
         var kataloge = new Dictionary<WebGisObjektart, WebGisSanierungKatalog?>();
         var gelesen = new List<(WebGisObjektEingabe Eingabe, WebGisExportPosition Position, WebGisLesestand? Stand)>();
 
-        // Pruefung 22.09.2026, C3: Erst das ganze Abbild bauen, dann aufs Netz warten. Nach dem ersten Warten laeuft
-        // der Plan auf einem anderen Thread weiter, waehrend im nicht-modalen Fenster Haltungen/Schaechte entstehen
-        // oder verschwinden — die lebenden Listen darf er dann nicht mehr anfassen.
+        foreach (var e in eingaben)
+        {
+            var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
+            plan.Positionen.Add(pos);
+            gelesen.Add((e, pos, stand));
+        }
+
+        // Erst wenn alle Objekte gelesen sind, laesst sich sehen, ob zwei auf dasselbe WebGIS-Objekt
+        // zeigen — Massnahmen deshalb erst danach und nur fuer eindeutig zugeordnete Objekte.
+        sperreDoppelte(plan.Positionen);
+        foreach (var (e, pos, stand) in gelesen)
+            if (pos.Sperren.Count == 0)
+                await BaueSanierungenAsync(plan, sanierungsakten, e, stand, kataloge, ct).ConfigureAwait(false);
+
+        // Die geplanten Massnahmen erscheinen in der Vergleichsliste ihres Objekts.
+        foreach (var san in plan.Sanierungen)
+            plan.Positionen.Find(p => p.RecordId == san.ElternRecordId && p.Objektart == san.Objektart)
+                ?.Vergleich.Add(WebGisVergleichBuilder.Massnahme(san));
+        return plan;
+    }
+
+    /// <summary>Abbild aller Haltungen und Schaechte des Projekts — vor dem ersten Netzaufruf gebaut.</summary>
+    private static List<WebGisObjektEingabe> Eingaben(Project projekt)
+    {
         var eingaben = new List<WebGisObjektEingabe>();
         foreach (var h in projekt.Data)
         {
@@ -62,6 +135,7 @@ public sealed class WebGisExportUseCase
                 Saniert = WebGisSaniertKriterium.IstSaniert(projekt.Objektakten, h.Id),
                 Handwerte = Handwerte(h.FieldMeta, h.GetFieldValue),
                 Kanalfirmenwerte = Kanalfirmenwerte(h.FieldMeta, h.GetFieldValue),
+                Werte = new Dictionary<string, string>(h.Fields, StringComparer.Ordinal),
             });
         }
 
@@ -83,29 +157,10 @@ public sealed class WebGisExportUseCase
                 Saniert = WebGisSaniertKriterium.IstSaniert(projekt.Objektakten, s.Id),
                 Handwerte = Handwerte(s.FieldMeta, s.GetFieldValue),
                 Kanalfirmenwerte = Kanalfirmenwerte(s.FieldMeta, s.GetFieldValue),
+                Werte = new Dictionary<string, string>(s.Fields, StringComparer.Ordinal),
             });
         }
-        var sanierungsakten = WebGisAktenAbbild.Sanierungen(projekt.Objektakten);
-
-        foreach (var e in eingaben)
-        {
-            var (pos, stand) = await BaueEineAsync(e, ct).ConfigureAwait(false);
-            plan.Positionen.Add(pos);
-            gelesen.Add((e, pos, stand));
-        }
-
-        // Erst wenn alle Objekte gelesen sind, laesst sich sehen, ob zwei auf dasselbe WebGIS-Objekt
-        // zeigen — Massnahmen deshalb erst danach und nur fuer eindeutig zugeordnete Objekte.
-        SperreDoppelteZuordnungen(plan.Positionen);
-        foreach (var (e, pos, stand) in gelesen)
-            if (pos.Sperren.Count == 0)
-                await BaueSanierungenAsync(plan, sanierungsakten, e, stand, kataloge, ct).ConfigureAwait(false);
-
-        plan.Hinweise.Add($"{plan.Positionen.Count} Objekte geprueft: {plan.Schreibbare} mit Aenderung, {plan.Gesperrte} gesperrt.");
-        if (plan.Positionen.Count > 1 && plan.Positionen.TrueForAll(p => p.Sperren.Exists(s => s.StartsWith("Im WebGIS nicht eindeutig gefunden", StringComparison.Ordinal))))
-            plan.Hinweise.Add("Kein einziger Name wurde im WebGIS eindeutig gefunden. Bitte WebGIS-Anmeldung und Suche prüfen; die genaue Ursache ist damit noch nicht belegt.");
-        plan.Hinweise.Add($"{plan.Sanierungen.Count} Sanierungsmassnahmen geplant: {plan.SanierungenSchreibbar} anzulegen, {plan.SanierungenGesperrt} gesperrt.");
-        return plan;
+        return eingaben;
     }
 
     /// <summary>

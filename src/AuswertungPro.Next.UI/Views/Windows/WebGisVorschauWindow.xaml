@@ -2,10 +2,11 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        xmlns:webgis="clr-namespace:AuswertungPro.Next.Application.WebGis;assembly=AuswertungPro.Next.Application"
         ui:WindowFx.Entrance="True"
-        Title="SewerStudio — WebGIS-Übertragung"
-        Width="1180" Height="880"
-        MinWidth="780" MinHeight="520"
+        Title="SewerStudio — Vergleich mit dem WebGIS"
+        Width="1440" Height="900"
+        MinWidth="1000" MinHeight="600"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="True"
         Background="{DynamicResource BgBrush}"
@@ -13,251 +14,209 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
-        <!-- Eine Zeile unter einem Objekt: Feld | bisher → neu, bzw. Hinweis/Sperre im Klartext. -->
-        <DataTemplate x:Key="ZeileTemplate">
-            <Grid Margin="0,3,0,3">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="20"/>
-                    <ColumnDefinition Width="165"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Column="0" VerticalAlignment="Top" Margin="0,1,0,0" FontSize="{DynamicResource TextS}">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Text" Value="→"/>
-                            <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IstHinweis}" Value="True">
-                                    <Setter Property="Text" Value="!"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding IstSperre}" Value="True">
-                                    <Setter Property="Text" Value="×"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-
-                <TextBlock Grid.Column="1" Text="{Binding Feld}" TextWrapping="Wrap" VerticalAlignment="Top"
-                           Foreground="{DynamicResource MutedBrush}"/>
-
-                <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <TextBlock Text="{Binding Alt}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"
-                               Visibility="{Binding HatAlt, Converter={StaticResource BoolToVis}}"/>
-                    <TextBlock Text="  →  " Foreground="{DynamicResource MutedBrush}"
-                               Visibility="{Binding HatAlt, Converter={StaticResource BoolToVis}}"/>
-                    <TextBlock Text="{Binding Neu}" TextWrapping="Wrap">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IstHinweis}" Value="True">
-                                        <Setter Property="FontWeight" Value="Normal"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IstSperre}" Value="True">
-                                        <Setter Property="FontWeight" Value="Normal"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                </StackPanel>
-            </Grid>
-        </DataTemplate>
-
-        <!-- Eine Karte je Objekt: Name links, darunter alles, was daran geschieht. -->
-        <DataTemplate x:Key="ObjektTemplate">
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                    BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="14,10" Margin="0,0,0,8">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                        <TextBlock Text="{Binding Objekt}" FontWeight="SemiBold" FontSize="{DynamicResource TextM}"
-                                   Foreground="{DynamicResource TextBrush}"/>
-                        <Border CornerRadius="{DynamicResource RadiusChip}" Padding="8,1" Margin="10,0,0,0"
-                                VerticalAlignment="Center">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background" Value="{DynamicResource SuccessSubtleBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HatSperre}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource DangerSubtleBrush}"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding NurHinweise}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource WarningSubtleBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <TextBlock Text="{Binding Kurz}" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextBrush}"/>
-                        </Border>
-                        <!-- Korrigieren ohne das Fenster zu schliessen: oeffnet Haltung/Schacht,
-                             danach «Neu pruefen». Nur wo der Datensatz bekannt ist. -->
-                        <Button Content="Bearbeiten" Style="{StaticResource ToolbarButton}" Margin="10,0,0,0"
-                                Padding="10,2" VerticalAlignment="Center"
-                                Click="OnObjektBearbeiten" Tag="{Binding}"
-                                ToolTip="Öffnet dieses Objekt in Haltungen bzw. Schächte. Das Fenster bleibt offen — danach «Neu prüfen»."
-                                AutomationProperties.Name="Objekt bearbeiten"
-                                Visibility="{Binding KannOeffnen, Converter={StaticResource BoolToVis}}"/>
-                    </StackPanel>
-                    <ItemsControl ItemsSource="{Binding Zeilen}" ItemTemplate="{StaticResource ZeileTemplate}"/>
-                </StackPanel>
-            </Border>
-        </DataTemplate>
+        <!-- Abzeichen: Farbe nach Ton (Änderung blau, gleich grau, Vorschlag/Warnung gelb, gesperrt/Fehler rot, bestätigt grün). -->
+        <Style x:Key="Abzeichen" TargetType="Border">
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusChip}"/>
+            <Setter Property="Padding" Value="9,2"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Ton}" Value="{x:Static webgis:WebGisAnzeigeTon.Aenderung}">
+                    <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentTextBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Ton}" Value="{x:Static webgis:WebGisAnzeigeTon.Vorschlag}">
+                    <Setter Property="Background" Value="{DynamicResource WarningSubtleBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource WarningTextBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Ton}" Value="{x:Static webgis:WebGisAnzeigeTon.Warnung}">
+                    <Setter Property="Background" Value="{DynamicResource WarningSubtleBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource WarningTextBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Ton}" Value="{x:Static webgis:WebGisAnzeigeTon.Gesperrt}">
+                    <Setter Property="Background" Value="{DynamicResource DangerSubtleBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Ton}" Value="{x:Static webgis:WebGisAnzeigeTon.Fehler}">
+                    <Setter Property="Background" Value="{DynamicResource DangerSubtleBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Ton}" Value="{x:Static webgis:WebGisAnzeigeTon.Bestaetigt}">
+                    <Setter Property="Background" Value="{DynamicResource SuccessSubtleBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessTextBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
-    <!-- Nicht-modal: bleibt offen, waehrend in Haltungen/Schaechten korrigiert wird.
-         "Neu pruefen" liest das WebGIS erneut und baut die Liste aus dem aktuellen Projektstand. -->
-    <Grid Margin="18">
+    <Grid Margin="24,18,24,16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="{Binding Titel}" FontSize="{DynamicResource TextXL}" FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,10"/>
-
-        <!-- Vier Zahlen statt eines Satzes -->
-        <ItemsControl Grid.Row="1" ItemsSource="{Binding Kacheln}" Margin="0,0,0,12">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="16,10" Margin="0,0,10,0"
-                            MinWidth="150">
-                        <StackPanel>
-                            <TextBlock Text="{Binding Zahl}" FontSize="{DynamicResource TextXL}" FontWeight="Bold"
-                                       Foreground="{DynamicResource TextBrush}"/>
-                            <TextBlock Text="{Binding Beschriftung}" FontSize="{DynamicResource TextXS}"
-                                       Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-
-        <!-- Je Objekt eine Karte -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <!-- Kopf -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,14" LastChildFill="True">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Bottom">
+                <TextBlock Text="{Binding GeprueftUm}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <Button Content="Alle neu prüfen" Style="{DynamicResource ToolbarButton}" Margin="0,0,8,0"
+                        IsEnabled="{Binding Bereit}" Click="OnAlleNeuPruefen"
+                        ToolTip="Alle Haltungen und Schächte nochmals im WebGIS lesen und vergleichen"/>
+                <Button Content="Alle Änderungen schreiben …" Style="{DynamicResource ToolbarButton}"
+                        Click="OnAlleSchreiben"
+                        ToolTip="Alle Objekte mit Änderungen schreiben — vorher erscheint die ganze Liste zur Bestätigung" IsEnabled="{Binding AlleSchreibenAktiv}"/>
+            </StackPanel>
             <StackPanel>
-                <!-- Entscheid Pascal 23.09.2026 abends: Werte der Kanalfirma, die im WebGIS anders stehen,
-                     nur zur Auswahl. Nichts ist vorangehakt; nur Angehaktes geht ins WebGIS. -->
-                <Border Background="{DynamicResource WarningSubtleBrush}" BorderBrush="{DynamicResource WarningBrush}"
-                        BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="14,10" Margin="0,0,0,10"
-                        Visibility="{Binding HatVorschlaege, Converter={StaticResource BoolToVis}}">
-                    <StackPanel>
-                        <DockPanel Margin="0,0,0,4">
-                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                <Button Content="Alle anhaken" Style="{StaticResource ToolbarButton}" Padding="10,2"
-                                        Click="OnAlleVorschlaege" IsEnabled="{Binding Bereit}"
-                                        ToolTip="Hakt alle Abweichungen an. Geschrieben wird erst mit «Jetzt schreiben»."
-                                        AutomationProperties.Name="Alle Abweichungen anhaken"/>
-                                <Button Content="Keine" Style="{StaticResource ToolbarButton}" Padding="10,2" Margin="8,0,0,0"
-                                        Click="OnKeineVorschlaege" IsEnabled="{Binding Bereit}"
-                                        ToolTip="Entfernt alle Haken. Dann wird keine dieser Abweichungen geschrieben."
-                                        AutomationProperties.Name="Keine Abweichung anhaken"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <ui:FluentIcon Glyph="&#xE7BA;" Foreground="{DynamicResource WarningTextBrush}" Margin="0,0,8,0"/>
-                                <TextBlock Text="{Binding VorschlaegeTitel}" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource WarningTextBrush}"/>
-                            </StackPanel>
-                        </DockPanel>
-                        <TextBlock Text="Werte aus Kanalfirmen-Importen, die im WebGIS anders stehen. Nur was angehakt ist, wird geschrieben — nie automatisch."
-                                   TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
-                        <ItemsControl ItemsSource="{Binding Vorschlaege}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,2,0,2">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="28"/>
-                                            <ColumnDefinition Width="200"/>
-                                            <ColumnDefinition Width="165"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <CheckBox Grid.Column="0" VerticalAlignment="Center"
-                                                  IsChecked="{Binding Gewaehlt, Mode=TwoWay}"
-                                                  IsEnabled="{Binding DataContext.Bereit, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                  ToolTip="Anhaken: dieser Wert der Kanalfirma wird ins WebGIS geschrieben."
-                                                  AutomationProperties.Name="Abweichung anhaken"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Objekt}" TextWrapping="Wrap"
-                                                   VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding Feld}" TextWrapping="Wrap"
-                                                   VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
-                                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Alt}" Foreground="{DynamicResource MutedBrush}"/>
-                                            <TextBlock Text="  →  " Foreground="{DynamicResource MutedBrush}"/>
-                                            <TextBlock Text="{Binding Neu}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
-                <ItemsControl ItemsSource="{Binding Objekte}" ItemTemplate="{StaticResource ObjektTemplate}"/>
-                <TextBlock Text="Keine Unterschiede zum WebGIS — es gibt nichts zu übertragen."
-                           Foreground="{DynamicResource MutedBrush}" Margin="4,8,0,0"
-                           Visibility="{Binding Leer, Converter={StaticResource BoolToVis}}"/>
+                <TextBlock Text="Export / WebGIS" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                <TextBlock Text="Vergleich SewerStudio ↔ WebGIS" FontSize="{DynamicResource TextTitle}" FontWeight="SemiBold"/>
+                <TextBlock Text="Links ein Objekt wählen, rechts jedes Feld nebeneinander. Geschrieben wird erst nach deiner Bestätigung."
+                           Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
             </StackPanel>
-        </ScrollViewer>
+        </DockPanel>
 
-        <!-- Gleichartiges gebuendelt statt 43 Einzelmeldungen -->
-        <ItemsControl Grid.Row="3" ItemsSource="{Binding Sammelmeldungen}" Margin="2,12,0,0"
-                      Visibility="{Binding HatSammelmeldungen, Converter={StaticResource BoolToVis}}">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                        <TextBlock Text="i" FontWeight="Bold" Margin="0,0,8,0"
-                                   Foreground="{DynamicResource MutedBrush}"/>
-                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
-                    </StackPanel>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="330"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <Expander Grid.Row="4" Header="Vollständiger Bericht (Textfassung)" Margin="0,12,0,0"
-                  IsExpanded="{Binding BerichtOffen, Mode=TwoWay}">
-            <TextBox Text="{Binding Bericht, Mode=OneWay}" IsReadOnly="True" TextWrapping="NoWrap"
-                     FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextS}"
-                     MaxHeight="240" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                     Margin="0,6,0,0"/>
-        </Expander>
+            <!-- Objektliste -->
+            <Border Grid.Column="0" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="16,14,16,10">
+                        <TextBlock Text="OBJEKTE" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource AccentTextBrush}"/>
+                        <TextBox x:Name="SucheFeld" Text="{Binding Suche, UpdateSourceTrigger=PropertyChanged}" Margin="0,8,0,6"
+                                 AutomationProperties.Name="Haltung oder Schacht suchen"
+                                 ToolTip="Haltung oder Schacht suchen"/>
+                        <TextBlock Text="{Binding Zaehler}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <ListBox x:Name="ObjektListe" ItemsSource="{Binding Objekte}" SelectedItem="{Binding Ausgewaehlt}"
+                             BorderThickness="0" Background="Transparent" HorizontalContentAlignment="Stretch"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             VirtualizingPanel.IsVirtualizing="True" AutomationProperties.Name="Objektliste"
+                             MouseDoubleClick="OnObjektDoppelklick"
+                             ToolTip="Doppelklick öffnet die Haltung bzw. den Schacht in SewerStudio — dieses Fenster bleibt offen">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type webgis:WebGisVergleichsObjekt}">
+                                <DockPanel Margin="4,6">
+                                    <Border DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Abzeichen}">
+                                        <TextBlock Text="{Binding Chip}" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"/>
+                                    </Border>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding ArtText}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
 
-        <Grid Grid.Row="5" Margin="0,16,0,0">
-            <TextBlock Text="{Binding Status}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
-                       HorizontalAlignment="Left" TextWrapping="Wrap" MaxWidth="520"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="NeuPruefenButton" Padding="16,6" Margin="0,0,8,0" Click="OnNeuPruefen"
-                        IsEnabled="{Binding Bereit}"
-                        ToolTip="Liest alle Objekte erneut aus dem WebGIS und baut die Liste aus dem aktuellen Projektstand. Nach Korrekturen in Haltungen/Schächten hier klicken.">
-                    <StackPanel Orientation="Horizontal">
-                        <ui:FluentIcon Glyph="&#xE72C;" Margin="0,0,8,0"/>
-                        <TextBlock Text="Neu prüfen" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-                <Button x:Name="SchreibenButton" Style="{StaticResource PrimaryButton}" Padding="18,6" Margin="0,0,8,0"
-                        Click="OnSchreiben" IsEnabled="{Binding Bereit}"
-                        ToolTip="Prüft zuerst nochmals frisch und schreibt dann genau diese Liste ins WebGIS.">
-                    <StackPanel Orientation="Horizontal">
-                        <ui:FluentIcon Glyph="&#xE74E;" Foreground="White" Margin="0,0,8,0"/>
-                        <TextBlock Text="Jetzt schreiben" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-                <Button Content="Schliessen" Padding="16,6" Click="OnSchliessen" IsEnabled="{Binding Bereit}"
-                        ToolTip="Schliesst das Fenster. Es wird nichts geschrieben."/>
-            </StackPanel>
+            <!-- Vergleich des gewählten Objekts -->
+            <Border Grid.Column="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="20,14,20,12">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="In SewerStudio öffnen" Style="{DynamicResource ToolbarButton}" Margin="0,0,12,0"
+                                    Click="OnBearbeiten" IsEnabled="{Binding HatAuswahl}"
+                                    ToolTip="Dieses Objekt in Haltungen bzw. Schächten öffnen, um es zu korrigieren"/>
+                            <CheckBox Content="Nur Unterschiede zeigen" IsChecked="{Binding NurUnterschiede}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="{Binding Titel}" FontSize="{DynamicResource TextXL}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding Untertitel}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <DockPanel DockPanel.Dock="Bottom" Margin="20,10,20,12" LastChildFill="True">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="Nur dieses Objekt neu prüfen" Style="{DynamicResource ToolbarButton}" Margin="0,0,10,0"
+                                    Click="OnEinzelnPruefen"
+                                    ToolTip="Nur dieses Objekt nochmals im WebGIS lesen — nicht die ganze Liste" IsEnabled="{Binding EinzelnPruefenAktiv}"/>
+                            <Button Content="{Binding SchreibKnopf}" Style="{DynamicResource ToolbarButtonAccent}"
+                                    Click="OnEinzelnSchreiben"
+                                    ToolTip="Vorher erscheinen genau die Änderungen dieses Objekts zur Bestätigung" IsEnabled="{Binding SchreibenAktiv}"/>
+                        </StackPanel>
+                        <TextBlock Text="Beim Schreiben wird nur dieses Objekt nochmals gelesen, nicht die ganze Liste."
+                                   Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    </DockPanel>
+
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0" Background="{DynamicResource SurfaceSubtleBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,1">
+                            <Grid Margin="0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="200"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="280"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="FELD" Margin="16,0" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}"/>
+                                <TextBlock Grid.Column="1" Text="SEWERSTUDIO" Margin="16,0" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}"/>
+                                <TextBlock Grid.Column="2" Text="WEBGIS JETZT" Margin="16,0" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}"/>
+                                <TextBlock Grid.Column="3" Text="WAS PASSIERT" Margin="16,0" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}"/>
+                            </Grid>
+                        </Border>
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding Zeilen}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type webgis:WebGisVergleichsZeile}">
+                                        <Border BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="0,0,0,1">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Hervorheben}" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <Grid Margin="0,8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="200"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="280"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Feld}" FontWeight="SemiBold" Margin="16,0" TextWrapping="Wrap"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding SewerStudio}" Margin="16,0" TextWrapping="Wrap"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding WebGis}" Margin="16,0" TextWrapping="Wrap"/>
+                                                <StackPanel Grid.Column="3" Margin="16,0">
+                                                    <Border Style="{StaticResource Abzeichen}">
+                                                        <TextBlock Text="{Binding Aktion}" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Grund}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                                               TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                                    <CheckBox Content="mitschreiben" IsChecked="{Binding Mitschreiben}" Margin="0,4,0,0"
+                                                              Visibility="{Binding IstVorschlag, Converter={StaticResource BoolToVis}}"
+                                                              ToolTip="Wert der Kanalfirma beim Schreiben mitsenden"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </DockPanel>
+            </Border>
         </Grid>
+
+        <!-- Status und Schliessen -->
+        <DockPanel Grid.Row="2" Margin="0,12,0,0">
+            <Button DockPanel.Dock="Right" Content="Schliessen" Style="{DynamicResource ToolbarButton}"
+                    Click="OnSchliessen" IsEnabled="{Binding Bereit}" ToolTip="Fenster schliessen"/>
+            <TextBlock Text="{Binding Status}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+        </DockPanel>
     </Grid>
 </Window>

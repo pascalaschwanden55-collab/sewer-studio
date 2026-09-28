@@ -1,0 +1,108 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.WebGisSchreibBestaetigungWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        xmlns:webgis="clr-namespace:AuswertungPro.Next.Application.WebGis;assembly=AuswertungPro.Next.Application"
+        ui:WindowFx.Entrance="True"
+        Title="SewerStudio — Ins WebGIS schreiben"
+        Width="880" Height="560"
+        MinWidth="640" MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="{DynamicResource BgBrush}"
+        Foreground="{DynamicResource TextBrush}">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <Style x:Key="Ergebnis" TargetType="Border">
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusChip}"/>
+            <Setter Property="Padding" Value="9,2"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentTextBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Ton}" Value="{x:Static webgis:WebGisAnzeigeTon.Bestaetigt}">
+                    <Setter Property="Background" Value="{DynamicResource SuccessSubtleBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessTextBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Ton}" Value="{x:Static webgis:WebGisAnzeigeTon.Warnung}">
+                    <Setter Property="Background" Value="{DynamicResource WarningSubtleBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource WarningTextBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Ton}" Value="{x:Static webgis:WebGisAnzeigeTon.Fehler}">
+                    <Setter Property="Background" Value="{DynamicResource DangerSubtleBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel Margin="24,20,24,18">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+            <TextBlock x:Name="TitelText" FontSize="{DynamicResource TextXL}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+            <TextBlock x:Name="ErklaerText" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,14,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button x:Name="AbbrechenKnopf" Content="Abbrechen" Style="{DynamicResource ToolbarButton}" Margin="0,0,10,0"
+                        IsCancel="True" Click="OnAbbrechen" ToolTip="Nichts schreiben"/>
+                <Button x:Name="SchreibenKnopf" Content="Ja, diese Änderungen schreiben" Style="{DynamicResource ToolbarButtonAccent}"
+                        Click="OnSchreiben" ToolTip="Genau diese Änderungen ins WebGIS schreiben"/>
+            </StackPanel>
+            <TextBlock x:Name="HinweisText" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,16,0"/>
+        </DockPanel>
+
+        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                CornerRadius="{DynamicResource RadiusM}">
+            <DockPanel>
+                <Border DockPanel.Dock="Top" Background="{DynamicResource SurfaceSubtleBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                    <Grid Margin="0,7">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="24"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="170"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="OBJEKT" Margin="12,0" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}"/>
+                        <TextBlock Grid.Column="1" Text="FELD" Margin="12,0" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}"/>
+                        <TextBlock Grid.Column="2" Text="WEBGIS VORHER" Margin="12,0" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}"/>
+                        <TextBlock Grid.Column="4" Text="WEBGIS NACHHER" Margin="12,0" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}"/>
+                        <TextBlock Grid.Column="5" Text="ERGEBNIS" Margin="12,0" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}"/>
+                    </Grid>
+                </Border>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="Liste">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type webgis:WebGisSchreibZeile}">
+                                <Border BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="0,0,0,1">
+                                    <Grid Margin="0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="170"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Objekt}" Margin="12,0" TextWrapping="Wrap"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Feld}" Margin="12,0" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Vorher}" Margin="12,0" TextWrapping="Wrap"
+                                                   TextDecorations="Strikethrough" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBlock Grid.Column="3" Text="→" Foreground="{DynamicResource MutedBrush}"/>
+                                        <TextBlock Grid.Column="4" Text="{Binding Nachher}" Margin="12,0" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource AccentTextBrush}"/>
+                                        <Border Grid.Column="5" Margin="12,0" Style="{StaticResource Ergebnis}">
+                                            <TextBlock Text="{Binding Ergebnis}" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+    </DockPanel>
+</Window>
