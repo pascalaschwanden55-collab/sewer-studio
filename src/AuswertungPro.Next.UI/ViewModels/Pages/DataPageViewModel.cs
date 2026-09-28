@@ -743,7 +743,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
         Selected = record;
         _shell.NavigateToSanierungsMatrix(holding, singleHoldingMode: true, targetRecord: record);
-        _shell.SetStatus($"Sanierungsmaßnahme geöffnet: {holding}");
+        _shell.SetStatus($"Sanierungsmassnahme geöffnet: {holding}");
     }
 
     private void OpenSanierungsmassnahmenWindow(HaltungRecord? record, InitialFocusMode focus)

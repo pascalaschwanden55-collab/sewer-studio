@@ -7,7 +7,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="SewerStudio — Maßnahmen bearbeiten"
+        Title="SewerStudio — Massnahmen bearbeiten"
         Height="800" Width="1600" MinWidth="1100" MinHeight="620"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="10">
@@ -16,8 +16,8 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <controls:NovaDialogHeader Grid.Row="0" Title="Maßnahmen bearbeiten"
-                   Subtitle="Vordefinierte Maßnahmen aus wiederverwendbaren Positionen des Preiskatalogs zusammenstellen."/>
+        <controls:NovaDialogHeader Grid.Row="0" Title="Massnahmen bearbeiten"
+                   Subtitle="Vordefinierte Massnahmen aus wiederverwendbaren Positionen des Preiskatalogs zusammenstellen."/>
 
     <Grid Grid.Row="1">
         <Grid.ColumnDefinitions>
@@ -30,7 +30,7 @@
 
         <!-- Left: Template List -->
         <DockPanel Grid.Column="0" Margin="0,0,10,0">
-            <TextBlock DockPanel.Dock="Top" Text="Vordefinierte Maßnahmen"
+            <TextBlock DockPanel.Dock="Top" Text="Vordefinierte Massnahmen"
                        FontWeight="Bold" Margin="0,0,0,8"/>
 
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">

@@ -98,7 +98,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Maßnahmen:"
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Massnahmen:"
                                            Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding OptimizationVm.RuleMeasures}"
                                            Foreground="{StaticResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
@@ -110,7 +110,7 @@
                             <Button Command="{Binding ApplyRuleToCalcCommand}"
                                     Height="28" Margin="0,8,0,0"
                                     HorizontalAlignment="Left" Padding="12,2"
-                                    ToolTip="Regelbasierte Maßnahmen in den Kostenrechner übernehmen">
+                                    ToolTip="Regelbasierte Massnahmen in den Kostenrechner übernehmen">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="In Kalkulation"/>
                                     <ui:FluentIcon Glyph="&#xE72A;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource AccentBrush}" Margin="6,0,0,0"/>
@@ -136,7 +136,7 @@
                                         Command="{Binding OptimizationVm.OptimizeCommand}"
                                         Style="{StaticResource SecondaryButton}"
                                         Width="100" Height="28"
-                                        ToolTip="KI-Analyse starten - ermittelt optimale Sanierungsmaßnahme und Kostenschätzung"/>
+                                        ToolTip="KI-Analyse starten - ermittelt optimale Sanierungsmassnahme und Kostenschätzung"/>
                             </DockPanel>
 
                             <TextBlock Text="{Binding OptimizationVm.StatusText}"
@@ -210,7 +210,7 @@
                                 <Button Grid.Row="4" Grid.ColumnSpan="2"
                                         Command="{Binding ApplyAiToCalcCommand}"
                                         Height="28" HorizontalAlignment="Left" Padding="12,2"
-                                        ToolTip="KI-Vorschlag als Maßnahmen in den Kostenrechner übernehmen">
+                                        ToolTip="KI-Vorschlag als Massnahmen in den Kostenrechner übernehmen">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="KI übernehmen"/>
                                         <ui:FluentIcon Glyph="&#xE72A;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource AccentBrush}" Margin="6,0,0,0"/>
@@ -395,7 +395,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Left: Massnahmen list -->
-                <GroupBox Header="Maßnahmen" ToolTip="Verfügbare Sanierungsmaßnahmen - Doppelklick oder Auswahl zum Hinzufügen">
+                <GroupBox Header="Massnahmen" ToolTip="Verfügbare Sanierungsmassnahmen - Doppelklick oder Auswahl zum Hinzufügen">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*"/>
@@ -408,12 +408,12 @@
                                  DisplayMemberPath="DisplayName"
                                  SelectionChanged="MeasuresList_SelectionChanged"
                                  MouseDoubleClick="MeasuresList_MouseDoubleClick"
-                                 ToolTip="Maßnahmen auswählen und Doppelklick zum Hinzufügen zur Kalkulation"/>
+                                 ToolTip="Massnahmen auswählen und Doppelklick zum Hinzufügen zur Kalkulation"/>
                         <StackPanel Grid.Row="1">
                             <Button Height="32" Margin="0,5,0,0"
                                     Content="Positionen verwalten..."
                                     Command="{Binding CostCalcVm.EditPositionTemplatesCommand}"
-                                    ToolTip="Maßnahmen-Vorlagen und Positionen bearbeiten"/>
+                                    ToolTip="Massnahmen-Vorlagen und Positionen bearbeiten"/>
                         </StackPanel>
                     </Grid>
                 </GroupBox>
@@ -435,7 +435,7 @@
                                     Height="28"
                                     Padding="10,2"
                                     Command="{Binding CostCalcVm.SortMeasuresCommand}"
-                                    ToolTip="Sortiert Maßnahmen und Positionen in eine feste Reihenfolge"/>
+                                    ToolTip="Sortiert Massnahmen und Positionen in eine feste Reihenfolge"/>
                         </DockPanel>
                         <ScrollViewer x:Name="CalcScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto">
                             <ItemsControl x:Name="CalcItemsControl" ItemsSource="{Binding CostCalcVm.SelectedMeasures}">
@@ -560,7 +560,7 @@
 
                 <!-- Right: Katalogpositionen (Drag source) -->
                 <GroupBox Grid.Column="4" Header="Katalogpositionen"
-                          ToolTip="Katalogpositionen per Drag-and-Drop in eine Maßnahme ziehen">
+                          ToolTip="Katalogpositionen per Drag-and-Drop in eine Massnahme ziehen">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -611,16 +611,16 @@
                 </StackPanel>
 
                 <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
-                    <Button Content="Kosten &amp; Maßnahmen übernehmen" Width="260" Height="38" Margin="12,0,0,0"
+                    <Button Content="Kosten &amp; Massnahmen übernehmen" Width="260" Height="38" Margin="12,0,0,0"
                             Style="{StaticResource SecondaryButton}"
                             Command="{Binding CostCalcVm.ApplyTotalCommand}"
-                            ToolTip="Berechnete Kosten und gewählte Maßnahmen in die Haltungsdaten schreiben"/>
+                            ToolTip="Berechnete Kosten und gewählte Massnahmen in die Haltungsdaten schreiben"/>
                     <Button Content="PDF" Width="80" Height="38" Margin="8,0,0,0"
                             Style="{StaticResource SecondaryButton}"
                             Command="{Binding CostCalcVm.ExportPdfCommand}"
                             CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
                             ToolTip="Kostenzusammenstellung als PDF exportieren"/>
-                    <Button Content="Schließen" Width="110" Height="38" Margin="8,0,0,0"
+                    <Button Content="Schliessen" Width="110" Height="38" Margin="8,0,0,0"
                             Style="{StaticResource SecondaryButton}"
                             Command="{Binding CloseCommand}" IsCancel="True"/>
                     <Button Content="Speichern" Width="140" Height="38" Margin="8,0,0,0"

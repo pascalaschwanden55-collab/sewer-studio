@@ -160,7 +160,7 @@
                            Text="Starten Sie die Suche, um Ergebnisse anzuzeigen."
                            VerticalAlignment="Center" HorizontalAlignment="Left"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button x:Name="CloseButton" Content="Schließen" Click="Close_Click"
+                    <Button x:Name="CloseButton" Content="Schliessen" Click="Close_Click"
                             Style="{StaticResource SecondaryButton}" IsCancel="True" Margin="0,0,8,0"/>
                     <Button x:Name="ApplyButton" Content="Anwenden" Click="Apply_Click"
                             Style="{StaticResource PrimaryButton}" IsDefault="True" IsEnabled="False"/>

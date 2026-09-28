@@ -410,6 +410,56 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   neuen ExportPage-Untertitel angepasst (bewusste Änderung, siehe Aufgabenbeschreibung — nennt
   jetzt alle vier Abschnittsnamen statt der alten Kurzfassung «Excel, Verteilung, Kataster»).
   `HandbuchInhalt` (Abschnitte «Export»/«Import») beschreibt die neue Gliederung.
+- **Aufgabe 10a — Sprache: Englisch raus, «ß» wird «ss», Einstellungen bekommen einen
+  «Erweitert»-Bereich.** Rohe englische Entwicklerbegriffe in sichtbaren Texten (Training
+  Center: «Approve/Reject/Set New» → «Akzeptieren/Ablehnen/Zurücksetzen auf Neu», «Samples» →
+  «Trainingsdaten», «Review Queue» → «Prüfliste», «CaseId»-Spalte → «Fall», «YOLO Export...» →
+  «YOLO exportieren…», «auto-approve»/«Knowledge Base» in Tooltips → «automatisch
+  akzeptieren»/«Wissensdatenbank»; Fenstertitel «Pipeline Analysis» → «Videoanalyse»;
+  Einstellungen «Drop late frames»/«Skip frames» → «Verspätete Bilder verwerfen»/«Bilder bei
+  Rückstand überspringen»; drei «Reset»-Knöpfe bei den KI-Schwellwerten und einer im
+  VSA-Codierfenster → «Standard»/«Zurücksetzen»; Medienkonflikte «Auto-Resolve (gelernt)»/
+  «Mappings löschen» → «Alle gelernten Zuordnungen übernehmen»/«Zuordnungen löschen», inkl. des
+  gebundenen Ergebnistexts). **Etablierte Feature-Eigennamen bleiben englisch** («Training
+  Center», «Training Studio», YOLO/DINO/SAM/Qwen als Modellnamen, «Export»/«Import» als im
+  Deutschen gleichlautende Wörter) — nur rohe, dem Anwender unverständliche Entwicklerbegriffe
+  wurden ersetzt.
+  **Einstellungen: «Erweitert (für Fachleute)».** Rein technische Einzelfelder/-gruppen
+  (Codex-Agenten-Daten, `pdftotext.exe`, Codec-Threads, YOLO-/DINO-Schwellwerte, «Programm
+  sichern» mit Quellcode) stehen jetzt je Reiter in einem eigenen, standardmässig zugeklappten
+  `<Expander Header="Erweitert (für Fachleute)" IsExpanded="False">` am Ende des Reiters — kein
+  Feld entfernt, kein Schlüssel/keine Bindung geändert, nur verschoben. Nur Reiter, die
+  tatsächlich solche Felder enthalten, bekommen den Bereich (nicht jeder Reiter). Das
+  Suchfeld-Textfeld `SucheBox` trägt einen Platzhalter «Einstellung suchen…» nach demselben
+  Muster wie die globale Suche Strg+K (`MainWindow.xaml`: überlagerter `TextBlock`,
+  `IsHitTestVisible="False"`, `DataTrigger` auf leeren Text).
+  **`SettingsSearchController.Anwenden` klappt einen zugeklappten Erweitert-Bereich automatisch
+  auf**, wenn eine Suche mindestens eine `GroupBox` darin sichtbar schaltet, und zurück zu, wenn
+  die Suche geleert wird — eine neue `Aufklapper(TabItem)`-Hilfsmethode neben der bestehenden
+  `Gruppen(TabItem)` nutzt dieselbe `Nachfahren`-Rekursion über den WPF-Logical-Tree, die auch
+  durch einen kollabierten `Expander` hindurch findet. Ein neuer Erweitert-Bereich MUSS über
+  eine `GroupBox` gehen (keine nackten Felder direkt im Expander), sonst findet ihn die Suche
+  nicht. Test `SettingsSearchTests.Controller_klappt_einen_Erweitert_Bereich_bei_Treffer_darin_
+  auf_und_wieder_zu`.
+  **«ß» wird im ganzen sichtbaren Text zu «ss»** (Schweizer Schreibweise, wie an anderer Stelle
+  in CLAUDE.md schon für den Export/Domain-Layer festgehalten). Der bestehende Umlaut-Wächter
+  `DesignAuditFeinschliffTests.Sichtbare_Texte_verwenden_echte_Umlaute` hat dafür einen
+  Geschwistertest `Sichtbare_Texte_enthalten_kein_scharfes_S` (gleiche Regex/gleicher Helfer,
+  prüft nur auf `ß`) statt eines eigenen neuen Wächters. **Ausnahmen, die bewusst «ß» behalten
+  (Programmlogik, nicht sichtbarer Text):** `.Replace("ß", "ss", …)`-Normalisierungen (u. a.
+  `SettingsSearchMatcher`, `SchachtAbdeckungStkAutoFill`, `ZustandsklasseCellStyleFactory`),
+  der Eingabe-Alias-Schlüssel `["weiß"]` in `LiveControlColorParser` (Farbname aus Text lesen)
+  und der Identitätsvergleich `RecordDetailsModels.IstStrassenfeld` gegen echte, historisch mit
+  ß gespeicherte Projektfeldnamen («Beide Schreibweisen kommen in echten Projekten vor») — diese
+  drei Muster nie versehentlich mit umschreiben.
+  **Rohe Feldnamen als Beschriftung:** `FieldCatalog.Definitions["Referenzpruefung"]` hatte den
+  rohen Schlüssel wortwörtlich als `Label` (zweites Konstruktor-Argument) kopiert, sichtbar als
+  Spaltenkopf/Feldbeschriftung ohne Umlaut. Behoben durch Ändern NUR des Labels
+  (`"Referenzprüfung"`); der Schlüssel selbst (`ComboItems`-Lookup, `ColumnOrder`,
+  Excel/CSV/XTF-Exportkopf) bleibt `"Referenzpruefung"` — Anzeigename und Datenschlüssel sind
+  in diesem Katalog zwei getrennte Argumente, nie den Schlüssel für die Anzeige kopieren.
+  Ae/oe/ue in C#-Laufzeitmeldungen (`UserError.cs` u. a.) und rohe `ex.Message`/`ex.ToString()`
+  in der UI sind ein separater Schritt (Aufgabe 10b) und noch offen.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

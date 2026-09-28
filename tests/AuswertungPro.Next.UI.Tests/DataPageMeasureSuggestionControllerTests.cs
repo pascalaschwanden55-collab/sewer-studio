@@ -90,7 +90,7 @@ public sealed class DataPageMeasureSuggestionControllerTests
         Assert.Equal("1250.00", record.GetFieldValue("Kosten"));
         Assert.Equal(new[] { "Inliner", "Manschette" }, options);
         Assert.Equal(1, dirty);
-        Assert.Equal("Maßnahmenvorschlag mit Kostenschätzung gesetzt (1250.00, KI-Modell)", statuses.Single());
+        Assert.Equal("Massnahmenvorschlag mit Kostenschätzung gesetzt (1250.00, KI-Modell)", statuses.Single());
         Assert.Equal((3, 1250m), learning.Single());
         Assert.Equal(
             ("Inliner\nManschette\n\nGeschaetzte Kosten: 1’250.00\n\nQuelle: KI-Modell (3 aehnliche Faelle)", "Empfohlene Sanierungsmassnahmen"),

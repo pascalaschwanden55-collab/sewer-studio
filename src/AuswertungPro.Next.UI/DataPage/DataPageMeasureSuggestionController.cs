@@ -59,8 +59,8 @@ public sealed class DataPageMeasureSuggestionController
 
         var sourceText = recommendation.UsedTrainedModel ? "KI-Modell" : "Lernlogik";
         _setStatus(recommendation.EstimatedTotalCost is null
-            ? $"Maßnahmenvorschlag aus Schadenscodes gesetzt ({sourceText})"
-            : $"Maßnahmenvorschlag mit Kostenschätzung gesetzt ({recommendation.EstimatedTotalCost.Value:0.00}, {sourceText})");
+            ? $"Massnahmenvorschlag aus Schadenscodes gesetzt ({sourceText})"
+            : $"Massnahmenvorschlag mit Kostenschätzung gesetzt ({recommendation.EstimatedTotalCost.Value:0.00}, {sourceText})");
         _updateLearningInfo(recommendation.SimilarCasesCount, recommendation.EstimatedTotalCost);
 
         var summary = string.Join("\n", recommendation.Measures);

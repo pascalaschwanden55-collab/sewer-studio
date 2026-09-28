@@ -276,11 +276,26 @@
                         <ui:FluentIcon Glyph="&#xE721;"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,0,6,0"/>
-                        <TextBox x:Name="SucheBox"
-                                 Width="260"
-                                 TextChanged="SucheBox_TextChanged"
-                                 AutomationProperties.Name="Einstellung suchen"
-                                 ToolTip="Einstellung suchen — zeigt nur passende Gruppen und springt zum ersten Reiter mit Treffer."/>
+                        <Grid Width="260">
+                            <TextBox x:Name="SucheBox"
+                                     TextChanged="SucheBox_TextChanged"
+                                     AutomationProperties.Name="Einstellung suchen"
+                                     ToolTip="Einstellung suchen — zeigt nur passende Gruppen und springt zum ersten Reiter mit Treffer."/>
+                            <TextBlock Text="Einstellung suchen…" IsHitTestVisible="False"
+                                       VerticalAlignment="Center" Margin="2,0,0,0"
+                                       FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, ElementName=SucheBox}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
                         <TextBlock x:Name="SucheTreffer"
                                    Margin="8,0,0,0"
                                    VerticalAlignment="Center"
@@ -565,7 +580,6 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0"
@@ -590,29 +604,7 @@
                                     </StackPanel>
                                 </Button>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0"
-                                           Text="Codex-Agenten-Daten"
-                                           Style="{StaticResource SettingsFieldLabel}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="1"
-                                           Text="{Binding CodexArtifactCleanupStatusText}"
-                                           Margin="0,0,12,8"
-                                           VerticalAlignment="Center"
-                                           TextWrapping="Wrap"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <Button Grid.Row="1" Grid.Column="2"
-                                        Command="{Binding CleanCodexArtifactsCommand}"
-                                        Style="{StaticResource SettingsWideActionButton}"
-                                        ToolTip="Nur alte, rein erzeugte Codex-Baukopien nach Vorschau und Bestätigung entfernen.">
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <TextBlock FontFamily="{DynamicResource FontIcon}"
-                                                   Text="&#xE74D;"
-                                                   FontSize="{DynamicResource TextL}"
-                                                   Margin="0,0,8,0"/>
-                                        <TextBlock Text="Agenten-Daten prüfen"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <ProgressBar Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
+                                <ProgressBar Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
                                              Height="4"
                                              Margin="0,0,0,8"
                                              IsIndeterminate="True"
@@ -649,6 +641,53 @@
                                         ToolTip="Ordner mit Wiederherstellungspunkten öffnen."/>
                             </Grid>
                         </GroupBox>
+
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 10a: Codex-Agenten-Daten sind
+                             Entwicklerwerkzeug-Zwischendaten (Coding-Agent-Baukopien), keine
+                             normale Programmbereinigung. -->
+                        <Expander Header="Erweitert (für Fachleute)" IsExpanded="False" Margin="0,4,0,0">
+                            <GroupBox Header="Codex-Agenten-Daten" Style="{StaticResource SettingsSectionGroupBox}">
+                                <Grid Style="{StaticResource SettingsFormGrid}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0"
+                                               Text="Codex-Agenten-Daten"
+                                               Style="{StaticResource SettingsFieldLabel}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1"
+                                               Text="{Binding CodexArtifactCleanupStatusText}"
+                                               Margin="0,0,12,8"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <Button Grid.Row="0" Grid.Column="2"
+                                            Command="{Binding CleanCodexArtifactsCommand}"
+                                            Style="{StaticResource SettingsWideActionButton}"
+                                            ToolTip="Nur alte, rein erzeugte Codex-Baukopien nach Vorschau und Bestätigung entfernen.">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <TextBlock FontFamily="{DynamicResource FontIcon}"
+                                                       Text="&#xE74D;"
+                                                       FontSize="{DynamicResource TextL}"
+                                                       Margin="0,0,8,0"/>
+                                            <TextBlock Text="Agenten-Daten prüfen"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <ProgressBar Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                                 Height="4"
+                                                 Margin="0,0,0,8"
+                                                 IsIndeterminate="True"
+                                                 Visibility="{Binding IsProgramCleanupRunning, Converter={StaticResource BoolToVis}}"/>
+                                </Grid>
+                            </GroupBox>
+                        </Expander>
                     </StackPanel>
                     </ScrollViewer>
                 </TabItem>
@@ -678,27 +717,6 @@
                                         Style="{StaticResource SettingsBrowseButton}"
                                         ToolTip="Video-Ordner wählen"
                                         AutomationProperties.Name="Video-Ordner wählen">
-                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
-                                </Button>
-                            </Grid>
-                        </GroupBox>
-
-                        <GroupBox Header="Werkzeuge" Style="{StaticResource SettingsSectionGroupBox}">
-                            <Grid Style="{StaticResource SettingsFormGrid}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="180"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="pdftotext.exe" Style="{StaticResource SettingsFieldLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding PdfToTextPath}"
-                                         Style="{StaticResource SettingsTextInput}"/>
-                                <Button Grid.Column="2"
-                                        Command="{Binding BrowsePdfToTextCommand}"
-                                        Style="{StaticResource SettingsBrowseButton}"
-                                        ToolTip="pdftotext.exe auswählen"
-                                        AutomationProperties.Name="pdftotext.exe auswählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
                             </Grid>
@@ -755,6 +773,32 @@
                                            Text="Gesamter XTF-Datenbestand Kanton Uri: Leitungen und Sch&#xE4;chte."/>
                             </Grid>
                         </GroupBox>
+
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 10a: pdftotext.exe ist ein
+                             Entwickler-/Support-Werkzeug (siehe CLAUDE.md «Der PDF-Textleser
+                             wird geprueft gewaehlt»), keine normale Importquelle. -->
+                        <Expander Header="Erweitert (für Fachleute)" IsExpanded="False" Margin="0,4,0,0">
+                            <GroupBox Header="Werkzeuge" Style="{StaticResource SettingsSectionGroupBox}">
+                                <Grid Style="{StaticResource SettingsFormGrid}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="pdftotext.exe" Style="{StaticResource SettingsFieldLabel}"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding PdfToTextPath}"
+                                             Style="{StaticResource SettingsTextInput}"/>
+                                    <Button Grid.Column="2"
+                                            Command="{Binding BrowsePdfToTextCommand}"
+                                            Style="{StaticResource SettingsBrowseButton}"
+                                            ToolTip="pdftotext.exe auswählen"
+                                            AutomationProperties.Name="pdftotext.exe auswählen">
+                                        <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                    </Button>
+                                </Grid>
+                            </GroupBox>
+                        </Expander>
                     </StackPanel>
                     </ScrollViewer>
                 </TabItem>
@@ -780,15 +824,15 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Wiedergabe" Style="{StaticResource SettingsFieldLabel}"/>
                                 <StackPanel Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2">
                                     <CheckBox Content="Hardware-Decoding aktiv" IsChecked="{Binding VideoHwDecoding}" Style="{StaticResource SettingsFieldCheckBox}"/>
-                                    <CheckBox Content="Drop late frames" IsChecked="{Binding VideoDropLateFrames}" Style="{StaticResource SettingsFieldCheckBox}"/>
-                                    <CheckBox Content="Skip frames" IsChecked="{Binding VideoSkipFrames}" Style="{StaticResource SettingsFieldCheckBox}"/>
+                                    <CheckBox Content="Verspätete Bilder verwerfen" IsChecked="{Binding VideoDropLateFrames}" Style="{StaticResource SettingsFieldCheckBox}"
+                                              ToolTip="Bilder, die zu spät zum Anzeigen kommen, werden übersprungen statt die Wiedergabe zu verzögern."/>
+                                    <CheckBox Content="Bilder bei Rückstand überspringen" IsChecked="{Binding VideoSkipFrames}" Style="{StaticResource SettingsFieldCheckBox}"
+                                              ToolTip="Hält bei Rückstand die Wiedergabegeschwindigkeit, statt jedes einzelne Bild zu zeigen."/>
                                 </StackPanel>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Video-Ausgabe" Style="{StaticResource SettingsFieldLabel}"/>
@@ -819,16 +863,6 @@
                                           SelectedValuePath="Value"
                                           DisplayMemberPath="Label"
                                           SelectedValue="{Binding VideoNetworkCachingMs, Mode=TwoWay}"
-                                          Style="{StaticResource SettingsComboInput}"/>
-
-                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Codec-Threads" Style="{StaticResource SettingsFieldLabel}"/>
-                                <ComboBox Grid.Row="4" Grid.Column="1"
-                                          Width="140"
-                                          HorizontalAlignment="Left"
-                                          ItemsSource="{Binding VideoCodecThreadOptions}"
-                                          SelectedValuePath="Value"
-                                          DisplayMemberPath="Label"
-                                          SelectedValue="{Binding VideoCodecThreads, Mode=TwoWay}"
                                           Style="{StaticResource SettingsComboInput}"/>
                             </Grid>
                         </GroupBox>
@@ -880,6 +914,33 @@
                             </Grid>
                         </GroupBox>
 
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 10a: Codec-Wahl und Modell-Schwellwerte
+                             sind Entwicklereinstellungen, keine Wiedergabe-/Betriebseinstellungen. -->
+                        <Expander Header="Erweitert (für Fachleute)" IsExpanded="False" Margin="0,4,0,0">
+                            <StackPanel>
+                        <GroupBox Header="Video-Codec" Style="{StaticResource SettingsSectionGroupBox}">
+                            <Grid Style="{StaticResource SettingsFormGrid}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Codec-Threads" Style="{StaticResource SettingsFieldLabel}"/>
+                                <ComboBox Grid.Row="0" Grid.Column="1"
+                                          Width="140"
+                                          HorizontalAlignment="Left"
+                                          ItemsSource="{Binding VideoCodecThreadOptions}"
+                                          SelectedValuePath="Value"
+                                          DisplayMemberPath="Label"
+                                          SelectedValue="{Binding VideoCodecThreads, Mode=TwoWay}"
+                                          Style="{StaticResource SettingsComboInput}"/>
+                            </Grid>
+                        </GroupBox>
+
                         <GroupBox Header="KI-Schwellwerte" Style="{StaticResource SettingsSectionGroupBox}">
                             <Grid Style="{StaticResource SettingsFormGrid}">
                                 <Grid.ColumnDefinitions>
@@ -918,10 +979,10 @@
                                                TextAlignment="Center"/>
                                 </Border>
                                 <Button Grid.Row="0" Grid.Column="3"
-                                        Content="Reset"
+                                        Content="Standard"
                                         Command="{Binding ResetYoloConfidenceCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        Width="64"
+                                        Width="84"
                                         ToolTip="YOLO-Konfidenz auf Standardwert 25 Prozent setzen."/>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="DINO Box" Style="{StaticResource SettingsFieldLabel}"/>
@@ -948,10 +1009,10 @@
                                                TextAlignment="Center"/>
                                 </Border>
                                 <Button Grid.Row="1" Grid.Column="3"
-                                        Content="Reset"
+                                        Content="Standard"
                                         Command="{Binding ResetDinoBoxThresholdCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        Width="64"
+                                        Width="84"
                                         ToolTip="DINO-Box-Schwellwert auf Standardwert 25 Prozent setzen."/>
 
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="DINO Text" Style="{StaticResource SettingsFieldLabel}"/>
@@ -978,13 +1039,15 @@
                                                TextAlignment="Center"/>
                                 </Border>
                                 <Button Grid.Row="2" Grid.Column="3"
-                                        Content="Reset"
+                                        Content="Standard"
                                         Command="{Binding ResetDinoTextThresholdCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        Width="64"
+                                        Width="84"
                                         ToolTip="DINO-Text-Schwellwert auf Standardwert 20 Prozent setzen."/>
                             </Grid>
                         </GroupBox>
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
                     </ScrollViewer>
                 </TabItem>
@@ -1008,8 +1071,6 @@
                                             ToolTip="KI-Wissen, Trainingsdaten und zugehörige Einstellungen als ZIP sichern."/>
                                     <Button Content="KI-Wissen importieren" Command="{Binding ImportBackupCommand}" Margin="8,0,0,0" Width="180"
                                             ToolTip="Gesichertes KI-Wissen aus einer ZIP-Datei wiederherstellen."/>
-                                    <Button Content="Programm sichern" Command="{Binding CreateProgramSnapshotCommand}" Margin="8,0,0,0" Width="180"
-                                            ToolTip="Quellcode, kompletten Git-Verlauf und Modellgewichte als eine ZIP-Datei sichern — ohne Build-Ausgabe, Python-Umgebung und Kartenkacheln."/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding BackupStatusText}" Margin="0,6,0,0"
                                            Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}"/>
@@ -1081,6 +1142,21 @@
                                 </StackPanel>
                             </StackPanel>
                         </GroupBox>
+
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 10a: Programmsicherung mit Quellcode
+                             ist ein Entwickler-Werkzeug, keine normale Datensicherung. -->
+                        <Expander Header="Erweitert (für Fachleute)" IsExpanded="False" Margin="0,4,0,0">
+                            <GroupBox Header="Programmsicherung" Style="{StaticResource SettingsSectionGroupBox}">
+                                <StackPanel>
+                                    <TextBlock Text="Programm mit Quellcode sichern" Margin="0,0,0,6" Foreground="{DynamicResource MutedBrush}"/>
+                                    <TextBlock Text="Nur für Entwicklung/Support: Sichert Quellcode, kompletten Git-Verlauf und Modellgewichte als eine ZIP-Datei — ohne Build-Ausgabe, Python-Umgebung und Kartenkacheln."
+                                               TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}" Margin="0,0,0,8"/>
+                                    <Button Content="Programm sichern" Command="{Binding CreateProgramSnapshotCommand}" Width="180"
+                                            HorizontalAlignment="Left"
+                                            ToolTip="Quellcode, kompletten Git-Verlauf und Modellgewichte als eine ZIP-Datei sichern — ohne Build-Ausgabe, Python-Umgebung und Kartenkacheln."/>
+                                </StackPanel>
+                            </GroupBox>
+                        </Expander>
                     </StackPanel>
                     </ScrollViewer>
                 </TabItem>

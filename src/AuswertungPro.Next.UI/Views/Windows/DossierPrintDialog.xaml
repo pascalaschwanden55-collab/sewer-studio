@@ -81,7 +81,7 @@
                 <TextBlock Text="3) Auswertung"
                            FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,2"/>
                 <CheckBox x:Name="ChkHydraulik" Content="Hydraulik-Berechnung" IsChecked="True"/>
-                <CheckBox x:Name="ChkKostenschaetzung" Content="Kostenschätzung / Maßnahmen" IsChecked="True"/>
+                <CheckBox x:Name="ChkKostenschaetzung" Content="Kostenschätzung / Massnahmen" IsChecked="True"/>
 
                 <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,8,0,8"/>
 

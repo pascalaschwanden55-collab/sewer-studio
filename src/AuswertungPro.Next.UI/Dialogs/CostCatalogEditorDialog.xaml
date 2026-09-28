@@ -121,7 +121,7 @@
                         <TextBlock Text="Löschen"/>
                     </StackPanel>
                 </Button>
-                <Button Content="Schließen" Command="{Binding CloseCommand}" Style="{StaticResource SecondaryButton}"
+                <Button Content="Schliessen" Command="{Binding CloseCommand}" Style="{StaticResource SecondaryButton}"
                         Padding="18,6" Margin="0,0,8,0" IsCancel="True"/>
                 <Button Content="Speichern" Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButton}"
                         Padding="18,6" IsDefault="True"/>

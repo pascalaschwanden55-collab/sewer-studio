@@ -80,7 +80,7 @@ public sealed class DesignAuditThemeResourceTests
         var xaml = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml");
         var code = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml.cs");
 
-        Assert.Contains("Header=\"Maßnahmen\"", xaml);
+        Assert.Contains("Header=\"Massnahmen\"", xaml);
         Assert.Contains("Text=\"{Binding PageTitle}\"", xaml);
         Assert.Contains("Text=\"{Binding PageSubtitle}\"", xaml);
         Assert.Contains("DataContext.MeasureOptions", xaml);

@@ -37,7 +37,7 @@
                            Text="Doppelklick oder Kontextmenü auf der Zeile öffnet diese Detailansicht."/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Width="120" Command="{Binding CloseCommand, ElementName=Root}"
-                            Style="{StaticResource SecondaryButton}" IsCancel="True">Schließen</Button>
+                            Style="{StaticResource SecondaryButton}" IsCancel="True">Schliessen</Button>
                 </StackPanel>
             </Grid>
         </Border>

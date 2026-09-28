@@ -60,6 +60,40 @@ public sealed class DesignAuditFeinschliffTests
             + string.Join("\n", treffer));
     }
 
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 10a: Schweizer Schreibweise gilt auch fuer das
+    /// scharfe S. Sichtbare Texte schreiben "ss" statt "ß" ("Massnahmen", "Strasse",
+    /// "schliessen"); Kommentare und Bezeichner bleiben unberuehrt (dieselbe Regel wie beim
+    /// Umlaut-Waechter oben — <see cref="SichtbaresAttribut"/> sieht nur XAML-Attributwerte).
+    /// </summary>
+    [Fact]
+    public void Sichtbare_Texte_enthalten_kein_scharfes_S()
+    {
+        var treffer = new List<string>();
+
+        foreach (var datei in AlleXamlDateien())
+        {
+            var zeilen = File.ReadAllLines(datei);
+            for (var i = 0; i < zeilen.Length; i++)
+            {
+                foreach (Match m in SichtbaresAttribut.Matches(zeilen[i]))
+                {
+                    var wert = SichtbarerAnteil(m.Groups[2].Value);
+                    if (wert is null)
+                        continue;
+
+                    if (wert.Contains('ß'))
+                        treffer.Add($"{Relativ(datei)}:{i + 1}: {m.Groups[1].Value}=\"{wert}\"");
+                }
+            }
+        }
+
+        Assert.True(
+            treffer.Count == 0,
+            "Sichtbare Texte schreiben ein scharfes ß statt der Schweizer Schreibweise ss:\n"
+            + string.Join("\n", treffer));
+    }
+
     [Fact]
     public void Menuepunkte_haben_ein_Symbol_oder_sind_checkbar()
     {

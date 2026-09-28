@@ -363,7 +363,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             setUserEdited: false);
 
         Refresh();
-        LastResult = $"Auto-Resolve: {result.Resolved}/{result.TotalConflicts} aufgeloest, {result.Failed} Fehler, {result.Unresolved} offen";
+        LastResult = $"Gelernte Zuordnungen übernommen: {result.Resolved}/{result.TotalConflicts} aufgeloest, {result.Failed} Fehler, {result.Unresolved} offen";
     }
 
     private void ClearLearnedMappings()
@@ -371,8 +371,8 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         var count = _service.ClearMappings(_getProject());
         Refresh();
         LastResult = count > 0
-            ? $"Gelernte Mappings geloescht: {count}"
-            : "Keine gelernten Mappings vorhanden.";
+            ? $"Gelernte Zuordnungen geloescht: {count}"
+            : "Keine gelernten Zuordnungen vorhanden.";
     }
 
     private void OpenInfo()

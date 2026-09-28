@@ -162,7 +162,7 @@ public static partial class FieldCatalog
             [FieldKeys.ConditionClass] = new(FieldKeys.ConditionClass, "Zustandsklasse", FieldType.Combo, ComboItems[FieldKeys.ConditionClass]),
             ["VSA_Zustandsnote_D"] = new("VSA_Zustandsnote_D", "VSA-Zustandsnote D", FieldType.Decimal),
             ["Pruefungsresultat"] = new("Pruefungsresultat", "Prüfungsresultat", FieldType.Text),
-            ["Referenzpruefung"] = new("Referenzpruefung", "Referenzpruefung", FieldType.Combo, ComboItems["Referenzpruefung"]),
+            ["Referenzpruefung"] = new("Referenzpruefung", "Referenzprüfung", FieldType.Combo, ComboItems["Referenzpruefung"]),
             [FieldKeys.RenovationDecision] = new(FieldKeys.RenovationDecision, "Sanieren Ja/Nein", FieldType.Combo, ComboItems[FieldKeys.RenovationDecision]),
             [FieldKeys.RecommendedRehabilitationMeasures] = new(FieldKeys.RecommendedRehabilitationMeasures, "Empfohlene Sanierungsmassnahmen", FieldType.Multiline),
             [FieldKeys.Cost] = new(FieldKeys.Cost, "Kosten", FieldType.Decimal),

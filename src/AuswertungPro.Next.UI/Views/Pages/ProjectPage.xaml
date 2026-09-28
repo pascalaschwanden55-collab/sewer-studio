@@ -31,7 +31,7 @@
                 <Button Content="Projekt speichern" Command="{Binding SaveCommand}" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="8,0,0,0"
                         Visibility="{Binding IsNotDraft, Converter={StaticResource BoolToVis}}"
                         ToolTip="Alle Projektdaten speichern." />
-                <Button Content="Programm schließen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="8,0,0,0"
+                <Button Content="Programm schliessen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="8,0,0,0"
                         ToolTip="SewerStudio beenden. Ungespeicherte Änderungen werden vorher abgefragt." />
             </StackPanel>
         </ctrl:NovaPageHeader>
@@ -73,7 +73,7 @@
                         <TextBlock Grid.Row="2" Grid.Column="2" Text="Zone" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding Project.Metadata[Zone], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Straße" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Strasse" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="5" Grid.Column="0" Text="{Binding Project.Metadata[Strasse], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBlock Grid.Row="4" Grid.Column="2" Text="Bearbeiter" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="5" Grid.Column="2" Text="{Binding Project.Metadata[Bearbeiter], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>

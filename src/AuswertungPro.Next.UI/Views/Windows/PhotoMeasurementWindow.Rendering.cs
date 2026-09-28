@@ -239,7 +239,7 @@ public partial class PhotoMeasurementWindow
 
         _undoFrames.Push(frame);
 
-        TxtStatus.Text = $"Querschnitt: {_clickPoints.Count} Punkte · Doppelklick = schließen";
+        TxtStatus.Text = $"Querschnitt: {_clickPoints.Count} Punkte · Doppelklick = schliessen";
     }
 
     private void ClosePolygon()

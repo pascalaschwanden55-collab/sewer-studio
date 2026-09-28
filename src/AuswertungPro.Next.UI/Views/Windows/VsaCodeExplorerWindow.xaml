@@ -34,7 +34,7 @@
                 <!-- Titel -->
                 <nova:NovaDialogHeader Title="VSA Schadencodierung - VSA-KEK 2020"
                                         Subtitle="EN 13508-2 - VSA-KEK 2020" Margin="0,0,0,6">
-                    <Button x:Name="ResetButton" Content="Reset"
+                    <Button x:Name="ResetButton" Content="Zurücksetzen"
                             Style="{StaticResource ToolbarButton}" MinWidth="50" Padding="8,3"/>
                 </nova:NovaDialogHeader>
 

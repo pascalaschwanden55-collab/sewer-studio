@@ -24,7 +24,7 @@
                     <StackPanel Margin="0,0,18,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding GesamtTotal, StringFormat='Total (exkl. MwSt): {0:N2} CHF'}"
                                    FontWeight="SemiBold" HorizontalAlignment="Right"/>
-                        <TextBlock Text="{Binding BelegteSchaechte, StringFormat='{}{0} Schächte mit Maßnahme'}"
+                        <TextBlock Text="{Binding BelegteSchaechte, StringFormat='{}{0} Schächte mit Massnahme'}"
                                    Opacity="0.7" HorizontalAlignment="Right"/>
                     </StackPanel>
                     <Button Content="Neu laden" Command="{Binding ReloadCommand}" Margin="0,0,8,0"/>
@@ -49,7 +49,7 @@
                 <DataGridTextColumn Header="Funktion" Binding="{Binding Funktion}" IsReadOnly="True" Width="1.2*"/>
                 <DataGridTextColumn Header="Resultat" Binding="{Binding Resultat}" IsReadOnly="True" Width="1.4*"/>
 
-                <DataGridTemplateColumn Header="Maßnahme" Width="2*">
+                <DataGridTemplateColumn Header="Massnahme" Width="2*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <ComboBox ItemsSource="{Binding DataContext.MeasureOptions,

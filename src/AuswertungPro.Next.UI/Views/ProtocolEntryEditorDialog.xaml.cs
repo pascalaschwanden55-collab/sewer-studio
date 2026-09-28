@@ -615,7 +615,7 @@ public partial class ProtocolEntryEditorDialog : Window
             }
             if (_entryVm.MeterEnd < _entryVm.MeterStart)
             {
-                ValidationStatus.Text = "Streckenschaden: MeterEnde muss größer/gleich MeterStart sein.";
+                ValidationStatus.Text = "Streckenschaden: MeterEnde muss grösser/gleich MeterStart sein.";
                 return;
             }
         }
