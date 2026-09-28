@@ -38,6 +38,71 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   Test `NovaDialogWindowIsolatedSmokeTests` (Kindprozess-Muster) prueft Knopfbeschriftungen,
   Reihenfolge, Standard-/Abbrechen-Knopf, Rueckgabewerte per programmatischem Klick und die
   Darstellung im Dunkeltheme (Hintergrund = `CardBrush` des Dunkeltheme).
+- **Aufgabe 3 — Fensterregel: gemeinsamer Kopf und Knopfleiste (Teil 1, Grundlage +
+  Dossier-Fenster).** Regel fuer JEDES Fenster im Programm: **Seiten verwenden
+  `NovaPageHeader`** (Titel + Untertitel INLINE nebeneinander, kein Zeilenumbruch, Ellipsis —
+  unveraendert), **Fenster (`Window`) verwenden das neue `Controls/NovaDialogHeader`**
+  (Titel oben, darunter ein UMBRECHENDER Untertitel fuer den bisherigen Einleitungssatz,
+  kollabiert restlos bei leerem Untertitel, rechts optional ein Aktionsbereich). Lookless
+  Control nach demselben Muster wie `NovaPageHeader`/`StatusHost`; sein Stil liegt bewusst
+  IN `Theme/Controls.xaml` (nicht in einer eigenen mitgemergten Datei wie `NovaPageHeader`),
+  weil dort schon `StatusHost` denselben Weg geht. Grund fuer ein zweites Kopf-Control statt
+  Wiederverwendung von `NovaPageHeader`: dessen Untertitel ist absichtlich einzeilig/inline
+  fuer kurze Seiten-Taglines: die meisten Fenster-Einleitungssaetze sind ganze erklaerende
+  Saetze, die dort truemmerhaft abgeschnitten wuerden.
+  **`DialogButtonBar`** (`Style x:Key`, `TargetType="Border"`, in `Controls.xaml`) ist die
+  gemeinsame Fussleiste: Trennlinie oben (`BorderLightBrush`, `BorderThickness="0,1,0,0"`),
+  16 px Abstand darunter (`Padding="0,16,0,0"`). Genaues XAML-Muster (mechanisch zu
+  uebernehmen, auch fuer Aufgabe 4):
+
+  ```xml
+  <Border Grid.Row="…" Style="{StaticResource DialogButtonBar}">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+          <Button Content="Abbrechen" Style="{StaticResource SecondaryButton}"
+                  Margin="0,0,8,0" IsCancel="True" Click="OnCancel"/>
+          <Button Content="Speichern" Style="{StaticResource PrimaryButton}"
+                  IsDefault="True" Click="OnSave"/>
+      </StackPanel>
+  </Border>
+  ```
+
+  Ein zusaetzlicher Statustext links steht als weiteres Grid-Kind mit
+  `HorizontalAlignment="Left"` im selben `Grid` (Muster wie das bisherige `CountText` in
+  `DossierHoldingPickerWindow`/`DossierShaftPickerWindow`), NICHT im `StackPanel`. 8 px
+  Abstand zwischen Knoepfen bleibt ein manuelles `Margin="0,0,8,0"` an jedem Knopf ausser dem
+  letzten (WPF `StackPanel` kennt in dieser .NET-Version keine `Spacing`-Eigenschaft — belegt
+  am Referenzassembly geprueft, nicht angenommen) — kein Setter dafuer, damit die Reihenfolge
+  im XAML sofort sichtbar bleibt.
+  **Primaerstil vereinheitlicht:** Fenster-Hauptknopf = `PrimaryButton`. Neu:
+  **`DangerButton`** (`Controls.xaml`, `BasedOn SecondaryButton`, `Foreground=DangerTextBrush`,
+  `BorderBrush=DangerBrush`) ist optisch identisch mit dem bisherigen fensterlokalen
+  `NovaDialogDangerButton` aus Aufgabe 1 — bewusst NICHT dorthin verschoben (Aufgabe 1 bleibt
+  unangetastet), aber ab sofort die Vorlage fuer jede neue destruktive Aktion.
+  **`CompactButton`** hatte in `DataPage.xaml` eine lokale Doppeldefinition
+  (`BasedOn SecondaryButton`, kompakt) neben der Theme-Fassung (`BasedOn ToolbarButton`,
+  Pillenform) — beide sahen verschieden aus. Die Theme-Fassung (`Theme.xaml`/`ThemeLight.xaml`)
+  ist jetzt an die lokale angeglichen, die lokale Kopie in `DataPage.xaml` entfernt.
+  **Knopfregel** (Plan-Konstante, ab jetzt verbindlich, Wächter folgt vollstaendig in
+  Aufgabe 4): Knopfleiste unten rechts, Hauptaktion ganz rechts (`PrimaryButton`,
+  `IsDefault="True"`), «Abbrechen»/«Schliessen» direkt links davon (`IsCancel="True"`),
+  weitere Aktionen links davon. **Hoechstens EIN Hauptknopf je Fenster** — traf ein Fenster
+  bereits vorher einen mittigen Knopf mit `IsDefault="True"` (z. B. «Daten holen» in
+  `DossierParcelLookupWindow`), verliert DIESER es zugunsten des Fuss-Hauptknopfs, damit
+  Enter nicht auf zwei Knoepfe gleichzeitig zielt.
+  Angewendet auf alle 11 Dossier-Fenster (Area, Batch, Edit, HoldingPicker, PageSelection,
+  ParcelLookup, Plan, Preview, PrintDialog, Refresh, ShaftPicker): Kopf mit Titel + bisherigem
+  Einleitungssatz als Untertitel (leer bei `DossierEditWindow` — dessen doppelte
+  „Liegenschaft“-Ueberschrift im Formular entfaellt dafuer), Fussleiste nach Knopfregel.
+  Dabei aufgefallene und mitbehobene Abweichungen vom alten Bestand: `DossierBatchWindow`
+  und `DossierRefreshWindow` hatten den Hauptknopf LINKS vom Abbrechen-Knopf stehen (jetzt
+  vertauscht); `DossierPageSelectionWindow` hatte zwei fern voneinander stehende
+  Knopfgruppen (jetzt EINE rechtsbuendige Leiste: Alle waehlen, Keine, Abbrechen, Erzeugen);
+  `DossierPrintDialog` verwendete `SuccessButton` (jetzt `PrimaryButton`, dazu `IsDefault`/
+  `IsCancel` ergaenzt, die vorher fehlten). Wächter `DesignAuditDossierFensterTests` (Kopf,
+  Fussleiste, genau ein Hauptknopf mit `PrimaryButton`, ein Abbrechen-/Schliessen-Knopf, kein
+  `SuccessButton` mehr, `CompactButton`-Angleichung) und
+  `NovaDialogHeaderIsolatedSmokeTests` (Kindprozess-Muster: Titel/Untertitel-Kollaps,
+  Aktionen-DataContext, `DialogButtonBar`-Masse, `DangerButton`-Farben).
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

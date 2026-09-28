@@ -14,7 +14,11 @@ public sealed class DesignAuditThemeResourceTests
 
         Assert.Contains("Background=\"{DynamicResource BgBrush}\"", xaml);
         Assert.Contains("Style=\"{StaticResource SecondaryButton}\"", xaml);
-        Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
+        // Optikanalyse 28.09.2026, Aufgabe 3: SuccessButton -> PrimaryButton (Knopfregel, hoechstens
+        // EIN Hauptknopf je Fenster, einheitlicher Primaerstil). SuccessButton bleibt in
+        // HydraulikPrintDialog vorerst bestehen (uebriges Fenster, Aufgabe 4).
+        Assert.Contains("Style=\"{StaticResource PrimaryButton}\"", xaml);
+        Assert.DoesNotContain("SuccessButton", xaml);
     }
 
     [Fact]

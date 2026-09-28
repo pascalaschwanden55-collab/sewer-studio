@@ -28,12 +28,9 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
-        <Style x:Key="CompactButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-            <Setter Property="MinHeight" Value="28"/>
-            <Setter Property="MinWidth" Value="0"/>
-            <Setter Property="Padding" Value="10,4"/>
-            <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
-        </Style>
+        <!-- CompactButton: entfernte lokale Doppeldefinition (Optik und Bedienung professionell,
+             28.09.2026, Aufgabe 3). Die Theme-Fassung (Theme.xaml/ThemeLight.xaml) ist seither
+             identisch und wird ueber die normale Ressourcensuche gefunden. -->
         <!-- Nova, Aufklapp-Liste: EIN Zeilen-Kontextmenue fuer Tabelle UND Liste. Zwei Wege zu
              denselben Aktionen hiessen, dass nur einer die Pruefungen bekommt. Es enthaelt nur
              Zeilenaktionen; spaltenbezogene Punkte wie "Spalte leeren" stehen unter

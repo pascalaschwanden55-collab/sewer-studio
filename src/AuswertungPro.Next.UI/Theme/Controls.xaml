@@ -1812,4 +1812,65 @@
         <ui:FluentIcon Style="{StaticResource BearbeitungErledigtMarke}"
                        DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGridRow}}"/>
     </DataTemplate>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         FENSTERKOPF UND KNOPFLEISTE (Optik und Bedienung professionell, 28.09.2026, Aufgabe 3):
+         EIN gemeinsamer Kopf und EINE gemeinsame Fussleiste fuer Dialoge/Zusatzfenster. Regel:
+         Seiten verwenden NovaPageHeader, Fenster (Window) verwenden NovaDialogHeader.
+         ═══════════════════════════════════════════════════════════ -->
+
+    <!-- NovaDialogHeader: Titel oben, darunter ein UMBRECHENDER Untertitel (der bisherige
+         Einleitungssatz), rechts optional ein Aktionsbereich. Kollabiert bei leerem Untertitel
+         wie NovaPageHeader - kein leerer Rand. -->
+    <Style TargetType="{x:Type controls:NovaDialogHeader}">
+        <Setter Property="Margin" Value="0,0,0,14"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:NovaDialogHeader}">
+                    <DockPanel LastChildFill="True">
+                        <ContentPresenter DockPanel.Dock="Right" Content="{TemplateBinding Aktionen}"
+                                          VerticalAlignment="Top" Margin="14,0,0,0"/>
+                        <StackPanel>
+                            <TextBlock x:Name="TitleText" Text="{TemplateBinding Title}"
+                                       FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock x:Name="SubtitleText" Text="{TemplateBinding Subtitle}"
+                                       FontSize="{DynamicResource TextS}"
+                                       Foreground="{DynamicResource MutedBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Subtitle" Value="">
+                            <Setter TargetName="SubtitleText" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- DialogButtonBar: Fussleiste eines Fensters. Trennlinie oben (BorderLightBrush), 16 px
+         Abstand zwischen Trennlinie und Knoepfen. Anwendung: ein Border mit diesem Stil um eine
+         rechtsbuendige, horizontale StackPanel mit den Knoepfen; jeder Knopf ausser dem letzten
+         (dem ganz rechten Hauptknopf) traegt Margin="0,0,8,0" fuer den einheitlichen 8-px-Abstand.
+         Das genaue XAML-Muster steht im CLAUDE.md-Absatz zu dieser Aufgabe. -->
+    <Style x:Key="DialogButtonBar" TargetType="Border">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
+        <Setter Property="BorderThickness" Value="0,1,0,0"/>
+        <Setter Property="Padding" Value="0,16,0,0"/>
+    </Style>
+
+    <!-- DangerButton: destruktive Hauptaktion - Umriss/Text in DangerBrush statt Flaechenfuellung.
+         Optisch identisch mit dem bisherigen fensterlokalen NovaDialogDangerButton
+         (NovaDialogWindow.xaml, Aufgabe 1), hier programmweit als Theme-Stil verfuegbar, damit
+         neue Fenster nicht erneut eine eigene lokale Kopie anlegen. -->
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
+    </Style>
 </ResourceDictionary>

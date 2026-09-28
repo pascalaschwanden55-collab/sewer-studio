@@ -608,7 +608,15 @@
         </Setter>
     </Style>
 
-    <Style x:Key="CompactButton" TargetType="Button" BasedOn="{StaticResource ToolbarButton}"/>
+    <!-- Optik und Bedienung professionell, 28.09.2026, Aufgabe 3: angeglichen an die bisherige
+         lokale Doppeldefinition in DataPage.xaml (dort entfernt) - kompakter Sekundaerknopf statt
+         der Toolbar-Pillenform. -->
+    <Style x:Key="CompactButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
+    </Style>
 
     <Style x:Key="CompactToggleButton" TargetType="ToggleButton">
         <Setter Property="MinHeight" Value="30"/>
