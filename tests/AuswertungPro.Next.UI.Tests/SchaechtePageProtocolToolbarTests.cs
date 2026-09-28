@@ -16,7 +16,9 @@ public sealed class SchaechtePageProtocolToolbarTests
 
         Assert.Contains("Command=\"{Binding RefreshProtocolCommand}\"", xaml);
         Assert.Contains("Command=\"{Binding ImportProtocolCommand}\"", xaml);
-        Assert.Contains("Aktualisieren", xaml);
+        // Optikanalyse 28.09.2026, Aufgabe 7: "Aktualisieren" (unklarer Name) -> "Protokoll neu
+        // einlesen", passend zum Tooltip "Verknüpftes Protokoll neu einlesen ...".
+        Assert.Contains("Protokoll neu einlesen", xaml);
         Assert.Contains("Protokoll importieren", xaml);
         Assert.Contains("ganzen Ordner einschliesslich Unterordner importieren", xaml);
     }

@@ -119,9 +119,12 @@ public sealed class DesignAuditThemeResourceTests
         var dataPage = ReadUiFile("Views", "Pages", "DataPage.xaml");
         var shell = ReadUiFile("ViewModels", "ShellViewModel.cs");
 
-        Assert.Contains("Header=\"Sanierungsmaßnahme bearbeiten\"", dataPage);
-        // Nova-Etappe 1: der Einstieg liegt unter "Weitere Aktionen", der Text bleibt sichtbar.
-        Assert.Contains("Sanierungsmaßnahme bearbeiten", dataPage);
+        // Optikanalyse 28.09.2026, Aufgabe 7: "Sanierungsmaßnahme bearbeiten" unter "Weitere
+        // Aktionen" war eine Doppelung des Zeilenmenue-Eintrags (gleicher Click-Handler) und
+        // wurde entfernt; der Einstieg zur Sanierungs-Matrix bleibt ueber das Zeilenmenue
+        // (Header "Sanierungsmassnahmen...", ss statt ß) erhalten.
+        Assert.Contains("Header=\"Sanierungsmassnahmen...\"", dataPage);
+        Assert.Contains("Click=\"CostsMenu_Click\"", dataPage);
         Assert.Contains("x:Name=\"WeitereAktionenDropdown\"", dataPage);
         Assert.Contains("NavigateToSanierungsMatrix", shell);
         Assert.Contains("OpenSanierungsMatrix(record);", viewModel);

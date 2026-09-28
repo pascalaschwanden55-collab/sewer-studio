@@ -13,21 +13,56 @@ public sealed class DesignAuditNovaSchaechteTests
     {
         var xaml = Xaml();
         Assert.Contains("x:Name=\"WeitereAktionenDropdown\"", xaml);
-        foreach (var header in new[] { "PDF-Daten", "Aktualisieren", "Leere Felder aus QGIS", "GeoShop-Abgleich (XTF)", "Feldnamen aufräumen", "Strassen", "Hoch", "Runter", "Ansicht anpassen", "Alte Schachtansicht" })
+        // Optikanalyse 28.09.2026, Aufgabe 7: unklare Namen sprechend gemacht ("PDF-Daten" ->
+        // "Stammdaten aus PDFs ergänzen", "Aktualisieren" -> "Protokoll neu einlesen", "Strassen"
+        // -> "Strassennamen ergänzen"); "Hoch"/"Runter" heissen jetzt wie bei den Haltungen
+        // "Nach oben"/"Nach unten" (Reihenfolge-Untermenue).
+        foreach (var header in new[] { "Stammdaten aus PDFs ergänzen", "Protokoll neu einlesen", "Leere Felder aus QGIS", "GeoShop-Abgleich (XTF)", "Feldnamen aufräumen", "Strassennamen ergänzen", "Nach oben", "Nach unten", "Ansicht anpassen", "Alte Schachtansicht" })
             Assert.Contains($"Header=\"{header}\"", xaml);
         Assert.DoesNotContain("<ToggleButton x:Name=\"SchachtansichtToggle\"", xaml);
         Assert.Contains("x:Name=\"ColumnViewChips\"", xaml);
         Assert.Contains("SchaechteColumnViewCatalog.Views", xaml);
     }
 
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 7: "Weitere Aktionen" ist in Untermenues gegliedert
+    /// (Daten abgleichen, Reihenfolge, Ansicht - dieselben Titel wie bei den Haltungen, siehe
+    /// <see cref="WeitereAktionenUntermenueTests"/>). Die frueheren Zeilenmenue-Doppelungen
+    /// "Sanierungsmassnahmen...", "Protokoll (PDF)..." und "Gehe zu Ordner" sind aus "Weitere
+    /// Aktionen" entfernt - sie bleiben ueber das Zeilenmenue (SchachtZeilenMenue, ausserhalb
+    /// dieses Dropdown-Blocks) erreichbar.
+    /// </summary>
     [Fact]
     public void Gruppen_im_Menue_trennen_nur_mit_Separator_ohne_deaktivierte_Kopfzeilen()
     {
         var xaml = Xaml();
         Assert.DoesNotContain("IsEnabled=\"False\" Focusable=\"False\"", xaml);
-        Assert.Matches(new Regex("<Separator/>\\s*<MenuItem Header=\"Hoch\""), xaml);
-        Assert.Matches(new Regex("<Separator/>\\s*<MenuItem Header=\"Sanierungsmassnahmen\\.\\.\\.\""), xaml);
-        Assert.Matches(new Regex("<Separator/>\\s*<MenuItem Header=\"Ansicht anpassen\""), xaml);
+        // Zwischen Separator und Menuepunkt darf ein erklaerender XML-Kommentar stehen, sonst
+        // nur Leerraum - kein weiterer Menuepunkt dazwischen.
+        const string kommentar = "(?:\\s*<!--[\\s\\S]*?-->)?\\s*";
+        Assert.Matches(new Regex("<MenuItem Header=\"Daten abgleichen\""), xaml);
+        Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Reihenfolge\""), xaml);
+        Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Ansicht\""), xaml);
+        Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Ansicht anpassen\""), xaml);
+
+        var dropdownMenu = ExtractWeitereAktionenMenu(xaml);
+        Assert.DoesNotContain("Header=\"Sanierungsmassnahmen...\"", dropdownMenu);
+        Assert.DoesNotContain("Header=\"Protokoll (PDF)...\"", dropdownMenu);
+        Assert.DoesNotContain("Header=\"Gehe zu Ordner\"", dropdownMenu);
+        // Die drei Eintraege bleiben im Zeilenmenue (ausserhalb des Dropdown-Blocks) erhalten.
+        Assert.Contains("Header=\"Sanierungsmassnahmen...\"", xaml);
+        Assert.Contains("Header=\"Protokoll (PDF)...\"", xaml);
+        Assert.Contains("Header=\"Gehe zu Ordner\"", xaml);
+    }
+
+    private static string ExtractWeitereAktionenMenu(string xaml)
+    {
+        var start = xaml.IndexOf("x:Name=\"WeitereAktionenDropdown\"", System.StringComparison.Ordinal);
+        Assert.True(start >= 0, "WeitereAktionenDropdown nicht gefunden");
+        var contextStart = xaml.IndexOf("<Button.ContextMenu>", start, System.StringComparison.Ordinal);
+        var contextEnd = xaml.IndexOf("</Button.ContextMenu>", contextStart, System.StringComparison.Ordinal);
+        Assert.True(contextStart >= 0 && contextEnd > contextStart, "Button.ContextMenu von WeitereAktionenDropdown nicht gefunden");
+        return xaml[contextStart..contextEnd];
     }
 
     [Fact]

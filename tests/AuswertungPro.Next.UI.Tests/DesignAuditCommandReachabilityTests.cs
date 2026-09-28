@@ -28,6 +28,10 @@ public sealed class DesignAuditCommandReachabilityTests
 
     // Nova-Etappe 1: Die Werkzeugleiste zeigt eine Hauptaktion; alles andere liegt unter
     // "Weitere Aktionen". Kein sichtbarer Aktionstext darf dabei verschwinden.
+    // Optikanalyse 28.09.2026, Aufgabe 7: fuenf Untermenues (Daten abgleichen, Bearbeiten,
+    // Reihenfolge, Ansicht, Ausgabe) ersetzen die flache Liste. "Sanierungsmaßnahme bearbeiten"
+    // ist als Doppelung zum Zeilenmenue entfernt (dort "Sanierungsmassnahmen..."),
+    // "Fokusmodus (F11)" als Doppelung zum Menue Ansicht.
     [Theory]
     [InlineData("Speichern")]
     [InlineData("Neu")]
@@ -35,11 +39,10 @@ public sealed class DesignAuditCommandReachabilityTests
     [InlineData("Video prüfen")]
     [InlineData("Leere Felder aus QGIS")]
     [InlineData("GeoShop-Abgleich (XTF)")]
-    [InlineData("Sanierungsmaßnahme bearbeiten")]
     [InlineData("Direkt zur KI-Optimierung")]
     [InlineData("Vorschlag für diese Haltung erstellen")]
     [InlineData("Medien suchen")]
-    [InlineData("Strassen")]
+    [InlineData("Strassennamen ergänzen")]
     [InlineData("Hydraulik berechnen")]
     [InlineData("Hydraulik PDF")]
     [InlineData("Dossier")]
@@ -49,9 +52,17 @@ public sealed class DesignAuditCommandReachabilityTests
     [InlineData("Zeilenhöhe:")]
     [InlineData("Zoom:")]
     [InlineData("Ausrichtung:")]
-    [InlineData("Fokusmodus (F11)")]
     [InlineData("Haltungsansicht")]
     [InlineData("Weitere Aktionen")]
+    [InlineData("Daten abgleichen")]
+    [InlineData("Bearbeiten")]
+    [InlineData("Reihenfolge")]
+    [InlineData("Ansicht")]
+    [InlineData("Ausgabe")]
+    [InlineData("Nach oben")]
+    [InlineData("Nach unten")]
+    [InlineData("Auf Position…")]
+    [InlineData("Gehe zu Zeile…")]
     public void Haltungen_toolbar_keeps_every_action_reachable(string sichtbarerText)
     {
         var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml"));

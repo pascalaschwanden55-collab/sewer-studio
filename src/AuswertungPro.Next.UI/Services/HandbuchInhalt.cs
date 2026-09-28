@@ -49,17 +49,21 @@ public static class HandbuchInhalt
             "oder «Alle Spalten» wählen; vier eigene Spalten zeigen KI-Stand, Prüfstand, ob ein Video " +
             "hinterlegt ist und ob ein Protokoll vorliegt. F3 springt in die Suche.\n\n" +
             "Rechtsklick auf eine Zeile öffnet Beobachtungen, startet die Videoanalyse oder das " +
-            "Abspielen des Videos, druckt das Protokoll oder öffnet das Original-PDF. Der Knopf " +
-            "«Weitere Aktionen» bündelt seltenere Wege: Medien suchen, fehlende Felder aus QGIS, " +
-            "WebGIS oder GeoShop ergänzen, Sanierungsmassnahme bearbeiten, Hydraulik berechnen, " +
-            "Haltungsdossier drucken sowie Zeilen verschieben oder löschen. Statt der Tabelle lässt " +
-            "sich über Weitere Aktionen -> Ansicht auch die aufklappbare Listenansicht einer Haltung " +
-            "wählen."),
+            "Abspielen des Videos, druckt das Protokoll, öffnet das Original-PDF oder die " +
+            "Sanierungsmassnahmen. Der Knopf «Weitere Aktionen» bündelt seltenere Wege in fünf " +
+            "Untermenüs: Daten abgleichen (Medien suchen, WebGIS, GeoShop, QGIS, Strassennamen), " +
+            "Bearbeiten (KI-Optimierung, Sanierungsvorschlag, Hydraulik berechnen), Reihenfolge " +
+            "(Zeile verschieben oder an eine Position setzen), Ansicht (Ansicht wechseln, anpassen, " +
+            "abdocken) sowie Ausgabe (Hydraulik-PDF, Haltungsdossier drucken). Statt der Tabelle " +
+            "lässt sich über Weitere Aktionen -> Ansicht auch die aufklappbare Listenansicht einer " +
+            "Haltung wählen."),
 
         new("Schaechte", "Schächte",
             "Tabelle aller Schacht-Inspektionspunkte, gleich aufgebaut wie Haltungen: Spaltenwahl, " +
-            "Statusspalten, Suche, Rechtsklick-Kontextmenü und «Weitere Aktionen» für seltenere " +
-            "Wege (Protokoll neu einlesen, Vom WebGIS holen, Medien suchen). Neu, Löschen, " +
+            "Statusspalten, Suche, Rechtsklick-Kontextmenü (Details, Sanierungsmassnahmen, Protokoll-" +
+            "PDF, Gehe zu Ordner) und «Weitere Aktionen» mit den Untermenüs Daten abgleichen (Vom " +
+            "WebGIS holen, GeoShop, QGIS, Stammdaten aus PDFs ergänzen, Protokoll neu einlesen, " +
+            "Feldnamen aufräumen, Strassennamen ergänzen), Reihenfolge und Ansicht. Neu, Löschen, " +
             "Verschieben und die Detailansicht funktionieren wie bei den Haltungen. Auch hier kann " +
             "statt der Tabelle die aufklappbare Listenansicht gewählt werden."),
 
@@ -91,7 +95,7 @@ public static class HandbuchInhalt
             "kommen Kennzahlen zu Sanierungsquote und Kostenverteilung sowie das NPK-135-" +
             "Leistungsverzeichnis. Das Ergebnis lässt sich als PDF ausgeben."),
 
-        new("Dossiers", "Dossiers",
+        new("Dossiers", "Eigentümerdossiers",
             "Baut je Liegenschaft ein Eigentümerdossier: die vorhandenen Word-Vorlagenfelder " +
             "(Ausgangslage, Änderungswesen, Eigentümer, Themen wie Schäden oder Sanierungskonzept) " +
             "füllen, dazu automatisch das Zustandsklassen-Erklärblatt sowie eine Haltungs- und " +
@@ -116,7 +120,7 @@ public static class HandbuchInhalt
             "verändert werden - ein reiner Vergleich zur Selbstkontrolle, wie gut die KI-Einschätzung " +
             "mit der eigenen Bewertung übereinstimmt."),
 
-        new("VSA", "VSA",
+        new("VSA", "VSA-Bewertung",
             "Berechnet die Zustandsklasse (0-4) für alle Haltungen und Schächte nach VSA-KEK 2020 " +
             "aus den erfassten Schadenscodes. Der schlechteste Einzelbefund bestimmt die " +
             "Gesamtklasse einer Haltung; Kanäle und Schächte verwenden dabei getrennte Regelwerke."),

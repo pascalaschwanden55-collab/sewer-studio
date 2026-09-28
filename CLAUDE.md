@@ -266,6 +266,34 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `ShellViewModel.cs` und prüft Abdeckung — kein ServiceProvider/keine WPF-App nötig),
   `PlayerKeyboardShortcutPolicyTests` (Beschreibungen-Abdeckung), `HandbuchWindowIsolatedSmokeTests`,
   `TastenkuerzelWindowIsolatedSmokeTests` (beide Kindprozess-Muster).
+- **Aufgabe 7 — «Weitere Aktionen» gliedern, Doppelungen und Namen bereinigen.** Haltungen
+  (`DataPage.xaml`) und Schächte (`SchaechtePage.xaml`) gliedern das Menü «Weitere Aktionen»
+  jetzt in Untermenüs aus EINER gemeinsamen Titel-Liste: «Daten abgleichen ▸», «Bearbeiten ▸»,
+  «Reihenfolge ▸», «Ansicht ▸», «Ausgabe ▸». Nicht jede Seite braucht jede Gruppe — Schächte
+  haben keine eigenständige «Bearbeiten»/«Ausgabe»-Aktion, die nicht schon im Zeilenmenü steht,
+  und zeigen deshalb nur «Daten abgleichen», «Reihenfolge», «Ansicht». **Regel, die nicht
+  zurückfallen darf:** Ein Eintrag, der einen Handler mit dem Zeilenmenü (`HaltungZeilenMenue`/
+  `SchachtZeilenMenue`) TEILT, steht nur EINMAL — im Zeilenmenü, nicht zusätzlich unter «Weitere
+  Aktionen» (entfernt: Haltungen «Sanierungsmaßnahme bearbeiten», Schächte «Sanierungsmassnahmen…»/
+  «Protokoll (PDF)…»/«Gehe zu Ordner»). «Reihenfolge ▸» heisst auf BEIDEN Seiten «Nach oben»/
+  «Nach unten» (nie «Hoch»/«Runter»); das gemeinsame Popup/die eingebetteten Eingabefelder für
+  «Auf Position…»/«Gehe zu Zeile…» sind unverändert übernommen. «Fokusmodus (F11)» ist aus
+  «Weitere Aktionen» entfernt (Doppelung zum globalen Menü _Ansicht, dieselbe
+  `ShellViewModel.IsFocusMode`). Umbenennungen für sprechende Namen: Schächte «PDF-Daten» →
+  «Stammdaten aus PDFs ergänzen», «Aktualisieren» → «Protokoll neu einlesen»; beide Seiten
+  «Strassen» → «Strassennamen ergänzen»; Werkzeuge-Menü «Messvorlagen…» → «Massnahmenvorlagen…».
+  «Vom WebGIS holen» nennt im Tooltip jetzt ausdrücklich «Ohne Anmeldung: zuerst auf der Seite
+  Export am WebGIS anmelden.» (nur Text — `WebGisHolenAblauf.OeffneAsync` zeigte diesen Hinweis
+  als Laufzeit-Dialog schon vorher, Befehlslogik unverändert). **Leiste ↔ Seitentitel:**
+  `ShellNavigationTitles.Anzeige` (Schlüssel bleiben `"Dossiers"`/`"VSA"`) zeigt jetzt
+  «Eigentümerdossiers»/«VSA-Bewertung» passend zu den bestehenden `NovaPageHeader`-Titeln;
+  `HandbuchInhalt.Titel` der beiden Abschnitte folgt. Wächter: `WeitereAktionenUntermenueTests`
+  (jeder verwendete Untermenü-Titel stammt aus der gemeinsamen Liste, «Daten abgleichen»/
+  «Reihenfolge»/«Ansicht» kommen auf beiden Seiten vor, «Reihenfolge» nennt auf beiden Seiten
+  «Nach oben»/«Nach unten» — liest die echte `Button.ContextMenu`-Struktur über `XDocument`,
+  kein Text-Heuristik-Raten), `ShellNavigationTitlesTests`, angepasste
+  `DesignAuditCommandReachabilityTests`/`DesignAuditNovaSchaechteTests`/
+  `DesignAuditThemeResourceTests`/`SchaechtePageProtocolToolbarTests`.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

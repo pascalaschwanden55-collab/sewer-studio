@@ -7,6 +7,11 @@ public static class ShellNavigationTitles
     {
         "Uebersicht" => "Übersicht",
         "Schaechte" => "Schächte",
+        // Optikanalyse 28.09.2026, Aufgabe 7: Leiste und Seitentitel angleichen. Der Schluessel
+        // (NavItem.Title, Handbuch-Schluessel, Navigation) bleibt "Dossiers"/"VSA"; nur die
+        // sichtbare Beschriftung wird an den bestehenden Seitentitel (NovaPageHeader) angeglichen.
+        "Dossiers" => "Eigentümerdossiers",
+        "VSA" => "VSA-Bewertung",
         null => string.Empty,
         _ => title
     };
