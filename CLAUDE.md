@@ -653,6 +653,47 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   Testkorrektur nicht erkannt (die Erkennung sucht unescapte `"..."`); solche Stellen wurden
   einzeln nach dem realen Testlauf von Hand nachgezogen (`ObservationCatalogWindowInputNormalizerArchitectureTests`,
   `SchaechtePageArchitectureGuardTests`).
+- **Aufgabe 10c2 — Umlaute in Application/Infrastructure/Domain, rohe `ex.Message` ueber `UserError`.**
+  Rund 1330 Meldungs-, Bericht-, Status- und Ausnahmetexte der drei unteren Schichten tragen echte Umlaute.
+  Geaendert wurde NUR ein Literal mit Leerzeichen, das vorher per Suche (Quelltext, XAML, JSON, Tests,
+  Python-Werkzeuge) als reiner Anzeigetext belegt war. **Bleiben ASCII:** Log-/Trace-/`BestEffort`-Zeilen
+  (auch der Kontexttext von `BestEffort.Try`), KI-Prompts (`EnhancedVisionPromptBuilder`,
+  `GuidedVerificationService`, `PdfKiSchiedsrichter`), Parsermuster (`PdfProjectMetadataParser`), der
+  VSA-Codebaum (`VsaCodeTree`), der Feldschluessel `Ausfuehrung Datum/Jahr`, der Inhalt der
+  Sicherungs-Markerdatei (`BackupTargetMarkerGuardService.MarkerContent` — alte Sicherungen werden daran
+  erkannt), der XTF-Kopfkommentar (`XtfNeuWriter`), der Paketordner `2 Vollstaendig`, die Goldplatzhalter
+  «ausmass ergaenzen», die Standardbeschreibung «… - persoenlich bestaetigt» und der gespeicherte
+  `SkipReason` «Automatisch ergaenzte Rohrgrenze». **Zwei Texte sind Gegenstuecke und aendern nur
+  gemeinsam:** `SamMaskFormatValidator` «Hand-Box ist ungültig …» ↔ `TrainingStudioBoxAnalysisUseCase`
+  (`StartsWith`), `XtfBauwerkFelder` «… vollständig in den Zusatzangaben.» ↔ `XtfNeuExportService.HinweisOhneZusatz`
+  (`EndsWith`). `MediaDistributionService.IstVerknuepfungsFehler` erkennt die Meldung des
+  `ImportSourcePathGuard` in BEIDEN Schreibweisen («Verknüpfung»/«Verknuepfung»).
+  **`UserError` erkennt eigene Meldungen jetzt breiter** (`IstEigenerMeldungstyp`): Neben
+  `InvalidOperationException`/`ArgumentException` gelten auch exakt `IOException`, `InvalidDataException`,
+  `JsonException` sowie jeder in Domain/Application/Infrastructure DEKLARIERTE Ausnahmetyp
+  (`SidecarInsufficientVramException`, `SidecarRequestTimeoutException`, `TrainingExportPlanException`,
+  `SchachtProArchiveException` …) als eigene Meldung — immer nur mit Wurfort in einer eigenen Schicht.
+  Ausgenommen: `SidecarBadRequestException` (roher Sidecar-Antwortkoerper) und alle Typen im Namensraum
+  `…WebGis…` (Anzeige regeln die geschuetzten WebGIS-Ablaeufe). Dieselbe `IOException` aus `File.Copy` oder
+  `JsonException` aus System.Text.Json bleibt generisch. Damit wurden rund 95 Anzeigen von `ex.Message` auf
+  `UserError.DescribeAndReport` umgestellt, ohne die fachliche Auskunft (VRAM, Zeitlimit, Pfadschutz,
+  Session-Konflikt) zu verlieren. Bewusst roh bleiben nur Log-/Trace-Zeilen, `DataPageVideoPlaybackController`
+  (Textvergleich «native side»), `ImportRunWorkflowController.SetDetailsText(ex.ToString())` (zugeklappte
+  «Technische Details»), Ergebnisfelder, die in Sampledaten/Klassifikation weiterlaufen
+  (`CodingTrainingFrameStore`, `EnhancedFrameAnalysis.EmptyFromException`), die Werkzeugausgabe von
+  `PlaywrightInstallService`, die KI-Vorschlagsdurchlaeufe (`BendSuggestionScanWorkflow`,
+  `PipeEndSuggestionScanWorkflow`, `CodingSuggestionScanUseCase`, `BendSuggestionListViewModel`,
+  `PlayerWindow.Coding.Suggestions` — bewusste Entscheidung «technischer Fehler woertlich, nie glaetten»,
+  z. B. «ffmpeg ist fehlgeschlagen: moov atom not found», per Test festgehalten), die Dossier-Abfragen
+  (`DossierParcelLookupUseCase`, `OwnerDirectoryLookupUseCase`, `DossierBatchProposalUseCase` — der Dienstgrund
+  kommt schon als deutscher `GeoUrRequestFailedException`-Text und ist per Test festgehalten), der Quellenbefund
+  der Importquellenwahl (`Quellenwahl`, Diagnose im Importbericht), gezielt gefangene eigene Validierungsmeldungen (`ProjektPruefregeln`,
+  `XtfLieferungsNorm`, `GeoShopAbgleichPlanBuilder`) und alle WebGIS-Dateien. `UserErrorEigeneMeldungenSpracheTests`
+  prueft seither auch `IOException`/`InvalidDataException`/`JsonException` auf englische Texte (zwei gefunden
+  und uebersetzt: «Kein freier Dateiname für … gefunden.»). **Neuer Waechter**
+  `DesignAuditLaufzeittexteSchichtenTests` (UI.Tests) prueft alle Literale mit Leerzeichen der drei
+  Schichten gegen die bereinigten Wortformen; Log-Anweisungen (ueber mehrere Zeilen zusammengesetzt),
+  `AusgenommeneDateien` und `GeschuetzteGanzeZeichenketten` sind mit Grund aufgefuehrt.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 
