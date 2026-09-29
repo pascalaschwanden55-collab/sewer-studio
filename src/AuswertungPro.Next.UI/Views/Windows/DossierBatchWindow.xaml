@@ -33,7 +33,8 @@
                     IsEnabled="False" Click="OnCancelSearch"/>
         </StackPanel>
 
-        <DataGrid Grid.Row="2" x:Name="ProposalGrid" AutoGenerateColumns="False"
+        <Grid Grid.Row="2">
+        <DataGrid x:Name="ProposalGrid" AutoGenerateColumns="False"
                   CanUserAddRows="False" HeadersVisibility="Column"
                   GridLinesVisibility="Horizontal" IsReadOnly="False"
                   RowDetailsVisibilityMode="VisibleWhenSelected">
@@ -67,6 +68,23 @@
                 </DataTemplate>
             </DataGrid.RowDetailsTemplate>
         </DataGrid>
+
+        <controls:EmptyStateControl IsHitTestVisible="False"
+                                    Icon="&#xE8F1;"
+                                    Title="Noch keine Vorschläge"
+                                    Message="Gemeinde wählen und «Suchen» — die gefundenen Parzellen erscheinen hier.">
+            <controls:EmptyStateControl.Style>
+                <Style TargetType="controls:EmptyStateControl">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasItems, ElementName=ProposalGrid}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </controls:EmptyStateControl.Style>
+        </controls:EmptyStateControl>
+        </Grid>
 
         <TextBlock Grid.Row="3" x:Name="StatusText" TextWrapping="Wrap" Margin="0,10,0,0"/>
 

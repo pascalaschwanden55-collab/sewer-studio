@@ -758,6 +758,43 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   einer Umstrukturierung der drei nebeneinanderstehenden Zustands-Borders (Projekt waehlen/Laden/Inhalt) auf
   `BusyOverlay` oder ein `StatusHost`-`State`-Enum umstellen — das ginge ueber eine reine Optikaenderung
   hinaus und ist deshalb nicht angefasst.
+  **Fix-Runde 1 (Pruefung, Koordinator-Rueckmeldung):** (1) Die Vorlage (Spur/Indikator/Wanderstreif)
+  stand nach der ersten Fassung ZWEIMAL im Dokument — einmal im gemeinsamen Basisstil
+  `ProgressBarBaseFuerZweiHoehen`, einmal (mit hart kodiertem Radius `3` statt `RadiusBar` und fest
+  verdrahteter `AccentBarBrush` statt `TemplateBinding Foreground`) im impliziten typweiten
+  Sicherheitsnetz. Der Basisstil ist jetzt die EINE Stelle mit der echten `ControlTemplate`; das
+  implizite Sicherheitsnetz ist `BasedOn="{StaticResource ProgressBarBaseFuerZweiHoehen}"` und traegt
+  nur noch den einen abweichenden Setter (`Height=6`) — visuell unveraendert, weil `RadiusBar` (5) ein
+  6-px-Band genauso voll zur Kapsel rundet wie zuvor der hart kodierte Radius 3, und die geerbte
+  `Foreground=AccentBarBrush` denselben Indikatorton ergibt wie der alte feste Wert. Der Pruefer-Test
+  `ProgressBarIndeterminateTemplateTests` (schneidet den echten Stil per String-Marker aus
+  `Controls.xaml` und rendert ihn in einem echten Fenster) zielt seither auf
+  `x:Key="ProgressBarBaseFuerZweiHoehen"` statt auf den (jetzt leeren) impliziten Stil — er testet
+  damit direkt die Vorlage, die auch `ProgressBarThin`/`ProgressBarStandard` tatsaechlich verwenden.
+  (2) Weitere EmptyStateControl-Versorgung fuer «alles» (Entscheid Pascal): Haltungs-/Schacht-Uebersicht
+  (`HaltungUebersichtPanel`/`SchachtUebersichtPanel`, sowohl der «keine Auswahl»-Leerzustand — jetzt
+  ebenfalls `EmptyStateControl` statt eines eigenen `TextBlock` — als auch die Schadenliste selbst),
+  die abgedockten Voll-Ansichten `HaltungsansichtView`/`SchachtansichtView` (Haupt- UND Schadenliste),
+  `DossierAreaWindow` (Themenliste) und `DossierBatchWindow` (Vorschlagsliste) — alle in
+  `DesignAuditLeerUndLadezustandTests.EmptyStateDateien` gefuehrt.
+  **Drei Dateien bleiben bewusst OHNE `EmptyStateControl`**, mit real gemessenem Grund (nicht nur
+  Verdacht): `HaltungAufklappListe.xaml`, `SchachtAufklappListe.xaml` und `PlayerCodingSidePanel.xaml`
+  haben vorbestehende Unit-Tests, die sie per `new HaltungAufklappListe()` &c. auf einem blossen
+  STA-Thread OHNE `Application`-Ressourcen bauen (`DataPageAnsichtUmschalterTests`,
+  `NovaListenWiederverbindenTests`, `PlayerCodingSidePanelControllerInitializerTests`,
+  `PlayerCodingSidePanelEventBinderTests`, `HaltungAufklappListeFokusTests`). `EmptyStateControl`s
+  optionaler Aktionsknopf setzt `Style="{StaticResource SecondaryButton}"` — eine Ressource aus den
+  per `Application` gemergten Theme-Woerterbuechern, die beim BAML-Laden (nicht erst bei Sichtbarkeit)
+  aufgeloest wird; ohne `Application`-Kontext wirft das eine `XamlParseException`. Fuenf bestehende
+  Tests sind so tatsaechlich fehlgeschlagen (real gemessen, dann repariert durch Ruecknahme statt
+  Anpassung der Tests). Zwei weitere DossierEditWindow-Tabellen (Eigentuemer/Themen/Aenderungswesen,
+  Hoehe 110-170 px) sind ebenfalls bewusst NICHT versorgt: `EmptyStateControl`s minimaler
+  Platzbedarf (72-px-Icon + Titel + Nachricht + 24-px-Rand, real ueber 180 px) wuerde die absichtlich
+  kurze feste Tabellenhoehe ueberragen und die direkt darunterstehenden „+ Zeile"/„Zeile
+  entfernen"-Knoepfe ueberlappen (der umgebende Grid clippt nicht). `HandbuchWindow`s
+  Inhaltsverzeichnis ist eine feste, im Programm eingebaute Liste und kann nie leer sein — ebenfalls
+  ausgenommen. Neuer Waechter `Ausnahmen_ohne_EmptyStateControl_sind_real_bare_construction_Dateien`
+  haelt die drei bare-construction-Ausnahmen fest, damit sie nicht versehentlich doch versorgt werden.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

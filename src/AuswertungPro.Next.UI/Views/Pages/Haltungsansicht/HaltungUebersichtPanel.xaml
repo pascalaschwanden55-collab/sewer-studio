@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
              xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage"
+             xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
              x:Name="Root">
     <UserControl.Resources>
         <local:SchadenMeterConverter x:Key="SchadenMeterConv"/>
@@ -153,10 +154,13 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <TextBlock Grid.Row="3" Text="Keine baulichen oder betrieblichen Schäden erfasst."
-                               Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}" TextWrapping="Wrap">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
+                    <uc:EmptyStateControl Grid.Row="3"
+                                          IsHitTestVisible="False"
+                                          Icon="&#xE73E;"
+                                          Title="Keine Schäden"
+                                          Message="Keine baulichen oder betrieblichen Schäden erfasst.">
+                        <uc:EmptyStateControl.Style>
+                            <Style TargetType="uc:EmptyStateControl">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding Schaeden.Count, ElementName=Root}" Value="0">
@@ -164,8 +168,8 @@
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                        </uc:EmptyStateControl.Style>
+                    </uc:EmptyStateControl>
 
                     <!-- KI-Hinweis: nur sichtbar, solange die Auswahl offene KI-Vorschlaege hat -->
                     <Border Grid.Row="4" Background="{DynamicResource KiSubtleBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10,8" Margin="0,8,0,0"
@@ -183,11 +187,13 @@
                 </Grid>
             </Grid>
 
-            <TextBlock x:Name="Leerzustand" Text="Keine Haltung gewählt. Links eine Zeile wählen."
-                       Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"
-                       VerticalAlignment="Top" HorizontalAlignment="Left">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
+            <uc:EmptyStateControl x:Name="Leerzustand"
+                                  IsHitTestVisible="False"
+                                  Icon="&#xE8A5;"
+                                  Title="Keine Haltung gewählt"
+                                  Message="Links eine Zeile wählen.">
+                <uc:EmptyStateControl.Style>
+                    <Style TargetType="uc:EmptyStateControl">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
@@ -195,8 +201,8 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </TextBlock.Style>
-            </TextBlock>
+                </uc:EmptyStateControl.Style>
+            </uc:EmptyStateControl>
         </Grid>
     </Border>
 </UserControl>

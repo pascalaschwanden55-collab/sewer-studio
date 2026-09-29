@@ -5,6 +5,7 @@
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Schachtansicht"
              xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage"
+             xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
              x:Name="Root">
     <UserControl.Resources>
         <local:SchachtSummaryConverter x:Key="SummaryConv"/>
@@ -19,8 +20,8 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <ListBox Grid.Column="0"
-                 x:Name="SchachtList"
+        <Grid Grid.Column="0">
+        <ListBox x:Name="SchachtList"
                  HorizontalContentAlignment="Stretch"
                  ItemsSource="{Binding Records}"
                  SelectedItem="{Binding Selected, Mode=TwoWay}"
@@ -114,6 +115,23 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
+        <uc:EmptyStateControl IsHitTestVisible="False"
+                              Icon="&#xE8A5;"
+                              Title="Noch keine Schächte"
+                              Message="Importiere Schachtinspektionen, damit sie hier erscheinen.">
+            <uc:EmptyStateControl.Style>
+                <Style TargetType="uc:EmptyStateControl">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasItems, ElementName=SchachtList}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </uc:EmptyStateControl.Style>
+        </uc:EmptyStateControl>
+        </Grid>
+
         <GridSplitter Grid.Column="1"
                       Width="6"
                       HorizontalAlignment="Stretch"
@@ -161,6 +179,7 @@
                                 ToolTip="Schacht-Details &#x00F6;ffnen"/>
                     </DockPanel>
 
+                    <Grid>
                     <ListBox x:Name="DamageList"
                              Background="Transparent"
                              BorderThickness="0"
@@ -196,6 +215,23 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+
+                    <uc:EmptyStateControl IsHitTestVisible="False"
+                                          Icon="&#xE73E;"
+                                          Title="Keine Schäden"
+                                          Message="Keine baulichen oder betrieblichen Schäden erfasst.">
+                        <uc:EmptyStateControl.Style>
+                            <Style TargetType="uc:EmptyStateControl">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasItems, ElementName=DamageList}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </uc:EmptyStateControl.Style>
+                    </uc:EmptyStateControl>
+                    </Grid>
                 </DockPanel>
             </Border>
         </Grid>

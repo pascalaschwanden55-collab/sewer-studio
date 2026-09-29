@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Views.Pages;
 
@@ -117,7 +118,9 @@ internal static class NovaRenderingChecks
     internal static void OhneAuswahlNurLeerzustand(FrameworkElement panel)
     {
         var inhalt = Assert.IsAssignableFrom<UIElement>(panel.FindName("Inhalt"));
-        var leerzustand = Assert.IsType<TextBlock>(panel.FindName("Leerzustand"));
+        // Optikanalyse 28.09.2026, Aufgabe 11 Fix-Runde 1: der Leerzustand ist auf das
+        // gemeinsame EmptyStateControl umgestellt (vorher ein einzelner TextBlock).
+        var leerzustand = Assert.IsType<EmptyStateControl>(panel.FindName("Leerzustand"));
 
         Assert.Equal(Visibility.Collapsed, inhalt.Visibility);
         Assert.Equal(Visibility.Visible, leerzustand.Visibility);

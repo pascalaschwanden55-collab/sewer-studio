@@ -99,7 +99,25 @@
                             </Button>
                         </StackPanel>
 
+                        <Grid>
                         <ListBox x:Name="TopicList" DisplayMemberPath="Title"/>
+
+                        <controls:EmptyStateControl IsHitTestVisible="False"
+                                                    Icon="&#xE8A5;"
+                                                    Title="Noch keine Themen"
+                                                    Message="Über «Neu» ein erstes Thema anlegen.">
+                            <controls:EmptyStateControl.Style>
+                                <Style TargetType="controls:EmptyStateControl">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasItems, ElementName=TopicList}" Value="False">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </controls:EmptyStateControl.Style>
+                        </controls:EmptyStateControl>
+                        </Grid>
                     </DockPanel>
 
                     <Grid Grid.Row="1" Grid.Column="1"

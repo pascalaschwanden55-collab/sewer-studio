@@ -251,7 +251,10 @@ public sealed class DesignAuditNovaHaltungenTests
     {
         var xaml = Xaml("Views", "Pages", "Haltungsansicht", "HaltungUebersichtPanel.xaml");
         Assert.Contains("x:Name=\"Leerzustand\"", xaml);
-        Assert.Contains("Keine Haltung gewählt. Links eine Zeile wählen.", xaml);
+        // Optikanalyse 28.09.2026, Aufgabe 11 Fix-Runde 1: der Leerzustand ist auf das gemeinsame
+        // EmptyStateControl umgestellt (Title/Message statt eines einzelnen TextBlock-Textes).
+        Assert.Contains("Title=\"Keine Haltung gewählt\"", xaml);
+        Assert.Contains("Message=\"Links eine Zeile wählen.\"", xaml);
 
         // Der ganze Inhalt haengt an einem einzigen Sichtbarkeitsschalter: Record == null.
         var inhalt = Regex.Match(xaml, @"<Grid x:Name=""Inhalt""[\s\S]*?</Grid.Style>");

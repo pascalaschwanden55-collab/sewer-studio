@@ -198,7 +198,56 @@ public sealed class DesignAuditLeerUndLadezustandTests
         (["Views", "Windows", "SchachtMassnahmenKatalogEditorWindow.xaml"], "Schacht-Massnahmen-Katalog-Editor"),
         (["Views", "Pages", "BuilderPage.xaml"], "Druckcenter (Haltungsliste)"),
         (["Views", "Pages", "DossiersPage.xaml"], "Dossiers-Cockpit (Liegenschaftsliste)"),
+
+        // Fix-Runde 1 (Koordinator-Rueckmeldung, Pascal "alles"): die restlichen Haltungs-/
+        // Schachtansicht-Unterlisten und zwei Dossier-Fenster. Laufen alle nur im echten
+        // Kindprozess (App-Ressourcen vorhanden) - siehe Ausnahmeliste unten fuer die drei
+        // Dateien, die das NICHT tun und deshalb bewusst NICHT versorgt sind.
+        (["Views", "Pages", "Haltungsansicht", "HaltungUebersichtPanel.xaml"], "Haltungs-Uebersicht (Leerzustand + Schadenliste)"),
+        (["Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"], "Schacht-Uebersicht (Leerzustand + Schadenliste)"),
+        (["Views", "Pages", "Haltungsansicht", "HaltungsansichtView.xaml"], "Abgedockte Haltungsansicht (Liste + Schadenliste)"),
+        (["Views", "Pages", "Schachtansicht", "SchachtansichtView.xaml"], "Abgedockte Schachtansicht (Liste + Schadenliste)"),
+        (["Views", "Windows", "DossierAreaWindow.xaml"], "Gebietsangaben (Themenliste)"),
+        (["Views", "Windows", "DossierBatchWindow.xaml"], "Dossiers aus dem Projekt erzeugen (Vorschlagsliste)"),
     ];
+
+    /// <summary>
+    /// Fix-Runde 1: drei Dateien haben vorbestehende, bare-construction Unit-Tests
+    /// (<c>new HaltungAufklappListe()</c>/<c>new SchachtAufklappListe()</c>/
+    /// <c>new PlayerCodingSidePanel()</c> auf einem blossen STA-Thread ohne <c>Application</c>-
+    /// Ressourcen, z. B. <see cref="DataPageAnsichtUmschalterTests"/>,
+    /// <see cref="NovaListenWiederverbindenTests"/>,
+    /// <see cref="PlayerCodingSidePanelControllerInitializerTests"/>). Das gemeinsame
+    /// <c>EmptyStateControl</c> setzt seinen optionalen Aktionsknopf mit
+    /// <c>Style="{StaticResource SecondaryButton}"</c> — diese Ressource kommt nur aus den per
+    /// <c>Application</c> gemergten Theme-Woerterbuechern und wird beim BAML-Laden (nicht erst bei
+    /// Sichtbarkeit) aufgeloest. Ohne <c>Application</c>-Kontext wirft das eine
+    /// <c>XamlParseException</c> ("Ressource SecondaryButton kann nicht gefunden werden") — real
+    /// gemessen, kein Verdacht. Diese drei Dateien bleiben deshalb bewusst OHNE EmptyStateControl;
+    /// eine Aenderung am gemeinsamen Control selbst waere ausserhalb dieser Aufgabe.
+    /// </summary>
+    private static readonly string[] EmptyStateAusnahmenBareConstruction =
+    [
+        "HaltungAufklappListe.xaml",
+        "SchachtAufklappListe.xaml",
+        "PlayerCodingSidePanel.xaml",
+    ];
+
+    [Fact]
+    public void Ausnahmen_ohne_EmptyStateControl_sind_real_bare_construction_Dateien()
+    {
+        // Schuetzt die Begruendung: keine der drei Dateien darf zufaellig doch ein
+        // EmptyStateControl bekommen haben (sonst waere die Ausnahme hier veraltet).
+        foreach (var datei in EmptyStateAusnahmenBareConstruction)
+        {
+            var treffer = Directory.EnumerateFiles(UiRoot, datei, SearchOption.AllDirectories)
+                .Where(p => !p.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                .ToList();
+            Assert.True(treffer.Count == 1, $"{datei}: erwartet genau eine Datei, gefunden {treffer.Count}.");
+            var xaml = File.ReadAllText(treffer[0]);
+            Assert.DoesNotContain("EmptyStateControl", xaml, StringComparison.Ordinal);
+        }
+    }
 
     [Fact]
     public void Jede_versorgte_Liste_traegt_ein_EmptyStateControl()

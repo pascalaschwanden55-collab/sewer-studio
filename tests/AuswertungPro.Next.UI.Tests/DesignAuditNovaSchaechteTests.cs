@@ -161,7 +161,10 @@ public sealed class DesignAuditNovaSchaechteTests
     {
         var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
         Assert.Contains("x:Name=\"Leerzustand\"", xaml);
-        Assert.Contains("Kein Schacht gewählt. Links eine Zeile wählen.", xaml);
+        // Optikanalyse 28.09.2026, Aufgabe 11 Fix-Runde 1: der Leerzustand ist auf das gemeinsame
+        // EmptyStateControl umgestellt (Title/Message statt eines einzelnen TextBlock-Textes).
+        Assert.Contains("Title=\"Kein Schacht gewählt\"", xaml);
+        Assert.Contains("Message=\"Links eine Zeile wählen.\"", xaml);
 
         var inhalt = Regex.Match(xaml, @"<ScrollViewer x:Name=""Inhalt""[\s\S]*?</ScrollViewer.Style>");
         Assert.True(inhalt.Success, "Inhalt der Schachtansicht braucht einen eigenen Sichtbarkeitsschalter");

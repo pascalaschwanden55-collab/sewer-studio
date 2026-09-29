@@ -720,26 +720,32 @@
         </Setter>
     </Style>
 
-    <!-- ProgressBar (impliziter Fallback fuer den seltenen Fall, dass ein ProgressBar-Element
-         keinen der zwei benannten Stile traegt; Aufgabe 11 verlangt aber ausdruecklich einen
-         benannten Stil an jedem Balken, siehe ProgressBarThin/ProgressBarStandard unten). -->
-    <Style TargetType="{x:Type ProgressBar}">
-        <Setter Property="Height" Value="6"/>
+    <!-- Aufgabe 11 (Optikanalyse 28.09.2026), Fix-Runde 1: EINE gemeinsame Vorlage
+         (Spur + Indikator + Wanderstreif bei IsIndeterminate) fuer alle ProgressBar-Stile des
+         Programms — vorher stand dieselbe rund 70-zeilige ControlTemplate zweimal im Dokument
+         (einmal hier, einmal im impliziten Fallback direkt darunter). ProgressBarThin (4 px) und
+         ProgressBarStandard (8 px) sind fuer Werkzeugleisten-/Karten-Hinweise bzw. echte
+         Fortschrittsanzeigen (Import, Sicherung, Export, Batch-Laeufe) BasedOn diesem Basisstil.
+         Der Indikator bindet an TemplateBinding Foreground, damit einzelne Balken weiterhin eine
+         eigene Farbe setzen koennen (z. B. Zustandsklasse, Severity) — Standardwert AccentBarBrush.
+         RadiusBar (5) rundet jede der drei Hoehen (4/6/8) voll zur Kapsel. -->
+    <Style x:Key="ProgressBarBaseFuerZweiHoehen" TargetType="ProgressBar">
         <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBarBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ProgressBar">
                     <Border Background="{TemplateBinding Background}"
-                            CornerRadius="3"
+                            CornerRadius="{DynamicResource RadiusBar}"
                             SnapsToDevicePixels="True"
                             ClipToBounds="True">
                         <Grid>
                             <!-- Bestimmter Fortschritt: der Balken laeuft farblich von Blau nach Teal mit. -->
-                            <Border x:Name="PART_Track" CornerRadius="3">
+                            <Border x:Name="PART_Track" CornerRadius="{DynamicResource RadiusBar}">
                                 <Border x:Name="PART_Indicator"
-                                        Background="{DynamicResource AccentBarBrush}"
-                                        CornerRadius="3"
+                                        Background="{TemplateBinding Foreground}"
+                                        CornerRadius="{DynamicResource RadiusBar}"
                                         HorizontalAlignment="Left"/>
                             </Border>
                             <!-- Unbestimmtes Warten: ein Lichtstreif wandert durch den Balken.
@@ -749,7 +755,7 @@
                                  Streif jeder Breite an, ohne dass Layout animiert wird.
                                  Farbe fest: GradientStops koennen keine DynamicResource aufnehmen —
                                  Blau ist auf hell wie dunkel lesbar. -->
-                            <Border x:Name="Sweep" CornerRadius="3" Visibility="Collapsed">
+                            <Border x:Name="Sweep" CornerRadius="{DynamicResource RadiusBar}" Visibility="Collapsed">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                         <GradientStop x:Name="SweepLead" Color="#002563EB" Offset="-0.4"/>
@@ -764,76 +770,6 @@
                         <!-- Nur laufen, wenn wirklich gewartet wird und der Balken sichtbar ist.
                              Der Streif laeuft auch bei reduzierter Bewegung: er ist die Warteanzeige
                              selbst, kein Schmuck — ohne ihn stuende das Programm scheinbar still. -->
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsIndeterminate" Value="True"/>
-                                <Condition Property="IsVisible" Value="True"/>
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="PART_Track" Property="Visibility" Value="Collapsed"/>
-                            <Setter TargetName="Sweep" Property="Visibility" Value="Visible"/>
-                            <MultiTrigger.EnterActions>
-                                <BeginStoryboard x:Name="SweepRun">
-                                    <Storyboard RepeatBehavior="Forever">
-                                        <DoubleAnimation Storyboard.TargetName="SweepLead"
-                                                         Storyboard.TargetProperty="Offset"
-                                                         From="-0.4" To="1.0" Duration="0:0:1.4"/>
-                                        <DoubleAnimation Storyboard.TargetName="SweepPeak"
-                                                         Storyboard.TargetProperty="Offset"
-                                                         From="-0.2" To="1.2" Duration="0:0:1.4"/>
-                                        <DoubleAnimation Storyboard.TargetName="SweepTail"
-                                                         Storyboard.TargetProperty="Offset"
-                                                         From="0" To="1.4" Duration="0:0:1.4"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </MultiTrigger.EnterActions>
-                            <MultiTrigger.ExitActions>
-                                <StopStoryboard BeginStoryboardName="SweepRun"/>
-                            </MultiTrigger.ExitActions>
-                        </MultiTrigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!-- Aufgabe 11 (Optikanalyse 28.09.2026): die zwei programmweiten Fortschrittsbalken-Stile.
-         Beide teilen dieselbe Vorlage (Spur + Indikator + Wanderstreif bei IsIndeterminate, wie
-         der bisherige implizite Stil oben), nur die Hoehe unterscheidet sie: ProgressBarThin (4 px)
-         fuer Werkzeugleisten-/Karten-Hinweise ("wird geladen"), ProgressBarStandard (8 px) fuer
-         echte Fortschrittsanzeigen (Import, Sicherung, Export, Batch-Laeufe). Der Indikator bindet
-         an TemplateBinding Foreground, damit einzelne Balken weiterhin eine eigene Farbe setzen
-         koennen (z. B. Zustandsklasse, Severity) — der Standardwert ist AccentBarBrush wie bisher.
-         RadiusBar (5) rundet beide Hoehen voll zur Kapsel. -->
-    <Style x:Key="ProgressBarBaseFuerZweiHoehen" TargetType="ProgressBar">
-        <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource AccentBarBrush}"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ProgressBar">
-                    <Border Background="{TemplateBinding Background}"
-                            CornerRadius="{DynamicResource RadiusBar}"
-                            SnapsToDevicePixels="True"
-                            ClipToBounds="True">
-                        <Grid>
-                            <Border x:Name="PART_Track" CornerRadius="{DynamicResource RadiusBar}">
-                                <Border x:Name="PART_Indicator"
-                                        Background="{TemplateBinding Foreground}"
-                                        CornerRadius="{DynamicResource RadiusBar}"
-                                        HorizontalAlignment="Left"/>
-                            </Border>
-                            <Border x:Name="Sweep" CornerRadius="{DynamicResource RadiusBar}" Visibility="Collapsed">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                        <GradientStop x:Name="SweepLead" Color="#002563EB" Offset="-0.4"/>
-                                        <GradientStop x:Name="SweepPeak" Color="#FF2563EB" Offset="-0.2"/>
-                                        <GradientStop x:Name="SweepTail" Color="#002563EB" Offset="0"/>
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                            </Border>
-                        </Grid>
-                    </Border>
-                    <ControlTemplate.Triggers>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsIndeterminate" Value="True"/>
@@ -872,6 +808,17 @@
 
     <Style x:Key="ProgressBarStandard" TargetType="ProgressBar" BasedOn="{StaticResource ProgressBarBaseFuerZweiHoehen}">
         <Setter Property="Height" Value="8"/>
+    </Style>
+
+    <!-- ProgressBar (impliziter Fallback fuer den seltenen Fall, dass ein ProgressBar-Element
+         keinen der zwei benannten Stile traegt; Aufgabe 11 verlangt aber ausdruecklich einen
+         benannten Stil an jedem Balken, siehe ProgressBarThin/ProgressBarStandard oben). Fix-Runde 1:
+         BasedOn derselben Vorlage statt einer zweiten Kopie — nur die abweichende Hoehe (6 statt 4/8)
+         bleibt als eigener Setter. Visuell unveraendert: Radius {RadiusBar}=5 rundet 6 px genauso
+         voll zur Kapsel wie zuvor der hart kodierte Radius 3, und die geerbte Foreground=AccentBarBrush
+         ergibt denselben Indikatorton wie vorher der fest verdrahtete Wert. -->
+    <Style TargetType="{x:Type ProgressBar}" BasedOn="{StaticResource ProgressBarBaseFuerZweiHoehen}">
+        <Setter Property="Height" Value="6"/>
     </Style>
 
     <!-- ═══ MENU / CONTEXTMENU ═══ -->

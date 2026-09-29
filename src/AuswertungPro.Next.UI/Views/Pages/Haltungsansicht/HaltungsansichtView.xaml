@@ -59,8 +59,8 @@
         </Grid.ColumnDefinitions>
 
         <!-- Liste links (virtualisiert) -->
-        <ListBox Grid.Column="0"
-                 x:Name="HaltungList"
+        <Grid Grid.Column="0">
+        <ListBox x:Name="HaltungList"
                  HorizontalContentAlignment="Stretch"
                  ItemsSource="{Binding Records}"
                  SelectedItem="{Binding Selected, Mode=TwoWay}"
@@ -161,6 +161,23 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
+        <uc:EmptyStateControl IsHitTestVisible="False"
+                              Icon="&#xE8A5;"
+                              Title="Noch keine Haltungen"
+                              Message="Importiere Inspektionsdaten, damit die Haltungen hier erscheinen.">
+            <uc:EmptyStateControl.Style>
+                <Style TargetType="uc:EmptyStateControl">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasItems, ElementName=HaltungList}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </uc:EmptyStateControl.Style>
+        </uc:EmptyStateControl>
+        </Grid>
+
         <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
                       Background="{DynamicResource BorderBrush}"/>
 
@@ -207,6 +224,7 @@
                         <uc:PhotoGalleryPanel x:Name="FotoGalerie" Margin="0,4,0,0"/>
                     </Expander>
 
+                    <Grid>
                     <ListBox x:Name="SchadenList"
                              ItemsSource="{Binding SelectedProtocolEntries}"
                              Background="Transparent" BorderThickness="0"
@@ -247,6 +265,23 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+
+                    <uc:EmptyStateControl IsHitTestVisible="False"
+                                          Icon="&#xE73E;"
+                                          Title="Keine Schäden"
+                                          Message="Keine baulichen oder betrieblichen Schäden erfasst.">
+                        <uc:EmptyStateControl.Style>
+                            <Style TargetType="uc:EmptyStateControl">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasItems, ElementName=SchadenList}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </uc:EmptyStateControl.Style>
+                    </uc:EmptyStateControl>
+                    </Grid>
                 </DockPanel>
             </Border>
         </Grid>
