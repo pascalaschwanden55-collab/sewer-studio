@@ -131,7 +131,7 @@ public sealed class TeacherAnnotationFileStore : ITeacherAnnotationStore
             var json = await File.ReadAllTextAsync(path).ConfigureAwait(false);
             return JsonSerializer.Deserialize<List<TeacherAnnotation>>(json, JsonOptions)
                    ?? throw new JsonException(
-                       "Lehrer-Annotationen muessen als JSON-Liste gespeichert sein.");
+                       "Lehrer-Annotationen müssen als JSON-Liste gespeichert sein.");
         }
         catch (JsonException ex)
         {
@@ -140,8 +140,8 @@ public sealed class TeacherAnnotationFileStore : ITeacherAnnotationStore
                 () => File.Copy(path, path + ".corrupt", overwrite: true),
                 "Lehrer-Annotationen: korrupte Datei sichern");
             throw new InvalidOperationException(
-                $"Die Lehrer-Annotationen sind beschaedigt ({path}); der Bestand wurde "
-                + $"NICHT veraendert — eine Sicherungskopie liegt als .corrupt daneben, "
+                $"Die Lehrer-Annotationen sind beschädigt ({path}); der Bestand wurde "
+                + $"NICHT verändert — eine Sicherungskopie liegt als .corrupt daneben, "
                 + $"und es wird nichts gespeichert. {ex.Message}", ex);
         }
         catch (Exception ex)
@@ -152,7 +152,7 @@ public sealed class TeacherAnnotationFileStore : ITeacherAnnotationStore
             // fehlend = leer, unlesbar = Fehler.
             throw new InvalidOperationException(
                 $"Die Lehrer-Annotationen sind nicht lesbar ({path}). Der vorhandene "
-                + $"Bestand wurde NICHT veraendert — es wird nichts gespeichert. "
+                + $"Bestand wurde NICHT verändert — es wird nichts gespeichert. "
                 + $"{ex.GetType().Name}: {ex.Message}", ex);
         }
     }

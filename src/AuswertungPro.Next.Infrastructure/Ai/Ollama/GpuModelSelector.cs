@@ -87,7 +87,7 @@ public sealed class GpuModelSelectionService : IGpuModelSelector
                 GpuModelSelector.SmallModelNumCtx,
                 vramMb,
                 gpuName,
-                $"GPU {gpuName} mit nur {vramMb} MB VRAM — KI-Vision evtl. eingeschraenkt");
+                $"GPU {gpuName} mit nur {vramMb} MB VRAM — KI-Vision evtl. eingeschränkt");
         }
         catch
         {
@@ -178,7 +178,7 @@ public static class GpuModelSelector
     public static void Use(IGpuModelSelector selector) =>
         throw new NotSupportedException(
             "Die globale GPU-Modellwahl kann nicht mehr ausgetauscht werden. " +
-            "IGpuModelSelector bitte per Konstruktor uebergeben.");
+            "IGpuModelSelector bitte per Konstruktor übergeben.");
 
     /// <summary>Prueft, ob der Modellname automatisch aufgeloest werden soll.</summary>
     public static bool IsAutoMode(string? modelName)

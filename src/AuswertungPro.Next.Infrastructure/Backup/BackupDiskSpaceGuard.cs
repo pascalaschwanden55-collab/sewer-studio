@@ -37,7 +37,7 @@ public static class BackupDiskSpaceGuard
 
         if (availableBytes.Value < requiredBytes)
         {
-            return $"Zu wenig freier Speicherplatz am Sicherungsziel. Benoetigt: " +
+            return $"Zu wenig freier Speicherplatz am Sicherungsziel. Benötigt: " +
                    $"{ByteSizeFormatter.Format(requiredBytes)}, frei: " +
                    $"{ByteSizeFormatter.Format(availableBytes.Value)}.";
         }

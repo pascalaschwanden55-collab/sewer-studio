@@ -47,7 +47,7 @@ public sealed class VideoClipExtractionService : IVideoClipExtractor
             // Zielordner des Bildfolgen-Extraktors: Nie eine Alt-Datei als
             // Ergebnis unterschieben.
             throw new InvalidOperationException(
-                $"Die Zieldatei existiert bereits und wird nicht ueberschrieben: {outClip}");
+                $"Die Zieldatei existiert bereits und wird nicht überschrieben: {outClip}");
         }
 
         var args = string.Join(' ',
@@ -86,7 +86,7 @@ public sealed class VideoClipExtractionService : IVideoClipExtractor
         {
             TryDelete(outClip);
             var detail = output is null || string.IsNullOrWhiteSpace(output.StandardError)
-                ? $"Rueckgabewert {output?.ExitCode.ToString() ?? "unbekannt"}"
+                ? $"Rückgabewert {output?.ExitCode.ToString() ?? "unbekannt"}"
                 : output.StandardError.Trim();
             throw new InvalidOperationException($"ffmpeg ist fehlgeschlagen: {detail}");
         }

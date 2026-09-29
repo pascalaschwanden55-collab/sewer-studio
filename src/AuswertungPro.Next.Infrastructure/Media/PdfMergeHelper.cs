@@ -14,8 +14,8 @@ public static class PdfMergeHelper
     [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IPdfMergeService service)
         => throw new NotSupportedException(
-            "Der globale PDF-Zusammenfuegedienst kann nicht mehr ausgetauscht werden. " +
-            "IPdfMergeService bitte per Konstruktor uebergeben.");
+            "Der globale PDF-Zusammenfügedienst kann nicht mehr ausgetauscht werden. " +
+            "IPdfMergeService bitte per Konstruktor übergeben.");
 
     /// <summary>
     /// Haengt die Seiten der Original-PDFs an das generierte PDF an.

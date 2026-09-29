@@ -35,7 +35,7 @@ internal static class BackupTargetPathGuard
             if (string.IsNullOrWhiteSpace(parent))
             {
                 throw BackupTargetBoundary.Fail(
-                    $"Zielroot konnte nicht bis zum Laufwerks- oder Freigabe-Root geprueft werden: {root}");
+                    $"Zielroot konnte nicht bis zum Laufwerks- oder Freigabe-Root geprüft werden: {root}");
             }
 
             current = Normalize(parent);
@@ -80,14 +80,14 @@ internal static class BackupTargetPathGuard
             if (string.IsNullOrWhiteSpace(parent))
             {
                 throw BackupTargetBoundary.Fail(
-                    $"Zielpfad konnte nicht bis zum Sicherungsroot geprueft werden: {candidate}");
+                    $"Zielpfad konnte nicht bis zum Sicherungsroot geprüft werden: {candidate}");
             }
 
             current = Normalize(parent);
             if (!IsSameOrInside(root, current))
             {
                 throw BackupTargetBoundary.Fail(
-                    $"Zielpfad verlaesst den Sicherungsroot: {candidate}");
+                    $"Zielpfad verlässt den Sicherungsroot: {candidate}");
             }
         }
     }
@@ -133,7 +133,7 @@ internal static class BackupTargetPathGuard
                                        or NotSupportedException)
             {
                 throw BackupTargetBoundary.Fail(
-                    $"Zielordner konnte nicht sicher geprueft werden: {current}",
+                    $"Zielordner konnte nicht sicher geprüft werden: {current}",
                     ex);
             }
 
@@ -176,7 +176,7 @@ internal static class BackupTargetPathGuard
                                    or NotSupportedException)
         {
             throw BackupTargetBoundary.Fail(
-                $"Zielpfad konnte nicht sicher geprueft werden: {path}",
+                $"Zielpfad konnte nicht sicher geprüft werden: {path}",
                 ex);
         }
 
@@ -184,7 +184,7 @@ internal static class BackupTargetPathGuard
             && (attributes.Value & FileAttributes.ReparsePoint) != 0)
         {
             throw BackupTargetBoundary.Fail(
-                $"Verknuepfung im Sicherungs-Zielpfad wurde blockiert: {path}");
+                $"Verknüpfung im Sicherungs-Zielpfad wurde blockiert: {path}");
         }
     }
 

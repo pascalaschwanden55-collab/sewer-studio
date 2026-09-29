@@ -14,7 +14,7 @@ public sealed class BackupSourcePathGuardTests
                 root,
                 _ => FileAttributes.Directory | FileAttributes.ReparsePoint));
 
-        Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -27,6 +27,6 @@ public sealed class BackupSourcePathGuardTests
                 root,
                 _ => throw new UnauthorizedAccessException("gesperrt")));
 
-        Assert.Contains("nicht sicher geprueft", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nicht sicher geprüft", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 }

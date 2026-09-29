@@ -97,7 +97,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
 
         lock (_sync)
         {
-            EnsureState(SessionState.Open, "Weitere Dateien koennen nicht mehr vorbereitet werden.");
+            EnsureState(SessionState.Open, "Weitere Dateien können nicht mehr vorbereitet werden.");
             cancellationToken.ThrowIfCancellationRequested();
 
             var fullSource = Path.GetFullPath(sourcePath);
@@ -113,7 +113,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
             if (string.IsNullOrWhiteSpace(fileName)
                 || !fileName.Equals(targetFileName, StringComparison.Ordinal))
             {
-                throw new ArgumentException("Quelldatei hat keinen gueltigen Dateinamen.", nameof(sourcePath));
+                throw new ArgumentException("Quelldatei hat keinen gültigen Dateinamen.", nameof(sourcePath));
             }
 
             var targetPath = ResolveTargetPath(
@@ -232,7 +232,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
 
         lock (_sync)
         {
-            EnsureState(SessionState.Open, "Weitere Dateien koennen nicht mehr vorbereitet werden.");
+            EnsureState(SessionState.Open, "Weitere Dateien können nicht mehr vorbereitet werden.");
             cancellationToken.ThrowIfCancellationRequested();
 
             _paths.EnsureProjectRootIsSafe();
@@ -241,7 +241,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
                 nameof(preferredTargetPath));
             var targetDirectory = Path.GetDirectoryName(fullPreferredTarget)
                                   ?? throw new ArgumentException(
-                                      "Zieldatei hat keinen gueltigen Ordner.",
+                                      "Zieldatei hat keinen gültigen Ordner.",
                                       nameof(preferredTargetPath));
             targetDirectory = _paths.EnsureSafeProjectPath(
                 targetDirectory,
@@ -306,7 +306,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
     {
         lock (_sync)
         {
-            EnsureState(SessionState.Open, "Dateien wurden bereits veroeffentlicht.");
+            EnsureState(SessionState.Open, "Dateien wurden bereits veröffentlicht.");
             _paths.EnsureProjectRootIsSafe();
             try
             {
@@ -321,7 +321,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
                 if (rollbackErrors.Count > 0)
                 {
                     throw new AggregateException(
-                        "Dateiveroeffentlichung ist fehlgeschlagen; die Ruecknahme war unvollstaendig.",
+                        "Dateiveröffentlichung ist fehlgeschlagen; die Rücknahme war unvollständig.",
                         new[] { publishError }.Concat(rollbackErrors));
                 }
 
@@ -334,7 +334,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
     {
         lock (_sync)
         {
-            EnsureState(SessionState.Published, "Dateien muessen vor der Bestaetigung veroeffentlicht sein.");
+            EnsureState(SessionState.Published, "Dateien müssen vor der Bestätigung veröffentlicht sein.");
             _paths.EnsureProjectRootIsSafe();
 
             // Der Status wird vor dem Aufraeumen gesetzt. Ein reiner
@@ -370,7 +370,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
             if (errors.Count > 0)
             {
                 throw new AggregateException(
-                    "Import-Datei-Staging konnte nicht vollstaendig aufgeraeumt werden.",
+                    "Import-Datei-Staging konnte nicht vollständig aufgeräumt werden.",
                     errors);
             }
         }
@@ -429,7 +429,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
                 return candidate;
         }
 
-        throw new IOException($"Kein freier Zielname fuer erzeugte Importdatei: {preferredTarget}");
+        throw new IOException($"Kein freier Zielname für erzeugte Importdatei: {preferredTarget}");
     }
 
     private bool CanUseOrReuseGenerated(
@@ -540,7 +540,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
             }
 
             throw new IOException(
-                $"Importziel wurde waehrend des Laufs durch eine andere Datei belegt: {file.TargetPath}");
+                $"Importziel wurde während des Laufs durch eine andere Datei belegt: {file.TargetPath}");
         }
 
         stagePath = _paths.EnsureSafeProjectPath(stagePath, nameof(file.StagePath));
@@ -583,7 +583,7 @@ internal sealed class ImportFileStagingSession : IImportFileStagingSession
         if (!currentHash.Equals(file.Sha256, StringComparison.OrdinalIgnoreCase))
         {
             throw new IOException(
-                $"Neue Importdatei wurde nach der Veroeffentlichung veraendert und wird nicht geloescht: {file.TargetPath}");
+                $"Neue Importdatei wurde nach der Veröffentlichung verändert und wird nicht gelöscht: {file.TargetPath}");
         }
 
         targetPath = _paths.EnsureSafeProjectPath(targetPath, nameof(file.TargetPath));

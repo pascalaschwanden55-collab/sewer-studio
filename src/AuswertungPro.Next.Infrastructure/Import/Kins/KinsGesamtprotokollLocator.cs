@@ -16,7 +16,7 @@ public static class KinsGesamtprotokollLocator
     public static void Use(IKinsGesamtprotokollLocator locator)
         => throw new NotSupportedException(
             "Die globale KINS-Gesamtprotokollsuche kann nicht mehr ausgetauscht werden. " +
-            "IKinsGesamtprotokollLocator bitte per Konstruktor uebergeben.");
+            "IKinsGesamtprotokollLocator bitte per Konstruktor übergeben.");
 
     public static string? Finde(string sourceFolder)
         => Current.Finde(sourceFolder);

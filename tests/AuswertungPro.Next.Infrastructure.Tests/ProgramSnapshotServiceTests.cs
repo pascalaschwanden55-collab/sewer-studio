@@ -322,7 +322,7 @@ public sealed class ProgramSnapshotServiceTests : IDisposable
         var fehler = ProgramSnapshotService.VerifyArchive(archiv, expectedFileCount: 1, CancellationToken.None);
 
         Assert.NotNull(fehler);
-        Assert.Contains("Nachpruefung fehlgeschlagen", fehler);
+        Assert.Contains("Nachprüfung fehlgeschlagen", fehler);
     }
 
     [Fact]

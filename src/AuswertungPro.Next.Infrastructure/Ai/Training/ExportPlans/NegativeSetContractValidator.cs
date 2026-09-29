@@ -24,7 +24,7 @@ internal static class NegativeSetContractValidator
                 || semantic.ExcludedEvalProtected.Any(string.IsNullOrWhiteSpace))
             {
                 throw new TrainingExportPlanException(
-                    "Die Auschlusslisten des proto-Negativ-Sets sind ungueltig.");
+                    "Die Auschlusslisten des proto-Negativ-Sets sind ungültig.");
             }
             foreach (var set in semantic.ProtectedSets)
             {
@@ -37,7 +37,7 @@ internal static class NegativeSetContractValidator
                     || set.CandidatesSha256 is not null)
                 {
                     throw new TrainingExportPlanException(
-                        "Der Schutzbestand des proto-Negativ-Sets ist ungueltig.");
+                        "Der Schutzbestand des proto-Negativ-Sets ist ungültig.");
                 }
             }
             var snapshot = semantic.ProtectionSnapshot;
@@ -57,7 +57,7 @@ internal static class NegativeSetContractValidator
                 || snapshot.BaseModelSha256 is not null)
             {
                 throw new TrainingExportPlanException(
-                    "Die Schutz-Momentaufnahme des proto-Negativ-Sets ist ungueltig.");
+                    "Die Schutz-Momentaufnahme des proto-Negativ-Sets ist ungültig.");
             }
             return;
         }
@@ -79,7 +79,7 @@ internal static class NegativeSetContractValidator
                 || set.Pfad is not null)
             {
                 throw new TrainingExportPlanException(
-                    "Der Schutzbestand des bcc-Negativ-Sets ist ungueltig.");
+                    "Der Schutzbestand des bcc-Negativ-Sets ist ungültig.");
             }
         }
         var bccSnapshot = semantic.ProtectionSnapshot;
@@ -97,7 +97,7 @@ internal static class NegativeSetContractValidator
             || bccSnapshot.ByteSchutz is not null)
         {
             throw new TrainingExportPlanException(
-                "Die Schutz-Momentaufnahme des bcc-Negativ-Sets ist ungueltig.");
+                "Die Schutz-Momentaufnahme des bcc-Negativ-Sets ist ungültig.");
         }
     }
 
@@ -149,7 +149,7 @@ internal static class NegativeSetContractValidator
         foreach (var item in items)
         {
             if (item is null || string.IsNullOrWhiteSpace(item.Id))
-                throw new TrainingExportPlanException("Der Queue-Beleg enthaelt eine leere Bild-ID.");
+                throw new TrainingExportPlanException("Der Queue-Beleg enthält eine leere Bild-ID.");
 
             var imageSha256 = TrainingExportRegistryFileStore.RequireLowercaseSha256(
                 item.ImageSha256,
@@ -161,7 +161,7 @@ internal static class NegativeSetContractValidator
                 || string.IsNullOrWhiteSpace(item.PhysicalHoldingKey))
             {
                 throw new TrainingExportPlanException(
-                    $"Queue-Bildbeleg '{item.Id}' besitzt keine gueltige Haltung.");
+                    $"Queue-Bildbeleg '{item.Id}' besitzt keine gültige Haltung.");
             }
             var holdingKey = TrainingExportRegistryFileStore.NormalizeStrictHoldingKey(item.HoldingKey);
             var imageFormat = item.ImageFormat?.ToLowerInvariant();
@@ -194,13 +194,13 @@ internal static class NegativeSetContractValidator
                 || item.TargetFileName is not null)
             {
                 throw new TrainingExportPlanException(
-                    $"Queue-Bildbeleg '{item.Id}' ist ungueltig.");
+                    $"Queue-Bildbeleg '{item.Id}' ist ungültig.");
             }
 
             if (item.Predictions is null || item.Predictions.Count != modelIds.Count)
             {
                 throw new TrainingExportPlanException(
-                    $"Queue-Bild '{item.Id}' besitzt keine vollstaendige Modellvorhersage.");
+                    $"Queue-Bild '{item.Id}' besitzt keine vollständige Modellvorhersage.");
             }
             var predictedModelIds = new HashSet<string>(StringComparer.Ordinal);
             var triggered = false;
@@ -216,7 +216,7 @@ internal static class NegativeSetContractValidator
                     || (prediction.PredictedBcc && prediction.BccDetectionCount < 1))
                 {
                     throw new TrainingExportPlanException(
-                        $"Queue-Vorhersage fuer '{item.Id}' ist ungueltig.");
+                        $"Queue-Vorhersage für '{item.Id}' ist ungültig.");
                 }
                 triggered |= prediction.PredictedBcc;
             }
@@ -242,7 +242,7 @@ internal static class NegativeSetContractValidator
         foreach (var item in items)
         {
             if (item is null || string.IsNullOrWhiteSpace(item.ItemId))
-                throw new TrainingExportPlanException("Der Queue-Beleg enthaelt eine leere Bild-ID.");
+                throw new TrainingExportPlanException("Der Queue-Beleg enthält eine leere Bild-ID.");
 
             var imageSha256 = TrainingExportRegistryFileStore.RequireLowercaseSha256(
                 item.ImageSha256,
@@ -268,7 +268,7 @@ internal static class NegativeSetContractValidator
                 || item.Predictions is not null)
             {
                 throw new TrainingExportPlanException(
-                    $"Queue-Bildbeleg '{item.ItemId}' ist ungueltig.");
+                    $"Queue-Bildbeleg '{item.ItemId}' ist ungültig.");
             }
         }
     }

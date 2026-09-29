@@ -50,7 +50,7 @@ public static class PdfMergeVerification
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             {
                 throw new InvalidOperationException(
-                    $"Eine ausgewaehlte PDF-Beilage fehlt: {path ?? "(leer)"}");
+                    $"Eine ausgewählte PDF-Beilage fehlt: {path ?? "(leer)"}");
             }
 
             try
@@ -61,7 +61,7 @@ public static class PdfMergeVerification
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    $"Eine ausgewaehlte PDF-Beilage ist nicht lesbar: {path}", ex);
+                    $"Eine ausgewählte PDF-Beilage ist nicht lesbar: {path}", ex);
             }
         }
 
@@ -86,11 +86,11 @@ public static class PdfMergeVerification
 
     private static void EnsureExpectedPageCount(byte[] result, int expectedPages)
     {
-        var actualPages = ReadPageCount(result, "Das zusammengefuehrte Dossier");
+        var actualPages = ReadPageCount(result, "Das zusammengeführte Dossier");
         if (actualPages != expectedPages)
         {
             throw new InvalidOperationException(
-                $"Das Dossier ist unvollstaendig: erwartet {expectedPages} Seiten, erhalten {actualPages}.");
+                $"Das Dossier ist unvollständig: erwartet {expectedPages} Seiten, erhalten {actualPages}.");
         }
     }
 }

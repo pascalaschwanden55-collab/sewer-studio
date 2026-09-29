@@ -111,8 +111,8 @@ internal static class PersonalGoldMigrationCommitter
         {
             var rollbackError = RestoreMetadata(context, samplesChanged, databaseChanged);
             var message = rollbackError is null
-                ? $"Goldmigration fehlgeschlagen; JSON und Datenbank wurden zurueckgesetzt: {ex.Message}"
-                : $"Goldmigration fehlgeschlagen. Ruecksetzung unvollstaendig ({rollbackError}): {ex.Message}";
+                ? $"Goldmigration fehlgeschlagen; JSON und Datenbank wurden zurückgesetzt: {ex.Message}"
+                : $"Goldmigration fehlgeschlagen. Rücksetzung unvollständig ({rollbackError}): {ex.Message}";
             return new PersonalGoldFrameMigrationResult(
                 false,
                 request.DryRun,
@@ -146,7 +146,7 @@ internal static class PersonalGoldMigrationCommitter
                         StringComparison.OrdinalIgnoreCase)))
             {
                 throw new InvalidDataException(
-                    $"KB-Pfad-Pruefung fehlgeschlagen fuer '{sample.SampleId}'.");
+                    $"KB-Pfad-Prüfung fehlgeschlagen für '{sample.SampleId}'.");
             }
         }
     }

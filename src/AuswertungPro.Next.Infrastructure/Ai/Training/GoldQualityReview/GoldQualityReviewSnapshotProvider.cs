@@ -33,7 +33,7 @@ public sealed class GoldQualityReviewSnapshotProvider : IGoldQualityReviewSnapsh
         if (string.IsNullOrWhiteSpace(evalSetRoot))
         {
             throw new InvalidOperationException(
-                "Goldpruefung gesperrt: Der Eval-Schutzordner ist nicht konfiguriert.");
+                "Goldprüfung gesperrt: Der Eval-Schutzordner ist nicht konfiguriert.");
         }
 
         var request = TrainingDataInventoryRequestFactory.CreateStrictCurrentSnapshot(
@@ -53,7 +53,7 @@ public sealed class GoldQualityReviewSnapshotProvider : IGoldQualityReviewSnapsh
             || string.IsNullOrWhiteSpace(protection.Fingerprint))
         {
             throw new InvalidOperationException(
-                "Goldpruefung gesperrt: Der aktuelle Trainings-/Eval-Schutzscan ist unvollstaendig.");
+                "Goldprüfung gesperrt: Der aktuelle Trainings-/Eval-Schutzscan ist unvollständig.");
         }
 
         return new GoldQualityReviewDataSnapshot(

@@ -46,7 +46,7 @@ public sealed class TrainingExportSidecarRequestBuilderTests : IDisposable
         var error = await Assert.ThrowsAsync<TrainingExportPlanException>(() =>
             new TrainingExportSidecarRequestBuilder().BuildAsync(bundle));
 
-        Assert.Contains("veraendert", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("verändert", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private TrainingExportPlanBundle CreateBundle(

@@ -49,7 +49,7 @@ public sealed class KostenfallFileStore : IKostenfallStore
         catch (JsonException ex)
         {
             throw new InvalidDataException(
-                $"Die Falldatei ist beschaedigt und wurde nicht veraendert: {_pfad}", ex);
+                $"Die Falldatei ist beschädigt und wurde nicht verändert: {_pfad}", ex);
         }
     }
 

@@ -82,7 +82,7 @@ public sealed class MedienKopienTests
 
             Assert.True(wahl.Mehrdeutig);
             Assert.Null(wahl.Pfad);
-            Assert.Contains("nicht pruefbar", wahl.Grund, StringComparison.Ordinal);
+            Assert.Contains("nicht prüfbar", wahl.Grund, StringComparison.Ordinal);
         });
     }
 

@@ -72,7 +72,7 @@ public sealed class DossierPlanPublicationServiceTests : IDisposable
             var result = _service.Publish(_projectRoot, source, linkedTarget);
 
             Assert.False(result.Success);
-            Assert.Contains("Verknuepfung", result.Error, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", result.Error, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(Directory.EnumerateFiles(outside));
         }
         finally

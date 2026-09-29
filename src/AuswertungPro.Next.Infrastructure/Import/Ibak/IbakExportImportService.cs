@@ -111,7 +111,7 @@ public sealed class IbakExportImportService : IIbakImportService
                 if (holding.Entries.Count == 0)
                 {
                     uncertain++;
-                    messages.Add($"Keine Beobachtungen in Daten.txt fuer Haltung {holding.Holding}");
+                    messages.Add($"Keine Beobachtungen in Daten.txt für Haltung {holding.Holding}");
                     continue;
                 }
 
@@ -438,7 +438,7 @@ public sealed class IbakExportImportService : IIbakImportService
         }
 
         if (queue.Count > 0)
-            messages.Add($"IBAK: Nicht zugeordnete Fotos fuer Haltung {holdingKey}: {queue.Count}");
+            messages.Add($"IBAK: Nicht zugeordnete Fotos für Haltung {holdingKey}: {queue.Count}");
     }
 
     private static void AddPhotoPath(ProtocolEntry entry, string? photo)

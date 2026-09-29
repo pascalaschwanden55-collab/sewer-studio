@@ -156,14 +156,14 @@ public sealed class SchachtProImportService : ISchachtProImportService
         catch (SchachtProArchiveException ex)
         {
             errors++;
-            messages.Add($"Projekt '{entry.Name}' uebersprungen: {ex.Message}");
+            messages.Add($"Projekt '{entry.Name}' übersprungen: {ex.Message}");
             return;
         }
 
         if (json is null)
         {
             errors++;
-            messages.Add($"Projekt '{entry.Name}' uebersprungen: projects/{exportId}.json fehlt im Archiv.");
+            messages.Add($"Projekt '{entry.Name}' übersprungen: projects/{exportId}.json fehlt im Archiv.");
             return;
         }
 
@@ -179,7 +179,7 @@ public sealed class SchachtProImportService : ISchachtProImportService
             if (!string.Equals(snapshotExportId, exportId, StringComparison.Ordinal))
             {
                 errors++;
-                messages.Add($"Projekt '{entry.Name}' uebersprungen: abweichende Export-ID im Projekt-JSON.");
+                messages.Add($"Projekt '{entry.Name}' übersprungen: abweichende Export-ID im Projekt-JSON.");
                 return;
             }
 
@@ -190,7 +190,7 @@ public sealed class SchachtProImportService : ISchachtProImportService
                                           || protocolsElement.ValueKind != JsonValueKind.Array)
             {
                 errors++;
-                messages.Add($"Projekt '{entry.Name}' uebersprungen: Projekt-Snapshot unvollstaendig.");
+                messages.Add($"Projekt '{entry.Name}' übersprungen: Projekt-Snapshot unvollständig.");
                 return;
             }
 
@@ -212,7 +212,7 @@ public sealed class SchachtProImportService : ISchachtProImportService
                 if (protocolElement.ValueKind != JsonValueKind.Object)
                 {
                     errors++;
-                    messages.Add($"Protokoll {currentIndex + 1} in '{entry.Name}' uebersprungen: kein JSON-Objekt.");
+                    messages.Add($"Protokoll {currentIndex + 1} in '{entry.Name}' übersprungen: kein JSON-Objekt.");
                     continue;
                 }
 
@@ -225,14 +225,14 @@ public sealed class SchachtProImportService : ISchachtProImportService
                 catch (JsonException ex)
                 {
                     errors++;
-                    messages.Add($"Protokoll {currentIndex + 1} in '{entry.Name}' uebersprungen: beschaedigt ({ex.Message}).");
+                    messages.Add($"Protokoll {currentIndex + 1} in '{entry.Name}' übersprungen: beschädigt ({ex.Message}).");
                     continue;
                 }
 
                 if (dto is null)
                 {
                     errors++;
-                    messages.Add($"Protokoll {currentIndex + 1} in '{entry.Name}' uebersprungen: leer.");
+                    messages.Add($"Protokoll {currentIndex + 1} in '{entry.Name}' übersprungen: leer.");
                     continue;
                 }
 
@@ -260,7 +260,7 @@ public sealed class SchachtProImportService : ISchachtProImportService
                     // Fehlerstrategie: ein defektes Protokoll bricht weder das
                     // Projekt noch den Gesamtimport ab.
                     errors++;
-                    messages.Add($"Protokoll {currentIndex + 1} in '{entry.Name}' uebersprungen: {ex.Message}");
+                    messages.Add($"Protokoll {currentIndex + 1} in '{entry.Name}' übersprungen: {ex.Message}");
                     ctx?.Log.AddEntry("SchachtPro", "Protokoll", ImportLogStatus.Error,
                         recordKey: entry.Name, sourceFile: sproPath, detail: ex.Message);
                 }
@@ -269,7 +269,7 @@ public sealed class SchachtProImportService : ISchachtProImportService
         catch (JsonException ex)
         {
             errors++;
-            messages.Add($"Projekt '{entry.Name}' uebersprungen: Projekt-JSON beschaedigt ({ex.Message}).");
+            messages.Add($"Projekt '{entry.Name}' übersprungen: Projekt-JSON beschädigt ({ex.Message}).");
             ctx?.Log.AddEntry("SchachtPro", "ProjektJson", ImportLogStatus.Error,
                 recordKey: entry.Name, sourceFile: sproPath, detail: ex.Message);
         }
@@ -326,7 +326,7 @@ public sealed class SchachtProImportService : ISchachtProImportService
             var isConnectionPhoto = hasConnectionPhoto && photoIndex == photos.Count - 1;
             if (string.IsNullOrWhiteSpace(photo.ArchivePath))
             {
-                messages.Add($"Schacht {schachtNr}: Foto ohne Archivpfad uebersprungen.");
+                messages.Add($"Schacht {schachtNr}: Foto ohne Archivpfad übersprungen.");
                 continue;
             }
 
@@ -351,7 +351,7 @@ public sealed class SchachtProImportService : ISchachtProImportService
             if (!PhotoExtensions.Contains(extension))
             {
                 source.Dispose();
-                messages.Add($"Schacht {schachtNr}: Foto-Typ '{extension}' nicht unterstuetzt ({photo.ArchivePath}).");
+                messages.Add($"Schacht {schachtNr}: Foto-Typ '{extension}' nicht unterstützt ({photo.ArchivePath}).");
                 continue;
             }
 
@@ -373,7 +373,7 @@ public sealed class SchachtProImportService : ISchachtProImportService
                 relativePaths.Add(ProjectPathResolver.MakeRelative(targetPath, staging.ProjectRoot));
                 if (isConnectionPhoto)
                     messages.Add($"Schacht {schachtNr}: Anschlussfoto als Original kopiert. " +
-                        "Ausrichtung und Schachtgrafik-Ueberlagerung aus SchachtPro werden nicht uebernommen.");
+                        "Ausrichtung und Schachtgrafik-Überlagerung aus SchachtPro werden nicht übernommen.");
             }
             catch (Exception ex)
             {
@@ -389,7 +389,7 @@ public sealed class SchachtProImportService : ISchachtProImportService
             // Sonst lägen die Fotos auf der Platte und der Schacht zeigte nicht darauf.
             messages.Add(
                 $"Schacht {schachtNr}: {relativePaths.Count} Foto(s) kopiert, aber das Feld "
-                + "'Fotos' wurde von Hand geaendert und bleibt unveraendert.");
+                + "'Fotos' wurde von Hand geändert und bleibt unverändert.");
         }
     }
 

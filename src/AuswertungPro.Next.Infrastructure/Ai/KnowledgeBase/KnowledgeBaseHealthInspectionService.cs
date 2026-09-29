@@ -36,7 +36,7 @@ public sealed class KnowledgeBaseHealthInspectionService : IKnowledgeBaseHealthI
                     true,
                     false,
                     messages.Count == 0
-                        ? "SQLite lieferte kein Pruefergebnis."
+                        ? "SQLite lieferte kein Prüfergebnis."
                         : string.Join("; ", messages));
         }
         catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)

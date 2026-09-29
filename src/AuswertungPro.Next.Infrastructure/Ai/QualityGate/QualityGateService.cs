@@ -96,7 +96,7 @@ public sealed class QualityGateService
             $"category={category}): " +
             string.Join(", ", signals.Select(s => $"{s.Name}={s.Value:F2}×{s.Weight / totalWeight:F2}"))
             + (cappedSingleSource
-                ? $" — auf Gelb begrenzt: nur {sources.Count} unabhaengige Belegquelle "
+                ? $" — auf Gelb begrenzt: nur {sources.Count} unabhängige Belegquelle "
                   + $"({string.Join(" + ", sources)}), Green erst ab "
                   + $"{EvidenceSourceGrouping.MinIndependentSourcesForGreen}."
                 : string.Empty);

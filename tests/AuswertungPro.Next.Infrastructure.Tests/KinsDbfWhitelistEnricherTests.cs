@@ -230,7 +230,7 @@ public sealed class KinsDbfWhitelistEnricherTests : IDisposable
         Assert.Equal(0, result.SchaechteNeu);
         Assert.Equal(0, result.SchaechteAktualisiert);
         Assert.Equal(
-            ["KINS-DBF: Quellordner nicht gefunden \u2014 Anreicherung uebersprungen."],
+            ["KINS-DBF: Quellordner nicht gefunden \u2014 Anreicherung übersprungen."],
             result.Messages);
         Assert.Empty(project.Data);
         Assert.Empty(project.SchaechteData);

@@ -262,7 +262,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                         else
                         {
                             col.Item().Border(0.5f).BorderColor("#D1D5DB").Background("#FAFBFC").Padding(8)
-                                .Text("Keine Distanzdaten fuer eine Haltungsgrafik vorhanden.");
+                                .Text("Keine Distanzdaten für eine Haltungsgrafik vorhanden.");
                         }
                     }
 
@@ -741,7 +741,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
             table.Header(header =>
             {
                 header.Cell().Element(HeaderCell).Text("m+").FontSize(10).SemiBold();
-                header.Cell().Element(HeaderCell).Text("OP Kuerzel").FontSize(10).SemiBold();
+                header.Cell().Element(HeaderCell).Text("OP Kürzel").FontSize(10).SemiBold();
                 header.Cell().Element(HeaderCell).Text("Zustand").FontSize(10).SemiBold();
                 header.Cell().Element(HeaderCell).Text("MPEG").FontSize(10).SemiBold();
                 header.Cell().Element(HeaderCell).Text("Foto").FontSize(10).SemiBold();

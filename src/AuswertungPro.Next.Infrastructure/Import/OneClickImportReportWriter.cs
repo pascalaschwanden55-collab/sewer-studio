@@ -33,7 +33,7 @@ public sealed class OneClickImportReportWriter : IOneClickImportReportWriter
                 .AppendLine($"Format: {result.Format}")
                 .AppendLine($"Haltungen: {result.Found} (neu {result.Created}, aktualisiert {result.Updated})")
                 .AppendLine($"Fehler: {result.Errors}, Feld-Konflikte: {result.Conflicts}")
-                .AppendLine($"Vollstaendigkeit: {OneClickImportVollstaendigkeit.Beschreibe(result)}")
+                .AppendLine($"Vollständigkeit: {OneClickImportVollstaendigkeit.Beschreibe(result)}")
                 .AppendLine();
 
             if (result.Bestand is { } bestand)

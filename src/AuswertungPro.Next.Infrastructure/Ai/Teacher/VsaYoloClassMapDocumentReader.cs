@@ -60,7 +60,7 @@ internal static class VsaYoloClassMapDocumentReader
 
         var classesElement = GetRequiredProperty(properties, "classes");
         if (classesElement.ValueKind != JsonValueKind.Object)
-            throw new InvalidDataException("'classes' muss ein Objekt mit Zuordnungen 'Schluessel: ID' sein.");
+            throw new InvalidDataException("'classes' muss ein Objekt mit Zuordnungen 'Schlüssel: ID' sein.");
 
         return new VsaYoloClassMapDocument(
             VsaYoloClassMapFormat.Versioned,
@@ -78,11 +78,11 @@ internal static class VsaYoloClassMapDocumentReader
                 || !property.Value.TryGetInt32(out var id))
             {
                 throw new InvalidDataException(
-                    $"Altformat: Die ID fuer Klasse '{property.Name}' muss eine ganze Zahl sein.");
+                    $"Altformat: Die ID für Klasse '{property.Name}' muss eine ganze Zahl sein.");
             }
 
             if (!classes.TryAdd(property.Name, id))
-                throw new InvalidDataException($"Klassenschluessel '{property.Name}' ist mehrfach vorhanden.");
+                throw new InvalidDataException($"Klassenschlüssel '{property.Name}' ist mehrfach vorhanden.");
         }
 
         return new VsaYoloClassMapDocument(VsaYoloClassMapFormat.Legacy, classes);
@@ -100,7 +100,7 @@ internal static class VsaYoloClassMapDocumentReader
                 || !property.Value.TryGetInt32(out var id))
             {
                 throw new InvalidDataException(
-                    $"Die ID fuer Klasse '{property.Name}' muss eine ganze Zahl sein.");
+                    $"Die ID für Klasse '{property.Name}' muss eine ganze Zahl sein.");
             }
 
             classes.Add(property.Name, id);

@@ -59,7 +59,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
             {
                 ctx?.Log.AddEntry("WinCan", "SDF_Detected", ImportLogStatus.Info,
                     sourceFile: sdfPath,
-                    detail: "WinCan VX SDF erkannt — kein .NET 8 Treiber verfuegbar. Suche XTF-Export als Fallback.");
+                    detail: "WinCan VX SDF erkannt — kein .NET 8 Treiber verfügbar. Suche XTF-Export als Fallback.");
 
                 try
                 {
@@ -231,8 +231,8 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                     {
                         var befunde = obsByInspection.TryGetValue(uebersprungen.Pk, out var liste) ? liste.Count : 0;
                         messages.Add(
-                            $"Haltung {section.Key}: WinCan fuehrt {kandidaten.Count} Untersuchungen. " +
-                            $"Uebernommen: {Datumstext(inspection!)}; uebersprungen: {Datumstext(uebersprungen)} " +
+                            $"Haltung {section.Key}: WinCan führt {kandidaten.Count} Untersuchungen. " +
+                            $"Übernommen: {Datumstext(inspection!)}; übersprungen: {Datumstext(uebersprungen)} " +
                             $"mit {befunde} Befunden.");
                     }
 
@@ -280,14 +280,14 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                     if (inspection is null)
                     {
                         uncertain++;
-                        messages.Add($"Keine Inspektion in DB fuer Haltung {section.Key}");
+                        messages.Add($"Keine Inspektion in DB für Haltung {section.Key}");
                         continue;
                     }
 
                     if (!obsByInspection.TryGetValue(inspection.Pk, out var obsList) || obsList.Count == 0)
                     {
                         uncertain++;
-                        messages.Add($"Keine Beobachtungen in DB fuer Haltung {section.Key}");
+                        messages.Add($"Keine Beobachtungen in DB für Haltung {section.Key}");
                         continue;
                     }
 
@@ -407,12 +407,12 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
             if (failWhenNoMdb)
                 return Result<ImportStats>.Fail("WINCAN_DB_MISSING", "Keine WinCan DB3- oder MDB-Datei im Export gefunden.");
 
-            return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 0, 0, new[] { "Keine MDB-Datei fuer Fallback gefunden." }));
+            return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 0, 0, new[] { "Keine MDB-Datei für Fallback gefunden." }));
         }
 
         var messages = new List<string>
         {
-            $"Importquelle: WinCan MDB-Fallback ({mdbPaths.Count} Datei(en) geprueft)",
+            $"Importquelle: WinCan MDB-Fallback ({mdbPaths.Count} Datei(en) geprüft)",
             reasonMessage
         };
 
@@ -814,7 +814,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
             var wahl = MedienKandidatenAuswahl.Waehle(_medienInhalt.Pruefe(candidates));
             if (wahl.Pfad is null)
             {
-                messages.Add($"Video {haltungsname} nicht verknuepft: {wahl.Grund}");
+                messages.Add($"Video {haltungsname} nicht verknüpft: {wahl.Grund}");
                 continue;
             }
 
@@ -823,7 +823,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
             {
                 erneuert++;
                 messages.Add(
-                    $"Video {haltungsname}: gespeicherter Pfad war tot, neu aufgeloest auf "
+                    $"Video {haltungsname}: gespeicherter Pfad war tot, neu aufgelöst auf "
                     + Path.GetFileName(wahl.Pfad));
             }
             else
@@ -840,9 +840,9 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
         }
 
         if (linked > 0)
-            messages.Add($"Medien verknuepft: {linked} Videos aus dem WinCan VX Projektordner zugeordnet.");
+            messages.Add($"Medien verknüpft: {linked} Videos aus dem WinCan VX Projektordner zugeordnet.");
         if (erneuert > 0)
-            messages.Add($"Medien erneuert: {erneuert} tote Videoverweise neu aufgeloest.");
+            messages.Add($"Medien erneuert: {erneuert} tote Videoverweise neu aufgelöst.");
     }
 
     private static IReadOnlyList<string> FindMdbCandidates(string exportRoot)
@@ -939,11 +939,11 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     private static string Datumstext(WinCanDbInspection inspection)
     {
         if (inspection.HatWinCanVorgabedatum)
-            return "WinCan-Platzhalterdatum (kein glaubwuerdiges Untersuchungsdatum)";
+            return "WinCan-Platzhalterdatum (kein glaubwürdiges Untersuchungsdatum)";
 
         var startdatum = WinCanValueNormalizer.ParseSqliteDate(inspection.StartDate);
         return startdatum is null
-            ? "ohne glaubwuerdiges Untersuchungsdatum"
+            ? "ohne glaubwürdiges Untersuchungsdatum"
             : startdatum.Value.ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture);
     }
 

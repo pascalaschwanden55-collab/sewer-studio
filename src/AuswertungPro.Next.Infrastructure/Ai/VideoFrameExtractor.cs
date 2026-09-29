@@ -14,7 +14,7 @@ public static class VideoFrameExtractor
     public static void Use(IVideoFrameExtractor extractor) =>
         throw new NotSupportedException(
             "Der globale Video-Frame-Extraktor kann nicht mehr ausgetauscht werden. " +
-            "IVideoFrameExtractor bitte per Konstruktor uebergeben.");
+            "IVideoFrameExtractor bitte per Konstruktor übergeben.");
 
     /// <summary>
     /// Extrahiert ein einzelnes PNG-Frame aus einem Video bei einer Zeitposition.

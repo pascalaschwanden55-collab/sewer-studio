@@ -41,7 +41,7 @@ public static class PdfImportSafetyPolicy
     [Obsolete("Globale Dienstwechsel sind nicht mehr erlaubt. IPdfFileSafetyChecker direkt uebergeben.")]
     public static void Use(IPdfFileSafetyChecker checker)
         => throw new NotSupportedException(
-            "PdfImportSafetyPolicy ist unveraenderlich. IPdfFileSafetyChecker direkt uebergeben.");
+            "PdfImportSafetyPolicy ist unveränderlich. IPdfFileSafetyChecker direkt übergeben.");
 
     /// <summary>
     /// Aufgeloestes Byte-Budget: Override aus <see cref="MaxBytesEnvVar"/> (in MB), sonst Default.

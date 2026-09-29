@@ -36,7 +36,7 @@ public sealed class GoldQualityReviewSessionFileStoreTests : IDisposable
 
         var error = Assert.Throws<InvalidOperationException>(() => store.SaveCurrent(session));
 
-        Assert.Contains("nicht ueberschrieben", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nicht überschrieben", error.Message, StringComparison.OrdinalIgnoreCase);
         AssertSessionEqual(session, Assert.IsType<GoldQualityReviewSession>(store.LoadCurrent("Besitzer")));
     }
 
@@ -88,7 +88,7 @@ public sealed class GoldQualityReviewSessionFileStoreTests : IDisposable
 
             var error = Assert.Throws<InvalidDataException>(() => store.SaveCurrent(CreateSession()));
 
-            Assert.Contains("Verknuepfte Pfade", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfte Pfade", error.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(Directory.EnumerateFileSystemEntries(target));
         }
         finally

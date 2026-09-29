@@ -104,7 +104,7 @@ public sealed class PdfTextExtractionService : IPdfTextExtractor
             catch
             {
                 // Der eingebaute Leser haelt den Import auch bei einem Prozessfehler funktionsfaehig.
-                return ExtractPagesWithPdfPig(pdfPath, "pdftotext konnte nicht ausgefuehrt werden.");
+                return ExtractPagesWithPdfPig(pdfPath, "pdftotext konnte nicht ausgeführt werden.");
             }
         }
 

@@ -104,14 +104,14 @@ public sealed class PowerShellM150MdbRowReader : IM150MdbRowReader
                     if (File.Exists(tempScript))
                         File.Delete(tempScript);
                 },
-                "M150-Import: Temp-Skript loeschen");
+                "M150-Import: Temp-Skript löschen");
             BestEffort.Try(
                 () =>
                 {
                     if (File.Exists(tempJson))
                         File.Delete(tempJson);
                 },
-                "M150-Import: Temp-JSON loeschen");
+                "M150-Import: Temp-JSON löschen");
         }
     }
 

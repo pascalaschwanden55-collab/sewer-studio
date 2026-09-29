@@ -89,7 +89,7 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
         ArgumentException.ThrowIfNullOrWhiteSpace(projectFolder);
         ArgumentNullException.ThrowIfNull(project);
         if (fileStaging is not null && !SamePath(fileStaging.ProjectRoot, projectFolder))
-            throw new InvalidOperationException("Datei-Staging und Medienziel gehoeren nicht zum selben Projekt.");
+            throw new InvalidOperationException("Datei-Staging und Medienziel gehören nicht zum selben Projekt.");
 
         var writePaths = fileStaging is null
             ? new ProjectWritePathGuard(projectFolder)
@@ -195,7 +195,7 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                 return; // Alles OK, Datei existiert
 
             if (!string.IsNullOrWhiteSpace(sourceError)
-                && sourceError.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase))
+                && IstVerknuepfungsFehler(sourceError))
             {
                 messages.Add($"{fieldName}: {sourceError}");
             }
@@ -294,7 +294,7 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                 }
 
                 if (!string.IsNullOrWhiteSpace(relativeSourceError)
-                    && relativeSourceError.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase))
+                    && IstVerknuepfungsFehler(relativeSourceError))
                 {
                     messages.Add($"{fieldName}: {relativeSourceError}");
                 }
@@ -409,7 +409,7 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                         continue; // OK
 
                     if (!string.IsNullOrWhiteSpace(relativeSourceError)
-                        && relativeSourceError.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase))
+                        && IstVerknuepfungsFehler(relativeSourceError))
                     {
                         messages.Add($"Foto: {relativeSourceError}");
                     }
@@ -506,7 +506,7 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                     continue; // OK
 
                 if (!string.IsNullOrWhiteSpace(relativeSourceError)
-                    && relativeSourceError.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase))
+                    && IstVerknuepfungsFehler(relativeSourceError))
                 {
                     messages.Add($"VsaFinding Foto: {relativeSourceError}");
                 }
@@ -610,7 +610,7 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
         var source = ResolveSafeExistingSource(rawPath, projectFolder, out var sourceError);
         if (source is null
             && !string.IsNullOrWhiteSpace(sourceError)
-            && sourceError.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase))
+            && IstVerknuepfungsFehler(sourceError))
         {
             messages.Add($"Foto: {sourceError}");
         }
@@ -836,7 +836,7 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
                 return ownMatches[0];
             if (ownMatches.Count > 1)
             {
-                messages.Add($"{context}: Mehrere Treffer in eigener Haltung fuer {fileName} - Pfad nicht automatisch repariert.");
+                messages.Add($"{context}: Mehrere Treffer in eigener Haltung für {fileName} - Pfad nicht automatisch repariert.");
                 return null;
             }
         }
@@ -863,7 +863,7 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
             return globalMatches[0];
         if (globalMatches.Count > 1)
         {
-            messages.Add($"{context}: Mehrere globale Treffer fuer {fileName} - Pfad nicht automatisch repariert.");
+            messages.Add($"{context}: Mehrere globale Treffer für {fileName} - Pfad nicht automatisch repariert.");
             return null;
         }
 
@@ -960,4 +960,14 @@ public sealed class MediaDistributionService : IImportMediaDistributionService
     /// </summary>
     public static string SanitizePathSegment(string value)
         => ProjectPathResolver.SanitizePathSegment(value);
+
+    /// <summary>
+    /// Erkennt die Verknuepfungsmeldung des <see cref="ImportSourcePathGuard"/>. Seit der
+    /// Sprachbereinigung (Aufgabe 10c2) schreibt der Waechter "Verknüpfung" mit Umlaut;
+    /// die Ersatzschreibweise wird weiter erkannt, damit keine Meldung verloren geht.
+    /// </summary>
+    private static bool IstVerknuepfungsFehler(string? fehler)
+        => !string.IsNullOrWhiteSpace(fehler)
+           && (fehler.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase)
+               || fehler.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
 }

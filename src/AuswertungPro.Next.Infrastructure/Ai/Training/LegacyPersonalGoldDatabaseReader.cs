@@ -66,7 +66,7 @@ internal static class LegacyPersonalGoldDatabaseReader
             if (reader.IsDBNull(23))
             {
                 throw new InvalidDataException(
-                    $"Persoenlich bestaetigtes Archiv-Sample '{sampleId}' besitzt kein Embedding.");
+                    $"Persönlich bestätigtes Archiv-Sample '{sampleId}' besitzt kein Embedding.");
             }
 
             var corrected = reader.GetInt32(20) == 1;
@@ -104,7 +104,7 @@ internal static class LegacyPersonalGoldDatabaseReader
             if (!ManualGoldTrainingPolicy.IsManuallyConfirmed(sample, confirmedByUser))
             {
                 throw new InvalidDataException(
-                    $"Archiv-Sample '{sampleId}' erfuellt die persoenliche Goldregel nicht.");
+                    $"Archiv-Sample '{sampleId}' erfüllt die persönliche Goldregel nicht.");
             }
 
             candidates.Add(new LegacyPersonalGoldCandidate(
@@ -145,7 +145,7 @@ internal static class LegacyPersonalGoldDatabaseReader
             .Select(candidate => candidate.Sample.SampleId)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (unique.Count != candidates.Count)
-            throw new InvalidDataException("Doppelte persoenliche ManualCoding-ID im Altarchiv.");
+            throw new InvalidDataException("Doppelte persönliche ManualCoding-ID im Altarchiv.");
         return candidates;
     }
 
@@ -172,7 +172,7 @@ internal static class LegacyPersonalGoldDatabaseReader
     private static DateTime ParseRequiredUtc(string value, string field, string sampleId)
         => ParseOptionalUtc(value)
            ?? throw new InvalidDataException(
-               $"Archiv-Sample '{sampleId}' besitzt kein gueltiges {field}.");
+               $"Archiv-Sample '{sampleId}' besitzt kein gültiges {field}.");
 
     private static DateTime? ParseOptionalUtc(string value)
         => DateTime.TryParse(

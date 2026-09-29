@@ -81,7 +81,7 @@ public sealed class SchachtprotokollImportAnschlussTests
             Assert.Equal("Schächte_Verteilt/3133/20200703_3133.pdf", schacht.GetFieldValue("PDF_Path"));
             Assert.Contains(ergebnis.Messages,
                 m => m.Contains("Schachtprotokolle: 1 verteilt", StringComparison.Ordinal)
-                     && m.Contains("1 mit einem Schacht verknuepft", StringComparison.Ordinal));
+                     && m.Contains("1 mit einem Schacht verknüpft", StringComparison.Ordinal));
         });
     }
 

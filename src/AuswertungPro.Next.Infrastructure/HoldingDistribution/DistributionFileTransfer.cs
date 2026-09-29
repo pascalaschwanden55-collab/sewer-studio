@@ -16,7 +16,7 @@ public static class DistributionFileTransfer
     {
         ArgumentNullException.ThrowIfNull(transfer);
         throw new NotSupportedException(
-            "Die Dateiuebertragungs-Fassade kann nicht mehr global ersetzt werden.");
+            "Die Dateiübertragungs-Fassade kann nicht mehr global ersetzt werden.");
     }
 
     public static string EnsureUniquePath(string path, bool overwrite)

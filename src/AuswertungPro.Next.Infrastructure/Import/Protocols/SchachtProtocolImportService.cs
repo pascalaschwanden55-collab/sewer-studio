@@ -73,7 +73,7 @@ public sealed class SchachtProtocolImportService :
         {
             return directResult with
             {
-                Lesehinweis = "Das PDF enthaelt lesbaren Text, wurde aber nicht als Schachtprotokoll erkannt."
+                Lesehinweis = "Das PDF enthält lesbaren Text, wurde aber nicht als Schachtprotokoll erkannt."
             };
         }
 
@@ -83,7 +83,7 @@ public sealed class SchachtProtocolImportService :
             return directResult with
             {
                 Lesehinweis = "Das PDF ist vermutlich ein Bild-Scan ohne Textebene. " +
-                              $"Die Texterkennung konnte nicht ausgefuehrt werden: {ocr.Message}"
+                              $"Die Texterkennung konnte nicht ausgeführt werden: {ocr.Message}"
             };
         }
 
@@ -92,7 +92,7 @@ public sealed class SchachtProtocolImportService :
         {
             return ocrResult with
             {
-                Lesehinweis = "Die Texterkennung wurde ausgefuehrt, der Inhalt wurde aber nicht als Schachtprotokoll erkannt."
+                Lesehinweis = "Die Texterkennung wurde ausgeführt, der Inhalt wurde aber nicht als Schachtprotokoll erkannt."
             };
         }
 
@@ -234,6 +234,6 @@ public sealed class SchachtProtocolImportService :
                 return candidate;
         }
 
-        throw new IOException($"Kein freier Dateiname fuer das Schachtprotokoll gefunden: {preferredPath}");
+        throw new IOException($"Kein freier Dateiname für das Schachtprotokoll gefunden: {preferredPath}");
     }
 }

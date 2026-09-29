@@ -270,7 +270,7 @@ internal sealed class PersonalGoldBrainWorkspace(PersonalGoldBrainDatabaseBuilde
                 selected[0].ConfirmedByUser)))
         {
             throw new InvalidDataException(
-                "Neue training_samples.json enthaelt nicht ausschliesslich persoenliche Goldsamples.");
+                "Neue training_samples.json enthält nicht ausschliesslich persönliche Goldsamples.");
         }
 
         foreach (var sample in saved)
@@ -286,7 +286,7 @@ internal sealed class PersonalGoldBrainWorkspace(PersonalGoldBrainDatabaseBuilde
             if (!PersonalGoldBrainFileService.IsInside(paths.StagingRoot, stagedFrame))
             {
                 throw new InvalidDataException(
-                    $"Goldbildpfad ist im Arbeitsstand ungueltig: {sample.SampleId}");
+                    $"Goldbildpfad ist im Arbeitsstand ungültig: {sample.SampleId}");
             }
             if (!File.Exists(stagedFrame))
                 throw new FileNotFoundException($"Goldbild fehlt im neuen Stand: {sample.SampleId}", stagedFrame);
@@ -308,7 +308,7 @@ internal sealed class PersonalGoldBrainWorkspace(PersonalGoldBrainDatabaseBuilde
             "negative_feedback.jsonl"
         };
         if (oldContextNames.Any(name => File.Exists(Path.Combine(paths.StagingRoot, name))))
-            throw new InvalidDataException("Alter Laufzeitkontext wurde in den Goldstand uebernommen.");
+            throw new InvalidDataException("Alter Laufzeitkontext wurde in den Goldstand übernommen.");
     }
 
     private static async Task CopyOptionalFileAsync(

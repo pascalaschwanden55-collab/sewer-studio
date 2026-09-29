@@ -43,7 +43,7 @@ public sealed class PdfMergeVerificationTests : IDisposable
                 CreatePdf(1),
                 [attachment]));
 
-        Assert.Contains("unvollstaendig", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unvollständig", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("3", error.Message, StringComparison.Ordinal);
     }
 

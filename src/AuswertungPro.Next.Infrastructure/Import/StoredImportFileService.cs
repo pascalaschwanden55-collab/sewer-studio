@@ -146,7 +146,7 @@ public sealed class StoredImportFileService : IStoredImportFileService
             && !SamePath(projectDirectory, fileStaging.ProjectRoot))
         {
             throw new InvalidOperationException(
-                "Datei-Staging und Importziel gehoeren nicht zum selben Projekt.");
+                "Datei-Staging und Importziel gehören nicht zum selben Projekt.");
         }
 
         var storedPaths = new List<string>();
@@ -262,7 +262,7 @@ public sealed class StoredImportFileService : IStoredImportFileService
             || importKind.Contains(Path.AltDirectorySeparatorChar))
         {
             throw new ArgumentException(
-                "Die Importart muss ein einzelner gueltiger Ordnername sein.",
+                "Die Importart muss ein einzelner gültiger Ordnername sein.",
                 nameof(importKind));
         }
     }

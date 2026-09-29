@@ -88,7 +88,7 @@ internal static class ImportSourcePathGuard
 
                 if ((attributes & FileAttributes.ReparsePoint) != 0)
                 {
-                    error = $"Quellenpfad enthaelt eine Verknuepfung: {current}";
+                    error = $"Quellenpfad enthält eine Verknüpfung: {current}";
                     safePath = string.Empty;
                     return false;
                 }
@@ -97,7 +97,7 @@ internal static class ImportSourcePathGuard
                 var isLast = index == segments.Length - 1;
                 if (!isLast && !isDirectory)
                 {
-                    error = $"Quellenpfad enthaelt eine Datei statt eines Ordners: {current}";
+                    error = $"Quellenpfad enthält eine Datei statt eines Ordners: {current}";
                     safePath = string.Empty;
                     return false;
                 }
@@ -122,7 +122,7 @@ internal static class ImportSourcePathGuard
                                    or NotSupportedException
                                    or PathTooLongException)
         {
-            error = $"Quellenpfad konnte nicht sicher geprueft werden: {ex.Message}";
+            error = $"Quellenpfad konnte nicht sicher geprüft werden: {ex.Message}";
             safePath = string.Empty;
             exists = false;
             return false;

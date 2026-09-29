@@ -325,7 +325,7 @@ public sealed class AlteVsaKekSchachtImportTests
                 Assert.Contains("4 Untersuchungen", text, StringComparison.Ordinal);
                 Assert.Contains("1 Haltung", text, StringComparison.Ordinal);
                 Assert.Contains("2 Schaecht", text, StringComparison.Ordinal);
-                Assert.Contains("1 ungeklaert", text, StringComparison.Ordinal);
+                Assert.Contains("1 ungeklärt", text, StringComparison.Ordinal);
             });
     }
 

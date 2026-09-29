@@ -47,9 +47,9 @@ public sealed class AutoApprovalService
     public static string AlsHinweis(AiDecision decision)
         => decision.Outcome switch
         {
-            AiDecisionOutcome.AutoAccept => $"Zentrale Freigabe: KI-Kriterien erfuellt — {decision.Reason}",
+            AiDecisionOutcome.AutoAccept => $"Zentrale Freigabe: KI-Kriterien erfüllt — {decision.Reason}",
             AiDecisionOutcome.Reject => $"Zentrale Freigabe: ablehnen — {decision.Reason}",
-            _ => $"Zentrale Freigabe: pruefen — {decision.Reason}"
+            _ => $"Zentrale Freigabe: prüfen — {decision.Reason}"
         };
 
     /// <summary>
@@ -59,8 +59,8 @@ public sealed class AutoApprovalService
     /// </summary>
     public static string AlsHinweis(AutoApprovalResult result)
         => result.IsApproved
-            ? $"Zentrale Freigabe: KI-Kriterien erfuellt — {result.Reason}"
-            : $"Zentrale Freigabe: pruefen — {result.Reason}";
+            ? $"Zentrale Freigabe: KI-Kriterien erfüllt — {result.Reason}"
+            : $"Zentrale Freigabe: prüfen — {result.Reason}";
 }
 
 public sealed record AutoApprovalResult(bool IsApproved, string Reason)

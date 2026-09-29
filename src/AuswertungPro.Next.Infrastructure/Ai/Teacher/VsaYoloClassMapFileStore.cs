@@ -86,7 +86,7 @@ public sealed class VsaYoloClassMapFileStore : IVsaYoloClassMapStore
                 return id;
 
             throw new KeyNotFoundException(
-                $"Keine YOLO-Klasse fuer '{vsaCode.Trim()}' in der Klassenkarte vorhanden.");
+                $"Keine YOLO-Klasse für '{vsaCode.Trim()}' in der Klassenkarte vorhanden.");
         }
     }
 
@@ -97,7 +97,7 @@ public sealed class VsaYoloClassMapFileStore : IVsaYoloClassMapStore
         if (!_allowAutomaticClassCreation)
         {
             throw new InvalidOperationException(
-                "Das automatische Anlegen von YOLO-Klassen ist fuer diesen Store deaktiviert.");
+                "Das automatische Anlegen von YOLO-Klassen ist für diesen Store deaktiviert.");
         }
 
         lock (_sync)
@@ -189,7 +189,7 @@ public sealed class VsaYoloClassMapFileStore : IVsaYoloClassMapStore
                                    or ArgumentException)
         {
             throw new InvalidDataException(
-                $"YOLO-Klassenkarte '{path}' ist nicht lesbar oder ungueltig: {ex.Message}",
+                $"YOLO-Klassenkarte '{path}' ist nicht lesbar oder ungültig: {ex.Message}",
                 ex);
         }
     }

@@ -197,7 +197,7 @@ internal static class WinCanObservationAttacher
         }
 
         if (unmatchedCount > 0)
-            warnings.Add($"SO_T: {unmatchedCount} Beobachtungen ohne Inspektions-Zuordnung uebersprungen.");
+            warnings.Add($"SO_T: {unmatchedCount} Beobachtungen ohne Inspektions-Zuordnung übersprungen.");
 
         var attachedCount = 0;
         foreach (var record in records)
@@ -232,7 +232,7 @@ internal static class WinCanObservationAttacher
         }
 
         if (attachedCount > 0)
-            warnings.Add($"{warningPrefix}: {attachedCount} Haltungen mit Protokolleintraegen aus SO_T.");
+            warnings.Add($"{warningPrefix}: {attachedCount} Haltungen mit Protokolleinträgen aus SO_T.");
     }
 
     private static WinCanObservation Observation(

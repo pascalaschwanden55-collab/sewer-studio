@@ -71,7 +71,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
                 return new ImportRecoveryResult(
                     ImportRecoveryOutcome.Blocked,
                     "Der Import ist gespeichert, aber der Arbeitsordner kann nicht sicher " +
-                    $"entfernt werden. {committedStagingObstacle} Der Marker bleibt fuer " +
+                    $"entfernt werden. {committedStagingObstacle} Der Marker bleibt für " +
                     "einen erneuten Lauf erhalten.",
                     ProjectFolderModified: false);
             }
@@ -84,8 +84,8 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
                 return new ImportRecoveryResult(
                     ImportRecoveryOutcome.Blocked,
                     "Der Import ist gespeichert, aber die Wiederherstellung konnte den " +
-                    $"Arbeitsordner nicht vollstaendig aufraeumen. {committedCleanupWarning} " +
-                    "Der Marker bleibt fuer einen erneuten Lauf erhalten.",
+                    $"Arbeitsordner nicht vollständig aufräumen. {committedCleanupWarning} " +
+                    "Der Marker bleibt für einen erneuten Lauf erhalten.",
                     ProjectFolderModified: true);
             }
 
@@ -95,14 +95,14 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
                 // Der Arbeitsordner IST weg - der Projektordner ist damit veraendert.
                 return new ImportRecoveryResult(
                     ImportRecoveryOutcome.Blocked,
-                    "Der Import ist gespeichert und der Arbeitsordner ist aufgeraeumt, " +
+                    "Der Import ist gespeichert und der Arbeitsordner ist aufgeräumt, " +
                     $"aber der Wiederherstellungs-Marker konnte nicht entfernt werden. {clearWarning}",
                     ProjectFolderModified: true);
             }
 
             return new ImportRecoveryResult(
                 ImportRecoveryOutcome.CompletedCleanup,
-                $"Ein abgeschlossener Import vom {marker.StartedUtc.ToLocalTime():g} wurde aufgeraeumt.",
+                $"Ein abgeschlossener Import vom {marker.StartedUtc.ToLocalTime():g} wurde aufgeräumt.",
                 ProjectFolderModified: true);
         }
 
@@ -132,7 +132,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             {
                 hindernisse.Add(
                     $"Der Markereintrag \"{target.RelativePath}\" zeigt aus dem Projekt heraus " +
-                    "oder ueber eine Verknuepfung hinaus und wurde nicht angefasst.");
+                    "oder über eine Verknüpfung hinaus und wurde nicht angefasst.");
                 blockierendeDateien.Add(target.RelativePath);
                 continue;
             }
@@ -204,11 +204,11 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         {
             return new ImportRecoveryResult(
                 ImportRecoveryOutcome.Blocked,
-                $"Die Ruecknahme des unvollstaendigen Imports vom " +
-                $"{marker.StartedUtc.ToLocalTime():g} ist unvollstaendig " +
-                $"({rolledBack} Datei(en) zurueckgenommen). " +
+                $"Die Rücknahme des unvollständigen Imports vom " +
+                $"{marker.StartedUtc.ToLocalTime():g} ist unvollständig " +
+                $"({rolledBack} Datei(en) zurückgenommen). " +
                 string.Join(" ", rollbackWarnings) +
-                " Der Marker bleibt fuer eine sichere Pruefung erhalten.",
+                " Der Marker bleibt für eine sichere Prüfung erhalten.",
                 ProjectFolderModified: projektOrdnerVeraendert);
         }
 
@@ -217,15 +217,15 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         {
             return new ImportRecoveryResult(
                 ImportRecoveryOutcome.Blocked,
-                $"Der unvollstaendige Import vom {marker.StartedUtc.ToLocalTime():g} wurde " +
-                $"zurueckgenommen ({rolledBack} Datei(en)), aber der Wiederherstellungs-Marker " +
+                $"Der unvollständige Import vom {marker.StartedUtc.ToLocalTime():g} wurde " +
+                $"zurückgenommen ({rolledBack} Datei(en)), aber der Wiederherstellungs-Marker " +
                 $"konnte nicht entfernt werden. {rollbackClearWarning}",
                 ProjectFolderModified: true);
         }
 
         return new ImportRecoveryResult(
             ImportRecoveryOutcome.RolledBack,
-            $"Ein unvollstaendiger Import vom {marker.StartedUtc.ToLocalTime():g} wurde zurueckgenommen " +
+            $"Ein unvollständiger Import vom {marker.StartedUtc.ToLocalTime():g} wurde zurückgenommen " +
             $"({rolledBack} Datei(en)).",
             ProjectFolderModified: true);
     }
@@ -245,13 +245,13 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             ? string.Empty
             : $"Im Weg: {string.Join(", ", blockierendeDateien)}. ";
         return
-            $"Der unvollstaendige Import vom {marker.StartedUtc.ToLocalTime():g} wurde NICHT " +
-            "zurueckgenommen. " +
+            $"Der unvollständige Import vom {marker.StartedUtc.ToLocalTime():g} wurde NICHT " +
+            "zurückgenommen. " +
             blockierendeDateienHinweis +
             string.Join(" ", hindernisse) +
             $" Der Wiederherstellungs-Marker liegt unter {markerPfad}. " +
-            "Pruefen Sie die genannten Dateien und sichern Sie sie. Wird der Marker danach " +
-            "entfernt, laesst sich das Projekt wieder oeffnen; die bereits kopierten " +
+            "Prüfen Sie die genannten Dateien und sichern Sie sie. Wird der Marker danach " +
+            "entfernt, lässt sich das Projekt wieder öffnen; die bereits kopierten " +
             "Importdateien bleiben dann im Projekt.";
     }
 
@@ -261,7 +261,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         {
             if (!_journal.ClearIfOwned(projectRoot, expectedTxId))
             {
-                return "Der Marker gehoert inzwischen einer anderen Transaktion, ist " +
+                return "Der Marker gehört inzwischen einer anderen Transaktion, ist " +
                        "nicht sicher lesbar oder konnte nicht sicher entfernt werden.";
             }
 
@@ -269,7 +269,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             return remaining.Outcome == ImportTransactionJournalReadOutcome.Missing
                 ? null
                 : remaining.ErrorMessage
-                  ?? "Der Marker ist nach dem Loeschversuch weiterhin vorhanden.";
+                  ?? "Der Marker ist nach dem Löschversuch weiterhin vorhanden.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
             or ArgumentException or NotSupportedException)
@@ -331,7 +331,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             {
                 return new RollbackInspection(
                     RollbackVerdict.Blocked,
-                    $"Die Importdatei \"{Path.GetFileName(path)}\" konnte nicht sicher geprueft " +
+                    $"Die Importdatei \"{Path.GetFileName(path)}\" konnte nicht sicher geprüft " +
                     $"werden ({accessError}).");
             }
 
@@ -343,7 +343,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
                 return new RollbackInspection(
                     RollbackVerdict.Blocked,
                     $"Am erwarteten Importdateipfad \"{Path.GetFileName(path)}\" liegt eine " +
-                    "Verknuepfung; sie wurde nicht angefasst.");
+                    "Verknüpfung; sie wurde nicht angefasst.");
             }
 
             if ((attributes & FileAttributes.Directory) != 0)
@@ -358,7 +358,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             {
                 return new RollbackInspection(
                     RollbackVerdict.Blocked,
-                    $"Die Importdatei \"{Path.GetFileName(path)}\" ist schreibgeschuetzt und " +
+                    $"Die Importdatei \"{Path.GetFileName(path)}\" ist schreibgeschützt und " +
                     "wurde nicht angefasst.");
             }
 
@@ -383,14 +383,14 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
                 return new RollbackInspection(
                     RollbackVerdict.Blocked,
                     $"Die Importdatei \"{Path.GetFileName(path)}\" wird verwendet oder konnte " +
-                    $"nicht exklusiv geprueft werden ({ex.Message}); sie wurde nicht angefasst.");
+                    $"nicht exklusiv geprüft werden ({ex.Message}); sie wurde nicht angefasst.");
             }
 
             if (!currentSha.Equals(expectedSha, StringComparison.OrdinalIgnoreCase))
             {
                 return new RollbackInspection(
                     RollbackVerdict.Blocked,
-                    $"Die Importdatei \"{Path.GetFileName(path)}\" wurde nach dem Import veraendert " +
+                    $"Die Importdatei \"{Path.GetFileName(path)}\" wurde nach dem Import verändert " +
                     "und deshalb nicht angefasst.");
             }
 
@@ -400,7 +400,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         {
             return new RollbackInspection(
                 RollbackVerdict.Blocked,
-                $"Die Importdatei \"{Path.GetFileName(path)}\" konnte nicht geprueft werden " +
+                $"Die Importdatei \"{Path.GetFileName(path)}\" konnte nicht geprüft werden " +
                 $"({ex.Message}).");
         }
     }
@@ -431,7 +431,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             if (!IsSafeRollbackTarget(projectRoot, path))
             {
                 warning =
-                    $"Die Importdatei \"{Path.GetFileName(path)}\" ist seit der Pruefung nicht " +
+                    $"Die Importdatei \"{Path.GetFileName(path)}\" ist seit der Prüfung nicht " +
                     "mehr sicher erreichbar und wurde nicht angefasst.";
                 return false;
             }
@@ -450,7 +450,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             {
                 warning =
                     $"Die Entfernung der Importdatei \"{Path.GetFileName(path)}\" konnte nicht " +
-                    $"sicher bestaetigt werden ({accessError}).";
+                    $"sicher bestätigt werden ({accessError}).";
                 return false;
             }
 
@@ -493,7 +493,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             if (!IsExpectedStagingLocation(projectRoot, fullStaging))
             {
                 return $"Der Arbeitsordner \"{fullStaging}\" liegt nicht an einem erlaubten " +
-                       "Projektort und wurde nicht geloescht.";
+                       "Projektort und wurde nicht gelöscht.";
             }
 
             if (!TryGetPathAttributes(
@@ -502,7 +502,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
                     out var stagingMissing,
                     out var stagingAccessError))
             {
-                return $"Arbeitsordner konnte nicht sicher geprueft werden ({stagingAccessError}).";
+                return $"Arbeitsordner konnte nicht sicher geprüft werden ({stagingAccessError}).";
             }
 
             if (stagingMissing)
@@ -518,7 +518,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             }
             catch (IOException ex)
             {
-                return $"Arbeitsordner nicht geloescht ({ex.Message}).";
+                return $"Arbeitsordner nicht gelöscht ({ex.Message}).";
             }
 
             return InspectStagingTree(fullStaging);
@@ -526,7 +526,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException
             or PathTooLongException or IOException or UnauthorizedAccessException)
         {
-            return $"Arbeitsordner nicht geloescht ({ex.Message}).";
+            return $"Arbeitsordner nicht gelöscht ({ex.Message}).";
         }
     }
 
@@ -549,31 +549,31 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
                     out var directoryMissing,
                     out var directoryAccessError))
             {
-                return $"Arbeitsordner konnte nicht vollstaendig geprueft werden " +
+                return $"Arbeitsordner konnte nicht vollständig geprüft werden " +
                        $"({directoryAccessError}).";
             }
 
             if (directoryMissing)
             {
-                return "Der Arbeitsordner hat sich waehrend der Sicherheitspruefung " +
-                       "veraendert und wurde nicht angefasst.";
+                return "Der Arbeitsordner hat sich während der Sicherheitsprüfung " +
+                       "verändert und wurde nicht angefasst.";
             }
 
             if ((directoryAttributes & FileAttributes.ReparsePoint) != 0)
             {
-                return $"Der Arbeitsordner enthaelt die Verknuepfung " +
+                return $"Der Arbeitsordner enthält die Verknüpfung " +
                        $"\"{Path.GetFileName(directory)}\" und wurde nicht angefasst.";
             }
 
             if ((directoryAttributes & FileAttributes.Directory) == 0)
             {
-                return "Ein Eintrag im Arbeitsordner hat waehrend der Sicherheitspruefung " +
-                       "seinen Typ geaendert; der Arbeitsordner wurde nicht angefasst.";
+                return "Ein Eintrag im Arbeitsordner hat während der Sicherheitsprüfung " +
+                       "seinen Typ geändert; der Arbeitsordner wurde nicht angefasst.";
             }
 
             if ((directoryAttributes & FileAttributes.ReadOnly) != 0)
             {
-                return $"Der Arbeitsordner enthaelt den schreibgeschuetzten Ordner " +
+                return $"Der Arbeitsordner enthält den schreibgeschützten Ordner " +
                        $"\"{Path.GetFileName(directory)}\" und wurde nicht angefasst.";
             }
 
@@ -586,7 +586,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                return $"Der Arbeitsordner konnte nicht vollstaendig gelesen werden " +
+                return $"Der Arbeitsordner konnte nicht vollständig gelesen werden " +
                        $"({ex.Message}) und wurde nicht angefasst.";
             }
 
@@ -598,25 +598,25 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
                         out var missing,
                         out var accessError))
                 {
-                    return $"Ein Eintrag im Arbeitsordner konnte nicht sicher geprueft " +
+                    return $"Ein Eintrag im Arbeitsordner konnte nicht sicher geprüft " +
                            $"werden ({accessError}); der Arbeitsordner wurde nicht angefasst.";
                 }
 
                 if (missing)
                 {
-                    return "Der Arbeitsordner hat sich waehrend der Sicherheitspruefung " +
-                           "veraendert und wurde nicht angefasst.";
+                    return "Der Arbeitsordner hat sich während der Sicherheitsprüfung " +
+                           "verändert und wurde nicht angefasst.";
                 }
 
                 if ((attributes & FileAttributes.ReparsePoint) != 0)
                 {
-                    return $"Der Arbeitsordner enthaelt die Verknuepfung " +
+                    return $"Der Arbeitsordner enthält die Verknüpfung " +
                            $"\"{Path.GetFileName(entry)}\" und wurde nicht angefasst.";
                 }
 
                 if ((attributes & FileAttributes.ReadOnly) != 0)
                 {
-                    return $"Der Arbeitsordner enthaelt den schreibgeschuetzten Eintrag " +
+                    return $"Der Arbeitsordner enthält den schreibgeschützten Eintrag " +
                            $"\"{Path.GetFileName(entry)}\" und wurde nicht angefasst.";
                 }
 
@@ -640,7 +640,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     return $"Die Datei \"{Path.GetFileName(entry)}\" im Arbeitsordner wird " +
-                           $"verwendet oder konnte nicht exklusiv geprueft werden ({ex.Message}); " +
+                           $"verwendet oder konnte nicht exklusiv geprüft werden ({ex.Message}); " +
                            "der Arbeitsordner wurde nicht angefasst.";
                 }
             }
@@ -666,7 +666,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
             if (!IsExpectedStagingLocation(projectRoot, fullStaging))
             {
                 return $"Der Arbeitsordner \"{fullStaging}\" liegt nicht an einem erlaubten " +
-                       "Projektort und wurde nicht geloescht.";
+                       "Projektort und wurde nicht gelöscht.";
             }
 
             if (!TryGetPathAttributes(
@@ -675,7 +675,7 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
                     out var missingBefore,
                     out var accessErrorBefore))
             {
-                return $"Arbeitsordner konnte vor dem Entfernen nicht sicher geprueft " +
+                return $"Arbeitsordner konnte vor dem Entfernen nicht sicher geprüft " +
                        $"werden ({accessErrorBefore}).";
             }
 
@@ -698,19 +698,19 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
                     out var stagingMissing,
                     out var stagingAccessError))
             {
-                return $"Die Entfernung des Arbeitsordners konnte nicht sicher bestaetigt " +
+                return $"Die Entfernung des Arbeitsordners konnte nicht sicher bestätigt " +
                        $"werden ({stagingAccessError}).";
             }
 
             if (!stagingMissing)
-                return "Arbeitsordner konnte nicht vollstaendig entfernt werden.";
+                return "Arbeitsordner konnte nicht vollständig entfernt werden.";
 
             return null;
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException
             or PathTooLongException or IOException or UnauthorizedAccessException)
         {
-            return $"Arbeitsordner nicht geloescht ({ex.Message}).";
+            return $"Arbeitsordner nicht gelöscht ({ex.Message}).";
         }
     }
 

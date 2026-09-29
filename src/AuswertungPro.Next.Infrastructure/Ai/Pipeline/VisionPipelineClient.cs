@@ -124,7 +124,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClie
 
             int code = (int)resp.StatusCode;
             if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                return new PipelineHealthCheckResult(true, false, code, null, "Token ungueltig/fehlt");
+                return new PipelineHealthCheckResult(true, false, code, null, "Token ungültig/fehlt");
 
             if (!resp.IsSuccessStatusCode)
                 return new PipelineHealthCheckResult(true, true, code, null, $"HTTP {code}");
@@ -132,7 +132,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClie
             var json = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var health = JsonSerializer.Deserialize<SidecarHealthResponse>(json, JsonOpts);
             if (health is null)
-                return new PipelineHealthCheckResult(true, true, code, null, "Health-Antwort war leer oder ungueltig");
+                return new PipelineHealthCheckResult(true, true, code, null, "Health-Antwort war leer oder ungültig");
             if (!string.Equals(health.Version, ExpectedSidecarVersion, StringComparison.Ordinal))
             {
                 return new PipelineHealthCheckResult(
@@ -188,7 +188,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClie
             || !IsSha256(request.CandidateSha256))
         {
             throw new ArgumentException(
-                "Fuer den BCC-Modelltest sind eine exakte Kandidaten-ID und ein SHA-256 erforderlich.",
+                "Für den BCC-Modelltest sind eine exakte Kandidaten-ID und ein SHA-256 erforderlich.",
                 nameof(request));
         }
 
@@ -225,7 +225,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClie
         if (!IsLernstufeKlasse(request.Klasse) || !IsSha256(request.GewichtSha256))
         {
             throw new ArgumentException(
-                "Fuer eine Lernstufe sind ein Klassenname (a-z, _) und ein SHA-256 des Gewichts erforderlich.",
+                "Für eine Lernstufe sind ein Klassenname (a-z, _) und ein SHA-256 des Gewichts erforderlich.",
                 nameof(request));
         }
 
@@ -384,7 +384,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClie
             catch (Exception ex) when (IsSidecarUnavailableError(ex))
             {
                 throw new SidecarUnavailableException(
-                    $"Vision-Sidecar {endpoint} ist nicht verfuegbar: {ex.Message}",
+                    $"Vision-Sidecar {endpoint} ist nicht verfügbar: {ex.Message}",
                     ex);
             }
         }

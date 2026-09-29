@@ -168,7 +168,7 @@ public sealed class ImportFehlerbilanzTests
 
         var satz = OneClickImportVollstaendigkeit.Beschreibe(ergebnis);
 
-        Assert.Contains("nicht vollstaendig geprueft", satz, StringComparison.Ordinal);
+        Assert.Contains("nicht vollständig geprüft", satz, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public sealed class ImportFehlerbilanzTests
 
         var satz = OneClickImportVollstaendigkeit.Beschreibe(ergebnis);
 
-        Assert.StartsWith("geprueft", satz, StringComparison.Ordinal);
+        Assert.StartsWith("geprüft", satz, StringComparison.Ordinal);
         Assert.Contains("12 von 12", satz, StringComparison.Ordinal);
     }
 
@@ -212,7 +212,7 @@ public sealed class ImportFehlerbilanzTests
 
         var satz = OneClickImportVollstaendigkeit.Beschreibe(ergebnis);
 
-        Assert.StartsWith("nicht vollstaendig", satz, StringComparison.Ordinal);
+        Assert.StartsWith("nicht vollständig", satz, StringComparison.Ordinal);
         Assert.Contains("3 Fehler", satz, StringComparison.Ordinal);
     }
 

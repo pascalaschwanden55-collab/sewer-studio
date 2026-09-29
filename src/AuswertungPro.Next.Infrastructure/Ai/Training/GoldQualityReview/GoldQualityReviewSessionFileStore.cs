@@ -57,7 +57,7 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             throw new InvalidDataException(
-                $"Goldpruefungs-Sitzung '{path}' ist nicht sicher lesbar: {ex.Message}",
+                $"Goldprüfungs-Sitzung '{path}' ist nicht sicher lesbar: {ex.Message}",
                 ex);
         }
     }
@@ -70,7 +70,7 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
         if (File.Exists(path))
         {
             throw new InvalidOperationException(
-                "Eine Goldpruefungs-Sitzung ist bereits vorhanden und wird nicht ueberschrieben.");
+                "Eine Goldprüfungs-Sitzung ist bereits vorhanden und wird nicht überschrieben.");
         }
 
         var directory = Path.GetDirectoryName(path)!;
@@ -101,7 +101,7 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
             catch (IOException ex) when (File.Exists(path))
             {
                 throw new InvalidOperationException(
-                    "Eine Goldpruefungs-Sitzung ist bereits vorhanden und wird nicht ueberschrieben.",
+                    "Eine Goldprüfungs-Sitzung ist bereits vorhanden und wird nicht überschrieben.",
                     ex);
             }
         }
@@ -153,7 +153,7 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
                 StringComparison.OrdinalIgnoreCase))
             ?.SampleId
             ?? throw new InvalidOperationException(
-                "Der Abschluss gehoert nicht zu dieser Goldpruefungs-Sitzung.");
+                "Der Abschluss gehört nicht zu dieser Goldprüfungs-Sitzung.");
         var path = ResolveCompletionPath(session, canonicalSampleId, createDirectory: true);
         if (File.Exists(path))
         {
@@ -206,7 +206,7 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
                 || !string.Equals(receipt.SampleId, expectedSampleId, StringComparison.OrdinalIgnoreCase)
                 || receipt.CompletedUtc == default)
             {
-                throw new InvalidDataException("Abschlussbeleg ist unvollstaendig oder ungueltig.");
+                throw new InvalidDataException("Abschlussbeleg ist unvollständig oder ungültig.");
             }
 
             return receipt;
@@ -214,7 +214,7 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             throw new InvalidDataException(
-                $"Goldpruefungs-Abschlussbeleg '{path}' ist nicht sicher lesbar: {ex.Message}",
+                $"Goldprüfungs-Abschlussbeleg '{path}' ist nicht sicher lesbar: {ex.Message}",
                 ex);
         }
     }
@@ -299,7 +299,7 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
             || relative.Equals("..", StringComparison.Ordinal)
             || relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
         {
-            throw new InvalidOperationException("Goldpruefungs-Pfad liegt ausserhalb des KnowledgeRoot.");
+            throw new InvalidOperationException("Goldprüfungs-Pfad liegt ausserhalb des KnowledgeRoot.");
         }
     }
 
@@ -307,14 +307,14 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
     {
         if (_findReparsePoint(path) is { } reparsePoint)
             throw new InvalidDataException(
-                $"Verknuepfte Pfade sind fuer Goldpruefungen nicht erlaubt: {reparsePoint}");
+                $"Verknüpfte Pfade sind für Goldprüfungen nicht erlaubt: {reparsePoint}");
     }
 
     private static void RejectReparsePoint(string path)
     {
         var attributes = File.GetAttributes(path);
         if ((attributes & FileAttributes.ReparsePoint) != 0)
-            throw new InvalidDataException($"Verknuepfte Pfade sind fuer Goldpruefungen nicht erlaubt: {path}");
+            throw new InvalidDataException($"Verknüpfte Pfade sind für Goldprüfungen nicht erlaubt: {path}");
     }
 
     private static void Validate(GoldQualityReviewSession session, string reviewer)
@@ -338,7 +338,7 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
             || session.Entries.Select(entry => entry.SampleId)
                    .Distinct(StringComparer.OrdinalIgnoreCase).Count() != session.Entries.Count)
         {
-            throw new InvalidDataException("Goldpruefungs-Sitzung ist unvollstaendig oder ungueltig.");
+            throw new InvalidDataException("Goldprüfungs-Sitzung ist unvollständig oder ungültig.");
         }
     }
 

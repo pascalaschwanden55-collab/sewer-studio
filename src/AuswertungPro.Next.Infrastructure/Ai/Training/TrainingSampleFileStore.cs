@@ -257,9 +257,9 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
             if (signatureOwner is not null)
             {
                 throw new InvalidOperationException(
-                    $"Die Signatur des Samples '{sample.SampleId}' gehoert bereits zu " +
+                    $"Die Signatur des Samples '{sample.SampleId}' gehört bereits zu " +
                     $"Sample '{signatureOwner.SampleId}'. Der bestehende Gold-Datenbestand " +
-                    "wurde nicht veraendert.");
+                    "wurde nicht verändert.");
             }
 
             existing.RemoveAt(index);
@@ -391,7 +391,7 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         // Kostendateien (CostStoreFileProbe): fehlend = leer, unlesbar = Fehler.
         throw new InvalidOperationException(
             $"Die Trainingsdaten sind nicht lesbar, und keine Sicherungskopie ist "
-            + $"lesbar ({path}). Der vorhandene Bestand wurde NICHT veraendert — "
+            + $"lesbar ({path}). Der vorhandene Bestand wurde NICHT verändert — "
             + $"es wird nichts gespeichert. Letzter Lesefehler: {error.Message}",
             error);
     }
@@ -436,7 +436,7 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
                     if (File.Exists(tempPath))
                         File.Delete(tempPath);
                 },
-                "Trainingsdaten: Temp-Datei nach Speicherfehler loeschen");
+                "Trainingsdaten: Temp-Datei nach Speicherfehler löschen");
             throw;
         }
     }

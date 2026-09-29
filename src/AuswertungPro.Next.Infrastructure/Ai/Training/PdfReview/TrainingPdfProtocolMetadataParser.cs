@@ -167,7 +167,7 @@ internal static partial class TrainingPdfProtocolMetadataParser
             if (matching.Length != 1)
             {
                 throw new InvalidDataException(
-                    "Das Sammel-PDF enthaelt mehrere Haltungen, aber keine davon passt eindeutig zum Datei- und Ordnernamen.");
+                    "Das Sammel-PDF enthält mehrere Haltungen, aber keine davon passt eindeutig zum Datei- und Ordnernamen.");
             }
 
             haltungId = TrainingPdfHaltungId.PreferCleanAlias(
@@ -276,7 +276,7 @@ internal static partial class TrainingPdfProtocolMetadataParser
         if (sectionIds.Count > 1)
         {
             throw new InvalidDataException(
-                "Das PDF enthaelt widerspruechliche ausdrueckliche Haltungs-IDs. Der Import wurde zur Sicherheit abgebrochen.");
+                "Das PDF enthält widersprüchliche ausdrückliche Haltungs-IDs. Der Import wurde zur Sicherheit abgebrochen.");
         }
 
         if (sectionIds.Count == 1)
@@ -302,7 +302,7 @@ internal static partial class TrainingPdfProtocolMetadataParser
         if (ranked.Length > 1 && ranked[0].Value == ranked[1].Value)
         {
             throw new InvalidDataException(
-                "Das PDF enthaelt mehrere gleich starke Haltungs-IDs. Der Import wurde zur Sicherheit abgebrochen.");
+                "Das PDF enthält mehrere gleich starke Haltungs-IDs. Der Import wurde zur Sicherheit abgebrochen.");
         }
 
         return ranked[0].Key;
@@ -672,7 +672,7 @@ internal static partial class TrainingPdfProtocolMetadataParser
                 return null;
 
             throw new InvalidDataException(
-                "Das PDF enthaelt widerspruechliche Inspektionsdaten.");
+                "Das PDF enthält widersprüchliche Inspektionsdaten.");
         }
 
         if (headerDates.Length == 1)
@@ -691,7 +691,7 @@ internal static partial class TrainingPdfProtocolMetadataParser
                 return null;
 
             throw new InvalidDataException(
-                "Das PDF enthaelt widerspruechliche Inspektionsdaten.");
+                "Das PDF enthält widersprüchliche Inspektionsdaten.");
         }
 
         return labeledDates.Length == 1

@@ -119,7 +119,7 @@ public sealed class SqliteSnapshotCopyService : ISqliteSnapshotCopier
         command.CommandText = "PRAGMA integrity_check;";
         var result = Convert.ToString(command.ExecuteScalar());
         if (!string.Equals(result, "ok", StringComparison.OrdinalIgnoreCase))
-            throw new IOException($"SQLite-Inhaltspruefung fehlgeschlagen: {result ?? "keine Antwort"}");
+            throw new IOException($"SQLite-Inhaltsprüfung fehlgeschlagen: {result ?? "keine Antwort"}");
     }
 
     private static void TryDelete(string path)

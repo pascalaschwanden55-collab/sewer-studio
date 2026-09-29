@@ -69,7 +69,7 @@ public sealed class SchachtFeldnamenReparaturLaufTests
         var plan = SchachtFeldnamenReparaturLauf.Plane(new[] { Sauber("1") });
 
         Assert.True(plan.OhneAenderung);
-        Assert.Contains("nichts zusammenzufuehren", SchachtFeldnamenReparaturLauf.Bericht(plan),
+        Assert.Contains("nichts zusammenzuführen", SchachtFeldnamenReparaturLauf.Bericht(plan),
             StringComparison.Ordinal);
     }
 

@@ -114,7 +114,7 @@ public sealed class LegacyPdfImportService
                     {
                         Level = "Info",
                         Context = "PDF",
-                        Message = $"OCR-Fallback fuer Haltungszuordnung aktiviert: {Path.GetFileName(pdfPath)} | OCR-Seiten={ocrFallback.Pages.Count}.{ocrDetail}"
+                        Message = $"OCR-Fallback für Haltungszuordnung aktiviert: {Path.GetFileName(pdfPath)} | OCR-Seiten={ocrFallback.Pages.Count}.{ocrDetail}"
                     });
                 }
             }
@@ -166,7 +166,7 @@ public sealed class LegacyPdfImportService
                             {
                                 Level = "Info",
                                 Context = "PDF",
-                                Message = $"Chunk {chunk.Index} (Seiten {chunk.PageRange}) ohne Haltungsdaten uebersprungen."
+                                Message = $"Chunk {chunk.Index} (Seiten {chunk.PageRange}) ohne Haltungsdaten übersprungen."
                             });
                             continue;
                         }
@@ -524,7 +524,7 @@ public sealed class LegacyPdfImportService
         var zusatz = SchachtProtocolZusatzParser.Parse(fullText);
         SchachtProtocolApplier.ApplyZusatz(target, zusatz, rebuildFromProtocol: false, onlyMissing: fillMissingOnly);
         if (zusatz.Anschluesse.Count > 0)
-            imported.Add($"Anschluesse ({zusatz.Anschluesse.Count})");
+            imported.Add($"Anschlüsse ({zusatz.Anschluesse.Count})");
 
         project.ModifiedAtUtc = DateTime.UtcNow;
         project.Dirty = true;

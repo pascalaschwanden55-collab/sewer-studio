@@ -63,7 +63,7 @@ public sealed class PersonalGoldArchiveRecoveryService : IPersonalGoldArchiveRec
             var activeSamples = JsonSerializer.Deserialize<List<TrainingSample>>(
                                     originalSamplesBytes)
                                 ?? throw new InvalidDataException(
-                                    "Aktive training_samples.json enthaelt keine Liste.");
+                                    "Aktive training_samples.json enthält keine Liste.");
             PersonalGoldArchiveRecoveryInput.EnsureUniqueIds(activeSamples);
             var existingPersonal = activeSamples.Count(sample =>
                 ManualGoldTrainingPolicy.IsManuallyConfirmed(
@@ -76,7 +76,7 @@ public sealed class PersonalGoldArchiveRecoveryService : IPersonalGoldArchiveRec
                         request.ConfirmedByUser)))
             {
                 throw new InvalidDataException(
-                    "Das aktive Gehirn enthaelt nicht ausschliesslich persoenliche Goldsamples.");
+                    "Das aktive Gehirn enthält nicht ausschliesslich persönliche Goldsamples.");
             }
 
             var knownIds = activeSamples
@@ -248,7 +248,7 @@ public sealed class PersonalGoldArchiveRecoveryService : IPersonalGoldArchiveRec
             }
             var error = rollbackError is null
                 ? ex.Message
-                : $"{ex.Message} Ruecksetzung unvollstaendig: {rollbackError}";
+                : $"{ex.Message} Rücksetzung unvollständig: {rollbackError}";
             return Failure(request, error);
         }
     }

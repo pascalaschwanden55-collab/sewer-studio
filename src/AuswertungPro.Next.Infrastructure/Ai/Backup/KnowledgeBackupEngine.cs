@@ -143,7 +143,7 @@ public static class KnowledgeBackupEngine
                         if (File.Exists(temporaryArchivePath))
                             File.Delete(temporaryArchivePath);
                     },
-                    $"Knowledge-Export: Temp-Datei {temporaryArchivePath} loeschen");
+                    $"Knowledge-Export: Temp-Datei {temporaryArchivePath} löschen");
             }
         }
     }
@@ -192,7 +192,7 @@ public static class KnowledgeBackupEngine
                     if (File.Exists(snapshotPath))
                         File.Delete(snapshotPath);
                 },
-                $"Knowledge-Export: SQLite-Snapshot {snapshotPath} loeschen");
+                $"Knowledge-Export: SQLite-Snapshot {snapshotPath} löschen");
         }
     }
 
@@ -526,7 +526,7 @@ public static class KnowledgeBackupEngine
                     if (File.Exists(temporaryPath))
                         File.Delete(temporaryPath);
                 },
-                $"Knowledge-Import: Temp-Datei {temporaryPath} loeschen");
+                $"Knowledge-Import: Temp-Datei {temporaryPath} löschen");
         }
     }
 

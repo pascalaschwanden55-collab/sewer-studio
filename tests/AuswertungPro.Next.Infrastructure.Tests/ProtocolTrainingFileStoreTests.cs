@@ -57,7 +57,7 @@ public sealed class ProtocolTrainingFileStoreTests
                     new ProtocolEntry { Code = "BAB", MeterStart = 1.2 },
                     "H-001"));
 
-            Assert.Contains("NICHT veraendert", error.Message, StringComparison.Ordinal);
+            Assert.Contains("NICHT verändert", error.Message, StringComparison.Ordinal);
             Assert.Equal(corruptJson, File.ReadAllText(path));
         });
     }

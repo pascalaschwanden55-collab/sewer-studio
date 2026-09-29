@@ -102,7 +102,7 @@ public static class KiasFdbTopologyReader
         }
         catch (Exception ex)
         {
-            messages?.Add($"KIAS-FDB: Topologie nicht lesbar ({ex.Message}). Validierung uebersprungen.");
+            messages?.Add($"KIAS-FDB: Topologie nicht lesbar ({ex.Message}). Validierung übersprungen.");
         }
 
         return result;
@@ -175,7 +175,7 @@ public static class KiasFdbTopologyReader
         }
 
         if (badRows > 0)
-            messages?.Add($"KIAS-FDB: {badRows} fehlerhafte Stammdaten-Zeile(n) uebersprungen.");
+            messages?.Add($"KIAS-FDB: {badRows} fehlerhafte Stammdaten-Zeile(n) übersprungen.");
 
         return result;
     }

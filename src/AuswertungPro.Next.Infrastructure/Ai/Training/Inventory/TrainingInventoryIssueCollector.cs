@@ -22,7 +22,7 @@ internal static class TrainingInventoryIssueCollector
         {
             issues.Add(CreateWarning(
                 TrainingInventoryIssueCodes.ProtectedRootMissing,
-                "Geschuetzter Ordner fehlt und konnte nicht in die Dateisuche einbezogen werden.",
+                "Geschützter Ordner fehlt und konnte nicht in die Dateisuche einbezogen werden.",
                 path));
         }
     }
@@ -35,7 +35,7 @@ internal static class TrainingInventoryIssueCollector
         {
             issues.Add(CreateWarning(
                 TrainingInventoryIssueCodes.DirectorySkipped,
-                "Ordner konnte nicht vollstaendig gelesen werden.",
+                "Ordner konnte nicht vollständig gelesen werden.",
                 path));
         }
     }
@@ -52,7 +52,7 @@ internal static class TrainingInventoryIssueCollector
                     ? TrainingInventoryIssueSeverity.Error
                     : TrainingInventoryIssueSeverity.Warning,
                 Code = TrainingInventoryIssueCodes.SourceInvalid,
-                Message = source.Error ?? "JSON-Quelle ist ungueltig.",
+                Message = source.Error ?? "JSON-Quelle ist ungültig.",
                 Path = source.Path
             });
         }
@@ -77,19 +77,19 @@ internal static class TrainingInventoryIssueCollector
         if (!status.SetsFound)
             missingParts.Add("kein freigegebenes Eval-Set gefunden");
         if (!status.DiscoveryComplete)
-            missingParts.Add("Eval-Set-Suche unvollstaendig");
+            missingParts.Add("Eval-Set-Suche unvollständig");
         if (!status.ImageHashesAvailable)
         {
             missingParts.Add(status.ImageHashCheckEnabled
-                ? "Bild-Hashes unvollstaendig"
+                ? "Bild-Hashes unvollständig"
                 : "Bild-Hashvergleich bewusst deaktiviert");
         }
         if (!status.HoldingKeysAvailable)
-            missingParts.Add("Haltungs-Schluessel");
+            missingParts.Add("Haltungs-Schlüssel");
 
         var incompleteSets = status.Sets.Count(set => !set.Complete);
         if (incompleteSets > 0)
-            missingParts.Add($"{incompleteSets} von {status.Sets.Count} Eval-Sets unvollstaendig");
+            missingParts.Add($"{incompleteSets} von {status.Sets.Count} Eval-Sets unvollständig");
 
         issues.Add(new TrainingInventoryIssue
         {
@@ -99,7 +99,7 @@ internal static class TrainingInventoryIssueCollector
             Code = status.ImageHashCheckEnabled
                 ? TrainingInventoryIssueCodes.EvalProtectionUnavailable
                 : TrainingInventoryIssueCodes.EvalHashCheckDisabled,
-            Message = $"Eval-Schutz unvollstaendig ({string.Join(", ", missingParts)}). "
+            Message = $"Eval-Schutz unvollständig ({string.Join(", ", missingParts)}). "
                       + "Trainingsfreigabe bleibt gesperrt.",
             Path = evalSetRoot
         });
@@ -127,7 +127,7 @@ internal static class TrainingInventoryIssueCollector
             {
                 Severity = TrainingInventoryIssueSeverity.Error,
                 Code = TrainingInventoryIssueCodes.PathInvalid,
-                Message = $"{field} ist ungueltig oder nicht lesbar: {path.Error}",
+                Message = $"{field} ist ungültig oder nicht lesbar: {path.Error}",
                 Path = path.StoredPath,
                 RecordKey = recordKey
             });

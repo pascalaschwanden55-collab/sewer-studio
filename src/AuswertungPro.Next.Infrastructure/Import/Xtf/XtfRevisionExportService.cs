@@ -94,7 +94,7 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
 
             if (elemente.Count == 0 && stammdaten.Count == 0)
             {
-                bericht.AppendLine($"{name}: weder Kanalschaeden noch Stammdaten — uebersprungen.");
+                bericht.AppendLine($"{name}: weder Kanalschaeden noch Stammdaten — übersprungen.");
                 continue;
             }
 
@@ -124,8 +124,8 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
                 };
             plaene.Add(plan);
             bericht.AppendLine(
-                $"{name}: {plan.AnzahlGeaendert} geaendert, {plan.AnzahlNeu} neu, " +
-                $"{plan.AnzahlEntfernt} entfernt, {plan.AnzahlUnveraendert} unveraendert.");
+                $"{name}: {plan.AnzahlGeaendert} geändert, {plan.AnzahlNeu} neu, " +
+                $"{plan.AnzahlEntfernt} entfernt, {plan.AnzahlUnveraendert} unverändert.");
 
             foreach (var warnung in plan.Warnungen)
                 bericht.AppendLine($"    offen: {warnung}");
@@ -137,8 +137,8 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
             if (plan.BrauchtEntscheidung)
             {
                 fehler.Add(request.NurPruefen
-                    ? $"{name}: offene Faelle — die Pruefung ist nicht bestanden."
-                    : $"{name}: offene Faelle — es wurde nichts geschrieben.");
+                    ? $"{name}: offene Fälle — die Prüfung ist nicht bestanden."
+                    : $"{name}: offene Fälle — es wurde nichts geschrieben.");
                 continue;
             }
 
@@ -147,7 +147,7 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
 
             if (plan.OhneAenderung)
             {
-                bericht.AppendLine($"    keine Aenderung — keine Revision noetig.");
+                bericht.AppendLine($"    keine Aenderung — keine Revision nötig.");
                 continue;
             }
 
@@ -283,7 +283,7 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
         foreach (var rohPfad in quellPfade)
         {
             if (string.IsNullOrWhiteSpace(rohPfad))
-                return ([], "Eine gewaehlte XTF-Quelldatei hat keinen Pfad.");
+                return ([], "Eine gewählte XTF-Quelldatei hat keinen Pfad.");
 
             string pfad;
             try
@@ -292,7 +292,7 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
             }
             catch (Exception ex)
             {
-                return ([], $"Der Pfad der XTF-Quelldatei ist ungueltig: {ex.Message}");
+                return ([], $"Der Pfad der XTF-Quelldatei ist ungültig: {ex.Message}");
             }
 
             if (!string.Equals(Path.GetExtension(pfad), ".xtf", StringComparison.OrdinalIgnoreCase))
@@ -308,8 +308,8 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
             if (namen.TryGetValue(name, out var vorhandenerPfad))
             {
                 return ([],
-                    $"Zwei gewaehlte XTF-Quellen heissen '{name}'. " +
-                    $"Bitte waehle nur eine davon: '{vorhandenerPfad}' oder '{pfad}'.");
+                    $"Zwei gewählte XTF-Quellen heissen '{name}'. " +
+                    $"Bitte wähle nur eine davon: '{vorhandenerPfad}' oder '{pfad}'.");
             }
 
             namen[name] = pfad;

@@ -131,7 +131,7 @@ public sealed class ImportTransactionRecoveryServiceTests
         Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
         Assert.True(File.Exists(published));   // bleibt wegen SHA-Abweichung
         Assert.NotNull(journal.TryRead(dir.Path));
-        Assert.Contains("unvollstaendig", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unvollständig", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -303,7 +303,7 @@ public sealed class ImportTransactionRecoveryServiceTests
         Assert.True(File.Exists(linkPath));
         Assert.True(File.Exists(outsideFile));
         Assert.Equal("unveraendertes-kundenoriginal", File.ReadAllText(outsideFile));
-        Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(journal.TryRead(projectDir.Path));
     }
 
@@ -335,7 +335,7 @@ public sealed class ImportTransactionRecoveryServiceTests
             Assert.False(result.ProjectFolderModified);
             Assert.Equal("erstes-importziel", File.ReadAllText(firstPath));
             Assert.Equal("zweites-importziel", File.ReadAllText(secondPath));
-            Assert.Contains("schreibgeschuetzt", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("schreibgeschützt", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.NotNull(journal.TryRead(projectDir.Path));
         }
         finally
@@ -572,7 +572,7 @@ public sealed class ImportTransactionRecoveryServiceTests
         Assert.Equal("rest", File.ReadAllText(Path.Combine(stagingRoot, "behalten.stage")));
         Assert.True(File.Exists(linkPath));
         Assert.Equal("unveraendertes-kundenoriginal", File.ReadAllText(outsideFile));
-        Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(journal.TryRead(dir.Path));
     }
 

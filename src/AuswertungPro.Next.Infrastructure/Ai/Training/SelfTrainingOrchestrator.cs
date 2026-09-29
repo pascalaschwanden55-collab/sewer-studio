@@ -129,7 +129,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         {
             progress.Report(new SelfTrainingStep(
                 0, 0, "", 0, SelfTrainingStage.Completed, null, null, null,
-                $"Haltung {tc.CaseId} ist als Eval-Set reserviert — uebersprungen (kein Training)."));
+                $"Haltung {tc.CaseId} ist als Eval-Set reserviert — übersprungen (kein Training)."));
             return new SelfTrainingResult(tc.CaseId, 0, 0, 0, 0, 0, null, sw.Elapsed, 0);
         }
 
@@ -145,7 +145,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
 
         progress.Report(new SelfTrainingStep(
             0, allEntries.Count, "", 0, SelfTrainingStage.BuildingTimeline, null, null, null,
-            $"{allEntries.Count} Protokoll-Eintraege gefunden"));
+            $"{allEntries.Count} Protokoll-Einträge gefunden"));
 
         // Kein einziger (gueltiger) Protokoll-Eintrag -> nichts zu trainieren. Frueh + sauber
         // zurueck, BEVOR der Video-Fallback (ComputeMaxMeter/Max) ueberhaupt erreicht wird.
@@ -154,7 +154,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         {
             progress.Report(new SelfTrainingStep(
                 0, 0, "", 0, SelfTrainingStage.Completed, null, null, null,
-                "Keine Protokoll-Eintraege erkannt — uebersprungen (kein Training)."));
+                "Keine Protokoll-Einträge erkannt — übersprungen (kein Training)."));
             return new SelfTrainingResult(tc.CaseId, 0, 0, 0, 0, 0, null, sw.Elapsed, 0);
         }
 
@@ -221,7 +221,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                     progress.Report(new SelfTrainingStep(
                         i, allEntries.Count, entry.VsaCode, entry.MeterStart,
                         SelfTrainingStage.ExtractingFrame, null, null, framePath,
-                        $"Frame @ {timeSec:F1}s fuer {entry.VsaCode} @ {entry.MeterStart:F1}m"));
+                        $"Frame @ {timeSec:F1}s für {entry.VsaCode} @ {entry.MeterStart:F1}m"));
                 }
             }
 
@@ -237,7 +237,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         {
             progress.Report(new SelfTrainingStep(
                 0, allEntries.Count, "", 0, SelfTrainingStage.Completed, null, null, null,
-                "Keine Bilder verfuegbar (weder PDF-Fotos noch Video-Frames)."));
+                "Keine Bilder verfügbar (weder PDF-Fotos noch Video-Frames)."));
             return new SelfTrainingResult(tc.CaseId, allEntries.Count, 0, 0, 0, 0, null, sw.Elapsed, 0);
         }
 

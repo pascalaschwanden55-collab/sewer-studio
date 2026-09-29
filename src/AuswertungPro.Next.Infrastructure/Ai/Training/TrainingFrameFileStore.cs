@@ -87,7 +87,7 @@ public sealed class TrainingFrameFileStore : ITrainingFrameStore
 
         var extension = Path.GetExtension(fullSourcePath).ToLowerInvariant();
         if (!SupportedImageExtensions.Contains(extension))
-            throw new InvalidDataException($"Nicht unterstuetztes Bildformat '{extension}'.");
+            throw new InvalidDataException($"Nicht unterstütztes Bildformat '{extension}'.");
 
         var bytes = await ReadStableBytesAsync(fullSourcePath, ct).ConfigureAwait(false);
         return await StoreBytesAsync(bytes, extension, framesDir, ct).ConfigureAwait(false);
@@ -105,7 +105,7 @@ public sealed class TrainingFrameFileStore : ITrainingFrameStore
 
         extension = NormalizeExtension(extension);
         if (!SupportedImageExtensions.Contains(extension))
-            throw new InvalidDataException($"Nicht unterstuetztes Bildformat '{extension}'.");
+            throw new InvalidDataException($"Nicht unterstütztes Bildformat '{extension}'.");
 
         var bytes = imageBytes;
         var hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
@@ -173,7 +173,7 @@ public sealed class TrainingFrameFileStore : ITrainingFrameStore
             }
         }
 
-        throw new IOException("Das Quellbild wurde waehrend des Kopierens veraendert.");
+        throw new IOException("Das Quellbild wurde während des Kopierens verändert.");
     }
 
     private static async Task VerifyExistingTargetAsync(
@@ -186,7 +186,7 @@ public sealed class TrainingFrameFileStore : ITrainingFrameStore
         if (!actualHash.Equals(expectedHash, StringComparison.Ordinal))
         {
             throw new IOException(
-                $"Vorhandenes Goldbild '{targetPath}' stimmt nicht mit seinem Inhaltsnamen ueberein.");
+                $"Vorhandenes Goldbild '{targetPath}' stimmt nicht mit seinem Inhaltsnamen überein.");
         }
     }
 

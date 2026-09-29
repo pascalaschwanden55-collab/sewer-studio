@@ -82,7 +82,7 @@ internal sealed class PersonalGoldBrainCommitExecutor(
             {
                 throw new IOException(
                     "Gold-Gehirn-Umschaltung ist fehlgeschlagen und konnte nicht sicher " +
-                    $"zurueckgerollt werden. Commit-Fehler: {commitError.Message}; " +
+                    $"zurückgerollt werden. Commit-Fehler: {commitError.Message}; " +
                     $"Rollback-Fehler: {recoveryError.Message}",
                     new AggregateException(commitError, recoveryError));
             }
@@ -143,7 +143,7 @@ internal sealed class PersonalGoldBrainCommitExecutor(
         var externalHash = await PersonalGoldBrainFileService.HashAsync(externalTarget, cancellationToken)
             .ConfigureAwait(false);
         if (!localHash.Equals(externalHash, StringComparison.OrdinalIgnoreCase))
-            throw new IOException("Protokoll-Lernarchiv stimmt lokal und extern nicht ueberein.");
+            throw new IOException("Protokoll-Lernarchiv stimmt lokal und extern nicht überein.");
 
         PersonalGoldBrainFileService.MoveFileSafe(
             paths.LegacySafetyRoot,

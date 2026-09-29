@@ -60,7 +60,7 @@ public sealed class SchachtNetzFeldNachschlag : IFeldWertNachschlag
             if (werte.Count == 0)
             {
                 return new FeldNachschlagErgebnis.NichtGefunden(
-                    $"Das Abwassernetz fuehrt fuer {anfrage.Feldname} keinen Wert.");
+                    $"Das Abwassernetz führt für {anfrage.Feldname} keinen Wert.");
             }
 
             _log?.Invoke("Abwassernetz-Abfrage erfolgreich.");

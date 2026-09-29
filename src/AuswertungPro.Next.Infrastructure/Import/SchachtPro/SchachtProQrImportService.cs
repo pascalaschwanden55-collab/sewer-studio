@@ -21,13 +21,13 @@ public sealed class SchachtProQrImportService(IQrImageReader images) : ISchachtP
                 .Distinct(StringComparer.Ordinal).ToArray();
             if (texts.Length != 1)
                 throw new InvalidDataException(texts.Length == 0
-                    ? "Kein lesbarer SchachtPro-QR-Code im Bild. Bitte einen groesseren Screenshot verwenden."
+                    ? "Kein lesbarer SchachtPro-QR-Code im Bild. Bitte einen grösseren Screenshot verwenden."
                     : "Mehrere SchachtPro-QR-Codes im Bild. Bitte je Schacht ein einzelnes Bild verwenden.");
             var payload = SchachtProQrPayload.Parse(texts[0], ct);
             SchachtProProtocolImport.EnsureUniqueTarget(project, payload.Protocol.SchachtNr!);
             var mapped = SchachtProProtocolMapper.Map(payload.Protocol, false);
             ct.ThrowIfCancellationRequested();
-            var messages = new List<string> { "SchachtPro-QR: Pruefsumme und Datenformat geprueft. Fotos und Logos sind nicht enthalten." };
+            var messages = new List<string> { "SchachtPro-QR: Prüfsumme und Datenformat geprüft. Fotos und Logos sind nicht enthalten." };
             // Vor der Datensatzuebernahme kopieren: ein Ablagefehler darf keinen neuen Schacht hinterlassen.
             var imagePath = context?.FileStaging is { } staging
                 ? SchachtProQrAblage.Prepare(safePath, payload.Protocol, staging, ct)
@@ -43,10 +43,10 @@ public sealed class SchachtProQrImportService(IQrImageReader images) : ISchachtP
                 messages.Add($"QR-Bild dem Schacht zugeordnet: {imagePath}");
             }
             else
-                messages.Add("QR-Bild noch nicht im Schachtordner abgelegt: Projekt zuerst speichern und den Import erneut ausfuehren.");
+                messages.Add("QR-Bild noch nicht im Schachtordner abgelegt: Projekt zuerst speichern und den Import erneut ausführen.");
             project.Dirty = true;
             project.ModifiedAtUtc = DateTime.UtcNow;
-            messages.Add("Vollstaendiger QR-Quellbeleg in den Projektmetadaten gespeichert; verwendet wird die vorhandene SchachtPro-Feldzuordnung.");
+            messages.Add("Vollständiger QR-Quellbeleg in den Projektmetadaten gespeichert; verwendet wird die vorhandene SchachtPro-Feldzuordnung.");
             context?.Log.AddEntry("SchachtPro-QR", "Import", ImportLogStatus.Info,
                 sourceFile: path, recordKey: payload.Protocol.SchachtNr);
             return Result<ImportStats>.Success(new(found, created, updated, 0, uncertain, messages));

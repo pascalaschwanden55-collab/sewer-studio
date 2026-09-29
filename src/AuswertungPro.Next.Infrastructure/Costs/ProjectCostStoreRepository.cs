@@ -48,7 +48,7 @@ public sealed class ProjectCostStoreRepository : IProjectCostStoreRepository
         {
             loadError =
                 $"{_fileName} konnte nicht sicher gelesen werden: " +
-                (probe.Error ?? "Dateipfad ist ungueltig.");
+                (probe.Error ?? "Dateipfad ist ungültig.");
             return new ProjectCostStore();
         }
 
@@ -60,7 +60,7 @@ public sealed class ProjectCostStoreRepository : IProjectCostStoreRepository
         }
         catch (JsonException ex)
         {
-            loadError = $"{_fileName} ist beschaedigt: {ex.Message}";
+            loadError = $"{_fileName} ist beschädigt: {ex.Message}";
             return new ProjectCostStore();
         }
         catch (Exception ex)
@@ -75,7 +75,7 @@ public sealed class ProjectCostStoreRepository : IProjectCostStoreRepository
         error = null;
         if (store?.ByHolding is null)
         {
-            error = "Kostendaten fehlen oder sind ungueltig; Speichern ist gesperrt.";
+            error = "Kostendaten fehlen oder sind ungültig; Speichern ist gesperrt.";
             return false;
         }
 
@@ -101,7 +101,7 @@ public sealed class ProjectCostStoreRepository : IProjectCostStoreRepository
             {
                 error =
                     $"Speichern ist gesperrt: {_fileName} ist nicht sicher zugreifbar: " +
-                    (probe.Error ?? "Dateipfad ist ungueltig.");
+                    (probe.Error ?? "Dateipfad ist ungültig.");
                 return false;
             }
 

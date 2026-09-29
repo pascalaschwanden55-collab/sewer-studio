@@ -125,7 +125,7 @@ public sealed class WinCanDbAuswahlTests
                 string.IsNullOrWhiteSpace(record.GetFieldValue(FieldKeys.InspectionYear)),
                 "Das WinCan-Vorgabedatum ist kein Untersuchungsdatum.");
             var meldung = Assert.Single(result.Value!.Messages, m => m.Contains("2 Untersuchungen", StringComparison.Ordinal));
-            Assert.Contains("Uebernommen: WinCan-Platzhalterdatum", meldung, StringComparison.Ordinal);
+            Assert.Contains("Übernommen: WinCan-Platzhalterdatum", meldung, StringComparison.Ordinal);
             Assert.DoesNotContain("07.10.2025", meldung, StringComparison.Ordinal);
             Assert.Contains("4 Befunden", meldung);
             Assert.Contains("06.10.2025", meldung);
@@ -337,7 +337,7 @@ public sealed class WinCanDbAuswahlTests
             Assert.Contains(project.Data, r =>
                 string.Equals(r.GetFieldValue("Haltungsname"), "H6", StringComparison.OrdinalIgnoreCase));
             Assert.Contains(result.Value!.Messages, m =>
-                m.Contains("Schacht oben/unten unvollstaendig", StringComparison.Ordinal));
+                m.Contains("Schacht oben/unten unvollständig", StringComparison.Ordinal));
         }
         finally
         {

@@ -13,7 +13,7 @@ internal static class PersonalGoldArchiveRecoveryInput
         PersonalGoldArchiveRecoveryRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.ConfirmedByUser))
-            throw new ArgumentException("Bestaetiger fehlt.", nameof(request));
+            throw new ArgumentException("Bestätiger fehlt.", nameof(request));
 
         var activeRoot = PersonalGoldBrainFileService.NormalizeRoot(
             request.ActiveKnowledgeRoot,
@@ -35,7 +35,7 @@ internal static class PersonalGoldArchiveRecoveryInput
             || (File.GetAttributes(legacyRoot) & FileAttributes.ReparsePoint) != 0)
         {
             throw new InvalidDataException(
-                "Aktiver Wissensordner oder Altarchiv ist eine Verknuepfung.");
+                "Aktiver Wissensordner oder Altarchiv ist eine Verknüpfung.");
         }
         var previousActiveRoot = rootsEqual
             ? activeRoot
@@ -46,7 +46,7 @@ internal static class PersonalGoldArchiveRecoveryInput
                 activeRoot))
         {
             throw new InvalidDataException(
-                "Der Archivmarker gehoert nicht zum aktuell aktiven Wissensordner.");
+                "Der Archivmarker gehört nicht zum aktuell aktiven Wissensordner.");
         }
 
         var activeSamplesPath = Path.Combine(activeRoot, "training_samples.json");
@@ -140,13 +140,13 @@ internal static class PersonalGoldArchiveRecoveryInput
                 && !PersonalGoldBrainFileService.IsInside(legacyRoot, resolved))
             {
                 throw new InvalidDataException(
-                    $"Archivbildpfad verlaesst den geschuetzten Altordner: " +
+                    $"Archivbildpfad verlässt den geschützten Altordner: " +
                     candidate.Sample.SampleId);
             }
             if (!File.Exists(resolved))
             {
                 throw new FileNotFoundException(
-                    $"Persoenlich bestaetigtes Archivbild fehlt: {candidate.Sample.SampleId}",
+                    $"Persönlich bestätigtes Archivbild fehlt: {candidate.Sample.SampleId}",
                     resolved);
             }
 
@@ -186,7 +186,7 @@ internal static class PersonalGoldArchiveRecoveryInput
                         cancellationToken)
                     .ConfigureAwait(false));
             if (!PersonalGoldBrainFileService.IsInside(goldFramesRoot, targetPath))
-                throw new InvalidDataException("Geplantes Goldbild verlaesst den Goldordner.");
+                throw new InvalidDataException("Geplantes Goldbild verlässt den Goldordner.");
             PersonalGoldBrainFileService.EnsureMutationPathIsSafe(
                 paths.ActiveRoot,
                 codeFramesRoot);
@@ -211,7 +211,7 @@ internal static class PersonalGoldArchiveRecoveryInput
                 if (!targetHash.Equals(sourceHash, StringComparison.OrdinalIgnoreCase))
                 {
                     throw new IOException(
-                        $"Vorhandenes Goldbild besitzt eine abweichende Pruefsumme: {targetPath}");
+                        $"Vorhandenes Goldbild besitzt eine abweichende Prüfsumme: {targetPath}");
                 }
             }
 
@@ -332,7 +332,7 @@ internal static class PersonalGoldArchiveRecoveryInput
                 StringComparison.Ordinal)) != 1)
         {
             throw new InvalidDataException(
-                "Der Archiv-Schutzmarker besitzt keinen gueltigen Inhalt.");
+                "Der Archiv-Schutzmarker besitzt keinen gültigen Inhalt.");
         }
 
         const string previousRootPrefix = "PreviousActiveRoot=";
@@ -343,10 +343,10 @@ internal static class PersonalGoldArchiveRecoveryInput
             || string.IsNullOrWhiteSpace(previousRootLines[0][previousRootPrefix.Length..]))
         {
             throw new InvalidDataException(
-                "Der Archiv-Schutzmarker besitzt keinen eindeutigen frueheren aktiven Pfad.");
+                "Der Archiv-Schutzmarker besitzt keinen eindeutigen früheren aktiven Pfad.");
         }
         return PersonalGoldBrainFileService.NormalizeRoot(
             previousRootLines[0][previousRootPrefix.Length..],
-            "Frueherer aktiver Wissensordner");
+            "Früherer aktiver Wissensordner");
     }
 }

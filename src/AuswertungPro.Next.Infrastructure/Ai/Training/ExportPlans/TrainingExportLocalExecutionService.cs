@@ -27,7 +27,7 @@ public sealed class TrainingExportLocalExecutionService : ITrainingExportExecuti
         ArgumentNullException.ThrowIfNull(bundle);
         TrainingExportPlanValidator.Validate(bundle.Plan);
         if (bundle.Plan.Images.Count == 0)
-            throw new TrainingExportPlanException("Der Exportplan enthaelt keine auszugebenden Bilder.");
+            throw new TrainingExportPlanException("Der Exportplan enthält keine auszugebenden Bilder.");
 
         var result = await _localExecutor
             .ExecuteAsync(bundle, _datasetRoot, cancellationToken)

@@ -190,10 +190,10 @@ public sealed class CostCalculatorLogicServiceTests
     public void BuildNearestDnPriceHint_FormatsSingleAndRangeBuckets()
     {
         Assert.Equal(
-            "Preis von DN 200 uebernommen",
+            "Preis von DN 200 übernommen",
             CostCalculatorLogicService.BuildNearestDnPriceHint(new DnPrice { DnFrom = 200, DnTo = 200 }));
         Assert.Equal(
-            "Preis von DN 200-300 uebernommen",
+            "Preis von DN 200-300 übernommen",
             CostCalculatorLogicService.BuildNearestDnPriceHint(new DnPrice { DnFrom = 200, DnTo = 300 }));
     }
 

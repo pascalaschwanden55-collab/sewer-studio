@@ -17,7 +17,7 @@ internal static class SchachtProArchiveIntegrity
         if (!entries.TryGetValue(FileName, out var integrity))
         {
             if (required)
-                throw new SchachtProArchiveException("INTEGRITY_MISSING", "Pruefsummendatei integrity.json fehlt im SchachtPro-Archiv.");
+                throw new SchachtProArchiveException("INTEGRITY_MISSING", "Prüfsummendatei integrity.json fehlt im SchachtPro-Archiv.");
             return; // Format 1 hat noch keinen verpflichtenden Integritaetsnachweis.
         }
 
@@ -25,38 +25,38 @@ internal static class SchachtProArchiveIntegrity
         try
         {
             if (integrity.Length > MaxIntegrityBytes)
-                throw Invalid("Die Pruefsummendatei ist groesser als 5 MB.");
+                throw Invalid("Die Prüfsummendatei ist grösser als 5 MB.");
             using var input = integrity.Open();
             using var content = new MemoryStream();
             CopyBounded(input, content, MaxIntegrityBytes, ct);
             using var document = JsonDocument.Parse(content.ToArray());
             var root = document.RootElement;
             if (Required(root, "algorithm", JsonValueKind.String).GetString() != "SHA-256")
-                throw Invalid("Der Pruefsummenalgorithmus muss SHA-256 sein.");
+                throw Invalid("Der Prüfsummenalgorithmus muss SHA-256 sein.");
             expected = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var property in Required(root, "entries", JsonValueKind.Object).EnumerateObject())
             {
                 var path = SchachtProArchiveReader.NormalizeArchivePath(property.Name);
                 if (path.Length == 0 || path.EndsWith('/') || path == FileName
                     || !SchachtProArchiveReader.IsAllowedArchivePath(property.Name))
-                    throw Invalid($"Ungueltiger Pfad im Pruefsummennachweis: {property.Name}");
+                    throw Invalid($"Ungültiger Pfad im Prüfsummennachweis: {property.Name}");
                 if (property.Value.ValueKind != JsonValueKind.String)
-                    throw Invalid($"Ungueltige Pruefsumme fuer {path}.");
+                    throw Invalid($"Ungültige Prüfsumme für {path}.");
                 var hash = property.Value.GetString()!;
                 if (hash.Length != 64 || !hash.All(Uri.IsHexDigit))
-                    throw Invalid($"Ungueltige SHA-256-Pruefsumme fuer {path}.");
+                    throw Invalid($"Ungültige SHA-256-Prüfsumme für {path}.");
                 if (!expected.TryAdd(path, hash) || expected.Count > MaxEntries)
-                    throw Invalid("Mehrfache Pfade oder zu viele Eintraege im Pruefsummennachweis.");
+                    throw Invalid("Mehrfache Pfade oder zu viele Einträge im Prüfsummennachweis.");
             }
         }
         catch (Exception ex) when (ex is JsonException or InvalidDataException)
         {
-            throw Invalid("Die Pruefsummendatei ist beschaedigt oder unlesbar.");
+            throw Invalid("Die Prüfsummendatei ist beschädigt oder unlesbar.");
         }
 
         var files = entries.Where(pair => pair.Key != FileName && !pair.Key.EndsWith('/')).ToArray();
         if (!expected.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(files.Select(pair => pair.Key)))
-            throw Mismatch("Dateiliste und Pruefsummennachweis stimmen nicht ueberein.");
+            throw Mismatch("Dateiliste und Prüfsummennachweis stimmen nicht überein.");
         foreach (var (path, entry) in files)
         {
             ct.ThrowIfCancellationRequested();
@@ -70,22 +70,22 @@ internal static class SchachtProArchiveIntegrity
                 ct.ThrowIfCancellationRequested();
                 length += read;
                 if (length > entry.Length)
-                    throw Mismatch($"Die Laengenangabe fuer {path} stimmt nicht.");
+                    throw Mismatch($"Die Längenangabe für {path} stimmt nicht.");
                 hash.AppendData(buffer, 0, read);
             }
             if (length != entry.Length || !Convert.ToHexString(hash.GetHashAndReset())
                     .Equals(expected[path], StringComparison.OrdinalIgnoreCase))
-                throw Mismatch($"Die Datei {path} wurde beschaedigt oder veraendert.");
+                throw Mismatch($"Die Datei {path} wurde beschädigt oder verändert.");
         }
     }
 
     private static JsonElement Required(JsonElement root, string name, JsonValueKind kind)
     {
         if (root.ValueKind != JsonValueKind.Object)
-            throw Invalid("Die Pruefsummendatei enthaelt kein JSON-Objekt.");
+            throw Invalid("Die Prüfsummendatei enthält kein JSON-Objekt.");
         var properties = root.EnumerateObject().Where(property => property.Name == name).ToArray();
         if (properties.Length != 1 || properties[0].Value.ValueKind != kind)
-            throw Invalid($"Die Angabe {name} fehlt, ist mehrfach vorhanden oder ungueltig.");
+            throw Invalid($"Die Angabe {name} fehlt, ist mehrfach vorhanden oder ungültig.");
         return properties[0].Value;
     }
 
@@ -97,7 +97,7 @@ internal static class SchachtProArchiveIntegrity
         {
             ct.ThrowIfCancellationRequested();
             if (output.Length + read > limit)
-                throw Invalid("Die Pruefsummendatei ist groesser als 5 MB.");
+                throw Invalid("Die Prüfsummendatei ist grösser als 5 MB.");
             output.Write(buffer, 0, read);
         }
     }

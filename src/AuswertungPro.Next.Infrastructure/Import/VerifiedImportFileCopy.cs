@@ -23,12 +23,12 @@ internal static class VerifiedImportFileCopy
                 || sourceInfo.LastWriteTimeUtc != initialWriteTime)
             {
                 throw new IOException(
-                    $"Quelldatei wurde waehrend des Kopierens veraendert: {sourcePath}");
+                    $"Quelldatei wurde während des Kopierens verändert: {sourcePath}");
             }
 
             var stageHash = ComputeSha256(stagePath);
             if (!sourceHash.Equals(stageHash, StringComparison.OrdinalIgnoreCase))
-                throw new IOException($"Pruefsumme der vorbereiteten Kopie stimmt nicht: {sourcePath}");
+                throw new IOException($"Prüfsumme der vorbereiteten Kopie stimmt nicht: {sourcePath}");
             return sourceHash;
         }
         catch

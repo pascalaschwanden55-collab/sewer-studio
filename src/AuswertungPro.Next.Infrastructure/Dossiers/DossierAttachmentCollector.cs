@@ -257,7 +257,7 @@ public sealed class DossierAttachmentCollector :
             {
                 warnings.Add(
                     $"Beilage '{Path.GetFileName(safeSource)}': "
-                    + $"Kopie fuer die Vorschau fehlgeschlagen ({ex.Message}).");
+                    + $"Kopie für die Vorschau fehlgeschlagen ({ex.Message}).");
             }
         }
     }

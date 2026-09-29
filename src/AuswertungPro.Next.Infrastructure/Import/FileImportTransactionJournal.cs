@@ -59,14 +59,14 @@ public sealed class FileImportTransactionJournal : IImportTransactionJournal
         if (ExceedsTargetLimit(marker))
         {
             throw new ArgumentException(
-                $"Der Import umfasst {marker.PublishedTargets!.Count} Dateien; hoechstens "
-                + $"{MaxPublishedTargets} koennen im Wiederherstellungsmarker gefuehrt werden. "
+                $"Der Import umfasst {marker.PublishedTargets!.Count} Dateien; höchstens "
+                + $"{MaxPublishedTargets} können im Wiederherstellungsmarker geführt werden. "
                 + "Bitte den Import in kleinere Teile aufteilen.",
                 nameof(marker));
         }
 
         if (!IsValid(marker))
-            throw new ArgumentException("Der Import-Wiederherstellungsmarker ist unvollstaendig.", nameof(marker));
+            throw new ArgumentException("Der Import-Wiederherstellungsmarker ist unvollständig.", nameof(marker));
 
         ExecuteSynchronized(projectRoot, () =>
         {
@@ -76,7 +76,7 @@ public sealed class FileImportTransactionJournal : IImportTransactionJournal
                 throw new InvalidOperationException(
                     "Im Projekt liegt ein Import-Wiederherstellungsmarker, der nicht "
                     + "sicher gelesen werden kann. Bitte das Projekt neu laden, damit "
-                    + "die Wiederherstellung ihn pruefen kann.");
+                    + "die Wiederherstellung ihn prüfen kann.");
             }
 
             if (current is
@@ -89,8 +89,8 @@ public sealed class FileImportTransactionJournal : IImportTransactionJournal
                 throw new InvalidOperationException(
                     $"Im Projekt liegt noch eine unabgeschlossene Import-Transaktion vom "
                     + $"{current.Marker.StartedUtc.ToLocalTime():g}. Bitte das Projekt zuerst "
-                    + "neu laden - die Wiederherstellung prueft den offenen Import und meldet, "
-                    + "was zu tun ist. Erst danach ist ein neuer Import moeglich.");
+                    + "neu laden - die Wiederherstellung prüft den offenen Import und meldet, "
+                    + "was zu tun ist. Erst danach ist ein neuer Import möglich.");
             }
 
             _afterOwnershipCheck?.Invoke();
@@ -105,7 +105,7 @@ public sealed class FileImportTransactionJournal : IImportTransactionJournal
                 || !string.Equals(written.Marker.TxId, marker.TxId, StringComparison.Ordinal))
             {
                 throw new IOException(
-                    "Der Import-Wiederherstellungsmarker konnte nach dem Schreiben nicht bestaetigt werden.");
+                    "Der Import-Wiederherstellungsmarker konnte nach dem Schreiben nicht bestätigt werden.");
             }
 
             return true;
@@ -245,8 +245,8 @@ public sealed class FileImportTransactionJournal : IImportTransactionJournal
         if (ExceedsTargetLimit(marker))
         {
             throw new ArgumentException(
-                $"Der Import umfasst {marker.PublishedTargets!.Count} Dateien; hoechstens "
-                + $"{MaxPublishedTargets} koennen im Wiederherstellungsmarker gefuehrt werden.",
+                $"Der Import umfasst {marker.PublishedTargets!.Count} Dateien; höchstens "
+                + $"{MaxPublishedTargets} können im Wiederherstellungsmarker geführt werden.",
                 nameof(marker));
         }
 
@@ -256,8 +256,8 @@ public sealed class FileImportTransactionJournal : IImportTransactionJournal
         {
             // Die Datei wird gar nicht erst angefasst: ein vorhandener Marker bleibt liegen.
             throw new ArgumentException(
-                $"Der Wiederherstellungsmarker waere {groesse} Bytes gross; erlaubt sind "
-                + $"hoechstens {MaxMarkerBytes}. Bitte den Import in kleinere Teile aufteilen.",
+                $"Der Wiederherstellungsmarker wäre {groesse} Bytes gross; erlaubt sind "
+                + $"höchstens {MaxMarkerBytes}. Bitte den Import in kleinere Teile aufteilen.",
                 nameof(marker));
         }
 

@@ -431,7 +431,7 @@ public sealed class TrainingCenterImportService
             if (string.IsNullOrWhiteSpace(chunk.DetectedId) || chunk.IsUncertain)
             {
                 uncertain++;
-                messages.Add($"Chunk {chunk.Index} (Seiten {chunk.PageRange}): keine Haltungs-ID erkannt, uebersprungen.");
+                messages.Add($"Chunk {chunk.Index} (Seiten {chunk.PageRange}): keine Haltungs-ID erkannt, übersprungen.");
                 continue;
             }
 

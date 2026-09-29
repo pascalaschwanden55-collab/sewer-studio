@@ -31,7 +31,7 @@ public sealed class KinsDbfWhitelistEnrichmentService : IKinsDbfWhitelistEnriche
 
         if (project is null || string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
         {
-            messages.Add("KINS-DBF: Quellordner nicht gefunden — Anreicherung uebersprungen.");
+            messages.Add("KINS-DBF: Quellordner nicht gefunden — Anreicherung übersprungen.");
             return new KinsDbfEnrichmentResult(0, 0, 0, messages);
         }
 
@@ -39,7 +39,7 @@ public sealed class KinsDbfWhitelistEnrichmentService : IKinsDbfWhitelistEnriche
         var haltungDbf = FindeDatei(sourceFolder, "haltung.DBF");
         if (schachtDbf is null && haltungDbf is null)
         {
-            messages.Add("KINS-DBF: keine haltung.DBF/schacht.DBF gefunden — Anreicherung uebersprungen.");
+            messages.Add("KINS-DBF: keine haltung.DBF/schacht.DBF gefunden — Anreicherung übersprungen.");
             return new KinsDbfEnrichmentResult(0, 0, 0, messages);
         }
 
@@ -163,7 +163,7 @@ public sealed class KinsDbfWhitelistEnrichmentService : IKinsDbfWhitelistEnriche
             {
                 var bez = Wert(row, "BEZ");
                 if (!string.IsNullOrWhiteSpace(bez))
-                    messages.Add($"KINS-DBF: Haltung mit Bezeichnung '{bez}' nicht im Projekt — uebersprungen.");
+                    messages.Add($"KINS-DBF: Haltung mit Bezeichnung '{bez}' nicht im Projekt — übersprungen.");
                 continue;
             }
 
@@ -176,7 +176,7 @@ public sealed class KinsDbfWhitelistEnrichmentService : IKinsDbfWhitelistEnriche
             // Felder ohne Ziel im FieldCatalog: nur melden, nicht setzen (bewusst, s. Plan).
             var baujahr = GanzzahlOderLeer(Wert(row, "BAUJAHR"));
             if (!string.IsNullOrWhiteSpace(baujahr))
-                messages.Add($"KINS-DBF: Baujahr {baujahr} vorhanden, aber kein Zielfeld — nicht uebernommen.");
+                messages.Add($"KINS-DBF: Baujahr {baujahr} vorhanden, aber kein Zielfeld — nicht übernommen.");
         }
 
         return gesetzt;

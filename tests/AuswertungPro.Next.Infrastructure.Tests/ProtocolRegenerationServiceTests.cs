@@ -149,7 +149,7 @@ public sealed class ProtocolRegenerationServiceTests
             var error = Assert.Throws<IOException>(() =>
                 service.RegenerateOne(project, tempRoot, record, document));
 
-            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(Directory.EnumerateFileSystemEntries(external));
             Assert.True(string.IsNullOrEmpty(record.GetFieldValue("PDF_Eigen")));
         }

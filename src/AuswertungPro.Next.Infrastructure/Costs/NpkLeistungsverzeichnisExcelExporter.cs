@@ -381,7 +381,7 @@ public static class NpkLeistungsverzeichnisExcelExporter
     public static void Use(INpkLeistungsverzeichnisExcelExporter exporter)
         => throw new NotSupportedException(
             "Der globale NPK-Excel-Export kann nicht mehr ausgetauscht werden. " +
-            "INpkLeistungsverzeichnisExcelExporter bitte per Konstruktor uebergeben.");
+            "INpkLeistungsverzeichnisExcelExporter bitte per Konstruktor übergeben.");
 
     public static byte[] BuildWorkbook(
         IReadOnlyList<AggregatedPosition> positions,

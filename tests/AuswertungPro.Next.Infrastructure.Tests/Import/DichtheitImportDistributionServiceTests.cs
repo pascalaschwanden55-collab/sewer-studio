@@ -167,7 +167,7 @@ public sealed class DichtheitImportDistributionServiceTests : IDisposable
             Assert.Equal(0, result.Verteilt);
             Assert.Equal(1, result.NichtZugeordnet);
             Assert.Contains(result.Messages, message =>
-                message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+                message.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase));
             Assert.Empty(Directory.EnumerateFileSystemEntries(externalFolder));
         }
         finally

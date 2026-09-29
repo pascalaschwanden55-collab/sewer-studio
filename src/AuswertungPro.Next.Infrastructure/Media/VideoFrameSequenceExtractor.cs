@@ -51,7 +51,7 @@ public sealed class VideoFrameSequenceExtractor : IVideoFrameSequenceExtractor
         if (result.ExitCode != 0)
         {
             var detail = string.IsNullOrWhiteSpace(result.StandardError)
-                ? $"Rueckgabewert {result.ExitCode}"
+                ? $"Rückgabewert {result.ExitCode}"
                 : result.StandardError.Trim();
             throw new InvalidOperationException($"ffmpeg ist fehlgeschlagen: {detail}");
         }
@@ -74,8 +74,8 @@ public sealed class VideoFrameSequenceExtractor : IVideoFrameSequenceExtractor
         if (Directory.EnumerateFileSystemEntries(targetDirectory).Any())
         {
             throw new InvalidOperationException(
-                $"Der Zielordner muss leer sein, damit keine Bilder eines frueheren Laufs "
-                + $"mitgezaehlt werden: {targetDirectory}");
+                $"Der Zielordner muss leer sein, damit keine Bilder eines früheren Laufs "
+                + $"mitgezählt werden: {targetDirectory}");
         }
     }
 

@@ -100,7 +100,7 @@ public sealed class ImportRunReportFileExporter : IImportRunReportExporter
             text.AppendLine();
         }
 
-        text.AppendLine("--- Alle Eintraege ---");
+        text.AppendLine("--- Alle Einträge ---");
         foreach (var entry in log.EntriesList)
         {
             text.AppendLine(

@@ -336,25 +336,25 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                     {
                         messages.AddRange(xtfErgebnis.Value.Messages);
                         fehlerbilanz.Melde(
-                            "Ergaenzende XTF-Quelle", xtfErgebnis.Value.Errors, xtfErgebnis.Value.Messages);
+                            "Ergänzende XTF-Quelle", xtfErgebnis.Value.Errors, xtfErgebnis.Value.Messages);
                         messages.Add(
-                            $"Ergaenzende XTF-Quellen: {ergaenzend.Count} gelesen, "
+                            $"Ergänzende XTF-Quellen: {ergaenzend.Count} gelesen, "
                             + $"{project.Data.Count - vorher} Haltungen und "
                             + $"{project.SchaechteData.Count - vorherSchaechte} Schaechte dazugekommen.");
                     }
                     else
                     {
-                        fehlerbilanz.Melde("Ergaenzende XTF-Quelle",
-                            $"XTF-Ergaenzung fehlgeschlagen: {xtfErgebnis.ErrorMessage}");
-                        messages.Add($"Ergaenzende XTF-Quelle fehlgeschlagen: {xtfErgebnis.ErrorMessage}");
+                        fehlerbilanz.Melde("Ergänzende XTF-Quelle",
+                            $"XTF-Ergänzung fehlgeschlagen: {xtfErgebnis.ErrorMessage}");
+                        messages.Add($"Ergänzende XTF-Quelle fehlgeschlagen: {xtfErgebnis.ErrorMessage}");
                     }
                 }
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                fehlerbilanz.Melde("Ergaenzende XTF-Quelle", $"XTF-Ergaenzung fehlgeschlagen: {ex.Message}");
-                messages.Add($"Ergaenzende XTF-Quelle fehlgeschlagen: {ex.Message}");
+                fehlerbilanz.Melde("Ergänzende XTF-Quelle", $"XTF-Ergänzung fehlgeschlagen: {ex.Message}");
+                messages.Add($"Ergänzende XTF-Quelle fehlgeschlagen: {ex.Message}");
             }
         }
 
@@ -378,7 +378,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 {
                     var txtResult = _kinsDvdTextEnricher.Apply(project, det.KinsDataTxtPath);
                     messages.AddRange(txtResult.Messages);
-                    messages.Add($"KINS-TXT: {txtResult.TimecodesGesetzt} Timecodes, {txtResult.LaengenGesetzt} Laengen, {txtResult.DatumGesetzt} Daten gesetzt.");
+                    messages.Add($"KINS-TXT: {txtResult.TimecodesGesetzt} Timecodes, {txtResult.LaengenGesetzt} Längen, {txtResult.DatumGesetzt} Daten gesetzt.");
                 }
 
                 // 3. FoxPro-DBF: Schachtliste + Whitelist fuer leere Stammdaten
@@ -430,7 +430,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         catch (Exception ex)
         {
             // Der Abgleich ist eine Zusatzpruefung und darf den Import nie stoppen.
-            messages.Add($"Katasterabgleich uebersprungen: {ex.Message}");
+            messages.Add($"Katasterabgleich übersprungen: {ex.Message}");
         }
 
         // ------------------------------------------------------------------
@@ -475,7 +475,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                     conflictCount += enrichResult.Conflicts.Count;
                     messages.AddRange(enrichResult.Conflicts);
                     messages.Add(
-                        $"SIA405-Anreicherung: {enrichResult.Filled} Felder gefuellt, " +
+                        $"SIA405-Anreicherung: {enrichResult.Filled} Felder gefüllt, " +
                         $"{enrichResult.Conflicts.Count} Konflikte.");
                 }
                 else
@@ -522,7 +522,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         {
             messages.Add(
                 "WARNUNG: 0 Haltungen importiert, obwohl Datenquellen erkannt wurden. " +
-                "Bitte Report pruefen; die Herstellerquelle wurde vermutlich nicht gelesen oder enthaelt ein unbekanntes Schema.");
+                "Bitte Report prüfen; die Herstellerquelle wurde vermutlich nicht gelesen oder enthält ein unbekanntes Schema.");
         }
 
         // Bestandsaufnahme zum Schluss: was ist wirklich angekommen. Bewusst KEINE
@@ -612,7 +612,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
             if (_kins is not null)
                 return _kins.ImportKinsExport(sourceFolder, project, parseContext);
             return Result<ImportStats>.Fail(
-                "KINS_SERVICE_MISSING", "KINS ohne XTF erkannt, aber kein KINS-Importservice verfuegbar.");
+                "KINS_SERVICE_MISSING", "KINS ohne XTF erkannt, aber kein KINS-Importservice verfügbar.");
         }
 
         return _winCan.ImportWinCanExport(sourceFolder, project, parseContext);
@@ -704,12 +704,12 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 messages.Add(det.Sia405XtfPath is null
                     ? "SIA405: nicht vorhanden."
                     : $"SIA405: Whitelist-Anreicherung aus {Path.GetFileName(det.Sia405XtfPath)}.");
-                messages.Add("FDB/Daten.txt/PDF: archiviert; PDF nur fuer Plan-Import und Protokoll-Verteilung.");
+                messages.Add("FDB/Daten.txt/PDF: archiviert; PDF nur für Plan-Import und Protokoll-Verteilung.");
                 break;
 
             case KanalExportFormat.Ibak:
-                messages.Add("Hauptquelle: IBAK/KIAS Daten.txt (Arizona.fdb/PDF werden archiviert und ergaenzend genutzt, falls Service es unterstuetzt).");
-                messages.Add("PDF: archiviert; TV-Protokoll nur fuer Verteilung, Plan-PDF nur fuer den Ordner Plaene.");
+                messages.Add("Hauptquelle: IBAK/KIAS Daten.txt (Arizona.fdb/PDF werden archiviert und ergänzend genutzt, falls Service es unterstützt).");
+                messages.Add("PDF: archiviert; TV-Protokoll nur für Verteilung, Plan-PDF nur für den Ordner Plaene.");
                 break;
 
             case KanalExportFormat.Kins:
@@ -717,7 +717,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                     messages.Add($"Hauptquelle: KINS VSA_KEK-XTF ({Path.GetFileName(det.VsaKekXtfPath)}).");
                 else
                     messages.Add($"Hauptquelle: KINS kiDVDaten.txt ({Path.GetFileName(det.KinsDataTxtPath ?? "")}).");
-                messages.Add("KINS-Zusatzquellen: kiDVDaten.txt/DBF nur fuer Timecodes, Laengen, Schaechte und Whitelist-Felder.");
+                messages.Add("KINS-Zusatzquellen: kiDVDaten.txt/DBF nur für Timecodes, Längen, Schaechte und Whitelist-Felder.");
                 break;
         }
 

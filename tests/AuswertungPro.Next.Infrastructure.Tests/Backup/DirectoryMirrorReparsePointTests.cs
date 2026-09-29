@@ -221,7 +221,7 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
 
         Assert.False(File.Exists(Path.Combine(foreign, "kopie.txt")));
         Assert.Contains(stats.Errors, error =>
-            error.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+            error.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase));
     }
 
     [JunctionFact]
@@ -252,6 +252,6 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
 
         Assert.Empty(Directory.EnumerateFiles(foreign, "*", SearchOption.AllDirectories));
         Assert.Contains(stats.Errors, error =>
-            error.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+            error.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -64,7 +64,7 @@ public sealed class VsaClassificationTable
         return JsonSerializer.Deserialize<VsaClassificationTable>(json,
                 Application.Common.JsonDefaults.CaseInsensitive)
             ?? throw new InvalidDataException(
-                $"Die Regeltabelle '{path}' enthaelt kein gueltiges Tabellenobjekt.");
+                $"Die Regeltabelle '{path}' enthält kein gültiges Tabellenobjekt.");
     }
 
     /// <summary>

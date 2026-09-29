@@ -102,7 +102,7 @@ public sealed class MediaConflictCenterService
         {
             return new ScanResult(
                 Array.Empty<MediaConflictCase>(),
-                "Der Medien-Konfliktordner konnte nicht sicher geprueft werden: " + ex.Message);
+                "Der Medien-Konfliktordner konnte nicht sicher geprüft werden: " + ex.Message);
         }
 
         if (!Directory.Exists(holdingsRoot))
@@ -315,7 +315,7 @@ public sealed class MediaConflictCenterService
         {
             return new ResolveResult(
                 false,
-                sourceError ?? "Videoquelle konnte nicht sicher geprueft werden.",
+                sourceError ?? "Videoquelle konnte nicht sicher geprüft werden.",
                 selectedVideoPath,
                 null,
                 null,
@@ -374,7 +374,7 @@ public sealed class MediaConflictCenterService
                 {
                     guard.EnsureSafeFileTarget(destVideoPath);
                     if (!TryInspectExistingVideoSource(selectedVideoPath, out var recheckedSourcePath, out sourceError))
-                        throw new IOException(sourceError ?? "Videoquelle konnte vor dem Kopieren nicht sicher geprueft werden.");
+                        throw new IOException(sourceError ?? "Videoquelle konnte vor dem Kopieren nicht sicher geprüft werden.");
                     File.Copy(recheckedSourcePath, destVideoPath, overwrite: false);
                 }
             }
@@ -403,7 +403,7 @@ public sealed class MediaConflictCenterService
 
             return new ResolveResult(
                 true,
-                "Konflikt aufgeloest.",
+                "Konflikt aufgelöst.",
                 selectedVideoPath,
                 destVideoPath,
                 updatedHolding,

@@ -84,7 +84,7 @@ public sealed class QuickScanService : IQuickScanService
             // U3: ffmpeg-Haenger — den Teilscan ehrlich als unvollstaendig kennzeichnen
             // (Fehlertext gesetzt) statt ihn wie einen vollstaendigen Scan aussehen zu lassen.
             return new QuickScanResult(segments, duration, done,
-                "Frame-Extraktion haengt (ffmpeg) — Schnellscan unvollstaendig.");
+                "Frame-Extraktion hängt (ffmpeg) — Schnellscan unvollständig.");
         }
 
         return new QuickScanResult(segments, duration, done, null);

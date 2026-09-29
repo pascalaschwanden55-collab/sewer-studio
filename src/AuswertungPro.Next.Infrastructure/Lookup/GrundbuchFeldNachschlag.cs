@@ -58,7 +58,7 @@ public sealed class GrundbuchFeldNachschlag : IFeldWertNachschlag
                 // die Drosselung des Kantons.
                 return new FeldNachschlagErgebnis.NichtGefunden(
                     "Der Schacht steht nicht mit einer Lage im Abwasserkataster. "
-                    + "Ohne Lage laesst sich die Parzelle nicht bestimmen.");
+                    + "Ohne Lage lässt sich die Parzelle nicht bestimmen.");
             }
 
             var linie = PunktAlsKurzeLinie.Baue(lage.Value.Ost, lage.Value.Nord);
@@ -82,7 +82,7 @@ public sealed class GrundbuchFeldNachschlag : IFeldWertNachschlag
                 var nummern = string.Join(", ", parzellen.Select(p => p.Number));
                 return new FeldNachschlagErgebnis.NichtGefunden(
                     $"Der Schacht liegt auf einer Parzellengrenze ({nummern}). "
-                    + "Welche Parzelle gemeint ist, laesst sich von hier aus nicht "
+                    + "Welche Parzelle gemeint ist, lässt sich von hier aus nicht "
                     + "entscheiden.");
             }
 
@@ -92,7 +92,7 @@ public sealed class GrundbuchFeldNachschlag : IFeldWertNachschlag
             if (eintrag is null || eintrag.NoOwnerRegistered)
             {
                 return new FeldNachschlagErgebnis.NichtGefunden(
-                    $"Fuer Parzelle {parzelle.Number} ist kein Eigentuemer eingetragen.");
+                    $"Für Parzelle {parzelle.Number} ist kein Eigentuemer eingetragen.");
             }
 
             _log?.Invoke("Grundbuchabfrage erfolgreich.");

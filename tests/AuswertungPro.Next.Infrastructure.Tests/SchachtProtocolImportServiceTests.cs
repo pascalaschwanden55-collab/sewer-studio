@@ -153,7 +153,7 @@ public sealed class SchachtProtocolImportServiceTests
                 null));
 
         Assert.False(result.IstSchachtprotokoll);
-        Assert.Contains("Texterkennung wurde ausgefuehrt", result.Lesehinweis, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Texterkennung wurde ausgeführt", result.Lesehinweis, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -327,7 +327,7 @@ public sealed class SchachtProtocolImportServiceTests
             var error = Assert.Throws<IOException>(() =>
                 service.DistributePdfWithResult(projectFolder, "74467", source));
 
-            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(Directory.EnumerateFileSystemEntries(foreignFolder));
             Assert.Equal("KUNDENORIGINAL", File.ReadAllText(source));
         }

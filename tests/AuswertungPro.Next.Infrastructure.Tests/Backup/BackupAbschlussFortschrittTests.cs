@@ -35,7 +35,7 @@ public sealed class BackupAbschlussFortschrittTests : IDisposable
         Assert.True(ergebnis.Success, ergebnis.Error);
 
         var letzteKopie = meldungen.FindLastIndex(m => m.Component == "Extras");
-        var erstePruefung = meldungen.FindIndex(m => m.Component == "Pruefe Sicherung");
+        var erstePruefung = meldungen.FindIndex(m => m.Component == "Prüfe Sicherung");
         Assert.True(letzteKopie >= 0, "Keine Extras-Meldung gefunden.");
         Assert.True(erstePruefung > letzteKopie, "Keine Pruefmeldung nach den Extras.");
 

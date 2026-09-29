@@ -18,7 +18,7 @@ internal static class BackupSourcePathGuard
         if ((attributes & FileAttributes.ReparsePoint) != 0)
         {
             throw new InvalidDataException(
-                $"Verknuepfung als Sicherungs-Quellroot wurde blockiert: {sourceRoot}");
+                $"Verknüpfung als Sicherungs-Quellroot wurde blockiert: {sourceRoot}");
         }
 
         if ((attributes & FileAttributes.Directory) == 0)
@@ -31,7 +31,7 @@ internal static class BackupSourcePathGuard
         if ((attributes & FileAttributes.ReparsePoint) != 0)
         {
             throw new InvalidDataException(
-                $"Verknuepfung als Sicherungs-Quelldatei wurde blockiert: {sourcePath}");
+                $"Verknüpfung als Sicherungs-Quelldatei wurde blockiert: {sourcePath}");
         }
 
         if ((attributes & FileAttributes.Directory) != 0)
@@ -57,7 +57,7 @@ internal static class BackupSourcePathGuard
                                    or NotSupportedException)
         {
             throw new InvalidDataException(
-                $"Sicherungsquelle konnte nicht sicher geprueft werden: {path}",
+                $"Sicherungsquelle konnte nicht sicher geprüft werden: {path}",
                 ex);
         }
     }

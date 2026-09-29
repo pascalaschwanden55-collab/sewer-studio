@@ -153,7 +153,7 @@ public sealed class BackupEinzelfehlerTests : IDisposable
 
         Assert.True(ergebnis.Success, ergebnis.Error);
         var pruefphase = meldungen
-            .Where(m => m.Component.Contains("Pruefe", StringComparison.OrdinalIgnoreCase))
+            .Where(m => m.Component.Contains("Prüfe", StringComparison.OrdinalIgnoreCase))
             .ToList();
         Assert.NotEmpty(pruefphase);
         Assert.Contains(pruefphase, m => m.BytesDone < m.BytesTotal);

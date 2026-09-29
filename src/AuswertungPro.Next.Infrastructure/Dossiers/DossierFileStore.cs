@@ -155,7 +155,7 @@ public sealed class DossierFileStore : IDossierStore
 
             throw new InvalidOperationException(
                 "Die Dossier-Datei ist nicht lesbar und es gibt kein brauchbares Backup. "
-                + $"Eine Kopie liegt unter '{badPath}'. Es wurde nichts ueberschrieben.",
+                + $"Eine Kopie liegt unter '{badPath}'. Es wurde nichts überschrieben.",
                 ex);
         }
     }
@@ -421,7 +421,7 @@ public sealed class DossierFileStore : IDossierStore
                     if (!entries.MoveNext())
                         Directory.Delete(safeFolder, recursive: false);
                 },
-                $"Dossiers: leeren neuen Ordner '{folder}' zuruecknehmen");
+                $"Dossiers: leeren neuen Ordner '{folder}' zurücknehmen");
         }
     }
 
@@ -451,7 +451,7 @@ public sealed class DossierFileStore : IDossierStore
                     if (File.Exists(safeTemporary))
                         File.Delete(safeTemporary);
                 },
-                "Dossiers: temporaere Standarddatei entfernen");
+                "Dossiers: temporäre Standarddatei entfernen");
         }
     }
 
@@ -495,7 +495,7 @@ public sealed class DossierFileStore : IDossierStore
             .ConfigureAwait(false);
 
         if (document is null)
-            throw new InvalidOperationException($"'{path}' enthaelt kein gueltiges Dossier-Dokument.");
+            throw new InvalidOperationException($"'{path}' enthält kein gültiges Dossier-Dokument.");
 
         // Ein neueres Format als bekannt: nicht raten, sondern melden. Ein
         // stiller Weiterlauf wuerde beim naechsten Speichern Felder verlieren.

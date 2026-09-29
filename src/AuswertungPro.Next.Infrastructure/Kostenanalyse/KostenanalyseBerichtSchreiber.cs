@@ -34,7 +34,7 @@ public static class KostenanalyseBerichtSchreiber
         var pfad = Path.Combine(ordner, name);
 
         if (File.Exists(pfad))
-            throw new IOException($"Bericht existiert bereits und wird nicht ueberschrieben: {pfad}");
+            throw new IOException($"Bericht existiert bereits und wird nicht überschrieben: {pfad}");
 
         var dokument = new
         {
@@ -62,7 +62,7 @@ public static class KostenanalyseBerichtSchreiber
             },
             gegenprobeStandardpaket = new
             {
-                hinweis = "Ohne jede Aehnlichkeitssuche - immer dasselbe Paket.",
+                hinweis = "Ohne jede Ähnlichkeitssuche - immer dasselbe Paket.",
                 richtig = ergebnis.BasisRichtig,
                 zuviel = ergebnis.BasisZuviel,
                 fehlend = ergebnis.BasisFehlend,

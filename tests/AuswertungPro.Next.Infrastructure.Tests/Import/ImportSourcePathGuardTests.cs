@@ -125,7 +125,7 @@ public sealed class ImportSourcePathGuardTests : IDisposable
         Assert.False(ok);
         Assert.Empty(safePath);
         Assert.False(exists);
-        Assert.StartsWith("Quellenpfad konnte nicht sicher geprueft werden:", error, StringComparison.Ordinal);
+        Assert.StartsWith("Quellenpfad konnte nicht sicher geprüft werden:", error, StringComparison.Ordinal);
     }
 
     [JunctionFact]
@@ -143,7 +143,7 @@ public sealed class ImportSourcePathGuardTests : IDisposable
         Assert.False(ok);
         Assert.Empty(safePath);
         Assert.False(exists);
-        Assert.Contains("Verknuepfung", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Verknüpfung", error, StringComparison.OrdinalIgnoreCase);
     }
 
     public void Dispose()

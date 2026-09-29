@@ -14,7 +14,7 @@ public static class RepoRootLocator
     public static void Use(IRepositoryRootLocator locator) =>
         throw new NotSupportedException(
             "Die globale Projektordnersuche kann nicht mehr ausgetauscht werden. " +
-            "IRepositoryRootLocator bitte per Konstruktor uebergeben.");
+            "IRepositoryRootLocator bitte per Konstruktor übergeben.");
 
     public static string? Locate()
         => Current.Locate(AppContext.BaseDirectory);

@@ -56,7 +56,7 @@ public sealed class ImportedFileLedgerService : IImportedFileLedger
 
         if (!Directory.Exists(root))
         {
-            messages.Add($"Projektordner nicht gefunden, keine Ruecknahme: {root}");
+            messages.Add($"Projektordner nicht gefunden, keine Rücknahme: {root}");
             return new ImportRollbackResult(false, 0, 0, messages);
         }
 
@@ -71,8 +71,8 @@ public sealed class ImportedFileLedgerService : IImportedFileLedger
         if (verschwunden.Count > 0)
         {
             messages.Add(
-                "Ruecknahme abgebrochen: Dateien, die vor dem Import vorhanden waren, fehlen jetzt "
-                + $"(z.B. {string.Join(", ", verschwunden)}). Es wurde nichts geloescht.");
+                "Rücknahme abgebrochen: Dateien, die vor dem Import vorhanden waren, fehlen jetzt "
+                + $"(z.B. {string.Join(", ", verschwunden)}). Es wurde nichts gelöscht.");
             return new ImportRollbackResult(false, 0, 0, messages);
         }
 
@@ -92,14 +92,14 @@ public sealed class ImportedFileLedgerService : IImportedFileLedger
                 if (!IsInside(root, vollPfad))
                 {
                     behalten++;
-                    messages.Add($"Nicht zurueckgenommen (ausserhalb des Projekts): {relative}");
+                    messages.Add($"Nicht zurückgenommen (ausserhalb des Projekts): {relative}");
                     continue;
                 }
 
                 if (ReparsePointGuard.IsReparsePoint(vollPfad))
                 {
                     behalten++;
-                    messages.Add($"Nicht zurueckgenommen (Verknuepfung): {relative}");
+                    messages.Add($"Nicht zurückgenommen (Verknüpfung): {relative}");
                     continue;
                 }
 
@@ -109,7 +109,7 @@ public sealed class ImportedFileLedgerService : IImportedFileLedger
             catch (Exception ex)
             {
                 behalten++;
-                messages.Add($"Nicht zurueckgenommen ({ex.GetType().Name}): {relative}");
+                messages.Add($"Nicht zurückgenommen ({ex.GetType().Name}): {relative}");
             }
         }
 
@@ -117,7 +117,7 @@ public sealed class ImportedFileLedgerService : IImportedFileLedger
 
         messages.Insert(
             0,
-            $"Importdateien zurueckgenommen: {geloescht} entfernt, {behalten} belassen.");
+            $"Importdateien zurückgenommen: {geloescht} entfernt, {behalten} belassen.");
         return new ImportRollbackResult(true, geloescht, behalten, messages);
     }
 

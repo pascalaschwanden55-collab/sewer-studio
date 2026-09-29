@@ -16,7 +16,7 @@ public static class PipelineTraceWriter
     public static void Use(IPipelineTraceWriter writer) =>
         throw new NotSupportedException(
             "Der globale Pipeline-Trace-Schreiber kann nicht mehr ausgetauscht werden. " +
-            "IPipelineTraceWriter bitte per Konstruktor uebergeben.");
+            "IPipelineTraceWriter bitte per Konstruktor übergeben.");
 
     public static async Task WriteAsync(PipelineFrameTrace entry)
     {

@@ -366,7 +366,7 @@ public sealed class ImportFileStagingServiceTests
             var error = Assert.Throws<IOException>(
                 () => new ImportFileStagingService().Begin(linkedProjectFile));
 
-            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
             Assert.False(Directory.Exists(Path.Combine(
                 externalProject,
                 "Projektdateien",
@@ -398,7 +398,7 @@ public sealed class ImportFileStagingServiceTests
                 source,
                 Path.Combine(temp.ProjectRoot, "Imports", "PDF")));
 
-            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(Directory.EnumerateFileSystemEntries(externalProject));
         }
         finally
@@ -439,7 +439,7 @@ public sealed class ImportFileStagingServiceTests
         {
             var error = Assert.Throws<IOException>(session.Publish);
 
-            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal("fremder-inhalt", File.ReadAllText(externalStage));
             Assert.False(File.Exists(Path.Combine(
                 externalProject,
@@ -482,7 +482,7 @@ public sealed class ImportFileStagingServiceTests
 
             Assert.Contains(
                 error.InnerExceptions,
-                inner => inner.Message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+                inner => inner.Message.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase));
             Assert.Equal("fremd", File.ReadAllText(externalStage));
         }
         finally

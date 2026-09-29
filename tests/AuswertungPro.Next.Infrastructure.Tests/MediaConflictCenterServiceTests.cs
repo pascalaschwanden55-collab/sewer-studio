@@ -51,7 +51,7 @@ public sealed class MediaConflictCenterServiceTests
 
             Assert.False(result.Success);
             Assert.Empty(result.Cases);
-            Assert.Contains("nicht sicher geprueft", result.Error, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("nicht sicher geprüft", result.Error, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -306,7 +306,7 @@ public sealed class MediaConflictCenterServiceTests
 
             Assert.Null(learnedSource);
             Assert.False(result.Success);
-            Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.True(File.Exists(infoPath));
             Assert.False(project.Dirty);
             Assert.Equal("kunden-video", File.ReadAllText(externalVideo));

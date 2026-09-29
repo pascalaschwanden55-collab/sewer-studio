@@ -56,7 +56,7 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
 
             // Eine verknuepfte Programmwurzel wuerde unbemerkt woanders lesen.
             if (ReparsePointGuard.IsReparsePoint(programRoot))
-                return Failed($"Programmordner ist eine Verknuepfung: {programRoot}");
+                return Failed($"Programmordner ist eine Verknüpfung: {programRoot}");
 
             var destinationPath = Path.GetFullPath(request.ZipPath);
             var destinationDirectory = Path.GetDirectoryName(destinationPath);
@@ -84,7 +84,7 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
                     false,
                     "Unersetzliche Ordner konnten nicht gelesen werden: "
                     + string.Join(", ", missingRequired)
-                    + ". Die Sicherung waere unvollstaendig und wurde nicht geschrieben.",
+                    + ". Die Sicherung wäre unvollständig und wurde nicht geschrieben.",
                     0, 0, scan.SkippedReparsePoints, scan.UnreadableDirectories);
             }
 
@@ -123,7 +123,7 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
 
             if (request.VerifyArchive)
             {
-                progress?.Report("Sicherung wird geprueft...");
+                progress?.Report("Sicherung wird geprüft...");
                 var verifyError = VerifyArchive(temporaryArchivePath, fileCount, ct);
                 if (verifyError is not null)
                     return new ProgramSnapshotResult(
@@ -166,7 +166,7 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
                         if (File.Exists(temporaryArchivePath))
                             File.Delete(temporaryArchivePath);
                     },
-                    $"Programm-Momentaufnahme: Temp-Datei {temporaryArchivePath} loeschen");
+                    $"Programm-Momentaufnahme: Temp-Datei {temporaryArchivePath} löschen");
             }
         }
     }
@@ -338,19 +338,19 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
                 crc ^= 0xFFFFFFFFu;
 
                 if (gelesen != entry.Length)
-                    return $"Nachpruefung fehlgeschlagen: {entry.FullName} ist {gelesen} Bytes gross, "
+                    return $"Nachprüfung fehlgeschlagen: {entry.FullName} ist {gelesen} Bytes gross, "
                            + $"erwartet {entry.Length}.";
 
                 if (crc != entry.Crc32)
-                    return $"Nachpruefung fehlgeschlagen: Pruefsumme von {entry.FullName} stimmt nicht "
-                           + "(Daten in der Sicherung sind beschaedigt).";
+                    return $"Nachprüfung fehlgeschlagen: Prüfsumme von {entry.FullName} stimmt nicht "
+                           + "(Daten in der Sicherung sind beschädigt).";
             }
 
             if (!manifestFound)
-                return "Nachpruefung fehlgeschlagen: Das Manifest fehlt in der Sicherung.";
+                return "Nachprüfung fehlgeschlagen: Das Manifest fehlt in der Sicherung.";
 
             if (dataEntries != expectedFileCount)
-                return $"Nachpruefung fehlgeschlagen: {dataEntries} Eintraege in der Sicherung, "
+                return $"Nachprüfung fehlgeschlagen: {dataEntries} Einträge in der Sicherung, "
                        + $"erwartet {expectedFileCount}.";
 
             return null;
@@ -361,7 +361,7 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
         }
         catch (Exception ex)
         {
-            return $"Nachpruefung fehlgeschlagen: {ex.GetType().Name}: {ex.Message}";
+            return $"Nachprüfung fehlgeschlagen: {ex.GetType().Name}: {ex.Message}";
         }
     }
 
@@ -448,8 +448,8 @@ public sealed class ProgramSnapshotService : IProgramSnapshotService
                 + "Arbeitsdateien sind ebenfalls enthalten; der Commit identifiziert den Inhalt "
                 + "dieser Sicherung deshalb nicht eindeutig.",
             HinweisPruefsumme =
-                "Die SHA-256-Pruefsumme der Sicherung selbst liegt als Nebendatei <name>.zip.sha256 "
-                + "daneben - im Manifest wuerde sie sich selbst enthalten."
+                "Die SHA-256-Prüfsumme der Sicherung selbst liegt als Nebendatei <name>.zip.sha256 "
+                + "daneben - im Manifest würde sie sich selbst enthalten."
         };
 
         var entry = zip.CreateEntry("_manifest.json", CompressionLevel.Optimal);

@@ -67,9 +67,9 @@ public sealed class IbakFdbConnectionOptionsService : IIbakFdbConnectionOptions
             && (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(password)))
         {
             throw new InvalidOperationException(
-                "Firebird-Serverzugriff benoetigt ausdrueckliche Zugangsdaten. " +
+                "Firebird-Serverzugriff benötigt ausdrückliche Zugangsdaten. " +
                 $"Setze {IbakFdbConnectionOptions.UserEnvVar} und {IbakFdbConnectionOptions.PasswordEnvVar}; " +
-                "die lokalen Embedded-Standardwerte werden fuer Serverpfade nicht verwendet.");
+                "die lokalen Embedded-Standardwerte werden für Serverpfade nicht verwendet.");
         }
 
         return (
@@ -94,8 +94,8 @@ public static class IbakFdbConnectionOptions
     [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IIbakFdbConnectionOptions options) =>
         throw new NotSupportedException(
-            "Die globalen IBAK-Verbindungsoptionen koennen nicht mehr ausgetauscht werden. " +
-            "IIbakFdbConnectionOptions bitte per Konstruktor uebergeben.");
+            "Die globalen IBAK-Verbindungsoptionen können nicht mehr ausgetauscht werden. " +
+            "IIbakFdbConnectionOptions bitte per Konstruktor übergeben.");
 
     public static FbConnectionStringBuilder CreateEmbedded(
         string databasePath,

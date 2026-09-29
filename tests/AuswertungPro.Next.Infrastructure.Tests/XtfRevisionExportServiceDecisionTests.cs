@@ -29,7 +29,7 @@ public sealed class XtfRevisionExportServiceDecisionTests
                     Quelldateien: [quelle]));
 
             Assert.False(ergebnis.Ok);
-            Assert.Contains("offene Faelle", ergebnis.Fehler, StringComparison.Ordinal);
+            Assert.Contains("offene Fälle", ergebnis.Fehler, StringComparison.Ordinal);
             Assert.Contains("offen:", ergebnis.Bericht, StringComparison.Ordinal);
             Assert.Empty(ergebnis.Dateien);
             Assert.False(Directory.Exists(Path.Combine(temp, "Ausgabe")));

@@ -105,7 +105,7 @@ public sealed class ProtocolTrainingFileStore : IProtocolTrainingStore
             var json = File.ReadAllText(path);
             var data = JsonSerializer.Deserialize<ProtocolTrainingData>(json, JsonOptions)
                        ?? throw new JsonException(
-                           "Protokoll-Trainingsdaten muessen als JSON-Objekt gespeichert sein.");
+                           "Protokoll-Trainingsdaten müssen als JSON-Objekt gespeichert sein.");
             data.Samples ??= new List<ProtocolTrainingSampleData>();
             return data;
         }
@@ -117,7 +117,7 @@ public sealed class ProtocolTrainingFileStore : IProtocolTrainingStore
             // unlesbar = Fehler.
             throw new InvalidOperationException(
                 $"Die Protokoll-Trainingsdaten sind nicht lesbar ({path}). Der "
-                + $"vorhandene Bestand wurde NICHT veraendert — es wird nichts "
+                + $"vorhandene Bestand wurde NICHT verändert — es wird nichts "
                 + $"gespeichert. {ex.GetType().Name}: {ex.Message}", ex);
         }
     }

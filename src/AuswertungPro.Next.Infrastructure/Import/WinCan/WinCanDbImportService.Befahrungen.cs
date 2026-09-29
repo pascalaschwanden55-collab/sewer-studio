@@ -43,7 +43,7 @@ public sealed partial class WinCanDbImportService
                 var rawCode = obs.OpCode ?? "";
                 var normalizedCode = VsaCodeValidator.TryNormalizeKnownCode(rawCode) ?? "";
                 if (normalizedCode.Length == 0 && !string.IsNullOrWhiteSpace(rawCode))
-                    messages.Add($"WinCan: Code '{rawCode}' unbekannt/ungueltig - leer uebernommen (Haltung {sectionKey}).");
+                    messages.Add($"WinCan: Code '{rawCode}' unbekannt/ungültig - leer übernommen (Haltung {sectionKey}).");
 
                 var entry = new ProtocolEntry
                 {
@@ -228,7 +228,7 @@ public sealed partial class WinCanDbImportService
         {
             offen++;
             messages.Add(
-                $"Video {sectionKey}: Rolle ungeklaert fuer {Path.GetFileName(offenesVideo.Pfad)} "
+                $"Video {sectionKey}: Rolle ungeklärt für {Path.GetFileName(offenesVideo.Pfad)} "
                 + $"— {offenesVideo.Grund}");
         }
 

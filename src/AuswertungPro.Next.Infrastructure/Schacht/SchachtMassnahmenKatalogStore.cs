@@ -54,7 +54,7 @@ public sealed class SchachtMassnahmenKatalogStore : ISchachtMassnahmenKatalogSto
             var list = JsonSerializer.Deserialize<List<SchachtMassnahmeKatalogEintrag>>(json, JsonDefaults.CaseInsensitive);
             if (list is null)
             {
-                loadError = "Die Massnahmenliste enthaelt keine gueltige Liste.";
+                loadError = "Die Massnahmenliste enthält keine gültige Liste.";
                 return Defaults();
             }
 
@@ -82,7 +82,7 @@ public sealed class SchachtMassnahmenKatalogStore : ISchachtMassnahmenKatalogSto
         if (loadError is not null)
         {
             error = "Die vorhandene Massnahmenliste kann nicht gelesen werden und wird " +
-                    $"deshalb nicht ueberschrieben: {loadError}";
+                    $"deshalb nicht überschrieben: {loadError}";
             return false;
         }
 

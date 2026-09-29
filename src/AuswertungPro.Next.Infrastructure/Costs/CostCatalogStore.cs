@@ -140,7 +140,7 @@ public sealed class CostCatalogStore : ICostCatalogStore
         }
         catch (Exception ex)
         {
-            error = $"Kostenkatalog ist ungueltig; Speichern ist gesperrt: {ex.Message}";
+            error = $"Kostenkatalog ist ungültig; Speichern ist gesperrt: {ex.Message}";
             return false;
         }
 
@@ -344,7 +344,7 @@ public sealed class CostCatalogStore : ICostCatalogStore
         }
         catch (Exception ex)
         {
-            loadError = $"{Path.GetFileName(path)} ist beschaedigt oder nicht lesbar: {ex.Message}";
+            loadError = $"{Path.GetFileName(path)} ist beschädigt oder nicht lesbar: {ex.Message}";
             if (rememberUserOverrideError)
                 LastUserOverrideLoadError = ex.Message;
             return new CostCatalog();
@@ -389,15 +389,15 @@ public sealed class CostCatalogStore : ICostCatalogStore
                        ?? throw new InvalidDataException($"Kostenposition {index + 1} darf nicht null sein.");
             var key = NormalizeKey(item.Key, item.Name);
             if (string.IsNullOrWhiteSpace(key))
-                throw new InvalidDataException($"Kostenposition {index + 1} hat weder Schluessel noch Name.");
+                throw new InvalidDataException($"Kostenposition {index + 1} hat weder Schlüssel noch Name.");
             if (!keys.Add(key))
-                throw new InvalidDataException($"Der normalisierte Kosten-Schluessel '{key}' ist doppelt.");
+                throw new InvalidDataException($"Der normalisierte Kosten-Schlüssel '{key}' ist doppelt.");
             if (item.DnPrices is null)
-                throw new InvalidDataException($"DN-Preise der Kostenposition '{key}' duerfen nicht null sein.");
+                throw new InvalidDataException($"DN-Preise der Kostenposition '{key}' dürfen nicht null sein.");
             if (item.DnPrices.Any(price => price is null))
                 throw new InvalidDataException($"DN-Preise der Kostenposition '{key}' enthalten einen leeren Eintrag.");
             if (item.Aliases is null)
-                throw new InvalidDataException($"Aliase der Kostenposition '{key}' duerfen nicht null sein.");
+                throw new InvalidDataException($"Aliase der Kostenposition '{key}' dürfen nicht null sein.");
         }
     }
 

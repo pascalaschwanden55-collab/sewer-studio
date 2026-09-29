@@ -483,7 +483,7 @@ public sealed class HoldingFolderDistributorVideoMatchingTests
                 videoFilesCache: []);
 
             Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotFound, result.Status);
-            Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal("kundenvideo", File.ReadAllText(externalVideo));
         }
         finally

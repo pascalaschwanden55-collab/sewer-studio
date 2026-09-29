@@ -62,7 +62,7 @@ internal static class DossierAttachmentOwnershipManifest
         {
             throw new InvalidDataException(
                 "Das Beilagen-Eigentuemermanifest ist unlesbar. "
-                + "Zur Sicherheit wurden keine Beilagen veraendert.",
+                + "Zur Sicherheit wurden keine Beilagen verändert.",
                 ex);
         }
 
@@ -72,7 +72,7 @@ internal static class DossierAttachmentOwnershipManifest
         {
             throw new InvalidDataException(
                 "Das Beilagen-Eigentuemermanifest hat ein unbekanntes Format. "
-                + "Zur Sicherheit wurden keine Beilagen veraendert.");
+                + "Zur Sicherheit wurden keine Beilagen verändert.");
         }
 
         var entryNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -102,7 +102,7 @@ internal static class DossierAttachmentOwnershipManifest
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 warnings.Add(
-                    $"Automatische Beilage '{entry.FileName}' konnte nicht geprueft werden "
+                    $"Automatische Beilage '{entry.FileName}' konnte nicht geprüft werden "
                     + $"und bleibt deshalb unangetastet ({ex.Message}).");
                 unavailable[entry.FileName] = entry;
                 continue;
@@ -112,7 +112,7 @@ internal static class DossierAttachmentOwnershipManifest
             {
                 warnings.Add(
                     $"Automatische Beilage '{entry.FileName}' wurde verändert. "
-                    + "Sie gilt jetzt als manuell und wird nicht entfernt oder ueberschrieben.");
+                    + "Sie gilt jetzt als manuell und wird nicht entfernt oder überschrieben.");
                 continue;
             }
 
@@ -276,8 +276,8 @@ internal static class DossierAttachmentOwnershipManifest
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             warnings.Add(
-                $"Automatische Beilage '{entry.FileName}' konnte fuer die Vorschau nicht "
-                + $"erneut geprueft werden und gilt deshalb als manuell ({ex.Message}).");
+                $"Automatische Beilage '{entry.FileName}' konnte für die Vorschau nicht "
+                + $"erneut geprüft werden und gilt deshalb als manuell ({ex.Message}).");
             return false;
         }
 
@@ -304,7 +304,7 @@ internal static class DossierAttachmentOwnershipManifest
                 || string.IsNullOrWhiteSpace(attachment.FileName))
             {
                 throw new InvalidDataException(
-                    "Eine automatische Beilage hat keinen gueltigen Zielpfad.");
+                    "Eine automatische Beilage hat keinen gültigen Zielpfad.");
             }
 
             var path = ResolveDirectChild(folder, attachment.FileName, guard);
@@ -389,7 +389,7 @@ internal static class DossierAttachmentOwnershipManifest
             names.Add(entry.FileName);
             warnings.Add(
                 $"Die bisherige automatische Beilage '{entry.FileName}' bleibt erhalten, "
-                + "weil das weiterhin ausgewaehlte Protokoll momentan nicht neu gelesen "
+                + "weil das weiterhin ausgewählte Protokoll momentan nicht neu gelesen "
                 + "werden konnte.");
         }
     }
@@ -429,8 +429,8 @@ internal static class DossierAttachmentOwnershipManifest
             {
                 var restoredAt = RestoreUnexpectedMove(quarantine, path, guard);
                 warnings.Add(
-                    $"Automatische Beilage '{entry.FileName}' wurde waehrend des "
-                    + "Sammelns veraendert. Der fremde Inhalt blieb unter "
+                    $"Automatische Beilage '{entry.FileName}' wurde während des "
+                    + "Sammelns verändert. Der fremde Inhalt blieb unter "
                     + $"'{Path.GetFileName(restoredAt)}' erhalten.");
                 return VerifiedMoveResult.Changed;
             }
@@ -453,7 +453,7 @@ internal static class DossierAttachmentOwnershipManifest
 
             warnings.Add(
                 $"Automatische Beilage '{entry.FileName}' konnte vor dem Entfernen nicht "
-                + $"geprueft werden und bleibt unangetastet ({ex.Message}).");
+                + $"geprüft werden und bleibt unangetastet ({ex.Message}).");
             return VerifiedMoveResult.Unavailable;
         }
     }
@@ -505,7 +505,7 @@ internal static class DossierAttachmentOwnershipManifest
                 or DossierAttachmentKind.GeneratedProtocol))
         {
             throw new InvalidDataException(
-                "Das Beilagen-Eigentuemermanifest enthaelt einen ungueltigen Eintrag.");
+                "Das Beilagen-Eigentuemermanifest enthält einen ungültigen Eintrag.");
         }
 
         _ = ResolveDirectChild(folder, entry.FileName, guard);
@@ -520,7 +520,7 @@ internal static class DossierAttachmentOwnershipManifest
             || !string.Equals(Path.GetFileName(fileName), fileName, StringComparison.Ordinal))
         {
             throw new InvalidDataException(
-                "Ein Pfad im Beilagen-Eigentuemermanifest verlaesst den Beilagenordner.");
+                "Ein Pfad im Beilagen-Eigentuemermanifest verlässt den Beilagenordner.");
         }
 
         var safeFolder = guard.EnsureSafeDirectoryTarget(folder);
@@ -531,7 +531,7 @@ internal static class DossierAttachmentOwnershipManifest
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                "Ein Pfad im Beilagen-Eigentuemermanifest verlaesst den Beilagenordner.");
+                "Ein Pfad im Beilagen-Eigentuemermanifest verlässt den Beilagenordner.");
         }
 
         return path;
@@ -598,8 +598,8 @@ internal static class DossierAttachmentOwnershipManifest
                 if (!string.Equals(Hash(quarantine), sha256, StringComparison.OrdinalIgnoreCase))
                 {
                     warnings.Add(
-                        $"Die Quarantaene-Sicherung '{Path.GetFileName(quarantine)}' "
-                        + "wurde veraendert und deshalb nicht zurueckverschoben.");
+                        $"Die Quarantäne-Sicherung '{Path.GetFileName(quarantine)}' "
+                        + "wurde verändert und deshalb nicht zurückverschoben.");
                     continue;
                 }
 
@@ -607,7 +607,7 @@ internal static class DossierAttachmentOwnershipManifest
                 {
                     warnings.Add(
                         $"Die Sicherung '{Path.GetFileName(quarantine)}' blieb erhalten, "
-                        + "weil der urspruengliche Zielpfad inzwischen belegt ist.");
+                        + "weil der ursprüngliche Zielpfad inzwischen belegt ist.");
                     continue;
                 }
 
@@ -617,7 +617,7 @@ internal static class DossierAttachmentOwnershipManifest
             {
                 warnings.Add(
                     $"Die Sicherung '{Path.GetFileName(quarantine)}' konnte nicht "
-                    + $"zurueckverschoben werden ({ex.Message}).");
+                    + $"zurückverschoben werden ({ex.Message}).");
             }
         }
     }
@@ -640,8 +640,8 @@ internal static class DossierAttachmentOwnershipManifest
                 if (!string.Equals(Hash(quarantine), sha256, StringComparison.OrdinalIgnoreCase))
                 {
                     warnings.Add(
-                        $"Die Quarantaene-Datei '{Path.GetFileName(quarantine)}' wurde "
-                        + "veraendert und deshalb nicht geloescht.");
+                        $"Die Quarantäne-Datei '{Path.GetFileName(quarantine)}' wurde "
+                        + "verändert und deshalb nicht gelöscht.");
                     continue;
                 }
 

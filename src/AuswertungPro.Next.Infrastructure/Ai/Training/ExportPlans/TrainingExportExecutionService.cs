@@ -35,7 +35,7 @@ public sealed class TrainingExportExecutionService : ITrainingExportExecutionSer
         ArgumentNullException.ThrowIfNull(bundle);
         TrainingExportPlanValidator.Validate(bundle.Plan);
         if (bundle.Plan.Images.Count == 0)
-            throw new TrainingExportPlanException("Der Exportplan enthaelt keine auszugebenden Bilder.");
+            throw new TrainingExportPlanException("Der Exportplan enthält keine auszugebenden Bilder.");
 
         var health = await _sidecarClient
             .CheckHealthDetailedAsync(cancellationToken)
@@ -52,7 +52,7 @@ public sealed class TrainingExportExecutionService : ITrainingExportExecutionSer
         if (!health.IsAuthorized)
         {
             throw new TrainingExportPlanException(
-                "Sidecar ist erreichbar, aber die Anmeldung ist ungueltig. Kein automatischer Sicherheits-Bypass.");
+                "Sidecar ist erreichbar, aber die Anmeldung ist ungültig. Kein automatischer Sicherheits-Bypass.");
         }
 
         if (health.Health is null)
@@ -68,7 +68,7 @@ public sealed class TrainingExportExecutionService : ITrainingExportExecutionSer
                 TrainingExportExecutionRoute.LocalRequestTooLarge,
                 local,
                 health.Health.Version,
-                $"Plan hat {bundle.Plan.Images.Count} Bilder; hoechstens " +
+                $"Plan hat {bundle.Plan.Images.Count} Bilder; höchstens " +
                 $"{TrainingExportSidecarRequestBuilder.MaximumImagesPerRequest} sind pro Sidecar-Request erlaubt.");
         }
 
@@ -119,7 +119,7 @@ public sealed class TrainingExportExecutionService : ITrainingExportExecutionSer
             || !string.Equals(response.PlanSha256, plan.PlanId, StringComparison.OrdinalIgnoreCase))
         {
             throw new TrainingExportPlanException(
-                "Sidecar-Bestaetigung gehoert nicht zum aktuellen Exportplan.");
+                "Sidecar-Bestätigung gehört nicht zum aktuellen Exportplan.");
         }
 
         var status = response.Status switch
@@ -160,12 +160,12 @@ public sealed class TrainingExportExecutionService : ITrainingExportExecutionSer
             {
                 throw new TrainingExportPlanException(
                     "Sidecar und lokaler Export verwenden unterschiedliche Zielordner. " +
-                    "Pruefe SEWER_SIDECAR_TRAINING_EXPORT_ROOT.");
+                    "Prüfe SEWER_SIDECAR_TRAINING_EXPORT_ROOT.");
             }
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
-            throw new TrainingExportPlanException("Sidecar meldet ungueltige Exportpfade.", ex);
+            throw new TrainingExportPlanException("Sidecar meldet ungültige Exportpfade.", ex);
         }
     }
 }

@@ -37,8 +37,8 @@ public sealed class WinCanObservationAttacherTests
             entry => AssertEntry(entry, "AAA", "erster", 1.5),
             entry => AssertEntry(entry, "BBB", "zweiter", 2.75));
         Assert.NotSame(record.Protocol.Original.Entries[0], record.Protocol.Current.Entries[0]);
-        Assert.Contains("SO_T: 1 Beobachtungen ohne Inspektions-Zuordnung uebersprungen.", warnings);
-        Assert.Contains("WinCan Viewer: 1 Haltungen mit Protokolleintraegen aus SO_T.", warnings);
+        Assert.Contains("SO_T: 1 Beobachtungen ohne Inspektions-Zuordnung übersprungen.", warnings);
+        Assert.Contains("WinCan Viewer: 1 Haltungen mit Protokolleinträgen aus SO_T.", warnings);
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public sealed class WinCanObservationAttacherTests
         var entry = Assert.Single(record.Protocol!.Original.Entries);
         AssertEntry(entry, "BAB", "Riss", 3.25);
         Assert.Equal("Import (WinCan Viewer XML)", record.Protocol.Original.Comment);
-        Assert.Contains("WinCan Viewer XML: 1 Haltungen mit Protokolleintraegen aus SO_T.", warnings);
+        Assert.Contains("WinCan Viewer XML: 1 Haltungen mit Protokolleinträgen aus SO_T.", warnings);
     }
 
     [Fact]

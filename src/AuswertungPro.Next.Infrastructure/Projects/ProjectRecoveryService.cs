@@ -100,13 +100,13 @@ public sealed class ProjectRecoveryService : IProjectRecoveryService
         ProjectRecoveryResult recovery,
         IProjectRepository repository)
     {
-        var backupPath = recovery.RecoveredFromPath ?? "(Sicherungspfad nicht verfuegbar)";
+        var backupPath = recovery.RecoveredFromPath ?? "(Sicherungspfad nicht verfügbar)";
         var quarantinePath = recovery.QuarantinedPath;
 
         if (recovery.Project is null)
         {
             return CreateResult(
-                "Die gepruefte Projektsicherung ist nicht mehr verfuegbar. Stellen Sie die " +
+                "Die geprüfte Projektsicherung ist nicht mehr verfügbar. Stellen Sie die " +
                 $"Sicherung manuell wieder her: {backupPath}",
                 projectFolderModified: !string.IsNullOrWhiteSpace(quarantinePath));
         }
@@ -116,7 +116,7 @@ public sealed class ProjectRecoveryService : IProjectRecoveryService
         {
             return CreateResult(
                 "Der Projektordner konnte nicht sicher bestimmt werden. Stellen Sie die " +
-                $"gueltige Sicherung manuell wieder her: {backupPath}",
+                $"gültige Sicherung manuell wieder her: {backupPath}",
                 projectFolderModified: !string.IsNullOrWhiteSpace(quarantinePath));
         }
 
@@ -137,7 +137,7 @@ public sealed class ProjectRecoveryService : IProjectRecoveryService
         catch (Exception ex)
         {
             return CreateResult(
-                "Die gueltige Projektdatei konnte wegen eines unsicheren Projektpfads " +
+                "Die gültige Projektdatei konnte wegen eines unsicheren Projektpfads " +
                 $"nicht automatisch wiederhergestellt werden ({ex.Message}). Stellen Sie " +
                 $"die Sicherung manuell wieder her: {backupPath}",
                 projectFolderModified: !string.IsNullOrWhiteSpace(quarantinePath));
@@ -146,8 +146,8 @@ public sealed class ProjectRecoveryService : IProjectRecoveryService
         if (string.IsNullOrWhiteSpace(quarantinePath) || !File.Exists(quarantinePath))
         {
             return CreateResult(
-                "Die gueltige Projektdatei konnte nicht automatisch wiederhergestellt werden, " +
-                "weil die Quarantaene der beschaedigten Datei nicht sicher bestaetigt werden " +
+                "Die gültige Projektdatei konnte nicht automatisch wiederhergestellt werden, " +
+                "weil die Quarantäne der beschädigten Datei nicht sicher bestätigt werden " +
                 $"konnte. Stellen Sie die Sicherung manuell wieder her: {backupPath}",
                 projectFolderModified: !string.IsNullOrWhiteSpace(quarantinePath));
         }
@@ -158,7 +158,7 @@ public sealed class ProjectRecoveryService : IProjectRecoveryService
         {
             return CreateResult(
                 $"Unter \"{projectFilePath}\" ist inzwischen wieder eine Datei erschienen; " +
-                "sie wurde nicht ueberschrieben. Stellen Sie die gueltige Sicherung manuell " +
+                "sie wurde nicht überschrieben. Stellen Sie die gültige Sicherung manuell " +
                 $"wieder her: {backupPath}");
         }
 
@@ -181,7 +181,7 @@ public sealed class ProjectRecoveryService : IProjectRecoveryService
             {
                 return CreateResult(
                     $"Unter \"{projectFilePath}\" ist inzwischen wieder eine Datei erschienen; " +
-                    "sie wurde nicht ueberschrieben. Stellen Sie die gueltige Sicherung manuell " +
+                    "sie wurde nicht überschrieben. Stellen Sie die gültige Sicherung manuell " +
                     $"wieder her: {backupPath}");
             }
 
@@ -189,7 +189,7 @@ public sealed class ProjectRecoveryService : IProjectRecoveryService
             if (!save.Ok)
             {
                 return CreateResult(
-                    "Die gueltige Projektdatei konnte nicht automatisch wiederhergestellt " +
+                    "Die gültige Projektdatei konnte nicht automatisch wiederhergestellt " +
                     $"werden ({save.ErrorMessage}). Stellen Sie die Sicherung manuell wieder " +
                     $"her: {backupPath}");
             }
@@ -204,23 +204,23 @@ public sealed class ProjectRecoveryService : IProjectRecoveryService
             if (!verification.Ok || verification.Value is null)
             {
                 return CreateResult(
-                    "Die automatisch bereitgestellte Projektdatei konnte nicht gueltig " +
-                    $"nachgeprueft werden ({verification.ErrorMessage}). Stellen Sie die " +
+                    "Die automatisch bereitgestellte Projektdatei konnte nicht gültig " +
+                    $"nachgeprüft werden ({verification.ErrorMessage}). Stellen Sie die " +
                     $"Sicherung manuell wieder her: {backupPath}");
             }
 
             return CreateResult(
-                $"Die gepruefte Sicherung wurde wieder unter \"{projectFilePath}\" " +
-                $"bereitgestellt. Die beschaedigte Datei bleibt unter \"{quarantinePath}\" " +
-                "fuer die Fehlersuche erhalten.");
+                $"Die geprüfte Sicherung wurde wieder unter \"{projectFilePath}\" " +
+                $"bereitgestellt. Die beschädigte Datei bleibt unter \"{quarantinePath}\" " +
+                "für die Fehlersuche erhalten.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
             or ArgumentException or NotSupportedException or PathTooLongException)
         {
             return CreateResult(
-                "Die gueltige Projektdatei konnte nicht automatisch wiederhergestellt " +
+                "Die gültige Projektdatei konnte nicht automatisch wiederhergestellt " +
                 $"werden ({ex.Message}). Eine neu erschienene Datei wurde nicht " +
-                $"ueberschrieben. Stellen Sie die Sicherung manuell wieder her: {backupPath}");
+                $"überschrieben. Stellen Sie die Sicherung manuell wieder her: {backupPath}");
         }
         finally
         {

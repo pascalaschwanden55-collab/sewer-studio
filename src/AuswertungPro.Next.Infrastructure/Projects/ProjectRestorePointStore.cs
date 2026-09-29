@@ -22,7 +22,7 @@ public sealed class ProjectRestorePointStore : IProjectRestorePointService
             if (string.IsNullOrWhiteSpace(projectFolder))
             {
                 return ProjectRestorePointResult.Skipped(
-                    "Restore-Point uebersprungen: kein Projektordner angegeben.");
+                    "Restore-Point übersprungen: kein Projektordner angegeben.");
             }
 
             try
@@ -30,7 +30,7 @@ public sealed class ProjectRestorePointStore : IProjectRestorePointService
                 var projectFile = ProjectFileLocator.Locate(projectFolder);
                 return projectFile is null
                     ? ProjectRestorePointResult.Skipped(
-                        "Restore-Point uebersprungen: keine projekt.json gefunden (neues/leeres Projekt).")
+                        "Restore-Point übersprungen: keine projekt.json gefunden (neues/leeres Projekt).")
                     : TryCreateForProjectFileCore(projectFile);
             }
             catch (Exception ex)
@@ -54,14 +54,14 @@ public sealed class ProjectRestorePointStore : IProjectRestorePointService
         if (string.IsNullOrWhiteSpace(projectFilePath) || !File.Exists(projectFilePath))
         {
             return ProjectRestorePointResult.Skipped(
-                "Restore-Point uebersprungen: keine vorhandene projekt.json angegeben.");
+                "Restore-Point übersprungen: keine vorhandene projekt.json angegeben.");
         }
 
         var projectRoot = ProjectFileLocator.ProjectRootFromFile(projectFilePath);
         if (string.IsNullOrWhiteSpace(projectRoot))
         {
             return ProjectRestorePointResult.Skipped(
-                "Restore-Point uebersprungen: Projektordner konnte nicht bestimmt werden.");
+                "Restore-Point übersprungen: Projektordner konnte nicht bestimmt werden.");
         }
 
         try
@@ -74,7 +74,7 @@ public sealed class ProjectRestorePointStore : IProjectRestorePointService
             if (!validation.Ok || validation.Value is null)
             {
                 return ProjectRestorePointResult.Skipped(
-                    $"Restore-Point uebersprungen: projekt.json ist nicht lesbar ({validation.ErrorMessage ?? "unbekannter Fehler"}).");
+                    $"Restore-Point übersprungen: projekt.json ist nicht lesbar ({validation.ErrorMessage ?? "unbekannter Fehler"}).");
             }
 
             var restoreDir = Path.Combine(

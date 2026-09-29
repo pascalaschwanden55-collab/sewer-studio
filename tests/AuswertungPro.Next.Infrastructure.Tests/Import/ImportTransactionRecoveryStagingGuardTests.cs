@@ -54,7 +54,7 @@ public sealed class ImportTransactionRecoveryStagingGuardTests
         Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
         Assert.True(Directory.Exists(foreign));
         Assert.True(File.Exists(foreignFile));
-        Assert.Contains("nicht geloescht", result.Message!);
+        Assert.Contains("nicht gelöscht", result.Message!);
         Assert.NotNull(journal.TryRead(projectRoot));
     }
 
@@ -153,7 +153,7 @@ public sealed class ImportTransactionRecoveryStagingGuardTests
 
         Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
         Assert.True(File.Exists(foreignFile));
-        Assert.Contains("nicht geloescht", result.Message, StringComparison.Ordinal);
+        Assert.Contains("nicht gelöscht", result.Message, StringComparison.Ordinal);
         Assert.NotNull(journal.TryRead(projectDir.Path));
     }
 }

@@ -37,7 +37,7 @@ public sealed class ProjectWritePathGuardTests
 
             var error = Assert.Throws<IOException>(() => guard.EnsureSafeFileTarget(target));
 
-            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(Directory.EnumerateFiles(external, "*", SearchOption.AllDirectories));
         }
         finally

@@ -67,7 +67,7 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
         {
             return new XtfNeuExportResult(
                 false, bericht,
-                request.NurAenderungen ? "Keine lieferbaren Handaenderungen vorhanden. Leere Angaben und reine Dateipfadaenderungen werden nicht geliefert." : "Es gibt nichts zu exportieren — kein Objekt erfuellt die Pflichtangaben.",
+                request.NurAenderungen ? "Keine lieferbaren Handänderungen vorhanden. Leere Angaben und reine Dateipfadaenderungen werden nicht geliefert." : "Es gibt nichts zu exportieren — kein Objekt erfüllt die Pflichtangaben.",
                 null);
         }
 
@@ -87,7 +87,7 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
 
     private static string HinweisOhneZusatz(string hinweis)
     {
-        foreach (var ende in new[] { "siehe Zusatzangaben.", "vollstaendig in den Zusatzangaben." })
+        foreach (var ende in new[] { "siehe Zusatzangaben.", "vollständig in den Zusatzangaben." })
             if (hinweis.EndsWith(ende, StringComparison.Ordinal))
                 return hinweis[..^ende.Length] + "Originalwert verbleibt im Projekt.";
         return hinweis;
@@ -104,7 +104,7 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
             var gelesen = _verlaeufe.Lies();
             hinweis = gelesen.Count == 0
                 ? $"Aus \"{_verlaeufe.Quellpfad}\" konnte kein Verlauf gelesen werden."
-                : $"{gelesen.Count} Verlaeufe aus \"{_verlaeufe.Quellpfad}\".";
+                : $"{gelesen.Count} Verläufe aus \"{_verlaeufe.Quellpfad}\".";
             return gelesen;
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException
@@ -121,7 +121,7 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
     {
         var text = new StringBuilder();
         text.AppendLine($"Projekt: {projekt.Name}");
-        text.AppendLine(plan.NurAenderungen ? "Lieferart: nur Handaenderungen mit Feldauftraegen." : "Lieferart: Projektstand gemäss Exportumfang und Hinweisen.");
+        text.AppendLine(plan.NurAenderungen ? "Lieferart: nur Handänderungen mit Feldaufträgen." : "Lieferart: Projektstand gemäss Exportumfang und Hinweisen.");
         text.AppendLine();
         text.AppendLine($"Im Projekt: {projekt.Data.Count} Haltungen, {projekt.SchaechteData.Count} Schaechte.");
         text.AppendLine($"In die Datei: {plan.Haltungen} Haltungen, {plan.Schaechte} Schaechte " +
@@ -132,8 +132,8 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
 
         text.AppendLine();
         text.AppendLine("Die Objektkennungen bleiben bei jedem Export dieselben. Ein zweiter Lauf");
-        text.AppendLine("kann damit bestehende Objekte treffen, sofern die Kennungen im Ziel bestaetigt sind. Bauteile mit");
-        text.AppendLine("GEONIS-Kennung (\"Katasterkennungen ergaenzen\") tragen die Kennung des Katasters.");
+        text.AppendLine("kann damit bestehende Objekte treffen, sofern die Kennungen im Ziel bestätigt sind. Bauteile mit");
+        text.AppendLine("GEONIS-Kennung (\"Katasterkennungen ergänzen\") tragen die Kennung des Katasters.");
         if (plan.Dss) text.AppendLine("Importierte Rollen und Verknüpfungen behalten ihre Original-TIDs. Fehlende externe Organisationen nennt der Bericht. Ein tatsächlicher GEONIS-Import ist damit noch nicht geprüft.");
         else
         {
@@ -189,9 +189,9 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
         if (mitGeonis > 0)
         {
             text.AppendLine(mitGeonis == 1
-                ? "  1 Objekt traegt seine GEONIS-Kennung aus dem Kataster."
+                ? "  1 Objekt trägt seine GEONIS-Kennung aus dem Kataster."
                 : $"  {mitGeonis} Objekte tragen ihre GEONIS-Kennung aus dem Kataster.");
-            text.AppendLine("  FME muss diese Kennungen gegen die aktuelle SIA405_ID pruefen.");
+            text.AppendLine("  FME muss diese Kennungen gegen die aktuelle SIA405_ID prüfen.");
             text.AppendLine("  Unbekannte oder mehrdeutige Kennungen erlauben kein Update.");
             if (gedreht > 0)
             {
@@ -227,10 +227,10 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
                     $"  {mitObjektId} Objekte haben eine Objekt-ID und werden trotzdem geschrieben.");
             }
 
-            text.AppendLine("  Eine einzelne ID reicht nicht fuer den ganzen XTF-Objektverbund; die Datei");
-            text.AppendLine("  erhaelt deshalb eigene, gleichbleibende XTF-Kennungen.");
-            text.AppendLine("  Beim Import in einen bereits gefuellten Kataster koennen dadurch Duplikate");
-            text.AppendLine("  entstehen. Fuer eine Aktualisierung bitte \"Revidierte XTF\" verwenden.");
+            text.AppendLine("  Eine einzelne ID reicht nicht für den ganzen XTF-Objektverbund; die Datei");
+            text.AppendLine("  erhält deshalb eigene, gleichbleibende XTF-Kennungen.");
+            text.AppendLine("  Beim Import in einen bereits gefüllten Kataster können dadurch Duplikate");
+            text.AppendLine("  entstehen. Für eine Aktualisierung bitte \"Revidierte XTF\" verwenden.");
         }
 
         if (ohneEigentuemer > 0)
@@ -240,9 +240,9 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
             text.AppendLine(
                 "  In SIA405 ist der Verweis auf eine Organisation Pflicht. Der Knopf");
             text.AppendLine(
-                "  \"Leere Felder aus QGIS ergaenzen\" auf der Haltungs- und der Schachtseite");
+                "  \"Leere Felder aus QGIS ergänzen\" auf der Haltungs- und der Schachtseite");
             text.AppendLine(
-                "  fuellt ihn dort, wo der Kataster ihn kennt.");
+                "  füllt ihn dort, wo der Kataster ihn kennt.");
         }
 
         if (ohneVerlauf > 0)
@@ -253,7 +253,7 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
             text.AppendLine(
                 $"  {ohneSchacht} Haltungsenden verweisen auf Schaechte, die das Projekt nicht");
             text.AppendLine(
-                "  fuehrt. Die Haltung geht trotzdem hinaus, ihr Endpunkt bleibt nur ohne");
+                "  führt. Die Haltung geht trotzdem hinaus, ihr Endpunkt bleibt nur ohne");
             text.AppendLine("  Verbindung zum Schacht.");
         }
 

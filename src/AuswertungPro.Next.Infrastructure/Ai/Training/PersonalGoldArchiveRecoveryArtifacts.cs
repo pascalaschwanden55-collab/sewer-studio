@@ -91,7 +91,7 @@ internal sealed class PersonalGoldArchiveRecoveryArtifacts(
             || File.Exists(transaction.AuditDirectory))
         {
             throw new IOException(
-                $"Nachhol-Pruefpfad existiert bereits: {transaction.AuditDirectory}");
+                $"Nachhol-Prüfpfad existiert bereits: {transaction.AuditDirectory}");
         }
 
         PersonalGoldBrainFileService.CreateDirectorySafe(
@@ -224,7 +224,7 @@ internal sealed class PersonalGoldArchiveRecoveryArtifacts(
         if (Directory.Exists(transaction.AuditDirectory))
         {
             throw new InvalidDataException(
-                "Recovery-Pruefpfad blieb nach dem sicheren Aufraeumen bestehen.");
+                "Recovery-Prüfpfad blieb nach dem sicheren Aufräumen bestehen.");
         }
     }
 
@@ -295,7 +295,7 @@ internal sealed class PersonalGoldArchiveRecoveryArtifacts(
                 .Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                "Vorher-Datei besitzt eine falsche Pruefsumme.");
+                "Vorher-Datei besitzt eine falsche Prüfsumme.");
         }
         await WriteReplacementBytesAsync(
                 safetyRoot,
@@ -320,7 +320,7 @@ internal sealed class PersonalGoldArchiveRecoveryArtifacts(
         PersonalGoldBrainFileService.EnsureMutationPathIsSafe(safetyRoot, temporaryPath);
         if (File.Exists(temporaryPath) || Directory.Exists(temporaryPath))
             throw new InvalidDataException(
-                $"Ruecksetz-Temporaerpfad ist bereits belegt: {temporaryPath}");
+                $"Ruecksetz-Temporärpfad ist bereits belegt: {temporaryPath}");
         try
         {
             await using (var stream = new FileStream(

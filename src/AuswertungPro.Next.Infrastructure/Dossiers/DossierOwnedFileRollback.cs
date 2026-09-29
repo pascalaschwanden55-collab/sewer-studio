@@ -29,7 +29,7 @@ internal static class DossierOwnedFileRollback
         if (expectedSha256.Length != SHA256.HashSizeInBytes)
         {
             throw new ArgumentException(
-                "Der erwartete SHA-256-Wert ist ungueltig.",
+                "Der erwartete SHA-256-Wert ist ungültig.",
                 nameof(expectedSha256));
         }
 
@@ -55,7 +55,7 @@ internal static class DossierOwnedFileRollback
 
             throw new Win32Exception(
                 error,
-                "Die eigene Dossierdatei konnte fuer die sichere Ruecknahme nicht gesperrt werden.");
+                "Die eigene Dossierdatei konnte für die sichere Rücknahme nicht gesperrt werden.");
         }
 
         // Ohne Freigaben kann die Datei zwischen Pruefung und Loeschmarkierung
@@ -75,7 +75,7 @@ internal static class DossierOwnedFileRollback
         {
             throw new Win32Exception(
                 Marshal.GetLastWin32Error(),
-                "Die eigene Dossierdatei konnte nicht sicher zurueckgenommen werden.");
+                "Die eigene Dossierdatei konnte nicht sicher zurückgenommen werden.");
         }
 
         return true;

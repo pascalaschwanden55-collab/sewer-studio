@@ -88,7 +88,7 @@ public sealed class SchachtStammdatenErgaenzungsService : ISchachtStammdatenErga
                 var tiefe = Missing(quelle.Schachttiefe) ? parsed.Schachttiefe : null;
                 if (Missing(form) && Missing(dimension) && Missing(tiefe))
                 {
-                    meldungen.Add($"Schacht {nummer}: PDF enthaelt keine der fehlenden Stammdaten.");
+                    meldungen.Add($"Schacht {nummer}: PDF enthält keine der fehlenden Stammdaten.");
                     continue;
                 }
 

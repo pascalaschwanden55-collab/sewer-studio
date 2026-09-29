@@ -51,7 +51,7 @@ public static class TelemetryPathResolver
     public static void Use(ITelemetryPathResolver resolver) =>
         throw new NotSupportedException(
             "Die globale Telemetrie-Pfadsuche kann nicht mehr ausgetauscht werden. " +
-            "ITelemetryPathResolver bitte per Konstruktor uebergeben.");
+            "ITelemetryPathResolver bitte per Konstruktor übergeben.");
 
     public static string? ResolveFile(string fileName) => Current.ResolveFile(fileName);
 }

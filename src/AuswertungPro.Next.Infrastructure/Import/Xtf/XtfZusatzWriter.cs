@@ -23,7 +23,7 @@ internal static class XtfZusatzWriter
                     || !felder.TryGetValue("GeaendertAm", out var zeit)
                     || !DateTimeOffset.TryParseExact(zeit, "O", System.Globalization.CultureInfo.InvariantCulture,
                         System.Globalization.DateTimeStyles.None, out _))
-                    throw new InvalidDataException("Ein Aenderungsauftrag hat kein gueltiges Ziel oder Aenderungsdatum.");
+                    throw new InvalidDataException("Ein Aenderungsauftrag hat kein gültiges Ziel oder Aenderungsdatum.");
                 basket.Add(new XElement(ns + (XtfZusatzangaben.Topic + ".Aenderung"), new XAttribute("TID", objekt.Tid),
                     new XElement(ns + "ObjektTid", ziel), new XElement(ns + "Feld", zielFeld), new XElement(ns + "GeaendertAm", zeit)));
                 continue;
@@ -33,7 +33,7 @@ internal static class XtfZusatzWriter
                 || !felder.TryGetValue("Feld", out var feld) || !XtfZusatzangaben.IstErlaubt(feld)
                 || !felder.TryGetValue("Wert", out var wert) || string.IsNullOrWhiteSpace(wert)
                 || !paare.Add((tid, feld)))
-                throw new InvalidDataException("Eine Zusatzangabe hat kein eindeutiges Ziel oder ein unzulaessiges Feld.");
+                throw new InvalidDataException("Eine Zusatzangabe hat kein eindeutiges Ziel oder ein unzulässiges Feld.");
             basket.Add(new XElement(ns + XtfZusatzangaben.Klasse, new XAttribute("TID", objekt.Tid),
                 new XElement(ns + "ObjektTid", tid), new XElement(ns + "Feld", feld), new XElement(ns + "Wert", wert)));
         }

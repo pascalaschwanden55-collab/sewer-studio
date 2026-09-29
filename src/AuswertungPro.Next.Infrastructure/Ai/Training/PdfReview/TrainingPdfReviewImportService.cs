@@ -106,7 +106,7 @@ public sealed partial class TrainingPdfReviewImportService : ITrainingPdfReviewI
         if (!string.Equals(sourceSha, sourceShaAfterRead, StringComparison.OrdinalIgnoreCase))
         {
             throw new IOException(
-                "Das PDF wurde waehrend des Imports veraendert. Es wurde nichts in die Pruefliste uebernommen.");
+                "Das PDF wurde während des Imports verändert. Es wurde nichts in die Prüfliste übernommen.");
         }
 
         var haltungId = RunUserVisibleValidation(
@@ -140,7 +140,7 @@ public sealed partial class TrainingPdfReviewImportService : ITrainingPdfReviewI
             {
                 issues.Add(new TrainingPdfReviewImportIssue(
                     "ambiguous_haltung",
-                    "Foto wurde ausgelassen, weil der PDF-Abschnitt mehrere Haltungs-IDs enthaelt.",
+                    "Foto wurde ausgelassen, weil der PDF-Abschnitt mehrere Haltungs-IDs enthält.",
                     photo.PageNumber));
                 continue;
             }
@@ -186,8 +186,8 @@ public sealed partial class TrainingPdfReviewImportService : ITrainingPdfReviewI
                 issues.Add(new TrainingPdfReviewImportIssue(
                     isImageHash ? "eval_image_hash" : "eval_haltung",
                     isImageHash
-                        ? "Foto wurde ausgelassen, weil seine Bilddaten zum eingefrorenen Mess-Set gehoeren."
-                        : $"Foto wurde ausgelassen, weil die Haltung {itemHaltungId} zum eingefrorenen Mess-Set gehoert.",
+                        ? "Foto wurde ausgelassen, weil seine Bilddaten zum eingefrorenen Mess-Set gehören."
+                        : $"Foto wurde ausgelassen, weil die Haltung {itemHaltungId} zum eingefrorenen Mess-Set gehört.",
                     photo.PageNumber));
                 continue;
             }
@@ -348,7 +348,7 @@ public sealed partial class TrainingPdfReviewImportService : ITrainingPdfReviewI
             ".jpg" or ".jpeg" => ".jpg",
             ".png" => ".png",
             _ => throw new InvalidDataException(
-                $"Nicht unterstuetztes PDF-Bildformat '{extension}'.")
+                $"Nicht unterstütztes PDF-Bildformat '{extension}'.")
         };
         var imageSha = Convert.ToHexStringLower(SHA256.HashData(bytes));
         Directory.CreateDirectory(stageRoot);
@@ -361,7 +361,7 @@ public sealed partial class TrainingPdfReviewImportService : ITrainingPdfReviewI
             if (!string.Equals(existingSha, imageSha, StringComparison.OrdinalIgnoreCase))
             {
                 throw new IOException(
-                    "Ein vorhandenes PDF-Prueffoto hat unerwartet andere Bildbytes.");
+                    "Ein vorhandenes PDF-Prüffoto hat unerwartet andere Bildbytes.");
             }
 
             return target;
@@ -385,7 +385,7 @@ public sealed partial class TrainingPdfReviewImportService : ITrainingPdfReviewI
 
             var storedSha = ComputeSha256(target);
             if (!string.Equals(storedSha, imageSha, StringComparison.OrdinalIgnoreCase))
-                throw new IOException("Das abgelegte PDF-Prueffoto ist nicht bytegleich.");
+                throw new IOException("Das abgelegte PDF-Prüffoto ist nicht bytegleich.");
             return target;
         }
         finally
@@ -398,14 +398,14 @@ public sealed partial class TrainingPdfReviewImportService : ITrainingPdfReviewI
     private static string ValidateSourcePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
-            throw new ArgumentException("Bitte ein PDF-Protokoll waehlen.", nameof(path));
+            throw new ArgumentException("Bitte ein PDF-Protokoll wählen.", nameof(path));
         var fullPath = Path.GetFullPath(path);
         if (!string.Equals(
                 Path.GetExtension(fullPath),
                 ".pdf",
                 StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidDataException("Die gewaehlte Datei ist kein PDF-Protokoll.");
+            throw new InvalidDataException("Die gewählte Datei ist kein PDF-Protokoll.");
         }
 
         if (!File.Exists(fullPath))
@@ -530,7 +530,7 @@ public sealed partial class TrainingPdfReviewImportService : ITrainingPdfReviewI
             Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
         var fullPath = Path.GetFullPath(path);
         if (!fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase))
-            throw new IOException("PDF-Pruefdatei liegt ausserhalb des Wissensordners.");
+            throw new IOException("PDF-Prüfdatei liegt ausserhalb des Wissensordners.");
 
         var relative = Path.GetRelativePath(_knowledgeRoot, fullPath);
         var current = _knowledgeRoot;
@@ -545,7 +545,7 @@ public sealed partial class TrainingPdfReviewImportService : ITrainingPdfReviewI
             if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
             {
                 throw new IOException(
-                    "PDF-Pruefablage enthaelt eine Verknuepfung ausserhalb des Wissensordners.");
+                    "PDF-Prüfablage enthält eine Verknüpfung ausserhalb des Wissensordners.");
             }
         }
     }

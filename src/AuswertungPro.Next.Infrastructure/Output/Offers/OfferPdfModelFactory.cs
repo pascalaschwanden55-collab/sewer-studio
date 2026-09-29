@@ -536,7 +536,7 @@ public static class OfferPdfModelFactory
         if (dn.HasValue)
             parts.Add($"DN: {dn.Value} mm");
         if (lengthM.HasValue)
-            parts.Add($"Laenge: {lengthM.Value:0.00} m");
+            parts.Add($"Länge: {lengthM.Value:0.00} m");
         if (date.HasValue)
             parts.Add($"Inspektionsdatum: {date.Value:dd.MM.yyyy}");
         return string.Join("\n", parts);
@@ -553,7 +553,7 @@ public static class OfferPdfModelFactory
     private static List<string> DefaultTextBlocks() =>
     [
         "Grundlage: Auswertung / Datentransfer. Mengen (m/h/stk) werden manuell erfasst.",
-        "Gueltigkeit: 30 Tage. Ausfuehrung nach Terminabsprache.",
+        "Gültigkeit: 30 Tage. Ausführung nach Terminabsprache.",
         "Zahlungsbedingungen: 30 Tage netto."
     ];
 
@@ -561,7 +561,7 @@ public static class OfferPdfModelFactory
     [
         "Grundlage: gespeicherte Kosten/Massnahmen aus dem Projekt.",
         "Betrag je Position = Menge x Einzelpreis (Netto).",
-        "Diese Zusammenstellung dient als Kostenuebersicht, nicht als Offerte."
+        "Diese Zusammenstellung dient als Kostenübersicht, nicht als Offerte."
     ];
 
     private static (decimal Net, decimal Vat, decimal Gross) ResolveTotals(HoldingCost cost)

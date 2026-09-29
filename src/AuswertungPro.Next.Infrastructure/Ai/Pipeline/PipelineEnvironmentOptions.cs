@@ -90,8 +90,8 @@ public static class PipelineEnvironmentOptions
     [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IPipelineEnvironmentOptions options) =>
         throw new NotSupportedException(
-            "Die globalen Pipeline-Umgebungswerte koennen nicht mehr ausgetauscht werden. " +
-            "IPipelineEnvironmentOptions bitte per Konstruktor uebergeben.");
+            "Die globalen Pipeline-Umgebungswerte können nicht mehr ausgetauscht werden. " +
+            "IPipelineEnvironmentOptions bitte per Konstruktor übergeben.");
 
     public static bool ClassifierDecisionEnabled()
         => Current.ClassifierDecisionEnabled();

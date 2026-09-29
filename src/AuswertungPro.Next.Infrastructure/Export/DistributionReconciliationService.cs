@@ -42,8 +42,8 @@ public sealed class DistributionReconciliationService : IDistributionReconciliat
             return new DistributionReconciliationPlan(
                 Array.Empty<DistributionReconciliationEntry>(),
                 Array.Empty<string>(),
-                "Im Projekt sind weder Haltungen noch Schaechte geladen. Der Abgleich wuerde "
-                + "die Verteilordner vollstaendig leeren und wird deshalb nicht ausgefuehrt.");
+                "Im Projekt sind weder Haltungen noch Schaechte geladen. Der Abgleich würde "
+                + "die Verteilordner vollständig leeren und wird deshalb nicht ausgeführt.");
         }
 
         var zuVerschieben = new List<DistributionReconciliationEntry>();
@@ -275,7 +275,7 @@ public sealed class DistributionReconciliationService : IDistributionReconciliat
             {
                 // Der Inhalt laege ausserhalb des Projekts - nie verschieben.
                 uebersprungen.Add(
-                    $"{wurzelName}\\{name}: Verknuepfung, wurde nicht angefasst.");
+                    $"{wurzelName}\\{name}: Verknüpfung, wurde nicht angefasst.");
                 continue;
             }
 
@@ -313,7 +313,7 @@ public sealed class DistributionReconciliationService : IDistributionReconciliat
             var name = Path.GetFileName(datei);
             if (IstVerknuepfung(datei))
             {
-                uebersprungen.Add($"{wurzelName}\\{name}: Verknuepfung, wurde nicht angefasst.");
+                uebersprungen.Add($"{wurzelName}\\{name}: Verknüpfung, wurde nicht angefasst.");
                 continue;
             }
 

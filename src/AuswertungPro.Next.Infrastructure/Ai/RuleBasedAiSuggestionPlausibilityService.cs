@@ -94,13 +94,13 @@ public sealed partial class RuleBasedAiSuggestionPlausibilityService : IAiSugges
             if ((obs.Contains("riss") || obs.Contains("crack"))
                 && !code.StartsWith("BA"))
             {
-                warnings.Add($"PL03: Befund enthaelt 'Riss' aber Code '{code}' ist keine Riss-Kategorie.");
+                warnings.Add($"PL03: Befund enthält 'Riss' aber Code '{code}' ist keine Riss-Kategorie.");
             }
 
             if ((obs.Contains("verformung") || obs.Contains("deformation"))
                 && !code.StartsWith("BB"))
             {
-                warnings.Add($"PL03: Befund enthaelt 'Verformung' aber Code '{code}' ist keine Verformungs-Kategorie.");
+                warnings.Add($"PL03: Befund enthält 'Verformung' aber Code '{code}' ist keine Verformungs-Kategorie.");
             }
         }
 
