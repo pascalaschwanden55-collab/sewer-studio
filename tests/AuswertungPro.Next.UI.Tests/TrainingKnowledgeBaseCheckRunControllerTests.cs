@@ -54,7 +54,8 @@ public sealed class TrainingKnowledgeBaseCheckRunControllerTests
             logs.Add,
             value => status = value);
 
-        Assert.Equal("KB-Prüfung fehlgeschlagen: kaputt", status);
+        // Aufgabe 10c2: Der Status zeigt die UserError-Meldung, das Log behaelt den Rohtext.
+        Assert.Equal("KB-Prüfung fehlgeschlagen: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.", status);
         Assert.Equal(["KB-Prüfung FEHLER: kaputt"], logs);
     }
 }

@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System.IO;
 using System.Net.Http;
 using AuswertungPro.Next.Application.Ai;
@@ -55,7 +56,7 @@ public sealed partial class ServiceProvider
                 {
                     evalSchutzFehler =
                         "Die Sperrliste der reservierten Prüfhaltungen fehlt. Die KI arbeitet vorerst ohne Vergleichswissen.\n" +
-                        $"{ex.Message}\n" +
+                        $"{UserError.Describe(ex)}\n" +
                         "Prüfdaten-Ordner in den Einstellungen prüfen (leer lassen schaltet den Schutz bewusst ab).";
                     throw;
                 }

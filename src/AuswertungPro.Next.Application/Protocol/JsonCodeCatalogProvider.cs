@@ -218,7 +218,7 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
             LastLoadWarnings = Array.Empty<string>();
             LastLoadErrors = new[]
             {
-                $"Code-Katalog konnte nicht gelesen werden: {ex.Message}"
+                $"Code-Katalog konnte nicht gelesen werden: {UserError.DescribeAndReport(ex, "Code-Katalog lesen")}"
             };
         }
     }

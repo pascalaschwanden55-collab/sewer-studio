@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AuswertungPro.Next.Application.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -119,7 +120,7 @@ public partial class DossierParcelLookupWindow : Window
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Die Gemeindeliste konnte nicht geladen werden: " + ex.Message;
+            StatusText.Text = "Die Gemeindeliste konnte nicht geladen werden: " + UserError.DescribeAndReport(ex, "Gemeindeliste laden");
         }
     }
 
@@ -189,7 +190,7 @@ public partial class DossierParcelLookupWindow : Window
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Die Abfrage ist fehlgeschlagen: " + ex.Message;
+            StatusText.Text = "Die Abfrage ist fehlgeschlagen: " + UserError.DescribeAndReport(ex, "Parzellenabfrage");
         }
         finally
         {

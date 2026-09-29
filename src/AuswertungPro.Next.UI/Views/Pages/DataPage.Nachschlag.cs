@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AuswertungPro.Next.Application.Common;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -64,7 +65,7 @@ public partial class DataPage
         }
         catch (Exception ex)
         {
-            ergebnis = new FeldNachschlagErgebnis.Fehler(ex.Message);
+            ergebnis = new FeldNachschlagErgebnis.Fehler(UserError.DescribeAndReport(ex, "Feld nachschlagen (Haltung)"));
         }
 
         var fenster = new FeldVorschlagWindow(haltungsname, feldname, ergebnis)

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AuswertungPro.Next.Application.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Application.UseCases.Objektakten;
@@ -181,6 +182,6 @@ public sealed class ObjektFeldViewModel : ObservableObject
             SetProperty(ref _text, text, nameof(Text));
             _geaendert(); AktualisiereAuswahl();
         }
-        catch (InvalidOperationException ex) { _fehler(ex.Message); OnPropertyChanged(nameof(Text)); }
+        catch (InvalidOperationException ex) { _fehler(UserError.DescribeAndReport(ex, "Objektaktenfeld schreiben")); OnPropertyChanged(nameof(Text)); }
     }
 }

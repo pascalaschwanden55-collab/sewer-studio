@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AuswertungPro.Next.Application.Common;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -60,7 +61,7 @@ public partial class SchaechtePage
         }
         catch (Exception ex)
         {
-            ergebnis = new FeldNachschlagErgebnis.Fehler(ex.Message);
+            ergebnis = new FeldNachschlagErgebnis.Fehler(UserError.DescribeAndReport(ex, "Feld nachschlagen (Schacht)"));
         }
 
         var fenster = new FeldVorschlagWindow(schachtnummer, feldname, ergebnis)

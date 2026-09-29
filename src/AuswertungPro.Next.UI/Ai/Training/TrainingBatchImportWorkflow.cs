@@ -110,7 +110,7 @@ public static class TrainingBatchImportWorkflow
                 },
                 ex =>
                 {
-                    runtimeSetup.RunSummary.RecordError(ex.Message);
+                    runtimeSetup.RunSummary.RecordError(UserError.Describe(ex));
                     request.BatchUi.Log($"  FEHLER: {ex.Message}");
                 },
                 request.CancellationToken).ConfigureAwait(false);

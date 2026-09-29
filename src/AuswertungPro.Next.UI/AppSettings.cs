@@ -497,7 +497,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
             // Ungueltiges JSON geht oben in die Quarantaene und bleibt dadurch erhalten;
             // hier geht es um gesperrte, verweigerte oder kurz nicht erreichbare Dateien.
             if (SettingsFileMightExist())
-                fallback._loadError = ex.Message;
+                fallback._loadError = UserError.Describe(ex);
             return fallback;
         }
     }

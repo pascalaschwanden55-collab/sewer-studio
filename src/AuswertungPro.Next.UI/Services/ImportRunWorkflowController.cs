@@ -219,7 +219,7 @@ public static class ImportRunWorkflowController
                 catch (Exception ex)
                 {
                     postImportIncomplete = true;
-                    var detail = $"Nacharbeiten unvollständig: {ex.Message}";
+                    var detail = $"Nacharbeiten unvollständig: {UserError.DescribeAndReport(ex, "Import-Nacharbeiten")}";
                     runLog.AddEntry(
                         request.Label,
                         "PostImport",
@@ -351,8 +351,8 @@ public static class ImportRunWorkflowController
             if (!cleanup.StagingCleanupSucceeded && cleanup.StagingCleanupError is { } ex)
             {
                 var detail = projectCommitted
-                    ? $"Datei-Arbeitsordner konnte nicht vollständig aufgeräumt werden: {ex.Message}"
-                    : $"Vorbereitete Importdateien konnten nicht vollständig zurückgenommen werden: {ex.Message}";
+                    ? $"Datei-Arbeitsordner konnte nicht vollständig aufgeräumt werden: {UserError.DescribeAndReport(ex, "Import-Arbeitsordner aufräumen")}"
+                    : $"Vorbereitete Importdateien konnten nicht vollständig zurückgenommen werden: {UserError.DescribeAndReport(ex, "Importdateien zurücknehmen")}";
                 runLog.AddEntry(
                     request.Label,
                     "Datei-Staging",
@@ -407,7 +407,7 @@ public static class ImportRunWorkflowController
                 label,
                 "Speichern",
                 ImportLogStatus.Error,
-                detail: $"Import wurde übernommen, Speichern schlug fehl: {ex.Message}");
+                detail: $"Import wurde übernommen, Speichern schlug fehl: {UserError.DescribeAndReport(ex, "Import speichern")}");
         }
 
         return false;
@@ -572,7 +572,7 @@ public static class ImportRunWorkflowController
         }
         catch (Exception ex)
         {
-            return Result<ImportStats>.Fail($"{request.Label}_EXCEPTION", ex.Message);
+            return Result<ImportStats>.Fail($"{request.Label}_EXCEPTION", UserError.DescribeAndReport(ex, $"Import {request.Label}"));
         }
     }
 

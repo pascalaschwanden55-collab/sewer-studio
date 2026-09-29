@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.IO;
 using System.Windows.Media;
@@ -41,7 +42,7 @@ public sealed class PlanImageAdjuster : IPlanImageAdjuster
         }
         catch (Exception ex)
         {
-            return PlanImageResult.Failed("Der Plan konnte nicht gedreht werden: " + ex.Message);
+            return PlanImageResult.Failed("Der Plan konnte nicht gedreht werden: " + UserError.DescribeAndReport(ex, "Dossierplan drehen"));
         }
     }
 
@@ -77,7 +78,7 @@ public sealed class PlanImageAdjuster : IPlanImageAdjuster
         }
         catch (Exception ex)
         {
-            return PlanImageResult.Failed("Der Plan konnte nicht zugeschnitten werden: " + ex.Message);
+            return PlanImageResult.Failed("Der Plan konnte nicht zugeschnitten werden: " + UserError.DescribeAndReport(ex, "Dossierplan zuschneiden"));
         }
     }
 

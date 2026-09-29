@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using AuswertungPro.Next.Application.Common;
+using System.IO;
 using System.Security.Cryptography;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
@@ -382,7 +383,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Rejected(
-                    $"Das zu reparierende Goldsample konnte nicht sicher gelesen werden: {ex.Message}");
+                    $"Das zu reparierende Goldsample konnte nicht sicher gelesen werden: {UserError.DescribeAndReport(ex, "Goldsample zur Reparatur lesen")}");
             }
         }
 
@@ -473,7 +474,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Rejected(
-                    $"Gebundener Bildstand konnte nicht sicher gelesen werden: {ex.Message}");
+                    $"Gebundener Bildstand konnte nicht sicher gelesen werden: {UserError.DescribeAndReport(ex, "Gebundenen Bildstand lesen")}");
             }
 
             if (!string.Equals(
@@ -495,7 +496,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Rejected($"Eval-Schutz nicht verfügbar: {ex.Message}");
+            return Rejected($"Eval-Schutz nicht verfügbar: {UserError.DescribeAndReport(ex, "Eval-Schutz laden")}");
         }
         // Beim Foto-Assistenten ist dies genau eine Arbeitskopie des beim
         // Segmentieren gebundenen Originals. Dieselben Bytes gehen unten an
@@ -696,7 +697,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return (null, Rejected($"Goldbild konnte nicht sicher gespeichert werden: {ex.Message}"));
+            return (null, Rejected($"Goldbild konnte nicht sicher gespeichert werden: {UserError.DescribeAndReport(ex, "Goldbild speichern")}"));
         }
         if (string.IsNullOrWhiteSpace(storedFramePath))
         {
@@ -712,7 +713,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return (null, Rejected(
-                $"Goldbild konnte nach dem Speichern nicht bytegenau geprüft werden: {ex.Message}"));
+                $"Goldbild konnte nach dem Speichern nicht bytegenau geprüft werden: {UserError.DescribeAndReport(ex, "Goldbild nachprüfen")}"));
         }
 
         return (new StoredGoldImage(storedFramePath, storedImageSha256), null);
@@ -739,7 +740,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return (null, Rejected($"Goldsample konnte nicht gespeichert werden: {ex.Message}"));
+                return (null, Rejected($"Goldsample konnte nicht gespeichert werden: {UserError.DescribeAndReport(ex, "Goldsample speichern")}"));
             }
         }
         else if (repairsExistingSample)
@@ -761,7 +762,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return (null, Rejected($"Goldsample konnte nicht gespeichert werden: {ex.Message}"));
+                return (null, Rejected($"Goldsample konnte nicht gespeichert werden: {UserError.DescribeAndReport(ex, "Goldsample speichern")}"));
             }
 
             // Auch ein Nachlabeln mit gleichem Code ersetzt die fachliche Wahrheit
@@ -813,7 +814,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
         catch (Exception ex)
         {
-            return (KbIndexState.Error.ToString(), $"KB-Index nicht aktualisiert: {ex.Message}");
+            return (KbIndexState.Error.ToString(), $"KB-Index nicht aktualisiert: {UserError.DescribeAndReport(ex, "KB-Index aktualisieren")}");
         }
     }
 
@@ -873,7 +874,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         catch (Exception ex)
         {
             // Sample bleibt gespeichert; die Warnung wird sichtbar zurueckgegeben (nie still).
-            return (null, $"Teacher-Kandidat nicht gespeichert: {ex.Message}");
+            return (null, $"Teacher-Kandidat nicht gespeichert: {UserError.DescribeAndReport(ex, "Teacher-Kandidat speichern")}");
         }
     }
 
@@ -915,7 +916,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
         catch (Exception ex)
         {
-            warning = $"Alter KB-Eintrag konnte nicht entfernt werden: {ex.Message}";
+            warning = $"Alter KB-Eintrag konnte nicht entfernt werden: {UserError.DescribeAndReport(ex, "Alten KB-Eintrag entfernen")}";
         }
 
         // Teacher: alten Kandidaten entfernen — sonst lernt der Export weiter den alten Code.
@@ -955,7 +956,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         {
             warning = CombineWarnings(
                 warning,
-                $"Alter Teacher-Eintrag konnte nicht entfernt werden: {ex.Message}");
+                $"Alter Teacher-Eintrag konnte nicht entfernt werden: {UserError.DescribeAndReport(ex, "Alten Teacher-Eintrag entfernen")}");
         }
 
         return warning;

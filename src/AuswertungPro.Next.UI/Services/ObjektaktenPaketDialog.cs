@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Application.UseCases.Objektakten;
@@ -18,7 +19,7 @@ public sealed class ObjektaktenPaketDialog(IObjektaktenPaketService service, IDi
             service.Exportiere(projekt, datei);
             dialogs.Info("Zusatzdatei mit Objektakten, Bestandsfeldern und Herkunft gespeichert. Sie kann in dasselbe SewerStudio-Projekt eingelesen werden. Die GEONIS-Rückübernahme ist noch nicht bestätigt.", "Objektakten exportiert");
         }
-        catch (Exception ex) { dialogs.Error(ex.Message, "Objektakten exportieren"); }
+        catch (Exception ex) { dialogs.Error(UserError.DescribeAndReport(ex, "Objektakten exportieren"), "Objektakten exportieren"); }
     }
 
     public bool Importiere(Project projekt, Func<bool> darfSchreiben)
@@ -33,6 +34,6 @@ public sealed class ObjektaktenPaketDialog(IObjektaktenPaketService service, IDi
             ObjektaktenPaketImport.Uebernehme(projekt, paket);
             return true;
         }
-        catch (Exception ex) { dialogs.Error(ex.Message, "Objektakten übernehmen"); return false; }
+        catch (Exception ex) { dialogs.Error(UserError.DescribeAndReport(ex, "Objektakten übernehmen"), "Objektakten übernehmen"); return false; }
     }
 }

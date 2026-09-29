@@ -251,7 +251,7 @@ public sealed class CodingTrainingSamplePersistenceCoordinatorTests
             Request(caseId: "H-500"));
 
         Assert.False(result.Success);
-        Assert.Contains("JSON gesperrt", result.Error);
+        Assert.Contains("Eine Datei oder ein Ordner ist momentan nicht verfügbar", result.Error);
     }
 
     [Fact]

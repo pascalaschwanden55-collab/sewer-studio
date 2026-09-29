@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System.Net.Http;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
@@ -61,7 +62,7 @@ public static class TrainingKnowledgeBaseSampleDeindexer
             // gesperrten oder nicht erreichbaren KB scheitern. Der Fehler darf aber nicht
             // mehr spurlos verschwinden: Der freigegebene Eintrag kann sonst weiter als
             // Vergleichswissen dienen, waehrend die Oberflaeche Vollzug meldet.
-            return TrainingKnowledgeBaseDeindexResult.Failed(ex.Message);
+            return TrainingKnowledgeBaseDeindexResult.Failed(UserError.DescribeAndReport(ex, "KB-Eintrag entfernen"));
         }
     }
 

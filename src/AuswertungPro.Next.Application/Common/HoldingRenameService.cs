@@ -89,7 +89,7 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
         }
         catch (Exception ex)
         {
-            return HoldingRenameResult.Fail(ex.Message);
+            return HoldingRenameResult.Fail(UserError.DescribeAndReport(ex, "Haltung umbenennen"));
         }
         string? targetFolder = null;
         var folderRenamed = false;

@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System.Collections.ObjectModel;
 using System.IO;
 using AuswertungPro.Next.Application.Xtf.Lieferung;
@@ -159,7 +160,7 @@ public sealed class XtfLieferungViewModel : ObservableObject
         using var abbruch = new CancellationTokenSource(); _abbruch = abbruch; Arbeitet = true;
         try { await arbeit(abbruch.Token); }
         catch (OperationCanceledException) { Status = "Vorgang abgebrochen. Originaldatei bleibt erhalten."; }
-        catch (Exception e) { Status = "Vorgang nicht abgeschlossen: " + e.Message; }
+        catch (Exception e) { Status = "Vorgang nicht abgeschlossen: " + UserError.DescribeAndReport(e, "XTF-Lieferung bearbeiten"); }
         finally { _abbruch = null; Arbeitet = false; }
     }
     private void EntwurfGeaendert() { OnPropertyChanged(nameof(HatEntwurf)); BefehleAktualisieren(); }

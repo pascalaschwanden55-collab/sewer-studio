@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -62,7 +63,7 @@ public partial class VideoAnalysisPipelineWindow : Window
         }
         catch (Exception ex)
         {
-            Vm.SetError(ex.Message);
+            Vm.SetError(UserError.DescribeAndReport(ex, "Videoanalyse"));
         }
     }
 
@@ -117,7 +118,7 @@ public partial class VideoAnalysisPipelineWindow : Window
         }
         catch (Exception ex)
         {
-            Vm.SetError(ex.Message);
+            Vm.SetError(UserError.DescribeAndReport(ex, "Videoanalyse"));
         }
     }
 

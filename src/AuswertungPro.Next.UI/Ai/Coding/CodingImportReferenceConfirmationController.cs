@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Ai.Coding;
@@ -55,7 +56,7 @@ public sealed class CodingImportReferenceConfirmationController
         }
         catch (Exception ex)
         {
-            persistence = CodingTrainingSamplePersistenceResult.Failed(ex.Message);
+            persistence = CodingTrainingSamplePersistenceResult.Failed(UserError.DescribeAndReport(ex, "Importreferenz als Training speichern"));
         }
 
         if (!persistence.Success)

@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -61,7 +62,7 @@ public sealed class GeoShopAbgleichDialog(IGeoShopLeser leser, IDialogService di
             catch (Exception ex)
             {
                 if (!abbruch.IsCancellationRequested)
-                    fenster.Zeige($"Die XTF konnte nicht abgeglichen werden.\n\n{ex.Message}", false);
+                    fenster.Zeige($"Die XTF konnte nicht abgeglichen werden.\n\n{UserError.DescribeAndReport(ex, "GeoShop-Abgleich")}", false);
             }
         };
         if (fenster.ShowDialog() != true || plan is null || !darfSchreiben()) return 0;
@@ -70,6 +71,6 @@ public sealed class GeoShopAbgleichDialog(IGeoShopLeser leser, IDialogService di
             if (sicherung is null) throw new InvalidOperationException("Die Projektsicherung ist nicht angebunden. Es wird nichts übernommen.");
             return GeoShopGesicherteUebernahme.WendeAn(plan, ziele(), sicherung);
         }
-        catch (Exception ex) { dialogs.Error(ex.Message, "GeoShop-Abgleich"); return 0; }
+        catch (Exception ex) { dialogs.Error(UserError.DescribeAndReport(ex, "GeoShop-Abgleich"), "GeoShop-Abgleich"); return 0; }
     }
 }

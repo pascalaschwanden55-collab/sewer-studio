@@ -179,8 +179,7 @@ public sealed partial class SchaechtePageViewModel
             }
             catch (Exception ex)
             {
-                UserError.DescribeAndReport(ex, "Schachtprotokoll im Ordner lesen");
-                failures.Add($"{Path.GetFileName(pdfPath)}: {ex.Message}");
+                failures.Add($"{Path.GetFileName(pdfPath)}: {UserError.DescribeAndReport(ex, "Schachtprotokoll im Ordner lesen")}");
             }
         }
 

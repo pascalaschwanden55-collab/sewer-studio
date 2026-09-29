@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System.Text.Json;
 
 namespace AuswertungPro.Next.Application.Protocol;
@@ -93,7 +94,7 @@ public sealed class ManifestCodeCatalogProvider : ICodeCatalogProvider
         {
             _codes = new List<CodeDefinition>();
             LastLoadWarnings = Array.Empty<string>();
-            LastLoadErrors = new[] { $"Manifest-Katalog konnte nicht gelesen werden: {ex.Message}" };
+            LastLoadErrors = new[] { $"Manifest-Katalog konnte nicht gelesen werden: {UserError.DescribeAndReport(ex, "Manifest-Katalog lesen")}" };
         }
     }
 

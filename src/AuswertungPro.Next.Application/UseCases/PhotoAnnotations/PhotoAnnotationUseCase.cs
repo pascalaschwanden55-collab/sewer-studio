@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System.Globalization;
 using System.Security.Cryptography;
 using AuswertungPro.Next.Application.Ai.Training;
@@ -114,7 +115,7 @@ public sealed class PhotoAnnotationUseCase : IPhotoAnnotationUseCase
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return FailedSegment($"Originalfoto kann nicht gelesen werden: {ex.Message}");
+            return FailedSegment($"Originalfoto kann nicht gelesen werden: {UserError.DescribeAndReport(ex, "Originalfoto lesen")}");
         }
 
         var codeHint = NormalizeCode(request.Context.CodeHint);
@@ -140,7 +141,7 @@ public sealed class PhotoAnnotationUseCase : IPhotoAnnotationUseCase
         }
         catch (Exception ex)
         {
-            return FailedSegment($"SAM-Segmentierung fehlgeschlagen: {ex.Message}");
+            return FailedSegment($"SAM-Segmentierung fehlgeschlagen: {UserError.DescribeAndReport(ex, "Foto-Segmentierung")}");
         }
 
         if (segmentation.Degraded)
@@ -172,7 +173,7 @@ public sealed class PhotoAnnotationUseCase : IPhotoAnnotationUseCase
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return FailedSegment($"Originalfoto kann nach der Segmentierung nicht gelesen werden: {ex.Message}");
+            return FailedSegment($"Originalfoto kann nach der Segmentierung nicht gelesen werden: {UserError.DescribeAndReport(ex, "Originalfoto nach Segmentierung lesen")}");
         }
 
         WorkbenchImageSnapshot snapshot;
@@ -184,7 +185,7 @@ public sealed class PhotoAnnotationUseCase : IPhotoAnnotationUseCase
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return FailedSegment($"Originalfoto kann nicht gebunden werden: {ex.Message}");
+            return FailedSegment($"Originalfoto kann nicht gebunden werden: {UserError.DescribeAndReport(ex, "Originalfoto binden")}");
         }
 
         if (!string.Equals(hashBefore, snapshot.Sha256, StringComparison.Ordinal))
@@ -240,7 +241,7 @@ public sealed class PhotoAnnotationUseCase : IPhotoAnnotationUseCase
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return FailedSave($"Originalfoto kann nicht mehr gelesen werden: {ex.Message}");
+            return FailedSave($"Originalfoto kann nicht mehr gelesen werden: {UserError.DescribeAndReport(ex, "Originalfoto vor dem Speichern lesen")}");
         }
 
         if (!string.Equals(
@@ -295,7 +296,7 @@ public sealed class PhotoAnnotationUseCase : IPhotoAnnotationUseCase
         }
         catch (Exception ex)
         {
-            return FailedSave($"KI-Beispiel konnte nicht gespeichert werden: {ex.Message}");
+            return FailedSave($"KI-Beispiel konnte nicht gespeichert werden: {UserError.DescribeAndReport(ex, "KI-Beispiel speichern")}");
         }
 
         if (!saved.Saved)

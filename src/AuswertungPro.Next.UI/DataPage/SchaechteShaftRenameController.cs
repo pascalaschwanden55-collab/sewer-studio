@@ -43,7 +43,7 @@ internal static class SchaechteShaftRenameController
         }
         catch (Exception ex)
         {
-            showError(ex.Message, "PDF nicht aktualisiert");
+            showError(UserError.DescribeAndReport(ex, "Protokoll-PDF beim Umbenennen"), "PDF nicht aktualisiert");
             return false;
         }
 

@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.Collections.Generic;
 using AuswertungPro.Next.Application.Lookup;
@@ -50,7 +51,7 @@ public static class QgisNachfuellWorkflow
             // Eine fehlende oder unlesbare Datei darf nie wie "nichts gefunden"
             // aussehen — sonst haelt der Benutzer eine Stoerung fuer eine Datenluecke.
             dialogs.Error(
-                $"Der QGIS-Bestand konnte nicht gelesen werden.\n\n{ex.Message}\n\n" +
+                $"Der QGIS-Bestand konnte nicht gelesen werden.\n\n{UserError.DescribeAndReport(ex, "QGIS-Bestand lesen")}\n\n" +
                 $"Eingestellte Datei:\n{leser.Quellpfad(art)}",
                 titel);
             return new QgisNachfuellErgebnis(false, 0, "QGIS-Bestand nicht lesbar.");

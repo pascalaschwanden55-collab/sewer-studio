@@ -73,14 +73,14 @@ internal sealed class HoldingFolderRenameTransaction
             {
                 var rollbackError = RollbackMoves(applied, pathGuard);
                 var message = rollbackError is null
-                    ? ex.Message
-                    : $"{ex.Message} Rollback fehlgeschlagen: {rollbackError}";
+                    ? UserError.DescribeAndReport(ex, "Haltungsordner umbenennen")
+                    : $"{UserError.DescribeAndReport(ex, "Haltungsordner umbenennen")} Rücknahme fehlgeschlagen: {rollbackError}";
                 return new HoldingFolderRenameTransaction(false, message, pathGuard);
             }
         }
         catch (Exception ex)
         {
-            return new HoldingFolderRenameTransaction(false, ex.Message, pathGuard);
+            return new HoldingFolderRenameTransaction(false, UserError.DescribeAndReport(ex, "Haltungsordner umbenennen"), pathGuard);
         }
     }
 
@@ -193,7 +193,7 @@ internal sealed class HoldingFolderRenameTransaction
             catch (Exception ex)
             {
                 errors ??= [];
-                errors.Add($"{move.Destination}: {ex.Message}");
+                errors.Add($"{move.Destination}: {UserError.DescribeAndReport(ex, "Haltungsordner zurücknehmen")}");
             }
         }
 

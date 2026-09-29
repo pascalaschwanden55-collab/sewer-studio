@@ -34,7 +34,7 @@ public sealed class CodingSessionStartWorkflowTests
                 }));
 
         Assert.False(result);
-        Assert.Equal(["execute", "error:Länge fehlt", "exit"], calls);
+        Assert.Equal(["execute", "error:Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.", "exit"], calls);
     }
 
     [Fact]

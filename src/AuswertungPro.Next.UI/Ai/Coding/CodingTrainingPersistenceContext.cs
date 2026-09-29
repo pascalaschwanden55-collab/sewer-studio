@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
@@ -94,7 +95,7 @@ public sealed class CodingTrainingPersistenceContext
         }
         catch (Exception ex)
         {
-            return CodingTrainingSamplePersistenceResult.Failed(ex.Message);
+            return CodingTrainingSamplePersistenceResult.Failed(UserError.DescribeAndReport(ex, "Trainingsfälle speichern"));
         }
     }
 

@@ -185,7 +185,7 @@ public sealed class CodingAiInitializationWorkflowTests
             },
             SetCodingAiState: (text, color, detail) =>
             {
-                Assert.Equal("Fehler: boom", text);
+                Assert.Equal("Fehler: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.", text);
                 Assert.Equal(PlayerStatusColors.Error, color);
                 Assert.Equal("Modell: qwen2.5-vl:7b", detail);
                 calls.Add("state:error");

@@ -40,7 +40,7 @@ public sealed class XtfLieferungUiTests
         var store = new Ablage { Speicherfehler = true }; var vm = new XtfLieferungViewModel(store, new Dialoge());
         await vm.OeffnenCommand.ExecuteAsync(null); vm.Auswahl = vm.Zeilen[0]; await vm.AuswahlLaden;
         vm.Felder[0].Wert = "Eingabe"; await vm.SpeichernCommand.ExecuteAsync(null);
-        Assert.True(vm.HatEntwurf); Assert.Contains("zwischenzeitlich", vm.Status);
+        Assert.True(vm.HatEntwurf); Assert.Contains("Vorgang nicht abgeschlossen", vm.Status); Assert.Contains("Programmlog", vm.Status); // 10c2: UserError statt Rohtext der Test-Ausnahme
         vm.VerwerfenCommand.Execute(null); Assert.False(vm.HatEntwurf); Assert.Equal("Originaltext", vm.Felder[0].Wert);
     }
 

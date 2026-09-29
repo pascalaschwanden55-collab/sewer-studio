@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.IO;
 
@@ -71,7 +72,7 @@ internal sealed class DossierPlanWorkSession : IDisposable
         catch (Exception ex)
         {
             return DossierPlanPublicationResult.Failed(
-                "Der Planpfad ist ungültig: " + ex.Message);
+                "Der Planpfad ist ungültig: " + UserError.DescribeAndReport(ex, "Dossierplan-Pfad prüfen"));
         }
 
         // Ein bereits gespeicherter, nicht bearbeiteter Plan gehoert nicht der
@@ -105,7 +106,7 @@ internal sealed class DossierPlanWorkSession : IDisposable
         catch (Exception ex)
         {
             return DossierPlanPublicationResult.Failed(
-                "Der bearbeitete Plan konnte nicht übernommen werden: " + ex.Message);
+                "Der bearbeitete Plan konnte nicht übernommen werden: " + UserError.DescribeAndReport(ex, "Dossierplan übernehmen"));
         }
     }
 

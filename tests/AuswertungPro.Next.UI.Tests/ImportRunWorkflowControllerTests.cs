@@ -618,7 +618,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Contains("replace", calls);
         Assert.Contains("save", calls);
         Assert.Contains("Nacharbeiten unvollständig", state.Summary);
-        Assert.Contains("Foto konnte nicht kopiert werden", state.Details);
+        Assert.Contains("Nacharbeiten unvollständig: Eine Datei oder ein Ordner ist momentan nicht verfügbar", state.Details);
         Assert.Equal("WinCan importiert mit Hinweisen", state.Statuses[^1]);
         Assert.Equal(1, state.LastExportLog?.TotalErrors);
     }

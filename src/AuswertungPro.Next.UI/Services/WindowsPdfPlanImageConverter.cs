@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.IO;
 using System.Threading;
@@ -104,7 +105,7 @@ public sealed class WindowsPdfPlanImageConverter : IPlanImageConverter
             // Eine nicht lesbare Datei darf das Dossier nicht verhindern; die
             // Stelle bleibt dann leer und sagt warum.
             return PlanImageResult.Failed(
-                "Die Plandatei konnte nicht umgewandelt werden: " + ex.Message);
+                "Die Plandatei konnte nicht umgewandelt werden: " + UserError.DescribeAndReport(ex, "Plandatei umwandeln"));
         }
         finally
         {

@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -230,7 +231,7 @@ public partial class SchachtgrafikControl : UserControl
             // Oberflaeche beim blossen Anzeigen nicht abstuerzen lassen.
             Buehne.Child = null;
             SetValue(SymbolAnzahlPropertyKey, 0);
-            ZeigeHinweis("Die Schachtgrafik kann nicht gezeichnet werden: " + ex.Message);
+            ZeigeHinweis("Die Schachtgrafik kann nicht gezeichnet werden: " + UserError.DescribeAndReport(ex, "Schachtgrafik zeichnen"));
         }
     }
 

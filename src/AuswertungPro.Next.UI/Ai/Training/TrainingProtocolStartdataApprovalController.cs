@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
@@ -30,7 +31,7 @@ public static class TrainingProtocolStartdataApprovalController
             }
             catch (Exception ex)
             {
-                errors.Add($"Startdaten-Freigabe Fehler ({item.SelfTrainingVsaCode}): {ex.Message}");
+                errors.Add($"Startdaten-Freigabe Fehler ({item.SelfTrainingVsaCode}): {UserError.DescribeAndReport(ex, "Startdaten freigeben")}");
             }
         }
 
