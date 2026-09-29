@@ -196,10 +196,12 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
 
     internal static IReadOnlyList<ZustandZeile> BaueZustandLegende(IReadOnlyDictionary<string, int> anzahlJeKlasse)
     {
+        // Aufgabe 17: dringendste Klasse zuerst (Z0 -> Z4), wie die KPI-Karte "Dringend (Z0/Z1)"
+        // gleich darueber schon rechnet.
         (string Klasse, string Label)[] reihenfolge =
         [
-            ("4", "Z4 · kein Handlungsbedarf"), ("3", "Z3 · langfristig"), ("2", "Z2 · mittelfristig"),
-            ("1", "Z1 · kurzfristig"), ("0", "Z0 · sofort"), ("ohne", "nicht berechnet")
+            ("0", "Z0 · sofort"), ("1", "Z1 · kurzfristig"), ("2", "Z2 · mittelfristig"),
+            ("3", "Z3 · langfristig"), ("4", "Z4 · kein Handlungsbedarf"), ("ohne", "nicht berechnet")
         ];
         return reihenfolge
             .Select(r => new ZustandZeile(r.Klasse, r.Label, anzahlJeKlasse.TryGetValue(r.Klasse, out var n) ? n : 0))

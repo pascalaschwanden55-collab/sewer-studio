@@ -30,7 +30,7 @@ internal static class OfferPdfTemplateExport
         // Gemeinsame Quelle (Optikanalyse 28.09.2026, Aufgabe 15); ohne Injektion der
         // bisherige feste Pfad (Der Renderer prueft selbst, ob die Datei existiert).
         var logoPath = berichtsMarke?.LogoPfad
-            ?? Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+            ?? BerichtsLogoResolver.DefaultLogoPath(AppContext.BaseDirectory);
 
         return render(model, templatePath, outputPdfPath, logoPath, ct);
     }

@@ -474,7 +474,7 @@ public sealed class DataPagePrintController
         if (_berichtsMarke is not null)
             return _berichtsMarke.LogoPfad;
 
-        var logoPath = Path.Combine(_baseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+        var logoPath = BerichtsLogoResolver.DefaultLogoPath(_baseDirectory);
         return _fileExists(logoPath) ? logoPath : null;
     }
 

@@ -161,7 +161,11 @@
             <RowDefinition Height="Auto"/>      <!-- Controls -->
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" x:Name="PlayerKopfzeile" Style="{StaticResource PlayerCard}" Margin="0,0,0,8" Padding="12,8">
+        <!-- Aufgabe 17: der Kopf zeigt nur noch den Dateinamen; der volle Pfad (weiterhin von
+             PlayerWindowHeaderControls.ApplyVideoInfo in VideoPathText.Text geschrieben) steht
+             als ToolTip auf der ganzen Kopfzeile statt zusaetzlich ausgeschrieben daneben. -->
+        <Border Grid.Row="0" x:Name="PlayerKopfzeile" Style="{StaticResource PlayerCard}" Margin="0,0,0,8" Padding="12,8"
+                ToolTip="{Binding Text, ElementName=VideoPathText}">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Style="{StaticResource PlayerButton}" Padding="10,4" Margin="6,0,0,0"
                         Click="Close_Click" ToolTip="Player schliessen" AutomationProperties.Name="Player schliessen">
@@ -184,12 +188,10 @@
                     <TextBlock DockPanel.Dock="Left" Text="Video · " VerticalAlignment="Center"
                                FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                     <TextBlock x:Name="VideoNameText" DockPanel.Dock="Left" Text="Video" VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis" MaxWidth="260"
+                               TextTrimming="CharacterEllipsis" MaxWidth="420"
                                FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
-                    <TextBlock DockPanel.Dock="Left" Text=" · " VerticalAlignment="Center"
-                               FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
-                    <TextBlock x:Name="VideoPathText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                               FontSize="{DynamicResource TextL}" FontWeight="Normal" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <!-- Traegt weiterhin den vollen Pfad (fuer den ToolTip oben), erscheint selbst nicht mehr im Kopf. -->
+                    <TextBlock x:Name="VideoPathText" Visibility="Collapsed"/>
                 </DockPanel>
             </DockPanel>
         </Border>
@@ -859,11 +861,14 @@
 
         <Border x:Name="Bedienleiste" Grid.Row="5" Style="{StaticResource PlayerCard}" Padding="14,12">
             <WrapPanel VerticalAlignment="Center">
-                <Button Style="{StaticResource PlayerPrimaryButton}" Margin="0,0,6,0" Click="Play_Click"
+                <!-- Aufgabe 17: "Abspielen" ist keine Akzent-Hauptaktion mehr — in dieser
+                     Bedienleiste bleibt nur der Codier-Modus-Knopf weiter unten farbig
+                     hervorgehoben (Knopfregel: hoechstens ein Akzentknopf je Leiste). -->
+                <Button Style="{StaticResource PlayerButton}" Margin="0,0,6,0" Click="Play_Click"
                         ToolTip="Abspielen / Pause — Leertaste">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Play" VerticalAlignment="Center"/>
+                        <TextBlock Text="Abspielen" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button Style="{StaticResource PlayerButton}" Margin="0,0,6,0" Click="Pause_Click"
@@ -877,7 +882,7 @@
                         ToolTip="Stopp — Taste S">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE71A;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Stop" VerticalAlignment="Center"/>
+                        <TextBlock Text="Stopp" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
@@ -885,13 +890,18 @@
                         Background="{DynamicResource BorderBrush}"/>
 
                 <DockPanel LastChildFill="True" Width="200" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <!-- Der Tooltip nennt bewusst weiter die Taste "+" (Gegenstueck zu "Langsamer —
+                         Taste −" am Regler direkt daneben, siehe DesignAuditPlayerShortcutTests);
+                         AutomationProperties.Name fehlte fuer den unbeschrifteten "..."-Knopf bisher
+                         ganz (Aufgabe 17). -->
                     <ToggleButton x:Name="SpeedPresetButton"
                                   DockPanel.Dock="Right"
                                   Style="{StaticResource SpeedToggleButton}"
                                   MinHeight="28"
                                   Padding="8,3"
                                   Margin="8,0,0,0"
-                                  ToolTip="Schneller — Taste +">
+                                  ToolTip="Schneller — Taste +"
+                                  AutomationProperties.Name="Feste Geschwindigkeitsstufen (0.5x bis 8x) — Schneller: Taste +">
                         <TextBlock Text="&#xE712;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
                     </ToggleButton>
                     <Slider x:Name="SpeedSlider"

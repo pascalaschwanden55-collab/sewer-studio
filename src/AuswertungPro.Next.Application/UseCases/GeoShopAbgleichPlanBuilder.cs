@@ -91,7 +91,7 @@ public static class GeoShopAbgleichPlanBuilder
             {
                 try { vergleich = GeoShopImportVergleich.Baue(ziel, quelle, werte, gedreht); }
                 catch (Exception ex) when (ex is InvalidOperationException or System.Text.Json.JsonException)
-                { Hinweis($"{UserError.DescribeInputHint(ex, "GeoShop-Vergleich")} – ausgelassen."); continue; }
+                { Hinweis($"{UserError.DescribeInputHint(ex, "GeoShop-Vergleich").TrimEnd('.')} – ausgelassen."); continue; }
                 felder.RemoveAll(f => !f.IstKennung);
                 neueAktenwerte = vergleich.HatNeueAkten;
             }

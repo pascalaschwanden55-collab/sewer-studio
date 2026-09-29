@@ -1266,6 +1266,85 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `NpkLeistungsverzeichnisExcelExporterTests` und `OfferPdfExportServiceTests`, der die
   injizierte `IBerichtsMarke` tatsaechlich ankommen sieht, sowie ein Fall in
   `CodingProtocolPdfExportPlannerTests` fuer den optionalen `resolveLogoPath`-Parameter.
+- **Aufgabe 17 — Kleinigkeiten und Endkontrolle.** Uebersicht: `ProjektUebersichtPageViewModel.
+  BaueZustandLegende` sortiert jetzt Z0 (sofort) zuerst bis Z4 (kein Handlungsbedarf) zuletzt —
+  vorher stand die dringendste Klasse ganz unten, im Widerspruch zur KPI-Karte "Dringend
+  (Z0/Z1)" direkt darueber. Die Karte "Haeufigste Schaeden" zeigte den Hauptcode DOPPELT
+  (eine eigene Mono-Spalte links UND nochmals eingebettet im `Klartext` der Zeile rechts, z. B.
+  "BAB" links und "12 BAB (Riss)" rechts) — jetzt einmal `Klartext` ("BAB (Riss)") links,
+  `Anzahl` allein rechts. Die Karte "Sanierungsverfahren" (und "Haeufigste Schaeden" ohne
+  Befunde) zeigen bei leerem Bestand `EmptyStateControl` statt einer eigenen Textzeile (Regel
+  aus Aufgabe 11). **Die Lernbereitschafts-Ampel ("Rot · Lernbasis: 0 Faelle") ueber der
+  Haltungen-Werkzeugleiste ist unsichtbar, solange kein einziger Fall gelernt wurde**
+  (`LearningReadinessPresenter.Build`, `IsVisible = stats.TotalSamples > 0`) — vorher stand sie
+  dauerhaft rot auf jedem frischen Projekt, ohne etwas Handlungsleitendes zu sagen. Ampel-
+  Schwellenwerte (25/100 Faelle) und der Infotext sind unveraendert, nur die Anzeige-Entscheidung
+  ist neu. Schaechte: `SchaechtePageViewModel.LoadColumnsFromTemplate` meldet einen erfolgreichen
+  Ladevorgang nicht mehr als sichtbaren Status "Spalten geladen: N" — `LastResult` bleibt wie an
+  den beiden Fehlerzweigen daneben fuer echte Probleme reserviert.
+  **`ShellViewModel.ProjektPfad`** (ToolTip unter der Wortmarke) verlangt jetzt zusaetzlich
+  `HasPersistedProject`: `Settings.LastProjectPath` ist eine programmweite "zuletzt benutzt"-
+  Einstellung, kein Attribut des aktuellen Projekts — ohne diese zweite Pruefung (derselbe
+  Schutz, den `TrySaveProjectCore` bereits gegen ein Ueberschreiben verwendet) haette ein neues,
+  noch nicht gespeichertes Projekt den Pfad des zuletzt geoeffneten Projekts gezeigt.
+  `InitNova`s PropertyChanged-Filter reagiert deshalb zusaetzlich auf `HasPersistedProject`
+  (sonst zieht der ToolTip nicht nach, wenn nur dieses Flag zuletzt wechselt, ohne dass sich
+  `IsProjectReady` dabei tatsaechlich noch aendert).
+  Player: Kopf zeigt nur noch den Dateinamen; `VideoPathText` traegt weiterhin (unveraendert von
+  `PlayerWindowHeaderControls.ApplyVideoInfo`) den vollen Pfad, ist aber `Visibility="Collapsed"`
+  und der volle Pfad haengt stattdessen als ToolTip an der ganzen Kopfzeile (`PlayerKopfzeile`).
+  "Play"/"Stop" heissen "Abspielen"/"Stopp"; der Play-Knopf ist kein Akzentknopf mehr (Knopfregel:
+  hoechstens ein Akzentknopf je Leiste) — der Codier-Modus-Knopf bleibt der einzige Akzent in der
+  Bedienleiste. Der unbeschriftete "···"-Geschwindigkeitsstufen-Knopf (`SpeedPresetButton`)
+  bekommt `AutomationProperties.Name`; sein Tooltip "Schneller — Taste +" bleibt woertlich
+  stehen (Gegenstueck zu "Langsamer — Taste −" am Regler daneben, `DesignAuditPlayerShortcutTests`
+  verlangt beide Zeichenketten irgendwo im Fenster).
+  Training Studio: Die fuenf Schadensstufen-Knoepfe stehen in einem `UniformGrid Columns="5"`
+  statt einer `StackPanel` mit festen Pixelbreiten — sie teilen sich immer die volle verfuegbare
+  Breite, statt bei einem schmaleren Fenster abgeschnitten zu werden. Die Bogen-/Rohrende-
+  Vorschlagstabelle in der schmalen Werkzeugspalte (~210-240 px) hat engere, weiterhin volle
+  Spaltenbreiten (Art 100/Ort mind. 70/Stufe 55/Konfidenz 70/Bilder 50 statt 130/*/70/80/60) und
+  `HorizontalScrollBarVisibility="Auto"`; der bestehende waagrechte Bildlauf (Aufgabe/B4) bleibt
+  fuer den Rest.
+  Vier fensterferne Fundstellen tragen den Standard-Logopfad seit Aufgabe 15 zwar bereits ueber
+  `IBerichtsMarke`, ihr jeweiliger Rueckfall OHNE Injektion baute den Pfad aber noch als eigene
+  Zeichenkette nach statt `BerichtsLogoResolver.DefaultLogoPath(...)` zu rufen
+  (`NpkLeistungsverzeichnisExcelExporter`, `ProtocolRegenerationAdapter`, `OfferPdfTemplateExport`,
+  `DataPagePrintController`) — jetzt vereinheitlicht; Verhalten unveraendert, nur eine Quelle
+  weniger. `ServiceProviderRegistrationTests`-Kommentar korrigiert (`IBerichtsMarke` hat nur
+  `LogoPfad`, keine Fusszeile). `AboutWindow`-Fenstertitel heisst "SewerStudio — Über das
+  Programm" (vorher "SewerStudio — Über SewerStudio", eine Verdopplung der Wortmarke).
+  `GeoShopAbgleichPlanBuilder`: ein Hinweistext, dessen Ursache bereits mit "Technische Details
+  stehen im Programmlog." endete, bekam durch das angehaengte " – ausgelassen." einen Punkt
+  direkt vor einem Gedankenstrich — der eingebettete Meldungstext wird jetzt vor dem Anhaengen
+  getrimmt (`.TrimEnd('.')`). `SchachtSanierungsMatrixPageViewModel`: "Schacht/Schaechte" ->
+  "Schacht/Schächte" (Umlaut).
+  **Neuer Token `SuccessBadgeTextBrush`** (Theme.xaml/ThemeLight.xaml, beide Weiss — `ColorSuccess`
+  ist in beiden Themes derselbe Wert, schwarze Schrift erreicht darauf nur 4,19:1): Die drei
+  Overlay-Badges im Training Studio (`TrainingStudioWindow.AddOverlayBadge`: Segmentierung
+  erfolgreich/nicht darstellbar, Hand-Box) verwendeten alle `StatusBadgeTextBrush` — den Token
+  fuer die theme-gleichen Z0-Z4-Zustandsklassen-Abzeichen, nicht fuer eine theme-abhaengige
+  Fuellfarbe wie `SuccessBrush` (Aufgabe-12-Regel). `AddOverlayBadge` nimmt jetzt Hintergrund-
+  UND Vordergrund-Token als Parameter (Success/Warning/DangerBadgeTextBrush je Fall).
+  **Isolierter Pruefhost repariert:** `docs/reviews/2026-09-06-nova/wpf-etappe-2/werkzeug/`
+  (Program.cs, Pruefhost.csproj) zeigte seit dem Ordnerumzug auf 5.0 (13.09.2026) noch auf den
+  nicht mehr vorhandenen alten Worktree `C:\Sewer-Studio_KI_4.5-nova` — drei Konstanten und ein
+  MSBuild-Property zeigen jetzt auf den aktuellen Arbeitsbaum, der Root-Profilordner bleibt ein
+  eigener `.tmp`-Ordner (nie das echte Benutzerprofil). **Offener, real geprüfter Befund im
+  Werkzeug selbst (nicht im Produkt):** Seiten, die `BearbeitungErledigtKnopf`
+  (`BasedOn="{StaticResource ToolbarButton}"`, `Controls.xaml`) lazy laden — Haltungen, Schaechte
+  und darueber auch Player/TrainingStudio, die zuerst zur Haltungsseite navigieren — werfen im
+  Pruefhost `XamlParseException: Ressource "ToolbarButton" nicht gefunden`, real reproduziert
+  auch nach Umstellung auf einen einzigen in sich konsistenten `XamlReader.Parse`-Aufruf (kein
+  nachtraeglicher `MergedDictionaries[0]`-Tausch mehr). Vermutete Ursache: `XamlReader.Parse`
+  einer nachgebauten `App.xaml` kennt beim deferred Laden eines Stils aus einer per `Source=`
+  gemergten Datei (`Controls.xaml`) nicht denselben App-weiten Aufloesungskontext wie echtes
+  kompiliertes BAML — im Produkt selbst funktioniert dasselbe `BasedOn` uebergreifend nachweislich
+  (die Bearbeitung-erledigt-Markierung ist seit dem 13.09.2026 produktiv). Uebersicht, Import und
+  Einstellungen sind davon NICHT betroffen und wurden erfolgreich fotografiert (hell + dunkel,
+  `docs/reviews/2026-09-28-optik/bilder/`); Haltungen, Schaechte, Player und Training Studio
+  brauchen fuer neue Bildschirmfotos entweder eine tiefere Reparatur dieses Werkzeugs (echtes
+  `InitializeComponent()` statt nachgebautem XAML) oder eine Sichtpruefung im echten Programm.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

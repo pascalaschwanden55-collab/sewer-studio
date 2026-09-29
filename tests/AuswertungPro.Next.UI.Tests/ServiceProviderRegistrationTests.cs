@@ -138,7 +138,7 @@ public sealed class ServiceProviderRegistrationTests
         // «Verteilen» statt mehrerer Ja/Nein-Dialoge auf der Export-Seite, 28.09.2026).
         // 174 -> 175: ITaskbarFortschritt zeigt den Fortschritt langer Laeufe am Programmsymbol
         // in der Windows-Taskleiste (Aufgabe 13, Windows-Integration, 28.09.2026).
-        // 175 -> 176: IBerichtsMarke liefert Logo-Pfad und Fusszeile fuer PDF-/Excel-Export
+        // 175 -> 176: IBerichtsMarke liefert den Logo-Pfad fuer PDF-/Excel-Export
         // und Dossier aus einer gemeinsamen Quelle (Aufgabe 15, Optikanalyse 28.09.2026).
         Assert.True(
             registrations.Count == 176,

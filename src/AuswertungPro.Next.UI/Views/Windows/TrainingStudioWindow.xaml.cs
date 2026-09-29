@@ -699,14 +699,14 @@ public partial class TrainingStudioWindow : Window
             }
             else if (result.Rendered && boxBounds is { } maskLabelBounds)
             {
-                AddOverlayBadge(_vm.Segmentation.StatusText, maskLabelBounds.X, maskLabelBounds.Bottom, "SuccessBrush");
+                AddOverlayBadge(_vm.Segmentation.StatusText, maskLabelBounds.X, maskLabelBounds.Bottom, "SuccessBrush", "SuccessBadgeTextBrush");
             }
             else if (!result.Rendered && boxBounds is { } notRenderedBounds)
             {
                 // Keine gerenderte Maske und kein Fehlertext (z. B. leere Maske ohne RLE):
                 // Segmentierung ist vorhanden, aber nicht darstellbar — orange statt gruen,
                 // "formal sichtbar, aber nicht goldfaehig" (CLAUDE.md, Trainings-Studio-Regeln).
-                AddOverlayBadge(_vm.Segmentation.StatusText, notRenderedBounds.X, notRenderedBounds.Bottom, "WarningBrush");
+                AddOverlayBadge(_vm.Segmentation.StatusText, notRenderedBounds.X, notRenderedBounds.Bottom, "WarningBrush", "WarningBadgeTextBrush");
             }
         }
 
@@ -730,12 +730,18 @@ public partial class TrainingStudioWindow : Window
             Canvas.SetTop(rect, bounds.Y);
             OverlayCanvas.Children.Add(rect);
 
-            AddOverlayBadge("Hand-Box", bounds.X, Math.Max(0, bounds.Y - 18), "DangerBrush");
+            AddOverlayBadge("Hand-Box", bounds.X, Math.Max(0, bounds.Y - 18), "DangerBrush", "DangerBadgeTextBrush");
         }
     }
 
-    /// <summary>Kleines Beschriftungs-Badge (Hintergrundfarbe + Statuskontrast-Text) an einer Canvas-Position.</summary>
-    private void AddOverlayBadge(string text, double left, double top, string backgroundResourceKey)
+    /// <summary>
+    /// Kleines Beschriftungs-Badge (Hintergrundfarbe + passender Kontrasttext) an einer
+    /// Canvas-Position. <c>StatusBadgeTextBrush</c> ist nur fuer die theme-gleichen
+    /// Zustandsklassen-Abzeichen Z0-Z4 gedacht (CLAUDE.md, Aufgabe 12 Fix-Runde 1) — auf
+    /// Success-/Warning-/Danger-Brush braucht jede Flaeche ihre eigene, dafuer gemessene
+    /// *BadgeTextBrush.
+    /// </summary>
+    private void AddOverlayBadge(string text, double left, double top, string backgroundResourceKey, string foregroundResourceKey)
     {
         var badge = new Border
         {
@@ -746,7 +752,7 @@ public partial class TrainingStudioWindow : Window
             Child = new TextBlock
             {
                 Text = text,
-                Foreground = (Brush)FindResource("StatusBadgeTextBrush"),
+                Foreground = (Brush)FindResource(foregroundResourceKey),
                 FontSize = (double)FindResource("TextXS"),
                 FontWeight = FontWeights.SemiBold,
             },

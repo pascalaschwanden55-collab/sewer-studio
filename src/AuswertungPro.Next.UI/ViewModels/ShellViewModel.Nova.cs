@@ -19,8 +19,13 @@ public partial class ShellViewModel
     public string SpeicherstandText => ShellNovaKopfzeile.Speicherstand(IsProjectReady ? Project.Name : null, _letzteSpeicherungLokal, IsProjectReady && Project.Dirty);
 
     /// <summary>Aufgabe 5 (Programmidentitaet): voller Projektpfad als ToolTip unter der Wortmarke —
-    /// die Kopfzeile zeigt weiterhin den Projektnamen, der Dateipfad steht nur im ToolTip.</summary>
-    public string? ProjektPfad => IsProjectReady ? _sp.Settings.LastProjectPath : null;
+    /// die Kopfzeile zeigt weiterhin den Projektnamen, der Dateipfad steht nur im ToolTip.
+    /// Aufgabe 17: <c>Settings.LastProjectPath</c> ist eine programmweite "zuletzt benutzt"-
+    /// Einstellung, kein Attribut des aktuellen Projekts. Ohne die zusaetzliche Pruefung von
+    /// <see cref="HasPersistedProject"/> (derselbe Schutz, den <c>TrySaveProjectCore</c> schon
+    /// gegen ein versehentliches Ueberschreiben verwendet) wuerde ein neues, noch nicht
+    /// gespeichertes Projekt hier den Pfad des ZULETZT geoeffneten Projekts anzeigen.</summary>
+    public string? ProjektPfad => IsProjectReady && HasPersistedProject ? _sp.Settings.LastProjectPath : null;
 
     public IRelayCommand NaechsteAufgabePruefenCommand { get; private set; } = null!;
 
@@ -71,7 +76,8 @@ public partial class ShellViewModel
         GlobaleSucheFokusCommand = new RelayCommand(() => GlobaleSucheFokusAngefordert?.Invoke());
         PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName is nameof(SelectedNavItem) or nameof(IsProjectReady) or nameof(Project))
+            if (e.PropertyName is nameof(SelectedNavItem) or nameof(IsProjectReady) or nameof(Project)
+                or nameof(HasPersistedProject))
                 AktualisiereNovaKopfzeile();
         };
         MotionSettings.EngineChanged += OnHintergrundEngineGeaendert;

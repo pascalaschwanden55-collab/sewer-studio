@@ -199,6 +199,25 @@ public sealed class DesignAuditContrastTests
             $"{themeFile}: WarningBadgeTextBrush erreicht auf WarningBrush keine 4,5:1.");
     }
 
+    /// <summary>
+    /// Aufgabe 17: TrainingStudioWindow.AddOverlayBadge zeichnete seine drei Badges
+    /// (Segmentierung erfolgreich/nicht darstellbar, Hand-Box) alle mit StatusBadgeTextBrush —
+    /// dem Token fuer die theme-gleichen Z0-Z4-Abzeichen, nicht fuer eine theme-abhaengige
+    /// Fuellfarbe (nur 4,19:1 dunkel auf SuccessBrush). SuccessBadgeTextBrush ist in beiden
+    /// Themes Weiss, weil ColorSuccess in beiden Themes derselbe Wert ist.
+    /// </summary>
+    [Theory]
+    [InlineData("Theme.xaml")]
+    [InlineData("ThemeLight.xaml")]
+    public void Success_badge_text_reaches_normal_text_contrast_on_success_fill(string themeFile)
+    {
+        var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+
+        Assert.True(
+            Contrast(ReadSolidColorBrush(xaml, "SuccessBadgeTextBrush"), ReadColor(xaml, "ColorSuccess")) >= 4.5,
+            $"{themeFile}: SuccessBadgeTextBrush erreicht auf SuccessBrush keine 4,5:1.");
+    }
+
     private static string WarningTextColor(string xaml) => ReadSolidColorBrush(xaml, "WarningTextBrush");
 
     private static string DangerTextColor(string xaml) => ReadSolidColorBrush(xaml, "DangerTextBrush");

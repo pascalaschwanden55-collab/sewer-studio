@@ -196,6 +196,10 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
+                                    <!-- Aufgabe 17: engere, aber weiterhin vollstaendig lesbare Spalten-
+                                         breiten fuer die schmale Werkzeugspalte (~210-240 px) — Ort bekommt
+                                         eine Mindestbreite, damit die Sternspalte nie unlesbar schmal wird;
+                                         der waagrechte Bildlauf bleibt fuer die restlichen Spalten (B4). -->
                                     <DataGrid Grid.Row="0"
                                               ItemsSource="{Binding Suggestions}"
                                               SelectedItem="{Binding SelectedSuggestion}"
@@ -204,11 +208,12 @@
                                               MouseDoubleClick="BendSuggestionGrid_MouseDoubleClick"
                                               ToolTip="Doppelklick öffnet die Grossansicht mit Bild und Clip."
                                               HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                              HorizontalScrollBarVisibility="Auto"
                                               Background="Transparent" MaxHeight="220" Margin="0,0,0,8">
                                         <DataGrid.Columns>
-                                            <DataGridTextColumn Header="Art" Binding="{Binding ArtText}" Width="130"/>
-                                            <DataGridTextColumn Header="Ort" Binding="{Binding OrtText}" Width="*"/>
-                                            <DataGridTextColumn Header="Stufe" Binding="{Binding StufeText}" Width="70">
+                                            <DataGridTextColumn Header="Art" Binding="{Binding ArtText}" Width="100"/>
+                                            <DataGridTextColumn Header="Ort" Binding="{Binding OrtText}" Width="*" MinWidth="70"/>
+                                            <DataGridTextColumn Header="Stufe" Binding="{Binding StufeText}" Width="55">
                                                 <DataGridTextColumn.ElementStyle>
                                                     <Style TargetType="TextBlock">
                                                         <Style.Triggers>
@@ -225,8 +230,8 @@
                                                     </Style>
                                                 </DataGridTextColumn.ElementStyle>
                                             </DataGridTextColumn>
-                                            <DataGridTextColumn Header="Konfidenz" Binding="{Binding KonfidenzText}" Width="80"/>
-                                            <DataGridTextColumn Header="Bilder" Binding="{Binding FrameCount}" Width="60"/>
+                                            <DataGridTextColumn Header="Konfidenz" Binding="{Binding KonfidenzText}" Width="70"/>
+                                            <DataGridTextColumn Header="Bilder" Binding="{Binding FrameCount}" Width="50"/>
                                         </DataGrid.Columns>
                                     </DataGrid>
                                     <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush}"
@@ -494,18 +499,21 @@
                                          Margin="0,2,0,8"/>
 
                                 <TextBlock Text="Schadensstufe (optional)" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
-                                    <Button Content="1" Width="40" MinWidth="40" Margin="0,0,4,0" Style="{StaticResource Severity1Button}"
+                                <!-- Aufgabe 17: UniformGrid statt StackPanel — die fuenf Knoepfe teilen
+                                     sich IMMER die volle verfuegbare Breite gleichmaessig, statt bei
+                                     einem schmaleren Fenster abgeschnitten zu werden. -->
+                                <UniformGrid Columns="5" Margin="0,2,0,8">
+                                    <Button Content="1" Margin="0,0,4,0" Style="{StaticResource Severity1Button}"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="1"/>
-                                    <Button Content="2" Width="40" MinWidth="40" Margin="0,0,4,0" Style="{StaticResource Severity2Button}"
+                                    <Button Content="2" Margin="0,0,4,0" Style="{StaticResource Severity2Button}"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="2"/>
-                                    <Button Content="3" Width="40" MinWidth="40" Margin="0,0,4,0" Style="{StaticResource Severity3Button}"
+                                    <Button Content="3" Margin="0,0,4,0" Style="{StaticResource Severity3Button}"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="3"/>
-                                    <Button Content="4" Width="40" MinWidth="40" Margin="0,0,4,0" Style="{StaticResource Severity4Button}"
+                                    <Button Content="4" Margin="0,0,4,0" Style="{StaticResource Severity4Button}"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="4"/>
-                                    <Button Content="5" Width="40" MinWidth="40" Style="{StaticResource Severity5Button}"
+                                    <Button Content="5" Style="{StaticResource Severity5Button}"
                                             Command="{Binding SetSeverityCommand}" CommandParameter="5"/>
-                                </StackPanel>
+                                </UniformGrid>
                                 <TextBlock Text="{Binding Severity, StringFormat='Gewählt: Stufe {0}', TargetNullValue='Keine Stufe gewählt'}"
                                            FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
 

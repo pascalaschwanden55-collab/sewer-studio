@@ -4,7 +4,7 @@
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         ui:WindowFx.Entrance="True"
-        Title="SewerStudio — Über SewerStudio"
+        Title="SewerStudio — Über das Programm"
         Width="560" Height="600"
         MinWidth="480" MinHeight="500"
         ResizeMode="CanResizeWithGrip"

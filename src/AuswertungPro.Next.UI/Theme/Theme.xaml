@@ -153,6 +153,10 @@
          jeweiligen Theme ist. -->
     <SolidColorBrush x:Key="DangerBadgeTextBrush" Color="#FF0A0F1A"/>
     <SolidColorBrush x:Key="WarningBadgeTextBrush" Color="#FF0A0F1A"/>
+    <!-- Wie DangerBadgeTextBrush/WarningBadgeTextBrush, aber ColorSuccess ist in beiden Themes
+         derselbe Wert (#FF15803D) — deshalb hier wie in ThemeLight.xaml einheitlich Weiss
+         (schwarze Schrift erreicht auf dieser Flaeche nur 4,19:1, Weiss 5,02:1). -->
+    <SolidColorBrush x:Key="SuccessBadgeTextBrush" Color="#FFFFFFFF"/>
     <SolidColorBrush x:Key="InfoTextBrush" Color="#FF79C0FF"/>
     <SolidColorBrush x:Key="KiBrush" Color="{StaticResource ColorKi}"/>
     <SolidColorBrush x:Key="KiSubtleBrush" Color="{StaticResource ColorKiSubtle}"/>

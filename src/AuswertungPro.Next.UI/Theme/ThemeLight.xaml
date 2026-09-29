@@ -125,6 +125,9 @@
     <!-- Schrift DIREKT AUF der gesaettigten DangerBrush/WarningBrush-Flaeche, siehe Theme.xaml. -->
     <SolidColorBrush x:Key="DangerBadgeTextBrush" Color="#FFFFFFFF"/>
     <SolidColorBrush x:Key="WarningBadgeTextBrush" Color="#FFFFFFFF"/>
+    <!-- ColorSuccess ist in beiden Themes derselbe Wert (#FF15803D) — deshalb hier wie in
+         Theme.xaml einheitlich Weiss (siehe dortiger Kommentar). -->
+    <SolidColorBrush x:Key="SuccessBadgeTextBrush" Color="#FFFFFFFF"/>
     <SolidColorBrush x:Key="InfoTextBrush" Color="#FF0369A1"/>
     <SolidColorBrush x:Key="KiBrush" Color="{StaticResource ColorKi}"/>
     <SolidColorBrush x:Key="KiSubtleBrush" Color="{StaticResource ColorKiSubtle}"/>

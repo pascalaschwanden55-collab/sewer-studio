@@ -476,7 +476,9 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
 
         EnsureRecordColumns();
         UpdateNr();
-        LastResult = $"Spalten geladen: {Columns.Count}";
+        // Aufgabe 17 (Optikanalyse 28.09.2026): "Spalten geladen: N" ist ein rein technisches
+        // Detail ohne Wert fuer Pascal — LastResult bleibt fuer wirkliche Probleme reserviert
+        // (siehe die beiden Fehlerfaelle oben); ein erfolgreicher Ladevorgang meldet nichts.
     }
 
     private void EnsureRecordColumns()

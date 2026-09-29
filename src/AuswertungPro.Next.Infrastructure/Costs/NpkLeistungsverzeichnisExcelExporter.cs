@@ -362,7 +362,7 @@ public sealed class NpkLeistungsverzeichnisExcelExportService : INpkLeistungsver
             return logoPathAbs;
         if (_berichtsMarke is not null)
             return _berichtsMarke.LogoPfad;
-        var appLogo = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+        var appLogo = BerichtsLogoResolver.DefaultLogoPath(AppContext.BaseDirectory);
         return File.Exists(appLogo) ? appLogo : null;
     }
 

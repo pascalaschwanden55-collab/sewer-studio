@@ -142,7 +142,7 @@ public sealed class ProtocolRegenerationAdapter : IProtocolRegenerationService, 
         if (_berichtsMarke is not null)
             return _berichtsMarke.LogoPfad;
 
-        var logo = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+        var logo = BerichtsLogoResolver.DefaultLogoPath(AppContext.BaseDirectory);
         return File.Exists(logo) ? logo : null;
     }
 }
