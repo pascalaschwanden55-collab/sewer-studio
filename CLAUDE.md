@@ -593,6 +593,66 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   austauschbar** — `is` ist die richtige Wahl, wenn Unterklassen fachlich dazugehören sollen
   (z. B. „irgendein Argumentfehler"), `GetType() ==` die richtige Wahl, wenn nur die exakt
   konstruierten Basistypen gemeint sind, deren Text wir selbst verfasst haben.
+- **Aufgabe 10c1 — Ae/oe/ue-Restbereinigung im ganzen UI-Projekt (nicht nur die 10b-Dateien).**
+  Rund 150 ASCII-Ersatzwörter (waehlen, fuer, pruefen, Schaeden, Aenderungen, Goldpruefung,
+  Pruefungsresultat als Fliesstext, Eintraege, Laenge, groesser, Faelle, beschaedigt, enthaelt,
+  muessen, laesst, koennen, Schaerfe, Anschluesse, Fuellung, laedt, Qualitaet, Aufraeumen,
+  nachgeruestet, aufloesbar, Saetze, Verfuegung, schlaegt, Zeitueberschreitung, duerfen,
+  Schaetzung u.v.a., siehe `DesignAuditLaufzeittexteTests.Aufgabe10c1BereinigteWoerter`) sind
+  jetzt in `src/AuswertungPro.Next.UI` auf echte Umlaute umgestellt — Kommentare, `///`-Doku
+  und `[Obsolete(...)]`-Hinweise bleiben unveraendert ae/oe/ue (Entwicklertext).
+  **Datenschluessel mit Unterstrich bleiben automatisch geschuetzt**, weil der Unterstrich ein
+  Wortzeichen ist und die Wortgrenze `\b` direkt davor/danach aufhebt: `Ausgefuehrt_durch`,
+  `Nova_Pruefung`, `Primaere_Schaeden`, `vsa.meter.quelle` (Punkt ist dagegen KEIN Wortzeichen,
+  wirkt also wie ein Leerzeichen — `vsa.hoehe.mm`/`deckel.hoehe`/`haltungspunkt.hoehe` mussten
+  deshalb einzeln als Ausnahme erkannt werden, nicht automatisch geschuetzt).
+  **Bewusst NICHT umgestellt** (Grund jeweils genannt): `Ausgefuehrt`/`ausgefuehrt` — lebt
+  parallel als Feldschluessel-Alias auch ohne Unterstrich
+  (`SchachtSanierungPflichtfeldValidator.AusgefuehrtDurchAliases`,
+  `SchachtFeldWert(record, "Ausgefuehrt durch", "Ausgefuehrt_durch")`) UND als echtes Label;
+  genau 3 Stellen mit eindeutig anzeigendem Zweck (`BuilderPageFilterSummaryBuilder.cs` Filter-
+  Zusammenfassung, `SchachtSanierungPflichtfeldValidator.cs` fehlende-Felder-Meldung,
+  `SchaechtePageViewModel.cs` Fallback-Spaltenkopf) wurden EINZELN von Hand auf „Ausgeführt
+  durch" umgestellt, die Alias-Arrays bleiben ASCII. `Schaechte`/`Uebersicht` bleiben ASCII-
+  Navigationsschluessel (`ShellNavigationTitles.Anzeige` übersetzt sie separat) — nur echte
+  Fliesstext-Stellen mit demselben Wort in einem laengeren Satz (z. B. „Schächte gespeichert.",
+  die ToolTipDescription-Saetze in `ShellViewModel.NavigationSupport.cs`) wurden gefixt.
+  `Eigentuemer` bleibt ueberall ASCII (dokumentierte, absichtliche Doppelspur: Excel-Vorlage
+  fuehrt „Eigentümer" mit Umlaut, Katalog/Import/Code immer „Eigentuemer" — siehe
+  `SchaechtePageViewModel.cs`-Kommentar „das Feld heisst Eigentuemer — beides ist dieselbe
+  Spalte"). `Pruefungsresultat`/`Referenzpruefung` bleiben ASCII-Feldschluessel; die drei
+  Excel-Farbregel-Werte „Pruefung bestanden" u. a. bleiben unveraendert (`ExcelReportStyle`
+  matcht exakt). `geschaetzt`/`Gefuellt` bleiben interne Datenwerte (CodeMeta-Parameter bzw.
+  Converter-Konstante), keine Beschriftung. `gruen`/`gruene` bleiben ASCII NUR als
+  Eingabe-Alias-Schluessel in `LiveControlColorParser.NamedColors` (dieselbe Ausnahme wie das
+  dort dokumentierte „weiss"/„weiß"-Paar); echte Fliesstext-Stellen („gruene Treffer") sind
+  einzeln bereinigt. Reine Log-/Diagnose-Zeilen (`Logger.LogError/LogWarning`) bleiben ae/oe/ue.
+  **Neuer Waechter** `DesignAuditLaufzeittexteTests.Aufgabe10c1_Bereinigte_Ersatzschreibweisen_fallen_im_gesamten_UI_Projekt_nicht_zurueck`
+  durchsucht ALLE `.cs`-Dateien in `src/AuswertungPro.Next.UI` (ausser WebGis*/
+  ExportWebGisBereich.cs) statt einer festen Dateiliste; er entfernt vor der Wortpruefung den
+  Inhalt von `{...}`-Interpolationsausdruecken (sonst waere `{result.BereitsVollstaendig}` ein
+  falscher Treffer) und ueberspringt Kommentar- und `[Obsolete(`-Zeilen.
+  **Lehre aus der Umsetzung (Selbstkorrektur, drei Fehlerklassen):**
+  (1) Ein automatisiertes Bereinigungsskript darf NIE auf Dateien laufen, die selbst eine
+  ASCII-Wortliste als Pruefmuster enthalten — es korrigiert sonst sein eigenes Suchmuster
+  weg (`DesignAuditLaufzeittexteTests.Aufgabe10c1BereinigteWoerter` und
+  `DesignAuditFeinschliffTests.UmlautErsatz` wurden so einmal versehentlich zerstoert und
+  aus `git show HEAD:...` wiederhergestellt).
+  (2) Ein Testprojekt-weiter Lauf desselben Woerterbuchs darf nur auf Zeichenketten wirken,
+  die tatsaechlich einen in DIESER Aufgabe geaenderten Produktionscode widerspiegeln — mehrere
+  Tests pruefen Zeichenketten aus `Application`/`Infrastructure` (out of scope fuer 10c1, z. B.
+  `ProtocolEntryValidator.cs`, `AutoApprovalService.cs`, `SafeShellOpenService.cs`,
+  `CatalogPriceResolver.cs`, `ImportPlausibilitaetsTor.cs`, `ProtocolTrainingFileStore.cs`) oder
+  reine C#-Bezeichner (Methodennamen wie `Waehle`/`Pruefe` in Architektur-Tests, die Quellcode
+  als Text lesen) und wurden faelschlich mitgezogen; alle per echtem Testlauf gefunden und
+  einzeln zurueckgesetzt. Alle Aenderungen an `tests/AuswertungPro.Next.Infrastructure.Tests`,
+  `tests/AuswertungPro.Next.Pipeline.Tests` und `tests/ProjectModernizer.Tests` wurden komplett
+  verworfen (ausserhalb des 10c1-Umfangs).
+  (3) Architektur-Tests, die Quellcode als Rohtext mit ESCAPETEN Anfuehrungszeichen
+  (`\"...\"`) oder nach Whitespace-Entfernung vergleichen, wurden von der automatischen
+  Testkorrektur nicht erkannt (die Erkennung sucht unescapte `"..."`); solche Stellen wurden
+  einzeln nach dem realen Testlauf von Hand nachgezogen (`ObservationCatalogWindowInputNormalizerArchitectureTests`,
+  `SchaechtePageArchitectureGuardTests`).
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 
